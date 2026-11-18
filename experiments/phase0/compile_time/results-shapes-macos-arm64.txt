@@ -1,0 +1,16 @@
+== clang++ -std=c++20 -O2 (Apple clang 21), seven code shapes of a 141-gate network
+  A plain function, pointer operands                               0.04 s
+  B template, pointer operands                                     0.04 s
+  F template, pointer operands, locals declared T (not const T)    0.04 s
+  G template, pointer operands, locals declared const auto         0.03 s
+  C template, struct operands by reference, pointer result         0.04 s
+  D template, struct operands, struct returned by braces           0.03 s
+  E as D, two declarators per statement (gen_synth.py's style)     0.03 s
+== g++-16 -std=c++20 -O2, the same
+  A plain function, pointer operands                               0.11 s
+  B template, pointer operands                                     0.10 s
+  F template, pointer operands, locals declared T (not const T)    0.10 s
+  G template, pointer operands, locals declared const auto         0.10 s
+  C template, struct operands by reference, pointer result         0.10 s
+  D template, struct operands, struct returned by braces           0.10 s
+  E as D, two declarators per statement (gen_synth.py's style)     0.10 s

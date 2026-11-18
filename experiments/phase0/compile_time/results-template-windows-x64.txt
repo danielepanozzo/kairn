@@ -1,0 +1,24 @@
+== cl /std:c++20 /EHsc /O2 /arch:AVX2 (MSVC 19.52): N-gate network as a function template
+    4 gates     0.34 s
+    6 gates     0.10 s
+    8 gates     0.09 s
+   10 gates     0.08 s
+   12 gates     0.08 s
+   14 gates     0.07 s
+   16 gates     0.06 s
+   20 gates     0.07 s
+   24 gates     0.09 s
+   31 gates     0.15 s
+   48 gates     5.34 s
+== the same with /permissive (no two-phase lookup)
+    4 gates     0.32 s
+    6 gates     0.10 s
+    8 gates     0.09 s
+   10 gates     0.09 s
+   12 gates     0.08 s
+   14 gates     0.07 s
+   16 gates     0.07 s
+   20 gates     0.07 s
+   24 gates     0.08 s
+   31 gates     0.09 s
+   48 gates     0.08 s

@@ -1,1 +1,7 @@
-== cl /std:c++20 /EHsc /O2 /arch:AVX2 (MSVC, Visual Studio 2026 Build Tools; Intel 20-thread desktop)
+== cl /std:c++20 /EHsc /O2 /arch:AVX2 (MSVC 19.52, Visual Studio 2026 Build Tools; Intel 20-thread desktop)
+# run_msvc.py, as first run on 2026-11-18 (without a time limit per compile):
+# add8: 141 TwoSum gates = 846 flops; mul8: 28 TwoProd + 8 products + 213 gates = 1342 flops; 1 call sites of each
+  out of line (noinline)   did not finish: cl.exe had used 1476 s of CPU time (24.6 minutes) when it was stopped
+# The cause is the function-template form of the networks, not their size or the FMA products:
+# see results-shapes-windows-x64.txt, results-template-windows-x64.txt, results-scaling-windows-x64.txt
+# and results-scaling-mul-windows-x64.txt. run_msvc.py now has a 120 s limit per compile.

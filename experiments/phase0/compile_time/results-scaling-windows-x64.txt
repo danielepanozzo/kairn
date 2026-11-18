@@ -1,0 +1,27 @@
+== cl /std:c++20 /EHsc /O2 /arch:AVX2 (MSVC, Visual Studio 2026 Build Tools)
+     6 gates (   36 flops)      0.30 s
+    16 gates (   96 flops)      0.09 s
+    31 gates (  186 flops)      0.09 s
+    48 gates (  288 flops)      0.09 s
+    64 gates (  384 flops)      0.08 s
+    96 gates (  576 flops)      0.08 s
+   141 gates (  846 flops)      0.09 s
+   213 gates ( 1278 flops)      0.10 s
+== cl /std:c++20 /EHsc /O1 /arch:AVX2 (MSVC, Visual Studio 2026 Build Tools)
+     6 gates (   36 flops)      0.33 s
+    16 gates (   96 flops)      0.09 s
+    31 gates (  186 flops)      0.09 s
+    48 gates (  288 flops)      0.09 s
+    64 gates (  384 flops)      0.08 s
+    96 gates (  576 flops)      0.09 s
+   141 gates (  846 flops)      0.09 s
+   213 gates ( 1278 flops)      0.11 s
+== cl /std:c++20 /EHsc /Od /arch:AVX2 (MSVC, Visual Studio 2026 Build Tools)
+     6 gates (   36 flops)      0.32 s
+    16 gates (   96 flops)      0.08 s
+    31 gates (  186 flops)      0.08 s
+    48 gates (  288 flops)      0.07 s
+    64 gates (  384 flops)      0.07 s
+    96 gates (  576 flops)      0.06 s
+   141 gates (  846 flops)      0.06 s
+   213 gates ( 1278 flops)      0.07 s

@@ -1,0 +1,143 @@
+# Decisions
+
+## Decisions needed from you
+
+Ten questions. Each has a recommendation; where you agree, a one-word answer is enough.
+
+### D1 Proof assistant
+
+**Rocq 9 with Flocq 4.2, and an axiom allow-list of exactly four entries**
+(`ClassicalDedekindReals.sig_forall_dec`, `ClassicalDedekindReals.sig_not_dec`,
+`FunctionalExtensionality.functional_extensionality_dep`, `Classical_Prop.classic`).
+Reasons and the comparison with Lean 4 and Isabelle are in
+[Verification](verification.md#proof-assistant-rocq-with-flocq); the pipeline was run end to end
+in Phase 0 and these four are what every theorem about real numbers in Rocq depends on.
+*Recommended: approve both.*
+
+### D2 What counts as machine-checked
+
+The only existing verification of the 3- and 4-limb networks is an SMT solver's unchecked answer
+on an abstraction. Two questions:
+
+1. May a solver's `unsat` without a certificate checked by Rocq ever stand in for a proof?
+   *Recommended: no.* It would put Z3 and an unpublished lemma base in the trusted base.
+2. If a proof parametric in the precision is not achieved for some operation, is a pair of
+   kernel-checked proofs, one for `float` and one for `double`, acceptable? *Recommended: yes*,
+   flagged on that operation's reference page. It will certainly be the case for elementary
+   functions, whose polynomials and tables depend on the target precision.
+
+### D3 Eight limbs and runtime k
+
+No algorithm for five or more limbs has a correctness proof of any kind in the literature, and the
+one library that shipped them withdrew them as broken
+([Operations](operations.md#eight-limbs-and-runtime-k)). Kairn has to invent and prove one.
+Options:
+
+- **(a) Recommended.** Keep $k = 8$ and runtime $k$ in scope but late (Milestone 6), after the
+  miso2 path and the $k \le 4$ proofs; accept selects (branch-free conditional moves) inside the
+  kernels; accept constants that grow with $k$.
+- (b) Ship them early behind `UNVERIFIED` with a branching algorithm, so that clients can
+  experiment, and prove later. Fast to deliver, but a long-lived unverified path in a library
+  whose point is verification.
+- (c) Drop baked-in $k = 8$ from the first release.
+
+### D4 Normalization invariant
+
+$x_i = \mathrm{RN}(x_i + x_{i+1})$ for every $i$ ([Numbers](numbers.md#the-normalization-invariant)).
+*Recommended: confirm.* The consequence to be aware of: representations are not unique, so
+equality and ordering are computed, not read off the limbs.
+
+### D5 Non-finite results
+
+Should `Expansion` arithmetic return canonical $\pm\infty$ and NaN the way IEEE does
+(an estimated 10 to 20% on a 2-limb addition, to be measured), or only promise "not finite"?
+*Recommended: IEEE-like by default, with `kairn::finite::` variants and the batch kernels skipping
+the canonicalization.* Generic client code compares against infinities and expects
+$\infty + 1 = \infty$; kernels in hot loops do not need it.
+
+### D6 One limb and contraction under Clang
+
+Under Clang's default (`-ffp-contract=on`), `a * x + y` on `double` is fused and the same
+expression on `Expansion<double, 1>` is not ([Library](library.md#one-limb)). Options:
+
+- **(a) Recommended.** Leave $k = 1$ unfused under Clang's default and document it;
+  `KAIRN_K1_CONTRACT` opts into a pragma that restores identical code. Rationale: with the pragma
+  on, a client who passed `-ffp-contract=off` to get reproducible results would get fused $k = 1$
+  arithmetic anyway.
+- (b) Pragma on by default, macro to turn it off: matches the brief's "no overhead" literally.
+
+On GCC there is nothing to decide (identical code), and on MSVC the auto-vectorization gap cannot
+be closed by either option.
+
+### D7 Generated headers
+
+*Recommended: commit the generated kernel headers* under `include/kairn/gen/`, with CI
+regenerating them and failing on any difference. A header-only library should work from a plain
+clone, and no client build should need Python. The alternative is to generate at CMake configure
+time and commit nothing generated.
+
+### D8 Workload priority
+
+*Recommended order:* verified computation with balls (miso2), linear algebra, elementwise GPU
+loops, geometric predicates ([Plan](plan.md#performance-targets)).
+
+### D9 Runtime dispatch state
+
+Choosing AVX-512 at run time needs the result of CPU detection. *Recommended: a `Backend` value
+the client obtains once and passes* (default: the compile-time baseline), which keeps the "no
+global mutable state" rule intact. The alternative is one idempotent atomic cache inside the
+headers: more convenient, and a deliberate exception to that rule.
+
+### D10 Test infrastructure
+
+Things only you can provide or approve:
+
+1. **CI runners.** The repository is private; GitHub-hosted minutes are limited, and the
+   brute-force tier, CUDA and Metal need real machines. May kirby, sonic, ci-windows and the Mac
+   be registered as self-hosted runners for this repository? (ci-windows is described in your SSH
+   config as the wildmeshing-toolkit CI machine.)
+2. **clang-cl and the MSVC ARM64 tools** are not installed on ci-windows. The brief lists clang-cl
+   as a supported compiler and Windows AArch64 as compile-only; may I install both components?
+3. **AVX-512.** None of the four machines has it. Options: correctness under Intel SDE only
+   (recommended for now), a hosted runner, or access to another machine.
+4. **kirby** was at load average 117 with 9 GB of free disk. It is the only consumer GeForce; I
+   will use it for GPU correctness and the float-versus-double numbers, and sonic for anything
+   timed on the CPU, unless you prefer otherwise.
+5. **Linux AArch64** will run under QEMU user-mode on a hosted runner, as the brief says.
+
+## Deviations from the brief, flagged
+
+Per the ground rules, everything in this report that weakens, changes or cannot meet a statement
+of the brief:
+
+| # | The brief says | What Phase 0 found | Proposed handling |
+|---|---|---|---|
+| 1 | TwoSum, Fast2Sum and TwoProd with an explicit `fma` are patterns contraction cannot change | False once inlined together: Clang on AArch64 with `-ffp-contract=fast` and MSVC with `/fp:contract` duplicate the rounded product into later additions and silently reduce the result to single-limb accuracy | Rule R1/R2: no product feeds an addition; TwoProd is two FMAs ([Environment](environment.md#contraction)). A strengthening, at the cost of an FMA per product |
+| 2 | Use Clang's scoped `fp contract(off)` as extra protection | It is ignored under `-ffp-contract=fast`, the one case that needs it | Not relied on; harmless to keep |
+| 3 | Raw intrinsics for AVX2, AVX-512, NEON | Intrinsics are contracted like scalar code | Same rule in the SIMD backends |
+| 4 | $k = 1$ has no overhead over plain `T` | True on GCC; on Clang's default one instruction per multiply-add unless a pragma is used; MSVC does not auto-vectorize loops over the wrapper | [D6](#d6-one-limb-and-contraction-under-clang); batch kernels for loops |
+| 5 | Every bound has a machine-checked proof; verify every baked-in instance | No published proof of any kind exists for $k \ge 5$; $k = 3, 4$ are SMT-only; every existing proof ignores underflow | [D2](#d2-what-counts-as-machine-checked), [D3](#d3-eight-limbs-and-runtime-k); operations stay `UNVERIFIED` until proved |
+| 6 | Proofs parametric in $p$, so one proof covers `float`, `double` and Metal | Achievable for the arithmetic kernels (planned); not for elementary functions; possibly not for $k = 3, 4$ | [D2](#d2-what-counts-as-machine-checked) |
+| 7 | Core arithmetic is `constexpr` with a Dekker product, proven like the run-time path | Feasible and prototyped; consequence: compile-time and run-time results of one expression can differ in the last bits, both within the bound | Documented |
+| 8 | Signs of zeros specified | The networks do not preserve the sign of a zero | Specified as unspecified ([Numbers](numbers.md#zero-and-signs)) |
+| 9 | Interval and Ball at every $k$ | An `Interval<T, 1>` bound costs about ten operations against one with a hardware rounding mode, which Kairn may not use | Fast paths on CUDA and AVX-512; clients keep native intervals at $k = 1$ on other targets |
+| 10 | `float` limbs on GPUs, including Metal | `float` k-numbers keep full precision only above $10^{-31}$ ($k = 2$) to $10^{-16}$ ($k = 4$), and on Metal above $10^{-24}$ to $10^{-9}$ | Inherent to the format; documented prominently |
+| 11 | AVX-512 path, clang-cl, Windows AArch64 | No AVX-512 machine; clang-cl and ARM64 tools not installed; none of the three was run in Phase 0 | [D10](#d10-test-infrastructure) |
+| 12 | Interval semantics modeled on IEEE 1788.1 | The standard is paywalled; semantics were taken from the P1788 drafts and implementations | To be checked against the standard before Milestone 2 |
+
+## Decisions log
+
+Decisions already taken within Phase 0, each reversible at your word.
+
+| Date | Decision | Reason |
+|---|---|---|
+| 2026-11-18 | Repository `danielepanozzo/kairn`, private, MIT, copyright line "The Kairn Authors" | Your instruction; the copyright holder is a placeholder for you to set |
+| 2026-11-18 | A rounded product is always `fma(a, b, +0.0)`; generator rules R1 and R2 | Contraction experiment, 23 configurations |
+| 2026-11-18 | Fast-math sub-flags are rejected by `#error` where a macro exists and by the self-test elsewhere | Clang defines no macro for three of them |
+| 2026-11-18 | `__builtin_is_constant_evaluated()` instead of `std::is_constant_evaluated()`; no `nextafter` in device code | nvcc diagnostics |
+| 2026-11-18 | Kernels are emitted as non-template functions, one statement per operation | MSVC template parsing time; Clang per-expression contraction |
+| 2026-11-18 | Kernels above $k = 2$ are never force-inlined | Compile-time measurement |
+| 2026-11-18 | Scalar FMA on MSVC through `_mm_fmadd_sd` | `std::fma` is a library call under `/fp:strict` and `/Od` |
+| 2026-11-18 | MSL functions start with `#pragma METAL fp math_mode(safe)` and `fp contract(off)` and use `precise::` functions | Metal probe |
+| 2026-11-18 | Generator in Python, standard library only | Small, auditable, shared with the documentation tooling |
+| 2026-11-18 | Phase 0 experiments are kept, with their recorded outputs, under `experiments/phase0/` | Every number in this report can be rerun |

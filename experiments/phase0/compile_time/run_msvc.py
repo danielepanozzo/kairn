@@ -6,7 +6,11 @@ for calls in (1, 16, 64):
     print("# " + subprocess.run([sys.executable, "gen_synth.py", str(calls)], capture_output=True, text=True).stdout.strip())
     for mode in (0, 1, 2):
         t = time.time()
-        r = subprocess.run(["cl", "/nologo", "/std:c++20", "/EHsc", "/O2", "/arch:AVX2", f"/DSYNTH_INLINE={mode}", "/c", "client.cpp", "/Foclient.obj"], capture_output=True, text=True)
+        try:
+            r = subprocess.run(["cl", "/nologo", "/std:c++20", "/EHsc", "/O2", "/arch:AVX2", f"/DSYNTH_INLINE={mode}", "/c", "client.cpp", "/Foclient.obj"], capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            print(f"  {names[mode]}  > 120 s (stopped)", flush=True)
+            continue
         if r.returncode:
             print(f"  {names[mode]}  FAILED: {r.stdout.strip().splitlines()[-1] if r.stdout.strip() else ''}")
         else:

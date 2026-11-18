@@ -1,0 +1,8 @@
+== cl /std:c++20 /EHsc /O2 /arch:AVX2 (MSVC 19.52), one 141-gate network in seven code shapes
+  A plain function, pointer operands                               0.37 s
+  B template, pointer operands                                   > 30 s (stopped)
+  F template, pointer operands, locals declared T (not const T)  > 30 s (stopped)
+  G template, pointer operands, locals declared const auto       > 30 s (stopped)
+  C template, struct operands by reference, pointer result       > 30 s (stopped)
+  D template, struct operands, struct returned by braces         > 30 s (stopped)
+  E as D, two declarators per statement (gen_synth.py's style)   > 30 s (stopped)

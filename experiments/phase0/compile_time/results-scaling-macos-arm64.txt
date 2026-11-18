@@ -1,0 +1,13 @@
+== clang++ -std=c++20 -O2 (Apple M3 Max)
+     6 gates (   36 flops)      0.02 s
+    16 gates (   96 flops)      0.02 s
+    31 gates (  186 flops)      0.02 s
+    48 gates (  288 flops)      0.03 s
+    64 gates (  384 flops)      0.03 s
+    96 gates (  576 flops)      0.03 s
+   141 gates (  846 flops)      0.03 s
+   213 gates ( 1278 flops)      0.04 s
+== g++-16 -std=c++20 -O2 (Apple M3 Max)
+     6 gates (   36 flops)      0.06 s
+    16 gates (   96 flops)      0.06 s
+    31 gates (  186 flops)      0.07 s

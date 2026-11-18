@@ -1,0 +1,8 @@
+== probe_msvc.py: cl /std:c++20 /EHsc /arch:AVX2 on gen_synth.py's client with 1 call site, 60 s limit per compile (MSVC 19.52)
+  as generated, /O2                                          > 60 s (stopped)
+  as generated, /O1                                          > 60 s (stopped)
+  as generated, /Od                                          > 60 s (stopped)
+  only add8 (141 gates), /O2                                 > 60 s (stopped)
+  only mul8 (28 TwoProd + 8 products + 213 gates), /O2       > 60 s (stopped)
+  only mul8, operands copied to locals first, /O2            > 60 s (stopped)
+  only mul8, /O2 /fp:strict                                  > 60 s (stopped)
