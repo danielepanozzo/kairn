@@ -1,0 +1,28 @@
+# Build trees and generated output
+/build*/
+/site/
+/_deps/
+*.o
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.dSYM/
+__pycache__/
+*.pyc
+.venv/
+venv/
+# Proof build products
+*.vo
+*.vok
+*.vos
+*.glob
+*.aux
+.lia.cache
+.nia.cache
+.lake/
+# Editors and OS
+.DS_Store
+.vscode/
+.idea/
+compile_commands.json
