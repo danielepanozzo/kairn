@@ -1,0 +1,91 @@
+device: Apple M3 Max
+== default MTLCompileOptions
+  a+b no subnormal involved:      0 / 172441 differ    subnormal involved:  65032 /  89703 differ   [65032 zero (flushed)]
+  TwoSum err no subnormal involved: 159820 / 172441 differ    subnormal involved:  22972 /  89703 differ   [182792 zero (flushed)]
+  a*b no subnormal involved:      0 / 172441 differ    subnormal involved:  17534 /  89703 differ   [17534 zero (flushed)]
+  TwoProd err no subnormal involved:      0 / 167800 differ    subnormal involved:   8744 /  94344 differ   [8744 zero (flushed)]
+  fma(a,b,c) no subnormal involved:      0 / 172419 differ    subnormal involved:  38733 /  89725 differ   [35511 zero (flushed), 3222 other]
+  t=a*b; t+c no subnormal involved:      0 / 172419 differ    subnormal involved:  43162 /  89725 differ   [35502 zero (flushed), 7601 other, 59 fused (= fma)]
+  a*b+c no subnormal involved:      0 / 172419 differ    subnormal involved:  43162 /  89725 differ   [35502 zero (flushed), 7601 other, 59 fused (= fma)]
+  a/b no subnormal involved:  39670 / 172441 differ    subnormal involved:  52699 /  89703 differ   [92369 other]
+  sqrt|a| no subnormal involved:  48336 / 172441 differ    subnormal involved:  48364 /  89703 differ   [63932 other, 32768 zero (flushed)]
+  (a+b)-a no subnormal involved: 100256 / 172441 differ    subnormal involved:  14709 /  89703 differ   [114965 reassociated to b]
+  precise::sqrt no subnormal involved:      0 / 172441 differ    subnormal involved:  32768 /  89703 differ   [32768 zero (flushed)]
+== mathMode = .fast
+  a+b no subnormal involved:      0 / 172441 differ    subnormal involved:  65032 /  89703 differ   [65032 zero (flushed)]
+  TwoSum err no subnormal involved: 159820 / 172441 differ    subnormal involved:  22972 /  89703 differ   [182792 zero (flushed)]
+  a*b no subnormal involved:      0 / 172441 differ    subnormal involved:  17534 /  89703 differ   [17534 zero (flushed)]
+  TwoProd err no subnormal involved:      0 / 167800 differ    subnormal involved:   8744 /  94344 differ   [8744 zero (flushed)]
+  fma(a,b,c) no subnormal involved:      0 / 172419 differ    subnormal involved:  38733 /  89725 differ   [35511 zero (flushed), 3222 other]
+  t=a*b; t+c no subnormal involved:      0 / 172419 differ    subnormal involved:  43162 /  89725 differ   [35502 zero (flushed), 7601 other, 59 fused (= fma)]
+  a*b+c no subnormal involved:      0 / 172419 differ    subnormal involved:  43162 /  89725 differ   [35502 zero (flushed), 7601 other, 59 fused (= fma)]
+  a/b no subnormal involved:  39670 / 172441 differ    subnormal involved:  52699 /  89703 differ   [92369 other]
+  sqrt|a| no subnormal involved:  48336 / 172441 differ    subnormal involved:  48364 /  89703 differ   [63932 other, 32768 zero (flushed)]
+  (a+b)-a no subnormal involved: 100256 / 172441 differ    subnormal involved:  14709 /  89703 differ   [114965 reassociated to b]
+  precise::sqrt no subnormal involved:      0 / 172441 differ    subnormal involved:  32768 /  89703 differ   [32768 zero (flushed)]
+== mathMode = .relaxed
+  a+b no subnormal involved:      0 / 172441 differ    subnormal involved:  65032 /  89703 differ   [65032 zero (flushed)]
+  TwoSum err no subnormal involved: 159820 / 172441 differ    subnormal involved:  22972 /  89703 differ   [182792 zero (flushed)]
+  a*b no subnormal involved:      0 / 172441 differ    subnormal involved:  17534 /  89703 differ   [17534 zero (flushed)]
+  TwoProd err no subnormal involved:      0 / 167800 differ    subnormal involved:   8744 /  94344 differ   [8744 zero (flushed)]
+  fma(a,b,c) no subnormal involved:      0 / 172419 differ    subnormal involved:  38733 /  89725 differ   [35511 zero (flushed), 3222 other]
+  t=a*b; t+c no subnormal involved:      0 / 172419 differ    subnormal involved:  43162 /  89725 differ   [35502 zero (flushed), 7601 other, 59 fused (= fma)]
+  a*b+c no subnormal involved:      0 / 172419 differ    subnormal involved:  43162 /  89725 differ   [35502 zero (flushed), 7601 other, 59 fused (= fma)]
+  a/b no subnormal involved:  39670 / 172441 differ    subnormal involved:  52699 /  89703 differ   [92369 other]
+  sqrt|a| no subnormal involved:  48336 / 172441 differ    subnormal involved:  48364 /  89703 differ   [63932 other, 32768 zero (flushed)]
+  (a+b)-a no subnormal involved: 100256 / 172441 differ    subnormal involved:  14709 /  89703 differ   [114965 reassociated to b]
+  precise::sqrt no subnormal involved:      0 / 172441 differ    subnormal involved:  32768 /  89703 differ   [32768 zero (flushed)]
+== mathMode = .safe, mathFloatingPointFunctions = .precise
+  a+b no subnormal involved:      0 / 172441 differ    subnormal involved:  65032 /  89703 differ   [65032 zero (flushed)]
+  TwoSum err no subnormal involved:      0 / 172441 differ    subnormal involved:      0 /  89703 differ   
+  a*b no subnormal involved:      0 / 172441 differ    subnormal involved:  17534 /  89703 differ   [17534 zero (flushed)]
+  TwoProd err no subnormal involved:      0 / 167800 differ    subnormal involved:   8744 /  94344 differ   [8744 zero (flushed)]
+  fma(a,b,c) no subnormal involved:      0 / 172419 differ    subnormal involved:  38733 /  89725 differ   [35511 zero (flushed), 3222 other]
+  t=a*b; t+c no subnormal involved:      0 / 172419 differ    subnormal involved:  43162 /  89725 differ   [35502 zero (flushed), 7601 other, 59 fused (= fma)]
+  a*b+c no subnormal involved:  42363 / 172419 differ    subnormal involved:  38796 /  89725 differ   [42563 fused (= fma), 35511 zero (flushed), 3085 other]
+  a/b no subnormal involved:      0 / 172441 differ    subnormal involved:  32768 /  89703 differ   [32768 other]
+  sqrt|a| no subnormal involved:      0 / 172441 differ    subnormal involved:  32768 /  89703 differ   [32768 zero (flushed)]
+  (a+b)-a no subnormal involved:      0 / 172441 differ    subnormal involved:  65078 /  89703 differ   [32768 zero (flushed), 32310 other]
+  precise::sqrt no subnormal involved:      0 / 172441 differ    subnormal involved:  32768 /  89703 differ   [32768 zero (flushed)]
+== default MTLCompileOptions + scoped pragmas at the start of the kernel body: shader did not compile: program_source:8:19: error: '#pragma METAL fp' can only appear at file scope or at the start of a compound statement
+== default MTLCompileOptions + scoped pragmas in a helper function called from an unprotected kernel
+  a+b no subnormal involved:      0 / 172441 differ    subnormal involved:  65032 /  89703 differ   [65032 zero (flushed)]
+  TwoSum err no subnormal involved:      0 / 172441 differ    subnormal involved:      0 /  89703 differ   
+  a*b no subnormal involved:      0 / 172441 differ    subnormal involved:  17534 /  89703 differ   [17534 zero (flushed)]
+  TwoProd err no subnormal involved:      0 / 167800 differ    subnormal involved:   8744 /  94344 differ   [8744 zero (flushed)]
+  fma(a,b,c) no subnormal involved:      0 / 172419 differ    subnormal involved:  38733 /  89725 differ   [35511 zero (flushed), 3222 other]
+  t=a*b; t+c no subnormal involved:      0 / 172419 differ    subnormal involved:  43162 /  89725 differ   [35502 zero (flushed), 7601 other, 59 fused (= fma)]
+  a*b+c no subnormal involved:      0 / 172419 differ    subnormal involved:  43162 /  89725 differ   [35502 zero (flushed), 7601 other, 59 fused (= fma)]
+  a/b no subnormal involved:      0 / 172441 differ    subnormal involved:  32768 /  89703 differ   [32768 other]
+  sqrt|a| no subnormal involved:  48336 / 172441 differ    subnormal involved:  48364 /  89703 differ   [63932 other, 32768 zero (flushed)]
+  (a+b)-a no subnormal involved:      0 / 172441 differ    subnormal involved:  65078 /  89703 differ   [32768 zero (flushed), 32310 other]
+  precise::sqrt no subnormal involved:      0 / 172441 differ    subnormal involved:  32768 /  89703 differ   [32768 zero (flushed)]
+== mathMode = .fast + scoped pragmas in a helper function called from an unprotected kernel
+  a+b no subnormal involved:      0 / 172441 differ    subnormal involved:  65032 /  89703 differ   [65032 zero (flushed)]
+  TwoSum err no subnormal involved:      0 / 172441 differ    subnormal involved:      0 /  89703 differ   
+  a*b no subnormal involved:      0 / 172441 differ    subnormal involved:  17534 /  89703 differ   [17534 zero (flushed)]
+  TwoProd err no subnormal involved:      0 / 167800 differ    subnormal involved:   8744 /  94344 differ   [8744 zero (flushed)]
+  fma(a,b,c) no subnormal involved:      0 / 172419 differ    subnormal involved:  38733 /  89725 differ   [35511 zero (flushed), 3222 other]
+  t=a*b; t+c no subnormal involved:      0 / 172419 differ    subnormal involved:  43162 /  89725 differ   [35502 zero (flushed), 7601 other, 59 fused (= fma)]
+  a*b+c no subnormal involved:      0 / 172419 differ    subnormal involved:  43162 /  89725 differ   [35502 zero (flushed), 7601 other, 59 fused (= fma)]
+  a/b no subnormal involved:      0 / 172441 differ    subnormal involved:  32768 /  89703 differ   [32768 other]
+  sqrt|a| no subnormal involved:  48336 / 172441 differ    subnormal involved:  48364 /  89703 differ   [63932 other, 32768 zero (flushed)]
+  (a+b)-a no subnormal involved:      0 / 172441 differ    subnormal involved:  65078 /  89703 differ   [32768 zero (flushed), 32310 other]
+  precise::sqrt no subnormal involved:      0 / 172441 differ    subnormal involved:  32768 /  89703 differ   [32768 zero (flushed)]
+== how subnormals are flushed (x, y from a buffer; safe math mode by pragma)
+  subnormal input: 0x1p-140 * 0x1p+30 (IEEE 0x1p-110)
+      x*y = +0   x+y = 0x1p+30   (x != 0) = 0   fma(x,y,0) = +0
+  subnormal input: 0x1p-140 + 1 (IEEE 1)
+      x*y = +0   x+y = 0x1p+0   (x != 0) = 0   fma(x,y,0) = +0
+  subnormal + subnormal, normal sum: 0x1.8p-127 + 0x1.8p-127 (IEEE 0x1.8p-126)
+      x*y = +0   x+y = +0   (x != 0) = 0   fma(x,y,0) = +0
+  exact subnormal result: 0x1p-126 * 0.5 (IEEE 0x1p-127)
+      x*y = +0   x+y = 0x1p-1   (x != 0) = 1   fma(x,y,0) = +0
+  exact subnormal result, negative: -0x1p-126 * 0.5 (IEEE -0x1p-127)
+      x*y = -0   x+y = 0x1p-1   (x != 0) = 1   fma(x,y,0) = -0
+  tiny before rounding, rounds to the smallest normal: (1 - 2^-24) * 0x1p-126 (IEEE 0x1p-126)
+      x*y = +0   x+y = 0x1.fffffep-1   (x != 0) = 1   fma(x,y,0) = +0
+  normal - normal, subnormal difference: 0x1.000002p-126 + -0x1p-126 (IEEE 0x1p-149)
+      x*y = -0   x+y = +0   (x != 0) = 1   fma(x,y,0) = -0
+  smallest normal passes through: 0x1p-126 * 1 (IEEE 0x1p-126)
+      x*y = 0x1p-126   x+y = 0x1p+0   (x != 0) = 1   fma(x,y,0) = 0x1p-126

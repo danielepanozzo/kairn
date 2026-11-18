@@ -1,0 +1,10 @@
+NVIDIA RTX 6000 Ada Generation (compute capability 8.9), 1e9 a = a*m + c per second:
+  float                  40517.17
+  double                   588.03   float/double       = 68.9
+  Expansion<float, 2>     1448.96   (46 bits)  vs double = 2.46x
+  Expansion<double, 2>      20.40   (104 bits) vs double = 0.035x,  vs Expansion<float, 2> = 0.014x
+NVIDIA RTX A5000 (compute capability 8.6), 1e9 a = a*m + c per second:
+  float                  12421.35
+  double                   180.53   float/double       = 68.8
+  Expansion<float, 2>      450.97   (46 bits)  vs double = 2.50x
+  Expansion<double, 2>       6.26   (104 bits) vs double = 0.035x,  vs Expansion<float, 2> = 0.014x

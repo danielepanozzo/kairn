@@ -1,0 +1,1 @@
+== cl /std:c++20 /EHsc /O2 /arch:AVX2 (MSVC, Visual Studio 2026 Build Tools; Intel 20-thread desktop)

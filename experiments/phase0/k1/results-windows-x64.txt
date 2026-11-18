@@ -1,0 +1,8 @@
+== cl /std:c++20 /EHsc /O2 /arch:AVX2
+  axpy    plain:  69 instructions   k1:  40 instructions   DIFFERENT: plain has 1 and, 5 cmp, 1 ja, 2 jae, 2 jb, 1 je, 6 lea, 1 npad, 1 test, 4 vaddpd, 1 vbroadcastsd, 4 vmovupd, 1 vmovups, 4 vmulpd, 1 vzeroupper more; k1 has 1 call, 1 jmp, 1 mov, 1 vmovq, 2 xor more
+  dot     plain:  30 instructions   k1:  38 instructions   DIFFERENT: plain has nothing more; k1 has 1 add, 1 call, 3 mov, 1 sub, 2 xor more
+  horner  plain:  16 instructions   k1:  20 instructions   DIFFERENT: plain has nothing more; k1 has 1 add, 1 sub, 2 vmovaps more
+== cl /std:c++20 /EHsc /O2 /arch:AVX2 /fp:contract
+  axpy    plain:  68 instructions   k1:  40 instructions   DIFFERENT: plain has 1 and, 5 cmp, 1 ja, 2 jae, 2 jb, 1 je, 6 lea, 1 test, 1 vbroadcastsd, 5 vfmadd213sd, 4 vfmadd231pd, 5 vmovsd, 8 vmovupd, 1 vmovups, 1 vzeroupper more; k1 has 1 call, 1 jmp, 1 mov, 5 vaddsd, 1 vmovq, 5 vmulsd, 2 xor more
+  dot     plain:  30 instructions   k1:  38 instructions   DIFFERENT: plain has nothing more; k1 has 1 add, 1 call, 3 mov, 1 sub, 2 xor more
+  horner  plain:   9 instructions   k1:  16 instructions   DIFFERENT: plain has 7 vfmadd213sd more; k1 has 7 vfmadd231sd, 6 vmovsd, 1 vmovups more

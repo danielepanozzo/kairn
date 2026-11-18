@@ -1,0 +1,19 @@
+The Rocq Prover, version 9.0.1
+coq-flocq 4.2.2
+rocq-stdlib 9.0.0
+g++ (Debian 12.2.0-14+deb12u1) 12.2.0
+== proofs
+  Model.v, Proofs.v: checked
+== axioms used by the theorems
+  allowed      ClassicalDedekindReals.sig_forall_dec
+  allowed      ClassicalDedekindReals.sig_not_dec
+  allowed      Classical_Prop.classic
+  allowed      FunctionalExtensionality.functional_extensionality_dep
+== negative control (a theorem closed with Admitted must be rejected)
+  NOT ALLOWED  wrong
+  rejected, as it must be
+== generated C++ against exact rational arithmetic
+  two_sum       cases=20000  violations=0
+  fast_two_sum  cases=20000  violations=0
+  two_prod      cases=20000  violations=0  (4230 below the exactness threshold: checked |p + e - ab| < 2^-1074 instead)
+wall time of the whole run: 6.88s

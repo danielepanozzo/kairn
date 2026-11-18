@@ -1,0 +1,5 @@
+NVIDIA GeForce RTX 3080 Ti (compute capability 8.6), 1e9 a = a*m + c per second:
+  float                  16427.98
+  double                   235.80   float/double       = 69.7
+  Expansion<float, 2>      589.68   (46 bits)  vs double = 2.50x
+  Expansion<double, 2>       8.16   (104 bits) vs double = 0.035x,  vs Expansion<float, 2> = 0.014x

@@ -1,0 +1,34 @@
+Apple clang version 21.0.0 (clang-2100.4.1.1)
+g++-16 (Homebrew GCC 16.2.0) 16.2.0
+== clang++ -std=c++20 -O2 -ffp-contract=off
+  axpy    plain:  54 instructions   k1:  49 instructions   DIFFERENT: plain has 1 fadd, 4 fadd.2d, 1 fmul, 4 fmul.2d more; k1 has 1 fmadd, 4 fmla.2d more
+  dot     plain:  54 instructions   k1:  53 instructions   DIFFERENT: plain has 1 fadd, 1 fmul more; k1 has 1 fmadd more
+  horner  plain:  20 instructions   k1:  13 instructions   DIFFERENT: plain has 7 fadd, 7 fmul more; k1 has 7 fmadd more
+== clang++ -std=c++20 -O2 -DPROTO_K1_NO_CONTRACT_PRAGMA
+  axpy    plain:  49 instructions   k1:  54 instructions   DIFFERENT: plain has 1 fmadd, 4 fmla.2d more; k1 has 1 fadd, 4 fadd.2d, 1 fmul, 4 fmul.2d more
+  dot     plain:  53 instructions   k1:  54 instructions   DIFFERENT: plain has 1 fmadd more; k1 has 1 fadd, 1 fmul more
+  horner  plain:  13 instructions   k1:  20 instructions   DIFFERENT: plain has 7 fmadd more; k1 has 7 fadd, 7 fmul more
+== clang++ -std=c++20 -O2
+  axpy    plain:  49 instructions   k1:  49 instructions   identical
+  dot     plain:  53 instructions   k1:  53 instructions   identical
+  horner  plain:  13 instructions   k1:  13 instructions   same instructions
+== clang++ -std=c++20 -O3
+  axpy    plain:  49 instructions   k1:  49 instructions   identical
+  dot     plain:  53 instructions   k1:  53 instructions   identical
+  horner  plain:  13 instructions   k1:  13 instructions   same instructions
+== clang++ -std=c++20 -O3 -ffp-contract=fast
+  axpy    plain:  49 instructions   k1:  49 instructions   identical
+  dot     plain:  53 instructions   k1:  53 instructions   identical
+  horner  plain:  13 instructions   k1:  13 instructions   identical
+== g++-16 -std=c++20 -O2 -ffp-contract=off
+  axpy    plain:  11 instructions   k1:  11 instructions   identical
+  dot     plain:  13 instructions   k1:  11 instructions   DIFFERENT: plain has 1 movi, 1 ret more; k1 has nothing more
+  horner  plain:  10 instructions   k1:  10 instructions   same instructions
+== g++-16 -std=c++20 -O2
+  axpy    plain:  10 instructions   k1:  10 instructions   same instructions
+  dot     plain:  12 instructions   k1:  10 instructions   DIFFERENT: plain has 1 movi, 1 ret more; k1 has nothing more
+  horner  plain:   9 instructions   k1:   9 instructions   same instructions
+== g++-16 -std=c++20 -O3
+  axpy    plain:  40 instructions   k1:  40 instructions   identical
+  dot     plain:  12 instructions   k1:  10 instructions   DIFFERENT: plain has 1 movi, 1 ret more; k1 has nothing more
+  horner  plain:  12 instructions   k1:  12 instructions   same instructions

@@ -1,0 +1,26 @@
+== clang++ -std=c++20 -O2 (Apple M3 Max)
+# add8: 141 TwoSum gates = 846 flops; mul8: 28 TwoProd + 8 products + 213 gates = 1342 flops; 1 call sites of each
+  out of line (noinline)     0.10 s   object     8880 bytes
+  plain inline                0.09 s   object     8880 bytes
+  forced inline               0.09 s   object     8584 bytes
+# add8: 141 TwoSum gates = 846 flops; mul8: 28 TwoProd + 8 products + 213 gates = 1342 flops; 16 call sites of each
+  out of line (noinline)     0.09 s   object     9856 bytes
+  plain inline                0.10 s   object     9856 bytes
+  forced inline               0.55 s   object   128928 bytes
+# add8: 141 TwoSum gates = 846 flops; mul8: 28 TwoProd + 8 products + 213 gates = 1342 flops; 64 call sites of each
+  out of line (noinline)     0.10 s   object    12928 bytes
+  plain inline                0.10 s   object    12928 bytes
+  forced inline               2.93 s   object   514464 bytes
+== g++-16 -std=c++20 -O2 (Apple M3 Max)
+# add8: 141 TwoSum gates = 846 flops; mul8: 28 TwoProd + 8 products + 213 gates = 1342 flops; 1 call sites of each
+  out of line (noinline)     0.29 s   object     9424 bytes
+  plain inline                0.29 s   object     9144 bytes
+  forced inline               0.29 s   object     8888 bytes
+# add8: 141 TwoSum gates = 846 flops; mul8: 28 TwoProd + 8 products + 213 gates = 1342 flops; 16 call sites of each
+  out of line (noinline)     0.30 s   object    10656 bytes
+  plain inline                0.30 s   object    10656 bytes
+  forced inline               2.49 s   object   134352 bytes
+# add8: 141 TwoSum gates = 846 flops; mul8: 28 TwoProd + 8 products + 213 gates = 1342 flops; 64 call sites of each
+  out of line (noinline)     0.35 s   object    14496 bytes
+  plain inline                0.34 s   object    14496 bytes
+  forced inline              11.49 s   object   534256 bytes

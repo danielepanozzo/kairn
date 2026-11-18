@@ -1,0 +1,13 @@
+usage: cl [ option... ] filename... [ /link linkoption... ]
+== cl /std:c++20 /EHsc /O2 /arch:AVX2
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time
+== cl /std:c++20 /EHsc /Od /arch:AVX2
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time
+== cl /std:c++20 /EHsc /O2 /arch:AVX2 /fp:strict
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time
+== cl /std:c++20 /EHsc /O2 /arch:AVX2 /fp:contract
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time

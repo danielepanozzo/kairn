@@ -1,0 +1,33 @@
+== nvcc -std=c++20 -O3  (no --expt-relaxed-constexpr)
+device: NVIDIA GeForce RTX 3080 Ti (compute capability 8.6)
+constexpr (front end)  horner 0x1.25ed097b425edp+0 0x1.2f684bda12f68p-57   two_prod 0x1.1198588df4473p-3 0x1.476595fab5e9cp-58
+device run time        horner 0x1.25ed097b425edp+0 0x1.2f684bda12f68p-57   two_prod 0x1.1198588df4473p-3 0x1.476595fab5e9cp-58
+constexpr inside device code      0x1.25ed097b425edp+0 0x1.2f684bda12f68p-57
+two_prod: constexpr == device: yes
+double-double product, 1048576 cases: device(intrinsics) != host: 0   device(textbook, plain * and +) != host: 0
+float-float product, 1048576 cases: device(intrinsics) != host: 0   device(textbook, plain * and +) != host: 0
+subnormal float  device: two_sum 0x1.85p-140 0x0p+0  two_prod 0x1p-140 0x0p+0  half 0x1.8p-141  2*min 0x1p-148
+subnormal float  host:   two_sum 0x1.85p-140 0x0p+0  two_prod 0x1p-140 0x0p+0  half 0x1.8p-141  2*min 0x1p-148
+directed rounding: 1048576 pairs x 4 operations, disagreements between intrinsics and RN emulation: 0
+== nvcc -std=c++20 -O3 -fmad=false (no --expt-relaxed-constexpr)
+device: NVIDIA GeForce RTX 3080 Ti (compute capability 8.6)
+constexpr (front end)  horner 0x1.25ed097b425edp+0 0x1.2f684bda12f68p-57   two_prod 0x1.1198588df4473p-3 0x1.476595fab5e9cp-58
+device run time        horner 0x1.25ed097b425edp+0 0x1.2f684bda12f68p-57   two_prod 0x1.1198588df4473p-3 0x1.476595fab5e9cp-58
+constexpr inside device code      0x1.25ed097b425edp+0 0x1.2f684bda12f68p-57
+two_prod: constexpr == device: yes
+double-double product, 1048576 cases: device(intrinsics) != host: 0   device(textbook, plain * and +) != host: 0
+float-float product, 1048576 cases: device(intrinsics) != host: 0   device(textbook, plain * and +) != host: 0
+subnormal float  device: two_sum 0x1.85p-140 0x0p+0  two_prod 0x1p-140 0x0p+0  half 0x1.8p-141  2*min 0x1p-148
+subnormal float  host:   two_sum 0x1.85p-140 0x0p+0  two_prod 0x1p-140 0x0p+0  half 0x1.8p-141  2*min 0x1p-148
+directed rounding: 1048576 pairs x 4 operations, disagreements between intrinsics and RN emulation: 0
+== nvcc -std=c++20 -O3 --use_fast_math (no --expt-relaxed-constexpr)
+device: NVIDIA GeForce RTX 3080 Ti (compute capability 8.6)
+constexpr (front end)  horner 0x1.25ed097b425edp+0 0x1.2f684bda12f68p-57   two_prod 0x1.1198588df4473p-3 0x1.476595fab5e9cp-58
+device run time        horner 0x1.25ed097b425edp+0 0x1.2f684bda12f68p-57   two_prod 0x1.1198588df4473p-3 0x1.476595fab5e9cp-58
+constexpr inside device code      0x1.25ed097b425edp+0 0x1.2f684bda12f68p-57
+two_prod: constexpr == device: yes
+double-double product, 1048576 cases: device(intrinsics) != host: 0   device(textbook, plain * and +) != host: 0
+float-float product, 1048576 cases: device(intrinsics) != host: 0   device(textbook, plain * and +) != host: 0
+subnormal float  device: two_sum 0x0p+0 0x0p+0  two_prod 0x0p+0 0x0p+0  half 0x0p+0  2*min 0x0p+0
+subnormal float  host:   two_sum 0x1.85p-140 0x0p+0  two_prod 0x1p-140 0x0p+0  half 0x1.8p-141  2*min 0x1p-148
+directed rounding: 1048576 pairs x 4 operations, disagreements between intrinsics and RN emulation: 0

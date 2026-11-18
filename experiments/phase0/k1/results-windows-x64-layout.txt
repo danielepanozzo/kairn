@@ -1,0 +1,25 @@
+MSVC (Visual Studio 2026 Build Tools), cl /std:c++20 /EHsc /O2 /arch:AVX2
+== K1_LAYOUT=0   (0: T limb[1]; 1: scalar member; 2: std::array<T,1>)
+  axpy    plain:  69 instructions   k1:  31 instructions   DIFFERENT: plain has 1 add, 1 and, 5 cmp, 1 ja, 2 jae, 2 jb, 1 je, 6 lea, 2 mov, 1 npad, 1 sub, 1 test, 4 vaddpd, 1 vbroadcastsd, 4 vmovupd, 1 vmovups, 4 vmulpd, 1 vzeroupper more; k1 has 1 vmovq more
+  dot     plain:  30 instructions   k1:  30 instructions   same instructions
+  horner  plain:  16 instructions   k1:  15 instructions   DIFFERENT: plain has 1 vmovups more; k1 has nothing more
+== K1_LAYOUT=0 /GS-  (0: T limb[1]; 1: scalar member; 2: std::array<T,1>)
+  axpy    plain:  69 instructions   k1:  31 instructions   DIFFERENT: plain has 1 add, 1 and, 5 cmp, 1 ja, 2 jae, 2 jb, 1 je, 6 lea, 2 mov, 1 npad, 1 sub, 1 test, 4 vaddpd, 1 vbroadcastsd, 4 vmovupd, 1 vmovups, 4 vmulpd, 1 vzeroupper more; k1 has 1 vmovq more
+  dot     plain:  30 instructions   k1:  30 instructions   same instructions
+  horner  plain:  16 instructions   k1:  15 instructions   DIFFERENT: plain has 1 vmovups more; k1 has nothing more
+== K1_LAYOUT=1   (0: T limb[1]; 1: scalar member; 2: std::array<T,1>)
+  axpy    plain:  69 instructions   k1:  31 instructions   DIFFERENT: plain has 1 add, 1 and, 5 cmp, 1 ja, 2 jae, 2 jb, 1 je, 6 lea, 2 mov, 1 npad, 1 sub, 1 test, 4 vaddpd, 1 vbroadcastsd, 4 vmovupd, 1 vmovups, 4 vmulpd, 1 vzeroupper more; k1 has 1 vmovq more
+  dot     plain:  30 instructions   k1:  30 instructions   same instructions
+  horner  plain:  16 instructions   k1:  15 instructions   DIFFERENT: plain has 1 vmovups more; k1 has nothing more
+== K1_LAYOUT=1 /GS-  (0: T limb[1]; 1: scalar member; 2: std::array<T,1>)
+  axpy    plain:  69 instructions   k1:  31 instructions   DIFFERENT: plain has 1 add, 1 and, 5 cmp, 1 ja, 2 jae, 2 jb, 1 je, 6 lea, 2 mov, 1 npad, 1 sub, 1 test, 4 vaddpd, 1 vbroadcastsd, 4 vmovupd, 1 vmovups, 4 vmulpd, 1 vzeroupper more; k1 has 1 vmovq more
+  dot     plain:  30 instructions   k1:  30 instructions   same instructions
+  horner  plain:  16 instructions   k1:  15 instructions   DIFFERENT: plain has 1 vmovups more; k1 has nothing more
+== K1_LAYOUT=2   (0: T limb[1]; 1: scalar member; 2: std::array<T,1>)
+  axpy    plain:  69 instructions   k1:  31 instructions   DIFFERENT: plain has 1 add, 1 and, 5 cmp, 1 ja, 2 jae, 2 jb, 1 je, 6 lea, 2 mov, 1 npad, 1 sub, 1 test, 4 vaddpd, 1 vbroadcastsd, 4 vmovupd, 1 vmovups, 4 vmulpd, 1 vzeroupper more; k1 has 1 vmovq more
+  dot     plain:  30 instructions   k1:  30 instructions   same instructions
+  horner  plain:  16 instructions   k1:  15 instructions   DIFFERENT: plain has 1 vmovups more; k1 has nothing more
+== K1_LAYOUT=2 /GS-  (0: T limb[1]; 1: scalar member; 2: std::array<T,1>)
+  axpy    plain:  69 instructions   k1:  31 instructions   DIFFERENT: plain has 1 add, 1 and, 5 cmp, 1 ja, 2 jae, 2 jb, 1 je, 6 lea, 2 mov, 1 npad, 1 sub, 1 test, 4 vaddpd, 1 vbroadcastsd, 4 vmovupd, 1 vmovups, 4 vmulpd, 1 vzeroupper more; k1 has 1 vmovq more
+  dot     plain:  30 instructions   k1:  30 instructions   same instructions
+  horner  plain:  16 instructions   k1:  15 instructions   DIFFERENT: plain has 1 vmovups more; k1 has nothing more

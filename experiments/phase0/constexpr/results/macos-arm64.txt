@@ -1,0 +1,32 @@
+Apple clang version 21.0.0 (clang-2100.4.1.1)
+g++-16 (Homebrew GCC 16.2.0) 16.2.0
+== clang++ -std=c++20 -O2
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time
+== clang++ -std=c++20 -O0
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time
+== clang++ -std=c++20 -O2 -frounding-math
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time
+== clang++ -std=c++20 -O2 -ffp-contract=fast
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time
+== clang++ -std=c++20 -O2 -ffp-contract=fast -frounding-math
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time
+== g++-16 -std=c++20 -O2
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time
+== g++-16 -std=c++20 -O0
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time
+== g++-16 -std=c++20 -O2 -frounding-math
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time
+== g++-16 -std=c++20 -O0 -frounding-math
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time
+== g++-16 -std=c++20 -O2 -ffp-contract=off
+horner k1 constexpr 0x1.0c49ba5e353f8p+0
+error-free transformations: constant evaluation == run time

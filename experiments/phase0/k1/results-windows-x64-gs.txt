@@ -1,0 +1,7 @@
+MSVC (Visual Studio 2026 Build Tools), cl /std:c++20 /EHsc /O2 /arch:AVX2: security-cookie checks in dot_k1
+GS_VARIANT=0        __security_check_cookie calls in dot_k1: 1
+GS_VARIANT=0 /GS-   __security_check_cookie calls in dot_k1: 0
+GS_VARIANT=1        __security_check_cookie calls in dot_k1: 1
+GS_VARIANT=1 /GS-   __security_check_cookie calls in dot_k1: 0
+GS_VARIANT=2        __security_check_cookie calls in dot_k1: 1
+GS_VARIANT=2 /GS-   __security_check_cookie calls in dot_k1: 0

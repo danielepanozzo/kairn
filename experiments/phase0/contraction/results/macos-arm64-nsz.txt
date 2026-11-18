@@ -1,0 +1,34 @@
+== apple-clang arm64 -O2 -ffp-contract=fast -fno-signed-zeros
+  mul_opaque             fused instructions: 5
+  mul_opaqueintrin       fused instructions: 5
+  mul_reference          fused instructions: 3
+  mul_scoped             fused instructions: 5
+  mul_scopeddirect       fused instructions: 5
+  mul_simd               fused instructions: 5
+  mul_simdopaque         fused instructions: 5
+  mul_textbook           fused instructions: 5
+  reference     cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  textbook      cases= 20000  differ_from_reference= 20000  max_rel_err=8958025242652462.000 u^2  not_normalized=     0
+  opaque        cases= 20000  differ_from_reference= 20000  max_rel_err=8958025242652462.000 u^2  not_normalized=     0
+  opaqueintrin  cases= 20000  differ_from_reference= 20000  max_rel_err=8958025242652462.000 u^2  not_normalized=     0
+  simd          cases= 20000  differ_from_reference= 20000  max_rel_err=8958025242652462.000 u^2  not_normalized=     0
+  simdopaque    cases= 20000  differ_from_reference= 20000  max_rel_err=8958025242652462.000 u^2  not_normalized=     0
+  scoped        cases= 20000  differ_from_reference= 20000  max_rel_err=8958025242652462.000 u^2  not_normalized=     0
+  scopeddirect  cases= 20000  differ_from_reference= 20000  max_rel_err=8958025242652462.000 u^2  not_normalized=     0
+== apple-clang arm64 -O2 -fassociative-math -fno-signed-zeros -fno-trapping-math (no fast-math macro)
+  mul_opaque             fused instructions: 3
+  mul_opaqueintrin       fused instructions: 3
+  mul_reference          fused instructions: 3
+  mul_scoped             fused instructions: 3
+  mul_scopeddirect       fused instructions: 3
+  mul_simd               fused instructions: 3
+  mul_simdopaque         fused instructions: 3
+  mul_textbook           fused instructions: 3
+  reference     cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  textbook      cases= 20000  differ_from_reference= 20000  max_rel_err=17361375370160574.000 u^2  not_normalized=     0
+  opaque        cases= 20000  differ_from_reference= 20000  max_rel_err=17361375370160574.000 u^2  not_normalized=     0
+  opaqueintrin  cases= 20000  differ_from_reference= 20000  max_rel_err=17361375370160574.000 u^2  not_normalized=     0
+  simd          cases= 20000  differ_from_reference= 20000  max_rel_err=8938216951229678.000 u^2  not_normalized=     0
+  simdopaque    cases= 20000  differ_from_reference= 20000  max_rel_err=8938216951229678.000 u^2  not_normalized=     0
+  scoped        cases= 20000  differ_from_reference= 20000  max_rel_err=17361375370160574.000 u^2  not_normalized=     0
+  scopeddirect  cases= 20000  differ_from_reference= 20000  max_rel_err=17361375370160574.000 u^2  not_normalized=     0

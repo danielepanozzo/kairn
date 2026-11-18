@@ -1,0 +1,142 @@
+Model name:                              AMD EPYC 7452 32-Core Processor
+g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Ubuntu clang version 18.1.3 (1ubuntu1)
+== gcc-13 x86-64 -O2 -mavx2 -mfma -ffp-contract=off
+  mul_opaque             fused instructions: 5
+  mul_opaqueintrin       fused instructions: 5
+  mul_reference          fused instructions: 3
+  mul_scopeddirect       fused instructions: 3
+  mul_scoped             fused instructions: 3
+  mul_simd               fused instructions: 3
+  mul_simdopaque         fused instructions: 5
+  mul_textbook           fused instructions: 3
+  reference     cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  textbook      cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaque        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaqueintrin  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simd          cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simdopaque    cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scoped        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scopeddirect  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+== gcc-13 x86-64 -O2 -mavx2 -mfma -ffp-contract=fast
+  mul_opaque             fused instructions: 5
+  mul_opaqueintrin       fused instructions: 5
+  mul_reference          fused instructions: 3
+  mul_scopeddirect       fused instructions: 3
+  mul_scoped             fused instructions: 0
+  mul_scoped_inner       fused instructions: 3
+  mul_simd               fused instructions: 3
+  mul_simdopaque         fused instructions: 5
+  mul_textbook           fused instructions: 3
+  reference     cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  textbook      cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaque        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaqueintrin  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simd          cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simdopaque    cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scoped        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scopeddirect  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+== gcc-13 x86-64 -O0 -mavx2 -mfma (default contract=fast)
+  mul_opaque             fused instructions: 0
+  mul_opaqueintrin       fused instructions: 0
+  mul_reference          fused instructions: 0
+  mul_scopeddirect       fused instructions: 0
+  mul_scoped             fused instructions: 0
+  mul_scoped_inner       fused instructions: 0
+  mul_simd               fused instructions: 3
+  mul_simdopaque         fused instructions: 5
+  mul_textbook           fused instructions: 0
+  reference     cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  textbook      cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaque        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaqueintrin  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simd          cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simdopaque    cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scoped        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scopeddirect  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+== gcc-13 x86-64 -O3 -march=native -frounding-math (default contract=fast)
+  mul_opaque             fused instructions: 5
+  mul_opaqueintrin       fused instructions: 5
+  mul_reference          fused instructions: 3
+  mul_scopeddirect       fused instructions: 3
+  mul_scoped             fused instructions: 0
+  mul_scoped_inner       fused instructions: 3
+  mul_simd               fused instructions: 3
+  mul_simdopaque         fused instructions: 5
+  mul_textbook           fused instructions: 3
+  reference     cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  textbook      cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaque        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaqueintrin  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simd          cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simdopaque    cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scoped        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scopeddirect  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+== clang-18 x86-64 -O2 -mavx2 -mfma -ffp-contract=off
+  mul_opaque             fused instructions: 5
+  mul_opaqueintrin       fused instructions: 5
+  mul_reference          fused instructions: 3
+  mul_scopeddirect       fused instructions: 3
+  mul_scoped             fused instructions: 3
+  mul_simd               fused instructions: 3
+  mul_simdopaque         fused instructions: 5
+  mul_textbook           fused instructions: 3
+  reference     cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  textbook      cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaque        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaqueintrin  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simd          cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simdopaque    cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scoped        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scopeddirect  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+== clang-18 x86-64 -O2 -mavx2 -mfma -ffp-contract=on
+  mul_opaque             fused instructions: 5
+  mul_opaqueintrin       fused instructions: 5
+  mul_reference          fused instructions: 3
+  mul_scopeddirect       fused instructions: 3
+  mul_scoped             fused instructions: 3
+  mul_simd               fused instructions: 3
+  mul_simdopaque         fused instructions: 5
+  mul_textbook           fused instructions: 3
+  reference     cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  textbook      cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaque        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaqueintrin  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simd          cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simdopaque    cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scoped        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scopeddirect  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+== clang-18 x86-64 -O2 -mavx2 -mfma -ffp-contract=fast
+  mul_opaque             fused instructions: 5
+  mul_opaqueintrin       fused instructions: 5
+  mul_reference          fused instructions: 3
+  mul_scopeddirect       fused instructions: 3
+  mul_scoped             fused instructions: 3
+  mul_simd               fused instructions: 3
+  mul_simdopaque         fused instructions: 5
+  mul_textbook           fused instructions: 3
+  reference     cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  textbook      cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaque        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaqueintrin  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simd          cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simdopaque    cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scoped        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scopeddirect  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+== clang-18 x86-64 -O3 -march=native -ffp-contract=fast -frounding-math
+  mul_opaque             fused instructions: 5
+  mul_opaqueintrin       fused instructions: 5
+  mul_reference          fused instructions: 3
+  mul_scopeddirect       fused instructions: 3
+  mul_scoped             fused instructions: 3
+  mul_simd               fused instructions: 3
+  mul_simdopaque         fused instructions: 5
+  mul_textbook           fused instructions: 3
+  reference     cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  textbook      cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaque        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  opaqueintrin  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simd          cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  simdopaque    cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scoped        cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0
+  scopeddirect  cases= 20000  differ_from_reference=     0  max_rel_err=   3.093 u^2  not_normalized=     0

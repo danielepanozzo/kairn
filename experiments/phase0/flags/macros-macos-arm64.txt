@@ -1,0 +1,31 @@
+## Apple clang version 21.0.0 (clang-2100.4.1.1), arm64
+(none)                                                        : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-ffast-math                                                   : __ARM_FEATURE_FMA 1;__FAST_MATH__ 1;__FINITE_MATH_ONLY__ 1;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-Ofast                                                        : __ARM_FEATURE_FMA 1;__FAST_MATH__ 1;__FINITE_MATH_ONLY__ 1;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-funsafe-math-optimizations                                   : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-fassociative-math -fno-signed-zeros -fno-trapping-math       : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-fno-signed-zeros                                             : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-freciprocal-math                                             : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-ffinite-math-only                                            : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 1;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-frounding-math                                               : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-ffp-contract=fast                                            : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-ffp-contract=off                                             : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-ffp-model=fast                                               : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-ffp-model=aggressive                                         : __ARM_FEATURE_FMA 1;__FAST_MATH__ 1;__FINITE_MATH_ONLY__ 1;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+-ffp-model=strict                                             : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;
+
+## g++-16 (Homebrew GCC 16.2.0) 16.2.0, arm64
+(none)                                                        : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FLT_EVAL_METHOD__ 0;__FP_FAST_FMA 1;
+-ffast-math                                                   : __ARM_FEATURE_FMA 1;__ASSOCIATIVE_MATH__ 1;__FAST_MATH__ 1;__FINITE_MATH_ONLY__ 1;__FLT_EVAL_METHOD__ 0;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;__NO_SIGNED_ZEROS__ 1;__NO_TRAPPING_MATH__ 1;__RECIPROCAL_MATH__ 1;
+-Ofast                                                        : __ARM_FEATURE_FMA 1;__ASSOCIATIVE_MATH__ 1;__FAST_MATH__ 1;__FINITE_MATH_ONLY__ 1;__FLT_EVAL_METHOD__ 0;__FP_FAST_FMA 1;__NO_MATH_ERRNO__ 1;__NO_SIGNED_ZEROS__ 1;__NO_TRAPPING_MATH__ 1;__RECIPROCAL_MATH__ 1;
+-funsafe-math-optimizations                                   : __ARM_FEATURE_FMA 1;__ASSOCIATIVE_MATH__ 1;__FINITE_MATH_ONLY__ 0;__FLT_EVAL_METHOD__ 0;__FP_FAST_FMA 1;__NO_SIGNED_ZEROS__ 1;__NO_TRAPPING_MATH__ 1;__RECIPROCAL_MATH__ 1;
+-fassociative-math -fno-signed-zeros -fno-trapping-math       : __ARM_FEATURE_FMA 1;__ASSOCIATIVE_MATH__ 1;__FINITE_MATH_ONLY__ 0;__FLT_EVAL_METHOD__ 0;__FP_FAST_FMA 1;__NO_SIGNED_ZEROS__ 1;__NO_TRAPPING_MATH__ 1;
+-fno-signed-zeros                                             : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FLT_EVAL_METHOD__ 0;__FP_FAST_FMA 1;__NO_SIGNED_ZEROS__ 1;
+-freciprocal-math                                             : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FLT_EVAL_METHOD__ 0;__FP_FAST_FMA 1;__RECIPROCAL_MATH__ 1;
+-ffinite-math-only                                            : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 1;__FLT_EVAL_METHOD__ 0;__FP_FAST_FMA 1;
+-frounding-math                                               : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FLT_EVAL_METHOD__ 0;__FP_FAST_FMA 1;__ROUNDING_MATH__ 1;
+-ffp-contract=fast                                            : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FLT_EVAL_METHOD__ 0;__FP_FAST_FMA 1;
+-ffp-contract=off                                             : __ARM_FEATURE_FMA 1;__FINITE_MATH_ONLY__ 0;__FLT_EVAL_METHOD__ 0;__FP_FAST_FMA 1;
+-ffp-model=fast                                               : (flag not accepted)
+-ffp-model=aggressive                                         : (flag not accepted)
+-ffp-model=strict                                             : (flag not accepted)
