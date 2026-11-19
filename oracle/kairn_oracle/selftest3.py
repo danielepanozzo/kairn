@@ -803,6 +803,13 @@ def precision_one(ctx):
     except F.FormatError:
         pass
     cl = claims3(ctx)
+    # Below a kernel's minimum precision its bound need not exist (3/(1 - 4u) is negative at
+    # p = 1): the line is out of scope, and the kernel stays readable for the other formats.
+    s = judge(["add_2_2 fp:1:-3:2 0x1p+0 0x0p+0 0x1p+0 0x0p+0 -> 0x1p+1 0x0p+0",
+               "add_2_2 binary64 0x1p+0 0x0p+0 0x1p+0 0x0p+0 -> 0x1p+1 0x0p+0"], cl)
+    t = totals(s)
+    expect(t["out_of_scope"] == 1 and t["passed"] == 1 and not s.claims_errors,
+           "a format below min_precision set the kernel aside: %r %s" % (t, s.claims_errors))
     n = 0
     for k in PRECISION_ONE:
         expect(cl.get(k).min_precision == 1, "%s: min_precision %s" % (k, cl.get(k).min_precision))
@@ -1030,6 +1037,11 @@ def judge_wave3(ctx):
                    "%s: %s %s, want a failure of %s" % (line, got, c, want))
             continue
         expect(got == want, "%s: %s, want %s" % (line, got, want))
+    # Where represents pins the result, the suspicious heuristic says nothing more.
+    s = judge(["neg_2 binary64 inf 0x0p+0 -> nan nan", "neg_2 binary64 0x1p+0 0x0p+0 -> inf 0x0p+0"],
+              cl)
+    expect(totals(s)["failed"] == 2 and totals(s)["suspicious"] == 0,
+           "neg_2 pinned by represents: %r" % totals(s))
     # Statistics over the lines that pass, worked out by hand.
     s = judge([ln for ln, w in HAND3 if w == "passed"], cl)
     c = counts(s, "add_2_2_full")

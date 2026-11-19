@@ -168,6 +168,11 @@ MUTANTS = {
     "claims: finite_when names not checked": (
         "claims.py", '            tree = kernel.input_expression(cond["abs_le"], w.split(": ", 1)[1])',
         '            tree = X.parse(cond["abs_le"])'),
+    "bounds evaluated below min_precision": (
+        "check.py", '            if e.kind == "error" and not self.in_scope:', "            if False:"),
+    "represents: pinned outputs still shown as suspicious": (
+        "extended.py", "    pinned = all(i in ep.pinned for lo, hi in c[\"ranges\"] for i in range(lo, hi))",
+        "    pinned = False"),
     "claims: lead not compared with the value": (
         "claims.py", "        if (t[0] != LEADS[self.lead] or", "        if False and (t[0] != LEADS[self.lead] or"),
 }
