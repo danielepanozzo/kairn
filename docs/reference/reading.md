@@ -126,8 +126,9 @@ guarantee is called a target, an operation that calls it compiles only with the 
 ([What holds today](../getting-started/guarantees.md#proved-and-unverified)).
 
 The statements about infinite and NaN operands are read in Flocq's model of IEEE 754, with signed
-zeros, infinities, NaN and overflow. The generator does not print them yet; the
-[index](index.md) says how many `gen/claims.json` marks proved. Proofs against statements written
+zeros, infinities, NaN and overflow; the generator prints them into
+`proofs/gen/IeeeStatements.v`, and the [index](index.md) says how many `gen/claims.json` marks
+proved. Proofs against statements written
 by hand are described on the [Proofs](../proofs/index.md#what-is-proved-and-in-which-model) page;
 a reference page reports only the status of the claims.
 

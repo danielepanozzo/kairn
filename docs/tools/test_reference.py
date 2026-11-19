@@ -247,11 +247,28 @@ class Table(unittest.TestCase):
 COPIED = ["gen/claims.json", "gen/kernels", "include/kairn/gen/bounds.hpp", "results",
           "docs/tools/reference_operations.py", "docs/developer/design/phase0/references.md",
           "docs/developer/results", "proofs/theories", "proofs/gen/Statements.v", "proofs/gen/Model.v",
+          "proofs/gen/IeeeModel.v",
           "mkdocs.yml",
           "docs/reference"]
 
 
+IEEE_ONLY = ("make_2", "make_2_limbs", "ball_make_1", "ball_make_2")
+
+
+def with_ieee_only(data):
+    """The claims with "ieee_only": true on the kernels without a real-model statement (the *_full
+    kernels and the constructors), as the generator is to write them; unchanged once it does."""
+    if not any("ieee_only" in k for k in data["kernels"]):
+        for k in data["kernels"]:
+            if k["name"].endswith("_full") or k["name"] in IEEE_ONLY:
+                k["ieee_only"] = True
+    return data
+
+
 class Copy:
+    """A copy of the inputs of reference.py in a temporary directory, with ieee_only in its claims,
+    and the pages written from them, so that every test starts from a fresh reference."""
+
     def __init__(self):
         self.root = tempfile.mkdtemp(prefix="kairn-reference-")
         for rel in COPIED:
@@ -261,6 +278,8 @@ class Copy:
                 shutil.copytree(src, dst)
             else:
                 shutil.copy(src, dst)
+        self.set_claims(with_ieee_only(self.claims()))
+        reference.write(self.root)
 
     def claims(self):
         with open(os.path.join(self.root, "gen", "claims.json"), encoding="utf-8") as f:
@@ -406,8 +425,58 @@ class Tool(unittest.TestCase):
         self.assertIn("It follows that in every case $Z$ contains $x a$", page)
 
     def test_constructors(self):
-        self.assertIn("$a = \\pm\\infty$ gives $(\\pm\\infty, 0)$", self.page("make_2"))
+        self.assertIn("when $a = \\pm\\infty$, $x = (\\pm\\infty, 0)$", self.page("make_2"))
         self.assertIn("is a NaN or negative, $-\\infty$ included", self.page("ball_make_2"))
+
+    # ieee_only, the claims' word on whether a kernel has a statement on finite operands.
+    def test_ieee_only_outside_the_extended_domain(self):
+        self.change("add_2_2", lambda k: k.update(ieee_only=True))
+        self.fails("add_2_2", "ieee_only", "not extended")
+
+    def test_ieee_only_with_another_value(self):
+        self.change("add_2_2_full", lambda k: k.update(ieee_only=False))
+        self.fails("add_2_2_full", "ieee_only")
+
+    def test_ieee_only_kinds_on_a_kernel_with_a_finite_statement(self):
+        for name, kind in (("add_2_2_full", "extends"), ("ball_make_2", "makes_ball"), ("make_2", "represents")):
+            self.change(name, lambda k: k.pop("ieee_only"))
+            self.fails(name, kind, "not ieee_only")
+            self.change(name, lambda k: k.update(ieee_only=True))
+
+    def test_ieee_only_with_two_statuses(self):
+        self.change("ball_make_1", lambda k: k.update(status="proved"))
+        self.fails("ball_make_1", "ieee_only", "ieee_status")
+
+    def test_ieee_only_decides_the_reading(self):
+        # A kernel with a ball requirement and an encloses claim, and a real-model statement:
+        # ball_neg_k, which the claims do not mark ieee_only.
+        page = self.page("ball_neg_1")
+        finite, extended = page.split("## Infinite and NaN operands")
+        self.assertIn("proved for finite operands", page)
+        self.assertIn("- $c_x$ is a number of `T`.\n- $r_x \\ge 0$.", finite)
+        self.assertIn("is a canonical ball: a finite ball", extended)
+        self.assertIn("**B2.** $Z$ is empty exactly when $X$ is empty", extended)
+        self.assertIn("$c_x$ is normalized", self.page("ball_neg_2").split("## Infinite")[0])
+        # The same claims with ieee_only: one statement, in the IEEE model, and its status.
+        self.change("ball_neg_1", lambda k: k.update(ieee_only=True, status="unverified"))
+        page = self.page("ball_neg_1")
+        self.assertNotIn("## Infinite and NaN operands", page)
+        self.assertIn("finite, infinite or NaN", page)
+
+    def test_represents_next_to_other_claims(self):
+        page = self.page("neg_2")
+        finite, extended = page.split("## Infinite and NaN operands")
+        self.assertNotIn("canonical", finite.split("## Status")[0].split("## Guarantees")[1])
+        self.assertIn("$z$ is canonical and is $-x$ exactly: when $-x$ is finite", extended)
+        self.assertIn("when $-x = \\pm\\infty$, $z = (\\pm\\infty, 0)$", extended)
+        self.assertNotIn("Which canonical value comes out", page)
+        self.assertNotIn("These runs judged other claims", page)
+
+    def test_represents_without_the_value_is_said_to_be_only_canonical(self):
+        self.change("abs_2", lambda k: k.update(ensures=[e for e in k["ensures"] if e["kind"] != "represents"]))
+        page = self.page("abs_2")
+        self.assertIn("- $z$ is canonical.", page)
+        self.assertIn("Which canonical value comes out", page)
 
     def test_finite_kernel_with_extended_statement(self):
         page = self.page("to_up_2")
@@ -466,7 +535,7 @@ class Tool(unittest.TestCase):
         data = self.copy.claims()
         for k in data["kernels"]:
             for e in k["ensures"]:
-                if e["kind"] == "extends" and not e["finite_when"]:
+                if e["kind"] == "extends":
                     e["finite_when"] = [{"abs_le": k["value"], "exp": -1}]
         self.copy.set_claims(data)
         files = reference.plan(self.copy.root)

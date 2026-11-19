@@ -6,6 +6,9 @@ the rest of the repository produces. Python 3 standard library only.
                                              and the Reference section of the nav in mkdocs.yml
   python3 docs/tools/reference.py --check   change nothing; exit 1 if a page or the nav differs
                                              from what would be written, or a stray page is there
+  python3 docs/tools/reference.py --claims PATH
+                                             render every page from the claims in PATH, in memory,
+                                             and write nothing (a trial of claims not committed)
 
 Inputs, and nothing else:
 
@@ -49,7 +52,7 @@ FORMATS = [("binary64", "double", 53, 971), ("binary32", "float", 24, 104)]
 
 KNOWN_KERNEL_FIELDS = {"name", "inputs", "outputs", "value", "requires", "ensures", "min_precision",
                        "status", "theorem", "source", "flops", "instances", "domain", "ieee_status",
-                       "ieee_theorem"}
+                       "ieee_theorem", "ieee_only"}
 KNOWN_GROUP_FIELDS = {"name", "limbs", "type"}
 KNOWN_GROUP_TYPES = {"mask"}
 KNOWN_DOMAINS = {"finite", "extended"}
@@ -83,9 +86,9 @@ DOMAIN_REQUIRES = {
     "finite": {"normalized", "abs_ge", "nonneg", "power_of_two"},
     "extended": {"canonical", "ball", "nonneg", "power_of_two"},
 }
-# The kinds of an extended kernel that have no reading on finite operands alone: such a kernel
-# (a full kernel, a constructor) has only the statement in the IEEE model.
-EXTENDED_ONLY_KINDS = {"extends", "represents", "makes_ball"}
+# The kinds that exist only for a kernel without a statement on finite operands (a full kernel, a
+# constructor), which the claims mark "ieee_only": true; represents too, when it is the only entry.
+IEEE_ONLY_KINDS = {"extends", "makes_ball"}
 
 # The one sentence every page with an UNVERIFIED statement about infinite and NaN operands carries,
 # word for word: gen/claims.json is the only source of a status here.
@@ -244,11 +247,12 @@ def parenthesized(node):
 
 # --- The data -------------------------------------------------------------------------------------
 
-def load_claims(root):
-    path = os.path.join(root, "gen", "claims.json")
+def load_claims(root, path=None):
+    """The kernels of gen/claims.json, or of another claims file (--claims)."""
+    path = path or os.path.join(root, "gen", "claims.json")
     data = json.loads(read(path))
     if data.get("schema") != 1:
-        fail("gen/claims.json has schema %r; this script reads schema 1" % data.get("schema"))
+        fail("%s has schema %r; this script reads schema 1" % (path, data.get("schema")))
     return data["kernels"]
 
 
@@ -417,13 +421,26 @@ class Kernel:
                 parse(c["abs_le"], "%s, finite_when" % where, set(self.inputs))
             if kind != "makes_ball" and self.value is None:
                 fail("%s: a %s claim needs a value, and the kernel has none" % (where, kind))
-        kinds = {e["kind"] for e in entry["ensures"]}
-        # A statement on finite operands alone exists unless a kind or a requirement is of the
-        # extended domain only (a full kernel, a full Ball kernel, a constructor).
-        self.finite_reading = not (kinds & EXTENDED_ONLY_KINDS) and not any(r == "ball" for r, _ in self.requires)
-        if self.extended and not self.finite_reading and entry["status"] != entry["ieee_status"]:
-            fail("%s: a kernel with only an IEEE-model statement has the status %r and the ieee_status %r, "
-                 "which architecture.md says are one" % (where, entry["status"], entry["ieee_status"]))
+        # Whether the kernel has a statement on finite operands (the real model) is what the claims
+        # say with ieee_only, and nothing else (architecture.md, "Claims of the non-finite layer").
+        if "ieee_only" in entry and entry["ieee_only"] is not True:
+            fail("%s: ieee_only is %r; the claims give it as true or leave it out" % (where, entry["ieee_only"]))
+        self.ieee_only = entry.get("ieee_only", False)
+        if self.ieee_only and not self.extended:
+            fail("%s: ieee_only is true, but the domain is %r, not extended" % (where, self.domain))
+        if self.ieee_only and entry["status"] != entry["ieee_status"]:
+            fail("%s: a kernel with only an IEEE-model statement (ieee_only) has the status %r and the "
+                 "ieee_status %r, which architecture.md says are one" % (where, entry["status"], entry["ieee_status"]))
+        kinds = [e["kind"] for e in entry["ensures"]]
+        only_ieee = [k for k in kinds if k in IEEE_ONLY_KINDS] + (["represents"] if kinds == ["represents"] else [])
+        if only_ieee and not self.ieee_only:
+            fail("%s: the claim kind %s exists only for a kernel without a statement on finite operands, and the "
+                 "kernel is not ieee_only" % (where, only_ieee[0]))
+        self.finite_reading = not self.ieee_only
+        # The entries of the statement on finite operands: represents adds nothing there to the
+        # others (an exact error and normalized), and says which canonical value comes out in the
+        # extended domain.
+        self.finite_entries = [e for e in entry["ensures"] if e["kind"] != "represents"] if self.finite_reading else []
         self.errors = [e for e in entry["ensures"] if e["kind"] == "error"]
         for fmt, _, _, _ in FORMATS:
             if len(entry["instances"].get(fmt, [])) != len(self.errors):
@@ -479,17 +496,22 @@ class Kernel:
         return ("$%s$ is canonical: finite and normalized, or $(\\pm\\infty, \\pm 0)$, or "
                 "$(\\mathrm{NaN}, \\mathrm{NaN})$" % name_tex(x))
 
-    # Requirements, in each reading.
+    # Requirements, in each reading. On finite operands a requirement may say several things.
     def finite_requirement(self, kind, args):
         if kind in ("normalized", "canonical"):       # canonical is normalized on finite operands
-            return self.normalized_text(args[0])
+            return [self.normalized_text(args[0])]
+        if kind == "ball":                            # a finite ball: its center and its radius
+            c, r = args
+            center = (self.normalized_text(c) if len(self.limbs(c)) == 2
+                      else "$%s$ is a number of `T`" % name_tex(c))
+            return [center, "$%s \\ge 0$" % name_tex(r)]
         if kind == "abs_ge":
-            return "$\\lvert %s\\rvert \\ge \\lvert %s\\rvert$" % (name_tex(args[0]), name_tex(args[1]))
+            return ["$\\lvert %s\\rvert \\ge \\lvert %s\\rvert$" % (name_tex(args[0]), name_tex(args[1]))]
         if kind == "nonneg":
-            return "$%s \\ge 0$" % name_tex(args[0])
+            return ["$%s \\ge 0$" % name_tex(args[0])]
         if kind == "power_of_two":
             c = name_tex(args[0])
-            return "$%s$ is a power of two: $%s = 2^n$ for an integer $n$" % (c, c)
+            return ["$%s$ is a power of two: $%s = 2^n$ for an integer $n$" % (c, c)]
         fail("kernel %s: the requirement %s has no reading on finite operands" % (self.name, kind))
 
     def extended_requirement(self, kind, args):
@@ -627,12 +649,13 @@ class Kernel:
         return "%s %s %s" % (a, KNOWN_RELS[e["rel"]], b)
 
     def finite_short(self):
-        parts = [self.finite_bullet(e, short=True) for e in self.entry["ensures"]
+        entries = self.finite_entries
+        parts = [self.finite_bullet(e, short=True) for e in entries
                  if e["kind"] != "normalized" and not (e["kind"] == "error" and e["when"])]
-        normalized = [e for e in self.entry["ensures"] if e["kind"] == "normalized"]
+        normalized = [e for e in entries if e["kind"] == "normalized"]
         if normalized and parts:
             parts[-1] += ", normalized"
-        return "; ".join(parts) or "; ".join(self.finite_bullet(e, short=True) for e in self.entry["ensures"])
+        return "; ".join(parts) or "; ".join(self.finite_bullet(e, short=True) for e in entries)
 
     def calls(self, known):
         """The kernels its listing calls, in order."""
@@ -878,7 +901,7 @@ NOT_CALLED = "not yet called by the public headers"
 
 
 class Site:
-    def __init__(self, root):
+    def __init__(self, root, claims=None):
         self.root = root
         ops = load_operations(root)
         self.ops = ops
@@ -887,9 +910,15 @@ class Site:
         self.brute = load_brute(root)
         self.bounds = load_bounds(root)
         self.statements = load_statements(root)
-        self.model = set(re.findall(r"^Definition (\w+) ", read(os.path.join(root, "proofs", "gen", "Model.v")), re.M))
+        # The generated formal models (the real one, and the IEEE one where it exists) and the
+        # kernels each defines.
+        self.models = []
+        for f in ("Model.v", "IeeeModel.v"):
+            path = os.path.join(root, "proofs", "gen", f)
+            if os.path.exists(path):
+                self.models.append((f, set(re.findall(r"^Definition (\w+) ", read(path), re.M))))
         self.kernels = {}
-        entries = load_claims(root)
+        entries = load_claims(root, claims)
         self.all_names = {e["name"] for e in entries}
         for entry in entries:
             name = entry["name"]
@@ -1000,7 +1029,7 @@ class Site:
         if k.finite_reading:
             w("When the requirements hold and no operation of the kernel overflows:")
             w("")
-            for x in e["ensures"]:
+            for x in k.finite_entries:
                 w("- " + k.finite_bullet(x) + ".")
             w("")
             if any(k.bound_tex(x) is not None for x in k.errors):
@@ -1050,13 +1079,14 @@ class Site:
         # Listing.
         w("## Listing")
         w("")
-        made = "the C++ and the formal model (`proofs/gen/Model.v`) are" if name in self.model else "the C++ is"
+        models = ["`proofs/gen/%s`" % f for f, names in self.models if name in names]
+        made = ("the C++ and the formal model%s (%s) are" % ("s" if len(models) > 1 else "", ", ".join(models))
+                if models else "the C++ is")
         w("From [`gen/kernels/%s.kernel`](%s/blob/main/gen/kernels/%s.kernel), the description %s generated "
           "from.%s Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is "
           "$\\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend "
           "([the kernel IR](../developer/architecture.md#the-kernel-ir))." % (
-              name, REPO_URL, name, made,
-              "" if name in self.model else " The generator prints no formal model of it yet."))
+              name, REPO_URL, name, made, "" if models else " The generator prints no formal model of it yet."))
         calls = k.calls(self.all_names)
         if calls:
             w("It calls %s." % ", ".join(self.link(c) for c in calls))
@@ -1121,7 +1151,7 @@ class Site:
 
     def finite_requirements(self, k):
         return ["Every limb of every operand is a finite number of `T`"] + [
-            k.finite_requirement(kind, args) for kind, args in k.requires]
+            line for kind, args in k.requires for line in k.finite_requirement(kind, args)]
 
     def extended_requirements(self, k):
         """In the order of the inputs: each requirement where its first input is, and each one-limb
@@ -1139,20 +1169,27 @@ class Site:
         kinds = [x["kind"] for x in e["ensures"]]
         lines = []
         exact_kinds = [x for x in e["ensures"] if x["kind"] in ("normalized", "error")]
+        represents = [x for x in e["ensures"] if x["kind"] == "represents"]
+        # Which value comes out, for every canonical operand, when the claims say it (represents);
+        # otherwise only that it is canonical. Then the statement on finite operands, which holds
+        # when everything is finite.
+        for x in represents:
+            lines.extend(self.extended_represents(k, x))
         if exact_kinds:
             outs = []
             for x in exact_kinds:
                 if x["of"] not in outs:
                     outs.append(x["of"])
-            lines.append("$%s$ %s canonical." % ("$, $".join(name_tex(o) for o in outs),
-                                                  "is" if len(outs) == 1 else "are"))
+            if not represents:
+                lines.append("$%s$ %s canonical." % ("$, $".join(name_tex(o) for o in outs),
+                                                      "is" if len(outs) == 1 else "are"))
             lines.append("When every operand and %s are finite, the statement on finite operands holds:" % (
                 " and ".join("$%s$" % name_tex(o) for o in outs)))
             for x in exact_kinds:
                 lines.append("    - " + k.finite_bullet(x) + ".")
         for x in e["ensures"]:
             kind = x["kind"]
-            if kind in ("normalized", "error"):
+            if kind in ("normalized", "error", "represents"):
                 continue
             if kind == "predicate":
                 lines.append("$%s$ is true exactly when $%s$ holds between the two values as extended real "
@@ -1166,8 +1203,6 @@ class Site:
                 lines.extend(self.extended_extends(k, x))
             elif kind == "encloses":
                 lines.extend(self.extended_encloses(k, x))
-            elif kind == "represents":
-                lines.extend(self.extended_represents(k, x))
             elif kind == "makes_ball":
                 lines.extend(self.extended_makes_ball(k, x))
             else:
@@ -1288,9 +1323,10 @@ class Site:
         k.is_two_limbs(o, "represents(%s)" % o)
         v = tex(k.value)
         o0, o1 = (name_tex(l) for l in k.limbs(o))
-        return ["$%s$ is canonical and is $%s$ exactly: a finite $%s$ gives a finite normalized $%s$ with "
-                "$%s + %s = %s$; $%s = \\pm\\infty$ gives $(\\pm\\infty, 0)$; a NaN gives $(\\mathrm{NaN}, "
-                "\\mathrm{NaN})$." % (name_tex(o), v, v, name_tex(o), o0, o1, v, v)]
+        return ["$%s$ is canonical and is $%s$ exactly: when $%s$ is finite, $%s$ is finite and normalized "
+                "with $%s + %s = %s$; when $%s = \\pm\\infty$, $%s = (\\pm\\infty, 0)$; when $%s$ is a NaN, "
+                "$%s = (\\mathrm{NaN}, \\mathrm{NaN})$." % (
+                    name_tex(o), v, v, name_tex(o), o0, o1, v, v, name_tex(o), v, name_tex(o))]
 
     def extended_makes_ball(self, k, x):
         frm = x["from"]
@@ -1305,7 +1341,7 @@ class Site:
                 "Otherwise $Z$ is the ball of center $%s$ and radius $%s$, exactly." % (c, r)]
 
     def computes(self, k):
-        e = k.entry
+        e = dict(k.entry, ensures=k.finite_entries) if k.finite_reading else k.entry
         kinds = [x["kind"] for x in e["ensures"]]
         v = tex(k.value) if k.value is not None else None
         if "extends" in kinds:
@@ -1548,11 +1584,13 @@ class Site:
         if k.extended:
             lines.append("Anything for operands that do not satisfy the requirements%s." % (
                 " of the statement on infinite and NaN operands" if k.finite_reading else ""))
-            if any(x["kind"] in ("normalized", "error") for x in k.entry["ensures"]):
+            kinds = [x["kind"] for x in k.entry["ensures"]]
+            if any(x in ("normalized", "error") for x in kinds) and "represents" not in kinds:
                 lines.append("Which canonical value comes out when an operand is not finite: the claims say only "
                              "that it is canonical.")
             lines.append("The sign of a zero limb, and which NaN a NaN result is: the claims compare neither.")
-        if any(r in ("normalized", "canonical") for r, _ in k.requires) and k.finite_reading:
+        if k.finite_reading and any(r in ("normalized", "canonical") or (r == "ball" and len(k.limbs(a[0])) == 2)
+                                    for r, a in k.requires):
             lines.append("Anything about an operand that is not normalized, which only limbs given by the program "
                          "can make: `from_limbs` in a build without checks, `from_limbs_unchecked`, or `limb[]` "
                          "written directly.")
@@ -1583,7 +1621,9 @@ class Site:
             w("They judged the statement on finite operands; the stored summaries hold no measurement of the "
               "statement on infinite and NaN operands.")
         w("")
-        current = [k.label(x) for x in k.entry["ensures"]]
+        # The runs judged the statement on finite operands where there is one: its entries.
+        judged = k.finite_entries if k.finite_reading else k.entry["ensures"]
+        current = [k.label(x) for x in judged]
         rows = b["rows"]
         judged_labels = next((r["entries"] for r in rows if r["entries"]), None)
         if judged_labels is not None and [x["label"] for x in judged_labels] != current:
@@ -1592,7 +1632,7 @@ class Site:
                   "; ".join("`%s`" % x["label"] for x in judged_labels), "; ".join("`%s`" % c for c in current)))
             w("")
         cols = []
-        for j, x in enumerate(k.entry["ensures"]):
+        for j, x in enumerate(judged):
             kind = x["kind"]
             if kind == "error":
                 exact = k.bound_tex(x) is None
@@ -1777,9 +1817,9 @@ def with_nav(mkdocs_text, nav_lines):
     return "\n".join(lines[:begin] + nav_lines + lines[end + 1:])
 
 
-def plan(root):
+def plan(root, claims=None):
     """{relative path: content} of every file the script owns, mkdocs.yml included."""
-    site = Site(root)
+    site = Site(root, claims)
     files = site.files()
     mk = os.path.join(root, "mkdocs.yml")
     files["mkdocs.yml"] = with_nav(read(mk), site.nav())
@@ -1795,9 +1835,9 @@ def stray(root, files):
                   if f.endswith(".md") and f not in owned and f not in HAND_WRITTEN)
 
 
-def check(root):
+def check(root, claims=None):
     """The differences between the committed files and what would be written, as messages."""
-    files = plan(root)
+    files = plan(root, claims)
     problems = []
     for rel, text in sorted(files.items()):
         path = in_root(root, rel)
@@ -1825,10 +1865,17 @@ def write(root):
 def main(argv):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--check", action="store_true", help="change nothing; fail if a page or the nav is stale")
+    ap.add_argument("--claims", metavar="PATH",
+                    help="read the claims from PATH instead of gen/claims.json, render every page in memory "
+                         "and write nothing (with --check, compare with the committed pages instead)")
     a = ap.parse_args(argv)
     try:
+        if a.claims and not a.check:
+            files = plan(ROOT, a.claims)
+            print("reference.py: rendered %d files from %s; nothing written" % (len(files), a.claims))
+            return 0
         if a.check:
-            problems = check(ROOT)
+            problems = check(ROOT, a.claims)
             for p in problems:
                 print("reference.py: %s" % p)
             if problems:
