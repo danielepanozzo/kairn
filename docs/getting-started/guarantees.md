@@ -1,16 +1,20 @@
 # What holds today
 
 Kairn's public headers cover `Expansion<T, 1>`, `Expansion<T, 2>` and `Ball<T, 1>`, `Ball<T, 2>`
-for `T` = `float` and `double`. This page says, for each operation, what is proved, and what is
-not written yet. It describes the repository as `gen/claims.json` stands in this version; the
-compiler enforces the current status on its own (below), so the code cannot fall behind it. The
-design is in the [Phase 0 report](../developer/design/phase0/index.md) and the
+for `T` = `float` and `double`. This page says, for each operation, what is proved, what the
+library returns at overflow and for infinite and NaN values, and what is not proved yet. It
+describes the repository as `gen/claims.json` stands in this version; the compiler enforces the
+current status on its own (below), so the code cannot fall behind it. The design is in the
+[Phase 0 report](../developer/design/phase0/index.md) and the
 [Milestone 1 statements](../developer/design/milestone1.md).
 
 Notation, from [Numbers](../developer/design/phase0/numbers.md#notation): $u = 2^{-p}$ is the unit
-roundoff of a limb ($2^{-53}$ for `double`, $2^{-24}$ for `float`) and $\eta$ its smallest
-subnormal number ($2^{-1074}$, $2^{-149}$). A k-number is *normalized* when each limb is the sum
-of itself and the next one rounded to nearest; every operation requires normalized operands.
+roundoff of a limb ($2^{-53}$ for `double`, $2^{-24}$ for `float`), $\eta$ its smallest
+subnormal number ($2^{-1074}$, $2^{-149}$), and $2^{e_{\max}}$ its overflow threshold ($2^{1024}$,
+$2^{128}$). A two-limb number is *normalized* when its leading limb is the sum of the two rounded
+to nearest, and *canonical* when it is finite and normalized, or $(\pm\infty, 0)$, or
+$(\mathrm{NaN}, \mathrm{NaN})$. Every constructor and operation returns canonical numbers and
+requires canonical operands; a one-limb number is any value of `T`.
 
 ## Proved, and UNVERIFIED
 
@@ -22,12 +26,20 @@ the audit finds no axiom beyond the four allowed
 
 An UNVERIFIED operation compiles only when one of its operands carries the marker
 `kairn::unverified(...)`: `kairn::unverified(x) - y`, `kairn::unverified(x) < y`,
-`kairn::to_down(kairn::unverified(x))`, `x -= kairn::unverified(y)`. The marker applies to the one
-operation it is an operand of, and the result is an ordinary value, so each unproved step of a
-computation is visible in the source. It may be put on a `float` or `double` operand too (it
-converts back to that type), so that code generic over `T` and the k-numbers can be written once,
-and it is accepted on proved operations as well, so that code written with it keeps compiling when
-a proof lands. A marked left operand of `+=` does not compile: it would modify a copy.
+`kairn::to_down(kairn::unverified(x))`, `x -= kairn::unverified(y)`,
+`kairn::Expansion<double, 2>(kairn::unverified(a))`. The marker applies to the one operation it is
+an operand of, and the result is an ordinary value, so each unproved step of a computation is
+visible in the source. It may be put on a `float` or `double` operand too (it converts back to that
+type), so that code generic over `T` and the k-numbers can be written once, and it is accepted on
+proved operations as well, so that code written with it keeps compiling when a proof lands. A
+marked left operand of `+=` does not compile: it would modify a copy. `from_limbs` has no marked
+form, since its operand is a pointer.
+
+Each operation is gated on the kernel it really calls, constructors and the narrowing to one limb
+included, and no operation can compile through a conversion to another kernel: `x + a` with a
+limb `a` is the form of `add_2_1_full`, never `x + Expansion(a)` with `add_2_2_full`, and a ball
+times a `T` is the scaling, never a product with a point ball. The tests compile each such case
+against a copy of the headers in which only that kernel is UNVERIFIED (`api.reject.*`).
 
 Which kernels are proved is read from `include/kairn/gen/bounds.hpp`, which the generator writes
 from `gen/claims.json`. When a proof is checked and the generator is rerun, the operation compiles
@@ -43,63 +55,113 @@ root) will ship before their proofs.
 
 Each kernel has a page in the [reference](../reference/index.md), generated from
 `gen/claims.json`: its statement, the theorem and file that prove it, its constants for `float`
-and `double`, and what the brute-force runs measured. In short, for normalized operands $x$, $y$
-and a limb $a$, with $z$ the result. "Exact" rows have no kernel:
-they are IEEE 754 operations on one limb, or read limbs, and need no proof of Kairn's. The second
-column is the claim of the kernel, proved in the *real model*, where no operation overflows. The
-third says what is proved in Flocq's model of IEEE 754, where operations overflow
-([Milestone 1](../developer/design/milestone1.md#what-is-proved-about-an-arithmetic-kernel)).
+and `double`, and what the brute-force runs measured. In short, for canonical operands $x$, $y$
+and a limb $a$, with $z$ the result. The second column is the claim of the kernel's finite core,
+proved in the *real model*, where no operation overflows; it is what a result satisfies whenever
+it is finite. The third column is proved in Flocq's model of IEEE 754, where operations overflow
+and values may be infinite or NaN ([below](#overflow-and-non-finite-values)).
 
-| Operation (kernel) | Claim, proved in the real model | In the IEEE model |
+| Operation (kernel) | When the result is finite, proved in the real model | Infinities, NaN and overflow, proved in the IEEE model |
 |---|---|---|
-| `x + y` (`add_2_2`) | $z$ normalized, $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\lvert x + y\rvert$ | either $z_0$ is not finite or the claim holds; $z_0$ finite when $\lvert x_0\rvert, \lvert y_0\rvert \le 2^{1022}$ (`double`) |
-| `x * y` (`mul_2_2`) | $z$ normalized, $\lvert z - xy\rvert \le 4u^2\lvert xy\rvert + \tfrac32\eta$ | either $z_0$ is not finite or the claim holds; $z_0$ finite when $\lvert xy\rvert \le 2^{1023}$ (`double`) |
-| `x + a`, `a + x` (`add_2_1`) | $z$ normalized, $\lvert z - (x + a)\rvert \le 2u^2\lvert x + a\rvert$ | either $z_0$ is not finite or the claim holds |
-| `x * a`, `a * x` (`mul_2_1`) | $z$ normalized, $\lvert z - xa\rvert \le 2u^2\lvert xa\rvert + \eta$ | either $z_0$ is not finite or the claim holds |
-| `add_fast(x, y)` (`add_fast_2_2`) | $z$ normalized, $\lvert z - (x + y)\rvert \le 3u^2(\lvert x\rvert + \lvert y\rvert)$ | either $z_0$ is not finite or the claim holds |
-| `x - y` (`sub_2_2`) | that of `x + y` | not instantiated |
-| `x - a`, `a - x` (`sub_2_1`, `sub_1_2`) | that of `x + a` | not instantiated |
-| `ldexp(x, n)`, `half(x)` (`mul_pow2_2`) | $z$ normalized, $\lvert z - 2^n x\rvert \le \eta$ | not instantiated |
-| `-x`, `abs(x)` (`neg_2`, `abs_2`) | exact, normalized | no statement yet |
-| `<`, `<=`, `>`, `>=`, `==`, `!=` (`lt`, `le`, `eq` kernels) | the truth about the exact values | no statement yet |
-| `to_nearest`, `to_down`, `to_up`, `abs_upper` (`to_nearest_2`, `to_down_2`, `to_up_2`, `abs_upper_2`) | the exact rounding to `T` | no statement yet |
+| `x + y` (`add_2_2_full`) | $z$ normalized, $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\lvert x + y\rvert$ | F1 to F5; finite when $\lvert x\rvert, \lvert y\rvert \le 2^{e_{\max}-2}$ |
+| `x * y` (`mul_2_2_full`) | $z$ normalized, $\lvert z - xy\rvert \le 4u^2\lvert xy\rvert + \tfrac32\eta$ | F1 to F5; finite when $\lvert xy\rvert \le 2^{e_{\max}-1}$ |
+| `x + a`, `a + x` (`add_2_1_full`) | $z$ normalized, $\lvert z - (x + a)\rvert \le 2u^2\lvert x + a\rvert$ | F1 to F5; finite when $\lvert x\rvert, \lvert a\rvert \le 2^{e_{\max}-2}$ |
+| `x * a`, `a * x` (`mul_2_1_full`) | $z$ normalized, $\lvert z - xa\rvert \le 2u^2\lvert xa\rvert + \eta$ | F1 to F5; finite when $\lvert xa\rvert \le 2^{e_{\max}-1}$ |
+| `add_fast(x, y)` (`add_fast_2_2_full`) | $z$ normalized, $\lvert z - (x + y)\rvert \le 3u^2(\lvert x\rvert + \lvert y\rvert)$ | F1 to F5; finite as for `x + y` |
+| `x - y`, `x - a`, `a - x` (`sub_2_2_full`, `sub_2_1_full`, `sub_1_2_full`) | those of `x + y` and `x + a` | F1 to F5; finite as for `x + y` and `x + a` |
+| `ldexp(x, n)`, `half(x)` (`mul_pow2_2_full`) | $z$ normalized, $\lvert z - 2^n x\rvert \le \eta$ | F1 to F5; finite when $\lvert 2^n x\rvert \le 2^{e_{\max}-1}$ |
+| `-x`, `abs(x)` (`neg_2`, `abs_2`) | exact, normalized | exact: the infinity with its sign changed or removed; NaN stays NaN |
+| `<`, `<=`, `>`, `>=`, `==`, `!=` (`lt`, `le`, `eq` kernels) | the truth about the exact values | the truth in the extended reals; false with a NaN, as for `T` (`!=` true) |
+| `to_nearest`, `to_down`, `to_up`, `abs_upper` (`to_nearest_2`, ...) | the exact rounding to `T` | the rounding with overflow ($\pm\infty$ beyond the largest finite `T`); an infinity or NaN gives itself |
+| constructors (`make_2`, `make_2_limbs`, `ball_make_1`, `ball_make_2`) | | the value given, canonical; for a ball, below |
 | one limb: `+`, `-`, `*`, `add_fast`, `ldexp`, `half` (`add_1_1`, `mul_1_1`) | one rounding to nearest: $\lvert z - v\rvert \le \frac{u}{1 + u}\lvert v\rvert$, plus $\tfrac12\eta$ for products | the IEEE 754 operation |
 | one limb: `-x`, `abs`, comparisons, conversions | exact (no kernel) | the IEEE 754 operation |
-| `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (`ball_add_1`, ..., `ball_neg_2`) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | no statement yet |
-| construction, `limb`, `sign`, `isfinite`, `is_normalized` | exact (no kernel) | |
+| `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (`ball_add_1_full`, ..., `ball_neg_2`) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | B1 to B3: containment in every case, the empty set and the whole line included |
+| `limb`, `sign`, `isfinite`, `is_normalized`, a ball's states | exact (no kernel) | |
 
-The claims hold for every precision from the kernel's minimum on (at most 4), so for `float` and
-`double` alike; the thresholds of the third column are $2^{126}$ and $2^{127}$ for `float`. The
-IEEE-model theorems are checked against statements written by hand; the generator does not print
-them yet. The constants of every row with an error bound, rounded up to `T`, are in
-`kairn::traits<kairn::Expansion<T, 2>>` (`add`, `add_limb`, `add_fast`, `sub`, `sub_limb`, `mul`,
-`mul_limb`, `ldexp`) and `kairn::traits<T>`.
+A one-limb operand next to a two-limb one is its limb: `x + y` with `y` an `Expansion<T, 1>` is
+`x + a`, through `add_2_1_full`. The claims hold for every precision from the kernel's minimum on
+(at most 4), so for `float` and `double` alike. The constants of every row with an error bound,
+rounded up to `T`, are in `kairn::traits<kairn::Expansion<T, 2>>` (`add`, `add_limb`, `add_fast`,
+`sub`, `sub_limb`, `mul`, `mul_limb`, `ldexp`) and `kairn::traits<T>`: they are the bounds of the
+cores, which a result satisfies whenever it is finite.
 
 ## Overflow and non-finite values
 
-The design returns canonical infinities and NaN the way `T` does
-([D5](../developer/design/phase0/decisions.md#d5-non-finite-results)), through *full kernels* that
-follow each core with a fix-up ([IEEE-like results](../developer/design/milestone1.md#ieee-like-results)).
-**Those are not generated yet**: every operation today calls the *finite core* of its kernel. What
-holds:
+**Two-limb arithmetic returns IEEE-like results** (decision
+[D5](../developer/design/phase0/decisions.md#d5-non-finite-results)): every operator calls a
+*full kernel*, the finite core of the operation followed by a fix-up of one operation of `T` on
+the leading limbs, two tests and selects
+([IEEE-like results](../developer/design/milestone1.md#ieee-like-results)). For canonical
+operands, with $w$ the result:
 
-- Where the third column of the table says so, an intermediate overflow never produces a finite
-  wrong result: either the leading limb of the result is not finite, or the result is normalized
-  and within its bound.
-- For `x - y`, `x - a`, `a - x` and `ldexp`, the same is expected by the same argument but not
-  proved; for the operations with comparisons, selects or steps to a neighbor (negation, `abs`,
-  comparisons, conversions, the Ball operations), nothing is stated in the IEEE model yet.
-- When the leading limb of a result is not finite, the limbs may hold any non-finite pattern, such
-  as $(+\infty, \mathrm{NaN})$, not the canonical forms. With an operand that is not finite,
-  nothing is claimed about the result.
-- The constructor from a `T` already returns the canonical forms: $(\pm\infty, 0)$ and
-  $(\mathrm{NaN}, \mathrm{NaN})$.
-- A `Ball` has no special states yet (a NaN radius for the empty set; the whole line, radius
-  $+\infty$ and center 0), and a center or radius that is not finite is returned as the kernel
-  computed it.
-- `ldexp(x, n)` takes only an `n` for which $2^n$ is a number of `T` ($-1074 \le n \le 1023$ for
-  `double`); for any other `n` the result is NaN. The two-step scaling of
-  [Milestone 1](../developer/design/milestone1.md#second-wave-kernels) is not written.
+- **F1.** $w$ is canonical.
+- **F2.** If $w_0$ is finite, every operand is finite and $w$ satisfies the claim of the core: no
+  overflow inside the kernel can produce a finite wrong result.
+- **F3.** If every operand is finite and the condition of the table holds, $w_0$ is finite.
+- **F4.** If every operand is finite and $w_0$ is not, $w = (\pm\infty, 0)$ with the sign of the
+  exact result.
+- **F5.** If an operand is not finite, $w$ is the canonical form of the operation of `T` on the
+  leading limbs: $+\infty + 1 = +\infty$, $\infty - \infty = \mathrm{NaN}$,
+  $0 \cdot \infty = \mathrm{NaN}$; which NaN is not specified.
+
+**`kairn::finite::`** is the opt-out: `add`, `sub`, `mul`, `add_fast` and `ldexp` on the same
+operand types as the operators, calling the cores without the fix-up. Their contract is the
+cores': either the leading limb of the result is not finite, or the result is normalized and
+within its bound; which non-finite pattern comes out (it may be $(+\infty, \mathrm{NaN})$) is not
+specified, and such a result is not canonical, so test it with `kairn::isfinite` before passing it
+to an operator. For one limb they are the operators themselves.
+
+**`ldexp(x, n)` is total.** When $2^n$ is a number of `T` it is one call of the kernel. Otherwise
+it scales in steps ([Milestone 1](../developer/design/milestone1.md#second-wave-kernels) says two;
+three are needed above $2^{2 e_{\max} - 2}$, where a subnormal $x$ can still give a finite result):
+up, by $2^{e_{\max}-1}$ as often as needed and then the rest, every step exact until one
+overflows, so the result is $2^n x$ exactly or $(\pm\infty, 0)$; down, by $2^n / \eta$ and then by
+$\eta$, the smallest power of two of `T`. The result is canonical, and normalized when finite.
+Down, $\lvert z - 2^n x\rvert \le \eta$, the bound of one call, holds by an argument (a limb the
+first step leaves normal is scaled exactly, and one it makes subnormal is rounded to zero by the
+second step either way) that is tested against the oracle, through the claims of the one-step
+kernel (`api.oracle.mul_pow2_2_full.*`, form `ldexp_far`), and not proved. For one limb, the
+same steps give $\mathrm{RN}(2^n x)$, what `std::ldexp` returns.
+
+**A `Ball` is in one of three states**, each a set of real numbers: a *finite ball*, the reals
+within its radius of its center (center finite, radius finite and $\ge 0$); the *whole line*,
+every real (center 0, radius $+\infty$); the *empty set* (every limb a NaN). `X.is_finite()`,
+`X.is_whole()` and `X.is_empty()` say which, and `Ball<T, K>::whole()` and `Ball<T, K>::empty()`
+make the last two. A constructor gives the empty set for a NaN or negative radius, and the whole
+line for a center that is not finite or a radius of $+\infty$; in a build with `KAIRN_CHECKS`, a
+negative radius is reported, since it is almost surely a mistake. Every Ball operation calls a
+*full Ball kernel*, which proves, for canonical operands: **B1** the result is canonical; **B2**
+it is empty exactly when an operand is empty; **B3** if it is a finite ball, every operand is a
+finite ball, every scalar finite, and the result contains $x \circ y$ for every $x$, $y$ of the
+operands. So in every case the result contains every $x \circ y$, the whole line counting as
+containing everything ([Ball kernels](../developer/design/milestone1.md#ball-kernels)). A point
+operand, a `T` or an `Expansion` of as many limbs, is the ball of radius 0 its constructor makes;
+times a ball, a `T` (and for one limb, an `Expansion<T, 1>`) is the scaling, a kernel of its own.
+
+**What is proved, and in which model.** Every error bound, normalization, exact comparison,
+rounding and ball containment is proved in the real model, where nothing overflows; F1 to F5, B1
+to B3, and what the comparisons, conversions and constructors return for infinities and NaN are
+proved in Flocq's model of IEEE 754, against statements the generator prints from the same kernel
+descriptions as the C++ ([Proofs](../proofs/index.md#what-is-proved-and-in-which-model); each
+kernel's page in the [reference](../reference/index.md) gives its theorem).
+
+**Not proved yet.** When the result of a Ball operation on finite balls is guaranteed to be a
+finite ball rather than the whole line (B4): no such condition is proved, so a program cannot yet
+rely on a finite ball coming out. And thresholds sharper than those of the table: exhaustive runs
+on small formats first see an overflow at 0.55 of the overflow threshold or above for the
+additions and 0.86 or above for the products, where the proved conditions are a quarter and a half
+of it ([Milestone 1](../developer/design/milestone1.md#what-is-proved-about-an-arithmetic-kernel)).
+
+**Cost.** The fix-up was measured
+([Benchmarks](../developer/results/bench-milestone1.md#2-the-fix-up-for-non-finite-results)) at
+19 to 58% of a packed addition and 70 to 106% of a packed product, and at 0 to 6% in a chain of
+dependent scalar operations when it is emitted behind a branch. The generator emits the scalar
+code in the select form of the listings for now, which costs more in a chain (up to 47% with
+Apple clang, 76% with MSVC); emitting it behind a branch is a later step of the generator. The
+full Ball kernels, measured with the first radius design, cost 4 to 39% over their cores in
+throughput and up to 2.9 times in a chain, where their selects make the next center wait for the
+radius.
 
 ## Products the program passes in
 
@@ -111,33 +173,26 @@ statements (GCC's default for C++, `-ffp-contract=fast`, MSVC's `/fp:contract`) 
 fuse `a * b` into the error-free sums inside the kernel, which would then not be error-free.
 Without that step, the result was measured normalized and wrong by about $2^{-24}$ relative to
 itself, on GCC 13 and 16 by default, on Apple clang with `-ffp-contract=fast`, and on MSVC with
-`/fp:contract`; Clang 18 on x86-64 with `-ffp-contract=fast` fused such a product into a ball's
-radius or one-limb center, though not into `x + a * b`.
+`/fp:contract`.
 
-So every value of type `T` that enters a two-limb operation or a ball, and every one-limb value
-that does, passes through a *guard*: it is added to $+0$ before any kernel adds it. A product
+So every value of type `T` that the program supplies passes through a *guard*, an addition of
+$+0$, before any kernel adds it: rule R3 of the
+[kernel IR](../developer/architecture.md#the-kernel-ir), which the generator enforces. A product
 plus $+0$ is at most fused into one FMA that rounds the product, and its result is a sum, which
-nothing later can fuse; a compiler that honors signed zeros cannot remove the addition. The
-guarded places:
-
-- the constructor of `Expansion<T, 2>` from a `T`, the widening from `Expansion<T, 1>`, and each
-  limb given to `from_limbs` and `from_limbs_unchecked`;
-- the limb operand of `x + a`, `a + x`, `x - a`, `a - x`, `x += a` and `x -= a` on two limbs;
-- every center and radius given to a `Ball`'s constructors.
-
-Not guarded, because a kernel only multiplies or compares them, and a multiplicand cannot be fused:
-the limb operand of `x * a`, of a comparison with a limb, and of a scaling of a ball, and the
-exponent of `ldexp`. Nor are limbs written directly into `limb[]`: a limb written that way must not
-be a product the compiler can see being computed; `from_limbs` is the way to build a number from
-computed values.
+nothing later can fuse; a compiler that honors signed zeros cannot remove the addition. The guard
+is in the kernels that receive such a value: `add_2_1` (and through it `sub_2_1`, `sub_1_2` and
+their full kernels) on its limb operand, and the constructors `make_2`, `make_2_limbs`,
+`ball_make_1` and `ball_make_2` on what they are given. A limb operand that a kernel only
+multiplies or compares needs none (`x * a`, comparisons, the scaling of a ball, `ldexp`). Limbs
+written directly into `limb[]` are not guarded: a limb written that way must not be a product the
+compiler can see being computed; `from_limbs` is the way to build a number from computed values.
 
 So the program may pass its own products to Kairn under every contraction setting. The test
 `api.boundary.*` checks each guarded form with the product written in the call against the same
 operation on the rounded product, bit for bit, under each contraction setting of the compiler, and
-`api.boundary.unguarded.*` checks, with the guard turned off, that the compilers above do fuse. The
-guard costs one addition per incoming value: measured on `x + a` in a loop, about 7 to 13% for
-independent sums and 0 to 5% for an accumulation `s += a` (Apple clang 21, GCC 16, GCC 13,
-Clang 18). A guarded $-0$ enters as $+0$; Kairn leaves the sign of a zero unspecified anyway.
+`api.boundary.unguarded.*` builds the same test against a copy of the headers with the guard taken
+out of the generated kernels, and checks that the compilers above do fuse then. A guarded $-0$
+enters as $+0$; Kairn leaves the sign of a zero unspecified anyway.
 
 One-limb values themselves are not guarded: they behave like `T`, contraction included, so an
 expression such as `p * q + r` on `Expansion<double, 1>` may be evaluated with one rounding where
@@ -150,10 +205,20 @@ macro for it, and with `-ffp-contract=fast` on AArch64 it breaks the two-limb pr
 
 ## Constant evaluation
 
-Every operation is `constexpr` except those whose kernel has a fused multiply-add and no
-constant-evaluation variant yet: `x * y`, `x * a`, `ldexp` and `half` on two limbs, and every
-`Ball` operation but the negation. With Clang, an operation that produces a NaN is not a constant
-expression, so `ldexp` with an exponent out of range cannot be evaluated at compile time there.
+`constexpr`: the constructors, the sums and differences of two limbs (their full kernels, whose
+fix-up evaluates at compile time), negation and absolute value, the comparisons and conversions,
+every operation of one limb, a ball's negation, states and constants, and `kairn::finite::add`,
+`sub` and `add_fast`. Not yet: the products of two limbs, `ldexp` and `half` on two limbs, and the
+Ball arithmetic, whose kernels contain fused operations without a constant-evaluation variant.
+The canonical infinities and NaN come out of the constructors at compile time
+(`Expansion<double, 2>(INFINITY)` is $(+\infty, 0)$), and so do the states of a ball. GCC and
+Clang refuse, at compile time, an operation that produces an infinity from finite operands or a
+NaN, so an overflowing sum or an operation on an infinity is not a constant expression there,
+though it is evaluated as stated at run time. In constant evaluation the guard is not applied
+(nothing is fused there), so a $-0$ keeps its sign. One compiler's constant evaluator takes
+`a < b` for true when an operand is a NaN: every comparison that can run at compile time, in the
+generated kernels and in the headers, is written `b > a` or `b >= a`, and `api.constexpr` checks
+the comparisons with NaN operands.
 
 ## One limb
 
@@ -181,4 +246,4 @@ Including Kairn fails with `#error` under the flags a macro reveals (`-ffast-mat
 `kairn::environment_ok()` reads the control register and says whether the rounding mode and
 flush-to-zero are in their default state; Kairn never changes them. In a build without `NDEBUG`
 (or with `KAIRN_CHECKS` defined to 1), every operation checks the environment and that its
-operands are normalized, and stops the program with a message if not.
+operands are canonical, and stops the program with a message if not.
