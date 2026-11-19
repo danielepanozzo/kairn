@@ -102,9 +102,20 @@ title and group, and the C++ forms that reach it, with their operand types. A ne
 entry there (the script refuses to run without one), and the test fails when a public operation
 whose header comment names a kernel is not among that kernel's forms.
 
-The script knows the claim kinds and requirements of `docs/developer/architecture.md`
-("Claims", "Claims of the second wave") and nothing else: on a kind, a requirement, a field or a
-status it has no template for, it stops and names it, so that someone writes the template before
-the pages change. Kernels with `"domain": "extended"` are handled by one switch at the top of the
-script, `EXTENDED_DOMAIN`: `"fail"` (the committed value) stops on them, `"skip"` leaves them out
-and lists them on the index as not rendered yet.
+The script knows the claim kinds, fields and requirements of `docs/developer/architecture.md`
+("Claims", "Claims of the second wave", "Claims of the non-finite layer"), each in the domain where
+that page gives it a meaning, and nothing else: on a kind, a requirement, a field, a condition, a
+lead or a status it has no template for, it stops and names it, so that someone writes the
+template before the pages change. Whether a kernel has a statement on finite operands is what the
+claims say with `ieee_only`, and nothing else. A kernel of the extended domain without
+`ieee_only` keeps its statement on finite operands (`canonical` and `ball` read as their finite
+cases, `represents` left out) and gets a section "Infinite and NaN operands"; a kernel with
+`"ieee_only": true` (a full kernel, a constructor) has the statement in the IEEE model only (F1 to
+F5, B1 to B4, or that of the constructor), printed with the kernel's own names, its core's bound
+and its `finite_when` conditions. Every status comes from `status` and `ieee_status`, never from
+anything else. `python3 docs/tools/reference.py --claims PATH` renders the pages from another
+claims file, in memory, to try claims that are not committed.
+
+A kernel whose description says `entry: yes` and that has no form in the table is one the public
+headers may call but do not call yet, and its page and the index say so. When a header starts to
+call it, the test fails until its forms are in the table.

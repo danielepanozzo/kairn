@@ -1,0 +1,20 @@
+# from_limbs: the 2-limb number with the limbs (h, l) the program gives, which must be canonical;
+# each limb guarded (rule R3; milestone1.md, "Values that enter from the program").
+kernel:        make_2_limbs
+input:         supplied y = h l
+output:        x = x0 x1
+value:         y
+requires:      canonical y
+ensures:       represents x
+min_precision: 1
+source:        constructors (Milestone 1 listing)
+license:       algorithm: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeMake.v make_2_limbs_correct
+entry:         yes
+cone_exempt:   x1 = guard(l) does not reach x0; a canonical (h, l) has a non-finite l only when h is not finite, which the IEEE-model statement (represents), not data flow, covers
+
+x0 = guard(h)
+x1 = guard(l)

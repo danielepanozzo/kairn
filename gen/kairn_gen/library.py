@@ -178,7 +178,10 @@ def selftest_case(k, kernels, f):
     req = {}
     for r in k.requires:
         req.setdefault(r[0], []).append(r[1:])
-    nonneg = {r[0] for r in req.get('nonneg', [])}
+    # Radii are nonnegative: of a ball operand, and the one a ball is made from (otherwise the
+    # result would be the empty set, which is not finite).
+    nonneg = {r[0] for r in req.get('nonneg', [])} | {r[1] for r in req.get('ball', [])} | \
+        {e['from']['radius'] for e in k.ensures if e['kind'] == 'makes_ball'}
     pow2 = {r[0] for r in req.get('power_of_two', [])}
     smaller = {r[1] for r in req.get('abs_ge', [])}
     inputs = []
@@ -207,9 +210,49 @@ def selftest_case(k, kernels, f):
     return inputs, out
 
 
+def nonfinite_case(k, kernels, f):
+    """For a full kernel or a constructor (a kernel without a real-model statement): the operands
+    of selftest_case with the first operand made non-finite, +infinity in binary64 and NaN in
+    binary32, in its canonical form ((inf, 0) or (NaN, NaN) for two limbs; for a ball, the whole
+    line or the empty set), and the outputs. None for any other kernel."""
+    if k.real_model:
+        return None
+    inputs, _ = selftest_case(k, kernels, f)
+    inf = f.name == 'binary64'
+    special = (interp.INF, False) if inf else interp.NaN
+    zero = interp.canon(False, 0, 0)
+    balls = {r[1]: r[2] for r in k.requires if r[0] == 'ball'}
+    at = {}
+    i = 0
+    for g in k.inputs:
+        at[g.name] = list(range(i, i + len(g.limbs)))
+        i += len(g.limbs)
+    first = k.inputs[0]
+    if first.kind != ir.LIMB:
+        raise LibraryError(f'{k.name}: no non-finite case for a kernel whose first input is a mask')
+    limbs = at[first.name]
+    if first.name in balls:                 # the whole line, or the empty set
+        for j in limbs:
+            inputs[j] = zero if inf else interp.NaN
+        inputs[at[balls[first.name]][0]] = special
+    else:
+        inputs[limbs[0]] = special
+        for j in limbs[1:]:
+            inputs[j] = zero if inf else interp.NaN
+    machine = interp.Machine(kernels)
+    out = machine.run(k.name, f, inputs)
+    if interp.Machine(kernels, fused=False).run(k.name, f, inputs) != out:
+        raise LibraryError(f'{k.name}: a non-finite case whose result depends on contraction')
+    return inputs, out
+
+
 def _value(v, ctype):
     if isinstance(v, bool):
         return 'true' if v else 'false'
+    if v[0] == interp.INF:
+        return f'{"-" if v[1] else ""}std::numeric_limits<{ctype}>::infinity()'
+    if v[0] == interp.NAN:
+        return f'std::numeric_limits<{ctype}>::quiet_NaN()'
     text = interp.format_limb(v)
     return (text + cpp.TYPES[ctype][1]) if text != '0x0p+0' else '0.0' + cpp.TYPES[ctype][1]
 
@@ -220,10 +263,13 @@ def selftest(kernels):
              '// "The self-test"): every kernel, for each limb type, on fixed operands that satisfy its',
              '// requirements, against the outputs the generator\'s exact interpreter computes for them.',
              '// The operands are read through volatile objects, so that the compiler cannot evaluate a',
-             '// kernel while it compiles: what runs is the code the client\'s flags produced.',
+             '// kernel while it compiles: what runs is the code the client\'s flags produced. The full',
+             '// kernels and the constructors of the non-finite layer have a second case each, with a',
+             '// non-finite first operand: +infinity for double, NaN for float.',
              '#pragma once', '',
              '#include <bit>',
-             '#include <cstdint>', '',
+             '#include <cstdint>',
+             '#include <limits>', '',
              '#include "scalar.hpp"', '',
              'namespace kairn::gen::selftest {', '',
              '// Whether a computed limb is the stored one, from the bit patterns: a comparison would read',
@@ -247,18 +293,24 @@ def selftest(kernels):
             if out is None:
                 lines.append(f'// not checked: its result depends on the contraction of a muladd')
                 continue
-            names.append(fn)
+            cases = [(fn, f'{k.name} ({ctype})', inputs, out)]
+            special = nonfinite_case(k, kernels, f)
+            if special:
+                cases.append((f'{k.name}_nonfinite_{ctype}', f'{k.name} ({ctype}, a non-finite operand)')
+                             + special)
             ins = [('bool' if kind == ir.MASK else ctype) for kind in k.input_kinds]
             outs = [('bool' if kind == ir.MASK else ctype) for kind in k.output_kinds]
-            lines.append(f'inline const char* {fn}() noexcept {{')
-            for i, (t, v) in enumerate(zip(ins, inputs)):
-                lines.append(f'    volatile {t} i{i} = {_value(v, ctype)};')
-            for i, t in enumerate(outs):
-                lines.append(f'    {t} o{i};')
-            args = [f'i{i}' for i in range(len(ins))] + [f'o{i}' for i in range(len(outs))]
-            lines.append(f'    {k.name}({", ".join(args)});')
-            cond = ' || '.join(f'!same(o{i}, {_value(v, ctype)})' for i, v in enumerate(out))
-            lines += [f'    return {cond} ? "{k.name} ({ctype})" : nullptr;', '}']
+            for fn, label, inputs, out in cases:
+                names.append(fn)
+                lines.append(f'inline const char* {fn}() noexcept {{')
+                for i, (t, v) in enumerate(zip(ins, inputs)):
+                    lines.append(f'    volatile {t} i{i} = {_value(v, ctype)};')
+                for i, t in enumerate(outs):
+                    lines.append(f'    {t} o{i};')
+                args = [f'i{i}' for i in range(len(ins))] + [f'o{i}' for i in range(len(outs))]
+                lines.append(f'    {k.name}({", ".join(args)});')
+                cond = ' || '.join(f'!same(o{i}, {_value(v, ctype)})' for i, v in enumerate(out))
+                lines += [f'    return {cond} ? "{label}" : nullptr;', '}']
     lines += ['', '// Each check in turn: the name of the first kernel whose result differs, or nullptr. The',
               '// checks are called through pointers so that each stays a function of its own, which keeps',
               '// the compile time of a translation unit that calls run() small.',

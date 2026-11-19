@@ -35,7 +35,8 @@ From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra Psatz.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements.
 From Kairn Require Import Format Guard Normalized EFT Program IeeeBridge IeeeEFT IeeeMul22.
-From Kairn Require IeeeDraft.
+From Kairn Require IeeeOperations.
+From Kairn.Gen Require IeeeModel.
 Import ListNotations.
 Open Scope R_scope.
 
@@ -169,7 +170,7 @@ Lemma add_2_2_range_sum :
   forall x0 x1 y0 y1 : float,
   normalized_2 emin prec (b2r x0) (b2r x1) -> normalized_2 emin prec (b2r y0) (b2r y1) ->
   Rabs ((b2r x0 + b2r x1) + (b2r y0 + b2r y1)) <= Q ->
-  Forall inrange (runR IeeeDraft.add_2_2_prog [b2r x0; b2r x1; b2r y0; b2r y1]).
+  Forall inrange (runR IeeeModel.add_2_2_prog [b2r x0; b2r x1; b2r y0; b2r y1]).
 Proof.
 intros Hp3 x0 x1 y0 y1 Nx Ny Hxy.
 assert (Hp2 : (2 <= prec)%Z) by lia.
@@ -186,7 +187,7 @@ assert (HS : Rabs (X0 + Y0) <= Q + U).
 { replace (X0 + Y0) with ((X0 + X1 + (Y0 + Y1)) + - (X1 + Y1)) by ring.
   apply Rle_trans with (1 := Rabs_triang _ _). rewrite Rabs_Ropp.
   generalize (Rabs_triang X1 Y1). lra. }
-cbv [IeeeBridge.runR run stepR nth app IeeeDraft.add_2_2_prog].
+cbv [IeeeBridge.runR run stepR nth app IeeeModel.add_2_2_prog].
 set (sh := rnd (X0 + Y0)). set (bb1 := rnd (sh - X0)). set (t01 := rnd (sh - bb1)).
 set (t11 := rnd (X0 - t01)). set (t21 := rnd (Y0 - bb1)). set (sl := rnd (t11 + t21)).
 set (th := rnd (X1 + Y1)). set (bb2 := rnd (th - X1)). set (t02 := rnd (th - bb2)).
@@ -300,7 +301,7 @@ Lemma mul_2_2_range_zero :
   forall x0 x1 y0 y1 : float,
   normalized_2 emin prec (b2r x0) (b2r x1) -> normalized_2 emin prec (b2r y0) (b2r y1) ->
   rnd (b2r x0 * b2r y0 + 0) = 0 ->
-  Forall inrange (runR IeeeDraft.mul_2_2_prog [b2r x0; b2r x1; b2r y0; b2r y1]).
+  Forall inrange (runR IeeeModel.mul_2_2_prog [b2r x0; b2r x1; b2r y0; b2r y1]).
 Proof.
 intros x0 x1 y0 y1 Nx Ny Hch.
 assert (I0 : inrange 0).
@@ -310,7 +311,7 @@ assert (Hp : Rabs (b2r x0 * b2r y0) <= bpow radix2 (emin - 1)).
 destruct (small_products _ _ _ _ Nx Ny Hp) as [H01 [H10 H11]].
 set (X0 := b2r x0) in *. set (X1 := b2r x1) in *. set (Y0 := b2r y0) in *. set (Y1 := b2r y1) in *.
 assert (R0 : rnd 0 = 0) by (apply round_0; auto with typeclass_instances).
-cbv [IeeeBridge.runR run stepR nth app IeeeDraft.mul_2_2_prog].
+cbv [IeeeBridge.runR run stepR nth app IeeeModel.mul_2_2_prog].
 set (ch := rnd (X0 * Y0 + 0)) in *. set (cl1 := rnd (X0 * Y0 + - ch)).
 set (tl0 := rnd (X1 * Y1 + 0)). set (tl1 := rnd (X0 * Y1 + tl0)).
 set (cl2 := rnd (X1 * Y0 + tl1)). set (cl3 := rnd (cl1 + cl2)).
@@ -350,7 +351,7 @@ Lemma add_2_1_range :
   forall x0 x1 a : float,
   normalized_2 emin prec (b2r x0) (b2r x1) ->
   Rabs (b2r x0) <= Q -> Rabs (b2r a) <= Q ->
-  Forall inrange (runR IeeeDraft.add_2_1_prog [b2r x0; b2r x1; b2r a]).
+  Forall inrange (runR IeeeModel.add_2_1_prog [b2r x0; b2r x1; b2r a]).
 Proof.
 intros Hp3 x0 x1 a Nx Hx0 Ha.
 assert (Hp2 : (2 <= prec)%Z) by lia.
@@ -364,7 +365,7 @@ assert (FA : format A) by apply (b2r_format prec emax).
 assert (HX1 : Rabs X1 <= / 4 * U).
 { apply Rle_trans with (1 := normalized_2_tail_rel emin prec X0 X1 Nx). rewrite <- uQ.
   apply Rmult_le_compat_l. apply bpow_ge_0. exact Hx0. }
-cbv [IeeeBridge.runR run stepR nth app IeeeDraft.add_2_1_prog].
+cbv [IeeeBridge.runR run stepR nth app IeeeModel.add_2_1_prog].
 rewrite (guard_real_any emin prec tie_even A FA).
 set (sh := rnd (X0 + A)). set (bb := rnd (sh - X0)). set (t0 := rnd (sh - bb)).
 set (t1 := rnd (X0 - t0)). set (t2 := rnd (A - bb)). set (sl := rnd (t1 + t2)).
@@ -403,7 +404,7 @@ Lemma add_2_1_range_sum :
   forall x0 x1 a : float,
   normalized_2 emin prec (b2r x0) (b2r x1) ->
   Rabs ((b2r x0 + b2r x1) + b2r a) <= Q ->
-  Forall inrange (runR IeeeDraft.add_2_1_prog [b2r x0; b2r x1; b2r a]).
+  Forall inrange (runR IeeeModel.add_2_1_prog [b2r x0; b2r x1; b2r a]).
 Proof.
 intros Hp3 x0 x1 a Nx Hxa.
 assert (Hp2 : (2 <= prec)%Z) by lia.
@@ -418,7 +419,7 @@ assert (FA : format A) by apply (b2r_format prec emax).
 assert (HS : Rabs (X0 + A) <= Q + / 2 * U).
 { replace (X0 + A) with ((X0 + X1 + A) + - X1) by ring.
   apply Rle_trans with (1 := Rabs_triang _ _). rewrite Rabs_Ropp. lra. }
-cbv [IeeeBridge.runR run stepR nth app IeeeDraft.add_2_1_prog].
+cbv [IeeeBridge.runR run stepR nth app IeeeModel.add_2_1_prog].
 rewrite (guard_real_any emin prec tie_even A FA).
 set (sh := rnd (X0 + A)). set (bb := rnd (sh - X0)). set (t0 := rnd (sh - bb)).
 set (t1 := rnd (X0 - t0)). set (t2 := rnd (A - bb)). set (sl := rnd (t1 + t2)).
@@ -463,7 +464,7 @@ Lemma add_fast_2_2_range :
   forall x0 x1 y0 y1 : float,
   normalized_2 emin prec (b2r x0) (b2r x1) -> normalized_2 emin prec (b2r y0) (b2r y1) ->
   Rabs (b2r x0) <= Q -> Rabs (b2r y0) <= Q ->
-  Forall inrange (runR IeeeDraft.add_fast_2_2_prog [b2r x0; b2r x1; b2r y0; b2r y1]).
+  Forall inrange (runR IeeeModel.add_fast_2_2_prog [b2r x0; b2r x1; b2r y0; b2r y1]).
 Proof.
 intros Hp2 x0 x1 y0 y1 Nx Ny Hx0 Hy0.
 assert (U0 : 0 < U) by apply bpow_gt_0.
@@ -480,7 +481,7 @@ assert (HX1 : Rabs X1 <= / 4 * U).
 assert (HY1 : Rabs Y1 <= / 4 * U).
 { apply Rle_trans with (1 := normalized_2_tail_rel emin prec Y0 Y1 Ny). rewrite <- uQ.
   apply Rmult_le_compat_l. apply bpow_ge_0. exact Hy0. }
-cbv [IeeeBridge.runR run stepR nth app IeeeDraft.add_fast_2_2_prog].
+cbv [IeeeBridge.runR run stepR nth app IeeeModel.add_fast_2_2_prog].
 set (sh := rnd (X0 + Y0)). set (bb := rnd (sh - X0)). set (t0 := rnd (sh - bb)).
 set (t1 := rnd (X0 - t0)). set (t2 := rnd (Y0 - bb)). set (sl := rnd (t1 + t2)).
 set (v := rnd (X1 + Y1)). set (w := rnd (sl + v)). set (z0 := rnd (sh + w)).
@@ -524,7 +525,7 @@ Lemma add_fast_2_2_range_sum :
   forall x0 x1 y0 y1 : float,
   normalized_2 emin prec (b2r x0) (b2r x1) -> normalized_2 emin prec (b2r y0) (b2r y1) ->
   Rabs ((b2r x0 + b2r x1) + (b2r y0 + b2r y1)) <= Q ->
-  Forall inrange (runR IeeeDraft.add_fast_2_2_prog [b2r x0; b2r x1; b2r y0; b2r y1]).
+  Forall inrange (runR IeeeModel.add_fast_2_2_prog [b2r x0; b2r x1; b2r y0; b2r y1]).
 Proof.
 intros Hp2 x0 x1 y0 y1 Nx Ny Hxy.
 assert (U0 : 0 < U) by apply bpow_gt_0.
@@ -540,7 +541,7 @@ assert (HS : Rabs (X0 + Y0) <= Q + U).
 { replace (X0 + Y0) with ((X0 + X1 + (Y0 + Y1)) + - (X1 + Y1)) by ring.
   apply Rle_trans with (1 := Rabs_triang _ _). rewrite Rabs_Ropp.
   generalize (Rabs_triang X1 Y1). lra. }
-cbv [IeeeBridge.runR run stepR nth app IeeeDraft.add_fast_2_2_prog].
+cbv [IeeeBridge.runR run stepR nth app IeeeModel.add_fast_2_2_prog].
 set (sh := rnd (X0 + Y0)). set (bb := rnd (sh - X0)). set (t0 := rnd (sh - bb)).
 set (t1 := rnd (X0 - t0)). set (t2 := rnd (Y0 - bb)). set (sl := rnd (t1 + t2)).
 set (v := rnd (X1 + Y1)). set (w := rnd (sl + v)). set (z0 := rnd (sh + w)).
@@ -645,7 +646,7 @@ Lemma mul_2_1_range_zero :
   forall x0 x1 a : float,
   normalized_2 emin prec (b2r x0) (b2r x1) ->
   rnd (b2r x0 * b2r a + 0) = 0 ->
-  Forall inrange (runR IeeeDraft.mul_2_1_prog [b2r x0; b2r x1; b2r a]).
+  Forall inrange (runR IeeeModel.mul_2_1_prog [b2r x0; b2r x1; b2r a]).
 Proof.
 intros x0 x1 a Nx Hch.
 assert (I0 : inrange 0).
@@ -655,7 +656,7 @@ assert (Hp : Rabs (b2r x0 * b2r a) <= bpow radix2 (emin - 1)).
 generalize (small_product_1 _ _ _ Nx Hp). intros H1.
 set (X0 := b2r x0) in *. set (X1 := b2r x1) in *. set (A := b2r a) in *.
 assert (R0 : rnd 0 = 0) by (apply round_0; auto with typeclass_instances).
-cbv [IeeeBridge.runR run stepR nth app IeeeDraft.mul_2_1_prog].
+cbv [IeeeBridge.runR run stepR nth app IeeeModel.mul_2_1_prog].
 set (ch := rnd (X0 * A + 0)) in *. set (cl1 := rnd (X0 * A + - ch)).
 set (cl3 := rnd (X1 * A + cl1)).
 set (z0 := rnd (ch + cl3)). set (zz := rnd (z0 - ch)). set (z1 := rnd (cl3 - zz)).
@@ -680,7 +681,7 @@ Lemma mul_2_1_range :
   forall x0 x1 a : float,
   normalized_2 emin prec (b2r x0) (b2r x1) ->
   Rabs ((b2r x0 + b2r x1) * b2r a) <= H ->
-  Forall inrange (runR IeeeDraft.mul_2_1_prog [b2r x0; b2r x1; b2r a]).
+  Forall inrange (runR IeeeModel.mul_2_1_prog [b2r x0; b2r x1; b2r a]).
 Proof.
 intros Hp2 x0 x1 a Nx Hxa.
 assert (U0 : 0 < U) by apply bpow_gt_0.
@@ -689,7 +690,7 @@ destruct (lead_product_le Hp2 _ _ _ Nx Hxa) as [HP HP1].
 set (X0 := b2r x0) in *. set (X1 := b2r x1) in *. set (A := b2r a) in *.
 assert (FX0 : format X0) by apply (b2r_format prec emax).
 assert (FA : format A) by apply (b2r_format prec emax).
-cbv [IeeeBridge.runR run stepR nth app IeeeDraft.mul_2_1_prog].
+cbv [IeeeBridge.runR run stepR nth app IeeeModel.mul_2_1_prog].
 set (ch := rnd (X0 * A + 0)). set (cl1 := rnd (X0 * A + - ch)).
 set (cl3 := rnd (X1 * A + cl1)).
 set (z0 := rnd (ch + cl3)). set (zz := rnd (z0 - ch)). set (z1 := rnd (cl3 - zz)).
@@ -733,7 +734,7 @@ Lemma mul_pow2_2_range_zero :
   forall x0 x1 c : float,
   normalized_2 emin prec (b2r x0) (b2r x1) ->
   rnd (b2r x0 * b2r c + 0) = 0 ->
-  Forall inrange (runR IeeeDraft.mul_pow2_2_prog [b2r x0; b2r x1; b2r c]).
+  Forall inrange (runR IeeeModel.mul_pow2_2_prog [b2r x0; b2r x1; b2r c]).
 Proof.
 intros x0 x1 c Nx Hh.
 assert (I0 : inrange 0).
@@ -743,7 +744,7 @@ assert (Hp : Rabs (b2r x0 * b2r c) <= bpow radix2 (emin - 1)).
 generalize (small_product_1 _ _ _ Nx Hp). intros H1.
 set (X0 := b2r x0) in *. set (X1 := b2r x1) in *. set (C := b2r c) in *.
 assert (R0 : rnd 0 = 0) by (apply round_0; auto with typeclass_instances).
-cbv [IeeeBridge.runR run stepR nth app IeeeDraft.mul_pow2_2_prog].
+cbv [IeeeBridge.runR run stepR nth app IeeeModel.mul_pow2_2_prog].
 set (h := rnd (X0 * C + 0)) in *. set (l := rnd (X1 * C + 0)).
 set (z0 := rnd (h + l)). set (zz := rnd (z0 - h)). set (z1 := rnd (l - zz)).
 assert (El : l = 0).
@@ -764,14 +765,14 @@ Lemma mul_pow2_2_range :
   forall x0 x1 c : float,
   normalized_2 emin prec (b2r x0) (b2r x1) ->
   Rabs ((b2r x0 + b2r x1) * b2r c) <= H ->
-  Forall inrange (runR IeeeDraft.mul_pow2_2_prog [b2r x0; b2r x1; b2r c]).
+  Forall inrange (runR IeeeModel.mul_pow2_2_prog [b2r x0; b2r x1; b2r c]).
 Proof.
 intros Hp2 x0 x1 c Nx Hxc.
 assert (U0 : 0 < U) by apply bpow_gt_0.
 generalize Omega_eq (U_le_H 1 ltac:(lia) ltac:(lia)). rewrite pow2_1. intros EO T3.
 destruct (lead_product_le Hp2 _ _ _ Nx Hxc) as [HP HP1].
 set (X0 := b2r x0) in *. set (X1 := b2r x1) in *. set (C := b2r c) in *.
-cbv [IeeeBridge.runR run stepR nth app IeeeDraft.mul_pow2_2_prog].
+cbv [IeeeBridge.runR run stepR nth app IeeeModel.mul_pow2_2_prog].
 set (h := rnd (X0 * C + 0)). set (l := rnd (X1 * C + 0)).
 set (z0 := rnd (h + l)). set (zz := rnd (z0 - h)). set (z1 := rnd (l - zz)).
 assert (Ih : inrange h).

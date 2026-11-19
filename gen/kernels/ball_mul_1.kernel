@@ -1,32 +1,33 @@
-# The product of two balls with one-limb centers: |xy - cx cy| <= |cx| ry + |cy| rx + rx ry, plus
-# the error of the rounded center product, at most U |cz| + V from the claims of mul_1_1.
+# The product of two balls with one-limb centers: the center by one operation of T, the radius in the second design.
+# The radius is evaluated by operations rounded to nearest on nonnegative values and inflated
+# once (milestone1.md, "The radius, second design"): E turns the error bound of the center
+# kernel mul_1_1 into a multiple of |cz0|, G covers the roundings of the radius, H what underflow
+# loses and the absolute term of the bound. Each is an exact expression rounded up.
 kernel:        ball_mul_1
-input:         cx
-input:         rx
-input:         cy
-input:         ry
+input:         stored cx
+input:         stored rx
+input:         stored cy
+input:         stored ry
 output:        cz
 output:        rz
 value:         cx*cy
 requires:      nonneg rx
 requires:      nonneg ry
 ensures:       encloses cz rz x*y x=cx,rx y=cy,ry
-min_precision: 2
-theorem:       proofs/theories/Ball.v ball_mul_1_correct
-source:        midpoint-radius product (Milestone 1 listing)
+min_precision: 1
+theorem:       proofs/theories/Ball2.v ball_mul_1_correct
+source:        midpoint-radius product (Milestone 1 listing, second radius design)
 license:       algorithm and proof: MIT
 status:        proved
+entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
 cz = prod(cx, cy)
 ax = abs(cx)
 ay = abs(cy)
-t1 = rmul(ax, ry)
-t2 = rmul(ay, rx)
-t3 = rmul(rx, ry)
-s1 = radd(t1, t2)
-s2 = radd(s1, t3)
-mz = abs(cz)
-d0 = rmul(const unit_computed(mul_1_1), mz)
-d  = radd(d0, const tiny_computed(mul_1_1))
-rz = radd(s2, d)
+az = abs(cz)
+p  = prod(rx, ry)
+q  = fma(ay, rx, p)
+w  = fma(ax, ry, q)
+t  = fma(az, const up(unit(mul_1_1)/(1-unit(mul_1_1))), w)
+rz = fma(t, const up((1+u)^5), const up((1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)))

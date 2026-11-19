@@ -1,6 +1,7 @@
 # make -C proofs          build every proof, then run the axiom audit
 # make -C proofs build    build only
 # make -C proofs audit    audit only (builds first)
+# make -C proofs gen      only the generated model and statement files and what they import
 # make -C proofs clean
 #
 # Needs `rocq` (Rocq 9.x) with Flocq 4.2 on the PATH, and python3.
@@ -30,7 +31,7 @@ audit: build
 	@echo "== assumptions of every theorem that establishes a generated statement"
 	@$(ROCQ) compile $(LIBS) gen/Audit.v > audit/Audit.out
 	@$(PYTHON) $(AUDIT) assumptions gen/Audit.v audit/Audit.out $(ALLOWED)
-	@echo "== assumptions of the theorems whose statements are written by hand"
+	@echo "== assumptions of the theorems that the generated audits do not list (audit/HandAudit.v)"
 	@$(ROCQ) compile $(LIBS) -Q audit KairnAudit audit/HandAudit.v > audit/HandAudit.out
 	@$(PYTHON) $(AUDIT) assumptions audit/HandAudit.v audit/HandAudit.out $(ALLOWED)
 	@echo "== negative control: a false theorem closed with Admitted must be rejected"
@@ -41,10 +42,23 @@ audit: build
 	@if $(PYTHON) $(AUDIT) assumptions audit/Bad.v audit/Bad.out $(ALLOWED); \
 	  then echo "  ERROR: the assumption check accepted audit/Bad.v"; exit 1; \
 	  else echo "  rejected by the assumption check, as it must be"; fi
+	@echo "== assumptions of the IEEE-model theorem of every kernel of the extended domain"
+	@$(ROCQ) compile $(LIBS) gen/IeeeAudit.v > audit/IeeeAudit.out
+	@if grep -q "Print Assumptions" gen/IeeeAudit.v; \
+	  then $(PYTHON) $(AUDIT) assumptions gen/IeeeAudit.v audit/IeeeAudit.out $(ALLOWED); \
+	  else echo "  none yet"; fi
 	@echo "== audit passed"
+
+# The generated model and statement files and the files they import. (gen/Audit.v and
+# gen/IeeeAudit.v name the theorems, so they need the whole build: the audit compiles them.)
+GENERATED := gen/Model.vo gen/Statements.vo gen/IeeeModel.vo gen/IeeeStatements.vo
+
+gen: Makefile.rocq
+	+$(MAKE) --no-print-directory -f Makefile.rocq $(GENERATED)
 
 clean:
 	@if [ -f Makefile.rocq ]; then $(MAKE) --no-print-directory -f Makefile.rocq cleanall; fi
+	rm -f gen/IeeeAudit.vo* gen/IeeeAudit.glob gen/.IeeeAudit.aux
 	rm -f Makefile.rocq Makefile.rocq.conf .Makefile.rocq.d audit/*.out audit/*.vo audit/*.vok audit/*.vos audit/*.glob audit/.*.aux
 
-.PHONY: all build audit clean
+.PHONY: all build audit gen clean

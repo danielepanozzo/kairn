@@ -3,14 +3,19 @@ kernel:        neg_2
 input:         x = x0 x1
 output:        z = z0 z1
 value:         -x
-requires:      normalized x
+requires:      canonical x
 ensures:       normalized z
 ensures:       error z R c=0 k=2 t=0
+ensures:       represents z
 min_precision: 1
 theorem:       proofs/theories/Sign.v neg_2_correct
 source:        limb by limb (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeExt.v neg_2_ieee_correct
+entry:         yes
 cone_exempt:   z1 = -x1 does not reach z0; a negation is exact and cannot overflow, and a non-finite x1 beside a finite x0 is not a normalized operand, so the non-finite layer, which reads x0, stands in for the check
 
 z0 = neg(x0)

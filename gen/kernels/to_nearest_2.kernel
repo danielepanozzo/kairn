@@ -3,13 +3,17 @@ kernel:        to_nearest_2
 input:         x = x0 x1
 output:        t
 value:         x
-requires:      normalized x
+requires:      canonical x
 ensures:       rounded t nearest
 min_precision: 1
 theorem:       proofs/theories/Convert.v to_nearest_2_correct
 source:        the definition of normalized (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeExt.v to_nearest_2_ieee_correct
+entry:         yes
 unused:        x1 for a normalized x, x0 is RN(x) already
 cone_exempt:   x1 is not used; a non-finite x1 beside a finite x0 is not a normalized operand, so the non-finite layer, which reads x0, stands in for the check
 

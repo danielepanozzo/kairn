@@ -4,13 +4,17 @@ input:         x = x0 x1
 input:         a
 output:        mask m
 value:         x-a
-requires:      normalized x
+requires:      canonical x
 ensures:       predicate m eq x a
 min_precision: 1
 theorem:       proofs/theories/Compare.v eq_2_1_correct
 source:        limbs compared in order (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeExt.v eq_2_1_ieee_correct
+entry:         yes
 cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; the non-finite layer tests the operands
 
 h = eq(x0, a)

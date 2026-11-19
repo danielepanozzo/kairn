@@ -1,0 +1,31 @@
+# x + a with IEEE-like results: add_2_1, then the fix-up. a is guarded (rule R3)
+# before the fix-up adds it; the core is called with a and guards it itself.
+# The fix-up is that of milestone1.md, "IEEE-like results", with r0 = times_inf(t) (exact, so not
+# a fused operation) for prod(t, const inf): |z0| is named az here, since a is the operand.
+kernel:        add_2_1_full
+input:         x = x0 x1
+input:         a
+output:        w = w0 w1
+value:         x+a
+requires:      canonical x
+ensures:       extends w core=add_2_1 lead=add finite_when=abs_le(x,-2);abs_le(a,-2)
+min_precision: 3
+source:        add_2_1, then the fix-up of IEEE-like results (Milestone 1 listing)
+license:       core: as add_2_1; fix-up: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeFull.v add_2_1_full_correct
+entry:         yes
+cone_exempt:   the fix-up selects, after an explicit test that z0 is finite (f), between the core's result and the canonical form of t; F1 to F5 of milestone1.md, "IEEE-like results", state what comes out
+
+g        = guard(a)
+(z0, z1) = add_2_1(x0, x1, a)
+t        = add(x0, g)
+az       = abs(z0)
+f        = lt(az, const inf)
+r0       = times_inf(t)
+n        = eq(r0, r0)
+r1       = select(n, 0, r0)
+w0       = select(f, z0, r0)
+w1       = select(f, z1, r1)

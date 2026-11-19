@@ -92,20 +92,23 @@ of the format) or masks.
 | `fma a b c`, `fms a b c`, `fnma a b c` | $\mathrm{RN}(ab + c)$, $\mathrm{RN}(ab - c)$, $\mathrm{RN}(-ab + c)$: one rounding | always a fused operation |
 | `prod a b` | $\mathrm{RN}(ab)$ | `fma(a, b, +0.0)`: the *opaque product* |
 | `muladd a b c` | $\mathrm{RN}(ab + c)$ **or** $\mathrm{RN}(\mathrm{RN}(ab) + c)$, the compiler's choice | `a * b + c`; its theorem covers both |
-| `lt`, `le`, `eq` | comparison, giving a mask | comparison |
+| `lt`, `le`, `eq` | comparison, giving a mask | comparison; `lt(a, b)` and `le(a, b)` are written `b > a` and `b >= a`, which one compiler's constant evaluator gets right on a NaN where it gets `<` and `<=` wrong |
 | `and`, `or`, `not` | on masks | |
 | `select m a b` | $a$ if $m$, else $b$ | conditional move or blend, never a branch |
 | `succ a`, `pred a` | the neighbors of $a$ in the format | |
-| `guard a` | $\mathrm{RN}(a + 0)$, which is $a$ (a zero comes out positive) | `a + T(0)`: see rule R3 |
+| `guard a` | $\mathrm{RN}(a + 0)$, which is $a$ (a zero comes out positive) | `a + 0.0`: see rule R3. In constant evaluation, where nothing is fused, the operand itself |
 | `const name` | a constant that depends on the format (for example the splitter $2^{\lceil p/2\rceil} + 1$) | a literal |
-| `0`, `const inf` | the literal zero, and $+\infty$ (used by the fix-ups of the non-finite layer only) | literals |
+| `0`, `const inf`, `const nan` | the literal zero, $+\infty$ and a quiet NaN (used by the non-finite layer only) | a literal; `std::numeric_limits` |
+| `const up(EXPR)` | the smallest number of the format not below `EXPR`, an exact expression over $u$, $\eta$, integers and the constants `unit(K)`, `tiny(K)` of a proved kernel's bound | an exact literal per type |
+| `times_inf a` | $a \times \infty$: a NaN for a NaN or a zero, otherwise the infinity with the sign of $a$ | a plain multiplication by infinity; its result may only be compared or selected |
 | `call K args` | another kernel | inlined in C++, kept as a call in Rocq |
 
 Rules the generator enforces on every kernel, and refuses to generate otherwise:
 
 1. Single assignment; every use after its definition; no unused value.
 2. **R1.** The result of `prod` is the only product-like value that may be an operand of `add`,
-   `sub`, or the addend of an FMA. There is no plain multiplication in the run-time IR.
+   `sub`, or the addend of an FMA. There is no plain multiplication in the run-time IR, except
+   `times_inf`, which is exact and whose result is only compared or selected.
 3. **R2.** No kernel output is an expression the compiler could fuse into the caller: outputs are
    results of `add`, `sub`, `fma`-family, `prod`, `select`, `neg`, `abs`, `succ`, `pred`, never of
    `muladd`.
@@ -142,19 +145,24 @@ R3 was added in Milestone 1, after a test of the public headers found the failur
 with GCC 13 and 16 at their default setting, with Apple clang on AArch64 under
 `-ffp-contract=fast` and with MSVC under `/fp:contract`, `x + a * b`, `x - a * b` and `a * b - x` for a 2-limb `x` differed from the same
 operation on the rounded product in every one of 200 000 cases chosen to cancel; with the guard,
-in none, on those compilers and on the settings that do not contract. Clang 18 on x86-64 under
-`-ffp-contract=fast` left those three forms alone and fused the radius and the one-limb center
-given to a `Ball` instead; the guard covers these too
-(`tests/api/boundary.cpp`, with a control that fails when the guard is taken out). The guard relies on what
-the opaque product already relies on: the compiler honors the sign of zero, so it may not remove
-`a + 0`. Until the generator emits `guard` and checks the rule, the public headers apply it by
-hand in one helper.
+in none, on those compilers and on the settings that do not contract
+(`tests/api/boundary.cpp`, with a control that builds the same test against a copy of the generated
+kernels with the guard taken out, and fails if those compilers then fuse nothing). Clang 18 on
+x86-64 under `-ffp-contract=fast` left those three forms alone. With the first headers it fused the
+radius and the one-limb center given to a `Ball` instead; since the constructors are generated
+kernels, whose selects sit between the program's product and the sums of the ball, it fuses nothing
+even without the guard, and its control only reports. The guard relies on what the opaque product
+already relies on: the compiler honors the sign of zero, so it may not remove `a + 0`. The
+generator emits every guard and checks the rule; the public headers contain none of their own.
 
-One compiler does not fit that description. MSVC 19.52 removes the addition of zero for some
-operands under `/O2`: a guarded $-0$ stays $-0$ (values are unaffected, and the sign of a zero is
-unspecified). In every test so far it still kept the program's product out of the kernel under
-`/fp:contract`, the one MSVC setting that contracts, which is not its default: 0 of 200 000 cases
-differ with the guard and all of them without it. On MSVC the guard therefore rests on those
+One compiler does not fit that description. With the hand-written guard of the first headers,
+MSVC 19.52 removed the addition of zero for some operands under `/O2`: a guarded $-0$ stayed $-0$
+(values are unaffected, and the sign of a zero is unspecified). With the generated guard, a $-0$
+given to a constructor, to `x + a` and to a `Ball` entered as $+0$ under `/O2`, `/Od`,
+`/fp:contract` and `/fp:strict`, so the addition was kept in those cases. In every test so far
+MSVC kept the program's product out of the kernel under `/fp:contract`, the one MSVC setting that
+contracts, which is not its default: no case differs with the guard and all of them without it.
+Since this compiler has been seen to remove such an addition, on MSVC the guard rests on those
 tests, which run on every change, and not on a rule of the language.
 
 A kernel may name a second kernel as its **constant-evaluation variant**. The emitted C++
@@ -165,7 +173,10 @@ variant has its own statement and proof.
 C++ emission rules: non-template functions, one overload per limb type; one operation per
 statement; kernels of at most two limbs are force-inlined. A kernel is `constexpr` when it
 contains no fused operation or names a constant-evaluation variant; a kernel that is not yet
-`constexpr` is listed as such in the generator's output.
+`constexpr` is listed as such in the generator's output. `guard` and `times_inf` dispatch on
+`__builtin_is_constant_evaluated()`, so the full kernels of the additions and the constructors
+are `constexpr`; the product kernels are not yet, because their cores contain fused operations
+and only `two_prod` has a constant-evaluation variant.
 
 ## Kernels of the first wave
 
@@ -288,6 +299,14 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   It assumes that every input limb is a number of the format and concludes, before the claims,
   that every output limb is one too (unless a `normalized` claim on that output already says
   so), so that the theorem of one kernel establishes the hypotheses of the next.
+- `IeeeModel.v` and `IeeeStatements.v`: the same for the IEEE model
+  ([Milestone 1 statements](design/milestone1.md#two-formal-models-of-one-kernel)): every kernel
+  as a function of Flocq's binary floating-point numbers, with one binder per operation for the
+  NaN it may return, and the IEEE-model statements of each kernel. They import two hand-written
+  files: `proofs/theories/IeeeOperations.v`, which gives each operation of the IR its meaning in
+  Flocq's terms, and `IeeeVocabulary.v`, the definitions the statements are written with.
+  `IeeeAudit.v` is to them what `Audit.v` is to the real model, for the kernels of the extended
+  domain.
 - `Audit.v`: for every kernel not marked `unverified`, a silent definition
   `<kernel>_audit : <kernel>_spec := <kernel>_correct`, which fails to compile unless the theorem
   has the generated statement as its type, followed by `Print Assumptions <kernel>_correct`. The
@@ -403,11 +422,11 @@ field has the domain `finite`, as before.
 
 | Kind | Fields | Meaning in the extended domain |
 |---|---|---|
-| `extends` | `of`, `core`: a kernel with the same inputs and outputs, `lead`: `add`, `sub` or `mul`, `finite_when`: a list of conditions | F1 to F5 of [IEEE-like results](design/milestone1.md#ieee-like-results): the output is canonical; if it is finite, every operand is finite and every `ensures` entry of `core` holds; if every operand is finite and every condition holds, the output is finite; if every operand is finite and the output is not, it is $(\pm\infty, 0)$ with the sign of `value`; if an operand is not finite, the output is the canonical form of `lead` applied to the leading limbs of the inputs, in order, by the rules of IEEE 754 |
+| `extends` | `of`, `core`: a kernel with the same inputs and outputs, `lead`: `add`, `sub` or `mul`, `finite_when`: a list of conditions | F1 to F5 of [IEEE-like results](design/milestone1.md#ieee-like-results): the output is canonical; if it is finite, every operand is finite and every `ensures` entry of `core` holds; if every operand is finite and every condition holds, the output is finite; if every operand is finite and the output is not, it is $(\pm\infty, 0)$ with the sign of `value` (the proofs give $+0$; the sign of a zero is not part of a claim); if an operand is not finite, the output is the canonical form of `lead` applied to the leading limbs of the inputs, in order, by the rules of IEEE 754 |
 | `encloses` | as before, and `finite_when` | B1 to B4 of [Ball kernels](design/milestone1.md#ball-kernels): the output ball is canonical; it is empty exactly when a ball operand is empty; if it is a finite ball, every operand is finite and the containment holds; if every operand is finite and every condition holds, it is a finite ball |
 | `normalized`, `error` | as before | apply when every operand and the output are finite; the output is canonical in every case |
 | `predicate` | as before | the relation between the two values as extended real numbers; false when an operand is a NaN |
-| `rounded` | as before | for a finite operand, the rounding of `value` in the sense of the format with overflow: a result beyond $\Omega$ in the direction of rounding is the infinity; an infinite or NaN operand gives itself |
+| `rounded` | as before | for a finite operand, the rounding of `value` in the sense of the format with overflow: a result beyond $\Omega$ in the direction of rounding is the infinity; for an infinite or NaN operand, `value` of it (the operand itself, or its absolute value for `abs_upper_2`) |
 | `upper` | as before | the output is a NaN exactly when an operand is a NaN or the operation is $0 \cdot \infty$; otherwise it is not below `value`, and `gaps` applies when it is finite |
 
 A condition of `finite_when` is `{"abs_le": EXPR, "exp": E}`: $\lvert \mathrm{EXPR}\rvert \le
@@ -429,6 +448,14 @@ Two more kinds serve the constructors
 | `represents` | `of` | the output is canonical and is `value` exactly: a finite `value` gives a finite normalized output of that value, $\pm\infty$ gives $(\pm\infty, 0)$, a NaN gives all NaN |
 | `makes_ball` | `center`, `radius`: the outputs; `from`: the inputs given as center and radius | the output ball is canonical: empty when the given radius is a NaN or negative; otherwise the whole line when the given center is not finite or the given radius is $+\infty$; otherwise the given center and radius, exactly |
 
+`value` may be an expression there too: `neg_2` and `abs_2` carry `represents` next to their
+`normalized` and `error` entries, with the values `-x` and `abs(x)`, and that entry is what says
+which canonical value comes out for an infinite or NaN operand (the infinity with its sign
+changed or removed; a NaN for a NaN). In the real model `represents` adds nothing to
+`normalized` with an exact `error`, and the generated real-model statement does not print it.
+`ball_neg_k`, which needs no fix-up, carries the extended-domain `encloses` like the full Ball
+kernels.
+
 A kernel of this domain has a statement in the IEEE model, generated like the real-model
 statements and proved the same way. A kernel that also makes sense on finite operands alone
 (the comparisons, the conversions, `neg_2`, `abs_2`, `radd`, `rmul`) keeps its real-model
@@ -436,7 +463,9 @@ statement and gains the IEEE-model one: its `requires` say `canonical` where the
 `normalized`, which is the same thing for a finite operand. A full kernel or a constructor has
 the IEEE-model statement only, and a core keeps the real-model one and the domain `finite`.
 
-`status` and `theorem` keep referring to the real-model statement where there is one. A kernel
+A kernel without a real-model statement (a full kernel, a full Ball kernel, a constructor)
+carries `"ieee_only": true`; the field is absent otherwise. `status` and `theorem` keep referring
+to the real-model statement where there is one. A kernel
 of the extended domain also carries `ieee_status` (`proved` or `unverified`) and, when proved,
 `ieee_theorem`; for a full kernel or a constructor, which has no real-model statement, `status`
 is its `ieee_status`. The oracle judges the claims whatever the statuses say.
@@ -446,17 +475,18 @@ left out):
 
 ```json
 {
-  "name": "add_2_1_full", "domain": "extended",
+  "name": "add_2_1_full", "domain": "extended", "ieee_only": true,
   "inputs": [{"name": "x", "limbs": 2}, {"name": "a", "limbs": 1}],
   "outputs": [{"name": "w", "limbs": 2}],
   "value": "x+a",
   "requires": ["canonical(x)"],
-  "ensures": [{"kind": "extends", "of": "w", "core": "add_2_1", "lead": "add", "finite_when": []}],
-  "min_precision": 3, "status": "unverified", "ieee_status": "unverified",
+  "ensures": [{"kind": "extends", "of": "w", "core": "add_2_1", "lead": "add",
+               "finite_when": [{"abs_le": "x", "exp": -2}, {"abs_le": "a", "exp": -2}]}],
+  "min_precision": 3, "status": "proved", "ieee_status": "proved",
   "instances": {"binary64": [], "binary32": []}
 },
 {
-  "name": "ball_mul_2_full", "domain": "extended",
+  "name": "ball_mul_2_full", "domain": "extended", "ieee_only": true,
   "inputs": [{"name": "cx", "limbs": 2}, {"name": "rx", "limbs": 1},
              {"name": "cy", "limbs": 2}, {"name": "ry", "limbs": 1}],
   "outputs": [{"name": "cw", "limbs": 2}, {"name": "rw", "limbs": 1}],
@@ -465,21 +495,27 @@ left out):
   "ensures": [{"kind": "encloses", "center": "cw", "radius": "rw", "set": "x*y",
                "balls": {"x": {"center": "cx", "radius": "rx"}, "y": {"center": "cy", "radius": "ry"}},
                "finite_when": []}],
-  "min_precision": 4, "status": "unverified", "ieee_status": "unverified",
+  "min_precision": 4, "status": "proved", "ieee_status": "proved",
   "instances": {"binary64": [], "binary32": []}
 },
 {
-  "name": "ball_make_2", "domain": "extended",
+  "name": "ball_make_2", "domain": "extended", "ieee_only": true,
   "inputs": [{"name": "c", "limbs": 2}, {"name": "r", "limbs": 1}],
   "outputs": [{"name": "cw", "limbs": 2}, {"name": "rw", "limbs": 1}],
   "requires": ["canonical(c)"],
   "ensures": [{"kind": "makes_ball", "center": "cw", "radius": "rw", "from": {"center": "c", "radius": "r"}}],
-  "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+  "min_precision": 1, "status": "proved", "ieee_status": "proved",
   "instances": {"binary64": [], "binary32": []}
 }
 ```
 
-The minimum precision of a full kernel is that of its core. In the extended domain the scalar of
+A kernel description also has fields that drive the IEEE-model printer and are not written to
+the claims: `ieee`, `ieee_finite` and `ieee_finite_result` name the IEEE-model statements of a
+finite core (the bridge, and the two forms of "no overflow below a threshold"), and `ieee_only`
+marks a kernel that has no real-model statement (`gen/README.md`).
+
+The minimum precision of a full kernel is that of its core (2 for the one-limb full Ball
+kernels, whose constants must stay below the overflow threshold). In the extended domain the scalar of
 `ball_scale` is any value of the format, $\pm\infty$ or NaN, and one that is not finite gives the
 whole line (the empty set if the ball operand is empty). `make_2_limbs` takes its two limbs as one
 2-limb input with `canonical`.

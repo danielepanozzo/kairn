@@ -100,6 +100,81 @@ MUTANTS = {
         "claims.py", "                for fmtname, d in per.items():\n                    put(fmtname, j, d)",
         "                for fmtname, d in per.items():\n"
         "                    put(fmtname, len(inst) - 1 - j, d)"),
+    # The non-finite layer.
+    "F1: canonical output not checked": (
+        "extended.py", '    if not canonical(fmt, w):\n        fail("F1"',
+        '    if False:\n        fail("F1"'),
+    "F2: core entries not applied": (
+        "extended.py", '                    fail("F2", "core %s: %s" % (it["core_name"], r))',
+        "                    pass"),
+    "F2: finite result for a non-finite operand accepted": (
+        "extended.py", '        fail("F2", "a finite result although an operand is not finite")',
+        "        pass"),
+    "F3 not checked": (
+        "extended.py", '        if conds_hold:\n            fail("F3"', '        if False:\n            fail("F3"'),
+    "F4: sign of the exact value ignored": (
+        "extended.py", "want = INF if v > 0 else NINF", "want = INF"),
+    "F4: tail after the infinity not checked": (
+        "extended.py", "if w0 != want or any(t != 0 for t in w[1:]):", "if w0 != want:"),
+    "F5: lead not applied": (
+        "extended.py", '    if w != want:\n        fail("F5"', '    if False:\n        fail("F5"'),
+    "F4: overflow on small operands not shown": (
+        "extended.py", '        if ep.small(x, V):\n            sus.append("F4',
+        '        if False:\n            sus.append("F4'),
+    "extended reals: 0 * inf is not NaN": (
+        "extended.py", "if sa is None or sb is None or sa == 0 or sb == 0:",
+        "if sa is None or sb is None:"),
+    "extended reals: inf - inf is not NaN": (
+        "extended.py", "    if type(a) is not int and type(b) is not int and a != b:\n        return NAN",
+        "    if False:\n        return NAN"),
+    "canonical: any tail after an infinity": (
+        "extended.py", "    return all(v == 0 for v in limbs[1:])\n", "    return True\n"),
+    "canonical: a NaN with any tail": (
+        "extended.py", "        return all(v == NAN for v in limbs)\n    return all(v == 0",
+        "        return True\n    return all(v == 0"),
+    "ball: whole line with any center": (
+        "extended.py", "if r == INF and all(v == 0 for v in c):", "if r == INF:"),
+    "ball: negative radius accepted": (
+        "extended.py", 'return "finite" if r >= 0 and F.normalized_limbs(fmt, c) else None',
+        'return "finite" if F.normalized_limbs(fmt, c) else None'),
+    "B2 not checked": (
+        "extended.py", '    if (so == "empty") != empty_in:', "    if False:"),
+    "B3: finite ball from a non-finite operand accepted": (
+        "extended.py", '        if not fin_ops:\n            es.applicable += 1\n            fail("B3"',
+        '        if False:\n            es.applicable += 1\n            fail("B3"'),
+    "requirements of the extended domain not checked": (
+        "extended.py", "    why = ep.violated(x)\n", "    why = None\n"),
+    "nonneg admits -inf": (
+        "extended.py", "ok = v in (INF, NAN) or", "ok = v in (INF, NAN, NINF) or"),
+    "makes_ball: negative radius not empty": (
+        "extended.py", "if r == NAN or r == NINF or (type(r) is int and r < 0):",
+        "if r == NAN or r == NINF:"),
+    "represents: value not compared": (
+        "extended.py", '    if not ok:\n        es.count("failed: not the value")',
+        '    if False:\n        es.count("failed: not the value")'),
+    "predicate: a NaN compares equal": (
+        "extended.py", "truth = d is not None and (", 'truth = (d is None and rel != "lt") or d is not None and ('),
+    "rounded: down below -Omega kept finite": (
+        "extended.py", "r = NINF if r < -om else om if r > om else r",
+        "r = -om if r < -om else om if r > om else r"),
+    "upper: any output accepted for a NaN value": (
+        "extended.py", '        return [] if o == NAN else ["upper: the output is not a NaN although the value is"]',
+        "        return []"),
+    "exhaustive: -inf left out of a one-limb domain": (
+        "gen3.py", "dom = fin + [(INF,), (NINF,), (NAN,)]", "dom = fin + [(INF,), (NAN,)]"),
+    "claims: core inputs not compared": (
+        "claims.py", "        if shape(c.inputs, c.masks, True) != shape(k.inputs, k.masks, True):",
+        "        if False:"),
+    "claims: finite_when names not checked": (
+        "claims.py", '            tree = kernel.input_expression(cond["abs_le"], w.split(": ", 1)[1])',
+        '            tree = X.parse(cond["abs_le"])'),
+    "bounds evaluated below min_precision": (
+        "check.py", '            if e.kind == "error" and not self.in_scope:', "            if False:"),
+    "represents: pinned outputs still shown as suspicious": (
+        "extended.py", "    pinned = all(i in ep.pinned for lo, hi in c[\"ranges\"] for i in range(lo, hi))",
+        "    pinned = False"),
+    "claims: lead not compared with the value": (
+        "claims.py", "        if (t[0] != LEADS[self.lead] or", "        if False and (t[0] != LEADS[self.lead] or"),
 }
 
 

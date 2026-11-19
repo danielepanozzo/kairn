@@ -2,11 +2,12 @@
 
 **Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is in
 progress: the first public headers exist, for numbers of one and two limbs of type `float` or
-`double` and for balls around them, and the claims of all their operations have checked proofs in
-a model of arithmetic where nothing overflows. What happens at overflow is proved for some
-operations only, and the treatment of infinities and NaN is not written yet;
-[What holds today](guarantees.md) has the details. This page shows how to build and test the
-repository, write a first program, use the CMake package, and build this site.
+`double` and for balls around them. The claims of all their operations have checked proofs in a
+model of arithmetic where nothing overflows, and at overflow and for infinities and NaN they
+return results like those of `float` and `double` (balls: the whole line, or the empty set), which
+is proved in a model of IEEE 754; [What holds today](guarantees.md) has the details and what is
+not proved yet. This page shows how to build and test the repository, write a first program, use
+the CMake package, and build this site.
 
 ## A first program
 
@@ -69,7 +70,7 @@ Built on its own, Kairn defaults to a `Release` build, because its contraction t
 optimizing compiler does. With a multi-configuration generator (Visual Studio, Xcode), name the
 configuration instead: `cmake --build build --config Release` and `ctest --test-dir build -C
 Release --output-on-failure`. Add `--parallel N` to both of the last two commands to use N cores;
-with four, the whole run takes about two minutes on a recent machine.
+with five, the whole run takes about three and a half minutes on a recent machine.
 
 The tests:
 
@@ -85,17 +86,17 @@ The tests:
 | `crosscheck.cxx.*` | Each kernel, compiled with the build's compiler and flags, on random `binary64` and `binary32` operands, judged by the oracle. |
 | `crosscheck.neon.*`, `crosscheck.avx2.*` | The same for the packed kernels, NEON on AArch64 and AVX2 on x86-64, one operand per lane. |
 | `crosscheck.cxx-*.*`, `crosscheck.neon-*.*`, `crosscheck.avx2-*.*` | The same, under each contraction setting that matters to the compiler. |
-| `crosscheck.guards` | The cross-checks fail when they check less than they say: an incomplete enumeration, a missing stratum, nothing judged. |
+| `crosscheck.guards` | The cross-checks fail when they check less than they say: an incomplete enumeration, a missing stratum, nothing judged, a kind of non-finite case never seen. |
 | `consume.add_subdirectory` | A CMake project that adds Kairn with `add_subdirectory` and links `kairn::kairn` and `kairn::fma` builds, compiles as C++20, and runs a kernel. |
 | `consume.install` | `cmake --install` of the build tree into a prefix inside the build directory. |
 | `consume.find_package` | A CMake project that finds that installed copy with `find_package(kairn)` builds, compiles as C++20, and runs a kernel. |
-| `api.oracle.*` | Each public operation, computed through the operators and functions of `kairn/kairn.hpp`, on random `binary64` and `binary32` operands, judged by the oracle against the claims of its kernel; also with contraction forced on (`.contract-fast`). |
-| `api.oracle.coverage` | Every kernel of `gen/claims.json` is computed by some public operation or listed as internal to others. |
-| `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, and the same results at run time. |
+| `api.oracle.*` | Each public operation, computed through the constructors, operators and functions of `kairn/kairn.hpp`, on random `binary64` and `binary32` operands (infinities, NaN, the empty set and the whole line included, for the kernels that have them), judged by the oracle against the claims of the kernel it calls; also with contraction forced on (`.contract-fast`). |
+| `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by some public operation, or is a building block of others, or is on a short list of entry kernels not public yet, each with its reason. |
+| `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, and the same results at run time. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass, and each detects a changed rounding mode and flush-to-zero. |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break Kairn and define no macro; `kairn::self_test()` must report a failure. |
-| `api.reject.*` | What must not compile: the flags `config.hpp` rejects, and each kind of operation written without the marker while its kernel is UNVERIFIED (against a copy of the headers in which every kernel is). |
-| `api.boundary.*` | A product the program computes and passes into an operation (`x + a * b`, a constructor, `from_limbs`, a ball's center or radius) gives, bit for bit, the result of the same operation on the rounded product, under each contraction setting; `api.boundary.unguarded.*` checks that without the guard the compilers that fuse across statements do change it. |
+| `api.reject.*` | What must not compile: the flags `config.hpp` rejects; each kind of operation and constructor written without the marker while its kernel is UNVERIFIED (against a copy of the headers in which every kernel is); and an operation whose kernel alone is UNVERIFIED, which must not compile through a conversion to another kernel. |
+| `api.boundary.*` | A product the program computes and passes into an operation (`x + a * b`, a constructor, `from_limbs`, a ball's center or radius) gives, bit for bit, the result of the same operation on the rounded product, under each contraction setting; `api.boundary.unguarded.*` checks, against a copy of the headers without the generated guard, that the compilers that fuse across statements do change it. |
 | `api.k1.zero_cost` | The instructions emitted for loops over `Expansion<double, 1>` against the same loops over `double`. |
 | `api.example.*` | The examples of this site, which check their own output; the tutorial's, under each contraction setting, against the output its page shows. |
 

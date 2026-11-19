@@ -15,6 +15,10 @@ theorem:       proofs/theories/AddFast22.v add_fast_2_2_correct
 source:        JMP17 Alg. 5 (SloppyDWPlusDW); the bound and the normalization are proved here
 license:       algorithm: published; proof: MIT
 status:        proved
+ieee:          bridge spec
+ieee_finite:   abs_le(x0,-2);abs_le(y0,-2)
+ieee_finite_result: abs_le(x+y,-2)
+entry:         yes
 
 (sh, sl) = two_sum(x0, y0)
 v        = add(x1, y1)

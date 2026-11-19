@@ -12,6 +12,7 @@ import sys
 from fractions import Fraction
 
 from . import expr as EX
+from . import extended as XT
 from . import fmt as F
 from .claims import ClaimsError
 
@@ -413,7 +414,12 @@ class Plan:
         for e in kernel.ensures:
             ranges = [self.out_slices[n] for n in e.of]
             c = {"kind": e.kind, "ranges": ranges, "first": ranges[0][0]}
-            if e.kind == "error":
+            if e.kind == "error" and not self.in_scope:
+                # Below the kernel's minimum precision nothing is judged, and a bound may not
+                # even exist there (3/(1 - 4u) at p = 2): it is not evaluated, so that such a
+                # format cannot set the kernel aside for the others.
+                c["source"] = None
+            elif e.kind == "error":
                 rel, ab, src = kernel.bound(fmt, e)
                 # The bound is rel*rho + ab; with rho and the error at scale sc it reads
                 # rel*rho + ab*2^-sc in those units.
@@ -435,6 +441,8 @@ class Plan:
             elif e.kind == "encloses":
                 c.update(self._encloses(e))
             self.entries.append(c)
+        # The extended domain (the non-finite layer) is judged by extended.py.
+        self.ext = XT.ExtPlan(self, Plan) if kernel.extended and self.in_scope else None
 
     def limb_products_normal(self, x):
         (alo, ahi), (blo, bhi), te = self.lp
@@ -510,6 +518,7 @@ class Checker:
             if k.unknown_fields:
                 self.summary.claims_warnings.append(
                     "%s: fields not read by the oracle: %s" % (k.name, ", ".join(k.unknown_fields)))
+            self.summary.claims_warnings.extend(k.warnings)
         self.max_examples = max_examples
         self.plans = {}
         self.open_header = None     # (descriptor, expected lines, kernel, format, seen)
@@ -606,6 +615,11 @@ class Checker:
             st.entries = [EntryStats(e.label, e.kind) for e in pl.kernel.ensures]
             for es, pe in zip(st.entries, pl.entries):
                 es.bound_source = pe.get("source")
+            if pl.ext is not None:
+                # The entries of the core of each `extends` entry, which F2 applies.
+                for label, kind, source in pl.ext.extra:
+                    st.entries.append(EntryStats(label, kind))
+                    st.entries[-1].bound_source = source
         st.c["cases"] += 1
         if pl is None:
             if kname in self.claims.broken:
@@ -630,6 +644,9 @@ class Checker:
             return
         if not pl.in_scope:
             st.c["out_of_scope"] += 1
+            return
+        if pl.ext is not None:
+            XT.judge_line(self, st, pl, line, ins, outs)
             return
         # Requirements first: a case outside them is never counted as passed.
         for i in pl.in_masks:
@@ -735,9 +752,25 @@ class Checker:
                 self._fail(st, line, "output limb not a number of the format")
                 return
         st.c["judged"] += 1
+        reasons = self._judge(pl, st.entries, x, z, V, expected, line)
+        if reasons:
+            st.c["failed"] += 1
+            for r in reasons:
+                st.reason(r)
+            st.example("failure", line, "; ".join(reasons), self.max_examples)
+        else:
+            st.c["passed"] += 1
+
+    def _judge(self, pl, ents, x, z, V, expected, line, only=None):
+        """The reasons of the failures of every `ensures` entry of the plan (those listed in
+        `only`), on finite operands and finite outputs, with the statistics in ents.  F2 of the
+        extended domain applies it to the core of a full kernel."""
+        fmt = pl.fmt
         reasons = []
         for i, e in enumerate(pl.entries):
-            es = st.entries[i]
+            if only is not None and i not in only:
+                continue
+            es = ents[i]
             kind = e["kind"]
             if kind == "normalized":
                 es.applicable += 1
@@ -799,13 +832,7 @@ class Checker:
                 b = (bn << sh, rd) if sh >= 0 else (bn, rd << -sh)
                 if es.b_max is None or _gt(b, es.b_max):
                     es.b_max, es.b_case = _reduce(*b), line
-        if reasons:
-            st.c["failed"] += 1
-            for r in reasons:
-                st.reason(r)
-            st.example("failure", line, "; ".join(reasons), self.max_examples)
-        else:
-            st.c["passed"] += 1
+        return reasons
 
     # -- the kinds of the second wave: each returns the reason of a failure, or None ----------
 
@@ -858,8 +885,13 @@ class Checker:
         return None
 
     def _encloses(self, pl, e, es, x, z, V, _r, line):
-        fmt = pl.fmt
         es.applicable += 1
+        return self._containment(pl, e, es, x, z, line)
+
+    def _containment(self, pl, e, es, x, z, line):
+        """The set is within the returned radius of the returned center (finite operands and
+        outputs), with the statistics of the radius."""
+        fmt = pl.fmt
         rg = pl.set_range(e, x)
         if rg is None:
             es.count("empty set (a negative input radius)")

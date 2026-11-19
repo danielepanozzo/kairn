@@ -1,5 +1,5 @@
 (* The three error-free transformations in the IEEE model: two_sum, fast_two_sum,
-   two_prod (IeeeDraft.v), with finite operands a and b.
+   two_prod (proofs/gen/IeeeModel.v), with finite operands a and b.
 
    fast_two_sum, under its requirement |a| >= |b|: if s is finite then z and e are
    finite and equal to the values of the real model. So s = RN(a + b), s + e = a + b
@@ -23,7 +23,7 @@
    the same question for the usual order of operations.) That enumeration is not a
    proof; what is proved is the equivalence above and the sufficient condition.
 
-   The statements, in the form of IeeeStatementsDraft.v, are at the end of the file:
+   The statements, in the form of proofs/gen/IeeeStatements.v, are at the end of the file:
    fast_two_sum_ieee_correct, two_prod_ieee_correct, two_sum_ieee_correct.
 
    The proof for two_sum bounds the four values computed after bb (two_sum_range):
@@ -33,39 +33,40 @@
    twice), and t0 = a. *)
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra.
 From Flocq Require Import Core Sterbenz Binary.
-From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Format Normalized EFT Program IeeeBridge IeeeStatementsDraft.
-From Kairn Require IeeeDraft.
+From Kairn.Gen Require Import Model Statements IeeeStatements.
+From Kairn Require Import Format Normalized EFT Program IeeeBridge IeeeVocabulary.
+From Kairn Require IeeeOperations.
+From Kairn.Gen Require IeeeModel.
 Import ListNotations.
 Open Scope R_scope.
 
-(** * The programs of IeeeDraft.v are the kernels of the real model *)
+(** * The programs of proofs/gen/IeeeModel.v are the kernels of the real model *)
 
 Lemma fast_two_sum_runR :
   forall emin prec choice a b,
   fast_two_sum emin prec choice a b =
-  (nth 2 (runR emin prec choice IeeeDraft.fast_two_sum_prog [a; b]) 0,
-   nth 4 (runR emin prec choice IeeeDraft.fast_two_sum_prog [a; b]) 0).
+  (nth 2 (runR emin prec choice IeeeModel.fast_two_sum_prog [a; b]) 0,
+   nth 4 (runR emin prec choice IeeeModel.fast_two_sum_prog [a; b]) 0).
 Proof.
-intros. cbv [fast_two_sum runR run stepR nth app IeeeDraft.fast_two_sum_prog]. reflexivity.
+intros. cbv [fast_two_sum runR run stepR nth app IeeeModel.fast_two_sum_prog]. reflexivity.
 Qed.
 
 Lemma two_prod_runR :
   forall emin prec choice a b,
   two_prod emin prec choice a b =
-  (nth 2 (runR emin prec choice IeeeDraft.two_prod_prog [a; b]) 0,
-   nth 3 (runR emin prec choice IeeeDraft.two_prod_prog [a; b]) 0).
+  (nth 2 (runR emin prec choice IeeeModel.two_prod_prog [a; b]) 0,
+   nth 3 (runR emin prec choice IeeeModel.two_prod_prog [a; b]) 0).
 Proof.
-intros. cbv [two_prod runR run stepR nth app IeeeDraft.two_prod_prog]. reflexivity.
+intros. cbv [two_prod runR run stepR nth app IeeeModel.two_prod_prog]. reflexivity.
 Qed.
 
 Lemma two_sum_runR :
   forall emin prec choice a b,
   two_sum emin prec choice a b =
-  (nth 2 (runR emin prec choice IeeeDraft.two_sum_prog [a; b]) 0,
-   nth 7 (runR emin prec choice IeeeDraft.two_sum_prog [a; b]) 0).
+  (nth 2 (runR emin prec choice IeeeModel.two_sum_prog [a; b]) 0,
+   nth 7 (runR emin prec choice IeeeModel.two_sum_prog [a; b]) 0).
 Proof.
-intros. cbv [two_sum runR run stepR nth app IeeeDraft.two_sum_prog]. reflexivity.
+intros. cbv [two_sum runR run stepR nth app IeeeModel.two_sum_prog]. reflexivity.
 Qed.
 
 (** * Magnitudes in the real model, near the top of the range *)
@@ -342,29 +343,29 @@ Notation finite_all := (Forall (fun x : float => fin x)).
 (* The programs are the kernels of the IEEE model. *)
 Lemma fast_two_sum_runB :
   forall a b : float,
-  IeeeDraft.fast_two_sum prec emax nan_plus nan_minus a b =
-  (nth 2 (runB IeeeDraft.fast_two_sum_prog [a; b]) d0,
-   nth 4 (runB IeeeDraft.fast_two_sum_prog [a; b]) d0).
+  IeeeModel.fast_two_sum prec emax nan_plus nan_minus a b =
+  (nth 2 (runB IeeeModel.fast_two_sum_prog [a; b]) d0,
+   nth 4 (runB IeeeModel.fast_two_sum_prog [a; b]) d0).
 Proof.
-intros. cbv [IeeeDraft.fast_two_sum run stepB nth app IeeeDraft.fast_two_sum_prog]. reflexivity.
+intros. cbv [IeeeModel.fast_two_sum run stepB nth app IeeeModel.fast_two_sum_prog]. reflexivity.
 Qed.
 
 Lemma two_prod_runB :
   forall a b : float,
-  IeeeDraft.two_prod prec emax nan_opp nan_fma a b =
-  (nth 2 (runB IeeeDraft.two_prod_prog [a; b]) d0,
-   nth 3 (runB IeeeDraft.two_prod_prog [a; b]) d0).
+  IeeeModel.two_prod prec emax nan_opp nan_fma a b =
+  (nth 2 (runB IeeeModel.two_prod_prog [a; b]) d0,
+   nth 3 (runB IeeeModel.two_prod_prog [a; b]) d0).
 Proof.
-intros. cbv [IeeeDraft.two_prod run stepB nth app IeeeDraft.two_prod_prog]. reflexivity.
+intros. cbv [IeeeModel.two_prod run stepB nth app IeeeModel.two_prod_prog]. reflexivity.
 Qed.
 
 Lemma two_sum_runB :
   forall a b : float,
-  IeeeDraft.two_sum prec emax nan_plus nan_minus a b =
-  (nth 2 (runB IeeeDraft.two_sum_prog [a; b]) d0,
-   nth 7 (runB IeeeDraft.two_sum_prog [a; b]) d0).
+  IeeeModel.two_sum prec emax nan_plus nan_minus a b =
+  (nth 2 (runB IeeeModel.two_sum_prog [a; b]) d0,
+   nth 7 (runB IeeeModel.two_sum_prog [a; b]) d0).
 Proof.
-intros. cbv [IeeeDraft.two_sum run stepB nth app IeeeDraft.two_sum_prog]. reflexivity.
+intros. cbv [IeeeModel.two_sum run stepB nth app IeeeModel.two_sum_prog]. reflexivity.
 Qed.
 
 (** ** fast_two_sum *)
@@ -374,13 +375,13 @@ Qed.
 Theorem fast_two_sum_bridge :
   (2 <= prec)%Z ->
   forall a b : float, fin a -> fin b -> Rabs (b2r b) <= Rabs (b2r a) ->
-  fin (nth 2 (runB IeeeDraft.fast_two_sum_prog [a; b]) d0) ->
-  finite_all (runB IeeeDraft.fast_two_sum_prog [a; b]) /\
-  map b2r (runB IeeeDraft.fast_two_sum_prog [a; b]) = runR IeeeDraft.fast_two_sum_prog [b2r a; b2r b].
+  fin (nth 2 (runB IeeeModel.fast_two_sum_prog [a; b]) d0) ->
+  finite_all (runB IeeeModel.fast_two_sum_prog [a; b]) /\
+  map b2r (runB IeeeModel.fast_two_sum_prog [a; b]) = runR IeeeModel.fast_two_sum_prog [b2r a; b2r b].
 Proof.
 intros Hp2 a b Fa Fb Hab Hs.
 apply (bridge_f2s_prog prec emax nan_plus nan_minus nan_opp nan_fma
-         IeeeDraft.fast_two_sum_prog [] 0%nat 1%nat [a; b] 2%nat); trivial.
+         IeeeModel.fast_two_sum_prog [] 0%nat 1%nat [a; b] 2%nat); trivial.
 - repeat constructor; assumption.
 - generalize (fast_two_sum_correct emin prec Hp2 (b2r a) (b2r b)
                 (b2r_format prec emax a) (b2r_format prec emax b) Hab).
@@ -390,7 +391,7 @@ Qed.
 Theorem fast_two_sum_values :
   (2 <= prec)%Z ->
   forall a b : float, fin a -> fin b -> Rabs (b2r b) <= Rabs (b2r a) ->
-  let '(s, e) := IeeeDraft.fast_two_sum prec emax nan_plus nan_minus a b in
+  let '(s, e) := IeeeModel.fast_two_sum prec emax nan_plus nan_minus a b in
   fin s ->
   fin e /\ (b2r s, b2r e) = fast_two_sum emin prec tie_even (b2r a) (b2r b).
 Proof.
@@ -404,27 +405,27 @@ Qed.
 
 Theorem two_prod_bridge :
   forall a b : float, fin a -> fin b ->
-  fin (nth 2 (runB IeeeDraft.two_prod_prog [a; b]) d0) ->
-  finite_all (runB IeeeDraft.two_prod_prog [a; b]) /\
-  map b2r (runB IeeeDraft.two_prod_prog [a; b]) = runR IeeeDraft.two_prod_prog [b2r a; b2r b].
+  fin (nth 2 (runB IeeeModel.two_prod_prog [a; b]) d0) ->
+  finite_all (runB IeeeModel.two_prod_prog [a; b]) /\
+  map b2r (runB IeeeModel.two_prod_prog [a; b]) = runR IeeeModel.two_prod_prog [b2r a; b2r b].
 Proof.
 intros a b Fa Fb Hp.
 apply (bridge_tail_prog prec emax nan_plus nan_minus nan_opp nan_fma
-         IeeeDraft.two_prod_prog [Iprod 0 1] [Ifms 0 1 2] [a; b] 2%nat); trivial.
+         IeeeModel.two_prod_prog [Iprod 0 1] [Ifms 0 1 2] [a; b] 2%nat); trivial.
 - repeat constructor; assumption.
 - simpl. lia.
 - intros F1 M1.
   assert (Hr : inrange (rnd (b2r a * b2r b + 0))).
   { change (rnd (b2r a * b2r b + 0)) with (nth 2 (runR [Iprod 0 1] (map b2r [a; b])) 0).
     rewrite <- M1, nth_b2r. apply b2r_inrange. }
-  cbv [IeeeBridge.runR run stepR nth app map IeeeDraft.two_prod_prog].
+  cbv [IeeeBridge.runR run stepR nth app map IeeeModel.two_prod_prog].
   repeat constructor; try apply b2r_inrange; trivial.
   now apply (two_prod_range prec emax).
 Qed.
 
 Theorem two_prod_values :
   forall a b : float, fin a -> fin b ->
-  let '(p, e) := IeeeDraft.two_prod prec emax nan_opp nan_fma a b in
+  let '(p, e) := IeeeModel.two_prod prec emax nan_opp nan_fma a b in
   fin p ->
   fin e /\ (b2r p, b2r e) = two_prod emin prec tie_even (b2r a) (b2r b).
 Proof.
@@ -439,26 +440,26 @@ Qed.
 (* The sum is one IEEE addition: when finite, it is the rounded sum. *)
 Lemma two_sum_sum :
   forall a b : float, fin a -> fin b ->
-  let '(s, e) := IeeeDraft.two_sum prec emax nan_plus nan_minus a b in
+  let '(s, e) := IeeeModel.two_sum prec emax nan_plus nan_minus a b in
   fin s -> b2r s = rnd (b2r a + b2r b).
 Proof.
-intros a b Fa Fb. cbv [IeeeDraft.two_sum].
+intros a b Fa Fb. cbv [IeeeModel.two_sum].
 apply (add_spec prec emax nan_plus a b Fa Fb).
 Qed.
 
 (* From the error term: its cone is the whole kernel. *)
 Theorem two_sum_bridge_e :
   forall a b : float, fin a -> fin b ->
-  fin (nth 7 (runB IeeeDraft.two_sum_prog [a; b]) d0) ->
-  finite_all (runB IeeeDraft.two_sum_prog [a; b]) /\
-  map b2r (runB IeeeDraft.two_sum_prog [a; b]) = runR IeeeDraft.two_sum_prog [b2r a; b2r b].
+  fin (nth 7 (runB IeeeModel.two_sum_prog [a; b]) d0) ->
+  finite_all (runB IeeeModel.two_sum_prog [a; b]) /\
+  map b2r (runB IeeeModel.two_sum_prog [a; b]) = runR IeeeModel.two_sum_prog [b2r a; b2r b].
 Proof.
 intros a b Fa Fb He.
 assert (Fe : finite_all [a; b]) by (repeat constructor; assumption).
-assert (F : finite_all (runB IeeeDraft.two_sum_prog [a; b])).
+assert (F : finite_all (runB IeeeModel.two_sum_prog [a; b])).
 { apply (covers_sound prec emax nan_plus nan_minus nan_opp nan_fma) with 7%nat; trivial. }
 split. exact F.
-now apply (run_sim prec emax nan_plus nan_minus nan_opp nan_fma IeeeDraft.two_sum_prog [a; b] Fe).
+now apply (run_sim prec emax nan_plus nan_minus nan_opp nan_fma IeeeModel.two_sum_prog [a; b] Fe).
 Qed.
 
 (* From the sum, when bb does not overflow. *)
@@ -466,13 +467,13 @@ Theorem two_sum_bridge_s :
   (2 <= prec)%Z ->
   forall a b : float, fin a -> fin b ->
   inrange (rnd (rnd (b2r a + b2r b) - b2r a)) ->
-  fin (nth 2 (runB IeeeDraft.two_sum_prog [a; b]) d0) ->
-  finite_all (runB IeeeDraft.two_sum_prog [a; b]) /\
-  map b2r (runB IeeeDraft.two_sum_prog [a; b]) = runR IeeeDraft.two_sum_prog [b2r a; b2r b].
+  fin (nth 2 (runB IeeeModel.two_sum_prog [a; b]) d0) ->
+  finite_all (runB IeeeModel.two_sum_prog [a; b]) /\
+  map b2r (runB IeeeModel.two_sum_prog [a; b]) = runR IeeeModel.two_sum_prog [b2r a; b2r b].
 Proof.
 intros Hp2 a b Fa Fb Hbb Hs.
 apply (bridge_tail_prog prec emax nan_plus nan_minus nan_opp nan_fma
-         IeeeDraft.two_sum_prog [Iadd 0 1] [Isub 2 0; Isub 2 3; Isub 0 4; Isub 1 3; Iadd 5 6]
+         IeeeModel.two_sum_prog [Iadd 0 1] [Isub 2 0; Isub 2 3; Isub 0 4; Isub 1 3; Iadd 5 6]
          [a; b] 2%nat); trivial.
 - repeat constructor; assumption.
 - simpl. lia.
@@ -483,7 +484,7 @@ apply (bridge_tail_prog prec emax nan_plus nan_minus nan_opp nan_fma
   destruct (two_sum_range prec emax Hp2 (b2r a) (b2r b) (b2r_format prec emax a)
               (b2r_format prec emax b) (b2r_le_Omega prec emax a) (b2r_le_Omega prec emax b)
               Hr Hbb) as [H0 [H1 [H2 He]]].
-  cbv [IeeeBridge.runR run stepR nth app map IeeeDraft.two_sum_prog].
+  cbv [IeeeBridge.runR run stepR nth app map IeeeModel.two_sum_prog].
   repeat constructor; try apply b2r_inrange; trivial.
 Qed.
 
@@ -491,7 +492,7 @@ Qed.
 Theorem two_sum_values :
   (2 <= prec)%Z ->
   forall a b : float, fin a -> fin b ->
-  let '(s, e) := IeeeDraft.two_sum prec emax nan_plus nan_minus a b in
+  let '(s, e) := IeeeModel.two_sum prec emax nan_plus nan_minus a b in
   (fin e <-> fin s /\ inrange (rnd (rnd (b2r a + b2r b) - b2r a))) /\
   (fin e -> (b2r s, b2r e) = two_sum emin prec tie_even (b2r a) (b2r b)).
 Proof.
@@ -499,7 +500,7 @@ intros Hp2 a b Fa Fb. rewrite two_sum_runB. split; [split|].
 - intros He. destruct (two_sum_bridge_e a b Fa Fb He) as [F M]. split.
   + now apply nth_fin.
   + change (rnd (rnd (b2r a + b2r b) - b2r a))
-      with (nth 3 (runR IeeeDraft.two_sum_prog [b2r a; b2r b]) 0).
+      with (nth 3 (runR IeeeModel.two_sum_prog [b2r a; b2r b]) 0).
     rewrite <- M, nth_b2r. apply b2r_inrange.
 - intros [Hs Hbb]. destruct (two_sum_bridge_s Hp2 a b Fa Fb Hbb Hs) as [F M]. now apply nth_fin.
 - intros He. destruct (two_sum_bridge_e a b Fa Fb He) as [F M].
@@ -510,14 +511,14 @@ Qed.
 Theorem two_sum_values_not_top :
   (2 <= prec)%Z ->
   forall a b : float, fin a -> fin b -> Rabs (b2r b) <> Omega ->
-  let '(s, e) := IeeeDraft.two_sum prec emax nan_plus nan_minus a b in
+  let '(s, e) := IeeeModel.two_sum prec emax nan_plus nan_minus a b in
   fin s ->
   fin e /\ (b2r s, b2r e) = two_sum emin prec tie_even (b2r a) (b2r b).
 Proof.
 intros Hp2 a b Fa Fb Hb.
 generalize (two_sum_values Hp2 a b Fa Fb). rewrite two_sum_runB.
 intros [[_ H1] H2] Hs.
-assert (He : fin (nth 7 (runB IeeeDraft.two_sum_prog [a; b]) d0)).
+assert (He : fin (nth 7 (runB IeeeModel.two_sum_prog [a; b]) d0)).
 { apply H1. split. exact Hs.
   apply (two_sum_bb_range prec emax); trivial.
   - apply (b2r_format prec emax).
@@ -525,7 +526,7 @@ assert (He : fin (nth 7 (runB IeeeDraft.two_sum_prog [a; b]) d0)).
   - change (rnd (b2r a + b2r b)) with (nth 2 (runR [Iadd 0 1] (map b2r [a; b])) 0).
     assert (Fe : finite_all [a; b]) by (repeat constructor; assumption).
     assert (F1 : finite_all (runB [Iadd 0 1] [a; b])).
-    { change (finite_all [a; b; nth 2 (runB IeeeDraft.two_sum_prog [a; b]) d0]).
+    { change (finite_all [a; b; nth 2 (runB IeeeModel.two_sum_prog [a; b]) d0]).
       repeat constructor; assumption. }
     destruct (run_sim prec emax nan_plus nan_minus nan_opp nan_fma [Iadd 0 1] [a; b] Fe) as [_ M1].
     rewrite <- (M1 F1), nth_b2r. apply b2r_inrange. }
@@ -534,7 +535,7 @@ Qed.
 
 End IeeeEFT.
 
-(** * The statements of IeeeStatementsDraft.v *)
+(** * The statements of proofs/gen/IeeeStatements.v *)
 
 Theorem fast_two_sum_ieee_correct : fast_two_sum_ieee_spec.
 Proof.
@@ -543,7 +544,7 @@ generalize (fast_two_sum_values prec emax nan_plus nan_minus
               (fun x => nan_plus x x) (fun x y _ => nan_plus x y) Hp2 a b Fa Fb Hab)
            (fast_two_sum_correct (ieee_emin prec emax) prec Hp2 (val a) (val b)
               (b2r_format prec emax a) (b2r_format prec emax b) Hab).
-destruct (IeeeDraft.fast_two_sum prec emax nan_plus nan_minus a b) as [s e].
+destruct (IeeeModel.fast_two_sum prec emax nan_plus nan_minus a b) as [s e].
 intros B C Fs. destruct (B Fs) as [Fe E]. unfold val, ieee_emin in *.
 rewrite <- E in C. split. exact Fe. exact C.
 Qed.
@@ -555,10 +556,26 @@ generalize (two_prod_values prec emax (fun x y => nan_fma x y y) (fun x y => nan
               nan_opp nan_fma a b Fa Fb)
            (two_prod_correct (ieee_emin prec emax) prec Hp2 (val a) (val b)
               (b2r_format prec emax a) (b2r_format prec emax b)).
-destruct (IeeeDraft.two_prod prec emax nan_opp nan_fma a b) as [p e].
+destruct (IeeeModel.two_prod prec emax nan_opp nan_fma a b) as [p e].
 intros B C Fp. destruct (B Fp) as [Fe E]. unfold val, ieee_emin in *.
 rewrite <- E in C. destruct C as [_ [_ C]]. split. exact Fe. exact C.
 Qed.
+
+(* The statement of two_sum, written by hand: the generator does not print it, because the
+   exact condition under which its error term is finite is not a claim of the kernel. *)
+Definition two_sum_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax),
+  (2 <= prec)%Z ->
+  forall a b : binary_float prec emax,
+  finite a -> finite b ->
+  let '(s, e) := IeeeModel.two_sum prec emax nan_plus nan_minus a b in
+  (finite s -> val s = RN (ieee_emin prec emax) prec (val a + val b)) /\
+  (finite e <->
+   finite s /\ Rabs (RN (ieee_emin prec emax) prec (val s - val a)) < bpow radix2 emax) /\
+  (finite s -> Rabs (val b) < omega prec emax -> finite e) /\
+  (finite e -> (val s + val e) = (val a + val b)).
 
 Theorem two_sum_ieee_correct : two_sum_ieee_spec.
 Proof.
@@ -570,7 +587,7 @@ generalize (two_sum_sum prec emax nan_plus nan_minus a b Fa Fb)
            (two_sum_values_not_top prec emax nan_plus nan_minus nan_opp nan_fma Hp2 a b Fa Fb)
            (two_sum_correct (ieee_emin prec emax) prec Hp2 (val a) (val b)
               (b2r_format prec emax a) (b2r_format prec emax b)).
-destruct (IeeeDraft.two_sum prec emax nan_plus nan_minus a b) as [s e].
+destruct (IeeeModel.two_sum prec emax nan_plus nan_minus a b) as [s e].
 intros S1 [V1 V2] V3 C. unfold val, ieee_emin, finite, omega in *.
 split; [exact S1|split; [|split]].
 - split.

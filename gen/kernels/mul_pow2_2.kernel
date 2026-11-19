@@ -16,6 +16,9 @@ theorem:       proofs/theories/MulPow2.v mul_pow2_2_correct
 source:        both limbs scaled, then Fast2Sum (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+ieee:          bridge spec
+ieee_finite:   abs_le(x*c,-1)
+entry:         yes
 
 h        = prod(x0, c)
 l        = prod(x1, c)

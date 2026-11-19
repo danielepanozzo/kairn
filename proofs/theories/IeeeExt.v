@@ -2,7 +2,7 @@
    infinite or NaN: neg_2, abs_2, the eight comparisons, to_nearest_2, to_down_2,
    to_up_2 and abs_upper_2; and radd and rmul on operands that are nonnegative,
    +infinity or NaN (at the end of the file). The statements are in
-   IeeeExtStatementsDraft.v.
+   proofs/gen/IeeeStatements.v.
 
    Each result is given as an extended real number. The proofs go through three facts:
 
@@ -19,10 +19,10 @@
    rounding of the value in the sense of T. *)
 From Stdlib Require Import Reals ZArith Bool Lia Lra.
 From Flocq Require Import Core Binary.
-From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Format Normalized Sign Compare Convert Directed IeeeBridge IeeeStatementsDraft
-  IeeeExtStatementsDraft IeeeOps.
-From Kairn Require IeeeDraft.
+From Kairn.Gen Require Import Model Statements IeeeStatements.
+From Kairn Require Import Format Normalized Sign Compare Convert Directed IeeeBridge IeeeVocabulary IeeeOps.
+From Kairn Require IeeeOperations.
+From Kairn.Gen Require IeeeModel.
 Open Scope R_scope.
 
 Section IeeeExt.
@@ -39,14 +39,14 @@ Notation fexp := (FLT_exp emin prec).
 Notation format := (generic_format radix2 fexp).
 Notation fin x := (is_finite prec emax x = true).
 Notation b2r := (B2R prec emax).
-Notation neg := (IeeeDraft.neg prec emax nan_opp).
-Notation flt := (IeeeDraft.lt prec emax).
-Notation fle := (IeeeDraft.le prec emax).
-Notation feq := (IeeeDraft.eq prec emax).
-Notation fsucc := (IeeeDraft.succ prec emax).
-Notation fpred := (IeeeDraft.pred prec emax).
-Notation pzero := (IeeeDraft.pzero prec emax).
-Notation pinf := (IeeeDraft.pinf prec emax).
+Notation neg := (IeeeOperations.neg prec emax nan_opp).
+Notation flt := (IeeeOperations.lt prec emax).
+Notation fle := (IeeeOperations.le prec emax).
+Notation feq := (IeeeOperations.eq prec emax).
+Notation fsucc := (IeeeOperations.succ prec emax).
+Notation fpred := (IeeeOperations.pred prec emax).
+Notation pzero := (IeeeOperations.pzero prec emax).
+Notation pinf := (IeeeOperations.pinf prec emax).
 Notation ninf := (B754_infinity prec emax true).
 Notation xv := (@xval prec emax).
 Notation xv2 := (@xval_2 prec emax).
@@ -169,9 +169,9 @@ Ltac compare_22 Cx Cy real :=
 Lemma lt_2_2_ext :
   (1 <= prec)%Z ->
   forall x0 x1 y0 y1 : float, canonical_2 x0 x1 -> canonical_2 y0 y1 ->
-  IeeeDraft.lt_2_2 prec emax x0 x1 y0 y1 = xlt (xv2 x0 x1) (xv2 y0 y1).
+  IeeeModel.lt_2_2 prec emax x0 x1 y0 y1 = xlt (xv2 x0 x1) (xv2 y0 y1).
 Proof.
-intros Hp x0 x1 y0 y1 Cx Cy. unfold IeeeDraft.lt_2_2. cbv zeta.
+intros Hp x0 x1 y0 y1 Cx Cy. unfold IeeeModel.lt_2_2. cbv zeta.
 rewrite 2!lt_xval, eq_xval.
 compare_22 Cx Cy (lt_2_2_correct emin prec Hp (b2r x0) (b2r x1) (b2r y0) (b2r y1)).
 Qed.
@@ -179,9 +179,9 @@ Qed.
 Lemma le_2_2_ext :
   (1 <= prec)%Z ->
   forall x0 x1 y0 y1 : float, canonical_2 x0 x1 -> canonical_2 y0 y1 ->
-  IeeeDraft.le_2_2 prec emax x0 x1 y0 y1 = xle (xv2 x0 x1) (xv2 y0 y1).
+  IeeeModel.le_2_2 prec emax x0 x1 y0 y1 = xle (xv2 x0 x1) (xv2 y0 y1).
 Proof.
-intros Hp x0 x1 y0 y1 Cx Cy. unfold IeeeDraft.le_2_2. cbv zeta.
+intros Hp x0 x1 y0 y1 Cx Cy. unfold IeeeModel.le_2_2. cbv zeta.
 rewrite lt_xval, eq_xval, le_xval.
 compare_22 Cx Cy (le_2_2_correct emin prec Hp (b2r x0) (b2r x1) (b2r y0) (b2r y1)).
 Qed.
@@ -189,9 +189,9 @@ Qed.
 Lemma eq_2_2_ext :
   (1 <= prec)%Z ->
   forall x0 x1 y0 y1 : float, canonical_2 x0 x1 -> canonical_2 y0 y1 ->
-  IeeeDraft.eq_2_2 prec emax x0 x1 y0 y1 = xeq (xv2 x0 x1) (xv2 y0 y1).
+  IeeeModel.eq_2_2 prec emax x0 x1 y0 y1 = xeq (xv2 x0 x1) (xv2 y0 y1).
 Proof.
-intros Hp x0 x1 y0 y1 Cx Cy. unfold IeeeDraft.eq_2_2. cbv zeta.
+intros Hp x0 x1 y0 y1 Cx Cy. unfold IeeeModel.eq_2_2. cbv zeta.
 rewrite 2!eq_xval.
 compare_22 Cx Cy (eq_2_2_correct emin prec Hp (b2r x0) (b2r x1) (b2r y0) (b2r y1)).
 Qed.
@@ -211,9 +211,9 @@ Ltac compare_21 Cx a real :=
 Lemma lt_2_1_ext :
   (1 <= prec)%Z ->
   forall x0 x1 a : float, canonical_2 x0 x1 ->
-  IeeeDraft.lt_2_1 prec emax x0 x1 a = xlt (xv2 x0 x1) (xv a).
+  IeeeModel.lt_2_1 prec emax x0 x1 a = xlt (xv2 x0 x1) (xv a).
 Proof.
-intros Hp x0 x1 a Cx. unfold IeeeDraft.lt_2_1. cbv zeta.
+intros Hp x0 x1 a Cx. unfold IeeeModel.lt_2_1. cbv zeta.
 rewrite 2!lt_xval, eq_xval, xval_pzero.
 compare_21 Cx a (lt_2_1_correct emin prec Hp (b2r x0) (b2r x1) (b2r a)).
 Qed.
@@ -221,9 +221,9 @@ Qed.
 Lemma le_2_1_ext :
   (1 <= prec)%Z ->
   forall x0 x1 a : float, canonical_2 x0 x1 ->
-  IeeeDraft.le_2_1 prec emax x0 x1 a = xle (xv2 x0 x1) (xv a).
+  IeeeModel.le_2_1 prec emax x0 x1 a = xle (xv2 x0 x1) (xv a).
 Proof.
-intros Hp x0 x1 a Cx. unfold IeeeDraft.le_2_1. cbv zeta.
+intros Hp x0 x1 a Cx. unfold IeeeModel.le_2_1. cbv zeta.
 rewrite lt_xval, eq_xval, le_xval, xval_pzero.
 compare_21 Cx a (le_2_1_correct emin prec Hp (b2r x0) (b2r x1) (b2r a)).
 Qed.
@@ -231,9 +231,9 @@ Qed.
 Lemma eq_2_1_ext :
   (1 <= prec)%Z ->
   forall x0 x1 a : float, canonical_2 x0 x1 ->
-  IeeeDraft.eq_2_1 prec emax x0 x1 a = xeq (xv2 x0 x1) (xv a).
+  IeeeModel.eq_2_1 prec emax x0 x1 a = xeq (xv2 x0 x1) (xv a).
 Proof.
-intros Hp x0 x1 a Cx. unfold IeeeDraft.eq_2_1. cbv zeta.
+intros Hp x0 x1 a Cx. unfold IeeeModel.eq_2_1. cbv zeta.
 rewrite 2!eq_xval, xval_pzero.
 compare_21 Cx a (eq_2_1_correct emin prec Hp (b2r x0) (b2r x1) (b2r a)).
 Qed.
@@ -253,9 +253,9 @@ Ltac compare_12 a Cy real :=
 Lemma lt_1_2_ext :
   (1 <= prec)%Z ->
   forall a y0 y1 : float, canonical_2 y0 y1 ->
-  IeeeDraft.lt_1_2 prec emax a y0 y1 = xlt (xv a) (xv2 y0 y1).
+  IeeeModel.lt_1_2 prec emax a y0 y1 = xlt (xv a) (xv2 y0 y1).
 Proof.
-intros Hp a y0 y1 Cy. unfold IeeeDraft.lt_1_2. cbv zeta.
+intros Hp a y0 y1 Cy. unfold IeeeModel.lt_1_2. cbv zeta.
 rewrite 2!lt_xval, eq_xval, xval_pzero.
 compare_12 a Cy (lt_1_2_correct emin prec Hp (b2r a) (b2r y0) (b2r y1)).
 Qed.
@@ -263,9 +263,9 @@ Qed.
 Lemma le_1_2_ext :
   (1 <= prec)%Z ->
   forall a y0 y1 : float, canonical_2 y0 y1 ->
-  IeeeDraft.le_1_2 prec emax a y0 y1 = xle (xv a) (xv2 y0 y1).
+  IeeeModel.le_1_2 prec emax a y0 y1 = xle (xv a) (xv2 y0 y1).
 Proof.
-intros Hp a y0 y1 Cy. unfold IeeeDraft.le_1_2. cbv zeta.
+intros Hp a y0 y1 Cy. unfold IeeeModel.le_1_2. cbv zeta.
 rewrite lt_xval, eq_xval, le_xval, xval_pzero.
 compare_12 a Cy (le_1_2_correct emin prec Hp (b2r a) (b2r y0) (b2r y1)).
 Qed.
@@ -283,10 +283,10 @@ Proof. intros [s|s|s pl H|s m e H]; reflexivity. Qed.
 
 Lemma neg_2_ext :
   forall x0 x1 : float, canonical_2 x0 x1 ->
-  let '(z0, z1) := IeeeDraft.neg_2 prec emax nan_opp x0 x1 in
+  let '(z0, z1) := IeeeModel.neg_2 prec emax nan_opp x0 x1 in
   canonical_2 z0 z1 /\ xv2 z0 z1 = xopp (xv2 x0 x1).
 Proof.
-intros x0 x1 C. unfold IeeeDraft.neg_2. cbv beta iota zeta.
+intros x0 x1 C. unfold IeeeModel.neg_2. cbv beta iota zeta.
 destruct C as [[F0 [F1 N]]|[[[s E] [s' E']]|[N0 N1]]].
 - unfold finite, val in *. split.
   + left. unfold finite, val. rewrite 2!neg_finite, 2!neg_value.
@@ -303,10 +303,10 @@ Qed.
 Lemma abs_2_ext :
   (1 <= prec)%Z ->
   forall x0 x1 : float, canonical_2 x0 x1 ->
-  let '(z0, z1) := IeeeDraft.abs_2 prec emax nan_opp x0 x1 in
+  let '(z0, z1) := IeeeModel.abs_2 prec emax nan_opp x0 x1 in
   canonical_2 z0 z1 /\ xv2 z0 z1 = xabs (xv2 x0 x1).
 Proof.
-intros Hp x0 x1 C. unfold IeeeDraft.abs_2. cbv beta iota zeta.
+intros Hp x0 x1 C. unfold IeeeModel.abs_2. cbv beta iota zeta.
 destruct C as [[F0 [F1 N]]|[[[s E] [s' E']]|[N0 N1]]].
 - unfold finite, val in *.
   assert (Fz : fin pzero) by reflexivity.
@@ -338,9 +338,9 @@ Proof. intros r H. unfold overflow_of. now rewrite Rlt_bool_true. Qed.
 
 Lemma to_nearest_2_ext :
   forall x0 x1 : float, canonical_2 x0 x1 ->
-  xv (IeeeDraft.to_nearest_2 prec emax x0 x1) = xround emax (RN emin prec) (xv2 x0 x1).
+  xv (IeeeModel.to_nearest_2 prec emax x0 x1) = xround emax (RN emin prec) (xv2 x0 x1).
 Proof.
-intros x0 x1 C. unfold IeeeDraft.to_nearest_2. cbv zeta.
+intros x0 x1 C. unfold IeeeModel.to_nearest_2. cbv zeta.
 destruct (canonical_cases x0 x1 C)
   as [[F0 [F1 [[_ [_ N]] [E0 [E1 E]]]]]|[[s [s' [_ [_ [E0 [E1 E]]]]]]|[_ [_ [E0 [E1 E]]]]]];
   rewrite E0, E; try reflexivity.
@@ -350,9 +350,9 @@ Qed.
 Lemma to_up_2_ext :
   (1 <= prec)%Z ->
   forall x0 x1 : float, canonical_2 x0 x1 ->
-  xv (IeeeDraft.to_up_2 prec emax x0 x1) = xround emax (RU emin prec) (xv2 x0 x1).
+  xv (IeeeModel.to_up_2 prec emax x0 x1) = xround emax (RU emin prec) (xv2 x0 x1).
 Proof.
-intros Hp x0 x1 C. unfold IeeeDraft.to_up_2. cbv zeta. rewrite lt_xval, xval_pzero.
+intros Hp x0 x1 C. unfold IeeeModel.to_up_2. cbv zeta. rewrite lt_xval, xval_pzero.
 destruct (canonical_cases x0 x1 C)
   as [[F0 [F1 [N [E0 [E1 E]]]]]|[[s [s' [_ [_ [E0 [E1 E]]]]]]|[_ [_ [E0 [E1 E]]]]]];
   rewrite E1, E.
@@ -377,9 +377,9 @@ Qed.
 Lemma to_down_2_ext :
   (1 <= prec)%Z ->
   forall x0 x1 : float, canonical_2 x0 x1 ->
-  xv (IeeeDraft.to_down_2 prec emax x0 x1) = xround emax (RD emin prec) (xv2 x0 x1).
+  xv (IeeeModel.to_down_2 prec emax x0 x1) = xround emax (RD emin prec) (xv2 x0 x1).
 Proof.
-intros Hp x0 x1 C. unfold IeeeDraft.to_down_2. cbv zeta. rewrite lt_xval, xval_pzero.
+intros Hp x0 x1 C. unfold IeeeModel.to_down_2. cbv zeta. rewrite lt_xval, xval_pzero.
 destruct (canonical_cases x0 x1 C)
   as [[F0 [F1 [N [E0 [E1 E]]]]]|[[s [s' [_ [_ [E0 [E1 E]]]]]]|[_ [_ [E0 [E1 E]]]]]];
   rewrite E1, E.
@@ -407,12 +407,12 @@ Qed.
 Lemma abs_upper_2_ext :
   (1 <= prec)%Z ->
   forall x0 x1 : float, canonical_2 x0 x1 ->
-  xv (IeeeDraft.abs_upper_2 prec emax nan_opp x0 x1)
+  xv (IeeeModel.abs_upper_2 prec emax nan_opp x0 x1)
   = xround emax (RU emin prec) (xabs (xv2 x0 x1)).
 Proof.
-intros Hp x0 x1 C. unfold IeeeDraft.abs_upper_2.
+intros Hp x0 x1 C. unfold IeeeModel.abs_upper_2.
 generalize (abs_2_ext Hp x0 x1 C).
-destruct (IeeeDraft.abs_2 prec emax nan_opp x0 x1) as [a0 a1]. intros [Ca Ea]. cbv zeta.
+destruct (IeeeModel.abs_2 prec emax nan_opp x0 x1) as [a0 a1]. intros [Ca Ea]. cbv zeta.
 rewrite <- Ea. exact (to_up_2_ext Hp a0 a1 Ca).
 Qed.
 
@@ -425,7 +425,7 @@ Variable nan_fma : float -> float -> float -> nan_of.
 Lemma radd_ext :
   (2 <= prec)%Z ->
   forall a b : float, nonneg_ext a -> nonneg_ext b ->
-  let r := IeeeDraft.radd prec emax nan_plus a b in
+  let r := IeeeModel.radd prec emax nan_plus a b in
   nonneg_ext r /\
   (fin r -> fin a /\ fin b /\ b2r a + b2r b <= b2r r /\
    b2r r - (b2r a + b2r b) <= 3 / 2 * (b2r r - Ulp.pred radix2 fexp (b2r r))).
@@ -442,7 +442,7 @@ Qed.
 Lemma rmul_ext :
   (2 <= prec)%Z ->
   forall a b : float, nonneg_ext a -> nonneg_ext b ->
-  let r := IeeeDraft.rmul prec emax nan_fma a b in
+  let r := IeeeModel.rmul prec emax nan_fma a b in
   nonneg_ext r /\
   (fin r -> fin a /\ fin b /\ b2r a * b2r b <= b2r r /\
    b2r r - (b2r a * b2r b) <= 3 / 2 * (b2r r - Ulp.pred radix2 fexp (b2r r))).
@@ -458,7 +458,7 @@ Qed.
 
 End IeeeExt.
 
-(** * The statements of IeeeExtStatementsDraft.v *)
+(** * The statements of proofs/gen/IeeeStatements.v *)
 
 Theorem neg_2_ieee_correct : neg_2_ieee_spec.
 Proof. intros prec emax Hp He nan_opp _ x0 x1 C. exact (neg_2_ext prec emax nan_opp x0 x1 C). Qed.

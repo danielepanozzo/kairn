@@ -27,6 +27,29 @@ value: $c\,u^k$ is relative to the result (with $k = 2$ for two limbs, so about 
 `double`), and $t\,\eta$ is an absolute term that only matters when the result is near the
 underflow range.
 
+For infinite and NaN operands
+([IEEE-like results](../developer/design/milestone1.md#ieee-like-results)):
+
+| Term | Meaning |
+|---|---|
+| canonical | of a two-limb number: finite and normalized, or $(\pm\infty, \pm 0)$, or $(\mathrm{NaN}, \mathrm{NaN})$; of a ball: a finite ball, the whole line (center 0, radius $+\infty$), or the empty set (every limb a NaN) |
+| $\Omega$ | the largest finite number of `T` |
+| $2^{e_{\max}}$ | the overflow threshold of `T`, just above $\Omega$: $2^{1024}$ for `double`, $2^{128}$ for `float` |
+
+## Three kinds of kernel
+
+- Most kernels have a statement about **finite operands** only, proved over the real numbers.
+- Some also have a statement about operands that may be **infinite or NaN**, read in the IEEE model
+  (comparisons, conversions, negation and absolute value, the radius steps). Their page gives the
+  statement on finite operands first, then a section "Infinite and NaN operands" with its own
+  requirements and its own status line.
+- The **full kernels** (`add_2_2_full` and the like) and the **constructors** (`make_2`,
+  `ball_make_2` and the like) have only the statement in the IEEE model. A full kernel runs its
+  *core*, the kernel of the same name without `_full`, and then turns overflow and infinite or NaN
+  operands into the result `T` would give. Its statement has five parts, F1 to F5, printed with the
+  core's bound and the kernel's own conditions; a full Ball kernel has four, B1 to B4, about the
+  three states of a ball. The public headers do not call these kernels yet, and their pages say so.
+
 ## The parts of a page
 
 **What it computes.** The exact value the result stands for, as a formula of the operands. For an
@@ -38,13 +61,16 @@ operands.
 `double`, `Expansion<T, 2>` a number of two limbs, `Ball<T, 1>` a ball whose center has one limb.
 A form marked as converted reaches the kernel through an exact conversion of an operand (a limb to
 a one-limb number, a one-limb number to two limbs, a point to a ball of radius 0). A building
-block has no form: it is a step of other kernels.
+block has no form: it is a step of other kernels. A kernel that the public headers may call but do
+not call yet says "not yet called by the public headers".
 
-**Requires.** What the operands must satisfy for the guarantee to apply. Every operand is finite.
-Every operation of Kairn returns normalized numbers when the leading limb of its result is finite,
-so the requirement that an operand be normalized can fail only for a number whose limbs the program
-gave: `from_limbs` in a build without checks, `from_limbs_unchecked`, or `limb[]` written directly. In a build with `KAIRN_CHECKS` (the default without `NDEBUG`), every operation checks it
-and stops the program if it fails.
+**Requires.** What the operands must satisfy for the guarantee to apply. On finite operands, every
+operand is finite. Every operation of Kairn returns normalized numbers when the leading limb of its
+result is finite, so the requirement that an operand be normalized can fail only for a number whose
+limbs the program gave: `from_limbs` in a build without checks, `from_limbs_unchecked`, or `limb[]`
+written directly. In a build with `KAIRN_CHECKS` (the default without `NDEBUG`), every operation
+checks it and stops the program if it fails. A statement about infinite and NaN operands requires
+canonical operands instead, and a one-limb operand it does not constrain may be any value of `T`.
 
 **Guarantees.** The statement, then its constants. For a bound, the table gives $c\,u^k$ and
 $t\,\eta$ for `double` and `float`, exactly and approximately, and the constants that
@@ -53,7 +79,9 @@ value instead of the exact one (what a running error analysis needs). Last, the 
 for which the statement is proved.
 
 **Status.** *Proved*, with the theorem's name and its file; or *UNVERIFIED*, marked at the top of
-the page (below).
+the page (below). Each statement has its own status, as `gen/claims.json` gives it (`status`, and
+`ieee_status` for the statement about infinite and NaN operands); a page never derives one from
+anything else.
 
 **Source.** Where the algorithm comes from and under which license, as the kernel's description
 gives them. The references are on the [References](../developer/design/phase0/references.md) page.
@@ -63,9 +91,11 @@ nearest. The C++ and the formal model are both printed from it.
 
 **Measured.** What the latest brute-force runs found, explained [below](#what-the-measured-numbers-are).
 
-**Not claimed.** What the statement does not cover. For every kernel today: operands that are
-infinite or NaN, and results that overflow; [What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)
-says what is known there.
+**Not claimed.** What the statements do not cover. For a kernel with a statement about finite
+operands only: operands that are infinite or NaN, and results that overflow; the page names the
+full kernel that states them, if there is one, and
+[What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the
+library does now.
 
 ## What "proved" means
 
@@ -90,10 +120,17 @@ hardware rounds as IEEE 754 says. The tests are for those
 ([Testing](../developer/testing.md)), and `kairn::self_test()` checks the last two in your own
 program.
 
-An **UNVERIFIED** kernel has a statement that the oracle tests but no checked proof. Its page says
-so at the top, its guarantee is called a target, an operation that calls it compiles only with the
-marker `kairn::unverified` on an operand, and `kairn::traits` exports no constants for it
+An **UNVERIFIED** kernel has a statement but no checked proof. Its page says so at the top, its
+guarantee is called a target, an operation that calls it compiles only with the marker
+`kairn::unverified` on an operand, and `kairn::traits` exports no constants for it
 ([What holds today](../getting-started/guarantees.md#proved-and-unverified)).
+
+The statements about infinite and NaN operands are read in Flocq's model of IEEE 754, with signed
+zeros, infinities, NaN and overflow; the generator prints them into
+`proofs/gen/IeeeStatements.v`, and the [index](index.md) says how many `gen/claims.json` marks
+proved. Proofs against statements written
+by hand are described on the [Proofs](../proofs/index.md#what-is-proved-and-in-which-model) page;
+a reference page reports only the status of the claims.
 
 ## What the measured numbers are
 
@@ -111,8 +148,10 @@ runs:
 
 The columns:
 
-- **Cases judged**: the cases whose result has a finite leading limb. When it does not, the claims
-  say nothing, so those cases are counted and not judged.
+- **Cases judged**: the cases whose result has a finite leading limb. When it does not, the
+  statement on finite operands says nothing, so those cases are counted and not judged. The stored
+  runs measure no statement about infinite and NaN operands, and a kernel no run has judged says
+  so.
 - **Failed**: cases that violate a claim, or whose operands violate the requirements.
 - **Largest error / bound**: over the judged cases, the largest $\lvert\text{error}\rvert$ divided
   by the bound the claim allows for that case; 1 is the bound itself. For a claim that the result is

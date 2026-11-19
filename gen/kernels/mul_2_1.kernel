@@ -13,6 +13,9 @@ theorem:       proofs/theories/Mul21.v mul_2_1_correct
 source:        JMP17 Alg. 9 (DWTimesFP3); bound from MR22
 license:       algorithm: published; proof: MIT
 status:        proved
+ieee:          bridge spec
+ieee_finite:   abs_le(x*a,-1)
+entry:         yes
 
 (ch, cl1) = two_prod(x0, a)
 cl3       = fma(x1, a, cl1)

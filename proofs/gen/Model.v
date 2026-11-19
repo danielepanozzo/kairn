@@ -18,97 +18,83 @@ Notation rnd := (round radix2 (FLT_exp emin prec) (Znearest choice)).
 (* Veltkamp's multiplier 2^ceil(prec/2) + 1. *)
 Definition splitter : R := bpow radix2 (Z.div (prec + 1) 2) + 1.
 
-(* tiny_computed(mul_1_1): tiny / (1 - rel), rounded up to the format, for the bound
-   rel |v| + tiny of mul_1_1, with rel = c u^k and tiny = t eta from its claims. *)
-Definition tiny_computed_mul_1_1 : R :=
-  let rel := (1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1 in
-  let tiny := (1 / 2) * bpow radix2 emin in
-  round radix2 (FLT_exp emin prec) Zceil (tiny / (1 - rel)).
+(* up(unit(add_1_1)/(1-unit(add_1_1))): the smallest number of the format not below it. *)
+Definition up_ball_add_1_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1) / (1 - ((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1))).
 
-(* tiny_computed(mul_2_1): tiny / (1 - rel), rounded up to the format, for the bound
-   rel |v| + tiny of mul_2_1, with rel = c u^k and tiny = t eta from its claims. *)
-Definition tiny_computed_mul_2_1 : R :=
-  let rel := 2 * bpow radix2 (- prec) ^ 2 in
-  let tiny := 1 * bpow radix2 emin in
-  round radix2 (FLT_exp emin prec) Zceil (tiny / (1 - rel)).
+(* up((1+u)^3): the smallest number of the format not below it. *)
+Definition up_ball_add_1_1 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) ^ 3).
 
-(* tiny_computed(mul_2_2): tiny / (1 - rel), rounded up to the format, for the bound
-   rel |v| + tiny of mul_2_2, with rel = c u^k and tiny = t eta from its claims. *)
-Definition tiny_computed_mul_2_2 : R :=
-  let rel := 4 * bpow radix2 (- prec) ^ 2 in
-  let tiny := (3 / 2) * bpow radix2 emin in
-  round radix2 (FLT_exp emin prec) Zceil (tiny / (1 - rel)).
+(* up((1+u)*((1+u)^2*eta+eta/2)): the smallest number of the format not below it. *)
+Definition up_ball_add_1_2 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * ((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + (bpow radix2 emin / 2))).
 
-(* unit_computed(add_1_1): rel / (1 - rel), rounded up to the format, for the bound
-   rel |v| + tiny of add_1_1, with rel = c u^k and tiny = t eta from its claims. *)
-Definition unit_computed_add_1_1 : R :=
-  let rel := (1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1 in
-  round radix2 (FLT_exp emin prec) Zceil (rel / (1 - rel)).
+(* up(unit(add_2_2)/(1-unit(add_2_2))*(1+u)): the smallest number of the format not below it. *)
+Definition up_ball_add_2_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((((3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2) / (1 - ((3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2))) * (1 + bpow radix2 (- prec))).
 
-(* unit_computed(add_2_2): rel / (1 - rel), rounded up to the format, for the bound
-   rel |v| + tiny of add_2_2, with rel = c u^k and tiny = t eta from its claims. *)
-Definition unit_computed_add_2_2 : R :=
-  let rel := (3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2 in
-  round radix2 (FLT_exp emin prec) Zceil (rel / (1 - rel)).
+(* up(unit(mul_1_1)/(1-unit(mul_1_1))): the smallest number of the format not below it. *)
+Definition up_ball_mul_1_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1) / (1 - ((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1))).
 
-(* unit_computed(mul_1_1): rel / (1 - rel), rounded up to the format, for the bound
-   rel |v| + tiny of mul_1_1, with rel = c u^k and tiny = t eta from its claims. *)
-Definition unit_computed_mul_1_1 : R :=
-  let rel := (1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1 in
-  round radix2 (FLT_exp emin prec) Zceil (rel / (1 - rel)).
+(* up((1+u)^5): the smallest number of the format not below it. *)
+Definition up_ball_mul_1_1 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) ^ 5).
 
-(* unit_computed(mul_2_1): rel / (1 - rel), rounded up to the format, for the bound
-   rel |v| + tiny of mul_2_1, with rel = c u^k and tiny = t eta from its claims. *)
-Definition unit_computed_mul_2_1 : R :=
-  let rel := 2 * bpow radix2 (- prec) ^ 2 in
-  round radix2 (FLT_exp emin prec) Zceil (rel / (1 - rel)).
+(* up((1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)): the smallest number of the format not below it. *)
+Definition up_ball_mul_1_2 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * ((((2 * ((1 + bpow radix2 (- prec)) ^ 4)) * bpow radix2 emin) + (((1 / 2) * bpow radix2 emin) / (1 - ((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1)))) + (bpow radix2 emin / 2))).
 
-(* unit_computed(mul_2_2): rel / (1 - rel), rounded up to the format, for the bound
-   rel |v| + tiny of mul_2_2, with rel = c u^k and tiny = t eta from its claims. *)
-Definition unit_computed_mul_2_2 : R :=
-  let rel := 4 * bpow radix2 (- prec) ^ 2 in
-  round radix2 (FLT_exp emin prec) Zceil (rel / (1 - rel)).
+(* up(unit(mul_2_2)/(1-unit(mul_2_2))): the smallest number of the format not below it. *)
+Definition up_ball_mul_2_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((4 * bpow radix2 (- prec) ^ 2) / (1 - (4 * bpow radix2 (- prec) ^ 2))).
+
+(* up((1+u)^6): the smallest number of the format not below it. *)
+Definition up_ball_mul_2_1 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) ^ 6).
+
+(* up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)): the smallest number of the format not below it. *)
+Definition up_ball_mul_2_2 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * ((((2 * ((1 + bpow radix2 (- prec)) ^ 5)) * bpow radix2 emin) + (((3 / 2) * bpow radix2 emin) / (1 - (4 * bpow radix2 (- prec) ^ 2)))) + (bpow radix2 emin / 2))).
+
+(* up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)): the smallest number of the format not below it. *)
+Definition up_ball_scale_1_2 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + (((1 / 2) * bpow radix2 emin) / (1 - ((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1)))) + (bpow radix2 emin / 2))).
+
+(* up(unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)): the smallest number of the format not below it. *)
+Definition up_ball_scale_2_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((2 * bpow radix2 (- prec) ^ 2) / (1 - (2 * bpow radix2 (- prec) ^ 2))) * (1 + bpow radix2 (- prec))).
+
+(* up((1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)): the smallest number of the format not below it. *)
+Definition up_ball_scale_2_2 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + ((1 * bpow radix2 emin) / (1 - (2 * bpow radix2 (- prec) ^ 2)))) + (bpow radix2 emin / 2))).
 
 (* add_1_1: one rounding to nearest. *)
 Definition add_1_1 (a b : R) : R :=
   let s := rnd (a + b) in
   s.
 
-(* rmul: one step up from the rounded product (Milestone 1 listing). *)
-Definition rmul (a b : R) : R :=
-  let p := rnd (a * b + 0) in
-  let r := succ radix2 (FLT_exp emin prec) p in
-  r.
-
-(* radd: one step up from the rounded sum (Milestone 1 listing). *)
-Definition radd (a b : R) : R :=
-  let s := rnd (a + b) in
-  let r := succ radix2 (FLT_exp emin prec) s in
-  r.
-
-(* ball_add_1: midpoint-radius sum (Milestone 1 listing). *)
+(* ball_add_1: midpoint-radius sum (Milestone 1 listing, second radius design). *)
 Definition ball_add_1 (cx rx cy ry : R) : R * R :=
   let cz := rnd (cx + cy) in
-  let mz := Rabs cz in
-  let d := rmul unit_computed_add_1_1 mz in
-  let r0 := radd rx ry in
-  let rz := radd r0 d in
+  let az := Rabs cz in
+  let s := rnd (rx + ry) in
+  let t := rnd (az * up_ball_add_1_0 + s) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
   (cz, rz).
 
-(* ball_mul_1: midpoint-radius product (Milestone 1 listing). *)
+(* ball_mul_1: midpoint-radius product (Milestone 1 listing, second radius design). *)
 Definition ball_mul_1 (cx rx cy ry : R) : R * R :=
   let cz := rnd (cx * cy + 0) in
   let ax := Rabs cx in
   let ay := Rabs cy in
-  let t1 := rmul ax ry in
-  let t2 := rmul ay rx in
-  let t3 := rmul rx ry in
-  let s1 := radd t1 t2 in
-  let s2 := radd s1 t3 in
-  let mz := Rabs cz in
-  let d0 := rmul unit_computed_mul_1_1 mz in
-  let d := radd d0 tiny_computed_mul_1_1 in
-  let rz := radd s2 d in
+  let az := Rabs cz in
+  let p := rnd (rx * ry + 0) in
+  let q := rnd (ay * rx + p) in
+  let w := rnd (ax * ry + q) in
+  let t := rnd (az * up_ball_mul_1_0 + w) in
+  let rz := rnd (t * up_ball_mul_1_1 + up_ball_mul_1_2) in
   (cz, rz).
 
 (* ball_neg_1: midpoint-radius negation (Milestone 1 listing). *)
@@ -117,15 +103,14 @@ Definition ball_neg_1 (cx rx : R) : R * R :=
   let rz := rx in
   (cz, rz).
 
-(* ball_scale_1: midpoint-radius scaling (Milestone 1 listing). *)
+(* ball_scale_1: midpoint-radius scaling (Milestone 1 listing, second radius design). *)
 Definition ball_scale_1 (cx rx a : R) : R * R :=
   let cz := rnd (cx * a + 0) in
   let aa := Rabs a in
-  let t1 := rmul aa rx in
-  let mz := Rabs cz in
-  let d0 := rmul unit_computed_mul_1_1 mz in
-  let d := radd d0 tiny_computed_mul_1_1 in
-  let rz := radd t1 d in
+  let az := Rabs cz in
+  let p := rnd (aa * rx + 0) in
+  let t := rnd (az * up_ball_mul_1_0 + p) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_scale_1_2) in
   (cz, rz).
 
 (* ball_sub_1: midpoint-radius difference (Milestone 1 listing). *)
@@ -145,6 +130,18 @@ Definition fast_two_sum (a b : R) : R * R :=
 Definition mul_1_1 (a b : R) : R :=
   let p := rnd (a * b + 0) in
   p.
+
+(* radd: one step up from the rounded sum (Milestone 1 listing). *)
+Definition radd (a b : R) : R :=
+  let s := rnd (a + b) in
+  let r := succ radix2 (FLT_exp emin prec) s in
+  r.
+
+(* rmul: one step up from the rounded product (Milestone 1 listing). *)
+Definition rmul (a b : R) : R :=
+  let p := rnd (a * b + 0) in
+  let r := succ radix2 (FLT_exp emin prec) p in
+  r.
 
 (* split: Veltkamp's split (Dekker 1971). *)
 Definition split (a : R) : R * R :=
@@ -209,7 +206,8 @@ Definition abs_upper_2 (x0 x1 : R) : R :=
 
 (* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. *)
 Definition add_2_1 (x0 x1 a : R) : R * R :=
-  let '(sh, sl) := two_sum x0 a in
+  let g := rnd (a + 0) in
+  let '(sh, sl) := two_sum x0 g in
   let v := rnd (x1 + sl) in
   let '(z0, z1) := fast_two_sum sh v in
   (z0, z1).
@@ -232,13 +230,13 @@ Definition add_fast_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(z0, z1) := fast_two_sum sh w in
   (z0, z1).
 
-(* ball_add_2: midpoint-radius sum (Milestone 1 listing). *)
+(* ball_add_2: midpoint-radius sum (Milestone 1 listing, second radius design). *)
 Definition ball_add_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
   let '(cz0, cz1) := add_2_2 cx0 cx1 cy0 cy1 in
-  let mz := abs_upper_2 cz0 cz1 in
-  let d := rmul unit_computed_add_2_2 mz in
-  let r0 := radd rx ry in
-  let rz := radd r0 d in
+  let az := Rabs cz0 in
+  let s := rnd (rx + ry) in
+  let t := rnd (az * up_ball_add_2_0 + s) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
   (cz0, cz1, rz).
 
 (* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. *)
@@ -251,20 +249,17 @@ Definition mul_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(z0, z1) := fast_two_sum ch cl3 in
   (z0, z1).
 
-(* ball_mul_2: midpoint-radius product (Milestone 1 listing). *)
+(* ball_mul_2: midpoint-radius product (Milestone 1 listing, second radius design). *)
 Definition ball_mul_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
   let '(cz0, cz1) := mul_2_2 cx0 cx1 cy0 cy1 in
-  let ax := abs_upper_2 cx0 cx1 in
-  let ay := abs_upper_2 cy0 cy1 in
-  let t1 := rmul ax ry in
-  let t2 := rmul ay rx in
-  let t3 := rmul rx ry in
-  let s1 := radd t1 t2 in
-  let s2 := radd s1 t3 in
-  let mz := abs_upper_2 cz0 cz1 in
-  let d0 := rmul unit_computed_mul_2_2 mz in
-  let d := radd d0 tiny_computed_mul_2_2 in
-  let rz := radd s2 d in
+  let ax := Rabs cx0 in
+  let ay := Rabs cy0 in
+  let az := Rabs cz0 in
+  let p := rnd (rx * ry + 0) in
+  let q := rnd (ay * rx + p) in
+  let w := rnd (ax * ry + q) in
+  let t := rnd (az * up_ball_mul_2_0 + w) in
+  let rz := rnd (t * up_ball_mul_2_1 + up_ball_mul_2_2) in
   (cz0, cz1, rz).
 
 (* neg_2: limb by limb (Milestone 1 listing). *)
@@ -286,15 +281,14 @@ Definition mul_2_1 (x0 x1 a : R) : R * R :=
   let '(z0, z1) := fast_two_sum ch cl3 in
   (z0, z1).
 
-(* ball_scale_2: midpoint-radius scaling (Milestone 1 listing). *)
+(* ball_scale_2: midpoint-radius scaling (Milestone 1 listing, second radius design). *)
 Definition ball_scale_2 (cx0 cx1 rx a : R) : R * R * R :=
   let '(cz0, cz1) := mul_2_1 cx0 cx1 a in
   let aa := Rabs a in
-  let t1 := rmul aa rx in
-  let mz := abs_upper_2 cz0 cz1 in
-  let d0 := rmul unit_computed_mul_2_1 mz in
-  let d := radd d0 tiny_computed_mul_2_1 in
-  let rz := radd t1 d in
+  let az := Rabs cz0 in
+  let p := rnd (aa * rx + 0) in
+  let t := rnd (az * up_ball_scale_2_0 + p) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_scale_2_2) in
   (cz0, cz1, rz).
 
 (* ball_sub_2: midpoint-radius difference (Milestone 1 listing). *)

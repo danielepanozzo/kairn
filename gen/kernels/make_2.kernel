@@ -1,0 +1,21 @@
+# Expansion<T, 2> from a value of T or from a one-limb number: (a, 0), canonical. The guard makes
+# a value the program may have computed as a product into a number the compiler cannot fuse
+# (rule R3); a NaN gives (NaN, NaN), an infinity (inf, 0) (milestone1.md, "Values that enter from
+# the program").
+kernel:        make_2
+input:         a
+output:        x = x0 x1
+value:         a
+ensures:       represents x
+min_precision: 1
+source:        constructors (Milestone 1 listing)
+license:       algorithm: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeMake.v make_2_correct
+entry:         yes
+
+x0 = guard(a)
+n  = eq(x0, x0)
+x1 = select(n, 0, x0)

@@ -28,9 +28,10 @@
       when RN(s - a) overflows, and that it cannot happen unless |b| = Omega. *)
 From Stdlib Require Import Reals ZArith List.
 From Flocq Require Import Core Binary.
-From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Program IeeeBridge IeeeStatementsDraft.
-From Kairn Require IeeeDraft.
+From Kairn.Gen Require Import Model Statements IeeeStatements.
+From Kairn Require Import Program IeeeBridge IeeeVocabulary.
+From Kairn Require IeeeOperations.
+From Kairn.Gen Require IeeeModel.
 Import ListNotations.
 Open Scope R_scope.
 
@@ -45,7 +46,7 @@ Definition add_2_2_ieee_finite_half_spec : Prop :=
   normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
   Rabs (val x0) < bpow radix2 (emax - 1) ->
   Rabs (val y0) < bpow radix2 (emax - 1) ->
-  let '(z0, z1) := IeeeDraft.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
+  let '(z0, z1) := IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
   finite z0 /\ finite z1.
 
 Definition add_2_2_ieee_finite_sum_spec : Prop :=
@@ -58,7 +59,7 @@ Definition add_2_2_ieee_finite_sum_spec : Prop :=
   normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
   normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
   Rabs ((val x0 + val x1) + (val y0 + val y1)) <= bpow radix2 (emax - 1) ->
-  let '(z0, z1) := IeeeDraft.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
+  let '(z0, z1) := IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
   finite z0 /\ finite z1.
 
 Definition two_sum_overflow_spec : Prop :=
@@ -68,7 +69,7 @@ Definition two_sum_overflow_spec : Prop :=
   (2 <= prec)%Z ->
   forall a b : binary_float prec emax,
   finite a -> finite b ->
-  let '(s, e) := IeeeDraft.two_sum prec emax nan_plus nan_minus a b in
+  let '(s, e) := IeeeModel.two_sum prec emax nan_plus nan_minus a b in
   (finite s /\ ~ finite e) <->
   (Rabs (val b) = omega prec emax /\ val a * val b < 0 /\
    exists j : Z, (1 <= j < 2 ^ (prec - 2))%Z /\

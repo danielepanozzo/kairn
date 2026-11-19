@@ -1,0 +1,13 @@
+# Test kernel: the error claim of mul_2_2 (c = 4, k = 2, t = 3/2, from precision 4) on a stand-in
+# body, so that the constants up(EXPR) of ops_up can name unit(ops_mul) and tiny(ops_mul) within
+# the test kernels.
+kernel:   ops_mul
+input:    a
+input:    b
+output:   p
+value:    a*b
+ensures:  error p R c=4 k=2 t=3/2
+min_precision: 4
+status:   unverified
+
+p = prod(a, b)

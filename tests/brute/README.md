@@ -22,7 +22,11 @@ Two parts:
   tier's exponent range (2 and 3 when `min_precision` is 1: the oracle reads no format of
   precision 1), the quick tier's format one and two bits more precise, and other exponent
   ranges; for the two-limb balls with two operands, complete enumerations of formats with fewer
-  exponents and larger restricted domains (`SHAPES` and `EXPLICIT` in `brute.py`).
+  exponents and larger restricted domains (`SHAPES` and `EXPLICIT` in `brute.py`). For the
+  kernels of the extended domain (the non-finite layer) every format has the shape of the
+  IEEE-model statements, `qmin + qmax = 3 - 2p`, as in the quick tier, so a format with more
+  precision keeps the quick tier's number of exponents rather than its exponent range; their
+  enumerations include the non-finite values of every operand.
   `--interp-bins N --interp-take LIST` splits the plan into N bins of about equal size and runs
   some of them, so that machines can share it.
 

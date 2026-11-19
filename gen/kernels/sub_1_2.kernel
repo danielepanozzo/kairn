@@ -12,6 +12,10 @@ theorem:       proofs/theories/Sign.v sub_1_2_correct
 source:        add_2_1 (JMP17 Alg. 4) on -y and a
 license:       algorithm: published; proof: MIT
 status:        proved
+ieee:          bridge spec
+ieee_finite:   abs_le(a,-2);abs_le(y0,-2)
+ieee_finite_result: abs_le(a-y,-2)
+entry:         yes
 
 n0       = neg(y0)
 n1       = neg(y1)

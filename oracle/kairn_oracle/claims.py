@@ -24,6 +24,17 @@ _NORMALIZED_RE = re.compile(r"\s*normalized\(\s*(%s)\s*\)\s*\Z" % _NAME)
 _ABS_GE_RE = re.compile(r"\s*abs_ge\(\s*(%s)\s*,\s*(%s)\s*\)\s*\Z" % (_NAME, _NAME))
 # Requirements on one input, second wave.
 _UNARY_REQ_RE = re.compile(r"\s*(power_of_two|nonneg)\(\s*(%s)\s*\)\s*\Z" % _NAME)
+# Requirements of the non-finite layer (architecture.md, "Claims of the non-finite layer").
+_CANONICAL_RE = re.compile(r"\s*canonical\(\s*(%s)\s*\)\s*\Z" % _NAME)
+_BALL_RE = re.compile(r"\s*ball\(\s*(%s)\s*,\s*(%s)\s*\)\s*\Z" % (_NAME, _NAME))
+DOMAINS = ("finite", "extended")
+IEEE_STATUSES = ("proved", "unverified")
+# The operation of T that `extends` applies to the leading limbs, and the operator the kernel's
+# value must have for it.
+LEADS = {"add": "+", "sub": "-", "mul": "*"}
+# Kinds that exist only in the extended domain, and the kinds a core of `extends` may have.
+EXTENDED_KINDS = ("extends", "represents", "makes_ball")
+CORE_KINDS = ("normalized", "error", "leading_rounded")
 # limb_products_normal is not in architecture.md: it is the condition of the exactness claim of
 # mul_pow2_2 ("each of the two products is zero or at least 2^(p-1) eta in magnitude"), which
 # the vocabulary cannot otherwise express.  Proposed as an addition.
@@ -32,7 +43,8 @@ FORMS = ("R", "A")
 ROUNDING_MODES = ("nearest", "down", "up")
 RELATIONS = ("lt", "le", "eq")
 KERNEL_FIELDS = {"name", "inputs", "outputs", "value", "requires", "ensures", "min_precision",
-                 "status", "theorem", "source", "flops", "instances"}
+                 "status", "theorem", "source", "flops", "instances", "domain", "ieee_status",
+                 "ieee_theorem"}
 
 
 # ---------------------------------------------------------------------------
@@ -141,6 +153,13 @@ def parse_fraction(s, what):
         raise ClaimsError("%s: not an exact rational: %r" % (what, s))
 
 
+def _fw_text(fw):
+    if not fw:
+        return "nothing (no condition claimed)"
+    return " and ".join("|%s| <= 2^(qmax+p%+d)" % (text, e) if e else "|%s| <= 2^(qmax+p)" % text
+                        for _t, text, e in fw)
+
+
 # ---------------------------------------------------------------------------
 
 class Entry:
@@ -152,7 +171,11 @@ class Entry:
              "rounded": {"kind", "of", "mode"},
              "upper": {"kind", "of", "gaps"},
              "predicate": {"kind", "of", "rel", "args"},
-             "encloses": {"kind", "center", "radius", "set", "balls"}}
+             "encloses": {"kind", "center", "radius", "set", "balls", "finite_when"},
+             # The non-finite layer.
+             "extends": {"kind", "of", "core", "lead", "finite_when"},
+             "represents": {"kind", "of"},
+             "makes_ball": {"kind", "center", "radius", "from"}}
 
     def __init__(self, kernel, raw, index, error_index):
         self.raw = raw
@@ -168,8 +191,27 @@ class Entry:
         if extra:
             raise ClaimsError("%s: unknown fields %s" % (where, sorted(extra)))
         self.error_index = None
+        self.finite_when = None
+        if self.kind in EXTENDED_KINDS and not kernel.extended:
+            raise ClaimsError("%s: this kind belongs to the extended domain, and the kernel has "
+                              "no \"domain\": \"extended\"" % where)
         if self.kind == "encloses":
             self._read_encloses(kernel, raw, where)
+            self.of = [self.center, self.radius]
+            if kernel.extended:
+                self.finite_when = self._read_finite_when(kernel, raw, where)
+                # Every ball of the set is a ball operand of the kernel: its states (finite,
+                # whole line, empty) come from a ball() requirement on the same two inputs.
+                for b, (c, r) in self.balls.items():
+                    if (c, r) not in kernel.ball_requires:
+                        raise ClaimsError("%s: ball %s over (%s, %s) has no requirement "
+                                          "ball(%s, %s)" % (where, b, c, r, c, r))
+            elif "finite_when" in raw:
+                raise ClaimsError("%s: finite_when belongs to the extended domain" % where)
+            self.label = self._label()
+            return
+        if self.kind == "makes_ball":
+            self._read_makes_ball(kernel, raw, where)
             self.of = [self.center, self.radius]
             self.label = self._label()
             return
@@ -180,8 +222,11 @@ class Entry:
                 raise ClaimsError("%s: 'of' must name one mask output" % where)
         elif masks:
             raise ClaimsError("%s: 'of' names the mask %s" % (where, masks[0]))
-        if self.kind in ("error", "leading_rounded", "rounded", "upper") and kernel.value_tree is None:
+        if (self.kind in ("error", "leading_rounded", "rounded", "upper", "extends", "represents")
+                and kernel.value_tree is None):
             raise ClaimsError("%s: the kernel has no value" % where)
+        if self.kind == "extends":
+            self._read_extends(kernel, raw, where)
         if self.kind in ("rounded", "upper"):
             if len(self.of) != 1 or kernel.limbs_of(self.of[0]) != 1:
                 raise ClaimsError("%s: 'of' must name one 1-limb output" % where)
@@ -286,12 +331,101 @@ class Entry:
         if X.uses(self.set_tree, "abs"):
             raise ClaimsError("%s: abs() is not allowed in set" % where)
 
+    def _read_finite_when(self, kernel, raw, where):
+        """[(tree, text, E)]: each condition {"abs_le": EXPR, "exp": E} means
+        |EXPR| <= 2^(qmax + p + E).  Required in the extended domain; empty when no condition
+        is claimed (and then nothing is claimed: F3 and B4 do not apply)."""
+        if "finite_when" not in raw:
+            raise ClaimsError("%s: missing finite_when (an empty list when no condition is "
+                              "claimed)" % where)
+        fw = raw["finite_when"]
+        if not isinstance(fw, list):
+            raise ClaimsError("%s: finite_when must be a list" % where)
+        out = []
+        for j, cond in enumerate(fw):
+            w = "%s: finite_when[%d]" % (where, j)
+            if not isinstance(cond, dict) or set(cond) != {"abs_le", "exp"}:
+                raise ClaimsError("%s must be {\"abs_le\": EXPR, \"exp\": E}, got %r" % (w, cond))
+            e = cond["exp"]
+            if not isinstance(e, int) or isinstance(e, bool):
+                raise ClaimsError("%s: exp must be an integer, got %r" % (w, e))
+            if not isinstance(cond["abs_le"], str):
+                raise ClaimsError("%s: abs_le must be an expression" % w)
+            tree = kernel.input_expression(cond["abs_le"], w.split(": ", 1)[1])
+            out.append((tree, cond["abs_le"].strip(), e))
+        return out
+
+    def _read_extends(self, kernel, raw, where):
+        """F1 to F5 of milestone1.md.  The core is resolved by Claims.link_cores, once every
+        kernel is read: it must exist, be of the finite domain, and have the same inputs and
+        outputs (by position) and the same value."""
+        self.core_name = raw.get("core")
+        if not isinstance(self.core_name, str) or not self.core_name:
+            raise ClaimsError("%s: core must name a kernel" % where)
+        if self.core_name == kernel.name:
+            raise ClaimsError("%s: a kernel cannot be its own core" % where)
+        self.lead = raw.get("lead")
+        if self.lead not in LEADS:
+            raise ClaimsError("%s: lead must be add, sub or mul, got %r" % (where, self.lead))
+        self.finite_when = self._read_finite_when(kernel, raw, where)
+        # lead is applied to the leading limbs of the inputs, in order; F4 takes the sign of
+        # value.  Both describe one operation, so the value must be that operation of the two
+        # operands, in input order for a sum or a difference.
+        ops = [n for n in kernel.input_names if n not in kernel.masks]
+        t = kernel.value_tree
+        if len(ops) != 2:
+            raise ClaimsError("%s: lead applies to two operands; the kernel has %d" % (where, len(ops)))
+        if (t[0] != LEADS[self.lead] or t[1][0] != "name" or t[2][0] != "name"
+                or ([t[1][1], t[2][1]] != ops if t[0] != "*" else
+                    sorted([t[1][1], t[2][1]]) != sorted(ops))):
+            raise ClaimsError("%s: value %r is not %s of the operands %s" % (
+                where, kernel.value_text, self.lead, ", ".join(ops)))
+        self.core = None
+
+    def _read_makes_ball(self, kernel, raw, where):
+        for f in ("center", "radius", "from"):
+            if f not in raw:
+                raise ClaimsError("%s: missing %s" % (where, f))
+        outs = dict(kernel.outputs)
+        ins = dict(kernel.inputs)
+        self.center, self.radius = raw["center"], raw["radius"]
+        for what, n in (("center", self.center), ("radius", self.radius)):
+            if not isinstance(n, str) or n not in outs or n in kernel.masks:
+                raise ClaimsError("%s: %s %r is not a limb output" % (where, what, n))
+        if self.center == self.radius:
+            raise ClaimsError("%s: center and radius are the same output" % where)
+        if outs[self.radius] != 1:
+            raise ClaimsError("%s: the radius %s must be one limb" % (where, self.radius))
+        fr = raw["from"]
+        if not isinstance(fr, dict) or set(fr) != {"center", "radius"}:
+            raise ClaimsError("%s: from must be {\"center\": INPUT, \"radius\": INPUT}" % where)
+        self.from_center, self.from_radius = fr["center"], fr["radius"]
+        for what, n in (("center", self.from_center), ("radius", self.from_radius)):
+            if not isinstance(n, str) or n not in ins or n in kernel.masks:
+                raise ClaimsError("%s: from %s %r is not a limb input" % (where, what, n))
+        if self.from_center == self.from_radius:
+            raise ClaimsError("%s: the given center and radius are the same input" % where)
+        if ins[self.from_radius] != 1:
+            raise ClaimsError("%s: the given radius %s must be one limb" % (where, self.from_radius))
+        if ins[self.from_center] != outs[self.center]:
+            raise ClaimsError("%s: the given center has %d limbs, the output center %d" % (
+                where, ins[self.from_center], outs[self.center]))
+
     def _label(self):
         if self.kind == "encloses":
-            return "encloses(%s, %s) %s over %s" % (
+            s = "encloses(%s, %s) %s over %s" % (
                 self.center, self.radius, self.set_text,
                 ", ".join("%s=[%s +- %s]" % (b, c, r) for b, (c, r) in self.balls.items()))
+            if self.finite_when is not None:
+                s += ", B1-B4, finite when %s" % _fw_text(self.finite_when)
+            return s
+        if self.kind == "makes_ball":
+            return "makes_ball(%s, %s) from center %s, radius %s" % (
+                self.center, self.radius, self.from_center, self.from_radius)
         of = "+".join(self.of)
+        if self.kind == "extends":
+            return "extends(%s) F1-F5, core %s, lead %s, finite when %s" % (
+                of, self.core_name, self.lead, _fw_text(self.finite_when))
         if self.kind == "error":
             s = "error(%s) form %s, c=%s, k=%d, t=%s" % (of, self.form, self.c, self.k, self.t)
             if self.when:
@@ -312,6 +446,12 @@ class Kernel:
             raise ClaimsError("kernel entry without a name")
         self.name = raw["name"]
         self.raw = raw
+        # "domain": "extended" (the non-finite layer): operands may be infinite or NaN and every
+        # completed line is judged.  Absent means finite, the domain of the first two waves.
+        self.domain = raw.get("domain", "finite")
+        if self.domain not in DOMAINS:
+            raise ClaimsError("%s: unknown domain %r (finite or extended)" % (self.name, self.domain))
+        self.extended = self.domain == "extended"
         self.masks = set()
         self.inputs = self._io(raw.get("inputs"), "inputs")
         self.outputs = self._io(raw.get("outputs"), "outputs")
@@ -345,25 +485,73 @@ class Kernel:
             if t[0] == "*" and t[1][0] == "name" and t[2][0] == "name":
                 self.limb_products = (t[1][1], t[2][1])
         self.requires = []
-        for r in raw.get("requires", []):
+        self.ball_requires = []
+        limbs = dict(self.inputs)
+        reqs = raw.get("requires", [])
+        if not isinstance(reqs, list):
+            raise ClaimsError("%s: requires must be a list" % self.name)
+        for r in reqs:
             if not isinstance(r, str):
                 raise ClaimsError("%s: requirement %r is not a string" % (self.name, r))
             m = _NORMALIZED_RE.match(r)
             if m and m.group(1) in self.input_names and m.group(1) not in self.masks:
+                if self.extended:
+                    raise ClaimsError("%s: requirement %r: in the extended domain a 2-limb operand "
+                                      "is canonical(), not normalized()" % (self.name, r))
                 self.requires.append(("normalized", m.group(1)))
                 continue
             m = _ABS_GE_RE.match(r)
             if (m and m.group(1) in self.input_names and m.group(2) in self.input_names
                     and not {m.group(1), m.group(2)} & self.masks):
+                if self.extended:
+                    raise ClaimsError("%s: requirement %r has no meaning in the extended domain"
+                                      % (self.name, r))
                 self.requires.append(("abs_ge", m.group(1), m.group(2)))
                 continue
             m = _UNARY_REQ_RE.match(r)
             if m and m.group(2) in self.input_names and m.group(2) not in self.masks:
                 self.requires.append((m.group(1), m.group(2)))
                 continue
+            m = _CANONICAL_RE.match(r)
+            if m and m.group(1) in self.input_names and m.group(1) not in self.masks:
+                if not self.extended:
+                    raise ClaimsError("%s: requirement %r belongs to the extended domain"
+                                      % (self.name, r))
+                if limbs[m.group(1)] < 2:
+                    raise ClaimsError("%s: requirement %r: canonical() is for an operand of two "
+                                      "limbs (a one-limb operand is any value)" % (self.name, r))
+                self.requires.append(("canonical", m.group(1)))
+                continue
+            m = _BALL_RE.match(r)
+            if (m and m.group(1) in self.input_names and m.group(2) in self.input_names
+                    and not {m.group(1), m.group(2)} & self.masks):
+                c, rr = m.group(1), m.group(2)
+                if not self.extended:
+                    raise ClaimsError("%s: requirement %r belongs to the extended domain"
+                                      % (self.name, r))
+                if c == rr or limbs[rr] != 1:
+                    raise ClaimsError("%s: requirement %r: a ball is a center and a one-limb "
+                                      "radius, two different inputs" % (self.name, r))
+                used = {n for b in self.ball_requires for n in b}
+                if c in used or rr in used:
+                    raise ClaimsError("%s: requirement %r shares an input with another ball"
+                                      % (self.name, r))
+                self.requires.append(("ball", c, rr))
+                self.ball_requires.append((c, rr))
+                continue
             raise ClaimsError("%s: requirement %r is outside the vocabulary "
                               "(normalized(NAME), abs_ge(NAME, NAME), power_of_two(NAME), "
-                              "nonneg(NAME))" % (self.name, r))
+                              "nonneg(NAME); in the extended domain canonical(NAME), "
+                              "ball(CENTER, RADIUS))" % (self.name, r))
+        if self.extended:
+            # An operand of several limbs is canonical or the center of a ball: nothing else
+            # says what its limbs may be once they need not be finite.
+            covered = {r[1] for r in self.requires if r[0] == "canonical"}
+            covered |= {c for c, _ in self.ball_requires}
+            for n, l in self.inputs:
+                if l > 1 and n not in self.masks and n not in covered:
+                    raise ClaimsError("%s: the %d-limb input %s has neither canonical(%s) nor a "
+                                      "ball() requirement" % (self.name, l, n, n))
         ens = raw.get("ensures")
         if not isinstance(ens, list):
             raise ClaimsError("%s: ensures must be a list" % self.name)
@@ -383,6 +571,22 @@ class Kernel:
             raise ClaimsError("%s: min_precision must be an integer" % self.name)
         self.min_precision = mp
         self.status = raw.get("status")
+        # The status of the IEEE-model statement.  Read and checked for form, never used for a
+        # verdict: the oracle judges the claims whatever the statuses say.
+        self.warnings = []
+        self.ieee_status = raw.get("ieee_status")
+        if self.ieee_status is not None and self.ieee_status not in IEEE_STATUSES:
+            raise ClaimsError("%s: ieee_status must be proved or unverified, got %r"
+                              % (self.name, self.ieee_status))
+        it = raw.get("ieee_theorem")
+        if it is not None and not isinstance(it, dict):
+            raise ClaimsError("%s: ieee_theorem must be an object" % self.name)
+        if self.extended and self.ieee_status is None:
+            self.warnings.append("%s: a kernel of the extended domain without ieee_status"
+                                 % self.name)
+        if self.ieee_status == "proved" and it is None:
+            self.warnings.append("%s: ieee_status is proved but there is no ieee_theorem"
+                                 % self.name)
         self._instances = self._read_instances(raw.get("instances", {}))
         self._bounds = {}
         # Descriptive fields carry no semantics for the oracle; anything else is reported,
@@ -569,6 +773,7 @@ class Claims:
             except ClaimsError as ex:
                 self.broken[name] = str(ex)
         self.check_instances()
+        self.link_cores()
 
     def get(self, name):
         return self.kernels.get(name)
@@ -579,6 +784,59 @@ class Claims:
 
     def errors(self):
         return ["%s" % why for _, why in sorted(self.broken.items())]
+
+    def link_cores(self):
+        """Resolve the core of every `extends` entry.  A full kernel whose core is missing,
+        unreadable or does not fit is set aside like any other unreadable kernel."""
+        for k in list(self.kernels.values()):
+            for e in k.ensures:
+                if e.kind != "extends":
+                    continue
+                try:
+                    e.core = self._core_of(k, e)
+                except ClaimsError as ex:
+                    self.mark_broken(k.name, str(ex))
+                    break
+
+    def _core_of(self, k, e):
+        where = "%s: extends: core %s" % (k.name, e.core_name)
+        c = self.kernels.get(e.core_name)
+        if c is None:
+            if e.core_name in self.broken:
+                raise ClaimsError("%s cannot be read (%s)" % (where, self.broken[e.core_name]))
+            raise ClaimsError("%s is not in the claims" % where)
+        if c.extended:
+            raise ClaimsError("%s is of the extended domain; a core is a finite kernel" % where)
+
+        def shape(io, masks, names):
+            return [(n if names else None, l, n in masks) for n, l in io]
+
+        # The same inputs, names and limbs; outputs of the same shape, whose names may differ
+        # (z in the cores' listings, w in the full kernels'): they are matched by position.
+        if shape(c.inputs, c.masks, True) != shape(k.inputs, k.masks, True):
+            raise ClaimsError("%s has other inputs (%s) than the kernel (%s)" % (
+                where, _io_text(c.inputs), _io_text(k.inputs)))
+        if shape(c.outputs, c.masks, False) != shape(k.outputs, k.masks, False):
+            raise ClaimsError("%s has other outputs (%s) than the kernel (%s)" % (
+                where, _io_text(c.outputs), _io_text(k.outputs)))
+        # The core's requirements are the kernel's with normalized for canonical.
+        want = {("normalized",) + r[1:] if r[0] == "canonical" else r for r in k.requires}
+        if set(c.requires) != want:
+            raise ClaimsError("%s requires %s, which is not the kernel's requirements with "
+                              "normalized() for canonical()" % (
+                                  where, ", ".join("%s(%s)" % (r[0], ", ".join(r[1:]))
+                                                   for r in c.requires) or "nothing"))
+        bad = [x.kind for x in c.ensures if x.kind not in CORE_KINDS]
+        if bad:
+            raise ClaimsError("%s has ensures of kind %s; a core of extends may have %s only"
+                              % (where, bad[0], ", ".join(CORE_KINDS)))
+        if c.min_precision != k.min_precision:
+            raise ClaimsError("%s has min_precision %s and the kernel %s; a full kernel's is "
+                              "that of its core" % (where, c.min_precision, k.min_precision))
+        if c.value_tree is None or not _same_polynomial(c, k):
+            raise ClaimsError("%s has the value %r, the kernel %r (inputs matched by position)"
+                              % (where, c.value_text, k.value_text))
+        return c
 
     def check_instances(self):
         """Evaluate every listed instance against c and t; a kernel whose numbers disagree
@@ -593,6 +851,28 @@ class Claims:
                             k.bound(f, e)
             except ClaimsError as ex:
                 self.mark_broken(k.name, str(ex))
+
+
+def _io_text(io):
+    return ", ".join("%s:%d" % (n, l) for n, l in io)
+
+
+def _same_polynomial(a, b):
+    """True when the values of kernels a and b are the same function of their inputs matched by
+    position.  Both are polynomials in the inputs, so agreement at random integer points (fixed
+    seed) decides it with overwhelming probability, and a reordering such as c*x for x*c is
+    accepted."""
+    import random
+    pos_a = {n: i for i, n in enumerate(a.input_names)}
+    pos_b = {n: i for i, n in enumerate(b.input_names)}
+    fa = X.make_function(["v"], X.compile_tree(a.value_tree, lambda n: ("v[%d]" % pos_a[n], 0))[0])
+    fb = X.make_function(["v"], X.compile_tree(b.value_tree, lambda n: ("v[%d]" % pos_b[n], 0))[0])
+    rnd = random.Random(20261119)
+    for _ in range(12):
+        v = [rnd.randrange(-(1 << 80), 1 << 80) for _ in a.input_names]
+        if fa(v) != fb(v):
+            return False
+    return True
 
 
 def load_claims(path):

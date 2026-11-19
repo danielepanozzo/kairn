@@ -1,0 +1,249 @@
+"""The IEEE-model printer (ieee.py): proofs/gen/IeeeModel.v, IeeeStatements.v and IeeeAudit.v.
+
+The theorems of proofs/theories are about the printed definitions and have the printed statements
+as their types (make -C proofs, with its audit); the digests below pin the files that build passed
+on, and the tests read what the printer does with the claims. Before the hand-written drafts of
+this model were retired, a Rocq file checked by conversion alone that the printed text was the
+drafts'."""
+import copy
+import hashlib
+import os
+import re
+import unittest
+
+import common
+from kairn_gen import ieee, ir, rules
+
+# The variables of the section of IeeeOperations.v, in their order.
+SECTION = ['Variable prec emax : Z.', 'Context {prec_gt_0_ : Prec_gt_0 prec}.',
+           'Context {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}.',
+           'Variable nan_plus : float -> float -> nan_of.', 'Variable nan_minus : float -> float -> nan_of.',
+           'Variable nan_opp : float -> nan_of.', 'Variable nan_abs : float -> nan_of.',
+           'Variable nan_fma : float -> float -> float -> nan_of.', 'Variable nan_mult : float -> float -> nan_of.',
+           'Variable nan_const : nan_of.']
+
+# The kernels that the proofs use as programs.
+PROGRAMS = ['fast_two_sum', 'two_prod', 'two_sum', 'add_2_2', 'mul_2_2', 'add_2_1', 'mul_2_1', 'add_fast_2_2',
+            'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_pow2_2']
+
+
+def read(rel):
+    with open(os.path.join(common.ROOT, rel), encoding='utf-8') as f:
+        return f.read()
+
+
+def definitions(text):
+    return re.findall(r'^Definition (\w+)', text, flags=re.M)
+
+
+class Model(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.ks = common.kernels()
+        cls.model = ieee.model(cls.ks)
+
+    def test_the_section_is_that_of_the_draft(self):
+        lines = [x for x in self.model.splitlines() if x.startswith(('Variable ', 'Context '))]
+        self.assertEqual(lines, SECTION)
+
+    def test_every_kernel(self):
+        self.assertEqual(set(ieee.in_model(self.ks)), set(self.ks))
+        names = definitions(self.model.split('End IeeeKernels.')[0])
+        self.assertEqual([n for n in names if n in self.ks], list(self.ks))     # callees first
+
+    def test_definitions(self):
+        m = self.model
+        self.assertIn('Definition add_2_1 (x0 x1 a : float) : float * float :=\n'
+                      '  let g := guard a in\n'
+                      "  let '(sh, sl) := two_sum x0 g in\n"
+                      '  let v := add x1 sl in\n'
+                      "  let '(z0, z1) := fast_two_sum sh v in\n"
+                      '  (z0, z1).', m)
+        self.assertIn('Definition ball_add_2 (cx0 cx1 rx cy0 cy1 ry : float) : float * float * float :=\n'
+                      "  let '(cz0, cz1) := add_2_2 cx0 cx1 cy0 cy1 in\n"
+                      '  let az := abs cz0 in\n'
+                      '  let s := add rx ry in\n'
+                      '  let t := fma az up_ball_add_2_0 s in\n'
+                      '  let rz := fma t up_ball_add_1_1 up_ball_add_1_2 in\n'
+                      '  (cz0, cz1, rz).', m)
+        self.assertIn('  let r0 := times_inf t in\n  let n := eq r0 r0 in\n  let r1 := if n then pzero else r0 in\n', m)
+        self.assertIn('  let cw := if e then k0 else cnan in\n', m)
+        self.assertIn('Definition to_nearest_2 (x0 x1 : float) : float :=\n  let t := x0 in\n  t.', m)
+        self.assertIn('Definition lt_2_2 (x0 x1 y0 y1 : float) : bool :=', m)
+        # Every operation is that of IeeeOperations.v, applied to the variables of this section.
+        self.assertIn('Local Notation fms := (IeeeOperations.fms prec emax nan_opp nan_fma).', m)
+        self.assertIn('Local Notation guard := (IeeeOperations.guard prec emax nan_plus).', m)
+
+    def test_constants(self):
+        # A constant of the format is the number of the format whose value is the constant of the
+        # real model: up(EXPR) at emin = 3 - emax - prec, the splitter at prec.
+        m = self.model
+        self.assertIn('Definition up_ball_add_1_0 : float := const_of (Model.up_ball_add_1_0 (3 - emax - prec) prec).', m)
+        self.assertIn('Definition splitter : float := const_of (Model.splitter prec).', m)
+        ups = {n for n in definitions(m) if n.startswith('up_')}
+        self.assertEqual(ups, {n for n in definitions(read('proofs/gen/Model.v')) if n.startswith('up_')})
+        self.assertEqual(len(ups), 13)
+
+    def test_programs(self):
+        self.assertEqual([k.name for k in ieee.program_kernels(self.ks)], [n for n in self.ks if n in PROGRAMS])
+        self.assertEqual(sorted(n[:-len('_prog')] for n in definitions(self.model) if n.endswith('_prog')),
+                         sorted(PROGRAMS))
+        # The positions: the inputs from 0, then one per instruction, calls inlined.
+        self.assertIn('Definition sub_2_1_prog : list instr :=\n'
+                      '  [ Ineg 2      (*  3 n *)\n'
+                      '  ; Iguard 3    (*  4 z0_g *)\n'
+                      '  ; Iadd 0 4    (*  5 z0_sh *)\n', self.model)
+        self.assertIsNone(ieee.program(self.ks['ball_add_1'], self.ks))        # abs
+        self.assertIsNone(ieee.program(self.ks['split'], self.ks))             # a constant
+
+    def test_operations_the_model_has_not(self):
+        # fnma, muladd and mul: a kernel that uses one (a test kernel) is left out, unless it
+        # needs an IEEE-model statement.
+        tks = common.kernels(common.TEST_KERNELS)
+        left_out = set(tks) - set(ieee.in_model(tks))
+        self.assertEqual(left_out, {'ops_fused', 'ops_muladd', 'ops_call'})
+        self.assertNotIn('ops_fused', ieee.model(tks))
+        self.assertEqual(rules.check_all(tks), [])
+        ks = copy.deepcopy(dict(tks))
+        ks['ops_fused'].ieee = ('spec',)
+        errors = [str(e) for e in rules.check_all(ks)]
+        self.assertTrue(any('the IEEE model has no fnma' in e for e in errors), errors)
+
+
+class Statements(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.ks = common.kernels()
+        cls.text = ieee.statements(cls.ks)
+
+    def test_names(self):
+        names = definitions(self.text)
+        self.assertEqual(len(names), len(set(names)))
+        self.assertEqual(names, [n for k in self.ks.values() for n in ieee.statement_names(k)])
+        by = {k.name: ieee.statement_names(k) for k in self.ks.values()}
+        self.assertEqual(by['add_2_2'], ['add_2_2_ieee_bridge_spec', 'add_2_2_ieee_spec', 'add_2_2_ieee_finite_spec',
+                                         'add_2_2_ieee_finite_result_spec'])
+        self.assertEqual(by['mul_2_1'], ['mul_2_1_ieee_bridge_spec', 'mul_2_1_ieee_spec', 'mul_2_1_ieee_finite_spec'])
+        self.assertEqual(by['fast_two_sum'], ['fast_two_sum_ieee_spec'])
+        self.assertEqual(by['two_sum'], [])          # its statement in the draft is written by hand
+        self.assertEqual(by['add_2_2_full'], ['add_2_2_full_spec'])
+        self.assertEqual(by['ball_neg_2'], ['ball_neg_2_ieee_spec'])
+        self.assertEqual(by['neg_2'], ['neg_2_ieee_spec'])
+        self.assertEqual(by['make_2'], ['make_2_spec'])
+        self.assertEqual(by['ball_add_1'], [])
+
+    def statement(self, name):
+        m = re.search(rf'^Definition {name} : Prop :=\n(.*?)\.\n', self.text, flags=re.M | re.S)
+        return m.group(1)
+
+    def test_the_full_kernels(self):
+        s = self.statement('add_2_1_full_spec')
+        self.assertIn('  let t := IeeeOperations.add prec emax nan_plus x0 (IeeeOperations.guard prec emax nan_plus a) in\n', s)
+        self.assertIn('  (finite x0 -> finite a ->\n   Rabs (val x0 + val x1) <= bpow radix2 (emax - 2) ->\n'
+                      '   Rabs (val a) <= bpow radix2 (emax - 2) ->\n   finite w0) /\\', s)
+        self.assertIn('  (~ (finite x0 /\\ finite a) -> canonical_of t w0 w1)', s)
+        s = self.statement('mul_pow2_2_full_spec')
+        self.assertIn('  canonical_2 x0 x1 ->\n  finite c ->\n  (exists n : Z, val c = bpow radix2 n) ->\n', s)
+        self.assertIn('  (~ finite x0 -> canonical_of t w0 w1)', s)
+        self.assertIn('Rabs ((val x0 + val x1) * val c) <= bpow radix2 (emax - 1) ->', s)
+
+    def test_represents(self):
+        # neg_2 and abs_2 say it next to normalized and an exact error, which it implies.
+        self.assertTrue(self.statement('neg_2_ieee_spec').endswith(
+            '  canonical_2 z0 z1 /\\\n  xval_2 z0 z1 = xopp (xval_2 x0 x1)'))
+        self.assertIn('  (1 <= prec)%Z ->\n', self.statement('abs_2_ieee_spec'))
+        s = self.statement('make_2_limbs_spec')
+        self.assertNotIn('<= prec)%Z', s)
+        self.assertTrue(s.endswith('  xval_2 x0 x1 = xval_2 h l /\\\n  (finite h -> val x0 = val h /\\ val x1 = val l)'))
+
+    def test_balls(self):
+        s = self.statement('ball_scale_1_full_spec')
+        self.assertIn('   ball_finite_1 cx rx /\\ finite a /\\\n', s)
+        self.assertTrue(s.endswith('  (finite a -> forall x : R, in_ball_1 cx rx x -> in_ball_1 cw rw (x * val a))'))
+        s = self.statement('ball_make_1_spec')
+        self.assertIn('ball_finite_1 cw rw /\\ val cw = val c /\\ val rw = val r', s)
+        s = self.statement('ball_make_2_spec')
+        self.assertIn('ball_finite_2 cw0 cw1 rw /\\ cw0 = c0 /\\ cw1 = c1 /\\ val rw = val r', s)
+
+    def test_the_finite_domain(self):
+        s = self.statement('sub_1_2_ieee_finite_result_spec')
+        self.assertIn('  Rabs (val a - (val y0 + val y1)) <= bpow radix2 (emax - 2) ->\n', s)
+        self.assertIn('IeeeModel.sub_1_2_prog [a; y0; y1]', s)
+        s = self.statement('add_2_2_ieee_bridge_spec')
+        self.assertIn('  = add_2_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val y0) (val y1)', s)
+
+    def test_audit(self):
+        text = ieee.audit(self.ks)
+        # Every kernel of the extended domain names its theorem.
+        self.assertEqual(text.count('Print Assumptions'), 39)
+        self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
+                      'Print Assumptions add_2_2_full_correct.', text)
+        self.assertIn('From Kairn Require Import IeeeFull.', text)
+
+
+class CheckedFiles(unittest.TestCase):
+    # The generated files that make -C proofs passed on: every theorem of the IEEE model is about
+    # these definitions and has one of these statements as its type. A change of either file needs
+    # that build again, and new digests here.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '767258ddf5556ceea5712828d8a36022fe9378c706fc2b256cc7041f39ea4e43',
+               'proofs/gen/IeeeStatements.v': '0d2b8e66d080f2246c6fbe7fce61edf0a11210d6369aceb80284273f6beac6b3'}
+
+    def test_the_checked_files(self):
+        for path, digest in self.DIGESTS.items():
+            text = read(path)
+            self.assertEqual(hashlib.sha256(text.encode()).hexdigest(), digest, path)
+
+
+class Fields(unittest.TestCase):
+    HEAD = '''
+kernel:  k
+input:   x = x0 x1
+input:   a
+output:  z = z0 z1
+value:   x+a
+requires: normalized x
+ensures: normalized z
+ensures: error z R c=2 k=2 t=0
+status:  unverified
+{fields}
+(sh, sl) = two_sum(x0, a)
+v        = add(x1, sl)
+(z0, z1) = fast_two_sum(sh, v)
+'''
+
+    def errors(self, fields):
+        ks = dict(common.kernels())
+        k = ir.parse_kernel(self.HEAD.format(fields=fields), 'k.kernel')
+        ks['k'] = k
+        return k, [str(e) for e in rules.check_all(ir.ordered(ks)) if e.kernel == 'k']
+
+    def test_accepted_and_parsed(self):
+        k, errors = self.errors('ieee: spec bridge\nieee_finite: abs_le(x0,-2);abs_le(a, -2)\n'
+                                'ieee_finite_result: abs_le(x+a,-2)')
+        self.assertEqual(errors, [])
+        self.assertEqual(k.ieee, ('bridge', 'spec'))
+        self.assertEqual(k.ieee_finite, [{'abs_le': 'x0', 'exp': -2}, {'abs_le': 'a', 'exp': -2}])
+        self.assertEqual(ieee.statement_names(k), ['k_ieee_bridge_spec', 'k_ieee_spec', 'k_ieee_finite_spec',
+                                                   'k_ieee_finite_result_spec'])
+
+    def test_refused(self):
+        with self.assertRaises(ir.DescriptionError):
+            self.errors('ieee: spec proof')
+        _, errors = self.errors('ieee_finite: abs_le(b,-2)')
+        self.assertTrue(any('unknown name b' in e for e in errors), errors)
+        _, errors = self.errors('domain: extended\nieee: spec')
+        self.assertTrue(any('about a kernel of the finite domain' in e for e in errors), errors)
+
+    def test_groups_the_vocabulary_has_no_word_for(self):
+        # canonical_2, xval_2, ball_2 are about two limbs: a 4-limb output that claims represents
+        # has no IEEE-model statement, and is refused.
+        ks = copy.deepcopy(dict(common.kernels(common.TEST_KERNELS)))
+        k = ks['ops_special']
+        k.outputs = [ir.Group('x', ('x0', 'x1', 'x2', 'x3'))]
+        errors = [str(e) for e in rules.check_all(ks) if e.kernel == 'ops_special']
+        self.assertTrue(any('x has 4 limbs, and the IEEE-model statements have words for 2' in e for e in errors),
+                        errors)
+
+
+if __name__ == '__main__':
+    unittest.main()

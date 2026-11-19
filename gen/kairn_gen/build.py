@@ -1,7 +1,7 @@
 """What `build` writes and what `check` compares, paths relative to the repository root."""
 import os
 
-from . import claims, cpp, ir, library, rocq, rules, simd
+from . import claims, cpp, ieee, ir, library, rocq, rules, simd
 
 # Every file in these directories must be one that build writes.
 GENERATED_DIRS = ('proofs/gen', 'include/kairn/gen')
@@ -18,6 +18,9 @@ def outputs(kernels):
         'proofs/gen/Model.v': rocq.model(kernels),
         'proofs/gen/Statements.v': rocq.statements(kernels),
         'proofs/gen/Audit.v': rocq.audit(kernels),
+        'proofs/gen/IeeeModel.v': ieee.model(kernels),
+        'proofs/gen/IeeeStatements.v': ieee.statements(kernels),
+        'proofs/gen/IeeeAudit.v': ieee.audit(kernels),
         'include/kairn/gen/prelude.hpp': cpp.prelude(kernels),
         'include/kairn/gen/scalar.hpp': cpp.scalar(kernels),
         'include/kairn/gen/avx2.hpp': simd.header(simd.AVX2, kernels),
@@ -74,15 +77,24 @@ def _ignored(name):
 
 
 def summary(kernels):
-    """The lines build prints about the kernels: what is unverified, not constexpr, exempt."""
+    """The lines build prints about the kernels: what is unverified, not constexpr, exempt, and
+    which guards of rule R3 are pending."""
     def names(pred):
         found = [k.name for k in kernels.values() if pred(k)]
         return ', '.join(found) if found else 'none'
+    pending, through = rules.r3_report(kernels)
+    pending_text = '; '.join(f'{n} ({v}: {why})' for n, p in pending.items() for v, why in p.items())
+    through_text = ', '.join('%s (%s)' % (n, ', '.join(by)) for n, by in through.items())
     return [
         f'kernels: {len(kernels)}',
         f'UNVERIFIED: {names(lambda k: k.status == "unverified")}',
+        f'IEEE model UNVERIFIED: {names(lambda k: k.extended and k.ieee_status == "unverified")}',
+        f'no real-model statement (IEEE model only): {names(lambda k: not k.real_model)}',
         f'not constexpr: {names(lambda k: cpp.constexpr_kind(k, kernels) is None)}',
         f'constexpr through a constant-evaluation variant: '
         f'{", ".join(f"{k.name} ({k.ce_variant})" for k in kernels.values() if k.ce_variant) or "none"}',
         f'exempt from the non-finite cone: {names(lambda k: bool(k.cone_exempt))}',
+        f'entry kernels (rule R3): {names(lambda k: k.entry)}',
+        f'R3 GUARD PENDING: {pending_text or "none"}',
+        f'accepted by R3 only through a pending guard: {through_text or "none"}',
     ]

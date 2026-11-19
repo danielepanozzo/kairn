@@ -12,6 +12,10 @@ theorem:       proofs/theories/Sign.v sub_2_1_correct
 source:        add_2_1 (JMP17 Alg. 4) on -a
 license:       algorithm: published; proof: MIT
 status:        proved
+ieee:          bridge spec
+ieee_finite:   abs_le(x0,-2);abs_le(a,-2)
+ieee_finite_result: abs_le(x-a,-2)
+entry:         yes
 
 n        = neg(a)
 (z0, z1) = add_2_1(x0, x1, n)

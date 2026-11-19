@@ -13,6 +13,7 @@ theorem:       proofs/theories/EFT.v two_prod_correct
 source:        TwoProd with an FMA (folklore; see JMP17)
 license:       algorithm: published; proof: MIT
 status:        proved
+ieee:          spec
 ce_variant:    two_prod_dekker
 
 p = prod(a, b)

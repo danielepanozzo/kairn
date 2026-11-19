@@ -35,6 +35,9 @@ class Check(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn('UNVERIFIED: ', r.stdout)
         self.assertIn('not constexpr: ', r.stdout)
+        # The pending guards of rule R3, and what is accepted only through them, are printed: none.
+        self.assertIn('R3 GUARD PENDING: none\n', r.stdout)
+        self.assertIn('accepted by R3 only through a pending guard: none\n', r.stdout)
         r = kairn_gen(root, 'check')
         self.assertEqual(r.returncode, 0, r.stderr)
 

@@ -1,4 +1,6 @@
-# DWPlusFP: a double-word number plus a number of the format.
+# DWPlusFP: a double-word number plus a number of the format. The operand a enters from the
+# program and is guarded in the first line (rule R3; milestone1.md, "Values that enter from the
+# program").
 kernel:        add_2_1
 input:         x = x0 x1
 input:         a
@@ -12,7 +14,12 @@ theorem:       proofs/theories/Add21.v add_2_1_correct
 source:        JMP17 Alg. 4 (DWPlusFP); bound from MR22
 license:       algorithm: published; proof: MIT
 status:        proved
+ieee:          bridge spec
+ieee_finite:   abs_le(x0,-2);abs_le(a,-2)
+ieee_finite_result: abs_le(x+a,-2)
+entry:         yes
 
-(sh, sl) = two_sum(x0, a)
+g        = guard(a)
+(sh, sl) = two_sum(x0, g)
 v        = add(x1, sl)
 (z0, z1) = fast_two_sum(sh, v)

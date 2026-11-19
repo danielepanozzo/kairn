@@ -82,7 +82,7 @@ constexpr auto bound_of_either() noexcept {
     constexpr auto b = bound_of<T, H>();
     if constexpr (a.verified && b.verified) {
         static_assert(a.reference == b.reference, "the two kernels of one operation have bounds of different forms");
-        auto larger = [](T x, T y) { return x < y ? y : x; };
+        auto larger = [](T x, T y) { return y > x ? y : x; };  // b > a, never a < b: see detail::canonical
         return Bound<T>{larger(a.unit, b.unit), larger(a.tiny, b.tiny), larger(a.unit_computed, b.unit_computed),
                         larger(a.tiny_computed, b.tiny_computed), a.reference};
     } else {
@@ -126,7 +126,9 @@ struct traits_one_limb {
 /// `add_fast`, `sub`, `sub_limb`, `mul`, `mul_limb`, `ldexp`. An entry is a Bound<limb_type>
 /// when the operation's kernel is proved, and an UnverifiedBound, without constants, otherwise;
 /// `entry.verified` says which in both cases. The entries of float and double are those of one
-/// IEEE 754 operation, the same as Expansion<T, 1>.
+/// IEEE 754 operation, the same as Expansion<T, 1>. For two limbs the kernel is the finite core
+/// of the operation: its bound is what an operator's result satisfies whenever it is finite (the
+/// operator adds only the fix-up of infinities and NaN), and what kairn::finite:: satisfies.
 template <class X>
 struct traits;
 

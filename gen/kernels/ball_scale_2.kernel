@@ -1,8 +1,11 @@
-# A ball with a 2-limb center times a number a of the format: the center by mul_2_1, plus
-# U |cz| + V from the claims of mul_2_1.
+# A ball times a number a of the format, with a 2-limb center: the center by mul_2_1, the radius in the second design.
+# The radius is evaluated by operations rounded to nearest on nonnegative values and inflated
+# once (milestone1.md, "The radius, second design"): E turns the error bound of the center
+# kernel mul_2_1 into a multiple of |cz0|, G covers the roundings of the radius, H what underflow
+# loses and the absolute term of the bound. Each is an exact expression rounded up.
 kernel:        ball_scale_2
 input:         cx = cx0 cx1
-input:         rx
+input:         stored rx
 input:         a
 output:        cz = cz0 cz1
 output:        rz
@@ -12,16 +15,16 @@ requires:      nonneg rx
 ensures:       normalized cz
 ensures:       encloses cz rz x*a x=cx,rx
 min_precision: 2
-theorem:       proofs/theories/Ball.v ball_scale_2_correct
-source:        midpoint-radius scaling (Milestone 1 listing)
+theorem:       proofs/theories/Ball2.v ball_scale_2_correct
+source:        midpoint-radius scaling (Milestone 1 listing, second radius design)
 license:       algorithm and proof: MIT
 status:        proved
+entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
-(cz0, cz1) = mul_2_1(cx0, cx1, a)
-aa         = abs(a)
-t1         = rmul(aa, rx)
-mz         = abs_upper_2(cz0, cz1)
-d0         = rmul(const unit_computed(mul_2_1), mz)
-d          = radd(d0, const tiny_computed(mul_2_1))
-rz         = radd(t1, d)
+(cz0, cz1)  = mul_2_1(cx0, cx1, a)
+aa          = abs(a)
+az          = abs(cz0)
+p           = prod(aa, rx)
+t           = fma(az, const up(unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)), p)
+rz          = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)))

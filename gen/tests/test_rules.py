@@ -1,8 +1,12 @@
 """The rules refuse wrong kernels with a message naming the kernel, the value and the rule."""
+import copy
+import dataclasses
+import os
+import re
 import unittest
 
 import common
-from kairn_gen import ir, rules
+from kairn_gen import build, ir, rules
 
 # A valid kernel to start from: Fast2Sum.
 HEAD = '''
@@ -206,6 +210,591 @@ e = sub(s, b)
                                                             'q = select(w, a, b)\nr0 = add(q, s)'))
         self.assertTrue(any(e.value == '0' and 'a constant is a limb, not a mask' in str(e) for e in errors),
                         errors)
+
+
+class R3(unittest.TestCase):
+    """Rule R3 (architecture.md, "The kernel IR"): in an entry kernel, a value that enters from the
+    program, or what neg, abs, select or copy alone make of it, is never an operand of add or sub
+    nor the addend of an FMA before it has passed through guard."""
+    ENTRY = '''
+kernel:   k
+input:    x = x0 x1
+input:    a
+output:   z = z0 z1
+value:    x+a
+requires: normalized x
+ensures:  error z R c=0 k=2 t=0
+status:   unverified
+entry:    yes
+cone_exempt: only rule R3 is judged here
+'''
+    # A callee that adds its second operand, one that only multiplies it, and one that returns it.
+    ADDS = '''
+kernel:  adds
+input:   p
+input:   q
+output:  s
+value:   p+q
+ensures: error s R c=0 k=1 t=0
+status:  unverified
+s = add(p, q)
+'''
+    MULTIPLIES = ADDS.replace('kernel:  adds', 'kernel:  multiplies').replace('p+q', 'p*q') \
+                     .replace('s = add(p, q)', 's = prod(p, q)')
+    RETURNS = '''
+kernel:  returns
+input:   p
+output:  r
+value:   -p
+ensures: error r R c=0 k=1 t=0
+status:  unverified
+r = neg(p)
+'''
+
+    def r3(self, body, *more, head=None):
+        errors = check((head or self.ENTRY) + body, self.ADDS, self.MULTIPLIES, self.RETURNS, *more)
+        others = [e for e in errors if e.rule not in (rules.RULE_R3, rules.RULE_CONE)]
+        self.assertEqual(others, [], body)
+        return [e for e in errors if e.rule == rules.RULE_R3]
+
+    def refused(self, body, value, words, *more, head=None, kernel='k'):
+        errors = self.r3(body, *more, head=head)
+        self.assertTrue(any(e.kernel == kernel and e.value == value and words in str(e) for e in errors),
+                        f'no refusal of {kernel}, {value} mentioning {words!r} in:\n' +
+                        ('\n'.join(map(str, errors)) or 'accepted'))
+
+    END = 'z0 = add(s, x1)\nz1 = sub(z0, s)\n'
+
+    # Each way of breaking the rule is caught.
+
+    def test_direct_addition(self):
+        self.refused('s = add(x0, a)\n' + self.END, 'a', 'reaches an operand of add at s without passing '
+                                                         'through guard')
+        self.refused('s = sub(a, x0)\n' + self.END, 'a', 'an operand of sub at s')
+
+    def test_through_a_negation_and_an_absolute_value(self):
+        self.refused('n = neg(a)\ns = add(x0, n)\n' + self.END, 'a', 'an operand of add at s')
+        self.refused('n = abs(a)\nm = neg(n)\ns = sub(x0, m)\n' + self.END, 'a', 'an operand of sub at s')
+
+    def test_through_a_select_and_a_copy(self):
+        self.refused('m = lt(x0, x1)\nq = select(m, x1, a)\ns = add(x0, q)\n' + self.END, 'a',
+                     'an operand of add at s')
+        self.refused('c = copy(a)\ns = add(x0, c)\n' + self.END, 'a', 'an operand of add at s')
+
+    def test_as_the_addend_of_an_fma(self):
+        for op in ('fma', 'fms', 'fnma', 'muladd'):
+            self.refused(f'p = {op}(x0, x1, a)\ns = add(p, x0)\n' + self.END, 'a', f'the addend of {op} at p')
+
+    def test_through_a_call_into_an_input_the_callee_adds(self):
+        self.refused('s = adds(x0, a)\n' + self.END, 'a', 'an operand of add at s in adds (called for s)')
+        self.refused('n = neg(a)\ns = adds(n, x0)\n' + self.END, 'a', 'in adds (called for s)')
+
+    def test_through_a_value_a_callee_returns(self):
+        self.refused('r = returns(a)\ns = add(x0, r)\n' + self.END, 'a', 'an operand of add at s')
+
+    def test_limbs_the_program_supplies(self):
+        head = self.ENTRY.replace('input:    x = x0 x1', 'input:    supplied x = x0 x1')
+        self.refused('g = guard(a)\ns = add(x0, g)\n' + self.END, 'x0', 'an operand of add at s', head=head)
+
+    # Each allowed use passes.
+
+    def test_factor_and_comparison(self):
+        self.assertEqual(self.r3('p = prod(x0, a)\nq = fma(a, x1, x0)\nm = lt(a, x0)\nw = select(m, p, q)\n'
+                                 's = add(w, p)\n' + self.END), [])
+
+    def test_through_a_call_into_an_input_the_callee_multiplies(self):
+        self.assertEqual(self.r3('n = abs(a)\np = multiplies(x0, n)\ns = add(p, x0)\n' + self.END), [])
+
+    def test_guarded(self):
+        self.assertEqual(self.r3('g = guard(a)\ns = add(x0, g)\n' + self.END), [])
+        self.assertEqual(self.r3('n = neg(a)\ng = guard(n)\ns = adds(x0, g)\n' + self.END), [])
+        self.assertEqual(self.r3('g = guard(a)\nr = returns(g)\ns = add(x0, r)\n' + self.END), [])
+
+    def test_stored(self):
+        head = self.ENTRY.replace('input:    a', 'input:    stored a')
+        self.assertEqual(self.r3('s = add(x0, a)\n' + self.END, head=head), [])
+        self.assertEqual(self.r3('s = adds(x0, a)\n' + self.END, head=head), [])
+
+    def test_the_limbs_of_a_multi_limb_input_are_stored(self):
+        self.assertEqual(self.r3('g = guard(a)\ns = add(x0, x1)\nt = add(s, g)\nz0 = add(t, x1)\n'
+                                 'z1 = sub(z0, t)\n'), [])
+
+    def test_only_entry_kernels(self):
+        head = self.ENTRY.replace('entry:    yes\n', '')
+        self.assertEqual(self.r3('s = add(x0, a)\n' + self.END, head=head), [])
+
+    def test_declarations(self):
+        self.refused('g = guard(a)\ns = add(x0, g)\n' + self.END, 'x', 'stored is said of a one-limb input',
+                     head=self.ENTRY.replace('input:    x = x0 x1', 'input:    stored x = x0 x1'))
+        self.refused('s = add(x0, a)\n' + self.END, 'a', 'supplied is said of a multi-limb input',
+                     head=self.ENTRY.replace('input:    a', 'input:    supplied a'))
+        self.refused('s = add(x0, a)\n' + self.END, 'a', 'only an entry kernel says where its inputs come from',
+                     head=self.ENTRY.replace('entry:    yes\n', '').replace('input:    a', 'input:    stored a'))
+        with self.assertRaises(ir.DescriptionError):
+            check(self.ENTRY.replace('entry:    yes', 'entry:    no') + 's = add(x0, a)\n' + self.END)
+
+    # The pending guard.
+
+    def test_pending(self):
+        head = self.ENTRY + 'guard_pending: a the reason\n'
+        self.assertEqual(self.r3('s = add(x0, a)\n' + self.END, head=head), [])
+        self.assertEqual(self.r3('s = adds(x0, a)\n' + self.END, head=head), [])
+        self.refused('g = guard(a)\ns = add(x0, g)\n' + self.END, 'a', 'is never added unguarded; remove the '
+                     'declaration', head=head)
+        self.refused('s = add(x0, a)\n' + self.END, 'a', 'not an input that enters from the program',
+                     head=head.replace('input:    a', 'input:    stored a'))
+        self.refused('s = add(x0, a)\n' + self.END, 'a', 'only an entry kernel has values that enter',
+                     head=head.replace('entry:    yes\n', ''))
+        with self.assertRaises(ir.DescriptionError):
+            check(self.ENTRY + 'guard_pending: a\n' + 's = add(x0, a)\n' + self.END)
+
+    def test_accepted_through_the_pending_guard_of_a_callee(self):
+        callee = self.ENTRY.replace('kernel:   k', 'kernel:   inner') + 'guard_pending: a the reason\n' + \
+            's = add(x0, a)\n' + self.END
+        caller = self.ENTRY.replace('kernel:   k', 'kernel:   outer')
+        body = 'n = neg(a)\n(z0, z1) = inner(x0, x1, n)\n'
+        kernels = {}
+        for text in (callee, caller + body):
+            k = ir.parse_kernel(text, 'test')
+            kernels[k.name] = k
+        kernels = ir.ordered(kernels)
+        self.assertEqual([e for e in rules.check_all(kernels) if e.rule == rules.RULE_R3], [])
+        pending, through = rules.r3_report(kernels)
+        self.assertEqual(pending, {'inner': {'a': 'the reason'}})
+        self.assertEqual(through, {'outer': ['inner']})
+        # Without the declaration, both are refused: the caller for the callee's addition.
+        kernels['inner'].guard_pending = {}
+        errors = [e for e in rules.check_all(kernels) if e.rule == rules.RULE_R3]
+        self.assertEqual({(e.kernel, e.value) for e in errors}, {('inner', 'a'), ('outer', 'a')})
+        self.assertIn('an operand of add at s in inner (called for z0)',
+                      str([e for e in errors if e.kernel == 'outer'][0]))
+
+
+class NonFiniteLayer(unittest.TestCase):
+    """The description format and the rules of the non-finite layer (architecture.md, "Claims of
+    the non-finite layer"): a full kernel, a full ball kernel and a constructor, and each misuse."""
+    CORE = '''
+kernel:  core
+input:   x = x0 x1
+input:   a
+output:  z = z0 z1
+value:   x+a
+requires: normalized x
+ensures: error z R c=0 k=2 t=0
+min_precision: 2
+status:  unverified
+s  = add(x0, a)
+z0 = add(s, x1)
+z1 = sub(z0, s)
+'''
+    FULL = '''
+kernel:  full
+input:   x = x0 x1
+input:   a
+output:  w = w0 w1
+value:   x+a
+requires: canonical x
+ensures: extends w core=core lead=add finite_when=abs_le(x,-2);abs_le(abs(x)*a,0)
+min_precision: 2
+status:  unverified
+domain:  extended
+ieee_status: unverified
+cone_exempt: the fix-up selects
+(z0, z1) = core(x0, x1, a)
+t  = add(x0, a)
+m  = abs(z0)
+f  = lt(m, const inf)
+r0 = prod(t, const inf)
+n  = eq(r0, r0)
+r1 = select(n, 0, r0)
+w0 = select(f, z0, r0)
+w1 = select(f, z1, r1)
+'''
+    BALL = '''
+kernel:  ballk
+input:   stored c
+input:   stored r
+output:  cw
+output:  rw
+value:   c
+requires: ball c r
+ensures: encloses cw rw x x=c,r finite_when=abs_le(c,-1)
+min_precision: 1
+status:  unverified
+domain:  extended
+ieee_status: unverified
+entry:   yes
+ieee_only: yes
+cone_exempt: selects
+e  = eq(r, r)
+cw = select(e, c, const nan)
+rw = copy(r)
+'''
+    MAKE = '''
+kernel:  maker
+input:   c
+input:   r
+output:  cw
+output:  rw
+ensures: makes_ball cw rw from=c,r
+min_precision: 1
+status:  unverified
+domain:  extended
+ieee_status: unverified
+entry:   yes
+cone_exempt: selects
+g  = guard(r)
+e  = le(0, g)
+h  = guard(c)
+cw = select(e, h, const nan)
+rw = select(e, g, const nan)
+'''
+
+    def errors(self, *texts, rule=None):
+        errs = check(*texts)
+        return [e for e in errs if rule is None or e.rule == rule]
+
+    def refused(self, words, *texts, rule=None):
+        errs = self.errors(*texts, rule=rule)
+        self.assertTrue(any(words in str(e) for e in errs), f'nothing mentions {words!r} in:\n' +
+                        ('\n'.join(map(str, errs)) or 'accepted'))
+
+    def test_accepted_and_parsed(self):
+        self.assertEqual(check(self.CORE, self.FULL, self.BALL, self.MAKE), [])
+        full = ir.parse_kernel(self.FULL, 't')
+        self.assertTrue(full.extended and not full.real_model)
+        self.assertEqual((full.domain, full.ieee_status, full.entry), ('extended', 'unverified', False))
+        self.assertEqual(full.requires, [('canonical', 'x')])
+        self.assertEqual(full.ensures, [{'kind': 'extends', 'of': 'w', 'core': 'core', 'lead': 'add',
+                                         'finite_when': [{'abs_le': 'x', 'exp': -2},
+                                                         {'abs_le': 'abs(x)*a', 'exp': 0}]}])
+        ball = ir.parse_kernel(self.BALL, 't')
+        self.assertEqual((ball.stored, ball.entry, ball.requires), ({'c', 'r'}, True, [('ball', 'c', 'r')]))
+        self.assertEqual(ball.ensures[0]['finite_when'], [{'abs_le': 'c', 'exp': -1}])
+        self.assertFalse(ball.real_model)
+        make = ir.parse_kernel(self.MAKE, 't')
+        self.assertEqual(make.ensures, [{'kind': 'makes_ball', 'center': 'cw', 'radius': 'rw',
+                                         'from': {'center': 'c', 'radius': 'r'}}])
+        self.assertIsNone(make.value)
+        self.assertEqual(make.program_values(), ['c', 'r'])
+        # In the extended domain an encloses entry without finite_when has an empty one.
+        k = ir.parse_kernel(self.BALL.replace(' finite_when=abs_le(c,-1)', ''), 't')
+        self.assertEqual(k.ensures[0]['finite_when'], [])
+        k = ir.parse_kernel(self.FULL.replace(' finite_when=abs_le(x,-2);abs_le(abs(x)*a,0)', ''), 't')
+        self.assertEqual(k.ensures[0]['finite_when'], [])
+        rep = ir.parse_kernel('kernel: r\ninput: a\noutput: x = x0 x1\nvalue: a\nensures: represents x\n'
+                              'ieee_theorem: proofs/theories/X.v r_ieee\n', 't')
+        self.assertEqual((rep.ensures, rep.ieee_theorem), ([{'kind': 'represents', 'of': 'x'}],
+                                                           ('proofs/theories/X.v', 'r_ieee')))
+        self.assertFalse(rep.real_model)
+
+    def test_malformed_descriptions(self):
+        for old, new in (('lead=add', ''), ('core=core', ''), ('lead=add', 'lead=add lead=sub'),
+                         ('finite_when=abs_le(x,-2);', 'finite_when=x<-2;'),
+                         ('finite_when=abs_le(x,-2);', 'finite_when=abs_le(x);'),
+                         ('ieee_status: unverified', 'ieee_status: unverified\nieee_status: proved'),
+                         ('ieee_status: unverified', 'ieee_status: unverified\nieee_theorem: X.v'),
+                         ('domain:  extended', 'domain:  extended\ndomain:  extended')):
+            with self.assertRaises(ir.DescriptionError, msg=new):
+                ir.parse_kernel(self.FULL.replace(old, new), 't')
+        with self.assertRaises(ir.DescriptionError):
+            ir.parse_kernel(self.MAKE.replace('from=c,r', 'c,r'), 't')
+        with self.assertRaises(ir.DescriptionError):
+            ir.parse_kernel(self.BALL.replace('finite_when=abs_le(c,-1)', 'finite_when=c'), 't')
+
+    def test_domains(self):
+        self.refused('it is extended, or the line is left out', self.CORE, self.FULL.replace('extended', 'finite'),
+                     rule=rules.DOMAIN)
+        self.refused('is of the extended domain', self.CORE,
+                     self.FULL.replace('domain:  extended\nieee_status: unverified\n', ''), rule=rules.DOMAIN)
+        self.refused('not a claim of the finite domain', self.CORE,
+                     self.FULL.replace('domain:  extended\nieee_status: unverified\n', ''), rule=rules.CLAIMS)
+        self.refused('finite_when belongs to the extended domain',
+                     self.BALL.replace('domain:  extended\nieee_status: unverified\n', '')
+                              .replace('requires: ball c r', 'requires: nonneg r'), rule=rules.DOMAIN)
+        # The real model has no infinity and cannot call a kernel that is not in it.
+        self.refused('const inf has no meaning in the real model',
+                     self.CORE.replace('s  = add(x0, a)', 's  = add(x0, a)\nq  = lt(a, const inf)\n'
+                                                          'k  = select(q, a, x1)')
+                              .replace('z0 = add(s, x1)', 'z0 = add(s, k)'), rule=rules.DOMAIN)
+        caller = self.CORE.replace('kernel:  core', 'kernel:  caller').replace(
+            's  = add(x0, a)\nz0 = add(s, x1)\nz1 = sub(z0, s)', '(z0, z1) = full(x0, x1, a)')
+        self.refused('full has no real-model statement, so a kernel that has one cannot call it',
+                     self.CORE, self.FULL, caller, rule=rules.DOMAIN)
+
+    def test_requirements(self):
+        self.refused('canonical is not a requirement of the finite domain',
+                     self.CORE.replace('normalized x', 'canonical x'), rule=rules.CLAIMS)
+        self.refused('canonical stands for normalized there', self.CORE,
+                     self.FULL.replace('canonical x', 'normalized x'), rule=rules.CLAIMS)
+        self.refused('canonical is about a multi-limb input', self.CORE,
+                     self.FULL.replace('requires: canonical x', 'requires: canonical x\nrequires: canonical a'),
+                     rule=rules.CLAIMS)
+        self.refused('the radius of a ball is a one-limb input',
+                     self.BALL.replace('input:   stored r', 'input:   r = r0 r1')
+                              .replace('e  = eq(r, r)', 'e  = eq(r0, r1)').replace('rw = copy(r)', 'rw = copy(r0)'),
+                     rule=rules.CLAIMS)
+        self.refused('is required to be a ball', self.BALL.replace('requires: ball c r', 'requires: nonneg r'),
+                     rule=rules.CLAIMS)
+        self.refused('a kernel that makes a ball from its inputs has no value',
+                     self.MAKE.replace('output:  rw', 'output:  rw\nvalue:   c'), rule=rules.CLAIMS)
+        self.refused("makes_ball from radius 'q': not a one-limb limb input",
+                     self.MAKE.replace('from=c,r', 'from=c,q'), rule=rules.CLAIMS)
+
+    def test_extends(self):
+        for old, new, words in (
+                ('lead=add', 'lead=div', 'lead='),
+                ('core=core', 'core=full', 'not another kernel'),
+                ('core=core', 'core=nope', 'not another kernel'),
+                ('value:   x+a', 'value:   x-a', 'the value must be the core\'s'),
+                ('min_precision: 2', 'min_precision: 3', 'the minimum precision is the core\'s'),
+                ('requires: canonical x\n', '', 'the requirements are the core\'s with canonical for normalized'),
+                ('abs_le(x,-2)', 'abs_le(q,-2)', 'unknown name'),
+                ('ensures: extends w', 'ensures: error w R c=0 k=2 t=0\nensures: extends w', 'claims nothing else')):
+            self.refused(words, self.CORE, self.FULL.replace(old, new), rule=rules.CLAIMS)
+        renamed = self.CORE.replace('input:   a', 'input:   b').replace('x+a', 'x+b').replace('add(x0, a)',
+                                                                                                'add(x0, b)')
+        self.refused('the core must have the same inputs, names included', renamed, self.FULL, rule=rules.CLAIMS)
+        extended_core = self.CORE.replace('normalized x', 'canonical x') + \
+            'domain: extended\nieee_status: unverified\n'
+        self.refused('a core is of the finite domain', extended_core, self.FULL, rule=rules.CLAIMS)
+
+    def test_statuses(self):
+        self.refused('a kernel of the extended domain gives one of', self.CORE,
+                     self.FULL.replace('ieee_status: unverified\n', ''), rule=rules.RULE_THEOREM)
+        self.refused('belong to kernels of the extended domain',
+                     self.CORE.replace('status:  unverified', 'status:  unverified\nieee_status: unverified'),
+                     rule=rules.RULE_THEOREM)
+        self.refused('so its status is its ieee_status', self.CORE,
+                     self.FULL.replace('status:  unverified', 'status:  proved\nsource: s\nlicense: l'),
+                     rule=rules.RULE_THEOREM)
+        self.refused('no real-model statement, so no theorem', self.CORE,
+                     self.FULL + 'theorem: proofs/theories/X.v full_correct\n', rule=rules.RULE_THEOREM)
+        self.refused('only once the IEEE-model statement is proved', self.CORE,
+                     self.FULL + 'ieee_theorem: proofs/theories/X.v full_ieee\n', rule=rules.RULE_THEOREM)
+        proved = self.FULL.replace('status:  unverified', 'status:  proved\nsource: s\nlicense: l') \
+                          .replace('ieee_status: unverified', 'ieee_status: proved')
+        self.refused('names no ieee_theorem', self.CORE, proved, rule=rules.RULE_THEOREM)
+        self.assertEqual(self.errors(self.CORE, proved + 'ieee_theorem: proofs/theories/X.v full_ieee\n'), [])
+
+
+class TimesInf(unittest.TestCase):
+    """times_inf is a plain multiplication (by infinity, exact): its result may only be an
+    operand of a comparison or of select, and an output only through select (rule R1)."""
+    FULL = NonFiniteLayer.FULL.replace('r0 = prod(t, const inf)', 'r0 = times_inf(t)')
+
+    def refused(self, old, new, words, rule=rules.RULE_R1):
+        errors = check(NonFiniteLayer.CORE, self.FULL.replace(old, new))
+        self.assertTrue(any(e.rule == rule and e.value == 'r0' and words in str(e) for e in errors),
+                        f'nothing mentions {words!r} in:\n' + ('\n'.join(map(str, errors)) or 'accepted'))
+
+    def test_compared_and_selected_is_accepted(self):
+        self.assertEqual(check(NonFiniteLayer.CORE, self.FULL), [])
+        self.assertIn('r0 = times_inf(t)', self.FULL)
+
+    def test_each_forbidden_use(self):
+        tail = 'w1 = select(f, z1, r1)'
+        for use, words in (('q = add(r0, x0)', 'an operand of add at q'), ('q = sub(x0, r0)', 'an operand of sub at q'),
+                           ('q = fma(r0, x0, x1)', 'an operand of fma at q'), ('q = fma(x0, x1, r0)', 'an operand of fma at q'),
+                           ('q = fms(x0, x1, r0)', 'an operand of fms at q'), ('q = prod(r0, x0)', 'an operand of prod at q'),
+                           ('q = muladd(x0, x1, r0)', 'an operand of muladd at q'), ('q = neg(r0)', 'an operand of neg at q'),
+                           ('q = abs(r0)', 'an operand of abs at q'), ('q = copy(r0)', 'an operand of copy at q'),
+                           ('q = guard(r0)', 'an operand of guard at q'), ('q = succ(r0)', 'an operand of succ at q'),
+                           ('q = times_inf(r0)', 'an operand of times_inf at q'),
+                           ('(q, e) = two(r0, x0)', 'passed to two at q')):
+            body = f'{tail}\n{use}\nm2 = lt(q, x0)\n'
+            callee = ('kernel: two\ninput: a\ninput: b\noutput: s = s0 s1\nvalue: a+b\nensures: error s R c=0 k=2 t=0\n'
+                      'status: unverified\ns0 = add(a, b)\ns1 = sub(s0, a)\n')
+            # q must be used: an extra output w2 selected from it.
+            text = self.FULL.replace(tail, body).replace('output:  w = w0 w1', 'output:  w = w0 w1\noutput:  mask m2')
+            if use.startswith('(q, e)'):
+                text = text.replace('m2 = lt(q, x0)', 'm2 = lt(q, e)')
+            errors = check(NonFiniteLayer.CORE, text, callee)
+            self.assertTrue(any(e.rule == rules.RULE_R1 and e.value == 'r0' and words in str(e) for e in errors),
+                            f'{use}: ' + ('\n'.join(map(str, errors)) or 'accepted'))
+
+    def test_an_output_as_it_is(self):
+        text = self.FULL.replace('output:  w = w0 w1', 'output:  w = w0 w1\noutput:  r0')
+        errors = check(NonFiniteLayer.CORE, text)
+        self.assertTrue(any(e.rule == rules.RULE_R1 and e.value == 'r0' and 'an output as it is' in str(e)
+                            for e in errors), '\n'.join(map(str, errors)) or 'accepted')
+
+    def test_not_in_the_real_model(self):
+        core = NonFiniteLayer.CORE.replace('z1 = sub(z0, s)', 'z1 = sub(z0, s)\nq = times_inf(s)\nm = lt(q, s)\n'
+                                                                'k = select(m, s, x1)\nz2 = add(z1, k)') \
+                                  .replace('output:  z = z0 z1', 'output:  z = z0 z1 z2')
+        errors = check(core)
+        self.assertTrue(any(e.rule == rules.DOMAIN and 'times_inf has no meaning in the real model' in str(e)
+                            for e in errors), '\n'.join(map(str, errors)) or 'accepted')
+
+    def test_the_full_kernels_use_it(self):
+        ks = common.kernels()
+        for name in TheKernels.FULL:
+            body = [f'{", ".join(st.dsts)} = {st.op}({", ".join(map(str, st.args))})' for st in ks[name].body]
+            self.assertIn('r0 = times_inf(t)', body, name)
+            self.assertFalse(any(st.op == 'prod' and any(a.name == 'inf' for a in st.args) for st in ks[name].body))
+
+
+class R3Outputs(unittest.TestCase):
+    """Rule R3: an entry kernel never returns a value that enters from the program as it is."""
+    HEAD = R3.ENTRY.replace('output:   z = z0 z1', 'output:   z = z0 z1\noutput:   r')
+
+    def errors(self, body, head=None):
+        errs = check((head or self.HEAD) + 's = add(x0, x1)\nz0 = add(s, x0)\nz1 = sub(z0, s)\n' + body,
+                     R3.RETURNS)
+        return [e for e in errs if e.rule == rules.RULE_R3]
+
+    def test_refused(self):
+        for body in ('r = copy(a)', 'r = neg(a)', 'n = abs(a)\nr = neg(n)', 'm = lt(a, x0)\nr = select(m, a, x0)',
+                     'r = returns(a)'):
+            errs = self.errors(body + '\n')
+            self.assertTrue(any(e.value == 'a' and 'is the output r as it is' in str(e) for e in errs),
+                            f'{body}: ' + ('\n'.join(map(str, errs)) or 'accepted'))
+
+    def test_accepted(self):
+        for body in ('g = guard(a)\nr = copy(g)', 'r = prod(a, x0)', 'r = succ(a)', 'g = guard(a)\nr = returns(g)'):
+            self.assertEqual(self.errors(body + '\n'), [], body)
+        stored = self.HEAD.replace('input:    a', 'input:    stored a')
+        self.assertEqual(self.errors('r = copy(a)\n', head=stored), [])
+        self.assertEqual(self.errors('r = copy(a)\n', head=self.HEAD.replace('entry:    yes\n', '')), [])
+
+    def test_no_kernel_returns_a_program_value(self):
+        ks = common.kernels()
+        self.assertFalse(any('as it is' in str(e) for e in rules.check_all(ks)))
+        for k in ks.values():
+            if k.entry:
+                _, _, out = rules.r3_analysis(k, ks, frozenset(k.program_values()))
+                self.assertEqual(out, {}, k.name)
+
+
+class UpConstants(unittest.TestCase):
+    """const up(EXPR): an exact expression over u, eta, integers, unit(K) and tiny(K), rounded up."""
+    BOUND = '''
+kernel:  bound
+input:   a
+input:   b
+output:  p
+value:   a*b
+ensures: error p R c=1 k=1 t=1/2
+status:  {status}
+source:  x
+license: MIT
+theorem: proofs/theories/X.v bound_correct
+p = prod(a, b)
+'''
+    USER = HEAD.replace('kernel:  bad', 'kernel:  user')
+
+    def user(self, expr_text, status='unverified', extra=''):
+        head = self.USER.replace('status:  unverified', f'status:  {status}') + extra
+        if status == 'proved':
+            head += 'source: x\nlicense: MIT\ntheorem: proofs/theories/X.v user_correct\n'
+        return head + f'k = prod(const up({expr_text}), a)\ns = add(k, b)\nz = sub(s, k)\ne = sub(b, z)\n'
+
+    def errors(self, *texts):
+        return [e for e in check(*texts) if e.rule in (rules.COMPUTED, rules.WELL_FORMED)]
+
+    def test_accepted(self):
+        for text in ('(1+u)^6', 'unit(bound)/(1-unit(bound))*(1+u)',
+                     '(1+u) * ((1+u)^5*2*eta + tiny(bound)/(1-unit(bound)) + eta/2)', '2^-3*eta', '1/3'):
+            for status in ('unverified', 'proved'):
+                self.assertEqual(check(self.BOUND.format(status='proved'), self.user(text, status)), [], text)
+        k = ir.parse_kernel(self.user('(1 + u) ^ 6'), 't')
+        self.assertEqual(k.body[0].args[0], ir.Operand('up((1+u)^6)', const=True))
+
+    def test_refused(self):
+        for text, words in (('abs(u)', 'abs is not allowed'), ('v*u', 'unknown name v'),
+                            ('u^u', 'an exponent is an integer'), ('u-1', 'it must be positive'),
+                            ('unit(nope)', 'nope is not a kernel'), ('unit(user)', 'it must be positive'),
+                            ('2^2000', 'overflows'), ('0', 'it must be positive')):
+            errors = self.errors(self.BOUND.format(status='proved'), self.user(text))
+            self.assertTrue(any(words in str(e) for e in errors), f'{text}: ' + ('\n'.join(map(str, errors)) or 'accepted'))
+        # A proved kernel may use the bound of a proved kernel only; and not below its precision.
+        errors = self.errors(self.BOUND.format(status='unverified'), self.user('unit(bound)', 'proved'))
+        self.assertTrue(any('only an unverified kernel may use the constants' in str(e) for e in errors), errors)
+        bound = self.BOUND.format(status='proved').replace('p = prod', 'min_precision: 3\np = prod')
+        errors = self.errors(bound, self.user('tiny(bound)'))
+        self.assertTrue(any('min_precision must be at least 3' in str(e) for e in errors), errors)
+        self.assertEqual(self.errors(bound, self.user('tiny(bound)', extra='min_precision: 3\n')), [])
+
+    def test_names_the_printers_make(self):
+        errors = check(HEAD.replace('kernel:  bad', 'kernel:  up_x') + GOOD)
+        self.assertTrue(any(e.kernel == 'up_x' and e.rule == rules.WELL_FORMED for e in errors), errors)
+
+    def test_not_in_the_claims(self):
+        # Powers and unit(K), tiny(K) belong to constants: a claim cannot use them.
+        for old, new, words in (('c=0', 'c=2^3', 'a rational expression'), ('t=0', 't=tiny(bad)', 'a rational expression'),
+                                ('value:   a+b', 'value:   a^2', 'only + - *')):
+            errors = check(HEAD.replace(old, new) + GOOD)
+            self.assertTrue(any(e.rule == rules.CLAIMS and words in str(e) for e in errors),
+                            f'{new}: ' + ('\n'.join(map(str, errors)) or 'accepted'))
+
+
+class R3OfTheKernels(unittest.TestCase):
+    """Rule R3 on gen/kernels: which kernels are entry kernels; no guard is pending."""
+    # What the public headers call (include/kairn/expansion.hpp and ball.hpp): the cores, through
+    # kairn::finite and the kernels that need no fix-up, and the full kernels and constructors
+    # (milestone1.md).
+    CORES = {'add_2_2', 'add_2_1', 'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_2_2', 'mul_2_1', 'neg_2', 'abs_2',
+             'add_fast_2_2', 'mul_pow2_2', 'lt_2_2', 'le_2_2', 'eq_2_2', 'lt_2_1', 'le_2_1', 'eq_2_1', 'lt_1_2',
+             'le_1_2', 'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'ball_neg_1', 'ball_neg_2'}
+    # The cores of the Ball operations are entry kernels (a center or a radius of the program may
+    # reach them), but the headers call them only inside the full Ball kernels: they have no
+    # kairn::finite form yet.
+    BALL_CORES = {f'ball_{op}_{k}' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+    # environment.hpp runs two_sum on the self-test's own constants, read through volatile objects:
+    # no value of the program reaches it, and milestone1.md names it a building block, not an entry
+    # kernel.
+    NOT_ENTRY_BUT_CALLED = {'two_sum'}
+
+    def test_entry_kernels(self):
+        ks = common.kernels()
+        self.assertEqual({n for n, k in ks.items() if k.entry},
+                         self.CORES | self.BALL_CORES | TheKernels.NON_FINITE)
+
+    def test_every_kernel_the_public_headers_call_is_an_entry_kernel(self):
+        ks = common.kernels()
+        called = set()
+        include = os.path.join(common.ROOT, 'include', 'kairn')
+        for name in os.listdir(include):
+            if name.endswith('.hpp'):
+                with open(os.path.join(include, name), encoding='utf-8') as f:
+                    text = f.read()
+                called |= set(re.findall(r'\bgen::(\w+)\(', text)) & set(ks)
+                for macro in re.findall(r'gen::NAME##(_\w+)\(', text):        # gen::NAME##_2_2(...)
+                    called |= {n for n in ks if n.endswith(macro) and n[:-len(macro)] in ('lt', 'le', 'eq')}
+        self.assertEqual(called - self.NOT_ENTRY_BUT_CALLED, self.CORES | TheKernels.NON_FINITE)
+        self.assertTrue(all(ks[n].entry for n in called - self.NOT_ENTRY_BUT_CALLED))
+        self.assertFalse(any(ks[n].entry for n in self.NOT_ENTRY_BUT_CALLED))
+
+    def test_no_pending_guard(self):
+        # add_2_1 guards its scalar in its first line (milestone1.md), and nothing is left pending.
+        ks = common.kernels()
+        self.assertEqual(ks['add_2_1'].body[0].op, 'guard')
+        self.assertEqual(ks['add_2_1'].body[0].args, (ir.Operand('a'),))
+        self.assertEqual({n: k.guard_pending for n, k in ks.items() if k.guard_pending}, {})
+        pending, through = rules.r3_report(ks)
+        self.assertEqual((pending, through), ({}, {}))
+
+    def test_accepted_because_of_the_guard_and_for_no_other_reason(self):
+        # Without the guard of add_2_1, exactly add_2_1 and the kernels that pass it their scalar
+        # unguarded are refused, each for that scalar.
+        ks = copy.deepcopy(dict(common.kernels()))
+        k = ks['add_2_1']
+        guard, call = k.body[0], k.body[1]
+        self.assertEqual((guard.op, call.op), ('guard', 'two_sum'))
+        k.body = [dataclasses.replace(call, args=(call.args[0], ir.Operand('a')))] + k.body[2:]
+        errors = [e for e in rules.check_all(ks) if e.rule == rules.RULE_R3]
+        self.assertEqual(sorted((e.kernel, e.value) for e in errors),
+                         sorted((n, 'a') for n in ('add_2_1', 'sub_2_1', 'sub_1_2', 'add_2_1_full', 'sub_2_1_full',
+                                                   'sub_1_2_full')))
+        for e in errors:
+            self.assertIn('in two_sum (called for sh)', str(e))
+        self.assertEqual([e for e in rules.check_all(ks) if e.rule != rules.RULE_R3], [])
+
+    def test_build_prints_the_pending_guards(self):
+        lines = build.summary(common.kernels())
+        self.assertIn('R3 GUARD PENDING: none', lines)
+        self.assertIn('accepted by R3 only through a pending guard: none', lines)
 
 
 class ComputedConstants(unittest.TestCase):
@@ -447,9 +1036,26 @@ class TheKernels(unittest.TestCase):
                    'ball_mul_2', 'ball_scale_1', 'ball_scale_2', 'ball_neg_1', 'ball_neg_2', 'ball_sub_1',
                    'ball_sub_2', 'add_1_1', 'mul_1_1'}
 
+    # docs/developer/design/milestone1.md, "IEEE-like results", "Values that enter from the program"
+    # and "Ball kernels": the full kernels and the constructors.
+    FULL = {f'{core}_full' for core in ('add_2_2', 'add_fast_2_2', 'sub_2_2', 'add_2_1', 'sub_2_1', 'sub_1_2',
+                                        'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
+    FULL_BALL = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+    CONSTRUCTORS = {'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2'}
+    NON_FINITE = FULL | FULL_BALL | CONSTRUCTORS
+    # The kernels that need no fix-up (milestone1.md): the extended domain, with both statements.
+    NO_FIX_UP = {'neg_2', 'abs_2', 'lt_2_2', 'le_2_2', 'eq_2_2', 'lt_2_1', 'le_2_1', 'eq_2_1', 'lt_1_2', 'le_1_2',
+                 'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'radd', 'rmul'}
+    # ball_neg_k needs no fix-up either, and reads its encloses from a ball (architecture.md).
+    BALL_NEG = {'ball_neg_1', 'ball_neg_2'}
+    # The Ball cores of the second radius design, and add_2_1 with its guard: the kernels whose
+    # listing changed after their first proof, and whose theorems are those of the new listing.
+    BALL_CORES = {f'ball_{op}_{k}' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+    REPROVE = BALL_CORES | {'add_2_1'}
+
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
-        self.assertEqual(set(ks), self.FIRST_WAVE | self.SECOND_WAVE)
+        self.assertEqual(set(ks), self.FIRST_WAVE | self.SECOND_WAVE | self.NON_FINITE)
         body = {name: [(st.dsts, st.op, tuple(map(str, st.args))) for st in k.body] for name, k in ks.items()}
         self.assertEqual(body['two_sum'], [
             (('s',), 'add', ('a', 'b')), (('bb',), 'sub', ('s', 'a')), (('t0',), 'sub', ('s', 'bb')),
@@ -464,20 +1070,43 @@ class TheKernels(unittest.TestCase):
         # add_fast_2_2 ends with Fast2Sum: its normalization is proved, so there is no variant
         # ending with TwoSum.
         self.assertEqual(body['add_fast_2_2'][-1], (('z0', 'z1'), 'fast_two_sum', ('sh', 'w')))
-        # Proved means: the audit passes for that kernel (make -C proofs). Every kernel is.
+        # Proved means: the audit passes for that kernel (make -C proofs). Every kernel is: those of
+        # the real model, the Ball cores of the second radius design and add_2_1 with its guard
+        # among them (Ball2.v, Add21.v), by their real-model theorems; the full kernels and the
+        # constructors, which have no real-model statement, by their IEEE-model theorems.
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.FIRST_WAVE | self.SECOND_WAVE)
+                         self.FIRST_WAVE | self.SECOND_WAVE | self.NON_FINITE)
         self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, set())
+        self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
+                         {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
+        self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
+        self.assertEqual({name for name, k in ks.items() if not k.real_model}, self.NON_FINITE)
+        self.assertEqual({name for name, k in ks.items() if k.extended},
+                         self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG)
+        self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
+                         dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG, 'proved'))
+        # Every kernel of the extended domain names its IEEE-model theorem, and no other kernel does.
+        self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
+                         self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG)
+        # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
+        # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H
+        # of the radius are below the overflow threshold (IeeeExtStatementsDraft.v). A
+        # constructor's is 1.
+        for name in self.FULL | self.FULL_BALL:
+            core = name[:-len('_full')]
+            want = 2 if name.endswith('_1_full') and name.startswith('ball_') else ks[core].min_precision
+            self.assertEqual(ks[name].min_precision, want, name)
+        self.assertEqual({ks[n].min_precision for n in self.CONSTRUCTORS}, {1})
         self.assertEqual(ks['two_prod'].ce_variant, 'two_prod_dekker')
-        # The smallest precision from which each proved statement holds.
-        self.assertEqual({name: k.min_precision for name, k in ks.items() if k.status == 'proved'}, {
+        # The smallest precision from which each real-model statement holds.
+        self.assertEqual({name: k.min_precision for name, k in ks.items() if k.real_model}, {
             'two_sum': 2, 'fast_two_sum': 2, 'two_prod': 2, 'split': 4, 'two_prod_dekker': 4,
             'add_2_2': 3, 'add_2_1': 3, 'mul_2_2': 4, 'mul_2_1': 2, 'add_fast_2_2': 2,
             'neg_2': 1, 'abs_2': 1, 'sub_2_2': 3, 'sub_2_1': 3, 'sub_1_2': 3,
             'lt_2_2': 1, 'le_2_2': 1, 'eq_2_2': 1, 'lt_2_1': 1, 'le_2_1': 1, 'eq_2_1': 1, 'lt_1_2': 1,
             'le_1_2': 1, 'to_nearest_2': 1, 'to_down_2': 1, 'to_up_2': 1, 'abs_upper_2': 1,
             'radd': 2, 'rmul': 2, 'mul_pow2_2': 2, 'add_1_1': 1, 'mul_1_1': 1,
-            'ball_add_1': 2, 'ball_sub_1': 2, 'ball_neg_1': 1, 'ball_mul_1': 2, 'ball_scale_1': 2,
+            'ball_add_1': 1, 'ball_sub_1': 1, 'ball_neg_1': 1, 'ball_mul_1': 1, 'ball_scale_1': 1,
             'ball_add_2': 3, 'ball_sub_2': 3, 'ball_neg_2': 1, 'ball_mul_2': 4, 'ball_scale_2': 2})
 
     def test_second_wave_bodies_are_those_of_milestone1_md(self):
@@ -501,29 +1130,54 @@ class TheKernels(unittest.TestCase):
         self.assertEqual(body('radd'), ['s = add(a, b)', 'r = succ(s)'])
         self.assertEqual(body('rmul'), ['p = prod(a, b)', 'r = succ(p)'])
         self.assertEqual(body('mul_pow2_2'), ['h = prod(x0, c)', 'l = prod(x1, c)', 'z0, z1 = fast_two_sum(h, l)'])
+        # The Ball cores of the second radius design (milestone1.md, "The radius, second design").
         self.assertEqual(body('ball_add_2'), [
-            'cz0, cz1 = add_2_2(cx0, cx1, cy0, cy1)', 'mz = abs_upper_2(cz0, cz1)',
-            'd = rmul(const unit_computed(add_2_2), mz)', 'r0 = radd(rx, ry)', 'rz = radd(r0, d)'])
+            'cz0, cz1 = add_2_2(cx0, cx1, cy0, cy1)', 'az = abs(cz0)', 's = add(rx, ry)',
+            't = fma(az, const up(unit(add_2_2)/(1-unit(add_2_2))*(1+u)), s)',
+            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)))'])
+        self.assertEqual(body('ball_add_1'), [
+            'cz = add(cx, cy)', 'az = abs(cz)', 's = add(rx, ry)',
+            't = fma(az, const up(unit(add_1_1)/(1-unit(add_1_1))), s)',
+            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)))'])
         self.assertEqual(body('ball_mul_1'), [
-            'cz = prod(cx, cy)', 'ax = abs(cx)', 'ay = abs(cy)', 't1 = rmul(ax, ry)', 't2 = rmul(ay, rx)',
-            't3 = rmul(rx, ry)', 's1 = radd(t1, t2)', 's2 = radd(s1, t3)', 'mz = abs(cz)',
-            'd0 = rmul(const unit_computed(mul_1_1), mz)', 'd = radd(d0, const tiny_computed(mul_1_1))',
-            'rz = radd(s2, d)'])
+            'cz = prod(cx, cy)', 'ax = abs(cx)', 'ay = abs(cy)', 'az = abs(cz)', 'p = prod(rx, ry)',
+            'q = fma(ay, rx, p)', 'w = fma(ax, ry, q)', 't = fma(az, const up(unit(mul_1_1)/(1-unit(mul_1_1))), w)',
+            'rz = fma(t, const up((1+u)^5), const up((1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)))'])
+        self.assertEqual(body('ball_mul_2'), [
+            'cz0, cz1 = mul_2_2(cx0, cx1, cy0, cy1)', 'ax = abs(cx0)', 'ay = abs(cy0)', 'az = abs(cz0)',
+            'p = prod(rx, ry)', 'q = fma(ay, rx, p)', 'w = fma(ax, ry, q)',
+            't = fma(az, const up(unit(mul_2_2)/(1-unit(mul_2_2))), w)',
+            'rz = fma(t, const up((1+u)^6), const up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)))'])
+        self.assertEqual(body('ball_scale_1'), [
+            'cz = prod(cx, a)', 'aa = abs(a)', 'az = abs(cz)', 'p = prod(aa, rx)',
+            't = fma(az, const up(unit(mul_1_1)/(1-unit(mul_1_1))), p)',
+            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)))'])
         self.assertEqual(body('ball_scale_2'), [
-            'cz0, cz1 = mul_2_1(cx0, cx1, a)', 'aa = abs(a)', 't1 = rmul(aa, rx)', 'mz = abs_upper_2(cz0, cz1)',
-            'd0 = rmul(const unit_computed(mul_2_1), mz)', 'd = radd(d0, const tiny_computed(mul_2_1))',
-            'rz = radd(t1, d)'])
-        # The two-limb balls take their constants from the proved kernels of their centers.
-        for name, center in (('ball_add_2', 'add_2_2'), ('ball_mul_2', 'mul_2_2'), ('ball_scale_2', 'mul_2_1')):
-            self.assertEqual(ks[name].body[0].op, center)
-            self.assertEqual({ir.computed(c)[1] for c in ir.constants(ks[name]) if ir.computed(c)}, {center})
+            'cz0, cz1 = mul_2_1(cx0, cx1, a)', 'aa = abs(a)', 'az = abs(cz0)', 'p = prod(aa, rx)',
+            't = fma(az, const up(unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)), p)',
+            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)))'])
+        self.assertEqual(body('ball_sub_1'), ['n = neg(cy)', 'cz, rz = ball_add_1(cx, rx, n, ry)'])
+        self.assertEqual(body('ball_sub_2'), ['n0, n1 = neg_2(cy0, cy1)',
+                                              'cz0, cz1, rz = ball_add_2(cx0, cx1, rx, n0, n1, ry)'])
+        # Each takes its constants from the proved bound of the kernel of its center; radd and rmul
+        # are no longer called, and stay kernels.
+        for name, center in (('ball_add_1', 'add_1_1'), ('ball_add_2', 'add_2_2'), ('ball_mul_1', 'mul_1_1'),
+                             ('ball_mul_2', 'mul_2_2'), ('ball_scale_1', 'mul_1_1'), ('ball_scale_2', 'mul_2_1')):
+            called = {k.split('(')[1].rstrip(')') for c in ir.constants(ks[name]) if ir.up(c)
+                      for k in re.findall(r'(?:unit|tiny)\([a-z0-9_]+\)', c)}
+            self.assertEqual(called, {center}, name)
             self.assertEqual(ks[center].status, 'proved')
+        self.assertTrue(all(st.op not in ('radd', 'rmul', 'abs_upper_2') for k in ks.values() for st in k.body
+                            if k.name.startswith('ball_')))
+        self.assertIn('radd', ks)
+        self.assertIn('rmul', ks)
 
     def test_flops(self):
-        # The operation counts of docs/developer/design/phase0/operations.md.
+        # The operation counts of docs/developer/design/phase0/operations.md, and the guard of add_2_1
+        # (rule R3), which is one more addition.
         ks = common.kernels()
         self.assertEqual({n: ir.flops(ks[n], ks) for n in ('add_2_2', 'add_fast_2_2', 'add_2_1', 'mul_2_2', 'mul_2_1')},
-                         {'add_2_2': 20, 'add_fast_2_2': 11, 'add_2_1': 10, 'mul_2_2': 9, 'mul_2_1': 6})
+                         {'add_2_2': 20, 'add_fast_2_2': 11, 'add_2_1': 11, 'mul_2_2': 9, 'mul_2_1': 6})
 
 
 if __name__ == '__main__':

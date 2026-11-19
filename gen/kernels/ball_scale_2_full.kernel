@@ -1,0 +1,35 @@
+# The scaling by a of a ball with 2-limb center, with the special states of a ball:
+# ball_scale_2, then the fix-up of milestone1.md, "Ball kernels".
+# One ball operand, so q is rx itself; |cz0| is named az here, since a is the operand.
+kernel:        ball_scale_2_full
+input:         cx = cx0 cx1
+input:         stored rx
+input:         a
+output:        cw = cw0 cw1
+output:        rw
+value:         cx*a
+requires:      ball cx rx
+ensures:       encloses cw rw x*a x=cx,rx
+min_precision: 2
+source:        ball_scale_2, then the fix-up of the special states of a ball (Milestone 1 listing)
+license:       core: as ball_scale_2; fix-up: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallCores.v ball_scale_2_full_correct
+entry:         yes
+ieee_only:     yes
+cone_exempt:   the fix-up selects, after explicit tests that the center and the radius are finite (f) and that no operand is empty (e); B1 to B4 of milestone1.md, "Ball kernels", state what comes out
+
+(cz0, cz1, rz) = ball_scale_2(cx0, cx1, rx, a)
+e              = eq(rx, rx)
+az             = abs(cz0)
+f1             = lt(az, const inf)
+f2             = lt(rz, const inf)
+f              = and(f1, f2)
+c0             = select(f, cz0, 0)
+c1             = select(f, cz1, 0)
+r              = select(f, rz, const inf)
+cw0            = select(e, c0, rx)
+cw1            = select(e, c1, rx)
+rw             = select(e, r, rx)

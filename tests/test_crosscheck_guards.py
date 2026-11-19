@@ -5,9 +5,11 @@
 Each test runs a real pipeline, gen | kairn-gen interp | check --json, on a tiny toy format, whose
 stream the oracle passes but which did not check what a cross-check sets out to check (a
 partial or restricted enumeration, strata missing, nothing judged, a comparison seen one way
-only), or alters the summary of a good run where no stream can produce the fault; and requires
-the guards to fail it, with their reason. With CMAKE, the path of cmake, it also runs
-crosscheck.cmake on such a run, which must fail with the guards' reason, and on a good one.
+only; in the extended domain, a class of results never seen: no overflow, no non-finite operand,
+finite_when never put to the test, a ball result or a constructor's outcome missing, the strata
+of the layer missing), or alters the summary of a good run where no stream can produce the fault;
+and requires the guards to fail it, with their reason. With CMAKE, the path of cmake, it also
+runs crosscheck.cmake on such a run, which must fail with the guards' reason, and on a good one.
 """
 import copy
 import json
@@ -131,9 +133,11 @@ class Guards(unittest.TestCase):
         self.fails(s, "two_sum", "fp:3:-3:2", "--exhaustive", reason="applied to no judged case")
 
     def test_a_comparison_seen_one_way(self):
-        s = pipeline("lt_2_2", "fp:3:-3:2", "--exhaustive", "--restrict", "x.sign=+",
-                     "--restrict", "y.sign=-")
-        self.fails(s, "lt_2_2", "fp:3:-3:2", "--exhaustive", "--restrict", "x.sign=+,y.sign=-",
+        # Every comparison is of the extended domain, whose enumerations always include the
+        # infinities (-inf < y is true), so this is a random run of one stratum: equality of
+        # random operands never holds.
+        s = pipeline("eq_2_2", "fp:4:-6:1", "--seed", "0", "--count", "100", "--strata", "uniform")
+        self.fails(s, "eq_2_2", "fp:4:-6:1", "--seed", "0", "--count", "100",
                    reason="was never true")
 
     def test_a_directed_rounding_that_never_steps(self):
@@ -143,15 +147,122 @@ class Guards(unittest.TestCase):
         self.fails(s, "to_down_2", "fp:4:-6:4", "--seed", "0", "--count", "200",
                    reason="never differed from the rounding to nearest")
 
+
+# The extended domain (the non-finite layer): toy formats of the shape qmin + qmax = 3 - 2p, as
+# in the quick tier. fp:3:-3:0 has the overflow threshold 2^3 and Omega = 7; add_2_2_full's
+# finite_when bounds both operands by 2^(qmax+p-2) = 2 there (when its exponent is -2).
+ADD = ("add_2_2_full", "fp:3:-3:0")
+BALL = ("ball_add_1_full", "fp:2:-2:1")         # Omega = 6 = 0x1.8p+2
+
+
+class ExtendedGuards(unittest.TestCase):
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def test_good_runs_pass(self):
+        s = pipeline(*ADD, "--exhaustive")
+        out = self.passes(s, *ADD, "--exhaustive")
+        self.assertIn("extended domain: F2 finite", out)
+        self.assertIn("F3 applies", out)
+        s = pipeline(*BALL, "--seed", "0", "--count", "400")
+        self.passes(s, *BALL, "--seed", "0", "--count", "400")
+        for kernel in ("make_2_limbs", "ball_make_2", "radd", "neg_2"):
+            s = pipeline(kernel, "fp:3:-3:0", "--exhaustive")
+            self.passes(s, kernel, "fp:3:-3:0", "--exhaustive")
+
+    # extends: a finite result, an overflow, a non-finite operand, and F3 put to the test.
+    def test_extends_without_an_overflow(self):
+        s = pipeline(*ADD, "--exhaustive", "--restrict", "x.lead=-3:-2",
+                     "--restrict", "y.lead=-3:-2")
+        self.fails(s, *ADD, "--exhaustive", "--restrict", "x.lead=-3:-2,y.lead=-3:-2",
+                   reason='saw no case of "class F4: finite operands, non-finite result"')
+
+    def test_extends_without_a_nonfinite_operand(self):
+        s = pipeline(*ADD, "--seed", "0", "--count", "200", "--strata", "uniform,edge")
+        self.fails(s, *ADD, "--seed", "0", "--count", "200",
+                   reason='saw no case of "class F5: a non-finite operand"')
+
+    def test_extends_without_its_finite_when(self):
+        # x0 = Omega: |x| > 2^(qmax+p+e) for every e < 0, so F3 never applies; F2, F4 and F5 do.
+        s = pipeline(*ADD, "--exhaustive", "--restrict", "x.in=0x1.cp+2")
+        self.fails(s, *ADD, "--exhaustive", "--restrict", "x.in=0x1.cp+2",
+                   reason="saw no case where every finite_when condition holds")
+
+    # encloses: each of the three results.
+    def test_encloses_without_a_finite_ball(self):
+        # A radius of Omega makes every result from finite operands the whole line.
+        s = pipeline(*BALL, "--exhaustive", "--restrict", "rx.in=0x1.8p+2")
+        self.fails(s, *BALL, "--exhaustive", "--restrict", "rx.in=0x1.8p+2",
+                   reason='saw no case of "result: finite ball"')
+
+    def test_encloses_without_the_empty_set(self):
+        s = pipeline(*BALL, "--seed", "0", "--count", "200", "--strata", "uniform,hugeradius")
+        self.fails(s, *BALL, "--seed", "0", "--count", "200",
+                   reason='saw no case of "result: empty set"')
+
+    # The constructors: each outcome.
+    def test_constructors_without_every_outcome(self):
+        s = pipeline("ball_make_1", "fp:3:-3:0", "--seed", "0", "--count", "100",
+                     "--strata", "uniform")
+        self.fails(s, "ball_make_1", "fp:3:-3:0", "--seed", "0", "--count", "100",
+                   reason='saw no case of "given: whole line"')
+        s = pipeline("make_2", "fp:3:-3:0", "--seed", "0", "--count", "100", "--strata", "uniform")
+        self.fails(s, "make_2", "fp:3:-3:0", "--seed", "0", "--count", "100",
+                   reason='saw no case of "value NaN"')
+
+    # The kernels that gained the extended domain: non-finite operands.
+    def test_existing_kinds_without_nonfinite_operands(self):
+        for kernel, reason in (
+                ("lt_2_2", '"a non-finite operand, true"'),
+                ("to_down_2", '"a non-finite operand"'),
+                ("radd", '"output +inf on a non-finite operand"'),
+                ("neg_2", '"a non-finite operand"')):
+            s = pipeline(kernel, "fp:3:-3:0", "--seed", "0", "--count", "100",
+                         "--strata", "uniform")
+            self.fails(s, kernel, "fp:3:-3:0", "--seed", "0", "--count", "100",
+                       reason="saw no case of " + reason)
+
+    # The strata of the layer, in a random run's header.
+    def test_strata_of_the_layer_not_promised(self):
+        common = "uniform,underflow,overflow,zero,pow2,extreme"
+        s = pipeline("neg_2", "fp:3:-3:0", "--seed", "0", "--count", "100",
+                     "--strata", common + ",halfgap")
+        self.fails(s, "neg_2", "fp:3:-3:0", "--seed", "0", "--count", "100",
+                   reason="without nonfinite, which it adds for neg_2 in the extended domain")
+        s = pipeline(*ADD, "--seed", "0", "--count", "100", "--strata", common + ",nonfinite")
+        self.fails(s, *ADD, "--seed", "0", "--count", "100", reason="without edge")
+        self.fails(s, *ADD, "--seed", "0", "--count", "100", reason="without threshold")
+
+    # Summaries altered where no stream can produce the fault.
+    def test_claims_not_those_judged(self):
+        good = pipeline("make_2_limbs", "fp:3:-3:0", "--exhaustive")
+        s = copy.deepcopy(good)
+        for k in s["keys"]:
+            k["stats"]["entries"][0]["kind"] = "normalized"
+        self.fails(s, "make_2_limbs", "fp:3:-3:0", "--exhaustive",
+                   reason="are not those of the claims of make_2_limbs")
+        s = copy.deepcopy(good)
+        s["claims"] = os.path.join(ROOT, "no-such-claims.json")
+        self.fails(s, "make_2_limbs", "fp:3:-3:0", "--exhaustive",
+                   reason="cannot read the claims")
+
     # The driver passes the guards' verdict on.
     def test_the_driver(self):
         if not CMAKE:
             self.skipTest("needs the path of cmake")
         with tempfile.TemporaryDirectory() as d:
-            def drive(kernel, fmt):
+            def drive(kernel, fmt, restrict=""):
                 return subprocess.run(
                     [CMAKE, "-DPYTHON=" + PY, "-DSOURCE_DIR=" + ROOT, "-DKERNEL=" + kernel,
                      "-DFORMAT=" + fmt, "-DRUNNER=interp", "-DEXHAUSTIVE=ON",
+                     "-DRESTRICT=" + restrict,
                      "-DSUMMARY=" + os.path.join(d, kernel + ".json"), "-DFAIL_ON_SUSPICIOUS=ON",
                      "-P", os.path.join(TESTS, "crosscheck.cmake")],
                     capture_output=True, text=True)
@@ -161,6 +272,13 @@ class Guards(unittest.TestCase):
             good = drive("two_sum", "fp:3:-3:2")
             self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
             self.assertIn("passed, ", good.stdout + good.stderr)
+            # CMake wraps the lines of its messages.
+            bad = drive(*ADD, restrict="x.lead=-3:-2,y.lead=-3:-2")
+            self.assertNotEqual(bad.returncode, 0)
+            self.assertIn("class F4", " ".join((bad.stdout + bad.stderr).split()))
+            good = drive(*ADD)
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            self.assertIn("extended domain: F2 finite", " ".join((good.stdout + good.stderr).split()))
 
 
 if __name__ == "__main__":

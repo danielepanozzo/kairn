@@ -8,7 +8,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 | Tier | What | Where it runs | Time |
 |---|---|---|---|
-| Quick | `ctest`: the generator's tests without their C++ part, the oracle's own tests, the cross-checks below, the consumer checks | every push and pull request, on every platform of the CI; and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | about two minutes on a recent machine with `--parallel 4` |
+| Quick | `ctest`: the generator's tests without their C++ part, the oracle's own tests, the cross-checks below, the consumer checks | every push and pull request, on every platform of the CI; and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | about three and a half minutes on a recent machine with `--parallel 5` |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
 | Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases), and the interpreter on every operand of larger toy formats, with the quick tier's guards and a time budget | by hand, on the test machines, never in CI (`tests/brute/README.md`); results in [Brute force, Milestone 1](results/brute-milestone1.md) | about 90 minutes per machine for Milestone 1 |
@@ -42,13 +42,13 @@ The tests of the public interface (`tests/api/`, label `api`):
 
 | Test | Checks |
 |---|---|
-| `api.oracle.K.F`, `api.oracle.K.F.contract-fast` | Every public operation whose results must satisfy the claims of kernel K, computed through the operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on random cases of format F, judged by the oracle; once with the build's flags and once with contraction forced on. Each form of the operation (`x + a` and `a + x`, `x += a`, the marked and the unmarked operator) is a pipeline of its own. |
-| `api.oracle.coverage` | Every kernel of `gen/claims.json` is computed by a public operation or listed by the runner as internal to others. |
-| `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, the same results at run time, the properties of the types, and that an operation compiles without `kairn::unverified` exactly when its kernel is proved. |
+| `api.oracle.K.F`, `api.oracle.K.F.contract-fast` | Every public operation that calls kernel K, computed through the constructors, operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on random cases of format F, judged by the oracle against K's claims; once with the build's flags and once with contraction forced on. For a kernel of the extended domain the cases include infinite and NaN operands and empty and whole balls, built through the public constructors. Each form of the operation (`x + a` and `a + x`, `x += a`, `x + y` with a one-limb `y`, the marked and the unmarked operator, `kairn::finite::add`) is a pipeline of its own. A few forms can compute only some lines of their kernel (`ldexp` needs a power of two among the operands of `mul_1_1`, a point form a ball of radius 0, the steps of `ldexp` an operand that can be scaled exactly); they compute the plain operation on the others, and fail if a stream of 1000 lines or more reached their own operation on none. |
+| `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the finite cores of the Ball operations); no entry kernel is a building block. |
+| `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, comparisons with a NaN among them; the same results at run time; the properties of the types; and that an operation compiles without `kairn::unverified` exactly when the kernel it calls is proved. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass in the default environment and fail under each directed rounding mode and under flush-to-zero. |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break the kernels and define no macro (reassociation; `-ffp-model=fast`; on AArch64 `-fno-signed-zeros` with `-ffp-contract=fast`): `kairn::self_test()` must fail. |
-| `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects, and each kind of operation written without the marker while its kernel is unverified (against a copy of the headers in which every kernel is). |
-| `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, a ball's center or radius) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; with the guard turned off, it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
+| `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball). |
+| `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, `kairn::finite::add`, a ball's center, radius or point) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; built against a copy of the headers in which the generated guard is taken out of `gen/scalar.hpp` (made at configure time, which fails if it finds no guard), it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
 | `api.k1.zero_cost` | The instructions emitted for loops over `Expansion<double, 1>` against the same loops over `double` (`tests/api/k1/zero_cost.py`). |
 | `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*`, built under each contraction setting, also compares it with the text its tutorial shows ([Documentation](documentation.md#examples)). |
 
@@ -69,54 +69,88 @@ pass or fail; on failure it also prints the command that reruns one case (below)
   (`KAIRN_CROSSCHECK_SEED`), so that a run is the same everywhere and can be repeated. The
   oracle's generator chooses the strata from the kernel's family (`oracle/README.md`): those of
   the first wave for sums and products, and the families of the second wave (conversions,
-  comparisons, directed steps, scaling, balls) each with strata of its own.
-- **The toy formats** depend on the kernel's inputs, each written as its role: `1` a limb, `2` a
-  normalized pair, `r` a radius (`nonneg()`), `c` a power of two (`power_of_two()`). They are
-  chosen so that each enumeration is 50 000 to 250 000 cases, with the range of products below 1
-  so that most products neither overflow nor vanish, and at least the kernel's minimum
-  precision. The table is in `tests/CMakeLists.txt`; a kernel whose inputs have no entry, or
-  whose minimum precision is above its toy format's, gets a test that fails and says so, rather
-  than a run where nothing is claimed.
+  comparisons, directed steps, scaling, balls) each with strata of its own; a kernel of the
+  extended domain also gets those of the non-finite layer (non-finite operands, $0 \cdot \infty$,
+  overflow, the `finite_when` thresholds, the states of balls, the radii of constructors).
+- **The toy formats** depend on the kernel's domain and inputs, each written as its role: `1` a
+  limb, `2` a normalized pair, `r` a radius (`nonneg()`), `c` a power of two (`power_of_two()`).
+  They are chosen so that each enumeration is 50 000 to 250 000 cases and at least the kernel's
+  minimum precision. The tables are in `tests/CMakeLists.txt`; a kernel whose inputs have no
+  entry, or whose minimum precision is above its toy format's, gets a test that fails and says
+  so, rather than a run where nothing is claimed. For the kernels of the finite domain, the
+  range of products is below 1, so that most products neither overflow nor vanish:
 
     | Inputs | Kernels | Toy format | Cases |
     |---|---|---|---|
     | `1` | `split` | `fp:11:-30:10` | 86 015 |
     | `1 1` | `two_sum`, `fast_two_sum`, `add_1_1` | `fp:5:-7:4` | 172 225 |
     | `1 1` | `two_prod`, `two_prod_dekker`, `mul_1_1` | `fp:5:-12:-1` | 172 225 |
-    | `r r` | `radd` | `fp:6:-8:4` | 200 704 |
-    | `r r` | `rmul` | `fp:6:-13:-2` | 173 056 |
-    | `2` | `neg_2`, `abs_2`, the conversions | `fp:6:-8:4` | 118 335 |
-    | `2 1`, `1 2` | `add_2_1`, the subtractions, the comparisons | `fp:4:-4:2` | 221 361 |
+    | `2 1`, `1 2` | `add_2_1`, `sub_2_1`, `sub_1_2` | `fp:4:-4:2` | 221 361 |
     | `2 1` | `mul_2_1` | `fp:4:-8:-2` | 221 361 |
-    | `2 2` | `add_2_2`, `add_fast_2_2`, `sub_2_2`, the comparisons | `fp:3:-3:2` | 178 929 |
+    | `2 2` | `add_2_2`, `add_fast_2_2`, `sub_2_2` | `fp:3:-3:2` | 178 929 |
     | `2 2` | `mul_2_2` | `fp:4:-7:-3` | 245 025 |
     | `2 c` | `mul_pow2_2` | `fp:5:-6:2` | 144 755 |
-    | `1 r` | `ball_neg_1` | `fp:5:-7:4` | 86 320 |
-    | `2 r` | `ball_neg_2` | `fp:4:-4:2` | 111 552 |
     | `1 r 1` | `ball_scale_1` | `fp:3:-5:0` | 84 700 |
     | `2 r 1` | `ball_scale_2` | `fp:2:-4:1` | 60 102 |
     | `1 r 1 r` | `ball_add_1`, `ball_sub_1` | `fp:2:-3:1` | 76 176 |
-    | `1 r 1 r` | `ball_mul_1` | `fp:2:-4:0` | 76 176 |
+    | `1 r 1 r` | `ball_mul_1` | `fp:2:-4:1` | 142 884 |
+
+    The kernels of the extended domain (the non-finite layer, [Claims of the non-finite
+    layer](architecture.md#claims-of-the-non-finite-layer)) read the roles in that domain: `1`
+    is any value of the format, infinities and NaN included; `2` a canonical pair (finite and
+    normalized, $(\pm\infty, 0)$ or NaN); `r` a radius that may also be $+\infty$ or NaN; `b1`
+    and `b2` a ball, its center of one or two limbs and its radius together, which the oracle
+    enumerates as one operand: every finite center with every finite radius $\ge 0$, the whole
+    line and the empty set. Every enumeration includes the non-finite values of each operand
+    (`oracle/README.md`, "gen"), and every format has the shape the statements of the IEEE model
+    are proved for, $q_{\min} + q_{\max} = 3 - 2p$, which `binary64` and `binary32` have: one
+    fits the budget for every kernel. At these sizes a format of that shape has few exponents
+    (two to twelve, and forty for the one limb of `make_2`), so overflow is common, which is what
+    the layer is about.
+
+    | Inputs | Kernels | Toy format | $q_{\min} + q_{\max} = 3 - 2p$ | Cases |
+    |---|---|---|---|---|
+    | `1` | `make_2` | `fp:11:-29:10` | yes | 83 970 |
+    | `2` | `neg_2`, `abs_2`, the conversions, `make_2_limbs` | `fp:6:-10:1` | yes | 89 730 |
+    | `r r` | `radd`, `rmul` | `fp:6:-10:1` | yes | 174 724 |
+    | `1 1` | `ball_make_1` | `fp:5:-7:0` | yes | 84 100 |
+    | `2 1`, `1 2` | `add_2_1_full`, `sub_2_1_full`, `sub_1_2_full`, `mul_2_1_full`, the comparisons, `ball_make_2` | `fp:4:-5:0` | yes | 113 316 |
+    | `2 c` | `mul_pow2_2_full` | `fp:5:-7:0` | yes | 84 888 |
+    | `2 2` | `add_2_2_full`, `add_fast_2_2_full`, `sub_2_2_full`, the comparisons | `fp:3:-4:1` | yes | 181 476 |
+    | `2 2` | `mul_2_2_full` | `fp:4:-4:-1` | yes | 62 500 |
+    | `b1` | `ball_neg_1` | `fp:5:-9:2` | yes | 86 322 |
+    | `b2` | `ball_neg_2` | `fp:4:-6:1` | yes | 198 074 |
+    | `b1 b1` | `ball_add_1_full`, `ball_sub_1_full`, `ball_mul_1_full` | `fp:2:-3:2` | yes | 144 400 |
+    | `b1 1` | `ball_scale_1_full` | `fp:3:-4:1` | yes | 89 436 |
+    | `b2 1` | `ball_scale_2_full` | `fp:3:-3:0` | yes | 100 044 |
+    | `b2 b2` | `ball_add_2_full`, `ball_sub_2_full` | `fp:3:-2:-1` | yes | 122 500 |
 
 - **Restricted enumerations.** The two-limb balls with two operands have far too many operand
   combinations at their minimum precision (140 million for `ball_add_2` at `fp:3:-3:2`, 12.4
-  billion for `ball_mul_2` at `fp:4:-5:1`). Their `interp-restricted` test enumerates every
-  operand of a domain restricted by the oracle's `--restrict`, and says so in its report
-  ("complete over a RESTRICTED domain"); their `interp-sampled` test runs 20 000 random cases of
-  the whole format from every stratum of the ball family.
+  billion for `ball_mul_2` at `fp:4:-5:1`, 97.6 million for `ball_mul_2_full` at `fp:4:-4:-1`).
+  Their `interp-restricted` test enumerates every operand of a domain restricted by the oracle's
+  `--restrict`, and says so in its report ("complete over a RESTRICTED domain"); their
+  `interp-sampled` test runs 20 000 random cases of the whole format from every stratum of the
+  ball family. A restriction shrinks the finite part of a domain only: the whole line and the
+  empty set are always enumerated, and for `ball_mul_2_full` the zero ball too, since `cy` is
+  not restricted.
 
     | Kernels | Toy format | Restricted to | Cases |
     |---|---|---|---|
     | `ball_add_2`, `ball_sub_2` | `fp:3:-3:2` | both radii in {0, 1/8, 1/2, 5/2}, `cx` in [1/2, 2) | 148 896 |
     | `ball_mul_2` | `fp:4:-5:1` | both radii in {0, η, 3/2}, `cx` in [1, 2), `cy` in [1/8, 2) | 64 728 |
+    | `ball_mul_2_full` | `fp:4:-4:-1` (of the shape above) | both finite radii in {0, η, 1/2, 3/2}, a finite `cx` in [1, 2) | 120 780 |
 
-- **Non-finite results.** A claim says nothing about a case whose leading output limb is not
-  finite, so the oracle does not judge such a case; a runner that returned NaN for everything
-  would pass. The cross-checks therefore pass `--fail-on-suspicious`, which fails a non-finite
-  result whose operands and exact value are all far below the overflow threshold. The exceptions
-  are `split` and `two_prod_dekker`, whose multiplication by the splitter overflows for such
-  operands, as their requirement of no intermediate overflow allows; for them the guards below
-  stand guard.
+- **Non-finite results.** A claim of the finite domain says nothing about a case whose leading
+  output limb is not finite, so the oracle does not judge such a case; a runner that returned NaN
+  for everything would pass. The cross-checks therefore pass `--fail-on-suspicious`, which fails
+  a non-finite result whose operands and exact value are all far below the overflow threshold.
+  A kernel of the extended domain (the non-finite layer) is judged on every line, non-finite
+  results included, and the same option fails its non-finite results on such operands where its
+  claims leave them open (`oracle/README.md`, "The extended domain"). The exceptions, for every
+  runner, are `split` and `two_prod_dekker`, whose multiplication by the splitter overflows for
+  such operands, as their requirement of no intermediate overflow allows; for them the guards
+  below stand guard.
 
 ### What a pass requires
 
@@ -137,9 +171,43 @@ decides that from the oracle's summary (`check --json`):
   comparison saw both outcomes; a rounding to nearest saw an inexact case; a rounding down or up
   saw a case where it differs from the rounding to nearest.
 
+For a kernel of the extended domain the run must also have seen what that layer is about. The
+guards read the kernel's claims (the file the oracle's summary names) and the oracle's counts of
+the classes of each statement (`oracle/README.md`, "The extended domain"):
+
+- **The strata of the layer**: a random run's header lists, besides those of the kernel's
+  family, the strata the oracle's generator adds for it: `nonfinite` for every kernel, `zeroinf`
+  where the value or the set has a product, `edge` for `extends`, `threshold` where
+  `finite_when` is not empty, `ballstates`, `zerowhole` and `hugeradius` for `encloses`,
+  `badradius` for `makes_ball`; and, as for every stratum, a case of each.
+- **Every class of every statement**, counted by the oracle for each entry of the kernel's own
+  claims:
+
+    | Kind | Kernels | Cases the run must have seen |
+    |---|---|---|
+    | `extends` | the nine full kernels | a finite result (F2), an overflow on finite operands (F4), a non-finite operand (F5); where `finite_when` is not empty, a case where every condition holds (F3 applies) |
+    | `encloses` | the eight full Ball kernels, `ball_neg_1`, `ball_neg_2` | each of the three results: a finite ball, the whole line, the empty set (and B4 applying, once a `finite_when` is claimed) |
+    | `represents` | `make_2`, `make_2_limbs`, `neg_2`, `abs_2` | a finite, an infinite and a NaN value |
+    | `makes_ball` | `ball_make_1`, `ball_make_2` | each given state: a finite ball, the whole line (a center that is not finite or a radius $+\infty$), the empty set (a radius that is NaN or negative) |
+    | `normalized`, `error` | `neg_2`, `abs_2`, `ball_neg_2` | a non-finite operand |
+    | `rounded` | the conversions | a non-finite operand |
+    | `predicate` | the comparisons | a non-finite operand with each outcome |
+    | `upper` | `radd`, `rmul` | a NaN (a NaN operand, or $0 \cdot \infty$) and $+\infty$ from a non-finite operand |
+
+    The guards of the finite domain apply to these kernels as before, to their finite cases and
+    to the entries of the core that F2 applies. The oracle does not count the corner where a zero
+    ball meets the whole line ($0 \cdot \infty$ in a radius, which must give the whole line, not
+    the empty set) separately, so no guard asks for it: the complete enumerations contain it, as
+    does the restricted one of `ball_mul_2_full`, and a random run has the `zerowhole` stratum.
+
 `crosscheck.guards` runs pipelines that the oracle passes but these guards must fail (a partial
 enumeration, a restricted one passed off as complete, missing strata, nothing judged, a comparison
-that was never true), and summaries altered where no stream can produce the fault.
+that was never true; in the extended domain, an enumeration of `add_2_2_full` without an overflow
+or where `finite_when` never holds, one of `ball_add_1_full` whose radius makes every result from
+finite operands the whole line, random runs without non-finite operands, without the empty set or
+without one of a constructor's outcomes, headers without the strata of the layer), and summaries
+altered where no stream can produce the fault (entries that are not those of the claims, claims
+that cannot be read).
 
 ### Packed kernels
 
@@ -183,13 +251,18 @@ Clang) or `/arch:AVX2` (MSVC and clang-cl) when the build's flags do not already
 
 ### Time
 
-About two minutes with `--parallel 4` on a recent machine: 110 to 133 seconds on an Apple M3 Max,
-with Apple clang or GCC 16, for 742 tests whose times add up to about 490 seconds. Elsewhere, as
-measured: 271 seconds on 16 cores of a 2019 x86-64 server and 453 seconds on 4 of them; with
-MSVC, 369 seconds on 8 logical processors of a Windows machine and 533 seconds on 4. On the Mac a
-cross-check of a compiled runner takes 0.3 to 0.6 seconds, one of the interpreter 1 to 7 seconds,
-and the generator's and the oracle's own tests about 45 seconds each. `KAIRN_CROSSCHECK_CASES`
-sets the share of the compiled runners, about three fifths of the total.
+About three and a half minutes with `--parallel 5` on a recent machine: 188 to 233 seconds on an
+Apple M3 Max with Apple clang or GCC 16 (with other jobs running on it), for 1 343 tests whose
+times add up to 950 to 1 050 seconds. Elsewhere, as measured: 455 to 467 seconds with
+`--parallel 4` on 16 cores of a 2019 x86-64 server with GCC 13, and 267 to 277 seconds with
+`--parallel 16` (GCC 13, Clang 18); with MSVC, 710 seconds with `--parallel 4` on 8 logical
+processors of a Windows machine, where starting the Python processes of every test costs more
+(with `--parallel 8` there, the generator's own tests ran past their timeout of 600 seconds). On
+the Mac a cross-check of a compiled runner takes 0.3 to 1.1 seconds, one of the interpreter 1 to
+9 seconds, the generator's own tests 80 to 95 seconds and the oracle's 70 to 85, since they judge
+the non-finite layer too; those two set a floor to the wall time. `KAIRN_CROSSCHECK_CASES` sets
+the share of the compiled runners, about half of the total (1 008 tests); the interpreter's 67
+enumerations are about a fifth.
 
 ## The generator's tier
 

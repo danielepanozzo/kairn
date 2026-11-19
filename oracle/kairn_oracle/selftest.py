@@ -52,10 +52,12 @@ def test(fn):
 
 
 class Ctx:
-    def __init__(self, workdir, quick, cxx):
+    def __init__(self, workdir, quick, cxx, jobs=None):
         self.workdir = workdir
         self.quick = quick
         self.cxx = cxx
+        env = os.environ.get("KAIRN_ORACLE_JOBS", "")
+        self.jobs = max(1, jobs or (int(env) if env.isdigit() else 0) or os.cpu_count() or 1)
         self.claims = load_claims(FIXTURE)
         self.claims2 = load_claims(FIXTURE2)
         self.cxx_bin = None
@@ -546,14 +548,18 @@ def cxx_constants():
             U, V = refrun.ball_constants(ar, center, refrun.DEFAULT_CENTER_CLAIMS)
             args += ["--const", "%s.%s.U=%s" % (fname, center, ar.write(U)),
                      "--const", "%s.%s.V=%s" % (fname, center, ar.write(V))]
+        # E, G and H of the second radius design, per Ball kernel.
+        for kname in sorted(refrun.RADIUS2):
+            for which, v in zip("EGH", refrun.radius2_constants(ar, kname)):
+                args += ["--const", "%s.%s.%s=%s" % (fname, kname, which, ar.write(v))]
     return args
 
 
-def cxx_run(ctx, lines, variant="correct"):
+def cxx_run(ctx, lines, variant="correct", radius="first"):
     exe = build_cxx(ctx)
     if exe is None:
         raise Skip(ctx.cxx_error)
-    r = subprocess.run([exe, "--variant", variant] + cxx_constants(),
+    r = subprocess.run([exe, "--variant", variant, "--radius", radius] + cxx_constants(),
                        input="\n".join(lines) + "\n", capture_output=True, text=True)
     if r.returncode != 0:
         raise AssertionError("C++ runner failed: %s" % r.stderr[-500:])
@@ -892,8 +898,10 @@ def brute_driver(ctx):
     return "%d keys" % len(out["external"])
 
 
-# The tests of the second wave register themselves after the first wave's.
+# The tests of the second wave register themselves after the first wave's, and those of the
+# non-finite layer after them.
 from . import selftest2  # noqa: E402,F401
+from . import selftest3  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------
@@ -901,7 +909,7 @@ from . import selftest2  # noqa: E402,F401
 def main(a):
     workdir = a.workdir or tempfile.mkdtemp(prefix="kairn-oracle-selftest-")
     os.makedirs(workdir, exist_ok=True)
-    ctx = Ctx(workdir, a.quick, a.cxx)
+    ctx = Ctx(workdir, a.quick, a.cxx, getattr(a, "jobs", None))
     only = set(a.only.split(",")) if a.only else None
     failed = skipped = 0
     t0 = time.time()

@@ -14,6 +14,9 @@ theorem:       proofs/theories/Mul22.v mul_2_2_correct
 source:        JMP17 Alg. 12 (DWTimesDW3); bound from MR22
 license:       algorithm: published; proof: MIT
 status:        proved
+ieee:          bridge spec
+ieee_finite:   abs_le(x*y,-1)
+entry:         yes
 
 (ch, cl1) = two_prod(x0, y0)
 tl0       = prod(x1, y1)

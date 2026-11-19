@@ -1,0 +1,33 @@
+# A ball from a canonical 2-limb center (an object, so its limbs are stored) and a radius from the
+# program, guarded (rule R3): the empty set when the radius is a NaN or negative (e false), the
+# whole line when the center is not finite or the radius is +infinity (f false), and otherwise the
+# ball itself (milestone1.md, "Values that enter from the program").
+kernel:        ball_make_2
+input:         c = c0 c1
+input:         r
+output:        cw = cw0 cw1
+output:        rw
+requires:      canonical c
+ensures:       makes_ball cw rw from=c,r
+min_precision: 1
+source:        constructors (Milestone 1 listing)
+license:       algorithm: MIT
+status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeMake.v ball_make_2_correct
+entry:         yes
+cone_exempt:   every output is selected after explicit tests of the center and the radius (e, f); makes_ball states what comes out
+
+g   = guard(r)
+e   = le(0, g)
+a   = abs(c0)
+f1  = lt(a, const inf)
+f2  = lt(g, const inf)
+f   = and(f1, f2)
+k0  = select(f, c0, 0)
+k1  = select(f, c1, 0)
+s   = select(f, g, const inf)
+cw0 = select(e, k0, const nan)
+cw1 = select(e, k1, const nan)
+rw  = select(e, s, const nan)

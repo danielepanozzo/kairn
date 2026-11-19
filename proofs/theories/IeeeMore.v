@@ -1,4 +1,4 @@
-(* add_2_1, mul_2_1 and add_fast_2_2 in the IEEE model (IeeeDraft.v), for finite operands
+(* add_2_1, mul_2_1 and add_fast_2_2 in the IEEE model (proofs/gen/IeeeModel.v), for finite operands
    that satisfy the requirements of the kernel.
 
    For each of the three kernels K:
@@ -21,52 +21,52 @@
    overflows. It is a magnitude analysis written per kernel, as in IeeeAdd22.v and
    IeeeMul22.v.
 
-   The statements, in the form of IeeeStatementsDraft.v, are at the end of the file. *)
+   The statements, in the form of proofs/gen/IeeeStatements.v, are at the end of the file. *)
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra.
 From Flocq Require Import Core Binary.
-From Kairn.Gen Require Import Model Statements.
+From Kairn.Gen Require Import Model Statements IeeeStatements.
 From Kairn Require Import Format Guard Normalized EFT Add21 Mul21 AddFast22 Program IeeeBridge
-  IeeeStatementsDraft.
-From Kairn Require IeeeDraft.
+  IeeeVocabulary.
+From Kairn Require IeeeOperations.
+From Kairn.Gen Require IeeeModel.
 Import ListNotations.
 Open Scope R_scope.
 
-(** * The programs of IeeeDraft.v are the kernels of the real model *)
+(** * The programs of proofs/gen/IeeeModel.v are the kernels of the real model *)
 
-(* The program guards a in its first line, as the listing of milestone1.md does; the
-   kernel of proofs/gen/Model.v does not yet. For a number a of the format the guard
-   returns a (Guard.v), so the two agree. The proof also holds, unchanged, once the
-   generated kernel has the guard. *)
+(* The program guards a in its first line, as the kernel of proofs/gen/Model.v does. For a
+   number a of the format the guard returns a (Guard.v), which the proof uses to state the
+   equality with the operand itself in position 2. *)
 Lemma add_2_1_runR :
   forall emin prec choice x0 x1 a, Prec_gt_0 prec ->
   generic_format radix2 (FLT_exp emin prec) a ->
   add_2_1 emin prec choice x0 x1 a =
-  (nth 11 (runR emin prec choice IeeeDraft.add_2_1_prog [x0; x1; a]) 0,
-   nth 13 (runR emin prec choice IeeeDraft.add_2_1_prog [x0; x1; a]) 0).
+  (nth 11 (runR emin prec choice IeeeModel.add_2_1_prog [x0; x1; a]) 0,
+   nth 13 (runR emin prec choice IeeeModel.add_2_1_prog [x0; x1; a]) 0).
 Proof.
 intros emin prec choice x0 x1 a Hp Fa.
-cbv [add_2_1 two_sum fast_two_sum runR run stepR nth app IeeeDraft.add_2_1_prog].
+cbv [add_2_1 two_sum fast_two_sum runR run stepR nth app IeeeModel.add_2_1_prog].
 rewrite ?(guard_real_any emin prec choice a Fa). reflexivity.
 Qed.
 
 Lemma mul_2_1_runR :
   forall emin prec choice x0 x1 a,
   mul_2_1 emin prec choice x0 x1 a =
-  (nth 6 (runR emin prec choice IeeeDraft.mul_2_1_prog [x0; x1; a]) 0,
-   nth 8 (runR emin prec choice IeeeDraft.mul_2_1_prog [x0; x1; a]) 0).
+  (nth 6 (runR emin prec choice IeeeModel.mul_2_1_prog [x0; x1; a]) 0,
+   nth 8 (runR emin prec choice IeeeModel.mul_2_1_prog [x0; x1; a]) 0).
 Proof.
-intros. cbv [mul_2_1 two_prod fast_two_sum runR run stepR nth app IeeeDraft.mul_2_1_prog].
+intros. cbv [mul_2_1 two_prod fast_two_sum runR run stepR nth app IeeeModel.mul_2_1_prog].
 reflexivity.
 Qed.
 
 Lemma add_fast_2_2_runR :
   forall emin prec choice x0 x1 y0 y1,
   add_fast_2_2 emin prec choice x0 x1 y0 y1 =
-  (nth 12 (runR emin prec choice IeeeDraft.add_fast_2_2_prog [x0; x1; y0; y1]) 0,
-   nth 14 (runR emin prec choice IeeeDraft.add_fast_2_2_prog [x0; x1; y0; y1]) 0).
+  (nth 12 (runR emin prec choice IeeeModel.add_fast_2_2_prog [x0; x1; y0; y1]) 0,
+   nth 14 (runR emin prec choice IeeeModel.add_fast_2_2_prog [x0; x1; y0; y1]) 0).
 Proof.
 intros. cbv [add_fast_2_2 two_sum fast_two_sum runR run stepR nth app
-             IeeeDraft.add_fast_2_2_prog].
+             IeeeModel.add_fast_2_2_prog].
 reflexivity.
 Qed.
 
@@ -96,12 +96,12 @@ Notation finite_all := (Forall (fun x : float => fin x)).
 (* The program is the kernel of the IEEE model. *)
 Lemma add_2_1_runB :
   forall x0 x1 a : float,
-  IeeeDraft.add_2_1 prec emax nan_plus nan_minus x0 x1 a =
-  (nth 11 (runB IeeeDraft.add_2_1_prog [x0; x1; a]) d0,
-   nth 13 (runB IeeeDraft.add_2_1_prog [x0; x1; a]) d0).
+  IeeeModel.add_2_1 prec emax nan_plus nan_minus x0 x1 a =
+  (nth 11 (runB IeeeModel.add_2_1_prog [x0; x1; a]) d0,
+   nth 13 (runB IeeeModel.add_2_1_prog [x0; x1; a]) d0).
 Proof.
-intros. cbv [IeeeDraft.add_2_1 IeeeDraft.two_sum IeeeDraft.fast_two_sum run stepB nth app
-             IeeeDraft.add_2_1_prog].
+intros. cbv [IeeeModel.add_2_1 IeeeModel.two_sum IeeeModel.fast_two_sum run stepB nth app
+             IeeeModel.add_2_1_prog].
 reflexivity.
 Qed.
 
@@ -109,14 +109,14 @@ Theorem add_2_1_bridge :
   (3 <= prec)%Z ->
   forall x0 x1 a : float, fin x0 -> fin x1 -> fin a ->
   normalized_2 emin prec (b2r x0) (b2r x1) ->
-  fin (nth 11 (runB IeeeDraft.add_2_1_prog [x0; x1; a]) d0) ->
-  finite_all (runB IeeeDraft.add_2_1_prog [x0; x1; a]) /\
-  map b2r (runB IeeeDraft.add_2_1_prog [x0; x1; a])
-  = runR IeeeDraft.add_2_1_prog [b2r x0; b2r x1; b2r a].
+  fin (nth 11 (runB IeeeModel.add_2_1_prog [x0; x1; a]) d0) ->
+  finite_all (runB IeeeModel.add_2_1_prog [x0; x1; a]) /\
+  map b2r (runB IeeeModel.add_2_1_prog [x0; x1; a])
+  = runR IeeeModel.add_2_1_prog [b2r x0; b2r x1; b2r a].
 Proof.
 intros Hp3 x0 x1 a F0 F1 Fa Nx Hz.
 apply (bridge_f2s_prog prec emax nan_plus nan_minus nan_opp nan_fma
-         IeeeDraft.add_2_1_prog (firstn 8 IeeeDraft.add_2_1_prog) 4%nat 10%nat
+         IeeeModel.add_2_1_prog (firstn 8 IeeeModel.add_2_1_prog) 4%nat 10%nat
          [x0; x1; a] 11%nat); trivial.
 - repeat constructor; assumption.
 - generalize (add_2_1_correct emin prec Hp3 (b2r x0) (b2r x1) (b2r a) Nx
@@ -129,7 +129,7 @@ Theorem add_2_1_values :
   (3 <= prec)%Z ->
   forall x0 x1 a : float, fin x0 -> fin x1 -> fin a ->
   normalized_2 emin prec (b2r x0) (b2r x1) ->
-  let '(z0, z1) := IeeeDraft.add_2_1 prec emax nan_plus nan_minus x0 x1 a in
+  let '(z0, z1) := IeeeModel.add_2_1 prec emax nan_plus nan_minus x0 x1 a in
   fin z0 ->
   fin z1 /\
   (b2r z0, b2r z1) = add_2_1 emin prec tie_even (b2r x0) (b2r x1) (b2r a).
@@ -145,7 +145,7 @@ Theorem add_2_1_values_correct :
   (3 <= prec)%Z ->
   forall x0 x1 a : float, fin x0 -> fin x1 -> fin a ->
   normalized_2 emin prec (b2r x0) (b2r x1) ->
-  let '(z0, z1) := IeeeDraft.add_2_1 prec emax nan_plus nan_minus x0 x1 a in
+  let '(z0, z1) := IeeeModel.add_2_1 prec emax nan_plus nan_minus x0 x1 a in
   fin z0 ->
   fin z1 /\
   normalized_2 emin prec (b2r z0) (b2r z1) /\
@@ -156,7 +156,7 @@ intros Hp3 x0 x1 a F0 F1 Fa Nx.
 generalize (add_2_1_values Hp3 x0 x1 a F0 F1 Fa Nx)
            (add_2_1_correct emin prec Hp3 (b2r x0) (b2r x1) (b2r a) Nx
               (b2r_format prec emax a)).
-destruct (IeeeDraft.add_2_1 prec emax nan_plus nan_minus x0 x1 a) as [z0 z1].
+destruct (IeeeModel.add_2_1 prec emax nan_plus nan_minus x0 x1 a) as [z0 z1].
 intros B C Fz. destruct (B Fz) as [Fz1 E]. rewrite <- E in C. split. exact Fz1. exact C.
 Qed.
 
@@ -164,12 +164,12 @@ Qed.
 
 Lemma mul_2_1_runB :
   forall x0 x1 a : float,
-  IeeeDraft.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a =
-  (nth 6 (runB IeeeDraft.mul_2_1_prog [x0; x1; a]) d0,
-   nth 8 (runB IeeeDraft.mul_2_1_prog [x0; x1; a]) d0).
+  IeeeModel.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a =
+  (nth 6 (runB IeeeModel.mul_2_1_prog [x0; x1; a]) d0,
+   nth 8 (runB IeeeModel.mul_2_1_prog [x0; x1; a]) d0).
 Proof.
-intros. cbv [IeeeDraft.mul_2_1 IeeeDraft.two_prod IeeeDraft.fast_two_sum run stepB nth app
-             IeeeDraft.mul_2_1_prog].
+intros. cbv [IeeeModel.mul_2_1 IeeeModel.two_prod IeeeModel.fast_two_sum run stepB nth app
+             IeeeModel.mul_2_1_prog].
 reflexivity.
 Qed.
 
@@ -177,14 +177,14 @@ Theorem mul_2_1_bridge :
   (2 <= prec)%Z ->
   forall x0 x1 a : float, fin x0 -> fin x1 -> fin a ->
   normalized_2 emin prec (b2r x0) (b2r x1) ->
-  fin (nth 6 (runB IeeeDraft.mul_2_1_prog [x0; x1; a]) d0) ->
-  finite_all (runB IeeeDraft.mul_2_1_prog [x0; x1; a]) /\
-  map b2r (runB IeeeDraft.mul_2_1_prog [x0; x1; a])
-  = runR IeeeDraft.mul_2_1_prog [b2r x0; b2r x1; b2r a].
+  fin (nth 6 (runB IeeeModel.mul_2_1_prog [x0; x1; a]) d0) ->
+  finite_all (runB IeeeModel.mul_2_1_prog [x0; x1; a]) /\
+  map b2r (runB IeeeModel.mul_2_1_prog [x0; x1; a])
+  = runR IeeeModel.mul_2_1_prog [b2r x0; b2r x1; b2r a].
 Proof.
 intros Hp2 x0 x1 a F0 F1 Fa Nx Hz.
 apply (bridge_f2s_prog prec emax nan_plus nan_minus nan_opp nan_fma
-         IeeeDraft.mul_2_1_prog (firstn 3 IeeeDraft.mul_2_1_prog) 3%nat 5%nat
+         IeeeModel.mul_2_1_prog (firstn 3 IeeeModel.mul_2_1_prog) 3%nat 5%nat
          [x0; x1; a] 6%nat); trivial.
 - repeat constructor; assumption.
 - generalize (mul_2_1_correct emin prec Hp2 (b2r x0) (b2r x1) (b2r a) Nx
@@ -196,7 +196,7 @@ Theorem mul_2_1_values :
   (2 <= prec)%Z ->
   forall x0 x1 a : float, fin x0 -> fin x1 -> fin a ->
   normalized_2 emin prec (b2r x0) (b2r x1) ->
-  let '(z0, z1) := IeeeDraft.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a in
+  let '(z0, z1) := IeeeModel.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a in
   fin z0 ->
   fin z1 /\
   (b2r z0, b2r z1) = mul_2_1 emin prec tie_even (b2r x0) (b2r x1) (b2r a).
@@ -211,7 +211,7 @@ Theorem mul_2_1_values_correct :
   (2 <= prec)%Z ->
   forall x0 x1 a : float, fin x0 -> fin x1 -> fin a ->
   normalized_2 emin prec (b2r x0) (b2r x1) ->
-  let '(z0, z1) := IeeeDraft.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a in
+  let '(z0, z1) := IeeeModel.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a in
   fin z0 ->
   fin z1 /\
   normalized_2 emin prec (b2r z0) (b2r z1) /\
@@ -222,7 +222,7 @@ intros Hp2 x0 x1 a F0 F1 Fa Nx.
 generalize (mul_2_1_values Hp2 x0 x1 a F0 F1 Fa Nx)
            (mul_2_1_correct emin prec Hp2 (b2r x0) (b2r x1) (b2r a) Nx
               (b2r_format prec emax a)).
-destruct (IeeeDraft.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a) as [z0 z1].
+destruct (IeeeModel.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a) as [z0 z1].
 intros B C Fz. destruct (B Fz) as [Fz1 E]. rewrite <- E in C. split. exact Fz1. exact C.
 Qed.
 
@@ -230,12 +230,12 @@ Qed.
 
 Lemma add_fast_2_2_runB :
   forall x0 x1 y0 y1 : float,
-  IeeeDraft.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 =
-  (nth 12 (runB IeeeDraft.add_fast_2_2_prog [x0; x1; y0; y1]) d0,
-   nth 14 (runB IeeeDraft.add_fast_2_2_prog [x0; x1; y0; y1]) d0).
+  IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 =
+  (nth 12 (runB IeeeModel.add_fast_2_2_prog [x0; x1; y0; y1]) d0,
+   nth 14 (runB IeeeModel.add_fast_2_2_prog [x0; x1; y0; y1]) d0).
 Proof.
-intros. cbv [IeeeDraft.add_fast_2_2 IeeeDraft.two_sum IeeeDraft.fast_two_sum run stepB nth app
-             IeeeDraft.add_fast_2_2_prog].
+intros. cbv [IeeeModel.add_fast_2_2 IeeeModel.two_sum IeeeModel.fast_two_sum run stepB nth app
+             IeeeModel.add_fast_2_2_prog].
 reflexivity.
 Qed.
 
@@ -243,14 +243,14 @@ Theorem add_fast_2_2_bridge :
   (2 <= prec)%Z ->
   forall x0 x1 y0 y1 : float, fin x0 -> fin x1 -> fin y0 -> fin y1 ->
   normalized_2 emin prec (b2r x0) (b2r x1) -> normalized_2 emin prec (b2r y0) (b2r y1) ->
-  fin (nth 12 (runB IeeeDraft.add_fast_2_2_prog [x0; x1; y0; y1]) d0) ->
-  finite_all (runB IeeeDraft.add_fast_2_2_prog [x0; x1; y0; y1]) /\
-  map b2r (runB IeeeDraft.add_fast_2_2_prog [x0; x1; y0; y1])
-  = runR IeeeDraft.add_fast_2_2_prog [b2r x0; b2r x1; b2r y0; b2r y1].
+  fin (nth 12 (runB IeeeModel.add_fast_2_2_prog [x0; x1; y0; y1]) d0) ->
+  finite_all (runB IeeeModel.add_fast_2_2_prog [x0; x1; y0; y1]) /\
+  map b2r (runB IeeeModel.add_fast_2_2_prog [x0; x1; y0; y1])
+  = runR IeeeModel.add_fast_2_2_prog [b2r x0; b2r x1; b2r y0; b2r y1].
 Proof.
 intros Hp2 x0 x1 y0 y1 F0 F1 G0 G1 Nx Ny Hz.
 apply (bridge_f2s_prog prec emax nan_plus nan_minus nan_opp nan_fma
-         IeeeDraft.add_fast_2_2_prog (firstn 8 IeeeDraft.add_fast_2_2_prog) 4%nat 11%nat
+         IeeeModel.add_fast_2_2_prog (firstn 8 IeeeModel.add_fast_2_2_prog) 4%nat 11%nat
          [x0; x1; y0; y1] 12%nat); trivial.
 - repeat constructor; assumption.
 - generalize (add_fast_2_2_correct emin prec Hp2 (b2r x0) (b2r x1) (b2r y0) (b2r y1) Nx Ny).
@@ -261,7 +261,7 @@ Theorem add_fast_2_2_values :
   (2 <= prec)%Z ->
   forall x0 x1 y0 y1 : float, fin x0 -> fin x1 -> fin y0 -> fin y1 ->
   normalized_2 emin prec (b2r x0) (b2r x1) -> normalized_2 emin prec (b2r y0) (b2r y1) ->
-  let '(z0, z1) := IeeeDraft.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
+  let '(z0, z1) := IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
   fin z0 ->
   fin z1 /\
   (b2r z0, b2r z1) = add_fast_2_2 emin prec tie_even (b2r x0) (b2r x1) (b2r y0) (b2r y1).
@@ -276,7 +276,7 @@ Theorem add_fast_2_2_values_correct :
   (2 <= prec)%Z ->
   forall x0 x1 y0 y1 : float, fin x0 -> fin x1 -> fin y0 -> fin y1 ->
   normalized_2 emin prec (b2r x0) (b2r x1) -> normalized_2 emin prec (b2r y0) (b2r y1) ->
-  let '(z0, z1) := IeeeDraft.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
+  let '(z0, z1) := IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
   fin z0 ->
   fin z1 /\
   normalized_2 emin prec (b2r z0) (b2r z1) /\
@@ -286,13 +286,13 @@ Proof.
 intros Hp2 x0 x1 y0 y1 F0 F1 G0 G1 Nx Ny.
 generalize (add_fast_2_2_values Hp2 x0 x1 y0 y1 F0 F1 G0 G1 Nx Ny)
            (add_fast_2_2_correct emin prec Hp2 (b2r x0) (b2r x1) (b2r y0) (b2r y1) Nx Ny).
-destruct (IeeeDraft.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1) as [z0 z1].
+destruct (IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1) as [z0 z1].
 intros B C Fz. destruct (B Fz) as [Fz1 E]. rewrite <- E in C. split. exact Fz1. exact C.
 Qed.
 
 End IeeeMore.
 
-(** * The statements of IeeeStatementsDraft.v *)
+(** * The statements of proofs/gen/IeeeStatements.v *)
 
 Theorem add_2_1_ieee_bridge : add_2_1_ieee_bridge_spec.
 Proof.

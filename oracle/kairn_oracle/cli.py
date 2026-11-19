@@ -197,6 +197,9 @@ def main(argv=None):
     s.add_argument("--workdir", help="where to build the C++ runner and write streams")
     s.add_argument("--cxx", help="C++ compiler (default: $CXX, then c++, clang++, g++)")
     s.add_argument("--only", help="comma-separated test names")
+    s.add_argument("--jobs", type=int, default=None,
+                   help="worker processes of the exhaustive tests (default: $KAIRN_ORACLE_JOBS, "
+                        "then the number of CPUs)")
     s.set_defaults(func=cmd_selftest)
 
     b = sub.add_parser("brute", help="run gen | RUNNER | check pipelines in parallel")
@@ -214,6 +217,8 @@ def main(argv=None):
     b.add_argument("--strata")
     b.add_argument("--exhaustive", action="store_true")
     b.add_argument("--restrict", action="append")
+    b.add_argument("--radius", default="first", choices=("first", "second"),
+                   help="with --runner refrun: the Ball cores' radius design (default first)")
     b.add_argument("--json", help="write the merged summary here")
     b.add_argument("--workdir", help="where chunk summaries go (default: a temporary directory)")
     add_check_options(b)

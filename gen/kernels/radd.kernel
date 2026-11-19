@@ -14,6 +14,9 @@ theorem:       proofs/theories/Directed.v radd_correct
 source:        one step up from the rounded sum (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+domain:        extended
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeExt.v radd_ieee_correct
 cone_exempt:   r = succ(s), and succ(-inf) is finite; r is a radius, and the ball layer tests radii for non-finite values (Milestone 1 statements, Ball kernels)
 
 s = add(a, b)

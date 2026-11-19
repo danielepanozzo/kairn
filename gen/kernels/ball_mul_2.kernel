@@ -1,10 +1,13 @@
-# The product of two balls with 2-limb centers: the center by mul_2_2, and the radius from upper
-# bounds of the center magnitudes, plus U |cz| + V from the claims of mul_2_2.
+# The product of two balls with 2-limb centers: the center by mul_2_2, the radius in the second design.
+# The radius is evaluated by operations rounded to nearest on nonnegative values and inflated
+# once (milestone1.md, "The radius, second design"): E turns the error bound of the center
+# kernel mul_2_2 into a multiple of |cz0|, G covers the roundings of the radius, H what underflow
+# loses and the absolute term of the bound. Each is an exact expression rounded up.
 kernel:        ball_mul_2
 input:         cx = cx0 cx1
-input:         rx
+input:         stored rx
 input:         cy = cy0 cy1
-input:         ry
+input:         stored ry
 output:        cz = cz0 cz1
 output:        rz
 value:         cx*cy
@@ -15,21 +18,19 @@ requires:      nonneg ry
 ensures:       normalized cz
 ensures:       encloses cz rz x*y x=cx,rx y=cy,ry
 min_precision: 4
-theorem:       proofs/theories/Ball.v ball_mul_2_correct
-source:        midpoint-radius product (Milestone 1 listing)
+theorem:       proofs/theories/Ball2.v ball_mul_2_correct
+source:        midpoint-radius product (Milestone 1 listing, second radius design)
 license:       algorithm and proof: MIT
 status:        proved
+entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
-(cz0, cz1) = mul_2_2(cx0, cx1, cy0, cy1)
-ax         = abs_upper_2(cx0, cx1)
-ay         = abs_upper_2(cy0, cy1)
-t1         = rmul(ax, ry)
-t2         = rmul(ay, rx)
-t3         = rmul(rx, ry)
-s1         = radd(t1, t2)
-s2         = radd(s1, t3)
-mz         = abs_upper_2(cz0, cz1)
-d0         = rmul(const unit_computed(mul_2_2), mz)
-d          = radd(d0, const tiny_computed(mul_2_2))
-rz         = radd(s2, d)
+(cz0, cz1)  = mul_2_2(cx0, cx1, cy0, cy1)
+ax          = abs(cx0)
+ay          = abs(cy0)
+az          = abs(cz0)
+p           = prod(rx, ry)
+q           = fma(ay, rx, p)
+w           = fma(ax, ry, q)
+t           = fma(az, const up(unit(mul_2_2)/(1-unit(mul_2_2))), w)
+rz          = fma(t, const up((1+u)^6), const up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)))

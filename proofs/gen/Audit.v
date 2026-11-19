@@ -7,7 +7,7 @@ From Kairn.Gen Require Import Statements.
 From Kairn Require Import Add21.
 From Kairn Require Import Add22.
 From Kairn Require Import AddFast22.
-From Kairn Require Import Ball.
+From Kairn Require Import Ball2.
 From Kairn Require Import Compare.
 From Kairn Require Import Convert.
 From Kairn Require Import Directed.
@@ -22,12 +22,6 @@ From Kairn Require Import TwoProdDekker.
 
 Definition add_1_1_audit : add_1_1_spec := add_1_1_correct.
 Print Assumptions add_1_1_correct.
-
-Definition rmul_audit : rmul_spec := rmul_correct.
-Print Assumptions rmul_correct.
-
-Definition radd_audit : radd_spec := radd_correct.
-Print Assumptions radd_correct.
 
 Definition ball_add_1_audit : ball_add_1_spec := ball_add_1_correct.
 Print Assumptions ball_add_1_correct.
@@ -49,6 +43,12 @@ Print Assumptions fast_two_sum_correct.
 
 Definition mul_1_1_audit : mul_1_1_spec := mul_1_1_correct.
 Print Assumptions mul_1_1_correct.
+
+Definition radd_audit : radd_spec := radd_correct.
+Print Assumptions radd_correct.
+
+Definition rmul_audit : rmul_spec := rmul_correct.
+Print Assumptions rmul_correct.
 
 Definition split_audit : split_spec := split_correct.
 Print Assumptions split_correct.

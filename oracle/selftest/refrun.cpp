@@ -5,7 +5,8 @@
 // oracle on hardware arithmetic.  It must be compiled without contraction
 // (-ffp-contract=off), because a fused a*b+c would change what each statement computes.
 //
-// Usage: refrun [--variant NAME] [--const FORMAT.KERNEL.U=HEX ...] < requests > completed
+// Usage: refrun [--variant NAME] [--radius first|second] [--const FORMAT.KERNEL.U=HEX ...]
+//          < requests > completed
 // Variants inject the errors that the oracle's selftest expects `check` to catch.  The Ball
 // kernels need the constants U and V of their center's kernel (add, prod, add_2_2, mul_2_2,
 // mul_2_1), rounded up to the format; they are computed exactly by the Python side
@@ -43,6 +44,24 @@ enum class Variant {
   ball_no_rr,
   ball_pow2_ulp,
   abs_lead_only,
+  // The non-finite layer.
+  full_no_fixup,
+  full_overflow_sign,
+  full_overflow_nan,
+  full_overflow_finite,
+  full_spurious_overflow,
+  full_inf_tail_nan,
+  full_inf_tail_eta,
+  full_nan_one_limb,
+  full_nan_to_zero,
+  ball_full_swap,
+  ball_full_zero_inf_empty,
+  ball_full_finite_whole,
+  make_negative_radius,
+  make_nan_radius,
+  make2_inf_nan_tail,
+  ball2_no_E,
+  ball2_no_H,
 };
 
 struct VariantName {
@@ -69,6 +88,23 @@ const VariantName kVariants[] = {
     {"ball-no-rr", Variant::ball_no_rr},
     {"ball-pow2-ulp", Variant::ball_pow2_ulp},
     {"abs-lead-only", Variant::abs_lead_only},
+    {"full-no-fixup", Variant::full_no_fixup},
+    {"full-overflow-sign", Variant::full_overflow_sign},
+    {"full-overflow-nan", Variant::full_overflow_nan},
+    {"full-overflow-finite", Variant::full_overflow_finite},
+    {"full-spurious-overflow", Variant::full_spurious_overflow},
+    {"full-inf-tail-nan", Variant::full_inf_tail_nan},
+    {"full-inf-tail-eta", Variant::full_inf_tail_eta},
+    {"full-nan-one-limb", Variant::full_nan_one_limb},
+    {"full-nan-to-zero", Variant::full_nan_to_zero},
+    {"ball-full-swap", Variant::ball_full_swap},
+    {"ball-full-zero-inf-empty", Variant::ball_full_zero_inf_empty},
+    {"ball-full-finite-whole", Variant::ball_full_finite_whole},
+    {"make-negative-radius", Variant::make_negative_radius},
+    {"make-nan-radius", Variant::make_nan_radius},
+    {"make2-inf-nan-tail", Variant::make2_inf_nan_tail},
+    {"ball2-no-E", Variant::ball2_no_E},
+    {"ball2-no-H", Variant::ball2_no_H},
 };
 
 Variant g_variant = Variant::correct;
@@ -172,10 +208,15 @@ void add_2_2(T x0, T x1, T y0, T y1, T& z0, T& z1) {
   fast_two_sum(vh, w, z0, z1);
 }
 
+// guard(a) = RN(a + 0): the value of a; a zero comes out positive (milestone1.md, "Values that
+// enter from the program").
+template <class T> T guard(T a) { return add(a, T(0)); }
+
 template <class T>
 void add_2_1(T x0, T x1, T a, T& z0, T& z1) {
   T sh, sl;
-  two_sum(x0, a, sh, sl);
+  T g = guard(a);
+  two_sum(x0, g, sh, sl);
   T v = add(x1, sl);
   if (g_variant == Variant::add_skip_renorm) {
     z0 = sh;
@@ -400,6 +441,70 @@ Ball<T> ball_scale(int k, Ball<T> x, T a) {
   return z;
 }
 
+// The second radius design (milestone1.md, "The radius, second design"): ordinary operations on
+// nonnegative values, then one inflation by the kernel's constants E, G and H, which are given
+// on the command line (--const binary64.ball_add_1.E=HEX ...) as the Python side computes them.
+bool g_radius2 = false;
+
+template <class T>
+void radius_constants(const std::string& kname, T& E, T& G, T& H) {
+  E = constant<T>(kname.c_str(), "E");
+  G = constant<T>(kname.c_str(), "G");
+  H = constant<T>(kname.c_str(), "H");
+  if (g_variant == Variant::ball2_no_E) E = T(0);
+  if (g_variant == Variant::ball2_no_H) H = T(0);
+}
+
+template <class T>
+Ball<T> ball_add2(const std::string& kname, int k, Ball<T> x, Ball<T> y) {
+  T E, G, H;
+  radius_constants(kname, E, G, H);
+  Ball<T> z;
+  z.c1 = T(0);
+  if (k == 1) z.c0 = add(x.c0, y.c0);
+  else add_2_2(x.c0, x.c1, y.c0, y.c1, z.c0, z.c1);
+  T az = std::fabs(z.c0);
+  T s = add(x.r, y.r);
+  T t = fma_(az, E, s);
+  z.r = fma_(t, G, H);
+  return z;
+}
+
+template <class T>
+Ball<T> ball_mul2(const std::string& kname, int k, Ball<T> x, Ball<T> y) {
+  T E, G, H;
+  radius_constants(kname, E, G, H);
+  Ball<T> z;
+  z.c1 = T(0);
+  if (k == 1) z.c0 = prod(x.c0, y.c0);
+  else mul_2_2(x.c0, x.c1, y.c0, y.c1, z.c0, z.c1);
+  T ax = std::fabs(x.c0);
+  T ay = std::fabs(y.c0);
+  T az = std::fabs(z.c0);
+  T p = prod(x.r, y.r);
+  T q = fma_(ay, x.r, p);
+  T w = fma_(ax, y.r, q);
+  T t = fma_(az, E, w);
+  z.r = fma_(t, G, H);
+  return z;
+}
+
+template <class T>
+Ball<T> ball_scale2(const std::string& kname, int k, Ball<T> x, T a) {
+  T E, G, H;
+  radius_constants(kname, E, G, H);
+  Ball<T> z;
+  z.c1 = T(0);
+  if (k == 1) z.c0 = prod(x.c0, a);
+  else mul_2_1(x.c0, x.c1, a, z.c0, z.c1);
+  T aa = std::fabs(a);
+  T az = std::fabs(z.c0);
+  T p = prod(aa, x.r);
+  T t = fma_(az, E, p);
+  z.r = fma_(t, G, H);
+  return z;
+}
+
 // Runs a Ball kernel "ball_OP_K" on v; false when the name or the arity does not fit.
 template <class T>
 bool run_ball(const std::string& k, const std::vector<T>& v, std::vector<T>& out) {
@@ -422,13 +527,14 @@ bool run_ball(const std::string& k, const std::vector<T>& v, std::vector<T>& out
       y.c0 = -y.c0;
       y.c1 = -y.c1;
     }
-    z = op == "mul" ? ball_mul(n, x, y) : ball_add(n, x, y);
+    if (g_radius2) z = op == "mul" ? ball_mul2(k, n, x, y) : ball_add2(k, n, x, y);
+    else z = op == "mul" ? ball_mul(n, x, y) : ball_add(n, x, y);
   } else if (op == "neg" && v.size() == per) {
     z = ball(0);
     z.c0 = -z.c0;
     z.c1 = -z.c1;
   } else if (op == "scale" && v.size() == per + 1) {
-    z = ball_scale(n, ball(0), v[per]);
+    z = g_radius2 ? ball_scale2(k, n, ball(0), v[per]) : ball_scale(n, ball(0), v[per]);
   } else {
     return false;
   }
@@ -436,6 +542,185 @@ bool run_ball(const std::string& k, const std::vector<T>& v, std::vector<T>& out
   if (n == 2) out.push_back(z.c1);
   out.push_back(z.r);
   return true;
+}
+
+// ---------------------------------------------------------------------------------------------
+// The non-finite layer (milestone1.md, "IEEE-like results", "Values that enter from the program",
+// "Ball kernels"): the core, then a fix-up on the leading limbs, as listed.
+
+template <class T> T inf_() { return std::numeric_limits<T>::infinity(); }
+template <class T> T qnan_() { return std::numeric_limits<T>::quiet_NaN(); }
+// times_inf(a): a plain multiplication by +infinity, a NaN for a NaN or a zero.
+template <class T> T times_inf(T a) { return a * inf_<T>(); }
+
+// The fix-up of a full kernel: (z0, z1) from the core, t the operation of T on the leading limbs.
+// fin (every operand finite) is read by the injected errors only.
+template <class T>
+void fixup(T z0, T z1, T t, bool fin, T& w0, T& w1) {
+  if (g_variant == Variant::full_no_fixup) {
+    w0 = z0;
+    w1 = z1;
+    return;
+  }
+  T a = std::fabs(z0);
+  bool f = a < inf_<T>();          // z0 is finite
+  T r0 = times_inf(t);             // a NaN or a zero gives a NaN; any other t the infinity of its sign
+  bool n = r0 == r0;               // r0 is not a NaN
+  T r1 = n ? T(0) : r0;
+  if (g_variant == Variant::full_inf_tail_nan && n) r1 = qnan_<T>();
+  else if (g_variant == Variant::full_inf_tail_eta && n) r1 = std::numeric_limits<T>::denorm_min();
+  else if (g_variant == Variant::full_nan_one_limb && !n) r1 = T(0);
+  if (!f && fin) {
+    if (g_variant == Variant::full_overflow_sign) {
+      r0 = -r0;
+    } else if (g_variant == Variant::full_overflow_nan) {
+      r0 = r1 = qnan_<T>();
+    } else if (g_variant == Variant::full_overflow_finite) {
+      r0 = r0 > T(0) ? std::numeric_limits<T>::max() : -std::numeric_limits<T>::max();
+      r1 = T(0);
+    }
+  }
+  if (g_variant == Variant::full_spurious_overflow && f && fin &&
+      std::fabs(t) >= std::ldexp(T(1), std::numeric_limits<T>::max_exponent - 3)) {
+    w0 = t > T(0) ? inf_<T>() : -inf_<T>();
+    w1 = T(0);
+    return;
+  }
+  w0 = f ? z0 : r0;
+  w1 = f ? z1 : r1;
+  if (g_variant == Variant::full_nan_to_zero && w0 != w0) {
+    w0 = T(0);
+    w1 = T(0);
+  }
+}
+
+template <class T>
+bool all_finite(const std::vector<T>& v) {
+  for (T a : v)
+    if (!std::isfinite(a)) return false;
+  return true;
+}
+
+// The nine full arithmetic kernels.
+template <class T>
+bool run_full(const std::string& k, const std::vector<T>& v, T& w0, T& w1) {
+  T z0, z1, t;
+  if (k == "add_2_2_full" && v.size() == 4) {
+    add_2_2(v[0], v[1], v[2], v[3], z0, z1);
+    t = add(v[0], v[2]);
+  } else if (k == "add_fast_2_2_full" && v.size() == 4) {
+    add_fast_2_2(v[0], v[1], v[2], v[3], z0, z1);
+    t = add(v[0], v[2]);
+  } else if (k == "sub_2_2_full" && v.size() == 4) {
+    add_2_2(v[0], v[1], -v[2], -v[3], z0, z1);
+    t = sub(v[0], v[2]);
+  } else if (k == "add_2_1_full" && v.size() == 3) {
+    T g = guard(v[2]);
+    add_2_1(v[0], v[1], v[2], z0, z1);
+    t = add(v[0], g);
+  } else if (k == "sub_2_1_full" && v.size() == 3) {
+    T g = guard(v[2]);
+    add_2_1(v[0], v[1], -v[2], z0, z1);
+    t = sub(v[0], g);
+  } else if (k == "sub_1_2_full" && v.size() == 3) {
+    T g = guard(v[0]);
+    add_2_1(-v[1], -v[2], v[0], z0, z1);
+    t = sub(g, v[1]);
+  } else if (k == "mul_2_2_full" && v.size() == 4) {
+    mul_2_2(v[0], v[1], v[2], v[3], z0, z1);
+    t = prod(v[0], v[2]);
+  } else if (k == "mul_2_1_full" && v.size() == 3) {
+    mul_2_1(v[0], v[1], v[2], z0, z1);
+    t = prod(v[0], v[2]);
+  } else if (k == "mul_pow2_2_full" && v.size() == 3) {
+    mul_pow2_2(v[0], v[1], v[2], z0, z1);
+    t = prod(v[0], v[2]);
+  } else {
+    return false;
+  }
+  fixup(z0, z1, t, all_finite(v), w0, w1);
+  return true;
+}
+
+// The fix-up of a full Ball kernel: z from the core, q a NaN exactly when an operand is empty.
+template <class T>
+Ball<T> ball_fixup(Ball<T> z, T q) {
+  if (g_variant == Variant::ball_full_zero_inf_empty) q = z.r;
+  bool e = q == q;
+  T a = std::fabs(z.c0);
+  bool f1 = a < inf_<T>();         // the center is finite
+  bool f2 = z.r < inf_<T>();       // the radius is finite (false for a NaN)
+  bool f = f1 && f2;
+  T c0 = f ? z.c0 : T(0);
+  T c1 = f ? z.c1 : T(0);
+  T r = f ? z.r : inf_<T>();
+  if (g_variant == Variant::ball_full_finite_whole && f1 && !f2) {
+    c0 = z.c0;
+    c1 = z.c1;
+    r = std::numeric_limits<T>::max();
+  }
+  Ball<T> w;
+  if (g_variant == Variant::ball_full_swap && (!e || !f)) {
+    w.c0 = w.c1 = !e ? T(0) : qnan_<T>();
+    w.r = !e ? inf_<T>() : qnan_<T>();
+    return w;
+  }
+  w.c0 = e ? c0 : q;
+  w.c1 = e ? c1 : q;
+  w.r = e ? r : q;
+  return w;
+}
+
+// ball_OP_K_full: the core ball_OP_K, then the fix-up.
+template <class T>
+bool run_ball_full(const std::string& k, const std::vector<T>& v, std::vector<T>& out) {
+  const std::string suffix = "_full";
+  if (k.size() <= suffix.size() || k.compare(0, 5, "ball_") != 0 ||
+      k.compare(k.size() - suffix.size(), suffix.size(), suffix) != 0)
+    return false;
+  const std::string core = k.substr(0, k.size() - suffix.size());
+  std::vector<T> z;
+  if (!run_ball(core, v, z)) return false;
+  int n = core.back() - '0';
+  bool scale = core.compare(5, 5, "scale") == 0;
+  T q = scale ? v[n] : add(v[n], v[2 * n + 1]);
+  Ball<T> b;
+  b.c0 = z[0];
+  b.c1 = n == 2 ? z[1] : T(0);
+  b.r = z.back();
+  Ball<T> w = ball_fixup(b, q);
+  out = {w.c0};
+  if (n == 2) out.push_back(w.c1);
+  out.push_back(w.r);
+  return true;
+}
+
+template <class T>
+void make_2(T a, T& x0, T& x1) {
+  x0 = guard(a);
+  bool n = x0 == x0;
+  x1 = n ? T(0) : x0;
+  if (g_variant == Variant::make2_inf_nan_tail && n) x1 = sub(x0, x0);
+}
+
+// ball_make_k(c, r) with the center already guarded for k = 1.
+template <class T>
+std::vector<T> ball_make(int k, T c0, T c1, T r) {
+  T g = guard(r);
+  bool e = T(0) <= g;              // false for a NaN or a negative radius
+  if (g_variant == Variant::make_negative_radius) e = g == g;
+  else if (g_variant == Variant::make_nan_radius) e = true;
+  T a = std::fabs(c0);
+  bool f1 = a < inf_<T>();
+  bool f2 = g < inf_<T>();
+  bool f = f1 && f2;
+  T k0 = f ? c0 : T(0);
+  T k1 = f ? c1 : T(0);
+  T s = f ? g : inf_<T>();
+  std::vector<T> out = {e ? k0 : qnan_<T>()};
+  if (k == 2) out.push_back(e ? k1 : qnan_<T>());
+  out.push_back(e ? s : qnan_<T>());
+  return out;
 }
 
 std::vector<std::string> split_spaces(const std::string& s) {
@@ -539,6 +824,12 @@ bool run_kernel(const std::string& k, const std::vector<T>& v, std::vector<T>& o
   else if (k == "sub_2_1" && v.size() == 3) add_2_1(v[0], v[1], -v[2], z0, z1);
   else if (k == "sub_1_2" && v.size() == 3) add_2_1(-v[1], -v[2], v[0], z0, z1);
   else if (k == "mul_pow2_2" && v.size() == 3) mul_pow2_2(v[0], v[1], v[2], z0, z1);
+  else if (run_full(k, v, z0, z1)) {}
+  else if (k == "make_2" && v.size() == 1) make_2(v[0], z0, z1);
+  else if (k == "make_2_limbs" && v.size() == 2) { z0 = guard(v[0]); z1 = guard(v[1]); }
+  else if (k == "ball_make_1" && v.size() == 2) { out = ball_make(1, guard(v[0]), T(0), v[1]); return true; }
+  else if (k == "ball_make_2" && v.size() == 3) { out = ball_make(2, v[0], v[1], v[2]); return true; }
+  else if (run_ball_full(k, v, out)) return true;
   else if (run_compare(k, v, mask)) return true;
   else if (run_ball(k, v, out)) return true;
   else {
@@ -547,6 +838,8 @@ bool run_kernel(const std::string& k, const std::vector<T>& v, std::vector<T>& o
     else if (k == "to_down_2" && v.size() == 2) t = to_down_2(v[0], v[1]);
     else if (k == "to_up_2" && v.size() == 2) t = to_up_2(v[0], v[1]);
     else if (k == "abs_upper_2" && v.size() == 2) t = abs_upper_2(v[0], v[1]);
+    else if (k == "add_1_1" && v.size() == 2) t = add(v[0], v[1]);
+    else if (k == "mul_1_1" && v.size() == 2) t = prod(v[0], v[1]);
     else if (k == "radd" && v.size() == 2) t = radd(v[0], v[1]);
     else if (k == "rmul" && v.size() == 2) t = rmul(v[0], v[1]);
     else return false;
@@ -626,8 +919,19 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "refrun: unknown variant %s\n", name);
         return 2;
       }
+    } else if (std::strcmp(argv[i], "--radius") == 0 && i + 1 < argc) {
+      const char* design = argv[++i];
+      if (std::strcmp(design, "first") == 0) {
+        g_radius2 = false;
+      } else if (std::strcmp(design, "second") == 0) {
+        g_radius2 = true;
+      } else {
+        std::fprintf(stderr, "refrun: unknown radius design %s (first or second)\n", design);
+        return 2;
+      }
     } else {
-      std::fprintf(stderr, "usage: refrun [--variant NAME] [--const FORMAT.KERNEL.U=HEX ...]\n");
+      std::fprintf(stderr, "usage: refrun [--variant NAME] [--radius first|second] "
+                           "[--const FORMAT.KERNEL.C=HEX ...]\n");
       return 2;
     }
   }

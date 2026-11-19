@@ -247,28 +247,24 @@ set(KAIRN_CROSSCHECK_SEED 0 CACHE STRING "Seed of the random cases of the cross-
 # that most products neither overflow nor vanish, and at least the kernel's min_precision. Where
 # no such format exists, the entry also names restrictions of the oracle (gen --restrict,
 # comma-separated): the test then enumerates that restricted domain, and a second test runs
-# KAIRN_CROSSCHECK_CASES random cases of the oracle's generator on the whole format.
+# KAIRN_CROSSCHECK_CASES random cases of the oracle's generator on the whole format. The kernels
+# of the extended domain have a table of their own, further below.
 #
 #   inputs   kernels                                  format         cases
 #   1        split                                    fp:11:-30:10    86 015
 #   1 1      two_sum, fast_two_sum, add_1_1           fp:5:-7:4      172 225
 #            two_prod, two_prod_dekker, mul_1_1       fp:5:-12:-1    172 225
-#   r r      radd                                     fp:6:-8:4      200 704
-#            rmul                                     fp:6:-13:-2    173 056
-#   2        neg_2, abs_2, the conversions            fp:6:-8:4      118 335
-#   2 1      add_2_1, sub_2_1, comparisons            fp:4:-4:2      221 361
-#   1 2      sub_1_2, comparisons                     fp:4:-4:2      221 361
+#   2 1      add_2_1, sub_2_1                         fp:4:-4:2      221 361
+#   1 2      sub_1_2                                  fp:4:-4:2      221 361
 #   2 1      mul_2_1                                  fp:4:-8:-2     221 361
-#   2 2      add_2_2, add_fast_2_2, sub_2_2,          fp:3:-3:2      178 929
-#            comparisons
+#   2 2      add_2_2, add_fast_2_2, sub_2_2           fp:3:-3:2      178 929
 #   2 2      mul_2_2                                  fp:4:-7:-3     245 025
 #   2 c      mul_pow2_2                               fp:5:-6:2      144 755
-#   1 r      ball_neg_1                               fp:5:-7:4       86 320
-#   2 r      ball_neg_2                               fp:4:-4:2      111 552
 #   1 r 1    ball_scale_1                             fp:3:-5:0       84 700
 #   2 r 1    ball_scale_2                             fp:2:-4:1       60 102
 #   1 r 1 r  ball_add_1, ball_sub_1                   fp:2:-3:1       76 176
-#            ball_mul_1                               fp:2:-4:0       76 176
+#            ball_mul_1 (its constant (1+u)^5 must    fp:2:-4:1      142 884
+#            be a number of the format, so qmax >= 1)
 #   2 r 2 r  ball_add_2, ball_sub_2: radii 0, 1/8,    fp:3:-3:2      148 896 of 140 million
 #            1/2, 5/2 and cx in [1/2, 2)
 #            ball_mul_2: radii 0, eta, 3/2, cx in     fp:4:-5:1       64 728 of 12.4 billion
@@ -276,25 +272,76 @@ set(KAIRN_CROSSCHECK_SEED 0 CACHE STRING "Seed of the random cases of the cross-
 set(_toy_1 fp:11:-30:10)
 set(_toy_1_1_sum fp:5:-7:4)
 set(_toy_1_1_product fp:5:-12:-1)
-set(_toy_r_r_sum fp:6:-8:4)
-set(_toy_r_r_product fp:6:-13:-2)
-set(_toy_2 fp:6:-8:4)
 set(_toy_2_1_sum fp:4:-4:2)
 set(_toy_1_2_sum fp:4:-4:2)
 set(_toy_2_1_product fp:4:-8:-2)
 set(_toy_2_2_sum fp:3:-3:2)
 set(_toy_2_2_product fp:4:-7:-3)
 set(_toy_2_c_product fp:5:-6:2)
-set(_toy_1_r_sum fp:5:-7:4)
-set(_toy_2_r_sum fp:4:-4:2)
 set(_toy_1_r_1_product fp:3:-5:0)
 set(_toy_2_r_1_product fp:2:-4:1)
 set(_toy_1_r_1_r_sum fp:2:-3:1)
-set(_toy_1_r_1_r_product fp:2:-4:0)
+set(_toy_1_r_1_r_product fp:2:-4:1)
 set(_radii "0x0p+0/0x1p-3/0x1p-1/0x1.4p+1")
 set(_toy_2_r_2_r_sum fp:3:-3:2 "rx.in=${_radii},ry.in=${_radii},cx.lead=-1:0")
 set(_radii "0x0p+0/0x1p-5/0x1.8p+0")
 set(_toy_2_r_2_r_product fp:4:-5:1 "rx.in=${_radii},ry.in=${_radii},cx.lead=0:0,cy.lead=-3:0")
+
+# The kernels of the extended domain (the non-finite layer, "domain": "extended") have toy formats
+# of their own, by the same roles read in that domain: 1 any value of the format, infinities and
+# NaN included; 2 a canonical pair (finite and normalized, (+-inf, 0) or NaN); r a radius
+# (nonneg(), +inf and NaN included); c a power of two (finite); b1 and b2 a ball, its center of one
+# or two limbs and its radius together (ball()), which the oracle enumerates as one operand: every
+# finite center with every finite radius >= 0, the whole line and the empty set. Every
+# enumeration includes the non-finite values of each operand (and a restriction shrinks only the
+# finite part of a domain), and every format has the shape the statements of the IEEE model are
+# proved for, qmin + qmax = 3 - 2p, as binary64 and binary32 have: an overflow threshold
+# 2^(qmax+p) and a smallest number 2^qmin whose product is 2^(3-p). Each enumeration is in the
+# same range of 50 000 to 250 000 cases; at these sizes a format of that shape has few exponents
+# (two to twelve, and forty for make_2), so overflow is common, which the layer is about.
+#
+#   inputs   kernels                                  format         cases
+#   1        make_2                                   fp:11:-29:10    83 970
+#   2        neg_2, abs_2, the conversions,           fp:6:-10:1      89 730
+#            make_2_limbs
+#   r r      radd, rmul                               fp:6:-10:1     174 724
+#   1 1      ball_make_1                              fp:5:-7:0       84 100
+#   2 1      add_2_1_full, sub_2_1_full, mul_2_1_full, fp:4:-5:0     113 316
+#            comparisons, ball_make_2
+#   1 2      sub_1_2_full, comparisons                fp:4:-5:0      113 316
+#   2 c      mul_pow2_2_full                          fp:5:-7:0       84 888
+#   2 2      add_2_2_full, add_fast_2_2_full,         fp:3:-4:1      181 476
+#            sub_2_2_full, comparisons
+#   2 2      mul_2_2_full                             fp:4:-4:-1      62 500
+#   b1       ball_neg_1                               fp:5:-9:2       86 322
+#   b2       ball_neg_2                               fp:4:-6:1      198 074
+#   b1 b1    ball_add_1_full, ball_sub_1_full,        fp:2:-3:2      144 400
+#            ball_mul_1_full
+#   b1 1     ball_scale_1_full                        fp:3:-4:1       89 436
+#   b2 1     ball_scale_2_full                        fp:3:-3:0      100 044
+#   b2 b2    ball_add_2_full, ball_sub_2_full         fp:3:-2:-1     122 500
+#            ball_mul_2_full: radii 0, eta, 1/2, 3/2  fp:4:-4:-1     120 780 of 97.6 million
+#            and cx in [1, 2)
+set(_toy_ext_1 fp:11:-29:10)
+set(_toy_ext_2 fp:6:-10:1)
+set(_toy_ext_r_r_sum fp:6:-10:1)
+set(_toy_ext_r_r_product fp:6:-10:1)
+set(_toy_ext_1_1_sum fp:5:-7:0)
+set(_toy_ext_2_1_sum fp:4:-5:0)
+set(_toy_ext_1_2_sum fp:4:-5:0)
+set(_toy_ext_2_1_product fp:4:-5:0)
+set(_toy_ext_2_c_product fp:5:-7:0)
+set(_toy_ext_2_2_sum fp:3:-4:1)
+set(_toy_ext_2_2_product fp:4:-4:-1)
+set(_toy_ext_b1 fp:5:-9:2)
+set(_toy_ext_b2 fp:4:-6:1)
+set(_toy_ext_b1_b1_sum fp:2:-3:2)
+set(_toy_ext_b1_b1_product fp:2:-3:2)
+set(_toy_ext_b1_1_product fp:3:-4:1)
+set(_toy_ext_b2_1_product fp:3:-3:0)
+set(_toy_ext_b2_b2_sum fp:3:-2:-1)
+set(_radii "0x0p+0/0x1p-4/0x1p-1/0x1.8p+0")
+set(_toy_ext_b2_b2_product fp:4:-4:-1 "rx.in=${_radii},ry.in=${_radii},cx.lead=0:0")
 
 # Kernels whose intermediate values can overflow for operands far below the largest number (the
 # product by the splitter), as their requirement of no intermediate overflow allows. The oracle
@@ -318,7 +365,13 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     string(JSON _kernel GET "${_claims}" kernels ${_i} name)
     string(JSON _value ERROR_VARIABLE _no_value GET "${_claims}" kernels ${_i} value)
     string(JSON _min ERROR_VARIABLE _no_min GET "${_claims}" kernels ${_i} min_precision)
+    string(JSON _domain ERROR_VARIABLE _no_domain GET "${_claims}" kernels ${_i} domain)
+    if(NOT _domain STREQUAL "extended")
+      set(_domain finite)
+    endif()
     set(_requires "")
+    set(_ball_centers "")
+    set(_ball_radii "")
     string(JSON _n_requires LENGTH "${_claims}" kernels ${_i} requires)
     if(_n_requires GREATER 0)
       math(EXPR _req_last "${_n_requires} - 1")
@@ -326,18 +379,32 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
         string(JSON _req GET "${_claims}" kernels ${_i} requires ${_j})
         string(REPLACE " " "" _req "${_req}")
         list(APPEND _requires "${_req}")
+        if(_req MATCHES "^ball\\(([^,]+),([^)]+)\\)$")
+          list(APPEND _ball_centers "${CMAKE_MATCH_1}")
+          list(APPEND _ball_radii "${CMAKE_MATCH_2}")
+        endif()
       endforeach()
     endif()
-    # The roles of the inputs, then the operation.
+    # The roles of the inputs, then the operation; in the extended domain, after "ext", with a
+    # ball's center standing for the ball and its radius left out.
     string(JSON _inputs LENGTH "${_claims}" kernels ${_i} inputs)
-    set(_shape "")
+    if(_domain STREQUAL "extended")
+      set(_shape "_ext")
+    else()
+      set(_shape "")
+    endif()
+    set(_n_roles 0)
     math(EXPR _in_last "${_inputs} - 1")
     foreach(_j RANGE ${_in_last})
       string(JSON _input GET "${_claims}" kernels ${_i} inputs ${_j} name)
       string(JSON _type ERROR_VARIABLE _no_type GET "${_claims}" kernels ${_i} inputs ${_j} type)
       string(JSON _limbs ERROR_VARIABLE _no_limbs GET "${_claims}" kernels ${_i} inputs ${_j} limbs)
-      if(_type STREQUAL "mask")
+      if(_input IN_LIST _ball_radii)
+        continue()
+      elseif(_type STREQUAL "mask")
         set(_role m)
+      elseif(_input IN_LIST _ball_centers)
+        set(_role "b${_limbs}")
       elseif(NOT _limbs STREQUAL "1")
         set(_role "${_limbs}")
       elseif("nonneg(${_input})" IN_LIST _requires)
@@ -348,8 +415,9 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
         set(_role 1)
       endif()
       string(APPEND _shape "_${_role}")
+      math(EXPR _n_roles "${_n_roles} + 1")
     endforeach()
-    if(_inputs GREATER 1)
+    if(_n_roles GREATER 1)
       if(_value MATCHES "\\*")
         string(APPEND _shape "_product")
       else()

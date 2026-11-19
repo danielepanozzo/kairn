@@ -36,8 +36,10 @@ class Format:
     __slots__ = ("p", "qmin", "qmax", "name", "omega", "lam", "emin_normal", "emax")
 
     def __init__(self, p, qmin, qmax):
-        if p < 2:
-            raise FormatError("precision must be at least 2, got %d" % p)
+        # Precision 1 is a format too: its numbers are zero and the powers of two (eighteen
+        # kernels are proved from it).
+        if p < 1:
+            raise FormatError("precision must be at least 1, got %d" % p)
         if qmin > qmax:
             raise FormatError("qmin %d is above qmax %d" % (qmin, qmax))
         self.p = p
