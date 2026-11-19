@@ -1,0 +1,28 @@
+# Test kernel: the scalar printer's branch over a fix-up (cpp.branch; milestone1.md, "Emission").
+# Every output is a select on m1, and every first arm a select on m2: the branch tests m1 & m2,
+# after s, m1 and m2. The arms it then returns are a value (s), the literal zero and an input (a).
+# The fix-up needs d and q, which nothing before the branch needs, and s, which it shares. An
+# operand that is not finite, or a sum that overflows, takes the fix-up. Its claim is not judged.
+kernel:   ops_branch
+input:    a
+input:    b
+output:   x = x0 x1
+output:   y
+value:    a
+ensures:  represents x
+status:   unverified
+domain:   extended
+ieee_status: unverified
+cone_exempt: a test of the scalar printer's branch, not of a computation
+
+s  = add(a, b)
+m1 = lt(s, const inf)
+m2 = eq(b, b)
+d  = sub(a, b)
+q  = times_inf(d)
+h  = select(m2, s, q)
+k  = select(m2, 0, d)
+l  = select(m2, a, b)
+x0 = select(m1, h, q)
+x1 = select(m1, k, d)
+y  = select(m1, l, s)

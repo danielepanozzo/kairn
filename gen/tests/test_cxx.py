@@ -26,6 +26,10 @@ X86 = platform.machine().lower() in ('x86_64', 'amd64')
 BASE = ['-std=c++20', '-Wall', '-Wextra', '-Wpedantic', '-Werror'] + (['-mfma'] if X86 else [])
 MATRIX = [[opt, f'-ffp-contract={c}'] + rm
           for opt in ('-O0', '-O2') for c in ('off', 'on', 'fast') for rm in ([], ['-frounding-math'])]
+# Each compiler builds the fix-ups of the scalar kernels in both forms, whichever is its own
+# (KAIRN_GEN_FIXUP_CALL, prelude.hpp): inline behind the branch, and as a function of its own.
+FORMS = [['-O2', '-ffp-contract=fast', f'-DKAIRN_GEN_FIXUP_CALL={c}'] for c in (0, 1)] + \
+        [['-O0', '-ffp-contract=off', '-DKAIRN_GEN_FIXUP_CALL=1']]
 N = common.size(2000, 150000)       # requests per kernel and format
 JOBS = common.JOBS
 
@@ -185,7 +189,7 @@ class Builds:
         self.dir = common.scratch(tag)
         self.configs = []
         for cxx in COMPILERS:
-            for flags in MATRIX:
+            for flags in MATRIX + FORMS:
                 self.configs.append((f'{cxx} {" ".join(flags)}', [cxx] + BASE + flags))
         if rosetta():
             for flags in (['-O2', '-ffp-contract=fast'], ['-O0', '-ffp-contract=off'],
@@ -452,6 +456,7 @@ class ConstantEvaluation(unittest.TestCase):
         with open(path, 'w') as f:
             f.write(self.source())
         flag_sets = [[], ['-frounding-math'], ['-ffp-contract=fast'], ['-O2', '-ffp-contract=fast', '-frounding-math']]
+        flag_sets += [[f'-DKAIRN_GEN_FIXUP_CALL={c}'] for c in (0, 1)]    # both forms of the fix-ups
         jobs = [[cxx] + BASE + flags + ['-I', INCLUDE, '-fsyntax-only', path]
                 for cxx in COMPILERS for flags in flag_sets]
         with ThreadPoolExecutor(JOBS) as ex:
@@ -484,6 +489,7 @@ class ConstantEvaluation(unittest.TestCase):
                          {n for n, k in self.ks.items() if k.extended and not k.real_model and
                           cpp.constexpr_kind(k, self.ks) == 'plain'})
         flag_sets = [[], ['-frounding-math'], ['-O2', '-ffp-contract=fast', '-frounding-math']]
+        flag_sets += [[f'-DKAIRN_GEN_FIXUP_CALL={c}'] for c in (0, 1)]    # both forms of the fix-ups
         jobs = [[cxx] + BASE + flags + ['-I', INCLUDE, '-fsyntax-only', path] for cxx in COMPILERS for flags in flag_sets]
         with ThreadPoolExecutor(JOBS) as ex:
             for cmd, (status, err) in zip(jobs, ex.map(compile_, jobs)):
