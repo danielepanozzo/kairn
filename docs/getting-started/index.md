@@ -2,10 +2,11 @@
 
 **Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is in
 progress: the first public headers exist, for numbers of one and two limbs of type `float` or
-`double` and for balls around them, and four of their arithmetic operations have checked proofs.
-Everything else is marked UNVERIFIED, and the treatment of overflow and of infinities is not
-written yet; [What holds today](guarantees.md) has the details. This page shows how to build and
-test the repository, write a first program, use the CMake package, and build this site.
+`double` and for balls around them, and the claims of all their operations have checked proofs in
+a model of arithmetic where nothing overflows. What happens at overflow is proved for some
+operations only, and the treatment of infinities and NaN is not written yet;
+[What holds today](guarantees.md) has the details. This page shows how to build and test the
+repository, write a first program, use the CMake package, and build this site.
 
 ## A first program
 
@@ -20,26 +21,23 @@ says why if it does not.
 ```
 
 `kairn::Expansion<double, 2>` stores a value as the exact sum of two `double`s, its *limbs*: about
-106 significant bits instead of 53. Its sums and products, with another two-limb number or with a
-`double`, have proved error bounds, which `kairn::traits` exports as constants:
+106 significant bits instead of 53. Its operations have proved error bounds, which `kairn::traits`
+exports as constants:
 
 ```cpp
 --8<-- "docs/examples/cpp/first_steps.cpp:expansion"
 ```
 
-Operations whose proof is not checked yet, such as subtraction, need the marker
-`kairn::unverified` on one operand, so that each unproved step is visible in the source:
-
-```cpp
---8<-- "docs/examples/cpp/first_steps.cpp:unverified"
-```
-
 A `kairn::Ball` is a set: a center and a radius, and every operation returns a ball that contains
-every result of the operation on points of its operands. Its operations are not proved yet either:
+every result of the operation on points of its operands:
 
 ```cpp
 --8<-- "docs/examples/cpp/first_steps.cpp:ball"
 ```
+
+An operation whose proof is not checked compiles only with the marker `kairn::unverified` on one
+of its operands; [What holds today](guarantees.md#proved-and-unverified) says which operations
+those are.
 
 The whole program is
 [`docs/examples/cpp/first_steps.cpp`](https://github.com/danielepanozzo/kairn/blob/main/docs/examples/cpp/first_steps.cpp);
@@ -93,12 +91,12 @@ The tests:
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, and the same results at run time. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass, and each detects a changed rounding mode and flush-to-zero. |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break Kairn and define no macro; `kairn::self_test()` must report a failure. |
-| `api.reject.*` | What must not compile: the flags `config.hpp` rejects, and each kind of UNVERIFIED operation written without the marker. |
+| `api.reject.*` | What must not compile: the flags `config.hpp` rejects, and each kind of operation written without the marker while its kernel is UNVERIFIED (against a copy of the headers in which every kernel is). |
 | `api.k1.zero_cost` | The instructions emitted for loops over `Expansion<double, 1>` against the same loops over `double`. |
 | `api.example.*` | The examples of this site, which check their own output. |
 
-`ctest -L api` runs only the tests of the public interface. [Testing](../developer/testing.md) explains the cross-checks, how to run one by hand, and how to
-rerun one failing case. The entry points of the
+`ctest -L api` runs only the tests of the public interface. [Testing](../developer/testing.md)
+explains the cross-checks, how to run one by hand, and how to rerun one failing case. The entry points of the
 [Architecture](../developer/architecture.md#layout-and-ownership) page and the cross-checks are
 registered only if Python 3 is found, and each entry point only if its script exists when CMake
 runs; configuring prints which were registered. The consumer checks build with the same generator

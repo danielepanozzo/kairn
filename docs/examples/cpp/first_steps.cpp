@@ -29,6 +29,7 @@ int main() {
     const double tiny = 0x1p-60;
     const double lost = 1.0 + tiny;          // 1
     const Number kept = Number(1.0) + tiny;  // limbs (1, 2^-60): the exact value
+    const Number back = kept - 1.0;          // 2^-60, exactly
 
     // (1 + 2^-60)^2 = 1 + 2^-59 + 2^-120. The product keeps the first two terms; its error is
     // at most traits<Number>::mul.unit times the exact result, plus traits<Number>::mul.tiny.
@@ -36,23 +37,17 @@ int main() {
     constexpr auto bound = kairn::traits<Number>::mul;
     static_assert(bound.verified);
     // --8<-- [end:expansion]
-    std::printf("lost: %a\nkept: %a + %a\nsquare: %a + %a\nbound of *: %a |exact| + %a\n", lost, kept.limb[0],
-                kept.limb[1], square.limb[0], square.limb[1], bound.unit, bound.tiny);
+    std::printf("lost: %a\nkept: %a + %a\nback: %a\nsquare: %a + %a\nbound of *: %a |exact| + %a\n", lost,
+                kept.limb[0], kept.limb[1], back.limb[0], square.limb[0], square.limb[1], bound.unit, bound.tiny);
     check(lost == 1.0 && kept.limb[0] == 1.0 && kept.limb[1] == tiny, "the sum keeps 2^-60");
-    check(square.limb[0] == 1.0 && square.limb[1] == 0x1p-59, "the square is 1 + 2^-59, within its bound");
-
-    // --8<-- [start:unverified]
-    // Subtraction has no checked proof yet: it compiles only with the marker on an operand.
-    const Number back = kairn::unverified(kept) - 1.0;  // 2^-60
-    // --8<-- [end:unverified]
     check(back.limb[0] == tiny && back.limb[1] == 0.0, "(1 + 2^-60) - 1 is 2^-60");
+    check(square.limb[0] == 1.0 && square.limb[1] == 0x1p-59, "the square is 1 + 2^-59, within its bound");
 
     // --8<-- [start:ball]
     // A side of 3 known to within 1/8: the ball of center 3 and radius 1/8, [2.875, 3.125].
     const kairn::Ball<double, 2> side(Number(3.0), 0.125);
-    // Every product x * y of two points of it lies in the result; Ball operations are not proved
-    // yet, so the marker is needed here too.
-    const auto area = kairn::unverified(side) * side;
+    // Every product x * y of two points of it lies in the result.
+    const auto area = side * side;
     // --8<-- [end:ball]
     std::printf("area: center %a + %a, radius %a\n", area.center().limb[0], area.center().limb[1], area.radius());
     // The exact range is [2.875^2, 3.125^2] = [8.265625, 9.765625]; the radius is 2 * 3 / 8 + 1/64

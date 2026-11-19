@@ -1,8 +1,9 @@
 # What holds today
 
 Kairn's public headers cover `Expansion<T, 1>`, `Expansion<T, 2>` and `Ball<T, 1>`, `Ball<T, 2>`
-for `T` = `float` and `double`. This page says, for each operation, what is proved, what is only a
-target, and what is not written yet. It is the state of the repository, not of the design: the
+for `T` = `float` and `double`. This page says, for each operation, what is proved, and what is
+not written yet. It describes the repository as `gen/claims.json` stands in this version; the
+compiler enforces the current status on its own (below), so the code cannot fall behind it. The
 design is in the [Phase 0 report](../developer/design/phase0/index.md) and the
 [Milestone 1 statements](../developer/design/milestone1.md).
 
@@ -20,77 +21,82 @@ the audit finds no axiom beyond the four allowed
 **UNVERIFIED**: its statement is a target, tested by the oracle in exact arithmetic but not proved.
 
 An UNVERIFIED operation compiles only when one of its operands carries the marker
-`kairn::unverified(...)`:
-
-```cpp
---8<-- "docs/examples/cpp/first_steps.cpp:unverified"
-```
-
-The marker applies to the one operation it is an operand of; the result is an ordinary value, so
-each unproved step of a computation is visible in the source. The same marker works on every form:
-`kairn::unverified(x) < y`, `kairn::to_down(kairn::unverified(x))`, `x -= kairn::unverified(y)`.
-It may be put on a `float` or `double` operand too (it converts back to that type), so that code
-generic over `T` and the k-numbers can be written once. A marked left operand of `+=` does not
-compile: it would modify a copy.
+`kairn::unverified(...)`: `kairn::unverified(x) - y`, `kairn::unverified(x) < y`,
+`kairn::to_down(kairn::unverified(x))`, `x -= kairn::unverified(y)`. The marker applies to the one
+operation it is an operand of, and the result is an ordinary value, so each unproved step of a
+computation is visible in the source. It may be put on a `float` or `double` operand too (it
+converts back to that type), so that code generic over `T` and the k-numbers can be written once,
+and it is accepted on proved operations as well, so that code written with it keeps compiling when
+a proof lands. A marked left operand of `+=` does not compile: it would modify a copy.
 
 Which kernels are proved is read from `include/kairn/gen/bounds.hpp`, which the generator writes
 from `gen/claims.json`. When a proof is checked and the generator is rerun, the operation compiles
-without the marker; code that still writes the marker keeps compiling. `kairn::traits` exports error
-constants only for proved operations: the entry of an UNVERIFIED one has `verified == false` and no
-constants to read, so that no client bound can be built on a number that is only a target.
+without the marker. `kairn::traits` exports error constants only for proved operations: the entry
+of an UNVERIFIED one has `verified == false` and no constants to read, so that no client bound can
+be built on a number that is only a target.
+
+In this version every kernel of one and two limbs is proved, so no operation of these headers
+needs the marker. It is how the operations still to come (three and four limbs, division, square
+root) will ship before their proofs.
 
 ## The operations
 
 For normalized operands $x$, $y$ and a limb $a$, with $z$ the result. "Exact" rows have no kernel:
-they are IEEE 754 operations on one limb, or read limbs, and need no proof of Kairn's.
+they are IEEE 754 operations on one limb, or read limbs, and need no proof of Kairn's. The second
+column is the claim of the kernel, proved in the *real model*, where no operation overflows. The
+third says what is proved in Flocq's model of IEEE 754, where operations overflow
+([Milestone 1](../developer/design/milestone1.md#what-is-proved-about-an-arithmetic-kernel)).
 
-| Operation | Kernel | Status | Statement |
-|---|---|---|---|
-| `x + y`, two limbs | `add_2_2` | **proved** | $z$ normalized, $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\lvert x + y\rvert$ |
-| `x + a`, `a + x` | `add_2_1` | **proved** | $z$ normalized, $\lvert z - (x + a)\rvert \le 2u^2\lvert x + a\rvert$ |
-| `x * y`, two limbs | `mul_2_2` | **proved** | $z$ normalized, $\lvert z - xy\rvert \le 4u^2\lvert xy\rvert + \tfrac32\eta$ |
-| `x * a`, `a * x` | `mul_2_1` | **proved** | $z$ normalized, $\lvert z - xa\rvert \le 2u^2\lvert xa\rvert + \eta$ |
-| `x - y` | `sub_2_2` | UNVERIFIED | target: that of `x + y` |
-| `x - a`, `a - x` | `sub_2_1`, `sub_1_2` | UNVERIFIED | target: that of `x + a` |
-| `-x`, `abs(x)` | `neg_2`, `abs_2` | UNVERIFIED | target: exact, normalized |
-| `add_fast(x, y)` | `add_fast_2_2` | UNVERIFIED | target: $z$ normalized, $\lvert z - (x + y)\rvert \le 4u^2(\lvert x\rvert + \lvert y\rvert)$ |
-| `ldexp(x, n)`, `half(x)` | `mul_pow2_2` | UNVERIFIED | target: $z$ normalized, $\lvert z - 2^n x\rvert \le \eta$ |
-| `<`, `<=`, `>`, `>=`, `==`, `!=` | `lt`, `le`, `eq` kernels | UNVERIFIED | target: the truth about the exact values |
-| `to_nearest`, `to_down`, `to_up`, `abs_upper` | `to_nearest_2`, `to_down_2`, `to_up_2`, `abs_upper_2` | UNVERIFIED | target: the exact rounding to `T` |
-| one limb: `+`, `-`, `*`, `add_fast`, `ldexp`, `half` | `add_1_1`, `mul_1_1` | UNVERIFIED | target: $\lvert z - v\rvert \le \frac{u}{1 + u}\lvert v\rvert$, plus $\tfrac12\eta$ for products |
-| one limb: `-x`, `abs`, comparisons, conversions | none | exact | the IEEE 754 operation |
-| `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` | `ball_add_1`, ..., `ball_neg_2` | UNVERIFIED | target: containment, $x \circ y \in Z$ for all $x \in X$, $y \in Y$ |
-| construction, `limb`, `sign`, `isfinite`, `is_normalized` | none | exact | by construction |
+| Operation (kernel) | Claim, proved in the real model | In the IEEE model |
+|---|---|---|
+| `x + y` (`add_2_2`) | $z$ normalized, $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\lvert x + y\rvert$ | either $z_0$ is not finite or the claim holds; $z_0$ finite when $\lvert x_0\rvert, \lvert y_0\rvert \le 2^{1022}$ (`double`) |
+| `x * y` (`mul_2_2`) | $z$ normalized, $\lvert z - xy\rvert \le 4u^2\lvert xy\rvert + \tfrac32\eta$ | either $z_0$ is not finite or the claim holds; $z_0$ finite when $\lvert xy\rvert \le 2^{1023}$ (`double`) |
+| `x + a`, `a + x` (`add_2_1`) | $z$ normalized, $\lvert z - (x + a)\rvert \le 2u^2\lvert x + a\rvert$ | either $z_0$ is not finite or the claim holds |
+| `x * a`, `a * x` (`mul_2_1`) | $z$ normalized, $\lvert z - xa\rvert \le 2u^2\lvert xa\rvert + \eta$ | either $z_0$ is not finite or the claim holds |
+| `add_fast(x, y)` (`add_fast_2_2`) | $z$ normalized, $\lvert z - (x + y)\rvert \le 3u^2(\lvert x\rvert + \lvert y\rvert)$ | either $z_0$ is not finite or the claim holds |
+| `x - y` (`sub_2_2`) | that of `x + y` | not instantiated |
+| `x - a`, `a - x` (`sub_2_1`, `sub_1_2`) | that of `x + a` | not instantiated |
+| `ldexp(x, n)`, `half(x)` (`mul_pow2_2`) | $z$ normalized, $\lvert z - 2^n x\rvert \le \eta$ | not instantiated |
+| `-x`, `abs(x)` (`neg_2`, `abs_2`) | exact, normalized | no statement yet |
+| `<`, `<=`, `>`, `>=`, `==`, `!=` (`lt`, `le`, `eq` kernels) | the truth about the exact values | no statement yet |
+| `to_nearest`, `to_down`, `to_up`, `abs_upper` (`to_nearest_2`, `to_down_2`, `to_up_2`, `abs_upper_2`) | the exact rounding to `T` | no statement yet |
+| one limb: `+`, `-`, `*`, `add_fast`, `ldexp`, `half` (`add_1_1`, `mul_1_1`) | one rounding to nearest: $\lvert z - v\rvert \le \frac{u}{1 + u}\lvert v\rvert$, plus $\tfrac12\eta$ for products | the IEEE 754 operation |
+| one limb: `-x`, `abs`, comparisons, conversions | exact (no kernel) | the IEEE 754 operation |
+| `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (`ball_add_1`, ..., `ball_neg_2`) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | no statement yet |
+| construction, `limb`, `sign`, `isfinite`, `is_normalized` | exact (no kernel) | |
 
-The proved bounds hold for every precision from the kernel's minimum on (2 to 4), so for `float`
-and `double` alike. The constants of each proved row, rounded up to `T`, are
-`kairn::traits<kairn::Expansion<T, 2>>::add`, `add_limb`, `mul` and `mul_limb`.
+The claims hold for every precision from the kernel's minimum on (at most 4), so for `float` and
+`double` alike; the thresholds of the third column are $2^{126}$ and $2^{127}$ for `float`. The
+IEEE-model theorems are checked against statements written by hand; the generator does not print
+them yet. The constants of every row with an error bound, rounded up to `T`, are in
+`kairn::traits<kairn::Expansion<T, 2>>` (`add`, `add_limb`, `add_fast`, `sub`, `sub_limb`, `mul`,
+`mul_limb`, `ldexp`) and `kairn::traits<T>`.
 
 ## Overflow and non-finite values
 
 The design returns canonical infinities and NaN the way `T` does
-([D5](../developer/design/phase0/decisions.md#d5-non-finite-results), and
-[IEEE-like results](../developer/design/milestone1.md#ieee-like-results)). **That layer is not
-written yet**: every operation today is the *finite core* of its kernel. What holds:
+([D5](../developer/design/phase0/decisions.md#d5-non-finite-results)), through *full kernels* that
+follow each core with a fix-up ([IEEE-like results](../developer/design/milestone1.md#ieee-like-results)).
+**Those are not generated yet**: every operation today calls the *finite core* of its kernel. What
+holds:
 
-- For `x + y` and `x * y`, Rocq proofs in Flocq's model of IEEE 754, overflow included, establish
-  that either the leading limb of the result is not finite, or the result is normalized and within
-  the bound above: an intermediate overflow never produces a finite wrong result. They also prove
-  that the result is finite when $\lvert x_0\rvert$ and $\lvert y_0\rvert$ are at most a quarter of
-  the overflow threshold ($2^{1022}$ for `double`) for the sum, and when $\lvert xy\rvert$ is at most
-  half of it for the product. These statements are written by hand
-  (`proofs/theories/IeeeStatementsDraft.v`), not yet generated from the claims.
-- For `x + a` and `x * a`, the bound is proved for operands whose computation does not overflow.
-  That an overflow inside them always shows in the leading limb is expected by the same argument
-  ([What is proved](../developer/design/milestone1.md#what-is-proved-about-an-arithmetic-kernel))
-  but not yet proved for these two kernels.
+- Where the third column of the table says so, an intermediate overflow never produces a finite
+  wrong result: either the leading limb of the result is not finite, or the result is normalized
+  and within its bound.
+- For `x - y`, `x - a`, `a - x` and `ldexp`, the same is expected by the same argument but not
+  proved; for the operations with comparisons, selects or steps to a neighbor (negation, `abs`,
+  comparisons, conversions, the Ball operations), nothing is stated in the IEEE model yet.
 - When the leading limb of a result is not finite, the limbs may hold any non-finite pattern, such
   as $(+\infty, \mathrm{NaN})$, not the canonical forms. With an operand that is not finite,
   nothing is claimed about the result.
 - The constructor from a `T` already returns the canonical forms: $(\pm\infty, 0)$ and
   $(\mathrm{NaN}, \mathrm{NaN})$.
 - A `Ball` has no special states yet (a NaN radius for the empty set; the whole line, radius
-  $+\infty$ and center 0), and a center that is not finite is returned as the kernel computed it.
+  $+\infty$ and center 0), and a center or radius that is not finite is returned as the kernel
+  computed it.
+- `ldexp(x, n)` takes only an `n` for which $2^n$ is a number of `T` ($-1074 \le n \le 1023$ for
+  `double`); for any other `n` the result is NaN. The two-step scaling of
+  [Milestone 1](../developer/design/milestone1.md#second-wave-kernels) is not written.
 
 ## A product written into a call
 

@@ -5,11 +5,10 @@ and ball arithmetic. Its aim is that every error bound it states carries a machi
 and that the code it ships is generated from the same description the proofs are about.
 
 **Status: pre-release. Milestone 1 is in progress, and nothing in this repository should be relied
-on yet.** The first public headers exist, for k-numbers of one and two limbs and balls around them;
-four of their arithmetic operations (the sum and the product of two-limb numbers, with each other
-and with a limb) have checked proofs, and every other operation is marked `UNVERIFIED`. Overflow
-and infinities are not handled the way the design says yet ([What holds
-today](getting-started/guarantees.md)).
+on yet.** The first public headers exist, for k-numbers of one and two limbs and balls around them,
+and the statement of each of their operations has a checked proof in a model where nothing
+overflows. At overflow less is proved, and infinities and NaN are not handled the way the design
+says yet ([What holds today](getting-started/guarantees.md)).
 
 ## What it is
 
@@ -70,9 +69,10 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
 - **Milestone 1**, in progress: `double` limbs with $k = 1$ and $2$; addition, subtraction and
   multiplication; scalar, AVX2 and NEON code; `Ball`; the generator, the Rocq proofs with gradual
   underflow, the oracle and CI. Done so far: the generator and its scalar, AVX2 and NEON output,
-  the oracle, the proofs of the error-free transformations and of the four two-limb sums and
-  products, and the scalar public headers (`Expansion` and `Ball` for $k = 1, 2$, `float` and
-  `double` limbs), whose every operation is judged by the oracle.
+  the oracle, the real-model proofs of every kernel of one and two limbs, and the scalar public
+  headers (`Expansion` and `Ball` for $k = 1, 2$, `float` and `double` limbs), whose every
+  operation is judged by the oracle. Not yet: the treatment of non-finite values, and most
+  statements at overflow.
 - The later milestones are in the [Plan](developer/design/phase0/plan.md#milestones).
 
 ## Where to go next
