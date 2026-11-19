@@ -16,12 +16,20 @@
 // 9: as 1, the friends are function templates of the plain struct of 2 (a template, no class template)
 // 10: as 6 and 4 together: no initializer, friends by reference
 // 11: Kairn's Expansion<double, 2>, the leading limb only, for comparison
+// 12: as 2, without noexcept: the plain structure of Phase 0 (experiments/phase0/k1/k1_layout.cpp)
+// 13: as 1, without noexcept
 #include <cstddef>
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #define GS_NOINLINE __declspec(noinline)
 #else
 #define GS_NOINLINE __attribute__((noinline))
+#endif
+
+#if GS_VARIANT == 12 || GS_VARIANT == 13
+#define GS_NOEXCEPT
+#else
+#define GS_NOEXCEPT noexcept
 #endif
 
 #if GS_VARIANT == 0 || GS_VARIANT == 11
@@ -34,13 +42,13 @@ inline double get(const V& x) { return x.limb[0]; }
 #elif GS_VARIANT == 11
 using V = kairn::Expansion<double, 2>;
 inline double get(const V& x) { return x.limb[0]; }
-#elif GS_VARIANT == 2
+#elif GS_VARIANT == 2 || GS_VARIANT == 12
 struct V {
     double limb[1] = {};
-    constexpr V() noexcept = default;
-    constexpr V(double x) noexcept : limb{x} {}
-    friend V operator+(V x, V y) noexcept { return V(x.limb[0] + y.limb[0]); }
-    friend V operator*(V x, V y) noexcept { return V(x.limb[0] * y.limb[0]); }
+    constexpr V() GS_NOEXCEPT = default;
+    constexpr V(double x) GS_NOEXCEPT : limb{x} {}
+    friend V operator+(V x, V y) GS_NOEXCEPT { return V(x.limb[0] + y.limb[0]); }
+    friend V operator*(V x, V y) GS_NOEXCEPT { return V(x.limb[0] * y.limb[0]); }
 };
 inline double get(const V& x) { return x.limb[0]; }
 #elif GS_VARIANT == 9
@@ -76,24 +84,24 @@ template <class T>
 struct X<T, 1> {
 #if GS_VARIANT == 6 || GS_VARIANT == 10
     T limb[1];
-    constexpr X() noexcept : limb{} {}
+    constexpr X() GS_NOEXCEPT : limb{} {}
 #elif GS_VARIANT == 7
     T limb0 = {};
-    constexpr X() noexcept = default;
+    constexpr X() GS_NOEXCEPT = default;
 #else
     T limb[1] = {};
 #if GS_VARIANT != 8
-    constexpr X() noexcept = default;
+    constexpr X() GS_NOEXCEPT = default;
 #endif
 #endif
 #if GS_VARIANT == 7
-    constexpr X(T x) noexcept : limb0{x} {}
-    T value() const noexcept { return limb0; }
+    constexpr X(T x) GS_NOEXCEPT : limb0{x} {}
+    T value() const GS_NOEXCEPT { return limb0; }
 #elif GS_VARIANT == 8
-    T value() const noexcept { return limb[0]; }
+    T value() const GS_NOEXCEPT { return limb[0]; }
 #else
-    constexpr X(T x) noexcept : limb{x} {}
-    T value() const noexcept { return limb[0]; }
+    constexpr X(T x) GS_NOEXCEPT : limb{x} {}
+    T value() const GS_NOEXCEPT { return limb[0]; }
 #endif
 #if GS_VARIANT == 8
 #define GS_MAKE(v) X{{v}}
@@ -101,20 +109,20 @@ struct X<T, 1> {
 #define GS_MAKE(v) X(v)
 #endif
 #if GS_VARIANT == 4 || GS_VARIANT == 10
-    friend X operator+(const X& x, const X& y) noexcept { return GS_MAKE(x.value() + y.value()); }
-    friend X operator*(const X& x, const X& y) noexcept { return GS_MAKE(x.value() * y.value()); }
+    friend X operator+(const X& x, const X& y) GS_NOEXCEPT { return GS_MAKE(x.value() + y.value()); }
+    friend X operator*(const X& x, const X& y) GS_NOEXCEPT { return GS_MAKE(x.value() * y.value()); }
 #elif GS_VARIANT != 5
-    friend X operator+(X x, X y) noexcept { return GS_MAKE(x.value() + y.value()); }
-    friend X operator*(X x, X y) noexcept { return GS_MAKE(x.value() * y.value()); }
+    friend X operator+(X x, X y) GS_NOEXCEPT { return GS_MAKE(x.value() + y.value()); }
+    friend X operator*(X x, X y) GS_NOEXCEPT { return GS_MAKE(x.value() * y.value()); }
 #endif
 };
 #if GS_VARIANT == 5
 template <class T>
-X<T, 1> operator+(X<T, 1> x, X<T, 1> y) noexcept {
+X<T, 1> operator+(X<T, 1> x, X<T, 1> y) GS_NOEXCEPT {
     return X<T, 1>(x.value() + y.value());
 }
 template <class T>
-X<T, 1> operator*(X<T, 1> x, X<T, 1> y) noexcept {
+X<T, 1> operator*(X<T, 1> x, X<T, 1> y) GS_NOEXCEPT {
     return X<T, 1>(x.value() * y.value());
 }
 #endif

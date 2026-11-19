@@ -495,25 +495,133 @@ def fmt_s(v):
     return '%.2f' % v if v >= 0.995 else '%.3f' % v
 
 
+# The configurations of the results page, in its order: (file stem, column title).
+COLUMNS = [('macos-clang', 'M3, Apple clang'), ('macos-gcc', 'M3, GCC 16'), ('linux-gcc', 'Zen 2, GCC 13'),
+           ('linux-clang', 'Zen 2, Clang 18'), ('windows-msvc', 'i5, MSVC')]
+LEVELS = [('O0', ('O0', 'Od'), '-O0 (MSVC /Od), NDEBUG'), ('O2', ('O2',), '-O2 (/O2), NDEBUG'),
+          ('O3', ('O3',), '-O3, NDEBUG'), ('debug', ('debug',), 'debug: -O0 -g (MSVC /Od /Z7 /RTC1), no NDEBUG')]
+BASE_UNITS = ['empty', 'kairn_std', 'std_headers', 'iostream', 'include']
+API_UNITS = ['include', 'use_e2', 'use_all', 'self_test', 'kernels_scalar', 'kernels_packed', 'runner', 'packed_runner']
+
+
 def cmd_report(args):
-    files = sorted(os.path.join(args.dir, f) for f in os.listdir(args.dir) if f.endswith('.json'))
-    runs = [json.load(open(f)) for f in files]
-    for d in runs:
-        if d.get('what') != 'run':
-            continue
-        print('\n#### %s, %s\n' % (d['machine']['description'] or d['machine']['cpu'], d['compiler']))
-        configs = list(d['configs'])
-        print('| Unit | ' + ' | '.join(configs) + ' |')
-        print('|---|' + '---:|' * len(configs))
-        by = {(r['unit'], r['config']): r for r in d['results']}
-        for u in d['units']:
+    """Markdown tables: the baselines (from the baselines run where there is one), the time of each
+    unit per level and configuration, the peak memory, the spread, the kernels and the phases."""
+    def get(stem, what):
+        path = os.path.join(args.dir, '%s-%s.json' % (what, stem))
+        return json.load(open(path)) if os.path.exists(path) else None
+
+    def table(data, unit, config):
+        if not data:
+            return None
+        for r in data['results']:
+            if r['unit'] == unit and r['config'] in config:
+                return r
+        return None
+
+    main_runs = {s: get(s, 'compile') for s, _ in COLUMNS}
+    base_runs = {s: get(s + '-baselines', 'compile') or main_runs[s] for s, _ in COLUMNS}
+    cols = [(s, t) for s, t in COLUMNS if main_runs[s]]
+
+    print('#### Baselines, at -O2 (s; peak MB)\n')
+    print('| Unit | ' + ' | '.join(t for _, t in cols) + ' |')
+    print('|---|' + '---:|' * len(cols))
+    for u in BASE_UNITS:
+        cells = []
+        for s, _ in cols:
+            r = table(base_runs[s], u, ('O2',))
+            cells.append('%s; %d' % (fmt_s(min(r['wall_s'])), round(max(r['peak_mb']))) if r else '-')
+        print('| `%s` | %s |' % (u, ' | '.join(cells)))
+    print()
+    for _, names, title in LEVELS:
+        print('#### %s: time (s)\n' % title)
+        print('| Unit | ' + ' | '.join(t for _, t in cols) + ' |')
+        print('|---|' + '---:|' * len(cols))
+        for u in API_UNITS:
             cells = []
-            for c in configs:
-                r = by[(u, c)]
-                w = sorted(r['wall_s'])
-                cells.append('%s s (+%d%%), %d MB' % (fmt_s(w[0]), round(100 * (w[-1] - w[0]) / w[0]),
-                                                       round(max(r['peak_mb']))))
-            print('| %s | %s |' % (u, ' | '.join(cells)))
+            for s, _ in cols:
+                r = table(main_runs[s], u, names)
+                cells.append(fmt_s(min(r['wall_s'])) if r else '-')
+            print('| `%s` | %s |' % (u, ' | '.join(cells)))
+        print()
+    for _, names, title in (LEVELS[1], LEVELS[3]):
+        print('#### %s: peak memory (MB)\n' % title)
+        print('| Unit | ' + ' | '.join(t for _, t in cols) + ' |')
+        print('|---|' + '---:|' * len(cols))
+        for u in API_UNITS:
+            cells = []
+            for s, _ in cols:
+                r = table(main_runs[s], u, names)
+                cells.append('%d' % round(max(r['peak_mb'])) if r else '-')
+            print('| `%s` | %s |' % (u, ' | '.join(cells)))
+        print()
+    print('#### Spread: median and maximum over the minimum, over every unit and level\n')
+    print('| Configuration | Runs | Median over minimum | Maximum over minimum |')
+    print('|---|---|---|---|')
+    for s, t in cols:
+        d = main_runs[s]
+        med = [statistics.median(r['wall_s']) / min(r['wall_s']) - 1 for r in d['results']]
+        mx = [max(r['wall_s']) / min(r['wall_s']) - 1 for r in d['results']]
+        print('| %s | %d | %d to %d%% (median %d%%) | %d to %d%% |' % (
+            t, d['reps'], round(100 * min(med)), round(100 * max(med)), round(100 * statistics.median(med)),
+            round(100 * min(mx)), round(100 * max(mx))))
+    print()
+    # The kernels: the size of each, and what it adds to kernels_scalar and kernels_packed alone.
+    sizes = get_sizes(args.dir)
+    pk = {s: get(s, 'perkernel') for s, _ in COLUMNS}
+    pcols = [(s, t) for s, t in COLUMNS if pk[s]]
+    if pk and sizes:
+        for backend in ('scalar', 'packed'):
+            print('#### What one kernel adds to `kernels_%s` alone, at -O2 (ms)\n' % backend)
+            print('| Kernel | Operations | Lines | ' + ' | '.join(t for _, t in pcols) + ' |')
+            print('|---|---:|---:|' + '---:|' * len(pcols))
+            order = sorted(sizes, key=lambda k: (-k['operations'], k['kernel']))
+            pick = order[:10] + [k for k in order if k['kernel'] == 'add_1_1']
+            base = {}
+            for s, _ in pcols:
+                rs = {r['kernel']: min(r['wall_s']) for r in pk[s]['results'] if r['backend'] == backend}
+                base[s] = rs
+            for k in pick:
+                cells = ['%+.0f' % (1000 * (base[s][k['kernel']] - base[s]['none'])) if k['kernel'] in base[s] else '-'
+                         for s, _ in pcols]
+                print('| `%s` | %d | %d | %s |' % (k['kernel'], k['operations'], k['lines'], ' | '.join(cells)))
+            cells = []
+            for s, _ in pcols:
+                main = main_runs.get(s)
+                r = table(main, 'kernels_%s' % backend, ('O2',))
+                cells.append('%+.0f' % (1000 * (min(r['wall_s']) - base[s]['none'])) if r else '-')
+            total_ops = sum(k['operations'] for k in sizes)
+            total_lines = sum(k['lines'] for k in sizes)
+            print('| all %d (the unit, from the main run) | %d | %d | %s |' % (len(sizes), total_ops, total_lines,
+                                                                            ' | '.join(cells)))
+            cells = ['%.0f' % (1000 * base[s]['none']) for s, _ in pcols]
+            print('| none (the empty table) | | | %s |' % ' | '.join(cells))
+            print()
+    ph = {s: get(s, 'phases') for s, _ in COLUMNS}
+    for s, t in COLUMNS:
+        d = ph[s]
+        if not d:
+            continue
+        print('#### Phases, %s, %s (%s; s)\n' % (t, d['config'], d['tool']))
+        keys = []
+        for r in d['results']:
+            for k in r['phases_s']:
+                if k not in keys:
+                    keys.append(k)
+        keys = [k for k in keys if not k.startswith('(timer)')][:8]
+        print('| Unit | wall | ' + ' | '.join(keys) + ' |')
+        print('|---|---:|' + '---:|' * len(keys))
+        for r in d['results']:
+            print('| `%s` | %s | %s |' % (r['unit'], fmt_s(r['wall_s']),
+                                         ' | '.join(fmt_s(r['phases_s'][k]) if k in r['phases_s'] else '-' for k in keys)))
+        print()
+
+
+def get_sizes(directory):
+    path = os.path.join(directory, 'kernel-sizes.json')
+    if os.path.exists(path):
+        return json.load(open(path))['kernels']
+    return kernel_sizes()
 
 
 def main():
