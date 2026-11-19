@@ -255,7 +255,7 @@ set(KAIRN_CROSSCHECK_SEED 0 CACHE STRING "Seed of the random cases of the cross-
 #            ball_mul_1                               fp:2:-4:0       76 176
 #   2 r 2 r  ball_add_2, ball_sub_2: radii 0, 1/8,    fp:3:-3:2      148 896 of 140 million
 #            1/2, 5/2 and cx in [1/2, 2)
-#            ball_mul_2: radii 0, eta, 3/2, cx in     fp:4:-5:1       64 728 of 1.2 billion
+#            ball_mul_2: radii 0, eta, 3/2, cx in     fp:4:-5:1       64 728 of 12.4 billion
 #            [1, 2) and cy in [1/8, 2)
 set(_toy_1 fp:11:-30:10)
 set(_toy_1_1_sum fp:5:-7:4)

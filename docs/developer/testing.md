@@ -11,7 +11,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 | Quick | `ctest`: the generator's tests without their C++ part, the oracle's own tests, the cross-checks below, the consumer checks | every push and pull request, on every platform of the CI; and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | about two minutes on a recent machine with `--parallel 4` |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
-| Brute force | `kairn-oracle brute`: long random runs, and exhaustive runs on larger toy formats, with a time budget | by hand, for now (`oracle/README.md`) | as long as it is given |
+| Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases), and the interpreter on every operand of larger toy formats, with the quick tier's guards and a time budget | by hand, on the test machines, never in CI (`tests/brute/README.md`); results in [Brute force, Milestone 1](results/brute-milestone1.md) | about 90 minutes per machine for Milestone 1 |
 
 A kernel's claims are only as good as the tests that could have refuted them, so every cross-check
 fails when it checked nothing, or less than it says: when the oracle judged no case, when an
@@ -98,7 +98,7 @@ pass or fail; on failure it also prints the command that reruns one case (below)
     | `1 r 1 r` | `ball_mul_1` | `fp:2:-4:0` | 76 176 |
 
 - **Restricted enumerations.** The two-limb balls with two operands have far too many operand
-  combinations at their minimum precision (140 million for `ball_add_2` at `fp:3:-3:2`, 1.2
+  combinations at their minimum precision (140 million for `ball_add_2` at `fp:3:-3:2`, 12.4
   billion for `ball_mul_2` at `fp:4:-5:1`). Their `interp-restricted` test enumerates every
   operand of a domain restricted by the oracle's `--restrict`, and says so in its report
   ("complete over a RESTRICTED domain"); their `interp-sampled` test runs 20 000 random cases of
