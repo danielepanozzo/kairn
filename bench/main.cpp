@@ -193,7 +193,11 @@ constexpr int kN = 256;   // elements per array: 9 arrays of 2 KB fit in any L1 
 // A normalized pair (h, l) with |h| in [2^kmin, 2^(kmax+1)) and |l| about 2^-53 |h|, renormalized
 // by fast_two_sum so that h = RN(h + l) holds exactly.
 void two_limb(Rng& r, int kmin, int kmax, double& h, double& l) {
-    const double a = r.sign() * std::ldexp(1.0 + r.u01(), r.range(kmin, kmax));
+    // One draw per statement: the order of evaluation inside an expression is unspecified, and
+    // every compiler must see the same inputs.
+    const double s = r.sign();
+    const double m = 1.0 + r.u01();
+    const double a = s * std::ldexp(m, r.range(kmin, kmax));
     const double b = a * r.sym() * 0x1p-53;
     kairn::gen::fast_two_sum(a, b, h, l);
 }
@@ -435,7 +439,9 @@ std::vector<Operand> special_operands(bool ball) {
 Operand random_operand(Rng& r, bool ball, bool large, int lo, int hi) {
     double h;
     if (large) {
-        h = r.sign() * std::ldexp(1.0 + r.u01(), r.range(lo, hi));
+        const double s = r.sign();
+        const double m = 1.0 + r.u01();
+        h = s * std::ldexp(m, r.range(lo, hi));
     } else {
         const std::uint64_t e = std::uint64_t(r.range(0, 2046)), m = r.next() & 0xfffffffffffffu;
         h = from_bits((r.next() & 0x8000000000000000u) | (e << 52) | m);
@@ -445,8 +451,15 @@ Operand random_operand(Rng& r, bool ball, bool large, int lo, int hi) {
     double rad = 0.0;
     if (ball) {
         const int kind = r.range(0, 9);
-        rad = kind == 0 ? 0.0 : kind < 7 ? std::fabs(h) * std::ldexp(r.u01(), -r.range(0, 120))
-                                         : std::ldexp(1.0 + r.u01(), r.range(-1074, 1023));
+        if (kind == 0) {
+            rad = 0.0;
+        } else if (kind < 7) {
+            const double m = r.u01();
+            rad = std::fabs(h) * std::ldexp(m, -r.range(0, 120));
+        } else {
+            const double m = 1.0 + r.u01();
+            rad = std::ldexp(m, r.range(-1074, 1023));
+        }
         if (!finite(rad)) rad = std::numeric_limits<double>::max();
     }
     return {h, l, rad};
