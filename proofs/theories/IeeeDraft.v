@@ -1,4 +1,4 @@
-(* DRAFT of the IEEE model of five kernels, written by hand in the form the generator is
+(* DRAFT of the IEEE model of eight kernels, written by hand in the form the generator is
    meant to print. Nothing in this file is a proof.
 
    What it is. proofs/gen/Model.v defines each kernel over the real numbers, in a format
@@ -30,7 +30,7 @@
    A call stays a call, as in Model.v, and the names of the values are those of the
    kernel descriptions.
 
-   The second part gives the same five kernels as straight-line programs (Program.v):
+   The second part gives the same kernels as straight-line programs (Program.v):
    the list of their operations after inlining the calls. This is the form on which the
    relation between the two models is proved (IeeeBridge.v); that each program is its
    kernel is checked there by computation. *)
@@ -113,6 +113,28 @@ Definition mul_2_2 (x0 x1 y0 y1 : float) : float * float :=
   let '(z0, z1) := fast_two_sum ch cl3 in
   (z0, z1).
 
+(* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. *)
+Definition add_2_1 (x0 x1 a : float) : float * float :=
+  let '(sh, sl) := two_sum x0 a in
+  let v := add x1 sl in
+  let '(z0, z1) := fast_two_sum sh v in
+  (z0, z1).
+
+(* mul_2_1: JMP17 Alg. 9 (DWTimesFP3); bound from MR22. *)
+Definition mul_2_1 (x0 x1 a : float) : float * float :=
+  let '(ch, cl1) := two_prod x0 a in
+  let cl3 := fma x1 a cl1 in
+  let '(z0, z1) := fast_two_sum ch cl3 in
+  (z0, z1).
+
+(* add_fast_2_2: JMP17 Alg. 5 (SloppyDWPlusDW). *)
+Definition add_fast_2_2 (x0 x1 y0 y1 : float) : float * float :=
+  let '(sh, sl) := two_sum x0 y0 in
+  let v := add x1 y1 in
+  let w := add sl v in
+  let '(z0, z1) := fast_two_sum sh w in
+  (z0, z1).
+
 End IeeeKernels.
 
 (** * The same kernels as straight-line programs *)
@@ -179,4 +201,43 @@ Definition mul_2_2_prog : list instr :=
   ; Iadd 4 9     (* 10 z0      fast_two_sum(ch, cl3) *)
   ; Isub 10 4    (* 11 z *)
   ; Isub 9 11    (* 12 z1 *)
+  ].
+
+(* inputs: 0 x0, 1 x1, 2 a *)
+Definition add_2_1_prog : list instr :=
+  [ Iadd 0 2     (*  3 sh      two_sum(x0, a) *)
+  ; Isub 3 0     (*  4 bb *)
+  ; Isub 3 4     (*  5 t0 *)
+  ; Isub 0 5     (*  6 t1 *)
+  ; Isub 2 4     (*  7 t2 *)
+  ; Iadd 6 7     (*  8 sl *)
+  ; Iadd 1 8     (*  9 v *)
+  ; Iadd 3 9     (* 10 z0      fast_two_sum(sh, v) *)
+  ; Isub 10 3    (* 11 z *)
+  ; Isub 9 11    (* 12 z1 *)
+  ].
+
+(* inputs: 0 x0, 1 x1, 2 a *)
+Definition mul_2_1_prog : list instr :=
+  [ Iprod 0 2    (*  3 ch      two_prod(x0, a) *)
+  ; Ifms 0 2 3   (*  4 cl1 *)
+  ; Ifma 1 2 4   (*  5 cl3 *)
+  ; Iadd 3 5     (*  6 z0      fast_two_sum(ch, cl3) *)
+  ; Isub 6 3     (*  7 z *)
+  ; Isub 5 7     (*  8 z1 *)
+  ].
+
+(* inputs: 0 x0, 1 x1, 2 y0, 3 y1 *)
+Definition add_fast_2_2_prog : list instr :=
+  [ Iadd 0 2     (*  4 sh      two_sum(x0, y0) *)
+  ; Isub 4 0     (*  5 bb *)
+  ; Isub 4 5     (*  6 t0 *)
+  ; Isub 0 6     (*  7 t1 *)
+  ; Isub 2 5     (*  8 t2 *)
+  ; Iadd 7 8     (*  9 sl *)
+  ; Iadd 1 3     (* 10 v *)
+  ; Iadd 9 10    (* 11 w *)
+  ; Iadd 4 11    (* 12 z0      fast_two_sum(sh, w) *)
+  ; Isub 12 4    (* 13 z *)
+  ; Isub 11 13   (* 14 z1 *)
   ].

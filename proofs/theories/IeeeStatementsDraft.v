@@ -1,6 +1,7 @@
 (* DRAFT of the statements about the IEEE model, written by hand in the form the generator
    is meant to print, one definition per statement as in proofs/gen/Statements.v. Nothing
-   in this file is a proof; the theorems are in IeeeEFT.v, IeeeAdd22.v and IeeeMul22.v.
+   in this file is a proof; the theorems are in IeeeEFT.v, IeeeAdd22.v, IeeeMul22.v and
+   IeeeMore.v.
 
    Every statement is for all precisions prec from the kernel's minimum on and all emax
    with prec < emax (Flocq's condition), for every choice of the NaN returned by each
@@ -229,3 +230,103 @@ Definition mul_2_2_ieee_finite_spec : Prop :=
                      IeeeDraft.mul_2_2_prog [x0; x1; y0; y1]) /\
   let '(z0, z1) := IeeeDraft.mul_2_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 y0 y1 in
   finite z0 /\ finite z1.
+
+(** * add_2_1, mul_2_1, add_fast_2_2 *)
+
+(* For these three kernels the first two statements are written; the third, with a
+   threshold under which nothing overflows, is not written yet. *)
+
+Definition add_2_1_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (3 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  finite x0 -> finite x1 -> finite a ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  let '(z0, z1) := IeeeDraft.add_2_1 prec emax nan_plus nan_minus x0 x1 a in
+  finite z0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeDraft.add_2_1_prog [x0; x1; a]) /\
+  finite z1 /\
+  (val z0, val z1)
+  = add_2_1 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val a).
+
+Definition add_2_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax),
+  (3 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  finite x0 -> finite x1 -> finite a ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  let '(z0, z1) := IeeeDraft.add_2_1 prec emax nan_plus nan_minus x0 x1 a in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val x0 + val x1) + val a))
+  <= 2 * u prec ^ 2 * Rabs ((val x0 + val x1) + val a).
+
+Definition mul_2_1_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  finite x0 -> finite x1 -> finite a ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  let '(z0, z1) := IeeeDraft.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a in
+  finite z0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeDraft.mul_2_1_prog [x0; x1; a]) /\
+  finite z1 /\
+  (val z0, val z1)
+  = mul_2_1 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val a).
+
+Definition mul_2_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  finite x0 -> finite x1 -> finite a ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  let '(z0, z1) := IeeeDraft.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val x0 + val x1) * val a))
+  <= 2 * u prec ^ 2 * Rabs ((val x0 + val x1) * val a) + 1 * eta (ieee_emin prec emax).
+
+Definition add_fast_2_2_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeDraft.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
+  finite z0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeDraft.add_fast_2_2_prog [x0; x1; y0; y1]) /\
+  finite z1 /\
+  (val z0, val z1)
+  = add_fast_2_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val y0) (val y1).
+
+Definition add_fast_2_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax),
+  (2 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeDraft.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val x0 + val x1) + (val y0 + val y1)))
+  <= 3 * u prec ^ 2 * (Rabs (val x0 + val x1) + Rabs (val y0 + val y1)).

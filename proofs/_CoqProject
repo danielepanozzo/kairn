@@ -36,3 +36,4 @@ theories/IeeeStatementsDraft.v
 theories/IeeeEFT.v
 theories/IeeeAdd22.v
 theories/IeeeMul22.v
+theories/IeeeMore.v
