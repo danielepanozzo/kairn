@@ -37,7 +37,7 @@ benchmarks measured, and what is still open. Each section links to the page that
 | proofs | [Proofs](../../proofs/index.md); the table below |
 | the oracle with both test tiers | An independent oracle in exact arithmetic (Python, deviation 13); a quick tier, a full tier and the brute-force tier ([Testing](../testing.md)) |
 | CI | Five workflows on hosted runners: the quick tier and the full tier on seven platform and compiler pairs (Linux x86-64 and arm64 with GCC and Clang, macOS arm64 with Apple clang, Windows x64 with MSVC and clang-cl), the generator's suite, the proofs with their audit, and the generated files and this site |
-| website skeleton | Home, Getting started, What holds today, one tutorial, 65 generated reference pages, Proofs, the developer guide |
+| website skeleton | Home, Getting started, What holds today, one tutorial, 64 generated reference pages (the 63 kernels and their index), Proofs, the developer guide |
 
 Added beyond the brief, because the tests showed they were needed:
 
@@ -232,7 +232,7 @@ on the M3 (33 to 54%) and the i5 (27 to 53%).
 [Home](../../index.md); [Getting started](../../getting-started/index.md) and
 [What holds today](../../getting-started/guarantees.md); the tutorial
 [Accurate sums and dot products](../../tutorials/accurate-sums.md), whose examples are compiled and
-run by the tests; 65 [reference](../../reference/index.md) pages generated from the claims, each
+run by the tests; 64 [reference](../../reference/index.md) pages generated from the claims (one per kernel, and their index), each
 with the statement in plain mathematics, the same statement as Rocq reads it, its theorem, its
 constants and what the brute-force runs measured; [Proofs](../../proofs/index.md), with how to
 check them yourself; the developer guide ([Architecture](../architecture.md),
