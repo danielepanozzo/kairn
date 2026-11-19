@@ -1,0 +1,52 @@
+# Temporary, for this pull request only: does Clang on Linux arm64 break the two-limb products
+# under -fno-signed-zeros with -ffp-contract=fast, as Apple clang does? Not to be merged.
+name: Experiment (temporary)
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  nsz:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Experiment, Linux arm64, Clang
+            os: ubuntu-24.04-arm
+            cxx: clang++
+          - name: Experiment, Linux x86-64, Clang
+            os: ubuntu-24.04
+            cxx: clang++ -mfma
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Kernels under the unsafe flags, judged by the oracle
+        run: |
+          ${{ matrix.cxx }} --version | head -1
+          for flags in "-O2 -fno-signed-zeros -ffp-contract=fast" "-O3 -fno-signed-zeros -ffp-contract=fast" "-O2 -fno-signed-zeros" "-O2 -ffp-contract=fast"; do
+            echo "== $flags"
+            ${{ matrix.cxx }} -std=c++20 $flags -I include -I gen/tests gen/tests/runner.cpp -o runner-x
+            for k in mul_2_2 mul_2_1 two_prod mul_2_2_full ball_mul_2 add_2_2 add_2_1 mul_1_1; do
+              python3 oracle/kairn-oracle gen $k binary64 --seed 0 --count 4000 | ./runner-x \
+                | python3 oracle/kairn-oracle check --claims gen/claims.json 2>&1 \
+                | grep -E "^kairn-oracle check|cases:" | tr '\n' ' ' | cut -c1-110
+              echo " [$k]"
+            done
+          done
+          echo "== the self-test program under the first flags"
+          cat > st.cpp <<'EOT'
+          #include <kairn/kairn.hpp>
+          #include <cstdio>
+          int main() { bool ok = kairn::self_test(); std::printf("self_test: %s\n", ok ? "ok" : "FAILED"); return 0; }
+          EOT
+          ${{ matrix.cxx }} -std=c++20 -O2 -fno-signed-zeros -ffp-contract=fast -I include st.cpp -o st && ./st
