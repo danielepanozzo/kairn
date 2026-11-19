@@ -6,6 +6,9 @@
 // no compiler sees what it computes at the call site.
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+
 #if defined(_MSC_VER) && !defined(__clang__)
 #define KB_NOINLINE __declspec(noinline)
 #define KB_COLD
@@ -42,22 +45,42 @@ struct ChainArgs {
 };
 using ChainFn = void (*)(const ChainArgs* a);
 
-// One timed function. name is "BACKEND/KIND/KERNEL/VARIANT": BACKEND scalar, packed or mpfr; KIND
-// tp, sum, prod or horner; VARIANT kairn for the generated kernel, or the name of a measurement
-// prop (props.hpp). Each variant is checked against scalar/KIND/KERNEL/kairn before it is timed.
+// The public types (api.cpp): arrays of kairn::Expansion<T, 2>, kairn::Ball<T, 2> and
+// kairn::Ball<T, 1>, as a client stores them, in a structure that api.cpp alone knows. A function
+// runs one throughput loop or one chain over the structure of its limb type, and writes its
+// results into the output part of the structure.
+using ApiFn = void (*)(void* data);
+
+// One timed function. name is "BACKEND/KIND/KERNEL/VARIANT": BACKEND scalar, packed, api (the
+// public types, double limbs), apif (float limbs) or mpfr; KIND tp, sum, prod or horner; VARIANT
+// kairn for the generated core, full for the generated full kernel, op for the public operator,
+// finite for kairn::finite::, or the name of a measurement prop (props.hpp). Each variant is
+// checked against scalar/KIND/KERNEL/kairn (api: api/KIND/KERNEL/kairn, apif: likewise) before it
+// is timed.
 struct Entry {
     const char* name;
     int lanes;        // 1 for scalar code; the register width for packed code
-    TpFn tp;          // exactly one of tp and chain is set
+    TpFn tp;          // exactly one of tp, chain and api is set
     ChainFn chain;
+    ApiFn api;
+    int bits;         // api: the width of the limb type, 64 or 32; 0 otherwise
 };
 
-// The tables of the scalar, packed and MPFR translation units, each ended by an entry with a null
-// name. The packed table is empty when the target has no packed backend, the MPFR one when MPFR
-// was not found.
+// The tables of the scalar, packed, public-type and MPFR translation units, each ended by an entry
+// with a null name. The packed table is empty when the target has no packed backend, the MPFR one
+// when MPFR was not found.
 extern const Entry scalar_entries[];
 extern const Entry packed_entries[];
 extern const char* const packed_backend;   // "avx2", "neon" or "none"
+extern const Entry api_entries[];
+
+// The structures of api.cpp: api_setup makes the operands from a fixed seed (the same with every
+// compiler), api_data returns the structure for limbs of `bits` bits, api_clear fills its outputs
+// with a NaN pattern, and api_output returns the bytes of its outputs and their number.
+void api_setup(std::uint64_t seed);
+void* api_data(int bits);
+void api_clear(int bits);
+const unsigned char* api_output(int bits, std::size_t* size);
 
 // MPFR keeps its numbers in its own arrays: mpfr_setup converts the operands of the chain and of
 // the throughput arrays once; the entries then time 106-bit mpfr_add and mpfr_mul on them, and

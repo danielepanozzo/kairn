@@ -5,11 +5,12 @@
 //
 // 1. Makes the inputs: normalized 2-limb numbers of moderate magnitude, balls with small radii,
 //    factors near 1, at run time from a fixed seed.
-// 2. Checks every timed function against the generated kernel on those inputs: bit for bit for
-//    the props and the packed code, within a tolerance for MPFR. It refuses to time anything if
-//    one check fails.
-// 3. Checks forms (a) and (b) of the full kernels against each other, and form (a) of packed code
-//    against scalar code, on random and special operands (infinities, NaN, overflow).
+// 2. Checks every timed function against the generated core on those inputs: bit for bit for the
+//    full kernels, the public operators, the props and the packed code, within a tolerance for
+//    MPFR. It refuses to time anything if one check fails.
+// 3. Checks the forms of the full kernels against each other (the generated scalar kernel, with
+//    its branch; the listing with selects; the generated packed kernel), on random and special
+//    operands (infinities, NaN, overflow), and their results against the statements.
 // 4. Times every function: calibrates a sample of about --sample-ms, then takes --reps samples of
 //    each, in rounds over all functions so that a disturbance spreads over all of them, and
 //    reports the minimum, median and maximum time per operation.
@@ -265,7 +266,7 @@ Name split(const std::string& s) {
 
 std::vector<const kb::Entry*> all_entries() {
     std::vector<const kb::Entry*> v;
-    for (const kb::Entry* t : {kb::scalar_entries, kb::packed_entries, kb::mpfr_entries})
+    for (const kb::Entry* t : {kb::scalar_entries, kb::packed_entries, kb::api_entries, kb::mpfr_entries})
         for (const kb::Entry* e = t; e->name; ++e) v.push_back(e);
     return v;
 }
@@ -275,6 +276,10 @@ const kb::Entry* find(const std::vector<const kb::Entry*>& v, const std::string&
         if (name == e->name) return e;
     return nullptr;
 }
+
+#if !defined(KAIRN_GEN_FIXUP_CALL)
+#error "kairn/gen/prelude.hpp defines KAIRN_GEN_FIXUP_CALL"
+#endif
 
 void run_tp(const kb::Entry& e, Data& d, int n = kN) {
     kb::TpFn volatile f = e.tp;
@@ -345,6 +350,25 @@ bool check_bits(const kb::Entry& e, const kb::Entry& ref, Data& d, std::string& 
     return true;
 }
 
+// A function of the public types (api.cpp) against the generated core on the same structure: every
+// byte of the outputs.
+bool check_api(const kb::Entry& e, const kb::Entry& ref, std::string& why) {
+    std::size_t size = 0;
+    kb::api_clear(ref.bits);
+    ref.api(kb::api_data(ref.bits));
+    const unsigned char* p = kb::api_output(ref.bits, &size);
+    const std::vector<unsigned char> want(p, p + size);
+    kb::api_clear(e.bits);
+    e.api(kb::api_data(e.bits));
+    p = kb::api_output(e.bits, &size);
+    for (std::size_t i = 0; i < size; ++i)
+        if (p[i] != want[i]) {
+            why = "output byte " + std::to_string(i) + " differs";
+            return false;
+        }
+    return true;
+}
+
 // MPFR rounds the exact operation to 106 bits, Kairn to within a few units of 2^-104 (relative):
 // the two agree to about 2^-100 for one operation, and to 2^-90 after a chain of 256.
 bool check_mpfr(const kb::Entry& e, const kb::Entry& ref, Data& d, std::string& why) {
@@ -402,8 +426,9 @@ bool empty_ball(double c0, double c1, double r) { return c0 != c0 && c1 != c1 &&
 
 struct FullCheck {
     std::string kernel;
-    // variants_vs_a: the variants full_fabs and full_inl of the 2-limb kernels against form (a).
-    int cases = 0, a_vs_b = 0, packed_vs_a = 0, variants_vs_a = 0, not_canonical = 0, spec = 0;
+    // sel_vs_full: the listing with selects (props.hpp) against the generated scalar kernel;
+    // packed_vs_full: the generated packed kernel against the generated scalar kernel.
+    int cases = 0, sel_vs_full = 0, packed_vs_full = 0, not_canonical = 0, spec = 0;
     int nonfinite_operand = 0, overflow = 0, finite_result = 0;
 };
 
@@ -502,20 +527,20 @@ FullCheck check_full(const std::vector<const kb::Entry*>& entries, const std::st
         f(n, x0.p, x1.p, xr.p, y0.p, y1.p, yr.p, o0.p, o1.p, orr.p);
         return true;
     };
-    run(("scalar/tp/" + kernel + "/full_sel").c_str(), a0, a1, ar);
-    run(("scalar/tp/" + kernel + "/full_br").c_str(), b0, b1, br);
-    const bool packed = run(("packed/tp/" + kernel + "/full_sel").c_str(), p0, p1, pr);
-    Buf v0(n), v1(n), vr(n), u0(n), u1(n), ur(n);
-    const bool variants = run(("scalar/tp/" + kernel + "/full_fabs").c_str(), v0, v1, vr) &&
-                          run(("scalar/tp/" + kernel + "/full_inl").c_str(), u0, u1, ur);
+    // a: the generated scalar kernel; b: the listing with selects; p: the generated packed kernel.
+    const bool have = run(("scalar/tp/" + kernel + "/full").c_str(), a0, a1, ar) &&
+                      run(("scalar/tp/" + kernel + "/full_sel").c_str(), b0, b1, br);
+    const bool packed = run(("packed/tp/" + kernel + "/full").c_str(), p0, p1, pr);
     fc.cases = n;
+    if (!have) {
+        fc.spec = n;   // a missing form is a failure
+        return fc;
+    }
     for (int i = 0; i < n; ++i) {
         const bool ab = same(a0[i], b0[i]) && same(a1[i], b1[i]) && (!ball || same(ar[i], br[i]));
         const bool pa = !packed || (same(a0[i], p0[i]) && same(a1[i], p1[i]) && (!ball || same(ar[i], pr[i])));
-        const bool va = !variants || (same(a0[i], v0[i]) && same(a1[i], v1[i]) && same(a0[i], u0[i]) && same(a1[i], u1[i]));
-        fc.a_vs_b += !ab;
-        fc.packed_vs_a += !pa;
-        fc.variants_vs_a += !va;
+        fc.sel_vs_full += !ab;
+        fc.packed_vs_full += !pa;
         const bool operands_finite = finite(x0[i]) && finite(y0[i]) && (!ball || (finite(xr[i]) && finite(yr[i])));
         fc.nonfinite_operand += !operands_finite;
         if (!ball) {
@@ -561,6 +586,10 @@ double time_calls(const Bench& b, Data& d) {
     if (b.e->tp) {
         kb::TpFn volatile f = b.e->tp;
         for (long c = 0; c < b.calls; ++c) f(kN, d.x0.p, d.x1.p, d.xr.p, d.y0.p, d.y1.p, d.yr.p, d.z0.p, d.z1.p, d.zr.p);
+    } else if (b.e->api) {
+        kb::ApiFn volatile f = b.e->api;
+        void* const data = kb::api_data(b.e->bits);
+        for (long c = 0; c < b.calls; ++c) f(data);
     } else {
         kb::ChainFn volatile f = b.e->chain;
         for (long c = 0; c < b.calls; ++c) f(b.args);
@@ -664,12 +693,14 @@ int main(int argc, char** argv) {
 
     Data d(1);
     kb::mpfr_setup(kN, d.x0.p, d.x1.p, d.y0.p, d.y1.p, &d.sum);
+    kb::api_setup(1);
 
     // 2. Every timed function against the generated kernel, on the benchmark inputs.
     int compared = 0, failed = 0;
     for (const kb::Entry* e : entries) {
         const Name nm = split(e->name);
-        const std::string ref_name = "scalar/" + nm.kind + "/" + nm.kernel + "/kairn";
+        const bool api = nm.backend == "api" || nm.backend == "apif";
+        const std::string ref_name = (api ? nm.backend : std::string("scalar")) + "/" + nm.kind + "/" + nm.kernel + "/kairn";
         const kb::Entry* ref = find(entries, ref_name);
         if (!ref) {
             std::fprintf(stderr, "check: %s has no reference %s\n", e->name, ref_name.c_str());
@@ -678,7 +709,8 @@ int main(int argc, char** argv) {
         }
         if (ref == e) continue;
         std::string why;
-        const bool ok = nm.backend == "mpfr" ? check_mpfr(*e, *ref, d, why) : check_bits(*e, *ref, d, why);
+        const bool ok = api ? check_api(*e, *ref, why)
+                        : nm.backend == "mpfr" ? check_mpfr(*e, *ref, d, why) : check_bits(*e, *ref, d, why);
         ++compared;
         if (!ok) {
             ++failed;
@@ -687,7 +719,7 @@ int main(int argc, char** argv) {
     }
     std::fprintf(stderr, "checked %d functions against the generated kernels: %d failed\n", compared, failed);
 
-    // 3. Forms (a) and (b) of the full kernels.
+    // 3. The forms of the full kernels.
     std::vector<FullCheck> full;
     int full_failed = 0;
     std::uint64_t seed = 7;
@@ -695,12 +727,11 @@ int main(int argc, char** argv) {
         full.push_back(check_full(entries, k, seed++));
         const FullCheck& f = full.back();
         std::fprintf(stderr,
-                     "%s: %d cases (%d with a non-finite operand, %d overflowing, %d finite): (a) vs (b) %d "
-                     "differ, packed (a) vs scalar (a) %d, variants vs (a) %d; %d not canonical, %d against "
-                     "the statement\n",
-                     f.kernel.c_str(), f.cases, f.nonfinite_operand, f.overflow, f.finite_result, f.a_vs_b,
-                     f.packed_vs_a, f.variants_vs_a, f.not_canonical, f.spec);
-        full_failed += f.a_vs_b + f.packed_vs_a + f.variants_vs_a + f.not_canonical + f.spec;
+                     "%s: %d cases (%d with a non-finite operand, %d overflowing, %d finite): selects vs "
+                     "generated %d differ, packed vs scalar %d; %d not canonical, %d against the statement\n",
+                     f.kernel.c_str(), f.cases, f.nonfinite_operand, f.overflow, f.finite_result, f.sel_vs_full,
+                     f.packed_vs_full, f.not_canonical, f.spec);
+        full_failed += f.sel_vs_full + f.packed_vs_full + f.not_canonical + f.spec;
     }
     if (failed || full_failed) {
         std::fprintf(stderr, "refusing to time: a check failed\n");
@@ -713,7 +744,7 @@ int main(int argc, char** argv) {
     for (const kb::Entry* e : entries) {
         if (!filter.empty() && std::string(e->name).find(filter) == std::string::npos) continue;
         const Name nm = split(e->name);
-        Bench b{e, e->tp ? nullptr : &d.args_for(nm.kind), e->tp ? kN : kN / e->lanes, 1, {}};
+        Bench b{e, e->chain ? &d.args_for(nm.kind) : nullptr, e->chain ? kN / e->lanes : kN, 1, {}};
         benches.push_back(b);
     }
     const double sample_ns = sample_ms * 1e6;
@@ -735,6 +766,7 @@ int main(int argc, char** argv) {
     out += "  \"compiler\": \"" + esc(compiler()) + "\",\n";
     out += "  \"flags\": \"" + esc(KAIRN_BENCH_FLAGS) + "\",\n";
     out += "  \"packed_backend\": \"" + std::string(kb::packed_backend) + "\",\n";
+    out += "  \"fixup_call\": " + std::to_string(KAIRN_GEN_FIXUP_CALL) + ",\n";
     out += "  \"mpfr\": \"" + esc(kb::mpfr_version_text) + "\",\n";
     out += "  \"elements\": " + std::to_string(kN) + ", \"reps\": " + std::to_string(reps) + ", \"sample_ms\": " +
            num(sample_ms) + ",\n";
@@ -744,9 +776,8 @@ int main(int argc, char** argv) {
         const FullCheck& f = full[i];
         out += std::string(i ? ", " : "") + "{\"kernel\": \"" + f.kernel + "\", \"cases\": " + std::to_string(f.cases) +
                ", \"nonfinite_operand\": " + std::to_string(f.nonfinite_operand) + ", \"overflow\": " +
-               std::to_string(f.overflow) + ", \"finite\": " + std::to_string(f.finite_result) + ", \"a_vs_b\": " +
-               std::to_string(f.a_vs_b) + ", \"packed_vs_a\": " + std::to_string(f.packed_vs_a) +
-               ", \"variants_vs_a\": " + std::to_string(f.variants_vs_a) +
+               std::to_string(f.overflow) + ", \"finite\": " + std::to_string(f.finite_result) + ", \"sel_vs_full\": " +
+               std::to_string(f.sel_vs_full) + ", \"packed_vs_full\": " + std::to_string(f.packed_vs_full) +
                ", \"not_canonical\": " + std::to_string(f.not_canonical) + ", \"against_statement\": " +
                std::to_string(f.spec) + "}";
     }
