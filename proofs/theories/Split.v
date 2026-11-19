@@ -5,8 +5,8 @@
        ah = RN (g + d)              al = RN (a - ah)
 
    What is proved here, for every format with gradual underflow, prec >= 4, every emin, and
-   ties to even (split_parts, split_products; split_correct_draft is item 1 alone, in the
-   shape of the generated statement):
+   ties to even (split_parts, split_products; split_correct is item 1 alone, the generated
+   statement split_spec of proofs/gen/Statements.v):
      1. ah + al = a exactly, and ah, al are numbers of F;
      2. ah is a rounded to nearest, ties to even, in the format of precision
         prec - s = floor(prec / 2) with the same eta; so ah has at most floor(prec / 2)
@@ -38,17 +38,6 @@ From Flocq Require Import Core Pff2Flocq.
 From Kairn.Gen Require Import Model Statements.
 From Kairn Require Import Format Normalized.
 Open Scope R_scope.
-
-(** * The statement in the shape of the generated one *)
-
-(* proofs/gen/Statements.v has split_spec with a placeholder minimum precision; this is the
-   same statement with the minimum precision for which it is proved. *)
-Definition split_spec' : Prop :=
-  forall emin prec : Z, (4 <= prec)%Z ->
-  forall a : R,
-  fmt emin prec a ->
-  let '(ah, al) := split emin prec tie_even a in
-  (ah + al) = a.
 
 (** * The exponent of the splitter *)
 
@@ -581,8 +570,8 @@ repeat split.
   unfold Prec_gt_0; lia. lia. now apply FLX_format_mult.
 Qed.
 
-(* The statement in the generated shape. *)
-Theorem split_correct_draft : split_spec'.
+(* The generated statement: item 1. *)
+Theorem split_correct : split_spec.
 Proof.
 intros emin prec Hp a Fa.
 generalize (split_sum emin prec Hp a Fa).

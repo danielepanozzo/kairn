@@ -6,8 +6,11 @@ output:        mask m
 value:         a-y
 requires:      normalized y
 ensures:       predicate m lt a y
+min_precision: 1
+theorem:       proofs/theories/Compare.v lt_1_2_correct
 source:        limbs compared in order (Milestone 1 listing)
-status:        unverified
+license:       algorithm and proof: MIT
+status:        proved
 cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; the non-finite layer tests the operands
 
 h = lt(a, y0)

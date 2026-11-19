@@ -9,7 +9,10 @@ output:        s
 value:         a+b
 ensures:       rounded s nearest
 ensures:       error s R c=1/(1+u) k=1 t=0
+min_precision: 1
+theorem:       proofs/theories/OneLimb.v add_1_1_correct
 source:        one rounding to nearest
-status:        unverified
+license:       bound: published; proof: MIT
+status:        proved
 
 s = add(a, b)

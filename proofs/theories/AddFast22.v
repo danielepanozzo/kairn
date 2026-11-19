@@ -6,7 +6,8 @@
        w        = RN(sl + v)
        (z0, z1) = fast_two_sum(sh, w)
 
-   Statement proved (add_fast_2_2_correct_c3): for x and y normalized, in any format with
+   Statement proved (add_fast_2_2_correct, the generated add_fast_2_2_spec of
+   proofs/gen/Statements.v): for x and y normalized, in any format with
    gradual underflow and precision at least 2, the result z is normalized and
        |z - (x + y)| <= 3 u^2 (|x| + |y|),
    with no underflow term. The bound is relative to |x| + |y|, not to |x + y|: when the
@@ -46,29 +47,6 @@ From Double Require Import F2Sum DWPlus.
 From Kairn.Gen Require Import Model Statements.
 From Kairn Require Import Format Transfer EFT.
 Open Scope R_scope.
-
-(** * The statements proved in this file *)
-
-(* The generated statement add_fast_2_2_spec (proofs/gen/Statements.v) with its provisional
-   constant 4, and the minimum precision 2 in place of the placeholder 1. *)
-Definition add_fast_2_2_spec_draft : Prop :=
-  forall emin prec : Z, (2 <= prec)%Z ->
-  forall x0 x1 y0 y1 : R,
-  normalized_2 emin prec x0 x1 ->
-  normalized_2 emin prec y0 y1 ->
-  let '(z0, z1) := add_fast_2_2 emin prec tie_even x0 x1 y0 y1 in
-  normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= 4 * u prec ^ 2 * (Rabs (x0 + x1) + Rabs (y0 + y1)).
-
-(* The same with the constant 3: the statement proposed for the kernel. *)
-Definition add_fast_2_2_spec_c3 : Prop :=
-  forall emin prec : Z, (2 <= prec)%Z ->
-  forall x0 x1 y0 y1 : R,
-  normalized_2 emin prec x0 x1 ->
-  normalized_2 emin prec y0 y1 ->
-  let '(z0, z1) := add_fast_2_2 emin prec tie_even x0 x1 y0 y1 in
-  normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= 3 * u prec ^ 2 * (Rabs (x0 + x1) + Rabs (y0 + y1)).
 
 (** * Real-number facts *)
 
@@ -454,9 +432,9 @@ Qed.
 
 End WithUnderflow.
 
-(** * The statements *)
+(** * The statement *)
 
-Theorem add_fast_2_2_correct_c3 : add_fast_2_2_spec_c3.
+Theorem add_fast_2_2_correct : add_fast_2_2_spec.
 Proof.
 intros emin prec Hp x0 x1 y0 y1 [F0 [F1 Hx]] [G0 [G1 Hy]].
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
@@ -490,17 +468,4 @@ intros Hc [_ Hz] Hb. split.
           - (x0 + y0 - round radix2 (FLX_exp prec) (Znearest tie_even) (x0 + y0) + (x1 + y1)))
     by (rewrite Hc; ring).
   exact Hb.
-Qed.
-
-(* The generated statement with its provisional constant 4 follows. *)
-Theorem add_fast_2_2_correct_draft : add_fast_2_2_spec_draft.
-Proof.
-intros emin prec Hp x0 x1 y0 y1 Nx Ny.
-generalize (add_fast_2_2_correct_c3 emin prec Hp x0 x1 y0 y1 Nx Ny).
-destruct (add_fast_2_2 emin prec tie_even x0 x1 y0 y1) as [z0 z1].
-intros [Hn Hb]. split; trivial.
-apply Rle_trans with (1 := Hb).
-apply Rmult_le_compat_r.
-- generalize (Rabs_pos (x0 + x1)) (Rabs_pos (y0 + y1)). lra.
-- assert (0 <= u prec ^ 2) by (apply pow_le, bpow_ge_0). lra.
 Qed.

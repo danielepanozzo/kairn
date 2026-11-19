@@ -96,7 +96,8 @@ class Claims(unittest.TestCase):
         self.assertEqual(self.by['lt_2_1']['instances'], {'binary64': [], 'binary32': []})
         self.assertEqual(self.by['abs_upper_2']['value'], 'abs(x)')
         self.assertEqual(self.by['abs_upper_2']['ensures'], [{'kind': 'rounded', 'of': 't', 'mode': 'up'}])
-        self.assertEqual(self.by['radd']['ensures'], [{'kind': 'upper', 'of': 'r', 'gaps': '2'}])
+        self.assertEqual(self.by['radd']['ensures'], [{'kind': 'upper', 'of': 'r', 'gaps': '3/2'}])
+        self.assertEqual(self.by['radd']['requires'], ['nonneg(a)', 'nonneg(b)'])
         self.assertEqual(self.by['mul_pow2_2']['requires'], ['normalized(x)', 'power_of_two(c)'])
         b = self.by['ball_mul_2']
         self.assertEqual(b['inputs'], [{'name': 'cx', 'limbs': 2}, {'name': 'rx', 'limbs': 1},
@@ -134,7 +135,7 @@ class Claims(unittest.TestCase):
         tp = self.by['two_prod']['instances']['binary64']
         self.assertEqual([Fraction(x['abs']) for x in tp], [Fraction(1, 2 ** 1075), 0])
         self.assertEqual(Fraction(self.by['two_prod_dekker']['instances']['binary32'][0]['abs']),
-                         Fraction(7, 2 ** 150))
+                         Fraction(13, 2 ** 152))       # (13/8) eta, eta = 2^-149
         self.assertEqual(Fraction(self.by['mul_2_1']['instances']['binary64'][0]['abs']), Fraction(1, 2 ** 1074))
         self.assertEqual(Fraction(self.by['two_sum']['instances']['binary64'][0]['rel']), 0)
         u = Fraction(1, 2 ** 53)

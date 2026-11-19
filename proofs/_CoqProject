@@ -23,6 +23,11 @@ theories/AddFast22.v
 theories/Split.v
 theories/TwoProdDekker.v
 theories/Directed.v
+theories/Sign.v
+theories/Compare.v
+theories/Convert.v
+theories/OneLimb.v
+theories/MulPow2.v
 theories/Program.v
 theories/IeeeDraft.v
 theories/IeeeBridge.v

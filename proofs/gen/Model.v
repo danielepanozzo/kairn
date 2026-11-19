@@ -224,20 +224,12 @@ Definition add_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(z0, z1) := fast_two_sum vh w in
   (z0, z1).
 
-(* add_fast_2_2: JMP17 Alg. 5 (SloppyDWPlusDW). *)
+(* add_fast_2_2: JMP17 Alg. 5 (SloppyDWPlusDW); the bound and the normalization are proved here. *)
 Definition add_fast_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(sh, sl) := two_sum x0 y0 in
   let v := rnd (x1 + y1) in
   let w := rnd (sl + v) in
   let '(z0, z1) := fast_two_sum sh w in
-  (z0, z1).
-
-(* add_fast_2_2_ts: JMP17 Alg. 5 (SloppyDWPlusDW), ending with TwoSum. *)
-Definition add_fast_2_2_ts (x0 x1 y0 y1 : R) : R * R :=
-  let '(sh, sl) := two_sum x0 y0 in
-  let v := rnd (x1 + y1) in
-  let w := rnd (sl + v) in
-  let '(z0, z1) := two_sum sh w in
   (z0, z1).
 
 (* ball_add_2: midpoint-radius sum (Milestone 1 listing). *)

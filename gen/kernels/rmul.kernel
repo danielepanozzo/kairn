@@ -1,13 +1,20 @@
-# An upper bound of a b, for radii: the rounded product, one step up. The number of gaps is
-# provisional (at most 2; 3/2 expected for nonnegative operands).
+# An upper bound of a b, for radii: the rounded product, one step up. For nonnegative operands it
+# exceeds the exact product by at most 3/2 gaps, which is sharp (a product halfway between two
+# numbers of the format that rounds up). For operands of any sign exhaustive runs give 2; not
+# claimed.
 kernel:        rmul
 input:         a
 input:         b
 output:        r
 value:         a*b
-ensures:       upper r gaps=2
+requires:      nonneg a
+requires:      nonneg b
+ensures:       upper r gaps=3/2
+min_precision: 2
+theorem:       proofs/theories/Directed.v rmul_correct
 source:        one step up from the rounded product (Milestone 1 listing)
-status:        unverified
+license:       algorithm and proof: MIT
+status:        proved
 cone_exempt:   r = succ(p), and succ(-inf) is finite; r is a radius, and the ball layer tests radii for non-finite values (Milestone 1 statements, Ball kernels)
 
 p = prod(a, b)

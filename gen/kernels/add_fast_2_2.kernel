@@ -1,6 +1,6 @@
-# SloppyDWPlusDW, ending with Fast2Sum. Whether the result is still normalized when the leading
-# limbs cancel is settled by exhaustive tests (the alternative ending is add_fast_2_2_ts). The
-# constant c is provisional.
+# SloppyDWPlusDW, ending with Fast2Sum. The result is normalized even when the leading limbs
+# cancel, and the error is at most 3 u^2 (|x| + |y|), with no underflow term: both are proved
+# (proofs/theories/AddFast22.v). The bound is relative to |x| + |y|, not to |x + y|.
 kernel:        add_fast_2_2
 input:         x = x0 x1
 input:         y = y0 y1
@@ -9,11 +9,12 @@ value:         x+y
 requires:      normalized x
 requires:      normalized y
 ensures:       normalized z
-ensures:       error z A c=4 k=2 t=0
+ensures:       error z A c=3 k=2 t=0
+min_precision: 2
 theorem:       proofs/theories/AddFast22.v add_fast_2_2_correct
-source:        JMP17 Alg. 5 (SloppyDWPlusDW)
+source:        JMP17 Alg. 5 (SloppyDWPlusDW); the bound and the normalization are proved here
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 
 (sh, sl) = two_sum(x0, y0)
 v        = add(x1, y1)

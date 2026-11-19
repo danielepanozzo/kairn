@@ -5,8 +5,11 @@ output:        t
 value:         abs(x)
 requires:      normalized x
 ensures:       rounded t up
+min_precision: 1
+theorem:       proofs/theories/Convert.v abs_upper_2_correct
 source:        abs_2, then to_up_2 (Milestone 1 listing)
-status:        unverified
+license:       algorithm and proof: MIT
+status:        proved
 cone_exempt:   through abs_2 and to_up_2, which select and step to a neighbor; the non-finite layer tests x0 itself
 
 (a0, a1) = abs_2(x0, x1)

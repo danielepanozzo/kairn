@@ -6,8 +6,11 @@ output:        t
 value:         x
 requires:      normalized x
 ensures:       rounded t up
+min_precision: 1
+theorem:       proofs/theories/Convert.v to_up_2_correct
 source:        the sign of x1 (Milestone 1 listing)
-status:        unverified
+license:       algorithm and proof: MIT
+status:        proved
 cone_exempt:   t is x0 or succ(x0), chosen by select, and succ(-inf) is finite; the non-finite layer tests x0 itself
 
 m = lt(0, x1)

@@ -7,8 +7,11 @@ value:         abs(x)
 requires:      normalized x
 ensures:       normalized z
 ensures:       error z R c=0 k=2 t=0
+min_precision: 1
+theorem:       proofs/theories/Sign.v abs_2_correct
 source:        the sign of x0 (Milestone 1 listing)
-status:        unverified
+license:       algorithm and proof: MIT
+status:        proved
 cone_exempt:   the limbs reach the outputs through select; each output limb is an input limb up to sign, so it is non-finite exactly when that input limb is, and the non-finite layer tests the operand
 
 m  = lt(x0, 0)

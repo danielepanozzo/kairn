@@ -438,7 +438,7 @@ class TheKernels(unittest.TestCase):
             self.assertTrue(common.kernels(d))
 
     FIRST_WAVE = {'two_sum', 'fast_two_sum', 'two_prod', 'split', 'two_prod_dekker', 'add_2_2', 'add_2_1',
-                  'mul_2_2', 'mul_2_1', 'add_fast_2_2', 'add_fast_2_2_ts'}
+                  'mul_2_2', 'mul_2_1', 'add_fast_2_2'}
     # docs/developer/design/milestone1.md, "Second-wave kernels" and "Ball kernels", and the two
     # one-rounding kernels whose claims give the one-limb balls their constants.
     SECOND_WAVE = {'neg_2', 'abs_2', 'sub_2_2', 'sub_2_1', 'sub_1_2', 'lt_2_2', 'le_2_2', 'eq_2_2', 'lt_2_1',
@@ -446,6 +446,8 @@ class TheKernels(unittest.TestCase):
                    'abs_upper_2', 'radd', 'rmul', 'mul_pow2_2', 'ball_add_1', 'ball_add_2', 'ball_mul_1',
                    'ball_mul_2', 'ball_scale_1', 'ball_scale_2', 'ball_neg_1', 'ball_neg_2', 'ball_sub_1',
                    'ball_sub_2', 'add_1_1', 'mul_1_1'}
+    BALLS = {'ball_add_1', 'ball_add_2', 'ball_mul_1', 'ball_mul_2', 'ball_scale_1', 'ball_scale_2',
+             'ball_neg_1', 'ball_neg_2', 'ball_sub_1', 'ball_sub_2'}
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -461,15 +463,22 @@ class TheKernels(unittest.TestCase):
         self.assertEqual(body['split'], [
             (('g',), 'prod', ('const splitter', 'a')), (('d',), 'sub', ('a', 'g')),
             (('ah',), 'add', ('g', 'd')), (('al',), 'sub', ('a', 'ah'))])
+        # add_fast_2_2 ends with Fast2Sum: its normalization is proved, so there is no variant
+        # ending with TwoSum.
         self.assertEqual(body['add_fast_2_2'][-1], (('z0', 'z1'), 'fast_two_sum', ('sh', 'w')))
-        self.assertEqual(body['add_fast_2_2_ts'][-1], (('z0', 'z1'), 'two_sum', ('sh', 'w')))
-        self.assertEqual(body['add_fast_2_2'][:-1], body['add_fast_2_2_ts'][:-1])
         # Proved means: the audit passes for that kernel (make -C proofs).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         {'two_sum', 'fast_two_sum', 'two_prod', 'add_2_2', 'add_2_1', 'mul_2_2', 'mul_2_1'})
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
-                         {'split', 'two_prod_dekker', 'add_fast_2_2', 'add_fast_2_2_ts'} | self.SECOND_WAVE)
+                         (self.FIRST_WAVE | self.SECOND_WAVE) - self.BALLS)
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.BALLS)
         self.assertEqual(ks['two_prod'].ce_variant, 'two_prod_dekker')
+        # The smallest precision from which each proved statement holds.
+        self.assertEqual({name: k.min_precision for name, k in ks.items() if k.status == 'proved'}, {
+            'two_sum': 2, 'fast_two_sum': 2, 'two_prod': 2, 'split': 4, 'two_prod_dekker': 4,
+            'add_2_2': 3, 'add_2_1': 3, 'mul_2_2': 4, 'mul_2_1': 2, 'add_fast_2_2': 2,
+            'neg_2': 1, 'abs_2': 1, 'sub_2_2': 3, 'sub_2_1': 3, 'sub_1_2': 3,
+            'lt_2_2': 1, 'le_2_2': 1, 'eq_2_2': 1, 'lt_2_1': 1, 'le_2_1': 1, 'eq_2_1': 1, 'lt_1_2': 1,
+            'le_1_2': 1, 'to_nearest_2': 1, 'to_down_2': 1, 'to_up_2': 1, 'abs_upper_2': 1,
+            'radd': 2, 'rmul': 2, 'mul_pow2_2': 2, 'add_1_1': 1, 'mul_1_1': 1})
 
     def test_second_wave_bodies_are_those_of_milestone1_md(self):
         ks = common.kernels()

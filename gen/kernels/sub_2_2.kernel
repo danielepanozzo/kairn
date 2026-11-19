@@ -9,8 +9,10 @@ requires:      normalized y
 ensures:       normalized z
 ensures:       error z R c=3/(1-4*u) k=2 t=0
 min_precision: 3
+theorem:       proofs/theories/Sign.v sub_2_2_correct
 source:        add_2_2 (JMP17 Alg. 6) on -y
-status:        unverified
+license:       algorithm: published; proof: MIT
+status:        proved
 
 n0       = neg(y0)
 n1       = neg(y1)

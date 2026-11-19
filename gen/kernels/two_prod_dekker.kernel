@@ -1,17 +1,19 @@
 # Dekker's product: TwoProd without an FMA, the constant-evaluation variant of two_prod. It requires
-# that no intermediate overflows.
+# that no intermediate overflows. The underflow term (13/8) eta is the proved one (the source has
+# 7/2); exhaustive runs on toy formats approach it.
 kernel:        two_prod_dekker
 input:         a
 input:         b
 output:        r = p e
 value:         a*b
 ensures:       leading_rounded r
-ensures:       error r R c=0 k=2 t=7/2
+ensures:       error r R c=0 k=2 t=13/8
 ensures:       error r R c=0 k=2 t=0 when=product_large
+min_precision: 4
 theorem:       proofs/theories/TwoProdDekker.v two_prod_dekker_correct
 source:        Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 cone_exempt:   the splits of a and b can overflow while p = RN(ab) is finite, which is why the kernel requires that no intermediate overflows; it runs in constant evaluation, where an overflow or a NaN is not a constant expression (GCC and Clang reject the program)
 
 (ah, al) = split(a)

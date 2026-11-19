@@ -8,7 +8,8 @@
        t3 = RN (t2 + RN (al bh))
        e  = RN (t3 + RN (al bl))
 
-   Statement proved (two_prod_dekker_correct_draft), for every format with gradual
+   Statement proved (two_prod_dekker_correct, the generated two_prod_dekker_spec of
+   proofs/gen/Statements.v), for every format with gradual
    underflow, prec >= 4, every emin, ties to even, exponents unbounded above:
        p = RN (a b);
        |p + e - a b| <= 13/8 eta;
@@ -20,7 +21,7 @@
      sequence of operations with eta < 1 (emin < 0). The condition on emin is removed here
      by scaling one operand by a power of two (two_prod_dekker_scale): the kernel run on
      (2^k a, b) in the format with smallest number 2^k eta returns 2^k times what it
-     returns on (a, b) in F. This gives two_prod_dekker_correct_7_2.
+     returns on (a, b) in F. This gives two_prod_dekker_exact.
    - The constant 13/8 is new here (section Tight). The 7/2 of the source charges eta/2 to
      each of the four partial products and to three of the sums. In fact, below the
      threshold, either the sums are all exact, and the defect is the sum of the rounding
@@ -48,31 +49,6 @@ From Flocq Require Import Core Plus_error Pff2Flocq.
 From Kairn.Gen Require Import Model Statements.
 From Kairn Require Import Format Split.
 Open Scope R_scope.
-
-(** * The statements in the shape of the generated one *)
-
-(* proofs/gen/Statements.v has two_prod_dekker_spec with a placeholder minimum precision and
-   the constant 7/2. This is the statement proved here: minimum precision 4, constant 13/8. *)
-Definition two_prod_dekker_spec' : Prop :=
-  forall emin prec : Z, (4 <= prec)%Z ->
-  forall a b : R,
-  fmt emin prec a ->
-  fmt emin prec b ->
-  let '(p, e) := two_prod_dekker emin prec tie_even a b in
-  p = RN emin prec (a * b) /\
-  Rabs ((p + e) - (a * b)) <= (13 / 8) * eta emin /\
-  (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).
-
-(* The same with the constant 7/2 of the source (Flocq's theorem, extended to every emin). *)
-Definition two_prod_dekker_spec_7_2 : Prop :=
-  forall emin prec : Z, (4 <= prec)%Z ->
-  forall a b : R,
-  fmt emin prec a ->
-  fmt emin prec b ->
-  let '(p, e) := two_prod_dekker emin prec tie_even a b in
-  p = RN emin prec (a * b) /\
-  Rabs ((p + e) - (a * b)) <= (7 / 2) * eta emin /\
-  (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).
 
 (** * The kernel in Flocq's terms, and scaling *)
 
@@ -545,22 +521,13 @@ destruct (Z_lt_le_dec (mag radix2 a - prec + (mag radix2 b - prec) + split_s pre
   + generalize (bpow_ge_0 radix2 emin). lra.
 Qed.
 
-(** * The statements *)
+(** * The statement *)
 
-Theorem two_prod_dekker_correct_draft : two_prod_dekker_spec'.
+Theorem two_prod_dekker_correct : two_prod_dekker_spec.
 Proof.
 intros emin prec Hp a b Fa Fb.
 generalize (two_prod_dekker_exact emin prec Hp a b Fa Fb)
            (two_prod_dekker_defect emin prec Hp a b Fa Fb).
 destruct (two_prod_dekker emin prec tie_even a b) as [p e]. cbn [fst snd].
 intros [H1 [_ H3]] H2. repeat split; trivial.
-Qed.
-
-(* With the constant of the source, as in the statement generated so far. *)
-Theorem two_prod_dekker_correct_7_2 : two_prod_dekker_spec_7_2.
-Proof.
-intros emin prec Hp a b Fa Fb.
-generalize (two_prod_dekker_exact emin prec Hp a b Fa Fb).
-destruct (two_prod_dekker emin prec tie_even a b) as [p e]. cbn [fst snd].
-intros [H1 [H2 H3]]. repeat split; trivial.
 Qed.

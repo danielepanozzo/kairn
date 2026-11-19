@@ -5,8 +5,11 @@ output:        t
 value:         x
 requires:      normalized x
 ensures:       rounded t nearest
+min_precision: 1
+theorem:       proofs/theories/Convert.v to_nearest_2_correct
 source:        the definition of normalized (Milestone 1 listing)
-status:        unverified
+license:       algorithm and proof: MIT
+status:        proved
 unused:        x1 for a normalized x, x0 is RN(x) already
 cone_exempt:   x1 is not used; a non-finite x1 beside a finite x0 is not a normalized operand, so the non-finite layer, which reads x0, stands in for the check
 

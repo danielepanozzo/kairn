@@ -1,14 +1,16 @@
 # Veltkamp's split: a = ah + al exactly, with ah on the upper half of the precision. Used by
-# Dekker's product.
+# Dekker's product. Proved from precision 4 on (the source's condition on the splitter's
+# exponent); exhaustive runs find it true from precision 1.
 kernel:        split
 input:         a
 output:        r = ah al
 value:         a
 ensures:       error r R c=0 k=2 t=0
+min_precision: 4
 theorem:       proofs/theories/Split.v split_correct
 source:        Veltkamp's split (Dekker 1971)
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 
 g  = prod(const splitter, a)
 d  = sub(a, g)

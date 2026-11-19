@@ -13,7 +13,7 @@
 namespace kairn::gen {
 
 // add_1_1(a, b) -> s
-// one rounding to nearest. Status: unverified; constexpr.
+// one rounding to nearest. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_1_1(double a, double b, double& s_out) noexcept {
     const double s = a + b;
     s_out = s;
@@ -24,7 +24,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_1_1(float a, float b, float& s_out) noe
 }
 
 // rmul(a, b) -> r
-// one step up from the rounded product (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// one step up from the rounded product (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void rmul(double a, double b, double& r_out) noexcept {
     const double p = fma_rn(a, b, 0.0);
     const double r = next_up(p);
@@ -37,7 +37,7 @@ KAIRN_GEN_FORCEINLINE void rmul(float a, float b, float& r_out) noexcept {
 }
 
 // radd(a, b) -> r
-// one step up from the rounded sum (Milestone 1 listing). Status: unverified; constexpr.
+// one step up from the rounded sum (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void radd(double a, double b, double& r_out) noexcept {
     const double s = a + b;
     const double r = next_up(s);
@@ -260,7 +260,7 @@ KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum(float a, float b, float& s_out
 }
 
 // mul_1_1(a, b) -> p
-// one rounding to nearest. Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// one rounding to nearest. Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_1_1(double a, double b, double& p_out) noexcept {
     const double p = fma_rn(a, b, 0.0);
     p_out = p;
@@ -271,7 +271,7 @@ KAIRN_GEN_FORCEINLINE void mul_1_1(float a, float b, float& p_out) noexcept {
 }
 
 // split(a) -> r = (ah, al)
-// Veltkamp's split (Dekker 1971). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// Veltkamp's split (Dekker 1971). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void split(double a, double& ah_out, double& al_out) noexcept {
     const double g = fma_rn(0x1.0000002p+27, a, 0.0);
     const double d = a - g;
@@ -355,7 +355,7 @@ KAIRN_GEN_FORCEINLINE constexpr void two_prod(float a, float b, float& p_out, fl
 }
 
 // two_prod_dekker(a, b) -> r = (p, e)
-// Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11. Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11. Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void two_prod_dekker(double a, double b, double& p_out, double& e_out) noexcept {
     // (ah, al) = split(a)
     const double ah_g = fma_rn(0x1.0000002p+27, a, 0.0);
@@ -427,7 +427,7 @@ KAIRN_GEN_FORCEINLINE constexpr void two_sum(float a, float b, float& s_out, flo
 }
 
 // abs_2(x = (x0, x1)) -> z = (z0, z1)
-// the sign of x0 (Milestone 1 listing). Status: unverified; constexpr.
+// the sign of x0 (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void abs_2(double x0, double x1, double& z0_out, double& z1_out) noexcept {
     const bool m = x0 < 0.0;
     const double n0 = -x0;
@@ -448,7 +448,7 @@ KAIRN_GEN_FORCEINLINE constexpr void abs_2(float x0, float x1, float& z0_out, fl
 }
 
 // to_up_2(x = (x0, x1)) -> t
-// the sign of x1 (Milestone 1 listing). Status: unverified; constexpr.
+// the sign of x1 (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void to_up_2(double x0, double x1, double& t_out) noexcept {
     const bool m = 0.0 < x1;
     const double s = next_up(x0);
@@ -463,7 +463,7 @@ KAIRN_GEN_FORCEINLINE constexpr void to_up_2(float x0, float x1, float& t_out) n
 }
 
 // abs_upper_2(x = (x0, x1)) -> t
-// abs_2, then to_up_2 (Milestone 1 listing). Status: unverified; constexpr.
+// abs_2, then to_up_2 (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void abs_upper_2(double x0, double x1, double& t_out) noexcept {
     // (a0, a1) = abs_2(x0, x1)
     const bool a0_m = x0 < 0.0;
@@ -586,7 +586,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_2(float x0, float x1, float y0, float
 }
 
 // add_fast_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// JMP17 Alg. 5 (SloppyDWPlusDW). Status: unverified; constexpr.
+// JMP17 Alg. 5 (SloppyDWPlusDW); the bound and the normalization are proved here. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
     // (sh, sl) = two_sum(x0, y0)
     const double sh = x0 + y0;
@@ -618,49 +618,6 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2(float x0, float x1, float y0, 
     const float z0 = sh + w;
     const float z0_z = z0 - sh;
     const float z1 = w - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-
-// add_fast_2_2_ts(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// JMP17 Alg. 5 (SloppyDWPlusDW), ending with TwoSum. Status: unverified; constexpr.
-KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_ts(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
-    // (sh, sl) = two_sum(x0, y0)
-    const double sh = x0 + y0;
-    const double sh_bb = sh - x0;
-    const double sh_t0 = sh - sh_bb;
-    const double sh_t1 = x0 - sh_t0;
-    const double sh_t2 = y0 - sh_bb;
-    const double sl = sh_t1 + sh_t2;
-    const double v = x1 + y1;
-    const double w = sl + v;
-    // (z0, z1) = two_sum(sh, w)
-    const double z0 = sh + w;
-    const double z0_bb = z0 - sh;
-    const double z0_t0 = z0 - z0_bb;
-    const double z0_t1 = sh - z0_t0;
-    const double z0_t2 = w - z0_bb;
-    const double z1 = z0_t1 + z0_t2;
-    z0_out = z0;
-    z1_out = z1;
-}
-KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_ts(float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
-    // (sh, sl) = two_sum(x0, y0)
-    const float sh = x0 + y0;
-    const float sh_bb = sh - x0;
-    const float sh_t0 = sh - sh_bb;
-    const float sh_t1 = x0 - sh_t0;
-    const float sh_t2 = y0 - sh_bb;
-    const float sl = sh_t1 + sh_t2;
-    const float v = x1 + y1;
-    const float w = sl + v;
-    // (z0, z1) = two_sum(sh, w)
-    const float z0 = sh + w;
-    const float z0_bb = z0 - sh;
-    const float z0_t0 = z0 - z0_bb;
-    const float z0_t1 = sh - z0_t0;
-    const float z0_t2 = w - z0_bb;
-    const float z1 = z0_t1 + z0_t2;
     z0_out = z0;
     z1_out = z1;
 }
@@ -953,7 +910,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2(float cx0, float cx1, float rx, float cy0,
 }
 
 // neg_2(x = (x0, x1)) -> z = (z0, z1)
-// limb by limb (Milestone 1 listing). Status: unverified; constexpr.
+// limb by limb (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void neg_2(double x0, double x1, double& z0_out, double& z1_out) noexcept {
     const double z0 = -x0;
     const double z1 = -x1;
@@ -1206,7 +1163,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2(float cx0, float cx1, float rx, float cy0,
 }
 
 // eq_2_1(x = (x0, x1), a) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void eq_2_1(double x0, double x1, double a, bool& m_out) noexcept {
     const bool h = x0 == a;
     const bool l = x1 == 0.0;
@@ -1221,7 +1178,7 @@ KAIRN_GEN_FORCEINLINE constexpr void eq_2_1(float x0, float x1, float a, bool& m
 }
 
 // eq_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void eq_2_2(double x0, double x1, double y0, double y1, bool& m_out) noexcept {
     const bool h = x0 == y0;
     const bool l = x1 == y1;
@@ -1236,7 +1193,7 @@ KAIRN_GEN_FORCEINLINE constexpr void eq_2_2(float x0, float x1, float y0, float 
 }
 
 // le_1_2(a, y = (y0, y1)) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void le_1_2(double a, double y0, double y1, bool& m_out) noexcept {
     const bool h = a < y0;
     const bool e = a == y0;
@@ -1255,7 +1212,7 @@ KAIRN_GEN_FORCEINLINE constexpr void le_1_2(float a, float y0, float y1, bool& m
 }
 
 // le_2_1(x = (x0, x1), a) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void le_2_1(double x0, double x1, double a, bool& m_out) noexcept {
     const bool h = x0 < a;
     const bool e = x0 == a;
@@ -1274,7 +1231,7 @@ KAIRN_GEN_FORCEINLINE constexpr void le_2_1(float x0, float x1, float a, bool& m
 }
 
 // le_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void le_2_2(double x0, double x1, double y0, double y1, bool& m_out) noexcept {
     const bool h = x0 < y0;
     const bool e = x0 == y0;
@@ -1293,7 +1250,7 @@ KAIRN_GEN_FORCEINLINE constexpr void le_2_2(float x0, float x1, float y0, float 
 }
 
 // lt_1_2(a, y = (y0, y1)) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void lt_1_2(double a, double y0, double y1, bool& m_out) noexcept {
     const bool h = a < y0;
     const bool e = a == y0;
@@ -1312,7 +1269,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_1_2(float a, float y0, float y1, bool& m
 }
 
 // lt_2_1(x = (x0, x1), a) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void lt_2_1(double x0, double x1, double a, bool& m_out) noexcept {
     const bool h = x0 < a;
     const bool e = x0 == a;
@@ -1331,7 +1288,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_2_1(float x0, float x1, float a, bool& m
 }
 
 // lt_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(double x0, double x1, double y0, double y1, bool& m_out) noexcept {
     const bool h = x0 < y0;
     const bool e = x0 == y0;
@@ -1350,7 +1307,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(float x0, float x1, float y0, float 
 }
 
 // mul_pow2_2(x = (x0, x1), c) -> z = (z0, z1)
-// both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_pow2_2(double x0, double x1, double c, double& z0_out, double& z1_out) noexcept {
     const double h = fma_rn(x0, c, 0.0);
     const double l = fma_rn(x1, c, 0.0);
@@ -1373,7 +1330,7 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2(float x0, float x1, float c, float& z0_out
 }
 
 // sub_1_2(a, y = (y0, y1)) -> z = (z0, z1)
-// add_2_1 (JMP17 Alg. 4) on -y and a. Status: unverified; constexpr.
+// add_2_1 (JMP17 Alg. 4) on -y and a. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_1_2(double a, double y0, double y1, double& z0_out, double& z1_out) noexcept {
     const double n0 = -y0;
     const double n1 = -y1;
@@ -1414,7 +1371,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_1_2(float a, float y0, float y1, float&
 }
 
 // sub_2_1(x = (x0, x1), a) -> z = (z0, z1)
-// add_2_1 (JMP17 Alg. 4) on -a. Status: unverified; constexpr.
+// add_2_1 (JMP17 Alg. 4) on -a. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_2_1(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
     const double n = -a;
     // (z0, z1) = add_2_1(x0, x1, n)
@@ -1453,7 +1410,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_1(float x0, float x1, float a, float&
 }
 
 // sub_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// add_2_2 (JMP17 Alg. 6) on -y. Status: unverified; constexpr.
+// add_2_2 (JMP17 Alg. 6) on -y. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
     const double n0 = -y0;
     const double n1 = -y1;
@@ -1518,7 +1475,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2(float x0, float x1, float y0, float
 }
 
 // to_down_2(x = (x0, x1)) -> t
-// the sign of x1 (Milestone 1 listing). Status: unverified; constexpr.
+// the sign of x1 (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void to_down_2(double x0, double x1, double& t_out) noexcept {
     const bool m = x1 < 0.0;
     const double p = next_down(x0);
@@ -1533,7 +1490,7 @@ KAIRN_GEN_FORCEINLINE constexpr void to_down_2(float x0, float x1, float& t_out)
 }
 
 // to_nearest_2(x = (x0, x1)) -> t
-// the definition of normalized (Milestone 1 listing). Status: unverified; constexpr.
+// the definition of normalized (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void to_nearest_2(double x0, [[maybe_unused]] double x1, double& t_out) noexcept {
     const double t = x0;
     t_out = t;

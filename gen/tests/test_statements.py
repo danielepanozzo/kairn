@@ -16,10 +16,9 @@ Two readings of a claim, because the formats here have a largest number and the 
   an operand of magnitude Omega, the open point of milestone1.md) and for the kernels exempt
   from the cone (see KNOWN_OVERFLOW_CORNERS).
 
-Judged: every kernel in the first reading, except the four unverified kernels of the first wave,
-whose statements the oracle's exhaustive runs are to settle (split and two_prod_dekker are not
-even defined at precision 1, where the splitter is not a number of the format); the second wave
-in the second reading.
+Judged: every kernel in the first reading, from its minimum precision on (split and
+two_prod_dekker are not even defined at precision 1, where the splitter is not a number of the
+format); the second wave in the second reading.
 """
 import bisect
 import itertools
@@ -331,21 +330,21 @@ def case_text(k, case):
 
 
 # The kernels exempt from the cone whose claims are false in the format itself although output
-# limb 0 is finite, because an intermediate overflowed: succ(-inf) is -top, a finite upper bound
-# that exceeds the exact sum or product by far more than two gaps. The statements (no overflow)
-# hold; the claims file's reading does not, and the oracle will see it. Reported, not accepted:
-# test_overflow_corners pins exactly these, so that a change shows.
-KNOWN_OVERFLOW_CORNERS = {'radd', 'rmul'}
+# limb 0 is finite, because an intermediate overflowed. There is none now. radd and rmul were such
+# corners while they took operands of any sign: succ(-inf) is -top, a finite upper bound that
+# exceeds the exact sum or product by far more than two gaps. They require nonnegative operands
+# now, an overflow then gives +inf, and succ(+inf) is +inf. test_overflow_corners pins exactly
+# this set, so that a change shows.
+KNOWN_OVERFLOW_CORNERS = set()
 FIRST_WAVE = {'two_sum', 'fast_two_sum', 'two_prod', 'split', 'two_prod_dekker', 'add_2_2', 'add_2_1',
-              'mul_2_2', 'mul_2_1', 'add_fast_2_2', 'add_fast_2_2_ts'}
-OPEN_IN_THE_FIRST_WAVE = {'split', 'two_prod_dekker', 'add_fast_2_2', 'add_fast_2_2_ts'}
+              'mul_2_2', 'mul_2_1', 'add_fast_2_2'}
 
 
 class Statements(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.ks = common.kernels()
-        cls.results = run_all(None, [n for n in cls.ks if n not in OPEN_IN_THE_FIRST_WAVE], 'statements')
+        cls.results = run_all(None, list(cls.ks), 'statements')
 
     def failures(self, reading):
         out = {}
@@ -361,7 +360,7 @@ class Statements(unittest.TestCase):
         bad = self.failures('statement')
         self.assertEqual({n: v[:3] for n, v in bad.items()}, {})
         judged = {name for name, _, _ in self.results}
-        self.assertTrue({'two_sum', 'add_2_2', 'mul_2_2', 'ball_mul_2', 'radd'} <= judged)
+        self.assertEqual(judged, set(self.ks))
 
     def test_the_claims_hold_in_the_format(self):
         """In the format itself, whenever output limb 0 is finite: what the oracle checks."""
@@ -389,8 +388,9 @@ class Statements(unittest.TestCase):
         self.assertTrue(holds(k['to_down_2'].ensures[0], k['to_down_2'], fmt, {'x': one - tiny}, {'t': [F(7, 8)]}))
         self.assertFalse(holds(k['lt_2_2'].ensures[0], k['lt_2_2'], fmt, {'x': one, 'y': one}, {'m': [True]}))
         upper = k['radd'].ensures[0]
-        self.assertTrue(holds(upper, k['radd'], fmt, {'a': one, 'b': half}, {'r': [F(7, 4)]}))
-        self.assertTrue(holds(upper, k['radd'], fmt, {'a': one, 'b': half}, {'r': [F(5, 2)]}))    # two gaps
+        self.assertTrue(holds(upper, k['radd'], fmt, {'a': one, 'b': half}, {'r': [F(7, 4)]}))    # one gap
+        self.assertTrue(holds(upper, k['radd'], fmt, {'a': one, 'b': F(3, 8)}, {'r': [F(7, 4)]}))  # 3/2 gaps
+        self.assertFalse(holds(upper, k['radd'], fmt, {'a': one, 'b': half}, {'r': [F(5, 2)]}))   # two gaps
         self.assertFalse(holds(upper, k['radd'], fmt, {'a': one, 'b': half}, {'r': [F(5, 4)]}))   # below
         self.assertFalse(holds(upper, k['radd'], fmt, {'a': one, 'b': half}, {'r': [F(3)]}))      # three gaps
         enc = k['ball_add_1'].ensures[0]

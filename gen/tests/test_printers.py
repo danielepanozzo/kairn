@@ -304,7 +304,7 @@ class Rocq(unittest.TestCase):
         self.assertIn('  (((a * b) = 0 \\/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).', s)
         self.assertIn('  Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * '
                       'Rabs ((x0 + x1) + (y0 + y1)).', s)
-        self.assertIn('<= 4 * u prec ^ 2 * (Rabs (x0 + x1) + Rabs (y0 + y1)).', s)
+        self.assertIn('<= 3 * u prec ^ 2 * (Rabs (x0 + x1) + Rabs (y0 + y1)).', s)
         self.assertIn('<= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + (3 / 2) * eta emin.', s)
         self.assertEqual(s.count('_spec : Prop :='), len(self.ks))
 
@@ -367,8 +367,9 @@ class Rocq(unittest.TestCase):
                 '  t = RN emin prec (x0 + x1).',                                # rounded
                 '  t = RD emin prec (x0 + x1).',
                 '  t = RU emin prec (Rabs (x0 + x1)).',
-                '  (a + b) <= r /\\ r - (a + b) <= 2 * (r - pred radix2 (FLT_exp emin prec) r).',   # upper
-                '  (a * b) <= r /\\ r - (a * b) <= 2 * (r - pred radix2 (FLT_exp emin prec) r).',
+                '  (a + b) <= r /\\ r - (a + b) <= (3 / 2) * (r - pred radix2 (FLT_exp emin prec) r).',   # upper
+                '  (a * b) <= r /\\ r - (a * b) <= (3 / 2) * (r - pred radix2 (FLT_exp emin prec) r).',
+                '  0 <= a ->\n  0 <= b ->\n  let r := radd emin prec tie_even a b in',
                 '  (exists n : Z, c = bpow radix2 n) ->',                       # power_of_two
                 '  0 <= rx ->',                                                  # nonneg
                 '  (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> '

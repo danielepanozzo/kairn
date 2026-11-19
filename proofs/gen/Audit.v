@@ -6,18 +6,54 @@
 From Kairn.Gen Require Import Statements.
 From Kairn Require Import Add21.
 From Kairn Require Import Add22.
+From Kairn Require Import AddFast22.
+From Kairn Require Import Compare.
+From Kairn Require Import Convert.
+From Kairn Require Import Directed.
 From Kairn Require Import EFT.
 From Kairn Require Import Mul21.
 From Kairn Require Import Mul22.
+From Kairn Require Import MulPow2.
+From Kairn Require Import OneLimb.
+From Kairn Require Import Sign.
+From Kairn Require Import Split.
+From Kairn Require Import TwoProdDekker.
+
+Definition add_1_1_audit : add_1_1_spec := add_1_1_correct.
+Print Assumptions add_1_1_correct.
+
+Definition rmul_audit : rmul_spec := rmul_correct.
+Print Assumptions rmul_correct.
+
+Definition radd_audit : radd_spec := radd_correct.
+Print Assumptions radd_correct.
 
 Definition fast_two_sum_audit : fast_two_sum_spec := fast_two_sum_correct.
 Print Assumptions fast_two_sum_correct.
 
+Definition mul_1_1_audit : mul_1_1_spec := mul_1_1_correct.
+Print Assumptions mul_1_1_correct.
+
+Definition split_audit : split_spec := split_correct.
+Print Assumptions split_correct.
+
 Definition two_prod_audit : two_prod_spec := two_prod_correct.
 Print Assumptions two_prod_correct.
 
+Definition two_prod_dekker_audit : two_prod_dekker_spec := two_prod_dekker_correct.
+Print Assumptions two_prod_dekker_correct.
+
 Definition two_sum_audit : two_sum_spec := two_sum_correct.
 Print Assumptions two_sum_correct.
+
+Definition abs_2_audit : abs_2_spec := abs_2_correct.
+Print Assumptions abs_2_correct.
+
+Definition to_up_2_audit : to_up_2_spec := to_up_2_correct.
+Print Assumptions to_up_2_correct.
+
+Definition abs_upper_2_audit : abs_upper_2_spec := abs_upper_2_correct.
+Print Assumptions abs_upper_2_correct.
 
 Definition add_2_1_audit : add_2_1_spec := add_2_1_correct.
 Print Assumptions add_2_1_correct.
@@ -25,8 +61,56 @@ Print Assumptions add_2_1_correct.
 Definition add_2_2_audit : add_2_2_spec := add_2_2_correct.
 Print Assumptions add_2_2_correct.
 
+Definition add_fast_2_2_audit : add_fast_2_2_spec := add_fast_2_2_correct.
+Print Assumptions add_fast_2_2_correct.
+
 Definition mul_2_2_audit : mul_2_2_spec := mul_2_2_correct.
 Print Assumptions mul_2_2_correct.
 
+Definition neg_2_audit : neg_2_spec := neg_2_correct.
+Print Assumptions neg_2_correct.
+
 Definition mul_2_1_audit : mul_2_1_spec := mul_2_1_correct.
 Print Assumptions mul_2_1_correct.
+
+Definition eq_2_1_audit : eq_2_1_spec := eq_2_1_correct.
+Print Assumptions eq_2_1_correct.
+
+Definition eq_2_2_audit : eq_2_2_spec := eq_2_2_correct.
+Print Assumptions eq_2_2_correct.
+
+Definition le_1_2_audit : le_1_2_spec := le_1_2_correct.
+Print Assumptions le_1_2_correct.
+
+Definition le_2_1_audit : le_2_1_spec := le_2_1_correct.
+Print Assumptions le_2_1_correct.
+
+Definition le_2_2_audit : le_2_2_spec := le_2_2_correct.
+Print Assumptions le_2_2_correct.
+
+Definition lt_1_2_audit : lt_1_2_spec := lt_1_2_correct.
+Print Assumptions lt_1_2_correct.
+
+Definition lt_2_1_audit : lt_2_1_spec := lt_2_1_correct.
+Print Assumptions lt_2_1_correct.
+
+Definition lt_2_2_audit : lt_2_2_spec := lt_2_2_correct.
+Print Assumptions lt_2_2_correct.
+
+Definition mul_pow2_2_audit : mul_pow2_2_spec := mul_pow2_2_correct.
+Print Assumptions mul_pow2_2_correct.
+
+Definition sub_1_2_audit : sub_1_2_spec := sub_1_2_correct.
+Print Assumptions sub_1_2_correct.
+
+Definition sub_2_1_audit : sub_2_1_spec := sub_2_1_correct.
+Print Assumptions sub_2_1_correct.
+
+Definition sub_2_2_audit : sub_2_2_spec := sub_2_2_correct.
+Print Assumptions sub_2_2_correct.
+
+Definition to_down_2_audit : to_down_2_spec := to_down_2_correct.
+Print Assumptions to_down_2_correct.
+
+Definition to_nearest_2_audit : to_nearest_2_spec := to_nearest_2_correct.
+Print Assumptions to_nearest_2_correct.

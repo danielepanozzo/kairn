@@ -27,10 +27,10 @@ build: Makefile.rocq
 audit: build
 	@echo "== text scan of the proof files"
 	@$(PYTHON) $(AUDIT) scan $(VFILES)
-	@echo "== assumptions of every theorem"
+	@echo "== assumptions of every theorem that establishes a generated statement"
 	@$(ROCQ) compile $(LIBS) gen/Audit.v > audit/Audit.out
 	@$(PYTHON) $(AUDIT) assumptions gen/Audit.v audit/Audit.out $(ALLOWED)
-	@echo "== assumptions of the theorems whose statements are not generated yet"
+	@echo "== assumptions of the theorems whose statements are written by hand"
 	@$(ROCQ) compile $(LIBS) -Q audit KairnAudit audit/HandAudit.v > audit/HandAudit.out
 	@$(PYTHON) $(AUDIT) assumptions audit/HandAudit.v audit/HandAudit.out $(ALLOWED)
 	@echo "== negative control: a false theorem closed with Admitted must be rejected"

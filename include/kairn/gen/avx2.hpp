@@ -601,48 +601,6 @@ KAIRN_GEN_FORCEINLINE void add_fast_2_2(__m256 x0, __m256 x1, __m256 y0, __m256 
     z1_out = z1;
 }
 
-// add_fast_2_2_ts(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-KAIRN_GEN_FORCEINLINE void add_fast_2_2_ts(__m256d x0, __m256d x1, __m256d y0, __m256d y1, __m256d& z0_out, __m256d& z1_out) noexcept {
-    // (sh, sl) = two_sum(x0, y0)
-    const __m256d sh = _mm256_add_pd(x0, y0);
-    const __m256d sh_bb = _mm256_sub_pd(sh, x0);
-    const __m256d sh_t0 = _mm256_sub_pd(sh, sh_bb);
-    const __m256d sh_t1 = _mm256_sub_pd(x0, sh_t0);
-    const __m256d sh_t2 = _mm256_sub_pd(y0, sh_bb);
-    const __m256d sl = _mm256_add_pd(sh_t1, sh_t2);
-    const __m256d v = _mm256_add_pd(x1, y1);
-    const __m256d w = _mm256_add_pd(sl, v);
-    // (z0, z1) = two_sum(sh, w)
-    const __m256d z0 = _mm256_add_pd(sh, w);
-    const __m256d z0_bb = _mm256_sub_pd(z0, sh);
-    const __m256d z0_t0 = _mm256_sub_pd(z0, z0_bb);
-    const __m256d z0_t1 = _mm256_sub_pd(sh, z0_t0);
-    const __m256d z0_t2 = _mm256_sub_pd(w, z0_bb);
-    const __m256d z1 = _mm256_add_pd(z0_t1, z0_t2);
-    z0_out = z0;
-    z1_out = z1;
-}
-KAIRN_GEN_FORCEINLINE void add_fast_2_2_ts(__m256 x0, __m256 x1, __m256 y0, __m256 y1, __m256& z0_out, __m256& z1_out) noexcept {
-    // (sh, sl) = two_sum(x0, y0)
-    const __m256 sh = _mm256_add_ps(x0, y0);
-    const __m256 sh_bb = _mm256_sub_ps(sh, x0);
-    const __m256 sh_t0 = _mm256_sub_ps(sh, sh_bb);
-    const __m256 sh_t1 = _mm256_sub_ps(x0, sh_t0);
-    const __m256 sh_t2 = _mm256_sub_ps(y0, sh_bb);
-    const __m256 sl = _mm256_add_ps(sh_t1, sh_t2);
-    const __m256 v = _mm256_add_ps(x1, y1);
-    const __m256 w = _mm256_add_ps(sl, v);
-    // (z0, z1) = two_sum(sh, w)
-    const __m256 z0 = _mm256_add_ps(sh, w);
-    const __m256 z0_bb = _mm256_sub_ps(z0, sh);
-    const __m256 z0_t0 = _mm256_sub_ps(z0, z0_bb);
-    const __m256 z0_t1 = _mm256_sub_ps(sh, z0_t0);
-    const __m256 z0_t2 = _mm256_sub_ps(w, z0_bb);
-    const __m256 z1 = _mm256_add_ps(z0_t1, z0_t2);
-    z0_out = z0;
-    z1_out = z1;
-}
-
 // ball_add_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
 KAIRN_GEN_FORCEINLINE void ball_add_2(__m256d cx0, __m256d cx1, __m256d rx, __m256d cy0, __m256d cy1, __m256d ry, __m256d& cz0_out, __m256d& cz1_out, __m256d& rz_out) noexcept {
     // (cz0, cz1) = add_2_2(cx0, cx1, cy0, cy1)

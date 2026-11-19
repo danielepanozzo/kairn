@@ -21,7 +21,6 @@ KAIRN_RUNNER_KERNEL(abs_upper_2, "ll", "l", kairn::gen::abs_upper_2(in[0], in[1]
 KAIRN_RUNNER_KERNEL(add_2_1, "lll", "ll", kairn::gen::add_2_1(in[0], in[1], in[2], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(add_2_2, "llll", "ll", kairn::gen::add_2_2(in[0], in[1], in[2], in[3], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(add_fast_2_2, "llll", "ll", kairn::gen::add_fast_2_2(in[0], in[1], in[2], in[3], out[0], out[1]))
-KAIRN_RUNNER_KERNEL(add_fast_2_2_ts, "llll", "ll", kairn::gen::add_fast_2_2_ts(in[0], in[1], in[2], in[3], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(ball_add_2, "llllll", "lll", kairn::gen::ball_add_2(in[0], in[1], in[2], in[3], in[4], in[5], out[0], out[1], out[2]))
 KAIRN_RUNNER_KERNEL(mul_2_2, "llll", "ll", kairn::gen::mul_2_2(in[0], in[1], in[2], in[3], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(ball_mul_2, "llllll", "lll", kairn::gen::ball_mul_2(in[0], in[1], in[2], in[3], in[4], in[5], out[0], out[1], out[2]))

@@ -8,8 +8,10 @@ requires:      normalized y
 ensures:       normalized z
 ensures:       error z R c=2 k=2 t=0
 min_precision: 3
+theorem:       proofs/theories/Sign.v sub_1_2_correct
 source:        add_2_1 (JMP17 Alg. 4) on -y and a
-status:        unverified
+license:       algorithm: published; proof: MIT
+status:        proved
 
 n0       = neg(y0)
 n1       = neg(y1)

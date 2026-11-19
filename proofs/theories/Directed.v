@@ -13,7 +13,11 @@
    s < 2^(emin + prec), and at a power of two ulp(s) is the spacing ABOVE s. Write x for
    the exact sum or product, s = RN(x), r = succ(s).
 
-   What is proved (radd_spec, rmul_spec, for prec >= 2):
+   What is proved. The generated statements radd_spec and rmul_spec (proofs/gen/Statements.v;
+   theorems radd_correct and rmul_correct) are items 2 and 3 below in the words of the claim
+   "upper": x <= r, and r - x <= (3/2) (r - pred(r)), where pred(r) is the largest number
+   of F below r. Since r = succ(s), pred(r) is s, and the gap r - pred(r) is ulp(s). All
+   four items together are the theorems radd_facts and rmul_facts, for prec >= 2:
      1. r is a number of F;
      2. x < r, strictly; more precisely r - x >= ulp(s) / 2;
      3. r - x <= (3/2) ulp(s). This is the sharp constant: equality holds whenever x is
@@ -45,57 +49,6 @@ From Flocq Require Import Core Plus_error.
 From Kairn.Gen Require Import Model Statements.
 From Kairn Require Import Format.
 Open Scope R_scope.
-
-(** * The two kernels, in the form of the generated model (proofs/gen/Model.v) *)
-
-Section Kernels.
-Variable emin prec : Z.
-Variable choice : Z -> bool.
-Notation rnd := (round radix2 (FLT_exp emin prec) (Znearest choice)).
-(* The next number of the format above a given one. *)
-Notation next := (succ radix2 (FLT_exp emin prec)).
-
-(* radd: an upper bound of a + b. *)
-Definition radd (a b : R) : R :=
-  let s := rnd (a + b) in
-  let r := next s in
-  r.
-
-(* rmul: an upper bound of a b. The product is the opaque product, as in two_prod. *)
-Definition rmul (a b : R) : R :=
-  let p := rnd (a * b + 0) in
-  let r := next p in
-  r.
-
-End Kernels.
-
-(** * The statements, in the form of the generated ones (proofs/gen/Statements.v) *)
-
-Definition radd_spec : Prop :=
-  forall emin prec : Z, (2 <= prec)%Z ->
-  forall a b : R,
-  fmt emin prec a ->
-  fmt emin prec b ->
-  0 <= a ->
-  0 <= b ->
-  let r := radd emin prec tie_even a b in
-  fmt emin prec r /\
-  (a + b) < r /\
-  r - (a + b) <= (3 / 2) * ulp radix2 (FLT_exp emin prec) (RN emin prec (a + b)) /\
-  r - (a + b) <= 3 * u prec * (a + b) + 1 * eta emin.
-
-Definition rmul_spec : Prop :=
-  forall emin prec : Z, (2 <= prec)%Z ->
-  forall a b : R,
-  fmt emin prec a ->
-  fmt emin prec b ->
-  0 <= a ->
-  0 <= b ->
-  let r := rmul emin prec tie_even a b in
-  fmt emin prec r /\
-  (a * b) < r /\
-  r - (a * b) <= (3 / 2) * ulp radix2 (FLT_exp emin prec) (RN emin prec (a * b)) /\
-  r - (a * b) <= 3 * u prec * (a * b) + (3 / 2) * eta emin.
 
 (** * Two inequalities between real numbers *)
 
@@ -173,6 +126,7 @@ Notation format := (generic_format radix2 fexp).
 Notation rnd := (round radix2 fexp (Znearest choice)).
 Notation ulp := (ulp radix2 fexp).
 Notation succ := (succ radix2 fexp).
+Notation pred := (pred radix2 fexp).
 
 (* The spacing of the format is never zero: below 2^(emin + prec) it is eta. *)
 Lemma ulp_FLT_gt_0 : forall x, 0 < ulp x.
@@ -215,6 +169,30 @@ Lemma up_above : forall x, 0 <= x -> x < succ (rnd x).
 Proof.
 intros x Hx. generalize (up_excess_ulp x Hx) (ulp_FLT_gt_0 (rnd x)). lra.
 Qed.
+
+(* The gap below the result, r - pred(r), is the spacing above s: the largest number of
+   the format below succ(s) is s itself. *)
+Lemma up_gap : forall x, 0 <= x -> succ (rnd x) - pred (succ (rnd x)) = ulp (rnd x).
+Proof.
+intros x Hx.
+assert (Fs : format (rnd x)) by (apply generic_format_round; auto with typeclass_instances).
+rewrite (pred_succ radix2 fexp (rnd x) Fs), up_eq by exact Hx. ring.
+Qed.
+
+(* 2 and 3 in the words of the claim "upper": the result is at least x, and exceeds it by
+   at most 3/2 of the gap below the result. *)
+Lemma up_upper :
+  forall x, 0 <= x ->
+  x <= succ (rnd x) /\ succ (rnd x) - x <= 3 / 2 * (succ (rnd x) - pred (succ (rnd x))).
+Proof.
+intros x Hx. split.
+- apply Rlt_le. now apply up_above.
+- rewrite up_gap by exact Hx. apply (up_excess_ulp x Hx).
+Qed.
+
+(* The result is not negative. *)
+Lemma up_ge_0 : forall x, 0 <= x -> 0 <= succ (rnd x).
+Proof. intros x Hx. apply Rlt_le, Rle_lt_trans with (1 := Hx). now apply up_above. Qed.
 
 (* 3, with the spacing above the result instead: weaker when the result is a power of
    two. *)
@@ -465,9 +443,55 @@ assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 1%Z; lia).
 rewrite rmul_eq. apply up_excess_ulp_result; trivial. now apply Rmult_le_pos.
 Qed.
 
-(** * The statements *)
+(** * The generated statements *)
 
 Theorem radd_correct : radd_spec.
+Proof.
+intros emin prec Hp a b Fa Fb Ha Hb r. unfold r. clear r.
+assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
+rewrite radd_eq. apply up_upper; trivial. lra.
+Qed.
+
+Theorem rmul_correct : rmul_spec.
+Proof.
+intros emin prec Hp a b Fa Fb Ha Hb r. unfold r. clear r.
+assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
+rewrite rmul_eq. apply up_upper; trivial. now apply Rmult_le_pos.
+Qed.
+
+(** * The four items of the header together *)
+
+(* The result is a number of the format, strictly above the exact value, within
+   (3/2) ulp(RN(x)) of it, and within 3 u x + eta of it (3 u x + (3/2) eta for the
+   product). These statements are written by hand; the audit of proofs/audit/HandAudit.v
+   covers them. *)
+Definition radd_facts_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  0 <= a ->
+  0 <= b ->
+  let r := radd emin prec tie_even a b in
+  fmt emin prec r /\
+  (a + b) < r /\
+  r - (a + b) <= (3 / 2) * ulp radix2 (FLT_exp emin prec) (RN emin prec (a + b)) /\
+  r - (a + b) <= 3 * u prec * (a + b) + 1 * eta emin.
+
+Definition rmul_facts_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  0 <= a ->
+  0 <= b ->
+  let r := rmul emin prec tie_even a b in
+  fmt emin prec r /\
+  (a * b) < r /\
+  r - (a * b) <= (3 / 2) * ulp radix2 (FLT_exp emin prec) (RN emin prec (a * b)) /\
+  r - (a * b) <= 3 * u prec * (a * b) + (3 / 2) * eta emin.
+
+Theorem radd_facts : radd_facts_spec.
 Proof.
 intros emin prec Hp a b Fa Fb Ha Hb r. unfold r. clear r.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
@@ -483,7 +507,7 @@ split; [|split; [|split]].
   apply Rmax_lub; lra.
 Qed.
 
-Theorem rmul_correct : rmul_spec.
+Theorem rmul_facts : rmul_facts_spec.
 Proof.
 intros emin prec Hp a b Fa Fb Ha Hb r. unfold r. clear r.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).

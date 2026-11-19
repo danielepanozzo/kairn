@@ -586,48 +586,6 @@ KAIRN_GEN_FORCEINLINE void add_fast_2_2(float32x4_t x0, float32x4_t x1, float32x
     z1_out = z1;
 }
 
-// add_fast_2_2_ts(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-KAIRN_GEN_FORCEINLINE void add_fast_2_2_ts(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, float64x2_t& z0_out, float64x2_t& z1_out) noexcept {
-    // (sh, sl) = two_sum(x0, y0)
-    const float64x2_t sh = vaddq_f64(x0, y0);
-    const float64x2_t sh_bb = vsubq_f64(sh, x0);
-    const float64x2_t sh_t0 = vsubq_f64(sh, sh_bb);
-    const float64x2_t sh_t1 = vsubq_f64(x0, sh_t0);
-    const float64x2_t sh_t2 = vsubq_f64(y0, sh_bb);
-    const float64x2_t sl = vaddq_f64(sh_t1, sh_t2);
-    const float64x2_t v = vaddq_f64(x1, y1);
-    const float64x2_t w = vaddq_f64(sl, v);
-    // (z0, z1) = two_sum(sh, w)
-    const float64x2_t z0 = vaddq_f64(sh, w);
-    const float64x2_t z0_bb = vsubq_f64(z0, sh);
-    const float64x2_t z0_t0 = vsubq_f64(z0, z0_bb);
-    const float64x2_t z0_t1 = vsubq_f64(sh, z0_t0);
-    const float64x2_t z0_t2 = vsubq_f64(w, z0_bb);
-    const float64x2_t z1 = vaddq_f64(z0_t1, z0_t2);
-    z0_out = z0;
-    z1_out = z1;
-}
-KAIRN_GEN_FORCEINLINE void add_fast_2_2_ts(float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, float32x4_t& z0_out, float32x4_t& z1_out) noexcept {
-    // (sh, sl) = two_sum(x0, y0)
-    const float32x4_t sh = vaddq_f32(x0, y0);
-    const float32x4_t sh_bb = vsubq_f32(sh, x0);
-    const float32x4_t sh_t0 = vsubq_f32(sh, sh_bb);
-    const float32x4_t sh_t1 = vsubq_f32(x0, sh_t0);
-    const float32x4_t sh_t2 = vsubq_f32(y0, sh_bb);
-    const float32x4_t sl = vaddq_f32(sh_t1, sh_t2);
-    const float32x4_t v = vaddq_f32(x1, y1);
-    const float32x4_t w = vaddq_f32(sl, v);
-    // (z0, z1) = two_sum(sh, w)
-    const float32x4_t z0 = vaddq_f32(sh, w);
-    const float32x4_t z0_bb = vsubq_f32(z0, sh);
-    const float32x4_t z0_t0 = vsubq_f32(z0, z0_bb);
-    const float32x4_t z0_t1 = vsubq_f32(sh, z0_t0);
-    const float32x4_t z0_t2 = vsubq_f32(w, z0_bb);
-    const float32x4_t z1 = vaddq_f32(z0_t1, z0_t2);
-    z0_out = z0;
-    z1_out = z1;
-}
-
 // ball_add_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
 KAIRN_GEN_FORCEINLINE void ball_add_2(float64x2_t cx0, float64x2_t cx1, float64x2_t rx, float64x2_t cy0, float64x2_t cy1, float64x2_t ry, float64x2_t& cz0_out, float64x2_t& cz1_out, float64x2_t& rz_out) noexcept {
     // (cz0, cz1) = add_2_2(cx0, cx1, cy0, cy1)

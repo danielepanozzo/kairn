@@ -37,12 +37,15 @@
           "when": null
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/OneLimb.v",
+        "name": "add_1_1_correct"
+      },
       "source": {
         "cite": "one rounding to nearest",
-        "license": null
+        "license": "bound: published; proof: MIT"
       },
       "flops": 1,
       "instances": {
@@ -79,20 +82,26 @@
         }
       ],
       "value": "a*b",
-      "requires": [],
+      "requires": [
+        "nonneg(a)",
+        "nonneg(b)"
+      ],
       "ensures": [
         {
           "kind": "upper",
           "of": "r",
-          "gaps": "2"
+          "gaps": "3/2"
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed.v",
+        "name": "rmul_correct"
+      },
       "source": {
         "cite": "one step up from the rounded product (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 1,
       "instances": {
@@ -119,20 +128,26 @@
         }
       ],
       "value": "a+b",
-      "requires": [],
+      "requires": [
+        "nonneg(a)",
+        "nonneg(b)"
+      ],
       "ensures": [
         {
           "kind": "upper",
           "of": "r",
-          "gaps": "2"
+          "gaps": "3/2"
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed.v",
+        "name": "radd_correct"
+      },
       "source": {
         "cite": "one step up from the rounded sum (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 1,
       "instances": {
@@ -551,12 +566,15 @@
           "when": null
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/OneLimb.v",
+        "name": "mul_1_1_correct"
+      },
       "source": {
         "cite": "one rounding to nearest",
-        "license": null
+        "license": "bound: published; proof: MIT"
       },
       "flops": 1,
       "instances": {
@@ -601,8 +619,8 @@
           "when": null
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
+      "min_precision": 4,
+      "status": "proved",
       "theorem": {
         "file": "proofs/theories/Split.v",
         "name": "split_correct"
@@ -736,7 +754,7 @@
           "form": "R",
           "c": "0",
           "k": 2,
-          "t": "7/2",
+          "t": "13/8",
           "when": null
         },
         {
@@ -749,8 +767,8 @@
           "when": "product_large"
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
+      "min_precision": 4,
+      "status": "proved",
       "theorem": {
         "file": "proofs/theories/TwoProdDekker.v",
         "name": "two_prod_dekker_correct"
@@ -764,7 +782,7 @@
         "binary64": [
           {
             "rel": "0",
-            "abs": "7/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+            "abs": "13/1619218026458484946819962773751338456396453198113136946855210864219442716543962775135683069611496995961496622914534495291118469899086347814936107199525908079372139394212530890915735261936745730729918141427781960548496059867397541588944826845193276450726480452098870156418667316921844020257490620069168050106461661928747958272"
           },
           {
             "rel": "0",
@@ -774,7 +792,7 @@
         "binary32": [
           {
             "rel": "0",
-            "abs": "7/1427247692705959881058285969449495136382746624"
+            "abs": "13/5708990770823839524233143877797980545530986496"
           },
           {
             "rel": "0",
@@ -877,12 +895,15 @@
           "when": null
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Sign.v",
+        "name": "abs_2_correct"
+      },
       "source": {
         "cite": "the sign of x0 (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -925,12 +946,15 @@
           "mode": "up"
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Convert.v",
+        "name": "to_up_2_correct"
+      },
       "source": {
         "cite": "the sign of x1 (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -963,12 +987,15 @@
           "mode": "up"
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Convert.v",
+        "name": "abs_upper_2_correct"
+      },
       "source": {
         "cite": "abs_2, then to_up_2 (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -1135,97 +1162,33 @@
           "kind": "error",
           "of": "z",
           "form": "A",
-          "c": "4",
+          "c": "3",
           "k": 2,
           "t": "0",
           "when": null
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
+      "min_precision": 2,
+      "status": "proved",
       "theorem": {
         "file": "proofs/theories/AddFast22.v",
         "name": "add_fast_2_2_correct"
       },
       "source": {
-        "cite": "JMP17 Alg. 5 (SloppyDWPlusDW)",
+        "cite": "JMP17 Alg. 5 (SloppyDWPlusDW); the bound and the normalization are proved here",
         "license": "algorithm: published; proof: MIT"
       },
       "flops": 11,
       "instances": {
         "binary64": [
           {
-            "rel": "1/20282409603651670423947251286016",
+            "rel": "3/81129638414606681695789005144064",
             "abs": "0"
           }
         ],
         "binary32": [
           {
-            "rel": "1/70368744177664",
-            "abs": "0"
-          }
-        ]
-      }
-    },
-    {
-      "name": "add_fast_2_2_ts",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "z",
-          "limbs": 2
-        }
-      ],
-      "value": "x+y",
-      "requires": [
-        "normalized(x)",
-        "normalized(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "normalized",
-          "of": "z"
-        },
-        {
-          "kind": "error",
-          "of": "z",
-          "form": "A",
-          "c": "4",
-          "k": 2,
-          "t": "0",
-          "when": null
-        }
-      ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": {
-        "file": "proofs/theories/AddFast22.v",
-        "name": "add_fast_2_2_ts_correct"
-      },
-      "source": {
-        "cite": "JMP17 Alg. 5 (SloppyDWPlusDW), ending with TwoSum",
-        "license": "algorithm: published; proof: MIT"
-      },
-      "flops": 14,
-      "instances": {
-        "binary64": [
-          {
-            "rel": "1/20282409603651670423947251286016",
-            "abs": "0"
-          }
-        ],
-        "binary32": [
-          {
-            "rel": "1/70368744177664",
+            "rel": "3/281474976710656",
             "abs": "0"
           }
         ]
@@ -1472,12 +1435,15 @@
           "when": null
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Sign.v",
+        "name": "neg_2_correct"
+      },
       "source": {
         "cite": "limb by limb (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -1784,12 +1750,15 @@
           ]
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "eq_2_1_correct"
+      },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -1832,12 +1801,15 @@
           ]
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "eq_2_2_correct"
+      },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -1879,12 +1851,15 @@
           ]
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "le_1_2_correct"
+      },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -1926,12 +1901,15 @@
           ]
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "le_2_1_correct"
+      },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -1974,12 +1952,15 @@
           ]
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "le_2_2_correct"
+      },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -2021,12 +2002,15 @@
           ]
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "lt_1_2_correct"
+      },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -2068,12 +2052,15 @@
           ]
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "lt_2_1_correct"
+      },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -2116,12 +2103,15 @@
           ]
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "lt_2_2_correct"
+      },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -2167,12 +2157,15 @@
           "when": null
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MulPow2.v",
+        "name": "mul_pow2_2_correct"
+      },
       "source": {
         "cite": "both limbs scaled, then Fast2Sum (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 5,
       "instances": {
@@ -2228,11 +2221,14 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Sign.v",
+        "name": "sub_1_2_correct"
+      },
       "source": {
         "cite": "add_2_1 (JMP17 Alg. 4) on -y and a",
-        "license": null
+        "license": "algorithm: published; proof: MIT"
       },
       "flops": 10,
       "instances": {
@@ -2288,11 +2284,14 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Sign.v",
+        "name": "sub_2_1_correct"
+      },
       "source": {
         "cite": "add_2_1 (JMP17 Alg. 4) on -a",
-        "license": null
+        "license": "algorithm: published; proof: MIT"
       },
       "flops": 10,
       "instances": {
@@ -2349,11 +2348,14 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Sign.v",
+        "name": "sub_2_2_correct"
+      },
       "source": {
         "cite": "add_2_2 (JMP17 Alg. 6) on -y",
-        "license": null
+        "license": "algorithm: published; proof: MIT"
       },
       "flops": 20,
       "instances": {
@@ -2396,12 +2398,15 @@
           "mode": "down"
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Convert.v",
+        "name": "to_down_2_correct"
+      },
       "source": {
         "cite": "the sign of x1 (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -2434,12 +2439,15 @@
           "mode": "nearest"
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Convert.v",
+        "name": "to_nearest_2_correct"
+      },
       "source": {
         "cite": "the definition of normalized (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {

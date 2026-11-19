@@ -1,16 +1,18 @@
-(* Audit of the theorems whose statements are not generated yet: the IEEE model of five
+(* Audit of the theorems whose statements are written by hand: the IEEE model of five
    kernels (drafts of the model and of the statements are in theories/IeeeDraft.v and
-   theories/IeeeStatementsDraft.v), add_fast_2_2, split, two_prod_dekker (proved with
-   constants and minimum precisions that differ from the placeholders of the generated
-   statements), and the directed steps radd and rmul.
+   theories/IeeeStatementsDraft.v), and statements that say more about a kernel than its
+   generated statement does (the parts of a split, further bounds on radd and rmul).
 
-   Same form as the generated proofs/gen/Audit.v: for every theorem, a silent definition
-   that fails to compile unless the theorem has the stated type, then the axioms it
-   depends on, for the audit script to compare with the allow-list. Nothing else is
-   printed. When a kernel's statement becomes generated, its lines move to gen/Audit.v. *)
+   The theorems that establish generated statements are audited by the generated
+   proofs/gen/Audit.v, and are not repeated here.
+
+   Same form as that file: for every theorem, a silent definition that fails to compile
+   unless the theorem has the stated type, then the axioms it depends on, for the audit
+   script to compare with the allow-list. Nothing else is printed. When a statement
+   becomes generated, its lines move to gen/Audit.v. *)
 From Kairn.Gen Require Import Statements.
 From Kairn Require Import IeeeStatementsDraft IeeeEFT IeeeAdd22 IeeeMul22.
-From Kairn Require Import AddFast22 Split TwoProdDekker Directed.
+From Kairn Require Import Split Directed.
 
 (* The IEEE model: error-free transformations. *)
 Definition fast_two_sum_ieee_audit : fast_two_sum_ieee_spec := fast_two_sum_ieee_correct.
@@ -42,35 +44,20 @@ Print Assumptions mul_2_2_ieee_correct.
 Definition mul_2_2_ieee_finite_audit : mul_2_2_ieee_finite_spec := mul_2_2_ieee_finite.
 Print Assumptions mul_2_2_ieee_finite.
 
-(* add_fast_2_2 (real model). *)
-Definition add_fast_2_2_c3_audit : add_fast_2_2_spec_c3 := add_fast_2_2_correct_c3.
-Print Assumptions add_fast_2_2_correct_c3.
-
-Definition add_fast_2_2_draft_audit : add_fast_2_2_spec_draft := add_fast_2_2_correct_draft.
-Print Assumptions add_fast_2_2_correct_draft.
-
-(* split and two_prod_dekker (real model). *)
-Definition split_draft_audit : split_spec' := split_correct_draft.
-Print Assumptions split_correct_draft.
-
+(* split (real model): what the two parts are, beyond their sum. *)
 Definition split_parts_audit : split_parts_spec := split_parts.
 Print Assumptions split_parts.
 
 Definition split_products_audit : split_products_spec := split_products.
 Print Assumptions split_products.
 
-Definition two_prod_dekker_draft_audit : two_prod_dekker_spec' := two_prod_dekker_correct_draft.
-Print Assumptions two_prod_dekker_correct_draft.
+(* radd and rmul (real model): the result is a number of the format, strictly above the
+   exact value, and the excess relative to the exact value. *)
+Definition radd_facts_audit : radd_facts_spec := radd_facts.
+Print Assumptions radd_facts.
 
-Definition two_prod_dekker_7_2_audit : two_prod_dekker_spec_7_2 := two_prod_dekker_correct_7_2.
-Print Assumptions two_prod_dekker_correct_7_2.
-
-(* radd and rmul (real model). *)
-Definition radd_audit : radd_spec := radd_correct.
-Print Assumptions radd_correct.
-
-Definition rmul_audit : rmul_spec := rmul_correct.
-Print Assumptions rmul_correct.
+Definition rmul_facts_audit : rmul_facts_spec := rmul_facts.
+Print Assumptions rmul_facts.
 
 (* Further bounds on radd and rmul, stated in theories/Directed.v. *)
 Print Assumptions radd_excess_max.
