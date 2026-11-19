@@ -587,15 +587,17 @@ without $N$: $2^{-1022}$ disappears in the rounding of a radius of ordinary size
 Max (Apple clang 21 and GCC 16, `-O2`) the same harness gives the same times with and without
 $N$, within 1% for every line of the table (with Apple clang, 7.3 to 7.9 ns for a step of
 `ball_add_2` and 5.6 to 6.0 ns for one of `ball_mul_2`, from one run to the next): that processor
-has no such penalty. With $N$, the full kernels of the i5's table take 0.94 to 1.04 times as long
-as their cores, run by run.
+has no such penalty. Nor has an AMD EPYC 7452 (Zen 2; GCC 13, `-O2 -mavx2 -mfma`): the same times
+within 1%, and 1.5 ns for the fused operation with either addend. With $N$, the full kernels of
+the i5's table take 0.94 to 1.04 times as long as their cores, run by run.
 
 What $N$ costs: every radius is larger by about $N$, which for `double` and `float` is far below
 one unit in the last place of any radius that is not itself near $N$. A ball computed from exact
 zeros (a point ball minus itself) has radius `H`, about $N$, where it had a few $\eta$. In a toy
 format with few exponents $N$ is not small: at `fp:2:-3:2`, `H` of `ball_add_1` goes from $3\eta$
 to $6\eta$, a sixteenth of the largest finite number, and at `fp:3:-2:-1`, where the quick tier
-enumerates `ball_add_2_full`, from $2\eta$ to $6\eta$ of a largest finite number of $14\eta$.
+enumerates `ball_add_2_full`, from $2\eta$ to $6\eta$ of a largest finite number of $14\eta$, so
+that 7 471 of the 122 500 cases of that enumeration give a finite ball, where 25 103 did.
 
 What remains slow on such a processor is an operation whose radius is itself in the subnormal
 range. A ball of center 0 whose radius is at this floor (`X - X` for a point `X`, or a product
