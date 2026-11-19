@@ -330,20 +330,27 @@ def natural_key(text):
 
 def load_brute(root):
     """The summaries of the latest brute-force runs: those under results/NAME/brute/ with the
-    last NAME in natural order (milestone2 after milestone1, milestone10 after milestone2)."""
+    last NAME in natural order (milestone2 after milestone1, milestone10 after milestone2), and
+    those of its supplementary runs, under results/NAME/brute/supplementary/: runs of a few
+    kernels at a later commit, whose rows a page shows apart."""
     base = os.path.join(root, "results")
     dirs = sorted((d for d in (os.listdir(base) if os.path.isdir(base) else [])
                    if os.path.isdir(os.path.join(base, d, "brute"))), key=natural_key)
-    for d in reversed(dirs):
-        files = sorted(f for f in os.listdir(os.path.join(base, d, "brute")) if f.endswith(".json"))
-        docs = []
-        for f in files:
-            data = json.loads(read(os.path.join(base, d, "brute", f)))
+
+    def summaries(rel):
+        path = os.path.join(base, rel)
+        out = []
+        for f in sorted(f for f in (os.listdir(path) if os.path.isdir(path) else []) if f.endswith(".json")):
+            data = json.loads(read(os.path.join(path, f)))
             if data.get("kairn_brute_summary") != 1:
-                fail("results/%s/brute/%s is not a brute-force summary of version 1" % (d, f))
-            docs.append(data)
+                fail("results/%s/%s is not a brute-force summary of version 1" % (rel, f))
+            out.append(data)
+        return out
+    for d in reversed(dirs):
+        docs = summaries(os.path.join(d, "brute"))
         if docs:
-            return {"name": d, "dir": "results/%s/brute" % d, "docs": docs}
+            return {"name": d, "dir": "results/%s/brute" % d, "docs": docs,
+                    "supplementary": summaries(os.path.join(d, "brute", "supplementary"))}
     return None
 
 
@@ -839,18 +846,36 @@ def merge(acc, entries, where):
 
 
 def brute_of(name, brute):
-    """What the stored runs say about one kernel, merged over machines and runners."""
+    """What the stored runs say about one kernel, merged over machines and runners; then the rows
+    of the supplementary runs that judged it, apart (they may judge a later form of its claims)."""
     if brute is None:
         return None
+    main = brute_rows(name, brute["docs"], "")
+    sup = brute_rows(name, brute.get("supplementary", []), ", supplementary run")
+    if main is None and sup is None:
+        return None
+    out = main or {"rows": [], "findings": [], "extended": False}
+    if sup:
+        for r in sup["rows"]:
+            r["supplementary"] = True
+        out["rows"] += sup["rows"]
+        out["findings"] += sup["findings"]
+        out["supplementary"] = sorted({c[:7] for d in brute["supplementary"] for c in d.get("commit", [])
+                                       if name in d["compiled"]["kernels"]
+                                       or any(r["kernel"] == name for r in d["interp"]["enumerations"])})
+    return out
+
+
+def brute_rows(name, docs, suffix):
     rows, findings = [], []
     for fmt, ctype, _, _ in FORMATS:
         row = None
-        for d in brute["docs"]:
+        for d in docs:
             s = d["compiled"]["kernels"].get(name, {}).get(fmt)
             if not s:
                 continue
             if row is None:
-                row = {"title": "`%s` (`%s`), compiled" % (fmt, ctype), "machines": 0, "runners": 0,
+                row = {"title": "`%s` (`%s`), compiled%s" % (fmt, ctype, suffix), "machines": 0, "runners": 0,
                        "cases": 0, "judged": 0, "failed": 0, "invalid": 0, "entries": None, "ok": True}
             row["machines"] += 1
             row["runners"] += len(s["runners"])
@@ -861,12 +886,12 @@ def brute_of(name, brute):
         if row:
             rows.append(row)
     interp = None
-    for d in brute["docs"]:
+    for d in docs:
         for r in d["interp"]["enumerations"]:
             if r["kernel"] != name:
                 continue
             if interp is None:
-                interp = {"title": "toy formats, every operand", "domains": 0, "complete": 0, "formats": [],
+                interp = {"title": "toy formats, every operand" + suffix, "domains": 0, "complete": 0, "formats": [],
                           "cases": 0, "judged": 0, "failed": 0, "invalid": 0, "entries": None, "ok": True}
             interp["domains"] += 1
             interp["complete"] += 1 if r.get("complete") else 0
@@ -888,9 +913,9 @@ def brute_of(name, brute):
     # non-finite layer, on every operand): the summaries say so per series since they record a
     # domain; older ones do not, and judged the statement on finite operands only.
     extended = any(s.get("domain") == "extended"
-                   for d in brute["docs"] for fmts in [d["compiled"]["kernels"].get(name, {})]
+                   for d in docs for fmts in [d["compiled"]["kernels"].get(name, {})]
                    for s in fmts.values()) or any(
-        r.get("domain") == "extended" for d in brute["docs"] for r in d["interp"]["enumerations"]
+        r.get("domain") == "extended" for d in docs for r in d["interp"]["enumerations"]
         if r["kernel"] == name)
     return {"rows": rows, "findings": findings, "extended": extended} if rows or findings else None
 
@@ -1658,6 +1683,20 @@ class Site:
                   "are not about the statement above." % (
                       "; ".join("`%s`" % x["label"] for x in judged_labels),
                       "; ".join("`%s`" % k.label(e) for e in own)))
+                w("")
+            # A condition finite_when (B4: finite operands under it give a finite ball) that the
+            # claims gained after the runs: the oracle labels an entry without one "finite when
+            # nothing".
+            no_b4 = judged_labels is not None and any(
+                e.get("finite_when") and "finite when nothing" in x["label"] for x, e in zip(judged_labels, own))
+            if no_b4:
+                sup = b.get("supplementary")
+                w("**The condition of this claim was not judged by every run.** The claims gained it (B4: finite "
+                  "operands under the condition give a finite ball) after the main runs, which judged the "
+                  "kernel without it, with no condition claimed%s." % (
+                      "; the supplementary run%s at commit %s judged it, on the cases of its rows below" % (
+                          "s" if len(sup) > 1 else "", ", ".join("`%s`" % c for c in sup)) if sup else
+                      "; no stored run judged it"))
                 w("")
             n_err = sum(x["kind"] == "error" for x in judged_labels or [])
             for j, x in enumerate(judged_labels or []):

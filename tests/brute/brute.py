@@ -1813,6 +1813,9 @@ def near_one(dec, attains):
             and decimal.Decimal(dec) >= decimal.Decimal("0.99999999995"))
 
 
+B4_APPLIES = "B4 applies: finite operands, every finite_when condition holds"
+
+
 def headline_columns(entries):
     """(column title, extractor, better) for the entries of a kernel that have one."""
     cols = []
@@ -1832,6 +1835,10 @@ def headline_columns(entries):
                          "slack in gaps of the radius", -1))
             cols.append(("smallest radius / enclosing", j, "minima",
                          "radius / smallest enclosing radius", -1))
+            # B4 (a finite ball from finite operands under the claim's finite_when condition):
+            # the cases the oracle applied it to, where the claim has such a condition.
+            if B4_APPLIES in e.get("counts", {}):
+                cols.append(("B4 applied to", j, "count", B4_APPLIES, 0))
         elif e["kind"] in ("rounded", "predicate"):
             cols.append(("outcomes" if e["kind"] == "predicate" else "cases by rounding",
                          j, "counts", None, 0))
@@ -2030,6 +2037,9 @@ def cmd_report(a):
                 if field == "counts":
                     cells.append(counts_text(e.get("counts", {})))
                     continue
+                if field == "count":
+                    cells.append(fmt_int(e.get("counts", {}).get(sub, 0)))
+                    continue
                 v = col_value(e, field, sub)
                 mark = " (the claim)" if (e.get("attains_claim") and field in ("max_ratio",
                                                                                 "maxima")) else ""
@@ -2050,7 +2060,7 @@ def cmd_report(a):
         # interpreter's.
         picks = []
         for name, j, field, sub, sign in cols:
-            if field in ("counts", "observed_c") or (sub and "enclosing" in sub):
+            if field in ("counts", "count", "observed_c") or (sub and "enclosing" in sub):
                 continue
             for compiled in (True, False):
                 vs = [(v, t) for t, nm, v in lines if nm == name and
