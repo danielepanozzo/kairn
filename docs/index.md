@@ -4,7 +4,8 @@ Kairn is a header-only C++20 library, in development, for floating-point expansi
 and ball arithmetic. Its aim is that every error bound it states carries a machine-checked proof,
 and that the code it ships is generated from the same description the proofs are about.
 
-**Status: pre-release. Milestone 1 is in progress, and nothing in this repository should be relied
+**Status: pre-release. Milestone 1 is complete and awaits its review
+([report](developer/results/milestone1.md)), and nothing in this repository should be relied
 on yet.** The first public headers exist, for k-numbers of one and two limbs and balls around them,
 and the statement of each of their operations has a checked proof in a model where nothing
 overflows. At overflow and for infinities and NaN they return results like those of `float` and
@@ -66,14 +67,13 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
 ## Status
 
 - **Phase 0**, specification and feasibility: complete, reviewed on 2026-11-18.
-- **Milestone 1**, in progress: `double` limbs with $k = 1$ and $2$; addition, subtraction and
-  multiplication; scalar, AVX2 and NEON code; `Ball`; the generator, the Rocq proofs with gradual
-  underflow, the oracle and CI. Done so far: the generator and its scalar, AVX2 and NEON output,
-  the oracle, the real-model proofs of every kernel of one and two limbs, and the scalar public
-  headers (`Expansion` and `Ball` for $k = 1, 2$, `float` and `double` limbs), whose every
-  operation is judged by the oracle; and the layer of non-finite values, IEEE-like results and
-  the special states of a ball, proved in a model of IEEE 754 and called by the headers. Not yet:
-  a condition under which a Ball operation stays finite.
+- **Milestone 1**, complete and awaiting its review
+  ([report](developer/results/milestone1.md)): `double` and `float` limbs with $k = 1$ and $2$;
+  addition, subtraction and multiplication; scalar, AVX2 and NEON code; `Ball`; the generator, the
+  Rocq proofs with gradual underflow, the oracle and CI. Every kernel is proved. At overflow and
+  for infinities and NaN the operations return IEEE-like results and the special states of a
+  ball, which is proved in a model of IEEE 754, with a condition under which a `Ball` operation
+  stays finite. The report lists what is open.
 - The later milestones are in the [Plan](developer/design/phase0/plan.md#milestones).
 
 ## Where to go next

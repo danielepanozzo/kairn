@@ -4,14 +4,17 @@ Rigorous floating-point expansions ("k-numbers") with interval and ball arithmet
 header-only C++20. Every error bound is meant to carry a machine-checked proof, and the shipped
 code is generated from the same source the proofs are about.
 
-**Status: Phase 0 (specification and feasibility) is complete and reviewed. Milestone 1 is in progress,
-and nothing here should be relied on yet.** The first public headers exist: `kairn/kairn.hpp`, with
+**Status: pre-release. Phase 0 (specification and feasibility) is complete and reviewed. Milestone 1
+is complete and awaits its review ([report](docs/developer/results/milestone1.md)). Nothing here
+should be relied on yet.** The first public headers exist: `kairn/kairn.hpp`, with
 `kairn::Expansion<T, 1>`, `kairn::Expansion<T, 2>` and `kairn::Ball<T, 1>`, `kairn::Ball<T, 2>` for
 `T` = `float` or `double`. Every operation has a proved error bound or containment, and returns
 results like those of `T` at overflow and for infinities and NaN (a ball: the whole line or the
 empty set); `kairn::finite::` skips that layer. [What holds today](docs/getting-started/guarantees.md)
 says what is proved, in which model, and what is not yet.
 
+- [Milestone 1 report](docs/developer/results/milestone1.md): what exists, what is proved, what
+  the tests and the benchmarks measured, and what is open.
 - [Phase 0 report](docs/developer/design/phase0/index.md): what Kairn will be, what was measured,
   and the decisions taken at its review.
 - [Experiments](experiments/phase0/README.md) behind the report.

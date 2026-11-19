@@ -1,7 +1,7 @@
 # Getting started
 
-**Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is in
-progress: the first public headers exist, for numbers of one and two limbs of type `float` or
+**Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is complete
+and awaits its review ([report](../developer/results/milestone1.md)): the first public headers exist, for numbers of one and two limbs of type `float` or
 `double` and for balls around them. The claims of all their operations have checked proofs in a
 model of arithmetic where nothing overflows, and at overflow and for infinities and NaN they
 return results like those of `float` and `double` (balls: the whole line, or the empty set), which

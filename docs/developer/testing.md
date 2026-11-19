@@ -150,7 +150,10 @@ pass or fail; on failure it also prints the command that reruns one case (below)
     line and the empty set. Every enumeration includes the non-finite values of each operand
     (`oracle/README.md`, "gen"), and every format has the shape the statements of the IEEE model
     are proved for, $q_{\min} + q_{\max} = 3 - 2p$, which `binary64` and `binary32` have: one
-    fits the budget for every kernel. At these sizes a format of that shape has few exponents
+    fits the budget for every kernel. The theorems also assume $q_{\max} \ge 1$, which some of
+    these formats do not have (`fp:3:-2:-1`, for example): there the tests judge the statements
+    where no theorem covers them
+    ([which formats](design/milestone1.md#what-is-proved-about-an-arithmetic-kernel)). At these sizes a format of that shape has few exponents
     (two to twelve, and forty for the one limb of `make_2`), so overflow is common, which is what
     the layer is about.
 
