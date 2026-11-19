@@ -366,8 +366,13 @@ def judge_line(ck, st, pl, line, ins, outs):
 
 
 def _failer(es, out):
+    """fail(statement, why): the reason, and the statement counted once per line."""
+    seen = set()
+
     def fail(stmt, why):
-        es.count("failed " + stmt)
+        if stmt not in seen:
+            seen.add(stmt)
+            es.count("failed " + stmt)
         out.append("%s: %s" % (stmt, why))
     return fail
 
@@ -482,8 +487,10 @@ def k_encloses(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
         if V is not None:
             es.track_min("whole line on finite operands: |value| / 2^(qmax+p)",
                          ep.ratio_value(V), line)
-        if ep.small(x, V, ((lo, sh), (hi, sh))):
-            sus.append("B: the whole line with operands, exact value and set below Omega/4")
+        # Not shown as suspicious, unlike a non-finite result of the other kinds: the radius
+        # computation steps up at every operation and reaches +inf far below Omega on small
+        # formats (at p = 2, a set within +-1.25 with Omega = 6), and with no finite_when
+        # condition nothing is claimed.
     return out
 
 
