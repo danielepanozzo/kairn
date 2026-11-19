@@ -381,22 +381,76 @@ machine with GCC 13:
 the generator's four longest test classes and the oracle's six enumerations left whole; the
 cross-checks of the compiled runners keep 6 000 of their 20 000 cases and the public interface
 2 000 of its 10 000. To see what the smaller samples still catch, every applicable one-statement
-change of each kernel's generated scalar code was planted in turn (`tests/kernel_mutants.py`,
-about 20 minutes on the Mac: an operator turned, an operand dropped, an FMA made a product or
-given a zero addend, a comparison loosened, a constant shortened, a selection swapped: 1 052
-changes of the 63 kernels, in their `double` and `float` code alike), built into three scalar
-runners (the build's flags, `-ffp-contract=off` and `=fast`, all at `-O3` as they were then built) and the public
-interface's runner, and put through the cross-checks and the public interface's tests of its
-kernel with each tier's samples. The full tier caught 863; the quick tier 861 of them, and nothing
-the full tier missed. The two it misses fail on one or two cases of the full tier's 20 000, the
-first at case 8 908 and 9 280: `ball_scale_2` with one FMA computed as a product and a sum (only
-the `-ffp-contract=off` runner shows it), and `add_fast_2_2_full` with its finiteness test
-`inf > a` loosened to `inf >= a`. The samples were chosen by this experiment: with 2 000 cases
-for the compiled runners two more went unseen, and with 1 000 for the public interface three
-more. Neither tier catches 189 changes, 135 of them FMAs computed as a product and a sum. The
-oracle's own mutants (`oracle/selftest/mutants.py`, 65 of them) are all caught by the quick
-tier's part of its selftest but one, `exhaustive: -inf left out of a one-limb domain`, which only
-an enumeration can see and the full tier catches.
+change of each kernel's generated scalar code was planted in turn (`tests/kernel_mutants.py`: an
+operator turned, an operand dropped, an FMA made a product or given a zero addend, a comparison
+loosened, a constant shortened, a selection swapped: 1 052 changes of the 63 kernels, in their
+`double` and `float` code alike, and a statement of a fix-up in both of its forms), built into
+three scalar runners (the build's flags, `-ffp-contract=off` and `=fast`, all at `-O3`) and the
+public interface's runner, and put through the cross-checks and the public interface's tests of
+its kernel with each tier's samples. On the Linux machine with GCC 13 (results in
+`results/milestone1/mutants/`), the full tier catches 865 and the quick tier 863 of them, and
+nothing the full tier misses. The two it misses fail on one or two cases of the full tier's
+20 000: `ball_scale_2` with one FMA computed as a product and a sum (only the `-ffp-contract=off`
+runner shows it), and `add_fast_2_2_full` with its finiteness test `inf > a` loosened to
+`inf >= a`, first at case 9 280. The samples were chosen by this experiment, when it was first run
+on the Mac (863 and 861 then, with the same two between the tiers): with 2 000 cases for the
+compiled runners two more went unseen, and with 1 000 for the public interface three more. The
+oracle's own mutants (`oracle/selftest/mutants.py`, 65 of them) are all caught by the quick tier's
+part of its selftest but one, `exhaustive: -inf left out of a one-limb domain`, which only an
+enumeration can see and the full tier catches.
+
+**What neither tier catches.** The tiers judge results against the kernels' claims, so a change
+that alters a result while keeping every claim passes them by design: 187 of the 1 052 do. What
+guards the listing itself is the generator's comparison with the interpreter
+([below](#the-generators-tier)), which the same tool runs with `--bits`: the generator's scalar
+runner with the changed kernel alone, built in the 15 configurations of that test with GCC 13 and
+again with Clang 18, on that test's cases, every result required to be bit-identical to the
+interpreter's. With both, each change falls in one class:
+
+| Class | Changes |
+|---|---|
+| Caught by the quick tier | 863 |
+| Caught by the full tier only | 2 |
+| Caught by the comparison with the interpreter only | 122 |
+| Caught by nothing | 65 |
+
+Of the 122, 70 are FMAs computed as a product and a sum, 18 FMAs of a zero addend computed as a
+plain product, 12 FMAs given a zero addend, 8 shortened constants and 14 others; GCC's builds catch
+all of them, Clang's 119. Each of the 65 was then examined by hand, with two searches for an operand
+on which it differs from the kernel: the changed and the original kernel compiled side by side, on
+every combination of the special values of the format in every position (or 4 million of them),
+4 million random cases per format from strata like the tests' and from numbers just above and below
+a power of two, as many with non-finite operands for a kernel of the extended domain and with any
+value anywhere, and every binary32 number for a one-input kernel; and 500 000 cases per format of
+the oracle's own generator, which keeps to the kernel's domain. The verdicts, with the reasons and
+the operands, are in `results/milestone1/mutants/survivors.json`:
+
+- **48 are equivalent**: they cannot change a result. 9 guards `a + 0.0` (which turns −0 into +0)
+  made `a - 0.0`: the guarded value only enters a TwoSum whose error term is +0 for both zeros, or
+  in a fix-up a product with infinity. 8 finiteness tests of a Ball's center loosened to `>=`: an
+  infinite center also makes the radius infinite or NaN, which the test beside it catches. 31 FMAs
+  of a zero addend computed as a product, or as a product and a sum: these change only the sign of
+  a zero result, and that zero goes into a radius that ends with the addition of a positive
+  constant, into `next_up`, into a product with infinity, into Dekker's error sum, where the sign
+  of a zero cannot survive, or, in Veltkamp's split, cannot occur.
+- **17 were blind spots**: an operand tells them apart, and no test supplied it. 7 on operands of
+  the kernel's domain: in `mul_2_2`, `mul_2_2_full`, `ball_mul_2` and `ball_mul_2_full`, `x1 * y1`
+  for the FMA gives a low limb −0 instead of +0 for a pair with a negative tail times zero; `split`
+  with its splitter $2^s + 1$ shortened to $2^s$ gives a high half of 13 bits instead of 12 to a
+  binary32 number just above a power of two; and Dekker's product with either splitter shortened
+  has another error term near underflow in binary32. 10 only on operands outside the domain (a pair
+  that is not normalized, or not canonical), which the comparison takes too: bit identity holds on
+  any operand. None breaks a claim: on every operand of the domain found, the oracle passes the
+  changed result, since Kairn leaves the sign of a zero unspecified, the error term stays within
+  the claim's allowance for underflow, and `split` claims only $a = a_h + a_l$ (that its high half
+  has at most half the precision, which Dekker's product relies on, is in its description but is
+  not a claim).
+
+Those operands are now among the comparison's cases (`SPECIAL_CASES` in `gen/tests/test_cxx.py`),
+and it catches all 17: of the 1 052 changes, the tests now catch 1 004, and the 48 they miss cannot
+change a result. With `--jobs 32` the whole run took 47 minutes on 32 hardware threads of the Linux
+machine; the comparison alone (`--no-tiers`) takes about a minute per change and core, and
+`--ids` reruns given changes (`results/milestone1/mutants/README.md`).
 
 The stopgap of the one tier, a timeout of 1 800 seconds for the generator's and the oracle's tests
 and of 60 minutes for the jobs of `build.yml`, is gone: their timeouts are 600 seconds and 30
@@ -409,7 +463,10 @@ two thirds of its time goes to its C++ tests, which build the generated code at 
 `-O2`, with and without `-frounding-math`, under every contraction setting, and with both forms of
 the scalar fix-ups (inline, and a function of its own: `KAIRN_GEN_FIXUP_CALL`), and require every
 build, scalar and packed, to be bit-identical to the interpreter, with special operands in every
-lane. The cross-checks build each compiler's own form only. ctest runs it without them (`--no-cxx`): with them it took 148 seconds on its own on the
+lane. It is what sees a change of the listing that keeps every claim: of the 187 planted faults
+that neither tier catches, it caught 122, and with the special operands it now adds for eight
+kernels (`SPECIAL_CASES`), 139; the other 48 cannot change a result
+([What neither tier catches](#time)). The cross-checks build each compiler's own form only. ctest runs it without them (`--no-cxx`): with them it took 148 seconds on its own on the
 Linux machine of [Time](#time), and the cross-checks already compile the same code with the build's
 compiler and flags. Of the rest, four test classes take about 95% of the time; the quick tier
 leaves them out (`--skip`) and the full tier runs them alone (`-k`, `full.kairn-gen.test`). The

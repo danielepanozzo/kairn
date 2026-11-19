@@ -182,15 +182,126 @@ def parse_completed(line):
     return [float.fromhex(t) for t in line.split(' -> ')[1].split()]
 
 
+# Operands that tell a fault planted in a kernel's scalar code from the kernel and that the random
+# cases of test_matrix miss (tests/kernel_mutants.py; results/milestone1/mutants/survivors.json),
+# each line with the fault it catches. Bit identity holds on any operand, so some are outside the
+# kernel's domain (marked "outside"): neither tier sees those faults, by design.
+SPECIAL_CASES = {
+    'mul_2_2': {
+        'binary64': [
+            '-0x1p+0 -0x1p-60 0x0p+0 0x0p+0',         # tl0 = x1 * y1: a low limb -0, not +0
+            '-0x0p+0 -0x0.0000000000001p-1022 0x1.0659418fbcbb6p-521 0x1.5555555555555p-2',  # outside: ch = x0 * y0
+            '0x0p+0 0x0.8p-1022 -0x0p+0 -0x1.0000000000001p-1022',       # outside: tl0 = x1 * y1 + 0.0
+        ],
+        'binary32': [
+            '-0x1p+0 -0x1p-30 0x0p+0 0x0p+0',
+            '0x1p-127 0x0p+0 -0x0p+0 -0x1.8f681ep-51',
+            '0x0p+0 0x1p-75 -0x0p+0 -0x1p-149',
+        ],
+    },
+    'mul_2_2_full': {
+        'binary64': [
+            '-0x1p+0 -0x1p-60 0x0p+0 0x0p+0',         # z0_tl0 = x1 * y1
+            '-0x0p+0 -0x1.2df1030122b6p-964 0x0p+0 0x1p-537',            # outside: z0_ch = x0 * y0, z0_tl0 + 0.0
+        ],
+        'binary32': [
+            '-0x1p+0 -0x1p-30 0x0p+0 0x0p+0',
+            '-0x0p+0 -0x1p-149 0x1p-149 0x1.fffffcp-127',                # outside: z0_ch = x0 * y0
+            '0x0p+0 0x1p-149 -0x0p+0 -0x1p-24',                          # outside: z0_tl0 = x1 * y1 + 0.0
+        ],
+    },
+    'ball_mul_2': {
+        'binary64': [
+            '-0x1p+0 -0x1p-60 0x0p+0 0x0p+0 0x0p+0 0x0p+0',             # cz0_tl0 = cx1 * cy1
+            '-0x0p+0 -0x1p-1022 0x1p-53 0x0.fffffffffffffp-1022 -0x1.0000000000001p-1022 0x1.7f7beb3d7addbp-1021',
+            # outside: cz0_ch = cx0 * cy0 (above), cz0_tl0 = cx1 * cy1 + 0.0 (below)
+            '0x0p+0 0x1.0000000000001p-1022 -0x1.0000004000001p+0 -0x0p+0 -0x0.fffffffffffffp-1022 '
+            '-0x1.0000004000001p+0',
+        ],
+        'binary32': [
+            '-0x1p+0 -0x1p-30 0x0p+0 0x0p+0 0x0p+0 0x0p+0',
+            '0x1p-126 0x1p-63 -0x1p-63 -0x0p+0 -0x1p-149 -0x1p+103',
+            '-0x0p+0 -0x1p-24 0x1.d2ac3p+125 0x0p+0 0x1p-149 -0x0p+0',
+        ],
+    },
+    'ball_mul_2_full': {
+        'binary64': [
+            '-0x1p+0 -0x1p-60 0x0p+0 0x0p+0 0x0p+0 0x0p+0',             # cz0_tl0 = cx1 * cy1
+            '0x0.8p-1022 0x1p-1022 -0x1.ffffffffc259dp+174 -0x0p+0 -0x1p-511 0x1.3faa40413b9d1p-405',
+            # outside: cz0_ch = cx0 * cy0 (above), cz0_tl0 = cx1 * cy1 + 0.0 (below)
+            '0x0p+0 0x1.f468898dd39bdp-998 0x1.0000004000001p+0 -0x0p+0 -0x1.324a99546b27ep-151 0x1.fffffffffffffp+1',
+        ],
+        'binary32': [
+            '-0x1p+0 -0x1p-30 0x0p+0 0x0p+0 0x0p+0 0x0p+0',
+            '0x0p+0 0x1.fffffcp-127 -0x1.eb207ap-46 -0x1.5fdf8ap-122 -0x1p-127 0x1.460d48p-102',
+            '0x0p+0 0x1.c2bf6p-91 -0x1p+0 -0x0p+0 -0x1p-127 -0x1.000006p+0',
+        ],
+    },
+    # The splitter 2^s + 1 shortened to 2^s: in binary32 a significand just above 1 gets a 13-bit
+    # high half (the claim, a = ah + al exactly, still holds); in binary64 only where the original's
+    # g = (2^27 + 1) a overflows and the mutant's does not.
+    'split': {
+        'binary64': ['0x1.ffffffffff6cap+996'],
+        'binary32': ['0x1.00086ap+78'],
+    },
+    'two_prod_dekker': {
+        'binary64': ['-0x1.ffffffff55ceap+996 -0x1.fffffffff3231p-724',    # the splitter of a, as split's
+                     '-0x1.000000001107dp-69 0x1.fffffffffc106p+996'],     # and of b
+        'binary32': ['0x1.000b28p-116 -0x1.ffffaap-1', '-0x1.00039ap-108 0x1.000a7cp-8'],
+    },
+    # outside: f = inf > |z0| loosened to >=, which only an infinite z0 tells apart; on canonical
+    # operands add_2_2 overflows to a NaN z0 (no search found an infinite one).
+    'add_2_2_full': {
+        'binary64': ['-0x1.0000000000003p+0 -0x1p+0 0x1.1155c6c8f72dfp+1022 -0x1.fffffffffffffp+1023'],
+        'binary32': ['-0x1.10f38ep+124 -0x1.4c086p-88 0x1.80ca52p+126 -0x1.fffffep+127'],
+    },
+    'sub_2_2_full': {
+        'binary64': ['0x1p-1022 -0x1.fffffffffffffp+1023 -0x1.5daaa8af2da63p+1022 0x1p+0'],
+        'binary32': ['0x1.f4acbcp+124 0x1.c27462p-95 -0x1.00007ap+124 0x1.fffffep+127'],
+    },
+}
+
+
+def special_cases(fmt, kernel):
+    return [[float.fromhex(x) for x in case.split()] for case in SPECIAL_CASES.get(kernel.name, {}).get(fmt, ())]
+
+
+def matrix_cases(kernels, name):
+    """The cases of Kernels.test_matrix for one kernel: lines_for's, with non-finite operands in
+    the forms of the non-finite layer for its kernels, and SPECIAL_CASES. tests/kernel_mutants.py
+    uses them too."""
+    return lines_for(kernels, [name], 'cxx',
+                     lambda fmt, k: common.nonfinite_cases(fmt, k, N // 4, 'cxx') + special_cases(fmt, k))
+
+
+def differences(cases, want, out):
+    """The lines of a runner's output `out` for `cases` that are not bit-identical to the
+    interpreter's limbs `want`, each with those limbs; an AssertionError if `out` is not the
+    completion of the cases, line by line."""
+    got = out.splitlines()
+    if len(got) != len(cases):
+        raise AssertionError(f'{len(got)} lines for {len(cases)} requests')
+    bad = []
+    for (_, _, _, request), w, line in zip(cases, want, got):
+        if not line.startswith(request + ' -> '):
+            raise AssertionError(line)
+        g = parse_completed(line)
+        if len(g) != len(w) or not all(common.same(x, y) for x, y in zip(g, w)):
+            bad.append((line, [x.hex() for x in w]))
+    return bad
+
+
+def configurations(compilers):
+    """(label, command without sources) of every build of the matrix with each compiler."""
+    return [(f'{cxx} {" ".join(flags)}', [cxx] + BASE + flags) for cxx in compilers for flags in MATRIX + FORMS]
+
+
 class Builds:
     """Every configuration of the matrix, built in parallel into one directory."""
 
     def __init__(self, tag, sources, extra=()):
         self.dir = common.scratch(tag)
-        self.configs = []
-        for cxx in COMPILERS:
-            for flags in MATRIX + FORMS:
-                self.configs.append((f'{cxx} {" ".join(flags)}', [cxx] + BASE + flags))
+        self.configs = configurations(COMPILERS)
         if rosetta():
             for flags in (['-O2', '-ffp-contract=fast'], ['-O0', '-ffp-contract=off'],
                           ['-O2', '-ffp-contract=on', '-frounding-math']):
@@ -220,8 +331,7 @@ class Kernels(unittest.TestCase):
     def test_matrix(self):
         """Every build, every kernel, both limb types: bit-identical to the interpreter."""
         for name in self.ks:
-            # With non-finite operands in the forms of the non-finite layer, for its kernels.
-            cases = lines_for(self.ks, [name], 'cxx', lambda fmt, k: common.nonfinite_cases(fmt, k, N // 4, 'cxx'))
+            cases = matrix_cases(self.ks, name)
             want = expect(None, cases)
             text = ''.join(c[3] + '\n' for c in cases)
             reference = None
@@ -233,14 +343,7 @@ class Kernels(unittest.TestCase):
                     self.assertEqual(code, 0, err)
                     if out == reference:            # the same text as an already checked build
                         continue
-                    got = out.splitlines()
-                    self.assertEqual(len(got), len(cases))
-                    bad = []
-                    for (_, _, _, request), w, line in zip(cases, want, got):
-                        self.assertTrue(line.startswith(request + ' -> '), line)
-                        g = parse_completed(line)
-                        if len(g) != len(w) or not all(common.same(x, y) for x, y in zip(g, w)):
-                            bad.append((line, [x.hex() for x in w]))
+                    bad = differences(cases, want, out)
                     self.assertEqual(bad[:5], [], f'{len(bad)} of {len(cases)} differ from the interpreter')
                     reference = out
 
@@ -279,6 +382,20 @@ class Kernels(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertEqual(out, 'lt_2_1 binary64 0x1p+0 -0x1p-60 0x1p+0 -> 1\n'
                               'le_1_2 binary32 0x1p+0 0x1p+0 -0x1p-30 -> 0\n')
+
+
+class SpecialCases(unittest.TestCase):
+    def test_they_fit_their_kernels(self):
+        """Every kernel of SPECIAL_CASES exists, and each case is one operand per input value, each a
+        number of its format, so that none drops out of test_matrix unseen."""
+        ks = common.kernels()
+        for name, by_format in SPECIAL_CASES.items():
+            self.assertIn(name, ks)
+            self.assertLessEqual(set(by_format), {'binary64', 'binary32'})
+            for fmt, cases in by_format.items():
+                for case in special_cases(fmt, ks[name]):
+                    self.assertEqual(len(case), len(ks[name].input_kinds), (name, case))
+                    self.assertEqual([common.rn(fmt, x) for x in case], case, (name, fmt, case))
 
 
 def negates_a_fused_result(k, kernels):
