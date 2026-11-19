@@ -450,7 +450,9 @@ statement and gains the IEEE-model one: its `requires` say `canonical` where the
 `normalized`, which is the same thing for a finite operand. A full kernel or a constructor has
 the IEEE-model statement only, and a core keeps the real-model one and the domain `finite`.
 
-`status` and `theorem` keep referring to the real-model statement where there is one. A kernel
+A kernel without a real-model statement (a full kernel, a full Ball kernel, a constructor)
+carries `"ieee_only": true`; the field is absent otherwise. `status` and `theorem` keep referring
+to the real-model statement where there is one. A kernel
 of the extended domain also carries `ieee_status` (`proved` or `unverified`) and, when proved,
 `ieee_theorem`; for a full kernel or a constructor, which has no real-model statement, `status`
 is its `ieee_status`. The oracle judges the claims whatever the statuses say.
@@ -460,17 +462,18 @@ left out):
 
 ```json
 {
-  "name": "add_2_1_full", "domain": "extended",
+  "name": "add_2_1_full", "domain": "extended", "ieee_only": true,
   "inputs": [{"name": "x", "limbs": 2}, {"name": "a", "limbs": 1}],
   "outputs": [{"name": "w", "limbs": 2}],
   "value": "x+a",
   "requires": ["canonical(x)"],
-  "ensures": [{"kind": "extends", "of": "w", "core": "add_2_1", "lead": "add", "finite_when": []}],
+  "ensures": [{"kind": "extends", "of": "w", "core": "add_2_1", "lead": "add",
+               "finite_when": [{"abs_le": "x", "exp": -2}, {"abs_le": "a", "exp": -2}]}],
   "min_precision": 3, "status": "unverified", "ieee_status": "unverified",
   "instances": {"binary64": [], "binary32": []}
 },
 {
-  "name": "ball_mul_2_full", "domain": "extended",
+  "name": "ball_mul_2_full", "domain": "extended", "ieee_only": true,
   "inputs": [{"name": "cx", "limbs": 2}, {"name": "rx", "limbs": 1},
              {"name": "cy", "limbs": 2}, {"name": "ry", "limbs": 1}],
   "outputs": [{"name": "cw", "limbs": 2}, {"name": "rw", "limbs": 1}],
@@ -483,7 +486,7 @@ left out):
   "instances": {"binary64": [], "binary32": []}
 },
 {
-  "name": "ball_make_2", "domain": "extended",
+  "name": "ball_make_2", "domain": "extended", "ieee_only": true,
   "inputs": [{"name": "c", "limbs": 2}, {"name": "r", "limbs": 1}],
   "outputs": [{"name": "cw", "limbs": 2}, {"name": "rw", "limbs": 1}],
   "requires": ["canonical(c)"],
@@ -493,7 +496,13 @@ left out):
 }
 ```
 
-The minimum precision of a full kernel is that of its core. In the extended domain the scalar of
+A kernel description also has fields that drive the IEEE-model printer and are not written to
+the claims: `ieee`, `ieee_finite` and `ieee_finite_result` name the IEEE-model statements of a
+finite core (the bridge, and the two forms of "no overflow below a threshold"), and `ieee_only`
+marks a kernel that has no real-model statement (`gen/README.md`).
+
+The minimum precision of a full kernel is that of its core (2 for the one-limb full Ball
+kernels, whose constants must stay below the overflow threshold). In the extended domain the scalar of
 `ball_scale` is any value of the format, $\pm\infty$ or NaN, and one that is not finite gives the
 whole line (the empty set if the ball operand is empty). `make_2_limbs` takes its two limbs as one
 2-limb input with `canonical`.

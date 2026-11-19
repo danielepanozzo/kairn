@@ -244,8 +244,8 @@ make_2(a) -> x                     make_2_limbs(h, l) -> x          ball_make_2(
 *Status.* The four constructors are proved in the IEEE model, for every precision. So are the
 two facts about the guard that the rest relies on: in the real model $\mathrm{RN}(a + 0) = a$ for
 a number of the format; in the IEEE model the guard keeps finiteness and the value, turns a zero
-into $+0$, and leaves an infinity or a NaN what it is. The generated real model of `add_2_1` does
-not contain the guard yet; a lemma shows that with it the kernel computes the same values.
+into $+0$, and leaves an infinity or a NaN what it is. With its guard, `add_2_1` is 11
+operations where the Phase 0 report counted 10.
 
 ## Second-wave kernels
 
