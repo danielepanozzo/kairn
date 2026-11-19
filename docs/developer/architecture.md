@@ -407,11 +407,68 @@ integer; $2^{q_{\max} + p}$ is the overflow threshold. For example `add_2_2_full
 `[{"abs_le": "x", "exp": -2}, {"abs_le": "y", "exp": -2}]` and `mul_2_2_full` has
 `[{"abs_le": "x*y", "exp": -1}]`. The list is empty when no condition is proved.
 
+Two more kinds serve the constructors
+([values that enter from the program](design/milestone1.md#values-that-enter-from-the-program)):
+
+| Kind | Fields | Meaning |
+|---|---|---|
+| `represents` | `of` | the output is canonical and is `value` exactly: a finite `value` gives a finite normalized output of that value, $\pm\infty$ gives $(\pm\infty, 0)$, a NaN gives all NaN |
+| `makes_ball` | `center`, `radius`: the outputs; `from`: the inputs given as center and radius | the output ball is canonical: empty when the given radius is a NaN or negative; otherwise the whole line when the given center is not finite or the given radius is $+\infty$; otherwise the given center and radius, exactly |
+
 A kernel of this domain has a statement in the IEEE model, generated like the real-model
 statements and proved the same way. A kernel that also makes sense on finite operands alone
 (the comparisons, the conversions, `neg_2`, `abs_2`, `radd`, `rmul`) keeps its real-model
-statement and gains the IEEE-model one; a full kernel has the IEEE-model statement only, and its
-core keeps the real-model one.
+statement and gains the IEEE-model one: its `requires` say `canonical` where they said
+`normalized`, which is the same thing for a finite operand. A full kernel or a constructor has
+the IEEE-model statement only, and a core keeps the real-model one and the domain `finite`.
+
+`status` and `theorem` keep referring to the real-model statement where there is one. A kernel
+of the extended domain also carries `ieee_status` (`proved` or `unverified`) and, when proved,
+`ieee_theorem`; for a full kernel or a constructor, which has no real-model statement, `status`
+is its `ieee_status`. The oracle judges the claims whatever the statuses say.
+
+Three entries in full, as the generator writes them (`source`, `flops` and the theorem fields
+left out):
+
+```json
+{
+  "name": "add_2_1_full", "domain": "extended",
+  "inputs": [{"name": "x", "limbs": 2}, {"name": "a", "limbs": 1}],
+  "outputs": [{"name": "w", "limbs": 2}],
+  "value": "x+a",
+  "requires": ["canonical(x)"],
+  "ensures": [{"kind": "extends", "of": "w", "core": "add_2_1", "lead": "add", "finite_when": []}],
+  "min_precision": 3, "status": "unverified", "ieee_status": "unverified",
+  "instances": {"binary64": [], "binary32": []}
+},
+{
+  "name": "ball_mul_2_full", "domain": "extended",
+  "inputs": [{"name": "cx", "limbs": 2}, {"name": "rx", "limbs": 1},
+             {"name": "cy", "limbs": 2}, {"name": "ry", "limbs": 1}],
+  "outputs": [{"name": "cw", "limbs": 2}, {"name": "rw", "limbs": 1}],
+  "value": "cx*cy",
+  "requires": ["ball(cx, rx)", "ball(cy, ry)"],
+  "ensures": [{"kind": "encloses", "center": "cw", "radius": "rw", "set": "x*y",
+               "balls": {"x": {"center": "cx", "radius": "rx"}, "y": {"center": "cy", "radius": "ry"}},
+               "finite_when": []}],
+  "min_precision": 4, "status": "unverified", "ieee_status": "unverified",
+  "instances": {"binary64": [], "binary32": []}
+},
+{
+  "name": "ball_make_2", "domain": "extended",
+  "inputs": [{"name": "c", "limbs": 2}, {"name": "r", "limbs": 1}],
+  "outputs": [{"name": "cw", "limbs": 2}, {"name": "rw", "limbs": 1}],
+  "requires": ["canonical(c)"],
+  "ensures": [{"kind": "makes_ball", "center": "cw", "radius": "rw", "from": {"center": "c", "radius": "r"}}],
+  "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+  "instances": {"binary64": [], "binary32": []}
+}
+```
+
+The minimum precision of a full kernel is that of its core. In the extended domain the scalar of
+`ball_scale` is any value of the format, $\pm\infty$ or NaN, and one that is not finite gives the
+whole line (the empty set if the ball operand is empty). `make_2_limbs` takes its two limbs as one
+2-limb input with `canonical`.
 
 ## The line protocol
 
