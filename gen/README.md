@@ -31,6 +31,7 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `include/kairn/gen/bounds.hpp` | Per kernel and limb type, whether it is proved and, only then, the constants of its error claim rounded up (`unit`, `tiny`, `unit_computed`, `tiny_computed`) and its form; what the public headers gate on and export through `kairn::traits` |
 | `include/kairn/gen/selftest.hpp` | Every kernel on fixed operands, with the results the interpreter computes: the stored bit patterns of `kairn::self_test()` |
 | `gen/claims.json` | What every kernel claims, with the constants per format as exact fractions |
+| `gen/objcode.json` | Per kernel, form of its C++ (scalar with the fix-up inline, scalar with the fix-up a function of its own, packed) and limb type, the fused multiply-adds and plain multiplications its code asks for: the expectations of the object-code check (`tests/objcode/`) |
 | `gen/tests/runner_kernels.inc` | The table of kernels of the C++ runners `gen/tests/runner.cpp` and `packed_runner.cpp` |
 
 `Model.v`, `Statements.v` and `Audit.v` are the real model only. The full kernels and the
@@ -56,6 +57,7 @@ through a pending guard. `proofs/gen` is mapped to the logical path `Kairn.Gen`,
 | `kairn_gen/simd.py` | The AVX2 and NEON printers (trusted; tested lane by lane against the scalar code) |
 | `kairn_gen/consts.py` | The exact value of every constant in any format, `unit_computed(K)` and `tiny_computed(K)` included |
 | `kairn_gen/claims.py` | `gen/claims.json` |
+| `kairn_gen/objcode.py` | `gen/objcode.json`: the counts below |
 | `kairn_gen/library.py` | `bounds.hpp` and `selftest.hpp`, for the hand-written public headers |
 | `kairn_gen/interp.py` | The interpreter: exact integer arithmetic on any format `(p, qmin, qmax)` |
 | `kairn_gen/build.py` | What `build` writes and `check` compares |
@@ -199,6 +201,34 @@ returns the outputs in a `fixup::result`. The call is what Clang on AArch64 gets
 what every other compiler gets; the tests may set the macro to build either. No other kernel
 changes, and the packed printers keep the selects as blends.
 
+## The counts of the object-code check
+
+`gen/objcode.json` gives, for every kernel, each form of its C++ (`scalar`, with the fix-up inline;
+`scalar_call`, with the fix-up a function of its own, `fixup::K`; `packed`) and each limb type, six
+numbers, in the order of the file's `counts`:
+
+- `fma`, `mul`: the operations printed as a fused multiply-add (`fma`, `fms`, `fnma`, `prod`) and as
+  a plain multiplication (`times_inf`, a product with +infinity), one per node of the flattened
+  listing. Every form prints each operation of the listing once.
+- `fma_distinct`, `mul_distinct`: the same, with the operations of one function that compute the
+  same thing from the same operands counted once, as a compiler that eliminates common
+  subexpressions does. The same thing means the same operation up to the order of two factors or of
+  the operands of a sum, an `fms` being an FMA of the negated addend, an `fnma` one of a negated
+  factor and a `prod` one with the addend +0; constants are the same when their literals of the
+  limb type are. In `scalar_call` the kernel and its fix-up are numbered apart.
+- `consteval_mul`: the plain products of the branch that a kernel with a constant-evaluation
+  variant takes in constant evaluation (two_prod: 7, Dekker's product), which a compiler that does
+  not optimize may emit although no execution takes it.
+- `muladd`: the declared contractable multiply-adds (none so far; the check has no rule for them).
+
+The forms differ for three kernels, `mul_2_1_full`, `mul_2_2_full` and `mul_pow2_2_full`, whose
+fix-up computes the core's leading product again (`t = prod(x0, y0)`): one FMA node more than
+`fma_distinct` in the inline form and in packed code, and as many in `scalar_call`, where the
+recomputation is in the fix-up function; and for `two_prod`, whose scalar forms have the branch of
+constant evaluation. The limb types differ for no kernel today, but they could: two constants of
+different expressions can be one number in binary32 and two in binary64. What the check makes of
+these numbers is in [Testing](../docs/developer/testing.md#object-code).
+
 ## The rules
 
 `build`, `check` and `interp` refuse a kernel that breaks one, naming the kernel, the value and the
@@ -291,7 +321,11 @@ computed constants (above). A kernel has no real-model statement when it claims 
 - the real model: `Model.v`, `Statements.v` and `Audit.v` are what they were before the non-finite
   layer, byte for byte (pinned digests), and the same as with the layer stripped;
 - the runners read `inf`, `-inf` and `nan` and print non-finite outputs as exactly those words,
-  in every scalar and packed build.
+  in every scalar and packed build;
+- the counts of the object-code check (`test_objcode.py`): each form counts every operation of the
+  listing once, the counts of known kernels, the kernels where forms differ, the numbering of
+  identical operations on a toy kernel (factors swapped, `fms` and `fnma` written as FMAs, constants
+  equal in one format only), and the committed `gen/objcode.json`.
 
 `--full` raises the sizes to a few hundred thousand requests per kernel; `--jobs N` (or
 `$KAIRN_GEN_JOBS`) caps the processes and compilers that run at once, on a shared machine.
