@@ -150,6 +150,13 @@ the opaque product already relies on: the compiler honors the sign of zero, so i
 `a + 0`. Until the generator emits `guard` and checks the rule, the public headers apply it by
 hand in one helper.
 
+One compiler does not fit that description. MSVC 19.52 removes the addition of zero for some
+operands under `/O2`: a guarded $-0$ stays $-0$ (values are unaffected, and the sign of a zero is
+unspecified). In every test so far it still kept the program's product out of the kernel under
+`/fp:contract`, the one MSVC setting that contracts, which is not its default: 0 of 200 000 cases
+differ with the guard and all of them without it. On MSVC the guard therefore rests on those
+tests, which run on every change, and not on a rule of the language.
+
 A kernel may name a second kernel as its **constant-evaluation variant**. The emitted C++
 function then dispatches on `__builtin_is_constant_evaluated()`. Inside such a variant, `prod` is
 emitted as `a * b`, because there is no FMA in constant evaluation and no contraction either. The
