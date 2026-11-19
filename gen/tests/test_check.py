@@ -12,7 +12,8 @@ from kairn_gen import build
 def copy_generator(dst):
     """A repository with only the generator in it, so that its kairn-gen works on dst."""
     shutil.copytree(common.GEN, os.path.join(dst, 'gen'),
-                    ignore=shutil.ignore_patterns('__pycache__', 'claims.json', 'runner_kernels.inc'))
+                    ignore=shutil.ignore_patterns('__pycache__', 'claims.json', 'objcode.json',
+                                                  'runner_kernels.inc'))
 
 
 def kairn_gen(root, *args):

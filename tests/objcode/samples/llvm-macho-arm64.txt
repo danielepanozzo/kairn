@@ -1,0 +1,106 @@
+
+unit.o:	file format mach-o arm64
+
+
+Disassembly of section __TEXT,__text:
+
+0000000000000000 <_kairn_objcode_fixups_call>:
+0000000000000000 <ltmp0>:
+       0:      	ret
+
+0000000000000004 <_kairn_objcode_scalar_double_add_1_1>:
+       4:      	ldp	d0, d1, [x0]
+       8:      	fadd	d0, d0, d1
+       c:      	str	d0, [x1]
+      10:      	ret
+
+00000000000024f8 <_kairn_objcode_scalar_double_mul_2_2_full>:
+    24f8:      	ldp	d0, d2, [x0]
+    24fc:      	ldp	d1, d3, [x0, #0x10]
+    2500:      	movi.2d	v4, #0000000000000000
+    2504:      	fmadd	d5, d0, d1, d4
+    2508:      	fnmsub	d6, d0, d1, d5
+    250c:      	fmadd	d4, d2, d3, d4
+    2510:      	fmadd	d3, d0, d3, d4
+    2514:      	fmadd	d2, d2, d1, d3
+    2518:      	fadd	d3, d6, d2
+    251c:      	fadd	d2, d5, d3
+    2520:      	fmov	x8, d2
+    2524:      	fsub	d4, d2, d5
+    2528:      	fsub	d3, d3, d4
+    252c:      	and	x8, x8, #0x7fffffffffffffff
+    2530:      	mov	x9, #0x7ff0000000000000 ; =9218868437227405312
+    2534:      	cmp	x8, x9
+    2538:      	b.ge	0x2544 <_kairn_objcode_scalar_double_mul_2_2_full+0x4c>
+    253c:      	stp	d2, d3, [x1]
+    2540:      	ret
+    2544:      	stp	x20, x19, [sp, #-0x20]!
+    2548:      	stp	x29, x30, [sp, #0x10]
+    254c:      	add	x29, sp, #0x10
+    2550:      	mov	w0, #0x0                ; =0
+    2554:      	mov	x19, x1
+    2558:      	bl	0x2558 <_kairn_objcode_scalar_double_mul_2_2_full+0x60>
+		0000000000002558:  ARM64_RELOC_BRANCH26	__ZN5kairn3gen5fixup12mul_2_2_fullEddddb
+    255c:      	mov	x1, x19
+    2560:      	mov.16b	v2, v0
+    2564:      	mov.16b	v3, v1
+    2568:      	ldp	x29, x30, [sp, #0x10]
+    256c:      	ldp	x20, x19, [sp], #0x20
+    2570:      	stp	d2, d3, [x1]
+    2574:      	ret
+
+00000000000038cc <_kairn_objcode_packed_float_abs_2>:
+    38cc:      	ldp	q0, q1, [x0]
+    38d0:      	fcmlt.4s	v2, v0, #0.0
+    38d4:      	fneg.4s	v3, v0
+    38d8:      	fneg.4s	v4, v1
+    38dc:      	bit.16b	v0, v3, v2
+    38e0:      	bit.16b	v1, v4, v2
+    38e4:      	stp	q0, q1, [x1]
+    38e8:      	ret
+
+0000000000004fa4 <_kairn_objcode_packed_double_mul_2_2_full>:
+    4fa4:      	ldp	q0, q1, [x0]
+    4fa8:      	ldp	q2, q3, [x0, #0x20]
+    4fac:      	movi.2d	v4, #0000000000000000
+    4fb0:      	movi.2d	v5, #0000000000000000
+    4fb4:      	fmla.2d	v5, v2, v0
+    4fb8:      	fneg.2d	v6, v5
+    4fbc:      	fmla.2d	v6, v2, v0
+    4fc0:      	fmla.2d	v4, v3, v1
+    4fc4:      	fmla.2d	v4, v3, v0
+    4fc8:      	fmla.2d	v4, v2, v1
+    4fcc:      	fadd.2d	v0, v6, v4
+    4fd0:      	fadd.2d	v1, v5, v0
+    4fd4:      	fsub.2d	v2, v1, v5
+    4fd8:      	fsub.2d	v0, v0, v2
+    4fdc:      	movi.2d	v2, #0xffffffffffffffff
+    4fe0:      	fneg.2d	v2, v2
+    4fe4:      	mov	x8, #0x7ff0000000000000 ; =9218868437227405312
+    4fe8:      	dup.2d	v3, x8
+    4fec:      	and.16b	v2, v1, v2
+    4ff0:      	cmge.2d	v4, v2, v3
+    4ff4:      	cmgt.2d	v2, v3, v2
+    4ff8:      	fmul.2d	v3, v5, v3
+    4ffc:      	fcmeq.2d	v5, v3, v3
+    5000:      	bif.16b	v1, v3, v2
+    5004:      	and.16b	v0, v2, v0
+    5008:      	bic.16b	v2, v4, v5
+    500c:      	and.16b	v2, v2, v3
+    5010:      	orr.16b	v0, v0, v2
+    5014:      	stp	q1, q0, [x1]
+    5018:      	ret
+
+0000000000005c94 <__ZN5kairn3gen5fixup12mul_2_2_fullEddddb>:
+    5c94:      	movi.2d	v4, #0000000000000000
+    5c98:      	fmadd	d0, d0, d1, d4
+    5c9c:      	mov	x8, #0x7ff0000000000000 ; =9218868437227405312
+    5ca0:      	fmov	d1, x8
+    5ca4:      	fmul	d0, d0, d1
+    5ca8:      	fcmp	d0, d0
+    5cac:      	fcsel	d1, d4, d0, vc
+    5cb0:      	cmp	w0, #0x0
+    5cb4:      	fcsel	d0, d2, d0, ne
+    5cb8:      	fcsel	d1, d3, d1, ne
+    5cbc:      	ret
+
