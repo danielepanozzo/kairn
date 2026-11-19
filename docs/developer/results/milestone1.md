@@ -1,6 +1,7 @@
 # Milestone 1 report
 
-**Status: complete, with the deviations and open issues listed below.** Milestone 1 is the
+**Status: complete except for one check that the brief asks of CI (the object-code check, under
+[Tests and CI](#tests-and-ci)), with the deviations and open issues listed below.** Milestone 1 is the
 vertical slice of the [brief](../design/brief.md): `double`, one and two limbs, scalar code with
 AVX2 and NEON, $+$, $-$, $\times$, `Ball`, proofs, the oracle with both test tiers, CI, and the
 skeleton of this site. This page says what exists, what is proved, what the tests and the
@@ -217,6 +218,14 @@ on the M3 (33 to 54%) and the i5 (27 to 53%).
   claim without being caught.
 - **CI** is green on `main` on Linux x86-64 and arm64 (GCC, Clang), macOS (Apple clang) and
   Windows (MSVC, clang-cl); a job takes 1 to 9 minutes.
+- **Not done yet: the object-code check.** The brief asks CI to disassemble the compiled kernels
+  and look for fused instructions that the kernel descriptions did not ask for, and the
+  [plan](../design/phase0/plan.md#milestones) puts it in this milestone. It is not in CI. What
+  exists in its place: every kernel is compiled under every contraction setting, at `-O0`, `-O2`
+  and the build's level, with and without `-frounding-math`, and its results are compared bit for
+  bit with the interpreter and judged by the oracle, which catches a contraction that changes a
+  result on a tested case; and the loops of the benchmarks were disassembled by hand on nine
+  configurations ([Benchmarks](bench-milestone1.md)). The check itself is being added.
 
 ## Documentation added
 
