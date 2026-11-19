@@ -271,7 +271,11 @@ class TheKernels(unittest.TestCase):
         self.assertEqual(body['add_fast_2_2'][-1], (('z0', 'z1'), 'fast_two_sum', ('sh', 'w')))
         self.assertEqual(body['add_fast_2_2_ts'][-1], (('z0', 'z1'), 'two_sum', ('sh', 'w')))
         self.assertEqual(body['add_fast_2_2'][:-1], body['add_fast_2_2_ts'][:-1])
-        self.assertTrue(all(k.status == 'unverified' for k in ks.values()))
+        # Proved means: the audit passes for that kernel (make -C proofs).
+        self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
+                         {'two_sum', 'fast_two_sum', 'two_prod', 'add_2_2', 'add_2_1', 'mul_2_2', 'mul_2_1'})
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
+                         {'split', 'two_prod_dekker', 'add_fast_2_2', 'add_fast_2_2_ts'})
         self.assertEqual(ks['two_prod'].ce_variant, 'two_prod_dekker')
 
     def test_flops(self):

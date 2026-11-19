@@ -186,7 +186,7 @@ class Rocq(unittest.TestCase):
         self.assertIn('  Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * '
                       'Rabs ((x0 + x1) + (y0 + y1)).', s)
         self.assertIn('<= 4 * u prec ^ 2 * (Rabs (x0 + x1) + Rabs (y0 + y1)).', s)
-        self.assertIn('<= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + 4 * eta emin.', s)
+        self.assertIn('<= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + (3 / 2) * eta emin.', s)
         self.assertEqual(s.count('_spec : Prop :='), len(self.ks))
 
     def test_muladd_choices(self):
@@ -202,8 +202,10 @@ class Rocq(unittest.TestCase):
         self.assertIn('ops_call emin prec tie_even fuse_u0_t x0 x1 a in', st)
 
     def test_audit(self):
-        self.assertIn('(* No kernel is verified yet. *)', rocq.audit(self.ks))
         ks = copy.deepcopy(dict(self.ks))
+        for k in ks.values():
+            k.status = 'unverified'
+        self.assertIn('(* No kernel is verified yet. *)', rocq.audit(ks))
         ks['mul_2_2'].status = 'proved'
         ks['add_2_2'].status = 'proved'
         audit = rocq.audit(ks)

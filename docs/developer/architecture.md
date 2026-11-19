@@ -107,8 +107,11 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    results of `add`, `sub`, `fma`-family, `prod`, `select`, `neg`, `abs`, `succ`, `pred`, never of
    `muladd`.
 4. **The non-finite cone.** Every limb value reaches output limb 0 through operations that map a
-   non-finite operand to a non-finite result. A kernel that cannot satisfy this declares it and
-   must come with an explicit finiteness test.
+   non-finite operand to a non-finite result, unless the value is itself computed from output
+   limb 0 (the error term of a `two_sum`, the tail of a final `fast_two_sum`). For those values
+   finiteness is not a matter of data flow: it is part of the kernel's proof, or a condition of
+   its statement. A kernel that cannot satisfy the rule declares it and must come with an
+   explicit finiteness test.
 5. Every kernel names its theorem, its source and that source's license, or is marked
    `unverified`.
 
@@ -182,30 +185,40 @@ add_fast_2_2(x, y) -> z   JMP17 Alg. 5
   (z0, z1) = fast_two_sum(sh, w)     (or two_sum: decided by the exhaustive test, see below)
 ```
 
-| Kernel | Requires | Target statement |
-|---|---|---|
-| `two_sum` | — | $s = \mathrm{RN}(a + b)$ and $s + e = a + b$ |
-| `fast_two_sum` | $\lvert a\rvert \ge \lvert b\rvert$ | the same, and $(s, e)$ is normalized |
-| `two_prod` | — | $p = \mathrm{RN}(ab)$; $\lvert p + e - ab\rvert \le \eta/2$; and $p + e = ab$ when $ab = 0$ or $\lvert ab\rvert \ge 2^{2p-1}\eta$ |
-| `two_prod_dekker` | no intermediate overflow | $p = \mathrm{RN}(ab)$; $\lvert p + e - ab\rvert \le \tfrac72\eta$; exact under the same condition |
-| `add_2_2` | $x$, $y$ normalized | $z$ normalized; $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\lvert x + y\rvert$ |
-| `add_2_1` | $x$ normalized | $z$ normalized; $\lvert z - (x + a)\rvert \le 2u^2\lvert x + a\rvert$ |
-| `mul_2_2` | $x$, $y$ normalized | $z$ normalized; $\lvert z - xy\rvert \le 4u^2\lvert xy\rvert + t\,\eta$ with $t \le 4$ to be determined |
-| `mul_2_1` | $x$ normalized | $z$ normalized; $\lvert z - xa\rvert \le 2u^2\lvert xa\rvert + t\,\eta$ with $t \le 2$ to be determined |
-| `add_fast_2_2` | $x$, $y$ normalized | $z$ normalized; $\lvert z - (x + y)\rvert \le c\,u^2(\lvert x\rvert + \lvert y\rvert)$, $c \le 4$ to be determined |
+| Kernel | Requires | Statement | Holds for | Status |
+|---|---|---|---|---|
+| `two_sum` | — | $s = \mathrm{RN}(a + b)$ and $s + e = a + b$ | $p \ge 2$ | proved |
+| `fast_two_sum` | $\lvert a\rvert \ge \lvert b\rvert$ | the same, and $(s, e)$ is normalized | $p \ge 2$ | proved |
+| `two_prod` | — | $p = \mathrm{RN}(ab)$; $\lvert p + e - ab\rvert \le \eta/2$; and $p + e = ab$ when $ab = 0$ or $\lvert ab\rvert \ge 2^{2p-1}\eta$ | $p \ge 2$ | proved |
+| `add_2_2` | $x$, $y$ normalized | $z$ normalized; $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\lvert x + y\rvert$ | $p \ge 3$ | proved |
+| `add_2_1` | $x$ normalized | $z$ normalized; $\lvert z - (x + a)\rvert \le 2u^2\lvert x + a\rvert$ | $p \ge 3$ | proved |
+| `mul_2_2` | $x$, $y$ normalized | $z$ normalized; $\lvert z - xy\rvert \le 4u^2\lvert xy\rvert + \tfrac32\eta$ | $p \ge 4$ | proved |
+| `mul_2_1` | $x$ normalized | $z$ normalized; $\lvert z - xa\rvert \le 2u^2\lvert xa\rvert + \eta$ | $p \ge 2$ | proved |
+| `two_prod_dekker` | no intermediate overflow | $p = \mathrm{RN}(ab)$; $\lvert p + e - ab\rvert \le \tfrac72\eta$; exact under the same condition as `two_prod` | | target |
+| `add_fast_2_2` | $x$, $y$ normalized | $z$ normalized; $\lvert z - (x + y)\rvert \le c\,u^2(\lvert x\rvert + \lvert y\rvert)$, $c \le 4$ to be determined | | target |
 
-All statements are for every format with $p$ above a small minimum that is part of the statement,
-with gradual underflow, and in this wave under the hypothesis that no operation overflows. The
-treatment of overflow and of non-finite operands is added on top of these statements, not inside
-them.
+"Proved" means: Rocq accepts a proof of the generated statement, and the audit finds only the
+four allowed axioms (`make -C proofs`). A target is what Kairn sets out to prove and is not a
+guarantee.
 
-Two things are deliberately open and are settled by exhaustive testing on toy formats before any
-proof is attempted: the smallest valid $t$ for the two products, and whether `add_fast_2_2` can
-end with `fast_two_sum` and still return a normalized result when the leading limbs cancel.
+All statements are for every format with $p$ at least the minimum shown, for every $q_{\min}$,
+with ties to even and gradual underflow, and under the hypothesis that no operation overflows.
+The treatment of overflow and of non-finite operands is added on top of these statements, not
+inside them ([Milestone 1 statements](design/milestone1.md)).
+
+The two additions carry over from the machine-checked proofs of
+[MR22](design/phase0/references.md#mr22), which have no underflow, through one lemma: the sum of
+two numbers of the format rounds to the same number with and without gradual underflow. The two
+products are new proofs; their underflow terms $\tfrac32\eta$ and $\eta$ are approached, and not
+exceeded, by exhaustive runs on toy formats.
+
+Still open, to be settled by exhaustive testing on toy formats before a proof is attempted:
+whether `add_fast_2_2` can end with `fast_two_sum` and still return a normalized result when the
+leading limbs cancel.
 
 The remaining Milestone 1 kernels (subtraction, comparisons, conversions, the directed-rounding
 primitives, `ldexp`, the treatment of non-finite values, and the `Ball` operations) are specified
-after this wave.
+in [Milestone 1 statements](design/milestone1.md).
 
 ## The formal model
 
@@ -217,9 +230,12 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   over `R`. `prod a b` is `rnd (a * b + 0)`, `fms a b c` is `rnd (a * b + - c)`; a `call` stays a
   call (`let '(sh, sl) := two_sum x0 y0 in`), so that a proof can use the callee's theorem.
 - `Statements.v`: one `Definition <kernel>_spec : Prop` per kernel, built from the kernel's
-  claims. A hand-written proof must have exactly this type.
-- `Audit.v`: for every kernel not marked `unverified`, checks
-  `(<kernel>_correct : <kernel>_spec)` and prints the theorem's assumptions.
+  claims. A hand-written proof must have exactly this type. A statement quantifies over every
+  `emin` and every `prec` from the kernel's minimum on, and fixes the tie rule to ties-to-even.
+- `Audit.v`: for every kernel not marked `unverified`, a silent definition
+  `<kernel>_audit : <kernel>_spec := <kernel>_correct`, which fails to compile unless the theorem
+  has the generated statement as its type, followed by `Print Assumptions <kernel>_correct`. The
+  file prints nothing else, so that the audit script can refuse any output it does not understand.
 
 `make -C proofs` fails if any theorem depends on anything other than the four allowed axioms
 (`ClassicalDedekindReals.sig_forall_dec`, `ClassicalDedekindReals.sig_not_dec`,
@@ -242,10 +258,10 @@ proof file contains `Admitted`, `admit`, `Axiom` or `Parameter`.
       "requires": ["normalized(x)", "normalized(y)"],
       "ensures": [
         {"kind": "normalized", "of": "z"},
-        {"kind": "error", "of": "z", "form": "R", "c": "4", "k": 2, "t": "4", "when": null}
+        {"kind": "error", "of": "z", "form": "R", "c": "4", "k": 2, "t": "3/2", "when": null}
       ],
-      "min_precision": 5,
-      "status": "unverified",
+      "min_precision": 4,
+      "status": "proved",
       "theorem": {"file": "proofs/theories/Mul22.v", "name": "mul_2_2_correct"},
       "source": {"cite": "JMP17 Alg. 12; bound from MR22", "license": "algorithm: published; proof: MIT"},
       "flops": 9,

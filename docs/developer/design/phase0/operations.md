@@ -48,7 +48,7 @@ parametric in $p$, $\eta$ and the tie rule.
 
 | Block | Code (one rounding per line) | Statement (model G) | Status |
 |---|---|---|---|
-| `TwoSum(a, b)` | 6 additions/subtractions (Knuth) | $s = \mathrm{RN}(a+b)$ and $s + e = a + b$ exactly, for all finite $a, b$ including subnormals, provided no intermediate overflows. That is guaranteed when $s$ is finite **and $\lvert a\rvert < \Omega$**: at $a = \pm\Omega$ the error term can be NaN although $s$ is finite ([BGM17](references.md#bgm17)). In `double`, $a = \Omega$ with $b = -1.5 \cdot 2^{971}$ is such a case. | proved in the tracer from Flocq's `TwoSum_correct` (a model without overflow) |
+| `TwoSum(a, b)` | 6 additions/subtractions (Knuth) | $s = \mathrm{RN}(a+b)$ and $s + e = a + b$ exactly, for all finite $a, b$ including subnormals, provided no intermediate overflows. A finite $s$ is not enough for that: with the order of operations Kairn uses, at $b = \pm\Omega$ the error term can be NaN although $s$ is finite ([BGM17](references.md#bgm17) describe the mirror case, at $a = \pm\Omega$, for the other order). In `double`, $a = -1.5 \cdot 2^{971}$ with $b = \Omega$ is such a case. The exact condition is settled with the overflow statements of [Milestone 1](../milestone1.md#what-is-proved-about-an-arithmetic-kernel). | proved in the tracer from Flocq's `TwoSum_correct` (a model without overflow) |
 | `Fast2Sum(a, b)` | $s = a \oplus b$; $z = s \ominus a$; $e = b \ominus z$ | The same, when $\lvert a\rvert \ge \lvert b\rvert$ (or the exponent of $a$ is at least that of $b$), provided $s$ is finite: it has no spurious overflow. The result $(s, e)$ is normalized. | proved in the tracer |
 | `TwoProd(a, b)` | $p = \mathrm{fma}(a, b, 0)$; $e = \mathrm{fma}(a, b, -p)$ | $p = \mathrm{RN}(ab)$, and, provided $p$ is finite, $p + e = ab$ exactly when $ab = 0$ or $\lvert ab\rvert \ge 2^{2p-1}\eta$ ($2^{-969}$ in `double`, $2^{-102}$ in `float`). | proved in the tracer from Flocq's `mult_error_FLT` |
 | `TwoProd`, small products | same | For all finite $a, b$ with $p$ finite: $\lvert p + e - ab\rvert \le \eta/2$. | **K** (known with constant 1 for any rounding: [HJZRT23](references.md#hjzrt23)) |
@@ -231,7 +231,7 @@ $$\mathrm{RD}(a + b) = \begin{cases} \mathrm{pred}(s) & \text{if } e < 0 \\ s & 
 \qquad (s, e) = \mathrm{Fast2Sum}(\text{larger}, \text{smaller}),$$
 
 with the operands ordered by magnitude by two selects. `Fast2Sum` rather than `TwoSum` because it
-has no spurious overflow: with `TwoSum` and $a = \Omega$ the error term can be NaN, the test
+has no spurious overflow: with `TwoSum` and an operand equal to $\Omega$ the error term can be NaN, the test
 $e < 0$ is then false, and the "lower bound" returned would be above the exact sum. Likewise with
 `TwoProd` for products, and with the exact remainders $a - qb$ and $a - s^2$
 (one FMA each) for quotients and square roots. `pred` and `succ` are computed in

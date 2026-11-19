@@ -79,14 +79,14 @@ class Claims(unittest.TestCase):
         self.assertEqual(k['requires'], ['normalized(x)', 'normalized(y)'])
         self.assertEqual(k['ensures'], [{'kind': 'normalized', 'of': 'z'},
                                         {'kind': 'error', 'of': 'z', 'form': 'R', 'c': '4', 'k': 2,
-                                         't': '4', 'when': None}])
-        self.assertEqual(k['min_precision'], 5)
+                                         't': '3/2', 'when': None}])
+        self.assertEqual(k['min_precision'], 4)
         self.assertEqual(k['flops'], 9)
         self.assertEqual(k['theorem'], {'file': 'proofs/theories/Mul22.v', 'name': 'mul_2_2_correct'})
         self.assertEqual(k['instances']['binary64']['rel'], '1/20282409603651670423947251286016')
-        self.assertEqual(Fraction(k['instances']['binary64']['abs']), Fraction(4, 2 ** 1074))
+        self.assertEqual(Fraction(k['instances']['binary64']['abs']), Fraction(3, 2 ** 1075))
         self.assertEqual(Fraction(k['instances']['binary32']['rel']), Fraction(4, 2 ** 48))
-        self.assertEqual(Fraction(k['instances']['binary32']['abs']), Fraction(4, 2 ** 149))
+        self.assertEqual(Fraction(k['instances']['binary32']['abs']), Fraction(3, 2 ** 150))
 
     def test_instances(self):
         u = Fraction(1, 2 ** 53)
@@ -97,7 +97,7 @@ class Claims(unittest.TestCase):
         self.assertEqual([Fraction(x['abs']) for x in tp], [Fraction(1, 2 ** 1075), 0])
         self.assertEqual(Fraction(self.by['two_prod_dekker']['instances']['binary32'][0]['abs']),
                          Fraction(7, 2 ** 150))
-        self.assertEqual(Fraction(self.by['mul_2_1']['instances']['binary64']['abs']), Fraction(2, 2 ** 1074))
+        self.assertEqual(Fraction(self.by['mul_2_1']['instances']['binary64']['abs']), Fraction(1, 2 ** 1074))
         self.assertEqual(Fraction(self.by['two_sum']['instances']['binary64']['rel']), 0)
 
 

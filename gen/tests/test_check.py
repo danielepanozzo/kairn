@@ -74,7 +74,7 @@ class Check(unittest.TestCase):
         with open(kpath, encoding='utf-8') as f:
             text = f.read()
         with open(kpath, 'w', encoding='utf-8') as f:
-            f.write(text.replace('t=4', 't=3'))
+            f.write(text.replace('t=3/2', 't=3'))
         r = kairn_gen(root, 'check')
         self.assertIn('gen/claims.json: differs', r.stderr)
         self.assertIn('proofs/gen/Statements.v: differs', r.stderr)
