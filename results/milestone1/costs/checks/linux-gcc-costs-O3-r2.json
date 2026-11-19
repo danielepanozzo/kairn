@@ -1,0 +1,102 @@
+{
+ "schema": 1,
+ "date": "2026-11-19",
+ "commit": "7a7a5ca",
+ "machine": {
+  "description": "Linux x86-64, AMD EPYC 7452 (Zen 2), two sockets of 32 cores; one logical CPU, its SMT sibling idle",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "pinning": "pinned to one logical CPU"
+ },
+ "compiler": "GCC 13.3.0",
+ "flags": "-O3 -DNDEBUG -O3 -ffp-contract=off -mfma -DKAIRN_CHECKS=0",
+ "kairn_checks": 0,
+ "elements": 256,
+ "reps": 31,
+ "sample_ms": 4,
+ "results": [
+  {
+   "name": "env/loop",
+   "ns_min": 6.458,
+   "ns_median": 6.472,
+   "ns_max": 6.926,
+   "checksum": "0b6050e73d686f4a"
+  },
+  {
+   "name": "add/loop",
+   "ns_min": 4.41,
+   "ns_median": 4.42,
+   "ns_max": 4.481,
+   "checksum": "7e3392f21c52a76d"
+  },
+  {
+   "name": "mul/loop",
+   "ns_min": 2.307,
+   "ns_median": 2.313,
+   "ns_max": 2.334,
+   "checksum": "9e9d2271ebac13ac"
+  },
+  {
+   "name": "add/sum",
+   "ns_min": 10.27,
+   "ns_median": 10.3,
+   "ns_max": 10.44,
+   "checksum": "955263da45fcd4a3"
+  },
+  {
+   "name": "mul/prod",
+   "ns_min": 8.33,
+   "ns_median": 8.343,
+   "ns_max": 8.463,
+   "checksum": "caa9f609468cd84f"
+  },
+  {
+   "name": "k1/loop",
+   "ns_min": 0.1844,
+   "ns_median": 0.1919,
+   "ns_max": 0.1986,
+   "checksum": "937765c9899a3f28"
+  },
+  {
+   "name": "k1/sum",
+   "ns_min": 0.7912,
+   "ns_median": 0.7926,
+   "ns_max": 0.8108,
+   "checksum": "5fab4184c96bb7e1"
+  },
+  {
+   "name": "k1/call",
+   "ns_min": 1.536,
+   "ns_median": 1.542,
+   "ns_max": 1.611,
+   "checksum": "937765c9899a3f28"
+  },
+  {
+   "name": "double/loop",
+   "ns_min": 0.1588,
+   "ns_median": 0.162,
+   "ns_max": 0.1652,
+   "checksum": "f60fda2a2cf2af28"
+  },
+  {
+   "name": "double/call",
+   "ns_min": 1.834,
+   "ns_median": 1.842,
+   "ns_max": 1.868,
+   "checksum": "f60fda2a2cf2af28"
+  },
+  {
+   "name": "double/sum",
+   "ns_min": 0.7909,
+   "ns_median": 0.793,
+   "ns_max": 0.8094,
+   "checksum": "3673372519bd4b21"
+  },
+  {
+   "name": "fma/chain",
+   "ns_min": 1.314,
+   "ns_median": 1.317,
+   "ns_max": 1.333,
+   "checksum": "f4c8579346367334"
+  }
+ ]
+}

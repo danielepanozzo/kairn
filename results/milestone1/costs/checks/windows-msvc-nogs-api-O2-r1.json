@@ -1,0 +1,723 @@
+{
+ "schema": 1,
+ "date": "2026-11-19",
+ "commit": "0f81c17",
+ "machine": {
+  "description": "Windows 11 x64, Intel Core i5-13500T (6 performance and 8 efficiency cores); one logical processor of a performance core, its sibling mostly idle; a shared CI machine",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13500T",
+  "os": "Windows",
+  "arch": "x86-64",
+  "pinning": "pinned to one logical CPU"
+ },
+ "compiler": "MSVC 19.52.37029",
+ "flags": "/DWIN32 /D_WINDOWS /EHsc /GS- /O2 /Ob2 /DNDEBUG /O2 /fp:precise /arch:AVX2",
+ "packed_backend": "avx2",
+ "fixup_call": 0,
+ "mpfr": "",
+ "elements": 256,
+ "reps": 31,
+ "sample_ms": 4,
+ "checks": {
+  "compared": 240,
+  "failed": 0,
+  "full_forms": [
+   {
+    "kernel": "add_2_2_full",
+    "cases": 8192,
+    "nonfinite_operand": 602,
+    "overflow": 203,
+    "finite": 7387,
+    "sel_vs_full": 0,
+    "packed_vs_full": 0,
+    "not_canonical": 0,
+    "against_statement": 0
+   },
+   {
+    "kernel": "mul_2_2_full",
+    "cases": 8192,
+    "nonfinite_operand": 580,
+    "overflow": 1867,
+    "finite": 5745,
+    "sel_vs_full": 0,
+    "packed_vs_full": 0,
+    "not_canonical": 0,
+    "against_statement": 0
+   },
+   {
+    "kernel": "ball_add_2_full",
+    "cases": 8192,
+    "nonfinite_operand": 273,
+    "overflow": 2041,
+    "finite": 5878,
+    "sel_vs_full": 0,
+    "packed_vs_full": 0,
+    "not_canonical": 0,
+    "against_statement": 0
+   },
+   {
+    "kernel": "ball_mul_2_full",
+    "cases": 8192,
+    "nonfinite_operand": 273,
+    "overflow": 3226,
+    "finite": 4693,
+    "sel_vs_full": 0,
+    "packed_vs_full": 0,
+    "not_canonical": 0,
+    "against_statement": 0
+   }
+  ]
+ },
+ "results": [
+  {
+   "name": "api/tp/add_2_2/kairn",
+   "lanes": 1,
+   "ns_min": 2.182,
+   "ns_median": 2.183,
+   "ns_max": 2.231
+  },
+  {
+   "name": "api/tp/add_2_2/op",
+   "lanes": 1,
+   "ns_min": 2.362,
+   "ns_median": 2.384,
+   "ns_max": 2.432
+  },
+  {
+   "name": "api/tp/add_2_2/finite",
+   "lanes": 1,
+   "ns_min": 2.182,
+   "ns_median": 2.183,
+   "ns_max": 2.299
+  },
+  {
+   "name": "api/tp/add_2_2/textbook",
+   "lanes": 1,
+   "ns_min": 2.187,
+   "ns_median": 2.19,
+   "ns_max": 2.338
+  },
+  {
+   "name": "api/tp/add_fast_2_2/kairn",
+   "lanes": 1,
+   "ns_min": 1.201,
+   "ns_median": 1.201,
+   "ns_max": 1.286
+  },
+  {
+   "name": "api/tp/add_fast_2_2/op",
+   "lanes": 1,
+   "ns_min": 1.332,
+   "ns_median": 1.348,
+   "ns_max": 1.43
+  },
+  {
+   "name": "api/tp/add_fast_2_2/finite",
+   "lanes": 1,
+   "ns_min": 1.202,
+   "ns_median": 1.203,
+   "ns_max": 1.299
+  },
+  {
+   "name": "api/tp/add_fast_2_2/textbook",
+   "lanes": 1,
+   "ns_min": 1.201,
+   "ns_median": 1.202,
+   "ns_max": 1.296
+  },
+  {
+   "name": "api/tp/add_2_1/kairn",
+   "lanes": 1,
+   "ns_min": 1.204,
+   "ns_median": 1.218,
+   "ns_max": 1.299
+  },
+  {
+   "name": "api/tp/add_2_1/op",
+   "lanes": 1,
+   "ns_min": 1.395,
+   "ns_median": 1.397,
+   "ns_max": 1.495
+  },
+  {
+   "name": "api/tp/add_2_1/finite",
+   "lanes": 1,
+   "ns_min": 1.208,
+   "ns_median": 1.221,
+   "ns_max": 1.301
+  },
+  {
+   "name": "api/tp/add_2_1/textbook",
+   "lanes": 1,
+   "ns_min": 1.096,
+   "ns_median": 1.099,
+   "ns_max": 1.174
+  },
+  {
+   "name": "api/tp/mul_2_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.9995,
+   "ns_median": 1.011,
+   "ns_max": 1.078
+  },
+  {
+   "name": "api/tp/mul_2_2/op",
+   "lanes": 1,
+   "ns_min": 1.267,
+   "ns_median": 1.279,
+   "ns_max": 1.401
+  },
+  {
+   "name": "api/tp/mul_2_2/finite",
+   "lanes": 1,
+   "ns_min": 0.9291,
+   "ns_median": 0.9594,
+   "ns_max": 1.049
+  },
+  {
+   "name": "api/tp/mul_2_2/textbook",
+   "lanes": 1,
+   "ns_min": 1.034,
+   "ns_median": 1.045,
+   "ns_max": 1.118
+  },
+  {
+   "name": "api/tp/mul_2_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.6876,
+   "ns_median": 0.691,
+   "ns_max": 0.7355
+  },
+  {
+   "name": "api/tp/mul_2_1/op",
+   "lanes": 1,
+   "ns_min": 1.055,
+   "ns_median": 1.058,
+   "ns_max": 1.14
+  },
+  {
+   "name": "api/tp/mul_2_1/finite",
+   "lanes": 1,
+   "ns_min": 0.697,
+   "ns_median": 0.7018,
+   "ns_max": 0.7815
+  },
+  {
+   "name": "api/tp/mul_2_1/textbook",
+   "lanes": 1,
+   "ns_min": 0.7432,
+   "ns_median": 0.7465,
+   "ns_max": 0.799
+  },
+  {
+   "name": "api/tp/neg_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.3541,
+   "ns_median": 0.3566,
+   "ns_max": 0.3872
+  },
+  {
+   "name": "api/tp/neg_2/op",
+   "lanes": 1,
+   "ns_min": 0.3531,
+   "ns_median": 0.3565,
+   "ns_max": 0.3816
+  },
+  {
+   "name": "api/tp/ball_add_2/kairn",
+   "lanes": 1,
+   "ns_min": 2.422,
+   "ns_median": 2.432,
+   "ns_max": 2.756
+  },
+  {
+   "name": "api/tp/ball_add_2/op",
+   "lanes": 1,
+   "ns_min": 3.101,
+   "ns_median": 3.107,
+   "ns_max": 3.321
+  },
+  {
+   "name": "api/tp/ball_mul_2/kairn",
+   "lanes": 1,
+   "ns_min": 2.283,
+   "ns_median": 2.291,
+   "ns_max": 2.451
+  },
+  {
+   "name": "api/tp/ball_mul_2/op",
+   "lanes": 1,
+   "ns_min": 3.243,
+   "ns_median": 3.248,
+   "ns_max": 3.502
+  },
+  {
+   "name": "api/tp/ball_scale_2/kairn",
+   "lanes": 1,
+   "ns_min": 1.516,
+   "ns_median": 1.518,
+   "ns_max": 1.588
+  },
+  {
+   "name": "api/tp/ball_scale_2/op",
+   "lanes": 1,
+   "ns_min": 2.495,
+   "ns_median": 2.523,
+   "ns_max": 2.693
+  },
+  {
+   "name": "api/tp/ball_neg_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.3744,
+   "ns_median": 0.3914,
+   "ns_max": 0.4303
+  },
+  {
+   "name": "api/tp/ball_neg_2/op",
+   "lanes": 1,
+   "ns_min": 0.3735,
+   "ns_median": 0.3923,
+   "ns_max": 0.4436
+  },
+  {
+   "name": "api/tp/ball_add_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.5776,
+   "ns_median": 0.599,
+   "ns_max": 0.6208
+  },
+  {
+   "name": "api/tp/ball_add_1/op",
+   "lanes": 1,
+   "ns_min": 1.599,
+   "ns_median": 1.601,
+   "ns_max": 1.625
+  },
+  {
+   "name": "api/tp/ball_mul_1/kairn",
+   "lanes": 1,
+   "ns_min": 1.383,
+   "ns_median": 1.385,
+   "ns_max": 1.431
+  },
+  {
+   "name": "api/tp/ball_mul_1/op",
+   "lanes": 1,
+   "ns_min": 2.269,
+   "ns_median": 2.29,
+   "ns_max": 2.398
+  },
+  {
+   "name": "api/tp/ball_scale_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.8394,
+   "ns_median": 0.8404,
+   "ns_max": 0.8742
+  },
+  {
+   "name": "api/tp/ball_scale_1/op",
+   "lanes": 1,
+   "ns_min": 1.805,
+   "ns_median": 1.81,
+   "ns_max": 2.268
+  },
+  {
+   "name": "api/tp/ball_neg_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.2273,
+   "ns_median": 0.2327,
+   "ns_max": 0.2395
+  },
+  {
+   "name": "api/tp/ball_neg_1/op",
+   "lanes": 1,
+   "ns_min": 0.2254,
+   "ns_median": 0.2272,
+   "ns_max": 0.2344
+  },
+  {
+   "name": "api/tp/add_1_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.1216,
+   "ns_median": 0.1239,
+   "ns_max": 0.1293
+  },
+  {
+   "name": "api/tp/add_1_1/limb",
+   "lanes": 1,
+   "ns_min": 0.1185,
+   "ns_median": 0.1233,
+   "ns_max": 0.1283
+  },
+  {
+   "name": "api/tp/mul_1_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.1224,
+   "ns_median": 0.1268,
+   "ns_max": 0.1377
+  },
+  {
+   "name": "api/tp/mul_1_1/limb",
+   "lanes": 1,
+   "ns_min": 0.123,
+   "ns_median": 0.1272,
+   "ns_max": 0.1334
+  },
+  {
+   "name": "api/tp/neg_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.1096,
+   "ns_median": 0.1226,
+   "ns_max": 0.1335
+  },
+  {
+   "name": "api/sum/add_2_2/kairn",
+   "lanes": 1,
+   "ns_min": 4.986,
+   "ns_median": 4.989,
+   "ns_max": 5.336
+  },
+  {
+   "name": "api/sum/add_2_2/op",
+   "lanes": 1,
+   "ns_min": 5.077,
+   "ns_median": 5.089,
+   "ns_max": 5.661
+  },
+  {
+   "name": "api/sum/add_2_2/finite",
+   "lanes": 1,
+   "ns_min": 4.987,
+   "ns_median": 4.989,
+   "ns_max": 5.306
+  },
+  {
+   "name": "api/sum/add_2_2/textbook",
+   "lanes": 1,
+   "ns_min": 4.963,
+   "ns_median": 4.985,
+   "ns_max": 5.39
+  },
+  {
+   "name": "api/sum/add_fast_2_2/kairn",
+   "lanes": 1,
+   "ns_min": 3.18,
+   "ns_median": 3.182,
+   "ns_max": 3.437
+  },
+  {
+   "name": "api/sum/add_fast_2_2/op",
+   "lanes": 1,
+   "ns_min": 3.346,
+   "ns_median": 3.35,
+   "ns_max": 3.621
+  },
+  {
+   "name": "api/sum/add_fast_2_2/finite",
+   "lanes": 1,
+   "ns_min": 3.182,
+   "ns_median": 3.192,
+   "ns_max": 3.462
+  },
+  {
+   "name": "api/sum/add_fast_2_2/textbook",
+   "lanes": 1,
+   "ns_min": 3.179,
+   "ns_median": 3.199,
+   "ns_max": 3.403
+  },
+  {
+   "name": "api/sum/add_2_1/kairn",
+   "lanes": 1,
+   "ns_min": 3.157,
+   "ns_median": 3.161,
+   "ns_max": 3.381
+  },
+  {
+   "name": "api/sum/add_2_1/op",
+   "lanes": 1,
+   "ns_min": 3.28,
+   "ns_median": 3.282,
+   "ns_max": 3.51
+  },
+  {
+   "name": "api/sum/add_2_1/finite",
+   "lanes": 1,
+   "ns_min": 3.159,
+   "ns_median": 3.161,
+   "ns_max": 3.461
+  },
+  {
+   "name": "api/sum/add_2_1/textbook",
+   "lanes": 1,
+   "ns_min": 3.143,
+   "ns_median": 3.146,
+   "ns_max": 3.268
+  },
+  {
+   "name": "api/sum/ball_add_2/kairn",
+   "lanes": 1,
+   "ns_min": 5.19,
+   "ns_median": 5.193,
+   "ns_max": 5.557
+  },
+  {
+   "name": "api/sum/ball_add_2/op",
+   "lanes": 1,
+   "ns_min": 5.234,
+   "ns_median": 5.295,
+   "ns_max": 5.662
+  },
+  {
+   "name": "api/sum/ball_add_1/kairn",
+   "lanes": 1,
+   "ns_min": 2.694,
+   "ns_median": 2.697,
+   "ns_max": 2.907
+  },
+  {
+   "name": "api/sum/ball_add_1/op",
+   "lanes": 1,
+   "ns_min": 3.356,
+   "ns_median": 3.373,
+   "ns_max": 3.67
+  },
+  {
+   "name": "api/sum/add_1_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.2855,
+   "ns_median": 0.2863,
+   "ns_max": 0.3198
+  },
+  {
+   "name": "api/sum/add_1_1/limb",
+   "lanes": 1,
+   "ns_min": 0.2855,
+   "ns_median": 0.2857,
+   "ns_max": 0.3074
+  },
+  {
+   "name": "api/prod/mul_2_2/kairn",
+   "lanes": 1,
+   "ns_min": 6.032,
+   "ns_median": 6.035,
+   "ns_max": 6.455
+  },
+  {
+   "name": "api/prod/mul_2_2/op",
+   "lanes": 1,
+   "ns_min": 5.769,
+   "ns_median": 5.772,
+   "ns_max": 6.177
+  },
+  {
+   "name": "api/prod/mul_2_2/finite",
+   "lanes": 1,
+   "ns_min": 5.969,
+   "ns_median": 6.008,
+   "ns_max": 6.45
+  },
+  {
+   "name": "api/prod/mul_2_2/textbook",
+   "lanes": 1,
+   "ns_min": 5.232,
+   "ns_median": 5.236,
+   "ns_max": 5.601
+  },
+  {
+   "name": "api/prod/mul_2_1/kairn",
+   "lanes": 1,
+   "ns_min": 5.092,
+   "ns_median": 5.098,
+   "ns_max": 5.451
+  },
+  {
+   "name": "api/prod/mul_2_1/op",
+   "lanes": 1,
+   "ns_min": 4.788,
+   "ns_median": 4.793,
+   "ns_max": 5.151
+  },
+  {
+   "name": "api/prod/mul_2_1/finite",
+   "lanes": 1,
+   "ns_min": 5.092,
+   "ns_median": 5.095,
+   "ns_max": 5.452
+  },
+  {
+   "name": "api/prod/mul_2_1/textbook",
+   "lanes": 1,
+   "ns_min": 4.247,
+   "ns_median": 4.283,
+   "ns_max": 4.581
+  },
+  {
+   "name": "api/prod/ball_mul_2/kairn",
+   "lanes": 1,
+   "ns_min": 6.815,
+   "ns_median": 6.83,
+   "ns_max": 7.299
+  },
+  {
+   "name": "api/prod/ball_mul_2/op",
+   "lanes": 1,
+   "ns_min": 6.597,
+   "ns_median": 6.601,
+   "ns_max": 7.095
+  },
+  {
+   "name": "api/prod/ball_scale_2/kairn",
+   "lanes": 1,
+   "ns_min": 5.408,
+   "ns_median": 5.411,
+   "ns_max": 5.788
+  },
+  {
+   "name": "api/prod/ball_scale_2/op",
+   "lanes": 1,
+   "ns_min": 4.81,
+   "ns_median": 4.818,
+   "ns_max": 5.15
+  },
+  {
+   "name": "api/prod/ball_mul_1/kairn",
+   "lanes": 1,
+   "ns_min": 6.401,
+   "ns_median": 6.405,
+   "ns_max": 6.668
+  },
+  {
+   "name": "api/prod/ball_mul_1/op",
+   "lanes": 1,
+   "ns_min": 6.46,
+   "ns_median": 6.479,
+   "ns_max": 6.804
+  },
+  {
+   "name": "api/prod/ball_scale_1/kairn",
+   "lanes": 1,
+   "ns_min": 4.046,
+   "ns_median": 4.056,
+   "ns_max": 4.333
+  },
+  {
+   "name": "api/prod/ball_scale_1/op",
+   "lanes": 1,
+   "ns_min": 3.981,
+   "ns_median": 4.002,
+   "ns_max": 4.283
+  },
+  {
+   "name": "api/prod/mul_1_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.5684,
+   "ns_median": 0.5707,
+   "ns_max": 0.6121
+  },
+  {
+   "name": "api/prod/mul_1_1/limb",
+   "lanes": 1,
+   "ns_min": 0.5445,
+   "ns_median": 0.5449,
+   "ns_max": 0.5827
+  },
+  {
+   "name": "api/horner/mul_2_2+add_2_2/kairn",
+   "lanes": 1,
+   "ns_min": 11.27,
+   "ns_median": 11.31,
+   "ns_max": 12.61
+  },
+  {
+   "name": "api/horner/mul_2_2+add_2_2/op",
+   "lanes": 1,
+   "ns_min": 11.35,
+   "ns_median": 11.41,
+   "ns_max": 12.21
+  },
+  {
+   "name": "api/horner/mul_2_2+add_2_2/finite",
+   "lanes": 1,
+   "ns_min": 11.27,
+   "ns_median": 11.31,
+   "ns_max": 12.09
+  },
+  {
+   "name": "api/horner/mul_2_2+add_2_2/textbook",
+   "lanes": 1,
+   "ns_min": 10.49,
+   "ns_median": 10.51,
+   "ns_max": 11.24
+  },
+  {
+   "name": "api/horner/mul_2_1+add_2_1/kairn",
+   "lanes": 1,
+   "ns_min": 8.561,
+   "ns_median": 8.579,
+   "ns_max": 9.012
+  },
+  {
+   "name": "api/horner/mul_2_1+add_2_1/op",
+   "lanes": 1,
+   "ns_min": 8.282,
+   "ns_median": 8.314,
+   "ns_max": 8.963
+  },
+  {
+   "name": "api/horner/mul_2_1+add_2_1/finite",
+   "lanes": 1,
+   "ns_min": 8.56,
+   "ns_median": 8.579,
+   "ns_max": 8.657
+  },
+  {
+   "name": "api/horner/mul_2_1+add_2_1/textbook",
+   "lanes": 1,
+   "ns_min": 7.589,
+   "ns_median": 7.753,
+   "ns_max": 7.984
+  },
+  {
+   "name": "api/horner/ball_mul_2+ball_add_2/kairn",
+   "lanes": 1,
+   "ns_min": 11.72,
+   "ns_median": 11.73,
+   "ns_max": 11.81
+  },
+  {
+   "name": "api/horner/ball_mul_2+ball_add_2/op",
+   "lanes": 1,
+   "ns_min": 11.91,
+   "ns_median": 11.96,
+   "ns_max": 12.1
+  },
+  {
+   "name": "api/horner/ball_mul_1+ball_add_1/kairn",
+   "lanes": 1,
+   "ns_min": 9.669,
+   "ns_median": 9.679,
+   "ns_max": 9.895
+  },
+  {
+   "name": "api/horner/ball_mul_1+ball_add_1/op",
+   "lanes": 1,
+   "ns_min": 10.34,
+   "ns_median": 10.35,
+   "ns_max": 10.86
+  },
+  {
+   "name": "api/horner/mul_1_1+add_1_1/kairn",
+   "lanes": 1,
+   "ns_min": 1.229,
+   "ns_median": 1.23,
+   "ns_max": 1.264
+  },
+  {
+   "name": "api/horner/mul_1_1+add_1_1/limb",
+   "lanes": 1,
+   "ns_min": 1.232,
+   "ns_median": 1.232,
+   "ns_max": 1.261
+  }
+ ]
+}

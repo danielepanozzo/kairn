@@ -1,0 +1,212 @@
+{
+ "schema": 1,
+ "what": "run",
+ "date": "2026-11-19",
+ "commit": "b710964",
+ "machine": {
+  "description": "Windows 11 x64, Intel Core i5-13500T (6 performance and 8 efficiency cores); a shared CI machine",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13500T",
+  "os": "Windows",
+  "arch": "AMD64"
+ },
+ "compiler": "Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64",
+ "cxx": "cl",
+ "family": "msvc",
+ "flags": "/cgthreads1",
+ "pinning": "not pinned",
+ "reps": 5,
+ "configs": {
+  "O2": [
+   "/O2",
+   "/DNDEBUG"
+  ]
+ },
+ "units": {
+  "use_e2": {
+   "source": "bench/compile_time/use_e2.cpp",
+   "packed": false,
+   "description": "kairn.hpp, every operation of Expansion<double, 2> and Ball<double, 2>"
+  },
+  "use_all": {
+   "source": "bench/compile_time/use_all.cpp",
+   "packed": false,
+   "description": "kairn.hpp, every operation of Expansion and Ball, float and double, 1 and 2 limbs"
+  },
+  "self_test": {
+   "source": "bench/compile_time/self_test.cpp",
+   "packed": false,
+   "description": "kairn.hpp and one call of kairn::self_test()"
+  },
+  "kernels_scalar": {
+   "source": "bench/compile_time/kernels_scalar.cpp",
+   "packed": false,
+   "description": "gen/scalar.hpp, every kernel for double and float"
+  },
+  "runner": {
+   "source": "gen/tests/runner.cpp",
+   "packed": false,
+   "description": "gen/tests/runner.cpp, the scalar runner of the quick tier"
+  }
+ },
+ "common_flags": {
+  "scalar": [
+   "/nologo",
+   "/std:c++20",
+   "/EHsc",
+   "/arch:AVX2",
+   "/I",
+   "include",
+   "/I",
+   "gen\\tests",
+   "/cgthreads1"
+  ],
+  "packed": [
+   "/nologo",
+   "/std:c++20",
+   "/EHsc",
+   "/arch:AVX2",
+   "/I",
+   "include",
+   "/I",
+   "gen\\tests",
+   "/cgthreads1"
+  ]
+ },
+ "results": [
+  {
+   "unit": "use_e2",
+   "config": "O2",
+   "wall_s": [
+    1.851,
+    1.9349,
+    1.8079,
+    1.624,
+    1.6047
+   ],
+   "cpu_s": [
+    1.7969,
+    1.9062,
+    1.7812,
+    1.625,
+    1.5625
+   ],
+   "peak_mb": [
+    44.1,
+    44.2,
+    44.3,
+    44.3,
+    44.2
+   ],
+   "object_bytes": 235602,
+   "command": "cl /nologo /std:c++20 /EHsc /arch:AVX2 /I include /I gen\\tests /cgthreads1 /O2 /DNDEBUG /c bench\\compile_time\\use_e2.cpp /FoWORK\\ct-unpinned-cg1\\use_e2-O2.obj"
+  },
+  {
+   "unit": "use_all",
+   "config": "O2",
+   "wall_s": [
+    5.593,
+    5.1734,
+    4.7402,
+    4.5901,
+    3.49
+   ],
+   "cpu_s": [
+    5.5312,
+    5.1719,
+    4.7188,
+    4.5625,
+    3.2812
+   ],
+   "peak_mb": [
+    47.5,
+    47.5,
+    47.5,
+    47.4,
+    47.6
+   ],
+   "object_bytes": 667217,
+   "command": "cl /nologo /std:c++20 /EHsc /arch:AVX2 /I include /I gen\\tests /cgthreads1 /O2 /DNDEBUG /c bench\\compile_time\\use_all.cpp /FoWORK\\ct-unpinned-cg1\\use_all-O2.obj"
+  },
+  {
+   "unit": "self_test",
+   "config": "O2",
+   "wall_s": [
+    1.5656,
+    1.6844,
+    1.3819,
+    1.4156,
+    1.1074
+   ],
+   "cpu_s": [
+    1.5625,
+    1.625,
+    1.3438,
+    1.4219,
+    1.0938
+   ],
+   "peak_mb": [
+    41.4,
+    41.4,
+    41.3,
+    41.3,
+    41.3
+   ],
+   "object_bytes": 305931,
+   "command": "cl /nologo /std:c++20 /EHsc /arch:AVX2 /I include /I gen\\tests /cgthreads1 /O2 /DNDEBUG /c bench\\compile_time\\self_test.cpp /FoWORK\\ct-unpinned-cg1\\self_test-O2.obj"
+  },
+  {
+   "unit": "kernels_scalar",
+   "config": "O2",
+   "wall_s": [
+    1.2289,
+    1.3322,
+    1.1592,
+    1.185,
+    0.9261
+   ],
+   "cpu_s": [
+    1.2031,
+    1.2812,
+    1.1562,
+    1.1875,
+    0.9219
+   ],
+   "peak_mb": [
+    46.7,
+    46.8,
+    47.1,
+    46.7,
+    46.7
+   ],
+   "object_bytes": 220725,
+   "command": "cl /nologo /std:c++20 /EHsc /arch:AVX2 /I include /I gen\\tests /cgthreads1 /O2 /DNDEBUG /c bench\\compile_time\\kernels_scalar.cpp /FoWORK\\ct-unpinned-cg1\\kernels_scalar-O2.obj"
+  },
+  {
+   "unit": "runner",
+   "config": "O2",
+   "wall_s": [
+    2.4987,
+    2.6551,
+    2.3689,
+    2.3228,
+    1.8315
+   ],
+   "cpu_s": [
+    2.5312,
+    2.625,
+    2.3438,
+    2.2812,
+    1.8281
+   ],
+   "peak_mb": [
+    93.2,
+    92.7,
+    92.6,
+    93.3,
+    92.6
+   ],
+   "object_bytes": 484047,
+   "command": "cl /nologo /std:c++20 /EHsc /arch:AVX2 /I include /I gen\\tests /cgthreads1 /O2 /DNDEBUG /c gen\\tests\\runner.cpp /FoWORK\\ct-unpinned-cg1\\runner-O2.obj"
+  }
+ ]
+}

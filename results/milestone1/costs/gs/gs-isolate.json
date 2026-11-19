@@ -1,0 +1,402 @@
+{
+ "schema": 1,
+ "what": "isolate",
+ "date": "2026-11-19",
+ "commit": "b710964",
+ "machine": "",
+ "compiler": "Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64",
+ "flags": [
+  "/nologo",
+  "/std:c++20",
+  "/EHsc",
+  "/O2",
+  "/DNDEBUG",
+  "/arch:AVX2",
+  "/fp:precise",
+  "/wd4190",
+  "/I",
+  "include"
+ ],
+ "results": {
+  "variant 0": {
+   "gs_add": {
+    "instructions": 12,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_add_value": {
+    "instructions": 11,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_dot": {
+    "instructions": 55,
+    "cookie_reads": 1,
+    "cookie_checks": 3,
+    "frame": 24
+   },
+   "gs_tp_add": {
+    "instructions": 38,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   }
+  },
+  "variant 1": {
+   "gs_add": {
+    "instructions": 12,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_add_value": {
+    "instructions": 11,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_dot": {
+    "instructions": 55,
+    "cookie_reads": 1,
+    "cookie_checks": 3,
+    "frame": 24
+   },
+   "gs_tp_add": {
+    "instructions": 38,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   }
+  },
+  "variant 2": {
+   "gs_add": {
+    "instructions": 12,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_add_value": {
+    "instructions": 11,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_dot": {
+    "instructions": 55,
+    "cookie_reads": 1,
+    "cookie_checks": 3,
+    "frame": 24
+   },
+   "gs_tp_add": {
+    "instructions": 38,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   }
+  },
+  "variant 3": {
+   "gs_add": {
+    "instructions": 12,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_add_value": {
+    "instructions": 11,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_dot": {
+    "instructions": 55,
+    "cookie_reads": 1,
+    "cookie_checks": 3,
+    "frame": 24
+   },
+   "gs_tp_add": {
+    "instructions": 38,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   }
+  },
+  "variant 4": {
+   "gs_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_add_value": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_dot": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_tp_add": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  },
+  "variant 5": {
+   "gs_add": {
+    "instructions": 12,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_add_value": {
+    "instructions": 11,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_dot": {
+    "instructions": 55,
+    "cookie_reads": 1,
+    "cookie_checks": 3,
+    "frame": 24
+   },
+   "gs_tp_add": {
+    "instructions": 38,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   }
+  },
+  "variant 6": {
+   "gs_add": {
+    "instructions": 12,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_add_value": {
+    "instructions": 11,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_dot": {
+    "instructions": 55,
+    "cookie_reads": 1,
+    "cookie_checks": 3,
+    "frame": 24
+   },
+   "gs_tp_add": {
+    "instructions": 38,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   }
+  },
+  "variant 7": {
+   "gs_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_add_value": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_dot": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_tp_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  },
+  "variant 8": {
+   "gs_add": {
+    "instructions": 12,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_add_value": {
+    "instructions": 11,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_dot": {
+    "instructions": 49,
+    "cookie_reads": 1,
+    "cookie_checks": 2,
+    "frame": 24
+   },
+   "gs_tp_add": {
+    "instructions": 37,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   }
+  },
+  "variant 9": {
+   "gs_add": {
+    "instructions": 12,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_add_value": {
+    "instructions": 11,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_dot": {
+    "instructions": 55,
+    "cookie_reads": 1,
+    "cookie_checks": 3,
+    "frame": 24
+   },
+   "gs_tp_add": {
+    "instructions": 38,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   }
+  },
+  "variant 10": {
+   "gs_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_add_value": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_dot": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_tp_add": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  },
+  "variant 11": {
+   "gs_add": {
+    "instructions": 51,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_add_value": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_dot": {
+    "instructions": 99,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "gs_tp_add": {
+    "instructions": 64,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   }
+  },
+  "variant 12": {
+   "gs_add": {
+    "instructions": 12,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_add_value": {
+    "instructions": 11,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_dot": {
+    "instructions": 49,
+    "cookie_reads": 1,
+    "cookie_checks": 2,
+    "frame": 24
+   },
+   "gs_tp_add": {
+    "instructions": 37,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   }
+  },
+  "variant 13": {
+   "gs_add": {
+    "instructions": 12,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_add_value": {
+    "instructions": 11,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "gs_dot": {
+    "instructions": 49,
+    "cookie_reads": 1,
+    "cookie_checks": 2,
+    "frame": 24
+   },
+   "gs_tp_add": {
+    "instructions": 37,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   }
+  }
+ },
+ "variants": {
+  "0": "Kairn's own Expansion<double, 1>",
+  "1": "class template partial specialization X<T, 1>, T limb[1] = {}, constexpr constructors, hidden friend operators taking V by value",
+  "2": "as 1, a plain struct instead of a template",
+  "3": "as 1, the primary template X<T> instead of a partial specialization",
+  "4": "as 1, the friends take const V&",
+  "5": "as 1, free function templates instead of hidden friends, taking V by value",
+  "6": "as 1, no default member initializer (T limb[1];)",
+  "7": "as 1, a scalar member T limb0 = {} instead of the array",
+  "8": "as 1, without the constructor from T (aggregate initialization)",
+  "9": "as 1, the friends are function templates of the plain struct of 2 (a template, no class template)",
+  "10": "as 6 and 4 together: no initializer, friends by reference",
+  "11": "Kairn's Expansion<double, 2>, the leading limb only, for comparison",
+  "12": "as 2, without noexcept: the plain structure of Phase 0 (experiments/phase0/k1/k1_layout.cpp)",
+  "13": "as 1, without noexcept"
+ }
+}

@@ -1,0 +1,1705 @@
+{
+ "schema": 1,
+ "what": "run",
+ "date": "2026-11-19",
+ "commit": "e166ef0",
+ "machine": {
+  "description": "Linux x86-64, AMD EPYC 7452 (Zen 2), two sockets of 32 cores; one logical CPU, its SMT sibling idle",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "os": "Linux",
+  "arch": "x86_64"
+ },
+ "compiler": "Ubuntu clang version 18.1.3 (1ubuntu1)",
+ "cxx": "clang++",
+ "family": "gnu",
+ "flags": "--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13",
+ "pinning": "pinned to logical CPU 56",
+ "reps": 7,
+ "configs": {
+  "O0": [
+   "-O0",
+   "-DNDEBUG"
+  ],
+  "O2": [
+   "-O2",
+   "-DNDEBUG"
+  ],
+  "O3": [
+   "-O3",
+   "-DNDEBUG"
+  ],
+  "debug": [
+   "-O0",
+   "-g"
+  ]
+ },
+ "units": {
+  "empty": {
+   "source": "bench/compile_time/empty.cpp",
+   "packed": false,
+   "description": "an empty translation unit"
+  },
+  "std_headers": {
+   "source": "bench/compile_time/std_headers.cpp",
+   "packed": false,
+   "description": "<cmath> and the standard headers kairn.hpp includes"
+  },
+  "kairn_std": {
+   "source": "bench/compile_time/kairn_std.cpp",
+   "packed": false,
+   "description": "the standard headers kairn.hpp includes, without <cmath>"
+  },
+  "iostream": {
+   "source": "bench/compile_time/iostream.cpp",
+   "packed": false,
+   "description": "<iostream> alone"
+  },
+  "include": {
+   "source": "bench/compile_time/include.cpp",
+   "packed": false,
+   "description": "kairn/kairn.hpp alone"
+  },
+  "use_e2": {
+   "source": "bench/compile_time/use_e2.cpp",
+   "packed": false,
+   "description": "kairn.hpp, every operation of Expansion<double, 2> and Ball<double, 2>"
+  },
+  "use_all": {
+   "source": "bench/compile_time/use_all.cpp",
+   "packed": false,
+   "description": "kairn.hpp, every operation of Expansion and Ball, float and double, 1 and 2 limbs"
+  },
+  "self_test": {
+   "source": "bench/compile_time/self_test.cpp",
+   "packed": false,
+   "description": "kairn.hpp and one call of kairn::self_test()"
+  },
+  "kernels_scalar": {
+   "source": "bench/compile_time/kernels_scalar.cpp",
+   "packed": false,
+   "description": "gen/scalar.hpp, every kernel for double and float"
+  },
+  "kernels_packed": {
+   "source": "bench/compile_time/kernels_packed.cpp",
+   "packed": true,
+   "description": "gen/avx2.hpp or gen/neon.hpp, every kernel for double and float"
+  },
+  "runner": {
+   "source": "gen/tests/runner.cpp",
+   "packed": false,
+   "description": "gen/tests/runner.cpp, the scalar runner of the quick tier"
+  },
+  "packed_runner": {
+   "source": "gen/tests/packed_runner.cpp",
+   "packed": true,
+   "description": "gen/tests/packed_runner.cpp, the packed runner of the quick tier"
+  }
+ },
+ "common_flags": {
+  "scalar": [
+   "-std=c++20",
+   "-I",
+   "include",
+   "-I",
+   "gen/tests",
+   "-mfma",
+   "--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13"
+  ],
+  "packed": [
+   "-std=c++20",
+   "-I",
+   "include",
+   "-I",
+   "gen/tests",
+   "-mavx2",
+   "-mfma",
+   "--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13"
+  ]
+ },
+ "results": [
+  {
+   "unit": "empty",
+   "config": "O0",
+   "wall_s": [
+    0.0358,
+    0.0368,
+    0.0375,
+    0.0368,
+    0.0367,
+    0.0365,
+    0.0365
+   ],
+   "cpu_s": [
+    0.0349,
+    0.0358,
+    0.0368,
+    0.0354,
+    0.0359,
+    0.0355,
+    0.0359
+   ],
+   "peak_mb": [
+    79.9,
+    79.9,
+    79.9,
+    79.9,
+    79.9,
+    79.9,
+    79.9
+   ],
+   "object_bytes": 752,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -DNDEBUG -c bench/compile_time/empty.cpp -o WORK/ct-clang/empty-O0.o"
+  },
+  {
+   "unit": "empty",
+   "config": "O2",
+   "wall_s": [
+    0.036,
+    0.0368,
+    0.0374,
+    0.0365,
+    0.0371,
+    0.0365,
+    0.037
+   ],
+   "cpu_s": [
+    0.0353,
+    0.0362,
+    0.0367,
+    0.0355,
+    0.0363,
+    0.0357,
+    0.0361
+   ],
+   "peak_mb": [
+    80.9,
+    80.9,
+    80.9,
+    80.9,
+    80.9,
+    81.9,
+    80.9
+   ],
+   "object_bytes": 752,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O2 -DNDEBUG -c bench/compile_time/empty.cpp -o WORK/ct-clang/empty-O2.o"
+  },
+  {
+   "unit": "empty",
+   "config": "O3",
+   "wall_s": [
+    0.0368,
+    0.0367,
+    0.0376,
+    0.0371,
+    0.0368,
+    0.0366,
+    0.0365
+   ],
+   "cpu_s": [
+    0.0361,
+    0.0361,
+    0.037,
+    0.0357,
+    0.036,
+    0.0356,
+    0.0357
+   ],
+   "peak_mb": [
+    80.9,
+    80.9,
+    80.9,
+    80.9,
+    80.9,
+    80.9,
+    80.9
+   ],
+   "object_bytes": 752,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -c bench/compile_time/empty.cpp -o WORK/ct-clang/empty-O3.o"
+  },
+  {
+   "unit": "empty",
+   "config": "debug",
+   "wall_s": [
+    0.0366,
+    0.0365,
+    0.0366,
+    0.0369,
+    0.0364,
+    0.0364,
+    0.0362
+   ],
+   "cpu_s": [
+    0.0359,
+    0.0358,
+    0.0359,
+    0.0354,
+    0.0357,
+    0.0357,
+    0.0355
+   ],
+   "peak_mb": [
+    80.9,
+    80.9,
+    80.9,
+    80.9,
+    80.9,
+    80.9,
+    80.9
+   ],
+   "object_bytes": 752,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -g -c bench/compile_time/empty.cpp -o WORK/ct-clang/empty-debug.o"
+  },
+  {
+   "unit": "std_headers",
+   "config": "O0",
+   "wall_s": [
+    0.2858,
+    0.2863,
+    0.2888,
+    0.2889,
+    0.2885,
+    0.2863,
+    0.2866
+   ],
+   "cpu_s": [
+    0.2851,
+    0.2856,
+    0.2877,
+    0.2875,
+    0.2877,
+    0.2856,
+    0.2855
+   ],
+   "peak_mb": [
+    104.4,
+    104.4,
+    104.4,
+    104.4,
+    104.4,
+    104.4,
+    104.4
+   ],
+   "object_bytes": 760,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -DNDEBUG -c bench/compile_time/std_headers.cpp -o WORK/ct-clang/std_headers-O0.o"
+  },
+  {
+   "unit": "std_headers",
+   "config": "O2",
+   "wall_s": [
+    0.4151,
+    0.29,
+    0.2907,
+    0.2912,
+    0.2902,
+    0.29,
+    0.2934
+   ],
+   "cpu_s": [
+    0.289,
+    0.2893,
+    0.2897,
+    0.2899,
+    0.2893,
+    0.2891,
+    0.2925
+   ],
+   "peak_mb": [
+    105.5,
+    105.5,
+    105.5,
+    105.5,
+    105.5,
+    105.5,
+    106.5
+   ],
+   "object_bytes": 760,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O2 -DNDEBUG -c bench/compile_time/std_headers.cpp -o WORK/ct-clang/std_headers-O2.o"
+  },
+  {
+   "unit": "std_headers",
+   "config": "O3",
+   "wall_s": [
+    0.2917,
+    0.2898,
+    0.2908,
+    0.2977,
+    0.2907,
+    0.2893,
+    0.291
+   ],
+   "cpu_s": [
+    0.2907,
+    0.2891,
+    0.2895,
+    0.296,
+    0.29,
+    0.2885,
+    0.2901
+   ],
+   "peak_mb": [
+    106.5,
+    105.5,
+    105.5,
+    105.5,
+    105.5,
+    105.5,
+    105.5
+   ],
+   "object_bytes": 760,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -c bench/compile_time/std_headers.cpp -o WORK/ct-clang/std_headers-O3.o"
+  },
+  {
+   "unit": "std_headers",
+   "config": "debug",
+   "wall_s": [
+    0.292,
+    0.2906,
+    0.2916,
+    0.2925,
+    0.2914,
+    0.2923,
+    0.29
+   ],
+   "cpu_s": [
+    0.2911,
+    0.2898,
+    0.2908,
+    0.2912,
+    0.2907,
+    0.2915,
+    0.2893
+   ],
+   "peak_mb": [
+    105.5,
+    105.5,
+    105.5,
+    105.5,
+    105.5,
+    105.5,
+    105.5
+   ],
+   "object_bytes": 22440,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -g -c bench/compile_time/std_headers.cpp -o WORK/ct-clang/std_headers-debug.o"
+  },
+  {
+   "unit": "kairn_std",
+   "config": "O0",
+   "wall_s": [
+    0.1287,
+    0.1307,
+    0.1302,
+    0.1311,
+    0.1299,
+    0.1296,
+    0.1292
+   ],
+   "cpu_s": [
+    0.1279,
+    0.1295,
+    0.129,
+    0.1297,
+    0.1292,
+    0.1285,
+    0.1285
+   ],
+   "peak_mb": [
+    93.2,
+    93.2,
+    94.2,
+    93.2,
+    93.2,
+    93.2,
+    93.2
+   ],
+   "object_bytes": 760,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -DNDEBUG -c bench/compile_time/kairn_std.cpp -o WORK/ct-clang/kairn_std-O0.o"
+  },
+  {
+   "unit": "kairn_std",
+   "config": "O2",
+   "wall_s": [
+    0.1323,
+    0.1334,
+    0.1325,
+    0.133,
+    0.1336,
+    0.132,
+    0.132
+   ],
+   "cpu_s": [
+    0.1315,
+    0.1326,
+    0.1316,
+    0.1319,
+    0.1327,
+    0.1313,
+    0.1314
+   ],
+   "peak_mb": [
+    95.2,
+    94.2,
+    95.2,
+    95.2,
+    94.2,
+    95.2,
+    95.2
+   ],
+   "object_bytes": 760,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O2 -DNDEBUG -c bench/compile_time/kairn_std.cpp -o WORK/ct-clang/kairn_std-O2.o"
+  },
+  {
+   "unit": "kairn_std",
+   "config": "O3",
+   "wall_s": [
+    0.1327,
+    0.133,
+    0.1322,
+    0.1339,
+    0.134,
+    0.1319,
+    0.1325
+   ],
+   "cpu_s": [
+    0.1318,
+    0.1321,
+    0.1314,
+    0.132,
+    0.1332,
+    0.1312,
+    0.1318
+   ],
+   "peak_mb": [
+    94.2,
+    95.2,
+    94.2,
+    95.2,
+    95.2,
+    94.2,
+    94.2
+   ],
+   "object_bytes": 760,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -c bench/compile_time/kairn_std.cpp -o WORK/ct-clang/kairn_std-O3.o"
+  },
+  {
+   "unit": "kairn_std",
+   "config": "debug",
+   "wall_s": [
+    0.1327,
+    0.1327,
+    0.1325,
+    0.1331,
+    0.1336,
+    0.1315,
+    0.132
+   ],
+   "cpu_s": [
+    0.1319,
+    0.1318,
+    0.1316,
+    0.1319,
+    0.1329,
+    0.1307,
+    0.1313
+   ],
+   "peak_mb": [
+    94.2,
+    94.2,
+    94.2,
+    94.2,
+    94.2,
+    94.2,
+    94.2
+   ],
+   "object_bytes": 14272,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -g -c bench/compile_time/kairn_std.cpp -o WORK/ct-clang/kairn_std-debug.o"
+  },
+  {
+   "unit": "iostream",
+   "config": "O0",
+   "wall_s": [
+    0.4565,
+    0.4589,
+    0.4602,
+    0.4594,
+    0.4596,
+    0.4578,
+    0.4576
+   ],
+   "cpu_s": [
+    0.4554,
+    0.458,
+    0.4593,
+    0.4579,
+    0.4586,
+    0.4567,
+    0.4566
+   ],
+   "peak_mb": [
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7
+   ],
+   "object_bytes": 808,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -DNDEBUG -c bench/compile_time/iostream.cpp -o WORK/ct-clang/iostream-O0.o"
+  },
+  {
+   "unit": "iostream",
+   "config": "O2",
+   "wall_s": [
+    0.4565,
+    0.4582,
+    0.4581,
+    0.458,
+    0.4563,
+    0.4591,
+    0.457
+   ],
+   "cpu_s": [
+    0.4555,
+    0.4574,
+    0.4567,
+    0.4568,
+    0.4554,
+    0.4575,
+    0.4559
+   ],
+   "peak_mb": [
+    115.7,
+    115.7,
+    115.7,
+    115.7,
+    115.7,
+    115.7,
+    115.7
+   ],
+   "object_bytes": 808,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O2 -DNDEBUG -c bench/compile_time/iostream.cpp -o WORK/ct-clang/iostream-O2.o"
+  },
+  {
+   "unit": "iostream",
+   "config": "O3",
+   "wall_s": [
+    0.4584,
+    0.4575,
+    0.4557,
+    0.4587,
+    0.4594,
+    0.4569,
+    0.4641
+   ],
+   "cpu_s": [
+    0.4573,
+    0.4566,
+    0.4547,
+    0.4572,
+    0.4587,
+    0.4557,
+    0.4631
+   ],
+   "peak_mb": [
+    115.7,
+    115.7,
+    115.7,
+    115.7,
+    115.7,
+    115.7,
+    115.7
+   ],
+   "object_bytes": 808,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -c bench/compile_time/iostream.cpp -o WORK/ct-clang/iostream-O3.o"
+  },
+  {
+   "unit": "iostream",
+   "config": "debug",
+   "wall_s": [
+    0.4614,
+    0.4621,
+    0.4639,
+    0.4645,
+    0.4625,
+    0.4631,
+    0.4638
+   ],
+   "cpu_s": [
+    0.4606,
+    0.4601,
+    0.4632,
+    0.4627,
+    0.4614,
+    0.4617,
+    0.4631
+   ],
+   "peak_mb": [
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7
+   ],
+   "object_bytes": 19048,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -g -c bench/compile_time/iostream.cpp -o WORK/ct-clang/iostream-debug.o"
+  },
+  {
+   "unit": "include",
+   "config": "O0",
+   "wall_s": [
+    0.2307,
+    0.2331,
+    0.2299,
+    0.2311,
+    0.2318,
+    0.2304,
+    0.2301
+   ],
+   "cpu_s": [
+    0.2299,
+    0.2318,
+    0.2291,
+    0.2296,
+    0.2309,
+    0.2295,
+    0.2294
+   ],
+   "peak_mb": [
+    98.3,
+    98.3,
+    98.3,
+    98.3,
+    98.3,
+    98.3,
+    98.3
+   ],
+   "object_bytes": 760,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-clang/include-O0.o"
+  },
+  {
+   "unit": "include",
+   "config": "O2",
+   "wall_s": [
+    0.2337,
+    0.2362,
+    0.2345,
+    0.2337,
+    0.2348,
+    0.2334,
+    0.2344
+   ],
+   "cpu_s": [
+    0.2328,
+    0.2349,
+    0.2331,
+    0.2322,
+    0.2338,
+    0.2322,
+    0.2335
+   ],
+   "peak_mb": [
+    99.3,
+    99.3,
+    99.3,
+    99.3,
+    99.3,
+    99.3,
+    99.3
+   ],
+   "object_bytes": 760,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O2 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-clang/include-O2.o"
+  },
+  {
+   "unit": "include",
+   "config": "O3",
+   "wall_s": [
+    0.2327,
+    0.2346,
+    0.2352,
+    0.2382,
+    0.2339,
+    0.234,
+    0.2334
+   ],
+   "cpu_s": [
+    0.2318,
+    0.2337,
+    0.2339,
+    0.2341,
+    0.2329,
+    0.2333,
+    0.2325
+   ],
+   "peak_mb": [
+    99.3,
+    99.3,
+    99.3,
+    99.3,
+    99.3,
+    99.3,
+    99.3
+   ],
+   "object_bytes": 760,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-clang/include-O3.o"
+  },
+  {
+   "unit": "include",
+   "config": "debug",
+   "wall_s": [
+    0.2323,
+    0.2339,
+    0.2346,
+    0.2336,
+    0.2342,
+    0.2342,
+    0.2345
+   ],
+   "cpu_s": [
+    0.2315,
+    0.233,
+    0.2337,
+    0.2323,
+    0.2335,
+    0.2333,
+    0.2335
+   ],
+   "peak_mb": [
+    100.4,
+    100.4,
+    100.4,
+    100.4,
+    99.3,
+    99.3,
+    99.3
+   ],
+   "object_bytes": 14272,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -g -c bench/compile_time/include.cpp -o WORK/ct-clang/include-debug.o"
+  },
+  {
+   "unit": "use_e2",
+   "config": "O0",
+   "wall_s": [
+    0.4238,
+    0.425,
+    0.4274,
+    0.428,
+    0.424,
+    0.425,
+    0.4252
+   ],
+   "cpu_s": [
+    0.4229,
+    0.4241,
+    0.4263,
+    0.4263,
+    0.4232,
+    0.4243,
+    0.4244
+   ],
+   "peak_mb": [
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7
+   ],
+   "object_bytes": 203448,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -DNDEBUG -c bench/compile_time/use_e2.cpp -o WORK/ct-clang/use_e2-O0.o"
+  },
+  {
+   "unit": "use_e2",
+   "config": "O2",
+   "wall_s": [
+    0.5459,
+    0.5488,
+    0.5463,
+    0.55,
+    0.5463,
+    0.5455,
+    0.5467
+   ],
+   "cpu_s": [
+    0.5452,
+    0.5473,
+    0.5455,
+    0.5478,
+    0.5455,
+    0.5441,
+    0.5458
+   ],
+   "peak_mb": [
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    115.7,
+    114.7
+   ],
+   "object_bytes": 73136,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O2 -DNDEBUG -c bench/compile_time/use_e2.cpp -o WORK/ct-clang/use_e2-O2.o"
+  },
+  {
+   "unit": "use_e2",
+   "config": "O3",
+   "wall_s": [
+    0.5466,
+    0.5486,
+    0.5478,
+    0.5481,
+    0.5478,
+    0.5488,
+    0.5466
+   ],
+   "cpu_s": [
+    0.5458,
+    0.5475,
+    0.5468,
+    0.5469,
+    0.5466,
+    0.5475,
+    0.5456
+   ],
+   "peak_mb": [
+    114.7,
+    115.7,
+    114.7,
+    114.7,
+    114.7,
+    115.7,
+    114.7
+   ],
+   "object_bytes": 73504,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -c bench/compile_time/use_e2.cpp -o WORK/ct-clang/use_e2-O3.o"
+  },
+  {
+   "unit": "use_e2",
+   "config": "debug",
+   "wall_s": [
+    0.6603,
+    0.6636,
+    0.6654,
+    0.6617,
+    0.6609,
+    0.6616,
+    0.6606
+   ],
+   "cpu_s": [
+    0.6593,
+    0.6626,
+    0.664,
+    0.6606,
+    0.66,
+    0.6607,
+    0.6593
+   ],
+   "peak_mb": [
+    138.1,
+    138.1,
+    138.1,
+    138.1,
+    138.1,
+    138.1,
+    138.1
+   ],
+   "object_bytes": 653520,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -g -c bench/compile_time/use_e2.cpp -o WORK/ct-clang/use_e2-debug.o"
+  },
+  {
+   "unit": "use_all",
+   "config": "O0",
+   "wall_s": [
+    0.799,
+    0.8006,
+    0.7989,
+    0.7992,
+    0.7958,
+    0.7985,
+    0.7974
+   ],
+   "cpu_s": [
+    0.7982,
+    0.7991,
+    0.7979,
+    0.7973,
+    0.7951,
+    0.7957,
+    0.7963
+   ],
+   "peak_mb": [
+    139.3,
+    140.3,
+    139.3,
+    139.3,
+    139.3,
+    139.3,
+    139.3
+   ],
+   "object_bytes": 584168,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -DNDEBUG -c bench/compile_time/use_all.cpp -o WORK/ct-clang/use_all-O0.o"
+  },
+  {
+   "unit": "use_all",
+   "config": "O2",
+   "wall_s": [
+    1.1174,
+    1.1227,
+    1.1213,
+    1.1253,
+    1.1203,
+    1.1188,
+    1.1198
+   ],
+   "cpu_s": [
+    1.1164,
+    1.1214,
+    1.1198,
+    1.1237,
+    1.119,
+    1.1177,
+    1.1181
+   ],
+   "peak_mb": [
+    126.9,
+    126.9,
+    126.9,
+    126.9,
+    126.9,
+    126.9,
+    126.9
+   ],
+   "object_bytes": 221608,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O2 -DNDEBUG -c bench/compile_time/use_all.cpp -o WORK/ct-clang/use_all-O2.o"
+  },
+  {
+   "unit": "use_all",
+   "config": "O3",
+   "wall_s": [
+    1.1203,
+    1.1269,
+    1.1246,
+    1.1248,
+    1.1198,
+    1.1177,
+    1.1211
+   ],
+   "cpu_s": [
+    1.1195,
+    1.1254,
+    1.1236,
+    1.123,
+    1.1189,
+    1.1157,
+    1.1199
+   ],
+   "peak_mb": [
+    126.9,
+    126.9,
+    126.9,
+    126.9,
+    126.9,
+    126.9,
+    126.9
+   ],
+   "object_bytes": 222344,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -c bench/compile_time/use_all.cpp -o WORK/ct-clang/use_all-O3.o"
+  },
+  {
+   "unit": "use_all",
+   "config": "debug",
+   "wall_s": [
+    1.4451,
+    1.4855,
+    1.4697,
+    1.4527,
+    1.4482,
+    1.447,
+    1.4445
+   ],
+   "cpu_s": [
+    1.4442,
+    1.4835,
+    1.4675,
+    1.4509,
+    1.4468,
+    1.4452,
+    1.4428
+   ],
+   "peak_mb": [
+    196.6,
+    196.6,
+    196.6,
+    196.6,
+    196.6,
+    196.6,
+    196.6
+   ],
+   "object_bytes": 1757248,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -g -c bench/compile_time/use_all.cpp -o WORK/ct-clang/use_all-debug.o"
+  },
+  {
+   "unit": "self_test",
+   "config": "O0",
+   "wall_s": [
+    0.3507,
+    0.353,
+    0.3518,
+    0.3534,
+    0.3484,
+    0.3474,
+    0.349
+   ],
+   "cpu_s": [
+    0.3498,
+    0.3518,
+    0.3503,
+    0.3514,
+    0.3476,
+    0.3462,
+    0.3482
+   ],
+   "peak_mb": [
+    109.6,
+    109.6,
+    109.6,
+    109.6,
+    109.6,
+    109.6,
+    109.6
+   ],
+   "object_bytes": 306328,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -DNDEBUG -c bench/compile_time/self_test.cpp -o WORK/ct-clang/self_test-O0.o"
+  },
+  {
+   "unit": "self_test",
+   "config": "O2",
+   "wall_s": [
+    0.7753,
+    0.7813,
+    0.7766,
+    0.7786,
+    0.7731,
+    0.7758,
+    0.7719
+   ],
+   "cpu_s": [
+    0.7743,
+    0.7795,
+    0.7748,
+    0.7773,
+    0.7721,
+    0.7746,
+    0.7707
+   ],
+   "peak_mb": [
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7
+   ],
+   "object_bytes": 156128,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O2 -DNDEBUG -c bench/compile_time/self_test.cpp -o WORK/ct-clang/self_test-O2.o"
+  },
+  {
+   "unit": "self_test",
+   "config": "O3",
+   "wall_s": [
+    0.7739,
+    0.7811,
+    0.7786,
+    0.7977,
+    0.7738,
+    0.775,
+    0.7747
+   ],
+   "cpu_s": [
+    0.7729,
+    0.78,
+    0.7765,
+    0.776,
+    0.7726,
+    0.7738,
+    0.7735
+   ],
+   "peak_mb": [
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7
+   ],
+   "object_bytes": 157848,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -c bench/compile_time/self_test.cpp -o WORK/ct-clang/self_test-O3.o"
+  },
+  {
+   "unit": "self_test",
+   "config": "debug",
+   "wall_s": [
+    0.4558,
+    0.4551,
+    0.4559,
+    0.4566,
+    0.4535,
+    0.4551,
+    0.4559
+   ],
+   "cpu_s": [
+    0.4549,
+    0.4536,
+    0.4547,
+    0.4547,
+    0.4528,
+    0.4537,
+    0.455
+   ],
+   "peak_mb": [
+    122.9,
+    122.9,
+    122.9,
+    122.9,
+    122.9,
+    122.9,
+    122.9
+   ],
+   "object_bytes": 561088,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -g -c bench/compile_time/self_test.cpp -o WORK/ct-clang/self_test-debug.o"
+  },
+  {
+   "unit": "kernels_scalar",
+   "config": "O0",
+   "wall_s": [
+    0.2276,
+    0.2273,
+    0.2268,
+    0.2273,
+    0.2266,
+    0.2261,
+    0.2266
+   ],
+   "cpu_s": [
+    0.2268,
+    0.2262,
+    0.2253,
+    0.2265,
+    0.2258,
+    0.225,
+    0.2254
+   ],
+   "peak_mb": [
+    103.4,
+    103.4,
+    103.4,
+    103.4,
+    103.4,
+    103.4,
+    103.4
+   ],
+   "object_bytes": 132608,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -DNDEBUG -c bench/compile_time/kernels_scalar.cpp -o WORK/ct-clang/kernels_scalar-O0.o"
+  },
+  {
+   "unit": "kernels_scalar",
+   "config": "O2",
+   "wall_s": [
+    0.4014,
+    0.4012,
+    0.4011,
+    0.4017,
+    0.3997,
+    0.3996,
+    0.4003
+   ],
+   "cpu_s": [
+    0.4004,
+    0.4,
+    0.3995,
+    0.4008,
+    0.3986,
+    0.3987,
+    0.3991
+   ],
+   "peak_mb": [
+    108.5,
+    108.5,
+    108.5,
+    108.5,
+    108.5,
+    108.5,
+    108.5
+   ],
+   "object_bytes": 49464,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O2 -DNDEBUG -c bench/compile_time/kernels_scalar.cpp -o WORK/ct-clang/kernels_scalar-O2.o"
+  },
+  {
+   "unit": "kernels_scalar",
+   "config": "O3",
+   "wall_s": [
+    0.4035,
+    0.4054,
+    0.4061,
+    0.4026,
+    0.4042,
+    0.4017,
+    0.4026
+   ],
+   "cpu_s": [
+    0.4027,
+    0.4042,
+    0.4044,
+    0.4018,
+    0.4031,
+    0.4009,
+    0.4014
+   ],
+   "peak_mb": [
+    108.5,
+    108.5,
+    108.5,
+    108.5,
+    108.5,
+    108.5,
+    108.5
+   ],
+   "object_bytes": 49720,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -c bench/compile_time/kernels_scalar.cpp -o WORK/ct-clang/kernels_scalar-O3.o"
+  },
+  {
+   "unit": "kernels_scalar",
+   "config": "debug",
+   "wall_s": [
+    0.308,
+    0.3081,
+    0.309,
+    0.3067,
+    0.3073,
+    0.3071,
+    0.3068
+   ],
+   "cpu_s": [
+    0.307,
+    0.3072,
+    0.3071,
+    0.3057,
+    0.3065,
+    0.3063,
+    0.3062
+   ],
+   "peak_mb": [
+    111.6,
+    111.6,
+    111.6,
+    111.6,
+    111.6,
+    111.6,
+    111.6
+   ],
+   "object_bytes": 318280,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -g -c bench/compile_time/kernels_scalar.cpp -o WORK/ct-clang/kernels_scalar-debug.o"
+  },
+  {
+   "unit": "kernels_packed",
+   "config": "O0",
+   "wall_s": [
+    0.9128,
+    0.9043,
+    0.9077,
+    0.9068,
+    0.9064,
+    0.9051,
+    0.9035
+   ],
+   "cpu_s": [
+    0.9118,
+    0.9029,
+    0.9064,
+    0.9054,
+    0.9048,
+    0.9033,
+    0.9025
+   ],
+   "peak_mb": [
+    122.9,
+    122.9,
+    122.9,
+    122.9,
+    122.9,
+    122.9,
+    122.9
+   ],
+   "object_bytes": 249016,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mavx2 -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -DNDEBUG -c bench/compile_time/kernels_packed.cpp -o WORK/ct-clang/kernels_packed-O0.o"
+  },
+  {
+   "unit": "kernels_packed",
+   "config": "O2",
+   "wall_s": [
+    0.8836,
+    0.8805,
+    0.8823,
+    0.8894,
+    0.8787,
+    0.8783,
+    0.8802
+   ],
+   "cpu_s": [
+    0.8823,
+    0.8793,
+    0.8809,
+    0.8884,
+    0.8771,
+    0.8769,
+    0.8787
+   ],
+   "peak_mb": [
+    128.0,
+    127.0,
+    128.0,
+    128.0,
+    128.0,
+    127.0,
+    128.0
+   ],
+   "object_bytes": 50936,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mavx2 -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O2 -DNDEBUG -c bench/compile_time/kernels_packed.cpp -o WORK/ct-clang/kernels_packed-O2.o"
+  },
+  {
+   "unit": "kernels_packed",
+   "config": "O3",
+   "wall_s": [
+    0.8888,
+    0.8836,
+    0.8851,
+    0.8865,
+    0.8798,
+    0.8797,
+    0.8863
+   ],
+   "cpu_s": [
+    0.8879,
+    0.8818,
+    0.8838,
+    0.885,
+    0.8789,
+    0.8785,
+    0.8855
+   ],
+   "peak_mb": [
+    128.0,
+    127.0,
+    127.0,
+    128.0,
+    128.0,
+    128.0,
+    128.0
+   ],
+   "object_bytes": 50936,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mavx2 -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -c bench/compile_time/kernels_packed.cpp -o WORK/ct-clang/kernels_packed-O3.o"
+  },
+  {
+   "unit": "kernels_packed",
+   "config": "debug",
+   "wall_s": [
+    0.9957,
+    0.9942,
+    0.9966,
+    1.0014,
+    0.9926,
+    0.994,
+    0.9926
+   ],
+   "cpu_s": [
+    0.9945,
+    0.9934,
+    0.9951,
+    0.9959,
+    0.9912,
+    0.9928,
+    0.9909
+   ],
+   "peak_mb": [
+    127.0,
+    127.0,
+    127.0,
+    127.0,
+    127.0,
+    127.0,
+    127.0
+   ],
+   "object_bytes": 418488,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mavx2 -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -g -c bench/compile_time/kernels_packed.cpp -o WORK/ct-clang/kernels_packed-debug.o"
+  },
+  {
+   "unit": "runner",
+   "config": "O0",
+   "wall_s": [
+    0.7529,
+    0.7527,
+    0.7548,
+    0.7563,
+    0.751,
+    0.7536,
+    0.7463
+   ],
+   "cpu_s": [
+    0.7515,
+    0.7514,
+    0.7535,
+    0.755,
+    0.75,
+    0.7526,
+    0.7454
+   ],
+   "peak_mb": [
+    128.9,
+    128.9,
+    128.9,
+    128.9,
+    128.9,
+    128.9,
+    128.9
+   ],
+   "object_bytes": 233600,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -DNDEBUG -c gen/tests/runner.cpp -o WORK/ct-clang/runner-O0.o"
+  },
+  {
+   "unit": "runner",
+   "config": "O2",
+   "wall_s": [
+    1.0795,
+    1.0788,
+    1.0791,
+    1.0839,
+    1.0784,
+    1.0816,
+    1.0849
+   ],
+   "cpu_s": [
+    1.0782,
+    1.0773,
+    1.0775,
+    1.0825,
+    1.0768,
+    1.08,
+    1.0831
+   ],
+   "peak_mb": [
+    135.0,
+    135.0,
+    135.0,
+    135.0,
+    135.0,
+    135.0,
+    135.0
+   ],
+   "object_bytes": 79080,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O2 -DNDEBUG -c gen/tests/runner.cpp -o WORK/ct-clang/runner-O2.o"
+  },
+  {
+   "unit": "runner",
+   "config": "O3",
+   "wall_s": [
+    1.0841,
+    1.0873,
+    1.0905,
+    1.0908,
+    1.0865,
+    1.0847,
+    1.0826
+   ],
+   "cpu_s": [
+    1.0823,
+    1.0861,
+    1.0889,
+    1.0893,
+    1.0855,
+    1.0833,
+    1.0818
+   ],
+   "peak_mb": [
+    135.0,
+    135.0,
+    135.0,
+    135.0,
+    135.0,
+    135.0,
+    135.0
+   ],
+   "object_bytes": 78200,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -c gen/tests/runner.cpp -o WORK/ct-clang/runner-O3.o"
+  },
+  {
+   "unit": "runner",
+   "config": "debug",
+   "wall_s": [
+    0.8626,
+    0.8607,
+    0.8615,
+    0.8639,
+    0.8614,
+    0.856,
+    0.8628
+   ],
+   "cpu_s": [
+    0.8616,
+    0.8595,
+    0.8597,
+    0.8631,
+    0.8599,
+    0.8549,
+    0.8612
+   ],
+   "peak_mb": [
+    135.1,
+    135.1,
+    135.1,
+    134.1,
+    135.1,
+    134.1,
+    135.0
+   ],
+   "object_bytes": 557392,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -g -c gen/tests/runner.cpp -o WORK/ct-clang/runner-debug.o"
+  },
+  {
+   "unit": "packed_runner",
+   "config": "O0",
+   "wall_s": [
+    1.4776,
+    1.4767,
+    1.4702,
+    1.476,
+    1.4696,
+    1.4729,
+    1.4726
+   ],
+   "cpu_s": [
+    1.4758,
+    1.4752,
+    1.4682,
+    1.4741,
+    1.4682,
+    1.4713,
+    1.4712
+   ],
+   "peak_mb": [
+    149.4,
+    148.4,
+    149.4,
+    148.4,
+    148.4,
+    149.4,
+    149.4
+   ],
+   "object_bytes": 387776,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mavx2 -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -DNDEBUG -c gen/tests/packed_runner.cpp -o WORK/ct-clang/packed_runner-O0.o"
+  },
+  {
+   "unit": "packed_runner",
+   "config": "O2",
+   "wall_s": [
+    1.7327,
+    1.7307,
+    1.7363,
+    1.7411,
+    1.7326,
+    1.7269,
+    1.7399
+   ],
+   "cpu_s": [
+    1.731,
+    1.729,
+    1.7342,
+    1.7395,
+    1.7306,
+    1.7253,
+    1.7381
+   ],
+   "peak_mb": [
+    154.6,
+    154.6,
+    154.1,
+    154.1,
+    154.6,
+    154.1,
+    154.6
+   ],
+   "object_bytes": 94944,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mavx2 -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O2 -DNDEBUG -c gen/tests/packed_runner.cpp -o WORK/ct-clang/packed_runner-O2.o"
+  },
+  {
+   "unit": "packed_runner",
+   "config": "O3",
+   "wall_s": [
+    1.799,
+    1.8014,
+    1.8059,
+    1.8081,
+    1.8028,
+    1.808,
+    1.8078
+   ],
+   "cpu_s": [
+    1.7975,
+    1.7992,
+    1.804,
+    1.8067,
+    1.8008,
+    1.8065,
+    1.8058
+   ],
+   "peak_mb": [
+    154.4,
+    154.1,
+    154.4,
+    154.3,
+    154.1,
+    154.1,
+    154.1
+   ],
+   "object_bytes": 96704,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mavx2 -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -c gen/tests/packed_runner.cpp -o WORK/ct-clang/packed_runner-O3.o"
+  },
+  {
+   "unit": "packed_runner",
+   "config": "debug",
+   "wall_s": [
+    1.6118,
+    1.6056,
+    1.6101,
+    1.6068,
+    1.6011,
+    1.617,
+    1.6113
+   ],
+   "cpu_s": [
+    1.6103,
+    1.604,
+    1.6079,
+    1.6057,
+    1.5991,
+    1.6158,
+    1.6094
+   ],
+   "peak_mb": [
+    155.2,
+    155.2,
+    155.4,
+    155.2,
+    155.2,
+    155.4,
+    155.5
+   ],
+   "object_bytes": 745744,
+   "command": "clang++ -std=c++20 -I include -I gen/tests -mavx2 -mfma --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O0 -g -c gen/tests/packed_runner.cpp -o WORK/ct-clang/packed_runner-debug.o"
+  }
+ ]
+}

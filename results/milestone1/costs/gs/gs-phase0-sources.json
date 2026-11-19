@@ -1,0 +1,151 @@
+{
+ "schema": 1,
+ "what": "objects: the two Phase 0 sources of the cookie experiment, recompiled",
+ "date": "2026-11-19",
+ "commit": "b710964",
+ "machine": "",
+ "compiler": "Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64",
+ "flags": [
+  "/nologo",
+  "/std:c++20",
+  "/EHsc",
+  "/O2",
+  "/DNDEBUG",
+  "/arch:AVX2",
+  "/fp:precise",
+  "/wd4190",
+  "/I",
+  "include"
+ ],
+ "results": {
+  "layout0": {
+   "??0E1@@QEAA@N@Z": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "??0E1@@QEAA@XZ": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "??A?$array@N$07@std@@QEBAAEBN_K@Z": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "??A?$array@UE1@@$07@std@@QEBAAEBUE1@@_K@Z": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "??D@YA?AUE1@@U0@0@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "??H@YA?AUE1@@U0@0@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "axpy_k1": {
+    "instructions": 40,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "axpy_plain": {
+    "instructions": 69,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "dot_k1": {
+    "instructions": 40,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "dot_plain": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "get": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "horner_k1": {
+    "instructions": 20,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "horner_plain": {
+    "instructions": 16,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  },
+  "gs0": {
+   "??0?$Expansion@N$00@@QEAA@N@Z": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "??0?$Expansion@N$00@@QEAA@XZ": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "??D@YA?AU?$Expansion@N$00@@U0@0@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "??H@YA?AU?$Expansion@N$00@@U0@0@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "dot_k1": {
+    "instructions": 40,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "dot_plain": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "get": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  }
+ },
+ "commands": [
+  "cl /nologo /std:c++20 /EHsc /O2 /arch:AVX2 /DK1_LAYOUT=0 /c experiments/phase0/k1/k1_layout.cpp /Folayout0.obj",
+  "cl /nologo /std:c++20 /EHsc /O2 /arch:AVX2 /DGS_VARIANT=0 /c experiments/phase0/k1/k1_gs.cpp /Fogs0.obj",
+  "python bench/gs_probe.py objects layout0.obj gs0.obj --labels layout0,gs0"
+ ]
+}

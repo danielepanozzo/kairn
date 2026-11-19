@@ -1,0 +1,210 @@
+{
+ "schema": 1,
+ "what": "run",
+ "date": "2026-11-19",
+ "commit": "b710964",
+ "machine": {
+  "description": "Windows 11 x64, Intel Core i5-13500T (6 performance and 8 efficiency cores); a shared CI machine",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13500T",
+  "os": "Windows",
+  "arch": "AMD64"
+ },
+ "compiler": "Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64",
+ "cxx": "cl",
+ "family": "msvc",
+ "flags": "",
+ "pinning": "not pinned",
+ "reps": 5,
+ "configs": {
+  "O2": [
+   "/O2",
+   "/DNDEBUG"
+  ]
+ },
+ "units": {
+  "use_e2": {
+   "source": "bench/compile_time/use_e2.cpp",
+   "packed": false,
+   "description": "kairn.hpp, every operation of Expansion<double, 2> and Ball<double, 2>"
+  },
+  "use_all": {
+   "source": "bench/compile_time/use_all.cpp",
+   "packed": false,
+   "description": "kairn.hpp, every operation of Expansion and Ball, float and double, 1 and 2 limbs"
+  },
+  "self_test": {
+   "source": "bench/compile_time/self_test.cpp",
+   "packed": false,
+   "description": "kairn.hpp and one call of kairn::self_test()"
+  },
+  "kernels_scalar": {
+   "source": "bench/compile_time/kernels_scalar.cpp",
+   "packed": false,
+   "description": "gen/scalar.hpp, every kernel for double and float"
+  },
+  "runner": {
+   "source": "gen/tests/runner.cpp",
+   "packed": false,
+   "description": "gen/tests/runner.cpp, the scalar runner of the quick tier"
+  }
+ },
+ "common_flags": {
+  "scalar": [
+   "/nologo",
+   "/std:c++20",
+   "/EHsc",
+   "/arch:AVX2",
+   "/I",
+   "include",
+   "/I",
+   "gen\\tests"
+  ],
+  "packed": [
+   "/nologo",
+   "/std:c++20",
+   "/EHsc",
+   "/arch:AVX2",
+   "/I",
+   "include",
+   "/I",
+   "gen\\tests"
+  ]
+ },
+ "results": [
+  {
+   "unit": "use_e2",
+   "config": "O2",
+   "wall_s": [
+    0.6008,
+    0.6024,
+    0.5787,
+    0.5752,
+    0.591
+   ],
+   "cpu_s": [
+    2.4062,
+    2.375,
+    2.3594,
+    2.3281,
+    2.3281
+   ],
+   "peak_mb": [
+    60.4,
+    60.6,
+    60.9,
+    60.2,
+    60.1
+   ],
+   "object_bytes": 235598,
+   "command": "cl /nologo /std:c++20 /EHsc /arch:AVX2 /I include /I gen\\tests /O2 /DNDEBUG /c bench\\compile_time\\use_e2.cpp /FoWORK\\ct-unpinned\\use_e2-O2.obj"
+  },
+  {
+   "unit": "use_all",
+   "config": "O2",
+   "wall_s": [
+    1.2083,
+    1.2418,
+    1.1251,
+    1.1462,
+    1.1704
+   ],
+   "cpu_s": [
+    6.4844,
+    6.5,
+    6.1562,
+    6.2812,
+    6.2344
+   ],
+   "peak_mb": [
+    65.5,
+    64.7,
+    65.6,
+    65.1,
+    65.0
+   ],
+   "object_bytes": 667213,
+   "command": "cl /nologo /std:c++20 /EHsc /arch:AVX2 /I include /I gen\\tests /O2 /DNDEBUG /c bench\\compile_time\\use_all.cpp /FoWORK\\ct-unpinned\\use_all-O2.obj"
+  },
+  {
+   "unit": "self_test",
+   "config": "O2",
+   "wall_s": [
+    0.5416,
+    0.5556,
+    0.5393,
+    0.5351,
+    0.5345
+   ],
+   "cpu_s": [
+    2.0938,
+    2.1406,
+    2.0312,
+    1.875,
+    2.0156
+   ],
+   "peak_mb": [
+    57.7,
+    57.5,
+    57.8,
+    57.6,
+    58.1
+   ],
+   "object_bytes": 305927,
+   "command": "cl /nologo /std:c++20 /EHsc /arch:AVX2 /I include /I gen\\tests /O2 /DNDEBUG /c bench\\compile_time\\self_test.cpp /FoWORK\\ct-unpinned\\self_test-O2.obj"
+  },
+  {
+   "unit": "kernels_scalar",
+   "config": "O2",
+   "wall_s": [
+    0.5049,
+    0.4583,
+    0.4569,
+    0.4822,
+    0.484
+   ],
+   "cpu_s": [
+    1.7969,
+    1.5312,
+    1.6562,
+    1.6562,
+    1.6562
+   ],
+   "peak_mb": [
+    52.3,
+    52.5,
+    52.1,
+    52.7,
+    52.5
+   ],
+   "object_bytes": 220721,
+   "command": "cl /nologo /std:c++20 /EHsc /arch:AVX2 /I include /I gen\\tests /O2 /DNDEBUG /c bench\\compile_time\\kernels_scalar.cpp /FoWORK\\ct-unpinned\\kernels_scalar-O2.obj"
+  },
+  {
+   "unit": "runner",
+   "config": "O2",
+   "wall_s": [
+    1.3438,
+    1.2995,
+    1.2926,
+    1.2859,
+    1.2929
+   ],
+   "cpu_s": [
+    3.25,
+    3.1094,
+    3.1719,
+    3.125,
+    3.1094
+   ],
+   "peak_mb": [
+    92.6,
+    92.7,
+    93.2,
+    92.6,
+    93.2
+   ],
+   "object_bytes": 484043,
+   "command": "cl /nologo /std:c++20 /EHsc /arch:AVX2 /I include /I gen\\tests /O2 /DNDEBUG /c gen\\tests\\runner.cpp /FoWORK\\ct-unpinned\\runner-O2.obj"
+  }
+ ]
+}

@@ -1,0 +1,102 @@
+{
+ "schema": 1,
+ "date": "2026-11-19",
+ "commit": "7a7a5ca",
+ "machine": {
+  "description": "Linux x86-64, AMD EPYC 7452 (Zen 2), two sockets of 32 cores; one logical CPU, its SMT sibling idle",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "pinning": "pinned to one logical CPU"
+ },
+ "compiler": "Clang 18.1.3 (1ubuntu1)",
+ "flags": "--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -O3 -DNDEBUG -O0 -ffp-contract=off -mfma -DKAIRN_CHECKS=1",
+ "kairn_checks": 1,
+ "elements": 256,
+ "reps": 31,
+ "sample_ms": 4,
+ "results": [
+  {
+   "name": "env/loop",
+   "ns_min": 10.39,
+   "ns_median": 10.51,
+   "ns_max": 10.64,
+   "checksum": "0b6050e73d686f4a"
+  },
+  {
+   "name": "add/loop",
+   "ns_min": 68.35,
+   "ns_median": 68.83,
+   "ns_max": 69.77,
+   "checksum": "7e3392f21c52a76d"
+  },
+  {
+   "name": "mul/loop",
+   "ns_min": 61.62,
+   "ns_median": 61.89,
+   "ns_max": 62.7,
+   "checksum": "9e9d2271ebac13ac"
+  },
+  {
+   "name": "add/sum",
+   "ns_min": 73.95,
+   "ns_median": 74.04,
+   "ns_max": 76.48,
+   "checksum": "955263da45fcd4a3"
+  },
+  {
+   "name": "mul/prod",
+   "ns_min": 66.04,
+   "ns_median": 67.25,
+   "ns_max": 68.14,
+   "checksum": "caa9f609468cd84f"
+  },
+  {
+   "name": "k1/loop",
+   "ns_min": 13.71,
+   "ns_median": 13.74,
+   "ns_max": 13.94,
+   "checksum": "937765c9899a3f28"
+  },
+  {
+   "name": "k1/sum",
+   "ns_min": 20.32,
+   "ns_median": 20.36,
+   "ns_max": 20.64,
+   "checksum": "5fab4184c96bb7e1"
+  },
+  {
+   "name": "k1/call",
+   "ns_min": 15.17,
+   "ns_median": 15.21,
+   "ns_max": 15.5,
+   "checksum": "937765c9899a3f28"
+  },
+  {
+   "name": "double/loop",
+   "ns_min": 3.216,
+   "ns_median": 3.32,
+   "ns_max": 3.357,
+   "checksum": "f60fda2a2cf2af28"
+  },
+  {
+   "name": "double/call",
+   "ns_min": 3.502,
+   "ns_median": 3.679,
+   "ns_max": 3.813,
+   "checksum": "f60fda2a2cf2af28"
+  },
+  {
+   "name": "double/sum",
+   "ns_min": 3.251,
+   "ns_median": 3.259,
+   "ns_max": 3.361,
+   "checksum": "3673372519bd4b21"
+  },
+  {
+   "name": "fma/chain",
+   "ns_min": 6.197,
+   "ns_median": 6.211,
+   "ns_max": 6.478,
+   "checksum": "f4c8579346367334"
+  }
+ ]
+}

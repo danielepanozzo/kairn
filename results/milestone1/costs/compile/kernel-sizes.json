@@ -1,0 +1,387 @@
+{
+ "schema": 1,
+ "what": "kernel sizes",
+ "source": "include/kairn/gen/scalar.hpp",
+ "kernels": [
+  {
+   "kernel": "add_1_1",
+   "lines": 8,
+   "operations": 1,
+   "fused": 0
+  },
+  {
+   "kernel": "ball_add_1",
+   "lines": 18,
+   "operations": 5,
+   "fused": 2
+  },
+  {
+   "kernel": "ball_add_1_full",
+   "lines": 78,
+   "operations": 15,
+   "fused": 2
+  },
+  {
+   "kernel": "ball_make_1",
+   "lines": 70,
+   "operations": 11,
+   "fused": 0
+  },
+  {
+   "kernel": "ball_mul_1",
+   "lines": 26,
+   "operations": 9,
+   "fused": 6
+  },
+  {
+   "kernel": "ball_mul_1_full",
+   "lines": 86,
+   "operations": 19,
+   "fused": 6
+  },
+  {
+   "kernel": "ball_neg_1",
+   "lines": 12,
+   "operations": 2,
+   "fused": 0
+  },
+  {
+   "kernel": "ball_scale_1",
+   "lines": 20,
+   "operations": 6,
+   "fused": 4
+  },
+  {
+   "kernel": "ball_scale_1_full",
+   "lines": 78,
+   "operations": 15,
+   "fused": 4
+  },
+  {
+   "kernel": "ball_sub_1",
+   "lines": 20,
+   "operations": 6,
+   "fused": 2
+  },
+  {
+   "kernel": "ball_sub_1_full",
+   "lines": 80,
+   "operations": 16,
+   "fused": 2
+  },
+  {
+   "kernel": "fast_two_sum",
+   "lines": 14,
+   "operations": 3,
+   "fused": 0
+  },
+  {
+   "kernel": "make_2",
+   "lines": 14,
+   "operations": 3,
+   "fused": 0
+  },
+  {
+   "kernel": "mul_1_1",
+   "lines": 8,
+   "operations": 1,
+   "fused": 1
+  },
+  {
+   "kernel": "radd",
+   "lines": 10,
+   "operations": 2,
+   "fused": 0
+  },
+  {
+   "kernel": "rmul",
+   "lines": 10,
+   "operations": 2,
+   "fused": 1
+  },
+  {
+   "kernel": "split",
+   "lines": 16,
+   "operations": 4,
+   "fused": 1
+  },
+  {
+   "kernel": "two_prod",
+   "lines": 56,
+   "operations": 2,
+   "fused": 2
+  },
+  {
+   "kernel": "two_prod_dekker",
+   "lines": 42,
+   "operations": 17,
+   "fused": 7
+  },
+  {
+   "kernel": "two_sum",
+   "lines": 20,
+   "operations": 6,
+   "fused": 0
+  },
+  {
+   "kernel": "abs_2",
+   "lines": 18,
+   "operations": 5,
+   "fused": 0
+  },
+  {
+   "kernel": "to_up_2",
+   "lines": 12,
+   "operations": 3,
+   "fused": 0
+  },
+  {
+   "kernel": "abs_upper_2",
+   "lines": 22,
+   "operations": 8,
+   "fused": 0
+  },
+  {
+   "kernel": "add_2_1",
+   "lines": 30,
+   "operations": 11,
+   "fused": 0
+  },
+  {
+   "kernel": "add_2_1_full",
+   "lines": 94,
+   "operations": 20,
+   "fused": 0
+  },
+  {
+   "kernel": "add_2_2",
+   "lines": 48,
+   "operations": 20,
+   "fused": 0
+  },
+  {
+   "kernel": "add_2_2_full",
+   "lines": 108,
+   "operations": 28,
+   "fused": 0
+  },
+  {
+   "kernel": "add_fast_2_2",
+   "lines": 30,
+   "operations": 11,
+   "fused": 0
+  },
+  {
+   "kernel": "add_fast_2_2_full",
+   "lines": 90,
+   "operations": 19,
+   "fused": 0
+  },
+  {
+   "kernel": "ball_add_2",
+   "lines": 58,
+   "operations": 24,
+   "fused": 2
+  },
+  {
+   "kernel": "ball_add_2_full",
+   "lines": 130,
+   "operations": 36,
+   "fused": 2
+  },
+  {
+   "kernel": "ball_make_2",
+   "lines": 82,
+   "operations": 12,
+   "fused": 0
+  },
+  {
+   "kernel": "mul_2_2",
+   "lines": 26,
+   "operations": 9,
+   "fused": 5
+  },
+  {
+   "kernel": "ball_mul_2",
+   "lines": 44,
+   "operations": 17,
+   "fused": 10
+  },
+  {
+   "kernel": "ball_mul_2_full",
+   "lines": 116,
+   "operations": 29,
+   "fused": 10
+  },
+  {
+   "kernel": "neg_2",
+   "lines": 12,
+   "operations": 2,
+   "fused": 0
+  },
+  {
+   "kernel": "ball_neg_2",
+   "lines": 16,
+   "operations": 3,
+   "fused": 0
+  },
+  {
+   "kernel": "mul_2_1",
+   "lines": 20,
+   "operations": 6,
+   "fused": 3
+  },
+  {
+   "kernel": "ball_scale_2",
+   "lines": 32,
+   "operations": 11,
+   "fused": 6
+  },
+  {
+   "kernel": "ball_scale_2_full",
+   "lines": 102,
+   "operations": 22,
+   "fused": 6
+  },
+  {
+   "kernel": "ball_sub_2",
+   "lines": 62,
+   "operations": 26,
+   "fused": 2
+  },
+  {
+   "kernel": "ball_sub_2_full",
+   "lines": 134,
+   "operations": 38,
+   "fused": 2
+  },
+  {
+   "kernel": "eq_2_1",
+   "lines": 12,
+   "operations": 3,
+   "fused": 0
+  },
+  {
+   "kernel": "eq_2_2",
+   "lines": 12,
+   "operations": 3,
+   "fused": 0
+  },
+  {
+   "kernel": "le_1_2",
+   "lines": 16,
+   "operations": 5,
+   "fused": 0
+  },
+  {
+   "kernel": "le_2_1",
+   "lines": 16,
+   "operations": 5,
+   "fused": 0
+  },
+  {
+   "kernel": "le_2_2",
+   "lines": 16,
+   "operations": 5,
+   "fused": 0
+  },
+  {
+   "kernel": "lt_1_2",
+   "lines": 16,
+   "operations": 5,
+   "fused": 0
+  },
+  {
+   "kernel": "lt_2_1",
+   "lines": 16,
+   "operations": 5,
+   "fused": 0
+  },
+  {
+   "kernel": "lt_2_2",
+   "lines": 16,
+   "operations": 5,
+   "fused": 0
+  },
+  {
+   "kernel": "make_2_limbs",
+   "lines": 12,
+   "operations": 2,
+   "fused": 0
+  },
+  {
+   "kernel": "mul_2_1_full",
+   "lines": 80,
+   "operations": 14,
+   "fused": 4
+  },
+  {
+   "kernel": "mul_2_2_full",
+   "lines": 86,
+   "operations": 17,
+   "fused": 6
+  },
+  {
+   "kernel": "mul_pow2_2",
+   "lines": 18,
+   "operations": 5,
+   "fused": 2
+  },
+  {
+   "kernel": "mul_pow2_2_full",
+   "lines": 78,
+   "operations": 13,
+   "fused": 3
+  },
+  {
+   "kernel": "sub_1_2",
+   "lines": 34,
+   "operations": 13,
+   "fused": 0
+  },
+  {
+   "kernel": "sub_1_2_full",
+   "lines": 98,
+   "operations": 22,
+   "fused": 0
+  },
+  {
+   "kernel": "sub_2_1",
+   "lines": 32,
+   "operations": 12,
+   "fused": 0
+  },
+  {
+   "kernel": "sub_2_1_full",
+   "lines": 96,
+   "operations": 21,
+   "fused": 0
+  },
+  {
+   "kernel": "sub_2_2",
+   "lines": 52,
+   "operations": 22,
+   "fused": 0
+  },
+  {
+   "kernel": "sub_2_2_full",
+   "lines": 112,
+   "operations": 30,
+   "fused": 0
+  },
+  {
+   "kernel": "to_down_2",
+   "lines": 12,
+   "operations": 3,
+   "fused": 0
+  },
+  {
+   "kernel": "to_nearest_2",
+   "lines": 9,
+   "operations": 1,
+   "fused": 0
+  }
+ ],
+ "commit": "040922c",
+ "command": "python3 bench/compile_time.py kernels --json results/milestone1/costs/compile/kernel-sizes.json"
+}

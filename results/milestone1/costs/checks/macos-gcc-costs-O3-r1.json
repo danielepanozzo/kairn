@@ -1,0 +1,102 @@
+{
+ "schema": 1,
+ "date": "2026-11-19",
+ "commit": "0f81c17",
+ "machine": {
+  "description": "macOS arm64, Apple M3 Max (12 performance and 4 efficiency cores); not pinned (macOS has no affinity), QoS user-interactive",
+  "cpu": "Apple M3 Max",
+  "pinning": "not pinned (no affinity on macOS); QoS user-interactive"
+ },
+ "compiler": "GCC 16.2.0",
+ "flags": "-O3 -DNDEBUG -O3 -ffp-contract=off -DKAIRN_CHECKS=0",
+ "kairn_checks": 0,
+ "elements": 256,
+ "reps": 31,
+ "sample_ms": 4,
+ "results": [
+  {
+   "name": "env/loop",
+   "ns_min": 0.3878,
+   "ns_median": 0.3888,
+   "ns_max": 0.3977,
+   "checksum": "0b6050e73d686f4a"
+  },
+  {
+   "name": "add/loop",
+   "ns_min": 1.514,
+   "ns_median": 1.52,
+   "ns_max": 1.566,
+   "checksum": "7e3392f21c52a76d"
+  },
+  {
+   "name": "mul/loop",
+   "ns_min": 0.7753,
+   "ns_median": 0.7776,
+   "ns_max": 0.7875,
+   "checksum": "9e9d2271ebac13ac"
+  },
+  {
+   "name": "add/sum",
+   "ns_min": 7.682,
+   "ns_median": 7.715,
+   "ns_max": 7.928,
+   "checksum": "955263da45fcd4a3"
+  },
+  {
+   "name": "mul/prod",
+   "ns_min": 5.808,
+   "ns_median": 5.839,
+   "ns_max": 5.917,
+   "checksum": "caa9f609468cd84f"
+  },
+  {
+   "name": "k1/loop",
+   "ns_min": 0.1541,
+   "ns_median": 0.1545,
+   "ns_max": 0.1553,
+   "checksum": "937765c9899a3f28"
+  },
+  {
+   "name": "k1/sum",
+   "ns_min": 0.503,
+   "ns_median": 0.5057,
+   "ns_max": 0.5299,
+   "checksum": "5fab4184c96bb7e1"
+  },
+  {
+   "name": "k1/call",
+   "ns_min": 0.8103,
+   "ns_median": 0.8129,
+   "ns_max": 0.8384,
+   "checksum": "937765c9899a3f28"
+  },
+  {
+   "name": "double/loop",
+   "ns_min": 0.155,
+   "ns_median": 0.1556,
+   "ns_max": 0.1568,
+   "checksum": "f60fda2a2cf2af28"
+  },
+  {
+   "name": "double/call",
+   "ns_min": 0.811,
+   "ns_median": 0.8134,
+   "ns_max": 0.8235,
+   "checksum": "f60fda2a2cf2af28"
+  },
+  {
+   "name": "double/sum",
+   "ns_min": 0.4902,
+   "ns_median": 0.4917,
+   "ns_max": 0.4993,
+   "checksum": "3673372519bd4b21"
+  },
+  {
+   "name": "fma/chain",
+   "ns_min": 0.7632,
+   "ns_median": 0.7658,
+   "ns_max": 0.7796,
+   "checksum": "f4c8579346367334"
+  }
+ ]
+}
