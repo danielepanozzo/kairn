@@ -147,8 +147,7 @@ pass or fail; on failure it also prints the command that reruns one case (below)
   a non-finite result whose operands and exact value are all far below the overflow threshold.
   A kernel of the extended domain (the non-finite layer) is judged on every line, non-finite
   results included, and the same option fails its non-finite results on such operands where its
-  claims leave them open, and a result of `neg_2` or `abs_2` on a non-finite operand whose value
-  is not the kernel's (`oracle/README.md`, "The extended domain"). The exceptions, for every
+  claims leave them open (`oracle/README.md`, "The extended domain"). The exceptions, for every
   runner, are `split` and `two_prod_dekker`, whose multiplication by the splitter overflows for
   such operands, as their requirement of no intermediate overflow allows; for them the guards
   below stand guard.
@@ -188,7 +187,7 @@ the classes of each statement (`oracle/README.md`, "The extended domain"):
     |---|---|---|
     | `extends` | the nine full kernels | a finite result (F2), an overflow on finite operands (F4), a non-finite operand (F5); where `finite_when` is not empty, a case where every condition holds (F3 applies) |
     | `encloses` | the eight full Ball kernels, `ball_neg_1`, `ball_neg_2` | each of the three results: a finite ball, the whole line, the empty set (and B4 applying, once a `finite_when` is claimed) |
-    | `represents` | `make_2`, `make_2_limbs` | a finite, an infinite and a NaN value |
+    | `represents` | `make_2`, `make_2_limbs`, `neg_2`, `abs_2` | a finite, an infinite and a NaN value |
     | `makes_ball` | `ball_make_1`, `ball_make_2` | each given state: a finite ball, the whole line (a center that is not finite or a radius $+\infty$), the empty set (a radius that is NaN or negative) |
     | `normalized`, `error` | `neg_2`, `abs_2`, `ball_neg_2` | a non-finite operand |
     | `rounded` | the conversions | a non-finite operand |
