@@ -48,7 +48,7 @@ For infinite and NaN operands
   *core*, the kernel of the same name without `_full`, and then turns overflow and infinite or NaN
   operands into the result `T` would give. Its statement has five parts, F1 to F5, printed with the
   core's bound and the kernel's own conditions; a full Ball kernel has four, B1 to B4, about the
-  three states of a ball. The public headers do not call these kernels yet, and their pages say so.
+  three states of a ball. The operators and constructors of the public headers call these kernels.
 
 ## The parts of a page
 
@@ -78,10 +78,15 @@ $t\,\eta$ for `double` and `float`, exactly and approximately, and the constants
 value instead of the exact one (what a running error analysis needs). Last, the smallest precision
 for which the statement is proved.
 
-**Status.** *Proved*, with the theorem's name and its file; or *UNVERIFIED*, marked at the top of
-the page (below). Each statement has its own status, as `gen/claims.json` gives it (`status`, and
-`ieee_status` for the statement about infinite and NaN operands); a page never derives one from
-anything else.
+**Status.** *Proved*, with the theorem's name and its file, and the audit file that prints the
+axioms its proof depends on; or *UNVERIFIED*, marked at the top of the page (below). Each
+statement has its own status, as `gen/claims.json` gives it (`status`, and `ieee_status` for the
+statement about infinite and NaN operands); a page never derives one from anything else.
+
+**Axioms.** The axioms a proof may depend on: the four that the audit allows, from
+`proofs/audit/allowed_axioms.txt`. Which of them a given theorem depends on is known only by running
+Rocq, so the page does not list them; it points to the artifact of the CI that keeps what the
+audit printed ([Proofs](../proofs/index.md)).
 
 **Source.** Where the algorithm comes from and under which license, as the kernel's description
 gives them. The references are on the [References](../developer/design/phase0/references.md) page.

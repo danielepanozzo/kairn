@@ -92,10 +92,11 @@ python3 docs/tools/test_reference.py     # the tests of the script and of its ta
 ```
 
 The script reads `gen/claims.json`, the kernel descriptions under `gen/kernels/`,
-`include/kairn/gen/bounds.hpp`, `proofs/gen/Statements.v` and the stored brute-force summaries of
-the latest milestone under `results/`, and prints every number, status and formula of a page from
-them. Rerun it after any of these changes; `--check` runs in CI (the workflow `checks.yml`) and in
-ctest (`docs.reference.check`, `docs.reference.test`).
+`include/kairn/gen/bounds.hpp`, `proofs/gen/Statements.v`, the axiom audit's allow-list and files
+(below), and the stored brute-force summaries of the latest milestone under `results/`, and prints
+every number, status and formula of a page from them. Rerun it after any of these changes;
+`--check` runs in CI (the workflow `checks.yml`) and in ctest (`docs.reference.check`,
+`docs.reference.test`).
 
 The one input written by hand is `docs/tools/reference_operations.py`: for each kernel its page's
 title and group, and the C++ forms that reach it, with their operand types. A new kernel needs an
@@ -119,6 +120,13 @@ claims file, in memory, to try claims that are not committed.
 A kernel whose description says `entry: yes` and that has no form in the table is one the public
 headers may call but do not call yet, and its page and the index say so. When a header starts to
 call it, the test fails until its forms are in the table.
+
+Each page names the theorems it calls proved, the audit file that prints their assumptions
+(`Print Assumptions`, in `proofs/gen/Audit.v`, `proofs/gen/IeeeAudit.v` or
+`proofs/audit/HandAudit.v`), and the axioms of `proofs/audit/allowed_axioms.txt`; the script fails
+on a proved theorem that no audit file names. Which of the allowed axioms a theorem depends on is
+known only by running Rocq, so no page lists them per theorem: the page points to the artifact
+`proof-audit` of the workflow `proofs.yml`, which keeps what the audit printed.
 
 ## The C++ API reference
 

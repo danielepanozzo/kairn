@@ -259,7 +259,7 @@ class Table(unittest.TestCase):
 COPIED = ["gen/claims.json", "gen/kernels", "include/kairn/gen/bounds.hpp", "results",
           "docs/tools/reference_operations.py", "docs/developer/design/phase0/references.md",
           "docs/developer/results", "proofs/theories", "proofs/gen/Statements.v", "proofs/gen/Model.v",
-          "proofs/gen/IeeeModel.v",
+          "proofs/gen/IeeeModel.v", "proofs/gen/Audit.v", "proofs/gen/IeeeAudit.v", "proofs/audit",
           "mkdocs.yml",
           "docs/reference"]
 
@@ -654,6 +654,57 @@ class Tool(unittest.TestCase):
         self.copy.kernel(data, "abs_2")["theorem"]["name"] = "abs_2_no_such_theorem"
         self.copy.set_claims(data)
         self.fails("abs_2", "abs_2_no_such_theorem")
+
+    def edit_file(self, rel, edit):
+        path = self.copy.path(rel)
+        text = edit(reference.read(path))
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text)
+
+    def test_axioms_come_from_the_allow_list(self):
+        page = self.page("lt_2_2")
+        self.assertIn("## Axioms", page)
+        allowed, _ = reference.load_audit(self.copy.root)
+        self.assertEqual(len(allowed), 4)
+        for a in allowed:
+            self.assertIn("- `%s`" % a, page)
+        self.assertIn("one of the four listed in", page)
+        self.assertIn("(`Print Assumptions lt_2_2_correct`, in [`proofs/gen/Audit.v`]", page)
+        self.assertIn("(`Print Assumptions lt_2_2_ieee_correct`, in [`proofs/gen/IeeeAudit.v`]", page)
+        self.assertIn("the proofs of `lt_2_2_correct` and `lt_2_2_ieee_correct` depend on", page)
+        self.assertIn("the artifact `proof-audit` of each run of the [Proofs workflow](%s)" % reference.PROOFS_WORKFLOW,
+                      page)
+        self.assertIn("the proof of `add_2_2_full_correct` depends on", self.page("add_2_2_full"))
+        # The list is read from the file, not written into the script.
+        self.edit_file(reference.ALLOWED_AXIOMS, lambda t: t + "Some.new_axiom\n")
+        page = self.page("lt_2_2")
+        self.assertIn("one of the five listed in", page)
+        self.assertIn("- `Some.new_axiom`", page)
+        self.assertIn("finds none beyond the five allowed", page)
+
+    def test_an_empty_allow_list_fails(self):
+        self.edit_file(reference.ALLOWED_AXIOMS, lambda t: "\n".join(l for l in t.split("\n") if l.startswith("#")))
+        self.fails(reference.ALLOWED_AXIOMS, "lists no axiom")
+
+    def test_a_proved_theorem_that_no_audit_prints_fails(self):
+        self.edit_file("proofs/gen/Audit.v", lambda t: t.replace("Print Assumptions add_2_1_correct.", ""))
+        self.fails("add_2_1", "add_2_1_correct", "no audit file prints")
+
+    def test_an_audit_line_in_a_comment_does_not_count(self):
+        self.edit_file("proofs/gen/IeeeAudit.v", lambda t: t.replace(
+            "Print Assumptions lt_2_2_ieee_correct.", "(* Print Assumptions lt_2_2_ieee_correct. *)"))
+        self.fails("lt_2_2", "lt_2_2_ieee_correct", "no audit file prints")
+
+    def test_no_axioms_without_a_proved_theorem(self):
+        self.change("add_2_1", lambda k: k.update(status="unverified"))
+        page = self.page("add_2_1")
+        self.assertNotIn("## Axioms", page)
+        self.assertNotIn("Print Assumptions", page)
+        # An UNVERIFIED statement about infinite and NaN operands leaves only the other theorem.
+        self.change("lt_2_2", lambda k: k.update(ieee_status="unverified"))
+        page = self.page("lt_2_2")
+        self.assertIn("the proof of `lt_2_2_correct` depends on", page)
+        self.assertNotIn("Print Assumptions lt_2_2_ieee_correct", page)
 
     def test_no_brute_results(self):
         shutil.rmtree(self.copy.path("results"))

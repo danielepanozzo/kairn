@@ -106,7 +106,13 @@ after itself, which is how an unfinished proof is caught. In this version every 
 depends on the same four axioms.
 
 A kernel's status in `gen/claims.json` is `proved` only when this audit passes for its theorem,
-and the CI runs it on every push and pull request.
+and the CI runs it on every push and pull request. It keeps what the audit printed as the
+artifact `proof-audit` of each run of the
+[Proofs workflow](https://github.com/danielepanozzo/kairn/actions/workflows/proofs.yml):
+`make.log`, the whole output of `make -C proofs`, with the axioms of every audited theorem, and
+the files `audit/*.out`, what Rocq printed for each audit file. The reference page of a kernel
+names its theorems and the allowed axioms, and points to that artifact for the axioms of each
+theorem, which only a run of Rocq computes.
 
 ## The four axioms
 
