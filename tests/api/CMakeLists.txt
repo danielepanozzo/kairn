@@ -188,7 +188,7 @@ endif()
 # UNVERIFIED operations written without the marker. Where the compiler explains, the message names
 # the concept whose constraint failed; Clang does not for a unary operator.
 if(_msvc_style)
-  set(_api_unmarked "error")
+  set(_api_unmarked "constraint")
 else()
   set(_api_unmarked "proof_checked|invalid argument type")
 endif()
