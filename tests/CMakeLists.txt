@@ -71,10 +71,12 @@ foreach(_entry IN LISTS _entries)
   add_test(NAME "${_name}.${_command}"
     COMMAND "${Python3_EXECUTABLE}" "${_script}" ${_args}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  # Two minutes each on a workstation; on the hosted runners, which are slower and run four
+  # tests at once on as many cores, 8 to more than 10 minutes and 4 to 8 minutes.
   if(_entry STREQUAL "gen/kairn-gen test")
-    set_tests_properties("${_name}.${_command}" PROPERTIES TIMEOUT 600)
+    set_tests_properties("${_name}.${_command}" PROPERTIES TIMEOUT 1800)
   elseif(_entry STREQUAL "oracle/kairn-oracle selftest")
-    set_tests_properties("${_name}.${_command}" PROPERTIES TIMEOUT 600
+    set_tests_properties("${_name}.${_command}" PROPERTIES TIMEOUT 1800
       FAIL_REGULAR_EXPRESSION "SKIP [^\n]*(no C\\+\\+ compiler|compiling the C\\+\\+ runner)")
   endif()
 endforeach()

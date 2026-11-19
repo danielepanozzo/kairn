@@ -22,7 +22,9 @@ jobs:
   test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    # The quick tier takes 17 to 28 minutes on the hosted runners since the kernels of the
+    # non-finite layer were added (measured on the first run with them).
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -75,6 +77,15 @@ jobs:
               Add-Content -Path $env:GITHUB_ENV -Value "$($Matches[1])=$($Matches[2])"
             }
           }
+
+      # The standard library of the hosted image (MSVC 14.52) refuses a Clang older than 22 with
+      # its error STL1000, and the clang-cl of the same image is 20.1. The library's own switch
+      # accepts the pair. clang-cl reads the options of the variable CL on every compilation: the
+      # checks of the configuration, the oracle's runner and the consumer projects included.
+      - name: Let the image's clang-cl use the image's newer standard library
+        if: matrix.cxx == 'clang-cl'
+        shell: pwsh
+        run: Add-Content -Path $env:GITHUB_ENV -Value "CL=/D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH"
 
       - name: Configure
         run: >
