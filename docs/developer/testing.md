@@ -8,8 +8,8 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 | Tier | What | Where it runs | Time |
 |---|---|---|---|
-| Quick | `ctest --test-dir build`: every kernel through every compiled runner on a small sample, every public operation on a small sample, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and the fast parts of the generator's and the oracle's own tests ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | 44 seconds to two minutes with `--parallel 4` ([Time](#time)) |
-| Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the longest parts of the generator's and the oracle's own tests ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | five to eight minutes with `--parallel 4` |
+| Quick | `ctest --test-dir build`: every kernel through every compiled runner on a small sample, every public operation on a small sample (and, built as a debug build with the checks, the first form of each), the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and the fast parts of the generator's and the oracle's own tests ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | 44 seconds to two minutes with `--parallel 4` ([Time](#time)) |
+| Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the longest parts of the generator's and the oracle's own tests ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | five to eight minutes with `--parallel 4` |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI, and without its C++ tests on Windows | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
 | Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases, both forms of the scalar fix-ups), and the interpreter on every operand of larger toy formats, with the same guards and a time budget | by hand, on the test machines, never in CI (`tests/brute/README.md`); results in [Brute force, Milestone 1](results/brute-milestone1.md) | for the final code of Milestone 1, 3.5 hours on the Linux machine and 3 hours each on the Mac and the Windows machine |
@@ -51,12 +51,14 @@ The tests of the public interface (`tests/api/`, label `api`):
 
 | Test | Checks |
 |---|---|
-| `api.oracle.K.F` | Every public operation that calls kernel K, computed through the constructors, operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on 2 000 random cases of format F, judged by the oracle against K's claims; by two runners on the same cases, one built with the build's flags and one with contraction forced on. For a kernel of the extended domain the cases include infinite and NaN operands and empty and whole balls, built through the public constructors. Each form of the operation (`x + a` and `a + x`, `x += a`, `x + y` with a one-limb `y`, the marked and the unmarked operator, `kairn::finite::add`) is judged on its own. A few forms can compute only some lines of their kernel (`ldexp` needs a power of two among the operands of `mul_1_1`, a point form a ball of radius 0, the steps of `ldexp` an operand that can be scaled exactly); they compute the plain operation on the others, and fail if a stream of 1000 lines or more reached their own operation on none, which is why the quick tier has at least 1 000 cases. |
+| `api.oracle.K.F` | Every public operation that calls kernel K, computed through the constructors, operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on 2 000 random cases of format F, judged by the oracle against K's claims; by two runners on the same cases, one built with the build's flags and one with contraction forced on, and by a third, the [debug build](#flag-sets), with the checks, on the first form of K only. For a kernel of the extended domain the cases include infinite and NaN operands and empty and whole balls, built through the public constructors. Each form of the operation (`x + a` and `a + x`, `x += a`, `x + y` with a one-limb `y`, the marked and the unmarked operator, `kairn::finite::add`) is judged on its own. A few forms can compute only some lines of their kernel (`ldexp` needs a power of two among the operands of `mul_1_1`, a point form a ball of radius 0, the steps of `ldexp` an operand that can be scaled exactly); they compute the plain operation on the others, and fail if a stream of 1000 lines or more reached their own operation on none, which is why the quick tier has at least 1 000 cases. |
 | `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the finite cores of the Ball operations); no entry kernel is a building block. |
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, comparisons with a NaN among them; the same results at run time; the properties of the types; and that an operation compiles without `kairn::unverified` exactly when the kernel it calls is proved. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass in the default environment and fail under each directed rounding mode and under flush-to-zero. |
+| `api.flags.debug.self_test`, `api.flags.debug.constexpr` | `kairn::self_test()` and `kairn::environment_ok()`, compiled as the [debug build](#flag-sets), pass (`runner.cpp --self-test`); `tests/api/constexpr.cpp` built so, its constant expressions evaluated with the checks on. |
+| `api.checks.debug.G`, `api.checks.release.G`, `api.checks.handler` | The [checks of a debug build](#the-checks-of-a-debug-build), in the debug build and with the build's own flags and `KAIRN_CHECKS` defined to 1: in the default environment every operation runs (G = `default`); under each directed rounding mode (`rounding`) and each state of flush to zero (`flush`) `environment_ok()` is false and every operation stops the program with Kairn's message; every operand that is not canonical, and every negative radius, stops it (`operands`); a `KAIRN_ENVIRONMENT_FAILURE` of the program's own is called instead and the operation goes on (`handler`). |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break the kernels and define no macro (reassociation; `-ffp-model=fast`; with Apple clang on AArch64, `-fno-signed-zeros` with `-ffp-contract=fast`, which Clang 18 was measured not to break the kernels with): `kairn::self_test()` must fail. |
-| `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball). |
+| `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball); with `KAIRN_CHECKS`, a constant expression given a pair that is not canonical (`from_limbs`, an operator) or a negative radius (`checks.*`). |
 | `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, `kairn::finite::add`, a ball's center, radius or point) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; built against a copy of the headers in which the generated guard is taken out of `gen/scalar.hpp` (made at configure time, which fails if it finds no guard), it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
 | `api.k1.zero_cost` | The instructions emitted for loops over `Expansion<double, 1>` against the same loops over `double` (`tests/api/k1/zero_cost.py`). |
 | `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*`, built under each contraction setting, also compares it with the text its tutorial shows ([Documentation](documentation.md#examples)). |
@@ -68,8 +70,10 @@ test it extends, with `full.` in front:
 
 | Test | Checks |
 |---|---|
-| `full.crosscheck.compiled.K.F` | `crosscheck.compiled.K.F` on 20 000 cases instead of 6 000: the cases of the same seed from case 0, so that the quick tier's are the first 6 000 of these. |
+| `full.crosscheck.compiled.K.F` | `crosscheck.compiled.K.F` on 20 000 cases instead of 6 000: the cases of the same seed from case 0, so that the quick tier's are the first 6 000 of these; with the kernels' runners, scalar and packed, of two [flag sets](#flag-sets) as well: the debug build (`-O0`, `/Od`) and one at `-O1` (`/O1`). |
 | `full.api.oracle.K.F` | `api.oracle.K.F` on 10 000 cases instead of 2 000, the quick tier's among them. |
+| `full.api.flags.oracle.K.F` | Every public form of kernel K through the runner of each [flag set](#flag-sets), the debug build's included, on the quick tier's 2 000 cases of format F. |
+| `full.api.flags.S.self_test`, `full.api.flags.S.constexpr` | `api.flags.debug.*` for each other flag set S. |
 | `full.objcode.check`, `full.objcode.controls` | `objcode.check` and `objcode.controls` in every configuration of the compiler's flag matrix: 24 for GCC, Clang and Apple clang and for clang-cl, 9 for MSVC. |
 | `full.crosscheck.interp.K` | Kernel K run by the generator's interpreter on **every** operand combination of a toy format. |
 | `full.crosscheck.interp-restricted.K` | Kernel K run by the interpreter on every operand of a **restricted** domain of a toy format, for the kernels whose whole enumeration is too long. |
@@ -467,6 +471,128 @@ python3 tests/objcode/objcode.py --cxx cl --flags=/arch:AVX2 --controls --workdi
 `--disassembler` names another disassembler, and `--emulator` the command that runs the controls'
 program for a cross compiler.
 
+## Flag sets
+
+A program that includes Kairn compiles the public interface and the kernels with its own flags.
+The runners above are built with the build's flags (`Release`: `-O3`, or `/O2`) and with each
+contraction setting at `-O2`. The public interface and the kernels are also built with each flag
+set below, the sets of a client (`tests/api/flags/`): each target gets exactly the options of its
+set after `CMAKE_CXX_FLAGS`, since the flags of the build's configuration (`-O3 -DNDEBUG`,
+`/O2 /Ob2 /DNDEBUG`) are emptied there; every set but the debug build defines `NDEBUG`, as a
+release build does. A full cross product is not needed: the sets give every value of every flag,
+and the combinations that Phase 0 found dangerous ([Environment](design/phase0/environment.md)):
+forced contraction at each optimization level, since whether a compiler fuses depends on the
+level (Apple clang 21 fuses the textbook product at `-O2` and not at `-O3`); `-frounding-math`,
+which changes what a compiler may fold, with forced contraction and optimization; and, with MSVC,
+`/Od` and `/fp:strict`, where `std::fma` is a library call and the kernels' FMA intrinsic must
+still be one fused operation.
+
+| Compiler | Set | Options | Why |
+|---|---|---|---|
+| every one | `debug` | CMake's `Debug` configuration: `-g` (GCC, Clang), `/Zi /Ob0 /Od /RTC1` and the debug C runtime (MSVC, clang-cl); no `NDEBUG`, so `KAIRN_CHECKS` is 1 | a client's debug build: no optimization, the compiler's default contraction (`fast` for GCC in GNU mode, `on` for Clang, `/fp:precise` for MSVC), and the [checks](#the-checks-of-a-debug-build) |
+| GCC, Clang, Apple clang | `O0-contract-fast-rounding-math` | `-O0 -ffp-contract=fast -frounding-math` | no optimization, with the two other flags at their riskier values |
+| | `O1-contract-off` | `-O1 -ffp-contract=off` | `-O1`, which no other test built, without contraction |
+| | `O1-contract-fast` | `-O1 -ffp-contract=fast` | forced contraction at `-O1`; also the kernels |
+| | `O2-contract-on-rounding-math` | `-O2 -ffp-contract=on -frounding-math` | contraction within expressions (Clang's default) with `-frounding-math` |
+| | `O2-contract-fast-rounding-math` | `-O2 -ffp-contract=fast -frounding-math` | forced contraction and `-frounding-math` at the level where Apple clang fuses (the flag set of the generator's tests of constant evaluation) |
+| | `O3-contract-off-rounding-math` | `-O3 -ffp-contract=off -frounding-math` | the level of `Release` without contraction, with `-frounding-math` |
+| | `O3-contract-fast` | `-O3 -ffp-contract=fast` | forced contraction at the level of `Release` (Clang's runner with the build's flags contracts only within expressions) |
+| MSVC | `Od-fp-contract` | `/Od /fp:contract` | contraction allowed, without optimization |
+| | `Od-fp-strict` | `/Od /fp:strict` | the two settings where `std::fma` is a library call; `/fp:strict` is MSVC's `-frounding-math` |
+| | `O1-fp-precise`, `O1-fp-contract`, `O1-fp-strict` | `/O1` and each `/fp:` setting | `/O1`, which no other test built; `O1-fp-contract` also the kernels |
+| | `O2-fp-strict` | `/O2 /fp:strict` | the level of `Release` with `/fp:strict` |
+| clang-cl | `Od-contract-fast` | `/Od /clang:-ffp-contract=fast` | forced contraction without optimization |
+| | `Od-fp-strict` | `/Od /fp:strict` | `/fp:strict` is `-ffp-model=strict`: no contraction, and `-frounding-math` |
+| | `O1-fp-precise` | `/O1 /fp:precise` | `/O1` (Clang's `-Os`), contraction within expressions |
+| | `O1-contract-fast-rounding-math` | `/O1 /clang:-ffp-contract=fast /clang:-frounding-math` | forced contraction with `-frounding-math`; also the kernels |
+| | `O2-fp-contract`, `O2-fp-strict` | `/O2` with `/fp:contract`, with `/fp:strict` | the level of `Release` with contraction within expressions, and with `/fp:strict` |
+
+With the runners of the build's flags and of the contraction settings at `-O2` or `/O2`, every
+optimization level meets every `/fp:` setting with MSVC, and forced contraction with every
+compiler. For each set, `tests/api/flags/` builds the public interface's runner and
+`tests/api/constexpr.cpp`, and for the debug build and the set marked "also the kernels" the
+kernels' runners, scalar and packed. They are tested as follows:
+
+| What | Quick tier | Full tier |
+|---|---|---|
+| The public interface against the oracle | the debug build's runner, on the first form of each kernel, in `api.oracle.K.F` | every form, through the runner of every set, on 2 000 cases (`full.api.flags.oracle.K.F`) |
+| `kairn::self_test()` and `environment_ok()`, compiled with the set's flags | `api.flags.debug.self_test` | `full.api.flags.S.self_test` |
+| `constexpr.cpp`: its constant expressions, and the same at run time | `api.flags.debug.constexpr` | `full.api.flags.S.constexpr` |
+| The kernels' runners, in the cross-checks | | the debug build and the `-O1` or `/O1` set, in `full.crosscheck.compiled.K.F` |
+| The checks of `KAIRN_CHECKS` | `api.checks.*` ([below](#the-checks-of-a-debug-build)) | |
+
+The quick tier has so little of it because a debug build's runners take two to three times as long
+as optimized ones, most of it in the text of the line protocol: on the Mac, the debug build's
+runner on every form added 21 seconds of test time to `api.oracle`, and its kernels' runners 35 to
+the cross-checks, against about 5 for the first forms ([Time](#time)). The generator's own suite
+builds the kernels at `-O0` too, with GCC and Clang only ([below](#the-generators-tier)): these
+are the tests that build them at `/Od` with MSVC and clang-cl, and at `-O1` with any compiler.
+
+## The checks of a debug build
+
+`KAIRN_CHECKS` is 1 when `NDEBUG` is not defined (or when a program defines it to 1); what it then
+does, as the headers are written:
+
+- Before every operation of `Expansion` and `Ball` (the arithmetic, `ldexp` and `half`, negation
+  and `abs`, the comparisons, the conversions to `T` and the narrowing to one limb, and
+  `kairn::finite::`), `kairn::environment_ok()`; if it fails, `KAIRN_ENVIRONMENT_FAILURE` with the
+  reason, by default a message and `std::abort()`.
+- Then the operands: an operation of two limbs requires canonical operands, a function of
+  `kairn::finite::` normalized ones or a leading limb that is not finite (what a core returns), a
+  `Ball` operation canonical balls; if one is not, a message and `std::abort()`.
+- The constructors check what they are given, and not the environment: `from_limbs` requires a
+  canonical pair, and `Ball(c, r)` reports a negative radius and, for two limbs, a center that is
+  not canonical.
+- In constant evaluation the environment is not checked, and an operand that fails a check makes
+  the constant expression invalid.
+
+`tests/api/checks.cpp` runs them, built as the [debug build](#flag-sets) (`api.checks.debug.*`)
+and with the build's own flags and `KAIRN_CHECKS` defined to 1 (`api.checks.release.*`, where an
+optimizer could move or drop a check), and `tests/api/checks.cmake` judges each case from the
+program's exit status and output:
+
+- `default`: in the default environment `environment_ok()` is true, and 29 operations run (a sum,
+  a product, `ldexp` and a comparison of one limb; every kind above of two limbs, and a sum of
+  `float` limbs; three of `kairn::finite::`; sums, products, scalings, negations and a point form
+  of balls), as do 13 operands the checks must let through: the canonical
+  infinities and NaN, the empty set and the whole line, a NaN and a $-0$ radius, and what a finite
+  core returns, given back to `kairn::finite::`.
+- `rounding`: for each directed rounding mode and each of the 29 operations, a run of its own:
+  `environment_ok()` is true, the mode is set and `environment_ok()` is false, and the operation
+  must stop the program, with an exit status other than 0 (`SIGABRT`; exit status 3 with
+  Microsoft's C runtime), after the line in which the program says it calls it, and with Kairn's
+  message on the standard error ("the rounding mode is not to nearest").
+- `flush`: the same with FTZ and with DAZ of MXCSR on x86-64, and FZ of FPCR on AArch64; on those
+  targets a program that can set none fails the test.
+- `operands`: 15 operands that are not canonical, each given to an operation, must stop the
+  program with their message: pairs that are not canonical given to `from_limbs`, to an operator,
+  a comparison, a conversion, `ldexp` and `kairn::finite::add`, what a finite core returns after
+  an overflow given to an operator, negative radii ($-\infty$ among them), a center that is not
+  canonical, and a ball that is not canonical, made by the internal constructor that takes a
+  kernel's result as it is, the only way to make one.
+
+`api.checks.handler` (`tests/api/checks_handler.cpp`) defines `KAIRN_ENVIRONMENT_FAILURE`: under
+rounding upward each operation calls it with the reason and returns. `api.reject.checks.*` are
+the constant expressions, and `api.oracle.K.F` judges the debug build's runner: the checks let
+every canonical case through and change no result. On the lines of `ball_make_1` and
+`ball_make_2` whose radius is negative, about 40% of their cases, which the checks stop by design,
+the debug build's runner computes `Ball::empty()`, the set the constructor makes of such a
+radius, and says on how many lines. The test programs keep Microsoft's C runtime from opening a
+dialog on `abort()`, and Linux from writing a core dump, which took 0.3 seconds per case on the
+Linux machine (`tests/api/no_crash_reports.hpp`).
+
+Two behaviours shape these tests, and the documentation of `KAIRN_CHECKS` does not describe them:
+
+- The test of a canonical pair, $x_0 + x_1 = x_0$, is computed in the rounding mode in force. The
+  constructors do not check the environment first, so under rounding upward `from_limbs` refuses
+  the canonical pair $(1.5, 2^{-60})$ with "the limbs are not a canonical pair", and a `Ball`
+  constructor of two limbs its center: the program stops, with a message that names the wrong
+  cause. The operands of `checks.cpp` are made before the state is set.
+- A `KAIRN_ENVIRONMENT_FAILURE` that returns does not let every operation go on, as `config.hpp`
+  says: the check of the operands follows, in the same rounding mode, and under rounding upward
+  `x + x` with $x = (1.5, 2^{-60})$ stops the program with "an operand: is not canonical". The
+  operands of `checks_handler.cpp` are those whose check does not depend on the rounding mode.
+
 ## Hardware FMA
 
 The kernels assume that an FMA is one rounding done by the hardware, and on x86-64 the headers
@@ -518,6 +644,36 @@ against 948 on 4 threads of the Linux machine, a ratio of 1.1, which would make 
 about 75 seconds there and the compiled runners' job about 100; and 1 011 seconds on a hosted
 macOS runner against 213 to 218 on the Mac, a ratio of 4.6, which would make the quick tier about
 3.5 minutes there.
+
+**The flag sets and the checks** ([Flag sets](#flag-sets), [The checks of a debug
+build](#the-checks-of-a-debug-build)) were measured on 2026-11-19 against the commit before them,
+each pair run back to back on the same machine, as above; the Mac was loaded by other jobs (load
+average 5 to 9), and the Linux machine by other users:
+
+| Where | Quick tier, before and after | Full tier, the tests that depend on the compiler, before and after | Whole full tier, after | Build, before and after |
+|---|---|---|---|---|
+| Mac, Apple clang 21 | 49.9 and 52.5 s; 46.6 and 48.3 s | 95.6 and 154.1 s | 346 s | 2.3 and 4.8 s |
+| Mac, GCC 16 | 42.9 and 44.9 s; 40.2 and 42.1 s | 56.4 and 88.1 s | 273 s | 3.8 and 9.1 s |
+| Linux, 16 threads, GCC 13 | 77.3 and 84.4 s | 111.6 and 148.8 s | 520 s | 4.3 and 8.6 s |
+| Linux, 16 threads, Clang 18 | 81.6 and 80.3 s | 110.9 and 146.0 s | 517 s | 3.2 and 6.7 s |
+| Linux, 4 threads, GCC 13 | | 110.3 and 141.1 s | | |
+| Linux, 4 threads, Clang 18 | | 105.4 and 136.3 s | | |
+| Windows, 8 logical processors, MSVC | 86.1, 89.2, 95.1 and 100.3, 102.0, 102.9 s | 125.6 and 227.1 s | 604 s | 6.7 and 13.8 s |
+
+In test time, the quick tier gained 7 to 11 seconds on the Mac, 13 on the Linux machine (once 28,
+when one test of a few milliseconds took 10 seconds there) and 28 to 56 on the Windows machine, of
+which the debug build's runner in `api.oracle` is 4 to 6 seconds on the Mac and the Linux machine
+and 11 to 14 on the Windows machine, the checks 3 to 7, and the rest the other tests slowed by these
+beside them. The full tier's tests that depend on the compiler gained 127 to 236 seconds on the
+Mac, 143 to 149 on the Linux machine and 407 on the Windows machine: 85 to 101 seconds for
+`full.api.flags.oracle` (175 on Windows), 34 to 120 for the kernels' runners in the cross-checks
+(192 on Windows, where the debug build's packed runner, at `/Od` with `/RTC1` and the debug C
+runtime, takes 0.2 seconds per 6 000 lines, five times the optimized one), and the rest the tests
+beside them. On the hosted runners the quick tier's ctest step took about as long as on the Linux
+machine on Linux x86-64 and 1.4 to 2.2 times as long as on the Windows machine on Windows
+([Costs, Milestone 1](results/costs-milestone1.md)): by those ratios, these add about 40 seconds
+to the full tier's job on Linux and 2.5 to 4 minutes on Windows, and 15 to 30 seconds to the quick
+tier on Windows, whose ctest step is already over two minutes there.
 
 **Waste removed** before anything left the quick tier, as measured on 16 threads of the Linux
 machine with GCC 13:
@@ -646,7 +802,12 @@ Linux machine of [Time](#time), and the cross-checks already compile the same co
 compiler and flags. Of the rest, four test classes take about 95% of the time; the quick tier
 leaves them out (`--skip`) and the full tier runs them alone (`-k`, `full.kairn-gen.test`). The
 whole suite runs in the workflow `generator.yml`, once per GCC-style compiler of the CI and once
-without C++ on Windows, and by hand:
+without C++ on Windows: its C++ tests are written for a GCC-style driver (`-O0`, `-ffp-contract=`,
+`-frounding-math`, `-fsyntax-only`, `-o`, `-mfma`, and the text of Clang's and GCC's errors), which
+neither compiler of the Windows jobs is, and they require every build to be bit-identical to the
+interpreter, which MSVC's `/fp:strict` is not for the sign of some zeros
+([Cross-checks](#cross-checks)). On Windows the [flag sets](#flag-sets) build the kernels at `/Od`
+and `/O1` instead. By hand:
 
 ```sh
 python3 gen/kairn-gen test                  # c++ and g++-16, those that exist
@@ -903,7 +1064,7 @@ per branch at a time (a new push cancels the run in progress); their jobs all st
 | Workflow | Jobs |
 |---|---|
 | `build.yml`, "Build and test" | The quick tier: configure, build and `ctest` with Ninja, `Release` and warnings as errors, on Linux x86-64 with GCC and with Clang (packed: AVX2), Linux arm64 with GCC and with Clang (NEON), macOS arm64 with Apple clang (NEON), and Windows x64 with MSVC and with clang-cl (AVX2) |
-| `full.yml`, "Full tier" | The full tier's tests that depend on the compiler (`ctest --test-dir build/tests/full` with `-LE` of the labels `python` and `generator`: the compiled runners' cross-checks and the public interface on more cases, and the object code on the whole flag matrix), on the same seven platforms and compilers, configured and built as in `build.yml`; and those in exact arithmetic (`-L python`), once, on Linux, configured but not built, in two jobs: the interpreter's enumerations (`-L interp`) and the oracle's (`-L python -LE interp`) |
+| `full.yml`, "Full tier" | The full tier's tests that depend on the compiler (`ctest --test-dir build/tests/full` with `-LE` of the labels `python` and `generator`: the compiled runners' cross-checks and the public interface on more cases, the [flag sets](#flag-sets), and the object code on the whole flag matrix), on the same seven platforms and compilers, configured and built as in `build.yml`; and those in exact arithmetic (`-L python`), once, on Linux, configured but not built, in two jobs: the interpreter's enumerations (`-L interp`) and the oracle's (`-L python -LE interp`) |
 | `generator.yml`, "Generator's full suite" | `python gen/kairn-gen test --cxx CXX`, C++ included, on Linux x86-64 and Linux arm64 with GCC and with Clang, and macOS arm64 with Apple clang; and `--no-cxx` on Windows x64. It contains the full tier's `full.kairn-gen.test` (label `generator`), which `full.yml` leaves out |
 | `proofs.yml`, "Proofs" | `make -C proofs` in the Rocq team's image `rocq/rocq-prover:9.0` (Rocq 9.0.1), with Flocq 4.2.2 from opam, cached between runs; what the audit printed is kept as the run's artifact `proof-audit` |
 | `checks.yml`, "Generated files and documentation" | `gen/kairn-gen check`, `docs/tools/reference.py --check` and its tests, `mkdocs build --strict`, Doxygen 1.18.0 on `docs/Doxyfile` with warnings as errors into the site's `api/`, `docs/tools/check_links.py`; the built site is kept as the run's artifact `site` |
