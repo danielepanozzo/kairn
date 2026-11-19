@@ -130,7 +130,8 @@ Each addition of balls computes the new center with the two-limb addition
    (`kairn::traits<Expansion<double, 2>>::add.unit_computed`);
 
 and that sum, computed with ordinary operations, is then inflated once, by a factor a few units
-of $u$ above 1 and a tiny constant for underflow, so that the radius never comes out too small
+of $u$ above 1 and a tiny constant (about $2^{-1022}$, which covers underflow), so that the radius
+never comes out too small
 ([the second radius design](../developer/design/milestone1.md#the-radius-second-design)). Here the
 data are exact, the radii start at 0, and the radius is the sum of the second terms, which the
 program recomputes by hand:

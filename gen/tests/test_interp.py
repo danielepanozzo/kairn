@@ -350,7 +350,11 @@ class Specials(unittest.TestCase):
             'up(unit(mul_2_2)/(1-unit(mul_2_2))*(1+u))': lambda u, eta, U, T: U / (1 - U) * (1 + u),
             'up((1+u)*((1+u)^5*2*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2))':
                 lambda u, eta, U, T: (1 + u) * ((1 + u) ** 5 * 2 * eta + T / (1 - U) + eta / 2),
+            # H of ball_mul_2, as its description writes it: the same plus the smallest normal number.
+            'up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u))':
+                lambda u, eta, U, T: (1 + u) * (2 * (1 + u) ** 5 * eta + T / (1 - U) + eta / 2) + eta / (2 * u),
         }
+        self.assertIn(list(forms)[-1], ir.constants(ks['ball_mul_2']))
         below_eta = 0
         for p, qmin, qmax in ((53, -1074, 971), (24, -149, 104), (4, -6, 3), (5, -12, 6), (4, -2, 3), (6, -9, 0)):
             f = interp.Format(f'fp:{p}:{qmin}:{qmax}', p, qmin, qmax)
@@ -377,6 +381,36 @@ class Specials(unittest.TestCase):
             m._const(interp.parse_format('fp:3:-4:3'), 'up(unit(ops_mul))')               # below its precision 4
         with self.assertRaises(consts.ConstError):
             consts.value('up(u-1)', ks, 53, -1074, 971)
+
+    def test_no_subnormal_constant(self):
+        """No constant that a kernel computes with is subnormal in the two hardware formats: a fused
+        operation with a subnormal operand is slow on some processors, and H of the Ball cores was
+        one until the smallest normal number was added to it. H is normal in every format, by its
+        expression; the radius of a Ball core is RN(t G + H) with t >= 0 and G >= 1, so it is at
+        least H, and normal too. (In a toy format with few exponents the other constants need not
+        be: u itself is below the smallest normal number of fp:4:-6:3.)"""
+        ks = common.kernels()
+        seen = 0
+        for p, qmin, qmax in ((53, -1074, 971), (24, -149, 104)):
+            normal = Fraction(2) ** (qmin + p - 1)
+            for name, k in ks.items():
+                for c in ir.constants(k):
+                    if c not in (ir.ZERO, 'inf', 'nan'):
+                        self.assertGreaterEqual(consts.value(c, ks, p, qmin, qmax), normal, (name, c, p))
+                        seen += 1
+        self.assertEqual(seen, 2 * (3 * 6 + 1))        # E, G, H of the six cores, and the splitter
+        cores = {'ball_add_1': 2, 'ball_add_2': 2, 'ball_scale_1': 3, 'ball_scale_2': 3, 'ball_mul_1': 4,
+                 'ball_mul_2': 5}
+        for name, more in cores.items():
+            h = [c for c in ir.constants(ks[name]) if 'eta' in c]
+            self.assertEqual(len(h), 1, name)
+            self.assertTrue(h[0].endswith('+eta/(2*u))'), name)
+            # In binary64: the smallest normal number plus 2 to 5 eta.
+            self.assertEqual(consts.value(h[0], ks, 53, -1074, 971),
+                             Fraction(2) ** -1022 + more * Fraction(2) ** -1074, name)
+            for p, qmin, qmax in ((24, -149, 104), (4, -6, 3), (5, -12, 6), (6, -9, 0), (4, -5, 1)):
+                self.assertGreaterEqual(consts.value(h[0], ks, p, qmin, qmax), Fraction(2) ** (qmin + p - 1),
+                                        (name, p))
 
     def test_copy_and_zero(self):
         m = interp.Machine(common.kernels())

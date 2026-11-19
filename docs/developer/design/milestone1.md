@@ -237,7 +237,10 @@ than 2% with Apple clang (`x + y` 1.13 times, `X + Y` 1.09), with GCC 16 (`X + Y
 and for the balls of one limb with GCC 13 (about 1.2) and GCC 16 (1.04 to 1.11). A loop of
 constructions `Ball<double, 2>(c, r)` takes 0.76 to 1.07 times as long as with the selects. No
 operation measured in a chain is slower with the branch by more than 3% on any configuration (the
-most: `x * y` with GCC 13, 2.7%), so the rule applies to every kernel it matches.
+most: `x * y` with GCC 13, 2.7%), so the rule applies to every kernel it matches. The i5's
+figures for `X + Y` and `X * Y` were measured when the last constant of the radius was still a
+subnormal number, which cost the operator and its core about 27 ns each there
+([the radius, second design](#the-radius-second-design)).
 
 ## Values that enter from the program
 
@@ -525,24 +528,89 @@ ball_scale_k(cx, rx, a) -> (cz, rz)           w  = fma(ax, ry, q)
 
 `E`, `G` and `H` are constants of the format, one set per kernel, each an exact expression
 rounded up. With $\mathrm{rel}$ and $\mathrm{tiny}$ the two constants of the center kernel's
-proved bound, $U_q = \mathrm{rel}/(1 - \mathrm{rel})$ and $V_q = \mathrm{tiny}/(1 - \mathrm{rel})$:
+proved bound, $U_q = \mathrm{rel}/(1 - \mathrm{rel})$ and $V_q = \mathrm{tiny}/(1 - \mathrm{rel})$,
+and with $N = \eta/(2u) = 2^{p-1}\eta$ the smallest normal number of the format ($2^{-1022}$ for
+`double`, $2^{-126}$ for `float`):
 
 | Kernel | `E` | `G` | `H` | Proved from |
 |---|---|---|---|---|
-| `ball_add_1`, `ball_sub_1` | $U_q$ | $(1+u)^3$ | $(1+u)\bigl((1+u)^2\eta + \tfrac12\eta\bigr)$ | $p \ge 1$ |
+| `ball_add_1`, `ball_sub_1` | $U_q$ | $(1+u)^3$ | $(1+u)\bigl((1+u)^2\eta + \tfrac12\eta\bigr) + N$ | $p \ge 1$ |
 | `ball_add_2`, `ball_sub_2` | $U_q(1+u)$ | $(1+u)^3$ | the same | $p \ge 3$ |
-| `ball_scale_1` | $U_q$ | $(1+u)^3$ | $(1+u)\bigl((1+u)^2\eta + V_q + \tfrac12\eta\bigr)$ | $p \ge 1$ |
+| `ball_scale_1` | $U_q$ | $(1+u)^3$ | $(1+u)\bigl((1+u)^2\eta + V_q + \tfrac12\eta\bigr) + N$ | $p \ge 1$ |
 | `ball_scale_2` | $U_q(1+u)$ | $(1+u)^3$ | the same form | $p \ge 2$ |
-| `ball_mul_1` | $U_q$ | $(1+u)^5$ | $(1+u)\bigl(2(1+u)^4\eta + V_q + \tfrac12\eta\bigr)$ | $p \ge 1$ |
-| `ball_mul_2` | $U_q$ | $(1+u)^6$ | $(1+u)\bigl(2(1+u)^5\eta + V_q + \tfrac12\eta\bigr)$ | $p \ge 4$ |
+| `ball_mul_1` | $U_q$ | $(1+u)^5$ | $(1+u)\bigl(2(1+u)^4\eta + V_q + \tfrac12\eta\bigr) + N$ | $p \ge 1$ |
+| `ball_mul_2` | $U_q$ | $(1+u)^6$ | $(1+u)\bigl(2(1+u)^5\eta + V_q + \tfrac12\eta\bigr) + N$ | $p \ge 4$ |
 
 `E` turns the center's error bound into a multiple of $\lvert c_{z0}\rvert$, `G` covers the
 rounding of every operation before the last line (and, for two limbs, the difference between a
-center and its leading limb), and `H` covers what underflow can lose and the absolute term of the
-center's bound. The argument is the usual one for sums of nonnegative products: a rounded
-operation returns at least its exact result divided by $1 + u$, less $\eta/2$ for a product. The
-proofs use only that each constant is a number of the format, nonnegative, and at least its
-expression.
+center and its leading limb), and the first term of `H` covers what underflow can lose and the
+absolute term of the center's bound. The argument is the usual one for sums of nonnegative
+products: a rounded operation returns at least its exact result divided by $1 + u$, less $\eta/2$
+for a product. The proofs use only that each constant is a number of the format, nonnegative, and
+at least its expression, which for `H` is the first term alone.
+
+**Why `H` contains $N$.** No bound needs it. Without it `H` is a few times $\eta$, a subnormal
+number, and the last line of every core is a fused multiply-add with a subnormal addend. Intel
+processors hand an operation with a subnormal operand to microcode (an *assist*): on the one
+measured below it takes about 27 ns, where the same operation on normal numbers takes 1.4 ns.
+With $N$ in it, `H` is a normal
+number, and so is every radius a core returns, since $r_z = \mathrm{RN}(tG + H) \ge H$. In a
+kernel description the term is `eta/(2*u)` inside the `up(...)` of `H`; the language of constants
+needed no extension.
+
+| Kernel | `H` without $N$ | `H`, `double` | `H`, `float` |
+|---|---|---|---|
+| `ball_add_k`, `ball_sub_k` | $2\eta$ | `0x1.0000000000002p-1022`, $N + 2\eta$ | `0x1.000004p-126f` |
+| `ball_scale_k` | $3\eta$ | `0x1.0000000000003p-1022`, $N + 3\eta$ | `0x1.000006p-126f` |
+| `ball_mul_1` | $4\eta$ | `0x1.0000000000004p-1022`, $N + 4\eta$ | `0x1.000008p-126f` |
+| `ball_mul_2` | $5\eta$ | `0x1.0000000000005p-1022`, $N + 5\eta$ | `0x1.00000ap-126f` |
+
+Measured on 2026-11-19 on an Intel Core i5-13500T with MSVC 19.52 (`/O2 /arch:AVX2 /std:c++20`),
+`binary64`, with a harness that is not in the repository: the generated kernels called directly
+on 256 operands with centers of magnitude about 1 and radii $2^{-100}$ times the center ($2^{-50}$
+for one limb), in a chain of dependent operations and in a loop of independent ones; the same
+source built against the headers before and after the change; one logical processor; the
+minimum over 21 samples, and the smallest of ten rounds (the machine ran other work during some
+rounds, which were slower for both versions).
+
+| ns per operation | `H` without $N$ | with $N$ |
+|---|---|---|
+| chain of `ball_add_2`, of `ball_mul_2` | 31.8, 35.0 | 5.2, 7.0 |
+| chain of `ball_sub_2`, of `ball_scale_2` | 33.1, 31.6 | 5.3, 5.1 |
+| chain of `ball_add_2_full`, of `ball_mul_2_full` | 36.2, 35.8 | 5.2, 6.6 |
+| chain of `ball_add_1`, of `ball_mul_1`, of `ball_scale_1` | 29.9, 33.0, 30.3 | 3.0, 6.6, 4.2 |
+| loop of `ball_add_2`, of `ball_mul_2` | 34.4, 34.7 | 2.4, 2.3 |
+| chain of `fma(r, G, H)` alone | 27.4 | 1.4 |
+
+The last result of every chain and loop, center and radius, is the same bit for bit with and
+without $N$: $2^{-1022}$ disappears in the rounding of a radius of ordinary size. On an Apple M3
+Max (Apple clang 21 and GCC 16, `-O2`) the same harness gives the same times with and without
+$N$, within 1% for every line of the table (with Apple clang, 7.3 to 7.9 ns for a step of
+`ball_add_2` and 5.6 to 6.0 ns for one of `ball_mul_2`, from one run to the next): that processor
+has no such penalty. Nor has an AMD EPYC 7452 (Zen 2; GCC 13, `-O2 -mavx2 -mfma`): the same times
+within 1%, and 1.5 ns for the fused operation with either addend. With $N$, the full kernels of
+the i5's table take 0.94 to 1.04 times as long as their cores, run by run.
+
+What $N$ costs: every radius is larger by about $N$, which for `double` and `float` is far below
+one unit in the last place of any radius that is not itself near $N$. A ball computed from exact
+zeros (a point ball minus itself) has radius `H`, about $N$, where it had a few $\eta$. In a toy
+format with few exponents $N$ is not small: at `fp:2:-3:2`, `H` of `ball_add_1` goes from $3\eta$
+to $6\eta$, a sixteenth of the largest finite number, and at `fp:3:-2:-1`, where the quick tier
+enumerates `ball_add_2_full`, from $2\eta$ to $6\eta$ of a largest finite number of $14\eta$, so
+that 7 471 of the 122 500 cases of that enumeration give a finite ball, where 25 103 did.
+
+What remains slow on such a processor is an operation whose radius is itself in the subnormal
+range. A ball of center 0 whose radius is at this floor (`X - X` for a point `X`, or a product
+with an exact zero) times a ball or a number of magnitude below 1 gives $\lvert c\rvert r < N$. In the
+same harness that product of balls takes 62 ns with and without $N$, and that scaling 47 ns
+without $N$ and 61 ns with it, which fits three assisted operations where there were two.
+When the other center is at least 1 in magnitude, the product by such a ball takes 2.3 ns, from
+61 ns. No operand of ordinary size reaches this path: on centers between $2^{-30}$ and $2^{30}$
+with radii 0, $2^{-100}$ or $2^{-50}$ times the center, the generator's interpreter finds no
+subnormal operand or result in any operation of any kernel (a census that is not in the
+repository, 300 random cases per kernel; without $N$ it finds the addend `H` of the Ball cores,
+in every case, and nothing else), and no constant of any kernel is subnormal in `binary64` or
+`binary32`, which the generator's tests check.
 
 *Status.* This is the design the generator emits: the first design above is kept on this page
 for the record, and its kernels and proofs are gone. Containment is proved in the real model for
@@ -550,8 +618,14 @@ the eight cores, in the shape of the statement above (and the radius is a number
 the center normalized for $k = 2$), against the generated statements
 (`proofs/theories/Ball2.v`), after complete enumerations of small formats by the generator's
 tests, by the proofs' author and, from this page alone, by the oracle found no failure.
-Enumeration suggests the constants have slack that is not proved away: `G` one unit in the last place smaller still encloses, and
-so does half of `H`; `H` cannot be dropped for products and scalings. `radd`, `rmul` and
+Those enumerations were made with `H` without $N$, and suggested that the constants have slack
+that is not proved away: `G` one unit in the last place smaller still enclosed, and so did half
+of that `H`, which could not be dropped for products and scalings. $N$ is slack by construction.
+With $N$, the proofs were checked again and the quick tier's enumerations of toy formats and
+random runs were repeated. Not repeated: the brute-force tier, whose
+[results](../results/brute-milestone1.md) are of the kernels without $N$; and the oracle's own
+reference runner of this design (`refrun --radius second`, `oracle/README.md`), written from this
+page's table independently of the generator, still computes `H` without $N$. `radd`, `rmul` and
 `abs_upper_2` remain kernels of their own.
 
 **Special states.** A ball value is *canonical* when it is a finite ball (center finite, and

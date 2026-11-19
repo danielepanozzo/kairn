@@ -25,8 +25,12 @@
    set only when an operand is.
 
    The constants E, G, H of each kernel are finite numbers of the IEEE format from
-   precision 2 on (E <= 1, G <= 4, H <= 16 eta), whence the minimum precision 2 of the
-   statements for a center of one limb, where the real model has 1.
+   precision 2 on, whence the minimum precision 2 of the statements for a center of one
+   limb, where the real model has 1: E <= 1, G <= 4, and H is at most 16 eta plus the
+   smallest normal number N = 2^(emin + prec - 1) (Ball2.nrm), which is part of it so that
+   H is a normal number. That sum is at most 9 N, and 12 N = 3 2^(emin + prec + 1) is a
+   number of the format below the overflow threshold; in the smallest format, prec = 2
+   and emax = 3, it is the largest finite number (good_le_normal).
 
    The statements, in the form of proofs/gen/IeeeStatements.v, are at the end of the file. *)
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra Psatz.
@@ -206,15 +210,34 @@ apply (const_of_RU prec emax t (bpow radix2 2) T0 T1).
 - apply bpow_lt. lia.
 Qed.
 
-Lemma good_le_16eta :
+(* H: an expression t <= 16 eta, plus the smallest normal number N = 2^(emin + prec - 1).
+   From precision 2 on, 16 eta <= 8 N, so the sum is at most 9 N <= 12 N = 3 2^(emin + prec + 1):
+   a number of the format (the integer 3 has two bits), below 2^emax because emax >= 3. A
+   power of two would not do as the bound: with prec = 2 and emax = 3 the next one, 16 N, is
+   2^emax itself. *)
+Lemma good_le_normal :
   (2 <= prec)%Z ->
   forall t : R, 0 <= t <= bpow radix2 (emin + 4) ->
-  good_const (const_of (RU emin prec t)) (RU emin prec t).
+  good_const (const_of (RU emin prec (t + Ball2.nrm emin prec)))
+             (RU emin prec (t + Ball2.nrm emin prec)).
 Proof.
 intros Hp t [T0 T1].
-apply (const_of_RU prec emax t (bpow radix2 (emin + 4)) T0 T1).
-- apply generic_format_bpow. unfold FLT_exp. lia.
-- apply bpow_lt. lia.
+assert (N0 : 0 <= bpow radix2 (emin + prec - 1)) by apply bpow_ge_0.
+assert (B1 : bpow radix2 (emin + 4) <= 8 * bpow radix2 (emin + prec - 1)).
+{ change 8 with (bpow radix2 3). rewrite <- bpow_plus. apply bpow_le. lia. }
+assert (B2 : bpow radix2 (emin + prec + 1) = 4 * bpow radix2 (emin + prec - 1)).
+{ change 4 with (bpow radix2 2). rewrite <- bpow_plus. f_equal. lia. }
+assert (S0 : 0 <= t + Ball2.nrm emin prec) by (rewrite (Ball2.nrm_eq emin prec); lra).
+assert (S1 : t + Ball2.nrm emin prec <= 3 * bpow radix2 (emin + prec + 1))
+  by (rewrite (Ball2.nrm_eq emin prec), B2; lra).
+apply (const_of_RU prec emax (t + Ball2.nrm emin prec) (3 * bpow radix2 (emin + prec + 1)) S0 S1).
+- apply generic_format_FLT. exists (Float radix2 3 (emin + prec + 1)).
+  + reflexivity.
+  + apply Z.lt_le_trans with (2 := Zpower_le radix2 2 prec Hp). reflexivity.
+  + simpl. lia.
+- apply Rlt_le_trans with (4 * bpow radix2 (emin + prec + 1)).
+  + generalize (bpow_gt_0 radix2 (emin + prec + 1)). lra.
+  + change 4 with (bpow radix2 2). rewrite <- bpow_plus. apply bpow_le. lia.
 Qed.
 
 Lemma kappa_bounds : (2 <= prec)%Z -> 1 <= 1 + u prec <= 5 / 4.
@@ -237,7 +260,7 @@ rewrite Ball2.e_add_1_eq, Ball2.g_add_1_eq, Ball2.h_add_1_eq.
 split; [|split].
 - apply good_le_1. generalize (uq_le_1 _ 1 (rel_1_quarter prec Hp) ltac:(lra)). lra.
 - apply good_le_4; trivial. apply pow_le_4. exact (Ball2.u_bounds prec 2 Hp). lia.
-- apply good_le_16eta; trivial.
+- apply good_le_normal; trivial.
   replace ((1 + u prec) * ((1 + u prec) ^ 2 * eta emin + eta emin / 2))
     with (Ball2.h2 emin prec 0) by (unfold Ball2.h2; ring).
   apply h2_le; trivial. generalize (bpow_gt_0 radix2 emin). unfold eta. lra.
@@ -256,7 +279,7 @@ rewrite Ball2.e_add_2_eq, Ball2.g_add_2_eq, Ball2.h_add_2_eq.
 split; [|split].
 - apply good_le_1. exact (uq_le_1 _ _ (rel_add_2_quarter prec Hp) (kappa_bounds Hp2)).
 - apply good_le_4; trivial. apply pow_le_4. exact (Ball2.u_bounds prec 2 Hp2). lia.
-- apply good_le_16eta; trivial.
+- apply good_le_normal; trivial.
   replace ((1 + u prec) * ((1 + u prec) ^ 2 * eta emin + eta emin / 2))
     with (Ball2.h2 emin prec 0) by (unfold Ball2.h2; ring).
   apply h2_le; trivial. generalize (bpow_gt_0 radix2 emin). unfold eta. lra.
@@ -274,7 +297,7 @@ rewrite Ball2.e_scale_1_eq, Ball2.g_scale_1_eq, Ball2.h_scale_1_eq.
 split; [|split].
 - apply good_le_1. generalize (uq_le_1 _ 1 (rel_1_quarter prec Hp) ltac:(lra)). lra.
 - apply good_le_4; trivial. apply pow_le_4. exact (Ball2.u_bounds prec 2 Hp). lia.
-- apply good_le_16eta; trivial. apply h2_le; trivial.
+- apply good_le_normal; trivial. apply h2_le; trivial.
   apply vq_le. exact (rel_1_quarter prec Hp). apply eta_tiny. lra.
 Qed.
 
@@ -291,7 +314,7 @@ assert (Hrel := rel_square_quarter 2 prec Hp ltac:(lra)).
 split; [|split].
 - apply good_le_1. exact (uq_le_1 _ _ Hrel (kappa_bounds Hp)).
 - apply good_le_4; trivial. apply pow_le_4. exact (Ball2.u_bounds prec 2 Hp). lia.
-- apply good_le_16eta; trivial. apply h2_le; trivial.
+- apply good_le_normal; trivial. apply h2_le; trivial.
   apply vq_le. exact Hrel. apply eta_tiny. lra.
 Qed.
 
@@ -307,7 +330,7 @@ rewrite Ball2.e_mul_1_eq, Ball2.g_mul_1_eq, Ball2.h_mul_1_eq.
 split; [|split].
 - apply good_le_1. generalize (uq_le_1 _ 1 (rel_1_quarter prec Hp) ltac:(lra)). lra.
 - apply good_le_4; trivial. apply pow_le_4. exact (Ball2.u_bounds prec 2 Hp). lia.
-- apply good_le_16eta; trivial. apply h4_le; [exact Hp|lia|].
+- apply good_le_normal; trivial. apply h4_le; [exact Hp|lia|].
   apply vq_le. exact (rel_1_quarter prec Hp). apply eta_tiny. lra.
 Qed.
 
@@ -325,7 +348,7 @@ assert (Hrel := rel_square_quarter 4 prec Hp2 ltac:(lra)).
 split; [|split].
 - apply good_le_1. generalize (uq_le_1 _ 1 Hrel ltac:(lra)). lra.
 - apply good_le_4; trivial. apply pow_le_4. exact (Ball2.u_bounds prec 2 Hp2). lia.
-- apply good_le_16eta; trivial. apply h4_le; [exact Hp2|lia|].
+- apply good_le_normal; trivial. apply h4_le; [exact Hp2|lia|].
   apply vq_le. exact Hrel. apply eta_tiny. lra.
 Qed.
 

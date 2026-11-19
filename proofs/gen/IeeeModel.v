@@ -60,7 +60,7 @@ Definition up_ball_add_1_0 : float := const_of (Model.up_ball_add_1_0 (3 - emax 
 (* up((1+u)^3), as a number of the format. *)
 Definition up_ball_add_1_1 : float := const_of (Model.up_ball_add_1_1 (3 - emax - prec) prec).
 
-(* up((1+u)*((1+u)^2*eta+eta/2)), as a number of the format. *)
+(* up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)), as a number of the format. *)
 Definition up_ball_add_1_2 : float := const_of (Model.up_ball_add_1_2 (3 - emax - prec) prec).
 
 (* up(unit(add_2_2)/(1-unit(add_2_2))*(1+u)), as a number of the format. *)
@@ -72,7 +72,7 @@ Definition up_ball_mul_1_0 : float := const_of (Model.up_ball_mul_1_0 (3 - emax 
 (* up((1+u)^5), as a number of the format. *)
 Definition up_ball_mul_1_1 : float := const_of (Model.up_ball_mul_1_1 (3 - emax - prec) prec).
 
-(* up((1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)), as a number of the format. *)
+(* up((1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)), as a number of the format. *)
 Definition up_ball_mul_1_2 : float := const_of (Model.up_ball_mul_1_2 (3 - emax - prec) prec).
 
 (* up(unit(mul_2_2)/(1-unit(mul_2_2))), as a number of the format. *)
@@ -81,16 +81,16 @@ Definition up_ball_mul_2_0 : float := const_of (Model.up_ball_mul_2_0 (3 - emax 
 (* up((1+u)^6), as a number of the format. *)
 Definition up_ball_mul_2_1 : float := const_of (Model.up_ball_mul_2_1 (3 - emax - prec) prec).
 
-(* up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)), as a number of the format. *)
+(* up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)), as a number of the format. *)
 Definition up_ball_mul_2_2 : float := const_of (Model.up_ball_mul_2_2 (3 - emax - prec) prec).
 
-(* up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)), as a number of the format. *)
+(* up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)), as a number of the format. *)
 Definition up_ball_scale_1_2 : float := const_of (Model.up_ball_scale_1_2 (3 - emax - prec) prec).
 
 (* up(unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)), as a number of the format. *)
 Definition up_ball_scale_2_0 : float := const_of (Model.up_ball_scale_2_0 (3 - emax - prec) prec).
 
-(* up((1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)), as a number of the format. *)
+(* up((1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)+eta/(2*u)), as a number of the format. *)
 Definition up_ball_scale_2_2 : float := const_of (Model.up_ball_scale_2_2 (3 - emax - prec) prec).
 
 (* add_1_1: one rounding to nearest. *)

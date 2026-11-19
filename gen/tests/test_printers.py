@@ -207,21 +207,22 @@ class Cpp(unittest.TestCase):
     def test_computed_constants(self):
         # The constants E, G, H of the second radius design, rounded up to the format. For
         # ball_add_1: E = rel / (1 - rel) with rel = u / (1 + u) is u exactly; G = (1 + u)^3 rounds
-        # up to 1 + 4u; H = (1 + u) ((1 + u)^2 eta + eta/2), just above (3/2) eta, rounds up to 2 eta.
+        # up to 1 + 4u; H = (1 + u) ((1 + u)^2 eta + eta/2) + N, with N = eta/(2u) the smallest
+        # normal number (2^-1022, 2^-126), is just above N + (3/2) eta and rounds up to N + 2 eta.
         add = self.fns[('ball_add_1', 'double')]['lines']
         self.assertIn('    const double t = fma_rn(az, 0x1p-53, s);', add)
-        self.assertIn('    const double rz = fma_rn(t, 0x1.0000000000002p+0, 0x1p-1073);', add)
+        self.assertIn('    const double rz = fma_rn(t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);', add)
         add = self.fns[('ball_add_1', 'float')]['lines']
-        self.assertIn('    const float rz = fma_rn(t, 0x1.000004p+0f, 0x1p-148f);', add)
-        # ball_mul_1: G = (1 + u)^5 rounds up to 1 + 6u; H, just above 3 eta, to 4 eta.
+        self.assertIn('    const float rz = fma_rn(t, 0x1.000004p+0f, 0x1.000004p-126f);', add)
+        # ball_mul_1: G = (1 + u)^5 rounds up to 1 + 6u; H, just above N + 3 eta, to N + 4 eta.
         mul = self.fns[('ball_mul_1', 'float')]['lines']
         self.assertIn('    const float t = fma_rn(az, 0x1p-24f, w);', mul)
-        self.assertIn('    const float rz = fma_rn(t, 0x1.000006p+0f, 0x1p-147f);', mul)
+        self.assertIn('    const float rz = fma_rn(t, 0x1.000006p+0f, 0x1.000008p-126f);', mul)
         # ball_mul_2: 4u^2 / (1 - 4u^2) rounds up to 2^-104 (1 + 2^-52); (1 + u)^6 to 1 + 8u; H,
-        # just above 4 eta, to 5 eta.
+        # just above N + 4 eta, to N + 5 eta.
         mul2 = self.fns[('ball_mul_2', 'double')]['lines']
         self.assertIn('    const double t = fma_rn(az, 0x1.0000000000001p-104, w);', mul2)
-        self.assertIn('    const double rz = fma_rn(t, 0x1.0000000000004p+0, 0x1.4p-1072);', mul2)
+        self.assertIn('    const double rz = fma_rn(t, 0x1.0000000000004p+0, 0x1.0000000000005p-1022);', mul2)
 
     def test_inlined_names(self):
         add = self.fns[('add_2_2', 'double')]['lines']
@@ -696,9 +697,9 @@ class Rocq(unittest.TestCase):
                       '(1 - ((3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2))) * '
                       '(1 + bpow radix2 (- prec))).', m)
         self.assertIn('Definition up_ball_scale_2_2 : R :=\n  round radix2 (FLT_exp emin prec) Zceil '
-                      '((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + '
+                      '(((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + '
                       '((1 * bpow radix2 emin) / (1 - (2 * bpow radix2 (- prec) ^ 2)))) + '
-                      '(bpow radix2 emin / 2))).', m)
+                      '(bpow radix2 emin / 2))) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).', m)
         self.assertNotIn('unit_computed', m)
         tks = common.kernels(common.TEST_KERNELS)
         self.assertIn('Definition ops_wave2 (a : R) (w : bool) (b : R) : R * R * R * bool :=', rocq.model(tks))
@@ -732,8 +733,10 @@ class Rocq(unittest.TestCase):
 
     # SHA-256 of Model.v, Statements.v and Audit.v as the real model prints them, the same before
     # the non-finite layer (commit f39b066) and after it. Change them only together with a change
-    # of the real model that is meant, and with the proofs that go with it.
-    DIGESTS = {'Model.v': 'cde4f8a5334da82d75bb616941b1ebea04d1ae160953db7a2cbbc79da392d493',
+    # of the real model that is meant, and with the proofs that go with it. Model.v changed once
+    # since: H of the six Ball cores gained the smallest normal number (five definitions
+    # up_ball_*_2); Statements.v and Audit.v did not.
+    DIGESTS = {'Model.v': '5d1877f80e6fdbe97881769674bf1bbe385d25a731f6817556f068faa0eb2d22',
                'Statements.v': '1f65f1272b0c31eaf4d84ee809f3c06ab8c01ceae3360e3f3e248a5bdea3a68d',
                'Audit.v': 'f70bb9882d50e61de707eb8e450b358375de8ececda800e88a2204aa13471a6f'}
 
@@ -744,7 +747,7 @@ class Rocq(unittest.TestCase):
         the format, for one limb) and a nonnegative radius for a ball, and without represents next
         to other claims. And the files are those of f39b066 but for the Ball cores of the second
         radius design and add_2_1 with its guard (and radd, rmul, which no kernel calls any more,
-        printed further down)."""
+        printed further down), and in Model.v for the constant H of those cores."""
         printers = {'Model.v': rocq.model, 'Statements.v': rocq.statements, 'Audit.v': rocq.audit}
         finite = {}
         for name, k in copy.deepcopy(dict(self.all)).items():
