@@ -7,8 +7,8 @@
 //
 //   boundary --expect none     every form agrees (the headers as they are)
 //   boundary --expect some     built with KAIRN_DETAIL_TEST_UNGUARDED, on a compiler and setting
-//                              that fuse: x + a * b must differ somewhere, so that the test above
-//                              cannot pass for want of a compiler that fuses
+//                              that fuse: some form must differ, so that the test above cannot
+//                              pass for want of a compiler that fuses
 //   boundary --expect report   prints the counts only
 //
 // The forms whose limb operand is only multiplied (x * (a * b), a ball scaled by a * b) need no
@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
     }
     bool ok = multiplied == 0;
     if (std::strcmp(expect, "none") == 0) ok = ok && guarded == 0;
-    if (std::strcmp(expect, "some") == 0) ok = ok && differ[0] > 0;
+    if (std::strcmp(expect, "some") == 0) ok = ok && guarded > 0;
     std::printf("%s (expected: %s)\n", ok ? "ok" : "FAILED", expect);
     return ok ? 0 : 1;
 }

@@ -99,7 +99,7 @@ endif()
 #
 # boundary.cpp, under the build's flags and each contraction setting that matters to the compiler:
 # with the guard, every form must agree with the same operation on the rounded product
-# (api.boundary.*). Built again with the guard turned off (api.boundary.unguarded.*), x + a * b
+# (api.boundary.*). Built again with the guard turned off (api.boundary.unguarded.*), some form
 # must differ where the compiler was measured to fuse across statements, so that the first test
 # cannot pass for want of a compiler that fuses; elsewhere that build only reports.
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -110,10 +110,6 @@ elseif(_msvc_style)
 else()
   set(_api_contraction "" "" contract-off -ffp-contract=off contract-on -ffp-contract=on
     contract-fast -ffp-contract=fast)
-endif()
-set(_api_aarch64 OFF)
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
-  set(_api_aarch64 ON)
 endif()
 list(LENGTH _api_contraction _n)
 math(EXPR _last "${_n} - 1")
@@ -126,13 +122,13 @@ foreach(_i RANGE 0 ${_last} 2)
   else()
     set(_suffix ".${_variant}")
   endif()
-  # Where the unguarded build was measured to fuse x + a * b: GCC by default (it contracts across
-  # statements in C++) and with =fast, Clang on AArch64 with =fast (not on x86-64), MSVC with
-  # /fp:contract.
+  # Where the unguarded build was measured to fuse: GCC by default (it contracts across statements
+  # in C++) and with =fast; Clang with =fast (on AArch64 every form, on x86-64 Clang 18 the balls'
+  # forms only); MSVC with /fp:contract.
   set(_fuses OFF)
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND (_variant STREQUAL "" OR _variant STREQUAL "contract-fast"))
     set(_fuses ON)
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND _variant STREQUAL "contract-fast" AND _api_aarch64)
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND _variant STREQUAL "contract-fast")
     set(_fuses ON)
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND _variant STREQUAL "fp-contract")
     set(_fuses ON)

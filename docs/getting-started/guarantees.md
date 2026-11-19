@@ -108,7 +108,8 @@ statements (GCC's default for C++, `-ffp-contract=fast`, MSVC's `/fp:contract`) 
 fuse `a * b` into the error-free sums inside the kernel, which would then not be error-free.
 Without that step, the result was measured normalized and wrong by about $2^{-24}$ relative to
 itself, on GCC 13 and 16 by default, on Apple clang with `-ffp-contract=fast`, and on MSVC with
-`/fp:contract`.
+`/fp:contract`; Clang 18 on x86-64 with `-ffp-contract=fast` fused such a product into a ball's
+radius or one-limb center, though not into `x + a * b`.
 
 So every value of type `T` that enters a two-limb operation or a ball, and every one-limb value
 that does, passes through a *guard*: it is added to $+0$ before any kernel adds it. A product
