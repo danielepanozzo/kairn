@@ -12,6 +12,7 @@ out by hand.
 
 import concurrent.futures as cf
 import copy
+from bisect import bisect_left
 import json
 import math
 import os
@@ -35,11 +36,20 @@ FULL22 = ("add_2_2_full", "add_fast_2_2_full", "sub_2_2_full", "mul_2_2_full")
 BALLF = ("ball_add_1_full", "ball_add_2_full", "ball_sub_1_full", "ball_sub_2_full",
          "ball_mul_1_full", "ball_mul_2_full", "ball_scale_1_full", "ball_scale_2_full")
 MAKE = ("make_2", "make_2_limbs", "ball_make_1", "ball_make_2")
+BALLNEG = ("ball_neg_1", "ball_neg_2")
 GAINED = ("neg_2", "abs_2", "lt_2_2", "le_2_2", "eq_2_2", "lt_2_1", "le_2_1", "eq_2_1", "lt_1_2",
           "le_1_2", "to_nearest_2", "to_down_2", "to_up_2", "abs_upper_2", "radd", "rmul")
 CORES = ("add_2_2", "add_fast_2_2", "sub_2_2", "add_2_1", "sub_2_1", "sub_1_2", "mul_2_2",
          "mul_2_1", "mul_pow2_2")
-EXTENDED = FULL + BALLF + MAKE + GAINED
+ONE_OPS = ("add_1_1", "mul_1_1")
+EXTENDED = FULL + BALLF + BALLNEG + MAKE + GAINED
+# The kernels of the fixture whose minimum precision is 1.
+PRECISION_ONE = ("neg_2", "abs_2", "lt_2_2", "le_2_2", "eq_2_2", "lt_2_1", "le_2_1", "eq_2_1",
+                 "lt_1_2", "le_1_2", "to_nearest_2", "to_down_2", "to_up_2", "abs_upper_2",
+                 "add_1_1", "mul_1_1", "ball_neg_1", "ball_neg_2") + MAKE
+# The Ball kernels of this layer are run with the cores of the second radius design (the design
+# their IEEE-model statements are proved with); the second wave's tests run the first.
+RADIUS = "second"
 # Formats: two named ones, a toy format, and toy formats of the shape of Flocq's IEEE formats
 # (qmin + qmax = 3 - 2p), as the IEEE-model statements require.
 FORMATS3 = ("binary64", "binary32", "fp:5:-10:5", "fp:4:-6:1")
@@ -52,8 +62,8 @@ def claims3(ctx):
     return ctx.claims3
 
 
-def run3(lines, variant="correct"):
-    r = refrun.Runner(variant)
+def run3(lines, variant="correct", radius=RADIUS):
+    r = refrun.Runner(variant, radius=radius)
     out = []
     for ln in lines:
         out.extend(r.complete(ln))
@@ -71,7 +81,7 @@ def stream3(ctx, kernel, fmtname, count, strata=None, seed="selftest3"):
 
 
 def exhaustive3(ctx, kernel, fmtname, restrict=(), variant="correct", ignore_mp=False,
-                chunk=20000, claims_path=FIXTURE3):
+                chunk=20000, claims_path=FIXTURE3, radius=RADIUS):
     """The summary of every case of an enumeration through the Python runner, in parallel, by
     the pipeline of `brute --runner refrun`."""
     from . import brute
@@ -79,7 +89,7 @@ def exhaustive3(ctx, kernel, fmtname, restrict=(), variant="correct", ignore_mp=
     g = G.ExhaustiveGen(cl.get(kernel), F.parse_format(fmtname), list(restrict))
     tasks = [dict(claims=claims_path, kernel=kernel, format=fmtname, exhaustive=True,
                   restrict=list(restrict), seed=None, strata=None, variant=variant,
-                  max_examples=5, ignore_min_precision=ignore_mp, start=s,
+                  max_examples=5, ignore_min_precision=ignore_mp, start=s, radius=radius,
                   count=min(chunk, g.total - s)) for s in range(0, g.total, chunk)]
     if len(tasks) == 1:
         parts = [brute.run_inprocess(tasks[0])]
@@ -133,10 +143,10 @@ def claims_reading_wave3(ctx):
     others unreadable."""
     cl = claims3(ctx)
     expect(not cl.broken, "fixture3 kernels set aside: %s" % cl.errors())
-    expect(set(cl.kernels) == set(EXTENDED + CORES), "fixture3 kernels")
+    expect(set(cl.kernels) == set(EXTENDED + CORES + ONE_OPS), "fixture3 kernels")
     for k in EXTENDED:
         expect(cl.get(k).extended, "%s is not of the extended domain" % k)
-    for k in CORES:
+    for k in CORES + ONE_OPS:
         expect(not cl.get(k).extended, "%s is not finite" % k)
     for k in FULL:
         e = cl.get(k).ensures[0]
@@ -374,6 +384,10 @@ def _class_checks(s, fname):
         for key in ("result: finite ball", "result: whole line", "result: empty set",
                     "whole line on finite operands"):
             expect(c.get(key, 0) > 0, "%s %s: no %s (%s)" % (k, fname, key, c))
+    for k in BALLNEG:
+        c = counts(s, k)
+        for key in ("result: finite ball", "result: whole line", "result: empty set"):
+            expect(c.get(key, 0) > 0, "%s %s: no %s (%s)" % (k, fname, key, c))
     for k in ("ball_make_1", "ball_make_2"):
         c = counts(s, k)
         for key in ("given: empty set", "given: whole line", "given: finite ball"):
@@ -472,6 +486,8 @@ def exhaustive_wave3(ctx):
            "exhaustive lines not unique or case 57 not reproducible")
     # The correct runner on every case.
     plan = [("fp:3:-4:1", k, ()) for k in FULL if k not in FULL22]
+    plan += [("fp:2:-2:1", "ball_neg_1", ()), ("fp:3:-3:0", "ball_neg_2", ())]
+    plan += [("fp:3:-4:1", k, ()) for k in ONE_OPS]
     plan += [("fp:3:-3:0", k, ()) for k in FULL22 if k != "mul_2_2_full"]
     plan += [("fp:4:-4:-1", "mul_2_2_full", ())]
     plan += [("fp:3:-4:1", k, ()) for k in MAKE + GAINED if k not in ("lt_2_2", "le_2_2", "eq_2_2")]
@@ -496,7 +512,10 @@ def exhaustive_wave3(ctx):
         expect(t["failed"] == 0 and not s.stream_errors and t["invalid"] == 0
                and t["suspicious"] == 0 and t["out_of_scope"] == 0,
                "correct runner flagged on %s %s: %r %s" % (k, fname, t, failures(s)[:2]))
-        expect(t["judged"] == t["cases"] > 0, "not every case judged for %s %s" % (k, fname))
+        # Every line of a kernel of the extended domain is judged; a finite kernel's overflows
+        # are not.
+        expect(t["judged"] == t["cases"] > 0 if cl.get(k).extended else t["judged"] > 0,
+               "not every case judged for %s %s" % (k, fname))
         cov = s.coverage.describe()
         expect(cov and ("COMPLETE" in cov[0]) == (not restrict), "coverage of %s: %s" % (k, cov))
         out.append(t["cases"])
@@ -513,7 +532,7 @@ def cxx_wave3(ctx):
         lines = []
         for k in EXTENDED:
             lines += stream3(ctx, k, fname, ctx.n(1500, 500))
-        hw = cxx_run(ctx, lines)
+        hw = cxx_run(ctx, lines, radius=RADIUS)
         py = run3(lines)
         expect(len(hw) == len(py), "line counts differ for %s" % fname)
         for a, b in zip(hw, py):
@@ -539,7 +558,7 @@ def cxx_wave3(ctx):
 # "failed: ..." keys of represents and makes_ball.
 # Kernels of the other families, which a planted bug must leave alone.
 REST = ("ball_mul_2_full", "ball_scale_1_full", "ball_make_2", "make_2", "neg_2", "radd")
-NOT_BALL = ("add_2_2_full", "mul_2_1_full", "make_2", "ball_make_1")
+NOT_BALL = ("add_2_2_full", "mul_2_1_full", "make_2", "ball_make_1", "ball_neg_2")
 NOT_MAKE = ("add_2_1_full", "ball_add_2_full", "ball_scale_2_full")
 INJECTED3 = (
     ("full-no-fixup", FULL, ("F4", "F5"), ("F1", "F2", "F4", "F5"), REST),
@@ -556,6 +575,14 @@ INJECTED3 = (
     ("ball-full-zero-inf-empty", ("ball_mul_1_full", "ball_mul_2_full", "ball_scale_1_full",
                                   "ball_scale_2_full"), ("B2",), ("B2",), NOT_BALL),
     ("ball-full-finite-whole", BALLF, ("B3",), ("B3",), NOT_BALL),
+    # The second radius design: without E the center's error is not covered; without H what
+    # underflow loses is not, which the products and scalings need (the sums may not).
+    # (Required in the one-limb kernels: at p = 4, G rounded up to 1.25 has room for the small
+    # error of a 2-limb center, which binary64 and binary32 streams still show.)
+    ("ball2-no-E", ("ball_add_1_full", "ball_sub_1_full", "ball_mul_1_full",
+                    "ball_scale_1_full"), ("B3",), ("B3",), NOT_BALL),
+    ("ball2-no-H", ("ball_mul_1_full", "ball_mul_2_full", "ball_scale_1_full",
+                    "ball_scale_2_full"), ("B3",), ("B3",), NOT_BALL),
     ("make-negative-radius", ("ball_make_1", "ball_make_2"), (": not canonical",),
      (": not canonical", ": whole line instead of empty set"),
      ("make_2", "make_2_limbs") + NOT_MAKE),
@@ -614,7 +641,8 @@ def injected_wave3(ctx):
     try:
         build_cxx(ctx)
         for fname in ("binary64", "binary32"):
-            res += _injected3(ctx, lambda lines, v: cxx_run(ctx, lines, v), fname, "C++ " + fname)
+            res += _injected3(ctx, lambda lines, v: cxx_run(ctx, lines, v, RADIUS), fname,
+                              "C++ " + fname)
     except Skip as ex:
         res.append("C++ skipped: %s" % ex)
     return "; ".join(res)
@@ -629,7 +657,7 @@ def injected_wave3_exhaustive(ctx):
              "ball": ("ball_add_1_full", "ball_mul_1_full", "ball_scale_1_full"),
              "make": ("make_2", "ball_make_1", "ball_make_2")}
     for variant, flagged, need, allowed, _clean in INJECTED3:
-        fam = variant.split("-")[0] if not variant.startswith("make") else "make"
+        fam = "make" if variant.startswith("make") else variant.split("-")[0].rstrip("2")
         ks = [k for k in flagged if k in small.get(fam, ())]
         if variant == "full-spurious-overflow":
             ks = ["add_2_2_full"]
@@ -640,6 +668,159 @@ def injected_wave3_exhaustive(ctx):
             _check_injected(s, variant, (k,), need, allowed, (), "exhaustive " + fname)
         res.append("%s (%s)" % (variant, ", ".join(ks if not ctx.quick else ks[:1])))
     return "; ".join(res)
+
+
+@test
+def radius_second(ctx):
+    """The constants of the second radius design against values worked out by hand from
+    milestone1.md's table; both radius designs pass on the same streams of the full Ball kernels;
+    the C++ runner's second design equals the Python one's."""
+    eta64 = Q(2) ** -1074
+    u64 = Q(1, 2 ** 53)
+
+    def consts(fname, kname):
+        ar = refrun.Arith(F.parse_format(fname).triple)
+        eta = Q(2) ** ar.qmin
+        return tuple(Q(v) * eta if type(v) is int else v
+                     for v in refrun.radius2_constants(ar, kname))
+
+    hand = {
+        # U_q = u exactly (rel = u/(1+u)); (1+u)^3 = 1+3u+... rounds up to 1+4u; H = 1.5 eta+.
+        ("binary64", "ball_add_1"): (u64, 1 + 4 * u64, 2 * eta64),
+        # (1+u)^6 rounds up to 1+8u; 4u^2/(1-4u^2) just above 2^-104; H just above 4 eta.
+        ("binary64", "ball_mul_2"): (Q(2) ** -104 * (1 + 2 * u64), 1 + 8 * u64, 5 * eta64),
+        # (1+u)^5 rounds up to 1+6u; H = (1+u)(2(1+u)^4 + (1+u)/2 + 1/2) eta, just above 3.
+        ("binary64", "ball_mul_1"): (u64, 1 + 6 * u64, 4 * eta64),
+        # u = 1/8: U_q = 1/8; (9/8)^3 = 1.42 rounds up to 1.5; H = 1.99 eta rounds to 2 eta.
+        ("fp:3:-4:1", "ball_add_1"): (Q(1, 8), Q(3, 2), Q(1, 8)),
+        # rel = 2u^2 = 1/32, U_q (1+u) = 9/248 is below eta = 1/16.
+        ("fp:3:-4:1", "ball_scale_2"): (Q(1, 16), Q(3, 2), Q(1, 4)),
+        # (9/8)^6 = 2.03 rounds up to 2.5 (spacing 1/2 in [2, 4)).
+        ("fp:3:-4:1", "ball_mul_2"): (Q(1, 8), Q(5, 2), Q(7, 16)),
+    }
+    for (fname, kname), want in hand.items():
+        got = consts(fname, kname)
+        expect(got == want, "%s %s: E, G, H = %s, want %s" % (fname, kname, got, want))
+    # ball_sub_k takes the constants of ball_add_k.
+    expect(consts("binary32", "ball_sub_2") == consts("binary32", "ball_add_2"), "sub constants")
+    n = 0
+    cl = claims3(ctx)
+    for fname in ("binary64", "fp:4:-6:1"):
+        lines = []
+        for k in BALLF:
+            lines += stream3(ctx, k, fname, ctx.n(1200, 300))
+        for radius in refrun.RADIUS_DESIGNS:
+            s = judge(run3(lines, radius=radius), cl, ignore_min_precision=True)
+            t = totals(s)
+            expect(t["failed"] == 0 and t["invalid"] == 0, "%s radius %s: %s" % (
+                fname, radius, failures(s)[:2]))
+            n += t["cases"]
+    return "constants of %d kernels by hand; %d cases" % (len(hand), n)
+
+
+# Precision-1 formats: numbers are zero and the powers of two.
+P1_FORMATS = [(1, -3, 2), (1, 0, 4), (1, -5, -1)]
+
+
+def rn_definition(br, p, qmin, t):
+    """RN(t) by the definition the proofs use (Flocq's round to nearest, ties to even): the
+    nearest number, and on a tie the one whose integer significand at the exponent of t,
+    max(e + 1 - p, qmin) with 2^e <= |t| < 2^(e+1), is even; beyond Omega the infinity.  At
+    p = 1 both neighbours of a tie have the significand 1, so 'even significand' alone cannot
+    decide, and this is what does (BruteRN assumes p >= 2)."""
+    if t <= -br.big or t >= br.big:
+        return -math.inf if t < 0 else math.inf
+    i = bisect_left(br.ext, t)
+    if br.ext[i] == t:
+        r = t
+    else:
+        lo, hi = br.ext[i - 1], br.ext[i]
+        if t - lo != hi - t:
+            r = lo if t - lo < hi - t else hi
+        else:
+            e, a = 0, abs(t)
+            while a >= 2:
+                a /= 2
+                e += 1
+            while a < 1:
+                a *= 2
+                e -= 1
+            scale = Q(2) ** max(e + 1 - p, qmin)
+            m = t / scale
+            fl = m.numerator // m.denominator
+            r = (fl if fl % 2 == 0 else fl + 1) * scale
+    if abs(r) >= br.big:
+        return math.inf if r > 0 else -math.inf
+    return r
+
+
+@test
+def precision_one(ctx):
+    """Formats of precision 1: rounding (ties included), directed rounding, neighbors, membership
+    and normalized pairs against brute force; every kernel proved from precision 1 generated,
+    run and judged at random and on every operand; precision 0 refused."""
+    from .selftest2 import _unbounded_values
+    import bisect
+    pts = 0
+    for p, qmin, qmax in P1_FORMATS:
+        f = F.Format(p, qmin, qmax)
+        ar = refrun.Arith((p, qmin, qmax))
+        br = BruteRN(p, qmin, qmax)
+        eta = Q(2) ** qmin
+        expect([Q(v) * eta for v in F.all_values(f)] == br.vals, "all_values %s" % f.name)
+        step = eta / 8
+        for j in range(-int((br.big + 4 * eta) / step), int((br.big + 4 * eta) / step) + 1):
+            r = rn_definition(br, p, qmin, j * step)
+            want = r if isinstance(r, float) else int(r / eta)
+            got = F.rn(f, j, qmin - 3)
+            got = got if type(got) is int else (math.inf if got == F.POS_INF else -math.inf)
+            expect(got == want and ar.round(j, 3) == want,
+                   "RN(%s) = %r / %r, want %r in %s" % (j * step, got, ar.round(j, 3), want, f.name))
+            pts += 1
+        ext = _unbounded_values(p, qmin, qmax)
+        top = Q(2) ** (qmax + p)
+        for j in range(-int(top / step), int(top / step) + 1):
+            t = j * step
+            i = bisect.bisect_right(ext, t)
+            down = ext[i - 1]
+            up = down if down == t else ext[i]
+            expect(Q(F.rdir(f, j, qmin - 3, False)) * eta == down and
+                   Q(F.rdir(f, j, qmin - 3, True)) * eta == up, "RD/RU(%s) in %s" % (t, f.name))
+        vals = F.all_values(f)
+        for i, v in enumerate(vals):
+            nxt = vals[i + 1] if i + 1 < len(vals) else F.POS_INF
+            prv = vals[i - 1] if i > 0 else F.NEG_INF
+            expect(F.succ(f, v) == nxt and F.pred(f, v) == prv, "succ/pred(%d) in %s" % (v, f.name))
+            expect(ar.next_up(v) == (nxt if type(nxt) is int else math.inf),
+                   "runner next_up(%d) in %s" % (v, f.name))
+        pairs = sorted({(a, b) for a in br.vals for b in br.vals
+                        if rn_definition(br, p, qmin, a + b) == a and (a != 0 or b == 0)})
+        gp = sorted((Q(a) * eta, Q(b) * eta) for a, b in G.normalized_pairs(f))
+        expect(gp == pairs, "normalized pairs of %s: %d, want %d" % (f.name, len(gp), len(pairs)))
+    try:
+        F.Format(0, -3, 2)
+        raise AssertionError("precision 0 accepted")
+    except F.FormatError:
+        pass
+    cl = claims3(ctx)
+    n = 0
+    for k in PRECISION_ONE:
+        expect(cl.get(k).min_precision == 1, "%s: min_precision %s" % (k, cl.get(k).min_precision))
+        for fname in ("fp:1:-6:3", "fp:1:-3:0"):
+            s = judge(run3(stream3(ctx, k, fname, ctx.n(600, 200))), cl)
+            t = totals(s)
+            # A finite kernel (add_1_1, mul_1_1) does not judge its overflows.
+            expect(t["invalid"] == 0 and t["failed"] == 0 and t["suspicious"] == 0
+                   and t["judged"] + t["nonfinite"] == t["cases"] and t["judged"] > 0,
+                   "%s %s: %r %s" % (k, fname, t, failures(s)[:2]))
+            n += t["cases"]
+        s = exhaustive3(ctx, k, "fp:1:-3:2")
+        t = totals(s)
+        expect(t["failed"] == 0 and t["invalid"] == 0 and t["suspicious"] == 0
+               and t["judged"] + t["nonfinite"] == t["cases"] and t["judged"] > 0,
+               "%s fp:1:-3:2 exhaustive: %r %s" % (k, t, failures(s)[:2]))
+        n += t["cases"]
+    return "%d rounding points; %d kernels, %d cases" % (pts, len(PRECISION_ONE), n)
 
 
 # Hand-written lines and their verdicts: passed, failed (with the statement that must fail),
@@ -765,10 +946,31 @@ HAND3 = [
     # normalized and error in the extended domain: canonical always, the rest when finite.
     ("neg_2 binary64 inf 0x0p+0 -> -inf 0x0p+0", "passed"),
     ("neg_2 binary64 inf 0x0p+0 -> -inf nan", "failed"),
-    ("neg_2 binary64 inf 0x0p+0 -> nan nan", "suspicious"),
+    # represents pins the value: (inf, 0) gives (-inf, 0), and a finite operand a finite result.
+    ("neg_2 binary64 inf 0x0p+0 -> nan nan", "failed"),
     ("neg_2 binary64 0x1p+0 0x1p-60 -> -0x1p+0 -0x1p-60", "passed"),
     ("neg_2 binary64 0x1p+0 0x1p-60 -> -0x1p+0 0x1p-60", "failed"),
-    ("neg_2 binary64 0x1p+0 0x1p-60 -> -inf 0x0p+0", "suspicious"),
+    ("neg_2 binary64 0x1p+0 0x1p-60 -> -inf 0x0p+0", "failed"),
+    ("neg_2 binary64 nan nan -> nan nan", "passed"),
+    ("neg_2 binary64 nan nan -> nan 0x0p+0", "failed"),
+    ("abs_2 binary64 -inf 0x0p+0 -> -inf 0x0p+0", "failed"),
+    ("abs_2 binary64 -0x1p+0 0x1p-60 -> 0x1p+0 -0x1p-60", "passed"),
+    ("abs_2 binary64 -0x1p+0 0x1p-60 -> 0x1p+0 0x1p-60", "failed"),
+    # ball_neg_k: no fix-up, the extended-domain encloses.
+    ("ball_neg_1 binary64 0x1p+0 0x1p-1 -> -0x1p+0 0x1p-1", "passed"),
+    ("ball_neg_1 binary64 0x1p+0 0x1p-1 -> 0x1p+0 0x1p-1", "B3"),
+    ("ball_neg_1 binary64 -0x0p+0 inf -> 0x0p+0 inf", "passed"),
+    ("ball_neg_1 binary64 nan nan -> nan nan", "passed"),
+    ("ball_neg_1 binary64 nan nan -> 0x0p+0 inf", "B2"),
+    ("ball_neg_2 binary64 0x1p+0 0x1p-60 0x0p+0 -> -0x1p+0 -0x1p-60 0x0p+0", "passed"),
+    ("ball_neg_2 binary64 0x1p+0 0x1p-60 0x0p+0 -> -0x1p+0 0x0p+0 0x0p+0", "B3"),
+    ("ball_neg_2 binary64 0x0p+0 0x0p+0 inf -> 0x0p+0 0x0p+0 inf", "passed"),
+    ("ball_neg_2 binary64 0x1p+0 0x1p+0 0x0p+0 -> -0x1p+0 -0x1p+0 0x0p+0", "invalid"),
+    # the one-limb operations at precision 1: 3 lies halfway between 2 and 4 and rounds to 4.
+    ("add_1_1 fp:1:-4:3 0x1p+0 0x1p+1 -> 0x1p+2", "passed"),
+    ("add_1_1 fp:1:-4:3 0x1p+0 0x1p+1 -> 0x1p+1", "failed"),
+    ("mul_1_1 fp:1:-4:3 0x1p-3 0x1p-3 -> 0x0p+0", "passed"),
+    ("make_2 fp:1:-4:3 0x1p+3 -> 0x1p+3 0x0p+0", "passed"),
     ("abs_2 binary64 -inf 0x0p+0 -> inf 0x0p+0", "passed"),
     # predicate: the extended reals; false on a NaN.
     ("lt_2_2 binary64 inf 0x0p+0 inf 0x0p+0 -> 0", "passed"),

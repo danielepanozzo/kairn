@@ -548,14 +548,18 @@ def cxx_constants():
             U, V = refrun.ball_constants(ar, center, refrun.DEFAULT_CENTER_CLAIMS)
             args += ["--const", "%s.%s.U=%s" % (fname, center, ar.write(U)),
                      "--const", "%s.%s.V=%s" % (fname, center, ar.write(V))]
+        # E, G and H of the second radius design, per Ball kernel.
+        for kname in sorted(refrun.RADIUS2):
+            for which, v in zip("EGH", refrun.radius2_constants(ar, kname)):
+                args += ["--const", "%s.%s.%s=%s" % (fname, kname, which, ar.write(v))]
     return args
 
 
-def cxx_run(ctx, lines, variant="correct"):
+def cxx_run(ctx, lines, variant="correct", radius="first"):
     exe = build_cxx(ctx)
     if exe is None:
         raise Skip(ctx.cxx_error)
-    r = subprocess.run([exe, "--variant", variant] + cxx_constants(),
+    r = subprocess.run([exe, "--variant", variant, "--radius", radius] + cxx_constants(),
                        input="\n".join(lines) + "\n", capture_output=True, text=True)
     if r.returncode != 0:
         raise AssertionError("C++ runner failed: %s" % r.stderr[-500:])
