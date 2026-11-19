@@ -107,13 +107,16 @@ add_2_2_full(x, y) -> w
   w1 = select(f, z1, r1)
 ```
 
-The other full kernels differ in their first two lines only:
+The other full kernels differ in their first lines only. With a one-limb operand `a` that is
+added or subtracted, the first line is `g = guard(a)` and `t` is computed from `g`
+([values that enter from the program](#values-that-enter-from-the-program)); the core is called
+with `a` and guards it itself, which compilers merge with the first guard.
 
 | Full kernel | Core | `t` |
 |---|---|---|
 | `add_2_2_full`, `add_fast_2_2_full` | `add_2_2`, `add_fast_2_2` | `add(x0, y0)` |
 | `sub_2_2_full` | `sub_2_2` | `sub(x0, y0)` |
-| `add_2_1_full`, `sub_2_1_full`, `sub_1_2_full` | `add_2_1`, `sub_2_1`, `sub_1_2` | `add(x0, a)`, `sub(x0, a)`, `sub(a, y0)` |
+| `add_2_1_full`, `sub_2_1_full`, `sub_1_2_full` | `add_2_1`, `sub_2_1`, `sub_1_2` | `add(x0, g)`, `sub(x0, g)`, `sub(g, y0)` |
 | `mul_2_2_full`, `mul_2_1_full`, `mul_pow2_2_full` | `mul_2_2`, `mul_2_1`, `mul_pow2_2` | `prod(x0, y0)`, `prod(x0, a)`, `prod(x0, c)` |
 
 `operator+` and the other operators of `Expansion<T, 2>` call the full kernels;
@@ -163,6 +166,62 @@ non-finite" is false.
 **Emission.** Packed code is emitted as listed, with blends. For scalar code the generator may
 emit the fix-up behind a branch on `f`; which is faster is measured, and the two forms compute the
 same function. The cost expected in D5 is 10 to 20% of a 2-limb addition.
+
+## Values that enter from the program
+
+Rule [R3](../architecture.md#the-kernel-ir): a value of `T` that the program supplies passes
+through `guard` (an addition of zero) before any kernel adds or subtracts it, because the program
+may have computed it as a product that a contracting compiler would otherwise fuse into the
+kernel. `guard(a)` has the value of `a`; a zero comes out positive, an infinity and a NaN stay
+what they are.
+
+**Kernels with a scalar operand.** `add_2_1` guards its one-limb operand in its first line; its
+listing is otherwise unchanged:
+
+```
+add_2_1(x, a) -> z
+  g        = guard(a)
+  (sh, sl) = two_sum(x0, g)
+  v        = x1 + sl
+  (z0, z1) = fast_two_sum(sh, v)
+```
+
+`sub_2_1` and `sub_1_2` pass their one-limb operand (negated, for `sub_2_1`) to `add_2_1` and to
+nothing else, so they are covered by its guard and do not change. The operands that kernels only
+multiply or compare (`a` in `mul_2_1` and in the comparisons, `c` in `mul_pow2_2`, the scalar of
+`ball_scale`) need no guard. The building blocks (`two_sum`, `fast_two_sum`, `two_prod`, `radd`,
+`rmul`, `add_1_1`, `mul_1_1`) are not entry kernels and are not guarded: inside Kairn their
+operands are never the program's products (R1).
+
+**Constructors** are entry kernels too, so that no limb of an object is ever a value the compiler
+can still fuse:
+
+```
+make_2(a) -> x                     make_2_limbs(h, l) -> x          ball_make_2(c, r) -> (cw, rw)
+  x0 = guard(a)                      x0 = guard(h)                    g   = guard(r)
+  n  = eq(x0, x0)                    x1 = guard(l)                    e   = le(0, g)
+  x1 = select(n, 0, x0)                                               a   = abs(c0)
+                                                                      f1  = lt(a, const inf)
+                                                                      f2  = lt(g, const inf)
+                                                                      f   = and(f1, f2)
+                                                                      k0  = select(f, c0, 0)
+                                                                      k1  = select(f, c1, 0)
+                                                                      s   = select(f, g, const inf)
+                                                                      cw0 = select(e, k0, const nan)
+                                                                      cw1 = select(e, k1, const nan)
+                                                                      rw  = select(e, s, const nan)
+```
+
+- `make_2(a)` is `Expansion<T, 2>` from a value of `T` or from a one-limb number: the result is
+  canonical and has the value of `a`.
+- `make_2_limbs(h, l)` is `from_limbs`: it requires $(h, l)$ to be canonical and returns it.
+- `ball_make_2(c, r)` takes a canonical center (an object, `stored`) and a radius from the
+  program. The result is canonical: the empty set when the radius is a NaN or negative (`e` is
+  then false), the whole line when the center is not finite or the radius is $+\infty$, and
+  otherwise the ball itself. `ball_make_1(c, r)` is the same with a one-limb center, guarded as
+  well, and no `k1`. `const nan` is a quiet NaN.
+
+All of these are targets, stated in the IEEE model like the full kernels.
 
 ## Second-wave kernels
 

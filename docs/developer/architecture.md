@@ -117,16 +117,24 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    explicit finiteness test.
 5. Every kernel names its theorem, its source and that source's license, or is marked
    `unverified`.
-6. **R3. Values that enter from the program.** A kernel that the public headers call with a
-   value of `T` supplied by the program (a scalar operand, a limb or a radius given to a
-   constructor) uses that input only through `guard`, except as a factor of `prod` or of an
-   FMA, or as an operand of a comparison. The reason: the program may have written
+6. **R3. Values that enter from the program.** A kernel that the public headers may call is
+   marked `entry`. In an entry kernel, a one-limb input is a value of `T` supplied by the program
+   (a scalar operand, a limb or a radius given to a constructor) unless the kernel declares it
+   `stored`: a limb of an object, such as the radius of a ball. An input supplied by the program,
+   and anything obtained from it by `neg`, `abs` or `select` alone, is never an operand of `add`
+   or `sub` nor the addend of an FMA: it passes through `guard` first. It may be a factor of
+   `prod` or of an FMA and an operand of a comparison as it is. The reason: the program may have
+   written
    `x + a * b`, and a compiler that contracts across statements then fuses the program's own
    multiplication into the kernel's first addition, so that the kernel no longer computes with a
    number of the format. After `guard` nothing is left to fuse: the only thing a compiler can
    fuse is a multiplication feeding an addition, and `(a * b) + 0` fused is the rounded product
-   itself. The limbs of a multi-limb operand need no guard: they are outputs of kernels (R2) or
-   were guarded when the object was constructed.
+   itself. The limbs of a multi-limb operand and the `stored` inputs need no guard: they are
+   outputs of kernels (R2) or were guarded when the object was constructed, by the constructor
+   kernels of [Milestone 1 statements](design/milestone1.md#values-that-enter-from-the-program).
+   One-limb arithmetic (`Expansion<T, 1>`) is outside this rule by decision
+   [D6](design/phase0/decisions.md#d6-one-limb-and-contraction-under-clang): it behaves like `T`,
+   contraction included.
 
 R3 was added in Milestone 1, after a test of the public headers found the failure it prevents:
 with GCC 13 and 16 at their default setting, with Apple clang on AArch64 under
