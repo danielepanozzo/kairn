@@ -5,13 +5,18 @@ kernels in a model where exponents are unbounded above. This page adds what Mile
 top: how overflow and non-finite values are treated, formally and in the code, and the remaining
 operations. Notation is that of [Numbers](phase0/numbers.md).
 
-**What is proved and what is a target.** The statements of the
+**What is proved, and against what.** The statements of the
 [second-wave kernels](#second-wave-kernels) and of the [Ball kernels](#ball-kernels) are proved
-in the real model, from the precision their tables give. In the IEEE model, the bridge and
-correctness are proved for the kernels the table below lists. The
-[IEEE-like results](#ieee-like-results), the special states of a ball, and the IEEE-model
-treatment of the kernels that contain comparisons, selects or steps to a neighbor are targets:
-tested on every operand of toy formats where a test exists, not proved.
+in the real model against the statements the generator prints, from the precision their tables
+give. Every IEEE-model statement of this page is proved too: the full kernels, the kernels that
+need no fix-up, the constructors, and the full Ball kernels with the second radius design. Those
+proofs are against statements and kernel models **written by hand** from the listings below
+(`proofs/theories/IeeeDraft.v`, `IeeeExtStatementsDraft.v`, `BallDraft.v`, audited through
+`proofs/audit/HandAudit.v`), because the generator does not print the IEEE model yet and still
+emits the first radius design. Until it prints the same definitions, nothing mechanical ties
+those theorems to the shipped code, and the claims keep these kernels `unverified`. What is not
+proved is said where it applies: the conditions under which a Ball operation returns a finite
+ball (B4), and thresholds sharper than the ones stated.
 
 ## Two formal models of one kernel
 
@@ -57,17 +62,18 @@ written per kernel.
 
 | Kernel | Bridge and correctness | No spurious overflow, proved for | What exhaustive runs show |
 |---|---|---|---|
-| `add_2_2` | proved | leading limbs of both operands at most $2^{e_{\max}-2}$ (a quarter of the overflow threshold), whatever the result | the sharp condition is half the threshold; not proved |
-| `mul_2_2` | proved | exact product at most $2^{e_{\max}-1}$ in magnitude, whatever the operands | the first overflow is at 0.94 of the threshold at $p = 5$ |
-| `add_2_1`, `mul_2_1`, `add_fast_2_2` | proved | not stated yet | |
+| `add_2_2`, `sub_2_2`, `add_fast_2_2` | proved | leading limbs of both operands at most $2^{e_{\max}-2}$ (a quarter of the overflow threshold), whatever the result; or exact result at most $2^{e_{\max}-2}$, whatever the operands | smallest exact result at an overflow: 0.62 of the threshold at $p = 3$, 0.55 at $p = 4$ |
+| `add_2_1`, `sub_2_1`, `sub_1_2` | proved | the same two conditions, with the one-limb operand in place of a leading limb | 0.67 at $p = 3$, 0.58 at $p = 4$ |
+| `mul_2_2`, `mul_2_1`, `mul_pow2_2` | proved | exact product at most $2^{e_{\max}-1}$ in magnitude, whatever the operands | 0.90 for `mul_2_2` at $p = 4$; 0.86 to 0.93 for `mul_2_1`; 0.88 to 0.97 for `mul_pow2_2` |
 | `two_sum`, `fast_two_sum`, `two_prod` | proved, in the form below | | |
 
-Here $2^{e_{\max}}$ is the overflow threshold, just above $\Omega$. These IEEE-model theorems
-are checked against hand-written statements (`proofs/audit/HandAudit.v`); the generator does not
-print IEEE-model statements yet. `sub_2_2`, `sub_2_1`, `sub_1_2` and `mul_pow2_2` fit the same
-template and are not instantiated. The kernels with comparisons, selects, `pred` or `succ` do
-not fit it: for them "a non-finite value stays non-finite" is false, and they need statements of
-their own in the IEEE model.
+Here $2^{e_{\max}}$ is the overflow threshold, just above $\Omega$. The last column is measured
+by complete enumeration of small formats and is not proved: the proved thresholds are a quarter
+of the overflow threshold for the additions and half of it for the products, and overflow was
+first seen above 0.55 and 0.86. These IEEE-model theorems are checked against hand-written
+statements (`proofs/audit/HandAudit.v`). The kernels with comparisons, selects, `pred` or `succ`
+do not fit the bridge: for them "a non-finite value stays non-finite" is false, and they have
+statements of their own in the IEEE model ([below](#ieee-like-results)).
 
 **The error-free transformations at the top of the range.** `fast_two_sum` and `two_prod` have a
 finite error term whenever their first output is finite. `two_sum` does not: with Kairn's order of
@@ -92,7 +98,9 @@ sign. A one-limb value is any value of `T`.
 
 **The full kernel.** Each arithmetic kernel $K$ of two limbs is a *finite core*. The generator
 emits a second kernel `K_full`: the core followed by a fix-up made of one operation of `T` on the
-leading limbs, two tests and selects. `0` is the literal zero and `const inf` is $+\infty$.
+leading limbs, two tests and selects. `0` is the literal zero, `const inf` is $+\infty$, and
+`times_inf` multiplies by $+\infty$: a plain multiplication, exact, whose result is only compared
+or selected, so that no fused operation is needed and the fix-up can be evaluated at compile time.
 
 ```
 add_2_2_full(x, y) -> w
@@ -100,7 +108,7 @@ add_2_2_full(x, y) -> w
   t  = add(x0, y0)               the same operation of T, on the leading limbs
   a  = abs(z0)
   f  = lt(a, const inf)          z0 is finite
-  r0 = prod(t, const inf)        a NaN stays a NaN; any other t becomes the infinity of its sign
+  r0 = times_inf(t)              a NaN or a zero gives a NaN; any other t the infinity of its sign
   n  = eq(r0, r0)                r0 is not a NaN
   r1 = select(n, 0, r0)
   w0 = select(f, z0, r0)
@@ -124,7 +132,8 @@ already named `a`, the temporary of the fix-up is named `az`.
 `kairn::finite::add` and its siblings call the cores.
 
 **Statement of a full kernel, in the IEEE model.** The 2-limb operands are canonical; a one-limb
-operand is any value of `T` (`c` stays a finite power of two).
+operand is any value of `T`, except the `c` of `mul_pow2_2_full`, which is required to be a
+finite power of two (nothing is stated for another `c`).
 
 - **F1.** $w$ is canonical.
 - **F2.** If $w_0$ is finite, then every operand is finite and $w$ satisfies the statement of the
@@ -132,29 +141,35 @@ operand is any value of `T` (`c` stays a finite power of two).
 - **F3.** If every operand is finite and the kernel's *finite when* condition holds, then $w_0$
   is finite. The conditions are those of [statement 3](#what-is-proved-about-an-arithmetic-kernel)
   of the core; a kernel without a proved condition has none yet.
-- **F4.** If every operand is finite and $w_0$ is not, then $w = (\pm\infty, 0)$ with the sign of
-  the exact result.
+- **F4.** If every operand is finite and $w_0$ is not, then $w = (\pm\infty, +0)$ with the sign
+  of the exact result.
 - **F5.** If an operand is not finite, then $w$ is the canonical form of $t$, the result of the
   operation of `T` on the leading limbs: $+\infty + 1 = +\infty$, $\infty - \infty = \mathrm{NaN}$,
-  $0 \cdot \infty = \mathrm{NaN}$.
+  $0 \cdot \infty = \mathrm{NaN}$. An infinity is followed by $+0$; which NaN is returned is not
+  specified.
 
-*Why it should hold.* `f` is true exactly when $z_0$ is finite. By the bridge, a finite $z_0$
+*Why it holds.* `f` is true exactly when $z_0$ is finite. By the bridge, a finite $z_0$
 means every value of the core was finite and equal to the real model's, which gives F2 for
 finite operands; and an operand that is not finite makes $z_0$ not finite, because the leading
 limb of every operand reaches $z_0$ through operations that keep a NaN and turn an infinity into
 an infinity or a NaN. So with such an operand the result is built from $t$, which is then a NaN
 or an infinity: F5. F4 needs one more fact: when a core overflows on finite operands, $t$ is not
-zero and has the sign of the exact result. If $t$ were zero, `r0` would be a NaN, which is still
-not a finite wrong result.
+zero and has the sign of the exact result. It follows from two facts proved about the cores: an
+addition does not overflow when the exact result is at most $2^{e_{\max}-2}$ in magnitude, so at
+an overflow the sum of the leading limbs has the sign of the exact result; and a product kernel
+does not overflow when the leading product rounds to zero.
 
-*Status.* All five are targets. F3 is proved for the cores `add_2_2` and `mul_2_2` (the table
-above). For F4, in complete runs at $p = 3$ and $4$, whenever $z_0$ was not finite on finite
-operands, $t$ was neither NaN nor zero and had the sign of the exact result.
+*Status.* F1 to F5 are proved for the nine full kernels, from the minimum precision of each
+core, with the conditions of F3 given in the
+[table above](#what-is-proved-about-an-arithmetic-kernel), stated on the exact values of the
+operands (for the additions: both operands at most $2^{e_{\max}-2}$ in magnitude; for the
+products: the exact product at most $2^{e_{\max}-1}$). They were first checked on every operand
+of small formats, non-finite operands included.
 
 **Kernels that need no fix-up.** Their listings already do the right thing on canonical
-operands; what that is must still be stated and proved in the IEEE model, directly, because they
-contain comparisons, selects and steps to a neighbor, for which "a non-finite value stays
-non-finite" is false.
+operands. What that is is stated and proved in the IEEE model directly, because they contain
+comparisons, selects and steps to a neighbor, for which "a non-finite value stays non-finite" is
+false.
 
 | Kernels | On canonical operands |
 |---|---|
@@ -165,8 +180,10 @@ non-finite" is false.
 | `radd`, `rmul` | for operands that are nonnegative, $+\infty$ or NaN: a NaN when an operand is a NaN or the product is $0 \cdot \infty$; otherwise a value not below the exact one, $+\infty$ on overflow |
 
 **Emission.** Packed code is emitted as listed, with blends. For scalar code the generator may
-emit the fix-up behind a branch on `f`; which is faster is measured, and the two forms compute the
-same function. The cost expected in D5 is 10 to 20% of a 2-limb addition.
+emit the fix-up behind a branch on `f`; the two forms compute the same function. Measured
+([benchmarks](../results/bench-milestone1.md)): as listed, the fix-up costs 19 to 58% of a packed
+addition and 70 to 106% of a packed multiplication, above the 10 to 20% that D5 expected; behind
+a branch it costs 0 to 6% in a chain of dependent scalar operations.
 
 ## Values that enter from the program
 
@@ -214,16 +231,21 @@ make_2(a) -> x                     make_2_limbs(h, l) -> x          ball_make_2(
 ```
 
 - `make_2(a)` is `Expansion<T, 2>` from a value of `T` or from a one-limb number: the result is
-  canonical and has the value of `a`.
-- `make_2_limbs(h, l)` is `from_limbs`: it requires $(h, l)$ to be canonical and returns it.
+  canonical and has the value of `a`. Because of the guard, $-0$ gives $(+0, +0)$.
+- `make_2_limbs(h, l)` is `from_limbs`: it requires $(h, l)$ to be canonical and returns limbs of
+  the same values (a zero limb may change sign).
 - `ball_make_2(c, r)` takes a canonical center (an object, `stored`) and a radius from the
-  program. The result is canonical: the empty set when the radius is a NaN or negative (`e` is
-  then false), the whole line when the center is not finite or the radius is $+\infty$, and
-  otherwise the ball itself. `ball_make_1(c, r)` is the same with a one-limb center supplied by
+  program. The result is canonical: the empty set when the radius is a NaN or negative,
+  $-\infty$ included (`e` is then false); otherwise the whole line when the center is not finite
+  (an infinity or a NaN) or the radius is $+\infty$; and otherwise the ball itself. `ball_make_1(c, r)` is the same with a one-limb center supplied by
   the program: its first lines are `g = guard(r)` and `c0 = guard(c)`, and it has no `k1` and
   no `cw1`. `const nan` is a quiet NaN.
 
-All of these are targets, stated in the IEEE model like the full kernels.
+*Status.* The four constructors are proved in the IEEE model, for every precision. So are the
+two facts about the guard that the rest relies on: in the real model $\mathrm{RN}(a + 0) = a$ for
+a number of the format; in the IEEE model the guard keeps finiteness and the value, turns a zero
+into $+0$, and leaves an infinity or a NaN what it is. The generated real model of `add_2_1` does
+not contain the guard yet; a lemma shows that with it the kernel computes the same values.
 
 ## Second-wave kernels
 
@@ -367,14 +389,14 @@ exact value turns into one relative to the computed value with $\mathrm{unit}/(1
 Every `radd` and `rmul` returns at least the exact sum or product. The product is the same with
 $\lvert xy - c_x c_y\rvert \le \lvert c_x\rvert r_y + \lvert c_y\rvert r_x + r_x r_y$.
 
-### The radius, second design (planned)
+### The radius, second design
 
 The [benchmarks](../results/bench-milestone1.md) show that the radius dominates a `Ball`
 operation: `ball_mul_2` costs 13 to 20 times `mul_2_2` in packed code, because each of the eleven
 steps to the next number up is about ten integer operations. The radius only has to be an upper
-bound, so the cores will evaluate it with ordinary operations rounded to nearest, on nonnegative
-values, and inflate the result once at the end: three to five floating-point operations, and no
-`succ`, no `select`, no `abs_upper`.
+bound, so the second design evaluates it with ordinary operations rounded to nearest, on
+nonnegative values, and inflates the result once at the end: three to five floating-point
+operations, and no `succ`, no `select`, no `abs_upper`.
 
 ```
 ball_add_k(cx, rx, cy, ry) -> (cz, rz)      ball_mul_k(cx, rx, cy, ry) -> (cz, rz)
@@ -388,23 +410,39 @@ ball_scale_k(cx, rx, a) -> (cz, rz)           w  = fma(ax, ry, q)
   cz = mul(cx, a)                             t  = fma(az, const E, w)
   aa = abs(a)                                 rz = fma(t, const G, const H)
   az = abs(cz0)
-  p  = prod(aa, rx)
+  p  = prod(aa, rx)                         ball_sub_k: neg, then ball_add_k, with its constants
   t  = fma(az, const E, p)
   rz = fma(t, const G, const H)
 ```
 
-`E`, `G` and `H` are constants of the format, one set per kernel, each an exact expression in
-$u$, $\eta$ and the constants of the center kernel's proved bound, rounded up by the generator:
-`E` turns the center's error bound into a multiple of $\lvert c_{z0}\rvert$, `G` is a power of
-$1 + u$ that covers the rounding of every operation before the last line, and `H` covers what
-underflow can lose and the absolute term of the center's bound. The argument is the usual one
-for sums of nonnegative products: a rounded operation returns at least its exact result divided
-by $1 + u$, less $\eta/2$ for a product.
+`E`, `G` and `H` are constants of the format, one set per kernel, each an exact expression
+rounded up. With $\mathrm{rel}$ and $\mathrm{tiny}$ the two constants of the center kernel's
+proved bound, $U_q = \mathrm{rel}/(1 - \mathrm{rel})$ and $V_q = \mathrm{tiny}/(1 - \mathrm{rel})$:
 
-*Status.* A target. Sampled on the toy format $p = 4$, $q_{\min} = -7$ (387 200 pairs of balls,
-judged exactly at the corners of the operands): no containment failure. The statement, the
-special states and the full kernels below do not change; the proofs of the cores do. Until the
-proofs of the new cores are checked, the kernels above stay as they are. `radd`, `rmul` and
+| Kernel | `E` | `G` | `H` | Proved from |
+|---|---|---|---|---|
+| `ball_add_1`, `ball_sub_1` | $U_q$ | $(1+u)^3$ | $(1+u)\bigl((1+u)^2\eta + \tfrac12\eta\bigr)$ | $p \ge 1$ |
+| `ball_add_2`, `ball_sub_2` | $U_q(1+u)$ | $(1+u)^3$ | the same | $p \ge 3$ |
+| `ball_scale_1` | $U_q$ | $(1+u)^3$ | $(1+u)\bigl((1+u)^2\eta + V_q + \tfrac12\eta\bigr)$ | $p \ge 1$ |
+| `ball_scale_2` | $U_q(1+u)$ | $(1+u)^3$ | the same form | $p \ge 2$ |
+| `ball_mul_1` | $U_q$ | $(1+u)^5$ | $(1+u)\bigl(2(1+u)^4\eta + V_q + \tfrac12\eta\bigr)$ | $p \ge 1$ |
+| `ball_mul_2` | $U_q$ | $(1+u)^6$ | $(1+u)\bigl(2(1+u)^5\eta + V_q + \tfrac12\eta\bigr)$ | $p \ge 4$ |
+
+`E` turns the center's error bound into a multiple of $\lvert c_{z0}\rvert$, `G` covers the
+rounding of every operation before the last line (and, for two limbs, the difference between a
+center and its leading limb), and `H` covers what underflow can lose and the absolute term of the
+center's bound. The argument is the usual one for sums of nonnegative products: a rounded
+operation returns at least its exact result divided by $1 + u$, less $\eta/2$ for a product. The
+proofs use only that each constant is a number of the format, nonnegative, and at least its
+expression.
+
+*Status.* Containment is proved in the real model for the eight cores, in the shape of the
+statement above (and the radius is a number of the format, the center normalized for $k = 2$),
+against definitions written by hand (`proofs/theories/BallDraft.v`, `Ball2.v`), after complete
+enumerations of small formats found no failure. The generator still emits the first design
+above, and the first design's proofs stay until it switches. Enumeration suggests the constants
+have slack that is not proved away: `G` one unit in the last place smaller still encloses, and
+so does half of `H`; `H` cannot be dropped for products and scalings. `radd`, `rmul` and
 `abs_upper_2` remain kernels of their own.
 
 **Special states.** A ball value is *canonical* when it is a finite ball (center finite, and
@@ -444,18 +482,22 @@ scalar of `ball_scale` is any value of `T`.
   containment holds in every case.)
 - **B4.** If every operand is a finite ball and the kernel's *finite when* condition holds, the
   result is a finite ball. No condition is proved yet.
+- **In every case** the result contains $x \circ y$ for all $x$ and $y$ in the operands, the
+  whole line counting as containing everything. This is the statement a user of balls relies on.
 
-*Why it should hold.* With no empty operand, every radius is nonnegative or $+\infty$, so `q` is
-not a NaN. If the result is finite, `f` held: $c_{z0}$ finite gives the center's statement by the
-bridge, and a finite $r_z$ means every value of the radius computation was finite, since each
-`radd` and `rmul` is at least as large as its operands' sum or product and keeps a non-finite
-value non-finite; the real-model containment proof then applies. A whole-line operand makes
-$c_{z0}$ or $r_z$ not finite: an infinite radius reaches $r_z$ through `radd` and `rmul`, and a
-product $0 \cdot \infty$ on the way gives a NaN radius, which `f2` also rejects. That is the
-corner where an exact zero ball meets the whole line: the radius formula computes a NaN, and the
-result is the whole line, not the empty set. A scalar that is not finite gives the whole line.
+*Why it holds.* With no empty operand, every radius is nonnegative or $+\infty$, so `q` is not a
+NaN. Every value of a core of the second design reaches $c_{z0}$ or $r_z$ through additions,
+products and fused operations, which keep a non-finite value non-finite; so a finite $c_{z0}$ and
+a finite $r_z$ mean that every value was finite and equal to the real model's, and the real-model
+containment applies. A whole-line operand makes $c_{z0}$ or $r_z$ not finite, and a product
+$0 \cdot \infty$ on the way gives a NaN radius, which `f2` also rejects. That is the corner where
+an exact zero ball meets the whole line: the radius formula computes a NaN, and the result is the
+whole line, not the empty set. A scalar that is not finite gives the whole line.
 
-*Status.* B1 to B3 are targets, to be proved in the IEEE model.
+*Status.* B1, B2, B3 and containment in every case are proved in the IEEE model for the eight
+full Ball kernels with the cores of the second radius design, and for `ball_neg_k`: from $p = 2$
+for one limb (the constants must stay below the overflow threshold) and from the precision of
+the core for two limbs. B4 is not started.
 
 The oracle can judge containment exactly: the exact range of $X \circ Y$ is an interval whose
 endpoints are sums or products of the operands' endpoints, and it must lie in $[c_z - r_z,
