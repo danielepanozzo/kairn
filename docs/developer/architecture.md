@@ -96,6 +96,7 @@ of the format) or masks.
 | `select m a b` | $a$ if $m$, else $b$ | conditional move or blend, never a branch |
 | `succ a`, `pred a` | the neighbors of $a$ in the format | |
 | `const name` | a constant that depends on the format (for example the splitter $2^{\lceil p/2\rceil} + 1$) | a literal |
+| `0`, `const inf` | the literal zero, and $+\infty$ (used by the fix-ups of the non-finite layer only) | literals |
 | `call K args` | another kernel | inlined in C++, kept as a call in Rocq |
 
 Rules the generator enforces on every kernel, and refuses to generate otherwise:
@@ -338,6 +339,44 @@ In the formal model: a mask is a `bool` (`Rlt_bool`, `Rle_bool`, `Req_bool`), `s
 `if ... then ... else`, `succ` and `pred` are Flocq's, a value rounded down or up is Flocq's
 `round` with `Zfloor` or `Zceil`, and `encloses` quantifies over all real numbers within the
 radii of the centers.
+
+### Claims of the non-finite layer
+
+The claims above are about finite operands, and say nothing when output limb 0 is not finite. The
+kernels that define what happens otherwise ([IEEE-like results](design/milestone1.md#ieee-like-results),
+[special states of a ball](design/milestone1.md#ball-kernels)) carry `"domain": "extended"`:
+their operands may be infinite or NaN, and every completed line is judged. A kernel without the
+field has the domain `finite`, as before.
+
+- **`requires`** gains `canonical(NAME)` for a 2-limb operand (finite and normalized, or
+  $(\pm\infty, \pm 0)$, or all NaN) and `ball(CENTER, RADIUS)` for a ball (a finite ball with a
+  canonical finite center and a finite nonnegative radius, or center 0 and radius $+\infty$, or
+  all NaN). A one-limb operand with no requirement is any value of the format, $\pm\infty$ or
+  NaN; `power_of_two(NAME)` and `nonneg(NAME)` keep excluding everything else, except that
+  `nonneg` admits $+\infty$ and NaN in this domain.
+- **`ensures`** gains `extends`, and `encloses`, `predicate`, `rounded`, `upper`, `normalized`
+  and `error` are read as follows in this domain.
+
+| Kind | Fields | Meaning in the extended domain |
+|---|---|---|
+| `extends` | `of`, `core`: a kernel with the same inputs and outputs, `lead`: `add`, `sub` or `mul`, `finite_when`: a list of conditions | F1 to F5 of [IEEE-like results](design/milestone1.md#ieee-like-results): the output is canonical; if it is finite, every operand is finite and every `ensures` entry of `core` holds; if every operand is finite and every condition holds, the output is finite; if every operand is finite and the output is not, it is $(\pm\infty, 0)$ with the sign of `value`; if an operand is not finite, the output is the canonical form of `lead` applied to the leading limbs of the inputs, in order, by the rules of IEEE 754 |
+| `encloses` | as before, and `finite_when` | B1 to B4 of [Ball kernels](design/milestone1.md#ball-kernels): the output ball is canonical; it is empty exactly when a ball operand is empty; if it is a finite ball, every operand is finite and the containment holds; if every operand is finite and every condition holds, it is a finite ball |
+| `normalized`, `error` | as before | apply when every operand and the output are finite; the output is canonical in every case |
+| `predicate` | as before | the relation between the two values as extended real numbers; false when an operand is a NaN |
+| `rounded` | as before | for a finite operand, the rounding of `value` in the sense of the format with overflow: a result beyond $\Omega$ in the direction of rounding is the infinity; an infinite or NaN operand gives itself |
+| `upper` | as before | the output is a NaN exactly when an operand is a NaN or the operation is $0 \cdot \infty$; otherwise it is not below `value`, and `gaps` applies when it is finite |
+
+A condition of `finite_when` is `{"abs_le": EXPR, "exp": E}`: $\lvert \mathrm{EXPR}\rvert \le
+2^{q_{\max} + p + E}$, with `EXPR` an expression over the input names as in `value` and $E$ an
+integer; $2^{q_{\max} + p}$ is the overflow threshold. For example `add_2_2_full` has
+`[{"abs_le": "x", "exp": -2}, {"abs_le": "y", "exp": -2}]` and `mul_2_2_full` has
+`[{"abs_le": "x*y", "exp": -1}]`. The list is empty when no condition is proved.
+
+A kernel of this domain has a statement in the IEEE model, generated like the real-model
+statements and proved the same way. A kernel that also makes sense on finite operands alone
+(the comparisons, the conversions, `neg_2`, `abs_2`, `radd`, `rmul`) keeps its real-model
+statement and gains the IEEE-model one; a full kernel has the IEEE-model statement only, and its
+core keeps the real-model one.
 
 ## The line protocol
 

@@ -84,31 +84,85 @@ must have that shape.
 ## IEEE-like results
 
 By decision [D5](phase0/decisions.md#d5-non-finite-results), `Expansion` arithmetic returns
-canonical infinities and NaN the way `T` does, and the `kairn::finite::` variants skip that. The
-default operation is the kernel followed by a fix-up made of one extra operation, one test and
-selects:
+canonical infinities and NaN the way `T` does, and the `kairn::finite::` variants skip that.
+
+**Canonical values.** A 2-limb value is *canonical* when it is finite and normalized, or
+$(\pm\infty, 0)$, or $(\mathrm{NaN}, \mathrm{NaN})$. The zero after an infinity may have either
+sign. A one-limb value is any value of `T`.
+
+**The full kernel.** Each arithmetic kernel $K$ of two limbs is a *finite core*. The generator
+emits a second kernel `K_full`: the core followed by a fix-up made of one operation of `T` on the
+leading limbs, two tests and selects. `0` is the literal zero and `const inf` is $+\infty$.
 
 ```
-z = K(x, y)
-t = x0 op y0                 one operation of T on the leading limbs (the opaque product for *)
-if z0 is finite:        return z
-else if t is NaN:       return (NaN, ..., NaN)
-else if t is infinite:  return (t, 0, ..., 0)
-else:                   return (infinity with the sign of t, 0, ..., 0)
+add_2_2_full(x, y) -> w
+  (z0, z1) = add_2_2(x, y)       the finite core
+  t  = add(x0, y0)               the same operation of T, on the leading limbs
+  a  = abs(z0)
+  f  = lt(a, const inf)          z0 is finite
+  r0 = prod(t, const inf)        a NaN stays a NaN; any other t becomes the infinity of its sign
+  n  = eq(r0, r0)                r0 is not a NaN
+  r1 = select(n, 0, r0)
+  w0 = select(f, z0, r0)
+  w1 = select(f, z1, r1)
 ```
 
-Statement, in the IEEE model:
+The other full kernels differ in their first two lines only:
 
-- For finite normalized operands the result is either finite, normalized and within the bound, or
-  a canonical infinity; it is finite whenever statement 3 applies. The infinity has the sign of
-  the exact result: in exhaustive runs at $p = 3$ and $4$, whenever $z_0$ was not finite, $t$ was
-  neither NaN nor zero and had that sign. Not proved yet.
-- With a non-finite operand, the result is the canonical form of what the same operation of `T`
-  returns on the leading limbs: $+\infty + 1 = +\infty$, $\infty - \infty = \mathrm{NaN}$,
+| Full kernel | Core | `t` |
+|---|---|---|
+| `add_2_2_full`, `add_fast_2_2_full` | `add_2_2`, `add_fast_2_2` | `add(x0, y0)` |
+| `sub_2_2_full` | `sub_2_2` | `sub(x0, y0)` |
+| `add_2_1_full`, `sub_2_1_full`, `sub_1_2_full` | `add_2_1`, `sub_2_1`, `sub_1_2` | `add(x0, a)`, `sub(x0, a)`, `sub(a, y0)` |
+| `mul_2_2_full`, `mul_2_1_full`, `mul_pow2_2_full` | `mul_2_2`, `mul_2_1`, `mul_pow2_2` | `prod(x0, y0)`, `prod(x0, a)`, `prod(x0, c)` |
+
+`operator+` and the other operators of `Expansion<T, 2>` call the full kernels;
+`kairn::finite::add` and its siblings call the cores.
+
+**Statement of a full kernel, in the IEEE model.** The 2-limb operands are canonical; a one-limb
+operand is any value of `T` (`c` stays a finite power of two).
+
+- **F1.** $w$ is canonical.
+- **F2.** If $w_0$ is finite, then every operand is finite and $w$ satisfies the statement of the
+  core: it is normalized and within the bound.
+- **F3.** If every operand is finite and the kernel's *finite when* condition holds, then $w_0$
+  is finite. The conditions are those of [statement 3](#what-is-proved-about-an-arithmetic-kernel)
+  of the core; a kernel without a proved condition has none yet.
+- **F4.** If every operand is finite and $w_0$ is not, then $w = (\pm\infty, 0)$ with the sign of
+  the exact result.
+- **F5.** If an operand is not finite, then $w$ is the canonical form of $t$, the result of the
+  operation of `T` on the leading limbs: $+\infty + 1 = +\infty$, $\infty - \infty = \mathrm{NaN}$,
   $0 \cdot \infty = \mathrm{NaN}$.
 
-The fix-up contains comparisons and selects, for which "non-finite in, non-finite out" is false,
-so it is proved directly in the IEEE model.
+*Why it should hold.* `f` is true exactly when $z_0$ is finite. By the bridge, a finite $z_0$
+means every value of the core was finite and equal to the real model's, which gives F2 for
+finite operands; and an operand that is not finite makes $z_0$ not finite, because the leading
+limb of every operand reaches $z_0$ through operations that keep a NaN and turn an infinity into
+an infinity or a NaN. So with such an operand the result is built from $t$, which is then a NaN
+or an infinity: F5. F4 needs one more fact: when a core overflows on finite operands, $t$ is not
+zero and has the sign of the exact result. If $t$ were zero, `r0` would be a NaN, which is still
+not a finite wrong result.
+
+*Status.* All five are targets. F3 is proved for the cores `add_2_2` and `mul_2_2` (the table
+above). For F4, in complete runs at $p = 3$ and $4$, whenever $z_0$ was not finite on finite
+operands, $t$ was neither NaN nor zero and had the sign of the exact result.
+
+**Kernels that need no fix-up.** Their listings already do the right thing on canonical
+operands; what that is must still be stated and proved in the IEEE model, directly, because they
+contain comparisons, selects and steps to a neighbor, for which "a non-finite value stays
+non-finite" is false.
+
+| Kernels | On canonical operands |
+|---|---|
+| `neg_2`, `abs_2` | the result is canonical: the infinity with its sign changed or removed; a NaN stays a NaN |
+| `lt`, `le`, `eq` (all forms) | the comparison of the two values as extended real numbers; false when an operand is a NaN, as for `T` |
+| `to_nearest_2` | $x_0$ |
+| `to_down_2`, `to_up_2`, `abs_upper_2` | for a finite $x$, the rounding in the sense of `T`, which is $\pm\infty$ when the neighbor of $\pm\Omega$ is needed; an infinite or NaN $x$ gives itself (its absolute value for `abs_upper_2`) |
+| `radd`, `rmul` | for operands that are nonnegative, $+\infty$ or NaN: a NaN when an operand is a NaN or the product is $0 \cdot \infty$; otherwise a value not below the exact one, $+\infty$ on overflow |
+
+**Emission.** Packed code is emitted as listed, with blends. For scalar code the generator may
+emit the fix-up behind a branch on `f`; which is faster is measured, and the two forms compute the
+same function. The cost expected in D5 is 10 to 20% of a 2-limb addition.
 
 ## Second-wave kernels
 
@@ -252,11 +306,54 @@ exact value turns into one relative to the computed value with $\mathrm{unit}/(1
 Every `radd` and `rmul` returns at least the exact sum or product. The product is the same with
 $\lvert xy - c_x c_y\rvert \le \lvert c_x\rvert r_y + \lvert c_y\rvert r_x + r_x r_y$.
 
-**Special states**, added with the non-finite layer: a radius that is NaN is the empty set and
-makes the result empty; a center that is not finite, or an infinite radius, makes the result the
-whole line ($r = +\infty$, $c = 0$). One corner needs care: with an exact zero ball and the whole
-line, the radius formula computes $0 \cdot \infty$, which is NaN, and the result must be the
-whole line, not the empty set.
+**Special states.** A ball value is *canonical* when it is a finite ball (center finite, and
+normalized for $k = 2$; radius finite and nonnegative), or the whole line (center 0, radius
+$+\infty$), or the empty set (every limb a NaN). The Ball kernels above are finite cores; the
+public operations call `ball_*_k_full`, the core followed by a fix-up:
+
+```
+ball_add_2_full(cx, rx, cy, ry) -> (cw, rw)
+  (cz0, cz1, rz) = ball_add_2(cx, rx, cy, ry)     the finite core
+  q   = add(rx, ry)              a NaN exactly when a radius is a NaN: an operand is empty
+  e   = eq(q, q)
+  a   = abs(cz0)
+  f1  = lt(a, const inf)         the center is finite
+  f2  = lt(rz, const inf)        the radius is finite (false for a NaN)
+  f   = and(f1, f2)
+  c0  = select(f, cz0, 0)        otherwise the whole line
+  c1  = select(f, cz1, 0)
+  r   = select(f, rz, const inf)
+  cw0 = select(e, c0, q)         an empty operand gives the empty set
+  cw1 = select(e, c1, q)
+  rw  = select(e, r, q)
+```
+
+`ball_sub_k_full` and `ball_mul_k_full` are the same after their cores; for $k = 1$ there is no
+`c1`; `ball_scale_k_full` has one ball operand, so `q` is `rx` itself. `ball_neg_k` needs no
+fix-up.
+
+**Statement of a full Ball kernel, in the IEEE model.** The ball operands are canonical; the
+scalar of `ball_scale` is any value of `T`.
+
+- **B1.** The result is canonical.
+- **B2.** If an operand is empty, the result is empty; otherwise it is not.
+- **B3.** If the result is a finite ball, then every operand is a finite ball, the scalar is
+  finite, and the containment statement above holds. (The whole line contains everything, so
+  containment holds in every case.)
+- **B4.** If every operand is a finite ball and the kernel's *finite when* condition holds, the
+  result is a finite ball. No condition is proved yet.
+
+*Why it should hold.* With no empty operand, every radius is nonnegative or $+\infty$, so `q` is
+not a NaN. If the result is finite, `f` held: $c_{z0}$ finite gives the center's statement by the
+bridge, and a finite $r_z$ means every value of the radius computation was finite, since each
+`radd` and `rmul` is at least as large as its operands' sum or product and keeps a non-finite
+value non-finite; the real-model containment proof then applies. A whole-line operand makes
+$c_{z0}$ or $r_z$ not finite: an infinite radius reaches $r_z$ through `radd` and `rmul`, and a
+product $0 \cdot \infty$ on the way gives a NaN radius, which `f2` also rejects. That is the
+corner where an exact zero ball meets the whole line: the radius formula computes a NaN, and the
+result is the whole line, not the empty set. A scalar that is not finite gives the whole line.
+
+*Status.* B1 to B3 are targets, to be proved in the IEEE model.
 
 The oracle can judge containment exactly: the exact range of $X \circ Y$ is an interval whose
 endpoints are sums or products of the operands' endpoints, and it must lie in $[c_z - r_z,
