@@ -130,7 +130,7 @@ t        = add(x0, y0)
 | `fnma a b c` | RN(−ab + c) | `rnd (- (a * b) + c)` | `fma_rn(-a, b, c)` | `_mm256_fnmadd_pd` | `vfmsq(c, a, b)` |
 | `prod a b` | RN(ab + 0) | `rnd (a * b + 0)` | `fma_rn(a, b, 0.0)` | `fmadd` with `setzero` | `vfmaq` with `+0.0` |
 | `muladd a b c` | RN(ab + c) or RN(RN(ab) + c), by `--muladd` | `if fuse_V then … else …` | `a * b + c` | `add(mul(a, b), c)` | `vaddq(vmulq(a, b), c)` |
-| `lt`, `le`, `eq` | IEEE comparisons | `Rlt_bool`, `Rle_bool`, `Req_bool` | `<`, `<=`, `==` | `_mm256_cmp_pd`, `_CMP_*_OQ` | `vcltq`, `vcleq`, `vceqq` |
+| `lt`, `le`, `eq` | IEEE comparisons | `Rlt_bool`, `Rle_bool`, `Req_bool` | `lt(a, b)` as `b > a`, `le(a, b)` as `b >= a` (MSVC's constant evaluator takes `<`, `<=` with a NaN for true), `==` | `_mm256_cmp_pd`, `_CMP_*_OQ` | `vcltq`, `vcleq`, `vceqq` |
 | `and`, `or`, `not` | on masks | `andb`, `orb`, `negb` | `&`, `\|`, `!` | `and`, `or`, `not_mask` | `vandq_u64`, `vorrq_u64`, `not_mask` |
 | `select m a b` | a if m else b | `if m then a else b` | `m ? a : b` | `_mm256_blendv_pd(b, a, m)` | `vbslq(m, a, b)` |
 | `succ a`, `pred a` | IEEE nextUp, nextDown | Flocq's `succ`, `pred` | `next_up(a)`, `next_down(a)` | `next_up`, `next_down` on integer lanes | the same |
