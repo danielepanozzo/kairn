@@ -93,6 +93,22 @@ if(_absent)
 endif()
 message(STATUS "${_line}")
 
+# --- The reference pages of the site ------------------------------------------------------------
+#
+# docs.reference.check: the pages under docs/reference/ and the Reference part of the nav in
+# mkdocs.yml are what docs/tools/reference.py writes from gen/claims.json, the kernel
+# descriptions and the stored brute-force results, as kairn-gen.check is for the generated code.
+# docs.reference.test: that script's own tests (docs/tools/test_reference.py). Python only.
+if(Python3_Interpreter_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/docs/tools/reference.py")
+  add_test(NAME docs.reference.check
+    COMMAND "${Python3_EXECUTABLE}" docs/tools/reference.py --check
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  add_test(NAME docs.reference.test
+    COMMAND "${Python3_EXECUTABLE}" docs/tools/test_reference.py
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(docs.reference.check docs.reference.test PROPERTIES LABELS docs)
+endif()
+
 # --- The compiled runners -----------------------------------------------------------------------
 #
 # gen/tests/runner.cpp runs the generated scalar kernels on the line protocol, and

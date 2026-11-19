@@ -65,3 +65,33 @@ an HTML tag and the page loses it, while GitHub shows it.
 repository root (`pymdownx.snippets`); a missing file fails the build. [Getting
 started](../getting-started/index.md) includes the consumer checks' `CMakeLists.txt` files this
 way, so what the page shows is what ctest builds. GitHub shows the include line itself.
+
+## Reference pages
+
+The pages under `docs/reference/`, except `reading.md`, are generated and committed, like the
+generated C++, and the Reference part of `nav` in `mkdocs.yml` is generated between the lines
+`# BEGIN reference` and `# END reference`:
+
+```sh
+python3 docs/tools/reference.py          # rewrite them
+python3 docs/tools/reference.py --check  # fail if one differs from what would be written
+python3 docs/tools/test_reference.py     # the tests of the script and of its table
+```
+
+The script reads `gen/claims.json`, the kernel descriptions under `gen/kernels/`,
+`include/kairn/gen/bounds.hpp`, `proofs/gen/Statements.v` and the stored brute-force summaries of
+the latest milestone under `results/`, and prints every number, status and formula of a page from
+them. Rerun it after any of these changes; `--check` runs in CI (the workflow `checks.yml`) and in
+ctest (`docs.reference.check`, `docs.reference.test`).
+
+The one input written by hand is `docs/tools/reference_operations.py`: for each kernel its page's
+title and group, and the C++ forms that reach it, with their operand types. A new kernel needs an
+entry there (the script refuses to run without one), and the test fails when a public operation
+whose header comment names a kernel is not among that kernel's forms.
+
+The script knows the claim kinds and requirements of `docs/developer/architecture.md`
+("Claims", "Claims of the second wave") and nothing else: on a kind, a requirement, a field or a
+status it has no template for, it stops and names it, so that someone writes the template before
+the pages change. Kernels with `"domain": "extended"` are handled by one switch at the top of the
+script, `EXTENDED_DOMAIN`: `"fail"` (the committed value) stops on them, `"skip"` leaves them out
+and lists them on the index as not rendered yet.

@@ -28,6 +28,7 @@ The tests that `ctest` runs, by name:
 | `kairn-gen.test` | The generator's own tests, without those that compile C++ (`--no-cxx`): see [the generator's tier](#the-generators-tier). |
 | `kairn-oracle.selftest` | The oracle's own tests (`--quick`), including injected errors it must catch. It compiles its own C++ reference runner with the build's compiler; if that fails, the test fails. |
 | `kairn-oracle.claims` | The oracle can read every claim in `gen/claims.json`. |
+| `docs.reference.check`, `docs.reference.test` | The reference pages of the site are what `docs/tools/reference.py` writes, and that script's own tests ([Documentation](documentation.md#reference-pages)). |
 | `crosscheck.interp.K` | Kernel K run by the generator's interpreter on **every** operand combination of a toy format. |
 | `crosscheck.interp-restricted.K` | Kernel K run by the interpreter on every operand of a **restricted** domain of a toy format, for the kernels whose whole enumeration is too long. |
 | `crosscheck.interp-sampled.K` | The same kernels on random cases of the whole toy format, from every stratum. |
@@ -270,4 +271,4 @@ per branch at a time (a new push cancels the run in progress):
 | `build.yml`, "Build and test" | Configure, build and `ctest` with Ninja, `Release` and warnings as errors, on Linux x86-64 with GCC and with Clang (packed: AVX2), macOS arm64 with Apple clang (NEON), and Windows x64 with MSVC and with clang-cl (AVX2) |
 | `generator.yml`, "Generator's full suite" | `python3 gen/kairn-gen test --cxx CXX`, C++ included, on Linux x86-64 with GCC and with Clang, and macOS arm64 with Apple clang |
 | `proofs.yml`, "Proofs" | `make -C proofs` in the Rocq team's image `rocq/rocq-prover:9.0` (Rocq 9.0.1), with Flocq 4.2.2 from opam, cached between runs |
-| `checks.yml`, "Generated files and documentation" | `gen/kairn-gen check`, `mkdocs build --strict`, `docs/tools/check_links.py` |
+| `checks.yml`, "Generated files and documentation" | `gen/kairn-gen check`, `docs/tools/reference.py --check` and its tests, `mkdocs build --strict`, `docs/tools/check_links.py` |

@@ -91,6 +91,60 @@ nav:
   - Getting started:
       - getting-started/index.md
       - What holds today: getting-started/guarantees.md
+  # BEGIN reference: written by docs/tools/reference.py; do not edit by hand
+  - Reference:
+      - reference/index.md
+      - How to read a page: reference/reading.md
+      - Arithmetic:
+          - Sum and difference, one limb: reference/add_1_1.md
+          - Product, one limb: reference/mul_1_1.md
+          - Sum of two two-limb numbers: reference/add_2_2.md
+          - Sum of a two-limb number and a limb: reference/add_2_1.md
+          - Difference of two two-limb numbers: reference/sub_2_2.md
+          - A two-limb number minus a limb: reference/sub_2_1.md
+          - A limb minus a two-limb number: reference/sub_1_2.md
+          - Product of two two-limb numbers: reference/mul_2_2.md
+          - Product of a two-limb number and a limb: reference/mul_2_1.md
+          - Fast sum of two two-limb numbers: reference/add_fast_2_2.md
+          - Negation, two limbs: reference/neg_2.md
+          - Absolute value, two limbs: reference/abs_2.md
+      - Comparisons:
+          - Less than, two two-limb numbers: reference/lt_2_2.md
+          - At most, two two-limb numbers: reference/le_2_2.md
+          - Equality, two two-limb numbers: reference/eq_2_2.md
+          - A two-limb number less than a limb: reference/lt_2_1.md
+          - A two-limb number at most a limb: reference/le_2_1.md
+          - A two-limb number equal to a limb: reference/eq_2_1.md
+          - A limb less than a two-limb number: reference/lt_1_2.md
+          - A limb at most a two-limb number: reference/le_1_2.md
+      - Conversions to one limb:
+          - Rounding to nearest: reference/to_nearest_2.md
+          - Rounding down: reference/to_down_2.md
+          - Rounding up: reference/to_up_2.md
+          - Upper bound of the magnitude: reference/abs_upper_2.md
+      - Scaling by a power of two:
+          - Scaling a two-limb number by a power of two: reference/mul_pow2_2.md
+      - Ball operations:
+          - Sum of balls, one-limb center: reference/ball_add_1.md
+          - Sum of balls, two-limb center: reference/ball_add_2.md
+          - Difference of balls, one-limb center: reference/ball_sub_1.md
+          - Difference of balls, two-limb center: reference/ball_sub_2.md
+          - Product of balls, one-limb center: reference/ball_mul_1.md
+          - Product of balls, two-limb center: reference/ball_mul_2.md
+          - A ball times a limb, one-limb center: reference/ball_scale_1.md
+          - A ball times a limb, two-limb center: reference/ball_scale_2.md
+          - Negation of a ball, one-limb center: reference/ball_neg_1.md
+          - Negation of a ball, two-limb center: reference/ball_neg_2.md
+      - Building blocks:
+          - "TwoSum: an exact sum as two limbs": reference/two_sum.md
+          - "Fast2Sum: an exact sum of ordered operands": reference/fast_two_sum.md
+          - "TwoProd: an exact product as two limbs": reference/two_prod.md
+          - "Dekker's product: TwoProd without an FMA": reference/two_prod_dekker.md
+          - Veltkamp's split: reference/split.md
+          - An upper bound of a sum, for radii: reference/radd.md
+          - An upper bound of a product, for radii: reference/rmul.md
+  # END reference
+  - Proofs: proofs/index.md
   - Developer guide:
       - Architecture: developer/architecture.md
       - Testing: developer/testing.md
