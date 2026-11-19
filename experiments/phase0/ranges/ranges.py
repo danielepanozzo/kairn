@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
 """Exponent-range analysis per (T, k): the numbers behind the tables of the Phase 0 report.
 
-Every bound has the form  |error| <= unit * |x| + tiny  with unit ~ 2^(-k*p) and tiny a small
-multiple of the format's floor: eta = 2^qmin, the smallest subnormal, with gradual underflow, or
-lambda, the smallest normal number, when subnormals are flushed to zero (Metal). The relative
-term dominates, i.e. the k-number delivers its full k*p bits, when
-    |x| >= 2^(k*p) * floor,
-and below that the guaranteed precision at 2^E <= |x| < 2^(E+1) is
-    min(k*p, E - log2(floor))  bits.
-(k = 1 is the exception in both models: a normal result carries no absolute error, so plain T
-keeps its p bits down to lambda.) The constant in front of the floor is ignored here. Prints Markdown tables."""
+Every bound has the form  |error| <= unit * |x| + tiny  with unit ~ 2^(-k*p).
+
+Gradual underflow (model G): tiny ~ eta/2, where eta = 2^qmin is the smallest subnormal. The
+relative term dominates, i.e. the k-number delivers its full k*p bits, when
+    |x| >= 2^(k*p - 1) * eta,
+which is also exactly where the last limb's unit in the last place reaches eta, and for k = 1 it
+is the smallest normal number. Below it, a value with 2^E <= |x| < 2^(E+1) has
+    min(k*p, E - qmin + 1)  bits.
+
+Flush to zero (model Z, Metal): tiny ~ lambda, the smallest normal number, so the threshold is
+    |x| >= 2^(k*p) * lambda        and below it    min(k*p, E - log2(lambda))  bits,
+except for k = 1, where a normal result is never flushed and plain T keeps its p bits down to
+lambda.
+
+At magnitude 2^E at most floor((E - qmin) / p) + 1 limbs of a normalized number can be nonzero.
+The small constants in front of eta and lambda are ignored. Prints Markdown tables."""
 from fractions import Fraction
 from math import log10
 
@@ -28,23 +35,22 @@ print("|---|---|---|---|---|---|---|---|")
 for t, f in FORMATS.items():
     for k in BAKED[t]:
         bits = k * f["p"]
-        g, z = (f["lam"] if k == 1 else f["qmin"] + bits), (f["lam"] if k == 1 else f["lam"] + bits)
+        g, z = f["qmin"] + bits - 1, (f["lam"] if k == 1 else f["lam"] + bits)
         E = -100  # 2^-100 <= 1e-30 < 2^-99
-        eg = max(0, min(bits, E - f["qmin"]))
+        eg = max(0, min(bits, E - f["qmin"] + 1))
         ez = (bits if k == 1 and E >= f["lam"] else max(0, min(bits, E - f["lam"])))
         print(f"| {t} | {k} | {bits} | {bits * log10(2):.1f} | 2^{g} ≈ {dec(g)} | 2^{z} ≈ {dec(z)} | {eg} | {ez} |")
 
 print("\n### Other thresholds\n")
-print("| T | u = 2^-p | smallest subnormal η | smallest normal λ | largest Ω | TwoProd error-free for ab = 0 or \\|ab\\| ≥ | limbs that fit above η at \\|x\\| = 1 |")
+print("| T | u = 2^-p | smallest subnormal η | smallest normal λ | largest Ω | TwoProd error-free for ab = 0 or \\|ab\\| ≥ | nonzero limbs possible at \\|x\\| = 1 |")
 print("|---|---|---|---|---|---|---|")
 for t, f in FORMATS.items():
     tp = f["qmin"] + 2 * f["p"] - 1
-    print(f"| {t} | 2^-{f['p']} | 2^{f['qmin']} ≈ {dec(f['qmin'])} | 2^{f['lam']} ≈ {dec(f['lam'])} | (2 − 2^{1 - f['p']})·2^{f['emax']} ≈ {dec(f['emax'] + 1)} | 2^{tp} ≈ {dec(tp)} | {(1 - f['qmin']) / f['p']:.1f} |")
+    print(f"| {t} | 2^-{f['p']} | 2^{f['qmin']} ≈ {dec(f['qmin'])} | 2^{f['lam']} ≈ {dec(f['lam'])} | (2 − 2^{1 - f['p']})·2^{f['emax']} ≈ {dec(f['emax'] + 1)} | 2^{tp} ≈ {dec(tp)} | {(0 - f['qmin']) // f['p'] + 1} |")
 
-print("\n### Runtime k: largest useful k at a given magnitude (gradual underflow)\n")
-print("| T | \\|x\\| ≈ 1e+300 / 1e+30 | \\|x\\| = 1 | \\|x\\| ≈ 1e-10 | \\|x\\| ≈ 1e-100 / 1e-20 |")
+print("\n### Largest number of nonzero limbs of a normalized number at a given magnitude (gradual underflow)\n")
+print("| T | top of the range | \\|x\\| = 1 | \\|x\\| ≈ 1e-10 | \\|x\\| ≈ 1e-30 |")
 print("|---|---|---|---|---|")
 for t, f in FORMATS.items():
-    hi, lo = (996, -333) if t == "double" else (99, -67)
-    cells = [(E - f["qmin"]) // f["p"] for E in (hi, 0, -34, lo)]
+    cells = [(E - f["qmin"]) // f["p"] + 1 for E in (f["emax"], 0, -34, -100)]
     print(f"| {t} | {cells[0]} | {cells[1]} | {cells[2]} | {cells[3]} |")

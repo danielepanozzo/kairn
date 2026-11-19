@@ -25,12 +25,15 @@ underflow, *under any contraction of the kernel that the rules of the IR allow*
 2. $|z - (x \circ y)| \le c\,u^k\,|x \circ y| + t\,\eta$ (form **R**, relative to the exact
    result), or, where that is all that holds,
    $|z - (x \circ y)| \le c\,u^k\,(|x| + |y|) + t\,\eta$ (form **A**, relative to the operands);
-3. if $|x \circ y| \le \Omega_{\mathrm{safe}}$ then $z_0$ is finite.
+3. if the operands and $x \circ y$ are at most $\Omega_{\mathrm{safe}}$ in magnitude then $z_0$ is
+   finite ([Numbers](numbers.md#the-top-of-the-range)).
 
 **Exported constants.** For each operation, `kairn::traits<Expansion<T, k>>` exposes
 `unit` $\ge c\,u^k$ and `tiny` $\ge t\,\eta$ as `constexpr` values of type $T$ rounded up, the
-form (R or A), and `unit_computed` $\ge \mathrm{unit}/(1 - \mathrm{unit})$ for clients whose
-analysis is written relative to the computed value (Higham's (2.5)). A client proof written for
+form (R or A), and the pair `unit_computed` $\ge \mathrm{unit}/(1 - \mathrm{unit})$,
+`tiny_computed` $\ge \mathrm{tiny}/(1 - \mathrm{unit})$ for clients whose analysis is written
+relative to the computed value (Higham's (2.5)):
+$|z - (x \circ y)| \le \mathrm{unit\_computed}\,|z| + \mathrm{tiny\_computed}$. A client proof written for
 $u = 2^{-53}$ in the standard model carries over by substituting these.
 
 "Correct rounding" in Kairn always means *this*: an outward or nearest result within the stated
@@ -39,17 +42,16 @@ given $k$ are not a floating-point format).
 
 ## Building blocks
 
-These are the only places where exactness, rather than a bound, is claimed. The first three are
-already checked by the Phase 0 tracer
+The error-free transformations. The first three are already checked by the Phase 0 tracer
 ([`experiments/phase0/tracer/Proofs.v`](https://github.com/danielepanozzo/kairn/blob/main/experiments/phase0/tracer/Proofs.v)),
 parametric in $p$, $\eta$ and the tie rule.
 
 | Block | Code (one rounding per line) | Statement (model G) | Status |
 |---|---|---|---|
-| `TwoSum(a, b)` | 6 additions/subtractions (Knuth) | $s = \mathrm{RN}(a+b)$ and $s + e = a + b$ exactly, for all finite $a, b$ including subnormals, provided $s$ is finite. | proved in the tracer from Flocq's `TwoSum_correct` |
-| `Fast2Sum(a, b)` | $s = a \oplus b$; $z = s \ominus a$; $e = b \ominus z$ | The same, when $\lvert a\rvert \ge \lvert b\rvert$ (or the exponent of $a$ is at least that of $b$). The result $(s, e)$ is normalized. | proved in the tracer |
-| `TwoProd(a, b)` | $p = \mathrm{fma}(a, b, 0)$; $e = \mathrm{fma}(a, b, -p)$ | $p = \mathrm{RN}(ab)$, and $p + e = ab$ exactly when $ab = 0$ or $\lvert ab\rvert \ge 2^{2p-1}\eta$ ($2^{-969}$ in `double`, $2^{-102}$ in `float`). | proved in the tracer from Flocq's `mult_error_FLT` |
-| `TwoProd`, small products | same | For all finite $a, b$: $\lvert p + e - ab\rvert \le \eta/2$. | **K** (known with constant 1 for any rounding: [HJZRT23](references.md#hjzrt23)) |
+| `TwoSum(a, b)` | 6 additions/subtractions (Knuth) | $s = \mathrm{RN}(a+b)$ and $s + e = a + b$ exactly, for all finite $a, b$ including subnormals, provided no intermediate overflows. That is guaranteed when $s$ is finite **and $\lvert a\rvert < \Omega$**: at $a = \pm\Omega$ the error term can be NaN although $s$ is finite ([BGM17](references.md#bgm17)). In `double`, $a = \Omega$ with $b = -1.5 \cdot 2^{971}$ is such a case. | proved in the tracer from Flocq's `TwoSum_correct` (a model without overflow) |
+| `Fast2Sum(a, b)` | $s = a \oplus b$; $z = s \ominus a$; $e = b \ominus z$ | The same, when $\lvert a\rvert \ge \lvert b\rvert$ (or the exponent of $a$ is at least that of $b$), provided $s$ is finite: it has no spurious overflow. The result $(s, e)$ is normalized. | proved in the tracer |
+| `TwoProd(a, b)` | $p = \mathrm{fma}(a, b, 0)$; $e = \mathrm{fma}(a, b, -p)$ | $p = \mathrm{RN}(ab)$, and, provided $p$ is finite, $p + e = ab$ exactly when $ab = 0$ or $\lvert ab\rvert \ge 2^{2p-1}\eta$ ($2^{-969}$ in `double`, $2^{-102}$ in `float`). | proved in the tracer from Flocq's `mult_error_FLT` |
+| `TwoProd`, small products | same | For all finite $a, b$ with $p$ finite: $\lvert p + e - ab\rvert \le \eta/2$. | **K** (known with constant 1 for any rounding: [HJZRT23](references.md#hjzrt23)) |
 | `TwoProd`, constant evaluation | Dekker's product with Veltkamp's split (17 operations) | Exact under the same condition, and $\lvert p + e - ab\rvert \le \tfrac72\eta$ always, when no intermediate overflows. | Flocq `Dekker`; overflow precondition **P** ([BM11](references.md#bm11)) |
 | Opaque product | $p = \mathrm{fma}(a, b, 0)$ | $p = \mathrm{RN}(ab)$ as a real number (the sign of a zero may differ from `a * b`). | trivial; see [why](environment.md#the-rule-no-product-feeds-an-addition) |
 
@@ -92,7 +94,7 @@ machine-checked by [MR22](references.md#mr22), and the square root of
 | $x / y$ | DWDivDW3 (JMP Alg. 18) | 31 | 9.8 | **F** `DWDDW3_correct` ($p \ge 14$) | **K** |
 | $x / a$ | DWDivFP3 (JMP Alg. 15) | 10 | 3 | **F** `DWDFP3_correct` | **K** |
 | $\sqrt x$ | SQRTDWtoDW (LLMPR Alg. 8) | 8 | 25/8, asymptotically optimal | **F**, with case lemmas for underflow when $x \ge 2^{p}\lambda$ | 0 by exact rescaling of small $x$ |
-| $\mathrm{fma}(x, y, w)$ | product then accurate sum; a dedicated kernel ([JJLM26](references.md#jjlm26)) later | 29 | not form R: $3u^2\lvert xy + w\rvert + 4u^2\lvert xy\rvert$ (a relative bound under cancellation needs the dedicated kernel) | **K** | ≤ 4 |
+| $\mathrm{fma}(x, y, w)$ | product then accurate sum; a dedicated kernel ([JJLM26](references.md#jjlm26)) later | 29 | not form R: to first order $3u^2\lvert xy + w\rvert + 4u^2\lvert xy\rvert$ (a relative bound under cancellation needs the dedicated kernel) | **K** | ≤ 4 |
 
 Remarks:
 
@@ -105,8 +107,9 @@ Remarks:
   benchmark decision; both will have Rocq proofs or neither ships.
 - **What is missing from the literature for every row**: the underflow term, a statement that the
   result is normalized (MR22's Rocq states it for three of fifteen algorithms), and the `TwoProd`
-  exactness, which MR22 assume as a hypothesis. The $t$ targets count the product-type roundings
-  of each network at $\eta/2$ each, fused and unfused variants included.
+  exactness, which MR22 assume as a hypothesis. The $t$ targets are upper estimates: half the
+  number of product-type roundings of each network, counting its unfused variants, rounded up
+  with some slack.
 - Division and square root may land behind `UNVERIFIED` first, as the brief allows.
 
 ## k = 3 and k = 4
@@ -175,7 +178,7 @@ to handle that.**
 | k-number $\to$ k'-number, $k' > k$ | Append zeros: exact, normalized. | — |
 | k-number $\to$ k'-number, $k' < k$ | Keep the first $k'$ limbs: normalized, error at most $\frac{u^{k'}}{1-u}\lvert x_0\rvert$. | 0 |
 | Mixed-k arithmetic | Defined as: convert the narrower operand, then operate. | — |
-| `double` limbs $\leftrightarrow$ `float` limbs | A `double` is exactly a 3-limb `float` number when it is in `float` range; the conversions are exact splitting or exact summation followed by truncation, with overflow to $\pm\infty$ and an underflow term. Not in the brief: added because miso2 builds in `double` on the host and narrows to `float` for the device ([API](library.md#what-miso2-needs)). | $\le k'$ |
+| `double` limbs $\leftrightarrow$ `float` limbs | A `double` is exactly a 3-limb `float` number when it is in `float` range and a multiple of the smallest `float` subnormal (always the case above $2^{-97}$); the conversions are exact splitting or exact summation followed by truncation, with overflow to $\pm\infty$ and an underflow term. Not in the brief: added because miso2 builds in `double` on the host and narrows to `float` for the device ([API](library.md#what-miso2-needs)). | $\le k'$ |
 | `ldexp(x, n)`, `half(x)` | Each limb is scaled; the result is renormalized. Exact unless a limb becomes subnormal; always $\lvert z - 2^n x\rvert \le \tfrac k2\,\eta$. | $k/2$ |
 | `neg`, `abs` | Exact; limb-wise sign change (the sign of $x$ is the sign of $x_0$). | — |
 | `renormalize(x)` | For limbs of decreasing magnitude with bounded overlap: a normalized result with form-R error $c\,u^k$. Status **K**: the Rocq-proved renormalization of [BJMP17](references.md#bjmp17) is the starting point, but it returns the weaker ulp-nonoverlap and uses data-dependent tests. | 0 |
@@ -189,14 +192,21 @@ The first three rows are immediate; the others are status **K**.
 `compare(x, y)` and `sign(x)` return the truth about the real values, always. No tolerance, no
 "almost equal".
 
-**How.** $\mathrm{sign}(x) = \mathrm{sign}(x_0)$ by consequence 3 of the invariant. For
-`compare`, lexicographic comparison of limbs is wrong (see [Numbers](numbers.md#a-k-number)), so:
-if $x_0$ and $y_0$ differ by more than $2u(|x_0| + |y_0|)$ the leading limbs decide; otherwise the
-sign of the accurate difference decides. That is sound because the accurate subtraction has a
-purely relative bound with $c\,u^k < 1$ and $t = 0$ under gradual underflow: its result is zero
-exactly when the operands are equal and has the sign of the exact difference otherwise. Cost: two
-comparisons in the common case, one k-subtraction when the leading limbs are within two ulps.
-Status: **K**, a corollary of the addition theorem.
+**How.** $\mathrm{sign}(x) = \mathrm{sign}(x_0)$ by consequence 3 of the invariant.
+
+- **$k = 2$, and any k-number against a $T$**: comparing limbs in order is exact, because
+  $x_0 = \mathrm{RN}(x)$ for two limbs and rounding is monotone.
+- **$k \ge 3$**: comparing limbs in order is wrong (see [Numbers](numbers.md#a-k-number)), so:
+  operands of opposite sign are decided by sign; otherwise, if $x_0$ and $y_0$ differ by more than
+  $2u(|x_0| + |y_0|)$ the leading limbs decide; otherwise the sign of the accurate difference
+  decides. That is sound because the accurate subtraction has a purely relative bound with
+  $c\,u^k < 1$ and $t = 0$ under gradual underflow: its result is zero exactly when the operands
+  are equal and has the sign of the exact difference otherwise; and the difference of two finite
+  numbers of the same sign cannot overflow. Cost: two comparisons in the common case, one
+  k-subtraction when the leading limbs are within two ulps.
+
+Status: **K**. An exhaustive search on 4- to 6-bit formats found no counterexample to either
+case, nor to the conversions below.
 
 With a NaN operand comparisons return false (and `compare` returns "unordered"), as for `T`.
 
@@ -217,9 +227,12 @@ Kairn never calls `fesetround`. A result rounded down or up is obtained from the
 result and the *sign of its exact error*, then one step to the neighbor:
 
 $$\mathrm{RD}(a + b) = \begin{cases} \mathrm{pred}(s) & \text{if } e < 0 \\ s & \text{otherwise} \end{cases}
-\qquad (s, e) = \mathrm{TwoSum}(a, b),$$
+\qquad (s, e) = \mathrm{Fast2Sum}(\text{larger}, \text{smaller}),$$
 
-and likewise with `TwoProd` for products, and with the exact remainders $a - qb$ and $a - s^2$
+with the operands ordered by magnitude by two selects. `Fast2Sum` rather than `TwoSum` because it
+has no spurious overflow: with `TwoSum` and $a = \Omega$ the error term can be NaN, the test
+$e < 0$ is then false, and the "lower bound" returned would be above the exact sum. Likewise with
+`TwoProd` for products, and with the exact remainders $a - qb$ and $a - s^2$
 (one FMA each) for quotients and square roots. `pred` and `succ` are computed in
 round-to-nearest ([RZBM09](references.md#rzbm09), Algorithm 2, with its three cases as selects) or
 by stepping the bit pattern. This is the technique of the kv library's `KV_NOHWROUND` mode
@@ -227,11 +240,11 @@ by stepping the bit pattern. This is the technique of the kv library's `KV_NOHWR
 
 | Primitive on $T$ | Statement | Status |
 |---|---|---|
-| `add_down`, `add_up`, `sub_*` | Exactly $\mathrm{RD}$ / $\mathrm{RU}$ of the exact result, for all finite operands. If the nearest result overflows, the lower bound is $\Omega$ and the upper bound $+\infty$ (and symmetrically). | **K**, from `TwoSum` and Flocq's `succ`/`pred` theory |
-| `mul_down`, `mul_up` | Exactly $\mathrm{RD}$ / $\mathrm{RU}$ when $ab = 0$ or $\lvert ab\rvert \ge 2^{2p-1}\eta$. Below that, a valid bound within $2\eta$ of the exact product. | **K** |
+| `add_down`, `add_up`, `sub_*` | Exactly $\mathrm{RD}$ / $\mathrm{RU}$ of the exact result, for all finite operands. If the nearest result overflows, the lower bound is $\Omega$ and the upper bound $+\infty$ (and symmetrically). | **K**, from `Fast2Sum` and Flocq's `succ`/`pred` theory |
+| `mul_down`, `mul_up` | Exactly $\mathrm{RD}$ / $\mathrm{RU}$ when $ab = 0$ or $\lvert ab\rvert \ge 2^{2p-1}\eta$. Below that, a valid bound at most one number of the format beyond the exact directed rounding. | **K** |
 | `div_*`, `sqrt_*` | Exactly $\mathrm{RD}$ / $\mathrm{RU}$ when the remainder is representable; a valid bound one ulp wider otherwise. | **K** (the remainder properties are in Flocq for unbounded exponents only) |
 | `next_up`, `next_down` | Exactly $\mathrm{succ}$, $\mathrm{pred}$ for finite arguments; $\mathrm{succ}(\Omega) = +\infty$. | Flocq `Bsucc_correct` |
-| Radius arithmetic: `radd(a, b)`, `rmul(a, b)` for $a, b \ge 0$ | $\mathrm{next\_up}(a \oplus b) \ge a + b$ and $\mathrm{next\_up}(a \otimes b) \ge ab$, always, at most two ulps above. | **K**, immediate (this is miso2's `addUpAtNearest`) |
+| Radius arithmetic: `radd(a, b)`, `rmul(a, b)` for $a, b \ge 0$ | $\mathrm{next\_up}(a \oplus b) \ge a + b$ and $\mathrm{next\_up}(a \otimes b) \ge ab$, always, and at most 1.5 ulps of the result above the exact value. | **K**, immediate (this is miso2's `addUpAtNearest`) |
 
 **Fast paths**, used only where the instruction is by definition the same function, and only
 after the equivalence is tested on that backend: CUDA's `__dadd_rd`, `__dmul_ru`, `__fma_rd`, …
@@ -251,15 +264,19 @@ decorations; the semantics below were taken from the P1788 drafts
   An empty operand gives an empty result.
 - **Tightness.** For bounded operands and a finite result, each endpoint of the result is within
   $w\,u^k\,|e| + w'\eta$ of the corresponding endpoint $e$ of the exact range.
-  For $k = 1$: $w = 0$ for sums (the endpoints are the exact directed roundings, the tightest
-  possible) and for products, quotients and square roots outside the underflow band of the table
-  above. For $k \ge 2$: the endpoint is the round-to-nearest kernel result moved outward by its
-  own proven bound, so the target is $w \le 2c + 3$ with $c$ the constant of the kernel (status **K**).
+  For $k = 1$ the endpoints are the exact directed roundings of the exact endpoints, the tightest
+  intervals representable in $T$ (so $w = 2$), for sums always and for products, quotients and
+  square roots outside the underflow band of the table above. For $k \ge 2$ the endpoint is the
+  round-to-nearest kernel result moved outward by its own proven bound in the computed-value
+  form, so the target is $w \le 2c + 3$ with $c$ the constant of the kernel (status **K**). If an
+  endpoint kernel returns a non-finite value from finite operands, the endpoint becomes
+  $\mp\infty$, which is always sound.
 - **Partial functions** follow 1788: points outside the domain are ignored
   ($\sqrt{[-1, 4]} = [0, 2]$, $\sqrt{[-2, -1]} = \emptyset$).
-- **Division by an interval containing zero** is defined: $X / [0, 0] = \emptyset$; otherwise the
-  result is the hull of the (possibly two-piece) quotient set, which is a half-line or the whole
-  line. `mul_rev_to_pair` returns the two pieces separately, as 1788's function of that name.
+- **Division by an interval containing zero** is defined: $X / [0, 0] = \emptyset$;
+  $[0, 0] / Y = [0, 0]$ for any other $Y$; otherwise the result is the hull of the (possibly
+  two-piece) quotient set, which is a half-line or the whole line. `mul_rev_to_pair` returns the
+  two pieces separately, as 1788's function of that name.
 - **Products with zero and infinity**: $[0, 0] \cdot X = [0, 0]$ for any nonempty $X$, including
   unbounded ones. The endpoint arithmetic uses $0 \cdot \infty = 0$ for this reason (miso2's
   `mulUpZ`).
@@ -280,8 +297,11 @@ to the centers; the radius is the propagated radius plus the kernel's proven bou
 result is the whole line.
 
 In the table, $\lvert c\rvert^{+}$ is `abs_upper` of a center, and $\delta$ is the kernel's own
-error bound evaluated at the new center $c_z$: the operation's `unit` times
-$\lvert c_z\rvert^{+}$, plus its `tiny`. The formulas are shown before the rounding up.
+error bound evaluated at the new center $c_z$, in its computed-value form: `unit_computed`
+times $\lvert c_z\rvert^{+}$, plus `tiny_computed`. (The plain `unit` would not be a bound here:
+it is relative to the exact result, which is not known.) The formulas are shown before the
+rounding up; the quotient and square-root rows also use a rounded-down difference and square
+root and a rounded-up quotient.
 
 | Operation | Radius |
 |---|---|
@@ -291,8 +311,10 @@ $\lvert c_z\rvert^{+}$, plus its `tiny`. The formulas are shown before the round
 | $X / Y$, $0 \notin Y$ | $\dfrac{\lvert c_x\rvert^{+} r_y + \lvert c_y\rvert^{+} r_x}{m\,(m - r_y)} + \delta$ with $m$ a lower bound of $\lvert c_y\rvert$; the whole line if $0 \in Y$ |
 | $\sqrt X$ | $r_x / \sqrt{m - r_x} + \delta$ with $m$ a lower bound of $c_x$ when $m > r_x$; otherwise the ball enclosing $[0, \sqrt{c_x + r_x}]$; empty if $c_x + r_x < 0$ |
 
-**Tightness.** The radius is at most $(1 + 3u)^d$ times the exact value of its formula, with
-$d \le 5$ the nesting depth of the formula: only the `radd`/`rmul` steps inflate it. Against exact range arithmetic, midpoint-radius products
+**Tightness.** Each rounding step of the radius computation inflates its value by a factor of at
+most $1 + 3u$ and an absolute $2\eta$ (the absolute part matters only for radii in the subnormal
+range, where a step up is at least $\eta$); a formula has at most six such steps. Against exact
+range arithmetic, midpoint-radius products
 overestimate the radius by a factor of at most 1.5 ([Rump99](references.md#rump99)).
 
 Why `Ball` is the cheap enclosure at $k \ge 2$: one k-number kernel and a handful of `T`
@@ -334,10 +356,10 @@ $m\,\varepsilon < 1$ checked at compile time when $n$ is a constant and at run t
 | Kernel | Bound | Notes |
 |---|---|---|
 | `sum` of $n$ k-numbers | $\lvert \tilde s - s\rvert \le \gamma_{n-1}(\varepsilon_{+}) \sum \lvert x_i\rvert$ | No underflow term. Holds for any order; the proof is done for the orders actually emitted (sequential and the SIMD lane-then-reduce order). |
-| `dot` | $\lvert \tilde s - x^{\mathsf T} y\rvert \le \gamma_n(\varepsilon_{\mathrm{dot}}) \sum \lvert x_i y_i\rvert + n\,\mathrm{tiny}_{\times}$ | |
+| `dot` | $\lvert \tilde s - x^{\mathsf T} y\rvert \le \gamma_n(\varepsilon_{\mathrm{dot}}) \sum \lvert x_i y_i\rvert + n\,\tau$ | Here $\tau$ is the product's `tiny` inflated by the factor $1 + \gamma$ of the later additions, which scale the underflow terms; the exported function returns the inflated value. |
 | `axpy`, elementwise maps | The scalar bound per entry. | |
 | `convolution` | The `dot` bound per output coefficient with $n = \min(n_a, n_b)$. | miso2's polynomial product. |
-| `gemv`, `gemm` | $\lvert \widetilde{Ax} - Ax\rvert \le \gamma_n(\varepsilon_{\mathrm{dot}})\,\lvert A\rvert\lvert x\rvert + n\,\mathrm{tiny}_{\times}$ entrywise | |
+| `gemv`, `gemm` | $\lvert \widetilde{Ax} - Ax\rvert \le \gamma_n(\varepsilon_{\mathrm{dot}})\,\lvert A\rvert\lvert x\rvert + n\,\tau$ entrywise | $\tau$ as for `dot`. |
 | `sum`/`dot` of $T$ inputs returning a k-number | $\lvert \tilde s - s\rvert \le \gamma^{(k)}_n \sum \lvert x_i\rvert$ with $\gamma^{(k)}_n = O((nu)^k)$, plus $n\,\eta$ for `dot` | The k-fold-precision algorithms of [ORO05](references.md#oro05). |
 
 "Fused" means the loop body keeps an unnormalized accumulator (the error-free transformations

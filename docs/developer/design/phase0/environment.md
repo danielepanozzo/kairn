@@ -67,8 +67,10 @@ Three conclusions:
   `#pragma fp_contract(off)` work but stop the function from being inlined, which is the one thing
   a 9-flop kernel must not lose.
 
-GCC and x86-64 Clang produce correct code only because their optimizers fuse a product when it
-has no other use; that is an implementation detail, not a guarantee.
+GCC and x86-64 Clang produced correct code in every configuration. My reading, which the
+experiment does not prove, is that their optimizers fuse a product only when it has no other use,
+and here the product is also an operand of the explicit `fma`. That is an implementation detail,
+not a guarantee, and nothing in their documentation promises it.
 
 ### The rule: no product feeds an addition
 

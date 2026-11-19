@@ -153,7 +153,7 @@ struct Expansion {
 
 template <class T> struct Bound {    // an entry of the error model
     T unit, tiny;                    // |computed - exact| <= unit * |reference| + tiny
-    T unit_computed;                 // the same relative to the computed value
+    T unit_computed, tiny_computed;  // |computed - exact| <= unit_computed * |computed| + tiny_computed
     enum { result, operands } reference;
     bool verified;                   // false while the operation is UNVERIFIED
 };

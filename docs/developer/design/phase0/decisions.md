@@ -138,6 +138,7 @@ Decisions already taken within Phase 0, each reversible at your word.
 | 2026-11-18 | Kernels are emitted as non-template functions, one statement per operation | MSVC template parsing time; Clang per-expression contraction |
 | 2026-11-18 | Kernels above $k = 2$ are never force-inlined | Compile-time measurement |
 | 2026-11-18 | Scalar FMA on MSVC through `_mm_fmadd_sd` | `std::fma` is a library call under `/fp:strict` and `/Od` |
+| 2026-11-18 | Directed sums on $T$ use `Fast2Sum` on operands ordered by magnitude, not `TwoSum` | `TwoSum` can return a NaN error term at $\lvert a\rvert = \Omega$ with a finite sum, which would turn into a wrong-side bound (found by the independent review) |
 | 2026-11-18 | MSL functions start with `#pragma METAL fp math_mode(safe)` and `fp contract(off)` and use `precise::` functions | Metal probe |
 | 2026-11-18 | Generator in Python, standard library only | Small, auditable, shared with the documentation tooling |
 | 2026-11-18 | Phase 0 experiments are kept, with their recorded outputs, under `experiments/phase0/` | Every number in this report can be rerun |

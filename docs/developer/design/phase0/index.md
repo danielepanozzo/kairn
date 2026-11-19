@@ -48,6 +48,16 @@ on the M3 Max Mac, kirby, sonic and ci-windows.
 | `compile_time/` | What do 8-limb-sized kernels cost to compile? | 0.1 to 0.3 s out of line; 3 to 11 s if force-inlined at 64 sites; **MSVC cannot parse them as templates** (over 24 CPU-minutes; 0.1 s as plain functions). [Details](library.md#inlining-and-compile-time) |
 | `ranges/` | Where does each $(T, k)$ keep its precision? | [Table](numbers.md#precision-depends-on-magnitude) |
 
+The two mathematical pages ([Numbers](numbers.md), [Operations](operations.md)) were then checked
+by an independent reviewer that tested their claims by exhaustive search over 4- to 6-bit
+floating-point formats and on `double`. It confirmed the invariant's consequences, the conversion
+and comparison rules, the error-free transformations and the one-limb constants, and it found a
+dozen errors, all corrected in the text: the most serious was a `TwoSum` overflow corner at the
+largest finite number that would have made a "rounded down" sum land above the exact one; the
+others were off-by-one range thresholds, statements that hold only from three limbs on, and
+bounds stated relative to the wrong quantity. The statements marked **K** remain targets until
+their proofs exist.
+
 ## The report
 
 | Page | Covers (items of the brief's Phase 0 list) |

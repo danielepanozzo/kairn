@@ -14,8 +14,9 @@ A limb type $T$ is an IEEE 754 binary format with precision $p$:
 
 - $\mathbb{F}$ is the set of finite numbers of the format: $M \cdot 2^{q}$ with integers $|M| < 2^p$
   and $q \ge \log_2 \eta$, up to $\Omega$.
-- $\mathrm{RN}(t)$ is $t$ rounded to the nearest element of $\mathbb{F}$, ties to even. It is the
-  only rounding Kairn ever uses.
+- $\mathrm{RN}(t)$ is $t$ rounded to the nearest element of $\mathbb{F}$, ties to even, and
+  $\pm\infty$ when $|t| \ge \Omega + \tfrac12\mathrm{ulp}(\Omega)$ (the IEEE overflow rule). It is
+  the only rounding Kairn ever uses.
 - $\mathrm{ulp}(x) = 2^{\max(\lfloor \log_2 |x| \rfloor - p + 1,\ \log_2\eta)}$ for $x \ne 0$: the
   gap between consecutive numbers of the format around $x$.
 - $\mathrm{succ}(x)$ and $\mathrm{pred}(x)$ are the next number of the format above and below $x$.
@@ -53,8 +54,10 @@ known branch-free 3- and 4-limb algorithms are stated.
 
 **Consequences** (each is a short lemma; they will be the first entries of the proof library):
 
-1. $|x_{i+1}| \le \tfrac12 \mathrm{ulp}(x_i) \le u\,|x_i|$. When $x_i$ is a power of two and
-   $x_{i+1}$ has the opposite sign, the bound tightens to $\tfrac14 \mathrm{ulp}(x_i)$.
+1. $|x_{i+1}| \le \tfrac12 \mathrm{ulp}(x_i)$ and $|x_{i+1}| \le u\,|x_i|$. (If $x_i$ is subnormal
+   then $x_{i+1} = 0$, because sums in the subnormal range are exact.) When $x_i$ is a power of
+   two and $x_{i+1}$ has the opposite sign, the first bound tightens to
+   $\tfrac14 \mathrm{ulp}(x_i)$.
 2. Zeros are at the end: $x_i = 0$ implies $x_{i+1} = 0$. There are no interleaved zeros.
 3. The sign of the value is the sign of $x_0$, and the value is zero exactly when $x_0 = 0$.
 4. $|x - x_0| \le \frac{u}{1-u}\,|x_0|$, so $x_0$ approximates $x$ with relative error below $2u$.
@@ -64,14 +67,16 @@ known branch-free 3- and 4-limb algorithms are stated.
    `x[i] + x[i+1] == x[i]`. `kairn::is_normalized` does that, and debug builds assert it on every
    operand.
 
-**What it does not give.** The representation is not unique: $1 + u + u^2$ is both
-$(1,\ u,\ u^2)$ and $(1 + 2u,\ -u(1-u),\ 0)$, and both are normalized. Two consequences:
+**What it does not give, from three limbs on.** For $k = 2$ the invariant says
+$x_0 = \mathrm{RN}(x)$, so the representation is unique and comparing limbs in order compares
+values. For $k \ge 3$ neither holds: $1 + u + u^2$ is both $(1,\ u,\ u^2)$ and
+$(1 + 2u,\ -u(1-u),\ 0)$, and both are normalized. Two consequences for $k \ge 3$:
 
 - Comparing limbs lexicographically is **not** an exact comparison (the example compares
   $1 < 1 + 2u$ on the first limb for two equal values). Exact comparison is an operation with its
   own algorithm and theorem ([Operations](operations.md#comparisons-and-sign)).
-- $x_0$ is not always the correct rounding of $x$ to $T$ for $k \ge 3$ (a tie on $x_0 + x_1$ is
-  broken by $x_2$). Directed and nearest conversions to $T$ are operations too.
+- $x_0$ is not always the correct rounding of $x$ to $T$ (a tie on $x_0 + x_1$ is broken by
+  $x_2$). Directed and nearest conversions to $T$ are operations too.
 
 ### Why this invariant
 
@@ -141,31 +146,41 @@ Every core operation has the same contract shape; the per-operation statements a
 
 ## Precision depends on magnitude
 
-A normalized k-number has its limbs at least $p$ binades apart, so near $|x| = 1$ at most
-$\lfloor 1074/53 \rfloor = 20$ `double` limbs or $\lfloor 149/24 \rfloor = 6$ `float` limbs fit
-above the smallest subnormal. More to the point, every bound has the form
+A normalized k-number has its limbs at least $p$ binades apart, so a number near $|x| = 1$ can
+have at most 21 nonzero `double` limbs or 7 nonzero `float` limbs (the brief's "about 20" and
+"about 6"): at magnitude $2^E$ the count is $\lfloor (E - \log_2\eta)/p \rfloor + 1$. More to the
+point, every bound has the form
 
 $$|\text{computed} - \text{exact}| \le \mathrm{unit} \cdot |\text{exact}| + \mathrm{tiny},
 \qquad \mathrm{unit} \approx c\,u^k, \quad \mathrm{tiny} \approx t\,\eta \ \text{(model G)}\ \text{or}\ t\,\lambda \ \text{(model Z)},$$
 
-and the k-number delivers its full $k\,p$ bits only where the relative term dominates, that is for
-$|x| \ge 2^{kp}\,\eta$ (or $2^{kp}\lambda$ when subnormals are flushed). Below that threshold the
-guaranteed precision at $2^E \le |x| < 2^{E+1}$ is $\min(k\,p,\ E - \log_2\eta)$ bits: one bit is
-lost per binade. The table is computed by
+and the k-number delivers its full $k\,p$ bits only where the relative term dominates.
+
+- **Model G**: the absolute term is of the order of $\eta/2$, so the threshold is
+  $|x| \ge 2^{kp-1}\,\eta$. This is also exactly where the last limb's unit in the last place
+  reaches $\eta$; for $k = 1$ it is $\lambda$, and for $k = 2$ it is the `TwoProd` exactness
+  threshold of [Operations](operations.md#building-blocks). Below it a value with
+  $2^E \le |x| < 2^{E+1}$ has $\min(k\,p,\ E - \log_2\eta + 1)$ bits: one bit is lost per binade.
+- **Model Z**: the absolute term is of the order of $\lambda$, so the threshold is
+  $|x| \ge 2^{kp}\lambda$ and below it there are $\min(k\,p,\ E - \log_2\lambda)$ bits. The
+  exception is $k = 1$: a normal result is never flushed, so plain `float` keeps its 24 bits down
+  to $\lambda$.
+
+The table is computed by
 [`experiments/phase0/ranges/ranges.py`](https://github.com/danielepanozzo/kairn/blob/main/experiments/phase0/ranges/ranges.py)
 and ignores the small constants $c$ and $t$.
 
 | T | k | bits ($k\,p$) | decimal digits | full precision for $\lvert x\rvert \ge$ (G: CPU, CUDA) | (Z: Metal) | bits at $\lvert x\rvert = 10^{-30}$ (G) | (Z) |
 |---|---|---|---|---|---|---|---|
 | double | 1 | 53 | 16.0 | $2^{-1022} \approx 2.2\cdot10^{-308}$ | — | 53 | — |
-| double | 2 | 106 | 31.9 | $2^{-968} \approx 4.0\cdot10^{-292}$ | — | 106 | — |
-| double | 3 | 159 | 47.9 | $2^{-915} \approx 3.6\cdot10^{-276}$ | — | 159 | — |
-| double | 4 | 212 | 63.8 | $2^{-862} \approx 3.3\cdot10^{-260}$ | — | 212 | — |
-| double | 8 | 424 | 127.6 | $2^{-650} \approx 2.1\cdot10^{-196}$ | — | 424 | — |
+| double | 2 | 106 | 31.9 | $2^{-969} \approx 2.0\cdot10^{-292}$ | — | 106 | — |
+| double | 3 | 159 | 47.9 | $2^{-916} \approx 1.8\cdot10^{-276}$ | — | 159 | — |
+| double | 4 | 212 | 63.8 | $2^{-863} \approx 1.6\cdot10^{-260}$ | — | 212 | — |
+| double | 8 | 424 | 127.6 | $2^{-651} \approx 1.1\cdot10^{-196}$ | — | 424 | — |
 | float | 1 | 24 | 7.2 | $2^{-126} \approx 1.2\cdot10^{-38}$ | $2^{-126} \approx 1.2\cdot10^{-38}$ | 24 | 24 |
-| float | 2 | 48 | 14.4 | $2^{-101} \approx 3.9\cdot10^{-31}$ | $2^{-78} \approx 3.3\cdot10^{-24}$ | 48 | 26 |
-| float | 3 | 72 | 21.7 | $2^{-77} \approx 6.6\cdot10^{-24}$ | $2^{-54} \approx 5.6\cdot10^{-17}$ | 49 | 26 |
-| float | 4 | 96 | 28.9 | $2^{-53} \approx 1.1\cdot10^{-16}$ | $2^{-30} \approx 9.3\cdot10^{-10}$ | 49 | 26 |
+| float | 2 | 48 | 14.4 | $2^{-102} \approx 2.0\cdot10^{-31}$ | $2^{-78} \approx 3.3\cdot10^{-24}$ | 48 | 26 |
+| float | 3 | 72 | 21.7 | $2^{-78} \approx 3.3\cdot10^{-24}$ | $2^{-54} \approx 5.6\cdot10^{-17}$ | 50 | 26 |
+| float | 4 | 96 | 28.9 | $2^{-54} \approx 5.6\cdot10^{-17}$ | $2^{-30} \approx 9.3\cdot10^{-10}$ | 50 | 26 |
 
 Metal has no `double`, so the Z column applies to `float` only. What the table says in practice:
 
@@ -173,27 +188,32 @@ Metal has no `double`, so the Z column applies to `float` only. What the table s
   underflow term matters only for adversarial inputs.
 - **`float` limbs lose precision at magnitudes that occur in real data.** `Expansion<float, 4>`
   keeps its 96 bits only above about $10^{-16}$ on CUDA and only above about $10^{-9}$ on Metal.
-  A quantity near $10^{-30}$ has at most 49 bits on CUDA and 26 on Metal, however large $k$ is. This is a
+  A quantity near $10^{-30}$ has at most 50 bits on CUDA and 26 on Metal, however large $k$ is. This is a
   property of the format, not of the algorithms, and no implementation can avoid it; the cure is
   for the client to scale its data (exact scaling by powers of two is provided). The getting-started
   page on choosing $T$ and $k$ will lead with this table, and it is part of the
   float-versus-double recommendation for CUDA ([Plan](plan.md#performance-targets)).
-- **Runtime k** is useful up to $\lfloor (E - \log_2\eta)/p \rfloor$ limbs at magnitude $2^E$:
-  about 20 `double` or 6 `float` limbs near 1, 39 or 10 near the top of the range. The runtime-k
+- **Runtime k** is useful up to $\lfloor (E - \log_2\eta)/p \rfloor + 1$ limbs at magnitude
+  $2^E$: 21 `double` or 7 `float` limbs near 1, 40 or 12 at the top of the range. The runtime-k
   path rejects larger $k$ at construction rather than carry limbs that cannot hold bits.
 
 ### The top of the range
 
 Flocq's formats, and therefore the proofs, have no largest exponent. The connection to real
 arithmetic is the dichotomy stated above (*finite first limb implies the bound*) plus, for each
-operation, a **no-spurious-overflow** lemma: if the exact result satisfies
-$|x \circ y| \le \Omega_{\mathrm{safe}}$ then the result is finite. The safe threshold is an
-output of each proof; for the additions it is within a factor $1 - O(u)$ of $\Omega$ (the only
-spurious overflow of `TwoSum` is at $|a| = \Omega$, [BGM17](references.md#bgm17)), and for
-products it is where the leading product overflows. The compile-time path is narrower: Dekker's
-product splits a limb by multiplying it by $2^{\lceil p/2 \rceil} + 1$, which overflows for limbs above
-about $2^{996}$ in `double` ([BM11](references.md#bm11)), so the constant-evaluation variant rescales by
-an exact power of two first; that rescaling is part of the kernel and of its proof.
+operation, a **no-spurious-overflow** lemma: if the operands and the exact result are at most
+$\Omega_{\mathrm{safe}}$ in magnitude then the result is finite. The safe threshold is an output
+of each proof, and it has to be a condition on the operands too, not only on the result: a
+`TwoSum` whose first operand is exactly $\pm\Omega$ can return a NaN error term although its sum
+is finite ([BGM17](references.md#bgm17); with $x = \Omega$ and $y \approx -\Omega/2$ the 2-limb
+addition returns NaN for an exact result of $\Omega/2$). The target is
+$\Omega_{\mathrm{safe}} = \Omega/4$ for additions, and where the leading product overflows for
+products. Between $\Omega_{\mathrm{safe}}$ and $\Omega$ a result is either correct or not finite.
+The compile-time path is narrower: Dekker's product splits a limb by multiplying it by
+$2^{\lceil p/2 \rceil} + 1$, which overflows for limbs above about $2^{997}$ in `double` (the
+published sufficient condition is $2^{995}$, [BM11](references.md#bm11)), so the
+constant-evaluation variant rescales by an exact power of two first; that rescaling is part of
+the kernel and of its proof.
 
 ## Other number types
 
