@@ -596,6 +596,18 @@ def cmd_report(args):
                                                                             ' | '.join(cells)))
             cells = ['%.0f' % (1000 * base[s]['none']) for s, _ in pcols]
             print('| none (the empty table) | | | %s |' % ' | '.join(cells))
+            # The five largest kernels by operations: their share of the sum of the 63 increments,
+            # and of that sum less 63 times the increment of the smallest kernel (add_1_1), which
+            # is roughly what any kernel costs, the instantiation of its two functions.
+            top5 = [k['kernel'] for k in order[:5]]
+            cells = []
+            for s, _ in pcols:
+                inc = {k: v - base[s]['none'] for k, v in base[s].items() if k != 'none'}
+                total, floor = sum(inc.values()), inc.get('add_1_1', 0.0)
+                t5 = sum(inc[k] for k in top5)
+                cells.append('%.0f%%, %.0f%%' % (100 * t5 / total, 100 * (t5 - 5 * floor) / (total - len(inc) * floor)))
+            print('| the five largest: share of the sum of the increments; the same less the smallest\'s | | | %s |'
+                  % ' | '.join(cells))
             print()
     ph = {s: get(s, 'phases') for s, _ in COLUMNS}
     for s, t in COLUMNS:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""costs_report.py DIR: the tables of the checks of KAIRN_CHECKS and of MSVC's stack cookie on
-docs/developer/results/costs-milestone1.md, from the JSON files that kairn-bench-costs-* and
-kairn-bench write (bench/README.md, "Other costs").
+"""costs_report.py DIR [GSDIR]: the tables of the checks of KAIRN_CHECKS and of MSVC's stack cookie
+on docs/developer/results/costs-milestone1.md, from the JSON files that kairn-bench-costs-* and
+kairn-bench write in DIR, and those of gs_probe.py in GSDIR (bench/README.md, "Other costs").
 
 A file is named MACHINE-COMPILER[-GS]-PROGRAM-LEVEL-rN.json: PROGRAM costs (KAIRN_CHECKS 0),
 costs-checks (1) or api (kairn-bench --filter api/), GS gs or nogs (MSVC, with /GS or /GS-), N the
@@ -130,7 +130,7 @@ def gs_tables(runs):
                         if w:
                             vals.append(w['ns'][n] / v['ns'][n])
                 cells.append(rng(vals) if vals else '-')
-            print('| kairn-bench-%s-%s | %s |' % (prog, level_name('windows', l), ' | '.join(cells)))
+            print('| `KAIRN_CHECKS` %d, `%s` | %s |' % (prog == 'costs-checks', level_name('windows', l), ' | '.join(cells)))
     print()
     ratios = {}
     for (m, c, g, p, ll, r), v in runs.items():
@@ -148,10 +148,71 @@ def gs_tables(runs):
                             if abs(statistics.median(v) - 1) > 0.03) or 'none'))
 
 
+SHAPES = ['ret_add', 'ret_mul', 'add', 'mul', 'tp_add', 'tp_mul', 'sum', 'prod', 'dot', 'axpy', 'horner']
+TYPES = [('double', '`double`'), ('e1', '`Expansion<double, 1>`'), ('e2', '`Expansion<double, 2>`'),
+         ('b1', '`Ball<double, 1>`'), ('b2', '`Ball<double, 2>`'), ('p1', 'plain, `double limb[1]`'),
+         ('p2', 'plain, `double limb[2]`'), ('pb2', 'plain, a ball of two limbs')]
+
+
+def cell(f, g=None):
+    """'cookie' or '-', with the instructions, and those of the /GS- build when given."""
+    if f is None:
+        return 'not found'
+    text = ('**cookie**, ' if f['cookie_checks'] else '') + '%d' % f['instructions']
+    if g is not None and g['instructions'] != f['instructions']:
+        text += ' (%d)' % g['instructions']
+    return text
+
+
+def gs_probe_tables(directory):
+    def get(name):
+        path = os.path.join(directory, name)
+        return json.load(open(path)) if os.path.exists(path) else None
+    probe, fix, iso, objs = get('gs-probe.json'), get('gs-fix.json'), get('gs-isolate.json'), get('gs-objects.json')
+    if probe:
+        gs, nogs = probe['results']['/GS'], probe['results']['/GS-']
+        print('### Which functions get the cookie (%s; instructions with /GS, and with /GS- where they differ)\n'
+              % probe['compiler'])
+        print('| Shape | ' + ' | '.join(t for _, t in TYPES) + ' |')
+        print('|---|' + '---|' * len(TYPES))
+        for s in SHAPES:
+            cells = [cell(gs.get('gs_%s_%s' % (t, s)), nogs.get('gs_%s_%s' % (t, s))) for t, _ in TYPES]
+            print('| `%s` | %s |' % (s, ' | '.join(cells)))
+        n = sum(1 for f in gs.values() if f['cookie_checks'])
+        print('\n%d of %d functions read the cookie with /GS, %d with /GS-.\n' % (
+            n, len(gs), sum(1 for f in nogs.values() if f['cookie_checks'])))
+    if fix:
+        r = fix['results']['/GS, by reference']
+        print('### Expansion<T, 1> passed by const reference (%s)\n' % fix.get('patch', ''))
+        print('| Shape | `Expansion<double, 1>`, /GS, the headers as they are | the same, by const reference |')
+        print('|---|---|---|')
+        for s in SHAPES:
+            print('| `%s` | %s | %s |' % (s, cell(probe['results']['/GS'].get('gs_e1_%s' % s)) if probe else '-',
+                                         cell(r.get('gs_e1_%s' % s))))
+        print('\nWith the change, %d of %d functions read the cookie.\n' % (
+            sum(1 for f in r.values() if f['cookie_checks']), len(r)))
+    if iso:
+        print('### What triggers it (gs_isolate.cpp, /GS; instructions)\n')
+        names = ['gs_add', 'gs_add_value', 'gs_dot', 'gs_tp_add']
+        print('| Variant | ' + ' | '.join('`%s`' % n[3:] for n in names) + ' |')
+        print('|---|' + '---|' * len(names))
+        for v, what in iso['variants'].items():
+            r = iso['results']['variant %s' % v]
+            print('| %s: %s | %s |' % (v, what, ' | '.join(cell(r.get(n)) for n in names)))
+        print()
+    if objs:
+        for label, r in objs['results'].items():
+            n = sum(1 for f in r.values() if f['cookie_checks'])
+            print('%s: %d functions, %d read the cookie.' % (label, len(r), n))
+        print()
+
+
 def main():
     runs = load(sys.argv[1])
     checks_tables(runs)
     gs_tables(runs)
+    if len(sys.argv) > 2:
+        gs_probe_tables(sys.argv[2])
 
 
 if __name__ == '__main__':

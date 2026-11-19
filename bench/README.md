@@ -210,6 +210,13 @@ elsewhere (`kairn-bench`'s `api.cpp.obj`); `isolate` compiles `gs_isolate.cpp`, 
 that differ from `Expansion<double, 1>` in one thing each; `fix` compiles `gs_probe.cpp` against a
 copy of the headers in the work directory in which `Expansion<T, 1>` is passed by const reference.
 
+```sh
+python3 bench/costs_report.py results/milestone1/costs/checks results/milestone1/costs/gs
+```
+
+prints the tables of the results page from the stored runs of `costs.cpp` and `kairn-bench`
+(named `MACHINE-COMPILER[-GS]-PROGRAM-LEVEL-rN.json`) and of `gs_probe.py`.
+
 ### The quick tier on the hosted runners
 
 `ci_times.py collect` reads, with read-only `gh` calls, the last runs of the workflow "Build and
