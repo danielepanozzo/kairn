@@ -96,6 +96,7 @@ of the format) or masks.
 | `and`, `or`, `not` | on masks | |
 | `select m a b` | $a$ if $m$, else $b$ | conditional move or blend, never a branch |
 | `succ a`, `pred a` | the neighbors of $a$ in the format | |
+| `guard a` | $\mathrm{RN}(a + 0)$, which is $a$ (a zero comes out positive) | `a + T(0)`: see rule R3 |
 | `const name` | a constant that depends on the format (for example the splitter $2^{\lceil p/2\rceil} + 1$) | a literal |
 | `0`, `const inf` | the literal zero, and $+\infty$ (used by the fix-ups of the non-finite layer only) | literals |
 | `call K args` | another kernel | inlined in C++, kept as a call in Rocq |
@@ -116,6 +117,25 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    explicit finiteness test.
 5. Every kernel names its theorem, its source and that source's license, or is marked
    `unverified`.
+6. **R3. Values that enter from the program.** A kernel that the public headers call with a
+   value of `T` supplied by the program (a scalar operand, a limb or a radius given to a
+   constructor) uses that input only through `guard`, except as a factor of `prod` or of an
+   FMA, or as an operand of a comparison. The reason: the program may have written
+   `x + a * b`, and a compiler that contracts across statements then fuses the program's own
+   multiplication into the kernel's first addition, so that the kernel no longer computes with a
+   number of the format. After `guard` nothing is left to fuse: the only thing a compiler can
+   fuse is a multiplication feeding an addition, and `(a * b) + 0` fused is the rounded product
+   itself. The limbs of a multi-limb operand need no guard: they are outputs of kernels (R2) or
+   were guarded when the object was constructed.
+
+R3 was added in Milestone 1, after a test of the public headers found the failure it prevents:
+with GCC 13 and 16 at their default setting, with Apple clang on AArch64 under
+`-ffp-contract=fast` and with MSVC under `/fp:contract`, `x + a * b`, `x - a * b` and `a * b - x` for a 2-limb `x` differed from the same
+operation on the rounded product in every one of 200 000 cases chosen to cancel; with the guard,
+in none, on those compilers and on the settings that do not contract. The guard relies on what
+the opaque product already relies on: the compiler honors the sign of zero, so it may not remove
+`a + 0`. Until the generator emits `guard` and checks the rule, the public headers apply it by
+hand in one helper.
 
 A kernel may name a second kernel as its **constant-evaluation variant**. The emitted C++
 function then dispatches on `__builtin_is_constant_evaluated()`. Inside such a variant, `prod` is
