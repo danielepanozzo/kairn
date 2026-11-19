@@ -29,9 +29,9 @@
 
    The statements, in the form of IeeeExtStatementsDraft.v, are at the end of the file. *)
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra Psatz.
-From Flocq Require Import Core Binary.
+From Flocq Require Import Core Plus_error Binary.
 From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Format Normalized EFT Program IeeeBridge IeeeEFT IeeeAdd22 IeeeMul22
+From Kairn Require Import Format Normalized EFT Program IeeeBridge IeeeEFT IeeeAdd22 IeeeMul22 IeeeSub
   IeeeMore IeeeStatementsDraft IeeeExtStatementsDraft IeeeOps IeeeRange.
 From Kairn Require IeeeDraft.
 Import ListNotations.
@@ -516,6 +516,672 @@ apply (full_template _ _ _ (fin x0 /\ fin y0)
   intros K. apply (prod_not_finite prec emax nan_fma). now apply not_both_finite.
 Qed.
 
+(** * The other kernels *)
+
+(* A sum of two numbers of the format that is not zero is at least eta in magnitude, so
+   it does not round to zero. *)
+Lemma sum_round_neq_0 :
+  forall a b : R, format a -> format b -> a + b <> 0 -> rnd (a + b) <> 0.
+Proof.
+intros a b Fa Fb Z E.
+assert (Feta : format (bpow radix2 emin)).
+{ apply generic_format_bpow. unfold FLT_exp. lia. }
+destruct (Rlt_or_le (Rabs (a + b)) (bpow radix2 emin)) as [L|L].
+- apply Z. apply (format_lt_eta emin prec); trivial.
+  apply FLT_format_plus_small; trivial.
+  apply Rlt_le, Rlt_le_trans with (1 := L). apply bpow_le. lia.
+- generalize (round_abs_ge emin prec tie_even (a + b) _ Feta L). rewrite E, Rabs_R0.
+  generalize (bpow_gt_0 radix2 emin). lra.
+Qed.
+
+(* v is the exact result of an addition or of a subtraction, beyond Q in magnitude, and
+   a + b the same operation on the leading limbs, within Q of it: a + b does not round
+   to zero and has the sign of v. *)
+Lemma lead_sum_sign :
+  forall a b v : R, format a -> format b ->
+  Q < Rabs v -> Rabs (v - (a + b)) <= Q ->
+  rnd (a + b) <> 0 /\ Rlt_bool (a + b) 0 = Rlt_bool v 0.
+Proof.
+intros a b v Fa Fb Hv Hd.
+apply Rabs_le_inv in Hd.
+assert (S : (0 < v /\ 0 < a + b) \/ (v < 0 /\ a + b < 0)).
+{ unfold Rabs in Hv. destruct (Rcase_abs v); [right|left]; lra. }
+split.
+- apply sum_round_neq_0; trivial. lra.
+- destruct S as [[S1 S2]|[S1 S2]].
+  + rewrite 2!Rlt_bool_false by lra. reflexivity.
+  + rewrite 2!Rlt_bool_true by lra. reflexivity.
+Qed.
+
+Lemma U_le_Q : (2 <= prec)%Z -> U <= Q.
+Proof. intros Hp. apply bpow_le. lia. Qed.
+
+Lemma not_fin : forall x : float, ~ fin x -> is_finite prec emax x = false.
+Proof. intros x K. destruct (is_finite prec emax x) eqn:F; trivial. now elim K. Qed.
+
+(* The first components of two equal pairs. *)
+Lemma pair_eq_fst :
+  forall (A B : Type) (a a' : A) (b b' : B), (a, b) = (a', b') -> a = a'.
+Proof. intros A B a a' b b' E. exact (f_equal fst E). Qed.
+
+Notation sub_2_2 := (IeeeDraft.sub_2_2 prec emax nan_plus nan_minus nan_opp).
+Notation add_2_1 := (IeeeDraft.add_2_1 prec emax nan_plus nan_minus).
+Notation sub_2_1 := (IeeeDraft.sub_2_1 prec emax nan_plus nan_minus nan_opp).
+Notation sub_1_2 := (IeeeDraft.sub_1_2 prec emax nan_plus nan_minus nan_opp).
+Notation add_fast_2_2 := (IeeeDraft.add_fast_2_2 prec emax nan_plus nan_minus).
+Notation mul_2_1 := (IeeeDraft.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma).
+Notation mul_pow2_2 := (IeeeDraft.mul_pow2_2 prec emax nan_plus nan_minus nan_fma).
+
+(** ** The cores *)
+
+(* For each core: the cone (a finite z0 means finite operands), and, on finite operands
+   that satisfy its requirements, correctness, a threshold, and what an overflow says. *)
+
+Lemma add_2_2_core :
+  (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : float,
+  let '(z0, z1) := add_2_2 x0 x1 y0 y1 in
+  (fin z0 -> fin x0 /\ fin y0) /\
+  (fin x0 -> fin x1 -> fin y0 -> fin y1 ->
+   normalized_2 emin prec (b2r x0) (b2r x1) -> normalized_2 emin prec (b2r y0) (b2r y1) ->
+   (fin z0 ->
+    fin z1 /\ normalized_2 emin prec (b2r z0) (b2r z1) /\
+    Rabs ((b2r z0 + b2r z1) - ((b2r x0 + b2r x1) + (b2r y0 + b2r y1)))
+    <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) + (b2r y0 + b2r y1))) /\
+   (Rabs (b2r x0) <= Q -> Rabs (b2r y0) <= Q -> fin z0) /\
+   (is_finite prec emax z0 = false ->
+    Q < Rabs ((b2r x0 + b2r x1) + (b2r y0 + b2r y1)))).
+Proof.
+intros Hp x0 x1 y0 y1.
+set (e := [x0; x1; y0; y1]).
+generalize (add_2_2_values_correct prec emax nan_plus nan_minus nan_opp nan_fma Hp x0 x1 y0 y1).
+destruct (add_2_2 x0 x1 y0 y1) as [z0 z1] eqn:EK. intros V.
+assert (Ez0 : z0 = nth 21 (runB IeeeDraft.add_2_2_prog e) d0).
+{ generalize (add_2_2_runB prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 y0 y1).
+  rewrite EK. unfold e. intros K. exact (pair_eq_fst _ _ _ _ _ _ K). }
+split.
+- rewrite Ez0. intros Fz. split.
+  + exact (cone_input IeeeDraft.add_2_2_prog e 21 0 eq_refl eq_refl (Nat.lt_0_succ 3) Fz).
+  + apply (cone_input IeeeDraft.add_2_2_prog e 21 2 eq_refl eq_refl); trivial. simpl. lia.
+- intros F0 F1 G0 G1 Nx Ny.
+  assert (Fe : finite_all e) by (repeat constructor; assumption).
+  split; [|split].
+  + exact (V F0 F1 G0 G1 Nx Ny).
+  + intros Hx Hy. rewrite Ez0. apply (nth_fin prec emax).
+    apply (run_sim prec emax nan_plus nan_minus nan_opp nan_fma IeeeDraft.add_2_2_prog e Fe).
+    exact (add_2_2_range prec emax Hp x0 x1 y0 y1 Nx Ny Hx Hy).
+  + rewrite Ez0. intros Fz. apply Rnot_le_lt. intros K.
+    exact (overflow_out_of_range IeeeDraft.add_2_2_prog e 21 Fe Fz
+             (add_2_2_range_sum prec emax Hp x0 x1 y0 y1 Nx Ny K)).
+Qed.
+
+Lemma add_fast_2_2_core :
+  (2 <= prec)%Z ->
+  forall x0 x1 y0 y1 : float,
+  let '(z0, z1) := add_fast_2_2 x0 x1 y0 y1 in
+  (fin z0 -> fin x0 /\ fin y0) /\
+  (fin x0 -> fin x1 -> fin y0 -> fin y1 ->
+   normalized_2 emin prec (b2r x0) (b2r x1) -> normalized_2 emin prec (b2r y0) (b2r y1) ->
+   (fin z0 ->
+    fin z1 /\ normalized_2 emin prec (b2r z0) (b2r z1) /\
+    Rabs ((b2r z0 + b2r z1) - ((b2r x0 + b2r x1) + (b2r y0 + b2r y1)))
+    <= 3 * u prec ^ 2 * (Rabs (b2r x0 + b2r x1) + Rabs (b2r y0 + b2r y1))) /\
+   (Rabs (b2r x0) <= Q -> Rabs (b2r y0) <= Q -> fin z0) /\
+   (is_finite prec emax z0 = false ->
+    Q < Rabs ((b2r x0 + b2r x1) + (b2r y0 + b2r y1)))).
+Proof.
+intros Hp x0 x1 y0 y1.
+set (e := [x0; x1; y0; y1]).
+generalize (add_fast_2_2_values_correct prec emax nan_plus nan_minus nan_opp nan_fma Hp x0 x1 y0 y1).
+destruct (add_fast_2_2 x0 x1 y0 y1) as [z0 z1] eqn:EK. intros V.
+assert (Ez0 : z0 = nth 12 (runB IeeeDraft.add_fast_2_2_prog e) d0).
+{ generalize (add_fast_2_2_runB prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 y0 y1).
+  rewrite EK. unfold e. intros K. exact (pair_eq_fst _ _ _ _ _ _ K). }
+split.
+- rewrite Ez0. intros Fz. split.
+  + exact (cone_input IeeeDraft.add_fast_2_2_prog e 12 0 eq_refl eq_refl (Nat.lt_0_succ 3) Fz).
+  + apply (cone_input IeeeDraft.add_fast_2_2_prog e 12 2 eq_refl eq_refl); trivial. simpl. lia.
+- intros F0 F1 G0 G1 Nx Ny.
+  assert (Fe : finite_all e) by (repeat constructor; assumption).
+  split; [|split].
+  + exact (V F0 F1 G0 G1 Nx Ny).
+  + intros Hx Hy. rewrite Ez0. apply (nth_fin prec emax).
+    apply (run_sim prec emax nan_plus nan_minus nan_opp nan_fma IeeeDraft.add_fast_2_2_prog e Fe).
+    exact (add_fast_2_2_range prec emax Hp x0 x1 y0 y1 Nx Ny Hx Hy).
+  + rewrite Ez0. intros Fz. apply Rnot_le_lt. intros K.
+    exact (overflow_out_of_range IeeeDraft.add_fast_2_2_prog e 12 Fe Fz
+             (add_fast_2_2_range_sum prec emax Hp x0 x1 y0 y1 Nx Ny K)).
+Qed.
+
+Lemma add_2_1_core :
+  (3 <= prec)%Z ->
+  forall x0 x1 a : float,
+  let '(z0, z1) := add_2_1 x0 x1 a in
+  (fin z0 -> fin x0 /\ fin a) /\
+  (fin x0 -> fin x1 -> fin a -> normalized_2 emin prec (b2r x0) (b2r x1) ->
+   (fin z0 ->
+    fin z1 /\ normalized_2 emin prec (b2r z0) (b2r z1) /\
+    Rabs ((b2r z0 + b2r z1) - ((b2r x0 + b2r x1) + b2r a))
+    <= 2 * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) + b2r a)) /\
+   (Rabs (b2r x0) <= Q -> Rabs (b2r a) <= Q -> fin z0) /\
+   (is_finite prec emax z0 = false -> Q < Rabs ((b2r x0 + b2r x1) + b2r a))).
+Proof.
+intros Hp x0 x1 a.
+set (e := [x0; x1; a]).
+generalize (add_2_1_values_correct prec emax nan_plus nan_minus nan_opp nan_fma Hp x0 x1 a).
+destruct (add_2_1 x0 x1 a) as [z0 z1] eqn:EK. intros V.
+assert (Ez0 : z0 = nth 11 (runB IeeeDraft.add_2_1_prog e) d0).
+{ generalize (add_2_1_runB prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a).
+  rewrite EK. unfold e. intros K. exact (pair_eq_fst _ _ _ _ _ _ K). }
+split.
+- rewrite Ez0. intros Fz. split.
+  + exact (cone_input IeeeDraft.add_2_1_prog e 11 0 eq_refl eq_refl (Nat.lt_0_succ 2) Fz).
+  + apply (cone_input IeeeDraft.add_2_1_prog e 11 2 eq_refl eq_refl); trivial. simpl. lia.
+- intros F0 F1 Fa Nx.
+  assert (Fe : finite_all e) by (repeat constructor; assumption).
+  split; [|split].
+  + exact (V F0 F1 Fa Nx).
+  + intros Hx Ha. rewrite Ez0. apply (nth_fin prec emax).
+    apply (run_sim prec emax nan_plus nan_minus nan_opp nan_fma IeeeDraft.add_2_1_prog e Fe).
+    exact (add_2_1_range prec emax Hp x0 x1 a Nx Hx Ha).
+  + rewrite Ez0. intros Fz. apply Rnot_le_lt. intros K.
+    exact (overflow_out_of_range IeeeDraft.add_2_1_prog e 11 Fe Fz
+             (add_2_1_range_sum prec emax Hp x0 x1 a Nx K)).
+Qed.
+
+Lemma mul_2_1_core :
+  (2 <= prec)%Z ->
+  forall x0 x1 a : float,
+  let '(z0, z1) := mul_2_1 x0 x1 a in
+  (fin z0 -> fin x0 /\ fin a) /\
+  (fin x0 -> fin x1 -> fin a -> normalized_2 emin prec (b2r x0) (b2r x1) ->
+   (fin z0 ->
+    fin z1 /\ normalized_2 emin prec (b2r z0) (b2r z1) /\
+    Rabs ((b2r z0 + b2r z1) - ((b2r x0 + b2r x1) * b2r a))
+    <= 2 * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) * b2r a) + 1 * eta emin) /\
+   (Rabs ((b2r x0 + b2r x1) * b2r a) <= bpow radix2 (emax - 1) -> fin z0) /\
+   (is_finite prec emax z0 = false -> rnd (b2r x0 * b2r a + 0) <> 0)).
+Proof.
+intros Hp x0 x1 a.
+set (e := [x0; x1; a]).
+generalize (mul_2_1_values_correct prec emax nan_plus nan_minus nan_opp nan_fma Hp x0 x1 a).
+destruct (mul_2_1 x0 x1 a) as [z0 z1] eqn:EK. intros V.
+assert (Ez0 : z0 = nth 6 (runB IeeeDraft.mul_2_1_prog e) d0).
+{ generalize (mul_2_1_runB prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a).
+  rewrite EK. unfold e. intros K. exact (pair_eq_fst _ _ _ _ _ _ K). }
+split.
+- rewrite Ez0. intros Fz. split.
+  + exact (cone_input IeeeDraft.mul_2_1_prog e 6 0 eq_refl eq_refl (Nat.lt_0_succ 2) Fz).
+  + apply (cone_input IeeeDraft.mul_2_1_prog e 6 2 eq_refl eq_refl); trivial. simpl. lia.
+- intros F0 F1 Fa Nx.
+  assert (Fe : finite_all e) by (repeat constructor; assumption).
+  split; [|split].
+  + exact (V F0 F1 Fa Nx).
+  + intros Hxa. rewrite Ez0. apply (nth_fin prec emax).
+    apply (run_sim prec emax nan_plus nan_minus nan_opp nan_fma IeeeDraft.mul_2_1_prog e Fe).
+    exact (mul_2_1_range prec emax Hp x0 x1 a Nx Hxa).
+  + rewrite Ez0. intros Fz K.
+    exact (overflow_out_of_range IeeeDraft.mul_2_1_prog e 6 Fe Fz
+             (mul_2_1_range_zero prec emax x0 x1 a Nx K)).
+Qed.
+
+Lemma mul_pow2_2_core :
+  (2 <= prec)%Z ->
+  forall x0 x1 c : float,
+  let '(z0, z1) := mul_pow2_2 x0 x1 c in
+  (fin z0 -> fin x0 /\ fin c) /\
+  (fin x0 -> fin x1 -> fin c -> normalized_2 emin prec (b2r x0) (b2r x1) ->
+   (exists n : Z, b2r c = bpow radix2 n) ->
+   (fin z0 ->
+    fin z1 /\ normalized_2 emin prec (b2r z0) (b2r z1) /\
+    Rabs ((b2r z0 + b2r z1) - ((b2r x0 + b2r x1) * b2r c)) <= 1 * eta emin) /\
+   (Rabs ((b2r x0 + b2r x1) * b2r c) <= bpow radix2 (emax - 1) -> fin z0) /\
+   (is_finite prec emax z0 = false -> rnd (b2r x0 * b2r c + 0) <> 0)).
+Proof.
+intros Hp x0 x1 c.
+set (e := [x0; x1; c]).
+generalize (mul_pow2_2_values_correct prec emax nan_plus nan_minus nan_opp nan_fma Hp x0 x1 c).
+destruct (mul_pow2_2 x0 x1 c) as [z0 z1] eqn:EK. intros V.
+assert (Ez0 : z0 = nth 5 (runB IeeeDraft.mul_pow2_2_prog e) d0).
+{ generalize (mul_pow2_2_runB prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 c).
+  rewrite EK. unfold e. intros K. exact (pair_eq_fst _ _ _ _ _ _ K). }
+split.
+- rewrite Ez0. intros Fz. split.
+  + exact (cone_input IeeeDraft.mul_pow2_2_prog e 5 0 eq_refl eq_refl (Nat.lt_0_succ 2) Fz).
+  + apply (cone_input IeeeDraft.mul_pow2_2_prog e 5 2 eq_refl eq_refl); trivial. simpl. lia.
+- intros F0 F1 Fc Nx Pc.
+  assert (Fe : finite_all e) by (repeat constructor; assumption).
+  split; [|split].
+  + exact (V F0 F1 Fc Nx Pc).
+  + intros Hxc. rewrite Ez0. apply (nth_fin prec emax).
+    apply (run_sim prec emax nan_plus nan_minus nan_opp nan_fma IeeeDraft.mul_pow2_2_prog e Fe).
+    exact (mul_pow2_2_range prec emax Hp x0 x1 c Nx Hxc).
+  + rewrite Ez0. intros Fz K.
+    exact (overflow_out_of_range IeeeDraft.mul_pow2_2_prog e 5 Fe Fz
+             (mul_pow2_2_range_zero prec emax x0 x1 c Nx K)).
+Qed.
+
+(* A subtraction is the addition of the opposite. *)
+Lemma sub_2_2_eq :
+  forall x0 x1 y0 y1 : float, sub_2_2 x0 x1 y0 y1 = add_2_2 x0 x1 (neg y0) (neg y1).
+Proof.
+intros. unfold IeeeDraft.sub_2_2. cbv zeta.
+destruct (IeeeDraft.add_2_2 prec emax nan_plus nan_minus x0 x1 (neg y0) (neg y1)) as [z0 z1].
+reflexivity.
+Qed.
+
+Lemma sub_2_1_eq : forall x0 x1 a : float, sub_2_1 x0 x1 a = add_2_1 x0 x1 (neg a).
+Proof.
+intros. unfold IeeeDraft.sub_2_1. cbv zeta.
+destruct (IeeeDraft.add_2_1 prec emax nan_plus nan_minus x0 x1 (neg a)) as [z0 z1]. reflexivity.
+Qed.
+
+Lemma sub_1_2_eq : forall a y0 y1 : float, sub_1_2 a y0 y1 = add_2_1 (neg y0) (neg y1) a.
+Proof.
+intros. unfold IeeeDraft.sub_1_2. cbv zeta.
+destruct (IeeeDraft.add_2_1 prec emax nan_plus nan_minus (neg y0) (neg y1) a) as [z0 z1].
+reflexivity.
+Qed.
+
+Lemma neg_val : forall y : float, b2r (neg y) = - b2r y.
+Proof. intros y. apply B2R_Bopp. Qed.
+
+Lemma neg_fin : forall y : float, is_finite prec emax (neg y) = is_finite prec emax y.
+Proof. intros y. apply is_finite_Bopp. Qed.
+
+(** ** add_fast_2_2_full *)
+
+Notation add_fast_2_2_full :=
+  (IeeeDraft.add_fast_2_2_full prec emax nan_plus nan_minus nan_abs nan_fma).
+
+Lemma add_fast_2_2_full_eq :
+  forall x0 x1 y0 y1 : float,
+  add_fast_2_2_full x0 x1 y0 y1
+  = fixup (fst (add_fast_2_2 x0 x1 y0 y1)) (snd (add_fast_2_2 x0 x1 y0 y1)) (add x0 y0).
+Proof.
+intros. unfold IeeeDraft.add_fast_2_2_full.
+destruct (IeeeDraft.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1) as [z0 z1]. reflexivity.
+Qed.
+
+Lemma add_fast_2_2_full_facts :
+  (2 <= prec)%Z ->
+  forall x0 x1 y0 y1 : float, canonical_2 x0 x1 -> canonical_2 y0 y1 ->
+  let '(w0, w1) := add_fast_2_2_full x0 x1 y0 y1 in
+  canonical_2 w0 w1 /\
+  (fin w0 -> (fin x0 /\ fin y0) /\ fin w1 /\ normalized_2 emin prec (b2r w0) (b2r w1) /\
+   Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) + (b2r y0 + b2r y1)))
+   <= 3 * u prec ^ 2 * (Rabs (b2r x0 + b2r x1) + Rabs (b2r y0 + b2r y1))) /\
+  (fin x0 /\ fin y0 ->
+   Rabs (b2r x0 + b2r x1) <= Q /\ Rabs (b2r y0 + b2r y1) <= Q -> fin w0) /\
+  (fin x0 /\ fin y0 -> ~ fin w0 ->
+   w0 = B754_infinity prec emax (Rlt_bool ((b2r x0 + b2r x1) + (b2r y0 + b2r y1)) 0) /\
+   w1 = pzero) /\
+  (~ (fin x0 /\ fin y0) -> canonical_of (add x0 y0) w0 w1).
+Proof.
+intros Hp x0 x1 y0 y1 Cx Cy. rewrite add_fast_2_2_full_eq.
+generalize (add_fast_2_2_core Hp x0 x1 y0 y1).
+destruct (add_fast_2_2 x0 x1 y0 y1) as [z0 z1]. cbn [fst snd]. intros [Cone Core].
+apply (full_template z0 z1 _ (fin x0 /\ fin y0)
+         (Rabs (b2r x0 + b2r x1) <= Q /\ Rabs (b2r y0 + b2r y1) <= Q)
+         (fun w0 w1 => Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) + (b2r y0 + b2r y1)))
+            <= 3 * u prec ^ 2 * (Rabs (b2r x0 + b2r x1) + Rabs (b2r y0 + b2r y1)))).
+- exact Cone.
+- intros [F0 G0]. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  destruct (canonical_2_finite y0 y1 Cy G0) as [G1 Ny].
+  exact (proj1 (Core F0 F1 G0 G1 Nx Ny)).
+- intros [F0 G0] [Hx Hy]. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  destruct (canonical_2_finite y0 y1 Cy G0) as [G1 Ny].
+  exact (proj1 (proj2 (Core F0 F1 G0 G1 Nx Ny))
+           (lead_le_bpow _ _ _ Nx Hx) (lead_le_bpow _ _ _ Ny Hy)).
+- intros [F0 G0] Fz. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  destruct (canonical_2_finite y0 y1 Cy G0) as [G1 Ny].
+  generalize (proj2 (proj2 (Core F0 F1 G0 G1 Nx Ny)) Fz). intros Hv.
+  assert (Hd : Rabs ((b2r x0 + b2r x1) + (b2r y0 + b2r y1) - (b2r x0 + b2r y0)) <= Q).
+  { replace ((b2r x0 + b2r x1) + (b2r y0 + b2r y1) - (b2r x0 + b2r y0))
+      with (b2r x1 + b2r y1) by ring.
+    apply Rle_trans with (1 := Rabs_triang _ _).
+    generalize (tail_le_half_U prec emax x0 x1 Nx) (tail_le_half_U prec emax y0 y1 Ny)
+               (U_le_Q Hp). lra. }
+  destruct (lead_sum_sign (b2r x0) (b2r y0) _ (b2r_format prec emax x0) (b2r_format prec emax y0)
+              Hv Hd) as [Z E].
+  rewrite <- E. now apply lead_add.
+- intros K. apply (add_not_finite prec emax nan_plus). now apply not_both_finite.
+Qed.
+
+(** ** sub_2_2_full *)
+
+Notation sub_2_2_full :=
+  (IeeeDraft.sub_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+
+Lemma sub_2_2_full_eq :
+  forall x0 x1 y0 y1 : float,
+  sub_2_2_full x0 x1 y0 y1
+  = fixup (fst (sub_2_2 x0 x1 y0 y1)) (snd (sub_2_2 x0 x1 y0 y1)) (sub x0 y0).
+Proof.
+intros. unfold IeeeDraft.sub_2_2_full.
+destruct (IeeeDraft.sub_2_2 prec emax nan_plus nan_minus nan_opp x0 x1 y0 y1) as [z0 z1].
+reflexivity.
+Qed.
+
+Lemma sub_2_2_full_facts :
+  (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : float, canonical_2 x0 x1 -> canonical_2 y0 y1 ->
+  let '(w0, w1) := sub_2_2_full x0 x1 y0 y1 in
+  canonical_2 w0 w1 /\
+  (fin w0 -> (fin x0 /\ fin y0) /\ fin w1 /\ normalized_2 emin prec (b2r w0) (b2r w1) /\
+   Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) - (b2r y0 + b2r y1)))
+   <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) - (b2r y0 + b2r y1))) /\
+  (fin x0 /\ fin y0 ->
+   Rabs (b2r x0 + b2r x1) <= Q /\ Rabs (b2r y0 + b2r y1) <= Q -> fin w0) /\
+  (fin x0 /\ fin y0 -> ~ fin w0 ->
+   w0 = B754_infinity prec emax (Rlt_bool ((b2r x0 + b2r x1) - (b2r y0 + b2r y1)) 0) /\
+   w1 = pzero) /\
+  (~ (fin x0 /\ fin y0) -> canonical_of (sub x0 y0) w0 w1).
+Proof.
+intros Hp x0 x1 y0 y1 Cx Cy. assert (Hp2 : (2 <= prec)%Z) by lia.
+rewrite sub_2_2_full_eq, sub_2_2_eq.
+generalize (add_2_2_core Hp x0 x1 (neg y0) (neg y1)).
+destruct (add_2_2 x0 x1 (neg y0) (neg y1)) as [z0 z1]. cbn [fst snd].
+rewrite !neg_val, !neg_fin.
+replace (b2r x0 + b2r x1 + (- b2r y0 + - b2r y1)) with (b2r x0 + b2r x1 - (b2r y0 + b2r y1))
+  by ring.
+rewrite Rabs_Ropp. intros [Cone Core].
+apply (full_template z0 z1 _ (fin x0 /\ fin y0)
+         (Rabs (b2r x0 + b2r x1) <= Q /\ Rabs (b2r y0 + b2r y1) <= Q)
+         (fun w0 w1 => Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) - (b2r y0 + b2r y1)))
+            <= (3 / (1 - (4 * u prec))) * u prec ^ 2
+               * Rabs ((b2r x0 + b2r x1) - (b2r y0 + b2r y1)))).
+- exact Cone.
+- intros [F0 G0]. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  destruct (canonical_2_finite y0 y1 Cy G0) as [G1 Ny].
+  exact (proj1 (Core F0 F1 G0 G1 Nx (normalized_2_opp emin prec _ _ Ny))).
+- intros [F0 G0] [Hx Hy]. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  destruct (canonical_2_finite y0 y1 Cy G0) as [G1 Ny].
+  exact (proj1 (proj2 (Core F0 F1 G0 G1 Nx (normalized_2_opp emin prec _ _ Ny)))
+           (lead_le_bpow _ _ _ Nx Hx) (lead_le_bpow _ _ _ Ny Hy)).
+- intros [F0 G0] Fz. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  destruct (canonical_2_finite y0 y1 Cy G0) as [G1 Ny].
+  generalize (proj2 (proj2 (Core F0 F1 G0 G1 Nx (normalized_2_opp emin prec _ _ Ny))) Fz).
+  intros Hv.
+  assert (Hd : Rabs ((b2r x0 + b2r x1) - (b2r y0 + b2r y1) - (b2r x0 + - b2r y0)) <= Q).
+  { replace ((b2r x0 + b2r x1) - (b2r y0 + b2r y1) - (b2r x0 + - b2r y0))
+      with (b2r x1 + - b2r y1) by ring.
+    apply Rle_trans with (1 := Rabs_triang _ _). rewrite Rabs_Ropp.
+    generalize (tail_le_half_U prec emax x0 x1 Nx) (tail_le_half_U prec emax y0 y1 Ny)
+               (U_le_Q Hp2). lra. }
+  destruct (lead_sum_sign (b2r x0) (- b2r y0) _ (b2r_format prec emax x0)
+              (generic_format_opp _ _ _ (b2r_format prec emax y0)) Hv Hd) as [Z E].
+  rewrite <- E. exact (lead_sub x0 y0 F0 G0 Z).
+- intros K. apply (sub_not_finite prec emax nan_minus). now apply not_both_finite.
+Qed.
+
+(** ** add_2_1_full *)
+
+Notation add_2_1_full := (IeeeDraft.add_2_1_full prec emax nan_plus nan_minus nan_abs nan_fma).
+
+Lemma add_2_1_full_eq :
+  forall x0 x1 a : float,
+  add_2_1_full x0 x1 a
+  = fixup (fst (add_2_1 x0 x1 a)) (snd (add_2_1 x0 x1 a)) (add x0 (guard a)).
+Proof.
+intros. unfold IeeeDraft.add_2_1_full. cbv zeta.
+destruct (IeeeDraft.add_2_1 prec emax nan_plus nan_minus x0 x1 a) as [z0 z1]. reflexivity.
+Qed.
+
+Lemma add_2_1_full_facts :
+  (3 <= prec)%Z ->
+  forall x0 x1 a : float, canonical_2 x0 x1 ->
+  let '(w0, w1) := add_2_1_full x0 x1 a in
+  canonical_2 w0 w1 /\
+  (fin w0 -> (fin x0 /\ fin a) /\ fin w1 /\ normalized_2 emin prec (b2r w0) (b2r w1) /\
+   Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) + b2r a))
+   <= 2 * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) + b2r a)) /\
+  (fin x0 /\ fin a -> Rabs (b2r x0 + b2r x1) <= Q /\ Rabs (b2r a) <= Q -> fin w0) /\
+  (fin x0 /\ fin a -> ~ fin w0 ->
+   w0 = B754_infinity prec emax (Rlt_bool ((b2r x0 + b2r x1) + b2r a) 0) /\ w1 = pzero) /\
+  (~ (fin x0 /\ fin a) -> canonical_of (add x0 (guard a)) w0 w1).
+Proof.
+intros Hp x0 x1 a Cx. assert (Hp2 : (2 <= prec)%Z) by lia.
+rewrite add_2_1_full_eq.
+generalize (add_2_1_core Hp x0 x1 a).
+destruct (add_2_1 x0 x1 a) as [z0 z1]. cbn [fst snd]. intros [Cone Core].
+apply (full_template z0 z1 _ (fin x0 /\ fin a)
+         (Rabs (b2r x0 + b2r x1) <= Q /\ Rabs (b2r a) <= Q)
+         (fun w0 w1 => Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) + b2r a))
+            <= 2 * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) + b2r a))).
+- exact Cone.
+- intros [F0 Fa]. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  exact (proj1 (Core F0 F1 Fa Nx)).
+- intros [F0 Fa] [Hx Ha]. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  exact (proj1 (proj2 (Core F0 F1 Fa Nx)) (lead_le_bpow _ _ _ Nx Hx) Ha).
+- intros [F0 Fa] Fz. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  generalize (proj2 (proj2 (Core F0 F1 Fa Nx)) Fz). intros Hv.
+  assert (Hd : Rabs ((b2r x0 + b2r x1) + b2r a - (b2r x0 + b2r a)) <= Q).
+  { replace ((b2r x0 + b2r x1) + b2r a - (b2r x0 + b2r a)) with (b2r x1) by ring.
+    generalize (tail_le_half_U prec emax x0 x1 Nx) (U_le_Q Hp2) (bpow_gt_0 radix2 (emax - prec)).
+    lra. }
+  destruct (lead_sum_sign (b2r x0) (b2r a) _ (b2r_format prec emax x0) (b2r_format prec emax a)
+              Hv Hd) as [Z E].
+  assert (Fg : fin (guard a)) by now rewrite (guard_finite prec emax nan_plus).
+  generalize (lead_add x0 (guard a) F0 Fg). rewrite (guard_val prec emax nan_plus a).
+  intros L. rewrite <- E. exact (L Z).
+- intros K. apply (add_not_finite prec emax nan_plus).
+  rewrite (guard_finite prec emax nan_plus). now apply not_both_finite.
+Qed.
+
+(** ** sub_2_1_full *)
+
+Notation sub_2_1_full :=
+  (IeeeDraft.sub_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+
+Lemma sub_2_1_full_eq :
+  forall x0 x1 a : float,
+  sub_2_1_full x0 x1 a
+  = fixup (fst (sub_2_1 x0 x1 a)) (snd (sub_2_1 x0 x1 a)) (sub x0 (guard a)).
+Proof.
+intros. unfold IeeeDraft.sub_2_1_full. cbv zeta.
+destruct (IeeeDraft.sub_2_1 prec emax nan_plus nan_minus nan_opp x0 x1 a) as [z0 z1].
+reflexivity.
+Qed.
+
+Lemma sub_2_1_full_facts :
+  (3 <= prec)%Z ->
+  forall x0 x1 a : float, canonical_2 x0 x1 ->
+  let '(w0, w1) := sub_2_1_full x0 x1 a in
+  canonical_2 w0 w1 /\
+  (fin w0 -> (fin x0 /\ fin a) /\ fin w1 /\ normalized_2 emin prec (b2r w0) (b2r w1) /\
+   Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) - b2r a))
+   <= 2 * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) - b2r a)) /\
+  (fin x0 /\ fin a -> Rabs (b2r x0 + b2r x1) <= Q /\ Rabs (b2r a) <= Q -> fin w0) /\
+  (fin x0 /\ fin a -> ~ fin w0 ->
+   w0 = B754_infinity prec emax (Rlt_bool ((b2r x0 + b2r x1) - b2r a) 0) /\ w1 = pzero) /\
+  (~ (fin x0 /\ fin a) -> canonical_of (sub x0 (guard a)) w0 w1).
+Proof.
+intros Hp x0 x1 a Cx. assert (Hp2 : (2 <= prec)%Z) by lia.
+rewrite sub_2_1_full_eq, sub_2_1_eq.
+generalize (add_2_1_core Hp x0 x1 (neg a)).
+destruct (add_2_1 x0 x1 (neg a)) as [z0 z1]. cbn [fst snd].
+rewrite !neg_val, !neg_fin.
+replace (b2r x0 + b2r x1 + - b2r a) with (b2r x0 + b2r x1 - b2r a) by ring.
+rewrite Rabs_Ropp. intros [Cone Core].
+apply (full_template z0 z1 _ (fin x0 /\ fin a)
+         (Rabs (b2r x0 + b2r x1) <= Q /\ Rabs (b2r a) <= Q)
+         (fun w0 w1 => Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) - b2r a))
+            <= 2 * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) - b2r a))).
+- exact Cone.
+- intros [F0 Fa]. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  exact (proj1 (Core F0 F1 Fa Nx)).
+- intros [F0 Fa] [Hx Ha]. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  exact (proj1 (proj2 (Core F0 F1 Fa Nx)) (lead_le_bpow _ _ _ Nx Hx) Ha).
+- intros [F0 Fa] Fz. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  generalize (proj2 (proj2 (Core F0 F1 Fa Nx)) Fz). intros Hv.
+  assert (Hd : Rabs ((b2r x0 + b2r x1) - b2r a - (b2r x0 + - b2r a)) <= Q).
+  { replace ((b2r x0 + b2r x1) - b2r a - (b2r x0 + - b2r a)) with (b2r x1) by ring.
+    generalize (tail_le_half_U prec emax x0 x1 Nx) (U_le_Q Hp2) (bpow_gt_0 radix2 (emax - prec)).
+    lra. }
+  destruct (lead_sum_sign (b2r x0) (- b2r a) _ (b2r_format prec emax x0)
+              (generic_format_opp _ _ _ (b2r_format prec emax a)) Hv Hd) as [Z E].
+  assert (Fg : fin (guard a)) by now rewrite (guard_finite prec emax nan_plus).
+  generalize (lead_sub x0 (guard a) F0 Fg). rewrite (guard_val prec emax nan_plus a).
+  intros L. rewrite <- E. exact (L Z).
+- intros K. apply (sub_not_finite prec emax nan_minus).
+  rewrite (guard_finite prec emax nan_plus). now apply not_both_finite.
+Qed.
+
+(** ** sub_1_2_full *)
+
+Notation sub_1_2_full :=
+  (IeeeDraft.sub_1_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+
+Lemma sub_1_2_full_eq :
+  forall a y0 y1 : float,
+  sub_1_2_full a y0 y1
+  = fixup (fst (sub_1_2 a y0 y1)) (snd (sub_1_2 a y0 y1)) (sub (guard a) y0).
+Proof.
+intros. unfold IeeeDraft.sub_1_2_full. cbv zeta.
+destruct (IeeeDraft.sub_1_2 prec emax nan_plus nan_minus nan_opp a y0 y1) as [z0 z1].
+reflexivity.
+Qed.
+
+Lemma sub_1_2_full_facts :
+  (3 <= prec)%Z ->
+  forall a y0 y1 : float, canonical_2 y0 y1 ->
+  let '(w0, w1) := sub_1_2_full a y0 y1 in
+  canonical_2 w0 w1 /\
+  (fin w0 -> (fin a /\ fin y0) /\ fin w1 /\ normalized_2 emin prec (b2r w0) (b2r w1) /\
+   Rabs ((b2r w0 + b2r w1) - (b2r a - (b2r y0 + b2r y1)))
+   <= 2 * u prec ^ 2 * Rabs (b2r a - (b2r y0 + b2r y1))) /\
+  (fin a /\ fin y0 -> Rabs (b2r a) <= Q /\ Rabs (b2r y0 + b2r y1) <= Q -> fin w0) /\
+  (fin a /\ fin y0 -> ~ fin w0 ->
+   w0 = B754_infinity prec emax (Rlt_bool (b2r a - (b2r y0 + b2r y1)) 0) /\ w1 = pzero) /\
+  (~ (fin a /\ fin y0) -> canonical_of (sub (guard a) y0) w0 w1).
+Proof.
+intros Hp a y0 y1 Cy. assert (Hp2 : (2 <= prec)%Z) by lia.
+rewrite sub_1_2_full_eq, sub_1_2_eq.
+generalize (add_2_1_core Hp (neg y0) (neg y1) a).
+destruct (add_2_1 (neg y0) (neg y1) a) as [z0 z1]. cbn [fst snd].
+rewrite !neg_val, !neg_fin.
+replace (- b2r y0 + - b2r y1 + b2r a) with (b2r a - (b2r y0 + b2r y1)) by ring.
+rewrite Rabs_Ropp. intros [Cone Core].
+apply (full_template z0 z1 _ (fin a /\ fin y0)
+         (Rabs (b2r a) <= Q /\ Rabs (b2r y0 + b2r y1) <= Q)
+         (fun w0 w1 => Rabs ((b2r w0 + b2r w1) - (b2r a - (b2r y0 + b2r y1)))
+            <= 2 * u prec ^ 2 * Rabs (b2r a - (b2r y0 + b2r y1)))).
+- intros Fz. destruct (Cone Fz) as [G0 Fa]. split; assumption.
+- intros [Fa G0]. destruct (canonical_2_finite y0 y1 Cy G0) as [G1 Ny].
+  exact (proj1 (Core G0 G1 Fa (normalized_2_opp emin prec _ _ Ny))).
+- intros [Fa G0] [Ha Hy]. destruct (canonical_2_finite y0 y1 Cy G0) as [G1 Ny].
+  exact (proj1 (proj2 (Core G0 G1 Fa (normalized_2_opp emin prec _ _ Ny)))
+           (lead_le_bpow _ _ _ Ny Hy) Ha).
+- intros [Fa G0] Fz. destruct (canonical_2_finite y0 y1 Cy G0) as [G1 Ny].
+  generalize (proj2 (proj2 (Core G0 G1 Fa (normalized_2_opp emin prec _ _ Ny))) Fz). intros Hv.
+  assert (Hd : Rabs (b2r a - (b2r y0 + b2r y1) - (b2r a + - b2r y0)) <= Q).
+  { replace (b2r a - (b2r y0 + b2r y1) - (b2r a + - b2r y0)) with (- b2r y1) by ring.
+    rewrite Rabs_Ropp.
+    generalize (tail_le_half_U prec emax y0 y1 Ny) (U_le_Q Hp2) (bpow_gt_0 radix2 (emax - prec)).
+    lra. }
+  destruct (lead_sum_sign (b2r a) (- b2r y0) _ (b2r_format prec emax a)
+              (generic_format_opp _ _ _ (b2r_format prec emax y0)) Hv Hd) as [Z E].
+  assert (Fg : fin (guard a)) by now rewrite (guard_finite prec emax nan_plus).
+  generalize (lead_sub (guard a) y0 Fg G0). rewrite (guard_val prec emax nan_plus a).
+  intros L. rewrite <- E. exact (L Z).
+- intros K. apply (sub_not_finite prec emax nan_minus).
+  rewrite (guard_finite prec emax nan_plus). now apply not_both_finite.
+Qed.
+
+(** ** mul_2_1_full *)
+
+Notation mul_2_1_full :=
+  (IeeeDraft.mul_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+
+Lemma mul_2_1_full_eq :
+  forall x0 x1 a : float,
+  mul_2_1_full x0 x1 a = fixup (fst (mul_2_1 x0 x1 a)) (snd (mul_2_1 x0 x1 a)) (prod x0 a).
+Proof.
+intros. unfold IeeeDraft.mul_2_1_full.
+destruct (IeeeDraft.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 a) as [z0 z1].
+reflexivity.
+Qed.
+
+Lemma mul_2_1_full_facts :
+  (2 <= prec)%Z ->
+  forall x0 x1 a : float, canonical_2 x0 x1 ->
+  let '(w0, w1) := mul_2_1_full x0 x1 a in
+  canonical_2 w0 w1 /\
+  (fin w0 -> (fin x0 /\ fin a) /\ fin w1 /\ normalized_2 emin prec (b2r w0) (b2r w1) /\
+   Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) * b2r a))
+   <= 2 * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) * b2r a) + 1 * eta emin) /\
+  (fin x0 /\ fin a -> Rabs ((b2r x0 + b2r x1) * b2r a) <= bpow radix2 (emax - 1) -> fin w0) /\
+  (fin x0 /\ fin a -> ~ fin w0 ->
+   w0 = B754_infinity prec emax (Rlt_bool ((b2r x0 + b2r x1) * b2r a) 0) /\ w1 = pzero) /\
+  (~ (fin x0 /\ fin a) -> canonical_of (prod x0 a) w0 w1).
+Proof.
+intros Hp x0 x1 a Cx. rewrite mul_2_1_full_eq.
+generalize (mul_2_1_core Hp x0 x1 a).
+destruct (mul_2_1 x0 x1 a) as [z0 z1]. cbn [fst snd]. intros [Cone Core].
+apply (full_template z0 z1 _ (fin x0 /\ fin a)
+         (Rabs ((b2r x0 + b2r x1) * b2r a) <= bpow radix2 (emax - 1))
+         (fun w0 w1 => Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) * b2r a))
+            <= 2 * u prec ^ 2 * Rabs ((b2r x0 + b2r x1) * b2r a) + 1 * eta emin)).
+- exact Cone.
+- intros [F0 Fa]. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  exact (proj1 (Core F0 F1 Fa Nx)).
+- intros [F0 Fa] Hxa. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  exact (proj1 (proj2 (Core F0 F1 Fa Nx)) Hxa).
+- intros [F0 Fa] Fz. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  generalize (proj2 (proj2 (Core F0 F1 Fa Nx)) Fz). intros Z.
+  assert (Zp : b2r x0 * b2r a <> 0).
+  { intros K. apply Z. rewrite K, Rplus_0_r. apply round_0; auto with typeclass_instances. }
+  rewrite <- (prod_sign_1 _ _ _ Nx Zp). now apply lead_prod.
+- intros K. apply (prod_not_finite prec emax nan_fma). now apply not_both_finite.
+Qed.
+
+(** ** mul_pow2_2_full *)
+
+Notation mul_pow2_2_full :=
+  (IeeeDraft.mul_pow2_2_full prec emax nan_plus nan_minus nan_abs nan_fma).
+
+Lemma mul_pow2_2_full_eq :
+  forall x0 x1 c : float,
+  mul_pow2_2_full x0 x1 c
+  = fixup (fst (mul_pow2_2 x0 x1 c)) (snd (mul_pow2_2 x0 x1 c)) (prod x0 c).
+Proof.
+intros. unfold IeeeDraft.mul_pow2_2_full.
+destruct (IeeeDraft.mul_pow2_2 prec emax nan_plus nan_minus nan_fma x0 x1 c) as [z0 z1].
+reflexivity.
+Qed.
+
+Lemma mul_pow2_2_full_facts :
+  (2 <= prec)%Z ->
+  forall x0 x1 c : float, canonical_2 x0 x1 -> fin c -> (exists n : Z, b2r c = bpow radix2 n) ->
+  let '(w0, w1) := mul_pow2_2_full x0 x1 c in
+  canonical_2 w0 w1 /\
+  (fin w0 -> fin x0 /\ fin w1 /\ normalized_2 emin prec (b2r w0) (b2r w1) /\
+   Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) * b2r c)) <= 1 * eta emin) /\
+  (fin x0 -> Rabs ((b2r x0 + b2r x1) * b2r c) <= bpow radix2 (emax - 1) -> fin w0) /\
+  (fin x0 -> ~ fin w0 ->
+   w0 = B754_infinity prec emax (Rlt_bool ((b2r x0 + b2r x1) * b2r c) 0) /\ w1 = pzero) /\
+  (~ fin x0 -> canonical_of (prod x0 c) w0 w1).
+Proof.
+intros Hp x0 x1 c Cx Fc Pc. rewrite mul_pow2_2_full_eq.
+generalize (mul_pow2_2_core Hp x0 x1 c).
+destruct (mul_pow2_2 x0 x1 c) as [z0 z1]. cbn [fst snd]. intros [Cone Core].
+apply (full_template z0 z1 _ (fin x0)
+         (Rabs ((b2r x0 + b2r x1) * b2r c) <= bpow radix2 (emax - 1))
+         (fun w0 w1 => Rabs ((b2r w0 + b2r w1) - ((b2r x0 + b2r x1) * b2r c)) <= 1 * eta emin)).
+- intros Fz. exact (proj1 (Cone Fz)).
+- intros F0. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  exact (proj1 (Core F0 F1 Fc Nx Pc)).
+- intros F0 Hxc. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  exact (proj1 (proj2 (Core F0 F1 Fc Nx Pc)) Hxc).
+- intros F0 Fz. destruct (canonical_2_finite x0 x1 Cx F0) as [F1 Nx].
+  generalize (proj2 (proj2 (Core F0 F1 Fc Nx Pc)) Fz). intros Z.
+  assert (Zp : b2r x0 * b2r c <> 0).
+  { intros K. apply Z. rewrite K, Rplus_0_r. apply round_0; auto with typeclass_instances. }
+  rewrite <- (prod_sign_1 _ _ _ Nx Zp). now apply lead_prod.
+- intros K. apply (prod_not_finite prec emax nan_fma). left. now apply not_fin.
+Qed.
+
 End IeeeFull.
 
 (** * The statements of IeeeExtStatementsDraft.v *)
@@ -548,4 +1214,82 @@ destruct (IeeeDraft.mul_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs na
 generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F))
            (fun F => proj1 (canonical_2_finite prec emax y0 y1 Cy F)).
 intros Gx Gy. full_glue.
+Qed.
+
+Theorem add_fast_2_2_full_correct : add_fast_2_2_full_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma Hp2 x0 x1 y0 y1 Cx Cy t. subst t.
+generalize (add_fast_2_2_full_facts prec emax nan_plus nan_minus (fun x => nan_plus x x) nan_abs
+              nan_fma Hp2 x0 x1 y0 y1 Cx Cy).
+destruct (IeeeDraft.add_fast_2_2_full prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 y0 y1)
+  as [w0 w1].
+generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F))
+           (fun F => proj1 (canonical_2_finite prec emax y0 y1 Cy F)).
+intros Gx Gy. full_glue.
+Qed.
+
+Theorem sub_2_2_full_correct : sub_2_2_full_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp3 x0 x1 y0 y1 Cx Cy t. subst t.
+generalize (sub_2_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+              Hp3 x0 x1 y0 y1 Cx Cy).
+destruct (IeeeDraft.sub_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma x0 x1 y0 y1)
+  as [w0 w1].
+generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F))
+           (fun F => proj1 (canonical_2_finite prec emax y0 y1 Cy F)).
+intros Gx Gy. full_glue.
+Qed.
+
+Theorem add_2_1_full_correct : add_2_1_full_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma Hp3 x0 x1 a Cx t. subst t.
+generalize (add_2_1_full_facts prec emax nan_plus nan_minus (fun x => nan_plus x x) nan_abs
+              nan_fma Hp3 x0 x1 a Cx).
+destruct (IeeeDraft.add_2_1_full prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 a) as [w0 w1].
+generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F)).
+intros Gx. full_glue.
+Qed.
+
+Theorem sub_2_1_full_correct : sub_2_1_full_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp3 x0 x1 a Cx t. subst t.
+generalize (sub_2_1_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+              Hp3 x0 x1 a Cx).
+destruct (IeeeDraft.sub_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma x0 x1 a)
+  as [w0 w1].
+generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F)).
+intros Gx. full_glue.
+Qed.
+
+Theorem sub_1_2_full_correct : sub_1_2_full_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp3 a y0 y1 Cy t. subst t.
+generalize (sub_1_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+              Hp3 a y0 y1 Cy).
+destruct (IeeeDraft.sub_1_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma a y0 y1)
+  as [w0 w1].
+generalize (fun F => proj1 (canonical_2_finite prec emax y0 y1 Cy F)).
+intros Gy. full_glue.
+Qed.
+
+Theorem mul_2_1_full_correct : mul_2_1_full_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp2 x0 x1 a Cx t. subst t.
+generalize (mul_2_1_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+              Hp2 x0 x1 a Cx).
+destruct (IeeeDraft.mul_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma x0 x1 a)
+  as [w0 w1].
+generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F)).
+intros Gx. full_glue.
+Qed.
+
+Theorem mul_pow2_2_full_correct : mul_pow2_2_full_spec.
+Proof.
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma Hp2 x0 x1 c Cx Fc Pc t. subst t.
+generalize (mul_pow2_2_full_facts prec emax nan_plus nan_minus (fun x => nan_plus x x) nan_abs
+              nan_fma Hp2 x0 x1 c Cx Fc Pc).
+destruct (IeeeDraft.mul_pow2_2_full prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 c)
+  as [w0 w1].
+generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F)).
+intros Gx. full_glue.
 Qed.

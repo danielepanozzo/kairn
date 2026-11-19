@@ -13,7 +13,7 @@
    script to compare with the allow-list. Nothing else is printed. When a statement
    becomes generated, its lines move to gen/Audit.v. *)
 From Kairn.Gen Require Import Statements.
-From Kairn Require Import IeeeStatementsDraft IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore.
+From Kairn Require Import IeeeStatementsDraft IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore IeeeSub.
 From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeExtStatementsDraft IeeeOps IeeeFull.
 From Kairn Require BallDraft Ball2.
@@ -172,3 +172,28 @@ Print Assumptions ball_neg_1_ieee_correct.
 
 Definition ball_neg_2_ieee_audit : ball_neg_2_ieee_spec := ball_neg_2_ieee_correct.
 Print Assumptions ball_neg_2_ieee_correct.
+
+(* The IEEE model: sub_2_2, sub_2_1, sub_1_2, mul_pow2_2 (bridge and correctness). *)
+Definition sub_2_2_ieee_bridge_audit : sub_2_2_ieee_bridge_spec := sub_2_2_ieee_bridge.
+Print Assumptions sub_2_2_ieee_bridge.
+
+Definition sub_2_2_ieee_audit : sub_2_2_ieee_spec := sub_2_2_ieee_correct.
+Print Assumptions sub_2_2_ieee_correct.
+
+Definition sub_2_1_ieee_bridge_audit : sub_2_1_ieee_bridge_spec := sub_2_1_ieee_bridge.
+Print Assumptions sub_2_1_ieee_bridge.
+
+Definition sub_2_1_ieee_audit : sub_2_1_ieee_spec := sub_2_1_ieee_correct.
+Print Assumptions sub_2_1_ieee_correct.
+
+Definition sub_1_2_ieee_bridge_audit : sub_1_2_ieee_bridge_spec := sub_1_2_ieee_bridge.
+Print Assumptions sub_1_2_ieee_bridge.
+
+Definition sub_1_2_ieee_audit : sub_1_2_ieee_spec := sub_1_2_ieee_correct.
+Print Assumptions sub_1_2_ieee_correct.
+
+Definition mul_pow2_2_ieee_bridge_audit : mul_pow2_2_ieee_bridge_spec := mul_pow2_2_ieee_bridge.
+Print Assumptions mul_pow2_2_ieee_bridge.
+
+Definition mul_pow2_2_ieee_audit : mul_pow2_2_ieee_spec := mul_pow2_2_ieee_correct.
+Print Assumptions mul_pow2_2_ieee_correct.

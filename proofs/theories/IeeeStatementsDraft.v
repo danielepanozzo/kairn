@@ -330,3 +330,132 @@ Definition add_fast_2_2_ieee_spec : Prop :=
   normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
   Rabs ((val z0 + val z1) - ((val x0 + val x1) + (val y0 + val y1)))
   <= 3 * u prec ^ 2 * (Rabs (val x0 + val x1) + Rabs (val y0 + val y1)).
+
+(** * sub_2_2, sub_2_1, sub_1_2, mul_pow2_2 *)
+
+Definition sub_2_2_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeDraft.sub_2_2 prec emax nan_plus nan_minus nan_opp x0 x1 y0 y1 in
+  finite z0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeDraft.sub_2_2_prog [x0; x1; y0; y1]) /\
+  finite z1 /\
+  (val z0, val z1)
+  = sub_2_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val y0) (val y1).
+
+Definition sub_2_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax),
+  (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeDraft.sub_2_2 prec emax nan_plus nan_minus nan_opp x0 x1 y0 y1 in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val x0 + val x1) - (val y0 + val y1)))
+  <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((val x0 + val x1) - (val y0 + val y1)).
+
+Definition sub_2_1_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (3 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  finite x0 -> finite x1 -> finite a ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  let '(z0, z1) := IeeeDraft.sub_2_1 prec emax nan_plus nan_minus nan_opp x0 x1 a in
+  finite z0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeDraft.sub_2_1_prog [x0; x1; a]) /\
+  finite z1 /\
+  (val z0, val z1)
+  = sub_2_1 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val a).
+
+Definition sub_2_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax),
+  (3 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  finite x0 -> finite x1 -> finite a ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  let '(z0, z1) := IeeeDraft.sub_2_1 prec emax nan_plus nan_minus nan_opp x0 x1 a in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val x0 + val x1) - val a))
+  <= 2 * u prec ^ 2 * Rabs ((val x0 + val x1) - val a).
+
+Definition sub_1_2_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (3 <= prec)%Z ->
+  forall a y0 y1 : binary_float prec emax,
+  finite a -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeDraft.sub_1_2 prec emax nan_plus nan_minus nan_opp a y0 y1 in
+  finite z0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeDraft.sub_1_2_prog [a; y0; y1]) /\
+  finite z1 /\
+  (val z0, val z1)
+  = sub_1_2 (ieee_emin prec emax) prec tie_even (val a) (val y0) (val y1).
+
+Definition sub_1_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax),
+  (3 <= prec)%Z ->
+  forall a y0 y1 : binary_float prec emax,
+  finite a -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeDraft.sub_1_2 prec emax nan_plus nan_minus nan_opp a y0 y1 in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - (val a - (val y0 + val y1)))
+  <= 2 * u prec ^ 2 * Rabs (val a - (val y0 + val y1)).
+
+Definition mul_pow2_2_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall x0 x1 c : binary_float prec emax,
+  finite x0 -> finite x1 -> finite c ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  (exists n : Z, val c = bpow radix2 n) ->
+  let '(z0, z1) := IeeeDraft.mul_pow2_2 prec emax nan_plus nan_minus nan_fma x0 x1 c in
+  finite z0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeDraft.mul_pow2_2_prog [x0; x1; c]) /\
+  finite z1 /\
+  (val z0, val z1)
+  = mul_pow2_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val c).
+
+Definition mul_pow2_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall x0 x1 c : binary_float prec emax,
+  finite x0 -> finite x1 -> finite c ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  (exists n : Z, val c = bpow radix2 n) ->
+  let '(z0, z1) := IeeeDraft.mul_pow2_2 prec emax nan_plus nan_minus nan_fma x0 x1 c in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val x0 + val x1) * val c)) <= 1 * eta (ieee_emin prec emax).

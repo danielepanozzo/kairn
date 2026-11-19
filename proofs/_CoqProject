@@ -40,6 +40,7 @@ theories/IeeeEFT.v
 theories/IeeeAdd22.v
 theories/IeeeMul22.v
 theories/IeeeMore.v
+theories/IeeeSub.v
 theories/IeeeExtStatementsDraft.v
 theories/IeeeOps.v
 theories/IeeeRange.v
