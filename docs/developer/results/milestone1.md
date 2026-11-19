@@ -4,7 +4,7 @@
 vertical slice of the [brief](../design/brief.md): `double`, one and two limbs, scalar code with
 AVX2 and NEON, $+$, $-$, $\times$, `Ball`, proofs, the oracle with both test tiers, CI, and the
 skeleton of this site. This page says what exists, what is proved, what the tests and the
-benchmarks measured, and what is still open. Every number links to the page that has its details.
+benchmarks measured, and what is still open. Each section links to the page that has the details.
 
 ## In short
 
@@ -16,13 +16,14 @@ benchmarks measured, and what is still open. Every number links to the page that
 - **No claim was violated by the brute-force runs**: 13.8 billion results of the compiled kernels
   and 0.78 billion of the interpreter on every operand of small formats, on three machines, with
   five compilers. Four bounds were attained exactly, so those four cannot be tightened.
-- **The finite-only functions are within the 1.2 budget** against textbook double-word code in
-  all but one configuration. The default operators, which also handle overflow, cost the same in
+- **The finite-only functions are within 1.2 times textbook double-word code** in all but one
+  configuration. The libraries the brief names as the reference are timed at Milestone 8, as
+  planned; until then the textbook code is the baseline. The default operators, which also handle overflow, cost the same in
   dependent chains and 1.05 to 2.7 times the textbook code in loops of independent operations.
 - **One composition is argued and tested but not machine-checked**: `ldexp` when $2^n$ is not a
   number of the limb type (deviation 17).
-- **Two decisions are for the owner**: whether the default operators keep the handling of
-  overflow, and what to do about three smaller items listed at the end.
+- **Two decisions are for the owner**, listed at the end: whether the default operators keep the
+  handling of overflow (recommended: yes), and whether to publish this site at a URL.
 
 ## What is done
 
@@ -177,6 +178,13 @@ configurations, three runs each, on the final code
 ([Benchmarks, Milestone 1](bench-milestone1.md)). A *loop* is a loop of independent operations; a
 *chain* is a dependent chain or a Horner evaluation. Ratios are of minimum times.
 
+The brief's budget is "within about 1.2 times the fastest of QD, CAMPARY, MultiFloats.jl and CCCL
+fpmp2" for operations without rigorous bounds. Those libraries were not timed in this milestone:
+the [plan](../design/phase0/plan.md#milestones) does that at Milestone 8. The baseline here,
+called *textbook*, is the same algorithms written directly from the listings of
+[JMP17](../design/phase0/references.md#jmp17), with a plain product, no guard and no handling of
+overflow, compiled with the same flags.
+
 | Question | Answer |
 |---|---|
 | The opaque product, `fma(a, b, 0)` in place of `a * b` | nothing on the M3; 7 to 13% in a product chain on Zen 2; 10 to 12% in scalar chains with MSVC |
@@ -272,6 +280,8 @@ No theorem was weakened and no axiom was added.
 12. **The oracle's test of a suspicious infinity** does not apply to `ball_mul_1` at 1 bit of
     precision; the exact check `tests/brute/widen.py` stands in its place there.
 13. **clang-cl** is in the CI's quick and full tiers and in no brute-force run.
+14. **QD, CAMPARY, MultiFloats.jl and CCCL fpmp2 were not timed**; the 1.2 budget was checked
+    against textbook code of the same algorithms. The plan times the libraries at Milestone 8.
 
 ## For the owner
 
@@ -281,5 +291,9 @@ No theorem was weakened and no axiom was added.
    dependent chains is nil, and the loops where it costs are the ones the batch kernels of
    Milestone 2 are for. The alternative is to make the finite-only functions the default and the
    handling of overflow the option.
-2. **The first client.** Milestone 2 adds `Interval`, `BallVector` and the batch kernels, and ends
-   with a pull request to the first client. Nothing in Milestone 1 changes that plan.
+2. **Publishing the site.** CI builds this site on every change and keeps it as an artifact; it
+   is not published at a URL, which the brief leaves optional. Publishing it with GitHub Pages
+   is one workflow more.
+
+Milestone 2 adds `Interval`, `BallVector` and the batch kernels, and ends with a pull request to
+the first client. Nothing in Milestone 1 changes that plan.
