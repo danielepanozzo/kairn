@@ -1557,6 +1557,11 @@ def best_of(values, sign):
     return best
 
 
+def exact_claim(label):
+    """An error entry whose bound is zero: the claim is that the result is exact."""
+    return bool(re.search(r"\bc=0, k=\d+, t=0\b", label))
+
+
 def counts_text(counts):
     order = ["true", "false", "exact", "inexact", "tie", "inexact, = RN", "inexact, != RN"]
     names = sorted(counts, key=lambda c: (order.index(c) if c in order else 99, c))
@@ -1635,6 +1640,11 @@ def cmd_report(a):
         w("| Kernel | Claim | Compiled | Interpreter (format) |")
         w("|---|---|---|---|")
         for _, k, label, c, i in rs:
+            if kind == "error" and exact_claim(label):
+                w("| `%s` | `%s` | %s | %s |" % (k, label.replace("|", "\\|"),
+                                                "0 (exact)" if c else "-",
+                                                ("0 (exact; `%s`)" % i[2]) if i else "-"))
+                continue
             w("| `%s` | `%s` | %s | %s |" % (
                 k, label.replace("|", "\\|"),
                 (short(c[0]) + (" (the claim)" if c[-1] else "")) if c else "-",
@@ -1711,6 +1721,10 @@ def cmd_report(a):
                 v = col_value(e, field, sub)
                 mark = " (the claim)" if (e.get("attains_claim") and field in ("max_ratio",
                                                                                 "maxima")) else ""
+                if v and field in ("max_ratio", "observed_c") and exact_claim(e["label"]) \
+                        and decimal.Decimal(v[0]) == 0:
+                    cells.append("0 (exact)" if field == "max_ratio" else "0")
+                    continue
                 cells.append(short(v[0]) + mark if v else "-")
                 if v and field != "observed_c" and not (sub and "enclosing" in sub):
                     lines.append((title, name, v))
