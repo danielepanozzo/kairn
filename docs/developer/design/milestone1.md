@@ -365,6 +365,46 @@ exact value turns into one relative to the computed value with $\mathrm{unit}/(1
 Every `radd` and `rmul` returns at least the exact sum or product. The product is the same with
 $\lvert xy - c_x c_y\rvert \le \lvert c_x\rvert r_y + \lvert c_y\rvert r_x + r_x r_y$.
 
+### The radius, second design (planned)
+
+The [benchmarks](../results/bench-milestone1.md) show that the radius dominates a `Ball`
+operation: `ball_mul_2` costs 13 to 20 times `mul_2_2` in packed code, because each of the eleven
+steps to the next number up is about ten integer operations. The radius only has to be an upper
+bound, so the cores will evaluate it with ordinary operations rounded to nearest, on nonnegative
+values, and inflate the result once at the end: three to five floating-point operations, and no
+`succ`, no `select`, no `abs_upper`.
+
+```
+ball_add_k(cx, rx, cy, ry) -> (cz, rz)      ball_mul_k(cx, rx, cy, ry) -> (cz, rz)
+  cz = add(cx, cy)                            cz = mul(cx, cy)
+  az = abs(cz0)                               ax = abs(cx0)
+  s  = add(rx, ry)                            ay = abs(cy0)
+  t  = fma(az, const E, s)                    az = abs(cz0)
+  rz = fma(t, const G, const H)               p  = prod(rx, ry)
+                                              q  = fma(ay, rx, p)
+ball_scale_k(cx, rx, a) -> (cz, rz)           w  = fma(ax, ry, q)
+  cz = mul(cx, a)                             t  = fma(az, const E, w)
+  aa = abs(a)                                 rz = fma(t, const G, const H)
+  az = abs(cz0)
+  p  = prod(aa, rx)
+  t  = fma(az, const E, p)
+  rz = fma(t, const G, const H)
+```
+
+`E`, `G` and `H` are constants of the format, one set per kernel, each an exact expression in
+$u$, $\eta$ and the constants of the center kernel's proved bound, rounded up by the generator:
+`E` turns the center's error bound into a multiple of $\lvert c_{z0}\rvert$, `G` is a power of
+$1 + u$ that covers the rounding of every operation before the last line, and `H` covers what
+underflow can lose and the absolute term of the center's bound. The argument is the usual one
+for sums of nonnegative products: a rounded operation returns at least its exact result divided
+by $1 + u$, less $\eta/2$ for a product.
+
+*Status.* A target. Sampled on the toy format $p = 4$, $q_{\min} = -7$ (387 200 pairs of balls,
+judged exactly at the corners of the operands): no containment failure. The statement, the
+special states and the full kernels below do not change; the proofs of the cores do. Until the
+proofs of the new cores are checked, the kernels above stay as they are. `radd`, `rmul` and
+`abs_upper_2` remain kernels of their own.
+
 **Special states.** A ball value is *canonical* when it is a finite ball (center finite, and
 normalized for $k = 2$; radius finite and nonnegative), or the whole line (center 0, radius
 $+\infty$), or the empty set (every limb a NaN). The Ball kernels above are finite cores; the
