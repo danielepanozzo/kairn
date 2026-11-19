@@ -381,7 +381,7 @@ bool check_mpfr(const kb::Entry& e, const kb::Entry& ref, Data& d, std::string& 
     return true;
 }
 
-// --- Forms (a) and (b) of the full kernels on special operands ----------------------------------
+// --- The forms of the full kernels on special operands ------------------------------------------
 
 bool same(double a, double b) {   // the same bits, apart from NaN payloads and the sign of zeros
     if (a != a && b != b) return true;
@@ -403,7 +403,8 @@ bool empty_ball(double c0, double c1, double r) { return c0 != c0 && c1 != c1 &&
 
 struct FullCheck {
     std::string kernel;
-    int cases = 0, a_vs_b = 0, packed_vs_a = 0, not_canonical = 0, spec = 0;
+    // variants_vs_a: the variants full_fabs and full_inl of the 2-limb kernels against form (a).
+    int cases = 0, a_vs_b = 0, packed_vs_a = 0, variants_vs_a = 0, not_canonical = 0, spec = 0;
     int nonfinite_operand = 0, overflow = 0, finite_result = 0;
 };
 
@@ -505,12 +506,17 @@ FullCheck check_full(const std::vector<const kb::Entry*>& entries, const std::st
     run(("scalar/tp/" + kernel + "/full_sel").c_str(), a0, a1, ar);
     run(("scalar/tp/" + kernel + "/full_br").c_str(), b0, b1, br);
     const bool packed = run(("packed/tp/" + kernel + "/full_sel").c_str(), p0, p1, pr);
+    Buf v0(n), v1(n), vr(n), u0(n), u1(n), ur(n);
+    const bool variants = run(("scalar/tp/" + kernel + "/full_fabs").c_str(), v0, v1, vr) &&
+                          run(("scalar/tp/" + kernel + "/full_inl").c_str(), u0, u1, ur);
     fc.cases = n;
     for (int i = 0; i < n; ++i) {
         const bool ab = same(a0[i], b0[i]) && same(a1[i], b1[i]) && (!ball || same(ar[i], br[i]));
         const bool pa = !packed || (same(a0[i], p0[i]) && same(a1[i], p1[i]) && (!ball || same(ar[i], pr[i])));
+        const bool va = !variants || (same(a0[i], v0[i]) && same(a1[i], v1[i]) && same(a0[i], u0[i]) && same(a1[i], u1[i]));
         fc.a_vs_b += !ab;
         fc.packed_vs_a += !pa;
+        fc.variants_vs_a += !va;
         const bool operands_finite = finite(x0[i]) && finite(y0[i]) && (!ball || (finite(xr[i]) && finite(yr[i])));
         fc.nonfinite_operand += !operands_finite;
         if (!ball) {
@@ -691,10 +697,11 @@ int main(int argc, char** argv) {
         const FullCheck& f = full.back();
         std::fprintf(stderr,
                      "%s: %d cases (%d with a non-finite operand, %d overflowing, %d finite): (a) vs (b) %d "
-                     "differ, packed (a) vs scalar (a) %d differ; %d not canonical, %d against the statement\n",
+                     "differ, packed (a) vs scalar (a) %d, variants vs (a) %d; %d not canonical, %d against "
+                     "the statement\n",
                      f.kernel.c_str(), f.cases, f.nonfinite_operand, f.overflow, f.finite_result, f.a_vs_b,
-                     f.packed_vs_a, f.not_canonical, f.spec);
-        full_failed += f.a_vs_b + f.packed_vs_a + f.not_canonical + f.spec;
+                     f.packed_vs_a, f.variants_vs_a, f.not_canonical, f.spec);
+        full_failed += f.a_vs_b + f.packed_vs_a + f.variants_vs_a + f.not_canonical + f.spec;
     }
     if (failed || full_failed) {
         std::fprintf(stderr, "refusing to time: a check failed\n");
@@ -740,6 +747,7 @@ int main(int argc, char** argv) {
                ", \"nonfinite_operand\": " + std::to_string(f.nonfinite_operand) + ", \"overflow\": " +
                std::to_string(f.overflow) + ", \"finite\": " + std::to_string(f.finite_result) + ", \"a_vs_b\": " +
                std::to_string(f.a_vs_b) + ", \"packed_vs_a\": " + std::to_string(f.packed_vs_a) +
+               ", \"variants_vs_a\": " + std::to_string(f.variants_vs_a) +
                ", \"not_canonical\": " + std::to_string(f.not_canonical) + ", \"against_statement\": " +
                std::to_string(f.spec) + "}";
     }

@@ -8,7 +8,10 @@
 // - *_full_sel, *_full_br: the full kernels of docs/developer/design/milestone1.md ("IEEE-like
 //   results", "Ball kernels"), which the generator does not emit yet. _sel is the listing as it
 //   stands, with selects written as the generator writes them (m ? a : b); _br branches on "the
-//   result is finite" and does the fix-up in a function of its own, on the unlikely path.
+//   result is finite" and does the fix-up in a function of its own, on the unlikely path. Two
+//   variants of these, for the 2-limb kernels only, test explanations of the measurements:
+//   _full_fabs is _full_sel with std::fabs in place of abs_bits, _full_inl is _full_br with the
+//   fix-up inline.
 // - textbook::: double-word addition and multiplication written from the algorithm listings of
 //   Joldes, Muller and Popescu, "Tight and rigorous error bounds for basic building blocks of
 //   double-word arithmetic", ACM TOMS 44(2), 2017 (JMP17): 2Sum, Fast2Sum, Fast2Mult with an FMA,
@@ -18,6 +21,7 @@
 
 #include <kairn/gen/scalar.hpp>
 
+#include <cmath>
 #include <limits>
 
 #include "bench.hpp"
@@ -120,6 +124,35 @@ KAIRN_GEN_FORCEINLINE void mul_2_2_full_sel(double x0, double x1, double y0, dou
     fixup_sel(z0, z1, t, w0, w1);
 }
 
+// A variant of form (a), not a listing of milestone1.md: |z0| from std::fabs instead of
+// abs_bits. The same values; some compilers keep this test in floating-point registers, where
+// abs_bits's integer AND sends z0 through a general-purpose register.
+KAIRN_GEN_FORCEINLINE void fixup_sel_fabs(double z0, double z1, double t, double& w0_out, double& w1_out) noexcept {
+    const double a = std::fabs(z0);
+    const bool f = a < kInf;
+    const double r0 = fma_rn(t, kInf, 0.0);
+    const bool n = r0 == r0;
+    const double r1 = n ? 0.0 : r0;
+    const double w0 = f ? z0 : r0;
+    const double w1 = f ? z1 : r1;
+    w0_out = w0;
+    w1_out = w1;
+}
+
+KAIRN_GEN_FORCEINLINE void add_2_2_full_fabs(double x0, double x1, double y0, double y1, double& w0, double& w1) noexcept {
+    double z0, z1;
+    kairn::gen::add_2_2(x0, x1, y0, y1, z0, z1);
+    const double t = x0 + y0;
+    fixup_sel_fabs(z0, z1, t, w0, w1);
+}
+
+KAIRN_GEN_FORCEINLINE void mul_2_2_full_fabs(double x0, double x1, double y0, double y1, double& w0, double& w1) noexcept {
+    double z0, z1;
+    kairn::gen::mul_2_2(x0, x1, y0, y1, z0, z1);
+    const double t = fma_rn(x0, y0, 0.0);
+    fixup_sel_fabs(z0, z1, t, w0, w1);
+}
+
 // --- The full kernels, form (b): a branch, and the fix-up out of line ---------------------------
 
 struct Limbs2 {
@@ -155,6 +188,40 @@ KAIRN_GEN_FORCEINLINE void mul_2_2_full_br(double x0, double x1, double y0, doub
         const Limbs2 r = mul_fixup(x0, y0);
         w0 = r.l0;
         w1 = r.l1;
+        return;
+    }
+    w0 = z0;
+    w1 = z1;
+}
+
+// A variant of form (b), not a listing of milestone1.md: the same branch, with the fix-up inline
+// on the unlikely path instead of in a function of its own, which a vectorizer can turn back
+// into selects.
+KAIRN_GEN_FORCEINLINE void canonical_inline(double t, double& w0, double& w1) noexcept {
+    const double r0 = fma_rn(t, kInf, 0.0);
+    const bool n = r0 == r0;
+    w0 = r0;
+    w1 = n ? 0.0 : r0;
+}
+
+KAIRN_GEN_FORCEINLINE void add_2_2_full_inl(double x0, double x1, double y0, double y1, double& w0, double& w1) noexcept {
+    double z0, z1;
+    kairn::gen::add_2_2(x0, x1, y0, y1, z0, z1);
+    if (!(abs_bits(z0) < kInf)) [[unlikely]] {
+        const double t = x0 + y0;
+        canonical_inline(t, w0, w1);
+        return;
+    }
+    w0 = z0;
+    w1 = z1;
+}
+
+KAIRN_GEN_FORCEINLINE void mul_2_2_full_inl(double x0, double x1, double y0, double y1, double& w0, double& w1) noexcept {
+    double z0, z1;
+    kairn::gen::mul_2_2(x0, x1, y0, y1, z0, z1);
+    if (!(abs_bits(z0) < kInf)) [[unlikely]] {
+        const double t = fma_rn(x0, y0, 0.0);
+        canonical_inline(t, w0, w1);
         return;
     }
     w0 = z0;

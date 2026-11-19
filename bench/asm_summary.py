@@ -137,9 +137,14 @@ def main(argv):
             print('%-40s %5s  %s' % (name if j == 0 else '', r['instructions'] if j == 0 else '',
                                      '  '.join('%6d' % lp[c] for c in cols)))
     if out:
+        # Compact: one row of numbers per loop, in the order of "columns".
+        items = sorted(result.items())
         with open(out, 'w') as f:
-            json.dump(result, f, indent=1, sort_keys=True)
-            f.write('\n')
+            f.write('{"columns": %s,\n "functions": {\n' % json.dumps(cols))
+            for j, (name, r) in enumerate(items):
+                row = {'instructions': r['instructions'], 'loops': [[lp[c] for c in cols] for lp in r['loops']]}
+                f.write('  %s: %s%s\n' % (json.dumps(name), json.dumps(row), ',' if j + 1 < len(items) else ''))
+            f.write(' }}\n')
     if not result:
         print('no kb_ function found', file=sys.stderr)
         return 1
