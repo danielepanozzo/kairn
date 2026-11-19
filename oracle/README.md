@@ -237,7 +237,10 @@ the selftest checks that both ways give the same statistics.
 Throughput, one process per stage on binary64 (Apple M3 Max): `gen` 70 000 to 160 000 cases
 per second, `check` 60 000 to 140 000 lines per second depending on the kernel (`mul_2_2` is the
 slowest). In-process `brute` on toy formats does gen, reference runner and check at 40 000 to
-70 000 cases per second per job.
+70 000 cases per second per job. For the kinds of the second wave, `check` reads 120 000 to
+200 000 lines per second for `rounded`, `upper` and `predicate`, and 45 000 to 80 000 for
+`encloses` (`ball_mul_2` is the slowest); in-process `brute` on the Ball kernels of toy formats
+runs at about 26 000 cases per second per job.
 
 ## refrun and the C++ runner
 
