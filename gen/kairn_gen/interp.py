@@ -17,7 +17,7 @@ inlines calls, so comparing the two also tests the inlining.
 import re
 from dataclasses import dataclass
 
-from . import ir
+from . import consts, ir
 
 NUM, INF, NAN = 'num', 'inf', 'nan'
 NaN = (NAN,)
@@ -231,6 +231,16 @@ def parse_limb(text):
     return canon(m.group(1) == '-', int(digits, 16), int(m.group(4)) - 4 * len(m.group(3) or ''))
 
 
+def parse_mask(text):
+    if text not in ('0', '1'):
+        raise InterpError(f'not a mask: {text!r} (a mask is 0 or 1)')
+    return text == '1'
+
+
+def format_mask(m):
+    return '1' if m else '0'
+
+
 def format_limb(v):
     if v[0] == NAN:
         return 'nan'
@@ -266,9 +276,13 @@ class Machine:
             raise InterpError(f'unknown kernel {name!r}')
         if len(inputs) != len(k.input_limbs):
             raise InterpError(f'{name} takes {len(k.input_limbs)} limbs, not {len(inputs)}')
-        for v in inputs:
-            if not member(f, v):
-                raise InterpError(f'{format_limb(v)} is not a number of format {f.name}')
+        for v, kind in zip(inputs, k.input_kinds):
+            if kind == ir.MASK:
+                if not isinstance(v, bool):
+                    raise InterpError(f'{name}: a mask operand is true or false, not {v!r}')
+            elif isinstance(v, bool) or not member(f, v):
+                raise InterpError(f'{format_limb(v) if not isinstance(v, bool) else v} is not a '
+                                  f'number of format {f.name}')
         in_variant = False
         if self.consteval:
             if k.ce_variant:
@@ -283,8 +297,13 @@ class Machine:
     def _const(self, f, name):
         key = (f, name)
         if key not in self._consts:
-            v = canon(False, ir.CONSTANTS[name](f.p), 0)
-            if not member(f, v) or v[0] != NUM:
+            try:
+                x = consts.value(name, self.kernels, f.p, f.qmin, f.qmax)
+            except consts.ConstError as e:
+                raise InterpError(f'constant {name} in format {f.name}: {e}')
+            v = canon(False, x.numerator, 0) if x.denominator == 1 else \
+                canon(False, x.numerator, -(x.denominator.bit_length() - 1))
+            if not member(f, v):
                 raise InterpError(f'constant {name} is not a number of format {f.name}')
             self._consts[key] = v
         return self._consts[key]
@@ -338,6 +357,8 @@ class Machine:
             return succ(f, a[0])
         if op == 'pred':
             return pred(f, a[0])
+        if op == 'copy':
+            return a[0]
         raise InterpError(f'the interpreter does not evaluate {op}')
 
 
@@ -354,8 +375,15 @@ def complete(machine, line, formats):
     name, fmt = fields[0], fields[1]
     if fmt not in formats:
         formats[fmt] = parse_format(fmt)
-    out = machine.run(name, formats[fmt], [parse_limb(t) for t in fields[2:]])
-    return line + ' -> ' + ' '.join(format_limb(v) for v in out)
+    k = machine.kernels.get(name)
+    if k is None:
+        raise InterpError(f'unknown kernel {name!r}')
+    if len(fields) - 2 != len(k.input_limbs):
+        raise InterpError(f'{name} takes {len(k.input_limbs)} limbs, not {len(fields) - 2}')
+    ins = [parse_mask(t) if kind == ir.MASK else parse_limb(t) for t, kind in zip(fields[2:], k.input_kinds)]
+    out = machine.run(name, formats[fmt], ins)
+    return line + ' -> ' + ' '.join(format_mask(v) if kind == ir.MASK else format_limb(v)
+                                    for v, kind in zip(out, k.output_kinds))
 
 
 def serve(machine, infile, outfile, errfile):

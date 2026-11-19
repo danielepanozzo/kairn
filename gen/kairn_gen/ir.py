@@ -8,11 +8,18 @@ kernel is described in one file, gen/kernels/NAME.kernel:
     kernel:        NAME
     input:         x = x0 x1          a group and its limbs, most significant first
     input:         a                  a one-limb group: the limb has the group's name
-    output:        z = z0 z1
-    value:         x+y                the exact real function the output approximates
-    requires:      normalized x       or: abs_ge a b
+    input:         mask m             a mask: one value, true or false
+    output:        z = z0 z1          (outputs likewise)
+    value:         x+y                the exact real function the output approximates: names,
+                                      + - *, unary minus, abs( ), parentheses
+    requires:      normalized x       or: abs_ge a b, power_of_two c, nonneg r
     ensures:       normalized z       or: leading_rounded z
     ensures:       error z R c=3/(1-4*u) k=2 t=0 [when=product_large]
+    ensures:       rounded t down     the mode: nearest, down or up
+    ensures:       upper r gaps=2
+    ensures:       predicate m lt x y the relation lt, le or eq between two expressions
+    ensures:       encloses cz rz x+y x=cx,rx y=cy,ry
+                                      center, radius, the set, and each ball's center and radius
     min_precision: 3                  optional
     theorem:       proofs/theories/Add22.v add_2_2_correct
     source:        free text
@@ -20,12 +27,17 @@ kernel is described in one file, gen/kernels/NAME.kernel:
     status:        unverified         or: proved
     ce_variant:    KERNEL             optional: its constant-evaluation variant
     cone_exempt:   free text          optional: why rule 4 cannot hold, and what stands in for it
+    unused:        x1 free text       optional: an input the computation does not need, and why
 
     sh = add(x0, y0)                  one operation per line
     (s, e) = two_sum(a, b)            a call of another kernel
     g = prod(const splitter, a)       a format-dependent constant as an operand
+    d = rmul(const unit_computed(add_2_2), mz)
+                                      a constant computed from another kernel's claims
+    m = lt(x1, 0)                     the literal zero (+0) as an operand
 
-This module only reads and represents descriptions; rules.py decides whether they are acceptable.
+Expressions in `ensures` are written without spaces. This module only reads and represents
+descriptions; rules.py decides whether they are acceptable.
 """
 import os
 import re
@@ -54,6 +66,9 @@ OPS = {
     'select': ((MASK, LIMB, LIMB), LIMB),
     'succ': ((LIMB,), LIMB),
     'pred': ((LIMB,), LIMB),
+    # The value itself, under another name: how a kernel returns one of its inputs (to_nearest_2
+    # returns x0), since an output must be computed by an operation (rule 3).
+    'copy': ((LIMB,), LIMB),
     # A plain multiplication. It is accepted by the parser only so that rule R1 refuses it with a
     # reason; no printer and no interpreter knows it.
     'mul': ((LIMB, LIMB), LIMB),
@@ -67,6 +82,18 @@ FUSED = frozenset({'fma', 'fms', 'fnma', 'prod'})
 CONSTANTS = {
     'splitter': lambda p: 2 ** ((p + 1) // 2) + 1,   # Veltkamp's multiplier 2^ceil(p/2) + 1
 }
+# The literal zero of a description (`lt(x1, 0)`) is the constant of this name, +0 in every format.
+ZERO = '0'
+# Constants computed from the claims of another kernel K (consts.py): written `const F(K)`.
+COMPUTED = ('unit_computed', 'tiny_computed')
+_COMPUTED = re.compile(r'(unit_computed|tiny_computed)\(([a-z][a-z0-9_]*)\)\Z')
+
+
+def computed(name):
+    """(F, K) for the name of a computed constant F(K), or None."""
+    m = _COMPUTED.match(name)
+    return (m.group(1), m.group(2)) if m else None
+
 
 KERNEL_NAME = re.compile(r'[a-z][a-z0-9_]*\Z')
 # Value names have no underscore: flattening names an inlined value CALLER_CALLEE, which can then
@@ -81,10 +108,12 @@ class DescriptionError(Exception):
 @dataclass(frozen=True)
 class Operand:
     name: str
-    const: bool = False
+    const: bool = False   # a constant of the format: a name of CONSTANTS, ZERO, or computed
 
     def __str__(self):
-        return f'const {self.name}' if self.const else self.name
+        if self.const and self.name != ZERO:
+            return f'const {self.name}'
+        return self.name
 
 
 @dataclass(frozen=True)
@@ -103,6 +132,7 @@ class Stmt:
 class Group:
     name: str
     limbs: tuple
+    kind: str = LIMB     # MASK: one value, the group's name
 
 
 @dataclass
@@ -113,7 +143,7 @@ class Kernel:
     outputs: list = field(default_factory=list)    # Groups
     body: list = field(default_factory=list)       # Stmts
     value: str = None
-    requires: list = field(default_factory=list)   # ('normalized', g) or ('abs_ge', g, h)
+    requires: list = field(default_factory=list)   # tuples: ('normalized', g), ('abs_ge', g, h), ...
     ensures: list = field(default_factory=list)    # dicts in the claims schema's shape
     min_precision: int = None
     theorem: tuple = None                          # (file, name)
@@ -122,9 +152,11 @@ class Kernel:
     status: str = None
     ce_variant: str = None
     cone_exempt: str = None
+    unused: dict = field(default_factory=dict)     # input value -> why the computation ignores it
 
     @property
     def input_limbs(self):
+        """Every input value, masks included, in order: the kernel's parameters."""
         return [v for g in self.inputs for v in g.limbs]
 
     @property
@@ -132,14 +164,26 @@ class Kernel:
         return [v for g in self.outputs for v in g.limbs]
 
     @property
+    def input_kinds(self):
+        return [g.kind for g in self.inputs for _ in g.limbs]
+
+    @property
+    def output_kinds(self):
+        return [g.kind for g in self.outputs for _ in g.limbs]
+
+    @property
     def limbs(self):
         return max(len(g.limbs) for g in self.inputs + self.outputs)
 
 
 def _group(text, where):
+    words = text.split()
+    if len(words) == 2 and words[0] == 'mask' and VALUE_NAME.match(words[1]):
+        return Group(words[1], (words[1],), MASK)
     m = re.fullmatch(r'([a-z][a-z0-9]*)(?:\s*=\s*([a-z0-9 ]+))?', text.strip())
     if not m:
-        raise DescriptionError(f'{where}: expected "NAME" or "NAME = LIMB LIMB ...", got {text!r}')
+        raise DescriptionError(f'{where}: expected "NAME", "NAME = LIMB LIMB ..." or "mask NAME", '
+                               f'got {text!r}')
     limbs = tuple(m.group(2).split()) if m.group(2) else (m.group(1),)
     return Group(m.group(1), limbs)
 
@@ -148,6 +192,20 @@ def _ensures(words, where):
     kind = words[0] if words else None
     if kind in ('normalized', 'leading_rounded') and len(words) == 2:
         return {'kind': kind, 'of': words[1]}
+    if kind == 'rounded' and len(words) == 3:
+        return {'kind': kind, 'of': words[1], 'mode': words[2]}
+    if kind == 'upper' and len(words) == 3 and words[2].startswith('gaps='):
+        return {'kind': kind, 'of': words[1], 'gaps': words[2][len('gaps='):]}
+    if kind == 'predicate' and len(words) == 5:
+        return {'kind': kind, 'of': words[1], 'rel': words[2], 'args': words[3:5]}
+    if kind == 'encloses' and len(words) >= 5:
+        balls = {}
+        for w in words[4:]:
+            m = re.fullmatch(r'([a-z][a-z0-9]*)=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', w)
+            if not m or m.group(1) in balls:
+                raise DescriptionError(f'{where}: bad or repeated ball {w!r}: NAME=CENTER,RADIUS')
+            balls[m.group(1)] = {'center': m.group(2), 'radius': m.group(3)}
+        return {'kind': kind, 'center': words[1], 'radius': words[2], 'set': words[3], 'balls': balls}
     if kind == 'error' and len(words) >= 3:
         entry = {'kind': 'error', 'of': words[1], 'form': words[2],
                  'c': None, 'k': None, 't': None, 'when': None}
@@ -164,7 +222,9 @@ def _ensures(words, where):
     raise DescriptionError(f'{where}: cannot read ensures entry {" ".join(words)!r}')
 
 
-_STMT = re.compile(r'(?:\(\s*(?P<many>[^()]*)\)|(?P<one>\S+))\s*=\s*(?P<op>[a-z][a-z0-9_]*)\((?P<args>[^()]*)\)')
+# The operands may hold one level of parentheses, for `const unit_computed(K)`.
+_STMT = re.compile(r'(?:\(\s*(?P<many>[^()]*)\)|(?P<one>\S+))\s*=\s*(?P<op>[a-z][a-z0-9_]*)'
+                   r'\((?P<args>(?:[^()]|\([^()]*\))*)\)')
 
 
 def _stmt(text, where, lineno):
@@ -173,10 +233,12 @@ def _stmt(text, where, lineno):
         raise DescriptionError(f'{where}: expected "DST = OP(ARGS)" or "(DST, ...) = KERNEL(ARGS)", got {text!r}')
     dsts = tuple(d.strip() for d in (m.group('many') or m.group('one')).split(','))
     args = []
-    for a in (x.strip() for x in m.group('args').split(',')) if m.group('args').strip() else ():
+    for a in (x.strip() for x in re.split(r',(?![^()]*\))', m.group('args'))) if m.group('args').strip() else ():
         words = a.split()
         if len(words) == 2 and words[0] == 'const':
             args.append(Operand(words[1], const=True))
+        elif words == [ZERO]:
+            args.append(Operand(ZERO, const=True))
         elif len(words) == 1:
             args.append(Operand(words[0]))
         else:
@@ -229,6 +291,11 @@ def parse_kernel(text, path):
             k.theorem = tuple(parts)
         elif key in ('source', 'license', 'status', 'ce_variant', 'cone_exempt'):
             setattr(k, key, val)
+        elif key == 'unused':
+            name, _, why = val.partition(' ')
+            if not name or not why.strip() or name in k.unused:
+                raise DescriptionError(f'{where}: expected "unused: INPUT REASON", once per input')
+            k.unused[name] = why.strip()
         else:
             raise DescriptionError(f'{where}: unknown key {key!r}')
     if k.name is None:
@@ -336,10 +403,15 @@ def muladd_sites(kernel, kernels):
 
 def kinds(kernel, kernels):
     """The kind (LIMB or MASK) of every flattened value."""
-    out = {v: LIMB for v in kernel.input_limbs}
+    out = dict(zip(kernel.input_limbs, kernel.input_kinds))
     for p in prims(kernel, kernels):
         out[p.dst] = OPS[p.op][1]
     return out
+
+
+def constants(kernel):
+    """The names of the constants the kernel's own statements use (not its callees')."""
+    return sorted({a.name for st in kernel.body for a in st.args if a.const})
 
 
 def flops(kernel, kernels):

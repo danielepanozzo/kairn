@@ -18,11 +18,17 @@ library.md):
   host-only to nvcc), and the constant-evaluation branch is the variant's body with each prod a
   plain product, since constant evaluation has neither FMA nor contraction.
 - Kernels of at most two limbs are force-inlined.
+- A mask is a bool, and select a conditional expression on values already computed, which
+  compilers turn into a conditional move or a blend; succ and pred step the bit pattern
+  (std::bit_cast is constexpr), so that kernels that use them stay constexpr.
 """
-from . import ir
+from fractions import Fraction
 
-# The limb types: precision, and the literal suffix.
+from . import consts, ir
+
+# The limb types: precision, the literal suffix, and the format (p, qmin, qmax).
 TYPES = {'double': (53, ''), 'float': (24, 'f')}
+FORMATS = {'double': (53, -1074, 971), 'float': (24, -149, 104)}
 
 # Each operation as a C++ expression of exactly one operation. {0} {1} {2} are operands (names or
 # literals, never expressions) and {zero} is +0 of the limb type.
@@ -45,6 +51,7 @@ SPELL = {
     'select': '{0} ? {1} : {2}',
     'succ': 'next_up({0})',
     'pred': 'next_down({0})',
+    'copy': '{0}',
 }
 SPELL_CONSTEVAL = dict(SPELL, prod='{0} * {1}')
 
@@ -80,16 +87,29 @@ def constexpr_kind(k, kernels):
     return 'plain'
 
 
-def _literal(name, ctype):
-    p, suffix = TYPES[ctype]
-    v = ir.CONSTANTS[name](p)
-    if not 0 < v < 2 ** p:
-        raise PrintError(f'constant {name} = {v} is not exactly a {ctype}')
-    bits = v.bit_length() - 1
+def hex_literal(v, suffix):
+    """A positive dyadic rational as a C99 hexadecimal literal, 0x1.8p-3."""
+    m, d = v.numerator, v.denominator
+    if m <= 0 or d & (d - 1):
+        raise PrintError(f'{v} is not a positive dyadic rational')
+    e = -(d.bit_length() - 1)
+    while m % 2 == 0:
+        m, e = m // 2, e + 1
+    bits = m.bit_length() - 1
     digits = (bits + 3) // 4
-    frac = (v - (1 << bits)) << (4 * digits - bits)
+    frac = (m - (1 << bits)) << (4 * digits - bits)
     mantissa = f'0x1.{frac:0{digits}x}' if bits else '0x1'
-    return f'{mantissa}p+{bits}{suffix}'
+    return f'{mantissa}p{e + bits:+d}{suffix}'
+
+
+def literal(name, kernels, ctype):
+    """A constant of the format as a literal of the limb type: its exact value (consts.py)."""
+    suffix = TYPES[ctype][1]
+    try:
+        v = consts.value(name, kernels, *FORMATS[ctype])
+    except consts.ConstError as e:
+        raise PrintError(f'constant {name}: {e}')
+    return f'0.0{suffix}' if v == 0 else hex_literal(Fraction(v), suffix)
 
 
 def _body(k, kernels, ctype, spell, indent):
@@ -101,7 +121,7 @@ def _body(k, kernels, ctype, spell, indent):
         if isinstance(it, ir.CallMark):
             lines.append(f'{pad}// ({", ".join(it.dsts)}) = {it.callee}({", ".join(map(str, it.args))})')
             continue
-        args = [_literal(a.name, ctype) if a.const else a.name for a in it.args]
+        args = [literal(a.name, kernels, ctype) if a.const else a.name for a in it.args]
         vtype = ctype if ir.OPS[it.op][1] == ir.LIMB else 'bool'
         lines.append(f'{pad}const {vtype} {it.dst} = {spell[it.op].format(*args, zero=zero)};')
     lines += [f'{pad}{v}_out = {v};' for v in k.output_limbs]
@@ -117,10 +137,19 @@ def _check_names(k, kernels):
             raise PrintError(f'kernel {k.name}: C++ name clash: {", ".join(sorted(clash))}')
 
 
+def parameters(k, limb, mask):
+    """Inputs by value, outputs by reference; an input the computation ignores is marked so."""
+    def vtype(kind):
+        return mask if kind == ir.MASK else limb
+    ins = [f'{"[[maybe_unused]] " if v in k.unused else ""}{vtype(kind)} {v}'
+           for v, kind in zip(k.input_limbs, k.input_kinds)]
+    return ins + [f'{vtype(kind)}& {v}_out' for v, kind in zip(k.output_limbs, k.output_kinds)]
+
+
 def function(k, kernels, ctype):
     _check_names(k, kernels)
     kind = constexpr_kind(k, kernels)
-    params = [f'{ctype} {v}' for v in k.input_limbs] + [f'{ctype}& {v}_out' for v in k.output_limbs]
+    params = parameters(k, ctype, 'bool')
     inline = 'KAIRN_GEN_FORCEINLINE' if k.limbs <= 2 else 'inline'
     lines = [f'{inline} {"constexpr " if kind else ""}void {k.name}({", ".join(params)}) noexcept {{']
     if kind == 'variant':
@@ -135,6 +164,8 @@ def function(k, kernels, ctype):
 
 
 def _group(g):
+    if g.kind == ir.MASK:
+        return f'mask {g.name}'
     return g.name if g.limbs == (g.name,) else f'{g.name} = ({", ".join(g.limbs)})'
 
 
@@ -195,8 +226,8 @@ def prelude(kernels):
                   f'    return {builtin}(a, b, c);',
                   '#endif',
                   '}']
-    for ctype, utype, sign, inf in (('double', 'std::uint64_t', '0x7fffffffffffffffu', '0x7ff0000000000000u'),
-                                    ('float', 'std::uint32_t', '0x7fffffffu', '0x7f800000u')):
+    for ctype, utype, sign, inf, bits in (('double', 'std::uint64_t', '0x7fffffffffffffffu', '0x7ff0000000000000u', 64),
+                                          ('float', 'std::uint32_t', '0x7fffffffu', '0x7f800000u', 32)):
         if 'abs' in helpers:
             lines += ['',
                       '// |a|, exactly, by clearing the sign bit (std::fabs is not constexpr in C++20).',
@@ -206,13 +237,21 @@ def prelude(kernels):
         if helpers & {'succ', 'pred'}:
             lines += ['',
                       '// IEEE 754 nextUp and nextDown, by stepping the bit pattern: nextafter is not',
-                      '// constexpr in C++20, and not usable in CUDA device code.',
+                      '// constexpr in C++20, and not usable in CUDA device code. The pattern of a',
+                      '// positive number moves up, that of a negative one towards zero; either zero',
+                      '// becomes the smallest subnormal; NaN and +inf stay. The choices are masks of',
+                      '// all ones or all zeros, each from one comparison: written with ?: or ||, GCC',
+                      '// and Clang emit branches on the data. m + (s ^ 1) exceeds inf exactly for NaN',
+                      '// and +inf (it is m + 1 for a positive pattern, m for a negative one).',
                       f'KAIRN_GEN_FORCEINLINE constexpr {ctype} next_up({ctype} a) noexcept {{',
                       f'    const {utype} b = std::bit_cast<{utype}>(a);',
                       f'    const {utype} m = b & {sign};',
-                      f'    if (m > {inf} || b == {inf}) return a;  // NaN, +inf',
-                      f'    if (m == 0) return std::bit_cast<{ctype}>({utype}{{1}});  // either zero',
-                      f'    return std::bit_cast<{ctype}>(b == m ? b + 1 : b - 1);',
+                      f'    const {utype} s = b >> {bits - 1};',
+                      f'    const {utype} step = b + 1 - (s << 1);  // b + 1, or b - 1 for a negative pattern',
+                      f'    const {utype} zero = {utype}{{0}} - {utype}(m == 0);',
+                      f'    const {utype} keep = {utype}{{0}} - {utype}(m + (s ^ 1) > {inf});',
+                      f'    const {utype} r = (zero & 1) | (~zero & step);',
+                      f'    return std::bit_cast<{ctype}>((keep & b) | (~keep & r));',
                       '}',
                       f'KAIRN_GEN_FORCEINLINE constexpr {ctype} next_down({ctype} a) noexcept {{ return -next_up(-a); }}']
     lines += ['', '}  // namespace kairn::gen']
@@ -239,11 +278,17 @@ def scalar(kernels, prelude_name='prelude.hpp'):
 
 
 def runner_table(kernels):
-    """One line per kernel for gen/tests/runner.cpp: name, input and output limb counts, the call."""
+    """One line per kernel for the runners of gen/tests: name, the kind of each input and output
+    value (l a limb, m a mask), and the call. Limbs are in[i] and out[i], masks mi[i] and mo[i],
+    i being the value's position among the inputs or the outputs."""
     lines = ['// Generated by gen/kairn-gen. Do not edit.',
-             '// The kernels gen/tests/runner.cpp can run: name, input limbs, output limbs, the call.']
+             '// The kernels the runners of gen/tests can run: name, input and output kinds (l: limb,',
+             '// m: mask), the call.']
     for k in kernels.values():
-        ni, no = len(k.input_limbs), len(k.output_limbs)
-        args = [f'in[{i}]' for i in range(ni)] + [f'out[{i}]' for i in range(no)]
-        lines.append(f'KAIRN_RUNNER_KERNEL({k.name}, {ni}, {no}, kairn::gen::{k.name}({", ".join(args)}))')
+        def kinds(ks):
+            return ''.join('m' if kind == ir.MASK else 'l' for kind in ks)
+        args = [f'{"mi" if kind == ir.MASK else "in"}[{i}]' for i, kind in enumerate(k.input_kinds)]
+        args += [f'{"mo" if kind == ir.MASK else "out"}[{i}]' for i, kind in enumerate(k.output_kinds)]
+        lines.append(f'KAIRN_RUNNER_KERNEL({k.name}, "{kinds(k.input_kinds)}", "{kinds(k.output_kinds)}", '
+                     f'kairn::gen::{k.name}({", ".join(args)}))')
     return '\n'.join(lines) + '\n'

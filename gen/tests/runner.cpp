@@ -8,8 +8,10 @@
 // It runs binary64 requests on double limbs and binary32 requests on float limbs. Another kernel
 // header can stand in for the generated one (-DKAIRN_RUNNER_HEADER='"x.hpp"', with its own
 // runner_kernels.inc earlier on the include path), which is how the tests run their own kernels.
+// A mask, as an operand or a result, is 0 or 1.
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -24,14 +26,19 @@ namespace {
 
 struct Kernel {
     const char* name;
-    int inputs, outputs;
-    void (*binary64)(const double* in, double* out);
-    void (*binary32)(const float* in, float* out);
+    const char* in_kinds;   // one letter per input value: l a limb, m a mask
+    const char* out_kinds;
+    void (*binary64)(const double* in, double* out, const bool* mi, bool* mo);
+    void (*binary32)(const float* in, float* out, const bool* mi, bool* mo);
 };
 
-// The same call text serves both limb types: overload resolution picks the kernel.
+// The same call text serves both limb types: overload resolution picks the kernel. Limbs are
+// in[i] and out[i], masks mi[i] and mo[i], i being the position among the inputs or outputs.
+// Most kernels have no masks, or no limbs among their outputs: hence [[maybe_unused]].
+#define KAIRN_RUNNER_ARGS(T) \
+    [[maybe_unused]] const T* in, [[maybe_unused]] T* out, [[maybe_unused]] const bool* mi, [[maybe_unused]] bool* mo
 #define KAIRN_RUNNER_KERNEL(NAME, IN, OUT, CALL) \
-    {#NAME, IN, OUT, [](const double* in, double* out) { CALL; }, [](const float* in, float* out) { CALL; }},
+    {#NAME, IN, OUT, [](KAIRN_RUNNER_ARGS(double)) { CALL; }, [](KAIRN_RUNNER_ARGS(float)) { CALL; }},
 const Kernel kernels[] = {
 #include "runner_kernels.inc"
 };
@@ -102,20 +109,30 @@ int main() {
         for (const Kernel& c : kernels)
             if (fields[0] == c.name) k = &c;
         if (!k) fail("unknown kernel " + fields[0]);
-        if (int(fields.size()) - 2 != k->inputs) fail(fields[0] + " takes " + std::to_string(k->inputs) + " limbs");
-        if (k->inputs > max_limbs || k->outputs > max_limbs) fail("too many limbs for this runner");
+        const int inputs = int(std::strlen(k->in_kinds)), outputs = int(std::strlen(k->out_kinds));
+        if (int(fields.size()) - 2 != inputs) fail(fields[0] + " takes " + std::to_string(inputs) + " limbs");
+        if (inputs > max_limbs || outputs > max_limbs) fail("too many limbs for this runner");
+        bool mi[max_limbs] = {}, mo[max_limbs] = {};
+        for (int i = 0; i < inputs; ++i) {
+            if (k->in_kinds[i] != 'm') continue;
+            if (fields[2 + i] != "0" && fields[2 + i] != "1") fail("not a mask: " + fields[2 + i]);
+            mi[i] = fields[2 + i] == "1";
+        }
         out += " ->";
         if (fields[1] == "binary64") {
-            double in[max_limbs], res[max_limbs];
-            for (int i = 0; i < k->inputs; ++i) in[i] = parse(fields[2 + i]);
-            k->binary64(in, res);
-            for (int i = 0; i < k->outputs; ++i) {
+            double in[max_limbs] = {}, res[max_limbs] = {};
+            for (int i = 0; i < inputs; ++i)
+                if (k->in_kinds[i] == 'l') in[i] = parse(fields[2 + i]);
+            k->binary64(in, res, mi, mo);
+            for (int i = 0; i < outputs; ++i) {
                 out += ' ';
-                put(res[i], out);
+                if (k->out_kinds[i] == 'm') out += mo[i] ? '1' : '0';
+                else put(res[i], out);
             }
         } else if (fields[1] == "binary32") {
-            float in[max_limbs], res[max_limbs];
-            for (int i = 0; i < k->inputs; ++i) {
+            float in[max_limbs] = {}, res[max_limbs] = {};
+            for (int i = 0; i < inputs; ++i) {
+                if (k->in_kinds[i] != 'l') continue;
                 const double v = parse(fields[2 + i]);
                 const double top = std::numeric_limits<float>::max();
                 // A finite double beyond the float range cannot even be converted (undefined).
@@ -123,10 +140,11 @@ int main() {
                 in[i] = static_cast<float>(v);
                 if (static_cast<double>(in[i]) != v && v == v) fail(fields[2 + i] + " is not a binary32 number");
             }
-            k->binary32(in, res);
-            for (int i = 0; i < k->outputs; ++i) {
+            k->binary32(in, res, mi, mo);
+            for (int i = 0; i < outputs; ++i) {
                 out += ' ';
-                put(static_cast<double>(res[i]), out);
+                if (k->out_kinds[i] == 'm') out += mo[i] ? '1' : '0';
+                else put(static_cast<double>(res[i]), out);
             }
         } else {
             fail("this runner knows binary64 and binary32, not " + fields[1]);

@@ -25,6 +25,10 @@ Definition RN (x : R) : R := round radix2 (FLT_exp emin prec) (Znearest tie_even
 Definition u : R := bpow radix2 (- prec).
 Definition eta : R := bpow radix2 emin.
 
+(* Rounding down and up: the largest number of the format not above x, the smallest not below. *)
+Definition RD (x : R) : R := round radix2 (FLT_exp emin prec) Zfloor x.
+Definition RU (x : R) : R := round radix2 (FLT_exp emin prec) Zceil x.
+
 (* A 2-limb number is normalized: its limbs are numbers of the format, and each
    limb is the rounding of itself plus the next one. *)
 Definition normalized_2 (x0 x1 : R) : Prop :=
