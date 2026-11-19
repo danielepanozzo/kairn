@@ -95,6 +95,67 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   message(STATUS "Kairn tests: the public interface of ${_n} kernels against the oracle, with 2 runners")
 endif()
 
+# --- Products of the program passed into Kairn ------------------------------------------------
+#
+# boundary.cpp, under the build's flags and each contraction setting that matters to the compiler:
+# with the guard, every form must agree with the same operation on the rounded product
+# (api.boundary.*). Built again with the guard turned off (api.boundary.unguarded.*), x + a * b
+# must differ where the compiler was measured to fuse across statements, so that the first test
+# cannot pass for want of a compiler that fuses; elsewhere that build only reports.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(_api_contraction "" "" fp-precise /fp:precise fp-contract /fp:contract fp-strict /fp:strict)
+elseif(_msvc_style)
+  set(_api_contraction "" "" fp-strict /fp:strict fp-precise /fp:precise fp-contract /fp:contract
+    contract-fast /clang:-ffp-contract=fast)
+else()
+  set(_api_contraction "" "" contract-off -ffp-contract=off contract-on -ffp-contract=on
+    contract-fast -ffp-contract=fast)
+endif()
+set(_api_aarch64 OFF)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
+  set(_api_aarch64 ON)
+endif()
+list(LENGTH _api_contraction _n)
+math(EXPR _last "${_n} - 1")
+foreach(_i RANGE 0 ${_last} 2)
+  math(EXPR _j "${_i} + 1")
+  list(GET _api_contraction ${_i} _variant)
+  list(GET _api_contraction ${_j} _option)
+  if(_variant STREQUAL "")
+    set(_suffix "")
+  else()
+    set(_suffix ".${_variant}")
+  endif()
+  # Where the unguarded build was measured to fuse x + a * b: GCC by default (it contracts across
+  # statements in C++) and with =fast, Clang on AArch64 with =fast (not on x86-64), MSVC with
+  # /fp:contract.
+  set(_fuses OFF)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND (_variant STREQUAL "" OR _variant STREQUAL "contract-fast"))
+    set(_fuses ON)
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND _variant STREQUAL "contract-fast" AND _api_aarch64)
+    set(_fuses ON)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND _variant STREQUAL "fp-contract")
+    set(_fuses ON)
+  endif()
+  string(REPLACE "." "-" _target_suffix "${_suffix}")
+  # At -O2, where Clang was measured to fuse every form without the guard (at -O3 fewer); MSVC's
+  # Release is /O2 already.
+  set(_level "")
+  if(NOT _msvc_style)
+    set(_level -O2)
+  endif()
+  _kairn_api_program(kairn-api-boundary${_target_suffix} boundary.cpp ${_level} ${_option})
+  add_test(NAME api.boundary${_suffix} COMMAND kairn-api-boundary${_target_suffix} --expect none)
+  _kairn_api_program(kairn-api-boundary-unguarded${_target_suffix} boundary.cpp ${_level} ${_option})
+  target_compile_definitions(kairn-api-boundary-unguarded${_target_suffix} PRIVATE KAIRN_DETAIL_TEST_UNGUARDED)
+  if(_fuses)
+    add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect some)
+  else()
+    add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect report)
+  endif()
+  set_tests_properties(api.boundary${_suffix} api.boundary.unguarded${_suffix} PROPERTIES LABELS "api;boundary")
+endforeach()
+
 # --- The environment and the self-test --------------------------------------------------------
 _kairn_api_program(kairn-api-environment environment.cpp)
 add_test(NAME api.environment COMMAND kairn-api-environment)

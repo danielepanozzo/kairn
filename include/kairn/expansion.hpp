@@ -53,6 +53,28 @@ struct is_ball_t<Unverified<X>> : is_ball_t<X> {};
 template <class X>
 concept ball = is_ball_t<std::remove_cvref_t<X>>::value;
 
+/// The guard on a value that enters from the program: v + 0. With contraction across statements
+/// (GCC's default for C++, -ffp-contract=fast, /fp:contract) a product the program computed can be
+/// fused into a kernel's error-free sums, which are then wrong. (a * b) + 0 may itself become
+/// fma(a, b, 0), the rounded product, but its result is an addition, so nothing after it can be
+/// fused. A compiler that honors signed zeros cannot remove it (it turns -0 into +0, so a guarded
+/// -0 enters as +0); v - 0 and v + (-0) are identities and are folded away. It is to become an
+/// operation of the generated IR (rule R3: no value that enters from the program is an operand of
+/// an addition or subtraction, or the addend of an FMA, before it passes through the guard).
+/// Constant evaluation computes one operation at a time and fuses nothing, so the guard is skipped
+/// there: Clang's constant evaluator refuses NaN + 0, which would make a NaN operand non-constant.
+/// (The sign of a zero can then differ between compile time and run time; it is unspecified.)
+/// KAIRN_DETAIL_TEST_UNGUARDED turns it off, for the tests that show it is needed and nothing else.
+template <limb T>
+KAIRN_FORCEINLINE constexpr T guard(T v) noexcept {
+#if defined(KAIRN_DETAIL_TEST_UNGUARDED)
+    return v;
+#else
+    if (__builtin_is_constant_evaluated()) return v;
+    return v + T(0);
+#endif
+}
+
 /// Whether the limb x is finite, from its bit pattern (std::isfinite is not constexpr in C++20).
 template <limb T>
 KAIRN_FORCEINLINE constexpr bool finite(T x) noexcept {
@@ -225,7 +247,11 @@ KAIRN_FORCEINLINE constexpr T abs_upper(Expansion<T, 1> x) noexcept {
     return gen::abs_bits(x.limb[0]);
 }
 
-// k = 2: the generated kernels.
+// k = 2: the generated kernels. A two-limb operand needs no guard here: it was guarded when it was
+// built from limbs, or it is a kernel's result, which rule R2 keeps out of reach of contraction.
+// A one-limb operand is guarded where a kernel adds or subtracts it (add_2_1, sub_2_1, sub_1_2),
+// and not where it is only multiplied (mul_2_1, mul_pow2_2) or compared (lt, le, eq with a limb):
+// a multiplicand or a compared value cannot be fused.
 template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 2> add(Expansion<T, 2> x, Expansion<T, 2> y) noexcept {
     check(x, y);
@@ -237,7 +263,7 @@ template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 2> add(Expansion<T, 2> x, std::type_identity_t<T> a) noexcept {
     check(x);
     Expansion<T, 2> z;
-    gen::add_2_1(x.limb[0], x.limb[1], a, z.limb[0], z.limb[1]);
+    gen::add_2_1(x.limb[0], x.limb[1], guard(a), z.limb[0], z.limb[1]);
     return z;
 }
 template <class T>
@@ -255,14 +281,14 @@ template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 2> sub(Expansion<T, 2> x, std::type_identity_t<T> a) noexcept {
     check(x);
     Expansion<T, 2> z;
-    gen::sub_2_1(x.limb[0], x.limb[1], a, z.limb[0], z.limb[1]);
+    gen::sub_2_1(x.limb[0], x.limb[1], guard(a), z.limb[0], z.limb[1]);
     return z;
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 2> sub(std::type_identity_t<T> a, Expansion<T, 2> y) noexcept {
     check(y);
     Expansion<T, 2> z;
-    gen::sub_1_2(a, y.limb[0], y.limb[1], z.limb[0], z.limb[1]);
+    gen::sub_1_2(guard(a), y.limb[0], y.limb[1], z.limb[0], z.limb[1]);
     return z;
 }
 // Not constexpr: the products have fused operations and no constant-evaluation variant yet.
@@ -277,6 +303,7 @@ template <class T>
 KAIRN_FORCEINLINE Expansion<T, 2> mul(Expansion<T, 2> x, std::type_identity_t<T> a) noexcept {
     check(x);
     Expansion<T, 2> z;
+    // No guard: mul_2_1 uses a only as a multiplicand (two_prod(x0, a), fma(x1, a, cl1)).
     gen::mul_2_1(x.limb[0], x.limb[1], a, z.limb[0], z.limb[1]);
     return z;
 }
@@ -309,6 +336,7 @@ template <class T>
 KAIRN_FORCEINLINE Expansion<T, 2> ldexp(Expansion<T, 2> x, int n) noexcept {
     check(x);
     Expansion<T, 2> z;
+    // No guard: the power of two is built here, and mul_pow2_2 only multiplies by it.
     gen::mul_pow2_2(x.limb[0], x.limb[1], pow2<T>(n), z.limb[0], z.limb[1]);
     return z;
 }
@@ -330,7 +358,7 @@ KAIRN_FORCEINLINE Expansion<T, 2> half(Expansion<T, 2> x) noexcept {
     template <class T>                                                                                   \
     KAIRN_FORCEINLINE constexpr bool NAME(Expansion<T, 2> x, std::type_identity_t<T> a) noexcept {       \
         check(x);                                                                                        \
-        bool m = false;                                                                                  \
+        bool m = false; /* no guard: a is only compared */                                               \
         gen::NAME##_2_1(x.limb[0], x.limb[1], a, m);                                                     \
         return m;                                                                                        \
     }
@@ -341,14 +369,14 @@ KAIRN_DETAIL_K2_COMPARE(eq)
 template <class T>
 KAIRN_FORCEINLINE constexpr bool lt(std::type_identity_t<T> a, Expansion<T, 2> y) noexcept {
     check(y);
-    bool m = false;
+    bool m = false;  // no guard: a is only compared
     gen::lt_1_2(a, y.limb[0], y.limb[1], m);
     return m;
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr bool le(std::type_identity_t<T> a, Expansion<T, 2> y) noexcept {
     check(y);
-    bool m = false;
+    bool m = false;  // no guard: a is only compared
     gen::le_1_2(a, y.limb[0], y.limb[1], m);
     return m;
 }
@@ -419,6 +447,10 @@ KAIRN_DETAIL_MIXED(eq, constexpr)
 /// smallest subnormal of T); as for every operation, they need kairn::unverified only while
 /// gen/claims.json does not mark their kernel proved. Negation, abs, comparisons and the
 /// conversions to T have no kernel: they are exact IEEE 754 operations and never need it.
+///
+/// One-limb values are not guarded (see Expansion<T, 2>): they behave like T, contraction
+/// included, so p * q + r may be computed with one rounding where the compiler contracts, as for
+/// T (decision D6). They are guarded where they enter a two-limb operation or a ball.
 template <class T>
 struct Expansion<T, 1> {
     static_assert(detail::limb<T>, "Expansion<T, k>: the limb type T is float or double");
@@ -507,42 +539,51 @@ struct Expansion<T, 1> {
 /// not finite the limbs may hold any non-finite pattern, and an operand with a non-finite limb
 /// gives a result about which nothing is claimed.
 ///
-/// Not covered by any guarantee today: a product computed by the program and passed to an
-/// operation, as in x + a * b, under a contraction setting that fuses across statements (GCC's
-/// default for C++, -ffp-contract=fast on AArch64 Clang, MSVC's /fp:contract). The compiler can
-/// fuse that product into the kernel's error-free sums, which then are not error-free: measured,
-/// a normalized result with a relative error near 2^-24, where the bound is near 2^-104. Rule R2
-/// of the generator prevents this between Kairn's own kernels, not at the boundary with the
-/// program's code. -ffp-contract=off or =on, /fp:precise and /fp:strict are not affected.
+/// A value of type T that the program passes in (to a constructor, to from_limbs, or as the limb
+/// operand of x + a, a + x, x - a, a - x) goes through a guard, one addition of +0, before any
+/// kernel adds it: otherwise a product the program computed, as in x + a * b, could be fused into
+/// the kernel's error-free sums under contraction across statements (GCC's default for C++,
+/// -ffp-contract=fast, MSVC's /fp:contract), which then are not error-free. The guard turns a
+/// -0 into +0, whose sign Kairn leaves unspecified anyway. Limbs written directly into `limb` are
+/// not guarded (see there).
 template <class T>
 struct Expansion<T, 2> {
     static_assert(detail::limb<T>, "Expansion<T, k>: the limb type T is float or double");
 
-    /// The limbs, most significant first.
+    /// The limbs, most significant first. Written directly, a limb must not be a product the
+    /// compiler can see being computed (in the same function, even through a variable): under
+    /// contraction it could be fused into the next operation's sums. from_limbs and the
+    /// constructors guard what they are given; use them to build a number from computed values.
     T limb[2] = {};
 
     /// Zero.
     constexpr Expansion() noexcept = default;
-    /// x, exactly: (x, 0). For a non-finite x, the canonical forms (+inf, 0), (-inf, 0) and
-    /// (NaN, NaN).
-    constexpr Expansion(T x) noexcept : limb{x, x == x ? T(0) : x} {}
-    /// x, exactly: (x0, 0), or a canonical non-finite form as above.
+    /// x, exactly: (x, 0); a -0 becomes +0 (the guard). For a non-finite x, the canonical forms
+    /// (+inf, 0), (-inf, 0) and (NaN, NaN).
+    constexpr Expansion(T x) noexcept {
+        const T g = detail::guard(x);
+        limb[0] = g;
+        limb[1] = g == g ? T(0) : g;
+    }
+    /// x, exactly: (x0, 0), or a canonical non-finite form as above. The limb is guarded: a
+    /// one-limb value can be a product the compiler sees.
     constexpr Expansion(const Expansion<T, 1>& x) noexcept : Expansion(x.limb[0]) {}
-    /// The number with these two limbs (limbs[0], limbs[1]). They must form a normalized number:
-    /// limbs[0] + limbs[1] rounded to nearest is limbs[0]. Checked when KAIRN_CHECKS is 1, and
-    /// then a violation fails a constant expression or calls the failure handler; not checked
-    /// otherwise.
+    /// The number with these two limbs (limbs[0], limbs[1]), each guarded. They must form a
+    /// normalized number: limbs[0] + limbs[1] rounded to nearest is limbs[0]. Checked when
+    /// KAIRN_CHECKS is 1, and then a violation fails a constant expression or calls the failure
+    /// handler; not checked otherwise.
     static constexpr Expansion from_limbs(const T* limbs) noexcept {
         Expansion x = from_limbs_unchecked(limbs);
         detail::check(x);
         return x;
     }
-    /// The number with these two limbs, unchecked. If they do not form a normalized number,
-    /// operations on it have no undefined behavior but give results with no guarantee.
+    /// The number with these two limbs, each guarded, without the normalization check. If they do
+    /// not form a normalized number, operations on it have no undefined behavior but give results
+    /// with no guarantee.
     static constexpr Expansion from_limbs_unchecked(const T* limbs) noexcept {
         Expansion x;
-        x.limb[0] = limbs[0];
-        x.limb[1] = limbs[1];
+        x.limb[0] = detail::guard(limbs[0]);
+        x.limb[1] = detail::guard(limbs[1]);
         return x;
     }
 

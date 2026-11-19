@@ -35,6 +35,23 @@ struct ball_kernels<T, 2> {
     using neg = gen::bounds::ball_neg_2<T>;
 };
 
+// A center as it enters a ball. One limb is guarded (detail::guard): it goes into the center's
+// addition and can be a product the compiler sees. Two limbs were guarded when they were built.
+template <class T>
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> enter(const Expansion<T, 1>& c) noexcept {
+    return Expansion<T, 1>(guard(c.limb[0]));
+}
+template <class T>
+KAIRN_FORCEINLINE constexpr const Expansion<T, 2>& enter(const Expansion<T, 2>& c) noexcept {
+    return c;
+}
+
+/// The tag of the constructor of Ball that takes a kernel's result, which needs no guard.
+struct kernel_result_t {
+    explicit kernel_result_t() = default;
+};
+inline constexpr kernel_result_t kernel_result{};
+
 template <class T, int K>
 KAIRN_FORCEINLINE constexpr void check_ball([[maybe_unused]] const Ball<T, K>& x) noexcept {
 #if KAIRN_CHECKS
@@ -51,7 +68,7 @@ KAIRN_FORCEINLINE Ball<T, 1> add(const Ball<T, 1>& x, const Ball<T, 1>& y) noexc
     check_ball(y);
     T c = T(0), r = T(0);
     gen::ball_add_1(x.center().limb[0], x.radius(), y.center().limb[0], y.radius(), c, r);
-    return Ball<T, 1>(Expansion<T, 1>(c), r);
+    return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
 }
 template <class T>
 KAIRN_FORCEINLINE Ball<T, 1> sub(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept {
@@ -59,7 +76,7 @@ KAIRN_FORCEINLINE Ball<T, 1> sub(const Ball<T, 1>& x, const Ball<T, 1>& y) noexc
     check_ball(y);
     T c = T(0), r = T(0);
     gen::ball_sub_1(x.center().limb[0], x.radius(), y.center().limb[0], y.radius(), c, r);
-    return Ball<T, 1>(Expansion<T, 1>(c), r);
+    return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
 }
 template <class T>
 KAIRN_FORCEINLINE Ball<T, 1> mul(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept {
@@ -67,21 +84,22 @@ KAIRN_FORCEINLINE Ball<T, 1> mul(const Ball<T, 1>& x, const Ball<T, 1>& y) noexc
     check_ball(y);
     T c = T(0), r = T(0);
     gen::ball_mul_1(x.center().limb[0], x.radius(), y.center().limb[0], y.radius(), c, r);
-    return Ball<T, 1>(Expansion<T, 1>(c), r);
+    return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
 }
 template <class T>
 KAIRN_FORCEINLINE Ball<T, 1> mul(const Ball<T, 1>& x, std::type_identity_t<T> a) noexcept {
     check_ball(x);
     T c = T(0), r = T(0);
+    // No guard: ball_scale_1 only multiplies a (prod(cx, a), and rmul(abs(a), rx)).
     gen::ball_scale_1(x.center().limb[0], x.radius(), a, c, r);
-    return Ball<T, 1>(Expansion<T, 1>(c), r);
+    return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 1> neg(const Ball<T, 1>& x) noexcept {
     check_ball(x);
     T c = T(0), r = T(0);
     gen::ball_neg_1(x.center().limb[0], x.radius(), c, r);
-    return Ball<T, 1>(Expansion<T, 1>(c), r);
+    return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
 }
 template <class T>
 KAIRN_FORCEINLINE Ball<T, 2> add(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept {
@@ -91,7 +109,7 @@ KAIRN_FORCEINLINE Ball<T, 2> add(const Ball<T, 2>& x, const Ball<T, 2>& y) noexc
     T r = T(0);
     gen::ball_add_2(x.center().limb[0], x.center().limb[1], x.radius(), y.center().limb[0], y.center().limb[1],
                     y.radius(), c.limb[0], c.limb[1], r);
-    return Ball<T, 2>(c, r);
+    return Ball<T, 2>(kernel_result, c, r);
 }
 template <class T>
 KAIRN_FORCEINLINE Ball<T, 2> sub(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept {
@@ -101,7 +119,7 @@ KAIRN_FORCEINLINE Ball<T, 2> sub(const Ball<T, 2>& x, const Ball<T, 2>& y) noexc
     T r = T(0);
     gen::ball_sub_2(x.center().limb[0], x.center().limb[1], x.radius(), y.center().limb[0], y.center().limb[1],
                     y.radius(), c.limb[0], c.limb[1], r);
-    return Ball<T, 2>(c, r);
+    return Ball<T, 2>(kernel_result, c, r);
 }
 template <class T>
 KAIRN_FORCEINLINE Ball<T, 2> mul(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept {
@@ -111,15 +129,16 @@ KAIRN_FORCEINLINE Ball<T, 2> mul(const Ball<T, 2>& x, const Ball<T, 2>& y) noexc
     T r = T(0);
     gen::ball_mul_2(x.center().limb[0], x.center().limb[1], x.radius(), y.center().limb[0], y.center().limb[1],
                     y.radius(), c.limb[0], c.limb[1], r);
-    return Ball<T, 2>(c, r);
+    return Ball<T, 2>(kernel_result, c, r);
 }
 template <class T>
 KAIRN_FORCEINLINE Ball<T, 2> mul(const Ball<T, 2>& x, std::type_identity_t<T> a) noexcept {
     check_ball(x);
     Expansion<T, 2> c;
     T r = T(0);
+    // No guard: ball_scale_2 only multiplies a (mul_2_1(cx, a), and rmul(abs(a), rx)).
     gen::ball_scale_2(x.center().limb[0], x.center().limb[1], x.radius(), a, c.limb[0], c.limb[1], r);
-    return Ball<T, 2>(c, r);
+    return Ball<T, 2>(kernel_result, c, r);
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 2> neg(const Ball<T, 2>& x) noexcept {
@@ -127,7 +146,7 @@ KAIRN_FORCEINLINE constexpr Ball<T, 2> neg(const Ball<T, 2>& x) noexcept {
     Expansion<T, 2> c;
     T r = T(0);
     gen::ball_neg_2(x.center().limb[0], x.center().limb[1], x.radius(), c.limb[0], c.limb[1], r);
-    return Ball<T, 2>(c, r);
+    return Ball<T, 2>(kernel_result, c, r);
 }
 template <class T, int K>
 KAIRN_FORCEINLINE Ball<T, K> mul(std::type_identity_t<T> a, const Ball<T, K>& x) noexcept {
@@ -203,21 +222,28 @@ class Ball {
     T r_ = T(0);
 
 public:
+    // Every center and radius the program passes in is guarded (detail::guard, one addition of
+    // +0): the radius goes into radd, an addition, and a one-limb center into the center's
+    // addition, where a product the compiler sees could otherwise be fused. A -0 becomes +0.
+
     /// The point 0: center 0, radius 0.
     constexpr Ball() noexcept = default;
-    /// The point x: center x (exactly), radius 0.
-    constexpr Ball(T x) noexcept : c_(x) {}
+    /// The point x: center x (exactly, up to the sign of a zero), radius 0.
+    constexpr Ball(T x) noexcept : c_(detail::enter(Expansion<T, K>(x))) {}
     /// The point c: center c, radius 0.
-    constexpr Ball(const Expansion<T, K>& c) noexcept : c_(c) {}
+    constexpr Ball(const Expansion<T, K>& c) noexcept : c_(detail::enter(c)) {}
     /// The ball of center c and radius r. Requires a normalized c and r >= 0: checked when
     /// KAIRN_CHECKS is 1, except that a NaN radius passes (it is the planned representation of the
     /// empty set, about which nothing is claimed yet).
-    constexpr Ball(const Expansion<T, K>& c, T r) noexcept : c_(c), r_(r) {
+    constexpr Ball(const Expansion<T, K>& c, T r) noexcept : c_(detail::enter(c)), r_(detail::guard(r)) {
 #if KAIRN_CHECKS
-        detail::check(c);
-        if (r < 0) detail::fail("a ball", "has a negative radius");
+        detail::check(c_);
+        if (r_ < 0) detail::fail("a ball", "has a negative radius");
 #endif
     }
+    /// Internal: a kernel's center and radius, as they are (rule R2 already keeps them out of
+    /// reach of contraction, so they need no guard).
+    constexpr Ball(detail::kernel_result_t, const Expansion<T, K>& c, T r) noexcept : c_(c), r_(r) {}
 
     /// The center.
     constexpr const Expansion<T, K>& center() const noexcept { return c_; }
