@@ -162,15 +162,63 @@ EXPLICIT = {
 }
 
 
-# Kernels whose description uses the constant splitter 2^ceil(p/2) + 1: the interpreter refuses a
-# format whose largest number is below it (kairn-gen interp: "constant splitter ... is not a
-# number of the format"), a format where the claims, which assume that nothing overflows, say
-# nothing. The plan leaves such formats out for them.
-SPLITTER_KERNELS = ("split", "two_prod_dekker")
+# The constants of a kernel (the splitter 2^ceil(p/2) + 1 of split and two_prod_dekker, the
+# constants up(...) and unit_computed(K) of the Ball kernels) are numbers of the format, or the
+# interpreter refuses the kernel in it (kairn-gen interp: "constant ... is not a number of the
+# format", or "... overflows the format"): a format where the claims, which assume that nothing
+# overflows, say nothing. The plan evaluates every constant of a kernel and of its callees with
+# the generator's own code (gen/kairn_gen/consts.py) and replaces a format that one of them does
+# not fit by the nearest that every one fits: the same precision and number of exponents, the
+# range moved up one exponent at a time (finite domain), or two exponents more at a time in the
+# IEEE shape (extended domain).
+_GEN = []
 
 
-def splitter_fits(p, qmax):
-    return (2 ** p - 1) * 2 ** qmax >= 2 ** (-(-p // 2)) + 1
+def gen_kernels():
+    """The generator's modules ir and consts and its kernels, loaded once."""
+    if not _GEN:
+        sys.path.insert(0, os.path.join(REPO, "gen"))
+        from kairn_gen import consts, ir
+        _GEN.extend([ir, consts, ir.load_kernels(os.path.join(REPO, "gen", "kernels"))])
+    return _GEN
+
+
+def kernel_constants(name):
+    """The constants a kernel names, its callees' included (+inf and NaN are always numbers)."""
+    ir, _, ks = gen_kernels()
+
+    def walk(k):
+        out = set(ir.constants(k))
+        for st in k.body:
+            if st.is_call:
+                out |= walk(ks[st.op])
+        return out
+    return sorted(walk(ks[name]) - {"inf", "nan"})
+
+
+def refusal(name, fmt):
+    """Why the interpreter refuses the kernel in the format (a constant of it that is not a
+    number of the format), or None."""
+    _, consts, ks = gen_kernels()
+    p, qmin, qmax = parse_fmt(fmt)
+    for c in kernel_constants(name):
+        try:
+            consts.value(c, ks, p, qmin, qmax)
+        except consts.ConstError as e:
+            return "constant %s: %s" % (c, e)
+    return None
+
+
+def fitting_format(name, fmt, extended):
+    """The format nearest to fmt in which every constant of the kernel is a number (see above),
+    or None if there is none within 64 steps."""
+    p, qmin, qmax = parse_fmt(fmt)
+    for i in range(1, 65):
+        f = (ieee_shaped(p, qmax - qmin + 1 + 2 * i) if extended
+             else "fp:%d:%d:%d" % (p, qmin + i, qmax + i))
+        if refusal(name, f) is None:
+            return f
+    return None
 
 
 def load_claims():
@@ -258,9 +306,20 @@ def interp_plan(kernels, only=None):
         seen = set()
         for fmt, restrict, _ in entries:
             p, qmin, qmax = parse_fmt(fmt)
-            if p < pmin or (fmt, tuple(restrict)) in seen:
+            if p < pmin:
                 continue
-            if name in SPLITTER_KERNELS and not splitter_fits(p, qmax):
+            refused = refusal(name, fmt)
+            if refused:
+                replaced = fitting_format(name, fmt, extended)
+                if replaced is None:
+                    errors.append("%s: the interpreter refuses %s (%s), and no format of the "
+                                  "same precision with its exponents moved up accepts it"
+                                  % (name, fmt, refused))
+                    continue
+                fmt, refused = replaced, "replaces %s, where %s" % (fmt, refused.split(": ")[0]
+                                                                    + " is not a number")
+                p, qmin, qmax = parse_fmt(fmt)
+            if (fmt, tuple(restrict)) in seen:
                 continue
             if extended and qmin + qmax != 3 - 2 * p:
                 errors.append("%s: %s is not of the shape qmin + qmax = 3 - 2p of the extended "
@@ -286,8 +345,11 @@ def interp_plan(kernels, only=None):
                 why.append("another " + ("number of exponents" if extended else "exponent range"))
             if restrict:
                 why.append("restricted")
+            if refused:
+                why.append(refused)
             plan.append({"kernel": name, "format": fmt, "restrict": list(restrict),
-                         "why": ", ".join(why)})
+                         "why": ", ".join(why),
+                         "domain": "extended" if extended else "finite"})
     return plan, errors
 
 
@@ -624,8 +686,22 @@ def cache_value(builddir, name):
     return None
 
 
-def build(work, specs, generator, cmake_args, jobs, env):
-    """Configure (once) and build each --build NAME=CXX; return the runners they produce."""
+def default_fixup_call(compiler):
+    """KAIRN_GEN_FIXUP_CALL as include/kairn/gen/prelude.hpp sets it when nothing defines it:
+    1 (the fix-up of a scalar full kernel a function of its own) with Clang on AArch64, 0
+    (inline) elsewhere. The builds are native, so the target is this machine."""
+    clang = compiler.split()[0] in ("Clang", "AppleClang")
+    return 1 if clang and platform.machine().lower() in ("arm64", "aarch64") else 0
+
+
+def build(work, specs, generator, cmake_args, jobs, env, fixup_forms="both"):
+    """Configure (once) and build each --build NAME=CXX; return the runners they produce.
+
+    The quick tier's runners have the compiler's own form of the scalar fix-ups
+    (KAIRN_GEN_FIXUP_CALL, prelude.hpp). With fixup_forms "both", each build NAME has a second
+    one, NAME-fixup-call or NAME-fixup-inline, configured with the other form defined
+    (CXXFLAGS=-DKAIRN_GEN_FIXUP_CALL=0 or 1), of which only the scalar runners are built and
+    run: the packed kernels have no such branch (gen/kairn_gen/cpp.py)."""
     runners = []
     os.makedirs(os.path.join(work, "logs"), exist_ok=True)
     for spec in specs:
@@ -634,24 +710,55 @@ def build(work, specs, generator, cmake_args, jobs, env):
             sys.exit("brute: --build wants NAME=COMPILER, NAME of letters, digits, . _ -: %r"
                      % spec)
         bdir = os.path.join(work, "builds", name)
-        if not os.path.exists(os.path.join(bdir, "CMakeCache.txt")):
-            cmd = ["cmake", "-S", REPO, "-B", bdir, "-DCMAKE_BUILD_TYPE=Release",
-                   "-DCMAKE_CXX_COMPILER=" + cxx, "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"]
-            if generator:
-                cmd += ["-G", generator]
-            cmd += cmake_args
-            log("configure %s: %s" % (name, " ".join(cmd[1:2] + cmd[5:])))
-            run_step("configure " + name, cmd, env, 900,
-                     os.path.join(work, "logs", "configure-%s.log" % name))
-        log("build %s" % name)
-        cmd = ["cmake", "--build", bdir, "--parallel", str(max(1, jobs))]
-        if cache_value(bdir, "CMAKE_CONFIGURATION_TYPES"):
-            cmd += ["--config", "Release"]
-        run_step("build " + name, cmd, env, 3600, os.path.join(work, "logs", "build-%s.log" % name))
-        runners += discover(name, bdir)
+        build_one(work, name, bdir, cxx, generator, cmake_args, jobs, env, None)
+        main = discover(name, bdir)
+        dflt = default_fixup_call(main[0]["compiler"])
+        for r in main:
+            if r["kind"] == "scalar":
+                r["fixup"] = "call" if dflt else "inline"
+                r["fixup_default"] = True
+        runners += main
+        if fixup_forms != "both":
+            continue
+        other = 1 - dflt
+        oname = "%s-fixup-%s" % (name, "call" if other else "inline")
+        odir = os.path.join(work, "builds", oname)
+        oenv = dict(env)
+        oenv["CXXFLAGS"] = (env.get("CXXFLAGS", "") + " -DKAIRN_GEN_FIXUP_CALL=%d" % other).strip()
+        targets = [r["target"] for r in main if r["kind"] == "scalar"]
+        build_one(work, oname, odir, cxx, generator, cmake_args, jobs, oenv, targets)
+        extra = [r for r in discover(oname, odir) if r["kind"] == "scalar"]
+        for r in extra:
+            r["fixup"] = "call" if other else "inline"
+            r["fixup_default"] = False
+            if "-DKAIRN_GEN_FIXUP_CALL=%d" % other not in r["flags"].split():
+                sys.exit("brute: the runner %s was not compiled with -DKAIRN_GEN_FIXUP_CALL=%d "
+                         "(its flags: %s)" % (r["id"], other, r["flags"]))
+        runners += extra
     if not runners:
         sys.exit("brute: the builds produced no runner")
     return runners
+
+
+def build_one(work, name, bdir, cxx, generator, cmake_args, jobs, env, targets):
+    if not os.path.exists(os.path.join(bdir, "CMakeCache.txt")):
+        cmd = ["cmake", "-S", REPO, "-B", bdir, "-DCMAKE_BUILD_TYPE=Release",
+               "-DCMAKE_CXX_COMPILER=" + cxx, "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"]
+        if generator:
+            cmd += ["-G", generator]
+        cmd += cmake_args
+        log("configure %s: %s%s" % (name, " ".join(cmd[1:2] + cmd[5:]),
+                                    " (CXXFLAGS=%s)" % env["CXXFLAGS"] if env.get("CXXFLAGS")
+                                    else ""))
+        run_step("configure " + name, cmd, env, 900,
+                 os.path.join(work, "logs", "configure-%s.log" % name))
+    log("build %s" % name)
+    cmd = ["cmake", "--build", bdir, "--parallel", str(max(1, jobs))]
+    if cache_value(bdir, "CMAKE_CONFIGURATION_TYPES"):
+        cmd += ["--config", "Release"]
+    if targets:
+        cmd += ["--target"] + targets
+    run_step("build " + name, cmd, env, 3600, os.path.join(work, "logs", "build-%s.log" % name))
 
 
 def discover(name, bdir):
@@ -952,6 +1059,7 @@ class Scheduler:
         self.stopped = set()
         self.stopped_enums = set()
         self.findings_path = os.path.join(work, "findings.jsonl")
+        self.times = open(os.path.join(work, "times.jsonl"), "a", encoding="utf-8")
         self.n_findings = 0
         if os.path.exists(self.findings_path):
             with open(self.findings_path, encoding="utf-8") as f:
@@ -965,6 +1073,21 @@ class Scheduler:
                             self.stopped_enums.add(enum_key(x))
         self.pairs = [(k, f) for k in a.kernel_names for f in ("binary64", "binary32")]
         self.stats = {"tasks": 0, "judged_cases": 0, "interp_cases": 0}
+
+    def timing(self, t, why):
+        """The wall time of a finished pipeline, for the cases per second of the report."""
+        x = {"s": round(time.time() - t.t0, 3)}
+        if isinstance(t, InterpTask):
+            x.update(part="interp", enum=enum_key(t.e), count=t.count)
+        else:
+            x.update(part="gen" if isinstance(t, GenTask) else "check", kernel=t.unit.kernel,
+                     format=t.unit.format, count=t.unit.count)
+            if isinstance(t, CheckTask):
+                x["runner"] = t.runner["id"]
+        if why:
+            x["failed"] = True
+        self.times.write(json.dumps(x, separators=(",", ":")) + "\n")
+        self.times.flush()
 
     def finding(self, part, why, examples, **fields):
         x = dict(part=part, why=why, examples=examples, time=now_iso(), **fields)
@@ -1045,6 +1168,7 @@ class Scheduler:
                 if isinstance(t, InterpTask):
                     self.stats["interp_cases"] += t.count
                 why = t.finish()
+                self.timing(t, why)
                 if isinstance(t, GenTask):
                     if why:
                         self.finding("compiled", why, [], kernel=t.unit.kernel,
@@ -1155,6 +1279,11 @@ def cmd_run(a):
         os.environ.update(env)
     parts = set(a.part.split(","))
     a.compiled, a.interp = "compiled" in parts, "interp" in parts
+    code_commit = a.commit or git_commit(CODE_PATHS)
+    driver_commit = a.driver_commit or git_commit(DRIVER_PATHS)
+    if not code_commit or not driver_commit:
+        sys.exit("brute: no git history to name the commit of the code under test and of the "
+                 "driver: give --commit and --driver-commit")
     kernels = load_claims()
     only = set(a.kernels.split(",")) if a.kernels else None
     a.kernel_names = [k["name"] for k in kernels if not only or k["name"] in only]
@@ -1164,7 +1293,8 @@ def cmd_run(a):
     if a.compiled:
         if not a.build:
             sys.exit("brute: the compiled part needs at least one --build NAME=COMPILER")
-        runners = build(work, a.build, a.generator, a.cmake_arg or [], a.jobs, env)
+        runners = build(work, a.build, a.generator, a.cmake_arg or [], a.jobs, env,
+                        a.fixup_forms)
         write_json(os.path.join(work, "runners.json"), runners)
         log("%d runners: %s" % (len(runners), ", ".join(r["id"] for r in runners)))
     enums = []
@@ -1186,12 +1316,12 @@ def cmd_run(a):
     record = {"started": started, "budget": a.budget, "jobs": a.jobs, "parts": sorted(parts),
               "seed": a.seed, "chunk": a.chunk, "interp_chunk": a.interp_chunk,
               "cases_cap": a.cases, "kernels": a.kernel_names, "cpus": a.cpus, "nice": a.nice,
-              "commit": a.commit or git_commit(), "machine": machine_info(a.cpus),
+              "commit": code_commit, "driver_commit": driver_commit,
+              "driver_sha256": file_sha256(__file__),
+              "fixup_forms": a.fixup_forms, "machine": machine_info(a.cpus),
               "interp_bins": a.interp_bins, "interp_take": a.interp_take,
-              "builds": [{"name": s.split("=", 1)[0],
-                          "compiler": compiler_of(os.path.join(work, "builds",
-                                                               s.split("=", 1)[0]))}
-                         for s in (a.build or [])] if a.compiled else []}
+              "builds": [{"name": b, "compiler": compiler_of(os.path.join(work, "builds", b))}
+                         for b in sorted({r["build"] for r in runners})]}
     with open(os.path.join(work, "runs.jsonl"), "a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
     deadline = time.time() + a.budget if a.budget else None
@@ -1215,15 +1345,30 @@ def cmd_run(a):
     return status or (1 if sched.n_findings else 0)
 
 
-def git_commit():
+# The code under test: the kernels and their claims, the generator and its interpreter, the
+# headers, the proofs and the oracle; and the driver. In a checkout, the last commit that changed
+# each is what `run` records unless --commit and --driver-commit say otherwise (a copy made with
+# git archive has no history: give both).
+CODE_PATHS = ("include", "gen", "proofs", "oracle")
+DRIVER_PATHS = ("tests/brute",)
+
+
+def git_commit(paths=()):
     try:
-        out = subprocess.run(["git", "-C", REPO, "rev-parse", "HEAD"], capture_output=True,
-                             text=True, timeout=30)
-        if out.returncode == 0:
+        cmd = ["git", "-C", REPO, "log", "-1", "--format=%H"]
+        if paths:
+            cmd += ["--"] + list(paths)
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if out.returncode == 0 and out.stdout.strip():
             return out.stdout.strip()
     except (OSError, subprocess.SubprocessError):
         pass
     return None
+
+
+def file_sha256(path):
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read().replace(b"\r\n", b"\n")).hexdigest()
 
 
 # --- Collect ---------------------------------------------------------------------------------------
@@ -1923,7 +2068,13 @@ def main(argv=None):
     r.add_argument("--task-timeout", type=float, default=1800,
                    help="seconds before a pipeline is killed and reported")
     r.add_argument("--report-every", type=float, default=60)
-    r.add_argument("--commit", help="the commit the tree is from (default: git rev-parse HEAD)")
+    r.add_argument("--commit", help="the commit of the code under test (default: the last that "
+                                    "changed include, gen, proofs or oracle)")
+    r.add_argument("--driver-commit", help="the commit of this driver (default: the last that "
+                                           "changed tests/brute)")
+    r.add_argument("--fixup-forms", choices=("both", "default"), default="both",
+                   help="both forms of the scalar fix-ups (KAIRN_GEN_FIXUP_CALL; default), or "
+                        "only the compiler's own, as in the quick tier")
     r.set_defaults(func=cmd_run)
 
     c = sub.add_parser("collect", help="merge, guard and write the compact summary")
