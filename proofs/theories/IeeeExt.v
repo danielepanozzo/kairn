@@ -1,6 +1,8 @@
 (* The kernels that need no fix-up, in the IEEE model, on canonical operands that may be
-   infinite or NaN: neg_2, abs_2, the eight comparisons, to_nearest_2, to_down_2 and
-   to_up_2. The statements are in IeeeExtStatementsDraft.v.
+   infinite or NaN: neg_2, abs_2, the eight comparisons, to_nearest_2, to_down_2,
+   to_up_2 and abs_upper_2; and radd and rmul on operands that are nonnegative,
+   +infinity or NaN (at the end of the file). The statements are in
+   IeeeExtStatementsDraft.v.
 
    Each result is given as an extended real number. The proofs go through three facts:
 
@@ -18,7 +20,7 @@
 From Stdlib Require Import Reals ZArith Bool Lia Lra.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Format Normalized Sign Compare Convert IeeeBridge IeeeStatementsDraft
+From Kairn Require Import Format Normalized Sign Compare Convert Directed IeeeBridge IeeeStatementsDraft
   IeeeExtStatementsDraft IeeeOps.
 From Kairn Require IeeeDraft.
 Open Scope R_scope.
@@ -399,6 +401,61 @@ destruct (canonical_cases x0 x1 C)
 - cbn [xlt xround]. exact E0.
 Qed.
 
+(** * abs_upper_2, radd and rmul *)
+
+(* abs_upper_2 is abs_2 followed by to_up_2. *)
+Lemma abs_upper_2_ext :
+  (1 <= prec)%Z ->
+  forall x0 x1 : float, canonical_2 x0 x1 ->
+  xv (IeeeDraft.abs_upper_2 prec emax nan_opp x0 x1)
+  = xround emax (RU emin prec) (xabs (xv2 x0 x1)).
+Proof.
+intros Hp x0 x1 C. unfold IeeeDraft.abs_upper_2.
+generalize (abs_2_ext Hp x0 x1 C).
+destruct (IeeeDraft.abs_2 prec emax nan_opp x0 x1) as [a0 a1]. intros [Ca Ea]. cbv zeta.
+rewrite <- Ea. exact (to_up_2_ext Hp a0 a1 Ca).
+Qed.
+
+(* radd and rmul on operands that are nonnegative, +infinity or NaN: the result is of
+   that kind too, and a finite result means finite operands and the statement of the
+   real model. *)
+Variable nan_plus : float -> float -> nan_of.
+Variable nan_fma : float -> float -> float -> nan_of.
+
+Lemma radd_ext :
+  (2 <= prec)%Z ->
+  forall a b : float, nonneg_ext a -> nonneg_ext b ->
+  let r := IeeeDraft.radd prec emax nan_plus a b in
+  nonneg_ext r /\
+  (fin r -> fin a /\ fin b /\ b2r a + b2r b <= b2r r /\
+   b2r r - (b2r a + b2r b) <= 3 / 2 * (b2r r - Ulp.pred radix2 fexp (b2r r))).
+Proof.
+intros Hp a b Ha Hb. cbv zeta.
+destruct (radd_nonneg prec emax nan_plus a b Ha Hb) as [Hr Fr].
+split; [exact Hr|]. intros F. destruct (Fr F) as [Fa [Fb E]].
+split; [exact Fa|split; [exact Fb|]]. rewrite E.
+exact (proj2 (radd_correct emin prec Hp (b2r a) (b2r b)
+                (b2r_format prec emax a) (b2r_format prec emax b)
+                (nonneg_ext_fin prec emax a Ha Fa) (nonneg_ext_fin prec emax b Hb Fb))).
+Qed.
+
+Lemma rmul_ext :
+  (2 <= prec)%Z ->
+  forall a b : float, nonneg_ext a -> nonneg_ext b ->
+  let r := IeeeDraft.rmul prec emax nan_fma a b in
+  nonneg_ext r /\
+  (fin r -> fin a /\ fin b /\ b2r a * b2r b <= b2r r /\
+   b2r r - (b2r a * b2r b) <= 3 / 2 * (b2r r - Ulp.pred radix2 fexp (b2r r))).
+Proof.
+intros Hp a b Ha Hb. cbv zeta.
+destruct (rmul_nonneg prec emax nan_fma a b Ha Hb) as [Hr Fr].
+split; [exact Hr|]. intros F. destruct (Fr F) as [Fa [Fb E]].
+split; [exact Fa|split; [exact Fb|]]. rewrite E.
+exact (proj2 (rmul_correct emin prec Hp (b2r a) (b2r b)
+                (b2r_format prec emax a) (b2r_format prec emax b)
+                (nonneg_ext_fin prec emax a Ha Fa) (nonneg_ext_fin prec emax b Hb Fb))).
+Qed.
+
 End IeeeExt.
 
 (** * The statements of IeeeExtStatementsDraft.v *)
@@ -443,3 +500,18 @@ Proof. intros prec emax Hp He Hp1 x0 x1 C. exact (to_down_2_ext prec emax Hp1 x0
 
 Theorem to_up_2_ieee_correct : to_up_2_ieee_spec.
 Proof. intros prec emax Hp He Hp1 x0 x1 C. exact (to_up_2_ext prec emax Hp1 x0 x1 C). Qed.
+
+Theorem abs_upper_2_ieee_correct : abs_upper_2_ieee_spec.
+Proof.
+intros prec emax Hp He nan_opp Hp1 x0 x1 C. exact (abs_upper_2_ext prec emax nan_opp Hp1 x0 x1 C).
+Qed.
+
+Theorem radd_ieee_correct : radd_ieee_spec.
+Proof.
+intros prec emax Hp He nan_plus Hp2 a b Ha Hb. exact (radd_ext prec emax nan_plus Hp2 a b Ha Hb).
+Qed.
+
+Theorem rmul_ieee_correct : rmul_ieee_spec.
+Proof.
+intros prec emax Hp He nan_fma Hp2 a b Ha Hb. exact (rmul_ext prec emax nan_fma Hp2 a b Ha Hb).
+Qed.

@@ -796,3 +796,49 @@ Definition to_up_2_ieee_spec : Prop :=
   let t := IeeeDraft.to_up_2 prec emax x0 x1 in
   xval t = xround emax (RU (ieee_emin prec emax) prec) (xval_2 x0 x1).
 
+
+(* abs_upper_2: the absolute value of a canonical 2-limb value, rounded up to one limb. *)
+Definition abs_upper_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp : nan1 prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  let t := IeeeDraft.abs_upper_2 prec emax nan_opp x0 x1 in
+  xval t = xround emax (RU (ieee_emin prec emax) prec) (xabs (xval_2 x0 x1)).
+
+(* radd and rmul, on operands that are nonnegative, +infinity or NaN: the result is of
+   that kind too, and when it is finite the operands are finite and the statement of the
+   real model holds. (The Ball kernels of the second radius design do not call them.) *)
+Definition radd_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax),
+  (2 <= prec)%Z ->
+  forall a b : binary_float prec emax,
+  nonneg_ext a ->
+  nonneg_ext b ->
+  let r := IeeeDraft.radd prec emax nan_plus a b in
+  nonneg_ext r /\
+  (finite r ->
+   finite a /\ finite b /\
+   (val a + val b) <= val r /\
+   val r - (val a + val b)
+   <= (3 / 2) * (val r - Ulp.pred radix2 (FLT_exp (ieee_emin prec emax) prec) (val r))).
+
+Definition rmul_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall a b : binary_float prec emax,
+  nonneg_ext a ->
+  nonneg_ext b ->
+  let r := IeeeDraft.rmul prec emax nan_fma a b in
+  nonneg_ext r /\
+  (finite r ->
+   finite a /\ finite b /\
+   (val a * val b) <= val r /\
+   val r - (val a * val b)
+   <= (3 / 2) * (val r - Ulp.pred radix2 (FLT_exp (ieee_emin prec emax) prec) (val r))).

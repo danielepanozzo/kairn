@@ -310,3 +310,14 @@ Print Assumptions to_down_2_ieee_correct.
 Definition to_up_2_ieee_audit : to_up_2_ieee_spec := to_up_2_ieee_correct.
 Print Assumptions to_up_2_ieee_correct.
 
+
+(* abs_upper_2, radd and rmul on the extended domain. *)
+Definition abs_upper_2_ieee_audit : abs_upper_2_ieee_spec := abs_upper_2_ieee_correct.
+Print Assumptions abs_upper_2_ieee_correct.
+
+Definition radd_ieee_audit : radd_ieee_spec := radd_ieee_correct.
+Print Assumptions radd_ieee_correct.
+
+Definition rmul_ieee_audit : rmul_ieee_spec := rmul_ieee_correct.
+Print Assumptions rmul_ieee_correct.
+
