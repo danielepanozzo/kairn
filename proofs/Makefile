@@ -30,6 +30,9 @@ audit: build
 	@echo "== assumptions of every theorem"
 	@$(ROCQ) compile $(LIBS) gen/Audit.v > audit/Audit.out
 	@$(PYTHON) $(AUDIT) assumptions gen/Audit.v audit/Audit.out $(ALLOWED)
+	@echo "== assumptions of the theorems whose statements are not generated yet"
+	@$(ROCQ) compile $(LIBS) -Q audit KairnAudit audit/HandAudit.v > audit/HandAudit.out
+	@$(PYTHON) $(AUDIT) assumptions audit/HandAudit.v audit/HandAudit.out $(ALLOWED)
 	@echo "== negative control: a false theorem closed with Admitted must be rejected"
 	@if $(PYTHON) $(AUDIT) scan audit/Bad.v; \
 	  then echo "  ERROR: the text scan accepted audit/Bad.v"; exit 1; \

@@ -26,25 +26,50 @@ numbers, while only the IEEE model can say what happens at overflow or with an i
 ## What is proved about an arithmetic kernel
 
 Let $K$ be a kernel made only of additions, subtractions, opaque products, fused operations and
-sign changes (every first-wave kernel is), with finite normalized operands.
+sign changes, ending with a `fast_two_sum` whose sum is output limb 0 (every first-wave
+arithmetic kernel is), with finite normalized operands.
 
 1. **Bridge.** If output limb 0 of the IEEE model is finite, then every intermediate value was
    finite, and the outputs are equal, as real numbers, to those of the real model.
    *Why it holds:* each of those operations returns a non-finite value when an operand is not
-   finite, and the generator's cone rule guarantees that every intermediate value reaches output
-   limb 0. The proof is mechanical and is generated per kernel.
+   finite, and the generator's cone rule guarantees that every value computed before output
+   limb 0 reaches it. The two values computed after it, the tail of the final `fast_two_sum`,
+   need a different argument: if the first of them overflowed, the second limb would be at least
+   $2^{-p}$ times the overflow threshold, which a normalized result excludes; and the result is
+   normalized by the real-model theorem.
 2. **Correctness.** Therefore either $z_0$ is not finite, or $z$ is normalized and satisfies the
    bound of the real-model theorem. No finite wrong result can come out of an intermediate
    overflow.
-3. **No spurious overflow.** There is a threshold $\Omega_K$, a power-of-two fraction of $\Omega$
-   that is part of the statement, such that if all operands and the exact result are at most
-   $\Omega_K$ in magnitude then $z_0$ is finite. Target: $\Omega/4$ for the additions; for the
-   products to be determined.
+3. **No spurious overflow.** Under a threshold that is part of the statement, every value is
+   finite. This is a statement about the real model alone: it says that every value there is at
+   most $\Omega$ in magnitude.
 
-Open, to be settled by exhaustive testing on toy formats with a finite $q_{\max}$: the exact
-conditions under which `two_sum`, in the operation order Kairn uses, returns a non-finite error
-term although its sum is finite. Phase 0 found such a case for one operation order at an operand
-equal to $\pm\Omega$; statement 3 has to be stated so that this corner is outside it.
+The bridge is proved once, for every such kernel: a kernel is also a list of instructions, the
+cone is computed inside Rocq, and one theorem covers all lists that pass the check
+(`proofs/theories/IeeeBridge.v`). Per kernel there remain two lemmas proved by computation and one
+application of that theorem, which the generator can print. Statement 3 is a magnitude analysis
+written per kernel.
+
+| Kernel | Bridge and correctness | No spurious overflow, proved for | What exhaustive runs show |
+|---|---|---|---|
+| `add_2_2` | proved | leading limbs of both operands at most $2^{e_{\max}-2}$ (a quarter of the overflow threshold), whatever the result | the sharp condition is half the threshold; not proved |
+| `mul_2_2` | proved | exact product at most $2^{e_{\max}-1}$ in magnitude, whatever the operands | the first overflow is at 0.94 of the threshold at $p = 5$ |
+| `two_sum`, `fast_two_sum`, `two_prod` | proved, in the form below | | |
+
+Here $2^{e_{\max}}$ is the overflow threshold, just above $\Omega$. The other first-wave kernels
+fit the same template and are not instantiated yet.
+
+**The error-free transformations at the top of the range.** `fast_two_sum` and `two_prod` have a
+finite error term whenever their first output is finite. `two_sum` does not: with Kairn's order of
+operations its error term is finite exactly when the sum is finite and the second operation,
+$\mathrm{RN}(s - a)$, does not overflow. That it suffices for the second operand to be below
+$\Omega$ in magnitude is proved; exhaustive runs show that the failing pairs all have the second
+operand equal to $\pm\Omega$. Any threshold below $\Omega$ on the leading limbs therefore keeps
+this corner out of statement 3.
+
+**Which formats.** Flocq's IEEE formats have $q_{\min} + q_{\max} = 3 - 2p$, as `binary32` and
+`binary64` do. The IEEE-model theorems are for those formats, and toy formats used to test them
+must have that shape.
 
 ## IEEE-like results
 
@@ -66,8 +91,8 @@ Statement, in the IEEE model:
 
 - For finite normalized operands the result is either finite, normalized and within the bound, or
   a canonical infinity; it is finite whenever statement 3 applies. The infinity has the sign of
-  the exact result (to be confirmed by the exhaustive tests for the case where the leading limbs
-  cancel).
+  the exact result: in exhaustive runs at $p = 3$ and $4$, whenever $z_0$ was not finite, $t$ was
+  neither NaN nor zero and had that sign. Not proved yet.
 - With a non-finite operand, the result is the canonical form of what the same operation of `T`
   returns on the leading limbs: $+\infty + 1 = +\infty$, $\infty - \infty = \mathrm{NaN}$,
   $0 \cdot \infty = \mathrm{NaN}$.

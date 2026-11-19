@@ -19,3 +19,14 @@ theories/Add22.v
 theories/Add21.v
 theories/Mul22.v
 theories/Mul21.v
+theories/AddFast22.v
+theories/Split.v
+theories/TwoProdDekker.v
+theories/Directed.v
+theories/Program.v
+theories/IeeeDraft.v
+theories/IeeeBridge.v
+theories/IeeeStatementsDraft.v
+theories/IeeeEFT.v
+theories/IeeeAdd22.v
+theories/IeeeMul22.v
