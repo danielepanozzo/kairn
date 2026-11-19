@@ -657,3 +657,139 @@ Definition make_2_limbs_spec : Prop :=
   canonical_2 x0 x1 /\
   xval_2 x0 x1 = xval_2 h l /\
   (finite h -> val x0 = val h /\ val x1 = val l).
+
+(** * The kernels that need no fix-up *)
+
+(* On canonical operands these kernels already return what the non-finite layer wants.
+   Each statement gives the result as an extended real number (xval, xval_2): for finite
+   operands it is the statement of the real model, with a result that leaves the range
+   returned as the infinity of its sign; an infinite operand is treated as the infinity
+   it is; and a NaN gives a NaN, or false for a comparison. *)
+
+(* neg_2 and abs_2: the result is canonical. *)
+Definition neg_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp : nan1 prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  let '(z0, z1) := IeeeDraft.neg_2 prec emax nan_opp x0 x1 in
+  canonical_2 z0 z1 /\
+  xval_2 z0 z1 = xopp (xval_2 x0 x1).
+
+Definition abs_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp : nan1 prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  let '(z0, z1) := IeeeDraft.abs_2 prec emax nan_opp x0 x1 in
+  canonical_2 z0 z1 /\
+  xval_2 z0 z1 = xabs (xval_2 x0 x1).
+
+(* The comparisons: that of the two values as extended real numbers. *)
+Definition lt_2_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  canonical_2 y0 y1 ->
+  let m := IeeeDraft.lt_2_2 prec emax x0 x1 y0 y1 in
+  m = xlt (xval_2 x0 x1) (xval_2 y0 y1).
+
+Definition le_2_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  canonical_2 y0 y1 ->
+  let m := IeeeDraft.le_2_2 prec emax x0 x1 y0 y1 in
+  m = xle (xval_2 x0 x1) (xval_2 y0 y1).
+
+Definition eq_2_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  canonical_2 y0 y1 ->
+  let m := IeeeDraft.eq_2_2 prec emax x0 x1 y0 y1 in
+  m = xeq (xval_2 x0 x1) (xval_2 y0 y1).
+
+Definition lt_2_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  let m := IeeeDraft.lt_2_1 prec emax x0 x1 a in
+  m = xlt (xval_2 x0 x1) (xval a).
+
+Definition le_2_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  let m := IeeeDraft.le_2_1 prec emax x0 x1 a in
+  m = xle (xval_2 x0 x1) (xval a).
+
+Definition eq_2_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 a : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  let m := IeeeDraft.eq_2_1 prec emax x0 x1 a in
+  m = xeq (xval_2 x0 x1) (xval a).
+
+Definition lt_1_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  (1 <= prec)%Z ->
+  forall a y0 y1 : binary_float prec emax,
+  canonical_2 y0 y1 ->
+  let m := IeeeDraft.lt_1_2 prec emax a y0 y1 in
+  m = xlt (xval a) (xval_2 y0 y1).
+
+Definition le_1_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  (1 <= prec)%Z ->
+  forall a y0 y1 : binary_float prec emax,
+  canonical_2 y0 y1 ->
+  let m := IeeeDraft.le_1_2 prec emax a y0 y1 in
+  m = xle (xval a) (xval_2 y0 y1).
+
+(* The conversions to one limb: the rounding of the value in the sense of T. *)
+Definition to_nearest_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  let t := IeeeDraft.to_nearest_2 prec emax x0 x1 in
+  xval t = xround emax (RN (ieee_emin prec emax) prec) (xval_2 x0 x1).
+
+Definition to_down_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  let t := IeeeDraft.to_down_2 prec emax x0 x1 in
+  xval t = xround emax (RD (ieee_emin prec emax) prec) (xval_2 x0 x1).
+
+Definition to_up_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  (1 <= prec)%Z ->
+  forall x0 x1 : binary_float prec emax,
+  canonical_2 x0 x1 ->
+  let t := IeeeDraft.to_up_2 prec emax x0 x1 in
+  xval t = xround emax (RU (ieee_emin prec emax) prec) (xval_2 x0 x1).
+

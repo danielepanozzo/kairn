@@ -47,5 +47,6 @@ theories/IeeeRange.v
 theories/IeeeFull.v
 theories/IeeeMake.v
 theories/IeeeFinite.v
+theories/IeeeExt.v
 theories/IeeeBall.v
 theories/IeeeBallCores.v

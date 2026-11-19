@@ -17,7 +17,7 @@ From Kairn Require Import IeeeStatementsDraft IeeeEFT IeeeAdd22 IeeeMul22 IeeeMo
 From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeExtStatementsDraft IeeeOps IeeeFull.
 From Kairn Require BallDraft Ball2.
-From Kairn Require Import IeeeBallCores IeeeMake IeeeFinite.
+From Kairn Require Import IeeeBallCores IeeeMake IeeeFinite IeeeExt.
 
 (* The IEEE model: error-free transformations. *)
 Definition fast_two_sum_ieee_audit : fast_two_sum_ieee_spec := fast_two_sum_ieee_correct.
@@ -268,4 +268,45 @@ Print Assumptions mul_2_1_ieee_finite.
 
 Definition mul_pow2_2_ieee_finite_audit : mul_pow2_2_ieee_finite_spec := mul_pow2_2_ieee_finite.
 Print Assumptions mul_pow2_2_ieee_finite.
+
+
+(* The kernels that need no fix-up, on canonical operands. *)
+Definition neg_2_ieee_audit : neg_2_ieee_spec := neg_2_ieee_correct.
+Print Assumptions neg_2_ieee_correct.
+
+Definition abs_2_ieee_audit : abs_2_ieee_spec := abs_2_ieee_correct.
+Print Assumptions abs_2_ieee_correct.
+
+Definition lt_2_2_ieee_audit : lt_2_2_ieee_spec := lt_2_2_ieee_correct.
+Print Assumptions lt_2_2_ieee_correct.
+
+Definition le_2_2_ieee_audit : le_2_2_ieee_spec := le_2_2_ieee_correct.
+Print Assumptions le_2_2_ieee_correct.
+
+Definition eq_2_2_ieee_audit : eq_2_2_ieee_spec := eq_2_2_ieee_correct.
+Print Assumptions eq_2_2_ieee_correct.
+
+Definition lt_2_1_ieee_audit : lt_2_1_ieee_spec := lt_2_1_ieee_correct.
+Print Assumptions lt_2_1_ieee_correct.
+
+Definition le_2_1_ieee_audit : le_2_1_ieee_spec := le_2_1_ieee_correct.
+Print Assumptions le_2_1_ieee_correct.
+
+Definition eq_2_1_ieee_audit : eq_2_1_ieee_spec := eq_2_1_ieee_correct.
+Print Assumptions eq_2_1_ieee_correct.
+
+Definition lt_1_2_ieee_audit : lt_1_2_ieee_spec := lt_1_2_ieee_correct.
+Print Assumptions lt_1_2_ieee_correct.
+
+Definition le_1_2_ieee_audit : le_1_2_ieee_spec := le_1_2_ieee_correct.
+Print Assumptions le_1_2_ieee_correct.
+
+Definition to_nearest_2_ieee_audit : to_nearest_2_ieee_spec := to_nearest_2_ieee_correct.
+Print Assumptions to_nearest_2_ieee_correct.
+
+Definition to_down_2_ieee_audit : to_down_2_ieee_spec := to_down_2_ieee_correct.
+Print Assumptions to_down_2_ieee_correct.
+
+Definition to_up_2_ieee_audit : to_up_2_ieee_spec := to_up_2_ieee_correct.
+Print Assumptions to_up_2_ieee_correct.
 
