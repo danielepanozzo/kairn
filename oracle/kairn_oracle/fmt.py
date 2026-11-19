@@ -230,6 +230,35 @@ def rn_fixed(fmt, n):
     return rn(fmt, n, fmt.qmin)
 
 
+def rdir(fmt, n, s, up):
+    """n * 2^s rounded toward +infinity (up) or -infinity, with gradual underflow and the
+    exponent range unbounded above: the fixed value returned may exceed Omega, and the
+    caller decides what that means."""
+    if n == 0:
+        return 0
+    a = -n if n < 0 else n
+    # The exponent of the last place kept: p bits, or the subnormal grid.
+    q = max(s + a.bit_length() - fmt.p, fmt.qmin)
+    if q <= s:
+        return n << (s - fmt.qmin)
+    sh = q - s
+    m = a >> sh
+    # Inexact: the magnitude grows when rounding toward the infinity of the value's sign.
+    if (m << sh) != a and (n > 0) == up:
+        m += 1
+    r = m << (q - fmt.qmin)
+    return -r if n < 0 else r
+
+
+def gap_below(fmt, n):
+    """n - pred(n) for a fixed value n, with the exponent range unbounded above (so that
+    pred(-Omega) is the next number of the unbounded format, not -infinity)."""
+    if n > 0:
+        # Below a power of two the spacing is that of the binade underneath.
+        return 1 << max((n - 1).bit_length() - fmt.p, 0)
+    return ulp(fmt, n)
+
+
 def ulp(fmt, n):
     """ulp of a fixed value as a fixed value; ulp(0) = eta."""
     b = abs(n).bit_length()
