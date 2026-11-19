@@ -196,7 +196,7 @@ overflow, compiled with the same flags.
 | The default operators against textbook code | chains: 0.98 to 1.17. Loops: 1.05 to 2.74; within 1.2 only for $x + y$ with GCC 16, Clang 18, MSVC and GCC 13 at `-O2` |
 | Packed kernels with the fix-up against packed cores | sums 1.16 to 1.54 in a loop, products 1.70 to 2.05 |
 | A `Ball<double, 2>` operation against its center's operation | chains: 0.93 to 1.14. Loops: $X + Y$ 0.93 to 1.35, $X \times Y$ 1.23 to 2.58 |
-| A `Ball<double, 1>` operation against one `double` operation | 3.9 to 11.9 in a chain: a rigorous ball costs about six operations where a `double` costs one |
+| A `Ball<double, 1>` operation against one `double` operation | 3.9 to 11.9 in a chain: a rigorous ball costs about six operations where a `double` costs one. An upper estimate: the `double` step it is divided by was later found to be measured below the latency of the operation, by up to a factor of two ([costs](costs-milestone1.md)) |
 | `float` limbs | the same conclusions; a `float` operation takes the time of a `double` one except with Clang 18 (1.12 to 1.80) |
 
 Decision D5 expected the handling of overflow to cost 10 to 20% of a two-limb addition. That

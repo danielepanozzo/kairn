@@ -201,6 +201,11 @@ limb), on arrays of each type; then the packed kernels.
 - **A ball of one limb costs 4 to 12 times one `double` operation in a chain** (`X + Y` 4.9 to 11.8,
   `X * Y` 6.5 to 11.9, `X * a` 3.9 to 7.3): a `double` step is one operation, a ball step a center
   and a radius of four to six operations, and the radius's chain of fused operations is the longer.
+  These ratios are upper estimates: the `double` chain step they divide by is measured in a chain
+  of 256 steps, which the processor overlaps with the next call's, so it is below the latency of
+  the operation (0.39 ns for an addition on the M3, whose latency in a long chain is about 0.75 ns:
+  [Compile times and other costs](costs-milestone1.md#the-environment-check-in-detail)). The chains of the
+  two-limb operations are 10 to 20 times longer per step and are hardly affected.
 - **Packed**, a ball costs 1.3 to 1.6 times its center for a sum and 1.6 to 1.9 times for a
   product, both with the fix-up; 2.9 to 3.9 times the product's core.
 - **`-X`** costs 1.08 to 3.29 times `-x` in a loop: a loop of copies with a sign flip, 24 bytes
