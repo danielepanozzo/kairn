@@ -186,6 +186,14 @@ def claims_reading_wave3(ctx):
     must_fail("add_2_1_full", ext(core="add_2_2"), "a core with other inputs")
     must_fail("sub_1_2_full", ext(core="add_2_1"), "a core with its inputs in another order")
     must_fail("add_2_2_full", rename_y, "a core with other input names")
+
+    def rename_a(k):
+        # Only the name differs: the scalar has no requirement and the value is the same
+        # polynomial by position.
+        k["inputs"][1]["name"] = "b"
+        k["value"] = "x+b"
+
+    must_fail("add_2_1_full", rename_a, "a core with another name for an unconstrained input")
     must_fail("add_2_2_full", lambda k: k["outputs"][0].update(limbs=1), "a core with other outputs")
     must_fail("add_2_2_full", ext(core="neg_2"), "a core of the extended domain")
     must_fail("sub_2_2_full", ext(core="add_2_2"), "a core with another value")

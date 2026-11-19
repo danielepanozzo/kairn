@@ -157,9 +157,9 @@ MUTANTS = {
     "rounded: down below -Omega kept finite": (
         "extended.py", "r = NINF if r < -om else om if r > om else r",
         "r = -om if r < -om else om if r > om else r"),
-    "upper: NaN output accepted": (
-        "extended.py", "    if o == NAN:\n        es.applicable += 1\n        return [\"upper: a NaN output",
-        "    if False:\n        es.applicable += 1\n        return [\"upper: a NaN output"),
+    "upper: any output accepted for a NaN value": (
+        "extended.py", '        return [] if o == NAN else ["upper: the output is not a NaN although the value is"]',
+        "        return []"),
     "exhaustive: -inf left out of a one-limb domain": (
         "gen3.py", "dom = fin + [(INF,), (NINF,), (NAN,)]", "dom = fin + [(INF,), (NAN,)]"),
     "claims: core inputs not compared": (
