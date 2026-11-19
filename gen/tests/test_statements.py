@@ -9,7 +9,8 @@ that the statements it prints are not false before anyone tries to prove them.
 
 Two readings of a claim, because the formats here have a largest number and the statements do not:
 - the statement's (the Rocq model): no operation overflows. The kernel runs in the same precision
-  and underflow threshold with the exponent range widened far enough that nothing overflows.
+  and underflow threshold with the exponent range widened far enough that nothing overflows. A
+  statement also says that every output limb is a number of the format; that is judged here too.
 - the claims file's (what the oracle checks): in the format itself, whenever output limb 0 is
   finite. The two agree when output limb 0 finite means that nothing overflowed. That is what
   the non-finite cone gives, except for values computed from output limb 0 (two_sum's error at
@@ -300,10 +301,15 @@ def judge(job):
                 if reading == 'statement':
                     bad.append((reading, case, 'overflow', 'output limb 0 is not finite'))
                 continue    # the claims hold whenever output limb 0 is finite
-            for e in k.ensures:
-                if not holds(e, k, judged, ins, outs):
-                    bad.append((reading, case, e['kind'], [interp.format_mask(v) if isinstance(v, bool) else
-                                                           interp.format_limb(v) for v in got]))
+            failed = [e['kind'] for e in k.ensures if not holds(e, k, judged, ins, outs)]
+            # What a statement says of every output limb besides its claims, so that statements
+            # compose (rocq.py, _output_formats): it is a number of the format.
+            if reading == 'statement' and not all(x in judged.members for g in k.outputs if g.kind == ir.LIMB
+                                                  for x in outs[g.name]):
+                failed.insert(0, 'format')
+            if failed:
+                shown = [interp.format_mask(v) if isinstance(v, bool) else interp.format_limb(v) for v in got]
+                bad += [(reading, case, kind, shown) for kind in failed]
     return name, fmt.name, bad
 
 
@@ -410,6 +416,10 @@ class Statements(unittest.TestCase):
         self.assertEqual(fmt.round(F(17, 16), 'up'), F(5, 4))
         self.assertEqual(fmt.round(F(1, 32), 'up'), F(1, 16))          # below eta
         self.assertEqual(fmt.round(F(1, 32), 'nearest'), 0)            # half of eta: a tie, to 0
+        self.assertIn(F(7, 8), fmt.members)                            # what "a number of the format" is
+        self.assertNotIn(F(9, 8), fmt.members)                         # four significant bits
+        self.assertNotIn(F(1, 32), fmt.members)                        # below eta
+        self.assertNotIn(INF, fmt.members)
         self.assertEqual(fmt.top, F(56))
         self.assertEqual(fmt.round(F(100), 'nearest'), F(96))          # no overflow beyond 56
         self.assertEqual(fmt.pred(one), F(7, 8))
