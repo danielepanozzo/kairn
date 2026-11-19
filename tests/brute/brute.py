@@ -1701,7 +1701,7 @@ def cmd_collect(a):
         interp.append(rec)
     machine = starts[-1]["machine"]
     result = {
-        "kairn_brute_summary": 2,
+        "kairn_brute_summary": 1,
         "name": a.name,
         "machine": machine,
         # The code under test and the driver: every commit a run of this work directory named
