@@ -1864,7 +1864,7 @@ def exact_claim(label):
 def counts_text(counts):
     order = ["true", "false", "exact", "inexact", "tie", "inexact, = RN", "inexact, != RN"]
     names = sorted(counts, key=lambda c: (order.index(c) if c in order else 99, c))
-    return ", ".join("%s %s" % (c.replace("inexact, != RN", "differs from RN")
+    return "; ".join("%s %s" % (c.replace("inexact, != RN", "differs from RN")
                                .replace("inexact, = RN", "inexact, as RN"), fmt_int(counts[c]))
                      for c in names)
 
