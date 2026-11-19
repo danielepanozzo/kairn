@@ -145,59 +145,59 @@ KAIRN_FORCEINLINE constexpr void check_core(const Expansion<T, 2>& x, const Expa
 // k = 1: one IEEE 754 operation each. Under KAIRN_K1_CONTRACT Clang may fuse a product with a sum
 // that uses it, as it does for plain T (config.hpp).
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> add(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> add(const Expansion<T, 1>& x, const Expansion<T, 1>& y) noexcept {
     KAIRN_DETAIL_K1_CONTRACT
     check(x, y);
     return Expansion<T, 1>(x.limb[0] + y.limb[0]);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> add(Expansion<T, 1> x, std::type_identity_t<T> a) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> add(const Expansion<T, 1>& x, std::type_identity_t<T> a) noexcept {
     return add(x, Expansion<T, 1>(a));
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> add(std::type_identity_t<T> a, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> add(std::type_identity_t<T> a, const Expansion<T, 1>& y) noexcept {
     return add(Expansion<T, 1>(a), y);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> sub(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> sub(const Expansion<T, 1>& x, const Expansion<T, 1>& y) noexcept {
     KAIRN_DETAIL_K1_CONTRACT
     check(x, y);
     return Expansion<T, 1>(x.limb[0] - y.limb[0]);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> sub(Expansion<T, 1> x, std::type_identity_t<T> a) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> sub(const Expansion<T, 1>& x, std::type_identity_t<T> a) noexcept {
     return sub(x, Expansion<T, 1>(a));
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> sub(std::type_identity_t<T> a, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> sub(std::type_identity_t<T> a, const Expansion<T, 1>& y) noexcept {
     return sub(Expansion<T, 1>(a), y);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> mul(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> mul(const Expansion<T, 1>& x, const Expansion<T, 1>& y) noexcept {
     KAIRN_DETAIL_K1_CONTRACT
     check(x, y);
     return Expansion<T, 1>(x.limb[0] * y.limb[0]);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> mul(Expansion<T, 1> x, std::type_identity_t<T> a) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> mul(const Expansion<T, 1>& x, std::type_identity_t<T> a) noexcept {
     return mul(x, Expansion<T, 1>(a));
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> mul(std::type_identity_t<T> a, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> mul(std::type_identity_t<T> a, const Expansion<T, 1>& y) noexcept {
     return mul(Expansion<T, 1>(a), y);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> neg(Expansion<T, 1> x) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> neg(const Expansion<T, 1>& x) noexcept {
     check(x);
     return Expansion<T, 1>(-x.limb[0]);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> abs(Expansion<T, 1> x) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> abs(const Expansion<T, 1>& x) noexcept {
     check(x);
     return Expansion<T, 1>(gen::abs_bits(x.limb[0]));
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> add_fast(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> add_fast(const Expansion<T, 1>& x, const Expansion<T, 1>& y) noexcept {
     return add(x, y);
 }
 // a 2^n, rounded once. Beyond the powers of two of T, in steps: up, by 2^pow2_max as often as
@@ -208,7 +208,7 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 1> add_fast(Expansion<T, 1> x, Expansio
 // and tested through the oracle, not machine-checked (deviation 17 of
 // docs/developer/design/phase0/decisions.md).
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(Expansion<T, 1> x, int n) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(const Expansion<T, 1>& x, int n) noexcept {
     KAIRN_DETAIL_K1_CONTRACT
     check(x);
     constexpr int lo = pow2_min<T>, hi = pow2_max<T>;
@@ -227,44 +227,44 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(Expansion<T, 1> x, int n) noex
     return Expansion<T, 1>(a * pow2<T>(n));
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> half(Expansion<T, 1> x) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> half(const Expansion<T, 1>& x) noexcept {
     KAIRN_DETAIL_K1_CONTRACT
     check(x);
     return Expansion<T, 1>(x.limb[0] * T(0.5));
 }
 // b > a and b >= a, not a < b and a <= b: see canonical().
 template <class T>
-KAIRN_FORCEINLINE constexpr bool lt(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr bool lt(const Expansion<T, 1>& x, const Expansion<T, 1>& y) noexcept {
     check(x, y);
     return y.limb[0] > x.limb[0];
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr bool le(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr bool le(const Expansion<T, 1>& x, const Expansion<T, 1>& y) noexcept {
     check(x, y);
     return y.limb[0] >= x.limb[0];
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr bool eq(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr bool eq(const Expansion<T, 1>& x, const Expansion<T, 1>& y) noexcept {
     check(x, y);
     return x.limb[0] == y.limb[0];
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr T to_nearest(Expansion<T, 1> x) noexcept {
+KAIRN_FORCEINLINE constexpr T to_nearest(const Expansion<T, 1>& x) noexcept {
     check(x);
     return x.limb[0];
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr T to_down(Expansion<T, 1> x) noexcept {
+KAIRN_FORCEINLINE constexpr T to_down(const Expansion<T, 1>& x) noexcept {
     check(x);
     return x.limb[0];
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr T to_up(Expansion<T, 1> x) noexcept {
+KAIRN_FORCEINLINE constexpr T to_up(const Expansion<T, 1>& x) noexcept {
     check(x);
     return x.limb[0];
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr T abs_upper(Expansion<T, 1> x) noexcept {
+KAIRN_FORCEINLINE constexpr T abs_upper(const Expansion<T, 1>& x) noexcept {
     check(x);
     return gen::abs_bits(x.limb[0]);
 }
@@ -306,11 +306,11 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 2> add(std::type_identity_t<T> a, Expan
     return add(y, a);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 2> add(Expansion<T, 2> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> add(Expansion<T, 2> x, const Expansion<T, 1>& y) noexcept {
     return add(x, y.limb[0]);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 2> add(Expansion<T, 1> x, Expansion<T, 2> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> add(const Expansion<T, 1>& x, Expansion<T, 2> y) noexcept {
     return add(y, x.limb[0]);
 }
 template <class T>
@@ -335,11 +335,11 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 2> sub(std::type_identity_t<T> a, Expan
     return w;
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 2> sub(Expansion<T, 2> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> sub(Expansion<T, 2> x, const Expansion<T, 1>& y) noexcept {
     return sub(x, y.limb[0]);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 2> sub(Expansion<T, 1> x, Expansion<T, 2> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> sub(const Expansion<T, 1>& x, Expansion<T, 2> y) noexcept {
     return sub(x.limb[0], y);
 }
 // Not constexpr: the products have fused operations and no constant-evaluation variant yet.
@@ -362,11 +362,11 @@ KAIRN_FORCEINLINE Expansion<T, 2> mul(std::type_identity_t<T> a, Expansion<T, 2>
     return mul(y, a);
 }
 template <class T>
-KAIRN_FORCEINLINE Expansion<T, 2> mul(Expansion<T, 2> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE Expansion<T, 2> mul(Expansion<T, 2> x, const Expansion<T, 1>& y) noexcept {
     return mul(x, y.limb[0]);
 }
 template <class T>
-KAIRN_FORCEINLINE Expansion<T, 2> mul(Expansion<T, 1> x, Expansion<T, 2> y) noexcept {
+KAIRN_FORCEINLINE Expansion<T, 2> mul(const Expansion<T, 1>& x, Expansion<T, 2> y) noexcept {
     return mul(y, x.limb[0]);
 }
 template <class T>
@@ -459,7 +459,7 @@ KAIRN_FORCEINLINE Expansion<T, 2> half(Expansion<T, 2> x) noexcept {
         return m;                                                                                        \
     }                                                                                                    \
     template <class T>                                                                                   \
-    KAIRN_FORCEINLINE constexpr bool NAME(Expansion<T, 2> x, Expansion<T, 1> y) noexcept {               \
+    KAIRN_FORCEINLINE constexpr bool NAME(Expansion<T, 2> x, const Expansion<T, 1>& y) noexcept {        \
         return NAME(x, y.limb[0]);                                                                       \
     }
 KAIRN_DETAIL_K2_COMPARE(lt)
@@ -485,15 +485,15 @@ KAIRN_FORCEINLINE constexpr bool eq(std::type_identity_t<T> a, Expansion<T, 2> y
     return eq(y, a);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr bool lt(Expansion<T, 1> x, Expansion<T, 2> y) noexcept {
+KAIRN_FORCEINLINE constexpr bool lt(const Expansion<T, 1>& x, Expansion<T, 2> y) noexcept {
     return lt(x.limb[0], y);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr bool le(Expansion<T, 1> x, Expansion<T, 2> y) noexcept {
+KAIRN_FORCEINLINE constexpr bool le(const Expansion<T, 1>& x, Expansion<T, 2> y) noexcept {
     return le(x.limb[0], y);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr bool eq(Expansion<T, 1> x, Expansion<T, 2> y) noexcept {
+KAIRN_FORCEINLINE constexpr bool eq(const Expansion<T, 1>& x, Expansion<T, 2> y) noexcept {
     return eq(y, x.limb[0]);
 }
 template <class T>
@@ -593,19 +593,19 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 2> core_add(std::type_identity_t<T> a, 
     return core_add(y, a);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 2> core_add(Expansion<T, 2> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> core_add(Expansion<T, 2> x, const Expansion<T, 1>& y) noexcept {
     return core_add(x, y.limb[0]);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 2> core_add(Expansion<T, 1> x, Expansion<T, 2> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> core_add(const Expansion<T, 1>& x, Expansion<T, 2> y) noexcept {
     return core_add(y, x.limb[0]);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 2> core_sub(Expansion<T, 2> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> core_sub(Expansion<T, 2> x, const Expansion<T, 1>& y) noexcept {
     return core_sub(x, y.limb[0]);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 2> core_sub(Expansion<T, 1> x, Expansion<T, 2> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 2> core_sub(const Expansion<T, 1>& x, Expansion<T, 2> y) noexcept {
     return core_sub(x.limb[0], y);
 }
 template <class T>
@@ -613,56 +613,56 @@ KAIRN_FORCEINLINE Expansion<T, 2> core_mul(std::type_identity_t<T> a, Expansion<
     return core_mul(y, a);
 }
 template <class T>
-KAIRN_FORCEINLINE Expansion<T, 2> core_mul(Expansion<T, 2> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE Expansion<T, 2> core_mul(Expansion<T, 2> x, const Expansion<T, 1>& y) noexcept {
     return core_mul(x, y.limb[0]);
 }
 template <class T>
-KAIRN_FORCEINLINE Expansion<T, 2> core_mul(Expansion<T, 1> x, Expansion<T, 2> y) noexcept {
+KAIRN_FORCEINLINE Expansion<T, 2> core_mul(const Expansion<T, 1>& x, Expansion<T, 2> y) noexcept {
     return core_mul(y, x.limb[0]);
 }
 // One limb: the operations themselves.
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_add(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_add(const Expansion<T, 1>& x, const Expansion<T, 1>& y) noexcept {
     return add(x, y);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_add(Expansion<T, 1> x, std::type_identity_t<T> a) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_add(const Expansion<T, 1>& x, std::type_identity_t<T> a) noexcept {
     return add(x, a);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_add(std::type_identity_t<T> a, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_add(std::type_identity_t<T> a, const Expansion<T, 1>& y) noexcept {
     return add(a, y);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_sub(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_sub(const Expansion<T, 1>& x, const Expansion<T, 1>& y) noexcept {
     return sub(x, y);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_sub(Expansion<T, 1> x, std::type_identity_t<T> a) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_sub(const Expansion<T, 1>& x, std::type_identity_t<T> a) noexcept {
     return sub(x, a);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_sub(std::type_identity_t<T> a, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_sub(std::type_identity_t<T> a, const Expansion<T, 1>& y) noexcept {
     return sub(a, y);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_mul(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_mul(const Expansion<T, 1>& x, const Expansion<T, 1>& y) noexcept {
     return mul(x, y);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_mul(Expansion<T, 1> x, std::type_identity_t<T> a) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_mul(const Expansion<T, 1>& x, std::type_identity_t<T> a) noexcept {
     return mul(x, a);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_mul(std::type_identity_t<T> a, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_mul(std::type_identity_t<T> a, const Expansion<T, 1>& y) noexcept {
     return mul(a, y);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_add_fast(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_add_fast(const Expansion<T, 1>& x, const Expansion<T, 1>& y) noexcept {
     return add(x, y);
 }
 template <class T>
-KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_ldexp(Expansion<T, 1> x, int n) noexcept {
+KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_ldexp(const Expansion<T, 1>& x, int n) noexcept {
     return ldexp(x, n);
 }
 
@@ -710,55 +710,67 @@ struct Expansion<T, 1> {
     static constexpr Expansion from_limbs_unchecked(const T* limbs) noexcept { return Expansion(limbs[0]); }
 
     /// x + y, rounded to nearest (kernel add_1_1).
-    friend KAIRN_FORCEINLINE constexpr Expansion operator+(Expansion x, Expansion y) noexcept
+    friend KAIRN_FORCEINLINE constexpr Expansion operator+(const Expansion& x, const Expansion& y) noexcept
         requires detail::proof_checked<gen::bounds::add_1_1<T>>
     {
         return detail::add(x, y);
     }
     /// x - y, rounded to nearest (kernel add_1_1 on x and -y).
-    friend KAIRN_FORCEINLINE constexpr Expansion operator-(Expansion x, Expansion y) noexcept
+    friend KAIRN_FORCEINLINE constexpr Expansion operator-(const Expansion& x, const Expansion& y) noexcept
         requires detail::proof_checked<gen::bounds::add_1_1<T>>
     {
         return detail::sub(x, y);
     }
     /// x * y, rounded to nearest (kernel mul_1_1).
-    friend KAIRN_FORCEINLINE constexpr Expansion operator*(Expansion x, Expansion y) noexcept
+    friend KAIRN_FORCEINLINE constexpr Expansion operator*(const Expansion& x, const Expansion& y) noexcept
         requires detail::proof_checked<gen::bounds::mul_1_1<T>>
     {
         return detail::mul(x, y);
     }
     /// x = x + y (kernel add_1_1).
-    friend KAIRN_FORCEINLINE constexpr Expansion& operator+=(Expansion& x, Expansion y) noexcept
+    friend KAIRN_FORCEINLINE constexpr Expansion& operator+=(Expansion& x, const Expansion& y) noexcept
         requires detail::proof_checked<gen::bounds::add_1_1<T>>
     {
         return x = detail::add(x, y);
     }
     /// x = x - y (kernel add_1_1).
-    friend KAIRN_FORCEINLINE constexpr Expansion& operator-=(Expansion& x, Expansion y) noexcept
+    friend KAIRN_FORCEINLINE constexpr Expansion& operator-=(Expansion& x, const Expansion& y) noexcept
         requires detail::proof_checked<gen::bounds::add_1_1<T>>
     {
         return x = detail::sub(x, y);
     }
     /// x = x * y (kernel mul_1_1).
-    friend KAIRN_FORCEINLINE constexpr Expansion& operator*=(Expansion& x, Expansion y) noexcept
+    friend KAIRN_FORCEINLINE constexpr Expansion& operator*=(Expansion& x, const Expansion& y) noexcept
         requires detail::proof_checked<gen::bounds::mul_1_1<T>>
     {
         return x = detail::mul(x, y);
     }
     /// -x, exactly.
-    friend KAIRN_FORCEINLINE constexpr Expansion operator-(Expansion x) noexcept { return detail::neg(x); }
+    friend KAIRN_FORCEINLINE constexpr Expansion operator-(const Expansion& x) noexcept { return detail::neg(x); }
     /// Whether x < y, exactly: the comparison of T. False if either is NaN.
-    friend KAIRN_FORCEINLINE constexpr bool operator<(Expansion x, Expansion y) noexcept { return detail::lt(x, y); }
+    friend KAIRN_FORCEINLINE constexpr bool operator<(const Expansion& x, const Expansion& y) noexcept {
+        return detail::lt(x, y);
+    }
     /// Whether x > y, exactly. False if either is NaN.
-    friend KAIRN_FORCEINLINE constexpr bool operator>(Expansion x, Expansion y) noexcept { return detail::lt(y, x); }
+    friend KAIRN_FORCEINLINE constexpr bool operator>(const Expansion& x, const Expansion& y) noexcept {
+        return detail::lt(y, x);
+    }
     /// Whether x <= y, exactly. False if either is NaN.
-    friend KAIRN_FORCEINLINE constexpr bool operator<=(Expansion x, Expansion y) noexcept { return detail::le(x, y); }
+    friend KAIRN_FORCEINLINE constexpr bool operator<=(const Expansion& x, const Expansion& y) noexcept {
+        return detail::le(x, y);
+    }
     /// Whether x >= y, exactly. False if either is NaN.
-    friend KAIRN_FORCEINLINE constexpr bool operator>=(Expansion x, Expansion y) noexcept { return detail::le(y, x); }
+    friend KAIRN_FORCEINLINE constexpr bool operator>=(const Expansion& x, const Expansion& y) noexcept {
+        return detail::le(y, x);
+    }
     /// Whether x == y, exactly (+0 equals -0). False if either is NaN.
-    friend KAIRN_FORCEINLINE constexpr bool operator==(Expansion x, Expansion y) noexcept { return detail::eq(x, y); }
+    friend KAIRN_FORCEINLINE constexpr bool operator==(const Expansion& x, const Expansion& y) noexcept {
+        return detail::eq(x, y);
+    }
     /// Whether x != y, exactly. True if either is NaN.
-    friend KAIRN_FORCEINLINE constexpr bool operator!=(Expansion x, Expansion y) noexcept { return !detail::eq(x, y); }
+    friend KAIRN_FORCEINLINE constexpr bool operator!=(const Expansion& x, const Expansion& y) noexcept {
+        return !detail::eq(x, y);
+    }
 };
 
 /// Two limbs (a double-word number): the value is limb[0] + limb[1], exactly, and limb[1] is at
