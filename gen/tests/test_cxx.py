@@ -83,6 +83,23 @@ NONFINITE_CE_CASES = [
 ]
 
 
+# Kernels of the extended domain with a real-model statement, on NaN and infinite operands, in
+# constant evaluation: comparisons are false on a NaN (MSVC's constant evaluator takes < and <=
+# with a NaN for true, which is why the C++ writes them > and >=).
+NAN_CE_CASES = [
+    ('lt_2_2', 'double', [math.nan, math.nan, 1.0, 0.0]),
+    ('le_2_2', 'float', [1.0, 0.0, math.nan, math.nan]),
+    ('lt_2_1', 'double', [1.0, 0.0, math.nan]),
+    ('le_1_2', 'double', [math.nan, 1.0, 0.0]),
+    ('eq_2_1', 'float', [math.nan, math.nan, math.nan]),
+    ('le_2_1', 'double', [math.inf, 0.0, math.inf]),
+    ('to_up_2', 'double', [math.nan, math.nan]),
+    ('to_down_2', 'float', [-math.inf, 0.0]),
+    ('abs_2', 'double', [math.nan, math.nan]),
+    ('abs_upper_2', 'double', [-math.inf, 0.0]),
+]
+
+
 def _ce_literal(x, ctype):
     if x != x:
         return f'std::numeric_limits<{ctype}>::quiet_NaN()'
@@ -97,13 +114,16 @@ def nonfinite_ce_source(ks):
     NaN where it gives a NaN (zeros of either sign are equal)."""
     ce = interp.Machine(ks, consteval=True)
     lines = ['#include <limits>', '#include "kairn/gen/scalar.hpp"', '']
-    for name, ctype, case in NONFINITE_CE_CASES:
+    for name, ctype, case in NONFINITE_CE_CASES + NAN_CE_CASES:
         fmt = interp.parse_format('binary64' if ctype == 'double' else 'binary32')
-        outs = [common.to_float(v) for v in ce.run(name, fmt, [common.to_value(x) for x in case])]
-        decl = ' '.join(f'{ctype} o{i} = 0;' for i in range(len(outs)))
+        got = ce.run(name, fmt, [common.to_value(x) for x in case])
+        outs = [common.to_float(v) for v in got]
+        masks = [isinstance(v, bool) for v in got]
+        decl = ' '.join(f'{"bool" if m else ctype} o{i} = {"false" if m else "0"};' for i, m in enumerate(masks))
         args = ', '.join([_ce_literal(x, ctype) for x in case] + [f'o{i}' for i in range(len(outs))])
-        check = ' && '.join(f'o{i} != o{i}' if x != x else f'o{i} == {_ce_literal(x, ctype)}'
-                            for i, x in enumerate(outs))
+        check = ' && '.join(f'o{i} == {"true" if x else "false"}' if m else
+                            f'o{i} != o{i}' if x != x else f'o{i} == {_ce_literal(x, ctype)}'
+                            for i, (x, m) in enumerate(zip(outs, masks)))
         lines.append(f'static_assert([] {{ {decl} kairn::gen::{name}({args}); return {check}; }}());')
     lines.append('int main() {}')
     return '\n'.join(lines) + '\n'

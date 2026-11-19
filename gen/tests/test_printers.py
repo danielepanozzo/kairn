@@ -59,7 +59,7 @@ ATOM = r'(?:[a-z][a-z0-9_]*|0x1(?:\.[0-9a-f]+)?p[-+][0-9]+f?|0\.0f?|' \
 # One operation, written over atoms: what "one operation per statement" allows (a bare atom is a
 # copy, which is none).
 ONE_OPERATION = re.compile(
-    rf'(?:-{ATOM}|!{ATOM}|{ATOM} (?:[-+*<&|]|<=|==) {ATOM}|{ATOM} \? {ATOM} : {ATOM}|'
+    rf'(?:-{ATOM}|!{ATOM}|{ATOM} (?:[-+*<>&|]|<=|>=|==) {ATOM}|{ATOM} \? {ATOM} : {ATOM}|'
     rf'fma_rn\(-?{ATOM}, {ATOM}, -?{ATOM}\)|(?:abs_bits|next_up|next_down)\({ATOM}\)|'
     rf'{ATOM} \* {ATOM} \+ {ATOM}|{ATOM}|'
     # guard in a constexpr kernel: its operand in constant evaluation, one addition at run time;
@@ -152,8 +152,13 @@ class Cpp(unittest.TestCase):
 
     def test_masks_and_unused_inputs(self):
         self.assertTrue(self.fns[('lt_2_2', 'double')]['head'].endswith('double y1, bool& m_out) noexcept {'))
-        self.assertIn('    const bool l = x1 < 0.0f;', self.fns[('lt_2_1', 'float')]['lines'])
-        self.assertIn('    const bool l = 0.0 < y1;', self.fns[('lt_1_2', 'double')]['lines'])
+        # lt(a, b) is written b > a and le(a, b) b >= a (MSVC's constant evaluator takes < and <=
+        # with a NaN for true); the C++ never has < or <= between values.
+        self.assertIn('    const bool l = 0.0f > x1;', self.fns[('lt_2_1', 'float')]['lines'])
+        self.assertIn('    const bool l = y1 > 0.0;', self.fns[('lt_1_2', 'double')]['lines'])
+        self.assertIn('    const bool l = y1 >= x1;', self.fns[('le_2_2', 'double')]['lines'])
+        for f in list(self.fns.values()) + list(self.tfns.values()):
+            self.assertFalse(any(re.search(r' <=? ', line) for line in f['lines'] if not line.strip().startswith('//')))
         self.assertIn('    const bool t = e & l;', self.fns[('lt_2_2', 'double')]['lines'])
         self.assertIn('    const double t = m ? s : x0;', self.fns[('to_up_2', 'double')]['lines'])
         self.assertIn('[[maybe_unused]] double x1', self.fns[('to_nearest_2', 'double')]['head'])
@@ -208,14 +213,14 @@ class Cpp(unittest.TestCase):
                       self.fns[('mul_2_2_full', 'double')]['lines'])
         prelude = cpp.prelude(self.ks)
         self.assertIn('KAIRN_GEN_FORCEINLINE constexpr float times_inf_ce(float t) noexcept {\n'
-                      '    return t > 0 ? std::numeric_limits<float>::infinity() : t < 0 ? '
+                      '    return t > 0 ? std::numeric_limits<float>::infinity() : 0 > t ? '
                       '-std::numeric_limits<float>::infinity() : std::numeric_limits<float>::quiet_NaN();\n}', prelude)
-        self.assertIn('    const bool f = az < std::numeric_limits<double>::infinity();', full)
+        self.assertIn('    const bool f = std::numeric_limits<double>::infinity() > az;', full)
         self.assertIn('    const double w1 = f ? z1 : r1;', full)
         make = self.fns[('ball_make_2', 'float')]
         self.assertTrue(make['constexpr'])
         self.assertIn('    const float rw = e ? s : std::numeric_limits<float>::quiet_NaN();', make['lines'])
-        self.assertIn('    const bool e = 0.0f <= g;', make['lines'])
+        self.assertIn('    const bool e = g >= 0.0f;', make['lines'])
         self.assertIn('#include <limits>', cpp.prelude(self.ks))
         self.assertIn('#include <limits>', cpp.prelude(self.tks))         # ops_special
         without = {n: k for n, k in self.tks.items() if n != 'ops_special'}

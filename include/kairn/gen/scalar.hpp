@@ -100,8 +100,8 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(double cx, double rx, double cy, doub
     const double q = rx + ry;
     const bool e = q == q;
     const double a = abs_bits(cz);
-    const bool f1 = a < std::numeric_limits<double>::infinity();
-    const bool f2 = rz < std::numeric_limits<double>::infinity();
+    const bool f1 = std::numeric_limits<double>::infinity() > a;
+    const bool f2 = std::numeric_limits<double>::infinity() > rz;
     const bool f = f1 & f2;
     const double c0 = f ? cz : 0.0;
     const double r = f ? rz : std::numeric_limits<double>::infinity();
@@ -126,8 +126,8 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(float cx, float rx, float cy, float r
     const float q = rx + ry;
     const bool e = q == q;
     const float a = abs_bits(cz);
-    const bool f1 = a < std::numeric_limits<float>::infinity();
-    const bool f2 = rz < std::numeric_limits<float>::infinity();
+    const bool f1 = std::numeric_limits<float>::infinity() > a;
+    const bool f2 = std::numeric_limits<float>::infinity() > rz;
     const bool f = f1 & f2;
     const float c0 = f ? cz : 0.0f;
     const float r = f ? rz : std::numeric_limits<float>::infinity();
@@ -142,10 +142,10 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(float cx, float rx, float cy, float r
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_1(double c, double r, double& cw_out, double& rw_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? r : r + 0.0;
     const double c0 = __builtin_is_constant_evaluated() ? c : c + 0.0;
-    const bool e = 0.0 <= g;
+    const bool e = g >= 0.0;
     const double a = abs_bits(c0);
-    const bool f1 = a < std::numeric_limits<double>::infinity();
-    const bool f2 = g < std::numeric_limits<double>::infinity();
+    const bool f1 = std::numeric_limits<double>::infinity() > a;
+    const bool f2 = std::numeric_limits<double>::infinity() > g;
     const bool f = f1 & f2;
     const double k0 = f ? c0 : 0.0;
     const double s = f ? g : std::numeric_limits<double>::infinity();
@@ -157,10 +157,10 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_make_1(double c, double r, double& cw_
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_1(float c, float r, float& cw_out, float& rw_out) noexcept {
     const float g = __builtin_is_constant_evaluated() ? r : r + 0.0f;
     const float c0 = __builtin_is_constant_evaluated() ? c : c + 0.0f;
-    const bool e = 0.0f <= g;
+    const bool e = g >= 0.0f;
     const float a = abs_bits(c0);
-    const bool f1 = a < std::numeric_limits<float>::infinity();
-    const bool f2 = g < std::numeric_limits<float>::infinity();
+    const bool f1 = std::numeric_limits<float>::infinity() > a;
+    const bool f2 = std::numeric_limits<float>::infinity() > g;
     const bool f = f1 & f2;
     const float k0 = f ? c0 : 0.0f;
     const float s = f ? g : std::numeric_limits<float>::infinity();
@@ -272,8 +272,8 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1_full(double cx, double rx, double cy, doub
     const double q = rx + ry;
     const bool e = q == q;
     const double a = abs_bits(cz);
-    const bool f1 = a < std::numeric_limits<double>::infinity();
-    const bool f2 = rz < std::numeric_limits<double>::infinity();
+    const bool f1 = std::numeric_limits<double>::infinity() > a;
+    const bool f2 = std::numeric_limits<double>::infinity() > rz;
     const bool f = f1 & f2;
     const double c0 = f ? cz : 0.0;
     const double r = f ? rz : std::numeric_limits<double>::infinity();
@@ -315,8 +315,8 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1_full(float cx, float rx, float cy, float r
     const float q = rx + ry;
     const bool e = q == q;
     const float a = abs_bits(cz);
-    const bool f1 = a < std::numeric_limits<float>::infinity();
-    const bool f2 = rz < std::numeric_limits<float>::infinity();
+    const bool f1 = std::numeric_limits<float>::infinity() > a;
+    const bool f2 = std::numeric_limits<float>::infinity() > rz;
     const bool f = f1 & f2;
     const float c0 = f ? cz : 0.0f;
     const float r = f ? rz : std::numeric_limits<float>::infinity();
@@ -403,8 +403,8 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1_full(double cx, double rx, double a, dou
     const double rz = next_up(rz_s);
     const bool e = rx == rx;
     const double az = abs_bits(cz);
-    const bool f1 = az < std::numeric_limits<double>::infinity();
-    const bool f2 = rz < std::numeric_limits<double>::infinity();
+    const bool f1 = std::numeric_limits<double>::infinity() > az;
+    const bool f2 = std::numeric_limits<double>::infinity() > rz;
     const bool f = f1 & f2;
     const double c0 = f ? cz : 0.0;
     const double r = f ? rz : std::numeric_limits<double>::infinity();
@@ -432,8 +432,8 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1_full(float cx, float rx, float a, float&
     const float rz = next_up(rz_s);
     const bool e = rx == rx;
     const float az = abs_bits(cz);
-    const bool f1 = az < std::numeric_limits<float>::infinity();
-    const bool f2 = rz < std::numeric_limits<float>::infinity();
+    const bool f1 = std::numeric_limits<float>::infinity() > az;
+    const bool f2 = std::numeric_limits<float>::infinity() > rz;
     const bool f = f1 & f2;
     const float c0 = f ? cz : 0.0f;
     const float r = f ? rz : std::numeric_limits<float>::infinity();
@@ -500,8 +500,8 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(double cx, double rx, double cy, doub
     const double q = rx + ry;
     const bool e = q == q;
     const double a = abs_bits(cz);
-    const bool f1 = a < std::numeric_limits<double>::infinity();
-    const bool f2 = rz < std::numeric_limits<double>::infinity();
+    const bool f1 = std::numeric_limits<double>::infinity() > a;
+    const bool f2 = std::numeric_limits<double>::infinity() > rz;
     const bool f = f1 & f2;
     const double c0 = f ? cz : 0.0;
     const double r = f ? rz : std::numeric_limits<double>::infinity();
@@ -528,8 +528,8 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(float cx, float rx, float cy, float r
     const float q = rx + ry;
     const bool e = q == q;
     const float a = abs_bits(cz);
-    const bool f1 = a < std::numeric_limits<float>::infinity();
-    const bool f2 = rz < std::numeric_limits<float>::infinity();
+    const bool f1 = std::numeric_limits<float>::infinity() > a;
+    const bool f2 = std::numeric_limits<float>::infinity() > rz;
     const bool f = f1 & f2;
     const float c0 = f ? cz : 0.0f;
     const float r = f ? rz : std::numeric_limits<float>::infinity();
@@ -743,7 +743,7 @@ KAIRN_GEN_FORCEINLINE constexpr void two_sum(float a, float b, float& s_out, flo
 // abs_2(x = (x0, x1)) -> z = (z0, z1)
 // the sign of x0 (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void abs_2(double x0, double x1, double& z0_out, double& z1_out) noexcept {
-    const bool m = x0 < 0.0;
+    const bool m = 0.0 > x0;
     const double n0 = -x0;
     const double n1 = -x1;
     const double z0 = m ? n0 : x0;
@@ -752,7 +752,7 @@ KAIRN_GEN_FORCEINLINE constexpr void abs_2(double x0, double x1, double& z0_out,
     z1_out = z1;
 }
 KAIRN_GEN_FORCEINLINE constexpr void abs_2(float x0, float x1, float& z0_out, float& z1_out) noexcept {
-    const bool m = x0 < 0.0f;
+    const bool m = 0.0f > x0;
     const float n0 = -x0;
     const float n1 = -x1;
     const float z0 = m ? n0 : x0;
@@ -764,13 +764,13 @@ KAIRN_GEN_FORCEINLINE constexpr void abs_2(float x0, float x1, float& z0_out, fl
 // to_up_2(x = (x0, x1)) -> t
 // the sign of x1 (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void to_up_2(double x0, double x1, double& t_out) noexcept {
-    const bool m = 0.0 < x1;
+    const bool m = x1 > 0.0;
     const double s = next_up(x0);
     const double t = m ? s : x0;
     t_out = t;
 }
 KAIRN_GEN_FORCEINLINE constexpr void to_up_2(float x0, float x1, float& t_out) noexcept {
-    const bool m = 0.0f < x1;
+    const bool m = x1 > 0.0f;
     const float s = next_up(x0);
     const float t = m ? s : x0;
     t_out = t;
@@ -780,26 +780,26 @@ KAIRN_GEN_FORCEINLINE constexpr void to_up_2(float x0, float x1, float& t_out) n
 // abs_2, then to_up_2 (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void abs_upper_2(double x0, double x1, double& t_out) noexcept {
     // (a0, a1) = abs_2(x0, x1)
-    const bool a0_m = x0 < 0.0;
+    const bool a0_m = 0.0 > x0;
     const double a0_n0 = -x0;
     const double a0_n1 = -x1;
     const double a0 = a0_m ? a0_n0 : x0;
     const double a1 = a0_m ? a0_n1 : x1;
     // (t) = to_up_2(a0, a1)
-    const bool t_m = 0.0 < a1;
+    const bool t_m = a1 > 0.0;
     const double t_s = next_up(a0);
     const double t = t_m ? t_s : a0;
     t_out = t;
 }
 KAIRN_GEN_FORCEINLINE constexpr void abs_upper_2(float x0, float x1, float& t_out) noexcept {
     // (a0, a1) = abs_2(x0, x1)
-    const bool a0_m = x0 < 0.0f;
+    const bool a0_m = 0.0f > x0;
     const float a0_n0 = -x0;
     const float a0_n1 = -x1;
     const float a0 = a0_m ? a0_n0 : x0;
     const float a1 = a0_m ? a0_n1 : x1;
     // (t) = to_up_2(a0, a1)
-    const bool t_m = 0.0f < a1;
+    const bool t_m = a1 > 0.0f;
     const float t_s = next_up(a0);
     const float t = t_m ? t_s : a0;
     t_out = t;
@@ -859,7 +859,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_1_full(double x0, double x1, double a
     const double z1 = z0_v - z0_z;
     const double t = x0 + g;
     const double az = abs_bits(z0);
-    const bool f = az < std::numeric_limits<double>::infinity();
+    const bool f = std::numeric_limits<double>::infinity() > az;
     const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
@@ -885,7 +885,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_1_full(float x0, float x1, float a, f
     const float z1 = z0_v - z0_z;
     const float t = x0 + g;
     const float az = abs_bits(z0);
-    const bool f = az < std::numeric_limits<float>::infinity();
+    const bool f = std::numeric_limits<float>::infinity() > az;
     const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
@@ -984,7 +984,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_2_full(double x0, double x1, double y
     const double z1 = z0_w - z0_z;
     const double t = x0 + y0;
     const double a = abs_bits(z0);
-    const bool f = a < std::numeric_limits<double>::infinity();
+    const bool f = std::numeric_limits<double>::infinity() > a;
     const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
@@ -1021,7 +1021,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_2_full(float x0, float x1, float y0, 
     const float z1 = z0_w - z0_z;
     const float t = x0 + y0;
     const float a = abs_bits(z0);
-    const bool f = a < std::numeric_limits<float>::infinity();
+    const bool f = std::numeric_limits<float>::infinity() > a;
     const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
@@ -1087,7 +1087,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_full(double x0, double x1, dou
     const double z1 = z0_w - z0_z;
     const double t = x0 + y0;
     const double a = abs_bits(z0);
-    const bool f = a < std::numeric_limits<double>::infinity();
+    const bool f = std::numeric_limits<double>::infinity() > a;
     const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
@@ -1113,7 +1113,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_full(float x0, float x1, float
     const float z1 = z0_w - z0_z;
     const float t = x0 + y0;
     const float a = abs_bits(z0);
-    const bool f = a < std::numeric_limits<float>::infinity();
+    const bool f = std::numeric_limits<float>::infinity() > a;
     const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
@@ -1153,13 +1153,13 @@ KAIRN_GEN_FORCEINLINE void ball_add_2(double cx0, double cx1, double rx, double 
     const double cz1 = cz0_w - cz0_z;
     // (mz) = abs_upper_2(cz0, cz1)
     // (mz_a0, mz_a1) = abs_2(cz0, cz1)
-    const bool mz_a0_m = cz0 < 0.0;
+    const bool mz_a0_m = 0.0 > cz0;
     const double mz_a0_n0 = -cz0;
     const double mz_a0_n1 = -cz1;
     const double mz_a0 = mz_a0_m ? mz_a0_n0 : cz0;
     const double mz_a1 = mz_a0_m ? mz_a0_n1 : cz1;
     // (mz) = to_up_2(mz_a0, mz_a1)
-    const bool mz_m = 0.0 < mz_a1;
+    const bool mz_m = mz_a1 > 0.0;
     const double mz_s = next_up(mz_a0);
     const double mz = mz_m ? mz_s : mz_a0;
     // (d) = rmul(const unit_computed(add_2_2), mz)
@@ -1203,13 +1203,13 @@ KAIRN_GEN_FORCEINLINE void ball_add_2(float cx0, float cx1, float rx, float cy0,
     const float cz1 = cz0_w - cz0_z;
     // (mz) = abs_upper_2(cz0, cz1)
     // (mz_a0, mz_a1) = abs_2(cz0, cz1)
-    const bool mz_a0_m = cz0 < 0.0f;
+    const bool mz_a0_m = 0.0f > cz0;
     const float mz_a0_n0 = -cz0;
     const float mz_a0_n1 = -cz1;
     const float mz_a0 = mz_a0_m ? mz_a0_n0 : cz0;
     const float mz_a1 = mz_a0_m ? mz_a0_n1 : cz1;
     // (mz) = to_up_2(mz_a0, mz_a1)
-    const bool mz_m = 0.0f < mz_a1;
+    const bool mz_m = mz_a1 > 0.0f;
     const float mz_s = next_up(mz_a0);
     const float mz = mz_m ? mz_s : mz_a0;
     // (d) = rmul(const unit_computed(add_2_2), mz)
@@ -1257,13 +1257,13 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(double cx0, double cx1, double rx, do
     const double cz1 = cz0_w - cz0_z;
     // (cz0_mz) = abs_upper_2(cz0, cz1)
     // (cz0_mz_a0, cz0_mz_a1) = abs_2(cz0, cz1)
-    const bool cz0_mz_a0_m = cz0 < 0.0;
+    const bool cz0_mz_a0_m = 0.0 > cz0;
     const double cz0_mz_a0_n0 = -cz0;
     const double cz0_mz_a0_n1 = -cz1;
     const double cz0_mz_a0 = cz0_mz_a0_m ? cz0_mz_a0_n0 : cz0;
     const double cz0_mz_a1 = cz0_mz_a0_m ? cz0_mz_a0_n1 : cz1;
     // (cz0_mz) = to_up_2(cz0_mz_a0, cz0_mz_a1)
-    const bool cz0_mz_m = 0.0 < cz0_mz_a1;
+    const bool cz0_mz_m = cz0_mz_a1 > 0.0;
     const double cz0_mz_s = next_up(cz0_mz_a0);
     const double cz0_mz = cz0_mz_m ? cz0_mz_s : cz0_mz_a0;
     // (cz0_d) = rmul(const unit_computed(add_2_2), cz0_mz)
@@ -1278,8 +1278,8 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(double cx0, double cx1, double rx, do
     const double q = rx + ry;
     const bool e = q == q;
     const double a = abs_bits(cz0);
-    const bool f1 = a < std::numeric_limits<double>::infinity();
-    const bool f2 = rz < std::numeric_limits<double>::infinity();
+    const bool f1 = std::numeric_limits<double>::infinity() > a;
+    const bool f2 = std::numeric_limits<double>::infinity() > rz;
     const bool f = f1 & f2;
     const double c0 = f ? cz0 : 0.0;
     const double c1 = f ? cz1 : 0.0;
@@ -1320,13 +1320,13 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(float cx0, float cx1, float rx, float
     const float cz1 = cz0_w - cz0_z;
     // (cz0_mz) = abs_upper_2(cz0, cz1)
     // (cz0_mz_a0, cz0_mz_a1) = abs_2(cz0, cz1)
-    const bool cz0_mz_a0_m = cz0 < 0.0f;
+    const bool cz0_mz_a0_m = 0.0f > cz0;
     const float cz0_mz_a0_n0 = -cz0;
     const float cz0_mz_a0_n1 = -cz1;
     const float cz0_mz_a0 = cz0_mz_a0_m ? cz0_mz_a0_n0 : cz0;
     const float cz0_mz_a1 = cz0_mz_a0_m ? cz0_mz_a0_n1 : cz1;
     // (cz0_mz) = to_up_2(cz0_mz_a0, cz0_mz_a1)
-    const bool cz0_mz_m = 0.0f < cz0_mz_a1;
+    const bool cz0_mz_m = cz0_mz_a1 > 0.0f;
     const float cz0_mz_s = next_up(cz0_mz_a0);
     const float cz0_mz = cz0_mz_m ? cz0_mz_s : cz0_mz_a0;
     // (cz0_d) = rmul(const unit_computed(add_2_2), cz0_mz)
@@ -1341,8 +1341,8 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(float cx0, float cx1, float rx, float
     const float q = rx + ry;
     const bool e = q == q;
     const float a = abs_bits(cz0);
-    const bool f1 = a < std::numeric_limits<float>::infinity();
-    const bool f2 = rz < std::numeric_limits<float>::infinity();
+    const bool f1 = std::numeric_limits<float>::infinity() > a;
+    const bool f2 = std::numeric_limits<float>::infinity() > rz;
     const bool f = f1 & f2;
     const float c0 = f ? cz0 : 0.0f;
     const float c1 = f ? cz1 : 0.0f;
@@ -1359,10 +1359,10 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(float cx0, float cx1, float rx, float
 // constructors (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(double c0, double c1, double r, double& cw0_out, double& cw1_out, double& rw_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? r : r + 0.0;
-    const bool e = 0.0 <= g;
+    const bool e = g >= 0.0;
     const double a = abs_bits(c0);
-    const bool f1 = a < std::numeric_limits<double>::infinity();
-    const bool f2 = g < std::numeric_limits<double>::infinity();
+    const bool f1 = std::numeric_limits<double>::infinity() > a;
+    const bool f2 = std::numeric_limits<double>::infinity() > g;
     const bool f = f1 & f2;
     const double k0 = f ? c0 : 0.0;
     const double k1 = f ? c1 : 0.0;
@@ -1376,10 +1376,10 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(double c0, double c1, double r,
 }
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(float c0, float c1, float r, float& cw0_out, float& cw1_out, float& rw_out) noexcept {
     const float g = __builtin_is_constant_evaluated() ? r : r + 0.0f;
-    const bool e = 0.0f <= g;
+    const bool e = g >= 0.0f;
     const float a = abs_bits(c0);
-    const bool f1 = a < std::numeric_limits<float>::infinity();
-    const bool f2 = g < std::numeric_limits<float>::infinity();
+    const bool f1 = std::numeric_limits<float>::infinity() > a;
+    const bool f2 = std::numeric_limits<float>::infinity() > g;
     const bool f = f1 & f2;
     const float k0 = f ? c0 : 0.0f;
     const float k1 = f ? c1 : 0.0f;
@@ -1442,24 +1442,24 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2(double cx0, double cx1, double rx, double 
     const double cz1 = cz0_cl3 - cz0_z;
     // (ax) = abs_upper_2(cx0, cx1)
     // (ax_a0, ax_a1) = abs_2(cx0, cx1)
-    const bool ax_a0_m = cx0 < 0.0;
+    const bool ax_a0_m = 0.0 > cx0;
     const double ax_a0_n0 = -cx0;
     const double ax_a0_n1 = -cx1;
     const double ax_a0 = ax_a0_m ? ax_a0_n0 : cx0;
     const double ax_a1 = ax_a0_m ? ax_a0_n1 : cx1;
     // (ax) = to_up_2(ax_a0, ax_a1)
-    const bool ax_m = 0.0 < ax_a1;
+    const bool ax_m = ax_a1 > 0.0;
     const double ax_s = next_up(ax_a0);
     const double ax = ax_m ? ax_s : ax_a0;
     // (ay) = abs_upper_2(cy0, cy1)
     // (ay_a0, ay_a1) = abs_2(cy0, cy1)
-    const bool ay_a0_m = cy0 < 0.0;
+    const bool ay_a0_m = 0.0 > cy0;
     const double ay_a0_n0 = -cy0;
     const double ay_a0_n1 = -cy1;
     const double ay_a0 = ay_a0_m ? ay_a0_n0 : cy0;
     const double ay_a1 = ay_a0_m ? ay_a0_n1 : cy1;
     // (ay) = to_up_2(ay_a0, ay_a1)
-    const bool ay_m = 0.0 < ay_a1;
+    const bool ay_m = ay_a1 > 0.0;
     const double ay_s = next_up(ay_a0);
     const double ay = ay_m ? ay_s : ay_a0;
     // (t1) = rmul(ax, ry)
@@ -1479,13 +1479,13 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2(double cx0, double cx1, double rx, double 
     const double s2 = next_up(s2_s);
     // (mz) = abs_upper_2(cz0, cz1)
     // (mz_a0, mz_a1) = abs_2(cz0, cz1)
-    const bool mz_a0_m = cz0 < 0.0;
+    const bool mz_a0_m = 0.0 > cz0;
     const double mz_a0_n0 = -cz0;
     const double mz_a0_n1 = -cz1;
     const double mz_a0 = mz_a0_m ? mz_a0_n0 : cz0;
     const double mz_a1 = mz_a0_m ? mz_a0_n1 : cz1;
     // (mz) = to_up_2(mz_a0, mz_a1)
-    const bool mz_m = 0.0 < mz_a1;
+    const bool mz_m = mz_a1 > 0.0;
     const double mz_s = next_up(mz_a0);
     const double mz = mz_m ? mz_s : mz_a0;
     // (d0) = rmul(const unit_computed(mul_2_2), mz)
@@ -1516,24 +1516,24 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2(float cx0, float cx1, float rx, float cy0,
     const float cz1 = cz0_cl3 - cz0_z;
     // (ax) = abs_upper_2(cx0, cx1)
     // (ax_a0, ax_a1) = abs_2(cx0, cx1)
-    const bool ax_a0_m = cx0 < 0.0f;
+    const bool ax_a0_m = 0.0f > cx0;
     const float ax_a0_n0 = -cx0;
     const float ax_a0_n1 = -cx1;
     const float ax_a0 = ax_a0_m ? ax_a0_n0 : cx0;
     const float ax_a1 = ax_a0_m ? ax_a0_n1 : cx1;
     // (ax) = to_up_2(ax_a0, ax_a1)
-    const bool ax_m = 0.0f < ax_a1;
+    const bool ax_m = ax_a1 > 0.0f;
     const float ax_s = next_up(ax_a0);
     const float ax = ax_m ? ax_s : ax_a0;
     // (ay) = abs_upper_2(cy0, cy1)
     // (ay_a0, ay_a1) = abs_2(cy0, cy1)
-    const bool ay_a0_m = cy0 < 0.0f;
+    const bool ay_a0_m = 0.0f > cy0;
     const float ay_a0_n0 = -cy0;
     const float ay_a0_n1 = -cy1;
     const float ay_a0 = ay_a0_m ? ay_a0_n0 : cy0;
     const float ay_a1 = ay_a0_m ? ay_a0_n1 : cy1;
     // (ay) = to_up_2(ay_a0, ay_a1)
-    const bool ay_m = 0.0f < ay_a1;
+    const bool ay_m = ay_a1 > 0.0f;
     const float ay_s = next_up(ay_a0);
     const float ay = ay_m ? ay_s : ay_a0;
     // (t1) = rmul(ax, ry)
@@ -1553,13 +1553,13 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2(float cx0, float cx1, float rx, float cy0,
     const float s2 = next_up(s2_s);
     // (mz) = abs_upper_2(cz0, cz1)
     // (mz_a0, mz_a1) = abs_2(cz0, cz1)
-    const bool mz_a0_m = cz0 < 0.0f;
+    const bool mz_a0_m = 0.0f > cz0;
     const float mz_a0_n0 = -cz0;
     const float mz_a0_n1 = -cz1;
     const float mz_a0 = mz_a0_m ? mz_a0_n0 : cz0;
     const float mz_a1 = mz_a0_m ? mz_a0_n1 : cz1;
     // (mz) = to_up_2(mz_a0, mz_a1)
-    const bool mz_m = 0.0f < mz_a1;
+    const bool mz_m = mz_a1 > 0.0f;
     const float mz_s = next_up(mz_a0);
     const float mz = mz_m ? mz_s : mz_a0;
     // (d0) = rmul(const unit_computed(mul_2_2), mz)
@@ -1594,24 +1594,24 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(double cx0, double cx1, double rx, do
     const double cz1 = cz0_cl3 - cz0_z;
     // (cz0_ax) = abs_upper_2(cx0, cx1)
     // (cz0_ax_a0, cz0_ax_a1) = abs_2(cx0, cx1)
-    const bool cz0_ax_a0_m = cx0 < 0.0;
+    const bool cz0_ax_a0_m = 0.0 > cx0;
     const double cz0_ax_a0_n0 = -cx0;
     const double cz0_ax_a0_n1 = -cx1;
     const double cz0_ax_a0 = cz0_ax_a0_m ? cz0_ax_a0_n0 : cx0;
     const double cz0_ax_a1 = cz0_ax_a0_m ? cz0_ax_a0_n1 : cx1;
     // (cz0_ax) = to_up_2(cz0_ax_a0, cz0_ax_a1)
-    const bool cz0_ax_m = 0.0 < cz0_ax_a1;
+    const bool cz0_ax_m = cz0_ax_a1 > 0.0;
     const double cz0_ax_s = next_up(cz0_ax_a0);
     const double cz0_ax = cz0_ax_m ? cz0_ax_s : cz0_ax_a0;
     // (cz0_ay) = abs_upper_2(cy0, cy1)
     // (cz0_ay_a0, cz0_ay_a1) = abs_2(cy0, cy1)
-    const bool cz0_ay_a0_m = cy0 < 0.0;
+    const bool cz0_ay_a0_m = 0.0 > cy0;
     const double cz0_ay_a0_n0 = -cy0;
     const double cz0_ay_a0_n1 = -cy1;
     const double cz0_ay_a0 = cz0_ay_a0_m ? cz0_ay_a0_n0 : cy0;
     const double cz0_ay_a1 = cz0_ay_a0_m ? cz0_ay_a0_n1 : cy1;
     // (cz0_ay) = to_up_2(cz0_ay_a0, cz0_ay_a1)
-    const bool cz0_ay_m = 0.0 < cz0_ay_a1;
+    const bool cz0_ay_m = cz0_ay_a1 > 0.0;
     const double cz0_ay_s = next_up(cz0_ay_a0);
     const double cz0_ay = cz0_ay_m ? cz0_ay_s : cz0_ay_a0;
     // (cz0_t1) = rmul(cz0_ax, ry)
@@ -1631,13 +1631,13 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(double cx0, double cx1, double rx, do
     const double cz0_s2 = next_up(cz0_s2_s);
     // (cz0_mz) = abs_upper_2(cz0, cz1)
     // (cz0_mz_a0, cz0_mz_a1) = abs_2(cz0, cz1)
-    const bool cz0_mz_a0_m = cz0 < 0.0;
+    const bool cz0_mz_a0_m = 0.0 > cz0;
     const double cz0_mz_a0_n0 = -cz0;
     const double cz0_mz_a0_n1 = -cz1;
     const double cz0_mz_a0 = cz0_mz_a0_m ? cz0_mz_a0_n0 : cz0;
     const double cz0_mz_a1 = cz0_mz_a0_m ? cz0_mz_a0_n1 : cz1;
     // (cz0_mz) = to_up_2(cz0_mz_a0, cz0_mz_a1)
-    const bool cz0_mz_m = 0.0 < cz0_mz_a1;
+    const bool cz0_mz_m = cz0_mz_a1 > 0.0;
     const double cz0_mz_s = next_up(cz0_mz_a0);
     const double cz0_mz = cz0_mz_m ? cz0_mz_s : cz0_mz_a0;
     // (cz0_d0) = rmul(const unit_computed(mul_2_2), cz0_mz)
@@ -1652,8 +1652,8 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(double cx0, double cx1, double rx, do
     const double q = rx + ry;
     const bool e = q == q;
     const double a = abs_bits(cz0);
-    const bool f1 = a < std::numeric_limits<double>::infinity();
-    const bool f2 = rz < std::numeric_limits<double>::infinity();
+    const bool f1 = std::numeric_limits<double>::infinity() > a;
+    const bool f2 = std::numeric_limits<double>::infinity() > rz;
     const bool f = f1 & f2;
     const double c0 = f ? cz0 : 0.0;
     const double c1 = f ? cz1 : 0.0;
@@ -1681,24 +1681,24 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(float cx0, float cx1, float rx, float
     const float cz1 = cz0_cl3 - cz0_z;
     // (cz0_ax) = abs_upper_2(cx0, cx1)
     // (cz0_ax_a0, cz0_ax_a1) = abs_2(cx0, cx1)
-    const bool cz0_ax_a0_m = cx0 < 0.0f;
+    const bool cz0_ax_a0_m = 0.0f > cx0;
     const float cz0_ax_a0_n0 = -cx0;
     const float cz0_ax_a0_n1 = -cx1;
     const float cz0_ax_a0 = cz0_ax_a0_m ? cz0_ax_a0_n0 : cx0;
     const float cz0_ax_a1 = cz0_ax_a0_m ? cz0_ax_a0_n1 : cx1;
     // (cz0_ax) = to_up_2(cz0_ax_a0, cz0_ax_a1)
-    const bool cz0_ax_m = 0.0f < cz0_ax_a1;
+    const bool cz0_ax_m = cz0_ax_a1 > 0.0f;
     const float cz0_ax_s = next_up(cz0_ax_a0);
     const float cz0_ax = cz0_ax_m ? cz0_ax_s : cz0_ax_a0;
     // (cz0_ay) = abs_upper_2(cy0, cy1)
     // (cz0_ay_a0, cz0_ay_a1) = abs_2(cy0, cy1)
-    const bool cz0_ay_a0_m = cy0 < 0.0f;
+    const bool cz0_ay_a0_m = 0.0f > cy0;
     const float cz0_ay_a0_n0 = -cy0;
     const float cz0_ay_a0_n1 = -cy1;
     const float cz0_ay_a0 = cz0_ay_a0_m ? cz0_ay_a0_n0 : cy0;
     const float cz0_ay_a1 = cz0_ay_a0_m ? cz0_ay_a0_n1 : cy1;
     // (cz0_ay) = to_up_2(cz0_ay_a0, cz0_ay_a1)
-    const bool cz0_ay_m = 0.0f < cz0_ay_a1;
+    const bool cz0_ay_m = cz0_ay_a1 > 0.0f;
     const float cz0_ay_s = next_up(cz0_ay_a0);
     const float cz0_ay = cz0_ay_m ? cz0_ay_s : cz0_ay_a0;
     // (cz0_t1) = rmul(cz0_ax, ry)
@@ -1718,13 +1718,13 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(float cx0, float cx1, float rx, float
     const float cz0_s2 = next_up(cz0_s2_s);
     // (cz0_mz) = abs_upper_2(cz0, cz1)
     // (cz0_mz_a0, cz0_mz_a1) = abs_2(cz0, cz1)
-    const bool cz0_mz_a0_m = cz0 < 0.0f;
+    const bool cz0_mz_a0_m = 0.0f > cz0;
     const float cz0_mz_a0_n0 = -cz0;
     const float cz0_mz_a0_n1 = -cz1;
     const float cz0_mz_a0 = cz0_mz_a0_m ? cz0_mz_a0_n0 : cz0;
     const float cz0_mz_a1 = cz0_mz_a0_m ? cz0_mz_a0_n1 : cz1;
     // (cz0_mz) = to_up_2(cz0_mz_a0, cz0_mz_a1)
-    const bool cz0_mz_m = 0.0f < cz0_mz_a1;
+    const bool cz0_mz_m = cz0_mz_a1 > 0.0f;
     const float cz0_mz_s = next_up(cz0_mz_a0);
     const float cz0_mz = cz0_mz_m ? cz0_mz_s : cz0_mz_a0;
     // (cz0_d0) = rmul(const unit_computed(mul_2_2), cz0_mz)
@@ -1739,8 +1739,8 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(float cx0, float cx1, float rx, float
     const float q = rx + ry;
     const bool e = q == q;
     const float a = abs_bits(cz0);
-    const bool f1 = a < std::numeric_limits<float>::infinity();
-    const bool f2 = rz < std::numeric_limits<float>::infinity();
+    const bool f1 = std::numeric_limits<float>::infinity() > a;
+    const bool f2 = std::numeric_limits<float>::infinity() > rz;
     const bool f = f1 & f2;
     const float c0 = f ? cz0 : 0.0f;
     const float c1 = f ? cz1 : 0.0f;
@@ -1834,13 +1834,13 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2(double cx0, double cx1, double rx, doubl
     const double t1 = next_up(t1_p);
     // (mz) = abs_upper_2(cz0, cz1)
     // (mz_a0, mz_a1) = abs_2(cz0, cz1)
-    const bool mz_a0_m = cz0 < 0.0;
+    const bool mz_a0_m = 0.0 > cz0;
     const double mz_a0_n0 = -cz0;
     const double mz_a0_n1 = -cz1;
     const double mz_a0 = mz_a0_m ? mz_a0_n0 : cz0;
     const double mz_a1 = mz_a0_m ? mz_a0_n1 : cz1;
     // (mz) = to_up_2(mz_a0, mz_a1)
-    const bool mz_m = 0.0 < mz_a1;
+    const bool mz_m = mz_a1 > 0.0;
     const double mz_s = next_up(mz_a0);
     const double mz = mz_m ? mz_s : mz_a0;
     // (d0) = rmul(const unit_computed(mul_2_1), mz)
@@ -1872,13 +1872,13 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2(float cx0, float cx1, float rx, float a,
     const float t1 = next_up(t1_p);
     // (mz) = abs_upper_2(cz0, cz1)
     // (mz_a0, mz_a1) = abs_2(cz0, cz1)
-    const bool mz_a0_m = cz0 < 0.0f;
+    const bool mz_a0_m = 0.0f > cz0;
     const float mz_a0_n0 = -cz0;
     const float mz_a0_n1 = -cz1;
     const float mz_a0 = mz_a0_m ? mz_a0_n0 : cz0;
     const float mz_a1 = mz_a0_m ? mz_a0_n1 : cz1;
     // (mz) = to_up_2(mz_a0, mz_a1)
-    const bool mz_m = 0.0f < mz_a1;
+    const bool mz_m = mz_a1 > 0.0f;
     const float mz_s = next_up(mz_a0);
     const float mz = mz_m ? mz_s : mz_a0;
     // (d0) = rmul(const unit_computed(mul_2_1), mz)
@@ -1914,13 +1914,13 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(double cx0, double cx1, double rx, 
     const double cz0_t1 = next_up(cz0_t1_p);
     // (cz0_mz) = abs_upper_2(cz0, cz1)
     // (cz0_mz_a0, cz0_mz_a1) = abs_2(cz0, cz1)
-    const bool cz0_mz_a0_m = cz0 < 0.0;
+    const bool cz0_mz_a0_m = 0.0 > cz0;
     const double cz0_mz_a0_n0 = -cz0;
     const double cz0_mz_a0_n1 = -cz1;
     const double cz0_mz_a0 = cz0_mz_a0_m ? cz0_mz_a0_n0 : cz0;
     const double cz0_mz_a1 = cz0_mz_a0_m ? cz0_mz_a0_n1 : cz1;
     // (cz0_mz) = to_up_2(cz0_mz_a0, cz0_mz_a1)
-    const bool cz0_mz_m = 0.0 < cz0_mz_a1;
+    const bool cz0_mz_m = cz0_mz_a1 > 0.0;
     const double cz0_mz_s = next_up(cz0_mz_a0);
     const double cz0_mz = cz0_mz_m ? cz0_mz_s : cz0_mz_a0;
     // (cz0_d0) = rmul(const unit_computed(mul_2_1), cz0_mz)
@@ -1934,8 +1934,8 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(double cx0, double cx1, double rx, 
     const double rz = next_up(rz_s);
     const bool e = rx == rx;
     const double az = abs_bits(cz0);
-    const bool f1 = az < std::numeric_limits<double>::infinity();
-    const bool f2 = rz < std::numeric_limits<double>::infinity();
+    const bool f1 = std::numeric_limits<double>::infinity() > az;
+    const bool f2 = std::numeric_limits<double>::infinity() > rz;
     const bool f = f1 & f2;
     const double c0 = f ? cz0 : 0.0;
     const double c1 = f ? cz1 : 0.0;
@@ -1964,13 +1964,13 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(float cx0, float cx1, float rx, flo
     const float cz0_t1 = next_up(cz0_t1_p);
     // (cz0_mz) = abs_upper_2(cz0, cz1)
     // (cz0_mz_a0, cz0_mz_a1) = abs_2(cz0, cz1)
-    const bool cz0_mz_a0_m = cz0 < 0.0f;
+    const bool cz0_mz_a0_m = 0.0f > cz0;
     const float cz0_mz_a0_n0 = -cz0;
     const float cz0_mz_a0_n1 = -cz1;
     const float cz0_mz_a0 = cz0_mz_a0_m ? cz0_mz_a0_n0 : cz0;
     const float cz0_mz_a1 = cz0_mz_a0_m ? cz0_mz_a0_n1 : cz1;
     // (cz0_mz) = to_up_2(cz0_mz_a0, cz0_mz_a1)
-    const bool cz0_mz_m = 0.0f < cz0_mz_a1;
+    const bool cz0_mz_m = cz0_mz_a1 > 0.0f;
     const float cz0_mz_s = next_up(cz0_mz_a0);
     const float cz0_mz = cz0_mz_m ? cz0_mz_s : cz0_mz_a0;
     // (cz0_d0) = rmul(const unit_computed(mul_2_1), cz0_mz)
@@ -1984,8 +1984,8 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(float cx0, float cx1, float rx, flo
     const float rz = next_up(rz_s);
     const bool e = rx == rx;
     const float az = abs_bits(cz0);
-    const bool f1 = az < std::numeric_limits<float>::infinity();
-    const bool f2 = rz < std::numeric_limits<float>::infinity();
+    const bool f1 = std::numeric_limits<float>::infinity() > az;
+    const bool f2 = std::numeric_limits<float>::infinity() > rz;
     const bool f = f1 & f2;
     const float c0 = f ? cz0 : 0.0f;
     const float c1 = f ? cz1 : 0.0f;
@@ -2032,13 +2032,13 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2(double cx0, double cx1, double rx, double 
     const double cz1 = cz0_w - cz0_z;
     // (cz0_mz) = abs_upper_2(cz0, cz1)
     // (cz0_mz_a0, cz0_mz_a1) = abs_2(cz0, cz1)
-    const bool cz0_mz_a0_m = cz0 < 0.0;
+    const bool cz0_mz_a0_m = 0.0 > cz0;
     const double cz0_mz_a0_n0 = -cz0;
     const double cz0_mz_a0_n1 = -cz1;
     const double cz0_mz_a0 = cz0_mz_a0_m ? cz0_mz_a0_n0 : cz0;
     const double cz0_mz_a1 = cz0_mz_a0_m ? cz0_mz_a0_n1 : cz1;
     // (cz0_mz) = to_up_2(cz0_mz_a0, cz0_mz_a1)
-    const bool cz0_mz_m = 0.0 < cz0_mz_a1;
+    const bool cz0_mz_m = cz0_mz_a1 > 0.0;
     const double cz0_mz_s = next_up(cz0_mz_a0);
     const double cz0_mz = cz0_mz_m ? cz0_mz_s : cz0_mz_a0;
     // (cz0_d) = rmul(const unit_computed(add_2_2), cz0_mz)
@@ -2086,13 +2086,13 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2(float cx0, float cx1, float rx, float cy0,
     const float cz1 = cz0_w - cz0_z;
     // (cz0_mz) = abs_upper_2(cz0, cz1)
     // (cz0_mz_a0, cz0_mz_a1) = abs_2(cz0, cz1)
-    const bool cz0_mz_a0_m = cz0 < 0.0f;
+    const bool cz0_mz_a0_m = 0.0f > cz0;
     const float cz0_mz_a0_n0 = -cz0;
     const float cz0_mz_a0_n1 = -cz1;
     const float cz0_mz_a0 = cz0_mz_a0_m ? cz0_mz_a0_n0 : cz0;
     const float cz0_mz_a1 = cz0_mz_a0_m ? cz0_mz_a0_n1 : cz1;
     // (cz0_mz) = to_up_2(cz0_mz_a0, cz0_mz_a1)
-    const bool cz0_mz_m = 0.0f < cz0_mz_a1;
+    const bool cz0_mz_m = cz0_mz_a1 > 0.0f;
     const float cz0_mz_s = next_up(cz0_mz_a0);
     const float cz0_mz = cz0_mz_m ? cz0_mz_s : cz0_mz_a0;
     // (cz0_d) = rmul(const unit_computed(add_2_2), cz0_mz)
@@ -2144,13 +2144,13 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(double cx0, double cx1, double rx, do
     const double cz1 = cz0_w - cz0_z;
     // (cz0_mz) = abs_upper_2(cz0, cz1)
     // (cz0_mz_a0, cz0_mz_a1) = abs_2(cz0, cz1)
-    const bool cz0_mz_a0_m = cz0 < 0.0;
+    const bool cz0_mz_a0_m = 0.0 > cz0;
     const double cz0_mz_a0_n0 = -cz0;
     const double cz0_mz_a0_n1 = -cz1;
     const double cz0_mz_a0 = cz0_mz_a0_m ? cz0_mz_a0_n0 : cz0;
     const double cz0_mz_a1 = cz0_mz_a0_m ? cz0_mz_a0_n1 : cz1;
     // (cz0_mz) = to_up_2(cz0_mz_a0, cz0_mz_a1)
-    const bool cz0_mz_m = 0.0 < cz0_mz_a1;
+    const bool cz0_mz_m = cz0_mz_a1 > 0.0;
     const double cz0_mz_s = next_up(cz0_mz_a0);
     const double cz0_mz = cz0_mz_m ? cz0_mz_s : cz0_mz_a0;
     // (cz0_d) = rmul(const unit_computed(add_2_2), cz0_mz)
@@ -2165,8 +2165,8 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(double cx0, double cx1, double rx, do
     const double q = rx + ry;
     const bool e = q == q;
     const double a = abs_bits(cz0);
-    const bool f1 = a < std::numeric_limits<double>::infinity();
-    const bool f2 = rz < std::numeric_limits<double>::infinity();
+    const bool f1 = std::numeric_limits<double>::infinity() > a;
+    const bool f2 = std::numeric_limits<double>::infinity() > rz;
     const bool f = f1 & f2;
     const double c0 = f ? cz0 : 0.0;
     const double c1 = f ? cz1 : 0.0;
@@ -2211,13 +2211,13 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(float cx0, float cx1, float rx, float
     const float cz1 = cz0_w - cz0_z;
     // (cz0_mz) = abs_upper_2(cz0, cz1)
     // (cz0_mz_a0, cz0_mz_a1) = abs_2(cz0, cz1)
-    const bool cz0_mz_a0_m = cz0 < 0.0f;
+    const bool cz0_mz_a0_m = 0.0f > cz0;
     const float cz0_mz_a0_n0 = -cz0;
     const float cz0_mz_a0_n1 = -cz1;
     const float cz0_mz_a0 = cz0_mz_a0_m ? cz0_mz_a0_n0 : cz0;
     const float cz0_mz_a1 = cz0_mz_a0_m ? cz0_mz_a0_n1 : cz1;
     // (cz0_mz) = to_up_2(cz0_mz_a0, cz0_mz_a1)
-    const bool cz0_mz_m = 0.0f < cz0_mz_a1;
+    const bool cz0_mz_m = cz0_mz_a1 > 0.0f;
     const float cz0_mz_s = next_up(cz0_mz_a0);
     const float cz0_mz = cz0_mz_m ? cz0_mz_s : cz0_mz_a0;
     // (cz0_d) = rmul(const unit_computed(add_2_2), cz0_mz)
@@ -2232,8 +2232,8 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(float cx0, float cx1, float rx, float
     const float q = rx + ry;
     const bool e = q == q;
     const float a = abs_bits(cz0);
-    const bool f1 = a < std::numeric_limits<float>::infinity();
-    const bool f2 = rz < std::numeric_limits<float>::infinity();
+    const bool f1 = std::numeric_limits<float>::infinity() > a;
+    const bool f2 = std::numeric_limits<float>::infinity() > rz;
     const bool f = f1 & f2;
     const float c0 = f ? cz0 : 0.0f;
     const float c1 = f ? cz1 : 0.0f;
@@ -2279,17 +2279,17 @@ KAIRN_GEN_FORCEINLINE constexpr void eq_2_2(float x0, float x1, float y0, float 
 // le_1_2(a, y = (y0, y1)) -> mask m
 // limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void le_1_2(double a, double y0, double y1, bool& m_out) noexcept {
-    const bool h = a < y0;
+    const bool h = y0 > a;
     const bool e = a == y0;
-    const bool l = 0.0 <= y1;
+    const bool l = y1 >= 0.0;
     const bool t = e & l;
     const bool m = h | t;
     m_out = m;
 }
 KAIRN_GEN_FORCEINLINE constexpr void le_1_2(float a, float y0, float y1, bool& m_out) noexcept {
-    const bool h = a < y0;
+    const bool h = y0 > a;
     const bool e = a == y0;
-    const bool l = 0.0f <= y1;
+    const bool l = y1 >= 0.0f;
     const bool t = e & l;
     const bool m = h | t;
     m_out = m;
@@ -2298,17 +2298,17 @@ KAIRN_GEN_FORCEINLINE constexpr void le_1_2(float a, float y0, float y1, bool& m
 // le_2_1(x = (x0, x1), a) -> mask m
 // limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void le_2_1(double x0, double x1, double a, bool& m_out) noexcept {
-    const bool h = x0 < a;
+    const bool h = a > x0;
     const bool e = x0 == a;
-    const bool l = x1 <= 0.0;
+    const bool l = 0.0 >= x1;
     const bool t = e & l;
     const bool m = h | t;
     m_out = m;
 }
 KAIRN_GEN_FORCEINLINE constexpr void le_2_1(float x0, float x1, float a, bool& m_out) noexcept {
-    const bool h = x0 < a;
+    const bool h = a > x0;
     const bool e = x0 == a;
-    const bool l = x1 <= 0.0f;
+    const bool l = 0.0f >= x1;
     const bool t = e & l;
     const bool m = h | t;
     m_out = m;
@@ -2317,17 +2317,17 @@ KAIRN_GEN_FORCEINLINE constexpr void le_2_1(float x0, float x1, float a, bool& m
 // le_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
 // limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void le_2_2(double x0, double x1, double y0, double y1, bool& m_out) noexcept {
-    const bool h = x0 < y0;
+    const bool h = y0 > x0;
     const bool e = x0 == y0;
-    const bool l = x1 <= y1;
+    const bool l = y1 >= x1;
     const bool t = e & l;
     const bool m = h | t;
     m_out = m;
 }
 KAIRN_GEN_FORCEINLINE constexpr void le_2_2(float x0, float x1, float y0, float y1, bool& m_out) noexcept {
-    const bool h = x0 < y0;
+    const bool h = y0 > x0;
     const bool e = x0 == y0;
-    const bool l = x1 <= y1;
+    const bool l = y1 >= x1;
     const bool t = e & l;
     const bool m = h | t;
     m_out = m;
@@ -2336,17 +2336,17 @@ KAIRN_GEN_FORCEINLINE constexpr void le_2_2(float x0, float x1, float y0, float 
 // lt_1_2(a, y = (y0, y1)) -> mask m
 // limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void lt_1_2(double a, double y0, double y1, bool& m_out) noexcept {
-    const bool h = a < y0;
+    const bool h = y0 > a;
     const bool e = a == y0;
-    const bool l = 0.0 < y1;
+    const bool l = y1 > 0.0;
     const bool t = e & l;
     const bool m = h | t;
     m_out = m;
 }
 KAIRN_GEN_FORCEINLINE constexpr void lt_1_2(float a, float y0, float y1, bool& m_out) noexcept {
-    const bool h = a < y0;
+    const bool h = y0 > a;
     const bool e = a == y0;
-    const bool l = 0.0f < y1;
+    const bool l = y1 > 0.0f;
     const bool t = e & l;
     const bool m = h | t;
     m_out = m;
@@ -2355,17 +2355,17 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_1_2(float a, float y0, float y1, bool& m
 // lt_2_1(x = (x0, x1), a) -> mask m
 // limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void lt_2_1(double x0, double x1, double a, bool& m_out) noexcept {
-    const bool h = x0 < a;
+    const bool h = a > x0;
     const bool e = x0 == a;
-    const bool l = x1 < 0.0;
+    const bool l = 0.0 > x1;
     const bool t = e & l;
     const bool m = h | t;
     m_out = m;
 }
 KAIRN_GEN_FORCEINLINE constexpr void lt_2_1(float x0, float x1, float a, bool& m_out) noexcept {
-    const bool h = x0 < a;
+    const bool h = a > x0;
     const bool e = x0 == a;
-    const bool l = x1 < 0.0f;
+    const bool l = 0.0f > x1;
     const bool t = e & l;
     const bool m = h | t;
     m_out = m;
@@ -2374,17 +2374,17 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_2_1(float x0, float x1, float a, bool& m
 // lt_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
 // limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(double x0, double x1, double y0, double y1, bool& m_out) noexcept {
-    const bool h = x0 < y0;
+    const bool h = y0 > x0;
     const bool e = x0 == y0;
-    const bool l = x1 < y1;
+    const bool l = y1 > x1;
     const bool t = e & l;
     const bool m = h | t;
     m_out = m;
 }
 KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(float x0, float x1, float y0, float y1, bool& m_out) noexcept {
-    const bool h = x0 < y0;
+    const bool h = y0 > x0;
     const bool e = x0 == y0;
-    const bool l = x1 < y1;
+    const bool l = y1 > x1;
     const bool t = e & l;
     const bool m = h | t;
     m_out = m;
@@ -2419,7 +2419,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1_full(double x0, double x1, double a, double& 
     const double z1 = z0_cl3 - z0_z;
     const double t = fma_rn(x0, a, 0.0);
     const double az = abs_bits(z0);
-    const bool f = az < std::numeric_limits<double>::infinity();
+    const bool f = std::numeric_limits<double>::infinity() > az;
     const double r0 = t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
@@ -2440,7 +2440,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1_full(float x0, float x1, float a, float& w0_o
     const float z1 = z0_cl3 - z0_z;
     const float t = fma_rn(x0, a, 0.0f);
     const float az = abs_bits(z0);
-    const bool f = az < std::numeric_limits<float>::infinity();
+    const bool f = std::numeric_limits<float>::infinity() > az;
     const float r0 = t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
@@ -2467,7 +2467,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_2_full(double x0, double x1, double y0, double 
     const double z1 = z0_cl3 - z0_z;
     const double t = fma_rn(x0, y0, 0.0);
     const double a = abs_bits(z0);
-    const bool f = a < std::numeric_limits<double>::infinity();
+    const bool f = std::numeric_limits<double>::infinity() > a;
     const double r0 = t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
@@ -2491,7 +2491,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_2_full(float x0, float x1, float y0, float y1, 
     const float z1 = z0_cl3 - z0_z;
     const float t = fma_rn(x0, y0, 0.0f);
     const float a = abs_bits(z0);
-    const bool f = a < std::numeric_limits<float>::infinity();
+    const bool f = std::numeric_limits<float>::infinity() > a;
     const float r0 = t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
@@ -2536,7 +2536,7 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(double x0, double x1, double c, doubl
     const double z1 = z0_l - z0_z;
     const double t = fma_rn(x0, c, 0.0);
     const double a = abs_bits(z0);
-    const bool f = a < std::numeric_limits<double>::infinity();
+    const bool f = std::numeric_limits<double>::infinity() > a;
     const double r0 = t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
@@ -2555,7 +2555,7 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(float x0, float x1, float c, float& w
     const float z1 = z0_l - z0_z;
     const float t = fma_rn(x0, c, 0.0f);
     const float a = abs_bits(z0);
-    const bool f = a < std::numeric_limits<float>::infinity();
+    const bool f = std::numeric_limits<float>::infinity() > a;
     const float r0 = t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
@@ -2628,7 +2628,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_1_2_full(double a, double y0, double y1
     const double z1 = z0_v - z0_z;
     const double t = g - y0;
     const double az = abs_bits(z0);
-    const bool f = az < std::numeric_limits<double>::infinity();
+    const bool f = std::numeric_limits<double>::infinity() > az;
     const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
@@ -2657,7 +2657,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_1_2_full(float a, float y0, float y1, f
     const float z1 = z0_v - z0_z;
     const float t = g - y0;
     const float az = abs_bits(z0);
-    const bool f = az < std::numeric_limits<float>::infinity();
+    const bool f = std::numeric_limits<float>::infinity() > az;
     const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
@@ -2727,7 +2727,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_1_full(double x0, double x1, double a
     const double z1 = z0_v - z0_z;
     const double t = x0 - g;
     const double az = abs_bits(z0);
-    const bool f = az < std::numeric_limits<double>::infinity();
+    const bool f = std::numeric_limits<double>::infinity() > az;
     const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
@@ -2755,7 +2755,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_1_full(float x0, float x1, float a, f
     const float z1 = z0_v - z0_z;
     const float t = x0 - g;
     const float az = abs_bits(z0);
-    const bool f = az < std::numeric_limits<float>::infinity();
+    const bool f = std::numeric_limits<float>::infinity() > az;
     const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
@@ -2863,7 +2863,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(double x0, double x1, double y
     const double z1 = z0_w - z0_z;
     const double t = x0 - y0;
     const double a = abs_bits(z0);
-    const bool f = a < std::numeric_limits<double>::infinity();
+    const bool f = std::numeric_limits<double>::infinity() > a;
     const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
@@ -2903,7 +2903,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(float x0, float x1, float y0, 
     const float z1 = z0_w - z0_z;
     const float t = x0 - y0;
     const float a = abs_bits(z0);
-    const bool f = a < std::numeric_limits<float>::infinity();
+    const bool f = std::numeric_limits<float>::infinity() > a;
     const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
@@ -2916,13 +2916,13 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(float x0, float x1, float y0, 
 // to_down_2(x = (x0, x1)) -> t
 // the sign of x1 (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void to_down_2(double x0, double x1, double& t_out) noexcept {
-    const bool m = x1 < 0.0;
+    const bool m = 0.0 > x1;
     const double p = next_down(x0);
     const double t = m ? p : x0;
     t_out = t;
 }
 KAIRN_GEN_FORCEINLINE constexpr void to_down_2(float x0, float x1, float& t_out) noexcept {
-    const bool m = x1 < 0.0f;
+    const bool m = 0.0f > x1;
     const float p = next_down(x0);
     const float t = m ? p : x0;
     t_out = t;

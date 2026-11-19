@@ -45,8 +45,10 @@ SPELL = {
     'fnma': 'fma_rn(-{0}, {1}, {2})',
     'prod': 'fma_rn({0}, {1}, {zero})',   # the opaque product
     'muladd': '{0} * {1} + {2}',         # the compiler may fuse it: the theorem covers both
-    'lt': '{0} < {1}',
-    'le': '{0} <= {1}',
+    # a < b written b > a, a <= b written b >= a: the same in IEEE 754, NaN included, but MSVC's
+    # constant evaluator (19.52) takes < and <= with a NaN operand for true, and > and >= right.
+    'lt': '{1} > {0}',
+    'le': '{1} >= {0}',
     'eq': '{0} == {1}',
     'and': '{0} & {1}',                  # not &&: no short circuit, no branch
     'or': '{0} | {1}',
@@ -299,8 +301,9 @@ def prelude(kernels):
                       '// t times +infinity in constant evaluation, from comparisons alone: GCC and Clang',
                       '// refuse an operation that produces a NaN there, 0 times infinity among them, even',
                       '// where its result is not selected. At run time a kernel multiplies (times_inf).',
+                      '// Only > compares: MSVC\'s constant evaluator takes < with a NaN for true.',
                       f'KAIRN_GEN_FORCEINLINE constexpr {ctype} times_inf_ce({ctype} t) noexcept {{',
-                      f'    return t > 0 ? {limits}::infinity() : t < 0 ? -{limits}::infinity() : {limits}::quiet_NaN();',
+                      f'    return t > 0 ? {limits}::infinity() : 0 > t ? -{limits}::infinity() : {limits}::quiet_NaN();',
                       '}']
     lines += ['', '}  // namespace kairn::gen']
     return '\n'.join(lines) + '\n'

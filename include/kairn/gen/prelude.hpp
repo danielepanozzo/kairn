@@ -77,8 +77,9 @@ KAIRN_GEN_FORCEINLINE constexpr double next_down(double a) noexcept { return -ne
 // t times +infinity in constant evaluation, from comparisons alone: GCC and Clang
 // refuse an operation that produces a NaN there, 0 times infinity among them, even
 // where its result is not selected. At run time a kernel multiplies (times_inf).
+// Only > compares: MSVC's constant evaluator takes < with a NaN for true.
 KAIRN_GEN_FORCEINLINE constexpr double times_inf_ce(double t) noexcept {
-    return t > 0 ? std::numeric_limits<double>::infinity() : t < 0 ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::quiet_NaN();
+    return t > 0 ? std::numeric_limits<double>::infinity() : 0 > t ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::quiet_NaN();
 }
 
 // |a|, exactly, by clearing the sign bit (std::fabs is not constexpr in C++20).
@@ -108,8 +109,9 @@ KAIRN_GEN_FORCEINLINE constexpr float next_down(float a) noexcept { return -next
 // t times +infinity in constant evaluation, from comparisons alone: GCC and Clang
 // refuse an operation that produces a NaN there, 0 times infinity among them, even
 // where its result is not selected. At run time a kernel multiplies (times_inf).
+// Only > compares: MSVC's constant evaluator takes < with a NaN for true.
 KAIRN_GEN_FORCEINLINE constexpr float times_inf_ce(float t) noexcept {
-    return t > 0 ? std::numeric_limits<float>::infinity() : t < 0 ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::quiet_NaN();
+    return t > 0 ? std::numeric_limits<float>::infinity() : 0 > t ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::quiet_NaN();
 }
 
 }  // namespace kairn::gen
