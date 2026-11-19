@@ -275,7 +275,9 @@ proof file contains `Admitted`, `admit`, `Axiom` or `Parameter`.
 ```
 
 - `value` is the exact real function the output approximates: `x+y`, `x-y` or `x*y` of the input
-  values (the value of a multi-limb input is the exact sum of its limbs).
+  values, or one input by name (the value of a multi-limb input is the exact sum of its limbs).
+- `min_precision` is the smallest precision for which the claims hold, or `null` when it is not
+  known yet; the oracle then judges every format.
 - `requires` uses a closed vocabulary: `normalized(NAME)`, `abs_ge(NAME, NAME)`. Operands are
   always finite.
 - `ensures` holds whenever the requirements hold and output limb 0 is finite:
@@ -287,7 +289,9 @@ proof file contains `Admitted`, `admit`, `Axiom` or `Parameter`.
       $\text{value} = 0$ or $\lvert\text{value}\rvert \ge 2^{2p-1}\eta$;
     - `leading_rounded`: output limb 0 equals $\mathrm{RN}(\text{value})$.
 - `instances` gives, per named format, `rel` $= c\,u^k$ and `abs` $= t\,\eta$ of each `error`
-  entry as exact fractions. The oracle uses these numbers and never evaluates `c` itself.
+  entry as exact fractions (a list, in the order of the entries, when a kernel has several). For
+  a named format the oracle uses these numbers; it also evaluates `c` and `t` itself, which is
+  what it does for toy formats, and refuses a kernel on which the two disagree.
 - `status` is `proved` only when the audit has passed for that kernel.
 
 ## The line protocol
@@ -305,8 +309,11 @@ completed:  KERNEL FORMAT LIMB ... [#TAG] -> LIMB ...
   limbs likewise.
 - A runner reads requests on standard input and, for each, writes the same line followed by
   ` -> ` and the output limbs. It copies everything before the arrow unchanged, including an
-  optional `#TAG`, which names the stratum the case belongs to. Lines starting with `#` are
-  comments and are copied through.
+  optional `#TAG`. The oracle's tags are `#STRATUM:INDEX`: the stratum the case belongs to and
+  its index in the stream, from which the case can be regenerated. Lines starting with `#` are
+  comments and are copied through; the oracle brackets a stream with two of them and uses them to
+  detect dropped or added lines.
+- The sign of a zero is never compared: Kairn leaves it unspecified.
 - Which backend or variant a runner uses is chosen on its command line, never in the stream.
 
 The oracle generates requests (case $i$ of a given generator and seed is computed without

@@ -75,33 +75,130 @@ Statement, in the IEEE model:
 The fix-up contains comparisons and selects, for which "non-finite in, non-finite out" is false,
 so it is proved directly in the IEEE model.
 
-## Second-wave operations
+## Second-wave kernels
 
-For limb type $T$ and at most two limbs. `pred` and `succ` are the neighbors in the format.
+For limb type $T$ and at most two limbs, in the notation of the
+[first-wave listings](../architecture.md#kernels-of-the-first-wave): each line is one operation,
+value names are normative, a 2-limb operand `x` is `(x0, x1)`, and a one-limb operand is `a`.
+`pred` and `succ` are the neighbors in the format; `m`-values are masks. These listings are the
+finite cores: what each returns for non-finite operands is added as in
+[IEEE-like results](#ieee-like-results).
 
-| Operation | Definition | Target statement |
+**Sign changes and subtraction.**
+
+```
+neg_2(x) -> z            abs_2(x) -> z                sub_2_2(x, y) -> z
+  z0 = neg(x0)             m  = lt(x0, 0)               n0 = neg(y0)
+  z1 = neg(x1)             n0 = neg(x0)                 n1 = neg(y1)
+                           n1 = neg(x1)                 z  = add_2_2(x0, x1, n0, n1)
+                           z0 = select(m, n0, x0)
+                           z1 = select(m, n1, x1)     sub_2_1(x, a), sub_1_2(a, y): likewise,
+                                                      through add_2_1
+```
+
+**Comparisons.** Limbs are compared in order.
+
+```
+lt_2_2(x, y) -> m                 le_2_2(x, y) -> m                 eq_2_2(x, y) -> m
+  h = lt(x0, y0)                    h = lt(x0, y0)                    h = eq(x0, y0)
+  e = eq(x0, y0)                    e = eq(x0, y0)                    l = eq(x1, y1)
+  l = lt(x1, y1)                    l = le(x1, y1)                    m = and(h, l)
+  t = and(e, l)                     t = and(e, l)
+  m = or(h, t)                      m = or(h, t)
+```
+
+Against one limb `a`, the same with `(a, 0)` in place of the 2-limb operand:
+`lt_2_1`, `le_2_1`, `eq_2_1`, `lt_1_2`, `le_1_2`.
+
+**Conversions to one limb.**
+
+```
+to_nearest_2(x) -> t     to_down_2(x) -> t          to_up_2(x) -> t           abs_upper_2(x) -> t
+  t = x0                   m = lt(x1, 0)              m = lt(0, x1)             (a0, a1) = abs_2(x)
+                           p = pred(x0)               s = succ(x0)              t = to_up_2(a0, a1)
+                           t = select(m, p, x0)       t = select(m, s, x0)
+```
+
+**Directed steps on one limb**, for radii.
+
+```
+radd(a, b) -> r          rmul(a, b) -> r
+  s = add(a, b)            p = prod(a, b)
+  r = succ(s)              r = succ(p)
+```
+
+**Scaling by a power of two.** `c` is a limb that is a power of two; `ldexp(x, n)` and `half(x)`
+are this kernel with $c = 2^n$ (two calls when $2^n$ is not a number of the format).
+
+```
+mul_pow2_2(x, c) -> z
+  h = prod(x0, c)
+  l = prod(x1, c)
+  (z0, z1) = fast_two_sum(h, l)
+```
+
+| Kernel | Requires | Target statement |
 |---|---|---|
-| `sub_2_2`, `sub_2_1` | the addition with the second operand negated | that of the addition |
-| `neg_2`, `abs_2` | sign change of both limbs; `abs_2` changes them when $x_0 < 0$ | exact; the result is normalized |
-| `lt`, `le`, `eq` on two 2-limb numbers, and against one limb | limbs compared in order | equal to the comparison of the real values |
-| `to_nearest_2` | $x_0$ | $= \mathrm{RN}(x)$ |
-| `to_down_2`, `to_up_2` | $x_0$, or $\mathrm{pred}(x_0)$ when $x_1 < 0$; symmetric | the largest number of the format $\le x$; the smallest $\ge x$ |
-| `abs_upper_2` | `to_up_2` of `abs_2` | the smallest number of the format $\ge \lvert x\rvert$ |
-| `next_up`, `next_down` | $\mathrm{succ}$, $\mathrm{pred}$ | exact; $\mathrm{succ}(\Omega) = +\infty$ |
-| `radd(a, b)`, `rmul(a, b)` for $a, b \ge 0$ | $\mathrm{succ}(\mathrm{RN}(a + b))$, $\mathrm{succ}(\mathrm{RN}(ab))$ | at least the exact sum or product, and at most 1.5 ulps of the result above it |
-| `ldexp_2(x, n)` | each limb scaled by $2^n$, then renormalized | exact when no limb becomes subnormal; always $\lvert z - 2^n x\rvert \le \eta$ |
+| `neg_2`, `abs_2` | $x$ normalized | $z$ normalized; $z = -x$, $z = \lvert x\rvert$ exactly |
+| `sub_2_2`, `sub_2_1`, `sub_1_2` | operands normalized | that of the addition, for $x - y$ |
+| `lt`, `le`, `eq` (all forms) | operands normalized | the mask is the truth of the comparison of the real values |
+| `to_nearest_2` | $x$ normalized | $t = \mathrm{RN}(x)$ |
+| `to_down_2`, `to_up_2` | $x$ normalized | $t$ is the largest number of the format $\le x$; the smallest $\ge x$ |
+| `abs_upper_2` | $x$ normalized | $t$ is the smallest number of the format $\ge \lvert x\rvert$ |
+| `radd`, `rmul` | — | $r \ge a + b$, $r \ge ab$; and $r$ exceeds the exact value by at most $g$ gaps, where a gap is $r - \mathrm{pred}(r)$ and $g \le 2$ is to be determined ($3/2$ expected for nonnegative operands) |
+| `mul_pow2_2` | $x$ normalized, $c$ a power of two | $z$ normalized; $\lvert z - cx\rvert \le \eta$; and $z = cx$ when each of the two products is zero or at least $2^{p-1}\eta$ in magnitude |
 
 Why comparing limbs in order is exact for two limbs: $x_0 = \mathrm{RN}(x)$ and rounding is
 monotone, so $x < y$ gives $x_0 \le y_0$, and when $x_0 = y_0$ the order is that of $x_1$ and
-$y_1$; conversely $x_0 < y_0$ excludes both $x > y$ and $x = y$.
+$y_1$; conversely $x_0 < y_0$ excludes both $x > y$ and $x = y$. The same argument covers a
+one-limb operand, which is its own rounding.
 
-**Ball operations**, for centers of one and two limbs: addition, subtraction, multiplication,
-multiplication by an exact scalar, negation. The center is the round-to-nearest kernel on the
-centers. The radius is the formula of the
-[Ball table](phase0/operations.md#ball), evaluated with `radd` and `rmul`, in which the kernel's
-own error enters as `unit_computed` times `abs_upper` of the new center, plus `tiny_computed`.
-Statement: for all $x \in X$ and $y \in Y$, $x \circ y \in Z$. A center that is not finite gives
-the whole line ($r = +\infty$, $c = 0$).
+Why `mul_pow2_2` ends with `fast_two_sum`: when the second product is rounded in the subnormal
+range it can land exactly half a gap from the first, and the pair is then no longer normalized.
 
-Each of these is a kernel in the generator like any other, with selects where a choice is needed,
-so its proof is about the same code that ships.
+## Ball kernels
+
+A ball is a center of $k$ limbs and a radius of one limb. For $k = 1$ the center operation is one
+operation of $T$; for $k = 2$ it is the kernel of the same name. `U` and `V` stand for the
+constants `unit_computed` and `tiny_computed` of the center's kernel, rounded up to $T$ by the
+generator from the proved bound ($V = 0$ for additions, and the line that adds it is then left
+out).
+
+```
+ball_add_k(cx, rx, cy, ry) -> (cz, rz)      ball_mul_k(cx, rx, cy, ry) -> (cz, rz)
+  cz = add(cx, cy)                            cz = mul(cx, cy)
+  mz = abs_upper(cz)                          ax = abs_upper(cx)
+  d  = rmul(const U, mz)                      ay = abs_upper(cy)
+  r0 = radd(rx, ry)                           t1 = rmul(ax, ry)
+  rz = radd(r0, d)                            t2 = rmul(ay, rx)
+                                              t3 = rmul(rx, ry)
+ball_scale_k(cx, rx, a) -> (cz, rz)           s1 = radd(t1, t2)
+  cz = mul(cx, a)                             s2 = radd(s1, t3)
+  aa = abs(a)                                 mz = abs_upper(cz)
+  t1 = rmul(aa, rx)                           d0 = rmul(const U, mz)
+  mz = abs_upper(cz)                          d  = radd(d0, const V)
+  d0 = rmul(const U, mz)                      rz = radd(s2, d)
+  d  = radd(d0, const V)
+  rz = radd(t1, d)                          ball_neg_k, ball_sub_k: through neg and ball_add_k
+```
+
+**Statement (containment), in the real model.** For finite operands with nonnegative radii, and
+for all real $x$, $y$ with $\lvert x - c_x\rvert \le r_x$ and $\lvert y - c_y\rvert \le r_y$:
+$\lvert (x \circ y) - c_z\rvert \le r_z$.
+
+*Why it holds.* For the sum, $\lvert x + y - c_z\rvert \le r_x + r_y + \lvert c_x + c_y - c_z\rvert$.
+The last term is the center kernel's error, at most $\mathrm{unit}\cdot\lvert c_x + c_y\rvert +
+\mathrm{tiny}$ by its theorem, hence at most $U\lvert c_z\rvert + V$ (a bound relative to the
+exact value turns into one relative to the computed value with $\mathrm{unit}/(1 - \mathrm{unit})$).
+Every `radd` and `rmul` returns at least the exact sum or product. The product is the same with
+$\lvert xy - c_x c_y\rvert \le \lvert c_x\rvert r_y + \lvert c_y\rvert r_x + r_x r_y$.
+
+**Special states**, added with the non-finite layer: a radius that is NaN is the empty set and
+makes the result empty; a center that is not finite, or an infinite radius, makes the result the
+whole line ($r = +\infty$, $c = 0$). One corner needs care: with an exact zero ball and the whole
+line, the radius formula computes $0 \cdot \infty$, which is NaN, and the result must be the
+whole line, not the empty set.
+
+The oracle can judge containment exactly: the exact range of $X \circ Y$ is an interval whose
+endpoints are sums or products of the operands' endpoints, and it must lie in $[c_z - r_z,
+c_z + r_z]$.
