@@ -204,8 +204,9 @@ the compiler contracts, exactly as for `double`.
 
 The flag `-fno-signed-zeros` lets a compiler remove the guard and fold the opaque products of the
 kernels back into plain ones. GCC rejects it at compile time (`config.hpp`); Clang defines no
-macro for it, and with `-ffp-contract=fast` on AArch64 it breaks the two-limb products, which
-`kairn::self_test()` reports. It is not supported.
+macro for it. With `-ffp-contract=fast` and Apple clang 21 on AArch64 it breaks the two-limb
+products, which `kairn::self_test()` reports; with Clang 18, on x86-64 and on AArch64 Linux, the
+same flags were measured to break nothing. It is not supported with any compiler.
 
 ## Constant evaluation
 

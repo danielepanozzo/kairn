@@ -37,6 +37,12 @@ jobs:
           - name: Linux x86-64, Clang (scalar and AVX2)
             os: ubuntu-24.04
             tests: --cxx clang++
+          - name: Linux arm64, GCC (scalar and NEON)
+            os: ubuntu-24.04-arm
+            tests: --cxx g++
+          - name: Linux arm64, Clang (scalar and NEON)
+            os: ubuntu-24.04-arm
+            tests: --cxx clang++
           - name: macOS arm64, Apple clang (scalar and NEON)
             os: macos-15
             tests: --cxx c++

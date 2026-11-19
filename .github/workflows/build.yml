@@ -2,7 +2,7 @@
 # (docs/developer/testing.md). The same three commands as in docs/getting-started/index.md, with
 # Ninja everywhere, Release, warnings as errors, and the compiler named. The packed kernels are
 # tested with the backend of each runner: AVX2 on the x86-64 ones (whose CPUs have it), NEON on
-# macOS arm64. ctest in the build directory runs the quick tier only; the full tier, everything
+# the arm64 ones (Linux and macOS). ctest in the build directory runs the quick tier only; the full tier, everything
 # that left it, runs beside these jobs in full.yml, and the generator's whole suite, its C++ tests
 # included, in generator.yml.
 name: Build and test
@@ -34,6 +34,12 @@ jobs:
             cxx: g++
           - name: Linux x86-64, Clang
             os: ubuntu-24.04
+            cxx: clang++
+          - name: Linux arm64, GCC
+            os: ubuntu-24.04-arm
+            cxx: g++
+          - name: Linux arm64, Clang
+            os: ubuntu-24.04-arm
             cxx: clang++
           - name: macOS arm64, Apple clang
             os: macos-15
