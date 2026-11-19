@@ -850,11 +850,18 @@ def merging(ctx):
     return "%d lines" % len(lines)
 
 
+def _shell_word(arg):
+    """arg as one word of a command line for the shell that brute runs the runner with: sh, or
+    cmd on Windows, which leaves the quoting to the program (POSIX single quotes mean nothing
+    there)."""
+    return subprocess.list2cmdline([arg]) if os.name == "nt" else shlex.quote(arg)
+
+
 @test
 def brute_driver(ctx):
     """brute with an external runner and in-process gives the same statistics."""
     out = {}
-    for name, runner in (("external", "%s %s refrun" % (shlex.quote(sys.executable), shlex.quote(SCRIPT))),
+    for name, runner in (("external", "%s %s refrun" % (_shell_word(sys.executable), _shell_word(SCRIPT))),
                          ("inprocess", "refrun")):
         js = os.path.join(ctx.workdir, "brute-%s.json" % name)
         cmd = [sys.executable, SCRIPT, "brute", "--runner", runner, "--claims", FIXTURE,

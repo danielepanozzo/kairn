@@ -14,18 +14,28 @@ there is no library yet.**
 
 ## Build and test
 
-Needs CMake 3.21 or later and a C++20 compiler; the generator's and the oracle's tests also need
+Needs CMake 3.21 or later and a C++20 compiler, and on x86-64 a CPU with FMA; the tests also need
 Python 3. From the repository root:
 
 ```sh
-cmake -S . -B build
+cmake -S . -B build                      # Release unless CMAKE_BUILD_TYPE says otherwise
 cmake --build build
 ctest --test-dir build --output-on-failure
 cmake --install build --prefix PREFIX    # optional: then find_package(kairn) with PREFIX in CMAKE_PREFIX_PATH
 ```
 
-The CMake target `kairn::kairn` exists, but its only header is `kairn/version.hpp`. The tests are
-listed in [Getting started](docs/getting-started/index.md#configure-build-and-test).
+With Visual Studio or Xcode, add `--config Release` to the build and `-C Release` to `ctest`. The
+tests take one to two minutes: the generator's and the oracle's own tests, and cross-checks in
+which the oracle judges every kernel, run by the generator's interpreter on every operand of a
+small format and compiled on random `binary64` and `binary32` operands, under each contraction
+setting of the compiler. They are listed in
+[Getting started](docs/getting-started/index.md#configure-build-and-test) and explained in
+[Testing](docs/developer/testing.md).
+
+The CMake target `kairn::kairn` holds `kairn/version.hpp` and the generated kernels, which are not
+an interface yet. On x86-64 the kernels need hardware FMA: compile for such a CPU, or also link
+`kairn::fma`, which adds the option for your compiler
+([Hardware FMA](docs/getting-started/index.md#hardware-fma)).
 
 ## Documentation
 

@@ -1,0 +1,86 @@
+# Build and quick tier: configure, build and ctest on every hosted platform and compiler
+# (docs/developer/testing.md). The same three commands as in docs/getting-started/index.md, with
+# Ninja everywhere, Release, warnings as errors, and the compiler named.
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# One run per branch: a new push cancels the run it supersedes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x86-64, GCC
+            os: ubuntu-24.04
+            cxx: g++
+          - name: Linux x86-64, Clang
+            os: ubuntu-24.04
+            cxx: clang++
+          - name: macOS arm64, Apple clang
+            os: macos-15
+            cxx: clang++
+          - name: Windows x64, MSVC
+            os: windows-2025
+            cxx: cl
+          - name: Windows x64, clang-cl
+            os: windows-2025
+            cxx: clang-cl
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Python 3.13 or later, so that the oracle's selftest also checks its rounding against the
+      # machine (rounding_hardware needs math.fma). The action sets Python3_ROOT_DIR, which CMake's
+      # FindPython3 follows.
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      # cl, clang-cl and the oracle's selftest, which runs the compiler itself, need the variables
+      # of a Visual Studio developer prompt: those that vcvars64.bat sets or changes go into
+      # GITHUB_ENV for the steps that follow.
+      - name: Visual Studio developer environment
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw "no Visual Studio with the x64 C++ tools" }
+          $bat = Join-Path $env:RUNNER_TEMP "vcvars-and-set.bat"
+          Set-Content -Path $bat -Value "@call `"$vs\VC\Auxiliary\Build\vcvars64.bat`" >nul || exit /b 1", "@set"
+          $before = @{}
+          Get-ChildItem env: | ForEach-Object { $before[$_.Name] = $_.Value }
+          $lines = & cmd.exe /d /c $bat
+          if ($LASTEXITCODE -ne 0) { throw "vcvars64.bat failed" }
+          foreach ($line in $lines) {
+            if ($line -match '^([^=]+)=(.*)$' -and $before[$Matches[1]] -cne $Matches[2]) {
+              Add-Content -Path $env:GITHUB_ENV -Value "$($Matches[1])=$($Matches[2])"
+            }
+          }
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --parallel 4

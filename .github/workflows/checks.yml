@@ -1,0 +1,41 @@
+# The generated files are what the generator writes, and the documentation site builds without a
+# warning and with every link resolving (docs/developer/documentation.md). One job: each step takes
+# seconds.
+name: Generated files and documentation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# One run per branch: a new push cancels the run it supersedes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Generated files and documentation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Generated files are fresh
+        run: python3 gen/kairn-gen check
+
+      - name: Install MkDocs
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet -r docs/requirements.txt
+
+      - name: Build the site, warnings as errors
+        run: .venv/bin/mkdocs build --strict
+
+      - name: Check links and anchors as GitHub resolves them
+        run: python3 docs/tools/check_links.py

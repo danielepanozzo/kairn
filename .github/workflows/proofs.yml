@@ -1,0 +1,62 @@
+# The Rocq proofs and the axiom audit: make -C proofs, with Rocq 9.0.1 from the Rocq team's image
+# and Flocq 4.2.2 from opam (docs/developer/testing.md).
+name: Proofs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# One run per branch: a new push cancels the run it supersedes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  proofs:
+    name: Rocq proofs and axiom audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container:
+      # rocq/rocq-prover:9.0 as of its 9.0.1 build. The digest is also in the cache key below:
+      # Flocq's compiled files are only valid for the Rocq that compiled them.
+      image: rocq/rocq-prover:9.0@sha256:3ed9c46fa02e9fd7748a959abebb11b36f8818d10738dcc93edc67354c313ce2
+      # The image's user, rocq, cannot write the workspace the runner mounts, so the steps run as
+      # root, with opam's root left where the image put it (HOME is /github/home in a job
+      # container, so opam would not find it by itself).
+      options: --user root
+    env:
+      OPAMROOT: /home/rocq/.opam
+      OPAMROOTISOK: "1"
+      OPAMYES: "1"
+      OPAMCOLOR: never
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Locate Flocq
+        id: flocq
+        run: echo "dir=$(opam var lib)/coq/user-contrib/Flocq" >> "$GITHUB_OUTPUT"
+
+      # Flocq's installed directory is all the proofs need from it, so it is what is cached:
+      # 22 MB, against about a minute and a half to build it.
+      - name: Restore Flocq
+        id: cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.flocq.outputs.dir }}
+          key: flocq-4.2.2-rocq-prover-9.0-3ed9c46fa02e9fd7748a959abebb11b36f8818d10738dcc93edc67354c313ce2
+
+      - name: Install Flocq 4.2.2
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: opam install coq-flocq.4.2.2
+
+      - name: Build the proofs and run the audit
+        run: opam exec -- make -C proofs -j"$(nproc)"

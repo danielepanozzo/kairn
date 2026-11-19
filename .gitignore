@@ -26,3 +26,5 @@ venv/
 .vscode/
 .idea/
 compile_commands.json
+# Agent worktrees and local tool state
+/.claude/

@@ -213,6 +213,10 @@ template <> float parse<float>(const std::string& s) { return std::strtof(s.c_st
 
 template <class T>
 std::string show(T v) {
+  // The protocol spells the non-finite values inf, -inf and nan; %a does not everywhere (MSVC
+  // prints a NaN as -nan(ind)).
+  if (std::isnan(v)) return "nan";
+  if (std::isinf(v)) return v < 0 ? "-inf" : "inf";
   char buf[64];
   std::snprintf(buf, sizeof buf, "%a", static_cast<double>(v));
   return buf;

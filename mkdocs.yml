@@ -91,6 +91,7 @@ nav:
   - Getting started: getting-started/index.md
   - Developer guide:
       - Architecture: developer/architecture.md
+      - Testing: developer/testing.md
       - Documentation: developer/documentation.md
       - Design notes:
           - Phase 0 report:
