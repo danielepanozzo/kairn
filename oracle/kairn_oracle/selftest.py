@@ -907,14 +907,20 @@ from . import selftest3  # noqa: E402,F401
 # ---------------------------------------------------------------------------
 
 def main(a):
+    only = set(a.only.split(",")) if a.only else None
+    leave_out = set(a.skip.split(",")) if getattr(a, "skip", None) else set()
+    # A name that is not a test's (a test renamed, a typo) would select or leave out nothing.
+    unknown = sorted(((only or set()) | leave_out) - {fn.__name__ for fn in TESTS})
+    if unknown:
+        print("selftest: no test named %s" % ", ".join(unknown))
+        return 2
     workdir = a.workdir or tempfile.mkdtemp(prefix="kairn-oracle-selftest-")
     os.makedirs(workdir, exist_ok=True)
     ctx = Ctx(workdir, a.quick, a.cxx, getattr(a, "jobs", None))
-    only = set(a.only.split(",")) if a.only else None
     failed = skipped = 0
     t0 = time.time()
     for fn in TESTS:
-        if only and fn.__name__ not in only:
+        if (only and fn.__name__ not in only) or fn.__name__ in leave_out:
             continue
         t = time.time()
         try:

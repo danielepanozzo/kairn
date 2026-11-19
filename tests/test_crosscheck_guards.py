@@ -149,7 +149,7 @@ class Guards(unittest.TestCase):
 
 
 # The extended domain (the non-finite layer): toy formats of the shape qmin + qmax = 3 - 2p, as
-# in the quick tier. fp:3:-3:0 has the overflow threshold 2^3 and Omega = 7; add_2_2_full's
+# in the interpreter's enumerations. fp:3:-3:0 has the overflow threshold 2^3 and Omega = 7; add_2_2_full's
 # finite_when bounds both operands by 2^(qmax+p-2) = 2 there (when its exponent is -2).
 ADD = ("add_2_2_full", "fp:3:-3:0")
 BALL = ("ball_add_1_full", "fp:2:-2:1")         # Omega = 6 = 0x1.8p+2

@@ -2,7 +2,9 @@
 # (docs/developer/testing.md). The same three commands as in docs/getting-started/index.md, with
 # Ninja everywhere, Release, warnings as errors, and the compiler named. The packed kernels are
 # tested with the backend of each runner: AVX2 on the x86-64 ones (whose CPUs have it), NEON on
-# macOS arm64. The generator's C++ tests, which ctest leaves out, are in generator.yml.
+# macOS arm64. ctest in the build directory runs the quick tier only; the full tier, everything
+# that left it, runs beside these jobs in full.yml, and the generator's whole suite, its C++ tests
+# included, in generator.yml.
 name: Build and test
 
 on:
@@ -22,9 +24,7 @@ jobs:
   test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    # The quick tier takes 17 to 28 minutes on the hosted runners since the kernels of the
-    # non-finite layer were added (measured on the first run with them).
-    timeout-minutes: 60
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
