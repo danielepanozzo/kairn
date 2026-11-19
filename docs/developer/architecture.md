@@ -43,6 +43,7 @@ derived from it or checked against it:
 | `oracle/` | The oracle: Python, standard library only. | `gen/claims.json` as data, and nothing else: **no code shared with `gen/` or the library** |
 | `tests/` | Runners for the library, the quick corpus, CMake/ctest wiring. | library, oracle |
 | `bench/` | Benchmarks. | library |
+| `results/` | Stored summaries of brute-force runs and benchmarks, by milestone. | — |
 | `docs/` | The MkDocs site; this page; the Phase 0 report. | — |
 | `experiments/phase0/` | Phase 0 experiments, kept as recorded. | — |
 

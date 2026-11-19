@@ -93,6 +93,9 @@ nav:
       - Architecture: developer/architecture.md
       - Testing: developer/testing.md
       - Documentation: developer/documentation.md
+      - Results:
+          - Brute force, Milestone 1: developer/results/brute-milestone1.md
+          - Benchmarks, Milestone 1: developer/results/bench-milestone1.md
       - Design notes:
           - Phase 0 report:
               - developer/design/phase0/index.md
