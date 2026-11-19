@@ -685,7 +685,7 @@ complement to the random tiers, not a replacement.
 **Where it runs.** By hand, as above, with any runner; and in the full tier,
 `full.search.compiled`: every kernel, both formats, 5 000 cases each through the scalar runner of
 the build, four worker processes; 10 seconds on the Mac, 16 on the Linux machine (GCC 13 and Clang
-18 alike) and 27 on the Windows machine. Its seeds then include the regression cases, so it
+18 alike) and 27 to 33 on the Windows machine. Its seeds then include the regression cases, so it
 starts from the closest cases known.
 
 ### The shrinker
@@ -721,7 +721,7 @@ runs through every compiled runner and through every form of the public interfac
 kernel, and every line, toy formats included, through the interpreter; the oracle judges each
 result as in the cross-checks. 185 lines today (16 from the history, 38 of the literature, 62 of
 the brute-force runs, 69 of the two searches); in the quick tier's run, 0.5 to 1.1 seconds on the Mac,
-1.1 on the Linux machine and 2.6 on the Windows machine, where starting a process costs most (one
+1.1 on the Linux machine and 2.6 to 6 on the Windows machine, where starting a process costs most (one
 run of each compiled runner, of the interpreter, and of each runner of the public interface per
 name of a form).
 
