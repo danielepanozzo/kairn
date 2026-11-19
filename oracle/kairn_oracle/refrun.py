@@ -1126,12 +1126,22 @@ def main(argv):
         return 0
     if a.print_constants:
         ar = Arith(parse_format_triple(a.print_constants))
+        # Below a center kernel's precision its bound may not exist (3/(1 - 4u) at p = 2).
         for center in sorted(set(CENTER_KERNEL.values())):
-            U, V = ball_constants(ar, center, a.center_claims or DEFAULT_CENTER_CLAIMS)
+            try:
+                U, V = ball_constants(ar, center, a.center_claims or DEFAULT_CENTER_CLAIMS)
+            except (ValueError, ZeroDivisionError) as ex:
+                print("%s.%s: no constants (%s)" % (a.print_constants, center, ex))
+                continue
             print("%s.%s.U=%s" % (a.print_constants, center, ar.write(U)))
             print("%s.%s.V=%s" % (a.print_constants, center, ar.write(V)))
         for kname in sorted(RADIUS2):
-            for which, v in zip("EGH", radius2_constants(ar, kname)):
+            try:
+                consts = radius2_constants(ar, kname)
+            except (ValueError, ZeroDivisionError) as ex:
+                print("%s.%s: no constants (%s)" % (a.print_constants, kname, ex))
+                continue
+            for which, v in zip("EGH", consts):
                 print("%s.%s.%s=%s" % (a.print_constants, kname, which, ar.write(v)))
         return 0
     Runner(a.variant, a.center_claims, a.radius).run(sys.stdin, sys.stdout)
