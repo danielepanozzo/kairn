@@ -511,5 +511,5 @@ The non-finite layer, each planted bug with the statement that must catch it (an
 | `ball-full-finite-whole`: a finite center kept with the radius $\Omega$ | full Ball kernels | B3 |
 | `make-negative-radius`, `make-nan-radius`: the radius tested for NaN only, or not at all | `ball_make_1`, `ball_make_2` | `makes_ball` |
 | `make2-inf-nan-tail`: `make_2` of an infinity with a NaN tail | `make_2` | `represents` |
-| `ball2-no-E`: the second design without $E$ | one-limb full Ball kernels (at $p = 4$, $G$ rounded up has room for a 2-limb center's error) | B3 |
+| `ball2-no-E`: the second design without $E$ | one-limb full Ball kernels; $G$ rounded up has room for the missing term at low precision (a 2-limb center at $p = 4$; `ball_mul_1` on every case of `fp:2:-2:1` and `fp:3:-3:0`), so the exhaustive test takes `ball_mul_1` at `fp:3:-4:1` | B3 |
 | `ball2-no-H`: the second design without $H$ | products and scalings of balls | B3 |

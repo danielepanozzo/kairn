@@ -662,9 +662,19 @@ def injected_wave3_exhaustive(ctx):
         if variant == "full-spurious-overflow":
             ks = ["add_2_2_full"]
         for k in ks if not ctx.quick else ks[:1]:
-            fname = "fp:3:-3:0" if k == "add_2_2_full" else "fp:2:-2:1" if k.startswith(
-                "ball_") and "scale" not in k else "fp:3:-4:1"
-            s = exhaustive3(ctx, k, fname, (), variant)
+            restrict = ()
+            if k == "add_2_2_full":
+                fname = "fp:3:-3:0"
+            elif k in ("ball_add_1_full", "ball_sub_1_full"):
+                fname = "fp:2:-2:1"
+            elif k == "ball_mul_1_full":
+                # Below p = 3 and qmin = -4 the rounded-up G of the second design hides a missing
+                # E: on every case of fp:2:-2:1 and fp:3:-3:0 the radius still encloses.
+                fname = "fp:3:-4:1"
+                restrict = ("rx.in=0x0p+0/0x1p-4", "ry.in=0x0p+0/0x1p-4")
+            else:
+                fname = "fp:3:-4:1"
+            s = exhaustive3(ctx, k, fname, restrict, variant)
             _check_injected(s, variant, (k,), need, allowed, (), "exhaustive " + fname)
         res.append("%s (%s)" % (variant, ", ".join(ks if not ctx.quick else ks[:1])))
     return "; ".join(res)
