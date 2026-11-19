@@ -11,8 +11,11 @@ value:         cx*cy
 requires:      nonneg rx
 requires:      nonneg ry
 ensures:       encloses cz rz x*y x=cx,rx y=cy,ry
+min_precision: 2
+theorem:       proofs/theories/Ball.v ball_mul_1_correct
 source:        midpoint-radius product (Milestone 1 listing)
-status:        unverified
+license:       algorithm and proof: MIT
+status:        proved
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
 cz = prod(cx, cy)

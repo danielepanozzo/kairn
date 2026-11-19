@@ -208,12 +208,15 @@
           }
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Ball.v",
+        "name": "ball_add_1_correct"
+      },
       "source": {
         "cite": "midpoint-radius sum (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 4,
       "instances": {
@@ -274,12 +277,15 @@
           }
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Ball.v",
+        "name": "ball_mul_1_correct"
+      },
       "source": {
         "cite": "midpoint-radius product (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 9,
       "instances": {
@@ -327,12 +333,15 @@
           }
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Ball.v",
+        "name": "ball_neg_1_correct"
+      },
       "source": {
         "cite": "midpoint-radius negation (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -384,12 +393,15 @@
           }
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Ball.v",
+        "name": "ball_scale_1_correct"
+      },
       "source": {
         "cite": "midpoint-radius scaling (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 5,
       "instances": {
@@ -450,12 +462,15 @@
           }
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Ball.v",
+        "name": "ball_sub_1_correct"
+      },
       "source": {
         "cite": "midpoint-radius difference (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 4,
       "instances": {
@@ -1254,11 +1269,14 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Ball.v",
+        "name": "ball_add_2_correct"
+      },
       "source": {
         "cite": "midpoint-radius sum (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 23,
       "instances": {
@@ -1390,11 +1408,14 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Ball.v",
+        "name": "ball_mul_2_correct"
+      },
       "source": {
         "cite": "midpoint-radius product (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 17,
       "instances": {
@@ -1506,12 +1527,15 @@
           }
         }
       ],
-      "min_precision": null,
-      "status": "unverified",
-      "theorem": null,
+      "min_precision": 1,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Ball.v",
+        "name": "ball_neg_2_correct"
+      },
       "source": {
         "cite": "midpoint-radius negation (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -1632,11 +1656,14 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Ball.v",
+        "name": "ball_scale_2_correct"
+      },
       "source": {
         "cite": "midpoint-radius scaling (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 10,
       "instances": {
@@ -1704,11 +1731,14 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Ball.v",
+        "name": "ball_sub_2_correct"
+      },
       "source": {
         "cite": "midpoint-radius difference (Milestone 1 listing)",
-        "license": null
+        "license": "algorithm and proof: MIT"
       },
       "flops": 23,
       "instances": {

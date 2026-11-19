@@ -9,8 +9,11 @@ output:        rz
 value:         cx*a
 requires:      nonneg rx
 ensures:       encloses cz rz x*a x=cx,rx
+min_precision: 2
+theorem:       proofs/theories/Ball.v ball_scale_1_correct
 source:        midpoint-radius scaling (Milestone 1 listing)
-status:        unverified
+license:       algorithm and proof: MIT
+status:        proved
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
 cz = prod(cx, a)

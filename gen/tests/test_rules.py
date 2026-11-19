@@ -446,8 +446,6 @@ class TheKernels(unittest.TestCase):
                    'abs_upper_2', 'radd', 'rmul', 'mul_pow2_2', 'ball_add_1', 'ball_add_2', 'ball_mul_1',
                    'ball_mul_2', 'ball_scale_1', 'ball_scale_2', 'ball_neg_1', 'ball_neg_2', 'ball_sub_1',
                    'ball_sub_2', 'add_1_1', 'mul_1_1'}
-    BALLS = {'ball_add_1', 'ball_add_2', 'ball_mul_1', 'ball_mul_2', 'ball_scale_1', 'ball_scale_2',
-             'ball_neg_1', 'ball_neg_2', 'ball_sub_1', 'ball_sub_2'}
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -466,10 +464,10 @@ class TheKernels(unittest.TestCase):
         # add_fast_2_2 ends with Fast2Sum: its normalization is proved, so there is no variant
         # ending with TwoSum.
         self.assertEqual(body['add_fast_2_2'][-1], (('z0', 'z1'), 'fast_two_sum', ('sh', 'w')))
-        # Proved means: the audit passes for that kernel (make -C proofs).
+        # Proved means: the audit passes for that kernel (make -C proofs). Every kernel is.
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         (self.FIRST_WAVE | self.SECOND_WAVE) - self.BALLS)
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.BALLS)
+                         self.FIRST_WAVE | self.SECOND_WAVE)
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, set())
         self.assertEqual(ks['two_prod'].ce_variant, 'two_prod_dekker')
         # The smallest precision from which each proved statement holds.
         self.assertEqual({name: k.min_precision for name, k in ks.items() if k.status == 'proved'}, {
@@ -478,7 +476,9 @@ class TheKernels(unittest.TestCase):
             'neg_2': 1, 'abs_2': 1, 'sub_2_2': 3, 'sub_2_1': 3, 'sub_1_2': 3,
             'lt_2_2': 1, 'le_2_2': 1, 'eq_2_2': 1, 'lt_2_1': 1, 'le_2_1': 1, 'eq_2_1': 1, 'lt_1_2': 1,
             'le_1_2': 1, 'to_nearest_2': 1, 'to_down_2': 1, 'to_up_2': 1, 'abs_upper_2': 1,
-            'radd': 2, 'rmul': 2, 'mul_pow2_2': 2, 'add_1_1': 1, 'mul_1_1': 1})
+            'radd': 2, 'rmul': 2, 'mul_pow2_2': 2, 'add_1_1': 1, 'mul_1_1': 1,
+            'ball_add_1': 2, 'ball_sub_1': 2, 'ball_neg_1': 1, 'ball_mul_1': 2, 'ball_scale_1': 2,
+            'ball_add_2': 3, 'ball_sub_2': 3, 'ball_neg_2': 1, 'ball_mul_2': 4, 'ball_scale_2': 2})
 
     def test_second_wave_bodies_are_those_of_milestone1_md(self):
         ks = common.kernels()

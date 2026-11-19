@@ -50,7 +50,7 @@ KAIRN_GEN_FORCEINLINE constexpr void radd(float a, float b, float& r_out) noexce
 }
 
 // ball_add_1(cx, rx, cy, ry) -> cz, rz
-// midpoint-radius sum (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius sum (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_add_1(double cx, double rx, double cy, double ry, double& cz_out, double& rz_out) noexcept {
     const double cz = cx + cy;
     const double mz = abs_bits(cz);
@@ -83,7 +83,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1(float cx, float rx, float cy, float ry, fl
 }
 
 // ball_mul_1(cx, rx, cy, ry) -> cz, rz
-// midpoint-radius product (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius product (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_mul_1(double cx, double rx, double cy, double ry, double& cz_out, double& rz_out) noexcept {
     const double cz = fma_rn(cx, cy, 0.0);
     const double ax = abs_bits(cx);
@@ -150,7 +150,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1(float cx, float rx, float cy, float ry, fl
 }
 
 // ball_neg_1(cx, rx) -> cz, rz
-// midpoint-radius negation (Milestone 1 listing). Status: unverified; constexpr.
+// midpoint-radius negation (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_neg_1(double cx, double rx, double& cz_out, double& rz_out) noexcept {
     const double cz = -cx;
     const double rz = rx;
@@ -165,7 +165,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_neg_1(float cx, float rx, float& cz_ou
 }
 
 // ball_scale_1(cx, rx, a) -> cz, rz
-// midpoint-radius scaling (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius scaling (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_scale_1(double cx, double rx, double a, double& cz_out, double& rz_out) noexcept {
     const double cz = fma_rn(cx, a, 0.0);
     const double aa = abs_bits(a);
@@ -206,7 +206,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1(float cx, float rx, float a, float& cz_o
 }
 
 // ball_sub_1(cx, rx, cy, ry) -> cz, rz
-// midpoint-radius difference (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius difference (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_sub_1(double cx, double rx, double cy, double ry, double& cz_out, double& rz_out) noexcept {
     const double n = -cy;
     // (cz, rz) = ball_add_1(cx, rx, n, ry)
@@ -623,7 +623,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2(float x0, float x1, float y0, 
 }
 
 // ball_add_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
-// midpoint-radius sum (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius sum (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_add_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
     // (cz0, cz1) = add_2_2(cx0, cx1, cy0, cy1)
     // (cz0_sh, cz0_sl) = two_sum(cx0, cy0)
@@ -759,7 +759,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_2(float x0, float x1, float y0, float y1, float
 }
 
 // ball_mul_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
-// midpoint-radius product (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius product (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_mul_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
     // (cz0, cz1) = mul_2_2(cx0, cx1, cy0, cy1)
     // (cz0_ch, cz0_cl1) = two_prod(cx0, cy0)
@@ -925,7 +925,7 @@ KAIRN_GEN_FORCEINLINE constexpr void neg_2(float x0, float x1, float& z0_out, fl
 }
 
 // ball_neg_2(cx = (cx0, cx1), rx) -> cz = (cz0, cz1), rz
-// midpoint-radius negation (Milestone 1 listing). Status: unverified; constexpr.
+// midpoint-radius negation (Milestone 1 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_neg_2(double cx0, double cx1, double rx, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
     // (cz0, cz1) = neg_2(cx0, cx1)
     const double cz0 = -cx0;
@@ -973,7 +973,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1(float x0, float x1, float a, float& z0_out, f
 }
 
 // ball_scale_2(cx = (cx0, cx1), rx, a) -> cz = (cz0, cz1), rz
-// midpoint-radius scaling (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius scaling (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_scale_2(double cx0, double cx1, double rx, double a, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
     // (cz0, cz1) = mul_2_1(cx0, cx1, a)
     // (cz0_ch, cz0_cl1) = two_prod(cx0, a)
@@ -1052,7 +1052,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2(float cx0, float cx1, float rx, float a,
 }
 
 // ball_sub_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
-// midpoint-radius difference (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// midpoint-radius difference (Milestone 1 listing). Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_sub_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
     // (n0, n1) = neg_2(cy0, cy1)
     const double n0 = -cy0;

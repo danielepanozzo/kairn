@@ -15,8 +15,10 @@ requires:      nonneg ry
 ensures:       normalized cz
 ensures:       encloses cz rz x*y x=cx,rx y=cy,ry
 min_precision: 4
+theorem:       proofs/theories/Ball.v ball_mul_2_correct
 source:        midpoint-radius product (Milestone 1 listing)
-status:        unverified
+license:       algorithm and proof: MIT
+status:        proved
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
 (cz0, cz1) = mul_2_2(cx0, cx1, cy0, cy1)
