@@ -15,9 +15,10 @@ docs/reference/KERNEL.md. An entry gives:
   conversion (a limb converted to a one-limb number, a point to a ball) has no declaration of
   its own, and says so in its note;
   A kernel with no forms is either a building block, part of other kernels, or an entry kernel
-  (`entry: yes` in its description: a full kernel, a constructor) that the public headers do not
-  call yet; its page and the index say which. Give it forms only when a header calls it: the test
-  fails on a form of a kernel that no header comment names;
+  (`entry: yes` in its description: today the finite cores of the Ball operations) that the
+  public headers do not call yet; its page and the index say which. Give it forms only when a
+  header calls it: the test fails on a form of a kernel that no header comment names. A function
+  of `kairn::finite` is written `finite::add(x, y)`;
 - traits: the entries of kairn::traits whose constants come from this kernel's claims
   (traits<T> is also traits<float>, traits<double> and traits<Expansion<T, 1>>);
 - note: optional, one sentence about the forms, shown under them.
@@ -40,7 +41,11 @@ T = "T"
 GROUPS = [
     ("construction", "Construction and access",
      "Making numbers and balls, and reading their parts."),
-    ("arithmetic", "Arithmetic", "Sums, differences, products, negation and absolute value."),
+    ("arithmetic", "Arithmetic", "Sums, differences, products, negation and absolute value. The operators "
+     "of two limbs return IEEE-like results: canonical infinities and NaN, as `T` does."),
+    ("finite", "Arithmetic without the fix-up",
+     "`kairn::finite::`: the finite cores of the operators of two limbs, without the fix-up that makes "
+     "infinities and NaN canonical; for one limb, the operators themselves."),
     ("comparisons", "Comparisons", "Whether one value is below, at most, or equal to another."),
     ("conversions", "Conversions to one limb", "A two-limb number rounded to a value of `T`."),
     ("scaling", "Scaling by a power of two", "`ldexp` and `half`."),
@@ -59,16 +64,38 @@ def page(group, title, *forms, traits=(), note=None):
     return {"group": group, "title": title, "forms": list(forms), "traits": list(traits), "note": note}
 
 
-WIDENED = "the `Expansion<T, 1>` operand is converted to two limbs first, exactly"
+ONE = "the limb of the `Expansion<T, 1>` operand is the limb $a$"
 CONVERTED = "the limb is converted to `Expansion<T, 1>` first, exactly"
-POINT = "the point is converted to a ball of radius 0 first"
+POINT = "the point is the ball of radius 0 its constructor makes"
+CORE = "the finite core: no fix-up of infinities and NaN"
 
 KERNELS = {
-    # --- Constructors: the kernels of the constructors, not yet called -------------------------
-    "make_2": page("construction", "A two-limb number from a value of T"),
-    "make_2_limbs": page("construction", "A two-limb number from its limbs"),
-    "ball_make_1": page("construction", "A ball from a one-limb center and a radius"),
-    "ball_make_2": page("construction", "A ball from a two-limb center and a radius"),
+    # --- Constructors ---------------------------------------------------------------------------
+    "make_2": page(
+        "construction", "A two-limb number from a value of T",
+        form("Expansion<T, 2>(a)", T, result=E2, note="implicit"),
+        form("Expansion<T, 2>(a)", E1, result=E2, note="implicit; " + ONE),
+    ),
+    "make_2_limbs": page(
+        "construction", "A two-limb number from its limbs",
+        form("from_limbs(p)", "T*", result=E2,
+             note="`Expansion<T, 2>::from_limbs(p)`, with `p` pointing to the two limbs; checked when "
+                  "`KAIRN_CHECKS` is 1"),
+        form("from_limbs_unchecked(p)", "T*", result=E2, note="the same, never checked"),
+    ),
+    "ball_make_1": page(
+        "construction", "A ball from a one-limb center and a radius",
+        form("Ball<T, 1>(c, r)", E1, T, result=B1),
+        form("Ball<T, 1>(c)", E1, result=B1, note="implicit: the point $c$, radius 0"),
+        form("Ball<T, 1>(a)", T, result=B1, note="implicit: the point $a$, radius 0"),
+    ),
+    "ball_make_2": page(
+        "construction", "A ball from a two-limb center and a radius",
+        form("Ball<T, 2>(c, r)", E2, T, result=B2),
+        form("Ball<T, 2>(c)", E2, result=B2, note="implicit: the point $c$, radius 0"),
+        form("Ball<T, 2>(a)", T, result=B2,
+             note="implicit: the point $a$, radius 0, with the center made by `make_2` first"),
+    ),
     # --- One limb -----------------------------------------------------------------------------
     "add_1_1": page(
         "arithmetic", "Sum and difference, one limb",
@@ -81,6 +108,13 @@ KERNELS = {
         form("a -= b", E1, E1, result=E1, note="the sum $a + (-b)$"),
         form("a - b", E1, T, result=E1, note="the sum $a + (-b)$; " + CONVERTED),
         form("a - b", T, E1, result=E1, note="the sum $a + (-b)$; " + CONVERTED),
+        form("finite::add(a, b)", E1, E1, result=E1, group="finite", note="the operator itself"),
+        form("finite::add(a, b)", E1, T, result=E1, group="finite"),
+        form("finite::add(a, b)", T, E1, result=E1, group="finite"),
+        form("finite::sub(a, b)", E1, E1, result=E1, group="finite", note="the sum $a + (-b)$"),
+        form("finite::sub(a, b)", E1, T, result=E1, group="finite"),
+        form("finite::sub(a, b)", T, E1, result=E1, group="finite"),
+        form("finite::add_fast(a, b)", E1, E1, result=E1, group="finite"),
         traits=["traits<T>::add", "traits<T>::add_limb", "traits<T>::add_fast", "traits<T>::sub",
                 "traits<T>::sub_limb"],
         note="The code is one addition of `T`; as for `T`, a compiler that contracts may fuse it "
@@ -93,75 +127,67 @@ KERNELS = {
         form("a * b", E1, T, result=E1, note=CONVERTED),
         form("a * b", T, E1, result=E1, note=CONVERTED),
         form("ldexp(a, n)", E1, "int", result=E1, group="scaling",
-             note="$b = 2^n$, for an `n` with $2^n$ a number of `T`; otherwise the result is NaN"),
+             note="$b = 2^n$, for every `n`: one product when $2^n$ is a number of `T`, otherwise two, "
+                  "which round as one does: the result is that of `std::ldexp`"),
         form("half(a)", E1, result=E1, group="scaling", note="$b = 1/2$"),
+        form("finite::mul(a, b)", E1, E1, result=E1, group="finite", note="the operator itself"),
+        form("finite::mul(a, b)", E1, T, result=E1, group="finite"),
+        form("finite::mul(a, b)", T, E1, result=E1, group="finite"),
+        form("finite::ldexp(a, n)", E1, "int", result=E1, group="finite", note="`ldexp(a, n)` itself"),
         traits=["traits<T>::mul", "traits<T>::mul_limb", "traits<T>::ldexp"],
         note="The code is one product of `T`; as for `T`, a compiler that contracts may fuse it "
              "with an addition it sees ([One limb](../getting-started/guarantees.md#one-limb)).",
     ),
-    # --- Two limbs: arithmetic -----------------------------------------------------------------
-    "add_2_2": page(
+    # --- Two limbs: arithmetic, the full kernels -----------------------------------------------
+    "add_2_2_full": page(
         "arithmetic", "Sum of two two-limb numbers",
         form("x + y", E2, E2, result=E2),
         form("x += y", E2, E2, result=E2),
-        form("x + y", E2, E1, result=E2, note=WIDENED),
-        form("x + y", E1, E2, result=E2, note=WIDENED),
-        traits=["traits<Expansion<T, 2>>::add"],
     ),
-    "add_2_2_full": page("arithmetic", "Sum of two two-limb numbers, with infinities and NaN"),
-    "add_2_1": page(
+    "add_2_1_full": page(
         "arithmetic", "Sum of a two-limb number and a limb",
         form("x + a", E2, T, result=E2),
         form("a + x", T, E2, result=E2),
         form("x += a", E2, T, result=E2),
-        traits=["traits<Expansion<T, 2>>::add_limb"],
+        form("x + y", E2, E1, result=E2, note=ONE),
+        form("y + x", E1, E2, result=E2, note=ONE),
+        form("x += y", E2, E1, result=E2, note=ONE),
     ),
-    "add_2_1_full": page("arithmetic", "Sum of a two-limb number and a limb, with infinities and NaN"),
-    "sub_2_2": page(
+    "sub_2_2_full": page(
         "arithmetic", "Difference of two two-limb numbers",
         form("x - y", E2, E2, result=E2),
         form("x -= y", E2, E2, result=E2),
-        form("x - y", E2, E1, result=E2, note=WIDENED),
-        form("x - y", E1, E2, result=E2, note=WIDENED),
-        traits=["traits<Expansion<T, 2>>::sub"],
     ),
-    "sub_2_2_full": page("arithmetic", "Difference of two two-limb numbers, with infinities and NaN"),
-    "sub_2_1": page(
+    "sub_2_1_full": page(
         "arithmetic", "A two-limb number minus a limb",
         form("x - a", E2, T, result=E2),
         form("x -= a", E2, T, result=E2),
-        traits=["traits<Expansion<T, 2>>::sub_limb"],
+        form("x - y", E2, E1, result=E2, note=ONE),
+        form("x -= y", E2, E1, result=E2, note=ONE),
     ),
-    "sub_2_1_full": page("arithmetic", "A two-limb number minus a limb, with infinities and NaN"),
-    "sub_1_2": page(
+    "sub_1_2_full": page(
         "arithmetic", "A limb minus a two-limb number",
         form("a - y", T, E2, result=E2),
-        traits=["traits<Expansion<T, 2>>::sub_limb"],
+        form("x - y", E1, E2, result=E2, note="the limb of the `Expansion<T, 1>` operand is the limb $a$"),
     ),
-    "sub_1_2_full": page("arithmetic", "A limb minus a two-limb number, with infinities and NaN"),
-    "mul_2_2": page(
+    "mul_2_2_full": page(
         "arithmetic", "Product of two two-limb numbers",
         form("x * y", E2, E2, result=E2),
         form("x *= y", E2, E2, result=E2),
-        form("x * y", E2, E1, result=E2, note=WIDENED),
-        form("x * y", E1, E2, result=E2, note=WIDENED),
-        traits=["traits<Expansion<T, 2>>::mul"],
     ),
-    "mul_2_2_full": page("arithmetic", "Product of two two-limb numbers, with infinities and NaN"),
-    "mul_2_1": page(
+    "mul_2_1_full": page(
         "arithmetic", "Product of a two-limb number and a limb",
         form("x * a", E2, T, result=E2),
         form("a * x", T, E2, result=E2),
         form("x *= a", E2, T, result=E2),
-        traits=["traits<Expansion<T, 2>>::mul_limb"],
+        form("x * y", E2, E1, result=E2, note=ONE),
+        form("y * x", E1, E2, result=E2, note=ONE),
+        form("x *= y", E2, E1, result=E2, note=ONE),
     ),
-    "mul_2_1_full": page("arithmetic", "Product of a two-limb number and a limb, with infinities and NaN"),
-    "add_fast_2_2": page(
+    "add_fast_2_2_full": page(
         "arithmetic", "Fast sum of two two-limb numbers",
         form("add_fast(x, y)", E2, E2, result=E2),
-        traits=["traits<Expansion<T, 2>>::add_fast"],
     ),
-    "add_fast_2_2_full": page("arithmetic", "Fast sum of two two-limb numbers, with infinities and NaN"),
     "neg_2": page(
         "arithmetic", "Negation, two limbs",
         form("-x", E2, result=E2),
@@ -170,37 +196,90 @@ KERNELS = {
         "arithmetic", "Absolute value, two limbs",
         form("abs(x)", E2, result=E2),
     ),
+    # --- Two limbs: the finite cores, kairn::finite ---------------------------------------------
+    "add_2_2": page(
+        "finite", "Sum of two two-limb numbers, finite core",
+        form("finite::add(x, y)", E2, E2, result=E2, note=CORE),
+        traits=["traits<Expansion<T, 2>>::add"],
+    ),
+    "add_2_1": page(
+        "finite", "Sum of a two-limb number and a limb, finite core",
+        form("finite::add(x, a)", E2, T, result=E2, note=CORE),
+        form("finite::add(a, x)", T, E2, result=E2),
+        form("finite::add(x, y)", E2, E1, result=E2, note=ONE),
+        form("finite::add(y, x)", E1, E2, result=E2, note=ONE),
+        traits=["traits<Expansion<T, 2>>::add_limb"],
+    ),
+    "sub_2_2": page(
+        "finite", "Difference of two two-limb numbers, finite core",
+        form("finite::sub(x, y)", E2, E2, result=E2, note=CORE),
+        traits=["traits<Expansion<T, 2>>::sub"],
+    ),
+    "sub_2_1": page(
+        "finite", "A two-limb number minus a limb, finite core",
+        form("finite::sub(x, a)", E2, T, result=E2, note=CORE),
+        form("finite::sub(x, y)", E2, E1, result=E2, note=ONE),
+        traits=["traits<Expansion<T, 2>>::sub_limb"],
+    ),
+    "sub_1_2": page(
+        "finite", "A limb minus a two-limb number, finite core",
+        form("finite::sub(a, y)", T, E2, result=E2, note=CORE),
+        form("finite::sub(x, y)", E1, E2, result=E2, note="the limb of the `Expansion<T, 1>` operand is the limb $a$"),
+        traits=["traits<Expansion<T, 2>>::sub_limb"],
+    ),
+    "mul_2_2": page(
+        "finite", "Product of two two-limb numbers, finite core",
+        form("finite::mul(x, y)", E2, E2, result=E2, note=CORE),
+        traits=["traits<Expansion<T, 2>>::mul"],
+    ),
+    "mul_2_1": page(
+        "finite", "Product of a two-limb number and a limb, finite core",
+        form("finite::mul(x, a)", E2, T, result=E2, note=CORE),
+        form("finite::mul(a, x)", T, E2, result=E2),
+        form("finite::mul(x, y)", E2, E1, result=E2, note=ONE),
+        form("finite::mul(y, x)", E1, E2, result=E2, note=ONE),
+        traits=["traits<Expansion<T, 2>>::mul_limb"],
+    ),
+    "add_fast_2_2": page(
+        "finite", "Fast sum of two two-limb numbers, finite core",
+        form("finite::add_fast(x, y)", E2, E2, result=E2, note=CORE),
+        traits=["traits<Expansion<T, 2>>::add_fast"],
+    ),
+    "mul_pow2_2": page(
+        "finite", "Scaling a two-limb number by a power of two, finite core",
+        form("finite::ldexp(x, n)", E2, "int", result=E2,
+             note=CORE + "; $c = 2^n$, in steps when $2^n$ is not a number of `T`, as `ldexp`"),
+        traits=["traits<Expansion<T, 2>>::ldexp"],
+    ),
     # --- Two limbs: comparisons ----------------------------------------------------------------
     "lt_2_2": page(
         "comparisons", "Less than, two two-limb numbers",
         form("x < y", E2, E2, result="bool"),
         form("y > x", E2, E2, result="bool"),
-        form("x < y", E2, E1, result="bool", note=WIDENED),
-        form("x < y", E1, E2, result="bool", note=WIDENED),
     ),
     "le_2_2": page(
         "comparisons", "At most, two two-limb numbers",
         form("x <= y", E2, E2, result="bool"),
         form("y >= x", E2, E2, result="bool"),
-        form("x <= y", E2, E1, result="bool", note=WIDENED),
-        form("x <= y", E1, E2, result="bool", note=WIDENED),
     ),
     "eq_2_2": page(
         "comparisons", "Equality, two two-limb numbers",
         form("x == y", E2, E2, result="bool"),
         form("x != y", E2, E2, result="bool", note="the negation of `x == y`"),
-        form("x == y", E2, E1, result="bool", note=WIDENED),
-        form("x == y", E1, E2, result="bool", note=WIDENED),
     ),
     "lt_2_1": page(
         "comparisons", "A two-limb number less than a limb",
         form("x < a", E2, T, result="bool"),
         form("a > x", T, E2, result="bool"),
+        form("x < y", E2, E1, result="bool", note=ONE),
+        form("y > x", E1, E2, result="bool", note=ONE),
     ),
     "le_2_1": page(
         "comparisons", "A two-limb number at most a limb",
         form("x <= a", E2, T, result="bool"),
         form("a >= x", T, E2, result="bool"),
+        form("x <= y", E2, E1, result="bool", note=ONE),
+        form("y >= x", E1, E2, result="bool", note=ONE),
     ),
     "eq_2_1": page(
         "comparisons", "A two-limb number equal to a limb",
@@ -208,16 +287,24 @@ KERNELS = {
         form("a == x", T, E2, result="bool"),
         form("x != a", E2, T, result="bool", note="the negation of `x == a`"),
         form("a != x", T, E2, result="bool", note="the negation of `a == x`"),
+        form("x == y", E2, E1, result="bool", note=ONE),
+        form("y == x", E1, E2, result="bool", note=ONE),
+        form("x != y", E2, E1, result="bool", note="the negation of `x == y`; " + ONE),
+        form("y != x", E1, E2, result="bool", note="the negation of `y == x`; " + ONE),
     ),
     "lt_1_2": page(
         "comparisons", "A limb less than a two-limb number",
         form("a < y", T, E2, result="bool"),
         form("y > a", E2, T, result="bool"),
+        form("x < y", E1, E2, result="bool", note="the limb of the `Expansion<T, 1>` operand is the limb $a$"),
+        form("y > x", E2, E1, result="bool", note="the limb of the `Expansion<T, 1>` operand is the limb $a$"),
     ),
     "le_1_2": page(
         "comparisons", "A limb at most a two-limb number",
         form("a <= y", T, E2, result="bool"),
         form("y >= a", E2, T, result="bool"),
+        form("x <= y", E1, E2, result="bool", note="the limb of the `Expansion<T, 1>` operand is the limb $a$"),
+        form("y >= x", E2, E1, result="bool", note="the limb of the `Expansion<T, 1>` operand is the limb $a$"),
     ),
     # --- Two limbs: conversions ----------------------------------------------------------------
     "to_nearest_2": page(
@@ -238,79 +325,84 @@ KERNELS = {
         form("abs_upper(x)", E2, result=T),
     ),
     # --- Two limbs: scaling --------------------------------------------------------------------
-    "mul_pow2_2": page(
+    "mul_pow2_2_full": page(
         "scaling", "Scaling a two-limb number by a power of two",
         form("ldexp(x, n)", E2, "int", result=E2,
-             note="$c = 2^n$, for an `n` with $2^n$ a number of `T`; otherwise $c$ is NaN and nothing is claimed"),
+             note="$c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls "
+                  "([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values))"),
         form("half(x)", E2, result=E2, note="$c = 1/2$"),
-        traits=["traits<Expansion<T, 2>>::ldexp"],
     ),
-    "mul_pow2_2_full": page("scaling", "Scaling by a power of two, with infinities and NaN"),
     # --- Balls ---------------------------------------------------------------------------------
-    "ball_add_1": page(
+    "ball_add_1_full": page(
         "ball", "Sum of balls, one-limb center",
         form("X + Y", B1, B1, result=B1),
         form("X += Y", B1, B1, result=B1),
-        form("X + y", B1, E1, result=B1, note=POINT),
         form("X + a", B1, T, result=B1, note=POINT),
         form("a + X", T, B1, result=B1, note=POINT),
+        form("X + c", B1, E1, result=B1, note=POINT),
+        form("c + X", E1, B1, result=B1, note=POINT),
+        form("X += a", B1, T, result=B1, note=POINT),
+        form("X += c", B1, E1, result=B1, note=POINT),
     ),
-    "ball_add_1_full": page("ball", "Sum of balls, one-limb center, with the special states"),
-    "ball_add_2": page(
+    "ball_add_2_full": page(
         "ball", "Sum of balls, two-limb center",
         form("X + Y", B2, B2, result=B2),
         form("X += Y", B2, B2, result=B2),
-        form("X + y", B2, E2, result=B2, note=POINT),
         form("X + a", B2, T, result=B2, note=POINT),
         form("a + X", T, B2, result=B2, note=POINT),
+        form("X + c", B2, E2, result=B2, note=POINT),
+        form("c + X", E2, B2, result=B2, note=POINT),
+        form("X += a", B2, T, result=B2, note=POINT),
+        form("X += c", B2, E2, result=B2, note=POINT),
     ),
-    "ball_add_2_full": page("ball", "Sum of balls, two-limb center, with the special states"),
-    "ball_sub_1": page(
+    "ball_sub_1_full": page(
         "ball", "Difference of balls, one-limb center",
         form("X - Y", B1, B1, result=B1),
         form("X -= Y", B1, B1, result=B1),
-        form("X - y", B1, E1, result=B1, note=POINT),
         form("X - a", B1, T, result=B1, note=POINT),
         form("a - X", T, B1, result=B1, note=POINT),
+        form("X - c", B1, E1, result=B1, note=POINT),
+        form("c - X", E1, B1, result=B1, note=POINT),
+        form("X -= a", B1, T, result=B1, note=POINT),
+        form("X -= c", B1, E1, result=B1, note=POINT),
     ),
-    "ball_sub_1_full": page("ball", "Difference of balls, one-limb center, with the special states"),
-    "ball_sub_2": page(
+    "ball_sub_2_full": page(
         "ball", "Difference of balls, two-limb center",
         form("X - Y", B2, B2, result=B2),
         form("X -= Y", B2, B2, result=B2),
-        form("X - y", B2, E2, result=B2, note=POINT),
         form("X - a", B2, T, result=B2, note=POINT),
         form("a - X", T, B2, result=B2, note=POINT),
+        form("X - c", B2, E2, result=B2, note=POINT),
+        form("c - X", E2, B2, result=B2, note=POINT),
+        form("X -= a", B2, T, result=B2, note=POINT),
+        form("X -= c", B2, E2, result=B2, note=POINT),
     ),
-    "ball_sub_2_full": page("ball", "Difference of balls, two-limb center, with the special states"),
-    "ball_mul_1": page(
+    "ball_mul_1_full": page(
         "ball", "Product of balls, one-limb center",
         form("X * Y", B1, B1, result=B1),
         form("X *= Y", B1, B1, result=B1),
-        form("X * y", B1, E1, result=B1, note=POINT),
     ),
-    "ball_mul_1_full": page("ball", "Product of balls, one-limb center, with the special states"),
-    "ball_mul_2": page(
+    "ball_mul_2_full": page(
         "ball", "Product of balls, two-limb center",
         form("X * Y", B2, B2, result=B2),
         form("X *= Y", B2, B2, result=B2),
-        form("X * y", B2, E2, result=B2, note=POINT),
+        form("X * c", B2, E2, result=B2, note=POINT),
+        form("c * X", E2, B2, result=B2, note=POINT),
     ),
-    "ball_mul_2_full": page("ball", "Product of balls, two-limb center, with the special states"),
-    "ball_scale_1": page(
+    "ball_scale_1_full": page(
         "ball", "A ball times a limb, one-limb center",
         form("X * a", B1, T, result=B1),
         form("a * X", T, B1, result=B1),
         form("X *= a", B1, T, result=B1),
+        form("X * c", B1, E1, result=B1, note="the limb of the `Expansion<T, 1>` operand is the scalar $a$"),
+        form("c * X", E1, B1, result=B1, note="the limb of the `Expansion<T, 1>` operand is the scalar $a$"),
     ),
-    "ball_scale_1_full": page("ball", "A ball times a limb, one-limb center, with the special states"),
-    "ball_scale_2": page(
+    "ball_scale_2_full": page(
         "ball", "A ball times a limb, two-limb center",
         form("X * a", B2, T, result=B2),
         form("a * X", T, B2, result=B2),
         form("X *= a", B2, T, result=B2),
     ),
-    "ball_scale_2_full": page("ball", "A ball times a limb, two-limb center, with the special states"),
     "ball_neg_1": page(
         "ball", "Negation of a ball, one-limb center",
         form("-X", B1, result=B1),
@@ -319,6 +411,15 @@ KERNELS = {
         "ball", "Negation of a ball, two-limb center",
         form("-X", B2, result=B2),
     ),
+    # --- The finite cores of the Ball operations: entry kernels no public operation calls yet ---
+    "ball_add_1": page("ball", "Sum of balls, one-limb center, finite core"),
+    "ball_add_2": page("ball", "Sum of balls, two-limb center, finite core"),
+    "ball_sub_1": page("ball", "Difference of balls, one-limb center, finite core"),
+    "ball_sub_2": page("ball", "Difference of balls, two-limb center, finite core"),
+    "ball_mul_1": page("ball", "Product of balls, one-limb center, finite core"),
+    "ball_mul_2": page("ball", "Product of balls, two-limb center, finite core"),
+    "ball_scale_1": page("ball", "A ball times a limb, one-limb center, finite core"),
+    "ball_scale_2": page("ball", "A ball times a limb, two-limb center, finite core"),
     # --- Building blocks: no public form -------------------------------------------------------
     "two_sum": page("building-blocks", "TwoSum: an exact sum as two limbs"),
     "fast_two_sum": page("building-blocks", "Fast2Sum: an exact sum of ordered operands"),
@@ -335,40 +436,33 @@ def exact(group, does, *forms):
 
 
 # Operations that call no kernel. `does` is what the header comment says the operation does.
-CANONICAL = ("the value $a$ exactly: $(a, 0)$, with a $-0$ made $+0$; for an infinite or NaN $a$, "
-             "$(\\pm\\infty, 0)$ or $(\\mathrm{NaN}, \\mathrm{NaN})$")
-
 EXACT = [
     exact("construction", "zero",
           form("Expansion<T, K>()", result="Expansion<T, K>")),
-    exact("construction", CANONICAL,
-          form("Expansion<T, 2>(a)", T, result=E2)),
-    exact("construction", CANONICAL + ", where $a$ is the limb of the one-limb number",
-          form("Expansion<T, 2>(a)", E1, result=E2)),
     exact("construction", "the value $a$",
           form("Expansion<T, 1>(a)", T, result=E1)),
-    exact("construction", "the number with these limbs, which must form a normalized number; "
-          "checked when `KAIRN_CHECKS` is 1",
-          form("Expansion<T, K>::from_limbs(p)", "const T*", result="Expansion<T, K>")),
-    exact("construction", "the same without the check: limbs that do not form a normalized number "
-          "give results without any guarantee",
-          form("Expansion<T, K>::from_limbs_unchecked(p)", "const T*", result="Expansion<T, K>")),
+    exact("construction", "the limb $p_0$: every value of `T` is a one-limb number",
+          form("Expansion<T, 1>::from_limbs(p)", "const T*", result=E1),
+          form("Expansion<T, 1>::from_limbs_unchecked(p)", "const T*", result=E1)),
     exact("construction", "the limbs, most significant first; a limb written directly must not be "
-          "a product the compiler can see",
+          "a product the compiler can see, and the pair written must be canonical",
           form("x.limb[i]", "Expansion<T, K>", result="T")),
     exact("construction", "the point 0: center 0, radius 0",
           form("Ball<T, K>()", result="Ball<T, K>")),
-    exact("construction", "the point $a$: center $a$, radius 0",
-          form("Ball<T, K>(a)", T, result="Ball<T, K>")),
-    exact("construction", "the point $c$: center $c$, radius 0",
-          form("Ball<T, K>(c)", "Expansion<T, K>", result="Ball<T, K>")),
-    exact("construction", "the ball of center $c$ and radius $r$; requires a normalized $c$ and "
-          "$r \\ge 0$, checked when `KAIRN_CHECKS` is 1",
-          form("Ball<T, K>(c, r)", "Expansion<T, K>", T, result="Ball<T, K>")),
-    exact("construction", "the center",
+    exact("construction", "the whole line: center 0, radius $+\\infty$",
+          form("Ball<T, K>::whole()", result="Ball<T, K>")),
+    exact("construction", "the empty set: every limb a NaN",
+          form("Ball<T, K>::empty()", result="Ball<T, K>")),
+    exact("construction", "the center; 0 for the whole line, NaN limbs for the empty set",
           form("X.center()", "Ball<T, K>", result="Expansion<T, K>")),
-    exact("construction", "the radius",
+    exact("construction", "the radius; $+\\infty$ for the whole line, a NaN for the empty set",
           form("X.radius()", "Ball<T, K>", result="T")),
+    exact("construction", "whether it is a finite ball (its radius is finite)",
+          form("X.is_finite()", "Ball<T, K>", result="bool")),
+    exact("construction", "whether it is the whole line (its radius is $+\\infty$)",
+          form("X.is_whole()", "Ball<T, K>", result="bool")),
+    exact("construction", "whether it is the empty set (its radius is a NaN)",
+          form("X.is_empty()", "Ball<T, K>", result="bool")),
     exact("construction", "$-1$, $0$ or $+1$, from the leading limb; $0$ for NaN",
           form("sign(x)", "Expansion<T, K>", result="int")),
     exact("construction", "whether the leading limb is finite",

@@ -36,11 +36,13 @@ struct ball_kernels<T, 2> {
     using make = gen::bounds::ball_make_2<T>;
 };
 
+/// Whether the kernel that makes a ball from a center is proved: ball_make_1 or ball_make_2.
+template <class T, int K>
+concept make_proved = proof_checked<typename ball_kernels<T, K>::make>;
 /// Whether the kernels that build the point ball of a T are proved: ball_make_1, or make_2 and
 /// ball_make_2.
 template <class T, int K>
-concept point_proved = proof_checked<typename ball_kernels<T, K>::make> &&
-                       (K == 1 || proof_checked<gen::bounds::make_2<T>>);
+concept point_proved = make_proved<T, K> && (K == 1 || proof_checked<gen::bounds::make_2<T>>);
 
 /// The tag of the constructor of Ball that takes a kernel's result as it is.
 struct kernel_result_t {
@@ -281,8 +283,9 @@ class Ball {
 public:
     /// The point 0: center 0, radius 0.
     constexpr Ball() noexcept = default;
-    /// The point a: center a (exactly, up to the sign of a zero), radius 0 (kernel ball_make_1, or
-    /// make_2 and then ball_make_2). An infinite or NaN a gives the whole line.
+    /// The point a: center a (exactly, up to the sign of a zero), radius 0 (kernels ball_make_1 or
+    /// ball_make_2, with a two-limb center made by make_2 first). An infinite or NaN a gives the
+    /// whole line.
     constexpr Ball(T a) noexcept
         requires detail::point_proved<T, K>
         : Ball(detail::make_point<T, K>(a)) {}
@@ -391,15 +394,13 @@ KAIRN_FORCEINLINE Ball<T, K> operator+(std::type_identity_t<T> a, const Ball<T, 
 }
 /// X + c: X plus the point c (kernel ball_add_1_full or ball_add_2_full).
 template <class T, int K>
-    requires detail::proof_checked<typename detail::ball_kernels<T, K>::add> &&
-             detail::proof_checked<typename detail::ball_kernels<T, K>::make>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::add> && detail::make_proved<T, K>
 KAIRN_FORCEINLINE Ball<T, K> operator+(const Ball<T, K>& x, const Expansion<T, K>& c) noexcept {
     return detail::add(x, c);
 }
 /// c + X: the point c plus X (kernel ball_add_1_full or ball_add_2_full).
 template <class T, int K>
-    requires detail::proof_checked<typename detail::ball_kernels<T, K>::add> &&
-             detail::proof_checked<typename detail::ball_kernels<T, K>::make>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::add> && detail::make_proved<T, K>
 KAIRN_FORCEINLINE Ball<T, K> operator+(const Expansion<T, K>& c, const Ball<T, K>& x) noexcept {
     return detail::add(c, x);
 }
@@ -423,15 +424,13 @@ KAIRN_FORCEINLINE Ball<T, K> operator-(std::type_identity_t<T> a, const Ball<T, 
 }
 /// X - c: X minus the point c (kernel ball_sub_1_full or ball_sub_2_full).
 template <class T, int K>
-    requires detail::proof_checked<typename detail::ball_kernels<T, K>::sub> &&
-             detail::proof_checked<typename detail::ball_kernels<T, K>::make>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::sub> && detail::make_proved<T, K>
 KAIRN_FORCEINLINE Ball<T, K> operator-(const Ball<T, K>& x, const Expansion<T, K>& c) noexcept {
     return detail::sub(x, c);
 }
 /// c - X: the point c minus X (kernel ball_sub_1_full or ball_sub_2_full).
 template <class T, int K>
-    requires detail::proof_checked<typename detail::ball_kernels<T, K>::sub> &&
-             detail::proof_checked<typename detail::ball_kernels<T, K>::make>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::sub> && detail::make_proved<T, K>
 KAIRN_FORCEINLINE Ball<T, K> operator-(const Expansion<T, K>& c, const Ball<T, K>& x) noexcept {
     return detail::sub(c, x);
 }
@@ -468,15 +467,13 @@ KAIRN_FORCEINLINE Ball<T, 1> operator*(const Expansion<T, 1>& c, const Ball<T, 1
 }
 /// X c for a two-limb c: X times the point c (kernel ball_mul_2_full).
 template <class T>
-    requires detail::proof_checked<gen::bounds::ball_mul_2_full<T>> &&
-             detail::proof_checked<gen::bounds::ball_make_2<T>>
+    requires detail::proof_checked<gen::bounds::ball_mul_2_full<T>> && detail::make_proved<T, 2>
 KAIRN_FORCEINLINE Ball<T, 2> operator*(const Ball<T, 2>& x, const Expansion<T, 2>& c) noexcept {
     return detail::mul(x, c);
 }
 /// c X for a two-limb c: the point c times X (kernel ball_mul_2_full).
 template <class T>
-    requires detail::proof_checked<gen::bounds::ball_mul_2_full<T>> &&
-             detail::proof_checked<gen::bounds::ball_make_2<T>>
+    requires detail::proof_checked<gen::bounds::ball_mul_2_full<T>> && detail::make_proved<T, 2>
 KAIRN_FORCEINLINE Ball<T, 2> operator*(const Expansion<T, 2>& c, const Ball<T, 2>& x) noexcept {
     return detail::mul(c, x);
 }
@@ -501,8 +498,7 @@ KAIRN_FORCEINLINE Ball<T, K>& operator+=(Ball<T, K>& x, std::type_identity_t<T> 
 }
 /// X = X + c (kernel ball_add_1_full or ball_add_2_full).
 template <class T, int K>
-    requires detail::proof_checked<typename detail::ball_kernels<T, K>::add> &&
-             detail::proof_checked<typename detail::ball_kernels<T, K>::make>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::add> && detail::make_proved<T, K>
 KAIRN_FORCEINLINE Ball<T, K>& operator+=(Ball<T, K>& x, const Expansion<T, K>& c) noexcept {
     return x = detail::add(x, c);
 }
@@ -520,8 +516,7 @@ KAIRN_FORCEINLINE Ball<T, K>& operator-=(Ball<T, K>& x, std::type_identity_t<T> 
 }
 /// X = X - c (kernel ball_sub_1_full or ball_sub_2_full).
 template <class T, int K>
-    requires detail::proof_checked<typename detail::ball_kernels<T, K>::sub> &&
-             detail::proof_checked<typename detail::ball_kernels<T, K>::make>
+    requires detail::proof_checked<typename detail::ball_kernels<T, K>::sub> && detail::make_proved<T, K>
 KAIRN_FORCEINLINE Ball<T, K>& operator-=(Ball<T, K>& x, const Expansion<T, K>& c) noexcept {
     return x = detail::sub(x, c);
 }

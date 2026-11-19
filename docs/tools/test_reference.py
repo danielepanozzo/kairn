@@ -83,13 +83,17 @@ def header_operations(root, known):
     for fname in ("expansion.hpp", "ball.hpp", "traits.hpp"):
         path = os.path.join(root, "include", "kairn", fname)
         lines = reference.read(path).split("\n")
-        context, detail, comment = None, False, []
+        context, detail, comment, prefix = None, False, [], ""
         for i, line in enumerate(lines, 1):
             s = line.strip()
             if s.startswith("namespace detail {"):
                 detail = True
             elif s.startswith("}  // namespace detail"):
                 detail = False
+            elif s.startswith("namespace finite {"):
+                prefix = "finite::"                              # kairn::finite::add(x, y)
+            elif s.startswith("}  // namespace finite"):
+                prefix = ""
             m = re.match(r"(?:struct|class) (Expansion<T, [12]>|Ball|traits_one_limb|traits<Expansion<T, 2>>) \{", s)
             if m:
                 context = {"Ball": "Ball<T, K>", "traits_one_limb": "traits<T>"}.get(m.group(1), m.group(1))
@@ -119,6 +123,8 @@ def header_operations(root, known):
             name = f.group(1)
             if context and name == context.split("<")[0]:
                 name = context                                   # a constructor
+            elif not context:
+                name = prefix + name
             operands = tuple(param_type(p, context) for p in split_params(f.group(2)))
             found.append((where, ("op", name, operands), names))
     return found
@@ -206,7 +212,7 @@ class Table(unittest.TestCase):
         named, called = header_kernel_uses(ROOT, set(self.claims))
         entry = [k for k, p in self.ops.KERNELS.items() if not p["forms"] and reference.load_listing(
             ROOT, k)["fields"].get("entry") == "yes"]
-        self.assertIn("add_2_2_full", entry)
+        self.assertIn("ball_add_2", entry)
         used = [k for k in entry if k in named | called]
         self.assertEqual(used, [], "kernels the headers name or call, listed in the table without forms "
                                    "(their pages would say that no header calls them)")
@@ -236,9 +242,12 @@ class Table(unittest.TestCase):
     def test_the_header_scan_sees_what_it_should(self):
         found = header_operations(ROOT, set(self.claims))
         keys = {(key, tuple(k)) for _, key, k in found}
-        self.assertIn((("op", "operator+", ("Expansion<T, 2>", "Expansion<T, 2>")), ("add_2_2",)), keys)
+        self.assertIn((("op", "operator+", ("Expansion<T, 2>", "Expansion<T, 2>")), ("add_2_2_full",)), keys)
+        self.assertIn((("op", "finite::add", ("Expansion<T, 2>", "Expansion<T, 2>")), ("add_2_2",)), keys)
         self.assertIn((("op", "Expansion<T, 1>", ("Expansion<T, 2>",)), ("to_nearest_2",)), keys)
-        self.assertIn((("op", "operator+", ("Ball<T, K>", "Ball<T, K>")), ("ball_add_1", "ball_add_2")), keys)
+        self.assertIn((("op", "Expansion<T, 2>", ("T",)), ("make_2",)), keys)
+        self.assertIn((("op", "operator+", ("Ball<T, K>", "Ball<T, K>")), ("ball_add_1_full", "ball_add_2_full")), keys)
+        self.assertIn((("op", "Ball<T, K>", ("Expansion<T, K>", "T")), ("ball_make_1", "ball_make_2")), keys)
         self.assertIn((("traits", "traits<Expansion<T, 2>>::sub_limb"), ("sub_2_1", "sub_1_2")), keys)
 
 
@@ -380,11 +389,11 @@ class Tool(unittest.TestCase):
         self.fails("add_2_2_full", "add_2_1", "inputs")
 
     def test_statuses_of_a_full_kernel_disagree(self):
-        self.change("add_2_2_full", lambda k: k.update(status="proved"))
+        self.change("add_2_2_full", lambda k: k.update(status="unverified"))
         self.fails("add_2_2_full", "ieee_status")
 
     def test_proved_ieee_statement_needs_its_theorem(self):
-        self.change("neg_2", lambda k: k.update(ieee_status="proved"))
+        self.change("neg_2", lambda k: (k.update(ieee_status="proved"), k.pop("ieee_theorem", None)))
         self.fails("neg_2", "ieee_theorem")
 
     def test_proved_ieee_statement(self):
@@ -401,14 +410,22 @@ class Tool(unittest.TestCase):
 
     def test_full_kernel(self):
         page = self.page("add_2_2_full")
-        self.assertIn("**Not yet called by the public headers.**", page)
-        self.assertIn("call its core, [`add_2_2`](add_2_2.md), instead", page)
+        self.assertIn("| `x + y` | `Expansion<T, 2>`, `Expansion<T, 2>` |", page)
         self.assertIn("**F2.** If $w_0$ is finite", page)
         self.assertIn("$\\lvert w - (x + y)\\rvert \\le \\frac{3u^2}{1 - 4u}\\,\\lvert x + y\\rvert$", page)
         self.assertIn("$\\lvert x\\rvert \\le 2^{e_{\\max} - 2}$ and $\\lvert y\\rvert \\le 2^{e_{\\max} - 2}$", page)
         self.assertIn("$2^{1022}$ for `double`, $2^{126}$ for `float`", page)
         self.assertIn("the canonical form of $x_0 + y_0$ computed in `T`", page)
-        self.assertIn(reference.IEEE_PROOFS_SENTENCE, page)
+        # Unverified, its page says so and points to the proofs page.
+        self.change("add_2_2_full", lambda k: (k.update(status="unverified", ieee_status="unverified"),
+                                               k.pop("ieee_theorem", None)))
+        self.assertIn(reference.IEEE_PROOFS_SENTENCE, self.page("add_2_2_full"))
+
+    def test_kernel_not_called_yet(self):
+        # The finite core of a Ball operation: the headers call the full kernel instead.
+        page = self.page("ball_add_2")
+        self.assertIn("**Not yet called by the public headers.**", page)
+        self.assertIn("call [`ball_add_2_full`](ball_add_2_full.md), which computes this kernel", page)
 
     def test_conditions_come_from_the_claims(self):
         self.change("mul_2_1_full", lambda k: k["ensures"][0].update(finite_when=[{"abs_le": "x*a", "exp": -1}]))
@@ -444,7 +461,7 @@ class Tool(unittest.TestCase):
             self.change(name, lambda k: k.update(ieee_only=True))
 
     def test_ieee_only_with_two_statuses(self):
-        self.change("ball_make_1", lambda k: k.update(status="proved"))
+        self.change("ball_make_1", lambda k: k.update(status="unverified"))
         self.fails("ball_make_1", "ieee_only", "ieee_status")
 
     def test_ieee_only_decides_the_reading(self):
@@ -458,7 +475,7 @@ class Tool(unittest.TestCase):
         self.assertIn("**B2.** $Z$ is empty exactly when $X$ is empty", extended)
         self.assertIn("$c_x$ is normalized", self.page("ball_neg_2").split("## Infinite")[0])
         # The same claims with ieee_only: one statement, in the IEEE model, and its status.
-        self.change("ball_neg_1", lambda k: k.update(ieee_only=True, status="unverified"))
+        self.change("ball_neg_1", lambda k: k.update(ieee_only=True))
         page = self.page("ball_neg_1")
         self.assertNotIn("## Infinite and NaN operands", page)
         self.assertIn("finite, infinite or NaN", page)
@@ -479,6 +496,9 @@ class Tool(unittest.TestCase):
         self.assertIn("Which canonical value comes out", page)
 
     def test_finite_kernel_with_extended_statement(self):
+        page = self.page("to_up_2")
+        self.assertIn("proved for finite operands · proved for infinite and NaN operands", page)
+        self.change("to_up_2", lambda k: (k.update(ieee_status="unverified"), k.pop("ieee_theorem", None)))
         page = self.page("to_up_2")
         self.assertIn("proved for finite operands · **UNVERIFIED** for infinite and NaN operands", page)
         self.assertIn("## Infinite and NaN operands", page)
