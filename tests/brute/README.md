@@ -56,6 +56,7 @@ python3 tests/brute/brute.py plan --bins 20               # the enumerations, th
 python3 tests/brute/brute.py run --work WORK --budget SECONDS --jobs N [options]
 python3 tests/brute/brute.py collect --work WORK --name NAME --out results/milestone1/brute/NAME.json
 python3 tests/brute/brute.py report results/milestone1/brute/*.json     # Markdown tables
+python3 tests/brute/test_brute.py                         # the driver's own tests
 ```
 
 `run` configures and builds each `--build NAME=COMPILER` under `WORK/builds/NAME` (Release, with
@@ -98,37 +99,55 @@ the extremes.
 
 ## The runs of Milestone 1
 
-From the repository root of a copy of the tree (`WORK` a directory outside it), with about 90
-minutes of budget on each machine. The results are in `results/milestone1/brute/` and
+From the repository root of a copy of the tree made with `git archive` (`WORK` a directory
+outside it), with 3.5 hours of budget on the Linux machine and 3 hours on the Mac and on Windows.
+`CODE` is the commit of the code under test, `6f89054e8e027643001e4d003bdc45aed62a43d8` (its
+kernels, generator, interpreter, claims and oracle judge are those of `b7a1fbb`), and `DRIVER`
+the commit of the driver the copy was made from, `e226c9e473aa891e78a4ee103348152c273f331e`
+(`d619f71715fb1cd21171ecc164552c95c7f2b562` for the Linux run's first ten minutes, below). The
+results are in `results/milestone1/brute/` and
 [docs/developer/results/brute-milestone1.md](../../docs/developer/results/brute-milestone1.md).
 
-Linux x86-64 (AMD EPYC 7452, GCC 13 and Clang 18; 64 of its 128 hardware threads; `CLANG` is a
-`clang++` that finds GCC 13's libstdc++, through `--gcc-install-dir`):
+Linux x86-64 (AMD EPYC 7452, GCC 13 and Clang 18; socket 0, 64 of its 128 hardware threads;
+`CLANG` is a `clang++` that finds GCC 13's libstdc++, through `--gcc-install-dir`). It started
+with the compiled part alone while the plan of the enumerations was settled,
 
 ```sh
-python3 tests/brute/brute.py run --work WORK --budget 5400 --jobs 80 --nice 10 \
+python3 tests/brute/brute.py run --work WORK --budget 12600 --jobs 80 --nice 10 \
     --cpus 0-31,64-95 --generator Ninja --build gcc13=g++ --build clang18=CLANG \
-    --seed m1-linux --interp-bins 20 --interp-take 3-19
+    --seed m1r2-linux --part compiled --commit CODE --driver-commit d619f71715fb1cd21171ecc164552c95c7f2b562
 ```
 
-macOS arm64 (Apple M3 Max, Apple clang 21 and GCC 16; 6 jobs):
+was stopped (SIGTERM) after 562 seconds of budget, and went on with both parts and the budget
+left, on the same work directory:
 
 ```sh
-python3 tests/brute/brute.py run --work WORK --budget 5400 --jobs 6 --nice 10 \
-    --build clang=c++ --build gcc16=g++-16 --seed m1-mac --interp-bins 20 --interp-take 0-2
+python3 tests/brute/brute.py run --work WORK --budget 12000 --jobs 80 --nice 10 \
+    --cpus 0-31,64-95 --generator Ninja --build gcc13=g++ --build clang18=CLANG \
+    --seed m1r2-linux --part compiled,interp --interp-bins 20 --interp-take 0,3-19 \
+    --commit CODE --driver-commit DRIVER
 ```
 
-Windows x64 (Intel Core i5-13500T, MSVC 19.52; 8 logical processors):
+macOS arm64 (Apple M3 Max, Apple clang 21 and GCC 16; 8 jobs):
+
+```sh
+python3 tests/brute/brute.py run --work WORK --budget 10800 --jobs 8 --nice 10 \
+    --build clang=c++ --build gcc16=g++-16 --seed m1r2-mac --interp-bins 20 --interp-take 1-2 \
+    --commit CODE --driver-commit DRIVER
+```
+
+Windows x64 (Intel Core i5-13500T, MSVC 19.52; 8 logical processors), started through WMI so
+that it does not depend on the ssh session:
 
 ```bat
-python tests\brute\brute.py run --work WORK --budget 5400 --jobs 8 --nice 1 --cpus 0-7 ^
-    --generator Ninja --build msvc=cl --seed m1-windows --part compiled ^
-    --env-script "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+python tests\brute\brute.py run --work WORK --budget 10800 --jobs 8 --nice 1 --cpus 0-7 ^
+    --generator Ninja --build msvc=cl --seed m1r2-windows --part compiled ^
+    --env-script "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat" ^
+    --commit CODE --driver-commit DRIVER
 ```
 
-Each run was stopped and started again twice in its first twenty minutes, with the same command,
-a newer driver (better scheduling) and the budget left, and the Windows run once more after a
-network reset ended its ssh session; the work directory kept what was done. Then, on each machine:
+Then, on each machine, with the driver of this commit (`collect` and `report` read the work
+directories of the driver above):
 
 ```sh
 python3 tests/brute/brute.py collect --work WORK --name NAME --out NAME.json --jobs N \
