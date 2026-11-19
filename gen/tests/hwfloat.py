@@ -96,7 +96,7 @@ class Arith:
             self.fma, self.round, self.next_up = fma32, r32, next_up32
             self.add = lambda x, y: fma32(x, 1.0, y)
             self.consts = {'splitter': 4097.0}        # 2^12 + 1
-        self.consts['0'] = 0.0
+        self.consts.update({'0': 0.0, 'inf': INF, 'nan': math.nan})
         self.kernels = kernels
 
     def const(self, name):
@@ -144,6 +144,8 @@ class Arith:
             return -self.next_up(-a[0])
         if op == 'copy':
             return a[0]
+        if op == 'guard':
+            return self.add(a[0], 0.0)    # -0.0 + 0.0 is +0.0
         raise ValueError(op)
 
 

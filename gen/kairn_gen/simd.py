@@ -51,6 +51,7 @@ AVX2 = {
         'succ': 'next_up({0})',
         'pred': 'next_down({0})',
         'copy': '{0}',
+        'guard': '_mm256_add_{s}({0}, _mm256_setzero_{s}())',      # RN(a + 0), with a zero vector
     },
 }
 
@@ -86,6 +87,7 @@ NEON = {
         'succ': 'next_up({0})',
         'pred': 'next_down({0})',
         'copy': '{0}',
+        'guard': 'vaddq_{s}({0}, vdupq_n_{s}(0.0{f}))',             # RN(a + 0), with a zero vector
     },
 }
 

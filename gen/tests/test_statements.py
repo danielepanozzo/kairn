@@ -17,9 +17,12 @@ Two readings of a claim, because the formats here have a largest number and the 
   an operand of magnitude Omega, the open point of milestone1.md) and for the kernels exempt
   from the cone (see KNOWN_OVERFLOW_CORNERS).
 
-Judged: every kernel in the first reading, from its minimum precision on (split and
-two_prod_dekker are not even defined at precision 1, where the splitter is not a number of the
-format); the second wave in the second reading.
+Judged: every kernel that has a real-model statement in the first reading, from its minimum
+precision on (split and two_prod_dekker are not even defined at precision 1, where the splitter is
+not a number of the format); the second wave in the second reading. A kernel of the extended domain
+is judged here on finite operands, its requirement canonical read as normalized, as its real-model
+statement reads it; what it does with non-finite operands, and the full kernels and constructors,
+which have no real-model statement, are judged in test_nonfinite.py.
 """
 import bisect
 import itertools
@@ -113,7 +116,7 @@ class Space:
                 vals = [v for v in vals if not v[0] and v[1] > 0 and v[1].numerator & (v[1].numerator - 1) == 0
                         and v[1].denominator & (v[1].denominator - 1) == 0]
             self.kind, self.items = 'list', [(v,) for v in vals]
-        elif len(g.limbs) == 2 and 'normalized' in want:
+        elif len(g.limbs) == 2 and want & {'normalized', 'canonical'}:
             # x1 lies within half a gap of x0 on either side: a range of the sorted numbers.
             self.kind, self.ranges = 'pairs', []
             line = fmt.line
@@ -349,7 +352,7 @@ FIRST_WAVE = {'two_sum', 'fast_two_sum', 'two_prod', 'split', 'two_prod_dekker',
 class Statements(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.ks = common.kernels()
+        cls.ks = {name: k for name, k in common.kernels().items() if k.real_model}
         cls.results = run_all(None, list(cls.ks), 'statements')
 
     def failures(self, reading):

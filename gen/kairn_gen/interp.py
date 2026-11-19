@@ -295,6 +295,10 @@ class Machine:
         return self._eval(k, f, list(inputs), in_variant)
 
     def _const(self, f, name):
+        if name == 'inf':
+            return (INF, False)
+        if name == 'nan':
+            return NaN
         key = (f, name)
         if key not in self._consts:
             try:
@@ -359,6 +363,8 @@ class Machine:
             return pred(f, a[0])
         if op == 'copy':
             return a[0]
+        if op == 'guard':
+            return add(f, a[0], (NUM, False, 0, 0))    # RN(a + 0): -0 becomes +0
         raise InterpError(f'the interpreter does not evaluate {op}')
 
 

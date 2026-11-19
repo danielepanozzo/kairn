@@ -9,22 +9,38 @@ kernel is described in one file, gen/kernels/NAME.kernel:
     input:         x = x0 x1          a group and its limbs, most significant first
     input:         a                  a one-limb group: the limb has the group's name
     input:         mask m             a mask: one value, true or false
+    input:         stored rx          entry kernels: a one-limb input that is a limb of an object
+    input:         supplied y = h l   entry kernels: a multi-limb input whose limbs the program gives
     output:        z = z0 z1          (outputs likewise)
     value:         x+y                the exact real function the output approximates: names,
                                       + - *, unary minus, abs( ), parentheses
     requires:      normalized x       or: abs_ge a b, power_of_two c, nonneg r
+    requires:      canonical x        (domain extended) or: ball cx rx
     ensures:       normalized z       or: leading_rounded z
     ensures:       error z R c=3/(1-4*u) k=2 t=0 [when=product_large]
     ensures:       rounded t down     the mode: nearest, down or up
     ensures:       upper r gaps=2
     ensures:       predicate m lt x y the relation lt, le or eq between two expressions
-    ensures:       encloses cz rz x+y x=cx,rx y=cy,ry
+    ensures:       encloses cz rz x+y x=cx,rx y=cy,ry [finite_when=CONDITIONS]
                                       center, radius, the set, and each ball's center and radius
+    ensures:       extends w core=add_2_2 lead=add [finite_when=abs_le(x,-2);abs_le(y,-2)]
+                                      a full kernel: its core, the operation of T on the leading
+                                      limbs, and the conditions under which the output is finite
+    ensures:       represents x       a constructor: the output is the value, canonical
+    ensures:       makes_ball cw rw from=c,r
+                                      a constructor of a ball: center and radius outputs, from
+                                      the center and radius inputs
     min_precision: 3                  optional
     theorem:       proofs/theories/Add22.v add_2_2_correct
     source:        free text
     license:       free text
     status:        unverified         or: proved
+    domain:        extended           optional (default finite): operands may be infinite or NaN
+    ieee_status:   unverified         the domain extended only: the IEEE-model statement's status
+    ieee_theorem:  FILE NAME          the domain extended only, once that statement is proved
+    entry:         yes                optional: the public headers may call it (rule R3)
+    guard_pending: a free text        optional: an entry kernel's input that is not guarded yet,
+                                      and why (rule R3)
     ce_variant:    KERNEL             optional: its constant-evaluation variant
     cone_exempt:   free text          optional: why rule 4 cannot hold, and what stands in for it
     unused:        x1 free text       optional: an input the computation does not need, and why
@@ -35,9 +51,13 @@ kernel is described in one file, gen/kernels/NAME.kernel:
     d = rmul(const unit_computed(add_2_2), mz)
                                       a constant computed from another kernel's claims
     m = lt(x1, 0)                     the literal zero (+0) as an operand
+    f = lt(a, const inf)              +infinity; `const nan` is a quiet NaN
+    g = guard(a)                      RN(a + 0): a value that enters from the program (R3)
 
-Expressions in `ensures` are written without spaces. This module only reads and represents
-descriptions; rules.py decides whether they are acceptable.
+Expressions in `ensures` are written without spaces. A condition of finite_when is
+abs_le(EXPR,E), meaning |EXPR| <= 2^(qmax + p + E); several are separated by `;`, and none is
+written by leaving finite_when out. This module only reads and represents descriptions; rules.py
+decides whether they are acceptable.
 """
 import os
 import re
@@ -69,6 +89,9 @@ OPS = {
     # The value itself, under another name: how a kernel returns one of its inputs (to_nearest_2
     # returns x0), since an output must be computed by an operation (rule 3).
     'copy': ((LIMB,), LIMB),
+    # RN(a + 0): the value of a, a zero made positive. A value that enters from the program passes
+    # through it before any addition (rule R3); its result is an addition, which nothing can fuse.
+    'guard': ((LIMB,), LIMB),
     # A plain multiplication. It is accepted by the parser only so that rule R1 refuses it with a
     # reason; no printer and no interpreter knows it.
     'mul': ((LIMB, LIMB), LIMB),
@@ -84,6 +107,10 @@ CONSTANTS = {
 }
 # The literal zero of a description (`lt(x1, 0)`) is the constant of this name, +0 in every format.
 ZERO = '0'
+# The constants that are not numbers: +infinity and a quiet NaN, which only the fix-ups of the
+# non-finite layer use (docs/developer/design/milestone1.md, "IEEE-like results"). The real model
+# has neither, so a kernel that names one has no real-model statement.
+SPECIAL = ('inf', 'nan')
 # Constants computed from the claims of another kernel K (consts.py): written `const F(K)`.
 COMPUTED = ('unit_computed', 'tiny_computed')
 _COMPUTED = re.compile(r'(unit_computed|tiny_computed)\(([a-z][a-z0-9_]*)\)\Z')
@@ -153,6 +180,43 @@ class Kernel:
     ce_variant: str = None
     cone_exempt: str = None
     unused: dict = field(default_factory=dict)     # input value -> why the computation ignores it
+    # The non-finite layer (architecture.md, "Claims of the non-finite layer").
+    domain: str = None                             # None (finite) or 'extended', as written
+    ieee_status: str = None
+    ieee_theorem: tuple = None                     # (file, name)
+    # Rule R3 (architecture.md, "The kernel IR").
+    entry: bool = False
+    stored: set = field(default_factory=set)       # one-limb input groups that are limbs of objects
+    supplied: set = field(default_factory=set)     # multi-limb input groups the program gives
+    guard_pending: dict = field(default_factory=dict)   # input value -> why it is not guarded yet
+
+    @property
+    def extended(self):
+        return self.domain == 'extended'
+
+    @property
+    def real_model(self):
+        """Whether the kernel has a statement in the real model. A full kernel or a constructor
+        (architecture.md, "Claims of the non-finite layer") has the IEEE-model statement only: it
+        says how non-finite values come out, which the real model cannot. They are recognized by
+        what they claim: `extends`, `represents`, `makes_ball`, or a requirement `ball`, which the
+        full Ball kernels have and the cores do not."""
+        return not (any(e['kind'] in ('extends', 'represents', 'makes_ball') for e in self.ensures)
+                    or any(r[0] == 'ball' for r in self.requires))
+
+    def program_values(self):
+        """The input values that enter from the program, for rule R3: in an entry kernel, every
+        one-limb limb input not declared stored, and the limbs of multi-limb inputs declared
+        supplied. Empty for a kernel that is not an entry kernel."""
+        if not self.entry:
+            return []
+        out = []
+        for g in self.inputs:
+            if g.kind != LIMB:
+                continue
+            if (len(g.limbs) == 1 and g.name not in self.stored) or g.name in self.supplied:
+                out += list(g.limbs)
+        return out
 
     @property
     def input_limbs(self):
@@ -176,22 +240,59 @@ class Kernel:
         return max(len(g.limbs) for g in self.inputs + self.outputs)
 
 
-def _group(text, where):
+INPUT_CLASSES = ('stored', 'supplied')   # rule R3: where an entry kernel's input comes from
+
+
+def _group(text, where, classes=()):
+    """A group, and the class written before it (one of `classes`, or None)."""
     words = text.split()
     if len(words) == 2 and words[0] == 'mask' and VALUE_NAME.match(words[1]):
-        return Group(words[1], (words[1],), MASK)
+        return Group(words[1], (words[1],), MASK), None
+    cls = None
+    if len(words) > 1 and words[0] in classes:
+        cls, text = words[0], text.strip()[len(words[0]):]
     m = re.fullmatch(r'([a-z][a-z0-9]*)(?:\s*=\s*([a-z0-9 ]+))?', text.strip())
     if not m:
-        raise DescriptionError(f'{where}: expected "NAME", "NAME = LIMB LIMB ..." or "mask NAME", '
-                               f'got {text!r}')
+        raise DescriptionError(f'{where}: expected "NAME", "NAME = LIMB LIMB ..." or "mask NAME"'
+                               f'{", after stored or supplied" if classes else ""}, got {text!r}')
     limbs = tuple(m.group(2).split()) if m.group(2) else (m.group(1),)
-    return Group(m.group(1), limbs)
+    return Group(m.group(1), limbs), cls
+
+
+def _finite_when(text, where):
+    """abs_le(EXPR,E);abs_le(EXPR,E) as [{'abs_le': EXPR, 'exp': E}, ...]."""
+    out = []
+    for part in text.split(';') if text else ():
+        m = re.fullmatch(r'abs_le\((.+),(-?[0-9]+)\)', part)
+        if not m:
+            raise DescriptionError(f'{where}: a condition of finite_when is abs_le(EXPR,E), got {part!r}')
+        out.append({'abs_le': m.group(1), 'exp': int(m.group(2))})
+    return out
 
 
 def _ensures(words, where):
     kind = words[0] if words else None
-    if kind in ('normalized', 'leading_rounded') and len(words) == 2:
+    if kind in ('normalized', 'leading_rounded', 'represents') and len(words) == 2:
         return {'kind': kind, 'of': words[1]}
+    if kind == 'extends' and len(words) >= 2:
+        entry = {'kind': kind, 'of': words[1], 'core': None, 'lead': None, 'finite_when': None}
+        for w in words[2:]:
+            key, eq, val = w.partition('=')
+            if not eq or key not in ('core', 'lead', 'finite_when') or entry[key] is not None:
+                raise DescriptionError(f'{where}: bad or repeated field {w!r} in extends entry')
+            entry[key] = _finite_when(val, where) if key == 'finite_when' else val
+        for key in ('core', 'lead'):
+            if not entry[key]:
+                raise DescriptionError(f'{where}: an extends entry needs {key}=')
+        if entry['finite_when'] is None:
+            entry['finite_when'] = []
+        return entry
+    if kind == 'makes_ball' and len(words) == 4:
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
+        if not m:
+            raise DescriptionError(f'{where}: expected "makes_ball CENTER RADIUS from=CENTER,RADIUS"')
+        return {'kind': kind, 'center': words[1], 'radius': words[2],
+                'from': {'center': m.group(1), 'radius': m.group(2)}}
     if kind == 'rounded' and len(words) == 3:
         return {'kind': kind, 'of': words[1], 'mode': words[2]}
     if kind == 'upper' and len(words) == 3 and words[2].startswith('gaps='):
@@ -199,13 +300,19 @@ def _ensures(words, where):
     if kind == 'predicate' and len(words) == 5:
         return {'kind': kind, 'of': words[1], 'rel': words[2], 'args': words[3:5]}
     if kind == 'encloses' and len(words) >= 5:
-        balls = {}
+        balls, finite_when = {}, None
         for w in words[4:]:
+            if w.startswith('finite_when=') and finite_when is None:
+                finite_when = _finite_when(w[len('finite_when='):], where)
+                continue
             m = re.fullmatch(r'([a-z][a-z0-9]*)=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', w)
             if not m or m.group(1) in balls:
                 raise DescriptionError(f'{where}: bad or repeated ball {w!r}: NAME=CENTER,RADIUS')
             balls[m.group(1)] = {'center': m.group(2), 'radius': m.group(3)}
-        return {'kind': kind, 'center': words[1], 'radius': words[2], 'set': words[3], 'balls': balls}
+        entry = {'kind': kind, 'center': words[1], 'radius': words[2], 'set': words[3], 'balls': balls}
+        if finite_when is not None:
+            entry['finite_when'] = finite_when
+        return entry
     if kind == 'error' and len(words) >= 3:
         entry = {'kind': 'error', 'of': words[1], 'form': words[2],
                  'c': None, 'k': None, 't': None, 'when': None}
@@ -249,7 +356,7 @@ def _stmt(text, where, lineno):
 def parse_kernel(text, path):
     k = Kernel(name=None, path=path)
     single = {'kernel', 'value', 'min_precision', 'theorem', 'source', 'license', 'status',
-              'ce_variant', 'cone_exempt'}
+              'ce_variant', 'cone_exempt', 'domain', 'ieee_status', 'ieee_theorem', 'entry'}
     seen = set()
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split('#', 1)[0].strip()
@@ -268,9 +375,12 @@ def parse_kernel(text, path):
         if key == 'kernel':
             k.name = val
         elif key == 'input':
-            k.inputs.append(_group(val, where))
+            g, cls = _group(val, where, INPUT_CLASSES)
+            k.inputs.append(g)
+            if cls:
+                getattr(k, cls).add(g.name)
         elif key == 'output':
-            k.outputs.append(_group(val, where))
+            k.outputs.append(_group(val, where)[0])
         elif key == 'value':
             k.value = val
         elif key == 'requires':
@@ -284,22 +394,33 @@ def parse_kernel(text, path):
             if not re.fullmatch(r'[0-9]+', val):
                 raise DescriptionError(f'{where}: min_precision must be an integer')
             k.min_precision = int(val)
-        elif key == 'theorem':
+        elif key in ('theorem', 'ieee_theorem'):
             parts = val.split()
             if len(parts) != 2:
-                raise DescriptionError(f'{where}: expected "theorem: FILE NAME"')
-            k.theorem = tuple(parts)
-        elif key in ('source', 'license', 'status', 'ce_variant', 'cone_exempt'):
+                raise DescriptionError(f'{where}: expected "{key}: FILE NAME"')
+            setattr(k, key, tuple(parts))
+        elif key in ('source', 'license', 'status', 'ce_variant', 'cone_exempt', 'domain', 'ieee_status'):
             setattr(k, key, val)
-        elif key == 'unused':
+        elif key == 'entry':
+            if val != 'yes':
+                raise DescriptionError(f'{where}: expected "entry: yes" (leave the line out otherwise)')
+            k.entry = True
+        elif key in ('unused', 'guard_pending'):
             name, _, why = val.partition(' ')
-            if not name or not why.strip() or name in k.unused:
-                raise DescriptionError(f'{where}: expected "unused: INPUT REASON", once per input')
-            k.unused[name] = why.strip()
+            table = getattr(k, key)
+            if not name or not why.strip() or name in table:
+                raise DescriptionError(f'{where}: expected "{key}: INPUT REASON", once per input')
+            table[name] = why.strip()
         else:
             raise DescriptionError(f'{where}: unknown key {key!r}')
     if k.name is None:
         raise DescriptionError(f'{path}: no "kernel:" line')
+    if k.extended:
+        # In the extended domain an encloses entry always says when the ball is finite (an empty
+        # list when no condition is proved), as extends does.
+        for e in k.ensures:
+            if e['kind'] == 'encloses':
+                e.setdefault('finite_when', [])
     if not KERNEL_NAME.match(k.name):
         raise DescriptionError(f'{path}: bad kernel name {k.name!r}')
     if not k.inputs or not k.outputs:
@@ -415,6 +536,6 @@ def constants(kernel):
 
 
 def flops(kernel, kernels):
-    """Floating-point operations after inlining; an FMA counts as one."""
-    arith = {'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd'}
+    """Floating-point operations after inlining; an FMA counts as one, and so does a guard."""
+    arith = {'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd', 'guard'}
     return sum(1 for p in prims(kernel, kernels) if p.op in arith)

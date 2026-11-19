@@ -447,9 +447,20 @@ class TheKernels(unittest.TestCase):
                    'ball_mul_2', 'ball_scale_1', 'ball_scale_2', 'ball_neg_1', 'ball_neg_2', 'ball_sub_1',
                    'ball_sub_2', 'add_1_1', 'mul_1_1'}
 
+    # docs/developer/design/milestone1.md, "IEEE-like results", "Values that enter from the program"
+    # and "Ball kernels": the full kernels and the constructors.
+    FULL = {f'{core}_full' for core in ('add_2_2', 'add_fast_2_2', 'sub_2_2', 'add_2_1', 'sub_2_1', 'sub_1_2',
+                                        'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
+    FULL_BALL = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+    CONSTRUCTORS = {'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2'}
+    NON_FINITE = FULL | FULL_BALL | CONSTRUCTORS
+    # The kernels that need no fix-up (milestone1.md): the extended domain, with both statements.
+    NO_FIX_UP = {'neg_2', 'abs_2', 'lt_2_2', 'le_2_2', 'eq_2_2', 'lt_2_1', 'le_2_1', 'eq_2_1', 'lt_1_2', 'le_1_2',
+                 'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'radd', 'rmul'}
+
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
-        self.assertEqual(set(ks), self.FIRST_WAVE | self.SECOND_WAVE)
+        self.assertEqual(set(ks), self.FIRST_WAVE | self.SECOND_WAVE | self.NON_FINITE)
         body = {name: [(st.dsts, st.op, tuple(map(str, st.args))) for st in k.body] for name, k in ks.items()}
         self.assertEqual(body['two_sum'], [
             (('s',), 'add', ('a', 'b')), (('bb',), 'sub', ('s', 'a')), (('t0',), 'sub', ('s', 'bb')),
@@ -464,10 +475,22 @@ class TheKernels(unittest.TestCase):
         # add_fast_2_2 ends with Fast2Sum: its normalization is proved, so there is no variant
         # ending with TwoSum.
         self.assertEqual(body['add_fast_2_2'][-1], (('z0', 'z1'), 'fast_two_sum', ('sh', 'w')))
-        # Proved means: the audit passes for that kernel (make -C proofs). Every kernel is.
+        # Proved means: the audit passes for that kernel (make -C proofs). Every kernel of the real
+        # model is; the full kernels and the constructors have no real-model statement, and their
+        # IEEE-model statements are not proved.
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
                          self.FIRST_WAVE | self.SECOND_WAVE)
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, set())
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.NON_FINITE)
+        self.assertEqual({name for name, k in ks.items() if not k.real_model}, self.NON_FINITE)
+        self.assertEqual({name for name, k in ks.items() if k.extended}, self.NON_FINITE | self.NO_FIX_UP)
+        self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
+                         dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP, 'unverified'))
+        self.assertFalse(any(k.ieee_theorem for k in ks.values()))
+        # The minimum precision of a full kernel is that of its core; a constructor's is 1.
+        for name in self.FULL | self.FULL_BALL:
+            core = name[:-len('_full')]
+            self.assertEqual(ks[name].min_precision, ks[core].min_precision, name)
+        self.assertEqual({ks[n].min_precision for n in self.CONSTRUCTORS}, {1})
         self.assertEqual(ks['two_prod'].ce_variant, 'two_prod_dekker')
         # The smallest precision from which each proved statement holds.
         self.assertEqual({name: k.min_precision for name, k in ks.items() if k.status == 'proved'}, {

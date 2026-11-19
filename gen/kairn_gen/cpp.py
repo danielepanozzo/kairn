@@ -52,6 +52,9 @@ SPELL = {
     'succ': 'next_up({0})',
     'pred': 'next_down({0})',
     'copy': '{0}',
+    # RN(a + 0). Never a - 0 or a + (-0), which are identities that compilers fold away; a + 0
+    # turns -0 into +0, so a compiler that honors signed zeros keeps it.
+    'guard': '{0} + {zero}',
 }
 SPELL_CONSTEVAL = dict(SPELL, prod='{0} * {1}')
 
@@ -103,7 +106,12 @@ def hex_literal(v, suffix):
 
 
 def literal(name, kernels, ctype):
-    """A constant of the format as a literal of the limb type: its exact value (consts.py)."""
+    """A constant of the format as a literal of the limb type: its exact value (consts.py), or
+    +infinity and a quiet NaN from <limits> (constant expressions; there is no literal for them)."""
+    if name == 'inf':
+        return f'std::numeric_limits<{ctype}>::infinity()'
+    if name == 'nan':
+        return f'std::numeric_limits<{ctype}>::quiet_NaN()'
     suffix = TYPES[ctype][1]
     try:
         v = consts.value(name, kernels, *FORMATS[ctype])
@@ -174,12 +182,23 @@ def _description(k, kernels):
     kind = constexpr_kind(k, kernels)
     when = {'variant': f'constexpr through {k.ce_variant}', 'plain': 'constexpr',
             None: 'not constexpr: it has fused operations and no constant-evaluation variant'}[kind]
-    return [f'// {sig}', f'// {k.source or "no source given"}. Status: {k.status}; {when}.']
+    if not k.extended:
+        status = f'Status: {k.status}'
+    elif k.real_model:
+        status = f'Status: {k.status} (real model), {k.ieee_status} (IEEE model)'
+    else:
+        status = f'Status: {k.ieee_status} (IEEE model only)'
+    return [f'// {sig}', f'// {k.source or "no source given"}. {status}; {when}.']
 
 
 def _helpers(kernels):
     used = {p.op for k in kernels.values() for p in ir.prims(k, kernels)}
     return used & {'abs', 'succ', 'pred'}
+
+
+def uses_special(kernels):
+    """Whether a kernel names +infinity or NaN, which come from <limits>."""
+    return any(a.const and a.name in ir.SPECIAL for k in kernels.values() for st in k.body for a in st.args)
 
 
 def prelude(kernels):
@@ -192,6 +211,8 @@ def prelude(kernels):
              '#endif']
     if helpers:
         lines += ['#include <bit>', '#include <cstdint>']
+    if uses_special(kernels):
+        lines += ['#include <limits>']
     lines += ['',
               '// Kernels of at most two limbs are a few dozen flops and must disappear into the caller.',
               '#if defined(_MSC_VER) && !defined(__clang__)',

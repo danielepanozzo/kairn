@@ -5,6 +5,12 @@ model printed here and the code printed there describe the same computation. Bot
 table of spellings plus a loop over the kernel's statements, and the meaning of each spelling is
 in the comment beside it.
 
+It prints the real model only. A kernel without a real-model statement (a full kernel or a
+constructor of the non-finite layer, ir.Kernel.real_model) is left out of all three files; a kernel
+of the extended domain that has one is printed as before, its requirement canonical read as
+normalized, which is the same thing for finite operands. The IEEE-model statements are not printed
+yet.
+
 The model is Flocq's: rnd is rounding to nearest with tie rule `choice` in FLT_exp emin prec, the
 format of precision prec with gradual underflow below 2^emin and no overflow. Every operation of
 the IR is one application of rnd, except the exact ones. Calls stay calls. A mask is a bool.
@@ -41,10 +47,12 @@ SPELL = {
     'succ': 'succ radix2 (FLT_exp emin prec) {0}',     # the next number of the format
     'pred': 'pred radix2 (FLT_exp emin prec) {0}',
     'copy': '{0}',
+    'guard': 'rnd ({0} + 0)',                          # the value of {0} (rule R3)
 }
 
 # The section variables each operation uses: those of rnd, or of the format alone.
-USES = dict.fromkeys(('add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd'), ('emin', 'prec', 'choice'))
+USES = dict.fromkeys(('add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd', 'guard'),
+                     ('emin', 'prec', 'choice'))
 USES.update(succ=('emin', 'prec'), pred=('emin', 'prec'))
 SECTION = ('emin', 'prec', 'choice')
 
@@ -151,7 +159,13 @@ def _computed_definition(name, kernels):
     return lines
 
 
+def real(kernels):
+    """The kernels that have a real-model statement, in order."""
+    return {name: k for name, k in kernels.items() if k.real_model}
+
+
 def model(kernels):
+    kernels = real(kernels)
     used = {a.name for k in kernels.values() for st in k.body for a in st.args if a.const} - {ir.ZERO}
     lines = [HEADER, '',
              '(* The formal model of every kernel: one function over the real numbers, in which every',
@@ -305,8 +319,9 @@ CLAIMS = {'normalized': _claim_normalized, 'leading_rounded': _claim_leading_rou
 
 
 def _hypotheses(k, ins):
-    """The requirements, and that every limb is a number of the format."""
-    normalized = {r[1] for r in k.requires if r[0] == 'normalized'}
+    """The requirements, and that every limb is a number of the format. A canonical operand is a
+    normalized one in the real model, where every value is finite."""
+    normalized = {r[1] for r in k.requires if r[0] in ('normalized', 'canonical')}
     hyps = []
     for g in k.inputs:
         if g.kind == ir.MASK:
@@ -383,6 +398,7 @@ def statement(k, kernels):
 
 
 def statements(kernels):
+    kernels = real(kernels)
     sizes = sorted({len(g.limbs) for k in kernels.values() for g in k.inputs + k.outputs
                     if len(g.limbs) > 1})
     lines = [HEADER, '',
@@ -412,7 +428,7 @@ def theory_module(path):
 
 
 def audit(kernels):
-    verified = [k for k in kernels.values() if k.status != 'unverified']
+    verified = [k for k in real(kernels).values() if k.status != 'unverified']
     lines = [HEADER, '',
              '(* For every kernel not marked unverified: its theorem has exactly the generated',
              '   statement as its type, and the axioms it depends on are printed, for the audit',

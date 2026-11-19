@@ -53,7 +53,8 @@ def functions(text):
     return out
 
 
-ATOM = r'(?:[a-z][a-z0-9_]*|0x1(?:\.[0-9a-f]+)?p[-+][0-9]+f?|0\.0f?)'
+ATOM = r'(?:[a-z][a-z0-9_]*|0x1(?:\.[0-9a-f]+)?p[-+][0-9]+f?|0\.0f?|' \
+       r'std::numeric_limits<(?:double|float)>::(?:infinity|quiet_NaN)\(\))'
 # One operation, written over atoms: what "one operation per statement" allows (a bare atom is a
 # copy, which is none).
 ONE_OPERATION = re.compile(
@@ -125,6 +126,11 @@ class Cpp(unittest.TestCase):
     NOT_CONSTEXPR = {'mul_2_2', 'mul_2_1', 'split', 'two_prod_dekker', 'mul_1_1', 'rmul', 'mul_pow2_2',
                      'ball_add_1', 'ball_add_2', 'ball_mul_1', 'ball_mul_2', 'ball_scale_1', 'ball_scale_2',
                      'ball_sub_1', 'ball_sub_2'}
+    # The full kernels: their fix-up turns t into an infinity with the opaque product prod(t, inf),
+    # so not one is constexpr, the additions included (whose cores are). The constructors are.
+    NOT_CONSTEXPR |= {f'{core}_full' for core in ('add_2_2', 'add_fast_2_2', 'sub_2_2', 'add_2_1', 'sub_2_1',
+                                                   'sub_1_2', 'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
+    NOT_CONSTEXPR |= {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
 
     def test_constexpr(self):
         plain = {name for (name, _), f in self.fns.items() if not f['constexpr']}
@@ -191,8 +197,9 @@ class Packed(unittest.TestCase):
     """The AVX2 and NEON printers: one intrinsic per statement, products only as FMAs."""
     FUSED = {'avx2.hpp': r'_mm256_fn?m(?:add|sub)_p[sd]\(', 'neon.hpp': r'vfm[as]q_f(?:32|64)\('}
     PLAIN_PRODUCT = {'avx2.hpp': r'_mm256_mul_p[sd]\(', 'neon.hpp': r'vmulq_f(?:32|64)\('}
-    CONSTANT = {'avx2.hpp': r'_mm256_(?:set1_p[sd]\([-+0-9a-fx.p]+f?\)|setzero_p[sd]\(\))',
-                'neon.hpp': r'vdupq_n_f(?:32|64)\([-+0-9a-fx.p]+f?\)'}
+    SPECIAL = r'std::numeric_limits<(?:double|float)>::(?:infinity|quiet_NaN)\(\)'
+    CONSTANT = {'avx2.hpp': rf'_mm256_(?:set1_p[sd]\((?:[-+0-9a-fx.p]+f?|{SPECIAL})\)|setzero_p[sd]\(\))',
+                'neon.hpp': rf'vdupq_n_f(?:32|64)\((?:[-+0-9a-fx.p]+f?|{SPECIAL})\)'}
     CALL = r'(?:_mm256_\w+|v\w+q_[fu](?:32|64)|not_mask|next_up|next_down)\('
 
     @classmethod
@@ -264,9 +271,11 @@ class Packed(unittest.TestCase):
 class Rocq(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.ks = common.kernels()
-        cls.model = rocq.model(cls.ks)
-        cls.statements = rocq.statements(cls.ks)
+        cls.all = common.kernels()
+        # The kernels the real model prints: all but the full kernels and the constructors.
+        cls.ks = rocq.real(cls.all)
+        cls.model = rocq.model(cls.all)
+        cls.statements = rocq.statements(cls.all)
 
     def test_the_tracer_model(self):
         self.assertIn(TRACER_PREAMBLE, self.model)
