@@ -1005,9 +1005,11 @@ class Scheduler:
             # that no slot waits for a generator: when fewer checks are queued or coming than
             # there are slots, a generator goes first.
             before = deadline is None or time.time() < deadline
+            # Generating a case can take three times as long as judging one (the comparisons),
+            # so up to three units per round of the runners are generated at a time.
             n_r = max(1, len(self.runners))
-            max_gens = max(1, self.jobs // n_r)
-            max_open = 2 + 2 * (-(-self.jobs // n_r))
+            max_gens = max(2, -(-3 * self.jobs // n_r))
+            max_open = max_gens + 2 + (-(-self.jobs // n_r))
             while used < self.jobs:
                 task = None
                 if before and next_interp is None:
@@ -1679,8 +1681,9 @@ def cmd_report(a):
             for r in d["interp"]["enumerations"]:
                 if r["kernel"] != k:
                     continue
-                title = "`%s`%s" % (r["format"], (", restricted: " + ", ".join(
-                    "`%s`" % x for x in r["restrict"])) if r["restrict"] else ", every operand")
+                title = "`%s`%s (%s)" % (r["format"], (", restricted: " + ", ".join(
+                    "`%s`" % x for x in r["restrict"])) if r["restrict"] else ", every operand",
+                    r["why"].replace(", restricted", ""))
                 rows.append((title, r.get("counts", {}), r.get("entries", []),
                              r["guards"] == "ok" and r.get("complete"), False))
         if not rows:
@@ -1692,7 +1695,7 @@ def cmd_report(a):
         w("Claims: " + "; ".join("`%s`" % e["label"] for e in entries0) + ".")
         w("")
         cols = headline_columns(entries0)
-        w("| Run | Cases | Judged | Failed | " + " | ".join(c[0] for c in cols) + " |")
+        w("| " + " | ".join(["Run", "Cases", "Judged", "Failed"] + [c[0] for c in cols]) + " |")
         w("|---|---|---|---|" + "---|" * len(cols))
         lines = []
         for title, counts, entries, ok, compiled in rows:
@@ -1711,10 +1714,9 @@ def cmd_report(a):
                 cells.append(short(v[0]) + mark if v else "-")
                 if v and field != "observed_c" and not (sub and "enclosing" in sub):
                     lines.append((title, name, v))
-            w("| %s%s | %s | %s | %s | %s |" % (
-                title, "" if ok else " (**INCOMPLETE or guard failed**)",
-                fmt_int(counts.get("cases", 0)), fmt_int(counts.get("judged", 0)),
-                fmt_int(counts.get("failed", 0)), " | ".join(cells)))
+            w("| " + " | ".join([title + ("" if ok else " (**INCOMPLETE or guard failed**)"),
+                                 fmt_int(counts.get("cases", 0)), fmt_int(counts.get("judged", 0)),
+                                 fmt_int(counts.get("failed", 0))] + cells) + " |")
         # The line of the extreme of each headline column, over the compiled rows and over the
         # interpreter's.
         picks = []
