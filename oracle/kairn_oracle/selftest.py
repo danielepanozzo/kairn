@@ -52,10 +52,12 @@ def test(fn):
 
 
 class Ctx:
-    def __init__(self, workdir, quick, cxx):
+    def __init__(self, workdir, quick, cxx, jobs=None):
         self.workdir = workdir
         self.quick = quick
         self.cxx = cxx
+        env = os.environ.get("KAIRN_ORACLE_JOBS", "")
+        self.jobs = max(1, jobs or (int(env) if env.isdigit() else 0) or os.cpu_count() or 1)
         self.claims = load_claims(FIXTURE)
         self.claims2 = load_claims(FIXTURE2)
         self.cxx_bin = None
@@ -901,7 +903,7 @@ from . import selftest2  # noqa: E402,F401
 def main(a):
     workdir = a.workdir or tempfile.mkdtemp(prefix="kairn-oracle-selftest-")
     os.makedirs(workdir, exist_ok=True)
-    ctx = Ctx(workdir, a.quick, a.cxx)
+    ctx = Ctx(workdir, a.quick, a.cxx, getattr(a, "jobs", None))
     only = set(a.only.split(",")) if a.only else None
     failed = skipped = 0
     t0 = time.time()
