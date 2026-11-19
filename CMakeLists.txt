@@ -15,6 +15,7 @@ project(kairn
   LANGUAGES CXX)
 
 option(KAIRN_BUILD_TESTS "Register Kairn's tests with ctest" ${PROJECT_IS_TOP_LEVEL})
+option(KAIRN_BUILD_BENCHMARKS "Build the benchmark harness of bench/ (not part of the library)" OFF)
 
 # Built on its own, Kairn is built for testing, and its tests mean most with optimization on: the
 # contraction tests check what an optimizer may do to the kernels (tests/CMakeLists.txt).
@@ -82,4 +83,8 @@ install(FILES
 if(KAIRN_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
+endif()
+
+if(KAIRN_BUILD_BENCHMARKS)
+  add_subdirectory(bench)
 endif()
