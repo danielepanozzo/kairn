@@ -109,6 +109,11 @@ The Rocq model is one section over `emin prec choice`. Closing it abstracts each
 the section variables it uses and only those (`lt_2_2` takes four reals, `to_down_2` takes
 `emin prec` first), and the statements apply each kernel accordingly (`rocq.section_args`).
 
+The conclusion of a statement starts with `fmt` of every output limb that no `normalized` claim
+covers, in output order (`rocq._output_formats`); the claims follow. Statements then compose: the
+hypotheses of a statement say `fmt` of every input limb, and the theorem of the kernel that
+computed that limb provides it. A mask output gets nothing.
+
 A kernel with a constant-evaluation variant (`ce_variant:`) is `constexpr` and dispatches on
 `__builtin_is_constant_evaluated()`: in constant evaluation it runs the variant's body with each
 `prod` a plain product. `interp --ce` does the same.
@@ -156,9 +161,10 @@ constant-evaluation variants (same signature, no FMA), and of computed constants
   random, and every build must print exactly what the scalar runner built with the same flags
   prints;
 - the statements: every claim, in exact arithmetic, on every operand of formats with precisions
-  1 to 6 (a sample where there are too many), with nothing overflowing (the Rocq statement) and in
-  the format itself whenever output limb 0 is finite (what the oracle checks). `test_statements.py`
-  lists the corners where the two differ.
+  1 to 6 (a sample where there are too many), with nothing overflowing (the Rocq statement, which
+  also says that every output limb is a number of the format) and in the format itself whenever
+  output limb 0 is finite (what the oracle checks). `test_statements.py` lists the corners where
+  the two differ.
 
 `--full` raises the sizes to a few hundred thousand requests per kernel; `--jobs N` (or
 `$KAIRN_GEN_JOBS`) caps the processes and compilers that run at once, on a shared machine.
