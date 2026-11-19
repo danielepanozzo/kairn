@@ -1,11 +1,16 @@
 // Reference runner for binary64 (double) and binary32 (float), written directly from the
-// pseudo-code of the first-wave kernels in docs/developer/architecture.md, one rounding per
+// pseudo-code of the first-wave kernels in docs/developer/architecture.md and of the
+// second-wave and Ball kernels in docs/developer/design/milestone1.md, one rounding per
 // statement.  It shares nothing with the library or its generator: its purpose is to test the
 // oracle on hardware arithmetic.  It must be compiled without contraction
 // (-ffp-contract=off), because a fused a*b+c would change what each statement computes.
 //
-// Usage: refrun [--variant NAME] < requests > completed
-// Variants inject the errors that the oracle's selftest expects `check` to catch.
+// Usage: refrun [--variant NAME] [--const FORMAT.KERNEL.U=HEX ...] < requests > completed
+// Variants inject the errors that the oracle's selftest expects `check` to catch.  The Ball
+// kernels need the constants U and V of their center's kernel (add, prod, add_2_2, mul_2_2,
+// mul_2_1), rounded up to the format; they are computed exactly by the Python side
+// (`kairn-oracle refrun --print-constants FORMAT`) and given here, because computing a
+// rounded-up rational exactly is not something to do in the arithmetic under test.
 
 #include <cmath>
 #include <cstdint>
@@ -13,6 +18,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -28,6 +34,15 @@ enum class Variant {
   two_sum_zero,
   corrupt_input,
   fast_end_two_sum,
+  cmp_lead_equal,
+  down_no_neg_step,
+  down_pow2_wrong_side,
+  radd_no_step,
+  rmul_nearest,
+  ball_no_center_error,
+  ball_no_rr,
+  ball_pow2_ulp,
+  abs_lead_only,
 };
 
 struct VariantName {
@@ -45,9 +60,21 @@ const VariantName kVariants[] = {
     {"two-sum-zero", Variant::two_sum_zero},
     {"corrupt-input", Variant::corrupt_input},
     {"fast-end-two-sum", Variant::fast_end_two_sum},
+    {"cmp-lead-equal", Variant::cmp_lead_equal},
+    {"down-no-neg-step", Variant::down_no_neg_step},
+    {"down-pow2-wrong-side", Variant::down_pow2_wrong_side},
+    {"radd-no-step", Variant::radd_no_step},
+    {"rmul-nearest", Variant::rmul_nearest},
+    {"ball-no-center-error", Variant::ball_no_center_error},
+    {"ball-no-rr", Variant::ball_no_rr},
+    {"ball-pow2-ulp", Variant::ball_pow2_ulp},
+    {"abs-lead-only", Variant::abs_lead_only},
 };
 
 Variant g_variant = Variant::correct;
+
+// The constants of the Ball kernels, "FORMAT.KERNEL.U" -> value, from the command line.
+std::map<std::string, double> g_consts;
 
 std::uint32_t fnv1a(const std::string& s) {
   std::uint32_t h = 2166136261u;
@@ -195,6 +222,222 @@ void add_fast_2_2(T x0, T x1, T y0, T y1, T& z0, T& z1) {
   fast_two_sum(sh, w, z0, z1);
 }
 
+// ---------------------------------------------------------------------------------------------
+// Second wave (milestone1.md).  succ and pred are the neighbours in the format, which is what
+// nextafter toward the infinities returns.
+
+template <class T> T succ(T a) { return std::nextafter(a, std::numeric_limits<T>::infinity()); }
+template <class T> T pred(T a) { return std::nextafter(a, -std::numeric_limits<T>::infinity()); }
+
+template <class T>
+bool is_pow2(T a) {
+  int e;
+  return std::isfinite(a) && a != T(0) && std::frexp(std::fabs(a), &e) == T(0.5);
+}
+
+template <class T>
+void abs_2(T x0, T x1, T& z0, T& z1) {
+  bool m = x0 < T(0);
+  T n0 = -x0;
+  T n1 = g_variant == Variant::abs_lead_only ? x1 : -x1;
+  z0 = m ? n0 : x0;
+  z1 = m ? n1 : x1;
+}
+
+template <class T>
+bool lt_2_2(T x0, T x1, T y0, T y1, bool strict) {
+  bool h = x0 < y0;
+  bool e = x0 == y0;
+  // The injected error: when the first limbs are equal, lt and le swap tests.
+  if (g_variant == Variant::cmp_lead_equal && e) strict = !strict;
+  bool l = strict ? x1 < y1 : x1 <= y1;
+  bool t = e && l;
+  return h || t;
+}
+
+template <class T>
+bool eq_2_2(T x0, T x1, T y0, T y1) {
+  bool h = x0 == y0;
+  bool l = x1 == y1;
+  if (g_variant == Variant::cmp_lead_equal && h) l = true;
+  return h && l;
+}
+
+template <class T>
+T to_down_2(T x0, T x1) {
+  bool m = x1 < T(0);
+  T p = pred(x0);
+  if (g_variant == Variant::down_no_neg_step) m = false;
+  if (g_variant == Variant::down_pow2_wrong_side && is_pow2(x0)) {
+    T s = succ(x0);
+    if (std::isfinite(s)) p = x0 - (s - x0);
+  }
+  return m ? p : x0;
+}
+
+template <class T>
+T to_up_2(T x0, T x1) {
+  bool m = T(0) < x1;
+  T s = succ(x0);
+  return m ? s : x0;
+}
+
+template <class T>
+T abs_upper_2(T x0, T x1) {
+  T a0, a1;
+  abs_2(x0, x1, a0, a1);
+  return to_up_2(a0, a1);
+}
+
+template <class T>
+T radd(T a, T b) {
+  T s = add(a, b);
+  return g_variant == Variant::radd_no_step ? s : succ(s);
+}
+
+template <class T>
+T rmul(T a, T b) {
+  T p = prod(a, b);
+  return g_variant == Variant::rmul_nearest ? p : succ(p);
+}
+
+template <class T>
+void mul_pow2_2(T x0, T x1, T c, T& z0, T& z1) {
+  T h = prod(x0, c);
+  T l = prod(x1, c);
+  fast_two_sum(h, l, z0, z1);
+}
+
+template <class T> const char* format_name();
+template <> const char* format_name<double>() { return "binary64"; }
+template <> const char* format_name<float>() { return "binary32"; }
+
+template <class T>
+T constant(const char* center, const char* which) {
+  std::string key = std::string(format_name<T>()) + "." + center + "." + which;
+  auto it = g_consts.find(key);
+  if (it == g_consts.end()) {
+    std::fprintf(stderr, "refrun: constant %s not given (--const %s=HEX)\n", key.c_str(),
+                 key.c_str());
+    std::exit(2);
+  }
+  return static_cast<T>(it->second);
+}
+
+// A Ball: center limbs (k = 1 or 2) and a radius.
+template <class T>
+struct Ball {
+  T c0, c1, r;
+};
+
+template <class T>
+T ball_mag_upper(int k, T c0, T c1) {
+  return k == 1 ? std::fabs(c0) : abs_upper_2(c0, c1);
+}
+
+template <class T>
+T ball_radius(T c0, T rz) {
+  if (g_variant == Variant::ball_pow2_ulp && is_pow2(c0) && std::isfinite(rz)) return pred(rz);
+  return rz;
+}
+
+template <class T>
+Ball<T> ball_add(int k, Ball<T> x, Ball<T> y) {
+  const char* center = k == 1 ? "add" : "add_2_2";
+  T U = constant<T>(center, "U");
+  Ball<T> z;
+  z.c1 = T(0);
+  if (k == 1) z.c0 = add(x.c0, y.c0);
+  else add_2_2(x.c0, x.c1, y.c0, y.c1, z.c0, z.c1);
+  T mz = ball_mag_upper(k, z.c0, z.c1);
+  T d = rmul(U, mz);
+  T r0 = radd(x.r, y.r);
+  T rz = g_variant == Variant::ball_no_center_error ? r0 : radd(r0, d);
+  z.r = ball_radius(z.c0, rz);
+  return z;
+}
+
+template <class T>
+Ball<T> ball_mul(int k, Ball<T> x, Ball<T> y) {
+  const char* center = k == 1 ? "prod" : "mul_2_2";
+  T U = constant<T>(center, "U");
+  T V = constant<T>(center, "V");
+  Ball<T> z;
+  z.c1 = T(0);
+  if (k == 1) z.c0 = prod(x.c0, y.c0);
+  else mul_2_2(x.c0, x.c1, y.c0, y.c1, z.c0, z.c1);
+  T ax = ball_mag_upper(k, x.c0, x.c1);
+  T ay = ball_mag_upper(k, y.c0, y.c1);
+  T t1 = rmul(ax, y.r);
+  T t2 = rmul(ay, x.r);
+  T t3 = rmul(x.r, y.r);
+  T s1 = radd(t1, t2);
+  T s2 = g_variant == Variant::ball_no_rr ? s1 : radd(s1, t3);
+  T mz = ball_mag_upper(k, z.c0, z.c1);
+  T d0 = rmul(U, mz);
+  T d = radd(d0, V);
+  T rz = g_variant == Variant::ball_no_center_error ? s2 : radd(s2, d);
+  z.r = ball_radius(z.c0, rz);
+  return z;
+}
+
+template <class T>
+Ball<T> ball_scale(int k, Ball<T> x, T a) {
+  const char* center = k == 1 ? "prod" : "mul_2_1";
+  T U = constant<T>(center, "U");
+  T V = constant<T>(center, "V");
+  Ball<T> z;
+  z.c1 = T(0);
+  if (k == 1) z.c0 = prod(x.c0, a);
+  else mul_2_1(x.c0, x.c1, a, z.c0, z.c1);
+  T aa = std::fabs(a);
+  T t1 = rmul(aa, x.r);
+  T mz = ball_mag_upper(k, z.c0, z.c1);
+  T d0 = rmul(U, mz);
+  T d = radd(d0, V);
+  T rz = g_variant == Variant::ball_no_center_error ? t1 : radd(t1, d);
+  z.r = ball_radius(z.c0, rz);
+  return z;
+}
+
+// Runs a Ball kernel "ball_OP_K" on v; false when the name or the arity does not fit.
+template <class T>
+bool run_ball(const std::string& k, const std::vector<T>& v, std::vector<T>& out) {
+  if (k.size() < 7 || k.compare(0, 5, "ball_") != 0) return false;
+  int n = k.back() - '0';
+  if ((n != 1 && n != 2) || k[k.size() - 2] != '_') return false;
+  std::string op = k.substr(5, k.size() - 7);
+  std::size_t per = static_cast<std::size_t>(n) + 1;
+  auto ball = [&](std::size_t at) {
+    Ball<T> b;
+    b.c0 = v[at];
+    b.c1 = n == 2 ? v[at + 1] : T(0);
+    b.r = v[at + n];
+    return b;
+  };
+  Ball<T> z;
+  if ((op == "add" || op == "sub" || op == "mul") && v.size() == 2 * per) {
+    Ball<T> x = ball(0), y = ball(per);
+    if (op == "sub") {
+      y.c0 = -y.c0;
+      y.c1 = -y.c1;
+    }
+    z = op == "mul" ? ball_mul(n, x, y) : ball_add(n, x, y);
+  } else if (op == "neg" && v.size() == per) {
+    z = ball(0);
+    z.c0 = -z.c0;
+    z.c1 = -z.c1;
+  } else if (op == "scale" && v.size() == per + 1) {
+    z = ball_scale(n, ball(0), v[per]);
+  } else {
+    return false;
+  }
+  out = {z.c0};
+  if (n == 2) out.push_back(z.c1);
+  out.push_back(z.r);
+  return true;
+}
+
 std::vector<std::string> split_spaces(const std::string& s) {
   std::vector<std::string> out;
   std::size_t i = 0;
@@ -243,9 +486,39 @@ void corrupt(const std::string& kernel, std::vector<std::string>& args) {
   args[0] = std::numeric_limits<T>::digits == 53 ? "0x1.00000000000008p+0" : "0x1.000001p+0";
 }
 
+bool is_first_wave(const std::string& k) {
+  return k == "two_sum" || k == "fast_two_sum" || k == "two_prod" || k == "two_prod_dekker" ||
+         k == "split" || k == "add_2_2" || k == "add_2_1" || k == "mul_2_2" || k == "mul_2_1" ||
+         k == "add_fast_2_2";
+}
+
+// The comparisons: (relation, form) -> mask, with (a, 0) in place of a one-limb operand.
 template <class T>
-bool run_kernel(const std::string& k, const std::vector<T>& v, std::vector<T>& out) {
+bool run_compare(const std::string& k, const std::vector<T>& v, int& mask) {
+  if (k.size() != 6 || k[2] != '_' || k[4] != '_') return false;
+  std::string rel = k.substr(0, 2), form = k.substr(3);
+  T x0, x1, y0, y1;
+  if (form == "2_2" && v.size() == 4) {
+    x0 = v[0]; x1 = v[1]; y0 = v[2]; y1 = v[3];
+  } else if (form == "2_1" && v.size() == 3) {
+    x0 = v[0]; x1 = v[1]; y0 = v[2]; y1 = T(0);
+  } else if (form == "1_2" && v.size() == 3) {
+    x0 = v[0]; x1 = T(0); y0 = v[1]; y1 = v[2];
+  } else {
+    return false;
+  }
+  if (rel == "lt") mask = lt_2_2(x0, x1, y0, y1, true);
+  else if (rel == "le") mask = lt_2_2(x0, x1, y0, y1, false);
+  else if (rel == "eq") mask = eq_2_2(x0, x1, y0, y1);
+  else return false;
+  return true;
+}
+
+// Fills out (limbs) or mask (0 or 1) for kernel k on the input limbs v.
+template <class T>
+bool run_kernel(const std::string& k, const std::vector<T>& v, std::vector<T>& out, int& mask) {
   T z0, z1;
+  mask = -1;
   if (k == "two_sum" && v.size() == 2) two_sum(v[0], v[1], z0, z1);
   else if (k == "fast_two_sum" && v.size() == 2) fast_two_sum(v[0], v[1], z0, z1);
   else if (k == "two_prod" && v.size() == 2) two_prod(v[0], v[1], z0, z1);
@@ -256,7 +529,26 @@ bool run_kernel(const std::string& k, const std::vector<T>& v, std::vector<T>& o
   else if (k == "mul_2_2" && v.size() == 4) mul_2_2(v[0], v[1], v[2], v[3], z0, z1);
   else if (k == "mul_2_1" && v.size() == 3) mul_2_1(v[0], v[1], v[2], z0, z1);
   else if (k == "add_fast_2_2" && v.size() == 4) add_fast_2_2(v[0], v[1], v[2], v[3], z0, z1);
-  else return false;
+  else if (k == "neg_2" && v.size() == 2) { z0 = -v[0]; z1 = -v[1]; }
+  else if (k == "abs_2" && v.size() == 2) abs_2(v[0], v[1], z0, z1);
+  else if (k == "sub_2_2" && v.size() == 4) add_2_2(v[0], v[1], -v[2], -v[3], z0, z1);
+  else if (k == "sub_2_1" && v.size() == 3) add_2_1(v[0], v[1], -v[2], z0, z1);
+  else if (k == "sub_1_2" && v.size() == 3) add_2_1(-v[1], -v[2], v[0], z0, z1);
+  else if (k == "mul_pow2_2" && v.size() == 3) mul_pow2_2(v[0], v[1], v[2], z0, z1);
+  else if (run_compare(k, v, mask)) return true;
+  else if (run_ball(k, v, out)) return true;
+  else {
+    T t;
+    if (k == "to_nearest_2" && v.size() == 2) t = v[0];
+    else if (k == "to_down_2" && v.size() == 2) t = to_down_2(v[0], v[1]);
+    else if (k == "to_up_2" && v.size() == 2) t = to_up_2(v[0], v[1]);
+    else if (k == "abs_upper_2" && v.size() == 2) t = abs_upper_2(v[0], v[1]);
+    else if (k == "radd" && v.size() == 2) t = radd(v[0], v[1]);
+    else if (k == "rmul" && v.size() == 2) t = rmul(v[0], v[1]);
+    else return false;
+    out = {t};
+    return true;
+  }
   out = {z0, z1};
   return true;
 }
@@ -282,10 +574,17 @@ bool complete(std::string line, std::string& result) {
   std::vector<T> vals;
   for (const auto& a : args) vals.push_back(parse<T>(a));
   std::vector<T> out;
-  if (!run_kernel<T>(kernel, vals, out)) return false;
-  if (g_variant == Variant::ulp_rare && fnv1a(line) % 256 == 0)
+  int mask;
+  if (!run_kernel<T>(kernel, vals, out, mask)) return false;
+  if (mask >= 0) {
+    result = prefix + line + " -> " + (mask ? "1" : "0");
+    return true;
+  }
+  const bool first = is_first_wave(kernel);
+  if (g_variant == Variant::ulp_rare && first && fnv1a(line) % 256 == 0)
     out[1] = std::nextafter(out[1], std::numeric_limits<T>::infinity());
-  if (g_variant == Variant::not_normalized && is_finite_nonzero(out[0]) && std::isfinite(out[1])) {
+  if (g_variant == Variant::not_normalized && first && is_finite_nonzero(out[0]) &&
+      std::isfinite(out[1])) {
     // Move one ulp of z0 into z1 when that is exact: same value, broken invariant.
     T n = std::nextafter(out[0], std::numeric_limits<T>::infinity());
     T d = n - out[0];
@@ -303,7 +602,15 @@ bool complete(std::string line, std::string& result) {
 
 int main(int argc, char** argv) {
   for (int i = 1; i < argc; ++i) {
-    if (std::strcmp(argv[i], "--variant") == 0 && i + 1 < argc) {
+    if (std::strcmp(argv[i], "--const") == 0 && i + 1 < argc) {
+      std::string spec = argv[++i];
+      std::size_t eq = spec.find('=');
+      if (eq == std::string::npos) {
+        std::fprintf(stderr, "refrun: --const wants FORMAT.KERNEL.U=HEX, got %s\n", spec.c_str());
+        return 2;
+      }
+      g_consts[spec.substr(0, eq)] = std::strtod(spec.c_str() + eq + 1, nullptr);
+    } else if (std::strcmp(argv[i], "--variant") == 0 && i + 1 < argc) {
       const char* name = argv[++i];
       bool found = false;
       for (const auto& v : kVariants)
@@ -316,7 +623,7 @@ int main(int argc, char** argv) {
         return 2;
       }
     } else {
-      std::fprintf(stderr, "usage: refrun [--variant NAME]\n");
+      std::fprintf(stderr, "usage: refrun [--variant NAME] [--const FORMAT.KERNEL.U=HEX ...]\n");
       return 2;
     }
   }

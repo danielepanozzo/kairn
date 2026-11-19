@@ -1,20 +1,32 @@
 """A reference runner in pure Python for any binary format, toy formats included.
 
-It evaluates the first-wave kernels as written in docs/developer/architecture.md, one
+It evaluates the first-wave kernels as written in docs/developer/architecture.md and the
+second-wave and Ball kernels as written in docs/developer/design/milestone1.md, one
 rounding per line.  It is part of the oracle only to test the oracle, so it avoids the
 checker's code on purpose: rounding is computed from the two neighbors of the exact value
-(the checker shifts and inspects the dropped bits), literals are read with float.fromhex
-and printed with float.hex whenever the format fits in binary64 (the checker has its own
-exact parser and printer).  A shared bug would let a wrong result pass; two different
-implementations that agree, and that agree with hardware on binary64, make that unlikely.
+(the checker shifts and inspects the dropped bits), succ and pred from the canonical
+significand and exponent (the checker from bit lengths of spacings), literals are read with
+float.fromhex and printed with float.hex whenever the format fits in binary64 (the checker
+has its own exact parser and printer).  A shared bug would let a wrong result pass; two
+different implementations that agree, and that agree with hardware on binary64, make that
+unlikely.
+
+The Ball kernels need the constants U and V of their center's kernel.  They are computed
+here, exactly, from the error bound of that kernel in a claims file (by default the
+oracle's first-wave fixture), as architecture.md defines them: U = RU(unit / (1 - unit)),
+V = RU(tiny / (1 - unit)) with unit = c u^k and tiny = t eta.
 
 Named variants inject errors that the checker must catch (see VARIANTS).
 """
 
+import ast
+import json
 import math
+import os
 import re
 import sys
 import zlib
+from fractions import Fraction
 
 INF = math.inf
 NAN = math.nan
@@ -35,7 +47,33 @@ VARIANTS = {
                         "the alternative the exhaustive test decides between)",
     "trace-fast-two-sum": "correct results; before a line, a comment for every fast_two_sum call "
                           "whose first operand is smaller in magnitude than the second",
+    # Second wave.
+    "cmp-lead-equal": "comparisons wrong only when the first limbs are equal: lt and le swap "
+                      "their test on the second limbs, eq ignores them",
+    "down-no-neg-step": "to_down_2 forgets the step when the second limb is negative",
+    "down-pow2-wrong-side": "to_down_2 at a leading limb that is a power of two steps by the gap "
+                            "on the other side of it",
+    "radd-no-step": "radd without its final succ",
+    "rmul-nearest": "rmul returns the product rounded to nearest",
+    "ball-no-center-error": "Ball radii without the term of the center kernel's own error",
+    "ball-no-rr": "ball_mul radii without the product of the two radii",
+    "ball-pow2-ulp": "Ball radii one unit in the last place too small when the leading limb of "
+                     "the center is a power of two",
+    "abs-lead-only": "abs_2 negates only the first limb",
+    "trace-mul-pow2": "correct results; before a line, a comment when the pair (h, l) of "
+                      "mul_pow2_2 is not normalized before its fast_two_sum",
 }
+
+ORACLE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_CENTER_CLAIMS = os.path.join(ORACLE_DIR, "selftest", "claims-wave1.json")
+
+# The kernel of each Ball kernel's center.  For one limb it is one operation of the format,
+# whose bound no claims entry states: |RN(v) - v| <= u|v| + t eta with t = 0 for a sum (sums
+# below the normal range are exact) and t = 1/2 for a product.
+CENTER_KERNEL = {"ball_add_1": "add", "ball_sub_1": "add", "ball_mul_1": "prod",
+                 "ball_scale_1": "prod", "ball_add_2": "add_2_2", "ball_sub_2": "add_2_2",
+                 "ball_mul_2": "mul_2_2", "ball_scale_2": "mul_2_1"}
+ONE_OPERATION_BOUND = {"add": ("1", 1, Fraction(0)), "prod": ("1", 1, Fraction(1, 2))}
 
 _NAMED = {"binary64": (53, -1074, 971), "binary32": (24, -149, 104)}
 
@@ -151,6 +189,55 @@ class Arith:
         m = abs(a)
         return m <= self.omega and (m >> ((m & -m).bit_length() - 1)).bit_length() <= self.p
 
+    # -- neighbors, from the definition ------------------------------------
+    def _canonical(self, a):
+        """(m, e) with a = m * 2^e * eta, 2^(p-1) <= m < 2^p, or e = 0 for a subnormal."""
+        e = max(a.bit_length() - self.p, 0)
+        return a >> e, e
+
+    def _above_positive(self, a):
+        # The next number above a >= 0 is m + 1 units of the same exponent (when m + 1 = 2^p
+        # this is the first number of the next binade, the same value).
+        if a == 0:
+            return 1
+        m, e = self._canonical(a)
+        r = (m + 1) << e
+        return INF if r > self.omega else r
+
+    def _below_positive(self, a):
+        # The number below a > 0: one unit less, except at the bottom of a normal binade,
+        # where the binade underneath has units of half the size.
+        m, e = self._canonical(a)
+        if m == 1 << (self.p - 1) and e > 0:
+            return ((1 << self.p) - 1) << (e - 1)
+        return (m - 1) << e
+
+    def next_up(self, a):
+        """succ: the smallest number of the format above a (IEEE nextUp)."""
+        if type(a) is float:
+            if a != a or a > 0:
+                return a
+            return -self.omega
+        if a >= 0:
+            return self._above_positive(a)
+        return -self._below_positive(-a)
+
+    def next_down(self, a):
+        """pred: the largest number of the format below a."""
+        return -self.next_up(-a)
+
+    def round_up_fraction(self, f):
+        """The smallest number of the format not below the positive rational f * eta."""
+        num, den = f.numerator, f.denominator
+        if num <= 0:
+            raise ValueError("round_up_fraction of a nonpositive number")
+        e = num.bit_length() - den.bit_length()
+        if (num << max(-e, 0)) < (den << max(e, 0)):
+            e -= 1
+        unit = 1 << max(e - self.p + 1, 0)
+        r = -((-num) // (den * unit)) * unit
+        return INF if r > self.omega else r
+
     # -- literals --------------------------------------------------------
     def read(self, tok):
         t = tok.lower()
@@ -191,6 +278,66 @@ class Arith:
         return _exact_hex_out(v, self.qmin)
 
 
+def _eval_rational(text, u):
+    """A rational expression in u (integers, u, + - * /, ^ or ** with an integer exponent),
+    evaluated exactly with Python's own parser; the checker has its own evaluator."""
+
+    def ev(n):
+        if isinstance(n, ast.Expression):
+            return ev(n.body)
+        if isinstance(n, ast.Constant) and type(n.value) is int:
+            return Fraction(n.value)
+        if isinstance(n, ast.Name) and n.id == "u":
+            return u
+        if isinstance(n, ast.UnaryOp) and isinstance(n.op, (ast.USub, ast.UAdd)):
+            v = ev(n.operand)
+            return -v if isinstance(n.op, ast.USub) else v
+        if isinstance(n, ast.BinOp):
+            a, b = ev(n.left), ev(n.right)
+            if isinstance(n.op, ast.Add):
+                return a + b
+            if isinstance(n.op, ast.Sub):
+                return a - b
+            if isinstance(n.op, ast.Mult):
+                return a * b
+            if isinstance(n.op, ast.Div):
+                return a / b
+            if isinstance(n.op, ast.Pow) and b.denominator == 1:
+                return a ** int(b)
+        raise ValueError("cannot evaluate %r" % text)
+
+    return ev(ast.parse(str(text).replace("^", "**"), mode="eval"))
+
+
+def center_bound(center, claims_path):
+    """(c, k, t) of the error bound of a center kernel: for one operation the bound of a
+    rounding, otherwise the first unconditional error entry of that kernel in the claims."""
+    if center in ONE_OPERATION_BOUND:
+        return ONE_OPERATION_BOUND[center]
+    with open(claims_path, encoding="utf-8") as fh:
+        data = json.load(fh)
+    for k in data["kernels"]:
+        if k.get("name") == center:
+            for e in k["ensures"]:
+                if e.get("kind") == "error" and e.get("when") is None:
+                    return str(e["c"]), int(e["k"]), Fraction(str(e["t"]))
+    raise ValueError("no error bound for %s in %s" % (center, claims_path))
+
+
+def ball_constants(ar, center, claims_path):
+    """(U, V) as fixed values of the format: unit/(1 - unit) and tiny/(1 - unit) rounded up,
+    with unit = c u^k and tiny = t eta."""
+    c, k, t = center_bound(center, claims_path)
+    u = Fraction(1, 1 << ar.p)
+    unit = _eval_rational(c, u) * u ** k
+    if not 0 <= unit < 1:
+        raise ValueError("unit %s of %s is not in [0, 1)" % (unit, center))
+    per_eta = Fraction(1 << -ar.qmin) if ar.qmin < 0 else Fraction(1, 1 << ar.qmin)
+    U = ar.round_up_fraction(unit / (1 - unit) * per_eta) if unit else 0
+    V = ar.round_up_fraction(t / (1 - unit)) if t else 0
+    return U, V
+
+
 def _exact_hex(tok):
     m = re.fullmatch(r"([+-]?)0[xX]([0-9a-fA-F]*)\.?([0-9a-fA-F]*)[pP]([+-]?\d+)", tok)
     if not m:
@@ -211,10 +358,12 @@ def _exact_hex_out(v, scale):
 # Kernels, value names as in architecture.md
 
 class Kernels:
-    def __init__(self, ar):
+    def __init__(self, ar, center_claims=DEFAULT_CENTER_CLAIMS):
         self.A = ar
         self.v = ar.variant
-        self.trace = [] if ar.variant == "trace-fast-two-sum" else None
+        self.trace = [] if ar.variant in ("trace-fast-two-sum", "trace-mul-pow2") else None
+        self.center_claims = center_claims
+        self._consts = {}
 
     def two_sum(self, a, b):
         A = self.A
@@ -233,7 +382,8 @@ class Kernels:
         s = A.add(a, b)
         z = A.sub(s, a)
         e = A.sub(b, z)
-        if self.trace is not None and type(a) is int and type(b) is int and abs(a) < abs(b):
+        if (self.v == "trace-fast-two-sum" and type(a) is int and type(b) is int
+                and abs(a) < abs(b)):
             # The documented precondition is |a| >= |b|, or exponent(a) >= exponent(b) with
             # IEEE exponents (clamped at the smallest normal binade).
             ea = max(abs(a).bit_length(), A.p) if a else A.p
@@ -316,25 +466,233 @@ class Kernels:
             return self.two_sum(sh, w)
         return self.fast_two_sum(sh, w, "final")
 
+    # -- second wave: sign changes and subtraction -------------------------------------------
+    def neg_2(self, x0, x1):
+        return -x0, -x1
+
+    def abs_2(self, x0, x1):
+        m = x0 < 0
+        n0 = -x0
+        n1 = x1 if self.v == "abs-lead-only" else -x1
+        z0 = n0 if m else x0
+        z1 = n1 if m else x1
+        return z0, z1
+
+    def sub_2_2(self, x0, x1, y0, y1):
+        return self.add_2_2(x0, x1, -y0, -y1)
+
+    def sub_2_1(self, x0, x1, a):
+        return self.add_2_1(x0, x1, -a)
+
+    def sub_1_2(self, a, y0, y1):
+        return self.add_2_1(-y0, -y1, a)
+
+    # -- comparisons, limbs in order ---------------------------------------------------------
+    def _lt(self, x0, x1, y0, y1, strict):
+        h = x0 < y0
+        e = x0 == y0
+        # The injected error: when the first limbs are equal, lt and le swap tests.
+        if self.v == "cmp-lead-equal" and e:
+            strict = not strict
+        l = x1 < y1 if strict else x1 <= y1
+        t = e and l
+        return (h or t,)
+
+    def _eq(self, x0, x1, y0, y1):
+        h = x0 == y0
+        l = x1 == y1
+        if self.v == "cmp-lead-equal" and h:
+            l = True
+        return (h and l,)
+
+    def lt_2_2(self, x0, x1, y0, y1):
+        return self._lt(x0, x1, y0, y1, True)
+
+    def le_2_2(self, x0, x1, y0, y1):
+        return self._lt(x0, x1, y0, y1, False)
+
+    def eq_2_2(self, x0, x1, y0, y1):
+        return self._eq(x0, x1, y0, y1)
+
+    def lt_2_1(self, x0, x1, a):
+        return self._lt(x0, x1, a, 0, True)
+
+    def le_2_1(self, x0, x1, a):
+        return self._lt(x0, x1, a, 0, False)
+
+    def eq_2_1(self, x0, x1, a):
+        return self._eq(x0, x1, a, 0)
+
+    def lt_1_2(self, a, y0, y1):
+        return self._lt(a, 0, y0, y1, True)
+
+    def le_1_2(self, a, y0, y1):
+        return self._lt(a, 0, y0, y1, False)
+
+    # -- conversions to one limb -------------------------------------------------------------
+    def to_nearest_2(self, x0, x1):
+        return (x0,)
+
+    def to_down_2(self, x0, x1):
+        A = self.A
+        m = x1 < 0
+        p = A.next_down(x0)
+        if self.v == "down-no-neg-step":
+            m = False
+        if (self.v == "down-pow2-wrong-side" and type(x0) is int and x0
+                and abs(x0) & (abs(x0) - 1) == 0):
+            s = A.next_up(x0)
+            p = x0 - (s - x0) if type(s) is int else p
+        t = p if m else x0
+        return (t,)
+
+    def to_up_2(self, x0, x1):
+        m = 0 < x1
+        s = self.A.next_up(x0)
+        t = s if m else x0
+        return (t,)
+
+    def abs_upper_2(self, x0, x1):
+        a0, a1 = self.abs_2(x0, x1)
+        return self.to_up_2(a0, a1)
+
+    # -- directed steps, scaling --------------------------------------------------------------
+    def radd(self, a, b):
+        s = self.A.add(a, b)
+        r = s if self.v == "radd-no-step" else self.A.next_up(s)
+        return (r,)
+
+    def rmul(self, a, b):
+        p = self.A.prod(a, b)
+        r = p if self.v == "rmul-nearest" else self.A.next_up(p)
+        return (r,)
+
+    def mul_pow2_2(self, x0, x1, c):
+        A = self.A
+        h = A.prod(x0, c)
+        l = A.prod(x1, c)
+        if self.v == "trace-mul-pow2" and type(h) is int and type(l) is int and A.add(h, l) != h:
+            self.trace.append("mul_pow2_2: (h, l) = (%s, %s) is not normalized"
+                              % (A.write(h), A.write(l)))
+        return self.fast_two_sum(h, l, "final")
+
+    # -- Ball kernels ---------------------------------------------------------------------------
+    def consts(self, kname):
+        c = self._consts.get(kname)
+        if c is None:
+            c = self._consts[kname] = ball_constants(self.A, CENTER_KERNEL[kname],
+                                                     self.center_claims)
+        return c
+
+    def _abs_upper(self, cz):
+        return (abs(cz[0]),) if len(cz) == 1 else self.abs_upper_2(*cz)
+
+    def _rz(self, cz, rz):
+        c0 = cz[0]
+        if (self.v == "ball-pow2-ulp" and type(c0) is int and c0 and type(rz) is int
+                and abs(c0) & (abs(c0) - 1) == 0):
+            return self.A.next_down(rz)
+        return rz
+
+    def _ball_add(self, kname, cx, rx, cy, ry):
+        A = self.A
+        U, _ = self.consts(kname)
+        cz = (A.add(cx[0], cy[0]),) if len(cx) == 1 else self.add_2_2(*(cx + cy))
+        (mz,) = self._abs_upper(cz)
+        (d,) = self.rmul(U, mz)
+        (r0,) = self.radd(rx, ry)
+        (rz,) = (r0,) if self.v == "ball-no-center-error" else self.radd(r0, d)
+        return cz + (self._rz(cz, rz),)
+
+    def _ball_mul(self, kname, cx, rx, cy, ry):
+        A = self.A
+        U, V = self.consts(kname)
+        cz = (A.prod(cx[0], cy[0]),) if len(cx) == 1 else self.mul_2_2(*(cx + cy))
+        (ax,) = self._abs_upper(cx)
+        (ay,) = self._abs_upper(cy)
+        (t1,) = self.rmul(ax, ry)
+        (t2,) = self.rmul(ay, rx)
+        (t3,) = self.rmul(rx, ry)
+        (s1,) = self.radd(t1, t2)
+        (s2,) = (s1,) if self.v == "ball-no-rr" else self.radd(s1, t3)
+        (mz,) = self._abs_upper(cz)
+        (d0,) = self.rmul(U, mz)
+        (d,) = self.radd(d0, V)
+        (rz,) = (s2,) if self.v == "ball-no-center-error" else self.radd(s2, d)
+        return cz + (self._rz(cz, rz),)
+
+    def _ball_scale(self, kname, cx, rx, a):
+        A = self.A
+        U, V = self.consts(kname)
+        cz = (A.prod(cx[0], a),) if len(cx) == 1 else self.mul_2_1(cx[0], cx[1], a)
+        aa = abs(a)
+        (t1,) = self.rmul(aa, rx)
+        (mz,) = self._abs_upper(cz)
+        (d0,) = self.rmul(U, mz)
+        (d,) = self.radd(d0, V)
+        (rz,) = (t1,) if self.v == "ball-no-center-error" else self.radd(t1, d)
+        return cz + (self._rz(cz, rz),)
+
+    def ball_add_1(self, cx, rx, cy, ry):
+        return self._ball_add("ball_add_1", (cx,), rx, (cy,), ry)
+
+    def ball_add_2(self, cx0, cx1, rx, cy0, cy1, ry):
+        return self._ball_add("ball_add_2", (cx0, cx1), rx, (cy0, cy1), ry)
+
+    def ball_sub_1(self, cx, rx, cy, ry):
+        return self._ball_add("ball_sub_1", (cx,), rx, (-cy,), ry)
+
+    def ball_sub_2(self, cx0, cx1, rx, cy0, cy1, ry):
+        return self._ball_add("ball_sub_2", (cx0, cx1), rx, (-cy0, -cy1), ry)
+
+    def ball_neg_1(self, cx, rx):
+        return -cx, rx
+
+    def ball_neg_2(self, cx0, cx1, rx):
+        return -cx0, -cx1, rx
+
+    def ball_mul_1(self, cx, rx, cy, ry):
+        return self._ball_mul("ball_mul_1", (cx,), rx, (cy,), ry)
+
+    def ball_mul_2(self, cx0, cx1, rx, cy0, cy1, ry):
+        return self._ball_mul("ball_mul_2", (cx0, cx1), rx, (cy0, cy1), ry)
+
+    def ball_scale_1(self, cx, rx, a):
+        return self._ball_scale("ball_scale_1", (cx,), rx, a)
+
+    def ball_scale_2(self, cx0, cx1, rx, a):
+        return self._ball_scale("ball_scale_2", (cx0, cx1), rx, a)
+
 
 ARITY = {"two_sum": 2, "fast_two_sum": 2, "two_prod": 2, "two_prod_dekker": 2, "split": 1,
-         "add_2_2": 4, "add_2_1": 3, "mul_2_2": 4, "mul_2_1": 3, "add_fast_2_2": 4}
+         "add_2_2": 4, "add_2_1": 3, "mul_2_2": 4, "mul_2_1": 3, "add_fast_2_2": 4,
+         "neg_2": 2, "abs_2": 2, "sub_2_2": 4, "sub_2_1": 3, "sub_1_2": 3,
+         "lt_2_2": 4, "le_2_2": 4, "eq_2_2": 4, "lt_2_1": 3, "le_2_1": 3, "eq_2_1": 3,
+         "lt_1_2": 3, "le_1_2": 3, "to_nearest_2": 2, "to_down_2": 2, "to_up_2": 2,
+         "abs_upper_2": 2, "radd": 2, "rmul": 2, "mul_pow2_2": 3,
+         "ball_add_1": 4, "ball_add_2": 6, "ball_sub_1": 4, "ball_sub_2": 6, "ball_neg_1": 2,
+         "ball_neg_2": 3, "ball_mul_1": 4, "ball_mul_2": 6, "ball_scale_1": 3,
+         "ball_scale_2": 4}
+FIRST_WAVE = frozenset(("two_sum", "fast_two_sum", "two_prod", "two_prod_dekker", "split",
+                        "add_2_2", "add_2_1", "mul_2_2", "mul_2_1", "add_fast_2_2"))
 # Which input limb pairs form a normalized 2-limb operand (for corrupt-input).
 PAIRS = {"add_2_2": (0, 2), "add_2_1": (0,), "mul_2_2": (0, 2), "mul_2_1": (0,),
          "add_fast_2_2": (0, 2)}
 
 
 class Runner:
-    def __init__(self, variant="correct"):
+    def __init__(self, variant="correct", center_claims=None):
         if variant not in VARIANTS:
             raise ValueError("unknown variant %r (known: %s)" % (variant, ", ".join(VARIANTS)))
         self.variant = variant
+        self.center_claims = center_claims or DEFAULT_CENTER_CLAIMS
         self.cache = {}
 
     def kernels(self, fmtname):
         k = self.cache.get(fmtname)
         if k is None:
-            k = self.cache[fmtname] = Kernels(Arith(parse_format_triple(fmtname), self.variant))
+            k = self.cache[fmtname] = Kernels(Arith(parse_format_triple(fmtname), self.variant),
+                                              self.center_claims)
         return k
 
     def complete(self, line):
@@ -362,19 +720,24 @@ class Runner:
             del K.trace[:]
         out = list(getattr(K, kname)(*vals))
         if K.trace:
-            pre += ["# refrun trace: fast_two_sum %s with |a| < |b|: a = 0 %s, exponent(a) >= "
-                    "exponent(b) %s, error-free %s" % (site, "yes" if z else "no",
-                                                       "yes" if eok else "no", "yes" if ex else "no")
-                    for site, z, eok, ex in K.trace]
-        if self.variant == "ulp-rare" and zlib.crc32(line.encode()) % 256 == 0 and len(out) > 1:
+            pre += ["# refrun trace: " + t if isinstance(t, str) else
+                    "# refrun trace: fast_two_sum %s with |a| < |b|: a = 0 %s, exponent(a) >= "
+                    "exponent(b) %s, error-free %s" % (t[0], "yes" if t[1] else "no",
+                                                       "yes" if t[2] else "no",
+                                                       "yes" if t[3] else "no")
+                    for t in K.trace]
+        first = kname in FIRST_WAVE
+        if (self.variant == "ulp-rare" and first and zlib.crc32(line.encode()) % 256 == 0
+                and len(out) > 1):
             out[1] = A.succ(out[1])
-        if self.variant == "not-normalized" and len(out) == 2:
+        if self.variant == "not-normalized" and first and len(out) == 2:
             z0, z1 = out
             if type(z0) is int and type(z1) is int and z0 != 0:
                 n = A.succ(z0)
                 if type(n) is int and A.member(z1 - (n - z0)):
                     out = [n, z1 - (n - z0)]
-        return pre + [line + " -> " + " ".join(A.write(v) for v in out)]
+        return pre + [line + " -> " + " ".join(
+            ("1" if v else "0") if type(v) is bool else A.write(v) for v in out)]
 
     def corrupt(self, kname, A, args):
         args = list(args)
@@ -416,11 +779,23 @@ def main(argv):
                                  description="Reference runner (pure Python, any binary format).")
     ap.add_argument("--variant", default="correct", help="one of: " + ", ".join(VARIANTS))
     ap.add_argument("--list-variants", action="store_true")
+    ap.add_argument("--center-claims",
+                    help="claims file whose bounds of add_2_2, mul_2_2 and mul_2_1 give the Ball "
+                         "constants U and V (default: the oracle's first-wave fixture)")
+    ap.add_argument("--print-constants", metavar="FORMAT",
+                    help="print U and V of every Ball kernel for FORMAT and stop")
     a = ap.parse_args(argv)
     if a.list_variants:
         for k, v in VARIANTS.items():
-            print("%-18s %s" % (k, v))
+            print("%-22s %s" % (k, v))
         return 0
-    Runner(a.variant).run(sys.stdin, sys.stdout)
+    if a.print_constants:
+        ar = Arith(parse_format_triple(a.print_constants))
+        for center in sorted(set(CENTER_KERNEL.values())):
+            U, V = ball_constants(ar, center, a.center_claims or DEFAULT_CENTER_CLAIMS)
+            print("%s.%s.U=%s" % (a.print_constants, center, ar.write(U)))
+            print("%s.%s.V=%s" % (a.print_constants, center, ar.write(V)))
+        return 0
+    Runner(a.variant, a.center_claims).run(sys.stdin, sys.stdout)
     sys.stdout.flush()
     return 0
