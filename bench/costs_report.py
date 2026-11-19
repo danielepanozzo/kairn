@@ -198,6 +198,7 @@ def gs_probe_tables(directory):
         print('|---|' + '---|' * len(names))
         for v, what in iso['variants'].items():
             r = iso['results']['variant %s' % v]
+            what = what.replace('<', '&lt;').replace('>', '&gt;')   # Expansion<T, 1> is no HTML tag
             print('| %s: %s | %s |' % (v, what, ' | '.join(cell(r.get(n)) for n in names)))
         print()
     if objs:
