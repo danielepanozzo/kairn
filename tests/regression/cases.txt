@@ -503,419 +503,452 @@ two_prod fp:7:-20:-6 -0x1.fcp+0 -0x1.fcp-9 #brute:62
 # --- The adversarial search: its best lines that came at least as close as the brute-force runs --
 
 # add_1_1 binary64, error(s) form R, c=1/(1+u), k=1, t=0: largest error/allowed 1; the brute-force
-# runs: 1. Found by kairn-oracle search (seed 0, 20000 cases, the interpreter), a line of
-# results/milestone1/brute/linux-x86-64.json: add_1_1 binary64 -0x1p+0 -0x1.0000000000001p+0
-# #extreme:265622.
+# runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, through the
+# interpreter), a line of results/milestone1/brute/linux-x86-64.json: add_1_1 binary64 -0x1p+0
+# -0x1.0000000000001p+0 #extreme:265622.
 add_1_1 binary64 -0x1p+0 -0x1.0000000000001p+0 #search:1
 
-# add_2_1 binary64, error(z) form R, c=2, k=2, t=0: largest error/allowed 1 - 2.22e-16; the
-# brute-force runs: 0.9831748346. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
-add_2_1 binary64 0x1p+1022 0x1.0000000000001p+968 -0x1.fffffffffffffp+1020 #search:2
-
 # add_2_1 binary32, error(z) form R, c=2, k=2, t=0: largest error/allowed 1 - 1.19e-07; the
-# brute-force runs: 0.9877198049. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
-add_2_1 binary32 0x1p+0 0x1.000002p-25 -0x1.fffffep-2 #search:3
+# brute-force runs: 0.9877198049. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
+add_2_1 binary32 0x1p+0 0x1.000002p-25 -0x1.fffffep-2 #search:2
 
-# add_2_1_full binary64, F2, core add_2_1: error(z) form R, c=2, k=2, t=0: largest error/allowed 1 -
-# 2.22e-16; the brute-force runs: 0.984177767. Found by kairn-oracle search (seed 0, 20000 cases,
-# the interpreter), from stratum extreme, case 0.
-add_2_1_full binary64 -0x1p+154 -0x1.0000000000001p+100 0x1.fffffffffffffp+152 #search:4
+# add_2_1 binary64, error(z) form R, c=2, k=2, t=0: largest error/allowed 1 - 2.22e-16; the
+# brute-force runs: 0.9831748346. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
+add_2_1 binary64 0x1p+1022 0x1.0000000000001p+968 -0x1.fffffffffffffp+1020 #search:3
 
 # add_2_1_full binary32, F2, core add_2_1: error(z) form R, c=2, k=2, t=0: largest error/allowed 1 -
-# 1.19e-07; the brute-force runs: 0.9846285019. Found by kairn-oracle search (seed 0, 20000 cases,
-# the interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
-add_2_1_full binary32 0x1p+0 0x1.000002p-25 -0x1.fffffep-2 #search:5
+# 1.19e-07; the brute-force runs: 0.9846285019. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, through the interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
+add_2_1_full binary32 0x1p+0 0x1.000002p-25 -0x1.fffffep-2 #search:4
 
-# add_2_2 binary64, error(z) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed 1 - 8.14e-16; the
-# brute-force runs: 0.665531474. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from literature: MR22 p. 6, Property 2.1, AccurateDWPlusDW.
-add_2_2 binary64 -0x1.fffffffffffffp+1019 -0x1.fffffffffffffp+913 0x1p+1021 0x1.fffffffffffffp+967 #search:6
+# add_2_1_full binary64, F2, core add_2_1: error(z) form R, c=2, k=2, t=0: largest error/allowed 1 -
+# 2.22e-16; the brute-force runs: 0.984177767. Found by kairn-oracle search (seed 0, 20000 cases per
+# kernel and format, through the interpreter), from stratum extreme, case 0.
+add_2_1_full binary64 -0x1p+154 -0x1.0000000000001p+100 0x1.fffffffffffffp+152 #search:5
 
 # add_2_2 binary32, error(z) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed 1 - 4.37e-07; the
-# brute-force runs: 0.6889230825. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from literature: MR22 p. 6, Property 2.1, AccurateDWPlusDW.
-add_2_2 binary32 0x1p+122 0x1.fffffep+97 -0x1.fffffep+120 -0x1.fffffep+72 #search:7
+# brute-force runs: 0.6889230825. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), from literature: MR22 p. 6, Property 2.1, AccurateDWPlusDW.
+add_2_2 binary32 0x1p+122 0x1.fffffep+97 -0x1.fffffep+120 -0x1.fffffep+72 #search:6
 
-# add_2_2_full binary64, F2, core add_2_2: error(z) form R, c=3/(1-4*u), k=2, t=0: largest
-# error/allowed 1 - 8.14e-16; the brute-force runs: 0.6666666667. Found by kairn-oracle search (seed
-# 0, 20000 cases, the interpreter), from literature: MR22 p. 6, Property 2.1, AccurateDWPlusDW.
-add_2_2_full binary64 0x1p+1023 0x1.fffffffffffffp+969 -0x1.fffffffffffffp+1021 -0x1.fffffffffffffp+915 #search:8
+# add_2_2 binary64, error(z) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed 1 - 8.14e-16; the
+# brute-force runs: 0.665531474. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), from literature: MR22 p. 6, Property 2.1, AccurateDWPlusDW.
+add_2_2 binary64 -0x1.fffffffffffffp+1019 -0x1.fffffffffffffp+913 0x1p+1021 0x1.fffffffffffffp+967 #search:7
 
 # add_2_2_full binary32, F2, core add_2_2: error(z) form R, c=3/(1-4*u), k=2, t=0: largest
 # error/allowed 1 - 4.37e-07; the brute-force runs: 0.7180185433. Found by kairn-oracle search (seed
-# 0, 20000 cases, the interpreter), from literature: MR22 p. 6, Property 2.1, AccurateDWPlusDW.
-add_2_2_full binary32 0x1p+127 0x1.fffffep+102 -0x1.fffffep+125 -0x1.fffffep+77 #search:9
+# 0, 20000 cases per kernel and format, through the interpreter), from literature: MR22 p. 6,
+# Property 2.1, AccurateDWPlusDW.
+add_2_2_full binary32 0x1p+127 0x1.fffffep+102 -0x1.fffffep+125 -0x1.fffffep+77 #search:8
 
-# add_fast_2_2 binary64, error(z) form A, c=3, k=2, t=0: largest error/allowed 0.9576857242; the
-# brute-force runs: 0.7427914495. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from stratum close, case 5.
-add_fast_2_2 binary64 0x1.0000000000001p-933 0x1.f4e04051c2285p-987 0x1.10d9c70685c3p-938 0x1.eb5fef8040001p-992 #search:10
+# add_2_2_full binary64, F2, core add_2_2: error(z) form R, c=3/(1-4*u), k=2, t=0: largest
+# error/allowed 1 - 8.14e-16; the brute-force runs: 0.6666666667. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, through the interpreter), from literature: MR22 p. 6,
+# Property 2.1, AccurateDWPlusDW.
+add_2_2_full binary64 0x1p+1023 0x1.fffffffffffffp+969 -0x1.fffffffffffffp+1021 -0x1.fffffffffffffp+915 #search:9
 
 # add_fast_2_2 binary32, error(z) form A, c=3, k=2, t=0: largest error/allowed 1 - 4.37e-07; the
-# brute-force runs: 0.5957899376. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/linux-x86-64.json: add_fast_2_2 binary32
-# 0x1.4p+77 0x1.fffffep+52 0x1.adae78p+99 0x1.fffffep+74 #extreme:1126254.
-add_fast_2_2 binary32 0x1p+99 0x1.fffffep+74 0x1.4p+77 0x1.fffffep+52 #search:11
+# brute-force runs: 0.5957899376. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and
+# format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from a line of results/milestone1/brute/windows-x64.json: add_fast_2_2 binary32 -0x1p+40
+# -0x1.fffffep+15 -0x1.76eba4p+15 -0x1.fffffep-10 #extreme:630570.
+add_fast_2_2 binary32 -0x1.4p-66 0x1.fffffep-91 -0x1.000002p-44 0x1.fffffep-69 #search:10
 
-# add_fast_2_2_full binary64, F2, core add_fast_2_2: error(z) form A, c=3, k=2, t=0: largest
-# error/allowed 0.7876131628; the brute-force runs: 0.523703511. Found by kairn-oracle search (seed
-# 0, 20000 cases, the interpreter), from a line of results/milestone1/brute/linux-x86-64.json:
-# add_fast_2_2_full binary64 -0x1.5f364b2159d63p+1022 0x1.26baaab8de08cp+947
-# -0x1.15e3af47f4fe4p+1023 0x1.fffffffffffffp+969 #edge:418802.
-add_fast_2_2_full binary64 -0x1.0002040000004p+1023 0x1.fffffbfffffffp+969 -0x1.0e2c9642b3ea6p+1021 0x1.2cbaeab80dfffp+947 #search:12
+# add_fast_2_2 binary64, error(z) form A, c=3, k=2, t=0: largest error/allowed 1 - 8.14e-16; the
+# brute-force runs: 0.7427914495. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and
+# format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from a line of results/milestone1/brute/linux-x86-64.json: add_fast_2_2 binary64
+# 0x1.0b615051b21cfp+666 0x1.f4d0405142e95p+612 0x1.1857a9d7fa27ep+664 0x1.8384ecc57285fp+608
+# #close:309921.
+add_fast_2_2 binary64 0x1p-187 0x1p-240 0x1.4p-238 0x1.7ffffffffffffp-292 #search:11
 
 # add_fast_2_2_full binary32, F2, core add_fast_2_2: error(z) form A, c=3, k=2, t=0: largest
-# error/allowed 0.9213518545; the brute-force runs: 0.7663672314. Found by kairn-oracle search (seed
-# 0, 20000 cases, the interpreter), from a line of results/milestone1/brute/macos-arm64.json:
-# add_fast_2_2_full binary32 -0x1p+23 -0x1p-1 -0x1.7686dep-2 0x1.fffffep-27 #extreme:1119714.
-add_fast_2_2_full binary32 -0x1p-70 -0x1.e9496cp-95 -0x1.01061p-74 -0x1.6c0be2p-99 #search:13
+# error/allowed 1 - 4.37e-07; the brute-force runs: 0.7663672314. Found by kairn-oracle search (seed
+# 0, 1000000 cases per kernel and format, through the scalar runner of a GCC 13 build on Linux
+# x86-64, 48 processes, batches of 1024), from a line of the first version of this file.
+add_fast_2_2_full binary32 0x1.000002p+126 -0x1.fffffep+101 0x1.4p+104 -0x1.fffffep+79 #search:12
+
+# add_fast_2_2_full binary64, F2, core add_fast_2_2: error(z) form A, c=3, k=2, t=0: largest
+# error/allowed 1 - 8.14e-16; the brute-force runs: 0.523703511. Found by kairn-oracle search (seed
+# 0, 1000000 cases per kernel and format, through the scalar runner of a GCC 13 build on Linux
+# x86-64, 48 processes, batches of 1024), from a line of the first version of this file.
+add_fast_2_2_full binary64 0x1.4p+491 -0x1.fffffffffffffp+437 0x1.0000000000001p+542 -0x1.fffffffffffffp+488 #search:13
 
 # ball_add_1 binary64, encloses(cz, rz) x+y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
-# of the radius 1; the brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), a line of results/milestone1/brute/linux-x86-64.json: ball_add_1 binary64
-# -0x1.ffffffffffffdp+1022 0x1.00001p+1023 0x1.fffffffffffffp+1023 0x1.baa00c34ad848p+1019
-# #overflow:1014412.
+# of the radius 1; the brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per
+# kernel and format, through the interpreter), a line of results/milestone1/brute/linux-x86-64.json:
+# ball_add_1 binary64 -0x1.ffffffffffffdp+1022 0x1.00001p+1023 0x1.fffffffffffffp+1023
+# 0x1.baa00c34ad848p+1019 #overflow:1014412.
 ball_add_1 binary64 -0x1.ffffffffffffdp+1022 0x1.00001p+1023 0x1.fffffffffffffp+1023 0x1.baa00c34ad848p+1019 #search:14
-
-# ball_add_1_full binary64, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
-# |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1; the brute-force runs:
-# 1. Found by kairn-oracle search (seed 0, 20000 cases, the interpreter), a line of
-# results/milestone1/brute/linux-x86-64.json: ball_add_1_full binary64 -0x1.fffffffffffffp+1023
-# 0x1p+1022 0x1.ffffffffffffdp+1022 0x1.549103e54ff75p+1022 #hugeradius:315167.
-ball_add_1_full binary64 -0x1.fffffffffffffp+1023 0x1p+1022 0x1.ffffffffffffdp+1022 0x1.549103e54ff75p+1022 #search:15
 
 # ball_add_1_full binary32, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
 # |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1; the brute-force runs:
-# 1. Found by kairn-oracle search (seed 0, 20000 cases, the interpreter), a line of
-# results/milestone1/brute/linux-x86-64.json: ball_add_1_full binary32 0x1.fffffap+125
-# 0x1.6f24bap+125 -0x1.fffffep+126 0x1p+125 #hugeradius:919651.
-ball_add_1_full binary32 0x1.fffffap+125 0x1.6f24bap+125 -0x1.fffffep+126 0x1p+125 #search:16
+# 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, through the
+# interpreter), a line of results/milestone1/brute/linux-x86-64.json: ball_add_1_full binary32
+# 0x1.fffffap+125 0x1.6f24bap+125 -0x1.fffffep+126 0x1p+125 #hugeradius:919651.
+ball_add_1_full binary32 0x1.fffffap+125 0x1.6f24bap+125 -0x1.fffffep+126 0x1p+125 #search:15
 
-# ball_add_2 binary64, encloses(cz, rz) x+y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
-# of the radius 1.171875; the brute-force runs: 1.25238385. Found by kairn-oracle search (seed 0,
-# 20000 cases, the interpreter), from a line of results/milestone1/brute/macos-arm64.json:
-# ball_add_2 binary64 -0x1.6f6453c0f15dp+1021 0x1.fffffffffffffp+967 0x1p+1021
-# 0x1.fffffffffffffp+1023 -0x1.fffffffffffffp+969 0x1.ffffffffffffdp+1022 #overflow:1484596.
-ball_add_2 binary64 0x1.911b1a47ccaaep+664 -0x1.f44f8b4c7f38p+608 0x1.fffffffffffffp+566 0x1p+671 0x1.e6e55de0ce7f7p+617 0x1.fffffffffffffp+620 #search:17
+# ball_add_1_full binary64, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1; the brute-force runs:
+# 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, through the
+# interpreter), a line of results/milestone1/brute/linux-x86-64.json: ball_add_1_full binary64
+# -0x1.fffffffffffffp+1023 0x1p+1022 0x1.ffffffffffffdp+1022 0x1.549103e54ff75p+1022
+# #hugeradius:315167.
+ball_add_1_full binary64 -0x1.fffffffffffffp+1023 0x1p+1022 0x1.ffffffffffffdp+1022 0x1.549103e54ff75p+1022 #search:16
 
 # ball_add_2 binary32, encloses(cz, rz) x+y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
 # of the radius 1.125000015; the brute-force runs: 1.250128612. Found by kairn-oracle search (seed
-# 0, 20000 cases, the interpreter), from stratum radii, case 2.
-ball_add_2 binary32 -0x1.178b1p+26 0x1p+2 0x1.fffffep-21 -0x1.8p+3 0x1.40bp-22 0x1.fffffep+4 #search:18
+# 0, 20000 cases per kernel and format, through the interpreter), from stratum radii, case 2.
+ball_add_2 binary32 -0x1.178b1p+26 0x1p+2 0x1.fffffep-21 -0x1.8p+3 0x1.40bp-22 0x1.fffffep+4 #search:17
 
-# ball_add_2_full binary64, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
-# |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.171875; the brute-force
-# runs: 1.258921446. Found by kairn-oracle search (seed 0, 20000 cases, the interpreter), from a
-# line of results/milestone1/brute/supplementary/macos-arm64-b4.json: ball_add_2_full binary64
-# 0x1.dcbdcd9c1e06ap+1021 0x1.038b7938849a9p+926 0x1.edba97ca2ae94p+967 -0x1.dcbdcd9c1e069p+1021
-# 0x1.c109cfaef0b85p+965 0x1.fffffffffffffp+1021 #cancel:780442.
-ball_add_2_full binary64 0x1.dcbdcf9c1e06bp+663 -0x1.fffffff000002p+609 0x1.fffffffffffffp+559 0x1.4c439655577a1p+660 -0x1p+556 0x1.fffffffffffffp+613 #search:19
+# ball_add_2 binary64, encloses(cz, rz) x+y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
+# of the radius 1.15625; the brute-force runs: 1.25238385. Found by kairn-oracle search (seed 0,
+# 1000000 cases per kernel and format, through the scalar runner of a GCC 13 build on Linux x86-64,
+# 48 processes, batches of 1024), from a line of results/milestone1/brute/macos-arm64.json:
+# ball_add_2 binary64 -0x1.ea731aec56a96p-951 0x1.21379fe891a82p-1022 0x1.fffffffffffffp+1022
+# -0x1.911b1a47ccab5p+958 0x1.e1106cf4ef3bdp+35 0x1.fb1e2d0212a7dp+968 #wide:575109.
+ball_add_2 binary64 0x1.911b1a47ccaa9p+973 -0x1.fffffffffffffp+913 0x1.fffffffffffffp+916 0x1.000001054000ap+1021 0x1.e6e55de0ce7e7p+967 0x1.fffffffffffffp+970 #search:18
 
 # ball_add_2_full binary32, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
-# |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.15820314; the
-# brute-force runs: 1.25005275. Found by kairn-oracle search (seed 0, 20000 cases, the interpreter),
-# from a line of results/milestone1/brute/supplementary/linux-x86-64-b4.json: ball_add_2_full
-# binary32 0x1.fffffep+127 0x0p+0 0x1.7ff916p+102 0x1p-148 0x0p+0 0x1.fffffcp+125 #extreme:2852241.
-ball_add_2_full binary32 -0x1.65478p+126 0x1.ffffeep+101 0x1.fffffep+104 0x1.082002p+122 -0x1.80001ep+96 0x1.fffffep+79 #search:20
+# |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.109375015; the
+# brute-force runs: 1.25005275. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and
+# format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from a line of results/milestone1/brute/windows-x64.json: ball_add_2_full binary32
+# 0x1.65477cp-84 -0x1p-149 0x1.fffffep+125 0x1.720b6ap+102 0x1.91750ap+77 0x1.f5820ep+100
+# #wide:947690.
+ball_add_2_full binary32 -0x1.082014p+53 -0x1.fffffep+28 0x1.fffffep+8 0x1.65478p+55 -0x1.fffffep+30 0x1.fffffep+33 #search:19
 
-# ball_mul_1 binary64, encloses(cz, rz) x*y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
-# of the radius 1.503734438; the brute-force runs: 1.558107973. Found by kairn-oracle search (seed
-# 0, 20000 cases, the interpreter), from a line of results/milestone1/brute/macos-arm64.json:
-# ball_mul_1 binary64 0x1p+238 0x1.83a892fd78aa9p+252 0x1p+732 0x1.75e851ec7bcefp+744 #pow2:513315.
-ball_mul_1 binary64 -0x1.0000000000219p-958 0x1.83a892fd78aa9p-944 0x1.8000000000001p+729 0x1.75e8518c7bcefp+741 #search:21
+# ball_add_2_full binary64, encloses(cw, rw) x+y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx+cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.156311035; the
+# brute-force runs: 1.258921446. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and
+# format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from a line of the first version of this file.
+ball_add_2_full binary64 0x1.dcbdcf9c1e06bp-505 -0x1.fffffff000002p-559 0x1.fffffffffffffp-609 0x1.4c439655577a1p-508 -0x1.6d6599bbca601p-568 0x1.fffffffffffffp-555 #search:20
 
 # ball_mul_1 binary32, encloses(cz, rz) x*y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
-# of the radius 1.500020333; the brute-force runs: 1.535302303. Found by kairn-oracle search (seed
-# 0, 20000 cases, the interpreter), from a line of results/milestone1/brute/macos-arm64.json:
-# ball_mul_1 binary32 -0x1.c61316p-70 0x1.a41a2ep-65 0x1.aa69b4p+3 0x1.4a8fp+20 #wide:197810.
-ball_mul_1 binary32 0x1.a6p-126 0x1.00000ap-109 -0x1.fffd1cp+53 0x1.fffffep+56 #search:22
+# of the radius 1.500000089; the brute-force runs: 1.535302303. Found by kairn-oracle search (seed
+# 0, 1000000 cases per kernel and format, through the scalar runner of a GCC 13 build on Linux
+# x86-64, 48 processes, batches of 1024), from a line of results/milestone1/brute/windows-x64.json:
+# ball_mul_1 binary32 -0x1.11d222p+122 0x1.fffffep+127 0x1.cc788p-116 0x1.000108p-109 #wide:513268.
+ball_mul_1 binary32 0x1.fffffcp+67 0x1.fffffep+91 0x1p-148 0x1.000002p-124 #search:21
 
-# ball_mul_1_full binary64, encloses(cw, rw) x*y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
-# |(abs(cx)+rx)*(abs(cy)+ry)| <= 2^(qmax+p-4): smallest slack in gaps of the radius 1.506098738; the
-# brute-force runs: 1.598718958. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/windows-x64.json: ball_mul_1_full binary64
-# -0x1.fc8dd3592c02ep+732 0x1.9c45a6bfbd92dp+736 0x1p-1074 0x1.4e155fcp-1048 #radii:635353.
-ball_mul_1_full binary64 -0x1.0000000028235p-983 0x1.4e155e4p-957 0x1.1eb33c25d7f9cp+70 0x1.9df5a6bfbd92dp+73 #search:23
+# ball_mul_1 binary64, encloses(cz, rz) x*y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
+# of the radius 1.500108848; the brute-force runs: 1.558107973. Found by kairn-oracle search (seed
+# 0, 1000000 cases per kernel and format, through the scalar runner of a GCC 13 build on Linux
+# x86-64, 48 processes, batches of 1024), from a line of results/milestone1/brute/macos-arm64.json:
+# ball_mul_1 binary64 0x1p+238 0x1.83a892fd78aa9p+252 0x1p+732 0x1.75e851ec7bcefp+744 #pow2:513315.
+ball_mul_1 binary64 0x1.9676ffa04daf3p-925 0x1.83a862fd70aa9p-910 -0x1.9d25de85ec99fp-99 0x1.75e8508c7bcecp-58 #search:22
 
 # ball_mul_1_full binary32, encloses(cw, rw) x*y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
-# |(abs(cx)+rx)*(abs(cy)+ry)| <= 2^(qmax+p-4): smallest slack in gaps of the radius 1.500000511; the
-# brute-force runs: 1.590696101. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/supplementary/linux-x86-64-b4.json:
-# ball_mul_1_full binary32 -0x1.2491e6p+117 0x1.fffffap+125 0x1.c752ecp-36 0x1.0d0406p-17
-# #threshold:2643367.
-ball_mul_1_full binary32 0x1p-148 0x1.000008p-124 -0x1.3ffdf6p+88 0x1.fffffep+96 #search:24
+# |(abs(cx)+rx)*(abs(cy)+ry)| <= 2^(qmax+p-4): smallest slack in gaps of the radius 1.500000149; the
+# brute-force runs: 1.590696101. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and
+# format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from a line of results/milestone1/brute/macos-arm64.json: ball_mul_1_full binary32
+# -0x1.0804p-134 0x1.02p-114 -0x1.a03054p+55 0x1.054074p+61 #cancel:803833.
+ball_mul_1_full binary32 0x1p-15 0x1.000002p+9 -0x1.ffbffcp-101 0x1.fffffep-88 #search:23
 
-# ball_mul_2 binary64, encloses(cz, rz) x*y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
-# of the radius 2.491482942; the brute-force runs: 2.50405612. Found by kairn-oracle search (seed 0,
-# 20000 cases, the interpreter), from a line of results/milestone1/brute/windows-x64.json:
-# ball_mul_2 binary64 -0x1p-591 0x1.8a4012887d7cp-912 0x1.0100008p-591 -0x1p+553 -0x1p+500
-# 0x1.3c9c1ff9e4f4ap+502 #pow2:830424.
-ball_mul_2 binary64 -0x1.08d891001002cp+1000 -0x1p+395 0x1.0460400027cdep+1000 -0x1.00000011008p+21 -0x1.fffffff8p-33 0x1.eedfe73972c55p-33 #search:25
+# ball_mul_1_full binary64, encloses(cw, rw) x*y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |(abs(cx)+rx)*(abs(cy)+ry)| <= 2^(qmax+p-4): smallest slack in gaps of the radius 1.50117632; the
+# brute-force runs: 1.598718958. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and
+# format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from a line of results/milestone1/brute/supplementary/linux-x86-64-b4.json: ball_mul_1_full
+# binary64 0x1.4c69eb1b4196p+580 0x1.57e049a401ae9p+605 -0x1.28fb27e0f8ed6p-164 0x1.808p-130
+# #threshold:3958692.
+ball_mul_1_full binary64 0x1.0000000029014p-411 0x1.4e155e4p-385 0x1.10420ap-556 0x1.9eb6163fbd92dp-553 #search:24
 
 # ball_mul_2 binary32, encloses(cz, rz) x*y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
-# of the radius 2.461842341; the brute-force runs: 2.501498606. Found by kairn-oracle search (seed
-# 0, 20000 cases, the interpreter), from a line of results/milestone1/brute/linux-x86-64.json:
-# ball_mul_2 binary32 0x1p+63 0x1.9645c4p-106 0x1.1d78d8p+60 -0x1p-39 -0x1.fffffep-64 0x1.4ec63ap-62
-# #pow2:2592288.
-ball_mul_2 binary32 -0x1.002796p+93 -0x1.fffffep+68 0x1.1fffe6p+90 0x1p+34 0x1.fffffp+9 0x1.4fcbfep+11 #search:26
+# of the radius 2.445312373; the brute-force runs: 2.501498606. Found by kairn-oracle search (seed
+# 0, 1000000 cases per kernel and format, through the scalar runner of a GCC 13 build on Linux
+# x86-64, 48 processes, batches of 1024), from a line of results/milestone1/brute/macos-arm64.json:
+# ball_mul_2 binary32 -0x1p-45 0x1.1a46b2p-74 0x1.18p-55 0x1p-44 0x1.fffffep-69 0x1.cf72b8p-69
+# #pow2:547895.
+ball_mul_2 binary32 -0x1p+60 -0x1.fffffap+35 0x1.1ffff6p+57 -0x1p-119 -0x1p-143 0x1.cp-144 #search:25
 
-# ball_mul_2_full binary64, encloses(cw, rw) x*y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
-# |(abs(cx)+rx)*(abs(cy)+ry)| <= 2^(qmax+p-2): smallest slack in gaps of the radius 2.442098644; the
-# brute-force runs: 2.5. Found by kairn-oracle search (seed 0, 20000 cases, the interpreter), from a
-# line of results/milestone1/brute/supplementary/linux-x86-64-b4.json: ball_mul_2_full binary64
-# -0x1p-743 -0x1.fffffffffffffp-797 0x1.1a5f0123dde43p-743 -0x1p+282 -0x1p+229
-# 0x1.c667f0dca7265p+228 #pow2:862310.
-ball_mul_2_full binary64 0x1.1f6c9defdd5e6p+630 0x1.f343163fae59ep+576 0x1.1e7f3631eff7dp+630 0x1p-1011 0x1p-1064 0x1.c8p-1065 #search:27
+# ball_mul_2 binary64, encloses(cz, rz) x*y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
+# of the radius 2.198901534; the brute-force runs: 2.50405612. Found by kairn-oracle search (seed 0,
+# 1000000 cases per kernel and format, through the scalar runner of a GCC 13 build on Linux x86-64,
+# 48 processes, batches of 1024), from a line of results/milestone1/brute/macos-arm64.json:
+# ball_mul_2 binary64 0x1p-109 0x1.4b69575a308e7p-181 0x1.000000002p-109 0x1p+315 0x1p+262
+# 0x1.ed9d071872ccdp+261 #pow2:1248998.
+ball_mul_2 binary64 -0x1.08db987f8dfbp+168 -0x1.bfffffffffffcp+114 0x1.0000000000298p+118 0x1.000208d48fdecp-353 0x1.fffffe0000002p-407 0x1.eae4613ce133cp-407 #search:26
 
 # ball_mul_2_full binary32, encloses(cw, rw) x*y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
-# |(abs(cx)+rx)*(abs(cy)+ry)| <= 2^(qmax+p-2): smallest slack in gaps of the radius 2.499999523; the
-# brute-force runs: 2.560770361. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/supplementary/linux-x86-64-b4.json:
-# ball_mul_2_full binary32 -0x1.7aaf0cp+44 -0x1.edf3b6p+17 0x1.e26e1cp+62 -0x1.dd4988p-93 0x1p-149
-# 0x1.2958e4p-85 #wide:942952.
-ball_mul_2_full binary32 0x1p-7 0x1.fffffcp-32 0x1p-7 0x1.000008p-54 0x1p-78 0x1.ap-75 #search:28
+# |(abs(cx)+rx)*(abs(cy)+ry)| <= 2^(qmax+p-2): smallest slack in gaps of the radius 2.449999815; the
+# brute-force runs: 2.560770361. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and
+# format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from a line of results/milestone1/brute/macos-arm64.json: ball_mul_2_full binary32 -0x1p+50
+# -0x1.fffffep+24 0x1p+50 -0x1p-47 -0x1.fffffep-72 0x1p-71 #pow2:1344866.
+ball_mul_2_full binary32 -0x1.2p+29 -0x1.fffffcp+4 0x1p+26 -0x1.000004p+98 -0x1p+74 0x1.99988p+91 #search:27
+
+# ball_mul_2_full binary64, encloses(cw, rw) x*y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |(abs(cx)+rx)*(abs(cy)+ry)| <= 2^(qmax+p-2): smallest slack in gaps of the radius 2.438605979; the
+# brute-force runs: 2.5. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and format,
+# through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of 1024), from
+# a line of the first version of this file.
+ball_mul_2_full binary64 0x1.1f6f098344d9bp+868 0x1.ffffffffffffcp+814 0x1.1f6f098344d9cp+868 0x1p+154 0x1p+101 0x1.c801f90acfbf9p+100 #search:28
 
 # ball_neg_1 binary32, encloses(cz, rz) -x over x=[cx +- rx], B1-B4, finite when nothing (no
 # condition claimed): smallest slack in gaps of the radius 0; the brute-force runs: 0. Found by
-# kairn-oracle search (seed 0, 20000 cases, the interpreter), a line of
-# results/milestone1/brute/linux-x86-64.json: ball_neg_1 binary32 -0x1.fffffep+127 -0x0p+0
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, through the interpreter), a line
+# of results/milestone1/brute/linux-x86-64.json: ball_neg_1 binary32 -0x1.fffffep+127 -0x0p+0
 # #ballstates:37.
 ball_neg_1 binary32 -0x1.fffffep+127 -0x0p+0 #search:29
 
 # ball_neg_2 binary32, encloses(cz, rz) -x over x=[cx +- rx], B1-B4, finite when nothing (no
 # condition claimed): smallest slack in gaps of the radius 0; the brute-force runs: 0. Found by
-# kairn-oracle search (seed 0, 20000 cases, the interpreter), a line of
-# results/milestone1/brute/linux-x86-64.json: ball_neg_2 binary32 -0x1.fffffep+127 0x1p+102
+# kairn-oracle search (seed 0, 20000 cases per kernel and format, through the interpreter), a line
+# of results/milestone1/brute/linux-x86-64.json: ball_neg_2 binary32 -0x1.fffffep+127 0x1p+102
 # 0x1.5b76eep+125 #ballstates:435.
 ball_neg_2 binary32 -0x1.fffffep+127 0x1p+102 0x1.5b76eep+125 #search:30
 
-# ball_scale_1_full binary64, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
-# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1; the brute-force runs: 1.
-# Found by kairn-oracle search (seed 0, 20000 cases, the interpreter), a line of
-# results/milestone1/brute/linux-x86-64.json: ball_scale_1_full binary64 0x1.fffffffffffffp+1023
-# 0x1.fffffffffffffp+1023 0x1.0000000000001p-1022 #extreme:23287.
-ball_scale_1_full binary64 0x1.fffffffffffffp+1023 0x1.fffffffffffffp+1023 0x1.0000000000001p-1022 #search:31
-
 # ball_scale_1_full binary32, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
 # |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.000000119; the
-# brute-force runs: 1.000000119. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), a line of results/milestone1/brute/linux-x86-64.json: ball_scale_1_full binary32
-# 0x1.fffffep+127 0x1.fffffep+127 0x1.000002p-126 #ballstates:1441612.
-ball_scale_1_full binary32 0x1.fffffep+127 0x1.fffffep+127 0x1.000002p-126 #search:32
+# brute-force runs: 1.000000119. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), a line of results/milestone1/brute/linux-x86-64.json:
+# ball_scale_1_full binary32 0x1.fffffep+127 0x1.fffffep+127 0x1.000002p-126 #ballstates:1441612.
+ball_scale_1_full binary32 0x1.fffffep+127 0x1.fffffep+127 0x1.000002p-126 #search:31
+
+# ball_scale_1_full binary64, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1; the brute-force runs: 1.
+# Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, through the interpreter),
+# a line of results/milestone1/brute/linux-x86-64.json: ball_scale_1_full binary64
+# 0x1.fffffffffffffp+1023 0x1.fffffffffffffp+1023 0x1.0000000000001p-1022 #extreme:23287.
+ball_scale_1_full binary64 0x1.fffffffffffffp+1023 0x1.fffffffffffffp+1023 0x1.0000000000001p-1022 #search:32
+
+# ball_scale_2 binary32, encloses(cz, rz) x*a over x=[cx +- rx]: smallest slack in gaps of the
+# radius 1.250000358; the brute-force runs: 1.37500006. Found by kairn-oracle search (seed 0,
+# 1000000 cases per kernel and format, through the scalar runner of a GCC 13 build on Linux x86-64,
+# 48 processes, batches of 1024), from a line of results/milestone1/brute/macos-arm64.json:
+# ball_scale_2 binary32 -0x1.67d02p-20 -0x1p-44 0x1.000002p-42 -0x1.fffffep+127 #extreme:174952.
+ball_scale_2 binary32 0x1.00004p+0 0x1p-24 0x1.000032p-22 0x1.23d70ap+49 #search:33
 
 # ball_scale_2 binary64, encloses(cz, rz) x*a over x=[cx +- rx]: smallest slack in gaps of the
-# radius 1.250002265; the brute-force runs: 1.375. Found by kairn-oracle search (seed 0, 20000
-# cases, the interpreter), from a line of results/milestone1/brute/windows-x64.json: ball_scale_2
-# binary64 -0x1.000004000001p-385 -0x1p-438 0x1.0000000000088p-436 -0x1.fffffffffffffp+1023
-# #extreme:580487.
-ball_scale_2 binary64 -0x1.9343fed7e99e2p+755 -0x1.f1b0298b4000fp+701 0x1.f12de79e3ffffp+703 0x1.40001p-940 #search:33
-
-# ball_scale_2_full binary64, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
-# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.251099106; the
-# brute-force runs: 1.328974964. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/linux-x86-64.json: ball_scale_2_full
-# binary64 0x1.19a3bcaf90745p+503 0x1.e762b08f1c66bp+449 0x1.ac610605ac53p+451
-# -0x1.3ccd0120a0a3fp-160 #radii:1241959.
-ball_scale_2_full binary64 -0x1.47dac86a8f00cp-2 0x1p-55 0x1.96f10e44f0c6p-54 0x1.5ff00b2fdf899p+0 #search:34
+# radius 1.250000477; the brute-force runs: 1.375. Found by kairn-oracle search (seed 0, 1000000
+# cases per kernel and format, through the scalar runner of a GCC 13 build on Linux x86-64, 48
+# processes, batches of 1024), from stratum cancel, case 4.
+ball_scale_2 binary64 -0x1.9343fed7e99eap+755 -0x1.fffffffep+701 0x1.f12de71e3ffffp+703 -0x1.40001p-940 #search:34
 
 # ball_scale_2_full binary32, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
-# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.253375888; the
-# brute-force runs: 1.375003874. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/linux-x86-64.json: ball_scale_2_full
-# binary32 0x1.13eb44p-88 0x1.f6a318p-114 0x1.c8fc9ep-111 0x1.4633d4p+71 #ballstates:1326726.
-ball_scale_2_full binary32 0x1.13eb44p+92 0x1.dfffcp+67 0x1.a85e8ap+69 -0x1.4633d4p+35 #search:35
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.250231862; the
+# brute-force runs: 1.375003874. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and
+# format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from a line of results/milestone1/brute/windows-x64.json: ball_scale_2_full binary32
+# 0x1.31d788p-49 0x1p-73 0x1.0002p-71 0x1.fffffep+127 #extreme:470775.
+ball_scale_2_full binary32 0x1.13eb44p-81 0x1.d8c6dp-106 0x1.a85e8ap-104 -0x1.4633d4p+9 #search:35
+
+# ball_scale_2_full binary64, encloses(cw, rw) x*a over x=[cx +- rx], B1-B4, finite when
+# |(abs(cx)+rx)*a| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.25; the brute-force runs:
+# 1.328974964. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and format, through
+# the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of 1024), from a line
+# of results/milestone1/brute/windows-x64.json: ball_scale_2_full binary64 0x1.2494a8f7fb91cp+464
+# -0x1.50fd7ab89a47ap+410 0x1.67d13937de52ap+413 0x1.c2a6f442dc7d9p+354 #radii:427368.
+ball_scale_2_full binary64 -0x1.47dac86a8f00bp-2 -0x1.ffffffffffffcp-56 0x1.96f10e04f0a5ep-54 -0x1.8p-54 #search:36
 
 # ball_sub_1 binary64, encloses(cz, rz) x-y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
-# of the radius 1; the brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), a line of results/milestone1/brute/linux-x86-64.json: ball_sub_1 binary64
-# 0x1.fffffffffffffp+1021 0x1.fe8d63f55e9f3p+1021 0x1p+1023 0x1.0125941d73ce4p+1020
-# #overflow:975061.
-ball_sub_1 binary64 0x1.fffffffffffffp+1021 0x1.fe8d63f55e9f3p+1021 0x1p+1023 0x1.0125941d73ce4p+1020 #search:36
-
-# ball_sub_1_full binary64, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
-# |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1; the brute-force runs:
-# 1. Found by kairn-oracle search (seed 0, 20000 cases, the interpreter), a line of
-# results/milestone1/brute/linux-x86-64.json: ball_sub_1_full binary64 0x1.fffffffffffffp+1023
-# 0x1p+1021 0x1.ffffffffffffdp+1022 0x1.ffffffffffffdp+1022 #ballstates:78073.
-ball_sub_1_full binary64 0x1.fffffffffffffp+1023 0x1p+1021 0x1.ffffffffffffdp+1022 0x1.ffffffffffffdp+1022 #search:37
+# of the radius 1; the brute-force runs: 1. Found by kairn-oracle search (seed 0, 20000 cases per
+# kernel and format, through the interpreter), a line of results/milestone1/brute/linux-x86-64.json:
+# ball_sub_1 binary64 0x1.fffffffffffffp+1021 0x1.fe8d63f55e9f3p+1021 0x1p+1023
+# 0x1.0125941d73ce4p+1020 #overflow:975061.
+ball_sub_1 binary64 0x1.fffffffffffffp+1021 0x1.fe8d63f55e9f3p+1021 0x1p+1023 0x1.0125941d73ce4p+1020 #search:37
 
 # ball_sub_1_full binary32, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
 # |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1; the brute-force runs:
-# 1. Found by kairn-oracle search (seed 0, 20000 cases, the interpreter), a line of
-# results/milestone1/brute/linux-x86-64.json: ball_sub_1_full binary32 -0x1.fffffap+126
-# 0x1.d7bc68p+126 -0x1.fffffep+127 0x1.a35d48p+124 #hugeradius:361304.
+# 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, through the
+# interpreter), a line of results/milestone1/brute/linux-x86-64.json: ball_sub_1_full binary32
+# -0x1.fffffap+126 0x1.d7bc68p+126 -0x1.fffffep+127 0x1.a35d48p+124 #hugeradius:361304.
 ball_sub_1_full binary32 -0x1.fffffap+126 0x1.d7bc68p+126 -0x1.fffffep+127 0x1.a35d48p+124 #search:38
 
-# ball_sub_2 binary64, encloses(cz, rz) x-y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
-# of the radius 1.15637207; the brute-force runs: 1.251070709. Found by kairn-oracle search (seed 0,
-# 20000 cases, the interpreter), from a line of results/milestone1/brute/windows-x64.json:
-# ball_sub_2 binary64 -0x1.9b9a97b969e6ep-883 0x1.000000000018p-984 0x1.fa22ace3d0c83p+967
-# -0x1.894e3d3ade3ebp-505 0x1.c6d5a81cb049bp-598 0x1.fffffffffffffp+1021 #radii:36674.
-ball_sub_2 binary64 0x1.ffffffffffffep+360 -0x1p+307 0x1.fffffffffffffp+256 -0x1.894e3d3ade3e8p+355 0x1.c4d277424fd01p+298 0x1.fffffffffffffp+310 #search:39
+# ball_sub_1_full binary64, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1; the brute-force runs:
+# 1. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format, through the
+# interpreter), a line of results/milestone1/brute/linux-x86-64.json: ball_sub_1_full binary64
+# 0x1.fffffffffffffp+1023 0x1p+1021 0x1.ffffffffffffdp+1022 0x1.ffffffffffffdp+1022
+# #ballstates:78073.
+ball_sub_1_full binary64 0x1.fffffffffffffp+1023 0x1p+1021 0x1.ffffffffffffdp+1022 0x1.ffffffffffffdp+1022 #search:39
 
 # ball_sub_2 binary32, encloses(cz, rz) x-y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
-# of the radius 1.156250134; the brute-force runs: 1.250030696. Found by kairn-oracle search (seed
-# 0, 20000 cases, the interpreter), from stratum pow2, case 1.
-ball_sub_2 binary32 0x1.2fe51ep+20 -0x1.7ffffep-16 0x1.fffffep+6 0x1.3cfcap+28 0x1.ffffb6p+2 0x1.fffffep-19 #search:40
+# of the radius 1.125000015; the brute-force runs: 1.250030696. Found by kairn-oracle search (seed
+# 0, 1000000 cases per kernel and format, through the scalar runner of a GCC 13 build on Linux
+# x86-64, 48 processes, batches of 1024), from a line of the first version of this file.
+ball_sub_2 binary32 0x1.1cfc9cp+125 0x1p+101 0x1.fffffep+78 -0x1.4p+103 -0x1.fffffep+77 0x1.fffffep+103 #search:40
 
-# ball_sub_2_full binary64, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
-# |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.158203125; the
-# brute-force runs: 1.250853359. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/linux-x86-64.json: ball_sub_2_full binary64
-# -0x1.1e94e844549abp+964 -0x1.aa4b2a6036c1cp+868 0x1.f397c8654efffp+967 -0x1.16baf91f7fd3cp-1004
-# 0x1p-1057 0x1.fffffffffffffp+1021 #wide:2252063.
-ball_sub_2_full binary64 -0x1.1e94e844549b2p-281 0x1.a83dbaa3b0dafp-335 0x1.fffffffffffffp-381 0x1.ffffffffffffcp-277 -0x1p-330 0x1.fffffffffffffp-327 #search:41
+# ball_sub_2 binary64, encloses(cz, rz) x-y over x=[cx +- rx], y=[cy +- ry]: smallest slack in gaps
+# of the radius 1.125; the brute-force runs: 1.251070709. Found by kairn-oracle search (seed 0,
+# 1000000 cases per kernel and format, through the scalar runner of a GCC 13 build on Linux x86-64,
+# 48 processes, batches of 1024), from a line of results/milestone1/brute/windows-x64.json:
+# ball_sub_2 binary64 -0x1.9b9a97b969e6ep-883 0x1.000000000018p-984 0x1.fa22ace3d0c83p+967
+# -0x1.894e3d3ade3ebp-505 0x1.c6d5a81cb049bp-598 0x1.fffffffffffffp+1021 #radii:36674.
+ball_sub_2 binary64 -0x1.cp+101 0x1.4000000000021p+47 0x1.fffffffffffffp+101 0x1.0000000000002p+152 -0x1p+99 0x1.fffffffffffffp+47 #search:41
 
 # ball_sub_2_full binary32, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
-# |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.171875007; the
-# brute-force runs: 1.251336798. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/supplementary/linux-x86-64-b4.json:
-# ball_sub_2_full binary32 0x1.1dbcfep+104 -0x1.e46c02p+15 0x1.fd4322p+101 0x1.532f54p-9
-# -0x1.073f7p-52 0x1.fffffep+126 #hugeradius:4084591.
-ball_sub_2_full binary32 -0x1.024814p-54 -0x1.fdbff6p-79 0x1.fffffep-101 0x1.004p-79 -0x1.000008p-104 0x1.fffffep-76 #search:42
+# |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.109375015; the
+# brute-force runs: 1.251336798. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and
+# format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from a line of the first version of this file.
+ball_sub_2_full binary32 -0x1.024814p-56 -0x1.fffffep-81 0x1.fffffep-76 0x1.024814p-54 0x1.fffffep-79 0x1.fffffep-101 #search:42
 
-# mul_2_1 binary64, error(z) form R, c=2, k=2, t=1: largest error/allowed 1 - 1.67e-16; the
-# brute-force runs: 1 - 2.22e-16. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/linux-x86-64.json: mul_2_1 binary64 0x1.8p+0
-# 0x1.fffffffffffffp-54 0x1.0000000000001p-1022 #extreme:1754898.
-mul_2_1 binary64 0x1.8p+0 0x1.fffffffffffdap-54 -0x1.0000000000013p-1022 #search:43
+# ball_sub_2_full binary64, encloses(cw, rw) x-y over x=[cx +- rx], y=[cy +- ry], B1-B4, finite when
+# |abs(cx-cy)+rx+ry| <= 2^(qmax+p-2): smallest slack in gaps of the radius 1.15625; the brute-force
+# runs: 1.250853359. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and format,
+# through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of 1024), from
+# a line of the first version of this file.
+ball_sub_2_full binary64 0x1.fffffbfbfffep+361 -0x1p+308 0x1.fffffffffffffp+311 -0x1.1e9cc84c549b2p+357 0x1.4000000000001p+257 0x1.fffffffffffffp+257 #search:43
 
 # mul_2_1 binary32, error(z) form R, c=2, k=2, t=1: largest error/allowed 1 - 8.94e-08; the
-# brute-force runs: 1 - 1.49e-07. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/macos-arm64.json: mul_2_1 binary32 0x1.8p+0
-# 0x1.fffffep-25 0x1.fffffcp-127 #extreme:409458.
+# brute-force runs: 1 - 1.49e-07. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), from a line of results/milestone1/brute/macos-arm64.json:
+# mul_2_1 binary32 0x1.8p+0 0x1.fffffep-25 0x1.fffffcp-127 #extreme:409458.
 mul_2_1 binary32 -0x1.8p+0 0x1.fffffcp-25 0x1.000002p-126 #search:44
 
-# mul_2_1_full binary64, F2, core mul_2_1: error(z) form R, c=2, k=2, t=1: largest error/allowed 1 -
-# 1.67e-16; the brute-force runs: 1 - 2.78e-16. Found by kairn-oracle search (seed 0, 20000 cases,
-# the interpreter), from a line of results/milestone1/brute/windows-x64.json: mul_2_1_full binary64
-# 0x1.0000040000004p+687 0x1p+634 0x1.05bdb0819cfe1p-851 #extreme:521106.
-mul_2_1_full binary64 -0x1.8p+0 0x1.ffffffffffffep-54 0x1.0000000000001p-1022 #search:45
+# mul_2_1 binary64, error(z) form R, c=2, k=2, t=1: largest error/allowed 1 - 1.67e-16; the
+# brute-force runs: 1 - 2.22e-16. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and
+# format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from a line of results/milestone1/brute/linux-x86-64.json: mul_2_1 binary64 0x1.8p+0
+# 0x1.fffffffffffffp-54 0x1.0000000000001p-1022 #extreme:1754898.
+mul_2_1 binary64 0x1.8p+0 -0x1.ffffffffffffep-54 0x1.0000000000001p-1022 #search:45
 
 # mul_2_1_full binary32, F2, core mul_2_1: error(z) form R, c=2, k=2, t=1: largest error/allowed 1 -
-# 1.19e-07; the brute-force runs: 1 - 2.09e-07. Found by kairn-oracle search (seed 0, 20000 cases,
-# the interpreter), from a line of results/milestone1/brute/linux-x86-64.json: mul_2_1_full binary32
-# -0x1.80002p+0 -0x1.fffffep-25 0x1.000002p-126 #extreme:2316466.
-mul_2_1_full binary32 -0x1.8p+0 -0x1.fffffep-25 0x1.000002p-126 #search:46
+# 7.45e-08; the brute-force runs: 1 - 2.09e-07. Found by kairn-oracle search (seed 0, 1000000 cases
+# per kernel and format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes,
+# batches of 1024), from a line of results/milestone1/brute/linux-x86-64.json: mul_2_1_full binary32
+# 0x1.0004p+124 0x1p+100 0x1.0bbdaap-13 #extreme:1055006.
+mul_2_1_full binary32 0x1.4p+1 0x1.fffff8p-24 0x1.000004p-127 #search:46
 
-# mul_2_2 binary64, error(z) form R, c=4, k=2, t=3/2: largest error/allowed 1 - 8.74e-09; the
-# brute-force runs: 0.9771845858. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from literature: MR22 p. 14, Theorem 2.8, DWTimesDW3.
-mul_2_2 binary64 0x1.0000001008922p+632 0x1.ffffffdd903bbp+578 -0x1.0000000000002p+388 -0x1p+335 #search:47
+# mul_2_1_full binary64, F2, core mul_2_1: error(z) form R, c=2, k=2, t=1: largest error/allowed 1 -
+# 1.67e-16; the brute-force runs: 1 - 2.78e-16. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, through the interpreter), from a line of
+# results/milestone1/brute/windows-x64.json: mul_2_1_full binary64 0x1.0000040000004p+687 0x1p+634
+# 0x1.05bdb0819cfe1p-851 #extreme:521106.
+mul_2_1_full binary64 -0x1.8p+0 0x1.ffffffffffffep-54 0x1.0000000000001p-1022 #search:47
 
-# mul_2_2 binary32, error(z) form R, c=4, k=2, t=3/2: largest error/allowed 0.9961413938; the
-# brute-force runs: 0.973839931. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/windows-x64.json: mul_2_2 binary32
-# -0x1.d6467cp-7 0x1.e7596p-32 0x1.aedc3ep-108 -0x1.258bp-133 #uniform:182629.
-mul_2_2 binary32 -0x1.24b57ap-61 0x1.27a628p-86 0x1.d70b84p-61 0x1.dbc646p-86 #search:48
+# mul_2_2 binary32, error(z) form R, c=4, k=2, t=3/2: largest error/allowed 0.9982983184; the
+# brute-force runs: 0.973839931. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and
+# format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from a line of results/milestone1/brute/linux-x86-64.json: mul_2_2 binary32 -0x1.208p+33
+# 0x1.78463cp+5 0x1.002008p+13 -0x1.fc27b4p-12 #pow2:2492033.
+mul_2_2 binary32 -0x1.170ba6p-45 0x1.dbc6c6p-70 0x1.24b57ap-77 -0x1.f312ap-102 #search:48
+
+# mul_2_2 binary64, error(z) form R, c=4, k=2, t=3/2: largest error/allowed 1 - 1.92e-15; the
+# brute-force runs: 0.9771845858. Found by kairn-oracle search (seed 0, 1000000 cases per kernel and
+# format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from stratum pow2, case 3.
+mul_2_2 binary64 -0x1.0000000000002p+320 -0x1.ffffffffffff7p+266 0x1.0000000000001p+703 0x1.ffffffffffffep+649 #search:49
+
+# mul_2_2_full binary32, F2, core mul_2_2: error(z) form R, c=4, k=2, t=3/2: largest error/allowed 1
+# - 1.86e-07; the brute-force runs: 0.968941442. Found by kairn-oracle search (seed 0, 1000000 cases
+# per kernel and format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes,
+# batches of 1024), from a line of the first version of this file.
+mul_2_2_full binary32 -0x1.6baf06p-101 -0x1.555554p-126 -0x1.8p-25 -0x1.6866aep-50 #search:50
 
 # mul_2_2_full binary64, F2, core mul_2_2: error(z) form R, c=4, k=2, t=3/2: largest error/allowed 1
-# - 3.14e-09; the brute-force runs: 0.9809490668. Found by kairn-oracle search (seed 0, 20000 cases,
-# the interpreter), from literature: MR22 p. 14, Theorem 2.8, DWTimesDW3.
-mul_2_2_full binary64 0x1.000000057b14p+300 0x1.fffffff203fbbp+246 0x1.0000000000001p+209 0x1.ffffffffffffep+155 #search:49
-
-# mul_2_2_full binary32, F2, core mul_2_2: error(z) form R, c=4, k=2, t=3/2: largest error/allowed
-# 0.9989591888; the brute-force runs: 0.968941442. Found by kairn-oracle search (seed 0, 20000
-# cases, the interpreter), from a line of results/milestone1/brute/macos-arm64.json: mul_2_2_full
-# binary32 -0x1.02f44cp+94 0x1.fffffep+69 0x1.fa28bp+32 -0x1p+8 #threshold:991379.
-mul_2_2_full binary32 -0x1.5a094p-25 0x1.687088p-50 0x1.6baf0ep-101 -0x1.7ad27cp-126 #search:50
-
-# mul_pow2_2 binary64, error(z) form R, c=0, k=2, t=1: largest error/allowed 0.75; the brute-force
-# runs: 0.7385458962. Found by kairn-oracle search (seed 0, 20000 cases, the interpreter), from a
-# line of results/milestone1/brute/windows-x64.json: mul_pow2_2 binary64 0x1.210fa2e083873p-842
-# -0x1.c4ff0fafaac5fp-896 0x1p-181 #into:211897.
-mul_pow2_2 binary64 0x1.210fa2e083873p-842 -0x1.fffffffffffffp-896 0x1p-181 #search:51
+# - 1.92e-15; the brute-force runs: 0.9809490668. Found by kairn-oracle search (seed 0, 1000000
+# cases per kernel and format, through the scalar runner of a GCC 13 build on Linux x86-64, 48
+# processes, batches of 1024), from a line of the first version of this file.
+mul_2_2_full binary64 0x1.0000000000002p+250 0x1.ffffffffffff7p+196 -0x1.0000000000001p+773 -0x1.ffffffffffffep+719 #search:51
 
 # mul_pow2_2 binary32, error(z) form R, c=0, k=2, t=1: largest error/allowed 0.7499999851; the
-# brute-force runs: 0.7499999851. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), a line of results/milestone1/brute/linux-x86-64.json: mul_pow2_2 binary32
-# -0x1.6f0f42p-38 -0x1.fffffep-63 0x1p-89 #extreme:938111.
+# brute-force runs: 0.7499999851. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), a line of results/milestone1/brute/linux-x86-64.json: mul_pow2_2
+# binary32 -0x1.6f0f42p-38 -0x1.fffffep-63 0x1p-89 #extreme:938111.
 mul_pow2_2 binary32 -0x1.6f0f42p-38 -0x1.fffffep-63 0x1p-89 #search:52
 
-# mul_pow2_2_full binary64, F2, core mul_pow2_2: error(z) form R, c=0, k=2, t=1: largest
-# error/allowed 0.75; the brute-force runs: 0.7489149584. Found by kairn-oracle search (seed 0,
-# 20000 cases, the interpreter), from a line of results/milestone1/brute/windows-x64.json:
-# mul_pow2_2_full binary64 0x1.54a8fcb432a93p-356 -0x1.e1b2525df18cep-410 0x1p-667 #into:139803.
-mul_pow2_2_full binary64 0x1.54a8fcb432a93p-356 -0x1.fffffffffffffp-410 0x1p-667 #search:53
+# mul_pow2_2 binary64, error(z) form R, c=0, k=2, t=1: largest error/allowed 0.75; the brute-force
+# runs: 0.7385458962. Found by kairn-oracle search (seed 0, 20000 cases per kernel and format,
+# through the interpreter), from a line of results/milestone1/brute/windows-x64.json: mul_pow2_2
+# binary64 0x1.210fa2e083873p-842 -0x1.c4ff0fafaac5fp-896 0x1p-181 #into:211897.
+mul_pow2_2 binary64 0x1.210fa2e083873p-842 -0x1.fffffffffffffp-896 0x1p-181 #search:53
 
 # mul_pow2_2_full binary32, F2, core mul_pow2_2: error(z) form R, c=0, k=2, t=1: largest
 # error/allowed 0.7499999851; the brute-force runs: 0.7499999851. Found by kairn-oracle search (seed
-# 0, 20000 cases, the interpreter), a line of results/milestone1/brute/linux-x86-64.json:
-# mul_pow2_2_full binary32 -0x1.a0c816p-54 0x1.fffffep-79 0x1p-73 #extreme:210738.
+# 0, 20000 cases per kernel and format, through the interpreter), a line of
+# results/milestone1/brute/linux-x86-64.json: mul_pow2_2_full binary32 -0x1.a0c816p-54
+# 0x1.fffffep-79 0x1p-73 #extreme:210738.
 mul_pow2_2_full binary32 -0x1.a0c816p-54 0x1.fffffep-79 0x1p-73 #search:54
 
-# sub_1_2 binary64, error(z) form R, c=2, k=2, t=0: largest error/allowed 1 - 2.22e-16; the
-# brute-force runs: 0.8100488031. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
-sub_1_2 binary64 -0x1.fffffffffffffp-869 -0x1p-867 -0x1.0000000000001p-921 #search:55
+# mul_pow2_2_full binary64, F2, core mul_pow2_2: error(z) form R, c=0, k=2, t=1: largest
+# error/allowed 0.75; the brute-force runs: 0.7489149584. Found by kairn-oracle search (seed 0,
+# 20000 cases per kernel and format, through the interpreter), from a line of
+# results/milestone1/brute/windows-x64.json: mul_pow2_2_full binary64 0x1.54a8fcb432a93p-356
+# -0x1.e1b2525df18cep-410 0x1p-667 #into:139803.
+mul_pow2_2_full binary64 0x1.54a8fcb432a93p-356 -0x1.fffffffffffffp-410 0x1p-667 #search:55
 
 # sub_1_2 binary32, error(z) form R, c=2, k=2, t=0: largest error/allowed 1 - 1.19e-07; the
-# brute-force runs: 0.8920582021. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
+# brute-force runs: 0.8920582021. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
 sub_1_2 binary32 -0x1.fffffep-2 -0x1p+0 -0x1.000002p-25 #search:56
 
-# sub_1_2_full binary64, F2, core sub_1_2: error(z) form R, c=2, k=2, t=0: largest error/allowed 1 -
-# 2.22e-16; the brute-force runs: 0.8122096829. Found by kairn-oracle search (seed 0, 20000 cases,
-# the interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
-sub_1_2_full binary64 -0x1.fffffffffffffp-2 -0x1p+0 -0x1.0000000000001p-54 #search:57
+# sub_1_2 binary64, error(z) form R, c=2, k=2, t=0: largest error/allowed 1 - 2.22e-16; the
+# brute-force runs: 0.8100488031. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
+sub_1_2 binary64 -0x1.fffffffffffffp-869 -0x1p-867 -0x1.0000000000001p-921 #search:57
 
 # sub_1_2_full binary32, F2, core sub_1_2: error(z) form R, c=2, k=2, t=0: largest error/allowed 1 -
-# 1.19e-07; the brute-force runs: 0.9167225113. Found by kairn-oracle search (seed 0, 20000 cases,
-# the interpreter), from a line of results/milestone1/brute/macos-arm64.json: sub_1_2_full binary32
-# -0x1.e425eap-21 -0x1.0bf338p-19 0x1.6dbb4ep-44 #close:1247116.
+# 1.19e-07; the brute-force runs: 0.9167225113. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, through the interpreter), from a line of
+# results/milestone1/brute/macos-arm64.json: sub_1_2_full binary32 -0x1.e425eap-21 -0x1.0bf338p-19
+# 0x1.6dbb4ep-44 #close:1247116.
 sub_1_2_full binary32 -0x1.fffffep-70 -0x1p-68 -0x1.000002p-93 #search:58
 
-# sub_2_1 binary64, error(z) form R, c=2, k=2, t=0: largest error/allowed 1 - 2.22e-16; the
-# brute-force runs: 0.9973626209. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
-sub_2_1 binary64 0x1p+0 0x1.0000000000001p-54 0x1.fffffffffffffp-2 #search:59
+# sub_1_2_full binary64, F2, core sub_1_2: error(z) form R, c=2, k=2, t=0: largest error/allowed 1 -
+# 2.22e-16; the brute-force runs: 0.8122096829. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, through the interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
+sub_1_2_full binary64 -0x1.fffffffffffffp-2 -0x1p+0 -0x1.0000000000001p-54 #search:59
 
 # sub_2_1 binary32, error(z) form R, c=2, k=2, t=0: largest error/allowed 1 - 1.19e-07; the
-# brute-force runs: 0.9861856006. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
+# brute-force runs: 0.9861856006. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
 sub_2_1 binary32 0x1p+126 0x1.000002p+101 0x1.fffffep+124 #search:60
 
-# sub_2_1_full binary64, F2, core sub_2_1: error(z) form R, c=2, k=2, t=0: largest error/allowed 1 -
-# 2.22e-16; the brute-force runs: 0.9131984078. Found by kairn-oracle search (seed 0, 20000 cases,
-# the interpreter), from a line of results/milestone1/brute/linux-x86-64.json: sub_2_1_full binary64
-# -0x1.0000080002p-84 -0x1.fffffffffffffp-138 -0x1.2ad2adc80c71fp-86 #extreme:597948.
-sub_2_1_full binary64 -0x1p-864 -0x1.0000000000001p-918 -0x1.fffffffffffffp-866 #search:61
+# sub_2_1 binary64, error(z) form R, c=2, k=2, t=0: largest error/allowed 1 - 2.22e-16; the
+# brute-force runs: 0.9973626209. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
+sub_2_1 binary64 0x1p+0 0x1.0000000000001p-54 0x1.fffffffffffffp-2 #search:61
 
 # sub_2_1_full binary32, F2, core sub_2_1: error(z) form R, c=2, k=2, t=0: largest error/allowed 1 -
-# 1.19e-07; the brute-force runs: 0.9431929885. Found by kairn-oracle search (seed 0, 20000 cases,
-# the interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
+# 1.19e-07; the brute-force runs: 0.9431929885. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, through the interpreter), from literature: JMP17 p. 15res:6, DWPlusFP.
 sub_2_1_full binary32 0x1p+127 0x1.000002p+102 0x1.fffffep+125 #search:62
 
-# sub_2_2 binary64, error(z) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed 1 - 8.14e-16; the
-# brute-force runs: 0.7031266384. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from literature: MR22 p. 6, Property 2.1, AccurateDWPlusDW.
-sub_2_2 binary64 0x1.fffffffffffffp-2 0x1.fffffffffffffp-108 0x1p+0 0x1.fffffffffffffp-54 #search:63
+# sub_2_1_full binary64, F2, core sub_2_1: error(z) form R, c=2, k=2, t=0: largest error/allowed 1 -
+# 2.22e-16; the brute-force runs: 0.9131984078. Found by kairn-oracle search (seed 0, 20000 cases
+# per kernel and format, through the interpreter), from a line of
+# results/milestone1/brute/linux-x86-64.json: sub_2_1_full binary64 -0x1.0000080002p-84
+# -0x1.fffffffffffffp-138 -0x1.2ad2adc80c71fp-86 #extreme:597948.
+sub_2_1_full binary64 -0x1p-864 -0x1.0000000000001p-918 -0x1.fffffffffffffp-866 #search:63
 
 # sub_2_2 binary32, error(z) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed 1 - 4.37e-07; the
-# brute-force runs: 0.7466942084. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from literature: MR22 p. 6, Property 2.1, AccurateDWPlusDW.
+# brute-force runs: 0.7466942084. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), from literature: MR22 p. 6, Property 2.1, AccurateDWPlusDW.
 sub_2_2 binary32 0x1p+126 0x1.fffffep+101 0x1.fffffep+124 0x1.fffffep+76 #search:64
 
-# sub_2_2_full binary64, F2, core sub_2_2: error(z) form R, c=3/(1-4*u), k=2, t=0: largest
-# error/allowed 1 - 8.14e-16; the brute-force runs: 0.6666666667. Found by kairn-oracle search (seed
-# 0, 20000 cases, the interpreter), from literature: MR22 p. 6, Property 2.1, AccurateDWPlusDW.
-sub_2_2_full binary64 0x1p+0 0x1.fffffffffffffp-54 0x1.fffffffffffffp-2 0x1.fffffffffffffp-108 #search:65
+# sub_2_2 binary64, error(z) form R, c=3/(1-4*u), k=2, t=0: largest error/allowed 1 - 8.14e-16; the
+# brute-force runs: 0.7031266384. Found by kairn-oracle search (seed 0, 20000 cases per kernel and
+# format, through the interpreter), from literature: MR22 p. 6, Property 2.1, AccurateDWPlusDW.
+sub_2_2 binary64 0x1.fffffffffffffp-2 0x1.fffffffffffffp-108 0x1p+0 0x1.fffffffffffffp-54 #search:65
 
 # sub_2_2_full binary32, F2, core sub_2_2: error(z) form R, c=3/(1-4*u), k=2, t=0: largest
 # error/allowed 1 - 4.37e-07; the brute-force runs: 0.6666664282. Found by kairn-oracle search (seed
-# 0, 20000 cases, the interpreter), from literature: MR22 p. 6, Property 2.1, AccurateDWPlusDW.
+# 0, 20000 cases per kernel and format, through the interpreter), from literature: MR22 p. 6,
+# Property 2.1, AccurateDWPlusDW.
 sub_2_2_full binary32 0x1.fffffep-2 0x1.fffffep-50 0x1p+0 0x1.fffffep-25 #search:66
 
-# two_prod_dekker binary64, error(r) form R, c=0, k=2, t=13/8: largest error/allowed 0.9696301824;
-# the brute-force runs: 0.9238521407. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/linux-x86-64.json: two_prod_dekker binary64
-# -0x1.1f0a0955cd14fp-243 -0x1.e80876bef4b48p-782 #underflow:1121739.
-two_prod_dekker binary64 -0x1.1f0a0955cbf4fp-243 0x1.e80876bef4b48p-782 #search:67
+# sub_2_2_full binary64, F2, core sub_2_2: error(z) form R, c=3/(1-4*u), k=2, t=0: largest
+# error/allowed 1 - 8.14e-16; the brute-force runs: 0.6666666667. Found by kairn-oracle search (seed
+# 0, 20000 cases per kernel and format, through the interpreter), from literature: MR22 p. 6,
+# Property 2.1, AccurateDWPlusDW.
+sub_2_2_full binary64 0x1p+0 0x1.fffffffffffffp-54 0x1.fffffffffffffp-2 0x1.fffffffffffffp-108 #search:67
 
-# two_prod_dekker binary32, error(r) form R, c=0, k=2, t=13/8: largest error/allowed 0.9686817756;
-# the brute-force runs: 0.925880102. Found by kairn-oracle search (seed 0, 20000 cases, the
-# interpreter), from a line of results/milestone1/brute/linux-x86-64.json: two_prod_dekker binary32
-# 0x1.14af1ap-116 -0x1.e2d274p-12 #underflow:1627899.
-two_prod_dekker binary32 0x1.e4d256p-12 0x1.14af3p-116 #search:68
+# two_prod_dekker binary32, error(r) form R, c=0, k=2, t=13/8: largest error/allowed 0.9855052141;
+# the brute-force runs: 0.925880102. Found by kairn-oracle search (seed 0, 1000000 cases per kernel
+# and format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from a line of the first version of this file.
+two_prod_dekker binary32 0x1.94af2ap-116 0x1.e0d15cp-12 #search:68
+
+# two_prod_dekker binary64, error(r) form R, c=0, k=2, t=13/8: largest error/allowed 0.9915889567;
+# the brute-force runs: 0.9238521407. Found by kairn-oracle search (seed 0, 1000000 cases per kernel
+# and format, through the scalar runner of a GCC 13 build on Linux x86-64, 48 processes, batches of
+# 1024), from stratum uniform, case 7.
+two_prod_dekker binary64 -0x1.1f0b0d45cbe6fp-243 0x1.e80c72bef5b08p-782 #search:69

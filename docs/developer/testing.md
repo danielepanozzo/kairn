@@ -659,6 +659,19 @@ had met the bound of `mul_2_1`). What it brought closest:
 - `two_prod_dekker` comes to 0.97 of its bound near underflow (0.92 before) and `mul_pow2_2` to
   0.75 in `binary64` (0.74).
 
+**A longer run**, on the Linux machine: 1 000 000 cases per kernel and format (94 million in all,
+seed 0, batches of 1 024) through the scalar runner of a GCC 13 build, 48 processes, 405 seconds,
+starting from the regression cases below. No claim was violated. It came closer still on 42 of the
+116 quantities: `mul_2_2` and the core of `mul_2_2_full` to within $1.9 \cdot 10^{-15}$ of their
+bound in `binary64`, with an observed constant of $4 - \epsilon$ (from a case of the stratum
+`pow2`, not from the literature), and in `binary32` to 0.998 (`mul_2_2`) and $1 - 1.9 \cdot
+10^{-7}$ (the core of `mul_2_2_full`); `add_fast_2_2` and its core to within $8.1 \cdot 10^{-16}$
+in `binary64` (0.96 at 20 000 cases); `two_prod_dekker` to 0.992 and 0.986; and the smallest
+slack of the two-limb Ball
+radii to 1.11 to 1.16 gaps for the sums, 1.25 for the scaling and 2.20 for the product in
+`binary64`. Its best lines replaced those of the shorter run in the regression cases where they
+came closer.
+
 **What it did not find.** A search climbs the quantities of the claims, and a fault that breaks a
 claim only where the correct kernel is far from its bound gives it nothing to climb. Of the
 planted faults of `tests/kernel_mutants.py` that the full tier catches and the quick tier misses,
@@ -706,8 +719,8 @@ hardware). A case the line protocol cannot carry has a test of its own, named th
 of the program fused into a kernel is `api.boundary.*`. Every line of `binary64` and `binary32`
 runs through every compiled runner and through every form of the public interface that calls its
 kernel, and every line, toy formats included, through the interpreter; the oracle judges each
-result as in the cross-checks. 184 lines today (16 from the history, 38 of the literature, 62 of
-the brute-force runs, 68 of the search); in the quick tier's run, 0.5 to 1.1 seconds on the Mac,
+result as in the cross-checks. 185 lines today (16 from the history, 38 of the literature, 62 of
+the brute-force runs, 69 of the two searches); in the quick tier's run, 0.5 to 1.1 seconds on the Mac,
 1.1 on the Linux machine and 2.6 on the Windows machine, where starting a process costs most (one
 run of each compiled runner, of the interpreter, and of each runner of the public interface per
 name of a form).

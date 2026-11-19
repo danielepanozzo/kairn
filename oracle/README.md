@@ -438,7 +438,10 @@ bound in `binary64` (0.977 before), with an observed constant of 3.99999996 agai
 4 (3.34 before): the search carried MR22's case, 3.997, further; and the form-A bound of
 `add_fast_2_2` is attained to within $4.4 \cdot 10^{-7}$ in `binary32` (0.60 before), by a
 search that started from a brute-force line, and from the strata alone for the core of
-`add_fast_2_2_full`. It did not find every planted fault: a
+`add_fast_2_2_full`. A longer run, 1 000 000 cases per kernel and format through a compiled
+runner, violated nothing either and brought `mul_2_2` to within $1.9 \cdot 10^{-15}$ of its bound
+and `add_fast_2_2` to within $8.1 \cdot 10^{-16}$ of its, in `binary64`. It did not find every
+planted fault: a
 fault of `tests/kernel_mutants.py` that breaks the radius of `ball_scale_2` only where the
 correct kernel's slack is large (a zero input radius) went unseen in 100 000 cases, while the
 full tier's 20 000 random ones met it once or twice.
