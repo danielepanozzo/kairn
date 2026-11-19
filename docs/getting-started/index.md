@@ -9,7 +9,8 @@ install the CMake package, and build this site.
 
 - CMake 3.21 or later and a C++20 compiler.
 - On x86-64, a CPU with FMA (Intel Haswell, AMD Piledriver or later) to run the kernels and their
-  tests ([Hardware FMA](#hardware-fma)).
+  tests ([Hardware FMA](#hardware-fma)), and with AVX2 too (Intel Haswell, AMD Excavator or
+  later) for the tests of the packed kernels.
 - Python 3, for the generator's and the oracle's tests and for building the site. Building Kairn
   as a client will never need it ([Architecture](../developer/architecture.md#layout-and-ownership)).
 
@@ -27,19 +28,22 @@ Built on its own, Kairn defaults to a `Release` build, because its contraction t
 optimizing compiler does. With a multi-configuration generator (Visual Studio, Xcode), name the
 configuration instead: `cmake --build build --config Release` and `ctest --test-dir build -C
 Release --output-on-failure`. Add `--parallel N` to both of the last two commands to use N cores;
-the whole run takes one to two minutes.
+with four, the whole run takes about two minutes on a recent machine.
 
 The tests:
 
 | Test | Checks |
 |---|---|
 | `kairn-gen.check` | `python3 gen/kairn-gen check`: every committed generated file is what the generator writes. |
-| `kairn-gen.test` | `python3 gen/kairn-gen test`: the generator's own tests, compiling the C++ with the build's compiler (skipped for MSVC and clang-cl). |
+| `kairn-gen.test` | `python3 gen/kairn-gen test --no-cxx`: the generator's own tests, without those that compile C++, which take longer than everything else together; run `python3 gen/kairn-gen test` for all of them. |
 | `kairn-oracle.selftest` | `python3 oracle/kairn-oracle selftest --quick`: the oracle's own tests, including injected errors that it must catch. |
 | `kairn-oracle.claims` | `python3 oracle/kairn-oracle check --claims-only`: the oracle can read every claim in `gen/claims.json`. |
 | `crosscheck.interp.*` | Each kernel, run by the generator's interpreter on every operand of a small format, judged by the oracle against its claims. |
+| `crosscheck.interp-restricted.*`, `crosscheck.interp-sampled.*` | For the kernels with too many operands for that (the two-limb balls), every operand of a restricted domain of a small format, and random operands of the whole format. |
 | `crosscheck.cxx.*` | Each kernel, compiled with the build's compiler and flags, on random `binary64` and `binary32` operands, judged by the oracle. |
-| `crosscheck.cxx-*.*` | The same, under each contraction setting that matters to the compiler. |
+| `crosscheck.neon.*`, `crosscheck.avx2.*` | The same for the packed kernels, NEON on AArch64 and AVX2 on x86-64, one operand per lane. |
+| `crosscheck.cxx-*.*`, `crosscheck.neon-*.*`, `crosscheck.avx2-*.*` | The same, under each contraction setting that matters to the compiler. |
+| `crosscheck.guards` | The cross-checks fail when they check less than they say: an incomplete enumeration, a missing stratum, nothing judged. |
 | `consume.add_subdirectory` | A CMake project that adds Kairn with `add_subdirectory` and links `kairn::kairn` and `kairn::fma` builds, compiles as C++20, and runs a kernel. |
 | `consume.install` | `cmake --install` of the build tree into a prefix inside the build directory. |
 | `consume.find_package` | A CMake project that finds that installed copy with `find_package(kairn)` builds, compiles as C++20, and runs a kernel. |
