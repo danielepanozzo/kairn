@@ -393,11 +393,13 @@ def radius2_exact(p, qmin, kname):
     eta), from milestone1.md's table:
         E = U_q, or U_q (1+u) for the 2-limb sums and scaling;
         G = (1+u)^3, ^5 (ball_mul_1) or ^6 (ball_mul_2);
-        H = (1+u)((1+u)^2 eta + 1/2 eta)            for sums,
-            (1+u)((1+u)^2 eta + V_q + 1/2 eta)      for scalings,
-            (1+u)(2(1+u)^4 eta + V_q + 1/2 eta)     for ball_mul_1,
-            (1+u)(2(1+u)^5 eta + V_q + 1/2 eta)     for ball_mul_2,
-    with U_q = rel/(1 - rel) and V_q = tiny/(1 - rel) of the center kernel's proved bound."""
+        H = (1+u)((1+u)^2 eta + 1/2 eta) + N            for sums,
+            (1+u)((1+u)^2 eta + V_q + 1/2 eta) + N      for scalings,
+            (1+u)(2(1+u)^4 eta + V_q + 1/2 eta) + N     for ball_mul_1,
+            (1+u)(2(1+u)^5 eta + V_q + 1/2 eta) + N     for ball_mul_2,
+    with U_q = rel/(1 - rel) and V_q = tiny/(1 - rel) of the center kernel's proved bound, and
+    N = 2^(p-1) eta the smallest normal number, which no bound needs: it makes H a normal number
+    (the page's "Why H contains N")."""
     center, e_factor, g_power, h_shape = RADIUS2[kname]
     c, k, t = PROVED_BOUND[center]
     u = Fraction(1, 1 << p)
@@ -415,6 +417,7 @@ def radius2_exact(p, qmin, kname):
         H = one * (2 * one ** 4 + vq + Fraction(1, 2))
     else:
         H = one * (2 * one ** 5 + vq + Fraction(1, 2))
+    H += Fraction(1 << (p - 1))                # N, in units of eta
     return E, G, H
 
 

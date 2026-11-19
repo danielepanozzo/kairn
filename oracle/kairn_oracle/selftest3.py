@@ -694,19 +694,25 @@ def radius_second(ctx):
         return tuple(Q(v) * eta if type(v) is int else v
                      for v in refrun.radius2_constants(ar, kname))
 
+    n64 = 2 ** 52 * eta64                      # N, the smallest normal number: 2^-1022
     hand = {
-        # U_q = u exactly (rel = u/(1+u)); (1+u)^3 = 1+3u+... rounds up to 1+4u; H = 1.5 eta+.
-        ("binary64", "ball_add_1"): (u64, 1 + 4 * u64, 2 * eta64),
-        # (1+u)^6 rounds up to 1+8u; 4u^2/(1-4u^2) just above 2^-104; H just above 4 eta.
-        ("binary64", "ball_mul_2"): (Q(2) ** -104 * (1 + 2 * u64), 1 + 8 * u64, 5 * eta64),
-        # (1+u)^5 rounds up to 1+6u; H = (1+u)(2(1+u)^4 + (1+u)/2 + 1/2) eta, just above 3.
-        ("binary64", "ball_mul_1"): (u64, 1 + 6 * u64, 4 * eta64),
-        # u = 1/8: U_q = 1/8; (9/8)^3 = 1.42 rounds up to 1.5; H = 1.99 eta rounds to 2 eta.
-        ("fp:3:-4:1", "ball_add_1"): (Q(1, 8), Q(3, 2), Q(1, 8)),
-        # rel = 2u^2 = 1/32, U_q (1+u) = 9/248 is below eta = 1/16.
-        ("fp:3:-4:1", "ball_scale_2"): (Q(1, 16), Q(3, 2), Q(1, 4)),
-        # (9/8)^6 = 2.03 rounds up to 2.5 (spacing 1/2 in [2, 4)).
-        ("fp:3:-4:1", "ball_mul_2"): (Q(1, 8), Q(5, 2), Q(7, 16)),
+        # U_q = u exactly (rel = u/(1+u)); (1+u)^3 = 1+3u+... rounds up to 1+4u; H = N plus
+        # 1.5 eta+, and numbers just above N are multiples of eta: N + 2 eta.
+        ("binary64", "ball_add_1"): (u64, 1 + 4 * u64, n64 + 2 * eta64),
+        # (1+u)^6 rounds up to 1+8u; 4u^2/(1-4u^2) just above 2^-104; H just above N + 4 eta.
+        ("binary64", "ball_mul_2"): (Q(2) ** -104 * (1 + 2 * u64), 1 + 8 * u64, n64 + 5 * eta64),
+        # (1+u)^5 rounds up to 1+6u; H = N + (1+u)(2(1+u)^4 + (1+u)/2 + 1/2) eta, just above
+        # N + 3 eta.
+        ("binary64", "ball_mul_1"): (u64, 1 + 6 * u64, n64 + 4 * eta64),
+        # u = 1/8, eta = 1/16, N = 4 eta: U_q = 1/8; (9/8)^3 = 1.42 rounds up to 1.5;
+        # H = (4 + 1.99) eta rounds up to 6 eta (spacing eta in [4 eta, 8 eta)).
+        ("fp:3:-4:1", "ball_add_1"): (Q(1, 8), Q(3, 2), Q(3, 8)),
+        # rel = 2u^2 = 1/32, U_q (1+u) = 9/248 is below eta = 1/16; H = (4 + 3.15) eta rounds
+        # up to 8 eta.
+        ("fp:3:-4:1", "ball_scale_2"): (Q(1, 16), Q(3, 2), Q(1, 2)),
+        # (9/8)^6 = 2.03 rounds up to 2.5 (spacing 1/2 in [2, 4)); H = (4 + 6.42) eta rounds up
+        # to 12 eta (spacing 2 eta in [8 eta, 16 eta)).
+        ("fp:3:-4:1", "ball_mul_2"): (Q(1, 8), Q(5, 2), Q(3, 4)),
     }
     for (fname, kname), want in hand.items():
         got = consts(fname, kname)
