@@ -17,19 +17,39 @@ string(REPLACE "|" ";" OPTIONS "${OPTIONS}")
 string(REPLACE "|" ";" COMMON "${COMMON}")
 
 # With -DUNVERIFIED_FIXTURE=DIR, the headers are first copied into DIR with every kernel of
-# kairn/gen/bounds.hpp marked unverified, so that the marker is tested whatever the proofs say.
+# kairn/gen/bounds.hpp marked unverified, so that the marker is tested whatever the proofs say;
+# with -DUNVERIFIED_ONLY=a|b as well, only those kernels, so that what another, proved kernel
+# would let compile through a conversion is tested too.
 if(UNVERIFIED_FIXTURE)
   file(REMOVE_RECURSE "${UNVERIFIED_FIXTURE}")
   file(COPY "${INCLUDE}/kairn" DESTINATION "${UNVERIFIED_FIXTURE}")
   set(_bounds "${UNVERIFIED_FIXTURE}/kairn/gen/bounds.hpp")
   file(READ "${_bounds}" _text)
-  string(REGEX REPLACE "template <> struct ([a-z0-9_]+)<(double|float)> {[^}]*};"
-    "template <> struct \\1<\\2> { static constexpr bool proved = false; };" _fixture "${_text}")
-  string(REGEX MATCHALL "proved = true" _left "${_fixture}")
-  string(REGEX MATCHALL "proved = false" _all "${_fixture}")
-  list(LENGTH _all _n)
-  if(_left OR _n EQUAL 0)
-    message(FATAL_ERROR "could not mark every kernel of ${_bounds} unverified")
+  if(UNVERIFIED_ONLY)
+    string(REPLACE "|" ";" _only "${UNVERIFIED_ONLY}")
+    set(_fixture "${_text}")
+    foreach(_k IN LISTS _only)
+      string(REGEX MATCHALL "template <> struct ${_k}<(double|float)> {" _found "${_fixture}")
+      list(LENGTH _found _n)
+      if(NOT _n EQUAL 2)
+        message(FATAL_ERROR "could not find the two specializations of ${_k} in ${_bounds}")
+      endif()
+      string(REGEX REPLACE "template <> struct ${_k}<(double|float)> {[^}]*};"
+        "template <> struct ${_k}<\\1> { static constexpr bool proved = false; };" _fixture "${_fixture}")
+    endforeach()
+    string(REGEX MATCHALL "proved = true" _left "${_fixture}")
+    if(NOT _left)
+      message(FATAL_ERROR "marking ${UNVERIFIED_ONLY} unverified left no kernel proved")
+    endif()
+  else()
+    string(REGEX REPLACE "template <> struct ([a-z0-9_]+)<(double|float)> {[^}]*};"
+      "template <> struct \\1<\\2> { static constexpr bool proved = false; };" _fixture "${_text}")
+    string(REGEX MATCHALL "proved = true" _left "${_fixture}")
+    string(REGEX MATCHALL "proved = false" _all "${_fixture}")
+    list(LENGTH _all _n)
+    if(_left OR _n EQUAL 0)
+      message(FATAL_ERROR "could not mark every kernel of ${_bounds} unverified")
+    endif()
   endif()
   file(WRITE "${_bounds}" "${_fixture}")
   set(INCLUDE "${UNVERIFIED_FIXTURE}")

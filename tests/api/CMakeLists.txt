@@ -2,11 +2,16 @@
 #
 # - api.constexpr: static_asserts of everything constexpr, and the same expressions at run time.
 # - api.oracle.KERNEL.FORMAT[.contract-fast]: the oracle judges, against KERNEL's claims, every
-#   public operation that must satisfy them (runner.cpp), computed through the operators and
-#   functions a client calls, on random binary64 and binary32 cases; once with this build's flags
-#   and once with contraction forced on.
-# - api.oracle.coverage: every kernel of gen/claims.json is mapped to a public operation by the
-#   runner or listed by it as internal, and the list below agrees.
+#   public operation that calls KERNEL (runner.cpp), computed through the constructors, operators
+#   and functions a client calls, on random binary64 and binary32 cases (in the extended domain,
+#   infinities, NaN and the special balls included, for the kernels that have it); once with this
+#   build's flags and once with contraction forced on.
+# - api.oracle.coverage: every kernel of gen/claims.json is reached by a public form of the
+#   runner, or is a building block, or is an entry kernel on the runner's short list of those not
+#   public yet; no entry kernel is a building block; and the lists below agree.
+# - api.boundary.*: a product the program computes and passes in gives the result of the same
+#   operation on the rounded product, under each contraction setting; with the generated guard
+#   taken out of a copy of the headers, it must not where the compiler fuses.
 # - api.environment: environment_ok() and self_test() pass in the default environment and detect
 #   a changed rounding mode and flush-to-zero.
 # - api.self_test.unsafe.*: with Clang, a build whose flags break Kairn without a macro to show it,
@@ -36,8 +41,10 @@ add_test(NAME api.constexpr COMMAND kairn-api-constexpr)
 
 # --- The public interface against the oracle --------------------------------------------------
 #
-# The kernels that no public operation computes on its own; runner.cpp lists the same, with why.
+# The building blocks, which no public operation computes on its own, and the entry kernels that no
+# public operation calls yet; runner.cpp lists the same, with why.
 set(_api_internal two_sum fast_two_sum two_prod split two_prod_dekker radd rmul)
+set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2)
 set(KAIRN_API_CASES 10000 CACHE STRING
   "Random cases per kernel, format and form of the public interface judged by the oracle")
 set(KAIRN_API_SEED 1 CACHE STRING "Seed of the random cases of the public interface's tests")
@@ -60,7 +67,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   set(_api_mapped "")
   foreach(_i RANGE ${_api_last})
     string(JSON _kernel GET "${_api_json}" kernels ${_i} name)
-    if(_kernel IN_LIST _api_internal)
+    if(_kernel IN_LIST _api_internal OR _kernel IN_LIST _api_not_public)
       continue()
     endif()
     list(APPEND _api_mapped ${_kernel})
@@ -89,8 +96,9 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
     endforeach()
   endforeach()
   add_test(NAME api.oracle.coverage
-    COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>" "-DMAPPED=${_api_mapped}"
-      "-DINTERNAL=${_api_internal}" -P "${CMAKE_CURRENT_SOURCE_DIR}/coverage.cmake")
+    COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>" "-DCLAIMS=${_api_claims}"
+      "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"
+      "-DNOT_PUBLIC=${_api_not_public}" -P "${CMAKE_CURRENT_SOURCE_DIR}/coverage.cmake")
   set_tests_properties(api.oracle.coverage PROPERTIES LABELS "api;oracle")
   list(LENGTH _api_mapped _n)
   message(STATUS "Kairn tests: the public interface of ${_n} kernels against the oracle, with 2 runners")
@@ -100,9 +108,31 @@ endif()
 #
 # boundary.cpp, under the build's flags and each contraction setting that matters to the compiler:
 # with the guard, every form must agree with the same operation on the rounded product
-# (api.boundary.*). Built again with the guard turned off (api.boundary.unguarded.*), some form
+# (api.boundary.*). Built again with the guard taken out (api.boundary.unguarded.*), some form
 # must differ where the compiler was measured to fuse across statements, so that the first test
 # cannot pass for want of a compiler that fuses; elsewhere that build only reports.
+#
+# The guard is an operation of the generated kernels (rule R3), emitted as
+# `__builtin_is_constant_evaluated() ? a : a + 0.0`. The unguarded build compiles against a copy of
+# the headers in which every such line of include/kairn/gen/scalar.hpp keeps only `a`: the
+# generator has no switch for it, and needs none for anything but this test. The copy is made at
+# configure time, and fails the configuration if it finds no guard to take out or leaves one.
+set(_api_unguarded "${CMAKE_CURRENT_BINARY_DIR}/unguarded-fixture")
+set(_api_scalar "${_api_include}/kairn/gen/scalar.hpp")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_api_scalar}")
+file(REMOVE_RECURSE "${_api_unguarded}")
+file(COPY "${_api_include}/kairn" DESTINATION "${_api_unguarded}")
+file(READ "${_api_scalar}" _api_text)
+string(REGEX MATCHALL "__builtin_is_constant_evaluated\\(\\) \\? ([A-Za-z0-9_]+) : [A-Za-z0-9_]+ \\+ 0\\.0f?;"
+  _api_guards "${_api_text}")
+list(LENGTH _api_guards _api_n)
+string(REGEX REPLACE "__builtin_is_constant_evaluated\\(\\) \\? ([A-Za-z0-9_]+) : ([A-Za-z0-9_]+) \\+ 0\\.0f?;"
+  "\\1;" _api_text "${_api_text}")
+string(REGEX MATCHALL "\\+ 0\\.0f?;" _api_left "${_api_text}")
+if(_api_n EQUAL 0 OR _api_left)
+  message(FATAL_ERROR "tests/api: could not take the guard out of ${_api_scalar} (${_api_n} found)")
+endif()
+file(WRITE "${_api_unguarded}/kairn/gen/scalar.hpp" "${_api_text}")
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   set(_api_contraction "" "" fp-precise /fp:precise fp-contract /fp:contract fp-strict /fp:strict)
 elseif(_msvc_style)
@@ -143,8 +173,12 @@ foreach(_i RANGE 0 ${_last} 2)
   endif()
   _kairn_api_program(kairn-api-boundary${_target_suffix} boundary.cpp ${_level} ${_option})
   add_test(NAME api.boundary${_suffix} COMMAND kairn-api-boundary${_target_suffix} --expect none)
-  _kairn_api_program(kairn-api-boundary-unguarded${_target_suffix} boundary.cpp ${_level} ${_option})
-  target_compile_definitions(kairn-api-boundary-unguarded${_target_suffix} PRIVATE KAIRN_DETAIL_TEST_UNGUARDED)
+  add_executable(kairn-api-boundary-unguarded${_target_suffix} boundary.cpp)
+  target_include_directories(kairn-api-boundary-unguarded${_target_suffix} BEFORE PRIVATE "${_api_unguarded}")
+  target_link_libraries(kairn-api-boundary-unguarded${_target_suffix} PRIVATE kairn::fma)
+  target_compile_features(kairn-api-boundary-unguarded${_target_suffix} PRIVATE cxx_std_20)
+  target_compile_options(kairn-api-boundary-unguarded${_target_suffix} PRIVATE ${_api_warnings} ${_level} ${_option})
+  target_compile_definitions(kairn-api-boundary-unguarded${_target_suffix} PRIVATE KAIRN_TEST_UNGUARDED_COPY)
   if(_fuses)
     add_test(NAME api.boundary.unguarded${_suffix} COMMAND kairn-api-boundary-unguarded${_target_suffix} --expect some)
   else()
@@ -252,8 +286,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 else()
   set(_api_unmarked "proof_checked|invalid argument type")
 endif()
-foreach(_case_name IN ITEMS 1:sub_2_2 2:lt_2_2 3:neg_2 4:to_down_2 5:add_1_1 6:ball_add_2 7:sub_2_2_assign
-                            8:mul_pow2_2 9:ball_scale_2 10:traits_constant)
+foreach(_case_name IN ITEMS 1:sub_2_2_full 2:lt_2_2 3:neg_2 4:to_down_2 5:add_1_1 6:ball_add_2_full
+                            7:sub_2_2_full_assign 8:mul_pow2_2_full 9:ball_scale_2_full 10:traits_constant
+                            12:to_nearest_2_narrowing 13:make_2 14:ball_make_2)
   string(REPLACE ":" ";" _pair "${_case_name}")
   list(GET _pair 0 _case)
   list(GET _pair 1 _name)
@@ -264,7 +299,20 @@ foreach(_case_name IN ITEMS 1:sub_2_2 2:lt_2_2 3:neg_2 4:to_down_2 5:add_1_1 6:b
   _kairn_api_reject(unverified.${_name} ${_case} "${_expect}"
     "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/${_name}")
 endforeach()
-_kairn_api_reject(checks.from_limbs_not_normalized 11 "constant|constexpr")
+# One kernel unverified, the others proved: the operation must not compile through a conversion to
+# another, proved kernel (x + a as x + Expansion(a), a scaling as a product with a point ball).
+foreach(_case_name IN ITEMS 20:add_2_1_full:limb 21:add_2_1_full:one_limb 22:sub_1_2_full:limb
+                            23:mul_2_1_full:limb 24:ball_scale_2_full:limb 25:ball_make_2:point
+                            26:lt_2_1:limb)
+  string(REPLACE ":" ";" _triple "${_case_name}")
+  list(GET _triple 0 _case)
+  list(GET _triple 1 _kernel)
+  list(GET _triple 2 _what)
+  _kairn_api_reject(unverified_only.${_kernel}.${_what} ${_case} "${_api_unmarked}"
+    "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/only-${_kernel}-${_what}"
+    "-DUNVERIFIED_ONLY=${_kernel}")
+endforeach()
+_kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")
 
 # --- One limb against T -----------------------------------------------------------------------
 if(Python3_Interpreter_FOUND)

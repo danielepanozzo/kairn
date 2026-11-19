@@ -1,17 +1,32 @@
 // A runner of the line protocol (docs/developer/architecture.md, "The line protocol") that computes
 // every result through Kairn's public interface, so that the oracle judges what a client calls:
-// the operators and functions of Expansion and Ball, not the generated kernels.
+// the constructors, operators and functions of Expansion and Ball, not the generated kernels.
 //
 //   runner [--form NAME]      request lines on standard input, completed lines on standard output
 //   runner --forms KERNEL     the forms that must satisfy KERNEL's claims, one per line
 //   runner --list             every kernel that some form maps to
-//   runner --internal         the kernels no public operation computes on its own
+//   runner --internal         the building blocks: kernels that are parts of other kernels
+//   runner --not-public       entry kernels that no public operation calls yet, each with why
 //
-// Each public operation is mapped to the kernel whose claims it must satisfy; a kernel can have
-// several forms (x + a and a + x, x += y, the marked and the unmarked operator). A form uses the
-// operator without kairn::unverified when gen/claims.json says the kernel is proved, as a client
-// would, and with the marker otherwise, so that the runner follows the proofs as they land.
+// Each public operation is mapped to the kernel it calls, whose claims it must satisfy; a kernel
+// can have several forms (x + a and a + x, x += y, the marked and the unmarked operator). The
+// kernels of the extended domain (the full kernels, the constructors, the comparisons and
+// conversions) get infinite and NaN operands from the oracle, and balls that are empty or the
+// whole line; every operand is built through the public constructors (from_limbs, Ball(c, r)), so
+// that what reaches the operation is what a client would have. A form uses the operator without
+// kairn::unverified when gen/claims.json says the kernel is proved, as a client would, and with
+// the marker otherwise, so that the runner follows the proofs as they land.
+//
+// Some forms can compute only some lines of their kernel: ldexp needs a power of two among the
+// operands of mul_1_1, half needs an operand it can halve back exactly, a point form needs a ball
+// of radius zero. On the other lines such a form computes the plain operation (written beside
+// it), and it fails at the end of a stream of at least 1000 lines in which it computed none: a pass
+// must mean that the form itself was judged.
+//
 // binary64 requests run on double limbs, binary32 requests on float limbs; a mask is 0 or 1.
+// KAIRN_CHECKS is off: the oracle sends what the checks would stop (negative radii, which make an
+// empty ball), and judges the result instead.
+#define KAIRN_CHECKS 0
 #include <kairn/kairn.hpp>
 
 #include <cmath>
@@ -34,24 +49,39 @@ using B1 = kairn::Ball<T, 1>;
 template <class T>
 using B2 = kairn::Ball<T, 2>;
 namespace bounds = kairn::gen::bounds;
-using kairn::unverified;
+namespace finite = kairn::finite;
 
-// Operands, from the limbs of a request.
+// The operand as a client writes it: itself if the kernel is proved, marked otherwise.
+#define PROVED(KERNEL) bounds::KERNEL<T>::proved
+#define AS(KERNEL, x)                                                    \
+    [&] {                                                                \
+        if constexpr (PROVED(KERNEL)) return (x);                        \
+        else return kairn::unverified(x);                                \
+    }()
+
+// Operands, from the limbs of a request, through the public constructors.
 template <class T>
 E1<T> one(const T* in) {
     return E1<T>(in[0]);
 }
 template <class T>
 E2<T> two(const T* in) {
-    return E2<T>::from_limbs(in);
+    if constexpr (PROVED(make_2_limbs)) {
+        return E2<T>::from_limbs(in);
+    } else {  // no public way to build it: the limbs as they are
+        E2<T> x;
+        x.limb[0] = in[0];
+        x.limb[1] = in[1];
+        return x;
+    }
 }
 template <class T>
 B1<T> ball1(const T* in) {
-    return B1<T>(one(in), in[1]);
+    return B1<T>(AS(ball_make_1, one(in)), in[1]);
 }
 template <class T>
 B2<T> ball2(const T* in) {
-    return B2<T>(two(in), in[2]);
+    return B2<T>(AS(ball_make_2, two(in)), in[2]);
 }
 // Results, into the limbs of the completed line.
 template <class T>
@@ -69,124 +99,330 @@ void put(T* out, const kairn::Ball<T, K>& z) {
     out[K] = z.radius();
 }
 
-// One form: a function template, instantiated for double and float in the table below.
-#define FORM(NAME, ...)                                                                    \
-    template <class T>                                                                     \
-    void NAME([[maybe_unused]] const T* in, [[maybe_unused]] T* out, [[maybe_unused]] bool* mo) { \
-        __VA_ARGS__;                                                                       \
+// How often a conditional form computed its own operation (see the top of the file).
+long reached = 0;
+
+// x 2^k by T's own ldexp on each limb, independent of Kairn, when that is exact and gives a
+// normalized pair: true and the result in y, or false.
+template <class T>
+bool exact_scale(const T* x, int limbs, int k, T* y) {
+    for (int i = 0; i < limbs; ++i) {
+        y[i] = std::ldexp(x[i], k);
+        if (!std::isfinite(y[i]) || std::ldexp(y[i], -k) != x[i]) return false;
     }
-// The operator as a client writes it: unmarked if the kernel is proved, marked otherwise.
-#define PROVED(KERNEL) bounds::KERNEL<T>::proved
+    return limbs == 1 || y[0] + y[1] == y[0];
+}
+// For x and c = 2^m: y = x 2^k exactly, with m - k outside the exponents of the powers of two of
+// T, so that ldexp(y, m - k) is x 2^m computed in steps; false if no such exact y is found.
+template <class T>
+bool far_split(const T* x, int limbs, int m, T* y, int& n) {
+    constexpr int lo = std::numeric_limits<T>::min_exponent - std::numeric_limits<T>::digits;
+    constexpr int hi = std::numeric_limits<T>::max_exponent - 1;
+    for (int k : {m - hi - 1, m - lo + 1, m - hi - 1 - 2 * std::numeric_limits<T>::digits, m - lo + 1 + hi}) {
+        if (exact_scale(x, limbs, k, y)) {
+            n = m - k;
+            return true;
+        }
+    }
+    return false;
+}
+// b as +-2^m: true and m, or false.
+template <class T>
+bool power_of_two(T b, int& m) {
+    if (!std::isfinite(b) || b == 0) return false;
+    int e = 0;
+    const T f = std::frexp(std::fabs(b), &e);
+    m = e - 1;
+    return f == T(0.5);
+}
+
+// One form: a function template, instantiated for double and float in the table below.
+#define FORM(NAME, ...)                                                                             \
+    template <class T>                                                                              \
+    void NAME([[maybe_unused]] const T* in, [[maybe_unused]] T* out, [[maybe_unused]] bool* mo) {   \
+        __VA_ARGS__;                                                                                \
+    }
 
 // One limb. -b and E1(-b) are exact, so x - (-b) asks for the rounded sum the claims of add_1_1
 // are about.
-FORM(add_1_1_plus, if constexpr (PROVED(add_1_1)) put(out, one(in) + one(in + 1)); else put(out, unverified(one(in)) + one(in + 1)))
-FORM(add_1_1_plus_limb, if constexpr (PROVED(add_1_1)) put(out, one(in) + in[1]); else put(out, unverified(one(in)) + in[1]))
-FORM(add_1_1_limb_plus, if constexpr (PROVED(add_1_1)) put(out, in[0] + one(in + 1)); else put(out, in[0] + unverified(one(in + 1))))
-FORM(add_1_1_plus_assign, E1<T> x = one(in); if constexpr (PROVED(add_1_1)) x += one(in + 1); else x += unverified(one(in + 1)); put(out, x))
-FORM(add_1_1_minus, if constexpr (PROVED(add_1_1)) put(out, one(in) - E1<T>(-in[1])); else put(out, unverified(one(in)) - E1<T>(-in[1])))
-FORM(add_1_1_minus_assign, E1<T> x = one(in); if constexpr (PROVED(add_1_1)) x -= E1<T>(-in[1]); else x -= unverified(E1<T>(-in[1])); put(out, x))
-FORM(add_1_1_add_fast, if constexpr (PROVED(add_1_1)) put(out, kairn::add_fast(one(in), one(in + 1))); else put(out, kairn::add_fast(unverified(one(in)), one(in + 1))))
-FORM(add_1_1_marked, put(out, unverified(one(in)) + unverified(one(in + 1))))
-FORM(mul_1_1_times, if constexpr (PROVED(mul_1_1)) put(out, one(in) * one(in + 1)); else put(out, unverified(one(in)) * one(in + 1)))
-FORM(mul_1_1_times_limb, if constexpr (PROVED(mul_1_1)) put(out, one(in) * in[1]); else put(out, unverified(one(in)) * in[1]))
-FORM(mul_1_1_limb_times, if constexpr (PROVED(mul_1_1)) put(out, in[0] * one(in + 1)); else put(out, in[0] * unverified(one(in + 1))))
-FORM(mul_1_1_times_assign, E1<T> x = one(in); if constexpr (PROVED(mul_1_1)) x *= one(in + 1); else x *= unverified(one(in + 1)); put(out, x))
-FORM(mul_1_1_marked, put(out, unverified(one(in)) * unverified(one(in + 1))))
+FORM(add_1_1_plus, put(out, AS(add_1_1, one(in)) + one(in + 1)))
+FORM(add_1_1_plus_limb, put(out, AS(add_1_1, one(in)) + in[1]))
+FORM(add_1_1_limb_plus, put(out, in[0] + AS(add_1_1, one(in + 1))))
+FORM(add_1_1_plus_assign, E1<T> x = one(in); x += AS(add_1_1, one(in + 1)); put(out, x))
+FORM(add_1_1_minus, put(out, AS(add_1_1, one(in)) - E1<T>(-in[1])))
+FORM(add_1_1_minus_assign, E1<T> x = one(in); x -= AS(add_1_1, E1<T>(-in[1])); put(out, x))
+FORM(add_1_1_add_fast, put(out, kairn::add_fast(AS(add_1_1, one(in)), one(in + 1))))
+FORM(add_1_1_marked, put(out, kairn::unverified(one(in)) + kairn::unverified(one(in + 1))))
+FORM(add_1_1_finite_add, put(out, finite::add(AS(add_1_1, one(in)), one(in + 1))))
+FORM(add_1_1_finite_add_limb, put(out, finite::add(AS(add_1_1, one(in)), in[1])))
+FORM(add_1_1_finite_limb_add, put(out, finite::add(in[0], AS(add_1_1, one(in + 1)))))
+FORM(add_1_1_finite_sub, put(out, finite::sub(AS(add_1_1, one(in)), E1<T>(-in[1]))))
+FORM(add_1_1_finite_sub_limb, put(out, finite::sub(AS(add_1_1, one(in)), -in[1])))
+FORM(add_1_1_finite_add_fast, put(out, finite::add_fast(AS(add_1_1, one(in)), one(in + 1))))
+FORM(mul_1_1_times, put(out, AS(mul_1_1, one(in)) * one(in + 1)))
+FORM(mul_1_1_times_limb, put(out, AS(mul_1_1, one(in)) * in[1]))
+FORM(mul_1_1_limb_times, put(out, in[0] * AS(mul_1_1, one(in + 1))))
+FORM(mul_1_1_times_assign, E1<T> x = one(in); x *= AS(mul_1_1, one(in + 1)); put(out, x))
+FORM(mul_1_1_marked, put(out, kairn::unverified(one(in)) * kairn::unverified(one(in + 1))))
+FORM(mul_1_1_finite_mul, put(out, finite::mul(AS(mul_1_1, one(in)), one(in + 1))))
+FORM(mul_1_1_finite_mul_limb, put(out, finite::mul(AS(mul_1_1, one(in)), in[1])))
+FORM(mul_1_1_finite_limb_mul, put(out, finite::mul(in[0], AS(mul_1_1, one(in + 1)))))
+// ldexp, half and the steps of ldexp, on the lines whose b is +-2^m; the product otherwise.
+FORM(mul_1_1_ldexp, int m = 0; if (!power_of_two(in[1], m)) { put(out, one(in) * one(in + 1)); return; } ++reached;
+     const E1<T> z = kairn::ldexp(AS(mul_1_1, one(in)), m); put(out, in[1] > 0 ? z : -z))
+FORM(mul_1_1_finite_ldexp, int m = 0; if (!power_of_two(in[1], m)) { put(out, one(in) * one(in + 1)); return; } ++reached;
+     const E1<T> z = finite::ldexp(AS(mul_1_1, one(in)), m); put(out, in[1] > 0 ? z : -z))
+FORM(mul_1_1_half, int m = 0; T y[1];
+     if (!power_of_two(in[1], m) || !exact_scale(in, 1, m + 1, y)) { put(out, one(in) * one(in + 1)); return; } ++reached;
+     const E1<T> z = kairn::half(AS(mul_1_1, one(y))); put(out, in[1] > 0 ? z : -z))
+FORM(mul_1_1_ldexp_far, int m = 0, n = 0; T y[1];
+     if (!power_of_two(in[1], m) || !far_split(in, 1, m, y, n)) { put(out, one(in) * one(in + 1)); return; } ++reached;
+     const E1<T> z = kairn::ldexp(AS(mul_1_1, one(y)), n); put(out, in[1] > 0 ? z : -z))
 
-// Two limbs: arithmetic.
-FORM(add_2_2_plus, if constexpr (PROVED(add_2_2)) put(out, two(in) + two(in + 2)); else put(out, unverified(two(in)) + two(in + 2)))
-FORM(add_2_2_plus_assign, E2<T> x = two(in); if constexpr (PROVED(add_2_2)) x += two(in + 2); else x += unverified(two(in + 2)); put(out, x))
-FORM(add_2_2_marked, put(out, two(in) + unverified(two(in + 2))))
-FORM(add_2_1_plus, if constexpr (PROVED(add_2_1)) put(out, two(in) + in[2]); else put(out, unverified(two(in)) + in[2]))
-FORM(add_2_1_limb_plus, if constexpr (PROVED(add_2_1)) put(out, in[2] + two(in)); else put(out, in[2] + unverified(two(in))))
-FORM(add_2_1_plus_assign, E2<T> x = two(in); if constexpr (PROVED(add_2_1)) x += in[2]; else x += unverified(in[2]); put(out, x))
-FORM(add_2_1_marked, put(out, two(in) + unverified(in[2])))
-FORM(sub_2_2_minus, if constexpr (PROVED(sub_2_2)) put(out, two(in) - two(in + 2)); else put(out, unverified(two(in)) - two(in + 2)))
-FORM(sub_2_2_minus_assign, E2<T> x = two(in); if constexpr (PROVED(sub_2_2)) x -= two(in + 2); else x -= unverified(two(in + 2)); put(out, x))
-FORM(sub_2_2_marked, put(out, two(in) - unverified(two(in + 2))))
-FORM(sub_2_1_minus, if constexpr (PROVED(sub_2_1)) put(out, two(in) - in[2]); else put(out, unverified(two(in)) - in[2]))
-FORM(sub_2_1_minus_assign, E2<T> x = two(in); if constexpr (PROVED(sub_2_1)) x -= in[2]; else x -= unverified(in[2]); put(out, x))
-FORM(sub_2_1_marked, put(out, two(in) - unverified(in[2])))
-FORM(sub_1_2_minus, if constexpr (PROVED(sub_1_2)) put(out, in[0] - two(in + 1)); else put(out, in[0] - unverified(two(in + 1))))
-FORM(sub_1_2_marked, put(out, unverified(in[0]) - two(in + 1)))
-FORM(mul_2_2_times, if constexpr (PROVED(mul_2_2)) put(out, two(in) * two(in + 2)); else put(out, unverified(two(in)) * two(in + 2)))
-FORM(mul_2_2_times_assign, E2<T> x = two(in); if constexpr (PROVED(mul_2_2)) x *= two(in + 2); else x *= unverified(two(in + 2)); put(out, x))
-FORM(mul_2_2_marked, put(out, two(in) * unverified(two(in + 2))))
-FORM(mul_2_1_times, if constexpr (PROVED(mul_2_1)) put(out, two(in) * in[2]); else put(out, unverified(two(in)) * in[2]))
-FORM(mul_2_1_limb_times, if constexpr (PROVED(mul_2_1)) put(out, in[2] * two(in)); else put(out, in[2] * unverified(two(in))))
-FORM(mul_2_1_times_assign, E2<T> x = two(in); if constexpr (PROVED(mul_2_1)) x *= in[2]; else x *= unverified(in[2]); put(out, x))
-FORM(mul_2_1_marked, put(out, unverified(two(in)) * in[2]))
-FORM(neg_2_negate, if constexpr (PROVED(neg_2)) put(out, -two(in)); else put(out, -unverified(two(in))))
-FORM(abs_2_abs, if constexpr (PROVED(abs_2)) put(out, kairn::abs(two(in))); else put(out, kairn::abs(unverified(two(in)))))
-FORM(add_fast_2_2_add_fast, if constexpr (PROVED(add_fast_2_2)) put(out, kairn::add_fast(two(in), two(in + 2))); else put(out, kairn::add_fast(unverified(two(in)), two(in + 2))))
-// c is a positive power of two, 2^n with n = ilogb(c) (subnormal powers included).
-FORM(mul_pow2_2_ldexp, const int n = std::ilogb(in[2]); if constexpr (PROVED(mul_pow2_2)) put(out, kairn::ldexp(two(in), n)); else put(out, kairn::ldexp(unverified(two(in)), n)))
+// Two limbs: construction.
+FORM(make_2_from_limb, put(out, E2<T>(AS(make_2, in[0]))))
+FORM(make_2_from_one, put(out, E2<T>(AS(make_2, one(in)))))
+FORM(make_2_marked, put(out, E2<T>(kairn::unverified(in[0]))))
+FORM(make_2_limbs_from_limbs, put(out, E2<T>::from_limbs(in)))
+FORM(make_2_limbs_from_limbs_unchecked, put(out, E2<T>::from_limbs_unchecked(in)))
+
+// Two limbs: arithmetic, the full kernels.
+FORM(add_2_2_full_plus, put(out, AS(add_2_2_full, two(in)) + two(in + 2)))
+FORM(add_2_2_full_plus_assign, E2<T> x = two(in); x += AS(add_2_2_full, two(in + 2)); put(out, x))
+FORM(add_2_2_full_marked, put(out, two(in) + kairn::unverified(two(in + 2))))
+FORM(add_2_1_full_plus, put(out, AS(add_2_1_full, two(in)) + in[2]))
+FORM(add_2_1_full_limb_plus, put(out, in[2] + AS(add_2_1_full, two(in))))
+FORM(add_2_1_full_plus_assign, E2<T> x = two(in); x += AS(add_2_1_full, in[2]); put(out, x))
+FORM(add_2_1_full_plus_one, put(out, AS(add_2_1_full, two(in)) + one(in + 2)))
+FORM(add_2_1_full_one_plus, put(out, one(in + 2) + AS(add_2_1_full, two(in))))
+FORM(add_2_1_full_plus_assign_one, E2<T> x = two(in); x += AS(add_2_1_full, one(in + 2)); put(out, x))
+FORM(add_2_1_full_marked, put(out, two(in) + kairn::unverified(in[2])))
+FORM(sub_2_2_full_minus, put(out, AS(sub_2_2_full, two(in)) - two(in + 2)))
+FORM(sub_2_2_full_minus_assign, E2<T> x = two(in); x -= AS(sub_2_2_full, two(in + 2)); put(out, x))
+FORM(sub_2_2_full_marked, put(out, two(in) - kairn::unverified(two(in + 2))))
+FORM(sub_2_1_full_minus, put(out, AS(sub_2_1_full, two(in)) - in[2]))
+FORM(sub_2_1_full_minus_assign, E2<T> x = two(in); x -= AS(sub_2_1_full, in[2]); put(out, x))
+FORM(sub_2_1_full_minus_one, put(out, AS(sub_2_1_full, two(in)) - one(in + 2)))
+FORM(sub_2_1_full_minus_assign_one, E2<T> x = two(in); x -= AS(sub_2_1_full, one(in + 2)); put(out, x))
+FORM(sub_2_1_full_marked, put(out, two(in) - kairn::unverified(in[2])))
+FORM(sub_1_2_full_minus, put(out, in[0] - AS(sub_1_2_full, two(in + 1))))
+FORM(sub_1_2_full_one_minus, put(out, one(in) - AS(sub_1_2_full, two(in + 1))))
+FORM(sub_1_2_full_marked, put(out, kairn::unverified(in[0]) - two(in + 1)))
+FORM(mul_2_2_full_times, put(out, AS(mul_2_2_full, two(in)) * two(in + 2)))
+FORM(mul_2_2_full_times_assign, E2<T> x = two(in); x *= AS(mul_2_2_full, two(in + 2)); put(out, x))
+FORM(mul_2_2_full_marked, put(out, two(in) * kairn::unverified(two(in + 2))))
+FORM(mul_2_1_full_times, put(out, AS(mul_2_1_full, two(in)) * in[2]))
+FORM(mul_2_1_full_limb_times, put(out, in[2] * AS(mul_2_1_full, two(in))))
+FORM(mul_2_1_full_times_assign, E2<T> x = two(in); x *= AS(mul_2_1_full, in[2]); put(out, x))
+FORM(mul_2_1_full_times_one, put(out, AS(mul_2_1_full, two(in)) * one(in + 2)))
+FORM(mul_2_1_full_one_times, put(out, one(in + 2) * AS(mul_2_1_full, two(in))))
+FORM(mul_2_1_full_times_assign_one, E2<T> x = two(in); x *= AS(mul_2_1_full, one(in + 2)); put(out, x))
+FORM(mul_2_1_full_marked, put(out, kairn::unverified(two(in)) * in[2]))
+FORM(add_fast_2_2_full_add_fast, put(out, kairn::add_fast(AS(add_fast_2_2_full, two(in)), two(in + 2))))
+FORM(add_fast_2_2_full_marked, put(out, kairn::add_fast(two(in), kairn::unverified(two(in + 2)))))
+// c is a positive power of two of T, 2^m with m = ilogb(c) (subnormal powers included).
+FORM(mul_pow2_2_full_ldexp, put(out, kairn::ldexp(AS(mul_pow2_2_full, two(in)), std::ilogb(in[2]))))
+FORM(mul_pow2_2_full_marked, put(out, kairn::ldexp(kairn::unverified(two(in)), std::ilogb(in[2]))))
+// half(y) with y = x 2^(m + 1) exactly, where there is such a y; ldexp(x, m) otherwise. The same
+// for the steps of ldexp, with y = x 2^k exactly and m - k beyond the powers of two of T.
+FORM(mul_pow2_2_full_half, const int m = std::ilogb(in[2]); T y[2];
+     if (!std::isfinite(in[0]) || !exact_scale(in, 2, m + 1, y)) { put(out, kairn::ldexp(two(in), m)); return; } ++reached;
+     put(out, kairn::half(AS(mul_pow2_2_full, two(y)))))
+FORM(mul_pow2_2_full_ldexp_far, int n = 0; T y[2];
+     if (!std::isfinite(in[0]) || !far_split(in, 2, std::ilogb(in[2]), y, n)) { put(out, kairn::ldexp(two(in), std::ilogb(in[2]))); return; }
+     ++reached; put(out, kairn::ldexp(AS(mul_pow2_2_full, two(y)), n)))
+
+// Two limbs: the finite cores, kairn::finite::.
+FORM(add_2_2_finite_add, put(out, finite::add(AS(add_2_2, two(in)), two(in + 2))))
+FORM(add_2_2_marked, put(out, finite::add(two(in), kairn::unverified(two(in + 2)))))
+FORM(add_2_1_finite_add, put(out, finite::add(AS(add_2_1, two(in)), in[2])))
+FORM(add_2_1_finite_limb_add, put(out, finite::add(in[2], AS(add_2_1, two(in)))))
+FORM(add_2_1_finite_add_one, put(out, finite::add(AS(add_2_1, two(in)), one(in + 2))))
+FORM(add_2_1_finite_one_add, put(out, finite::add(one(in + 2), AS(add_2_1, two(in)))))
+FORM(sub_2_2_finite_sub, put(out, finite::sub(AS(sub_2_2, two(in)), two(in + 2))))
+FORM(sub_2_1_finite_sub, put(out, finite::sub(AS(sub_2_1, two(in)), in[2])))
+FORM(sub_2_1_finite_sub_one, put(out, finite::sub(AS(sub_2_1, two(in)), one(in + 2))))
+FORM(sub_1_2_finite_sub, put(out, finite::sub(in[0], AS(sub_1_2, two(in + 1)))))
+FORM(sub_1_2_finite_one_sub, put(out, finite::sub(one(in), AS(sub_1_2, two(in + 1)))))
+FORM(mul_2_2_finite_mul, put(out, finite::mul(AS(mul_2_2, two(in)), two(in + 2))))
+FORM(mul_2_1_finite_mul, put(out, finite::mul(AS(mul_2_1, two(in)), in[2])))
+FORM(mul_2_1_finite_limb_mul, put(out, finite::mul(in[2], AS(mul_2_1, two(in)))))
+FORM(mul_2_1_finite_mul_one, put(out, finite::mul(AS(mul_2_1, two(in)), one(in + 2))))
+FORM(mul_2_1_finite_one_mul, put(out, finite::mul(one(in + 2), AS(mul_2_1, two(in)))))
+FORM(add_fast_2_2_finite_add_fast, put(out, finite::add_fast(AS(add_fast_2_2, two(in)), two(in + 2))))
+FORM(mul_pow2_2_finite_ldexp, put(out, finite::ldexp(AS(mul_pow2_2, two(in)), std::ilogb(in[2]))))
+FORM(mul_pow2_2_finite_ldexp_far, int n = 0; T y[2];
+     if (!far_split(in, 2, std::ilogb(in[2]), y, n)) { put(out, finite::ldexp(two(in), std::ilogb(in[2]))); return; }
+     ++reached; put(out, finite::ldexp(AS(mul_pow2_2, two(y)), n)))
+
+// Two limbs: negation, absolute value.
+FORM(neg_2_negate, put(out, -AS(neg_2, two(in))))
+FORM(abs_2_abs, put(out, kairn::abs(AS(abs_2, two(in)))))
 
 // Two limbs: comparisons. The reversed forms ask the same question with the operands swapped.
-FORM(lt_2_2_less, if constexpr (PROVED(lt_2_2)) mo[0] = two(in) < two(in + 2); else mo[0] = unverified(two(in)) < two(in + 2))
-FORM(lt_2_2_greater, if constexpr (PROVED(lt_2_2)) mo[0] = two(in + 2) > two(in); else mo[0] = two(in + 2) > unverified(two(in)))
-FORM(le_2_2_less_equal, if constexpr (PROVED(le_2_2)) mo[0] = two(in) <= two(in + 2); else mo[0] = unverified(two(in)) <= two(in + 2))
-FORM(le_2_2_greater_equal, if constexpr (PROVED(le_2_2)) mo[0] = two(in + 2) >= two(in); else mo[0] = two(in + 2) >= unverified(two(in)))
-FORM(eq_2_2_equal, if constexpr (PROVED(eq_2_2)) mo[0] = two(in) == two(in + 2); else mo[0] = unverified(two(in)) == two(in + 2))
-FORM(eq_2_2_not_unequal, if constexpr (PROVED(eq_2_2)) mo[0] = !(two(in) != two(in + 2)); else mo[0] = !(two(in) != unverified(two(in + 2))))
-FORM(lt_2_1_less, if constexpr (PROVED(lt_2_1)) mo[0] = two(in) < in[2]; else mo[0] = unverified(two(in)) < in[2])
-FORM(lt_2_1_greater, if constexpr (PROVED(lt_2_1)) mo[0] = in[2] > two(in); else mo[0] = unverified(in[2]) > two(in))
-FORM(le_2_1_less_equal, if constexpr (PROVED(le_2_1)) mo[0] = two(in) <= in[2]; else mo[0] = unverified(two(in)) <= in[2])
-FORM(le_2_1_greater_equal, if constexpr (PROVED(le_2_1)) mo[0] = in[2] >= two(in); else mo[0] = in[2] >= unverified(two(in)))
-FORM(eq_2_1_equal, if constexpr (PROVED(eq_2_1)) mo[0] = two(in) == in[2]; else mo[0] = unverified(two(in)) == in[2])
-FORM(eq_2_1_equal_rev, if constexpr (PROVED(eq_2_1)) mo[0] = in[2] == two(in); else mo[0] = in[2] == unverified(two(in)))
-FORM(eq_2_1_not_unequal, if constexpr (PROVED(eq_2_1)) mo[0] = !(two(in) != in[2]); else mo[0] = !(two(in) != unverified(in[2])))
-FORM(eq_2_1_not_unequal_rev, if constexpr (PROVED(eq_2_1)) mo[0] = !(in[2] != two(in)); else mo[0] = !(unverified(in[2]) != two(in)))
-FORM(lt_1_2_less, if constexpr (PROVED(lt_1_2)) mo[0] = in[0] < two(in + 1); else mo[0] = in[0] < unverified(two(in + 1)))
-FORM(lt_1_2_greater, if constexpr (PROVED(lt_1_2)) mo[0] = two(in + 1) > in[0]; else mo[0] = unverified(two(in + 1)) > in[0])
-FORM(le_1_2_less_equal, if constexpr (PROVED(le_1_2)) mo[0] = in[0] <= two(in + 1); else mo[0] = in[0] <= unverified(two(in + 1)))
-FORM(le_1_2_greater_equal, if constexpr (PROVED(le_1_2)) mo[0] = two(in + 1) >= in[0]; else mo[0] = unverified(two(in + 1)) >= in[0])
+FORM(lt_2_2_less, mo[0] = AS(lt_2_2, two(in)) < two(in + 2))
+FORM(lt_2_2_greater, mo[0] = two(in + 2) > AS(lt_2_2, two(in)))
+FORM(le_2_2_less_equal, mo[0] = AS(le_2_2, two(in)) <= two(in + 2))
+FORM(le_2_2_greater_equal, mo[0] = two(in + 2) >= AS(le_2_2, two(in)))
+FORM(eq_2_2_equal, mo[0] = AS(eq_2_2, two(in)) == two(in + 2))
+FORM(eq_2_2_not_unequal, mo[0] = !(two(in) != AS(eq_2_2, two(in + 2))))
+FORM(lt_2_1_less, mo[0] = AS(lt_2_1, two(in)) < in[2])
+FORM(lt_2_1_greater, mo[0] = in[2] > AS(lt_2_1, two(in)))
+FORM(lt_2_1_less_one, mo[0] = AS(lt_2_1, two(in)) < one(in + 2))
+FORM(lt_2_1_greater_one, mo[0] = one(in + 2) > AS(lt_2_1, two(in)))
+FORM(le_2_1_less_equal, mo[0] = AS(le_2_1, two(in)) <= in[2])
+FORM(le_2_1_greater_equal, mo[0] = in[2] >= AS(le_2_1, two(in)))
+FORM(le_2_1_less_equal_one, mo[0] = AS(le_2_1, two(in)) <= one(in + 2))
+FORM(le_2_1_greater_equal_one, mo[0] = one(in + 2) >= AS(le_2_1, two(in)))
+FORM(eq_2_1_equal, mo[0] = AS(eq_2_1, two(in)) == in[2])
+FORM(eq_2_1_equal_rev, mo[0] = in[2] == AS(eq_2_1, two(in)))
+FORM(eq_2_1_not_unequal, mo[0] = !(AS(eq_2_1, two(in)) != in[2]))
+FORM(eq_2_1_not_unequal_rev, mo[0] = !(in[2] != AS(eq_2_1, two(in))))
+FORM(eq_2_1_equal_one, mo[0] = AS(eq_2_1, two(in)) == one(in + 2))
+FORM(eq_2_1_equal_one_rev, mo[0] = one(in + 2) == AS(eq_2_1, two(in)))
+FORM(eq_2_1_not_unequal_one, mo[0] = !(AS(eq_2_1, two(in)) != one(in + 2)))
+FORM(eq_2_1_not_unequal_one_rev, mo[0] = !(one(in + 2) != AS(eq_2_1, two(in))))
+FORM(lt_1_2_less, mo[0] = in[0] < AS(lt_1_2, two(in + 1)))
+FORM(lt_1_2_greater, mo[0] = AS(lt_1_2, two(in + 1)) > in[0])
+FORM(lt_1_2_less_one, mo[0] = one(in) < AS(lt_1_2, two(in + 1)))
+FORM(lt_1_2_greater_one, mo[0] = AS(lt_1_2, two(in + 1)) > one(in))
+FORM(le_1_2_less_equal, mo[0] = in[0] <= AS(le_1_2, two(in + 1)))
+FORM(le_1_2_greater_equal, mo[0] = AS(le_1_2, two(in + 1)) >= in[0])
+FORM(le_1_2_less_equal_one, mo[0] = one(in) <= AS(le_1_2, two(in + 1)))
+FORM(le_1_2_greater_equal_one, mo[0] = AS(le_1_2, two(in + 1)) >= one(in))
 
-// Two limbs: conversions to T. Narrowing an Expansion<T, 2> keeps its leading limb, which is the
-// claim of to_nearest_2.
-FORM(to_nearest_2_to_nearest, if constexpr (PROVED(to_nearest_2)) out[0] = kairn::to_nearest(two(in)); else out[0] = kairn::to_nearest(unverified(two(in))))
-FORM(to_nearest_2_narrow, out[0] = E1<T>(two(in)).limb[0])
-FORM(to_down_2_to_down, if constexpr (PROVED(to_down_2)) out[0] = kairn::to_down(two(in)); else out[0] = kairn::to_down(unverified(two(in))))
-FORM(to_up_2_to_up, if constexpr (PROVED(to_up_2)) out[0] = kairn::to_up(two(in)); else out[0] = kairn::to_up(unverified(two(in))))
-FORM(abs_upper_2_abs_upper, if constexpr (PROVED(abs_upper_2)) out[0] = kairn::abs_upper(two(in)); else out[0] = kairn::abs_upper(unverified(two(in))))
+// Two limbs: conversions to T. Narrowing keeps the leading limb, the claim of to_nearest_2.
+FORM(to_nearest_2_to_nearest, out[0] = kairn::to_nearest(AS(to_nearest_2, two(in))))
+FORM(to_nearest_2_narrow, out[0] = E1<T>(AS(to_nearest_2, two(in))).limb[0])
+FORM(to_nearest_2_narrow_marked, out[0] = E1<T>(kairn::unverified(two(in))).limb[0])
+FORM(to_down_2_to_down, out[0] = kairn::to_down(AS(to_down_2, two(in))))
+FORM(to_up_2_to_up, out[0] = kairn::to_up(AS(to_up_2, two(in))))
+FORM(abs_upper_2_abs_upper, out[0] = kairn::abs_upper(AS(abs_upper_2, two(in))))
 
-// Balls. Operands are (center limbs, radius); a scaling's third operand is the exact T.
-#define BALL_FORMS(K, BALL)                                                                                                    \
-    FORM(ball_add_##K##_plus, if constexpr (PROVED(ball_add_##K)) put(out, BALL(in) + BALL(in + K + 1)); else put(out, unverified(BALL(in)) + BALL(in + K + 1))) \
-    FORM(ball_add_##K##_plus_assign, auto x = BALL(in); if constexpr (PROVED(ball_add_##K)) x += BALL(in + K + 1); else x += unverified(BALL(in + K + 1)); put(out, x)) \
-    FORM(ball_sub_##K##_minus, if constexpr (PROVED(ball_sub_##K)) put(out, BALL(in) - BALL(in + K + 1)); else put(out, unverified(BALL(in)) - BALL(in + K + 1))) \
-    FORM(ball_sub_##K##_minus_assign, auto x = BALL(in); if constexpr (PROVED(ball_sub_##K)) x -= BALL(in + K + 1); else x -= unverified(BALL(in + K + 1)); put(out, x)) \
-    FORM(ball_mul_##K##_times, if constexpr (PROVED(ball_mul_##K)) put(out, BALL(in) * BALL(in + K + 1)); else put(out, unverified(BALL(in)) * BALL(in + K + 1))) \
-    FORM(ball_mul_##K##_times_assign, auto x = BALL(in); if constexpr (PROVED(ball_mul_##K)) x *= BALL(in + K + 1); else x *= unverified(BALL(in + K + 1)); put(out, x)) \
-    FORM(ball_scale_##K##_scale, if constexpr (PROVED(ball_scale_##K)) put(out, BALL(in) * in[K + 1]); else put(out, unverified(BALL(in)) * in[K + 1])) \
-    FORM(ball_scale_##K##_scale_rev, if constexpr (PROVED(ball_scale_##K)) put(out, in[K + 1] * BALL(in)); else put(out, in[K + 1] * unverified(BALL(in)))) \
-    FORM(ball_scale_##K##_scale_assign, auto x = BALL(in); if constexpr (PROVED(ball_scale_##K)) x *= in[K + 1]; else x *= unverified(in[K + 1]); put(out, x)) \
-    FORM(ball_neg_##K##_negate, if constexpr (PROVED(ball_neg_##K)) put(out, -BALL(in)); else put(out, -unverified(BALL(in))))
+// Balls: construction. The center and the radius as given (a negative radius makes the empty set).
+FORM(ball_make_1_center_radius, put(out, B1<T>(AS(ball_make_1, one(in)), in[1])))
+FORM(ball_make_1_limb_radius, put(out, B1<T>(in[0], in[1])))
+FORM(ball_make_2_center_radius, put(out, B2<T>(AS(ball_make_2, two(in)), in[2])))
+
+// Balls: arithmetic. Operands are (center limbs, radius); a scaling's last operand is a T. A point
+// form takes the other ball of the line as a point when its radius is zero (and, for a point of
+// type T with two limbs, its second limb too), and is the operation of balls otherwise.
+#define BALL_FORMS(K, BALL)                                                                                          \
+    FORM(ball_add_##K##_full_plus, put(out, AS(ball_add_##K##_full, BALL(in)) + BALL(in + K + 1)))                 \
+    FORM(ball_add_##K##_full_plus_assign, auto x = BALL(in); x += AS(ball_add_##K##_full, BALL(in + K + 1)); put(out, x)) \
+    FORM(ball_add_##K##_full_marked, put(out, BALL(in) + kairn::unverified(BALL(in + K + 1))))                    \
+    FORM(ball_sub_##K##_full_minus, put(out, AS(ball_sub_##K##_full, BALL(in)) - BALL(in + K + 1)))                \
+    FORM(ball_sub_##K##_full_minus_assign, auto x = BALL(in); x -= AS(ball_sub_##K##_full, BALL(in + K + 1)); put(out, x)) \
+    FORM(ball_sub_##K##_full_marked, put(out, BALL(in) - kairn::unverified(BALL(in + K + 1))))                    \
+    FORM(ball_mul_##K##_full_times, put(out, AS(ball_mul_##K##_full, BALL(in)) * BALL(in + K + 1)))                \
+    FORM(ball_mul_##K##_full_times_assign, auto x = BALL(in); x *= AS(ball_mul_##K##_full, BALL(in + K + 1)); put(out, x)) \
+    FORM(ball_mul_##K##_full_marked, put(out, BALL(in) * kairn::unverified(BALL(in + K + 1))))                    \
+    FORM(ball_scale_##K##_full_scale, put(out, AS(ball_scale_##K##_full, BALL(in)) * in[K + 1]))                   \
+    FORM(ball_scale_##K##_full_scale_rev, put(out, in[K + 1] * AS(ball_scale_##K##_full, BALL(in))))               \
+    FORM(ball_scale_##K##_full_scale_assign, auto x = BALL(in); x *= AS(ball_scale_##K##_full, in[K + 1]); put(out, x)) \
+    FORM(ball_scale_##K##_full_marked, put(out, kairn::unverified(BALL(in)) * in[K + 1]))                         \
+    FORM(ball_neg_##K##_negate, put(out, -AS(ball_neg_##K, BALL(in))))                                             \
+    FORM(ball_neg_##K##_marked, put(out, -kairn::unverified(BALL(in))))
 BALL_FORMS(1, ball1)
 BALL_FORMS(2, ball2)
+
+// Points: the radius of the point's ball is zero, and for a point of type T with two limbs so is
+// its second limb.
+template <class T, int K>
+bool point(const T* ball) {
+    return ball[K] == 0 && (K == 1 || ball[1] == 0);
+}
+template <class T, int K>
+bool center_point(const T* ball) {
+    return ball[K] == 0;
+}
+template <class T, int K>
+kairn::Expansion<T, K> center(const T* in) {
+    if constexpr (K == 1) return one(in);
+    else return two(in);
+}
+#define POINT_FORMS(K, BALL)                                                                                         \
+    FORM(ball_add_##K##_full_plus_point, const T* y = in + K + 1;                                                    \
+         if (!point<T, K>(y)) { put(out, BALL(in) + BALL(y)); return; } ++reached;                                   \
+         put(out, AS(ball_add_##K##_full, BALL(in)) + y[0]))                                                          \
+    FORM(ball_add_##K##_full_point_plus, if (!point<T, K>(in)) { put(out, BALL(in) + BALL(in + K + 1)); return; }    \
+         ++reached; put(out, in[0] + AS(ball_add_##K##_full, BALL(in + K + 1))))                                     \
+    FORM(ball_add_##K##_full_plus_center, const T* y = in + K + 1;                                                   \
+         if (!center_point<T, K>(y)) { put(out, BALL(in) + BALL(y)); return; } ++reached;                            \
+         put(out, AS(ball_add_##K##_full, BALL(in)) + center<T, K>(y)))                                               \
+    FORM(ball_add_##K##_full_center_plus, if (!center_point<T, K>(in)) { put(out, BALL(in) + BALL(in + K + 1)); return; } \
+         ++reached; put(out, center<T, K>(in) + AS(ball_add_##K##_full, BALL(in + K + 1))))                          \
+    FORM(ball_add_##K##_full_plus_assign_point, const T* y = in + K + 1; auto x = BALL(in);                          \
+         if (!point<T, K>(y)) { put(out, x + BALL(y)); return; } ++reached; x += AS(ball_add_##K##_full, y[0]); put(out, x)) \
+    FORM(ball_add_##K##_full_plus_assign_center, const T* y = in + K + 1; auto x = BALL(in);                         \
+         if (!center_point<T, K>(y)) { put(out, x + BALL(y)); return; } ++reached;                                   \
+         x += AS(ball_add_##K##_full, (center<T, K>(y))); put(out, x))                                                \
+    FORM(ball_sub_##K##_full_minus_point, const T* y = in + K + 1;                                                   \
+         if (!point<T, K>(y)) { put(out, BALL(in) - BALL(y)); return; } ++reached;                                   \
+         put(out, AS(ball_sub_##K##_full, BALL(in)) - y[0]))                                                          \
+    FORM(ball_sub_##K##_full_point_minus, if (!point<T, K>(in)) { put(out, BALL(in) - BALL(in + K + 1)); return; }   \
+         ++reached; put(out, in[0] - AS(ball_sub_##K##_full, BALL(in + K + 1))))                                     \
+    FORM(ball_sub_##K##_full_minus_center, const T* y = in + K + 1;                                                  \
+         if (!center_point<T, K>(y)) { put(out, BALL(in) - BALL(y)); return; } ++reached;                            \
+         put(out, AS(ball_sub_##K##_full, BALL(in)) - center<T, K>(y)))                                               \
+    FORM(ball_sub_##K##_full_center_minus, if (!center_point<T, K>(in)) { put(out, BALL(in) - BALL(in + K + 1)); return; } \
+         ++reached; put(out, center<T, K>(in) - AS(ball_sub_##K##_full, BALL(in + K + 1))))                          \
+    FORM(ball_sub_##K##_full_minus_assign_point, const T* y = in + K + 1; auto x = BALL(in);                         \
+         if (!point<T, K>(y)) { put(out, x - BALL(y)); return; } ++reached; x -= AS(ball_sub_##K##_full, y[0]); put(out, x)) \
+    FORM(ball_sub_##K##_full_minus_assign_center, const T* y = in + K + 1; auto x = BALL(in);                        \
+         if (!center_point<T, K>(y)) { put(out, x - BALL(y)); return; } ++reached;                                   \
+         x -= AS(ball_sub_##K##_full, (center<T, K>(y))); put(out, x))
+POINT_FORMS(1, ball1)
+POINT_FORMS(2, ball2)
+// Products with a point: for two limbs, the ball of the point; for one limb, the scaling by it.
+FORM(ball_mul_2_full_times_center, const T* y = in + 3;
+     if (!center_point<T, 2>(y)) { put(out, ball2(in) * ball2(y)); return; } ++reached;
+     put(out, AS(ball_mul_2_full, ball2(in)) * two(y)))
+FORM(ball_mul_2_full_center_times, if (!center_point<T, 2>(in)) { put(out, ball2(in) * ball2(in + 3)); return; }
+     ++reached; put(out, two(in) * AS(ball_mul_2_full, ball2(in + 3))))
+FORM(ball_scale_1_full_scale_one, put(out, AS(ball_scale_1_full, ball1(in)) * one(in + 2)))
+FORM(ball_scale_1_full_one_scale, put(out, one(in + 2) * AS(ball_scale_1_full, ball1(in))))
 
 struct Form {
     const char* kernel;
     const char* name;
-    const char* in_kinds;   // one letter per input value: l a limb, m a mask
+    const char* in_kinds;  // one letter per input value: l a limb, m a mask
     const char* out_kinds;
+    bool conditional;      // computes its own operation on some lines only
     void (*binary64)(const double*, double*, bool*);
     void (*binary32)(const float*, float*, bool*);
 };
 
-#define ROW(KERNEL, NAME, IN, OUT) {#KERNEL, #NAME, IN, OUT, KERNEL##_##NAME<double>, KERNEL##_##NAME<float>},
+#define ROW(KERNEL, NAME, IN, OUT) {#KERNEL, #NAME, IN, OUT, false, KERNEL##_##NAME<double>, KERNEL##_##NAME<float>},
+#define SOME(KERNEL, NAME, IN, OUT) {#KERNEL, #NAME, IN, OUT, true, KERNEL##_##NAME<double>, KERNEL##_##NAME<float>},
 #define BALL_ROWS(K, IN, OUT, IN_SCALE, IN_NEG)            \
-    ROW(ball_add_##K, plus, IN, OUT)                     \
-    ROW(ball_add_##K, plus_assign, IN, OUT)              \
-    ROW(ball_sub_##K, minus, IN, OUT)                    \
-    ROW(ball_sub_##K, minus_assign, IN, OUT)             \
-    ROW(ball_mul_##K, times, IN, OUT)                    \
-    ROW(ball_mul_##K, times_assign, IN, OUT)             \
-    ROW(ball_scale_##K, scale, IN_SCALE, OUT)            \
-    ROW(ball_scale_##K, scale_rev, IN_SCALE, OUT)        \
-    ROW(ball_scale_##K, scale_assign, IN_SCALE, OUT)     \
-    ROW(ball_neg_##K, negate, IN_NEG, OUT)
+    ROW(ball_add_##K##_full, plus, IN, OUT)              \
+    ROW(ball_add_##K##_full, plus_assign, IN, OUT)       \
+    ROW(ball_add_##K##_full, marked, IN, OUT)            \
+    SOME(ball_add_##K##_full, plus_point, IN, OUT)       \
+    SOME(ball_add_##K##_full, point_plus, IN, OUT)       \
+    SOME(ball_add_##K##_full, plus_center, IN, OUT)      \
+    SOME(ball_add_##K##_full, center_plus, IN, OUT)      \
+    SOME(ball_add_##K##_full, plus_assign_point, IN, OUT) \
+    SOME(ball_add_##K##_full, plus_assign_center, IN, OUT) \
+    ROW(ball_sub_##K##_full, minus, IN, OUT)             \
+    ROW(ball_sub_##K##_full, minus_assign, IN, OUT)      \
+    ROW(ball_sub_##K##_full, marked, IN, OUT)            \
+    SOME(ball_sub_##K##_full, minus_point, IN, OUT)      \
+    SOME(ball_sub_##K##_full, point_minus, IN, OUT)      \
+    SOME(ball_sub_##K##_full, minus_center, IN, OUT)     \
+    SOME(ball_sub_##K##_full, center_minus, IN, OUT)     \
+    SOME(ball_sub_##K##_full, minus_assign_point, IN, OUT) \
+    SOME(ball_sub_##K##_full, minus_assign_center, IN, OUT) \
+    ROW(ball_mul_##K##_full, times, IN, OUT)             \
+    ROW(ball_mul_##K##_full, times_assign, IN, OUT)      \
+    ROW(ball_mul_##K##_full, marked, IN, OUT)            \
+    ROW(ball_scale_##K##_full, scale, IN_SCALE, OUT)     \
+    ROW(ball_scale_##K##_full, scale_rev, IN_SCALE, OUT) \
+    ROW(ball_scale_##K##_full, scale_assign, IN_SCALE, OUT) \
+    ROW(ball_scale_##K##_full, marked, IN_SCALE, OUT)    \
+    ROW(ball_neg_##K, negate, IN_NEG, OUT)               \
+    ROW(ball_neg_##K, marked, IN_NEG, OUT)
 
 // The first form of each kernel is its canonical one.
 const Form forms[] = {
@@ -198,37 +434,87 @@ const Form forms[] = {
     ROW(add_1_1, minus_assign, "ll", "l")
     ROW(add_1_1, add_fast, "ll", "l")
     ROW(add_1_1, marked, "ll", "l")
+    ROW(add_1_1, finite_add, "ll", "l")
+    ROW(add_1_1, finite_add_limb, "ll", "l")
+    ROW(add_1_1, finite_limb_add, "ll", "l")
+    ROW(add_1_1, finite_sub, "ll", "l")
+    ROW(add_1_1, finite_sub_limb, "ll", "l")
+    ROW(add_1_1, finite_add_fast, "ll", "l")
     ROW(mul_1_1, times, "ll", "l")
     ROW(mul_1_1, times_limb, "ll", "l")
     ROW(mul_1_1, limb_times, "ll", "l")
     ROW(mul_1_1, times_assign, "ll", "l")
     ROW(mul_1_1, marked, "ll", "l")
-    ROW(add_2_2, plus, "llll", "ll")
-    ROW(add_2_2, plus_assign, "llll", "ll")
+    ROW(mul_1_1, finite_mul, "ll", "l")
+    ROW(mul_1_1, finite_mul_limb, "ll", "l")
+    ROW(mul_1_1, finite_limb_mul, "ll", "l")
+    SOME(mul_1_1, ldexp, "ll", "l")
+    SOME(mul_1_1, finite_ldexp, "ll", "l")
+    SOME(mul_1_1, half, "ll", "l")
+    SOME(mul_1_1, ldexp_far, "ll", "l")
+    ROW(make_2, from_limb, "l", "ll")
+    ROW(make_2, from_one, "l", "ll")
+    ROW(make_2, marked, "l", "ll")
+    ROW(make_2_limbs, from_limbs, "ll", "ll")
+    ROW(make_2_limbs, from_limbs_unchecked, "ll", "ll")
+    ROW(add_2_2_full, plus, "llll", "ll")
+    ROW(add_2_2_full, plus_assign, "llll", "ll")
+    ROW(add_2_2_full, marked, "llll", "ll")
+    ROW(add_2_1_full, plus, "lll", "ll")
+    ROW(add_2_1_full, limb_plus, "lll", "ll")
+    ROW(add_2_1_full, plus_assign, "lll", "ll")
+    ROW(add_2_1_full, plus_one, "lll", "ll")
+    ROW(add_2_1_full, one_plus, "lll", "ll")
+    ROW(add_2_1_full, plus_assign_one, "lll", "ll")
+    ROW(add_2_1_full, marked, "lll", "ll")
+    ROW(sub_2_2_full, minus, "llll", "ll")
+    ROW(sub_2_2_full, minus_assign, "llll", "ll")
+    ROW(sub_2_2_full, marked, "llll", "ll")
+    ROW(sub_2_1_full, minus, "lll", "ll")
+    ROW(sub_2_1_full, minus_assign, "lll", "ll")
+    ROW(sub_2_1_full, minus_one, "lll", "ll")
+    ROW(sub_2_1_full, minus_assign_one, "lll", "ll")
+    ROW(sub_2_1_full, marked, "lll", "ll")
+    ROW(sub_1_2_full, minus, "lll", "ll")
+    ROW(sub_1_2_full, one_minus, "lll", "ll")
+    ROW(sub_1_2_full, marked, "lll", "ll")
+    ROW(mul_2_2_full, times, "llll", "ll")
+    ROW(mul_2_2_full, times_assign, "llll", "ll")
+    ROW(mul_2_2_full, marked, "llll", "ll")
+    ROW(mul_2_1_full, times, "lll", "ll")
+    ROW(mul_2_1_full, limb_times, "lll", "ll")
+    ROW(mul_2_1_full, times_assign, "lll", "ll")
+    ROW(mul_2_1_full, times_one, "lll", "ll")
+    ROW(mul_2_1_full, one_times, "lll", "ll")
+    ROW(mul_2_1_full, times_assign_one, "lll", "ll")
+    ROW(mul_2_1_full, marked, "lll", "ll")
+    ROW(add_fast_2_2_full, add_fast, "llll", "ll")
+    ROW(add_fast_2_2_full, marked, "llll", "ll")
+    ROW(mul_pow2_2_full, ldexp, "lll", "ll")
+    ROW(mul_pow2_2_full, marked, "lll", "ll")
+    SOME(mul_pow2_2_full, half, "lll", "ll")
+    SOME(mul_pow2_2_full, ldexp_far, "lll", "ll")
+    ROW(add_2_2, finite_add, "llll", "ll")
     ROW(add_2_2, marked, "llll", "ll")
-    ROW(add_2_1, plus, "lll", "ll")
-    ROW(add_2_1, limb_plus, "lll", "ll")
-    ROW(add_2_1, plus_assign, "lll", "ll")
-    ROW(add_2_1, marked, "lll", "ll")
-    ROW(sub_2_2, minus, "llll", "ll")
-    ROW(sub_2_2, minus_assign, "llll", "ll")
-    ROW(sub_2_2, marked, "llll", "ll")
-    ROW(sub_2_1, minus, "lll", "ll")
-    ROW(sub_2_1, minus_assign, "lll", "ll")
-    ROW(sub_2_1, marked, "lll", "ll")
-    ROW(sub_1_2, minus, "lll", "ll")
-    ROW(sub_1_2, marked, "lll", "ll")
-    ROW(mul_2_2, times, "llll", "ll")
-    ROW(mul_2_2, times_assign, "llll", "ll")
-    ROW(mul_2_2, marked, "llll", "ll")
-    ROW(mul_2_1, times, "lll", "ll")
-    ROW(mul_2_1, limb_times, "lll", "ll")
-    ROW(mul_2_1, times_assign, "lll", "ll")
-    ROW(mul_2_1, marked, "lll", "ll")
+    ROW(add_2_1, finite_add, "lll", "ll")
+    ROW(add_2_1, finite_limb_add, "lll", "ll")
+    ROW(add_2_1, finite_add_one, "lll", "ll")
+    ROW(add_2_1, finite_one_add, "lll", "ll")
+    ROW(sub_2_2, finite_sub, "llll", "ll")
+    ROW(sub_2_1, finite_sub, "lll", "ll")
+    ROW(sub_2_1, finite_sub_one, "lll", "ll")
+    ROW(sub_1_2, finite_sub, "lll", "ll")
+    ROW(sub_1_2, finite_one_sub, "lll", "ll")
+    ROW(mul_2_2, finite_mul, "llll", "ll")
+    ROW(mul_2_1, finite_mul, "lll", "ll")
+    ROW(mul_2_1, finite_limb_mul, "lll", "ll")
+    ROW(mul_2_1, finite_mul_one, "lll", "ll")
+    ROW(mul_2_1, finite_one_mul, "lll", "ll")
+    ROW(add_fast_2_2, finite_add_fast, "llll", "ll")
+    ROW(mul_pow2_2, finite_ldexp, "lll", "ll")
+    SOME(mul_pow2_2, finite_ldexp_far, "lll", "ll")
     ROW(neg_2, negate, "ll", "ll")
     ROW(abs_2, abs, "ll", "ll")
-    ROW(add_fast_2_2, add_fast, "llll", "ll")
-    ROW(mul_pow2_2, ldexp, "lll", "ll")
     ROW(lt_2_2, less, "llll", "m")
     ROW(lt_2_2, greater, "llll", "m")
     ROW(le_2_2, less_equal, "llll", "m")
@@ -237,31 +523,62 @@ const Form forms[] = {
     ROW(eq_2_2, not_unequal, "llll", "m")
     ROW(lt_2_1, less, "lll", "m")
     ROW(lt_2_1, greater, "lll", "m")
+    ROW(lt_2_1, less_one, "lll", "m")
+    ROW(lt_2_1, greater_one, "lll", "m")
     ROW(le_2_1, less_equal, "lll", "m")
     ROW(le_2_1, greater_equal, "lll", "m")
+    ROW(le_2_1, less_equal_one, "lll", "m")
+    ROW(le_2_1, greater_equal_one, "lll", "m")
     ROW(eq_2_1, equal, "lll", "m")
     ROW(eq_2_1, equal_rev, "lll", "m")
     ROW(eq_2_1, not_unequal, "lll", "m")
     ROW(eq_2_1, not_unequal_rev, "lll", "m")
+    ROW(eq_2_1, equal_one, "lll", "m")
+    ROW(eq_2_1, equal_one_rev, "lll", "m")
+    ROW(eq_2_1, not_unequal_one, "lll", "m")
+    ROW(eq_2_1, not_unequal_one_rev, "lll", "m")
     ROW(lt_1_2, less, "lll", "m")
     ROW(lt_1_2, greater, "lll", "m")
+    ROW(lt_1_2, less_one, "lll", "m")
+    ROW(lt_1_2, greater_one, "lll", "m")
     ROW(le_1_2, less_equal, "lll", "m")
     ROW(le_1_2, greater_equal, "lll", "m")
+    ROW(le_1_2, less_equal_one, "lll", "m")
+    ROW(le_1_2, greater_equal_one, "lll", "m")
     ROW(to_nearest_2, to_nearest, "ll", "l")
     ROW(to_nearest_2, narrow, "ll", "l")
+    ROW(to_nearest_2, narrow_marked, "ll", "l")
     ROW(to_down_2, to_down, "ll", "l")
     ROW(to_up_2, to_up, "ll", "l")
     ROW(abs_upper_2, abs_upper, "ll", "l")
+    ROW(ball_make_1, center_radius, "ll", "ll")
+    ROW(ball_make_1, limb_radius, "ll", "ll")
+    ROW(ball_make_2, center_radius, "lll", "lll")
     BALL_ROWS(1, "llll", "ll", "lll", "ll")
     BALL_ROWS(2, "llllll", "lll", "llll", "lll")
+    SOME(ball_mul_2_full, times_center, "llllll", "lll")
+    SOME(ball_mul_2_full, center_times, "llllll", "lll")
+    ROW(ball_scale_1_full, scale_one, "lll", "ll")
+    ROW(ball_scale_1_full, one_scale, "lll", "ll")
 };
 
-// Kernels that no public operation computes on its own, and why. Every kernel of gen/claims.json
-// is either mapped above or listed here (tests/api/CMakeLists.txt checks it).
+// Kernels that are parts of other kernels and that no public operation calls on its own. Every
+// kernel of gen/claims.json is mapped above, listed here, or listed below (coverage.cmake).
 const char* const internal[] = {
-    "two_sum", "fast_two_sum", "two_prod",        // building blocks of the kernels above
-    "split", "two_prod_dekker",                   // the constant-evaluation variant of two_prod
-    "radd", "rmul",                               // radius arithmetic inside the Ball kernels
+    "two_sum", "fast_two_sum", "two_prod",   // building blocks of the kernels above
+    "split", "two_prod_dekker",              // the constant-evaluation variant of two_prod
+    "radd", "rmul",                          // radius arithmetic of the first Ball design
+};
+// Entry kernels (entry: yes in gen/kernels) that no public operation calls yet, and why.
+struct NotPublic {
+    const char* kernel;
+    const char* why;
+};
+const char* const ball_core = "the finite core of a Ball operation: the operators call the full kernel, and "
+                              "kairn::finite has no Ball forms (decision D5 names the Expansion arithmetic)";
+const NotPublic not_public[] = {
+    {"ball_add_1", ball_core}, {"ball_sub_1", ball_core}, {"ball_mul_1", ball_core}, {"ball_scale_1", ball_core},
+    {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core}, {"ball_scale_2", ball_core},
 };
 
 constexpr int max_limbs = 16;
@@ -302,7 +619,7 @@ void put_limb(double v, std::string& out) {
 }
 
 int usage() {
-    std::fprintf(stderr, "usage: runner [--form NAME] | --forms KERNEL | --list | --internal\n");
+    std::fprintf(stderr, "usage: runner [--form NAME] | --forms KERNEL | --list | --internal | --not-public\n");
     return 2;
 }
 
@@ -316,13 +633,23 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (argc == 2 && std::strcmp(argv[1], "--list") == 0) {
-        const char* last = "";
-        for (const Form& f : forms)
-            if (std::strcmp(f.kernel, last) != 0) std::printf("%s\n", last = f.kernel);
+        std::vector<std::string> seen;
+        for (const Form& f : forms) {
+            bool known = false;
+            for (const std::string& s : seen) known = known || s == f.kernel;
+            if (!known) {
+                seen.push_back(f.kernel);
+                std::printf("%s\n", f.kernel);
+            }
+        }
         return 0;
     }
     if (argc == 2 && std::strcmp(argv[1], "--internal") == 0) {
         for (const char* k : internal) std::printf("%s\n", k);
+        return 0;
+    }
+    if (argc == 2 && std::strcmp(argv[1], "--not-public") == 0) {
+        for (const NotPublic& k : not_public) std::printf("%s\t%s\n", k.kernel, k.why);
         return 0;
     }
     if (argc == 3 && std::strcmp(argv[1], "--form") == 0) {
@@ -334,6 +661,8 @@ int main(int argc, char** argv) {
     std::ios::sync_with_stdio(false);
     std::string line, out;
     std::vector<std::string> fields;
+    long lines = 0;
+    const Form* conditional = nullptr;
     while (std::getline(std::cin, line)) {
         ++lineno;
         if (!line.empty() && line.back() == '\r') line.pop_back();
@@ -359,6 +688,8 @@ int main(int argc, char** argv) {
             if (form_name ? std::strcmp(form_name, f.name) == 0 : k == nullptr) k = &f;
         }
         if (!k) fail("no public operation maps to " + fields[0] + (form_name ? std::string(" as form ") + form_name : ""));
+        if (k->conditional) conditional = k;
+        ++lines;
         const int inputs = int(std::strlen(k->in_kinds)), outputs = int(std::strlen(k->out_kinds));
         if (int(fields.size()) - 2 != inputs) fail(fields[0] + " takes " + std::to_string(inputs) + " limbs");
         bool mo[max_limbs] = {};
@@ -392,6 +723,15 @@ int main(int argc, char** argv) {
         }
         out += '\n';
         std::fwrite(out.data(), 1, out.size(), stdout);
+    }
+    if (conditional) {
+        std::fprintf(stderr, "runner: form %s of %s computed its own operation on %ld of %ld lines\n", conditional->name,
+                     conditional->kernel, reached, lines);
+        if (lines >= 1000 && reached == 0) {
+            std::fprintf(stderr, "runner: form %s of %s computed its own operation on none of %ld lines\n",
+                         conditional->name, conditional->kernel, lines);
+            return 3;
+        }
     }
     return 0;
 }

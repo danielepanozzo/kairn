@@ -1,14 +1,16 @@
 // A product the program computes, passed straight into a Kairn operation, must give the same result
-// as the same operation on that product rounded first: the guard (detail::guard in expansion.hpp)
-// keeps a compiler that contracts across statements from fusing the product into a kernel's
-// error-free sums. Each form below is computed twice, with the product written in the call, and
-// with an honestly rounded product (returned through a volatile by a function that is not
-// inlined), on operands chosen so that the sums cancel, and the results are compared bit for bit.
+// as the same operation on that product rounded first: the guard of the generated kernels (rule
+// R3: guard(a) in add_2_1 and in the constructor kernels) keeps a compiler that contracts across
+// statements from fusing the product into a kernel's error-free sums. Each form below is computed
+// twice, with the product written in the call, and with an honestly rounded product (returned
+// through a volatile by a function that is not inlined), on operands chosen so that the sums
+// cancel, and the results are compared bit for bit.
 //
 //   boundary --expect none     every form agrees (the headers as they are)
-//   boundary --expect some     built with KAIRN_DETAIL_TEST_UNGUARDED, on a compiler and setting
-//                              that fuse: some form must differ, so that the test above cannot
-//                              pass for want of a compiler that fuses
+//   boundary --expect some     built against a copy of the headers without the guard
+//                              (tests/api/CMakeLists.txt), on a compiler and setting that fuse:
+//                              some form must differ, so that the test above cannot pass for want
+//                              of a compiler that fuses
 //   boundary --expect report   prints the counts only
 //
 // The forms whose limb operand is only multiplied (x * (a * b), a ball scaled by a * b) need no
@@ -60,6 +62,12 @@ PAIR(ball1_point, B1, (B1 y, double a, double b), return B1(a * b) + y, return B
 PAIR(ball1_center, B1, (B1 y, double a, double b), return B1(E1(a) * E1(b), 0x1p-40) + y,
      return B1(E1(a), 0x1p-40) + y)
 PAIR(ball1_radius, B1, (B1 y, double a, double b), return B1(E1(0.75), a * b) + y, return B1(E1(0.75), a) + y)
+PAIR(plus_one, E2, (E2 x, double a, double b), return x + E1(a * b), return x + E1(a))
+PAIR(minus_one, E2, (E2 x, double a, double b), return x - E1(a * b), return x - E1(a))
+PAIR(finite_plus, E2, (E2 x, double a, double b), return kairn::finite::add(x, a * b), return kairn::finite::add(x, a))
+PAIR(finite_rminus, E2, (E2 x, double a, double b), return kairn::finite::sub(a * b, x), return kairn::finite::sub(a, x))
+PAIR(ball2_plus_point, B2, (B2 y, double a, double b), return y + a * b, return y + a)
+PAIR(ball1_point_minus, B1, (B1 y, double a, double b), return a * b - y, return a - y)
 // Multiplicands: no guard, and none needed.
 PAIR(times, E2, (E2 x, double a, double b), return x * (a * b), return x * a)
 PAIR(ball2_scale, B2, (B2 y, double a, double b), return y * (a * b), return y * a)
@@ -86,14 +94,15 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "usage: boundary --expect none|some|report\n");
         return 2;
     }
-    enum { n_forms = 18 };
+    enum { n_forms = 24 };
     const char* names[n_forms] = {"x + a*b", "a*b + x", "x - a*b", "a*b - x", "x += a*b", "x -= a*b", "E2(a*b) + x",
                                   "from_limbs({a*b, 0}) + x", "E2(E1(a) * E1(b)) + x", "Ball2(a*b) + Y",
                                   "Ball2(E2(a*b), r) + Y", "Ball2(c, a*b) + Y", "Ball1(a*b) + Y",
-                                  "Ball1(E1(a) * E1(b), r) + Y", "Ball1(c, a*b) + Y", "x * (a*b)", "Ball2 * (a*b)",
-                                  "Ball1 * (a*b)"};
-    const bool multiplicand[n_forms] = {false, false, false, false, false, false, false, false, false,
-                                        false, false, false, false, false, false, true,  true,  true};
+                                  "Ball1(E1(a) * E1(b), r) + Y", "Ball1(c, a*b) + Y", "x + E1(a*b)", "x - E1(a*b)",
+                                  "finite::add(x, a*b)", "finite::sub(a*b, x)", "Y + a*b (Ball2)", "a*b - Y (Ball1)",
+                                  "x * (a*b)", "Ball2 * (a*b)", "Ball1 * (a*b)"};
+    bool multiplicand[n_forms] = {};
+    multiplicand[n_forms - 3] = multiplicand[n_forms - 2] = multiplicand[n_forms - 1] = true;
     long differ[n_forms] = {};
     const long cases = 200000;
     for (long i = 0; i < cases; ++i) {
@@ -103,7 +112,7 @@ int main(int argc, char** argv) {
         // Leading limbs that cancel the product, or nearly double it for the differences.
         const E2 xm = E2(-p * near), xp = E2(p * near);
         const B2 y2(E2(-p * near), 0x1p-40), r2(E2(-0.5), p * uniform());
-        const B1 y1(E1(-p * near), 0x1p-40), r1(E1(-0.5), p * uniform());
+        const B1 y1(E1(-p * near), 0x1p-40), r1(E1(-0.5), p * uniform()), m1(E1(p * near), 0x1p-40);
         int f = 0;
         differ[f++] += !same(plus_inline(xm, a, b), plus_ref(xm, p, 1.0));
         differ[f++] += !same(plus_rev_inline(xm, a, b), plus_rev_ref(xm, p, 1.0));
@@ -120,6 +129,12 @@ int main(int argc, char** argv) {
         differ[f++] += !same(ball1_point_inline(y1, a, b), ball1_point_ref(y1, p, 1.0));
         differ[f++] += !same(ball1_center_inline(y1, a, b), ball1_center_ref(y1, p, 1.0));
         differ[f++] += !same(ball1_radius_inline(r1, a, b), ball1_radius_ref(r1, p, 1.0));
+        differ[f++] += !same(plus_one_inline(xm, a, b), plus_one_ref(xm, p, 1.0));
+        differ[f++] += !same(minus_one_inline(xp, a, b), minus_one_ref(xp, p, 1.0));
+        differ[f++] += !same(finite_plus_inline(xm, a, b), finite_plus_ref(xm, p, 1.0));
+        differ[f++] += !same(finite_rminus_inline(xp, a, b), finite_rminus_ref(xp, p, 1.0));
+        differ[f++] += !same(ball2_plus_point_inline(y2, a, b), ball2_plus_point_ref(y2, p, 1.0));
+        differ[f++] += !same(ball1_point_minus_inline(m1, a, b), ball1_point_minus_ref(m1, p, 1.0));
         differ[f++] += !same(times_inline(xm, a, b), times_ref(xm, p, 1.0));
         differ[f++] += !same(ball2_scale_inline(y2, a, b), ball2_scale_ref(y2, p, 1.0));
         differ[f++] += !same(ball1_scale_inline(y1, a, b), ball1_scale_ref(y1, p, 1.0));
