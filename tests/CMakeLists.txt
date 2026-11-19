@@ -260,9 +260,7 @@ set(KAIRN_CROSSCHECK_SEED 0 CACHE STRING "Seed of the random cases of the cross-
 #   2 2      add_2_2, add_fast_2_2, sub_2_2           fp:3:-3:2      178 929
 #   2 2      mul_2_2                                  fp:4:-7:-3     245 025
 #   2 c      mul_pow2_2                               fp:5:-6:2      144 755
-#   1 r      ball_neg_1                               fp:5:-7:4       86 320
-#   2 r      ball_neg_2                               fp:4:-4:2      111 552
-#   1 r 1    ball_scale_1                             fp:3:-5:0       84 700
+#   1 r 1    ball_scale_1                            fp:3:-5:0       84 700
 #   2 r 1    ball_scale_2                             fp:2:-4:1       60 102
 #   1 r 1 r  ball_add_1, ball_sub_1                   fp:2:-3:1       76 176
 #            ball_mul_1                               fp:2:-4:0       76 176
@@ -279,8 +277,6 @@ set(_toy_2_1_product fp:4:-8:-2)
 set(_toy_2_2_sum fp:3:-3:2)
 set(_toy_2_2_product fp:4:-7:-3)
 set(_toy_2_c_product fp:5:-6:2)
-set(_toy_1_r_sum fp:5:-7:4)
-set(_toy_2_r_sum fp:4:-4:2)
 set(_toy_1_r_1_product fp:3:-5:0)
 set(_toy_2_r_1_product fp:2:-4:1)
 set(_toy_1_r_1_r_sum fp:2:-3:1)
@@ -316,6 +312,8 @@ set(_toy_2_r_2_r_product fp:4:-5:1 "rx.in=${_radii},ry.in=${_radii},cx.lead=0:0,
 #   2 2      add_2_2_full, add_fast_2_2_full,         fp:3:-4:1      181 476
 #            sub_2_2_full, comparisons
 #   2 2      mul_2_2_full                             fp:4:-4:-1      62 500
+#   b1       ball_neg_1                               fp:5:-9:2       86 322
+#   b2       ball_neg_2                               fp:4:-6:1      198 074
 #   b1 b1    ball_add_1_full, ball_sub_1_full,        fp:2:-3:2      144 400
 #            ball_mul_1_full
 #   b1 1     ball_scale_1_full                        fp:3:-4:1       89 436
@@ -334,6 +332,8 @@ set(_toy_ext_2_1_product fp:4:-5:0)
 set(_toy_ext_2_c_product fp:5:-7:0)
 set(_toy_ext_2_2_sum fp:3:-4:1)
 set(_toy_ext_2_2_product fp:4:-4:-1)
+set(_toy_ext_b1 fp:5:-9:2)
+set(_toy_ext_b2 fp:4:-6:1)
 set(_toy_ext_b1_b1_sum fp:2:-3:2)
 set(_toy_ext_b1_b1_product fp:2:-3:2)
 set(_toy_ext_b1_1_product fp:3:-4:1)

@@ -90,8 +90,6 @@ pass or fail; on failure it also prints the command that reruns one case (below)
     | `2 2` | `add_2_2`, `add_fast_2_2`, `sub_2_2` | `fp:3:-3:2` | 178 929 |
     | `2 2` | `mul_2_2` | `fp:4:-7:-3` | 245 025 |
     | `2 c` | `mul_pow2_2` | `fp:5:-6:2` | 144 755 |
-    | `1 r` | `ball_neg_1` | `fp:5:-7:4` | 86 320 |
-    | `2 r` | `ball_neg_2` | `fp:4:-4:2` | 111 552 |
     | `1 r 1` | `ball_scale_1` | `fp:3:-5:0` | 84 700 |
     | `2 r 1` | `ball_scale_2` | `fp:2:-4:1` | 60 102 |
     | `1 r 1 r` | `ball_add_1`, `ball_sub_1` | `fp:2:-3:1` | 76 176 |
@@ -120,6 +118,8 @@ pass or fail; on failure it also prints the command that reruns one case (below)
     | `2 c` | `mul_pow2_2_full` | `fp:5:-7:0` | yes | 84 888 |
     | `2 2` | `add_2_2_full`, `add_fast_2_2_full`, `sub_2_2_full`, the comparisons | `fp:3:-4:1` | yes | 181 476 |
     | `2 2` | `mul_2_2_full` | `fp:4:-4:-1` | yes | 62 500 |
+    | `b1` | `ball_neg_1` | `fp:5:-9:2` | yes | 86 322 |
+    | `b2` | `ball_neg_2` | `fp:4:-6:1` | yes | 198 074 |
     | `b1 b1` | `ball_add_1_full`, `ball_sub_1_full`, `ball_mul_1_full` | `fp:2:-3:2` | yes | 144 400 |
     | `b1 1` | `ball_scale_1_full` | `fp:3:-4:1` | yes | 89 436 |
     | `b2 1` | `ball_scale_2_full` | `fp:3:-3:0` | yes | 100 044 |
@@ -187,10 +187,10 @@ the classes of each statement (`oracle/README.md`, "The extended domain"):
     | Kind | Kernels | Cases the run must have seen |
     |---|---|---|
     | `extends` | the nine full kernels | a finite result (F2), an overflow on finite operands (F4), a non-finite operand (F5); where `finite_when` is not empty, a case where every condition holds (F3 applies) |
-    | `encloses` | the eight full Ball kernels | each of the three results: a finite ball, the whole line, the empty set (and B4 applying, once a `finite_when` is claimed) |
+    | `encloses` | the eight full Ball kernels, `ball_neg_1`, `ball_neg_2` | each of the three results: a finite ball, the whole line, the empty set (and B4 applying, once a `finite_when` is claimed) |
     | `represents` | `make_2`, `make_2_limbs` | a finite, an infinite and a NaN value |
     | `makes_ball` | `ball_make_1`, `ball_make_2` | each given state: a finite ball, the whole line (a center that is not finite or a radius $+\infty$), the empty set (a radius that is NaN or negative) |
-    | `normalized`, `error` | `neg_2`, `abs_2` | a non-finite operand |
+    | `normalized`, `error` | `neg_2`, `abs_2`, `ball_neg_2` | a non-finite operand |
     | `rounded` | the conversions | a non-finite operand |
     | `predicate` | the comparisons | a non-finite operand with each outcome |
     | `upper` | `radd`, `rmul` | a NaN (a NaN operand, or $0 \cdot \infty$) and $+\infty$ from a non-finite operand |
