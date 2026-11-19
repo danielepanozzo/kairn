@@ -2240,11 +2240,15 @@ def report_backends(docs, w):
     w("|---|---|" + "---|" * len(heads))
 
     def cell(v):
+        # A ratio of exactly 1 is printed "1" by frac_dec; one that only rounds to 1 at ten
+        # digits keeps its zeros ("1.000000000").
         if v is None:
             return "-"
-        if near_one(v, decimal.Decimal(v) == 1):
+        if v == "1":
+            return "1 (the claim)"
+        if near_one(v, False):
             return "1 - ε, ε < 10⁻⁹"
-        return short(v) + (" (the claim)" if decimal.Decimal(v) == 1 else "")
+        return short(v)
     for key in sorted(table, key=lambda key: -max(decimal.Decimal(v)
                                                    for v in table[key].values())):
         w("| `%s` | `%s` | %s |" % (key[0], labels[key].replace("|", "\\|"), " | ".join(

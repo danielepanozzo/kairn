@@ -128,11 +128,15 @@ python3 tests/brute/brute.py run --work WORK --budget 12000 --jobs 80 --nice 10 
     --commit CODE --driver-commit DRIVER
 ```
 
+Its enumerations took 48 minutes, so it was stopped once more after 3 003 seconds of that
+budget and given bin 2 of the Mac's share as well, with the budget left (the same command with
+`--budget 8930 --interp-take 0,2-19`).
+
 macOS arm64 (Apple M3 Max, Apple clang 21 and GCC 16; 8 jobs):
 
 ```sh
 python3 tests/brute/brute.py run --work WORK --budget 10800 --jobs 8 --nice 10 \
-    --build clang=c++ --build gcc16=g++-16 --seed m1r2-mac --interp-bins 20 --interp-take 1-2 \
+    --build clang=c++ --build gcc16=g++-16 --seed m1r2-mac --interp-bins 20 --interp-take 1 \
     --commit CODE --driver-commit DRIVER
 ```
 
