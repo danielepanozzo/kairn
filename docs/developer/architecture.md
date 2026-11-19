@@ -294,6 +294,38 @@ proof file contains `Admitted`, `admit`, `Axiom` or `Parameter`.
   what it does for toy formats, and refuses a kernel on which the two disagree.
 - `status` is `proved` only when the audit has passed for that kernel.
 
+### Claims of the second wave
+
+The kernels of [Milestone 1 statements](design/milestone1.md) return masks, single limbs rounded
+in a direction, upper bounds and balls, so the vocabulary grows. Everything above stays as it is.
+
+- **Inputs and outputs** may carry `"type": "mask"` (one value, written `0` or `1` in the line
+  protocol). The default type is a limb group.
+- **`value`** is an expression over the inputs: names, `+`, `-`, `*`, unary minus, `abs( )` and
+  parentheses. Examples: `x-y`, `-x`, `abs(x)`, `c*x`.
+- **`requires`** gains `power_of_two(NAME)` and `nonneg(NAME)`.
+- **`instances`** is always a list, one object per `error` entry, in order.
+- **`ensures`** gains:
+
+| Kind | Fields | Meaning |
+|---|---|---|
+| `rounded` | `of`, `mode`: `nearest`, `down` or `up` | the one-limb output is `value` rounded that way: to nearest with ties to even, to the largest number of the format not above it, to the smallest not below it |
+| `upper` | `of`, `gaps` | `value` $\le$ output, and the output exceeds `value` by at most `gaps` times (output $-$ `pred`(output)) |
+| `predicate` | `of` (a mask), `rel`: `lt`, `le` or `eq`, `args`: two expressions | the mask is true exactly when the relation holds between the exact values of the two expressions |
+| `encloses` | `center`, `radius`, `set`: an expression over ball names, `balls`: for each name its center and radius inputs | every value of `set`, with each ball name ranging over its ball, is within `radius` of `center` |
+
+A kernel may use `const unit_computed(K)` and `const tiny_computed(K)`: the constants of kernel
+`K`'s proved bound in the form relative to the computed result, $\mathrm{unit}/(1 - \mathrm{unit})$
+and $\mathrm{tiny}/(1 - \mathrm{unit})$ with $\mathrm{unit} = c\,u^k$ and $\mathrm{tiny} = t\,\eta$,
+each rounded up to a number of the format. The generator computes them exactly, for every format,
+from `K`'s claims; they may be used only if `K` is `proved`, or the kernel using them is itself
+`unverified`.
+
+In the formal model: a mask is a `bool` (`Rlt_bool`, `Rle_bool`, `Req_bool`), `select` is
+`if ... then ... else`, `succ` and `pred` are Flocq's, a value rounded down or up is Flocq's
+`round` with `Zfloor` or `Zceil`, and `encloses` quantifies over all real numbers within the
+radii of the centers.
+
 ## The line protocol
 
 Runners and the oracle exchange text lines, the same on every platform and for every format.
