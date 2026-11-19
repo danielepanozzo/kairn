@@ -119,8 +119,9 @@ add_2_2_full(x, y) -> w
 The other full kernels differ in their first lines only. With a one-limb operand `a` that is
 added or subtracted, the first line is `g = guard(a)` and `t` is computed from `g`
 ([values that enter from the program](#values-that-enter-from-the-program)); the core is called
-with `a` and guards it itself, which compilers merge with the first guard. Where an input is
-already named `a`, the temporary of the fix-up is named `az`.
+with `a` and guards it itself, which compilers merge with the first guard (in scalar code the
+first guard is computed only when the fix-up runs: Emission, below). Where an input is already
+named `a`, the temporary of the fix-up is named `az`.
 
 | Full kernel | Core | `t` |
 |---|---|---|
@@ -180,11 +181,63 @@ false.
 | `to_down_2`, `to_up_2`, `abs_upper_2` | for a finite $x$, the rounding in the sense of `T`, which is $\pm\infty$ when the neighbor of $\pm\Omega$ is needed; an infinite or NaN $x$ gives itself (its absolute value for `abs_upper_2`) |
 | `radd`, `rmul` | for operands that are nonnegative, $+\infty$ or NaN: a NaN when an operand is a NaN or the product is $0 \cdot \infty$; otherwise a value not below the exact one, $+\infty$ on overflow |
 
-**Emission.** Packed code is emitted as listed, with blends. For scalar code the generator may
-emit the fix-up behind a branch on `f`; the two forms compute the same function. Measured
-([benchmarks](../results/bench-milestone1.md)): as listed, the fix-up costs 19 to 58% of a packed
-addition and 70 to 106% of a packed multiplication, above the 10 to 20% that D5 expected; behind
-a branch it costs 0 to 6% in a chain of dependent scalar operations.
+**Emission.** Packed code is emitted as listed, with blends. As listed, the fix-up costs 19 to
+58% of a packed addition and 70 to 106% of a packed multiplication, above the 10 to 20% that D5
+expected ([benchmarks](../results/bench-milestone1.md)). Scalar code puts the fix-up behind a
+branch, because in a chain of dependent operations the selects put a comparison and a select on
+the critical path, where a predicted branch puts neither. The scalar printer does it by one rule
+on the listing (`branch` in `gen/kairn_gen/cpp.py`), with nothing written per kernel:
+
+1. It applies to a kernel without a real-model statement (a full kernel, a full Ball kernel, a
+   constructor) whose every output is a select on one same mask $m_1$. The first arms are what
+   the outputs are when $m_1$ is true. While those arms are all selects on one same mask $m_2$,
+   $m_2$ joins the masks and the arms become their first arms.
+2. Before the branch: the operations that the masks and the final arms need, in the listing's
+   order.
+3. When every mask is true (`if (m1 & m2)`, with `[[likely]]`): each output is its final arm.
+4. Otherwise: every other operation, in the listing's order, and the outputs as listed.
+
+Both paths compute the listing's outputs: the first because every select on the way takes its
+first arm, the second because it is the listing. An operation that a path leaves out is one whose
+value that path does not use. The operations of the IR have no side effects: Kairn does not specify
+the floating-point exception flags that a kernel raises, so an emission may execute fewer of the
+listing's operations, and no statement or proof depends on which ones run. On the first path an
+output can be an operand as it is (`ball_make_2` returns its center, `c0` and `c1`): that is the
+value of the listing's select, not an operation that could be fused into the caller.
+
+The rule applies to the nine full kernels, with the one mask `f`; and to the eight full Ball
+kernels and the two constructors of balls, with `e & f`, after which their fix-up is only selects.
+It leaves alone `make_2` (its `x0` is no select) and `make_2_limbs` (it has none), and every
+kernel with a real-model statement, whose selects depend on the data (`to_up_2` on the sign of
+`x1`), not on whether a value is finite. The listings put the ordinary case in the first arm,
+which is why the first path is the likely one.
+
+With Clang on AArch64 the fix-up is a function of its own (`fixup::K`, never inlined, cold,
+returning the outputs by value); everywhere else it is inline. `KAIRN_GEN_FIXUP_CALL` in
+`prelude.hpp` chooses, and the generator's tests build both forms with each compiler. The choice
+is measured (below for the machines): Apple clang 21 turns the inline branch back into selects,
+so that a chain of `x + y` takes 10.8 ns per step inline, 10.7 ns as listed and 7.5 ns with the
+call (7.6 ns for the core alone); GCC 16 on the same machine is slower with the call than inline
+in the chains of `x + y` (8.0 to 8.1 against 7.6 to 7.7 ns) and `x + a` (5.4 against 4.8 ns,
+12%). Neither form alone is within 5% of the better one with both compilers. On x86-64 the inline
+branch is within 2% of the call in every chain measured, and as fast or faster in loops of
+independent operations (Clang 18: `x + y` 2.7 against 4.2 ns).
+
+Measured on 2026-11-19, `binary64`, on the three machines of the
+[benchmarks](../results/bench-milestone1.md), in nine configurations (M3: Apple clang 21 and GCC 16
+at `-O2` and `-O3`; Zen 2: GCC 13 and Clang 18 at `-O2` and `-O3`; i5: MSVC 19.52 `/O2`), with a
+harness that is not in the repository: the public operators and the cores on 256 operands made
+as in `bench/`, each in a loop of independent operations and in a dependent chain, minimum over
+21 samples, five rounds. In a chain, `x + y`, `x * y`, `X + Y` and `X * Y` on two limbs take 0.95
+to 1.04 times as long as their cores (`kairn::finite::add`, `kairn::finite::mul`, `ball_add_2`,
+`ball_mul_2`), where with the selects they took 0.97 to 1.91 times as long (1.35 to 1.91 with
+Apple clang, 1.12 to 1.77 with MSVC). In loops of independent operations the branch is faster
+than the selects in most configurations, up to 2.1 times (MSVC, `x * y`); it is slower by more
+than 2% with Apple clang (`x + y` 1.13 times, `X + Y` 1.09), with GCC 16 (`X + Y`, up to 1.06),
+and for the balls of one limb with GCC 13 (about 1.2) and GCC 16 (1.04 to 1.11). A loop of
+constructions `Ball<double, 2>(c, r)` takes 0.76 to 1.07 times as long as with the selects. No
+operation measured in a chain is slower with the branch by more than 3% on any configuration (the
+most: `x * y` with GCC 13, 2.7%), so the rule applies to every kernel it matches.
 
 ## Values that enter from the program
 

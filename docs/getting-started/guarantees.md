@@ -155,13 +155,16 @@ of it ([Milestone 1](../developer/design/milestone1.md#what-is-proved-about-an-a
 
 **Cost.** The fix-up was measured
 ([Benchmarks](../developer/results/bench-milestone1.md#2-the-fix-up-for-non-finite-results)) at
-19 to 58% of a packed addition and 70 to 106% of a packed product, and at 0 to 6% in a chain of
-dependent scalar operations when it is emitted behind a branch. The generator emits the scalar
-code in the select form of the listings for now, which costs more in a chain (up to 47% with
-Apple clang, 76% with MSVC); emitting it behind a branch is a later step of the generator. The
-full Ball kernels, measured with the first radius design, cost 4 to 39% over their cores in
-throughput and up to 2.9 times in a chain, where their selects make the next center wait for the
-radius.
+19 to 58% of a packed addition and 70 to 106% of a packed product. In scalar code the generator
+puts it behind a branch, taken only when a result is not finite
+([Milestone 1](../developer/design/milestone1.md#ieee-like-results), "Emission"). Measured with
+`double` limbs on an Apple M3 (Apple clang 21, GCC 16), an AMD Zen 2 (GCC 13, Clang 18) and an
+Intel i5 (MSVC), in a chain of dependent operations, `x + y`, `x * y` and the same on two-limb
+balls take 0.95 to 1.04 times as long as the cores (`kairn::finite::add` and
+`kairn::finite::mul`; for balls, the kernels without the fix-up); written as the listings'
+selects, they took up to 1.91 times as long with Apple clang and 1.77 times with MSVC. In loops of
+independent operations they cost 1.0 to 2.3 times the cores; such loops are what the packed
+kernels are for.
 
 ## Products the program passes in
 

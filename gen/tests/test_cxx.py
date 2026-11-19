@@ -331,6 +331,14 @@ class EveryOperation(unittest.TestCase):
             self.assertEqual(code, 2, bad)
             self.assertIn('line 2: not a mask', err)
 
+    def test_the_cases_take_both_paths_of_a_branch(self):
+        # ops_branch branches on m1 = (a == a) and m2 = (b == b): the cases of test_matrix take the
+        # first path, and the fix-up with each mask false alone.
+        paths = {(True, True): 0, (False, True): 0, (True, False): 0, (False, False): 0}
+        for _, _, (a, b), _ in lines_for(self.ks, ['ops_branch'], 'ops'):
+            paths[(a == a, b == b)] += 1
+        self.assertTrue(paths[(True, True)] and paths[(False, True)] and paths[(True, False)], paths)
+
     def test_matrix(self):
         names = list(self.ks)
         cases = lines_for(self.ks, names, 'ops')
