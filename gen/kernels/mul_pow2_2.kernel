@@ -1,0 +1,19 @@
+# A 2-limb number times a power of two c: exact unless a product is rounded in the subnormal
+# range. It ends with Fast2Sum because the second product, rounded there, can land half a gap from
+# the first, and the pair is then no longer normalized. Its exactness when each product is zero or
+# at least 2^(p-1) eta in magnitude is not stated: the vocabulary has no such condition yet.
+kernel:        mul_pow2_2
+input:         x = x0 x1
+input:         c
+output:        z = z0 z1
+value:         x*c
+requires:      normalized x
+requires:      power_of_two c
+ensures:       normalized z
+ensures:       error z R c=0 k=2 t=1
+source:        both limbs scaled, then Fast2Sum (Milestone 1 listing)
+status:        unverified
+
+h        = prod(x0, c)
+l        = prod(x1, c)
+(z0, z1) = fast_two_sum(h, l)

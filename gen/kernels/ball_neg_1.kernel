@@ -1,0 +1,15 @@
+# The negation of a ball with a one-limb center: exact, the radius unchanged.
+kernel:        ball_neg_1
+input:         cx
+input:         rx
+output:        cz
+output:        rz
+value:         -cx
+requires:      nonneg rx
+ensures:       encloses cz rz -x x=cx,rx
+source:        midpoint-radius negation (Milestone 1 listing)
+status:        unverified
+cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
+
+cz = neg(cx)
+rz = copy(rx)

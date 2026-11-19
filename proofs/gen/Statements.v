@@ -25,12 +25,104 @@ Definition RN (x : R) : R := round radix2 (FLT_exp emin prec) (Znearest tie_even
 Definition u : R := bpow radix2 (- prec).
 Definition eta : R := bpow radix2 emin.
 
+(* Rounding down and up: the largest number of the format not above x, the smallest not below. *)
+Definition RD (x : R) : R := round radix2 (FLT_exp emin prec) Zfloor x.
+Definition RU (x : R) : R := round radix2 (FLT_exp emin prec) Zceil x.
+
 (* A 2-limb number is normalized: its limbs are numbers of the format, and each
    limb is the rounding of itself plus the next one. *)
 Definition normalized_2 (x0 x1 : R) : Prop :=
   fmt x0 /\ fmt x1 /\ x0 = RN (x0 + x1).
 
 End Vocabulary.
+
+(* add_1_1: one rounding to nearest. Status: unverified. Minimum precision not known yet. *)
+Definition add_1_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let s := add_1_1 emin prec tie_even a b in
+  s = RN emin prec (a + b) /\
+  Rabs (s - (a + b)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (a + b).
+
+(* rmul: one step up from the rounded product (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition rmul_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := rmul emin prec tie_even a b in
+  (a * b) <= r /\ r - (a * b) <= 2 * (r - pred radix2 (FLT_exp emin prec) r).
+
+(* radd: one step up from the rounded sum (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition radd_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := radd emin prec tie_even a b in
+  (a + b) <= r /\ r - (a + b) <= 2 * (r - pred radix2 (FLT_exp emin prec) r).
+
+(* ball_add_1: midpoint-radius sum (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition ball_add_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall cx rx cy ry : R,
+  fmt emin prec cx ->
+  fmt emin prec rx ->
+  fmt emin prec cy ->
+  fmt emin prec ry ->
+  0 <= rx ->
+  0 <= ry ->
+  let '(cz, rz) := ball_add_1 emin prec tie_even cx rx cy ry in
+  (forall x y : R, Rabs (x - cx) <= rx -> Rabs (y - cy) <= ry -> Rabs ((x + y) - cz) <= rz).
+
+(* ball_mul_1: midpoint-radius product (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition ball_mul_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall cx rx cy ry : R,
+  fmt emin prec cx ->
+  fmt emin prec rx ->
+  fmt emin prec cy ->
+  fmt emin prec ry ->
+  0 <= rx ->
+  0 <= ry ->
+  let '(cz, rz) := ball_mul_1 emin prec tie_even cx rx cy ry in
+  (forall x y : R, Rabs (x - cx) <= rx -> Rabs (y - cy) <= ry -> Rabs ((x * y) - cz) <= rz).
+
+(* ball_neg_1: midpoint-radius negation (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition ball_neg_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall cx rx : R,
+  fmt emin prec cx ->
+  fmt emin prec rx ->
+  0 <= rx ->
+  let '(cz, rz) := ball_neg_1 cx rx in
+  (forall x : R, Rabs (x - cx) <= rx -> Rabs ((- x) - cz) <= rz).
+
+(* ball_scale_1: midpoint-radius scaling (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition ball_scale_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall cx rx a : R,
+  fmt emin prec cx ->
+  fmt emin prec rx ->
+  fmt emin prec a ->
+  0 <= rx ->
+  let '(cz, rz) := ball_scale_1 emin prec tie_even cx rx a in
+  (forall x : R, Rabs (x - cx) <= rx -> Rabs ((x * a) - cz) <= rz).
+
+(* ball_sub_1: midpoint-radius difference (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition ball_sub_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall cx rx cy ry : R,
+  fmt emin prec cx ->
+  fmt emin prec rx ->
+  fmt emin prec cy ->
+  fmt emin prec ry ->
+  0 <= rx ->
+  0 <= ry ->
+  let '(cz, rz) := ball_sub_1 emin prec tie_even cx rx cy ry in
+  (forall x y : R, Rabs (x - cx) <= rx -> Rabs (y - cy) <= ry -> Rabs ((x - y) - cz) <= rz).
 
 (* fast_two_sum: Fast2Sum (Dekker 1971). Status: proved. *)
 Definition fast_two_sum_spec : Prop :=
@@ -43,6 +135,16 @@ Definition fast_two_sum_spec : Prop :=
   s = RN emin prec (a + b) /\
   (s + e) = (a + b) /\
   normalized_2 emin prec s e.
+
+(* mul_1_1: one rounding to nearest. Status: unverified. Minimum precision not known yet. *)
+Definition mul_1_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let p := mul_1_1 emin prec tie_even a b in
+  p = RN emin prec (a * b) /\
+  Rabs (p - (a * b)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (a * b) + (1 / 2) * eta emin.
 
 (* split: Veltkamp's split (Dekker 1971). Status: unverified. Minimum precision not known yet. *)
 Definition split_spec : Prop :=
@@ -84,6 +186,31 @@ Definition two_sum_spec : Prop :=
   s = RN emin prec (a + b) /\
   (s + e) = (a + b).
 
+(* abs_2: the sign of x0 (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition abs_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 : R,
+  normalized_2 emin prec x0 x1 ->
+  let '(z0, z1) := abs_2 x0 x1 in
+  normalized_2 emin prec z0 z1 /\
+  (z0 + z1) = (Rabs (x0 + x1)).
+
+(* to_up_2: the sign of x1 (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition to_up_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 : R,
+  normalized_2 emin prec x0 x1 ->
+  let t := to_up_2 emin prec x0 x1 in
+  t = RU emin prec (x0 + x1).
+
+(* abs_upper_2: abs_2, then to_up_2 (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition abs_upper_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 : R,
+  normalized_2 emin prec x0 x1 ->
+  let t := abs_upper_2 emin prec x0 x1 in
+  t = RU emin prec (Rabs (x0 + x1)).
+
 (* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. Status: proved. *)
 Definition add_2_1_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
@@ -124,15 +251,19 @@ Definition add_fast_2_2_ts_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= 4 * u prec ^ 2 * (Rabs (x0 + x1) + Rabs (y0 + y1)).
 
-(* mul_2_1: JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved. *)
-Definition mul_2_1_spec : Prop :=
-  forall emin prec : Z, (2 <= prec)%Z ->
-  forall x0 x1 a : R,
-  normalized_2 emin prec x0 x1 ->
-  fmt emin prec a ->
-  let '(z0, z1) := mul_2_1 emin prec tie_even x0 x1 a in
-  normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
+(* ball_add_2: midpoint-radius sum (Milestone 1 listing). Status: unverified. *)
+Definition ball_add_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall cx0 cx1 rx cy0 cy1 ry : R,
+  normalized_2 emin prec cx0 cx1 ->
+  fmt emin prec rx ->
+  normalized_2 emin prec cy0 cy1 ->
+  fmt emin prec ry ->
+  0 <= rx ->
+  0 <= ry ->
+  let '(cz0, cz1, rz) := ball_add_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in
+  normalized_2 emin prec cz0 cz1 /\
+  (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x + y) - (cz0 + cz1)) <= rz).
 
 (* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. Status: proved. *)
 Definition mul_2_2_spec : Prop :=
@@ -143,3 +274,202 @@ Definition mul_2_2_spec : Prop :=
   let '(z0, z1) := mul_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) * (y0 + y1))) <= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + (3 / 2) * eta emin.
+
+(* ball_mul_2: midpoint-radius product (Milestone 1 listing). Status: unverified. *)
+Definition ball_mul_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall cx0 cx1 rx cy0 cy1 ry : R,
+  normalized_2 emin prec cx0 cx1 ->
+  fmt emin prec rx ->
+  normalized_2 emin prec cy0 cy1 ->
+  fmt emin prec ry ->
+  0 <= rx ->
+  0 <= ry ->
+  let '(cz0, cz1, rz) := ball_mul_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in
+  normalized_2 emin prec cz0 cz1 /\
+  (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x * y) - (cz0 + cz1)) <= rz).
+
+(* neg_2: limb by limb (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition neg_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 : R,
+  normalized_2 emin prec x0 x1 ->
+  let '(z0, z1) := neg_2 x0 x1 in
+  normalized_2 emin prec z0 z1 /\
+  (z0 + z1) = (- (x0 + x1)).
+
+(* ball_neg_2: midpoint-radius negation (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition ball_neg_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall cx0 cx1 rx : R,
+  normalized_2 emin prec cx0 cx1 ->
+  fmt emin prec rx ->
+  0 <= rx ->
+  let '(cz0, cz1, rz) := ball_neg_2 cx0 cx1 rx in
+  normalized_2 emin prec cz0 cz1 /\
+  (forall x : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs ((- x) - (cz0 + cz1)) <= rz).
+
+(* mul_2_1: JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved. *)
+Definition mul_2_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let '(z0, z1) := mul_2_1 emin prec tie_even x0 x1 a in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
+
+(* ball_scale_2: midpoint-radius scaling (Milestone 1 listing). Status: unverified. *)
+Definition ball_scale_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall cx0 cx1 rx a : R,
+  normalized_2 emin prec cx0 cx1 ->
+  fmt emin prec rx ->
+  fmt emin prec a ->
+  0 <= rx ->
+  let '(cz0, cz1, rz) := ball_scale_2 emin prec tie_even cx0 cx1 rx a in
+  normalized_2 emin prec cz0 cz1 /\
+  (forall x : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs ((x * a) - (cz0 + cz1)) <= rz).
+
+(* ball_sub_2: midpoint-radius difference (Milestone 1 listing). Status: unverified. *)
+Definition ball_sub_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall cx0 cx1 rx cy0 cy1 ry : R,
+  normalized_2 emin prec cx0 cx1 ->
+  fmt emin prec rx ->
+  normalized_2 emin prec cy0 cy1 ->
+  fmt emin prec ry ->
+  0 <= rx ->
+  0 <= ry ->
+  let '(cz0, cz1, rz) := ball_sub_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in
+  normalized_2 emin prec cz0 cz1 /\
+  (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x - y) - (cz0 + cz1)) <= rz).
+
+(* eq_2_1: limbs compared in order (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition eq_2_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let m := eq_2_1 x0 x1 a in
+  m = Req_bool (x0 + x1) a.
+
+(* eq_2_2: limbs compared in order (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition eq_2_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let m := eq_2_2 x0 x1 y0 y1 in
+  m = Req_bool (x0 + x1) (y0 + y1).
+
+(* le_1_2: limbs compared in order (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition le_1_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall a y0 y1 : R,
+  fmt emin prec a ->
+  normalized_2 emin prec y0 y1 ->
+  let m := le_1_2 a y0 y1 in
+  m = Rle_bool a (y0 + y1).
+
+(* le_2_1: limbs compared in order (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition le_2_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let m := le_2_1 x0 x1 a in
+  m = Rle_bool (x0 + x1) a.
+
+(* le_2_2: limbs compared in order (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition le_2_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let m := le_2_2 x0 x1 y0 y1 in
+  m = Rle_bool (x0 + x1) (y0 + y1).
+
+(* lt_1_2: limbs compared in order (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition lt_1_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall a y0 y1 : R,
+  fmt emin prec a ->
+  normalized_2 emin prec y0 y1 ->
+  let m := lt_1_2 a y0 y1 in
+  m = Rlt_bool a (y0 + y1).
+
+(* lt_2_1: limbs compared in order (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition lt_2_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let m := lt_2_1 x0 x1 a in
+  m = Rlt_bool (x0 + x1) a.
+
+(* lt_2_2: limbs compared in order (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition lt_2_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let m := lt_2_2 x0 x1 y0 y1 in
+  m = Rlt_bool (x0 + x1) (y0 + y1).
+
+(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition mul_pow2_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 c : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec c ->
+  (exists n : Z, c = bpow radix2 n) ->
+  let '(z0, z1) := mul_pow2_2 emin prec tie_even x0 x1 c in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) * c)) <= 1 * eta emin.
+
+(* sub_1_2: add_2_1 (JMP17 Alg. 4) on -y and a. Status: unverified. *)
+Definition sub_1_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall a y0 y1 : R,
+  fmt emin prec a ->
+  normalized_2 emin prec y0 y1 ->
+  let '(z0, z1) := sub_1_2 emin prec tie_even a y0 y1 in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - (a - (y0 + y1))) <= 2 * u prec ^ 2 * Rabs (a - (y0 + y1)).
+
+(* sub_2_1: add_2_1 (JMP17 Alg. 4) on -a. Status: unverified. *)
+Definition sub_2_1_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let '(z0, z1) := sub_2_1 emin prec tie_even x0 x1 a in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) - a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) - a).
+
+(* sub_2_2: add_2_2 (JMP17 Alg. 6) on -y. Status: unverified. *)
+Definition sub_2_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let '(z0, z1) := sub_2_2 emin prec tie_even x0 x1 y0 y1 in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) - (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) - (y0 + y1)).
+
+(* to_down_2: the sign of x1 (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition to_down_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 : R,
+  normalized_2 emin prec x0 x1 ->
+  let t := to_down_2 emin prec x0 x1 in
+  t = RD emin prec (x0 + x1).
+
+(* to_nearest_2: the definition of normalized (Milestone 1 listing). Status: unverified. Minimum precision not known yet. *)
+Definition to_nearest_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 : R,
+  normalized_2 emin prec x0 x1 ->
+  let t := to_nearest_2 x0 x1 in
+  t = RN emin prec (x0 + x1).

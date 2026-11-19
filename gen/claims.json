@@ -2,6 +2,453 @@
   "schema": 1,
   "kernels": [
     {
+      "name": "add_1_1",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "s",
+          "limbs": 1
+        }
+      ],
+      "value": "a+b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "s",
+          "mode": "nearest"
+        },
+        {
+          "kind": "error",
+          "of": "s",
+          "form": "R",
+          "c": "1/(1+u)",
+          "k": 1,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "one rounding to nearest",
+        "license": null
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/9007199254740993",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/16777217",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rmul",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a*b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "r",
+          "gaps": "2"
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "one step up from the rounded product (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "radd",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a+b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "r",
+          "gaps": "2"
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "one step up from the rounded sum (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_add_1",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 1
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "cx+cy",
+      "requires": [
+        "nonneg(rx)",
+        "nonneg(ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "x+y",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          }
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "midpoint-radius sum (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 4,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_mul_1",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 1
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*cy",
+      "requires": [
+        "nonneg(rx)",
+        "nonneg(ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "x*y",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          }
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "midpoint-radius product (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 9,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_neg_1",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 1
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "-cx",
+      "requires": [
+        "nonneg(rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "-x",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            }
+          }
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "midpoint-radius negation (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_scale_1",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 1
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*a",
+      "requires": [
+        "nonneg(rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "x*a",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            }
+          }
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "midpoint-radius scaling (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 5,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_sub_1",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 1
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "cx-cy",
+      "requires": [
+        "nonneg(rx)",
+        "nonneg(ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "x-y",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          }
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "midpoint-radius difference (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 4,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "fast_two_sum",
       "inputs": [
         {
@@ -54,14 +501,77 @@
       },
       "flops": 3,
       "instances": {
-        "binary64": {
-          "rel": "0",
-          "abs": "0"
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "mul_1_1",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
         },
-        "binary32": {
-          "rel": "0",
-          "abs": "0"
+        {
+          "name": "b",
+          "limbs": 1
         }
+      ],
+      "outputs": [
+        {
+          "name": "p",
+          "limbs": 1
+        }
+      ],
+      "value": "a*b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "p",
+          "mode": "nearest"
+        },
+        {
+          "kind": "error",
+          "of": "p",
+          "form": "R",
+          "c": "1/(1+u)",
+          "k": 1,
+          "t": "1/2",
+          "when": null
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "one rounding to nearest",
+        "license": null
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/9007199254740993",
+            "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/16777217",
+            "abs": "1/1427247692705959881058285969449495136382746624"
+          }
+        ]
       }
     },
     {
@@ -103,14 +613,18 @@
       },
       "flops": 4,
       "instances": {
-        "binary64": {
-          "rel": "0",
-          "abs": "0"
-        },
-        "binary32": {
-          "rel": "0",
-          "abs": "0"
-        }
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
       }
     },
     {
@@ -316,14 +830,150 @@
       },
       "flops": 6,
       "instances": {
-        "binary64": {
-          "rel": "0",
-          "abs": "0"
-        },
-        "binary32": {
-          "rel": "0",
-          "abs": "0"
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "abs_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
         }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "abs(x)",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the sign of x0 (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "to_up_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "value": "x",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "t",
+          "mode": "up"
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the sign of x1 (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "abs_upper_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "value": "abs(x)",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "t",
+          "mode": "up"
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "abs_2, then to_up_2 (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
       }
     },
     {
@@ -375,14 +1025,18 @@
       },
       "flops": 10,
       "instances": {
-        "binary64": {
-          "rel": "1/40564819207303340847894502572032",
-          "abs": "0"
-        },
-        "binary32": {
-          "rel": "1/140737488355328",
-          "abs": "0"
-        }
+        "binary64": [
+          {
+            "rel": "1/40564819207303340847894502572032",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/140737488355328",
+            "abs": "0"
+          }
+        ]
       }
     },
     {
@@ -435,14 +1089,18 @@
       },
       "flops": 20,
       "instances": {
-        "binary64": {
-          "rel": "3/81129638414606645666991986180096",
-          "abs": "0"
-        },
-        "binary32": {
-          "rel": "1/93824969867264",
-          "abs": "0"
-        }
+        "binary64": [
+          {
+            "rel": "3/81129638414606645666991986180096",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/93824969867264",
+            "abs": "0"
+          }
+        ]
       }
     },
     {
@@ -495,14 +1153,18 @@
       },
       "flops": 11,
       "instances": {
-        "binary64": {
-          "rel": "1/20282409603651670423947251286016",
-          "abs": "0"
-        },
-        "binary32": {
-          "rel": "1/70368744177664",
-          "abs": "0"
-        }
+        "binary64": [
+          {
+            "rel": "1/20282409603651670423947251286016",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/70368744177664",
+            "abs": "0"
+          }
+        ]
       }
     },
     {
@@ -555,73 +1217,90 @@
       },
       "flops": 14,
       "instances": {
-        "binary64": {
-          "rel": "1/20282409603651670423947251286016",
-          "abs": "0"
-        },
-        "binary32": {
-          "rel": "1/70368744177664",
-          "abs": "0"
-        }
+        "binary64": [
+          {
+            "rel": "1/20282409603651670423947251286016",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/70368744177664",
+            "abs": "0"
+          }
+        ]
       }
     },
     {
-      "name": "mul_2_1",
+      "name": "ball_add_2",
       "inputs": [
         {
-          "name": "x",
+          "name": "cx",
           "limbs": 2
         },
         {
-          "name": "a",
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 2
+        },
+        {
+          "name": "ry",
           "limbs": 1
         }
       ],
       "outputs": [
         {
-          "name": "z",
+          "name": "cz",
           "limbs": 2
+        },
+        {
+          "name": "rz",
+          "limbs": 1
         }
       ],
-      "value": "x*a",
+      "value": "cx+cy",
       "requires": [
-        "normalized(x)"
+        "normalized(cx)",
+        "nonneg(rx)",
+        "normalized(cy)",
+        "nonneg(ry)"
       ],
       "ensures": [
         {
           "kind": "normalized",
-          "of": "z"
+          "of": "cz"
         },
         {
-          "kind": "error",
-          "of": "z",
-          "form": "R",
-          "c": "2",
-          "k": 2,
-          "t": "1",
-          "when": null
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "x+y",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          }
         }
       ],
-      "min_precision": 2,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Mul21.v",
-        "name": "mul_2_1_correct"
-      },
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
       "source": {
-        "cite": "JMP17 Alg. 9 (DWTimesFP3); bound from MR22",
-        "license": "algorithm: published; proof: MIT"
+        "cite": "midpoint-radius sum (Milestone 1 listing)",
+        "license": null
       },
-      "flops": 6,
+      "flops": 23,
       "instances": {
-        "binary64": {
-          "rel": "1/40564819207303340847894502572032",
-          "abs": "1/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
-        },
-        "binary32": {
-          "rel": "1/140737488355328",
-          "abs": "1/713623846352979940529142984724747568191373312"
-        }
+        "binary64": [],
+        "binary32": []
       }
     },
     {
@@ -674,14 +1353,1098 @@
       },
       "flops": 9,
       "instances": {
-        "binary64": {
-          "rel": "1/20282409603651670423947251286016",
-          "abs": "3/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+        "binary64": [
+          {
+            "rel": "1/20282409603651670423947251286016",
+            "abs": "3/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/70368744177664",
+            "abs": "3/1427247692705959881058285969449495136382746624"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ball_mul_2",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
         },
-        "binary32": {
-          "rel": "1/70368744177664",
-          "abs": "3/1427247692705959881058285969449495136382746624"
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 2
+        },
+        {
+          "name": "ry",
+          "limbs": 1
         }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 2
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*cy",
+      "requires": [
+        "normalized(cx)",
+        "nonneg(rx)",
+        "normalized(cy)",
+        "nonneg(ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "cz"
+        },
+        {
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "x*y",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          }
+        }
+      ],
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "midpoint-radius product (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 17,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "neg_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "-x",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "limb by limb (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ball_neg_2",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 2
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "-cx",
+      "requires": [
+        "normalized(cx)",
+        "nonneg(rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "cz"
+        },
+        {
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "-x",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            }
+          }
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "midpoint-radius negation (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "mul_2_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x*a",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "2",
+          "k": 2,
+          "t": "1",
+          "when": null
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Mul21.v",
+        "name": "mul_2_1_correct"
+      },
+      "source": {
+        "cite": "JMP17 Alg. 9 (DWTimesFP3); bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 6,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/40564819207303340847894502572032",
+            "abs": "1/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/140737488355328",
+            "abs": "1/713623846352979940529142984724747568191373312"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ball_scale_2",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 2
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*a",
+      "requires": [
+        "normalized(cx)",
+        "nonneg(rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "cz"
+        },
+        {
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "x*a",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            }
+          }
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "midpoint-radius scaling (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 10,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_sub_2",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 2
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 2
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "cx-cy",
+      "requires": [
+        "normalized(cx)",
+        "nonneg(rx)",
+        "normalized(cy)",
+        "nonneg(ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "cz"
+        },
+        {
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "x-y",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          }
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "midpoint-radius difference (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 23,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "eq_2_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-a",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "eq",
+          "args": [
+            "x",
+            "a"
+          ]
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "eq_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "eq",
+          "args": [
+            "x",
+            "y"
+          ]
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "le_1_2",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "a-y",
+      "requires": [
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "le",
+          "args": [
+            "a",
+            "y"
+          ]
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "le_2_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-a",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "le",
+          "args": [
+            "x",
+            "a"
+          ]
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "le_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "le",
+          "args": [
+            "x",
+            "y"
+          ]
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "lt_1_2",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "a-y",
+      "requires": [
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "a",
+            "y"
+          ]
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "lt_2_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-a",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "x",
+            "a"
+          ]
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "lt_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "x",
+            "y"
+          ]
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "mul_pow2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x*c",
+      "requires": [
+        "normalized(x)",
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "1",
+          "when": null
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "both limbs scaled, then Fast2Sum (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 5,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "1/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "1/713623846352979940529142984724747568191373312"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sub_1_2",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "a-y",
+      "requires": [
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "2",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_1 (JMP17 Alg. 4) on -y and a",
+        "license": null
+      },
+      "flops": 10,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/40564819207303340847894502572032",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/140737488355328",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sub_2_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x-a",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "2",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_1 (JMP17 Alg. 4) on -a",
+        "license": null
+      },
+      "flops": 10,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/40564819207303340847894502572032",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/140737488355328",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sub_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "3/(1-4*u)",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_2 (JMP17 Alg. 6) on -y",
+        "license": null
+      },
+      "flops": 20,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "3/81129638414606645666991986180096",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/93824969867264",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "to_down_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "value": "x",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "t",
+          "mode": "down"
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the sign of x1 (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "to_nearest_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "value": "x",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "t",
+          "mode": "nearest"
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the definition of normalized (Milestone 1 listing)",
+        "license": null
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
       }
     }
   ]

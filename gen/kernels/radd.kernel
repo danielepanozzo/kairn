@@ -1,0 +1,14 @@
+# An upper bound of a + b, for radii: the rounded sum, one step up. The number of gaps is
+# provisional (at most 2; 3/2 expected for nonnegative operands).
+kernel:        radd
+input:         a
+input:         b
+output:        r
+value:         a+b
+ensures:       upper r gaps=2
+source:        one step up from the rounded sum (Milestone 1 listing)
+status:        unverified
+cone_exempt:   r = succ(s), and succ(-inf) is finite; r is a radius, and the ball layer tests radii for non-finite values (Milestone 1 statements, Ball kernels)
+
+s = add(a, b)
+r = succ(s)

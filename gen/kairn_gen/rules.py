@@ -3,7 +3,7 @@
 Each rule is a short traversal of the kernel's dataflow graph and refuses with a message that
 names the kernel, the value and the rule. Nothing is printed for any kernel while one is refused.
 """
-from . import cpp, expr, ir, rocq
+from . import consts, cpp, expr, ir, rocq, simd
 
 RULE1 = 'rule 1 (static single assignment)'
 RULE_R1 = 'rule 2 (R1: products)'
@@ -13,19 +13,30 @@ RULE_THEOREM = 'rule 5 (theorem or unverified)'
 WELL_FORMED = 'well-formed'
 CLAIMS = 'claims'
 CONSTEVAL = 'constant-evaluation variant'
+COMPUTED = 'computed constants'
 
 STATUSES = ('unverified', 'proved')
 
 # Operand positions where a product could be contracted into an addition.
 ADDITIVE = {'add': (0, 1), 'sub': (0, 1), 'fma': (2,), 'fms': (2,), 'fnma': (2,), 'muladd': (2,)}
 # Operations whose result is (up to sign) one of these operands: a product passes through them.
-FORWARDING = {'neg': (0,), 'abs': (0,), 'select': (1, 2)}
-# R2: what a kernel output may be the result of. Never muladd.
+FORWARDING = {'neg': (0,), 'abs': (0,), 'select': (1, 2), 'copy': (0,)}
+# R2: what a kernel output may be the result of. Never muladd. A mask cannot be contracted into
+# anything, so a mask output may be the result of any operation that makes a mask.
 OUTPUT_OPS = frozenset({'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'select', 'neg', 'abs',
-                        'succ', 'pred'})
+                        'succ', 'pred', 'copy'})
+MASK_OPS = frozenset(op for op, (_, result) in ir.OPS.items() if result == ir.MASK)
 # Rule 4: operations that map any non-finite operand to a non-finite result. Not select (it may
 # drop the operand), not succ/pred (succ(-inf) is finite), not comparisons.
-PROPAGATING = frozenset({'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd', 'neg', 'abs', 'mul'})
+PROPAGATING = frozenset({'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd', 'neg', 'abs', 'mul',
+                         'copy'})
+# The closed vocabulary of the claims (architecture.md, "Claims" and "Claims of the second wave").
+REQUIRES = {'normalized': 1, 'abs_ge': 2, 'power_of_two': 1, 'nonneg': 1}
+ROUNDING_MODES = ('nearest', 'down', 'up')
+RELATIONS = ('lt', 'le', 'eq')
+VALUE_TREES = {'name', 'add', 'sub', 'mul', 'neg', 'abs'}
+# Entries that say something about the value: a kernel needs at least one.
+ABOUT_THE_VALUE = ('error', 'leading_rounded', 'rounded', 'upper', 'predicate', 'encloses')
 
 
 class RuleError(Exception):
@@ -42,7 +53,8 @@ def check_all(kernels):
     if errors:
         return errors   # the other rules flatten calls, which needs well-formed callees
     for k in kernels.values():
-        for rule in (products, outputs, nonfinite_cone, theorem, claims, consteval_variant):
+        for rule in (products, outputs, nonfinite_cone, theorem, claims, consteval_variant,
+                     computed_constants):
             errors += rule(k, kernels)
     return errors
 
@@ -54,21 +66,21 @@ def well_formed(k, kernels):
     def err(value, rule, msg):
         errs.append(RuleError(k.name, value, rule, msg))
 
-    reserved = rocq.RESERVED | cpp.RESERVED
+    reserved = rocq.RESERVED | cpp.RESERVED | simd.RESERVED
     if k.name in reserved:
         err('-', WELL_FORMED, f'{k.name} is a name the printers use')
-    if k.name.endswith(('_spec', '_correct', '_audit')) or k.name.startswith('fuse_'):
+    if k.name.endswith(('_spec', '_correct', '_audit')) or k.name.startswith(('fuse_',) + ir.COMPUTED):
         err('-', WELL_FORMED, f'{k.name}: the Rocq printer makes names ending in _spec, _correct and '
-                              '_audit, and starting with fuse_')
+                              '_audit, and starting with fuse_, unit_computed and tiny_computed')
     groups = [g.name for g in k.inputs + k.outputs]
     for g in set(groups):
         if groups.count(g) > 1:
             err(g, WELL_FORMED, f'group {g} is declared twice')
     defined = {}   # value -> (kind, line or 'input')
-    for v in k.input_limbs:
+    for v, kind in zip(k.input_limbs, k.input_kinds):
         if v in defined:
             err(v, RULE1, f'{v} is assigned twice (as two input limbs)')
-        defined[v] = (ir.LIMB, 'input')
+        defined[v] = (kind, 'input')
     later = {d: st.line for st in k.body for d in st.dsts}
     used = set()
     for st in k.body:
@@ -80,8 +92,8 @@ def well_formed(k, kernels):
                 used.update(a.name for a in st.args)
                 continue
             callee = kernels[st.op]
-            want = [ir.LIMB] * len(callee.input_limbs)
-            results = [ir.LIMB] * len(callee.output_limbs)
+            want = callee.input_kinds
+            results = callee.output_kinds
         else:
             want, result = ir.OPS[st.op]
             results = [result]
@@ -93,7 +105,7 @@ def well_formed(k, kernels):
                 f'line {st.line}: {st.op} defines {len(results)} values, not {len(st.dsts)}')
         for a, kind in zip(st.args, want):
             if a.const:
-                if a.name not in ir.CONSTANTS:
+                if a.name != ir.ZERO and a.name not in ir.CONSTANTS and not ir.computed(a.name):
                     err(a.name, WELL_FORMED, f'line {st.line}: unknown constant {a.name!r}')
                 elif kind != ir.LIMB:
                     err(a.name, WELL_FORMED, f'line {st.line}: a constant is a limb, not a mask')
@@ -126,17 +138,25 @@ def well_formed(k, kernels):
         elif v in reserved or v in kernels:
             err(v, WELL_FORMED, f'{v} is a name the printers use')
     outs = k.output_limbs
-    for v in outs:
+    for v, kind in zip(outs, k.output_kinds):
         if outs.count(v) > 1:
             err(v, WELL_FORMED, f'{v} is returned twice')
         if v not in defined:
             err(v, RULE1, f'output {v} is never defined')
-        elif defined[v][0] != ir.LIMB:
-            err(v, WELL_FORMED, f'output {v} is a mask; outputs are limbs')
+        elif defined[v][0] != kind:
+            err(v, WELL_FORMED, f'output {v} is a {defined[v][0]}, and its group is declared as a '
+                                f'{kind} group ("output: mask NAME" declares a mask)')
+        used.add(v)
+    for v, why in k.unused.items():
+        if v not in k.input_limbs:
+            err(v, RULE1, f'unused: {v} is not an input')
+        elif v in used:
+            err(v, RULE1, f'unused: {v} is used; remove the declaration')
         used.add(v)
     for v in defined:
         if v not in used:
-            err(v, RULE1, f'{v} is never used')
+            err(v, RULE1, f'{v} is never used (an input the computation does not need is declared '
+                          'with "unused:")' if defined[v][1] == 'input' else f'{v} is never used')
     return errs
 
 
@@ -178,8 +198,8 @@ def outputs(k, kernels):
         st = defs.get(v)
         if st is None:
             errs.append(RuleError(k.name, v, RULE_R2, f'output {v} is an input; an output must be '
-                                                      'computed by an operation'))
-        elif not st.is_call and st.op not in OUTPUT_OPS:
+                                                      'computed by an operation (copy, for an input)'))
+        elif not st.is_call and st.op not in OUTPUT_OPS | MASK_OPS:
             errs.append(RuleError(k.name, v, RULE_R2,
                                   f'output {v} is the result of {st.op} (line {st.line}); outputs are '
                                   f'results of {", ".join(sorted(OUTPUT_OPS))}, never of muladd'))
@@ -253,16 +273,18 @@ def theorem(k, kernels):
 
 
 def claims(k, kernels):
-    """The claims use the closed vocabulary of architecture.md, "Claims"."""
+    """The claims use the closed vocabulary of architecture.md, "Claims" and its second wave."""
     errs = []
 
     def err(msg):
         errs.append(RuleError(k.name, '-', CLAIMS, msg))
 
-    ins = {g.name for g in k.inputs}
-    outs = {g.name for g in k.outputs}
+    ins = {g.name: g for g in k.inputs}
+    outs = {g.name: g for g in k.outputs}
+    limb_ins = {n for n, g in ins.items() if g.kind == ir.LIMB}
+    one_limb_ins = {n for n in limb_ins if len(ins[n].limbs) == 1}
 
-    def parsed(text, allowed_names, what):
+    def parsed(text, allowed_names, what, trees=None):
         try:
             tree = expr.parse(text)
         except expr.ExprError as e:
@@ -272,45 +294,133 @@ def claims(k, kernels):
         if extra:
             err(f'{what}: unknown name {", ".join(sorted(extra))} in {text!r}')
             return None
+        if trees is not None and not _only(tree, trees):
+            err(f'{what} {text!r}: only + - *, unary minus and abs( ) of names')
+            return None
+        if trees is None and not _only(tree, {'int', 'name', 'add', 'sub', 'mul', 'div', 'neg'}):
+            err(f'{what} {text!r}: a rational expression has no abs( )')
+            return None
         return tree
+
+    def output(name, what, kind=ir.LIMB, one=False):
+        g = outs.get(name)
+        if g is None:
+            err(f'ensures {what} of {name!r}: not an output')
+        elif g.kind != kind:
+            err(f'ensures {what} of {name!r}: the output must be a {kind}')
+        elif one and len(g.limbs) != 1:
+            err(f'ensures {what} of {name!r}: the output must have one limb')
 
     if not k.value:
         err('no value')
     else:
-        tree = parsed(k.value, ins, 'value')
-        if tree is not None and not _only(tree, {'name', 'add', 'sub', 'mul', 'neg'}):
-            err(f'value {k.value!r}: only + - * of the inputs')
+        parsed(k.value, limb_ins, 'value', VALUE_TREES)
     for req in k.requires:
-        if req[0] == 'normalized' and len(req) == 2 and req[1] in ins:
+        n = REQUIRES.get(req[0])
+        names = req[1:]
+        if n is not None and len(names) == n and all(x in limb_ins for x in names):
+            if req[0] in ('power_of_two', 'nonneg') and names[0] not in one_limb_ins:
+                err(f'requires {" ".join(req)!r}: {req[0]} is about a one-limb input')
             continue
-        if req[0] == 'abs_ge' and len(req) == 3 and req[1] in ins and req[2] in ins:
-            continue
-        err(f'requires {" ".join(req)!r}: the vocabulary is "normalized INPUT", "abs_ge INPUT INPUT"')
-    if not any(e['kind'] == 'error' for e in k.ensures):
-        err('no error entry in ensures')
+        err(f'requires {" ".join(req)!r}: the vocabulary is "normalized INPUT", "abs_ge INPUT INPUT", '
+            '"power_of_two INPUT", "nonneg INPUT"')
+    if not any(e['kind'] in ABOUT_THE_VALUE for e in k.ensures):
+        err(f'ensures says nothing about the value: it needs an entry of kind {", ".join(ABOUT_THE_VALUE)}')
     for e in k.ensures:
-        if e['of'] not in outs:
-            err(f'ensures {e["kind"]} of {e["of"]!r}: not an output')
-        if e['kind'] != 'error':
-            continue
-        if e['form'] not in ('R', 'A'):
-            err(f'error form {e["form"]!r}: it is R or A')
-        for key in ('c', 'k', 't'):
-            if e[key] is None:
-                err(f'error entry without {key}')
-        if e['c'] is not None:
-            parsed(e['c'], {'u'}, 'c')
-        if e['t'] is not None:
-            parsed(e['t'], set(), 't')
-        if e['when'] not in (None, 'product_large'):
-            err(f'when={e["when"]!r}: the vocabulary is product_large')
+        kind = e['kind']
+        if kind in ('normalized', 'leading_rounded'):
+            output(e['of'], kind)
+        elif kind == 'error':
+            output(e['of'], kind)
+            if e['form'] not in ('R', 'A'):
+                err(f'error form {e["form"]!r}: it is R or A')
+            for key in ('c', 'k', 't'):
+                if e[key] is None:
+                    err(f'error entry without {key}')
+            if e['c'] is not None:
+                parsed(e['c'], {'u'}, 'c')
+            if e['t'] is not None:
+                parsed(e['t'], set(), 't')
+            if e['when'] not in (None, 'product_large'):
+                err(f'when={e["when"]!r}: the vocabulary is product_large')
+        elif kind == 'rounded':
+            output(e['of'], kind, one=True)
+            if e['mode'] not in ROUNDING_MODES:
+                err(f'rounded mode {e["mode"]!r}: it is {", ".join(ROUNDING_MODES)}')
+        elif kind == 'upper':
+            output(e['of'], kind, one=True)
+            tree = parsed(e['gaps'], set(), 'gaps')
+            if tree is not None and not expr.evaluate(tree, {}) > 0:
+                err(f'gaps={e["gaps"]}: the number of gaps is positive')
+        elif kind == 'predicate':
+            output(e['of'], kind, kind=ir.MASK)
+            if e['rel'] not in RELATIONS:
+                err(f'predicate relation {e["rel"]!r}: it is {", ".join(RELATIONS)}')
+            for a in e['args']:
+                parsed(a, limb_ins, 'predicate argument', VALUE_TREES)
+        elif kind == 'encloses':
+            _encloses(e, k, ins, outs, output, parsed, err)
     if k.min_precision is not None and k.min_precision < 1:
         err('min_precision must be at least 1')
     return errs
 
 
+def _encloses(e, k, ins, outs, output, parsed, err):
+    """A ball claim: its center and radius are outputs, each ball a center and a radius input,
+    and the set an expression over the ball names and the inputs no ball uses."""
+    output(e['center'], 'encloses (center)')
+    output(e['radius'], 'encloses (radius)', one=True)
+    taken = set()
+    for b, cr in e['balls'].items():
+        c, r = cr['center'], cr['radius']
+        clash = b in ins or b in outs or b in k.input_limbs + k.output_limbs or \
+            b in rocq.RESERVED or not ir.VALUE_NAME.match(b)
+        if clash:
+            err(f'ball name {b!r} is the name of a group, a limb, or a name the printers use')
+        for what, n in (('center', c), ('radius', r)):
+            g = ins.get(n)
+            if g is None or g.kind != ir.LIMB or (what == 'radius' and len(g.limbs) != 1):
+                err(f'ball {b}: its {what} {n!r} is not a{" one-limb" if what == "radius" else ""} '
+                    'limb input')
+            if n in taken:
+                err(f'ball {b}: {n} belongs to two balls')
+            taken.add(n)
+    if not e['balls']:
+        err('encloses names no ball')
+    points = {n for n, g in ins.items() if g.kind == ir.LIMB and n not in taken}
+    parsed(e['set'], set(e['balls']) | points, 'encloses set', VALUE_TREES)
+
+
 def _only(tree, allowed):
     return tree[0] in allowed and all(_only(t, allowed) for t in tree[1:] if isinstance(t, tuple))
+
+
+def computed_constants(k, kernels):
+    """unit_computed(K) and tiny_computed(K) name a kernel with one unconditional relative bound,
+    and come from a proved bound unless the kernel that uses them is itself unverified."""
+    errs = []
+    for name in ir.constants(k):
+        c = ir.computed(name)
+        if c is None:
+            continue
+        callee = kernels.get(c[1])
+        if callee is None:
+            errs.append(RuleError(k.name, name, COMPUTED, f'{c[1]} is not a kernel'))
+            continue
+        try:
+            consts.source_bound(callee)
+        except consts.ConstError as e:
+            errs.append(RuleError(k.name, name, COMPUTED, str(e)))
+        if callee.status != 'proved' and k.status != 'unverified':
+            errs.append(RuleError(k.name, name, COMPUTED,
+                                  f'{c[1]} is {callee.status}: only an unverified kernel may use the '
+                                  'constants of a bound that is not proved'))
+        # Below K's minimum precision its bound, and so the constant, does not exist.
+        if callee.min_precision and (k.min_precision or 1) < callee.min_precision:
+            errs.append(RuleError(k.name, name, COMPUTED,
+                                  f'the claims of {c[1]} hold from precision {callee.min_precision} on, '
+                                  f'so min_precision must be at least {callee.min_precision}'))
+    return errs
 
 
 def consteval_variant(k, kernels):

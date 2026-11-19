@@ -5,10 +5,10 @@ A small explicit parser, so that no claim text is ever evaluated as Python:
     expr  := term (('+' | '-') term)*
     term  := unary (('*' | '/') unary)*
     unary := '-' unary | atom
-    atom  := INTEGER | NAME | '(' expr ')'
+    atom  := INTEGER | 'abs' '(' expr ')' | NAME | '(' expr ')'
 
-The result is a tree of tuples: ('int', n), ('name', s), ('neg', a), and (op, a, b) for op in
-add, sub, mul, div.
+The result is a tree of tuples: ('int', n), ('name', s), ('neg', a), ('abs', a), and (op, a, b)
+for op in add, sub, mul, div. Where each kind of tree may appear is the rules' business.
 """
 import re
 from fractions import Fraction
@@ -70,6 +70,12 @@ def parse(text):
     def atom():
         nonlocal pos
         kind, val = peek()
+        if (kind, val) == ('name', 'abs') and pos + 1 < len(tokens) and tokens[pos + 1] == ('op', '('):
+            pos += 2
+            a = expr()
+            if not take(')'):
+                raise ExprError(f'missing ")" in {text!r}')
+            return ('abs', a)
         if kind in ('int', 'name'):
             pos += 1
             return (kind, val)
@@ -105,6 +111,8 @@ def evaluate(tree, env):
         return env[tree[1]]
     if kind == 'neg':
         return -evaluate(tree[1], env)
+    if kind == 'abs':
+        return abs(evaluate(tree[1], env))
     a, b = evaluate(tree[1], env), evaluate(tree[2], env)
     if kind == 'add':
         return a + b

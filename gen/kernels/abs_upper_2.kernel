@@ -1,0 +1,13 @@
+# The smallest number of the format not below |x|: what a radius computation needs of a center.
+kernel:        abs_upper_2
+input:         x = x0 x1
+output:        t
+value:         abs(x)
+requires:      normalized x
+ensures:       rounded t up
+source:        abs_2, then to_up_2 (Milestone 1 listing)
+status:        unverified
+cone_exempt:   through abs_2 and to_up_2, which select and step to a neighbor; the non-finite layer tests x0 itself
+
+(a0, a1) = abs_2(x0, x1)
+t        = to_up_2(a0, a1)

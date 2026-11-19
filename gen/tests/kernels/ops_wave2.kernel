@@ -1,0 +1,24 @@
+# Test kernel: the forms of the second wave, each visible in an output: a mask operand and a mask
+# result, copy, the literal zero on either side of a comparison, and constants computed from the
+# claims of another kernel.
+kernel:   ops_wave2
+input:    a
+input:    mask w
+input:    b
+output:   r = r0 c1 k1
+output:   mask v
+value:    a+b
+ensures:  error r R c=1 k=1 t=0
+status:   unverified
+
+m1 = lt(a, 0)
+m2 = le(0, b)
+m3 = and(m1, w)
+v  = or(m3, m2)
+c1 = copy(b)
+s  = select(w, a, b)
+k1 = prod(const unit_computed(ops_bound), s)
+k2 = add(k1, const tiny_computed(ops_bound))
+k3 = add(a, b)
+k4 = add(k2, k3)
+r0 = add(k4, c1)

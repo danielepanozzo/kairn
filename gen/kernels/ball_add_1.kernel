@@ -1,0 +1,22 @@
+# The sum of two balls with one-limb centers. The center is one rounded sum, whose error is at most
+# U |cz| with U = unit_computed(add_1_1); a sum has no underflow error, so there is no V term.
+kernel:        ball_add_1
+input:         cx
+input:         rx
+input:         cy
+input:         ry
+output:        cz
+output:        rz
+value:         cx+cy
+requires:      nonneg rx
+requires:      nonneg ry
+ensures:       encloses cz rz x+y x=cx,rx y=cy,ry
+source:        midpoint-radius sum (Milestone 1 listing)
+status:        unverified
+cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
+
+cz = add(cx, cy)
+mz = abs(cz)
+d  = rmul(const unit_computed(add_1_1), mz)
+r0 = radd(rx, ry)
+rz = radd(r0, d)

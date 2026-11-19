@@ -8,6 +8,7 @@ import hashlib
 import math
 import os
 import platform
+import random
 import shutil
 import struct
 import subprocess
@@ -44,13 +45,15 @@ def rosetta():
     return subprocess.run(['arch', '-x86_64', '/usr/bin/true'], capture_output=True).returncode == 0
 
 
-def lines_for(kernels, names, seed):
+def lines_for(kernels, names, seed, extra=None):
+    """(kernel, format, operands, request line) for N random cases per kernel and format, and the
+    cases extra(fmt, kernel) gives, if any."""
     out = []
     for name in names:
         for fmt in ('binary64', 'binary32'):
-            for i, case in enumerate(common.requests(fmt, kernels[name], N, seed)):
-                limbs = ' '.join(interp.format_limb(common.to_value(x)) for x in case)
-                out.append((name, fmt, case, f'{name} {fmt} {limbs} #{i}'))
+            cases = common.requests(fmt, kernels[name], N, seed) + (extra(fmt, kernels[name]) if extra else [])
+            for i, case in enumerate(cases):
+                out.append((name, fmt, case, f'{name} {fmt} {" ".join(map(common.token, case))} #{i}'))
     return out
 
 
@@ -97,7 +100,7 @@ class Builds:
         return r.returncode, r.stdout, r.stderr
 
 
-class FirstWave(unittest.TestCase):
+class Kernels(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not COMPILERS:
@@ -106,7 +109,7 @@ class FirstWave(unittest.TestCase):
         cls.builds = Builds('cxx', [RUNNER], ['-I', INCLUDE, '-I', common.TESTS])
 
     def test_matrix(self):
-        """Every build, every first-wave kernel, both limb types: bit-identical to the interpreter."""
+        """Every build, every kernel, both limb types: bit-identical to the interpreter."""
         for name in self.ks:
             cases = lines_for(self.ks, [name], 'cxx')
             want = expect(None, cases)
@@ -147,6 +150,13 @@ class FirstWave(unittest.TestCase):
             self.assertIn('line 2:', err)
             self.assertIn(words, err)
 
+    def test_runner_masks(self):
+        code, out, err = self.builds.run(0, 'lt_2_1 binary64 0x1p+0 -0x1p-60 0x1p+0\n'
+                                            'le_1_2 binary32 0x1p+0 0x1p+0 -0x1p-30\n')
+        self.assertEqual(code, 0, err)
+        self.assertEqual(out, 'lt_2_1 binary64 0x1p+0 -0x1p-60 0x1p+0 -> 1\n'
+                              'le_1_2 binary32 0x1p+0 0x1p+0 -0x1p-30 -> 0\n')
+
 
 def negates_a_fused_result(k, kernels):
     """Whether the kernel negates the result of a fused operation or of a muladd.
@@ -186,6 +196,17 @@ class EveryOperation(unittest.TestCase):
     def test_negated_fused_results_are_known(self):
         self.assertEqual({n for n, k in self.ks.items() if negates_a_fused_result(k, self.ks)},
                          {'ops_muladd', 'ops_call'})
+        ks = common.kernels()
+        self.assertEqual({n for n, k in ks.items() if negates_a_fused_result(k, ks)}, set())
+
+    def test_runner_mask_operands(self):
+        code, out, err = self.builds.run(0, 'ops_wave2 binary64 -0x1p+0 1 0x1p+0\n')
+        self.assertEqual(code, 0, err)
+        self.assertTrue(out.endswith(' 1\n'), out)
+        for bad in ('2', '0x1p+0', '-0'):
+            code, out, err = self.builds.run(0, f'# fine\nops_wave2 binary64 0x1p+0 {bad} 0x1p+0\n')
+            self.assertEqual(code, 2, bad)
+            self.assertIn('line 2: not a mask', err)
 
     def test_matrix(self):
         names = list(self.ks)
@@ -234,6 +255,8 @@ def bits(x, ctype):
 
 
 def literal(x, ctype):
+    if isinstance(x, bool):
+        return 'true' if x else 'false'
     return f'{x.hex()}{"f" if ctype == "float" else ""}'
 
 
@@ -275,19 +298,29 @@ class ConstantEvaluation(unittest.TestCase):
                 lines.append(f'static_assert([] {{ {ctype} p = 0, e = 0; kairn::gen::two_prod({literal(a, ctype)}, '
                              f'{literal(b, ctype)}, p, e); return std::bit_cast<{utype[ctype]}>(p) == {bits(p, ctype)}u '
                              f'&& std::bit_cast<{utype[ctype]}>(e) == {bits(e, ctype)}u; }}());')
-            # The kernels without fused operations give their run-time bits in constant evaluation.
-            for name in ('two_sum', 'fast_two_sum', 'add_2_1', 'add_2_2', 'add_fast_2_2', 'add_fast_2_2_ts'):
-                k = self.ks[name]
-                for case in common.requests(fmt.name, k, 8, 'ce'):
-                    if not all(math.isfinite(x) for x in case):
+            # The kernels without fused operations give their run-time bits in constant evaluation;
+            # succ and pred (std::bit_cast) also on zeros of both signs, subnormals and the largest
+            # finite numbers.
+            edge = [x for x in common.edges(fmt.name) if math.isfinite(x)]
+            for name, k in self.ks.items():
+                if cpp.constexpr_kind(k, self.ks) != 'plain':
+                    continue
+                rng = random.Random(f'ce:{name}:{fmt.name}')
+                cases = common.requests(fmt.name, k, 8, 'ce') + \
+                    [[rng.choice((False, True)) if kind == ir.MASK else rng.choice(edge) for kind in k.input_kinds]
+                     for _ in range(16)]
+                for case in cases:
+                    if not all(isinstance(x, bool) or math.isfinite(x) for x in case):
                         continue
                     outs = [common.to_float(v) for v in rt.run(name, fmt, [common.to_value(x) for x in case])]
                     if not all(math.isfinite(x) for x in outs):
                         continue   # not a constant expression: tested apart
-                    decl = ' '.join(f'{ctype} o{i} = 0;' for i in range(len(outs)))
+                    kinds = k.output_kinds
+                    decl = ' '.join(f'{"bool" if kind == ir.MASK else ctype} o{i} = 0;' for i, kind in enumerate(kinds))
                     args = ', '.join([literal(x, ctype) for x in case] + [f'o{i}' for i in range(len(outs))])
-                    check = ' && '.join(f'std::bit_cast<{utype[ctype]}>(o{i}) == {bits(x, ctype)}u'
-                                        for i, x in enumerate(outs))
+                    check = ' && '.join(f'o{i} == {"true" if x else "false"}' if kind == ir.MASK else
+                                        f'std::bit_cast<{utype[ctype]}>(o{i}) == {bits(x, ctype)}u'
+                                        for i, (x, kind) in enumerate(zip(outs, kinds)))
                     lines.append(f'static_assert([] {{ {decl} kairn::gen::{name}({args}); return {check}; }}());')
         lines.append('int main() {}')
         return '\n'.join(lines) + '\n'
@@ -318,7 +351,8 @@ class ConstantEvaluation(unittest.TestCase):
             self.assertIn('constant', err)
 
     def test_kernels_with_fused_operations_are_not_constexpr(self):
-        for name in ('mul_2_2', 'mul_2_1', 'split', 'two_prod_dekker', 'two_sum'):
+        for name in ('mul_2_2', 'mul_2_1', 'split', 'two_prod_dekker', 'rmul', 'mul_pow2_2', 'ball_add_1',
+                     'two_sum', 'radd'):
             k = self.ks[name]
             path = os.path.join(self.dir, f'not_constexpr_{name}.cpp')
             args = ', '.join(['1.0'] * len(k.input_limbs) + [f'o[{i}]' for i in range(len(k.output_limbs))])
@@ -329,8 +363,8 @@ class ConstantEvaluation(unittest.TestCase):
                         'static_assert(ok);\nint main() {}\n')
             for cxx in COMPILERS:
                 status, err = compile_([cxx] + BASE + ['-I', INCLUDE, '-fsyntax-only', path])
-                if name == 'two_sum':
-                    self.assertEqual(status, 0, err)       # the control
+                if name in ('two_sum', 'radd'):
+                    self.assertEqual(status, 0, err)       # the controls, radd through succ
                 else:
                     self.assertNotEqual(status, 0, f'{cxx}: {name} is usable in constant evaluation')
                     self.assertIn('constant', err)

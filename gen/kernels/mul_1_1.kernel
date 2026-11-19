@@ -1,0 +1,14 @@
+# One rounded product. Not a kernel the library calls (its code is the opaque product): it states
+# the bound of the center of a one-limb ball product, from which ball_mul_1 and ball_scale_1 take
+# their constants. Relative error u/(1 + u) in the normal range, eta/2 below it.
+kernel:        mul_1_1
+input:         a
+input:         b
+output:        p
+value:         a*b
+ensures:       rounded p nearest
+ensures:       error p R c=1/(1+u) k=1 t=1/2
+source:        one rounding to nearest
+status:        unverified
+
+p = prod(a, b)

@@ -13,7 +13,7 @@ from fractions import Fraction
 
 import common
 import hwfloat
-from kairn_gen import interp, ir
+from kairn_gen import consts, expr, interp, ir
 
 KAIRN_GEN = os.path.join(common.GEN, 'kairn-gen')
 
@@ -72,6 +72,65 @@ class Formats(unittest.TestCase):
         self.assertEqual(ir.CONSTANTS['splitter'](53), 2 ** 27 + 1)
         self.assertEqual(ir.CONSTANTS['splitter'](24), 2 ** 12 + 1)
         self.assertEqual(ir.CONSTANTS['splitter'](5), 2 ** 3 + 1)
+
+    def test_computed_constants(self):
+        # Worked out by hand: for one rounding, unit = u/(1+u) gives unit/(1 - unit) = u exactly,
+        # and tiny/(1 - unit) = (eta/2)(1 + u), which rounds up to eta; for mul_2_2, unit = 4u^2 =
+        # 2^-104 gives 2^-104/(1 - 2^-104), just above 2^-104, and (3/2) eta/(1 - 2^-104) rounds
+        # up to 2 eta; for add_2_2, tiny = 0.
+        ks = common.kernels()
+        F = Fraction
+        for name, fmt, want in (('unit_computed(add_1_1)', (53, -1074, 971), F(1, 2 ** 53)),
+                                ('unit_computed(add_1_1)', (24, -149, 104), F(1, 2 ** 24)),
+                                ('unit_computed(add_1_1)', (5, -12, 6), F(1, 2 ** 5)),
+                                ('tiny_computed(mul_1_1)', (53, -1074, 971), F(1, 2 ** 1074)),
+                                ('tiny_computed(mul_1_1)', (3, -4, 3), F(1, 2 ** 4)),
+                                ('unit_computed(mul_2_2)', (53, -1074, 971), F(2 ** 52 + 1, 2 ** 156)),
+                                ('tiny_computed(mul_2_2)', (53, -1074, 971), F(2, 2 ** 1074)),
+                                ('tiny_computed(mul_2_2)', (24, -149, 104), F(2, 2 ** 149)),
+                                ('tiny_computed(add_2_2)', (53, -1074, 971), F(0)),
+                                ('tiny_computed(mul_2_1)', (4, -6, 3), F(2, 2 ** 6)),
+                                ('0', (5, -12, 6), F(0))):
+            self.assertEqual(consts.value(name, ks, *fmt), want, (name, fmt))
+        # In a format whose numbers are all multiples of 4, u rounds up to 4.
+        self.assertEqual(consts.value('unit_computed(add_1_1)', ks, 3, 2, 4), 4)
+
+    def test_computed_constants_are_rounded_up_values(self):
+        # On every small format: the smallest number of the format not below the exact quotient.
+        ks = common.kernels()
+        for name in TOY:
+            toy = Toy(name)
+            f = toy.f
+            for c in ('unit_computed(add_1_1)', 'unit_computed(mul_1_1)', 'tiny_computed(mul_1_1)',
+                      'unit_computed(mul_2_1)', 'tiny_computed(mul_2_1)'):
+                fn, k = ir.computed(c)
+                e = consts.source_bound(ks[k])
+                u = Fraction(1, 2 ** f.p)
+                unit = expr.evaluate(expr.parse(e['c']), {'u': u}) * u ** e['k']
+                tiny = expr.evaluate(expr.parse(e['t']), {}) * Fraction(2) ** f.qmin
+                exact = (unit if fn == 'unit_computed' else tiny) / (1 - unit)
+                if ks[k].min_precision and f.p < ks[k].min_precision:
+                    with self.assertRaises(consts.ConstError):
+                        consts.value(c, ks, f.p, f.qmin, f.qmax)
+                    continue
+                if not unit < 1:
+                    continue
+                above = [x for x in [Fraction(0)] + toy.pos[:-1] if x >= exact]
+                if not above:
+                    with self.assertRaises(consts.ConstError, msg=(name, c)):
+                        consts.value(c, ks, f.p, f.qmin, f.qmax)
+                    continue
+                self.assertEqual(consts.value(c, ks, f.p, f.qmin, f.qmax), above[0], (name, c))
+
+    def test_constants_below_the_minimum_precision(self):
+        ks = common.kernels()
+        with self.assertRaises(consts.ConstError):     # add_2_2's claims hold from precision 3
+            consts.value('unit_computed(add_2_2)', ks, 2, -4, 4)
+        m = interp.Machine(ks)
+        x = interp.parse_limb('0x1p+0')
+        with self.assertRaises(interp.InterpError):
+            m.run('ball_add_2', interp.parse_format('fp:2:-4:4'), [x, interp.canon(False, 0, 0), x, x,
+                                                                    interp.canon(False, 0, 0), x])
 
 
 # ---------------------------------------------------------------------------------------------
@@ -215,18 +274,25 @@ class Specials(unittest.TestCase):
         self.assertEqual(interp.add(f, top, half_ulp), inf)
         self.assertEqual(interp.add(f, top, interp.canon(False, 1, 969)), top)
 
+    def test_copy_and_zero(self):
+        m = interp.Machine(common.kernels())
+        f = interp.parse_format('binary64')
+        for x in (interp.NaN, (interp.INF, True), common.to_value(-0.0), common.to_value(5e-324)):
+            self.assertEqual(m._op('copy', f, [x], False), x)
+        self.assertEqual(m._const(f, '0'), common.to_value(0.0))
+        # lt(x1, 0) compares with +0: -0 is not below it.
+        self.assertEqual(m.run('lt_2_1', f, [common.to_value(1.0), common.to_value(-0.0), common.to_value(1.0)]),
+                         [False])
+        with self.assertRaises(interp.InterpError):
+            m.run('lt_2_1', f, [common.to_value(1.0), True, common.to_value(1.0)])
+        with self.assertRaises(interp.InterpError):
+            interp.Machine(common.kernels(common.TEST_KERNELS)).run('ops_wave2', f, [common.to_value(1.0)] * 3)
+
 
 # ---------------------------------------------------------------------------------------------
 # The interpreter against the host.
 
-def edge_cases(fmt, kernel, limit):
-    """Edge values in every limb position: all combinations when few, a sample otherwise."""
-    edges = common.edges(fmt)
-    n = len(kernel.input_limbs)
-    if len(edges) ** n <= limit:
-        return [list(c) for c in itertools.product(edges, repeat=n)]
-    rng = random.Random(f'edges:{kernel.name}')
-    return [[rng.choice(edges) for _ in range(n)] for _ in range(limit)]
+edge_cases = common.edge_cases
 
 
 class AgainstHardware(unittest.TestCase):
@@ -254,10 +320,10 @@ class AgainstHardware(unittest.TestCase):
                 with self.subTest(kernel=name, fmt=fmt, fused=fused, consteval=consteval):
                     self.assertEqual(bad[:3], [], f'{len(bad)} of {len(cases)} differ')
 
-    def test_first_wave(self):
+    def test_kernels(self):
         self.compare(None)
 
-    def test_first_wave_constant_evaluation(self):
+    def test_kernels_constant_evaluation(self):
         ks = common.kernels()
         from kairn_gen import cpp
         self.compare(None, consteval=True, only=lambda k: cpp.constexpr_kind(k, ks) is not None)
@@ -352,6 +418,26 @@ class Protocol(unittest.TestCase):
         self.assertEqual(r.stdout.split(' -> ')[1].split()[0], '-0x1p-26')
         r = self.run_interp(line, '--kernels', common.TEST_KERNELS)
         self.assertEqual(r.stdout.split(' -> ')[1].split()[0], '-0x1.0000001p-26')
+
+    def test_masks(self):
+        text = ('lt_2_1 binary64 0x1p+0 -0x1p-60 0x1p+0\n'
+                'eq_2_2 fp:4:-6:3 0x1p+0 0x0p+0 0x1p+0 -0x0p+0\n'
+                'ops_wave2 binary32 -0x1p+0 1 0x1p+0\n'
+                'ops_wave2 binary32 -0x1p+0 0 0x1p+0\n')
+        r = self.run_interp(text, '--kernels', common.TEST_KERNELS)
+        self.assertEqual(r.returncode, 2)        # lt_2_1 is not a test kernel
+        r = self.run_interp(text.split('\n', 2)[2], '--kernels', common.TEST_KERNELS)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual([x.split(' -> ')[1].split()[-1] for x in r.stdout.splitlines()], ['1', '1'])
+        r = self.run_interp(''.join(text.splitlines(True)[:2]))
+        self.assertEqual(r.stdout, 'lt_2_1 binary64 0x1p+0 -0x1p-60 0x1p+0 -> 1\n'
+                                   'eq_2_2 fp:4:-6:3 0x1p+0 0x0p+0 0x1p+0 -0x0p+0 -> 1\n')
+        for bad in ('2', 'true', '0x1p+0', '-0'):
+            r = self.run_interp(f'ops_wave2 binary64 0x1p+0 {bad} 0x1p+0\n', '--kernels', common.TEST_KERNELS)
+            self.assertEqual(r.returncode, 2, bad)
+            self.assertIn('not a mask', r.stderr)
+        r = self.run_interp('ops_wave2 binary64 0x1p+0 1 1\n', '--kernels', common.TEST_KERNELS)
+        self.assertIn("not a limb: '1'", r.stderr)
 
     def test_errors_name_the_line(self):
         for line, words in (('nope binary64 0x1p+0', 'unknown kernel'),

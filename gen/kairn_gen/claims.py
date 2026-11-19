@@ -25,19 +25,23 @@ def instance(entry, fmt):
     return {'rel': str(rel), 'abs': str(expr.evaluate(expr.parse(entry['t']), {}) * eta)}
 
 
+def _group(g):
+    # A limb group has no type, the default; a mask says so.
+    out = {'name': g.name, 'limbs': len(g.limbs)}
+    if g.kind == ir.MASK:
+        out['type'] = 'mask'
+    return out
+
+
 def kernel_claims(k, kernels):
     errors = [e for e in k.ensures if e['kind'] == 'error']
-    instances = {}
-    for name in INSTANCE_FORMATS:
-        fmt = interp.parse_format(name)
-        per_entry = [instance(e, fmt) for e in errors]
-        # One error entry: the object of the schema's example. Several: one object per error
-        # entry, in the order of `ensures`.
-        instances[name] = per_entry[0] if len(per_entry) == 1 else per_entry
+    # Always a list, one object per error entry in the order of `ensures` (second wave).
+    instances = {name: [instance(e, interp.parse_format(name)) for e in errors]
+                 for name in INSTANCE_FORMATS}
     return {
         'name': k.name,
-        'inputs': [{'name': g.name, 'limbs': len(g.limbs)} for g in k.inputs],
-        'outputs': [{'name': g.name, 'limbs': len(g.limbs)} for g in k.outputs],
+        'inputs': [_group(g) for g in k.inputs],
+        'outputs': [_group(g) for g in k.outputs],
         'value': k.value,
         'requires': [_requires(r) for r in k.requires],
         'ensures': [dict(e) for e in k.ensures],

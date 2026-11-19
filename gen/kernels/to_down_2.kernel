@@ -1,0 +1,15 @@
+# The largest number of the format not above a 2-limb x: x0, or its predecessor when x is below
+# x0, that is when x1 < 0.
+kernel:        to_down_2
+input:         x = x0 x1
+output:        t
+value:         x
+requires:      normalized x
+ensures:       rounded t down
+source:        the sign of x1 (Milestone 1 listing)
+status:        unverified
+cone_exempt:   t is x0 or pred(x0), chosen by select, and pred(+inf) is finite; the non-finite layer tests x0 itself
+
+m = lt(x1, 0)
+p = pred(x0)
+t = select(m, p, x0)

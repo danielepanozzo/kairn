@@ -1,0 +1,17 @@
+# The negation of a ball with a 2-limb center: exact, the radius unchanged.
+kernel:        ball_neg_2
+input:         cx = cx0 cx1
+input:         rx
+output:        cz = cz0 cz1
+output:        rz
+value:         -cx
+requires:      normalized cx
+requires:      nonneg rx
+ensures:       normalized cz
+ensures:       encloses cz rz -x x=cx,rx
+source:        midpoint-radius negation (Milestone 1 listing)
+status:        unverified
+cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
+
+(cz0, cz1) = neg_2(cx0, cx1)
+rz         = copy(rx)

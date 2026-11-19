@@ -1,0 +1,14 @@
+# An upper bound of a b, for radii: the rounded product, one step up. The number of gaps is
+# provisional (at most 2; 3/2 expected for nonnegative operands).
+kernel:        rmul
+input:         a
+input:         b
+output:        r
+value:         a*b
+ensures:       upper r gaps=2
+source:        one step up from the rounded product (Milestone 1 listing)
+status:        unverified
+cone_exempt:   r = succ(p), and succ(-inf) is finite; r is a radius, and the ball layer tests radii for non-finite values (Milestone 1 statements, Ball kernels)
+
+p = prod(a, b)
+r = succ(p)
