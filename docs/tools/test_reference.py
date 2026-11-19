@@ -630,6 +630,15 @@ class Tool(unittest.TestCase):
         page = reference.plan(self.copy.root)["docs/reference/mul_2_2.md"]
         self.assertIn("These runs judged other claims", page)
 
+    def test_runs_in_the_extended_domain_are_read_as_such(self):
+        # The stored summaries record each series' domain: a full kernel's page says that the runs
+        # judged it with infinite and NaN operands, and measures the entries of its core (F2).
+        page = reference.plan(self.copy.root)["docs/reference/add_2_2_full.md"]
+        self.assertIn("They judged the kernel in the extended domain, infinite and NaN operands included", page)
+        self.assertIn("largest error / bound (core `add_2_2`)", page)
+        self.assertNotIn("These runs judged other claims", page)
+        self.assertNotIn("hold no measurement of the statement on infinite and NaN operands", page)
+
     def test_missing_theorem_fails(self):
         data = self.copy.claims()
         self.copy.kernel(data, "abs_2")["theorem"]["name"] = "abs_2_no_such_theorem"

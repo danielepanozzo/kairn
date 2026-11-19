@@ -622,11 +622,11 @@ Those enumerations were made with `H` without $N$, and suggested that the consta
 that is not proved away: `G` one unit in the last place smaller still enclosed, and so did half
 of that `H`, which could not be dropped for products and scalings. $N$ is slack by construction.
 With $N$, the proofs were checked again and the quick tier's enumerations of toy formats and
-random runs were repeated. Not repeated: the brute-force tier, whose
-[results](../results/brute-milestone1.md) are of the kernels without $N$; and the oracle's own
-reference runner of this design (`refrun --radius second`, `oracle/README.md`), written from this
-page's table independently of the generator, still computes `H` without $N$. `radd`, `rmul` and
-`abs_upper_2` remain kernels of their own.
+random runs were repeated, and so was the brute-force tier, on three machines
+([results](../results/brute-milestone1.md)); the oracle's own reference runner of this design
+(`refrun --radius second`, `oracle/README.md`), written from this page's table independently of
+the generator, computes `H` with $N$ since commit `b7a1fbb`. `radd`, `rmul` and `abs_upper_2`
+remain kernels of their own.
 
 **Special states.** A ball value is *canonical* when it is a finite ball (center finite, and
 normalized for $k = 2$; radius finite and nonnegative), or the whole line (center 0, radius
