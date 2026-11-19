@@ -43,6 +43,8 @@ The whole program is
 [`docs/examples/cpp/first_steps.cpp`](https://github.com/danielepanozzo/kairn/blob/main/docs/examples/cpp/first_steps.cpp);
 ctest builds and runs it (`api.example.first_steps`), and it checks the values it prints. To build
 your own program, link `kairn::kairn` and `kairn::fma` ([Use it from CMake](#use-it-from-cmake)).
+Next, the tutorial [Accurate sums and dot products](../tutorials/accurate-sums.md) puts these
+types to work, and the [reference](../reference/index.md) has a page for every operation.
 
 ## What you need
 
@@ -77,6 +79,7 @@ The tests:
 | `kairn-gen.test` | `python3 gen/kairn-gen test --no-cxx`: the generator's own tests, without those that compile C++, which take longer than everything else together; run `python3 gen/kairn-gen test` for all of them. |
 | `kairn-oracle.selftest` | `python3 oracle/kairn-oracle selftest --quick`: the oracle's own tests, including injected errors that it must catch. |
 | `kairn-oracle.claims` | `python3 oracle/kairn-oracle check --claims-only`: the oracle can read every claim in `gen/claims.json`. |
+| `docs.reference.check`, `docs.reference.test` | `python3 docs/tools/reference.py --check`: the reference pages of this site are what the script writes from the claims and the stored results; and the script's own tests. |
 | `crosscheck.interp.*` | Each kernel, run by the generator's interpreter on every operand of a small format, judged by the oracle against its claims. |
 | `crosscheck.interp-restricted.*`, `crosscheck.interp-sampled.*` | For the kernels with too many operands for that (the two-limb balls), every operand of a restricted domain of a small format, and random operands of the whole format. |
 | `crosscheck.cxx.*` | Each kernel, compiled with the build's compiler and flags, on random `binary64` and `binary32` operands, judged by the oracle. |
@@ -94,7 +97,7 @@ The tests:
 | `api.reject.*` | What must not compile: the flags `config.hpp` rejects, and each kind of operation written without the marker while its kernel is UNVERIFIED (against a copy of the headers in which every kernel is). |
 | `api.boundary.*` | A product the program computes and passes into an operation (`x + a * b`, a constructor, `from_limbs`, a ball's center or radius) gives, bit for bit, the result of the same operation on the rounded product, under each contraction setting; `api.boundary.unguarded.*` checks that without the guard the compilers that fuse across statements do change it. |
 | `api.k1.zero_cost` | The instructions emitted for loops over `Expansion<double, 1>` against the same loops over `double`. |
-| `api.example.*` | The examples of this site, which check their own output. |
+| `api.example.*` | The examples of this site, which check their own output; the tutorial's, under each contraction setting, against the output its page shows. |
 
 `ctest -L api` runs only the tests of the public interface. [Testing](../developer/testing.md)
 explains the cross-checks, how to run one by hand, and how to rerun one failing case. The entry points of the

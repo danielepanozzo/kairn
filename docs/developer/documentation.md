@@ -65,3 +65,46 @@ an HTML tag and the page loses it, while GitHub shows it.
 repository root (`pymdownx.snippets`); a missing file fails the build. [Getting
 started](../getting-started/index.md) includes the consumer checks' `CMakeLists.txt` files this
 way, so what the page shows is what ctest builds. GitHub shows the include line itself.
+
+## Examples
+
+Every fragment of C++ on a page is a section of a complete program under `docs/examples/cpp/`,
+marked in the program with `// --8<-- [start:NAME]` and `// --8<-- [end:NAME]` and included as
+`--8<-- "docs/examples/cpp/PROGRAM.cpp:NAME"`. ctest builds every example with warnings as errors
+and runs it (`api.example.*`, registered in `tests/api/CMakeLists.txt`), and the program checks
+its own results and exits with a status other than 0 when one is wrong. When a page shows what a
+program prints, the output is a file next to it, `PROGRAM.txt`, included the same way, and the test
+compares the program's output with it (`tests/api/example_output.cmake`), so the output must be
+the same on every platform. [Accurate sums](../tutorials/accurate-sums.md) is built this way, once
+with the build's flags and once per contraction setting of the compiler. After changing such a
+program, write its new output into the `.txt` file and check the page that includes it.
+
+## Reference pages
+
+The pages under `docs/reference/`, except `reading.md`, are generated and committed, like the
+generated C++, and the Reference part of `nav` in `mkdocs.yml` is generated between the lines
+`# BEGIN reference` and `# END reference`:
+
+```sh
+python3 docs/tools/reference.py          # rewrite them
+python3 docs/tools/reference.py --check  # fail if one differs from what would be written
+python3 docs/tools/test_reference.py     # the tests of the script and of its table
+```
+
+The script reads `gen/claims.json`, the kernel descriptions under `gen/kernels/`,
+`include/kairn/gen/bounds.hpp`, `proofs/gen/Statements.v` and the stored brute-force summaries of
+the latest milestone under `results/`, and prints every number, status and formula of a page from
+them. Rerun it after any of these changes; `--check` runs in CI (the workflow `checks.yml`) and in
+ctest (`docs.reference.check`, `docs.reference.test`).
+
+The one input written by hand is `docs/tools/reference_operations.py`: for each kernel its page's
+title and group, and the C++ forms that reach it, with their operand types. A new kernel needs an
+entry there (the script refuses to run without one), and the test fails when a public operation
+whose header comment names a kernel is not among that kernel's forms.
+
+The script knows the claim kinds and requirements of `docs/developer/architecture.md`
+("Claims", "Claims of the second wave") and nothing else: on a kind, a requirement, a field or a
+status it has no template for, it stops and names it, so that someone writes the template before
+the pages change. Kernels with `"domain": "extended"` are handled by one switch at the top of the
+script, `EXTENDED_DOMAIN`: `"fail"` (the committed value) stops on them, `"skip"` leaves them out
+and lists them on the index as not rendered yet.

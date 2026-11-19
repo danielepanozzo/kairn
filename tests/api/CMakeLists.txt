@@ -14,7 +14,8 @@
 # - api.reject.*: what must not compile: rejected flags, and UNVERIFIED operations without the
 #   marker (each with a control that compiles).
 # - api.k1.zero_cost: the code of Expansion<double, 1> against that of double (k1/zero_cost.py).
-# - api.example.*: the documentation's examples (docs/examples/cpp/), which check their own output.
+# - api.example.*: the documentation's examples (docs/examples/cpp/), which check their own output;
+#   api.example.accurate_sums.* also compares it with the text its tutorial shows.
 
 set(_api_include "${PROJECT_SOURCE_DIR}/include")
 if(_msvc_style)
@@ -287,4 +288,29 @@ endif()
 _kairn_api_program(kairn-example-first-steps "${PROJECT_SOURCE_DIR}/docs/examples/cpp/first_steps.cpp")
 add_test(NAME api.example.first_steps COMMAND kairn-example-first-steps)
 set_tests_properties(api.example.first_steps PROPERTIES LABELS "api;example")
+
+# The tutorial's program prints the same text on every platform and under every contraction
+# setting (its data are chosen so that even its double loops give one answer), and the tutorial
+# shows that text: it is built with the build's flags and once per contraction setting, as
+# api.boundary.* is, and each build's output is compared with accurate_sums.txt.
+list(LENGTH _api_contraction _n)
+math(EXPR _last "${_n} - 1")
+foreach(_i RANGE 0 ${_last} 2)
+  math(EXPR _j "${_i} + 1")
+  list(GET _api_contraction ${_i} _variant)
+  list(GET _api_contraction ${_j} _option)
+  if(_variant STREQUAL "")
+    set(_suffix "")
+  else()
+    set(_suffix ".${_variant}")
+  endif()
+  string(REPLACE "." "-" _target_suffix "${_suffix}")
+  _kairn_api_program(kairn-example-accurate-sums${_target_suffix}
+    "${PROJECT_SOURCE_DIR}/docs/examples/cpp/accurate_sums.cpp" ${_option})
+  add_test(NAME api.example.accurate_sums${_suffix}
+    COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-example-accurate-sums${_target_suffix}>"
+      "-DEXPECTED=${PROJECT_SOURCE_DIR}/docs/examples/cpp/accurate_sums.txt"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/example_output.cmake")
+  set_tests_properties(api.example.accurate_sums${_suffix} PROPERTIES LABELS "api;example")
+endforeach()
 set_tests_properties(api.constexpr api.environment PROPERTIES LABELS api)

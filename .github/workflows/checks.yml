@@ -1,6 +1,6 @@
-# The generated files are what the generator writes, and the documentation site builds without a
-# warning and with every link resolving (docs/developer/documentation.md). One job: each step takes
-# seconds.
+# The generated files are what the generator writes, the reference pages are what
+# docs/tools/reference.py writes, and the documentation site builds without a warning and with
+# every link resolving (docs/developer/documentation.md). One job: each step takes seconds.
 name: Generated files and documentation
 
 on:
@@ -28,6 +28,12 @@ jobs:
 
       - name: Generated files are fresh
         run: python3 gen/kairn-gen check
+
+      - name: Reference pages are fresh
+        run: python3 docs/tools/reference.py --check
+
+      - name: Tests of the reference generator
+        run: python3 docs/tools/test_reference.py
 
       - name: Install MkDocs
         run: |

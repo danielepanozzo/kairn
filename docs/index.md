@@ -78,8 +78,13 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
 ## Where to go next
 
 - [Getting started](getting-started/index.md): build and test the repository, and a first program.
+- [Accurate sums and dot products](tutorials/accurate-sums.md): a tutorial with two-limb numbers
+  and balls, on a sum that `double` gets entirely wrong.
+- [Reference](reference/index.md): every operation, with its proved statement, its theorem, and
+  what the brute-force runs measured.
 - [What holds today](getting-started/guarantees.md): which operations are proved, and what is not
   written yet.
+- [Proofs](proofs/index.md): how to check the proofs yourself, and what they rest on.
 - [Architecture](developer/architecture.md): how the repository is organized and how its parts
   connect.
 - [The Phase 0 report](developer/design/phase0/index.md): the design, and the measurements behind

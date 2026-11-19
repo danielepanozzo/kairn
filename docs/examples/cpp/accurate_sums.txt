@@ -1,0 +1,10 @@
+Sum of 2001 numbers: exact value 1, condition number 6.3e+19
+  double                -6347.5 (error -6.3e+03)
+  Expansion<double, 2>  0.99999999999939948 + 1.3877787807814457e-17 (error -6.0e-13)
+  Ball<double, 2>       center error -6.0e-13, radius 2.82e-10
+    U = 3.698e-32, times the sum of |center| 7.616e+21: 2.82e-10
+    with data known to half a unit in the last place: radius 7.01e+03
+Dot product of 2001 pairs: exact value 1, condition number 6.7e+18
+  double                -730.53954890068781 (error -7.3e+02)
+  Expansion<double, 2>  1.0000000000000511 + 8.3671943477806584e-17 (error 5.1e-14)
+  Ball<double, 2>       center error 5.1e-14, radius 5.14e-11

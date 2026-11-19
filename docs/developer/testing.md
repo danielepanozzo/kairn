@@ -28,6 +28,7 @@ The tests that `ctest` runs, by name:
 | `kairn-gen.test` | The generator's own tests, without those that compile C++ (`--no-cxx`): see [the generator's tier](#the-generators-tier). |
 | `kairn-oracle.selftest` | The oracle's own tests (`--quick`), including injected errors it must catch. It compiles its own C++ reference runner with the build's compiler; if that fails, the test fails. |
 | `kairn-oracle.claims` | The oracle can read every claim in `gen/claims.json`. |
+| `docs.reference.check`, `docs.reference.test` | The reference pages of the site are what `docs/tools/reference.py` writes, and that script's own tests ([Documentation](documentation.md#reference-pages)). |
 | `crosscheck.interp.K` | Kernel K run by the generator's interpreter on **every** operand combination of a toy format. |
 | `crosscheck.interp-restricted.K` | Kernel K run by the interpreter on every operand of a **restricted** domain of a toy format, for the kernels whose whole enumeration is too long. |
 | `crosscheck.interp-sampled.K` | The same kernels on random cases of the whole toy format, from every stratum. |
@@ -49,7 +50,7 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects, and each kind of operation written without the marker while its kernel is unverified (against a copy of the headers in which every kernel is). |
 | `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, a ball's center or radius) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; with the guard turned off, it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
 | `api.k1.zero_cost` | The instructions emitted for loops over `Expansion<double, 1>` against the same loops over `double` (`tests/api/k1/zero_cost.py`). |
-| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output. |
+| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*`, built under each contraction setting, also compares it with the text its tutorial shows ([Documentation](documentation.md#examples)). |
 
 Labels select groups: `ctest -L crosscheck`, `-L interp` (with `-L restricted` and `-L sampled`
 among them), `-L cxx` (the scalar runners), `-L packed`, `-L contraction`, `-L api` (with
@@ -270,4 +271,4 @@ per branch at a time (a new push cancels the run in progress):
 | `build.yml`, "Build and test" | Configure, build and `ctest` with Ninja, `Release` and warnings as errors, on Linux x86-64 with GCC and with Clang (packed: AVX2), macOS arm64 with Apple clang (NEON), and Windows x64 with MSVC and with clang-cl (AVX2) |
 | `generator.yml`, "Generator's full suite" | `python3 gen/kairn-gen test --cxx CXX`, C++ included, on Linux x86-64 with GCC and with Clang, and macOS arm64 with Apple clang |
 | `proofs.yml`, "Proofs" | `make -C proofs` in the Rocq team's image `rocq/rocq-prover:9.0` (Rocq 9.0.1), with Flocq 4.2.2 from opam, cached between runs |
-| `checks.yml`, "Generated files and documentation" | `gen/kairn-gen check`, `mkdocs build --strict`, `docs/tools/check_links.py` |
+| `checks.yml`, "Generated files and documentation" | `gen/kairn-gen check`, `docs/tools/reference.py --check` and its tests, `mkdocs build --strict`, `docs/tools/check_links.py` |
