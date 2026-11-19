@@ -74,14 +74,28 @@ def round_up(q, fmt):
     return x
 
 
-def computed_constant(kernels, name, fmt):
-    """unit_computed(K) or tiny_computed(K) from K's claims, rounded up with the host's floats."""
-    fn, kname = name[:-1].split('(')
+def _bound(kernels, kname, fmt):
+    """unit = c u^k and tiny = t eta of K's one error claim, exactly."""
     (e,) = [e for e in kernels[kname].ensures if e['kind'] == 'error']
     p, qmin = (53, -1074) if fmt == 'binary64' else (24, -149)
     u = Fraction(1, 2 ** p)
-    unit = expr.evaluate(expr.parse(e['c']), {'u': u}) * u ** e['k']
-    tiny = expr.evaluate(expr.parse(e['t']), {}) * Fraction(2) ** qmin
+    return (expr.evaluate(expr.parse(e['c']), {'u': u}) * u ** e['k'],
+            expr.evaluate(expr.parse(e['t']), {}) * Fraction(2) ** qmin)
+
+
+def computed_constant(kernels, name, fmt):
+    """unit_computed(K) or tiny_computed(K) from K's claims, or up(EXPR), rounded up with the
+    host's floats."""
+    p, qmin = (53, -1074) if fmt == 'binary64' else (24, -149)
+    if name.startswith('up('):
+        tree = expr.parse(name[len('up('):-1])
+        env = {'u': Fraction(1, 2 ** p), 'eta': Fraction(2) ** qmin}
+        for fn, kname in expr.calls(tree):
+            unit, tiny = _bound(kernels, kname, fmt)
+            env[f'unit({kname})'], env[f'tiny({kname})'] = unit, tiny
+        return round_up(expr.evaluate(tree, env), fmt)
+    fn, kname = name[:-1].split('(')
+    unit, tiny = _bound(kernels, kname, fmt)
     return round_up((unit if fn == 'unit_computed' else tiny) / (1 - unit), fmt)
 
 
@@ -98,6 +112,7 @@ class Arith:
             self.consts = {'splitter': 4097.0}        # 2^12 + 1
         self.consts.update({'0': 0.0, 'inf': INF, 'nan': math.nan})
         self.kernels = kernels
+        self.consteval = False
 
     def const(self, name):
         if name not in self.consts:
@@ -145,7 +160,10 @@ class Arith:
         if op == 'copy':
             return a[0]
         if op == 'guard':
-            return self.add(a[0], 0.0)    # -0.0 + 0.0 is +0.0
+            # -0.0 + 0.0 is +0.0; constant evaluation returns the operand.
+            return a[0] if self.consteval else self.add(a[0], 0.0)
+        if op == 'times_inf':
+            return math.nan if a[0] != a[0] or a[0] == 0 else math.copysign(INF, a[0])
         raise ValueError(op)
 
 
@@ -153,6 +171,7 @@ def run(kernels, name, fmt, inputs, fused=True, consteval=False):
     """A kernel as written, calls included; consteval runs its variant with plain products.
     Masks are bools, and outputs that are masks come back as 1.0 or 0.0."""
     arith = Arith(fmt, kernels)
+    arith.consteval = consteval
     k = kernels[name]
     plain = False
     if consteval:

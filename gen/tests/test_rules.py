@@ -411,7 +411,7 @@ w1 = select(f, z1, r1)
 '''
     BALL = '''
 kernel:  ballk
-input:   c
+input:   stored c
 input:   stored r
 output:  cw
 output:  rw
@@ -467,7 +467,7 @@ rw = select(e, g, const nan)
                                          'finite_when': [{'abs_le': 'x', 'exp': -2},
                                                          {'abs_le': 'abs(x)*a', 'exp': 0}]}])
         ball = ir.parse_kernel(self.BALL, 't')
-        self.assertEqual((ball.stored, ball.entry, ball.requires), ({'r'}, True, [('ball', 'c', 'r')]))
+        self.assertEqual((ball.stored, ball.entry, ball.requires), ({'c', 'r'}, True, [('ball', 'c', 'r')]))
         self.assertEqual(ball.ensures[0]['finite_when'], [{'abs_le': 'c', 'exp': -1}])
         self.assertFalse(ball.real_model)
         make = ir.parse_kernel(self.MAKE, 't')
@@ -574,6 +574,157 @@ rw = select(e, g, const nan)
                           .replace('ieee_status: unverified', 'ieee_status: proved')
         self.refused('names no ieee_theorem', self.CORE, proved, rule=rules.RULE_THEOREM)
         self.assertEqual(self.errors(self.CORE, proved + 'ieee_theorem: proofs/theories/X.v full_ieee\n'), [])
+
+
+class TimesInf(unittest.TestCase):
+    """times_inf is a plain multiplication (by infinity, exact): its result may only be an
+    operand of a comparison or of select, and an output only through select (rule R1)."""
+    FULL = NonFiniteLayer.FULL.replace('r0 = prod(t, const inf)', 'r0 = times_inf(t)')
+
+    def refused(self, old, new, words, rule=rules.RULE_R1):
+        errors = check(NonFiniteLayer.CORE, self.FULL.replace(old, new))
+        self.assertTrue(any(e.rule == rule and e.value == 'r0' and words in str(e) for e in errors),
+                        f'nothing mentions {words!r} in:\n' + ('\n'.join(map(str, errors)) or 'accepted'))
+
+    def test_compared_and_selected_is_accepted(self):
+        self.assertEqual(check(NonFiniteLayer.CORE, self.FULL), [])
+        self.assertIn('r0 = times_inf(t)', self.FULL)
+
+    def test_each_forbidden_use(self):
+        tail = 'w1 = select(f, z1, r1)'
+        for use, words in (('q = add(r0, x0)', 'an operand of add at q'), ('q = sub(x0, r0)', 'an operand of sub at q'),
+                           ('q = fma(r0, x0, x1)', 'an operand of fma at q'), ('q = fma(x0, x1, r0)', 'an operand of fma at q'),
+                           ('q = fms(x0, x1, r0)', 'an operand of fms at q'), ('q = prod(r0, x0)', 'an operand of prod at q'),
+                           ('q = muladd(x0, x1, r0)', 'an operand of muladd at q'), ('q = neg(r0)', 'an operand of neg at q'),
+                           ('q = abs(r0)', 'an operand of abs at q'), ('q = copy(r0)', 'an operand of copy at q'),
+                           ('q = guard(r0)', 'an operand of guard at q'), ('q = succ(r0)', 'an operand of succ at q'),
+                           ('q = times_inf(r0)', 'an operand of times_inf at q'),
+                           ('(q, e) = two(r0, x0)', 'passed to two at q')):
+            body = f'{tail}\n{use}\nm2 = lt(q, x0)\n'
+            callee = ('kernel: two\ninput: a\ninput: b\noutput: s = s0 s1\nvalue: a+b\nensures: error s R c=0 k=2 t=0\n'
+                      'status: unverified\ns0 = add(a, b)\ns1 = sub(s0, a)\n')
+            # q must be used: an extra output w2 selected from it.
+            text = self.FULL.replace(tail, body).replace('output:  w = w0 w1', 'output:  w = w0 w1\noutput:  mask m2')
+            if use.startswith('(q, e)'):
+                text = text.replace('m2 = lt(q, x0)', 'm2 = lt(q, e)')
+            errors = check(NonFiniteLayer.CORE, text, callee)
+            self.assertTrue(any(e.rule == rules.RULE_R1 and e.value == 'r0' and words in str(e) for e in errors),
+                            f'{use}: ' + ('\n'.join(map(str, errors)) or 'accepted'))
+
+    def test_an_output_as_it_is(self):
+        text = self.FULL.replace('output:  w = w0 w1', 'output:  w = w0 w1\noutput:  r0')
+        errors = check(NonFiniteLayer.CORE, text)
+        self.assertTrue(any(e.rule == rules.RULE_R1 and e.value == 'r0' and 'an output as it is' in str(e)
+                            for e in errors), '\n'.join(map(str, errors)) or 'accepted')
+
+    def test_not_in_the_real_model(self):
+        core = NonFiniteLayer.CORE.replace('z1 = sub(z0, s)', 'z1 = sub(z0, s)\nq = times_inf(s)\nm = lt(q, s)\n'
+                                                                'k = select(m, s, x1)\nz2 = add(z1, k)') \
+                                  .replace('output:  z = z0 z1', 'output:  z = z0 z1 z2')
+        errors = check(core)
+        self.assertTrue(any(e.rule == rules.DOMAIN and 'times_inf has no meaning in the real model' in str(e)
+                            for e in errors), '\n'.join(map(str, errors)) or 'accepted')
+
+    def test_the_full_kernels_use_it(self):
+        ks = common.kernels()
+        for name in TheKernels.FULL:
+            body = [f'{", ".join(st.dsts)} = {st.op}({", ".join(map(str, st.args))})' for st in ks[name].body]
+            self.assertIn('r0 = times_inf(t)', body, name)
+            self.assertFalse(any(st.op == 'prod' and any(a.name == 'inf' for a in st.args) for st in ks[name].body))
+
+
+class R3Outputs(unittest.TestCase):
+    """Rule R3: an entry kernel never returns a value that enters from the program as it is."""
+    HEAD = R3.ENTRY.replace('output:   z = z0 z1', 'output:   z = z0 z1\noutput:   r')
+
+    def errors(self, body, head=None):
+        errs = check((head or self.HEAD) + 's = add(x0, x1)\nz0 = add(s, x0)\nz1 = sub(z0, s)\n' + body,
+                     R3.RETURNS)
+        return [e for e in errs if e.rule == rules.RULE_R3]
+
+    def test_refused(self):
+        for body in ('r = copy(a)', 'r = neg(a)', 'n = abs(a)\nr = neg(n)', 'm = lt(a, x0)\nr = select(m, a, x0)',
+                     'r = returns(a)'):
+            errs = self.errors(body + '\n')
+            self.assertTrue(any(e.value == 'a' and 'is the output r as it is' in str(e) for e in errs),
+                            f'{body}: ' + ('\n'.join(map(str, errs)) or 'accepted'))
+
+    def test_accepted(self):
+        for body in ('g = guard(a)\nr = copy(g)', 'r = prod(a, x0)', 'r = succ(a)', 'g = guard(a)\nr = returns(g)'):
+            self.assertEqual(self.errors(body + '\n'), [], body)
+        stored = self.HEAD.replace('input:    a', 'input:    stored a')
+        self.assertEqual(self.errors('r = copy(a)\n', head=stored), [])
+        self.assertEqual(self.errors('r = copy(a)\n', head=self.HEAD.replace('entry:    yes\n', '')), [])
+
+    def test_no_kernel_returns_a_program_value(self):
+        ks = common.kernels()
+        self.assertFalse(any('as it is' in str(e) for e in rules.check_all(ks)))
+        for k in ks.values():
+            if k.entry:
+                _, _, out = rules.r3_analysis(k, ks, frozenset(k.program_values()))
+                self.assertEqual(out, {}, k.name)
+
+
+class UpConstants(unittest.TestCase):
+    """const up(EXPR): an exact expression over u, eta, integers, unit(K) and tiny(K), rounded up."""
+    BOUND = '''
+kernel:  bound
+input:   a
+input:   b
+output:  p
+value:   a*b
+ensures: error p R c=1 k=1 t=1/2
+status:  {status}
+source:  x
+license: MIT
+theorem: proofs/theories/X.v bound_correct
+p = prod(a, b)
+'''
+    USER = HEAD.replace('kernel:  bad', 'kernel:  user')
+
+    def user(self, expr_text, status='unverified', extra=''):
+        head = self.USER.replace('status:  unverified', f'status:  {status}') + extra
+        if status == 'proved':
+            head += 'source: x\nlicense: MIT\ntheorem: proofs/theories/X.v user_correct\n'
+        return head + f'k = prod(const up({expr_text}), a)\ns = add(k, b)\nz = sub(s, k)\ne = sub(b, z)\n'
+
+    def errors(self, *texts):
+        return [e for e in check(*texts) if e.rule in (rules.COMPUTED, rules.WELL_FORMED)]
+
+    def test_accepted(self):
+        for text in ('(1+u)^6', 'unit(bound)/(1-unit(bound))*(1+u)',
+                     '(1+u) * ((1+u)^5*2*eta + tiny(bound)/(1-unit(bound)) + eta/2)', '2^-3*eta', '1/3'):
+            for status in ('unverified', 'proved'):
+                self.assertEqual(check(self.BOUND.format(status='proved'), self.user(text, status)), [], text)
+        k = ir.parse_kernel(self.user('(1 + u) ^ 6'), 't')
+        self.assertEqual(k.body[0].args[0], ir.Operand('up((1+u)^6)', const=True))
+
+    def test_refused(self):
+        for text, words in (('abs(u)', 'abs is not allowed'), ('v*u', 'unknown name v'),
+                            ('u^u', 'an exponent is an integer'), ('u-1', 'it must be positive'),
+                            ('unit(nope)', 'nope is not a kernel'), ('unit(user)', 'it must be positive'),
+                            ('2^2000', 'overflows'), ('0', 'it must be positive')):
+            errors = self.errors(self.BOUND.format(status='proved'), self.user(text))
+            self.assertTrue(any(words in str(e) for e in errors), f'{text}: ' + ('\n'.join(map(str, errors)) or 'accepted'))
+        # A proved kernel may use the bound of a proved kernel only; and not below its precision.
+        errors = self.errors(self.BOUND.format(status='unverified'), self.user('unit(bound)', 'proved'))
+        self.assertTrue(any('only an unverified kernel may use the constants' in str(e) for e in errors), errors)
+        bound = self.BOUND.format(status='proved').replace('p = prod', 'min_precision: 3\np = prod')
+        errors = self.errors(bound, self.user('tiny(bound)'))
+        self.assertTrue(any('min_precision must be at least 3' in str(e) for e in errors), errors)
+        self.assertEqual(self.errors(bound, self.user('tiny(bound)', extra='min_precision: 3\n')), [])
+
+    def test_names_the_printers_make(self):
+        errors = check(HEAD.replace('kernel:  bad', 'kernel:  up_x') + GOOD)
+        self.assertTrue(any(e.kernel == 'up_x' and e.rule == rules.WELL_FORMED for e in errors), errors)
+
+    def test_not_in_the_claims(self):
+        # Powers and unit(K), tiny(K) belong to constants: a claim cannot use them.
+        for old, new, words in (('c=0', 'c=2^3', 'a rational expression'), ('t=0', 't=tiny(bad)', 'a rational expression'),
+                                ('value:   a+b', 'value:   a^2', 'only + - *')):
+            errors = check(HEAD.replace(old, new) + GOOD)
+            self.assertTrue(any(e.rule == rules.CLAIMS and words in str(e) for e in errors),
+                            f'{new}: ' + ('\n'.join(map(str, errors)) or 'accepted'))
 
 
 class R3OfTheKernels(unittest.TestCase):

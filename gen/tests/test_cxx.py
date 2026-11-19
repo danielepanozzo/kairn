@@ -58,6 +58,66 @@ NON_FINITE_LINES = {
 }
 
 
+# The full kernels and the constructors in constant evaluation: (kernel, type, operands), finite
+# operands for the full kernels (an exact cancellation among them, where t = 0 and times_inf(t)
+# would be a NaN), non-finite ones for the constructors, whose results may be infinite or NaN.
+NONFINITE_CE_CASES = [
+    ('add_2_2_full', 'double', [1.0, 2.0 ** -60, 2.0, 0.0]),
+    ('add_2_2_full', 'double', [1.0, 0.0, -1.0, 0.0]),
+    ('add_2_2_full', 'float', [3.0, 2.0 ** -30, -0.5, 2.0 ** -28]),
+    ('add_fast_2_2_full', 'double', [1.5, 2.0 ** -55, 0.25, 0.0]),
+    ('sub_2_2_full', 'float', [1.0, 2.0 ** -26, 1.0, 0.0]),
+    ('add_2_1_full', 'double', [1.0, 2.0 ** -60, 0.75]),
+    ('sub_2_1_full', 'double', [1.0, 2.0 ** -60, 1.0]),
+    ('sub_1_2_full', 'float', [2.0, 1.0, -2.0 ** -25]),
+    ('make_2', 'double', [math.nan]),
+    ('make_2', 'float', [-math.inf]),
+    ('make_2', 'double', [-0.0]),
+    ('make_2_limbs', 'double', [math.inf, -0.0]),
+    ('ball_make_1', 'double', [1.0, math.nan]),
+    ('ball_make_1', 'float', [math.nan, 1.0]),
+    ('ball_make_1', 'double', [-0.0, -0.0]),
+    ('ball_make_2', 'double', [1.0, 2.0 ** -60, -1.0]),
+    ('ball_make_2', 'float', [math.inf, 0.0, 0.5]),
+    ('ball_make_2', 'double', [1.0, 2.0 ** -60, math.inf]),
+]
+
+
+def _ce_literal(x, ctype):
+    if x != x:
+        return f'std::numeric_limits<{ctype}>::quiet_NaN()'
+    if math.isinf(x):
+        return f'{"-" if x < 0 else ""}std::numeric_limits<{ctype}>::infinity()'
+    return literal(x, ctype)
+
+
+def nonfinite_ce_source(ks):
+    """static_asserts that the full kernels and the constructors in NONFINITE_CE_CASES are constant
+    expressions with the values the interpreter computes in constant evaluation: equal values, a
+    NaN where it gives a NaN (zeros of either sign are equal)."""
+    ce = interp.Machine(ks, consteval=True)
+    lines = ['#include <limits>', '#include "kairn/gen/scalar.hpp"', '']
+    for name, ctype, case in NONFINITE_CE_CASES:
+        fmt = interp.parse_format('binary64' if ctype == 'double' else 'binary32')
+        outs = [common.to_float(v) for v in ce.run(name, fmt, [common.to_value(x) for x in case])]
+        decl = ' '.join(f'{ctype} o{i} = 0;' for i in range(len(outs)))
+        args = ', '.join([_ce_literal(x, ctype) for x in case] + [f'o{i}' for i in range(len(outs))])
+        check = ' && '.join(f'o{i} != o{i}' if x != x else f'o{i} == {_ce_literal(x, ctype)}'
+                            for i, x in enumerate(outs))
+        lines.append(f'static_assert([] {{ {decl} kairn::gen::{name}({args}); return {check}; }}());')
+    lines.append('int main() {}')
+    return '\n'.join(lines) + '\n'
+
+
+# An overflow on finite operands, which gives (inf, 0) at run time. In constant evaluation the core
+# stops first: GCC refuses the overflow itself (the largest double times 2), Clang the NaN that
+# TwoSum then computes (inf - inf).
+OVERFLOW_CE = ('#include <limits>\n#include "kairn/gen/scalar.hpp"\n'
+               'static_assert([] { double w0 = 0, w1 = 0; kairn::gen::add_2_2_full(0x1.fffffffffffffp+1023, 0.0, '
+               '0x1.fffffffffffffp+1023, 0.0, w0, w1); return w0 == std::numeric_limits<double>::infinity(); }());\n'
+               'int main() {}\n')
+
+
 def compile_(cmd):
     r = subprocess.run(cmd, capture_output=True, text=True)
     return r.returncode, r.stderr
@@ -337,9 +397,10 @@ class ConstantEvaluation(unittest.TestCase):
                 lines.append(f'static_assert([] {{ {ctype} p = 0, e = 0; kairn::gen::two_prod({literal(a, ctype)}, '
                              f'{literal(b, ctype)}, p, e); return std::bit_cast<{utype[ctype]}>(p) == {bits(p, ctype)}u '
                              f'&& std::bit_cast<{utype[ctype]}>(e) == {bits(e, ctype)}u; }}());')
-            # The kernels without fused operations give their run-time bits in constant evaluation;
-            # succ and pred (std::bit_cast) also on zeros of both signs, subnormals and the largest
-            # finite numbers.
+            # The kernels without fused operations give in constant evaluation the bits that the
+            # interpreter computes there: their run-time bits, except that a guard leaves a -0 as
+            # it is; succ and pred (std::bit_cast) also on zeros of both signs, subnormals and the
+            # largest finite numbers; the full kernels of the additions included.
             edge = [x for x in common.edges(fmt.name) if math.isfinite(x)]
             for name, k in self.ks.items():
                 if cpp.constexpr_kind(k, self.ks) != 'plain':
@@ -351,9 +412,11 @@ class ConstantEvaluation(unittest.TestCase):
                 for case in cases:
                     if not all(isinstance(x, bool) or math.isfinite(x) for x in case):
                         continue
-                    outs = [common.to_float(v) for v in rt.run(name, fmt, [common.to_value(x) for x in case])]
+                    outs = [common.to_float(v) for v in ce.run(name, fmt, [common.to_value(x) for x in case])]
                     if not all(math.isfinite(x) for x in outs):
                         continue   # not a constant expression: tested apart
+                    rt_outs = [common.to_float(v) for v in rt.run(name, fmt, [common.to_value(x) for x in case])]
+                    self.assertEqual(outs, rt_outs, (name, case))     # the same values, zeros aside
                     kinds = k.output_kinds
                     decl = ' '.join(f'{"bool" if kind == ir.MASK else ctype} o{i} = 0;' for i, kind in enumerate(kinds))
                     args = ', '.join([literal(x, ctype) for x in case] + [f'o{i}' for i in range(len(outs))])
@@ -389,9 +452,36 @@ class ConstantEvaluation(unittest.TestCase):
             self.assertNotEqual(status, 0, cxx)
             self.assertIn('constant', err)
 
+    def test_the_non_finite_layer_in_constant_evaluation(self):
+        """The full kernels of the additions are constant expressions on finite operands, also when
+        t = 0, where times_inf(t) is a NaN that constant evaluation could not compute (it compares
+        instead); the constructors on infinite and NaN operands, where guard returns its operand.
+        With every flag set of test_static_asserts."""
+        path = os.path.join(self.dir, 'ce_nonfinite.cpp')
+        with open(path, 'w') as f:
+            f.write(nonfinite_ce_source(self.ks))
+        self.assertEqual({n for n, _, _ in NONFINITE_CE_CASES},
+                         {n for n, k in self.ks.items() if k.extended and not k.real_model and
+                          cpp.constexpr_kind(k, self.ks) == 'plain'})
+        flag_sets = [[], ['-frounding-math'], ['-O2', '-ffp-contract=fast', '-frounding-math']]
+        jobs = [[cxx] + BASE + flags + ['-I', INCLUDE, '-fsyntax-only', path] for cxx in COMPILERS for flags in flag_sets]
+        with ThreadPoolExecutor(JOBS) as ex:
+            for cmd, (status, err) in zip(jobs, ex.map(compile_, jobs)):
+                self.assertEqual(status, 0, f'{" ".join(cmd)}\n{err}')
+
+    def test_an_overflow_of_a_full_kernel_is_not_a_constant_expression(self):
+        # Not a wrong constant: a compile error, from the core (OVERFLOW_CE).
+        path = os.path.join(self.dir, 'ce_full_overflow.cpp')
+        with open(path, 'w') as f:
+            f.write(OVERFLOW_CE)
+        for cxx in COMPILERS:
+            status, err = compile_([cxx] + BASE + ['-I', INCLUDE, '-fsyntax-only', path])
+            self.assertNotEqual(status, 0, cxx)
+            self.assertIn('constant', err)
+
     def test_kernels_with_fused_operations_are_not_constexpr(self):
         for name in ('mul_2_2', 'mul_2_1', 'split', 'two_prod_dekker', 'rmul', 'mul_pow2_2', 'ball_add_1',
-                     'two_sum', 'radd'):
+                     'mul_2_2_full', 'mul_2_1_full', 'mul_pow2_2_full', 'ball_add_2_full', 'two_sum', 'radd'):
             k = self.ks[name]
             path = os.path.join(self.dir, f'not_constexpr_{name}.cpp')
             args = ', '.join(['1.0'] * len(k.input_limbs) + [f'o[{i}]' for i in range(len(k.output_limbs))])

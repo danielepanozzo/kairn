@@ -24,13 +24,31 @@ class Parser(unittest.TestCase):
 
     def test_refusals(self):
         for text in ('', '1+', '(1', '1)', '2**3', '1e5', '0x10', '1.5', 'u u', "__import__('os')",
-                     'eval(1)', '1;2', '2^3', '[1]'):
+                     'eval(1)', '1;2', '2^u', '2^1.5', '2^(3)', '[1]', 'unit(1)', 'unit(a+b)', 'tiny()'):
             with self.assertRaises(expr.ExprError, msg=text):
                 self.value(text, u=1)
         with self.assertRaises(expr.ExprError):
             self.value('1/(1-1)')
         with self.assertRaises(expr.ExprError):
+            self.value('0^-1')
+        with self.assertRaises(expr.ExprError):
             self.value('v')
+        with self.assertRaises(expr.ExprError):
+            self.value('unit(k)')
+
+    def test_powers_and_bounds(self):
+        # What a constant up(EXPR) may say: integer powers, and unit(K), tiny(K) of a kernel K.
+        self.assertEqual(self.value('2^3'), 8)
+        self.assertEqual(self.value('2^-3'), Fraction(1, 8))
+        self.assertEqual(self.value('-2^2'), -4)                 # the power binds tighter
+        self.assertEqual(self.value('(1+u)^6', u=Fraction(1, 2)), Fraction(3, 2) ** 6)
+        self.assertEqual(self.value('2*3^2'), 18)
+        tree = expr.parse('unit(mul_2_2)/(1-unit(mul_2_2))*(1+u) + tiny(add_1_1)')
+        self.assertEqual(expr.calls(tree), {('unit', 'mul_2_2'), ('tiny', 'add_1_1')})
+        self.assertEqual(expr.names(tree), {'u'})
+        env = {'unit(mul_2_2)': Fraction(1, 4), 'tiny(add_1_1)': Fraction(1, 8), 'u': Fraction(1, 2)}
+        self.assertEqual(expr.evaluate(tree, env), Fraction(1, 4) / Fraction(3, 4) * Fraction(3, 2) + Fraction(1, 8))
+        self.assertEqual(expr.parse('unit'), ('name', 'unit'))     # a name when no ( follows
 
     def test_names(self):
         self.assertEqual(expr.names(expr.parse('x*y+x')), {'x', 'y'})

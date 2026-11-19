@@ -330,6 +330,53 @@ class Specials(unittest.TestCase):
             self.assertEqual(op('guard', nzero), zero, name)
             self.assertEqual((m._const(f, 'inf'), m._const(f, 'nan')), (inf, nan), name)
             self.assertEqual((op('neg', inf), op('abs', ninf)), (ninf, inf), name)
+            # times_inf: a NaN for a NaN or a zero, otherwise the infinity with the sign of t.
+            for x, want in ((one, inf), (none, ninf), (eta, inf), (neta, ninf), (top, inf), (ntop, ninf),
+                            (inf, inf), (ninf, ninf), (zero, nan), (nzero, nan), (nan, nan)):
+                self.assertEqual(op('times_inf', x), want, (name, x))
+            # In constant evaluation guard returns its operand, -0 included.
+            ce = interp.Machine(common.kernels(), consteval=True)
+            self.assertEqual([ce._op('guard', f, [x], False) for x in (nzero, nan, ninf, one)], [nzero, nan, ninf, one])
+            self.assertEqual(ce._op('times_inf', f, [nzero], False), nan)
+
+    def test_up_constants(self):
+        """const up(EXPR), against exact fractions computed here: the smallest number of the format
+        not below the expression (at least it, and its predecessor in the format below it), in the
+        two hardware formats and toy formats, one of them where the expression is below eta."""
+        ks = common.kernels()
+        F = Fraction
+        forms = {
+            'up((1+u)^6)': lambda u, eta, U, T: (1 + u) ** 6,
+            'up(unit(mul_2_2)/(1-unit(mul_2_2))*(1+u))': lambda u, eta, U, T: U / (1 - U) * (1 + u),
+            'up((1+u)*((1+u)^5*2*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2))':
+                lambda u, eta, U, T: (1 + u) * ((1 + u) ** 5 * 2 * eta + T / (1 - U) + eta / 2),
+        }
+        below_eta = 0
+        for p, qmin, qmax in ((53, -1074, 971), (24, -149, 104), (4, -6, 3), (5, -12, 6), (4, -2, 3), (6, -9, 0)):
+            f = interp.Format(f'fp:{p}:{qmin}:{qmax}', p, qmin, qmax)
+            u, eta = F(1, 2 ** p), F(2) ** qmin
+            U, T = 4 * u ** 2, F(3, 2) * eta          # mul_2_2: c = 4, k = 2, t = 3/2
+            for name, form in forms.items():
+                exact = form(u, eta, U, T)
+                v = consts.value(name, ks, p, qmin, qmax)
+                value = interp.canon(False, v.numerator, -(v.denominator.bit_length() - 1))
+                self.assertTrue(interp.member(f, value), (name, p))
+                self.assertGreaterEqual(v, exact, (name, p))
+                down = interp.pred(f, value)
+                below = Fraction(down[2]) * Fraction(2) ** down[3] * (-1 if down[1] else 1) if down[2] else Fraction(0)
+                self.assertLess(below, exact, (name, p))
+                if exact < eta:
+                    self.assertEqual(v, eta, (name, p))
+                    below_eta += 1
+        self.assertGreater(below_eta, 0)
+        # The interpreter computes the same constants, in any format; the expression is checked.
+        m = interp.Machine(common.kernels(common.TEST_KERNELS))
+        f = interp.parse_format('fp:5:-12:6')
+        self.assertEqual(m._const(f, 'up((1+u)^6)'), interp.canon(False, 5, -2))      # (33/32)^6 = 1.2028 up: 5/4
+        with self.assertRaises(interp.InterpError):
+            m._const(interp.parse_format('fp:3:-4:3'), 'up(unit(ops_mul))')               # below its precision 4
+        with self.assertRaises(consts.ConstError):
+            consts.value('up(u-1)', ks, 53, -1074, 971)
 
     def test_copy_and_zero(self):
         m = interp.Machine(common.kernels())
