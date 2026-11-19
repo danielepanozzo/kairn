@@ -34,6 +34,7 @@ theories/Ball.v
 theories/Ball2.v
 theories/Program.v
 theories/IeeeDraft.v
+gen/IeeeModel.v
 theories/IeeeBridge.v
 theories/IeeeStatementsDraft.v
 theories/IeeeEFT.v
@@ -42,6 +43,7 @@ theories/IeeeMul22.v
 theories/IeeeMore.v
 theories/IeeeSub.v
 theories/IeeeExtStatementsDraft.v
+gen/IeeeStatements.v
 theories/IeeeOps.v
 theories/IeeeRange.v
 theories/IeeeFull.v

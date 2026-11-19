@@ -1,6 +1,9 @@
 # make -C proofs          build every proof, then run the axiom audit
 # make -C proofs build    build only
 # make -C proofs audit    audit only (builds first)
+# make -C proofs gen      only the generated files and what they import, IeeeAudit.v included
+# make -C proofs agree    gen, then wip/GenAgreesWithDrafts.v: the generated definitions and
+#                         statements are those of the drafts (outside the default build)
 # make -C proofs clean
 #
 # Needs `rocq` (Rocq 9.x) with Flocq 4.2 on the PATH, and python3.
@@ -41,10 +44,28 @@ audit: build
 	@if $(PYTHON) $(AUDIT) assumptions audit/Bad.v audit/Bad.out $(ALLOWED); \
 	  then echo "  ERROR: the assumption check accepted audit/Bad.v"; exit 1; \
 	  else echo "  rejected by the assumption check, as it must be"; fi
+	@echo "== assumptions of every theorem that establishes a generated IEEE-model statement"
+	@$(ROCQ) compile $(LIBS) gen/IeeeAudit.v > audit/IeeeAudit.out
+	@if grep -q "Print Assumptions" gen/IeeeAudit.v; \
+	  then $(PYTHON) $(AUDIT) assumptions gen/IeeeAudit.v audit/IeeeAudit.out $(ALLOWED); \
+	  else echo "  none yet"; fi
 	@echo "== audit passed"
+
+# The generated files, the files they import, and gen/IeeeAudit.v (which checks nothing yet).
+GENERATED := gen/Model.vo gen/Statements.vo gen/IeeeModel.vo gen/IeeeStatements.vo
+
+gen: Makefile.rocq
+	+$(MAKE) --no-print-directory -f Makefile.rocq $(GENERATED)
+	$(ROCQ) compile $(LIBS) gen/IeeeAudit.v
+
+agree: gen
+	+$(MAKE) --no-print-directory -f Makefile.rocq theories/BallDraft.vo
+	$(ROCQ) compile $(LIBS) -Q wip KairnWip wip/GenAgreesWithDrafts.v
 
 clean:
 	@if [ -f Makefile.rocq ]; then $(MAKE) --no-print-directory -f Makefile.rocq cleanall; fi
+	rm -f gen/IeeeAudit.vo* gen/IeeeAudit.glob gen/.IeeeAudit.aux
+	rm -f wip/GenAgreesWithDrafts.vo* wip/GenAgreesWithDrafts.glob wip/.GenAgreesWithDrafts.aux
 	rm -f Makefile.rocq Makefile.rocq.conf .Makefile.rocq.d audit/*.out audit/*.vo audit/*.vok audit/*.vos audit/*.glob audit/.*.aux
 
-.PHONY: all build audit clean
+.PHONY: all build audit gen agree clean
