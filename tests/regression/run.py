@@ -11,7 +11,8 @@ is at the top of that file. Each runner completes the lines it can run:
   gen/tests/packed_runner.cpp): every line of binary64 and binary32;
 - the generator's interpreter (--interp): every line, toy formats included;
 - a runner of the public interface (--api, tests/api/runner.cpp): the lines of binary64 and
-  binary32 of every kernel it maps a form to (`--list`), once per form of the kernel (`--forms`).
+  binary32 of every kernel it maps a form to (`--list`), once per form of the kernel (`--forms`);
+  one run per form name takes the lines of every kernel with a form of that name.
 
 The oracle (oracle/kairn_oracle, in this process) judges every output, as the cross-checks do:
 no claim violated, no invalid case, every line completed and in order, and no suspicious
@@ -139,6 +140,7 @@ def main(argv):
         one(label, [exe], compiled)
     if a.interp:
         one("interp", [sys.executable, os.path.join(REPO, "gen", "kairn-gen"), "interp"], cases)
+    forms_of = {}
     for spec in a.api:
         label, _, exe = spec.partition("=")
         status, listed, err = run([exe, "--list"], [])
@@ -151,19 +153,32 @@ def main(argv):
             k = ln.split(" ", 1)[0]
             if k in mapped:
                 by_kernel.setdefault(k, []).append(ln)
+        # Kernels share form names (`plus` is x + y for every sum that has the operator), and a
+        # line takes the form of that name of its own kernel: one run per form name, with the lines
+        # of every kernel that has it, so that the runs are fewer (on Windows each costs a few
+        # hundredths of a second).
+        by_form = {}
         for k, lines in sorted(by_kernel.items()):
-            status, forms, err = run([exe, "--forms", k], [])
-            if status != 0 or not forms:
-                failures.append("%s --forms %s: exited with %d %s" % (label, k, status, err))
-                continue
+            # Runners of the same source (tests/api/runner.cpp, built with other flags) that list
+            # the same kernels list the same forms: asked once.
+            forms = forms_of.get((tuple(listed), k))
+            if forms is None:
+                status, forms, err = run([exe, "--forms", k], [])
+                if status != 0 or not forms:
+                    failures.append("%s --forms %s: exited with %d %s" % (label, k, status, err))
+                    continue
+                forms_of[(tuple(listed), k)] = forms
             for form in forms:
-                one("%s, %s, form %s" % (label, k, form), [exe, "--form", form], lines)
+                by_form.setdefault(form, []).extend(lines)
+        for form, lines in sorted(by_form.items()):
+            one("%s, form %s" % (label, form), [exe, "--form", form], lines)
     n_api = sum(1 for r in report if ", form " in r)
     for r in report:
         if ", form " not in r or "FAILED" in r:
             print("regression: %s" % r)
     if n_api:
-        print("regression: and %d forms of the public interface" % n_api)
+        print("regression: and %d runs of the public interface, one per runner and form name"
+              % n_api)
     print("regression: %d cases (%d of binary64 and binary32), %d runs, %d distinct outputs "
           "judged" % (len(cases), len(compiled), len(report), judge.judged_outputs))
     if failures:
