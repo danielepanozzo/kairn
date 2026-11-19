@@ -40,8 +40,10 @@ def _theorem(t):
 def kernel_claims(k, kernels):
     """One kernel's entry. A kernel of the extended domain (architecture.md, "Claims of the
     non-finite layer") says so with `domain`, and gives `ieee_status`, and `ieee_theorem` once
-    that is proved; one of the finite domain has neither field, as before. A kernel that makes a
-    ball from its inputs has no `value`."""
+    that is proved; one of the finite domain has neither field, as before. A kernel without a
+    real-model statement (ir.Kernel.real_model: the full kernels, the full Ball kernels, the
+    constructors) says so with `"ieee_only": true` after `domain`; every other kernel has no such
+    field. A kernel that makes a ball from its inputs has no `value`."""
     errors = [e for e in k.ensures if e['kind'] == 'error']
     # Always a list, one object per error entry in the order of `ensures` (second wave).
     instances = {name: [instance(e, interp.parse_format(name)) for e in errors]
@@ -49,6 +51,8 @@ def kernel_claims(k, kernels):
     out = {'name': k.name}
     if k.extended:
         out['domain'] = 'extended'
+    if not k.real_model:
+        out['ieee_only'] = True
     out.update(inputs=[_group(g) for g in k.inputs], outputs=[_group(g) for g in k.outputs])
     if k.value is not None:
         out['value'] = k.value

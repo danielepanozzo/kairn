@@ -135,6 +135,7 @@
     {
       "name": "ball_add_1_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "cx",
@@ -204,6 +205,7 @@
     {
       "name": "ball_make_1",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "c",
@@ -322,6 +324,7 @@
     {
       "name": "ball_mul_1_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "cx",
@@ -510,6 +513,7 @@
     {
       "name": "ball_scale_1_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "cx",
@@ -639,6 +643,7 @@
     {
       "name": "ball_sub_1_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "cx",
@@ -775,6 +780,7 @@
     {
       "name": "make_2",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "a",
@@ -1454,6 +1460,7 @@
     {
       "name": "add_2_1_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "x",
@@ -1573,6 +1580,7 @@
     {
       "name": "add_2_2_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "x",
@@ -1693,6 +1701,7 @@
     {
       "name": "add_fast_2_2_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "x",
@@ -1824,6 +1833,7 @@
     {
       "name": "ball_add_2_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "cx",
@@ -1893,6 +1903,7 @@
     {
       "name": "ball_make_2",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "c",
@@ -2083,6 +2094,7 @@
     {
       "name": "ball_mul_2_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "cx",
@@ -2408,6 +2420,7 @@
     {
       "name": "ball_scale_2_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "cx",
@@ -2543,6 +2556,7 @@
     {
       "name": "ball_sub_2_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "cx",
@@ -3031,6 +3045,7 @@
     {
       "name": "make_2_limbs",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "y",
@@ -3070,6 +3085,7 @@
     {
       "name": "mul_2_1_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "x",
@@ -3121,6 +3137,7 @@
     {
       "name": "mul_2_2_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "x",
@@ -3237,6 +3254,7 @@
     {
       "name": "mul_pow2_2_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "x",
@@ -3352,6 +3370,7 @@
     {
       "name": "sub_1_2_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "a",
@@ -3470,6 +3489,7 @@
     {
       "name": "sub_2_1_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "x",
@@ -3589,6 +3609,7 @@
     {
       "name": "sub_2_2_full",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
           "name": "x",
