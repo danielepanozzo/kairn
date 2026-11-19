@@ -60,14 +60,17 @@ From [`gen/kernels/ball_scale_1.kernel`](https://github.com/danielepanozzo/kairn
 # The radius is evaluated by operations rounded to nearest on nonnegative values and inflated
 # once (milestone1.md, "The radius, second design"): E turns the error bound of the center
 # kernel mul_1_1 into a multiple of |cz0|, G covers the roundings of the radius, H what underflow
-# loses and the absolute term of the bound. Each is an exact expression rounded up.
+# loses and the absolute term of the bound. Each is an exact expression rounded up. H also
+# contains eta/(2u), the smallest normal number, which no bound needs: it makes H, and with it
+# every radius a kernel returns, a normal number, because a fused operation with a subnormal
+# operand is slow on some processors (decisions.md, the log of 2026-11-19).
 
 cz = prod(cx, a)
 aa = abs(a)
 az = abs(cz)
 p  = prod(aa, rx)
 t  = fma(az, const up(unit(mul_1_1)/(1-unit(mul_1_1))), p)
-rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)))
+rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)))
 ```
 
 ## Measured

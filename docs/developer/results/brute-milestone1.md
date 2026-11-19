@@ -32,7 +32,11 @@ setting) gave the same counts and the same extremes, for every kernel and format
 ## What was run
 
 The code under test (kernels, claims, generator, interpreter, oracle) is that of commit
-`e951404`. The runs started from the driver of commit `e5c3c78` and were restarted twice in their
+`e951404`. Since then one constant of the Ball cores has changed: $H$ gained the smallest normal
+number of the format ([the radius, second design](../design/milestone1.md#the-radius-second-design)),
+which makes every radius larger by about $2^{-1022}$ for `double` and by much more in a toy
+format. The runs of the Ball kernels reported here are of the kernels before that change and
+were not repeated; the quick tier was. The runs started from the driver of commit `e5c3c78` and were restarted twice in their
 first twenty minutes, keeping what was done, with the scheduling of `e635202` and then
 `d7cdd34`, which keeps every slot busy. The commands are in
 [`tests/brute/README.md`](https://github.com/danielepanozzo/kairn/blob/main/tests/brute/README.md),

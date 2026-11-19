@@ -77,7 +77,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1(__m256d cx, __m256d rx, __m256d cy, __m256
     const __m256d az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz);
     const __m256d s = _mm256_add_pd(rx, ry);
     const __m256d t = _mm256_fmadd_pd(az, _mm256_set1_pd(0x1p-53), s);
-    const __m256d rz = _mm256_fmadd_pd(t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1p-1073));
+    const __m256d rz = _mm256_fmadd_pd(t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.0000000000002p-1022));
     cz_out = cz;
     rz_out = rz;
 }
@@ -86,7 +86,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1(__m256 cx, __m256 rx, __m256 cy, __m256 ry
     const __m256 az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz);
     const __m256 s = _mm256_add_ps(rx, ry);
     const __m256 t = _mm256_fmadd_ps(az, _mm256_set1_ps(0x1p-24f), s);
-    const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1p-148f));
+    const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000004p-126f));
     cz_out = cz;
     rz_out = rz;
 }
@@ -98,7 +98,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(__m256d cx, __m256d rx, __m256d cy, _
     const __m256d cz_az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz);
     const __m256d cz_s = _mm256_add_pd(rx, ry);
     const __m256d cz_t = _mm256_fmadd_pd(cz_az, _mm256_set1_pd(0x1p-53), cz_s);
-    const __m256d rz = _mm256_fmadd_pd(cz_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1p-1073));
+    const __m256d rz = _mm256_fmadd_pd(cz_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.0000000000002p-1022));
     const __m256d q = _mm256_add_pd(rx, ry);
     const __m256d e = _mm256_cmp_pd(q, q, _CMP_EQ_OQ);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz);
@@ -118,7 +118,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(__m256 cx, __m256 rx, __m256 cy, __m2
     const __m256 cz_az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz);
     const __m256 cz_s = _mm256_add_ps(rx, ry);
     const __m256 cz_t = _mm256_fmadd_ps(cz_az, _mm256_set1_ps(0x1p-24f), cz_s);
-    const __m256 rz = _mm256_fmadd_ps(cz_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1p-148f));
+    const __m256 rz = _mm256_fmadd_ps(cz_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000004p-126f));
     const __m256 q = _mm256_add_ps(rx, ry);
     const __m256 e = _mm256_cmp_ps(q, q, _CMP_EQ_OQ);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz);
@@ -175,7 +175,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1(__m256d cx, __m256d rx, __m256d cy, __m256
     const __m256d q = _mm256_fmadd_pd(ay, rx, p);
     const __m256d w = _mm256_fmadd_pd(ax, ry, q);
     const __m256d t = _mm256_fmadd_pd(az, _mm256_set1_pd(0x1p-53), w);
-    const __m256d rz = _mm256_fmadd_pd(t, _mm256_set1_pd(0x1.0000000000003p+0), _mm256_set1_pd(0x1p-1072));
+    const __m256d rz = _mm256_fmadd_pd(t, _mm256_set1_pd(0x1.0000000000003p+0), _mm256_set1_pd(0x1.0000000000004p-1022));
     cz_out = cz;
     rz_out = rz;
 }
@@ -188,7 +188,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1(__m256 cx, __m256 rx, __m256 cy, __m256 ry
     const __m256 q = _mm256_fmadd_ps(ay, rx, p);
     const __m256 w = _mm256_fmadd_ps(ax, ry, q);
     const __m256 t = _mm256_fmadd_ps(az, _mm256_set1_ps(0x1p-24f), w);
-    const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000006p+0f), _mm256_set1_ps(0x1p-147f));
+    const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000006p+0f), _mm256_set1_ps(0x1.000008p-126f));
     cz_out = cz;
     rz_out = rz;
 }
@@ -204,7 +204,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1_full(__m256d cx, __m256d rx, __m256d cy, _
     const __m256d cz_q = _mm256_fmadd_pd(cz_ay, rx, cz_p);
     const __m256d cz_w = _mm256_fmadd_pd(cz_ax, ry, cz_q);
     const __m256d cz_t = _mm256_fmadd_pd(cz_az, _mm256_set1_pd(0x1p-53), cz_w);
-    const __m256d rz = _mm256_fmadd_pd(cz_t, _mm256_set1_pd(0x1.0000000000003p+0), _mm256_set1_pd(0x1p-1072));
+    const __m256d rz = _mm256_fmadd_pd(cz_t, _mm256_set1_pd(0x1.0000000000003p+0), _mm256_set1_pd(0x1.0000000000004p-1022));
     const __m256d q = _mm256_add_pd(rx, ry);
     const __m256d e = _mm256_cmp_pd(q, q, _CMP_EQ_OQ);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz);
@@ -228,7 +228,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1_full(__m256 cx, __m256 rx, __m256 cy, __m2
     const __m256 cz_q = _mm256_fmadd_ps(cz_ay, rx, cz_p);
     const __m256 cz_w = _mm256_fmadd_ps(cz_ax, ry, cz_q);
     const __m256 cz_t = _mm256_fmadd_ps(cz_az, _mm256_set1_ps(0x1p-24f), cz_w);
-    const __m256 rz = _mm256_fmadd_ps(cz_t, _mm256_set1_ps(0x1.000006p+0f), _mm256_set1_ps(0x1p-147f));
+    const __m256 rz = _mm256_fmadd_ps(cz_t, _mm256_set1_ps(0x1.000006p+0f), _mm256_set1_ps(0x1.000008p-126f));
     const __m256 q = _mm256_add_ps(rx, ry);
     const __m256 e = _mm256_cmp_ps(q, q, _CMP_EQ_OQ);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz);
@@ -264,7 +264,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1(__m256d cx, __m256d rx, __m256d a, __m25
     const __m256d az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz);
     const __m256d p = _mm256_fmadd_pd(aa, rx, _mm256_setzero_pd());
     const __m256d t = _mm256_fmadd_pd(az, _mm256_set1_pd(0x1p-53), p);
-    const __m256d rz = _mm256_fmadd_pd(t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.8p-1073));
+    const __m256d rz = _mm256_fmadd_pd(t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.0000000000003p-1022));
     cz_out = cz;
     rz_out = rz;
 }
@@ -274,7 +274,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1(__m256 cx, __m256 rx, __m256 a, __m256& 
     const __m256 az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz);
     const __m256 p = _mm256_fmadd_ps(aa, rx, _mm256_setzero_ps());
     const __m256 t = _mm256_fmadd_ps(az, _mm256_set1_ps(0x1p-24f), p);
-    const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.8p-148f));
+    const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000006p-126f));
     cz_out = cz;
     rz_out = rz;
 }
@@ -287,7 +287,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1_full(__m256d cx, __m256d rx, __m256d a, 
     const __m256d cz_az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz);
     const __m256d cz_p = _mm256_fmadd_pd(cz_aa, rx, _mm256_setzero_pd());
     const __m256d cz_t = _mm256_fmadd_pd(cz_az, _mm256_set1_pd(0x1p-53), cz_p);
-    const __m256d rz = _mm256_fmadd_pd(cz_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.8p-1073));
+    const __m256d rz = _mm256_fmadd_pd(cz_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.0000000000003p-1022));
     const __m256d e = _mm256_cmp_pd(rx, rx, _CMP_EQ_OQ);
     const __m256d az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz);
     const __m256d f1 = _mm256_cmp_pd(az, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
@@ -307,7 +307,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1_full(__m256 cx, __m256 rx, __m256 a, __m
     const __m256 cz_az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz);
     const __m256 cz_p = _mm256_fmadd_ps(cz_aa, rx, _mm256_setzero_ps());
     const __m256 cz_t = _mm256_fmadd_ps(cz_az, _mm256_set1_ps(0x1p-24f), cz_p);
-    const __m256 rz = _mm256_fmadd_ps(cz_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.8p-148f));
+    const __m256 rz = _mm256_fmadd_ps(cz_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000006p-126f));
     const __m256 e = _mm256_cmp_ps(rx, rx, _CMP_EQ_OQ);
     const __m256 az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz);
     const __m256 f1 = _mm256_cmp_ps(az, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
@@ -329,7 +329,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1(__m256d cx, __m256d rx, __m256d cy, __m256
     const __m256d cz_az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz);
     const __m256d cz_s = _mm256_add_pd(rx, ry);
     const __m256d cz_t = _mm256_fmadd_pd(cz_az, _mm256_set1_pd(0x1p-53), cz_s);
-    const __m256d rz = _mm256_fmadd_pd(cz_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1p-1073));
+    const __m256d rz = _mm256_fmadd_pd(cz_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.0000000000002p-1022));
     cz_out = cz;
     rz_out = rz;
 }
@@ -340,7 +340,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1(__m256 cx, __m256 rx, __m256 cy, __m256 ry
     const __m256 cz_az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz);
     const __m256 cz_s = _mm256_add_ps(rx, ry);
     const __m256 cz_t = _mm256_fmadd_ps(cz_az, _mm256_set1_ps(0x1p-24f), cz_s);
-    const __m256 rz = _mm256_fmadd_ps(cz_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1p-148f));
+    const __m256 rz = _mm256_fmadd_ps(cz_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000004p-126f));
     cz_out = cz;
     rz_out = rz;
 }
@@ -354,7 +354,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(__m256d cx, __m256d rx, __m256d cy, _
     const __m256d cz_az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz);
     const __m256d cz_s = _mm256_add_pd(rx, ry);
     const __m256d cz_t = _mm256_fmadd_pd(cz_az, _mm256_set1_pd(0x1p-53), cz_s);
-    const __m256d rz = _mm256_fmadd_pd(cz_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1p-1073));
+    const __m256d rz = _mm256_fmadd_pd(cz_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.0000000000002p-1022));
     const __m256d q = _mm256_add_pd(rx, ry);
     const __m256d e = _mm256_cmp_pd(q, q, _CMP_EQ_OQ);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz);
@@ -376,7 +376,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(__m256 cx, __m256 rx, __m256 cy, __m2
     const __m256 cz_az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz);
     const __m256 cz_s = _mm256_add_ps(rx, ry);
     const __m256 cz_t = _mm256_fmadd_ps(cz_az, _mm256_set1_ps(0x1p-24f), cz_s);
-    const __m256 rz = _mm256_fmadd_ps(cz_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1p-148f));
+    const __m256 rz = _mm256_fmadd_ps(cz_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000004p-126f));
     const __m256 q = _mm256_add_ps(rx, ry);
     const __m256 e = _mm256_cmp_ps(q, q, _CMP_EQ_OQ);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz);
@@ -967,7 +967,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2(__m256d cx0, __m256d cx1, __m256d rx, __m2
     const __m256d az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz0);
     const __m256d s = _mm256_add_pd(rx, ry);
     const __m256d t = _mm256_fmadd_pd(az, _mm256_set1_pd(0x1.8000000000004p-105), s);
-    const __m256d rz = _mm256_fmadd_pd(t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1p-1073));
+    const __m256d rz = _mm256_fmadd_pd(t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.0000000000002p-1022));
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1001,7 +1001,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2(__m256 cx0, __m256 cx1, __m256 rx, __m256 
     const __m256 az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz0);
     const __m256 s = _mm256_add_ps(rx, ry);
     const __m256 t = _mm256_fmadd_ps(az, _mm256_set1_ps(0x1.800008p-47f), s);
-    const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1p-148f));
+    const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000004p-126f));
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1038,7 +1038,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(__m256d cx0, __m256d cx1, __m256d rx,
     const __m256d cz0_az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz0);
     const __m256d cz0_s = _mm256_add_pd(rx, ry);
     const __m256d cz0_t = _mm256_fmadd_pd(cz0_az, _mm256_set1_pd(0x1.8000000000004p-105), cz0_s);
-    const __m256d rz = _mm256_fmadd_pd(cz0_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1p-1073));
+    const __m256d rz = _mm256_fmadd_pd(cz0_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.0000000000002p-1022));
     const __m256d q = _mm256_add_pd(rx, ry);
     const __m256d e = _mm256_cmp_pd(q, q, _CMP_EQ_OQ);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz0);
@@ -1085,7 +1085,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(__m256 cx0, __m256 cx1, __m256 rx, __
     const __m256 cz0_az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz0);
     const __m256 cz0_s = _mm256_add_ps(rx, ry);
     const __m256 cz0_t = _mm256_fmadd_ps(cz0_az, _mm256_set1_ps(0x1.800008p-47f), cz0_s);
-    const __m256 rz = _mm256_fmadd_ps(cz0_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1p-148f));
+    const __m256 rz = _mm256_fmadd_ps(cz0_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000004p-126f));
     const __m256 q = _mm256_add_ps(rx, ry);
     const __m256 e = _mm256_cmp_ps(q, q, _CMP_EQ_OQ);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz0);
@@ -1192,7 +1192,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2(__m256d cx0, __m256d cx1, __m256d rx, __m2
     const __m256d q = _mm256_fmadd_pd(ay, rx, p);
     const __m256d w = _mm256_fmadd_pd(ax, ry, q);
     const __m256d t = _mm256_fmadd_pd(az, _mm256_set1_pd(0x1.0000000000001p-104), w);
-    const __m256d rz = _mm256_fmadd_pd(t, _mm256_set1_pd(0x1.0000000000004p+0), _mm256_set1_pd(0x1.4p-1072));
+    const __m256d rz = _mm256_fmadd_pd(t, _mm256_set1_pd(0x1.0000000000004p+0), _mm256_set1_pd(0x1.0000000000005p-1022));
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1217,7 +1217,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2(__m256 cx0, __m256 cx1, __m256 rx, __m256 
     const __m256 q = _mm256_fmadd_ps(ay, rx, p);
     const __m256 w = _mm256_fmadd_ps(ax, ry, q);
     const __m256 t = _mm256_fmadd_ps(az, _mm256_set1_ps(0x1.000002p-46f), w);
-    const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000008p+0f), _mm256_set1_ps(0x1.4p-147f));
+    const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000008p+0f), _mm256_set1_ps(0x1.00000ap-126f));
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1245,7 +1245,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(__m256d cx0, __m256d cx1, __m256d rx,
     const __m256d cz0_q = _mm256_fmadd_pd(cz0_ay, rx, cz0_p);
     const __m256d cz0_w = _mm256_fmadd_pd(cz0_ax, ry, cz0_q);
     const __m256d cz0_t = _mm256_fmadd_pd(cz0_az, _mm256_set1_pd(0x1.0000000000001p-104), cz0_w);
-    const __m256d rz = _mm256_fmadd_pd(cz0_t, _mm256_set1_pd(0x1.0000000000004p+0), _mm256_set1_pd(0x1.4p-1072));
+    const __m256d rz = _mm256_fmadd_pd(cz0_t, _mm256_set1_pd(0x1.0000000000004p+0), _mm256_set1_pd(0x1.0000000000005p-1022));
     const __m256d q = _mm256_add_pd(rx, ry);
     const __m256d e = _mm256_cmp_pd(q, q, _CMP_EQ_OQ);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz0);
@@ -1283,7 +1283,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(__m256 cx0, __m256 cx1, __m256 rx, __
     const __m256 cz0_q = _mm256_fmadd_ps(cz0_ay, rx, cz0_p);
     const __m256 cz0_w = _mm256_fmadd_ps(cz0_ax, ry, cz0_q);
     const __m256 cz0_t = _mm256_fmadd_ps(cz0_az, _mm256_set1_ps(0x1.000002p-46f), cz0_w);
-    const __m256 rz = _mm256_fmadd_ps(cz0_t, _mm256_set1_ps(0x1.000008p+0f), _mm256_set1_ps(0x1.4p-147f));
+    const __m256 rz = _mm256_fmadd_ps(cz0_t, _mm256_set1_ps(0x1.000008p+0f), _mm256_set1_ps(0x1.00000ap-126f));
     const __m256 q = _mm256_add_ps(rx, ry);
     const __m256 e = _mm256_cmp_ps(q, q, _CMP_EQ_OQ);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz0);
@@ -1376,7 +1376,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2(__m256d cx0, __m256d cx1, __m256d rx, __
     const __m256d az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz0);
     const __m256d p = _mm256_fmadd_pd(aa, rx, _mm256_setzero_pd());
     const __m256d t = _mm256_fmadd_pd(az, _mm256_set1_pd(0x1.0000000000001p-105), p);
-    const __m256d rz = _mm256_fmadd_pd(t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.8p-1073));
+    const __m256d rz = _mm256_fmadd_pd(t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.0000000000003p-1022));
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1395,7 +1395,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2(__m256 cx0, __m256 cx1, __m256 rx, __m25
     const __m256 az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz0);
     const __m256 p = _mm256_fmadd_ps(aa, rx, _mm256_setzero_ps());
     const __m256 t = _mm256_fmadd_ps(az, _mm256_set1_ps(0x1.000002p-47f), p);
-    const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.8p-148f));
+    const __m256 rz = _mm256_fmadd_ps(t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000006p-126f));
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1417,7 +1417,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(__m256d cx0, __m256d cx1, __m256d r
     const __m256d cz0_az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz0);
     const __m256d cz0_p = _mm256_fmadd_pd(cz0_aa, rx, _mm256_setzero_pd());
     const __m256d cz0_t = _mm256_fmadd_pd(cz0_az, _mm256_set1_pd(0x1.0000000000001p-105), cz0_p);
-    const __m256d rz = _mm256_fmadd_pd(cz0_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.8p-1073));
+    const __m256d rz = _mm256_fmadd_pd(cz0_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.0000000000003p-1022));
     const __m256d e = _mm256_cmp_pd(rx, rx, _CMP_EQ_OQ);
     const __m256d az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz0);
     const __m256d f1 = _mm256_cmp_pd(az, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
@@ -1448,7 +1448,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(__m256 cx0, __m256 cx1, __m256 rx, 
     const __m256 cz0_az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz0);
     const __m256 cz0_p = _mm256_fmadd_ps(cz0_aa, rx, _mm256_setzero_ps());
     const __m256 cz0_t = _mm256_fmadd_ps(cz0_az, _mm256_set1_ps(0x1.000002p-47f), cz0_p);
-    const __m256 rz = _mm256_fmadd_ps(cz0_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.8p-148f));
+    const __m256 rz = _mm256_fmadd_ps(cz0_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000006p-126f));
     const __m256 e = _mm256_cmp_ps(rx, rx, _CMP_EQ_OQ);
     const __m256 az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz0);
     const __m256 f1 = _mm256_cmp_ps(az, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
@@ -1499,7 +1499,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2(__m256d cx0, __m256d cx1, __m256d rx, __m2
     const __m256d cz0_az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz0);
     const __m256d cz0_s = _mm256_add_pd(rx, ry);
     const __m256d cz0_t = _mm256_fmadd_pd(cz0_az, _mm256_set1_pd(0x1.8000000000004p-105), cz0_s);
-    const __m256d rz = _mm256_fmadd_pd(cz0_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1p-1073));
+    const __m256d rz = _mm256_fmadd_pd(cz0_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.0000000000002p-1022));
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1537,7 +1537,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2(__m256 cx0, __m256 cx1, __m256 rx, __m256 
     const __m256 cz0_az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz0);
     const __m256 cz0_s = _mm256_add_ps(rx, ry);
     const __m256 cz0_t = _mm256_fmadd_ps(cz0_az, _mm256_set1_ps(0x1.800008p-47f), cz0_s);
-    const __m256 rz = _mm256_fmadd_ps(cz0_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1p-148f));
+    const __m256 rz = _mm256_fmadd_ps(cz0_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000004p-126f));
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1578,7 +1578,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(__m256d cx0, __m256d cx1, __m256d rx,
     const __m256d cz0_az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz0);
     const __m256d cz0_s = _mm256_add_pd(rx, ry);
     const __m256d cz0_t = _mm256_fmadd_pd(cz0_az, _mm256_set1_pd(0x1.8000000000004p-105), cz0_s);
-    const __m256d rz = _mm256_fmadd_pd(cz0_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1p-1073));
+    const __m256d rz = _mm256_fmadd_pd(cz0_t, _mm256_set1_pd(0x1.0000000000002p+0), _mm256_set1_pd(0x1.0000000000002p-1022));
     const __m256d q = _mm256_add_pd(rx, ry);
     const __m256d e = _mm256_cmp_pd(q, q, _CMP_EQ_OQ);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz0);
@@ -1629,7 +1629,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(__m256 cx0, __m256 cx1, __m256 rx, __
     const __m256 cz0_az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz0);
     const __m256 cz0_s = _mm256_add_ps(rx, ry);
     const __m256 cz0_t = _mm256_fmadd_ps(cz0_az, _mm256_set1_ps(0x1.800008p-47f), cz0_s);
-    const __m256 rz = _mm256_fmadd_ps(cz0_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1p-148f));
+    const __m256 rz = _mm256_fmadd_ps(cz0_t, _mm256_set1_ps(0x1.000004p+0f), _mm256_set1_ps(0x1.000004p-126f));
     const __m256 q = _mm256_add_ps(rx, ry);
     const __m256 e = _mm256_cmp_ps(q, q, _CMP_EQ_OQ);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz0);

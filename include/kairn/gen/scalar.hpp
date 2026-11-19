@@ -34,7 +34,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1(double cx, double rx, double cy, double ry
     const double az = abs_bits(cz);
     const double s = rx + ry;
     const double t = fma_rn(az, 0x1p-53, s);
-    const double rz = fma_rn(t, 0x1.0000000000002p+0, 0x1p-1073);
+    const double rz = fma_rn(t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
     cz_out = cz;
     rz_out = rz;
 }
@@ -43,7 +43,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1(float cx, float rx, float cy, float ry, fl
     const float az = abs_bits(cz);
     const float s = rx + ry;
     const float t = fma_rn(az, 0x1p-24f, s);
-    const float rz = fma_rn(t, 0x1.000004p+0f, 0x1p-148f);
+    const float rz = fma_rn(t, 0x1.000004p+0f, 0x1.000004p-126f);
     cz_out = cz;
     rz_out = rz;
 }
@@ -74,7 +74,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(double cx, double rx, double cy, doub
     const double cz_az = abs_bits(cz);
     const double cz_s = rx + ry;
     const double cz_t = fma_rn(cz_az, 0x1p-53, cz_s);
-    const double rz = fma_rn(cz_t, 0x1.0000000000002p+0, 0x1p-1073);
+    const double rz = fma_rn(cz_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
     const double q = rx + ry;
     const bool e = q == q;
     const double a = abs_bits(cz);
@@ -105,7 +105,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(float cx, float rx, float cy, float r
     const float cz_az = abs_bits(cz);
     const float cz_s = rx + ry;
     const float cz_t = fma_rn(cz_az, 0x1p-24f, cz_s);
-    const float rz = fma_rn(cz_t, 0x1.000004p+0f, 0x1p-148f);
+    const float rz = fma_rn(cz_t, 0x1.000004p+0f, 0x1.000004p-126f);
     const float q = rx + ry;
     const bool e = q == q;
     const float a = abs_bits(cz);
@@ -215,7 +215,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1(double cx, double rx, double cy, double ry
     const double q = fma_rn(ay, rx, p);
     const double w = fma_rn(ax, ry, q);
     const double t = fma_rn(az, 0x1p-53, w);
-    const double rz = fma_rn(t, 0x1.0000000000003p+0, 0x1p-1072);
+    const double rz = fma_rn(t, 0x1.0000000000003p+0, 0x1.0000000000004p-1022);
     cz_out = cz;
     rz_out = rz;
 }
@@ -228,7 +228,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1(float cx, float rx, float cy, float ry, fl
     const float q = fma_rn(ay, rx, p);
     const float w = fma_rn(ax, ry, q);
     const float t = fma_rn(az, 0x1p-24f, w);
-    const float rz = fma_rn(t, 0x1.000006p+0f, 0x1p-147f);
+    const float rz = fma_rn(t, 0x1.000006p+0f, 0x1.000008p-126f);
     cz_out = cz;
     rz_out = rz;
 }
@@ -263,7 +263,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1_full(double cx, double rx, double cy, doub
     const double cz_q = fma_rn(cz_ay, rx, cz_p);
     const double cz_w = fma_rn(cz_ax, ry, cz_q);
     const double cz_t = fma_rn(cz_az, 0x1p-53, cz_w);
-    const double rz = fma_rn(cz_t, 0x1.0000000000003p+0, 0x1p-1072);
+    const double rz = fma_rn(cz_t, 0x1.0000000000003p+0, 0x1.0000000000004p-1022);
     const double q = rx + ry;
     const bool e = q == q;
     const double a = abs_bits(cz);
@@ -298,7 +298,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1_full(float cx, float rx, float cy, float r
     const float cz_q = fma_rn(cz_ay, rx, cz_p);
     const float cz_w = fma_rn(cz_ax, ry, cz_q);
     const float cz_t = fma_rn(cz_az, 0x1p-24f, cz_w);
-    const float rz = fma_rn(cz_t, 0x1.000006p+0f, 0x1p-147f);
+    const float rz = fma_rn(cz_t, 0x1.000006p+0f, 0x1.000008p-126f);
     const float q = rx + ry;
     const bool e = q == q;
     const float a = abs_bits(cz);
@@ -347,7 +347,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1(double cx, double rx, double a, double& 
     const double az = abs_bits(cz);
     const double p = fma_rn(aa, rx, 0.0);
     const double t = fma_rn(az, 0x1p-53, p);
-    const double rz = fma_rn(t, 0x1.0000000000002p+0, 0x1.8p-1073);
+    const double rz = fma_rn(t, 0x1.0000000000002p+0, 0x1.0000000000003p-1022);
     cz_out = cz;
     rz_out = rz;
 }
@@ -357,7 +357,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1(float cx, float rx, float a, float& cz_o
     const float az = abs_bits(cz);
     const float p = fma_rn(aa, rx, 0.0f);
     const float t = fma_rn(az, 0x1p-24f, p);
-    const float rz = fma_rn(t, 0x1.000004p+0f, 0x1.8p-148f);
+    const float rz = fma_rn(t, 0x1.000004p+0f, 0x1.000006p-126f);
     cz_out = cz;
     rz_out = rz;
 }
@@ -389,7 +389,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1_full(double cx, double rx, double a, dou
     const double cz_az = abs_bits(cz);
     const double cz_p = fma_rn(cz_aa, rx, 0.0);
     const double cz_t = fma_rn(cz_az, 0x1p-53, cz_p);
-    const double rz = fma_rn(cz_t, 0x1.0000000000002p+0, 0x1.8p-1073);
+    const double rz = fma_rn(cz_t, 0x1.0000000000002p+0, 0x1.0000000000003p-1022);
     const bool e = rx == rx;
     const double az = abs_bits(cz);
     const bool f1 = std::numeric_limits<double>::infinity() > az;
@@ -420,7 +420,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1_full(float cx, float rx, float a, float&
     const float cz_az = abs_bits(cz);
     const float cz_p = fma_rn(cz_aa, rx, 0.0f);
     const float cz_t = fma_rn(cz_az, 0x1p-24f, cz_p);
-    const float rz = fma_rn(cz_t, 0x1.000004p+0f, 0x1.8p-148f);
+    const float rz = fma_rn(cz_t, 0x1.000004p+0f, 0x1.000006p-126f);
     const bool e = rx == rx;
     const float az = abs_bits(cz);
     const bool f1 = std::numeric_limits<float>::infinity() > az;
@@ -454,7 +454,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1(double cx, double rx, double cy, double ry
     const double cz_az = abs_bits(cz);
     const double cz_s = rx + ry;
     const double cz_t = fma_rn(cz_az, 0x1p-53, cz_s);
-    const double rz = fma_rn(cz_t, 0x1.0000000000002p+0, 0x1p-1073);
+    const double rz = fma_rn(cz_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
     cz_out = cz;
     rz_out = rz;
 }
@@ -465,7 +465,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1(float cx, float rx, float cy, float ry, fl
     const float cz_az = abs_bits(cz);
     const float cz_s = rx + ry;
     const float cz_t = fma_rn(cz_az, 0x1p-24f, cz_s);
-    const float rz = fma_rn(cz_t, 0x1.000004p+0f, 0x1p-148f);
+    const float rz = fma_rn(cz_t, 0x1.000004p+0f, 0x1.000004p-126f);
     cz_out = cz;
     rz_out = rz;
 }
@@ -498,7 +498,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(double cx, double rx, double cy, doub
     const double cz_az = abs_bits(cz);
     const double cz_s = rx + ry;
     const double cz_t = fma_rn(cz_az, 0x1p-53, cz_s);
-    const double rz = fma_rn(cz_t, 0x1.0000000000002p+0, 0x1p-1073);
+    const double rz = fma_rn(cz_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
     const double q = rx + ry;
     const bool e = q == q;
     const double a = abs_bits(cz);
@@ -531,7 +531,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(float cx, float rx, float cy, float r
     const float cz_az = abs_bits(cz);
     const float cz_s = rx + ry;
     const float cz_t = fma_rn(cz_az, 0x1p-24f, cz_s);
-    const float rz = fma_rn(cz_t, 0x1.000004p+0f, 0x1p-148f);
+    const float rz = fma_rn(cz_t, 0x1.000004p+0f, 0x1.000004p-126f);
     const float q = rx + ry;
     const bool e = q == q;
     const float a = abs_bits(cz);
@@ -1336,7 +1336,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2(double cx0, double cx1, double rx, double 
     const double az = abs_bits(cz0);
     const double s = rx + ry;
     const double t = fma_rn(az, 0x1.8000000000004p-105, s);
-    const double rz = fma_rn(t, 0x1.0000000000002p+0, 0x1p-1073);
+    const double rz = fma_rn(t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1370,7 +1370,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2(float cx0, float cx1, float rx, float cy0,
     const float az = abs_bits(cz0);
     const float s = rx + ry;
     const float t = fma_rn(az, 0x1.800008p-47f, s);
-    const float rz = fma_rn(t, 0x1.000004p+0f, 0x1p-148f);
+    const float rz = fma_rn(t, 0x1.000004p+0f, 0x1.000004p-126f);
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1430,7 +1430,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(double cx0, double cx1, double rx, do
     const double cz0_az = abs_bits(cz0);
     const double cz0_s = rx + ry;
     const double cz0_t = fma_rn(cz0_az, 0x1.8000000000004p-105, cz0_s);
-    const double rz = fma_rn(cz0_t, 0x1.0000000000002p+0, 0x1p-1073);
+    const double rz = fma_rn(cz0_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
     const double q = rx + ry;
     const bool e = q == q;
     const double a = abs_bits(cz0);
@@ -1490,7 +1490,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(float cx0, float cx1, float rx, float
     const float cz0_az = abs_bits(cz0);
     const float cz0_s = rx + ry;
     const float cz0_t = fma_rn(cz0_az, 0x1.800008p-47f, cz0_s);
-    const float rz = fma_rn(cz0_t, 0x1.000004p+0f, 0x1p-148f);
+    const float rz = fma_rn(cz0_t, 0x1.000004p+0f, 0x1.000004p-126f);
     const float q = rx + ry;
     const bool e = q == q;
     const float a = abs_bits(cz0);
@@ -1661,7 +1661,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2(double cx0, double cx1, double rx, double 
     const double q = fma_rn(ay, rx, p);
     const double w = fma_rn(ax, ry, q);
     const double t = fma_rn(az, 0x1.0000000000001p-104, w);
-    const double rz = fma_rn(t, 0x1.0000000000004p+0, 0x1.4p-1072);
+    const double rz = fma_rn(t, 0x1.0000000000004p+0, 0x1.0000000000005p-1022);
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1686,7 +1686,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2(float cx0, float cx1, float rx, float cy0,
     const float q = fma_rn(ay, rx, p);
     const float w = fma_rn(ax, ry, q);
     const float t = fma_rn(az, 0x1.000002p-46f, w);
-    const float rz = fma_rn(t, 0x1.000008p+0f, 0x1.4p-147f);
+    const float rz = fma_rn(t, 0x1.000008p+0f, 0x1.00000ap-126f);
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1737,7 +1737,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(double cx0, double cx1, double rx, do
     const double cz0_q = fma_rn(cz0_ay, rx, cz0_p);
     const double cz0_w = fma_rn(cz0_ax, ry, cz0_q);
     const double cz0_t = fma_rn(cz0_az, 0x1.0000000000001p-104, cz0_w);
-    const double rz = fma_rn(cz0_t, 0x1.0000000000004p+0, 0x1.4p-1072);
+    const double rz = fma_rn(cz0_t, 0x1.0000000000004p+0, 0x1.0000000000005p-1022);
     const double q = rx + ry;
     const bool e = q == q;
     const double a = abs_bits(cz0);
@@ -1788,7 +1788,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(float cx0, float cx1, float rx, float
     const float cz0_q = fma_rn(cz0_ay, rx, cz0_p);
     const float cz0_w = fma_rn(cz0_ax, ry, cz0_q);
     const float cz0_t = fma_rn(cz0_az, 0x1.000002p-46f, cz0_w);
-    const float rz = fma_rn(cz0_t, 0x1.000008p+0f, 0x1.4p-147f);
+    const float rz = fma_rn(cz0_t, 0x1.000008p+0f, 0x1.00000ap-126f);
     const float q = rx + ry;
     const bool e = q == q;
     const float a = abs_bits(cz0);
@@ -1898,7 +1898,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2(double cx0, double cx1, double rx, doubl
     const double az = abs_bits(cz0);
     const double p = fma_rn(aa, rx, 0.0);
     const double t = fma_rn(az, 0x1.0000000000001p-105, p);
-    const double rz = fma_rn(t, 0x1.0000000000002p+0, 0x1.8p-1073);
+    const double rz = fma_rn(t, 0x1.0000000000002p+0, 0x1.0000000000003p-1022);
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1917,7 +1917,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2(float cx0, float cx1, float rx, float a,
     const float az = abs_bits(cz0);
     const float p = fma_rn(aa, rx, 0.0f);
     const float t = fma_rn(az, 0x1.000002p-47f, p);
-    const float rz = fma_rn(t, 0x1.000004p+0f, 0x1.8p-148f);
+    const float rz = fma_rn(t, 0x1.000004p+0f, 0x1.000006p-126f);
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -1962,7 +1962,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(double cx0, double cx1, double rx, 
     const double cz0_az = abs_bits(cz0);
     const double cz0_p = fma_rn(cz0_aa, rx, 0.0);
     const double cz0_t = fma_rn(cz0_az, 0x1.0000000000001p-105, cz0_p);
-    const double rz = fma_rn(cz0_t, 0x1.0000000000002p+0, 0x1.8p-1073);
+    const double rz = fma_rn(cz0_t, 0x1.0000000000002p+0, 0x1.0000000000003p-1022);
     const bool e = rx == rx;
     const double az = abs_bits(cz0);
     const bool f1 = std::numeric_limits<double>::infinity() > az;
@@ -2006,7 +2006,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(float cx0, float cx1, float rx, flo
     const float cz0_az = abs_bits(cz0);
     const float cz0_p = fma_rn(cz0_aa, rx, 0.0f);
     const float cz0_t = fma_rn(cz0_az, 0x1.000002p-47f, cz0_p);
-    const float rz = fma_rn(cz0_t, 0x1.000004p+0f, 0x1.8p-148f);
+    const float rz = fma_rn(cz0_t, 0x1.000004p+0f, 0x1.000006p-126f);
     const bool e = rx == rx;
     const float az = abs_bits(cz0);
     const bool f1 = std::numeric_limits<float>::infinity() > az;
@@ -2071,7 +2071,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2(double cx0, double cx1, double rx, double 
     const double cz0_az = abs_bits(cz0);
     const double cz0_s = rx + ry;
     const double cz0_t = fma_rn(cz0_az, 0x1.8000000000004p-105, cz0_s);
-    const double rz = fma_rn(cz0_t, 0x1.0000000000002p+0, 0x1p-1073);
+    const double rz = fma_rn(cz0_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -2109,7 +2109,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2(float cx0, float cx1, float rx, float cy0,
     const float cz0_az = abs_bits(cz0);
     const float cz0_s = rx + ry;
     const float cz0_t = fma_rn(cz0_az, 0x1.800008p-47f, cz0_s);
-    const float rz = fma_rn(cz0_t, 0x1.000004p+0f, 0x1p-148f);
+    const float rz = fma_rn(cz0_t, 0x1.000004p+0f, 0x1.000004p-126f);
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
@@ -2173,7 +2173,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(double cx0, double cx1, double rx, do
     const double cz0_az = abs_bits(cz0);
     const double cz0_s = rx + ry;
     const double cz0_t = fma_rn(cz0_az, 0x1.8000000000004p-105, cz0_s);
-    const double rz = fma_rn(cz0_t, 0x1.0000000000002p+0, 0x1p-1073);
+    const double rz = fma_rn(cz0_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
     const double q = rx + ry;
     const bool e = q == q;
     const double a = abs_bits(cz0);
@@ -2237,7 +2237,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(float cx0, float cx1, float rx, float
     const float cz0_az = abs_bits(cz0);
     const float cz0_s = rx + ry;
     const float cz0_t = fma_rn(cz0_az, 0x1.800008p-47f, cz0_s);
-    const float rz = fma_rn(cz0_t, 0x1.000004p+0f, 0x1p-148f);
+    const float rz = fma_rn(cz0_t, 0x1.000004p+0f, 0x1.000004p-126f);
     const float q = rx + ry;
     const bool e = q == q;
     const float a = abs_bits(cz0);

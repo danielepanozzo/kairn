@@ -45,6 +45,13 @@
    expressions (lemmas radius_2 and radius_4); that they are rounded up to the format
    matters only to the kernels, which need them as numbers of the format.
 
+   The H of proofs/gen/Model.v is larger than the argument needs: it is the expression
+   above plus eta / (2 u) = 2^(emin + prec - 1), the smallest normal number (nrm below),
+   rounded up. The addition is there for speed, not for the bound: it makes H, and so
+   every radius, a normal number, and a fused operation with a subnormal operand is
+   slow on some processors. A larger H is still at least its expression (RU_ge_plus),
+   which is all the proofs ask of it.
+
    Each statement holds for every eta and from the minimum precision of the center's
    kernel: the radius computation adds no condition of its own.
 
@@ -424,6 +431,33 @@ Proof.
 intros t Ht. destruct (RU_radius emin prec t Ht) as [[_ P] L]. split; assumption.
 Qed.
 
+(* The same for an expression t to which a nonnegative n was added before rounding up:
+   the result is still at least t. This is how H is used: t is what the bound needs and
+   n is the smallest normal number. *)
+Lemma RU_ge_plus :
+  forall t n : R, 0 <= t -> 0 <= n -> 0 <= RU emin prec (t + n) /\ t <= RU emin prec (t + n).
+Proof.
+intros t n Ht Hn. assert (Hs : 0 <= t + n) by lra.
+destruct (RU_ge (t + n) Hs) as [P L]. split; lra.
+Qed.
+
+(* What n buys. No statement needs these two facts: they say why the radius of a core is
+   never below the smallest normal number. The H of a core is at least the n added to its
+   expression, and the radius, RN (t G + H) with t >= 0 and G >= 0 in the last line of every
+   listing, is at least H. *)
+Lemma RU_plus_ge_r : forall t n : R, 0 <= t -> n <= RU emin prec (t + n).
+Proof.
+intros t n Ht. apply Rle_trans with (t + n). lra.
+destruct (round_UP_pt radix2 fexp (t + n)) as [_ [L _]]. exact L.
+Qed.
+
+Lemma radius_ge_H :
+  forall t G H : R, 0 <= t -> 0 <= G -> format H -> H <= rnd (t * G + H).
+Proof.
+intros t G H Ht HG FH. apply round_ge_generic; auto with typeclass_instances.
+generalize (Rmult_le_pos t G Ht HG). lra.
+Qed.
+
 Lemma pow_ge_0' : forall n : nat, 0 <= (1 + uu) ^ n.
 Proof. intros n. apply pow_le. lra. Qed.
 
@@ -432,7 +466,8 @@ End Radius2.
 (** * The constants of proofs/gen/Model.v *)
 
 (* Each is, by definition, the rounding up of the expression of the table of
-   proofs/gen/Model.v, with u and eta spelled out. These equalities hold by unfolding. *)
+   proofs/gen/Model.v, with u and eta spelled out; for H, of that expression plus the
+   smallest normal number. These equalities hold by unfolding. *)
 Definition uq (rel : R) : R := rel / (1 - rel).
 Definition vq (rel tiny : R) : R := tiny / (1 - rel).
 
@@ -440,6 +475,21 @@ Definition h2 (emin prec : Z) (V : R) : R :=
   (1 + u prec) * ((1 + u prec) ^ 2 * eta emin + V + eta emin / 2).
 Definition h4 (emin prec : Z) (n : nat) (V : R) : R :=
   (1 + u prec) * (2 * (1 + u prec) ^ n * eta emin + V + eta emin / 2).
+
+(* The smallest normal number, 2^(emin + prec - 1), as proofs/gen/Model.v writes it. *)
+Definition nrm (emin prec : Z) : R := eta emin / (2 * u prec).
+
+Lemma nrm_eq : forall emin prec : Z, nrm emin prec = bpow radix2 (emin + prec - 1).
+Proof.
+intros emin prec. unfold nrm, eta, u.
+generalize (bpow_gt_0 radix2 (- prec)). intros U0.
+apply Rmult_eq_reg_r with (2 * bpow radix2 (- prec)); [|lra].
+unfold Rdiv. rewrite Rmult_assoc, Rinv_l by lra. rewrite Rmult_1_r.
+rewrite <- pow2_1, <- 2!bpow_plus. f_equal. lia.
+Qed.
+
+Lemma nrm_ge_0 : forall emin prec : Z, 0 <= nrm emin prec.
+Proof. intros emin prec. rewrite nrm_eq. apply bpow_ge_0. Qed.
 
 Lemma uq_ge_0 : forall rel : R, 0 <= rel < 1 -> 0 <= uq rel.
 Proof. intros rel H. exact (div_pos rel rel (proj1 H) H). Qed.
@@ -480,7 +530,7 @@ Lemma g_add_1_eq : forall emin prec : Z,
 Proof. reflexivity. Qed.
 Lemma h_add_1_eq : forall emin prec : Z,
   Model.up_ball_add_1_2 emin prec
-  = RU emin prec ((1 + u prec) * ((1 + u prec) ^ 2 * eta emin + eta emin / 2)).
+  = RU emin prec ((1 + u prec) * ((1 + u prec) ^ 2 * eta emin + eta emin / 2) + nrm emin prec).
 Proof. reflexivity. Qed.
 
 Lemma e_add_2_eq : forall emin prec : Z,
@@ -491,7 +541,7 @@ Lemma g_add_2_eq : forall emin prec : Z,
 Proof. reflexivity. Qed.
 Lemma h_add_2_eq : forall emin prec : Z,
   Model.up_ball_add_1_2 emin prec
-  = RU emin prec ((1 + u prec) * ((1 + u prec) ^ 2 * eta emin + eta emin / 2)).
+  = RU emin prec ((1 + u prec) * ((1 + u prec) ^ 2 * eta emin + eta emin / 2) + nrm emin prec).
 Proof. reflexivity. Qed.
 
 Lemma e_scale_1_eq : forall emin prec : Z,
@@ -502,7 +552,7 @@ Lemma g_scale_1_eq : forall emin prec : Z,
 Proof. reflexivity. Qed.
 Lemma h_scale_1_eq : forall emin prec : Z,
   Model.up_ball_scale_1_2 emin prec
-  = RU emin prec (h2 emin prec (vq (rel_1 prec) (1 / 2 * eta emin))).
+  = RU emin prec (h2 emin prec (vq (rel_1 prec) (1 / 2 * eta emin)) + nrm emin prec).
 Proof. reflexivity. Qed.
 
 Lemma e_scale_2_eq : forall emin prec : Z,
@@ -514,7 +564,7 @@ Lemma g_scale_2_eq : forall emin prec : Z,
 Proof. reflexivity. Qed.
 Lemma h_scale_2_eq : forall emin prec : Z,
   Model.up_ball_scale_2_2 emin prec
-  = RU emin prec (h2 emin prec (vq (rel_mul_21 prec) (1 * eta emin))).
+  = RU emin prec (h2 emin prec (vq (rel_mul_21 prec) (1 * eta emin)) + nrm emin prec).
 Proof. reflexivity. Qed.
 
 Lemma e_mul_1_eq : forall emin prec : Z,
@@ -525,7 +575,7 @@ Lemma g_mul_1_eq : forall emin prec : Z,
 Proof. reflexivity. Qed.
 Lemma h_mul_1_eq : forall emin prec : Z,
   Model.up_ball_mul_1_2 emin prec
-  = RU emin prec (h4 emin prec 4 (vq (rel_1 prec) (1 / 2 * eta emin))).
+  = RU emin prec (h4 emin prec 4 (vq (rel_1 prec) (1 / 2 * eta emin)) + nrm emin prec).
 Proof. reflexivity. Qed.
 
 Lemma e_mul_2_eq : forall emin prec : Z,
@@ -536,7 +586,7 @@ Lemma g_mul_2_eq : forall emin prec : Z,
 Proof. reflexivity. Qed.
 Lemma h_mul_2_eq : forall emin prec : Z,
   Model.up_ball_mul_2_2 emin prec
-  = RU emin prec (h4 emin prec 5 (vq (rel_mul_22 prec) (3 / 2 * eta emin))).
+  = RU emin prec (h4 emin prec 5 (vq (rel_mul_22 prec) (3 / 2 * eta emin)) + nrm emin prec).
 Proof. reflexivity. Qed.
 
 (** * One-limb centers *)
@@ -564,7 +614,8 @@ destruct (RU_ge emin prec ((1 + u prec) ^ 3) (pow_ge_0' prec 3)) as [G0 G1].
 assert (H2 : (1 + u prec) * ((1 + u prec) ^ 2 * eta emin + eta emin / 2) = h2 emin prec 0)
   by (unfold h2; ring).
 rewrite H2.
-destruct (RU_ge emin prec (h2 emin prec 0) (h2_ge_0 emin prec 0 (Rle_refl 0))) as [H0 H1].
+destruct (RU_ge_plus emin prec (h2 emin prec 0) (nrm emin prec)
+            (h2_ge_0 emin prec 0 (Rle_refl 0)) (nrm_ge_0 emin prec)) as [H0 H1].
 apply Rle_trans with (rx + ry + Rabs (cz - (cx + cy))).
 - exact (enclose_add x y cx cy cz rx ry _ Hx Hy (Rle_refl _)).
 - apply (radius_2 emin prec (rx + ry) (Rabs cz) _ _ _ _ 0);
@@ -612,8 +663,8 @@ generalize (computed_bound rel tiny cz (cx * cy) Hrel Htiny Hb). fold (uq rel) (
 intros Hc.
 destruct (RU_ge emin prec (uq rel) (uq_ge_0 rel Hrel)) as [E0 E1].
 destruct (RU_ge emin prec ((1 + u prec) ^ 5) (pow_ge_0' prec 5)) as [G0 G1].
-destruct (RU_ge emin prec (h4 emin prec 4 (vq rel tiny))
-            (h4_ge_0 emin prec 4 _ (vq_ge_0 rel tiny Hrel Htiny))) as [H0 H1].
+destruct (RU_ge_plus emin prec (h4 emin prec 4 (vq rel tiny)) (nrm emin prec)
+            (h4_ge_0 emin prec 4 _ (vq_ge_0 rel tiny Hrel Htiny)) (nrm_ge_0 emin prec)) as [H0 H1].
 apply Rle_trans with (Rabs cx * ry + Rabs cy * rx + rx * ry + Rabs (cz - cx * cy)).
 - exact (enclose_mul x y cx cy cz rx ry (Rabs cx) (Rabs cy) _ Hx Hy
            (Rle_refl _) (Rle_refl _) (Rle_refl _)).
@@ -649,8 +700,8 @@ generalize (computed_bound rel tiny cz (cx * a) Hrel Htiny Hb). fold (uq rel) (v
 intros Hc.
 destruct (RU_ge emin prec (uq rel) (uq_ge_0 rel Hrel)) as [E0 E1].
 destruct (RU_ge emin prec ((1 + u prec) ^ 3) (pow_ge_0' prec 3)) as [G0 G1].
-destruct (RU_ge emin prec (h2 emin prec (vq rel tiny))
-            (h2_ge_0 emin prec _ (vq_ge_0 rel tiny Hrel Htiny))) as [H0 H1].
+destruct (RU_ge_plus emin prec (h2 emin prec (vq rel tiny)) (nrm emin prec)
+            (h2_ge_0 emin prec _ (vq_ge_0 rel tiny Hrel Htiny)) (nrm_ge_0 emin prec)) as [H0 H1].
 apply Rle_trans with (Rabs a * rx + Rabs (cz - cx * a)).
 - exact (enclose_scale x a cx cz rx _ Hx (Rle_refl _)).
 - apply (radius_2 emin prec (Rabs a * rx) (Rabs cz) _ _ _ _ (vq rel tiny));
@@ -692,7 +743,8 @@ destruct (RU_ge emin prec ((1 + u prec) ^ 3) (pow_ge_0' prec 3)) as [G0 G1].
 assert (H2 : (1 + u prec) * ((1 + u prec) ^ 2 * eta emin + eta emin / 2) = h2 emin prec 0)
   by (unfold h2; ring).
 rewrite H2.
-destruct (RU_ge emin prec (h2 emin prec 0) (h2_ge_0 emin prec 0 (Rle_refl 0))) as [H0 H1].
+destruct (RU_ge_plus emin prec (h2 emin prec 0) (nrm emin prec)
+            (h2_ge_0 emin prec 0 (Rle_refl 0)) (nrm_ge_0 emin prec)) as [H0 H1].
 apply Rle_trans with (rx + ry + e).
 - exact (enclose_add x y (cx0 + cx1) (cy0 + cy1) (cz0 + cz1) rx ry _ Hx Hy (Rle_refl _)).
 - apply (radius_2 emin prec (rx + ry) (Rabs cz0) _ _ _ _ 0);
@@ -746,8 +798,8 @@ generalize (normalized_2_abs_le emin prec cz0 cz1 Ncz) (normalized_2_abs_le emin
            (normalized_2_abs_le emin prec cy0 cy1 Ncy). intros Hz Hcx Hcy.
 destruct (RU_ge emin prec (uq rel) (uq_ge_0 rel Hrel)) as [E0 E1].
 destruct (RU_ge emin prec ((1 + u prec) ^ 6) (pow_ge_0' prec 6)) as [G0 G1].
-destruct (RU_ge emin prec (h4 emin prec 5 (vq rel tiny))
-            (h4_ge_0 emin prec 5 _ (vq_ge_0 rel tiny Hrel Htiny))) as [H0 H1].
+destruct (RU_ge_plus emin prec (h4 emin prec 5 (vq rel tiny)) (nrm emin prec)
+            (h4_ge_0 emin prec 5 _ (vq_ge_0 rel tiny Hrel Htiny)) (nrm_ge_0 emin prec)) as [H0 H1].
 apply Rle_trans with (Rabs (cx0 + cx1) * ry + Rabs (cy0 + cy1) * rx + rx * ry + e).
 - exact (enclose_mul x y (cx0 + cx1) (cy0 + cy1) (cz0 + cz1) rx ry _ _ _ Hx Hy
            (Rle_refl _) (Rle_refl _) (Rle_refl _)).
@@ -793,8 +845,8 @@ assert (P : 0 <= uq rel * (1 + u prec)).
 { apply Rmult_le_pos. now apply uq_ge_0. lra. }
 destruct (RU_ge emin prec (uq rel * (1 + u prec)) P) as [E0 E1].
 destruct (RU_ge emin prec ((1 + u prec) ^ 3) (pow_ge_0' prec 3)) as [G0 G1].
-destruct (RU_ge emin prec (h2 emin prec (vq rel tiny))
-            (h2_ge_0 emin prec _ (vq_ge_0 rel tiny Hrel Htiny))) as [H0 H1].
+destruct (RU_ge_plus emin prec (h2 emin prec (vq rel tiny)) (nrm emin prec)
+            (h2_ge_0 emin prec _ (vq_ge_0 rel tiny Hrel Htiny)) (nrm_ge_0 emin prec)) as [H0 H1].
 apply Rle_trans with (Rabs a * rx + e).
 - exact (enclose_scale x a (cx0 + cx1) (cz0 + cz1) rx _ Hx (Rle_refl _)).
 - apply (radius_2 emin prec (Rabs a * rx) (Rabs cz0) _ _ _ _ (vq rel tiny));

@@ -1131,31 +1131,32 @@ class TheKernels(unittest.TestCase):
         self.assertEqual(body('rmul'), ['p = prod(a, b)', 'r = succ(p)'])
         self.assertEqual(body('mul_pow2_2'), ['h = prod(x0, c)', 'l = prod(x1, c)', 'z0, z1 = fast_two_sum(h, l)'])
         # The Ball cores of the second radius design (milestone1.md, "The radius, second design").
+        # The last constant, H, ends with eta/(2*u), the smallest normal number.
         self.assertEqual(body('ball_add_2'), [
             'cz0, cz1 = add_2_2(cx0, cx1, cy0, cy1)', 'az = abs(cz0)', 's = add(rx, ry)',
             't = fma(az, const up(unit(add_2_2)/(1-unit(add_2_2))*(1+u)), s)',
-            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)))'])
+            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))'])
         self.assertEqual(body('ball_add_1'), [
             'cz = add(cx, cy)', 'az = abs(cz)', 's = add(rx, ry)',
             't = fma(az, const up(unit(add_1_1)/(1-unit(add_1_1))), s)',
-            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)))'])
+            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))'])
         self.assertEqual(body('ball_mul_1'), [
             'cz = prod(cx, cy)', 'ax = abs(cx)', 'ay = abs(cy)', 'az = abs(cz)', 'p = prod(rx, ry)',
             'q = fma(ay, rx, p)', 'w = fma(ax, ry, q)', 't = fma(az, const up(unit(mul_1_1)/(1-unit(mul_1_1))), w)',
-            'rz = fma(t, const up((1+u)^5), const up((1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)))'])
+            'rz = fma(t, const up((1+u)^5), const up((1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)))'])
         self.assertEqual(body('ball_mul_2'), [
             'cz0, cz1 = mul_2_2(cx0, cx1, cy0, cy1)', 'ax = abs(cx0)', 'ay = abs(cy0)', 'az = abs(cz0)',
             'p = prod(rx, ry)', 'q = fma(ay, rx, p)', 'w = fma(ax, ry, q)',
             't = fma(az, const up(unit(mul_2_2)/(1-unit(mul_2_2))), w)',
-            'rz = fma(t, const up((1+u)^6), const up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)))'])
+            'rz = fma(t, const up((1+u)^6), const up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))'])
         self.assertEqual(body('ball_scale_1'), [
             'cz = prod(cx, a)', 'aa = abs(a)', 'az = abs(cz)', 'p = prod(aa, rx)',
             't = fma(az, const up(unit(mul_1_1)/(1-unit(mul_1_1))), p)',
-            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)))'])
+            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)))'])
         self.assertEqual(body('ball_scale_2'), [
             'cz0, cz1 = mul_2_1(cx0, cx1, a)', 'aa = abs(a)', 'az = abs(cz0)', 'p = prod(aa, rx)',
             't = fma(az, const up(unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)), p)',
-            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)))'])
+            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)+eta/(2*u)))'])
         self.assertEqual(body('ball_sub_1'), ['n = neg(cy)', 'cz, rz = ball_add_1(cx, rx, n, ry)'])
         self.assertEqual(body('ball_sub_2'), ['n0, n1 = neg_2(cy0, cy1)',
                                               'cz0, cz1, rz = ball_add_2(cx0, cx1, rx, n0, n1, ry)'])

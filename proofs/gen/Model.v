@@ -26,9 +26,9 @@ Definition up_ball_add_1_0 : R :=
 Definition up_ball_add_1_1 : R :=
   round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) ^ 3).
 
-(* up((1+u)*((1+u)^2*eta+eta/2)): the smallest number of the format not below it. *)
+(* up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)): the smallest number of the format not below it. *)
 Definition up_ball_add_1_2 : R :=
-  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * ((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + (bpow radix2 emin / 2))).
+  round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) * ((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + (bpow radix2 emin / 2))) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
 
 (* up(unit(add_2_2)/(1-unit(add_2_2))*(1+u)): the smallest number of the format not below it. *)
 Definition up_ball_add_2_0 : R :=
@@ -42,9 +42,9 @@ Definition up_ball_mul_1_0 : R :=
 Definition up_ball_mul_1_1 : R :=
   round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) ^ 5).
 
-(* up((1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)): the smallest number of the format not below it. *)
+(* up((1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)): the smallest number of the format not below it. *)
 Definition up_ball_mul_1_2 : R :=
-  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * ((((2 * ((1 + bpow radix2 (- prec)) ^ 4)) * bpow radix2 emin) + (((1 / 2) * bpow radix2 emin) / (1 - ((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1)))) + (bpow radix2 emin / 2))).
+  round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) * ((((2 * ((1 + bpow radix2 (- prec)) ^ 4)) * bpow radix2 emin) + (((1 / 2) * bpow radix2 emin) / (1 - ((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1)))) + (bpow radix2 emin / 2))) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
 
 (* up(unit(mul_2_2)/(1-unit(mul_2_2))): the smallest number of the format not below it. *)
 Definition up_ball_mul_2_0 : R :=
@@ -54,21 +54,21 @@ Definition up_ball_mul_2_0 : R :=
 Definition up_ball_mul_2_1 : R :=
   round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) ^ 6).
 
-(* up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)): the smallest number of the format not below it. *)
+(* up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)): the smallest number of the format not below it. *)
 Definition up_ball_mul_2_2 : R :=
-  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * ((((2 * ((1 + bpow radix2 (- prec)) ^ 5)) * bpow radix2 emin) + (((3 / 2) * bpow radix2 emin) / (1 - (4 * bpow radix2 (- prec) ^ 2)))) + (bpow radix2 emin / 2))).
+  round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) * ((((2 * ((1 + bpow radix2 (- prec)) ^ 5)) * bpow radix2 emin) + (((3 / 2) * bpow radix2 emin) / (1 - (4 * bpow radix2 (- prec) ^ 2)))) + (bpow radix2 emin / 2))) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
 
-(* up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)): the smallest number of the format not below it. *)
+(* up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)): the smallest number of the format not below it. *)
 Definition up_ball_scale_1_2 : R :=
-  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + (((1 / 2) * bpow radix2 emin) / (1 - ((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1)))) + (bpow radix2 emin / 2))).
+  round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + (((1 / 2) * bpow radix2 emin) / (1 - ((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1)))) + (bpow radix2 emin / 2))) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
 
 (* up(unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)): the smallest number of the format not below it. *)
 Definition up_ball_scale_2_0 : R :=
   round radix2 (FLT_exp emin prec) Zceil (((2 * bpow radix2 (- prec) ^ 2) / (1 - (2 * bpow radix2 (- prec) ^ 2))) * (1 + bpow radix2 (- prec))).
 
-(* up((1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)): the smallest number of the format not below it. *)
+(* up((1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)+eta/(2*u)): the smallest number of the format not below it. *)
 Definition up_ball_scale_2_2 : R :=
-  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + ((1 * bpow radix2 emin) / (1 - (2 * bpow radix2 (- prec) ^ 2)))) + (bpow radix2 emin / 2))).
+  round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + ((1 * bpow radix2 emin) / (1 - (2 * bpow radix2 (- prec) ^ 2)))) + (bpow radix2 emin / 2))) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
 
 (* add_1_1: one rounding to nearest. *)
 Definition add_1_1 (a b : R) : R :=

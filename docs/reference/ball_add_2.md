@@ -69,13 +69,16 @@ It calls [`add_2_2`](add_2_2.md).
 # The radius is evaluated by operations rounded to nearest on nonnegative values and inflated
 # once (milestone1.md, "The radius, second design"): E turns the error bound of the center
 # kernel add_2_2 into a multiple of |cz0|, G covers the roundings of the radius, H what underflow
-# loses and the absolute term of the bound. Each is an exact expression rounded up.
+# loses and the absolute term of the bound. Each is an exact expression rounded up. H also
+# contains eta/(2u), the smallest normal number, which no bound needs: it makes H, and with it
+# every radius a kernel returns, a normal number, because a fused operation with a subnormal
+# operand is slow on some processors (decisions.md, the log of 2026-11-19).
 
 (cz0, cz1)  = add_2_2(cx0, cx1, cy0, cy1)
 az          = abs(cz0)
 s           = add(rx, ry)
 t           = fma(az, const up(unit(add_2_2)/(1-unit(add_2_2))*(1+u)), s)
-rz          = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)))
+rz          = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))
 ```
 
 ## Measured

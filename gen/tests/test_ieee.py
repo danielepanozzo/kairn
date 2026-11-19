@@ -185,7 +185,7 @@ class CheckedFiles(unittest.TestCase):
     # The generated files that make -C proofs passed on: every theorem of the IEEE model is about
     # these definitions and has one of these statements as its type. A change of either file needs
     # that build again, and new digests here.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '767258ddf5556ceea5712828d8a36022fe9378c706fc2b256cc7041f39ea4e43',
+    DIGESTS = {'proofs/gen/IeeeModel.v': '2376d5d56677eaea43aaa7fe2d038df7af50f532ffe91bb37038326dfb95d4ef',
                'proofs/gen/IeeeStatements.v': '0d2b8e66d080f2246c6fbe7fce61edf0a11210d6369aceb80284273f6beac6b3'}
 
     def test_the_checked_files(self):
