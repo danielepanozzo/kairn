@@ -1,0 +1,13 @@
+# Test kernel: one declared contractable multiply-add.
+kernel:   ops_muladd
+input:    a
+input:    b
+input:    c
+output:   r = r0 r1
+value:    a*b+c
+ensures:  error r R c=1 k=1 t=0
+status:   unverified
+
+t  = muladd(a, b, c)
+r0 = neg(t)
+r1 = sub(r0, a)

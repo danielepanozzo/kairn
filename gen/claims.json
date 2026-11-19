@@ -1,0 +1,688 @@
+{
+  "schema": 1,
+  "kernels": [
+    {
+      "name": "fast_two_sum",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        }
+      ],
+      "value": "a+b",
+      "requires": [
+        "abs_ge(a, b)"
+      ],
+      "ensures": [
+        {
+          "kind": "leading_rounded",
+          "of": "r"
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": null
+        },
+        {
+          "kind": "normalized",
+          "of": "r"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/FastTwoSum.v",
+        "name": "fast_two_sum_correct"
+      },
+      "source": {
+        "cite": "Fast2Sum (Dekker 1971)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": {
+          "rel": "0",
+          "abs": "0"
+        },
+        "binary32": {
+          "rel": "0",
+          "abs": "0"
+        }
+      }
+    },
+    {
+      "name": "split",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        }
+      ],
+      "value": "a",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/Split.v",
+        "name": "split_correct"
+      },
+      "source": {
+        "cite": "Veltkamp's split (Dekker 1971)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 4,
+      "instances": {
+        "binary64": {
+          "rel": "0",
+          "abs": "0"
+        },
+        "binary32": {
+          "rel": "0",
+          "abs": "0"
+        }
+      }
+    },
+    {
+      "name": "two_prod",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        }
+      ],
+      "value": "a*b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "leading_rounded",
+          "of": "r"
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "1/2",
+          "when": null
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": "product_large"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/TwoProd.v",
+        "name": "two_prod_correct"
+      },
+      "source": {
+        "cite": "TwoProd with an FMA (folklore; see JMP17)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          },
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "1/1427247692705959881058285969449495136382746624"
+          },
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "two_prod_dekker",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        }
+      ],
+      "value": "a*b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "leading_rounded",
+          "of": "r"
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "7/2",
+          "when": null
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": "product_large"
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/TwoProdDekker.v",
+        "name": "two_prod_dekker_correct"
+      },
+      "source": {
+        "cite": "Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 17,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "7/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          },
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "7/1427247692705959881058285969449495136382746624"
+          },
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "two_sum",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        }
+      ],
+      "value": "a+b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "leading_rounded",
+          "of": "r"
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/TwoSum.v",
+        "name": "two_sum_correct"
+      },
+      "source": {
+        "cite": "TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 6,
+      "instances": {
+        "binary64": {
+          "rel": "0",
+          "abs": "0"
+        },
+        "binary32": {
+          "rel": "0",
+          "abs": "0"
+        }
+      }
+    },
+    {
+      "name": "add_2_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x+a",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "2",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/Add21.v",
+        "name": "add_2_1_correct"
+      },
+      "source": {
+        "cite": "JMP17 Alg. 4 (DWPlusFP); bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 10,
+      "instances": {
+        "binary64": {
+          "rel": "1/40564819207303340847894502572032",
+          "abs": "0"
+        },
+        "binary32": {
+          "rel": "1/140737488355328",
+          "abs": "0"
+        }
+      }
+    },
+    {
+      "name": "add_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "3/(1-4*u)",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/Add22.v",
+        "name": "add_2_2_correct"
+      },
+      "source": {
+        "cite": "JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 20,
+      "instances": {
+        "binary64": {
+          "rel": "3/81129638414606645666991986180096",
+          "abs": "0"
+        },
+        "binary32": {
+          "rel": "1/93824969867264",
+          "abs": "0"
+        }
+      }
+    },
+    {
+      "name": "add_fast_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "A",
+          "c": "4",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/AddFast22.v",
+        "name": "add_fast_2_2_correct"
+      },
+      "source": {
+        "cite": "JMP17 Alg. 5 (SloppyDWPlusDW)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 11,
+      "instances": {
+        "binary64": {
+          "rel": "1/20282409603651670423947251286016",
+          "abs": "0"
+        },
+        "binary32": {
+          "rel": "1/70368744177664",
+          "abs": "0"
+        }
+      }
+    },
+    {
+      "name": "add_fast_2_2_ts",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "A",
+          "c": "4",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/AddFast22.v",
+        "name": "add_fast_2_2_ts_correct"
+      },
+      "source": {
+        "cite": "JMP17 Alg. 5 (SloppyDWPlusDW), ending with TwoSum",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 14,
+      "instances": {
+        "binary64": {
+          "rel": "1/20282409603651670423947251286016",
+          "abs": "0"
+        },
+        "binary32": {
+          "rel": "1/70368744177664",
+          "abs": "0"
+        }
+      }
+    },
+    {
+      "name": "mul_2_1",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x*a",
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "2",
+          "k": 2,
+          "t": "2",
+          "when": null
+        }
+      ],
+      "min_precision": null,
+      "status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/Mul21.v",
+        "name": "mul_2_1_correct"
+      },
+      "source": {
+        "cite": "JMP17 Alg. 9 (DWTimesFP3); bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 6,
+      "instances": {
+        "binary64": {
+          "rel": "1/40564819207303340847894502572032",
+          "abs": "1/101201126653655309176247673359458653524778324882071059178450679013715169783997673445980191850718562247593538932158405955694904368692896738433506699970369254960758712138283180682233453871046608170619883839236372534281003741712346349309051677824579778170405028256179384776166707307615251266093163754323003131653853870546747392"
+        },
+        "binary32": {
+          "rel": "1/140737488355328",
+          "abs": "1/356811923176489970264571492362373784095686656"
+        }
+      }
+    },
+    {
+      "name": "mul_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "4",
+          "k": 2,
+          "t": "4",
+          "when": null
+        }
+      ],
+      "min_precision": 5,
+      "status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/Mul22.v",
+        "name": "mul_2_2_correct"
+      },
+      "source": {
+        "cite": "JMP17 Alg. 12 (DWTimesDW3); bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 9,
+      "instances": {
+        "binary64": {
+          "rel": "1/20282409603651670423947251286016",
+          "abs": "1/50600563326827654588123836679729326762389162441035529589225339506857584891998836722990095925359281123796769466079202977847452184346448369216753349985184627480379356069141590341116726935523304085309941919618186267140501870856173174654525838912289889085202514128089692388083353653807625633046581877161501565826926935273373696"
+        },
+        "binary32": {
+          "rel": "1/70368744177664",
+          "abs": "1/178405961588244985132285746181186892047843328"
+        }
+      }
+    }
+  ]
+}

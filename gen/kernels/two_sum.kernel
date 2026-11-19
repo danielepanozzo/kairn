@@ -1,0 +1,20 @@
+# TwoSum: s = RN(a + b) and e = a + b - s exactly, with no requirement on a and b.
+kernel:        two_sum
+input:         a
+input:         b
+output:        r = s e
+value:         a+b
+ensures:       leading_rounded r
+ensures:       error r R c=0 k=2 t=0
+min_precision: 2
+theorem:       proofs/theories/TwoSum.v two_sum_correct
+source:        TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965)
+license:       algorithm: published; proof: MIT
+status:        unverified
+
+s  = add(a, b)
+bb = sub(s, a)
+t0 = sub(s, bb)
+t1 = sub(a, t0)
+t2 = sub(b, bb)
+e  = add(t1, t2)

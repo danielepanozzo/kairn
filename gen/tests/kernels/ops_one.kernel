@@ -1,0 +1,10 @@
+# Test kernel: a single output limb.
+kernel:   ops_one
+input:    a
+input:    b
+output:   s
+value:    a+b
+ensures:  error s R c=1 k=1 t=0
+status:   unverified
+
+s = add(a, b)

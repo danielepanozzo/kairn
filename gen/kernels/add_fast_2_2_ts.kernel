@@ -1,0 +1,21 @@
+# SloppyDWPlusDW, ending with TwoSum instead of Fast2Sum: the alternative to add_fast_2_2 if that
+# one fails to return a normalized result when the leading limbs cancel. The constant c is
+# provisional.
+kernel:        add_fast_2_2_ts
+input:         x = x0 x1
+input:         y = y0 y1
+output:        z = z0 z1
+value:         x+y
+requires:      normalized x
+requires:      normalized y
+ensures:       normalized z
+ensures:       error z A c=4 k=2 t=0
+theorem:       proofs/theories/AddFast22.v add_fast_2_2_ts_correct
+source:        JMP17 Alg. 5 (SloppyDWPlusDW), ending with TwoSum
+license:       algorithm: published; proof: MIT
+status:        unverified
+
+(sh, sl) = two_sum(x0, y0)
+v        = add(x1, y1)
+w        = add(sl, v)
+(z0, z1) = two_sum(sh, w)

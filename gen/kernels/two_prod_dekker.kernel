@@ -1,0 +1,27 @@
+# Dekker's product: TwoProd without an FMA, the constant-evaluation variant of two_prod. It requires
+# that no intermediate overflows.
+kernel:        two_prod_dekker
+input:         a
+input:         b
+output:        r = p e
+value:         a*b
+ensures:       leading_rounded r
+ensures:       error r R c=0 k=2 t=7/2
+ensures:       error r R c=0 k=2 t=0 when=product_large
+theorem:       proofs/theories/TwoProdDekker.v two_prod_dekker_correct
+source:        Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11
+license:       algorithm: published; proof: MIT
+status:        unverified
+cone_exempt:   the splits of a and b can overflow while p = RN(ab) is finite, which is why the kernel requires that no intermediate overflows; it runs in constant evaluation, where an overflow or a NaN is not a constant expression (GCC and Clang reject the program)
+
+(ah, al) = split(a)
+(bh, bl) = split(b)
+p  = prod(a, b)
+q0 = prod(ah, bh)
+t1 = sub(q0, p)
+q1 = prod(ah, bl)
+t2 = add(t1, q1)
+q2 = prod(al, bh)
+t3 = add(t2, q2)
+q3 = prod(al, bl)
+e  = add(t3, q3)

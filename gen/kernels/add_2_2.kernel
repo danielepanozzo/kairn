@@ -1,0 +1,22 @@
+# AccurateDWPlusDW: the accurate sum of two double-word numbers.
+kernel:        add_2_2
+input:         x = x0 x1
+input:         y = y0 y1
+output:        z = z0 z1
+value:         x+y
+requires:      normalized x
+requires:      normalized y
+ensures:       normalized z
+ensures:       error z R c=3/(1-4*u) k=2 t=0
+min_precision: 3
+theorem:       proofs/theories/Add22.v add_2_2_correct
+source:        JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22
+license:       algorithm: published; proof: MIT
+status:        unverified
+
+(sh, sl) = two_sum(x0, y0)
+(th, tl) = two_sum(x1, y1)
+c        = add(sl, th)
+(vh, vl) = fast_two_sum(sh, c)
+w        = add(tl, vl)
+(z0, z1) = fast_two_sum(vh, w)

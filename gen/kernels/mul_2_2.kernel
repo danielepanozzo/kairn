@@ -1,0 +1,23 @@
+# DWTimesDW3: the product of two double-word numbers, with the plain products written as FMAs. The
+# underflow term t is provisional: the smallest valid t is settled by exhaustive tests first.
+kernel:        mul_2_2
+input:         x = x0 x1
+input:         y = y0 y1
+output:        z = z0 z1
+value:         x*y
+requires:      normalized x
+requires:      normalized y
+ensures:       normalized z
+ensures:       error z R c=4 k=2 t=4
+min_precision: 5
+theorem:       proofs/theories/Mul22.v mul_2_2_correct
+source:        JMP17 Alg. 12 (DWTimesDW3); bound from MR22
+license:       algorithm: published; proof: MIT
+status:        unverified
+
+(ch, cl1) = two_prod(x0, y0)
+tl0       = prod(x1, y1)
+tl1       = fma(x0, y1, tl0)
+cl2       = fma(x1, y0, tl1)
+cl3       = add(cl1, cl2)
+(z0, z1)  = fast_two_sum(ch, cl3)

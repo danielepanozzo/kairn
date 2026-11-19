@@ -1,0 +1,362 @@
+"""The generated C++, compiled with every compiler and flag set at hand, against the interpreter.
+
+For kernels without muladd there is exactly one correct result per request, so every build must
+be bit-identical to the interpreter. The compilers are $KAIRN_GEN_CXX (space-separated; empty to
+skip), by default those of `c++` and `g++-16` that exist.
+"""
+import hashlib
+import math
+import os
+import platform
+import shutil
+import struct
+import subprocess
+import sys
+import unittest
+from concurrent.futures import ThreadPoolExecutor
+from fractions import Fraction
+
+import common
+from kairn_gen import cpp, interp, ir
+
+ENV = os.environ.get('KAIRN_GEN_CXX')
+COMPILERS = ENV.split() if ENV is not None else [c for c in ('c++', 'g++-16') if shutil.which(c)]
+X86 = platform.machine().lower() in ('x86_64', 'amd64')
+BASE = ['-std=c++20', '-Wall', '-Wextra', '-Wpedantic', '-Werror'] + (['-mfma'] if X86 else [])
+MATRIX = [[opt, f'-ffp-contract={c}'] + rm
+          for opt in ('-O0', '-O2') for c in ('off', 'on', 'fast') for rm in ([], ['-frounding-math'])]
+N = common.size(2000, 150000)       # requests per kernel and format
+JOBS = common.JOBS
+
+RUNNER = os.path.join(common.TESTS, 'runner.cpp')
+INCLUDE = os.path.join(common.ROOT, 'include')
+
+
+def compile_(cmd):
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    return r.returncode, r.stderr
+
+
+def rosetta():
+    """Whether x86-64 binaries can be built and run here (macOS on Apple silicon)."""
+    if sys.platform != 'darwin' or X86 or 'c++' not in COMPILERS:
+        return False
+    return subprocess.run(['arch', '-x86_64', '/usr/bin/true'], capture_output=True).returncode == 0
+
+
+def lines_for(kernels, names, seed):
+    out = []
+    for name in names:
+        for fmt in ('binary64', 'binary32'):
+            for i, case in enumerate(common.requests(fmt, kernels[name], N, seed)):
+                limbs = ' '.join(interp.format_limb(common.to_value(x)) for x in case)
+                out.append((name, fmt, case, f'{name} {fmt} {limbs} #{i}'))
+    return out
+
+
+def expect(directory, cases, fused=True):
+    """Each request's interpreter output limbs, as floats."""
+    out = [None] * len(cases)
+    groups = {}
+    for i, (name, fmt, case, _) in enumerate(cases):
+        groups.setdefault((name, fmt), []).append(i)
+    for (name, fmt), idx in groups.items():
+        for i, o in zip(idx, common.interpret(directory, name, fmt, [cases[i][2] for i in idx], fused=fused)):
+            out[i] = o
+    return out
+
+
+def parse_completed(line):
+    return [float.fromhex(t) for t in line.split(' -> ')[1].split()]
+
+
+class Builds:
+    """Every configuration of the matrix, built in parallel into one directory."""
+
+    def __init__(self, tag, sources, extra=()):
+        self.dir = common.scratch(tag)
+        self.configs = []
+        for cxx in COMPILERS:
+            for flags in MATRIX:
+                self.configs.append((f'{cxx} {" ".join(flags)}', [cxx] + BASE + flags))
+        if rosetta():
+            for flags in (['-O2', '-ffp-contract=fast'], ['-O0', '-ffp-contract=off'],
+                          ['-O2', '-ffp-contract=on', '-frounding-math']):
+                self.configs.append((f'c++ -arch x86_64 -mfma {" ".join(flags)} (Rosetta)',
+                                     ['c++', '-arch', 'x86_64', '-mfma'] + BASE + flags))
+        jobs = []
+        for i, (label, cmd) in enumerate(self.configs):
+            exe = os.path.join(self.dir, f'runner{i}')
+            jobs.append(cmd + list(extra) + list(sources) + ['-o', exe])
+        with ThreadPoolExecutor(JOBS) as ex:
+            self.results = list(ex.map(compile_, jobs))
+        self.exes = [os.path.join(self.dir, f'runner{i}') for i in range(len(self.configs))]
+
+    def run(self, i, text):
+        r = subprocess.run([self.exes[i]], input=text, capture_output=True, text=True)
+        return r.returncode, r.stdout, r.stderr
+
+
+class FirstWave(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not COMPILERS:
+            raise unittest.SkipTest('no C++ compiler (set KAIRN_GEN_CXX)')
+        cls.ks = common.kernels()
+        cls.builds = Builds('cxx', [RUNNER], ['-I', INCLUDE, '-I', common.TESTS])
+
+    def test_matrix(self):
+        """Every build, every first-wave kernel, both limb types: bit-identical to the interpreter."""
+        for name in self.ks:
+            cases = lines_for(self.ks, [name], 'cxx')
+            want = expect(None, cases)
+            text = ''.join(c[3] + '\n' for c in cases)
+            reference = None
+            for i, (label, _) in enumerate(self.builds.configs):
+                with self.subTest(kernel=name, build=label):
+                    status, err = self.builds.results[i]
+                    self.assertEqual(status, 0, err)
+                    code, out, err = self.builds.run(i, text)
+                    self.assertEqual(code, 0, err)
+                    if out == reference:            # the same text as an already checked build
+                        continue
+                    got = out.splitlines()
+                    self.assertEqual(len(got), len(cases))
+                    bad = []
+                    for (_, _, _, request), w, line in zip(cases, want, got):
+                        self.assertTrue(line.startswith(request + ' -> '), line)
+                        g = parse_completed(line)
+                        if len(g) != len(w) or not all(common.same(x, y) for x, y in zip(g, w)):
+                            bad.append((line, [x.hex() for x in w]))
+                    self.assertEqual(bad[:5], [], f'{len(bad)} of {len(cases)} differ from the interpreter')
+                    reference = out
+
+    def test_runner_protocol(self):
+        text = '# comment\n\ntwo_sum binary64 0x1p+0 0x1p-60 #tag\nmul_2_1 binary32 0x1p+0 0x0p+0 0x1.8p+1\n'
+        code, out, err = self.builds.run(0, text)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(out, '# comment\n\ntwo_sum binary64 0x1p+0 0x1p-60 #tag -> 0x1p+0 0x1p-60\n'
+                              'mul_2_1 binary32 0x1p+0 0x0p+0 0x1.8p+1 -> 0x1.8p+1 0x0p+0\n')
+        for line, words in (('nope binary64 0x1p+0', 'unknown kernel'), ('two_sum binary64 1.0 0x1p+0', 'not a limb'),
+                            ('two_sum binary32 0x1.0000001p+0 0x1p+0', 'not a binary32'),
+                            ('two_sum binary32 0x1p+200 0x1p+0', 'not a binary32'),
+                            ('two_sum fp:5:-12:6 0x1p+0 0x1p+0', 'binary64 and binary32'),
+                            ('two_sum binary64  0x1p+0', 'single spaces'), ('two_sum binary64 0x1p+0', 'takes 2')):
+            code, out, err = self.builds.run(0, '# fine\n' + line + '\n')
+            self.assertEqual(code, 2, line)
+            self.assertIn('line 2:', err)
+            self.assertIn(words, err)
+
+
+def negates_a_fused_result(k, kernels):
+    """Whether the kernel negates the result of a fused operation or of a muladd.
+
+    On AArch64, GCC and Clang at -O2 turn -fma(a, b, c) into one fnmadd, which computes
+    (-ab) + (-c): when ab + c is exactly zero that is +0, where the negation gives -0. Clang does
+    it even through a sign-bit flip written with std::bit_cast. Only the sign of a zero changes,
+    which Kairn leaves unspecified, but such a kernel has no single bit-exact result.
+    """
+    prims = ir.prims(k, kernels)
+    defs = {p.dst: p.op for p in prims}
+    return any(p.op == 'neg' and defs.get(p.args[0].name) in ir.FUSED | {'muladd'}
+               for p in prims if not p.args[0].const)
+
+
+def same_but_zero_signs(x, y):
+    return common.same(x, y) or (x == 0 and y == 0)
+
+
+class EveryOperation(unittest.TestCase):
+    """The test kernels, which use every operation of the IR, printed and compiled the same way."""
+
+    @classmethod
+    def setUpClass(cls):
+        if not COMPILERS:
+            raise unittest.SkipTest('no C++ compiler (set KAIRN_GEN_CXX)')
+        cls.ks = common.kernels(common.TEST_KERNELS)
+        d = common.scratch('ops')
+        for name, text in (('prelude.hpp', cpp.prelude(cls.ks)), ('kernels.hpp', cpp.scalar(cls.ks)),
+                           ('runner_kernels.inc', cpp.runner_table(cls.ks))):
+            with open(os.path.join(d, name), 'w') as f:
+                f.write(text)
+        shutil.copy(RUNNER, d)     # so that its #include "runner_kernels.inc" finds these kernels
+        cls.builds = Builds('ops-build', [os.path.join(d, 'runner.cpp')],
+                            ['-I', d, '-DKAIRN_RUNNER_HEADER="kernels.hpp"'])
+
+    def test_negated_fused_results_are_known(self):
+        self.assertEqual({n for n, k in self.ks.items() if negates_a_fused_result(k, self.ks)},
+                         {'ops_muladd', 'ops_call'})
+
+    def test_matrix(self):
+        names = list(self.ks)
+        cases = lines_for(self.ks, names, 'ops')
+        fused = expect(common.TEST_KERNELS, cases, fused=True)
+        unfused = expect(common.TEST_KERNELS, cases, fused=False)
+        text = ''.join(c[3] + '\n' for c in cases)
+        loose = {n for n, k in self.ks.items() if negates_a_fused_result(k, self.ks)}
+        checked = {}         # digest of an output already compared line by line: its zero-sign count
+        for i, (label, cmd) in enumerate(self.builds.configs):
+            with self.subTest(build=label):
+                status, err = self.builds.results[i]
+                self.assertEqual(status, 0, err)
+                code, out, err = self.builds.run(i, text)
+                self.assertEqual(code, 0, err)
+                contract_off = '-ffp-contract=off' in cmd
+                digest = (contract_off, hashlib.sha256(out.encode()).digest())
+                if digest in checked:
+                    self.note(label, checked[digest])
+                    continue
+                bad, zero_signs = [], 0
+                for (name, _, _, request), f, u, line in zip(cases, fused, unfused, out.splitlines()):
+                    g = parse_completed(line)
+                    allowed = [u] if contract_off else [u, f]   # without contraction, two roundings
+                    if any(all(common.same(x, y) for x, y in zip(g, w)) for w in allowed):
+                        continue
+                    if name in loose and any(all(same_but_zero_signs(x, y) for x, y in zip(g, w))
+                                             for w in allowed):
+                        zero_signs += 1
+                        continue
+                    bad.append((line, [x.hex() for x in u], [x.hex() for x in f]))
+                self.note(label, zero_signs)
+                self.assertEqual(bad[:5], [], f'{len(bad)} of {len(cases)} differ from the interpreter')
+                checked[digest] = zero_signs
+
+    @staticmethod
+    def note(label, zero_signs):
+        if zero_signs:
+            print(f'\n  note: {label}: {zero_signs} results of kernels that negate a fused result differ '
+                  'from the interpreter in the sign of a zero only', file=sys.stderr)
+
+
+def bits(x, ctype):
+    return struct.unpack('<Q', struct.pack('<d', x))[0] if ctype == 'double' else \
+        struct.unpack('<I', struct.pack('<f', x))[0]
+
+
+def literal(x, ctype):
+    return f'{x.hex()}{"f" if ctype == "float" else ""}'
+
+
+class ConstantEvaluation(unittest.TestCase):
+    """two_prod in constant evaluation runs Dekker's product; static_assert checks its bits."""
+
+    H = float.fromhex
+    CASES = {
+        'double': [(H('0x1.123456789abcdp+3'), H('0x1.fedcba9876543p-7')), (1 + 2 ** -52, 1 - 2 ** -52),
+                   (3.0, 1 / 3), (H('0x1.fffffffffffffp+500'), H('0x1.fffffffffffffp+400')),
+                   (H('-0x1.5555555555555p-1'), H('0x1.0000000000001p+20')), (-0.0, 1.0),
+                   (2.0 ** -500, 2.0 ** -500)],
+        'float': [(H('0x1.234568p+3'), H('0x1.fedcbap-7')), (1 + 2 ** -23, 1 - 2 ** -23), (3.0, H('0x1.555556p-2')),
+                  (H('0x1.fffffep+40'), H('0x1.fffffep+30')), (-0.0, 1.0), (2.0 ** -70, 2.0 ** -70)],
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        if not COMPILERS:
+            raise unittest.SkipTest('no C++ compiler (set KAIRN_GEN_CXX)')
+        cls.ks = common.kernels()
+        cls.dir = common.scratch('ce')
+
+    def source(self):
+        lines = ['#include <bit>', '#include <cstdint>', '#include "kairn/gen/scalar.hpp"', '']
+        ce = interp.Machine(self.ks, consteval=True)
+        rt = interp.Machine(self.ks)
+        utype = {'double': 'std::uint64_t', 'float': 'std::uint32_t'}
+        for ctype, cases in self.CASES.items():
+            fmt = interp.parse_format('binary64' if ctype == 'double' else 'binary32')
+            for a, b in cases:
+                p, e = [common.to_float(v) for v in ce.run('two_prod', fmt, [common.to_value(a), common.to_value(b)])]
+                # A correct exact product: p = RN(ab), and p + e = ab whenever ab = 0 or
+                # |ab| >= 2^(2p-1) eta (checked here with rationals, independently of the kernels).
+                exact = Fraction(a) * Fraction(b)
+                self.assertEqual(Fraction(p), Fraction(common.rn(fmt.name, float(exact))) if exact else 0)
+                if exact == 0 or abs(exact) >= Fraction(2) ** (2 * fmt.p - 1 + fmt.qmin):
+                    self.assertEqual(Fraction(p) + Fraction(e), exact, (a, b))
+                lines.append(f'static_assert([] {{ {ctype} p = 0, e = 0; kairn::gen::two_prod({literal(a, ctype)}, '
+                             f'{literal(b, ctype)}, p, e); return std::bit_cast<{utype[ctype]}>(p) == {bits(p, ctype)}u '
+                             f'&& std::bit_cast<{utype[ctype]}>(e) == {bits(e, ctype)}u; }}());')
+            # The kernels without fused operations give their run-time bits in constant evaluation.
+            for name in ('two_sum', 'fast_two_sum', 'add_2_1', 'add_2_2', 'add_fast_2_2', 'add_fast_2_2_ts'):
+                k = self.ks[name]
+                for case in common.requests(fmt.name, k, 8, 'ce'):
+                    if not all(math.isfinite(x) for x in case):
+                        continue
+                    outs = [common.to_float(v) for v in rt.run(name, fmt, [common.to_value(x) for x in case])]
+                    if not all(math.isfinite(x) for x in outs):
+                        continue   # not a constant expression: tested apart
+                    decl = ' '.join(f'{ctype} o{i} = 0;' for i in range(len(outs)))
+                    args = ', '.join([literal(x, ctype) for x in case] + [f'o{i}' for i in range(len(outs))])
+                    check = ' && '.join(f'std::bit_cast<{utype[ctype]}>(o{i}) == {bits(x, ctype)}u'
+                                        for i, x in enumerate(outs))
+                    lines.append(f'static_assert([] {{ {decl} kairn::gen::{name}({args}); return {check}; }}());')
+        lines.append('int main() {}')
+        return '\n'.join(lines) + '\n'
+
+    def test_static_asserts(self):
+        path = os.path.join(self.dir, 'ce_test.cpp')
+        with open(path, 'w') as f:
+            f.write(self.source())
+        flag_sets = [[], ['-frounding-math'], ['-ffp-contract=fast'], ['-O2', '-ffp-contract=fast', '-frounding-math']]
+        jobs = [[cxx] + BASE + flags + ['-I', INCLUDE, '-fsyntax-only', path]
+                for cxx in COMPILERS for flags in flag_sets]
+        with ThreadPoolExecutor(JOBS) as ex:
+            for cmd, (status, err) in zip(jobs, ex.map(compile_, jobs)):
+                self.assertEqual(status, 0, f'{" ".join(cmd)}\n{err}')
+
+    def test_overflow_is_not_a_constant_expression(self):
+        # Dekker's product overflows in its split near the top of the range; in constant
+        # evaluation that is a compile error, never a wrong constant (two_prod_dekker's cone_exempt).
+        path = os.path.join(self.dir, 'ce_overflow.cpp')
+        with open(path, 'w') as f:
+            f.write('#include "kairn/gen/scalar.hpp"\n'
+                    'constexpr double e = [] { double p = 0, e = 0; '
+                    'kairn::gen::two_prod(0x1.fffffffffffffp+1023, 0x1p-1000, p, e); return e; }();\n'
+                    'int main() { return e == 0; }\n')
+        for cxx in COMPILERS:
+            status, err = compile_([cxx] + BASE + ['-I', INCLUDE, '-fsyntax-only', path])
+            self.assertNotEqual(status, 0, cxx)
+            self.assertIn('constant', err)
+
+    def test_kernels_with_fused_operations_are_not_constexpr(self):
+        for name in ('mul_2_2', 'mul_2_1', 'split', 'two_prod_dekker', 'two_sum'):
+            k = self.ks[name]
+            path = os.path.join(self.dir, f'not_constexpr_{name}.cpp')
+            args = ', '.join(['1.0'] * len(k.input_limbs) + [f'o[{i}]' for i in range(len(k.output_limbs))])
+            with open(path, 'w') as f:
+                f.write('#include "kairn/gen/scalar.hpp"\n'
+                        f'constexpr bool ok = [] {{ double o[{len(k.output_limbs)}] = {{}}; '
+                        f'kairn::gen::{name}({args}); return o[0] == o[0]; }}();\n'
+                        'static_assert(ok);\nint main() {}\n')
+            for cxx in COMPILERS:
+                status, err = compile_([cxx] + BASE + ['-I', INCLUDE, '-fsyntax-only', path])
+                if name == 'two_sum':
+                    self.assertEqual(status, 0, err)       # the control
+                else:
+                    self.assertNotEqual(status, 0, f'{cxx}: {name} is usable in constant evaluation')
+                    self.assertIn('constant', err)
+
+
+class Prelude(unittest.TestCase):
+    def test_x86_without_fma_is_refused(self):
+        if X86:
+            cxx = [COMPILERS[0]] if COMPILERS else None
+        elif sys.platform == 'darwin' and 'c++' in COMPILERS:
+            cxx = ['c++', '-arch', 'x86_64']
+        else:
+            cxx = None
+        if not cxx:
+            self.skipTest('no compiler for x86-64 here')
+        d = common.scratch('prelude')
+        path = os.path.join(d, 'p.cpp')
+        with open(path, 'w') as f:
+            f.write('#include "kairn/gen/scalar.hpp"\nint main() {}\n')
+        base = [b for b in BASE if b != '-mfma']
+        status, err = compile_(cxx + base + ['-mno-fma', '-I', INCLUDE, '-fsyntax-only', path])
+        self.assertNotEqual(status, 0)
+        self.assertIn('Kairn needs hardware FMA', err)
+        status, err = compile_(cxx + base + ['-mfma', '-I', INCLUDE, '-fsyntax-only', path])
+        self.assertEqual(status, 0, err)
+
+
+if __name__ == '__main__':
+    unittest.main()

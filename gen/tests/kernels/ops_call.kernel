@@ -1,0 +1,13 @@
+# Test kernel: calls, one of a kernel with a muladd and one with a single output.
+kernel:   ops_call
+input:    x = x0 x1
+input:    a
+output:   z = z0 z1
+value:    x*a
+ensures:  error z R c=1 k=1 t=0
+status:   unverified
+
+(u0, u1) = ops_muladd(x0, x1, a)
+v        = ops_one(u0, u1)
+z0       = add(v, a)
+z1       = sub(z0, x0)

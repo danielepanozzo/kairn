@@ -1,0 +1,18 @@
+# Test kernel: the FMA family and the exact sign operations, each visible as an output limb.
+kernel:   ops_fused
+input:    a
+input:    b
+input:    c
+output:   r = r0 f1 f2 f3 n m
+value:    a*b+c
+ensures:  error r R c=1 k=1 t=0
+status:   unverified
+
+n  = neg(a)
+m  = abs(b)
+f1 = fma(n, m, c)
+f2 = fms(a, b, c)
+f3 = fnma(a, c, b)
+s  = add(f2, f3)
+t  = sub(s, m)
+r0 = add(f1, t)

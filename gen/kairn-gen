@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""kairn-gen: Kairn's generator (docs/developer/architecture.md).
+
+    python3 gen/kairn-gen build     regenerate every generated file
+    python3 gen/kairn-gen check     fail if a committed generated file differs from what build writes
+    python3 gen/kairn-gen test      the generator's own tests (--full for the long sizes)
+    python3 gen/kairn-gen interp    the exact interpreter, as a runner: request lines on standard
+                                    input, completed lines on standard output
+"""
+import argparse
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
+# Nothing of a run is written into the repository, the test processes' bytecode included.
+sys.dont_write_bytecode = True
+os.environ['PYTHONDONTWRITEBYTECODE'] = '1'
+
+from kairn_gen import build, interp, ir  # noqa: E402
+
+
+def _load(kernel_dir=None):
+    try:
+        kernels, errors = build.load(ROOT, kernel_dir)
+    except ir.DescriptionError as e:
+        sys.exit(f'kairn-gen: {e}')
+    if errors:
+        for e in errors:
+            print(f'kairn-gen: refused: {e}', file=sys.stderr)
+        sys.exit(1)
+    return kernels
+
+
+def cmd_build(args):
+    kernels = _load()
+    for rel, what in build.write(ROOT, build.outputs(kernels)):
+        print(f'{what:9}  {rel}')
+    for line in build.summary(kernels):
+        print(line)
+
+
+def cmd_check(args):
+    kernels = _load()
+    problems = build.compare(ROOT, build.outputs(kernels))
+    for problem, rel in problems:
+        print(f'kairn-gen check: {rel}: {problem}', file=sys.stderr)
+    if problems:
+        print('kairn-gen check: run python3 gen/kairn-gen build and commit the result', file=sys.stderr)
+        sys.exit(1)
+    print(f'kairn-gen check: {len(build.outputs(kernels))} generated files are fresh')
+
+
+def cmd_test(args):
+    import unittest
+    os.environ['KAIRN_GEN_TEST_FULL'] = '1' if args.full else os.environ.get('KAIRN_GEN_TEST_FULL', '0')
+    if args.jobs:
+        os.environ['KAIRN_GEN_JOBS'] = str(args.jobs)
+    if args.no_cxx:
+        os.environ['KAIRN_GEN_CXX'] = ''
+    elif args.cxx is not None:
+        os.environ['KAIRN_GEN_CXX'] = args.cxx
+    tests_dir = os.path.join(HERE, 'tests')
+    sys.path.insert(0, tests_dir)
+    loader = unittest.TestLoader()
+    if args.pattern:
+        loader.testNamePatterns = [f'*{p}*' for p in args.pattern]
+    suite = loader.discover(tests_dir, pattern='test_*.py', top_level_dir=tests_dir)
+    result = unittest.TextTestRunner(verbosity=2 if args.verbose else 1).run(suite)
+    sys.exit(0 if result.wasSuccessful() else 1)
+
+
+def cmd_interp(args):
+    kernels = _load(args.kernels)
+    machine = interp.Machine(kernels, fused=args.muladd == 'fused', consteval=args.ce)
+    sys.exit(interp.serve(machine, sys.stdin, sys.stdout, sys.stderr))
+
+
+def main():
+    parser = argparse.ArgumentParser(prog='kairn-gen', description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = parser.add_subparsers(dest='command', required=True)
+    sub.add_parser('build', help='regenerate every generated file').set_defaults(run=cmd_build)
+    sub.add_parser('check', help='fail if a generated file is stale').set_defaults(run=cmd_check)
+    t = sub.add_parser('test', help="the generator's own tests")
+    t.add_argument('--full', action='store_true',
+                   help='a few hundred thousand cases per kernel instead of a few thousand')
+    t.add_argument('--cxx', help='space-separated C++ compilers to test (default: c++ and g++-16, '
+                                 'those that exist; or $KAIRN_GEN_CXX)')
+    t.add_argument('--no-cxx', action='store_true', help='skip the tests that compile C++')
+    t.add_argument('-j', '--jobs', type=int, help='processes and compilers at once (default: all cores, '
+                                                   'or $KAIRN_GEN_JOBS)')
+    t.add_argument('-k', dest='pattern', action='append', help='only tests whose name contains this')
+    t.add_argument('-v', '--verbose', action='store_true')
+    t.set_defaults(run=cmd_test)
+    i = sub.add_parser('interp', help='the exact interpreter, as a runner of the line protocol')
+    i.add_argument('--muladd', choices=('fused', 'unfused'), default='fused',
+                   help='how each muladd executes (default fused)')
+    i.add_argument('--ce', action='store_true',
+                   help='as in C++ constant evaluation: kernels run their constant-evaluation '
+                        'variant, prod is a plain product, muladd is unfused')
+    i.add_argument('--kernels', help='a directory of kernel descriptions other than gen/kernels')
+    i.set_defaults(run=cmd_interp)
+    args = parser.parse_args()
+    args.run(args)
+
+
+if __name__ == '__main__':
+    main()
