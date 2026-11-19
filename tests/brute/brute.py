@@ -1219,6 +1219,7 @@ def entry_stats(keys, p):
         x = {"label": e0["label"], "kind": e0["kind"],
              "applicable": sum(e["applicable"] for e in es),
              "failures": sum(e["failures"] for e in es)}
+        best = None
         if e0["kind"] == "error":
             best = None
             a_best = None
@@ -1259,6 +1260,16 @@ def entry_stats(keys, p):
             x["minima"] = {n: [frac_dec(r), c] for n, (r, c) in sorted(minima.items())}
         if counts:
             x["counts"] = dict(sorted(counts.items()))
+        # Whether the extreme is the claim itself, decided exactly: an error equal to its bound,
+        # an upper bound exceeding the value by exactly the claimed number of gaps.
+        if e0["kind"] == "error" and best is not None:
+            x["attains_claim"] = best[0][0] == best[0][1]
+        elif e0["kind"] == "upper" and "excess in gaps" in maxima:
+            g = re.search(r"gaps=(\d+)(?:/(\d+))?", e0["label"])
+            if g:
+                gn, gd = int(g.group(1)), int(g.group(2) or 1)
+                r = maxima["excess in gaps"][0]
+                x["attains_claim"] = r[0] * gd == gn * r[1]
         out.append(x)
     return out
 
@@ -1476,6 +1487,8 @@ def combine_entries(per_runner):
                 counts[name] = counts.get(name, 0) + n
         if counts:
             x["counts"] = counts
+        if any("attains_claim" in es[j] for _, es in per_runner):
+            x["attains_claim"] = any(es[j].get("attains_claim") for _, es in per_runner)
         out.append(x)
     return out
 
@@ -1575,6 +1588,56 @@ def cmd_report(a):
                                                    d["interp"]["enumerations"]]:
             if k not in kernels:
                 kernels.append(k)
+    # How close each bound came: the extreme of each error, upper and encloses entry over the
+    # compiled runs and over the interpreter's, every kernel in one table, closest first.
+    rank = []
+    for k in kernels:
+        per = {}
+        for d in docs:
+            for fmt, s in d["compiled"]["kernels"].get(k, {}).items():
+                for e in s["entries"]:
+                    per.setdefault(e["label"], {"kind": e["kind"], "c": [], "i": []})["c"].append(e)
+            for r in d["interp"]["enumerations"]:
+                if r["kernel"] == k:
+                    for e in r.get("entries", []):
+                        per.setdefault(e["label"], {"kind": e["kind"], "c": [], "i": []})[
+                            "i"].append(dict(e, _fmt=r["format"]))
+        for label, x in per.items():
+            if x["kind"] == "error":
+                get, sign = (lambda e: e.get("max_ratio")), 1
+            elif x["kind"] == "upper":
+                get, sign = (lambda e: e.get("maxima", {}).get("excess in gaps")), 1
+            elif x["kind"] == "encloses":
+                get, sign = (lambda e: e.get("minima", {}).get("slack in gaps of the radius")), -1
+            else:
+                continue
+            c = best_of([get(e) for e in x["c"]], sign)
+            i = best_of([get(e) and get(e)[:2] + [e["_fmt"]] for e in x["i"]], sign)
+            ca = any(e.get("attains_claim") for e in x["c"])
+            ia = any(e.get("attains_claim") for e in x["i"])
+            rank.append((x["kind"], k, label, c and c + [ca], i and i + [ia]))
+    for kind, title, note in (
+            ("error", "Largest error over its bound", "1 is the bound"),
+            ("upper", "Largest excess of an upper bound, in gaps",
+             "the claim is the `gaps=` of the entry"),
+            ("encloses", "Smallest slack of a Ball radius, in gaps of the radius",
+             "below 1, a radius one unit in the last place smaller would not enclose")):
+        rs = [r for r in rank if r[0] == kind]
+        if not rs:
+            continue
+        sign = -1 if kind == "encloses" else 1
+        rs.sort(key=lambda r: -sign * max(
+            [decimal.Decimal(v[0]) * sign for v in (r[3], r[4]) if v] or [decimal.Decimal(0)]))
+        w("")
+        w("<!-- %s: %s -->" % (title, note))
+        w("| Kernel | Claim | Compiled | Interpreter (format) |")
+        w("|---|---|---|---|")
+        for _, k, label, c, i in rs:
+            w("| `%s` | `%s` | %s | %s |" % (
+                k, label.replace("|", "\\|"),
+                (short(c[0]) + (" (the claim)" if c[-1] else "")) if c else "-",
+                ("%s (`%s`)%s" % (short(i[0]), i[2], " (the claim)" if i[-1] else "")) if i
+                else "-"))
     for k in kernels:
         rows = []           # (title, counts, entries, guards)
         for fmt in ("binary64", "binary32"):
@@ -1604,6 +1667,9 @@ def cmd_report(a):
                     for c, m in s["entries"][j].get("counts", {}).items():
                         cs[c] = cs.get(c, 0) + m
                 x["counts"] = cs
+                if any("attains_claim" in s["entries"][j] for _, s in slots):
+                    x["attains_claim"] = any(s["entries"][j].get("attains_claim")
+                                             for _, s in slots)
                 merged.append(x)
             ok = all(s["guards"] == "ok" for _, s in slots)
             rows.append(("`%s`, %d runners on %d machine%s" % (fmt, nrun, len(slots),
@@ -1640,7 +1706,9 @@ def cmd_report(a):
                     cells.append(counts_text(e.get("counts", {})) if compiled else "")
                     continue
                 v = col_value(e, field, sub)
-                cells.append(short(v[0]) if v else "-")
+                mark = " (the claim)" if (e.get("attains_claim") and field in ("max_ratio",
+                                                                                "maxima")) else ""
+                cells.append(short(v[0]) + mark if v else "-")
                 if v and field != "observed_c" and not (sub and "enclosing" in sub):
                     lines.append((title, name, v))
             w("| %s%s | %s | %s | %s | %s |" % (
