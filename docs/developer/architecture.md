@@ -92,20 +92,23 @@ of the format) or masks.
 | `fma a b c`, `fms a b c`, `fnma a b c` | $\mathrm{RN}(ab + c)$, $\mathrm{RN}(ab - c)$, $\mathrm{RN}(-ab + c)$: one rounding | always a fused operation |
 | `prod a b` | $\mathrm{RN}(ab)$ | `fma(a, b, +0.0)`: the *opaque product* |
 | `muladd a b c` | $\mathrm{RN}(ab + c)$ **or** $\mathrm{RN}(\mathrm{RN}(ab) + c)$, the compiler's choice | `a * b + c`; its theorem covers both |
-| `lt`, `le`, `eq` | comparison, giving a mask | comparison |
+| `lt`, `le`, `eq` | comparison, giving a mask | comparison; `lt(a, b)` and `le(a, b)` are written `b > a` and `b >= a`, which one compiler's constant evaluator gets right on a NaN where it gets `<` and `<=` wrong |
 | `and`, `or`, `not` | on masks | |
 | `select m a b` | $a$ if $m$, else $b$ | conditional move or blend, never a branch |
 | `succ a`, `pred a` | the neighbors of $a$ in the format | |
-| `guard a` | $\mathrm{RN}(a + 0)$, which is $a$ (a zero comes out positive) | `a + T(0)`: see rule R3 |
+| `guard a` | $\mathrm{RN}(a + 0)$, which is $a$ (a zero comes out positive) | `a + 0.0`: see rule R3. In constant evaluation, where nothing is fused, the operand itself |
 | `const name` | a constant that depends on the format (for example the splitter $2^{\lceil p/2\rceil} + 1$) | a literal |
-| `0`, `const inf` | the literal zero, and $+\infty$ (used by the fix-ups of the non-finite layer only) | literals |
+| `0`, `const inf`, `const nan` | the literal zero, $+\infty$ and a quiet NaN (used by the non-finite layer only) | a literal; `std::numeric_limits` |
+| `const up(EXPR)` | the smallest number of the format not below `EXPR`, an exact expression over $u$, $\eta$, integers and the constants `unit(K)`, `tiny(K)` of a proved kernel's bound | an exact literal per type |
+| `times_inf a` | $a \times \infty$: a NaN for a NaN or a zero, otherwise the infinity with the sign of $a$ | a plain multiplication by infinity; its result may only be compared or selected |
 | `call K args` | another kernel | inlined in C++, kept as a call in Rocq |
 
 Rules the generator enforces on every kernel, and refuses to generate otherwise:
 
 1. Single assignment; every use after its definition; no unused value.
 2. **R1.** The result of `prod` is the only product-like value that may be an operand of `add`,
-   `sub`, or the addend of an FMA. There is no plain multiplication in the run-time IR.
+   `sub`, or the addend of an FMA. There is no plain multiplication in the run-time IR, except
+   `times_inf`, which is exact and whose result is only compared or selected.
 3. **R2.** No kernel output is an expression the compiler could fuse into the caller: outputs are
    results of `add`, `sub`, `fma`-family, `prod`, `select`, `neg`, `abs`, `succ`, `pred`, never of
    `muladd`.
@@ -165,7 +168,10 @@ variant has its own statement and proof.
 C++ emission rules: non-template functions, one overload per limb type; one operation per
 statement; kernels of at most two limbs are force-inlined. A kernel is `constexpr` when it
 contains no fused operation or names a constant-evaluation variant; a kernel that is not yet
-`constexpr` is listed as such in the generator's output.
+`constexpr` is listed as such in the generator's output. `guard` and `times_inf` dispatch on
+`__builtin_is_constant_evaluated()`, so the full kernels of the additions and the constructors
+are `constexpr`; the product kernels are not yet, because their cores contain fused operations
+and only `two_prod` has a constant-evaluation variant.
 
 ## Kernels of the first wave
 
