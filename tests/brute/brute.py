@@ -307,8 +307,9 @@ def interp_plan(kernels, only=None):
         elif shape in SHAPES:
             quick, extra = SHAPES[shape]
             _, qmin, qmax = parse_fmt(quick)
+            # Precision 1 too, which the oracle reads since commit 2bfe39d; and 2 and 3 then.
             p0 = max(pmin, 2)
-            for p in (p0, p0 + 1):
+            for p in ([1] if pmin == 1 else []) + [p0, p0 + 1]:
                 if extended:
                     entries.append((ieee_shaped(p, qmax - qmin + 1), [], None))
                 else:
@@ -1321,6 +1322,8 @@ def cmd_run(a):
             log("PLAN ERROR: %s" % e)
         if errors:
             return 1
+        if a.interp_match:
+            plan = [e for e in plan if re.search(a.interp_match, "%s %s" % (e["kernel"], e["format"]))]
         plan = sized_plan(plan, os.path.join(work, "sizes.json"))
         if a.interp_bins:
             which, load = bins_of(plan, a.interp_bins)
@@ -1337,6 +1340,7 @@ def cmd_run(a):
               "driver_sha256": file_sha256(__file__),
               "fixup_forms": a.fixup_forms, "machine": machine_info(a.cpus),
               "interp_bins": a.interp_bins, "interp_take": a.interp_take,
+              "interp_match": a.interp_match,
               "builds": [{"name": b, "compiler": compiler_of(os.path.join(work, "builds", b))}
                          for b in sorted({r["build"] for r in runners})]}
     with open(os.path.join(work, "runs.jsonl"), "a", encoding="utf-8") as f:
@@ -1716,7 +1720,8 @@ def cmd_collect(a):
                                if "compiled" in r["parts"]}),
         "runs": [{"started": r["started"], "budget": r["budget"], "jobs": r["jobs"],
                   "parts": r["parts"], "cpus": r["cpus"], "nice": r["nice"],
-                  "interp_bins": r.get("interp_bins"), "interp_take": r.get("interp_take")}
+                  "interp_bins": r.get("interp_bins"), "interp_take": r.get("interp_take"),
+                  "interp_match": r.get("interp_match")}
                  for r in starts],
         "ends": [{"started": r["started"], "finished": r["finished"], "wall": r["wall"],
                   "status": r["status"], "findings": r["findings"]} for r in ends],
@@ -2049,6 +2054,7 @@ def cmd_report(a):
                     continue
                 if v and field == "max_ratio" and near_one(v[0], e.get("attains_claim")):
                     cells.append("1 - ε, ε < 10⁻⁹")
+                    lines.append((title, name, v))
                     continue
                 cells.append(short(v[0]) + mark if v else "-")
                 if v and field != "observed_c" and not (sub and "enclosing" in sub):
@@ -2099,7 +2105,10 @@ def cmd_report(a):
                     # The enumeration, restrictions included: the tag's index is within it.
                     where = " (%s)" % re.sub(r" \((p =|quick|another|the quick).*$", "",
                                              t.replace("`", ""))
-                w("%s, %s %s%s:" % (name, "compiled" if compiled else "interpreter", short(v[0]),
+                value = short(v[0])
+                if name.startswith("largest error") and v[0] != "1" and near_one(v[0], False):
+                    value = "1 - ε, ε < 10⁻⁹"
+                w("%s, %s %s%s:" % (name, "compiled" if compiled else "interpreter", value,
                                     where))
                 w("  " + v[1])
             w("```")
@@ -2162,17 +2171,23 @@ def report_aim(docs, w):
     judged = sorted(v[1] for v in per.values())
     distinct = sorted(v[2] for v in per.values())
     below = sorted((v[0], k, f) for (k, f), v in per.items() if v[0] < AIM)
+    below_j = sorted((v[1], k, f) for (k, f), v in per.items() if v[1] < AIM)
     w("")
     w("<!-- The aim: 10^8 cases per kernel and format, summed over the machines and their "
       "runners -->")
     w("Per kernel and format, summed over the machines and their runners: %s to %s cases "
       "(median %s), of which %s to %s judged (a finite result, or any result in the extended "
-      "domain), from %s to %s distinct cases. %d of %d kernel and format pairs reach 10^8 "
+      "domain), from %s to %s distinct cases. %d of %d kernel and format pairs reach $10^8$ "
       "cases%s." % (fmt_int(cases[0]), fmt_int(cases[-1]), fmt_int(cases[len(cases) // 2]),
                     fmt_int(judged[0]), fmt_int(judged[-1]), fmt_int(distinct[0]),
                     fmt_int(distinct[-1]), len(per) - len(below), len(per),
                     ("; the fewest: " + ", ".join("`%s` `%s` %s" % (k, f, fmt_int(n))
                                                   for n, k, f in below[:5])) if below else ""))
+    w("")
+    w("%d of %d reach $10^8$ judged results%s." % (
+        len(per) - len(below_j), len(per),
+        ("; below it: " + ", ".join("`%s` `%s` %s" % (k, f, fmt_int(n)) for n, k, f in below_j))
+        if below_j else ""))
 
 
 def report_agreement(docs, w):
@@ -2349,6 +2364,8 @@ def main(argv=None):
                    help="split the plan into this many bins of about equal size ...")
     r.add_argument("--interp-take", default="", help="... and run these bins (e.g. 0-6)")
     r.add_argument("--kernels", help="only these kernels (comma-separated)")
+    r.add_argument("--interp-match", help="only the enumerations whose 'KERNEL FORMAT' matches this "
+                                          "regular expression (before --interp-bins)")
     r.add_argument("--cpus", help="CPU numbers to run on, e.g. 0-31,64-95 (Linux, Windows)")
     r.add_argument("--nice", type=int, default=0, help="lower the priority (POSIX nice; on "
                                                        "Windows, below normal)")

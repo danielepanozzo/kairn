@@ -45,6 +45,14 @@ class Plan(unittest.TestCase):
         self.assertEqual(brute.fitting_format("two_prod_dekker", "fp:7:-6:-5", True),
                          "fp:7:-9:-2")
 
+    def test_precision_one_is_planned(self):
+        # The oracle reads formats of precision 1: a kernel whose claims hold from precision 1
+        # gets an enumeration of precision 1, then 2 and 3.
+        for k in self.kernels:
+            if k.get("min_precision") == 1:
+                ps = {brute.parse_fmt(e["format"])[0] for e in self.plan if e["kernel"] == k["name"]}
+                self.assertTrue({1, 2, 3} <= ps, (k["name"], ps))
+
     def test_extended_formats_have_the_ieee_shape(self):
         for e in self.plan:
             if e["domain"] == "extended":
@@ -68,7 +76,7 @@ class FixupForms(unittest.TestCase):
             self.assertEqual(brute.default_fixup_call("MSVC 19.52"), 0)
 
     def test_flags_keep_the_form(self):
-        cmd = "/usr/bin/g++ -DKAIRN_GEN_FIXUP_CALL=1 -O3 -I/home/x/include -o a.o -c b.cpp"
+        cmd = "/usr/bin/g++ -DKAIRN_GEN_FIXUP_CALL=1 -O3 -I/opt/src/include -o a.o -c b.cpp"
         self.assertEqual(brute.build_flags(cmd), "-DKAIRN_GEN_FIXUP_CALL=1 -O3")
 
 
