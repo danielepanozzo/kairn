@@ -8,7 +8,7 @@ stack cookie"). Run from the repository root in a Visual Studio x64 developer pr
       /GS and once with /GS-, disassembles the objects with dumpbin, and reports for every function
       whether it reads __security_cookie and calls __security_check_cookie, and its number of
       instructions.
-  gs_probe.py objects OBJ... [--prefix kb_a64_] [--json FILE]
+  gs_probe.py objects OBJ... [--labels A,B] [--prefix kb_a64_] [--json FILE]
       The same report for objects compiled elsewhere (kairn-bench's api.cpp.obj), for the functions
       whose names start with the prefix.
   gs_probe.py isolate --json FILE
@@ -139,6 +139,7 @@ def main():
     p.add_argument('what', choices=['probe', 'objects', 'isolate', 'fix'])
     p.add_argument('objs', nargs='*')
     p.add_argument('--prefix', default='')
+    p.add_argument('--labels', help='objects: the names of the objects in the report, comma-separated')
     p.add_argument('--vcvars')
     p.add_argument('--workdir', default='.')
     p.add_argument('--commit', default='unknown')
@@ -173,9 +174,9 @@ def main():
         obj = os.path.join(args.workdir, 'gs_probe_by_reference.obj')
         data['results']['/GS, by reference'] = compile_and_read(src, obj, ['/DGS_PLAIN'], env, 'gs_', include=dst)
     elif args.what == 'objects':
-        for obj in args.objs:
-            data['results'][os.path.basename(obj)] = functions(
-                run([tool('dumpbin', env), '/disasm:nobytes', obj], env), args.prefix)
+        labels = args.labels.split(',') if args.labels else [os.path.basename(o) for o in args.objs]
+        for label, obj in zip(labels, args.objs):
+            data['results'][label] = functions(run([tool('dumpbin', env), '/disasm:nobytes', obj], env), args.prefix)
     else:
         src = os.path.join(ROOT, 'bench', 'gs_isolate.cpp')
         text = open(src).read()
