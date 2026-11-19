@@ -20,8 +20,10 @@ python3 oracle/kairn-oracle selftest [--quick]               the oracle's own te
 ```
 
 Claims are read from `gen/claims.json` of this repository unless `--claims FILE` says otherwise.
-The selftest uses its own hand-written fixture, `oracle/selftest/claims-wave1.json`, so that it
-does not depend on the generator.
+The selftest uses its own hand-written fixtures, `oracle/selftest/claims-wave1.json` and
+`oracle/selftest/claims-wave2.json` (the kernels of [Milestone 1
+statements](../docs/developer/design/milestone1.md)), so that it does not depend on the
+generator.
 
 ## gen
 
@@ -54,14 +56,32 @@ more often); `--strata a,b` restricts it. Each line is tagged `#STRATUM:INDEX`.
 The second limb of a 2-limb operand is mostly within a few binades of half an ulp of the first
 (where it carries a full second word) and otherwise anywhere below.
 
+The strata above are those of kernels whose value is `NAME op NAME` (or one input) and whose
+claims use the first-wave kinds, which includes the subtractions.  The other kernels of the
+second wave get their own generator (`gen2.py`): each input has a role (a normalized 2-limb
+operand, a limb, a radius for `nonneg()`, a power of two for `power_of_two()`, a mask) and
+each kernel a family from its claims, with the strata `uniform`, `underflow`, `overflow`,
+`zero`, `pow2` and `extreme` as above, plus:
+
+| Family | Kernels | Strata of its own |
+|---|---|---|
+| unary | `neg_2`, `abs_2`, conversions | `halfgap`: $x_1 = \pm\frac12$ gap of $x_0$ on either side, at powers of two too (where the gap below is half the gap above) |
+| compare | `predicate` claims | `equal`; `lastplace` (operands that differ in the last place of the second limb only, or a one-limb operand against the same leading limb and the smallest tail); `leadequal`; `neighbor` ($y_0 = $ succ or pred of $x_0$); `straddle` (opposite signs near zero, zeros of both signs); `halfgap` |
+| step | `upper` claims | `nonneg`; `tie` (sums $N2^E$ and products, factored by small primes, with $N$ odd at the rounding position, below and above powers of two and in the subnormal range); `close` |
+| scale | a `power_of_two()` input | `into` and `outof` (scalings into and out of the subnormal range); `halfscaled` ($c x_1$ rounding to exactly half a gap of $c x_0$) |
+| ball | `encloses` claims | `radii` (zero, $\eta$, subnormal, tiny, about an ulp of the center, comparable, much wider than the center, huge); `wide` (small centers, wide radii); `exact` (zero radii, inexact centers); `centerpow2` (centers whose sum or product is a power of two); `cancel` |
+
 **Exhaustive mode** (`--exhaustive`) enumerates the product of the operand domains: every number
-of the format for a 1-limb input (one zero), every normalized pair for a 2-limb input. Case $i$ is
-decoded from $i$ directly. A coupled requirement (`abs_ge`) is applied by skipping the indices it
-excludes. Restrictions shrink a domain:
+of the format for a 1-limb input (one zero), every normalized pair for a 2-limb input, 0 and 1
+for a mask; `nonneg()` and `power_of_two()` remove the operands they exclude from the domain of
+their input. Case $i$ is decoded from $i$ directly. A coupled requirement (`abs_ge`) is applied
+by skipping the indices it excludes. Restrictions shrink a domain:
 
 - `NAME.lead=LO:HI` keeps operands whose leading limb is in binades LO to HI
   ($2^{LO} \le |x_0| < 2^{HI+1}$; this excludes zero);
-- `NAME.sign=+` or `-` keeps $x_0 \ge 0$ or $x_0 \le 0$.
+- `NAME.sign=+` or `-` keeps $x_0 \ge 0$ or $x_0 \le 0$;
+- `NAME.in=V1/V2/...` keeps operands whose leading limb is one of the listed literals (radii
+  of the Ball kernels, for example `rx.in=0x0p+0/0x1p-3/0x1p-1`).
 
 The generator writes a header and a trailer comment around its lines:
 
@@ -85,22 +105,42 @@ For each line, in this order:
    right number of limbs on both sides. Otherwise: **failure**.
 2. If the format's precision is below the kernel's `min_precision`, the line is **out of scope**
    and not judged (`--ignore-min-precision` judges it anyway).
-3. **Requirements**: every input limb must be a finite number of the format, then every
-   `requires` entry must hold (`normalized(x)`: $x_i = \mathrm{RN}(x_i + x_{i+1})$;
-   `abs_ge(a, b)`: $|a| \ge |b|$ as values). Otherwise the line is **invalid**: counted, shown,
-   never passed.
+3. **Requirements**: every input limb must be a finite number of the format and every mask
+   input `0` or `1`, then every `requires` entry must hold (`normalized(x)`:
+   $x_i = \mathrm{RN}(x_i + x_{i+1})$; `abs_ge(a, b)`: $|a| \ge |b|$ as values; `nonneg(r)`:
+   $r \ge 0$; `power_of_two(c)`: $c = 2^n$ for an integer $n$, so positive). Otherwise the line
+   is **invalid**: counted, shown, never passed.
 4. **Non-finite results**: if output limb 0 is not finite, the line is **non-finite** and not
    judged. If limb 0 is finite but a lower limb is not, it is counted as non-finite too (column
    "in a lower limb only"): under this wave's hypothesis that no operation overflows such a case is
    outside every statement, but it shows up separately because the library invariant says it
    should not happen for k-number results. Either kind is also **suspicious** when every input
-   limb, every input value and the exact value are below $\Omega/4$. Suspicious cases are listed;
-   they fail the run only with `--fail-on-suspicious`.
-5. Every output limb must be a number of the format. Otherwise: **failure**.
+   limb, every input value and the exact value (for `encloses`, both ends of the set) are below
+   $\Omega/4$. Suspicious cases are listed; they fail the run only with `--fail-on-suspicious`.
+   A line is also non-finite, whatever its output, when a `rounded` entry's exact rounding in a
+   range unbounded above exceeds $\Omega$, or an `upper` entry's smallest upper bound does
+   (counted again as "with an exact result beyond Omega").
+5. Every output limb must be a number of the format and every mask output `0` or `1`.
+   Otherwise: **failure**.
 6. Every `ensures` entry: `normalized` (the invariant on the named outputs), `leading_rounded`
    (output limb 0 equals $\mathrm{RN}(\text{value})$, signs of zero ignored), `error`
    ($|\text{output} - \text{value}| \le \mathrm{rel}\cdot\rho + \mathrm{abs}$, skipped when its
-   `when` condition is false). A line with any violated entry is a **failure**.
+   `when` condition is false), and those of the second wave:
+    - `rounded`: the output equals the value rounded to nearest (ties to even), down or up, with
+      gradual underflow;
+    - `upper`: $\text{value} \le o$ and $o - \text{value} \le \mathrm{gaps}\cdot(o -
+      \mathrm{pred}(o))$, with pred in the format unbounded above (so the gap below $-\Omega$
+      is $\mathrm{ulp}(\Omega)$);
+    - `predicate`: the mask equals the truth of `rel` between the exact values of the two `args`;
+    - `encloses`: the set is evaluated exactly at every corner of the box of the balls
+      ($[c - r, c + r]$ with $c$ the exact sum of the center's limbs); because every ball occurs
+      once in a set made of sums, differences, products, scalars and negations, the set is
+      multilinear in the balls and its range is the interval between the smallest and the largest
+      corner value. The smallest radius around the returned center that encloses it,
+      $r_{\min} = \max(c_z - \mathrm{lo}, \mathrm{hi} - c_z)$, must be at most the returned
+      radius. A ball with a negative radius is empty and the entry holds (counted as such).
+
+   A line with any violated entry is a **failure**.
 
 The exit status is 0 when nothing failed; 1 on any failure, stream error or kernel whose claims
 cannot be read; 2 on a usage error or a claims file that cannot be read at all. `--expect-valid`
@@ -123,15 +163,43 @@ and failures; for `error` entries:
 - The profile of (a) by distance $D = \lfloor \log_2(u^k\rho/\eta) \rfloor$ (`--verbose`), from
   which (a) for any other $F$ can be read.
 
+For the kinds of the second wave, the statistics that show a loose or a tight claim:
+
+- `upper`: the largest excess $(o - \text{value})/(o - \mathrm{pred}(o))$ in gaps, over all
+  cases and over the cases whose operands are all nonnegative, with the lines that attain them,
+  and a histogram of the excess by quarters of a gap;
+- `encloses`: the distribution of $r_z / r_{\min}$ (counts of ratio 1 and of $r_z/r_{\min} - 1$
+  in $[2^k, 2^{k+1})$, and of $r_{\min} = 0$), its largest and smallest values, and the smallest
+  slack $(r_z - r_{\min})/(r_z - \mathrm{pred}(r_z))$ in gaps of the radius: below 1, a radius one
+  unit in the last place smaller would no longer enclose;
+- `rounded`: counts of exact cases and of inexact ones (ties, for nearest; equal to or different
+  from the rounding to nearest, for down and up), so that a conversion test that never steps is
+  noticed;
+- `predicate`: counts of true and false outcomes.
+
 `--json FILE` writes all of this, with exact fractions as decimal strings; `check --merge A.json
 B.json ...` merges summaries (counts add, maxima combine, coverage ranges unite).
 
 ### Claims as read
 
-- `value` is `NAME+NAME`, `NAME-NAME` or `NAME*NAME` over the inputs, or a bare input `NAME`
-  (the outputs approximate that input, as for `split`; an addition to architecture.md's list);
-  `requires` is `normalized(NAME)` or `abs_ge(NAME, NAME)`; `ensures` kinds are `normalized`,
-  `error` and `leading_rounded`; `when` is `null` or `product_large`.
+- `value` is an expression over the limb inputs: names, `+`, `-`, `*`, unary minus, `abs( )`
+  and parentheses (a bare input name, as for `split`, is the identity). It may be absent or
+  `null` when no entry uses it (comparisons, balls). It is compiled once per format into
+  integer arithmetic at scales known in advance (a sum of limbs at scale $\eta$, a product of
+  two at $\eta^2$), so that the exact value is still a Python integer.
+- Inputs and outputs are limb groups or masks (`"type": "mask"`, one slot, `0` or `1`).
+- `requires` is `normalized(NAME)`, `abs_ge(NAME, NAME)`, `nonneg(NAME)` or
+  `power_of_two(NAME)`; `ensures` kinds are `normalized`, `error`, `leading_rounded`, `rounded`
+  (`of` one 1-limb output, `mode`), `upper` (`of` one 1-limb output, `gaps` a rational),
+  `predicate` (`of` one mask, `rel`, `args` two expressions over the inputs) and `encloses`
+  (`center` and `radius` outputs, the radius of one limb; `balls` mapping each ball name to
+  `{"center": INPUT, "radius": INPUT}` or `[INPUT, INPUT]`, the radius of one limb; `set` an
+  expression over ball names and the other limb inputs, in which every ball occurs exactly once
+  and `abs` does not, because only then are the corners of the box enough).
+- `when` is `null`, `product_large`, or `limb_products_normal`: every product of a limb of one
+  factor of the value by a limb of the other is zero or at least $2^{p-1}\eta$ in magnitude
+  (the exactness condition of `mul_pow2_2`, which architecture.md's vocabulary cannot express;
+  proposed as an addition).
 - Anything else is never ignored. A kernel whose claims cannot be read (unknown vocabulary, a
   listed instance that disagrees with its `c` and `t`, a name listed twice) is set aside with the
   reason: the report starts with a CLAIMS ERROR line, its lines fail, and the run fails; the other
@@ -140,9 +208,11 @@ B.json ...` merges summaries (counts add, maxima combine, coverage ranges unite)
   validation of a claims file.
 - `of` names one output; a list of names, or `"s+e"`, concatenates outputs in that order, which is
   how a pair of 1-limb results `(s, e)` is read as one 2-limb number. Absent means all outputs.
-- `instances[FORMAT]` is one `{rel, abs}` object when the kernel has one `error` entry, otherwise a
-  list in the order of the `error` entries; an `instances` object inside an `error` entry is
-  accepted too.
+- `instances` is a list with one object per `error` entry, in their order, each mapping a format
+  to its `{rel, abs}` (the second-wave form; `[]` for a kernel without `error` entries). The
+  first-wave form is still read: an object in which `instances[FORMAT]` is one `{rel, abs}`
+  when the kernel has one `error` entry, otherwise a list in the order of the `error` entries;
+  an `instances` object inside an `error` entry is accepted too.
 - The verdict uses the listed instance. For a format that is not listed (toy formats), `rel` and
   `abs` are evaluated exactly from `c` (a rational expression in `u`: integers, `u`, `+ - * /`,
   `^` or `**`, parentheses), `k` and `t`, and the report says so. Where both exist they must
@@ -171,11 +241,25 @@ slowest). In-process `brute` on toy formats does gen, reference runner and check
 
 ## refrun and the C++ runner
 
-`refrun` evaluates the first-wave kernels (and `split`), as written in architecture.md, for any
-format. It avoids the checker's code on purpose: its rounding is computed from the two neighbors of the exact
-value (the checker shifts and inspects the dropped bits), and where the format fits in binary64 it
-reads limbs with `float.fromhex` and prints them with `float.hex`. `--list-variants` shows the
-injected errors.
+`refrun` evaluates the first-wave kernels (and `split`), as written in architecture.md, and the
+second-wave and Ball kernels, as written in milestone1.md, for any format. It avoids the
+checker's code on purpose: its rounding is computed from the two neighbors of the exact
+value (the checker shifts and inspects the dropped bits), `succ` and `pred` from the canonical
+significand and exponent with IEEE's `nextUp` at the infinities (the checker uses bit lengths of
+spacings), and where the format fits in binary64 it reads limbs with `float.fromhex` and prints
+them with `float.hex`. `--list-variants` shows the injected errors.
+
+The Ball kernels need the constants $U$ and $V$ of their center's kernel. `refrun` computes them
+exactly, as architecture.md defines them ($\mathrm{unit}/(1-\mathrm{unit})$ and
+$\mathrm{tiny}/(1-\mathrm{unit})$ rounded up to the format, with $\mathrm{unit} = c\,u^k$,
+$\mathrm{tiny} = t\eta$), from the bounds of `add_2_2`, `mul_2_2` and `mul_2_1` in a claims file:
+the first-wave fixture unless `--center-claims FILE` says otherwise. For one limb the center is
+one operation, whose bound no claims entry states; `refrun` takes $|\mathrm{RN}(v) - v| \le
+u|v| + t\eta$ with $t = 0$ for a sum and $t = \frac12$ for a product. `refrun --print-constants
+FORMAT` prints them.
+
+The variant `trace-mul-pow2` computes correct results and writes a comment before a line when
+the pair $(h, l)$ of `mul_pow2_2` is not normalized before its final `fast_two_sum`.
 
 The variant `trace-fast-two-sum` computes correct results and writes a comment before a line for
 every `fast_two_sum` call whose first operand is smaller in magnitude than the second, saying
@@ -187,20 +271,26 @@ pseudo-code. The selftest compiles it with the system compiler (`$CXX`, then `c+
 `g++`, or `--cxx`) with `-std=c++17 -O2 -ffp-contract=off -fno-fast-math` (`/std:c++17 /O2
 /fp:precise` for `cl` and `clang-cl`, untested so far), and skips the C++ tests with a message if
 no compiler works. It has its own variants (`subnormal-flush` instead of
-`subnormal-trunc`).
+`subnormal-trunc`). Its `succ` and `pred` are `nextafter` toward the infinities, and it takes the
+Ball constants on its command line (`--const binary64.mul_2_2.U=0x1.0000000000001p-104`, one per
+format, center kernel and constant), which the selftest computes with the Python runner.
 
 ## selftest
 
 ```
-python3 oracle/kairn-oracle selftest            # about 35 seconds
-python3 oracle/kairn-oracle selftest --quick    # smaller samples, about 20 seconds
-python3 oracle/selftest/mutants.py              # tests the selftest, about five minutes
+python3 oracle/kairn-oracle selftest              # about 90 seconds
+python3 oracle/kairn-oracle selftest --quick      # smaller samples, about 40 seconds
+python3 oracle/selftest/mutants.py --jobs 6       # tests the selftest, about ten minutes
 ```
 
 `mutants.py` copies the oracle into a temporary directory once per mutant, plants one deliberate
 bug in the checker or the arithmetic (rounding ties away from zero, no gradual underflow,
 requirements or normalization or membership of outputs not checked, a bound lenient by a factor
-of two, the `when` condition ignored, ...) and requires `selftest --quick` to fail on the copy.
+of two, the `when` condition ignored, ...; for the second wave, one per new check: a relation
+or a direction misread, the gap taken on the wrong side of a power of two, the lower side of an
+enclosure or the input radii or two of the four corners ignored, a requirement not checked,
+`abs` or a minus dropped from expressions, instances read in the wrong order, a statistic
+computed over the wrong cases, ...) and requires `selftest --quick` to fail on the copy.
 
 | Test | What would make it fail |
 |---|---|
@@ -220,6 +310,16 @@ of two, the `when` condition ignored, ...) and requires `selftest --quick` to fa
 | `check_robustness` | malformed, truncated or non-finite streams passed |
 | `merging` | the merged summary of two halves differs from the summary of the whole |
 | `brute_driver` | external and in-process pipelines disagree |
+| `expressions` | compiled value expressions against `Fraction` on random inputs; a malformed expression accepted |
+| `rounding_directed` | rounding down and up, and the gap below a number, against a brute-force search on six toy formats, beyond $\Omega$ included |
+| `claims_reading_wave2` | the second-wave fixture unreadable or inconsistent; the list and object forms of `instances` disagreeing; 27 malformed second-wave kernels not set aside |
+| `gen_wave2` | an invalid generated case, a missing stratum, a comparison stream without both outcomes, a conversion stream that never steps, a correct runner flagged, case $i$ not reproducible |
+| `exhaustive_wave2` | the new domains against brute-force counts, mask inputs read or written wrongly, the correct runner flagged on any case of 44 enumerations of tiny formats (the 2-limb balls on restricted radii, marked RESTRICTED) |
+| `cxx_wave2` | the C++ runner flagged, or any of its second-wave results different from the Python runner's |
+| `injected_wave2`, `injected_wave2_exhaustive` | an injected error not flagged where it belongs, or flagged in a kernel that does not use it |
+| `judge_wave2` | a hand-written line judged otherwise than worked out by hand (masks, directions, gaps below powers of two, the corners of a product of balls, the requirements, beyond $\Omega$), or a statistic off |
+| `scaled_gaps` | halved gaps passed, gaps times 1024 failed, or the largest excess in gaps moved with the claim |
+| `merging_wave2` | the merge of second-wave summaries differs from the whole |
 
 Injected errors (`refrun --list-variants`): one ulp off in the second limb in about 1 case in 256;
 a result with the right value but not normalized; a product that drops a cross term; additions
@@ -227,3 +327,13 @@ that skip their last renormalization; rounding wrong only below $\lambda$; a `tw
 term is wrong only when it should be zero; inputs altered to violate a requirement (must be
 invalid, not passed); and the fixture with every bound halved (must fail) or multiplied by 1024
 (must pass with ratios 1024 times smaller).
+
+Second wave: comparisons wrong only when the first limbs are equal; `to_down_2` that forgets
+its step when the second limb is negative, and one that steps by the gap on the wrong side of a
+power of two; `radd` without its final step; `rmul` rounded to nearest only; Ball radii without
+the center kernel's own error term, `ball_mul` without the product of the two radii; an `abs_2`
+that negates only the first limb. A Ball radius one unit in the last place too small at a
+power-of-two center (`ball-pow2-ulp`) is not an error with respect to the claim on the tiny
+formats: the listing leaves more than one gap of slack in every case enumerated there, so the
+radius one ulp smaller still encloses. The selftest demands that no verdict changes and that
+the smallest slack the oracle reports drops by at least half a gap.
