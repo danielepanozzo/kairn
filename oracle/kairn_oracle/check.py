@@ -414,7 +414,12 @@ class Plan:
         for e in kernel.ensures:
             ranges = [self.out_slices[n] for n in e.of]
             c = {"kind": e.kind, "ranges": ranges, "first": ranges[0][0]}
-            if e.kind == "error":
+            if e.kind == "error" and not self.in_scope:
+                # Below the kernel's minimum precision nothing is judged, and a bound may not
+                # even exist there (3/(1 - 4u) at p = 2): it is not evaluated, so that such a
+                # format cannot set the kernel aside for the others.
+                c["source"] = None
+            elif e.kind == "error":
                 rel, ab, src = kernel.bound(fmt, e)
                 # The bound is rel*rho + ab; with rho and the error at scale sc it reads
                 # rel*rho + ab*2^-sc in those units.
@@ -437,7 +442,7 @@ class Plan:
                 c.update(self._encloses(e))
             self.entries.append(c)
         # The extended domain (the non-finite layer) is judged by extended.py.
-        self.ext = XT.ExtPlan(self, Plan) if kernel.extended else None
+        self.ext = XT.ExtPlan(self, Plan) if kernel.extended and self.in_scope else None
 
     def limb_products_normal(self, x):
         (alo, ahi), (blo, bhi), te = self.lp
