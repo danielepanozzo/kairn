@@ -9,6 +9,7 @@ import json
 import re
 from fractions import Fraction
 
+from . import expr as X
 from .fmt import parse_format, FormatError
 
 
@@ -21,8 +22,15 @@ _VALUE_RE = re.compile(r"\s*(%s)\s*([-+*])\s*(%s)\s*\Z" % (_NAME, _NAME))
 _IDENTITY_RE = re.compile(r"\s*(%s)\s*\Z" % _NAME)
 _NORMALIZED_RE = re.compile(r"\s*normalized\(\s*(%s)\s*\)\s*\Z" % _NAME)
 _ABS_GE_RE = re.compile(r"\s*abs_ge\(\s*(%s)\s*,\s*(%s)\s*\)\s*\Z" % (_NAME, _NAME))
-WHEN_VOCABULARY = ("product_large",)
+# Requirements on one input, second wave.
+_UNARY_REQ_RE = re.compile(r"\s*(power_of_two|nonneg)\(\s*(%s)\s*\)\s*\Z" % _NAME)
+# limb_products_normal is not in architecture.md: it is the condition of the exactness claim of
+# mul_pow2_2 ("each of the two products is zero or at least 2^(p-1) eta in magnitude"), which
+# the vocabulary cannot otherwise express.  Proposed as an addition.
+WHEN_VOCABULARY = ("product_large", "limb_products_normal")
 FORMS = ("R", "A")
+ROUNDING_MODES = ("nearest", "down", "up")
+RELATIONS = ("lt", "le", "eq")
 KERNEL_FIELDS = {"name", "inputs", "outputs", "value", "requires", "ensures", "min_precision",
                  "status", "theorem", "source", "flops", "instances"}
 
@@ -138,6 +146,14 @@ def parse_fraction(s, what):
 class Entry:
     """One `ensures` entry."""
 
+    KNOWN = {"normalized": {"kind", "of"},
+             "error": {"kind", "of", "form", "c", "k", "t", "when", "instances"},
+             "leading_rounded": {"kind", "of"},
+             "rounded": {"kind", "of", "mode"},
+             "upper": {"kind", "of", "gaps"},
+             "predicate": {"kind", "of", "rel", "args"},
+             "encloses": {"kind", "center", "radius", "set", "balls"}}
+
     def __init__(self, kernel, raw, index, error_index):
         self.raw = raw
         self.index = index
@@ -145,16 +161,47 @@ class Entry:
             raise ClaimsError("%s: ensures entry %d has no kind" % (kernel.name, index))
         self.kind = raw["kind"]
         where = "%s: ensures entry %d (%s)" % (kernel.name, index, self.kind)
-        known = {"normalized": {"kind", "of"},
-                 "error": {"kind", "of", "form", "c", "k", "t", "when", "instances"},
-                 "leading_rounded": {"kind", "of"}}
+        known = self.KNOWN
         if self.kind not in known:
             raise ClaimsError("%s: unknown kind" % where)
         extra = set(raw) - known[self.kind]
         if extra:
             raise ClaimsError("%s: unknown fields %s" % (where, sorted(extra)))
-        self.of = kernel.resolve_outputs(raw.get("of"), where)
         self.error_index = None
+        if self.kind == "encloses":
+            self._read_encloses(kernel, raw, where)
+            self.of = [self.center, self.radius]
+            self.label = self._label()
+            return
+        self.of = kernel.resolve_outputs(raw.get("of"), where)
+        masks = [n for n in self.of if n in kernel.masks]
+        if self.kind == "predicate":
+            if len(self.of) != 1 or not masks:
+                raise ClaimsError("%s: 'of' must name one mask output" % where)
+        elif masks:
+            raise ClaimsError("%s: 'of' names the mask %s" % (where, masks[0]))
+        if self.kind in ("error", "leading_rounded", "rounded", "upper") and kernel.value_tree is None:
+            raise ClaimsError("%s: the kernel has no value" % where)
+        if self.kind in ("rounded", "upper"):
+            if len(self.of) != 1 or kernel.limbs_of(self.of[0]) != 1:
+                raise ClaimsError("%s: 'of' must name one 1-limb output" % where)
+        if self.kind == "rounded":
+            self.mode = raw.get("mode")
+            if self.mode not in ROUNDING_MODES:
+                raise ClaimsError("%s: mode must be nearest, down or up, got %r" % (where, self.mode))
+        elif self.kind == "upper":
+            self.gaps = parse_fraction(raw.get("gaps"), where + " gaps")
+            if self.gaps < 0:
+                raise ClaimsError("%s: gaps is negative" % where)
+        elif self.kind == "predicate":
+            self.rel = raw.get("rel")
+            if self.rel not in RELATIONS:
+                raise ClaimsError("%s: rel must be lt, le or eq, got %r" % (where, self.rel))
+            args = raw.get("args")
+            if not isinstance(args, list) or len(args) != 2:
+                raise ClaimsError("%s: args must be a list of two expressions" % where)
+            self.args = [kernel.input_expression(a, where) for a in args]
+            self.args_text = [a.strip() for a in args]
         if self.kind == "error":
             self.error_index = error_index
             self.form = raw.get("form")
@@ -173,16 +220,89 @@ class Entry:
             self.when = raw.get("when")
             if self.when is not None and self.when not in WHEN_VOCABULARY:
                 raise ClaimsError("%s: unknown condition when=%r" % (where, self.when))
+            if self.when == "limb_products_normal" and kernel.limb_products is None:
+                raise ClaimsError("%s: limb_products_normal needs a value that is one input "
+                                  "times another" % where)
             self.entry_instances = raw.get("instances")
         self.label = self._label()
 
+    def _read_encloses(self, kernel, raw, where):
+        """center and radius name outputs; balls maps each ball name to its center and radius
+        inputs; set is an expression over ball names and the other limb inputs (scalars)."""
+        for f in ("center", "radius", "set", "balls"):
+            if f not in raw:
+                raise ClaimsError("%s: missing %s" % (where, f))
+        outs = dict(kernel.outputs)
+        self.center, self.radius = raw["center"], raw["radius"]
+        for what, n in (("center", self.center), ("radius", self.radius)):
+            if not isinstance(n, str) or n not in outs or n in kernel.masks:
+                raise ClaimsError("%s: %s %r is not a limb output" % (where, what, n))
+        if self.center == self.radius:
+            raise ClaimsError("%s: center and radius are the same output" % where)
+        if outs[self.radius] != 1:
+            raise ClaimsError("%s: the radius %s must be one limb" % (where, self.radius))
+        balls = raw["balls"]
+        if not isinstance(balls, dict) or not balls:
+            raise ClaimsError("%s: balls must be a nonempty object" % where)
+        ins = dict(kernel.inputs)
+        self.balls = {}
+        used = set()
+        for b, spec in balls.items():
+            if isinstance(spec, list) and len(spec) == 2:
+                c, r = spec
+            elif isinstance(spec, dict) and set(spec) == {"center", "radius"}:
+                c, r = spec["center"], spec["radius"]
+            else:
+                raise ClaimsError("%s: ball %r must be {center, radius}" % (where, b))
+            if not re.fullmatch(_NAME, b) or b in ins or b in X.FUNCTIONS:
+                raise ClaimsError("%s: bad ball name %r (it must not be an input name)" % (where, b))
+            for what, n in (("center", c), ("radius", r)):
+                if not isinstance(n, str) or n not in ins or n in kernel.masks:
+                    raise ClaimsError("%s: ball %s: %s %r is not a limb input" % (where, b, what, n))
+            if ins[r] != 1:
+                raise ClaimsError("%s: ball %s: the radius %s must be one limb" % (where, b, r))
+            if c == r or c in used or r in used:
+                raise ClaimsError("%s: ball %s shares an input with another ball" % (where, b))
+            used.update((c, r))
+            self.balls[b] = (c, r)
+        try:
+            self.set_tree = X.parse(raw["set"])
+        except X.ExprError as ex:
+            raise ClaimsError("%s: set: %s" % (where, ex))
+        self.set_text = raw["set"].strip()
+        nm = X.names(self.set_tree)
+        for n in nm:
+            if n in self.balls:
+                continue
+            if n not in ins or n in kernel.masks or n in used:
+                raise ClaimsError("%s: set names %r, which is neither a ball nor a scalar input"
+                                  % (where, n))
+        # A sum or product in which every ball occurs once is multilinear, so its range over
+        # the box of the balls is attained at the corners; with abs or a repeated ball it is
+        # not, the corners would not give the exact set, and the verdict could be wrong.
+        for b in self.balls:
+            if nm.count(b) != 1:
+                raise ClaimsError("%s: ball %s must occur exactly once in set" % (where, b))
+        if X.uses(self.set_tree, "abs"):
+            raise ClaimsError("%s: abs() is not allowed in set" % where)
+
     def _label(self):
+        if self.kind == "encloses":
+            return "encloses(%s, %s) %s over %s" % (
+                self.center, self.radius, self.set_text,
+                ", ".join("%s=[%s +- %s]" % (b, c, r) for b, (c, r) in self.balls.items()))
         of = "+".join(self.of)
         if self.kind == "error":
             s = "error(%s) form %s, c=%s, k=%d, t=%s" % (of, self.form, self.c, self.k, self.t)
             if self.when:
                 s += ", when %s" % self.when
             return s
+        if self.kind == "rounded":
+            return "rounded(%s) %s" % (of, self.mode)
+        if self.kind == "upper":
+            return "upper(%s) gaps=%s" % (of, self.gaps)
+        if self.kind == "predicate":
+            return "predicate(%s) %s(%s, %s)" % (of, self.rel, self.args_text[0], self.args_text[1])
         return "%s(%s)" % (self.kind, of)
 
 
@@ -192,6 +312,7 @@ class Kernel:
             raise ClaimsError("kernel entry without a name")
         self.name = raw["name"]
         self.raw = raw
+        self.masks = set()
         self.inputs = self._io(raw.get("inputs"), "inputs")
         self.outputs = self._io(raw.get("outputs"), "outputs")
         names = [n for n, _ in self.inputs] + [n for n, _ in self.outputs]
@@ -199,31 +320,50 @@ class Kernel:
             raise ClaimsError("%s: input and output names must be distinct" % self.name)
         self.input_names = [n for n, _ in self.inputs]
         v = raw.get("value")
-        m = _VALUE_RE.match(v) if isinstance(v, str) else None
-        mi = _IDENTITY_RE.match(v) if isinstance(v, str) else None
-        if m is not None and m.group(1) in self.input_names and m.group(3) in self.input_names:
-            self.value = (m.group(2), m.group(1), m.group(3))
-        elif mi is not None and mi.group(1) in self.input_names:
-            # A bare input name: the outputs approximate that input itself (split).  Not in
-            # architecture.md's list; proposed as an addition.
-            self.value = ("=", mi.group(1), mi.group(1))
-        else:
-            raise ClaimsError("%s: value %r is not NAME, NAME+NAME, NAME-NAME or NAME*NAME over "
-                              "the inputs" % (self.name, v))
+        # The first-wave forms keep their tuple, which gen.py reads; every value also has its
+        # syntax tree.  A value may be absent when no entry needs it (comparisons, balls).
+        self.value = None
+        self.value_tree = None
+        self.value_text = None
+        self.limb_products = None
+        if v is not None:
+            m = _VALUE_RE.match(v) if isinstance(v, str) else None
+            mi = _IDENTITY_RE.match(v) if isinstance(v, str) else None
+            if m is not None and m.group(1) in self.input_names and m.group(3) in self.input_names:
+                self.value = (m.group(2), m.group(1), m.group(3))
+            elif mi is not None and mi.group(1) in self.input_names:
+                # A bare input name: the outputs approximate that input itself (split).  Not
+                # in architecture.md's list; proposed as an addition.
+                self.value = ("=", mi.group(1), mi.group(1))
+            try:
+                self.value_tree = self.input_expression(v, "value")
+            except ClaimsError:
+                raise ClaimsError("%s: value %r is not an expression over the limb inputs "
+                                  "(names, + - *, unary minus, abs( ), parentheses)" % (self.name, v))
+            self.value_text = v.strip()
+            t = self.value_tree
+            if t[0] == "*" and t[1][0] == "name" and t[2][0] == "name":
+                self.limb_products = (t[1][1], t[2][1])
         self.requires = []
         for r in raw.get("requires", []):
             if not isinstance(r, str):
                 raise ClaimsError("%s: requirement %r is not a string" % (self.name, r))
             m = _NORMALIZED_RE.match(r)
-            if m and m.group(1) in self.input_names:
+            if m and m.group(1) in self.input_names and m.group(1) not in self.masks:
                 self.requires.append(("normalized", m.group(1)))
                 continue
             m = _ABS_GE_RE.match(r)
-            if m and m.group(1) in self.input_names and m.group(2) in self.input_names:
+            if (m and m.group(1) in self.input_names and m.group(2) in self.input_names
+                    and not {m.group(1), m.group(2)} & self.masks):
                 self.requires.append(("abs_ge", m.group(1), m.group(2)))
                 continue
+            m = _UNARY_REQ_RE.match(r)
+            if m and m.group(2) in self.input_names and m.group(2) not in self.masks:
+                self.requires.append((m.group(1), m.group(2)))
+                continue
             raise ClaimsError("%s: requirement %r is outside the vocabulary "
-                              "(normalized(NAME), abs_ge(NAME, NAME))" % (self.name, r))
+                              "(normalized(NAME), abs_ge(NAME, NAME), power_of_two(NAME), "
+                              "nonneg(NAME))" % (self.name, r))
         ens = raw.get("ensures")
         if not isinstance(ens, list):
             raise ClaimsError("%s: ensures must be a list" % self.name)
@@ -250,15 +390,44 @@ class Kernel:
         self.unknown_fields = sorted(set(raw) - KERNEL_FIELDS)
 
     def _io(self, lst, what):
+        """[(name, limbs)].  A mask ("type": "mask") takes one slot of the line, written 0
+        or 1; its name also goes into self.masks."""
         if not isinstance(lst, list) or not lst:
             raise ClaimsError("%s: %s must be a nonempty list" % (self.name, what))
         out = []
         for d in lst:
-            if (not isinstance(d, dict) or not isinstance(d.get("name"), str)
-                    or not isinstance(d.get("limbs"), int) or d["limbs"] < 1):
+            if not isinstance(d, dict) or not isinstance(d.get("name"), str):
+                raise ClaimsError("%s: bad %s entry %r" % (self.name, what, d))
+            ty = d.get("type", "limbs")
+            if ty == "mask":
+                n = d.get("limbs", 1)
+                if n != 1 or isinstance(n, bool):
+                    raise ClaimsError("%s: mask %s has limbs %r" % (self.name, d["name"], n))
+                self.masks.add(d["name"])
+                out.append((d["name"], 1))
+                continue
+            if ty != "limbs":
+                raise ClaimsError("%s: %s entry %s has unknown type %r"
+                                  % (self.name, what, d["name"], ty))
+            if (not isinstance(d.get("limbs"), int) or isinstance(d.get("limbs"), bool)
+                    or d["limbs"] < 1):
                 raise ClaimsError("%s: bad %s entry %r" % (self.name, what, d))
             out.append((d["name"], d["limbs"]))
         return out
+
+    def limbs_of(self, name):
+        return dict(self.inputs + self.outputs).get(name)
+
+    def input_expression(self, text, where):
+        """The syntax tree of an expression over the limb inputs."""
+        try:
+            tree = X.parse(text)
+        except X.ExprError as ex:
+            raise ClaimsError("%s: %s: %s" % (self.name, where, ex))
+        for n in X.names(tree):
+            if n not in self.input_names or n in self.masks:
+                raise ClaimsError("%s: %s: %r is not a limb input" % (self.name, where, n))
+        return tree
 
     def resolve_outputs(self, of, where):
         """`of` names one output; a list of names or "s+e" concatenates outputs in that
@@ -279,13 +448,14 @@ class Kernel:
         return names
 
     def _read_instances(self, inst):
-        """{(p, qmin, qmax): [(rel, abs) per error entry]} from either placement: under
-        the kernel (one object per format when there is one error entry, a list in the
-        order of the error entries otherwise) or under each error entry."""
+        """{(p, qmin, qmax): [(rel, abs) per error entry]} from any placement: under the
+        kernel as a list with one object per error entry, each mapping formats to {rel, abs}
+        (second wave); under the kernel as an object mapping formats to one {rel, abs} or to
+        a list in the order of the error entries (first wave); or under each error entry."""
         errs = [e for e in self.ensures if e.kind == "error"]
         out = {}
-        if not isinstance(inst, dict):
-            raise ClaimsError("%s: instances must be an object" % self.name)
+        if not isinstance(inst, (dict, list)):
+            raise ClaimsError("%s: instances must be a list or an object" % self.name)
 
         def put(fmtname, idx, d):
             try:
@@ -301,6 +471,19 @@ class Kernel:
             lst[idx] = (parse_fraction(d["rel"], "%s %s rel" % (self.name, fmtname)),
                         parse_fraction(d["abs"], "%s %s abs" % (self.name, fmtname)))
 
+        if isinstance(inst, list):
+            # The second-wave form: one object per error entry, in their order, each mapping
+            # a format to its {rel, abs}.
+            if len(inst) != len(errs):
+                raise ClaimsError("%s: instances has %d items for %d error entries" %
+                                  (self.name, len(inst), len(errs)))
+            for j, per in enumerate(inst):
+                if not isinstance(per, dict):
+                    raise ClaimsError("%s: instances[%d] must map formats to {rel, abs}"
+                                      % (self.name, j))
+                for fmtname, d in per.items():
+                    put(fmtname, j, d)
+            inst = {}
         for fmtname, v in inst.items():
             if isinstance(v, dict):
                 if len(errs) != 1:

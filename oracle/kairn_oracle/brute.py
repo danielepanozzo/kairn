@@ -139,6 +139,18 @@ def main(a):
             for k, f in pairs:
                 yield dict(base, kernel=k, format=f, start=s, count=n)
 
+    if a.exhaustive:
+        # A restriction that does not fit a kernel or a format is a usage error, reported
+        # before any chunk starts.
+        from . import fmt as F
+        from . import gen as G
+        for k in kernels:
+            for fname in formats:
+                try:
+                    G.ExhaustiveGen(claims.get(k), F.parse_format(fname), a.restrict or [])
+                except (G.GenError, F.FormatError) as ex:
+                    print("kairn-oracle brute: %s %s: %s" % (k, fname, ex), file=sys.stderr)
+                    return 2
     run = run_inprocess if inproc else run_external
     Executor = cf.ProcessPoolExecutor if inproc else cf.ThreadPoolExecutor
     summary = C.Summary(a.max_examples)

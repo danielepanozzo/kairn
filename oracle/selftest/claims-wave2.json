@@ -1,0 +1,1343 @@
+{
+ "schema": 1,
+ "kernels": [
+  {
+   "name": "neg_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "z",
+     "limbs": 2
+    }
+   ],
+   "value": "-x",
+   "requires": [
+    "normalized(x)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "z"
+    },
+    {
+     "kind": "error",
+     "of": "z",
+     "form": "R",
+     "c": "0",
+     "k": 1,
+     "t": "0",
+     "when": null
+    }
+   ],
+   "min_precision": 2,
+   "instances": [
+    {
+     "binary64": {
+      "rel": "0",
+      "abs": "0"
+     },
+     "binary32": {
+      "rel": "0",
+      "abs": "0"
+     }
+    }
+   ],
+   "status": "unverified"
+  },
+  {
+   "name": "abs_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "z",
+     "limbs": 2
+    }
+   ],
+   "value": "abs(x)",
+   "requires": [
+    "normalized(x)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "z"
+    },
+    {
+     "kind": "error",
+     "of": "z",
+     "form": "R",
+     "c": "0",
+     "k": 1,
+     "t": "0",
+     "when": null
+    }
+   ],
+   "min_precision": 2,
+   "instances": [
+    {
+     "binary64": {
+      "rel": "0",
+      "abs": "0"
+     },
+     "binary32": {
+      "rel": "0",
+      "abs": "0"
+     }
+    }
+   ],
+   "status": "unverified"
+  },
+  {
+   "name": "sub_2_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "y",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "z",
+     "limbs": 2
+    }
+   ],
+   "value": "x-y",
+   "requires": [
+    "normalized(x)",
+    "normalized(y)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "z"
+    },
+    {
+     "kind": "error",
+     "of": "z",
+     "form": "R",
+     "c": "3/(1-4*u)",
+     "k": 2,
+     "t": "0",
+     "when": null
+    }
+   ],
+   "min_precision": 3,
+   "instances": [
+    {
+     "binary64": {
+      "rel": "3/81129638414606645666991986180096",
+      "abs": "0"
+     },
+     "binary32": {
+      "rel": "1/93824969867264",
+      "abs": "0"
+     }
+    }
+   ],
+   "status": "unverified"
+  },
+  {
+   "name": "sub_2_1",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "a",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "z",
+     "limbs": 2
+    }
+   ],
+   "value": "x-a",
+   "requires": [
+    "normalized(x)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "z"
+    },
+    {
+     "kind": "error",
+     "of": "z",
+     "form": "R",
+     "c": "2",
+     "k": 2,
+     "t": "0",
+     "when": null
+    }
+   ],
+   "min_precision": 3,
+   "instances": [
+    {
+     "binary64": {
+      "rel": "1/40564819207303340847894502572032",
+      "abs": "0"
+     },
+     "binary32": {
+      "rel": "1/140737488355328",
+      "abs": "0"
+     }
+    }
+   ],
+   "status": "unverified"
+  },
+  {
+   "name": "sub_1_2",
+   "inputs": [
+    {
+     "name": "a",
+     "limbs": 1
+    },
+    {
+     "name": "y",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "z",
+     "limbs": 2
+    }
+   ],
+   "value": "a-y",
+   "requires": [
+    "normalized(y)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "z"
+    },
+    {
+     "kind": "error",
+     "of": "z",
+     "form": "R",
+     "c": "2",
+     "k": 2,
+     "t": "0",
+     "when": null
+    }
+   ],
+   "min_precision": 3,
+   "instances": [
+    {
+     "binary64": {
+      "rel": "1/40564819207303340847894502572032",
+      "abs": "0"
+     },
+     "binary32": {
+      "rel": "1/140737488355328",
+      "abs": "0"
+     }
+    }
+   ],
+   "status": "unverified"
+  },
+  {
+   "name": "lt_2_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "y",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "m",
+     "type": "mask"
+    }
+   ],
+   "requires": [
+    "normalized(x)",
+    "normalized(y)"
+   ],
+   "ensures": [
+    {
+     "kind": "predicate",
+     "of": "m",
+     "rel": "lt",
+     "args": [
+      "x",
+      "y"
+     ]
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "lt_2_1",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "a",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "m",
+     "type": "mask"
+    }
+   ],
+   "requires": [
+    "normalized(x)"
+   ],
+   "ensures": [
+    {
+     "kind": "predicate",
+     "of": "m",
+     "rel": "lt",
+     "args": [
+      "x",
+      "a"
+     ]
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "le_2_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "y",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "m",
+     "type": "mask"
+    }
+   ],
+   "requires": [
+    "normalized(x)",
+    "normalized(y)"
+   ],
+   "ensures": [
+    {
+     "kind": "predicate",
+     "of": "m",
+     "rel": "le",
+     "args": [
+      "x",
+      "y"
+     ]
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "le_2_1",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "a",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "m",
+     "type": "mask"
+    }
+   ],
+   "requires": [
+    "normalized(x)"
+   ],
+   "ensures": [
+    {
+     "kind": "predicate",
+     "of": "m",
+     "rel": "le",
+     "args": [
+      "x",
+      "a"
+     ]
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "eq_2_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "y",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "m",
+     "type": "mask"
+    }
+   ],
+   "requires": [
+    "normalized(x)",
+    "normalized(y)"
+   ],
+   "ensures": [
+    {
+     "kind": "predicate",
+     "of": "m",
+     "rel": "eq",
+     "args": [
+      "x",
+      "y"
+     ]
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "eq_2_1",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "a",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "m",
+     "type": "mask"
+    }
+   ],
+   "requires": [
+    "normalized(x)"
+   ],
+   "ensures": [
+    {
+     "kind": "predicate",
+     "of": "m",
+     "rel": "eq",
+     "args": [
+      "x",
+      "a"
+     ]
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "lt_1_2",
+   "inputs": [
+    {
+     "name": "a",
+     "limbs": 1
+    },
+    {
+     "name": "y",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "m",
+     "type": "mask"
+    }
+   ],
+   "requires": [
+    "normalized(y)"
+   ],
+   "ensures": [
+    {
+     "kind": "predicate",
+     "of": "m",
+     "rel": "lt",
+     "args": [
+      "a",
+      "y"
+     ]
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "le_1_2",
+   "inputs": [
+    {
+     "name": "a",
+     "limbs": 1
+    },
+    {
+     "name": "y",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "m",
+     "type": "mask"
+    }
+   ],
+   "requires": [
+    "normalized(y)"
+   ],
+   "ensures": [
+    {
+     "kind": "predicate",
+     "of": "m",
+     "rel": "le",
+     "args": [
+      "a",
+      "y"
+     ]
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "to_nearest_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "t",
+     "limbs": 1
+    }
+   ],
+   "value": "x",
+   "requires": [
+    "normalized(x)"
+   ],
+   "ensures": [
+    {
+     "kind": "rounded",
+     "of": "t",
+     "mode": "nearest"
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "to_down_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "t",
+     "limbs": 1
+    }
+   ],
+   "value": "x",
+   "requires": [
+    "normalized(x)"
+   ],
+   "ensures": [
+    {
+     "kind": "rounded",
+     "of": "t",
+     "mode": "down"
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "to_up_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "t",
+     "limbs": 1
+    }
+   ],
+   "value": "x",
+   "requires": [
+    "normalized(x)"
+   ],
+   "ensures": [
+    {
+     "kind": "rounded",
+     "of": "t",
+     "mode": "up"
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "abs_upper_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "t",
+     "limbs": 1
+    }
+   ],
+   "value": "abs(x)",
+   "requires": [
+    "normalized(x)"
+   ],
+   "ensures": [
+    {
+     "kind": "rounded",
+     "of": "t",
+     "mode": "up"
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "radd",
+   "inputs": [
+    {
+     "name": "a",
+     "limbs": 1
+    },
+    {
+     "name": "b",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "r",
+     "limbs": 1
+    }
+   ],
+   "value": "a+b",
+   "requires": [],
+   "ensures": [
+    {
+     "kind": "upper",
+     "of": "r",
+     "gaps": "2"
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "rmul",
+   "inputs": [
+    {
+     "name": "a",
+     "limbs": 1
+    },
+    {
+     "name": "b",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "r",
+     "limbs": 1
+    }
+   ],
+   "value": "a*b",
+   "requires": [],
+   "ensures": [
+    {
+     "kind": "upper",
+     "of": "r",
+     "gaps": "2"
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "mul_pow2_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "c",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "z",
+     "limbs": 2
+    }
+   ],
+   "value": "c*x",
+   "requires": [
+    "normalized(x)",
+    "power_of_two(c)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "z"
+    },
+    {
+     "kind": "error",
+     "of": "z",
+     "form": "R",
+     "c": "0",
+     "k": 1,
+     "t": "1",
+     "when": null
+    },
+    {
+     "kind": "error",
+     "of": "z",
+     "form": "R",
+     "c": "0",
+     "k": 1,
+     "t": "0",
+     "when": "limb_products_normal"
+    }
+   ],
+   "min_precision": 2,
+   "instances": [
+    {
+     "binary64": {
+      "rel": "0",
+      "abs": "1/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
+     },
+     "binary32": {
+      "rel": "0",
+      "abs": "1/713623846352979940529142984724747568191373312"
+     }
+    },
+    {
+     "binary64": {
+      "rel": "0",
+      "abs": "0"
+     },
+     "binary32": {
+      "rel": "0",
+      "abs": "0"
+     }
+    }
+   ],
+   "status": "unverified"
+  },
+  {
+   "name": "ball_add_1",
+   "inputs": [
+    {
+     "name": "cx",
+     "limbs": 1
+    },
+    {
+     "name": "rx",
+     "limbs": 1
+    },
+    {
+     "name": "cy",
+     "limbs": 1
+    },
+    {
+     "name": "ry",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "cz",
+     "limbs": 1
+    },
+    {
+     "name": "rz",
+     "limbs": 1
+    }
+   ],
+   "requires": [
+    "nonneg(rx)",
+    "nonneg(ry)"
+   ],
+   "ensures": [
+    {
+     "kind": "encloses",
+     "center": "cz",
+     "radius": "rz",
+     "set": "X+Y",
+     "balls": {
+      "X": {
+       "center": "cx",
+       "radius": "rx"
+      },
+      "Y": {
+       "center": "cy",
+       "radius": "ry"
+      }
+     }
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "ball_sub_1",
+   "inputs": [
+    {
+     "name": "cx",
+     "limbs": 1
+    },
+    {
+     "name": "rx",
+     "limbs": 1
+    },
+    {
+     "name": "cy",
+     "limbs": 1
+    },
+    {
+     "name": "ry",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "cz",
+     "limbs": 1
+    },
+    {
+     "name": "rz",
+     "limbs": 1
+    }
+   ],
+   "requires": [
+    "nonneg(rx)",
+    "nonneg(ry)"
+   ],
+   "ensures": [
+    {
+     "kind": "encloses",
+     "center": "cz",
+     "radius": "rz",
+     "set": "X-Y",
+     "balls": {
+      "X": {
+       "center": "cx",
+       "radius": "rx"
+      },
+      "Y": {
+       "center": "cy",
+       "radius": "ry"
+      }
+     }
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "ball_mul_1",
+   "inputs": [
+    {
+     "name": "cx",
+     "limbs": 1
+    },
+    {
+     "name": "rx",
+     "limbs": 1
+    },
+    {
+     "name": "cy",
+     "limbs": 1
+    },
+    {
+     "name": "ry",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "cz",
+     "limbs": 1
+    },
+    {
+     "name": "rz",
+     "limbs": 1
+    }
+   ],
+   "requires": [
+    "nonneg(rx)",
+    "nonneg(ry)"
+   ],
+   "ensures": [
+    {
+     "kind": "encloses",
+     "center": "cz",
+     "radius": "rz",
+     "set": "X*Y",
+     "balls": {
+      "X": {
+       "center": "cx",
+       "radius": "rx"
+      },
+      "Y": {
+       "center": "cy",
+       "radius": "ry"
+      }
+     }
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "ball_neg_1",
+   "inputs": [
+    {
+     "name": "cx",
+     "limbs": 1
+    },
+    {
+     "name": "rx",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "cz",
+     "limbs": 1
+    },
+    {
+     "name": "rz",
+     "limbs": 1
+    }
+   ],
+   "requires": [
+    "nonneg(rx)"
+   ],
+   "ensures": [
+    {
+     "kind": "encloses",
+     "center": "cz",
+     "radius": "rz",
+     "set": "-X",
+     "balls": {
+      "X": {
+       "center": "cx",
+       "radius": "rx"
+      }
+     }
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "ball_scale_1",
+   "inputs": [
+    {
+     "name": "cx",
+     "limbs": 1
+    },
+    {
+     "name": "rx",
+     "limbs": 1
+    },
+    {
+     "name": "a",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "cz",
+     "limbs": 1
+    },
+    {
+     "name": "rz",
+     "limbs": 1
+    }
+   ],
+   "requires": [
+    "nonneg(rx)"
+   ],
+   "ensures": [
+    {
+     "kind": "encloses",
+     "center": "cz",
+     "radius": "rz",
+     "set": "a*X",
+     "balls": {
+      "X": {
+       "center": "cx",
+       "radius": "rx"
+      }
+     }
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "ball_add_2",
+   "inputs": [
+    {
+     "name": "cx",
+     "limbs": 2
+    },
+    {
+     "name": "rx",
+     "limbs": 1
+    },
+    {
+     "name": "cy",
+     "limbs": 2
+    },
+    {
+     "name": "ry",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "cz",
+     "limbs": 2
+    },
+    {
+     "name": "rz",
+     "limbs": 1
+    }
+   ],
+   "requires": [
+    "normalized(cx)",
+    "normalized(cy)",
+    "nonneg(rx)",
+    "nonneg(ry)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "cz"
+    },
+    {
+     "kind": "encloses",
+     "center": "cz",
+     "radius": "rz",
+     "set": "X+Y",
+     "balls": {
+      "X": {
+       "center": "cx",
+       "radius": "rx"
+      },
+      "Y": {
+       "center": "cy",
+       "radius": "ry"
+      }
+     }
+    }
+   ],
+   "min_precision": 3,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "ball_sub_2",
+   "inputs": [
+    {
+     "name": "cx",
+     "limbs": 2
+    },
+    {
+     "name": "rx",
+     "limbs": 1
+    },
+    {
+     "name": "cy",
+     "limbs": 2
+    },
+    {
+     "name": "ry",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "cz",
+     "limbs": 2
+    },
+    {
+     "name": "rz",
+     "limbs": 1
+    }
+   ],
+   "requires": [
+    "normalized(cx)",
+    "normalized(cy)",
+    "nonneg(rx)",
+    "nonneg(ry)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "cz"
+    },
+    {
+     "kind": "encloses",
+     "center": "cz",
+     "radius": "rz",
+     "set": "X-Y",
+     "balls": {
+      "X": {
+       "center": "cx",
+       "radius": "rx"
+      },
+      "Y": {
+       "center": "cy",
+       "radius": "ry"
+      }
+     }
+    }
+   ],
+   "min_precision": 3,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "ball_mul_2",
+   "inputs": [
+    {
+     "name": "cx",
+     "limbs": 2
+    },
+    {
+     "name": "rx",
+     "limbs": 1
+    },
+    {
+     "name": "cy",
+     "limbs": 2
+    },
+    {
+     "name": "ry",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "cz",
+     "limbs": 2
+    },
+    {
+     "name": "rz",
+     "limbs": 1
+    }
+   ],
+   "requires": [
+    "normalized(cx)",
+    "normalized(cy)",
+    "nonneg(rx)",
+    "nonneg(ry)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "cz"
+    },
+    {
+     "kind": "encloses",
+     "center": "cz",
+     "radius": "rz",
+     "set": "X*Y",
+     "balls": {
+      "X": {
+       "center": "cx",
+       "radius": "rx"
+      },
+      "Y": {
+       "center": "cy",
+       "radius": "ry"
+      }
+     }
+    }
+   ],
+   "min_precision": 5,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "ball_neg_2",
+   "inputs": [
+    {
+     "name": "cx",
+     "limbs": 2
+    },
+    {
+     "name": "rx",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "cz",
+     "limbs": 2
+    },
+    {
+     "name": "rz",
+     "limbs": 1
+    }
+   ],
+   "requires": [
+    "normalized(cx)",
+    "nonneg(rx)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "cz"
+    },
+    {
+     "kind": "encloses",
+     "center": "cz",
+     "radius": "rz",
+     "set": "-X",
+     "balls": {
+      "X": {
+       "center": "cx",
+       "radius": "rx"
+      }
+     }
+    }
+   ],
+   "min_precision": 2,
+   "instances": [],
+   "status": "unverified"
+  },
+  {
+   "name": "ball_scale_2",
+   "inputs": [
+    {
+     "name": "cx",
+     "limbs": 2
+    },
+    {
+     "name": "rx",
+     "limbs": 1
+    },
+    {
+     "name": "a",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "cz",
+     "limbs": 2
+    },
+    {
+     "name": "rz",
+     "limbs": 1
+    }
+   ],
+   "requires": [
+    "normalized(cx)",
+    "nonneg(rx)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "cz"
+    },
+    {
+     "kind": "encloses",
+     "center": "cz",
+     "radius": "rz",
+     "set": "a*X",
+     "balls": {
+      "X": {
+       "center": "cx",
+       "radius": "rx"
+      }
+     }
+    }
+   ],
+   "min_precision": 4,
+   "instances": [],
+   "status": "unverified"
+  }
+ ]
+}

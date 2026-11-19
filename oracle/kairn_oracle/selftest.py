@@ -30,6 +30,7 @@ from .claims import Claims, ClaimsError, load_claims, eval_rational
 
 ORACLE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIXTURE = os.path.join(ORACLE_DIR, "selftest", "claims-wave1.json")
+FIXTURE2 = os.path.join(ORACLE_DIR, "selftest", "claims-wave2.json")
 CXX_SOURCE = os.path.join(ORACLE_DIR, "selftest", "refrun.cpp")
 SCRIPT = os.path.join(ORACLE_DIR, "kairn-oracle")
 
@@ -56,6 +57,7 @@ class Ctx:
         self.quick = quick
         self.cxx = cxx
         self.claims = load_claims(FIXTURE)
+        self.claims2 = load_claims(FIXTURE2)
         self.cxx_bin = None
         self.cxx_error = None
         self._streams = {}
@@ -67,7 +69,8 @@ class Ctx:
         key = (kernel, fmtname, count, strata, seed)
         s = self._streams.get(key)
         if s is None:
-            g = G.RandomGen(self.claims.get(kernel), F.parse_format(fmtname), seed,
+            claims = self.claims if self.claims.get(kernel) else self.claims2
+            g = G.RandomGen(claims.get(kernel), F.parse_format(fmtname), seed,
                             strata.split(",") if strata else None)
             s = self._streams[key] = list(g.lines(0, count))
         return s
@@ -534,12 +537,24 @@ def build_cxx(ctx):
     return exe
 
 
+def cxx_constants():
+    """--const arguments for the Ball kernels of the C++ runner, computed by the Python one."""
+    args = []
+    for fname in ("binary64", "binary32"):
+        ar = refrun.Arith(F.parse_format(fname).triple)
+        for center in sorted(set(refrun.CENTER_KERNEL.values())):
+            U, V = refrun.ball_constants(ar, center, refrun.DEFAULT_CENTER_CLAIMS)
+            args += ["--const", "%s.%s.U=%s" % (fname, center, ar.write(U)),
+                     "--const", "%s.%s.V=%s" % (fname, center, ar.write(V))]
+    return args
+
+
 def cxx_run(ctx, lines, variant="correct"):
     exe = build_cxx(ctx)
     if exe is None:
         raise Skip(ctx.cxx_error)
-    r = subprocess.run([exe, "--variant", variant], input="\n".join(lines) + "\n",
-                       capture_output=True, text=True)
+    r = subprocess.run([exe, "--variant", variant] + cxx_constants(),
+                       input="\n".join(lines) + "\n", capture_output=True, text=True)
     if r.returncode != 0:
         raise AssertionError("C++ runner failed: %s" % r.stderr[-500:])
     return r.stdout.splitlines()
@@ -875,6 +890,10 @@ def brute_driver(ctx):
         expect(not s.stream_errors, "brute %s: %s" % (name, s.stream_errors[:2]))
     expect(out["external"] == out["inprocess"], "external and in-process statistics differ")
     return "%d keys" % len(out["external"])
+
+
+# The tests of the second wave register themselves after the first wave's.
+from . import selftest2  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------

@@ -7,13 +7,16 @@ product at scale eta^2, and bounds are compared after clearing denominators.
 
 import json
 import math
+import re
 import sys
 from fractions import Fraction
 
+from . import expr as EX
 from . import fmt as F
 from .claims import ClaimsError
 
 SUMMARY_VERSION = 1
+MASK_TEXT = {"0": 0, "1": 1}
 
 
 def _gt(a, b):
@@ -83,7 +86,7 @@ def frac_dec(r, digits=6):
 
 class EntryStats:
     __slots__ = ("label", "kind", "applicable", "failures", "max_ratio", "max_ratio_case",
-                 "profile", "b_max", "b_case", "bound_source")
+                 "profile", "b_max", "b_case", "bound_source", "counts", "maxima", "minima")
 
     def __init__(self, label, kind):
         self.label = label
@@ -98,6 +101,24 @@ class EntryStats:
         self.b_max = None              # largest (|error| - rel*rho) / eta
         self.b_case = None
         self.bound_source = None
+        # The kinds of the second wave: outcome and histogram counts by name, and named
+        # extreme fractions with the line that attains them.
+        self.counts = {}
+        self.maxima = {}
+        self.minima = {}
+
+    def count(self, key):
+        self.counts[key] = self.counts.get(key, 0) + 1
+
+    def track_max(self, name, r, line):
+        cur = self.maxima.get(name)
+        if cur is None or _gt(r, cur[0]):
+            self.maxima[name] = (_reduce(*r), line)
+
+    def track_min(self, name, r, line):
+        cur = self.minima.get(name)
+        if cur is None or _gt(cur[0], r):
+            self.minima[name] = (_reduce(*r), line)
 
     def merge(self, o):
         self.applicable += o.applicable
@@ -111,6 +132,12 @@ class EntryStats:
         if o.b_max is not None and (self.b_max is None or _gt(o.b_max, self.b_max)):
             self.b_max, self.b_case = o.b_max, o.b_case
         self.bound_source = self.bound_source or o.bound_source
+        for k, n in o.counts.items():
+            self.counts[k] = self.counts.get(k, 0) + n
+        for k, (r, case) in o.maxima.items():
+            self.track_max(k, r, case)
+        for k, (r, case) in o.minima.items():
+            self.track_min(k, r, case)
 
     def observed_a(self, far):
         best = None
@@ -126,7 +153,10 @@ class EntryStats:
                 "max_ratio_case": self.max_ratio_case,
                 "profile": {str(d): [enc(r), c] for d, (r, c) in sorted(self.profile.items())},
                 "b_max": enc(self.b_max), "b_case": self.b_case,
-                "bound_source": self.bound_source}
+                "bound_source": self.bound_source,
+                "counts": dict(sorted(self.counts.items())),
+                "maxima": {k: [enc(r), c] for k, (r, c) in sorted(self.maxima.items())},
+                "minima": {k: [enc(r), c] for k, (r, c) in sorted(self.minima.items())}}
 
     @classmethod
     def from_json(cls, j):
@@ -140,11 +170,14 @@ class EntryStats:
         s.b_max = dec(j["b_max"])
         s.b_case = j["b_case"]
         s.bound_source = j.get("bound_source")
+        s.counts = dict(j.get("counts", {}))
+        s.maxima = {k: (dec(v[0]), v[1]) for k, v in j.get("maxima", {}).items()}
+        s.minima = {k: (dec(v[0]), v[1]) for k, v in j.get("minima", {}).items()}
         return s
 
 
 COUNTERS = ("cases", "judged", "passed", "failed", "invalid", "out_of_scope", "nonfinite",
-            "nonfinite_tail", "suspicious")
+            "nonfinite_tail", "suspicious", "beyond")
 
 
 class KeyStats:
@@ -340,25 +373,43 @@ class Plan:
         q = fmt.qmin
         self.in_slices, self.n_in = self._slices(kernel.inputs)
         self.out_slices, self.n_out = self._slices(kernel.outputs)
-        op, a, b = kernel.value
-        self.op = op
-        self.lhs = self.in_slices[a]
-        self.rhs = self.in_slices[b]
-        self.sv = 2 * q if op == "*" else q          # scale of the exact value
-        # op "=": the outputs approximate the input itself; lhs and rhs name the same input.
+        self.in_masks = frozenset(self.in_slices[n][0] for n in kernel.input_names
+                                  if n in kernel.masks)
+        self.out_masks = frozenset(self.out_slices[n][0] for n, _ in kernel.outputs
+                                   if n in kernel.masks)
+        # The limb groups of the inputs, whose values the suspicious test bounds.
+        self.groups = [self.in_slices[n] for n in kernel.input_names if n not in kernel.masks]
+        limb_slots = [i for i in range(self.n_out) if i not in self.out_masks]
+        self.lead = limb_slots[0] if limb_slots else None
+        # The exact value is the integer value_fn(x) times 2^sv: sv is q for sums of limbs and
+        # 2q for products of two (a product of three would be 3q).
+        if kernel.value_tree is not None:
+            src, self.sv = EX.compile_tree(kernel.value_tree, self._leaf)
+            self.value_fn = EX.make_function(["x"], src)
+        else:
+            self.value_fn, self.sv = None, q
         self.sc = min(q, self.sv)                    # common scale for comparisons
         self.sh_out = q - self.sc
         self.sh_val = self.sv - self.sc
         self.in_scope = ignore_min_precision or fmt.p >= kernel.min_precision
         self.requires = []
         for r in kernel.requires:
-            if r[0] == "normalized":
-                self.requires.append(("normalized", r[1], self.in_slices[r[1]]))
-            else:
+            if r[0] == "abs_ge":
                 self.requires.append(("abs_ge", r, self.in_slices[r[1]], self.in_slices[r[2]]))
+            else:
+                self.requires.append((r[0], r[1], self.in_slices[r[1]]))
         # product_large: value = 0 or |value| >= 2^(2p-1) eta, as a fixed value at scale sv.
         self.pl_thr = 1 << max(2 * fmt.p - 1 + q - self.sv, 0)
+        # limb_products_normal: every product of a limb of one factor by a limb of the other
+        # (at scale 2q) is zero or at least 2^(p-1) eta = 2^(p-1-q) * 2^(2q) in magnitude.
+        self.lp = None
+        if kernel.limb_products is not None:
+            a, b = kernel.limb_products
+            self.lp = (self.in_slices[a], self.in_slices[b], fmt.p - 1 - q)
         self.entries = []
+        self.rounded = []                            # indices of the rounded entries
+        self.uppers = [e for e in kernel.ensures if e.kind == "upper"]
+        self.balls = None
         for e in kernel.ensures:
             ranges = [self.out_slices[n] for n in e.of]
             c = {"kind": e.kind, "ranges": ranges, "first": ranges[0][0]}
@@ -370,7 +421,73 @@ class Plan:
                 c.update(rel_n=rel.numerator, rel_d=rel.denominator,
                          abs_n=abs_sc.numerator, abs_d=abs_sc.denominator,
                          k=e.k, kp=e.k * fmt.p, form=e.form, when=e.when, source=src)
+            elif e.kind == "rounded":
+                c["mode"] = e.mode
+                self.rounded.append(len(self.entries))
+            elif e.kind == "upper":
+                c.update(gn=e.gaps.numerator, gd=e.gaps.denominator)
+            elif e.kind == "predicate":
+                (a, sa), (b, sb) = [EX.compile_tree(t, self._leaf) for t in e.args]
+                s = min(sa, sb)
+                # Both sides at their common scale: a comparison of integers.
+                c["fn"] = EX.make_function(["x"], "(%s<<%d, %s<<%d)" % (a, sa - s, b, sb - s))
+                c["rel"] = e.rel
+            elif e.kind == "encloses":
+                c.update(self._encloses(e))
             self.entries.append(c)
+
+    def limb_products_normal(self, x):
+        (alo, ahi), (blo, bhi), te = self.lp
+        thr = 1 << te if te > 0 else 1
+        for a in x[alo:ahi]:
+            for b in x[blo:bhi]:
+                p = abs(a * b)
+                if p and p < thr:
+                    return False
+        return True
+
+    def _leaf(self, name):
+        lo, hi = self.in_slices[name]
+        return "(%s)" % "+".join("x[%d]" % i for i in range(lo, hi)), self.fmt.qmin
+
+    def _encloses(self, e):
+        """The set as a function of the inputs and of one endpoint per ball, and the corners
+        of the box of the balls to evaluate it at."""
+        q = self.fmt.qmin
+        bnames = list(e.balls)
+        idx = {b: i for i, b in enumerate(bnames)}
+
+        def leaf(name):
+            if name in idx:
+                return "b[%d]" % idx[name], q
+            return self._leaf(name)
+
+        src, ss = EX.compile_tree(e.set_tree, leaf)
+        cs = min(q, ss)
+        lo, hi = self.out_slices[e.center]
+        return {"set": EX.make_function(["x", "b"], src),
+                "balls": [(self.in_slices[e.balls[b][0]], self.in_slices[e.balls[b][1]][0])
+                          for b in bnames],
+                "corners": [[(k >> i) & 1 for i in range(len(bnames))]
+                            for k in range(1 << len(bnames))],
+                # Set values at scale ss and outputs at scale q are compared at scale cs.
+                "sh_set": ss - cs, "sh_q": q - cs, "center": (lo, hi),
+                "radius": self.out_slices[e.radius][0]}
+
+    def set_range(self, c, x):
+        """(lo, hi) of the set at the entry's comparison scale, or None when a ball is empty
+        (negative radius): every corner of the box gives a candidate endpoint."""
+        ends = []
+        for (lo, hi), ri in c["balls"]:
+            ctr = sum(x[lo:hi])
+            r = x[ri]
+            if r < 0:
+                return None
+            ends.append((ctr - r, ctr + r))
+        fn = c["set"]
+        vals = [fn(x, [ends[i][bit] for i, bit in enumerate(corner)]) for corner in c["corners"]]
+        sh = c["sh_set"]
+        return min(vals) << sh, max(vals) << sh
 
     @staticmethod
     def _slices(io):
@@ -515,8 +632,16 @@ class Checker:
             st.c["out_of_scope"] += 1
             return
         # Requirements first: a case outside them is never counted as passed.
+        for i in pl.in_masks:
+            if ins[i] not in MASK_TEXT:
+                self._invalid(st, line, "mask input %r is not 0 or 1" % ins[i])
+                return
         try:
-            x = [F.parse_limb(fmt, t) for t in ins]
+            if pl.in_masks:
+                x = [MASK_TEXT[t] if i in pl.in_masks else F.parse_limb(fmt, t)
+                     for i, t in enumerate(ins)]
+            else:
+                x = [F.parse_limb(fmt, t) for t in ins]
         except F.LimbError as ex:
             self._invalid(st, line, "input limb malformed: %s" % ex)
             return
@@ -534,33 +659,71 @@ class Checker:
                 if not F.normalized_limbs(fmt, x[lo:hi]):
                     self._invalid(st, line, "requires normalized(%s)" % r[1])
                     return
+            elif r[0] == "nonneg":
+                lo, hi = r[2]
+                if sum(x[lo:hi]) < 0:
+                    self._invalid(st, line, "requires nonneg(%s)" % r[1])
+                    return
+            elif r[0] == "power_of_two":
+                lo, hi = r[2]
+                v = sum(x[lo:hi])
+                if v <= 0 or v & (v - 1):
+                    self._invalid(st, line, "requires power_of_two(%s)" % r[1])
+                    return
             else:
                 (alo, ahi), (blo, bhi) = r[2], r[3]
                 if abs(sum(x[alo:ahi])) < abs(sum(x[blo:bhi])):
                     self._invalid(st, line, "requires abs_ge(%s, %s)" % (r[1][1], r[1][2]))
                     return
+        for i in pl.out_masks:
+            if outs[i] not in MASK_TEXT:
+                self._fail(st, line, "mask output %r is not 0 or 1" % outs[i])
+                return
         try:
-            z = [F.parse_limb(fmt, t) for t in outs]
+            if pl.out_masks:
+                z = [MASK_TEXT[t] if i in pl.out_masks else F.parse_limb(fmt, t)
+                     for i, t in enumerate(outs)]
+            else:
+                z = [F.parse_limb(fmt, t) for t in outs]
         except F.LimbError as ex:
             self._fail(st, line, "output limb malformed: %s" % ex)
             return
-        lo, hi = pl.lhs
-        X = sum(x[lo:hi])
-        lo, hi = pl.rhs
-        Y = sum(x[lo:hi])
-        op = pl.op
-        V = X + Y if op == "+" else X - Y if op == "-" else X * Y if op == "*" else X
-        if type(z[0]) is not int or any(type(v) is not int for v in z):
+        V = pl.value_fn(x) if pl.value_fn is not None else None
+        # A rounding whose exact result in unbounded range is beyond Omega is outside the
+        # statement (no operation overflows): the case counts as non-finite, as an infinite
+        # output would.  So is an upper bound when the smallest one in unbounded range is.
+        expected = {}
+        beyond = False
+        for i in pl.rounded:
+            mode = pl.entries[i]["mode"]
+            if mode == "nearest":
+                r = F.rn(fmt, V, pl.sv)
+                beyond = beyond or type(r) is not int
+            else:
+                r = F.rdir(fmt, V, pl.sv, mode == "up")
+                beyond = beyond or abs(r) > fmt.omega
+            expected[i] = r
+        if pl.uppers and abs(F.rdir(fmt, V, pl.sv, True)) > fmt.omega:
+            beyond = True
+        if beyond or any(type(v) is not int for v in z):
             if any(v == F.OUTSIDE for v in z):
                 self._fail(st, line, "output limb not a number of the format")
                 return
-            lead = type(z[0]) is not int
+            lead = beyond or (pl.lead is not None and type(z[pl.lead]) is not int)
             st.c["nonfinite" if lead else "nonfinite_tail"] += 1
+            if beyond:
+                st.c["beyond"] += 1
             q4 = fmt.omega
-            small = all(4 * abs(v) < q4 for v in x) and 4 * abs(X) < q4 and 4 * abs(Y) < q4
-            if small:
+            small = not beyond and all(4 * abs(v) < q4 for v in x) and all(
+                4 * abs(sum(x[lo:hi])) < q4 for lo, hi in pl.groups)
+            if small and V is not None:
                 d = pl.sv - fmt.qmin
                 small = ((4 * abs(V)) << d) < q4 if d >= 0 else 4 * abs(V) < (q4 << -d)
+            for e in pl.entries:
+                if small and e["kind"] == "encloses":
+                    rg = pl.set_range(e, x)
+                    sh = e["sh_q"]
+                    small = rg is None or all(4 * abs(v) < (q4 << sh) for v in rg)
             if small:
                 st.c["suspicious"] += 1
                 st.example("suspicious", line, "non-finite %s with operands and exact value "
@@ -590,8 +753,15 @@ class Checker:
                 if r != z[e["first"]]:
                     es.failures += 1
                     reasons.append("leading limb is not RN(value)")
+            elif kind in SECOND_WAVE_KINDS:
+                why = SECOND_WAVE_KINDS[kind](self, pl, e, es, x, z, V, expected.get(i), line)
+                if why:
+                    es.failures += 1
+                    reasons.append(why)
             else:
                 if e["when"] == "product_large" and not (V == 0 or abs(V) >= pl.pl_thr):
+                    continue
+                if e["when"] == "limb_products_normal" and not pl.limb_products_normal(x):
                     continue
                 es.applicable += 1
                 O = 0
@@ -637,6 +807,90 @@ class Checker:
         else:
             st.c["passed"] += 1
 
+    # -- the kinds of the second wave: each returns the reason of a failure, or None ----------
+
+    def _rounded(self, pl, e, es, x, z, V, r, line):
+        fmt = pl.fmt
+        es.applicable += 1
+        o = z[e["first"]]
+        Vc = V << pl.sh_val
+        if (r << pl.sh_out) == Vc:
+            es.count("exact")
+        elif e["mode"] == "nearest":
+            d = F.rdir(fmt, V, pl.sv, False)
+            u = F.rdir(fmt, V, pl.sv, True)
+            es.count("tie" if (d + u) << pl.sh_out == 2 * Vc else "inexact")
+        else:
+            es.count("inexact, = RN" if r == F.rn(fmt, V, pl.sv) else "inexact, != RN")
+        if o != r:
+            return "output is not the value rounded %s" % e["mode"]
+        return None
+
+    def _upper(self, pl, e, es, x, z, V, _r, line):
+        fmt = pl.fmt
+        es.applicable += 1
+        o = z[e["first"]]
+        exc = (o << pl.sh_out) - (V << pl.sh_val)
+        g = F.gap_below(fmt, o) << pl.sh_out
+        if exc < 0:
+            es.count("below value")
+            return "output below the value"
+        # A histogram of the excess by quarters of a gap.
+        q4 = -((-4 * exc) // g)
+        es.count("excess in (%s, %s] gaps" % (frac_str(_reduce(q4 - 1, 4)), frac_str(_reduce(q4, 4)))
+                 if q4 else "exact")
+        ratio = (exc, g)
+        es.track_max("excess in gaps", ratio, line)
+        if all(sum(x[lo:hi]) >= 0 for lo, hi in pl.groups):
+            es.track_max("excess in gaps, nonnegative operands", ratio, line)
+        if exc * e["gd"] > e["gn"] * g:
+            return "output above the value by more than %s gaps" % frac_str((e["gn"], e["gd"]))
+        return None
+
+    def _predicate(self, pl, e, es, x, z, V, _r, line):
+        es.applicable += 1
+        a, b = e["fn"](x)
+        rel = e["rel"]
+        truth = a < b if rel == "lt" else a <= b if rel == "le" else a == b
+        es.count("true" if truth else "false")
+        if z[e["first"]] != (1 if truth else 0):
+            return "mask is not the truth of %s" % rel
+        return None
+
+    def _encloses(self, pl, e, es, x, z, V, _r, line):
+        fmt = pl.fmt
+        es.applicable += 1
+        rg = pl.set_range(e, x)
+        if rg is None:
+            es.count("empty set (a negative input radius)")
+            return None
+        lo, hi = rg
+        clo, chi = e["center"]
+        sh = e["sh_q"]
+        cz = sum(z[clo:chi]) << sh
+        rz = z[e["radius"]] << sh
+        # The smallest radius around the returned center that encloses the set.
+        rmin = max(cz - lo, hi - cz)
+        if rmin > rz:
+            return "set not enclosed: needs radius %s, has %s (%s units of 2^%d)" % (
+                rmin, rz, "a deficit of %d" % (rmin - rz), fmt.qmin - sh)
+        if rmin == 0:
+            es.count("smallest radius 0, radius 0" if rz == 0 else "smallest radius 0, radius > 0")
+        else:
+            d = rz - rmin
+            if d == 0:
+                es.count("ratio 1")
+            else:
+                k = d.bit_length() - rmin.bit_length()
+                if (d << max(-k, 0)) < (rmin << max(k, 0)):
+                    k -= 1
+                es.count("ratio - 1 in [2^%d, 2^%d)" % (k, k + 1))
+            es.track_max("radius / smallest enclosing radius", (rz, rmin), line)
+            es.track_min("radius / smallest enclosing radius", (rz, rmin), line)
+        g = F.gap_below(fmt, z[e["radius"]]) << sh
+        es.track_min("slack in gaps of the radius", (rz - rmin, g), line)
+        return None
+
     def _fail(self, st, line, why):
         st.c["failed"] += 1
         st.reason(why)
@@ -646,6 +900,10 @@ class Checker:
         st.c["invalid"] += 1
         st.reason("invalid: " + why)
         st.example("invalid", line, why, self.max_examples)
+
+
+SECOND_WAVE_KINDS = {"rounded": Checker._rounded, "upper": Checker._upper,
+                     "predicate": Checker._predicate, "encloses": Checker._encloses}
 
 
 # ---------------------------------------------------------------------------
@@ -663,9 +921,10 @@ def report(summary, out=sys.stdout, far=None, fail_on_suspicious=False, expect_v
     for cw in summary.claims_warnings:
         w("  claims warning: %s" % cw)
     w("  %d cases: %d passed, %d failed, %d invalid, %d non-finite (%d of them in a lower "
-      "limb only), %d suspicious, %d out of scope (precision below min_precision)"
+      "limb only, %d with an exact result beyond Omega), %d suspicious, %d out of scope "
+      "(precision below min_precision)"
       % (t["cases"], t["passed"], t["failed"], t["invalid"], t["nonfinite"] + t["nonfinite_tail"],
-         t["nonfinite_tail"], t["suspicious"], t["out_of_scope"]))
+         t["nonfinite_tail"], t["beyond"], t["suspicious"], t["out_of_scope"]))
     for e in summary.stream_errors:
         w("  STREAM ERROR: %s" % e)
     cov = summary.coverage.describe()
@@ -700,6 +959,7 @@ def report(summary, out=sys.stdout, far=None, fail_on_suspicious=False, expect_v
                 es.label, "" if es.bound_source in (None, "instances") else
                 " [bound %s]" % es.bound_source, es.applicable, es.failures))
             if es.kind != "error":
+                _report_counts(w, es)
                 continue
             if es.max_ratio is not None:
                 if es.max_ratio[1] == 0:
@@ -726,6 +986,25 @@ def report(summary, out=sys.stdout, far=None, fail_on_suspicious=False, expect_v
             for line, why in agg.examples[kind]:
                 w("  %s: %s" % (kind.upper(), why))
                 w("    %s" % line)
+
+
+def _count_order(key):
+    # Histogram buckets in numeric order: "(a, b] gaps" by a, "[2^k, ...)" by k.
+    m = re.search(r"\(([-0-9/]+),", key) or re.search(r"\[2\^(-?\d+),", key)
+    if m:
+        n, _, d = m.group(1).partition("/")
+        return (1, Fraction(int(n), int(d or 1)), key)
+    return (0, 0, key)
+
+
+def _report_counts(w, es):
+    """Outcomes, histograms and extremes of the second-wave kinds."""
+    for k in sorted(es.counts, key=_count_order):
+        w("    %10d  %s" % (es.counts[k], k))
+    for what, d in (("largest", es.maxima), ("smallest", es.minima)):
+        for k, (r, case) in sorted(d.items()):
+            w("    %s %s: %s = %s at" % (what, k, frac_dec(r), _short(frac_str(r))))
+            w("      %s" % case)
 
 
 def _short(s, n=80):
