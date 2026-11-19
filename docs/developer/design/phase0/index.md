@@ -1,8 +1,9 @@
 # Phase 0: specification and feasibility report
 
-**Status: for review.** Per the brief, work stops here until you have read this and answered the
-[ten decisions](decisions.md#decisions-needed-from-you). No library code exists yet; what exists
-is this report and the experiments behind it, all in the repository.
+**Status: reviewed.** The owner answered the
+[ten decisions](decisions.md#decisions-from-the-phase-0-review) on 2026-11-18, and Milestone 1 is
+next. The report below is kept as written for that review, with the decisions added. No library
+code existed when it was written; it rests on the experiments in the repository.
 
 ## Verdict
 
@@ -66,29 +67,29 @@ their proofs exist.
 | [Operations](operations.md) | Theorem statements in plain math for every operation, each with its status; semantics of `Interval`, `Ball`, `BallVector`; batch kernels; decimal I/O; elementary functions |
 | [Environment](environment.md) | Per-backend floating-point guarantees, documented and measured; contraction; flags; self-test; environment check |
 | [Verification](verification.md) | Proof assistant choice; proof plan per $k$; generator design; trusted base |
-| [Library](library.md) | Header-only design, runtime dispatch, compile times, constant evaluation; API; the check against miso2 |
+| [Library](library.md) | Header-only design, runtime dispatch, compile times, constant evaluation; API; the check against the first client |
 | [Plan](plan.md) | Testing; documentation outline; milestone plan; performance targets |
 | [Decisions](decisions.md) | The decisions needed from you; deviations from the brief; decisions log |
 | [References](references.md) | Sources, prior art, licenses |
 
-## Decisions needed, in one line each
+## Decisions, in one line each
 
-| | Question | Recommendation |
+| | Question | Decision |
 |---|---|---|
 | [D1](decisions.md#d1-proof-assistant) | Proof assistant and allowed axioms | Rocq 9 + Flocq 4.2; the four axioms of Rocq's real numbers |
 | [D2](decisions.md#d2-what-counts-as-machine-checked) | May an SMT answer count as a proof? Are per-format proofs acceptable? | No; yes, flagged |
-| [D3](decisions.md#d3-eight-limbs-and-runtime-k) | $k = 8$ and runtime $k$, for which no proved algorithm exists | Keep in scope, late, selects allowed |
-| [D4](decisions.md#d4-normalization-invariant) | The invariant $x_i = \mathrm{RN}(x_i + x_{i+1})$ | Confirm |
+| [D3](decisions.md#d3-eight-limbs-and-runtime-k) | $k = 8$ and runtime $k$, for which no proved algorithm exists | In scope, late, selects allowed |
+| [D4](decisions.md#d4-normalization-invariant) | The invariant $x_i = \mathrm{RN}(x_i + x_{i+1})$ | Confirmed |
 | [D5](decisions.md#d5-non-finite-results) | IEEE-like infinities and NaN, or only "not finite" | IEEE-like by default, fast variants available |
 | [D6](decisions.md#d6-one-limb-and-contraction-under-clang) | $k = 1$ under Clang's default contraction | Unfused by default, opt-in pragma |
 | [D7](decisions.md#d7-generated-headers) | Commit generated headers? | Yes, with a CI freshness check |
-| [D8](decisions.md#d8-workload-priority) | Workload priority | Balls for miso2, linear algebra, GPU loops, predicates |
+| [D8](decisions.md#d8-workload-priority) | Workload priority | Balls, linear algebra, GPU loops, predicates |
 | [D9](decisions.md#d9-runtime-dispatch-state) | Where the CPU-detection result lives | A value the client holds |
-| [D10](decisions.md#d10-test-infrastructure) | Runners, clang-cl, ARM64 tools, AVX-512 | Self-hosted runners; install the two components; SDE for AVX-512 |
+| [D10](decisions.md#d10-test-infrastructure) | Runners, clang-cl, ARM64 tools, AVX-512 | No self-hosted runners (experiments run directly on the machines, CI on hosted runners); install the two components; SDE for AVX-512 |
 
-## What I would do next
+## What comes next
 
-On your go-ahead, Milestone 1 ([Plan](plan.md#milestones)): `double`, one and two limbs,
+Milestone 1 ([Plan](plan.md#milestones)): `double`, one and two limbs,
 addition and multiplication on scalar, AVX2 and NEON, `Ball`, the generator, the Rocq proofs with
 gradual underflow, the oracle with both tiers, CI, and the website skeleton. Its first step is
 the riskiest part of that milestone, porting the double-word addition proof to gradual underflow,

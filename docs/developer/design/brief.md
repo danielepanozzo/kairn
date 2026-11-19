@@ -1,5 +1,7 @@
 # Kairn: rigorous floating-point expansions with interval and ball arithmetic
 
+*This copy of the original brief is lightly edited so that the first client project is not named.*
+
 ## Goal
 Build Kairn, a fast C++20 library for floating-point expansions ("k-numbers"): unevaluated
 sums of k IEEE-754 floats or doubles (generalizing double-double / quad-double), with
@@ -160,11 +162,9 @@ that, with no client-specific code in Kairn:
 - A packed SIMD type (W lanes of k-numbers in registers, from the generator's per-ISA
   code) and SoA containers/views with proxy element access, so clients can write their
   own vector loops over the same proven networks.
-- Phase 0 checks this API against a real client: miso2, a branch-and-bound solver over
-  Bernstein polynomials that already plans k-number reruns of its precision-limited
-  queries: https://github.com/fsichetti/miso2 (see its docs/numbers-and-rounding.md,
-  docs/proofs-and-arguments.md and docs/design-decisions.md). Report what miso2 would need
-  that Kairn doesn't provide.
+- Phase 0 checks this API against a real client: the first client, a branch-and-bound solver
+  over Bernstein polynomials that already plans k-number reruns of its precision-limited
+  queries. Report what the first client would need that Kairn doesn't provide.
 
 ## Verification
 - Pick the proof assistant in Phase 0 and justify it (e.g. Rocq + Flocq, which has
@@ -328,7 +328,7 @@ conventions, not its content.
   and invariants, theorem statements in plain math for every op, exponent-range analysis
   per (T, k), per-backend FP guarantees, proof assistant choice, generator design,
   header-only design (runtime dispatch, compile times), the API check
-  against miso2, documentation outline, milestone plan, and the decisions you need
+  against the first client, documentation outline, milestone plan, and the decisions you need
   from me.
 - Milestone 1 (vertical slice): double, k=1 and k=2, scalar + AVX2 + NEON, + − ×, Ball, proofs,
   the oracle with both test tiers, CI, and the website skeleton (Home, Getting started,

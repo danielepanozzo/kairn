@@ -1,8 +1,23 @@
 # Decisions
 
-## Decisions needed from you
+## Decisions from the Phase 0 review
 
-Ten questions. Each has a recommendation; where you agree, a one-word answer is enough.
+Ten questions were put to the project owner at the end of Phase 0, each with a recommendation.
+All ten were answered on 2026-11-18. Each section below keeps the question and its reasoning and
+ends with the decision.
+
+| | Question | Decision |
+|---|---|---|
+| D1 | Proof assistant and allowed axioms | Rocq 9 with Flocq 4.2; exactly the four axioms of Rocq's real numbers |
+| D2 | May an SMT answer count as a proof? Are per-format proofs acceptable? | No. Yes, flagged per operation |
+| D3 | $k = 8$ and runtime $k$ | In scope, late (Milestone 6); selects allowed; constants may grow with $k$ |
+| D4 | Normalization invariant | $x_i = \mathrm{RN}(x_i + x_{i+1})$, confirmed |
+| D5 | Non-finite results | IEEE-like by default, with `kairn::finite::` variants |
+| D6 | One limb under Clang's default contraction | Unfused by default; `KAIRN_K1_CONTRACT` opts in |
+| D7 | Generated headers | Committed, with a CI freshness check |
+| D8 | Workload priority | Balls, linear algebra, elementwise GPU loops, predicates |
+| D9 | Runtime dispatch state | A `Backend` value the client holds |
+| D10 | Test infrastructure | No self-hosted runners: experiments run directly on the test machines, CI is separate; clang-cl and the ARM64 tools are installed on the Windows machine; Intel SDE for AVX-512 |
 
 ### D1 Proof assistant
 
@@ -13,6 +28,9 @@ Reasons and the comparison with Lean 4 and Isabelle are in
 [Verification](verification.md#proof-assistant-rocq-with-flocq); the pipeline was run end to end
 in Phase 0 and these four are what every theorem about real numbers in Rocq depends on.
 *Recommended: approve both.*
+
+**Decision: both approved.** A fifth axiom needs the owner's approval before any proof uses it;
+CI fails on anything outside the list.
 
 ### D2 What counts as machine-checked
 
@@ -26,6 +44,11 @@ on an abstraction. Two questions:
    flagged on that operation's reference page. It will certainly be the case for elementary
    functions, whose polynomials and tables depend on the target precision.
 
+**Decision: no to the first, yes to the second.** Only a proof checked by Rocq's kernel counts;
+the 3- and 4-limb operations carry `UNVERIFIED` until one exists, and the SMT result is cited as
+evidence, not as a status. Per-format proofs are accepted where a parametric one is not achieved,
+and the operation's reference page says so.
+
 ### D3 Eight limbs and runtime k
 
 No algorithm for five or more limbs has a correctness proof of any kind in the literature, and the
@@ -34,18 +57,22 @@ one library that shipped them withdrew them as broken
 Options:
 
 - **(a) Recommended.** Keep $k = 8$ and runtime $k$ in scope but late (Milestone 6), after the
-  miso2 path and the $k \le 4$ proofs; accept selects (branch-free conditional moves) inside the
-  kernels; accept constants that grow with $k$.
+  first client's path and the $k \le 4$ proofs; accept selects (branch-free conditional moves)
+  inside the kernels; accept constants that grow with $k$.
 - (b) Ship them early behind `UNVERIFIED` with a branching algorithm, so that clients can
   experiment, and prove later. Fast to deliver, but a long-lived unverified path in a library
   whose point is verification.
 - (c) Drop baked-in $k = 8$ from the first release.
+
+**Decision: (a).**
 
 ### D4 Normalization invariant
 
 $x_i = \mathrm{RN}(x_i + x_{i+1})$ for every $i$ ([Numbers](numbers.md#the-normalization-invariant)).
 *Recommended: confirm.* The consequence to be aware of: representations are not unique, so
 equality and ordering are computed, not read off the limbs.
+
+**Decision: confirmed.**
 
 ### D5 Non-finite results
 
@@ -54,6 +81,8 @@ Should `Expansion` arithmetic return canonical $\pm\infty$ and NaN the way IEEE 
 *Recommended: IEEE-like by default, with `kairn::finite::` variants and the batch kernels skipping
 the canonicalization.* Generic client code compares against infinities and expects
 $\infty + 1 = \infty$; kernels in hot loops do not need it.
+
+**Decision: as recommended.** Milestone 1 measures the cost and reports it.
 
 ### D6 One limb and contraction under Clang
 
@@ -69,6 +98,8 @@ expression on `Expansion<double, 1>` is not ([Library](library.md#one-limb)). Op
 On GCC there is nothing to decide (identical code), and on MSVC the auto-vectorization gap cannot
 be closed by either option.
 
+**Decision: (a).**
+
 ### D7 Generated headers
 
 *Recommended: commit the generated kernel headers* under `include/kairn/gen/`, with CI
@@ -76,10 +107,14 @@ regenerating them and failing on any difference. A header-only library should wo
 clone, and no client build should need Python. The alternative is to generate at CMake configure
 time and commit nothing generated.
 
+**Decision: commit them.**
+
 ### D8 Workload priority
 
-*Recommended order:* verified computation with balls (miso2), linear algebra, elementwise GPU
-loops, geometric predicates ([Plan](plan.md#performance-targets)).
+*Recommended order:* verified computation with balls (the first client's workload), linear
+algebra, elementwise GPU loops, geometric predicates ([Plan](plan.md#performance-targets)).
+
+**Decision: that order.**
 
 ### D9 Runtime dispatch state
 
@@ -88,22 +123,33 @@ the client obtains once and passes* (default: the compile-time baseline), which 
 global mutable state" rule intact. The alternative is one idempotent atomic cache inside the
 headers: more convenient, and a deliberate exception to that rule.
 
+**Decision: the `Backend` value.**
+
 ### D10 Test infrastructure
 
-Things only you can provide or approve:
+Things only the owner can provide or approve:
 
-1. **CI runners.** The repository is private; GitHub-hosted minutes are limited, and the
-   brute-force tier, CUDA and Metal need real machines. May kirby, sonic, ci-windows and the Mac
-   be registered as self-hosted runners for this repository? (ci-windows is described in your SSH
-   config as the wildmeshing-toolkit CI machine.)
-2. **clang-cl and the MSVC ARM64 tools** are not installed on ci-windows. The brief lists clang-cl
-   as a supported compiler and Windows AArch64 as compile-only; may I install both components?
+1. **CI runners.** The brute-force tier, CUDA and Metal need real machines. The question was
+   whether the four test machines may be registered as self-hosted runners.
+2. **clang-cl and the MSVC ARM64 tools** are not installed on the Windows machine. The brief lists
+   clang-cl as a supported compiler and Windows AArch64 as compile-only; may both be installed?
 3. **AVX-512.** None of the four machines has it. Options: correctness under Intel SDE only
    (recommended for now), a hosted runner, or access to another machine.
-4. **kirby** was at load average 117 with 9 GB of free disk. It is the only consumer GeForce; I
-   will use it for GPU correctness and the float-versus-double numbers, and sonic for anything
-   timed on the CPU, unless you prefer otherwise.
-5. **Linux AArch64** will run under QEMU user-mode on a hosted runner, as the brief says.
+4. **The consumer-GPU machine** is shared and heavily loaded. It is used for GPU correctness and
+   the float-versus-double numbers only, and the other Linux machine for anything timed on the
+   CPU.
+5. **Linux AArch64** runs under QEMU user-mode on a hosted runner, as the brief says.
+
+**Decision:**
+
+1. **No self-hosted runners.** Experiments, the brute-force tier, GPU runs and benchmarks are run
+   directly on the test machines, and their results are recorded in the repository as in Phase 0.
+   CI is set up separately on hosted runners and covers what those can run: the flag matrix, the
+   quick tier, the proofs, the generated-header freshness check and the documentation build. The
+   repository becomes public when CI is set up.
+2. Both components are installed.
+3. Intel SDE.
+4. and 5. As stated.
 
 ## Deviations from the brief, flagged
 
@@ -127,11 +173,13 @@ of the brief:
 
 ## Decisions log
 
-Decisions already taken within Phase 0, each reversible at your word.
+Decisions taken within Phase 0 and at its review, each reversible at the owner's word.
 
 | Date | Decision | Reason |
 |---|---|---|
-| 2026-11-18 | Repository `danielepanozzo/kairn`, private, MIT, copyright line "The Kairn Authors" | Your instruction; the copyright holder is a placeholder for you to set |
+| 2026-11-18 | Repository `danielepanozzo/kairn`, MIT, copyright Daniele Panozzo; private until CI is set up | The owner's instruction |
+| 2026-11-18 | D1 to D10 decided as recorded [above](#decisions-from-the-phase-0-review) | Phase 0 review |
+| 2026-11-18 | No self-hosted runners; experiments run directly on the test machines; CI on hosted runners | Phase 0 review (D10) |
 | 2026-11-18 | A rounded product is always `fma(a, b, +0.0)`; generator rules R1 and R2 | Contraction experiment, 23 configurations |
 | 2026-11-18 | Fast-math sub-flags are rejected by `#error` where a macro exists and by the self-test elsewhere | Clang defines no macro for three of them |
 | 2026-11-18 | `__builtin_is_constant_evaluated()` instead of `std::is_constant_evaluated()`; no `nextafter` in device code | nvcc diagnostics |

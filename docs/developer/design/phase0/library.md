@@ -1,4 +1,4 @@
-# The library: header-only design, API, and the check against miso2
+# The library: header-only design, API, and the check against the first client
 
 ## Delivery
 
@@ -103,8 +103,8 @@ does), with `/fp:strict`, and under nvcc on host and device.
   are identical.
 - Constants from integers and rationals use integer arithmetic only, on a small fixed-capacity
   big integer written without `__int128` (MSVC lacks it), so they do not depend on the
-  floating-point semantics of constant evaluation at all. This is the generalization of miso2's
-  `roundAbs` to $k$ limbs.
+  floating-point semantics of constant evaluation at all. This is the generalization of the first
+  client's `roundAbs` to $k$ limbs.
 
 ## One limb
 
@@ -201,15 +201,14 @@ What makes this fit a client templated on its scalar:
 Thread safety: no global mutable state, no lazily initialized tables, nothing written outside the
 outputs. `environment_ok` and `self_test` only read.
 
-## What miso2 needs
+## What the first client needs
 
-miso2 is a branch-and-bound solver over Bernstein polynomials that plans to rerun
-precision-limited queries on k-numbers. I read its `docs/numbers-and-rounding.md`,
-`docs/proofs-and-arguments.md`, `docs/design-decisions.md` and the arithmetic headers
-(`Arithmetic.hpp`, `Ball.hpp`, `Interval.hpp`, `Lanes.hpp`) and its build flags; I did not read
-all 14 500 lines, so this list is what those sources show, not an audit.
+The first client is a branch-and-bound solver over Bernstein polynomials that plans to rerun
+precision-limited queries on k-numbers. I read its design documentation, its arithmetic headers
+and its build flags; I did not read all 14 500 lines, so this list is what those sources show,
+not an audit.
 
-| miso2 today | With Kairn | Status |
+| The client today | With Kairn | Status |
 |---|---|---|
 | `Ball<S>::unit`, `tiny`, and `ballCovers(k)`: $u$, an underflow constant, and the check $k\,u \le \tfrac12$ | `traits<X>` constants and the `constexpr` bound functions, whose preconditions are checked at compile time | in the brief |
 | `BallVector<N>`: $N$ `double` midpoints and one radius; `Polynomial` likewise | `BallVector<T, k>` | in the brief; its semantics are now [defined](operations.md#ballvector) |
@@ -228,26 +227,27 @@ all 14 500 lines, so this list is what those sources show, not an audit.
 | Built with `-frounding-math` (GCC, `gnu++23`) and nvcc `-std=c++20 --expt-relaxed-constexpr` | both work; the relaxed flag is not needed by Kairn | verified in Phase 0 |
 | Host intervals run in upward rounding ("tight"), balls in nearest, under guards that write MXCSR | Kairn must be called in nearest; `environment_ok()` is the check | in the brief |
 
-**What miso2 would need that Kairn does not provide**, beyond the additions above:
+**What the client would need that Kairn does not provide**, beyond the additions above:
 
 1. **Nothing replaces hardware directed rounding at $k = 1$ on the host.** A `double` interval
-   operation in miso2's current library is one instruction per bound; Kairn's
+   operation in the client's current library is one instruction per bound; Kairn's
    `Interval<double, 1>` emulates each bound with about ten operations because it may not change
-   the rounding mode. miso2 should keep its own intervals for the first pass and use Kairn from
-   $k = 2$ up, and for balls. Converting between the two is `lower_as<double>` and a constructor.
-2. **Mixed rounding modes in one program.** miso2 will switch between upward (its intervals) and
-   nearest (Kairn) around calls. Kairn can verify the mode but will not set it; the switching and
-   its cost stay in miso2's guards.
+   the rounding mode. The client should keep its own intervals for the first pass and use Kairn
+   from $k = 2$ up, and for balls. Converting between the two is `lower_as<double>` and a
+   constructor.
+2. **Mixed rounding modes in one program.** The client will switch between upward (its intervals)
+   and nearest (Kairn) around calls. Kairn can verify the mode but will not set it; the switching
+   and its cost stay in the client's guards.
 3. **Bernstein-specific kernels** (subdivision along a lattice line, Lagrange-to-Bernstein
    conversion, the hull of a polynomial in $t$) are not in Kairn and should not be: they are
-   compositions of sums, scalings and convolutions, and their radius bounds are miso2's own
+   compositions of sums, scalings and convolutions, and their radius bounds are the client's own
    theorems with Kairn's constants substituted.
 4. **Its GPU plan is float limbs with $k$ doubling.** The range table of
    [Numbers](numbers.md#precision-depends-on-magnitude) is the caveat: `float` k-numbers keep
-   their precision only above about $10^{-16}$ at $k = 4$. miso2 centers its coordinates, which
-   helps, but its determinants are products of differences and can be small; it will need exact
-   power-of-two scaling of its inputs, which Kairn provides, or `double` limbs at 69 times the
-   cost per operation.
-5. **Timeline.** miso2's plan is $k$ doubled per rerun: 2, 4, 8. Verified $k = 2$ is Milestone 1;
-   $k = 4$ carries the proof risk described in [Verification](verification.md#networks-for-three-and-four-limbs);
+   their precision only above about $10^{-16}$ at $k = 4$. The client centers its coordinates,
+   which helps, but its determinants are products of differences and can be small; it will need
+   exact power-of-two scaling of its inputs, which Kairn provides, or `double` limbs at 69 times
+   the cost per operation.
+5. **Timeline.** The client's plan is $k$ doubled per rerun: 2, 4, 8. Verified $k = 2$ is
+   Milestone 1; $k = 4$ carries the proof risk described in [Verification](verification.md#networks-for-three-and-four-limbs);
    $k = 8$ is research.

@@ -166,8 +166,9 @@ copies of a kernel differently. R1 and R2 are what make the second point harmles
 
 It is called at every batch-API entry and, in debug builds, in every scalar operation; a failure
 invokes `KAIRN_ENVIRONMENT_FAILURE`, which by default prints the reason and aborts. It is the
-documented precondition of every Kairn call, and the query miso2 needs: miso2 runs its double
-intervals in upward rounding and must be back in nearest before calling Kairn. The usual way to
+documented precondition of every Kairn call, and the query the first client needs. That client, a
+library for verified computation with balls on CPU and CUDA, runs its double intervals in upward
+rounding and must be back in nearest before calling Kairn. The usual way to
 end up with FTZ and DAZ set without asking is to link any object compiled with `-ffast-math`,
 which pulls in a startup routine that sets them for the whole process; that goes in the
 troubleshooting page. The cost of the read is a few cycles; it will be reported in Milestone 1.

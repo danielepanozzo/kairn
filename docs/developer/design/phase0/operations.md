@@ -55,8 +55,9 @@ parametric in $p$, $\eta$ and the tie rule.
 | `TwoProd`, constant evaluation | Dekker's product with Veltkamp's split (17 operations) | Exact under the same condition, and $\lvert p + e - ab\rvert \le \tfrac72\eta$ always, when no intermediate overflows. | Flocq `Dekker`; overflow precondition **P** ([BM11](references.md#bm11)) |
 | Opaque product | $p = \mathrm{fma}(a, b, 0)$ | $p = \mathrm{RN}(ab)$ as a real number (the sign of a zero may differ from `a * b`). | trivial; see [why](environment.md#the-rule-no-product-feeds-an-addition) |
 
-`TwoSum`, `Fast2Sum` and `TwoProd` are public API (`kairn::two_sum`, …): clients such as miso2
-use them for their own exactness tests.
+`TwoSum`, `Fast2Sum` and `TwoProd` are public API (`kairn::two_sum`, …): clients use them for
+their own exactness tests, as the first client (a library for verified computation with balls on
+CPU and CUDA) does.
 
 ## k = 1
 
@@ -178,7 +179,7 @@ to handle that.**
 | k-number $\to$ k'-number, $k' > k$ | Append zeros: exact, normalized. | — |
 | k-number $\to$ k'-number, $k' < k$ | Keep the first $k'$ limbs: normalized, error at most $\frac{u^{k'}}{1-u}\lvert x_0\rvert$. | 0 |
 | Mixed-k arithmetic | Defined as: convert the narrower operand, then operate. | — |
-| `double` limbs $\leftrightarrow$ `float` limbs | A `double` is exactly a 3-limb `float` number when it is in `float` range and a multiple of the smallest `float` subnormal (always the case above $2^{-97}$); the conversions are exact splitting or exact summation followed by truncation, with overflow to $\pm\infty$ and an underflow term. Not in the brief: added because miso2 builds in `double` on the host and narrows to `float` for the device ([API](library.md#what-miso2-needs)). | $\le k'$ |
+| `double` limbs $\leftrightarrow$ `float` limbs | A `double` is exactly a 3-limb `float` number when it is in `float` range and a multiple of the smallest `float` subnormal (always the case above $2^{-97}$); the conversions are exact splitting or exact summation followed by truncation, with overflow to $\pm\infty$ and an underflow term. Not in the brief: added because the first client builds in `double` on the host and narrows to `float` for the device ([API](library.md#what-the-first-client-needs)). | $\le k'$ |
 | `ldexp(x, n)`, `half(x)` | Each limb is scaled; the result is renormalized. Exact unless a limb becomes subnormal; always $\lvert z - 2^n x\rvert \le \tfrac k2\,\eta$. | $k/2$ |
 | `neg`, `abs` | Exact; limb-wise sign change (the sign of $x$ is the sign of $x_0$). | — |
 | `renormalize(x)` | For limbs of decreasing magnitude with bounded overlap: a normalized result with form-R error $c\,u^k$. Status **K**: the Rocq-proved renormalization of [BJMP17](references.md#bjmp17) is the starting point, but it returns the weaker ulp-nonoverlap and uses data-dependent tests. | 0 |
@@ -244,7 +245,7 @@ by stepping the bit pattern. This is the technique of the kv library's `KV_NOHWR
 | `mul_down`, `mul_up` | Exactly $\mathrm{RD}$ / $\mathrm{RU}$ when $ab = 0$ or $\lvert ab\rvert \ge 2^{2p-1}\eta$. Below that, a valid bound at most one number of the format beyond the exact directed rounding. | **K** |
 | `div_*`, `sqrt_*` | Exactly $\mathrm{RD}$ / $\mathrm{RU}$ when the remainder is representable; a valid bound one ulp wider otherwise. | **K** (the remainder properties are in Flocq for unbounded exponents only) |
 | `next_up`, `next_down` | Exactly $\mathrm{succ}$, $\mathrm{pred}$ for finite arguments; $\mathrm{succ}(\Omega) = +\infty$. | Flocq `Bsucc_correct` |
-| Radius arithmetic: `radd(a, b)`, `rmul(a, b)` for $a, b \ge 0$ | $\mathrm{next\_up}(a \oplus b) \ge a + b$ and $\mathrm{next\_up}(a \otimes b) \ge ab$, always, and at most 1.5 ulps of the result above the exact value. | **K**, immediate (this is miso2's `addUpAtNearest`) |
+| Radius arithmetic: `radd(a, b)`, `rmul(a, b)` for $a, b \ge 0$ | $\mathrm{next\_up}(a \oplus b) \ge a + b$ and $\mathrm{next\_up}(a \otimes b) \ge ab$, always, and at most 1.5 ulps of the result above the exact value. | **K**, immediate (this is the first client's `addUpAtNearest`) |
 
 **Fast paths**, used only where the instruction is by definition the same function, and only
 after the equivalence is tested on that backend: CUDA's `__dadd_rd`, `__dmul_ru`, `__fma_rd`, …
@@ -278,8 +279,8 @@ decorations; the semantics below were taken from the P1788 drafts
   two-piece) quotient set, which is a half-line or the whole line. `mul_rev_to_pair` returns the
   two pieces separately, as 1788's function of that name.
 - **Products with zero and infinity**: $[0, 0] \cdot X = [0, 0]$ for any nonempty $X$, including
-  unbounded ones. The endpoint arithmetic uses $0 \cdot \infty = 0$ for this reason (miso2's
-  `mulUpZ`).
+  unbounded ones. The endpoint arithmetic uses $0 \cdot \infty = 0$ for this reason (the first
+  client's `mulUpZ`).
 - **Comparisons are three-valued.** `less(X, Y)` is *true* when $x < y$ for all $x \in X, y \in Y$,
   *false* when $x \ge y$ for all of them, *unknown* otherwise; same for the other five orderings.
   The set relations of 1788 (`equal`, `subset`, `interior`, `disjoint`, `precedes`, …) are separate
@@ -323,9 +324,9 @@ operations, against two kernels plus two outward steps for `Interval`.
 ### BallVector
 
 A value is $\{v \in \mathbb{R}^N : \max_i |v_i - c_i| \le r\}$: $N$ k-number centers and one radius
-$r \in T$. It is the max-norm ball of [vdH09](references.md#vdh09) and exactly miso2's
+$r \in T$. It is the max-norm ball of [vdH09](references.md#vdh09) and exactly the first client's
 `BallVector` and `Polynomial` representation with k-number centers. The whole space is
-$r = +\infty$ with all centers zero (miso2's "void" state).
+$r = +\infty$ with all centers zero (the first client's "void" state).
 
 **Semantics of every kernel.** Let $f$ be the exact map (sum, scaling, dot product, convolution,
 matrix-vector product, …). The result $Z$ satisfies $f(X, Y) \subseteq Z$, and its radius is at
@@ -333,9 +334,9 @@ least what `Ball` arithmetic would return for each output entry: *a `BallVector`
 vector of `Ball` operations followed by taking the largest radius*, computed in one fused pass.
 A kernel may use a cheaper a priori bound (a norm of the centers times the rounding unit) as long
 as that bound dominates the entrywise one; each kernel's reference page states which formula it
-uses. Two requirements come from miso2 and are not in the brief's list: `norm_upper` (an upper
-bound in $T$ of $\max_i |c_i|$) as a kernel of its own, and a result flag saying whether all
-centers stayed finite.
+uses. Two requirements come from the first client and are not in the brief's list: `norm_upper`
+(an upper bound in $T$ of $\max_i |c_i|$) as a kernel of its own, and a result flag saying whether
+all centers stayed finite.
 
 ### One interface, and conversions
 
@@ -358,7 +359,7 @@ $m\,\varepsilon < 1$ checked at compile time when $n$ is a constant and at run t
 | `sum` of $n$ k-numbers | $\lvert \tilde s - s\rvert \le \gamma_{n-1}(\varepsilon_{+}) \sum \lvert x_i\rvert$ | No underflow term. Holds for any order; the proof is done for the orders actually emitted (sequential and the SIMD lane-then-reduce order). |
 | `dot` | $\lvert \tilde s - x^{\mathsf T} y\rvert \le \gamma_n(\varepsilon_{\mathrm{dot}}) \sum \lvert x_i y_i\rvert + n\,\tau$ | Here $\tau$ is the product's `tiny` inflated by the factor $1 + \gamma$ of the later additions, which scale the underflow terms; the exported function returns the inflated value. |
 | `axpy`, elementwise maps | The scalar bound per entry. | |
-| `convolution` | The `dot` bound per output coefficient with $n = \min(n_a, n_b)$. | miso2's polynomial product. |
+| `convolution` | The `dot` bound per output coefficient with $n = \min(n_a, n_b)$. | The first client's polynomial product. |
 | `gemv`, `gemm` | $\lvert \widetilde{Ax} - Ax\rvert \le \gamma_n(\varepsilon_{\mathrm{dot}})\,\lvert A\rvert\lvert x\rvert + n\,\tau$ entrywise | $\tau$ as for `dot`. |
 | `sum`/`dot` of $T$ inputs returning a k-number | $\lvert \tilde s - s\rvert \le \gamma^{(k)}_n \sum \lvert x_i\rvert$ with $\gamma^{(k)}_n = O((nu)^k)$, plus $n\,\eta$ for `dot` | The k-fold-precision algorithms of [ORO05](references.md#oro05). |
 
@@ -367,7 +368,7 @@ without the final renormalization gates) and normalizes once at the end. That is
 where its own proof goes through; $\varepsilon_{\mathrm{dot}}$ and the constants above are then
 those of the fused loop, not the product of the scalar constants. All status **K**. An
 `Accumulator` type exposes the same fused state to clients for loops Kairn does not provide (for
-example miso2's convolutions over multi-indices).
+example the first client's convolutions over multi-indices).
 
 ## Decimal input and output
 

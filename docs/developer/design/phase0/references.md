@@ -123,7 +123,8 @@ and dot product*, BIT 52, 2012, for a priori bounds in round-to-nearest.
 
 **Higham.** N. J. Higham. *Accuracy and Stability of Numerical Algorithms*, 2nd ed., SIAM, 2002.
 The standard model and $\gamma_n$; the form in which Kairn exports its error model, and the
-reference miso2's proofs cite.
+reference cited by the proofs of the first client (a library for verified computation with balls
+on CPU and CUDA).
 
 <a id="rzbm09"></a>**RZBM09.** S. M. Rump, P. Zimmermann, S. Boldo, G. Melquiond. *Computing
 predecessor and successor in rounding to nearest.* BIT 49, 2009
@@ -155,8 +156,8 @@ drafts D9.2 and D9.7, N. Revol's overview, and the documentation of the Octave i
 and IntervalArithmetic.jl.
 
 **CORE-MATH** ([core-math.gitlabpages.inria.fr](https://core-math.gitlabpages.inria.fr/), MIT)
-and **CRlibm**: prior art for elementary functions with proofs; miso2's current source of interval
-functions.
+and **CRlibm**: prior art for elementary functions with proofs; the first client's current source
+of interval functions.
 
 ## Proof tools
 

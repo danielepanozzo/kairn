@@ -108,7 +108,7 @@ benchmarks, docs added, open issues) and ships the documentation for what it add
 |---|---|---|---|
 | 0 | This report | Your review | — |
 | **1** | **Vertical slice**: `double`, $k = 1, 2$; $+$, $-$, $\times$ (accurate and fast addition, operations with a `T` operand, `ldexp`, comparisons, conversions to `T`); scalar, AVX2, NEON; `Ball`; generator; Rocq proofs with gradual underflow; oracle with quick and brute-force tiers; CI with the flag matrix and the object-code check; self-test and environment check; site skeleton (Home, Getting started, one tutorial, generated reference) | Every shipped operation has a checked theorem; brute force clean on Mac, Linux, Windows; `mkdocs build --strict` passes | Porting the double-word proofs to gradual underflow is the unknown in the estimate |
-| 2 | `float` limbs; `Interval`; `BallVector` and the first batch kernels (sum, dot, axpy, convolution, `norm_upper`, accumulator); SoA containers and the packed SIMD type; exhaustive tier on emulated formats | Same, plus the miso2 ball path can be written against it | Interval tightness constants |
+| 2 | `float` limbs; `Interval`; `BallVector` and the first batch kernels (sum, dot, axpy, convolution, `norm_upper`, accumulator); SoA containers and the packed SIMD type; exhaustive tier on emulated formats | Same, plus the first client's ball path can be written against it | Interval tightness constants |
 | 3 | CUDA and Metal backends: device code, warp helpers, device self-tests, flush-to-zero proofs, float-versus-double benchmarks on the GPUs | Same on the three GPUs and the M3 | The flush-to-zero proof framework |
 | 4 | $k = 3, 4$: networks first behind `UNVERIFIED`, then their Rocq proofs | Proofs checked, or an explicit report that a route failed and which is next | **Highest proof risk of the plan** |
 | 5 | Division and square root ($k = 2$ from the existing proofs; $k = 3, 4$ by Newton iteration); gemv, gemm; AVX-512 dispatch | Proofs checked for $k = 2$; others may stay `UNVERIFIED` | No AVX-512 hardware |
@@ -116,10 +116,10 @@ benchmarks, docs added, open issues) and ships the documentation for what it add
 | 7 | Decimal I/O; elementary functions; C ABI and bindings | One checked proof per function and format | Volume |
 | 8 | Release hardening: benchmarks against QD, CAMPARY, MultiFloats.jl, CCCL fpmp2, MPFR and Arb; full tutorials and gallery | The brief's release conditions | — |
 
-Milestones 2 and 3 do not depend on 4, so the miso2 use case (balls with 2-limb centers on CPU
-and GPU) is served before the risky proofs. No release happens before every public operation is
-proved, documented and exercised by a tutorial example in CI; milestones before that are
-development snapshots.
+Milestones 2 and 3 do not depend on 4, so the first client's use case (balls with 2-limb centers
+on CPU and GPU) is served before the risky proofs. No release happens before every public
+operation is proved, documented and exercised by a tutorial example in CI; milestones before that
+are development snapshots.
 
 ## Performance targets
 
