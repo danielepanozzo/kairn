@@ -1,0 +1,97 @@
+
+Dump of file unit.obj
+
+File Type: COFF OBJECT
+
+kairn_objcode_fixups_inline:
+  0000000000000000: ret         0
+
+kairn_objcode_packed_float_mul_2_2_full:
+  0000000000000000: sub         rsp,28h
+  0000000000000004: vmovups     ymm4,ymmword ptr [rcx+40h]
+  0000000000000009: vmovups     ymm3,ymmword ptr [rcx]
+  000000000000000D: vmovups     ymm0,ymmword ptr [rcx+60h]
+  0000000000000012: vmovups     ymm2,ymmword ptr [rcx+20h]
+  0000000000000017: vxorps      xmm1,xmm1,xmm1
+  000000000000001B: vfmadd231ps ymm1,ymm2,ymm0
+  0000000000000020: vfmadd231ps ymm1,ymm3,ymm0
+  0000000000000025: vfmadd231ps ymm1,ymm2,ymm4
+  000000000000002A: vmovaps     xmmword ptr [rsp+10h],xmm6
+  0000000000000030: vxorps      xmm6,xmm6,xmm6
+  0000000000000034: vfmadd231ps ymm6,ymm3,ymm4
+  0000000000000039: vmovups     ymm0,ymm6
+  000000000000003D: vfmsub231ps ymm0,ymm3,ymm4
+  0000000000000042: vaddps      ymm5,ymm1,ymm0
+  0000000000000046: vmovdqu     ymm1,ymmword ptr [__ymm@7f8000007f8000007f8000007f8000007f8000007f8000007f8000007f800000]
+  000000000000004E: vmovdqu     ymm0,ymmword ptr [__ymm@8000000080000000800000008000000080000000800000008000000080000000]
+  0000000000000056: vmulps      ymm2,ymm1,ymm6
+  000000000000005A: vaddps      ymm3,ymm6,ymm5
+  000000000000005E: vandnps     ymm0,ymm0,ymm3
+  0000000000000062: vcmplt_oqps ymm4,ymm0,ymm1
+  0000000000000067: vblendvps   ymm0,ymm2,ymm3,ymm4
+  000000000000006D: vsubps      ymm1,ymm3,ymm6
+  0000000000000071: vmovaps     xmmword ptr [rsp],xmm7
+  0000000000000076: vmovups     ymmword ptr [rdx],ymm0
+  000000000000007A: vcmpeqps    ymm0,ymm2,ymm2
+  000000000000007F: vxorps      xmm7,xmm7,xmm7
+  0000000000000083: vblendvps   ymm2,ymm2,ymm7,ymm0
+  0000000000000089: vsubps      ymm3,ymm5,ymm1
+  000000000000008D: vblendvps   ymm1,ymm2,ymm3,ymm4
+  0000000000000093: vmovups     ymmword ptr [rdx+20h],ymm1
+  0000000000000098: vzeroupper
+  000000000000009B: vmovaps     xmm6,xmmword ptr [rsp+10h]
+  00000000000000A1: vmovaps     xmm7,xmmword ptr [rsp]
+  00000000000000A6: add         rsp,28h
+  00000000000000AA: ret
+
+kairn_objcode_scalar_double_mul_2_2_full:
+  0000000000000000: sub         rsp,58h
+  0000000000000004: vmovsd      xmm3,qword ptr [rcx+18h]
+  0000000000000009: vmovsd      xmm4,qword ptr [rcx+8]
+  000000000000000E: vmovaps     xmmword ptr [rsp+40h],xmm6
+  0000000000000014: vmovaps     xmmword ptr [rsp+30h],xmm7
+  000000000000001A: vmovsd      xmm7,qword ptr [rcx]
+  000000000000001E: vmovaps     xmmword ptr [rsp+20h],xmm8
+  0000000000000024: vmovsd      xmm8,qword ptr [rcx+10h]
+  0000000000000029: vmovaps     xmmword ptr [rsp+10h],xmm9
+  000000000000002F: vmovupd     xmm9,xmm7
+  0000000000000033: vxorpd      xmm6,xmm6,xmm6
+  0000000000000037: vfmadd213sd xmm9,xmm8,xmm6
+  000000000000003C: vxorpd      xmm1,xmm9,xmmword ptr [__xmm@80000000000000008000000000000000]
+  0000000000000044: vmovupd     xmm5,xmm7
+  0000000000000048: vfmadd213sd xmm5,xmm8,xmm1
+  000000000000004D: vmovupd     xmm1,xmm4
+  0000000000000051: vfmadd213sd xmm1,xmm3,xmm6
+  0000000000000056: vmovq       xmm1,xmm1
+  000000000000005A: vfmadd213sd xmm7,xmm3,xmm1
+  000000000000005F: vmovq       xmm1,xmm7
+  0000000000000063: vfmadd213sd xmm4,xmm8,xmm1
+  0000000000000068: vaddsd      xmm2,xmm4,xmm5
+  000000000000006C: vmovsd      xmm4,qword ptr [__real@7ff0000000000000]
+  0000000000000074: vmovaps     xmmword ptr [rsp],xmm10
+  0000000000000079: vaddsd      xmm1,xmm9,xmm2
+  000000000000007D: vmovq       rax,xmm1
+  0000000000000082: mov         rcx,7FFFFFFFFFFFFFFFh
+  000000000000008C: and         rax,rcx
+  000000000000008F: vmovq       xmm0,rax
+  0000000000000094: vcomisd     xmm4,xmm0
+  0000000000000098: vxorpd      xmm10,xmm10,xmm10
+  000000000000009D: vsubsd      xmm3,xmm1,xmm9
+  00000000000000A2: jbe         00000000000000B3
+  00000000000000A4: vsubsd      xmm0,xmm2,xmm3
+  00000000000000A8: vmovsd      qword ptr [rdx+8],xmm0
+  00000000000000AD: vmovsd      qword ptr [rdx],xmm1
+  00000000000000B1: jmp         00000000000000CB
+  00000000000000B3: vmulsd      xmm2,xmm9,xmm4
+  00000000000000B7: vcmpeqsd    xmm0,xmm2,xmm2
+  00000000000000BC: vblendvpd   xmm1,xmm2,xmm10,xmm0
+  00000000000000C2: vmovsd      qword ptr [rdx+8],xmm1
+  00000000000000C7: vmovsd      qword ptr [rdx],xmm2
+  00000000000000CB: vmovaps     xmm6,xmmword ptr [rsp+40h]
+  00000000000000D1: vmovaps     xmm7,xmmword ptr [rsp+30h]
+  00000000000000D7: vmovaps     xmm8,xmmword ptr [rsp+20h]
+  00000000000000DD: vmovaps     xmm9,xmmword ptr [rsp+10h]
+  00000000000000E3: vmovaps     xmm10,xmmword ptr [rsp]
+  00000000000000E8: add         rsp,58h
+  00000000000000EC: ret
+

@@ -1,0 +1,87 @@
+
+unit.o:	file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+0000000000000000 <kairn_objcode_fixups_call>:
+       0:	ret
+
+0000000000000e00 <kairn_objcode_scalar_float_to_up_2>:
+     e00:	ldp	s0, s1, [x0]
+     e04:	fcmpe	s1, #0.0
+     e08:	b.gt	e14 <kairn_objcode_scalar_float_to_up_2+0x14>
+     e0c:	str	s0, [x1]
+     e10:	ret
+     e14:	fmov	w0, s0
+     e18:	mov	w5, #0x7f800000            	// #2139095040
+     e1c:	lsr	w3, w0, #31
+     e20:	add	w6, w0, #0x1
+     e24:	ands	w2, w0, #0x7fffffff
+     e28:	eor	w4, w3, #0x1
+     e2c:	sub	w3, w6, w3, lsl #1
+     e30:	add	w4, w4, w2
+     e34:	eor	w2, w3, #0x1
+     e38:	csel	w2, w2, wzr, eq	// eq = none
+     e3c:	cmp	w4, w5
+     e40:	eor	w2, w2, w3
+     e44:	eor	w0, w2, w0
+     e48:	csel	w0, w0, wzr, hi	// hi = pmore
+     e4c:	eor	w0, w0, w2
+     e50:	fmov	s0, w0
+     e54:	str	s0, [x1]
+     e58:	ret
+     e5c:	nop
+
+0000000000002900 <kairn_objcode_scalar_double_mul_2_2_full>:
+    2900:	ldp	d0, d6, [x0]
+    2904:	movi	d4, #0x0
+    2908:	ldp	d1, d3, [x0, #16]
+    290c:	mov	x0, #0x7fffffffffffffff    	// #9223372036854775807
+    2910:	mov	x2, #0x7fefffffffffffff    	// #9218868437227405311
+    2914:	fmov	d5, x2
+    2918:	fmadd	d2, d6, d3, d4
+    291c:	fmadd	d4, d0, d1, d4
+    2920:	fmadd	d2, d0, d3, d2
+    2924:	fnmsub	d3, d0, d1, d4
+    2928:	fmadd	d2, d6, d1, d2
+    292c:	fmov	d6, x0
+    2930:	fadd	d3, d3, d2
+    2934:	fadd	d2, d4, d3
+    2938:	and	v6.8b, v2.8b, v6.8b
+    293c:	fsub	d4, d2, d4
+    2940:	fcmpe	d6, d5
+    2944:	fsub	d3, d3, d4
+    2948:	b.ls	2978 <kairn_objcode_scalar_double_mul_2_2_full+0x78>  // b.plast
+    294c:	stp	x29, x30, [sp, #-32]!
+    2950:	mov	w0, #0x0                   	// #0
+    2954:	mov	x29, sp
+    2958:	str	x1, [sp, #24]
+    295c:	bl	0 <kairn_objcode_fixups_call>
+			295c: R_AARCH64_CALL26	_ZN5kairn3gen5fixup12mul_2_2_fullEddddb
+    2960:	fmov	x3, d1
+    2964:	ldr	x1, [sp, #24]
+    2968:	mov	v0.d[1], x3
+    296c:	str	q0, [x1]
+    2970:	ldp	x29, x30, [sp], #32
+    2974:	ret
+    2978:	stp	d2, d3, [x1]
+    297c:	ret
+
+
+Disassembly of section .text.unlikely._ZN5kairn3gen5fixup12mul_2_2_fullEddddb:
+
+0000000000000000 <_ZN5kairn3gen5fixup12mul_2_2_fullEddddb>:
+   0:	movi	d4, #0x0
+   4:	mov	x1, #0x7ff0000000000000    	// #9218868437227405312
+   8:	fmov	d5, x1
+   c:	and	w0, w0, #0x1
+  10:	fmadd	d0, d0, d1, d4
+  14:	fmul	d0, d0, d5
+  18:	fcmp	d0, d0
+  1c:	fcsel	d4, d0, d4, ne	// ne = any
+  20:	cmp	w0, #0x0
+  24:	fcsel	d0, d0, d2, eq	// eq = none
+  28:	fcsel	d1, d4, d3, eq	// eq = none
+  2c:	ret
+

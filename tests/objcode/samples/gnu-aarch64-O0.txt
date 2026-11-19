@@ -1,0 +1,363 @@
+
+unit.o:	file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+0000000000000000 <kairn_objcode_fixups_inline>:
+       0:	nop
+       4:	ret
+
+00000000000000d0 <kairn_objcode_scalar_double_ball_add_1>:
+      d0:	sub	sp, sp, #0xd0
+      d4:	stp	x29, x30, [sp, #192]
+      d8:	add	x29, sp, #0xc0
+      dc:	str	x0, [sp, #24]
+      e0:	str	x1, [sp, #16]
+      e4:	str	x2, [sp, #8]
+      e8:	str	x3, [sp]
+      ec:	adrp	x0, 0 <__stack_chk_guard>
+			ec: R_AARCH64_ADR_GOT_PAGE	__stack_chk_guard
+      f0:	ldr	x0, [x0]
+			f0: R_AARCH64_LD64_GOT_LO12_NC	__stack_chk_guard
+      f4:	ldr	x1, [x0]
+      f8:	str	x1, [sp, #184]
+      fc:	mov	x1, #0x0                   	// #0
+     100:	ldr	x0, [sp, #24]
+     104:	ldr	d3, [x0]
+     108:	ldr	x0, [sp, #24]
+     10c:	add	x0, x0, #0x8
+     110:	ldr	d2, [x0]
+     114:	ldr	x0, [sp, #24]
+     118:	add	x0, x0, #0x10
+     11c:	ldr	d1, [x0]
+     120:	ldr	x0, [sp, #24]
+     124:	add	x0, x0, #0x18
+     128:	ldr	d0, [x0]
+     12c:	ldr	x0, [sp, #16]
+     130:	add	x0, x0, #0x8
+     134:	str	d3, [sp, #48]
+     138:	str	d2, [sp, #56]
+     13c:	str	d1, [sp, #64]
+     140:	str	d0, [sp, #72]
+     144:	ldr	x1, [sp, #16]
+     148:	str	x1, [sp, #80]
+     14c:	str	x0, [sp, #88]
+     150:	ldr	d1, [sp, #48]
+     154:	ldr	d0, [sp, #64]
+     158:	fadd	d0, d1, d0
+     15c:	str	d0, [sp, #96]
+     160:	ldr	d0, [sp, #96]
+     164:	str	d0, [sp, #32]
+     168:	add	x0, sp, #0x20
+     16c:	bl	0 <kairn_objcode_fixups_inline>
+			16c: R_AARCH64_CALL26	_ZSt8bit_castImdET_RKT0_
+     170:	and	x0, x0, #0x7fffffffffffffff
+     174:	str	x0, [sp, #40]
+     178:	add	x0, sp, #0x28
+     17c:	bl	0 <kairn_objcode_fixups_inline>
+			17c: R_AARCH64_CALL26	_ZSt8bit_castIdmET_RKT0_
+     180:	nop
+     184:	str	d0, [sp, #104]
+     188:	ldr	d1, [sp, #56]
+     18c:	ldr	d0, [sp, #72]
+     190:	fadd	d0, d1, d0
+     194:	str	d0, [sp, #112]
+     198:	ldr	d0, [sp, #104]
+     19c:	str	d0, [sp, #120]
+     1a0:	mov	x0, #0x3ca0000000000000    	// #4368491638549381120
+     1a4:	fmov	d0, x0
+     1a8:	str	d0, [sp, #128]
+     1ac:	ldr	d0, [sp, #112]
+     1b0:	str	d0, [sp, #136]
+     1b4:	ldr	d2, [sp, #120]
+     1b8:	ldr	d1, [sp, #128]
+     1bc:	ldr	d0, [sp, #136]
+     1c0:	fmadd	d0, d2, d1, d0
+     1c4:	nop
+     1c8:	str	d0, [sp, #144]
+     1cc:	ldr	d0, [sp, #144]
+     1d0:	str	d0, [sp, #152]
+     1d4:	mov	x0, #0x2                   	// #2
+     1d8:	movk	x0, #0x3ff0, lsl #48
+     1dc:	fmov	d0, x0
+     1e0:	str	d0, [sp, #160]
+     1e4:	mov	x0, #0x2                   	// #2
+     1e8:	movk	x0, #0x10, lsl #48
+     1ec:	fmov	d0, x0
+     1f0:	str	d0, [sp, #168]
+     1f4:	ldr	d2, [sp, #152]
+     1f8:	ldr	d1, [sp, #160]
+     1fc:	ldr	d0, [sp, #168]
+     200:	fmadd	d0, d2, d1, d0
+     204:	nop
+     208:	str	d0, [sp, #176]
+     20c:	ldr	x0, [sp, #80]
+     210:	ldr	d0, [sp, #96]
+     214:	str	d0, [x0]
+     218:	ldr	x0, [sp, #88]
+     21c:	ldr	d0, [sp, #176]
+     220:	str	d0, [x0]
+     224:	nop
+     228:	nop
+     22c:	adrp	x0, 0 <__stack_chk_guard>
+			22c: R_AARCH64_ADR_GOT_PAGE	__stack_chk_guard
+     230:	ldr	x0, [x0]
+			230: R_AARCH64_LD64_GOT_LO12_NC	__stack_chk_guard
+     234:	ldr	x2, [sp, #184]
+     238:	ldr	x1, [x0]
+     23c:	subs	x2, x2, x1
+     240:	mov	x1, #0x0                   	// #0
+     244:	b.eq	24c <kairn_objcode_scalar_double_ball_add_1+0x17c>  // b.none
+     248:	bl	0 <__stack_chk_fail>
+			248: R_AARCH64_CALL26	__stack_chk_fail
+     24c:	ldp	x29, x30, [sp, #192]
+     250:	add	sp, sp, #0xd0
+     254:	ret
+
+0000000000012608 <kairn_objcode_packed_float_rmul>:
+   12608:	sub	sp, sp, #0x2c0
+   1260c:	str	x0, [sp, #24]
+   12610:	str	x1, [sp, #16]
+   12614:	str	x2, [sp, #8]
+   12618:	str	x3, [sp]
+   1261c:	ldr	x0, [sp, #24]
+   12620:	ldr	q1, [x0]
+   12624:	ldr	x0, [sp, #24]
+   12628:	add	x0, x0, #0x10
+   1262c:	ldr	q0, [x0]
+   12630:	str	q1, [sp, #64]
+   12634:	str	q0, [sp, #80]
+   12638:	ldr	x0, [sp, #16]
+   1263c:	str	x0, [sp, #56]
+   12640:	str	wzr, [sp, #36]
+   12644:	ldr	s0, [sp, #36]
+   12648:	dup	v0.4s, v0.s[0]
+   1264c:	str	q0, [sp, #96]
+   12650:	ldr	q0, [sp, #64]
+   12654:	str	q0, [sp, #112]
+   12658:	ldr	q0, [sp, #80]
+   1265c:	str	q0, [sp, #128]
+   12660:	ldr	q2, [sp, #112]
+   12664:	ldr	q1, [sp, #128]
+   12668:	ldr	q0, [sp, #96]
+   1266c:	fmla	v0.4s, v2.4s, v1.4s
+   12670:	nop
+   12674:	str	q0, [sp, #144]
+   12678:	ldr	q0, [sp, #144]
+   1267c:	str	q0, [sp, #160]
+   12680:	ldr	q0, [sp, #160]
+   12684:	str	q0, [sp, #176]
+   12688:	mov	w0, #0x7fffffff            	// #2147483647
+   1268c:	str	w0, [sp, #40]
+   12690:	ldr	s0, [sp, #40]
+   12694:	dup	v0.4s, v0.s[0]
+   12698:	mov	v1.16b, v0.16b
+   1269c:	ldr	q0, [sp, #176]
+   126a0:	str	q0, [sp, #192]
+   126a4:	str	q1, [sp, #208]
+   126a8:	ldr	q1, [sp, #192]
+   126ac:	ldr	q0, [sp, #208]
+   126b0:	and	v0.16b, v1.16b, v0.16b
+   126b4:	str	q0, [sp, #224]
+   126b8:	mov	w0, #0x7f800000            	// #2139095040
+   126bc:	str	w0, [sp, #44]
+   126c0:	ldr	s0, [sp, #44]
+   126c4:	dup	v0.4s, v0.s[0]
+   126c8:	str	q0, [sp, #240]
+   126cc:	mov	w0, #0x1                   	// #1
+   126d0:	str	w0, [sp, #48]
+   126d4:	ldr	s0, [sp, #48]
+   126d8:	dup	v0.4s, v0.s[0]
+   126dc:	str	q0, [sp, #256]
+   126e0:	ldr	q0, [sp, #224]
+   126e4:	str	q0, [sp, #272]
+   126e8:	ldr	q0, [sp, #240]
+   126ec:	str	q0, [sp, #288]
+   126f0:	ldr	q1, [sp, #272]
+   126f4:	ldr	q0, [sp, #288]
+   126f8:	cmhi	v0.4s, v1.4s, v0.4s
+   126fc:	mov	v2.16b, v0.16b
+   12700:	ldr	q0, [sp, #176]
+   12704:	str	q0, [sp, #304]
+   12708:	ldr	q0, [sp, #240]
+   1270c:	str	q0, [sp, #320]
+   12710:	ldr	q1, [sp, #304]
+   12714:	ldr	q0, [sp, #320]
+   12718:	cmeq	v0.4s, v1.4s, v0.4s
+   1271c:	str	q2, [sp, #336]
+   12720:	str	q0, [sp, #352]
+   12724:	ldr	q1, [sp, #336]
+   12728:	ldr	q0, [sp, #352]
+   1272c:	orr	v0.16b, v1.16b, v0.16b
+   12730:	str	q0, [sp, #368]
+   12734:	ldr	q0, [sp, #176]
+   12738:	str	q0, [sp, #384]
+   1273c:	ldr	q0, [sp, #224]
+   12740:	str	q0, [sp, #400]
+   12744:	ldr	q1, [sp, #384]
+   12748:	ldr	q0, [sp, #400]
+   1274c:	cmeq	v0.4s, v1.4s, v0.4s
+   12750:	mov	v3.16b, v0.16b
+   12754:	ldr	q0, [sp, #176]
+   12758:	str	q0, [sp, #416]
+   1275c:	ldr	q0, [sp, #256]
+   12760:	str	q0, [sp, #432]
+   12764:	ldr	q1, [sp, #416]
+   12768:	ldr	q0, [sp, #432]
+   1276c:	add	v1.4s, v1.4s, v0.4s
+   12770:	ldr	q0, [sp, #176]
+   12774:	str	q0, [sp, #448]
+   12778:	ldr	q0, [sp, #256]
+   1277c:	str	q0, [sp, #464]
+   12780:	ldr	q2, [sp, #448]
+   12784:	ldr	q0, [sp, #464]
+   12788:	sub	v0.4s, v2.4s, v0.4s
+   1278c:	str	q3, [sp, #480]
+   12790:	str	q1, [sp, #496]
+   12794:	str	q0, [sp, #512]
+   12798:	ldr	q1, [sp, #480]
+   1279c:	ldr	q2, [sp, #496]
+   127a0:	ldr	q0, [sp, #512]
+   127a4:	bit	v0.16b, v2.16b, v1.16b
+   127a8:	nop
+   127ac:	str	q0, [sp, #528]
+   127b0:	str	wzr, [sp, #52]
+   127b4:	ldr	s0, [sp, #52]
+   127b8:	dup	v0.4s, v0.s[0]
+   127bc:	mov	v1.16b, v0.16b
+   127c0:	ldr	q0, [sp, #224]
+   127c4:	str	q0, [sp, #544]
+   127c8:	str	q1, [sp, #560]
+   127cc:	ldr	q1, [sp, #544]
+   127d0:	ldr	q0, [sp, #560]
+   127d4:	cmeq	v0.4s, v1.4s, v0.4s
+   127d8:	str	q0, [sp, #576]
+   127dc:	ldr	q0, [sp, #256]
+   127e0:	str	q0, [sp, #592]
+   127e4:	ldr	q0, [sp, #528]
+   127e8:	str	q0, [sp, #608]
+   127ec:	ldr	q1, [sp, #576]
+   127f0:	ldr	q2, [sp, #592]
+   127f4:	ldr	q0, [sp, #608]
+   127f8:	bit	v0.16b, v2.16b, v1.16b
+   127fc:	nop
+   12800:	str	q0, [sp, #624]
+   12804:	ldr	q0, [sp, #368]
+   12808:	str	q0, [sp, #640]
+   1280c:	ldr	q0, [sp, #176]
+   12810:	str	q0, [sp, #656]
+   12814:	ldr	q0, [sp, #624]
+   12818:	str	q0, [sp, #672]
+   1281c:	ldr	q1, [sp, #640]
+   12820:	ldr	q2, [sp, #656]
+   12824:	ldr	q0, [sp, #672]
+   12828:	bit	v0.16b, v2.16b, v1.16b
+   1282c:	nop
+   12830:	str	q0, [sp, #688]
+   12834:	ldr	x0, [sp, #56]
+   12838:	ldr	q0, [sp, #688]
+   1283c:	str	q0, [x0]
+   12840:	nop
+   12844:	nop
+   12848:	add	sp, sp, #0x2c0
+   1284c:	ret
+
+0000000000013548 <kairn_objcode_packed_double_abs_2>:
+   13548:	sub	sp, sp, #0x150
+   1354c:	str	x0, [sp, #24]
+   13550:	str	x1, [sp, #16]
+   13554:	str	x2, [sp, #8]
+   13558:	str	x3, [sp]
+   1355c:	ldr	x0, [sp, #24]
+   13560:	ldr	q1, [x0]
+   13564:	ldr	x0, [sp, #24]
+   13568:	add	x0, x0, #0x10
+   1356c:	ldr	q0, [x0]
+   13570:	ldr	x0, [sp, #16]
+   13574:	add	x0, x0, #0x10
+   13578:	str	q1, [sp, #64]
+   1357c:	str	q0, [sp, #80]
+   13580:	ldr	x1, [sp, #16]
+   13584:	str	x1, [sp, #40]
+   13588:	str	x0, [sp, #48]
+   1358c:	str	xzr, [sp, #56]
+   13590:	ldr	d0, [sp, #56]
+   13594:	dup	v0.2d, v0.d[0]
+   13598:	mov	v1.16b, v0.16b
+   1359c:	ldr	q0, [sp, #64]
+   135a0:	str	q0, [sp, #96]
+   135a4:	str	q1, [sp, #112]
+   135a8:	ldr	q0, [sp, #96]
+   135ac:	ldr	q1, [sp, #112]
+   135b0:	fcmgt	v0.2d, v1.2d, v0.2d
+   135b4:	str	q0, [sp, #128]
+   135b8:	ldr	q0, [sp, #64]
+   135bc:	str	q0, [sp, #144]
+   135c0:	ldr	q0, [sp, #144]
+   135c4:	fneg	v0.2d, v0.2d
+   135c8:	str	q0, [sp, #160]
+   135cc:	ldr	q0, [sp, #80]
+   135d0:	str	q0, [sp, #176]
+   135d4:	ldr	q0, [sp, #176]
+   135d8:	fneg	v0.2d, v0.2d
+   135dc:	str	q0, [sp, #192]
+   135e0:	ldr	q0, [sp, #128]
+   135e4:	str	q0, [sp, #208]
+   135e8:	ldr	q0, [sp, #160]
+   135ec:	str	q0, [sp, #224]
+   135f0:	ldr	q0, [sp, #64]
+   135f4:	str	q0, [sp, #240]
+   135f8:	ldr	q1, [sp, #208]
+   135fc:	ldr	q2, [sp, #224]
+   13600:	ldr	q0, [sp, #240]
+   13604:	bit	v0.16b, v2.16b, v1.16b
+   13608:	nop
+   1360c:	str	q0, [sp, #256]
+   13610:	ldr	q0, [sp, #128]
+   13614:	str	q0, [sp, #272]
+   13618:	ldr	q0, [sp, #192]
+   1361c:	str	q0, [sp, #288]
+   13620:	ldr	q0, [sp, #80]
+   13624:	str	q0, [sp, #304]
+   13628:	ldr	q1, [sp, #272]
+   1362c:	ldr	q2, [sp, #288]
+   13630:	ldr	q0, [sp, #304]
+   13634:	bit	v0.16b, v2.16b, v1.16b
+   13638:	nop
+   1363c:	str	q0, [sp, #320]
+   13640:	ldr	x0, [sp, #40]
+   13644:	ldr	q0, [sp, #256]
+   13648:	str	q0, [x0]
+   1364c:	ldr	x0, [sp, #48]
+   13650:	ldr	q0, [sp, #320]
+   13654:	str	q0, [x0]
+   13658:	nop
+   1365c:	nop
+   13660:	add	sp, sp, #0x150
+   13664:	ret
+
+
+Disassembly of section .text._ZSt8bit_castImdET_RKT0_:
+
+0000000000000000 <_ZSt8bit_castImdET_RKT0_>:
+   0:	sub	sp, sp, #0x10
+   4:	str	x0, [sp, #8]
+   8:	ldr	x0, [sp, #8]
+   c:	ldr	d0, [x0]
+  10:	fmov	x0, d0
+  14:	add	sp, sp, #0x10
+  18:	ret
+
+
+Disassembly of section .text._ZSt8bit_castIdmET_RKT0_:
+
+0000000000000000 <_ZSt8bit_castIdmET_RKT0_>:
+   0:	sub	sp, sp, #0x10
+   4:	str	x0, [sp, #8]
+   8:	ldr	x0, [sp, #8]
+   c:	ldr	x0, [x0]
+  10:	fmov	d0, x0
+  14:	add	sp, sp, #0x10
+  18:	ret
+

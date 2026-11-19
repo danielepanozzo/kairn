@@ -1,0 +1,20 @@
+
+fixture.o:	file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+0000000000000000 <kairn_objcode_fixture_scalar_double_statements>:
+   0:	ldp	d2, d1, [x0]
+   4:	ldr	d0, [x0, #16]
+   8:	fmadd	d0, d2, d1, d0
+   c:	str	d0, [x1]
+  10:	ret
+
+0000000000000074 <kairn_objcode_fixture_packed_float_statements>:
+  74:	ldp	q2, q1, [x0]
+  78:	ldr	q0, [x0, #32]
+  7c:	fmla	v0.4s, v2.4s, v1.4s
+  80:	str	q0, [x1]
+  84:	ret
+
