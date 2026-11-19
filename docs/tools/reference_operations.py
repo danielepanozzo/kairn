@@ -14,6 +14,10 @@ docs/reference/KERNEL.md. An entry gives:
   (the test reads include/kairn/*.hpp); a form that reaches the kernel through an implicit
   conversion (a limb converted to a one-limb number, a point to a ball) has no declaration of
   its own, and says so in its note;
+  A kernel with no forms is either a building block, part of other kernels, or an entry kernel
+  (`entry: yes` in its description: a full kernel, a constructor) that the public headers do not
+  call yet; its page and the index say which. Give it forms only when a header calls it: the test
+  fails on a form of a kernel that no header comment names;
 - traits: the entries of kairn::traits whose constants come from this kernel's claims
   (traits<T> is also traits<float>, traits<double> and traits<Expansion<T, 1>>);
 - note: optional, one sentence about the forms, shown under them.
@@ -35,7 +39,7 @@ T = "T"
 # The groups of the index, in order: (id, title, what the group is).
 GROUPS = [
     ("construction", "Construction and access",
-     "Making numbers and balls, and reading their parts. No kernel: these copy limbs."),
+     "Making numbers and balls, and reading their parts."),
     ("arithmetic", "Arithmetic", "Sums, differences, products, negation and absolute value."),
     ("comparisons", "Comparisons", "Whether one value is below, at most, or equal to another."),
     ("conversions", "Conversions to one limb", "A two-limb number rounded to a value of `T`."),
@@ -60,6 +64,11 @@ CONVERTED = "the limb is converted to `Expansion<T, 1>` first, exactly"
 POINT = "the point is converted to a ball of radius 0 first"
 
 KERNELS = {
+    # --- Constructors: the kernels of the constructors, not yet called -------------------------
+    "make_2": page("construction", "A two-limb number from a value of T"),
+    "make_2_limbs": page("construction", "A two-limb number from its limbs"),
+    "ball_make_1": page("construction", "A ball from a one-limb center and a radius"),
+    "ball_make_2": page("construction", "A ball from a two-limb center and a radius"),
     # --- One limb -----------------------------------------------------------------------------
     "add_1_1": page(
         "arithmetic", "Sum and difference, one limb",
@@ -99,6 +108,7 @@ KERNELS = {
         form("x + y", E1, E2, result=E2, note=WIDENED),
         traits=["traits<Expansion<T, 2>>::add"],
     ),
+    "add_2_2_full": page("arithmetic", "Sum of two two-limb numbers, with infinities and NaN"),
     "add_2_1": page(
         "arithmetic", "Sum of a two-limb number and a limb",
         form("x + a", E2, T, result=E2),
@@ -106,6 +116,7 @@ KERNELS = {
         form("x += a", E2, T, result=E2),
         traits=["traits<Expansion<T, 2>>::add_limb"],
     ),
+    "add_2_1_full": page("arithmetic", "Sum of a two-limb number and a limb, with infinities and NaN"),
     "sub_2_2": page(
         "arithmetic", "Difference of two two-limb numbers",
         form("x - y", E2, E2, result=E2),
@@ -114,17 +125,20 @@ KERNELS = {
         form("x - y", E1, E2, result=E2, note=WIDENED),
         traits=["traits<Expansion<T, 2>>::sub"],
     ),
+    "sub_2_2_full": page("arithmetic", "Difference of two two-limb numbers, with infinities and NaN"),
     "sub_2_1": page(
         "arithmetic", "A two-limb number minus a limb",
         form("x - a", E2, T, result=E2),
         form("x -= a", E2, T, result=E2),
         traits=["traits<Expansion<T, 2>>::sub_limb"],
     ),
+    "sub_2_1_full": page("arithmetic", "A two-limb number minus a limb, with infinities and NaN"),
     "sub_1_2": page(
         "arithmetic", "A limb minus a two-limb number",
         form("a - y", T, E2, result=E2),
         traits=["traits<Expansion<T, 2>>::sub_limb"],
     ),
+    "sub_1_2_full": page("arithmetic", "A limb minus a two-limb number, with infinities and NaN"),
     "mul_2_2": page(
         "arithmetic", "Product of two two-limb numbers",
         form("x * y", E2, E2, result=E2),
@@ -133,6 +147,7 @@ KERNELS = {
         form("x * y", E1, E2, result=E2, note=WIDENED),
         traits=["traits<Expansion<T, 2>>::mul"],
     ),
+    "mul_2_2_full": page("arithmetic", "Product of two two-limb numbers, with infinities and NaN"),
     "mul_2_1": page(
         "arithmetic", "Product of a two-limb number and a limb",
         form("x * a", E2, T, result=E2),
@@ -140,11 +155,13 @@ KERNELS = {
         form("x *= a", E2, T, result=E2),
         traits=["traits<Expansion<T, 2>>::mul_limb"],
     ),
+    "mul_2_1_full": page("arithmetic", "Product of a two-limb number and a limb, with infinities and NaN"),
     "add_fast_2_2": page(
         "arithmetic", "Fast sum of two two-limb numbers",
         form("add_fast(x, y)", E2, E2, result=E2),
         traits=["traits<Expansion<T, 2>>::add_fast"],
     ),
+    "add_fast_2_2_full": page("arithmetic", "Fast sum of two two-limb numbers, with infinities and NaN"),
     "neg_2": page(
         "arithmetic", "Negation, two limbs",
         form("-x", E2, result=E2),
@@ -228,6 +245,7 @@ KERNELS = {
         form("half(x)", E2, result=E2, note="$c = 1/2$"),
         traits=["traits<Expansion<T, 2>>::ldexp"],
     ),
+    "mul_pow2_2_full": page("scaling", "Scaling by a power of two, with infinities and NaN"),
     # --- Balls ---------------------------------------------------------------------------------
     "ball_add_1": page(
         "ball", "Sum of balls, one-limb center",
@@ -237,6 +255,7 @@ KERNELS = {
         form("X + a", B1, T, result=B1, note=POINT),
         form("a + X", T, B1, result=B1, note=POINT),
     ),
+    "ball_add_1_full": page("ball", "Sum of balls, one-limb center, with the special states"),
     "ball_add_2": page(
         "ball", "Sum of balls, two-limb center",
         form("X + Y", B2, B2, result=B2),
@@ -245,6 +264,7 @@ KERNELS = {
         form("X + a", B2, T, result=B2, note=POINT),
         form("a + X", T, B2, result=B2, note=POINT),
     ),
+    "ball_add_2_full": page("ball", "Sum of balls, two-limb center, with the special states"),
     "ball_sub_1": page(
         "ball", "Difference of balls, one-limb center",
         form("X - Y", B1, B1, result=B1),
@@ -253,6 +273,7 @@ KERNELS = {
         form("X - a", B1, T, result=B1, note=POINT),
         form("a - X", T, B1, result=B1, note=POINT),
     ),
+    "ball_sub_1_full": page("ball", "Difference of balls, one-limb center, with the special states"),
     "ball_sub_2": page(
         "ball", "Difference of balls, two-limb center",
         form("X - Y", B2, B2, result=B2),
@@ -261,30 +282,35 @@ KERNELS = {
         form("X - a", B2, T, result=B2, note=POINT),
         form("a - X", T, B2, result=B2, note=POINT),
     ),
+    "ball_sub_2_full": page("ball", "Difference of balls, two-limb center, with the special states"),
     "ball_mul_1": page(
         "ball", "Product of balls, one-limb center",
         form("X * Y", B1, B1, result=B1),
         form("X *= Y", B1, B1, result=B1),
         form("X * y", B1, E1, result=B1, note=POINT),
     ),
+    "ball_mul_1_full": page("ball", "Product of balls, one-limb center, with the special states"),
     "ball_mul_2": page(
         "ball", "Product of balls, two-limb center",
         form("X * Y", B2, B2, result=B2),
         form("X *= Y", B2, B2, result=B2),
         form("X * y", B2, E2, result=B2, note=POINT),
     ),
+    "ball_mul_2_full": page("ball", "Product of balls, two-limb center, with the special states"),
     "ball_scale_1": page(
         "ball", "A ball times a limb, one-limb center",
         form("X * a", B1, T, result=B1),
         form("a * X", T, B1, result=B1),
         form("X *= a", B1, T, result=B1),
     ),
+    "ball_scale_1_full": page("ball", "A ball times a limb, one-limb center, with the special states"),
     "ball_scale_2": page(
         "ball", "A ball times a limb, two-limb center",
         form("X * a", B2, T, result=B2),
         form("a * X", T, B2, result=B2),
         form("X *= a", B2, T, result=B2),
     ),
+    "ball_scale_2_full": page("ball", "A ball times a limb, two-limb center, with the special states"),
     "ball_neg_1": page(
         "ball", "Negation of a ball, one-limb center",
         form("-X", B1, result=B1),

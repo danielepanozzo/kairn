@@ -3,13 +3,17 @@
 
   python3 docs/tools/test_reference.py      (ctest: docs.reference.test)
 
-- The table against the data: every kernel it names is in gen/claims.json, and every public
+- The table against the data: every kernel it names is in gen/claims.json, every public
   operation of include/kairn/*.hpp whose comment names a kernel (`(kernel add_2_2)`,
-  `kernels sub_2_1 and sub_1_2`) is one of that kernel's forms, or of its traits entries.
+  `kernels sub_2_1 and sub_1_2`) is one of that kernel's forms, or of its traits entries, and a
+  kernel has forms only if the headers name or call it, so that a kernel the headers do not call
+  yet is listed as such.
 - The tool on modified copies of its inputs: it fails, naming what it cannot print, on an unknown
-  claim kind, requirement or status, on a kernel the table does not have, and on an extended
-  kernel unless the switch says skip; --check fails on a stale, missing or stray page and on a
-  stale nav; an UNVERIFIED kernel is marked; runs that judged other claims are flagged.
+  claim kind, requirement, field, condition, lead or status, on a kind or requirement outside its
+  domain, and on a kernel the table does not have; --check fails on a stale, missing or stray page
+  and on a stale nav; an UNVERIFIED kernel is marked; runs that judged other claims are flagged;
+  the statements of the extended domain (F1 to F5, B1 to B4, the constructors) are printed with
+  the kernel's own names, conditions and core.
 
 Python 3 standard library only; no network, no compiler.
 """
@@ -120,6 +124,22 @@ def header_operations(root, known):
     return found
 
 
+def header_kernel_uses(root, known):
+    """(named, called): the kernels the /// comments of the public headers name for an operation,
+    and those the headers call as kairn::gen functions or gate on (gen::bounds::K)."""
+    named = set()
+    for _, _, names in header_operations(root, known):
+        named |= set(names)
+    called = set()
+    d = os.path.join(root, "include", "kairn")
+    for fname in os.listdir(d):
+        if fname.endswith(".hpp"):
+            text = reference.read(os.path.join(d, fname))
+            called |= set(re.findall(r"\bgen::(\w+)\(", text)) & known
+            called |= set(re.findall(r"\bgen::bounds::(\w+)<", text)) & known
+    return named, called
+
+
 def form_key(f):
     code = f["code"]
     m = re.fullmatch(r"(\w+) (\+=|-=|\*=|==|!=|<=|>=|[-+*<>]) (\w+)", code)
@@ -172,9 +192,24 @@ class Table(unittest.TestCase):
         self.assertEqual(missing, [], "kernels in the table that gen/claims.json does not have")
 
     def test_every_kernel_has_a_page(self):
-        missing = [k for k, e in self.claims.items()
-                   if e.get("domain", "finite") == "finite" and k not in self.ops.KERNELS]
+        missing = [k for k in self.claims if k not in self.ops.KERNELS]
         self.assertEqual(missing, [], "kernels of gen/claims.json that the table does not have")
+
+    def test_forms_only_for_kernels_the_headers_use(self):
+        named, called = header_kernel_uses(ROOT, set(self.claims))
+        self.assertIn("add_2_2", called)
+        self.assertIn("add_1_1", named)
+        unused = [k for k, p in self.ops.KERNELS.items() if p["forms"] and k not in named | called]
+        self.assertEqual(unused, [], "kernels with forms in the table that no header names or calls")
+
+    def test_kernels_not_called_yet_are_not_called(self):
+        named, called = header_kernel_uses(ROOT, set(self.claims))
+        entry = [k for k, p in self.ops.KERNELS.items() if not p["forms"] and reference.load_listing(
+            ROOT, k)["fields"].get("entry") == "yes"]
+        self.assertIn("add_2_2_full", entry)
+        used = [k for k in entry if k in named | called]
+        self.assertEqual(used, [], "kernels the headers name or call, listed in the table without forms "
+                                   "(their pages would say that no header calls them)")
 
     def test_every_form_can_be_read(self):
         for name, p in self.ops.KERNELS.items():
@@ -211,7 +246,8 @@ class Table(unittest.TestCase):
 
 COPIED = ["gen/claims.json", "gen/kernels", "include/kairn/gen/bounds.hpp", "results",
           "docs/tools/reference_operations.py", "docs/developer/design/phase0/references.md",
-          "docs/developer/results", "proofs/theories", "proofs/gen/Statements.v", "mkdocs.yml",
+          "docs/developer/results", "proofs/theories", "proofs/gen/Statements.v", "proofs/gen/Model.v",
+          "mkdocs.yml",
           "docs/reference"]
 
 
@@ -251,12 +287,21 @@ class Tool(unittest.TestCase):
     def tearDown(self):
         self.copy.close()
 
-    def fails(self, *words, extended="fail"):
+    def fails(self, *words):
         with self.assertRaises(reference.ReferenceError) as ctx:
-            reference.plan(self.copy.root, extended)
+            reference.plan(self.copy.root)
         for w in words:
             self.assertIn(w, str(ctx.exception))
         return str(ctx.exception)
+
+    def change(self, name, edit):
+        """Apply edit to the claims of one kernel in the copy."""
+        data = self.copy.claims()
+        edit(self.copy.kernel(data, name))
+        self.copy.set_claims(data)
+
+    def page(self, name):
+        return reference.plan(self.copy.root)["docs/reference/%s.md" % name]
 
     def test_the_copy_is_fresh(self):
         self.assertEqual(reference.check(self.copy.root), [])
@@ -280,10 +325,105 @@ class Tool(unittest.TestCase):
         self.fails("neg_2", "pending")
 
     def test_unknown_field(self):
-        data = self.copy.claims()
-        self.copy.kernel(data, "neg_2")["ieee_status"] = "proved"
-        self.copy.set_claims(data)
-        self.fails("neg_2", "ieee_status")
+        self.change("neg_2", lambda k: k.update(frobnication=1))
+        self.fails("neg_2", "frobnication")
+
+    def test_ieee_fields_on_a_finite_kernel(self):
+        self.change("add_2_2", lambda k: k.update(ieee_status="proved"))
+        self.fails("add_2_2", "ieee_status")
+
+    def test_extended_kind_in_the_finite_domain(self):
+        self.change("add_2_2", lambda k: k["ensures"].append({"kind": "represents", "of": "z"}))
+        self.fails("add_2_2", "represents", "finite domain")
+
+    def test_extended_requirement_in_the_finite_domain(self):
+        self.change("ball_add_2", lambda k: k["requires"].append("ball(cx, rx)"))
+        self.fails("ball_add_2", "ball(cx, rx)", "finite domain")
+
+    def test_finite_kind_without_extended_reading(self):
+        self.change("neg_2", lambda k: k["ensures"].append({"kind": "leading_rounded", "of": "z"}))
+        self.fails("neg_2", "leading_rounded", "extended domain")
+
+    def test_unknown_field_of_a_claim(self):
+        self.change("add_2_2_full", lambda k: k["ensures"][0].update(scale=2))
+        self.fails("add_2_2_full", "extends", "scale")
+
+    def test_unknown_condition(self):
+        self.change("add_2_2_full", lambda k: k["ensures"][0]["finite_when"][0].update(strict=True))
+        self.fails("add_2_2_full", "finite_when")
+
+    def test_unknown_lead(self):
+        self.change("mul_2_1_full", lambda k: k["ensures"][0].update(lead="div"))
+        self.fails("mul_2_1_full", "div")
+
+    def test_core_with_other_inputs(self):
+        self.change("add_2_2_full", lambda k: k["ensures"][0].update(core="add_2_1"))
+        self.fails("add_2_2_full", "add_2_1", "inputs")
+
+    def test_statuses_of_a_full_kernel_disagree(self):
+        self.change("add_2_2_full", lambda k: k.update(status="proved"))
+        self.fails("add_2_2_full", "ieee_status")
+
+    def test_proved_ieee_statement_needs_its_theorem(self):
+        self.change("neg_2", lambda k: k.update(ieee_status="proved"))
+        self.fails("neg_2", "ieee_theorem")
+
+    def test_proved_ieee_statement(self):
+        self.change("neg_2", lambda k: k.update(ieee_status="proved", ieee_theorem={
+            "file": "proofs/theories/Sign.v", "name": "neg_2_correct"}))
+        page = self.page("neg_2")
+        self.assertIn("proved for finite operands · proved for infinite and NaN operands", page)
+        self.assertIn("**Status of this statement:** proved.", page)
+        self.assertNotIn(reference.IEEE_PROOFS_SENTENCE, page)
+
+    def test_constructor_without_value(self):
+        self.change("make_2", lambda k: k.pop("value"))
+        self.fails("make_2", "value")
+
+    def test_full_kernel(self):
+        page = self.page("add_2_2_full")
+        self.assertIn("**Not yet called by the public headers.**", page)
+        self.assertIn("call its core, [`add_2_2`](add_2_2.md), instead", page)
+        self.assertIn("**F2.** If $w_0$ is finite", page)
+        self.assertIn("$\\lvert w - (x + y)\\rvert \\le \\frac{3u^2}{1 - 4u}\\,\\lvert x + y\\rvert$", page)
+        self.assertIn("$\\lvert x\\rvert \\le 2^{e_{\\max} - 2}$ and $\\lvert y\\rvert \\le 2^{e_{\\max} - 2}$", page)
+        self.assertIn("$2^{1022}$ for `double`, $2^{126}$ for `float`", page)
+        self.assertIn("the canonical form of $x_0 + y_0$ computed in `T`", page)
+        self.assertIn(reference.IEEE_PROOFS_SENTENCE, page)
+
+    def test_conditions_come_from_the_claims(self):
+        self.change("mul_2_1_full", lambda k: k["ensures"][0].update(finite_when=[{"abs_le": "x*a", "exp": -1}]))
+        page = self.page("mul_2_1_full")
+        self.assertIn("**F3.** If every operand is finite and $\\lvert x a\\rvert \\le 2^{e_{\\max} - 1}$", page)
+        self.assertIn("$2^{1023}$ for `double`, $2^{127}$ for `float`", page)
+        self.assertNotIn("No condition under which", page)
+
+    def test_full_ball_kernel(self):
+        page = self.page("ball_scale_2_full")
+        self.assertIn("**B2.** $Z$ is empty exactly when $X$ is empty", page)
+        self.assertIn("**B3.** If $Z$ is a finite ball, then $X$ is a finite ball and $a$ is finite", page)
+        self.assertIn("$a$ is any value of `T`", page)
+        self.assertIn("It follows that in every case $Z$ contains $x a$", page)
+
+    def test_constructors(self):
+        self.assertIn("$a = \\pm\\infty$ gives $(\\pm\\infty, 0)$", self.page("make_2"))
+        self.assertIn("is a NaN or negative, $-\\infty$ included", self.page("ball_make_2"))
+
+    def test_finite_kernel_with_extended_statement(self):
+        page = self.page("to_up_2")
+        self.assertIn("proved for finite operands · **UNVERIFIED** for infinite and NaN operands", page)
+        self.assertIn("## Infinite and NaN operands", page)
+        self.assertIn("If an operand is infinite or NaN: $t = x_0$", page)
+        self.assertIn("$x$ is normalized", page.split("## Infinite")[0])
+        self.assertIn("$x$ is canonical", page.split("## Infinite")[1])
+
+    def test_the_sentence_on_hand_written_proofs_is_the_same_everywhere(self):
+        files = reference.plan(self.copy.root)
+        site = reference.Site(self.copy.root)
+        for name, k in site.kernels.items():
+            page = files["docs/reference/%s.md" % name]
+            unverified_ieee = k.extended and not k.ieee_proved
+            self.assertEqual(page.count(reference.IEEE_PROOFS_SENTENCE), 1 if unverified_ieee else 0, name)
 
     def test_kernel_missing_from_the_table(self):
         data = self.copy.claims()
@@ -299,29 +439,48 @@ class Tool(unittest.TestCase):
         self.copy.set_claims(data)
         self.fails("rmul", "does not have")
 
-    def extended_kernel(self):
+    def test_kernel_description_with_a_header_line_that_is_not_a_field(self):
+        path = self.copy.path("gen/kernels/neg_2.kernel")
+        text = reference.read(path)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text.replace("domain:", "a line without a field\ndomain:", 1))
+        self.fails("neg_2.kernel", "not a field")
+
+    def test_changes_announced_for_the_claims_need_no_template(self):
+        # A guard line in add_2_1, the second radius design in ball_add_2, a condition of F3 for
+        # every full kernel: the pages are regenerated, nothing fails.
+        for name, old, new in (
+                ("add_2_1", "(sh, sl) = two_sum(x0, a)", "g        = guard(a)\n(sh, sl) = two_sum(x0, g)"),
+                ("ball_add_2", None, "(cz0, cz1) = add_2_2(cx0, cx1, cy0, cy1)\naz = abs(cz0)\ns = add(rx, ry)\n"
+                                     "t = fma(az, const up(unit(add_2_2)), s)\n"
+                                     "rz = fma(t, const up((1+u)^3), const up(eta))")):
+            path = self.copy.path("gen/kernels/%s.kernel" % name)
+            text = reference.read(path)
+            if old is None:
+                head, _ = text.split("\n\n", 1)
+                text = head + "\n\n" + new + "\n"
+            else:
+                text = text.replace(old, new)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
         data = self.copy.claims()
-        data["kernels"].append({
-            "name": "add_2_1_full", "domain": "extended",
-            "inputs": [{"name": "x", "limbs": 2}, {"name": "a", "limbs": 1}],
-            "outputs": [{"name": "w", "limbs": 2}], "value": "x+a", "requires": ["canonical(x)"],
-            "ensures": [{"kind": "extends", "of": "w", "core": "add_2_1", "lead": "add", "finite_when": []}],
-            "min_precision": 3, "status": "unverified", "ieee_status": "unverified",
-            "instances": {"binary64": [], "binary32": []}})
+        for k in data["kernels"]:
+            for e in k["ensures"]:
+                if e["kind"] == "extends" and not e["finite_when"]:
+                    e["finite_when"] = [{"abs_le": k["value"], "exp": -1}]
         self.copy.set_claims(data)
+        files = reference.plan(self.copy.root)
+        self.assertIn("g        = guard(a)", files["docs/reference/add_2_1.md"])
+        self.assertNotIn("The radius adds", files["docs/reference/ball_add_2.md"])
+        self.assertIn("$\\lvert x - a\\rvert \\le 2^{e_{\\max} - 1}$", files["docs/reference/sub_2_1_full.md"])
 
-    def test_extended_kernel_fails_by_default(self):
-        self.extended_kernel()
-        self.assertEqual(reference.EXTENDED_DOMAIN, "fail", "the switch's committed value is fail")
-        self.fails("add_2_1_full", "EXTENDED_DOMAIN")
-
-    def test_extended_kernel_skipped_on_request(self):
-        self.extended_kernel()
-        files = reference.plan(self.copy.root, "skip")
-        self.assertNotIn("docs/reference/add_2_1_full.md", files)
-        index = files["docs/reference/index.md"]
-        self.assertIn("## Not in this reference yet", index)
-        self.assertIn("`add_2_1_full`", index)
+    def test_kernel_description_with_a_new_field(self):
+        # The generator's own fields (cone_exempt, guard_pending, ...) do not change the pages.
+        path = self.copy.path("gen/kernels/add_2_1.kernel")
+        text = reference.read(path)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text.replace("entry:", "colour:        blue\nentry:", 1))
+        self.assertEqual(reference.check(self.copy.root), [])
 
     def test_stale_page(self):
         path = self.copy.path("docs/reference/mul_2_2.md")
