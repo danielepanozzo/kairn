@@ -38,19 +38,40 @@ Variable choice : Z -> bool.
 Notation rnd := (round radix2 (FLT_exp emin prec) (Znearest choice)).'''
 
 
-def functions(text):
-    """{(name, limb type): body lines} of a generated header."""
+def functions(text, fixups=False):
+    """{(name, limb type): body lines} of a generated header: of the kernels, or with fixups, of
+    the fix-ups that are functions of their own (namespace fixup)."""
     out, current = {}, None
     for line in text.splitlines():
-        m = re.match(r'KAIRN_GEN_FORCEINLINE (constexpr )?void (\w+)\((double|float) ', line) or \
-            re.match(r'inline (constexpr )?void (\w+)\((double|float) ', line)
+        if fixups:
+            m = re.match(r'KAIRN_GEN_COLD (constexpr )?result<(double|float), [0-9]+> (\w+)\(', line)
+            key = (m.group(3), m.group(2)) if m else None
+        else:
+            m = re.match(r'KAIRN_GEN_FORCEINLINE (constexpr )?void (\w+)\((double|float) ', line) or \
+                re.match(r'inline (constexpr )?void (\w+)\((double|float) ', line)
+            key = (m.group(2), m.group(3)) if m else None
         if m:
-            current = out.setdefault((m.group(2), m.group(3)), {'constexpr': bool(m.group(1)), 'lines': [],
-                                                                 'head': line})
+            current = out.setdefault(key, {'constexpr': bool(m.group(1)), 'lines': [], 'head': line})
         elif line == '}':
             current = None
         elif current is not None:
             current['lines'].append(line)
+    return out
+
+
+def form(lines, call):
+    """The lines of a kernel body that the compiler sees with KAIRN_GEN_FIXUP_CALL 1 (call: the
+    fix-up is a function of its own) or 0 (inline)."""
+    out, keep = [], []
+    for line in lines:
+        if line == '#if KAIRN_GEN_FIXUP_CALL':
+            keep.append(call)
+        elif line == '#else':
+            keep[-1] = not keep[-1]
+        elif line == '#endif':
+            keep.pop()
+        elif all(keep):
+            out.append(line)
     return out
 
 
@@ -69,6 +90,13 @@ ONE_OPERATION = re.compile(
 # The spelling of times_inf: a plain multiplication by +infinity.
 TIMES_INF = r' \* std::numeric_limits<(?:double|float)>::infinity\(\);$'
 
+# The kernels whose fix-up the scalar printer puts behind a branch (cpp.branch), and the masks it
+# tests: the full kernels on f; the full Ball kernels and the constructors of balls on e & f.
+FULL = {f'{core}_full' for core in ('add_2_2', 'add_fast_2_2', 'sub_2_2', 'add_2_1', 'sub_2_1', 'sub_1_2',
+                                    'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
+FULL_BALL = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+BRANCHED = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BALL | {'ball_make_1', 'ball_make_2'}})
+
 
 class Cpp(unittest.TestCase):
     @classmethod
@@ -80,22 +108,31 @@ class Cpp(unittest.TestCase):
         cls.tfns = functions(cpp.scalar(cls.tks))
 
     def run_time(self, lines):
-        """The statements after the constant-evaluation branch, if any."""
+        """The statements after the constant-evaluation branch, if any, with the fix-up inline
+        (KAIRN_GEN_FIXUP_CALL 0)."""
         if '    if (__builtin_is_constant_evaluated()) {' in lines:
             lines = lines[lines.index('    }') + 1:]
-        return lines
+        return form(lines, call=False)
 
     def test_every_kernel_twice(self):
         self.assertEqual(set(self.fns), {(k, t) for k in self.ks for t in ('double', 'float')})
+        self.assertEqual(set(functions(self.text, fixups=True)), {(k, t) for k in BRANCHED for t in ('double', 'float')})
 
     def test_one_operation_per_statement(self):
-        for fns, ks in ((self.fns, self.ks), (self.tfns, self.tks)):
+        for fns, ks in ((self.fns, self.ks), (self.tfns, self.tks), (functions(self.text, fixups=True), self.ks),
+                        (functions(cpp.scalar(self.tks), fixups=True), self.tks)):
             for (name, t), f in fns.items():
                 for line in f['lines']:
                     m = re.fullmatch(rf'\s+const (?:{t}|bool) ([a-z0-9_]+) = (.*);', line)
                     if m:
                         self.assertRegex(m.group(2), rf'\A{ONE_OPERATION.pattern}\Z', (name, line))
-                    elif not re.fullmatch(r'\s+(//.*|[a-z0-9_]+_out = [a-z0-9_]+;|return;|}|if \(__builtin_is_constant_evaluated\(\)\) \{)', line):
+                    elif not (re.fullmatch(rf'\s+(//.*|[a-z0-9_]+_out = {ATOM};|return;|}}|'
+                                           r'if \(__builtin_is_constant_evaluated\(\)\) \{|'
+                                           r'if \([a-z0-9_]+(?: & [a-z0-9_]+)*\) \[\[likely\]\] \{|\} else \{|'
+                                           rf'const fixup::result<{t}, [0-9]+> fixed_ = fixup::{name}\([a-z0-9_, ]*\);|'
+                                           r'[a-z0-9_]+_out = fixed_\.limb\[[0-9]+\];|'
+                                           r'return \{\{[a-z0-9_]+(?:, [a-z0-9_]+)*\}\};)', line) or
+                              line in ('#if KAIRN_GEN_FIXUP_CALL', '#else', '#endif')):
                         self.fail((name, line))
 
     def test_no_plain_product_at_run_time(self):
@@ -208,30 +245,38 @@ class Cpp(unittest.TestCase):
                     a = p.args[0].name
                     run_time = f'{a} + {zero}'
                     want = f'__builtin_is_constant_evaluated() ? {a} : {run_time}' if f['constexpr'] else run_time
-                    self.assertIn(f'    const {t} {p.dst} = {want};', body, name)
+                    self.assertIn(f'const {t} {p.dst} = {want};', [x.strip() for x in body], name)
                 self.assertFalse(any(x.endswith((f' - {zero};', f' + -{zero};')) for x in body), name)
         self.assertTrue(any(p.op == 'guard' for n in self.tks for p in ir.prims(self.tks[n], self.tks)))
-        full = self.fns[('add_2_1_full', 'double')]['lines']
-        self.assertEqual(full[0], '    const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;')
-        self.assertIn('    const double t = x0 + g;', full)
-        self.assertIn('    const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : '
+        # The core's guard of a comes first; the fix-up's own guard, and t, are behind the branch.
+        lines = self.fns[('add_2_1_full', 'double')]['lines']
+        full = form(lines, call=False)
+        self.assertEqual(full[1], '    const double z0_g = __builtin_is_constant_evaluated() ? a : a + 0.0;')
+        self.assertIn('        const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;', full)
+        self.assertIn('        const double t = x0 + g;', full)
+        self.assertIn('        const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : '
                       't * std::numeric_limits<double>::infinity();', full)
+        fixup = functions(self.text, fixups=True)[('add_2_1_full', 'double')]
+        self.assertTrue(fixup['constexpr'])
+        self.assertEqual(fixup['lines'][:2], ['    const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;',
+                                              '    const double t = x0 + g;'])
         # A kernel that is not constexpr multiplies, with no dispatch.
-        self.assertIn('    const double r0 = t * std::numeric_limits<double>::infinity();',
+        self.assertIn('        const double r0 = t * std::numeric_limits<double>::infinity();',
                       self.fns[('mul_2_2_full', 'double')]['lines'])
+        self.assertFalse(functions(self.text, fixups=True)[('mul_2_2_full', 'double')]['constexpr'])
         prelude = cpp.prelude(self.ks)
         self.assertIn('KAIRN_GEN_FORCEINLINE constexpr float times_inf_ce(float t) noexcept {\n'
                       '    return t > 0 ? std::numeric_limits<float>::infinity() : 0 > t ? '
                       '-std::numeric_limits<float>::infinity() : std::numeric_limits<float>::quiet_NaN();\n}', prelude)
         self.assertIn('    const bool f = std::numeric_limits<double>::infinity() > az;', full)
-        self.assertIn('    const double w1 = f ? z1 : r1;', full)
+        self.assertIn('        const double w1 = f ? z1 : r1;', full)
         make = self.fns[('ball_make_2', 'float')]
         self.assertTrue(make['constexpr'])
-        self.assertIn('    const float rw = e ? s : std::numeric_limits<float>::quiet_NaN();', make['lines'])
+        self.assertIn('        const float rw = e ? s : std::numeric_limits<float>::quiet_NaN();', make['lines'])
         self.assertIn('    const bool e = g >= 0.0f;', make['lines'])
         self.assertIn('#include <limits>', cpp.prelude(self.ks))
-        self.assertIn('#include <limits>', cpp.prelude(self.tks))         # ops_special
-        without = {n: k for n, k in self.tks.items() if n != 'ops_special'}
+        self.assertIn('#include <limits>', cpp.prelude(self.tks))         # ops_special, ops_branch
+        without = {n: k for n, k in self.tks.items() if n not in ('ops_special', 'ops_branch')}
         self.assertNotIn('#include <limits>', cpp.prelude(without))
 
     def test_name_clash_is_refused(self):
@@ -242,6 +287,154 @@ class Cpp(unittest.TestCase):
                   ir.Stmt(('e',), 'sub', (ir.Operand('b'), ir.Operand('out')), 3)]
         with self.assertRaises(cpp.PrintError):
             cpp.function(ks['add_2_1'], ks, 'double')    # z0_out is the inlined `out` and an output
+
+
+def names(items):
+    return [it.dst if isinstance(it, ir.Prim) else ('call', it.callee) for it in items]
+
+
+class FixupBranch(unittest.TestCase):
+    """The scalar printer's branch over a fix-up (cpp.branch; milestone1.md, "Emission"): which
+    kernels it applies to, each case of the rule on toy kernels, and the two emitted forms."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.ks = common.kernels()
+        cls.text = cpp.scalar(cls.ks)
+        cls.fns = functions(cls.text)
+        cls.fixups = functions(cls.text, fixups=True)
+        cls.tks = common.kernels(common.TEST_KERNELS)
+
+    def toy(self, edit=None, **changes):
+        """ops_branch, with statements replaced ({dst: (op, args...)}) and fields changed."""
+        ks = copy.deepcopy(dict(self.tks))
+        k = ks['ops_branch']
+        for st in list(k.body):
+            if edit and st.dsts[0] in edit:
+                op, *args = edit[st.dsts[0]]
+                operands = tuple(ir.Operand(a, const=True) if a in ('0', 'inf') else ir.Operand(a) for a in args)
+                k.body[k.body.index(st)] = ir.Stmt(st.dsts, op, operands, st.line)
+        for field, value in changes.items():
+            setattr(k, field, value)
+        return cpp.branch(k, ks)
+
+    def test_the_kernels_it_applies_to(self):
+        got = {n: b.masks for n, k in self.ks.items() for b in [cpp.branch(k, self.ks)] if b}
+        self.assertEqual(got, BRANCHED)
+        # The constructors of 2-limb numbers have no fix-up of this shape: make_2 returns x0 as it is
+        # guarded, make_2_limbs has no select. Kernels with a real-model statement select on their
+        # data (to_up_2 on the sign of x1), and are left alone too.
+        for name in ('make_2', 'make_2_limbs', 'to_up_2', 'to_down_2', 'abs_2', 'abs_upper_2', 'lt_2_2'):
+            self.assertIsNone(cpp.branch(self.ks[name], self.ks), name)
+        for name in BRANCHED:
+            b = cpp.branch(self.ks[name], self.ks)
+            ball = name.startswith('ball_')
+            arms = {'ball_make_1': ['c0', 'g'], 'ball_make_2': ['c0', 'c1', 'g']}.get(
+                name, (['cz', 'rz'] if name.endswith('_1_full') else ['cz0', 'cz1', 'rz']) if ball else ['z0', 'z1'])
+            self.assertEqual([str(a) for a in b.arms], arms, name)
+            fixup = names(b.after)
+            if not ball:
+                # The operation of T on the leading limbs, its canonical form, and the selects.
+                self.assertEqual(fixup[-5:], ['r0', 'n', 'r1', 'w0', 'w1'], name)
+                self.assertIn(fixup[-6], ('t',), name)
+                self.assertIn(fixup[:-6], ([], ['g']), name)
+            else:
+                # Only selects: the masks and the core need everything else.
+                ops = {p.dst: p.op for p in ir.prims(self.ks[name], self.ks)}
+                self.assertEqual({ops[v] for v in fixup}, {'select'}, name)
+
+    def test_one_mask_and_two(self):
+        # ops_branch: the outputs select on m1, their first arms on m2.
+        b = cpp.branch(self.tks['ops_branch'], self.tks)
+        self.assertEqual(b.masks, ('m1', 'm2'))
+        self.assertEqual([str(a) for a in b.arms], ['s', '0', 'a'])   # a value, the literal zero, an input
+        self.assertEqual(names(b.before), ['s', 'm1', 'm2'])
+        self.assertEqual(names(b.after), ['d', 'q', 'h', 'k', 'l', 'x0', 'x1', 'y'])
+        # One mask: the first arms are not all selects on one mask.
+        b = self.toy({'l': ('select', 'm1', 'a', 'b')})
+        self.assertEqual(b.masks, ('m1',))
+        self.assertEqual([str(a) for a in b.arms], ['h', 'k', 'l'])
+        self.assertEqual(names(b.before), ['s', 'm1', 'm2', 'd', 'q', 'h', 'k', 'l'])
+        self.assertEqual(names(b.after), ['x0', 'x1', 'y'])
+        # An arm that is no select at all stops the descent the same way.
+        self.assertEqual(self.toy({'k': ('sub', 'd', 's')}).masks, ('m1',))
+        # A second level on the first mask again adds nothing.
+        self.assertEqual(self.toy({'h': ('select', 'm1', 's', 'q'), 'k': ('select', 'm1', '0', 'd'),
+                                   'l': ('select', 'm1', 'a', 'b')}).masks, ('m1',))
+
+    def test_what_it_leaves_alone(self):
+        # Outputs that select on different masks; an output that is no select.
+        self.assertIsNone(self.toy({'x1': ('select', 'm2', 'k', 'd')}))
+        self.assertIsNone(self.toy({'y': ('add', 'l', 's')}))
+        # A kernel with a real-model statement, whatever its shape.
+        self.assertIsNone(self.toy(ensures=[{'kind': 'normalized', 'of': 'x'}], domain=None))
+        # A mask output.
+        ks = copy.deepcopy(dict(self.tks))
+        k = ks['ops_branch']
+        k.outputs = k.outputs + [ir.Group('m2', ('m2',), ir.MASK)]
+        self.assertIsNone(cpp.branch(k, ks))
+
+    def test_the_emitted_branch(self):
+        lines = self.fns[('ball_add_2_full', 'double')]['lines']
+        inline, call = form(lines, call=False), form(lines, call=True)
+        i = inline.index('    if (e & f) [[likely]] {')
+        self.assertEqual(inline[i:i + 5], ['    if (e & f) [[likely]] {', '        cw0_out = cz0;', '        cw1_out = cz1;',
+                                           '        rw_out = rz;', '    } else {'])
+        self.assertEqual(inline[i + 5:], ['        const double c0 = f ? cz0 : 0.0;', '        const double c1 = f ? cz1 : 0.0;',
+                                          '        const double r = f ? rz : std::numeric_limits<double>::infinity();',
+                                          '        const double cw0 = e ? c0 : q;', '        const double cw1 = e ? c1 : q;',
+                                          '        const double rw = e ? r : q;', '        cw0_out = cw0;',
+                                          '        cw1_out = cw1;', '        rw_out = rw;', '    }'])
+        self.assertEqual(call[i + 5:], ['        const fixup::result<double, 3> fixed_ = '
+                                        'fixup::ball_add_2_full(cz0, cz1, rz, q, e, f);',
+                                        '        cw0_out = fixed_.limb[0];', '        cw1_out = fixed_.limb[1];',
+                                        '        rw_out = fixed_.limb[2];', '    }'])
+        self.assertEqual(inline[:i], call[:i])
+        self.assertTrue(self.fixups[('ball_add_2_full', 'double')]['head'].startswith(
+            'KAIRN_GEN_COLD result<double, 3> ball_add_2_full(double cz0, double cz1, double rz, double q, bool e, bool f)'))
+        toy = form(functions(cpp.scalar(self.tks))[('ops_branch', 'float')]['lines'], call=False)
+        self.assertEqual(toy[3:8], ['    if (m1 & m2) [[likely]] {', '        x0_out = s;', '        x1_out = 0.0f;',
+                                    '        y_out = a;', '    } else {'])
+
+    def test_both_forms_have_the_operations_of_the_listing(self):
+        """Inline, every operation of the flattened listing once: in the listing's order, or with
+        a branch, those before it and those of the fix-up each in the listing's order. As a call,
+        the same statements, split between the kernel and its fix-up function, whose parameters
+        are the values the fix-up uses and does not compute."""
+        for ks, text in ((self.ks, self.text), (self.tks, cpp.scalar(self.tks))):
+            fns, fixups = functions(text), functions(text, fixups=True)
+            for (name, t), f in fns.items():
+                prims = ir.prims(ks[name], ks)
+                b = cpp.branch(ks[name], ks)
+                order = [p.dst for p in prims] if b is None else \
+                    [n for n in names(b.before) + names(b.after) if isinstance(n, str)]
+                self.assertEqual(sorted(order), sorted(p.dst for p in prims), name)
+                stmts = [x.strip() for x in Cpp.run_time(None, f['lines']) if x.strip().startswith('const ')]
+                self.assertEqual([re.match(r'const \w+ (\w+) = ', x).group(1) for x in stmts], order, (name, t))
+                if (name, t) not in fixups:
+                    self.assertIsNone(b, name)
+                    self.assertNotIn('#if KAIRN_GEN_FIXUP_CALL', f['lines'], name)
+                    continue
+                fixup = fixups[(name, t)]
+                called = [x.strip() for x in form(f['lines'], call=True) if x.strip().startswith('const ')]
+                inner = [x.strip() for x in fixup['lines'] if x.strip().startswith('const ')]
+                self.assertEqual(called[:-1] + inner, stmts, (name, t))
+                self.assertEqual(called[-1], f'const fixup::result<{t}, {len(ks[name].output_limbs)}> fixed_ = '
+                                             f'fixup::{name}({", ".join(cpp.fixup_inputs(ks[name], b))});')
+                defined = {p.dst for p in prims if p.dst in {it.dst for it in b.after if isinstance(it, ir.Prim)}}
+                used = {a.name for p in prims if p.dst in defined for a in p.args if not a.const}
+                self.assertEqual(set(cpp.fixup_inputs(ks[name], b)), used - defined, name)
+                self.assertEqual(fixup['constexpr'], f['constexpr'], name)
+
+    def test_the_prelude_chooses_the_form(self):
+        prelude = cpp.prelude(self.ks)
+        self.assertIn('#if !defined(KAIRN_GEN_FIXUP_CALL)\n#if defined(__clang__) && defined(__aarch64__)\n'
+                      '#define KAIRN_GEN_FIXUP_CALL 1\n#else\n#define KAIRN_GEN_FIXUP_CALL 0\n#endif\n#endif\n', prelude)
+        self.assertIn('#define KAIRN_GEN_COLD inline __attribute__((noinline, cold))', prelude)
+        self.assertIn('#define KAIRN_GEN_COLD inline __declspec(noinline)', prelude)
+        # Without a kernel that branches, none of it.
+        ks = {n: k for n, k in self.tks.items() if n != 'ops_branch'}
+        self.assertNotIn('KAIRN_GEN_FIXUP_CALL', cpp.prelude(ks) + cpp.scalar(ks))
 
 
 def packed_functions(text):

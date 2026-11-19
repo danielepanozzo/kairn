@@ -18,6 +18,25 @@
 #define KAIRN_GEN_FORCEINLINE inline __attribute__((always_inline))
 #endif
 
+// Where a scalar kernel puts the fix-up that it runs behind a branch
+// (docs/developer/design/milestone1.md, "Emission"): inline, except with Clang on AArch64,
+// which turns an inline branch back into selects; there the fix-up is a function of its own
+// that is never inlined. The tests set KAIRN_GEN_FIXUP_CALL to build either form anywhere.
+#if !defined(KAIRN_GEN_FIXUP_CALL)
+#if defined(__clang__) && defined(__aarch64__)
+#define KAIRN_GEN_FIXUP_CALL 1
+#else
+#define KAIRN_GEN_FIXUP_CALL 0
+#endif
+#endif
+#if KAIRN_GEN_FIXUP_CALL
+#if defined(_MSC_VER) && !defined(__clang__)
+#define KAIRN_GEN_COLD inline __declspec(noinline)
+#else
+#define KAIRN_GEN_COLD inline __attribute__((noinline, cold))
+#endif
+#endif
+
 // Every theorem assumes that fma_rn is one rounding, done by the hardware. Without the
 // instruction the builtin becomes a library call, and the intrinsic an illegal instruction.
 #if (defined(__x86_64__) || defined(__i386__)) && !defined(__FMA__)
@@ -31,6 +50,17 @@
 #endif
 
 namespace kairn::gen {
+
+#if KAIRN_GEN_FIXUP_CALL
+// The outputs of a fix-up that is a function of its own, returned by value: through a
+// reference, the caller's variables would have their address taken.
+namespace fixup {
+template <class T, int N>
+struct result {
+    T limb[N];
+};
+}  // namespace fixup
+#endif
 
 // RN(a b + c) with one rounding. Not std::fma: MSVC compiles it to a library call under
 // /fp:strict and /Od. GCC and Clang lower the builtin to the instruction. Never called in

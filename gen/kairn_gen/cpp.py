@@ -24,7 +24,14 @@ library.md):
 - guard is a + 0 at run time and the operand itself in constant evaluation, where nothing is fused
   and Clang refuses NaN + 0; times_inf, exact, is a plain multiplication by infinity, so that the
   full kernels are constexpr wherever their cores are.
+- The fix-up of a full kernel or a constructor is behind a branch (branch()): as selects, it puts a
+  comparison and a select on the critical path of a chain of dependent operations
+  (docs/developer/design/milestone1.md, "Emission", has the measurements). With Clang on AArch64,
+  which turns an inline branch back into selects, the fix-up is a cold function that is never
+  inlined (KAIRN_GEN_FIXUP_CALL in prelude.hpp); elsewhere it is inline. Packed code keeps the
+  blends (simd.py).
 """
+from dataclasses import dataclass
 from fractions import Fraction
 
 from . import consts, ir
@@ -87,7 +94,7 @@ RESERVED = frozenset('''
     return short signed sizeof static static_assert static_cast struct switch template this
     thread_local throw true try typedef typeid typename union unsigned using virtual void volatile
     wchar_t while xor xor_eq final override import module
-    kairn gen std fma_rn abs_bits next_up next_down times_inf_ce in out
+    kairn gen std fma_rn abs_bits next_up next_down times_inf_ce in out fixup result
     linux unix i386 major minor errno stdin stdout stderr assert
 '''.split())
 
@@ -138,20 +145,120 @@ def literal(name, kernels, ctype):
     return f'0.0{suffix}' if v == 0 else hex_literal(Fraction(v), suffix)
 
 
-def _body(k, kernels, ctype, spell, indent):
-    """The statements of the flattened kernel, one operation each."""
-    pad = ' ' * indent
+@dataclass(frozen=True)
+class Branch:
+    """A kernel's fix-up behind a branch (branch()): the flattened listing split in two."""
+    masks: tuple     # the masks whose conjunction the branch tests, outermost first
+    arms: tuple      # per output limb, the Operand that the output equals when every mask is true
+    before: list     # the items (Prim, CallMark) that the masks and the arms need, in listing order
+    after: list      # every other item, in listing order: the fix-up
+
+
+def branch(k, kernels):
+    """How the scalar printer branches over the kernel's fix-up, or None: emitted as listed.
+
+    The rule (docs/developer/design/milestone1.md, "Emission"). It applies to a kernel without a
+    real-model statement (a full kernel, a full Ball kernel, a constructor: the kernels whose
+    selects are the fix-up of the non-finite layer, written with the ordinary case as the first
+    arm) whose every output is a limb defined by a select on one same mask m1. The first arms are
+    the outputs when m1 is true. While the arms are all selects on one same mask m2, m2 joins the
+    masks and the arms become their first arms. Before the branch: the operations that the masks
+    and the final arms need. When every mask is true: the outputs are the final arms. Otherwise:
+    every other operation, in the listing's order, and the outputs as listed. Both paths compute
+    the listing's outputs: the first because every select on the way takes its first arm, the
+    second because it is the listing; an operation left out of a path is one whose value that
+    path does not use, and the operations have no side effects.
+    """
+    if k.real_model or any(kind == ir.MASK for kind in k.output_kinds):
+        return None
+    items = ir.flatten(k, kernels)
+    defs = {it.dst: it for it in items if isinstance(it, ir.Prim)}
+
+    def select(a):
+        p = None if a.const else defs.get(a.name)
+        return p if p is not None and p.op == 'select' else None
+
+    level = [select(ir.Operand(v)) for v in k.output_limbs]
+    masks, arms = [], ()
+    while all(level) and len({p.args[0].name for p in level}) == 1 and level[0].args[0].name not in masks:
+        masks.append(level[0].args[0].name)
+        arms = tuple(p.args[1] for p in level)
+        level = [select(a) for a in arms]
+    if not masks:
+        return None
+    needed = set(masks) | {a.name for a in arms if not a.const}
+    for it in reversed(items):
+        if isinstance(it, ir.Prim) and it.dst in needed:
+            needed |= {a.name for a in it.args if not a.const}
+    before, after = [], []
+    for i, it in enumerate(items):
+        # The comment of a call goes where the first operation of the call goes.
+        first = it if isinstance(it, ir.Prim) else next(x for x in items[i:] if isinstance(x, ir.Prim))
+        (before if first.dst in needed else after).append(it)
+    return Branch(tuple(masks), arms, before, after)
+
+
+def _statements(items, kernels, ctype, spell, pad):
     zero = '0.0' + TYPES[ctype][1]
     inf = literal('inf', kernels, ctype)
     lines = []
-    for it in ir.flatten(k, kernels):
+    for it in items:
         if isinstance(it, ir.CallMark):
             lines.append(f'{pad}// ({", ".join(it.dsts)}) = {it.callee}({", ".join(map(str, it.args))})')
             continue
         args = [literal(a.name, kernels, ctype) if a.const else a.name for a in it.args]
         vtype = ctype if ir.OPS[it.op][1] == ir.LIMB else 'bool'
         lines.append(f'{pad}const {vtype} {it.dst} = {spell[it.op].format(*args, zero=zero, inf=inf)};')
-    lines += [f'{pad}{v}_out = {v};' for v in k.output_limbs]
+    return lines
+
+
+def _operand(a, kernels, ctype):
+    return literal(a.name, kernels, ctype) if a.const else a.name
+
+
+def fixup_inputs(k, b):
+    """The values the fix-up uses and does not compute, in the order they are defined: the
+    parameters of the fix-up when it is a function of its own."""
+    after = [it for it in b.after if isinstance(it, ir.Prim)]
+    used = {a.name for it in after for a in it.args if not a.const} - {it.dst for it in after}
+    order = list(k.input_limbs) + [it.dst for it in b.before if isinstance(it, ir.Prim)]
+    return [v for v in order if v in used]
+
+
+def _body(k, kernels, ctype, spell, indent):
+    """The statements of the flattened kernel, one operation each; the fix-up, if the kernel has
+    one, behind a branch (branch()), and with KAIRN_GEN_FIXUP_CALL a call of its function."""
+    pad = ' ' * indent
+    b = branch(k, kernels)
+    if b is None:
+        lines = _statements(ir.flatten(k, kernels), kernels, ctype, spell, pad)
+        return lines + [f'{pad}{v}_out = {v};' for v in k.output_limbs]
+    lines = _statements(b.before, kernels, ctype, spell, pad)
+    lines.append(f'{pad}if ({" & ".join(b.masks)}) [[likely]] {{')
+    lines += [f'{pad}    {v}_out = {_operand(a, kernels, ctype)};' for v, a in zip(k.output_limbs, b.arms)]
+    lines.append(f'{pad}}} else {{')
+    n = len(k.output_limbs)
+    lines += ['#if KAIRN_GEN_FIXUP_CALL',
+              f'{pad}    const fixup::result<{ctype}, {n}> fixed_ = fixup::{k.name}({", ".join(fixup_inputs(k, b))});']
+    lines += [f'{pad}    {v}_out = fixed_.limb[{i}];' for i, v in enumerate(k.output_limbs)]
+    lines.append('#else')
+    lines += _statements(b.after, kernels, ctype, spell, pad + '    ')
+    lines += [f'{pad}    {v}_out = {v};' for v in k.output_limbs]
+    lines += ['#endif', f'{pad}}}']
+    return lines
+
+
+def fixup_function(k, kernels, ctype):
+    """The fix-up as a function of its own (namespace fixup), for KAIRN_GEN_FIXUP_CALL: the
+    statements of the fix-up, from the values it uses, returning the outputs."""
+    b = branch(k, kernels)
+    kinds = ir.kinds(k, kernels)
+    kind = constexpr_kind(k, kernels)
+    params = [f'{ctype if kinds[v] == ir.LIMB else "bool"} {v}' for v in fixup_inputs(k, b)]
+    lines = [f'KAIRN_GEN_COLD {"constexpr " if kind == "plain" else ""}result<{ctype}, {len(k.output_limbs)}> '
+             f'{k.name}({", ".join(params)}) noexcept {{']
+    lines += _statements(b.after, kernels, ctype, SPELL_PLAIN if kind == 'plain' else SPELL, '    ')
+    lines += [f'    return {{{{{", ".join(k.output_limbs)}}}}};', '}']
     return lines
 
 
@@ -240,8 +347,29 @@ def prelude(kernels):
               '#else',
               '#define KAIRN_GEN_FORCEINLINE inline __attribute__((always_inline))',
               '#endif',
-              '',
-              '// Every theorem assumes that fma_rn is one rounding, done by the hardware. Without the',
+              '']
+    fixups = any(branch(k, kernels) for k in kernels.values())
+    if fixups:
+        lines += ['// Where a scalar kernel puts the fix-up that it runs behind a branch',
+                  '// (docs/developer/design/milestone1.md, "Emission"): inline, except with Clang on AArch64,',
+                  '// which turns an inline branch back into selects; there the fix-up is a function of its own',
+                  '// that is never inlined. The tests set KAIRN_GEN_FIXUP_CALL to build either form anywhere.',
+                  '#if !defined(KAIRN_GEN_FIXUP_CALL)',
+                  '#if defined(__clang__) && defined(__aarch64__)',
+                  '#define KAIRN_GEN_FIXUP_CALL 1',
+                  '#else',
+                  '#define KAIRN_GEN_FIXUP_CALL 0',
+                  '#endif',
+                  '#endif',
+                  '#if KAIRN_GEN_FIXUP_CALL',
+                  '#if defined(_MSC_VER) && !defined(__clang__)',
+                  '#define KAIRN_GEN_COLD inline __declspec(noinline)',
+                  '#else',
+                  '#define KAIRN_GEN_COLD inline __attribute__((noinline, cold))',
+                  '#endif',
+                  '#endif',
+                  '']
+    lines += ['// Every theorem assumes that fma_rn is one rounding, done by the hardware. Without the',
               '// instruction the builtin becomes a library call, and the intrinsic an illegal instruction.',
               '#if (defined(__x86_64__) || defined(__i386__)) && !defined(__FMA__)',
               '#error "Kairn needs hardware FMA: compile for an x86 CPU that has it (-mfma, -march=haswell or later)"',
@@ -254,8 +382,20 @@ def prelude(kernels):
               '#endif',
               '',
               'namespace kairn::gen {',
-              '',
-              '// RN(a b + c) with one rounding. Not std::fma: MSVC compiles it to a library call under',
+              '']
+    if fixups:
+        lines += ['#if KAIRN_GEN_FIXUP_CALL',
+                  '// The outputs of a fix-up that is a function of its own, returned by value: through a',
+                  '// reference, the caller\'s variables would have their address taken.',
+                  'namespace fixup {',
+                  'template <class T, int N>',
+                  'struct result {',
+                  '    T limb[N];',
+                  '};',
+                  '}  // namespace fixup',
+                  '#endif',
+                  '']
+    lines += ['// RN(a b + c) with one rounding. Not std::fma: MSVC compiles it to a library call under',
               '// /fp:strict and /Od. GCC and Clang lower the builtin to the instruction. Never called in',
               '// constant evaluation.']
     for ctype, sd, cvt, builtin in (('double', 'sd', '_mm_cvtsd_f64', '__builtin_fma'),
@@ -313,15 +453,24 @@ def scalar(kernels, prelude_name='prelude.hpp'):
     plain = [k.name for k in kernels.values() if constexpr_kind(k, kernels) is None]
     lines = [HEADER, '//',
              '// Scalar kernels for double and float limbs (docs/developer/architecture.md, "The kernel',
-             '// IR"). Inputs are passed by value; outputs by reference, written once at the end. Values',
-             '// keep the names of the kernel descriptions; a value inlined from a call is named',
-             '// SITE_VALUE, where SITE is the first value the call defines.',
+             '// IR"). Inputs are passed by value; outputs by reference, each written once on the path',
+             '// taken. Values keep the names of the kernel descriptions; a value inlined from a call is',
+             '// named SITE_VALUE, where SITE is the first value the call defines. The fix-up of a full',
+             '// kernel or a constructor is behind a branch: the listing\'s operations that its masks and',
+             '// the first arms of its selects need come first; when the masks are true the outputs are',
+             '// those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,',
+             '// "Emission").',
              f'// Not constexpr: {", ".join(plain) if plain else "none"}.',
              '#pragma once', '',
              f'#include "{prelude_name}"', '',
              'namespace kairn::gen {']
     for k in kernels.values():
         lines += [''] + _description(k, kernels)
+        if branch(k, kernels):
+            lines += ['#if KAIRN_GEN_FIXUP_CALL', 'namespace fixup {']
+            for ctype in TYPES:
+                lines += fixup_function(k, kernels, ctype)
+            lines += ['}  // namespace fixup', '#endif']
         for ctype in TYPES:
             lines += function(k, kernels, ctype)
     lines += ['', '}  // namespace kairn::gen']

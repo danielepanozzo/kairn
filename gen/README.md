@@ -24,8 +24,8 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `proofs/gen/IeeeModel.v` | One Rocq `Definition` per kernel that has an IEEE-model statement, over Flocq's binary floating-point numbers (signed zeros, infinities, NaN), each operation the one of `proofs/theories/IeeeOperations.v` |
 | `proofs/gen/IeeeStatements.v` | `Definition K_ieee_spec : Prop` (and the finite-domain forms) per such kernel, from its claims, in the vocabulary of `proofs/theories/IeeeVocabulary.v` |
 | `proofs/gen/IeeeAudit.v` | For each kernel whose IEEE-model status is not unverified, checks that its theorem has the generated statement as its type and prints its assumptions |
-| `include/kairn/gen/prelude.hpp` | The force-inline macro, the FMA primitive per compiler, `abs_bits`, `next_up`, `next_down`; refuses x86 without hardware FMA |
-| `include/kairn/gen/scalar.hpp` | Every kernel for `double` and `float`, in `kairn::gen` |
+| `include/kairn/gen/prelude.hpp` | The force-inline macro, the FMA primitive per compiler, `abs_bits`, `next_up`, `next_down`, the form of the scalar fix-ups per compiler (`KAIRN_GEN_FIXUP_CALL`); refuses x86 without hardware FMA |
+| `include/kairn/gen/scalar.hpp` | Every kernel for `double` and `float`, in `kairn::gen`; where the fix-up is a function of its own, that function, in `kairn::gen::fixup` |
 | `include/kairn/gen/avx2.hpp` | Every kernel for `__m256d` and `__m256` (4 doubles, 8 floats); refuses a target without AVX2 and FMA |
 | `include/kairn/gen/neon.hpp` | Every kernel for `float64x2_t` and `float32x4_t` (2 doubles, 4 floats); AArch64 only |
 | `include/kairn/gen/bounds.hpp` | Per kernel and limb type, whether it is proved and, only then, the constants of its error claim rounded up (`unit`, `tiny`, `unit_computed`, `tiny_computed`) and its form; what the public headers gate on and export through `kairn::traits` |
@@ -187,6 +187,18 @@ and `t = prod(x0, y0)` are fused operations, nor the full Ball kernels). Constan
 stops at what the core cannot compute there: an overflow (GCC) or the NaN that TwoSum then makes
 (Clang) is a compile error, never a wrong constant.
 
+The scalar printer puts the fix-up of the full kernels, the full Ball kernels and the
+constructors of balls behind a branch (`cpp.branch`; the rule and its measurements are in
+milestone1.md, "Emission"). When every output is a `select` on one mask, and while the first
+arms are all selects on one mask, those masks are what the branch tests; the operations that the
+masks and the final arms need are printed first; `if (m1 & m2) [[likely]]` the outputs are the
+arms; `else` the rest of the listing runs, in its order. The `else` part has two spellings under
+`KAIRN_GEN_FIXUP_CALL` (`prelude.hpp`): inline, or a call of `fixup::K`, a function of its own
+(cold, never inlined, constexpr where the kernel is) that takes the values the fix-up uses and
+returns the outputs in a `fixup::result`. The call is what Clang on AArch64 gets, the inline form
+what every other compiler gets; the tests may set the macro to build either. No other kernel
+changes, and the packed printers keep the selects as blends.
+
 ## The rules
 
 `build`, `check` and `interp` refuse a kernel that breaks one, naming the kernel, the value and the
@@ -240,9 +252,14 @@ computed constants (above). A kernel has no real-model statement when it claims 
 - the interpreter against rounding by enumeration on toy formats, and as a line-protocol runner;
 - the C++: `gen/tests/runner.cpp` built with each compiler of `$KAIRN_GEN_CXX` (default: `c++` and
   `g++-16`, those that exist) at `-O0` and `-O2`, with `-ffp-contract=off`, `on` and `fast`, with
-  and without `-frounding-math`, and for x86-64 under Rosetta where available; every build must be
-  bit-identical to the interpreter; `static_assert`s check two_prod in constant evaluation, and
-  every kernel without a fused operation (succ and pred included) against its run-time bits;
+  and without `-frounding-math`, with each form of the fix-ups (`-DKAIRN_GEN_FIXUP_CALL=0` and
+  `1`), and for x86-64 under Rosetta where available; every build must be bit-identical to the
+  interpreter; `static_assert`s check two_prod in constant evaluation, and every kernel without a
+  fused operation (succ and pred included) against its run-time bits, in both forms;
+- the branch over a fix-up (`test_printers.py`, `FixupBranch`): the kernels it applies to and the
+  masks it tests, each case of the rule on the toy kernel `ops_branch` and on variants of it (one
+  mask, two, an arm that is no select, outputs on different masks, a kernel with a real-model
+  statement), and that both forms print every operation of the listing once;
 - the packed code: `gen/tests/packed_runner.cpp`, which evaluates consecutive requests one per
   lane, built on the same matrix (NEON on AArch64; AVX2 with `-mavx2 -mfma` on x86-64, and under
   Rosetta where it runs AVX2); special operands sit in one lane of a register at a time and at

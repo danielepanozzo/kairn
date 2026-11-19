@@ -94,7 +94,7 @@ of the format) or masks.
 | `muladd a b c` | $\mathrm{RN}(ab + c)$ **or** $\mathrm{RN}(\mathrm{RN}(ab) + c)$, the compiler's choice | `a * b + c`; its theorem covers both |
 | `lt`, `le`, `eq` | comparison, giving a mask | comparison; `lt(a, b)` and `le(a, b)` are written `b > a` and `b >= a`, which one compiler's constant evaluator gets right on a NaN where it gets `<` and `<=` wrong |
 | `and`, `or`, `not` | on masks | |
-| `select m a b` | $a$ if $m$, else $b$ | conditional move or blend, never a branch |
+| `select m a b` | $a$ if $m$, else $b$ | `m ? a : b`, or a blend; behind a branch only where the scalar printer puts a fix-up (below) |
 | `succ a`, `pred a` | the neighbors of $a$ in the format | |
 | `guard a` | $\mathrm{RN}(a + 0)$, which is $a$ (a zero comes out positive) | `a + 0.0`: see rule R3. In constant evaluation, where nothing is fused, the operand itself |
 | `const name` | a constant that depends on the format (for example the splitter $2^{\lceil p/2\rceil} + 1$) | a literal |
@@ -177,6 +177,21 @@ contains no fused operation or names a constant-evaluation variant; a kernel tha
 `__builtin_is_constant_evaluated()`, so the full kernels of the additions and the constructors
 are `constexpr`; the product kernels are not yet, because their cores contain fused operations
 and only `two_prod` has a constant-evaluation variant.
+
+The operations of the IR have no side effects. Kairn does not specify the floating-point
+exception flags that a kernel raises, so a printer may leave out of a path of execution any
+operation whose value that path does not use: the outputs, which are all that a statement or a
+proof is about, do not change. The scalar printer does so for the fix-up of a full kernel, a
+full Ball kernel and a constructor of a ball: the operations that its masks and the first arms of
+its selects need come first; when the masks are true the outputs are those arms; otherwise the
+rest of the listing runs. With Clang on AArch64 that rest is a function of its own, never
+inlined; elsewhere it is inline. The rule, which kernels it applies to and the measurements behind
+the two forms are in [Milestone 1 statements](design/milestone1.md#ieee-like-results), under
+"Emission". Packed code keeps every select, as a blend. Each path computes operations of the
+listing and nothing else, so R1 holds of it as it holds of the listing; an output on the first
+path is the first arm of a select of the listing, the result of an addition, a subtraction, a
+fused operation or a guard, or in `ball_make_2` a limb of the center it was given, which R3
+already counts as safe to add.
 
 ## Kernels of the first wave
 

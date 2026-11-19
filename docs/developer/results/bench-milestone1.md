@@ -214,7 +214,9 @@ and summarized by `bench/asm_summary.py`; the counts are stored next to the meas
 Not acted on here; each item rests on the evidence above.
 
 1. **Emit the scalar fix-up behind a branch**, as the recommendation table says: inline on x86-64,
-   in a function of its own for Clang on AArch64.
+   in a function of its own for Clang on AArch64. *Done* after these measurements, in that form
+   (GCC on AArch64 gets it inline too): see "Emission" in
+   [Milestone 1 statements](../design/milestone1.md#ieee-like-results).
 2. **A step to the next number up for nonnegative operands.** Every radius operand is nonnegative;
    there the step is "add one to the bit pattern unless it is $+\infty$ or a NaN": two or three
    operations instead of about ten, no sign handling. It needs its own statement and proof, and

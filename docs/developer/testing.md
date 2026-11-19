@@ -269,9 +269,10 @@ enumerations are about a fifth.
 
 `python3 gen/kairn-gen test` is the generator's own suite (`gen/README.md`, "The tests"). About
 two thirds of its time goes to its C++ tests, which build the generated code at `-O0` and
-`-O2`, with and without `-frounding-math`, under every contraction setting, and require every
+`-O2`, with and without `-frounding-math`, under every contraction setting, and with both forms of
+the scalar fix-ups (inline, and a function of its own: `KAIRN_GEN_FIXUP_CALL`), and require every
 build, scalar and packed, to be bit-identical to the interpreter, with special operands in every
-lane. In the quick tier it runs without them (`--no-cxx`): with them it took 148 seconds on its
+lane. The cross-checks build each compiler's own form only. In the quick tier it runs without them (`--no-cxx`): with them it took 148 seconds on its
 own on the machine above, longer than the rest of `ctest` together, and the cross-checks already
 compile the same code with the build's compiler and flags. The whole suite runs in the workflow
 `generator.yml`, once per GCC-style compiler of the CI, and by hand:
