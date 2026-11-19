@@ -71,3 +71,29 @@ foreach(_level IN LISTS _levels)
     target_link_libraries(${_target} PRIVATE "${KAIRN_BENCH_MPFR_LIBRARY}" "${KAIRN_BENCH_GMP_LIBRARY}")
   endif()
 endforeach()
+
+# The cost of the checks of KAIRN_CHECKS and of MSVC's stack cookie (costs.cpp): one program per
+# value of KAIRN_CHECKS, which must be the same in every translation unit of a program,
+# kairn-bench-costs-LEVEL (0) and kairn-bench-costs-checks-LEVEL (1), at the levels above and
+# without optimization (-O0, /Od), as a debug build has it.
+if(_opt_O2 STREQUAL "/O2")
+  set(_opt_O0 /Od /Ob0)   # /Ob0 too: the Release flags have /Ob2, which /Od alone leaves on
+else()
+  set(_opt_O0 -O0)
+endif()
+foreach(_level IN ITEMS O0 ${_levels})
+  foreach(_checks IN ITEMS 0 1)
+    if(_checks)
+      set(_target kairn-bench-costs-checks-${_level})
+    else()
+      set(_target kairn-bench-costs-${_level})
+    endif()
+    add_executable(${_target} costs.cpp)
+    target_link_libraries(${_target} PRIVATE kairn::kairn kairn::fma)
+    target_compile_options(${_target} PRIVATE ${_opt_${_level}} ${_no_contract})
+    string(REPLACE ";" " " _opt_text "${_opt_${_level}}")
+    string(STRIP "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_config}} ${_opt_text} ${_no_contract} ${_fma} -DKAIRN_CHECKS=${_checks}" _flags)
+    string(REGEX REPLACE " +" " " _flags "${_flags}")
+    target_compile_definitions(${_target} PRIVATE "KAIRN_BENCH_FLAGS=\"${_flags}\"" KAIRN_CHECKS=${_checks})
+  endforeach()
+endforeach()

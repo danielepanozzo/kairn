@@ -1,0 +1,225 @@
+{
+ "schema": 1,
+ "what": "phases",
+ "date": "2026-11-19",
+ "commit": "0f81c17",
+ "machine": {
+  "description": "macOS arm64, Apple M3 Max (12 performance and 4 efficiency cores); not pinned (macOS has no affinity), QoS user-interactive",
+  "cpu": "Apple M3 Max",
+  "os": "Darwin",
+  "arch": "arm64"
+ },
+ "compiler": "g++-16 (Homebrew GCC 16.2.0) 16.2.0",
+ "cxx": "g++-16",
+ "family": "gnu",
+ "flags": "",
+ "pinning": "not pinned",
+ "reps": 3,
+ "config": "O2",
+ "config_flags": [
+  "-O2",
+  "-DNDEBUG"
+ ],
+ "tool": "-ftime-report",
+ "results": [
+  {
+   "unit": "empty",
+   "wall_s": 0.0641,
+   "phases_s": {
+    "phase setup": 0.0,
+    "TOTAL": 0.0
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "std_headers",
+   "wall_s": 0.1602,
+   "phases_s": {
+    "phase setup": 0.0,
+    "phase parsing": 0.08,
+    "phase lang. deferred": 0.01,
+    "TOTAL": 0.1,
+    "(timer) preprocessing": 0.03,
+    "(timer) |name lookup": 0.01,
+    "(timer) parser (global)": 0.01,
+    "(timer) parser struct body": 0.01,
+    "(timer) parser function body": 0.01,
+    "(timer) parser inl. func. body": 0.01,
+    "(timer) parser inl. meth. body": 0.01,
+    "(timer) template instantiation": 0.01
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "iostream",
+   "wall_s": 0.2551,
+   "phases_s": {
+    "phase setup": 0.0,
+    "phase parsing": 0.16,
+    "phase lang. deferred": 0.02,
+    "phase opt and generate": 0.01,
+    "TOTAL": 0.19,
+    "(timer) preprocessing": 0.05,
+    "(timer) template instantiation": 0.04,
+    "(timer) parser (global)": 0.02,
+    "(timer) parser struct body": 0.02,
+    "(timer) parser inl. meth. body": 0.02,
+    "(timer) |name lookup": 0.01,
+    "(timer) |overload resolution": 0.01,
+    "(timer) parser function body": 0.01
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "include",
+   "wall_s": 0.1424,
+   "phases_s": {
+    "phase setup": 0.0,
+    "phase parsing": 0.07,
+    "TOTAL": 0.08,
+    "(timer) preprocessing": 0.03,
+    "(timer) parser inl. func. body": 0.02,
+    "(timer) parser (global)": 0.01,
+    "(timer) parser struct body": 0.01
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "use_e2",
+   "wall_s": 0.5149,
+   "phases_s": {
+    "phase setup": 0.0,
+    "phase parsing": 0.08,
+    "phase lang. deferred": 0.01,
+    "phase opt and generate": 0.3,
+    "TOTAL": 0.39,
+    "(timer) callgraph functions expansion": 0.22,
+    "(timer) callgraph ipa passes": 0.08,
+    "(timer) preprocessing": 0.03,
+    "(timer) parser inl. func. body": 0.02,
+    "(timer) combiner": 0.02,
+    "(timer) integrated RA": 0.02,
+    "(timer) |name lookup": 0.01,
+    "(timer) |overload resolution": 0.01
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "use_all",
+   "wall_s": 1.1769,
+   "phases_s": {
+    "phase setup": 0.0,
+    "phase parsing": 0.09,
+    "phase lang. deferred": 0.03,
+    "phase opt and generate": 0.87,
+    "TOTAL": 1.0,
+    "(timer) callgraph functions expansion": 0.62,
+    "(timer) callgraph ipa passes": 0.23,
+    "(timer) combiner": 0.05,
+    "(timer) integrated RA": 0.05,
+    "(timer) tree Early VRP": 0.04,
+    "(timer) rest of compilation": 0.04,
+    "(timer) preprocessing": 0.03,
+    "(timer) parser inl. func. body": 0.03
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "self_test",
+   "wall_s": 1.0246,
+   "phases_s": {
+    "phase setup": 0.0,
+    "phase parsing": 0.08,
+    "phase opt and generate": 0.75,
+    "TOTAL": 0.84,
+    "(timer) callgraph functions expansion": 0.64,
+    "(timer) callgraph ipa passes": 0.1,
+    "(timer) backwards jump threading": 0.06,
+    "(timer) combiner": 0.06,
+    "(timer) integrated RA": 0.05,
+    "(timer) preprocessing": 0.03,
+    "(timer) parser inl. func. body": 0.03,
+    "(timer) dominator optimization": 0.03
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "kernels_scalar",
+   "wall_s": 0.4402,
+   "phases_s": {
+    "phase setup": 0.01,
+    "phase parsing": 0.05,
+    "phase opt and generate": 0.27,
+    "TOTAL": 0.33,
+    "(timer) callgraph functions expansion": 0.2,
+    "(timer) callgraph ipa passes": 0.07,
+    "(timer) parser inl. func. body": 0.02,
+    "(timer) integrated RA": 0.02,
+    "(timer) preprocessing": 0.01,
+    "(timer) parser (global)": 0.01,
+    "(timer) parser struct body": 0.01,
+    "(timer) integration": 0.01
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "kernels_packed",
+   "wall_s": 0.5688,
+   "phases_s": {
+    "phase setup": 0.0,
+    "phase parsing": 0.24,
+    "phase opt and generate": 0.22,
+    "TOTAL": 0.47,
+    "(timer) callgraph functions expansion": 0.15,
+    "(timer) parser (global)": 0.15,
+    "(timer) callgraph ipa passes": 0.06,
+    "(timer) parser inl. func. body": 0.06,
+    "(timer) preprocessing": 0.02,
+    "(timer) |name lookup": 0.01,
+    "(timer) callgraph construction": 0.01,
+    "(timer) parser struct body": 0.01
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "runner",
+   "wall_s": 0.8661,
+   "phases_s": {
+    "phase setup": 0.0,
+    "phase parsing": 0.21,
+    "phase lang. deferred": 0.03,
+    "phase opt and generate": 0.5,
+    "TOTAL": 0.74,
+    "(timer) callgraph functions expansion": 0.4,
+    "(timer) callgraph ipa passes": 0.09,
+    "(timer) preprocessing": 0.06,
+    "(timer) template instantiation": 0.05,
+    "(timer) parser (global)": 0.03,
+    "(timer) parser struct body": 0.03,
+    "(timer) parser inl. meth. body": 0.03,
+    "(timer) integrated RA": 0.03
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "packed_runner",
+   "wall_s": 1.2313,
+   "phases_s": {
+    "phase setup": 0.0,
+    "phase parsing": 0.39,
+    "phase lang. deferred": 0.03,
+    "phase opt and generate": 0.65,
+    "TOTAL": 1.07,
+    "(timer) callgraph functions expansion": 0.53,
+    "(timer) parser (global)": 0.15,
+    "(timer) callgraph ipa passes": 0.1,
+    "(timer) preprocessing": 0.07,
+    "(timer) parser inl. func. body": 0.07,
+    "(timer) template instantiation": 0.05,
+    "(timer) |overload resolution": 0.03,
+    "(timer) parser struct body": 0.03
+   },
+   "largest_functions_s": []
+  }
+ ]
+}

@@ -1,0 +1,134 @@
+{
+ "schema": 1,
+ "what": "phases",
+ "date": "2026-11-19",
+ "commit": "b710964",
+ "machine": {
+  "description": "Windows 11 x64, Intel Core i5-13500T (6 performance and 8 efficiency cores); a shared CI machine",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13500T",
+  "os": "Windows",
+  "arch": "AMD64"
+ },
+ "compiler": "Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64",
+ "cxx": "cl",
+ "family": "msvc",
+ "flags": "",
+ "pinning": "pinned to logical processor 4",
+ "reps": 3,
+ "config": "O2",
+ "config_flags": [
+  "/O2",
+  "/DNDEBUG"
+ ],
+ "tool": "/Bt+",
+ "results": [
+  {
+   "unit": "empty",
+   "wall_s": 0.0452,
+   "phases_s": {
+    "c1xx": 0.00965,
+    "c2": 0.00564
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "std_headers",
+   "wall_s": 0.1682,
+   "phases_s": {
+    "c1xx": 0.12936,
+    "c2": 0.00519
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "kairn_std",
+   "wall_s": 0.1479,
+   "phases_s": {
+    "c1xx": 0.11217,
+    "c2": 0.00484
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "iostream",
+   "wall_s": 0.4298,
+   "phases_s": {
+    "c1xx": 0.39256,
+    "c2": 0.00711
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "include",
+   "wall_s": 0.4392,
+   "phases_s": {
+    "c1xx": 0.31642,
+    "c2": 0.01092
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "use_e2",
+   "wall_s": 1.5686,
+   "phases_s": {
+    "c1xx": 0.22042,
+    "c2": 1.27984
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "use_all",
+   "wall_s": 3.7989,
+   "phases_s": {
+    "c1xx": 0.28057,
+    "c2": 3.47632
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "self_test",
+   "wall_s": 1.36,
+   "phases_s": {
+    "c1xx": 0.19397,
+    "c2": 1.12063
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "kernels_scalar",
+   "wall_s": 1.1146,
+   "phases_s": {
+    "c1xx": 0.18426,
+    "c2": 0.88846
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "kernels_packed",
+   "wall_s": 0.9804,
+   "phases_s": {
+    "c1xx": 0.22334,
+    "c2": 0.71509
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "runner",
+   "wall_s": 2.2889,
+   "phases_s": {
+    "c1xx": 0.61697,
+    "c2": 1.62615
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "packed_runner",
+   "wall_s": 2.3738,
+   "phases_s": {
+    "c1xx": 0.64684,
+    "c2": 1.68131
+   },
+   "largest_functions_s": []
+  }
+ ]
+}

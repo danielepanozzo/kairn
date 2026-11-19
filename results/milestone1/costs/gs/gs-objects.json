@@ -1,0 +1,2258 @@
+{
+ "schema": 1,
+ "what": "objects",
+ "date": "2026-11-19",
+ "commit": "b710964",
+ "machine": "",
+ "compiler": "Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64",
+ "flags": [
+  "/nologo",
+  "/std:c++20",
+  "/EHsc",
+  "/O2",
+  "/DNDEBUG",
+  "/arch:AVX2",
+  "/fp:precise",
+  "/wd4190",
+  "/I",
+  "include"
+ ],
+ "results": {
+  "api.cpp.obj /GS": {
+   "kb_a32_tp_ball_neg_2__op": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_ball_add_1__kairn": {
+    "instructions": 91,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_tp_ball_add_1__op": {
+    "instructions": 298,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "kb_a32_tp_ball_mul_1__kairn": {
+    "instructions": 163,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_tp_ball_mul_1__op": {
+    "instructions": 101,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a32_tp_ball_scale_1__kairn": {
+    "instructions": 114,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_tp_ball_scale_1__op": {
+    "instructions": 323,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 128
+   },
+   "kb_a32_tp_ball_neg_1__kairn": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_ball_neg_1__op": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_1_1__kairn": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_1_1__limb": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_mul_1_1__kairn": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_mul_1_1__limb": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_neg_1__kairn": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_sum_add_2_2__kairn": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_sum_add_2_2__op": {
+    "instructions": 63,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a32_sum_add_2_2__finite": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_sum_add_2_2__textbook": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_sum_add_fast_2_2__kairn": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_sum_add_fast_2_2__op": {
+    "instructions": 42,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a32_sum_add_fast_2_2__finite": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_sum_add_fast_2_2__textbook": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_sum_add_2_1__kairn": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a32_sum_add_2_1__op": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a32_sum_add_2_1__finite": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a32_sum_add_2_1__textbook": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_sum_ball_add_2__kairn": {
+    "instructions": 74,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a32_sum_ball_add_2__op": {
+    "instructions": 129,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 200
+   },
+   "kb_a32_sum_ball_add_1__kairn": {
+    "instructions": 85,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_sum_ball_add_1__op": {
+    "instructions": 299,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "kb_a32_sum_add_1_1__kairn": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_sum_add_1_1__limb": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_prod_mul_2_2__kairn": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_prod_mul_2_2__op": {
+    "instructions": 60,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a32_prod_mul_2_2__finite": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_prod_mul_2_2__textbook": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_prod_mul_2_1__kairn": {
+    "instructions": 37,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_prod_mul_2_1__op": {
+    "instructions": 53,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_prod_mul_2_1__finite": {
+    "instructions": 37,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_prod_mul_2_1__textbook": {
+    "instructions": 36,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_prod_ball_mul_2__kairn": {
+    "instructions": 80,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a32_prod_ball_mul_2__op": {
+    "instructions": 146,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 224
+   },
+   "kb_a32_prod_ball_scale_2__kairn": {
+    "instructions": 63,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a32_prod_ball_scale_2__op": {
+    "instructions": 122,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a32_prod_ball_mul_1__kairn": {
+    "instructions": 150,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kb_a32_prod_ball_mul_1__op": {
+    "instructions": 109,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a32_prod_ball_scale_1__kairn": {
+    "instructions": 102,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_prod_ball_scale_1__op": {
+    "instructions": 332,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 128
+   },
+   "kb_a32_prod_mul_1_1__kairn": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_prod_mul_1_1__limb": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_horner_2__kairn": {
+    "instructions": 76,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a32_horner_2__op": {
+    "instructions": 96,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a32_horner_2__finite": {
+    "instructions": 76,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a32_horner_2__textbook": {
+    "instructions": 74,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a32_horner_21__kairn": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_horner_21__op": {
+    "instructions": 71,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_horner_21__finite": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_horner_21__textbook": {
+    "instructions": 50,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_horner_ball_2__kairn": {
+    "instructions": 127,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 296
+   },
+   "kb_a32_horner_ball_2__op": {
+    "instructions": 239,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 304
+   },
+   "kb_a32_horner_ball_1__kairn": {
+    "instructions": 194,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a32_horner_ball_1__op": {
+    "instructions": 172,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 224
+   },
+   "kb_a32_horner_1__kairn": {
+    "instructions": 33,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_horner_1__limb": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_2_2__kairn": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_tp_add_2_2__op": {
+    "instructions": 63,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kb_a64_tp_add_2_2__finite": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_tp_add_2_2__textbook": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_tp_add_fast_2_2__kairn": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_fast_2_2__op": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a64_tp_add_fast_2_2__finite": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_fast_2_2__textbook": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_2_1__kairn": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_2_1__op": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a64_tp_add_2_1__finite": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_2_1__textbook": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_mul_2_2__kairn": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_tp_mul_2_2__op": {
+    "instructions": 59,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kb_a64_tp_mul_2_2__finite": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_tp_mul_2_2__textbook": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_tp_mul_2_1__kairn": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a64_tp_mul_2_1__op": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_tp_mul_2_1__finite": {
+    "instructions": 34,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a64_tp_mul_2_1__textbook": {
+    "instructions": 33,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a64_tp_neg_2__kairn": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_neg_2__op": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_ball_add_2__kairn": {
+    "instructions": 66,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a64_tp_ball_add_2__op": {
+    "instructions": 127,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a64_tp_ball_mul_2__kairn": {
+    "instructions": 86,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a64_tp_ball_mul_2__op": {
+    "instructions": 145,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 208
+   },
+   "kb_a64_tp_ball_scale_2__kairn": {
+    "instructions": 60,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a64_tp_ball_scale_2__op": {
+    "instructions": 124,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 176
+   },
+   "kb_a64_tp_ball_neg_2__kairn": {
+    "instructions": 16,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_ball_neg_2__op": {
+    "instructions": 16,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_ball_add_1__kairn": {
+    "instructions": 91,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a64_tp_ball_add_1__op": {
+    "instructions": 313,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "kb_a64_tp_ball_mul_1__kairn": {
+    "instructions": 188,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 80
+   },
+   "kb_a64_tp_ball_mul_1__op": {
+    "instructions": 114,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a64_tp_ball_scale_1__kairn": {
+    "instructions": 132,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "kb_a64_tp_ball_scale_1__op": {
+    "instructions": 350,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 128
+   },
+   "kb_a64_tp_ball_neg_1__kairn": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_ball_neg_1__op": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_1_1__kairn": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_1_1__limb": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_mul_1_1__kairn": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_mul_1_1__limb": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_neg_1__kairn": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_sum_add_2_2__kairn": {
+    "instructions": 53,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_sum_add_2_2__op": {
+    "instructions": 70,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a64_sum_add_2_2__finite": {
+    "instructions": 53,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_sum_add_2_2__textbook": {
+    "instructions": 50,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_sum_add_fast_2_2__kairn": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a64_sum_add_fast_2_2__op": {
+    "instructions": 50,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a64_sum_add_fast_2_2__finite": {
+    "instructions": 28,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_sum_add_fast_2_2__textbook": {
+    "instructions": 28,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_sum_add_2_1__kairn": {
+    "instructions": 33,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a64_sum_add_2_1__op": {
+    "instructions": 45,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a64_sum_add_2_1__finite": {
+    "instructions": 33,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a64_sum_add_2_1__textbook": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_sum_ball_add_2__kairn": {
+    "instructions": 71,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a64_sum_ball_add_2__op": {
+    "instructions": 129,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 184
+   },
+   "kb_a64_sum_ball_add_1__kairn": {
+    "instructions": 87,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a64_sum_ball_add_1__op": {
+    "instructions": 304,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "kb_a64_sum_add_1_1__kairn": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_sum_add_1_1__limb": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_prod_mul_2_2__kairn": {
+    "instructions": 54,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_prod_mul_2_2__op": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kb_a64_prod_mul_2_2__finite": {
+    "instructions": 54,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_prod_mul_2_2__textbook": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_prod_mul_2_1__kairn": {
+    "instructions": 39,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a64_prod_mul_2_1__op": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_prod_mul_2_1__finite": {
+    "instructions": 39,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a64_prod_mul_2_1__textbook": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a64_prod_ball_mul_2__kairn": {
+    "instructions": 92,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 184
+   },
+   "kb_a64_prod_ball_mul_2__op": {
+    "instructions": 149,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 224
+   },
+   "kb_a64_prod_ball_scale_2__kairn": {
+    "instructions": 69,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a64_prod_ball_scale_2__op": {
+    "instructions": 123,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a64_prod_ball_mul_1__kairn": {
+    "instructions": 186,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "kb_a64_prod_ball_mul_1__op": {
+    "instructions": 117,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a64_prod_ball_scale_1__kairn": {
+    "instructions": 137,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 80
+   },
+   "kb_a64_prod_ball_scale_1__op": {
+    "instructions": 347,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "kb_a64_prod_mul_1_1__kairn": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_prod_mul_1_1__limb": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_horner_2__kairn": {
+    "instructions": 85,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a64_horner_2__op": {
+    "instructions": 104,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a64_horner_2__finite": {
+    "instructions": 85,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a64_horner_2__textbook": {
+    "instructions": 80,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a64_horner_21__kairn": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kb_a64_horner_21__op": {
+    "instructions": 74,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_horner_21__finite": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_horner_21__textbook": {
+    "instructions": 54,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kb_a64_horner_ball_2__kairn": {
+    "instructions": 140,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 296
+   },
+   "kb_a64_horner_ball_2__op": {
+    "instructions": 243,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 288
+   },
+   "kb_a64_horner_ball_1__kairn": {
+    "instructions": 227,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 192
+   },
+   "kb_a64_horner_ball_1__op": {
+    "instructions": 180,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 224
+   },
+   "kb_a64_horner_1__kairn": {
+    "instructions": 33,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_horner_1__limb": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_2_2__kairn": {
+    "instructions": 45,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_tp_add_2_2__op": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kb_a32_tp_add_2_2__finite": {
+    "instructions": 45,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_tp_add_2_2__textbook": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_tp_add_fast_2_2__kairn": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_fast_2_2__op": {
+    "instructions": 42,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a32_tp_add_fast_2_2__finite": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_fast_2_2__textbook": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_2_1__kairn": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_2_1__op": {
+    "instructions": 40,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a32_tp_add_2_1__finite": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_2_1__textbook": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_mul_2_2__kairn": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_tp_mul_2_2__op": {
+    "instructions": 59,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a32_tp_mul_2_2__finite": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_tp_mul_2_2__textbook": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_tp_mul_2_1__kairn": {
+    "instructions": 34,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_tp_mul_2_1__op": {
+    "instructions": 51,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_tp_mul_2_1__finite": {
+    "instructions": 36,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_tp_mul_2_1__textbook": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a32_tp_neg_2__kairn": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_neg_2__op": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_ball_add_2__kairn": {
+    "instructions": 64,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a32_tp_ball_add_2__op": {
+    "instructions": 124,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a32_tp_ball_mul_2__kairn": {
+    "instructions": 80,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a32_tp_ball_mul_2__op": {
+    "instructions": 139,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 208
+   },
+   "kb_a32_tp_ball_scale_2__kairn": {
+    "instructions": 60,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kb_a32_tp_ball_scale_2__op": {
+    "instructions": 118,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 176
+   },
+   "kb_a32_tp_ball_neg_2__kairn": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  },
+  "api.cpp.obj /GS-": {
+   "kb_a32_tp_ball_neg_2__op": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_ball_add_1__kairn": {
+    "instructions": 91,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_tp_ball_add_1__op": {
+    "instructions": 298,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "kb_a32_tp_ball_mul_1__kairn": {
+    "instructions": 163,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_tp_ball_mul_1__op": {
+    "instructions": 101,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a32_tp_ball_scale_1__kairn": {
+    "instructions": 114,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_tp_ball_scale_1__op": {
+    "instructions": 323,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 128
+   },
+   "kb_a32_tp_ball_neg_1__kairn": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_ball_neg_1__op": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_1_1__kairn": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_1_1__limb": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_mul_1_1__kairn": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_mul_1_1__limb": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_neg_1__kairn": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_sum_add_2_2__kairn": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_sum_add_2_2__op": {
+    "instructions": 63,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a32_sum_add_2_2__finite": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_sum_add_2_2__textbook": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_sum_add_fast_2_2__kairn": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_sum_add_fast_2_2__op": {
+    "instructions": 42,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a32_sum_add_fast_2_2__finite": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_sum_add_fast_2_2__textbook": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_sum_add_2_1__kairn": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a32_sum_add_2_1__op": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a32_sum_add_2_1__finite": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a32_sum_add_2_1__textbook": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_sum_ball_add_2__kairn": {
+    "instructions": 74,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a32_sum_ball_add_2__op": {
+    "instructions": 129,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 200
+   },
+   "kb_a32_sum_ball_add_1__kairn": {
+    "instructions": 85,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_sum_ball_add_1__op": {
+    "instructions": 299,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "kb_a32_sum_add_1_1__kairn": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_sum_add_1_1__limb": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_prod_mul_2_2__kairn": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_prod_mul_2_2__op": {
+    "instructions": 60,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a32_prod_mul_2_2__finite": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_prod_mul_2_2__textbook": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_prod_mul_2_1__kairn": {
+    "instructions": 37,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_prod_mul_2_1__op": {
+    "instructions": 53,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_prod_mul_2_1__finite": {
+    "instructions": 37,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_prod_mul_2_1__textbook": {
+    "instructions": 36,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_prod_ball_mul_2__kairn": {
+    "instructions": 80,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a32_prod_ball_mul_2__op": {
+    "instructions": 146,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 224
+   },
+   "kb_a32_prod_ball_scale_2__kairn": {
+    "instructions": 63,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a32_prod_ball_scale_2__op": {
+    "instructions": 122,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a32_prod_ball_mul_1__kairn": {
+    "instructions": 150,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kb_a32_prod_ball_mul_1__op": {
+    "instructions": 109,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a32_prod_ball_scale_1__kairn": {
+    "instructions": 102,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_prod_ball_scale_1__op": {
+    "instructions": 332,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 128
+   },
+   "kb_a32_prod_mul_1_1__kairn": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_prod_mul_1_1__limb": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_horner_2__kairn": {
+    "instructions": 76,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a32_horner_2__op": {
+    "instructions": 96,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a32_horner_2__finite": {
+    "instructions": 76,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a32_horner_2__textbook": {
+    "instructions": 74,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a32_horner_21__kairn": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_horner_21__op": {
+    "instructions": 71,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_horner_21__finite": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_horner_21__textbook": {
+    "instructions": 50,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_horner_ball_2__kairn": {
+    "instructions": 127,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 280
+   },
+   "kb_a32_horner_ball_2__op": {
+    "instructions": 239,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 304
+   },
+   "kb_a32_horner_ball_1__kairn": {
+    "instructions": 194,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a32_horner_ball_1__op": {
+    "instructions": 172,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 224
+   },
+   "kb_a32_horner_1__kairn": {
+    "instructions": 33,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_horner_1__limb": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_2_2__kairn": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_tp_add_2_2__op": {
+    "instructions": 63,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kb_a64_tp_add_2_2__finite": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_tp_add_2_2__textbook": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_tp_add_fast_2_2__kairn": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_fast_2_2__op": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a64_tp_add_fast_2_2__finite": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_fast_2_2__textbook": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_2_1__kairn": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_2_1__op": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a64_tp_add_2_1__finite": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_2_1__textbook": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_mul_2_2__kairn": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_tp_mul_2_2__op": {
+    "instructions": 59,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kb_a64_tp_mul_2_2__finite": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_tp_mul_2_2__textbook": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_tp_mul_2_1__kairn": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a64_tp_mul_2_1__op": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_tp_mul_2_1__finite": {
+    "instructions": 34,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a64_tp_mul_2_1__textbook": {
+    "instructions": 33,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a64_tp_neg_2__kairn": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_neg_2__op": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_ball_add_2__kairn": {
+    "instructions": 66,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a64_tp_ball_add_2__op": {
+    "instructions": 127,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a64_tp_ball_mul_2__kairn": {
+    "instructions": 86,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a64_tp_ball_mul_2__op": {
+    "instructions": 145,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 208
+   },
+   "kb_a64_tp_ball_scale_2__kairn": {
+    "instructions": 60,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a64_tp_ball_scale_2__op": {
+    "instructions": 124,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 176
+   },
+   "kb_a64_tp_ball_neg_2__kairn": {
+    "instructions": 16,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_ball_neg_2__op": {
+    "instructions": 16,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_ball_add_1__kairn": {
+    "instructions": 91,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a64_tp_ball_add_1__op": {
+    "instructions": 313,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "kb_a64_tp_ball_mul_1__kairn": {
+    "instructions": 188,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 80
+   },
+   "kb_a64_tp_ball_mul_1__op": {
+    "instructions": 114,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a64_tp_ball_scale_1__kairn": {
+    "instructions": 132,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "kb_a64_tp_ball_scale_1__op": {
+    "instructions": 352,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 128
+   },
+   "kb_a64_tp_ball_neg_1__kairn": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_ball_neg_1__op": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_1_1__kairn": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_add_1_1__limb": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_mul_1_1__kairn": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_mul_1_1__limb": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_tp_neg_1__kairn": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_sum_add_2_2__kairn": {
+    "instructions": 53,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_sum_add_2_2__op": {
+    "instructions": 70,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a64_sum_add_2_2__finite": {
+    "instructions": 53,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_sum_add_2_2__textbook": {
+    "instructions": 50,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_sum_add_fast_2_2__kairn": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a64_sum_add_fast_2_2__op": {
+    "instructions": 50,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a64_sum_add_fast_2_2__finite": {
+    "instructions": 28,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_sum_add_fast_2_2__textbook": {
+    "instructions": 28,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_sum_add_2_1__kairn": {
+    "instructions": 33,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a64_sum_add_2_1__op": {
+    "instructions": 45,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a64_sum_add_2_1__finite": {
+    "instructions": 33,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a64_sum_add_2_1__textbook": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_sum_ball_add_2__kairn": {
+    "instructions": 71,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a64_sum_ball_add_2__op": {
+    "instructions": 129,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 184
+   },
+   "kb_a64_sum_ball_add_1__kairn": {
+    "instructions": 87,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a64_sum_ball_add_1__op": {
+    "instructions": 304,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "kb_a64_sum_add_1_1__kairn": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_sum_add_1_1__limb": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_prod_mul_2_2__kairn": {
+    "instructions": 54,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_prod_mul_2_2__op": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kb_a64_prod_mul_2_2__finite": {
+    "instructions": 54,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_prod_mul_2_2__textbook": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_prod_mul_2_1__kairn": {
+    "instructions": 39,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a64_prod_mul_2_1__op": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a64_prod_mul_2_1__finite": {
+    "instructions": 39,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a64_prod_mul_2_1__textbook": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kb_a64_prod_ball_mul_2__kairn": {
+    "instructions": 92,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a64_prod_ball_mul_2__op": {
+    "instructions": 149,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 224
+   },
+   "kb_a64_prod_ball_scale_2__kairn": {
+    "instructions": 67,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a64_prod_ball_scale_2__op": {
+    "instructions": 123,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a64_prod_ball_mul_1__kairn": {
+    "instructions": 188,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 96
+   },
+   "kb_a64_prod_ball_mul_1__op": {
+    "instructions": 117,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a64_prod_ball_scale_1__kairn": {
+    "instructions": 137,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "kb_a64_prod_ball_scale_1__op": {
+    "instructions": 347,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "kb_a64_prod_mul_1_1__kairn": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_prod_mul_1_1__limb": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_horner_2__kairn": {
+    "instructions": 85,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a64_horner_2__op": {
+    "instructions": 104,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a64_horner_2__finite": {
+    "instructions": 85,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a64_horner_2__textbook": {
+    "instructions": 80,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kb_a64_horner_21__kairn": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_horner_21__op": {
+    "instructions": 74,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_horner_21__finite": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_horner_21__textbook": {
+    "instructions": 54,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a64_horner_ball_2__kairn": {
+    "instructions": 139,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 264
+   },
+   "kb_a64_horner_ball_2__op": {
+    "instructions": 243,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 288
+   },
+   "kb_a64_horner_ball_1__kairn": {
+    "instructions": 226,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 176
+   },
+   "kb_a64_horner_ball_1__op": {
+    "instructions": 180,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 208
+   },
+   "kb_a64_horner_1__kairn": {
+    "instructions": 33,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a64_horner_1__limb": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_2_2__kairn": {
+    "instructions": 45,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_tp_add_2_2__op": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kb_a32_tp_add_2_2__finite": {
+    "instructions": 45,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_tp_add_2_2__textbook": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_tp_add_fast_2_2__kairn": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_fast_2_2__op": {
+    "instructions": 42,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a32_tp_add_fast_2_2__finite": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_fast_2_2__textbook": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_2_1__kairn": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_2_1__op": {
+    "instructions": 40,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a32_tp_add_2_1__finite": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_add_2_1__textbook": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_mul_2_2__kairn": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_tp_mul_2_2__op": {
+    "instructions": 59,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a32_tp_mul_2_2__finite": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_tp_mul_2_2__textbook": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kb_a32_tp_mul_2_1__kairn": {
+    "instructions": 34,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_tp_mul_2_1__op": {
+    "instructions": 51,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kb_a32_tp_mul_2_1__finite": {
+    "instructions": 36,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kb_a32_tp_mul_2_1__textbook": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kb_a32_tp_neg_2__kairn": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_neg_2__op": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kb_a32_tp_ball_add_2__kairn": {
+    "instructions": 64,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kb_a32_tp_ball_add_2__op": {
+    "instructions": 124,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "kb_a32_tp_ball_mul_2__kairn": {
+    "instructions": 80,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "kb_a32_tp_ball_mul_2__op": {
+    "instructions": 139,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 208
+   },
+   "kb_a32_tp_ball_scale_2__kairn": {
+    "instructions": 60,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kb_a32_tp_ball_scale_2__op": {
+    "instructions": 118,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 176
+   },
+   "kb_a32_tp_ball_neg_2__kairn": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  }
+ }
+}

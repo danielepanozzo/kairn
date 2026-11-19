@@ -1,0 +1,511 @@
+{
+ "schema": 1,
+ "what": "phases",
+ "date": "2026-11-19",
+ "commit": "0f81c17",
+ "machine": {
+  "description": "macOS arm64, Apple M3 Max (12 performance and 4 efficiency cores); not pinned (macOS has no affinity), QoS user-interactive",
+  "cpu": "Apple M3 Max",
+  "os": "Darwin",
+  "arch": "arm64"
+ },
+ "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+ "cxx": "c++",
+ "family": "gnu",
+ "flags": "",
+ "pinning": "not pinned",
+ "reps": 3,
+ "config": "O2",
+ "config_flags": [
+  "-O2",
+  "-DNDEBUG"
+ ],
+ "tool": "-ftime-trace",
+ "results": [
+  {
+   "unit": "empty",
+   "wall_s": 0.0205,
+   "phases_s": {
+    "ExecuteCompiler": 0.0024,
+    "Backend": 0.0008,
+    "Frontend": 0.0003,
+    "CodeGenPasses": 0.0,
+    "OptModule": 0.0,
+    "Source": 0.0,
+    "PerformPendingInstantiations": 0.0
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "std_headers",
+   "wall_s": 0.0557,
+   "phases_s": {
+    "ExecuteCompiler": 0.0345,
+    "Frontend": 0.0323,
+    "Source": 0.031,
+    "ParseClass": 0.0034,
+    "InstantiateFunction": 0.001,
+    "Backend": 0.0009,
+    "PerformPendingInstantiations": 0.0008,
+    "InstantiateClass": 0.0004,
+    "CodeGenPasses": 0.0001,
+    "OptModule": 0.0
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "iostream",
+   "wall_s": 0.4127,
+   "phases_s": {
+    "ExecuteCompiler": 0.3694,
+    "Frontend": 0.3654,
+    "Source": 0.3601,
+    "ParseClass": 0.1235,
+    "InstantiateClass": 0.035,
+    "InstantiateFunction": 0.0341,
+    "PerformPendingInstantiations": 0.0049,
+    "Backend": 0.001,
+    "CodeGenPasses": 0.0001,
+    "OptModule": 0.0
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "include",
+   "wall_s": 0.0792,
+   "phases_s": {
+    "ExecuteCompiler": 0.0523,
+    "Frontend": 0.0499,
+    "Source": 0.0489,
+    "ParseClass": 0.0059,
+    "Backend": 0.0009,
+    "InstantiateFunction": 0.0008,
+    "InstantiateClass": 0.0008,
+    "PerformPendingInstantiations": 0.0006,
+    "CodeGenPasses": 0.0,
+    "OptModule": 0.0
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "use_e2",
+   "wall_s": 0.2326,
+   "phases_s": {
+    "ExecuteCompiler": 0.172,
+    "Backend": 0.1002,
+    "Frontend": 0.0701,
+    "Source": 0.0504,
+    "CodeGenPasses": 0.0424,
+    "OptModule": 0.0424,
+    "OptFunction": 0.042,
+    "InstantiateFunction": 0.0126,
+    "CodeGen Function": 0.0096,
+    "ParseClass": 0.0066,
+    "PerformPendingInstantiations": 0.0022,
+    "InstantiateClass": 0.0013
+   },
+   "largest_functions_s": [
+    [
+     "_ZN5kairn3gen5fixup12add_2_2_fullEddddb",
+     0.002
+    ],
+    [
+     "_ZN3kct5UseE2IdE3addERKN5kairn9ExpansionIdLi2EEES6_",
+     0.0017
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE6radiusERKN5kairn4BallIdLi2EEE",
+     0.0012
+    ],
+    [
+     "_ZN3kct5UseE2IdE5ldexpERKN5kairn9ExpansionIdLi2EEEi",
+     0.0011
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE8sub_limbERKN5kairn4BallIdLi2EEEd",
+     0.001
+    ],
+    [
+     "_ZN3kct5UseE2IdE12finite_ldexpERKN5kairn9ExpansionIdLi2EEEi",
+     0.0008
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE8limb_subEdRKN5kairn4BallIdLi2EEE",
+     0.0008
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE8add_limbERKN5kairn4BallIdLi2EEEd",
+     0.0007
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE10sub_centerERKN5kairn4BallIdLi2EEERKNS2_9ExpansionIdLi2EEE",
+     0.0006
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE15sub_assign_limbERN5kairn4BallIdLi2EEEd",
+     0.0006
+    ]
+   ]
+  },
+  {
+   "unit": "use_all",
+   "wall_s": 0.4882,
+   "phases_s": {
+    "ExecuteCompiler": 0.3754,
+    "Backend": 0.2697,
+    "CodeGenPasses": 0.1119,
+    "OptModule": 0.1119,
+    "OptFunction": 0.1108,
+    "Frontend": 0.1037,
+    "Source": 0.0502,
+    "InstantiateFunction": 0.0353,
+    "CodeGen Function": 0.0264,
+    "ParseClass": 0.0065,
+    "PerformPendingInstantiations": 0.0054,
+    "InstantiateClass": 0.0019
+   },
+   "largest_functions_s": [
+    [
+     "_ZN5kairn3gen5fixup15mul_pow2_2_fullEffffb",
+     0.0025
+    ],
+    [
+     "_ZN5kairn3gen5fixup12add_2_2_fullEffffb",
+     0.0019
+    ],
+    [
+     "_ZN3kct5UseE2IfE3addERKN5kairn9ExpansionIfLi2EEES6_",
+     0.0017
+    ],
+    [
+     "_ZN3kct5UseE2IdE5ldexpERKN5kairn9ExpansionIdLi2EEEi",
+     0.0012
+    ],
+    [
+     "_ZN3kct5UseE2IfE5ldexpERKN5kairn9ExpansionIfLi2EEEi",
+     0.001
+    ],
+    [
+     "_ZN3kct7UseBallIfLi2EE10mul_centerERKN5kairn4BallIfLi2EEERKNS2_9ExpansionIfLi2EEE",
+     0.0008
+    ],
+    [
+     "_ZN3kct5UseE1IfE5ldexpEN5kairn9ExpansionIfLi1EEEi",
+     0.0008
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE10mul_centerERKN5kairn4BallIdLi2EEERKNS2_9ExpansionIdLi2EEE",
+     0.0007
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE17sub_assign_centerERN5kairn4BallIdLi2EEERKNS2_9ExpansionIdLi2EEE",
+     0.0007
+    ],
+    [
+     "_ZN3kct5UseE2IdE12finite_ldexpERKN5kairn9ExpansionIdLi2EEEi",
+     0.0007
+    ]
+   ]
+  },
+  {
+   "unit": "self_test",
+   "wall_s": 0.341,
+   "phases_s": {
+    "ExecuteCompiler": 0.2703,
+    "Backend": 0.2056,
+    "CodeGenPasses": 0.091,
+    "OptModule": 0.091,
+    "OptFunction": 0.0901,
+    "Frontend": 0.0631,
+    "Source": 0.0499,
+    "CodeGen Function": 0.0121,
+    "ParseClass": 0.0057,
+    "InstantiateClass": 0.0009,
+    "InstantiateFunction": 0.0008,
+    "PerformPendingInstantiations": 0.0005
+   },
+   "largest_functions_s": [
+    [
+     "_ZN5kairn6detail14self_test_limbIdEEPKcv",
+     0.0026
+    ],
+    [
+     "_ZN5kairn3gen5fixup15ball_add_1_fullEdddbb",
+     0.0018
+    ],
+    [
+     "_ZN5kairn3gen8selftest18add_2_1_full_floatEv",
+     0.0017
+    ],
+    [
+     "_ZN5kairn3gen8selftest21ball_mul_2_full_floatEv",
+     0.0011
+    ],
+    [
+     "_Z13kct_self_testv",
+     0.0011
+    ],
+    [
+     "_ZN5kairn6detail14self_test_limbIfEEPKcv",
+     0.0011
+    ],
+    [
+     "_ZN5kairn3gen8selftest32ball_mul_2_full_nonfinite_doubleEv",
+     0.001
+    ],
+    [
+     "_ZN5kairn3gen8selftest32ball_add_1_full_nonfinite_doubleEv",
+     0.001
+    ],
+    [
+     "_ZN5kairn3gen8selftest32ball_sub_2_full_nonfinite_doubleEv",
+     0.0009
+    ],
+    [
+     "_ZN5kairn3gen8selftest34ball_scale_2_full_nonfinite_doubleEv",
+     0.0009
+    ]
+   ]
+  },
+  {
+   "unit": "kernels_scalar",
+   "wall_s": 0.2224,
+   "phases_s": {
+    "ExecuteCompiler": 0.1575,
+    "Backend": 0.1082,
+    "Frontend": 0.0476,
+    "CodeGenPasses": 0.0433,
+    "OptModule": 0.0433,
+    "OptFunction": 0.0427,
+    "Source": 0.0345,
+    "CodeGen Function": 0.011,
+    "ParseClass": 0.0032,
+    "InstantiateClass": 0.0004,
+    "InstantiateFunction": 0.0001,
+    "PerformPendingInstantiations": 0.0
+   },
+   "largest_functions_s": [
+    [
+     "(anonymous class)::operator()",
+     0.0024
+    ],
+    [
+     "_ZN5kairn3gen5fixup15ball_add_1_fullEdddbb",
+     0.002
+    ],
+    [
+     "(anonymous class)::__invoke",
+     0.0018
+    ],
+    [
+     "_ZN3$_28__invokeEPKdPdPKbPb",
+     0.0014
+    ],
+    [
+     "_ZN5$_1248__invokeEPKdPdPKbPb",
+     0.0012
+    ],
+    [
+     "_ZN4$_828__invokeEPKdPdPKbPb",
+     0.0007
+    ],
+    [
+     "_ZN3$_48__invokeEPKdPdPKbPb",
+     0.0006
+    ],
+    [
+     "_ZN4$_608__invokeEPKdPdPKbPb",
+     0.0006
+    ],
+    [
+     "_ZN3$_08__invokeEPKdPdPKbPb",
+     0.0006
+    ],
+    [
+     "_ZN4$_838__invokeEPKfPfPKbPb",
+     0.0006
+    ]
+   ]
+  },
+  {
+   "unit": "kernels_packed",
+   "wall_s": 0.3059,
+   "phases_s": {
+    "ExecuteCompiler": 0.2352,
+    "Frontend": 0.1345,
+    "Backend": 0.0989,
+    "Source": 0.0944,
+    "CodeGen Function": 0.0379,
+    "CodeGenPasses": 0.0372,
+    "OptModule": 0.0371,
+    "OptFunction": 0.0367,
+    "ParseClass": 0.0035,
+    "InstantiateClass": 0.0004,
+    "InstantiateFunction": 0.0001,
+    "PerformPendingInstantiations": 0.0
+   },
+   "largest_functions_s": [
+    [
+     "(anonymous class)::operator()",
+     0.0026
+    ],
+    [
+     "(anonymous class)::__invoke",
+     0.002
+    ],
+    [
+     "_ZN4$_178__invokeEPK19__simd128_float32_tPS0_PK18__simd128_uint32_tPS4_",
+     0.0017
+    ],
+    [
+     "_ZN3$_28__invokeEPK19__simd128_float64_tPS0_PK18__simd128_uint64_tPS4_",
+     0.0017
+    ],
+    [
+     "kairn::gen::ball_sub_2_full",
+     0.0015
+    ],
+    [
+     "kairn::gen::ball_add_2_full",
+     0.0014
+    ],
+    [
+     "kairn::gen::ball_mul_2_full",
+     0.0014
+    ],
+    [
+     "kairn::gen::ball_scale_2_full",
+     0.0011
+    ],
+    [
+     "kairn::gen::add_2_2_full",
+     0.001
+    ],
+    [
+     "kairn::gen::ball_sub_2",
+     0.001
+    ]
+   ]
+  },
+  {
+   "unit": "runner",
+   "wall_s": 0.7639,
+   "phases_s": {
+    "ExecuteCompiler": 0.6547,
+    "Frontend": 0.4221,
+    "Source": 0.3787,
+    "Backend": 0.2292,
+    "ParseClass": 0.1246,
+    "CodeGenPasses": 0.0812,
+    "OptModule": 0.0812,
+    "OptFunction": 0.0805,
+    "InstantiateFunction": 0.0448,
+    "InstantiateClass": 0.041,
+    "CodeGen Function": 0.0203,
+    "PerformPendingInstantiations": 0.0076
+   },
+   "largest_functions_s": [
+    [
+     "main",
+     0.0254
+    ],
+    [
+     "_ZNSt3__1plB9nqe220106IcNS_11char_traitsIcEENS_9allocatorIcEEEENS_12basic_stringIT_T0_T1_EEOS9_SA_",
+     0.004
+    ],
+    [
+     "_ZNSt3__17getlineB9nqe220106IcNS_11char_traitsIcEENS_9allocatorIcEEEERNS_13basic_istreamIT_T0_EES9_RNS_12basic_stringIS6_S7_T1_EES6_",
+     0.0031
+    ],
+    [
+     "(anonymous namespace)::(anonymous class)::operator()",
+     0.0023
+    ],
+    [
+     "_ZN12_GLOBAL__N_15parseERKNSt3__112basic_stringIcNS0_11char_traitsIcEENS0_9allocatorIcEEEE",
+     0.0021
+    ],
+    [
+     "(anonymous namespace)::(anonymous class)::__invoke",
+     0.0019
+    ],
+    [
+     "_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendB9nqe220106IPKcLi0EEERS5_T_SA_",
+     0.0016
+    ],
+    [
+     "_ZN12_GLOBAL__N_13putEdRNSt3__112basic_stringIcNS0_11char_traitsIcEENS0_9allocatorIcEEEE",
+     0.0015
+    ],
+    [
+     "_ZN5kairn3gen5fixup15ball_add_1_fullEdddbb",
+     0.0014
+    ],
+    [
+     "_ZN12_GLOBAL__N_14failERKNSt3__112basic_stringIcNS0_11char_traitsIcEENS0_9allocatorIcEEEE",
+     0.0008
+    ]
+   ]
+  },
+  {
+   "unit": "packed_runner",
+   "wall_s": 0.9494,
+   "phases_s": {
+    "ExecuteCompiler": 0.8239,
+    "Frontend": 0.527,
+    "Source": 0.4408,
+    "Backend": 0.2932,
+    "ParseClass": 0.1272,
+    "CodeGenPasses": 0.0944,
+    "OptModule": 0.0944,
+    "OptFunction": 0.0936,
+    "InstantiateFunction": 0.0545,
+    "CodeGen Function": 0.0522,
+    "InstantiateClass": 0.0463,
+    "PerformPendingInstantiations": 0.0081
+   },
+   "largest_functions_s": [
+    [
+     "_ZN12_GLOBAL__N_15flushEv",
+     0.021
+    ],
+    [
+     "main",
+     0.0154
+    ],
+    [
+     "_ZNSt3__17getlineB9nqe220106IcNS_11char_traitsIcEENS_9allocatorIcEEEERNS_13basic_istreamIT_T0_EES9_RNS_12basic_stringIS6_S7_T1_EES6_",
+     0.0031
+    ],
+    [
+     "(anonymous namespace)::(anonymous class)::operator()",
+     0.0025
+    ],
+    [
+     "_ZZNSt3__16vectorIN12_GLOBAL__N_17RequestENS_9allocatorIS2_EEE12emplace_backIJRKS2_EEERS2_DpOT_ENKUlvE0_clEv",
+     0.0024
+    ],
+    [
+     "(anonymous namespace)::(anonymous class)::__invoke",
+     0.0021
+    ],
+    [
+     "_ZN12_GLOBAL__N_15parseERKNSt3__112basic_stringIcNS0_11char_traitsIcEENS0_9allocatorIcEEEE",
+     0.0021
+    ],
+    [
+     "_ZNSt3__1plB9nqe220106IcNS_11char_traitsIcEENS_9allocatorIcEEEENS_12basic_stringIT_T0_T1_EEOS9_SA_",
+     0.002
+    ],
+    [
+     "_ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendB9nqe220106IPKcLi0EEERS5_T_SA_",
+     0.0017
+    ],
+    [
+     "_ZN12_GLOBAL__N_13putEdRNSt3__112basic_stringIcNS0_11char_traitsIcEENS0_9allocatorIcEEEE",
+     0.0017
+    ]
+   ]
+  }
+ ]
+}

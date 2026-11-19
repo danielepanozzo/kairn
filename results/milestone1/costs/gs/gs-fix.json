@@ -1,0 +1,553 @@
+{
+ "schema": 1,
+ "what": "fix",
+ "date": "2026-11-19",
+ "commit": "b710964",
+ "machine": "",
+ "compiler": "Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64",
+ "flags": [
+  "/nologo",
+  "/std:c++20",
+  "/EHsc",
+  "/O2",
+  "/DNDEBUG",
+  "/arch:AVX2",
+  "/fp:precise",
+  "/wd4190",
+  "/I",
+  "include"
+ ],
+ "results": {
+  "/GS, by reference": {
+   "gs_b1_ret_add": {
+    "instructions": 66,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_b1_ret_mul": {
+    "instructions": 88,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b2_ret_add": {
+    "instructions": 103,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b2_ret_mul": {
+    "instructions": 124,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "gs_double_ret_add": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_ret_mul": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_e1_ret_add": {
+    "instructions": 5,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_e1_ret_mul": {
+    "instructions": 5,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_e2_ret_add": {
+    "instructions": 50,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e2_ret_mul": {
+    "instructions": 45,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_p1_ret_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p1_ret_mul": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p2_ret_add": {
+    "instructions": 5,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p2_ret_mul": {
+    "instructions": 5,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_pb2_ret_add": {
+    "instructions": 8,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_pb2_ret_mul": {
+    "instructions": 8,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_b1_add": {
+    "instructions": 67,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_b1_axpy": {
+    "instructions": 178,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 216
+   },
+   "gs_b1_dot": {
+    "instructions": 178,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 208
+   },
+   "gs_b1_horner": {
+    "instructions": 812,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 208
+   },
+   "gs_b1_mul": {
+    "instructions": 90,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b1_prod": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "gs_b1_sum": {
+    "instructions": 292,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "gs_b1_tp_add": {
+    "instructions": 318,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 112
+   },
+   "gs_b1_tp_mul": {
+    "instructions": 119,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "gs_b2_add": {
+    "instructions": 101,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b2_axpy": {
+    "instructions": 245,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 320
+   },
+   "gs_b2_dot": {
+    "instructions": 251,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 304
+   },
+   "gs_b2_horner": {
+    "instructions": 245,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 304
+   },
+   "gs_b2_mul": {
+    "instructions": 123,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "gs_b2_prod": {
+    "instructions": 152,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 224
+   },
+   "gs_b2_sum": {
+    "instructions": 131,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 176
+   },
+   "gs_b2_tp_add": {
+    "instructions": 130,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 144
+   },
+   "gs_b2_tp_mul": {
+    "instructions": 149,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 208
+   },
+   "gs_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_axpy": {
+    "instructions": 69,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_dot": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_horner": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_mul": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_prod": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_sum": {
+    "instructions": 20,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_tp_add": {
+    "instructions": 69,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_tp_mul": {
+    "instructions": 69,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_e1_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_e1_axpy": {
+    "instructions": 32,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_e1_dot": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_e1_horner": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_e1_mul": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_e1_prod": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_e1_sum": {
+    "instructions": 28,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_e1_tp_add": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_e1_tp_mul": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_e2_add": {
+    "instructions": 51,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e2_axpy": {
+    "instructions": 98,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "gs_e2_dot": {
+    "instructions": 99,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "gs_e2_horner": {
+    "instructions": 97,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "gs_e2_mul": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e2_prod": {
+    "instructions": 59,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_e2_sum": {
+    "instructions": 69,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "gs_e2_tp_add": {
+    "instructions": 64,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_e2_tp_mul": {
+    "instructions": 60,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_p1_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p1_axpy": {
+    "instructions": 32,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p1_dot": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_p1_horner": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p1_mul": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p1_prod": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p1_sum": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p1_tp_add": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p1_tp_mul": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p2_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p2_axpy": {
+    "instructions": 65,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p2_dot": {
+    "instructions": 40,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_p2_horner": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p2_mul": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p2_prod": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p2_sum": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p2_tp_add": {
+    "instructions": 34,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_p2_tp_mul": {
+    "instructions": 34,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_pb2_add": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_pb2_axpy": {
+    "instructions": 85,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_pb2_dot": {
+    "instructions": 93,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_pb2_horner": {
+    "instructions": 37,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_pb2_mul": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_pb2_prod": {
+    "instructions": 34,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_pb2_sum": {
+    "instructions": 38,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_pb2_tp_add": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_pb2_tp_mul": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  }
+ },
+ "patch": "include/kairn/expansion.hpp with 59 parameters Expansion<T, 1> and 22 parameters Expansion of the class Expansion<T, 1> passed by const reference"
+}

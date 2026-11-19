@@ -1,0 +1,1566 @@
+{
+ "schema": 1,
+ "what": "run",
+ "date": "2026-11-19",
+ "commit": "7a7a5ca",
+ "machine": {
+  "description": "Linux x86-64, AMD EPYC 7452 (Zen 2), two sockets of 32 cores; one logical CPU, its SMT sibling idle",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "os": "Linux",
+  "arch": "x86_64"
+ },
+ "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+ "cxx": "g++",
+ "family": "gnu",
+ "flags": "",
+ "pinning": "pinned to logical CPU 40",
+ "reps": 7,
+ "configs": {
+  "O0": [
+   "-O0",
+   "-DNDEBUG"
+  ],
+  "O2": [
+   "-O2",
+   "-DNDEBUG"
+  ],
+  "O3": [
+   "-O3",
+   "-DNDEBUG"
+  ],
+  "debug": [
+   "-O0",
+   "-g"
+  ]
+ },
+ "units": {
+  "empty": {
+   "source": "bench/compile_time/empty.cpp",
+   "packed": false,
+   "description": "an empty translation unit"
+  },
+  "std_headers": {
+   "source": "bench/compile_time/std_headers.cpp",
+   "packed": false,
+   "description": "<cmath> and the standard headers kairn.hpp includes"
+  },
+  "iostream": {
+   "source": "bench/compile_time/iostream.cpp",
+   "packed": false,
+   "description": "<iostream> alone"
+  },
+  "include": {
+   "source": "bench/compile_time/include.cpp",
+   "packed": false,
+   "description": "kairn/kairn.hpp alone"
+  },
+  "use_e2": {
+   "source": "bench/compile_time/use_e2.cpp",
+   "packed": false,
+   "description": "kairn.hpp, every operation of Expansion<double, 2> and Ball<double, 2>"
+  },
+  "use_all": {
+   "source": "bench/compile_time/use_all.cpp",
+   "packed": false,
+   "description": "kairn.hpp, every operation of Expansion and Ball, float and double, 1 and 2 limbs"
+  },
+  "self_test": {
+   "source": "bench/compile_time/self_test.cpp",
+   "packed": false,
+   "description": "kairn.hpp and one call of kairn::self_test()"
+  },
+  "kernels_scalar": {
+   "source": "bench/compile_time/kernels_scalar.cpp",
+   "packed": false,
+   "description": "gen/scalar.hpp, every kernel for double and float"
+  },
+  "kernels_packed": {
+   "source": "bench/compile_time/kernels_packed.cpp",
+   "packed": true,
+   "description": "gen/avx2.hpp or gen/neon.hpp, every kernel for double and float"
+  },
+  "runner": {
+   "source": "gen/tests/runner.cpp",
+   "packed": false,
+   "description": "gen/tests/runner.cpp, the scalar runner of the quick tier"
+  },
+  "packed_runner": {
+   "source": "gen/tests/packed_runner.cpp",
+   "packed": true,
+   "description": "gen/tests/packed_runner.cpp, the packed runner of the quick tier"
+  }
+ },
+ "common_flags": {
+  "scalar": [
+   "-std=c++20",
+   "-I",
+   "include",
+   "-I",
+   "gen/tests",
+   "-mfma"
+  ],
+  "packed": [
+   "-std=c++20",
+   "-I",
+   "include",
+   "-I",
+   "gen/tests",
+   "-mavx2",
+   "-mfma"
+  ]
+ },
+ "results": [
+  {
+   "unit": "empty",
+   "config": "O0",
+   "wall_s": [
+    0.0161,
+    0.0159,
+    0.0161,
+    0.0226,
+    0.0235,
+    0.0227,
+    0.0155
+   ],
+   "cpu_s": [
+    0.0136,
+    0.0134,
+    0.0138,
+    0.021,
+    0.0209,
+    0.0204,
+    0.0133
+   ],
+   "peak_mb": [
+    15.4,
+    15.4,
+    15.4,
+    15.4,
+    15.4,
+    15.4,
+    15.4
+   ],
+   "object_bytes": 936,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -DNDEBUG -c bench/compile_time/empty.cpp -o WORK/ct-gcc/empty-O0.o"
+  },
+  {
+   "unit": "empty",
+   "config": "O2",
+   "wall_s": [
+    0.0137,
+    0.0138,
+    0.0135,
+    0.0228,
+    0.023,
+    0.0226,
+    0.0136
+   ],
+   "cpu_s": [
+    0.0118,
+    0.0117,
+    0.012,
+    0.0212,
+    0.0209,
+    0.0206,
+    0.0118
+   ],
+   "peak_mb": [
+    15.4,
+    15.4,
+    15.4,
+    15.4,
+    15.4,
+    15.4,
+    15.4
+   ],
+   "object_bytes": 936,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O2 -DNDEBUG -c bench/compile_time/empty.cpp -o WORK/ct-gcc/empty-O2.o"
+  },
+  {
+   "unit": "empty",
+   "config": "O3",
+   "wall_s": [
+    0.0136,
+    0.0144,
+    0.014,
+    0.0223,
+    0.0227,
+    0.0168,
+    0.0129
+   ],
+   "cpu_s": [
+    0.0116,
+    0.0123,
+    0.0123,
+    0.021,
+    0.0207,
+    0.0145,
+    0.0115
+   ],
+   "peak_mb": [
+    15.4,
+    15.4,
+    15.4,
+    15.4,
+    15.4,
+    15.4,
+    15.4
+   ],
+   "object_bytes": 936,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O3 -DNDEBUG -c bench/compile_time/empty.cpp -o WORK/ct-gcc/empty-O3.o"
+  },
+  {
+   "unit": "empty",
+   "config": "debug",
+   "wall_s": [
+    0.0133,
+    0.0136,
+    0.0137,
+    0.022,
+    0.0226,
+    0.0136,
+    0.0129
+   ],
+   "cpu_s": [
+    0.0119,
+    0.012,
+    0.0124,
+    0.0208,
+    0.0208,
+    0.0117,
+    0.0116
+   ],
+   "peak_mb": [
+    15.4,
+    15.4,
+    15.4,
+    15.4,
+    15.4,
+    15.4,
+    15.4
+   ],
+   "object_bytes": 1400,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -g -c bench/compile_time/empty.cpp -o WORK/ct-gcc/empty-debug.o"
+  },
+  {
+   "unit": "std_headers",
+   "config": "O0",
+   "wall_s": [
+    0.1859,
+    0.186,
+    0.1897,
+    0.2915,
+    0.2885,
+    0.1867,
+    0.1848
+   ],
+   "cpu_s": [
+    0.1837,
+    0.1841,
+    0.1878,
+    0.2889,
+    0.2861,
+    0.1848,
+    0.1832
+   ],
+   "peak_mb": [
+    48.1,
+    48.1,
+    48.1,
+    48.1,
+    48.1,
+    48.1,
+    48.1
+   ],
+   "object_bytes": 944,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -DNDEBUG -c bench/compile_time/std_headers.cpp -o WORK/ct-gcc/std_headers-O0.o"
+  },
+  {
+   "unit": "std_headers",
+   "config": "O2",
+   "wall_s": [
+    0.1961,
+    0.195,
+    0.2014,
+    0.3053,
+    0.301,
+    0.1954,
+    0.1934
+   ],
+   "cpu_s": [
+    0.1936,
+    0.1932,
+    0.1969,
+    0.3024,
+    0.2989,
+    0.1934,
+    0.1919
+   ],
+   "peak_mb": [
+    49.2,
+    49.2,
+    49.2,
+    49.2,
+    49.2,
+    49.2,
+    49.2
+   ],
+   "object_bytes": 944,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O2 -DNDEBUG -c bench/compile_time/std_headers.cpp -o WORK/ct-gcc/std_headers-O2.o"
+  },
+  {
+   "unit": "std_headers",
+   "config": "O3",
+   "wall_s": [
+    0.1947,
+    0.1953,
+    0.3039,
+    0.3043,
+    0.304,
+    0.1962,
+    0.1948
+   ],
+   "cpu_s": [
+    0.1929,
+    0.1928,
+    0.3023,
+    0.3023,
+    0.3013,
+    0.194,
+    0.1932
+   ],
+   "peak_mb": [
+    49.2,
+    49.2,
+    49.2,
+    49.2,
+    49.2,
+    49.2,
+    49.2
+   ],
+   "object_bytes": 944,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O3 -DNDEBUG -c bench/compile_time/std_headers.cpp -o WORK/ct-gcc/std_headers-O3.o"
+  },
+  {
+   "unit": "std_headers",
+   "config": "debug",
+   "wall_s": [
+    0.1945,
+    0.195,
+    0.3045,
+    0.3027,
+    0.3021,
+    0.1965,
+    0.1957
+   ],
+   "cpu_s": [
+    0.1924,
+    0.1931,
+    0.3028,
+    0.3007,
+    0.2996,
+    0.1948,
+    0.1938
+   ],
+   "peak_mb": [
+    51.2,
+    51.2,
+    51.2,
+    51.2,
+    51.2,
+    51.2,
+    51.2
+   ],
+   "object_bytes": 17216,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -g -c bench/compile_time/std_headers.cpp -o WORK/ct-gcc/std_headers-debug.o"
+  },
+  {
+   "unit": "iostream",
+   "config": "O0",
+   "wall_s": [
+    0.3032,
+    0.3015,
+    0.4721,
+    0.4702,
+    0.4706,
+    0.3026,
+    0.3034
+   ],
+   "cpu_s": [
+    0.3002,
+    0.2997,
+    0.4694,
+    0.467,
+    0.4675,
+    0.2996,
+    0.3016
+   ],
+   "peak_mb": [
+    66.6,
+    66.6,
+    66.6,
+    66.6,
+    66.6,
+    66.6,
+    66.6
+   ],
+   "object_bytes": 1296,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -DNDEBUG -c bench/compile_time/iostream.cpp -o WORK/ct-gcc/iostream-O0.o"
+  },
+  {
+   "unit": "iostream",
+   "config": "O2",
+   "wall_s": [
+    0.3227,
+    0.3187,
+    0.4978,
+    0.4996,
+    0.496,
+    0.3174,
+    0.3206
+   ],
+   "cpu_s": [
+    0.3204,
+    0.3168,
+    0.4954,
+    0.4963,
+    0.4931,
+    0.3153,
+    0.3191
+   ],
+   "peak_mb": [
+    68.6,
+    68.6,
+    68.6,
+    68.6,
+    68.6,
+    68.6,
+    68.6
+   ],
+   "object_bytes": 992,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O2 -DNDEBUG -c bench/compile_time/iostream.cpp -o WORK/ct-gcc/iostream-O2.o"
+  },
+  {
+   "unit": "iostream",
+   "config": "O3",
+   "wall_s": [
+    0.3202,
+    0.3217,
+    0.502,
+    0.4984,
+    0.4978,
+    0.3187,
+    0.3192
+   ],
+   "cpu_s": [
+    0.318,
+    0.3192,
+    0.4994,
+    0.4951,
+    0.4944,
+    0.3171,
+    0.3171
+   ],
+   "peak_mb": [
+    68.6,
+    68.6,
+    68.6,
+    68.6,
+    68.6,
+    68.6,
+    68.6
+   ],
+   "object_bytes": 992,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O3 -DNDEBUG -c bench/compile_time/iostream.cpp -o WORK/ct-gcc/iostream-O3.o"
+  },
+  {
+   "unit": "iostream",
+   "config": "debug",
+   "wall_s": [
+    0.3225,
+    0.3252,
+    0.5036,
+    0.4981,
+    0.5025,
+    0.3231,
+    0.3218
+   ],
+   "cpu_s": [
+    0.32,
+    0.3237,
+    0.5013,
+    0.496,
+    0.4993,
+    0.3212,
+    0.3201
+   ],
+   "peak_mb": [
+    71.7,
+    71.7,
+    71.7,
+    71.7,
+    71.7,
+    71.7,
+    71.7
+   ],
+   "object_bytes": 25048,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -g -c bench/compile_time/iostream.cpp -o WORK/ct-gcc/iostream-debug.o"
+  },
+  {
+   "unit": "include",
+   "config": "O0",
+   "wall_s": [
+    0.1351,
+    0.1362,
+    0.2148,
+    0.2124,
+    0.2148,
+    0.1357,
+    0.1352
+   ],
+   "cpu_s": [
+    0.133,
+    0.1341,
+    0.2126,
+    0.2102,
+    0.2119,
+    0.1336,
+    0.1338
+   ],
+   "peak_mb": [
+    37.9,
+    37.9,
+    37.9,
+    37.9,
+    37.9,
+    37.9,
+    37.9
+   ],
+   "object_bytes": 936,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-gcc/include-O0.o"
+  },
+  {
+   "unit": "include",
+   "config": "O2",
+   "wall_s": [
+    0.1434,
+    0.143,
+    0.2248,
+    0.2267,
+    0.2287,
+    0.1422,
+    0.1425
+   ],
+   "cpu_s": [
+    0.1413,
+    0.1409,
+    0.2231,
+    0.224,
+    0.2255,
+    0.1407,
+    0.1404
+   ],
+   "peak_mb": [
+    38.9,
+    38.9,
+    38.9,
+    38.9,
+    38.9,
+    38.9,
+    38.9
+   ],
+   "object_bytes": 936,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O2 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-gcc/include-O2.o"
+  },
+  {
+   "unit": "include",
+   "config": "O3",
+   "wall_s": [
+    0.1436,
+    0.1439,
+    0.2248,
+    0.229,
+    0.2261,
+    0.1441,
+    0.1435
+   ],
+   "cpu_s": [
+    0.1417,
+    0.1422,
+    0.2227,
+    0.2269,
+    0.224,
+    0.142,
+    0.1416
+   ],
+   "peak_mb": [
+    38.9,
+    38.9,
+    38.9,
+    38.9,
+    38.9,
+    38.9,
+    38.9
+   ],
+   "object_bytes": 936,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O3 -DNDEBUG -c bench/compile_time/include.cpp -o WORK/ct-gcc/include-O3.o"
+  },
+  {
+   "unit": "include",
+   "config": "debug",
+   "wall_s": [
+    0.1475,
+    0.1451,
+    0.2282,
+    0.2317,
+    0.2276,
+    0.1462,
+    0.1465
+   ],
+   "cpu_s": [
+    0.1453,
+    0.1437,
+    0.2259,
+    0.2294,
+    0.2255,
+    0.1444,
+    0.1448
+   ],
+   "peak_mb": [
+    42.0,
+    41.0,
+    42.0,
+    41.0,
+    41.0,
+    41.0,
+    41.0
+   ],
+   "object_bytes": 16256,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -g -c bench/compile_time/include.cpp -o WORK/ct-gcc/include-debug.o"
+  },
+  {
+   "unit": "use_e2",
+   "config": "O0",
+   "wall_s": [
+    0.4567,
+    0.456,
+    0.7251,
+    0.7248,
+    0.7195,
+    0.4586,
+    0.4574
+   ],
+   "cpu_s": [
+    0.4548,
+    0.4538,
+    0.7232,
+    0.7217,
+    0.716,
+    0.4563,
+    0.4553
+   ],
+   "peak_mb": [
+    69.6,
+    69.6,
+    69.6,
+    69.6,
+    69.6,
+    69.6,
+    69.6
+   ],
+   "object_bytes": 192248,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -DNDEBUG -c bench/compile_time/use_e2.cpp -o WORK/ct-gcc/use_e2-O0.o"
+  },
+  {
+   "unit": "use_e2",
+   "config": "O2",
+   "wall_s": [
+    0.6819,
+    0.6795,
+    1.0808,
+    1.0812,
+    1.0765,
+    0.6782,
+    0.6812
+   ],
+   "cpu_s": [
+    0.6795,
+    0.6775,
+    1.0785,
+    1.0778,
+    1.0736,
+    0.6759,
+    0.6794
+   ],
+   "peak_mb": [
+    70.7,
+    70.7,
+    70.7,
+    70.7,
+    70.7,
+    70.7,
+    70.7
+   ],
+   "object_bytes": 73072,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O2 -DNDEBUG -c bench/compile_time/use_e2.cpp -o WORK/ct-gcc/use_e2-O2.o"
+  },
+  {
+   "unit": "use_e2",
+   "config": "O3",
+   "wall_s": [
+    0.6843,
+    0.6856,
+    1.0913,
+    1.0903,
+    1.0851,
+    0.6827,
+    0.6831
+   ],
+   "cpu_s": [
+    0.6822,
+    0.6838,
+    1.0896,
+    1.0867,
+    1.0802,
+    0.6809,
+    0.6812
+   ],
+   "peak_mb": [
+    70.7,
+    70.7,
+    70.7,
+    70.7,
+    70.7,
+    70.7,
+    70.7
+   ],
+   "object_bytes": 73392,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O3 -DNDEBUG -c bench/compile_time/use_e2.cpp -o WORK/ct-gcc/use_e2-O3.o"
+  },
+  {
+   "unit": "use_e2",
+   "config": "debug",
+   "wall_s": [
+    0.7684,
+    0.7655,
+    1.2239,
+    1.2276,
+    1.2193,
+    0.7698,
+    0.7685
+   ],
+   "cpu_s": [
+    0.7651,
+    0.7638,
+    1.2208,
+    1.22,
+    1.2149,
+    0.7672,
+    0.7656
+   ],
+   "peak_mb": [
+    95.2,
+    95.2,
+    95.2,
+    95.2,
+    95.2,
+    95.2,
+    95.2
+   ],
+   "object_bytes": 667488,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -g -c bench/compile_time/use_e2.cpp -o WORK/ct-gcc/use_e2-debug.o"
+  },
+  {
+   "unit": "use_all",
+   "config": "O0",
+   "wall_s": [
+    1.0507,
+    1.0512,
+    1.6702,
+    1.6668,
+    1.661,
+    1.0498,
+    1.0498
+   ],
+   "cpu_s": [
+    1.0484,
+    1.0491,
+    1.6657,
+    1.6623,
+    1.6547,
+    1.0467,
+    1.0479
+   ],
+   "peak_mb": [
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7,
+    114.7
+   ],
+   "object_bytes": 561336,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -DNDEBUG -c bench/compile_time/use_all.cpp -o WORK/ct-gcc/use_all-O0.o"
+  },
+  {
+   "unit": "use_all",
+   "config": "O2",
+   "wall_s": [
+    1.6831,
+    1.6813,
+    2.7122,
+    2.7021,
+    2.7021,
+    1.6812,
+    1.6775
+   ],
+   "cpu_s": [
+    1.6797,
+    1.6791,
+    2.7081,
+    2.6975,
+    2.6943,
+    1.6784,
+    1.6745
+   ],
+   "peak_mb": [
+    106.5,
+    106.5,
+    106.5,
+    106.5,
+    106.5,
+    106.5,
+    106.5
+   ],
+   "object_bytes": 218544,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O2 -DNDEBUG -c bench/compile_time/use_all.cpp -o WORK/ct-gcc/use_all-O2.o"
+  },
+  {
+   "unit": "use_all",
+   "config": "O3",
+   "wall_s": [
+    1.6939,
+    1.696,
+    2.7297,
+    2.7271,
+    2.7162,
+    1.6947,
+    1.6907
+   ],
+   "cpu_s": [
+    1.6904,
+    1.693,
+    2.7253,
+    2.7221,
+    2.7117,
+    1.6924,
+    1.6874
+   ],
+   "peak_mb": [
+    106.5,
+    106.5,
+    106.5,
+    106.5,
+    106.5,
+    106.5,
+    106.5
+   ],
+   "object_bytes": 219184,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O3 -DNDEBUG -c bench/compile_time/use_all.cpp -o WORK/ct-gcc/use_all-O3.o"
+  },
+  {
+   "unit": "use_all",
+   "config": "debug",
+   "wall_s": [
+    1.9023,
+    1.8982,
+    3.0513,
+    3.0388,
+    3.0385,
+    1.897,
+    1.8921
+   ],
+   "cpu_s": [
+    1.8916,
+    1.8884,
+    3.0392,
+    3.0333,
+    3.0266,
+    1.8873,
+    1.8881
+   ],
+   "peak_mb": [
+    184.3,
+    184.3,
+    184.3,
+    184.3,
+    184.3,
+    184.3,
+    184.3
+   ],
+   "object_bytes": 1838224,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -g -c bench/compile_time/use_all.cpp -o WORK/ct-gcc/use_all-debug.o"
+  },
+  {
+   "unit": "self_test",
+   "config": "O0",
+   "wall_s": [
+    0.4855,
+    0.4834,
+    0.7539,
+    0.7565,
+    0.7519,
+    0.483,
+    0.4841
+   ],
+   "cpu_s": [
+    0.483,
+    0.4811,
+    0.7511,
+    0.7534,
+    0.7492,
+    0.4799,
+    0.4813
+   ],
+   "peak_mb": [
+    66.6,
+    66.6,
+    65.5,
+    66.6,
+    65.5,
+    66.6,
+    65.5
+   ],
+   "object_bytes": 269216,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -DNDEBUG -c bench/compile_time/self_test.cpp -o WORK/ct-gcc/self_test-O0.o"
+  },
+  {
+   "unit": "self_test",
+   "config": "O2",
+   "wall_s": [
+    1.0776,
+    1.0803,
+    1.7801,
+    1.7754,
+    1.776,
+    1.0784,
+    1.0771
+   ],
+   "cpu_s": [
+    1.0753,
+    1.0784,
+    1.7764,
+    1.77,
+    1.7729,
+    1.0755,
+    1.0746
+   ],
+   "peak_mb": [
+    74.8,
+    74.8,
+    74.8,
+    74.8,
+    74.8,
+    74.8,
+    74.8
+   ],
+   "object_bytes": 194944,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O2 -DNDEBUG -c bench/compile_time/self_test.cpp -o WORK/ct-gcc/self_test-O2.o"
+  },
+  {
+   "unit": "self_test",
+   "config": "O3",
+   "wall_s": [
+    1.0809,
+    1.0807,
+    1.7842,
+    1.7823,
+    1.7776,
+    1.082,
+    1.0857
+   ],
+   "cpu_s": [
+    1.0775,
+    1.0776,
+    1.7793,
+    1.7766,
+    1.7734,
+    1.0793,
+    1.0824
+   ],
+   "peak_mb": [
+    74.8,
+    74.8,
+    74.8,
+    74.8,
+    74.8,
+    74.8,
+    74.8
+   ],
+   "object_bytes": 192600,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O3 -DNDEBUG -c bench/compile_time/self_test.cpp -o WORK/ct-gcc/self_test-O3.o"
+  },
+  {
+   "unit": "self_test",
+   "config": "debug",
+   "wall_s": [
+    0.5441,
+    0.5479,
+    0.854,
+    0.8551,
+    0.8515,
+    0.5444,
+    0.5453
+   ],
+   "cpu_s": [
+    0.5414,
+    0.5462,
+    0.8507,
+    0.8506,
+    0.8474,
+    0.5428,
+    0.5428
+   ],
+   "peak_mb": [
+    73.7,
+    73.7,
+    73.7,
+    73.7,
+    73.7,
+    73.7,
+    73.7
+   ],
+   "object_bytes": 546840,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -g -c bench/compile_time/self_test.cpp -o WORK/ct-gcc/self_test-debug.o"
+  },
+  {
+   "unit": "kernels_scalar",
+   "config": "O0",
+   "wall_s": [
+    0.3443,
+    0.3457,
+    0.5348,
+    0.5332,
+    0.5332,
+    0.3449,
+    0.3439
+   ],
+   "cpu_s": [
+    0.3425,
+    0.3429,
+    0.5322,
+    0.5297,
+    0.5296,
+    0.3426,
+    0.3421
+   ],
+   "peak_mb": [
+    54.3,
+    54.3,
+    54.3,
+    54.3,
+    54.3,
+    54.3,
+    54.3
+   ],
+   "object_bytes": 226800,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -DNDEBUG -c bench/compile_time/kernels_scalar.cpp -o WORK/ct-gcc/kernels_scalar-O0.o"
+  },
+  {
+   "unit": "kernels_scalar",
+   "config": "O2",
+   "wall_s": [
+    0.5272,
+    0.5265,
+    0.8482,
+    0.8467,
+    0.8438,
+    0.5284,
+    0.5264
+   ],
+   "cpu_s": [
+    0.5245,
+    0.5248,
+    0.8436,
+    0.8434,
+    0.8412,
+    0.5261,
+    0.5243
+   ],
+   "peak_mb": [
+    56.3,
+    55.3,
+    56.3,
+    56.3,
+    56.3,
+    56.3,
+    55.3
+   ],
+   "object_bytes": 87712,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O2 -DNDEBUG -c bench/compile_time/kernels_scalar.cpp -o WORK/ct-gcc/kernels_scalar-O2.o"
+  },
+  {
+   "unit": "kernels_scalar",
+   "config": "O3",
+   "wall_s": [
+    0.5318,
+    0.5283,
+    0.8482,
+    0.8513,
+    0.8439,
+    0.5293,
+    0.5301
+   ],
+   "cpu_s": [
+    0.5294,
+    0.5265,
+    0.8456,
+    0.847,
+    0.8421,
+    0.5268,
+    0.5281
+   ],
+   "peak_mb": [
+    57.3,
+    57.3,
+    57.3,
+    57.3,
+    57.3,
+    57.3,
+    57.3
+   ],
+   "object_bytes": 86632,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O3 -DNDEBUG -c bench/compile_time/kernels_scalar.cpp -o WORK/ct-gcc/kernels_scalar-O3.o"
+  },
+  {
+   "unit": "kernels_scalar",
+   "config": "debug",
+   "wall_s": [
+    0.3902,
+    0.3913,
+    0.6039,
+    0.6054,
+    0.6033,
+    0.3863,
+    0.3877
+   ],
+   "cpu_s": [
+    0.3877,
+    0.3896,
+    0.6013,
+    0.6017,
+    0.5998,
+    0.3844,
+    0.386
+   ],
+   "peak_mb": [
+    60.4,
+    60.4,
+    60.4,
+    60.4,
+    60.4,
+    60.4,
+    60.4
+   ],
+   "object_bytes": 472384,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -g -c bench/compile_time/kernels_scalar.cpp -o WORK/ct-gcc/kernels_scalar-debug.o"
+  },
+  {
+   "unit": "kernels_packed",
+   "config": "O0",
+   "wall_s": [
+    0.8005,
+    0.8048,
+    1.253,
+    1.252,
+    1.2458,
+    0.8002,
+    0.8001
+   ],
+   "cpu_s": [
+    0.7981,
+    0.8034,
+    1.25,
+    1.2482,
+    1.2436,
+    0.7983,
+    0.798
+   ],
+   "peak_mb": [
+    162.8,
+    162.8,
+    162.8,
+    162.8,
+    162.8,
+    162.8,
+    162.8
+   ],
+   "object_bytes": 284216,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mavx2 -mfma -O0 -DNDEBUG -c bench/compile_time/kernels_packed.cpp -o WORK/ct-gcc/kernels_packed-O0.o"
+  },
+  {
+   "unit": "kernels_packed",
+   "config": "O2",
+   "wall_s": [
+    0.9352,
+    0.9325,
+    1.4636,
+    1.4629,
+    1.4542,
+    0.9356,
+    0.9334
+   ],
+   "cpu_s": [
+    0.9332,
+    0.9307,
+    1.4597,
+    1.4585,
+    1.4514,
+    0.9334,
+    0.9311
+   ],
+   "peak_mb": [
+    165.9,
+    165.9,
+    165.9,
+    164.9,
+    165.9,
+    165.9,
+    165.9
+   ],
+   "object_bytes": 90840,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mavx2 -mfma -O2 -DNDEBUG -c bench/compile_time/kernels_packed.cpp -o WORK/ct-gcc/kernels_packed-O2.o"
+  },
+  {
+   "unit": "kernels_packed",
+   "config": "O3",
+   "wall_s": [
+    0.9376,
+    0.9419,
+    1.4633,
+    1.4681,
+    1.4639,
+    0.9376,
+    0.9343
+   ],
+   "cpu_s": [
+    0.9356,
+    0.9402,
+    1.4605,
+    1.4627,
+    1.4586,
+    0.9353,
+    0.9325
+   ],
+   "peak_mb": [
+    165.9,
+    165.9,
+    165.9,
+    165.9,
+    165.9,
+    165.9,
+    165.9
+   ],
+   "object_bytes": 90840,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mavx2 -mfma -O3 -DNDEBUG -c bench/compile_time/kernels_packed.cpp -o WORK/ct-gcc/kernels_packed-O3.o"
+  },
+  {
+   "unit": "kernels_packed",
+   "config": "debug",
+   "wall_s": [
+    0.8726,
+    0.8759,
+    1.3668,
+    1.3639,
+    1.3611,
+    0.8747,
+    0.8756
+   ],
+   "cpu_s": [
+    0.8706,
+    0.8736,
+    1.3632,
+    1.3596,
+    1.356,
+    0.8725,
+    0.8734
+   ],
+   "peak_mb": [
+    175.1,
+    175.1,
+    175.1,
+    175.1,
+    175.1,
+    175.1,
+    175.1
+   ],
+   "object_bytes": 673216,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mavx2 -mfma -O0 -g -c bench/compile_time/kernels_packed.cpp -o WORK/ct-gcc/kernels_packed-debug.o"
+  },
+  {
+   "unit": "runner",
+   "config": "O0",
+   "wall_s": [
+    0.7705,
+    0.7714,
+    1.1948,
+    1.1903,
+    1.1893,
+    0.7657,
+    0.7715
+   ],
+   "cpu_s": [
+    0.768,
+    0.7683,
+    1.1897,
+    1.1867,
+    1.1849,
+    0.7639,
+    0.7695
+   ],
+   "peak_mb": [
+    112.6,
+    113.7,
+    113.7,
+    113.7,
+    113.7,
+    113.7,
+    112.6
+   ],
+   "object_bytes": 252536,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -DNDEBUG -c gen/tests/runner.cpp -o WORK/ct-gcc/runner-O0.o"
+  },
+  {
+   "unit": "runner",
+   "config": "O2",
+   "wall_s": [
+    1.2086,
+    1.2129,
+    1.9219,
+    1.9192,
+    1.9155,
+    1.2131,
+    1.2075
+   ],
+   "cpu_s": [
+    1.2064,
+    1.2105,
+    1.9171,
+    1.9153,
+    1.9096,
+    1.2094,
+    1.2053
+   ],
+   "peak_mb": [
+    124.9,
+    124.9,
+    124.9,
+    124.9,
+    124.9,
+    124.9,
+    124.9
+   ],
+   "object_bytes": 78712,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O2 -DNDEBUG -c gen/tests/runner.cpp -o WORK/ct-gcc/runner-O2.o"
+  },
+  {
+   "unit": "runner",
+   "config": "O3",
+   "wall_s": [
+    1.3349,
+    1.3388,
+    2.1206,
+    2.1157,
+    2.1186,
+    1.3303,
+    1.3311
+   ],
+   "cpu_s": [
+    1.3323,
+    1.3368,
+    2.1154,
+    2.1096,
+    2.1147,
+    1.328,
+    1.3287
+   ],
+   "peak_mb": [
+    129.0,
+    129.0,
+    129.0,
+    129.0,
+    129.0,
+    129.0,
+    129.0
+   ],
+   "object_bytes": 84720,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O3 -DNDEBUG -c gen/tests/runner.cpp -o WORK/ct-gcc/runner-O3.o"
+  },
+  {
+   "unit": "runner",
+   "config": "debug",
+   "wall_s": [
+    0.8565,
+    0.8629,
+    1.3289,
+    1.3276,
+    1.3279,
+    0.8646,
+    0.8581
+   ],
+   "cpu_s": [
+    0.8539,
+    0.8612,
+    1.3257,
+    1.323,
+    1.3246,
+    0.8618,
+    0.8559
+   ],
+   "peak_mb": [
+    127.0,
+    127.0,
+    127.0,
+    126.0,
+    126.0,
+    126.0,
+    126.0
+   ],
+   "object_bytes": 643208,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mfma -O0 -g -c gen/tests/runner.cpp -o WORK/ct-gcc/runner-debug.o"
+  },
+  {
+   "unit": "packed_runner",
+   "config": "O0",
+   "wall_s": [
+    1.2917,
+    1.2962,
+    2.0095,
+    2.005,
+    2.0012,
+    1.2911,
+    1.295
+   ],
+   "cpu_s": [
+    1.2898,
+    1.2936,
+    2.0049,
+    2.001,
+    1.9982,
+    1.289,
+    1.2922
+   ],
+   "peak_mb": [
+    223.2,
+    223.2,
+    223.2,
+    223.2,
+    223.2,
+    223.2,
+    223.2
+   ],
+   "object_bytes": 352664,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mavx2 -mfma -O0 -DNDEBUG -c gen/tests/packed_runner.cpp -o WORK/ct-gcc/packed_runner-O0.o"
+  },
+  {
+   "unit": "packed_runner",
+   "config": "O2",
+   "wall_s": [
+    1.8837,
+    1.8843,
+    2.962,
+    2.9561,
+    2.9449,
+    1.884,
+    1.8777
+   ],
+   "cpu_s": [
+    1.8814,
+    1.8822,
+    2.9561,
+    2.9503,
+    2.9405,
+    1.8813,
+    1.875
+   ],
+   "peak_mb": [
+    247.8,
+    247.8,
+    247.8,
+    247.8,
+    247.8,
+    247.8,
+    247.8
+   ],
+   "object_bytes": 98384,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mavx2 -mfma -O2 -DNDEBUG -c gen/tests/packed_runner.cpp -o WORK/ct-gcc/packed_runner-O2.o"
+  },
+  {
+   "unit": "packed_runner",
+   "config": "O3",
+   "wall_s": [
+    2.2625,
+    2.2727,
+    3.5549,
+    3.5535,
+    3.544,
+    2.2593,
+    2.2561
+   ],
+   "cpu_s": [
+    2.2603,
+    2.2705,
+    3.5474,
+    3.5452,
+    3.5379,
+    2.2562,
+    2.2528
+   ],
+   "peak_mb": [
+    256.7,
+    256.0,
+    256.0,
+    256.0,
+    256.0,
+    256.0,
+    256.7
+   ],
+   "object_bytes": 114808,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mavx2 -mfma -O3 -DNDEBUG -c gen/tests/packed_runner.cpp -o WORK/ct-gcc/packed_runner-O3.o"
+  },
+  {
+   "unit": "packed_runner",
+   "config": "debug",
+   "wall_s": [
+    1.4284,
+    1.4233,
+    2.2277,
+    2.2077,
+    2.2014,
+    1.423,
+    1.4209
+   ],
+   "cpu_s": [
+    1.4254,
+    1.4215,
+    2.2161,
+    2.2026,
+    2.1973,
+    1.4197,
+    1.4178
+   ],
+   "peak_mb": [
+    242.7,
+    243.7,
+    242.7,
+    243.7,
+    243.7,
+    242.7,
+    243.7
+   ],
+   "object_bytes": 942368,
+   "command": "g++ -std=c++20 -I include -I gen/tests -mavx2 -mfma -O0 -g -c gen/tests/packed_runner.cpp -o WORK/ct-gcc/packed_runner-debug.o"
+  }
+ ]
+}

@@ -1,0 +1,102 @@
+{
+ "schema": 1,
+ "date": "2026-11-19",
+ "commit": "0f81c17",
+ "machine": {
+  "description": "Windows 11 x64, Intel Core i5-13500T (6 performance and 8 efficiency cores); one logical processor of a performance core, its sibling mostly idle; a shared CI machine",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13500T",
+  "pinning": "pinned to one logical CPU"
+ },
+ "compiler": "MSVC 19.52.37029",
+ "flags": "/DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG /O2 /fp:precise /arch:AVX2 -DKAIRN_CHECKS=0",
+ "kairn_checks": 0,
+ "elements": 256,
+ "reps": 31,
+ "sample_ms": 4,
+ "results": [
+  {
+   "name": "env/loop",
+   "ns_min": 1.099,
+   "ns_median": 1.103,
+   "ns_max": 1.179,
+   "checksum": "09b4ec233e6176a6"
+  },
+  {
+   "name": "add/loop",
+   "ns_min": 2.357,
+   "ns_median": 2.384,
+   "ns_max": 2.762,
+   "checksum": "7e3392f21c52a76d"
+  },
+  {
+   "name": "mul/loop",
+   "ns_min": 1.318,
+   "ns_median": 1.321,
+   "ns_max": 1.37,
+   "checksum": "9e9d2271ebac13ac"
+  },
+  {
+   "name": "add/sum",
+   "ns_min": 5.081,
+   "ns_median": 5.094,
+   "ns_max": 5.373,
+   "checksum": "955263da45fcd4a3"
+  },
+  {
+   "name": "mul/prod",
+   "ns_min": 5.77,
+   "ns_median": 5.796,
+   "ns_max": 6.551,
+   "checksum": "caa9f609468cd84f"
+  },
+  {
+   "name": "k1/loop",
+   "ns_min": 0.08686,
+   "ns_median": 0.08748,
+   "ns_max": 0.08972,
+   "checksum": "937765c9899a3f28"
+  },
+  {
+   "name": "k1/sum",
+   "ns_min": 0.297,
+   "ns_median": 0.2974,
+   "ns_max": 0.3022,
+   "checksum": "5fab4184c96bb7e1"
+  },
+  {
+   "name": "k1/call",
+   "ns_min": 1.767,
+   "ns_median": 1.772,
+   "ns_max": 1.802,
+   "checksum": "937765c9899a3f28"
+  },
+  {
+   "name": "double/loop",
+   "ns_min": 0.1202,
+   "ns_median": 0.1212,
+   "ns_max": 0.1237,
+   "checksum": "f60fda2a2cf2af28"
+  },
+  {
+   "name": "double/call",
+   "ns_min": 0.9995,
+   "ns_median": 1.113,
+   "ns_max": 1.126,
+   "checksum": "f60fda2a2cf2af28"
+  },
+  {
+   "name": "double/sum",
+   "ns_min": 0.2855,
+   "ns_median": 0.2861,
+   "ns_max": 0.3067,
+   "checksum": "3673372519bd4b21"
+  },
+  {
+   "name": "fma/chain",
+   "ns_min": 0.5548,
+   "ns_median": 0.5556,
+   "ns_max": 0.5674,
+   "checksum": "f4c8579346367334"
+  }
+ ]
+}

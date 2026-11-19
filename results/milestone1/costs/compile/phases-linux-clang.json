@@ -1,0 +1,526 @@
+{
+ "schema": 1,
+ "what": "phases",
+ "date": "2026-11-19",
+ "commit": "e166ef0",
+ "machine": {
+  "description": "Linux x86-64, AMD EPYC 7452 (Zen 2), two sockets of 32 cores; one logical CPU, its SMT sibling idle",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "os": "Linux",
+  "arch": "x86_64"
+ },
+ "compiler": "Ubuntu clang version 18.1.3 (1ubuntu1)",
+ "cxx": "clang++",
+ "family": "gnu",
+ "flags": "--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13",
+ "pinning": "pinned to logical CPU 56",
+ "reps": 3,
+ "config": "O2",
+ "config_flags": [
+  "-O2",
+  "-DNDEBUG"
+ ],
+ "tool": "-ftime-trace",
+ "results": [
+  {
+   "unit": "empty",
+   "wall_s": 0.0522,
+   "phases_s": {
+    "ExecuteCompiler": 0.0054,
+    "Backend": 0.0027,
+    "Frontend": 0.0007,
+    "CodeGenPasses": 0.0005,
+    "OptModule": 0.0005,
+    "PerformPendingInstantiations": 0.0
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "std_headers",
+   "wall_s": 0.5313,
+   "phases_s": {
+    "ExecuteCompiler": 0.4591,
+    "Frontend": 0.4521,
+    "Source": 0.3942,
+    "ParseClass": 0.0959,
+    "InstantiateFunction": 0.0587,
+    "PerformPendingInstantiations": 0.0565,
+    "InstantiateClass": 0.0058,
+    "Backend": 0.0031,
+    "CodeGenPasses": 0.0005,
+    "OptModule": 0.0005
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "kairn_std",
+   "wall_s": 0.2041,
+   "phases_s": {
+    "ExecuteCompiler": 0.1515,
+    "Frontend": 0.1456,
+    "Source": 0.1438,
+    "ParseClass": 0.0448,
+    "InstantiateClass": 0.0062,
+    "Backend": 0.0025,
+    "CodeGenPasses": 0.0005,
+    "OptModule": 0.0005,
+    "PerformPendingInstantiations": 0.0
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "iostream",
+   "wall_s": 0.787,
+   "phases_s": {
+    "ExecuteCompiler": 0.7116,
+    "Frontend": 0.7024,
+    "Source": 0.6599,
+    "ParseClass": 0.2383,
+    "InstantiateClass": 0.0918,
+    "InstantiateFunction": 0.07,
+    "PerformPendingInstantiations": 0.0415,
+    "Backend": 0.0033,
+    "CodeGenPasses": 0.0005,
+    "OptModule": 0.0005
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "include",
+   "wall_s": 0.3793,
+   "phases_s": {
+    "ExecuteCompiler": 0.3161,
+    "Frontend": 0.3101,
+    "Source": 0.307,
+    "ParseClass": 0.0631,
+    "InstantiateClass": 0.0084,
+    "InstantiateFunction": 0.0034,
+    "Backend": 0.0025,
+    "PerformPendingInstantiations": 0.0021,
+    "CodeGenPasses": 0.0004,
+    "OptModule": 0.0004
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "use_e2",
+   "wall_s": 0.9924,
+   "phases_s": {
+    "ExecuteCompiler": 0.8602,
+    "Backend": 0.438,
+    "Frontend": 0.4183,
+    "Source": 0.3278,
+    "CodeGenPasses": 0.2261,
+    "OptModule": 0.2255,
+    "OptFunction": 0.2221,
+    "ParseClass": 0.0692,
+    "InstantiateFunction": 0.0667,
+    "CodeGen Function": 0.0337,
+    "InstantiateClass": 0.0101,
+    "PerformPendingInstantiations": 0.0091
+   },
+   "largest_functions_s": [
+    [
+     "_ZN3kct7UseBallIdLi2EE8sub_limbERKN5kairn4BallIdLi2EEEd",
+     0.0282
+    ],
+    [
+     "_ZN3kct5UseE2IdE12finite_ldexpERKN5kairn9ExpansionIdLi2EEEi",
+     0.0046
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE3addERKN5kairn4BallIdLi2EEES6_",
+     0.0045
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE8limb_subEdRKN5kairn4BallIdLi2EEE",
+     0.0044
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE15sub_assign_limbERN5kairn4BallIdLi2EEEd",
+     0.0044
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE10mul_centerERKN5kairn4BallIdLi2EEERKNS2_9ExpansionIdLi2EEE",
+     0.0043
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE10sub_centerERKN5kairn4BallIdLi2EEERKNS2_9ExpansionIdLi2EEE",
+     0.0042
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE10center_addERKN5kairn9ExpansionIdLi2EEERKNS2_4BallIdLi2EEE",
+     0.0041
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE10center_subERKN5kairn9ExpansionIdLi2EEERKNS2_4BallIdLi2EEE",
+     0.0041
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE10center_mulERKN5kairn9ExpansionIdLi2EEERKNS2_4BallIdLi2EEE",
+     0.0041
+    ]
+   ]
+  },
+  {
+   "unit": "use_all",
+   "wall_s": 2.0152,
+   "phases_s": {
+    "ExecuteCompiler": 1.7001,
+    "Backend": 1.1673,
+    "Frontend": 0.5289,
+    "CodeGenPasses": 0.4887,
+    "OptModule": 0.4874,
+    "OptFunction": 0.4803,
+    "Source": 0.2654,
+    "InstantiateFunction": 0.1989,
+    "CodeGen Function": 0.0957,
+    "ParseClass": 0.0501,
+    "PerformPendingInstantiations": 0.0222,
+    "InstantiateClass": 0.0112
+   },
+   "largest_functions_s": [
+    [
+     "_ZN3kct5UseE2IfE2geERKN5kairn9ExpansionIfLi2EEES6_",
+     0.0477
+    ],
+    [
+     "_ZN3kct5UseE2IfE5ldexpERKN5kairn9ExpansionIfLi2EEEi",
+     0.0041
+    ],
+    [
+     "_ZN3kct5UseE2IdE5ldexpERKN5kairn9ExpansionIdLi2EEEi",
+     0.0039
+    ],
+    [
+     "_ZN3kct5UseE2IdE12finite_ldexpERKN5kairn9ExpansionIdLi2EEEi",
+     0.0032
+    ],
+    [
+     "_ZN3kct5UseE1IfE5ldexpEN5kairn9ExpansionIfLi1EEEi",
+     0.0031
+    ],
+    [
+     "_ZN3kct5UseE2IfE12finite_ldexpERKN5kairn9ExpansionIfLi2EEEi",
+     0.0031
+    ],
+    [
+     "_ZN3kct7UseBallIfLi2EE15sub_assign_limbERN5kairn4BallIfLi2EEEf",
+     0.0029
+    ],
+    [
+     "_ZN3kct5UseE1IdE12finite_ldexpEN5kairn9ExpansionIdLi1EEEi",
+     0.0028
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE17sub_assign_centerERN5kairn4BallIdLi2EEERKNS2_9ExpansionIdLi2EEE",
+     0.0027
+    ],
+    [
+     "_ZN3kct7UseBallIdLi2EE8sub_limbERKN5kairn4BallIdLi2EEEd",
+     0.0027
+    ]
+   ]
+  },
+  {
+   "unit": "self_test",
+   "wall_s": 1.3099,
+   "phases_s": {
+    "ExecuteCompiler": 1.1304,
+    "Backend": 0.8172,
+    "CodeGenPasses": 0.3278,
+    "OptModule": 0.3267,
+    "OptFunction": 0.3219,
+    "Frontend": 0.31,
+    "Source": 0.258,
+    "CodeGen Function": 0.0484,
+    "ParseClass": 0.0459,
+    "InstantiateClass": 0.0064,
+    "InstantiateFunction": 0.0033,
+    "PerformPendingInstantiations": 0.0021
+   },
+   "largest_functions_s": [
+    [
+     "_ZN5kairn3gen8selftest16ball_add_2_floatEv",
+     0.0191
+    ],
+    [
+     "kairn::gen::make_2_limbs",
+     0.0045
+    ],
+    [
+     "_ZN5kairn6detail14self_test_limbIdEEPKcv",
+     0.0041
+    ],
+    [
+     "_ZN5kairn3gen8selftest22ball_add_2_full_doubleEv",
+     0.0039
+    ],
+    [
+     "_ZN5kairn3gen8selftest32ball_add_2_full_nonfinite_doubleEv",
+     0.0038
+    ],
+    [
+     "_ZN5kairn6detail14self_test_limbIfEEPKcv",
+     0.0037
+    ],
+    [
+     "_ZN5kairn3gen8selftest32ball_sub_2_full_nonfinite_doubleEv",
+     0.0036
+    ],
+    [
+     "_ZN5kairn3gen8selftest32ball_mul_2_full_nonfinite_doubleEv",
+     0.0035
+    ],
+    [
+     "_ZN5kairn3gen8selftest22ball_sub_2_full_doubleEv",
+     0.0034
+    ],
+    [
+     "_ZN5kairn3gen8selftest21ball_mul_2_full_floatEv",
+     0.0034
+    ]
+   ]
+  },
+  {
+   "unit": "kernels_scalar",
+   "wall_s": 0.9034,
+   "phases_s": {
+    "ExecuteCompiler": 0.7538,
+    "Backend": 0.4769,
+    "Frontend": 0.2734,
+    "Source": 0.2033,
+    "CodeGenPasses": 0.1994,
+    "OptModule": 0.1989,
+    "OptFunction": 0.1964,
+    "CodeGen Function": 0.0587,
+    "ParseClass": 0.0526,
+    "InstantiateClass": 0.007,
+    "InstantiateFunction": 0.0002,
+    "PerformPendingInstantiations": 0.0
+   },
+   "largest_functions_s": [
+    [
+     "_ZN4$_858__invokeEPKfPfPKbPb",
+     0.0217
+    ],
+    [
+     "(anonymous class)::operator()",
+     0.0119
+    ],
+    [
+     "(anonymous class)::__invoke",
+     0.0103
+    ],
+    [
+     "kairn::gen::ball_mul_1_full",
+     0.0039
+    ],
+    [
+     "_ZN3$_48__invokeEPKdPdPKbPb",
+     0.0035
+    ],
+    [
+     "_ZN4$_608__invokeEPKdPdPKbPb",
+     0.003
+    ],
+    [
+     "_ZN4$_618__invokeEPKfPfPKbPb",
+     0.003
+    ],
+    [
+     "_ZN4$_118__invokeEPKfPfPKbPb",
+     0.0029
+    ],
+    [
+     "_ZN4$_108__invokeEPKdPdPKbPb",
+     0.0029
+    ],
+    [
+     "_ZN3$_58__invokeEPKfPfPKbPb",
+     0.0027
+    ]
+   ]
+  },
+  {
+   "unit": "kernels_packed",
+   "wall_s": 1.5431,
+   "phases_s": {
+    "ExecuteCompiler": 1.4049,
+    "Frontend": 0.8716,
+    "Source": 0.7768,
+    "Backend": 0.5299,
+    "CodeGenPasses": 0.1902,
+    "OptModule": 0.1898,
+    "OptFunction": 0.1874,
+    "CodeGen Function": 0.0873,
+    "ParseClass": 0.0367,
+    "InstantiateClass": 0.0045,
+    "InstantiateFunction": 0.0001,
+    "PerformPendingInstantiations": 0.0
+   },
+   "largest_functions_s": [
+    [
+     "_ZN4$_368__invokeEPKDv4_dPS0_S2_S3_",
+     0.0257
+    ],
+    [
+     "(anonymous class)::operator()",
+     0.0089
+    ],
+    [
+     "(anonymous class)::__invoke",
+     0.0076
+    ],
+    [
+     "kairn::gen::next_up",
+     0.006
+    ],
+    [
+     "kairn::gen::ball_sub_2_full",
+     0.0031
+    ],
+    [
+     "kairn::gen::ball_add_2_full",
+     0.0028
+    ],
+    [
+     "kairn::gen::ball_mul_2_full",
+     0.0027
+    ],
+    [
+     "_ZN4$_838__invokeEPKDv8_fPS0_S2_S3_",
+     0.0026
+    ],
+    [
+     "_ZN4$_828__invokeEPKDv4_dPS0_S2_S3_",
+     0.0025
+    ],
+    [
+     "_ZN4$_618__invokeEPKDv8_fPS0_S2_S3_",
+     0.0025
+    ]
+   ]
+  },
+  {
+   "unit": "runner",
+   "wall_s": 1.8991,
+   "phases_s": {
+    "ExecuteCompiler": 1.6802,
+    "Frontend": 1.0476,
+    "Source": 0.9148,
+    "Backend": 0.6269,
+    "ParseClass": 0.3535,
+    "CodeGenPasses": 0.2161,
+    "OptModule": 0.2154,
+    "OptFunction": 0.212,
+    "InstantiateClass": 0.1344,
+    "InstantiateFunction": 0.0908,
+    "CodeGen Function": 0.0588,
+    "PerformPendingInstantiations": 0.0287
+   },
+   "largest_functions_s": [
+    [
+     "main",
+     0.0398
+    ],
+    [
+     "(anonymous namespace)::(anonymous class)::operator()",
+     0.0079
+    ],
+    [
+     "(anonymous namespace)::(anonymous class)::__invoke",
+     0.0073
+    ],
+    [
+     "_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE17_M_realloc_insertIJS5_EEEvN9__gnu_cxx17__normal_iteratorIPS5_S7_EEDpOT_",
+     0.0062
+    ],
+    [
+     "_ZNSt7__cxx119to_stringEi",
+     0.0045
+    ],
+    [
+     "_ZN12_GLOBAL__N_15parseERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE",
+     0.0044
+    ],
+    [
+     "_ZN12_GLOBAL__N_13putEdRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE",
+     0.0043
+    ],
+    [
+     "_ZSt12__str_concatINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEET_PKNS6_10value_typeENS6_9size_typeES9_SA_RKNS6_14allocator_typeE",
+     0.0037
+    ],
+    [
+     "_ZStplIcSt11char_traitsIcESaIcEENSt7__cxx1112basic_stringIT_T0_T1_EEOS8_S9_",
+     0.0035
+    ],
+    [
+     "_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9_M_mutateEmmPKcm",
+     0.0035
+    ]
+   ]
+  },
+  {
+   "unit": "packed_runner",
+   "wall_s": 2.8202,
+   "phases_s": {
+    "ExecuteCompiler": 2.5786,
+    "Frontend": 1.5314,
+    "Source": 1.3143,
+    "Backend": 1.0411,
+    "CodeGenPasses": 0.3837,
+    "OptModule": 0.3827,
+    "OptFunction": 0.3786,
+    "ParseClass": 0.3019,
+    "InstantiateClass": 0.1257,
+    "CodeGen Function": 0.1207,
+    "InstantiateFunction": 0.1006,
+    "PerformPendingInstantiations": 0.0318
+   },
+   "largest_functions_s": [
+    [
+     "_ZN12_GLOBAL__N_15flushEv",
+     0.0539
+    ],
+    [
+     "_ZN12_GLOBAL__N_15$_1118__invokeEPKDv8_fPS1_S3_S4_",
+     0.0464
+    ],
+    [
+     "main",
+     0.0367
+    ],
+    [
+     "kairn::gen::ball_add_2",
+     0.0131
+    ],
+    [
+     "_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE17_M_realloc_insertIJS5_EEEvN9__gnu_cxx17__normal_iteratorIPS5_S7_EEDpOT_",
+     0.0094
+    ],
+    [
+     "(anonymous namespace)::(anonymous class)::operator()",
+     0.0083
+    ],
+    [
+     "_ZN12_GLOBAL__N_15parseERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE",
+     0.0077
+    ],
+    [
+     "(anonymous namespace)::(anonymous class)::__invoke",
+     0.0075
+    ],
+    [
+     "_ZN12_GLOBAL__N_13putEdRNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE",
+     0.0063
+    ],
+    [
+     "_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9_M_mutateEmmPKcm",
+     0.0057
+    ]
+   ]
+  }
+ ]
+}

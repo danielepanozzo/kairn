@@ -131,3 +131,94 @@ python3 bench/report.py results/milestone1/bench
 
 prints the tables of the results page from the stored JSON: a cell is the lowest and highest
 value of a ratio over the repeated runs of a configuration.
+
+## Other costs
+
+The tools behind [Compile times and other costs, Milestone
+1](../docs/developer/results/costs-milestone1.md), whose measurements are in
+`results/milestone1/costs/`. None of them is part of the library or of the tests.
+
+### Compile time
+
+`compile_time.py` compiles the translation units of `compile_time/` and the runners of
+`gen/tests/` with one compiler, each under each configuration, several times in rounds over all
+of them, and records the wall time, the processor time and the peak memory of every compilation
+(the largest resident set of the compiler and the processes it waits for, or the peak working set
+of `cl.exe`), and the size of the object. Nothing is linked.
+
+| Unit | What it compiles |
+|---|---|
+| `empty` | nothing: what starting the compiler costs |
+| `std_headers` | `<cmath>` and the standard and intrinsics headers that `kairn/kairn.hpp` includes |
+| `kairn_std` | the same without `<cmath>`, which Kairn does not include |
+| `iostream` | `<iostream>`, for scale |
+| `include` | `kairn/kairn.hpp`, nothing used |
+| `use_e2` | every public operation of `Expansion<double, 2>` and `Ball<double, 2>` once (`compile_time/use.hpp`) |
+| `use_all` | the same for `Expansion` and `Ball` with `float` and `double` limbs, one and two limbs |
+| `self_test` | one call of `kairn::self_test()`, which runs every kernel for both limb types |
+| `kernels_scalar`, `kernels_packed` | `kairn/gen/scalar.hpp`, or `avx2.hpp` / `neon.hpp`, alone, every kernel of `gen/tests/runner_kernels.inc` called for both limb types |
+| `runner`, `packed_runner` | `gen/tests/runner.cpp` and `gen/tests/packed_runner.cpp`, the runners of the quick tier |
+
+In `use.hpp` each operation is a non-inlined function of its own, as a client's code is spread
+over functions; an explicit instantiation emits all of them. The configurations are `-O0`, `-O2`
+and `-O3` with `-DNDEBUG`, and `debug`, CMake's Debug (`-O0 -g`, no `NDEBUG`, so `KAIRN_CHECKS`
+is 1); with MSVC `/Od` and `/O2` with `/DNDEBUG`, and `/Od /Z7 /RTC1` (`/Z7` rather than CMake's
+`/Zi`, which would start a PDB server). Every compilation has `-std=c++20` and the FMA option of
+`kairn::fma` (`-mfma` on x86-64, `/arch:AVX2`), the packed units `-mavx2 -mfma` on x86-64.
+
+```sh
+python3 bench/compile_time.py run --cxx g++ --reps 7 --cpu 40 --machine "..." \
+    --commit "$(git rev-parse --short HEAD)" --json results/milestone1/costs/compile/compile-linux-gcc.json
+python3 bench/compile_time.py per-kernel --cxx g++ --reps 7 --cpu 40 --json ...   # -O2 by default
+python3 bench/compile_time.py phases --cxx g++ --reps 3 --json ...
+python3 bench/compile_time.py kernels --json results/milestone1/costs/compile/kernel-sizes.json
+python3 bench/compile_time.py report results/milestone1/costs/compile
+```
+
+Clang on Linux takes `--flags "--gcc-install-dir=..."` where it needs one; MSVC `--cxx cl --msvc`
+in a developer prompt. `per-kernel` compiles `kernels_scalar.cpp` and `kernels_packed.cpp` once
+with an empty table and once per kernel with that kernel alone: the difference is what the kernel
+costs. `phases` asks the compiler where the time goes (GCC `-ftime-report`, Clang `-ftime-trace`,
+MSVC `/Bt+`). `kernels` counts the lines and operations of every generated kernel. `--cpu` pins
+the script, and every compiler it starts, to one logical processor (Linux, Windows). Every
+compilation has a timeout, and on a timeout only the process the script started is terminated.
+
+### The checks of `KAIRN_CHECKS`, and MSVC's stack cookie
+
+`costs.cpp` is a small benchmark of its own, timed as `kairn-bench` times (non-inlined functions
+called through a pointer, loops over arrays in L1 per operation and chains per step, samples of
+about 4 ms, the minimum over the samples): `kairn::environment_ok()` in a loop; `x + y` and
+`x * y` on `Expansion<double, 2>` in a loop and in a chain; `x + y` on `Expansion<double, 1>` in a
+loop, in a chain and as a call of a non-inlined function per element, next to the same on
+`double`; and a chain of `double` additions and one of fused multiply-adds for scale.
+`KAIRN_CHECKS` must be the same in every translation unit of a program, so each value is a
+program: `kairn-bench-costs-LEVEL` (0) and `kairn-bench-costs-checks-LEVEL` (1), for `O0` and the
+levels of `kairn-bench`. Each records a checksum of its outputs, which the two programs must agree
+on. For the cookie, the same programs are built again with `/GS-` added to `CMAKE_CXX_FLAGS`.
+
+```sh
+taskset -c 40 build-bench/bench/kairn-bench-costs-checks-O2 --cpu 40 --reps 31 \
+    --machine "..." --commit "$(git rev-parse --short HEAD)" --json results/milestone1/costs/checks/...
+```
+
+`gs_probe.py` (MSVC only, in a developer prompt) says which functions MSVC protects with a `/GS`
+stack cookie: `probe` compiles `gs_probe.cpp`, the same shapes of code (one operation, a loop, a
+chain, a dot product, `axpy`, Horner) on `double`, `Expansion<double, 1>`, `Expansion<double, 2>`,
+`Ball<double, 1>` and `Ball<double, 2>`, with `/GS` and `/GS-`, and reads `dumpbin /disasm` for
+`__security_cookie` and `__security_check_cookie`; `objects` does the same on objects built
+elsewhere (`kairn-bench`'s `api.cpp.obj`); `isolate` compiles `gs_isolate.cpp`, one-limb types
+that differ from `Expansion<double, 1>` in one thing each; `fix` compiles `gs_probe.cpp` against a
+copy of the headers in the work directory in which `Expansion<T, 1>` is passed by const reference.
+
+```sh
+python3 bench/costs_report.py results/milestone1/costs/checks results/milestone1/costs/gs
+```
+
+prints the tables of the results page from the stored runs of `costs.cpp` and `kairn-bench`
+(named `MACHINE-COMPILER[-GS]-PROGRAM-LEVEL-rN.json`) and of `gs_probe.py`.
+
+### The quick tier on the hosted runners
+
+`ci_times.py collect` reads, with read-only `gh` calls, the last runs of the workflow "Build and
+test" on `main`: per job, the duration of each step and of the job, and from the job's log the
+time of each test; `ci_times.py tables FILE` prints the tables of the results page.

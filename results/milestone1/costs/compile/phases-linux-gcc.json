@@ -1,0 +1,228 @@
+{
+ "schema": 1,
+ "what": "phases",
+ "date": "2026-11-19",
+ "commit": "7a7a5ca",
+ "machine": {
+  "description": "Linux x86-64, AMD EPYC 7452 (Zen 2), two sockets of 32 cores; one logical CPU, its SMT sibling idle",
+  "cpu": "AMD EPYC 7452 32-Core Processor",
+  "os": "Linux",
+  "arch": "x86_64"
+ },
+ "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+ "cxx": "g++",
+ "family": "gnu",
+ "flags": "",
+ "pinning": "pinned to logical CPU 40",
+ "reps": 3,
+ "config": "O2",
+ "config_flags": [
+  "-O2",
+  "-DNDEBUG"
+ ],
+ "tool": "-ftime-report",
+ "results": [
+  {
+   "unit": "empty",
+   "wall_s": 0.0217,
+   "phases_s": {
+    "phase setup": 0.01,
+    "TOTAL": 0.01
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "std_headers",
+   "wall_s": 0.8931,
+   "phases_s": {
+    "phase setup": 0.01,
+    "phase parsing": 0.82,
+    "phase lang. deferred": 0.05,
+    "TOTAL": 0.88,
+    "(timer) parser (global)": 0.26,
+    "(timer) preprocessing": 0.24,
+    "(timer) |name lookup": 0.17,
+    "(timer) parser inl. func. body": 0.08,
+    "(timer) parser struct body": 0.07,
+    "(timer) parser function body": 0.07,
+    "(timer) template instantiation": 0.07,
+    "(timer) |overload resolution": 0.04
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "iostream",
+   "wall_s": 1.3934,
+   "phases_s": {
+    "phase setup": 0.01,
+    "phase parsing": 1.27,
+    "phase lang. deferred": 0.09,
+    "TOTAL": 1.37,
+    "(timer) parser (global)": 0.46,
+    "(timer) |name lookup": 0.34,
+    "(timer) template instantiation": 0.27,
+    "(timer) preprocessing": 0.26,
+    "(timer) parser inl. meth. body": 0.11,
+    "(timer) parser struct body": 0.1,
+    "(timer) parser inl. func. body": 0.1,
+    "(timer) |overload resolution": 0.09
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "include",
+   "wall_s": 0.7131,
+   "phases_s": {
+    "phase setup": 0.01,
+    "phase parsing": 0.68,
+    "TOTAL": 0.69,
+    "(timer) parser (global)": 0.26,
+    "(timer) parser inl. func. body": 0.2,
+    "(timer) preprocessing": 0.14,
+    "(timer) |name lookup": 0.08,
+    "(timer) parser struct body": 0.05,
+    "(timer) template instantiation": 0.03,
+    "(timer) |overload resolution": 0.01
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "use_e2",
+   "wall_s": 1.7684,
+   "phases_s": {
+    "phase setup": 0.01,
+    "phase parsing": 0.71,
+    "phase lang. deferred": 0.05,
+    "phase opt and generate": 0.97,
+    "TOTAL": 1.74,
+    "(timer) callgraph functions expansion": 0.58,
+    "(timer) callgraph ipa passes": 0.36,
+    "(timer) parser (global)": 0.22,
+    "(timer) parser inl. func. body": 0.21,
+    "(timer) preprocessing": 0.19,
+    "(timer) |name lookup": 0.13,
+    "(timer) rest of compilation": 0.09,
+    "(timer) dump files": 0.07
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "use_all",
+   "wall_s": 3.761,
+   "phases_s": {
+    "phase setup": 0.01,
+    "phase parsing": 0.72,
+    "phase lang. deferred": 0.14,
+    "phase opt and generate": 2.84,
+    "TOTAL": 3.71,
+    "(timer) callgraph functions expansion": 1.66,
+    "(timer) callgraph ipa passes": 1.09,
+    "(timer) dump files": 0.27,
+    "(timer) rest of compilation": 0.25,
+    "(timer) parser (global)": 0.24,
+    "(timer) template instantiation": 0.19,
+    "(timer) |name lookup": 0.18,
+    "(timer) preprocessing": 0.18
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "self_test",
+   "wall_s": 2.2399,
+   "phases_s": {
+    "phase setup": 0.01,
+    "phase parsing": 0.69,
+    "phase opt and generate": 1.51,
+    "TOTAL": 2.21,
+    "(timer) callgraph functions expansion": 1.09,
+    "(timer) callgraph ipa passes": 0.38,
+    "(timer) parser inl. func. body": 0.23,
+    "(timer) preprocessing": 0.21,
+    "(timer) parser (global)": 0.16,
+    "(timer) dump files": 0.1,
+    "(timer) rest of compilation": 0.1,
+    "(timer) |name lookup": 0.09
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "kernels_scalar",
+   "wall_s": 1.2372,
+   "phases_s": {
+    "phase setup": 0.01,
+    "phase parsing": 0.35,
+    "phase opt and generate": 0.85,
+    "phase finalize": 0.01,
+    "TOTAL": 1.22,
+    "(timer) callgraph functions expansion": 0.54,
+    "(timer) callgraph ipa passes": 0.28,
+    "(timer) dump files": 0.12,
+    "(timer) parser (global)": 0.12,
+    "(timer) preprocessing": 0.1,
+    "(timer) parser inl. func. body": 0.09,
+    "(timer) rest of compilation": 0.07,
+    "(timer) dominance computation": 0.04
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "kernels_packed",
+   "wall_s": 3.2198,
+   "phases_s": {
+    "phase setup": 0.01,
+    "phase parsing": 2.39,
+    "phase opt and generate": 0.78,
+    "TOTAL": 3.18,
+    "(timer) parser (global)": 0.98,
+    "(timer) parser inl. func. body": 0.77,
+    "(timer) preprocessing": 0.55,
+    "(timer) callgraph functions expansion": 0.44,
+    "(timer) |name lookup": 0.4,
+    "(timer) callgraph ipa passes": 0.29,
+    "(timer) dump files": 0.11,
+    "(timer) rest of compilation": 0.11
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "runner",
+   "wall_s": 3.2454,
+   "phases_s": {
+    "phase setup": 0.01,
+    "phase parsing": 1.74,
+    "phase lang. deferred": 0.11,
+    "phase opt and generate": 1.35,
+    "TOTAL": 3.21,
+    "(timer) callgraph functions expansion": 0.89,
+    "(timer) parser (global)": 0.56,
+    "(timer) callgraph ipa passes": 0.41,
+    "(timer) |name lookup": 0.35,
+    "(timer) preprocessing": 0.34,
+    "(timer) template instantiation": 0.28,
+    "(timer) parser inl. meth. body": 0.19,
+    "(timer) parser struct body": 0.17
+   },
+   "largest_functions_s": []
+  },
+  {
+   "unit": "packed_runner",
+   "wall_s": 5.5992,
+   "phases_s": {
+    "phase setup": 0.01,
+    "phase parsing": 3.78,
+    "phase lang. deferred": 0.13,
+    "phase opt and generate": 1.62,
+    "TOTAL": 5.54,
+    "(timer) parser (global)": 1.35,
+    "(timer) callgraph functions expansion": 1.05,
+    "(timer) parser inl. func. body": 0.94,
+    "(timer) preprocessing": 0.79,
+    "(timer) |name lookup": 0.63,
+    "(timer) callgraph ipa passes": 0.49,
+    "(timer) template instantiation": 0.32,
+    "(timer) parser inl. meth. body": 0.2
+   },
+   "largest_functions_s": []
+  }
+ ]
+}
