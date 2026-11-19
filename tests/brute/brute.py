@@ -125,6 +125,17 @@ EXPLICIT = {
 }
 
 
+# Kernels whose description uses the constant splitter 2^ceil(p/2) + 1: the interpreter refuses a
+# format whose largest number is below it (kairn-gen interp: "constant splitter ... is not a
+# number of the format"), a format where the claims, which assume that nothing overflows, say
+# nothing. The plan leaves such formats out for them.
+SPLITTER_KERNELS = ("split", "two_prod_dekker")
+
+
+def splitter_fits(p, qmax):
+    return (2 ** p - 1) * 2 ** qmax >= 2 ** (-(-p // 2)) + 1
+
+
 def load_claims():
     with open(CLAIMS, encoding="utf-8") as f:
         return json.load(f)["kernels"]
@@ -192,6 +203,8 @@ def interp_plan(kernels, only=None):
         for fmt, restrict, _ in entries:
             p, qmin, qmax = parse_fmt(fmt)
             if p < pmin or (fmt, tuple(restrict)) in seen:
+                continue
+            if name in SPLITTER_KERNELS and not splitter_fits(p, qmax):
                 continue
             seen.add((fmt, tuple(restrict)))
             why = []
