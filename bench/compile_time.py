@@ -382,7 +382,7 @@ def msvc_phases(text):
     """MSVC /Bt+: the time of c1xx.dll (front end) and c2.dll (back end)."""
     phases = {}
     for line in text.splitlines():
-        m = re.search(r'time\(([^)]*?(c1xx|c2)\.dll)\)=(\d+\.\d+)s', line)
+        m = re.search(r'time\((.*?\\(c1xx|c2)\.dll)\)=(\d+\.\d+)s', line)   # the path has "(x86)"
         if m:
             phases[m.group(2)] = float(m.group(3))
     return phases
