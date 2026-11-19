@@ -150,8 +150,8 @@ in none, on those compilers and on the settings that do not contract
 kernels with the guard taken out, and fails if those compilers then fuse nothing). Clang 18 on
 x86-64 under `-ffp-contract=fast` left those three forms alone. With the first headers it fused the
 radius and the one-limb center given to a `Ball` instead; since the constructors are generated
-kernels, whose selects sit between the program's product and the sums of the ball, it fuses nothing
-even without the guard, and its control only reports. The guard relies on what the opaque product
+kernels, it fuses nothing even without the guard (measured; no cause is claimed), and its control
+only reports. The guard relies on what the opaque product
 already relies on: the compiler honors the sign of zero, so it may not remove `a + 0`. The
 generator emits every guard and checks the rule; the public headers contain none of their own.
 
