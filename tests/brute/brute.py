@@ -110,7 +110,9 @@ SHAPES = {
     "ext_b1": ("fp:5:-9:2", ["fp:6:-10:1", "fp:7:-11:0", "fp:5:-13:6"]),
     "ext_b2": ("fp:4:-6:1", ["fp:5:-7:0", "fp:6:-8:-1", "fp:4:-8:3"]),
     "ext_b1_b1_sum": ("fp:2:-3:2", ["fp:3:-4:1", "fp:2:-5:4"]),
-    "ext_b1_b1_product": ("fp:2:-3:2", ["fp:3:-4:1", "fp:2:-5:4"]),
+    # Fourteen exponents too: at two exponents a quarter of the cases end as a finite ball, at
+    # ten 42 %, at fourteen about half (estimated on 10 000 indices drawn uniformly).
+    "ext_b1_b1_product": ("fp:2:-3:2", ["fp:3:-4:1", "fp:2:-5:4", "fp:2:-7:6"]),
     "ext_b1_1_product": ("fp:3:-4:1", ["fp:4:-5:0", "fp:3:-6:3", "fp:2:-8:7"]),
     "ext_b2_1_product": ("fp:3:-3:0", ["fp:4:-4:-1", "fp:3:-4:1", "fp:2:-4:3"]),
 }
@@ -119,6 +121,18 @@ SHAPES = {
 # (140 million for ball_add_2 at fp:3:-3:2, 12.4 billion for ball_mul_2 at fp:4:-5:1). They get
 # complete enumerations of formats of their min_precision with fewer exponents, and larger
 # restricted domains than the quick tier's (gen --restrict), one of them one bit more precise.
+#
+# The share of the cases that end as a finite ball, estimated on 10 000 enumeration
+# indices drawn uniformly (the run reports the exact counts). Since the constant H of the radius
+# holds the smallest normal number, a product of balls in a format of few exponents mostly
+# overflows: ball_mul_2 at fp:4:-2:0 (numbers 2^-2 to 15, smallest normal 2) gives a finite ball
+# in 1.3 % of its cases, and more exponents above do not help (fp:4:-3:0 3.9 %, fp:4:-2:1 1.0 %,
+# fp:4:-3:1 2.4 %, 565 million cases), but the same number of exponents lower down does, where
+# products of numbers below 1 stay finite: fp:4:-5:-3 (the same size, 15.5 million) 35 %. The
+# full product, held to the IEEE shape, gets four exponents (fp:4:-4:-1, 98 million cases, 10 %,
+# where fp:4:-3:-2 gives 5.8 %) and a restricted enumeration with six (centers in [1, 2), 54 %).
+# The full sums give 18 % at fp:4:-3:-2 and 43 % at fp:3:-3:0, both complete; their quick
+# tier's fp:3:-2:-1 gives 6 %.
 _R_SUM_QUICK = "0x0p+0/0x1p-3/0x1p-1/0x1.4p+1"
 _R_SUM_7 = "0x0p+0/0x1p-3/0x1.8p-2/0x1p-1/0x1.4p+1/0x1.cp+2/0x1.cp+4"
 _R_MUL_QUICK = "0x0p+0/0x1p-5/0x1.8p+0"
@@ -135,7 +149,7 @@ EXPLICIT = {
         ("fp:4:-3:2", ["rx.in=" + _R_SUM_QUICK, "ry.in=" + _R_SUM_QUICK]),
     ]),
     "2_r_2_r_product": ("fp:4:-5:1", [
-        ("fp:4:-2:0", []),
+        ("fp:4:-5:-3", []),
         ("fp:4:-5:1", ["rx.in=" + _R_MUL_QUICK, "ry.in=" + _R_MUL_QUICK]),
         ("fp:4:-5:1", ["rx.in=" + _R_MUL_5, "ry.in=" + _R_MUL_5, "cx.lead=0:0"]),
         ("fp:4:-5:1", ["cx.lead=0:0", "cy.lead=0:0"]),
@@ -145,9 +159,9 @@ EXPLICIT = {
     # radius, the whole line and the empty set) and restrictions shrink its finite part only.
     # The sums are complete in the quick tier (fp:3:-2:-1, two exponents); here complete with one
     # bit more and with four exponents, and restricted with six. The product is restricted in the
-    # quick tier (fp:4:-4:-1, radii 0, eta, 1/2, 3/2, cx in [1, 2)); here complete with two
-    # exponents, every center with those radii, every radius with those centers, and restricted
-    # with one bit more.
+    # quick tier (fp:4:-4:-1, radii 0, eta, 1/2, 3/2, cx in [1, 2)); here complete with two and
+    # with four exponents, every center with those radii, centers in [1, 2) with six exponents,
+    # and restricted with one bit more.
     "ext_b2_b2_sum": ("fp:3:-2:-1", [
         ("fp:4:-3:-2", []),
         ("fp:3:-3:0", []),
@@ -156,7 +170,8 @@ EXPLICIT = {
     "ext_b2_b2_product": ("fp:4:-4:-1", [
         ("fp:4:-3:-2", []),
         ("fp:4:-4:-1", ["rx.in=" + _R_EXT_MUL_QUICK, "ry.in=" + _R_EXT_MUL_QUICK]),
-        ("fp:4:-4:-1", ["cx.lead=0:0", "cy.lead=0:0"]),
+        ("fp:4:-4:-1", []),
+        ("fp:4:-5:0", ["cx.lead=0:0", "cy.lead=0:0"]),
         ("fp:5:-5:-2", ["rx.in=" + _R_EXT_MUL_P5, "ry.in=" + _R_EXT_MUL_P5, "cx.lead=0:0"]),
     ]),
 }
@@ -1497,6 +1512,27 @@ def entry_stats(keys, p):
     return out
 
 
+def read_times(path):
+    """Seconds of the finished pipelines (times.jsonl), summed by (part, kernel or enumeration,
+    format, runner)."""
+    out = {}
+    if not os.path.exists(path):
+        return out
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            x = json.loads(line)
+            if x.get("failed"):
+                continue
+            if x["part"] == "interp":
+                key = ("interp", x["enum"], None, None)
+            else:
+                key = (x["part"], x["kernel"], x["format"], x.get("runner"))
+            out[key] = out.get(key, 0.0) + x["s"]
+    return out
+
+
 def key_counts(keys):
     t = {}
     for k in keys:
@@ -1552,7 +1588,8 @@ def cmd_collect(a):
             findings = [json.loads(l) for l in f if l.strip()]
     runners = read_json(os.path.join(work, "runners.json")) \
         if os.path.exists(os.path.join(work, "runners.json")) else []
-    rmap = {r["id"]: r for r in runners}
+    domain = {k["name"]: k.get("domain") or "finite" for k in load_claims()}
+    times = read_times(os.path.join(work, "times.jsonl"))
     merges = []
     series = []
     for kdir in sorted(glob.glob(os.path.join(work, "compiled", "*", "*"))):
@@ -1599,7 +1636,11 @@ def cmd_collect(a):
         entries = entry_stats(keys, p) if keys else []
         slot = compiled.setdefault(kernel, {}).setdefault(fmt, {"runners": {}})
         slot["runners"][rid] = {"counts": counts, "entries": entries, "units": nfiles,
-                                "covered": ranges, "guards": problems or "ok"}
+                                "covered": ranges, "guards": problems or "ok",
+                                "strata": {k["tag"]: [k["stats"]["counts"].get("cases", 0),
+                                                      k["stats"]["counts"].get("judged", 0)]
+                                           for k in keys},
+                                "seconds": times.get(("check", kernel, fmt, rid), 0.0)}
         for n, v in counts.items():
             totals[n] = totals.get(n, 0) + v
     # Per kernel and format: the counts over the runners, and each entry's extreme over them.
@@ -1615,13 +1656,29 @@ def cmd_collect(a):
             slot["guards"] = "ok" if all(r["guards"] == "ok" for r in rs.values()) else \
                 {rid: r["guards"] for rid, r in rs.items() if r["guards"] != "ok"}
             slot["cases_per_runner"] = sorted({r["counts"].get("cases", 0) for r in rs.values()})
+            slot["domain"] = domain.get(kernel, "unknown")
+            # Per stratum: the cases of the machine's stream (the most any runner judged: they
+            # all judge the same stream) and the judged results summed over the runners.
+            strata = {}
+            for r in rs.values():
+                for tag, (nc, nj) in r["strata"].items():
+                    x = strata.setdefault(tag, [0, 0])
+                    x[0] = max(x[0], nc)
+                    x[1] += nj
+            slot["strata"] = dict(sorted(strata.items()))
+            # Wall seconds of the pipelines: generating the cases, and judging them, summed over
+            # the runners.
+            slot["seconds"] = {"gen": round(times.get(("gen", kernel, fmt, None), 0.0), 1),
+                               "check": round(sum(r["seconds"] for r in rs.values()), 1)}
             slot["runners"] = {rid: [r["counts"].get(n, 0) for n in RUNNER_COUNTS] +
                                [headline(r["entries"])] for rid, r in sorted(rs.items())}
     interp = []
     itotals = {}
     for e, out, nfiles in enum_out:
         rec = {"kernel": e["kernel"], "format": e["format"], "restrict": e["restrict"],
-               "why": e["why"], "total": e["total"], "chunks": nfiles}
+               "why": e["why"], "total": e["total"], "chunks": nfiles,
+               "domain": domain.get(e["kernel"], "unknown"),
+               "seconds": round(times.get(("interp", enum_key(e), None, None), 0.0), 1)}
         if not nfiles:
             rec["guards"] = ["not run"]
             interp.append(rec)
@@ -1644,10 +1701,17 @@ def cmd_collect(a):
         interp.append(rec)
     machine = starts[-1]["machine"]
     result = {
-        "kairn_brute_summary": 1,
+        "kairn_brute_summary": 2,
         "name": a.name,
         "machine": machine,
+        # The code under test and the driver: every commit a run of this work directory named
+        # (one each, unless it was restarted with another driver), and the driver of collect.
         "commit": sorted({r["commit"] for r in starts if r.get("commit")}),
+        "driver_commit": sorted({r["driver_commit"] for r in starts if r.get("driver_commit")}),
+        "driver_sha256": sorted({r["driver_sha256"] for r in starts if r.get("driver_sha256")}),
+        "collect_driver_sha256": file_sha256(__file__),
+        "fixup_forms": sorted({r.get("fixup_forms", "default") for r in starts
+                               if "compiled" in r["parts"]}),
         "runs": [{"started": r["started"], "budget": r["budget"], "jobs": r["jobs"],
                   "parts": r["parts"], "cpus": r["cpus"], "nice": r["nice"],
                   "interp_bins": r.get("interp_bins"), "interp_take": r.get("interp_take")}
@@ -1658,7 +1722,9 @@ def cmd_collect(a):
         "chunk": starts[-1]["chunk"],
         "interp_chunk": starts[-1]["interp_chunk"],
         "runners": {r["id"]: {"kind": r["kind"], "backend": r["backend"], "setting": r["setting"],
-                              "compiler": r["compiler"], "flags": r["flags"]} for r in runners},
+                              "compiler": r["compiler"], "flags": r["flags"],
+                              "build": r["build"], "fixup": r.get("fixup"),
+                              "fixup_default": r.get("fixup_default")} for r in runners},
         "runner_columns": list(RUNNER_COUNTS) + ["headline per entry"],
         "compiled": {"totals": totals, "kernels": compiled},
         "interp": {"totals": itotals, "enumerations": interp},
@@ -1820,6 +1886,11 @@ def cmd_report(a):
               fmt_int(cpr[0])) if cpr else "-",
              fmt_int(d["compiled"]["totals"].get("judged", 0)),
              fmt_int(d["interp"]["totals"].get("cases", 0))))
+    report_throughput(docs, w)
+    report_aim(docs, w)
+    report_agreement(docs, w)
+    report_backends(docs, w)
+    report_balls(docs, w)
     kernels = []
     for d in docs:
         for k in list(d["compiled"]["kernels"]) + [r["kernel"] for r in
@@ -1989,6 +2060,22 @@ def cmd_report(a):
                         best = (v, t)
                 if best:
                     picks.append((name, compiled, best))
+        strata_lines = []
+        for fmt in ("binary64", "binary32"):
+            st = {}
+            for d in docs:
+                for tag, (nc, nj) in d["compiled"]["kernels"].get(k, {}).get(fmt, {}).get(
+                        "strata", {}).items():
+                    x = st.setdefault(tag, [0, 0])
+                    x[0] += nc
+                    x[1] += nj
+            if st:
+                strata_lines.append("`%s`: %s" % (fmt, ", ".join(
+                    "%s %s" % (tag, fmt_int(nc)) for tag, (nc, nj) in sorted(st.items()))))
+        if strata_lines:
+            w("")
+            w("Distinct random cases per stratum, summed over the machines (each judged by every "
+              "runner of its machine): " + "; ".join(strata_lines) + ".")
         if picks:
             w("")
             w("Where the extremes are attained (the line as the oracle reports it):")
@@ -2006,6 +2093,190 @@ def cmd_report(a):
             w("```")
     print("\n".join(out))
     return 0
+
+
+def wall_of(d):
+    return sum(e["wall"] for e in d.get("ends", []))
+
+
+def report_throughput(docs, w):
+    """Cases per second: of each machine over its wall time, and of one pipeline."""
+    w("")
+    w("<!-- Throughput: wall time of the runs (builds included); per second of it, the results "
+      "judged by the compiled runners and the cases enumerated; per second of one pipeline, the "
+      "cases one oracle check of a compiled runner, one generator of random cases and one "
+      "interpreter pipeline get through (summed over the kernels) -->")
+    w("| Machine | Wall time | Judged per second | Enumerated per second | One check pipeline, "
+      "cases/s | One generator, cases/s | One interpreter pipeline, cases/s |")
+    w("|---|---|---|---|---|---|---|")
+    for d in docs:
+        wall = wall_of(d)
+        kern = d["compiled"]["kernels"]
+        cases_chk = sum(s["counts"].get("cases", 0) for f in kern.values() for s in f.values())
+        sec_chk = sum(s.get("seconds", {}).get("check", 0) for f in kern.values()
+                      for s in f.values())
+        cases_gen = sum(max(s["cases_per_runner"] or [0]) for f in kern.values()
+                        for s in f.values())
+        sec_gen = sum(s.get("seconds", {}).get("gen", 0) for f in kern.values() for s in f.values())
+        en = d["interp"]["enumerations"]
+        cases_i = sum(r.get("counts", {}).get("cases", 0) for r in en)
+        sec_i = sum(r.get("seconds", 0) for r in en)
+
+        def rate(n, t):
+            return fmt_int(int(round(n / t))) if t else "-"
+        w("| %s | %s | %s | %s | %s | %s | %s |" % (
+            d["name"], "%.0f s (%.2f h)" % (wall, wall / 3600) if wall else "-",
+            rate(d["compiled"]["totals"].get("judged", 0), wall),
+            rate(d["interp"]["totals"].get("cases", 0), wall),
+            rate(cases_chk, sec_chk), rate(cases_gen, sec_gen), rate(cases_i, sec_i)))
+
+
+AIM = 10 ** 8
+
+
+def report_aim(docs, w):
+    """Cases per kernel and format summed over the machines and runners, against 10^8."""
+    per = {}
+    for d in docs:
+        for k, fmts in d["compiled"]["kernels"].items():
+            for fmt, s in fmts.items():
+                x = per.setdefault((k, fmt), [0, 0, 0])
+                x[0] += s["counts"].get("cases", 0)
+                x[1] += s["counts"].get("judged", 0)
+                x[2] += max(s["cases_per_runner"] or [0])
+    if not per:
+        return
+    cases = sorted(v[0] for v in per.values())
+    judged = sorted(v[1] for v in per.values())
+    distinct = sorted(v[2] for v in per.values())
+    below = sorted((v[0], k, f) for (k, f), v in per.items() if v[0] < AIM)
+    w("")
+    w("<!-- The aim: 10^8 cases per kernel and format, summed over the machines and their "
+      "runners -->")
+    w("Per kernel and format, summed over the machines and their runners: %s to %s cases "
+      "(median %s), of which %s to %s judged (a finite result, or any result in the extended "
+      "domain), from %s to %s distinct cases. %d of %d kernel and format pairs reach 10^8 "
+      "cases%s." % (fmt_int(cases[0]), fmt_int(cases[-1]), fmt_int(cases[len(cases) // 2]),
+                    fmt_int(judged[0]), fmt_int(judged[-1]), fmt_int(distinct[0]),
+                    fmt_int(distinct[-1]), len(per) - len(below), len(per),
+                    ("; the fewest: " + ", ".join("`%s` `%s` %s" % (k, f, fmt_int(n))
+                                                  for n, k, f in below[:5])) if below else ""))
+
+
+def report_agreement(docs, w):
+    """Whether every runner of a machine gave the same counts and extremes, per kernel and
+    format; the exceptions."""
+    diff = []
+    n = 0
+    for d in docs:
+        for k, fmts in sorted(d["compiled"]["kernels"].items()):
+            for fmt, s in sorted(fmts.items()):
+                n += 1
+                rows = {rid: (tuple(v[:len(RUNNER_COUNTS)]), json.dumps(v[-1]))
+                        for rid, v in s["runners"].items()}
+                if len(set(rows.values())) > 1:
+                    groups = {}
+                    for rid, v in sorted(rows.items()):
+                        groups.setdefault(v, []).append(rid)
+                    diff.append((d["name"], k, fmt, groups))
+    w("")
+    w("<!-- Agreement of the runners of a machine (they judge the same cases) -->")
+    if not diff:
+        w("On each machine, every runner gave the same counts and the same extremes, for every "
+          "kernel and format (%d series of runners compared)." % n)
+        return
+    w("Runners of one machine that disagree on the counts or the extremes (%d of %d kernel and "
+      "format pairs):" % (len(diff), n))
+    w("")
+    for name, k, fmt, groups in diff:
+        parts = []
+        for (counts, head), rids in groups.items():
+            parts.append("%s: counts %s, extremes %s" % (", ".join(rids), list(counts), head))
+        w("- %s `%s` `%s`: %s" % (name, k, fmt, "; ".join(parts)))
+
+
+def backend_of(r):
+    if r["kind"] == "packed":
+        return r["backend"].upper().replace("AVX2", "AVX2").replace("NEON", "NEON")
+    return "scalar"
+
+
+def report_backends(docs, w):
+    """The largest error over its bound per kernel (operation and limb counts), format and
+    backend: scalar (both forms of the fix-ups), AVX2, NEON; over every machine and compiler."""
+    cols = []
+    for d in docs:
+        for r in d["runners"].values():
+            b = backend_of(r)
+            if b not in cols:
+                cols.append(b)
+    cols.sort(key=lambda b: (b != "scalar", b))
+    table = {}
+    labels = {}
+    for d in docs:
+        for k, fmts in d["compiled"]["kernels"].items():
+            for fmt, s in fmts.items():
+                kinds = [e["kind"] for e in s["entries"]]
+                for rid, v in s["runners"].items():
+                    b = backend_of(d["runners"][rid])
+                    for j, h in enumerate(v[-1]):
+                        if kinds[j] != "error" or h is None or exact_claim(
+                                s["entries"][j]["label"]):
+                            continue
+                        key = (k, s["entries"][j]["label"])
+                        labels[key] = s["entries"][j]["label"]
+                        cur = table.setdefault(key, {}).get((fmt, b))
+                        if cur is None or decimal.Decimal(h) > decimal.Decimal(cur):
+                            table[key][(fmt, b)] = h
+    if not table:
+        return
+    heads = ["%s %s" % (f, b) for f in ("binary64", "binary32") for b in cols]
+    w("")
+    w("<!-- Largest error over its bound per kernel, format and backend (every machine and "
+      "compiler; scalar: both forms of the fix-ups) -->")
+    w("| Kernel | Claim | " + " | ".join(heads) + " |")
+    w("|---|---|" + "---|" * len(heads))
+
+    def cell(v):
+        if v is None:
+            return "-"
+        if near_one(v, decimal.Decimal(v) == 1):
+            return "1 - ε, ε < 10⁻⁹"
+        return short(v) + (" (the claim)" if decimal.Decimal(v) == 1 else "")
+    for key in sorted(table, key=lambda key: -max(decimal.Decimal(v)
+                                                   for v in table[key].values())):
+        w("| `%s` | `%s` | %s |" % (key[0], labels[key].replace("|", "\\|"), " | ".join(
+            cell(table[key].get((f, b))) for f in ("binary64", "binary32") for b in cols)))
+
+
+def report_balls(docs, w):
+    """The share of the cases of each enumeration of a Ball kernel whose result is a finite ball:
+    in the finite domain the judged ones (the others are non-finite), in the extended domain the
+    count "result: finite ball" of the encloses entry."""
+    rows = []
+    for d in docs:
+        for r in d["interp"]["enumerations"]:
+            if not r["kernel"].startswith("ball_") or not r.get("counts"):
+                continue
+            cases = r["counts"].get("cases", 0)
+            if r.get("domain") == "extended":
+                fin = sum(e.get("counts", {}).get("result: finite ball", 0)
+                          for e in r.get("entries", []) if e["kind"] == "encloses")
+                if not any(e["kind"] == "encloses" for e in r.get("entries", [])):
+                    continue
+            else:
+                fin = r["counts"].get("judged", 0)
+            rows.append((r["kernel"], r["format"], r["restrict"], cases, fin))
+    if not rows:
+        return
+    w("")
+    w("<!-- Ball enumerations: the cases whose result is a finite ball -->")
+    w("| Kernel | Enumeration | Cases | Finite ball | Share |")
+    w("|---|---|---|---|---|")
+    for k, f, rs, cases, fin in sorted(rows):
+        w("| `%s` | `%s`%s | %s | %s | %s |" % (
+            k, f, (", restricted: " + ", ".join("`%s`" % x for x in rs)) if rs else "",
+            fmt_int(cases), fmt_int(fin), ("%.1f %%" % (100.0 * fin / cases)) if cases else "-"))
 
 
 # --- Plan ------------------------------------------------------------------------------------------
