@@ -85,6 +85,12 @@ VARIANTS = {
                             "kept",
     "make-nan-radius": "ball_make does not test the radius, so a NaN radius gives the whole line",
     "make2-inf-nan-tail": "make_2 of an infinity has a NaN second limb",
+    # The second radius design (with --radius second).
+    "ball2-no-E": "second radius design without E: the center kernel's error is left out",
+    "ball2-no-H": "second radius design without H: what underflow loses is left out",
+    "ball2-G-pred": "second radius design with G one unit in the last place smaller (not an "
+                    "error with respect to the claim where the listing has slack)",
+    "ball2-H-half": "second radius design with half of H, rounded up (likewise)",
 }
 
 ORACLE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -97,6 +103,21 @@ CENTER_KERNEL = {"ball_add_1": "add", "ball_sub_1": "add", "ball_mul_1": "prod",
                  "ball_scale_1": "prod", "ball_add_2": "add_2_2", "ball_sub_2": "add_2_2",
                  "ball_mul_2": "mul_2_2", "ball_scale_2": "mul_2_1"}
 ONE_OPERATION_BOUND = {"add": ("1", 1, Fraction(0)), "prod": ("1", 1, Fraction(1, 2))}
+
+# The second radius design (milestone1.md, "The radius, second design"): its constants E, G, H
+# come from the proved bound of the center kernel, (c, k, t) with rel = c u^k and tiny = t eta,
+# as the pages state them: add_1_1 and mul_1_1 for one limb (u/(1+u), and 1/2 eta for the
+# product), add_2_2, mul_2_2 and mul_2_1 for two (architecture.md's table).
+PROVED_BOUND = {"add": ("1/(1+u)", 1, Fraction(0)), "prod": ("1/(1+u)", 1, Fraction(1, 2)),
+                "add_2_2": ("3/(1-4*u)", 2, Fraction(0)), "mul_2_2": ("4", 2, Fraction(3, 2)),
+                "mul_2_1": ("2", 2, Fraction(1))}
+# The row of the table for each Ball kernel: (center kernel, E has the factor (1+u), the power of
+# (1+u) in G, the shape of H).
+RADIUS2 = {"ball_add_1": ("add", False, 3, "add"), "ball_sub_1": ("add", False, 3, "add"),
+           "ball_add_2": ("add_2_2", True, 3, "add"), "ball_sub_2": ("add_2_2", True, 3, "add"),
+           "ball_scale_1": ("prod", False, 3, "scale"), "ball_scale_2": ("mul_2_1", True, 3, "scale"),
+           "ball_mul_1": ("prod", False, 5, "mul1"), "ball_mul_2": ("mul_2_2", False, 6, "mul2")}
+RADIUS_DESIGNS = ("first", "second")
 
 _NAMED = {"binary64": (53, -1074, 971), "binary32": (24, -149, 104)}
 
@@ -185,6 +206,12 @@ class Arith:
 
     def fnma(self, a, b, c):
         return self._fused(a, b, c, -1, 1)
+
+    def times_inf(self, a):
+        """a times +infinity: a NaN for a NaN or a zero, otherwise the infinity of a's sign."""
+        if type(a) is int:
+            return NAN if a == 0 else INF if a > 0 else -INF
+        return a * INF
 
     def const_splitter(self):
         """2^ceil(p/2) + 1 as a fixed value."""
@@ -361,6 +388,44 @@ def ball_constants(ar, center, claims_path):
     return U, V
 
 
+def radius2_exact(p, qmin, kname):
+    """(E, G, H) of the second radius design for a Ball kernel, as exact Fractions (H in units of
+    eta), from milestone1.md's table:
+        E = U_q, or U_q (1+u) for the 2-limb sums and scaling;
+        G = (1+u)^3, ^5 (ball_mul_1) or ^6 (ball_mul_2);
+        H = (1+u)((1+u)^2 eta + 1/2 eta)            for sums,
+            (1+u)((1+u)^2 eta + V_q + 1/2 eta)      for scalings,
+            (1+u)(2(1+u)^4 eta + V_q + 1/2 eta)     for ball_mul_1,
+            (1+u)(2(1+u)^5 eta + V_q + 1/2 eta)     for ball_mul_2,
+    with U_q = rel/(1 - rel) and V_q = tiny/(1 - rel) of the center kernel's proved bound."""
+    center, e_factor, g_power, h_shape = RADIUS2[kname]
+    c, k, t = PROVED_BOUND[center]
+    u = Fraction(1, 1 << p)
+    rel = _eval_rational(c, u) * u ** k
+    uq = rel / (1 - rel)
+    vq = t / (1 - rel)                         # in units of eta
+    one = 1 + u
+    E = uq * one if e_factor else uq
+    G = one ** g_power
+    if h_shape == "add":
+        H = one * (one ** 2 + Fraction(1, 2))
+    elif h_shape == "scale":
+        H = one * (one ** 2 + vq + Fraction(1, 2))
+    elif h_shape == "mul1":
+        H = one * (2 * one ** 4 + vq + Fraction(1, 2))
+    else:
+        H = one * (2 * one ** 5 + vq + Fraction(1, 2))
+    return E, G, H
+
+
+def radius2_constants(ar, kname):
+    """(E, G, H) rounded up to the format, as fixed values (+inf beyond Omega)."""
+    E, G, H = radius2_exact(ar.p, ar.qmin, kname)
+    per_eta = Fraction(1 << -ar.qmin) if ar.qmin < 0 else Fraction(1, 1 << ar.qmin)
+    up = lambda f: ar.round_up_fraction(f) if f else 0
+    return up(E * per_eta), up(G * per_eta), up(H)
+
+
 def _exact_hex(tok):
     m = re.fullmatch(r"([+-]?)0[xX]([0-9a-fA-F]*)\.?([0-9a-fA-F]*)[pP]([+-]?\d+)", tok)
     if not m:
@@ -381,11 +446,12 @@ def _exact_hex_out(v, scale):
 # Kernels, value names as in architecture.md
 
 class Kernels:
-    def __init__(self, ar, center_claims=DEFAULT_CENTER_CLAIMS):
+    def __init__(self, ar, center_claims=DEFAULT_CENTER_CLAIMS, radius="first"):
         self.A = ar
         self.v = ar.variant
         self.trace = [] if ar.variant in ("trace-fast-two-sum", "trace-mul-pow2") else None
         self.center_claims = center_claims
+        self.radius = radius
         self._consts = {}
 
     def two_sum(self, a, b):
@@ -580,6 +646,13 @@ class Kernels:
         a0, a1 = self.abs_2(x0, x1)
         return self.to_up_2(a0, a1)
 
+    # -- the one-limb operations as kernels ----------------------------------------------------
+    def add_1_1(self, a, b):
+        return (self.A.add(a, b),)
+
+    def mul_1_1(self, a, b):
+        return (self.A.prod(a, b),)
+
     # -- directed steps, scaling --------------------------------------------------------------
     def radd(self, a, b):
         s = self.A.add(a, b)
@@ -618,7 +691,63 @@ class Kernels:
             return self.A.next_down(rz)
         return rz
 
+    # -- the second radius design: ordinary operations, then one inflation ------------------------
+    def consts2(self, kname):
+        """(E, G, H) of a Ball kernel, rounded up; the variants change one of them."""
+        key = ("radius2", kname)
+        c = self._consts.get(key)
+        if c is None:
+            A = self.A
+            E, G, H = radius2_constants(A, kname)
+            if self.v == "ball2-no-E":
+                E = 0
+            elif self.v == "ball2-no-H":
+                H = 0
+            elif self.v == "ball2-G-pred" and type(G) is int:
+                G = A.next_down(G)
+            elif self.v == "ball2-H-half" and type(H) is int:
+                H = A.round_up_fraction(Fraction(H, 2))
+            c = self._consts[key] = (E, G, H)
+        return c
+
+    def _ball_add2(self, kname, cx, rx, cy, ry):
+        A = self.A
+        E, G, H = self.consts2(kname)
+        cz = (A.add(cx[0], cy[0]),) if len(cx) == 1 else self.add_2_2(*(cx + cy))
+        az = abs(cz[0])
+        s = A.add(rx, ry)
+        t = A.fma(az, E, s)
+        rz = A.fma(t, G, H)
+        return cz + (rz,)
+
+    def _ball_mul2(self, kname, cx, rx, cy, ry):
+        A = self.A
+        E, G, H = self.consts2(kname)
+        cz = (A.prod(cx[0], cy[0]),) if len(cx) == 1 else self.mul_2_2(*(cx + cy))
+        ax = abs(cx[0])
+        ay = abs(cy[0])
+        az = abs(cz[0])
+        p = A.prod(rx, ry)
+        q = A.fma(ay, rx, p)
+        w = A.fma(ax, ry, q)
+        t = A.fma(az, E, w)
+        rz = A.fma(t, G, H)
+        return cz + (rz,)
+
+    def _ball_scale2(self, kname, cx, rx, a):
+        A = self.A
+        E, G, H = self.consts2(kname)
+        cz = (A.prod(cx[0], a),) if len(cx) == 1 else self.mul_2_1(cx[0], cx[1], a)
+        aa = abs(a)
+        az = abs(cz[0])
+        p = A.prod(aa, rx)
+        t = A.fma(az, E, p)
+        rz = A.fma(t, G, H)
+        return cz + (rz,)
+
     def _ball_add(self, kname, cx, rx, cy, ry):
+        if self.radius == "second":
+            return self._ball_add2(kname, cx, rx, cy, ry)
         A = self.A
         U, _ = self.consts(kname)
         cz = (A.add(cx[0], cy[0]),) if len(cx) == 1 else self.add_2_2(*(cx + cy))
@@ -629,6 +758,8 @@ class Kernels:
         return cz + (self._rz(cz, rz),)
 
     def _ball_mul(self, kname, cx, rx, cy, ry):
+        if self.radius == "second":
+            return self._ball_mul2(kname, cx, rx, cy, ry)
         A = self.A
         U, V = self.consts(kname)
         cz = (A.prod(cx[0], cy[0]),) if len(cx) == 1 else self.mul_2_2(*(cx + cy))
@@ -646,6 +777,8 @@ class Kernels:
         return cz + (self._rz(cz, rz),)
 
     def _ball_scale(self, kname, cx, rx, a):
+        if self.radius == "second":
+            return self._ball_scale2(kname, cx, rx, a)
         A = self.A
         U, V = self.consts(kname)
         cz = (A.prod(cx[0], a),) if len(cx) == 1 else self.mul_2_1(cx[0], cx[1], a)
@@ -703,7 +836,7 @@ class Kernels:
             return z0, z1
         a = abs(z0)
         f = a < INF                    # z0 is finite
-        r0 = A.prod(t, INF)            # a NaN stays a NaN; any other t becomes the infinity
+        r0 = A.times_inf(t)            # a NaN or a zero gives a NaN; any other t the infinity of its sign
         n = r0 == r0                   # r0 is not a NaN
         r1 = 0 if n else r0
         if v == "full-inf-tail-nan" and n:
@@ -867,7 +1000,7 @@ ARITY = {"two_sum": 2, "fast_two_sum": 2, "two_prod": 2, "two_prod_dekker": 2, "
          "mul_pow2_2_full": 3, "ball_add_1_full": 4, "ball_add_2_full": 6, "ball_sub_1_full": 4,
          "ball_sub_2_full": 6, "ball_mul_1_full": 4, "ball_mul_2_full": 6, "ball_scale_1_full": 3,
          "ball_scale_2_full": 4, "make_2": 1, "make_2_limbs": 2, "ball_make_1": 2,
-         "ball_make_2": 3}
+         "ball_make_2": 3, "add_1_1": 2, "mul_1_1": 2}
 FIRST_WAVE = frozenset(("two_sum", "fast_two_sum", "two_prod", "two_prod_dekker", "split",
                         "add_2_2", "add_2_1", "mul_2_2", "mul_2_1", "add_fast_2_2"))
 # Which input limb pairs form a normalized 2-limb operand (for corrupt-input).
@@ -876,18 +1009,21 @@ PAIRS = {"add_2_2": (0, 2), "add_2_1": (0,), "mul_2_2": (0, 2), "mul_2_1": (0,),
 
 
 class Runner:
-    def __init__(self, variant="correct", center_claims=None):
+    def __init__(self, variant="correct", center_claims=None, radius="first"):
         if variant not in VARIANTS:
             raise ValueError("unknown variant %r (known: %s)" % (variant, ", ".join(VARIANTS)))
+        if radius not in RADIUS_DESIGNS:
+            raise ValueError("unknown radius design %r (first or second)" % radius)
         self.variant = variant
         self.center_claims = center_claims or DEFAULT_CENTER_CLAIMS
+        self.radius = radius
         self.cache = {}
 
     def kernels(self, fmtname):
         k = self.cache.get(fmtname)
         if k is None:
             k = self.cache[fmtname] = Kernels(Arith(parse_format_triple(fmtname), self.variant),
-                                              self.center_claims)
+                                              self.center_claims, self.radius)
         return k
 
     def complete(self, line):
@@ -978,11 +1114,15 @@ def main(argv):
                     help="claims file whose bounds of add_2_2, mul_2_2 and mul_2_1 give the Ball "
                          "constants U and V (default: the oracle's first-wave fixture)")
     ap.add_argument("--print-constants", metavar="FORMAT",
-                    help="print U and V of every Ball kernel for FORMAT and stop")
+                    help="print U and V of every center kernel, and E, G and H of every Ball "
+                         "kernel (second radius design), for FORMAT and stop")
+    ap.add_argument("--radius", default="first", choices=RADIUS_DESIGNS,
+                    help="the Ball cores' radius: the first design (steps to the next number up) "
+                         "or the second (one inflation at the end); default first")
     a = ap.parse_args(argv)
     if a.list_variants:
         for k, v in VARIANTS.items():
-            print("%-22s %s" % (k, v))
+            print("%-24s %s" % (k, v))
         return 0
     if a.print_constants:
         ar = Arith(parse_format_triple(a.print_constants))
@@ -990,7 +1130,10 @@ def main(argv):
             U, V = ball_constants(ar, center, a.center_claims or DEFAULT_CENTER_CLAIMS)
             print("%s.%s.U=%s" % (a.print_constants, center, ar.write(U)))
             print("%s.%s.V=%s" % (a.print_constants, center, ar.write(V)))
+        for kname in sorted(RADIUS2):
+            for which, v in zip("EGH", radius2_constants(ar, kname)):
+                print("%s.%s.%s=%s" % (a.print_constants, kname, which, ar.write(v)))
         return 0
-    Runner(a.variant, a.center_claims).run(sys.stdin, sys.stdout)
+    Runner(a.variant, a.center_claims, a.radius).run(sys.stdin, sys.stdout)
     sys.stdout.flush()
     return 0

@@ -5,7 +5,8 @@
 // oracle on hardware arithmetic.  It must be compiled without contraction
 // (-ffp-contract=off), because a fused a*b+c would change what each statement computes.
 //
-// Usage: refrun [--variant NAME] [--const FORMAT.KERNEL.U=HEX ...] < requests > completed
+// Usage: refrun [--variant NAME] [--radius first|second] [--const FORMAT.KERNEL.U=HEX ...]
+//          < requests > completed
 // Variants inject the errors that the oracle's selftest expects `check` to catch.  The Ball
 // kernels need the constants U and V of their center's kernel (add, prod, add_2_2, mul_2_2,
 // mul_2_1), rounded up to the format; they are computed exactly by the Python side
@@ -59,6 +60,8 @@ enum class Variant {
   make_negative_radius,
   make_nan_radius,
   make2_inf_nan_tail,
+  ball2_no_E,
+  ball2_no_H,
 };
 
 struct VariantName {
@@ -100,6 +103,8 @@ const VariantName kVariants[] = {
     {"make-negative-radius", Variant::make_negative_radius},
     {"make-nan-radius", Variant::make_nan_radius},
     {"make2-inf-nan-tail", Variant::make2_inf_nan_tail},
+    {"ball2-no-E", Variant::ball2_no_E},
+    {"ball2-no-H", Variant::ball2_no_H},
 };
 
 Variant g_variant = Variant::correct;
@@ -436,6 +441,70 @@ Ball<T> ball_scale(int k, Ball<T> x, T a) {
   return z;
 }
 
+// The second radius design (milestone1.md, "The radius, second design"): ordinary operations on
+// nonnegative values, then one inflation by the kernel's constants E, G and H, which are given
+// on the command line (--const binary64.ball_add_1.E=HEX ...) as the Python side computes them.
+bool g_radius2 = false;
+
+template <class T>
+void radius_constants(const std::string& kname, T& E, T& G, T& H) {
+  E = constant<T>(kname.c_str(), "E");
+  G = constant<T>(kname.c_str(), "G");
+  H = constant<T>(kname.c_str(), "H");
+  if (g_variant == Variant::ball2_no_E) E = T(0);
+  if (g_variant == Variant::ball2_no_H) H = T(0);
+}
+
+template <class T>
+Ball<T> ball_add2(const std::string& kname, int k, Ball<T> x, Ball<T> y) {
+  T E, G, H;
+  radius_constants(kname, E, G, H);
+  Ball<T> z;
+  z.c1 = T(0);
+  if (k == 1) z.c0 = add(x.c0, y.c0);
+  else add_2_2(x.c0, x.c1, y.c0, y.c1, z.c0, z.c1);
+  T az = std::fabs(z.c0);
+  T s = add(x.r, y.r);
+  T t = fma_(az, E, s);
+  z.r = fma_(t, G, H);
+  return z;
+}
+
+template <class T>
+Ball<T> ball_mul2(const std::string& kname, int k, Ball<T> x, Ball<T> y) {
+  T E, G, H;
+  radius_constants(kname, E, G, H);
+  Ball<T> z;
+  z.c1 = T(0);
+  if (k == 1) z.c0 = prod(x.c0, y.c0);
+  else mul_2_2(x.c0, x.c1, y.c0, y.c1, z.c0, z.c1);
+  T ax = std::fabs(x.c0);
+  T ay = std::fabs(y.c0);
+  T az = std::fabs(z.c0);
+  T p = prod(x.r, y.r);
+  T q = fma_(ay, x.r, p);
+  T w = fma_(ax, y.r, q);
+  T t = fma_(az, E, w);
+  z.r = fma_(t, G, H);
+  return z;
+}
+
+template <class T>
+Ball<T> ball_scale2(const std::string& kname, int k, Ball<T> x, T a) {
+  T E, G, H;
+  radius_constants(kname, E, G, H);
+  Ball<T> z;
+  z.c1 = T(0);
+  if (k == 1) z.c0 = prod(x.c0, a);
+  else mul_2_1(x.c0, x.c1, a, z.c0, z.c1);
+  T aa = std::fabs(a);
+  T az = std::fabs(z.c0);
+  T p = prod(aa, x.r);
+  T t = fma_(az, E, p);
+  z.r = fma_(t, G, H);
+  return z;
+}
+
 // Runs a Ball kernel "ball_OP_K" on v; false when the name or the arity does not fit.
 template <class T>
 bool run_ball(const std::string& k, const std::vector<T>& v, std::vector<T>& out) {
@@ -458,13 +527,14 @@ bool run_ball(const std::string& k, const std::vector<T>& v, std::vector<T>& out
       y.c0 = -y.c0;
       y.c1 = -y.c1;
     }
-    z = op == "mul" ? ball_mul(n, x, y) : ball_add(n, x, y);
+    if (g_radius2) z = op == "mul" ? ball_mul2(k, n, x, y) : ball_add2(k, n, x, y);
+    else z = op == "mul" ? ball_mul(n, x, y) : ball_add(n, x, y);
   } else if (op == "neg" && v.size() == per) {
     z = ball(0);
     z.c0 = -z.c0;
     z.c1 = -z.c1;
   } else if (op == "scale" && v.size() == per + 1) {
-    z = ball_scale(n, ball(0), v[per]);
+    z = g_radius2 ? ball_scale2(k, n, ball(0), v[per]) : ball_scale(n, ball(0), v[per]);
   } else {
     return false;
   }
@@ -480,6 +550,8 @@ bool run_ball(const std::string& k, const std::vector<T>& v, std::vector<T>& out
 
 template <class T> T inf_() { return std::numeric_limits<T>::infinity(); }
 template <class T> T qnan_() { return std::numeric_limits<T>::quiet_NaN(); }
+// times_inf(a): a plain multiplication by +infinity, a NaN for a NaN or a zero.
+template <class T> T times_inf(T a) { return a * inf_<T>(); }
 
 // The fix-up of a full kernel: (z0, z1) from the core, t the operation of T on the leading limbs.
 // fin (every operand finite) is read by the injected errors only.
@@ -492,7 +564,7 @@ void fixup(T z0, T z1, T t, bool fin, T& w0, T& w1) {
   }
   T a = std::fabs(z0);
   bool f = a < inf_<T>();          // z0 is finite
-  T r0 = prod(t, inf_<T>());       // a NaN stays a NaN; any other t becomes the infinity
+  T r0 = times_inf(t);             // a NaN or a zero gives a NaN; any other t the infinity of its sign
   bool n = r0 == r0;               // r0 is not a NaN
   T r1 = n ? T(0) : r0;
   if (g_variant == Variant::full_inf_tail_nan && n) r1 = qnan_<T>();
@@ -766,6 +838,8 @@ bool run_kernel(const std::string& k, const std::vector<T>& v, std::vector<T>& o
     else if (k == "to_down_2" && v.size() == 2) t = to_down_2(v[0], v[1]);
     else if (k == "to_up_2" && v.size() == 2) t = to_up_2(v[0], v[1]);
     else if (k == "abs_upper_2" && v.size() == 2) t = abs_upper_2(v[0], v[1]);
+    else if (k == "add_1_1" && v.size() == 2) t = add(v[0], v[1]);
+    else if (k == "mul_1_1" && v.size() == 2) t = prod(v[0], v[1]);
     else if (k == "radd" && v.size() == 2) t = radd(v[0], v[1]);
     else if (k == "rmul" && v.size() == 2) t = rmul(v[0], v[1]);
     else return false;
@@ -845,8 +919,19 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "refrun: unknown variant %s\n", name);
         return 2;
       }
+    } else if (std::strcmp(argv[i], "--radius") == 0 && i + 1 < argc) {
+      const char* design = argv[++i];
+      if (std::strcmp(design, "first") == 0) {
+        g_radius2 = false;
+      } else if (std::strcmp(design, "second") == 0) {
+        g_radius2 = true;
+      } else {
+        std::fprintf(stderr, "refrun: unknown radius design %s (first or second)\n", design);
+        return 2;
+      }
     } else {
-      std::fprintf(stderr, "usage: refrun [--variant NAME] [--const FORMAT.KERNEL.U=HEX ...]\n");
+      std::fprintf(stderr, "usage: refrun [--variant NAME] [--radius first|second] "
+                           "[--const FORMAT.KERNEL.C=HEX ...]\n");
       return 2;
     }
   }

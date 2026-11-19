@@ -217,6 +217,8 @@ def main(argv=None):
     b.add_argument("--strata")
     b.add_argument("--exhaustive", action="store_true")
     b.add_argument("--restrict", action="append")
+    b.add_argument("--radius", default="first", choices=("first", "second"),
+                   help="with --runner refrun: the Ball cores' radius design (default first)")
     b.add_argument("--json", help="write the merged summary here")
     b.add_argument("--workdir", help="where chunk summaries go (default: a temporary directory)")
     add_check_options(b)

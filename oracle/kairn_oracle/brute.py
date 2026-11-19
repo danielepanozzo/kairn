@@ -78,7 +78,7 @@ def run_inprocess(t):
         g = G.ExhaustiveGen(kernel, f, t["restrict"])
     else:
         g = G.RandomGen(kernel, f, t["seed"], t["strata"].split(",") if t["strata"] else None)
-    run = refrun.Runner(t["variant"])
+    run = refrun.Runner(t["variant"], radius=t.get("radius") or "first")
     ck = C.Checker(claims, t["ignore_min_precision"], t["max_examples"])
     line = ck.line
     complete = run.complete
@@ -115,7 +115,7 @@ def main(a):
     base = {"claims": claims_path, "runner": a.runner, "variant": variant, "seed": a.seed,
             "strata": a.strata, "exhaustive": a.exhaustive, "restrict": a.restrict or [],
             "workdir": workdir, "max_examples": a.max_examples,
-            "ignore_min_precision": a.ignore_min_precision}
+            "ignore_min_precision": a.ignore_min_precision, "radius": a.radius}
 
     def chunks():
         if a.exhaustive:
