@@ -120,13 +120,14 @@ lane and blend.
 |---|---|---|---|
 | scalar, chain | holds: 0 to 7% | holds: 1 to 2% | holds: 2% |
 | scalar, loop | holds with GCC 16 (14 to 18%); not with Apple clang (65 to 68%) | holds with GCC 13 -O2 and Clang 18 (18 to 19%); not with GCC 13 -O3 (2.23 to 2.24 times) | holds: 8% |
-| packed `add_2_2`, loop | above: 33 to 54% | holds: 16 to 21% | above: 27% |
+| packed `add_2_2`, loop | above: 33 to 54% | at the upper edge: 16 to 21% | above: 27% |
 | packed `add_2_2`, chain | above: 21 to 28% | holds: 11 to 17% | above: 53% |
 
 So the estimate holds for scalar code in a chain on every machine, for scalar loops where the
-compiler treats the operator's loop as it treats the core's, and for packed code on Zen 2 only. A
-multiplication is shorter than an addition and suffers more: the packed `mul_2_2` costs 70 to 105%
-more with the fix-up in a loop and 6 to 53% in a chain, the scalar `x * y` 27 to 96% in a loop.
+compiler treats the operator's loop as it treats the core's, and for packed code on Zen 2 only (at
+its upper edge in a loop). A multiplication is shorter than an addition and suffers more: the
+packed `mul_2_2` costs 70 to 105% more with the fix-up in a loop and 6 to 53% in a chain, the
+scalar `x * y` 27 to 96% in a loop.
 
 **The branch against the listing's selects.** The generator emitted the listing's selects for
 scalar code until the first measurement showed what they cost in a chain; it now emits the branch.
