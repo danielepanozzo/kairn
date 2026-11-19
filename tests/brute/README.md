@@ -1,9 +1,12 @@
 # The brute-force tier
 
-`brute.py` runs the quick tier's cross-checks ([testing.md](../../docs/developer/testing.md))
+`brute.py` runs ctest's cross-checks ([testing.md](../../docs/developer/testing.md))
 for much longer: the oracle's `gen | RUNNER | check` pipelines, judged by the oracle and held to
-the quick tier's guards (`tests/crosscheck_guards.py`). It is run by hand on the test machines,
-not in CI. Python 3, standard library only; macOS, Linux and Windows.
+the same guards (`tests/crosscheck_guards.py`). It is run by hand on the test machines,
+not in CI. Python 3, standard library only; macOS, Linux and Windows. Here and in `brute.py`,
+"the quick tier" names the cross-checks as they were when ctest had one tier: "the quick tier's
+format" is the toy format of a kernel's enumeration by the interpreter (`tests/CMakeLists.txt`),
+which the full tier runs now.
 
 Two parts:
 

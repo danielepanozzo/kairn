@@ -292,6 +292,10 @@ computed constants (above). A kernel has no real-model statement when it claims 
 
 `--full` raises the sizes to a few hundred thousand requests per kernel; `--jobs N` (or
 `$KAIRN_GEN_JOBS`) caps the processes and compilers that run at once, on a shared machine.
+`-k TEXT` runs only the tests whose name (`module.Class.test`) contains TEXT, and `--skip TEXT`
+leaves them out; either fails if no test's name contains TEXT. ctest's quick tier runs the suite
+without C++ and with `--skip` for its four longest classes, and its full tier those four with `-k`
+(`tests/CMakeLists.txt`, [Testing](../docs/developer/testing.md#the-generators-tier)).
 
 One difference is allowed, and reported each time it occurs: compilers fold the negation of an FMA
 result into one negated FMA (`fnmadd` on AArch64 with GCC 16 and Apple clang 21 at `-O2`, and

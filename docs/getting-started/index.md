@@ -70,27 +70,38 @@ Built on its own, Kairn defaults to a `Release` build, because its contraction t
 optimizing compiler does. With a multi-configuration generator (Visual Studio, Xcode), name the
 configuration instead: `cmake --build build --config Release` and `ctest --test-dir build -C
 Release --output-on-failure`. Add `--parallel N` to both of the last two commands to use N cores;
-with five, the whole run takes about three and a half minutes on a recent machine.
+with four, the tests took 44 to 47 seconds on an Apple M3 Max, 70 to 75 on 16 threads of a 2019
+x86-64 server and 85 to 113 on a Windows machine with 8 logical processors, and without, 166
+seconds on the first and 287 on the second ([Time](../developer/testing.md#time)).
 
-The tests:
+These commands run the quick tier, and ctest says so when it starts and when it ends. The full
+tier, everything that left the quick tier to keep it quick (the same cross-checks on ten times the
+cases, the enumerations of small formats by the generator's interpreter, the longest of the
+generator's and the oracle's own tests), is one more command after the same build:
+
+```sh
+ctest --test-dir build/tests/full --output-on-failure
+```
+
+With `--parallel 4` it took about five minutes on the Mac and seven and a half on the two other
+machines. [Testing](../developer/testing.md#the-full-tier) lists its
+tests, and the CI runs both tiers on every push and pull request.
+
+The tests of the quick tier:
 
 | Test | Checks |
 |---|---|
 | `kairn-gen.check` | `python3 gen/kairn-gen check`: every committed generated file is what the generator writes. |
-| `kairn-gen.test` | `python3 gen/kairn-gen test --no-cxx`: the generator's own tests, without those that compile C++, which take longer than everything else together; run `python3 gen/kairn-gen test` for all of them. |
-| `kairn-oracle.selftest` | `python3 oracle/kairn-oracle selftest --quick`: the oracle's own tests, including injected errors that it must catch. |
+| `kairn-gen.test` | `python3 gen/kairn-gen test --no-cxx`: the generator's own tests, without those that compile C++ and without the four longest test classes, which the full tier runs; run `python3 gen/kairn-gen test` for all of them. |
+| `kairn-oracle.selftest` | `python3 oracle/kairn-oracle selftest --quick`: the oracle's own tests, including injected errors that it must catch, without six enumerations of small formats, which the full tier runs. |
 | `kairn-oracle.claims` | `python3 oracle/kairn-oracle check --claims-only`: the oracle can read every claim in `gen/claims.json`. |
 | `docs.reference.check`, `docs.reference.test` | `python3 docs/tools/reference.py --check`: the reference pages of this site are what the script writes from the claims and the stored results; and the script's own tests. |
-| `crosscheck.interp.*` | Each kernel, run by the generator's interpreter on every operand of a small format, judged by the oracle against its claims. |
-| `crosscheck.interp-restricted.*`, `crosscheck.interp-sampled.*` | For the kernels with too many operands for that (the two-limb balls), every operand of a restricted domain of a small format, and random operands of the whole format. |
-| `crosscheck.cxx.*` | Each kernel, compiled with the build's compiler and flags, on random `binary64` and `binary32` operands, judged by the oracle. |
-| `crosscheck.neon.*`, `crosscheck.avx2.*` | The same for the packed kernels, NEON on AArch64 and AVX2 on x86-64, one operand per lane. |
-| `crosscheck.cxx-*.*`, `crosscheck.neon-*.*`, `crosscheck.avx2-*.*` | The same, under each contraction setting that matters to the compiler. |
+| `crosscheck.compiled.*` | Each kernel, compiled with the build's compiler and flags, scalar and packed (NEON on AArch64, AVX2 on x86-64, one operand per lane), and again under each contraction setting that matters to the compiler: every one of these builds on the same random `binary64` and `binary32` operands, judged by the oracle against the kernel's claims. |
 | `crosscheck.guards` | The cross-checks fail when they check less than they say: an incomplete enumeration, a missing stratum, nothing judged, a kind of non-finite case never seen. |
 | `consume.add_subdirectory` | A CMake project that adds Kairn with `add_subdirectory` and links `kairn::kairn` and `kairn::fma` builds, compiles as C++20, and runs a kernel. |
 | `consume.install` | `cmake --install` of the build tree into a prefix inside the build directory. |
 | `consume.find_package` | A CMake project that finds that installed copy with `find_package(kairn)` builds, compiles as C++20, and runs a kernel. |
-| `api.oracle.*` | Each public operation, computed through the constructors, operators and functions of `kairn/kairn.hpp`, on random `binary64` and `binary32` operands (infinities, NaN, the empty set and the whole line included, for the kernels that have them), judged by the oracle against the claims of the kernel it calls; also with contraction forced on (`.contract-fast`). |
+| `api.oracle.*` | Each public operation, computed through the constructors, operators and functions of `kairn/kairn.hpp`, on random `binary64` and `binary32` operands (infinities, NaN, the empty set and the whole line included, for the kernels that have them), judged by the oracle against the claims of the kernel it calls; built with the build's flags and with contraction forced on. |
 | `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by some public operation, or is a building block of others, or is on a short list of entry kernels not public yet, each with its reason. |
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, and the same results at run time. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass, and each detects a changed rounding mode and flush-to-zero. |
@@ -102,13 +113,14 @@ The tests:
 
 `ctest -L api` runs only the tests of the public interface. [Testing](../developer/testing.md)
 explains the cross-checks, how to run one by hand, and how to rerun one failing case. The entry points of the
-[Architecture](../developer/architecture.md#layout-and-ownership) page and the cross-checks are
-registered only if Python 3 is found, and each entry point only if its script exists when CMake
-runs; configuring prints which were registered. The consumer checks build with the same generator
-and compiler as the main build.
+[Architecture](../developer/architecture.md#layout-and-ownership) page, the cross-checks and the
+full tier are registered only if Python 3 is found, and each entry point only if its script exists
+when CMake runs; configuring prints which were registered, and how many tests each tier has. The
+consumer checks build with the same generator and compiler as the main build.
 
 Tests are on by default when Kairn is the top-level project and off when another project adds it;
-the option `KAIRN_BUILD_TESTS` overrides that.
+the option `KAIRN_BUILD_TESTS` overrides that. A project that adds Kairn with its tests on gets the
+quick tier only.
 
 ## Use it from CMake
 
