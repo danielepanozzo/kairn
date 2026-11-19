@@ -13,11 +13,13 @@
    s < 2^(emin + prec), and at a power of two ulp(s) is the spacing ABOVE s. Write x for
    the exact sum or product, s = RN(x), r = succ(s).
 
-   What is proved. The generated statements radd_spec and rmul_spec (proofs/gen/Statements.v;
-   theorems radd_correct and rmul_correct) are items 2 and 3 below in the words of the claim
-   "upper": x <= r, and r - x <= (3/2) (r - pred(r)), where pred(r) is the largest number
-   of F below r. Since r = succ(s), pred(r) is s, and the gap r - pred(r) is ulp(s). All
-   four items together are the theorems radd_facts and rmul_facts, for prec >= 2:
+   What is proved. The generated statements radd_spec and rmul_spec
+   (proofs/gen/Statements.v; theorems radd_correct and rmul_correct) are items 2 and 3
+   below in the words of the claim "upper": x <= r, and r - x <= (3/2) (r - pred(r)),
+   where pred(r) is the largest number of F below r. Since r = succ(s), pred(r) is s, and
+   the gap r - pred(r) is ulp(s). They are stated from precision 2 on, as the kernels'
+   descriptions say, but the proof needs only a positive precision. All four items
+   together are the theorems radd_facts and rmul_facts, for prec >= 2:
      1. r is a number of F;
      2. x < r, strictly; more precisely r - x >= ulp(s) / 2;
      3. r - x <= (3/2) ulp(s). This is the sharp constant: equality holds whenever x is

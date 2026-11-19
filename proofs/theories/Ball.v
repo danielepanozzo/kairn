@@ -147,7 +147,8 @@ split.
   unfold Rdiv. rewrite Rmult_assoc, Rinv_l by lra. lra.
 Qed.
 
-Lemma rel_square_R : forall c b t : R, 0 <= c -> 0 < t <= b -> c * (b * b) < 1 -> 0 <= c * t ^ 2 < 1.
+Lemma rel_square_R :
+  forall c b t : R, 0 <= c -> 0 < t <= b -> c * (b * b) < 1 -> 0 <= c * t ^ 2 < 1.
 Proof.
 intros c b t Hc [Ht0 Htb] Hcb.
 replace (t ^ 2) with (t * t) by ring.

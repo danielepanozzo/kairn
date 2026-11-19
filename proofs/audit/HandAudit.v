@@ -58,7 +58,8 @@ Print Assumptions mul_2_1_ieee_bridge.
 Definition mul_2_1_ieee_audit : mul_2_1_ieee_spec := mul_2_1_ieee_correct.
 Print Assumptions mul_2_1_ieee_correct.
 
-Definition add_fast_2_2_ieee_bridge_audit : add_fast_2_2_ieee_bridge_spec := add_fast_2_2_ieee_bridge.
+Definition add_fast_2_2_ieee_bridge_audit : add_fast_2_2_ieee_bridge_spec :=
+  add_fast_2_2_ieee_bridge.
 Print Assumptions add_fast_2_2_ieee_bridge.
 
 Definition add_fast_2_2_ieee_audit : add_fast_2_2_ieee_spec := add_fast_2_2_ieee_correct.
