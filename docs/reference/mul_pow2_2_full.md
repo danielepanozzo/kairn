@@ -16,7 +16,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$, $w = w_0 
 
 | Form | Operands | Result | Note |
 |---|---|---|---|
-| `ldexp(x, n)` | `Expansion<T, 2>`, `int` | `Expansion<T, 2>` | $c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)) |
+| `ldexp(x, n)` | `Expansion<T, 2>`, `int` | `Expansion<T, 2>` | $c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, whose composition is argued and tested but not machine-checked ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)) |
 | `half(x)` | `Expansion<T, 2>` | `Expansion<T, 2>` | $c = 1/2$ |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.

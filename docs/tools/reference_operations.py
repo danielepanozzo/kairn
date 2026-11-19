@@ -328,7 +328,8 @@ KERNELS = {
     "mul_pow2_2_full": page(
         "scaling", "Scaling a two-limb number by a power of two",
         form("ldexp(x, n)", E2, "int", result=E2,
-             note="$c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls "
+             note="$c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, "
+                  "whose composition is argued and tested but not machine-checked "
                   "([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values))"),
         form("half(x)", E2, result=E2, note="$c = 1/2$"),
     ),

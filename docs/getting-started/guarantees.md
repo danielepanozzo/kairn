@@ -112,17 +112,16 @@ within its bound; which non-finite pattern comes out (it may be $(+\infty, \math
 specified, and such a result is not canonical, so test it with `kairn::isfinite` before passing it
 to an operator. For one limb they are the operators themselves.
 
-**`ldexp(x, n)` is total.** When $2^n$ is a number of `T` it is one call of the kernel. Otherwise
-it scales in steps ([Milestone 1](../developer/design/milestone1.md#second-wave-kernels) says two;
-three are needed above $2^{2 e_{\max} - 2}$, where a subnormal $x$ can still give a finite result):
-up, by $2^{e_{\max}-1}$ as often as needed and then the rest, every step exact until one
-overflows, so the result is $2^n x$ exactly or $(\pm\infty, 0)$; down, by $2^n / \eta$ and then by
-$\eta$, the smallest power of two of `T`. The result is canonical, and normalized when finite.
-Down, $\lvert z - 2^n x\rvert \le \eta$, the bound of one call, holds by an argument (a limb the
-first step leaves normal is scaled exactly, and one it makes subnormal is rounded to zero by the
-second step either way) that is tested against the oracle, through the claims of the one-step
-kernel (`api.oracle.mul_pow2_2_full.*`, form `ldexp_far`), and not proved. For one limb, the
-same steps give $\mathrm{RN}(2^n x)$, what `std::ldexp` returns.
+**`ldexp(x, n)` is defined for every $n$.** When $2^n$ is a number of `T` it is one call of the
+kernel, with the proved statements of the table. Otherwise ($n$ above 1023 or below $-1074$ for
+`double`) the header calls the kernel two or three times, each time with a power of two of `T`.
+The result is canonical, and normalized when it is finite; that much follows from the proved
+statements of each call. Two more statements hold by an argument that is written out in the
+design and tested through the oracle, but is **not machine-checked**
+([Scaling beyond the powers of two of the format](../developer/design/milestone1.md#scaling-beyond-the-powers-of-two-of-the-format)):
+scaling up, the result is $2^n x$ exactly or $(\pm\infty, 0)$ on overflow; scaling down,
+$\lvert z - 2^n x\rvert \le \eta$, the bound of one call. For one limb, the same steps give
+$\mathrm{RN}(2^n x)$, what `std::ldexp` returns.
 
 **A `Ball` is in one of three states**, each a set of real numbers: a *finite ball*, the reals
 within its radius of its center (center finite, radius finite and $\ge 0$); the *whole line*,
@@ -146,7 +145,8 @@ proved in Flocq's model of IEEE 754, against statements the generator prints fro
 descriptions as the C++ ([Proofs](../proofs/index.md#what-is-proved-and-in-which-model); each
 kernel's page in the [reference](../reference/index.md) gives its theorem).
 
-**Not proved yet.** When the result of a Ball operation on finite balls is guaranteed to be a
+**Not proved yet.** The two statements about `ldexp` when $2^n$ is not a number of `T`, above.
+When the result of a Ball operation on finite balls is guaranteed to be a
 finite ball rather than the whole line (B4): no such condition is proved, so a program cannot yet
 rely on a finite ball coming out. And thresholds sharper than those of the table: exhaustive runs
 on small formats first see an overflow at 0.55 of the overflow threshold or above for the

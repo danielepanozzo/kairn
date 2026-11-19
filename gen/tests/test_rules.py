@@ -731,13 +731,16 @@ p = prod(a, b)
 
 class R3OfTheKernels(unittest.TestCase):
     """Rule R3 on gen/kernels: which kernels are entry kernels; no guard is pending."""
-    # What the public headers call today (include/kairn/expansion.hpp and ball.hpp), and the full
-    # kernels and constructors that they are to call (milestone1.md).
-    CALLED = {'add_2_2', 'add_2_1', 'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_2_2', 'mul_2_1', 'neg_2', 'abs_2',
-              'add_fast_2_2', 'mul_pow2_2', 'lt_2_2', 'le_2_2', 'eq_2_2', 'lt_2_1', 'le_2_1', 'eq_2_1', 'lt_1_2',
-              'le_1_2', 'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'ball_add_1', 'ball_sub_1',
-              'ball_mul_1', 'ball_scale_1', 'ball_neg_1', 'ball_add_2', 'ball_sub_2', 'ball_mul_2', 'ball_scale_2',
-              'ball_neg_2'}
+    # What the public headers call (include/kairn/expansion.hpp and ball.hpp): the cores, through
+    # kairn::finite and the kernels that need no fix-up, and the full kernels and constructors
+    # (milestone1.md).
+    CORES = {'add_2_2', 'add_2_1', 'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_2_2', 'mul_2_1', 'neg_2', 'abs_2',
+             'add_fast_2_2', 'mul_pow2_2', 'lt_2_2', 'le_2_2', 'eq_2_2', 'lt_2_1', 'le_2_1', 'eq_2_1', 'lt_1_2',
+             'le_1_2', 'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'ball_neg_1', 'ball_neg_2'}
+    # The cores of the Ball operations are entry kernels (a center or a radius of the program may
+    # reach them), but the headers call them only inside the full Ball kernels: they have no
+    # kairn::finite form yet.
+    BALL_CORES = {f'ball_{op}_{k}' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
     # environment.hpp runs two_sum on the self-test's own constants, read through volatile objects:
     # no value of the program reaches it, and milestone1.md names it a building block, not an entry
     # kernel.
@@ -745,7 +748,8 @@ class R3OfTheKernels(unittest.TestCase):
 
     def test_entry_kernels(self):
         ks = common.kernels()
-        self.assertEqual({n for n, k in ks.items() if k.entry}, self.CALLED | TheKernels.NON_FINITE)
+        self.assertEqual({n for n, k in ks.items() if k.entry},
+                         self.CORES | self.BALL_CORES | TheKernels.NON_FINITE)
 
     def test_every_kernel_the_public_headers_call_is_an_entry_kernel(self):
         ks = common.kernels()
@@ -758,8 +762,8 @@ class R3OfTheKernels(unittest.TestCase):
                 called |= set(re.findall(r'\bgen::(\w+)\(', text)) & set(ks)
                 for macro in re.findall(r'gen::NAME##(_\w+)\(', text):        # gen::NAME##_2_2(...)
                     called |= {n for n in ks if n.endswith(macro) and n[:-len(macro)] in ('lt', 'le', 'eq')}
-        self.assertEqual(called - self.NOT_ENTRY_BUT_CALLED, self.CALLED)
-        self.assertTrue(all(ks[n].entry for n in self.CALLED))
+        self.assertEqual(called - self.NOT_ENTRY_BUT_CALLED, self.CORES | TheKernels.NON_FINITE)
+        self.assertTrue(all(ks[n].entry for n in called - self.NOT_ENTRY_BUT_CALLED))
         self.assertFalse(any(ks[n].entry for n in self.NOT_ENTRY_BUT_CALLED))
 
     def test_no_pending_guard(self):
@@ -1044,8 +1048,8 @@ class TheKernels(unittest.TestCase):
                  'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'radd', 'rmul'}
     # ball_neg_k needs no fix-up either, and reads its encloses from a ball (architecture.md).
     BALL_NEG = {'ball_neg_1', 'ball_neg_2'}
-    # The Ball cores of the second radius design, and add_2_1 with its guard: unverified until
-    # their new proofs are attached.
+    # The Ball cores of the second radius design, and add_2_1 with its guard: the kernels whose
+    # listing changed after their first proof, and whose theorems are those of the new listing.
     BALL_CORES = {f'ball_{op}_{k}' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
     REPROVE = BALL_CORES | {'add_2_1'}
 

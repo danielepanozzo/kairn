@@ -388,7 +388,9 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 2> add_fast(Expansion<T, 2> x, Expansio
 }
 
 // x 2^n through mul_pow2_2_full (Full) or the core mul_pow2_2, whose scalar must be a power of two
-// of T. Beyond the powers of T, in steps (milestone1.md, "Scaling by a power of two"):
+// of T. Beyond the powers of T, in steps. This composition is written by hand, so no generated
+// statement is about it: what it returns is argued in milestone1.md, "Scaling beyond the powers
+// of two of the format", and tested through the oracle, not machine-checked.
 // - up: by 2^pow2_max as often as needed, then the rest. Scaling up is exact until it overflows,
 //   and an infinity stays one, so only the last step decides, as one step would. Above
 //   n = pow2_max + 1 - pow2_min (2098 for double) every nonzero finite x overflows, so n stops
@@ -397,7 +399,7 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 2> add_fast(Expansion<T, 2> x, Expansio
 //   scaled exactly; one it makes subnormal (it may lose bits there) is then below 2^pow2_min times
 //   the smallest normal number, and the second step rounds it to zero. So the second step rounds
 //   each limb at most once, by at most half a subnormal step, and the bound of one step, eta,
-//   still holds: an argument, tested against the one-step kernel's claims, not proved. Below
+//   still holds. Below
 //   n = pow2_min - pow2_max - 2 (-2099 for double) every finite x rounds to zero, so n stops there.
 template <bool Full, class T>
 KAIRN_FORCEINLINE Expansion<T, 2> scale2(Expansion<T, 2> x, T c) noexcept {
@@ -1379,10 +1381,10 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(const Expansion<T, 1>& x, int 
 /// Core: z normalized, |z - 2^n x| <= eta (and, proved as a hand-written statement, exactly 2^n x
 /// when each limb's product is zero or at least 2^(p-1) eta in magnitude). Finite when |2^n x| is
 /// at most 2^(e_max - 1). When 2^n is not a number of T (n above 1023 or below -1074 for double),
-/// the kernel is called two or three times (detail::ldexp_steps): up, every step is exact until
-/// one overflows, so the result is 2^n x exactly or (+-inf, 0) on overflow; down, the result is
-/// canonical and normalized, and |z - 2^n x| <= eta holds by an argument given there, tested
-/// against the oracle but not proved.
+/// the kernel is called two or three times (detail::ldexp_steps). The result is then canonical, and
+/// normalized when finite, by the proved statements of each call. Argued in the design and tested
+/// through the oracle, but not machine-checked: up, every step is exact until one overflows, so
+/// the result is 2^n x exactly or (+-inf, 0); down, |z - 2^n x| <= eta still holds.
 template <class T>
     requires detail::proof_checked<gen::bounds::mul_pow2_2_full<T>>
 KAIRN_FORCEINLINE Expansion<T, 2> ldexp(const Expansion<T, 2>& x, int n) noexcept {

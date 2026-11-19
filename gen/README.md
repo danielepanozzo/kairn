@@ -21,12 +21,9 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `proofs/gen/Model.v` | One Rocq `Definition` per kernel over the reals, each operation one rounding by Flocq's `round`, calls kept as calls |
 | `proofs/gen/Statements.v` | `Definition K_spec : Prop` per kernel, from its claims; the proof `K_correct` must have this type |
 | `proofs/gen/Audit.v` | For each kernel not marked unverified, checks `K_correct : K_spec` and prints its assumptions |
-
-The three Rocq files are the real model only. The full kernels and the constructors of the
-non-finite layer have no real-model statement and are not in them; a kernel of the extended
-domain that has one (the comparisons, the conversions, `neg_2`, `abs_2`, `radd`, `rmul`) is printed
-as before, its requirement `canonical` read as `normalized`. The IEEE-model statements are not
-printed yet.
+| `proofs/gen/IeeeModel.v` | One Rocq `Definition` per kernel that has an IEEE-model statement, over Flocq's binary floating-point numbers (signed zeros, infinities, NaN), each operation the one of `proofs/theories/IeeeOperations.v` |
+| `proofs/gen/IeeeStatements.v` | `Definition K_ieee_spec : Prop` (and the finite-domain forms) per such kernel, from its claims, in the vocabulary of `proofs/theories/IeeeVocabulary.v` |
+| `proofs/gen/IeeeAudit.v` | For each kernel whose IEEE-model status is not unverified, checks that its theorem has the generated statement as its type and prints its assumptions |
 | `include/kairn/gen/prelude.hpp` | The force-inline macro, the FMA primitive per compiler, `abs_bits`, `next_up`, `next_down`; refuses x86 without hardware FMA |
 | `include/kairn/gen/scalar.hpp` | Every kernel for `double` and `float`, in `kairn::gen` |
 | `include/kairn/gen/avx2.hpp` | Every kernel for `__m256d` and `__m256` (4 doubles, 8 floats); refuses a target without AVX2 and FMA |
@@ -35,6 +32,11 @@ printed yet.
 | `include/kairn/gen/selftest.hpp` | Every kernel on fixed operands, with the results the interpreter computes: the stored bit patterns of `kairn::self_test()` |
 | `gen/claims.json` | What every kernel claims, with the constants per format as exact fractions |
 | `gen/tests/runner_kernels.inc` | The table of kernels of the C++ runners `gen/tests/runner.cpp` and `packed_runner.cpp` |
+
+`Model.v`, `Statements.v` and `Audit.v` are the real model only. The full kernels and the
+constructors of the non-finite layer have no real-model statement and are not in them; a kernel of
+the extended domain that has one (the comparisons, the conversions, `neg_2`, `abs_2`, `radd`,
+`rmul`) is printed there with its requirement `canonical` read as `normalized`.
 
 `build` also lists the kernels that are unverified (in the real model, and in the IEEE model), those
 without a real-model statement, those that are not `constexpr`, those exempt from the non-finite

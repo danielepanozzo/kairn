@@ -178,7 +178,7 @@ to handle that.**
 | $T \to$ k-number | $(a, 0, \dots, 0)$: exact, normalized. | — |
 | k-number $\to$ k'-number, $k' > k$ | Append zeros: exact, normalized. | — |
 | k-number $\to$ k'-number, $k' < k$ | Keep the first $k'$ limbs: normalized, error at most $\frac{u^{k'}}{1-u}\lvert x_0\rvert$. | 0 |
-| Mixed-k arithmetic | Defined as: convert the narrower operand, then operate. | — |
+| Mixed-k arithmetic | The narrower operand is taken at its exact value: the result satisfies the statement of the operation on two operands of the wider type. Where a kernel for the mixed form exists (two limbs with one limb: `add_2_1`, `sub_2_1`, `sub_1_2`, `mul_2_1`), the headers call it and its tighter bound holds (changed in Milestone 1; the first text said "convert the narrower operand, then operate"). | — |
 | `double` limbs $\leftrightarrow$ `float` limbs | A `double` is exactly a 3-limb `float` number when it is in `float` range and a multiple of the smallest `float` subnormal (always the case above $2^{-97}$); the conversions are exact splitting or exact summation followed by truncation, with overflow to $\pm\infty$ and an underflow term. Not in the brief: added because the first client builds in `double` on the host and narrows to `float` for the device ([API](library.md#what-the-first-client-needs)). | $\le k'$ |
 | `ldexp(x, n)`, `half(x)` | Each limb is scaled; the result is renormalized. Exact unless a limb becomes subnormal; always $\lvert z - 2^n x\rvert \le \tfrac k2\,\eta$. | $k/2$ |
 | `neg`, `abs` | Exact; limb-wise sign change (the sign of $x$ is the sign of $x_0$). | — |

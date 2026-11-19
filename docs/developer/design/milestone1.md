@@ -301,7 +301,9 @@ radd(a, b) -> r          rmul(a, b) -> r
 ```
 
 **Scaling by a power of two.** `c` is a limb that is a power of two; `ldexp(x, n)` and `half(x)`
-are this kernel with $c = 2^n$ (two calls when $2^n$ is not a number of the format).
+are this kernel with $c = 2^n$. When $2^n$ is not a number of the format, the public `ldexp` calls
+the kernel in steps, each with a power of two of the format
+([below](#scaling-beyond-the-powers-of-two-of-the-format)).
 
 ```
 mul_pow2_2(x, c) -> z
@@ -343,6 +345,58 @@ one-limb operand, which is its own rounding.
 
 Why `mul_pow2_2` ends with `fast_two_sum`: when the second product is rounded in the subnormal
 range it can land exactly half a gap from the first, and the pair is then no longer normalized.
+
+### Scaling beyond the powers of two of the format
+
+`ldexp(x, n)` is defined for every `int` $n$, but the powers of two of the format only run from
+$\eta$ to $2^{e_{\max}-1}$ ($2^{-1074}$ to $2^{1023}$ for `double`). Outside that range the public
+header calls the kernel several times, each time with a power of two of the format
+(`detail::ldexp_steps` in `expansion.hpp`):
+
+- **Up**, $2^n > 2^{e_{\max}-1}$: by $2^{e_{\max}-1}$ while the exponent that remains is larger
+  than $e_{\max}-1$, then by the rest. Two calls reach $2^{2e_{\max}-2}$ only, and a subnormal
+  $x$ can give a finite result up to $n = 2097$ for `double`, so three calls may be needed. From
+  $n = 2098$ on (in general, $2^n \ge 2^{e_{\max}}/\eta$) every nonzero finite $x$ overflows, and
+  $n$ is clamped there.
+- **Down**, $2^n < \eta$: by $c_1 = 2^n/\eta$, then by $\eta$. Below $n = -2099$ for `double` (in
+  general, $2^n \le \eta/2^{e_{\max}+1}$) every finite $x$ gives a result that rounds to zero, and
+  $n$ is clamped there.
+
+**Status: argued and tested, not machine-checked.** These steps are composed by hand in the
+header, outside the generator, so no generated statement is about them. Each call satisfies the
+proved statements of the kernel; in particular the result is canonical, and normalized when it is
+finite. The two statements below are about the composition. They rest on the arguments given here
+and on the oracle, which judges every step of the public `ldexp` against the claims of the kernel
+(`api.oracle.mul_pow2_2_full.*`, form `ldexp_far`). Turning the composition into a generated
+kernel with a proved statement is an open item.
+
+*Up: the result is $2^n x$ exactly, or $(\pm\infty, 0)$ with the sign of $x$.* A limb times a
+power of two $c \ge 1$ is a number of the format unless it overflows, so both products of a call
+are exact. The pair of products is normalized because $x$ is: if $x_0$ is subnormal then $x_1 = 0$,
+and otherwise scaling by $c$ maps the numbers of the format around $x_0$ to those around $c x_0$,
+ties and parity included. So `fast_two_sum` returns the pair unchanged, and the call returns $cx$.
+A call that overflows returns $(\pm\infty, 0)$ with the sign of $x$ (F4), and the calls after it
+keep that value (F5).
+
+*Down: $\lvert z - 2^n x\rvert \le \eta$, the bound of one call, for `float` and `double`.* Let
+$h$ and $l$ be the two products of the first call and $y$ its result. A product of magnitude at
+least $2^{p-1}\eta$, the smallest normal number, is exact; a smaller one is rounded, by at most
+$\tfrac12\eta$, to a number of magnitude at most $2^{p-1}\eta$. `fast_two_sum` loses nothing
+($y_0 + y_1 = h + l$) and $\lvert y_1\rvert \le \lvert l\rvert$.
+
+- If both products are exact, $y = c_1 x$, and the second call is one call of the kernel on it:
+  the claim of the kernel gives the bound.
+- If only $l$ is rounded, then $\lvert y_1\rvert \le 2^{p-1}\eta$, so in the second call
+  $\lvert y_1 \eta\rvert < \tfrac12\eta$ rounds to zero and $z = \mathrm{RN}(y_0\eta)$. The error
+  is at most $\tfrac12\eta$ for that rounding, plus $\lvert y_1\rvert\eta$, plus $\eta$ times the
+  $\tfrac12\eta$ lost in $l$: less than $\eta$.
+- If $h$ is rounded too, then $\lvert y_0\rvert \le 2^p\eta$, both products of the second call
+  round to zero, and $z = 0$, while $\lvert 2^n x\rvert = \eta\lvert c_1 x\rvert < \tfrac12\eta$.
+
+The last two cases use $2^p\eta < \tfrac12$, which holds for `float` and `double`. For one limb the
+same steps give $\mathrm{RN}(2^n x)$ exactly, what `std::ldexp` returns: scaling up is exact until
+it overflows, and scaling down either leaves the first product exact or makes both paths round to
+a zero of the sign of $x$.
 
 ## Ball kernels
 

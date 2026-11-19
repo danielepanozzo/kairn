@@ -77,7 +77,7 @@ It calls [`two_sum`](two_sum.md), [`fast_two_sum`](fast_two_sum.md).
 ```
 # DWPlusFP: a double-word number plus a number of the format. The operand a enters from the
 # program and is guarded in the first line (rule R3; milestone1.md, "Values that enter from the
-# program"). Unverified until the proof of add_2_1_correct is attached to this listing.
+# program").
 
 g        = guard(a)
 (sh, sl) = two_sum(x0, g)
