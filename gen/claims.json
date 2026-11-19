@@ -117,7 +117,7 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
+      "status": "proved",
       "theorem": {
         "file": "proofs/theories/Ball2.v",
         "name": "ball_add_1_correct"
@@ -304,7 +304,7 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
+      "status": "proved",
       "theorem": {
         "file": "proofs/theories/Ball2.v",
         "name": "ball_mul_1_correct"
@@ -434,7 +434,7 @@
       "status": "proved",
       "ieee_status": "unverified",
       "theorem": {
-        "file": "proofs/theories/Ball.v",
+        "file": "proofs/theories/Ball2.v",
         "name": "ball_neg_1_correct"
       },
       "source": {
@@ -492,7 +492,7 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
+      "status": "proved",
       "theorem": {
         "file": "proofs/theories/Ball2.v",
         "name": "ball_scale_1_correct"
@@ -621,7 +621,7 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
+      "status": "proved",
       "theorem": {
         "file": "proofs/theories/Ball2.v",
         "name": "ball_sub_1_correct"
@@ -1426,7 +1426,7 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
+      "status": "proved",
       "theorem": {
         "file": "proofs/theories/Add21.v",
         "name": "add_2_1_correct"
@@ -1806,7 +1806,7 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
+      "status": "proved",
       "theorem": {
         "file": "proofs/theories/Ball2.v",
         "name": "ball_add_2_correct"
@@ -2065,7 +2065,7 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
+      "status": "proved",
       "theorem": {
         "file": "proofs/theories/Ball2.v",
         "name": "ball_mul_2_correct"
@@ -2264,7 +2264,7 @@
       "status": "proved",
       "ieee_status": "unverified",
       "theorem": {
-        "file": "proofs/theories/Ball.v",
+        "file": "proofs/theories/Ball2.v",
         "name": "ball_neg_2_correct"
       },
       "source": {
@@ -2390,7 +2390,7 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
+      "status": "proved",
       "theorem": {
         "file": "proofs/theories/Ball2.v",
         "name": "ball_scale_2_correct"
@@ -2525,7 +2525,7 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
+      "status": "proved",
       "theorem": {
         "file": "proofs/theories/Ball2.v",
         "name": "ball_sub_2_correct"

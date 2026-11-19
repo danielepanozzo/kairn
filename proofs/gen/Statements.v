@@ -49,7 +49,7 @@ Definition add_1_1_spec : Prop :=
   s = RN emin prec (a + b) /\
   Rabs (s - (a + b)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (a + b).
 
-(* ball_add_1: midpoint-radius sum (Milestone 1 listing, second radius design). Status: unverified. *)
+(* ball_add_1: midpoint-radius sum (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_add_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall cx rx cy ry : R,
@@ -64,7 +64,7 @@ Definition ball_add_1_spec : Prop :=
   fmt emin prec rz /\
   (forall x y : R, Rabs (x - cx) <= rx -> Rabs (y - cy) <= ry -> Rabs ((x + y) - cz) <= rz).
 
-(* ball_mul_1: midpoint-radius product (Milestone 1 listing, second radius design). Status: unverified. *)
+(* ball_mul_1: midpoint-radius product (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_mul_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall cx rx cy ry : R,
@@ -91,7 +91,7 @@ Definition ball_neg_1_spec : Prop :=
   fmt emin prec rz /\
   (forall x : R, Rabs (x - cx) <= rx -> Rabs ((- x) - cz) <= rz).
 
-(* ball_scale_1: midpoint-radius scaling (Milestone 1 listing, second radius design). Status: unverified. *)
+(* ball_scale_1: midpoint-radius scaling (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_scale_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall cx rx a : R,
@@ -104,7 +104,7 @@ Definition ball_scale_1_spec : Prop :=
   fmt emin prec rz /\
   (forall x : R, Rabs (x - cx) <= rx -> Rabs ((x * a) - cz) <= rz).
 
-(* ball_sub_1: midpoint-radius difference (Milestone 1 listing). Status: unverified. *)
+(* ball_sub_1: midpoint-radius difference (Milestone 1 listing). Status: proved. *)
 Definition ball_sub_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall cx rx cy ry : R,
@@ -241,7 +241,7 @@ Definition abs_upper_2_spec : Prop :=
   fmt emin prec t /\
   t = RU emin prec (Rabs (x0 + x1)).
 
-(* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. Status: unverified. *)
+(* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. Status: proved. *)
 Definition add_2_1_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 a : R,
@@ -271,7 +271,7 @@ Definition add_fast_2_2_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= 3 * u prec ^ 2 * (Rabs (x0 + x1) + Rabs (y0 + y1)).
 
-(* ball_add_2: midpoint-radius sum (Milestone 1 listing, second radius design). Status: unverified. *)
+(* ball_add_2: midpoint-radius sum (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_add_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall cx0 cx1 rx cy0 cy1 ry : R,
@@ -296,7 +296,7 @@ Definition mul_2_2_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) * (y0 + y1))) <= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + (3 / 2) * eta emin.
 
-(* ball_mul_2: midpoint-radius product (Milestone 1 listing, second radius design). Status: unverified. *)
+(* ball_mul_2: midpoint-radius product (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_mul_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall cx0 cx1 rx cy0 cy1 ry : R,
@@ -342,7 +342,7 @@ Definition mul_2_1_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
 
-(* ball_scale_2: midpoint-radius scaling (Milestone 1 listing, second radius design). Status: unverified. *)
+(* ball_scale_2: midpoint-radius scaling (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_scale_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall cx0 cx1 rx a : R,
@@ -355,7 +355,7 @@ Definition ball_scale_2_spec : Prop :=
   normalized_2 emin prec cz0 cz1 /\
   (forall x : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs ((x * a) - (cz0 + cz1)) <= rz).
 
-(* ball_sub_2: midpoint-radius difference (Milestone 1 listing). Status: unverified. *)
+(* ball_sub_2: midpoint-radius difference (Milestone 1 listing). Status: proved. *)
 Definition ball_sub_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall cx0 cx1 rx cy0 cy1 ry : R,

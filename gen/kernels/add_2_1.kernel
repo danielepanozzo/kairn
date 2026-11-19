@@ -13,7 +13,7 @@ min_precision: 3
 theorem:       proofs/theories/Add21.v add_2_1_correct
 source:        JMP17 Alg. 4 (DWPlusFP); bound from MR22
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 ieee:          bridge spec
 ieee_finite:   abs_le(x0,-2);abs_le(a,-2)
 ieee_finite_result: abs_le(x+a,-2)

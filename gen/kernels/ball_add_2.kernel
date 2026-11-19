@@ -21,7 +21,7 @@ min_precision: 3
 theorem:       proofs/theories/Ball2.v ball_add_2_correct
 source:        midpoint-radius sum (Milestone 1 listing, second radius design)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
