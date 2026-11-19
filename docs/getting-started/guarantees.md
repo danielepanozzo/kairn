@@ -41,7 +41,10 @@ root) will ship before their proofs.
 
 ## The operations
 
-For normalized operands $x$, $y$ and a limb $a$, with $z$ the result. "Exact" rows have no kernel:
+Each kernel has a page in the [reference](../reference/index.md), generated from
+`gen/claims.json`: its statement, the theorem and file that prove it, its constants for `float`
+and `double`, and what the brute-force runs measured. In short, for normalized operands $x$, $y$
+and a limb $a$, with $z$ the result. "Exact" rows have no kernel:
 they are IEEE 754 operations on one limb, or read limbs, and need no proof of Kairn's. The second
 column is the claim of the kernel, proved in the *real model*, where no operation overflows. The
 third says what is proved in Flocq's model of IEEE 754, where operations overflow
