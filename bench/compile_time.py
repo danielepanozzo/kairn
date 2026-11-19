@@ -46,6 +46,8 @@ UNITS = {
     'empty': (os.path.join(CT, 'empty.cpp'), False, 'an empty translation unit'),
     'std_headers': (os.path.join(CT, 'std_headers.cpp'), False,
                     '<cmath> and the standard headers kairn.hpp includes'),
+    'kairn_std': (os.path.join(CT, 'kairn_std.cpp'), False,
+                  'the standard headers kairn.hpp includes, without <cmath>'),
     'iostream': (os.path.join(CT, 'iostream.cpp'), False, '<iostream> alone'),
     'include': (os.path.join(CT, 'include.cpp'), False, 'kairn/kairn.hpp alone'),
     'use_e2': (os.path.join(CT, 'use_e2.cpp'), False,

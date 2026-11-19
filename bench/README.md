@@ -150,6 +150,7 @@ of `cl.exe`), and the size of the object. Nothing is linked.
 |---|---|
 | `empty` | nothing: what starting the compiler costs |
 | `std_headers` | `<cmath>` and the standard and intrinsics headers that `kairn/kairn.hpp` includes |
+| `kairn_std` | the same without `<cmath>`, which Kairn does not include |
 | `iostream` | `<iostream>`, for scale |
 | `include` | `kairn/kairn.hpp`, nothing used |
 | `use_e2` | every public operation of `Expansion<double, 2>` and `Ball<double, 2>` once (`compile_time/use.hpp`) |

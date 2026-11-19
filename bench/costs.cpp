@@ -21,7 +21,10 @@
 //   loop, each addition a call of a non-inlined function (kc_k1_add), which is where a cookie
 //   costs most; double/loop, double/call: the same two loops on double;
 // - double/sum, fma/chain: one double addition, and one fused multiply-add s = fma(s, h, x[i]),
-//   in a chain: the scale.
+//   in a chain: the scale. A chain of 256 steps this cheap is short enough for the processor to
+//   overlap the end of one call with the start of the next, so its step is below the latency of
+//   the operation, and they are no measure of it; a step of the two-limb chains is more than ten
+//   times longer.
 //
 // Each records a checksum of its outputs, so that the programs can be compared: neither the checks
 // nor the cookie change a result.
