@@ -178,6 +178,14 @@ class ExtPlan:
             else:
                 self.req.append((r[0], "requires %s(%s)" % (r[0], r[1]), pl.in_slices[r[1]]))
         self.items = []
+        # Output limbs whose value a `represents` entry pins on every line (neg_2 and abs_2
+        # carry one next to normalized and error): the suspicious heuristic of those kinds is
+        # then not needed for them.
+        self.pinned = set()
+        for e, c in zip(k.ensures, pl.entries):
+            if e.kind == "represents":
+                for lo, hi in c["ranges"]:
+                    self.pinned.update(range(lo, hi))
         # Statistics entries after those of the kernel's own ensures: one per entry of the core
         # of each `extends` entry (F2 applies them), labelled as such.
         self.extra = []
@@ -562,9 +570,11 @@ def k_finite_kind(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
         out.extend(ck._judge(pl, st.entries, x, z, V[0] if V else None, {}, line, only=(i,)))
         return out
     es.applicable += 1
+    # Where a `represents` entry pins these outputs, it judges what is shown here otherwise.
+    pinned = all(i in ep.pinned for lo, hi in c["ranges"] for i in range(lo, hi))
     if fin:
         es.count("non-finite result on finite operands")
-        if ep.small(x, V):
+        if not pinned and ep.small(x, V):
             sus.append("%s: a non-finite result with operands and exact value below Omega/4"
                        % c["kind"])
     else:
@@ -572,7 +582,7 @@ def k_finite_kind(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
         # Outside the claim, which says only "canonical"; but a result whose value is not the
         # value of the kernel in the extended reals is shown, as the finite layer shows a
         # non-finite result on small operands.
-        if V is not None and group_value(w) != V[0]:
+        if not pinned and V is not None and group_value(w) != V[0]:
             sus.append("%s: a non-finite operand and a result whose value is not %s"
                        % (c["kind"], V[0]))
     return out

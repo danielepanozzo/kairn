@@ -1359,6 +1359,210 @@
    }
   },
   {
+   "name": "ball_neg_1",
+   "domain": "extended",
+   "inputs": [
+    {
+     "name": "cx",
+     "limbs": 1
+    },
+    {
+     "name": "rx",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "cz",
+     "limbs": 1
+    },
+    {
+     "name": "rz",
+     "limbs": 1
+    }
+   ],
+   "value": "-cx",
+   "requires": [
+    "ball(cx, rx)"
+   ],
+   "ensures": [
+    {
+     "kind": "encloses",
+     "center": "cz",
+     "radius": "rz",
+     "set": "-x",
+     "balls": {
+      "x": {
+       "center": "cx",
+       "radius": "rx"
+      }
+     },
+     "finite_when": []
+    }
+   ],
+   "min_precision": 1,
+   "status": "proved",
+   "ieee_status": "unverified",
+   "instances": {
+    "binary64": [],
+    "binary32": []
+   }
+  },
+  {
+   "name": "ball_neg_2",
+   "domain": "extended",
+   "inputs": [
+    {
+     "name": "cx",
+     "limbs": 2
+    },
+    {
+     "name": "rx",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "cz",
+     "limbs": 2
+    },
+    {
+     "name": "rz",
+     "limbs": 1
+    }
+   ],
+   "value": "-cx",
+   "requires": [
+    "ball(cx, rx)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "cz"
+    },
+    {
+     "kind": "encloses",
+     "center": "cz",
+     "radius": "rz",
+     "set": "-x",
+     "balls": {
+      "x": {
+       "center": "cx",
+       "radius": "rx"
+      }
+     },
+     "finite_when": []
+    }
+   ],
+   "min_precision": 1,
+   "status": "proved",
+   "ieee_status": "unverified",
+   "instances": {
+    "binary64": [],
+    "binary32": []
+   }
+  },
+  {
+   "name": "add_1_1",
+   "inputs": [
+    {
+     "name": "a",
+     "limbs": 1
+    },
+    {
+     "name": "b",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "s",
+     "limbs": 1
+    }
+   ],
+   "value": "a+b",
+   "requires": [],
+   "ensures": [
+    {
+     "kind": "leading_rounded",
+     "of": "s"
+    },
+    {
+     "kind": "error",
+     "of": "s",
+     "form": "R",
+     "c": "1/(1+u)",
+     "k": 1,
+     "t": "0",
+     "when": null
+    }
+   ],
+   "min_precision": 1,
+   "status": "proved",
+   "instances": [
+    {
+     "binary64": {
+      "rel": "1/9007199254740993",
+      "abs": "0"
+     },
+     "binary32": {
+      "rel": "1/16777217",
+      "abs": "0"
+     }
+    }
+   ]
+  },
+  {
+   "name": "mul_1_1",
+   "inputs": [
+    {
+     "name": "a",
+     "limbs": 1
+    },
+    {
+     "name": "b",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "s",
+     "limbs": 1
+    }
+   ],
+   "value": "a*b",
+   "requires": [],
+   "ensures": [
+    {
+     "kind": "leading_rounded",
+     "of": "s"
+    },
+    {
+     "kind": "error",
+     "of": "s",
+     "form": "R",
+     "c": "1/(1+u)",
+     "k": 1,
+     "t": "1/2",
+     "when": null
+    }
+   ],
+   "min_precision": 1,
+   "status": "proved",
+   "instances": [
+    {
+     "binary64": {
+      "rel": "1/9007199254740993",
+      "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+     },
+     "binary32": {
+      "rel": "1/16777217",
+      "abs": "1/1427247692705959881058285969449495136382746624"
+     }
+    }
+   ]
+  },
+  {
    "name": "make_2",
    "domain": "extended",
    "inputs": [
@@ -1542,6 +1746,10 @@
      "k": 1,
      "t": "0",
      "when": null
+    },
+    {
+     "kind": "represents",
+     "of": "z"
     }
    ],
    "min_precision": 1,
@@ -1592,6 +1800,10 @@
      "k": 1,
      "t": "0",
      "when": null
+    },
+    {
+     "kind": "represents",
+     "of": "z"
     }
    ],
    "min_precision": 1,

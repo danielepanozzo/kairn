@@ -24,9 +24,9 @@ Claims are read from `gen/claims.json` of this repository unless `--claims FILE`
 The selftest uses its own hand-written fixtures, `oracle/selftest/claims-wave1.json`,
 `oracle/selftest/claims-wave2.json` (the kernels of [Milestone 1
 statements](../docs/developer/design/milestone1.md)) and `oracle/selftest/claims-wave3.json`
-(the non-finite layer: the full kernels with their cores, the full Ball kernels, the
-constructors, and the kernels that gain the extended domain), so that it does not depend on the
-generator.
+(the non-finite layer: the full kernels with their cores, the full Ball kernels and `ball_neg_k`,
+the constructors, the kernels that gain the extended domain, `neg_2` and `abs_2` with
+`represents`, and `add_1_1` and `mul_1_1`), so that it does not depend on the generator.
 
 ## gen
 
@@ -36,7 +36,10 @@ kairn-oracle gen mul_2_2 fp:5:-10:5 --exhaustive --restrict x.lead=2:2 --restric
 kairn-oracle gen mul_2_2 fp:5:-10:5 --exhaustive --restrict x.lead=2:2 --total
 ```
 
-Formats are `binary64`, `binary32` or `fp:P:QMIN:QMAX`. The kernel's inputs and requirements come
+Formats are `binary64`, `binary32` or `fp:P:QMIN:QMAX` with $P \ge 1$ (at precision 1 the numbers
+are zero and the powers of two, and a tie rounds to the even integer significand at the exponent
+of the value, as in Flocq: halfway between $2^k$ and $2^{k+1}$ goes to $2^{k+1}$, and $\eta/2$ to
+zero). The kernel's inputs and requirements come
 from the claims; every generated case satisfies them (the selftest checks this for every kernel
 and stratum).
 
@@ -130,7 +133,8 @@ For each line, in this order:
 1. The kernel must have claims and the format must parse; the line must have the arrow and the
    right number of limbs on both sides. Otherwise: **failure**.
 2. If the format's precision is below the kernel's `min_precision`, the line is **out of scope**
-   and not judged (`--ignore-min-precision` judges it anyway).
+   and not judged (`--ignore-min-precision` judges it anyway). The kernel's bounds are not even
+   evaluated for such a format, since they need not exist there ($3/(1 - 4u)$ at $p = 2$).
 3. **Requirements**: every input limb must be a finite number of the format and every mask
    input `0` or `1`, then every `requires` entry must hold (`normalized(x)`:
    $x_i = \mathrm{RN}(x_i + x_{i+1})$; `abs_ge(a, b)`: $|a| \ge |b|$ as values; `nonneg(r)`:
@@ -220,9 +224,12 @@ is judged: nothing is "non-finite, not judged". Steps 1 and 2 are as above; then
    non-finite result of `extends`, `normalized`, `error` or `upper` on finite operands when every
    operand and the exact value are below $\Omega/4$; and a canonical result of `normalized` or
    `error` whose value is not the kernel's value in the extended reals when an operand is not
-   finite (the claim says only "canonical" there). A whole line from finite operands is never
-   suspicious: the radius steps reach $+\infty$ far below $\Omega$ on small formats (at $p = 2$
-   a set within $\pm 1.25$ becomes the whole line with $\Omega = 6$).
+   finite (the claim says only "canonical" there). Neither is shown for outputs that a
+   `represents` entry of the same kernel pins (`neg_2` and `abs_2` carry one): that entry judges
+   them on every line. A whole line from finite operands is never suspicious: the first radius
+   design's steps reach $+\infty$ far below $\Omega$ on small formats (at $p = 2$ a set within
+   $\pm 1.25$ becomes the whole line with $\Omega = 6$). A Ball kernel of the extended domain
+   need not be a full kernel: `ball_neg_k` carries the extended `encloses` itself.
 
 Statistics of the extended domain, per entry: the classes (`class F2: finite operands, finite
 result`, `class F4: finite operands, non-finite result`, `class F5: a non-finite operand`;
@@ -383,7 +390,19 @@ input radii, or `rx` itself for `ball_scale`), and the constructors `make_2`, `m
 `ball_make_1` and `ball_make_2`; the other kernels run on non-finite operands as listed. Its
 arithmetic is IEEE's on every format: overflow to $\pm\infty$ at the format's own threshold,
 NaN propagation, $0 \cdot \infty$ and $\infty - \infty$ are NaN, comparisons are false on a NaN,
-`succ` of $\Omega$ is $+\infty$ and `succ` of $-\infty$ is $-\Omega$.
+`succ` of $\Omega$ is $+\infty$ and `succ` of $-\infty$ is $-\Omega$. The fix-up's
+`times_inf(t)` is a NaN for a NaN or a zero and otherwise the infinity of the sign of $t$.
+
+**The two radius designs.** `--radius first` (the default) runs the Ball cores with steps to the
+next number up; `--radius second` runs milestone1.md's "The radius, second design": ordinary
+operations on nonnegative values, then `fma(t, G, H)`. Its constants are computed exactly for
+any format from the page's table and rounded up to the format ($+\infty$ beyond $\Omega$), from
+the proved bound of the center kernel as the pages state it: $u/(1+u)$, with $\eta/2$ for a
+product, for one limb (`add_1_1`, `mul_1_1`); `add_2_2`, `mul_2_2` and `mul_2_1` of
+architecture.md for two. `refrun --print-constants FORMAT` prints them; `brute --radius second`
+runs the in-process runner with them. The variants `ball2-no-E` and `ball2-no-H` drop a
+constant (planted bugs); `ball2-G-pred` and `ball2-H-half` take $G$ one unit in the last place
+smaller and half of $H$ rounded up, to measure the slack the page reports.
 
 `selftest/refrun.cpp` is a standalone C++ runner for binary64 and binary32, written from the same
 pseudo-code. The selftest compiles it with the system compiler (`$CXX`, then `c++`, `clang++`,
@@ -392,7 +411,9 @@ pseudo-code. The selftest compiles it with the system compiler (`$CXX`, then `c+
 no compiler works. It has its own variants (`subnormal-flush` instead of
 `subnormal-trunc`). Its `succ` and `pred` are `nextafter` toward the infinities, and it takes the
 Ball constants on its command line (`--const binary64.mul_2_2.U=0x1.0000000000001p-104`, one per
-format, center kernel and constant), which the selftest computes with the Python runner.
+format, center kernel and constant; `--const binary64.ball_mul_2.G=...` for the second design,
+one per format, Ball kernel and constant), which the selftest computes with the Python runner.
+`--radius second` selects the second design.
 
 ## selftest
 
@@ -450,6 +471,11 @@ computed over the wrong cases, ...) and requires `selftest --quick` to fail on t
 | `injected_wave3`, `injected_wave3_exhaustive` | a planted bug of the layer not caught in the statement where it belongs, caught in another, or flagged in a kernel that does not use it |
 | `judge_wave3` | one of 144 hand-written lines judged otherwise than worked out by hand (each failure in its statement), or a class count or an overflow position off |
 | `merging_wave3` | the merge of summaries of the layer differs from the whole |
+| `radius_second` | a constant $E$, $G$ or $H$ of the second radius design other than worked out by hand from the page's table (binary64 and a $p = 3$ format), `ball_sub_k` with other constants than `ball_add_k`, either radius design flagged on the same streams |
+| `precision_one` | at precision 1: rounding (ties by the definition), directed rounding, neighbors, membership or normalized pairs different from brute force; a kernel proved from precision 1 invalid, flagged or unjudged at random or on every operand; a format below a kernel's minimum precision setting the kernel aside |
+
+The Ball kernels of the non-finite layer run with the second radius design in these tests (the
+design their IEEE-model statements are proved with); the second wave's tests run the first.
 
 Injected errors (`refrun --list-variants`): one ulp off in the second limb in about 1 case in 256;
 a result with the right value but not normalized; a product that drops a cross term; additions
@@ -485,3 +511,5 @@ The non-finite layer, each planted bug with the statement that must catch it (an
 | `ball-full-finite-whole`: a finite center kept with the radius $\Omega$ | full Ball kernels | B3 |
 | `make-negative-radius`, `make-nan-radius`: the radius tested for NaN only, or not at all | `ball_make_1`, `ball_make_2` | `makes_ball` |
 | `make2-inf-nan-tail`: `make_2` of an infinity with a NaN tail | `make_2` | `represents` |
+| `ball2-no-E`: the second design without $E$ | one-limb full Ball kernels; $G$ rounded up has room for the missing term at low precision (a 2-limb center at $p = 4$; `ball_mul_1` on every case of `fp:2:-2:1` and `fp:3:-3:0`), so the exhaustive test takes `ball_mul_1` at `fp:3:-4:1` | B3 |
+| `ball2-no-H`: the second design without $H$ | products and scalings of balls | B3 |
