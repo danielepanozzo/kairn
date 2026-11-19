@@ -9,6 +9,9 @@
   center. They are computed here with integers and fractions only, for any format, so that the
   C++ literals, the interpreter and the tests use the same numbers; the Rocq model states the same
   definition over the reals (rocq.py).
+- `up(EXPR)`: the smallest number of the format not below EXPR > 0, an exact rational expression
+  over u, eta, integers, unit(K) and tiny(K) (c u^k and t eta of K's error entry), with + - * /,
+  parentheses and integer powers.
 """
 from fractions import Fraction
 
@@ -69,10 +72,69 @@ def computed(fn, k, p, qmin, qmax):
     return v
 
 
+UP_TREES = {'int', 'name', 'add', 'sub', 'mul', 'div', 'neg', 'pow', 'call'}
+UP_NAMES = {'u', 'eta'}
+
+
+def up_tree(text):
+    """The parsed EXPR of a constant up(EXPR), checked for its vocabulary: u, eta, integers,
+    unit(K) and tiny(K), + - * /, parentheses and integer powers. Raises ConstError."""
+    try:
+        tree = expr.parse(text)
+    except expr.ExprError as e:
+        raise ConstError(f'up({text}): {e}')
+
+    def walk(t):
+        if t[0] not in UP_TREES:
+            raise ConstError(f'up({text}): {t[0]} is not allowed (only + - * /, ^ INTEGER, u, eta, '
+                             'integers, unit(K) and tiny(K))')
+        for x in t[1:]:
+            if isinstance(x, tuple):
+                walk(x)
+    walk(tree)
+    extra = expr.names(tree) - UP_NAMES
+    if extra:
+        raise ConstError(f'up({text}): unknown name {", ".join(sorted(extra))}')
+    return tree
+
+
+def up_exact(text, kernels, p, qmin):
+    """The exact value of EXPR in up(EXPR), for precision p and underflow threshold 2^qmin."""
+    tree = up_tree(text)
+    u, eta = Fraction(1, 2 ** p), Fraction(2) ** qmin
+    env = {'u': u, 'eta': eta}
+    for fn, kname in expr.calls(tree):
+        k = kernels.get(kname)
+        if k is None:
+            raise ConstError(f'up({text}): {kname} is not a kernel')
+        e = source_bound(k)
+        if k.min_precision is not None and p < k.min_precision:
+            raise ConstError(f'up({text}) is not defined for precision {p}: the claims of {kname} hold '
+                             f'from precision {k.min_precision} on')
+        try:
+            env[f'unit({kname})'] = expr.evaluate(expr.parse(e['c']), {'u': u}) * u ** e['k']
+            env[f'tiny({kname})'] = expr.evaluate(expr.parse(e['t']), {}) * eta
+        except expr.ExprError as err:
+            raise ConstError(f'up({text}): the bound of {kname}: {err}')
+    try:
+        return expr.evaluate(tree, env)
+    except expr.ExprError as err:
+        raise ConstError(f'up({text}): {err}')
+
+
 def value(name, kernels, p, qmin, qmax):
     """The exact value of constant `name` in format (p, qmin, qmax), as a Fraction."""
     if name == ir.ZERO:
         return Fraction(0)
+    text = ir.up(name)
+    if text is not None:
+        x = up_exact(text, kernels, p, qmin)
+        if not x > 0:
+            raise ConstError(f'{name} is {x} in the format ({p}, {qmin}, {qmax}); it must be positive')
+        v = round_up(x, p, qmin, qmax)
+        if v is None:
+            raise ConstError(f'{name} overflows the format ({p}, {qmin}, {qmax})')
+        return v
     if name in ir.CONSTANTS:
         v = Fraction(ir.CONSTANTS[name](p))
         if round_up(v, p, qmin, qmax) != v:

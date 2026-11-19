@@ -168,6 +168,29 @@ def requests(fmt, kernel, n, seed):
     return [operands(rng, fmt, kernel) for _ in range(n)]
 
 
+def nonfinite_cases(fmt, kernel, n, seed):
+    """For a kernel of the extended domain, n cases of `requests` in which each limb group is
+    replaced, with probability 1/2, by a non-finite value in the forms the non-finite layer uses:
+    (+-inf, +-0) and (nan, nan) for two limbs, +-inf, nan and the two zeros for one limb. None for
+    any other kernel (an empty list)."""
+    if not kernel.extended:
+        return []
+    rng = random.Random(f'{seed}:{fmt}:{kernel.name}:nonfinite')
+    pairs = [(s * math.inf, z) for s in (1.0, -1.0) for z in (0.0, -0.0)] + [(math.nan, math.nan)]
+    out = []
+    for case in requests(fmt, kernel, n, f'{seed}:nonfinite'):
+        i = 0
+        for g in kernel.inputs:
+            if g.kind == ir.LIMB and rng.random() < 0.5:
+                if len(g.limbs) == 2:
+                    case[i:i + 2] = list(rng.choice(pairs))
+                elif len(g.limbs) == 1:
+                    case[i] = rng.choice((math.inf, -math.inf, math.nan, 0.0, -0.0))
+            i += len(g.limbs)
+        out.append(case)
+    return out
+
+
 def edge_cases(fmt, kernel, limit):
     """Edge values in every limb position (both values of a mask): all combinations when few, a
     sample otherwise."""

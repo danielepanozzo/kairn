@@ -1,0 +1,14 @@
+# Test kernel: guard, of an input and of a negated input, each visible as an output limb (a -0
+# operand comes out +0).
+kernel:   ops_guard
+input:    a
+input:    b
+output:   r = r0 g1 g2
+value:    a+b
+ensures:  error r R c=1 k=1 t=0
+status:   unverified
+
+g1 = guard(a)
+n  = neg(b)
+g2 = guard(n)
+r0 = add(g1, g2)

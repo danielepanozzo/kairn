@@ -15,6 +15,8 @@ theorem:       proofs/theories/Directed.v rmul_correct
 source:        one step up from the rounded product (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+domain:        extended
+ieee_status:   unverified
 cone_exempt:   r = succ(p), and succ(-inf) is finite; r is a radius, and the ball layer tests radii for non-finite values (Milestone 1 statements, Ball kernels)
 
 p = prod(a, b)

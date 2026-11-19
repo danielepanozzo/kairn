@@ -1,8 +1,8 @@
 # A ball with a one-limb center times a number a of the format: |xa - cx a| <= |a| rx, plus the
 # error of the rounded center product, at most U |cz| + V from the claims of mul_1_1.
 kernel:        ball_scale_1
-input:         cx
-input:         rx
+input:         stored cx
+input:         stored rx
 input:         a
 output:        cz
 output:        rz
@@ -14,6 +14,7 @@ theorem:       proofs/theories/Ball.v ball_scale_1_correct
 source:        midpoint-radius scaling (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
 cz = prod(cx, a)

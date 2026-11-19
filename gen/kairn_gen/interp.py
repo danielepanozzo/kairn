@@ -264,7 +264,8 @@ def format_limb(v):
 class Machine:
     """Evaluates kernels. fused: how muladd executes. consteval: as in C++ constant evaluation,
     where a kernel with a variant runs the variant, prod is a plain product, muladd is unfused,
-    and a kernel without a variant must contain no fused operation at all."""
+    guard returns its operand, and a kernel without a variant must contain no fused operation at
+    all."""
 
     def __init__(self, kernels, fused=True, consteval=False):
         self.kernels, self.fused, self.consteval = kernels, fused and not consteval, consteval
@@ -295,6 +296,10 @@ class Machine:
         return self._eval(k, f, list(inputs), in_variant)
 
     def _const(self, f, name):
+        if name == 'inf':
+            return (INF, False)
+        if name == 'nan':
+            return NaN
         key = (f, name)
         if key not in self._consts:
             try:
@@ -359,6 +364,12 @@ class Machine:
             return pred(f, a[0])
         if op == 'copy':
             return a[0]
+        if op == 'guard':
+            # RN(a + 0): -0 becomes +0. Constant evaluation fuses nothing, and the guard is not
+            # evaluated there: the operand comes out unchanged (cpp.py emits it so).
+            return a[0] if self.consteval else add(f, a[0], (NUM, False, 0, 0))
+        if op == 'times_inf':
+            return mul(f, a[0], (INF, False))           # exact: NaN for a NaN or a zero
         raise InterpError(f'the interpreter does not evaluate {op}')
 
 

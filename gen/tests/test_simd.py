@@ -86,7 +86,8 @@ def packed_cases(kernels, names, seed):
     (so that they are aligned with the registers), then random and edge cases in random order."""
     def extra(fmt, k):
         rng = random.Random(f'{seed}:{fmt}:{k.name}:packed')
-        mixed = common.edge_cases(fmt, k, 400) + common.requests(fmt, k, N, f'{seed}:packed')
+        mixed = common.edge_cases(fmt, k, 400) + common.requests(fmt, k, N, f'{seed}:packed') + \
+            common.nonfinite_cases(fmt, k, N // 4, f'{seed}:packed')
         rng.shuffle(mixed)
         return special_groups(fmt, k, rng, 4 * LANES) + mixed
     lines = []
@@ -164,6 +165,18 @@ class Kernels(unittest.TestCase):
                         bad.append((line, [x.hex() for x in w]))
                 self.assertEqual(bad[:5], [], f'{len(bad)} of {len(p)} differ from the interpreter')
                 checked.add(digest)
+
+    def test_runner_non_finite_limbs(self):
+        """inf, -inf and nan as input limbs, and non-finite outputs printed exactly inf, -inf and
+        nan, never -nan, in every packed build: what the scalar runner and the interpreter print."""
+        lines = cxx.NON_FINITE_LINES
+        text = ''.join(f'{x}\n' for x in lines)
+        want = ''.join(f'{x} -> {y}\n' for x, y in lines.items())
+        for i, (label, _) in enumerate(self.builds.configs):
+            with self.subTest(build=label):
+                self.assertEqual(self.builds.results[i][0][0], 0, self.builds.results[i][0][1])
+                code, out, err = self.builds.run(i, 'packed', text)
+                self.assertEqual((code, out), (0, want), err)
 
     def test_runner_protocol(self):
         text = '# c\n\nlt_2_1 binary64 0x1p+0 -0x1p-60 0x1p+0 #t\nlt_2_1 binary64 nan 0x0p+0 0x1p+0\n# d\n' \

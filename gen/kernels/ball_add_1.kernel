@@ -1,10 +1,10 @@
 # The sum of two balls with one-limb centers. The center is one rounded sum, whose error is at most
 # U |cz| with U = unit_computed(add_1_1); a sum has no underflow error, so there is no V term.
 kernel:        ball_add_1
-input:         cx
-input:         rx
-input:         cy
-input:         ry
+input:         stored cx
+input:         stored rx
+input:         stored cy
+input:         stored ry
 output:        cz
 output:        rz
 value:         cx+cy
@@ -16,6 +16,7 @@ theorem:       proofs/theories/Ball.v ball_add_1_correct
 source:        midpoint-radius sum (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
 cz = add(cx, cy)

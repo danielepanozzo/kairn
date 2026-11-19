@@ -13,6 +13,7 @@ theorem:       proofs/theories/Sign.v sub_2_2_correct
 source:        add_2_2 (JMP17 Alg. 6) on -y
 license:       algorithm: published; proof: MIT
 status:        proved
+entry:         yes
 
 n0       = neg(y0)
 n1       = neg(y1)

@@ -74,15 +74,24 @@ def _ignored(name):
 
 
 def summary(kernels):
-    """The lines build prints about the kernels: what is unverified, not constexpr, exempt."""
+    """The lines build prints about the kernels: what is unverified, not constexpr, exempt, and
+    which guards of rule R3 are pending."""
     def names(pred):
         found = [k.name for k in kernels.values() if pred(k)]
         return ', '.join(found) if found else 'none'
+    pending, through = rules.r3_report(kernels)
+    pending_text = '; '.join(f'{n} ({v}: {why})' for n, p in pending.items() for v, why in p.items())
+    through_text = ', '.join('%s (%s)' % (n, ', '.join(by)) for n, by in through.items())
     return [
         f'kernels: {len(kernels)}',
         f'UNVERIFIED: {names(lambda k: k.status == "unverified")}',
+        f'IEEE model UNVERIFIED: {names(lambda k: k.extended and k.ieee_status == "unverified")}',
+        f'no real-model statement (IEEE model only): {names(lambda k: not k.real_model)}',
         f'not constexpr: {names(lambda k: cpp.constexpr_kind(k, kernels) is None)}',
         f'constexpr through a constant-evaluation variant: '
         f'{", ".join(f"{k.name} ({k.ce_variant})" for k in kernels.values() if k.ce_variant) or "none"}',
         f'exempt from the non-finite cone: {names(lambda k: bool(k.cone_exempt))}',
+        f'entry kernels (rule R3): {names(lambda k: k.entry)}',
+        f'R3 GUARD PENDING: {pending_text or "none"}',
+        f'accepted by R3 only through a pending guard: {through_text or "none"}',
     ]

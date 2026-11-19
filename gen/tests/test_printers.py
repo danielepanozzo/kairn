@@ -1,10 +1,11 @@
 """The two printers: what their text says, read independently of how they produce it."""
 import copy
+import hashlib
 import re
 import unittest
 
 import common
-from kairn_gen import cpp, ir, rocq, simd
+from kairn_gen import cpp, expr, ir, rocq, simd
 
 # The Phase 0 tracer's model of these three kernels, which Rocq 9.0.1 with Flocq 4.2.2 accepted
 # (experiments/phase0/tracer/gen.py).
@@ -53,13 +54,20 @@ def functions(text):
     return out
 
 
-ATOM = r'(?:[a-z][a-z0-9_]*|0x1(?:\.[0-9a-f]+)?p[-+][0-9]+f?|0\.0f?)'
+ATOM = r'(?:[a-z][a-z0-9_]*|0x1(?:\.[0-9a-f]+)?p[-+][0-9]+f?|0\.0f?|' \
+       r'std::numeric_limits<(?:double|float)>::(?:infinity|quiet_NaN)\(\))'
 # One operation, written over atoms: what "one operation per statement" allows (a bare atom is a
 # copy, which is none).
 ONE_OPERATION = re.compile(
-    rf'(?:-{ATOM}|!{ATOM}|{ATOM} (?:[-+*<&|]|<=|==) {ATOM}|{ATOM} \? {ATOM} : {ATOM}|'
+    rf'(?:-{ATOM}|!{ATOM}|{ATOM} (?:[-+*<>&|]|<=|>=|==) {ATOM}|{ATOM} \? {ATOM} : {ATOM}|'
     rf'fma_rn\(-?{ATOM}, {ATOM}, -?{ATOM}\)|(?:abs_bits|next_up|next_down)\({ATOM}\)|'
-    rf'{ATOM} \* {ATOM} \+ {ATOM}|{ATOM})')
+    rf'{ATOM} \* {ATOM} \+ {ATOM}|{ATOM}|'
+    # guard in a constexpr kernel: its operand in constant evaluation, one addition at run time;
+    # times_inf: comparisons in constant evaluation (times_inf_ce), one multiplication at run time.
+    rf'__builtin_is_constant_evaluated\(\) \? (?P<g>{ATOM}) : (?P=g) \+ 0\.0f?|'
+    rf'__builtin_is_constant_evaluated\(\) \? times_inf_ce\((?P<t>{ATOM})\) : (?P=t) \* {ATOM})')
+# The spelling of times_inf: a plain multiplication by +infinity.
+TIMES_INF = r' \* std::numeric_limits<(?:double|float)>::infinity\(\);$'
 
 
 class Cpp(unittest.TestCase):
@@ -92,13 +100,16 @@ class Cpp(unittest.TestCase):
 
     def test_no_plain_product_at_run_time(self):
         # R1 on the printed text: outside constant evaluation nothing is multiplied except in a
-        # muladd, and every product is an fma_rn whose count is the IR's.
+        # muladd and in times_inf (by infinity, exact), and every product is an fma_rn whose count
+        # is the IR's.
         for fns, ks in ((self.fns, self.ks), (self.tfns, self.tks)):
             for (name, t), f in fns.items():
                 body = self.run_time(f['lines'])
                 prims = ir.prims(ks[name], ks)
                 stars = sum(line.count(' * ') for line in body if not line.strip().startswith('//'))
-                self.assertEqual(stars, sum(p.op == 'muladd' for p in prims), name)
+                self.assertEqual(stars, sum(p.op in ('muladd', 'times_inf') for p in prims), name)
+                self.assertEqual(sum(bool(re.search(TIMES_INF, line)) for line in body),
+                                 sum(p.op == 'times_inf' for p in prims), name)
                 fmas = sum(line.count('fma_rn(') for line in body)
                 self.assertEqual(fmas, sum(p.op in ir.FUSED for p in prims), name)
                 zero = '0.0f' if t == 'float' else '0.0'
@@ -125,6 +136,12 @@ class Cpp(unittest.TestCase):
     NOT_CONSTEXPR = {'mul_2_2', 'mul_2_1', 'split', 'two_prod_dekker', 'mul_1_1', 'rmul', 'mul_pow2_2',
                      'ball_add_1', 'ball_add_2', 'ball_mul_1', 'ball_mul_2', 'ball_scale_1', 'ball_scale_2',
                      'ball_sub_1', 'ball_sub_2'}
+    # The full kernels are constexpr where their cores are: their fix-up turns t into an infinity
+    # with times_inf, which is no fused operation. Those of the products are not (their cores, and
+    # t = prod(x0, y0), are fused operations), nor are the full Ball kernels (rmul). The
+    # constructors are.
+    NOT_CONSTEXPR |= {f'{core}_full' for core in ('mul_2_2', 'mul_2_1', 'mul_pow2_2')}
+    NOT_CONSTEXPR |= {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
 
     def test_constexpr(self):
         plain = {name for (name, _), f in self.fns.items() if not f['constexpr']}
@@ -135,8 +152,13 @@ class Cpp(unittest.TestCase):
 
     def test_masks_and_unused_inputs(self):
         self.assertTrue(self.fns[('lt_2_2', 'double')]['head'].endswith('double y1, bool& m_out) noexcept {'))
-        self.assertIn('    const bool l = x1 < 0.0f;', self.fns[('lt_2_1', 'float')]['lines'])
-        self.assertIn('    const bool l = 0.0 < y1;', self.fns[('lt_1_2', 'double')]['lines'])
+        # lt(a, b) is written b > a and le(a, b) b >= a (MSVC's constant evaluator takes < and <=
+        # with a NaN for true); the C++ never has < or <= between values.
+        self.assertIn('    const bool l = 0.0f > x1;', self.fns[('lt_2_1', 'float')]['lines'])
+        self.assertIn('    const bool l = y1 > 0.0;', self.fns[('lt_1_2', 'double')]['lines'])
+        self.assertIn('    const bool l = y1 >= x1;', self.fns[('le_2_2', 'double')]['lines'])
+        for f in list(self.fns.values()) + list(self.tfns.values()):
+            self.assertFalse(any(re.search(r' <=? ', line) for line in f['lines'] if not line.strip().startswith('//')))
         self.assertIn('    const bool t = e & l;', self.fns[('lt_2_2', 'double')]['lines'])
         self.assertIn('    const double t = m ? s : x0;', self.fns[('to_up_2', 'double')]['lines'])
         self.assertIn('[[maybe_unused]] double x1', self.fns[('to_nearest_2', 'double')]['head'])
@@ -162,6 +184,47 @@ class Cpp(unittest.TestCase):
                      '    const double vh_z = vh - sh;', '    const double z1 = w - z0_z;',
                      '    z0_out = z0;'):
             self.assertIn(line, add)
+
+    def test_guard_and_the_non_finite_constants(self):
+        # guard(a) is an addition of +0 of the limb type, never a subtraction of 0 or an addition
+        # of -0, which compilers fold away; one guard per guard of the IR, and nothing else adds +0.
+        # In a constexpr kernel it is the operand itself in constant evaluation.
+        for fns, ks in ((self.fns, self.ks), (self.tfns, self.tks)):
+            for (name, t), f in fns.items():
+                zero = '0.0f' if t == 'float' else '0.0'
+                body = self.run_time(f['lines'])
+                guards = [p for p in ir.prims(ks[name], ks) if p.op == 'guard']
+                added = [x for x in body if x.endswith(f' + {zero};')]
+                self.assertEqual(len(added), len(guards), (name, t))
+                for p in guards:
+                    a = p.args[0].name
+                    run_time = f'{a} + {zero}'
+                    want = f'__builtin_is_constant_evaluated() ? {a} : {run_time}' if f['constexpr'] else run_time
+                    self.assertIn(f'    const {t} {p.dst} = {want};', body, name)
+                self.assertFalse(any(x.endswith((f' - {zero};', f' + -{zero};')) for x in body), name)
+        self.assertTrue(any(p.op == 'guard' for n in self.tks for p in ir.prims(self.tks[n], self.tks)))
+        full = self.fns[('add_2_1_full', 'double')]['lines']
+        self.assertEqual(full[0], '    const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;')
+        self.assertIn('    const double t = x0 + g;', full)
+        self.assertIn('    const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : '
+                      't * std::numeric_limits<double>::infinity();', full)
+        # A kernel that is not constexpr multiplies, with no dispatch.
+        self.assertIn('    const double r0 = t * std::numeric_limits<double>::infinity();',
+                      self.fns[('mul_2_2_full', 'double')]['lines'])
+        prelude = cpp.prelude(self.ks)
+        self.assertIn('KAIRN_GEN_FORCEINLINE constexpr float times_inf_ce(float t) noexcept {\n'
+                      '    return t > 0 ? std::numeric_limits<float>::infinity() : 0 > t ? '
+                      '-std::numeric_limits<float>::infinity() : std::numeric_limits<float>::quiet_NaN();\n}', prelude)
+        self.assertIn('    const bool f = std::numeric_limits<double>::infinity() > az;', full)
+        self.assertIn('    const double w1 = f ? z1 : r1;', full)
+        make = self.fns[('ball_make_2', 'float')]
+        self.assertTrue(make['constexpr'])
+        self.assertIn('    const float rw = e ? s : std::numeric_limits<float>::quiet_NaN();', make['lines'])
+        self.assertIn('    const bool e = g >= 0.0f;', make['lines'])
+        self.assertIn('#include <limits>', cpp.prelude(self.ks))
+        self.assertIn('#include <limits>', cpp.prelude(self.tks))         # ops_special
+        without = {n: k for n, k in self.tks.items() if n != 'ops_special'}
+        self.assertNotIn('#include <limits>', cpp.prelude(without))
 
     def test_name_clash_is_refused(self):
         ks = copy.deepcopy(dict(self.ks))
@@ -191,8 +254,9 @@ class Packed(unittest.TestCase):
     """The AVX2 and NEON printers: one intrinsic per statement, products only as FMAs."""
     FUSED = {'avx2.hpp': r'_mm256_fn?m(?:add|sub)_p[sd]\(', 'neon.hpp': r'vfm[as]q_f(?:32|64)\('}
     PLAIN_PRODUCT = {'avx2.hpp': r'_mm256_mul_p[sd]\(', 'neon.hpp': r'vmulq_f(?:32|64)\('}
-    CONSTANT = {'avx2.hpp': r'_mm256_(?:set1_p[sd]\([-+0-9a-fx.p]+f?\)|setzero_p[sd]\(\))',
-                'neon.hpp': r'vdupq_n_f(?:32|64)\([-+0-9a-fx.p]+f?\)'}
+    SPECIAL = r'std::numeric_limits<(?:double|float)>::(?:infinity|quiet_NaN)\(\)'
+    CONSTANT = {'avx2.hpp': rf'_mm256_(?:set1_p[sd]\((?:[-+0-9a-fx.p]+f?|{SPECIAL})\)|setzero_p[sd]\(\))',
+                'neon.hpp': rf'vdupq_n_f(?:32|64)\((?:[-+0-9a-fx.p]+f?|{SPECIAL})\)'}
     CALL = r'(?:_mm256_\w+|v\w+q_[fu](?:32|64)|not_mask|next_up|next_down)\('
 
     @classmethod
@@ -233,8 +297,13 @@ class Packed(unittest.TestCase):
                 body = '\n'.join(lines)
                 self.assertEqual(len(re.findall(self.FUSED[file], body)), sum(p.op in ir.FUSED for p in prims),
                                  (file, name))
+                # Plain products: those of a muladd, and times_inf's, by infinity.
                 self.assertEqual(len(re.findall(self.PLAIN_PRODUCT[file], body)),
-                                 sum(p.op == 'muladd' for p in prims), (file, name))
+                                 sum(p.op in ('muladd', 'times_inf') for p in prims), (file, name))
+                by_infinity = r'(?:_mm256_mul_p[sd]|vmulq_f(?:32|64))\(\w+, (?:_mm256_set1_p[sd]|vdupq_n_f(?:32|64))' \
+                              r'\(std::numeric_limits<(?:double|float)>::infinity\(\)\)\)'
+                self.assertEqual(len(re.findall(by_infinity, body)), sum(p.op == 'times_inf' for p in prims),
+                                 (file, name))
                 zero = '_mm256_setzero_p' if file == 'avx2.hpp' else 'vdupq_n_f'
                 stmts = [x for x in lines if re.match(r'\s+const \w+ \w+ = ', x)]
                 prods = [ln for ln, p in zip(stmts, prims) if p.op == 'prod']
@@ -259,14 +328,31 @@ class Packed(unittest.TestCase):
                       'uint64x2_t& m_out) noexcept {', text)
         self.assertIn('[[maybe_unused]] __m256d x1', self.texts[('avx2.hpp', 'kernels')])
         self.assertNotIn('constexpr void', text)
+        # guard: an addition of a zero vector; the non-finite constants broadcast from <limits>.
+        self.assertIn('    const __m256d x0 = _mm256_add_pd(a, _mm256_setzero_pd());', avx2[('make_2', '__m256d')])
+        self.assertIn('    const float32x4_t c0 = vaddq_f32(c, vdupq_n_f32(0.0f));', neon[('ball_make_1', 'float32x4_t')])
+        self.assertIn('    const __m256 r0 = _mm256_mul_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()));',
+                      avx2[('mul_2_2_full', '__m256')])
+        self.assertIn('    const float64x2_t r0 = vmulq_f64(t, vdupq_n_f64(std::numeric_limits<double>::infinity()));',
+                      neon[('add_2_2_full', 'float64x2_t')])
+        self.assertIn('    const float64x2_t rw = vbslq_f64(e, s, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));',
+                      neon[('ball_make_2', 'float64x2_t')])
+        for (file, which), t in self.texts.items():
+            ks = self.ks if which == 'kernels' else self.tks
+            for (name, vtype), lines in packed_functions(t).items():
+                guards = sum(p.op == 'guard' for p in ir.prims(ks[name], ks))
+                add_zero = r'(?:_mm256_add_p[sd]\(\w+, _mm256_setzero_p[sd]\(\)\)|vaddq_f(?:32|64)\(\w+, vdupq_n_f(?:32|64)\(0\.0f?\)\))'
+                self.assertEqual(sum(bool(re.search(add_zero, x)) for x in lines), guards, (file, name))
 
 
 class Rocq(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.ks = common.kernels()
-        cls.model = rocq.model(cls.ks)
-        cls.statements = rocq.statements(cls.ks)
+        cls.all = common.kernels()
+        # The kernels the real model prints: all but the full kernels and the constructors.
+        cls.ks = rocq.real(cls.all)
+        cls.model = rocq.model(cls.all)
+        cls.statements = rocq.statements(cls.all)
 
     def test_the_tracer_model(self):
         self.assertIn(TRACER_PREAMBLE, self.model)
@@ -316,7 +402,7 @@ class Rocq(unittest.TestCase):
         gives the hypotheses of the next. It says so by the `normalized` claim on the limb's
         group, or else by a `fmt` conjunct; these come first, in output order, and the claims
         follow unchanged. A mask gets nothing. Read from the printed text."""
-        tks = common.kernels(common.TEST_KERNELS)
+        tks = rocq.real(common.kernels(common.TEST_KERNELS))
         uncovered = {}
         for ks in (self.ks, tks):
             for name, k in ks.items():
@@ -430,6 +516,67 @@ class Rocq(unittest.TestCase):
         tks = common.kernels(common.TEST_KERNELS)
         self.assertIn('  forall a b : R,\n  forall w : bool,\n  fmt emin prec a ->\n  fmt emin prec b ->\n'
                       "  let '(r0, c1, k1, v) := ops_wave2 emin prec tie_even a w b in\n", rocq.statements(tks))
+
+    # SHA-256 of Model.v, Statements.v and Audit.v as the real model prints them, the same before
+    # the non-finite layer (commit f39b066) and after it. Change them only together with a change
+    # of the real model that is meant, and with the proofs that go with it.
+    DIGESTS = {'Model.v': 'b9317eb68cfea4256e06afc5c4711a152bacc51177639e7640eeb205453d638b',
+               'Statements.v': 'd4d3d190950921554165d0da54ba988acb98f0d69e1f9333eea2d863cc8c68d2',
+               'Audit.v': 'de3b3e3ec23ea5ef5b1a0b894dfb28257357316b9780ff22ca1cff113004fbba'}
+
+    def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
+        """The full kernels and the constructors have no real-model statement and appear nowhere in
+        the three files; a kernel of the extended domain that has one is printed exactly as if it
+        were of the finite domain with normalized for canonical. And the files are those of f39b066."""
+        printers = {'Model.v': rocq.model, 'Statements.v': rocq.statements, 'Audit.v': rocq.audit}
+        finite = {}
+        for name, k in copy.deepcopy(dict(self.all)).items():
+            if not k.real_model:
+                continue
+            k.domain, k.ieee_status, k.ieee_theorem = None, None, None
+            k.requires = [('normalized',) + r[1:] if r[0] == 'canonical' else r for r in k.requires]
+            finite[name] = k
+        self.assertEqual(len(finite), 42)
+        self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
+        for file, printer in printers.items():
+            text = printer(self.all)
+            self.assertEqual(text, printer(finite), file)
+            self.assertEqual(hashlib.sha256(text.encode()).hexdigest(), self.DIGESTS[file], file)
+            for name, k in self.all.items():
+                if not k.real_model:
+                    self.assertIsNone(re.search(rf'\b{name}\b', text), (file, name))
+
+    def test_up_constants_in_the_real_model(self):
+        """Each distinct const up(EXPR) is one definition, named after the first kernel that uses
+        it: EXPR over the reals, with u, eta, unit(K) and tiny(K) spelled out, rounded up by
+        Flocq's round with Zceil. The kernel applies it by name; the section variables follow."""
+        tks = common.kernels(common.TEST_KERNELS)
+        model = rocq.model(tks)
+        u = 'bpow radix2 (- prec)'
+        self.assertIn('(* up((1+u)^6): the smallest number of the format not below it. *)\n'
+                      'Definition up_ops_up_0 : R :=\n'
+                      f'  round radix2 (FLT_exp emin prec) Zceil ((1 + {u}) ^ 6).', model)
+        self.assertIn('Definition up_ops_up_1 : R :=\n'
+                      f'  round radix2 (FLT_exp emin prec) Zceil (((4 * {u} ^ 2) / (1 - (4 * {u} ^ 2))) * (1 + {u})).',
+                      model)
+        self.assertIn(f'((3 / 2) * bpow radix2 emin) / (1 - (4 * {u} ^ 2))', model)
+        self.assertIn('  let k1 := rnd (up_ops_up_0 * a + 0) in\n', model)
+        self.assertIn('  let k3 := rnd (up_ops_up_2 * a + 0) in\n', model)
+        self.assertEqual(rocq.section_args(tks['ops_up'], tks), ['emin', 'prec', 'choice'])
+        self.assertEqual(model.count('Definition up_'), 3)
+        self.assertLess(model.index('Definition up_ops_up_0'), model.index('Definition up_ops_up_1'))
+        # A negative power is the inverse of the positive one.
+        self.assertEqual(rocq._term(expr.parse('2^-3*u'), lambda n: 'u'), '((/ (2 ^ 3)) * u)')
+
+    def test_guard_in_the_real_model(self):
+        # guard is one rounding of a + 0, which a proof reads as a; a test kernel with a constant
+        # inf or nan has no real-model statement and is not printed.
+        tks = common.kernels(common.TEST_KERNELS)
+        model, statements = rocq.model(tks), rocq.statements(tks)
+        self.assertIn('Definition ops_guard (a b : R) : R * R * R :=\n  let g1 := rnd (a + 0) in\n'
+                      '  let n := - b in\n  let g2 := rnd (n + 0) in\n', model)
+        self.assertIn('  let \'(r0, g1, g2) := ops_guard emin prec tie_even a b in\n', statements)
+        self.assertNotIn('ops_special', model + statements + rocq.audit(tks))
 
     def test_audit(self):
         ks = copy.deepcopy(dict(self.ks))

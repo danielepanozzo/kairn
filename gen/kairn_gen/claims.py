@@ -33,25 +33,35 @@ def _group(g):
     return out
 
 
+def _theorem(t):
+    return {'file': t[0], 'name': t[1]} if t else None
+
+
 def kernel_claims(k, kernels):
+    """One kernel's entry. A kernel of the extended domain (architecture.md, "Claims of the
+    non-finite layer") says so with `domain`, and gives `ieee_status`, and `ieee_theorem` once
+    that is proved; one of the finite domain has neither field, as before. A kernel that makes a
+    ball from its inputs has no `value`."""
     errors = [e for e in k.ensures if e['kind'] == 'error']
     # Always a list, one object per error entry in the order of `ensures` (second wave).
     instances = {name: [instance(e, interp.parse_format(name)) for e in errors]
                  for name in INSTANCE_FORMATS}
-    return {
-        'name': k.name,
-        'inputs': [_group(g) for g in k.inputs],
-        'outputs': [_group(g) for g in k.outputs],
-        'value': k.value,
-        'requires': [_requires(r) for r in k.requires],
-        'ensures': [dict(e) for e in k.ensures],
-        'min_precision': k.min_precision,
-        'status': k.status,
-        'theorem': {'file': k.theorem[0], 'name': k.theorem[1]} if k.theorem else None,
-        'source': {'cite': k.source, 'license': k.license},
-        'flops': ir.flops(k, kernels),
-        'instances': instances,
-    }
+    out = {'name': k.name}
+    if k.extended:
+        out['domain'] = 'extended'
+    out.update(inputs=[_group(g) for g in k.inputs], outputs=[_group(g) for g in k.outputs])
+    if k.value is not None:
+        out['value'] = k.value
+    out.update(requires=[_requires(r) for r in k.requires], ensures=[dict(e) for e in k.ensures],
+               min_precision=k.min_precision, status=k.status)
+    if k.extended:
+        out['ieee_status'] = k.ieee_status
+    out['theorem'] = _theorem(k.theorem)
+    if k.ieee_theorem:
+        out['ieee_theorem'] = _theorem(k.ieee_theorem)
+    out.update(source={'cite': k.source, 'license': k.license}, flops=ir.flops(k, kernels),
+               instances=instances)
+    return out
 
 
 def claims(kernels):

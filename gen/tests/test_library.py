@@ -179,7 +179,7 @@ def parse_selftest(text):
         body = m.group(3)
         ins = re.findall(r'volatile (?:double|float|bool) i\d+ = ([^;]+);', body)
         call = re.search(r'    (\w+)\((.*)\);', body)
-        outs = re.findall(r'!same\(o\d+, ([^)]+)\)', body)
+        outs = re.findall(r'!same\(o\d+, ((?:[^()]|\(\))+)\)', body)
         out[f'{m.group(1)}_{m.group(2)}'] = (call.group(1), m.group(2), ins, outs)
     return out
 
@@ -187,6 +187,9 @@ def parse_selftest(text):
 def to_value(text, ctype):
     if text in ('true', 'false'):
         return text == 'true'
+    special = re.fullmatch(rf'(-?)std::numeric_limits<{ctype}>::(infinity|quiet_NaN)\(\)', text)
+    if special:
+        return (interp.INF, special.group(1) == '-') if special.group(2) == 'infinity' else interp.NaN
     if ctype == 'float':
         text = text[:-1]
     return interp.parse_limb('0x0p+0' if text == '0.0' else text)
@@ -208,31 +211,50 @@ class Selftest(unittest.TestCase):
         """Every case satisfies its kernel's requirements, and its stored outputs are what the
         interpreter computes (which also checks that the literals are printed exactly)."""
         machine = interp.Machine(self.ks)
+        nonfinite = set()
         for fn, (name, t, ins, outs) in self.cases.items():
             k = self.ks[name]
             f = interp.parse_format(TYPES[t][0])
             vals = [to_value(x, t) for x in ins]
+            got = machine.run(name, f, vals)
+            self.assertEqual([to_value(x, t) for x in outs], got, fn)
+            if '_nonfinite_' in fn:
+                # The second case of a full kernel or a constructor: its first operand is +inf in
+                # double and NaN in float, in canonical form, and so is some output limb.
+                self.assertFalse(k.real_model, fn)
+                special = (interp.INF, False) if t == 'double' else interp.NaN
+                self.assertIn(special, vals, fn)
+                self.assertTrue(any(not isinstance(v, bool) and v[0] != interp.NUM for v in got), fn)
+                nonfinite.add(name)
+                continue
             for v in vals:
                 self.assertTrue(isinstance(v, bool) or (v[0] == interp.NUM and interp.member(f, v)), fn)
             env = dict(zip(k.input_limbs, vals))
+            g = {g.name: g for g in k.inputs}
             for r in k.requires:
-                g = {g.name: g for g in k.inputs}
-                if r[0] == 'normalized':
+                if r[0] in ('normalized', 'canonical'):
                     limbs = [env[x] for x in g[r[1]].limbs]
                     for a, b in zip(limbs, limbs[1:]):
                         self.assertEqual(interp.add(f, a, b), a, (fn, r))
                 elif r[0] == 'nonneg':
                     self.assertFalse(env[r[1]][1], (fn, r))
+                elif r[0] == 'ball':
+                    for a, b in zip(g[r[1]].limbs, g[r[1]].limbs[1:]):
+                        self.assertEqual(interp.add(f, env[a], env[b]), env[a], (fn, r))
+                    self.assertFalse(env[r[2]][1], (fn, r))
                 elif r[0] == 'power_of_two':
                     self.assertEqual(env[r[1]][2], 1, (fn, r))
                     self.assertFalse(env[r[1]][1], (fn, r))
                 elif r[0] == 'abs_ge':
                     self.assertTrue(interp.le(interp.absolute(env[r[2]]), interp.absolute(env[r[1]])), (fn, r))
-            got = machine.run(name, f, vals)
-            self.assertEqual([to_value(x, t) for x in outs], got, fn)
+                else:
+                    self.fail((fn, r))
             # Something to check: no case where every limb output is zero.
             self.assertTrue(any(v is True or (not isinstance(v, bool) and v[2] != 0) for v in got) or
                             all(isinstance(v, bool) for v in got), fn)
+        # Every full kernel and constructor has its non-finite case, for both types.
+        self.assertEqual(nonfinite, {n for n, k in self.ks.items() if not k.real_model})
+        self.assertEqual(sum('_nonfinite_' in fn for fn in self.cases), 2 * len(nonfinite))
 
     def test_deterministic(self):
         self.assertEqual(library.selftest(copy.deepcopy(dict(self.ks))), self.text)

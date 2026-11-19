@@ -1,0 +1,29 @@
+# x * c, c a power of two, with IEEE-like results: mul_pow2_2, then the fix-up.
+# The fix-up is that of milestone1.md, "IEEE-like results", with r0 = times_inf(t) (exact, so not
+# a fused operation) for prod(t, const inf).
+kernel:        mul_pow2_2_full
+input:         x = x0 x1
+input:         c
+output:        w = w0 w1
+value:         x*c
+requires:      canonical x
+requires:      power_of_two c
+ensures:       extends w core=mul_pow2_2 lead=mul
+min_precision: 2
+source:        mul_pow2_2, then the fix-up of IEEE-like results (Milestone 1 listing)
+license:       core: as mul_pow2_2; fix-up: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the fix-up selects, after an explicit test that z0 is finite (f), between the core's result and the canonical form of t; F1 to F5 of milestone1.md, "IEEE-like results", state what comes out
+
+(z0, z1) = mul_pow2_2(x0, x1, c)
+t        = prod(x0, c)
+a        = abs(z0)
+f        = lt(a, const inf)
+r0       = times_inf(t)
+n        = eq(r0, r0)
+r1       = select(n, 0, r0)
+w0       = select(f, z0, r0)
+w1       = select(f, z1, r1)

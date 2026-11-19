@@ -65,6 +65,7 @@
     },
     {
       "name": "rmul",
+      "domain": "extended",
       "inputs": [
         {
           "name": "a",
@@ -95,6 +96,7 @@
       ],
       "min_precision": 2,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Directed.v",
         "name": "rmul_correct"
@@ -111,6 +113,7 @@
     },
     {
       "name": "radd",
+      "domain": "extended",
       "inputs": [
         {
           "name": "a",
@@ -141,6 +144,7 @@
       ],
       "min_precision": 2,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Directed.v",
         "name": "radd_correct"
@@ -225,6 +229,124 @@
       }
     },
     {
+      "name": "ball_add_1_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 1
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "value": "cx+cy",
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cw",
+          "radius": "rw",
+          "set": "x+y",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          },
+          "finite_when": []
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "ball_add_1, then the fix-up of the special states of a ball (Milestone 1 listing)",
+        "license": "core: as ball_add_1; fix-up: MIT"
+      },
+      "flops": 5,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_make_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 1
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "makes_ball",
+          "center": "cw",
+          "radius": "rw",
+          "from": {
+            "center": "c",
+            "radius": "r"
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "constructors (Milestone 1 listing)",
+        "license": "algorithm: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_mul_1",
       "inputs": [
         {
@@ -288,6 +410,75 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 9,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_mul_1_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 1
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*cy",
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cw",
+          "radius": "rw",
+          "set": "x*y",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          },
+          "finite_when": []
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "ball_mul_1, then the fix-up of the special states of a ball (Milestone 1 listing)",
+        "license": "core: as ball_mul_1; fix-up: MIT"
+      },
+      "flops": 10,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -410,6 +601,66 @@
       }
     },
     {
+      "name": "ball_scale_1_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 1
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*a",
+      "requires": [
+        "ball(cx, rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cw",
+          "radius": "rw",
+          "set": "x*a",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            }
+          },
+          "finite_when": []
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "ball_scale_1, then the fix-up of the special states of a ball (Milestone 1 listing)",
+        "license": "core: as ball_scale_1; fix-up: MIT"
+      },
+      "flops": 5,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_sub_1",
       "inputs": [
         {
@@ -473,6 +724,75 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 4,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_sub_1_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 1
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "value": "cx-cy",
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cw",
+          "radius": "rw",
+          "set": "x-y",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          },
+          "finite_when": []
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "ball_sub_1, then the fix-up of the special states of a ball (Milestone 1 listing)",
+        "license": "core: as ball_sub_1; fix-up: MIT"
+      },
+      "flops": 5,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -543,6 +863,43 @@
             "abs": "0"
           }
         ]
+      }
+    },
+    {
+      "name": "make_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "value": "a",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "represents",
+          "of": "x"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "constructors (Milestone 1 listing)",
+        "license": "algorithm: MIT"
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [],
+        "binary32": []
       }
     },
     {
@@ -879,6 +1236,7 @@
     },
     {
       "name": "abs_2",
+      "domain": "extended",
       "inputs": [
         {
           "name": "x",
@@ -893,7 +1251,7 @@
       ],
       "value": "abs(x)",
       "requires": [
-        "normalized(x)"
+        "canonical(x)"
       ],
       "ensures": [
         {
@@ -912,6 +1270,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Sign.v",
         "name": "abs_2_correct"
@@ -938,6 +1297,7 @@
     },
     {
       "name": "to_up_2",
+      "domain": "extended",
       "inputs": [
         {
           "name": "x",
@@ -952,7 +1312,7 @@
       ],
       "value": "x",
       "requires": [
-        "normalized(x)"
+        "canonical(x)"
       ],
       "ensures": [
         {
@@ -963,6 +1323,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Convert.v",
         "name": "to_up_2_correct"
@@ -979,6 +1340,7 @@
     },
     {
       "name": "abs_upper_2",
+      "domain": "extended",
       "inputs": [
         {
           "name": "x",
@@ -993,7 +1355,7 @@
       ],
       "value": "abs(x)",
       "requires": [
-        "normalized(x)"
+        "canonical(x)"
       ],
       "ensures": [
         {
@@ -1004,6 +1366,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Convert.v",
         "name": "abs_upper_2_correct"
@@ -1082,6 +1445,52 @@
       }
     },
     {
+      "name": "add_2_1_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "w",
+          "limbs": 2
+        }
+      ],
+      "value": "x+a",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "extends",
+          "of": "w",
+          "core": "add_2_1",
+          "lead": "add",
+          "finite_when": []
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_1, then the fix-up of IEEE-like results (Milestone 1 listing)",
+        "license": "core: as add_2_1; fix-up: MIT"
+      },
+      "flops": 13,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "add_2_2",
       "inputs": [
         {
@@ -1146,6 +1555,62 @@
       }
     },
     {
+      "name": "add_2_2_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "w",
+          "limbs": 2
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "extends",
+          "of": "w",
+          "core": "add_2_2",
+          "lead": "add",
+          "finite_when": [
+            {
+              "abs_le": "x",
+              "exp": -2
+            },
+            {
+              "abs_le": "y",
+              "exp": -2
+            }
+          ]
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
+        "license": "core: as add_2_2; fix-up: MIT"
+      },
+      "flops": 22,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "add_fast_2_2",
       "inputs": [
         {
@@ -1207,6 +1672,53 @@
             "abs": "0"
           }
         ]
+      }
+    },
+    {
+      "name": "add_fast_2_2_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "w",
+          "limbs": 2
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "extends",
+          "of": "w",
+          "core": "add_fast_2_2",
+          "lead": "add",
+          "finite_when": []
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_fast_2_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
+        "license": "core: as add_fast_2_2; fix-up: MIT"
+      },
+      "flops": 13,
+      "instances": {
+        "binary64": [],
+        "binary32": []
       }
     },
     {
@@ -1279,6 +1791,126 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 23,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_add_2_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 2
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 2
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "value": "cx+cy",
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cw",
+          "radius": "rw",
+          "set": "x+y",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          },
+          "finite_when": []
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "ball_add_2, then the fix-up of the special states of a ball (Milestone 1 listing)",
+        "license": "core: as ball_add_2; fix-up: MIT"
+      },
+      "flops": 24,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_make_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 2
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 2
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "canonical(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "makes_ball",
+          "center": "cw",
+          "radius": "rw",
+          "from": {
+            "center": "c",
+            "radius": "r"
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "constructors (Milestone 1 listing)",
+        "license": "algorithm: MIT"
+      },
+      "flops": 1,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -1424,7 +2056,77 @@
       }
     },
     {
+      "name": "ball_mul_2_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 2
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 2
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*cy",
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cw",
+          "radius": "rw",
+          "set": "x*y",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          },
+          "finite_when": []
+        }
+      ],
+      "min_precision": 4,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "ball_mul_2, then the fix-up of the special states of a ball (Milestone 1 listing)",
+        "license": "core: as ball_mul_2; fix-up: MIT"
+      },
+      "flops": 18,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "neg_2",
+      "domain": "extended",
       "inputs": [
         {
           "name": "x",
@@ -1439,7 +2141,7 @@
       ],
       "value": "-x",
       "requires": [
-        "normalized(x)"
+        "canonical(x)"
       ],
       "ensures": [
         {
@@ -1458,6 +2160,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Sign.v",
         "name": "neg_2_correct"
@@ -1672,6 +2375,66 @@
       }
     },
     {
+      "name": "ball_scale_2_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 2
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "value": "cx*a",
+      "requires": [
+        "ball(cx, rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cw",
+          "radius": "rw",
+          "set": "x*a",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            }
+          },
+          "finite_when": []
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "ball_scale_2, then the fix-up of the special states of a ball (Milestone 1 listing)",
+        "license": "core: as ball_scale_2; fix-up: MIT"
+      },
+      "flops": 10,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_sub_2",
       "inputs": [
         {
@@ -1747,7 +2510,77 @@
       }
     },
     {
+      "name": "ball_sub_2_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 2
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 2
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "value": "cx-cy",
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cw",
+          "radius": "rw",
+          "set": "x-y",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          },
+          "finite_when": []
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "ball_sub_2, then the fix-up of the special states of a ball (Milestone 1 listing)",
+        "license": "core: as ball_sub_2; fix-up: MIT"
+      },
+      "flops": 24,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "eq_2_1",
+      "domain": "extended",
       "inputs": [
         {
           "name": "x",
@@ -1767,7 +2600,7 @@
       ],
       "value": "x-a",
       "requires": [
-        "normalized(x)"
+        "canonical(x)"
       ],
       "ensures": [
         {
@@ -1782,6 +2615,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "eq_2_1_correct"
@@ -1798,6 +2632,7 @@
     },
     {
       "name": "eq_2_2",
+      "domain": "extended",
       "inputs": [
         {
           "name": "x",
@@ -1817,8 +2652,8 @@
       ],
       "value": "x-y",
       "requires": [
-        "normalized(x)",
-        "normalized(y)"
+        "canonical(x)",
+        "canonical(y)"
       ],
       "ensures": [
         {
@@ -1833,6 +2668,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "eq_2_2_correct"
@@ -1849,6 +2685,7 @@
     },
     {
       "name": "le_1_2",
+      "domain": "extended",
       "inputs": [
         {
           "name": "a",
@@ -1868,7 +2705,7 @@
       ],
       "value": "a-y",
       "requires": [
-        "normalized(y)"
+        "canonical(y)"
       ],
       "ensures": [
         {
@@ -1883,6 +2720,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "le_1_2_correct"
@@ -1899,6 +2737,7 @@
     },
     {
       "name": "le_2_1",
+      "domain": "extended",
       "inputs": [
         {
           "name": "x",
@@ -1918,7 +2757,7 @@
       ],
       "value": "x-a",
       "requires": [
-        "normalized(x)"
+        "canonical(x)"
       ],
       "ensures": [
         {
@@ -1933,6 +2772,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "le_2_1_correct"
@@ -1949,6 +2789,7 @@
     },
     {
       "name": "le_2_2",
+      "domain": "extended",
       "inputs": [
         {
           "name": "x",
@@ -1968,8 +2809,8 @@
       ],
       "value": "x-y",
       "requires": [
-        "normalized(x)",
-        "normalized(y)"
+        "canonical(x)",
+        "canonical(y)"
       ],
       "ensures": [
         {
@@ -1984,6 +2825,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "le_2_2_correct"
@@ -2000,6 +2842,7 @@
     },
     {
       "name": "lt_1_2",
+      "domain": "extended",
       "inputs": [
         {
           "name": "a",
@@ -2019,7 +2862,7 @@
       ],
       "value": "a-y",
       "requires": [
-        "normalized(y)"
+        "canonical(y)"
       ],
       "ensures": [
         {
@@ -2034,6 +2877,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "lt_1_2_correct"
@@ -2050,6 +2894,7 @@
     },
     {
       "name": "lt_2_1",
+      "domain": "extended",
       "inputs": [
         {
           "name": "x",
@@ -2069,7 +2914,7 @@
       ],
       "value": "x-a",
       "requires": [
-        "normalized(x)"
+        "canonical(x)"
       ],
       "ensures": [
         {
@@ -2084,6 +2929,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "lt_2_1_correct"
@@ -2100,6 +2946,7 @@
     },
     {
       "name": "lt_2_2",
+      "domain": "extended",
       "inputs": [
         {
           "name": "x",
@@ -2119,8 +2966,8 @@
       ],
       "value": "x-y",
       "requires": [
-        "normalized(x)",
-        "normalized(y)"
+        "canonical(x)",
+        "canonical(y)"
       ],
       "ensures": [
         {
@@ -2135,6 +2982,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "lt_2_2_correct"
@@ -2144,6 +2992,143 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "make_2_limbs",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "value": "y",
+      "requires": [
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "represents",
+          "of": "x"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "constructors (Milestone 1 listing)",
+        "license": "algorithm: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "mul_2_1_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "w",
+          "limbs": 2
+        }
+      ],
+      "value": "x*a",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "extends",
+          "of": "w",
+          "core": "mul_2_1",
+          "lead": "mul",
+          "finite_when": []
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_2_1, then the fix-up of IEEE-like results (Milestone 1 listing)",
+        "license": "core: as mul_2_1; fix-up: MIT"
+      },
+      "flops": 8,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "mul_2_2_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "w",
+          "limbs": 2
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "extends",
+          "of": "w",
+          "core": "mul_2_2",
+          "lead": "mul",
+          "finite_when": [
+            {
+              "abs_le": "x*y",
+              "exp": -1
+            }
+          ]
+        }
+      ],
+      "min_precision": 4,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_2_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
+        "license": "core: as mul_2_2; fix-up: MIT"
+      },
+      "flops": 11,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -2214,6 +3199,53 @@
       }
     },
     {
+      "name": "mul_pow2_2_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "w",
+          "limbs": 2
+        }
+      ],
+      "value": "x*c",
+      "requires": [
+        "canonical(x)",
+        "power_of_two(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "extends",
+          "of": "w",
+          "core": "mul_pow2_2",
+          "lead": "mul",
+          "finite_when": []
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_pow2_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
+        "license": "core: as mul_pow2_2; fix-up: MIT"
+      },
+      "flops": 7,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "sub_1_2",
       "inputs": [
         {
@@ -2277,6 +3309,52 @@
       }
     },
     {
+      "name": "sub_1_2_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "w",
+          "limbs": 2
+        }
+      ],
+      "value": "a-y",
+      "requires": [
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "extends",
+          "of": "w",
+          "core": "sub_1_2",
+          "lead": "sub",
+          "finite_when": []
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_1_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
+        "license": "core: as sub_1_2; fix-up: MIT"
+      },
+      "flops": 13,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "sub_2_1",
       "inputs": [
         {
@@ -2337,6 +3415,52 @@
             "abs": "0"
           }
         ]
+      }
+    },
+    {
+      "name": "sub_2_1_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "w",
+          "limbs": 2
+        }
+      ],
+      "value": "x-a",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "extends",
+          "of": "w",
+          "core": "sub_2_1",
+          "lead": "sub",
+          "finite_when": []
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_2_1, then the fix-up of IEEE-like results (Milestone 1 listing)",
+        "license": "core: as sub_2_1; fix-up: MIT"
+      },
+      "flops": 13,
+      "instances": {
+        "binary64": [],
+        "binary32": []
       }
     },
     {
@@ -2404,7 +3528,55 @@
       }
     },
     {
+      "name": "sub_2_2_full",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "w",
+          "limbs": 2
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "extends",
+          "of": "w",
+          "core": "sub_2_2",
+          "lead": "sub",
+          "finite_when": []
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_2_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
+        "license": "core: as sub_2_2; fix-up: MIT"
+      },
+      "flops": 22,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "to_down_2",
+      "domain": "extended",
       "inputs": [
         {
           "name": "x",
@@ -2419,7 +3591,7 @@
       ],
       "value": "x",
       "requires": [
-        "normalized(x)"
+        "canonical(x)"
       ],
       "ensures": [
         {
@@ -2430,6 +3602,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Convert.v",
         "name": "to_down_2_correct"
@@ -2446,6 +3619,7 @@
     },
     {
       "name": "to_nearest_2",
+      "domain": "extended",
       "inputs": [
         {
           "name": "x",
@@ -2460,7 +3634,7 @@
       ],
       "value": "x",
       "requires": [
-        "normalized(x)"
+        "canonical(x)"
       ],
       "ensures": [
         {
@@ -2471,6 +3645,7 @@
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Convert.v",
         "name": "to_nearest_2_correct"

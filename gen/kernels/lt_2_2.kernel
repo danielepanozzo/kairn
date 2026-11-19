@@ -5,14 +5,17 @@ input:         x = x0 x1
 input:         y = y0 y1
 output:        mask m
 value:         x-y
-requires:      normalized x
-requires:      normalized y
+requires:      canonical x
+requires:      canonical y
 ensures:       predicate m lt x y
 min_precision: 1
 theorem:       proofs/theories/Compare.v lt_2_2_correct
 source:        limbs compared in order (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+domain:        extended
+ieee_status:   unverified
+entry:         yes
 cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; the non-finite layer tests the operands
 
 h = lt(x0, y0)

@@ -1,0 +1,17 @@
+# Test kernel: constants defined by an exact expression rounded up to the format, const up(EXPR),
+# each visible through a product: a power of 1 + u, a relative bound turned into one relative to
+# the computed value, and a sum of underflow terms (the forms of the planned radius of the Ball
+# kernels). Spaces inside an expression mean nothing.
+kernel:   ops_up
+input:    a
+output:   r = r0 k1 k2 k3
+value:    a
+ensures:  error r R c=1 k=1 t=0
+min_precision: 4
+status:   unverified
+
+k1 = prod(const up((1+u)^6), a)
+k2 = prod(const up(unit(ops_mul)/(1-unit(ops_mul))*(1+u)), a)
+k3 = prod(const up((1+u)*((1+u)^5*2*eta + tiny(ops_mul)/(1-unit(ops_mul)) + eta/2)), a)
+s  = add(k1, k2)
+r0 = add(s, k3)

@@ -1,10 +1,10 @@
 # The product of two balls with one-limb centers: |xy - cx cy| <= |cx| ry + |cy| rx + rx ry, plus
 # the error of the rounded center product, at most U |cz| + V from the claims of mul_1_1.
 kernel:        ball_mul_1
-input:         cx
-input:         rx
-input:         cy
-input:         ry
+input:         stored cx
+input:         stored rx
+input:         stored cy
+input:         stored ry
 output:        cz
 output:        rz
 value:         cx*cy
@@ -16,6 +16,7 @@ theorem:       proofs/theories/Ball.v ball_mul_1_correct
 source:        midpoint-radius product (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
 cz = prod(cx, cy)
