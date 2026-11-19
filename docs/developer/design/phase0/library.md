@@ -63,7 +63,7 @@ Rules that follow:
   super-linear in the length of a network: 0.15 s at 31 gates, 5 s at 48, and no result after 24
   CPU-minutes at 141, against 0.1 s for the same code outside a template. The class templates
   `Expansion<T, k>` forward to these functions.
-- Large-$k$ headers are separate, so including `kairn.hpp` never parses them.
+- Headers for large $k$ are separate, so including `kairn.hpp` never parses them.
 
 Compile times of the real networks will be reported per milestone, as the brief asks.
 

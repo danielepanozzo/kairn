@@ -94,15 +94,15 @@ it.**
 - Zero is the k-number with all limbs zero (consequence 2 makes this the only normalized zero up
   to the signs of the limbs).
 - The sign of a zero limb is **unspecified**: $+0$ and $-0$ limbs are both valid and compare
-  equal. Kairn's networks are not sign-of-zero preserving (a `TwoSum` of two $-0$ gives
-  $(-0, +0)$), and making them so would cost operations on every path.
+  equal. Kairn's networks do not preserve the sign of a zero (a `TwoSum` of two negative zeros returns
+  a negative and a positive zero), and making them do so would cost operations on every path.
 - `sign(x)` returns $-1$, $0$ or $+1$ from $x_0$; `signbit`-style queries on a zero are not
   provided.
 
 ### Non-finite values
 
-**Definition.** A k-number is *finite* when $x_0$ is finite. Every operation maintains the
-invariant *if any limb is not finite then $x_0$ is not finite*, so `isfinite(x)` reads one limb.
+**Definition.** A k-number is *finite* when $x_0$ is finite. Every operation maintains one
+more invariant: if any limb is not finite, then $x_0$ is not finite. So `isfinite(x)` reads one limb.
 This holds by construction: the generator checks that every intermediate value of a network
 reaches the first output limb through additions, subtractions, products and FMAs, all of which
 keep a NaN and turn an infinity into an infinity or a NaN
@@ -173,7 +173,7 @@ Metal has no `double`, so the Z column applies to `float` only. What the table s
   underflow term matters only for adversarial inputs.
 - **`float` limbs lose precision at magnitudes that occur in real data.** `Expansion<float, 4>`
   keeps its 96 bits only above about $10^{-16}$ on CUDA and only above about $10^{-9}$ on Metal.
-  A quantity near $10^{-30}$ has 49 bits on CUDA and 26 on Metal, whatever $k$ is. This is a
+  A quantity near $10^{-30}$ has at most 49 bits on CUDA and 26 on Metal, however large $k$ is. This is a
   property of the format, not of the algorithms, and no implementation can avoid it; the cure is
   for the client to scale its data (exact scaling by powers of two is provided). The getting-started
   page on choosing $T$ and $k$ will lead with this table, and it is part of the
@@ -191,8 +191,8 @@ $|x \circ y| \le \Omega_{\mathrm{safe}}$ then the result is finite. The safe thr
 output of each proof; for the additions it is within a factor $1 - O(u)$ of $\Omega$ (the only
 spurious overflow of `TwoSum` is at $|a| = \Omega$, [BGM17](references.md#bgm17)), and for
 products it is where the leading product overflows. The compile-time path is narrower: Dekker's
-product splits a limb by multiplying it by $2^{\lceil p/2 \rceil} + 1$, which overflows above
-$2^{996}$ in `double` ([BM11](references.md#bm11)), so the constant-evaluation variant rescales by
+product splits a limb by multiplying it by $2^{\lceil p/2 \rceil} + 1$, which overflows for limbs above
+about $2^{996}$ in `double` ([BM11](references.md#bm11)), so the constant-evaluation variant rescales by
 an exact power of two first; that rescaling is part of the kernel and of its proof.
 
 ## Other number types

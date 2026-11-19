@@ -181,6 +181,8 @@ to handle that.**
 | `renormalize(x)` | For limbs of decreasing magnitude with bounded overlap: a normalized result with form-R error $c\,u^k$. Status **K**: the Rocq-proved renormalization of [BJMP17](references.md#bjmp17) is the starting point, but it returns the weaker ulp-nonoverlap and uses data-dependent tests. | 0 |
 | Constant from an integer or a rational $n/d$ | `constexpr`, integer arithmetic only: returns the k-number $z$, a bound $\beta \in T$ with $\lvert z - n/d\rvert \le \beta$, and a flag that is true exactly when $z = n/d$. $\beta \le u^k \lvert n/d\rvert (1 + 2u) + \eta$. | — |
 
+The first three rows are immediate; the others are status **K**.
+
 ## Comparisons and sign
 
 **Statement.** For finite normalized $x, y$ (and for $y \in T$): `x < y`, `x <= y`, `x == y`,
@@ -277,13 +279,17 @@ to the centers; the radius is the propagated radius plus the kernel's proven bou
 `radd`/`rmul`. For all $x \in X$, $y \in Y$: $x \circ y \in Z$. If the center is not finite the
 result is the whole line.
 
-| Operation | Radius (before rounding up; $\lvert c\rvert^{+}$ is `abs_upper`, $\delta_\circ(z) = \mathrm{unit}_\circ \lvert z_0\rvert^{+} + \mathrm{tiny}_\circ$) |
+In the table, $\lvert c\rvert^{+}$ is `abs_upper` of a center, and $\delta$ is the kernel's own
+error bound evaluated at the new center $c_z$: the operation's `unit` times
+$\lvert c_z\rvert^{+}$, plus its `tiny`. The formulas are shown before the rounding up.
+
+| Operation | Radius |
 |---|---|
-| $X \pm Y$ | $r_x + r_y + \delta_{+}(c_z)$ |
-| $X \cdot Y$ | $\lvert c_x\rvert^{+} r_y + \lvert c_y\rvert^{+} r_x + r_x r_y + \delta_{\times}(c_z)$ |
-| $a \cdot X$, $a \in T$ exact | $\lvert a\rvert\, r_x + \delta(c_z)$ |
-| $X / Y$, $0 \notin Y$ | $\dfrac{\lvert c_x\rvert^{+} r_y + \lvert c_y\rvert^{+} r_x}{m\,(m - r_y)} + \delta_{/}(c_z)$ with $m$ a lower bound of $\lvert c_y\rvert$; the whole line if $0 \in Y$ |
-| $\sqrt X$ | $r_x / \sqrt{m - r_x} + \delta_{\sqrt{}}(c_z)$ with $m$ a lower bound of $c_x$ when $m > r_x$; otherwise the ball enclosing $[0, \sqrt{c_x + r_x}]$; empty if $c_x + r_x < 0$ |
+| $X \pm Y$ | $r_x + r_y + \delta$ |
+| $X \cdot Y$ | $\lvert c_x\rvert^{+} r_y + \lvert c_y\rvert^{+} r_x + r_x r_y + \delta$ |
+| $a \cdot X$, $a \in T$ exact | $\lvert a\rvert\, r_x + \delta$ |
+| $X / Y$, $0 \notin Y$ | $\dfrac{\lvert c_x\rvert^{+} r_y + \lvert c_y\rvert^{+} r_x}{m\,(m - r_y)} + \delta$ with $m$ a lower bound of $\lvert c_y\rvert$; the whole line if $0 \in Y$ |
+| $\sqrt X$ | $r_x / \sqrt{m - r_x} + \delta$ with $m$ a lower bound of $c_x$ when $m > r_x$; otherwise the ball enclosing $[0, \sqrt{c_x + r_x}]$; empty if $c_x + r_x < 0$ |
 
 **Tightness.** The radius is at most $(1 + 3u)^d$ times the exact value of its formula, with
 $d \le 5$ the nesting depth of the formula: only the `radd`/`rmul` steps inflate it. Against exact range arithmetic, midpoint-radius products
@@ -316,7 +322,7 @@ centers stayed finite.
 set is inside midpoint ± radius), `contains`, `certainly_positive` / `negative` / `zero`, `hull`,
 `intersection`, `split`, `is_empty`, `is_entire`. Conversions are outward in both directions:
 interval to ball takes the rounded midpoint and a radius covering both ends; ball to interval
-computes $c - r$ downward and $c + r$ upward with the k-number-plus-$T$ kernel. An unbounded
+computes $c - r$ downward and $c + r$ upward with the kernel that adds a `T` to a k-number. An unbounded
 interval becomes the whole-line ball.
 
 ## Batch kernels
@@ -357,7 +363,7 @@ round-to-nearest `Bparse`.
 
 ## Elementary functions
 
-**Statement (each function $f$ and each $(T, k)$).** For $x$ in the stated domain,
+**Statement**, for each function $f$ and each pair $T$, $k$. For $x$ in the stated domain,
 $|\tilde f(x) - f(x)| \le c_f\,u^k\,|f(x)| + \mathrm{tiny}_f$; the `Interval` and `Ball` versions
 enclose $f$ over the whole operand. Planned set: `exp`, `expm1`, `log`, `log1p`, `log2`, `log10`,
 `sin`, `cos`, `tan`, `sinpi`, `cospi`, `asin`, `acos`, `atan`, `atan2`, `sinh`, `cosh`, `tanh`,
