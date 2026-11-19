@@ -44,6 +44,8 @@ OUT_DIR = "docs/reference"
 HAND_WRITTEN = {"reading.md"}          # pages of docs/reference/ that this script does not own
 NAV_BEGIN = "  # BEGIN reference: written by docs/tools/reference.py; do not edit by hand"
 NAV_END = "  # END reference"
+# The page in place of which the CI puts Doxygen's C++ API reference (docs/Doxyfile).
+API_PAGE = "api/index.md"
 
 # The two formats of the library: the C++ type, the precision p, and q_max, the largest exponent
 # of m 2^q (docs/developer/architecture.md, "Number formats"); 2^(q_max + p) is the overflow
@@ -1798,6 +1800,10 @@ class Site:
           "theorem, its listing, and what the latest brute-force runs measured. "
           "[How to read a page](reading.md) explains each part.")
         w("")
+        w("The [C++ API](../%s), which Doxygen generates from the comments of the public headers, lists every "
+          "class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of "
+          "an operation names the kernel it calls." % API_PAGE)
+        w("")
         if unverified:
             w("Of the %d kernels, %d are proved and %d are **UNVERIFIED**: %s." % (
                 len(self.kernels), len(proved), len(unverified), ", ".join(self.link(n) for n in unverified)))
@@ -1864,7 +1870,8 @@ class Site:
         return "\n".join(out)
 
     def nav(self):
-        lines = [NAV_BEGIN, "  - Reference:", "      - reference/index.md", "      - How to read a page: reference/reading.md"]
+        lines = [NAV_BEGIN, "  - Reference:", "      - reference/index.md", "      - How to read a page: reference/reading.md",
+                 "      - C++ API: %s" % API_PAGE]
         for gid, title, _ in self.groups:
             names = [n for n, p in self.ops.KERNELS.items() if p["group"] == gid]
             if not names:

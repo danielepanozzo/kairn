@@ -1,19 +1,20 @@
-// Expansion<T, 1> and Expansion<T, 2>: a value stored as the unevaluated sum of one or two limbs
-// of type T (float or double), and their operations.
-//
-// Every operation forwards to one generated kernel (include/kairn/gen/scalar.hpp) whose claims
-// are in gen/claims.json; the comment of each operation names it. An operation whose kernel is
-// proved compiles as written; any other needs the kairn::unverified marker on one operand
-// (config.hpp). Which kernels are proved is read from include/kairn/gen/bounds.hpp, never written
-// here, so an operation loses the need for the marker when its proof is checked and the
-// generator is rerun. Each operation is gated on the kernel it calls, and the mixed forms (a
-// two-limb number with a limb or a one-limb number) are exact matches, so that an operation
-// whose kernel is not proved can never compile through a conversion to another kernel.
-//
-// The arithmetic of two limbs returns IEEE-like results (decision D5): the operators call the
-// full kernels of docs/developer/design/milestone1.md ("IEEE-like results"), each a finite core
-// followed by a fix-up, so that every result is canonical, as T's results are. kairn::finite::
-// has the same operations on the cores alone, for code that knows its values stay finite.
+/// @file
+/// Expansion<T, 1> and Expansion<T, 2>: a value stored as the unevaluated sum of one or two limbs
+/// of type T (float or double), and their operations.
+///
+/// Every operation forwards to one generated kernel (include/kairn/gen/scalar.hpp) whose claims
+/// are in gen/claims.json; the comment of each operation names it. An operation whose kernel is
+/// proved compiles as written; any other needs the kairn::unverified marker on one operand
+/// (config.hpp). Which kernels are proved is read from include/kairn/gen/bounds.hpp, never written
+/// here, so an operation loses the need for the marker when its proof is checked and the
+/// generator is rerun. Each operation is gated on the kernel it calls, and the mixed forms (a
+/// two-limb number with a limb or a one-limb number) are exact matches, so that an operation
+/// whose kernel is not proved can never compile through a conversion to another kernel.
+///
+/// The arithmetic of two limbs returns IEEE-like results (decision D5): the operators call the
+/// full kernels of docs/developer/design/milestone1.md ("IEEE-like results"), each a finite core
+/// followed by a fix-up, so that every result is canonical, as T's results are. kairn::finite::
+/// has the same operations on the cores alone, for code that knows its values stay finite.
 #pragma once
 
 #include "config.hpp"

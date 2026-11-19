@@ -104,6 +104,9 @@ def header_operations(root, known):
             if s.startswith("///"):
                 comment.append(s[3:].strip())
                 continue
+            if s.startswith("#"):
+                comment = []        # the comment of a file (`/// @file`) or of a macro, not of an operation
+                continue
             if not comment or s.startswith("template <") or s.startswith("requires") or not s:
                 continue
             text, comment = " ".join(comment), []
@@ -602,6 +605,13 @@ class Tool(unittest.TestCase):
             f.write(text.replace(line + "\n", ""))
         problems = reference.check(self.copy.root)
         self.assertEqual(problems, ["mkdocs.yml differs from what docs/tools/reference.py writes"])
+
+    def test_the_cpp_api_is_in_the_nav_and_the_index(self):
+        files = reference.plan(self.copy.root)
+        nav = files["mkdocs.yml"].split("\n")
+        i = nav.index("      - How to read a page: reference/reading.md")
+        self.assertEqual(nav[i + 1], "      - C++ API: api/index.md")
+        self.assertIn("The [C++ API](../api/index.md), which Doxygen generates", files["docs/reference/index.md"])
 
     def test_crlf_checkout_is_fresh(self):
         for rel in ("docs/reference/add_2_2.md", "mkdocs.yml"):

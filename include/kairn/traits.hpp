@@ -1,12 +1,13 @@
-// kairn::traits<X>: the questions that float, double and every Expansion<T, K> answer the same
-// way, so that code templated on its scalar reads the same for all of them
-// (docs/developer/design/phase0/library.md, "API sketch"); and the error model as data
-// (docs/developer/design/phase0/operations.md, "Exported constants").
-//
-// The constants come from include/kairn/gen/bounds.hpp, which the generator writes from
-// gen/claims.json. An operation whose kernel is not proved there has no constants here at all:
-// its entry is an UnverifiedBound, and reading entry.unit does not compile. No number in this file
-// is written by hand.
+/// @file
+/// kairn::traits<X>: the questions that float, double and every Expansion<T, K> answer the same
+/// way, so that code templated on its scalar reads the same for all of them
+/// (docs/developer/design/phase0/library.md, "API sketch"); and the error model as data
+/// (docs/developer/design/phase0/operations.md, "Exported constants").
+///
+/// The constants come from include/kairn/gen/bounds.hpp, which the generator writes from
+/// gen/claims.json. An operation whose kernel is not proved there has no constants here at all:
+/// its entry is an UnverifiedBound, and reading entry.unit does not compile. No number in this file
+/// is written by hand.
 #pragma once
 
 #include "config.hpp"

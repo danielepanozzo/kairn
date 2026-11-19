@@ -11,9 +11,13 @@ repo_url: https://github.com/danielepanozzo/kairn
 edit_uri: edit/main/docs/
 docs_dir: docs
 
+# Doxygen's configuration and the main page of the C++ API reference, which Doxygen writes into
+# api/ after the build, in place of the page api/index.md (docs/developer/documentation.md).
 exclude_docs: |
   /requirements.txt
   /tools/
+  /Doxyfile
+  /api/mainpage.md
 
 theme:
   name: material
@@ -98,6 +102,7 @@ nav:
   - Reference:
       - reference/index.md
       - How to read a page: reference/reading.md
+      - C++ API: api/index.md
       - Construction and access:
           - A two-limb number from a value of T: reference/make_2.md
           - A two-limb number from its limbs: reference/make_2_limbs.md

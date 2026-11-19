@@ -4,6 +4,8 @@
 
 Every public operation of Kairn, grouped by what it does, with the kernel that computes it, and the kernels that the public headers do not call yet. Each kernel has a page: its statement in plain mathematics, the C++ forms that reach it, what it requires, what is proved and with which theorem, its listing, and what the latest brute-force runs measured. [How to read a page](reading.md) explains each part.
 
+The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
+
 All 63 kernels are proved.
 
 18 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.

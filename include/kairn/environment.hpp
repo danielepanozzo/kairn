@@ -1,13 +1,14 @@
-// The floating-point environment Kairn's guarantees assume, and the two checks a program can make
-// of it (docs/developer/design/phase0/environment.md, "The contract"):
-//
-// - kairn::environment_ok(): the dynamic state, which can change while a program runs: the
-//   rounding mode and flush-to-zero, read from the control register;
-// - kairn::self_test(): what the compiler did with the flags of the translation unit it is
-//   compiled in, which no register shows, by computing known results and comparing.
-//
-// Kairn never reads or writes the rounding mode to do its work and never changes the environment;
-// both checks only read.
+/// @file
+/// The floating-point environment Kairn's guarantees assume, and the two checks a program can make
+/// of it (docs/developer/design/phase0/environment.md, "The contract"):
+///
+/// - kairn::environment_ok(): the dynamic state, which can change while a program runs: the
+///   rounding mode and flush-to-zero, read from the control register;
+/// - kairn::self_test(): what the compiler did with the flags of the translation unit it is
+///   compiled in, which no register shows, by computing known results and comparing.
+///
+/// Kairn never reads or writes the rounding mode to do its work and never changes the environment;
+/// both checks only read.
 #pragma once
 
 #include "config.hpp"
