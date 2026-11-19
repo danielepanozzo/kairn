@@ -135,9 +135,11 @@ t        = add(x0, y0)
 | `select m a b` | a if m else b | `if m then a else b` | `m ? a : b` | `_mm256_blendv_pd(b, a, m)` | `vbslq(m, a, b)` |
 | `succ a`, `pred a` | IEEE nextUp, nextDown | Flocq's `succ`, `pred` | `next_up(a)`, `next_down(a)` | `next_up`, `next_down` on integer lanes | the same |
 | `copy a` | a | `a` | `a` | `a` | `a` |
-| `guard a` | RN(a + 0): a, with −0 made +0 | `rnd (a + 0)` | `a + 0.0` (never `a - 0`) | `_mm256_add_pd(a, _mm256_setzero_pd())` | `vaddq_f64(a, vdupq_n_f64(0.0))` |
+| `guard a` | RN(a + 0): a, with −0 made +0; a itself in constant evaluation | `rnd (a + 0)` | `a + 0.0` (never `a - 0`); in a `constexpr` kernel `__builtin_is_constant_evaluated() ? a : a + 0.0` | `_mm256_add_pd(a, _mm256_setzero_pd())` | `vaddq_f64(a, vdupq_n_f64(0.0))` |
+| `times_inf t` | t · (+∞), exact: NaN for a NaN or a zero, else ±∞ with t's sign | none (no infinity in the real model) | `t * std::numeric_limits<double>::infinity()`; in a `constexpr` kernel `times_inf_ce(t)` (comparisons) in constant evaluation | `_mm256_mul_pd(t, _mm256_set1_pd(` +∞ `))` | `vmulq_f64(t, vdupq_n_f64(` +∞ `))` |
 | `0` | +0 | `0` | `0.0` | `_mm256_setzero_pd()` | `vdupq_n_f64(0.0)` |
 | `const NAME` | `consts.value` | `rocq.CONSTANTS`, or `unit_computed_K` | a hexadecimal literal | `_mm256_set1_pd(literal)` | `vdupq_n_f64(literal)` |
+| `const up(EXPR)` | EXPR rounded up (`consts.value`) | `up_K_i := round … Zceil (EXPR)` | a hexadecimal literal | `_mm256_set1_pd(literal)` | `vdupq_n_f64(literal)` |
 | `const inf`, `const nan` | +∞, a quiet NaN | none: only kernels without a real-model statement name them | `std::numeric_limits<double>::infinity()`, `quiet_NaN()` | `_mm256_set1_pd(` that `)` | `vdupq_n_f64(` that `)` |
 | `K(args)` | evaluated as a call | `let '(…) := K args in` | inlined | inlined | inlined |
 
@@ -152,6 +154,18 @@ They are computed exactly for every format, toy formats included (`consts.py`), 
 are definitions over the reals with Flocq's `round … Zceil`. A kernel may use them only if K is
 proved, or if it is itself unverified, and only from K's minimum precision on.
 
+`const up(EXPR)` is the smallest number of the format not below EXPR, which must be positive: an
+exact expression over `u`, `eta`, integers, `unit(K)` and `tiny(K)` (K's c u^k and t η, from its
+one error entry, of form R and unconditional), with `+ - * /`, parentheses and integer powers
+(`^`, also negative). For example `const up((1+u)^6)`,
+`const up(unit(mul_2_2)/(1-unit(mul_2_2))*(1+u))`, and with spaces, which mean nothing,
+`const up((1+u)*((1+u)^5*2*eta + tiny(mul_2_2)/(1-unit(mul_2_2)) + eta/2))`. It is computed exactly
+for every format (`consts.py`, below η it is η); C++ prints it as an exact hexadecimal literal per
+type; Rocq as one definition per distinct constant, `up_K_i` after the first kernel K that uses it,
+`round radix2 (FLT_exp emin prec) Zceil (EXPR)` with u, η, `unit(K)` and `tiny(K)` spelled out. The
+rules of `unit_computed` apply (K proved unless the kernel is unverified, its minimum precision at
+least K's), and the expression is checked to be positive in binary64 and binary32.
+
 The Rocq model is one section over `emin prec choice`. Closing it abstracts each definition over
 the section variables it uses and only those (`lt_2_2` takes four reals, `to_down_2` takes
 `emin prec` first), and the statements apply each kernel accordingly (`rocq.section_args`).
@@ -163,7 +177,13 @@ computed that limb provides it. A mask output gets nothing.
 
 A kernel with a constant-evaluation variant (`ce_variant:`) is `constexpr` and dispatches on
 `__builtin_is_constant_evaluated()`: in constant evaluation it runs the variant's body with each
-`prod` a plain product. `interp --ce` does the same.
+`prod` a plain product. `interp --ce` does the same. In constant evaluation `guard` returns its
+operand and `times_inf` compares instead of multiplying (`times_inf_ce`): GCC and Clang refuse an
+operation that produces a NaN there (NaN + 0, 0 · ∞), even one whose result is not selected. The
+full kernels are then constexpr where their cores are (the additions; not the products, whose cores
+and `t = prod(x0, y0)` are fused operations, nor the full Ball kernels). Constant evaluation still
+stops at what the core cannot compute there: an overflow (GCC) or the NaN that TwoSum then makes
+(Clang) is a compile error, never a wrong constant.
 
 ## The rules
 
@@ -174,7 +194,9 @@ rule:
    input that the computation does not need but the claims do (`to_nearest_2`'s `x1`) is
    declared with `unused:` and the reason; C++ marks it `[[maybe_unused]]`.
 2. R1: there is no plain multiplication (`mul` is parsed only to be refused, with the route by
-   which it reaches an addition).
+   which it reaches an addition). `times_inf`, a multiplication by infinity and exact, is one only
+   in C++: its result may be an operand of a comparison or of `select` and nothing else, and an
+   output only through `select`.
 3. R2: no output is the result of a `muladd`, or an input (an input is returned through `copy`).
 4. The non-finite cone: every limb value reaches output limb 0 through operations that keep a
    non-finite operand non-finite (not `select`, `succ`, `pred` or comparisons), unless it is
@@ -189,14 +211,16 @@ rule:
    `select` or `copy` alone make of it, is never an operand of `add` or `sub` nor the addend of an
    FMA-family operation before it has passed through `guard`. It may be a factor and an operand of
    a comparison. A value passed to another kernel is followed into that kernel's body, and so is
-   what that kernel returns of it. `guard_pending: INPUT REASON` excuses one input of one kernel,
-   and every kernel that passes a value into it; `build` prints both lists, and the declaration is
-   refused once the input is guarded.
+   what that kernel returns of it. Nor is such a value an output of the entry kernel as it is (it
+   would be stored in an object, unguarded). `guard_pending: INPUT REASON` excuses one input of one
+   kernel, and every kernel that passes a value into it, of the first part; `build` prints both
+   lists, and the declaration is refused once the input is guarded.
 
 There are also checks of names (none may shadow what the printers use), kinds, arity, the closed
 vocabulary of the claims (that of architecture.md, "Claims of the second wave" and "Claims of the
 non-finite layer" included, each kind in its domain), of the two models (a kernel with a
-real-model statement names no `const inf` or `const nan` and calls no kernel without one), of
+real-model statement names no `const inf` or `const nan`, has no `times_inf`, and calls no kernel
+without one), of
 `extends` (its core has the same inputs, value, minimum precision, and requirements with
 `normalized` for `canonical`), of constant-evaluation variants (same signature, no FMA), and of
 computed constants (above). A kernel has no real-model statement when it claims `extends`,
