@@ -1,0 +1,535 @@
+{
+ "schema": 1,
+ "kernels": [
+  {
+   "name": "two_sum",
+   "inputs": [
+    {
+     "name": "a",
+     "limbs": 1
+    },
+    {
+     "name": "b",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "s",
+     "limbs": 1
+    },
+    {
+     "name": "e",
+     "limbs": 1
+    }
+   ],
+   "value": "a+b",
+   "requires": [],
+   "ensures": [
+    {
+     "kind": "leading_rounded",
+     "of": "s"
+    },
+    {
+     "kind": "error",
+     "of": [
+      "s",
+      "e"
+     ],
+     "form": "R",
+     "c": "0",
+     "k": 1,
+     "t": "0",
+     "when": null
+    }
+   ],
+   "min_precision": 2,
+   "instances": {
+    "binary64": {
+     "rel": "0",
+     "abs": "0"
+    },
+    "binary32": {
+     "rel": "0",
+     "abs": "0"
+    }
+   },
+   "status": "unverified"
+  },
+  {
+   "name": "fast_two_sum",
+   "inputs": [
+    {
+     "name": "a",
+     "limbs": 1
+    },
+    {
+     "name": "b",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "s",
+     "limbs": 1
+    },
+    {
+     "name": "e",
+     "limbs": 1
+    }
+   ],
+   "value": "a+b",
+   "requires": [
+    "abs_ge(a, b)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": [
+      "s",
+      "e"
+     ]
+    },
+    {
+     "kind": "leading_rounded",
+     "of": "s"
+    },
+    {
+     "kind": "error",
+     "of": [
+      "s",
+      "e"
+     ],
+     "form": "R",
+     "c": "0",
+     "k": 1,
+     "t": "0",
+     "when": null
+    }
+   ],
+   "min_precision": 2,
+   "instances": {
+    "binary64": {
+     "rel": "0",
+     "abs": "0"
+    },
+    "binary32": {
+     "rel": "0",
+     "abs": "0"
+    }
+   },
+   "status": "unverified"
+  },
+  {
+   "name": "two_prod",
+   "inputs": [
+    {
+     "name": "a",
+     "limbs": 1
+    },
+    {
+     "name": "b",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "p",
+     "limbs": 1
+    },
+    {
+     "name": "e",
+     "limbs": 1
+    }
+   ],
+   "value": "a*b",
+   "requires": [],
+   "ensures": [
+    {
+     "kind": "leading_rounded",
+     "of": "p"
+    },
+    {
+     "kind": "error",
+     "of": [
+      "p",
+      "e"
+     ],
+     "form": "R",
+     "c": "0",
+     "k": 1,
+     "t": "1/2",
+     "when": null
+    },
+    {
+     "kind": "error",
+     "of": [
+      "p",
+      "e"
+     ],
+     "form": "R",
+     "c": "0",
+     "k": 1,
+     "t": "0",
+     "when": "product_large"
+    }
+   ],
+   "min_precision": 2,
+   "instances": {
+    "binary64": [
+     {
+      "rel": "0",
+      "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+     },
+     {
+      "rel": "0",
+      "abs": "0"
+     }
+    ],
+    "binary32": [
+     {
+      "rel": "0",
+      "abs": "1/1427247692705959881058285969449495136382746624"
+     },
+     {
+      "rel": "0",
+      "abs": "0"
+     }
+    ]
+   },
+   "status": "unverified"
+  },
+  {
+   "name": "two_prod_dekker",
+   "inputs": [
+    {
+     "name": "a",
+     "limbs": 1
+    },
+    {
+     "name": "b",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "p",
+     "limbs": 1
+    },
+    {
+     "name": "e",
+     "limbs": 1
+    }
+   ],
+   "value": "a*b",
+   "requires": [],
+   "ensures": [
+    {
+     "kind": "leading_rounded",
+     "of": "p"
+    },
+    {
+     "kind": "error",
+     "of": [
+      "p",
+      "e"
+     ],
+     "form": "R",
+     "c": "0",
+     "k": 1,
+     "t": "7/2",
+     "when": null
+    },
+    {
+     "kind": "error",
+     "of": [
+      "p",
+      "e"
+     ],
+     "form": "R",
+     "c": "0",
+     "k": 1,
+     "t": "0",
+     "when": "product_large"
+    }
+   ],
+   "min_precision": 3,
+   "instances": {
+    "binary64": [
+     {
+      "rel": "0",
+      "abs": "7/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+     },
+     {
+      "rel": "0",
+      "abs": "0"
+     }
+    ],
+    "binary32": [
+     {
+      "rel": "0",
+      "abs": "7/1427247692705959881058285969449495136382746624"
+     },
+     {
+      "rel": "0",
+      "abs": "0"
+     }
+    ]
+   },
+   "status": "unverified"
+  },
+  {
+   "name": "add_2_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "y",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "z",
+     "limbs": 2
+    }
+   ],
+   "value": "x+y",
+   "requires": [
+    "normalized(x)",
+    "normalized(y)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "z"
+    },
+    {
+     "kind": "error",
+     "of": "z",
+     "form": "R",
+     "c": "3/(1-4*u)",
+     "k": 2,
+     "t": "0",
+     "when": null
+    }
+   ],
+   "min_precision": 3,
+   "instances": {
+    "binary64": {
+     "rel": "3/81129638414606645666991986180096",
+     "abs": "0"
+    },
+    "binary32": {
+     "rel": "1/93824969867264",
+     "abs": "0"
+    }
+   },
+   "status": "unverified"
+  },
+  {
+   "name": "add_2_1",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "a",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "z",
+     "limbs": 2
+    }
+   ],
+   "value": "x+a",
+   "requires": [
+    "normalized(x)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "z"
+    },
+    {
+     "kind": "error",
+     "of": "z",
+     "form": "R",
+     "c": "2",
+     "k": 2,
+     "t": "0",
+     "when": null
+    }
+   ],
+   "min_precision": 3,
+   "instances": {
+    "binary64": {
+     "rel": "1/40564819207303340847894502572032",
+     "abs": "0"
+    },
+    "binary32": {
+     "rel": "1/140737488355328",
+     "abs": "0"
+    }
+   },
+   "status": "unverified"
+  },
+  {
+   "name": "mul_2_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "y",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "z",
+     "limbs": 2
+    }
+   ],
+   "value": "x*y",
+   "requires": [
+    "normalized(x)",
+    "normalized(y)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "z"
+    },
+    {
+     "kind": "error",
+     "of": "z",
+     "form": "R",
+     "c": "4",
+     "k": 2,
+     "t": "4",
+     "when": null
+    }
+   ],
+   "min_precision": 5,
+   "instances": {
+    "binary64": {
+     "rel": "1/20282409603651670423947251286016",
+     "abs": "1/50600563326827654588123836679729326762389162441035529589225339506857584891998836722990095925359281123796769466079202977847452184346448369216753349985184627480379356069141590341116726935523304085309941919618186267140501870856173174654525838912289889085202514128089692388083353653807625633046581877161501565826926935273373696"
+    },
+    "binary32": {
+     "rel": "1/70368744177664",
+     "abs": "1/178405961588244985132285746181186892047843328"
+    }
+   },
+   "status": "unverified"
+  },
+  {
+   "name": "mul_2_1",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "a",
+     "limbs": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "z",
+     "limbs": 2
+    }
+   ],
+   "value": "x*a",
+   "requires": [
+    "normalized(x)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "z"
+    },
+    {
+     "kind": "error",
+     "of": "z",
+     "form": "R",
+     "c": "2",
+     "k": 2,
+     "t": "2",
+     "when": null
+    }
+   ],
+   "min_precision": 4,
+   "instances": {
+    "binary64": {
+     "rel": "1/40564819207303340847894502572032",
+     "abs": "1/101201126653655309176247673359458653524778324882071059178450679013715169783997673445980191850718562247593538932158405955694904368692896738433506699970369254960758712138283180682233453871046608170619883839236372534281003741712346349309051677824579778170405028256179384776166707307615251266093163754323003131653853870546747392"
+    },
+    "binary32": {
+     "rel": "1/140737488355328",
+     "abs": "1/356811923176489970264571492362373784095686656"
+    }
+   },
+   "status": "unverified"
+  },
+  {
+   "name": "add_fast_2_2",
+   "inputs": [
+    {
+     "name": "x",
+     "limbs": 2
+    },
+    {
+     "name": "y",
+     "limbs": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "z",
+     "limbs": 2
+    }
+   ],
+   "value": "x+y",
+   "requires": [
+    "normalized(x)",
+    "normalized(y)"
+   ],
+   "ensures": [
+    {
+     "kind": "normalized",
+     "of": "z"
+    },
+    {
+     "kind": "error",
+     "of": "z",
+     "form": "A",
+     "c": "4",
+     "k": 2,
+     "t": "0",
+     "when": null
+    }
+   ],
+   "min_precision": 3,
+   "instances": {
+    "binary64": {
+     "rel": "1/20282409603651670423947251286016",
+     "abs": "0"
+    },
+    "binary32": {
+     "rel": "1/70368744177664",
+     "abs": "0"
+    }
+   },
+   "status": "unverified"
+  }
+ ]
+}

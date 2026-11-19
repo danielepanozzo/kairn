@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+"""Kairn's test oracle.  Run `python3 oracle/kairn-oracle --help`."""
+
+import os
+import sys
+
+# The oracle runs from the source tree (ctest, CI); it must not write caches into it.
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"      # for the worker processes of brute
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from kairn_oracle.cli import main  # noqa: E402
+
+if __name__ == "__main__":
+    sys.exit(main())
