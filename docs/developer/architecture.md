@@ -155,11 +155,14 @@ even without the guard, and its control only reports. The guard relies on what t
 already relies on: the compiler honors the sign of zero, so it may not remove `a + 0`. The
 generator emits every guard and checks the rule; the public headers contain none of their own.
 
-One compiler does not fit that description. MSVC 19.52 removes the addition of zero for some
-operands under `/O2`: a guarded $-0$ stays $-0$ (values are unaffected, and the sign of a zero is
-unspecified). In every test so far it still kept the program's product out of the kernel under
-`/fp:contract`, the one MSVC setting that contracts, which is not its default: 0 of 200 000 cases
-differ with the guard and all of them without it. On MSVC the guard therefore rests on those
+One compiler does not fit that description. With the hand-written guard of the first headers,
+MSVC 19.52 removed the addition of zero for some operands under `/O2`: a guarded $-0$ stayed $-0$
+(values are unaffected, and the sign of a zero is unspecified). With the generated guard, a $-0$
+given to a constructor, to `x + a` and to a `Ball` entered as $+0$ under `/O2`, `/Od`,
+`/fp:contract` and `/fp:strict`, so the addition was kept in those cases. In every test so far
+MSVC kept the program's product out of the kernel under `/fp:contract`, the one MSVC setting that
+contracts, which is not its default: no case differs with the guard and all of them without it.
+Since this compiler has been seen to remove such an addition, on MSVC the guard rests on those
 tests, which run on every change, and not on a rule of the language.
 
 A kernel may name a second kernel as its **constant-evaluation variant**. The emitted C++
