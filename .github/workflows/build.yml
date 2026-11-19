@@ -1,6 +1,8 @@
 # Build and quick tier: configure, build and ctest on every hosted platform and compiler
 # (docs/developer/testing.md). The same three commands as in docs/getting-started/index.md, with
-# Ninja everywhere, Release, warnings as errors, and the compiler named.
+# Ninja everywhere, Release, warnings as errors, and the compiler named. The packed kernels are
+# tested with the backend of each runner: AVX2 on the x86-64 ones (whose CPUs have it), NEON on
+# macOS arm64. The generator's C++ tests, which ctest leaves out, are in generator.yml.
 name: Build and test
 
 on:

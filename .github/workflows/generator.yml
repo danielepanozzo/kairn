@@ -1,0 +1,51 @@
+# The generator's whole suite, its C++ tests included: python3 gen/kairn-gen test with each
+# GCC-style compiler of the hosted runners (docs/developer/testing.md). The quick tier (ctest, in
+# build.yml) runs the suite without its C++ tests, which compile the generated code at -O0 and
+# -O2, with and without -frounding-math, under every contraction setting, and require every
+# build, scalar and packed, to be bit-identical to the interpreter: here they run in full, one
+# job per compiler, as they did in ctest before.
+name: Generator's full suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# One run per branch: a new push cancels the run it supersedes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x86-64, GCC (scalar and AVX2)
+            os: ubuntu-24.04
+            cxx: g++
+          - name: Linux x86-64, Clang (scalar and AVX2)
+            os: ubuntu-24.04
+            cxx: clang++
+          - name: macOS arm64, Apple clang (scalar and NEON)
+            os: macos-15
+            cxx: c++
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Python 3.13 or later: the interpreter's tests compare it with math.fma.
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: The generator's tests, C++ included
+        run: python3 gen/kairn-gen test --cxx ${{ matrix.cxx }}
