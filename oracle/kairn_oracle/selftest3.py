@@ -666,7 +666,11 @@ def injected_wave3_exhaustive(ctx):
             if k == "add_2_2_full":
                 fname = "fp:3:-3:0"
             elif k in ("ball_add_1_full", "ball_sub_1_full"):
-                fname = "fp:2:-2:1"
+                # H contains the smallest normal number, 2 eta at p = 2. On fp:2:-2:1 that alone
+                # covers the error of every center (at most 1, with H = 1), so a missing E is
+                # no error there; with one more exponent at each end the centers reach 12, their
+                # error 2, and H is 3/4.
+                fname = "fp:2:-3:2"
             elif k == "ball_mul_1_full":
                 # Below p = 3 and qmin = -4 the rounded-up G of the second design hides a missing
                 # E: on every case of fp:2:-2:1 and fp:3:-3:0 the radius still encloses.
