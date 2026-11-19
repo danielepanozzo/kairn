@@ -50,38 +50,38 @@ inline const char* add_1_1_float() noexcept {
 
 // rmul (double)
 inline const char* rmul_double() noexcept {
-    volatile double i0 = 0x1.9e2e482ec0a67p+3;
-    volatile double i1 = 0x1.5d5b073bb2938p-2;
+    volatile double i0 = 0x1.9e2e482ec0a67p-19;
+    volatile double i1 = 0x1.02f14bae74eb1p-20;
     double o0;
     rmul(i0, i1, o0);
-    return !same(o0, 0x1.1a9c2f479f682p+2) ? "rmul (double)" : nullptr;
+    return !same(o0, 0x1.a2f108c2e1ef3p-39) ? "rmul (double)" : nullptr;
 }
 
 // rmul (float)
 inline const char* rmul_float() noexcept {
-    volatile float i0 = -0x1.26b368p+0f;
-    volatile float i1 = 0x1.8eddacp+3f;
+    volatile float i0 = 0x1.26b368p-18f;
+    volatile float i1 = 0x1.651f3p-18f;
     float o0;
     rmul(i0, i1, o0);
-    return !same(o0, -0x1.cb2a18p+3f) ? "rmul (float)" : nullptr;
+    return !same(o0, 0x1.9b1c1ap-36f) ? "rmul (float)" : nullptr;
 }
 
 // radd (double)
 inline const char* radd_double() noexcept {
-    volatile double i0 = 0x1.0fc42231eb96cp-3;
-    volatile double i1 = -0x1.19d59b69c7c8p-3;
+    volatile double i0 = 0x1.0fc42231eb96cp-16;
+    volatile double i1 = 0x1.48505cd27f8e2p-21;
     double o0;
     radd(i0, i1, o0);
-    return !same(o0, -0x1.422f26fb8627fp-8) ? "radd (double)" : nullptr;
+    return !same(o0, 0x1.1a06a5187f934p-16) ? "radd (double)" : nullptr;
 }
 
 // radd (float)
 inline const char* radd_float() noexcept {
-    volatile float i0 = 0x1.05ad5cp-1f;
-    volatile float i1 = -0x1.dcd0aap+2f;
+    volatile float i0 = 0x1.05ad5cp-19f;
+    volatile float i1 = 0x1.a5cb1p-18f;
     float o0;
     radd(i0, i1, o0);
-    return !same(o0, -0x1.bc1afcp+2f) ? "radd (float)" : nullptr;
+    return !same(o0, 0x1.1450e2p-17f) ? "radd (float)" : nullptr;
 }
 
 // ball_add_1 (double)
@@ -438,30 +438,6 @@ inline const char* add_fast_2_2_float() noexcept {
     float o1;
     add_fast_2_2(i0, i1, i2, i3, o0, o1);
     return !same(o0, 0x1.024118p+3f) || !same(o1, -0x1.63a9dcp-23f) ? "add_fast_2_2 (float)" : nullptr;
-}
-
-// add_fast_2_2_ts (double)
-inline const char* add_fast_2_2_ts_double() noexcept {
-    volatile double i0 = 0x1.293e3c630c43bp-3;
-    volatile double i1 = -0x1.f2d3bf23ea5edp-57;
-    volatile double i2 = -0x1.9ff0682bb601ap+1;
-    volatile double i3 = 0x1.84f1cc6b3f7c3p-55;
-    double o0;
-    double o1;
-    add_fast_2_2_ts(i0, i1, i2, i3, o0, o1);
-    return !same(o0, -0x1.8d5c8465853d6p+1) || !same(o1, -0x1.fbe191aedd8dcp-54) ? "add_fast_2_2_ts (double)" : nullptr;
-}
-
-// add_fast_2_2_ts (float)
-inline const char* add_fast_2_2_ts_float() noexcept {
-    volatile float i0 = 0x1.46e618p+2f;
-    volatile float i1 = 0x1.75eca6p-23f;
-    volatile float i2 = -0x1.b9f7p-2f;
-    volatile float i3 = 0x1.d870b8p-28f;
-    float o0;
-    float o1;
-    add_fast_2_2_ts(i0, i1, i2, i3, o0, o1);
-    return !same(o0, 0x1.2b46a8p+2f) || !same(o1, 0x1.84b02cp-23f) ? "add_fast_2_2_ts (float)" : nullptr;
 }
 
 // ball_add_2 (double)
@@ -1008,8 +984,6 @@ inline const char* run() noexcept {
         add_2_2_float,
         add_fast_2_2_double,
         add_fast_2_2_float,
-        add_fast_2_2_ts_double,
-        add_fast_2_2_ts_float,
         ball_add_2_double,
         ball_add_2_float,
         mul_2_2_double,

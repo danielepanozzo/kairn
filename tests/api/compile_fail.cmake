@@ -16,6 +16,25 @@ endforeach()
 string(REPLACE "|" ";" OPTIONS "${OPTIONS}")
 string(REPLACE "|" ";" COMMON "${COMMON}")
 
+# With -DUNVERIFIED_FIXTURE=DIR, the headers are first copied into DIR with every kernel of
+# kairn/gen/bounds.hpp marked unverified, so that the marker is tested whatever the proofs say.
+if(UNVERIFIED_FIXTURE)
+  file(REMOVE_RECURSE "${UNVERIFIED_FIXTURE}")
+  file(COPY "${INCLUDE}/kairn" DESTINATION "${UNVERIFIED_FIXTURE}")
+  set(_bounds "${UNVERIFIED_FIXTURE}/kairn/gen/bounds.hpp")
+  file(READ "${_bounds}" _text)
+  string(REGEX REPLACE "template <> struct ([a-z0-9_]+)<(double|float)> {[^}]*};"
+    "template <> struct \\1<\\2> { static constexpr bool proved = false; };" _fixture "${_text}")
+  string(REGEX MATCHALL "proved = true" _left "${_fixture}")
+  string(REGEX MATCHALL "proved = false" _all "${_fixture}")
+  list(LENGTH _all _n)
+  if(_left OR _n EQUAL 0)
+    message(FATAL_ERROR "could not mark every kernel of ${_bounds} unverified")
+  endif()
+  file(WRITE "${_bounds}" "${_fixture}")
+  set(INCLUDE "${UNVERIFIED_FIXTURE}")
+endif()
+
 if(STYLE STREQUAL "msvc")
   set(_base /nologo /std:c++20 /EHsc /Zs "/I${INCLUDE}" "/DKAIRN_TEST_CASE=${CASE}")
   set(_control /DKAIRN_TEST_CONTROL)

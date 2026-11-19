@@ -2,9 +2,11 @@
 // type T (docs/developer/design/phase0/operations.md, "Ball"; the kernels are in
 // docs/developer/design/milestone1.md, "Ball kernels").
 //
-// Every Ball operation is UNVERIFIED today (gen/claims.json): each needs the kairn::unverified
-// marker on one operand. The special states of a ball (the empty set, the whole line) and the
-// treatment of a center that overflows are designed but not written yet.
+// Each operation forwards to one generated Ball kernel, the finite core of the operation; like
+// every operation, it needs the kairn::unverified marker while gen/claims.json does not mark its
+// kernel proved. The special states of a ball (the empty set, the whole line) and the treatment
+// of a center or radius that overflows are designed (the full Ball kernels of
+// docs/developer/design/milestone1.md) but not generated yet.
 #pragma once
 
 #include "expansion.hpp"
@@ -182,14 +184,16 @@ KAIRN_FORCEINLINE Ball<T, K> mul(const Expansion<T, K>& x, const Ball<T, K>& y) 
 ///
 /// Each operation computes the center with the k-number kernel of the same name (rounded to
 /// nearest) and a radius that covers the radii of the operands and that kernel's own proved
-/// error bound, evaluated with every step rounded up (milestone1.md, "Ball kernels"). Its target
-/// statement is containment: for every x in X and y in Y, x op y is in the result.
+/// error bound, evaluated with every step rounded up (milestone1.md, "Ball kernels"). The claim
+/// of every Ball kernel (gen/claims.json) is containment, for finite operands with nonnegative
+/// radii, in the model where no operation overflows: for every x in X and y in Y, x op y is in
+/// the result; and for two limbs the center is normalized. As for every operation, the marker
+/// kairn::unverified is needed exactly while a kernel's claim is not proved.
 ///
-/// Status today: every operation (+, -, *, unary -, scaling by a T) is UNVERIFIED and needs
-/// kairn::unverified on one operand; containment is tested by the oracle in exact arithmetic but
-/// not proved. Not written yet: the special states (a NaN radius for the empty set; the whole
-/// line, r = +inf with c = 0) and the rule that a center that is not finite gives the whole line;
-/// today such a center is returned as the kernel computes it, and nothing is claimed about it.
+/// Not written yet: the special states (a NaN radius for the empty set; the whole line, r = +inf
+/// with c = 0), the rule that a center or a radius that is not finite gives the whole line, and
+/// any statement in the IEEE model with overflow. Today a result whose center or radius is not
+/// finite is returned as the kernel computes it, and nothing is claimed about it.
 template <class T, int K>
 class Ball {
     static_assert(detail::limb<T>, "Ball<T, k>: the limb type T is float or double");
@@ -220,27 +224,25 @@ public:
     /// The radius: every point of the set is within it of the center.
     constexpr T radius() const noexcept { return r_; }
 
-    /// X + Y (kernel ball_add_1 or ball_add_2, UNVERIFIED: needs kairn::unverified). Not usable
-    /// in constant evaluation yet.
+    /// X + Y (kernel ball_add_1 or ball_add_2). Not usable in constant evaluation yet.
     friend KAIRN_FORCEINLINE Ball operator+(const Ball& x, const Ball& y) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::add>
     {
         return detail::add(x, y);
     }
-    /// X - Y (kernel ball_sub_1 or ball_sub_2, UNVERIFIED: needs kairn::unverified).
+    /// X - Y (kernel ball_sub_1 or ball_sub_2).
     friend KAIRN_FORCEINLINE Ball operator-(const Ball& x, const Ball& y) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::sub>
     {
         return detail::sub(x, y);
     }
-    /// X * Y (kernel ball_mul_1 or ball_mul_2, UNVERIFIED: needs kairn::unverified).
+    /// X * Y (kernel ball_mul_1 or ball_mul_2).
     friend KAIRN_FORCEINLINE Ball operator*(const Ball& x, const Ball& y) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::mul>
     {
         return detail::mul(x, y);
     }
-    /// a X, for an exact a of type T (kernel ball_scale_1 or ball_scale_2, UNVERIFIED: needs
-    /// kairn::unverified).
+    /// a X, for an exact a of type T (kernel ball_scale_1 or ball_scale_2).
     friend KAIRN_FORCEINLINE Ball operator*(const Ball& x, T a) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::scale>
     {
@@ -252,32 +254,31 @@ public:
     {
         return detail::mul(a, x);
     }
-    /// -X (kernel ball_neg_1 or ball_neg_2, UNVERIFIED: needs kairn::unverified). Target: exactly
-    /// -X.
+    /// -X (kernel ball_neg_1 or ball_neg_2): exactly -X.
     friend KAIRN_FORCEINLINE constexpr Ball operator-(const Ball& x) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::neg>
     {
         return detail::neg(x);
     }
-    /// X = X + Y (UNVERIFIED: needs kairn::unverified).
+    /// X = X + Y.
     friend KAIRN_FORCEINLINE Ball& operator+=(Ball& x, const Ball& y) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::add>
     {
         return x = detail::add(x, y);
     }
-    /// X = X - Y (UNVERIFIED: needs kairn::unverified).
+    /// X = X - Y.
     friend KAIRN_FORCEINLINE Ball& operator-=(Ball& x, const Ball& y) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::sub>
     {
         return x = detail::sub(x, y);
     }
-    /// X = X * Y (UNVERIFIED: needs kairn::unverified).
+    /// X = X * Y.
     friend KAIRN_FORCEINLINE Ball& operator*=(Ball& x, const Ball& y) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::mul>
     {
         return x = detail::mul(x, y);
     }
-    /// X = a X (UNVERIFIED: needs kairn::unverified).
+    /// X = a X.
     friend KAIRN_FORCEINLINE Ball& operator*=(Ball& x, T a) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::scale>
     {

@@ -6,7 +6,8 @@
 //   0      nothing but including Kairn (for the tests of rejected compiler flags)
 //   1-9    an UNVERIFIED operation written without kairn::unverified (the control adds it)
 //   10     reading an error constant of an UNVERIFIED operation from kairn::traits (the control
-//          reads that of a proved one)
+//          reads only whether it is verified)
+// Cases 1 to 10 are compiled against headers in which every kernel is marked unverified.
 //   11     a non-normalized pair given to from_limbs in a constant expression, with KAIRN_CHECKS
 //          (the control turns KAIRN_CHECKS off)
 #if KAIRN_TEST_CASE == 11
@@ -54,7 +55,7 @@ int main() {
     sink = (MARK(p) * 2.0).radius();
 #elif KAIRN_TEST_CASE == 10
 #if defined(KAIRN_TEST_CONTROL)
-    sink = kairn::traits<E2>::add.unit;
+    sink = kairn::traits<E2>::sub.verified ? 1 : 0;
 #else
     sink = kairn::traits<E2>::sub.unit;
 #endif

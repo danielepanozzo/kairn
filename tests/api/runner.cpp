@@ -262,7 +262,6 @@ const char* const internal[] = {
     "two_sum", "fast_two_sum", "two_prod",        // building blocks of the kernels above
     "split", "two_prod_dekker",                   // the constant-evaluation variant of two_prod
     "radd", "rmul",                               // radius arithmetic inside the Ball kernels
-    "add_fast_2_2_ts",                            // the alternative ending of add_fast_2_2, not chosen
 };
 
 constexpr int max_limbs = 16;

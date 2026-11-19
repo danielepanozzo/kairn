@@ -2,17 +2,18 @@
 // of type T (float or double), and their operations.
 //
 // Every operation forwards to one generated kernel (include/kairn/gen/scalar.hpp) whose claims
-// are in gen/claims.json; the comment of each operation names it. An operation whose kernel is
-// proved compiles as written; any other needs the kairn::unverified marker on one operand
-// (config.hpp). Which kernels are proved is read from include/kairn/gen/bounds.hpp, so an
-// operation loses the need for the marker when its proof is checked and the generator is rerun.
+// are in gen/claims.json; the comment of each operation names it and quotes its claim. An
+// operation whose kernel is proved compiles as written; any other needs the kairn::unverified
+// marker on one operand (config.hpp). Which kernels are proved is read from
+// include/kairn/gen/bounds.hpp, never written here, so an operation loses the need for the
+// marker when its proof is checked and the generator is rerun.
 //
-// What holds today for every arithmetic operation, proved or not: the result is the finite core
-// of the kernel. The layer that turns overflow and non-finite operands into canonical infinities
-// and NaN (decision D5, docs/developer/design/milestone1.md, "IEEE-like results") is not written
-// yet, so a result whose leading limb is not finite may be any non-finite pattern, such as
-// (inf, nan), and an operand with a non-finite limb gives a result about which nothing is claimed.
-// docs/getting-started/guarantees.md has the table of what is proved.
+// What holds for every arithmetic operation: the result is the finite core of the kernel. The
+// layer that turns overflow and non-finite operands into canonical infinities and NaN (decision
+// D5; the full kernels of docs/developer/design/milestone1.md, "IEEE-like results") is not
+// generated yet, so a result whose leading limb is not finite may be any non-finite pattern, such
+// as (inf, nan), and an operand with a non-finite limb gives a result about which nothing is
+// claimed. docs/getting-started/guarantees.md has the table of what is proved.
 #pragma once
 
 #include "config.hpp"
@@ -413,11 +414,11 @@ KAIRN_DETAIL_MIXED(eq, constexpr)
 /// rounded ones, unless KAIRN_K1_CONTRACT is defined (config.hpp). A loop over Expansion<T, 1> is
 /// not auto-vectorized by MSVC where the same loop over T is.
 ///
-/// Status today: +, - and * (kernels add_1_1, mul_1_1) are UNVERIFIED, so they need the
-/// kairn::unverified marker; their target is the textbook bound |z - exact| <= u/(1 + u) |exact|,
-/// plus eta/2 for a product (u = 2^-p, eta the smallest subnormal of T). Negation, abs,
-/// comparisons and the conversions to T have no kernel: they are exact IEEE 754 operations and
-/// need no marker.
+/// +, - and * have kernels, add_1_1 and mul_1_1, whose claim is one rounding to nearest:
+/// |z - v| <= u/(1 + u) |v|, plus eta/2 for a product (v the exact result, u = 2^-p, eta the
+/// smallest subnormal of T); as for every operation, they need kairn::unverified only while
+/// gen/claims.json does not mark their kernel proved. Negation, abs, comparisons and the
+/// conversions to T have no kernel: they are exact IEEE 754 operations and never need it.
 template <class T>
 struct Expansion<T, 1> {
     static_assert(detail::limb<T>, "Expansion<T, k>: the limb type T is float or double");
@@ -430,44 +431,44 @@ struct Expansion<T, 1> {
     /// x, exactly. Implicit, as T converts to T.
     constexpr Expansion(T x) noexcept : limb{x} {}
     /// The leading limb of x: truncation, which for a normalized x is x rounded to nearest (the
-    /// claim of kernel to_nearest_2, UNVERIFIED). Explicit, because it loses the second limb.
+    /// claim of kernel to_nearest_2). Explicit, because it loses the second limb.
     explicit constexpr Expansion(const Expansion<T, 2>& x) noexcept : limb{x.limb[0]} {}
     /// limbs[0]: every finite T is a normalized one-limb number.
     static constexpr Expansion from_limbs(const T* limbs) noexcept { return Expansion(limbs[0]); }
     /// limbs[0].
     static constexpr Expansion from_limbs_unchecked(const T* limbs) noexcept { return Expansion(limbs[0]); }
 
-    /// x + y, rounded to nearest (kernel add_1_1, UNVERIFIED: needs kairn::unverified).
+    /// x + y, rounded to nearest (kernel add_1_1).
     friend KAIRN_FORCEINLINE constexpr Expansion operator+(Expansion x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::add_1_1<T>>
     {
         return detail::add(x, y);
     }
-    /// x - y, rounded to nearest (kernel add_1_1 on x and -y, UNVERIFIED: needs kairn::unverified).
+    /// x - y, rounded to nearest (kernel add_1_1 on x and -y).
     friend KAIRN_FORCEINLINE constexpr Expansion operator-(Expansion x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::add_1_1<T>>
     {
         return detail::sub(x, y);
     }
-    /// x * y, rounded to nearest (kernel mul_1_1, UNVERIFIED: needs kairn::unverified).
+    /// x * y, rounded to nearest (kernel mul_1_1).
     friend KAIRN_FORCEINLINE constexpr Expansion operator*(Expansion x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::mul_1_1<T>>
     {
         return detail::mul(x, y);
     }
-    /// x = x + y (kernel add_1_1, UNVERIFIED: needs kairn::unverified).
+    /// x = x + y (kernel add_1_1).
     friend KAIRN_FORCEINLINE constexpr Expansion& operator+=(Expansion& x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::add_1_1<T>>
     {
         return x = detail::add(x, y);
     }
-    /// x = x - y (kernel add_1_1, UNVERIFIED: needs kairn::unverified).
+    /// x = x - y (kernel add_1_1).
     friend KAIRN_FORCEINLINE constexpr Expansion& operator-=(Expansion& x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::add_1_1<T>>
     {
         return x = detail::sub(x, y);
     }
-    /// x = x * y (kernel mul_1_1, UNVERIFIED: needs kairn::unverified).
+    /// x = x * y (kernel mul_1_1).
     friend KAIRN_FORCEINLINE constexpr Expansion& operator*=(Expansion& x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::mul_1_1<T>>
     {
@@ -494,13 +495,15 @@ struct Expansion<T, 1> {
 /// With double limbs that is 106 bits of precision for values above about 2^-969, fewer below
 /// (docs/developer/design/phase0/numbers.md, "Precision depends on magnitude").
 ///
-/// Status today, as gen/claims.json says (docs/getting-started/guarantees.md has the table):
-/// x + y, x + a, x * y and x * a (a of type T) are proved and need no marker. Subtraction,
-/// negation, abs, the comparisons, the conversions to T, the fast addition and scaling by a power
-/// of two are UNVERIFIED and need kairn::unverified on one operand.
+/// Each operation below names its kernel and quotes the kernel's claim from gen/claims.json, for
+/// normalized operands (u = 2^-p is the unit roundoff of T, 2^-53 for double; eta is its smallest
+/// subnormal number, 2^-1074 for double). A claim is a guarantee when its kernel is proved, which
+/// is exactly when the operation compiles without kairn::unverified; the table of what is proved
+/// is docs/getting-started/guarantees.md. Claims are stated in a model where no operation
+/// overflows; what is proved when one does is said per operation.
 ///
 /// Every arithmetic operation is the finite core of its kernel: the layer that returns canonical
-/// infinities and NaN (decision D5) is not implemented yet. When the leading limb of a result is
+/// infinities and NaN (decision D5) is not generated yet. When the leading limb of a result is
 /// not finite the limbs may hold any non-finite pattern, and an operand with a non-finite limb
 /// gives a result about which nothing is claimed.
 ///
@@ -543,78 +546,79 @@ struct Expansion<T, 2> {
         return x;
     }
 
-    /// x + y, the accurate addition (kernel add_2_2, JMP17 Algorithm 6; proved).
+    /// x + y, the accurate addition (kernel add_2_2, JMP17 Algorithm 6).
     ///
-    /// Proved: for normalized x and y the result z is normalized and
-    /// |z - (x + y)| <= 3u^2/(1 - 4u) |x + y|, u = 2^-p (2^-53 for double), with no underflow
-    /// term. Also proved, in Flocq's model of IEEE 754 with overflow (a statement written by hand,
-    /// not yet generated from the claims): either z0 is not finite, or z1 is finite and the bound
-    /// holds; and z0 is finite when |x0| and |y0| are at most 2^1022 (double) or 2^126 (float).
-    /// Not yet: canonical infinities and NaN (decision D5).
+    /// Claim: the result z is normalized and |z - (x + y)| <= 3u^2/(1 - 4u) |x + y|, with no
+    /// underflow term. Proved also in Flocq's model of IEEE 754 with overflow (a statement written
+    /// by hand, docs/developer/design/milestone1.md): either z0 is not finite, or z1 is finite and
+    /// the claim holds; and z0 is finite when |x0| and |y0| are at most 2^1022 (double) or 2^126
+    /// (float). Not yet: canonical infinities and NaN (decision D5).
     friend KAIRN_FORCEINLINE constexpr Expansion operator+(Expansion x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::add_2_2<T>>
     {
         return detail::add(x, y);
     }
-    /// x + a (kernel add_2_1, JMP17 Algorithm 4; proved).
+    /// x + a (kernel add_2_1, JMP17 Algorithm 4).
     ///
-    /// Proved: for normalized x, if no operation inside the kernel overflows, the result z is
-    /// normalized and |z - (x + a)| <= 2u^2 |x + a|. Not yet proved: what happens when one
-    /// overflows (expected, as for x + y: the leading limb is then not finite), and canonical
+    /// Claim: the result z is normalized and |z - (x + a)| <= 2u^2 |x + a|. Proved also in
+    /// Flocq's model of IEEE 754 with overflow (hand-written statement): either z0 is not finite,
+    /// or the claim holds. Not yet: a condition under which z0 is finite, and canonical
     /// infinities and NaN (D5).
     friend KAIRN_FORCEINLINE constexpr Expansion operator+(Expansion x, T a) noexcept
         requires detail::proof_checked<gen::bounds::add_2_1<T>>
     {
         return detail::add(x, a);
     }
-    /// a + x: the same operation and guarantee as x + a.
+    /// a + x: the same operation and claim as x + a.
     friend KAIRN_FORCEINLINE constexpr Expansion operator+(T a, Expansion x) noexcept
         requires detail::proof_checked<gen::bounds::add_2_1<T>>
     {
         return detail::add(a, x);
     }
-    /// x - y (kernel sub_2_2, UNVERIFIED: needs kairn::unverified). Target: the statement of
-    /// x + y, for x - y.
+    /// x - y (kernel sub_2_2: add_2_2 on x and -y). Claim: that of x + y, for x - y. In the IEEE
+    /// model with overflow nothing is proved yet for this kernel.
     friend KAIRN_FORCEINLINE constexpr Expansion operator-(Expansion x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::sub_2_2<T>>
     {
         return detail::sub(x, y);
     }
-    /// x - a (kernel sub_2_1, UNVERIFIED: needs kairn::unverified). Target: that of x + a.
+    /// x - a (kernel sub_2_1). Claim: that of x + a, for x - a. In the IEEE model with overflow
+    /// nothing is proved yet for this kernel.
     friend KAIRN_FORCEINLINE constexpr Expansion operator-(Expansion x, T a) noexcept
         requires detail::proof_checked<gen::bounds::sub_2_1<T>>
     {
         return detail::sub(x, a);
     }
-    /// a - x (kernel sub_1_2, UNVERIFIED: needs kairn::unverified). Target: that of x + a.
+    /// a - x (kernel sub_1_2). Claim: that of x + a, for a - x. In the IEEE model with overflow
+    /// nothing is proved yet for this kernel.
     friend KAIRN_FORCEINLINE constexpr Expansion operator-(T a, Expansion x) noexcept
         requires detail::proof_checked<gen::bounds::sub_1_2<T>>
     {
         return detail::sub(a, x);
     }
-    /// x * y (kernel mul_2_2, JMP17 Algorithm 12; proved). Not usable in constant evaluation yet.
+    /// x * y (kernel mul_2_2, JMP17 Algorithm 12). Not usable in constant evaluation yet.
     ///
-    /// Proved: for normalized x and y the result z is normalized and
-    /// |z - xy| <= 4u^2 |xy| + (3/2) eta, eta the smallest subnormal number of T (2^-1074 for
-    /// double). Also proved, in Flocq's model of IEEE 754 with overflow (statement written by
-    /// hand): either z0 is not finite, or the bound holds; and z0 is finite when |xy| is at most
-    /// 2^1023 (double) or 2^127 (float). Not yet: canonical infinities and NaN (D5).
+    /// Claim: the result z is normalized and |z - xy| <= 4u^2 |xy| + (3/2) eta. Proved also in
+    /// Flocq's model of IEEE 754 with overflow (hand-written statement): either z0 is not finite,
+    /// or the claim holds; and z0 is finite when |xy| is at most 2^1023 (double) or 2^127
+    /// (float). Not yet: canonical infinities and NaN (D5).
     friend KAIRN_FORCEINLINE Expansion operator*(Expansion x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::mul_2_2<T>>
     {
         return detail::mul(x, y);
     }
-    /// x * a (kernel mul_2_1, JMP17 Algorithm 9; proved). Not usable in constant evaluation yet.
+    /// x * a (kernel mul_2_1, JMP17 Algorithm 9). Not usable in constant evaluation yet.
     ///
-    /// Proved: for normalized x, if no operation inside the kernel overflows, the result z is
-    /// normalized and |z - xa| <= 2u^2 |xa| + eta. Not yet proved: what happens when one
-    /// overflows, and canonical infinities and NaN (D5).
+    /// Claim: the result z is normalized and |z - xa| <= 2u^2 |xa| + eta. Proved also in
+    /// Flocq's model of IEEE 754 with overflow (hand-written statement): either z0 is not finite,
+    /// or the claim holds. Not yet: a condition under which z0 is finite, and canonical
+    /// infinities and NaN (D5).
     friend KAIRN_FORCEINLINE Expansion operator*(Expansion x, T a) noexcept
         requires detail::proof_checked<gen::bounds::mul_2_1<T>>
     {
         return detail::mul(x, a);
     }
-    /// a * x: the same operation and guarantee as x * a.
+    /// a * x: the same operation and claim as x * a.
     friend KAIRN_FORCEINLINE Expansion operator*(T a, Expansion x) noexcept
         requires detail::proof_checked<gen::bounds::mul_2_1<T>>
     {
@@ -632,13 +636,13 @@ struct Expansion<T, 2> {
     {
         return x = detail::add(x, a);
     }
-    /// x = x - y: as x - y (UNVERIFIED: needs kairn::unverified on y).
+    /// x = x - y: as x - y.
     friend KAIRN_FORCEINLINE constexpr Expansion& operator-=(Expansion& x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::sub_2_2<T>>
     {
         return x = detail::sub(x, y);
     }
-    /// x = x - a: as x - a (UNVERIFIED: needs kairn::unverified on a).
+    /// x = x - a: as x - a.
     friend KAIRN_FORCEINLINE constexpr Expansion& operator-=(Expansion& x, T a) noexcept
         requires detail::proof_checked<gen::bounds::sub_2_1<T>>
     {
@@ -656,118 +660,118 @@ struct Expansion<T, 2> {
     {
         return x = detail::mul(x, a);
     }
-    /// -x, limb by limb (kernel neg_2, UNVERIFIED: needs kairn::unverified). Target: exactly -x,
-    /// normalized.
+    /// -x, limb by limb (kernel neg_2). Claim: exactly -x, normalized.
     friend KAIRN_FORCEINLINE constexpr Expansion operator-(Expansion x) noexcept
         requires detail::proof_checked<gen::bounds::neg_2<T>>
     {
         return detail::neg(x);
     }
 
-    /// Whether x < y (kernel lt_2_2, UNVERIFIED: needs kairn::unverified). Target: the truth about
-    /// the exact values, for normalized operands; false if a limb is NaN.
+    /// Whether x < y (kernel lt_2_2). Claim: the truth about the exact values, for normalized
+    /// operands. With a NaN limb the result is false, as the comparisons of T are, but no claim
+    /// covers non-finite operands yet. The same holds for every comparison below.
     friend KAIRN_FORCEINLINE constexpr bool operator<(Expansion x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::lt_2_2<T>>
     {
         return detail::lt(x, y);
     }
-    /// Whether x > y (kernel lt_2_2 on y, x; UNVERIFIED: needs kairn::unverified).
+    /// Whether x > y (kernel lt_2_2 on y, x).
     friend KAIRN_FORCEINLINE constexpr bool operator>(Expansion x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::lt_2_2<T>>
     {
         return detail::lt(y, x);
     }
-    /// Whether x <= y (kernel le_2_2, UNVERIFIED: needs kairn::unverified).
+    /// Whether x <= y (kernel le_2_2).
     friend KAIRN_FORCEINLINE constexpr bool operator<=(Expansion x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::le_2_2<T>>
     {
         return detail::le(x, y);
     }
-    /// Whether x >= y (kernel le_2_2 on y, x; UNVERIFIED: needs kairn::unverified).
+    /// Whether x >= y (kernel le_2_2 on y, x).
     friend KAIRN_FORCEINLINE constexpr bool operator>=(Expansion x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::le_2_2<T>>
     {
         return detail::le(y, x);
     }
-    /// Whether x == y (kernel eq_2_2, UNVERIFIED: needs kairn::unverified).
+    /// Whether x == y (kernel eq_2_2).
     friend KAIRN_FORCEINLINE constexpr bool operator==(Expansion x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::eq_2_2<T>>
     {
         return detail::eq(x, y);
     }
-    /// Whether x != y: not x == y (kernel eq_2_2, UNVERIFIED: needs kairn::unverified).
+    /// Whether x != y: not x == y (kernel eq_2_2).
     friend KAIRN_FORCEINLINE constexpr bool operator!=(Expansion x, Expansion y) noexcept
         requires detail::proof_checked<gen::bounds::eq_2_2<T>>
     {
         return !detail::eq(x, y);
     }
-    /// Whether x < a (kernel lt_2_1, UNVERIFIED: needs kairn::unverified).
+    /// Whether x < a (kernel lt_2_1).
     friend KAIRN_FORCEINLINE constexpr bool operator<(Expansion x, T a) noexcept
         requires detail::proof_checked<gen::bounds::lt_2_1<T>>
     {
         return detail::lt(x, a);
     }
-    /// Whether x > a: a < x (kernel lt_1_2, UNVERIFIED: needs kairn::unverified).
+    /// Whether x > a: a < x (kernel lt_1_2).
     friend KAIRN_FORCEINLINE constexpr bool operator>(Expansion x, T a) noexcept
         requires detail::proof_checked<gen::bounds::lt_1_2<T>>
     {
         return detail::lt(a, x);
     }
-    /// Whether x <= a (kernel le_2_1, UNVERIFIED: needs kairn::unverified).
+    /// Whether x <= a (kernel le_2_1).
     friend KAIRN_FORCEINLINE constexpr bool operator<=(Expansion x, T a) noexcept
         requires detail::proof_checked<gen::bounds::le_2_1<T>>
     {
         return detail::le(x, a);
     }
-    /// Whether x >= a: a <= x (kernel le_1_2, UNVERIFIED: needs kairn::unverified).
+    /// Whether x >= a: a <= x (kernel le_1_2).
     friend KAIRN_FORCEINLINE constexpr bool operator>=(Expansion x, T a) noexcept
         requires detail::proof_checked<gen::bounds::le_1_2<T>>
     {
         return detail::le(a, x);
     }
-    /// Whether x == a (kernel eq_2_1, UNVERIFIED: needs kairn::unverified).
+    /// Whether x == a (kernel eq_2_1).
     friend KAIRN_FORCEINLINE constexpr bool operator==(Expansion x, T a) noexcept
         requires detail::proof_checked<gen::bounds::eq_2_1<T>>
     {
         return detail::eq(x, a);
     }
-    /// Whether x != a (kernel eq_2_1, UNVERIFIED: needs kairn::unverified).
+    /// Whether x != a (kernel eq_2_1).
     friend KAIRN_FORCEINLINE constexpr bool operator!=(Expansion x, T a) noexcept
         requires detail::proof_checked<gen::bounds::eq_2_1<T>>
     {
         return !detail::eq(x, a);
     }
-    /// Whether a < x (kernel lt_1_2, UNVERIFIED: needs kairn::unverified).
+    /// Whether a < x (kernel lt_1_2).
     friend KAIRN_FORCEINLINE constexpr bool operator<(T a, Expansion x) noexcept
         requires detail::proof_checked<gen::bounds::lt_1_2<T>>
     {
         return detail::lt(a, x);
     }
-    /// Whether a > x: x < a (kernel lt_2_1, UNVERIFIED: needs kairn::unverified).
+    /// Whether a > x: x < a (kernel lt_2_1).
     friend KAIRN_FORCEINLINE constexpr bool operator>(T a, Expansion x) noexcept
         requires detail::proof_checked<gen::bounds::lt_2_1<T>>
     {
         return detail::lt(x, a);
     }
-    /// Whether a <= x (kernel le_1_2, UNVERIFIED: needs kairn::unverified).
+    /// Whether a <= x (kernel le_1_2).
     friend KAIRN_FORCEINLINE constexpr bool operator<=(T a, Expansion x) noexcept
         requires detail::proof_checked<gen::bounds::le_1_2<T>>
     {
         return detail::le(a, x);
     }
-    /// Whether a >= x: x <= a (kernel le_2_1, UNVERIFIED: needs kairn::unverified).
+    /// Whether a >= x: x <= a (kernel le_2_1).
     friend KAIRN_FORCEINLINE constexpr bool operator>=(T a, Expansion x) noexcept
         requires detail::proof_checked<gen::bounds::le_2_1<T>>
     {
         return detail::le(x, a);
     }
-    /// Whether a == x (kernel eq_2_1, UNVERIFIED: needs kairn::unverified).
+    /// Whether a == x (kernel eq_2_1).
     friend KAIRN_FORCEINLINE constexpr bool operator==(T a, Expansion x) noexcept
         requires detail::proof_checked<gen::bounds::eq_2_1<T>>
     {
         return detail::eq(x, a);
     }
-    /// Whether a != x (kernel eq_2_1, UNVERIFIED: needs kairn::unverified).
+    /// Whether a != x (kernel eq_2_1).
     friend KAIRN_FORCEINLINE constexpr bool operator!=(T a, Expansion x) noexcept
         requires detail::proof_checked<gen::bounds::eq_2_1<T>>
     {
@@ -897,7 +901,7 @@ template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> abs(const Expansion<T, 1>& x) noexcept {
     return detail::abs(x);
 }
-/// |x| (kernel abs_2, UNVERIFIED: needs kairn::unverified). Target: exactly |x|, normalized.
+/// |x| (kernel abs_2). Claim: exactly |x|, normalized.
 template <class T>
     requires detail::proof_checked<gen::bounds::abs_2<T>>
 KAIRN_FORCEINLINE constexpr Expansion<T, 2> abs(const Expansion<T, 2>& x) noexcept {
@@ -910,17 +914,17 @@ KAIRN_FORCEINLINE constexpr auto abs(const X& x) noexcept -> decltype(detail::ab
     return detail::abs(detail::unmark(x));
 }
 
-/// The fast addition, for one limb: x + y (kernel add_1_1, UNVERIFIED: needs kairn::unverified).
+/// The fast addition, for one limb: x + y (kernel add_1_1).
 template <class T>
     requires detail::proof_checked<gen::bounds::add_1_1<T>>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> add_fast(const Expansion<T, 1>& x, const Expansion<T, 1>& y) noexcept {
     return detail::add_fast(x, y);
 }
-/// The fast addition (kernel add_fast_2_2, JMP17 Algorithm 5; UNVERIFIED: needs
-/// kairn::unverified): about half the operations of x + y, with a weaker bound, relative to the
-/// operands rather than to the result. Target: a normalized result with
-/// |z - (x + y)| <= 4u^2 (|x| + |y|). It has no relative bound when x and y nearly cancel, which
-/// is why x + y does not use it.
+/// The fast addition (kernel add_fast_2_2, JMP17 Algorithm 5): about half the operations of
+/// x + y, with a weaker bound, relative to the operands rather than to the result. Claim: a
+/// normalized result with |z - (x + y)| <= 3u^2 (|x| + |y|). It has no relative bound when x and
+/// y nearly cancel, which is why x + y does not use it. Proved also in Flocq's model of IEEE 754
+/// with overflow (hand-written statement): either z0 is not finite, or the claim holds.
 template <class T>
     requires detail::proof_checked<gen::bounds::add_fast_2_2<T>>
 KAIRN_FORCEINLINE constexpr Expansion<T, 2> add_fast(const Expansion<T, 2>& x, const Expansion<T, 2>& y) noexcept {
@@ -936,7 +940,7 @@ KAIRN_FORCEINLINE constexpr auto add_fast(const X& x, const Y& y) noexcept
 
 /// x times 2^n, for an n such that 2^n is a number of T (from -1074 to 1023 for double, -149 to
 /// 127 for float); for any other n the result is NaN. One limb: one rounded product (kernel
-/// mul_1_1, UNVERIFIED: needs kairn::unverified), exact unless the result is subnormal.
+/// mul_1_1), exact unless the result is subnormal.
 template <class T>
     requires detail::proof_checked<gen::bounds::mul_1_1<T>>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(const Expansion<T, 1>& x, int n) noexcept {
@@ -944,9 +948,10 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(const Expansion<T, 1>& x, int 
 }
 /// x times 2^n, for an n such that 2^n is a number of T (from -1074 to 1023 for double, -149 to
 /// 127 for float); for any other n the result is NaN (the two-step scaling that would cover them
-/// is not written yet). Kernel mul_pow2_2, UNVERIFIED: needs kairn::unverified. Target: a
-/// normalized result within eta of 2^n x, and exactly 2^n x unless a limb's product is rounded
-/// in the subnormal range. Not usable in constant evaluation yet.
+/// is not written yet). Kernel mul_pow2_2; claim: a normalized result within eta of 2^n x (and,
+/// proved as a hand-written statement, exactly 2^n x when each limb's product is zero or at least
+/// 2^(p-1) eta in magnitude). In the IEEE model with overflow nothing is proved yet for this
+/// kernel. Not usable in constant evaluation yet.
 template <class T>
     requires detail::proof_checked<gen::bounds::mul_pow2_2<T>>
 KAIRN_FORCEINLINE Expansion<T, 2> ldexp(const Expansion<T, 2>& x, int n) noexcept {
@@ -958,14 +963,13 @@ template <class X>
 KAIRN_FORCEINLINE constexpr auto ldexp(const X& x, int n) noexcept -> decltype(detail::ldexp(detail::unmark(x), n)) {
     return detail::ldexp(detail::unmark(x), n);
 }
-/// x / 2: ldexp(x, -1) (kernel mul_1_1, UNVERIFIED: needs kairn::unverified).
+/// x / 2: ldexp(x, -1) (kernel mul_1_1).
 template <class T>
     requires detail::proof_checked<gen::bounds::mul_1_1<T>>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> half(const Expansion<T, 1>& x) noexcept {
     return detail::half(x);
 }
-/// x / 2: ldexp(x, -1) (kernel mul_pow2_2, UNVERIFIED: needs kairn::unverified). Not usable in
-/// constant evaluation yet.
+/// x / 2: ldexp(x, -1) (kernel mul_pow2_2). Not usable in constant evaluation yet.
 template <class T>
     requires detail::proof_checked<gen::bounds::mul_pow2_2<T>>
 KAIRN_FORCEINLINE Expansion<T, 2> half(const Expansion<T, 2>& x) noexcept {
@@ -983,8 +987,8 @@ template <class T>
 KAIRN_FORCEINLINE constexpr T to_nearest(const Expansion<T, 1>& x) noexcept {
     return detail::to_nearest(x);
 }
-/// x rounded to nearest, ties to even: the leading limb (kernel to_nearest_2, UNVERIFIED: needs
-/// kairn::unverified).
+/// x rounded to nearest, ties to even: the leading limb (kernel to_nearest_2). Claim: exactly
+/// that rounding, for normalized x.
 template <class T>
     requires detail::proof_checked<gen::bounds::to_nearest_2<T>>
 KAIRN_FORCEINLINE constexpr T to_nearest(const Expansion<T, 2>& x) noexcept {
@@ -1001,8 +1005,7 @@ template <class T>
 KAIRN_FORCEINLINE constexpr T to_down(const Expansion<T, 1>& x) noexcept {
     return detail::to_down(x);
 }
-/// The largest T not above x (kernel to_down_2, UNVERIFIED: needs kairn::unverified). Target:
-/// exactly that number, for normalized x.
+/// The largest T not above x (kernel to_down_2). Claim: exactly that number, for normalized x.
 template <class T>
     requires detail::proof_checked<gen::bounds::to_down_2<T>>
 KAIRN_FORCEINLINE constexpr T to_down(const Expansion<T, 2>& x) noexcept {
@@ -1019,8 +1022,7 @@ template <class T>
 KAIRN_FORCEINLINE constexpr T to_up(const Expansion<T, 1>& x) noexcept {
     return detail::to_up(x);
 }
-/// The smallest T not below x (kernel to_up_2, UNVERIFIED: needs kairn::unverified). Target:
-/// exactly that number, for normalized x.
+/// The smallest T not below x (kernel to_up_2). Claim: exactly that number, for normalized x.
 template <class T>
     requires detail::proof_checked<gen::bounds::to_up_2<T>>
 KAIRN_FORCEINLINE constexpr T to_up(const Expansion<T, 2>& x) noexcept {
@@ -1037,8 +1039,8 @@ template <class T>
 KAIRN_FORCEINLINE constexpr T abs_upper(const Expansion<T, 1>& x) noexcept {
     return detail::abs_upper(x);
 }
-/// The smallest T not below |x| (kernel abs_upper_2, UNVERIFIED: needs kairn::unverified).
-/// Target: exactly that number, for normalized x.
+/// The smallest T not below |x| (kernel abs_upper_2). Claim: exactly that number, for
+/// normalized x.
 template <class T>
     requires detail::proof_checked<gen::bounds::abs_upper_2<T>>
 KAIRN_FORCEINLINE constexpr T abs_upper(const Expansion<T, 2>& x) noexcept {

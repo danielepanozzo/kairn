@@ -36,7 +36,7 @@ add_test(NAME api.constexpr COMMAND kairn-api-constexpr)
 # --- The public interface against the oracle --------------------------------------------------
 #
 # The kernels that no public operation computes on its own; runner.cpp lists the same, with why.
-set(_api_internal two_sum fast_two_sum two_prod split two_prod_dekker radd rmul add_fast_2_2_ts)
+set(_api_internal two_sum fast_two_sum two_prod split two_prod_dekker radd rmul)
 set(KAIRN_API_CASES 10000 CACHE STRING
   "Random cases per kernel, format and form of the public interface judged by the oracle")
 set(KAIRN_API_SEED 1 CACHE STRING "Seed of the random cases of the public interface's tests")
@@ -185,21 +185,27 @@ elseif(NOT _msvc_style)
   endif()
 endif()
 
-# UNVERIFIED operations written without the marker. Where the compiler explains, the message names
-# the concept whose constraint failed; Clang does not for a unary operator.
+# UNVERIFIED operations written without the marker, compiled against a copy of the headers in which
+# every kernel is marked unverified (compile_fail.cmake), so that the mechanism is tested whatever
+# gen/claims.json says today. Where the compiler explains, the message names the concept whose
+# constraint failed; Clang does not for a unary operator.
 if(_msvc_style)
   set(_api_unmarked "constraint")
 else()
   set(_api_unmarked "proof_checked|invalid argument type")
 endif()
 foreach(_case_name IN ITEMS 1:sub_2_2 2:lt_2_2 3:neg_2 4:to_down_2 5:add_1_1 6:ball_add_2 7:sub_2_2_assign
-                            8:mul_pow2_2 9:ball_scale_2)
+                            8:mul_pow2_2 9:ball_scale_2 10:traits_constant)
   string(REPLACE ":" ";" _pair "${_case_name}")
   list(GET _pair 0 _case)
   list(GET _pair 1 _name)
-  _kairn_api_reject(unverified.${_name} ${_case} "${_api_unmarked}")
+  set(_expect "${_api_unmarked}")
+  if(_name STREQUAL "traits_constant")
+    set(_expect "unit")
+  endif()
+  _kairn_api_reject(unverified.${_name} ${_case} "${_expect}"
+    "-DUNVERIFIED_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/unverified-fixture/${_name}")
 endforeach()
-_kairn_api_reject(unverified.traits_constant 10 "unit")
 _kairn_api_reject(checks.from_limbs_not_normalized 11 "constant|constexpr")
 
 # --- One limb against T -----------------------------------------------------------------------

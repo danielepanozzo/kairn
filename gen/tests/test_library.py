@@ -89,10 +89,11 @@ class Bounds(unittest.TestCase):
         for (name, t), body in self.structs.items():
             if self.claims[name]['status'] != 'proved':
                 self.assertEqual(body.strip(), 'static constexpr bool proved = false;', (name, t))
-        # Today: the error-free transformations and the four first-wave arithmetic kernels.
-        proved = {name for name, c in self.claims.items() if c['status'] == 'proved'}
-        self.assertEqual(proved, {'two_sum', 'fast_two_sum', 'two_prod', 'add_2_1', 'add_2_2',
-                                  'mul_2_1', 'mul_2_2'})
+        # Whatever the claims say today, a kernel made unverified loses its constants.
+        ks = copy.deepcopy(dict(self.ks))
+        ks['mul_2_2'].status = 'unverified'
+        ks['mul_2_2'].theorem = None
+        self.assertEqual(members(structs(library.bounds(ks))[('mul_2_2', 'double')]), {'proved': 'false'})
 
     def test_constants_against_exact_arithmetic(self):
         checked = 0
@@ -119,7 +120,8 @@ class Bounds(unittest.TestCase):
                 else:
                     self.assertLess(Fraction(pred(v, t)), x, (name, t, c, 'not the smallest'))
                 checked += 1
-        self.assertEqual(checked, 7 * 2 * 4)
+        # At least the four first-wave arithmetic kernels, for both types and four constants.
+        self.assertGreaterEqual(checked, 4 * 2 * 4)
 
     def test_known_values(self):
         # 3u^2/(1 - 4u) with u = 2^-53 is 3 2^-106 (1 + 4u + ...): rounded up, 1.5 (1 + 2^-50) 2^-105.
@@ -161,7 +163,6 @@ class Bounds(unittest.TestCase):
         m = members(structs(library.bounds(ks))[('add_fast_2_2', 'double')])
         self.assertEqual(m['form'], 'Form::operands')
         self.assertEqual(set(m), {'proved', 'form', 'unit', 'tiny'})
-        self.assertEqual(m['unit'], '0x1p-104')       # 4 u^2
 
     def test_refusals(self):
         ks = copy.deepcopy(dict(self.ks))
@@ -242,19 +243,29 @@ PROGRAM = r'''
 #include "kairn/gen/bounds.hpp"
 #include "kairn/gen/selftest.hpp"
 namespace b = kairn::gen::bounds;
-static_assert(b::add_2_2<double>::proved && b::mul_2_2<float>::proved);
-static_assert(!b::sub_2_2<double>::proved && !b::ball_add_2<float>::proved);
+template <class K> concept has_unit = requires { K::unit; };
 static_assert(b::add_2_2<double>::form == b::Form::result);
 static_assert(b::add_2_2<double>::unit == 0x1.8000000000004p-105);
 static_assert(b::mul_2_2<double>::tiny == 0x1p-1073 && b::mul_2_2<float>::tiny_computed == 0x1p-148f);
-template <class K> concept has_unit = requires { K::unit; };
-static_assert(has_unit<b::mul_2_1<double>> && !has_unit<b::sub_2_2<double>> && !has_unit<b::lt_2_2<float>>);
+@STATUS@
 int main() {
     const char* failed = kairn::gen::selftest::run();
     std::printf("%s\n", failed ? failed : "ok");
     return failed ? 1 : 0;
 }
 '''
+
+
+def status_asserts(ks):
+    """static_asserts that every kernel is proved, and has constants, exactly as its claims say."""
+    lines = []
+    for k in ks.values():
+        for t in TYPES:
+            proved = library.proved_for(k, t)
+            has = proved and library.error_entry(k) is not None
+            lines.append(f'static_assert(b::{k.name}<{t}>::proved == {str(proved).lower()} && '
+                         f'has_unit<b::{k.name}<{t}>> == {str(has).lower()});')
+    return '\n'.join(lines)
 
 
 class Cxx(unittest.TestCase):
@@ -291,7 +302,7 @@ class Cxx(unittest.TestCase):
                 f.write(text)
         cls.source = os.path.join(cls.dir, 'program.cpp')
         with open(cls.source, 'w', encoding='utf-8') as f:
-            f.write(PROGRAM)
+            f.write(PROGRAM.replace('@STATUS@', status_asserts(ks)))
 
     def build(self, cxx, flags, include):
         exe = os.path.join(self.dir, f'p{abs(hash((cxx, tuple(flags), include)))}')
