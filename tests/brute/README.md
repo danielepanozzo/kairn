@@ -94,4 +94,19 @@ python tests\brute\brute.py run --work WORK --budget 5400 --jobs 8 --nice 1 --cp
     --env-script "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
 ```
 
-Then, on each machine, `collect --work WORK --name NAME --out NAME.json`.
+Each run was stopped and started again twice in its first twenty minutes, with the same command,
+a newer driver (better scheduling) and the budget left, and the Windows run once more after a
+network reset ended its ssh session; the work directory kept what was done. Then, on each machine:
+
+```sh
+python3 tests/brute/brute.py collect --work WORK --name NAME --out NAME.json --jobs N \
+    [--cpus ... --nice ...]
+```
+
+with NAME `linux-x86-64`, `macos-arm64` and `windows-x64`, and on any machine, from the three files:
+
+```sh
+python3 tests/brute/brute.py report results/milestone1/brute/*.json
+```
+
+which prints the tables of the results page.
