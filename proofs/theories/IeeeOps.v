@@ -10,7 +10,7 @@
    - the tests of the fix-ups: lt (abs z) inf is true exactly when z is finite;
      lt r inf is true exactly when r is finite or -infinity; eq x x is false exactly
      when x is a NaN;
-   - prod t inf, which makes a leading value t canonical: a NaN or a zero t gives a NaN,
+   - times_inf t, which makes a leading value t canonical: a NaN or a zero t gives a NaN,
      any other t the infinity of its sign;
    - guard: the value and the finiteness of its operand are kept, a zero comes out as
      +0, an infinity is unchanged, a NaN stays a NaN (guard_ieee);
@@ -48,6 +48,7 @@ Variable nan_minus : float -> float -> nan_of.
 Variable nan_opp : float -> nan_of.
 Variable nan_abs : float -> nan_of.
 Variable nan_fma : float -> float -> float -> nan_of.
+Variable nan_mult : float -> float -> nan_of.
 
 Notation emin := (3 - emax - prec)%Z.
 Notation fexp := (FLT_exp emin prec).
@@ -61,6 +62,7 @@ Notation neg := (IeeeDraft.neg prec emax nan_opp).
 Notation fabs := (IeeeDraft.abs prec emax nan_abs).
 Notation fma := (IeeeDraft.fma prec emax nan_fma).
 Notation prod := (IeeeDraft.prod prec emax nan_fma).
+Notation times_inf := (IeeeDraft.times_inf prec emax nan_mult).
 Notation flt := (IeeeDraft.lt prec emax).
 Notation fle := (IeeeDraft.le prec emax).
 Notation feq := (IeeeDraft.eq prec emax).
@@ -159,41 +161,41 @@ intros x. unfold IeeeDraft.eq. rewrite <- (is_nan_B2BSN prec emax x).
 apply BinarySingleNaN.Beqb_refl.
 Qed.
 
-(** * prod t inf *)
+(** * times_inf t: the multiplication by +infinity *)
 
-Lemma prod_pinf_inf : forall s : bool, prod (B754_infinity prec emax s) pinf = B754_infinity prec emax s.
+Lemma times_inf_inf : forall s : bool, times_inf (B754_infinity prec emax s) = B754_infinity prec emax s.
 Proof. intros [|]; reflexivity. Qed.
 
-Lemma prod_pinf_finite :
+Lemma times_inf_finite :
   forall (s : bool) (m : positive) (e : Z) H,
-  prod (B754_finite prec emax s m e H) pinf = B754_infinity prec emax s.
+  times_inf (B754_finite prec emax s m e H) = B754_infinity prec emax s.
 Proof. intros [|] m e H; reflexivity. Qed.
 
-Lemma prod_pinf_zero : forall s : bool, is_nan prec emax (prod (B754_zero prec emax s) pinf) = true.
+Lemma times_inf_zero : forall s : bool, is_nan prec emax (times_inf (B754_zero prec emax s)) = true.
 Proof. intros s. reflexivity. Qed.
 
-Lemma prod_pinf_nan : forall t : float, is_nan prec emax t = true -> is_nan prec emax (prod t pinf) = true.
+Lemma times_inf_nan : forall t : float, is_nan prec emax t = true -> is_nan prec emax (times_inf t) = true.
 Proof. intros [s|s|s pl H|s m e H]; try discriminate; reflexivity. Qed.
 
-Lemma prod_pinf_cases :
+Lemma times_inf_cases :
   forall t : float,
-  is_nan prec emax (prod t pinf) = true \/ exists s : bool, prod t pinf = B754_infinity prec emax s.
+  is_nan prec emax (times_inf t) = true \/ exists s : bool, times_inf t = B754_infinity prec emax s.
 Proof.
 intros [s|s|s pl H|s m e H].
-- left. apply prod_pinf_zero.
-- right. exists s. apply prod_pinf_inf.
-- left. now apply prod_pinf_nan.
-- right. exists s. apply prod_pinf_finite.
+- left. apply times_inf_zero.
+- right. exists s. apply times_inf_inf.
+- left. now apply times_inf_nan.
+- right. exists s. apply times_inf_finite.
 Qed.
 
 (* A finite t that is not zero becomes the infinity of the sign of its value. *)
-Lemma prod_pinf_sign :
+Lemma times_inf_sign :
   forall t : float, fin t -> b2r t <> 0 ->
-  prod t pinf = B754_infinity prec emax (Rlt_bool (b2r t) 0).
+  times_inf t = B754_infinity prec emax (Rlt_bool (b2r t) 0).
 Proof.
 intros [s|s|s pl H|s m e H] F Z; try discriminate F.
 - now elim Z.
-- rewrite prod_pinf_finite. f_equal. destruct s.
+- rewrite times_inf_finite. f_equal. destruct s.
   + symmetry. apply Rlt_bool_true. apply finite_sign_neg.
   + symmetry. apply Rlt_bool_false. left. apply finite_sign_pos.
 Qed.

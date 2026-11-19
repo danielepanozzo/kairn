@@ -5,7 +5,7 @@
    operation of T on the leading limbs,
 
        w = (z0, z1)                 when z0 is finite,
-       w = the canonical form of t  otherwise: (NaN, NaN) when prod (t, inf) is a NaN,
+       w = the canonical form of t  otherwise: (NaN, NaN) when times_inf(t) is a NaN,
                                     that is when t is a NaN or a zero; (+-infinity, +0)
                                     with the sign of t for any other t.
 
@@ -17,7 +17,7 @@
      correctness  on finite operands, a finite z0 gives the statement of the core (the
                   theorem K_values_correct of IeeeAdd22.v, IeeeMul22.v, IeeeMore.v);
      threshold    the "finite when" condition (IeeeAdd22.v, IeeeMul22.v, IeeeRange.v);
-     overflow     on finite operands, when z0 is not finite, prod (t, inf) is the
+     overflow     on finite operands, when z0 is not finite, times_inf(t) is the
                   infinity of the sign of the exact result. For a kernel that adds:
                   it does not overflow when the exact result is at most 2^(emax - 2)
                   in magnitude (IeeeRange.v), so at overflow the sum of the leading
@@ -49,6 +49,7 @@ Variable nan_minus : float -> float -> nan_of.
 Variable nan_opp : float -> nan_of.
 Variable nan_abs : float -> nan_of.
 Variable nan_fma : float -> float -> float -> nan_of.
+Variable nan_mult : float -> float -> nan_of.
 
 Notation emin := (3 - emax - prec)%Z.
 Notation fexp := (FLT_exp emin prec).
@@ -62,6 +63,7 @@ Notation neg := (IeeeDraft.neg prec emax nan_opp).
 Notation fabs := (IeeeDraft.abs prec emax nan_abs).
 Notation fma := (IeeeDraft.fma prec emax nan_fma).
 Notation prod := (IeeeDraft.prod prec emax nan_fma).
+Notation times_inf := (IeeeDraft.times_inf prec emax nan_mult).
 Notation flt := (IeeeDraft.lt prec emax).
 Notation feq := (IeeeDraft.eq prec emax).
 Notation guard := (IeeeDraft.guard prec emax nan_plus).
@@ -87,7 +89,7 @@ Proof. exact prec_lt_emax_. Qed.
 Definition fixup (z0 z1 t : float) : float * float :=
   let a := fabs z0 in
   let f := flt a pinf in
-  let r0 := prod t pinf in
+  let r0 := times_inf t in
   let n := feq r0 r0 in
   let r1 := if n then pzero else r0 in
   let w0 := if f then z0 else r0 in
@@ -101,15 +103,15 @@ Qed.
 
 Lemma fixup_nan :
   forall z0 z1 t : float, is_finite prec emax z0 = false ->
-  is_nan prec emax (prod t pinf) = true ->
-  fixup z0 z1 t = (prod t pinf, prod t pinf).
+  is_nan prec emax (times_inf t) = true ->
+  fixup z0 z1 t = (times_inf t, times_inf t).
 Proof.
 intros z0 z1 t F N. unfold fixup. cbv zeta. rewrite lt_abs_pinf, F, eq_self, N. reflexivity.
 Qed.
 
 Lemma fixup_inf :
   forall (z0 z1 t : float) (s : bool), is_finite prec emax z0 = false ->
-  prod t pinf = B754_infinity prec emax s ->
+  times_inf t = B754_infinity prec emax s ->
   fixup z0 z1 t = (B754_infinity prec emax s, pzero).
 Proof.
 intros z0 z1 t s F E. unfold fixup. cbv zeta. rewrite lt_abs_pinf, F, eq_self, E. reflexivity.
@@ -121,7 +123,7 @@ Lemma full_template :
   (fin z0 -> opfin) ->
   (opfin -> fin z0 -> fin z1 /\ normalized_2 emin prec (b2r z0) (b2r z1) /\ P z0 z1) ->
   (opfin -> cond -> fin z0) ->
-  (opfin -> is_finite prec emax z0 = false -> prod t pinf = B754_infinity prec emax s) ->
+  (opfin -> is_finite prec emax z0 = false -> times_inf t = B754_infinity prec emax s) ->
   (~ opfin -> is_finite prec emax t = false) ->
   let '(w0, w1) := fixup z0 z1 t in
   canonical_2 w0 w1 /\
@@ -143,7 +145,7 @@ destruct (finite_dec prec emax z0) as [Fz|Fz].
   + intros K. now elim K.
 - assert (NO : opfin -> cond -> False).
   { intros O C. generalize (Hthr O C). congruence. }
-  destruct (prod_pinf_cases prec emax nan_fma t) as [N|[s' E]].
+  destruct (times_inf_cases prec emax nan_mult t) as [N|[s' E]].
   + rewrite (fixup_nan z0 z1 t Fz N).
     split; [|split; [|split; [|split]]].
     * right. right. split; exact N.
@@ -152,7 +154,7 @@ destruct (finite_dec prec emax z0) as [Fz|Fz].
     * intros O _. rewrite (Hlead O Fz) in N. discriminate N.
     * intros K. destruct (not_finite_cases prec emax t (Hnf K)) as [Nt|[s'' Et]].
       -- left. split; [exact Nt|split; exact N].
-      -- exfalso. rewrite Et, prod_pinf_inf in N. discriminate N.
+      -- exfalso. rewrite Et, times_inf_inf in N. discriminate N.
   + rewrite (fixup_inf z0 z1 t s' Fz E).
     split; [|split; [|split; [|split]]].
     * right. left. split. now exists s'. now exists false.
@@ -160,8 +162,8 @@ destruct (finite_dec prec emax z0) as [Fz|Fz].
     * intros O C. now elim (NO O C).
     * intros O _. rewrite (Hlead O Fz) in E. inversion E. split; reflexivity.
     * intros K. destruct (not_finite_cases prec emax t (Hnf K)) as [Nt|[s'' Et]].
-      -- exfalso. apply (prod_pinf_nan prec emax nan_fma) in Nt. rewrite E in Nt. discriminate Nt.
-      -- rewrite Et in E |- *. rewrite prod_pinf_inf in E. inversion E. subst.
+      -- exfalso. apply (times_inf_nan prec emax nan_mult) in Nt. rewrite E in Nt. discriminate Nt.
+      -- rewrite Et in E |- *. rewrite times_inf_inf in E. inversion E. subst.
          right. exists s'. split; [reflexivity|split; reflexivity].
 Qed.
 
@@ -226,7 +228,7 @@ Qed.
    operation, whether the operation overflowed or not. *)
 Lemma lead_add :
   forall a b : float, fin a -> fin b -> rnd (b2r a + b2r b) <> 0 ->
-  prod (add a b) pinf = B754_infinity prec emax (Rlt_bool (b2r a + b2r b) 0).
+  times_inf (add a b) = B754_infinity prec emax (Rlt_bool (b2r a + b2r b) 0).
 Proof.
 intros a b Fa Fb Z.
 assert (Zs : b2r a + b2r b <> 0).
@@ -239,10 +241,10 @@ change (round radix2 (SpecFloat.fexp prec emax)
   with (rnd (b2r a + b2r b)).
 destruct (Rlt_bool_spec (Rabs (rnd (b2r a + b2r b))) (bpow radix2 emax)) as [K|K].
 - intros [E [F _]].
-  rewrite (prod_pinf_sign prec emax nan_fma (add a b) F) by (rewrite E; exact Z).
+  rewrite (times_inf_sign prec emax nan_mult (add a b) F) by (rewrite E; exact Z).
   rewrite E. now rewrite rnd_sign.
 - intros [E S]. rewrite overflow_NE in E. apply B2FF_inf_inv in E.
-  rewrite E, prod_pinf_inf. f_equal.
+  rewrite E, times_inf_inf. f_equal.
   destruct (Rlt_bool_spec (b2r a + b2r b) 0) as [N|P].
   + destruct (Rlt_or_le (b2r a) 0) as [L|L]. now apply neg_sign.
     rewrite S. apply neg_sign. lra.
@@ -252,7 +254,7 @@ Qed.
 
 Lemma lead_sub :
   forall a b : float, fin a -> fin b -> rnd (b2r a - b2r b) <> 0 ->
-  prod (sub a b) pinf = B754_infinity prec emax (Rlt_bool (b2r a - b2r b) 0).
+  times_inf (sub a b) = B754_infinity prec emax (Rlt_bool (b2r a - b2r b) 0).
 Proof.
 intros a b Fa Fb Z.
 assert (Zs : b2r a - b2r b <> 0).
@@ -265,10 +267,10 @@ change (round radix2 (SpecFloat.fexp prec emax)
   with (rnd (b2r a - b2r b)).
 destruct (Rlt_bool_spec (Rabs (rnd (b2r a - b2r b))) (bpow radix2 emax)) as [K|K].
 - intros [E [F _]].
-  rewrite (prod_pinf_sign prec emax nan_fma (sub a b) F) by (rewrite E; exact Z).
+  rewrite (times_inf_sign prec emax nan_mult (sub a b) F) by (rewrite E; exact Z).
   rewrite E. now rewrite rnd_sign.
 - intros [E S]. rewrite overflow_NE in E. apply B2FF_inf_inv in E.
-  rewrite E, prod_pinf_inf. f_equal.
+  rewrite E, times_inf_inf. f_equal.
   destruct (Rlt_bool_spec (b2r a - b2r b) 0) as [N|P].
   + destruct (Rlt_or_le (b2r a) 0) as [L|L]. now apply neg_sign.
     rewrite S, (pos_sign prec emax b) by lra. reflexivity.
@@ -278,7 +280,7 @@ Qed.
 
 Lemma lead_prod :
   forall a b : float, fin a -> fin b -> rnd (b2r a * b2r b + 0) <> 0 ->
-  prod (prod a b) pinf = B754_infinity prec emax (Rlt_bool (b2r a * b2r b) 0).
+  times_inf (prod a b) = B754_infinity prec emax (Rlt_bool (b2r a * b2r b) 0).
 Proof.
 intros a b Fa Fb Z.
 generalize (Bfma_correct prec emax prec_gt_0_ prec_lt_emax_ nan_fma
@@ -290,10 +292,10 @@ change (round radix2 (SpecFloat.fexp prec emax)
 change (b2r pzero) with 0.
 destruct (Rlt_bool_spec (Rabs (rnd (b2r a * b2r b + 0))) (bpow radix2 emax)) as [K|K].
 - intros [E [F _]].
-  rewrite (prod_pinf_sign prec emax nan_fma (prod a b) F) by (rewrite E; exact Z).
+  rewrite (times_inf_sign prec emax nan_mult (prod a b) F) by (rewrite E; exact Z).
   rewrite E, rnd_sign by exact Z. now rewrite Rplus_0_r.
 - intros E. rewrite overflow_NE in E. apply B2FF_inf_inv in E.
-  rewrite E, prod_pinf_inf. now rewrite Rplus_0_r.
+  rewrite E, times_inf_inf. now rewrite Rplus_0_r.
 Qed.
 
 (* A value v beyond Q in magnitude and a number S within U of it, with 2 U <= Q: S does
@@ -374,7 +376,7 @@ Qed.
 (** * add_2_2_full *)
 
 Notation add_2_2 := (IeeeDraft.add_2_2 prec emax nan_plus nan_minus).
-Notation add_2_2_full := (IeeeDraft.add_2_2_full prec emax nan_plus nan_minus nan_abs nan_fma).
+Notation add_2_2_full := (IeeeDraft.add_2_2_full prec emax nan_plus nan_minus nan_abs nan_mult).
 
 Lemma add_2_2_full_eq :
   forall x0 x1 y0 y1 : float,
@@ -449,7 +451,7 @@ Qed.
 
 Notation mul_2_2 := (IeeeDraft.mul_2_2 prec emax nan_plus nan_minus nan_opp nan_fma).
 Notation mul_2_2_full :=
-  (IeeeDraft.mul_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+  (IeeeDraft.mul_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult).
 
 Lemma mul_2_2_full_eq :
   forall x0 x1 y0 y1 : float,
@@ -792,7 +794,7 @@ Proof. intros y. apply is_finite_Bopp. Qed.
 (** ** add_fast_2_2_full *)
 
 Notation add_fast_2_2_full :=
-  (IeeeDraft.add_fast_2_2_full prec emax nan_plus nan_minus nan_abs nan_fma).
+  (IeeeDraft.add_fast_2_2_full prec emax nan_plus nan_minus nan_abs nan_mult).
 
 Lemma add_fast_2_2_full_eq :
   forall x0 x1 y0 y1 : float,
@@ -851,7 +853,7 @@ Qed.
 (** ** sub_2_2_full *)
 
 Notation sub_2_2_full :=
-  (IeeeDraft.sub_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+  (IeeeDraft.sub_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_mult).
 
 Lemma sub_2_2_full_eq :
   forall x0 x1 y0 y1 : float,
@@ -917,7 +919,7 @@ Qed.
 
 (** ** add_2_1_full *)
 
-Notation add_2_1_full := (IeeeDraft.add_2_1_full prec emax nan_plus nan_minus nan_abs nan_fma).
+Notation add_2_1_full := (IeeeDraft.add_2_1_full prec emax nan_plus nan_minus nan_abs nan_mult).
 
 Lemma add_2_1_full_eq :
   forall x0 x1 a : float,
@@ -972,7 +974,7 @@ Qed.
 (** ** sub_2_1_full *)
 
 Notation sub_2_1_full :=
-  (IeeeDraft.sub_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+  (IeeeDraft.sub_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_mult).
 
 Lemma sub_2_1_full_eq :
   forall x0 x1 a : float,
@@ -1031,7 +1033,7 @@ Qed.
 (** ** sub_1_2_full *)
 
 Notation sub_1_2_full :=
-  (IeeeDraft.sub_1_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+  (IeeeDraft.sub_1_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_mult).
 
 Lemma sub_1_2_full_eq :
   forall a y0 y1 : float,
@@ -1092,7 +1094,7 @@ Qed.
 (** ** mul_2_1_full *)
 
 Notation mul_2_1_full :=
-  (IeeeDraft.mul_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+  (IeeeDraft.mul_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult).
 
 Lemma mul_2_1_full_eq :
   forall x0 x1 a : float,
@@ -1139,7 +1141,7 @@ Qed.
 (** ** mul_pow2_2_full *)
 
 Notation mul_pow2_2_full :=
-  (IeeeDraft.mul_pow2_2_full prec emax nan_plus nan_minus nan_abs nan_fma).
+  (IeeeDraft.mul_pow2_2_full prec emax nan_plus nan_minus nan_abs nan_fma nan_mult).
 
 Lemma mul_pow2_2_full_eq :
   forall x0 x1 c : float,
@@ -1195,10 +1197,11 @@ Ltac full_glue :=
 
 Theorem add_2_2_full_correct : add_2_2_full_spec.
 Proof.
-intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma Hp3 x0 x1 y0 y1 Cx Cy t. subst t.
-generalize (add_2_2_full_facts prec emax nan_plus nan_minus (fun x => nan_plus x x) nan_abs nan_fma
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_mult Hp3 x0 x1 y0 y1 Cx Cy t. subst t.
+generalize (add_2_2_full_facts prec emax nan_plus nan_minus (fun x => nan_plus x x) nan_abs
+              (fun x y _ => nan_plus x y) nan_mult
               Hp3 x0 x1 y0 y1 Cx Cy).
-destruct (IeeeDraft.add_2_2_full prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 y0 y1) as [w0 w1].
+destruct (IeeeDraft.add_2_2_full prec emax nan_plus nan_minus nan_abs nan_mult x0 x1 y0 y1) as [w0 w1].
 generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F))
            (fun F => proj1 (canonical_2_finite prec emax y0 y1 Cy F)).
 intros Gx Gy. full_glue.
@@ -1206,10 +1209,10 @@ Qed.
 
 Theorem mul_2_2_full_correct : mul_2_2_full_spec.
 Proof.
-intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp4 x0 x1 y0 y1 Cx Cy t. subst t.
-generalize (mul_2_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult Hp4 x0 x1 y0 y1 Cx Cy t. subst t.
+generalize (mul_2_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult
               Hp4 x0 x1 y0 y1 Cx Cy).
-destruct (IeeeDraft.mul_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma x0 x1 y0 y1)
+destruct (IeeeDraft.mul_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult x0 x1 y0 y1)
   as [w0 w1].
 generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F))
            (fun F => proj1 (canonical_2_finite prec emax y0 y1 Cy F)).
@@ -1218,10 +1221,10 @@ Qed.
 
 Theorem add_fast_2_2_full_correct : add_fast_2_2_full_spec.
 Proof.
-intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma Hp2 x0 x1 y0 y1 Cx Cy t. subst t.
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_mult Hp2 x0 x1 y0 y1 Cx Cy t. subst t.
 generalize (add_fast_2_2_full_facts prec emax nan_plus nan_minus (fun x => nan_plus x x) nan_abs
-              nan_fma Hp2 x0 x1 y0 y1 Cx Cy).
-destruct (IeeeDraft.add_fast_2_2_full prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 y0 y1)
+              (fun x y _ => nan_plus x y) nan_mult Hp2 x0 x1 y0 y1 Cx Cy).
+destruct (IeeeDraft.add_fast_2_2_full prec emax nan_plus nan_minus nan_abs nan_mult x0 x1 y0 y1)
   as [w0 w1].
 generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F))
            (fun F => proj1 (canonical_2_finite prec emax y0 y1 Cy F)).
@@ -1230,10 +1233,11 @@ Qed.
 
 Theorem sub_2_2_full_correct : sub_2_2_full_spec.
 Proof.
-intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp3 x0 x1 y0 y1 Cx Cy t. subst t.
-generalize (sub_2_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_mult Hp3 x0 x1 y0 y1 Cx Cy t. subst t.
+generalize (sub_2_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs
+              (fun x y _ => nan_plus x y) nan_mult
               Hp3 x0 x1 y0 y1 Cx Cy).
-destruct (IeeeDraft.sub_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma x0 x1 y0 y1)
+destruct (IeeeDraft.sub_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_mult x0 x1 y0 y1)
   as [w0 w1].
 generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F))
            (fun F => proj1 (canonical_2_finite prec emax y0 y1 Cy F)).
@@ -1242,20 +1246,21 @@ Qed.
 
 Theorem add_2_1_full_correct : add_2_1_full_spec.
 Proof.
-intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma Hp3 x0 x1 a Cx t. subst t.
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_mult Hp3 x0 x1 a Cx t. subst t.
 generalize (add_2_1_full_facts prec emax nan_plus nan_minus (fun x => nan_plus x x) nan_abs
-              nan_fma Hp3 x0 x1 a Cx).
-destruct (IeeeDraft.add_2_1_full prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 a) as [w0 w1].
+              (fun x y _ => nan_plus x y) nan_mult Hp3 x0 x1 a Cx).
+destruct (IeeeDraft.add_2_1_full prec emax nan_plus nan_minus nan_abs nan_mult x0 x1 a) as [w0 w1].
 generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F)).
 intros Gx. full_glue.
 Qed.
 
 Theorem sub_2_1_full_correct : sub_2_1_full_spec.
 Proof.
-intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp3 x0 x1 a Cx t. subst t.
-generalize (sub_2_1_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_mult Hp3 x0 x1 a Cx t. subst t.
+generalize (sub_2_1_full_facts prec emax nan_plus nan_minus nan_opp nan_abs
+              (fun x y _ => nan_plus x y) nan_mult
               Hp3 x0 x1 a Cx).
-destruct (IeeeDraft.sub_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma x0 x1 a)
+destruct (IeeeDraft.sub_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_mult x0 x1 a)
   as [w0 w1].
 generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F)).
 intros Gx. full_glue.
@@ -1263,10 +1268,11 @@ Qed.
 
 Theorem sub_1_2_full_correct : sub_1_2_full_spec.
 Proof.
-intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp3 a y0 y1 Cy t. subst t.
-generalize (sub_1_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_mult Hp3 a y0 y1 Cy t. subst t.
+generalize (sub_1_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs
+              (fun x y _ => nan_plus x y) nan_mult
               Hp3 a y0 y1 Cy).
-destruct (IeeeDraft.sub_1_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma a y0 y1)
+destruct (IeeeDraft.sub_1_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_mult a y0 y1)
   as [w0 w1].
 generalize (fun F => proj1 (canonical_2_finite prec emax y0 y1 Cy F)).
 intros Gy. full_glue.
@@ -1274,10 +1280,10 @@ Qed.
 
 Theorem mul_2_1_full_correct : mul_2_1_full_spec.
 Proof.
-intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp2 x0 x1 a Cx t. subst t.
-generalize (mul_2_1_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult Hp2 x0 x1 a Cx t. subst t.
+generalize (mul_2_1_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult
               Hp2 x0 x1 a Cx).
-destruct (IeeeDraft.mul_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma x0 x1 a)
+destruct (IeeeDraft.mul_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult x0 x1 a)
   as [w0 w1].
 generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F)).
 intros Gx. full_glue.
@@ -1285,10 +1291,10 @@ Qed.
 
 Theorem mul_pow2_2_full_correct : mul_pow2_2_full_spec.
 Proof.
-intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma Hp2 x0 x1 c Cx Fc Pc t. subst t.
+intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma nan_mult Hp2 x0 x1 c Cx Fc Pc t. subst t.
 generalize (mul_pow2_2_full_facts prec emax nan_plus nan_minus (fun x => nan_plus x x) nan_abs
-              nan_fma Hp2 x0 x1 c Cx Fc Pc).
-destruct (IeeeDraft.mul_pow2_2_full prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 c)
+              nan_fma nan_mult Hp2 x0 x1 c Cx Fc Pc).
+destruct (IeeeDraft.mul_pow2_2_full prec emax nan_plus nan_minus nan_abs nan_fma nan_mult x0 x1 c)
   as [w0 w1].
 generalize (fun F => proj1 (canonical_2_finite prec emax x0 x1 Cx F)).
 intros Gx. full_glue.

@@ -232,13 +232,13 @@ Definition guard_ieee_spec : Prop :=
 Definition add_2_2_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_mult : nan2 prec emax),
   (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : binary_float prec emax,
   canonical_2 x0 x1 ->
   canonical_2 y0 y1 ->
   let t := IeeeDraft.add prec emax nan_plus x0 y0 in
-  let '(w0, w1) := IeeeDraft.add_2_2_full prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 y0 y1 in
+  let '(w0, w1) := IeeeDraft.add_2_2_full prec emax nan_plus nan_minus nan_abs nan_mult x0 x1 y0 y1 in
   canonical_2 w0 w1 /\
   (finite w0 ->
    finite x0 /\ finite x1 /\ finite y0 /\ finite y1 /\ finite w1 /\
@@ -257,13 +257,14 @@ Definition add_2_2_full_spec : Prop :=
 Definition mul_2_2_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax)
+         (nan_mult : nan2 prec emax),
   (4 <= prec)%Z ->
   forall x0 x1 y0 y1 : binary_float prec emax,
   canonical_2 x0 x1 ->
   canonical_2 y0 y1 ->
   let t := IeeeDraft.prod prec emax nan_fma x0 y0 in
-  let '(w0, w1) := IeeeDraft.mul_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma x0 x1 y0 y1 in
+  let '(w0, w1) := IeeeDraft.mul_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult x0 x1 y0 y1 in
   canonical_2 w0 w1 /\
   (finite w0 ->
    finite x0 /\ finite x1 /\ finite y0 /\ finite y1 /\ finite w1 /\
@@ -463,13 +464,13 @@ Definition ball_neg_2_ieee_spec : Prop :=
 Definition add_fast_2_2_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_mult : nan2 prec emax),
   (2 <= prec)%Z ->
   forall x0 x1 y0 y1 : binary_float prec emax,
   canonical_2 x0 x1 ->
   canonical_2 y0 y1 ->
   let t := IeeeDraft.add prec emax nan_plus x0 y0 in
-  let '(w0, w1) := IeeeDraft.add_fast_2_2_full prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 y0 y1 in
+  let '(w0, w1) := IeeeDraft.add_fast_2_2_full prec emax nan_plus nan_minus nan_abs nan_mult x0 x1 y0 y1 in
   canonical_2 w0 w1 /\
   (finite w0 ->
    finite x0 /\ finite x1 /\ finite y0 /\ finite y1 /\ finite w1 /\
@@ -488,13 +489,13 @@ Definition add_fast_2_2_full_spec : Prop :=
 Definition sub_2_2_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_mult : nan2 prec emax),
   (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : binary_float prec emax,
   canonical_2 x0 x1 ->
   canonical_2 y0 y1 ->
   let t := IeeeDraft.sub prec emax nan_minus x0 y0 in
-  let '(w0, w1) := IeeeDraft.sub_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma x0 x1 y0 y1 in
+  let '(w0, w1) := IeeeDraft.sub_2_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_mult x0 x1 y0 y1 in
   canonical_2 w0 w1 /\
   (finite w0 ->
    finite x0 /\ finite x1 /\ finite y0 /\ finite y1 /\ finite w1 /\
@@ -513,12 +514,12 @@ Definition sub_2_2_full_spec : Prop :=
 Definition add_2_1_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_mult : nan2 prec emax),
   (3 <= prec)%Z ->
   forall x0 x1 a : binary_float prec emax,
   canonical_2 x0 x1 ->
   let t := IeeeDraft.add prec emax nan_plus x0 (IeeeDraft.guard prec emax nan_plus a) in
-  let '(w0, w1) := IeeeDraft.add_2_1_full prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 a in
+  let '(w0, w1) := IeeeDraft.add_2_1_full prec emax nan_plus nan_minus nan_abs nan_mult x0 x1 a in
   canonical_2 w0 w1 /\
   (finite w0 ->
    finite x0 /\ finite x1 /\ finite a /\ finite w1 /\
@@ -537,12 +538,12 @@ Definition add_2_1_full_spec : Prop :=
 Definition sub_2_1_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_mult : nan2 prec emax),
   (3 <= prec)%Z ->
   forall x0 x1 a : binary_float prec emax,
   canonical_2 x0 x1 ->
   let t := IeeeDraft.sub prec emax nan_minus x0 (IeeeDraft.guard prec emax nan_plus a) in
-  let '(w0, w1) := IeeeDraft.sub_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma x0 x1 a in
+  let '(w0, w1) := IeeeDraft.sub_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_mult x0 x1 a in
   canonical_2 w0 w1 /\
   (finite w0 ->
    finite x0 /\ finite x1 /\ finite a /\ finite w1 /\
@@ -561,12 +562,12 @@ Definition sub_2_1_full_spec : Prop :=
 Definition sub_1_2_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_mult : nan2 prec emax),
   (3 <= prec)%Z ->
   forall a y0 y1 : binary_float prec emax,
   canonical_2 y0 y1 ->
   let t := IeeeDraft.sub prec emax nan_minus (IeeeDraft.guard prec emax nan_plus a) y0 in
-  let '(w0, w1) := IeeeDraft.sub_1_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma a y0 y1 in
+  let '(w0, w1) := IeeeDraft.sub_1_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_mult a y0 y1 in
   canonical_2 w0 w1 /\
   (finite w0 ->
    finite a /\ finite y0 /\ finite y1 /\ finite w1 /\
@@ -585,12 +586,13 @@ Definition sub_1_2_full_spec : Prop :=
 Definition mul_2_1_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax)
+         (nan_mult : nan2 prec emax),
   (2 <= prec)%Z ->
   forall x0 x1 a : binary_float prec emax,
   canonical_2 x0 x1 ->
   let t := IeeeDraft.prod prec emax nan_fma x0 a in
-  let '(w0, w1) := IeeeDraft.mul_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma x0 x1 a in
+  let '(w0, w1) := IeeeDraft.mul_2_1_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_mult x0 x1 a in
   canonical_2 w0 w1 /\
   (finite w0 ->
    finite x0 /\ finite x1 /\ finite a /\ finite w1 /\
@@ -609,14 +611,15 @@ Definition mul_2_1_full_spec : Prop :=
 Definition mul_pow2_2_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax)
+         (nan_mult : nan2 prec emax),
   (2 <= prec)%Z ->
   forall x0 x1 c : binary_float prec emax,
   canonical_2 x0 x1 ->
   finite c ->
   (exists n : Z, val c = bpow radix2 n) ->
   let t := IeeeDraft.prod prec emax nan_fma x0 c in
-  let '(w0, w1) := IeeeDraft.mul_pow2_2_full prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 c in
+  let '(w0, w1) := IeeeDraft.mul_pow2_2_full prec emax nan_plus nan_minus nan_abs nan_fma nan_mult x0 x1 c in
   canonical_2 w0 w1 /\
   (finite w0 ->
    finite x0 /\ finite x1 /\ finite w1 /\

@@ -29,6 +29,9 @@
      fma a b c    Bfma           fma(a, b, c)
      fms a b c    Bfma, Bopp     fma(a, b, -c)
      prod a b     Bfma           fma(a, b, +0.0)
+     times_inf t  Bmult          t * (+infinity), a multiplication of the format (not a
+                                 fused operation): a NaN for a NaN or a zero t, and for
+                                 any other t the infinity of the sign of t
      lt le eq     Bltb Bleb Beqb a mask is a bool; a comparison with a NaN is false
      and or not   andb orb negb
      select m a b                if m then a else b
@@ -86,6 +89,7 @@ Variable nan_minus : float -> float -> nan_of.
 Variable nan_opp : float -> nan_of.
 Variable nan_abs : float -> nan_of.
 Variable nan_fma : float -> float -> float -> nan_of.
+Variable nan_mult : float -> float -> nan_of.
 (* The NaN that `const nan` denotes. *)
 Variable nan_const : nan_of.
 
@@ -105,6 +109,8 @@ Definition fma (a b c : float) : float :=
   Bfma prec emax prec_gt_0_ prec_lt_emax_ nan_fma BinarySingleNaN.mode_NE a b c.
 Definition fms (a b c : float) : float := fma a b (neg c).
 Definition prod (a b : float) : float := fma a b pzero.
+Definition times_inf (t : float) : float :=
+  Bmult prec emax prec_gt_0_ prec_lt_emax_ nan_mult BinarySingleNaN.mode_NE t pinf.
 Definition abs (a : float) : float :=
   Babs prec emax nan_abs a.
 Definition lt (a b : float) : bool :=
@@ -462,17 +468,18 @@ Definition ball_scale_2 (cx0 cx1 rx a : float) : float * float * float :=
 (** * The full kernels *)
 
 (* Each is its finite core followed by the fix-up of milestone1.md ("IEEE-like results"):
-   t is the operation of T on the leading limbs; f says that z0 is finite; r0 is t made
-   canonical: a NaN stays a NaN, any other t becomes the infinity of its sign (a zero t
-   would become a NaN). A one-limb operand that is added or subtracted is guarded before
-   it enters t; the core is called with the operand itself. *)
+   t is the operation of T on the leading limbs; f says that z0 is finite; r0 is
+   times_inf(t), which is t made canonical: a NaN stays a NaN, any other t becomes the
+   infinity of its sign (a zero t would become a NaN). A one-limb operand that is added
+   or subtracted is guarded before it enters t; the core is called with the operand
+   itself. *)
 
 Definition add_2_2_full (x0 x1 y0 y1 : float) : float * float :=
   let '(z0, z1) := add_2_2 x0 x1 y0 y1 in
   let t := add x0 y0 in
   let a := abs z0 in
   let f := lt a pinf in
-  let r0 := prod t pinf in
+  let r0 := times_inf t in
   let n := eq r0 r0 in
   let r1 := if n then pzero else r0 in
   let w0 := if f then z0 else r0 in
@@ -484,7 +491,7 @@ Definition add_fast_2_2_full (x0 x1 y0 y1 : float) : float * float :=
   let t := add x0 y0 in
   let a := abs z0 in
   let f := lt a pinf in
-  let r0 := prod t pinf in
+  let r0 := times_inf t in
   let n := eq r0 r0 in
   let r1 := if n then pzero else r0 in
   let w0 := if f then z0 else r0 in
@@ -496,7 +503,7 @@ Definition sub_2_2_full (x0 x1 y0 y1 : float) : float * float :=
   let t := sub x0 y0 in
   let a := abs z0 in
   let f := lt a pinf in
-  let r0 := prod t pinf in
+  let r0 := times_inf t in
   let n := eq r0 r0 in
   let r1 := if n then pzero else r0 in
   let w0 := if f then z0 else r0 in
@@ -509,7 +516,7 @@ Definition add_2_1_full (x0 x1 a : float) : float * float :=
   let t := add x0 g in
   let az := abs z0 in
   let f := lt az pinf in
-  let r0 := prod t pinf in
+  let r0 := times_inf t in
   let n := eq r0 r0 in
   let r1 := if n then pzero else r0 in
   let w0 := if f then z0 else r0 in
@@ -522,7 +529,7 @@ Definition sub_2_1_full (x0 x1 a : float) : float * float :=
   let t := sub x0 g in
   let az := abs z0 in
   let f := lt az pinf in
-  let r0 := prod t pinf in
+  let r0 := times_inf t in
   let n := eq r0 r0 in
   let r1 := if n then pzero else r0 in
   let w0 := if f then z0 else r0 in
@@ -535,7 +542,7 @@ Definition sub_1_2_full (a y0 y1 : float) : float * float :=
   let t := sub g y0 in
   let az := abs z0 in
   let f := lt az pinf in
-  let r0 := prod t pinf in
+  let r0 := times_inf t in
   let n := eq r0 r0 in
   let r1 := if n then pzero else r0 in
   let w0 := if f then z0 else r0 in
@@ -547,7 +554,7 @@ Definition mul_2_2_full (x0 x1 y0 y1 : float) : float * float :=
   let t := prod x0 y0 in
   let a := abs z0 in
   let f := lt a pinf in
-  let r0 := prod t pinf in
+  let r0 := times_inf t in
   let n := eq r0 r0 in
   let r1 := if n then pzero else r0 in
   let w0 := if f then z0 else r0 in
@@ -559,7 +566,7 @@ Definition mul_2_1_full (x0 x1 a : float) : float * float :=
   let t := prod x0 a in
   let az := abs z0 in
   let f := lt az pinf in
-  let r0 := prod t pinf in
+  let r0 := times_inf t in
   let n := eq r0 r0 in
   let r1 := if n then pzero else r0 in
   let w0 := if f then z0 else r0 in
@@ -571,7 +578,7 @@ Definition mul_pow2_2_full (x0 x1 c : float) : float * float :=
   let t := prod x0 c in
   let a := abs z0 in
   let f := lt a pinf in
-  let r0 := prod t pinf in
+  let r0 := times_inf t in
   let n := eq r0 r0 in
   let r1 := if n then pzero else r0 in
   let w0 := if f then z0 else r0 in
