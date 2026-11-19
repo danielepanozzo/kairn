@@ -1,9 +1,9 @@
 """The IEEE-model Rocq printer: proofs/gen/IeeeModel.v, IeeeStatements.v and IeeeAudit.v.
 
 The IEEE model defines each kernel over Flocq's binary_float prec emax, with the operations of
-proofs/theories/IeeeDraft.v (Bplus, Bfma, Bmult, ... rounded to nearest, ties to even), which are
+proofs/theories/IeeeOperations.v (Bplus, Bfma, Bmult, ... rounded to nearest, ties to even), which are
 not kernel-specific and are imported, not printed. The section declares the same variables, in
-the same order, as IeeeDraft.v's: prec, emax, the two instances Flocq needs, and one NaN-choice
+the same order, as IeeeOperations.v's: prec, emax, the two instances Flocq needs, and one NaN-choice
 function per operation (nan_plus, nan_minus, nan_opp, nan_abs, nan_fma, nan_mult) and the NaN of
 `const nan` (nan_const). Closing the section abstracts each definition over the variables it uses,
 in that order: that is the list of binders of every statement. A kernel with an operation the IEEE
@@ -11,8 +11,8 @@ model has not (fnma, muladd, mul: no kernel of gen/kernels) is left out. After t
 the kernels with a statement of the finite domain (below), and their callees, as straight-line
 programs of Program.v.
 
-The statements are printed from the claims in the shapes of IeeeStatementsDraft.v and
-IeeeExtStatementsDraft.v, whose vocabulary (finite, val, ieee_emin, nan2, canonical_2, xval,
+The statements are printed from the claims in the shapes described in
+proofs/theories/IeeeVocabulary.v, whose vocabulary (finite, val, ieee_emin, nan2, canonical_2, xval,
 xround, ball_1, in_ball_1, ...) is imported from there:
 - a kernel of the extended domain has one statement: F1 to F5 for a full kernel (extends); B1 to B3
   and containment for a ball (encloses); represents (the constructors, neg_2, abs_2, for which it
@@ -25,9 +25,9 @@ xround, ball_1, in_ball_1, ...) is imported from there:
   and the outputs are those of the real model), K_ieee_finite_spec and
   K_ieee_finite_result_spec (under a threshold every value is finite).
 
-Like the real-model printer, this one is trusted: proofs/wip/GenAgreesWithDrafts.v checks by
-conversion alone that what it prints is the drafts' text, kernel by kernel and statement by
-statement.
+Like the real-model printer, this one is trusted. Before the hand-written drafts of this
+model were retired, a Rocq file checked by conversion alone that what it prints was the drafts'
+text, kernel by kernel and statement by statement; the theorems are now about the printed text.
 """
 from . import expr, ir, rocq
 
@@ -39,7 +39,7 @@ HEADER = rocq.HEADER
 NANS = (('nan_plus', 'nan2'), ('nan_minus', 'nan2'), ('nan_opp', 'nan1'), ('nan_abs', 'nan1'),
         ('nan_fma', 'nan3'), ('nan_mult', 'nan2'), ('nan_const', None))
 CONST_NAN_TYPE = '{x : binary_float prec emax | is_nan prec emax x = true}'
-# The NaN-choice variables each operation of IeeeDraft.v takes.
+# The NaN-choice variables each operation of IeeeOperations.v takes.
 OP_NANS = {'add': ('nan_plus',), 'sub': ('nan_minus',), 'neg': ('nan_opp',), 'abs': ('nan_abs',),
            'fma': ('nan_fma',), 'fms': ('nan_opp', 'nan_fma'), 'prod': ('nan_fma',),
            'times_inf': ('nan_mult',), 'guard': ('nan_plus',)}
@@ -220,8 +220,8 @@ def model(kernels):
     cnames = _const_names(kernels, real)
     lines = [HEADER, '',
              '(* The IEEE model of every kernel: one function over Flocq\'s binary_float prec emax, with',
-             '   the operations of IeeeDraft.v (rounded to nearest, ties to even, overflow included), in',
-             '   a section whose variables are those of IeeeDraft.v, in the same order: closing it',
+             '   the operations of IeeeOperations.v (rounded to nearest, ties to even, overflow included), in',
+             '   a section whose variables are those of IeeeOperations.v, in the same order: closing it',
              '   abstracts each definition over the variables it uses. A call stays a call, and the',
              '   names of the values are those of the kernel descriptions. A constant of the format is',
              '   the number of the format whose value is the constant of the real model (Model.v). Then',
@@ -231,7 +231,7 @@ def model(kernels):
              'From Flocq Require Import Core Binary.',
              f'From {GEN_PATH} Require Model.',
              f'From {THEORIES_PATH} Require Import Program.',
-             f'From {THEORIES_PATH} Require IeeeDraft.',
+             f'From {THEORIES_PATH} Require IeeeOperations.',
              'Import ListNotations.',
              '',
              'Section IeeeKernels.',
@@ -250,25 +250,25 @@ def model(kernels):
              'Variable nan_mult : float -> float -> nan_of.',
              'Variable nan_const : nan_of.',
              '',
-             '(* The operations of IeeeDraft.v, applied to the variables of this section. *)',
-             'Local Notation pzero := (IeeeDraft.pzero prec emax).',
-             'Local Notation pinf := (IeeeDraft.pinf prec emax).',
-             'Local Notation cnan := (IeeeDraft.cnan prec emax nan_const).',
-             'Local Notation add := (IeeeDraft.add prec emax nan_plus).',
-             'Local Notation sub := (IeeeDraft.sub prec emax nan_minus).',
-             'Local Notation neg := (IeeeDraft.neg prec emax nan_opp).',
-             'Local Notation abs := (IeeeDraft.abs prec emax nan_abs).',
-             'Local Notation fma := (IeeeDraft.fma prec emax nan_fma).',
-             'Local Notation fms := (IeeeDraft.fms prec emax nan_opp nan_fma).',
-             'Local Notation prod := (IeeeDraft.prod prec emax nan_fma).',
-             'Local Notation times_inf := (IeeeDraft.times_inf prec emax nan_mult).',
-             'Local Notation lt := (IeeeDraft.lt prec emax).',
-             'Local Notation le := (IeeeDraft.le prec emax).',
-             'Local Notation eq := (IeeeDraft.eq prec emax).',
-             'Local Notation succ := (IeeeDraft.succ prec emax).',
-             'Local Notation pred := (IeeeDraft.pred prec emax).',
-             'Local Notation guard := (IeeeDraft.guard prec emax nan_plus).',
-             'Local Notation const_of := (IeeeDraft.const_of prec emax).']
+             '(* The operations of IeeeOperations.v, applied to the variables of this section. *)',
+             'Local Notation pzero := (IeeeOperations.pzero prec emax).',
+             'Local Notation pinf := (IeeeOperations.pinf prec emax).',
+             'Local Notation cnan := (IeeeOperations.cnan prec emax nan_const).',
+             'Local Notation add := (IeeeOperations.add prec emax nan_plus).',
+             'Local Notation sub := (IeeeOperations.sub prec emax nan_minus).',
+             'Local Notation neg := (IeeeOperations.neg prec emax nan_opp).',
+             'Local Notation abs := (IeeeOperations.abs prec emax nan_abs).',
+             'Local Notation fma := (IeeeOperations.fma prec emax nan_fma).',
+             'Local Notation fms := (IeeeOperations.fms prec emax nan_opp nan_fma).',
+             'Local Notation prod := (IeeeOperations.prod prec emax nan_fma).',
+             'Local Notation times_inf := (IeeeOperations.times_inf prec emax nan_mult).',
+             'Local Notation lt := (IeeeOperations.lt prec emax).',
+             'Local Notation le := (IeeeOperations.le prec emax).',
+             'Local Notation eq := (IeeeOperations.eq prec emax).',
+             'Local Notation succ := (IeeeOperations.succ prec emax).',
+             'Local Notation pred := (IeeeOperations.pred prec emax).',
+             'Local Notation guard := (IeeeOperations.guard prec emax nan_plus).',
+             'Local Notation const_of := (IeeeOperations.const_of prec emax).']
     done = set()
     for name, rname in sorted(cnames.items(), key=lambda kv: kv[1]):
         if rname in done:
@@ -514,7 +514,7 @@ def _hyps_extended(k, t):
 
 def _ieee_op(op, args):
     nans = ' '.join(OP_NANS.get(op, ()))
-    return f'IeeeDraft.{op} prec emax {nans} {" ".join(args)}'.replace('  ', ' ')
+    return f'IeeeOperations.{op} prec emax {nans} {" ".join(args)}'.replace('  ', ' ')
 
 
 def _full_spec(k, kernels, e):
@@ -702,7 +702,7 @@ def kernel_statements(k, kernels):
 def statements(kernels):
     lines = [HEADER, '',
              '(* The statements about the IEEE model (IeeeModel.v), built from the claims in the shapes',
-             '   of proofs/theories/IeeeStatementsDraft.v and IeeeExtStatementsDraft.v, whose vocabulary',
+             '   described in proofs/theories/IeeeVocabulary.v, whose vocabulary',
              '   they use: for all precisions from the kernel\'s minimum on and all emax with prec < emax,',
              '   for every choice of the NaN each operation returns, with rounding to nearest, ties to',
              '   even; emin = 3 - emax - prec. A hand-written proof of statement S is a theorem whose type',
@@ -710,8 +710,8 @@ def statements(kernels):
              'From Stdlib Require Import Reals ZArith List.',
              'From Flocq Require Import Core Binary.',
              f'From {GEN_PATH} Require Import Model Statements.',
-             f'From {THEORIES_PATH} Require Import Program IeeeBridge IeeeStatementsDraft IeeeExtStatementsDraft.',
-             f'From {THEORIES_PATH} Require IeeeDraft.',
+             f'From {THEORIES_PATH} Require Import Program IeeeBridge IeeeVocabulary.',
+             f'From {THEORIES_PATH} Require IeeeOperations.',
              f'From {GEN_PATH} Require IeeeModel.',
              'Import ListNotations.',
              'Open Scope R_scope.']

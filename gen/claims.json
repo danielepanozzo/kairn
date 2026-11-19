@@ -188,9 +188,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCores.v",
+        "name": "ball_add_1_full_correct"
+      },
       "source": {
         "cite": "ball_add_1, then the fix-up of the special states of a ball (Milestone 1 listing)",
         "license": "core: as ball_add_1; fix-up: MIT"
@@ -237,9 +241,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeMake.v",
+        "name": "ball_make_1_correct"
+      },
       "source": {
         "cite": "constructors (Milestone 1 listing)",
         "license": "algorithm: MIT"
@@ -375,9 +383,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCores.v",
+        "name": "ball_mul_1_full_correct"
+      },
       "source": {
         "cite": "ball_mul_1, then the fix-up of the special states of a ball (Milestone 1 listing)",
         "license": "core: as ball_mul_1; fix-up: MIT"
@@ -432,10 +444,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Ball2.v",
         "name": "ball_neg_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCores.v",
+        "name": "ball_neg_1_ieee_correct"
       },
       "source": {
         "cite": "midpoint-radius negation (Milestone 1 listing)",
@@ -554,9 +570,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCores.v",
+        "name": "ball_scale_1_full_correct"
+      },
       "source": {
         "cite": "ball_scale_1, then the fix-up of the special states of a ball (Milestone 1 listing)",
         "license": "core: as ball_scale_1; fix-up: MIT"
@@ -692,9 +712,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCores.v",
+        "name": "ball_sub_1_full_correct"
+      },
       "source": {
         "cite": "ball_sub_1, then the fix-up of the special states of a ball (Milestone 1 listing)",
         "license": "core: as ball_sub_1; fix-up: MIT"
@@ -796,9 +820,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeMake.v",
+        "name": "make_2_correct"
+      },
       "source": {
         "cite": "constructors (Milestone 1 listing)",
         "license": "algorithm: MIT"
@@ -904,10 +932,14 @@
       ],
       "min_precision": 2,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Directed.v",
         "name": "radd_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "radd_ieee_correct"
       },
       "source": {
         "cite": "one step up from the rounded sum (Milestone 1 listing)",
@@ -952,10 +984,14 @@
       ],
       "min_precision": 2,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Directed.v",
         "name": "rmul_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "rmul_ieee_correct"
       },
       "source": {
         "cite": "one step up from the rounded product (Milestone 1 listing)",
@@ -1277,10 +1313,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Sign.v",
         "name": "abs_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "abs_2_ieee_correct"
       },
       "source": {
         "cite": "the sign of x0 (Milestone 1 listing)",
@@ -1330,10 +1370,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Convert.v",
         "name": "to_up_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "to_up_2_ieee_correct"
       },
       "source": {
         "cite": "the sign of x1 (Milestone 1 listing)",
@@ -1373,10 +1417,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Convert.v",
         "name": "abs_upper_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "abs_upper_2_ieee_correct"
       },
       "source": {
         "cite": "abs_2, then to_up_2 (Milestone 1 listing)",
@@ -1493,9 +1541,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFull.v",
+        "name": "add_2_1_full_correct"
+      },
       "source": {
         "cite": "add_2_1, then the fix-up of IEEE-like results (Milestone 1 listing)",
         "license": "core: as add_2_1; fix-up: MIT"
@@ -1613,9 +1665,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFull.v",
+        "name": "add_2_2_full_correct"
+      },
       "source": {
         "cite": "add_2_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
         "license": "core: as add_2_2; fix-up: MIT"
@@ -1733,9 +1789,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFull.v",
+        "name": "add_fast_2_2_full_correct"
+      },
       "source": {
         "cite": "add_fast_2_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
         "license": "core: as add_fast_2_2; fix-up: MIT"
@@ -1877,9 +1937,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCores.v",
+        "name": "ball_add_2_full_correct"
+      },
       "source": {
         "cite": "ball_add_2, then the fix-up of the special states of a ball (Milestone 1 listing)",
         "license": "core: as ball_add_2; fix-up: MIT"
@@ -1928,9 +1992,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeMake.v",
+        "name": "ball_make_2_correct"
+      },
       "source": {
         "cite": "constructors (Milestone 1 listing)",
         "license": "algorithm: MIT"
@@ -2136,9 +2204,13 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCores.v",
+        "name": "ball_mul_2_full_correct"
+      },
       "source": {
         "cite": "ball_mul_2, then the fix-up of the special states of a ball (Milestone 1 listing)",
         "license": "core: as ball_mul_2; fix-up: MIT"
@@ -2189,10 +2261,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Sign.v",
         "name": "neg_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "neg_2_ieee_correct"
       },
       "source": {
         "cite": "limb by limb (Milestone 1 listing)",
@@ -2262,10 +2338,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Ball2.v",
         "name": "ball_neg_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCores.v",
+        "name": "ball_neg_2_ieee_correct"
       },
       "source": {
         "cite": "midpoint-radius negation (Milestone 1 listing)",
@@ -2452,9 +2532,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCores.v",
+        "name": "ball_scale_2_full_correct"
+      },
       "source": {
         "cite": "ball_scale_2, then the fix-up of the special states of a ball (Milestone 1 listing)",
         "license": "core: as ball_scale_2; fix-up: MIT"
@@ -2596,9 +2680,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallCores.v",
+        "name": "ball_sub_2_full_correct"
+      },
       "source": {
         "cite": "ball_sub_2, then the fix-up of the special states of a ball (Milestone 1 listing)",
         "license": "core: as ball_sub_2; fix-up: MIT"
@@ -2646,10 +2734,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "eq_2_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "eq_2_1_ieee_correct"
       },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
@@ -2699,10 +2791,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "eq_2_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "eq_2_2_ieee_correct"
       },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
@@ -2751,10 +2847,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "le_1_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "le_1_2_ieee_correct"
       },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
@@ -2803,10 +2903,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "le_2_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "le_2_1_ieee_correct"
       },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
@@ -2856,10 +2960,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "le_2_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "le_2_2_ieee_correct"
       },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
@@ -2908,10 +3016,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "lt_1_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "lt_1_2_ieee_correct"
       },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
@@ -2960,10 +3072,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "lt_2_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "lt_2_1_ieee_correct"
       },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
@@ -3013,10 +3129,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Compare.v",
         "name": "lt_2_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "lt_2_2_ieee_correct"
       },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
@@ -3054,9 +3174,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeMake.v",
+        "name": "make_2_limbs_correct"
+      },
       "source": {
         "cite": "constructors (Milestone 1 listing)",
         "license": "algorithm: MIT"
@@ -3105,9 +3229,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFull.v",
+        "name": "mul_2_1_full_correct"
+      },
       "source": {
         "cite": "mul_2_1, then the fix-up of IEEE-like results (Milestone 1 listing)",
         "license": "core: as mul_2_1; fix-up: MIT"
@@ -3157,9 +3285,13 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFull.v",
+        "name": "mul_2_2_full_correct"
+      },
       "source": {
         "cite": "mul_2_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
         "license": "core: as mul_2_2; fix-up: MIT"
@@ -3273,9 +3405,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFull.v",
+        "name": "mul_pow2_2_full_correct"
+      },
       "source": {
         "cite": "mul_pow2_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
         "license": "core: as mul_pow2_2; fix-up: MIT"
@@ -3391,9 +3527,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFull.v",
+        "name": "sub_1_2_full_correct"
+      },
       "source": {
         "cite": "sub_1_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
         "license": "core: as sub_1_2; fix-up: MIT"
@@ -3509,9 +3649,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFull.v",
+        "name": "sub_2_1_full_correct"
+      },
       "source": {
         "cite": "sub_2_1, then the fix-up of IEEE-like results (Milestone 1 listing)",
         "license": "core: as sub_2_1; fix-up: MIT"
@@ -3629,9 +3773,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFull.v",
+        "name": "sub_2_2_full_correct"
+      },
       "source": {
         "cite": "sub_2_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
         "license": "core: as sub_2_2; fix-up: MIT"
@@ -3670,10 +3818,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Convert.v",
         "name": "to_down_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "to_down_2_ieee_correct"
       },
       "source": {
         "cite": "the sign of x1 (Milestone 1 listing)",
@@ -3713,10 +3865,14 @@
       ],
       "min_precision": 1,
       "status": "proved",
-      "ieee_status": "unverified",
+      "ieee_status": "proved",
       "theorem": {
         "file": "proofs/theories/Convert.v",
         "name": "to_nearest_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "to_nearest_2_ieee_correct"
       },
       "source": {
         "cite": "the definition of normalized (Milestone 1 listing)",

@@ -9,9 +9,10 @@ ensures:       represents x
 min_precision: 1
 source:        constructors (Milestone 1 listing)
 license:       algorithm: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeMake.v make_2_limbs_correct
 entry:         yes
 cone_exempt:   x1 = guard(l) does not reach x0; a canonical (h, l) has a non-finite l only when h is not finite, which the IEEE-model statement (represents), not data flow, covers
 

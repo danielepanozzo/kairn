@@ -1,25 +1,31 @@
-(* Audit of the theorems whose statements are written by hand: the IEEE model of the
-   kernels (drafts of the model and of the statements are in theories/IeeeDraft.v,
-   theories/IeeeStatementsDraft.v and, for the non-finite layer,
-   theories/IeeeExtStatementsDraft.v), and statements that say more about a kernel than
-   its generated statement does (the parts of a split, the exactness of mul_pow2_2,
-   further bounds on radd and rmul, the guard).
+(* Audit of the theorems that the generated audits do not list.
 
-   The theorems that establish generated statements are audited by the generated
-   proofs/gen/Audit.v, and are not repeated here.
+   proofs/gen/Audit.v lists the theorem of every real-model statement, and
+   proofs/gen/IeeeAudit.v the theorem of the IEEE-model statement of every kernel of the
+   extended domain (the kernels with an ieee_theorem line). This file lists the rest:
 
-   Same form as that file: for every theorem, a silent definition that fails to compile
-   unless the theorem has the stated type, then the axioms it depends on, for the audit
-   script to compare with the allow-list. Nothing else is printed. When a statement
-   becomes generated, its lines move to gen/Audit.v. *)
-From Kairn.Gen Require Import Statements.
-From Kairn Require Import IeeeStatementsDraft IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore IeeeSub.
+   - theorems about generated statements that no kernel description names: the IEEE-model
+     statements of the kernels of the finite domain, printed in
+     proofs/gen/IeeeStatements.v (K_ieee_bridge_spec: the bridge to the real model;
+     K_ieee_spec: correctness; K_ieee_finite_spec and K_ieee_finite_result_spec: no
+     overflow below a threshold);
+   - theorems whose statements are written by hand because the generator does not print
+     them: two_sum in the IEEE model (the exact condition under which its error term is
+     finite is not a claim), the guard (an operation, not a kernel), the threshold of
+     mul_pow2_2 for a scalar that is not a power of two, and statements that say more
+     about a kernel than its generated statement does (the parts of a split, the
+     exactness of mul_pow2_2, further bounds on radd and rmul).
+
+   Same form as the generated audits: for every theorem, a silent definition that fails
+   to compile unless the theorem has the stated type, then the axioms it depends on, for
+   the audit script to compare with the allow-list. Nothing else is printed. *)
+From Kairn.Gen Require Import Statements IeeeStatements.
+From Kairn Require Import IeeeVocabulary IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore IeeeSub IeeeFinite.
 From Kairn Require Import Split Directed MulPow2.
-From Kairn Require Import Guard IeeeExtStatementsDraft IeeeOps IeeeFull.
-From Kairn Require BallDraft Ball2.
-From Kairn Require Import IeeeBallCores IeeeMake IeeeFinite IeeeExt.
+From Kairn Require Import Guard IeeeOps.
 
-(* The IEEE model: error-free transformations. *)
+(* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
+   theories/IeeeEFT.v). *)
 Definition fast_two_sum_ieee_audit : fast_two_sum_ieee_spec := fast_two_sum_ieee_correct.
 Print Assumptions fast_two_sum_ieee_correct.
 
@@ -62,8 +68,7 @@ Print Assumptions mul_2_1_ieee_bridge.
 Definition mul_2_1_ieee_audit : mul_2_1_ieee_spec := mul_2_1_ieee_correct.
 Print Assumptions mul_2_1_ieee_correct.
 
-Definition add_fast_2_2_ieee_bridge_audit : add_fast_2_2_ieee_bridge_spec :=
-  add_fast_2_2_ieee_bridge.
+Definition add_fast_2_2_ieee_bridge_audit : add_fast_2_2_ieee_bridge_spec := add_fast_2_2_ieee_bridge.
 Print Assumptions add_fast_2_2_ieee_bridge.
 
 Definition add_fast_2_2_ieee_audit : add_fast_2_2_ieee_spec := add_fast_2_2_ieee_correct.
@@ -105,74 +110,6 @@ Print Assumptions guard_real.
 Definition guard_ieee_audit : guard_ieee_spec := guard_ieee.
 Print Assumptions guard_ieee.
 
-(* The non-finite layer: the full kernels (F1 to F5). *)
-Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.
-Print Assumptions add_2_2_full_correct.
-
-Definition mul_2_2_full_audit : mul_2_2_full_spec := mul_2_2_full_correct.
-Print Assumptions mul_2_2_full_correct.
-
-(* The Ball cores of the second radius design (real model): the definitions and the
-   statements are drafts in theories/BallDraft.v, under the names the generated ones
-   have for the first design, hence the qualified names. *)
-Definition ball_add_1_second_audit : Kairn.BallDraft.ball_add_1_spec := Kairn.Ball2.ball_add_1_correct.
-Print Assumptions Kairn.Ball2.ball_add_1_correct.
-
-Definition ball_sub_1_second_audit : Kairn.BallDraft.ball_sub_1_spec := Kairn.Ball2.ball_sub_1_correct.
-Print Assumptions Kairn.Ball2.ball_sub_1_correct.
-
-Definition ball_mul_1_second_audit : Kairn.BallDraft.ball_mul_1_spec := Kairn.Ball2.ball_mul_1_correct.
-Print Assumptions Kairn.Ball2.ball_mul_1_correct.
-
-Definition ball_scale_1_second_audit : Kairn.BallDraft.ball_scale_1_spec :=
-  Kairn.Ball2.ball_scale_1_correct.
-Print Assumptions Kairn.Ball2.ball_scale_1_correct.
-
-Definition ball_add_2_second_audit : Kairn.BallDraft.ball_add_2_spec := Kairn.Ball2.ball_add_2_correct.
-Print Assumptions Kairn.Ball2.ball_add_2_correct.
-
-Definition ball_sub_2_second_audit : Kairn.BallDraft.ball_sub_2_spec := Kairn.Ball2.ball_sub_2_correct.
-Print Assumptions Kairn.Ball2.ball_sub_2_correct.
-
-Definition ball_mul_2_second_audit : Kairn.BallDraft.ball_mul_2_spec := Kairn.Ball2.ball_mul_2_correct.
-Print Assumptions Kairn.Ball2.ball_mul_2_correct.
-
-Definition ball_scale_2_second_audit : Kairn.BallDraft.ball_scale_2_spec :=
-  Kairn.Ball2.ball_scale_2_correct.
-Print Assumptions Kairn.Ball2.ball_scale_2_correct.
-
-(* The non-finite layer: the full Ball kernels (B1 to B3 and containment in every case),
-   with the cores of the second radius design; and ball_neg_k, which needs no fix-up. *)
-Definition ball_add_1_full_audit : ball_add_1_full_spec := ball_add_1_full_correct.
-Print Assumptions ball_add_1_full_correct.
-
-Definition ball_sub_1_full_audit : ball_sub_1_full_spec := ball_sub_1_full_correct.
-Print Assumptions ball_sub_1_full_correct.
-
-Definition ball_mul_1_full_audit : ball_mul_1_full_spec := ball_mul_1_full_correct.
-Print Assumptions ball_mul_1_full_correct.
-
-Definition ball_scale_1_full_audit : ball_scale_1_full_spec := ball_scale_1_full_correct.
-Print Assumptions ball_scale_1_full_correct.
-
-Definition ball_add_2_full_audit : ball_add_2_full_spec := ball_add_2_full_correct.
-Print Assumptions ball_add_2_full_correct.
-
-Definition ball_sub_2_full_audit : ball_sub_2_full_spec := ball_sub_2_full_correct.
-Print Assumptions ball_sub_2_full_correct.
-
-Definition ball_mul_2_full_audit : ball_mul_2_full_spec := ball_mul_2_full_correct.
-Print Assumptions ball_mul_2_full_correct.
-
-Definition ball_scale_2_full_audit : ball_scale_2_full_spec := ball_scale_2_full_correct.
-Print Assumptions ball_scale_2_full_correct.
-
-Definition ball_neg_1_ieee_audit : ball_neg_1_ieee_spec := ball_neg_1_ieee_correct.
-Print Assumptions ball_neg_1_ieee_correct.
-
-Definition ball_neg_2_ieee_audit : ball_neg_2_ieee_spec := ball_neg_2_ieee_correct.
-Print Assumptions ball_neg_2_ieee_correct.
-
 (* The IEEE model: sub_2_2, sub_2_1, sub_1_2, mul_pow2_2 (bridge and correctness). *)
 Definition sub_2_2_ieee_bridge_audit : sub_2_2_ieee_bridge_spec := sub_2_2_ieee_bridge.
 Print Assumptions sub_2_2_ieee_bridge.
@@ -198,38 +135,9 @@ Print Assumptions mul_pow2_2_ieee_bridge.
 Definition mul_pow2_2_ieee_audit : mul_pow2_2_ieee_spec := mul_pow2_2_ieee_correct.
 Print Assumptions mul_pow2_2_ieee_correct.
 
-(* The non-finite layer: the seven other full kernels (F1 to F5). *)
-Definition add_fast_2_2_full_audit : add_fast_2_2_full_spec := add_fast_2_2_full_correct.
-Print Assumptions add_fast_2_2_full_correct.
-
-Definition sub_2_2_full_audit : sub_2_2_full_spec := sub_2_2_full_correct.
-Print Assumptions sub_2_2_full_correct.
-
-Definition add_2_1_full_audit : add_2_1_full_spec := add_2_1_full_correct.
-Print Assumptions add_2_1_full_correct.
-
-Definition sub_2_1_full_audit : sub_2_1_full_spec := sub_2_1_full_correct.
-Print Assumptions sub_2_1_full_correct.
-
-Definition sub_1_2_full_audit : sub_1_2_full_spec := sub_1_2_full_correct.
-Print Assumptions sub_1_2_full_correct.
-
-Definition mul_2_1_full_audit : mul_2_1_full_spec := mul_2_1_full_correct.
-Print Assumptions mul_2_1_full_correct.
-
-Definition mul_pow2_2_full_audit : mul_pow2_2_full_spec := mul_pow2_2_full_correct.
-Print Assumptions mul_pow2_2_full_correct.
-
-
-(* The constructor kernels. *)
-Definition make_2_audit : make_2_spec := make_2_correct.
-Print Assumptions make_2_correct.
-
-Definition make_2_limbs_audit : make_2_limbs_spec := make_2_limbs_correct.
-Print Assumptions make_2_limbs_correct.
-
-
-(* The IEEE model: no overflow below a threshold, the other kernels. *)
+(* The IEEE model: no overflow below a threshold, the other kernels
+   (mul_pow2_2_ieee_finite_any_spec, for any finite scalar, is written by hand in
+   theories/IeeeFinite.v). *)
 Definition add_2_2_ieee_finite_result_audit : add_2_2_ieee_finite_result_spec := add_2_2_ieee_finite_result.
 Print Assumptions add_2_2_ieee_finite_result.
 
@@ -269,63 +177,6 @@ Print Assumptions mul_2_1_ieee_finite.
 Definition mul_pow2_2_ieee_finite_audit : mul_pow2_2_ieee_finite_spec := mul_pow2_2_ieee_finite.
 Print Assumptions mul_pow2_2_ieee_finite.
 
-
-(* The kernels that need no fix-up, on canonical operands. *)
-Definition neg_2_ieee_audit : neg_2_ieee_spec := neg_2_ieee_correct.
-Print Assumptions neg_2_ieee_correct.
-
-Definition abs_2_ieee_audit : abs_2_ieee_spec := abs_2_ieee_correct.
-Print Assumptions abs_2_ieee_correct.
-
-Definition lt_2_2_ieee_audit : lt_2_2_ieee_spec := lt_2_2_ieee_correct.
-Print Assumptions lt_2_2_ieee_correct.
-
-Definition le_2_2_ieee_audit : le_2_2_ieee_spec := le_2_2_ieee_correct.
-Print Assumptions le_2_2_ieee_correct.
-
-Definition eq_2_2_ieee_audit : eq_2_2_ieee_spec := eq_2_2_ieee_correct.
-Print Assumptions eq_2_2_ieee_correct.
-
-Definition lt_2_1_ieee_audit : lt_2_1_ieee_spec := lt_2_1_ieee_correct.
-Print Assumptions lt_2_1_ieee_correct.
-
-Definition le_2_1_ieee_audit : le_2_1_ieee_spec := le_2_1_ieee_correct.
-Print Assumptions le_2_1_ieee_correct.
-
-Definition eq_2_1_ieee_audit : eq_2_1_ieee_spec := eq_2_1_ieee_correct.
-Print Assumptions eq_2_1_ieee_correct.
-
-Definition lt_1_2_ieee_audit : lt_1_2_ieee_spec := lt_1_2_ieee_correct.
-Print Assumptions lt_1_2_ieee_correct.
-
-Definition le_1_2_ieee_audit : le_1_2_ieee_spec := le_1_2_ieee_correct.
-Print Assumptions le_1_2_ieee_correct.
-
-Definition to_nearest_2_ieee_audit : to_nearest_2_ieee_spec := to_nearest_2_ieee_correct.
-Print Assumptions to_nearest_2_ieee_correct.
-
-Definition to_down_2_ieee_audit : to_down_2_ieee_spec := to_down_2_ieee_correct.
-Print Assumptions to_down_2_ieee_correct.
-
-Definition to_up_2_ieee_audit : to_up_2_ieee_spec := to_up_2_ieee_correct.
-Print Assumptions to_up_2_ieee_correct.
-
-
-(* abs_upper_2, radd and rmul on the extended domain. *)
-Definition abs_upper_2_ieee_audit : abs_upper_2_ieee_spec := abs_upper_2_ieee_correct.
-Print Assumptions abs_upper_2_ieee_correct.
-
-Definition radd_ieee_audit : radd_ieee_spec := radd_ieee_correct.
-Print Assumptions radd_ieee_correct.
-
-Definition rmul_ieee_audit : rmul_ieee_spec := rmul_ieee_correct.
-Print Assumptions rmul_ieee_correct.
-
-
-(* The constructors of balls. *)
-Definition ball_make_1_audit : ball_make_1_spec := ball_make_1_correct.
-Print Assumptions ball_make_1_correct.
-
-Definition ball_make_2_audit : ball_make_2_spec := ball_make_2_correct.
-Print Assumptions ball_make_2_correct.
-
+Definition mul_pow2_2_ieee_finite_any_audit : mul_pow2_2_ieee_finite_any_spec :=
+  mul_pow2_2_ieee_finite_any.
+Print Assumptions mul_pow2_2_ieee_finite_any.

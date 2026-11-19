@@ -31,7 +31,7 @@
    soon as (1 + u) B <= G and (1 + u) (c + eta / 2) <= H (radius_tail).
 
    What is needed, in terms of S. The error of the center is at most Uq |cz| + Vq
-   (computed_bound of Ball.v, with Uq = rel / (1 - rel), Vq = tiny / (1 - rel) from the
+   (computed_bound below, with Uq = rel / (1 - rel), Vq = tiny / (1 - rel) from the
    bound rel |v| + tiny of the center's kernel), and |c| <= (1 + u) |c0| for a normalized
    pair (c0, c1). With k the number of limbs of the centers and kappa = (1 + u)^(k - 1):
    - sum: rx + ry + e <= S for S = rx + ry + E az, when E >= Uq kappa; n = 2;

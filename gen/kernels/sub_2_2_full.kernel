@@ -12,9 +12,10 @@ ensures:       extends w core=sub_2_2 lead=sub finite_when=abs_le(x,-2);abs_le(y
 min_precision: 3
 source:        sub_2_2, then the fix-up of IEEE-like results (Milestone 1 listing)
 license:       core: as sub_2_2; fix-up: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeFull.v sub_2_2_full_correct
 entry:         yes
 cone_exempt:   the fix-up selects, after an explicit test that z0 is finite (f), between the core's result and the canonical form of t; F1 to F5 of milestone1.md, "IEEE-like results", state what comes out
 

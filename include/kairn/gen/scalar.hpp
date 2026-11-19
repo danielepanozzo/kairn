@@ -45,7 +45,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1(float cx, float rx, float cy, float ry, fl
 }
 
 // ball_add_1_full(cx, rx, cy, ry) -> cw, rw
-// ball_add_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_add_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_add_1_full(double cx, double rx, double cy, double ry, double& cw_out, double& rw_out) noexcept {
     // (cz, rz) = ball_add_1(cx, rx, cy, ry)
     const double cz = cx + cy;
@@ -88,7 +88,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(float cx, float rx, float cy, float r
 }
 
 // ball_make_1(c, r) -> cw, rw
-// constructors (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+// constructors (Milestone 1 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_1(double c, double r, double& cw_out, double& rw_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? r : r + 0.0;
     const double c0 = __builtin_is_constant_evaluated() ? c : c + 0.0;
@@ -150,7 +150,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1(float cx, float rx, float cy, float ry, fl
 }
 
 // ball_mul_1_full(cx, rx, cy, ry) -> cw, rw
-// ball_mul_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_mul_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_mul_1_full(double cx, double rx, double cy, double ry, double& cw_out, double& rw_out) noexcept {
     // (cz, rz) = ball_mul_1(cx, rx, cy, ry)
     const double cz = fma_rn(cx, cy, 0.0);
@@ -201,7 +201,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1_full(float cx, float rx, float cy, float r
 }
 
 // ball_neg_1(cx, rx) -> cz, rz
-// midpoint-radius negation (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// midpoint-radius negation (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_neg_1(double cx, double rx, double& cz_out, double& rz_out) noexcept {
     const double cz = -cx;
     const double rz = rx;
@@ -239,7 +239,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1(float cx, float rx, float a, float& cz_o
 }
 
 // ball_scale_1_full(cx, rx, a) -> cw, rw
-// ball_scale_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_scale_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_scale_1_full(double cx, double rx, double a, double& cw_out, double& rw_out) noexcept {
     // (cz, rz) = ball_scale_1(cx, rx, a)
     const double cz = fma_rn(cx, a, 0.0);
@@ -307,7 +307,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1(float cx, float rx, float cy, float ry, fl
 }
 
 // ball_sub_1_full(cx, rx, cy, ry) -> cw, rw
-// ball_sub_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_sub_1, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_sub_1_full(double cx, double rx, double cy, double ry, double& cw_out, double& rw_out) noexcept {
     // (cz, rz) = ball_sub_1(cx, rx, cy, ry)
     const double cz_n = -cy;
@@ -371,7 +371,7 @@ KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum(float a, float b, float& s_out
 }
 
 // make_2(a) -> x = (x0, x1)
-// constructors (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+// constructors (Milestone 1 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void make_2(double a, double& x0_out, double& x1_out) noexcept {
     const double x0 = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const bool n = x0 == x0;
@@ -399,7 +399,7 @@ KAIRN_GEN_FORCEINLINE void mul_1_1(float a, float b, float& p_out) noexcept {
 }
 
 // radd(a, b) -> r
-// one step up from the rounded sum (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// one step up from the rounded sum (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void radd(double a, double b, double& r_out) noexcept {
     const double s = a + b;
     const double r = next_up(s);
@@ -412,7 +412,7 @@ KAIRN_GEN_FORCEINLINE constexpr void radd(float a, float b, float& r_out) noexce
 }
 
 // rmul(a, b) -> r
-// one step up from the rounded product (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); not constexpr: it has fused operations and no constant-evaluation variant.
+// one step up from the rounded product (Milestone 1 listing). Status: proved (real model), proved (IEEE model); not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void rmul(double a, double b, double& r_out) noexcept {
     const double p = fma_rn(a, b, 0.0);
     const double r = next_up(p);
@@ -581,7 +581,7 @@ KAIRN_GEN_FORCEINLINE constexpr void two_sum(float a, float b, float& s_out, flo
 }
 
 // abs_2(x = (x0, x1)) -> z = (z0, z1)
-// the sign of x0 (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// the sign of x0 (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void abs_2(double x0, double x1, double& z0_out, double& z1_out) noexcept {
     const bool m = 0.0 > x0;
     const double n0 = -x0;
@@ -602,7 +602,7 @@ KAIRN_GEN_FORCEINLINE constexpr void abs_2(float x0, float x1, float& z0_out, fl
 }
 
 // to_up_2(x = (x0, x1)) -> t
-// the sign of x1 (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// the sign of x1 (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void to_up_2(double x0, double x1, double& t_out) noexcept {
     const bool m = x1 > 0.0;
     const double s = next_up(x0);
@@ -617,7 +617,7 @@ KAIRN_GEN_FORCEINLINE constexpr void to_up_2(float x0, float x1, float& t_out) n
 }
 
 // abs_upper_2(x = (x0, x1)) -> t
-// abs_2, then to_up_2 (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// abs_2, then to_up_2 (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void abs_upper_2(double x0, double x1, double& t_out) noexcept {
     // (a0, a1) = abs_2(x0, x1)
     const bool a0_m = 0.0 > x0;
@@ -683,7 +683,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_1(float x0, float x1, float a, float&
 }
 
 // add_2_1_full(x = (x0, x1), a) -> w = (w0, w1)
-// add_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+// add_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_2_1_full(double x0, double x1, double a, double& w0_out, double& w1_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;
     // (z0, z1) = add_2_1(x0, x1, a)
@@ -799,7 +799,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_2(float x0, float x1, float y0, float
 }
 
 // add_2_2_full(x = (x0, x1), y = (y0, y1)) -> w = (w0, w1)
-// add_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+// add_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_2_2_full(double x0, double x1, double y0, double y1, double& w0_out, double& w1_out) noexcept {
     // (z0, z1) = add_2_2(x0, x1, y0, y1)
     // (z0_sh, z0_sl) = two_sum(x0, y0)
@@ -913,7 +913,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2(float x0, float x1, float y0, 
 }
 
 // add_fast_2_2_full(x = (x0, x1), y = (y0, y1)) -> w = (w0, w1)
-// add_fast_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+// add_fast_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_full(double x0, double x1, double y0, double y1, double& w0_out, double& w1_out) noexcept {
     // (z0, z1) = add_fast_2_2(x0, x1, y0, y1)
     // (z0_sh, z0_sl) = two_sum(x0, y0)
@@ -1039,7 +1039,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2(float cx0, float cx1, float rx, float cy0,
 }
 
 // ball_add_2_full(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cw = (cw0, cw1), rw
-// ball_add_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_add_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_add_2_full(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cw0_out, double& cw1_out, double& rw_out) noexcept {
     // (cz0, cz1, rz) = ball_add_2(cx0, cx1, rx, cy0, cy1, ry)
     // (cz0, cz1) = add_2_2(cx0, cx1, cy0, cy1)
@@ -1136,7 +1136,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(float cx0, float cx1, float rx, float
 }
 
 // ball_make_2(c = (c0, c1), r) -> cw = (cw0, cw1), rw
-// constructors (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+// constructors (Milestone 1 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(double c0, double c1, double r, double& cw0_out, double& cw1_out, double& rw_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? r : r + 0.0;
     const bool e = g >= 0.0;
@@ -1259,7 +1259,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2(float cx0, float cx1, float rx, float cy0,
 }
 
 // ball_mul_2_full(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cw = (cw0, cw1), rw
-// ball_mul_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_mul_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_mul_2_full(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cw0_out, double& cw1_out, double& rw_out) noexcept {
     // (cz0, cz1, rz) = ball_mul_2(cx0, cx1, rx, cy0, cy1, ry)
     // (cz0, cz1) = mul_2_2(cx0, cx1, cy0, cy1)
@@ -1338,7 +1338,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(float cx0, float cx1, float rx, float
 }
 
 // neg_2(x = (x0, x1)) -> z = (z0, z1)
-// limb by limb (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// limb by limb (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void neg_2(double x0, double x1, double& z0_out, double& z1_out) noexcept {
     const double z0 = -x0;
     const double z1 = -x1;
@@ -1353,7 +1353,7 @@ KAIRN_GEN_FORCEINLINE constexpr void neg_2(float x0, float x1, float& z0_out, fl
 }
 
 // ball_neg_2(cx = (cx0, cx1), rx) -> cz = (cz0, cz1), rz
-// midpoint-radius negation (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// midpoint-radius negation (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_neg_2(double cx0, double cx1, double rx, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
     // (cz0, cz1) = neg_2(cx0, cx1)
     const double cz0 = -cx0;
@@ -1442,7 +1442,7 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2(float cx0, float cx1, float rx, float a,
 }
 
 // ball_scale_2_full(cx = (cx0, cx1), rx, a) -> cw = (cw0, cw1), rw
-// ball_scale_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_scale_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_scale_2_full(double cx0, double cx1, double rx, double a, double& cw0_out, double& cw1_out, double& rw_out) noexcept {
     // (cz0, cz1, rz) = ball_scale_2(cx0, cx1, rx, a)
     // (cz0, cz1) = mul_2_1(cx0, cx1, a)
@@ -1586,7 +1586,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2(float cx0, float cx1, float rx, float cy0,
 }
 
 // ball_sub_2_full(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cw = (cw0, cw1), rw
-// ball_sub_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// ball_sub_2, then the fix-up of the special states of a ball (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void ball_sub_2_full(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cw0_out, double& cw1_out, double& rw_out) noexcept {
     // (cz0, cz1, rz) = ball_sub_2(cx0, cx1, rx, cy0, cy1, ry)
     // (cz0_n0, cz0_n1) = neg_2(cy0, cy1)
@@ -1691,7 +1691,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(float cx0, float cx1, float rx, float
 }
 
 // eq_2_1(x = (x0, x1), a) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void eq_2_1(double x0, double x1, double a, bool& m_out) noexcept {
     const bool h = x0 == a;
     const bool l = x1 == 0.0;
@@ -1706,7 +1706,7 @@ KAIRN_GEN_FORCEINLINE constexpr void eq_2_1(float x0, float x1, float a, bool& m
 }
 
 // eq_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void eq_2_2(double x0, double x1, double y0, double y1, bool& m_out) noexcept {
     const bool h = x0 == y0;
     const bool l = x1 == y1;
@@ -1721,7 +1721,7 @@ KAIRN_GEN_FORCEINLINE constexpr void eq_2_2(float x0, float x1, float y0, float 
 }
 
 // le_1_2(a, y = (y0, y1)) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void le_1_2(double a, double y0, double y1, bool& m_out) noexcept {
     const bool h = y0 > a;
     const bool e = a == y0;
@@ -1740,7 +1740,7 @@ KAIRN_GEN_FORCEINLINE constexpr void le_1_2(float a, float y0, float y1, bool& m
 }
 
 // le_2_1(x = (x0, x1), a) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void le_2_1(double x0, double x1, double a, bool& m_out) noexcept {
     const bool h = a > x0;
     const bool e = x0 == a;
@@ -1759,7 +1759,7 @@ KAIRN_GEN_FORCEINLINE constexpr void le_2_1(float x0, float x1, float a, bool& m
 }
 
 // le_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void le_2_2(double x0, double x1, double y0, double y1, bool& m_out) noexcept {
     const bool h = y0 > x0;
     const bool e = x0 == y0;
@@ -1778,7 +1778,7 @@ KAIRN_GEN_FORCEINLINE constexpr void le_2_2(float x0, float x1, float y0, float 
 }
 
 // lt_1_2(a, y = (y0, y1)) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void lt_1_2(double a, double y0, double y1, bool& m_out) noexcept {
     const bool h = y0 > a;
     const bool e = a == y0;
@@ -1797,7 +1797,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_1_2(float a, float y0, float y1, bool& m
 }
 
 // lt_2_1(x = (x0, x1), a) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void lt_2_1(double x0, double x1, double a, bool& m_out) noexcept {
     const bool h = a > x0;
     const bool e = x0 == a;
@@ -1816,7 +1816,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_2_1(float x0, float x1, float a, bool& m
 }
 
 // lt_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
-// limbs compared in order (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// limbs compared in order (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(double x0, double x1, double y0, double y1, bool& m_out) noexcept {
     const bool h = y0 > x0;
     const bool e = x0 == y0;
@@ -1835,7 +1835,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(float x0, float x1, float y0, float 
 }
 
 // make_2_limbs(y = (h, l)) -> x = (x0, x1)
-// constructors (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+// constructors (Milestone 1 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void make_2_limbs(double h, double l, double& x0_out, double& x1_out) noexcept {
     const double x0 = __builtin_is_constant_evaluated() ? h : h + 0.0;
     const double x1 = __builtin_is_constant_evaluated() ? l : l + 0.0;
@@ -1850,7 +1850,7 @@ KAIRN_GEN_FORCEINLINE constexpr void make_2_limbs(float h, float l, float& x0_ou
 }
 
 // mul_2_1_full(x = (x0, x1), a) -> w = (w0, w1)
-// mul_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// mul_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_2_1_full(double x0, double x1, double a, double& w0_out, double& w1_out) noexcept {
     // (z0, z1) = mul_2_1(x0, x1, a)
     // (z0_ch, z0_cl1) = two_prod(x0, a)
@@ -1895,7 +1895,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1_full(float x0, float x1, float a, float& w0_o
 }
 
 // mul_2_2_full(x = (x0, x1), y = (y0, y1)) -> w = (w0, w1)
-// mul_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// mul_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_2_2_full(double x0, double x1, double y0, double y1, double& w0_out, double& w1_out) noexcept {
     // (z0, z1) = mul_2_2(x0, x1, y0, y1)
     // (z0_ch, z0_cl1) = two_prod(x0, y0)
@@ -1969,7 +1969,7 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2(float x0, float x1, float c, float& z0_out
 }
 
 // mul_pow2_2_full(x = (x0, x1), c) -> w = (w0, w1)
-// mul_pow2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
+// mul_pow2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(double x0, double x1, double c, double& w0_out, double& w1_out) noexcept {
     // (z0, z1) = mul_pow2_2(x0, x1, c)
     const double z0_h = fma_rn(x0, c, 0.0);
@@ -2053,7 +2053,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_1_2(float a, float y0, float y1, float&
 }
 
 // sub_1_2_full(a, y = (y0, y1)) -> w = (w0, w1)
-// sub_1_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+// sub_1_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_1_2_full(double a, double y0, double y1, double& w0_out, double& w1_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;
     // (z0, z1) = sub_1_2(a, y0, y1)
@@ -2157,7 +2157,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_1(float x0, float x1, float a, float&
 }
 
 // sub_2_1_full(x = (x0, x1), a) -> w = (w0, w1)
-// sub_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+// sub_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_2_1_full(double x0, double x1, double a, double& w0_out, double& w1_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;
     // (z0, z1) = sub_2_1(x0, x1, a)
@@ -2283,7 +2283,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2(float x0, float x1, float y0, float
 }
 
 // sub_2_2_full(x = (x0, x1), y = (y0, y1)) -> w = (w0, w1)
-// sub_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+// sub_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(double x0, double x1, double y0, double y1, double& w0_out, double& w1_out) noexcept {
     // (z0, z1) = sub_2_2(x0, x1, y0, y1)
     const double z0_n0 = -y0;
@@ -2366,7 +2366,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(float x0, float x1, float y0, 
 }
 
 // to_down_2(x = (x0, x1)) -> t
-// the sign of x1 (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// the sign of x1 (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void to_down_2(double x0, double x1, double& t_out) noexcept {
     const bool m = 0.0 > x1;
     const double p = next_down(x0);
@@ -2381,7 +2381,7 @@ KAIRN_GEN_FORCEINLINE constexpr void to_down_2(float x0, float x1, float& t_out)
 }
 
 // to_nearest_2(x = (x0, x1)) -> t
-// the definition of normalized (Milestone 1 listing). Status: proved (real model), unverified (IEEE model); constexpr.
+// the definition of normalized (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void to_nearest_2(double x0, [[maybe_unused]] double x1, double& t_out) noexcept {
     const double t = x0;
     t_out = t;

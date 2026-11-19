@@ -1,7 +1,7 @@
 (* The bridge between the two models of a kernel, for every straight-line program.
 
    The real model (proofs/gen/Model.v) computes with real numbers in a format that has
-   no largest number; the IEEE model (IeeeDraft.v) computes with IEEE 754 numbers, where
+   no largest number; the IEEE model (proofs/gen/IeeeModel.v) computes with IEEE 754 numbers, where
    an operation whose rounded result is 2^emax or more in magnitude returns an infinity,
    and infinities and NaN propagate. This file proves, once for all programs made of
    additions, subtractions, fused multiply-adds and sign changes:
@@ -26,13 +26,14 @@
       least 2^(emax - prec), one unit in the last place of the largest numbers, while a
       normalized pair has |e| <= ulp(s)/2 <= 2^(emax - prec)/2.
 
-   Here emin = 3 - emax - prec, the smallest exponent of the IEEE format (IeeeDraft.v),
+   Here emin = 3 - emax - prec, the smallest exponent of the IEEE format (proofs/gen/IeeeModel.v),
    and the real model is taken in the format FLT with that emin. *)
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements.
 From Kairn Require Import Format Normalized Program.
-From Kairn Require IeeeDraft.
+From Kairn Require IeeeOperations.
+From Kairn.Gen Require IeeeModel.
 Import ListNotations.
 Open Scope R_scope.
 
@@ -79,14 +80,14 @@ Notation format := (generic_format radix2 fexp).
 Notation rnd := (round radix2 fexp (Znearest tie_even)).
 Notation fin x := (is_finite prec emax x = true).
 Notation b2r := (B2R prec emax).
-Notation add := (IeeeDraft.add prec emax nan_plus).
-Notation sub := (IeeeDraft.sub prec emax nan_minus).
-Notation neg := (IeeeDraft.neg prec emax nan_opp).
-Notation fma := (IeeeDraft.fma prec emax nan_fma).
-Notation fms := (IeeeDraft.fms prec emax nan_opp nan_fma).
-Notation prod := (IeeeDraft.prod prec emax nan_fma).
-Notation pzero := (IeeeDraft.pzero prec emax).
-Notation guard := (IeeeDraft.guard prec emax nan_plus).
+Notation add := (IeeeOperations.add prec emax nan_plus).
+Notation sub := (IeeeOperations.sub prec emax nan_minus).
+Notation neg := (IeeeOperations.neg prec emax nan_opp).
+Notation fma := (IeeeOperations.fma prec emax nan_fma).
+Notation fms := (IeeeOperations.fms prec emax nan_opp nan_fma).
+Notation prod := (IeeeOperations.prod prec emax nan_fma).
+Notation pzero := (IeeeOperations.pzero prec emax).
+Notation guard := (IeeeOperations.guard prec emax nan_plus).
 
 (* A real number is in range when its magnitude is below 2^emax. For a number of the
    format this means: at most the largest finite number. *)
@@ -115,7 +116,7 @@ Proof. intros v s H. destruct v; try reflexivity; discriminate H. Qed.
 (* Non-finite in, non-finite out. *)
 Lemma add_finite_inv : forall x y : float, fin (add x y) -> fin x /\ fin y.
 Proof.
-intros x y. unfold IeeeDraft.add, Bplus. rewrite is_finite_BSN2B.
+intros x y. unfold IeeeOperations.add, Bplus. rewrite is_finite_BSN2B.
 destruct x as [sx|sx|sx px Hx|sx mx ex Hx]; destruct y as [sy|sy|sy py Hy|sy my ey Hy];
   try (intros _; split; reflexivity); simpl; try discriminate.
 destruct (Bool.eqb sx sy); discriminate.
@@ -123,7 +124,7 @@ Qed.
 
 Lemma sub_finite_inv : forall x y : float, fin (sub x y) -> fin x /\ fin y.
 Proof.
-intros x y. unfold IeeeDraft.sub, Bminus. rewrite is_finite_BSN2B.
+intros x y. unfold IeeeOperations.sub, Bminus. rewrite is_finite_BSN2B.
 destruct x as [sx|sx|sx px Hx|sx mx ex Hx]; destruct y as [sy|sy|sy py Hy|sy my ey Hy];
   try (intros _; split; reflexivity); simpl; try discriminate.
 destruct (Bool.eqb sx (negb sy)); discriminate.
@@ -134,7 +135,7 @@ Proof. intros x. apply is_finite_Bopp. Qed.
 
 Lemma fma_finite_inv : forall x y z : float, fin (fma x y z) -> fin x /\ fin y /\ fin z.
 Proof.
-intros x y z. unfold IeeeDraft.fma, Bfma. rewrite is_finite_BSN2B.
+intros x y z. unfold IeeeOperations.fma, Bfma. rewrite is_finite_BSN2B.
 destruct x as [sx|sx|sx px Hx|sx mx ex Hx]; destruct y as [sy|sy|sy py Hy|sy my ey Hy];
   destruct z as [sz|sz|sz pz Hz|sz mz ez Hz];
   try (intros _; repeat split; reflexivity); simpl; try discriminate;
@@ -233,10 +234,10 @@ intros e i H a Ha. destruct i as [a1 b1|a1 b1|a1|a1 b1 c1|a1 b1 c1|a1 b1|a1]; si
 - apply sub_finite_inv in H. intuition (subst; auto).
 - rewrite neg_finite in H. intuition (subst; auto).
 - apply fma_finite_inv in H. intuition (subst; auto).
-- unfold IeeeDraft.fms in H. apply fma_finite_inv in H. rewrite neg_finite in H.
+- unfold IeeeOperations.fms in H. apply fma_finite_inv in H. rewrite neg_finite in H.
   intuition (subst; auto).
-- unfold IeeeDraft.prod in H. apply fma_finite_inv in H. intuition (subst; auto).
-- unfold IeeeDraft.guard in H. apply add_finite_inv in H. intuition (subst; auto).
+- unfold IeeeOperations.prod in H. apply fma_finite_inv in H. intuition (subst; auto).
+- unfold IeeeOperations.guard in H. apply add_finite_inv in H. intuition (subst; auto).
 Qed.
 
 (* With finite operands, the value of an instruction is finite exactly when its value
@@ -250,16 +251,16 @@ intros e i H. destruct i as [a1 b1|a1 b1|a1|a1 b1 c1|a1 b1 c1|a1 b1|a1]; simpl i
   rewrite ?nth_b2r.
 - apply add_spec; apply H; auto.
 - apply sub_spec; apply H; auto.
-- rewrite neg_finite. unfold IeeeDraft.neg. rewrite B2R_Bopp. split; [split|]; auto.
+- rewrite neg_finite. unfold IeeeOperations.neg. rewrite B2R_Bopp. split; [split|]; auto.
   intros _. unfold inrange. rewrite Rabs_Ropp. apply b2r_inrange.
 - apply fma_spec; apply H; auto.
-- unfold IeeeDraft.fms.
+- unfold IeeeOperations.fms.
   replace (- b2r (nth c1 e d0)) with (b2r (neg (nth c1 e d0)))
-    by (unfold IeeeDraft.neg; apply B2R_Bopp).
+    by (unfold IeeeOperations.neg; apply B2R_Bopp).
   apply fma_spec; try (apply H; auto). rewrite neg_finite. apply H; auto.
-- unfold IeeeDraft.prod. change 0 with (b2r pzero).
+- unfold IeeeOperations.prod. change 0 with (b2r pzero).
   apply fma_spec; try (apply H; auto). reflexivity.
-- unfold IeeeDraft.guard. change 0 with (b2r pzero).
+- unfold IeeeOperations.guard. change 0 with (b2r pzero).
   apply add_spec; try (apply H; auto). reflexivity.
 Qed.
 
