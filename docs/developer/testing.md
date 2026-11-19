@@ -69,26 +69,25 @@ pass or fail; on failure it also prints the command that reruns one case (below)
   (`KAIRN_CROSSCHECK_SEED`), so that a run is the same everywhere and can be repeated. The
   oracle's generator chooses the strata from the kernel's family (`oracle/README.md`): those of
   the first wave for sums and products, and the families of the second wave (conversions,
-  comparisons, directed steps, scaling, balls) each with strata of its own.
-- **The toy formats** depend on the kernel's inputs, each written as its role: `1` a limb, `2` a
-  normalized pair, `r` a radius (`nonneg()`), `c` a power of two (`power_of_two()`). They are
-  chosen so that each enumeration is 50 000 to 250 000 cases, with the range of products below 1
-  so that most products neither overflow nor vanish, and at least the kernel's minimum
-  precision. The table is in `tests/CMakeLists.txt`; a kernel whose inputs have no entry, or
-  whose minimum precision is above its toy format's, gets a test that fails and says so, rather
-  than a run where nothing is claimed.
+  comparisons, directed steps, scaling, balls) each with strata of its own; a kernel of the
+  extended domain also gets those of the non-finite layer (non-finite operands, $0 \cdot \infty$,
+  overflow, the `finite_when` thresholds, the states of balls, the radii of constructors).
+- **The toy formats** depend on the kernel's domain and inputs, each written as its role: `1` a
+  limb, `2` a normalized pair, `r` a radius (`nonneg()`), `c` a power of two (`power_of_two()`).
+  They are chosen so that each enumeration is 50 000 to 250 000 cases and at least the kernel's
+  minimum precision. The tables are in `tests/CMakeLists.txt`; a kernel whose inputs have no
+  entry, or whose minimum precision is above its toy format's, gets a test that fails and says
+  so, rather than a run where nothing is claimed. For the kernels of the finite domain, the
+  range of products is below 1, so that most products neither overflow nor vanish:
 
     | Inputs | Kernels | Toy format | Cases |
     |---|---|---|---|
     | `1` | `split` | `fp:11:-30:10` | 86 015 |
     | `1 1` | `two_sum`, `fast_two_sum`, `add_1_1` | `fp:5:-7:4` | 172 225 |
     | `1 1` | `two_prod`, `two_prod_dekker`, `mul_1_1` | `fp:5:-12:-1` | 172 225 |
-    | `r r` | `radd` | `fp:6:-8:4` | 200 704 |
-    | `r r` | `rmul` | `fp:6:-13:-2` | 173 056 |
-    | `2` | `neg_2`, `abs_2`, the conversions | `fp:6:-8:4` | 118 335 |
-    | `2 1`, `1 2` | `add_2_1`, the subtractions, the comparisons | `fp:4:-4:2` | 221 361 |
+    | `2 1`, `1 2` | `add_2_1`, `sub_2_1`, `sub_1_2` | `fp:4:-4:2` | 221 361 |
     | `2 1` | `mul_2_1` | `fp:4:-8:-2` | 221 361 |
-    | `2 2` | `add_2_2`, `add_fast_2_2`, `sub_2_2`, the comparisons | `fp:3:-3:2` | 178 929 |
+    | `2 2` | `add_2_2`, `add_fast_2_2`, `sub_2_2` | `fp:3:-3:2` | 178 929 |
     | `2 2` | `mul_2_2` | `fp:4:-7:-3` | 245 025 |
     | `2 c` | `mul_pow2_2` | `fp:5:-6:2` | 144 755 |
     | `1 r` | `ball_neg_1` | `fp:5:-7:4` | 86 320 |
@@ -98,17 +97,49 @@ pass or fail; on failure it also prints the command that reruns one case (below)
     | `1 r 1 r` | `ball_add_1`, `ball_sub_1` | `fp:2:-3:1` | 76 176 |
     | `1 r 1 r` | `ball_mul_1` | `fp:2:-4:0` | 76 176 |
 
+    The kernels of the extended domain (the non-finite layer, [Claims of the non-finite
+    layer](architecture.md#claims-of-the-non-finite-layer)) read the roles in that domain: `1`
+    is any value of the format, infinities and NaN included; `2` a canonical pair (finite and
+    normalized, $(\pm\infty, 0)$ or NaN); `r` a radius that may also be $+\infty$ or NaN; `b1`
+    and `b2` a ball, its center of one or two limbs and its radius together, which the oracle
+    enumerates as one operand: every finite center with every finite radius $\ge 0$, the whole
+    line and the empty set. Every enumeration includes the non-finite values of each operand
+    (`oracle/README.md`, "gen"), and every format has the shape the statements of the IEEE model
+    are proved for, $q_{\min} + q_{\max} = 3 - 2p$, which `binary64` and `binary32` have: one
+    fits the budget for every kernel. At these sizes a format of that shape has few exponents
+    (two to twelve, and forty for the one limb of `make_2`), so overflow is common, which is what
+    the layer is about.
+
+    | Inputs | Kernels | Toy format | $q_{\min} + q_{\max} = 3 - 2p$ | Cases |
+    |---|---|---|---|---|
+    | `1` | `make_2` | `fp:11:-29:10` | yes | 83 970 |
+    | `2` | `neg_2`, `abs_2`, the conversions, `make_2_limbs` | `fp:6:-10:1` | yes | 89 730 |
+    | `r r` | `radd`, `rmul` | `fp:6:-10:1` | yes | 174 724 |
+    | `1 1` | `ball_make_1` | `fp:5:-7:0` | yes | 84 100 |
+    | `2 1`, `1 2` | `add_2_1_full`, `sub_2_1_full`, `sub_1_2_full`, `mul_2_1_full`, the comparisons, `ball_make_2` | `fp:4:-5:0` | yes | 113 316 |
+    | `2 c` | `mul_pow2_2_full` | `fp:5:-7:0` | yes | 84 888 |
+    | `2 2` | `add_2_2_full`, `add_fast_2_2_full`, `sub_2_2_full`, the comparisons | `fp:3:-4:1` | yes | 181 476 |
+    | `2 2` | `mul_2_2_full` | `fp:4:-4:-1` | yes | 62 500 |
+    | `b1 b1` | `ball_add_1_full`, `ball_sub_1_full`, `ball_mul_1_full` | `fp:2:-3:2` | yes | 144 400 |
+    | `b1 1` | `ball_scale_1_full` | `fp:3:-4:1` | yes | 89 436 |
+    | `b2 1` | `ball_scale_2_full` | `fp:3:-3:0` | yes | 100 044 |
+    | `b2 b2` | `ball_add_2_full`, `ball_sub_2_full` | `fp:3:-2:-1` | yes | 122 500 |
+
 - **Restricted enumerations.** The two-limb balls with two operands have far too many operand
   combinations at their minimum precision (140 million for `ball_add_2` at `fp:3:-3:2`, 12.4
-  billion for `ball_mul_2` at `fp:4:-5:1`). Their `interp-restricted` test enumerates every
-  operand of a domain restricted by the oracle's `--restrict`, and says so in its report
-  ("complete over a RESTRICTED domain"); their `interp-sampled` test runs 20 000 random cases of
-  the whole format from every stratum of the ball family.
+  billion for `ball_mul_2` at `fp:4:-5:1`, 97.6 million for `ball_mul_2_full` at `fp:4:-4:-1`).
+  Their `interp-restricted` test enumerates every operand of a domain restricted by the oracle's
+  `--restrict`, and says so in its report ("complete over a RESTRICTED domain"); their
+  `interp-sampled` test runs 20 000 random cases of the whole format from every stratum of the
+  ball family. A restriction shrinks the finite part of a domain only: the whole line and the
+  empty set are always enumerated, and for `ball_mul_2_full` the zero ball too, since `cy` is
+  not restricted.
 
     | Kernels | Toy format | Restricted to | Cases |
     |---|---|---|---|
     | `ball_add_2`, `ball_sub_2` | `fp:3:-3:2` | both radii in {0, 1/8, 1/2, 5/2}, `cx` in [1/2, 2) | 148 896 |
     | `ball_mul_2` | `fp:4:-5:1` | both radii in {0, η, 3/2}, `cx` in [1, 2), `cy` in [1/8, 2) | 64 728 |
+    | `ball_mul_2_full` | `fp:4:-4:-1` (of the shape above) | both finite radii in {0, η, 1/2, 3/2}, a finite `cx` in [1, 2) | 120 780 |
 
 - **Non-finite results.** A claim of the finite domain says nothing about a case whose leading
   output limb is not finite, so the oracle does not judge such a case; a runner that returned NaN
@@ -116,10 +147,11 @@ pass or fail; on failure it also prints the command that reruns one case (below)
   a non-finite result whose operands and exact value are all far below the overflow threshold.
   A kernel of the extended domain (the non-finite layer) is judged on every line, non-finite
   results included, and the same option fails its non-finite results on such operands where its
-  claims leave them open (`oracle/README.md`). The exceptions
-  are `split` and `two_prod_dekker`, whose multiplication by the splitter overflows for such
-  operands, as their requirement of no intermediate overflow allows; for them the guards below
-  stand guard.
+  claims leave them open, and a result of `neg_2` or `abs_2` on a non-finite operand whose value
+  is not the kernel's (`oracle/README.md`, "The extended domain"). The exceptions, for every
+  runner, are `split` and `two_prod_dekker`, whose multiplication by the splitter overflows for
+  such operands, as their requirement of no intermediate overflow allows; for them the guards
+  below stand guard.
 
 ### What a pass requires
 
@@ -140,9 +172,43 @@ decides that from the oracle's summary (`check --json`):
   comparison saw both outcomes; a rounding to nearest saw an inexact case; a rounding down or up
   saw a case where it differs from the rounding to nearest.
 
+For a kernel of the extended domain the run must also have seen what that layer is about. The
+guards read the kernel's claims (the file the oracle's summary names) and the oracle's counts of
+the classes of each statement (`oracle/README.md`, "The extended domain"):
+
+- **The strata of the layer**: a random run's header lists, besides those of the kernel's
+  family, the strata the oracle's generator adds for it: `nonfinite` for every kernel, `zeroinf`
+  where the value or the set has a product, `edge` for `extends`, `threshold` where
+  `finite_when` is not empty, `ballstates`, `zerowhole` and `hugeradius` for `encloses`,
+  `badradius` for `makes_ball`; and, as for every stratum, a case of each.
+- **Every class of every statement**, counted by the oracle for each entry of the kernel's own
+  claims:
+
+    | Kind | Kernels | Cases the run must have seen |
+    |---|---|---|
+    | `extends` | the nine full kernels | a finite result (F2), an overflow on finite operands (F4), a non-finite operand (F5); where `finite_when` is not empty, a case where every condition holds (F3 applies) |
+    | `encloses` | the eight full Ball kernels | each of the three results: a finite ball, the whole line, the empty set (and B4 applying, once a `finite_when` is claimed) |
+    | `represents` | `make_2`, `make_2_limbs` | a finite, an infinite and a NaN value |
+    | `makes_ball` | `ball_make_1`, `ball_make_2` | each given state: a finite ball, the whole line (a center that is not finite or a radius $+\infty$), the empty set (a radius that is NaN or negative) |
+    | `normalized`, `error` | `neg_2`, `abs_2` | a non-finite operand |
+    | `rounded` | the conversions | a non-finite operand |
+    | `predicate` | the comparisons | a non-finite operand with each outcome |
+    | `upper` | `radd`, `rmul` | a NaN (a NaN operand, or $0 \cdot \infty$) and $+\infty$ from a non-finite operand |
+
+    The guards of the finite domain apply to these kernels as before, to their finite cases and
+    to the entries of the core that F2 applies. The oracle does not count the corner where a zero
+    ball meets the whole line ($0 \cdot \infty$ in a radius, which must give the whole line, not
+    the empty set) separately, so no guard asks for it: the complete enumerations contain it, as
+    does the restricted one of `ball_mul_2_full`, and a random run has the `zerowhole` stratum.
+
 `crosscheck.guards` runs pipelines that the oracle passes but these guards must fail (a partial
 enumeration, a restricted one passed off as complete, missing strata, nothing judged, a comparison
-that was never true), and summaries altered where no stream can produce the fault.
+that was never true; in the extended domain, an enumeration of `add_2_2_full` without an overflow
+or where `finite_when` never holds, one of `ball_add_1_full` whose radius makes every result from
+finite operands the whole line, random runs without non-finite operands, without the empty set or
+without one of a constructor's outcomes, headers without the strata of the layer), and summaries
+altered where no stream can produce the fault (entries that are not those of the claims, claims
+that cannot be read).
 
 ### Packed kernels
 
