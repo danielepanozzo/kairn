@@ -8,7 +8,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 | Tier | What | Where it runs | Time |
 |---|---|---|---|
-| Quick | `ctest`: the generator's tests without their C++ part, the oracle's own tests, the cross-checks below, the consumer checks | every push and pull request, on every platform of the CI; and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | about two minutes on a recent machine with `--parallel 4` |
+| Quick | `ctest`: the generator's tests without their C++ part, the oracle's own tests, the cross-checks below, the consumer checks | every push and pull request, on every platform of the CI; and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | about three and a half minutes on a recent machine with `--parallel 5` |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
 | Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases), and the interpreter on every operand of larger toy formats, with the quick tier's guards and a time budget | by hand, on the test machines, never in CI (`tests/brute/README.md`); results in [Brute force, Milestone 1](results/brute-milestone1.md) | about 90 minutes per machine for Milestone 1 |
@@ -252,14 +252,18 @@ Clang) or `/arch:AVX2` (MSVC and clang-cl) when the build's flags do not already
 
 ### Time
 
-About two minutes with `--parallel 4` on a recent machine: 110 to 133 seconds on an Apple M3 Max,
-with Apple clang or GCC 16, for 742 tests whose times add up to about 490 seconds. Elsewhere, as
-measured: 271 seconds on 16 cores of a 2019 x86-64 server and 453 seconds on 4 of them; with
-MSVC, 369 seconds on 8 logical processors of a Windows machine and 533 seconds on 4. On the Mac a
-cross-check of a compiled runner takes 0.3 to 0.6 seconds, one of the interpreter 1 to 7 seconds,
-the generator's own tests about 45 seconds, and the oracle's about 75 since it judges the
-non-finite layer too. `KAIRN_CROSSCHECK_CASES`
-sets the share of the compiled runners, about three fifths of the total.
+About three and a half minutes with `--parallel 5` on a recent machine: 192 seconds on an Apple
+M3 Max with Apple clang and 212 with GCC 16 (with other jobs running on it), for 1 343 tests
+whose times add up to 950 to 1 050 seconds. Elsewhere, as measured: 467 seconds with
+`--parallel 4` on 16 cores of a 2019 x86-64 server with GCC 13, and 267 to 277 seconds with
+`--parallel 16` (GCC 13, Clang 18); with MSVC, 712 seconds with `--parallel 4` on 8 logical
+processors of a Windows machine, where starting the Python processes of every test costs more
+(with `--parallel 8` there, the generator's own tests ran past their timeout of 600 seconds). On
+the Mac a cross-check of a compiled runner takes 0.3 to 1.1 seconds, one of the interpreter 1 to
+9 seconds, the generator's own tests 80 to 95 seconds and the oracle's 70 to 85, since they judge
+the non-finite layer too; those two set a floor to the wall time. `KAIRN_CROSSCHECK_CASES` sets
+the share of the compiled runners, about half of the total (1 008 tests); the interpreter's 67
+enumerations are about a fifth.
 
 ## The generator's tier
 

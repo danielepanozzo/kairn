@@ -299,9 +299,9 @@ set(_toy_2_r_2_r_product fp:4:-5:1 "rx.in=${_radii},ry.in=${_radii},cx.lead=0:0,
 # enumeration includes the non-finite values of each operand (and a restriction shrinks only the
 # finite part of a domain), and every format has the shape the statements of the IEEE model are
 # proved for, qmin + qmax = 3 - 2p, as binary64 and binary32 have: an overflow threshold
-# 2^(qmax+p) and a smallest number 2^qmin whose product is 2^(3-p). Sizes from the same 50 000 to
-# 250 000 cases; at these sizes a format of that shape has few exponents (four to eight for most),
-# so overflow is common, which the layer is about.
+# 2^(qmax+p) and a smallest number 2^qmin whose product is 2^(3-p). Each enumeration is in the
+# same range of 50 000 to 250 000 cases; at these sizes a format of that shape has few exponents
+# (two to twelve, and forty for make_2), so overflow is common, which the layer is about.
 #
 #   inputs   kernels                                  format         cases
 #   1        make_2                                   fp:11:-29:10    83 970
