@@ -196,16 +196,18 @@ add_test(NAME api.environment COMMAND kairn-api-environment)
 # Clang has no macro for these flag sets, so config.hpp cannot reject them, and the self-test must
 # catch them at run time. Each is built only if it compiles here (Clang 18 defines __FAST_MATH__ for
 # -ffp-model=fast, which config.hpp rejects), and only where the oracle found that it breaks the
-# kernels: -fno-signed-zeros with -ffp-contract=fast breaks x * y on AArch64 (Apple clang 21), where
-# an opaque product is folded back into a plain one and contracted, and breaks nothing on x86-64
-# (Clang 18), where the self-test then rightly passes.
+# kernels: -fno-signed-zeros with -ffp-contract=fast breaks x * y with Apple clang 21 on AArch64,
+# where an opaque product is folded back into a plain one and contracted. With Clang 18 it breaks
+# nothing, on x86-64 and on AArch64 Linux alike (there, 4 000 cases of each of eight kernels pass
+# the oracle at -O2 and -O3), and the self-test then rightly passes: the case is registered for
+# Apple clang only. A later Clang on AArch64 Linux has not been measured.
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT _msvc_style)
   include(CheckCXXSourceCompiles)
   include(CMakePushCheckState)
   set(_api_unsafe
     reassociation "-O2 -fassociative-math -fno-signed-zeros -fno-trapping-math"
     fp-model-fast "-O2 -ffp-model=fast")
-  if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
     list(APPEND _api_unsafe signed-zeros-contraction "-O2 -fno-signed-zeros -ffp-contract=fast")
   endif()
   list(LENGTH _api_unsafe _n)
