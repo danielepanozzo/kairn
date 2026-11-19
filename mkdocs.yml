@@ -97,17 +97,30 @@ nav:
   - Reference:
       - reference/index.md
       - How to read a page: reference/reading.md
+      - Construction and access:
+          - A two-limb number from a value of T: reference/make_2.md
+          - A two-limb number from its limbs: reference/make_2_limbs.md
+          - A ball from a one-limb center and a radius: reference/ball_make_1.md
+          - A ball from a two-limb center and a radius: reference/ball_make_2.md
       - Arithmetic:
           - Sum and difference, one limb: reference/add_1_1.md
           - Product, one limb: reference/mul_1_1.md
           - Sum of two two-limb numbers: reference/add_2_2.md
+          - Sum of two two-limb numbers, with infinities and NaN: reference/add_2_2_full.md
           - Sum of a two-limb number and a limb: reference/add_2_1.md
+          - Sum of a two-limb number and a limb, with infinities and NaN: reference/add_2_1_full.md
           - Difference of two two-limb numbers: reference/sub_2_2.md
+          - Difference of two two-limb numbers, with infinities and NaN: reference/sub_2_2_full.md
           - A two-limb number minus a limb: reference/sub_2_1.md
+          - A two-limb number minus a limb, with infinities and NaN: reference/sub_2_1_full.md
           - A limb minus a two-limb number: reference/sub_1_2.md
+          - A limb minus a two-limb number, with infinities and NaN: reference/sub_1_2_full.md
           - Product of two two-limb numbers: reference/mul_2_2.md
+          - Product of two two-limb numbers, with infinities and NaN: reference/mul_2_2_full.md
           - Product of a two-limb number and a limb: reference/mul_2_1.md
+          - Product of a two-limb number and a limb, with infinities and NaN: reference/mul_2_1_full.md
           - Fast sum of two two-limb numbers: reference/add_fast_2_2.md
+          - Fast sum of two two-limb numbers, with infinities and NaN: reference/add_fast_2_2_full.md
           - Negation, two limbs: reference/neg_2.md
           - Absolute value, two limbs: reference/abs_2.md
       - Comparisons:
@@ -126,15 +139,24 @@ nav:
           - Upper bound of the magnitude: reference/abs_upper_2.md
       - Scaling by a power of two:
           - Scaling a two-limb number by a power of two: reference/mul_pow2_2.md
+          - Scaling by a power of two, with infinities and NaN: reference/mul_pow2_2_full.md
       - Ball operations:
           - Sum of balls, one-limb center: reference/ball_add_1.md
+          - Sum of balls, one-limb center, with the special states: reference/ball_add_1_full.md
           - Sum of balls, two-limb center: reference/ball_add_2.md
+          - Sum of balls, two-limb center, with the special states: reference/ball_add_2_full.md
           - Difference of balls, one-limb center: reference/ball_sub_1.md
+          - Difference of balls, one-limb center, with the special states: reference/ball_sub_1_full.md
           - Difference of balls, two-limb center: reference/ball_sub_2.md
+          - Difference of balls, two-limb center, with the special states: reference/ball_sub_2_full.md
           - Product of balls, one-limb center: reference/ball_mul_1.md
+          - Product of balls, one-limb center, with the special states: reference/ball_mul_1_full.md
           - Product of balls, two-limb center: reference/ball_mul_2.md
+          - Product of balls, two-limb center, with the special states: reference/ball_mul_2_full.md
           - A ball times a limb, one-limb center: reference/ball_scale_1.md
+          - A ball times a limb, one-limb center, with the special states: reference/ball_scale_1_full.md
           - A ball times a limb, two-limb center: reference/ball_scale_2.md
+          - A ball times a limb, two-limb center, with the special states: reference/ball_scale_2_full.md
           - Negation of a ball, one-limb center: reference/ball_neg_1.md
           - Negation of a ball, two-limb center: reference/ball_neg_2.md
       - Building blocks:
