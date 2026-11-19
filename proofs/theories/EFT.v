@@ -151,7 +151,12 @@ Proof.
 intros emin prec Hp a b Fa Fb.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
 generalize (two_sum_exact emin prec Hp a b Fa Fb).
-destruct (two_sum emin prec tie_even a b) as [s e]. exact (fun H => H).
+assert (Fs : fmt emin prec (fst (two_sum emin prec tie_even a b))).
+{ unfold two_sum. cbv zeta. cbn [fst snd]. limb_format. }
+assert (Fe : fmt emin prec (snd (two_sum emin prec tie_even a b))).
+{ unfold two_sum. cbv zeta. cbn [fst snd]. limb_format. }
+destruct (two_sum emin prec tie_even a b) as [s e]. cbn [fst snd] in *.
+intros H. exact (conj Fs (conj Fe H)).
 Qed.
 
 Theorem fast_two_sum_correct : fast_two_sum_spec.
@@ -173,7 +178,11 @@ Proof.
 intros emin prec Hp a b Fa Fb.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
 generalize (two_prod_exact emin prec a b Fa Fb).
-destruct (two_prod emin prec tie_even a b) as [p e]. cbn [fst snd].
+assert (Fp : fmt emin prec (fst (two_prod emin prec tie_even a b))).
+{ unfold two_prod. cbv zeta. cbn [fst snd]. limb_format. }
+assert (Fe : fmt emin prec (snd (two_prod emin prec tie_even a b))).
+{ unfold two_prod. cbv zeta. cbn [fst snd]. limb_format. }
+destruct (two_prod emin prec tie_even a b) as [p e]. cbn [fst snd] in *.
 intros [H1 [H2 H3]]. repeat split; trivial.
 unfold eta. lra.
 Qed.

@@ -2,7 +2,9 @@
 
 (* One statement per kernel, built from its claims (gen/claims.json): a hand-written proof
    of kernel K is a theorem K_correct whose type is exactly K_spec. Rounding is to nearest,
-   ties to even, with gradual underflow and no overflow. *)
+   ties to even, with gradual underflow and no overflow. A statement assumes that every
+   input limb is a number of the format, and concludes the same of every output limb (by
+   fmt, or by normalized), so that one statement gives the hypotheses of the next. *)
 From Stdlib Require Import Reals ZArith.
 From Flocq Require Import Core.
 From Kairn.Gen Require Import Model.
@@ -43,6 +45,7 @@ Definition add_1_1_spec : Prop :=
   fmt emin prec a ->
   fmt emin prec b ->
   let s := add_1_1 emin prec tie_even a b in
+  fmt emin prec s /\
   s = RN emin prec (a + b) /\
   Rabs (s - (a + b)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (a + b).
 
@@ -55,6 +58,7 @@ Definition rmul_spec : Prop :=
   0 <= a ->
   0 <= b ->
   let r := rmul emin prec tie_even a b in
+  fmt emin prec r /\
   (a * b) <= r /\ r - (a * b) <= (3 / 2) * (r - pred radix2 (FLT_exp emin prec) r).
 
 (* radd: one step up from the rounded sum (Milestone 1 listing). Status: proved. *)
@@ -66,6 +70,7 @@ Definition radd_spec : Prop :=
   0 <= a ->
   0 <= b ->
   let r := radd emin prec tie_even a b in
+  fmt emin prec r /\
   (a + b) <= r /\ r - (a + b) <= (3 / 2) * (r - pred radix2 (FLT_exp emin prec) r).
 
 (* ball_add_1: midpoint-radius sum (Milestone 1 listing). Status: proved. *)
@@ -79,6 +84,8 @@ Definition ball_add_1_spec : Prop :=
   0 <= rx ->
   0 <= ry ->
   let '(cz, rz) := ball_add_1 emin prec tie_even cx rx cy ry in
+  fmt emin prec cz /\
+  fmt emin prec rz /\
   (forall x y : R, Rabs (x - cx) <= rx -> Rabs (y - cy) <= ry -> Rabs ((x + y) - cz) <= rz).
 
 (* ball_mul_1: midpoint-radius product (Milestone 1 listing). Status: proved. *)
@@ -92,6 +99,8 @@ Definition ball_mul_1_spec : Prop :=
   0 <= rx ->
   0 <= ry ->
   let '(cz, rz) := ball_mul_1 emin prec tie_even cx rx cy ry in
+  fmt emin prec cz /\
+  fmt emin prec rz /\
   (forall x y : R, Rabs (x - cx) <= rx -> Rabs (y - cy) <= ry -> Rabs ((x * y) - cz) <= rz).
 
 (* ball_neg_1: midpoint-radius negation (Milestone 1 listing). Status: proved. *)
@@ -102,6 +111,8 @@ Definition ball_neg_1_spec : Prop :=
   fmt emin prec rx ->
   0 <= rx ->
   let '(cz, rz) := ball_neg_1 cx rx in
+  fmt emin prec cz /\
+  fmt emin prec rz /\
   (forall x : R, Rabs (x - cx) <= rx -> Rabs ((- x) - cz) <= rz).
 
 (* ball_scale_1: midpoint-radius scaling (Milestone 1 listing). Status: proved. *)
@@ -113,6 +124,8 @@ Definition ball_scale_1_spec : Prop :=
   fmt emin prec a ->
   0 <= rx ->
   let '(cz, rz) := ball_scale_1 emin prec tie_even cx rx a in
+  fmt emin prec cz /\
+  fmt emin prec rz /\
   (forall x : R, Rabs (x - cx) <= rx -> Rabs ((x * a) - cz) <= rz).
 
 (* ball_sub_1: midpoint-radius difference (Milestone 1 listing). Status: proved. *)
@@ -126,6 +139,8 @@ Definition ball_sub_1_spec : Prop :=
   0 <= rx ->
   0 <= ry ->
   let '(cz, rz) := ball_sub_1 emin prec tie_even cx rx cy ry in
+  fmt emin prec cz /\
+  fmt emin prec rz /\
   (forall x y : R, Rabs (x - cx) <= rx -> Rabs (y - cy) <= ry -> Rabs ((x - y) - cz) <= rz).
 
 (* fast_two_sum: Fast2Sum (Dekker 1971). Status: proved. *)
@@ -147,6 +162,7 @@ Definition mul_1_1_spec : Prop :=
   fmt emin prec a ->
   fmt emin prec b ->
   let p := mul_1_1 emin prec tie_even a b in
+  fmt emin prec p /\
   p = RN emin prec (a * b) /\
   Rabs (p - (a * b)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (a * b) + (1 / 2) * eta emin.
 
@@ -156,6 +172,8 @@ Definition split_spec : Prop :=
   forall a : R,
   fmt emin prec a ->
   let '(ah, al) := split emin prec tie_even a in
+  fmt emin prec ah /\
+  fmt emin prec al /\
   (ah + al) = a.
 
 (* two_prod: TwoProd with an FMA (folklore; see JMP17). Status: proved. *)
@@ -165,6 +183,8 @@ Definition two_prod_spec : Prop :=
   fmt emin prec a ->
   fmt emin prec b ->
   let '(p, e) := two_prod emin prec tie_even a b in
+  fmt emin prec p /\
+  fmt emin prec e /\
   p = RN emin prec (a * b) /\
   Rabs ((p + e) - (a * b)) <= (1 / 2) * eta emin /\
   (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).
@@ -176,6 +196,8 @@ Definition two_prod_dekker_spec : Prop :=
   fmt emin prec a ->
   fmt emin prec b ->
   let '(p, e) := two_prod_dekker emin prec tie_even a b in
+  fmt emin prec p /\
+  fmt emin prec e /\
   p = RN emin prec (a * b) /\
   Rabs ((p + e) - (a * b)) <= (13 / 8) * eta emin /\
   (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).
@@ -187,6 +209,8 @@ Definition two_sum_spec : Prop :=
   fmt emin prec a ->
   fmt emin prec b ->
   let '(s, e) := two_sum emin prec tie_even a b in
+  fmt emin prec s /\
+  fmt emin prec e /\
   s = RN emin prec (a + b) /\
   (s + e) = (a + b).
 
@@ -205,6 +229,7 @@ Definition to_up_2_spec : Prop :=
   forall x0 x1 : R,
   normalized_2 emin prec x0 x1 ->
   let t := to_up_2 emin prec x0 x1 in
+  fmt emin prec t /\
   t = RU emin prec (x0 + x1).
 
 (* abs_upper_2: abs_2, then to_up_2 (Milestone 1 listing). Status: proved. *)
@@ -213,6 +238,7 @@ Definition abs_upper_2_spec : Prop :=
   forall x0 x1 : R,
   normalized_2 emin prec x0 x1 ->
   let t := abs_upper_2 emin prec x0 x1 in
+  fmt emin prec t /\
   t = RU emin prec (Rabs (x0 + x1)).
 
 (* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. Status: proved. *)
@@ -256,6 +282,7 @@ Definition ball_add_2_spec : Prop :=
   0 <= rx ->
   0 <= ry ->
   let '(cz0, cz1, rz) := ball_add_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in
+  fmt emin prec rz /\
   normalized_2 emin prec cz0 cz1 /\
   (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x + y) - (cz0 + cz1)) <= rz).
 
@@ -280,6 +307,7 @@ Definition ball_mul_2_spec : Prop :=
   0 <= rx ->
   0 <= ry ->
   let '(cz0, cz1, rz) := ball_mul_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in
+  fmt emin prec rz /\
   normalized_2 emin prec cz0 cz1 /\
   (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x * y) - (cz0 + cz1)) <= rz).
 
@@ -300,6 +328,7 @@ Definition ball_neg_2_spec : Prop :=
   fmt emin prec rx ->
   0 <= rx ->
   let '(cz0, cz1, rz) := ball_neg_2 cx0 cx1 rx in
+  fmt emin prec rz /\
   normalized_2 emin prec cz0 cz1 /\
   (forall x : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs ((- x) - (cz0 + cz1)) <= rz).
 
@@ -322,6 +351,7 @@ Definition ball_scale_2_spec : Prop :=
   fmt emin prec a ->
   0 <= rx ->
   let '(cz0, cz1, rz) := ball_scale_2 emin prec tie_even cx0 cx1 rx a in
+  fmt emin prec rz /\
   normalized_2 emin prec cz0 cz1 /\
   (forall x : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs ((x * a) - (cz0 + cz1)) <= rz).
 
@@ -336,6 +366,7 @@ Definition ball_sub_2_spec : Prop :=
   0 <= rx ->
   0 <= ry ->
   let '(cz0, cz1, rz) := ball_sub_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in
+  fmt emin prec rz /\
   normalized_2 emin prec cz0 cz1 /\
   (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x - y) - (cz0 + cz1)) <= rz).
 
@@ -458,6 +489,7 @@ Definition to_down_2_spec : Prop :=
   forall x0 x1 : R,
   normalized_2 emin prec x0 x1 ->
   let t := to_down_2 emin prec x0 x1 in
+  fmt emin prec t /\
   t = RD emin prec (x0 + x1).
 
 (* to_nearest_2: the definition of normalized (Milestone 1 listing). Status: proved. *)
@@ -466,4 +498,5 @@ Definition to_nearest_2_spec : Prop :=
   forall x0 x1 : R,
   normalized_2 emin prec x0 x1 ->
   let t := to_nearest_2 x0 x1 in
+  fmt emin prec t /\
   t = RN emin prec (x0 + x1).

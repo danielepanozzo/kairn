@@ -40,6 +40,7 @@ Proof.
 intros emin prec Hp a b Fa Fb s. unfold s, add_1_1. clear s. cbv zeta.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 1%Z; lia).
 unfold fmt in Fa, Fb.
+split. limb_format.
 split. reflexivity.
 rewrite rel_one_eq.
 rewrite (round_plus_FLT_FLX emin prec (Znearest tie_even) a b Fa Fb).
@@ -50,7 +51,9 @@ Theorem mul_1_1_correct : mul_1_1_spec.
 Proof.
 intros emin prec Hp a b Fa Fb p. unfold p, mul_1_1. clear p. cbv zeta.
 assert (Hp0 : (0 < prec)%Z) by lia.
+assert (Hq : Prec_gt_0 prec) by exact Hp0.
 rewrite !Rplus_0_r.
+split. limb_format.
 split. reflexivity.
 rewrite rel_one_eq.
 destruct (relative_error_N_FLT'_ex radix2 emin prec Hp0 tie_even (a * b))

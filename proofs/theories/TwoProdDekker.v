@@ -11,6 +11,7 @@
    Statement proved (two_prod_dekker_correct, the generated two_prod_dekker_spec of
    proofs/gen/Statements.v), for every format with gradual
    underflow, prec >= 4, every emin, ties to even, exponents unbounded above:
+       p and e are numbers of F;
        p = RN (a b);
        |p + e - a b| <= 13/8 eta;
        p + e = a b when a b = 0 or |a b| >= 2^(2 prec - 1) eta.
@@ -526,8 +527,14 @@ Qed.
 Theorem two_prod_dekker_correct : two_prod_dekker_spec.
 Proof.
 intros emin prec Hp a b Fa Fb.
+assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 4%Z; lia).
+(* both outputs are results of a rounding *)
+assert (Fp : fmt emin prec (fst (two_prod_dekker emin prec tie_even a b))).
+{ rewrite two_prod_dekker_unfold. cbv zeta. cbn [fst snd]. limb_format. }
+assert (Fe : fmt emin prec (snd (two_prod_dekker emin prec tie_even a b))).
+{ rewrite two_prod_dekker_unfold. cbv zeta. cbn [fst snd]. limb_format. }
 generalize (two_prod_dekker_exact emin prec Hp a b Fa Fb)
            (two_prod_dekker_defect emin prec Hp a b Fa Fb).
-destruct (two_prod_dekker emin prec tie_even a b) as [p e]. cbn [fst snd].
+destruct (two_prod_dekker emin prec tie_even a b) as [p e]. cbn [fst snd] in *.
 intros [H1 [_ H3]] H2. repeat split; trivial.
 Qed.

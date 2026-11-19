@@ -574,6 +574,8 @@ Qed.
 Theorem split_correct : split_spec.
 Proof.
 intros emin prec Hp a Fa.
-generalize (split_sum emin prec Hp a Fa).
-destruct (split emin prec tie_even a) as [ah al]. exact (fun H => H).
+assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 4%Z; lia).
+generalize (split_sum emin prec Hp a Fa) (split_format emin prec tie_even a).
+destruct (split emin prec tie_even a) as [ah al]. cbn [fst snd].
+intros Hs [Fh Fl]. exact (conj Fh (conj Fl Hs)).
 Qed.
