@@ -897,8 +897,9 @@ class Site:
           "what is proved and what is not written yet there is in "
           "[What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values).")
         if any(r.startswith("normalized(") for r in e["requires"]):
-            w("- Anything about an operand that is not normalized, which only `from_limbs_unchecked` or "
-              "writing `limb[]` directly can make.")
+            w("- Anything about an operand that is not normalized, which only limbs given by the program can "
+              "make: `from_limbs` in a build without checks, `from_limbs_unchecked`, or `limb[]` written "
+              "directly.")
         if not k.proved:
             w("- Anything at all, as a guarantee: the statement is a target until its proof is checked.")
         w("")

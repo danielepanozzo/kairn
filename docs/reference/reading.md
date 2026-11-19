@@ -41,9 +41,9 @@ a one-limb number, a one-limb number to two limbs, a point to a ball of radius 0
 block has no form: it is a step of other kernels.
 
 **Requires.** What the operands must satisfy for the guarantee to apply. Every operand is finite.
-Every operation of Kairn returns normalized numbers, so the requirement that an operand be
-normalized can fail only for a number built with `from_limbs_unchecked` or by writing its limbs
-directly. In a build with `KAIRN_CHECKS` (the default without `NDEBUG`), every operation checks it
+Every operation of Kairn returns normalized numbers when the leading limb of its result is finite,
+so the requirement that an operand be normalized can fail only for a number whose limbs the program
+gave: `from_limbs` in a build without checks, `from_limbs_unchecked`, or `limb[]` written directly. In a build with `KAIRN_CHECKS` (the default without `NDEBUG`), every operation checks it
 and stops the program if it fails.
 
 **Guarantees.** The statement, then its constants. For a bound, the table gives $c\,u^k$ and

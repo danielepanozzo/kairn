@@ -135,8 +135,9 @@ operations overflow as the hardware does, for formats shaped like `binary32` and
 `add_2_2`, `mul_2_2`, `add_2_1`, `mul_2_1` and `add_fast_2_2` it is proved that an overflow anywhere
 in the kernel never produces a finite wrong result: if the leading limb of the result is finite,
 the result is normalized and within its bound. For `add_2_2` and `mul_2_2` it is also proved that
-the result is finite under a condition on the operands (the leading limbs of both summands at most
-$2^{e_{\max}-2}$, a quarter of the overflow threshold; the exact product at most $2^{e_{\max}-1}$),
+the result is finite under a condition on the operands, with $2^{e_{\max}}$ the overflow threshold,
+just above the largest finite number (the leading limbs of both summands at most
+$2^{e_{\max}-2}$, a quarter of the threshold; the exact product at most $2^{e_{\max}-1}$),
 and `two_sum`, `fast_two_sum` and `two_prod` have statements of their own there. These statements
 are written by hand (`proofs/theories/IeeeStatementsDraft.v`), not yet printed by the generator,
 and are audited by `proofs/audit/HandAudit.v`. Canonical infinities and NaN, the special states of a
