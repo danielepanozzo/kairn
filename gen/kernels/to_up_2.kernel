@@ -1,0 +1,15 @@
+# The smallest number of the format not below a 2-limb x: x0, or its successor when x is above
+# x0, that is when x1 > 0.
+kernel:        to_up_2
+input:         x = x0 x1
+output:        t
+value:         x
+requires:      normalized x
+ensures:       rounded t up
+source:        the sign of x1 (Milestone 1 listing)
+status:        unverified
+cone_exempt:   t is x0 or succ(x0), chosen by select, and succ(-inf) is finite; the non-finite layer tests x0 itself
+
+m = lt(0, x1)
+s = succ(x0)
+t = select(m, s, x0)

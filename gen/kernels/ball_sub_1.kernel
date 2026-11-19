@@ -1,0 +1,18 @@
+# The difference of two balls with one-limb centers: ball_add_1 with the second center negated.
+kernel:        ball_sub_1
+input:         cx
+input:         rx
+input:         cy
+input:         ry
+output:        cz
+output:        rz
+value:         cx-cy
+requires:      nonneg rx
+requires:      nonneg ry
+ensures:       encloses cz rz x-y x=cx,rx y=cy,ry
+source:        midpoint-radius difference (Milestone 1 listing)
+status:        unverified
+cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
+
+n        = neg(cy)
+(cz, rz) = ball_add_1(cx, rx, n, ry)

@@ -1,0 +1,22 @@
+# A ball with a one-limb center times a number a of the format: |xa - cx a| <= |a| rx, plus the
+# error of the rounded center product, at most U |cz| + V from the claims of mul_1_1.
+kernel:        ball_scale_1
+input:         cx
+input:         rx
+input:         a
+output:        cz
+output:        rz
+value:         cx*a
+requires:      nonneg rx
+ensures:       encloses cz rz x*a x=cx,rx
+source:        midpoint-radius scaling (Milestone 1 listing)
+status:        unverified
+cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
+
+cz = prod(cx, a)
+aa = abs(a)
+t1 = rmul(aa, rx)
+mz = abs(cz)
+d0 = rmul(const unit_computed(mul_1_1), mz)
+d  = radd(d0, const tiny_computed(mul_1_1))
+rz = radd(t1, d)

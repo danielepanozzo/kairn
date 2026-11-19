@@ -1,0 +1,29 @@
+# The product of two balls with one-limb centers: |xy - cx cy| <= |cx| ry + |cy| rx + rx ry, plus
+# the error of the rounded center product, at most U |cz| + V from the claims of mul_1_1.
+kernel:        ball_mul_1
+input:         cx
+input:         rx
+input:         cy
+input:         ry
+output:        cz
+output:        rz
+value:         cx*cy
+requires:      nonneg rx
+requires:      nonneg ry
+ensures:       encloses cz rz x*y x=cx,rx y=cy,ry
+source:        midpoint-radius product (Milestone 1 listing)
+status:        unverified
+cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
+
+cz = prod(cx, cy)
+ax = abs(cx)
+ay = abs(cy)
+t1 = rmul(ax, ry)
+t2 = rmul(ay, rx)
+t3 = rmul(rx, ry)
+s1 = radd(t1, t2)
+s2 = radd(s1, t3)
+mz = abs(cz)
+d0 = rmul(const unit_computed(mul_1_1), mz)
+d  = radd(d0, const tiny_computed(mul_1_1))
+rz = radd(s2, d)

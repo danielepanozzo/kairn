@@ -7,6 +7,8 @@
 #if defined(_MSC_VER) && !defined(__clang__) && (defined(_M_X64) || defined(_M_IX86))
 #include <immintrin.h>
 #endif
+#include <bit>
+#include <cstdint>
 
 // Kernels of at most two limbs are a few dozen flops and must disappear into the caller.
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -46,5 +48,53 @@ KAIRN_GEN_FORCEINLINE float fma_rn(float a, float b, float c) noexcept {
     return __builtin_fmaf(a, b, c);
 #endif
 }
+
+// |a|, exactly, by clearing the sign bit (std::fabs is not constexpr in C++20).
+KAIRN_GEN_FORCEINLINE constexpr double abs_bits(double a) noexcept {
+    return std::bit_cast<double>(std::bit_cast<std::uint64_t>(a) & 0x7fffffffffffffffu);
+}
+
+// IEEE 754 nextUp and nextDown, by stepping the bit pattern: nextafter is not
+// constexpr in C++20, and not usable in CUDA device code. The pattern of a
+// positive number moves up, that of a negative one towards zero; either zero
+// becomes the smallest subnormal; NaN and +inf stay. The choices are masks of
+// all ones or all zeros, each from one comparison: written with ?: or ||, GCC
+// and Clang emit branches on the data. m + (s ^ 1) exceeds inf exactly for NaN
+// and +inf (it is m + 1 for a positive pattern, m for a negative one).
+KAIRN_GEN_FORCEINLINE constexpr double next_up(double a) noexcept {
+    const std::uint64_t b = std::bit_cast<std::uint64_t>(a);
+    const std::uint64_t m = b & 0x7fffffffffffffffu;
+    const std::uint64_t s = b >> 63;
+    const std::uint64_t step = b + 1 - (s << 1);  // b + 1, or b - 1 for a negative pattern
+    const std::uint64_t zero = std::uint64_t{0} - std::uint64_t(m == 0);
+    const std::uint64_t keep = std::uint64_t{0} - std::uint64_t(m + (s ^ 1) > 0x7ff0000000000000u);
+    const std::uint64_t r = (zero & 1) | (~zero & step);
+    return std::bit_cast<double>((keep & b) | (~keep & r));
+}
+KAIRN_GEN_FORCEINLINE constexpr double next_down(double a) noexcept { return -next_up(-a); }
+
+// |a|, exactly, by clearing the sign bit (std::fabs is not constexpr in C++20).
+KAIRN_GEN_FORCEINLINE constexpr float abs_bits(float a) noexcept {
+    return std::bit_cast<float>(std::bit_cast<std::uint32_t>(a) & 0x7fffffffu);
+}
+
+// IEEE 754 nextUp and nextDown, by stepping the bit pattern: nextafter is not
+// constexpr in C++20, and not usable in CUDA device code. The pattern of a
+// positive number moves up, that of a negative one towards zero; either zero
+// becomes the smallest subnormal; NaN and +inf stay. The choices are masks of
+// all ones or all zeros, each from one comparison: written with ?: or ||, GCC
+// and Clang emit branches on the data. m + (s ^ 1) exceeds inf exactly for NaN
+// and +inf (it is m + 1 for a positive pattern, m for a negative one).
+KAIRN_GEN_FORCEINLINE constexpr float next_up(float a) noexcept {
+    const std::uint32_t b = std::bit_cast<std::uint32_t>(a);
+    const std::uint32_t m = b & 0x7fffffffu;
+    const std::uint32_t s = b >> 31;
+    const std::uint32_t step = b + 1 - (s << 1);  // b + 1, or b - 1 for a negative pattern
+    const std::uint32_t zero = std::uint32_t{0} - std::uint32_t(m == 0);
+    const std::uint32_t keep = std::uint32_t{0} - std::uint32_t(m + (s ^ 1) > 0x7f800000u);
+    const std::uint32_t r = (zero & 1) | (~zero & step);
+    return std::bit_cast<float>((keep & b) | (~keep & r));
+}
+KAIRN_GEN_FORCEINLINE constexpr float next_down(float a) noexcept { return -next_up(-a); }
 
 }  // namespace kairn::gen

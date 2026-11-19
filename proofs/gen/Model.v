@@ -18,12 +18,133 @@ Notation rnd := (round radix2 (FLT_exp emin prec) (Znearest choice)).
 (* Veltkamp's multiplier 2^ceil(prec/2) + 1. *)
 Definition splitter : R := bpow radix2 (Z.div (prec + 1) 2) + 1.
 
+(* tiny_computed(mul_1_1): tiny / (1 - rel), rounded up to the format, for the bound
+   rel |v| + tiny of mul_1_1, with rel = c u^k and tiny = t eta from its claims. *)
+Definition tiny_computed_mul_1_1 : R :=
+  let rel := (1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1 in
+  let tiny := (1 / 2) * bpow radix2 emin in
+  round radix2 (FLT_exp emin prec) Zceil (tiny / (1 - rel)).
+
+(* tiny_computed(mul_2_1): tiny / (1 - rel), rounded up to the format, for the bound
+   rel |v| + tiny of mul_2_1, with rel = c u^k and tiny = t eta from its claims. *)
+Definition tiny_computed_mul_2_1 : R :=
+  let rel := 2 * bpow radix2 (- prec) ^ 2 in
+  let tiny := 1 * bpow radix2 emin in
+  round radix2 (FLT_exp emin prec) Zceil (tiny / (1 - rel)).
+
+(* tiny_computed(mul_2_2): tiny / (1 - rel), rounded up to the format, for the bound
+   rel |v| + tiny of mul_2_2, with rel = c u^k and tiny = t eta from its claims. *)
+Definition tiny_computed_mul_2_2 : R :=
+  let rel := 4 * bpow radix2 (- prec) ^ 2 in
+  let tiny := (3 / 2) * bpow radix2 emin in
+  round radix2 (FLT_exp emin prec) Zceil (tiny / (1 - rel)).
+
+(* unit_computed(add_1_1): rel / (1 - rel), rounded up to the format, for the bound
+   rel |v| + tiny of add_1_1, with rel = c u^k and tiny = t eta from its claims. *)
+Definition unit_computed_add_1_1 : R :=
+  let rel := (1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1 in
+  round radix2 (FLT_exp emin prec) Zceil (rel / (1 - rel)).
+
+(* unit_computed(add_2_2): rel / (1 - rel), rounded up to the format, for the bound
+   rel |v| + tiny of add_2_2, with rel = c u^k and tiny = t eta from its claims. *)
+Definition unit_computed_add_2_2 : R :=
+  let rel := (3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2 in
+  round radix2 (FLT_exp emin prec) Zceil (rel / (1 - rel)).
+
+(* unit_computed(mul_1_1): rel / (1 - rel), rounded up to the format, for the bound
+   rel |v| + tiny of mul_1_1, with rel = c u^k and tiny = t eta from its claims. *)
+Definition unit_computed_mul_1_1 : R :=
+  let rel := (1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1 in
+  round radix2 (FLT_exp emin prec) Zceil (rel / (1 - rel)).
+
+(* unit_computed(mul_2_1): rel / (1 - rel), rounded up to the format, for the bound
+   rel |v| + tiny of mul_2_1, with rel = c u^k and tiny = t eta from its claims. *)
+Definition unit_computed_mul_2_1 : R :=
+  let rel := 2 * bpow radix2 (- prec) ^ 2 in
+  round radix2 (FLT_exp emin prec) Zceil (rel / (1 - rel)).
+
+(* unit_computed(mul_2_2): rel / (1 - rel), rounded up to the format, for the bound
+   rel |v| + tiny of mul_2_2, with rel = c u^k and tiny = t eta from its claims. *)
+Definition unit_computed_mul_2_2 : R :=
+  let rel := 4 * bpow radix2 (- prec) ^ 2 in
+  round radix2 (FLT_exp emin prec) Zceil (rel / (1 - rel)).
+
+(* add_1_1: one rounding to nearest. *)
+Definition add_1_1 (a b : R) : R :=
+  let s := rnd (a + b) in
+  s.
+
+(* rmul: one step up from the rounded product (Milestone 1 listing). *)
+Definition rmul (a b : R) : R :=
+  let p := rnd (a * b + 0) in
+  let r := succ radix2 (FLT_exp emin prec) p in
+  r.
+
+(* radd: one step up from the rounded sum (Milestone 1 listing). *)
+Definition radd (a b : R) : R :=
+  let s := rnd (a + b) in
+  let r := succ radix2 (FLT_exp emin prec) s in
+  r.
+
+(* ball_add_1: midpoint-radius sum (Milestone 1 listing). *)
+Definition ball_add_1 (cx rx cy ry : R) : R * R :=
+  let cz := rnd (cx + cy) in
+  let mz := Rabs cz in
+  let d := rmul unit_computed_add_1_1 mz in
+  let r0 := radd rx ry in
+  let rz := radd r0 d in
+  (cz, rz).
+
+(* ball_mul_1: midpoint-radius product (Milestone 1 listing). *)
+Definition ball_mul_1 (cx rx cy ry : R) : R * R :=
+  let cz := rnd (cx * cy + 0) in
+  let ax := Rabs cx in
+  let ay := Rabs cy in
+  let t1 := rmul ax ry in
+  let t2 := rmul ay rx in
+  let t3 := rmul rx ry in
+  let s1 := radd t1 t2 in
+  let s2 := radd s1 t3 in
+  let mz := Rabs cz in
+  let d0 := rmul unit_computed_mul_1_1 mz in
+  let d := radd d0 tiny_computed_mul_1_1 in
+  let rz := radd s2 d in
+  (cz, rz).
+
+(* ball_neg_1: midpoint-radius negation (Milestone 1 listing). *)
+Definition ball_neg_1 (cx rx : R) : R * R :=
+  let cz := - cx in
+  let rz := rx in
+  (cz, rz).
+
+(* ball_scale_1: midpoint-radius scaling (Milestone 1 listing). *)
+Definition ball_scale_1 (cx rx a : R) : R * R :=
+  let cz := rnd (cx * a + 0) in
+  let aa := Rabs a in
+  let t1 := rmul aa rx in
+  let mz := Rabs cz in
+  let d0 := rmul unit_computed_mul_1_1 mz in
+  let d := radd d0 tiny_computed_mul_1_1 in
+  let rz := radd t1 d in
+  (cz, rz).
+
+(* ball_sub_1: midpoint-radius difference (Milestone 1 listing). *)
+Definition ball_sub_1 (cx rx cy ry : R) : R * R :=
+  let n := - cy in
+  let '(cz, rz) := ball_add_1 cx rx n ry in
+  (cz, rz).
+
 (* fast_two_sum: Fast2Sum (Dekker 1971). *)
 Definition fast_two_sum (a b : R) : R * R :=
   let s := rnd (a + b) in
   let z := rnd (s - a) in
   let e := rnd (b - z) in
   (s, e).
+
+(* mul_1_1: one rounding to nearest. *)
+Definition mul_1_1 (a b : R) : R :=
+  let p := rnd (a * b + 0) in
+  p.
 
 (* split: Veltkamp's split (Dekker 1971). *)
 Definition split (a : R) : R * R :=
@@ -64,6 +185,28 @@ Definition two_sum (a b : R) : R * R :=
   let e := rnd (t1 + t2) in
   (s, e).
 
+(* abs_2: the sign of x0 (Milestone 1 listing). *)
+Definition abs_2 (x0 x1 : R) : R * R :=
+  let m := Rlt_bool x0 0 in
+  let n0 := - x0 in
+  let n1 := - x1 in
+  let z0 := if m then n0 else x0 in
+  let z1 := if m then n1 else x1 in
+  (z0, z1).
+
+(* to_up_2: the sign of x1 (Milestone 1 listing). *)
+Definition to_up_2 (x0 x1 : R) : R :=
+  let m := Rlt_bool 0 x1 in
+  let s := succ radix2 (FLT_exp emin prec) x0 in
+  let t := if m then s else x0 in
+  t.
+
+(* abs_upper_2: abs_2, then to_up_2 (Milestone 1 listing). *)
+Definition abs_upper_2 (x0 x1 : R) : R :=
+  let '(a0, a1) := abs_2 x0 x1 in
+  let t := to_up_2 a0 a1 in
+  t.
+
 (* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. *)
 Definition add_2_1 (x0 x1 a : R) : R * R :=
   let '(sh, sl) := two_sum x0 a in
@@ -97,12 +240,14 @@ Definition add_fast_2_2_ts (x0 x1 y0 y1 : R) : R * R :=
   let '(z0, z1) := two_sum sh w in
   (z0, z1).
 
-(* mul_2_1: JMP17 Alg. 9 (DWTimesFP3); bound from MR22. *)
-Definition mul_2_1 (x0 x1 a : R) : R * R :=
-  let '(ch, cl1) := two_prod x0 a in
-  let cl3 := rnd (x1 * a + cl1) in
-  let '(z0, z1) := fast_two_sum ch cl3 in
-  (z0, z1).
+(* ball_add_2: midpoint-radius sum (Milestone 1 listing). *)
+Definition ball_add_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
+  let '(cz0, cz1) := add_2_2 cx0 cx1 cy0 cy1 in
+  let mz := abs_upper_2 cz0 cz1 in
+  let d := rmul unit_computed_add_2_2 mz in
+  let r0 := radd rx ry in
+  let rz := radd r0 d in
+  (cz0, cz1, rz).
 
 (* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. *)
 Definition mul_2_2 (x0 x1 y0 y1 : R) : R * R :=
@@ -113,5 +258,164 @@ Definition mul_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let cl3 := rnd (cl1 + cl2) in
   let '(z0, z1) := fast_two_sum ch cl3 in
   (z0, z1).
+
+(* ball_mul_2: midpoint-radius product (Milestone 1 listing). *)
+Definition ball_mul_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
+  let '(cz0, cz1) := mul_2_2 cx0 cx1 cy0 cy1 in
+  let ax := abs_upper_2 cx0 cx1 in
+  let ay := abs_upper_2 cy0 cy1 in
+  let t1 := rmul ax ry in
+  let t2 := rmul ay rx in
+  let t3 := rmul rx ry in
+  let s1 := radd t1 t2 in
+  let s2 := radd s1 t3 in
+  let mz := abs_upper_2 cz0 cz1 in
+  let d0 := rmul unit_computed_mul_2_2 mz in
+  let d := radd d0 tiny_computed_mul_2_2 in
+  let rz := radd s2 d in
+  (cz0, cz1, rz).
+
+(* neg_2: limb by limb (Milestone 1 listing). *)
+Definition neg_2 (x0 x1 : R) : R * R :=
+  let z0 := - x0 in
+  let z1 := - x1 in
+  (z0, z1).
+
+(* ball_neg_2: midpoint-radius negation (Milestone 1 listing). *)
+Definition ball_neg_2 (cx0 cx1 rx : R) : R * R * R :=
+  let '(cz0, cz1) := neg_2 cx0 cx1 in
+  let rz := rx in
+  (cz0, cz1, rz).
+
+(* mul_2_1: JMP17 Alg. 9 (DWTimesFP3); bound from MR22. *)
+Definition mul_2_1 (x0 x1 a : R) : R * R :=
+  let '(ch, cl1) := two_prod x0 a in
+  let cl3 := rnd (x1 * a + cl1) in
+  let '(z0, z1) := fast_two_sum ch cl3 in
+  (z0, z1).
+
+(* ball_scale_2: midpoint-radius scaling (Milestone 1 listing). *)
+Definition ball_scale_2 (cx0 cx1 rx a : R) : R * R * R :=
+  let '(cz0, cz1) := mul_2_1 cx0 cx1 a in
+  let aa := Rabs a in
+  let t1 := rmul aa rx in
+  let mz := abs_upper_2 cz0 cz1 in
+  let d0 := rmul unit_computed_mul_2_1 mz in
+  let d := radd d0 tiny_computed_mul_2_1 in
+  let rz := radd t1 d in
+  (cz0, cz1, rz).
+
+(* ball_sub_2: midpoint-radius difference (Milestone 1 listing). *)
+Definition ball_sub_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
+  let '(n0, n1) := neg_2 cy0 cy1 in
+  let '(cz0, cz1, rz) := ball_add_2 cx0 cx1 rx n0 n1 ry in
+  (cz0, cz1, rz).
+
+(* eq_2_1: limbs compared in order (Milestone 1 listing). *)
+Definition eq_2_1 (x0 x1 a : R) : bool :=
+  let h := Req_bool x0 a in
+  let l := Req_bool x1 0 in
+  let m := andb h l in
+  m.
+
+(* eq_2_2: limbs compared in order (Milestone 1 listing). *)
+Definition eq_2_2 (x0 x1 y0 y1 : R) : bool :=
+  let h := Req_bool x0 y0 in
+  let l := Req_bool x1 y1 in
+  let m := andb h l in
+  m.
+
+(* le_1_2: limbs compared in order (Milestone 1 listing). *)
+Definition le_1_2 (a y0 y1 : R) : bool :=
+  let h := Rlt_bool a y0 in
+  let e := Req_bool a y0 in
+  let l := Rle_bool 0 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* le_2_1: limbs compared in order (Milestone 1 listing). *)
+Definition le_2_1 (x0 x1 a : R) : bool :=
+  let h := Rlt_bool x0 a in
+  let e := Req_bool x0 a in
+  let l := Rle_bool x1 0 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* le_2_2: limbs compared in order (Milestone 1 listing). *)
+Definition le_2_2 (x0 x1 y0 y1 : R) : bool :=
+  let h := Rlt_bool x0 y0 in
+  let e := Req_bool x0 y0 in
+  let l := Rle_bool x1 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* lt_1_2: limbs compared in order (Milestone 1 listing). *)
+Definition lt_1_2 (a y0 y1 : R) : bool :=
+  let h := Rlt_bool a y0 in
+  let e := Req_bool a y0 in
+  let l := Rlt_bool 0 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* lt_2_1: limbs compared in order (Milestone 1 listing). *)
+Definition lt_2_1 (x0 x1 a : R) : bool :=
+  let h := Rlt_bool x0 a in
+  let e := Req_bool x0 a in
+  let l := Rlt_bool x1 0 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* lt_2_2: limbs compared in order (Milestone 1 listing). *)
+Definition lt_2_2 (x0 x1 y0 y1 : R) : bool :=
+  let h := Rlt_bool x0 y0 in
+  let e := Req_bool x0 y0 in
+  let l := Rlt_bool x1 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
+Definition mul_pow2_2 (x0 x1 c : R) : R * R :=
+  let h := rnd (x0 * c + 0) in
+  let l := rnd (x1 * c + 0) in
+  let '(z0, z1) := fast_two_sum h l in
+  (z0, z1).
+
+(* sub_1_2: add_2_1 (JMP17 Alg. 4) on -y and a. *)
+Definition sub_1_2 (a y0 y1 : R) : R * R :=
+  let n0 := - y0 in
+  let n1 := - y1 in
+  let '(z0, z1) := add_2_1 n0 n1 a in
+  (z0, z1).
+
+(* sub_2_1: add_2_1 (JMP17 Alg. 4) on -a. *)
+Definition sub_2_1 (x0 x1 a : R) : R * R :=
+  let n := - a in
+  let '(z0, z1) := add_2_1 x0 x1 n in
+  (z0, z1).
+
+(* sub_2_2: add_2_2 (JMP17 Alg. 6) on -y. *)
+Definition sub_2_2 (x0 x1 y0 y1 : R) : R * R :=
+  let n0 := - y0 in
+  let n1 := - y1 in
+  let '(z0, z1) := add_2_2 x0 x1 n0 n1 in
+  (z0, z1).
+
+(* to_down_2: the sign of x1 (Milestone 1 listing). *)
+Definition to_down_2 (x0 x1 : R) : R :=
+  let m := Rlt_bool x1 0 in
+  let p := pred radix2 (FLT_exp emin prec) x0 in
+  let t := if m then p else x0 in
+  t.
+
+(* to_nearest_2: the definition of normalized (Milestone 1 listing). *)
+Definition to_nearest_2 (x0 x1 : R) : R :=
+  let t := x0 in
+  t.
 
 End Kernels.

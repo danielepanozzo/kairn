@@ -1,0 +1,15 @@
+# x - a: a 2-limb number minus a number of the format, through add_2_1, whose claims it inherits.
+kernel:        sub_2_1
+input:         x = x0 x1
+input:         a
+output:        z = z0 z1
+value:         x-a
+requires:      normalized x
+ensures:       normalized z
+ensures:       error z R c=2 k=2 t=0
+min_precision: 3
+source:        add_2_1 (JMP17 Alg. 4) on -a
+status:        unverified
+
+n        = neg(a)
+(z0, z1) = add_2_1(x0, x1, n)

@@ -1,0 +1,18 @@
+# The absolute value of a 2-limb number: its negation when the leading limb is negative, which for
+# a normalized number is when the number is.
+kernel:        abs_2
+input:         x = x0 x1
+output:        z = z0 z1
+value:         abs(x)
+requires:      normalized x
+ensures:       normalized z
+ensures:       error z R c=0 k=2 t=0
+source:        the sign of x0 (Milestone 1 listing)
+status:        unverified
+cone_exempt:   the limbs reach the outputs through select; each output limb is an input limb up to sign, so it is non-finite exactly when that input limb is, and the non-finite layer tests the operand
+
+m  = lt(x0, 0)
+n0 = neg(x0)
+n1 = neg(x1)
+z0 = select(m, n0, x0)
+z1 = select(m, n1, x1)

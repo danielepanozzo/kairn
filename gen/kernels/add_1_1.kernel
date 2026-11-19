@@ -1,0 +1,15 @@
+# One rounded sum. Not a kernel the library calls (its code is a + b): it states the bound of the
+# center of a one-limb ball, from which ball_add_1 takes its constant unit_computed. Sharp in the
+# form u/(1 + u), and exact in the subnormal range, where the sum of two numbers of the format is
+# a number of the format.
+kernel:        add_1_1
+input:         a
+input:         b
+output:        s
+value:         a+b
+ensures:       rounded s nearest
+ensures:       error s R c=1/(1+u) k=1 t=0
+source:        one rounding to nearest
+status:        unverified
+
+s = add(a, b)

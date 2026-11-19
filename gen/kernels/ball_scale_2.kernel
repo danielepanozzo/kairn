@@ -1,0 +1,25 @@
+# A ball with a 2-limb center times a number a of the format: the center by mul_2_1, plus
+# U |cz| + V from the claims of mul_2_1.
+kernel:        ball_scale_2
+input:         cx = cx0 cx1
+input:         rx
+input:         a
+output:        cz = cz0 cz1
+output:        rz
+value:         cx*a
+requires:      normalized cx
+requires:      nonneg rx
+ensures:       normalized cz
+ensures:       encloses cz rz x*a x=cx,rx
+min_precision: 2
+source:        midpoint-radius scaling (Milestone 1 listing)
+status:        unverified
+cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
+
+(cz0, cz1) = mul_2_1(cx0, cx1, a)
+aa         = abs(a)
+t1         = rmul(aa, rx)
+mz         = abs_upper_2(cz0, cz1)
+d0         = rmul(const unit_computed(mul_2_1), mz)
+d          = radd(d0, const tiny_computed(mul_2_1))
+rz         = radd(t1, d)

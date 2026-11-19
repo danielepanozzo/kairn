@@ -1,0 +1,16 @@
+# a - y: a number of the format minus a 2-limb number, as -y + a through add_2_1.
+kernel:        sub_1_2
+input:         a
+input:         y = y0 y1
+output:        z = z0 z1
+value:         a-y
+requires:      normalized y
+ensures:       normalized z
+ensures:       error z R c=2 k=2 t=0
+min_precision: 3
+source:        add_2_1 (JMP17 Alg. 4) on -y and a
+status:        unverified
+
+n0       = neg(y0)
+n1       = neg(y1)
+(z0, z1) = add_2_1(n0, n1, a)

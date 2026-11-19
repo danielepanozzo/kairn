@@ -1,0 +1,17 @@
+# x < a: lt_2_2 with (a, 0) in place of y.
+kernel:        lt_2_1
+input:         x = x0 x1
+input:         a
+output:        mask m
+value:         x-a
+requires:      normalized x
+ensures:       predicate m lt x a
+source:        limbs compared in order (Milestone 1 listing)
+status:        unverified
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; the non-finite layer tests the operands
+
+h = lt(x0, a)
+e = eq(x0, a)
+l = lt(x1, 0)
+t = and(e, l)
+m = or(h, t)

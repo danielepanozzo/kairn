@@ -25,8 +25,8 @@ Print Assumptions add_2_1_correct.
 Definition add_2_2_audit : add_2_2_spec := add_2_2_correct.
 Print Assumptions add_2_2_correct.
 
-Definition mul_2_1_audit : mul_2_1_spec := mul_2_1_correct.
-Print Assumptions mul_2_1_correct.
-
 Definition mul_2_2_audit : mul_2_2_spec := mul_2_2_correct.
 Print Assumptions mul_2_2_correct.
+
+Definition mul_2_1_audit : mul_2_1_spec := mul_2_1_correct.
+Print Assumptions mul_2_1_correct.

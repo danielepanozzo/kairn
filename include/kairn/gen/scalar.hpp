@@ -5,12 +5,242 @@
 // IR"). Inputs are passed by value; outputs by reference, written once at the end. Values
 // keep the names of the kernel descriptions; a value inlined from a call is named
 // SITE_VALUE, where SITE is the first value the call defines.
-// Not constexpr: split, two_prod_dekker, mul_2_1, mul_2_2.
+// Not constexpr: rmul, ball_add_1, ball_mul_1, ball_scale_1, ball_sub_1, mul_1_1, split, two_prod_dekker, ball_add_2, mul_2_2, ball_mul_2, mul_2_1, ball_scale_2, ball_sub_2, mul_pow2_2.
 #pragma once
 
 #include "prelude.hpp"
 
 namespace kairn::gen {
+
+// add_1_1(a, b) -> s
+// one rounding to nearest. Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void add_1_1(double a, double b, double& s_out) noexcept {
+    const double s = a + b;
+    s_out = s;
+}
+KAIRN_GEN_FORCEINLINE constexpr void add_1_1(float a, float b, float& s_out) noexcept {
+    const float s = a + b;
+    s_out = s;
+}
+
+// rmul(a, b) -> r
+// one step up from the rounded product (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void rmul(double a, double b, double& r_out) noexcept {
+    const double p = fma_rn(a, b, 0.0);
+    const double r = next_up(p);
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE void rmul(float a, float b, float& r_out) noexcept {
+    const float p = fma_rn(a, b, 0.0f);
+    const float r = next_up(p);
+    r_out = r;
+}
+
+// radd(a, b) -> r
+// one step up from the rounded sum (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void radd(double a, double b, double& r_out) noexcept {
+    const double s = a + b;
+    const double r = next_up(s);
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void radd(float a, float b, float& r_out) noexcept {
+    const float s = a + b;
+    const float r = next_up(s);
+    r_out = r;
+}
+
+// ball_add_1(cx, rx, cy, ry) -> cz, rz
+// midpoint-radius sum (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void ball_add_1(double cx, double rx, double cy, double ry, double& cz_out, double& rz_out) noexcept {
+    const double cz = cx + cy;
+    const double mz = abs_bits(cz);
+    // (d) = rmul(const unit_computed(add_1_1), mz)
+    const double d_p = fma_rn(0x1p-53, mz, 0.0);
+    const double d = next_up(d_p);
+    // (r0) = radd(rx, ry)
+    const double r0_s = rx + ry;
+    const double r0 = next_up(r0_s);
+    // (rz) = radd(r0, d)
+    const double rz_s = r0 + d;
+    const double rz = next_up(rz_s);
+    cz_out = cz;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void ball_add_1(float cx, float rx, float cy, float ry, float& cz_out, float& rz_out) noexcept {
+    const float cz = cx + cy;
+    const float mz = abs_bits(cz);
+    // (d) = rmul(const unit_computed(add_1_1), mz)
+    const float d_p = fma_rn(0x1p-24f, mz, 0.0f);
+    const float d = next_up(d_p);
+    // (r0) = radd(rx, ry)
+    const float r0_s = rx + ry;
+    const float r0 = next_up(r0_s);
+    // (rz) = radd(r0, d)
+    const float rz_s = r0 + d;
+    const float rz = next_up(rz_s);
+    cz_out = cz;
+    rz_out = rz;
+}
+
+// ball_mul_1(cx, rx, cy, ry) -> cz, rz
+// midpoint-radius product (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void ball_mul_1(double cx, double rx, double cy, double ry, double& cz_out, double& rz_out) noexcept {
+    const double cz = fma_rn(cx, cy, 0.0);
+    const double ax = abs_bits(cx);
+    const double ay = abs_bits(cy);
+    // (t1) = rmul(ax, ry)
+    const double t1_p = fma_rn(ax, ry, 0.0);
+    const double t1 = next_up(t1_p);
+    // (t2) = rmul(ay, rx)
+    const double t2_p = fma_rn(ay, rx, 0.0);
+    const double t2 = next_up(t2_p);
+    // (t3) = rmul(rx, ry)
+    const double t3_p = fma_rn(rx, ry, 0.0);
+    const double t3 = next_up(t3_p);
+    // (s1) = radd(t1, t2)
+    const double s1_s = t1 + t2;
+    const double s1 = next_up(s1_s);
+    // (s2) = radd(s1, t3)
+    const double s2_s = s1 + t3;
+    const double s2 = next_up(s2_s);
+    const double mz = abs_bits(cz);
+    // (d0) = rmul(const unit_computed(mul_1_1), mz)
+    const double d0_p = fma_rn(0x1p-53, mz, 0.0);
+    const double d0 = next_up(d0_p);
+    // (d) = radd(d0, const tiny_computed(mul_1_1))
+    const double d_s = d0 + 0x1p-1074;
+    const double d = next_up(d_s);
+    // (rz) = radd(s2, d)
+    const double rz_s = s2 + d;
+    const double rz = next_up(rz_s);
+    cz_out = cz;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void ball_mul_1(float cx, float rx, float cy, float ry, float& cz_out, float& rz_out) noexcept {
+    const float cz = fma_rn(cx, cy, 0.0f);
+    const float ax = abs_bits(cx);
+    const float ay = abs_bits(cy);
+    // (t1) = rmul(ax, ry)
+    const float t1_p = fma_rn(ax, ry, 0.0f);
+    const float t1 = next_up(t1_p);
+    // (t2) = rmul(ay, rx)
+    const float t2_p = fma_rn(ay, rx, 0.0f);
+    const float t2 = next_up(t2_p);
+    // (t3) = rmul(rx, ry)
+    const float t3_p = fma_rn(rx, ry, 0.0f);
+    const float t3 = next_up(t3_p);
+    // (s1) = radd(t1, t2)
+    const float s1_s = t1 + t2;
+    const float s1 = next_up(s1_s);
+    // (s2) = radd(s1, t3)
+    const float s2_s = s1 + t3;
+    const float s2 = next_up(s2_s);
+    const float mz = abs_bits(cz);
+    // (d0) = rmul(const unit_computed(mul_1_1), mz)
+    const float d0_p = fma_rn(0x1p-24f, mz, 0.0f);
+    const float d0 = next_up(d0_p);
+    // (d) = radd(d0, const tiny_computed(mul_1_1))
+    const float d_s = d0 + 0x1p-149f;
+    const float d = next_up(d_s);
+    // (rz) = radd(s2, d)
+    const float rz_s = s2 + d;
+    const float rz = next_up(rz_s);
+    cz_out = cz;
+    rz_out = rz;
+}
+
+// ball_neg_1(cx, rx) -> cz, rz
+// midpoint-radius negation (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void ball_neg_1(double cx, double rx, double& cz_out, double& rz_out) noexcept {
+    const double cz = -cx;
+    const double rz = rx;
+    cz_out = cz;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE constexpr void ball_neg_1(float cx, float rx, float& cz_out, float& rz_out) noexcept {
+    const float cz = -cx;
+    const float rz = rx;
+    cz_out = cz;
+    rz_out = rz;
+}
+
+// ball_scale_1(cx, rx, a) -> cz, rz
+// midpoint-radius scaling (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void ball_scale_1(double cx, double rx, double a, double& cz_out, double& rz_out) noexcept {
+    const double cz = fma_rn(cx, a, 0.0);
+    const double aa = abs_bits(a);
+    // (t1) = rmul(aa, rx)
+    const double t1_p = fma_rn(aa, rx, 0.0);
+    const double t1 = next_up(t1_p);
+    const double mz = abs_bits(cz);
+    // (d0) = rmul(const unit_computed(mul_1_1), mz)
+    const double d0_p = fma_rn(0x1p-53, mz, 0.0);
+    const double d0 = next_up(d0_p);
+    // (d) = radd(d0, const tiny_computed(mul_1_1))
+    const double d_s = d0 + 0x1p-1074;
+    const double d = next_up(d_s);
+    // (rz) = radd(t1, d)
+    const double rz_s = t1 + d;
+    const double rz = next_up(rz_s);
+    cz_out = cz;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void ball_scale_1(float cx, float rx, float a, float& cz_out, float& rz_out) noexcept {
+    const float cz = fma_rn(cx, a, 0.0f);
+    const float aa = abs_bits(a);
+    // (t1) = rmul(aa, rx)
+    const float t1_p = fma_rn(aa, rx, 0.0f);
+    const float t1 = next_up(t1_p);
+    const float mz = abs_bits(cz);
+    // (d0) = rmul(const unit_computed(mul_1_1), mz)
+    const float d0_p = fma_rn(0x1p-24f, mz, 0.0f);
+    const float d0 = next_up(d0_p);
+    // (d) = radd(d0, const tiny_computed(mul_1_1))
+    const float d_s = d0 + 0x1p-149f;
+    const float d = next_up(d_s);
+    // (rz) = radd(t1, d)
+    const float rz_s = t1 + d;
+    const float rz = next_up(rz_s);
+    cz_out = cz;
+    rz_out = rz;
+}
+
+// ball_sub_1(cx, rx, cy, ry) -> cz, rz
+// midpoint-radius difference (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void ball_sub_1(double cx, double rx, double cy, double ry, double& cz_out, double& rz_out) noexcept {
+    const double n = -cy;
+    // (cz, rz) = ball_add_1(cx, rx, n, ry)
+    const double cz = cx + n;
+    const double cz_mz = abs_bits(cz);
+    // (cz_d) = rmul(const unit_computed(add_1_1), cz_mz)
+    const double cz_d_p = fma_rn(0x1p-53, cz_mz, 0.0);
+    const double cz_d = next_up(cz_d_p);
+    // (cz_r0) = radd(rx, ry)
+    const double cz_r0_s = rx + ry;
+    const double cz_r0 = next_up(cz_r0_s);
+    // (rz) = radd(cz_r0, cz_d)
+    const double rz_s = cz_r0 + cz_d;
+    const double rz = next_up(rz_s);
+    cz_out = cz;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void ball_sub_1(float cx, float rx, float cy, float ry, float& cz_out, float& rz_out) noexcept {
+    const float n = -cy;
+    // (cz, rz) = ball_add_1(cx, rx, n, ry)
+    const float cz = cx + n;
+    const float cz_mz = abs_bits(cz);
+    // (cz_d) = rmul(const unit_computed(add_1_1), cz_mz)
+    const float cz_d_p = fma_rn(0x1p-24f, cz_mz, 0.0f);
+    const float cz_d = next_up(cz_d_p);
+    // (cz_r0) = radd(rx, ry)
+    const float cz_r0_s = rx + ry;
+    const float cz_r0 = next_up(cz_r0_s);
+    // (rz) = radd(cz_r0, cz_d)
+    const float rz_s = cz_r0 + cz_d;
+    const float rz = next_up(rz_s);
+    cz_out = cz;
+    rz_out = rz;
+}
 
 // fast_two_sum(a, b) -> r = (s, e)
 // Fast2Sum (Dekker 1971). Status: proved; constexpr.
@@ -27,6 +257,17 @@ KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum(float a, float b, float& s_out
     const float e = b - z;
     s_out = s;
     e_out = e;
+}
+
+// mul_1_1(a, b) -> p
+// one rounding to nearest. Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_1_1(double a, double b, double& p_out) noexcept {
+    const double p = fma_rn(a, b, 0.0);
+    p_out = p;
+}
+KAIRN_GEN_FORCEINLINE void mul_1_1(float a, float b, float& p_out) noexcept {
+    const float p = fma_rn(a, b, 0.0f);
+    p_out = p;
 }
 
 // split(a) -> r = (ah, al)
@@ -183,6 +424,71 @@ KAIRN_GEN_FORCEINLINE constexpr void two_sum(float a, float b, float& s_out, flo
     const float e = t1 + t2;
     s_out = s;
     e_out = e;
+}
+
+// abs_2(x = (x0, x1)) -> z = (z0, z1)
+// the sign of x0 (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void abs_2(double x0, double x1, double& z0_out, double& z1_out) noexcept {
+    const bool m = x0 < 0.0;
+    const double n0 = -x0;
+    const double n1 = -x1;
+    const double z0 = m ? n0 : x0;
+    const double z1 = m ? n1 : x1;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void abs_2(float x0, float x1, float& z0_out, float& z1_out) noexcept {
+    const bool m = x0 < 0.0f;
+    const float n0 = -x0;
+    const float n1 = -x1;
+    const float z0 = m ? n0 : x0;
+    const float z1 = m ? n1 : x1;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// to_up_2(x = (x0, x1)) -> t
+// the sign of x1 (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void to_up_2(double x0, double x1, double& t_out) noexcept {
+    const bool m = 0.0 < x1;
+    const double s = next_up(x0);
+    const double t = m ? s : x0;
+    t_out = t;
+}
+KAIRN_GEN_FORCEINLINE constexpr void to_up_2(float x0, float x1, float& t_out) noexcept {
+    const bool m = 0.0f < x1;
+    const float s = next_up(x0);
+    const float t = m ? s : x0;
+    t_out = t;
+}
+
+// abs_upper_2(x = (x0, x1)) -> t
+// abs_2, then to_up_2 (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void abs_upper_2(double x0, double x1, double& t_out) noexcept {
+    // (a0, a1) = abs_2(x0, x1)
+    const bool a0_m = x0 < 0.0;
+    const double a0_n0 = -x0;
+    const double a0_n1 = -x1;
+    const double a0 = a0_m ? a0_n0 : x0;
+    const double a1 = a0_m ? a0_n1 : x1;
+    // (t) = to_up_2(a0, a1)
+    const bool t_m = 0.0 < a1;
+    const double t_s = next_up(a0);
+    const double t = t_m ? t_s : a0;
+    t_out = t;
+}
+KAIRN_GEN_FORCEINLINE constexpr void abs_upper_2(float x0, float x1, float& t_out) noexcept {
+    // (a0, a1) = abs_2(x0, x1)
+    const bool a0_m = x0 < 0.0f;
+    const float a0_n0 = -x0;
+    const float a0_n1 = -x1;
+    const float a0 = a0_m ? a0_n0 : x0;
+    const float a1 = a0_m ? a0_n1 : x1;
+    // (t) = to_up_2(a0, a1)
+    const bool t_m = 0.0f < a1;
+    const float t_s = next_up(a0);
+    const float t = t_m ? t_s : a0;
+    t_out = t;
 }
 
 // add_2_1(x = (x0, x1), a) -> z = (z0, z1)
@@ -359,31 +665,107 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_ts(float x0, float x1, float y
     z1_out = z1;
 }
 
-// mul_2_1(x = (x0, x1), a) -> z = (z0, z1)
-// JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void mul_2_1(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
-    // (ch, cl1) = two_prod(x0, a)
-    const double ch = fma_rn(x0, a, 0.0);
-    const double cl1 = fma_rn(x0, a, -ch);
-    const double cl3 = fma_rn(x1, a, cl1);
-    // (z0, z1) = fast_two_sum(ch, cl3)
-    const double z0 = ch + cl3;
-    const double z0_z = z0 - ch;
-    const double z1 = cl3 - z0_z;
-    z0_out = z0;
-    z1_out = z1;
+// ball_add_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
+// midpoint-radius sum (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void ball_add_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
+    // (cz0, cz1) = add_2_2(cx0, cx1, cy0, cy1)
+    // (cz0_sh, cz0_sl) = two_sum(cx0, cy0)
+    const double cz0_sh = cx0 + cy0;
+    const double cz0_sh_bb = cz0_sh - cx0;
+    const double cz0_sh_t0 = cz0_sh - cz0_sh_bb;
+    const double cz0_sh_t1 = cx0 - cz0_sh_t0;
+    const double cz0_sh_t2 = cy0 - cz0_sh_bb;
+    const double cz0_sl = cz0_sh_t1 + cz0_sh_t2;
+    // (cz0_th, cz0_tl) = two_sum(cx1, cy1)
+    const double cz0_th = cx1 + cy1;
+    const double cz0_th_bb = cz0_th - cx1;
+    const double cz0_th_t0 = cz0_th - cz0_th_bb;
+    const double cz0_th_t1 = cx1 - cz0_th_t0;
+    const double cz0_th_t2 = cy1 - cz0_th_bb;
+    const double cz0_tl = cz0_th_t1 + cz0_th_t2;
+    const double cz0_c = cz0_sl + cz0_th;
+    // (cz0_vh, cz0_vl) = fast_two_sum(cz0_sh, cz0_c)
+    const double cz0_vh = cz0_sh + cz0_c;
+    const double cz0_vh_z = cz0_vh - cz0_sh;
+    const double cz0_vl = cz0_c - cz0_vh_z;
+    const double cz0_w = cz0_tl + cz0_vl;
+    // (cz0, cz1) = fast_two_sum(cz0_vh, cz0_w)
+    const double cz0 = cz0_vh + cz0_w;
+    const double cz0_z = cz0 - cz0_vh;
+    const double cz1 = cz0_w - cz0_z;
+    // (mz) = abs_upper_2(cz0, cz1)
+    // (mz_a0, mz_a1) = abs_2(cz0, cz1)
+    const bool mz_a0_m = cz0 < 0.0;
+    const double mz_a0_n0 = -cz0;
+    const double mz_a0_n1 = -cz1;
+    const double mz_a0 = mz_a0_m ? mz_a0_n0 : cz0;
+    const double mz_a1 = mz_a0_m ? mz_a0_n1 : cz1;
+    // (mz) = to_up_2(mz_a0, mz_a1)
+    const bool mz_m = 0.0 < mz_a1;
+    const double mz_s = next_up(mz_a0);
+    const double mz = mz_m ? mz_s : mz_a0;
+    // (d) = rmul(const unit_computed(add_2_2), mz)
+    const double d_p = fma_rn(0x1.8000000000004p-105, mz, 0.0);
+    const double d = next_up(d_p);
+    // (r0) = radd(rx, ry)
+    const double r0_s = rx + ry;
+    const double r0 = next_up(r0_s);
+    // (rz) = radd(r0, d)
+    const double rz_s = r0 + d;
+    const double rz = next_up(rz_s);
+    cz0_out = cz0;
+    cz1_out = cz1;
+    rz_out = rz;
 }
-KAIRN_GEN_FORCEINLINE void mul_2_1(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
-    // (ch, cl1) = two_prod(x0, a)
-    const float ch = fma_rn(x0, a, 0.0f);
-    const float cl1 = fma_rn(x0, a, -ch);
-    const float cl3 = fma_rn(x1, a, cl1);
-    // (z0, z1) = fast_two_sum(ch, cl3)
-    const float z0 = ch + cl3;
-    const float z0_z = z0 - ch;
-    const float z1 = cl3 - z0_z;
-    z0_out = z0;
-    z1_out = z1;
+KAIRN_GEN_FORCEINLINE void ball_add_2(float cx0, float cx1, float rx, float cy0, float cy1, float ry, float& cz0_out, float& cz1_out, float& rz_out) noexcept {
+    // (cz0, cz1) = add_2_2(cx0, cx1, cy0, cy1)
+    // (cz0_sh, cz0_sl) = two_sum(cx0, cy0)
+    const float cz0_sh = cx0 + cy0;
+    const float cz0_sh_bb = cz0_sh - cx0;
+    const float cz0_sh_t0 = cz0_sh - cz0_sh_bb;
+    const float cz0_sh_t1 = cx0 - cz0_sh_t0;
+    const float cz0_sh_t2 = cy0 - cz0_sh_bb;
+    const float cz0_sl = cz0_sh_t1 + cz0_sh_t2;
+    // (cz0_th, cz0_tl) = two_sum(cx1, cy1)
+    const float cz0_th = cx1 + cy1;
+    const float cz0_th_bb = cz0_th - cx1;
+    const float cz0_th_t0 = cz0_th - cz0_th_bb;
+    const float cz0_th_t1 = cx1 - cz0_th_t0;
+    const float cz0_th_t2 = cy1 - cz0_th_bb;
+    const float cz0_tl = cz0_th_t1 + cz0_th_t2;
+    const float cz0_c = cz0_sl + cz0_th;
+    // (cz0_vh, cz0_vl) = fast_two_sum(cz0_sh, cz0_c)
+    const float cz0_vh = cz0_sh + cz0_c;
+    const float cz0_vh_z = cz0_vh - cz0_sh;
+    const float cz0_vl = cz0_c - cz0_vh_z;
+    const float cz0_w = cz0_tl + cz0_vl;
+    // (cz0, cz1) = fast_two_sum(cz0_vh, cz0_w)
+    const float cz0 = cz0_vh + cz0_w;
+    const float cz0_z = cz0 - cz0_vh;
+    const float cz1 = cz0_w - cz0_z;
+    // (mz) = abs_upper_2(cz0, cz1)
+    // (mz_a0, mz_a1) = abs_2(cz0, cz1)
+    const bool mz_a0_m = cz0 < 0.0f;
+    const float mz_a0_n0 = -cz0;
+    const float mz_a0_n1 = -cz1;
+    const float mz_a0 = mz_a0_m ? mz_a0_n0 : cz0;
+    const float mz_a1 = mz_a0_m ? mz_a0_n1 : cz1;
+    // (mz) = to_up_2(mz_a0, mz_a1)
+    const bool mz_m = 0.0f < mz_a1;
+    const float mz_s = next_up(mz_a0);
+    const float mz = mz_m ? mz_s : mz_a0;
+    // (d) = rmul(const unit_computed(add_2_2), mz)
+    const float d_p = fma_rn(0x1.800008p-47f, mz, 0.0f);
+    const float d = next_up(d_p);
+    // (r0) = radd(rx, ry)
+    const float r0_s = rx + ry;
+    const float r0 = next_up(r0_s);
+    // (rz) = radd(r0, d)
+    const float rz_s = r0 + d;
+    const float rz = next_up(rz_s);
+    cz0_out = cz0;
+    cz1_out = cz1;
+    rz_out = rz;
 }
 
 // mul_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
@@ -417,6 +799,748 @@ KAIRN_GEN_FORCEINLINE void mul_2_2(float x0, float x1, float y0, float y1, float
     const float z1 = cl3 - z0_z;
     z0_out = z0;
     z1_out = z1;
+}
+
+// ball_mul_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
+// midpoint-radius product (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void ball_mul_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
+    // (cz0, cz1) = mul_2_2(cx0, cx1, cy0, cy1)
+    // (cz0_ch, cz0_cl1) = two_prod(cx0, cy0)
+    const double cz0_ch = fma_rn(cx0, cy0, 0.0);
+    const double cz0_cl1 = fma_rn(cx0, cy0, -cz0_ch);
+    const double cz0_tl0 = fma_rn(cx1, cy1, 0.0);
+    const double cz0_tl1 = fma_rn(cx0, cy1, cz0_tl0);
+    const double cz0_cl2 = fma_rn(cx1, cy0, cz0_tl1);
+    const double cz0_cl3 = cz0_cl1 + cz0_cl2;
+    // (cz0, cz1) = fast_two_sum(cz0_ch, cz0_cl3)
+    const double cz0 = cz0_ch + cz0_cl3;
+    const double cz0_z = cz0 - cz0_ch;
+    const double cz1 = cz0_cl3 - cz0_z;
+    // (ax) = abs_upper_2(cx0, cx1)
+    // (ax_a0, ax_a1) = abs_2(cx0, cx1)
+    const bool ax_a0_m = cx0 < 0.0;
+    const double ax_a0_n0 = -cx0;
+    const double ax_a0_n1 = -cx1;
+    const double ax_a0 = ax_a0_m ? ax_a0_n0 : cx0;
+    const double ax_a1 = ax_a0_m ? ax_a0_n1 : cx1;
+    // (ax) = to_up_2(ax_a0, ax_a1)
+    const bool ax_m = 0.0 < ax_a1;
+    const double ax_s = next_up(ax_a0);
+    const double ax = ax_m ? ax_s : ax_a0;
+    // (ay) = abs_upper_2(cy0, cy1)
+    // (ay_a0, ay_a1) = abs_2(cy0, cy1)
+    const bool ay_a0_m = cy0 < 0.0;
+    const double ay_a0_n0 = -cy0;
+    const double ay_a0_n1 = -cy1;
+    const double ay_a0 = ay_a0_m ? ay_a0_n0 : cy0;
+    const double ay_a1 = ay_a0_m ? ay_a0_n1 : cy1;
+    // (ay) = to_up_2(ay_a0, ay_a1)
+    const bool ay_m = 0.0 < ay_a1;
+    const double ay_s = next_up(ay_a0);
+    const double ay = ay_m ? ay_s : ay_a0;
+    // (t1) = rmul(ax, ry)
+    const double t1_p = fma_rn(ax, ry, 0.0);
+    const double t1 = next_up(t1_p);
+    // (t2) = rmul(ay, rx)
+    const double t2_p = fma_rn(ay, rx, 0.0);
+    const double t2 = next_up(t2_p);
+    // (t3) = rmul(rx, ry)
+    const double t3_p = fma_rn(rx, ry, 0.0);
+    const double t3 = next_up(t3_p);
+    // (s1) = radd(t1, t2)
+    const double s1_s = t1 + t2;
+    const double s1 = next_up(s1_s);
+    // (s2) = radd(s1, t3)
+    const double s2_s = s1 + t3;
+    const double s2 = next_up(s2_s);
+    // (mz) = abs_upper_2(cz0, cz1)
+    // (mz_a0, mz_a1) = abs_2(cz0, cz1)
+    const bool mz_a0_m = cz0 < 0.0;
+    const double mz_a0_n0 = -cz0;
+    const double mz_a0_n1 = -cz1;
+    const double mz_a0 = mz_a0_m ? mz_a0_n0 : cz0;
+    const double mz_a1 = mz_a0_m ? mz_a0_n1 : cz1;
+    // (mz) = to_up_2(mz_a0, mz_a1)
+    const bool mz_m = 0.0 < mz_a1;
+    const double mz_s = next_up(mz_a0);
+    const double mz = mz_m ? mz_s : mz_a0;
+    // (d0) = rmul(const unit_computed(mul_2_2), mz)
+    const double d0_p = fma_rn(0x1.0000000000001p-104, mz, 0.0);
+    const double d0 = next_up(d0_p);
+    // (d) = radd(d0, const tiny_computed(mul_2_2))
+    const double d_s = d0 + 0x1p-1073;
+    const double d = next_up(d_s);
+    // (rz) = radd(s2, d)
+    const double rz_s = s2 + d;
+    const double rz = next_up(rz_s);
+    cz0_out = cz0;
+    cz1_out = cz1;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void ball_mul_2(float cx0, float cx1, float rx, float cy0, float cy1, float ry, float& cz0_out, float& cz1_out, float& rz_out) noexcept {
+    // (cz0, cz1) = mul_2_2(cx0, cx1, cy0, cy1)
+    // (cz0_ch, cz0_cl1) = two_prod(cx0, cy0)
+    const float cz0_ch = fma_rn(cx0, cy0, 0.0f);
+    const float cz0_cl1 = fma_rn(cx0, cy0, -cz0_ch);
+    const float cz0_tl0 = fma_rn(cx1, cy1, 0.0f);
+    const float cz0_tl1 = fma_rn(cx0, cy1, cz0_tl0);
+    const float cz0_cl2 = fma_rn(cx1, cy0, cz0_tl1);
+    const float cz0_cl3 = cz0_cl1 + cz0_cl2;
+    // (cz0, cz1) = fast_two_sum(cz0_ch, cz0_cl3)
+    const float cz0 = cz0_ch + cz0_cl3;
+    const float cz0_z = cz0 - cz0_ch;
+    const float cz1 = cz0_cl3 - cz0_z;
+    // (ax) = abs_upper_2(cx0, cx1)
+    // (ax_a0, ax_a1) = abs_2(cx0, cx1)
+    const bool ax_a0_m = cx0 < 0.0f;
+    const float ax_a0_n0 = -cx0;
+    const float ax_a0_n1 = -cx1;
+    const float ax_a0 = ax_a0_m ? ax_a0_n0 : cx0;
+    const float ax_a1 = ax_a0_m ? ax_a0_n1 : cx1;
+    // (ax) = to_up_2(ax_a0, ax_a1)
+    const bool ax_m = 0.0f < ax_a1;
+    const float ax_s = next_up(ax_a0);
+    const float ax = ax_m ? ax_s : ax_a0;
+    // (ay) = abs_upper_2(cy0, cy1)
+    // (ay_a0, ay_a1) = abs_2(cy0, cy1)
+    const bool ay_a0_m = cy0 < 0.0f;
+    const float ay_a0_n0 = -cy0;
+    const float ay_a0_n1 = -cy1;
+    const float ay_a0 = ay_a0_m ? ay_a0_n0 : cy0;
+    const float ay_a1 = ay_a0_m ? ay_a0_n1 : cy1;
+    // (ay) = to_up_2(ay_a0, ay_a1)
+    const bool ay_m = 0.0f < ay_a1;
+    const float ay_s = next_up(ay_a0);
+    const float ay = ay_m ? ay_s : ay_a0;
+    // (t1) = rmul(ax, ry)
+    const float t1_p = fma_rn(ax, ry, 0.0f);
+    const float t1 = next_up(t1_p);
+    // (t2) = rmul(ay, rx)
+    const float t2_p = fma_rn(ay, rx, 0.0f);
+    const float t2 = next_up(t2_p);
+    // (t3) = rmul(rx, ry)
+    const float t3_p = fma_rn(rx, ry, 0.0f);
+    const float t3 = next_up(t3_p);
+    // (s1) = radd(t1, t2)
+    const float s1_s = t1 + t2;
+    const float s1 = next_up(s1_s);
+    // (s2) = radd(s1, t3)
+    const float s2_s = s1 + t3;
+    const float s2 = next_up(s2_s);
+    // (mz) = abs_upper_2(cz0, cz1)
+    // (mz_a0, mz_a1) = abs_2(cz0, cz1)
+    const bool mz_a0_m = cz0 < 0.0f;
+    const float mz_a0_n0 = -cz0;
+    const float mz_a0_n1 = -cz1;
+    const float mz_a0 = mz_a0_m ? mz_a0_n0 : cz0;
+    const float mz_a1 = mz_a0_m ? mz_a0_n1 : cz1;
+    // (mz) = to_up_2(mz_a0, mz_a1)
+    const bool mz_m = 0.0f < mz_a1;
+    const float mz_s = next_up(mz_a0);
+    const float mz = mz_m ? mz_s : mz_a0;
+    // (d0) = rmul(const unit_computed(mul_2_2), mz)
+    const float d0_p = fma_rn(0x1.000002p-46f, mz, 0.0f);
+    const float d0 = next_up(d0_p);
+    // (d) = radd(d0, const tiny_computed(mul_2_2))
+    const float d_s = d0 + 0x1p-148f;
+    const float d = next_up(d_s);
+    // (rz) = radd(s2, d)
+    const float rz_s = s2 + d;
+    const float rz = next_up(rz_s);
+    cz0_out = cz0;
+    cz1_out = cz1;
+    rz_out = rz;
+}
+
+// neg_2(x = (x0, x1)) -> z = (z0, z1)
+// limb by limb (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void neg_2(double x0, double x1, double& z0_out, double& z1_out) noexcept {
+    const double z0 = -x0;
+    const double z1 = -x1;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void neg_2(float x0, float x1, float& z0_out, float& z1_out) noexcept {
+    const float z0 = -x0;
+    const float z1 = -x1;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// ball_neg_2(cx = (cx0, cx1), rx) -> cz = (cz0, cz1), rz
+// midpoint-radius negation (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void ball_neg_2(double cx0, double cx1, double rx, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
+    // (cz0, cz1) = neg_2(cx0, cx1)
+    const double cz0 = -cx0;
+    const double cz1 = -cx1;
+    const double rz = rx;
+    cz0_out = cz0;
+    cz1_out = cz1;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE constexpr void ball_neg_2(float cx0, float cx1, float rx, float& cz0_out, float& cz1_out, float& rz_out) noexcept {
+    // (cz0, cz1) = neg_2(cx0, cx1)
+    const float cz0 = -cx0;
+    const float cz1 = -cx1;
+    const float rz = rx;
+    cz0_out = cz0;
+    cz1_out = cz1;
+    rz_out = rz;
+}
+
+// mul_2_1(x = (x0, x1), a) -> z = (z0, z1)
+// JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_2_1(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
+    // (ch, cl1) = two_prod(x0, a)
+    const double ch = fma_rn(x0, a, 0.0);
+    const double cl1 = fma_rn(x0, a, -ch);
+    const double cl3 = fma_rn(x1, a, cl1);
+    // (z0, z1) = fast_two_sum(ch, cl3)
+    const double z0 = ch + cl3;
+    const double z0_z = z0 - ch;
+    const double z1 = cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void mul_2_1(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
+    // (ch, cl1) = two_prod(x0, a)
+    const float ch = fma_rn(x0, a, 0.0f);
+    const float cl1 = fma_rn(x0, a, -ch);
+    const float cl3 = fma_rn(x1, a, cl1);
+    // (z0, z1) = fast_two_sum(ch, cl3)
+    const float z0 = ch + cl3;
+    const float z0_z = z0 - ch;
+    const float z1 = cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// ball_scale_2(cx = (cx0, cx1), rx, a) -> cz = (cz0, cz1), rz
+// midpoint-radius scaling (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void ball_scale_2(double cx0, double cx1, double rx, double a, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
+    // (cz0, cz1) = mul_2_1(cx0, cx1, a)
+    // (cz0_ch, cz0_cl1) = two_prod(cx0, a)
+    const double cz0_ch = fma_rn(cx0, a, 0.0);
+    const double cz0_cl1 = fma_rn(cx0, a, -cz0_ch);
+    const double cz0_cl3 = fma_rn(cx1, a, cz0_cl1);
+    // (cz0, cz1) = fast_two_sum(cz0_ch, cz0_cl3)
+    const double cz0 = cz0_ch + cz0_cl3;
+    const double cz0_z = cz0 - cz0_ch;
+    const double cz1 = cz0_cl3 - cz0_z;
+    const double aa = abs_bits(a);
+    // (t1) = rmul(aa, rx)
+    const double t1_p = fma_rn(aa, rx, 0.0);
+    const double t1 = next_up(t1_p);
+    // (mz) = abs_upper_2(cz0, cz1)
+    // (mz_a0, mz_a1) = abs_2(cz0, cz1)
+    const bool mz_a0_m = cz0 < 0.0;
+    const double mz_a0_n0 = -cz0;
+    const double mz_a0_n1 = -cz1;
+    const double mz_a0 = mz_a0_m ? mz_a0_n0 : cz0;
+    const double mz_a1 = mz_a0_m ? mz_a0_n1 : cz1;
+    // (mz) = to_up_2(mz_a0, mz_a1)
+    const bool mz_m = 0.0 < mz_a1;
+    const double mz_s = next_up(mz_a0);
+    const double mz = mz_m ? mz_s : mz_a0;
+    // (d0) = rmul(const unit_computed(mul_2_1), mz)
+    const double d0_p = fma_rn(0x1.0000000000001p-105, mz, 0.0);
+    const double d0 = next_up(d0_p);
+    // (d) = radd(d0, const tiny_computed(mul_2_1))
+    const double d_s = d0 + 0x1p-1073;
+    const double d = next_up(d_s);
+    // (rz) = radd(t1, d)
+    const double rz_s = t1 + d;
+    const double rz = next_up(rz_s);
+    cz0_out = cz0;
+    cz1_out = cz1;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void ball_scale_2(float cx0, float cx1, float rx, float a, float& cz0_out, float& cz1_out, float& rz_out) noexcept {
+    // (cz0, cz1) = mul_2_1(cx0, cx1, a)
+    // (cz0_ch, cz0_cl1) = two_prod(cx0, a)
+    const float cz0_ch = fma_rn(cx0, a, 0.0f);
+    const float cz0_cl1 = fma_rn(cx0, a, -cz0_ch);
+    const float cz0_cl3 = fma_rn(cx1, a, cz0_cl1);
+    // (cz0, cz1) = fast_two_sum(cz0_ch, cz0_cl3)
+    const float cz0 = cz0_ch + cz0_cl3;
+    const float cz0_z = cz0 - cz0_ch;
+    const float cz1 = cz0_cl3 - cz0_z;
+    const float aa = abs_bits(a);
+    // (t1) = rmul(aa, rx)
+    const float t1_p = fma_rn(aa, rx, 0.0f);
+    const float t1 = next_up(t1_p);
+    // (mz) = abs_upper_2(cz0, cz1)
+    // (mz_a0, mz_a1) = abs_2(cz0, cz1)
+    const bool mz_a0_m = cz0 < 0.0f;
+    const float mz_a0_n0 = -cz0;
+    const float mz_a0_n1 = -cz1;
+    const float mz_a0 = mz_a0_m ? mz_a0_n0 : cz0;
+    const float mz_a1 = mz_a0_m ? mz_a0_n1 : cz1;
+    // (mz) = to_up_2(mz_a0, mz_a1)
+    const bool mz_m = 0.0f < mz_a1;
+    const float mz_s = next_up(mz_a0);
+    const float mz = mz_m ? mz_s : mz_a0;
+    // (d0) = rmul(const unit_computed(mul_2_1), mz)
+    const float d0_p = fma_rn(0x1.000002p-47f, mz, 0.0f);
+    const float d0 = next_up(d0_p);
+    // (d) = radd(d0, const tiny_computed(mul_2_1))
+    const float d_s = d0 + 0x1p-148f;
+    const float d = next_up(d_s);
+    // (rz) = radd(t1, d)
+    const float rz_s = t1 + d;
+    const float rz = next_up(rz_s);
+    cz0_out = cz0;
+    cz1_out = cz1;
+    rz_out = rz;
+}
+
+// ball_sub_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
+// midpoint-radius difference (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void ball_sub_2(double cx0, double cx1, double rx, double cy0, double cy1, double ry, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
+    // (n0, n1) = neg_2(cy0, cy1)
+    const double n0 = -cy0;
+    const double n1 = -cy1;
+    // (cz0, cz1, rz) = ball_add_2(cx0, cx1, rx, n0, n1, ry)
+    // (cz0, cz1) = add_2_2(cx0, cx1, n0, n1)
+    // (cz0_sh, cz0_sl) = two_sum(cx0, n0)
+    const double cz0_sh = cx0 + n0;
+    const double cz0_sh_bb = cz0_sh - cx0;
+    const double cz0_sh_t0 = cz0_sh - cz0_sh_bb;
+    const double cz0_sh_t1 = cx0 - cz0_sh_t0;
+    const double cz0_sh_t2 = n0 - cz0_sh_bb;
+    const double cz0_sl = cz0_sh_t1 + cz0_sh_t2;
+    // (cz0_th, cz0_tl) = two_sum(cx1, n1)
+    const double cz0_th = cx1 + n1;
+    const double cz0_th_bb = cz0_th - cx1;
+    const double cz0_th_t0 = cz0_th - cz0_th_bb;
+    const double cz0_th_t1 = cx1 - cz0_th_t0;
+    const double cz0_th_t2 = n1 - cz0_th_bb;
+    const double cz0_tl = cz0_th_t1 + cz0_th_t2;
+    const double cz0_c = cz0_sl + cz0_th;
+    // (cz0_vh, cz0_vl) = fast_two_sum(cz0_sh, cz0_c)
+    const double cz0_vh = cz0_sh + cz0_c;
+    const double cz0_vh_z = cz0_vh - cz0_sh;
+    const double cz0_vl = cz0_c - cz0_vh_z;
+    const double cz0_w = cz0_tl + cz0_vl;
+    // (cz0, cz1) = fast_two_sum(cz0_vh, cz0_w)
+    const double cz0 = cz0_vh + cz0_w;
+    const double cz0_z = cz0 - cz0_vh;
+    const double cz1 = cz0_w - cz0_z;
+    // (cz0_mz) = abs_upper_2(cz0, cz1)
+    // (cz0_mz_a0, cz0_mz_a1) = abs_2(cz0, cz1)
+    const bool cz0_mz_a0_m = cz0 < 0.0;
+    const double cz0_mz_a0_n0 = -cz0;
+    const double cz0_mz_a0_n1 = -cz1;
+    const double cz0_mz_a0 = cz0_mz_a0_m ? cz0_mz_a0_n0 : cz0;
+    const double cz0_mz_a1 = cz0_mz_a0_m ? cz0_mz_a0_n1 : cz1;
+    // (cz0_mz) = to_up_2(cz0_mz_a0, cz0_mz_a1)
+    const bool cz0_mz_m = 0.0 < cz0_mz_a1;
+    const double cz0_mz_s = next_up(cz0_mz_a0);
+    const double cz0_mz = cz0_mz_m ? cz0_mz_s : cz0_mz_a0;
+    // (cz0_d) = rmul(const unit_computed(add_2_2), cz0_mz)
+    const double cz0_d_p = fma_rn(0x1.8000000000004p-105, cz0_mz, 0.0);
+    const double cz0_d = next_up(cz0_d_p);
+    // (cz0_r0) = radd(rx, ry)
+    const double cz0_r0_s = rx + ry;
+    const double cz0_r0 = next_up(cz0_r0_s);
+    // (rz) = radd(cz0_r0, cz0_d)
+    const double rz_s = cz0_r0 + cz0_d;
+    const double rz = next_up(rz_s);
+    cz0_out = cz0;
+    cz1_out = cz1;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void ball_sub_2(float cx0, float cx1, float rx, float cy0, float cy1, float ry, float& cz0_out, float& cz1_out, float& rz_out) noexcept {
+    // (n0, n1) = neg_2(cy0, cy1)
+    const float n0 = -cy0;
+    const float n1 = -cy1;
+    // (cz0, cz1, rz) = ball_add_2(cx0, cx1, rx, n0, n1, ry)
+    // (cz0, cz1) = add_2_2(cx0, cx1, n0, n1)
+    // (cz0_sh, cz0_sl) = two_sum(cx0, n0)
+    const float cz0_sh = cx0 + n0;
+    const float cz0_sh_bb = cz0_sh - cx0;
+    const float cz0_sh_t0 = cz0_sh - cz0_sh_bb;
+    const float cz0_sh_t1 = cx0 - cz0_sh_t0;
+    const float cz0_sh_t2 = n0 - cz0_sh_bb;
+    const float cz0_sl = cz0_sh_t1 + cz0_sh_t2;
+    // (cz0_th, cz0_tl) = two_sum(cx1, n1)
+    const float cz0_th = cx1 + n1;
+    const float cz0_th_bb = cz0_th - cx1;
+    const float cz0_th_t0 = cz0_th - cz0_th_bb;
+    const float cz0_th_t1 = cx1 - cz0_th_t0;
+    const float cz0_th_t2 = n1 - cz0_th_bb;
+    const float cz0_tl = cz0_th_t1 + cz0_th_t2;
+    const float cz0_c = cz0_sl + cz0_th;
+    // (cz0_vh, cz0_vl) = fast_two_sum(cz0_sh, cz0_c)
+    const float cz0_vh = cz0_sh + cz0_c;
+    const float cz0_vh_z = cz0_vh - cz0_sh;
+    const float cz0_vl = cz0_c - cz0_vh_z;
+    const float cz0_w = cz0_tl + cz0_vl;
+    // (cz0, cz1) = fast_two_sum(cz0_vh, cz0_w)
+    const float cz0 = cz0_vh + cz0_w;
+    const float cz0_z = cz0 - cz0_vh;
+    const float cz1 = cz0_w - cz0_z;
+    // (cz0_mz) = abs_upper_2(cz0, cz1)
+    // (cz0_mz_a0, cz0_mz_a1) = abs_2(cz0, cz1)
+    const bool cz0_mz_a0_m = cz0 < 0.0f;
+    const float cz0_mz_a0_n0 = -cz0;
+    const float cz0_mz_a0_n1 = -cz1;
+    const float cz0_mz_a0 = cz0_mz_a0_m ? cz0_mz_a0_n0 : cz0;
+    const float cz0_mz_a1 = cz0_mz_a0_m ? cz0_mz_a0_n1 : cz1;
+    // (cz0_mz) = to_up_2(cz0_mz_a0, cz0_mz_a1)
+    const bool cz0_mz_m = 0.0f < cz0_mz_a1;
+    const float cz0_mz_s = next_up(cz0_mz_a0);
+    const float cz0_mz = cz0_mz_m ? cz0_mz_s : cz0_mz_a0;
+    // (cz0_d) = rmul(const unit_computed(add_2_2), cz0_mz)
+    const float cz0_d_p = fma_rn(0x1.800008p-47f, cz0_mz, 0.0f);
+    const float cz0_d = next_up(cz0_d_p);
+    // (cz0_r0) = radd(rx, ry)
+    const float cz0_r0_s = rx + ry;
+    const float cz0_r0 = next_up(cz0_r0_s);
+    // (rz) = radd(cz0_r0, cz0_d)
+    const float rz_s = cz0_r0 + cz0_d;
+    const float rz = next_up(rz_s);
+    cz0_out = cz0;
+    cz1_out = cz1;
+    rz_out = rz;
+}
+
+// eq_2_1(x = (x0, x1), a) -> mask m
+// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void eq_2_1(double x0, double x1, double a, bool& m_out) noexcept {
+    const bool h = x0 == a;
+    const bool l = x1 == 0.0;
+    const bool m = h & l;
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE constexpr void eq_2_1(float x0, float x1, float a, bool& m_out) noexcept {
+    const bool h = x0 == a;
+    const bool l = x1 == 0.0f;
+    const bool m = h & l;
+    m_out = m;
+}
+
+// eq_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
+// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void eq_2_2(double x0, double x1, double y0, double y1, bool& m_out) noexcept {
+    const bool h = x0 == y0;
+    const bool l = x1 == y1;
+    const bool m = h & l;
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE constexpr void eq_2_2(float x0, float x1, float y0, float y1, bool& m_out) noexcept {
+    const bool h = x0 == y0;
+    const bool l = x1 == y1;
+    const bool m = h & l;
+    m_out = m;
+}
+
+// le_1_2(a, y = (y0, y1)) -> mask m
+// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void le_1_2(double a, double y0, double y1, bool& m_out) noexcept {
+    const bool h = a < y0;
+    const bool e = a == y0;
+    const bool l = 0.0 <= y1;
+    const bool t = e & l;
+    const bool m = h | t;
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE constexpr void le_1_2(float a, float y0, float y1, bool& m_out) noexcept {
+    const bool h = a < y0;
+    const bool e = a == y0;
+    const bool l = 0.0f <= y1;
+    const bool t = e & l;
+    const bool m = h | t;
+    m_out = m;
+}
+
+// le_2_1(x = (x0, x1), a) -> mask m
+// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void le_2_1(double x0, double x1, double a, bool& m_out) noexcept {
+    const bool h = x0 < a;
+    const bool e = x0 == a;
+    const bool l = x1 <= 0.0;
+    const bool t = e & l;
+    const bool m = h | t;
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE constexpr void le_2_1(float x0, float x1, float a, bool& m_out) noexcept {
+    const bool h = x0 < a;
+    const bool e = x0 == a;
+    const bool l = x1 <= 0.0f;
+    const bool t = e & l;
+    const bool m = h | t;
+    m_out = m;
+}
+
+// le_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
+// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void le_2_2(double x0, double x1, double y0, double y1, bool& m_out) noexcept {
+    const bool h = x0 < y0;
+    const bool e = x0 == y0;
+    const bool l = x1 <= y1;
+    const bool t = e & l;
+    const bool m = h | t;
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE constexpr void le_2_2(float x0, float x1, float y0, float y1, bool& m_out) noexcept {
+    const bool h = x0 < y0;
+    const bool e = x0 == y0;
+    const bool l = x1 <= y1;
+    const bool t = e & l;
+    const bool m = h | t;
+    m_out = m;
+}
+
+// lt_1_2(a, y = (y0, y1)) -> mask m
+// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void lt_1_2(double a, double y0, double y1, bool& m_out) noexcept {
+    const bool h = a < y0;
+    const bool e = a == y0;
+    const bool l = 0.0 < y1;
+    const bool t = e & l;
+    const bool m = h | t;
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE constexpr void lt_1_2(float a, float y0, float y1, bool& m_out) noexcept {
+    const bool h = a < y0;
+    const bool e = a == y0;
+    const bool l = 0.0f < y1;
+    const bool t = e & l;
+    const bool m = h | t;
+    m_out = m;
+}
+
+// lt_2_1(x = (x0, x1), a) -> mask m
+// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void lt_2_1(double x0, double x1, double a, bool& m_out) noexcept {
+    const bool h = x0 < a;
+    const bool e = x0 == a;
+    const bool l = x1 < 0.0;
+    const bool t = e & l;
+    const bool m = h | t;
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE constexpr void lt_2_1(float x0, float x1, float a, bool& m_out) noexcept {
+    const bool h = x0 < a;
+    const bool e = x0 == a;
+    const bool l = x1 < 0.0f;
+    const bool t = e & l;
+    const bool m = h | t;
+    m_out = m;
+}
+
+// lt_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
+// limbs compared in order (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(double x0, double x1, double y0, double y1, bool& m_out) noexcept {
+    const bool h = x0 < y0;
+    const bool e = x0 == y0;
+    const bool l = x1 < y1;
+    const bool t = e & l;
+    const bool m = h | t;
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(float x0, float x1, float y0, float y1, bool& m_out) noexcept {
+    const bool h = x0 < y0;
+    const bool e = x0 == y0;
+    const bool l = x1 < y1;
+    const bool t = e & l;
+    const bool m = h | t;
+    m_out = m;
+}
+
+// mul_pow2_2(x = (x0, x1), c) -> z = (z0, z1)
+// both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_pow2_2(double x0, double x1, double c, double& z0_out, double& z1_out) noexcept {
+    const double h = fma_rn(x0, c, 0.0);
+    const double l = fma_rn(x1, c, 0.0);
+    // (z0, z1) = fast_two_sum(h, l)
+    const double z0 = h + l;
+    const double z0_z = z0 - h;
+    const double z1 = l - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void mul_pow2_2(float x0, float x1, float c, float& z0_out, float& z1_out) noexcept {
+    const float h = fma_rn(x0, c, 0.0f);
+    const float l = fma_rn(x1, c, 0.0f);
+    // (z0, z1) = fast_two_sum(h, l)
+    const float z0 = h + l;
+    const float z0_z = z0 - h;
+    const float z1 = l - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// sub_1_2(a, y = (y0, y1)) -> z = (z0, z1)
+// add_2_1 (JMP17 Alg. 4) on -y and a. Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_1_2(double a, double y0, double y1, double& z0_out, double& z1_out) noexcept {
+    const double n0 = -y0;
+    const double n1 = -y1;
+    // (z0, z1) = add_2_1(n0, n1, a)
+    // (z0_sh, z0_sl) = two_sum(n0, a)
+    const double z0_sh = n0 + a;
+    const double z0_sh_bb = z0_sh - n0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = n0 - z0_sh_t0;
+    const double z0_sh_t2 = a - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    const double z0_v = n1 + z0_sl;
+    // (z0, z1) = fast_two_sum(z0_sh, z0_v)
+    const double z0 = z0_sh + z0_v;
+    const double z0_z = z0 - z0_sh;
+    const double z1 = z0_v - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sub_1_2(float a, float y0, float y1, float& z0_out, float& z1_out) noexcept {
+    const float n0 = -y0;
+    const float n1 = -y1;
+    // (z0, z1) = add_2_1(n0, n1, a)
+    // (z0_sh, z0_sl) = two_sum(n0, a)
+    const float z0_sh = n0 + a;
+    const float z0_sh_bb = z0_sh - n0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = n0 - z0_sh_t0;
+    const float z0_sh_t2 = a - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    const float z0_v = n1 + z0_sl;
+    // (z0, z1) = fast_two_sum(z0_sh, z0_v)
+    const float z0 = z0_sh + z0_v;
+    const float z0_z = z0 - z0_sh;
+    const float z1 = z0_v - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// sub_2_1(x = (x0, x1), a) -> z = (z0, z1)
+// add_2_1 (JMP17 Alg. 4) on -a. Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_2_1(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
+    const double n = -a;
+    // (z0, z1) = add_2_1(x0, x1, n)
+    // (z0_sh, z0_sl) = two_sum(x0, n)
+    const double z0_sh = x0 + n;
+    const double z0_sh_bb = z0_sh - x0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = x0 - z0_sh_t0;
+    const double z0_sh_t2 = n - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    const double z0_v = x1 + z0_sl;
+    // (z0, z1) = fast_two_sum(z0_sh, z0_v)
+    const double z0 = z0_sh + z0_v;
+    const double z0_z = z0 - z0_sh;
+    const double z1 = z0_v - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sub_2_1(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
+    const float n = -a;
+    // (z0, z1) = add_2_1(x0, x1, n)
+    // (z0_sh, z0_sl) = two_sum(x0, n)
+    const float z0_sh = x0 + n;
+    const float z0_sh_bb = z0_sh - x0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = x0 - z0_sh_t0;
+    const float z0_sh_t2 = n - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    const float z0_v = x1 + z0_sl;
+    // (z0, z1) = fast_two_sum(z0_sh, z0_v)
+    const float z0 = z0_sh + z0_v;
+    const float z0_z = z0 - z0_sh;
+    const float z1 = z0_v - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// sub_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+// add_2_2 (JMP17 Alg. 6) on -y. Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
+    const double n0 = -y0;
+    const double n1 = -y1;
+    // (z0, z1) = add_2_2(x0, x1, n0, n1)
+    // (z0_sh, z0_sl) = two_sum(x0, n0)
+    const double z0_sh = x0 + n0;
+    const double z0_sh_bb = z0_sh - x0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = x0 - z0_sh_t0;
+    const double z0_sh_t2 = n0 - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(x1, n1)
+    const double z0_th = x1 + n1;
+    const double z0_th_bb = z0_th - x1;
+    const double z0_th_t0 = z0_th - z0_th_bb;
+    const double z0_th_t1 = x1 - z0_th_t0;
+    const double z0_th_t2 = n1 - z0_th_bb;
+    const double z0_tl = z0_th_t1 + z0_th_t2;
+    const double z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const double z0_vh = z0_sh + z0_c;
+    const double z0_vh_z = z0_vh - z0_sh;
+    const double z0_vl = z0_c - z0_vh_z;
+    const double z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const double z0 = z0_vh + z0_w;
+    const double z0_z = z0 - z0_vh;
+    const double z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sub_2_2(float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
+    const float n0 = -y0;
+    const float n1 = -y1;
+    // (z0, z1) = add_2_2(x0, x1, n0, n1)
+    // (z0_sh, z0_sl) = two_sum(x0, n0)
+    const float z0_sh = x0 + n0;
+    const float z0_sh_bb = z0_sh - x0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = x0 - z0_sh_t0;
+    const float z0_sh_t2 = n0 - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(x1, n1)
+    const float z0_th = x1 + n1;
+    const float z0_th_bb = z0_th - x1;
+    const float z0_th_t0 = z0_th - z0_th_bb;
+    const float z0_th_t1 = x1 - z0_th_t0;
+    const float z0_th_t2 = n1 - z0_th_bb;
+    const float z0_tl = z0_th_t1 + z0_th_t2;
+    const float z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float z0_vh = z0_sh + z0_c;
+    const float z0_vh_z = z0_vh - z0_sh;
+    const float z0_vl = z0_c - z0_vh_z;
+    const float z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float z0 = z0_vh + z0_w;
+    const float z0_z = z0 - z0_vh;
+    const float z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// to_down_2(x = (x0, x1)) -> t
+// the sign of x1 (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void to_down_2(double x0, double x1, double& t_out) noexcept {
+    const bool m = x1 < 0.0;
+    const double p = next_down(x0);
+    const double t = m ? p : x0;
+    t_out = t;
+}
+KAIRN_GEN_FORCEINLINE constexpr void to_down_2(float x0, float x1, float& t_out) noexcept {
+    const bool m = x1 < 0.0f;
+    const float p = next_down(x0);
+    const float t = m ? p : x0;
+    t_out = t;
+}
+
+// to_nearest_2(x = (x0, x1)) -> t
+// the definition of normalized (Milestone 1 listing). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void to_nearest_2(double x0, [[maybe_unused]] double x1, double& t_out) noexcept {
+    const double t = x0;
+    t_out = t;
+}
+KAIRN_GEN_FORCEINLINE constexpr void to_nearest_2(float x0, [[maybe_unused]] float x1, float& t_out) noexcept {
+    const float t = x0;
+    t_out = t;
 }
 
 }  // namespace kairn::gen

@@ -1,0 +1,17 @@
+# x - y for 2-limb numbers: the accurate sum with the negation of y, whose claims it inherits.
+kernel:        sub_2_2
+input:         x = x0 x1
+input:         y = y0 y1
+output:        z = z0 z1
+value:         x-y
+requires:      normalized x
+requires:      normalized y
+ensures:       normalized z
+ensures:       error z R c=3/(1-4*u) k=2 t=0
+min_precision: 3
+source:        add_2_2 (JMP17 Alg. 6) on -y
+status:        unverified
+
+n0       = neg(y0)
+n1       = neg(y1)
+(z0, z1) = add_2_2(x0, x1, n0, n1)
