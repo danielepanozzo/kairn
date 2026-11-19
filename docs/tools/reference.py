@@ -982,11 +982,20 @@ class Site:
                 if others:
                     shared.append("`%s` holds the larger constants of %s" % (
                         t.split("::")[1], " and ".join(self.link(n) for n in [k.name] + others)))
-            w("The compiled constants are %s: `unit` and `tiny` bound the error relative to the exact result, "
-              "`unit_computed` and `tiny_computed` relative to the computed one "
-              "($\\lvert \\text{error}\\rvert \\le \\mathtt{unit\\_computed}\\,\\lvert\\text{computed}\\rvert"
-              " + \\mathtt{tiny\\_computed}$)%s." % (
-                  "; ".join(names), "; " + "; ".join(shared) if shared else ""))
+            forms = {x["form"] for x in k.errors if not x["when"]}
+            if forms == {"R"}:
+                meaning = ("`unit` and `tiny` bound the error relative to the exact result, `unit_computed` "
+                           "and `tiny_computed` relative to the computed one ($\\lvert \\text{error}\\rvert \\le "
+                           "\\mathtt{unit\\_computed}\\,\\lvert\\text{computed}\\rvert + \\mathtt{tiny\\_computed}$)")
+            elif forms == {"A"}:
+                meaning = ("`unit` and `tiny` bound the error relative to the sum of the magnitudes of the "
+                           "operands (`reference` is `BoundForm::operands`); no bound relative to the computed "
+                           "value follows, and `unit_computed` and `tiny_computed` are $+\\infty$")
+            else:
+                fail("kernel %s: its unconditional error claims have the forms %s, which the constants "
+                     "sentence has no template for" % (k.name, sorted(forms)))
+            w("The compiled constants are %s: %s%s." % (
+                "; ".join(names), meaning, "; " + "; ".join(shared) if shared else ""))
             w("")
         return "\n".join(out)
 
