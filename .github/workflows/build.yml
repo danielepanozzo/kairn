@@ -35,6 +35,12 @@ jobs:
           - name: Linux x86-64, Clang
             os: ubuntu-24.04
             cxx: clang++
+          - name: Linux arm64, GCC
+            os: ubuntu-24.04-arm
+            cxx: g++
+          - name: Linux arm64, Clang
+            os: ubuntu-24.04-arm
+            cxx: clang++
           - name: macOS arm64, Apple clang
             os: macos-15
             cxx: clang++
