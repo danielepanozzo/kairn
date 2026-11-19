@@ -219,8 +219,8 @@ def main(argv):
            ('horner', 'mul_2_2+add_2_2', '`p = p * h + c[i]`, two-limb `h`, `c`'),
            ('horner', 'mul_2_1+add_2_1', '`p = p * h + c[i]`, one-limb `h`, `c`'))
     table([('%s, %s' % (KIND[kind], text), n(A, kind, k, 'op'), n(A, kind, k, 'finite')) for kind, k, text in ops])
-    print('\nGenerated full kernel over its core, separate arrays of limbs (`scalar`) and packed (`packed`);'
-          ' the listing with selects (`full_sel`) for comparison:\n')
+    print('\nGenerated full kernel over its core, on separate arrays of limbs (`scalar`) and packed\n'
+          '(`packed`); the listing with selects (`full_sel`) for comparison:\n')
     rows = []
     for kind, k in (('tp', 'add_2_2'), ('tp', 'add_2_1'), ('tp', 'add_fast_2_2'), ('tp', 'mul_2_2'), ('tp', 'mul_2_1'),
                     ('sum', 'add_2_2'), ('sum', 'add_2_1'), ('prod', 'mul_2_2'), ('prod', 'mul_2_1'),
@@ -281,8 +281,8 @@ def main(argv):
         rows.append(('%s, `%s` over a `double` operation' % (KIND[kind], kb), n(P, kind, kb, 'full'), n(P, kind, kc, v)))
     rows.append(('throughput, `ball_neg_1` over a `double` negation', n(P, 'tp', 'ball_neg_1', 'kairn'), n(P, 'tp', 'neg_1', 'kairn')))
     table(rows)
-    print('\nFull Ball kernels over their cores (public operator over the core on the same arrays; generated'
-          ' kernels on separate arrays, scalar and packed; the listing with selects):\n')
+    print('\nFull Ball kernels over their cores (`public`: the operator over the core on the same arrays;\n'
+          '`scalar` and `packed`: the generated kernels on separate arrays; `selects`: the listing):\n')
     rows = []
     for kind, k in (('tp', 'ball_add_2'), ('tp', 'ball_mul_2'), ('tp', 'ball_scale_2'), ('tp', 'ball_add_1'), ('tp', 'ball_mul_1'),
                     ('tp', 'ball_scale_1'), ('sum', 'ball_add_2'), ('prod', 'ball_mul_2'), ('prod', 'ball_scale_2'),
@@ -317,7 +317,7 @@ def main(argv):
             ('throughput, multiplication over `X * Y`', n(M, 'tp', 'mul_2_2', 'mpfr'), n(A, 'tp', 'ball_mul_2', 'op'))]
     table(rows)
 
-    print('\n### 5. `float` limbs\n')
+    print('\n### 5. Limbs of type `float`\n')
     rows = []
     for kind, k, text in ops:
         rows.append(('operator over `finite::`, %s, %s' % (KIND[kind], text), n(F, kind, k, 'op'), n(F, kind, k, 'finite')))

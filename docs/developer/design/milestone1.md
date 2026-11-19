@@ -181,12 +181,15 @@ false.
 | `to_down_2`, `to_up_2`, `abs_upper_2` | for a finite $x$, the rounding in the sense of `T`, which is $\pm\infty$ when the neighbor of $\pm\Omega$ is needed; an infinite or NaN $x$ gives itself (its absolute value for `abs_upper_2`) |
 | `radd`, `rmul` | for operands that are nonnegative, $+\infty$ or NaN: a NaN when an operand is a NaN or the product is $0 \cdot \infty$; otherwise a value not below the exact one, $+\infty$ on overflow |
 
-**Emission.** Packed code is emitted as listed, with blends. As listed, the fix-up costs 19 to
-58% of a packed addition and 70 to 106% of a packed multiplication, above the 10 to 20% that D5
-expected ([benchmarks](../results/bench-milestone1.md)). Scalar code puts the fix-up behind a
-branch, because in a chain of dependent operations the selects put a comparison and a select on
-the critical path, where a predicted branch puts neither. The scalar printer does it by one rule
-on the listing (`branch` in `gen/kairn_gen/cpp.py`), with nothing written per kernel:
+**Emission.** Packed code is emitted as listed, with blends. As listed, the fix-up costs 16 to
+54% of a packed `add_2_2` and 70 to 105% of a packed `mul_2_2` in a loop of independent
+operations, and 11 to 53% and 6 to 53% in a dependent chain, mostly above the 10 to 20% that D5
+expected ([benchmarks](../results/bench-milestone1.md#2-the-fix-up-for-non-finite-results);
+within it only on Zen 2). Scalar code puts the fix-up behind a branch, because in a chain of
+dependent operations the selects put a comparison and a select on the critical path, where a
+predicted branch puts neither: with the branch the public operators take 0.94 to 1.07 times as
+long as `kairn::finite::` in a chain, on every configuration measured. The scalar printer does it
+by one rule on the listing (`branch` in `gen/kairn_gen/cpp.py`), with nothing written per kernel:
 
 1. It applies to a kernel without a real-model statement (a full kernel, a full Ball kernel, a
    constructor) whose every output is a select on one same mask $m_1$. The first arms are what
@@ -502,9 +505,13 @@ $\lvert xy - c_x c_y\rvert \le \lvert c_x\rvert r_y + \lvert c_y\rvert r_x + r_x
 
 ### The radius, second design
 
-The [benchmarks](../results/bench-milestone1.md) show that the radius dominates a `Ball`
-operation: `ball_mul_2` costs 13 to 20 times `mul_2_2` in packed code, because each of the eleven
-steps to the next number up is about ten integer operations. The radius only has to be an upper
+The first benchmarks of Milestone 1 showed that the radius of the first design dominated a `Ball`
+operation: `ball_mul_2` cost 13 to 20 times `mul_2_2` in packed code, because each of the eleven
+steps to the next number up is about ten integer operations. With the second design, measured on
+the final code, a packed `ball_mul_2` costs 1.6 to 1.9 times a packed `mul_2_2` (both with the
+fix-up), and in a dependent chain `X * Y` on `Ball<double, 2>` takes 0.97 to 1.14 times as long as
+`x * y` on its center ([benchmarks](../results/bench-milestone1.md#3-the-cost-of-a-ball-operation)).
+The radius only has to be an upper
 bound, so the second design evaluates it with ordinary operations rounded to nearest, on
 nonnegative values, and inflates the result once at the end: three to five floating-point
 operations, and no `succ`, no `select`, no `abs_upper`.
@@ -589,7 +596,10 @@ $N$, within 1% for every line of the table (with Apple clang, 7.3 to 7.9 ns for 
 `ball_add_2` and 5.6 to 6.0 ns for one of `ball_mul_2`, from one run to the next): that processor
 has no such penalty. Nor has an AMD EPYC 7452 (Zen 2; GCC 13, `-O2 -mavx2 -mfma`): the same times
 within 1%, and 1.5 ns for the fused operation with either addend. With $N$, the full kernels of
-the i5's table take 0.94 to 1.04 times as long as their cores, run by run.
+the i5's table take 0.94 to 1.04 times as long as their cores, run by run. The
+[benchmarks](../results/bench-milestone1.md#3-the-cost-of-a-ball-operation) of the final code,
+with the public operators, agree: 5.2 ns for a step of `X + Y` and 6.6 ns for one of `X * Y` on
+`Ball<double, 2>` on the i5.
 
 What $N$ costs: every radius is larger by about $N$, which for `double` and `float` is far below
 one unit in the last place of any radius that is not itself near $N$. A ball computed from exact
