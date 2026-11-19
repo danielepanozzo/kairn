@@ -397,7 +397,7 @@ class Tool(unittest.TestCase):
 class Numbers(unittest.TestCase):
     def test_exact_forms(self):
         F = reference.fractions.Fraction
-        self.assertEqual(reference.exact_tex(F(1, 9007199254740993)), "\\frac{1}{2^{53} + 2^{0}}")
+        self.assertEqual(reference.exact_tex(F(1, 9007199254740993)), "\\frac{1}{2^{53} + 1}")
         self.assertEqual(reference.exact_tex(F(3, 81129638414606645666991986180096)), "\\frac{3}{2^{106} - 2^{55}}")
         self.assertEqual(reference.exact_tex(F(1, 93824969867264)), "\\frac{3}{2^{48} - 2^{26}}")
         self.assertEqual(reference.exact_tex(F(3, 2 ** 1075)), "3 \\cdot 2^{-1075}")

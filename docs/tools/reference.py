@@ -415,10 +415,11 @@ class Kernel:
             limbs = self.limbs(of)
             if len(limbs) != 2:
                 fail("kernel %s: normalized(%s) on %d limbs has no template" % (self.name, of, len(limbs)))
+            pair = "(%s, %s)" % (name_tex(limbs[0]), name_tex(limbs[1])) if self.expanded(of) else name_tex(of)
             if short:
-                return "$%s$ normalized" % name_tex(of)
+                return "$%s$ normalized" % pair
             return "$%s$ is normalized: $%s = \\mathrm{RN}(%s + %s)$" % (
-                name_tex(of), name_tex(limbs[0]), name_tex(limbs[0]), name_tex(limbs[1]))
+                pair, name_tex(limbs[0]), name_tex(limbs[0]), name_tex(limbs[1]))
         if kind == "error":
             of, v = self.out_tex(e["of"]), tex(self.value)
             bound = self.bound_tex(e)
@@ -554,12 +555,13 @@ def exact_tex(q):
         low = d & -d
         b = low.bit_length() - 1
         rest = d - low
+        power = "1" if b == 0 else "2^{%d}" % b
         if rest and rest & (rest - 1) == 0:
             a = rest.bit_length() - 1
-            return "\\frac{%d}{2^{%d} + 2^{%d}}" % (n, a, b)
+            return "\\frac{%d}{2^{%d} + %s}" % (n, a, power)
         if (d + low) & (d + low - 1) == 0:
             a = (d + low).bit_length() - 1
-            return "\\frac{%d}{2^{%d} - 2^{%d}}" % (n, a, b)
+            return "\\frac{%d}{2^{%d} - %s}" % (n, a, power)
     return None
 
 
@@ -948,7 +950,7 @@ class Site:
         for i, x in enumerate(k.errors):
             cond = " (%s)" % k.when_tex(x) if x["when"] else ""
             if parse(x["c"], "kernel %s, c" % k.name, {"u"}) != ("num", 0):
-                w("| relative term $c\\,u^%s$%s | %s |" % (x["k"], cond, " | ".join(
+                w("| relative term $c\\,u%s$%s | %s |" % ("" if x["k"] == 1 else "^%s" % x["k"], cond, " | ".join(
                     constant_tex(k.entry["instances"][fmt][i]["rel"]) for fmt, _, _ in FORMATS)))
             if fractions.Fraction(x["t"]) != 0:
                 w("| absolute term $t\\,\\eta$%s | %s |" % (cond, " | ".join(
@@ -963,12 +965,28 @@ class Site:
         w("")
         traits = self.ops.KERNELS[k.name]["traits"]
         if proved and traits:
-            w("The compiled constants are those of %s: `unit` and `tiny` bound the error relative to the "
-              "exact result, `unit_computed` and `tiny_computed` relative to the computed one "
+            groups = {}
+            for t in traits:
+                owner, member = t.split("::")
+                groups.setdefault(owner, []).append(member)
+            names = []
+            for owner, members in groups.items():
+                text = "the entr%s %s of `kairn::%s`" % ("y" if len(members) == 1 else "ies",
+                                                      ", ".join("`%s`" % m for m in members), owner)
+                if owner == "traits<T>":
+                    text += " (`T` is `float` or `double`; `kairn::traits<Expansion<T, 1>>` is the same)"
+                names.append(text)
+            shared = []
+            for t in traits:
+                others = [n for n, q in self.ops.KERNELS.items() if n != k.name and t in q["traits"]]
+                if others:
+                    shared.append("`%s` holds the larger constants of %s" % (
+                        t.split("::")[1], " and ".join(self.link(n) for n in [k.name] + others)))
+            w("The compiled constants are %s: `unit` and `tiny` bound the error relative to the exact result, "
+              "`unit_computed` and `tiny_computed` relative to the computed one "
               "($\\lvert \\text{error}\\rvert \\le \\mathtt{unit\\_computed}\\,\\lvert\\text{computed}\\rvert"
-              " + \\mathtt{tiny\\_computed}$)." % ", ".join(
-                  "`kairn::%s`" % t + (" (also for `float`, `double` and `Expansion<T, 1>`)" if t.startswith("traits<T>") else "")
-                  for t in traits))
+              " + \\mathtt{tiny\\_computed}$)%s." % (
+                  "; ".join(names), "; " + "; ".join(shared) if shared else ""))
             w("")
         return "\n".join(out)
 

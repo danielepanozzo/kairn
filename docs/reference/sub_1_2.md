@@ -41,7 +41,7 @@ The constants of the bound, for each limb type, from `gen/claims.json`; `kairn::
 | `unit`, `tiny`, as compiled | `0x1p-105`, `0.0` | `0x1p-47f`, `0.0f` |
 | `unit_computed`, `tiny_computed` | `0x1.0000000000001p-105`, `0.0` | `0x1.000002p-47f`, `0.0f` |
 
-The compiled constants are those of `kairn::traits<Expansion<T, 2>>::sub_limb`: `unit` and `tiny` bound the error relative to the exact result, `unit_computed` and `tiny_computed` relative to the computed one ($\lvert \text{error}\rvert \le \mathtt{unit\_computed}\,\lvert\text{computed}\rvert + \mathtt{tiny\_computed}$).
+The compiled constants are the entry `sub_limb` of `kairn::traits<Expansion<T, 2>>`: `unit` and `tiny` bound the error relative to the exact result, `unit_computed` and `tiny_computed` relative to the computed one ($\lvert \text{error}\rvert \le \mathtt{unit\_computed}\,\lvert\text{computed}\rvert + \mathtt{tiny\_computed}$); `sub_limb` holds the larger constants of [`sub_1_2`](sub_1_2.md) and [`sub_2_1`](sub_2_1.md).
 
 Proved for every binary format with a precision of at least 3 bits and any exponent range, rounding to nearest with ties to even and with gradual underflow, in the model where no operation overflows. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
 

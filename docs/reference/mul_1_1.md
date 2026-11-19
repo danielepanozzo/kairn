@@ -41,12 +41,12 @@ The constants of the bound, for each limb type, from `gen/claims.json`; `kairn::
 | | `double` | `float` |
 |---|---|---|
 | unit roundoff $u$ | $2^{-53}$ | $2^{-24}$ |
-| relative term $c\,u^1$ | $\frac{1}{2^{53} + 2^{0}} \approx 1.1102 \times 10^{-16}$ | $\frac{1}{2^{24} + 2^{0}} \approx 5.9605 \times 10^{-8}$ |
+| relative term $c\,u$ | $\frac{1}{2^{53} + 1} \approx 1.1102 \times 10^{-16}$ | $\frac{1}{2^{24} + 1} \approx 5.9605 \times 10^{-8}$ |
 | absolute term $t\,\eta$ | $2^{-1075} \approx 2.4703 \times 10^{-324}$ | $2^{-150} \approx 7.0065 \times 10^{-46}$ |
 | `unit`, `tiny`, as compiled | `0x1p-53`, `0x1p-1074` | `0x1p-24f`, `0x1p-149f` |
 | `unit_computed`, `tiny_computed` | `0x1p-53`, `0x1p-1074` | `0x1p-24f`, `0x1p-149f` |
 
-The compiled constants are those of `kairn::traits<T>::mul` (also for `float`, `double` and `Expansion<T, 1>`), `kairn::traits<T>::mul_limb` (also for `float`, `double` and `Expansion<T, 1>`), `kairn::traits<T>::ldexp` (also for `float`, `double` and `Expansion<T, 1>`): `unit` and `tiny` bound the error relative to the exact result, `unit_computed` and `tiny_computed` relative to the computed one ($\lvert \text{error}\rvert \le \mathtt{unit\_computed}\,\lvert\text{computed}\rvert + \mathtt{tiny\_computed}$).
+The compiled constants are the entries `mul`, `mul_limb`, `ldexp` of `kairn::traits<T>` (`T` is `float` or `double`; `kairn::traits<Expansion<T, 1>>` is the same): `unit` and `tiny` bound the error relative to the exact result, `unit_computed` and `tiny_computed` relative to the computed one ($\lvert \text{error}\rvert \le \mathtt{unit\_computed}\,\lvert\text{computed}\rvert + \mathtt{tiny\_computed}$).
 
 Proved for every binary format with a precision of at least 1 bit and any exponent range, rounding to nearest with ties to even and with gradual underflow, in the model where no operation overflows. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
 

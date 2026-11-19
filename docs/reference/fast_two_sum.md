@@ -25,7 +25,7 @@ When the requirements hold and no operation of the kernel overflows:
 
 - $s = \mathrm{RN}(a + b)$.
 - $s + e = a + b$ exactly.
-- $r$ is normalized: $s = \mathrm{RN}(s + e)$.
+- $(s, e)$ is normalized: $s = \mathrm{RN}(s + e)$.
 
 Proved for every binary format with a precision of at least 2 bits and any exponent range, rounding to nearest with ties to even and with gradual underflow, in the model where no operation overflows. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
 
