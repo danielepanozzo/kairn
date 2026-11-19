@@ -1,5 +1,6 @@
 """What the generator's tests share: paths, sizes, operands, and the interpreter in parallel."""
 import atexit
+import itertools
 import math
 import os
 import random
@@ -124,13 +125,17 @@ def tail(rng, fmt, x0):
 
 
 def operands(rng, fmt, kernel):
-    """Inputs for a kernel, from one of several strata (any inputs are fine for bit identity)."""
+    """Inputs for a kernel, from one of several strata (any inputs are fine for bit identity).
+    A mask operand is a Python bool."""
     p, qmin, qmax = FORMATS[fmt]
     stratum = rng.randrange(10)
     groups = []
     lead = None
     for g in kernel.inputs:
         # near() takes the exponent q of m 2^q, |m| in [2^(p-1), 2^p): a value near 2^(q+p-1).
+        if g.kind == ir.MASK:
+            groups.append(rng.random() < 0.5)
+            continue
         if stratum == 0:
             limbs = [rng.choice(edges(fmt)) for _ in g.limbs]
         elif stratum == 1:
@@ -163,15 +168,35 @@ def requests(fmt, kernel, n, seed):
     return [operands(rng, fmt, kernel) for _ in range(n)]
 
 
+def edge_cases(fmt, kernel, limit):
+    """Edge values in every limb position (both values of a mask): all combinations when few, a
+    sample otherwise."""
+    choices = [(False, True) if kind == ir.MASK else edges(fmt) for kind in kernel.input_kinds]
+    if math.prod(len(c) for c in choices) <= limit:
+        return [list(c) for c in itertools.product(*choices)]
+    rng = random.Random(f'edges:{kernel.name}')
+    return [[rng.choice(c) for c in choices] for _ in range(limit)]
+
+
 # ---------------------------------------------------------------------------------------------
 # The interpreter on many cases, in parallel.
 
 def to_value(x):
+    if isinstance(x, bool):
+        return x
     return interp.parse_limb(x.hex() if math.isfinite(x) else ('nan' if x != x else ('inf' if x > 0 else '-inf')))
 
 
 def to_float(v):
+    """A limb as a float; a mask as 1.0 or 0.0, which is how a runner's 1 and 0 read."""
+    if isinstance(v, bool):
+        return float(v)
     return float.fromhex(interp.format_limb(v))
+
+
+def token(x):
+    """An operand as the line protocol writes it."""
+    return interp.format_mask(x) if isinstance(x, bool) else interp.format_limb(to_value(x))
 
 
 def same(x, y):

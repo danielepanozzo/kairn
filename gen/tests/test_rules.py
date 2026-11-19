@@ -152,6 +152,131 @@ e = sub(s, b)
                                                    'theorem: proofs/theories/X.v bad_correct')
         self.assertEqual(check(head + GOOD), [])
 
+    # The second wave.
+
+    def test_unused_input_declared(self):
+        head = HEAD.replace('input:   b', 'input:   b\ninput:   c') + 'unused: c not needed here\n'
+        errors = check(head + GOOD)
+        self.assertEqual([e for e in errors if e.rule == rules.RULE1], [])
+
+    def test_unused_declaration_of_a_used_input(self):
+        errors = check(HEAD + 'unused: b it is used\n' + GOOD)
+        self.refused(errors, 'bad', 'b', rules.RULE1, 'is used; remove the declaration')
+
+    def test_unused_declaration_of_a_value_that_is_not_an_input(self):
+        errors = check(HEAD + 'unused: q no such input\n' + GOOD)
+        self.refused(errors, 'bad', 'q', rules.RULE1, 'is not an input')
+
+    def test_unused_input_names_the_declaration(self):
+        errors = check(HEAD.replace('input:   b', 'input:   b\ninput:   c') + GOOD)
+        self.refused(errors, 'bad', 'c', rules.RULE1, 'declared with "unused:"')
+
+    def test_product_through_a_copy(self):
+        errors = check(HEAD + 't = mul(a, b)\nc = copy(t)\ns = add(c, b)\nz = sub(s, a)\ne = sub(b, z)\n')
+        self.refused(errors, 'bad', 't', rules.RULE_R1, 'copy at c then an operand of add at s')
+
+    def test_copy_as_an_output_is_accepted(self):
+        self.assertEqual(check(HEAD + 's = add(a, b)\nz = sub(s, a)\nw = sub(b, z)\ne = copy(w)\n'), [])
+
+    def test_copy_keeps_a_value_in_the_cone(self):
+        # b reaches s only through the copy, which keeps a non-finite value non-finite.
+        self.assertEqual(check(HEAD + 'c = copy(b)\ns = add(a, c)\nz = sub(s, a)\ne = sub(b, z)\n'), [])
+
+    def test_mask_output_through_a_comparison_is_accepted(self):
+        head = HEAD.replace('output:  r = s e', 'output:  r = s e\noutput:  mask m')
+        self.assertEqual(check(head + GOOD + 'h = lt(a, 0)\nl = eq(0, b)\nm = and(h, l)\n'), [])
+
+    def test_mask_output_that_is_a_limb(self):
+        head = HEAD.replace('output:  r = s e', 'output:  r = s e\noutput:  mask m')
+        errors = check(head + GOOD + 'm = add(a, b)\n')
+        self.refused(errors, 'bad', 'm', rules.WELL_FORMED, 'is a limb, and its group is declared as a mask')
+
+    def test_mask_input_used_as_a_limb(self):
+        head = HEAD.replace('input:   b', 'input:   b\ninput:   mask w')
+        errors = check(head + 's = add(a, w)\nz = sub(s, a)\ne = sub(b, z)\n')
+        self.refused(errors, 'bad', 'w', rules.WELL_FORMED, 'wants a limb here, and w is a mask')
+
+    def test_mask_input_as_an_operand_of_select_is_accepted(self):
+        head = HEAD.replace('input:   b', 'input:   b\ninput:   mask w')
+        self.assertEqual(check(head + 'c = select(w, a, b)\nt = add(a, b)\ns = add(t, c)\n'
+                                      'z = sub(s, a)\ne = sub(b, z)\n'), [])
+
+    def test_zero_is_a_limb(self):
+        errors = check(HEAD + GOOD.replace('e = sub(b, z)', 'e = sub(b, z)\nh = lt(a, 0)\nw = and(0, h)\n'
+                                                            'q = select(w, a, b)\nr0 = add(q, s)'))
+        self.assertTrue(any(e.value == '0' and 'a constant is a limb, not a mask' in str(e) for e in errors),
+                        errors)
+
+
+class ComputedConstants(unittest.TestCase):
+    BOUND = '''
+kernel:  bound
+input:   a
+input:   b
+output:  p
+value:   a*b
+ensures: error p R c=1 k=1 t=1/2
+status:  {status}
+source:  x
+license: MIT
+theorem: proofs/theories/X.v bound_correct
+p = prod(a, b)
+'''
+    USER = HEAD.replace('kernel:  bad', 'kernel:  user')
+
+    def user(self, status='unverified', const='unit_computed(bound)'):
+        head = self.USER.replace('status:  unverified', f'status:  {status}')
+        if status == 'proved':
+            head += 'source: x\nlicense: MIT\ntheorem: proofs/theories/X.v user_correct\n'
+        return head + f'k = prod(const {const}, a)\ns = add(k, b)\nz = sub(s, k)\ne = sub(b, z)\n'
+
+    def refused(self, errors, words):
+        self.assertTrue(any(e.rule == rules.COMPUTED and words in str(e) for e in errors),
+                        '\n'.join(map(str, errors)) or 'accepted')
+
+    def test_accepted(self):
+        for status in ('unverified', 'proved'):
+            self.assertEqual(check(self.BOUND.format(status='proved'), self.user(status)), [])
+        self.assertEqual(check(self.BOUND.format(status='unverified'), self.user('unverified')), [])
+
+    def test_a_proved_kernel_needs_a_proved_bound(self):
+        errors = check(self.BOUND.format(status='unverified'), self.user('proved'))
+        self.refused(errors, 'only an unverified kernel may use the constants of a bound that is not proved')
+        errors = check(self.BOUND.format(status='unverified'), self.user('proved', 'tiny_computed(bound)'))
+        self.refused(errors, 'bound is unverified')
+
+    def test_unknown_kernel(self):
+        self.refused(check(self.BOUND.format(status='proved'), self.user(const='unit_computed(nope)')),
+                     'nope is not a kernel')
+
+    def test_the_bound_must_be_one_relative_unconditional_error_entry(self):
+        for change, words in (('ensures: error p R c=1 k=1 t=1/2\nensures: error p R c=2 k=1 t=0', '2 error entries'),
+                              ('ensures: error p R c=1 k=1 t=1/2\nensures: leading_rounded p', None),
+                              ('ensures: error p A c=1 k=1 t=1/2', 'form R and unconditional'),
+                              ('ensures: error p R c=1 k=1 t=1/2 when=product_large', 'form R and unconditional'),
+                              ('ensures: leading_rounded p', '0 error entries')):
+            bound = self.BOUND.format(status='proved').replace('ensures: error p R c=1 k=1 t=1/2', change)
+            errors = check(bound, self.user())
+            if words is None:
+                self.assertEqual(errors, [])
+            else:
+                self.refused(errors, words)
+
+    def test_minimum_precision_of_the_bound(self):
+        bound = self.BOUND.format(status='proved').replace('p = prod', 'min_precision: 3\np = prod')
+        self.refused(check(bound, self.user()), 'min_precision must be at least 3')
+        user = self.user().replace('status:  unverified', 'status:  unverified\nmin_precision: 3')
+        self.assertEqual(check(bound, user), [])
+
+    def test_unknown_function(self):
+        errors = check(self.BOUND.format(status='proved'), self.user(const='half_computed(bound)'))
+        self.assertTrue(any('unknown constant' in str(e) for e in errors), errors)
+
+    def test_kernel_names_the_constants_would_shadow(self):
+        for name in ('unit_computed_x', 'tiny_computed_y'):
+            errors = check(HEAD.replace('kernel:  bad', f'kernel:  {name}') + GOOD)
+            self.assertTrue(any(e.kernel == name and e.rule == rules.WELL_FORMED for e in errors), name)
+
 
 class WellFormed(unittest.TestCase):
     def refused(self, text, value, words, *more):
@@ -244,7 +369,67 @@ class Claims(unittest.TestCase):
         self.refused(HEAD.replace('c=0', 'c=1/0x2'), 'c:')
         self.refused(HEAD.replace('value:   a+b', 'value:   a/b'), 'only + - *')
         self.refused(HEAD.replace('value:   a+b', 'value:   a+q'), 'unknown name')
-        self.refused(HEAD.replace('ensures: error r R c=0 k=2 t=0', 'ensures: normalized r'), 'no error entry')
+        # A kernel whose claims say nothing about the value claims nothing (in the first wave
+        # this was "no error entry"; the second wave has kernels without one).
+        self.refused(HEAD.replace('ensures: error r R c=0 k=2 t=0', 'ensures: normalized r'),
+                     'says nothing about the value')
+
+    def test_second_wave_vocabulary_is_accepted(self):
+        head = HEAD.replace('output:  r = s e', 'output:  r = s e\noutput:  t\noutput:  mask m')
+        body = GOOD + 't = add(a, b)\nh = lt(a, b)\nl = le(0, a)\nm = and(h, l)\n'
+        text = (head.replace('value:   a+b', 'value:   abs(a)-b') + 'requires: power_of_two a\nrequires: nonneg b\n'
+                'ensures: rounded t down\nensures: rounded t nearest\nensures: upper t gaps=3/2\n'
+                'ensures: predicate m le a abs(-b)\nensures: encloses t t -x x=a,b\n' + body)
+        # The other outputs do not reach s (rule 4); only the claims matter here.
+        self.assertEqual([e for e in check(text) if e.rule == rules.CLAIMS], [])
+
+    def test_second_wave_vocabulary(self):
+        head = HEAD.replace('input:   b', 'input:   b\ninput:   x = x0 x1\ninput:   mask w') \
+                   .replace('output:  r = s e', 'output:  r = s e\noutput:  t\noutput:  mask m')
+        body = ('t = add(x0, x1)\nh = lt(a, b)\nl = and(h, w)\nm = or(l, h)\n'
+                'q = select(w, x0, x1)\nk = add(a, q)\ns = add(k, b)\nz = sub(s, a)\ne = sub(b, z)\n')
+        accepted = head + body
+        self.assertEqual([e for e in check(accepted) if e.rule == rules.CLAIMS], [])
+        for extra, words in (
+                ('requires: power_of_two x', 'about a one-limb input'),
+                ('requires: nonneg w', 'vocabulary'),
+                ('requires: nonneg', 'vocabulary'),
+                ('requires: power_of_two a b', 'vocabulary'),
+                ('ensures: rounded t zero', 'rounded mode'),
+                ('ensures: rounded r nearest', 'must have one limb'),
+                ('ensures: rounded m up', 'must be a limb'),
+                ('ensures: upper t gaps=0', 'positive'),
+                ('ensures: upper t gaps=u', 'unknown name'),
+                ('ensures: upper t gaps=abs(2)', 'no abs'),
+                ('ensures: predicate t lt a b', 'must be a mask'),
+                ('ensures: predicate m ne a b', 'predicate relation'),
+                ('ensures: predicate m lt a q', 'unknown name'),
+                ('ensures: predicate m lt a w', 'unknown name'),
+                ('ensures: normalized m', 'must be a limb'),
+                ('ensures: error m R c=0 k=2 t=0', 'must be a limb'),
+                ('ensures: encloses q t y y=a,b', 'not an output'),
+                ('ensures: encloses t r y y=a,b', 'must have one limb'),
+                ('ensures: encloses t t y y=q,b', 'not a limb input'),
+                ('ensures: encloses t t y y=a,x', 'not a one-limb limb input'),
+                ('ensures: encloses t t y y=w,b', 'not a limb input'),
+                ('ensures: encloses t t a a=x,b', 'is the name of a group'),
+                ('ensures: encloses t t u u=a,b', 'is the name of a group, a limb, or a name the printers use'),
+                ('ensures: encloses t t y+z y=a,b z=x,b', 'belongs to two balls'),
+                ('ensures: encloses t t y+b y=a,b', 'unknown name'),
+                ('ensures: encloses t t y*x y=a,b', None),
+                ('value: abs(a)', None),
+                ('value: 2*a', 'only + - *')):
+            text = (head.replace('value:   a+b', extra) if extra.startswith('value:') else head + extra + '\n') + body
+            try:
+                errors = check(text)
+            except ir.DescriptionError as e:
+                self.assertIn(words, str(e), extra)
+                continue
+            claim_errors = [e for e in errors if e.rule == rules.CLAIMS]
+            if words is None:
+                self.assertEqual(claim_errors, [], extra)
+            else:
+                self.assertTrue(any(words in str(e) for e in claim_errors), f'{extra}: {claim_errors}')
 
 
 class TheKernels(unittest.TestCase):
@@ -252,11 +437,19 @@ class TheKernels(unittest.TestCase):
         for d in (None, common.TEST_KERNELS):
             self.assertTrue(common.kernels(d))
 
-    def test_first_wave_names_are_those_of_architecture_md(self):
+    FIRST_WAVE = {'two_sum', 'fast_two_sum', 'two_prod', 'split', 'two_prod_dekker', 'add_2_2', 'add_2_1',
+                  'mul_2_2', 'mul_2_1', 'add_fast_2_2', 'add_fast_2_2_ts'}
+    # docs/developer/design/milestone1.md, "Second-wave kernels" and "Ball kernels", and the two
+    # one-rounding kernels whose claims give the one-limb balls their constants.
+    SECOND_WAVE = {'neg_2', 'abs_2', 'sub_2_2', 'sub_2_1', 'sub_1_2', 'lt_2_2', 'le_2_2', 'eq_2_2', 'lt_2_1',
+                   'le_2_1', 'eq_2_1', 'lt_1_2', 'le_1_2', 'to_nearest_2', 'to_down_2', 'to_up_2',
+                   'abs_upper_2', 'radd', 'rmul', 'mul_pow2_2', 'ball_add_1', 'ball_add_2', 'ball_mul_1',
+                   'ball_mul_2', 'ball_scale_1', 'ball_scale_2', 'ball_neg_1', 'ball_neg_2', 'ball_sub_1',
+                   'ball_sub_2', 'add_1_1', 'mul_1_1'}
+
+    def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
-        self.assertEqual(set(ks), {'two_sum', 'fast_two_sum', 'two_prod', 'split', 'two_prod_dekker',
-                                   'add_2_2', 'add_2_1', 'mul_2_2', 'mul_2_1', 'add_fast_2_2',
-                                   'add_fast_2_2_ts'})
+        self.assertEqual(set(ks), self.FIRST_WAVE | self.SECOND_WAVE)
         body = {name: [(st.dsts, st.op, tuple(map(str, st.args))) for st in k.body] for name, k in ks.items()}
         self.assertEqual(body['two_sum'], [
             (('s',), 'add', ('a', 'b')), (('bb',), 'sub', ('s', 'a')), (('t0',), 'sub', ('s', 'bb')),
@@ -275,8 +468,47 @@ class TheKernels(unittest.TestCase):
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
                          {'two_sum', 'fast_two_sum', 'two_prod', 'add_2_2', 'add_2_1', 'mul_2_2', 'mul_2_1'})
         self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
-                         {'split', 'two_prod_dekker', 'add_fast_2_2', 'add_fast_2_2_ts'})
+                         {'split', 'two_prod_dekker', 'add_fast_2_2', 'add_fast_2_2_ts'} | self.SECOND_WAVE)
         self.assertEqual(ks['two_prod'].ce_variant, 'two_prod_dekker')
+
+    def test_second_wave_bodies_are_those_of_milestone1_md(self):
+        ks = common.kernels()
+
+        def body(name):
+            return [f'{", ".join(st.dsts)} = {st.op}({", ".join(map(str, st.args))})' for st in ks[name].body]
+
+        self.assertEqual(body('abs_2'), ['m = lt(x0, 0)', 'n0 = neg(x0)', 'n1 = neg(x1)',
+                                         'z0 = select(m, n0, x0)', 'z1 = select(m, n1, x1)'])
+        self.assertEqual(body('sub_2_2'), ['n0 = neg(y0)', 'n1 = neg(y1)', 'z0, z1 = add_2_2(x0, x1, n0, n1)'])
+        self.assertEqual(body('lt_2_2'), ['h = lt(x0, y0)', 'e = eq(x0, y0)', 'l = lt(x1, y1)', 't = and(e, l)',
+                                          'm = or(h, t)'])
+        self.assertEqual(body('le_1_2'), ['h = lt(a, y0)', 'e = eq(a, y0)', 'l = le(0, y1)', 't = and(e, l)',
+                                          'm = or(h, t)'])
+        self.assertEqual(body('eq_2_1'), ['h = eq(x0, a)', 'l = eq(x1, 0)', 'm = and(h, l)'])
+        self.assertEqual(body('to_nearest_2'), ['t = copy(x0)'])
+        self.assertEqual(body('to_down_2'), ['m = lt(x1, 0)', 'p = pred(x0)', 't = select(m, p, x0)'])
+        self.assertEqual(body('to_up_2'), ['m = lt(0, x1)', 's = succ(x0)', 't = select(m, s, x0)'])
+        self.assertEqual(body('abs_upper_2'), ['a0, a1 = abs_2(x0, x1)', 't = to_up_2(a0, a1)'])
+        self.assertEqual(body('radd'), ['s = add(a, b)', 'r = succ(s)'])
+        self.assertEqual(body('rmul'), ['p = prod(a, b)', 'r = succ(p)'])
+        self.assertEqual(body('mul_pow2_2'), ['h = prod(x0, c)', 'l = prod(x1, c)', 'z0, z1 = fast_two_sum(h, l)'])
+        self.assertEqual(body('ball_add_2'), [
+            'cz0, cz1 = add_2_2(cx0, cx1, cy0, cy1)', 'mz = abs_upper_2(cz0, cz1)',
+            'd = rmul(const unit_computed(add_2_2), mz)', 'r0 = radd(rx, ry)', 'rz = radd(r0, d)'])
+        self.assertEqual(body('ball_mul_1'), [
+            'cz = prod(cx, cy)', 'ax = abs(cx)', 'ay = abs(cy)', 't1 = rmul(ax, ry)', 't2 = rmul(ay, rx)',
+            't3 = rmul(rx, ry)', 's1 = radd(t1, t2)', 's2 = radd(s1, t3)', 'mz = abs(cz)',
+            'd0 = rmul(const unit_computed(mul_1_1), mz)', 'd = radd(d0, const tiny_computed(mul_1_1))',
+            'rz = radd(s2, d)'])
+        self.assertEqual(body('ball_scale_2'), [
+            'cz0, cz1 = mul_2_1(cx0, cx1, a)', 'aa = abs(a)', 't1 = rmul(aa, rx)', 'mz = abs_upper_2(cz0, cz1)',
+            'd0 = rmul(const unit_computed(mul_2_1), mz)', 'd = radd(d0, const tiny_computed(mul_2_1))',
+            'rz = radd(t1, d)'])
+        # The two-limb balls take their constants from the proved kernels of their centers.
+        for name, center in (('ball_add_2', 'add_2_2'), ('ball_mul_2', 'mul_2_2'), ('ball_scale_2', 'mul_2_1')):
+            self.assertEqual(ks[name].body[0].op, center)
+            self.assertEqual({ir.computed(c)[1] for c in ir.constants(ks[name]) if ir.computed(c)}, {center})
+            self.assertEqual(ks[center].status, 'proved')
 
     def test_flops(self):
         # The operation counts of docs/developer/design/phase0/operations.md.

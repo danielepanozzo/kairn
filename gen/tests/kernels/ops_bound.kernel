@@ -1,0 +1,10 @@
+# Test kernel: one rounded product, whose error entry gives ops_wave2 its computed constants.
+kernel:   ops_bound
+input:    a
+input:    b
+output:   p
+value:    a*b
+ensures:  error p R c=1/(1+u) k=1 t=1/2
+status:   unverified
+
+p = prod(a, b)

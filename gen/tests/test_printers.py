@@ -4,7 +4,7 @@ import re
 import unittest
 
 import common
-from kairn_gen import cpp, ir, rocq
+from kairn_gen import cpp, ir, rocq, simd
 
 # The Phase 0 tracer's model of these three kernels, which Rocq 9.0.1 with Flocq 4.2.2 accepted
 # (experiments/phase0/tracer/gen.py).
@@ -53,12 +53,13 @@ def functions(text):
     return out
 
 
-ATOM = r'(?:[a-z][a-z0-9_]*|0x1(?:\.[0-9a-f]+)?p\+[0-9]+f?|0\.0f?)'
-# One operation, written over atoms: what "one operation per statement" allows.
+ATOM = r'(?:[a-z][a-z0-9_]*|0x1(?:\.[0-9a-f]+)?p[-+][0-9]+f?|0\.0f?)'
+# One operation, written over atoms: what "one operation per statement" allows (a bare atom is a
+# copy, which is none).
 ONE_OPERATION = re.compile(
     rf'(?:-{ATOM}|!{ATOM}|{ATOM} (?:[-+*<&|]|<=|==) {ATOM}|{ATOM} \? {ATOM} : {ATOM}|'
     rf'fma_rn\(-?{ATOM}, {ATOM}, -?{ATOM}\)|(?:abs_bits|next_up|next_down)\({ATOM}\)|'
-    rf'{ATOM} \* {ATOM} \+ {ATOM})')
+    rf'{ATOM} \* {ATOM} \+ {ATOM}|{ATOM})')
 
 
 class Cpp(unittest.TestCase):
@@ -119,13 +120,41 @@ class Cpp(unittest.TestCase):
             self.assertIn(f'        const {t} ah_g = {splitter} * a;', ce)
             self.assertEqual(ce[-3:], ['        p_out = p;', '        e_out = e;', '        return;'])
 
+    # The kernels with a fused operation (an FMA or the opaque product) and no constant-evaluation
+    # variant: every one that computes a product, directly or through rmul.
+    NOT_CONSTEXPR = {'mul_2_2', 'mul_2_1', 'split', 'two_prod_dekker', 'mul_1_1', 'rmul', 'mul_pow2_2',
+                     'ball_add_1', 'ball_add_2', 'ball_mul_1', 'ball_mul_2', 'ball_scale_1', 'ball_scale_2',
+                     'ball_sub_1', 'ball_sub_2'}
+
     def test_constexpr(self):
         plain = {name for (name, _), f in self.fns.items() if not f['constexpr']}
-        self.assertEqual(plain, {'mul_2_2', 'mul_2_1', 'split', 'two_prod_dekker'})
+        self.assertEqual(plain, self.NOT_CONSTEXPR)
         line = [x for x in self.text.splitlines() if x.startswith('// Not constexpr: ')]
-        self.assertEqual(sorted(line[0][len('// Not constexpr: '):-1].split(', ')),
-                         ['mul_2_1', 'mul_2_2', 'split', 'two_prod_dekker'])
+        self.assertEqual(set(line[0][len('// Not constexpr: '):-1].split(', ')), self.NOT_CONSTEXPR)
         self.assertTrue(all(f['head'].startswith('KAIRN_GEN_FORCEINLINE') for f in self.fns.values()))
+
+    def test_masks_and_unused_inputs(self):
+        self.assertTrue(self.fns[('lt_2_2', 'double')]['head'].endswith('double y1, bool& m_out) noexcept {'))
+        self.assertIn('    const bool l = x1 < 0.0f;', self.fns[('lt_2_1', 'float')]['lines'])
+        self.assertIn('    const bool l = 0.0 < y1;', self.fns[('lt_1_2', 'double')]['lines'])
+        self.assertIn('    const bool t = e & l;', self.fns[('lt_2_2', 'double')]['lines'])
+        self.assertIn('    const double t = m ? s : x0;', self.fns[('to_up_2', 'double')]['lines'])
+        self.assertIn('[[maybe_unused]] double x1', self.fns[('to_nearest_2', 'double')]['head'])
+        self.assertIn('    const double t = x0;', self.fns[('to_nearest_2', 'double')]['lines'])
+        heads = cpp.scalar(self.tks)
+        self.assertIn('void ops_wave2(double a, bool w, double b, double& r0_out, double& c1_out, '
+                      'double& k1_out, bool& v_out) noexcept {', heads)
+
+    def test_computed_constants(self):
+        # unit_computed(add_1_1) is u exactly; tiny_computed(mul_1_1) is eta (eta/2 (1 + u), rounded up).
+        add = self.fns[('ball_add_1', 'double')]['lines']
+        self.assertIn('    const double d_p = fma_rn(0x1p-53, mz, 0.0);', add)
+        mul = self.fns[('ball_mul_1', 'float')]['lines']
+        self.assertIn('    const float d_s = d0 + 0x1p-149f;', mul)
+        mul2 = self.fns[('ball_mul_2', 'double')]['lines']
+        # 4u^2 / (1 - 4u^2) rounded up is 2^-104 (1 + 2^-52); (3/2) eta / (1 - 4u^2) rounded up is 2 eta.
+        self.assertIn('    const double d0_p = fma_rn(0x1.0000000000001p-104, mz, 0.0);', mul2)
+        self.assertIn('    const double d_s = d0 + 0x1p-1073;', mul2)
 
     def test_inlined_names(self):
         add = self.fns[('add_2_2', 'double')]['lines']
@@ -142,6 +171,94 @@ class Cpp(unittest.TestCase):
                   ir.Stmt(('e',), 'sub', (ir.Operand('b'), ir.Operand('out')), 3)]
         with self.assertRaises(cpp.PrintError):
             cpp.function(ks['add_2_1'], ks, 'double')    # z0_out is the inlined `out` and an output
+
+
+def packed_functions(text):
+    """{(name, vector type): body lines} of a generated packed header."""
+    out, current = {}, None
+    for line in text.splitlines():
+        m = re.match(r'(?:KAIRN_GEN_FORCEINLINE|inline) void (\w+)\((?:\[\[maybe_unused\]\] )?(\w+) ', line)
+        if m:
+            current = out.setdefault((m.group(1), m.group(2)), [])
+        elif line == '}':
+            current = None
+        elif current is not None:
+            current.append(line)
+    return out
+
+
+class Packed(unittest.TestCase):
+    """The AVX2 and NEON printers: one intrinsic per statement, products only as FMAs."""
+    FUSED = {'avx2.hpp': r'_mm256_fn?m(?:add|sub)_p[sd]\(', 'neon.hpp': r'vfm[as]q_f(?:32|64)\('}
+    PLAIN_PRODUCT = {'avx2.hpp': r'_mm256_mul_p[sd]\(', 'neon.hpp': r'vmulq_f(?:32|64)\('}
+    CONSTANT = {'avx2.hpp': r'_mm256_(?:set1_p[sd]\([-+0-9a-fx.p]+f?\)|setzero_p[sd]\(\))',
+                'neon.hpp': r'vdupq_n_f(?:32|64)\([-+0-9a-fx.p]+f?\)'}
+    CALL = r'(?:_mm256_\w+|v\w+q_[fu](?:32|64)|not_mask|next_up|next_down)\('
+
+    @classmethod
+    def setUpClass(cls):
+        cls.ks = common.kernels()
+        cls.tks = common.kernels(common.TEST_KERNELS)
+        cls.texts = {(b['file'], d): simd.header(b, ks) for b in simd.BACKENDS
+                     for d, ks in (('kernels', cls.ks), ('test', cls.tks))}
+
+    def test_every_kernel_twice(self):
+        for b in simd.BACKENDS:
+            fns = packed_functions(self.texts[(b['file'], 'kernels')])
+            types = {v for v, *_ in b['types'].values()}
+            self.assertEqual(set(fns), {(k, t) for k in self.ks for t in types}, b['file'])
+
+    def test_one_intrinsic_per_statement(self):
+        for (file, which), text in self.texts.items():
+            ks = self.ks if which == 'kernels' else self.tks
+            for (name, vtype), lines in packed_functions(text).items():
+                ops = [p.op for p in ir.prims(ks[name], ks)]
+                stmts = [ln for ln in lines if re.match(r'\s+const \w+ \w+ = ', ln)]
+                self.assertEqual(len(stmts), len(ops), name)
+                for line, op in zip(stmts, ops):
+                    expr = re.sub(self.CONSTANT[file], 'K', line.split(' = ', 1)[1])
+                    calls = len(re.findall(self.CALL, expr))
+                    # Two calls only where the spelling composes an exact negation (NEON's fms) or
+                    # is the declared contractable multiply-add.
+                    want = 0 if op == 'copy' else 2 if (op == 'muladd' or (op == 'fms' and file == 'neon.hpp')) else 1
+                    self.assertEqual(calls, want, (file, name, line))
+                self.assertTrue(all(re.fullmatch(r'\s+(//.*|\w+_out = \w+;|const \w+ \w+ = .*;)', ln)
+                                    for ln in lines), name)
+
+    def test_products_are_fused_operations(self):
+        for (file, which), text in self.texts.items():
+            ks = self.ks if which == 'kernels' else self.tks
+            for (name, vtype), lines in packed_functions(text).items():
+                prims = ir.prims(ks[name], ks)
+                body = '\n'.join(lines)
+                self.assertEqual(len(re.findall(self.FUSED[file], body)), sum(p.op in ir.FUSED for p in prims),
+                                 (file, name))
+                self.assertEqual(len(re.findall(self.PLAIN_PRODUCT[file], body)),
+                                 sum(p.op == 'muladd' for p in prims), (file, name))
+                zero = '_mm256_setzero_p' if file == 'avx2.hpp' else 'vdupq_n_f'
+                stmts = [x for x in lines if re.match(r'\s+const \w+ \w+ = ', x)]
+                prods = [ln for ln, p in zip(stmts, prims) if p.op == 'prod']
+                self.assertEqual(len(prods), sum(p.op == 'prod' for p in prims))
+                self.assertTrue(all(zero in ln for ln in prods), (file, name))
+
+    def test_spellings(self):
+        avx2 = packed_functions(self.texts[('avx2.hpp', 'kernels')])
+        neon = packed_functions(self.texts[('neon.hpp', 'kernels')])
+        self.assertIn('    const __m256d t = _mm256_blendv_pd(x0, s, m);', avx2[('to_up_2', '__m256d')])
+        self.assertIn('    const __m256d l = _mm256_cmp_pd(x1, _mm256_setzero_pd(), _CMP_LT_OQ);',
+                      avx2[('lt_2_1', '__m256d')])
+        self.assertIn('    const __m256 t = _mm256_and_ps(e, l);', avx2[('lt_2_2', '__m256')])
+        self.assertIn('    const float64x2_t t = vbslq_f64(m, s, x0);', neon[('to_up_2', 'float64x2_t')])
+        self.assertIn('    const uint32x4_t t = vandq_u32(e, l);', neon[('lt_2_2', 'float32x4_t')])
+        self.assertIn('    const float64x2_t e = vfmaq_f64(vnegq_f64(p), a, b);', neon[('two_prod', 'float64x2_t')])
+        self.assertIn('    const __m256d e = _mm256_fmsub_pd(a, b, p);', avx2[('two_prod', '__m256d')])
+        self.assertIn('    const __m256d d_p = _mm256_fmadd_pd(_mm256_set1_pd(0x1p-53), mz, _mm256_setzero_pd());',
+                      avx2[('ball_add_1', '__m256d')])
+        text = self.texts[('neon.hpp', 'kernels')]
+        self.assertIn('void lt_2_2(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, '
+                      'uint64x2_t& m_out) noexcept {', text)
+        self.assertIn('[[maybe_unused]] __m256d x1', self.texts[('avx2.hpp', 'kernels')])
+        self.assertNotIn('constexpr void', text)
 
 
 class Rocq(unittest.TestCase):
@@ -162,7 +279,9 @@ class Rocq(unittest.TestCase):
             lets = [line for line in block.splitlines() if line.startswith('  let ')]
             self.assertEqual(len(lets), len(k.body), name)
             for st, line in zip(k.body, lets):
-                if st.is_call:
+                if st.is_call and len(st.dsts) == 1:     # a call with one output binds a name
+                    self.assertTrue(line.startswith(f"  let {st.dsts[0]} := {st.op} "), line)
+                elif st.is_call:
                     self.assertTrue(line.startswith(f"  let '({', '.join(st.dsts)}) := {st.op} "), line)
                 else:
                     self.assertTrue(line.startswith(f'  let {st.dsts[0]} := '), line)
@@ -200,6 +319,68 @@ class Rocq(unittest.TestCase):
         st = rocq.statements(tks)
         self.assertIn('  forall fuse_u0_t : bool,\n', st)
         self.assertIn('ops_call emin prec tie_even fuse_u0_t x0 x1 a in', st)
+
+    def test_section_arguments(self):
+        # Closing the section abstracts a definition over the section variables it uses, and only
+        # those (checked with Rocq 9.0.1); the statements apply each kernel accordingly.
+        want = {'lt_2_2': [], 'to_nearest_2': [], 'neg_2': [], 'abs_2': [], 'ball_neg_1': [],
+                'to_down_2': ['emin', 'prec'], 'abs_upper_2': ['emin', 'prec'], 'ball_neg_2': [],
+                'radd': ['emin', 'prec', 'choice'], 'two_sum': ['emin', 'prec', 'choice'],
+                'ball_add_1': ['emin', 'prec', 'choice']}
+        for name, args in want.items():
+            self.assertEqual(rocq.section_args(self.ks[name], self.ks), args, name)
+        self.assertIn('  let m := lt_2_2 x0 x1 y0 y1 in\n', self.statements)
+        self.assertIn('  let t := to_down_2 emin prec x0 x1 in\n', self.statements)
+        self.assertIn("  let '(cz, rz) := ball_add_1 emin prec tie_even cx rx cy ry in\n", self.statements)
+        self.assertIn("  let '(cz, rz) := ball_neg_1 cx rx in\n", self.statements)
+
+    def test_second_wave_model(self):
+        m = self.model
+        self.assertIn('Definition lt_2_1 (x0 x1 a : R) : bool :=\n  let h := Rlt_bool x0 a in\n'
+                      '  let e := Req_bool x0 a in\n  let l := Rlt_bool x1 0 in\n  let t := andb e l in\n'
+                      '  let m := orb h t in\n  m.', m)
+        self.assertIn('  let t := if m then s else x0 in\n', m)
+        self.assertIn('  let s := succ radix2 (FLT_exp emin prec) x0 in\n', m)
+        self.assertIn('  let p := pred radix2 (FLT_exp emin prec) x0 in\n', m)
+        self.assertIn('Definition to_nearest_2 (x0 x1 : R) : R :=\n  let t := x0 in\n  t.', m)
+        self.assertIn('Definition ball_add_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=', m)
+        self.assertIn('  let d := rmul unit_computed_add_2_2 mz in\n', m)
+        self.assertIn("  let '(cz0, cz1, rz) := ball_add_2 cx0 cx1 rx n0 n1 ry in\n", m)
+        self.assertIn('Definition unit_computed_add_2_2 : R :=\n'
+                      '  let rel := (3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2 in\n'
+                      '  round radix2 (FLT_exp emin prec) Zceil (rel / (1 - rel)).', m)
+        self.assertIn('Definition tiny_computed_mul_2_1 : R :=\n'
+                      '  let rel := 2 * bpow radix2 (- prec) ^ 2 in\n'
+                      '  let tiny := 1 * bpow radix2 emin in\n'
+                      '  round radix2 (FLT_exp emin prec) Zceil (tiny / (1 - rel)).', m)
+        tks = common.kernels(common.TEST_KERNELS)
+        self.assertIn('Definition ops_wave2 (a : R) (w : bool) (b : R) : R * R * R * bool :=', rocq.model(tks))
+
+    def test_second_wave_statements(self):
+        s = self.statements
+        self.assertIn('Definition RD (x : R) : R := round radix2 (FLT_exp emin prec) Zfloor x.', s)
+        self.assertIn('Definition RU (x : R) : R := round radix2 (FLT_exp emin prec) Zceil x.', s)
+        for text in (
+                '  m = Rlt_bool (x0 + x1) (y0 + y1).',                          # predicate
+                '  m = Req_bool (x0 + x1) a.',
+                '  m = Rle_bool a (y0 + y1).',
+                '  t = RN emin prec (x0 + x1).',                                # rounded
+                '  t = RD emin prec (x0 + x1).',
+                '  t = RU emin prec (Rabs (x0 + x1)).',
+                '  (a + b) <= r /\\ r - (a + b) <= 2 * (r - pred radix2 (FLT_exp emin prec) r).',   # upper
+                '  (a * b) <= r /\\ r - (a * b) <= 2 * (r - pred radix2 (FLT_exp emin prec) r).',
+                '  (exists n : Z, c = bpow radix2 n) ->',                       # power_of_two
+                '  0 <= rx ->',                                                  # nonneg
+                '  (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> '
+                'Rabs ((x * y) - (cz0 + cz1)) <= rz).',                         # encloses
+                '  (forall x : R, Rabs (x - cx) <= rx -> Rabs ((x * a) - cz) <= rz).',
+                '  (forall x : R, Rabs (x - cx) <= rx -> Rabs ((- x) - cz) <= rz).',
+                '  (z0 + z1) = (Rabs (x0 + x1)).',                              # exact, through abs
+                '  (z0 + z1) = (- (x0 + x1)).'):
+            self.assertIn(text, s)
+        tks = common.kernels(common.TEST_KERNELS)
+        self.assertIn('  forall a b : R,\n  forall w : bool,\n  fmt emin prec a ->\n  fmt emin prec b ->\n'
+                      "  let '(r0, c1, k1, v) := ops_wave2 emin prec tie_even a w b in\n", rocq.statements(tks))
 
     def test_audit(self):
         ks = copy.deepcopy(dict(self.ks))
