@@ -260,10 +260,11 @@ set(KAIRN_CROSSCHECK_SEED 0 CACHE STRING "Seed of the random cases of the cross-
 #   2 2      add_2_2, add_fast_2_2, sub_2_2           fp:3:-3:2      178 929
 #   2 2      mul_2_2                                  fp:4:-7:-3     245 025
 #   2 c      mul_pow2_2                               fp:5:-6:2      144 755
-#   1 r 1    ball_scale_1                            fp:3:-5:0       84 700
+#   1 r 1    ball_scale_1                             fp:3:-5:0       84 700
 #   2 r 1    ball_scale_2                             fp:2:-4:1       60 102
 #   1 r 1 r  ball_add_1, ball_sub_1                   fp:2:-3:1       76 176
-#            ball_mul_1                               fp:2:-4:0       76 176
+#            ball_mul_1 (its constant (1+u)^5 must    fp:2:-4:1      142 884
+#            be a number of the format, so qmax >= 1)
 #   2 r 2 r  ball_add_2, ball_sub_2: radii 0, 1/8,    fp:3:-3:2      148 896 of 140 million
 #            1/2, 5/2 and cx in [1/2, 2)
 #            ball_mul_2: radii 0, eta, 3/2, cx in     fp:4:-5:1       64 728 of 12.4 billion
@@ -280,7 +281,7 @@ set(_toy_2_c_product fp:5:-6:2)
 set(_toy_1_r_1_product fp:3:-5:0)
 set(_toy_2_r_1_product fp:2:-4:1)
 set(_toy_1_r_1_r_sum fp:2:-3:1)
-set(_toy_1_r_1_r_product fp:2:-4:0)
+set(_toy_1_r_1_r_product fp:2:-4:1)
 set(_radii "0x0p+0/0x1p-3/0x1p-1/0x1.4p+1")
 set(_toy_2_r_2_r_sum fp:3:-3:2 "rx.in=${_radii},ry.in=${_radii},cx.lead=-1:0")
 set(_radii "0x0p+0/0x1p-5/0x1.8p+0")

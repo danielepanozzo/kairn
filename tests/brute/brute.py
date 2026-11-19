@@ -93,7 +93,7 @@ SHAPES = {
     "1_r_1_product": ("fp:3:-5:0", ["fp:4:-5:0", "fp:5:-5:0", "fp:4:-8:2", "fp:3:-8:2"]),
     "2_r_1_product": ("fp:2:-4:1", ["fp:3:-4:1", "fp:4:-4:1", "fp:3:-6:2", "fp:2:-8:3"]),
     "1_r_1_r_sum": ("fp:2:-3:1", ["fp:3:-3:1", "fp:4:-3:1", "fp:3:-4:2", "fp:2:-6:4"]),
-    "1_r_1_r_product": ("fp:2:-4:0", ["fp:3:-4:0", "fp:4:-4:0", "fp:3:-6:2", "fp:2:-7:3"]),
+    "1_r_1_r_product": ("fp:2:-4:1", ["fp:3:-4:1", "fp:4:-4:1", "fp:3:-6:2", "fp:2:-7:3"]),
     # The extended domain: the quick tier's format with one and two bits more (the same number
     # of exponents), then more exponents.
     "ext_1": ("fp:11:-29:10", ["fp:12:-30:9", "fp:13:-31:8", "fp:13:-61:38"]),

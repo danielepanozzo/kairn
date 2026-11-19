@@ -93,7 +93,7 @@ pass or fail; on failure it also prints the command that reruns one case (below)
     | `1 r 1` | `ball_scale_1` | `fp:3:-5:0` | 84 700 |
     | `2 r 1` | `ball_scale_2` | `fp:2:-4:1` | 60 102 |
     | `1 r 1 r` | `ball_add_1`, `ball_sub_1` | `fp:2:-3:1` | 76 176 |
-    | `1 r 1 r` | `ball_mul_1` | `fp:2:-4:0` | 76 176 |
+    | `1 r 1 r` | `ball_mul_1` | `fp:2:-4:1` | 142 884 |
 
     The kernels of the extended domain (the non-finite layer, [Claims of the non-finite
     layer](architecture.md#claims-of-the-non-finite-layer)) read the roles in that domain: `1`
