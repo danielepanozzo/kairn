@@ -281,6 +281,64 @@ foreach(_kind scalar packed)
   endforeach()
 endforeach()
 
+# --- The object code ----------------------------------------------------------------------------
+#
+# objcode/objcode.py compiles objcode/unit.cpp, which has a function for every kernel and limb
+# type, scalar and packed (the backend above), with this build's compiler in each configuration of
+# its flag matrix (contraction settings, optimization levels, -frounding-math; both forms of the
+# scalar fix-ups), disassembles each object file, and checks the fused multiply-adds and plain
+# multiplications of every kernel against gen/objcode.json, which the generator writes from the
+# kernels' IR (docs/developer/testing.md, "Object code"). A disassembler that cannot be found is a
+# failure: dumpbin next to cl, llvm-objdump next to clang-cl, objdump otherwise.
+# - objcode.check: the quick tier's configurations of the matrix; full.objcode.check (full/) all.
+# - objcode.controls: the negative controls, in the same configurations; full.objcode.controls in
+#   all: the textbook a * b + c of objcode/fixture.cpp must fail the check exactly where its
+#   program sees the compiler fuse it, and somewhere; counts changed on purpose must fail.
+# - objcode.test: the checker's own tests, on stored disassemblies of every format (Python only).
+# The compilations take the options of CMAKE_CXX_FLAGS and kairn::fma's, as api.k1.zero_cost's do,
+# and two of them run at once in the quick tier, four in the full tier (PROCESSORS).
+set(_objcode_command "")
+if(Python3_Interpreter_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/tests/objcode/objcode.py")
+  get_target_property(_objcode_flags kairn::fma INTERFACE_COMPILE_OPTIONS)
+  if(NOT _objcode_flags)
+    set(_objcode_flags "")
+  endif()
+  separate_arguments(_objcode_cxx_flags NATIVE_COMMAND "${CMAKE_CXX_FLAGS}")
+  list(PREPEND _objcode_flags ${_objcode_cxx_flags})
+  if(CMAKE_OSX_SYSROOT AND NOT _msvc_style)
+    list(APPEND _objcode_flags -isysroot "${CMAKE_OSX_SYSROOT}")
+  endif()
+  list(JOIN _objcode_flags " " _objcode_flags)
+  list(JOIN _isa_option " " _objcode_isa)
+  if(_msvc_style)
+    set(_objcode_style msvc)
+  else()
+    set(_objcode_style gnu)
+  endif()
+  if(_packed_backend)
+    set(_objcode_packed "${_packed_backend}")
+  else()
+    set(_objcode_packed none)
+  endif()
+  set(_objcode_command "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/objcode/objcode.py"
+    --cxx "${CMAKE_CXX_COMPILER}" --style ${_objcode_style} --compiler-id "${CMAKE_CXX_COMPILER_ID}"
+    "--flags=${_objcode_flags}" --packed ${_objcode_packed} "--packed-flags=${_objcode_isa}")
+  add_test(NAME objcode.check
+    COMMAND ${_objcode_command} --tier quick --jobs 2
+      --workdir "${CMAKE_CURRENT_BINARY_DIR}/objcode/check")
+  add_test(NAME objcode.controls
+    COMMAND ${_objcode_command} --controls --tier quick --jobs 2
+      --workdir "${CMAKE_CURRENT_BINARY_DIR}/objcode/controls")
+  set_tests_properties(objcode.check objcode.controls PROPERTIES TIMEOUT 600 PROCESSORS 2
+    LABELS objcode)
+  add_test(NAME objcode.test
+    COMMAND "${Python3_EXECUTABLE}" tests/objcode/test_objcode.py
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(objcode.test PROPERTIES LABELS "objcode;python")
+  message(STATUS "Kairn tests: the object code of every kernel with ${CMAKE_CXX_COMPILER_ID} "
+    "(packed: ${_objcode_packed})")
+endif()
+
 # --- The cross-checks ---------------------------------------------------------------------------
 #
 # Run by crosscheck.cmake, which prints the oracle's report and fails when the run did not check

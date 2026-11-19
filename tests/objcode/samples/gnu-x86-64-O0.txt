@@ -1,0 +1,251 @@
+
+unit.o:	file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <kairn_objcode_fixups_inline>:
+       0:	endbr64
+       4:	push   %rbp
+       5:	mov    %rsp,%rbp
+       8:	nop
+       9:	pop    %rbp
+       a:	ret
+
+000000000000027d <kairn_objcode_scalar_float_ball_add_1>:
+     27d:	endbr64
+     281:	push   %rbp
+     282:	mov    %rsp,%rbp
+     285:	add    $0xffffffffffffff80,%rsp
+     289:	mov    %rdi,-0x68(%rbp)
+     28d:	mov    %rsi,-0x70(%rbp)
+     291:	mov    %rdx,-0x78(%rbp)
+     295:	mov    %rcx,-0x80(%rbp)
+     299:	mov    %fs:0x28,%rax
+     2a2:	mov    %rax,-0x8(%rbp)
+     2a6:	xor    %eax,%eax
+     2a8:	mov    -0x70(%rbp),%rax
+     2ac:	lea    0x4(%rax),%rdx
+     2b0:	mov    -0x68(%rbp),%rax
+     2b4:	add    $0xc,%rax
+     2b8:	vmovss (%rax),%xmm0
+     2bc:	mov    -0x68(%rbp),%rax
+     2c0:	add    $0x8,%rax
+     2c4:	vmovss (%rax),%xmm1
+     2c8:	mov    -0x68(%rbp),%rax
+     2cc:	add    $0x4,%rax
+     2d0:	vmovss (%rax),%xmm2
+     2d4:	mov    -0x68(%rbp),%rax
+     2d8:	vmovss (%rax),%xmm3
+     2dc:	vmovss %xmm3,-0x54(%rbp)
+     2e1:	vmovss %xmm2,-0x50(%rbp)
+     2e6:	vmovss %xmm1,-0x4c(%rbp)
+     2eb:	vmovss %xmm0,-0x48(%rbp)
+     2f0:	mov    -0x70(%rbp),%rax
+     2f4:	mov    %rax,-0x18(%rbp)
+     2f8:	mov    %rdx,-0x10(%rbp)
+     2fc:	vmovss -0x54(%rbp),%xmm0
+     301:	vaddss -0x4c(%rbp),%xmm0,%xmm0
+     306:	vmovss %xmm0,-0x44(%rbp)
+     30b:	vmovss -0x44(%rbp),%xmm0
+     310:	vmovss %xmm0,-0x5c(%rbp)
+     315:	lea    -0x5c(%rbp),%rax
+     319:	mov    %rax,%rdi
+     31c:	call   321 <kairn_objcode_scalar_float_ball_add_1+0xa4>
+			31d: R_X86_64_PLT32	_ZSt8bit_castIjfET_RKT0_-0x4
+     321:	and    $0x7fffffff,%eax
+     326:	mov    %eax,-0x58(%rbp)
+     329:	lea    -0x58(%rbp),%rax
+     32d:	mov    %rax,%rdi
+     330:	call   335 <kairn_objcode_scalar_float_ball_add_1+0xb8>
+			331: R_X86_64_PLT32	_ZSt8bit_castIfjET_RKT0_-0x4
+     335:	vmovd  %xmm0,%eax
+     339:	nop
+     33a:	mov    %eax,-0x40(%rbp)
+     33d:	vmovss -0x50(%rbp),%xmm0
+     342:	vaddss -0x48(%rbp),%xmm0,%xmm0
+     347:	vmovss %xmm0,-0x3c(%rbp)
+     34c:	vmovss -0x40(%rbp),%xmm0
+     351:	vmovss %xmm0,-0x38(%rbp)
+     356:	vmovss 0x0(%rip),%xmm0        # 35e <kairn_objcode_scalar_float_ball_add_1+0xe1>
+			35a: R_X86_64_PC32	.rodata+0x2c
+     35e:	vmovss %xmm0,-0x34(%rbp)
+     363:	vmovss -0x3c(%rbp),%xmm0
+     368:	vmovss %xmm0,-0x30(%rbp)
+     36d:	vmovss -0x38(%rbp),%xmm0
+     372:	vmovss -0x30(%rbp),%xmm4
+     377:	vfmadd132ss -0x34(%rbp),%xmm4,%xmm0
+     37d:	nop
+     37e:	vmovss %xmm0,-0x2c(%rbp)
+     383:	vmovss -0x2c(%rbp),%xmm0
+     388:	vmovss %xmm0,-0x28(%rbp)
+     38d:	vmovss 0x0(%rip),%xmm0        # 395 <kairn_objcode_scalar_float_ball_add_1+0x118>
+			391: R_X86_64_PC32	.rodata+0x30
+     395:	vmovss %xmm0,-0x24(%rbp)
+     39a:	vmovss 0x0(%rip),%xmm0        # 3a2 <kairn_objcode_scalar_float_ball_add_1+0x125>
+			39e: R_X86_64_PC32	.rodata+0x34
+     3a2:	vmovss %xmm0,-0x20(%rbp)
+     3a7:	vmovss -0x28(%rbp),%xmm0
+     3ac:	vmovss -0x20(%rbp),%xmm5
+     3b1:	vfmadd132ss -0x24(%rbp),%xmm5,%xmm0
+     3b7:	nop
+     3b8:	vmovss %xmm0,-0x1c(%rbp)
+     3bd:	mov    -0x18(%rbp),%rax
+     3c1:	vmovss -0x44(%rbp),%xmm0
+     3c6:	vmovss %xmm0,(%rax)
+     3ca:	mov    -0x10(%rbp),%rax
+     3ce:	vmovss -0x1c(%rbp),%xmm0
+     3d3:	vmovss %xmm0,(%rax)
+     3d7:	nop
+     3d8:	nop
+     3d9:	mov    -0x8(%rbp),%rax
+     3dd:	sub    %fs:0x28,%rax
+     3e6:	je     3ed <kairn_objcode_scalar_float_ball_add_1+0x170>
+     3e8:	call   3ed <kairn_objcode_scalar_float_ball_add_1+0x170>
+			3e9: R_X86_64_PLT32	__stack_chk_fail-0x4
+     3ed:	leave
+     3ee:	ret
+
+0000000000003624 <kairn_objcode_scalar_double_mul_1_1>:
+    3624:	endbr64
+    3628:	push   %rbp
+    3629:	mov    %rsp,%rbp
+    362c:	mov    %rdi,-0x48(%rbp)
+    3630:	mov    %rsi,-0x50(%rbp)
+    3634:	mov    %rdx,-0x58(%rbp)
+    3638:	mov    %rcx,-0x60(%rbp)
+    363c:	mov    -0x48(%rbp),%rax
+    3640:	add    $0x8,%rax
+    3644:	vmovsd (%rax),%xmm0
+    3648:	mov    -0x48(%rbp),%rax
+    364c:	vmovsd (%rax),%xmm1
+    3650:	vmovsd %xmm1,-0x38(%rbp)
+    3655:	vmovsd %xmm0,-0x30(%rbp)
+    365a:	mov    -0x50(%rbp),%rax
+    365e:	mov    %rax,-0x28(%rbp)
+    3662:	vmovsd -0x38(%rbp),%xmm0
+    3667:	vmovsd %xmm0,-0x20(%rbp)
+    366c:	vmovsd -0x30(%rbp),%xmm0
+    3671:	vmovsd %xmm0,-0x18(%rbp)
+    3676:	vxorpd %xmm0,%xmm0,%xmm0
+    367a:	vmovsd %xmm0,-0x10(%rbp)
+    367f:	vmovsd -0x20(%rbp),%xmm0
+    3684:	vmovsd -0x10(%rbp),%xmm2
+    3689:	vfmadd132sd -0x18(%rbp),%xmm2,%xmm0
+    368f:	nop
+    3690:	vmovsd %xmm0,-0x8(%rbp)
+    3695:	mov    -0x28(%rbp),%rax
+    3699:	vmovsd -0x8(%rbp),%xmm0
+    369e:	vmovsd %xmm0,(%rax)
+    36a2:	nop
+    36a3:	nop
+    36a4:	pop    %rbp
+    36a5:	ret
+
+0000000000029e62 <kairn_objcode_packed_double_mul_pow2_2>:
+   29e62:	endbr64
+   29e66:	push   %rbp
+   29e67:	mov    %rsp,%rbp
+   29e6a:	and    $0xffffffffffffffe0,%rsp
+   29e6e:	sub    $0x248,%rsp
+   29e75:	mov    %rdi,-0x50(%rsp)
+   29e7a:	mov    %rsi,-0x58(%rsp)
+   29e7f:	mov    %rdx,-0x60(%rsp)
+   29e84:	mov    %rcx,-0x68(%rsp)
+   29e89:	mov    -0x58(%rsp),%rax
+   29e8e:	lea    0x20(%rax),%rdx
+   29e92:	mov    -0x50(%rsp),%rax
+   29e97:	add    $0x40,%rax
+   29e9b:	vmovapd (%rax),%ymm0
+   29e9f:	mov    -0x50(%rsp),%rax
+   29ea4:	add    $0x20,%rax
+   29ea8:	vmovapd (%rax),%ymm1
+   29eac:	mov    -0x50(%rsp),%rax
+   29eb1:	vmovapd (%rax),%ymm2
+   29eb5:	vmovapd %ymm2,-0x38(%rsp)
+   29ebb:	vmovapd %ymm1,-0x18(%rsp)
+   29ec1:	vmovapd %ymm0,0x8(%rsp)
+   29ec7:	mov    -0x58(%rsp),%rax
+   29ecc:	mov    %rax,-0x48(%rsp)
+   29ed1:	mov    %rdx,-0x40(%rsp)
+   29ed6:	vxorpd %xmm1,%xmm1,%xmm1
+   29eda:	vmovapd -0x38(%rsp),%ymm0
+   29ee0:	vmovapd %ymm0,0x28(%rsp)
+   29ee6:	vmovapd 0x8(%rsp),%ymm0
+   29eec:	vmovapd %ymm0,0x48(%rsp)
+   29ef2:	vmovapd %ymm1,0x68(%rsp)
+   29ef8:	vmovapd 0x48(%rsp),%ymm1
+   29efe:	vmovapd 0x68(%rsp),%ymm0
+   29f04:	vfmadd231pd 0x28(%rsp),%ymm1,%ymm0
+   29f0b:	nop
+   29f0c:	vmovapd %ymm0,0x88(%rsp)
+   29f15:	vxorpd %xmm1,%xmm1,%xmm1
+   29f19:	vmovapd -0x18(%rsp),%ymm0
+   29f1f:	vmovapd %ymm0,0xa8(%rsp)
+   29f28:	vmovapd 0x8(%rsp),%ymm0
+   29f2e:	vmovapd %ymm0,0xc8(%rsp)
+   29f37:	vmovapd %ymm1,0xe8(%rsp)
+   29f40:	vmovapd 0xc8(%rsp),%ymm1
+   29f49:	vmovapd 0xe8(%rsp),%ymm0
+   29f52:	vfmadd231pd 0xa8(%rsp),%ymm1,%ymm0
+   29f5c:	nop
+   29f5d:	vmovapd %ymm0,0x108(%rsp)
+   29f66:	vmovapd 0x88(%rsp),%ymm0
+   29f6f:	vmovapd %ymm0,0x128(%rsp)
+   29f78:	vmovapd 0x108(%rsp),%ymm0
+   29f81:	vmovapd %ymm0,0x148(%rsp)
+   29f8a:	vmovapd 0x128(%rsp),%ymm0
+   29f93:	vaddpd 0x148(%rsp),%ymm0,%ymm0
+   29f9c:	vmovapd %ymm0,0x168(%rsp)
+   29fa5:	vmovapd 0x168(%rsp),%ymm0
+   29fae:	vmovapd %ymm0,0x188(%rsp)
+   29fb7:	vmovapd 0x88(%rsp),%ymm0
+   29fc0:	vmovapd %ymm0,0x1a8(%rsp)
+   29fc9:	vmovapd 0x188(%rsp),%ymm0
+   29fd2:	vsubpd 0x1a8(%rsp),%ymm0,%ymm0
+   29fdb:	vmovapd %ymm0,0x1c8(%rsp)
+   29fe4:	vmovapd 0x108(%rsp),%ymm0
+   29fed:	vmovapd %ymm0,0x1e8(%rsp)
+   29ff6:	vmovapd 0x1c8(%rsp),%ymm0
+   29fff:	vmovapd %ymm0,0x208(%rsp)
+   2a008:	vmovapd 0x1e8(%rsp),%ymm0
+   2a011:	vsubpd 0x208(%rsp),%ymm0,%ymm0
+   2a01a:	vmovapd %ymm0,0x228(%rsp)
+   2a023:	mov    -0x48(%rsp),%rax
+   2a028:	vmovapd 0x168(%rsp),%ymm0
+   2a031:	vmovapd %ymm0,(%rax)
+   2a035:	mov    -0x40(%rsp),%rax
+   2a03a:	vmovapd 0x228(%rsp),%ymm0
+   2a043:	vmovapd %ymm0,(%rax)
+   2a047:	nop
+   2a048:	nop
+   2a049:	leave
+   2a04a:	ret
+
+
+Disassembly of section .text._ZSt8bit_castIjfET_RKT0_:
+
+0000000000000000 <_ZSt8bit_castIjfET_RKT0_>:
+   0:	endbr64
+   4:	push   %rbp
+   5:	mov    %rsp,%rbp
+   8:	mov    %rdi,-0x8(%rbp)
+   c:	mov    -0x8(%rbp),%rax
+  10:	mov    (%rax),%eax
+  12:	pop    %rbp
+  13:	ret
+
+
+Disassembly of section .text._ZSt8bit_castIfjET_RKT0_:
+
+0000000000000000 <_ZSt8bit_castIfjET_RKT0_>:
+   0:	endbr64
+   4:	push   %rbp
+   5:	mov    %rsp,%rbp
+   8:	mov    %rdi,-0x8(%rbp)
+   c:	mov    -0x8(%rbp),%rax
+  10:	mov    (%rax),%eax
+  12:	vmovd  %eax,%xmm0
+  16:	pop    %rbp
+  17:	ret
+

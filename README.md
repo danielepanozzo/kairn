@@ -8,7 +8,9 @@ code is generated from the same source the proofs are about.
 is complete and awaits its review ([report](docs/developer/results/milestone1.md)). Nothing here
 should be relied on yet.** The first public headers exist: `kairn/kairn.hpp`, with
 `kairn::Expansion<T, 1>`, `kairn::Expansion<T, 2>` and `kairn::Ball<T, 1>`, `kairn::Ball<T, 2>` for
-`T` = `float` or `double`. Every operation has a proved error bound or containment, and returns
+`T` = `float` or `double`. Every operation has a proved error bound or containment, except `ldexp`
+by a power of two that the limb type cannot represent, whose steps are proved and whose composition
+is argued and tested, and returns
 results like those of `T` at overflow and for infinities and NaN (a ball: the whole line or the
 empty set); `kairn::finite::` skips that layer. [What holds today](docs/getting-started/guarantees.md)
 says what is proved, in which model, and what is not yet.

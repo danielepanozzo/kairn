@@ -8,8 +8,10 @@
 # (.github/workflows/full.yml) runs each where it must and no more:
 #
 # - none: the build's compiler. full.crosscheck.compiled.KERNEL.FORMAT, every compiled runner on
-#   KAIRN_CROSSCHECK_CASES cases, and full.api.oracle.KERNEL.FORMAT, every public form on
-#   KAIRN_API_CASES cases (api/CMakeLists.txt): on every platform and compiler of the CI.
+#   KAIRN_CROSSCHECK_CASES cases, full.api.oracle.KERNEL.FORMAT, every public form on
+#   KAIRN_API_CASES cases (api/CMakeLists.txt), and full.objcode.check and full.objcode.controls,
+#   the object code on the whole flag matrix (label objcode): on every platform and compiler of the
+#   CI.
 # - python: Python alone, in exact arithmetic (the interpreter, the oracle and its Python runner
 #   compute with integers and fractions), so the same on every platform: the interpreter's
 #   enumerations of toy formats and the oracle's own enumerations. Once in the CI.
@@ -94,6 +96,20 @@ foreach(_kernel IN LISTS _full_kernels)
     endforeach()
   endif()
 endforeach()
+
+# --- The object code ----------------------------------------------------------------------------
+#
+# objcode.check and objcode.controls of tests/CMakeLists.txt on every configuration of the
+# compiler's flag matrix, four compilations at once.
+if(_objcode_command)
+  add_test(NAME full.objcode.check
+    COMMAND ${_objcode_command} --tier full --jobs 4 --workdir "${CMAKE_CURRENT_BINARY_DIR}/objcode/check")
+  add_test(NAME full.objcode.controls
+    COMMAND ${_objcode_command} --controls --tier full --jobs 4
+      --workdir "${CMAKE_CURRENT_BINARY_DIR}/objcode/controls")
+  set_tests_properties(full.objcode.check full.objcode.controls PROPERTIES TIMEOUT 1200 PROCESSORS 4
+    LABELS "full;objcode")
+endif()
 
 # --- The adversarial search (begin) -------------------------------------------------------------
 #

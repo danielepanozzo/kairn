@@ -8,7 +8,8 @@ and that the code it ships is generated from the same description the proofs are
 ([report](developer/results/milestone1.md)), and nothing in this repository should be relied
 on yet.** The first public headers exist, for k-numbers of one and two limbs and balls around them,
 and the statement of each of their operations has a checked proof in a model where nothing
-overflows. At overflow and for infinities and NaN they return results like those of `float` and
+overflows (one exception: `ldexp` by a power of two outside the limb type's range is composed from
+proved steps by an argument that is tested, not machine-checked). At overflow and for infinities and NaN they return results like those of `float` and
 `double`, which is proved in a model of IEEE 754 ([What holds today](getting-started/guarantees.md)).
 
 ## What it is

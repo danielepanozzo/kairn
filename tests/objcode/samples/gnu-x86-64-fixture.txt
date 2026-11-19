@@ -1,0 +1,34 @@
+
+fixture.o:	file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <kairn_objcode_fixture_scalar_double_statements>:
+   0:	endbr64
+   4:	vmovsd (%rdi),%xmm0
+   8:	vmovsd 0x10(%rdi),%xmm1
+   d:	vfmadd132sd 0x8(%rdi),%xmm1,%xmm0
+  13:	vmovsd %xmm0,(%rsi)
+  17:	ret
+  18:	nopl   0x0(%rax,%rax,1)
+
+0000000000000060 <kairn_objcode_fixture_scalar_float_expression>:
+  60:	endbr64
+  64:	vmovss (%rdi),%xmm0
+  68:	vmovss 0x8(%rdi),%xmm1
+  6d:	vfmadd132ss 0x4(%rdi),%xmm1,%xmm0
+  73:	vmovss %xmm0,(%rsi)
+  77:	ret
+  78:	nopl   0x0(%rax,%rax,1)
+
+0000000000000080 <kairn_objcode_fixture_packed_double_statements>:
+  80:	endbr64
+  84:	vmovapd 0x20(%rdi),%ymm0
+  89:	vmovapd 0x40(%rdi),%ymm1
+  8e:	vfmadd132pd (%rdi),%ymm1,%ymm0
+  93:	vmovapd %ymm0,(%rsi)
+  97:	vzeroupper
+  9a:	ret
+  9b:	nopl   0x0(%rax,%rax,1)
+

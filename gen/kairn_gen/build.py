@@ -1,7 +1,7 @@
 """What `build` writes and what `check` compares, paths relative to the repository root."""
 import os
 
-from . import claims, cpp, ieee, ir, library, rocq, rules, simd
+from . import claims, cpp, ieee, ir, library, objcode, rocq, rules, simd
 
 # Every file in these directories must be one that build writes.
 GENERATED_DIRS = ('proofs/gen', 'include/kairn/gen')
@@ -28,6 +28,7 @@ def outputs(kernels):
         'include/kairn/gen/bounds.hpp': library.bounds(kernels),
         'include/kairn/gen/selftest.hpp': library.selftest(kernels),
         'gen/claims.json': claims.claims(kernels),
+        'gen/objcode.json': objcode.objcode(kernels),
         'gen/tests/runner_kernels.inc': cpp.runner_table(kernels),
     }
 

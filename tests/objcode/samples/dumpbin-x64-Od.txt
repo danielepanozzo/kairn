@@ -1,0 +1,183 @@
+
+Dump of file unit.obj
+
+File Type: COFF OBJECT
+
+kairn_objcode_fixups_inline:
+  0000000000000000: ret         0
+  0000000000000003: int         3
+  0000000000000004: int         3
+  0000000000000005: int         3
+  0000000000000006: int         3
+  0000000000000007: int         3
+  0000000000000008: int         3
+  0000000000000009: int         3
+  000000000000000A: int         3
+  000000000000000B: int         3
+  000000000000000C: int         3
+  000000000000000D: int         3
+  000000000000000E: int         3
+  000000000000000F: int         3
+
+kairn_objcode_scalar_double_two_prod:
+  00000000000013B0: mov         qword ptr [rsp+20h],r9
+  00000000000013B5: mov         qword ptr [rsp+18h],r8
+  00000000000013BA: mov         qword ptr [rsp+10h],rdx
+  00000000000013BF: mov         qword ptr [rsp+8],rcx
+  00000000000013C4: sub         rsp,38h
+  00000000000013C8: mov         eax,8
+  00000000000013CD: imul        rax,rax,1
+  00000000000013D1: mov         rcx,qword ptr [rsp+48h]
+  00000000000013D6: add         rcx,rax
+  00000000000013D9: mov         rax,rcx
+  00000000000013DC: mov         ecx,8
+  00000000000013E1: imul        rcx,rcx,0
+  00000000000013E5: mov         rdx,qword ptr [rsp+48h]
+  00000000000013EA: add         rdx,rcx
+  00000000000013ED: mov         rcx,rdx
+  00000000000013F0: mov         edx,8
+  00000000000013F5: imul        rdx,rdx,1
+  00000000000013F9: mov         r8d,8
+  00000000000013FF: imul        r8,r8,0
+  0000000000001403: mov         qword ptr [rsp+20h],r8
+  0000000000001408: mov         r9,rax
+  000000000000140B: mov         r8,rcx
+  000000000000140E: mov         rax,qword ptr [rsp+40h]
+  0000000000001413: vmovsd      xmm1,qword ptr [rax+rdx]
+  0000000000001418: mov         rax,qword ptr [rsp+40h]
+  000000000000141D: mov         rcx,qword ptr [rsp+20h]
+  0000000000001422: vmovsd      xmm0,qword ptr [rax+rcx]
+  0000000000001427: call        ?two_prod@gen@kairn@@YAXNNAEAN0@Z
+  000000000000142C: nop
+  000000000000142D: add         rsp,38h
+  0000000000001431: ret
+  0000000000001432: int         3
+  0000000000001433: int         3
+  0000000000001434: int         3
+  0000000000001435: int         3
+  0000000000001436: int         3
+  0000000000001437: int         3
+  0000000000001438: int         3
+  0000000000001439: int         3
+  000000000000143A: int         3
+  000000000000143B: int         3
+  000000000000143C: int         3
+  000000000000143D: int         3
+  000000000000143E: int         3
+  000000000000143F: int         3
+
+?fma_rn@gen@kairn@@YANNNN@Z (double __cdecl kairn::gen::fma_rn(double,double,double)):
+  0000000000000000: vmovsd      qword ptr [rsp+18h],xmm2
+  0000000000000006: vmovsd      qword ptr [rsp+10h],xmm1
+  000000000000000C: vmovsd      qword ptr [rsp+8],xmm0
+  0000000000000012: sub         rsp,58h
+  0000000000000016: vmovsd      xmm0,qword ptr [rsp+70h]
+  000000000000001C: vxorpd      xmm1,xmm1,xmm1
+  0000000000000020: vmovsd      xmm0,xmm1,xmm0
+  0000000000000024: vmovupd     xmmword ptr [rsp+30h],xmm0
+  000000000000002A: vmovsd      xmm0,qword ptr [rsp+68h]
+  0000000000000030: vxorpd      xmm1,xmm1,xmm1
+  0000000000000034: vmovsd      xmm0,xmm1,xmm0
+  0000000000000038: vmovupd     xmmword ptr [rsp+20h],xmm0
+  000000000000003E: vmovsd      xmm0,qword ptr [rsp+60h]
+  0000000000000044: vxorpd      xmm1,xmm1,xmm1
+  0000000000000048: vmovsd      xmm0,xmm1,xmm0
+  000000000000004C: vmovupd     xmmword ptr [rsp+10h],xmm0
+  0000000000000052: vmovupd     xmm0,xmmword ptr [rsp+10h]
+  0000000000000058: vmovupd     xmm1,xmmword ptr [rsp+20h]
+  000000000000005E: vfmadd213sd xmm0,xmm1,mmword ptr [rsp+30h]
+  0000000000000065: vmovupd     xmmword ptr [rsp+40h],xmm0
+  000000000000006B: vmovapd     xmm0,xmmword ptr [rsp+40h]
+  0000000000000071: vmovsd      qword ptr [rsp],xmm0
+  0000000000000076: vmovsd      xmm0,qword ptr [rsp]
+  000000000000007B: add         rsp,58h
+  000000000000007F: ret
+
+?two_prod@gen@kairn@@YAXNNAEAN0@Z (void __cdecl kairn::gen::two_prod(double,double,double &,double &)):
+  0000000000000000: mov         qword ptr [rsp+20h],r9
+  0000000000000005: mov         qword ptr [rsp+18h],r8
+  000000000000000A: vmovsd      qword ptr [rsp+10h],xmm1
+  0000000000000010: vmovsd      qword ptr [rsp+8],xmm0
+  0000000000000016: sub         rsp,0C8h
+  000000000000001D: xor         eax,eax
+  000000000000001F: test        eax,eax
+  0000000000000021: je          00000000000001BF
+  0000000000000027: vmovsd      xmm0,qword ptr [__real@41a0000002000000]
+  000000000000002F: vmulsd      xmm0,xmm0,mmword ptr [rsp+0D0h]
+  0000000000000038: vmovsd      qword ptr [rsp+30h],xmm0
+  000000000000003E: vmovsd      xmm0,qword ptr [rsp+0D0h]
+  0000000000000047: vsubsd      xmm0,xmm0,mmword ptr [rsp+30h]
+  000000000000004D: vmovsd      qword ptr [rsp+60h],xmm0
+  0000000000000053: vmovsd      xmm0,qword ptr [rsp+30h]
+  0000000000000059: vaddsd      xmm0,xmm0,mmword ptr [rsp+60h]
+  000000000000005F: vmovsd      qword ptr [rsp+20h],xmm0
+  0000000000000065: vmovsd      xmm0,qword ptr [rsp+0D0h]
+  000000000000006E: vsubsd      xmm0,xmm0,mmword ptr [rsp+20h]
+  0000000000000074: vmovsd      qword ptr [rsp+40h],xmm0
+  000000000000007A: vmovsd      xmm0,qword ptr [__real@41a0000002000000]
+  0000000000000082: vmulsd      xmm0,xmm0,mmword ptr [rsp+0D8h]
+  000000000000008B: vmovsd      qword ptr [rsp+38h],xmm0
+  0000000000000091: vmovsd      xmm0,qword ptr [rsp+0D8h]
+  000000000000009A: vsubsd      xmm0,xmm0,mmword ptr [rsp+38h]
+  00000000000000A0: vmovsd      qword ptr [rsp+68h],xmm0
+  00000000000000A6: vmovsd      xmm0,qword ptr [rsp+38h]
+  00000000000000AC: vaddsd      xmm0,xmm0,mmword ptr [rsp+68h]
+  00000000000000B2: vmovsd      qword ptr [rsp+28h],xmm0
+  00000000000000B8: vmovsd      xmm0,qword ptr [rsp+0D8h]
+  00000000000000C1: vsubsd      xmm0,xmm0,mmword ptr [rsp+28h]
+  00000000000000C7: vmovsd      qword ptr [rsp+48h],xmm0
+  00000000000000CD: vmovsd      xmm0,qword ptr [rsp+0D0h]
+  00000000000000D6: vmulsd      xmm0,xmm0,mmword ptr [rsp+0D8h]
+  00000000000000DF: vmovsd      qword ptr [rsp+50h],xmm0
+  00000000000000E5: vmovsd      xmm0,qword ptr [rsp+20h]
+  00000000000000EB: vmulsd      xmm0,xmm0,mmword ptr [rsp+28h]
+  00000000000000F1: vmovsd      qword ptr [rsp+70h],xmm0
+  00000000000000F7: vmovsd      xmm0,qword ptr [rsp+70h]
+  00000000000000FD: vsubsd      xmm0,xmm0,mmword ptr [rsp+50h]
+  0000000000000103: vmovsd      qword ptr [rsp+78h],xmm0
+  0000000000000109: vmovsd      xmm0,qword ptr [rsp+20h]
+  000000000000010F: vmulsd      xmm0,xmm0,mmword ptr [rsp+48h]
+  0000000000000115: vmovsd      qword ptr [rsp+80h],xmm0
+  000000000000011E: vmovsd      xmm0,qword ptr [rsp+78h]
+  0000000000000124: vaddsd      xmm0,xmm0,mmword ptr [rsp+80h]
+  000000000000012D: vmovsd      qword ptr [rsp+88h],xmm0
+  0000000000000136: vmovsd      xmm0,qword ptr [rsp+40h]
+  000000000000013C: vmulsd      xmm0,xmm0,mmword ptr [rsp+28h]
+  0000000000000142: vmovsd      qword ptr [rsp+90h],xmm0
+  000000000000014B: vmovsd      xmm0,qword ptr [rsp+88h]
+  0000000000000154: vaddsd      xmm0,xmm0,mmword ptr [rsp+90h]
+  000000000000015D: vmovsd      qword ptr [rsp+98h],xmm0
+  0000000000000166: vmovsd      xmm0,qword ptr [rsp+40h]
+  000000000000016C: vmulsd      xmm0,xmm0,mmword ptr [rsp+48h]
+  0000000000000172: vmovsd      qword ptr [rsp+0A0h],xmm0
+  000000000000017B: vmovsd      xmm0,qword ptr [rsp+98h]
+  0000000000000184: vaddsd      xmm0,xmm0,mmword ptr [rsp+0A0h]
+  000000000000018D: vmovsd      qword ptr [rsp+0A8h],xmm0
+  0000000000000196: mov         rax,qword ptr [rsp+0E0h]
+  000000000000019E: vmovsd      xmm0,qword ptr [rsp+50h]
+  00000000000001A4: vmovsd      qword ptr [rax],xmm0
+  00000000000001A8: mov         rax,qword ptr [rsp+0E8h]
+  00000000000001B0: vmovsd      xmm0,qword ptr [rsp+0A8h]
+  00000000000001B9: vmovsd      qword ptr [rax],xmm0
+  00000000000001BD: jmp         0000000000000239
+  00000000000001BF: vxorpd      xmm2,xmm2,xmm2
+  00000000000001C3: vmovsd      xmm1,qword ptr [rsp+0D8h]
+  00000000000001CC: vmovsd      xmm0,qword ptr [rsp+0D0h]
+  00000000000001D5: call        ?fma_rn@gen@kairn@@YANNNN@Z
+  00000000000001DA: vmovsd      qword ptr [rsp+58h],xmm0
+  00000000000001E0: vmovsd      xmm0,qword ptr [rsp+58h]
+  00000000000001E6: vxorpd      xmm0,xmm0,xmmword ptr [__xmm@80000000000000008000000000000000]
+  00000000000001EE: vmovupd     xmm2,xmm0
+  00000000000001F2: vmovsd      xmm1,qword ptr [rsp+0D8h]
+  00000000000001FB: vmovsd      xmm0,qword ptr [rsp+0D0h]
+  0000000000000204: call        ?fma_rn@gen@kairn@@YANNNN@Z
+  0000000000000209: vmovsd      qword ptr [rsp+0B0h],xmm0
+  0000000000000212: mov         rax,qword ptr [rsp+0E0h]
+  000000000000021A: vmovsd      xmm0,qword ptr [rsp+58h]
+  0000000000000220: vmovsd      qword ptr [rax],xmm0
+  0000000000000224: mov         rax,qword ptr [rsp+0E8h]
+  000000000000022C: vmovsd      xmm0,qword ptr [rsp+0B0h]
+  0000000000000235: vmovsd      qword ptr [rax],xmm0
+  0000000000000239: add         rsp,0C8h
+  0000000000000240: ret
+
