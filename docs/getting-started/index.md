@@ -92,6 +92,7 @@ The tests:
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass, and each detects a changed rounding mode and flush-to-zero. |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break Kairn and define no macro; `kairn::self_test()` must report a failure. |
 | `api.reject.*` | What must not compile: the flags `config.hpp` rejects, and each kind of operation written without the marker while its kernel is UNVERIFIED (against a copy of the headers in which every kernel is). |
+| `api.boundary.*` | A product the program computes and passes into an operation (`x + a * b`, a constructor, `from_limbs`, a ball's center or radius) gives, bit for bit, the result of the same operation on the rounded product, under each contraction setting; `api.boundary.unguarded.*` checks that without the guard the compilers that fuse across statements do change it. |
 | `api.k1.zero_cost` | The instructions emitted for loops over `Expansion<double, 1>` against the same loops over `double`. |
 | `api.example.*` | The examples of this site, which check their own output. |
 

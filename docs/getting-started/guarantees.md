@@ -98,34 +98,51 @@ holds:
   `double`); for any other `n` the result is NaN. The two-step scaling of
   [Milestone 1](../developer/design/milestone1.md#second-wave-kernels) is not written.
 
-## A product written into a call
+## Products the program passes in
 
 Kairn's kernels are written so that no compiler can fuse a product into one of their additions
 (rules R1 and R2 of [Environment](../developer/design/phase0/environment.md#the-rule-no-product-feeds-an-addition)),
-and the tests check that under every contraction setting. That protects each kernel and every
-combination of Kairn's operations, **but not a product computed by the program itself**: in
-`x + a * b`, with `a` and `b` of type `double`, a compiler that contracts across statements can
-fuse `a * b` into the error-free sums inside the kernel, which are then not error-free. Measured
-with `x` $= -\texttt{0x1.4ba3c12d3e764p-1}$, `a` $= \texttt{0x1.f2d212ebf7bc2p-1}$, `b` $=
-\texttt{0x1.5466e6af5c598p-1}$: the result should be $x + \mathrm{RN}(ab) =
--\texttt{0x1.c7d548p-32}$ exactly, and is $(-\texttt{0x1.c7d546b5bb8fcp-32},
-\texttt{0x1.7c53p-86})$, normalized and wrong by about $2^{-24}$ relative to the result, whether
-the product is taken rounded or exact.
+and the tests check that under every contraction setting. A product computed by the program
+itself and passed in, as in `x + a * b`, needs one more step: a compiler that contracts across
+statements (GCC's default for C++, `-ffp-contract=fast`, MSVC's `/fp:contract`) could otherwise
+fuse `a * b` into the error-free sums inside the kernel, which would then not be error-free.
+Without that step, the result was measured normalized and wrong by about $2^{-24}$ relative to
+itself, on GCC 13 and 16 by default, on Apple clang with `-ffp-contract=fast`, and on MSVC with
+`/fp:contract`.
 
-| Compiler and setting | `x + a * b` |
-|---|---|
-| GCC 13 (x86-64), GCC 16 (AArch64), default (`-ffp-contract=fast` for C++) | **wrong** |
-| GCC, `-ffp-contract=off` | correct |
-| Apple clang 21 (AArch64), default (`-ffp-contract=on`) | correct |
-| Apple clang 21, `-ffp-contract=fast` | **wrong**, also when the product is one of `Expansion<double, 1>` |
-| Clang 18 (x86-64), every setting | correct |
-| MSVC 19.52, `/fp:precise` (default) | correct |
-| MSVC 19.52, `/fp:contract` | **wrong** |
+So every value of type `T` that enters a two-limb operation or a ball, and every one-limb value
+that does, passes through a *guard*: it is added to $+0$ before any kernel adds it. A product
+plus $+0$ is at most fused into one FMA that rounds the product, and its result is a sum, which
+nothing later can fuse; a compiler that honors signed zeros cannot remove the addition. The
+guarded places:
 
-The same holds when the product is first stored in a variable, since these compilers contract
-across statements. Until this is resolved, compile code that passes its own products to Kairn
-with `-ffp-contract=off` (GCC, Clang) or without `/fp:contract` (MSVC), or let Kairn compute the
-product, as in `x + kairn::Expansion<double, 2>(a) * b`.
+- the constructor of `Expansion<T, 2>` from a `T`, the widening from `Expansion<T, 1>`, and each
+  limb given to `from_limbs` and `from_limbs_unchecked`;
+- the limb operand of `x + a`, `a + x`, `x - a`, `a - x`, `x += a` and `x -= a` on two limbs;
+- every center and radius given to a `Ball`'s constructors.
+
+Not guarded, because a kernel only multiplies or compares them, and a multiplicand cannot be fused:
+the limb operand of `x * a`, of a comparison with a limb, and of a scaling of a ball, and the
+exponent of `ldexp`. Nor are limbs written directly into `limb[]`: a limb written that way must not
+be a product the compiler can see being computed; `from_limbs` is the way to build a number from
+computed values.
+
+So the program may pass its own products to Kairn under every contraction setting. The test
+`api.boundary.*` checks each guarded form with the product written in the call against the same
+operation on the rounded product, bit for bit, under each contraction setting of the compiler, and
+`api.boundary.unguarded.*` checks, with the guard turned off, that the compilers above do fuse. The
+guard costs one addition per incoming value: measured on `x + a` in a loop, about 7 to 13% for
+independent sums and 0 to 5% for an accumulation `s += a` (Apple clang 21, GCC 16, GCC 13,
+Clang 18). A guarded $-0$ enters as $+0$; Kairn leaves the sign of a zero unspecified anyway.
+
+One-limb values themselves are not guarded: they behave like `T`, contraction included, so an
+expression such as `p * q + r` on `Expansion<double, 1>` may be evaluated with one rounding where
+the compiler contracts, exactly as for `double`.
+
+The flag `-fno-signed-zeros` lets a compiler remove the guard and fold the opaque products of the
+kernels back into plain ones. GCC rejects it at compile time (`config.hpp`); Clang defines no
+macro for it, and with `-ffp-contract=fast` on AArch64 it breaks the two-limb products, which
+`kairn::self_test()` reports. It is not supported.
 
 ## Constant evaluation
 

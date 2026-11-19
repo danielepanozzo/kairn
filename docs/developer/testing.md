@@ -37,9 +37,24 @@ The tests that `ctest` runs, by name:
 | `crosscheck.guards` | The cross-checks' guards fail the runs they are there to fail (`tests/test_crosscheck_guards.py`). |
 | `consume.*` | A CMake project that uses Kairn through `add_subdirectory`, and one through `find_package` after `cmake --install`, build and run a kernel. |
 
+The tests of the public interface (`tests/api/`, label `api`):
+
+| Test | Checks |
+|---|---|
+| `api.oracle.K.F`, `api.oracle.K.F.contract-fast` | Every public operation whose results must satisfy the claims of kernel K, computed through the operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on random cases of format F, judged by the oracle; once with the build's flags and once with contraction forced on. Each form of the operation (`x + a` and `a + x`, `x += a`, the marked and the unmarked operator) is a pipeline of its own. |
+| `api.oracle.coverage` | Every kernel of `gen/claims.json` is computed by a public operation or listed by the runner as internal to others. |
+| `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, the same results at run time, the properties of the types, and that an operation compiles without `kairn::unverified` exactly when its kernel is proved. |
+| `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass in the default environment and fail under each directed rounding mode and under flush-to-zero. |
+| `api.self_test.unsafe.*` | With Clang, programs built with flags that break the kernels and define no macro (reassociation; `-ffp-model=fast`; on AArch64 `-fno-signed-zeros` with `-ffp-contract=fast`): `kairn::self_test()` must fail. |
+| `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects, and each kind of operation written without the marker while its kernel is unverified (against a copy of the headers in which every kernel is). |
+| `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, a ball's center or radius) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; with the guard turned off, it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
+| `api.k1.zero_cost` | The instructions emitted for loops over `Expansion<double, 1>` against the same loops over `double` (`tests/api/k1/zero_cost.py`). |
+| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output. |
+
 Labels select groups: `ctest -L crosscheck`, `-L interp` (with `-L restricted` and `-L sampled`
-among them), `-L cxx` (the scalar runners), `-L packed`, `-L contraction`; `-R` selects by name,
-for example `ctest -R mul_2_2`.
+among them), `-L cxx` (the scalar runners), `-L packed`, `-L contraction`, `-L api` (with
+`-L oracle`, `-L reject` and `-L boundary` among them); `-R` selects by name, for example
+`ctest -R mul_2_2`.
 
 ### Cross-checks
 
