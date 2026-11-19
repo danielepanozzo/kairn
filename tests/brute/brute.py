@@ -313,7 +313,7 @@ def frac_gt(a, b):
     return a[0] * b[1] > b[0] * a[1]
 
 
-def frac_dec(r, digits=6):
+def frac_dec(r, digits=10):
     if r is None:
         return None
     n, d = int(r[0]), int(r[1])
@@ -1001,12 +1001,25 @@ class Scheduler:
                 for r in ([t.runner] if isinstance(t, CheckTask) else list(u.pending)):
                     self.stopped.add((u.kernel, u.format, r["id"]))
                     self.release(u, r, open_units)
-            # Start.
+            # Start. A unit is generated while the runners still judge the ones before it, so
+            # that no slot waits for a generator: when fewer checks are queued or coming than
+            # there are slots, a generator goes first.
             before = deadline is None or time.time() < deadline
+            n_r = max(1, len(self.runners))
+            max_gens = max(1, self.jobs // n_r)
+            max_open = 2 + 2 * (-(-self.jobs // n_r))
             while used < self.jobs:
                 task = None
-                # Judge what is generated first: it frees the disk.
-                while checks:
+                if before and next_interp is None:
+                    gens = [t for t in running if isinstance(t, GenTask)]
+                    coming = len(checks) + sum(len(t.unit.pending) for t in gens)
+                    if len(gens) < max_gens and coming < self.jobs and len(open_units) < max_open:
+                        unit = next(unit_iter, None)
+                        if unit is not None:
+                            open_units.append(unit)
+                            task = GenTask(self, unit)
+                # Judge what is generated: it frees the disk.
+                while task is None and checks:
                     c = checks.pop(0)
                     if (c.unit.kernel, c.unit.format, c.runner["id"]) in self.stopped:
                         self.release(c.unit, c.runner, open_units)
@@ -1018,13 +1031,11 @@ class Scheduler:
                         task, next_interp = next_interp, next(interp_iter, None)
                     else:
                         break
-                if task is None and before and next_interp is None:
-                    ahead = sum(1 for u in open_units)
-                    if ahead < max(2, self.jobs // max(1, len(self.runners)) + 2):
-                        unit = next(unit_iter, None)
-                        if unit is not None:
-                            open_units.append(unit)
-                            task = GenTask(self, unit)
+                if task is None and before and next_interp is None and len(open_units) < max_open:
+                    unit = next(unit_iter, None)
+                    if unit is not None:
+                        open_units.append(unit)
+                        task = GenTask(self, unit)
                 if task is None:
                     break
                 task.start()
@@ -1470,98 +1481,201 @@ def combine_entries(per_runner):
 
 
 # --- Report ----------------------------------------------------------------------------------------
+#
+# Markdown for docs/developer/results/: the machines, then one table per kernel, with a row per
+# format of the compiled runners (every machine and runner together) and per enumeration of the
+# interpreter, and the lines that attain the extremes.
 
 def fmt_int(n):
-    return "{:,}".format(n).replace(",", " ")
+    return "{:,}".format(n).replace(",", " ")
+
+
+def short(dec, digits=6):
+    if dec is None:
+        return "-"
+    d = decimal.Decimal(dec)
+    if d == 0:
+        return "0"
+    return format(decimal.Context(prec=digits).create_decimal(d), "g")
+
+
+def headline_columns(entries):
+    """(column title, extractor, better) for the entries of a kernel that have one."""
+    cols = []
+    for j, e in enumerate(entries):
+        lab = e["label"]
+        if e["kind"] == "error":
+            cols.append(("largest error / bound" + (" (%s)" % lab.split(")")[0].split("(")[1]
+                                                    if sum(x["kind"] == "error" for x in entries)
+                                                    > 1 else ""),
+                         j, "max_ratio", None, 1))
+            cols.append(("observed c", j, "observed_c", None, 1))
+        elif e["kind"] == "upper":
+            cols.append(("largest excess, gaps (claim %s)" % lab.split("gaps=")[1].split()[0],
+                         j, "maxima", "excess in gaps", 1))
+        elif e["kind"] == "encloses":
+            cols.append(("smallest radius slack, gaps", j, "minima",
+                         "slack in gaps of the radius", -1))
+            cols.append(("smallest radius / enclosing", j, "minima",
+                         "radius / smallest enclosing radius", -1))
+        elif e["kind"] in ("rounded", "predicate"):
+            cols.append(("outcomes" if e["kind"] == "predicate" else "cases by rounding",
+                         j, "counts", None, 0))
+    return cols
+
+
+def col_value(entry, field, name):
+    """[decimal, line, runner?] or None."""
+    v = entry.get(field)
+    if v is None:
+        return None
+    if name is not None:
+        v = v.get(name)
+    return v
+
+
+def best_of(values, sign):
+    best = None
+    for v in values:
+        if v and (best is None or sign * (decimal.Decimal(v[0]) - decimal.Decimal(best[0])) > 0):
+            best = v
+    return best
+
+
+def counts_text(counts):
+    order = ["true", "false", "exact", "inexact", "tie", "inexact, = RN", "inexact, != RN"]
+    names = sorted(counts, key=lambda c: (order.index(c) if c in order else 99, c))
+    return ", ".join("%s %s" % (c.replace("inexact, != RN", "differs from RN")
+                               .replace("inexact, = RN", "inexact, as RN"), fmt_int(counts[c]))
+                     for c in names)
 
 
 def cmd_report(a):
     docs = [read_json(f) for f in a.files]
-    w = print
-    w("## Machines\n")
-    w("| Name | Machine | Runners | Cases per runner and format | Judged | Enumerated |")
-    w("|---|---|---|---|---|---|")
+    out = []
+    w = out.append
+    w("| Machine | Compilers | Runners | Seed | Cases per kernel and format | Judged (compiled) "
+      "| Enumerated (interpreter) |")
+    w("|---|---|---|---|---|---|---|")
     for d in docs:
         m = d["machine"]
         cpr = sorted({c for k in d["compiled"]["kernels"].values() for s in k.values()
                       for c in s["cases_per_runner"]})
-        cpr_text = (fmt_int(cpr[0]) if len(cpr) == 1 else "%s to %s" % (fmt_int(cpr[0]),
-                                                                        fmt_int(cpr[-1]))) \
-            if cpr else "-"
-        w("| %s | %s, %s (%s) | %d | %s | %s | %s |"
-          % (d["name"], m["system"], m["machine"], m["cpu"], len(d["runners"]), cpr_text,
+        comp = sorted({r["compiler"] for r in d["runners"].values()})
+        w("| %s: %s %s, %s | %s | %d | `%s` | %s | %s | %s |"
+          % (d["name"], m["system"], m["machine"], m["cpu"], ", ".join(comp) or "-",
+             len(d["runners"]), d["seed"] or "-",
+             ("%s to %s" % (fmt_int(cpr[0]), fmt_int(cpr[-1])) if len(cpr) > 1 else
+              fmt_int(cpr[0])) if cpr else "-",
              fmt_int(d["compiled"]["totals"].get("judged", 0)),
              fmt_int(d["interp"]["totals"].get("cases", 0))))
     kernels = []
     for d in docs:
-        for k in d["compiled"]["kernels"]:
+        for k in list(d["compiled"]["kernels"]) + [r["kernel"] for r in
+                                                   d["interp"]["enumerations"]]:
             if k not in kernels:
                 kernels.append(k)
-    w("\n## Compiled runners\n")
-    w("| Kernel | Format | Judged | Failed | Claim | Largest | Where |")
-    w("|---|---|---|---|---|---|---|")
     for k in kernels:
+        rows = []           # (title, counts, entries, guards)
         for fmt in ("binary64", "binary32"):
             slots = [(d["name"], d["compiled"]["kernels"][k][fmt]) for d in docs
                      if fmt in d["compiled"]["kernels"].get(k, {})]
             if not slots:
                 continue
-            judged = sum(s["counts"].get("judged", 0) for _, s in slots)
-            failed = sum(s["counts"].get("failed", 0) for _, s in slots)
+            counts = {}
+            for _, s in slots:
+                for n, v in s["counts"].items():
+                    counts[n] = counts.get(n, 0) + v
+            nrun = sum(len(s["runners"]) for _, s in slots)
+            merged = []
             for j, e0 in enumerate(slots[0][1]["entries"]):
-                big, where = largest(e0["kind"], [(n, s["entries"][j]) for n, s in slots])
-                w("| `%s` | %s | %s | %d | %s | %s | %s |"
-                  % (k, fmt, fmt_int(judged) if j == 0 else "", failed if j == 0 else 0,
-                     e0["label"].replace("|", "\\|"), big, where))
-    w("\n## Interpreter\n")
-    w("| Kernel | Format | Restricted to | Cases | Complete | Failed | Claim | Largest |")
-    w("|---|---|---|---|---|---|---|---|")
-    for d in docs:
-        for r in d["interp"]["enumerations"]:
-            if "counts" not in r:
-                w("| `%s` | `%s` | %s | %s | not run | | | |"
-                  % (r["kernel"], r["format"], ", ".join(r["restrict"]) or "-",
-                     fmt_int(r["total"])))
+                x = {"label": e0["label"], "kind": e0["kind"]}
+                for field in ("max_ratio", "observed_c"):
+                    vs = [s["entries"][j].get(field) for n, s in slots]
+                    vs = [v + [n] if v else None for v, (n, _) in zip(vs, slots)]
+                    x[field] = best_of(vs, 1)
+                for field, sign in (("maxima", 1), ("minima", -1)):
+                    names = {nm for _, s in slots for nm in s["entries"][j].get(field, {})}
+                    x[field] = {nm: best_of([s["entries"][j].get(field, {}).get(nm, None) and
+                                             s["entries"][j][field][nm] + [n]
+                                             for n, s in slots], sign) for nm in names}
+                cs = {}
+                for _, s in slots:
+                    for c, m in s["entries"][j].get("counts", {}).items():
+                        cs[c] = cs.get(c, 0) + m
+                x["counts"] = cs
+                merged.append(x)
+            ok = all(s["guards"] == "ok" for _, s in slots)
+            rows.append(("`%s`, %d runners on %d machine%s" % (fmt, nrun, len(slots),
+                                                               "s" if len(slots) > 1 else ""),
+                         counts, merged, ok, True))
+        for d in docs:
+            for r in d["interp"]["enumerations"]:
+                if r["kernel"] != k:
+                    continue
+                title = "`%s`%s" % (r["format"], (", restricted: " + ", ".join(
+                    "`%s`" % x for x in r["restrict"])) if r["restrict"] else ", every operand")
+                rows.append((title, r.get("counts", {}), r.get("entries", []),
+                             r["guards"] == "ok" and r.get("complete"), False))
+        if not rows:
+            continue
+        w("")
+        w("### `%s`" % k)
+        w("")
+        entries0 = next((r[2] for r in rows if r[2]), [])
+        w("Claims: " + "; ".join("`%s`" % e["label"] for e in entries0) + ".")
+        w("")
+        cols = headline_columns(entries0)
+        w("| Run | Cases | Judged | Failed | " + " | ".join(c[0] for c in cols) + " |")
+        w("|---|---|---|---|" + "---|" * len(cols))
+        lines = []
+        for title, counts, entries, ok, compiled in rows:
+            cells = []
+            for name, j, field, sub, sign in cols:
+                if j >= len(entries):
+                    cells.append("-")
+                    continue
+                e = entries[j]
+                if field == "counts":
+                    cells.append(counts_text(e.get("counts", {})) if compiled else "")
+                    continue
+                v = col_value(e, field, sub)
+                cells.append(short(v[0]) if v else "-")
+                if v and field != "observed_c" and not (sub and "enclosing" in sub):
+                    lines.append((title, name, v))
+            w("| %s%s | %s | %s | %s | %s |" % (
+                title, "" if ok else " (**INCOMPLETE or guard failed**)",
+                fmt_int(counts.get("cases", 0)), fmt_int(counts.get("judged", 0)),
+                fmt_int(counts.get("failed", 0)), " | ".join(cells)))
+        # The line of the extreme of each headline column, over the compiled rows and over the
+        # interpreter's.
+        picks = []
+        for name, j, field, sub, sign in cols:
+            if field in ("counts", "observed_c") or (sub and "enclosing" in sub):
                 continue
-            for j, e in enumerate(r["entries"] or [None]):
-                big = largest(e["kind"], [(d["name"], e)])[0] if e else ""
-                w("| `%s` | `%s` | %s | %s | %s | %d | %s | %s |"
-                  % (r["kernel"], r["format"], ", ".join("`%s`" % x for x in r["restrict"]) or "-",
-                     fmt_int(r["counts"].get("cases", 0)),
-                     ("yes" if r["complete"] and r["guards"] == "ok" else "NO") if j == 0 else "",
-                     r["counts"].get("failed", 0) if j == 0 else 0,
-                     e["label"].replace("|", "\\|") if e else "", big))
+            for compiled in (True, False):
+                vs = [(v, t) for t, nm, v in lines if nm == name and
+                      any(r[0] == t and r[4] == compiled for r in rows)]
+                best = None
+                for v, t in vs:
+                    if best is None or sign * (decimal.Decimal(v[0]) -
+                                               decimal.Decimal(best[0][0])) > 0:
+                        best = (v, t)
+                if best:
+                    picks.append((name, compiled, best))
+        if picks:
+            w("")
+            w("Where the extremes are attained (the line as the oracle reports it):")
+            w("")
+            w("```")
+            for name, compiled, (v, t) in picks:
+                where = (" (%s)" % ", ".join(v[2:])) if len(v) > 2 else ""
+                w("%s, %s %s%s:" % (name, "compiled" if compiled else "interpreter", short(v[0]),
+                                    where))
+                w("  " + v[1])
+            w("```")
+    print("\n".join(out))
     return 0
-
-
-def largest(kind, named):
-    """The headline of an entry over machines: (text, where)."""
-    best, where = None, ""
-    if kind == "error":
-        for n, e in named:
-            v = e.get("max_ratio")
-            if v and (best is None or decimal.Decimal(v[0]) > decimal.Decimal(best[0])):
-                best, where = v, "%s %s" % (n, v[2] if len(v) > 2 else "")
-        return ("error/allowed %s" % best[0] if best else "-"), where
-    if kind == "upper":
-        for n, e in named:
-            v = e.get("maxima", {}).get("excess in gaps")
-            if v and (best is None or decimal.Decimal(v[0]) > decimal.Decimal(best[0])):
-                best, where = v, "%s %s" % (n, v[2] if len(v) > 2 else "")
-        return ("excess %s gaps" % best[0] if best else "-"), where
-    if kind == "encloses":
-        for n, e in named:
-            v = e.get("minima", {}).get("slack in gaps of the radius")
-            if v and (best is None or decimal.Decimal(v[0]) < decimal.Decimal(best[0])):
-                best, where = v, "%s %s" % (n, v[2] if len(v) > 2 else "")
-        return ("slack %s gaps" % best[0] if best else "-"), where
-    if kind in ("rounded", "predicate"):
-        counts = {}
-        for _, e in named:
-            for c, m in e.get("counts", {}).items():
-                counts[c] = counts.get(c, 0) + m
-        return ", ".join("%s %s" % (c, fmt_int(m)) for c, m in sorted(counts.items())), ""
-    return "", ""
 
 
 # --- Plan ------------------------------------------------------------------------------------------
