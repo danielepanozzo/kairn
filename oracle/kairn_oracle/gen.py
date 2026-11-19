@@ -388,12 +388,23 @@ _TAIL_MODES = ("near", "any", "half+", "half-", "quarter-", "max", "eta", "tiny"
 
 def valid(fmt, kernel, vals):
     for name, limbs in vals.items():
+        if name in kernel.masks:
+            if limbs not in ([0], [1]):
+                return False
+            continue
         for v in limbs:
             if type(v) is not int or not F.is_member(fmt, v):
                 return False
     for r in kernel.requires:
         if r[0] == "normalized":
             if not F.normalized_limbs(fmt, vals[r[1]]):
+                return False
+        elif r[0] == "nonneg":
+            if sum(vals[r[1]]) < 0:
+                return False
+        elif r[0] == "power_of_two":
+            v = sum(vals[r[1]])
+            if v <= 0 or v & (v - 1):
                 return False
         elif abs(sum(vals[r[1]])) < abs(sum(vals[r[2]])):
             return False
@@ -406,21 +417,39 @@ def limb_text(fmt, v, neg):
     return F.to_hex(v, fmt.qmin)
 
 
+def first_wave_shape(kernel):
+    """True when the first-wave generator handles the kernel: two operands that appear in a
+    value of the form NAME op NAME (or one that is the value), limbs and no masks, the first
+    requirements and kinds only."""
+    return (kernel.value is not None and not kernel.masks
+            and all(r[0] in ("normalized", "abs_ge") for r in kernel.requires)
+            and all(e.kind in ("normalized", "error", "leading_rounded") for e in kernel.ensures))
+
+
 class RandomGen:
     def __init__(self, kernel, fmt, seed, strata=None, index_tags=True):
         self.kernel = kernel
         self.fmt = fmt
-        self.shape = Shape(kernel)
+        if first_wave_shape(kernel):
+            self.shape = Shape(kernel)
+            known, schedule, self.make = STRATA, SCHEDULE, make_case
+        else:
+            # The kernels of the second wave have generators of their own (gen2.py).
+            from . import gen2
+            self.shape = gen2.Shape2(kernel)
+            known, schedule = self.shape.strata, self.shape.schedule
+            self.make = gen2.make_case
         self.seed = seed
         if strata:
             for s in strata:
-                if s not in STRATA:
-                    raise GenError("unknown stratum %r (known: %s)" % (s, ", ".join(STRATA)))
-            self.schedule = tuple(s for s in SCHEDULE if s in strata) or tuple(strata)
+                if s not in known:
+                    raise GenError("unknown stratum %r for %s (known: %s)"
+                                   % (s, kernel.name, ", ".join(known)))
+            self.schedule = tuple(s for s in schedule if s in strata) or tuple(strata)
             self.strata = list(strata)
         else:
-            self.schedule = SCHEDULE
-            self.strata = list(STRATA)
+            self.schedule = schedule
+            self.strata = list(known)
         self.key = seed_key(seed, kernel.name, fmt.name, self.strata)
         self.index_tags = index_tags
 
@@ -428,13 +457,16 @@ class RandomGen:
         stratum = self.schedule[i % len(self.schedule)]
         rng = CaseRandom(self.key, i)
         for _attempt in range(16):
-            vals, negz = make_case(self.fmt, self.shape, rng, stratum)
+            vals, negz = self.make(self.fmt, self.shape, rng, stratum)
             if valid(self.fmt, self.kernel, vals):
                 break
         else:
             raise GenError("could not generate a valid case %d (%s)" % (i, stratum))
         toks = [self.kernel.name, self.fmt.name]
         for n, _ in self.kernel.inputs:
+            if n in self.kernel.masks:
+                toks.append(str(vals[n][0]))
+                continue
             for j, v in enumerate(vals[n]):
                 toks.append(limb_text(self.fmt, v, (n, j) in negz))
         toks.append("#%s:%d" % (stratum, i) if self.index_tags else "#" + stratum)
@@ -457,7 +489,8 @@ class RandomGen:
 
 class Restriction:
     """NAME.lead=LO:HI keeps operands whose leading limb lies in binades LO..HI (2^LO <= |x0|
-    < 2^(HI+1); this excludes zero); NAME.sign=+ or - keeps x0 >= 0 or x0 <= 0."""
+    < 2^(HI+1); this excludes zero); NAME.sign=+ or - keeps x0 >= 0 or x0 <= 0;
+    NAME.in=V1/V2/... keeps operands whose leading limb is one of the listed literals."""
 
     def __init__(self, spec):
         self.spec = spec
@@ -465,7 +498,8 @@ class Restriction:
             lhs, val = spec.split("=", 1)
             name, what = lhs.split(".", 1)
         except ValueError:
-            raise GenError("bad restriction %r (NAME.lead=LO:HI or NAME.sign=+|-)" % spec)
+            raise GenError("bad restriction %r (NAME.lead=LO:HI, NAME.sign=+|- or "
+                           "NAME.in=V1/V2/...)" % spec)
         self.name = name
         self.what = what
         if what == "lead":
@@ -478,12 +512,28 @@ class Restriction:
             if val not in ("+", "-"):
                 raise GenError("bad sign in %r" % spec)
             self.sign = val
+        elif what == "in":
+            self.literals = val.split("/")
+            if not val or "" in self.literals:
+                raise GenError("bad value list in %r" % spec)
         else:
             raise GenError("unknown restriction %r" % spec)
+        self._values = {}
 
     def keep(self, fmt, x0):
         if self.what == "lead":
             return x0 != 0 and self.lo <= fmt.binade(x0) <= self.hi
+        if self.what == "in":
+            vs = self._values.get(fmt.triple)
+            if vs is None:
+                try:
+                    vs = {F.parse_limb(fmt, t) for t in self.literals}
+                except F.LimbError as ex:
+                    raise GenError("%s: %s" % (self.spec, ex))
+                if any(type(v) is not int for v in vs):
+                    raise GenError("%s: a listed value is not a number of %s" % (self.spec, fmt.name))
+                self._values[fmt.triple] = vs
+            return x0 in vs
         return x0 >= 0 if self.sign == "+" else x0 <= 0
 
 
@@ -511,13 +561,22 @@ def normalized_pairs(fmt):
     return out
 
 
-def domain(fmt, limbs, restrictions):
+def domain(fmt, limbs, restrictions, requires=(), mask=False):
+    """Every operand of one input: all numbers of the format for one limb, every normalized
+    pair for two, (0,) and (1,) for a mask; requirements on that input alone (nonneg,
+    power_of_two) and restrictions remove operands."""
+    if mask:
+        return [(0,), (1,)]
     if limbs == 1:
         base = [(v,) for v in F.all_values(fmt)]
     elif limbs == 2:
         base = normalized_pairs(fmt)
     else:
         raise GenError("exhaustive enumeration of %d-limb operands is not supported" % limbs)
+    if "nonneg" in requires:
+        base = [t for t in base if sum(t) >= 0]
+    if "power_of_two" in requires:
+        base = [t for t in base if sum(t) > 0 and sum(t) & (sum(t) - 1) == 0]
     return [t for t in base if all(r.keep(fmt, t[0]) for r in restrictions)]
 
 
@@ -535,9 +594,12 @@ class ExhaustiveGen:
         for n, l in kernel.inputs:
             if l == 2 and ("normalized", n) not in kernel.requires:
                 raise GenError("%s: exhaustive mode needs normalized() on 2-limb inputs" % kernel.name)
-            d = domain(fmt, l, [r for r in self.restrictions if r.name == n])
+            mask = n in kernel.masks
+            d = domain(fmt, l, [r for r in self.restrictions if r.name == n],
+                       [r[0] for r in kernel.requires if len(r) == 2 and r[1] == n], mask)
             self.doms.append(d)
-            self.texts.append([" ".join(F.to_hex(v, fmt.qmin) for v in t) for t in d])
+            self.texts.append([str(t[0]) if mask else " ".join(F.to_hex(v, fmt.qmin) for v in t)
+                               for t in d])
         self.total = 1
         for d in self.doms:
             self.total *= len(d)
