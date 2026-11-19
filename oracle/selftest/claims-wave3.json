@@ -1394,24 +1394,24 @@
    "domain": "extended",
    "inputs": [
     {
-     "name": "x",
+     "name": "y",
      "limbs": 2
     }
    ],
    "outputs": [
     {
-     "name": "z",
+     "name": "x",
      "limbs": 2
     }
    ],
-   "value": "x",
+   "value": "y",
    "requires": [
-    "canonical(x)"
+    "canonical(y)"
    ],
    "ensures": [
     {
      "kind": "represents",
-     "of": "z"
+     "of": "x"
     }
    ],
    "min_precision": 1,

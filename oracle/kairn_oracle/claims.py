@@ -808,15 +808,24 @@ class Claims:
         if c.extended:
             raise ClaimsError("%s is of the extended domain; a core is a finite kernel" % where)
 
-        def shape(io, masks):
-            return [(l, n in masks) for n, l in io]
+        def shape(io, masks, names):
+            return [(n if names else None, l, n in masks) for n, l in io]
 
-        if shape(c.inputs, c.masks) != shape(k.inputs, k.masks):
+        # The same inputs, names and limbs; outputs of the same shape, whose names may differ
+        # (z in the cores' listings, w in the full kernels'): they are matched by position.
+        if shape(c.inputs, c.masks, True) != shape(k.inputs, k.masks, True):
             raise ClaimsError("%s has other inputs (%s) than the kernel (%s)" % (
                 where, _io_text(c.inputs), _io_text(k.inputs)))
-        if shape(c.outputs, c.masks) != shape(k.outputs, k.masks):
+        if shape(c.outputs, c.masks, False) != shape(k.outputs, k.masks, False):
             raise ClaimsError("%s has other outputs (%s) than the kernel (%s)" % (
                 where, _io_text(c.outputs), _io_text(k.outputs)))
+        # The core's requirements are the kernel's with normalized for canonical.
+        want = {("normalized",) + r[1:] if r[0] == "canonical" else r for r in k.requires}
+        if set(c.requires) != want:
+            raise ClaimsError("%s requires %s, which is not the kernel's requirements with "
+                              "normalized() for canonical()" % (
+                                  where, ", ".join("%s(%s)" % (r[0], ", ".join(r[1:]))
+                                                   for r in c.requires) or "nothing"))
         bad = [x.kind for x in c.ensures if x.kind not in CORE_KINDS]
         if bad:
             raise ClaimsError("%s has ensures of kind %s; a core of extends may have %s only"
