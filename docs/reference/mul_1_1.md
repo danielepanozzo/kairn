@@ -18,7 +18,7 @@ $$p \approx a b.$$
 | `a *= b` | `Expansion<T, 1>`, `Expansion<T, 1>` | `Expansion<T, 1>` |  |
 | `a * b` | `Expansion<T, 1>`, `T` | `Expansion<T, 1>` | the limb is converted to `Expansion<T, 1>` first, exactly |
 | `a * b` | `T`, `Expansion<T, 1>` | `Expansion<T, 1>` | the limb is converted to `Expansion<T, 1>` first, exactly |
-| `ldexp(a, n)` | `Expansion<T, 1>`, `int` | `Expansion<T, 1>` | $b = 2^n$, for every `n`: one product when $2^n$ is a number of `T`, otherwise two, which round as one does: the result is that of `std::ldexp` |
+| `ldexp(a, n)` | `Expansion<T, 1>`, `int` | `Expansion<T, 1>` | $b = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three products by powers of two of `T`, of which only one rounds; that their composition gives $\mathrm{RN}(2^n a)$, the result of `std::ldexp`, is argued and tested but not machine-checked ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)) |
 | `half(a)` | `Expansion<T, 1>` | `Expansion<T, 1>` | $b = 1/2$ |
 | `finite::mul(a, b)` | `Expansion<T, 1>`, `Expansion<T, 1>` | `Expansion<T, 1>` | the operator itself |
 | `finite::mul(a, b)` | `Expansion<T, 1>`, `T` | `Expansion<T, 1>` |  |

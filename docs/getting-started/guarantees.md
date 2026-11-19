@@ -63,25 +63,25 @@ and values may be infinite or NaN ([below](#overflow-and-non-finite-values)).
 
 | Operation (kernel) | When the result is finite, proved in the real model | Infinities, NaN and overflow, proved in the IEEE model |
 |---|---|---|
-| `x + y` (`add_2_2_full`) | $z$ normalized, $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\lvert x + y\rvert$ | F1 to F5; finite when $\lvert x\rvert, \lvert y\rvert \le 2^{e_{\max}-2}$ |
-| `x * y` (`mul_2_2_full`) | $z$ normalized, $\lvert z - xy\rvert \le 4u^2\lvert xy\rvert + \tfrac32\eta$ | F1 to F5; finite when $\lvert xy\rvert \le 2^{e_{\max}-1}$ |
-| `x + a`, `a + x` (`add_2_1_full`) | $z$ normalized, $\lvert z - (x + a)\rvert \le 2u^2\lvert x + a\rvert$ | F1 to F5; finite when $\lvert x\rvert, \lvert a\rvert \le 2^{e_{\max}-2}$ |
-| `x * a`, `a * x` (`mul_2_1_full`) | $z$ normalized, $\lvert z - xa\rvert \le 2u^2\lvert xa\rvert + \eta$ | F1 to F5; finite when $\lvert xa\rvert \le 2^{e_{\max}-1}$ |
-| `add_fast(x, y)` (`add_fast_2_2_full`) | $z$ normalized, $\lvert z - (x + y)\rvert \le 3u^2(\lvert x\rvert + \lvert y\rvert)$ | F1 to F5; finite as for `x + y` |
-| `x - y`, `x - a`, `a - x` (`sub_2_2_full`, `sub_2_1_full`, `sub_1_2_full`) | those of `x + y` and `x + a` | F1 to F5; finite as for `x + y` and `x + a` |
-| `ldexp(x, n)`, `half(x)` (`mul_pow2_2_full`) | $z$ normalized, $\lvert z - 2^n x\rvert \le \eta$ | F1 to F5; finite when $\lvert 2^n x\rvert \le 2^{e_{\max}-1}$ |
-| `-x`, `abs(x)` (`neg_2`, `abs_2`) | exact, normalized | exact: the infinity with its sign changed or removed; NaN stays NaN |
-| `<`, `<=`, `>`, `>=`, `==`, `!=` (`lt`, `le`, `eq` kernels) | the truth about the exact values | the truth in the extended reals; false with a NaN, as for `T` (`!=` true) |
-| `to_nearest`, `to_down`, `to_up`, `abs_upper` (`to_nearest_2`, ...) | the exact rounding to `T` | the rounding with overflow ($\pm\infty$ beyond the largest finite `T`); an infinity or NaN gives itself |
-| constructors (`make_2`, `make_2_limbs`, `ball_make_1`, `ball_make_2`) | | the value given, canonical; for a ball, below |
-| one limb: `+`, `-`, `*`, `add_fast`, `ldexp`, `half` (`add_1_1`, `mul_1_1`) | one rounding to nearest: $\lvert z - v\rvert \le \frac{u}{1 + u}\lvert v\rvert$, plus $\tfrac12\eta$ for products | the IEEE 754 operation |
+| `x + y` ([`add_2_2_full`](../reference/add_2_2_full.md)) | $z$ normalized, $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\lvert x + y\rvert$ | F1 to F5; finite when $\lvert x\rvert, \lvert y\rvert \le 2^{e_{\max}-2}$ |
+| `x * y` ([`mul_2_2_full`](../reference/mul_2_2_full.md)) | $z$ normalized, $\lvert z - xy\rvert \le 4u^2\lvert xy\rvert + \tfrac32\eta$ | F1 to F5; finite when $\lvert xy\rvert \le 2^{e_{\max}-1}$ |
+| `x + a`, `a + x` ([`add_2_1_full`](../reference/add_2_1_full.md)) | $z$ normalized, $\lvert z - (x + a)\rvert \le 2u^2\lvert x + a\rvert$ | F1 to F5; finite when $\lvert x\rvert, \lvert a\rvert \le 2^{e_{\max}-2}$ |
+| `x * a`, `a * x` ([`mul_2_1_full`](../reference/mul_2_1_full.md)) | $z$ normalized, $\lvert z - xa\rvert \le 2u^2\lvert xa\rvert + \eta$ | F1 to F5; finite when $\lvert xa\rvert \le 2^{e_{\max}-1}$ |
+| `add_fast(x, y)` ([`add_fast_2_2_full`](../reference/add_fast_2_2_full.md)) | $z$ normalized, $\lvert z - (x + y)\rvert \le 3u^2(\lvert x\rvert + \lvert y\rvert)$ | F1 to F5; finite as for `x + y` |
+| `x - y`, `x - a`, `a - x` ([`sub_2_2_full`](../reference/sub_2_2_full.md), [`sub_2_1_full`](../reference/sub_2_1_full.md), [`sub_1_2_full`](../reference/sub_1_2_full.md)) | those of `x + y` and `x + a` | F1 to F5; finite as for `x + y` and `x + a` |
+| `ldexp(x, n)`, `half(x)` ([`mul_pow2_2_full`](../reference/mul_pow2_2_full.md)) | $z$ normalized, $\lvert z - 2^n x\rvert \le \eta$, when $2^n$ is a number of `T` ([below](#overflow-and-non-finite-values) for the other $n$) | F1 to F5; finite when $\lvert 2^n x\rvert \le 2^{e_{\max}-1}$ |
+| `-x`, `abs(x)` ([`neg_2`](../reference/neg_2.md), [`abs_2`](../reference/abs_2.md)) | exact, normalized | exact: the infinity with its sign changed or removed; NaN stays NaN |
+| `<`, `<=`, `>`, `>=`, `==`, `!=` (the `lt`, `le` and `eq` kernels of [Comparisons](../reference/index.md#comparisons)) | the truth about the exact values | the truth in the extended reals; false with a NaN, as for `T` (`!=` true) |
+| `to_nearest`, `to_down`, `to_up`, `abs_upper` ([`to_nearest_2`](../reference/to_nearest_2.md), [`to_down_2`](../reference/to_down_2.md), [`to_up_2`](../reference/to_up_2.md), [`abs_upper_2`](../reference/abs_upper_2.md)) | the exact rounding to `T` | the rounding with overflow ($\pm\infty$ beyond the largest finite `T`); an infinity or NaN gives itself |
+| constructors ([`make_2`](../reference/make_2.md), [`make_2_limbs`](../reference/make_2_limbs.md), [`ball_make_1`](../reference/ball_make_1.md), [`ball_make_2`](../reference/ball_make_2.md)) | | the value given, canonical; for a ball, below |
+| one limb: `+`, `-`, `*`, `add_fast`, `ldexp`, `half` ([`add_1_1`](../reference/add_1_1.md), [`mul_1_1`](../reference/mul_1_1.md)) | one rounding to nearest: $\lvert z - v\rvert \le \frac{u}{1 + u}\lvert v\rvert$, plus $\tfrac12\eta$ for products (`ldexp`: when $2^n$ is a number of `T`, [below](#overflow-and-non-finite-values) for the other $n$) | the IEEE 754 operation |
 | one limb: `-x`, `abs`, comparisons, conversions | exact (no kernel) | the IEEE 754 operation |
-| `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (`ball_add_1_full`, ..., `ball_neg_2`) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | B1 to B4 (B1 to B3 for `-X`): containment in every case, the empty set and the whole line included; a finite ball when no $x \circ y$ exceeds $2^{e_{\max}-2}$ in magnitude ($2^{e_{\max}-4}$ for the product of one-limb balls) |
+| `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (the kernels of [Ball operations](../reference/index.md#ball-operations)) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | B1 to B4 (B1 to B3 for `-X`): containment in every case, the empty set and the whole line included; a finite ball when no $x \circ y$ exceeds $2^{e_{\max}-2}$ in magnitude ($2^{e_{\max}-4}$ for the product of one-limb balls) |
 | `limb`, `sign`, `isfinite`, `is_normalized`, a ball's states | exact (no kernel) | |
 
 A one-limb operand next to a two-limb one is its limb: `x + y` with `y` an `Expansion<T, 1>` is
-`x + a`, through `add_2_1_full`. The claims hold for every precision from the kernel's minimum on
-(at most 4), so for `float` and `double` alike. The constants of every row with an error bound,
+`x + a`, through [`add_2_1_full`](../reference/add_2_1_full.md). The claims hold for every
+precision from the kernel's minimum on (at most 4), so for `float` and `double` alike. The constants of every row with an error bound,
 rounded up to `T`, are in `kairn::traits<kairn::Expansion<T, 2>>` (`add`, `add_limb`, `add_fast`,
 `sub`, `sub_limb`, `mul`, `mul_limb`, `ldexp`) and `kairn::traits<T>`: they are the bounds of the
 cores, which a result satisfies whenever it is finite.
@@ -113,15 +113,18 @@ specified, and such a result is not canonical, so test it with `kairn::isfinite`
 to an operator. For one limb they are the operators themselves.
 
 **`ldexp(x, n)` is defined for every $n$.** When $2^n$ is a number of `T` it is one call of the
-kernel, with the proved statements of the table. Otherwise ($n$ above 1023 or below $-1074$ for
-`double`) the header calls the kernel two or three times, each time with a power of two of `T`.
-The result is canonical, and normalized when it is finite; that much follows from the proved
-statements of each call. Two more statements hold by an argument that is written out in the
-design and tested through the oracle, but is **not machine-checked**
+kernel ([`mul_pow2_2_full`](../reference/mul_pow2_2_full.md)), with the proved statements of the
+table. Otherwise ($n$ above 1023 or below $-1074$ for `double`) the header calls the kernel two or
+three times, each time with a power of two of `T`. The result is canonical, and normalized when it
+is finite; that much follows from the proved statements of each call. Two more statements hold by
+an argument that is written out in the design and tested through the oracle, but is **not
+machine-checked**
 ([Scaling beyond the powers of two of the format](../developer/design/milestone1.md#scaling-beyond-the-powers-of-two-of-the-format)):
 scaling up, the result is $2^n x$ exactly or $(\pm\infty, 0)$ on overflow; scaling down,
-$\lvert z - 2^n x\rvert \le \eta$, the bound of one call. For one limb, the same steps give
-$\mathrm{RN}(2^n x)$, what `std::ldexp` returns.
+$\lvert z - 2^n x\rvert \le \eta$, the bound of one call. For one limb, whose kernel is one rounded
+product ([`mul_1_1`](../reference/mul_1_1.md)), the header multiplies two or three times by powers
+of two of `T`, so that only one of the products rounds; that the result is $\mathrm{RN}(2^n x)$,
+what `std::ldexp` returns, holds by the same argument, tested and not machine-checked either.
 
 **A `Ball` is in one of three states**, each a set of real numbers: a *finite ball*, the reals
 within its radius of its center (center finite, radius finite and $\ge 0$); the *whole line*,
@@ -146,12 +149,12 @@ sixteenth for the product of two one-limb balls), the result is a finite ball. W
 $c_x$, $c_y$ and radii $r_x$, $r_y$, and $2^{e_{\max}-2}$ that quarter ($2^{1022}$ for `double`,
 $2^{126}$ for `float`):
 
-| Operation | The result is a finite ball when |
+| Operation (kernels) | The result is a finite ball when |
 |---|---|
-| `X + Y`, `X - Y` | $\lvert c_x \pm c_y\rvert + r_x + r_y \le 2^{e_{\max}-2}$ |
-| `X * a`, `a * X` with a `T` (and, for one limb, an `Expansion<T, 1>`) | $(\lvert c_x\rvert + r_x)\,\lvert a\rvert \le 2^{e_{\max}-2}$ |
-| `X * Y`, two-limb centers | $(\lvert c_x\rvert + r_x)(\lvert c_y\rvert + r_y) \le 2^{e_{\max}-2}$ |
-| `X * Y`, one-limb centers | $(\lvert c_x\rvert + r_x)(\lvert c_y\rvert + r_y) \le 2^{e_{\max}-4}$, a sixteenth of the threshold ($2^{1020}$, $2^{124}$) |
+| `X + Y`, `X - Y` ([`ball_add_1_full`](../reference/ball_add_1_full.md), [`ball_add_2_full`](../reference/ball_add_2_full.md), [`ball_sub_1_full`](../reference/ball_sub_1_full.md), [`ball_sub_2_full`](../reference/ball_sub_2_full.md)) | $\lvert c_x \pm c_y\rvert + r_x + r_y \le 2^{e_{\max}-2}$ |
+| `X * a`, `a * X` with a `T` (and, for one limb, an `Expansion<T, 1>`) ([`ball_scale_1_full`](../reference/ball_scale_1_full.md), [`ball_scale_2_full`](../reference/ball_scale_2_full.md)) | $(\lvert c_x\rvert + r_x)\,\lvert a\rvert \le 2^{e_{\max}-2}$ |
+| `X * Y`, two-limb centers ([`ball_mul_2_full`](../reference/ball_mul_2_full.md)) | $(\lvert c_x\rvert + r_x)(\lvert c_y\rvert + r_y) \le 2^{e_{\max}-2}$ |
+| `X * Y`, one-limb centers ([`ball_mul_1_full`](../reference/ball_mul_1_full.md)) | $(\lvert c_x\rvert + r_x)(\lvert c_y\rvert + r_y) \le 2^{e_{\max}-4}$, a sixteenth of the threshold ($2^{1020}$, $2^{124}$) |
 
 Each left side is the largest magnitude that $x \circ y$ takes over the operands. In particular,
 for `double`, a sum of balls whose members are all at most $2^{1021}$ in magnitude is a finite
@@ -167,7 +170,8 @@ proved in Flocq's model of IEEE 754, against statements the generator prints fro
 descriptions as the C++ ([Proofs](../proofs/index.md#what-is-proved-and-in-which-model); each
 kernel's page in the [reference](../reference/index.md) gives its theorem).
 
-**Not proved yet.** The two statements about `ldexp` when $2^n$ is not a number of `T`, above.
+**Not proved yet.** The two statements about `ldexp` when $2^n$ is not a number of `T`, above,
+and the one about `ldexp` on one limb.
 And thresholds sharper than those stated. For the two-limb arithmetic, exhaustive runs on small
 formats first see an overflow at 0.55 of the overflow threshold or above for the additions and
 0.86 or above for the products, where the proved conditions are a quarter and a half of it

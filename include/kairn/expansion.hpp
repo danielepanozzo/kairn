@@ -200,10 +200,13 @@ template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> add_fast(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
     return add(x, y);
 }
-// a 2^n, rounded once. Beyond the powers of two of T, two steps: up, both exact until the last
-// one overflows; down, by 2^(n - pow2_min) and then by 2^pow2_min, where the first step is exact
-// unless its result is subnormal, and then the second rounds it to zero, as one step would.
-// Beyond the clamps every nonzero finite a overflows, or rounds to zero.
+// a 2^n, rounded once. Beyond the powers of two of T, in steps: up, by 2^pow2_max as often as
+// needed, then the rest (three steps above 2 pow2_max), each exact until one overflows; down, by
+// 2^(n - pow2_min) and then by 2^pow2_min, where the first step is exact unless its result is
+// subnormal, and then the second rounds it to zero, as one step would. Beyond the clamps every
+// nonzero finite a overflows, or rounds to zero. This composition is written by hand: argued here
+// and tested through the oracle, not machine-checked (deviation 17 of
+// docs/developer/design/phase0/decisions.md).
 template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(Expansion<T, 1> x, int n) noexcept {
     KAIRN_DETAIL_K1_CONTRACT
@@ -1369,8 +1372,11 @@ KAIRN_FORCEINLINE constexpr auto add_fast(const X& x, const Y& y) noexcept
 }
 
 /// x times 2^n, rounded once, for every n: RN(x 2^n), the result of std::ldexp. One limb (kernel
-/// mul_1_1, with b = 2^n): one product when 2^n is a number of T; otherwise two, which round as
-/// one does (the first is exact, or makes a value that the second rounds to zero either way).
+/// mul_1_1, with b = 2^n): one product when 2^n is a number of T. Otherwise two or three products
+/// by powers of two of T, of which only one rounds: scaling up, each is exact until one overflows;
+/// scaling down, the first is exact, or makes a value that the second rounds to zero either way.
+/// That this composition returns RN(x 2^n) is argued and tested through the oracle, not
+/// machine-checked.
 template <class T>
     requires detail::proof_checked<gen::bounds::mul_1_1<T>>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(const Expansion<T, 1>& x, int n) noexcept {

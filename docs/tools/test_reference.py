@@ -13,7 +13,9 @@
   domain, and on a kernel the table does not have; --check fails on a stale, missing or stray page
   and on a stale nav; an UNVERIFIED kernel is marked; runs that judged other claims are flagged;
   the statements of the extended domain (F1 to F5, B1 to B4, the constructors) are printed with
-  the kernel's own names, conditions and core.
+  the kernel's own names, conditions and core; the axioms are those of the audit's allow-list, and
+  a proved theorem that no audit file prints fails; every form of ldexp beyond the powers of two
+  says that its steps are not machine-checked; the C++ API is in the nav and the index.
 
 Python 3 standard library only; no network, no compiler.
 """
@@ -219,6 +221,17 @@ class Table(unittest.TestCase):
         used = [k for k in entry if k in named | called]
         self.assertEqual(used, [], "kernels the headers name or call, listed in the table without forms "
                                    "(their pages would say that no header calls them)")
+
+    def test_the_steps_of_ldexp_are_said_to_be_not_machine_checked(self):
+        # Beyond the powers of two of T, ldexp is a composition written in the header (deviation 17):
+        # every form that computes it says so, in the same words.
+        steps = [(name, f["code"]) for name, p in self.ops.KERNELS.items() for f in p["forms"]
+                 if "ldexp(" in f["code"] and "itself" not in (f["note"] or "")]
+        self.assertEqual(sorted(steps), [("mul_1_1", "ldexp(a, n)"), ("mul_pow2_2", "finite::ldexp(x, n)"),
+                                         ("mul_pow2_2_full", "ldexp(x, n)")])
+        for name, code in steps:
+            note = next(f["note"] for f in self.ops.KERNELS[name]["forms"] if f["code"] == code)
+            self.assertIn(self.ops.COMPOSITION, note, "%s, %s" % (name, code))
 
     def test_every_form_can_be_read(self):
         for name, p in self.ops.KERNELS.items():

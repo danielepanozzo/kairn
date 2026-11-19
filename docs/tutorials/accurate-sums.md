@@ -126,8 +126,8 @@ Each addition of balls computes the new center with the two-limb addition
 
 1. the radii of the two operands, which carry what was already uncertain;
 2. a bound on the rounding error of the new center: $U\,\lvert c\rvert$, where $c$ is the new center
-   and $U$ the proved bound of `add_2_2` relative to the computed result, rounded up to `double`
-   (`kairn::traits<Expansion<double, 2>>::add.unit_computed`);
+   and $U$ the proved bound of [`add_2_2`](../reference/add_2_2.md) relative to the computed
+   result, rounded up to `double` (`kairn::traits<Expansion<double, 2>>::add.unit_computed`);
 
 and that sum, computed with ordinary operations, is then inflated once, by a factor a few units
 of $u$ above 1 and a tiny constant (about $2^{-1022}$, which covers underflow), so that the radius
@@ -202,6 +202,9 @@ first, a product of balls took 3.0 to 4.4 times as long as its center in a chain
 
 ## What can go wrong
 
+In short, below; [Troubleshooting](../getting-started/index.md#troubleshooting) has every message
+that Kairn's checks print, with its cause and what to do.
+
 **Compiler flags.** Kairn's results depend on every floating-point operation being done as
 written. Including `kairn/kairn.hpp` fails with an `#error` under the flags a compiler announces with
 a macro: `-ffast-math` (and `-Ofast`), `-ffinite-math-only`, GCC's `-fassociative-math`,
@@ -235,7 +238,9 @@ result, and a ball made with a NaN or negative radius is the empty set. All of t
 ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)). It is also
 proved when finite operands give a finite ball: when no member of the exact result exceeds a
 quarter of the overflow threshold ($2^{1022}$ for `double`; a sixteenth of it for a product of
-one-limb balls). Where results may come nearer to the top of the range than that, test them:
+one-limb balls), the condition B4 on the page of each Ball kernel, such as
+[`ball_add_2_full`](../reference/ball_add_2_full.md) and
+[`ball_mul_1_full`](../reference/ball_mul_1_full.md). Where results may come nearer to the top of the range than that, test them:
 `kairn::isfinite(x)` for a number, `X.is_finite()` for a ball.
 
 ## What the headers do not provide yet
