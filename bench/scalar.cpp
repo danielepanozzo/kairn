@@ -105,7 +105,9 @@ KB_TP11_1(kb_tp_neg_1__kairn, plain_neg)
         [[maybe_unused]] const double* c0 = a->c0;                                                 \
         [[maybe_unused]] const double* c1 = a->c1;                                                 \
         [[maybe_unused]] const double* cr = a->cr;                                                 \
-        [[maybe_unused]] const double h0 = a->h0, h1 = a->h1, hr = a->hr;                         \
+        [[maybe_unused]] const double h0 = a->h0;                                                  \
+        [[maybe_unused]] const double h1 = a->h1;                                                  \
+        [[maybe_unused]] const double hr = a->hr;                                                  \
         double p0 = a->s0, p1 = a->s1, pr = a->sr;                                                 \
         INIT;                                                                                      \
         for (int i = 0; i < n; ++i) {                                                              \

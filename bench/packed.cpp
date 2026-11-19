@@ -115,7 +115,9 @@ KB_PTP11_1(kb_ptp_neg_1__kairn, plain_neg)
         [[maybe_unused]] const double* c0 = a->c0;                                                 \
         [[maybe_unused]] const double* c1 = a->c1;                                                 \
         [[maybe_unused]] const double* cr = a->cr;                                                 \
-        [[maybe_unused]] const V h0 = kp::set1(a->h0), h1 = kp::set1(a->h1), hr = kp::set1(a->hr); \
+        [[maybe_unused]] const V h0 = kp::set1(a->h0);                                             \
+        [[maybe_unused]] const V h1 = kp::set1(a->h1);                                             \
+        [[maybe_unused]] const V hr = kp::set1(a->hr);                                             \
         V p0 = kp::set1(a->s0), p1 = kp::set1(a->s1), pr = kp::set1(a->sr);                       \
         for (int i = 0; i < n; i += W) {                                                           \
             STEP;                                                                                  \

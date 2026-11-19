@@ -794,7 +794,12 @@ int main(int argc, char** argv) {
     }
     out += "  ]\n}\n";
     if (!json.empty()) {
-        FILE* fp = std::fopen(json.c_str(), "w");
+        FILE* fp = nullptr;
+#if defined(_MSC_VER)
+        if (fopen_s(&fp, json.c_str(), "w") != 0) fp = nullptr;
+#else
+        fp = std::fopen(json.c_str(), "w");
+#endif
         if (!fp || std::fputs(out.c_str(), fp) < 0 || std::fclose(fp) != 0) {
             std::fprintf(stderr, "cannot write %s\n", json.c_str());
             return 1;
