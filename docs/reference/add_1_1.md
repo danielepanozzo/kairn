@@ -76,7 +76,7 @@ Definition add_1_1_spec : Prop :=
 
 ## Listing
 
-From [`gen/kernels/add_1_1.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/add_1_1.kernel), the description the C++ and the formal model (`proofs/gen/Model.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/add_1_1.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/add_1_1.kernel), the description the C++ and the formal models (`proofs/gen/Model.v`, `proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 
 ```
 # One rounded sum. Not a kernel the library calls (its code is a + b): it states the bound of the

@@ -4,11 +4,11 @@
 
 Every public operation of Kairn, grouped by what it does, with the kernel that computes it, and the kernels that the public headers do not call yet. Each kernel has a page: its statement in plain mathematics, the C++ forms that reach it, what it requires, what is proved and with which theorem, its listing, and what the latest brute-force runs measured. [How to read a page](reading.md) explains each part.
 
-Of the 63 kernels, 42 are proved and 21 are **UNVERIFIED**: [`add_2_1_full`](add_2_1_full.md), [`add_2_2_full`](add_2_2_full.md), [`add_fast_2_2_full`](add_fast_2_2_full.md), [`ball_add_1_full`](ball_add_1_full.md), [`ball_add_2_full`](ball_add_2_full.md), [`ball_make_1`](ball_make_1.md), [`ball_make_2`](ball_make_2.md), [`ball_mul_1_full`](ball_mul_1_full.md), [`ball_mul_2_full`](ball_mul_2_full.md), [`ball_scale_1_full`](ball_scale_1_full.md), [`ball_scale_2_full`](ball_scale_2_full.md), [`ball_sub_1_full`](ball_sub_1_full.md), [`ball_sub_2_full`](ball_sub_2_full.md), [`make_2`](make_2.md), [`make_2_limbs`](make_2_limbs.md), [`mul_2_1_full`](mul_2_1_full.md), [`mul_2_2_full`](mul_2_2_full.md), [`mul_pow2_2_full`](mul_pow2_2_full.md), [`sub_1_2_full`](sub_1_2_full.md), [`sub_2_1_full`](sub_2_1_full.md), [`sub_2_2_full`](sub_2_2_full.md).
+Of the 63 kernels, 33 are proved and 30 are **UNVERIFIED**: [`add_2_1`](add_2_1.md), [`add_2_1_full`](add_2_1_full.md), [`add_2_2_full`](add_2_2_full.md), [`add_fast_2_2_full`](add_fast_2_2_full.md), [`ball_add_1`](ball_add_1.md), [`ball_add_1_full`](ball_add_1_full.md), [`ball_add_2`](ball_add_2.md), [`ball_add_2_full`](ball_add_2_full.md), [`ball_make_1`](ball_make_1.md), [`ball_make_2`](ball_make_2.md), [`ball_mul_1`](ball_mul_1.md), [`ball_mul_1_full`](ball_mul_1_full.md), [`ball_mul_2`](ball_mul_2.md), [`ball_mul_2_full`](ball_mul_2_full.md), [`ball_scale_1`](ball_scale_1.md), [`ball_scale_1_full`](ball_scale_1_full.md), [`ball_scale_2`](ball_scale_2.md), [`ball_scale_2_full`](ball_scale_2_full.md), [`ball_sub_1`](ball_sub_1.md), [`ball_sub_1_full`](ball_sub_1_full.md), [`ball_sub_2`](ball_sub_2.md), [`ball_sub_2_full`](ball_sub_2_full.md), [`make_2`](make_2.md), [`make_2_limbs`](make_2_limbs.md), [`mul_2_1_full`](mul_2_1_full.md), [`mul_2_2_full`](mul_2_2_full.md), [`mul_pow2_2_full`](mul_pow2_2_full.md), [`sub_1_2_full`](sub_1_2_full.md), [`sub_2_1_full`](sub_2_1_full.md), [`sub_2_2_full`](sub_2_2_full.md).
 
-16 kernels have a statement on finite operands and one on infinite and NaN operands; the second is **UNVERIFIED** for all of them.
+18 kernels have a statement on finite operands and one on infinite and NaN operands; the second is **UNVERIFIED** for all of them.
 
-No public operation calls an UNVERIFIED kernel, so none needs the marker `kairn::unverified`.
+The operations that call an UNVERIFIED kernel need the marker `kairn::unverified` on an operand: those of [`add_2_1`](add_2_1.md), [`ball_add_1`](ball_add_1.md), [`ball_add_2`](ball_add_2.md), [`ball_mul_1`](ball_mul_1.md), [`ball_mul_2`](ball_mul_2.md), [`ball_scale_1`](ball_scale_1.md), [`ball_scale_2`](ball_scale_2.md), [`ball_sub_1`](ball_sub_1.md), [`ball_sub_2`](ball_sub_2.md).
 
 Notation: $u = 2^{-p}$ is the unit roundoff of the limb type `T` ($2^{-53}$ for `double`, $2^{-24}$ for `float`), $\eta$ its smallest positive number, $\mathrm{RN}$ rounding to nearest with ties to even, and a two-limb number $x = x_0 + x_1$ is *normalized* when $x_0 = \mathrm{RN}(x_0 + x_1)$ ([Numbers](../developer/design/phase0/numbers.md#notation)). An operand of type `Expansion<T, 1>` next to an `Expansion<T, 2>` is converted to two limbs, exactly, and the two-limb form applies.
 
@@ -49,7 +49,7 @@ Sums, differences, products, negation and absolute value.
 | `a * b`, `a *= b` | `Expansion<T, 1>`, `Expansion<T, 1>` | $p = \mathrm{RN}(a b)$; $\lvert p - a b\rvert \le \frac{u}{1 + u}\,\lvert a b\rvert + \tfrac{1}{2}\,\eta$ | [`mul_1_1`](mul_1_1.md) |
 | `x + y`, `x += y` | `Expansion<T, 2>`, `Expansion<T, 2>` | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$, normalized | [`add_2_2`](add_2_2.md) |
 | not yet called by the public headers | - | canonical; the result of [`add_2_2`](add_2_2.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`add_2_2_full`](add_2_2_full.md) **UNVERIFIED** |
-| `x + a`, `a + x`, `x += a` | `Expansion<T, 2>`, `T` | $\lvert z - (x + a)\rvert \le 2\,u^2\,\lvert x + a\rvert$, normalized | [`add_2_1`](add_2_1.md) |
+| `x + a`, `a + x`, `x += a` | `Expansion<T, 2>`, `T` | $\lvert z - (x + a)\rvert \le 2\,u^2\,\lvert x + a\rvert$, normalized | [`add_2_1`](add_2_1.md) **UNVERIFIED** |
 | not yet called by the public headers | - | canonical; the result of [`add_2_1`](add_2_1.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`add_2_1_full`](add_2_1_full.md) **UNVERIFIED** |
 | `x - y`, `x -= y` | `Expansion<T, 2>`, `Expansion<T, 2>` | $\lvert z - (x - y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x - y\rvert$, normalized | [`sub_2_2`](sub_2_2.md) |
 | not yet called by the public headers | - | canonical; the result of [`sub_2_2`](sub_2_2.md) when finite, $(\pm\infty, 0)$ on overflow, as `T` for infinite and NaN operands | [`sub_2_2_full`](sub_2_2_full.md) **UNVERIFIED** |
@@ -112,21 +112,21 @@ Arithmetic on balls: the result contains every result on points of the operands.
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| `X + Y`, `X += Y`, `X + y`, `X + a`, `a + X` | `Ball<T, 1>`, `Ball<T, 1>` | contains every $x + y$ | [`ball_add_1`](ball_add_1.md) |
+| `X + Y`, `X += Y`, `X + y`, `X + a`, `a + X` | `Ball<T, 1>`, `Ball<T, 1>` | contains every $x + y$ | [`ball_add_1`](ball_add_1.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical ball that contains every $x + y$; the empty set and the whole line included | [`ball_add_1_full`](ball_add_1_full.md) **UNVERIFIED** |
-| `X + Y`, `X += Y`, `X + y`, `X + a`, `a + X` | `Ball<T, 2>`, `Ball<T, 2>` | contains every $x + y$, normalized | [`ball_add_2`](ball_add_2.md) |
+| `X + Y`, `X += Y`, `X + y`, `X + a`, `a + X` | `Ball<T, 2>`, `Ball<T, 2>` | contains every $x + y$, normalized | [`ball_add_2`](ball_add_2.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical ball that contains every $x + y$; the empty set and the whole line included | [`ball_add_2_full`](ball_add_2_full.md) **UNVERIFIED** |
-| `X - Y`, `X -= Y`, `X - y`, `X - a`, `a - X` | `Ball<T, 1>`, `Ball<T, 1>` | contains every $x - y$ | [`ball_sub_1`](ball_sub_1.md) |
+| `X - Y`, `X -= Y`, `X - y`, `X - a`, `a - X` | `Ball<T, 1>`, `Ball<T, 1>` | contains every $x - y$ | [`ball_sub_1`](ball_sub_1.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical ball that contains every $x - y$; the empty set and the whole line included | [`ball_sub_1_full`](ball_sub_1_full.md) **UNVERIFIED** |
-| `X - Y`, `X -= Y`, `X - y`, `X - a`, `a - X` | `Ball<T, 2>`, `Ball<T, 2>` | contains every $x - y$, normalized | [`ball_sub_2`](ball_sub_2.md) |
+| `X - Y`, `X -= Y`, `X - y`, `X - a`, `a - X` | `Ball<T, 2>`, `Ball<T, 2>` | contains every $x - y$, normalized | [`ball_sub_2`](ball_sub_2.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical ball that contains every $x - y$; the empty set and the whole line included | [`ball_sub_2_full`](ball_sub_2_full.md) **UNVERIFIED** |
-| `X * Y`, `X *= Y`, `X * y` | `Ball<T, 1>`, `Ball<T, 1>` | contains every $x y$ | [`ball_mul_1`](ball_mul_1.md) |
+| `X * Y`, `X *= Y`, `X * y` | `Ball<T, 1>`, `Ball<T, 1>` | contains every $x y$ | [`ball_mul_1`](ball_mul_1.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical ball that contains every $x y$; the empty set and the whole line included | [`ball_mul_1_full`](ball_mul_1_full.md) **UNVERIFIED** |
-| `X * Y`, `X *= Y`, `X * y` | `Ball<T, 2>`, `Ball<T, 2>` | contains every $x y$, normalized | [`ball_mul_2`](ball_mul_2.md) |
+| `X * Y`, `X *= Y`, `X * y` | `Ball<T, 2>`, `Ball<T, 2>` | contains every $x y$, normalized | [`ball_mul_2`](ball_mul_2.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical ball that contains every $x y$; the empty set and the whole line included | [`ball_mul_2_full`](ball_mul_2_full.md) **UNVERIFIED** |
-| `X * a`, `a * X`, `X *= a` | `Ball<T, 1>`, `T` | contains every $x a$ | [`ball_scale_1`](ball_scale_1.md) |
+| `X * a`, `a * X`, `X *= a` | `Ball<T, 1>`, `T` | contains every $x a$ | [`ball_scale_1`](ball_scale_1.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical ball that contains every $x a$; the empty set and the whole line included | [`ball_scale_1_full`](ball_scale_1_full.md) **UNVERIFIED** |
-| `X * a`, `a * X`, `X *= a` | `Ball<T, 2>`, `T` | contains every $x a$, normalized | [`ball_scale_2`](ball_scale_2.md) |
+| `X * a`, `a * X`, `X *= a` | `Ball<T, 2>`, `T` | contains every $x a$, normalized | [`ball_scale_2`](ball_scale_2.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical ball that contains every $x a$; the empty set and the whole line included | [`ball_scale_2_full`](ball_scale_2_full.md) **UNVERIFIED** |
 | `-X` | `Ball<T, 1>` | contains every $-x$ | [`ball_neg_1`](ball_neg_1.md) |
 | `-X` | `Ball<T, 2>` | contains every $-x$, normalized | [`ball_neg_2`](ball_neg_2.md) |

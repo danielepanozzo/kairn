@@ -49,7 +49,7 @@ Definition split_spec : Prop :=
 
 ## Listing
 
-From [`gen/kernels/split.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/split.kernel), the description the C++ and the formal model (`proofs/gen/Model.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/split.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/split.kernel), the description the C++ and the formal models (`proofs/gen/Model.v`, `proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 
 ```
 # Veltkamp's split: a = ah + al exactly, with ah on the upper half of the precision. Used by

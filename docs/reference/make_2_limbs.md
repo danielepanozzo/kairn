@@ -26,7 +26,7 @@ A number of several limbs stands for their exact sum: $y = h + l$, $x = x_0 + x_
 
 For operands that satisfy the requirements, finite, infinite or NaN:
 
-- $x$ is canonical and is $y$ exactly: a finite $y$ gives a finite normalized $x$ with $x_0 + x_1 = y$; $y = \pm\infty$ gives $(\pm\infty, 0)$; a NaN gives $(\mathrm{NaN}, \mathrm{NaN})$.
+- $x$ is canonical and is $y$ exactly: when $y$ is finite, $x$ is finite and normalized with $x_0 + x_1 = y$; when $y = \pm\infty$, $x = (\pm\infty, 0)$; when $y$ is a NaN, $x = (\mathrm{NaN}, \mathrm{NaN})$.
 
 Stated for every binary format with a precision of at least 1 bit, rounding to nearest with ties to even and with gradual underflow, in the IEEE model, with signed zeros, infinities, NaN and overflow. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
 
@@ -40,7 +40,7 @@ Stated for every binary format with a precision of at least 1 bit, rounding to n
 
 ## Listing
 
-From [`gen/kernels/make_2_limbs.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/make_2_limbs.kernel), the description the C++ is generated from. The generator prints no formal model of it yet. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/make_2_limbs.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/make_2_limbs.kernel), the description the C++ and the formal model (`proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 
 ```
 # from_limbs: the 2-limb number with the limbs (h, l) the program gives, which must be canonical;

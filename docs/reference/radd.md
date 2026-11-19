@@ -12,7 +12,7 @@ $$r \ge a + b.$$
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`ball_add_1`](ball_add_1.md), [`ball_mul_1`](ball_mul_1.md), [`ball_scale_1`](ball_scale_1.md), [`ball_add_2`](ball_add_2.md), [`ball_mul_2`](ball_mul_2.md), [`ball_scale_2`](ball_scale_2.md).
+No public operation computes this kernel on its own.
 
 ## Requires
 
@@ -69,7 +69,7 @@ Stated for every binary format with a precision of at least 2 bits, rounding to 
 
 ## Listing
 
-From [`gen/kernels/radd.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/radd.kernel), the description the C++ and the formal model (`proofs/gen/Model.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/radd.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/radd.kernel), the description the C++ and the formal models (`proofs/gen/Model.v`, `proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 
 ```
 # An upper bound of a + b, for radii: the rounded sum, one step up. For nonnegative operands it

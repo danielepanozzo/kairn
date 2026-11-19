@@ -31,7 +31,7 @@ For operands that satisfy the requirements, finite, infinite or NaN:
 - **F2.** If $w_0$ is finite, then every operand is finite and $w$ satisfies the statement of its core, [`mul_pow2_2`](mul_pow2_2.md):
     - $w$ is normalized: $w_0 = \mathrm{RN}(w_0 + w_1)$.
     - $\lvert w - x c\rvert \le \eta$.
-- **F3.** No condition under which $w_0$ is finite is claimed yet: the claims list none, which does not say that it always is.
+- **F3.** If every operand is finite and $\lvert x c\rvert \le 2^{e_{\max} - 1}$, then $w_0$ is finite. The conditions are on the exact values of the operands, and $2^{e_{\max}}$ is the overflow threshold of `T`, just above its largest finite number: $2^{e_{\max} - 1}$ is $2^{1023}$ for `double`, $2^{127}$ for `float`.
 - **F4.** If every operand is finite and $w_0$ is not, then $w = (\pm\infty, 0)$, with the sign of $x c$.
 - **F5.** If an operand is not finite, then $w$ is the canonical form of $x_0 \cdot c$ computed in `T`: $(\pm\infty, 0)$ for an infinity, $(\mathrm{NaN}, \mathrm{NaN})$ for a NaN (for example $+\infty \cdot 2 = +\infty$, $0 \cdot \infty = \mathrm{NaN}$).
 
@@ -47,7 +47,7 @@ Stated for every binary format with a precision of at least 2 bits, rounding to 
 
 ## Listing
 
-From [`gen/kernels/mul_pow2_2_full.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/mul_pow2_2_full.kernel), the description the C++ is generated from. The generator prints no formal model of it yet. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/mul_pow2_2_full.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/mul_pow2_2_full.kernel), the description the C++ and the formal model (`proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 It calls [`mul_pow2_2`](mul_pow2_2.md).
 
 ```

@@ -54,7 +54,7 @@ Definition fast_two_sum_spec : Prop :=
 
 ## Listing
 
-From [`gen/kernels/fast_two_sum.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/fast_two_sum.kernel), the description the C++ and the formal model (`proofs/gen/Model.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/fast_two_sum.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/fast_two_sum.kernel), the description the C++ and the formal models (`proofs/gen/Model.v`, `proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 
 ```
 # Fast2Sum: the same as TwoSum in three operations when |a| >= |b|; (s, e) is then normalized.

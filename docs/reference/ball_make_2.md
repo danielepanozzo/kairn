@@ -44,7 +44,7 @@ Stated for every binary format with a precision of at least 1 bit, rounding to n
 
 ## Listing
 
-From [`gen/kernels/ball_make_2.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/ball_make_2.kernel), the description the C++ is generated from. The generator prints no formal model of it yet. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/ball_make_2.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/ball_make_2.kernel), the description the C++ and the formal model (`proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 
 ```
 # A ball from a canonical 2-limb center (an object, so its limbs are stored) and a radius from the

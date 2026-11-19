@@ -68,7 +68,7 @@ Definition sub_1_2_spec : Prop :=
 
 ## Listing
 
-From [`gen/kernels/sub_1_2.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/sub_1_2.kernel), the description the C++ and the formal model (`proofs/gen/Model.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/sub_1_2.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/sub_1_2.kernel), the description the C++ and the formal models (`proofs/gen/Model.v`, `proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 It calls [`add_2_1`](add_2_1.md).
 
 ```

@@ -63,7 +63,7 @@ Definition two_prod_spec : Prop :=
 
 ## Listing
 
-From [`gen/kernels/two_prod.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/two_prod.kernel), the description the C++ and the formal model (`proofs/gen/Model.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/two_prod.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/two_prod.kernel), the description the C++ and the formal models (`proofs/gen/Model.v`, `proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 
 ```
 # TwoProd with an FMA. The rounded product is prod, an FMA with a zero addend, so that no compiler

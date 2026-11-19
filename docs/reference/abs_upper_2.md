@@ -70,7 +70,7 @@ Stated for every binary format with a precision of at least 1 bit, rounding to n
 
 ## Listing
 
-From [`gen/kernels/abs_upper_2.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/abs_upper_2.kernel), the description the C++ and the formal model (`proofs/gen/Model.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/abs_upper_2.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/abs_upper_2.kernel), the description the C++ and the formal models (`proofs/gen/Model.v`, `proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 It calls [`abs_2`](abs_2.md), [`to_up_2`](to_up_2.md).
 
 ```

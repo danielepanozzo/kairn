@@ -43,7 +43,7 @@ Stated for every binary format with a precision of at least 2 bits, rounding to 
 
 ## Listing
 
-From [`gen/kernels/ball_scale_1_full.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/ball_scale_1_full.kernel), the description the C++ is generated from. The generator prints no formal model of it yet. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/ball_scale_1_full.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/ball_scale_1_full.kernel), the description the C++ and the formal model (`proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 It calls [`ball_scale_1`](ball_scale_1.md).
 
 ```

@@ -24,7 +24,7 @@ $$x = a.$$
 
 For operands that satisfy the requirements, finite, infinite or NaN:
 
-- $x$ is canonical and is $a$ exactly: a finite $a$ gives a finite normalized $x$ with $x_0 + x_1 = a$; $a = \pm\infty$ gives $(\pm\infty, 0)$; a NaN gives $(\mathrm{NaN}, \mathrm{NaN})$.
+- $x$ is canonical and is $a$ exactly: when $a$ is finite, $x$ is finite and normalized with $x_0 + x_1 = a$; when $a = \pm\infty$, $x = (\pm\infty, 0)$; when $a$ is a NaN, $x = (\mathrm{NaN}, \mathrm{NaN})$.
 
 Stated for every binary format with a precision of at least 1 bit, rounding to nearest with ties to even and with gradual underflow, in the IEEE model, with signed zeros, infinities, NaN and overflow. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
 
@@ -38,7 +38,7 @@ Stated for every binary format with a precision of at least 1 bit, rounding to n
 
 ## Listing
 
-From [`gen/kernels/make_2.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/make_2.kernel), the description the C++ is generated from. The generator prints no formal model of it yet. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/make_2.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/make_2.kernel), the description the C++ and the formal model (`proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 
 ```
 # Expansion<T, 2> from a value of T or from a one-limb number: (a, 0), canonical. The guard makes

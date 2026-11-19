@@ -58,7 +58,7 @@ The statement above is about finite operands. The claims also say what the kerne
 
 and then:
 
-- $z$ is canonical.
+- $z$ is canonical and is $-x$ exactly: when $-x$ is finite, $z$ is finite and normalized with $z_0 + z_1 = -x$; when $-x = \pm\infty$, $z = (\pm\infty, 0)$; when $-x$ is a NaN, $z = (\mathrm{NaN}, \mathrm{NaN})$.
 - When every operand and $z$ are finite, the statement on finite operands holds:
     - $z$ is normalized: $z_0 = \mathrm{RN}(z_0 + z_1)$.
     - $z = -x$ exactly.
@@ -73,7 +73,7 @@ Stated for every binary format with a precision of at least 1 bit, rounding to n
 
 ## Listing
 
-From [`gen/kernels/neg_2.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/neg_2.kernel), the description the C++ and the formal model (`proofs/gen/Model.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
+From [`gen/kernels/neg_2.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/neg_2.kernel), the description the C++ and the formal models (`proofs/gen/Model.v`, `proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
 
 ```
 # The negation of a 2-limb number, limb by limb: exact, and still normalized.
@@ -96,7 +96,6 @@ They judged the statement on finite operands; the stored summaries hold no measu
 ## Not claimed
 
 - Anything for operands that do not satisfy the requirements of the statement on infinite and NaN operands.
-- Which canonical value comes out when an operand is not finite: the claims say only that it is canonical.
 - The sign of a zero limb, and which NaN a NaN result is: the claims compare neither.
 - Anything about an operand that is not normalized, which only limbs given by the program can make: `from_limbs` in a build without checks, `from_limbs_unchecked`, or `limb[]` written directly.
 - Anything about infinite and NaN operands, as a guarantee: that statement is a target until its proof is checked.
