@@ -664,6 +664,7 @@ add_test(NAME consume.add_subdirectory
 
 add_test(NAME consume.install
   COMMAND "${CMAKE_COMMAND}" "-DBUILD_DIR=${PROJECT_BINARY_DIR}" "-DPREFIX=${_consume_dir}/prefix"
+    "-DLICENSE=${PROJECT_SOURCE_DIR}/LICENSE" "-DLICENSE_DIR=${CMAKE_INSTALL_DATADIR}/licenses/kairn"
     "-DCONFIG=$<CONFIG>" -P "${CMAKE_CURRENT_SOURCE_DIR}/consume/install.cmake")
 set_tests_properties(consume.install PROPERTIES FIXTURES_SETUP kairn_installed)
 
