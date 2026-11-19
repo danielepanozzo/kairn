@@ -8,6 +8,7 @@
                                     input, completed lines on standard output
 """
 import argparse
+import fnmatch
 import os
 import sys
 
@@ -67,6 +68,25 @@ def cmd_test(args):
     if args.pattern:
         loader.testNamePatterns = [f'*{p}*' for p in args.pattern]
     suite = loader.discover(tests_dir, pattern='test_*.py', top_level_dir=tests_dir)
+
+    def tests(s):
+        """The tests of a suite, in order, nested suites flattened."""
+        for t in s:
+            if isinstance(t, unittest.TestSuite):
+                yield from tests(t)
+            else:
+                yield t
+
+    # A pattern that selects or leaves out nothing is a mistake (a test renamed, a typo): with -k
+    # it would run nothing and pass.
+    names = [t.id() for t in tests(suite)]
+    unused = [p for p in (args.pattern or []) + (args.skip or [])
+              if not any(fnmatch.fnmatchcase(n, f'*{p}*') for n in names)]
+    if unused:
+        sys.exit('kairn-gen test: no test name contains ' + ', '.join(unused))
+    if args.skip:
+        suite = unittest.TestSuite(t for t in tests(suite)
+                                   if not any(fnmatch.fnmatchcase(t.id(), f'*{p}*') for p in args.skip))
     result = unittest.TextTestRunner(verbosity=2 if args.verbose else 1).run(suite)
     sys.exit(0 if result.wasSuccessful() else 1)
 
@@ -92,6 +112,8 @@ def main():
     t.add_argument('-j', '--jobs', type=int, help='processes and compilers at once (default: all cores, '
                                                    'or $KAIRN_GEN_JOBS)')
     t.add_argument('-k', dest='pattern', action='append', help='only tests whose name contains this')
+    t.add_argument('--skip', action='append', metavar='PATTERN',
+                   help='leave out the tests whose name contains this')
     t.add_argument('-v', '--verbose', action='store_true')
     t.set_defaults(run=cmd_test)
     i = sub.add_parser('interp', help='the exact interpreter, as a runner of the line protocol')

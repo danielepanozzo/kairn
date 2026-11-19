@@ -14,11 +14,11 @@ programs of Program.v.
 The statements are printed from the claims in the shapes described in
 proofs/theories/IeeeVocabulary.v, whose vocabulary (finite, val, ieee_emin, nan2, canonical_2, xval,
 xround, ball_1, in_ball_1, ...) is imported from there:
-- a kernel of the extended domain has one statement: F1 to F5 for a full kernel (extends); B1 to B3
-  and containment for a ball (encloses); represents (the constructors, neg_2, abs_2, for which it
-  implies their normalized and exact error) and makes_ball; and, for the other kernels that need
-  no fix-up, their claims read over extended real numbers. It is named K_spec when the kernel has
-  no real-model statement, K_ieee_spec otherwise;
+- a kernel of the extended domain has one statement: F1 to F5 for a full kernel (extends); B1 to B3,
+  B4 when the claim has finite_when conditions, and containment for a ball (encloses); represents
+  (the constructors, neg_2, abs_2, for which it implies their normalized and exact error) and
+  makes_ball; and, for the other kernels that need no fix-up, their claims read over extended real
+  numbers. It is named K_spec when the kernel has no real-model statement, K_ieee_spec otherwise;
 - a kernel of the finite domain has the statements its description asks for (`ieee:` spec,
   bridge; `ieee_finite:`, `ieee_finite_result:` thresholds): K_ieee_spec (finite operands and a
   finite output limb 0 give the claims), K_ieee_bridge_spec (every value of its program is finite
@@ -558,7 +558,9 @@ def _ball_args(limbs, r):
 
 
 def _ball_spec(k, kernels, e):
-    """B1 to B3 and containment in every case, for a ball kernel of the extended domain."""
+    """B1 to B3 and containment in every case, for a ball kernel of the extended domain; and B4,
+    between B3 and containment, when the claim has conditions (finite_when): finite operands
+    under these conditions give a finite ball. An empty list claims nothing, and prints nothing."""
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels)) + _hyps_extended(k, t) + [_let(k, kernels)]
     c_out, r_out = _limbs(k, t.outs[e['center']].limbs, e['center'], (1, 2)), e['radius']
@@ -578,6 +580,10 @@ def _ball_spec(k, kernels, e):
     finite_ops = [f'ball_finite_{len(c)} {_ball_args(c, r)}' for _, c, r in balls] + [f'finite {v}' for v in scalars]
     lines.append(f'  (ball_finite_{n} {out} ->\n   ' + ' /\\ '.join(finite_ops) + ' /\\\n'
                  f'   (forall {names} : R, {inside}\n    Rabs ({set_term()} - {_val_sum(c_out)}) <= val {r_out})) /\\')
+    conds = [_condition(c, t) for c in e.get('finite_when', [])]
+    if conds:
+        lines.append('  (' + ' -> '.join(finite_ops) + ' ->\n   ' +
+                     ' ->\n   '.join(conds + [f'ball_finite_{n} {out}']) + ') /\\')
     ins = ' '.join(f'in_ball_{len(c)} {_ball_args(c, r)} {b} ->' for b, c, r in balls)
     pre = ''.join(f'finite {v} -> ' for v in scalars)
     lines.append(f'  ({pre}forall {names} : R, {ins} in_ball_{n} {out} {set_term()}).')

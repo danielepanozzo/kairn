@@ -254,7 +254,10 @@ computed constants (above). A kernel has no real-model statement when it claims 
   `g++-16`, those that exist) at `-O0` and `-O2`, with `-ffp-contract=off`, `on` and `fast`, with
   and without `-frounding-math`, with each form of the fix-ups (`-DKAIRN_GEN_FIXUP_CALL=0` and
   `1`), and for x86-64 under Rosetta where available; every build must be bit-identical to the
-  interpreter; `static_assert`s check two_prod in constant evaluation, and every kernel without a
+  interpreter, on random cases from several strata, non-finite operands for the kernels of the
+  extended domain, and the operands of `SPECIAL_CASES`, which tell faults planted by
+  `tests/kernel_mutants.py` apart that the random cases miss (`results/milestone1/mutants/`);
+  `static_assert`s check two_prod in constant evaluation, and every kernel without a
   fused operation (succ and pred included) against its run-time bits, in both forms;
 - the branch over a fix-up (`test_printers.py`, `FixupBranch`): the kernels it applies to and the
   masks it tests, each case of the rule on the toy kernel `ops_branch` and on variants of it (one
@@ -292,6 +295,10 @@ computed constants (above). A kernel has no real-model statement when it claims 
 
 `--full` raises the sizes to a few hundred thousand requests per kernel; `--jobs N` (or
 `$KAIRN_GEN_JOBS`) caps the processes and compilers that run at once, on a shared machine.
+`-k TEXT` runs only the tests whose name (`module.Class.test`) contains TEXT, and `--skip TEXT`
+leaves them out; either fails if no test's name contains TEXT. ctest's quick tier runs the suite
+without C++ and with `--skip` for its four longest classes, and its full tier those four with `-k`
+(`tests/CMakeLists.txt`, [Testing](../docs/developer/testing.md#the-generators-tier)).
 
 One difference is allowed, and reported each time it occurs: compilers fold the negation of an FMA
 result into one negated FMA (`fnmadd` on AArch64 with GCC 16 and Apple clang 21 at `-O2`, and

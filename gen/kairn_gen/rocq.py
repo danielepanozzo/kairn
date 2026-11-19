@@ -253,7 +253,12 @@ def _term(tree, name, call=None):
     if kind == 'neg':
         return f'(- {_term(tree[1], name, call)})'
     if kind == 'abs':
-        return f'(Rabs {_term(tree[1], name, call)})'
+        # Rabs takes one argument: a name that is spelled as an application (`val cx`, a one-limb
+        # input in the IEEE model) is put in parentheses; every other term already is, or is atomic.
+        inner = _term(tree[1], name, call)
+        if ' ' in inner and not inner.startswith('('):
+            inner = f'({inner})'
+        return f'(Rabs {inner})'
     if kind == 'pow':
         base = f'({_term(tree[1], name, call)} ^ {abs(tree[2])})'
         return base if tree[2] >= 0 else f'(/ {base})'

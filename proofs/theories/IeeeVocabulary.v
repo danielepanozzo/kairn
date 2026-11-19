@@ -65,14 +65,19 @@
      F4   opfin -> ~ finite w0 -> w0 = infinity (sign of the exact value) /\ w1 = +0
      F5   ~ opfin -> canonical_of t w0 w1
 
-   A full Ball kernel (ball_K_full_spec) has the conjunction of B1 to B3 and of containment
-   in every case:
+   A full Ball kernel (ball_K_full_spec) has the conjunction of B1 to B4 and of containment
+   in every case, in this order:
 
      B1   the result is a canonical ball
      B2   the result is empty <-> an operand is empty
      B3   the result is a finite ball -> every operand is a finite ball, the scalar is
           finite, and the containment statement of the core holds
+     B4   every operand is a finite ball -> the scalar is finite -> finite_when ->
+          the result is a finite ball
      C    for all real x, y in the operands, x o y is in the result (whole line included)
+
+   B4 is printed only for a kernel whose claims give conditions (finite_when): ball_neg_k,
+   whose result is as finite as its operand, has none and its statement has no B4.
 
    A kernel that needs no fix-up has its claims read over extended real numbers (xval,
    xval_2, xround), on canonical operands; a constructor says which canonical object

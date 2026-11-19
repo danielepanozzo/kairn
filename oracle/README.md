@@ -424,7 +424,14 @@ python3 oracle/selftest/mutants.py --jobs 6       # tests the selftest, about fi
 ```
 
 The exhaustive tests run one worker process per CPU; `--jobs N` (or `KAIRN_ORACLE_JOBS=N`)
-caps them. The times are for an Apple M3 Max with `--jobs 6`.
+caps them. The times are for an Apple M3 Max with `--jobs 6`. `--only NAMES` runs only the tests
+named (comma-separated), `--skip NAMES` all but those; a name that is not a test's is an error.
+ctest's quick tier runs `--quick` with `--skip` for the six enumerations of toy formats
+(`correct_runner_toy_exhaustive`, `injected_exhaustive`, `exhaustive_wave2`,
+`injected_wave2_exhaustive`, `exhaustive_wave3`, `injected_wave3_exhaustive`), three quarters of
+the time, and its full tier `--only` those six (`tests/CMakeLists.txt`). Of the mutants below, the
+quick tier's part catches all but one: `exhaustive: -inf left out of a one-limb domain`, which only
+an enumeration can see (`exhaustive_wave3`).
 
 `mutants.py` copies the oracle into a temporary directory once per mutant, plants one deliberate
 bug in the checker or the arithmetic (rounding ties away from zero, no gradual underflow,

@@ -2,8 +2,11 @@
 # GCC-style compiler of the hosted runners (docs/developer/testing.md). The quick tier (ctest, in
 # build.yml) runs the suite without its C++ tests, which compile the generated code at -O0 and
 # -O2, with and without -frounding-math, under every contraction setting, and require every
-# build, scalar and packed, to be bit-identical to the interpreter: here they run in full, one
-# job per compiler, as they did in ctest before.
+# build, scalar and packed, to be bit-identical to the interpreter, and without its four longest
+# test classes, which compare the interpreter with the machine's own arithmetic and judge the
+# statements on thousands of cases (the full tier's full.kairn-gen.test): here all of it runs, one
+# job per compiler, and on Windows, which has no GCC-style compiler here, everything but the C++
+# tests, so that the comparison with the machine's arithmetic runs on every operating system.
 name: Generator's full suite
 
 on:
@@ -30,13 +33,22 @@ jobs:
         include:
           - name: Linux x86-64, GCC (scalar and AVX2)
             os: ubuntu-24.04
-            cxx: g++
+            tests: --cxx g++
           - name: Linux x86-64, Clang (scalar and AVX2)
             os: ubuntu-24.04
-            cxx: clang++
+            tests: --cxx clang++
+          - name: Linux arm64, GCC (scalar and NEON)
+            os: ubuntu-24.04-arm
+            tests: --cxx g++
+          - name: Linux arm64, Clang (scalar and NEON)
+            os: ubuntu-24.04-arm
+            tests: --cxx clang++
           - name: macOS arm64, Apple clang (scalar and NEON)
             os: macos-15
-            cxx: c++
+            tests: --cxx c++
+          - name: Windows x64 (no C++ tests)
+            os: windows-2025
+            tests: --no-cxx
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -47,5 +59,6 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: The generator's tests, C++ included
-        run: python3 gen/kairn-gen test --cxx ${{ matrix.cxx }}
+      # python: the 3.14 of setup-python, under the one name it has on every runner.
+      - name: The generator's tests
+        run: python gen/kairn-gen test ${{ matrix.tests }}

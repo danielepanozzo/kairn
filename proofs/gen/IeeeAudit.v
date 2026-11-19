@@ -5,6 +5,7 @@
    for the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import IeeeStatements.
 From Kairn Require Import IeeeBallCores.
+From Kairn Require Import IeeeBallFinite.
 From Kairn Require Import IeeeExt.
 From Kairn Require Import IeeeFull.
 From Kairn Require Import IeeeMake.

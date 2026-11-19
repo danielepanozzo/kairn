@@ -1,18 +1,26 @@
-# Kairn's tests, registered with ctest when KAIRN_BUILD_TESTS is on; together they are the quick
-# tier (docs/developer/testing.md):
+# Kairn's tests, registered with ctest when KAIRN_BUILD_TESTS is on, in two tiers
+# (docs/developer/testing.md); add -C CONFIG for a multi-config generator:
 #
-#   ctest --test-dir build --output-on-failure        (add -C CONFIG for a multi-config generator)
+#   ctest --test-dir build --output-on-failure               the quick tier
+#   ctest --test-dir build/tests/full --output-on-failure    the full tier
+#
+# The quick tier is the tests of this directory and of api/. The full tier is what left it to keep
+# it quick: the same cross-checks on more cases, the interpreter's enumerations of toy formats, and
+# the longest parts of the generator's and the oracle's own tests. Its tests are registered in
+# full/ and named full.*; the file CTestCustom.cmake written at the top of the build tree leaves
+# them out of a ctest run there (CTEST_CUSTOM_TESTS_IGNORE), and both tiers say which they are
+# when ctest starts and ends. A ctest run in tests/ of the build tree runs both.
 #
 # - The entry points of docs/developer/architecture.md that run tests, each registered only if its
 #   script exists when CMake runs (configure again after one is added). They need Python 3; without
-#   it they are left out, as are the cross-checks, and nothing else changes.
-# - The cross-checks: the oracle judges every kernel of gen/claims.json as run by the generator's
-#   interpreter on every operand of a toy format (or, where that is too many, on every operand of
-#   a restricted domain and on random cases of the whole format), and as compiled with this
+#   it they are left out, as are the cross-checks and the full tier, and nothing else changes.
+# - The cross-checks: the oracle judges every kernel of gen/claims.json as compiled with this
 #   build's compiler and flags, on random binary64 and binary32 cases, once as the flags stand and
 #   once per contraction setting that matters to this compiler: the scalar kernels
 #   (gen/tests/runner.cpp), and the packed kernels of the target's backend, NEON or AVX2
-#   (gen/tests/packed_runner.cpp).
+#   (gen/tests/packed_runner.cpp); in the full tier on more cases, and also as run by the
+#   generator's interpreter on every operand of a toy format (or, where that is too many, on every
+#   operand of a restricted domain and on random cases of the whole format).
 # - The consumer checks (consume/): a project that uses kairn::kairn and kairn::fma through
 #   add_subdirectory, and one that uses them through find_package after this build tree is
 #   installed into a prefix under the build directory.
@@ -29,6 +37,15 @@ else()
   set(_msvc_style OFF)
 endif()
 
+# Whether this build registers the full tier: when Kairn is the top-level project, whose build tree
+# holds the CTestCustom.cmake that keeps it out of the quick tier. A project that adds Kairn with
+# KAIRN_BUILD_TESTS on gets the quick tier.
+if(PROJECT_IS_TOP_LEVEL AND Python3_Interpreter_FOUND)
+  set(_full_tier ON)
+else()
+  set(_full_tier OFF)
+endif()
+
 # --- The entry points ---------------------------------------------------------------------------
 #
 # Each is "SCRIPT COMMAND" from the repository root, run as python3 SCRIPT COMMAND ARGS:
@@ -36,12 +53,24 @@ endif()
 #   at -O0 and -O2, with and without -frounding-math, under every contraction setting, and
 #   compare it bit for bit with the interpreter: about two thirds of the suite's time, and what
 #   the cross-checks below cover for this build's compiler and flags. The whole suite runs in the
-#   workflow .github/workflows/generator.yml, and by hand: python3 gen/kairn-gen test.
+#   workflow .github/workflows/generator.yml, and by hand: python3 gen/kairn-gen test. The quick
+#   tier also leaves out the four test classes of _gen_full, which judge the interpreter and the
+#   statements on thousands of cases per kernel, about 95% of the time of the rest (266 of 277
+#   seconds of processor time on an Apple M3 Max); full.kairn-gen.test runs only them. Both fail
+#   if a name below matches no test.
 # - oracle/kairn-oracle selftest compiles its own C++ runner with this build's compiler, in the
 #   build tree. It skips the tests that need it, with a SKIP line, if the compiler does not work;
 #   with a compiler given that is a failure here. (Its other skip, of rounding_hardware on Python
-#   older than 3.13, which has no math.fma, is not.)
+#   older than 3.13, which has no math.fma, is not.) The quick tier leaves out the six tests of
+#   _oracle_full, the enumerations of toy formats through its Python runner, three quarters of
+#   its time (62 of 82 seconds on one core of the Mac above), none of which compiles anything;
+#   full.kairn-oracle.selftest runs only them. Both fail if a name below is not one of its tests.
 # - oracle/kairn-oracle check --claims-only reads every claim of gen/claims.json.
+set(_gen_full test_interp.ToyRounding. test_interp.AgainstHardware. test_statements.Statements.
+  test_nonfinite.NonFinite.)
+set(_oracle_full correct_runner_toy_exhaustive injected_exhaustive exhaustive_wave2
+  injected_wave2_exhaustive exhaustive_wave3 injected_wave3_exhaustive)
+list(JOIN _oracle_full "," _oracle_full_names)
 set(_entries "gen/kairn-gen check" "gen/kairn-gen test" "oracle/kairn-oracle selftest"
   "oracle/kairn-oracle claims")
 set(_present "")
@@ -62,8 +91,11 @@ foreach(_entry IN LISTS _entries)
   set(_args "${_command}")
   if(_entry STREQUAL "gen/kairn-gen test")
     list(APPEND _args --no-cxx)
+    foreach(_pattern IN LISTS _gen_full)
+      list(APPEND _args --skip "${_pattern}")
+    endforeach()
   elseif(_entry STREQUAL "oracle/kairn-oracle selftest")
-    list(APPEND _args --quick --cxx "${CMAKE_CXX_COMPILER}"
+    list(APPEND _args --quick --skip "${_oracle_full_names}" --cxx "${CMAKE_CXX_COMPILER}"
       --workdir "${CMAKE_CURRENT_BINARY_DIR}/oracle-selftest")
   elseif(_entry STREQUAL "oracle/kairn-oracle claims")
     set(_args check --claims gen/claims.json --claims-only)
@@ -71,12 +103,10 @@ foreach(_entry IN LISTS _entries)
   add_test(NAME "${_name}.${_command}"
     COMMAND "${Python3_EXECUTABLE}" "${_script}" ${_args}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  # Two minutes each on a workstation; on the hosted runners, which are slower and run four
-  # tests at once on as many cores, 8 to more than 10 minutes and 4 to 8 minutes.
   if(_entry STREQUAL "gen/kairn-gen test")
-    set_tests_properties("${_name}.${_command}" PROPERTIES TIMEOUT 1800)
+    set_tests_properties("${_name}.${_command}" PROPERTIES TIMEOUT 600)
   elseif(_entry STREQUAL "oracle/kairn-oracle selftest")
-    set_tests_properties("${_name}.${_command}" PROPERTIES TIMEOUT 1800
+    set_tests_properties("${_name}.${_command}" PROPERTIES TIMEOUT 600
       FAIL_REGULAR_EXPRESSION "SKIP [^\n]*(no C\\+\\+ compiler|compiling the C\\+\\+ runner)")
   endif()
 endforeach()
@@ -139,6 +169,15 @@ else()
   set(_settings contract-off -ffp-contract=off contract-on -ffp-contract=on
     contract-fast -ffp-contract=fast)
 endif()
+# With GCC and Clang the runners of a contraction setting are built at -O2, whatever the build's
+# level: Apple clang 21 fuses the textbook product of the Phase 0 experiment at -O2 and leaves it
+# alone at -O3, which is what Release gives (docs/developer/testing.md, "Contraction"). The runner
+# with the build's flags keeps the build's level, so both levels are tested.
+if(_msvc_style)
+  set(_contraction_level "")
+else()
+  set(_contraction_level -O2)
+endif()
 set(_variants "" "")    # name, option: the runner with the build's flags first
 list(APPEND _variants ${_settings})
 list(LENGTH _variants _n)
@@ -188,8 +227,7 @@ function(_kairn_packed_backend out_backend out_option)
 endfunction()
 
 set(_runners "")          # target names
-set(_runner_labels "")    # the same, as they appear in test names
-set(_runner_kinds "")     # scalar or packed
+set(_runner_labels "")    # the same, as the cross-checks name them
 foreach(_kind scalar packed)
   if(_kind STREQUAL "scalar")
     set(_source "${PROJECT_SOURCE_DIR}/gen/tests/runner.cpp")
@@ -223,22 +261,33 @@ foreach(_kind scalar packed)
     target_include_directories(${_target} PRIVATE "${PROJECT_SOURCE_DIR}/gen/tests")
     target_link_libraries(${_target} PRIVATE kairn::kairn kairn::fma)
     target_compile_options(${_target} PRIVATE ${_warnings} ${_isa_option} ${_option})
+    if(NOT _variant STREQUAL "")
+      target_compile_options(${_target} PRIVATE ${_contraction_level})
+    endif()
     list(APPEND _runners ${_target})
     list(APPEND _runner_labels ${_label})
-    list(APPEND _runner_kinds ${_kind})
   endforeach()
 endforeach()
 
 # --- The cross-checks ---------------------------------------------------------------------------
 #
-# One test per kernel of gen/claims.json and runner (and format, for the compiled runners), each a
-# pipeline gen | runner | check run by crosscheck.cmake, which prints the oracle's report and
-# fails when the run did not check what it set out to (see there). The toy format of the
-# interpreter's test depends on the kernel's inputs (below). A kernel without a toy format, or
-# whose toy format is below its min_precision, gets a test that fails and says so, instead of a
-# format where its claims are not stated.
+# Run by crosscheck.cmake, which prints the oracle's report and fails when the run did not check
+# what it set out to (see there):
+# - crosscheck.compiled.KERNEL.FORMAT (quick tier) and full.crosscheck.compiled.KERNEL.FORMAT
+#   (full tier): every compiled runner above on the same random cases of every stratum, the
+#   requests generated once and every output judged (an output identical byte for byte to one
+#   judged before has its verdict). The quick tier has KAIRN_CROSSCHECK_QUICK_CASES cases, the
+#   full tier KAIRN_CROSSCHECK_CASES, from case 0 of the same seed: the quick tier's cases are the
+#   first of the full tier's. 6000, because with 2000 two more of the faults planted in the
+#   kernels that the full tier caught went unseen (docs/developer/testing.md, "Time").
+# - full.crosscheck.interp.KERNEL (or interp-restricted and interp-sampled, below): the
+#   interpreter on a toy format, whose choice depends on the kernel's inputs (below). A kernel
+#   without a toy format, or whose toy format is below its min_precision, gets a test that fails
+#   and says so, instead of a format where its claims are not stated.
 set(KAIRN_CROSSCHECK_CASES 20000 CACHE STRING
-  "Random cases in each cross-check of a compiled runner, and in each sampled one of the interpreter")
+  "Random cases in each cross-check of the compiled runners of the full tier, and in each sampled one of the interpreter")
+set(KAIRN_CROSSCHECK_QUICK_CASES 6000 CACHE STRING
+  "Random cases in each cross-check of the compiled runners of the quick tier")
 set(KAIRN_CROSSCHECK_SEED 0 CACHE STRING "Seed of the random cases of the cross-checks")
 
 # The toy formats of the interpreter, by the kernel's inputs, each written as its role: 1 a limb,
@@ -361,6 +410,15 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   set(_summaries "${CMAKE_CURRENT_BINARY_DIR}/crosscheck")
   set(_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}")
   set(_random "-DCOUNT=${KAIRN_CROSSCHECK_CASES}" "-DSEED=${KAIRN_CROSSCHECK_SEED}")
+  set(_random_quick "-DCOUNT=${KAIRN_CROSSCHECK_QUICK_CASES}" "-DSEED=${KAIRN_CROSSCHECK_SEED}")
+  # Every compiled runner, as LABEL|EXECUTABLE pairs for crosscheck.cmake.
+  set(_compiled "")
+  foreach(_runner _label IN ZIP_LISTS _runners _runner_labels)
+    list(APPEND _compiled "${_label}" "$<TARGET_FILE:${_runner}>")
+  endforeach()
+  list(JOIN _compiled "|" _compiled)
+  # What full/CMakeLists.txt registers, kernel by kernel, for the full tier.
+  set(_full_kernels "")
   set(_n_complete 0)
   set(_n_restricted 0)
   foreach(_i RANGE ${_last})
@@ -454,48 +512,29 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       endif()
     endif()
     if(_restrict)
-      set(_name crosscheck.interp-restricted.${_kernel})
-      set(_labels crosscheck interp restricted)
       math(EXPR _n_restricted "${_n_restricted} + 1")
     else()
-      set(_name crosscheck.interp.${_kernel})
-      set(_labels crosscheck interp)
       math(EXPR _n_complete "${_n_complete} + 1")
     endif()
-    if(_error)
-      string(JOIN "" _error ${_error})
-      add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" "-DERROR=${_error}" -P "${_driver}")
-    else()
-      add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy}"
-        -DRUNNER=interp -DEXHAUSTIVE=ON "-DRESTRICT=${_restrict}"
-        "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
-    endif()
-    set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "${_labels}")
-    if(_restrict AND NOT _error)
-      set(_name crosscheck.interp-sampled.${_kernel})
-      add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy}"
-        -DRUNNER=interp ${_random} "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
-      set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "crosscheck;interp;sampled")
-    endif()
+    string(JOIN "" _error ${_error})
+    # For full/CMakeLists.txt, which registers the interpreter's tests and the compiled runners'
+    # on KAIRN_CROSSCHECK_CASES cases.
+    list(APPEND _full_kernels ${_kernel})
+    set(_full_${_kernel}_this ${_this})
+    set(_full_${_kernel}_toy "${_toy}")
+    set(_full_${_kernel}_restrict "${_restrict}")
+    set(_full_${_kernel}_error "${_error}")
 
     # The compiled runners, on random cases of every stratum.
-    foreach(_runner _label _kind IN ZIP_LISTS _runners _runner_labels _runner_kinds)
+    if(_compiled)
       foreach(_format binary64 binary32)
-        set(_name crosscheck.${_label}.${_kernel}.${_format})
+        set(_name crosscheck.compiled.${_kernel}.${_format})
         add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_format}"
-          "-DRUNNER=$<TARGET_FILE:${_runner}>" ${_random} "-DSUMMARY=${_summaries}/${_name}.json"
+          "-DRUNNERS=${_compiled}" ${_random_quick} "-DSUMMARY=${_summaries}/${_name}.json"
           -P "${_driver}")
-        if(_kind STREQUAL "scalar")
-          set(_labels crosscheck cxx)
-        else()
-          set(_labels crosscheck packed)
-        endif()
-        if(_label MATCHES "-")
-          list(APPEND _labels contraction)
-        endif()
-        set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "${_labels}")
+        set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "crosscheck;compiled")
       endforeach()
-    endforeach()
+    endif()
   endforeach()
   # The guards of crosscheck.cmake fail the runs they are there to fail: a partial or restricted
   # enumeration, a missing stratum, nothing judged, a comparison seen one way only.
@@ -515,9 +554,11 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     endif()
   endif()
   list(JOIN _runner_labels ", " _labels)
-  message(STATUS "Kairn tests: cross-checks of ${_count} kernels: the interpreter on "
-    "${_n_complete} complete enumerations of toy formats and ${_n_restricted} restricted ones "
-    "(each with a sampled run), and the compiled runners ${_labels} (${_packed})")
+  message(STATUS "Kairn tests: cross-checks of ${_count} kernels: the compiled runners ${_labels} "
+    "(${_packed}), on ${KAIRN_CROSSCHECK_QUICK_CASES} cases per kernel and format in the quick "
+    "tier and ${KAIRN_CROSSCHECK_CASES} in the full tier; and, in the full tier, the interpreter "
+    "on ${_n_complete} complete enumerations of toy formats and ${_n_restricted} restricted ones "
+    "(each with a sampled run)")
 endif()
 
 # --- The consumer checks ------------------------------------------------------------------------
@@ -562,3 +603,58 @@ add_test(NAME consume.find_package
     ${_build_and_test} ${_build_options} "-DCMAKE_PREFIX_PATH=${_consume_dir}/prefix" ${_run})
 set_tests_properties(consume.find_package PROPERTIES FIXTURES_REQUIRED kairn_installed)
 add_subdirectory(api)
+
+# --- The two tiers ------------------------------------------------------------------------------
+#
+# Every test of this directory and of api/ is in the quick tier, with the label quick; the full
+# tier is registered in full/, with the label full. When Kairn is the top-level project, the
+# CTestCustom.cmake that ctest reads at the top of the build tree leaves the full tier out of a run
+# there (CTEST_CUSTOM_TESTS_IGNORE), and each tier's CTestCustom.cmake has ctest say which tier it
+# runs, before the first test and after the summary (CTEST_CUSTOM_PRE_TEST, CTEST_CUSTOM_POST_TEST:
+# commands, here cmake -E echo, so a message has no semicolon).
+get_property(_quick_tests DIRECTORY PROPERTY TESTS)
+if(_quick_tests)
+  set_property(TEST ${_quick_tests} APPEND PROPERTY LABELS quick)
+endif()
+get_property(_api_tests DIRECTORY api PROPERTY TESTS)
+list(APPEND _quick_tests ${_api_tests})
+list(LENGTH _quick_tests _n_quick)
+
+function(_kairn_ctest_custom dir left_out pre post)
+  set(_echo "\\\"${CMAKE_COMMAND}\\\" -E echo")
+  set(_text "# Written by tests/CMakeLists.txt when CMake runs: read by ctest in this directory.\n")
+  if(left_out)
+    string(APPEND _text "set(CTEST_CUSTOM_TESTS_IGNORE \${CTEST_CUSTOM_TESTS_IGNORE}\n")
+    foreach(_test IN LISTS left_out)
+      string(APPEND _text "  \"${_test}\"\n")
+    endforeach()
+    string(APPEND _text ")\n")
+  endif()
+  string(APPEND _text "set(CTEST_CUSTOM_PRE_TEST \"${_echo} ${pre}\")\n"
+    "set(CTEST_CUSTOM_POST_TEST \"${_echo} ${post}\")\n")
+  file(CONFIGURE OUTPUT "${dir}/CTestCustom.cmake" CONTENT "${_text}" @ONLY)
+endfunction()
+
+if(_full_tier)
+  add_subdirectory(full)
+  get_property(_full_tests DIRECTORY full PROPERTY TESTS)
+  list(LENGTH _full_tests _n_full)
+  set(_quick_run "ctest --test-dir ${PROJECT_BINARY_DIR}")
+  set(_full_run "ctest --test-dir ${CMAKE_CURRENT_BINARY_DIR}/full")
+  _kairn_ctest_custom("${PROJECT_BINARY_DIR}" "${_full_tests}"
+    "Kairn tests: the quick tier, ${_n_quick} tests. The full tier, ${_n_full} tests more: ${_full_run}"
+    "Kairn tests: that was the quick tier, ${_n_quick} tests. The full tier: ${_full_run}")
+  _kairn_ctest_custom("${CMAKE_CURRENT_BINARY_DIR}/full" ""
+    "Kairn tests: the full tier, ${_n_full} tests, those that left the quick tier: ${_quick_run}"
+    "Kairn tests: that was the full tier, ${_n_full} tests")
+  message(STATUS "Kairn tests: the quick tier, ${_n_quick} tests (${_quick_run}), and the full "
+    "tier, ${_n_full} tests (${_full_run})")
+elseif(PROJECT_IS_TOP_LEVEL)
+  _kairn_ctest_custom("${PROJECT_BINARY_DIR}" ""
+    "Kairn tests: the quick tier, ${_n_quick} tests. No full tier without Python 3."
+    "Kairn tests: that was the quick tier, ${_n_quick} tests")
+  message(STATUS "Kairn tests: the quick tier, ${_n_quick} tests; no full tier without Python 3")
+else()
+  message(STATUS "Kairn tests: the quick tier, ${_n_quick} tests; the full tier only when Kairn "
+    "is the top-level project")
+endif()

@@ -30,12 +30,15 @@ cmake --install build --prefix PREFIX    # optional: then find_package(kairn) wi
 ```
 
 With Visual Studio or Xcode, add `--config Release` to the build and `-C Release` to `ctest`. The
-tests take a few minutes: the generator's and the oracle's own tests, cross-checks in which the
-oracle judges every kernel, run by the generator's interpreter on every operand of a small format
-and compiled on random `binary64` and `binary32` operands, under each contraction setting of the
-compiler, and the tests of the public interface, whose every operation the oracle judges too. They
-are listed in [Getting started](docs/getting-started/index.md#configure-build-and-test) and
-explained in [Testing](docs/developer/testing.md).
+tests are the quick tier, under two minutes with `--parallel 4`: the fast parts of the generator's
+and the oracle's own tests, cross-checks in which the oracle judges every kernel compiled on random
+`binary64` and `binary32` operands, under each contraction setting of the compiler, and the tests
+of the public interface, whose every operation the oracle judges too. The full tier,
+`ctest --test-dir build/tests/full`, runs the rest: the same on more operands, every operand of
+small formats through the generator's interpreter, and the longest of the generator's and the
+oracle's own tests. They are listed in
+[Getting started](docs/getting-started/index.md#configure-build-and-test) and explained in
+[Testing](docs/developer/testing.md).
 
 The CMake target `kairn::kairn` holds the headers; a program includes `kairn/kairn.hpp`
 ([a first program](docs/getting-started/index.md#a-first-program)). On x86-64 the kernels need

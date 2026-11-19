@@ -192,7 +192,7 @@ class Claims(unittest.TestCase):
             'requires': ['ball(cx, rx)', 'ball(cy, ry)'],
             'ensures': [{'kind': 'encloses', 'center': 'cw', 'radius': 'rw', 'set': 'x*y',
                          'balls': {'x': {'center': 'cx', 'radius': 'rx'}, 'y': {'center': 'cy', 'radius': 'ry'}},
-                         'finite_when': []}],
+                         'finite_when': [{'abs_le': '(abs(cx)+rx)*(abs(cy)+ry)', 'exp': -2}]}],
             'min_precision': 4, 'status': 'proved', 'ieee_status': 'proved',
             'instances': {'binary64': [], 'binary32': []}}.items()))
         self.assertEqual(shown('ball_make_2'), list({
@@ -205,10 +205,20 @@ class Claims(unittest.TestCase):
             'min_precision': 1, 'status': 'proved', 'ieee_status': 'proved',
             'instances': {'binary64': [], 'binary32': []}}.items()))
         # The conditions of finite_when: those that architecture.md gives, and the thresholds
-        # proved for the other full kernels (IeeeExtStatementsDraft.v); none for a ball.
+        # proved for the other full kernels (IeeeFull.v; IeeeBallFinite.v for the balls: the
+        # largest magnitude of a member of the exact result, at most a quarter of the overflow
+        # threshold, a sixteenth for ball_mul_1_full); none for ball_neg_k, which has no fix-up.
         def bound(text, e):
             return {'abs_le': text, 'exp': e}
-        want = {'add_2_2_full': [bound('x', -2), bound('y', -2)],
+        want = {'ball_add_1_full': [bound('abs(cx+cy)+rx+ry', -2)],
+                'ball_add_2_full': [bound('abs(cx+cy)+rx+ry', -2)],
+                'ball_sub_1_full': [bound('abs(cx-cy)+rx+ry', -2)],
+                'ball_sub_2_full': [bound('abs(cx-cy)+rx+ry', -2)],
+                'ball_mul_1_full': [bound('(abs(cx)+rx)*(abs(cy)+ry)', -4)],
+                'ball_mul_2_full': [bound('(abs(cx)+rx)*(abs(cy)+ry)', -2)],
+                'ball_scale_1_full': [bound('(abs(cx)+rx)*a', -2)],
+                'ball_scale_2_full': [bound('(abs(cx)+rx)*a', -2)],
+                'add_2_2_full': [bound('x', -2), bound('y', -2)],
                 'sub_2_2_full': [bound('x', -2), bound('y', -2)],
                 'add_fast_2_2_full': [bound('x', -2), bound('y', -2)],
                 'add_2_1_full': [bound('x', -2), bound('a', -2)],

@@ -182,26 +182,23 @@ Its radius is $5.14 \times 10^{-11}$, for an actual error of $5.1 \times 10^{-14
 ## What it costs
 
 From the [benchmarks of Milestone 1](../developer/results/bench-milestone1.md), on an Apple M3, an
-AMD Zen 2 and an Intel Core i5, with nine compiler configurations:
+AMD Zen 2 and an Intel Core i5, with nine compiler configurations, timing the operators used here
+(each with its check for infinities and NaN, below):
 
-- **Two limbs.** One step of a dependent two-limb sum (`add_2_2`, two two-limb operands) took 4.9
-  to 10.2 ns, against 0.28 to 0.79 ns for a `double` addition: 12.6 to 18.5 times longer, per
-  configuration. The sum loop above uses `x + a` (`add_2_1`), about half the operations of
-  `add_2_2`, which was not timed on its own. Loops of independent operations cost less per
-  operation, because the processor overlaps them and the compiler can vectorize them: 0.55 to
-  0.95 ns for `add_2_2`, except with GCC -O2 on Zen 2 (3.6 ns), which vectorizes nothing.
-- **Balls.** A step of a dependent sum of balls (`ball_add_2`) took 1.2 to 1.3 times as long as
-  `add_2_2` on the M3 and on Zen 2, and 2.3 times on the i5. A product of balls (`ball_mul_2`) took
-  3.0 to 4.4 times as long as `mul_2_2` in a dependent chain, and 13 to 20 times in packed loops of
-  independent operations.
+- **Two limbs.** One step of a dependent sum `s = s + a` (`x + a`, the sum loop above) took 3.3
+  to 6.6 ns, against 0.29 to 0.79 ns for a `double` addition: 8.2 to 12.6 times longer, per
+  configuration. With a two-limb summand, `s = s + x` took 5.1 to 10.4 ns. Loops of independent
+  operations cost less per operation, because the processor overlaps them and the compiler can
+  vectorize them: 0.89 to 2.9 ns for `x + a`.
+- **Balls.** A step of a dependent sum of balls `S = S + X` took 0.93 to 1.04 times as long as the
+  same sum of their two-limb centers, and a product of balls 0.97 to 1.14 times as long as the
+  product of the centers: in a chain the radius costs almost nothing. In loops of independent
+  operations it shows: 1.1 to 1.4 times for a sum, 1.2 to 2.6 times for a product.
 
-Those ball figures are for the first design of the radius, in which every addition and product of
-the radius was rounded up by a step to the next number of `double`, about ten integer operations
-each in packed code. The library now runs the second design, which computes the radius with
-ordinary operations and inflates it once at the end
-([Milestone 1 statements](../developer/design/milestone1.md#the-radius-second-design)); the
-benchmarks have not been rerun with it. Every operation also checks its result for infinities and
-NaN now (below), which adds a little more.
+These are figures for the second design of the radius, which computes it with ordinary operations
+and inflates it once at the end
+([Milestone 1 statements](../developer/design/milestone1.md#the-radius-second-design)); with the
+first, a product of balls took 3.0 to 4.4 times as long as its center in a chain.
 
 ## What can go wrong
 

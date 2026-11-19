@@ -31,14 +31,14 @@ For operands that satisfy the requirements, finite, infinite or NaN:
 - **B1.** The result $Z$, of center $c_w$ and radius $r_w$, is a canonical ball: a finite ball, the whole line (center 0, radius $+\infty$), or the empty set (every limb a NaN).
 - **B2.** $Z$ is empty exactly when an operand ball is empty.
 - **B3.** If $Z$ is a finite ball, then $X$ and $Y$ are finite balls, and $\lvert (x y) - c_w\rvert \le r_w$ for all real $x$ and $y$ with $\lvert x - c_x\rvert \le r_x$, $\lvert y - c_y\rvert \le r_y$.
-- **B4.** No condition under which $Z$ is a finite ball is claimed yet: the claims list none, which does not say that it always is.
+- **B4.** If $X$ and $Y$ are finite balls and $\lvert (\lvert c_x\rvert + r_x) (\lvert c_y\rvert + r_y)\rvert \le 2^{e_{\max} - 4}$, then $Z$ is a finite ball. The conditions are on the exact values of the operands, and $2^{e_{\max}}$ is the overflow threshold of `T`, just above its largest finite number: $2^{e_{\max} - 4}$ is $2^{1020}$ for `double`, $2^{124}$ for `float`.
 - It follows that in every case $Z$ contains $x y$ for every $x \in X$, $y \in Y$: the whole line contains every real number, and an empty operand has no points.
 
 Proved for every binary format with a precision of at least 2 bits, rounding to nearest with ties to even and with gradual underflow, in the IEEE model, with signed zeros, infinities, NaN and overflow. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
 
 ## Status
 
-**Proved.** Rocq checks the theorem `ball_mul_1_full_correct`, in [`proofs/theories/IeeeBallCores.v`](https://github.com/danielepanozzo/kairn/blob/main/proofs/theories/IeeeBallCores.v); `make -C proofs` finds no axiom in its proof beyond the four allowed ([Proofs](../proofs/index.md)).
+**Proved.** Rocq checks the theorem `ball_mul_1_full_correct`, in [`proofs/theories/IeeeBallFinite.v`](https://github.com/danielepanozzo/kairn/blob/main/proofs/theories/IeeeBallFinite.v); `make -C proofs` finds no axiom in its proof beyond the four allowed ([Proofs](../proofs/index.md)).
 
 ## Source
 
@@ -52,6 +52,10 @@ It calls [`ball_mul_1`](ball_mul_1.md).
 ```
 # The product of balls with one-limb centers, with the special states of a ball:
 # ball_mul_1, then the fix-up of milestone1.md, "Ball kernels".
+# finite_when (statement B4): the result is a finite ball when no product x y of members of the
+# operands exceeds a sixteenth of the overflow threshold in magnitude,
+# (|cx| + rx) (|cy| + ry) <= 2^(emax - 4). A sixteenth and not a quarter because the statement holds
+# from two bits of precision, where the constants of the radius are large (G = 4).
 
 (cz, rz) = ball_mul_1(cx, rx, cy, ry)
 q        = add(rx, ry)

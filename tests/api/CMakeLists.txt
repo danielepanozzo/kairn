@@ -1,11 +1,12 @@
 # The tests of the public interface (include/kairn/*.hpp), with ctest labels "api":
 #
 # - api.constexpr: static_asserts of everything constexpr, and the same expressions at run time.
-# - api.oracle.KERNEL.FORMAT[.contract-fast]: the oracle judges, against KERNEL's claims, every
-#   public operation that calls KERNEL (runner.cpp), computed through the constructors, operators
-#   and functions a client calls, on random binary64 and binary32 cases (in the extended domain,
-#   infinities, NaN and the special balls included, for the kernels that have it); once with this
-#   build's flags and once with contraction forced on.
+# - api.oracle.KERNEL.FORMAT: the oracle judges, against KERNEL's claims, every public operation
+#   that calls KERNEL (runner.cpp), computed through the constructors, operators and functions a
+#   client calls, on random binary64 and binary32 cases (in the extended domain, infinities, NaN
+#   and the special balls included, for the kernels that have it); with this build's flags and
+#   with contraction forced on, two runners on the same cases. full.api.oracle.KERNEL.FORMAT, in
+#   the full tier (../full/), does the same on more cases.
 # - api.oracle.coverage: every kernel of gen/claims.json is reached by a public form of the
 #   runner, or is a building block, or is an entry kernel on the runner's short list of those not
 #   public yet; no entry kernel is a building block; and the lists below agree.
@@ -46,7 +47,9 @@ add_test(NAME api.constexpr COMMAND kairn-api-constexpr)
 set(_api_internal two_sum fast_two_sum two_prod split two_prod_dekker radd rmul)
 set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2)
 set(KAIRN_API_CASES 10000 CACHE STRING
-  "Random cases per kernel, format and form of the public interface judged by the oracle")
+  "Random cases per kernel, format and form of the public interface judged by the oracle, in the full tier")
+set(KAIRN_API_QUICK_CASES 2000 CACHE STRING
+  "Random cases per kernel, format and form of the public interface judged by the oracle, in the quick tier")
 set(KAIRN_API_SEED 1 CACHE STRING "Seed of the random cases of the public interface's tests")
 
 _kairn_api_program(kairn-api-runner runner.cpp)
@@ -55,12 +58,21 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 elseif(_msvc_style)
   set(_api_contract /clang:-ffp-contract=fast)
 else()
-  set(_api_contract -ffp-contract=fast)
+  # At -O2, like the contraction runners of the cross-checks (tests/CMakeLists.txt says why).
+  set(_api_contract -ffp-contract=fast -O2)
 endif()
 _kairn_api_program(kairn-api-runner-contract-fast runner.cpp ${_api_contract})
 
+# Each test runs both runners, the one with the build's flags and the one with contraction forced
+# on, on the same requests, generated once (pipeline.cmake). The quick tier's KAIRN_API_QUICK_CASES
+# are at least 1000, the length of stream at which a form that computes only some lines of its
+# kernel must have computed one (runner.cpp); 2000, because with 1000 three more of the faults
+# planted in the kernels that the full tier caught went unseen (docs/developer/testing.md, "Time").
 set(_api_claims "${PROJECT_SOURCE_DIR}/gen/claims.json")
 if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
+  set(_api_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DRUNNERS=build|$<TARGET_FILE:kairn-api-runner>|contract-fast|$<TARGET_FILE:kairn-api-runner-contract-fast>"
+    "-DSEED=${KAIRN_API_SEED}")
   file(READ "${_api_claims}" _api_json)
   string(JSON _api_count LENGTH "${_api_json}" kernels)
   math(EXPR _api_last "${_api_count} - 1")
@@ -71,30 +83,18 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
       continue()
     endif()
     list(APPEND _api_mapped ${_kernel})
-    foreach(_variant "" contract-fast)
-      if(_variant STREQUAL "")
-        set(_runner kairn-api-runner)
-        set(_suffix "")
-      else()
-        set(_runner kairn-api-runner-${_variant})
-        set(_suffix ".${_variant}")
-      endif()
-      foreach(_format binary64 binary32)
-        set(_name api.oracle.${_kernel}.${_format}${_suffix})
-        add_test(NAME ${_name}
-          COMMAND "${CMAKE_COMMAND}" "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
-            "-DRUNNER=$<TARGET_FILE:${_runner}>" "-DKERNEL=${_kernel}" "-DFORMAT=${_format}"
-            "-DCOUNT=${KAIRN_API_CASES}" "-DSEED=${KAIRN_API_SEED}"
-            "-DSUMMARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/oracle${_suffix}"
-            -P "${CMAKE_CURRENT_SOURCE_DIR}/pipeline.cmake")
-        if(_variant STREQUAL "")
-          set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "api;oracle")
-        else()
-          set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "api;oracle;contraction")
-        endif()
-      endforeach()
+    foreach(_format binary64 binary32)
+      set(_name api.oracle.${_kernel}.${_format})
+      add_test(NAME ${_name}
+        COMMAND "${CMAKE_COMMAND}" ${_api_common} "-DKERNEL=${_kernel}" "-DFORMAT=${_format}"
+          "-DCOUNT=${KAIRN_API_QUICK_CASES}" "-DSUMMARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/oracle"
+          -P "${CMAKE_CURRENT_SOURCE_DIR}/pipeline.cmake")
+      set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "api;oracle")
     endforeach()
   endforeach()
+  # For ../full/CMakeLists.txt, which registers the same on KAIRN_API_CASES cases.
+  set(_api_oracle_kernels ${_api_mapped} PARENT_SCOPE)
+  set(_api_oracle_common ${_api_common} PARENT_SCOPE)
   add_test(NAME api.oracle.coverage
     COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>" "-DCLAIMS=${_api_claims}"
       "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"
@@ -196,16 +196,18 @@ add_test(NAME api.environment COMMAND kairn-api-environment)
 # Clang has no macro for these flag sets, so config.hpp cannot reject them, and the self-test must
 # catch them at run time. Each is built only if it compiles here (Clang 18 defines __FAST_MATH__ for
 # -ffp-model=fast, which config.hpp rejects), and only where the oracle found that it breaks the
-# kernels: -fno-signed-zeros with -ffp-contract=fast breaks x * y on AArch64 (Apple clang 21), where
-# an opaque product is folded back into a plain one and contracted, and breaks nothing on x86-64
-# (Clang 18), where the self-test then rightly passes.
+# kernels: -fno-signed-zeros with -ffp-contract=fast breaks x * y with Apple clang 21 on AArch64,
+# where an opaque product is folded back into a plain one and contracted. With Clang 18 it breaks
+# nothing, on x86-64 and on AArch64 Linux alike (there, 4 000 cases of each of eight kernels pass
+# the oracle at -O2 and -O3), and the self-test then rightly passes: the case is registered for
+# Apple clang only. A later Clang on AArch64 Linux has not been measured.
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT _msvc_style)
   include(CheckCXXSourceCompiles)
   include(CMakePushCheckState)
   set(_api_unsafe
     reassociation "-O2 -fassociative-math -fno-signed-zeros -fno-trapping-math"
     fp-model-fast "-O2 -ffp-model=fast")
-  if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64|ARM64)$")
     list(APPEND _api_unsafe signed-zeros-contraction "-O2 -fno-signed-zeros -ffp-contract=fast")
   endif()
   list(LENGTH _api_unsafe _n)
@@ -364,3 +366,7 @@ foreach(_i RANGE 0 ${_last} 2)
   set_tests_properties(api.example.accurate_sums${_suffix} PROPERTIES LABELS "api;example")
 endforeach()
 set_tests_properties(api.constexpr api.environment PROPERTIES LABELS api)
+
+# Every test here is in the quick tier (../CMakeLists.txt, "The two tiers").
+get_property(_api_tests DIRECTORY PROPERTY TESTS)
+set_property(TEST ${_api_tests} APPEND PROPERTY LABELS quick)

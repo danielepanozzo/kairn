@@ -15,8 +15,9 @@ proofs too are against what the generator prints: the IEEE model of every kernel
 kernel descriptions as the C++. Written by hand, and imported by the generated files, are only
 the meaning of each operation in Flocq's terms (`proofs/theories/IeeeOperations.v`) and the
 vocabulary of the statements (`IeeeVocabulary.v`). Every kernel of `gen/claims.json` is `proved`.
-What is not proved is said where it applies: the conditions under which a Ball operation returns
-a finite ball (B4), and thresholds sharper than the ones stated.
+What is not proved is said where it applies: thresholds sharper than the ones stated, for the
+arithmetic kernels (F3) and for the conditions under which a Ball operation returns a finite ball
+(B4).
 
 ## Two formal models of one kernel
 
@@ -86,7 +87,10 @@ this corner out of statement 3.
 
 **Which formats.** Flocq's IEEE formats have $q_{\min} + q_{\max} = 3 - 2p$, as `binary32` and
 `binary64` do. The IEEE-model theorems are for those formats, and toy formats used to test them
-must have that shape.
+must have that shape. Flocq's formats also have $e_{\max} > p$, that is $q_{\max} \ge 1$, which
+every IEEE-model statement assumes. Some toy formats of the test tiers have the shape and not
+this second property (`fp:3:-2:-1`, for example): on those the tests judge the statements where
+no theorem covers them.
 
 ## IEEE-like results
 
@@ -181,12 +185,15 @@ false.
 | `to_down_2`, `to_up_2`, `abs_upper_2` | for a finite $x$, the rounding in the sense of `T`, which is $\pm\infty$ when the neighbor of $\pm\Omega$ is needed; an infinite or NaN $x$ gives itself (its absolute value for `abs_upper_2`) |
 | `radd`, `rmul` | for operands that are nonnegative, $+\infty$ or NaN: a NaN when an operand is a NaN or the product is $0 \cdot \infty$; otherwise a value not below the exact one, $+\infty$ on overflow |
 
-**Emission.** Packed code is emitted as listed, with blends. As listed, the fix-up costs 19 to
-58% of a packed addition and 70 to 106% of a packed multiplication, above the 10 to 20% that D5
-expected ([benchmarks](../results/bench-milestone1.md)). Scalar code puts the fix-up behind a
-branch, because in a chain of dependent operations the selects put a comparison and a select on
-the critical path, where a predicted branch puts neither. The scalar printer does it by one rule
-on the listing (`branch` in `gen/kairn_gen/cpp.py`), with nothing written per kernel:
+**Emission.** Packed code is emitted as listed, with blends. As listed, the fix-up costs 16 to
+54% of a packed `add_2_2` and 70 to 105% of a packed `mul_2_2` in a loop of independent
+operations, and 11 to 53% and 6 to 53% in a dependent chain, mostly above the 10 to 20% that D5
+expected ([benchmarks](../results/bench-milestone1.md#2-the-fix-up-for-non-finite-results);
+within it only on Zen 2). Scalar code puts the fix-up behind a branch, because in a chain of
+dependent operations the selects put a comparison and a select on the critical path, where a
+predicted branch puts neither: with the branch the public operators take 0.94 to 1.07 times as
+long as `kairn::finite::` in a chain, on every configuration measured. The scalar printer does it
+by one rule on the listing (`branch` in `gen/kairn_gen/cpp.py`), with nothing written per kernel:
 
 1. It applies to a kernel without a real-model statement (a full kernel, a full Ball kernel, a
    constructor) whose every output is a select on one same mask $m_1$. The first arms are what
@@ -502,9 +509,13 @@ $\lvert xy - c_x c_y\rvert \le \lvert c_x\rvert r_y + \lvert c_y\rvert r_x + r_x
 
 ### The radius, second design
 
-The [benchmarks](../results/bench-milestone1.md) show that the radius dominates a `Ball`
-operation: `ball_mul_2` costs 13 to 20 times `mul_2_2` in packed code, because each of the eleven
-steps to the next number up is about ten integer operations. The radius only has to be an upper
+The first benchmarks of Milestone 1 showed that the radius of the first design dominated a `Ball`
+operation: `ball_mul_2` cost 13 to 20 times `mul_2_2` in packed code, because each of the eleven
+steps to the next number up is about ten integer operations. With the second design, measured on
+the final code, a packed `ball_mul_2` costs 1.6 to 1.9 times a packed `mul_2_2` (both with the
+fix-up), and in a dependent chain `X * Y` on `Ball<double, 2>` takes 0.97 to 1.14 times as long as
+`x * y` on its center ([benchmarks](../results/bench-milestone1.md#3-the-cost-of-a-ball-operation)).
+The radius only has to be an upper
 bound, so the second design evaluates it with ordinary operations rounded to nearest, on
 nonnegative values, and inflates the result once at the end: three to five floating-point
 operations, and no `succ`, no `select`, no `abs_upper`.
@@ -589,7 +600,10 @@ $N$, within 1% for every line of the table (with Apple clang, 7.3 to 7.9 ns for 
 `ball_add_2` and 5.6 to 6.0 ns for one of `ball_mul_2`, from one run to the next): that processor
 has no such penalty. Nor has an AMD EPYC 7452 (Zen 2; GCC 13, `-O2 -mavx2 -mfma`): the same times
 within 1%, and 1.5 ns for the fused operation with either addend. With $N$, the full kernels of
-the i5's table take 0.94 to 1.04 times as long as their cores, run by run.
+the i5's table take 0.94 to 1.04 times as long as their cores, run by run. The
+[benchmarks](../results/bench-milestone1.md#3-the-cost-of-a-ball-operation) of the final code,
+with the public operators, agree: 5.2 ns for a step of `X + Y` and 6.6 ns for one of `X * Y` on
+`Ball<double, 2>` on the i5.
 
 What $N$ costs: every radius is larger by about $N$, which for `double` and `float` is far below
 one unit in the last place of any radius that is not itself near $N$. A ball computed from exact
@@ -663,8 +677,9 @@ scalar of `ball_scale` is any value of `T`.
 - **B3.** If the result is a finite ball, then every operand is a finite ball, the scalar is
   finite, and the containment statement above holds. (The whole line contains everything, so
   containment holds in every case.)
-- **B4.** If every operand is a finite ball and the kernel's *finite when* condition holds, the
-  result is a finite ball. No condition is proved yet.
+- **B4.** If every operand is a finite ball, the scalar is finite, and the kernel's *finite when*
+  condition holds, the result is a finite ball. The conditions are
+  [below](#when-the-result-is-a-finite-ball).
 - **In every case** the result contains $x \circ y$ for all $x$ and $y$ in the operands, the
   whole line counting as containing everything. This is the statement a user of balls relies on.
 
@@ -677,11 +692,125 @@ $0 \cdot \infty$ on the way gives a NaN radius, which `f2` also rejects. That is
 an exact zero ball meets the whole line: the radius formula computes a NaN, and the result is the
 whole line, not the empty set. A scalar that is not finite gives the whole line.
 
-*Status.* B1, B2, B3 and containment in every case are proved in the IEEE model for the eight
-full Ball kernels with the cores of the second radius design, and for `ball_neg_k`: from $p = 2$
-for one limb (the constants must stay below the overflow threshold) and from the precision of
-the core for two limbs. B4 is not started.
+*Status.* B1 to B4 and containment in every case are proved in the IEEE model for the eight
+full Ball kernels with the cores of the second radius design: from $p = 2$ for one limb (the
+constants must stay below the overflow threshold) and from the precision of the core for two
+limbs. B4 was added last, with the conditions below, and raised none of these precisions.
+`ball_neg_k`, which has no fix-up, has B1 to B3 and containment; its claims give no condition and
+its statement has no B4.
 
 The oracle can judge containment exactly: the exact range of $X \circ Y$ is an interval whose
 endpoints are sums or products of the operands' endpoints, and it must lie in $[c_z - r_z,
 c_z + r_z]$.
+
+### When the result is a finite ball
+
+B1 to B3 would hold of a kernel that returned the whole line for every operand, since the whole
+line contains everything. B4 says when that does not happen. Its condition is one bound per
+kernel, in which $2^{e_{\max}}$ is the overflow threshold of the limb type ($2^{1024}$ for
+`double`, $2^{128}$ for `float`):
+
+| Kernel | For finite operands, the result is a finite ball when | Of the overflow threshold | Proved from |
+|---|---|---|---|
+| `ball_add_k_full` | $\lvert c_x + c_y\rvert + r_x + r_y \le 2^{e_{\max}-2}$ | a quarter | $p \ge 2$ for $k = 1$, $p \ge 3$ for $k = 2$ |
+| `ball_sub_k_full` | $\lvert c_x - c_y\rvert + r_x + r_y \le 2^{e_{\max}-2}$ | a quarter | the same |
+| `ball_scale_k_full` | $(\lvert c_x\rvert + r_x)\,\lvert a\rvert \le 2^{e_{\max}-2}$ | a quarter | $p \ge 2$ |
+| `ball_mul_2_full` | $(\lvert c_x\rvert + r_x)(\lvert c_y\rvert + r_y) \le 2^{e_{\max}-2}$ | a quarter | $p \ge 4$ |
+| `ball_mul_1_full` | $(\lvert c_x\rvert + r_x)(\lvert c_y\rvert + r_y) \le 2^{e_{\max}-4}$ | a sixteenth | $p \ge 2$ |
+
+Each left side is the largest magnitude that $x \circ y$ takes when $x$ and $y$ range over the
+operands, so a condition reads: no member of the exact result is larger than the bound. Like
+the conditions of F3 it is on the exact values of the operands (a two-limb center is the sum of
+its limbs), and it is what `finite_when` holds in the claims: `abs_le(abs(cx+cy)+rx+ry,-2)`,
+`abs_le(abs(cx-cy)+rx+ry,-2)`, `abs_le((abs(cx)+rx)*a,-2)`, `abs_le((abs(cx)+rx)*(abs(cy)+ry),-2)`,
+and the last one with `-4` for `ball_mul_1_full`. Simpler conditions follow from these. A sum or
+a difference is a finite ball when every member of each operand is at most $2^{e_{\max}-3}$ in
+magnitude ($2^{1021}$ for `double`). A product is one when every member of each operand is at
+most $2^{510}$ for `double`, $2^{62}$ for `float` (the square root of the sixteenth).
+
+*Why it holds.* The fix-up returns the core's center and radius unchanged when both are finite,
+and an operation of the IEEE model returns a finite number exactly when its exact result, rounded
+as if the format had no largest number, is below $2^{e_{\max}}$. So B4 is a bound on the values of
+the real model. Write $B$ for the bound of the condition.
+
+- **The center.** For one limb it is one rounding of a number of magnitude at most $B$. For two
+  limbs it is finite by [statement 3](#what-is-proved-about-an-arithmetic-kernel) of its own
+  kernel: the exact sum is at most $2^{e_{\max}-2}$, the exact product at most $2^{e_{\max}-1}$.
+- **The value `t`**, which the last line multiplies by `G`. It is a sum of nonnegative terms,
+  added one at a time and rounded each time: `s` or `p`, then `q` and `w` for a product, then
+  `t`. The exact sum is at most $B$: the terms with radii are those of the condition, and the
+  term `az * E` is at most the exact magnitude of the center, which the condition also counts
+  ($E \le \tfrac14$ for one limb and $\tfrac12$ for two, and the leading limb of a two-limb
+  number is at most $\tfrac43$ of its value in magnitude). A rounding adds at most half the gap
+  between neighboring numbers. For the sums and the scalings, two roundings stay below the
+  midpoint between $B$ and the next number of the format, and what is below that midpoint rounds
+  to at most $B$: $t \le B$. For `ball_mul_1` there are four roundings, and $t$ is at most the
+  number that follows $B$, which is $(1 + 2u)B$: either the product of the centers is small, and
+  then `az * E` is, or the three other terms are at most $B$ minus that product. For `ball_mul_2`
+  the terms are computed from the leading limbs of the centers, which costs the factor
+  $\tfrac43$, and the bound is cruder: $t \le 2B$.
+- **The radius**, $\mathrm{RN}(tG + H)$. From the definitions of the constants, $G \le 2$ for the
+  sums and the scalings, $G \le 4$ for `ball_mul_1` and $G \le \tfrac32$ for `ball_mul_2`; and
+  $H \le 4N$, or $6N$ for `ball_mul_1`, where $N = 2^{2 - e_{\max}}$ is the smallest normal number
+  of a format of the shape of `binary64`. So $tG + H$ is at most three quarters of $2^{e_{\max}}$
+  (seven eighths for `ball_mul_2`), which is a number of the format below the threshold.
+
+The proofs are in `proofs/theories/IeeeBallFinite.v`, on top of B1 to B3.
+
+*Why a sixteenth for `ball_mul_1`, and no more than a quarter for the others.* A statement holds
+for every format from the kernel's minimum precision on, so the smallest formats decide, and
+there the constants are far from 1. With two bits of precision $u = \tfrac14$, and for
+`ball_mul_1` $G = \mathrm{RU}((1 + u)^5) = 4$. The smallest format of two bits has the positive
+numbers $\tfrac14$, $\tfrac12$, $\tfrac34$, 1, $\tfrac32$, 2, 3, 4, 6 and the overflow threshold
+8, and in it `H` is 3 for `ball_mul_1` and $\tfrac32$ for the sums. There the product of the
+balls of centers 0 and $-\tfrac32$ and radii $\tfrac14$ and $\tfrac32$, whose members are at
+most $\tfrac34$ in magnitude, $\tfrac{3}{32}$ of the threshold, computes $t = 1$ and
+$\mathrm{RN}(4 \cdot 1 + 3) = 8$: the whole line. So an eighth cannot be claimed for `ball_mul_1`
+from two bits on. In the same format the sum of the balls of center 0 and radii $\tfrac34$ and 2,
+$\tfrac{11}{32}$ of the threshold, computes $t = 3$ and $\mathrm{RN}(2 \cdot 3 + \tfrac32) = 8$,
+so a half cannot be claimed for the sums. For `double`, $G$ exceeds 1 by at most $2^{-50}$ and
+$H$ is about $2^{-1022}$: the conditions are far from sharp there, and a condition that depended
+on the format could say more. The language of conditions has one exponent for every format, and
+was left as it is.
+
+*How sharp the conditions are: measured, not proved.* Every combination of finite operands of a
+small format was run through the generator's interpreter, and the smallest value of the left
+side of the condition at which the result was the whole line was recorded, as a fraction of the
+overflow threshold. The formats have the shape of `binary64` and $e_{\max} > p$, which the
+IEEE-model theorems also assume (Flocq's formats have it); the first of each row is the smallest
+such format of the kernel's minimum precision.
+
+| Kernel | Proved | `fp:2:-2:1` ($p = 2$, threshold 8) | `fp:2:-3:2` ($p = 2$, threshold 16) | `fp:3:-4:1` ($p = 3$, threshold 16) | `fp:4:-6:1` ($p = 4$, threshold 32) |
+|---|---|---|---|---|---|
+| `ball_add_1_full`, `ball_sub_1_full` | 0.25 | 0.34 | 0.44 | 0.58 | 0.79 |
+| `ball_scale_1_full`, `ball_scale_2_full` | 0.25 | 0.375 | 0.5 | 0.625 | 0.81 |
+| `ball_mul_1_full` | 0.0625 | 0.094 | 0.21 | 0.44 | 0.67 |
+| `ball_add_2_full`, `ball_sub_2_full` | 0.25 | | | 0.58 | 0.55 |
+| `ball_mul_2_full` | 0.25 | | | | 0.61 |
+
+An empty cell is a format below the kernel's minimum precision. The exact values are, row by
+row, $\tfrac{11}{32}$, $\tfrac{7}{16}$, $\tfrac{37}{64}$, $\tfrac{201}{256}$; $\tfrac38$,
+$\tfrac12$, $\tfrac58$, $\tfrac{13}{16}$; $\tfrac{3}{32}$, $\tfrac{55}{256}$, $\tfrac{455}{1024}$,
+$\tfrac{5487}{8192}$; $\tfrac{37}{64}$, $\tfrac{563}{1024}$; and $\tfrac{80343}{131072}$. In the
+first three columns every combination below the first whole line was run (for the two-limb sums,
+every combination above the proved bound, which is all the search needs: at or below it the
+theorem applies). At four bits there are too many operands for that (39 billion combinations of
+finite operands for `ball_mul_2_full`). The search is still complete there, but it starts above
+the proved bound, and for the two-limb kernels it bisects where the computed radius can only
+grow: on the sum of the two radii for a sum or a difference, on the second radius for a product.
+At $\tfrac{563}{1024}$ it is the center of the sum that overflows, with radii 0: the same 0.55
+that the [table of the arithmetic kernels](#what-is-proved-about-an-arithmetic-kernel) gives for
+`add_2_2` at four bits.
+
+The oracle's complete enumerations report the same quantity (in its report, the smallest whole
+line on finite operands, by the largest magnitude of a member of the exact set), and the two
+agree wherever both were run: the one-limb kernels and `ball_scale_2_full` in the first three
+formats. The script of the search is not in the repository; for a format small enough, the
+oracle's report gives the number:
+`python3 oracle/kairn-oracle gen ball_mul_1_full fp:2:-2:1 --exhaustive | python3 gen/kairn-gen interp | python3 oracle/kairn-oracle check`.
+
+The proved fractions are the best powers of two at two bits for the one-limb kernels and for
+`ball_scale_2_full`: 0.34, 0.375 and 0.094 leave no room for a half, a half and an eighth. For
+`ball_add_2_full`, `ball_sub_2_full` and `ball_mul_2_full` the measurements leave room for a half.
+There the quarter comes, for a sum, from the center, whose kernel is proved finite up to a
+quarter of the threshold, and for the product from the crude bound on `t`.
