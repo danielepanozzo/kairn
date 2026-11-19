@@ -201,10 +201,11 @@ inline const char* self_test_limb() noexcept {
 /// compares with the results the generator's exact interpreter computed for them. Operands are
 /// read through volatile objects, so the compiler cannot evaluate any of it at compile time.
 ///
-/// What it catches: flags with no macro for config.hpp to see (Clang's -fassociative-math,
-/// -fno-signed-zeros, -freciprocal-math, Apple clang's -ffp-model=fast), a changed rounding mode
-/// or flush-to-zero at the moment it runs, and a compiler that changes a kernel's result on the
-/// operands tried. What it does not prove: the flags of other translation units, nor the result
+/// What it catches: a flag with no macro for config.hpp to see (Clang's -fassociative-math,
+/// -fno-signed-zeros, -freciprocal-math, Apple clang's -ffp-model=fast) where the flag changes one
+/// of the results it computes (with Apple clang 21, -freciprocal-math alone and -fno-signed-zeros
+/// alone changed none), a changed rounding mode or flush-to-zero at the moment it runs, and a
+/// compiler that changes a kernel's result on the operands tried. What it does not prove: the flags of other translation units, nor the result
 /// of every operand. Returns at the first failure; never aborts; only reads.
 inline Status self_test() noexcept {
     if (const char* failure = detail::self_test_limb<double>()) return {failure, nullptr};
