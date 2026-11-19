@@ -884,7 +884,15 @@ def brute_of(name, brute):
                 findings.append((key, f))
     if interp:
         rows.append(interp)
-    return {"rows": rows, "findings": findings} if rows or findings else None
+    # Whether the runs judged the kernel in the extended domain (the oracle's judge of the
+    # non-finite layer, on every operand): the summaries say so per series since they record a
+    # domain; older ones do not, and judged the statement on finite operands only.
+    extended = any(s.get("domain") == "extended"
+                   for d in brute["docs"] for fmts in [d["compiled"]["kernels"].get(name, {})]
+                   for s in fmts.values()) or any(
+        r.get("domain") == "extended" for d in brute["docs"] for r in d["interp"]["enumerations"]
+        if r["kernel"] == name)
+    return {"rows": rows, "findings": findings, "extended": extended} if rows or findings else None
 
 
 # --- Pages ----------------------------------------------------------------------------------------
@@ -1621,31 +1629,67 @@ class Site:
           "compiled kernel (every compiler, scalar and packed code, every contraction setting) on random "
           "operands of `binary64` and `binary32`, and those of the generator's interpreter on every operand "
           "of small formats. A measurement, not a bound." % where)
-        if k.extended:
+        rows = b["rows"]
+        judged_labels = next((r["entries"] for r in rows if r["entries"]), None)
+        if k.extended and b["extended"]:
+            cores = sorted({m.group(1) for x in judged_labels or []
+                            for m in [re.match(r"^F2, core (\w+): ", x["label"])] if m})
+            w("They judged the kernel in the extended domain, infinite and NaN operands included, as the oracle "
+              "reads its statement in the IEEE model ([Claims of the non-finite layer]"
+              "(../developer/architecture.md#claims-of-the-non-finite-layer))%s." % (
+                  "" if not cores else ", and the claims of its finite core %s on the cases where they apply "
+                  "(F2: finite operands, finite result), which the columns below measure"
+                  % ", ".join("`%s`" % c for c in cores)))
+        elif k.extended:
             w("They judged the statement on finite operands; the stored summaries hold no measurement of the "
               "statement on infinite and NaN operands.")
         w("")
-        # The runs judged the statement on finite operands where there is one: its entries.
-        judged = k.finite_entries if k.finite_reading else k.entry["ensures"]
-        current = [k.label(x) for x in judged]
-        rows = b["rows"]
-        judged_labels = next((r["entries"] for r in rows if r["entries"]), None)
-        if judged_labels is not None and [x["label"] for x in judged_labels] != current:
-            w("**These runs judged other claims.** They judged %s; the kernel now claims %s. Their numbers "
-              "are not about the statement above." % (
-                  "; ".join("`%s`" % x["label"] for x in judged_labels), "; ".join("`%s`" % c for c in current)))
-            w("")
         cols = []
-        for j, x in enumerate(judged):
-            kind = x["kind"]
-            if kind == "error":
-                exact = k.bound_tex(x) is None
-                cols.append((j, "largest error / bound" + (" (%s)" % ("when product large" if x["when"] else "always")
-                                                          if len(k.errors) > 1 else ""), "exact" if exact else "ratio"))
-            elif kind == "upper":
-                cols.append((j, "largest excess, in gaps", "ratio"))
-            elif kind == "encloses":
-                cols.append((j, "smallest slack of the radius, in gaps", "slack"))
+        if k.extended and b["extended"]:
+            # The oracle's entries: the kernel's own, in the order of its claims, then those of the core
+            # of an `extends` entry, labelled "F2, core K: ..." (oracle/kairn_oracle/extended.py). An
+            # entry's oracle label starts with the claim's own label and may add the classes it judges.
+            own = k.entry["ensures"]
+            if judged_labels is not None and (
+                    [x["kind"] for x in judged_labels[:len(own)]] != [e["kind"] for e in own]
+                    or any(e["kind"] in ("error", "upper", "encloses", "rounded", "predicate", "normalized")
+                           and not x["label"].startswith(k.label(e)) for x, e in zip(judged_labels, own))):
+                w("**These runs judged other claims.** They judged %s; the kernel now claims %s. Their numbers "
+                  "are not about the statement above." % (
+                      "; ".join("`%s`" % x["label"] for x in judged_labels),
+                      "; ".join("`%s`" % k.label(e) for e in own)))
+                w("")
+            n_err = sum(x["kind"] == "error" for x in judged_labels or [])
+            for j, x in enumerate(judged_labels or []):
+                core = re.match(r"^F2, core (\w+): ", x["label"])
+                if x["kind"] == "error":
+                    exact = re.search(r"\bc=0, k=\d+, t=0\b", x["label"]) is not None
+                    cols.append((j, "largest error / bound" + (" (core `%s`)" % core.group(1) if core and n_err == 1
+                                                              else " (%s)" % x["label"] if n_err > 1 else ""),
+                                 "exact" if exact else "ratio"))
+                elif x["kind"] == "upper":
+                    cols.append((j, "largest excess, in gaps", "ratio"))
+                elif x["kind"] == "encloses":
+                    cols.append((j, "smallest slack of the radius, in gaps", "slack"))
+        else:
+            # The runs judged the statement on finite operands where there is one: its entries.
+            judged = k.finite_entries if k.finite_reading else k.entry["ensures"]
+            current = [k.label(x) for x in judged]
+            if judged_labels is not None and [x["label"] for x in judged_labels] != current:
+                w("**These runs judged other claims.** They judged %s; the kernel now claims %s. Their numbers "
+                  "are not about the statement above." % (
+                      "; ".join("`%s`" % x["label"] for x in judged_labels), "; ".join("`%s`" % c for c in current)))
+                w("")
+            for j, x in enumerate(judged):
+                kind = x["kind"]
+                if kind == "error":
+                    exact = k.bound_tex(x) is None
+                    cols.append((j, "largest error / bound" + (" (%s)" % ("when product large" if x["when"] else "always")
+                                                              if len(k.errors) > 1 else ""), "exact" if exact else "ratio"))
+                elif kind == "upper":
+                    cols.append((j, "largest excess, in gaps", "ratio"))
+                elif kind == "encloses":
+                    cols.append((j, "smallest slack of the radius, in gaps", "slack"))
         head = ["Run", "Cases judged", "Failed"] + [c[1] for c in cols]
         if any(c[2] == "ratio" for c in cols):
             head.append("Bound attained")
