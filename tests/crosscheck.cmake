@@ -4,13 +4,21 @@
 #   python3 oracle/kairn-oracle gen KERNEL FORMAT ... | RUNNER | python3 oracle/kairn-oracle check
 #
 #   cmake -DPYTHON=... -DSOURCE_DIR=... -DKERNEL=... -DFORMAT=... -DRUNNER=interp|EXECUTABLE
-#         -DSUMMARY=FILE (-DEXHAUSTIVE=ON | -DCOUNT=N -DSEED=S) [-DFAIL_ON_SUSPICIOUS=ON]
-#         -P crosscheck.cmake
+#         -DSUMMARY=FILE (-DEXHAUSTIVE=ON [-DRESTRICT=R1,R2,...] | -DCOUNT=N -DSEED=S)
+#         [-DFAIL_ON_SUSPICIOUS=ON] -P crosscheck.cmake
+#
+# RESTRICT is a comma-separated list of the oracle's restrictions (NAME.lead=LO:HI,
+# NAME.sign=+|-, NAME.in=V1/V2/...), as the generator's header writes them.
 #
 # The oracle's report is printed whatever happens. The test fails if a stage of the pipeline
 # fails (the oracle exits non-zero on any violated claim, invalid case or broken stream), and also
-# if nothing was judged, or an exhaustive run did not cover the whole enumeration, or a random run
-# missed a stratum: a pass must mean that the claims were checked.
+# when the run did not check what it set out to check, which crosscheck_guards.py decides from
+# the oracle's summary: a pass must mean that the claims were checked. In short, the stream must
+# be the one asked for and be seen whole; an exhaustive run must cover its enumeration, over
+# every operand or exactly the restricted domain asked for; a random run must have a case of
+# every stratum the oracle's generator lists for the kernel; something must be judged, every
+# claim must apply to some judged case, a comparison must see both outcomes and a directed
+# rounding must step.
 #
 # With -DERROR=MESSAGE instead, it only fails with that message: the test that stands in for a
 # cross-check tests/CMakeLists.txt cannot set up.
@@ -27,10 +35,26 @@ endforeach()
 
 set(_oracle "${PYTHON}" "${SOURCE_DIR}/oracle/kairn-oracle")
 set(_gen ${_oracle} gen "${KERNEL}" "${FORMAT}")
+set(_guards "${PYTHON}" "${CMAKE_CURRENT_LIST_DIR}/crosscheck_guards.py" "${SUMMARY}"
+  --kernel "${KERNEL}" --format "${FORMAT}")
 if(EXHAUSTIVE)
   list(APPEND _gen --exhaustive)
+  list(APPEND _guards --exhaustive)
+  if(RESTRICT)
+    string(REPLACE "," ";" _restrictions "${RESTRICT}")
+    foreach(_r IN LISTS _restrictions)
+      list(APPEND _gen --restrict "${_r}")
+    endforeach()
+    list(APPEND _guards --restrict "${RESTRICT}")
+  endif()
 else()
+  foreach(_var COUNT SEED)
+    if(NOT DEFINED ${_var})
+      message(FATAL_ERROR "crosscheck.cmake: ${_var} is not set")
+    endif()
+  endforeach()
   list(APPEND _gen --seed "${SEED}" --count "${COUNT}")
+  list(APPEND _guards --seed "${SEED}" --count "${COUNT}")
 endif()
 if(RUNNER STREQUAL "interp")
   set(_runner "${PYTHON}" "${SOURCE_DIR}/gen/kairn-gen" interp)
@@ -65,49 +89,26 @@ endif()
 string(CONCAT _again "To run one case again, with INDEX from its tag:\n"
   "  ${_one} | ${_runner_text} | ${_check_text}")
 
+set(_what "cross-check of ${KERNEL} ${FORMAT} with ${RUNNER}")
 list(GET _results 0 _gen_status)
 list(GET _results 1 _runner_status)
 list(GET _results 2 _check_status)
 if(NOT _gen_status STREQUAL "0" OR NOT _runner_status STREQUAL "0" OR
    NOT _check_status STREQUAL "0")
-  message(FATAL_ERROR "cross-check of ${KERNEL} ${FORMAT} with ${RUNNER} failed: request "
-    "generator ${_gen_status}, runner ${_runner_status}, oracle check ${_check_status} "
-    "(0 is success)\n${_again}")
+  message(FATAL_ERROR "${_what} failed: request generator ${_gen_status}, runner "
+    "${_runner_status}, oracle check ${_check_status} (0 is success)\n${_again}")
 endif()
 
-# A pass must have judged something, and covered what it set out to cover.
-file(READ "${SUMMARY}" _json)
-string(JSON _keys LENGTH "${_json}" keys)
-set(_judged 0)
-set(_tags "")
-if(_keys GREATER 0)
-  math(EXPR _last "${_keys} - 1")
-  foreach(_i RANGE ${_last})
-    string(JSON _n GET "${_json}" keys ${_i} stats counts judged)
-    math(EXPR _judged "${_judged} + ${_n}")
-    string(JSON _tag GET "${_json}" keys ${_i} tag)
-    list(APPEND _tags "${_tag}")
-  endforeach()
+# A pass must have checked what it set out to check.
+execute_process(
+  COMMAND ${_guards}
+  WORKING_DIRECTORY "${SOURCE_DIR}"
+  RESULT_VARIABLE _guard_status
+  OUTPUT_VARIABLE _guard_output
+  ERROR_VARIABLE _guard_output)
+string(STRIP "${_guard_output}" _guard_output)
+if(NOT _guard_status STREQUAL "0")
+  message(FATAL_ERROR "${_what}: the oracle passed it, but it did not check what it set out "
+    "to:\n${_guard_output}")
 endif()
-if(_judged EQUAL 0)
-  message(FATAL_ERROR "cross-check of ${KERNEL} ${FORMAT} with ${RUNNER}: the oracle passed it, "
-    "but judged no case (every result non-finite or out of scope), so nothing was checked")
-endif()
-if(EXHAUSTIVE)
-  string(JSON _total GET "${_json}" coverage 0 desc total)
-  string(JSON _ranges LENGTH "${_json}" coverage 0 ranges)
-  string(JSON _from GET "${_json}" coverage 0 ranges 0 0)
-  string(JSON _to GET "${_json}" coverage 0 ranges 0 1)
-  if(NOT _ranges EQUAL 1 OR NOT _from EQUAL 0 OR NOT _to EQUAL _total)
-    message(FATAL_ERROR "cross-check of ${KERNEL} ${FORMAT} with ${RUNNER}: the enumeration of "
-      "${_total} cases was not covered")
-  endif()
-else()
-  foreach(_stratum uniform close cancel overflow underflow pow2 extreme zero)
-    if(NOT _stratum IN_LIST _tags)
-      message(FATAL_ERROR "cross-check of ${KERNEL} ${FORMAT} with ${RUNNER}: no case of stratum "
-        "${_stratum} in ${COUNT} cases")
-    endif()
-  endforeach()
-endif()
-message(STATUS "cross-check of ${KERNEL} ${FORMAT} with ${RUNNER}: passed, ${_judged} cases judged")
+message(STATUS "${_what}: passed, ${_guard_output}")
