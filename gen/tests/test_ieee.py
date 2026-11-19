@@ -1,9 +1,10 @@
 """The IEEE-model printer (ieee.py): proofs/gen/IeeeModel.v, IeeeStatements.v and IeeeAudit.v.
 
-That the printed definitions and statements are those of the drafts in proofs/theories is checked
-by Rocq, by conversion alone (proofs/wip/GenAgreesWithDrafts.v, make -C proofs agree); the
-digests below pin the files that check passed on, and the tests read what the printer does with
-the claims."""
+The theorems of proofs/theories are about the printed definitions and have the printed statements
+as their types (make -C proofs, with its audit); the digests below pin the files that build passed
+on, and the tests read what the printer does with the claims. Before the hand-written drafts of
+this model were retired, a Rocq file checked by conversion alone that the printed text was the
+drafts'."""
 import copy
 import hashlib
 import os
@@ -13,7 +14,7 @@ import unittest
 import common
 from kairn_gen import ieee, ir, rules
 
-# The variables of the section of IeeeDraft.v, in their order.
+# The variables of the section of IeeeOperations.v, in their order.
 SECTION = ['Variable prec emax : Z.', 'Context {prec_gt_0_ : Prec_gt_0 prec}.',
            'Context {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}.',
            'Variable nan_plus : float -> float -> nan_of.', 'Variable nan_minus : float -> float -> nan_of.',
@@ -21,7 +22,7 @@ SECTION = ['Variable prec emax : Z.', 'Context {prec_gt_0_ : Prec_gt_0 prec}.',
            'Variable nan_fma : float -> float -> float -> nan_of.', 'Variable nan_mult : float -> float -> nan_of.',
            'Variable nan_const : nan_of.']
 
-# The kernels that IeeeDraft.v has as programs.
+# The kernels that the proofs use as programs.
 PROGRAMS = ['fast_two_sum', 'two_prod', 'two_sum', 'add_2_2', 'mul_2_2', 'add_2_1', 'mul_2_1', 'add_fast_2_2',
             'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_pow2_2']
 
@@ -69,9 +70,9 @@ class Model(unittest.TestCase):
         self.assertIn('  let cw := if e then k0 else cnan in\n', m)
         self.assertIn('Definition to_nearest_2 (x0 x1 : float) : float :=\n  let t := x0 in\n  t.', m)
         self.assertIn('Definition lt_2_2 (x0 x1 y0 y1 : float) : bool :=', m)
-        # Every operation is that of IeeeDraft.v, applied to the variables of this section.
-        self.assertIn('Local Notation fms := (IeeeDraft.fms prec emax nan_opp nan_fma).', m)
-        self.assertIn('Local Notation guard := (IeeeDraft.guard prec emax nan_plus).', m)
+        # Every operation is that of IeeeOperations.v, applied to the variables of this section.
+        self.assertIn('Local Notation fms := (IeeeOperations.fms prec emax nan_opp nan_fma).', m)
+        self.assertIn('Local Notation guard := (IeeeOperations.guard prec emax nan_plus).', m)
 
     def test_constants(self):
         # A constant of the format is the number of the format whose value is the constant of the
@@ -87,7 +88,7 @@ class Model(unittest.TestCase):
         self.assertEqual([k.name for k in ieee.program_kernels(self.ks)], [n for n in self.ks if n in PROGRAMS])
         self.assertEqual(sorted(n[:-len('_prog')] for n in definitions(self.model) if n.endswith('_prog')),
                          sorted(PROGRAMS))
-        # The positions of IeeeDraft.v: the inputs from 0, then one per instruction, calls inlined.
+        # The positions: the inputs from 0, then one per instruction, calls inlined.
         self.assertIn('Definition sub_2_1_prog : list instr :=\n'
                       '  [ Ineg 2      (*  3 n *)\n'
                       '  ; Iguard 3    (*  4 z0_g *)\n'
@@ -137,7 +138,7 @@ class Statements(unittest.TestCase):
 
     def test_the_full_kernels(self):
         s = self.statement('add_2_1_full_spec')
-        self.assertIn('  let t := IeeeDraft.add prec emax nan_plus x0 (IeeeDraft.guard prec emax nan_plus a) in\n', s)
+        self.assertIn('  let t := IeeeOperations.add prec emax nan_plus x0 (IeeeOperations.guard prec emax nan_plus a) in\n', s)
         self.assertIn('  (finite x0 -> finite a ->\n   Rabs (val x0 + val x1) <= bpow radix2 (emax - 2) ->\n'
                       '   Rabs (val a) <= bpow radix2 (emax - 2) ->\n   finite w0) /\\', s)
         self.assertIn('  (~ (finite x0 /\\ finite a) -> canonical_of t w0 w1)', s)
@@ -173,38 +174,24 @@ class Statements(unittest.TestCase):
 
     def test_audit(self):
         text = ieee.audit(self.ks)
-        self.assertNotIn('Print Assumptions', text)
-        self.assertIn('(* No IEEE-model statement has a theorem yet. *)', text)
+        # Every kernel of the extended domain names its theorem.
+        self.assertEqual(text.count('Print Assumptions'), 39)
+        self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
+                      'Print Assumptions add_2_2_full_correct.', text)
+        self.assertIn('From Kairn Require Import IeeeFull.', text)
 
 
-class AgreesWithDrafts(unittest.TestCase):
-    # The generated files on which make -C proofs agree passed: every definition and statement of
-    # the drafts that the generator prints is the generated one by conversion alone. A change of
-    # either file needs that check again, and new digests here.
-    DIGESTS = {'proofs/gen/IeeeModel.v': 'a286b9dfa338d7735696eb9ed9ef675860608a3495d2cd51a1eb9a4c1a7db55c',
-               'proofs/gen/IeeeStatements.v': 'ab2837335172357eb69722efef072ca8985ef708f66b1a891917ad4f361d3f50'}
+class CheckedFiles(unittest.TestCase):
+    # The generated files that make -C proofs passed on: every theorem of the IEEE model is about
+    # these definitions and has one of these statements as its type. A change of either file needs
+    # that build again, and new digests here.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '767258ddf5556ceea5712828d8a36022fe9378c706fc2b256cc7041f39ea4e43',
+               'proofs/gen/IeeeStatements.v': '0d2b8e66d080f2246c6fbe7fce61edf0a11210d6369aceb80284273f6beac6b3'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():
             text = read(path)
             self.assertEqual(hashlib.sha256(text.encode()).hexdigest(), digest, path)
-
-    def test_the_agreement_names_every_kernel_and_statement(self):
-        text = read('proofs/wip/GenAgreesWithDrafts.v')
-        ks = common.kernels()
-        kernels = set(re.findall(r'@IeeeModel\.(\w+) = @IeeeDraft\.\1 ', text))
-        # The two kernels of the constant-evaluation variant of two_prod are not in the draft.
-        self.assertEqual(kernels, set(ks) - {'split', 'two_prod_dekker'})
-        stated = set(re.findall(r'IeeeStatements\.(\w+) = \w+\.\1 ', text))
-        self.assertEqual(stated, {n for k in ks.values() for n in ieee.statement_names(k)})
-        fails = re.findall(r'^Fail Definition (\w+)_agrees', text, flags=re.M)
-        self.assertEqual(fails, ['ieee_mul_pow2_2_ieee_finite_spec'])
-        self.assertEqual(set(re.findall(r'IeeeModel\.(\w+_prog) = IeeeDraft\.\1 ', text)),
-                         {f'{n}_prog' for n in PROGRAMS})
-        real = set(re.findall(r'@Model\.(\w+) = @BallDraft\.\1 ', text))
-        self.assertEqual(real, {f'ball_{op}_{k}' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)})
-        self.assertEqual(len(re.findall(r'@Model\.up_\w+ = @BallDraft\.radius_[egh]_ball_\w+ ', text)), 18)
-        self.assertEqual(len(re.findall(r'Statements\.(ball_\w+_spec) = BallDraft\.\1 ', text)), 8)
 
 
 class Fields(unittest.TestCase):

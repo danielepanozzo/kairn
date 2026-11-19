@@ -11,7 +11,6 @@ third_party/mr22/DWPlus.v
 
 gen/Model.v
 gen/Statements.v
-theories/BallDraft.v
 theories/Format.v
 theories/Guard.v
 theories/Transfer.v
@@ -30,19 +29,17 @@ theories/Compare.v
 theories/Convert.v
 theories/OneLimb.v
 theories/MulPow2.v
-theories/Ball.v
 theories/Ball2.v
 theories/Program.v
-theories/IeeeDraft.v
+theories/IeeeOperations.v
 gen/IeeeModel.v
 theories/IeeeBridge.v
-theories/IeeeStatementsDraft.v
+theories/IeeeVocabulary.v
 theories/IeeeEFT.v
 theories/IeeeAdd22.v
 theories/IeeeMul22.v
 theories/IeeeMore.v
 theories/IeeeSub.v
-theories/IeeeExtStatementsDraft.v
 gen/IeeeStatements.v
 theories/IeeeOps.v
 theories/IeeeRange.v

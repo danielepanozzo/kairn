@@ -10,9 +10,10 @@ ensures:       represents x
 min_precision: 1
 source:        constructors (Milestone 1 listing)
 license:       algorithm: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeMake.v make_2_correct
 entry:         yes
 
 x0 = guard(a)

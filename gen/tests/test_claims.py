@@ -98,6 +98,8 @@ class Claims(unittest.TestCase):
             if 'ieee_only' in k:  # no real-model statement: right after the domain, and only true
                 want.insert(2, 'ieee_only')
                 self.assertIs(k['ieee_only'], True, k['name'])
+            if 'ieee_theorem' in k:          # the IEEE-model theorem after the real-model one
+                want.insert(want.index('theorem') + 1, 'ieee_theorem')
             if all(e['kind'] == 'makes_ball' for e in k['ensures']):
                 want.remove('value')          # a ball made from its inputs has no value
             self.assertEqual(list(k), want, k['name'])
@@ -170,7 +172,7 @@ class Claims(unittest.TestCase):
         # The three entries written out in full there, with source, flops and the theorem fields
         # left out; field for field, in that order.
         def shown(name):
-            return [(key, v) for key, v in self.by[name].items() if key not in ('source', 'flops', 'theorem')]
+            return [(key, v) for key, v in self.by[name].items() if key not in ('source', 'flops', 'theorem', 'ieee_theorem')]
         self.assertEqual(shown('add_2_1_full'), list({
             'name': 'add_2_1_full', 'domain': 'extended', 'ieee_only': True,
             'inputs': [{'name': 'x', 'limbs': 2}, {'name': 'a', 'limbs': 1}],
@@ -179,7 +181,7 @@ class Claims(unittest.TestCase):
             'requires': ['canonical(x)'],
             'ensures': [{'kind': 'extends', 'of': 'w', 'core': 'add_2_1', 'lead': 'add',
                          'finite_when': [{'abs_le': 'x', 'exp': -2}, {'abs_le': 'a', 'exp': -2}]}],
-            'min_precision': 3, 'status': 'unverified', 'ieee_status': 'unverified',
+            'min_precision': 3, 'status': 'proved', 'ieee_status': 'proved',
             'instances': {'binary64': [], 'binary32': []}}.items()))
         self.assertEqual(shown('ball_mul_2_full'), list({
             'name': 'ball_mul_2_full', 'domain': 'extended', 'ieee_only': True,
@@ -191,7 +193,7 @@ class Claims(unittest.TestCase):
             'ensures': [{'kind': 'encloses', 'center': 'cw', 'radius': 'rw', 'set': 'x*y',
                          'balls': {'x': {'center': 'cx', 'radius': 'rx'}, 'y': {'center': 'cy', 'radius': 'ry'}},
                          'finite_when': []}],
-            'min_precision': 4, 'status': 'unverified', 'ieee_status': 'unverified',
+            'min_precision': 4, 'status': 'proved', 'ieee_status': 'proved',
             'instances': {'binary64': [], 'binary32': []}}.items()))
         self.assertEqual(shown('ball_make_2'), list({
             'name': 'ball_make_2', 'domain': 'extended', 'ieee_only': True,
@@ -200,7 +202,7 @@ class Claims(unittest.TestCase):
             'requires': ['canonical(c)'],
             'ensures': [{'kind': 'makes_ball', 'center': 'cw', 'radius': 'rw',
                          'from': {'center': 'c', 'radius': 'r'}}],
-            'min_precision': 1, 'status': 'unverified', 'ieee_status': 'unverified',
+            'min_precision': 1, 'status': 'proved', 'ieee_status': 'proved',
             'instances': {'binary64': [], 'binary32': []}}.items()))
         # The conditions of finite_when: those that architecture.md gives, and the thresholds
         # proved for the other full kernels (IeeeExtStatementsDraft.v); none for a ball.
@@ -231,9 +233,9 @@ class Claims(unittest.TestCase):
                      'le_1_2', 'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'radd', 'rmul',
                      'ball_neg_1', 'ball_neg_2'):
             k = self.by[name]
-            self.assertEqual((k['domain'], k['status'], k['ieee_status']), ('extended', 'proved', 'unverified'))
+            self.assertEqual((k['domain'], k['status'], k['ieee_status']), ('extended', 'proved', 'proved'))
             self.assertIsNotNone(k['theorem'], name)
-            self.assertNotIn('ieee_theorem', k)
+            self.assertIsNotNone(k['ieee_theorem'], name)
             self.assertFalse(any(r.startswith('normalized') for r in k['requires']), name)
         self.assertEqual(self.by['lt_2_1']['requires'], ['canonical(x)'])
         self.assertEqual(self.by['radd']['requires'], ['nonneg(a)', 'nonneg(b)'])

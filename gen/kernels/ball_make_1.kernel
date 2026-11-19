@@ -10,9 +10,10 @@ ensures:       makes_ball cw rw from=c,r
 min_precision: 1
 source:        constructors (Milestone 1 listing)
 license:       algorithm: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeMake.v ball_make_1_correct
 entry:         yes
 cone_exempt:   every output is selected after explicit tests of the center and the radius (e, f); makes_ball states what comes out
 

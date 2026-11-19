@@ -2,9 +2,9 @@
    B1 to B3 of milestone1.md ("Ball kernels") for the full kernels, with containment in
    every case.
 
-   The cores (IeeeDraft.v, from BallDraft.v) compute a center, by the kernel of the
-   same name or by one operation of T, and a radius by additions, opaque products, fused
-   operations and absolute values. For operands whose centers are finite (and
+   The cores (proofs/gen/IeeeModel.v, from proofs/gen/Model.v) compute a center, by the
+   kernel of the same name or by one operation of T, and a radius by additions, opaque
+   products, fused operations and absolute values. For operands whose centers are finite (and
    normalized) and whose radii are nonnegative, +infinity or NaN (K_core):
 
    - every value of the radius computation is nonnegative, +infinity or NaN: an
@@ -28,13 +28,14 @@
    precision 2 on (E <= 1, G <= 4, H <= 16 eta), whence the minimum precision 2 of the
    statements for a center of one limb, where the real model has 1.
 
-   The statements, in the form of IeeeExtStatementsDraft.v, are at the end of the file. *)
+   The statements, in the form of proofs/gen/IeeeStatements.v, are at the end of the file. *)
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra Psatz.
 From Flocq Require Import Core Binary.
-From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Format Normalized Sign Ball Program IeeeBridge IeeeEFT
-  IeeeAdd22 IeeeMul22 IeeeMore IeeeStatementsDraft IeeeExtStatementsDraft IeeeOps IeeeBall.
-From Kairn Require BallDraft Ball2 IeeeDraft.
+From Kairn.Gen Require Import Model Statements IeeeStatements.
+From Kairn Require Import Format Normalized Sign Program IeeeBridge IeeeEFT
+  IeeeAdd22 IeeeMul22 IeeeMore IeeeVocabulary IeeeOps IeeeBall.
+From Kairn Require Ball2 IeeeOperations.
+From Kairn.Gen Require IeeeModel.
 Import ListNotations.
 Open Scope R_scope.
 
@@ -42,7 +43,7 @@ Open Scope R_scope.
 
 Lemma rel_1_quarter : forall prec : Z, (2 <= prec)%Z -> 0 <= 1 / (1 + u prec) * u prec ^ 1 <= / 4.
 Proof.
-intros prec Hp. assert (Ht : 0 < u prec <= / 4) by exact (u_bounds prec 2 Hp).
+intros prec Hp. assert (Ht : 0 < u prec <= / 4) by exact (Ball2.u_bounds prec 2 Hp).
 destruct Ht as [T0 T1]. set (t := u prec) in *.
 replace (1 / (1 + t) * t ^ 1) with (t / (1 + t)) by (field; lra).
 assert (I : 0 < / (1 + t)) by (apply Rinv_0_lt_compat; lra).
@@ -55,7 +56,7 @@ Qed.
 Lemma rel_add_2_quarter :
   forall prec : Z, (3 <= prec)%Z -> 0 <= 3 / (1 - 4 * u prec) * u prec ^ 2 <= / 4.
 Proof.
-intros prec Hp. assert (Ht : 0 < u prec <= / 8) by exact (u_bounds prec 3 Hp).
+intros prec Hp. assert (Ht : 0 < u prec <= / 8) by exact (Ball2.u_bounds prec 3 Hp).
 destruct Ht as [T0 T8]. set (t := u prec) in *.
 replace (3 / (1 - 4 * t) * t ^ 2) with (3 * (t * t) / (1 - 4 * t)) by (field; lra).
 assert (I : 0 < / (1 - 4 * t)) by (apply Rinv_0_lt_compat; lra).
@@ -70,7 +71,7 @@ Qed.
 Lemma rel_square_quarter :
   forall (c : R) (prec : Z), (2 <= prec)%Z -> 0 <= c <= 4 -> 0 <= c * u prec ^ 2 <= / 4.
 Proof.
-intros c prec Hp [C0 C4]. assert (Ht : 0 < u prec <= / 4) by exact (u_bounds prec 2 Hp).
+intros c prec Hp [C0 C4]. assert (Ht : 0 < u prec <= / 4) by exact (Ball2.u_bounds prec 2 Hp).
 destruct Ht as [T0 T1]. set (t := u prec) in *.
 replace (t ^ 2) with (t * t) by ring.
 assert (Hq : 0 <= t * t) by (apply Rmult_le_pos; lra).
@@ -116,7 +117,7 @@ Lemma h2_le :
   0 <= Ball2.h2 emin prec V <= bpow radix2 (emin + 4).
 Proof.
 intros emin prec V Hp [V0 V1].
-assert (Ht : 0 < u prec <= / 4) by exact (u_bounds prec 2 Hp).
+assert (Ht : 0 < u prec <= / 4) by exact (Ball2.u_bounds prec 2 Hp).
 destruct (pow_le_4 (u prec) 2 Ht ltac:(lia)) as [P0 P4].
 assert (B : bpow radix2 (emin + 4) = 16 * eta emin).
 { rewrite bpow_plus. unfold eta. change (bpow radix2 4) with 16. ring. }
@@ -135,7 +136,7 @@ Lemma h4_le :
   0 <= Ball2.h4 emin prec n V <= bpow radix2 (emin + 4).
 Proof.
 intros emin prec n V Hp Hn [V0 V1].
-assert (Ht : 0 < u prec <= / 4) by exact (u_bounds prec 2 Hp).
+assert (Ht : 0 < u prec <= / 4) by exact (Ball2.u_bounds prec 2 Hp).
 destruct (pow_le_4 (u prec) n Ht ltac:(lia)) as [P0 P4].
 assert (B : bpow radix2 (emin + 4) = 16 * eta emin).
 { rewrite bpow_plus. unfold eta. change (bpow radix2 4) with 16. ring. }
@@ -167,12 +168,12 @@ Notation format := (generic_format radix2 fexp).
 Notation rnd := (round radix2 fexp (Znearest tie_even)).
 Notation fin x := (is_finite prec emax x = true).
 Notation b2r := (B2R prec emax).
-Notation add := (IeeeDraft.add prec emax nan_plus).
-Notation neg := (IeeeDraft.neg prec emax nan_opp).
-Notation fabs := (IeeeDraft.abs prec emax nan_abs).
-Notation fma := (IeeeDraft.fma prec emax nan_fma).
-Notation prod := (IeeeDraft.prod prec emax nan_fma).
-Notation const_of := (IeeeDraft.const_of prec emax).
+Notation add := (IeeeOperations.add prec emax nan_plus).
+Notation neg := (IeeeOperations.neg prec emax nan_opp).
+Notation fabs := (IeeeOperations.abs prec emax nan_abs).
+Notation fma := (IeeeOperations.fma prec emax nan_fma).
+Notation prod := (IeeeOperations.prod prec emax nan_fma).
+Notation const_of := (IeeeOperations.const_of prec emax).
 Notation fixup_1 := (IeeeBall.ball_fixup_1 prec emax nan_abs).
 Notation fixup_2 := (IeeeBall.ball_fixup_2 prec emax nan_abs).
 
@@ -217,7 +218,7 @@ apply (const_of_RU prec emax t (bpow radix2 (emin + 4)) T0 T1).
 Qed.
 
 Lemma kappa_bounds : (2 <= prec)%Z -> 1 <= 1 + u prec <= 5 / 4.
-Proof. intros Hp. assert (Ht : 0 < u prec <= / 4) by exact (u_bounds prec 2 Hp). lra. Qed.
+Proof. intros Hp. assert (Ht : 0 < u prec <= / 4) by exact (Ball2.u_bounds prec 2 Hp). lra. Qed.
 
 Lemma eta_tiny : forall t : R, 0 <= t <= 3 / 2 -> 0 <= t * eta emin <= 3 / 2 * eta emin.
 Proof.
@@ -226,16 +227,16 @@ Qed.
 
 Lemma consts_ball_add_1 :
   (2 <= prec)%Z ->
-  good_const (IeeeDraft.radius_e_ball_add_1 prec emax) (BallDraft.radius_e_ball_add_1 emin prec) /\
-  good_const (IeeeDraft.radius_g_ball_add_1 prec emax) (BallDraft.radius_g_ball_add_1 emin prec) /\
-  good_const (IeeeDraft.radius_h_ball_add_1 prec emax) (BallDraft.radius_h_ball_add_1 emin prec).
+  good_const (IeeeModel.up_ball_add_1_0 prec emax) (Model.up_ball_add_1_0 emin prec) /\
+  good_const (IeeeModel.up_ball_add_1_1 prec emax) (Model.up_ball_add_1_1 emin prec) /\
+  good_const (IeeeModel.up_ball_add_1_2 prec emax) (Model.up_ball_add_1_2 emin prec).
 Proof.
-intros Hp. unfold IeeeDraft.radius_e_ball_add_1, IeeeDraft.radius_g_ball_add_1,
-                  IeeeDraft.radius_h_ball_add_1.
+intros Hp. unfold IeeeModel.up_ball_add_1_0, IeeeModel.up_ball_add_1_1,
+                  IeeeModel.up_ball_add_1_2.
 rewrite Ball2.e_add_1_eq, Ball2.g_add_1_eq, Ball2.h_add_1_eq.
 split; [|split].
 - apply good_le_1. generalize (uq_le_1 _ 1 (rel_1_quarter prec Hp) ltac:(lra)). lra.
-- apply good_le_4; trivial. apply pow_le_4. exact (u_bounds prec 2 Hp). lia.
+- apply good_le_4; trivial. apply pow_le_4. exact (Ball2.u_bounds prec 2 Hp). lia.
 - apply good_le_16eta; trivial.
   replace ((1 + u prec) * ((1 + u prec) ^ 2 * eta emin + eta emin / 2))
     with (Ball2.h2 emin prec 0) by (unfold Ball2.h2; ring).
@@ -244,17 +245,17 @@ Qed.
 
 Lemma consts_ball_add_2 :
   (3 <= prec)%Z ->
-  good_const (IeeeDraft.radius_e_ball_add_2 prec emax) (BallDraft.radius_e_ball_add_2 emin prec) /\
-  good_const (IeeeDraft.radius_g_ball_add_2 prec emax) (BallDraft.radius_g_ball_add_2 emin prec) /\
-  good_const (IeeeDraft.radius_h_ball_add_2 prec emax) (BallDraft.radius_h_ball_add_2 emin prec).
+  good_const (IeeeModel.up_ball_add_2_0 prec emax) (Model.up_ball_add_2_0 emin prec) /\
+  good_const (IeeeModel.up_ball_add_1_1 prec emax) (Model.up_ball_add_1_1 emin prec) /\
+  good_const (IeeeModel.up_ball_add_1_2 prec emax) (Model.up_ball_add_1_2 emin prec).
 Proof.
 intros Hp. assert (Hp2 : (2 <= prec)%Z) by lia.
-unfold IeeeDraft.radius_e_ball_add_2, IeeeDraft.radius_g_ball_add_2,
-       IeeeDraft.radius_h_ball_add_2.
+unfold IeeeModel.up_ball_add_2_0, IeeeModel.up_ball_add_1_1,
+       IeeeModel.up_ball_add_1_2.
 rewrite Ball2.e_add_2_eq, Ball2.g_add_2_eq, Ball2.h_add_2_eq.
 split; [|split].
 - apply good_le_1. exact (uq_le_1 _ _ (rel_add_2_quarter prec Hp) (kappa_bounds Hp2)).
-- apply good_le_4; trivial. apply pow_le_4. exact (u_bounds prec 2 Hp2). lia.
+- apply good_le_4; trivial. apply pow_le_4. exact (Ball2.u_bounds prec 2 Hp2). lia.
 - apply good_le_16eta; trivial.
   replace ((1 + u prec) * ((1 + u prec) ^ 2 * eta emin + eta emin / 2))
     with (Ball2.h2 emin prec 0) by (unfold Ball2.h2; ring).
@@ -263,77 +264,77 @@ Qed.
 
 Lemma consts_ball_scale_1 :
   (2 <= prec)%Z ->
-  good_const (IeeeDraft.radius_e_ball_scale_1 prec emax) (BallDraft.radius_e_ball_scale_1 emin prec) /\
-  good_const (IeeeDraft.radius_g_ball_scale_1 prec emax) (BallDraft.radius_g_ball_scale_1 emin prec) /\
-  good_const (IeeeDraft.radius_h_ball_scale_1 prec emax) (BallDraft.radius_h_ball_scale_1 emin prec).
+  good_const (IeeeModel.up_ball_mul_1_0 prec emax) (Model.up_ball_mul_1_0 emin prec) /\
+  good_const (IeeeModel.up_ball_add_1_1 prec emax) (Model.up_ball_add_1_1 emin prec) /\
+  good_const (IeeeModel.up_ball_scale_1_2 prec emax) (Model.up_ball_scale_1_2 emin prec).
 Proof.
-intros Hp. unfold IeeeDraft.radius_e_ball_scale_1, IeeeDraft.radius_g_ball_scale_1,
-                  IeeeDraft.radius_h_ball_scale_1.
+intros Hp. unfold IeeeModel.up_ball_mul_1_0, IeeeModel.up_ball_add_1_1,
+                  IeeeModel.up_ball_scale_1_2.
 rewrite Ball2.e_scale_1_eq, Ball2.g_scale_1_eq, Ball2.h_scale_1_eq.
 split; [|split].
 - apply good_le_1. generalize (uq_le_1 _ 1 (rel_1_quarter prec Hp) ltac:(lra)). lra.
-- apply good_le_4; trivial. apply pow_le_4. exact (u_bounds prec 2 Hp). lia.
+- apply good_le_4; trivial. apply pow_le_4. exact (Ball2.u_bounds prec 2 Hp). lia.
 - apply good_le_16eta; trivial. apply h2_le; trivial.
   apply vq_le. exact (rel_1_quarter prec Hp). apply eta_tiny. lra.
 Qed.
 
 Lemma consts_ball_scale_2 :
   (2 <= prec)%Z ->
-  good_const (IeeeDraft.radius_e_ball_scale_2 prec emax) (BallDraft.radius_e_ball_scale_2 emin prec) /\
-  good_const (IeeeDraft.radius_g_ball_scale_2 prec emax) (BallDraft.radius_g_ball_scale_2 emin prec) /\
-  good_const (IeeeDraft.radius_h_ball_scale_2 prec emax) (BallDraft.radius_h_ball_scale_2 emin prec).
+  good_const (IeeeModel.up_ball_scale_2_0 prec emax) (Model.up_ball_scale_2_0 emin prec) /\
+  good_const (IeeeModel.up_ball_add_1_1 prec emax) (Model.up_ball_add_1_1 emin prec) /\
+  good_const (IeeeModel.up_ball_scale_2_2 prec emax) (Model.up_ball_scale_2_2 emin prec).
 Proof.
-intros Hp. unfold IeeeDraft.radius_e_ball_scale_2, IeeeDraft.radius_g_ball_scale_2,
-                  IeeeDraft.radius_h_ball_scale_2.
+intros Hp. unfold IeeeModel.up_ball_scale_2_0, IeeeModel.up_ball_add_1_1,
+                  IeeeModel.up_ball_scale_2_2.
 rewrite Ball2.e_scale_2_eq, Ball2.g_scale_2_eq, Ball2.h_scale_2_eq.
 assert (Hrel := rel_square_quarter 2 prec Hp ltac:(lra)).
 split; [|split].
 - apply good_le_1. exact (uq_le_1 _ _ Hrel (kappa_bounds Hp)).
-- apply good_le_4; trivial. apply pow_le_4. exact (u_bounds prec 2 Hp). lia.
+- apply good_le_4; trivial. apply pow_le_4. exact (Ball2.u_bounds prec 2 Hp). lia.
 - apply good_le_16eta; trivial. apply h2_le; trivial.
   apply vq_le. exact Hrel. apply eta_tiny. lra.
 Qed.
 
 Lemma consts_ball_mul_1 :
   (2 <= prec)%Z ->
-  good_const (IeeeDraft.radius_e_ball_mul_1 prec emax) (BallDraft.radius_e_ball_mul_1 emin prec) /\
-  good_const (IeeeDraft.radius_g_ball_mul_1 prec emax) (BallDraft.radius_g_ball_mul_1 emin prec) /\
-  good_const (IeeeDraft.radius_h_ball_mul_1 prec emax) (BallDraft.radius_h_ball_mul_1 emin prec).
+  good_const (IeeeModel.up_ball_mul_1_0 prec emax) (Model.up_ball_mul_1_0 emin prec) /\
+  good_const (IeeeModel.up_ball_mul_1_1 prec emax) (Model.up_ball_mul_1_1 emin prec) /\
+  good_const (IeeeModel.up_ball_mul_1_2 prec emax) (Model.up_ball_mul_1_2 emin prec).
 Proof.
-intros Hp. unfold IeeeDraft.radius_e_ball_mul_1, IeeeDraft.radius_g_ball_mul_1,
-                  IeeeDraft.radius_h_ball_mul_1.
+intros Hp. unfold IeeeModel.up_ball_mul_1_0, IeeeModel.up_ball_mul_1_1,
+                  IeeeModel.up_ball_mul_1_2.
 rewrite Ball2.e_mul_1_eq, Ball2.g_mul_1_eq, Ball2.h_mul_1_eq.
 split; [|split].
 - apply good_le_1. generalize (uq_le_1 _ 1 (rel_1_quarter prec Hp) ltac:(lra)). lra.
-- apply good_le_4; trivial. apply pow_le_4. exact (u_bounds prec 2 Hp). lia.
+- apply good_le_4; trivial. apply pow_le_4. exact (Ball2.u_bounds prec 2 Hp). lia.
 - apply good_le_16eta; trivial. apply h4_le; [exact Hp|lia|].
   apply vq_le. exact (rel_1_quarter prec Hp). apply eta_tiny. lra.
 Qed.
 
 Lemma consts_ball_mul_2 :
   (4 <= prec)%Z ->
-  good_const (IeeeDraft.radius_e_ball_mul_2 prec emax) (BallDraft.radius_e_ball_mul_2 emin prec) /\
-  good_const (IeeeDraft.radius_g_ball_mul_2 prec emax) (BallDraft.radius_g_ball_mul_2 emin prec) /\
-  good_const (IeeeDraft.radius_h_ball_mul_2 prec emax) (BallDraft.radius_h_ball_mul_2 emin prec).
+  good_const (IeeeModel.up_ball_mul_2_0 prec emax) (Model.up_ball_mul_2_0 emin prec) /\
+  good_const (IeeeModel.up_ball_mul_2_1 prec emax) (Model.up_ball_mul_2_1 emin prec) /\
+  good_const (IeeeModel.up_ball_mul_2_2 prec emax) (Model.up_ball_mul_2_2 emin prec).
 Proof.
 intros Hp. assert (Hp2 : (2 <= prec)%Z) by lia.
-unfold IeeeDraft.radius_e_ball_mul_2, IeeeDraft.radius_g_ball_mul_2,
-       IeeeDraft.radius_h_ball_mul_2.
+unfold IeeeModel.up_ball_mul_2_0, IeeeModel.up_ball_mul_2_1,
+       IeeeModel.up_ball_mul_2_2.
 rewrite Ball2.e_mul_2_eq, Ball2.g_mul_2_eq, Ball2.h_mul_2_eq.
 assert (Hrel := rel_square_quarter 4 prec Hp2 ltac:(lra)).
 split; [|split].
 - apply good_le_1. generalize (uq_le_1 _ 1 Hrel ltac:(lra)). lra.
-- apply good_le_4; trivial. apply pow_le_4. exact (u_bounds prec 2 Hp2). lia.
+- apply good_le_4; trivial. apply pow_le_4. exact (Ball2.u_bounds prec 2 Hp2). lia.
 - apply good_le_16eta; trivial. apply h4_le; [exact Hp2|lia|].
   apply vq_le. exact Hrel. apply eta_tiny. lra.
 Qed.
 
 (** * The cores: centers of one limb *)
 
-Notation ball_add_1 := (IeeeDraft.ball_add_1 prec emax nan_plus nan_abs nan_fma).
-Notation ball_sub_1 := (IeeeDraft.ball_sub_1 prec emax nan_plus nan_opp nan_abs nan_fma).
-Notation ball_mul_1 := (IeeeDraft.ball_mul_1 prec emax nan_abs nan_fma).
-Notation ball_scale_1 := (IeeeDraft.ball_scale_1 prec emax nan_abs nan_fma).
+Notation ball_add_1 := (IeeeModel.ball_add_1 prec emax nan_plus nan_abs nan_fma).
+Notation ball_sub_1 := (IeeeModel.ball_sub_1 prec emax nan_plus nan_opp nan_abs nan_fma).
+Notation ball_mul_1 := (IeeeModel.ball_mul_1 prec emax nan_abs nan_fma).
+Notation ball_scale_1 := (IeeeModel.ball_scale_1 prec emax nan_abs nan_fma).
 
 Lemma ball_add_1_core :
   (2 <= prec)%Z ->
@@ -343,10 +344,10 @@ Lemma ball_add_1_core :
   (fin cz -> fin rz ->
    fin rx /\ fin ry /\
    (b2r cz, b2r rz)
-   = BallDraft.ball_add_1 emin prec tie_even (b2r cx) (b2r rx) (b2r cy) (b2r ry)).
+   = Model.ball_add_1 emin prec tie_even (b2r cx) (b2r rx) (b2r cy) (b2r ry)).
 Proof.
 intros Hp cx rx cy ry Fx Fy Hrx Hry.
-unfold IeeeDraft.ball_add_1, BallDraft.ball_add_1. cbv beta iota zeta.
+unfold IeeeModel.ball_add_1, Model.ball_add_1. cbv beta iota zeta.
 destruct (consts_ball_add_1 Hp) as [[FE [EE HE]] [[FG [EG HG]] [FH [EH HH]]]].
 destruct (add_nonneg prec emax nan_plus rx ry Hrx Hry) as [Hs [Es _]].
 destruct (fma_nonneg prec emax nan_fma _ _ _ (abs_nonneg prec emax nan_abs (add cx cy)) HE Hs)
@@ -368,15 +369,15 @@ Lemma ball_sub_1_core :
   (fin cz -> fin rz ->
    fin rx /\ fin ry /\
    (b2r cz, b2r rz)
-   = BallDraft.ball_sub_1 emin prec tie_even (b2r cx) (b2r rx) (b2r cy) (b2r ry)).
+   = Model.ball_sub_1 emin prec tie_even (b2r cx) (b2r rx) (b2r cy) (b2r ry)).
 Proof.
 intros Hp cx rx cy ry Fx Fy Hrx Hry.
-unfold IeeeDraft.ball_sub_1, BallDraft.ball_sub_1. cbv zeta.
-assert (Fn : fin (neg cy)) by (unfold IeeeDraft.neg; now rewrite is_finite_Bopp).
+unfold IeeeModel.ball_sub_1, Model.ball_sub_1. cbv zeta.
+assert (Fn : fin (neg cy)) by (unfold IeeeOperations.neg; now rewrite is_finite_Bopp).
 generalize (ball_add_1_core Hp cx rx (neg cy) ry Fx Fn Hrx Hry).
 replace (b2r (neg cy)) with (- b2r cy) by (symmetry; apply B2R_Bopp).
 destruct (ball_add_1 cx rx (neg cy) ry) as [cz rz].
-destruct (BallDraft.ball_add_1 emin prec tie_even (b2r cx) (b2r rx) (- b2r cy) (b2r ry)) as [c r].
+destruct (Model.ball_add_1 emin prec tie_even (b2r cx) (b2r rx) (- b2r cy) (b2r ry)) as [c r].
 cbv beta iota. intros K. exact K.
 Qed.
 
@@ -388,10 +389,10 @@ Lemma ball_mul_1_core :
   (fin cz -> fin rz ->
    fin rx /\ fin ry /\
    (b2r cz, b2r rz)
-   = BallDraft.ball_mul_1 emin prec tie_even (b2r cx) (b2r rx) (b2r cy) (b2r ry)).
+   = Model.ball_mul_1 emin prec tie_even (b2r cx) (b2r rx) (b2r cy) (b2r ry)).
 Proof.
 intros Hp cx rx cy ry Fx Fy Hrx Hry.
-unfold IeeeDraft.ball_mul_1, BallDraft.ball_mul_1. cbv beta iota zeta.
+unfold IeeeModel.ball_mul_1, Model.ball_mul_1. cbv beta iota zeta.
 destruct (consts_ball_mul_1 Hp) as [[FE [EE HE]] [[FG [EG HG]] [FH [EH HH]]]].
 destruct (prod_nonneg prec emax nan_fma rx ry Hrx Hry) as [Hp1 Ep].
 destruct (fma_nonneg prec emax nan_fma _ _ _ (abs_nonneg prec emax nan_abs cy) Hrx Hp1) as [Hq Eq].
@@ -406,8 +407,8 @@ destruct (Ep Fp) as [_ [_ E5]].
 split. exact Frx. split. exact Fry.
 rewrite E1, E2, E3, E4, E5, !(abs_val prec emax nan_abs), EE, EG, EH.
 assert (Ec : b2r (prod cx cy) = rnd (b2r cx * b2r cy + 0)).
-{ unfold IeeeDraft.prod. change 0 with (b2r (IeeeDraft.pzero prec emax)).
-  now apply (fma_spec prec emax nan_fma cx cy (IeeeDraft.pzero prec emax) Fx Fy eq_refl). }
+{ unfold IeeeOperations.prod. change 0 with (b2r (IeeeOperations.pzero prec emax)).
+  now apply (fma_spec prec emax nan_fma cx cy (IeeeOperations.pzero prec emax) Fx Fy eq_refl). }
 rewrite Ec. reflexivity.
 Qed.
 
@@ -418,10 +419,10 @@ Lemma ball_scale_1_core :
   nonneg_ext rz /\
   (fin cz -> fin rz ->
    fin rx /\ fin a /\
-   (b2r cz, b2r rz) = BallDraft.ball_scale_1 emin prec tie_even (b2r cx) (b2r rx) (b2r a)).
+   (b2r cz, b2r rz) = Model.ball_scale_1 emin prec tie_even (b2r cx) (b2r rx) (b2r a)).
 Proof.
 intros Hp cx rx a Fx Hrx.
-unfold IeeeDraft.ball_scale_1, BallDraft.ball_scale_1. cbv beta iota zeta.
+unfold IeeeModel.ball_scale_1, Model.ball_scale_1. cbv beta iota zeta.
 destruct (consts_ball_scale_1 Hp) as [[FE [EE HE]] [[FG [EG HG]] [FH [EH HH]]]].
 destruct (prod_nonneg prec emax nan_fma _ _ (abs_nonneg prec emax nan_abs a) Hrx) as [Hp1 Ep].
 destruct (fma_nonneg prec emax nan_fma _ _ _ (abs_nonneg prec emax nan_abs (prod cx a)) HE Hp1)
@@ -434,18 +435,18 @@ assert (Fa : fin a) by now rewrite <- (abs_finite prec emax nan_abs).
 split. exact Frx. split. exact Fa.
 rewrite E1, E2, E3, !(abs_val prec emax nan_abs), EE, EG, EH.
 assert (Ec : b2r (prod cx a) = rnd (b2r cx * b2r a + 0)).
-{ unfold IeeeDraft.prod. change 0 with (b2r (IeeeDraft.pzero prec emax)).
-  now apply (fma_spec prec emax nan_fma cx a (IeeeDraft.pzero prec emax) Fx Fa eq_refl). }
+{ unfold IeeeOperations.prod. change 0 with (b2r (IeeeOperations.pzero prec emax)).
+  now apply (fma_spec prec emax nan_fma cx a (IeeeOperations.pzero prec emax) Fx Fa eq_refl). }
 rewrite Ec. reflexivity.
 Qed.
 
 (** * The cores: centers of two limbs *)
 
-Notation ball_add_2 := (IeeeDraft.ball_add_2 prec emax nan_plus nan_minus nan_abs nan_fma).
-Notation ball_sub_2 := (IeeeDraft.ball_sub_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
-Notation ball_mul_2 := (IeeeDraft.ball_mul_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+Notation ball_add_2 := (IeeeModel.ball_add_2 prec emax nan_plus nan_minus nan_abs nan_fma).
+Notation ball_sub_2 := (IeeeModel.ball_sub_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+Notation ball_mul_2 := (IeeeModel.ball_mul_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
 Notation ball_scale_2 :=
-  (IeeeDraft.ball_scale_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+  (IeeeModel.ball_scale_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
 
 Lemma ball_add_2_core :
   (3 <= prec)%Z ->
@@ -458,14 +459,14 @@ Lemma ball_add_2_core :
   (fin cz0 -> fin rz ->
    fin rx /\ fin ry /\ fin cz1 /\
    (b2r cz0, b2r cz1, b2r rz)
-   = BallDraft.ball_add_2 emin prec tie_even (b2r cx0) (b2r cx1) (b2r rx)
+   = Model.ball_add_2 emin prec tie_even (b2r cx0) (b2r cx1) (b2r rx)
        (b2r cy0) (b2r cy1) (b2r ry)).
 Proof.
 intros Hp cx0 cx1 rx cy0 cy1 ry F0 F1 G0 G1 Nx Ny Hrx Hry.
-unfold IeeeDraft.ball_add_2, BallDraft.ball_add_2.
+unfold IeeeModel.ball_add_2, Model.ball_add_2.
 generalize (add_2_2_values prec emax nan_plus nan_minus nan_opp nan_fma Hp cx0 cx1 cy0 cy1
               F0 F1 G0 G1 Nx Ny).
-destruct (IeeeDraft.add_2_2 prec emax nan_plus nan_minus cx0 cx1 cy0 cy1) as [cz0 cz1].
+destruct (IeeeModel.add_2_2 prec emax nan_plus nan_minus cx0 cx1 cy0 cy1) as [cz0 cz1].
 cbv beta iota zeta. intros V.
 destruct (consts_ball_add_2 Hp) as [[FE [EE HE]] [[FG [EG HG]] [FH [EH HH]]]].
 destruct (add_nonneg prec emax nan_plus rx ry Hrx Hry) as [Hs [Es _]].
@@ -490,13 +491,13 @@ Lemma ball_sub_2_core :
   (fin cz0 -> fin rz ->
    fin rx /\ fin ry /\ fin cz1 /\
    (b2r cz0, b2r cz1, b2r rz)
-   = BallDraft.ball_sub_2 emin prec tie_even (b2r cx0) (b2r cx1) (b2r rx)
+   = Model.ball_sub_2 emin prec tie_even (b2r cx0) (b2r cx1) (b2r rx)
        (b2r cy0) (b2r cy1) (b2r ry)).
 Proof.
 intros Hp cx0 cx1 rx cy0 cy1 ry F0 F1 G0 G1 Nx Ny Hrx Hry.
-unfold IeeeDraft.ball_sub_2, BallDraft.ball_sub_2, IeeeDraft.neg_2, neg_2. cbv beta iota zeta.
-assert (Fn0 : fin (neg cy0)) by (unfold IeeeDraft.neg; now rewrite is_finite_Bopp).
-assert (Fn1 : fin (neg cy1)) by (unfold IeeeDraft.neg; now rewrite is_finite_Bopp).
+unfold IeeeModel.ball_sub_2, Model.ball_sub_2, IeeeModel.neg_2, neg_2. cbv beta iota zeta.
+assert (Fn0 : fin (neg cy0)) by (unfold IeeeOperations.neg; now rewrite is_finite_Bopp).
+assert (Fn1 : fin (neg cy1)) by (unfold IeeeOperations.neg; now rewrite is_finite_Bopp).
 assert (E0 : b2r (neg cy0) = - b2r cy0) by apply B2R_Bopp.
 assert (E1 : b2r (neg cy1) = - b2r cy1) by apply B2R_Bopp.
 assert (Nn : normalized_2 emin prec (b2r (neg cy0)) (b2r (neg cy1))).
@@ -504,7 +505,7 @@ assert (Nn : normalized_2 emin prec (b2r (neg cy0)) (b2r (neg cy1))).
 generalize (ball_add_2_core Hp cx0 cx1 rx (neg cy0) (neg cy1) ry F0 F1 Fn0 Fn1 Nx Nn Hrx Hry).
 rewrite E0, E1.
 destruct (ball_add_2 cx0 cx1 rx (neg cy0) (neg cy1) ry) as [[cz0 cz1] rz].
-destruct (BallDraft.ball_add_2 emin prec tie_even (b2r cx0) (b2r cx1) (b2r rx)
+destruct (Model.ball_add_2 emin prec tie_even (b2r cx0) (b2r cx1) (b2r rx)
             (- b2r cy0) (- b2r cy1) (b2r ry)) as [[c0 c1] r].
 cbv beta iota. intros K. exact K.
 Qed.
@@ -520,14 +521,14 @@ Lemma ball_mul_2_core :
   (fin cz0 -> fin rz ->
    fin rx /\ fin ry /\ fin cz1 /\
    (b2r cz0, b2r cz1, b2r rz)
-   = BallDraft.ball_mul_2 emin prec tie_even (b2r cx0) (b2r cx1) (b2r rx)
+   = Model.ball_mul_2 emin prec tie_even (b2r cx0) (b2r cx1) (b2r rx)
        (b2r cy0) (b2r cy1) (b2r ry)).
 Proof.
 intros Hp cx0 cx1 rx cy0 cy1 ry F0 F1 G0 G1 Nx Ny Hrx Hry.
-unfold IeeeDraft.ball_mul_2, BallDraft.ball_mul_2.
+unfold IeeeModel.ball_mul_2, Model.ball_mul_2.
 generalize (mul_2_2_values prec emax nan_plus nan_minus nan_opp nan_fma Hp cx0 cx1 cy0 cy1
               F0 F1 G0 G1 Nx Ny).
-destruct (IeeeDraft.mul_2_2 prec emax nan_plus nan_minus nan_opp nan_fma cx0 cx1 cy0 cy1)
+destruct (IeeeModel.mul_2_2 prec emax nan_plus nan_minus nan_opp nan_fma cx0 cx1 cy0 cy1)
   as [cz0 cz1].
 cbv beta iota zeta. intros V.
 destruct (consts_ball_mul_2 Hp) as [[FE [EE HE]] [[FG [EG HG]] [FH [EH HH]]]].
@@ -554,13 +555,13 @@ Lemma ball_scale_2_core :
   (fin cz0 -> fin rz ->
    fin rx /\ fin a /\ fin cz1 /\
    (b2r cz0, b2r cz1, b2r rz)
-   = BallDraft.ball_scale_2 emin prec tie_even (b2r cx0) (b2r cx1) (b2r rx) (b2r a)).
+   = Model.ball_scale_2 emin prec tie_even (b2r cx0) (b2r cx1) (b2r rx) (b2r a)).
 Proof.
 intros Hp cx0 cx1 rx a F0 F1 Nx Hrx.
-unfold IeeeDraft.ball_scale_2, BallDraft.ball_scale_2.
+unfold IeeeModel.ball_scale_2, Model.ball_scale_2.
 generalize (fun Fa => mul_2_1_values prec emax nan_plus nan_minus nan_opp nan_fma Hp cx0 cx1 a
                         F0 F1 Fa Nx).
-destruct (IeeeDraft.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma cx0 cx1 a) as [cz0 cz1].
+destruct (IeeeModel.mul_2_1 prec emax nan_plus nan_minus nan_opp nan_fma cx0 cx1 a) as [cz0 cz1].
 cbv beta iota zeta. intros V.
 destruct (consts_ball_scale_2 Hp) as [[FE [EE HE]] [[FG [EG HG]] [FH [EH HH]]]].
 destruct (prod_nonneg prec emax nan_fma _ _ (abs_nonneg prec emax nan_abs a) Hrx) as [Hp1 Ep].
@@ -778,18 +779,18 @@ Qed.
 
 (** * The full kernels *)
 
-Notation ball_add_1_full := (IeeeDraft.ball_add_1_full prec emax nan_plus nan_abs nan_fma).
-Notation ball_sub_1_full := (IeeeDraft.ball_sub_1_full prec emax nan_plus nan_opp nan_abs nan_fma).
-Notation ball_mul_1_full := (IeeeDraft.ball_mul_1_full prec emax nan_plus nan_abs nan_fma).
-Notation ball_scale_1_full := (IeeeDraft.ball_scale_1_full prec emax nan_abs nan_fma).
+Notation ball_add_1_full := (IeeeModel.ball_add_1_full prec emax nan_plus nan_abs nan_fma).
+Notation ball_sub_1_full := (IeeeModel.ball_sub_1_full prec emax nan_plus nan_opp nan_abs nan_fma).
+Notation ball_mul_1_full := (IeeeModel.ball_mul_1_full prec emax nan_plus nan_abs nan_fma).
+Notation ball_scale_1_full := (IeeeModel.ball_scale_1_full prec emax nan_abs nan_fma).
 Notation ball_add_2_full :=
-  (IeeeDraft.ball_add_2_full prec emax nan_plus nan_minus nan_abs nan_fma).
+  (IeeeModel.ball_add_2_full prec emax nan_plus nan_minus nan_abs nan_fma).
 Notation ball_sub_2_full :=
-  (IeeeDraft.ball_sub_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+  (IeeeModel.ball_sub_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
 Notation ball_mul_2_full :=
-  (IeeeDraft.ball_mul_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+  (IeeeModel.ball_mul_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
 Notation ball_scale_2_full :=
-  (IeeeDraft.ball_scale_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
+  (IeeeModel.ball_scale_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma).
 
 Lemma ball_add_1_full_facts :
   (2 <= prec)%Z ->
@@ -1008,13 +1009,13 @@ Qed.
 
 End IeeeBallCores.
 
-(** * The statements of IeeeExtStatementsDraft.v *)
+(** * The statements of proofs/gen/IeeeStatements.v *)
 
 Theorem ball_add_1_full_correct : ball_add_1_full_spec.
 Proof.
 intros prec emax Hp He nan_plus nan_abs nan_fma Hp2 cx rx cy ry Bx By.
 generalize (ball_add_1_full_facts prec emax nan_plus nan_abs nan_fma Hp2 cx rx cy ry Bx By).
-destruct (IeeeDraft.ball_add_1_full prec emax nan_plus nan_abs nan_fma cx rx cy ry) as [cw rw].
+destruct (IeeeModel.ball_add_1_full prec emax nan_plus nan_abs nan_fma cx rx cy ry) as [cw rw].
 intros [B1 [B2 B3]].
 split; [exact B1|split; [exact B2|split]].
 - intros Fw. destruct (B3 Fw) as [[Fx Fy] C]. split; [exact Fx|split; [exact Fy|exact C]].
@@ -1025,7 +1026,7 @@ Theorem ball_sub_1_full_correct : ball_sub_1_full_spec.
 Proof.
 intros prec emax Hp He nan_plus nan_opp nan_abs nan_fma Hp2 cx rx cy ry Bx By.
 generalize (ball_sub_1_full_facts prec emax nan_plus nan_opp nan_abs nan_fma Hp2 cx rx cy ry Bx By).
-destruct (IeeeDraft.ball_sub_1_full prec emax nan_plus nan_opp nan_abs nan_fma cx rx cy ry) as [cw rw].
+destruct (IeeeModel.ball_sub_1_full prec emax nan_plus nan_opp nan_abs nan_fma cx rx cy ry) as [cw rw].
 intros [B1 [B2 B3]].
 split; [exact B1|split; [exact B2|split]].
 - intros Fw. destruct (B3 Fw) as [[Fx Fy] C]. split; [exact Fx|split; [exact Fy|exact C]].
@@ -1036,7 +1037,7 @@ Theorem ball_mul_1_full_correct : ball_mul_1_full_spec.
 Proof.
 intros prec emax Hp He nan_plus nan_abs nan_fma Hp2 cx rx cy ry Bx By.
 generalize (ball_mul_1_full_facts prec emax nan_plus nan_abs nan_fma Hp2 cx rx cy ry Bx By).
-destruct (IeeeDraft.ball_mul_1_full prec emax nan_plus nan_abs nan_fma cx rx cy ry) as [cw rw].
+destruct (IeeeModel.ball_mul_1_full prec emax nan_plus nan_abs nan_fma cx rx cy ry) as [cw rw].
 intros [B1 [B2 B3]].
 split; [exact B1|split; [exact B2|split]].
 - intros Fw. destruct (B3 Fw) as [[Fx Fy] C]. split; [exact Fx|split; [exact Fy|exact C]].
@@ -1047,7 +1048,7 @@ Theorem ball_scale_1_full_correct : ball_scale_1_full_spec.
 Proof.
 intros prec emax Hp He nan_abs nan_fma Hp2 cx rx a Bx.
 generalize (ball_scale_1_full_facts prec emax nan_abs nan_fma Hp2 cx rx a Bx).
-destruct (IeeeDraft.ball_scale_1_full prec emax nan_abs nan_fma cx rx a) as [cw rw].
+destruct (IeeeModel.ball_scale_1_full prec emax nan_abs nan_fma cx rx a) as [cw rw].
 intros [B1 [B2 B3]].
 split; [exact B1|split; [exact B2|split]].
 - intros Fw. destruct (B3 Fw) as [[Fx Fa] C]. split; [exact Fx|split; [exact Fa|exact C]].
@@ -1059,7 +1060,7 @@ Theorem ball_add_2_full_correct : ball_add_2_full_spec.
 Proof.
 intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma Hpm cx0 cx1 rx cy0 cy1 ry Bx By.
 generalize (ball_add_2_full_facts prec emax nan_plus nan_minus (fun x => nan_plus x x) nan_abs nan_fma Hpm cx0 cx1 rx cy0 cy1 ry Bx By).
-destruct (IeeeDraft.ball_add_2_full prec emax nan_plus nan_minus nan_abs nan_fma cx0 cx1 rx cy0 cy1 ry) as [[cw0 cw1] rw].
+destruct (IeeeModel.ball_add_2_full prec emax nan_plus nan_minus nan_abs nan_fma cx0 cx1 rx cy0 cy1 ry) as [[cw0 cw1] rw].
 intros [B1 [B2 B3]].
 split; [exact B1|split; [exact B2|split]].
 - intros Fw. destruct (B3 Fw) as [[Fx Fy] C]. split; [exact Fx|split; [exact Fy|exact C]].
@@ -1070,7 +1071,7 @@ Theorem ball_sub_2_full_correct : ball_sub_2_full_spec.
 Proof.
 intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hpm cx0 cx1 rx cy0 cy1 ry Bx By.
 generalize (ball_sub_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma Hpm cx0 cx1 rx cy0 cy1 ry Bx By).
-destruct (IeeeDraft.ball_sub_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma cx0 cx1 rx cy0 cy1 ry) as [[cw0 cw1] rw].
+destruct (IeeeModel.ball_sub_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma cx0 cx1 rx cy0 cy1 ry) as [[cw0 cw1] rw].
 intros [B1 [B2 B3]].
 split; [exact B1|split; [exact B2|split]].
 - intros Fw. destruct (B3 Fw) as [[Fx Fy] C]. split; [exact Fx|split; [exact Fy|exact C]].
@@ -1081,7 +1082,7 @@ Theorem ball_mul_2_full_correct : ball_mul_2_full_spec.
 Proof.
 intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hpm cx0 cx1 rx cy0 cy1 ry Bx By.
 generalize (ball_mul_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma Hpm cx0 cx1 rx cy0 cy1 ry Bx By).
-destruct (IeeeDraft.ball_mul_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma cx0 cx1 rx cy0 cy1 ry) as [[cw0 cw1] rw].
+destruct (IeeeModel.ball_mul_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma cx0 cx1 rx cy0 cy1 ry) as [[cw0 cw1] rw].
 intros [B1 [B2 B3]].
 split; [exact B1|split; [exact B2|split]].
 - intros Fw. destruct (B3 Fw) as [[Fx Fy] C]. split; [exact Fx|split; [exact Fy|exact C]].
@@ -1093,7 +1094,7 @@ Proof.
 intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp2 cx0 cx1 rx a Bx.
 generalize (ball_scale_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma Hp2
               cx0 cx1 rx a Bx).
-destruct (IeeeDraft.ball_scale_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
+destruct (IeeeModel.ball_scale_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
             cx0 cx1 rx a) as [[cw0 cw1] rw].
 intros [B1 [B2 B3]].
 split; [exact B1|split; [exact B2|split]].
@@ -1105,7 +1106,7 @@ Qed.
 Theorem ball_neg_1_ieee_correct : ball_neg_1_ieee_spec.
 Proof.
 intros prec emax Hp He nan_opp _ cx rx Bx.
-unfold IeeeDraft.ball_neg_1. cbv zeta.
+unfold IeeeModel.ball_neg_1. cbv zeta.
 destruct (ball_neg_1_facts prec emax nan_opp cx rx Bx) as [B1 [B2 B3]].
 split; [exact B1|split; [exact B2|split; [exact B3|]]].
 exact (every_case_scale_1 prec emax Ropp _ _ _ _ B1 B2 B3).
@@ -1114,7 +1115,7 @@ Qed.
 Theorem ball_neg_2_ieee_correct : ball_neg_2_ieee_spec.
 Proof.
 intros prec emax Hp He nan_opp _ cx0 cx1 rx Bx.
-unfold IeeeDraft.ball_neg_2, IeeeDraft.neg_2. cbv beta iota zeta.
+unfold IeeeModel.ball_neg_2, IeeeModel.neg_2. cbv beta iota zeta.
 destruct (ball_neg_2_facts prec emax nan_opp cx0 cx1 rx Bx) as [B1 [B2 B3]].
 split; [exact B1|split; [exact B2|split; [exact B3|]]].
 exact (every_case_scale_2 prec emax Ropp _ _ _ _ _ _ B1 B2 B3).

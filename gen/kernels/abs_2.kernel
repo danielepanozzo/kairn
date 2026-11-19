@@ -14,7 +14,8 @@ source:        the sign of x0 (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeExt.v abs_2_ieee_correct
 entry:         yes
 cone_exempt:   the limbs reach the outputs through select; each output limb is an input limb up to sign, so it is non-finite exactly when that input limb is, and the non-finite layer tests the operand
 

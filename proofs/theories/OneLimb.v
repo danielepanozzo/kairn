@@ -2,7 +2,7 @@
 
    These two kernels are one rounding to nearest each, s = RN (a + b) and p = RN (a b).
    They exist to state the error of the center of a one-limb ball, from which the ball
-   kernels take their constants (Ball.v).
+   kernels take their constants (Ball2.v).
 
    What is proved (the generated statements of proofs/gen/Statements.v), for every
    precision and every eta, with u = 2^-prec:

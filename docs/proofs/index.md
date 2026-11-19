@@ -43,6 +43,9 @@ lists:
 
 - `proofs/gen/Model.v` and `proofs/gen/Statements.v`, which the generator writes from the kernel
   descriptions: a model of each kernel over the real numbers, and the statement of its claims;
+- `proofs/gen/IeeeModel.v` and `proofs/gen/IeeeStatements.v`, generated too: each kernel as a
+  function of Flocq's binary floating-point numbers, where operations overflow and operands may
+  be infinite or NaN, and its statements there;
 - `proofs/theories/`, the proofs written by hand, one theorem `K_correct` per kernel `K` and the
   lemmas they share;
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
@@ -62,11 +65,15 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    `Print Assumptions K_correct`. A script, `proofs/audit/audit.py`, reads what Rocq printed and
    fails on any axiom outside the allowed list, on a missing report, or on any output it does not
    understand.
-3. **The theorems whose statements are written by hand**, the same way, from
-   `proofs/audit/HandAudit.v`: the IEEE-model theorems below, and facts that say more about a
-   kernel than its generated statement does.
+3. **The theorems that the generated audits do not list**, the same way, from
+   `proofs/audit/HandAudit.v`: the IEEE-model theorems of the kernels that also have a
+   real-model statement of their own domain (they have generated statements as their types), and
+   a few facts whose statements are written by hand because they say more about a kernel than
+   its claims can express.
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
+5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
+   generated `proofs/gen/IeeeAudit.v`, like step 2.
 
 What it prints, after the compilation lines, shortened where it says `...` (a run of this version):
 
@@ -81,13 +88,15 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
       allowed      FunctionalExtensionality.functional_extensionality_dep
   ok           rmul_correct: 4 axioms
   ...
-== assumptions of the theorems whose statements are written by hand
+== assumptions of the theorems that the generated audits do not list (audit/HandAudit.v)
   ...
 == negative control: a false theorem closed with Admitted must be rejected
   rejected by the text scan, as it must be
   REJECTED     wrong: 1 axioms
       NOT ALLOWED  wrong
   rejected by the assumption check, as it must be
+== assumptions of the IEEE-model theorem of every kernel of the extended domain
+  ...
 == audit passed
 ```
 
@@ -146,13 +155,14 @@ and the operations overflow as the hardware does, for formats shaped like `binar
   infinities and NaN; and a Ball operation contains every result in every case, the whole line
   and the empty set included.
 
-These statements, and the models of the kernels they are about, are **written by hand**
-(`proofs/theories/IeeeStatementsDraft.v`, `IeeeExtStatementsDraft.v`, `IeeeDraft.v`,
-`BallDraft.v`) from the listings of the design pages, and audited by `proofs/audit/HandAudit.v`.
-The generator does not print them yet, and the public headers do not yet call the kernels of the
-second kind, so these theorems are not guarantees about what the library does today: the claims keep those
-kernels `unverified`, and [What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)
-says what the library does now.
+These statements and the models of the kernels they are about are generated from the kernel
+descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Two files are written
+by hand and are part of what must be trusted: `proofs/theories/IeeeOperations.v`, which says
+what each operation of a kernel means in Flocq's terms, and `IeeeVocabulary.v`, the definitions
+the statements use (what a canonical value is, what a ball contains). The kernels of the second
+kind are in the generated headers and are `proved` in the claims; whether an operator of the
+library calls them yet is said in
+[What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values).
 
 ## What a proof does not cover
 

@@ -8,12 +8,13 @@ value:         -cx
 requires:      ball cx rx
 ensures:       encloses cz rz -x x=cx,rx
 min_precision: 1
-theorem:       proofs/theories/Ball.v ball_neg_1_correct
+theorem:       proofs/theories/Ball2.v ball_neg_1_correct
 source:        midpoint-radius negation (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallCores.v ball_neg_1_ieee_correct
 entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 

@@ -541,8 +541,8 @@ class Rocq(unittest.TestCase):
     # the non-finite layer (commit f39b066) and after it. Change them only together with a change
     # of the real model that is meant, and with the proofs that go with it.
     DIGESTS = {'Model.v': 'cde4f8a5334da82d75bb616941b1ebea04d1ae160953db7a2cbbc79da392d493',
-               'Statements.v': '2ca182f1284d5f0a5b2ea61aee06eb4641c16cd26572a41ecd85b470fb20d6ee',
-               'Audit.v': '8d3ad68a9655aa87e0259e2b6860c0291f9e754daaf8816bf9af90fa25c5778e'}
+               'Statements.v': '1f65f1272b0c31eaf4d84ee809f3c06ab8c01ceae3360e3f3e248a5bdea3a68d',
+               'Audit.v': 'f70bb9882d50e61de707eb8e450b358375de8ececda800e88a2204aa13471a6f'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in

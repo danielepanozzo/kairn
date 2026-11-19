@@ -294,6 +294,14 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   It assumes that every input limb is a number of the format and concludes, before the claims,
   that every output limb is one too (unless a `normalized` claim on that output already says
   so), so that the theorem of one kernel establishes the hypotheses of the next.
+- `IeeeModel.v` and `IeeeStatements.v`: the same for the IEEE model
+  ([Milestone 1 statements](design/milestone1.md#two-formal-models-of-one-kernel)): every kernel
+  as a function of Flocq's binary floating-point numbers, with one binder per operation for the
+  NaN it may return, and the IEEE-model statements of each kernel. They import two hand-written
+  files: `proofs/theories/IeeeOperations.v`, which gives each operation of the IR its meaning in
+  Flocq's terms, and `IeeeVocabulary.v`, the definitions the statements are written with.
+  `IeeeAudit.v` is to them what `Audit.v` is to the real model, for the kernels of the extended
+  domain.
 - `Audit.v`: for every kernel not marked `unverified`, a silent definition
   `<kernel>_audit : <kernel>_spec := <kernel>_correct`, which fails to compile unless the theorem
   has the generated statement as its type, followed by `Print Assumptions <kernel>_correct`. The
@@ -469,7 +477,7 @@ left out):
   "requires": ["canonical(x)"],
   "ensures": [{"kind": "extends", "of": "w", "core": "add_2_1", "lead": "add",
                "finite_when": [{"abs_le": "x", "exp": -2}, {"abs_le": "a", "exp": -2}]}],
-  "min_precision": 3, "status": "unverified", "ieee_status": "unverified",
+  "min_precision": 3, "status": "proved", "ieee_status": "proved",
   "instances": {"binary64": [], "binary32": []}
 },
 {
@@ -482,7 +490,7 @@ left out):
   "ensures": [{"kind": "encloses", "center": "cw", "radius": "rw", "set": "x*y",
                "balls": {"x": {"center": "cx", "radius": "rx"}, "y": {"center": "cy", "radius": "ry"}},
                "finite_when": []}],
-  "min_precision": 4, "status": "unverified", "ieee_status": "unverified",
+  "min_precision": 4, "status": "proved", "ieee_status": "proved",
   "instances": {"binary64": [], "binary32": []}
 },
 {
@@ -491,7 +499,7 @@ left out):
   "outputs": [{"name": "cw", "limbs": 2}, {"name": "rw", "limbs": 1}],
   "requires": ["canonical(c)"],
   "ensures": [{"kind": "makes_ball", "center": "cw", "radius": "rw", "from": {"center": "c", "radius": "r"}}],
-  "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+  "min_precision": 1, "status": "proved", "ieee_status": "proved",
   "instances": {"binary64": [], "binary32": []}
 }
 ```

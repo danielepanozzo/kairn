@@ -13,13 +13,14 @@
      ball_make_2(c, r)    included); else the whole line when r is +infinity or the center
                           is not finite; else the ball of center c and radius r.
 
-   The statements are in IeeeExtStatementsDraft.v. *)
+   The statements are in proofs/gen/IeeeStatements.v. *)
 From Stdlib Require Import Reals ZArith Bool Lia Lra.
 From Flocq Require Import Core Binary.
-From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Format Normalized IeeeBridge IeeeStatementsDraft IeeeExtStatementsDraft
+From Kairn.Gen Require Import Model Statements IeeeStatements.
+From Kairn Require Import Format Normalized IeeeBridge IeeeVocabulary
   IeeeOps.
-From Kairn Require IeeeDraft.
+From Kairn Require IeeeOperations.
+From Kairn.Gen Require IeeeModel.
 Open Scope R_scope.
 
 Section IeeeMake.
@@ -38,14 +39,14 @@ Notation fexp := (FLT_exp emin prec).
 Notation format := (generic_format radix2 fexp).
 Notation fin x := (is_finite prec emax x = true).
 Notation b2r := (B2R prec emax).
-Notation guard := (IeeeDraft.guard prec emax nan_plus).
-Notation fabs := (IeeeDraft.abs prec emax nan_abs).
-Notation flt := (IeeeDraft.lt prec emax).
-Notation fle := (IeeeDraft.le prec emax).
-Notation feq := (IeeeDraft.eq prec emax).
-Notation pzero := (IeeeDraft.pzero prec emax).
-Notation pinf := (IeeeDraft.pinf prec emax).
-Notation cnan := (IeeeDraft.cnan prec emax nan_const).
+Notation guard := (IeeeOperations.guard prec emax nan_plus).
+Notation fabs := (IeeeOperations.abs prec emax nan_abs).
+Notation flt := (IeeeOperations.lt prec emax).
+Notation fle := (IeeeOperations.le prec emax).
+Notation feq := (IeeeOperations.eq prec emax).
+Notation pzero := (IeeeOperations.pzero prec emax).
+Notation pinf := (IeeeOperations.pinf prec emax).
+Notation cnan := (IeeeOperations.cnan prec emax nan_const).
 Notation ninf := (B754_infinity prec emax true).
 
 (* A number of the format followed by zero is normalized. *)
@@ -60,10 +61,10 @@ Qed.
 
 Lemma make_2_facts :
   forall a : float,
-  let '(x0, x1) := IeeeDraft.make_2 prec emax nan_plus a in
+  let '(x0, x1) := IeeeModel.make_2 prec emax nan_plus a in
   canonical_2 x0 x1 /\ xval_2 x0 x1 = xval a.
 Proof.
-intros a. unfold IeeeDraft.make_2. cbv beta iota zeta.
+intros a. unfold IeeeModel.make_2. cbv beta iota zeta.
 rewrite (eq_self prec emax), (guard_nan prec emax nan_plus).
 unfold xval_2, xval.
 rewrite (guard_finite prec emax nan_plus), (guard_nan prec emax nan_plus).
@@ -86,11 +87,11 @@ Qed.
 
 Lemma make_2_limbs_facts :
   forall h l : float, canonical_2 h l ->
-  let '(x0, x1) := IeeeDraft.make_2_limbs prec emax nan_plus h l in
+  let '(x0, x1) := IeeeModel.make_2_limbs prec emax nan_plus h l in
   canonical_2 x0 x1 /\ xval_2 x0 x1 = xval_2 h l /\
   (fin h -> b2r x0 = b2r h /\ b2r x1 = b2r l).
 Proof.
-intros h l C. unfold IeeeDraft.make_2_limbs. cbv beta iota zeta.
+intros h l C. unfold IeeeModel.make_2_limbs. cbv beta iota zeta.
 unfold xval_2. rewrite (guard_finite prec emax nan_plus), (guard_nan prec emax nan_plus).
 split; [|split].
 - destruct C as [[Fh [Fl N]]|[[[s E] [s' E']]|[Nh Nl]]].
@@ -151,14 +152,14 @@ Qed.
 
 Lemma ball_make_1_facts :
   forall c r : float,
-  let '(cw, rw) := IeeeDraft.ball_make_1 prec emax nan_plus nan_abs nan_const c r in
+  let '(cw, rw) := IeeeModel.ball_make_1 prec emax nan_plus nan_abs nan_const c r in
   ball_1 cw rw /\
   (r_empty r -> ball_empty_1 cw rw) /\
   (fin r -> 0 <= b2r r -> fin c ->
    ball_finite_1 cw rw /\ b2r cw = b2r c /\ b2r rw = b2r r) /\
   (r = pinf \/ (fin r /\ 0 <= b2r r /\ ~ fin c) -> ball_whole_1 cw rw).
 Proof.
-intros c r. unfold IeeeDraft.ball_make_1. cbv beta iota zeta.
+intros c r. unfold IeeeModel.ball_make_1. cbv beta iota zeta.
 rewrite (lt_abs_pinf prec emax nan_abs), (guard_finite prec emax nan_plus).
 assert (Ne : ball_empty_1 cnan cnan) by (split; exact (proj2_sig nan_const)).
 assert (Nw : ball_whole_1 pzero pinf) by (split; [now exists false|reflexivity]).
@@ -192,14 +193,14 @@ Qed.
 
 Lemma ball_make_2_facts :
   forall c0 c1 r : float, canonical_2 c0 c1 ->
-  let '(cw0, cw1, rw) := IeeeDraft.ball_make_2 prec emax nan_plus nan_abs nan_const c0 c1 r in
+  let '(cw0, cw1, rw) := IeeeModel.ball_make_2 prec emax nan_plus nan_abs nan_const c0 c1 r in
   ball_2 cw0 cw1 rw /\
   (r_empty r -> ball_empty_2 cw0 cw1 rw) /\
   (fin r -> 0 <= b2r r -> fin c0 ->
    ball_finite_2 cw0 cw1 rw /\ cw0 = c0 /\ cw1 = c1 /\ b2r rw = b2r r) /\
   (r = pinf \/ (fin r /\ 0 <= b2r r /\ ~ fin c0) -> ball_whole_2 cw0 cw1 rw).
 Proof.
-intros c0 c1 r C. unfold IeeeDraft.ball_make_2. cbv beta iota zeta.
+intros c0 c1 r C. unfold IeeeModel.ball_make_2. cbv beta iota zeta.
 rewrite (lt_abs_pinf prec emax nan_abs).
 assert (Ne : ball_empty_2 cnan cnan cnan) by (repeat split; exact (proj2_sig nan_const)).
 assert (Nw : ball_whole_2 pzero pzero pinf)

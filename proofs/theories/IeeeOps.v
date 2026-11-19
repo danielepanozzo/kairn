@@ -1,4 +1,4 @@
-(* Single operations of the IEEE model (IeeeDraft.v) on all values: finite numbers,
+(* Single operations of the IEEE model (proofs/gen/IeeeModel.v) on all values: finite numbers,
    infinities and NaN.
 
    IeeeBridge.v describes add, sub, fma and neg on finite operands. The non-finite layer
@@ -30,10 +30,11 @@
      number is one (const_of_RU). *)
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra.
 From Flocq Require Import Core Binary.
-From Kairn.Gen Require Import Model Statements.
+From Kairn.Gen Require Import Model Statements IeeeStatements.
 From Kairn Require Import Format Normalized Program IeeeBridge
-  IeeeStatementsDraft IeeeExtStatementsDraft.
-From Kairn Require IeeeDraft.
+  IeeeVocabulary.
+From Kairn Require IeeeOperations.
+From Kairn.Gen Require IeeeModel.
 Open Scope R_scope.
 
 Section IeeeOps.
@@ -56,21 +57,21 @@ Notation format := (generic_format radix2 fexp).
 Notation rnd := (round radix2 fexp (Znearest tie_even)).
 Notation fin x := (is_finite prec emax x = true).
 Notation b2r := (B2R prec emax).
-Notation add := (IeeeDraft.add prec emax nan_plus).
-Notation sub := (IeeeDraft.sub prec emax nan_minus).
-Notation neg := (IeeeDraft.neg prec emax nan_opp).
-Notation fabs := (IeeeDraft.abs prec emax nan_abs).
-Notation fma := (IeeeDraft.fma prec emax nan_fma).
-Notation prod := (IeeeDraft.prod prec emax nan_fma).
-Notation times_inf := (IeeeDraft.times_inf prec emax nan_mult).
-Notation flt := (IeeeDraft.lt prec emax).
-Notation fle := (IeeeDraft.le prec emax).
-Notation feq := (IeeeDraft.eq prec emax).
-Notation fsucc := (IeeeDraft.succ prec emax).
-Notation fpred := (IeeeDraft.pred prec emax).
-Notation guard := (IeeeDraft.guard prec emax nan_plus).
-Notation pzero := (IeeeDraft.pzero prec emax).
-Notation pinf := (IeeeDraft.pinf prec emax).
+Notation add := (IeeeOperations.add prec emax nan_plus).
+Notation sub := (IeeeOperations.sub prec emax nan_minus).
+Notation neg := (IeeeOperations.neg prec emax nan_opp).
+Notation fabs := (IeeeOperations.abs prec emax nan_abs).
+Notation fma := (IeeeOperations.fma prec emax nan_fma).
+Notation prod := (IeeeOperations.prod prec emax nan_fma).
+Notation times_inf := (IeeeOperations.times_inf prec emax nan_mult).
+Notation flt := (IeeeOperations.lt prec emax).
+Notation fle := (IeeeOperations.le prec emax).
+Notation feq := (IeeeOperations.eq prec emax).
+Notation fsucc := (IeeeOperations.succ prec emax).
+Notation fpred := (IeeeOperations.pred prec emax).
+Notation guard := (IeeeOperations.guard prec emax nan_plus).
+Notation pzero := (IeeeOperations.pzero prec emax).
+Notation pinf := (IeeeOperations.pinf prec emax).
 Notation ninf := (B754_infinity prec emax true).
 Notation inrange := (inrange emax).
 
@@ -157,7 +158,7 @@ Proof. intros [s|s|s pl H|s m e H] E; try discriminate E; reflexivity. Qed.
 
 Lemma eq_self : forall x : float, feq x x = negb (is_nan prec emax x).
 Proof.
-intros x. unfold IeeeDraft.eq. rewrite <- (is_nan_B2BSN prec emax x).
+intros x. unfold IeeeOperations.eq. rewrite <- (is_nan_B2BSN prec emax x).
 apply BinarySingleNaN.Beqb_refl.
 Qed.
 
@@ -247,7 +248,7 @@ Lemma prod_not_finite :
   is_finite prec emax (prod x y) = false.
 Proof.
 intros x y H. destruct (is_finite prec emax (prod x y)) eqn:E; trivial.
-unfold IeeeDraft.prod in E. apply (fma_finite_inv prec emax nan_fma) in E.
+unfold IeeeOperations.prod in E. apply (fma_finite_inv prec emax nan_fma) in E.
 destruct E as [E1 [E2 _]]. destruct H as [H|H]; congruence.
 Qed.
 
@@ -267,21 +268,21 @@ Qed.
 
 Lemma lt_finite : forall a b : float, fin a -> fin b -> flt a b = Rlt_bool (b2r a) (b2r b).
 Proof.
-intros a b Fa Fb. unfold IeeeDraft.lt.
+intros a b Fa Fb. unfold IeeeOperations.lt.
 rewrite <- (B2R_B2BSN prec emax a), <- (B2R_B2BSN prec emax b).
 apply BinarySingleNaN.Bltb_correct; now rewrite is_finite_B2BSN.
 Qed.
 
 Lemma le_finite : forall a b : float, fin a -> fin b -> fle a b = Rle_bool (b2r a) (b2r b).
 Proof.
-intros a b Fa Fb. unfold IeeeDraft.le.
+intros a b Fa Fb. unfold IeeeOperations.le.
 rewrite <- (B2R_B2BSN prec emax a), <- (B2R_B2BSN prec emax b).
 apply BinarySingleNaN.Bleb_correct; now rewrite is_finite_B2BSN.
 Qed.
 
 Lemma eq_finite : forall a b : float, fin a -> fin b -> feq a b = Req_bool (b2r a) (b2r b).
 Proof.
-intros a b Fa Fb. unfold IeeeDraft.eq.
+intros a b Fa Fb. unfold IeeeOperations.eq.
 rewrite <- (B2R_B2BSN prec emax a), <- (B2R_B2BSN prec emax b).
 apply BinarySingleNaN.Beqb_correct; now rewrite is_finite_B2BSN.
 Qed.
@@ -290,7 +291,7 @@ Qed.
 
 Lemma B2BSN_succ :
   forall x : float, B2BSN prec emax (fsucc x) = BinarySingleNaN.Bsucc (B2BSN prec emax x).
-Proof. intros x. unfold IeeeDraft.succ, Bsucc. apply B2BSN_lift. Qed.
+Proof. intros x. unfold IeeeOperations.succ, Bsucc. apply B2BSN_lift. Qed.
 
 Lemma succ_nan : forall x : float, is_nan prec emax (fsucc x) = is_nan prec emax x.
 Proof.
@@ -498,7 +499,7 @@ split.
          apply round_ge_generic; auto with typeclass_instances. apply generic_format_0.
       -- intros E. rewrite Rlt_bool_false in E by exact P.
          rewrite overflow_NE in E. apply B2FF_inf_inv in E. rewrite E. apply nonneg_ext_pinf.
-- intros F. unfold IeeeDraft.prod in F.
+- intros F. unfold IeeeOperations.prod in F.
   destruct (fma_finite_inv prec emax nan_fma a b pzero F) as [Fa [Fb _]].
   split; [exact Fa|split; [exact Fb|]].
   change (rnd (b2r a * b2r b + 0)) with (rnd (b2r a * b2r b + b2r pzero)).
@@ -507,8 +508,8 @@ Qed.
 
 (** * radd and rmul *)
 
-Notation radd := (IeeeDraft.radd prec emax nan_plus).
-Notation rmul := (IeeeDraft.rmul prec emax nan_fma).
+Notation radd := (IeeeModel.radd prec emax nan_plus).
+Notation rmul := (IeeeModel.rmul prec emax nan_fma).
 
 Lemma radd_nonneg :
   forall a b : float, nonneg_ext a -> nonneg_ext b ->
@@ -516,7 +517,7 @@ Lemma radd_nonneg :
   (fin (radd a b) ->
    fin a /\ fin b /\ b2r (radd a b) = Model.radd emin prec tie_even (b2r a) (b2r b)).
 Proof.
-intros a b Ha Hb. unfold IeeeDraft.radd. cbv zeta.
+intros a b Ha Hb. unfold IeeeModel.radd. cbv zeta.
 destruct (add_nonneg a b Ha Hb) as [Hs [Fs _]].
 destruct (succ_nonneg (add a b) Hs) as [Hr Fr].
 split. exact Hr.
@@ -530,7 +531,7 @@ Lemma rmul_nonneg :
   (fin (rmul a b) ->
    fin a /\ fin b /\ b2r (rmul a b) = Model.rmul emin prec tie_even (b2r a) (b2r b)).
 Proof.
-intros a b Ha Hb. unfold IeeeDraft.rmul. cbv zeta.
+intros a b Ha Hb. unfold IeeeModel.rmul. cbv zeta.
 destruct (prod_nonneg a b Ha Hb) as [Hs Fs].
 destruct (succ_nonneg (prod a b) Hs) as [Hr Fr].
 split. exact Hr.
@@ -558,7 +559,7 @@ Proof. intros a. apply B2R_Babs. Qed.
 
 (** * abs_2, to_up_2 and abs_upper_2 on a finite pair *)
 
-Notation abs_upper_2 := (IeeeDraft.abs_upper_2 prec emax nan_opp).
+Notation abs_upper_2 := (IeeeModel.abs_upper_2 prec emax nan_opp).
 
 Lemma abs_upper_2_nonneg :
   forall x0 x1 : float, fin x0 -> fin x1 ->
@@ -567,12 +568,12 @@ Lemma abs_upper_2_nonneg :
    b2r (abs_upper_2 x0 x1) = Model.abs_upper_2 emin prec (b2r x0) (b2r x1)).
 Proof.
 intros x0 x1 F0 F1.
-unfold IeeeDraft.abs_upper_2, IeeeDraft.abs_2, IeeeDraft.to_up_2,
+unfold IeeeModel.abs_upper_2, IeeeModel.abs_2, IeeeModel.to_up_2,
        Model.abs_upper_2, Model.abs_2, Model.to_up_2.
 cbv beta iota zeta.
 rewrite (lt_finite x0 pzero F0 eq_refl). change (b2r pzero) with 0.
-assert (Fn0 : fin (neg x0)) by (unfold IeeeDraft.neg; now rewrite is_finite_Bopp).
-assert (Fn1 : fin (neg x1)) by (unfold IeeeDraft.neg; now rewrite is_finite_Bopp).
+assert (Fn0 : fin (neg x0)) by (unfold IeeeOperations.neg; now rewrite is_finite_Bopp).
+assert (Fn1 : fin (neg x1)) by (unfold IeeeOperations.neg; now rewrite is_finite_Bopp).
 assert (En0 : b2r (neg x0) = - b2r x0) by apply B2R_Bopp.
 assert (En1 : b2r (neg x1) = - b2r x1) by apply B2R_Bopp.
 destruct (Rlt_bool_spec (b2r x0) 0) as [M|M].
@@ -592,14 +593,14 @@ Qed.
 
 (** * Constants *)
 
-Notation const_of := (IeeeDraft.const_of prec emax).
+Notation const_of := (IeeeOperations.const_of prec emax).
 
 (* const_of r is the finite number of value r, when there is one. *)
 Lemma const_of_spec :
   forall r : R, format r -> Rabs r < bpow radix2 emax ->
   fin (const_of r) /\ b2r (const_of r) = r.
 Proof.
-intros r Fr Hr. unfold IeeeDraft.const_of.
+intros r Fr Hr. unfold IeeeOperations.const_of.
 generalize (binary_normalize_correct prec emax prec_gt_0_ prec_lt_emax_ BinarySingleNaN.mode_NE
               (Ztrunc (scaled_mantissa radix2 fexp r)) (cexp radix2 fexp r) false).
 assert (E : F2R (Float radix2 (Ztrunc (scaled_mantissa radix2 fexp r)) (cexp radix2 fexp r)) = r)
@@ -714,7 +715,23 @@ Qed.
 
 End IeeeOps.
 
-(** * The statement of IeeeExtStatementsDraft.v *)
+(** * The statement of proofs/gen/IeeeStatements.v *)
+
+(* The statement, written by hand: guard is an operation, not a kernel, so the generator
+   prints no statement for it. *)
+(* guard a has the value of a: a finite a gives a finite number of the same value, a
+   zero gives +0, an infinity gives itself, a NaN gives a NaN. *)
+Definition guard_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax),
+  forall a : binary_float prec emax,
+  let g := IeeeOperations.guard prec emax nan_plus a in
+  (finite g <-> finite a) /\
+  val g = val a /\
+  (zero a -> g = pos_zero prec emax) /\
+  (forall s : bool, a = infinity prec emax s -> g = infinity prec emax s) /\
+  (nan g <-> nan a).
 
 Theorem guard_ieee : guard_ieee_spec.
 Proof.

@@ -12,7 +12,7 @@
 From Stdlib Require Import Reals ZArith Lia Lra.
 From Flocq Require Import Core.
 From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Format.
+From Kairn Require Import Format Guard.
 Open Scope R_scope.
 
 (** * The addition kernels over an arbitrary rounding function *)
@@ -65,8 +65,13 @@ Proof. reflexivity. Qed.
 Lemma add_2_2_g : forall x0 x1 y0 y1,
   add_2_2 emin prec choice x0 x1 y0 y1 = g_add_2_2 rnd x0 x1 y0 y1.
 Proof. reflexivity. Qed.
-Lemma add_2_1_g : forall x0 x1 a, add_2_1 emin prec choice x0 x1 a = g_add_2_1 rnd x0 x1 a.
-Proof. reflexivity. Qed.
+(* add_2_1 guards its one-limb operand first (rule R3): RN (a + 0), which is a itself for
+   a number of the format (Guard.v). *)
+Lemma add_2_1_g : forall x0 x1 a, generic_format radix2 (FLT_exp emin prec) a ->
+  add_2_1 emin prec choice x0 x1 a = g_add_2_1 rnd x0 x1 a.
+Proof.
+intros x0 x1 a Fa. unfold add_2_1. rewrite (guard_real_any emin prec choice a Fa). reflexivity.
+Qed.
 End Instances.
 
 (** * Two rounding functions that agree on sums give the same results *)
@@ -147,7 +152,9 @@ Proof. intros. rewrite add_2_2_g. now apply g_add_2_2_agree with (F := fun x => 
 
 Lemma add_2_1_FLX : forall x0 x1 a, format x0 -> format x1 -> format a ->
   add_2_1 emin prec choice x0 x1 a = g_add_2_1 rndx x0 x1 a.
-Proof. intros. rewrite add_2_1_g. now apply g_add_2_1_agree with (F := fun x => format x). Qed.
+Proof.
+intros. rewrite add_2_1_g by assumption. now apply g_add_2_1_agree with (F := fun x => format x).
+Qed.
 
 End FLT_FLX.
 

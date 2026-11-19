@@ -2,7 +2,7 @@
    its radius.
 
    A canonical ball is a finite ball, the whole line, or the empty set
-   (IeeeExtStatementsDraft.v). A full Ball kernel is a finite core followed by a fix-up
+   (proofs/gen/IeeeStatements.v). A full Ball kernel is a finite core followed by a fix-up
    that tests three things: whether an operand is the empty set (q is a NaN), and
    whether the center and the radius of the core are finite. This file contains:
 
@@ -27,10 +27,10 @@
    The cores themselves, and the statements of the full kernels, are in IeeeBallCores.v. *)
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra Psatz.
 From Flocq Require Import Core Binary.
-From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Format Normalized Program IeeeBridge IeeeStatementsDraft
-  IeeeExtStatementsDraft IeeeOps.
-From Kairn Require IeeeDraft.
+From Kairn.Gen Require Import Model Statements IeeeStatements.
+From Kairn Require Import Format Normalized Program IeeeBridge IeeeVocabulary IeeeOps.
+From Kairn Require IeeeOperations.
+From Kairn.Gen Require IeeeModel.
 Import ListNotations.
 Open Scope R_scope.
 
@@ -53,12 +53,12 @@ Notation format := (generic_format radix2 fexp).
 Notation rnd := (round radix2 fexp (Znearest tie_even)).
 Notation fin x := (is_finite prec emax x = true).
 Notation b2r := (B2R prec emax).
-Notation add := (IeeeDraft.add prec emax nan_plus).
-Notation fabs := (IeeeDraft.abs prec emax nan_abs).
-Notation flt := (IeeeDraft.lt prec emax).
-Notation feq := (IeeeDraft.eq prec emax).
-Notation pzero := (IeeeDraft.pzero prec emax).
-Notation pinf := (IeeeDraft.pinf prec emax).
+Notation add := (IeeeOperations.add prec emax nan_plus).
+Notation fabs := (IeeeOperations.abs prec emax nan_abs).
+Notation flt := (IeeeOperations.lt prec emax).
+Notation feq := (IeeeOperations.eq prec emax).
+Notation pzero := (IeeeOperations.pzero prec emax).
+Notation pinf := (IeeeOperations.pinf prec emax).
 
 Let Hprec : (0 < prec)%Z.
 Proof. exact prec_gt_0_. Qed.

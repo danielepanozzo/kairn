@@ -10,13 +10,13 @@ operations. Notation is that of [Numbers](phase0/numbers.md).
 in the real model against the statements the generator prints, from the precision their tables
 give. Every IEEE-model statement of this page is proved too: the full kernels, the kernels that
 need no fix-up, the constructors, and the full Ball kernels with the second radius design. Those
-proofs are against statements and kernel models **written by hand** from the listings below
-(`proofs/theories/IeeeDraft.v`, `IeeeExtStatementsDraft.v`, `BallDraft.v`, audited through
-`proofs/audit/HandAudit.v`), because the generator does not print the IEEE model yet and still
-emits the first radius design. Until it prints the same definitions, nothing mechanical ties
-those theorems to the shipped code, and the claims keep these kernels `unverified`. What is not
-proved is said where it applies: the conditions under which a Ball operation returns a finite
-ball (B4), and thresholds sharper than the ones stated.
+proofs too are against what the generator prints: the IEEE model of every kernel
+(`proofs/gen/IeeeModel.v`) and its statements (`proofs/gen/IeeeStatements.v`), from the same
+kernel descriptions as the C++. Written by hand, and imported by the generated files, are only
+the meaning of each operation in Flocq's terms (`proofs/theories/IeeeOperations.v`) and the
+vocabulary of the statements (`IeeeVocabulary.v`). Every kernel of `gen/claims.json` is `proved`.
+What is not proved is said where it applies: the conditions under which a Ball operation returns
+a finite ball (B4), and thresholds sharper than the ones stated.
 
 ## Two formal models of one kernel
 
@@ -70,8 +70,9 @@ written per kernel.
 Here $2^{e_{\max}}$ is the overflow threshold, just above $\Omega$. The last column is measured
 by complete enumeration of small formats and is not proved: the proved thresholds are a quarter
 of the overflow threshold for the additions and half of it for the products, and overflow was
-first seen above 0.55 and 0.86. These IEEE-model theorems are checked against hand-written
-statements (`proofs/audit/HandAudit.v`). The kernels with comparisons, selects, `pred` or `succ`
+first seen above 0.55 and 0.86. These theorems have generated statements as their types
+(checked through `proofs/audit/HandAudit.v`, since the generated audit lists one theorem per
+kernel). The kernels with comparisons, selects, `pred` or `succ`
 do not fit the bridge: for them "a non-finite value stays non-finite" is false, and they have
 statements of their own in the IEEE model ([below](#ieee-like-results)).
 
@@ -436,12 +437,13 @@ operation returns at least its exact result divided by $1 + u$, less $\eta/2$ fo
 proofs use only that each constant is a number of the format, nonnegative, and at least its
 expression.
 
-*Status.* Containment is proved in the real model for the eight cores, in the shape of the
-statement above (and the radius is a number of the format, the center normalized for $k = 2$),
-against definitions written by hand (`proofs/theories/BallDraft.v`, `Ball2.v`), after complete
-enumerations of small formats found no failure. The generator still emits the first design
-above, and the first design's proofs stay until it switches. Enumeration suggests the constants
-have slack that is not proved away: `G` one unit in the last place smaller still encloses, and
+*Status.* This is the design the generator emits: the first design above is kept on this page
+for the record, and its kernels and proofs are gone. Containment is proved in the real model for
+the eight cores, in the shape of the statement above (and the radius is a number of the format,
+the center normalized for $k = 2$), against the generated statements
+(`proofs/theories/Ball2.v`), after complete enumerations of small formats by the generator's
+tests, by the proofs' author and, from this page alone, by the oracle found no failure.
+Enumeration suggests the constants have slack that is not proved away: `G` one unit in the last place smaller still encloses, and
 so does half of `H`; `H` cannot be dropped for products and scalings. `radd`, `rmul` and
 `abs_upper_2` remain kernels of their own.
 

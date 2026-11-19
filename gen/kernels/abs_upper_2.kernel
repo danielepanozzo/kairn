@@ -11,7 +11,8 @@ source:        abs_2, then to_up_2 (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeExt.v abs_upper_2_ieee_correct
 entry:         yes
 cone_exempt:   through abs_2 and to_up_2, which select and step to a neighbor; the non-finite layer tests x0 itself
 

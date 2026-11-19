@@ -12,7 +12,8 @@ source:        the sign of x1 (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeExt.v to_up_2_ieee_correct
 entry:         yes
 cone_exempt:   t is x0 or succ(x0), chosen by select, and succ(-inf) is finite; the non-finite layer tests x0 itself
 
