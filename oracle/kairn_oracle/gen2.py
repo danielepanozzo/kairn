@@ -410,6 +410,12 @@ def _step(fmt, sh, rng, stratum):
         x, y = limb(fmt, rng, stratum), limb(fmt, rng, stratum)
     if rng.bits(1):
         x, y = y, x
+    # An operand required to be nonnegative keeps its magnitude and loses its sign, so that
+    # every stratum still reaches its corner (a tie, a power of two, the two ends of the range).
+    if sh.roles[a] == "radius":
+        x = abs(x)
+    if sh.roles[b] == "radius":
+        y = abs(y)
     vals[a], vals[b] = [x], [y]
     return vals
 

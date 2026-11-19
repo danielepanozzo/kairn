@@ -67,7 +67,7 @@ each kernel a family from its claims, with the strata `uniform`, `underflow`, `o
 |---|---|---|
 | unary | `neg_2`, `abs_2`, conversions | `halfgap`: $x_1 = \pm\frac12$ gap of $x_0$ on either side, at powers of two too (where the gap below is half the gap above) |
 | compare | `predicate` claims | `equal`; `lastplace` (operands that differ in the last place of the second limb only, or a one-limb operand against the same leading limb and the smallest tail); `leadequal`; `neighbor` ($y_0 = $ succ or pred of $x_0$); `straddle` (opposite signs near zero, zeros of both signs); `halfgap` |
-| step | `upper` claims | `nonneg`; `tie` (sums $N2^E$ and products, factored by small primes, with $N$ odd at the rounding position, below and above powers of two and in the subnormal range); `close` |
+| step | `upper` claims | `nonneg`; `tie` (sums $N2^E$ and products, factored by small primes, with $N$ odd at the rounding position, below and above powers of two and in the subnormal range); `close`. An operand under `nonneg()` is drawn as in every stratum and then loses its sign |
 | scale | a `power_of_two()` input | `into` and `outof` (scalings into and out of the subnormal range); `halfscaled` ($c x_1$ rounding to exactly half a gap of $c x_0$) |
 | ball | `encloses` claims | `radii` (zero, $\eta$, subnormal, tiny, about an ulp of the center, comparable, much wider than the center, huge); `wide` (small centers, wide radii); `exact` (zero radii, inexact centers); `centerpow2` (centers whose sum or product is a power of two); `cancel` |
 

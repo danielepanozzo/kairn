@@ -578,6 +578,44 @@ def scaled_gaps(ctx):
 
 
 @test
+def nonneg_steps(ctx):
+    """radd and rmul as the library claims them, with nonnegative operands and 3/2 gaps: every
+    stratum still generates (an operand loses its sign, it is not drawn again), the correct
+    runner passes, 3/2 gaps is reached, and with 5/4 the correct runner must fail."""
+    def claims(gaps):
+        d = json.load(open(FIXTURE2))
+        for k in d["kernels"]:
+            if k["name"] in ("radd", "rmul"):
+                k["requires"] = ["nonneg(a)", "nonneg(b)"]
+                for e in k["ensures"]:
+                    if e["kind"] == "upper":
+                        e["gaps"] = gaps
+        return Claims(d)
+
+    cl, tight = claims("3/2"), claims("5/4")
+    n = 0
+    for fname in ("fp:5:-10:5", "binary64"):
+        f = F.parse_format(fname)
+        lines = []
+        for k in ("radd", "rmul"):
+            lines += list(G.RandomGen(cl.get(k), f, "nonneg").lines(0, ctx.n(6000, 1500)))
+        done = py_run(lines)
+        s = judge(done, cl)
+        t = totals(s)
+        expect(t["invalid"] == 0 and t["failed"] == 0 and not s.stream_errors,
+               "%s: %r %s" % (fname, t, failures(s)[:2]))
+        for k in ("radd", "rmul"):
+            known = G.RandomGen(cl.get(k), f, "x").strata
+            tags = {key[2] for key in s.keys if key[0] == k}
+            expect(tags == set(known), "%s %s: strata %s" % (k, fname, sorted(tags)))
+            m = stats(s, k, "upper").maxima["excess in gaps"][0]
+            expect(Q(*m) == Q(3, 2), "%s %s: largest excess %s" % (k, fname, m))
+        expect(judge(done, tight).failed(), "%s: 5/4 gaps must fail" % fname)
+        n += t["cases"]
+    return "%d cases, largest excess 3/2 gaps" % n
+
+
+@test
 def merging_wave2(ctx):
     """Summaries of two halves of a second-wave stream merge into the summary of the whole."""
     lines = []
