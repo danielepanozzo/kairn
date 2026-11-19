@@ -45,5 +45,7 @@ theories/IeeeExtStatementsDraft.v
 theories/IeeeOps.v
 theories/IeeeRange.v
 theories/IeeeFull.v
+theories/IeeeMake.v
+theories/IeeeFinite.v
 theories/IeeeBall.v
 theories/IeeeBallCores.v

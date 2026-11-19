@@ -630,3 +630,30 @@ Definition mul_pow2_2_full_spec : Prop :=
    w0 = infinity prec emax (Rlt_bool ((val x0 + val x1) * val c) 0) /\ w1 = pos_zero prec emax) /\
   (~ finite x0 -> canonical_of t w0 w1).
 
+
+(** * The constructor kernels *)
+
+(* make_2: a 2-limb value from one value of T, which may be anything. The result is
+   canonical and stands for the same extended real number as a. *)
+Definition make_2_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax),
+  forall a : binary_float prec emax,
+  let '(x0, x1) := IeeeDraft.make_2 prec emax nan_plus a in
+  canonical_2 x0 x1 /\
+  xval_2 x0 x1 = xval a.
+
+(* make_2_limbs: a 2-limb value from its two limbs, which must be canonical. The result is
+   canonical and stands for the same extended real number; when h is finite, each limb
+   keeps its value (a zero may change its sign). *)
+Definition make_2_limbs_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax),
+  forall h l : binary_float prec emax,
+  canonical_2 h l ->
+  let '(x0, x1) := IeeeDraft.make_2_limbs prec emax nan_plus h l in
+  canonical_2 x0 x1 /\
+  xval_2 x0 x1 = xval_2 h l /\
+  (finite h -> val x0 = val h /\ val x1 = val l).

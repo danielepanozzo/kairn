@@ -17,7 +17,7 @@ From Kairn Require Import IeeeStatementsDraft IeeeEFT IeeeAdd22 IeeeMul22 IeeeMo
 From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeExtStatementsDraft IeeeOps IeeeFull.
 From Kairn Require BallDraft Ball2.
-From Kairn Require Import IeeeBallCores.
+From Kairn Require Import IeeeBallCores IeeeMake IeeeFinite.
 
 (* The IEEE model: error-free transformations. *)
 Definition fast_two_sum_ieee_audit : fast_two_sum_ieee_spec := fast_two_sum_ieee_correct.
@@ -197,3 +197,75 @@ Print Assumptions mul_pow2_2_ieee_bridge.
 
 Definition mul_pow2_2_ieee_audit : mul_pow2_2_ieee_spec := mul_pow2_2_ieee_correct.
 Print Assumptions mul_pow2_2_ieee_correct.
+
+(* The non-finite layer: the seven other full kernels (F1 to F5). *)
+Definition add_fast_2_2_full_audit : add_fast_2_2_full_spec := add_fast_2_2_full_correct.
+Print Assumptions add_fast_2_2_full_correct.
+
+Definition sub_2_2_full_audit : sub_2_2_full_spec := sub_2_2_full_correct.
+Print Assumptions sub_2_2_full_correct.
+
+Definition add_2_1_full_audit : add_2_1_full_spec := add_2_1_full_correct.
+Print Assumptions add_2_1_full_correct.
+
+Definition sub_2_1_full_audit : sub_2_1_full_spec := sub_2_1_full_correct.
+Print Assumptions sub_2_1_full_correct.
+
+Definition sub_1_2_full_audit : sub_1_2_full_spec := sub_1_2_full_correct.
+Print Assumptions sub_1_2_full_correct.
+
+Definition mul_2_1_full_audit : mul_2_1_full_spec := mul_2_1_full_correct.
+Print Assumptions mul_2_1_full_correct.
+
+Definition mul_pow2_2_full_audit : mul_pow2_2_full_spec := mul_pow2_2_full_correct.
+Print Assumptions mul_pow2_2_full_correct.
+
+
+(* The constructor kernels. *)
+Definition make_2_audit : make_2_spec := make_2_correct.
+Print Assumptions make_2_correct.
+
+Definition make_2_limbs_audit : make_2_limbs_spec := make_2_limbs_correct.
+Print Assumptions make_2_limbs_correct.
+
+
+(* The IEEE model: no overflow below a threshold, the other kernels. *)
+Definition add_2_2_ieee_finite_result_audit : add_2_2_ieee_finite_result_spec := add_2_2_ieee_finite_result.
+Print Assumptions add_2_2_ieee_finite_result.
+
+Definition add_fast_2_2_ieee_finite_audit : add_fast_2_2_ieee_finite_spec := add_fast_2_2_ieee_finite.
+Print Assumptions add_fast_2_2_ieee_finite.
+
+Definition add_fast_2_2_ieee_finite_result_audit : add_fast_2_2_ieee_finite_result_spec := add_fast_2_2_ieee_finite_result.
+Print Assumptions add_fast_2_2_ieee_finite_result.
+
+Definition sub_2_2_ieee_finite_audit : sub_2_2_ieee_finite_spec := sub_2_2_ieee_finite.
+Print Assumptions sub_2_2_ieee_finite.
+
+Definition sub_2_2_ieee_finite_result_audit : sub_2_2_ieee_finite_result_spec := sub_2_2_ieee_finite_result.
+Print Assumptions sub_2_2_ieee_finite_result.
+
+Definition add_2_1_ieee_finite_audit : add_2_1_ieee_finite_spec := add_2_1_ieee_finite.
+Print Assumptions add_2_1_ieee_finite.
+
+Definition add_2_1_ieee_finite_result_audit : add_2_1_ieee_finite_result_spec := add_2_1_ieee_finite_result.
+Print Assumptions add_2_1_ieee_finite_result.
+
+Definition sub_2_1_ieee_finite_audit : sub_2_1_ieee_finite_spec := sub_2_1_ieee_finite.
+Print Assumptions sub_2_1_ieee_finite.
+
+Definition sub_2_1_ieee_finite_result_audit : sub_2_1_ieee_finite_result_spec := sub_2_1_ieee_finite_result.
+Print Assumptions sub_2_1_ieee_finite_result.
+
+Definition sub_1_2_ieee_finite_audit : sub_1_2_ieee_finite_spec := sub_1_2_ieee_finite.
+Print Assumptions sub_1_2_ieee_finite.
+
+Definition sub_1_2_ieee_finite_result_audit : sub_1_2_ieee_finite_result_spec := sub_1_2_ieee_finite_result.
+Print Assumptions sub_1_2_ieee_finite_result.
+
+Definition mul_2_1_ieee_finite_audit : mul_2_1_ieee_finite_spec := mul_2_1_ieee_finite.
+Print Assumptions mul_2_1_ieee_finite.
+
+Definition mul_pow2_2_ieee_finite_audit : mul_pow2_2_ieee_finite_spec := mul_pow2_2_ieee_finite.
+Print Assumptions mul_pow2_2_ieee_finite.
+
