@@ -12,7 +12,9 @@ same pipelines as the quick tier's cross-checks (tests/crosscheck.cmake), only l
 - compiled: every kernel of gen/claims.json, binary64 and binary32, on random cases of the
   oracle's generator (seed --seed, every stratum), through every runner that the CMake builds
   given by --build produce (kairn-gen-runner* and kairn-gen-packed-runner*: the scalar and the
-  packed kernels, under each contraction setting). The cases come in units of --chunk; each
+  packed kernels, under each contraction setting), and the scalar runners of a second build of
+  each with the other form of the scalar fix-ups (KAIRN_GEN_FIXUP_CALL; --fixup-forms). The
+  cases come in units of --chunk; each
   unit is generated once and judged once per runner, so every runner of a machine judges the
   same cases, and a machine adds units round-robin over the kernels and formats until its
   budget is spent.

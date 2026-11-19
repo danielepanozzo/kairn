@@ -11,7 +11,13 @@ Two parts:
   the oracle's generator (every stratum, one seed per machine), through every runner that the
   CMake builds named by `--build` produce: `kairn-gen-runner*` (scalar) and
   `kairn-gen-packed-runner*` (NEON or AVX2), each with the build's flags and under each
-  contraction setting of the quick tier. Cases come in units of `--chunk` (200 000); a unit is
+  contraction setting of the quick tier. The quick tier's runners have the compiler's own form
+  of the scalar fix-ups of the full kernels and constructors (`KAIRN_GEN_FIXUP_CALL` in
+  `include/kairn/gen/prelude.hpp`: a function of its own with Clang on AArch64, inline
+  elsewhere); with `--fixup-forms both` (the default) each build `NAME` has a second one,
+  `NAME-fixup-call` or `NAME-fixup-inline`, configured with the other form
+  (`CXXFLAGS=-DKAIRN_GEN_FIXUP_CALL=1` or `=0`), whose scalar runners run too (the packed kernels
+  have no such branch). Cases come in units of `--chunk` (200 000); a unit is
   generated once and judged once per runner, so all the runners of a machine judge the same
   cases. Units are added round-robin over the kernels and formats until the budget is spent.
   `--fail-on-suspicious` everywhere except `split` and `two_prod_dekker`, as in the quick tier.
@@ -26,7 +32,15 @@ Two parts:
   kernels of the extended domain (the non-finite layer) every format has the shape of the
   IEEE-model statements, `qmin + qmax = 3 - 2p`, as in the quick tier, so a format with more
   precision keeps the quick tier's number of exponents rather than its exponent range; their
-  enumerations include the non-finite values of every operand.
+  enumerations include the non-finite values of every operand. Every constant of a kernel and of
+  its callees (the splitter of `split` and `two_prod_dekker`, the constants of the Ball radii) is
+  evaluated in each format of the plan with the generator's own code (`gen/kairn_gen/consts.py`);
+  a format in which one of them is not a number, which the interpreter would refuse, is replaced
+  by the nearest that every one fits (the same precision and number of exponents, the range moved
+  up; in the extended domain, two exponents more at a time), and the plan says so. The Ball
+  formats are chosen so that a good share of each kernel's complete enumerations ends as a
+  finite ball (the comment above `EXPLICIT` has the shares, estimated on samples; `report` prints
+  the counts).
   `--interp-bins N --interp-take LIST` splits the plan into N bins of about equal size and runs
   some of them, so that machines can share it.
 
@@ -52,6 +66,11 @@ the end of the build); those running finish. `--cpus` and `--nice` confine the d
 everything it starts; `--env-script` runs everything in the environment a script sets up
 (`vcvars64.bat` on Windows).
 
+`run` records the commit of the code under test and of the driver (by default the last commits
+that changed `include`, `gen`, `proofs` or `oracle`, and `tests/brute`; a copy of the tree made
+with `git archive` has no history, so give them with `--commit` and `--driver-commit`, or `run`
+refuses to start), and the wall time of every pipeline (`WORK/times.jsonl`).
+
 `run` is restartable: every finished pipeline leaves the oracle's summary under `WORK`, and
 running the same command again starts only what is missing (a larger `--budget` or `--cases`
 extends a run). It never leaves processes behind: on SIGINT, SIGTERM or SIGHUP it kills its
@@ -62,11 +81,20 @@ driver killed with SIGKILL leaves its pipelines to finish their chunk on their o
 `collect` merges each series' summaries with the oracle (`check --merge`), applies
 `tests/crosscheck_guards.py` to each merged series (cases 0 to N of the machine's seed, every
 stratum, every claim applied, both outcomes of every comparison, ...) and to each enumeration
-(complete coverage of exactly the domain asked for), and writes one compact JSON file: per kernel
-and format the counts, the largest error over its bound, the observed constants, the largest
-`upper` excess and the smallest Ball radius slack, each with the line that attains it, and per
-runner its counts. It exits 1 if a guard failed, an enumeration is incomplete or anything was
-found.
+(complete coverage of exactly the domain asked for), and writes one compact JSON file: the
+commits of the code under test and of the driver; per kernel and format its domain (finite or
+extended), the counts, the cases per stratum, the seconds spent generating and judging, the
+largest error over its bound, the observed constants, the largest `upper` excess and the
+smallest Ball radius slack, each with the line that attains it, and per runner its counts and
+form of the fix-ups; per enumeration its domain, counts and seconds. It exits 1 if a guard
+failed, an enumeration is incomplete or anything was found.
+
+`report` prints, from such files, the tables of the results page: the machines, the throughput
+(results per second of wall time, cases per second of one pipeline), the cases per kernel and
+format against the aim of 10^8, whether the runners of a machine agreed, the largest error over
+its bound per kernel, format and backend, the share of finite balls in each Ball enumeration,
+how close each claim came, and per kernel its rows, cases per stratum and the lines that attain
+the extremes.
 
 ## The runs of Milestone 1
 
