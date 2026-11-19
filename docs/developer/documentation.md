@@ -66,6 +66,19 @@ repository root (`pymdownx.snippets`); a missing file fails the build. [Getting
 started](../getting-started/index.md) includes the consumer checks' `CMakeLists.txt` files this
 way, so what the page shows is what ctest builds. GitHub shows the include line itself.
 
+## Examples
+
+Every fragment of C++ on a page is a section of a complete program under `docs/examples/cpp/`,
+marked in the program with `// --8<-- [start:NAME]` and `// --8<-- [end:NAME]` and included as
+`--8<-- "docs/examples/cpp/PROGRAM.cpp:NAME"`. ctest builds every example with warnings as errors
+and runs it (`api.example.*`, registered in `tests/api/CMakeLists.txt`), and the program checks
+its own results and exits with a status other than 0 when one is wrong. When a page shows what a
+program prints, the output is a file next to it, `PROGRAM.txt`, included the same way, and the test
+compares the program's output with it (`tests/api/example_output.cmake`), so the output must be
+the same on every platform. [Accurate sums](../tutorials/accurate-sums.md) is built this way, once
+with the build's flags and once per contraction setting of the compiler. After changing such a
+program, write its new output into the `.txt` file and check the page that includes it.
+
 ## Reference pages
 
 The pages under `docs/reference/`, except `reading.md`, are generated and committed, like the

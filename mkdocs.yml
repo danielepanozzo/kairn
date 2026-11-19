@@ -91,6 +91,8 @@ nav:
   - Getting started:
       - getting-started/index.md
       - What holds today: getting-started/guarantees.md
+  - Tutorials:
+      - Accurate sums and dot products: tutorials/accurate-sums.md
   # BEGIN reference: written by docs/tools/reference.py; do not edit by hand
   - Reference:
       - reference/index.md

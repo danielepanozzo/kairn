@@ -50,7 +50,7 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects, and each kind of operation written without the marker while its kernel is unverified (against a copy of the headers in which every kernel is). |
 | `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, a ball's center or radius) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; with the guard turned off, it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
 | `api.k1.zero_cost` | The instructions emitted for loops over `Expansion<double, 1>` against the same loops over `double` (`tests/api/k1/zero_cost.py`). |
-| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output. |
+| `api.example.*` | The examples of the documentation (`docs/examples/cpp/`), which check their own output; `api.example.accurate_sums.*`, built under each contraction setting, also compares it with the text its tutorial shows ([Documentation](documentation.md#examples)). |
 
 Labels select groups: `ctest -L crosscheck`, `-L interp` (with `-L restricted` and `-L sampled`
 among them), `-L cxx` (the scalar runners), `-L packed`, `-L contraction`, `-L api` (with
