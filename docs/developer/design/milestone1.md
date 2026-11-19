@@ -5,8 +5,13 @@ kernels in a model where exponents are unbounded above. This page adds what Mile
 top: how overflow and non-finite values are treated, formally and in the code, and the remaining
 operations. Notation is that of [Numbers](phase0/numbers.md).
 
-**Everything here is a target.** Each statement is first tested on every operand of toy formats,
-then proved; points still open are marked.
+**What is proved and what is a target.** The statements of the
+[second-wave kernels](#second-wave-kernels) and of the [Ball kernels](#ball-kernels) are proved
+in the real model, from the precision their tables give. In the IEEE model, the bridge and
+correctness are proved for the kernels the table below lists. The
+[IEEE-like results](#ieee-like-results), the special states of a ball, and the IEEE-model
+treatment of the kernels that contain comparisons, selects or steps to a neighbor are targets:
+tested on every operand of toy formats where a test exists, not proved.
 
 ## Two formal models of one kernel
 
@@ -54,10 +59,15 @@ written per kernel.
 |---|---|---|---|
 | `add_2_2` | proved | leading limbs of both operands at most $2^{e_{\max}-2}$ (a quarter of the overflow threshold), whatever the result | the sharp condition is half the threshold; not proved |
 | `mul_2_2` | proved | exact product at most $2^{e_{\max}-1}$ in magnitude, whatever the operands | the first overflow is at 0.94 of the threshold at $p = 5$ |
+| `add_2_1`, `mul_2_1`, `add_fast_2_2` | proved | not stated yet | |
 | `two_sum`, `fast_two_sum`, `two_prod` | proved, in the form below | | |
 
-Here $2^{e_{\max}}$ is the overflow threshold, just above $\Omega$. The other first-wave kernels
-fit the same template and are not instantiated yet.
+Here $2^{e_{\max}}$ is the overflow threshold, just above $\Omega$. These IEEE-model theorems
+are checked against hand-written statements (`proofs/audit/HandAudit.v`); the generator does not
+print IEEE-model statements yet. `sub_2_2`, `sub_2_1`, `sub_1_2` and `mul_pow2_2` fit the same
+template and are not instantiated. The kernels with comparisons, selects, `pred` or `succ` do
+not fit it: for them "a non-finite value stays non-finite" is false, and they need statements of
+their own in the IEEE model.
 
 **The error-free transformations at the top of the range.** `fast_two_sum` and `two_prod` have a
 finite error term whenever their first output is finite. `two_sum` does not: with Kairn's order of
@@ -162,16 +172,31 @@ mul_pow2_2(x, c) -> z
   (z0, z1) = fast_two_sum(h, l)
 ```
 
-| Kernel | Requires | Target statement |
-|---|---|---|
-| `neg_2`, `abs_2` | $x$ normalized | $z$ normalized; $z = -x$, $z = \lvert x\rvert$ exactly |
-| `sub_2_2`, `sub_2_1`, `sub_1_2` | operands normalized | that of the addition, for $x - y$ |
-| `lt`, `le`, `eq` (all forms) | operands normalized | the mask is the truth of the comparison of the real values |
-| `to_nearest_2` | $x$ normalized | $t = \mathrm{RN}(x)$ |
-| `to_down_2`, `to_up_2` | $x$ normalized | $t$ is the largest number of the format $\le x$; the smallest $\ge x$ |
-| `abs_upper_2` | $x$ normalized | $t$ is the smallest number of the format $\ge \lvert x\rvert$ |
-| `radd`, `rmul` | — | $r \ge a + b$, $r \ge ab$; and $r$ exceeds the exact value by at most $g$ gaps, where a gap is $r - \mathrm{pred}(r)$ and $g \le 2$ is to be determined ($3/2$ expected for nonnegative operands) |
-| `mul_pow2_2` | $x$ normalized, $c$ a power of two | $z$ normalized; $\lvert z - cx\rvert \le \eta$; and $z = cx$ when each of the two products is zero or at least $2^{p-1}\eta$ in magnitude |
+All of these are proved in the real model, for every format with $p$ at least the value shown.
+
+| Kernel | Requires | Statement | Holds for |
+|---|---|---|---|
+| `neg_2`, `abs_2` | $x$ normalized | $z$ normalized; $z = -x$, $z = \lvert x\rvert$ exactly | $p \ge 1$ |
+| `sub_2_2`, `sub_2_1`, `sub_1_2` | operands normalized | that of the addition, for $x - y$ | $p \ge 3$ |
+| `lt`, `le`, `eq` (all forms) | operands normalized | the mask is the truth of the comparison of the real values | $p \ge 1$ |
+| `to_nearest_2` | $x$ normalized | $t = \mathrm{RN}(x)$ | $p \ge 1$ |
+| `to_down_2`, `to_up_2` | $x$ normalized | $t$ is the largest number of the format $\le x$; the smallest $\ge x$ | $p \ge 1$ |
+| `abs_upper_2` | $x$ normalized | $t$ is the smallest number of the format $\ge \lvert x\rvert$ | $p \ge 1$ |
+| `radd`, `rmul` | $a \ge 0$, $b \ge 0$ | $r \ge a + b$, $r \ge ab$; and $r$ exceeds the exact value by at most $\tfrac32$ gaps, where a gap is $r - \mathrm{pred}(r)$ | $p \ge 2$ |
+| `mul_pow2_2` | $x$ normalized, $c$ a power of two | $z$ normalized; $\lvert z - cx\rvert \le \eta$ | $p \ge 2$ |
+| `add_1_1`, `mul_1_1` | — | $s = \mathrm{RN}(a + b)$ with $\lvert s - (a + b)\rvert \le \frac{u}{1 + u}\lvert a + b\rvert$; $p = \mathrm{RN}(ab)$ with $\lvert p - ab\rvert \le \frac{u}{1 + u}\lvert ab\rvert + \tfrac12\eta$ | $p \ge 1$ |
+
+Notes on three rows:
+
+- **`radd`, `rmul`.** The requirement of nonnegative operands is new: every use in the Ball
+  kernels has it, and it gives $\tfrac32$ gaps, which tests reach exactly. For operands of any
+  sign the excess reaches 2 gaps in tests (below a negative power of two the gap toward zero is
+  half the gap away from it); that case is not claimed.
+- **`mul_pow2_2`.** Also proved, as a hand-written statement because the claims cannot express
+  its condition yet: $z = cx$ exactly when each of the two products is zero or at least
+  $2^{p-1}\eta$ in magnitude (`mul_pow2_2_exact`).
+- **`add_1_1`, `mul_1_1`** are the one-limb operations as kernels, so that the one-limb `Ball`
+  takes its constants from a proved bound like the two-limb one.
 
 Why comparing limbs in order is exact for two limbs: $x_0 = \mathrm{RN}(x)$ and rounding is
 monotone, so $x < y$ gives $x_0 \le y_0$, and when $x_0 = y_0$ the order is that of $x_1$ and
@@ -207,9 +232,18 @@ ball_scale_k(cx, rx, a) -> (cz, rz)           s1 = radd(t1, t2)
   rz = radd(t1, d)                          ball_neg_k, ball_sub_k: through neg and ball_add_k
 ```
 
-**Statement (containment), in the real model.** For finite operands with nonnegative radii, and
-for all real $x$, $y$ with $\lvert x - c_x\rvert \le r_x$ and $\lvert y - c_y\rvert \le r_y$:
-$\lvert (x \circ y) - c_z\rvert \le r_z$.
+**Statement (containment), in the real model, proved for all ten kernels.** For finite operands
+with nonnegative radii, and for all real $x$, $y$ with $\lvert x - c_x\rvert \le r_x$ and
+$\lvert y - c_y\rvert \le r_y$: $\lvert (x \circ y) - c_z\rvert \le r_z$; and for $k = 2$ the
+center $c_z$ is normalized. It holds from $p = 1$ for `ball_neg_k`, $p = 2$ for the one-limb
+kernels and `ball_scale_2`, $p = 3$ for `ball_add_2` and `ball_sub_2`, and $p = 4$ for
+`ball_mul_2`.
+
+In the formal model `U` and `V` are not opaque constants: they are defined as the proved bound
+rounded up, and the proof uses only that they are numbers of the format, nonnegative, and at
+least the exact quotient. That the literals in the C++ headers equal those definitions is checked
+by the generator's tests and, independently, by the oracle, which judges containment on the
+compiled code.
 
 *Why it holds.* For the sum, $\lvert x + y - c_z\rvert \le r_x + r_y + \lvert c_x + c_y - c_z\rvert$.
 The last term is the center kernel's error, at most $\mathrm{unit}\cdot\lvert c_x + c_y\rvert +

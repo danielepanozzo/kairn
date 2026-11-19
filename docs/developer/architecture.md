@@ -182,7 +182,7 @@ add_fast_2_2(x, y) -> z   JMP17 Alg. 5
   (sh, sl) = two_sum(x0, y0)
   v        = x1 + y1
   w        = sl + v
-  (z0, z1) = fast_two_sum(sh, w)     (or two_sum: decided by the exhaustive test, see below)
+  (z0, z1) = fast_two_sum(sh, w)
 ```
 
 | Kernel | Requires | Statement | Holds for | Status |
@@ -194,12 +194,12 @@ add_fast_2_2(x, y) -> z   JMP17 Alg. 5
 | `add_2_1` | $x$ normalized | $z$ normalized; $\lvert z - (x + a)\rvert \le 2u^2\lvert x + a\rvert$ | $p \ge 3$ | proved |
 | `mul_2_2` | $x$, $y$ normalized | $z$ normalized; $\lvert z - xy\rvert \le 4u^2\lvert xy\rvert + \tfrac32\eta$ | $p \ge 4$ | proved |
 | `mul_2_1` | $x$ normalized | $z$ normalized; $\lvert z - xa\rvert \le 2u^2\lvert xa\rvert + \eta$ | $p \ge 2$ | proved |
-| `two_prod_dekker` | no intermediate overflow | $p = \mathrm{RN}(ab)$; $\lvert p + e - ab\rvert \le \tfrac72\eta$; exact under the same condition as `two_prod` | | target |
-| `add_fast_2_2` | $x$, $y$ normalized | $z$ normalized; $\lvert z - (x + y)\rvert \le c\,u^2(\lvert x\rvert + \lvert y\rvert)$, $c \le 4$ to be determined | | target |
+| `split` | — | $a_h + a_l = a$ | $p \ge 4$ | proved |
+| `two_prod_dekker` | — | $p = \mathrm{RN}(ab)$; $\lvert p + e - ab\rvert \le \tfrac{13}{8}\eta$; exact under the same condition as `two_prod` | $p \ge 4$ | proved |
+| `add_fast_2_2` | $x$, $y$ normalized | $z$ normalized; $\lvert z - (x + y)\rvert \le 3u^2(\lvert x\rvert + \lvert y\rvert)$ | $p \ge 2$ | proved |
 
 "Proved" means: Rocq accepts a proof of the generated statement, and the audit finds only the
-four allowed axioms (`make -C proofs`). A target is what Kairn sets out to prove and is not a
-guarantee.
+four allowed axioms (`make -C proofs`). Every kernel of this table is proved.
 
 All statements are for every format with $p$ at least the minimum shown, for every $q_{\min}$,
 with ties to even and gradual underflow, and under the hypothesis that no operation overflows.
@@ -212,13 +212,24 @@ two numbers of the format rounds to the same number with and without gradual und
 products are new proofs; their underflow terms $\tfrac32\eta$ and $\eta$ are approached, and not
 exceeded, by exhaustive runs on toy formats.
 
-Still open, to be settled by exhaustive testing on toy formats before a proof is attempted:
-whether `add_fast_2_2` can end with `fast_two_sum` and still return a normalized result when the
-leading limbs cancel.
+Three points that were open are settled by proofs:
+
+- `add_fast_2_2` ends with `fast_two_sum` and its result is normalized, also when the leading
+  limbs cancel. Its bound is relative to $\lvert x\rvert + \lvert y\rvert$, not to
+  $\lvert x + y\rvert$: use it when the operands have the same sign, or when a bound of that
+  form is enough.
+- `split` and `two_prod_dekker` are proved from $p = 4$. Enumerating one small format each at
+  $p = 2$ and at $p = 3$ finds no failure; those precisions are not proved and not claimed. In
+  this model no
+  operation overflows, so they have no requirement here; the conditions under which their
+  product by the splitter does not overflow belong to the layer described next.
+- The underflow term of `two_prod_dekker` is $\tfrac{13}{8}\eta$, below the $\tfrac72\eta$ first
+  set as a target.
 
 The remaining Milestone 1 kernels (subtraction, comparisons, conversions, the directed-rounding
-primitives, `ldexp`, the treatment of non-finite values, and the `Ball` operations) are specified
-in [Milestone 1 statements](design/milestone1.md).
+primitives, scaling by a power of two, and the `Ball` operations) are stated in
+[Milestone 1 statements](design/milestone1.md), with the treatment of overflow and of non-finite
+values.
 
 ## The formal model
 
@@ -266,8 +277,8 @@ proof file contains `Admitted`, `admit`, `Axiom` or `Parameter`.
       "source": {"cite": "JMP17 Alg. 12; bound from MR22", "license": "algorithm: published; proof: MIT"},
       "flops": 9,
       "instances": {
-        "binary64": {"rel": "1/20282409603651670423947251286016", "abs": "..."},
-        "binary32": {"rel": "...", "abs": "..."}
+        "binary64": [{"rel": "1/20282409603651670423947251286016", "abs": "..."}],
+        "binary32": [{"rel": "...", "abs": "..."}]
       }
     }
   ]
@@ -289,7 +300,7 @@ proof file contains `Admitted`, `admit`, `Axiom` or `Parameter`.
       $\text{value} = 0$ or $\lvert\text{value}\rvert \ge 2^{2p-1}\eta$;
     - `leading_rounded`: output limb 0 equals $\mathrm{RN}(\text{value})$.
 - `instances` gives, per named format, `rel` $= c\,u^k$ and `abs` $= t\,\eta$ of each `error`
-  entry as exact fractions (a list, in the order of the entries, when a kernel has several). For
+  entry as exact fractions (a list, in the order of the entries). For
   a named format the oracle uses these numbers; it also evaluates `c` and `t` itself, which is
   what it does for toy formats, and refuses a kernel on which the two disagree.
 - `status` is `proved` only when the audit has passed for that kernel.
@@ -304,7 +315,9 @@ in a direction, upper bounds and balls, so the vocabulary grows. Everything abov
 - **`value`** is an expression over the inputs: names, `+`, `-`, `*`, unary minus, `abs( )` and
   parentheses. Examples: `x-y`, `-x`, `abs(x)`, `c*x`.
 - **`requires`** gains `power_of_two(NAME)` and `nonneg(NAME)`.
-- **`instances`** is always a list, one object per `error` entry, in order.
+- **`instances`** holds, for each named format, a list with one object per `error` entry, in
+  order; the list is empty for a kernel without `error` entries.
+- **`min_precision`** is an integer for every proved kernel: the smallest $p$ of its theorem.
 - **`ensures`** gains:
 
 | Kind | Fields | Meaning |
