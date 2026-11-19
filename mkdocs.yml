@@ -1,0 +1,106 @@
+# The documentation site, built from docs/ (docs/developer/documentation.md). From the repository
+# root, with docs/requirements.txt installed (in .venv/, for example):
+#
+#   mkdocs serve            # http://127.0.0.1:8000, rebuilt on every change
+#   mkdocs build --strict   # writes site/; a broken link or anchor, or a page missing from nav, fails
+
+site_name: Kairn
+site_description: Floating-point expansions with interval and ball arithmetic and machine-checked error bounds (in development)
+repo_name: danielepanozzo/kairn
+repo_url: https://github.com/danielepanozzo/kairn
+edit_uri: edit/main/docs/
+docs_dir: docs
+
+exclude_docs: |
+  /requirements.txt
+  /tools/
+
+theme:
+  name: material
+  icon:
+    logo: material/sigma
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+    - content.action.edit
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  # Mathematics is written as $...$ and $$...$$ only, the two forms GitHub renders as well; MathJax
+  # typesets what arithmatex marks (docs/assets/mathjax.js).
+  - pymdownx.arithmatex:
+      generic: true
+      inline_syntax: [dollar]
+      block_syntax: [dollar]
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+      dedent_subsections: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_javascript:
+  - assets/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started/index.md
+  - Developer guide:
+      - Architecture: developer/architecture.md
+      - Documentation: developer/documentation.md
+      - Design notes:
+          - Phase 0 report:
+              - developer/design/phase0/index.md
+              - Numbers: developer/design/phase0/numbers.md
+              - Operations: developer/design/phase0/operations.md
+              - Environment: developer/design/phase0/environment.md
+              - Verification: developer/design/phase0/verification.md
+              - Library: developer/design/phase0/library.md
+              - Plan: developer/design/phase0/plan.md
+              - Decisions: developer/design/phase0/decisions.md
+              - References: developer/design/phase0/references.md
+          - The original brief: developer/design/brief.md

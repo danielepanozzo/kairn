@@ -10,7 +10,7 @@ machine-checked proof, and the shipped code is generated from the same source th
 are about. Namespace `kairn`, CMake target `kairn::kairn`.
 
 ## Number types
-- Expansion<T, k>, T ∈ {float, double}. Baked-in k: 1, 2, 3, 4, 8 (double); 1, 2, 3, 4
+- `Expansion<T, k>`, T ∈ {float, double}. Baked-in k: 1, 2, 3, 4, 8 (double); 1, 2, 3, 4
   (float). Plus a runtime-k generic path up to the exponent-range limit.
 - k = 1 is a first-class instance with the same API and no overhead over plain T, so a
   client templated on k runs its first pass at k = 1 and reruns at k = 2, 4, 8.
@@ -19,11 +19,11 @@ are about. Namespace `kairn`, CMake target `kairn::kairn`.
 - Precision depends on magnitude (the tail underflows: ~20 double / ~6 float components
   near |x| = 1). Document effective precision per (T, k) and magnitude; every bound
   includes an absolute (underflow) term.
-- Interval<T, k>: inf-sup, k-number endpoints, modeled on IEEE 1788.1 set-based semantics:
+- `Interval<T, k>`: inf-sup, k-number endpoints, modeled on IEEE 1788.1 set-based semantics:
   empty and unbounded intervals, defined division by intervals containing 0, no
   decorations. Comparisons are three-valued.
-- Ball<T, k>: k-number center + one low-precision radius, rounded upward.
-- BallVector<T, k>: N k-number centers sharing one radius (max-norm ball), for linear
+- `Ball<T, k>`: k-number center + one low-precision radius, rounded upward.
+- `BallVector<T, k>`: N k-number centers sharing one radius (max-norm ball), for linear
   algebra. Define its semantics precisely in Phase 0.
 
 ## What "correct" means
@@ -136,7 +136,7 @@ that, with no client-specific code in Kairn:
   constructor from limbs (precondition: normalized), so clients can move them through
   their own storage, GPU buffers and warp shuffles.
 - One scalar-traits interface, `kairn::traits<X>`, specialized for float, double and every
-  Expansion<T, k>: limb type, k, precision, and the error-model constants below, so client
+  `Expansion<T, k>`: limb type, k, precision, and the error-model constants below, so client
   code reads the same for all of them.
 - Error model exported as data. For every op and accuracy variant, a proven bound in
   standard-model form: |computed − exact| ≤ unit·|exact| + tiny (or ≤ unit·(|a| + |b|) +
@@ -154,7 +154,7 @@ that, with no client-specific code in Kairn:
   client's own kernels, not only through Kairn's batch launches. Device code has no
   recursion, no allocation and a small, fixed stack. Provide warp-level helpers for CUDA
   (shuffle, broadcast, min/max reductions of Expansion, Interval and Ball).
-- Interval<T, k> and Ball<T, k> share one enclosure interface (lower, upper as k-numbers,
+- `Interval<T, k>` and `Ball<T, k>` share one enclosure interface (lower, upper as k-numbers,
   directed conversions of the bounds to T, midpoint, radius, contains, certainly
   positive/negative/zero, hull, intersection, split), plus conversions both ways
   (interval → ball, ball → interval, outward), so client algorithms can be generic over

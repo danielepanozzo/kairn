@@ -1,0 +1,5 @@
+# The documentation site's build (mkdocs.yml). From the repository root:
+#   python3 -m venv .venv && .venv/bin/pip install -r docs/requirements.txt
+mkdocs==1.6.1
+mkdocs-material==9.8.1
+pymdown-extensions==13.1

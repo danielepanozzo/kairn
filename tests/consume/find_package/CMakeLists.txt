@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.21)
+project(kairn_consume CXX)
+find_package(kairn REQUIRED)
+add_executable(consume ../consume.cpp)
+target_link_libraries(consume PRIVATE kairn::kairn)

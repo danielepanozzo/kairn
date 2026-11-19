@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""check_links.py [DIR]: every relative Markdown link under DIR (default: docs) points at an
-existing file and, when it has a fragment, at a heading or an explicit <a id> of that file.
+"""check_links.py [PATH...]: every relative Markdown link in the .md files at or under each PATH
+(default: docs and README.md, from the repository root) points at an existing file and, when it
+has a fragment, at a heading or an explicit <a id> of that file.
 
 Heading anchors are computed the way GitHub does, and the script also fails when MkDocs' slug of
 a linked heading would differ (headings with '=', '<', or a hyphen next to a space), so that a
-page reads the same in both. `mkdocs build --strict` will replace this once the site exists."""
+page reads the same in both. It complements `mkdocs build --strict`, which checks links and
+anchors as the site resolves them but not as GitHub does, and it needs nothing but Python."""
 import os, re, sys
-root = sys.argv[1] if len(sys.argv) > 1 else "docs"
+roots = sys.argv[1:] or ["docs", "README.md"]
 def github_slug(h):
     h = re.sub(r"`|\*|\$", "", h.strip().lower())
     return re.sub(r" ", "-", re.sub(r"[^\w\- ]", "", h))
@@ -14,7 +16,8 @@ def mkdocs_slug(h):
     h = re.sub(r"`|\*|\$", "", h.strip().lower())
     return re.sub(r"[-\s]+", "-", re.sub(r"[^\w\s-]", "", h)).strip("-")
 anchors, portable, errors = {}, {}, []
-files = [os.path.join(d, f) for d, _, fs in os.walk(root) for f in fs if f.endswith(".md")]
+files = [p for r in roots for p in ([r] if os.path.isfile(r) else
+         [os.path.join(d, f) for d, _, fs in os.walk(r) for f in fs if f.endswith(".md")])]
 for f in files:
     text = open(f).read()
     text_nocode = re.sub(r"```.*?```", "", text, flags=re.S)

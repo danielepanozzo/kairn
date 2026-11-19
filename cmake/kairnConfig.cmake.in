@@ -1,0 +1,5 @@
+# The package configuration of an installed Kairn: find_package(kairn) defines kairn::kairn.
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/kairnTargets.cmake")
+check_required_components(kairn)
