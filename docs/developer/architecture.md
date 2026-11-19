@@ -140,7 +140,10 @@ R3 was added in Milestone 1, after a test of the public headers found the failur
 with GCC 13 and 16 at their default setting, with Apple clang on AArch64 under
 `-ffp-contract=fast` and with MSVC under `/fp:contract`, `x + a * b`, `x - a * b` and `a * b - x` for a 2-limb `x` differed from the same
 operation on the rounded product in every one of 200 000 cases chosen to cancel; with the guard,
-in none, on those compilers and on the settings that do not contract. The guard relies on what
+in none, on those compilers and on the settings that do not contract. Clang 18 on x86-64 under
+`-ffp-contract=fast` left those three forms alone and fused the radius and the one-limb center
+given to a `Ball` instead; the guard covers these too
+(`tests/api/boundary.cpp`, with a control that fails when the guard is taken out). The guard relies on what
 the opaque product already relies on: the compiler honors the sign of zero, so it may not remove
 `a + 0`. Until the generator emits `guard` and checks the rule, the public headers apply it by
 hand in one helper.

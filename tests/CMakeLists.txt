@@ -475,3 +475,4 @@ add_test(NAME consume.find_package
     "${CMAKE_CURRENT_SOURCE_DIR}/consume/find_package" "${_consume_dir}/find_package"
     ${_build_and_test} ${_build_options} "-DCMAKE_PREFIX_PATH=${_consume_dir}/prefix" ${_run})
 set_tests_properties(consume.find_package PROPERTIES FIXTURES_REQUIRED kairn_installed)
+add_subdirectory(api)

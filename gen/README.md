@@ -25,6 +25,8 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `include/kairn/gen/scalar.hpp` | Every kernel for `double` and `float`, in `kairn::gen` |
 | `include/kairn/gen/avx2.hpp` | Every kernel for `__m256d` and `__m256` (4 doubles, 8 floats); refuses a target without AVX2 and FMA |
 | `include/kairn/gen/neon.hpp` | Every kernel for `float64x2_t` and `float32x4_t` (2 doubles, 4 floats); AArch64 only |
+| `include/kairn/gen/bounds.hpp` | Per kernel and limb type, whether it is proved and, only then, the constants of its error claim rounded up (`unit`, `tiny`, `unit_computed`, `tiny_computed`) and its form; what the public headers gate on and export through `kairn::traits` |
+| `include/kairn/gen/selftest.hpp` | Every kernel on fixed operands, with the results the interpreter computes: the stored bit patterns of `kairn::self_test()` |
 | `gen/claims.json` | What every kernel claims, with the constants per format as exact fractions |
 | `gen/tests/runner_kernels.inc` | The table of kernels of the C++ runners `gen/tests/runner.cpp` and `packed_runner.cpp` |
 
@@ -44,6 +46,7 @@ exempt from the non-finite cone. `proofs/gen` is mapped to the logical path `Kai
 | `kairn_gen/simd.py` | The AVX2 and NEON printers (trusted; tested lane by lane against the scalar code) |
 | `kairn_gen/consts.py` | The exact value of every constant in any format, `unit_computed(K)` and `tiny_computed(K)` included |
 | `kairn_gen/claims.py` | `gen/claims.json` |
+| `kairn_gen/library.py` | `bounds.hpp` and `selftest.hpp`, for the hand-written public headers |
 | `kairn_gen/interp.py` | The interpreter: exact integer arithmetic on any format `(p, qmin, qmax)` |
 | `kairn_gen/build.py` | What `build` writes and `check` compares |
 
@@ -160,6 +163,11 @@ constant-evaluation variants (same signature, no FMA), and of computed constants
   Rosetta where it runs AVX2); special operands sit in one lane of a register at a time and at
   random, and every build must print exactly what the scalar runner built with the same flags
   prints;
+- the headers for the library (`test_library.py`): every constant of `bounds.hpp` is the smallest
+  number of its type not below the exact rational, checked with fractions and by stepping bit
+  patterns; unverified kernels have no constants; every self-test case satisfies its requirements
+  and stores what the interpreter computes; both headers compile with each compiler, the stored
+  results match the compiled kernels, and a stored result one unit off is caught;
 - the statements: every claim, in exact arithmetic, on every operand of formats with precisions
   1 to 6 (a sample where there are too many), with nothing overflowing (the Rocq statement, which
   also says that every output limb is a number of the format) and in the format itself whenever
