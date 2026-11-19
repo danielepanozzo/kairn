@@ -101,6 +101,7 @@ They judged the kernel in the extended domain, infinite and NaN operands include
 | `binary64` (`double`), compiled: 60 runners on 3 machines | 110 400 000 | 0 | 0 |
 | `binary32` (`float`), compiled: 60 runners on 3 machines | 110 400 000 | 0 | 0 |
 | toy formats, every operand: 5 domains of 5 formats | 6 712 620 | 0 | 0 (`fp:6:-8:-1`) |
+| toy formats, every operand, supplementary run: 1 domain of 1 format | 911 | 0 | 0 (`fp:1:-3:4`) |
 
 The slack is how far the returned radius is above the smallest radius that encloses the exact set, in units in the last place of the radius: below 1, a radius one unit smaller would not enclose it.
 

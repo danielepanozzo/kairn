@@ -97,6 +97,7 @@ The latest brute-force runs, from the stored summaries in [`results/milestone1/b
 | `binary64` (`double`), compiled: 60 runners on 3 machines | 94 270 848 | 0 | 1 − ε, ε < 10⁻⁹ | no |
 | `binary32` (`float`), compiled: 60 runners on 3 machines | 94 996 140 | 0 | 0.9999999404 | no |
 | toy formats, every operand: 6 domains of 6 formats | 9 488 650 | 0 | 0.999939 (`fp:7:-20:-6`) | no |
+| toy formats, every operand, supplementary run: 1 domain of 1 format | 625 | 0 | 0.75 (`fp:1:-12:-1`) | no |
 
 ## Not claimed
 

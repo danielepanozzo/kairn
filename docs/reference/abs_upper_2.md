@@ -90,6 +90,7 @@ They judged the kernel in the extended domain, infinite and NaN operands include
 | `binary64` (`double`), compiled: 60 runners on 3 machines | 112 800 000 | 0 |
 | `binary32` (`float`), compiled: 60 runners on 3 machines | 112 800 000 | 0 |
 | toy formats, every operand: 5 domains of 5 formats | 6 159 386 | 0 |
+| toy formats, every operand, supplementary run: 1 domain of 1 format | 248 | 0 |
 
 ## Not claimed
 

@@ -103,6 +103,7 @@ The latest brute-force runs, from the stored summaries in [`results/milestone1/b
 | `binary64` (`double`), compiled: 60 runners on 3 machines | 114 970 644 | 0 | 1 | yes |
 | `binary32` (`float`), compiled: 60 runners on 3 machines | 114 976 932 | 0 | 1 | yes |
 | toy formats, every operand: 5 domains of 5 formats | 8 699 593 | 0 | 1 (`fp:7:-14:2`) | yes |
+| toy formats, every operand, supplementary run: 1 domain of 1 format | 619 | 0 | 1 (`fp:1:-7:4`) | yes |
 
 ## Not claimed
 

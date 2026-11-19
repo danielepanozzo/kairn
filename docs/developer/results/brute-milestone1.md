@@ -13,7 +13,9 @@ and no pipeline failed or timed out. The code is the final code of Milestone 1: 
 them in the extended domain of infinities and NaN, judged there on infinite and NaN operands too.
 A [supplementary run](#supplementary-run-b4-on-the-full-ball-kernels), at a later commit whose
 full Ball kernels claim a condition more (B4), judged that condition on those eight kernels, with
-no failure either.
+no failure either; [another](#supplementary-run-precision-1) enumerated the 26 kernels whose
+claims hold from precision 1 in formats of that precision, which the plan of the main runs left
+out, with no failure.
 
 **How close the bounds came.** Four claims are attained exactly, by some case of the runs: the
 relative bound $u/(1+u)$ of `add_1_1` (a rounding to nearest), the underflow term $\eta/2$ of
@@ -105,7 +107,7 @@ per machine; every runner of a machine judged the same cases, as in the quick ti
 
 **Interpreter.** The generator's interpreter on every operand of 328 toy-format domains: for each
 kernel, the formats of precision `min_precision` and `min_precision + 1` (2 and 3 when
-`min_precision` is 1, [below](#what-was-not-run-and-why)) in the quick tier's exponent range
+`min_precision` is 1; precision 1 itself in a [supplementary run](#supplementary-run-precision-1)) in the quick tier's exponent range
 (for the extended domain, the quick tier's number of exponents in the shape
 $q_{\min} + q_{\max} = 3 - 2p$ of the IEEE-model statements), the quick tier's format one and two
 bits more precise, and one or two other exponent ranges; for the two-limb balls with two
@@ -2025,6 +2027,86 @@ smallest radius slack, gaps, interpreter 1.75 (fp:3:-3:0, every operand):
   ball_sub_2_full fp:3:-3:0 -0x1.cp+2 -0x1.8p-2 0x1p-2 -0x1.cp+2 -0x1.8p-2 0x1.8p+1 #exhaustive:4778 -> 0x0p+0 0x0p+0 0x1.4p+2
 ```
 
+## Supplementary run: precision 1
+
+Twenty-six kernels claim `min_precision` 1: their statements are proved for every precision
+from 1 bit up. The oracle reads formats of precision 1 since commit `2bfe39d`, but the plan of
+the runs above was written before that and started those kernels' enumerations at precision 2.
+A supplementary run made the 26 enumerations of precision 1 that the plan has now: the
+interpreter on every operand, on the Mac, with the code of commit `f7e0b6d` and the driver of
+commit `890d061` (a few seconds). Its summary is
+[`macos-arm64-p1.json`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone1/brute/supplementary).
+
+**No failure.** 278 652 cases, of which 146 280 judged (the others end in a non-finite result,
+nearly all of them an infinite radius of `ball_add_1`, `ball_sub_1` or `ball_mul_1`), no
+failure and no invalid case; every enumeration was complete and passed the guards. The bound of
+`add_1_1` is attained here too (at precision 1, $u/(1+u) = 1/3$); `mul_1_1` came to 0.75 of
+its bound; the smallest slack of a radius was 1.3125 gaps for `ball_add_1` and `ball_sub_1`,
+1.46875 for `ball_scale_1` and 1.625 for `ball_mul_1`.
+
+| Kernel | Enumeration | Cases | Judged | Failed |
+|---|---|---|---|---|
+| `abs_2` | `fp:1:-5:6` | 248 | 248 | 0 |
+| `abs_upper_2` | `fp:1:-5:6` | 248 | 248 | 0 |
+| `add_1_1` | `fp:1:-7:4` | 625 | 619 | 0 |
+| `ball_add_1` | `fp:1:-5:5` | 76 176 | 38 639 | 0 |
+| `ball_make_1` | `fp:1:-3:4` | 400 | 400 | 0 |
+| `ball_make_2` | `fp:1:-2:3` | 896 | 896 | 0 |
+| `ball_mul_1` | `fp:1:-6:5` | 105 625 | 48 733 | 0 |
+| `ball_neg_1` | `fp:1:-5:6` | 327 | 327 | 0 |
+| `ball_neg_2` | `fp:1:-3:4` | 911 | 911 | 0 |
+| `ball_scale_1` | `fp:1:-3:2` | 1 183 | 783 | 0 |
+| `ball_sub_1` | `fp:1:-5:5` | 76 176 | 38 639 | 0 |
+| `eq_2_1` | `fp:1:-2:3` | 896 | 896 | 0 |
+| `eq_2_2` | `fp:1:-2:3` | 3 136 | 3 136 | 0 |
+| `le_1_2` | `fp:1:-2:3` | 896 | 896 | 0 |
+| `le_2_1` | `fp:1:-2:3` | 896 | 896 | 0 |
+| `le_2_2` | `fp:1:-2:3` | 3 136 | 3 136 | 0 |
+| `lt_1_2` | `fp:1:-2:3` | 896 | 896 | 0 |
+| `lt_2_1` | `fp:1:-2:3` | 896 | 896 | 0 |
+| `lt_2_2` | `fp:1:-2:3` | 3 136 | 3 136 | 0 |
+| `make_2` | `fp:1:-19:20` | 84 | 84 | 0 |
+| `make_2_limbs` | `fp:1:-5:6` | 248 | 248 | 0 |
+| `mul_1_1` | `fp:1:-12:-1` | 625 | 625 | 0 |
+| `neg_2` | `fp:1:-5:6` | 248 | 248 | 0 |
+| `to_down_2` | `fp:1:-5:6` | 248 | 248 | 0 |
+| `to_nearest_2` | `fp:1:-5:6` | 248 | 248 | 0 |
+| `to_up_2` | `fp:1:-5:6` | 248 | 248 | 0 |
+
+**Infinite radii at precision 1, and what was checked about them.** At precision 1, $u = 1/2$,
+and the constants of the radius ([the radius, second design](../design/milestone1.md#the-radius-second-design))
+are large: the factor $\mathrm{up}((1+u)^3)$ of a sum or a scaling is 4, that of a product,
+$\mathrm{up}((1+u)^5)$, is 8, and the constant $H$ of a sum is $8\eta$. A first attempt, in the
+formats the plan then had for precision 1 (`fp:1:-2:2` for the sums, whose largest number is 4
+and whose $H$ is 2; `fp:1:-2:3` for the product), ended in a finite ball for 3.8 % of the cases
+of each sum and 5.3 % of those of the product, and the oracle showed 10, 10 and 423 of the
+infinite radii as *suspicious*: its test calls a non-finite result suspicious when the operands
+and the exact set are within a quarter of the largest number. No claim was violated (the claims
+of these kernels say nothing of a result that is not finite), but a suspicious result fails a
+run until it is explained. Two things were done.
+
+- **The exact test.** `tests/brute/widen.py` puts every operand of a format through the
+  interpreter twice: in the format, and in one of the same precision and smallest exponent with
+  many more exponents above, where the constants are the same and nothing overflows. If the
+  infinite radii are overflows and nothing else, the result in the format is infinite exactly
+  when the wide one exceeds the format's largest number, and equal to the wide one otherwise.
+  This held for every case: of `ball_add_1` and `ball_sub_1` at `fp:1:-2:2` (4 356 cases
+  each, 166 finite) and at `fp:1:-5:5` (76 176 each, 38 639 finite), of `ball_mul_1` at
+  `fp:1:-2:3` (8 281, 439 finite) and at `fp:1:-6:5` (105 625, 48 733 finite), and of
+  `ball_scale_1` at `fp:1:-3:2` (1 183, 783 finite). The suspicious results are overflows of
+  the radius, which the oracle's test of a quarter does not foresee when the factor is 4 and $H$
+  is half of the largest number, or when the factor is 8.
+- **The plan.** The sums now have `fp:1:-5:5` at precision 1, where half of the cases end as a
+  finite ball and the oracle shows nothing suspicious, and the product `fp:1:-6:5` (46 %). The
+  product keeps suspicious results in any exponent range, since its factor of 8 is above the 4
+  of the oracle's test: 376 here. Its run at precision 1 is the one place, with `split` and
+  `two_prod_dekker`, where the driver does not fail on them (`RADIUS_OVERFLOW` in
+  `brute.py`), and `widen.py` is the test that stands in their place. The numbers above are of
+  the run with this plan.
+
+Precision 1 was not run through the compiled kernels: no type of the library has it, and the
+compiled runners know `binary64` and `binary32` only.
+
 ## What was not run, and why
 
 - **$10^8$ judged results for eleven kernels and formats**: the aim of $10^8$ cases was reached
@@ -2033,12 +2115,6 @@ smallest radius slack, gaps, interpreter 1.75 (fp:3:-3:0, every operand):
   85 to 99 million: their non-finite results are not judged ([above](#the-aim-a-hundred-million-cases-per-kernel-and-format)).
   The driver extends a run where it stopped (`run` again on the same work directory with a larger
   budget).
-- **Precision 1.** Twenty-six kernels claim `min_precision` 1. The oracle reads formats of
-  precision 1 since commit `2bfe39d`, but the plan of these runs was written before it and
-  started their enumerations at precision 2, so their claims at precision 1 were tested in no
-  format here. By hand, every operand of `add_1_1` at `fp:1:-4:3` (289 cases) through the
-  interpreter and the oracle gave no failure. The driver now plans precision 1 as well (commit
-  `9f0577a`); a run of those enumerations was not made for this page.
 - **Every operand of the quick tier's formats of the two-limb balls with two operands**: 140
   million combinations each for `ball_add_2` and `ball_sub_2` at `fp:3:-3:2`, 12.4 billion for
   `ball_mul_2` at `fp:4:-5:1`. In their place, every operand of formats of the same precision
