@@ -4,7 +4,8 @@ The test oracle of Kairn: it decides, in exact arithmetic, whether results produ
 runner satisfy the claims in `gen/claims.json`. It is Python 3, standard library only, and shares
 no code with the generator or the library; it reads `gen/claims.json` as data and nothing else.
 The contract it implements is [docs/developer/architecture.md](../docs/developer/architecture.md)
-("Number formats", "Claims", "The line protocol").
+("Number formats", "Claims", "Claims of the second wave", "Claims of the non-finite layer", "The
+line protocol").
 
 Every verdict is decided with Python integers. A limb of a format with smallest subnormal
 $\eta = 2^{q_{\min}}$ is stored as the integer $N$ with value $N\eta$; sums of limbs are integers
@@ -20,9 +21,11 @@ python3 oracle/kairn-oracle selftest [--quick]               the oracle's own te
 ```
 
 Claims are read from `gen/claims.json` of this repository unless `--claims FILE` says otherwise.
-The selftest uses its own hand-written fixtures, `oracle/selftest/claims-wave1.json` and
+The selftest uses its own hand-written fixtures, `oracle/selftest/claims-wave1.json`,
 `oracle/selftest/claims-wave2.json` (the kernels of [Milestone 1
-statements](../docs/developer/design/milestone1.md)), so that it does not depend on the
+statements](../docs/developer/design/milestone1.md)) and `oracle/selftest/claims-wave3.json`
+(the non-finite layer: the full kernels with their cores, the full Ball kernels, the
+constructors, and the kernels that gain the extended domain), so that it does not depend on the
 generator.
 
 ## gen
@@ -71,6 +74,22 @@ each kernel a family from its claims, with the strata `uniform`, `underflow`, `o
 | scale | a `power_of_two()` input | `into` and `outof` (scalings into and out of the subnormal range); `halfscaled` ($c x_1$ rounding to exactly half a gap of $c x_0$) |
 | ball | `encloses` claims | `radii` (zero, $\eta$, subnormal, tiny, about an ulp of the center, comparable, much wider than the center, huge); `wide` (small centers, wide radii); `exact` (zero radii, inexact centers); `centerpow2` (centers whose sum or product is a power of two); `cancel` |
 
+A kernel of the extended domain (`"domain": "extended"`, the non-finite layer) keeps the strata
+of its family, drawn from a finite view of the kernel (`canonical(x)` read as `normalized(x)`,
+`ball(c, r)` as a normalized center and `nonneg(r)`, the core's entries in place of `extends`),
+and gets strata of its own, each coming round twice per cycle (`gen3.py`):
+
+| Stratum | Kernels | Operands |
+|---|---|---|
+| `nonfinite` | all | a finite case of any stratum with a random nonempty set of operands replaced: $\pm\infty$ or NaN for a limb, $(\pm\infty, \pm 0)$ or (NaN, NaN) for a 2-limb operand, $+\infty$ or NaN under `nonneg()`, the whole line or the empty set for a ball (a power of two stays finite) |
+| `zeroinf` | value or set with a product | one operand infinite (sometimes NaN, or a whole line), every other a zero of random sign, a ball the exact zero ball: the $0 \cdot \infty$ corners |
+| `edge` | `extends` | finite operands at which the core may overflow: leading limbs in the top two binades with random signs (so cancelling and not), $\Omega$ as either operand; for products, products near the overflow threshold and $\Omega$ times about one; a power of two that brings the other operand to the threshold |
+| `threshold` | a `finite_when` condition | operands at each condition $\lvert E\rvert \le 2^{q_{\max}+p+e}$: for a name, the threshold itself with a tail toward zero, or its predecessor; for a product, the second factor rounded down from the threshold over the first; a quarter of the cases just outside one condition |
+| `ballstates` | `encloses` | each ball finite, the whole line or the empty set; scalars not finite a third of the time |
+| `zerowhole` | `encloses` | an exact zero ball (or a ball centered at zero) against the whole line; a zero ball against a scalar that is not finite; the whole line against a zero scalar |
+| `hugeradius` | `encloses` | finite balls with radii in the top binades |
+| `badradius` | `makes_ball` | radii negative, $-\infty$, NaN, $+\infty$, zero, $\eta$, huge or ordinary; centers not finite a quarter of the time |
+
 **Exhaustive mode** (`--exhaustive`) enumerates the product of the operand domains: every number
 of the format for a 1-limb input (one zero), every normalized pair for a 2-limb input, 0 and 1
 for a mask; `nonneg()` and `power_of_two()` remove the operands they exclude from the domain of
@@ -82,6 +101,13 @@ by skipping the indices it excludes. Restrictions shrink a domain:
 - `NAME.sign=+` or `-` keeps $x_0 \ge 0$ or $x_0 \le 0$;
 - `NAME.in=V1/V2/...` keeps operands whose leading limb is one of the listed literals (radii
   of the Ball kernels, for example `rx.in=0x0p+0/0x1p-3/0x1p-1`).
+
+In the extended domain each domain includes the non-finite values of its operand: $+\infty$,
+$-\infty$ and NaN for a one-limb operand; $(+\infty, 0)$, $(-\infty, 0)$ and (NaN, NaN) for a
+canonical one; $+\infty$ and NaN under `nonneg()` (a power of two stays finite). A ball, its
+center and radius together, is one operand: every canonical finite center with every finite
+nonnegative radius, the whole line (center 0, radius $+\infty$) and the empty set. Restrictions
+shrink the finite part of a domain only; the non-finite values are always enumerated.
 
 The generator writes a header and a trailer comment around its lines:
 
@@ -146,6 +172,70 @@ The exit status is 0 when nothing failed; 1 on any failure, stream error or kern
 cannot be read; 2 on a usage error or a claims file that cannot be read at all. `--expect-valid`
 also fails on invalid cases (to test a generator).
 
+### The extended domain
+
+A kernel with `"domain": "extended"` is judged by `extended.py`, and every completed line of it
+is judged: nothing is "non-finite, not judged". Steps 1 and 2 are as above; then:
+
+3. **Requirements**: every input limb is a number of the format, $+\infty$, $-\infty$ or NaN
+   (anything else is invalid); `canonical(x)`: finite and normalized, or $(\pm\infty, \pm 0)$, or
+   every limb a NaN; `ball(c, r)`: a canonical finite center with a finite $r \ge 0$, or center 0
+   and $r = +\infty$, or every limb a NaN; `nonneg(r)`: $r \ge 0$, $+\infty$ or NaN;
+   `power_of_two(c)`: a finite power of two. A one-limb input with no requirement is any value.
+   A line outside them is **invalid**, never passed.
+4. Every output limb must be a number of the format, an infinity or a NaN, and every mask `0` or
+   `1`; otherwise **failure**.
+5. Every entry, in the extended reals (a finite value is an integer at a known scale; $\infty -
+   \infty$ and $0 \cdot \infty$ are NaN, as in IEEE 754). Each statement that fails is counted
+   under its name (`failed F4`, `failed B2`, ...), once per line:
+    - `extends` (F1 to F5 of milestone1.md): **F1** the output is canonical; **F2** if $w_0$ is
+      finite, every operand is finite and every entry of the core holds (the core's entries are
+      judged as for the core itself, with statistics of their own, labelled `F2, core K: ...`);
+      **F3** if every operand is finite and the `finite_when` list is not empty and every
+      condition holds, $w_0$ is finite; **F4** if every operand is finite and $w_0$ is not, $w$ is
+      $(\pm\infty, 0)$ with the sign of the exact value (a zero value has no such sign: failure);
+      **F5** if an operand is not finite, $w$ is the canonical form of `lead` applied by IEEE 754
+      to the leading limbs in input order. An empty `finite_when` claims nothing about when the
+      result is finite.
+    - `encloses` (B1 to B4): **B1** the result is a canonical ball; then **B2** it is empty
+      exactly when a ball operand is empty (a NaN radius); **B3** if it is a finite ball, every
+      ball operand is finite, every scalar of the set is finite, and the set is enclosed (as
+      above); **B4** as F3, with a finite ball. The whole line contains everything.
+    - `represents`: the output is canonical and is the value exactly ($\pm\infty$ as
+      $(\pm\infty, 0)$, NaN as all NaN).
+    - `makes_ball`: empty when the given radius is NaN or negative ($-\infty$ included);
+      otherwise the whole line when the given center or radius is not finite; otherwise the
+      given center and radius.
+    - `normalized`, `error`, `leading_rounded`: the output is canonical; the rest applies when
+      every operand and the output are finite.
+    - `predicate`: the relation in the extended reals, false when either side is a NaN.
+    - `rounded`: for finite operands the rounding with overflow (nearest: beyond the threshold;
+      down: below $-\Omega$ gives $-\infty$, above $\Omega$ gives $\Omega$; up likewise); a
+      non-finite operand gives the value itself in the extended reals ($\lvert-\infty\rvert$ for
+      `abs_upper_2`).
+    - `upper`: NaN exactly when the value is (a NaN operand, $0 \cdot \infty$); otherwise not
+      below the value, and `gaps` applies when the output is finite.
+
+   **Suspicious**, as in the finite layer, and a failure only with `--fail-on-suspicious`: a
+   non-finite result of `extends`, `normalized`, `error` or `upper` on finite operands when every
+   operand and the exact value are below $\Omega/4$; and a canonical result of `normalized` or
+   `error` whose value is not the kernel's value in the extended reals when an operand is not
+   finite (the claim says only "canonical" there). A whole line from finite operands is never
+   suspicious: the radius steps reach $+\infty$ far below $\Omega$ on small formats (at $p = 2$
+   a set within $\pm 1.25$ becomes the whole line with $\Omega = 6$).
+
+Statistics of the extended domain, per entry: the classes (`class F2: finite operands, finite
+result`, `class F4: finite operands, non-finite result`, `class F5: a non-finite operand`;
+`result: finite ball`, `result: whole line`, `result: empty set`; `given: ...` for
+`makes_ball`; `value finite / infinite / NaN` for `represents`), how often F3 and B4 applied,
+and, to choose `finite_when` thresholds:
+
+- for results that are not finite on finite operands, the smallest $\max\lvert\text{leading
+  limb}\rvert / 2^{q_{\max}+p}$ and $\lvert\text{value}\rvert / 2^{q_{\max}+p}$ (for a ball also
+  the largest end of the set over $2^{q_{\max}+p}$), with the lines that attain them;
+- for finite results on finite operands, the largest of the same quotients;
+- for `encloses` with a finite result, the slack statistics above.
+
 ### Statistics
 
 Per (kernel, format, tag) and aggregated per (kernel, format): cases, judged, failed, invalid,
@@ -206,6 +296,23 @@ B.json ...` merges summaries (counts add, maxima combine, coverage ranges unite)
   kernels are still judged. A file that is not JSON or not schema 1 is an error (exit 2). Kernel
   fields outside the documented ones are reported as warnings. `check` with no input lines is a
   validation of a claims file.
+- The non-finite layer: `domain` is `finite` (also when absent) or `extended`. In the extended
+  domain `requires` adds `canonical(NAME)` (a 2-limb input) and `ball(CENTER, RADIUS)` (a
+  one-limb radius, inputs in at most one ball) and refuses `normalized()` and `abs_ge()`; every
+  input of two limbs must be canonical or a ball's center; every ball of an `encloses` set must
+  have its `ball()` requirement; `finite_when` is required in `extends` and in `encloses`, a
+  list of `{"abs_le": EXPR, "exp": E}` with EXPR over the limb inputs and E an integer. Outside
+  the extended domain `canonical()`, `ball()`, `finite_when`, `extends`, `represents` and
+  `makes_ball` are refused. `extends` names a `core` that must exist, be readable, be of the
+  finite domain, have the same inputs (names and limbs), outputs of the same shape (matched by
+  position), the kernel's requirements with `normalized` for `canonical`, the same value (as a
+  polynomial in the inputs), the same `min_precision`, and entries of the kinds `normalized`,
+  `error` and `leading_rounded` only; its `lead` (`add`, `sub` or `mul`) must be the value's
+  operation on the two operands, in input order for a sum or a difference. `makes_ball` takes
+  `center` and `radius` outputs and `from` with the given `center` and `radius` inputs.
+  `ieee_status` (`proved` or `unverified`) and `ieee_theorem` (an object) are read for form and
+  never used for a verdict; a kernel of the extended domain without `ieee_status`, or `proved`
+  without `ieee_theorem`, gives a warning.
 - `of` names one output; a list of names, or `"s+e"`, concatenates outputs in that order, which is
   how a pair of 1-limb results `(s, e)` is read as one 2-limb number. Absent means all outputs.
 - `instances` is a list with one object per `error` entry, in their order, each mapping a format
@@ -269,6 +376,15 @@ every `fast_two_sum` call whose first operand is smaller in magnitude than the s
 whether that operand is zero, whether the exponent form of the precondition holds, and whether the
 call was still error-free.
 
+For the non-finite layer `refrun` runs, as listed in milestone1.md, the nine full arithmetic
+kernels (the core, then the fix-up on the leading limbs, with `guard` on a scalar that is added
+or subtracted), the eight full Ball kernels (the core, then the fix-up with `q`, the sum of the
+input radii, or `rx` itself for `ball_scale`), and the constructors `make_2`, `make_2_limbs`,
+`ball_make_1` and `ball_make_2`; the other kernels run on non-finite operands as listed. Its
+arithmetic is IEEE's on every format: overflow to $\pm\infty$ at the format's own threshold,
+NaN propagation, $0 \cdot \infty$ and $\infty - \infty$ are NaN, comparisons are false on a NaN,
+`succ` of $\Omega$ is $+\infty$ and `succ` of $-\infty$ is $-\Omega$.
+
 `selftest/refrun.cpp` is a standalone C++ runner for binary64 and binary32, written from the same
 pseudo-code. The selftest compiles it with the system compiler (`$CXX`, then `c++`, `clang++`,
 `g++`, or `--cxx`) with `-std=c++17 -O2 -ffp-contract=off -fno-fast-math` (`/std:c++17 /O2
@@ -281,10 +397,13 @@ format, center kernel and constant), which the selftest computes with the Python
 ## selftest
 
 ```
-python3 oracle/kairn-oracle selftest              # about 90 seconds
-python3 oracle/kairn-oracle selftest --quick      # smaller samples, about 40 seconds
-python3 oracle/selftest/mutants.py --jobs 6       # tests the selftest, about ten minutes
+python3 oracle/kairn-oracle selftest              # about two minutes
+python3 oracle/kairn-oracle selftest --quick      # smaller samples, about 90 seconds
+python3 oracle/selftest/mutants.py --jobs 6       # tests the selftest, about fifteen minutes
 ```
+
+The exhaustive tests run one worker process per CPU; `--jobs N` (or `KAIRN_ORACLE_JOBS=N`)
+caps them. The times are for an Apple M3 Max with `--jobs 6`.
 
 `mutants.py` copies the oracle into a temporary directory once per mutant, plants one deliberate
 bug in the checker or the arithmetic (rounding ties away from zero, no gradual underflow,
@@ -323,6 +442,14 @@ computed over the wrong cases, ...) and requires `selftest --quick` to fail on t
 | `judge_wave2` | a hand-written line judged otherwise than worked out by hand (masks, directions, gaps below powers of two, the corners of a product of balls, the requirements, beyond $\Omega$), or a statistic off |
 | `scaled_gaps` | halved gaps passed, gaps times 1024 failed, or the largest excess in gaps moved with the claim |
 | `merging_wave2` | the merge of second-wave summaries differs from the whole |
+| `claims_reading_wave3` | the fixture of the non-finite layer unreadable or its cores not linked; a domain written out as `finite` changing a summary; 47 malformed kernels of the layer not set aside (a core missing, unreadable, of the extended domain, with other inputs, input names, outputs, value, requirements or minimum precision; a lead that is not the value's operation; `finite_when` malformed or over unknown names; `canonical()` or `ball()` misplaced; constructors with bad fields; statuses of the wrong form) |
+| `extended_arithmetic` | expressions in the extended reals against Python's IEEE floats and Fractions, infinities and NaN included; comparisons; `canonical` and the ball states against their definitions on every pair and triple of limbs of `fp:2:-2:1` |
+| `gen_wave3` | an invalid generated case, a missing stratum, a class of a statement never reached (F2, F4 and F5 for every full kernel; finite, whole and empty results for every Ball kernel; each given state for the constructors; non-finite operands of both outcomes for the comparisons), a `threshold` stratum mostly outside its conditions, the correct runner flagged or suspicious, case $i$ not reproducible |
+| `exhaustive_wave3` | the domains with their non-finite values against brute-force counts, restrictions that drop non-finite values, the correct runner flagged on any case of 37 enumerations of tiny formats (of the IEEE shape $q_{\min} + q_{\max} = 3 - 2p$, the 2-limb balls on restricted radii) |
+| `cxx_wave3` | the C++ runner flagged, or any of its results on the layer different from the Python runner's |
+| `injected_wave3`, `injected_wave3_exhaustive` | a planted bug of the layer not caught in the statement where it belongs, caught in another, or flagged in a kernel that does not use it |
+| `judge_wave3` | one of 144 hand-written lines judged otherwise than worked out by hand (each failure in its statement), or a class count or an overflow position off |
+| `merging_wave3` | the merge of summaries of the layer differs from the whole |
 
 Injected errors (`refrun --list-variants`): one ulp off in the second limb in about 1 case in 256;
 a result with the right value but not normalized; a product that drops a cross term; additions
@@ -340,3 +467,21 @@ power-of-two center (`ball-pow2-ulp`) is not an error with respect to the claim 
 formats: the listing leaves more than one gap of slack in every case enumerated there, so the
 radius one ulp smaller still encloses. The selftest demands that no verdict changes and that
 the smallest slack the oracle reports drops by at least half a gap.
+
+The non-finite layer, each planted bug with the statement that must catch it (and no other):
+
+| Variant | Kernels | Caught in |
+|---|---|---|
+| `full-no-fixup`: the core's raw output | full kernels | F4 and F5 (F1, F2 allowed) |
+| `full-overflow-sign`: the infinity of the wrong sign on overflow | full kernels | F4 |
+| `full-overflow-nan`: (NaN, NaN) where an infinity is due | full kernels | F4 |
+| `full-overflow-finite`: $(\pm\Omega, 0)$ when the core overflowed | full kernels | F2 (the core's error entry) |
+| `full-spurious-overflow`: an infinity whenever $\lvert t\rvert \ge 2^{q_{\max}+p-3}$ | `add_2_2_full`, `mul_2_2_full` | F3; suspicious, not failed, in the kernels that claim no condition |
+| `full-inf-tail-nan`, `full-inf-tail-eta`: a NaN or nonzero tail after an infinity | full kernels | F1 (F4, F5 allowed) |
+| `full-nan-one-limb`: (NaN, 0) | full kernels | F1 (F5 allowed) |
+| `full-nan-to-zero`: (0, 0) for a NaN result | full kernels | F2 and F5 |
+| `ball-full-swap`: the empty set and the whole line swapped | full Ball kernels | B2 |
+| `ball-full-zero-inf-empty`: `q` from the computed radius, so $0 \cdot \infty$ gives the empty set | products and scalings of balls | B2 |
+| `ball-full-finite-whole`: a finite center kept with the radius $\Omega$ | full Ball kernels | B3 |
+| `make-negative-radius`, `make-nan-radius`: the radius tested for NaN only, or not at all | `ball_make_1`, `ball_make_2` | `makes_ball` |
+| `make2-inf-nan-tail`: `make_2` of an infinity with a NaN tail | `make_2` | `represents` |
