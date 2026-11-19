@@ -409,11 +409,11 @@ field has the domain `finite`, as before.
 
 | Kind | Fields | Meaning in the extended domain |
 |---|---|---|
-| `extends` | `of`, `core`: a kernel with the same inputs and outputs, `lead`: `add`, `sub` or `mul`, `finite_when`: a list of conditions | F1 to F5 of [IEEE-like results](design/milestone1.md#ieee-like-results): the output is canonical; if it is finite, every operand is finite and every `ensures` entry of `core` holds; if every operand is finite and every condition holds, the output is finite; if every operand is finite and the output is not, it is $(\pm\infty, 0)$ with the sign of `value`; if an operand is not finite, the output is the canonical form of `lead` applied to the leading limbs of the inputs, in order, by the rules of IEEE 754 |
+| `extends` | `of`, `core`: a kernel with the same inputs and outputs, `lead`: `add`, `sub` or `mul`, `finite_when`: a list of conditions | F1 to F5 of [IEEE-like results](design/milestone1.md#ieee-like-results): the output is canonical; if it is finite, every operand is finite and every `ensures` entry of `core` holds; if every operand is finite and every condition holds, the output is finite; if every operand is finite and the output is not, it is $(\pm\infty, 0)$ with the sign of `value` (the proofs give $+0$; the sign of a zero is not part of a claim); if an operand is not finite, the output is the canonical form of `lead` applied to the leading limbs of the inputs, in order, by the rules of IEEE 754 |
 | `encloses` | as before, and `finite_when` | B1 to B4 of [Ball kernels](design/milestone1.md#ball-kernels): the output ball is canonical; it is empty exactly when a ball operand is empty; if it is a finite ball, every operand is finite and the containment holds; if every operand is finite and every condition holds, it is a finite ball |
 | `normalized`, `error` | as before | apply when every operand and the output are finite; the output is canonical in every case |
 | `predicate` | as before | the relation between the two values as extended real numbers; false when an operand is a NaN |
-| `rounded` | as before | for a finite operand, the rounding of `value` in the sense of the format with overflow: a result beyond $\Omega$ in the direction of rounding is the infinity; an infinite or NaN operand gives itself |
+| `rounded` | as before | for a finite operand, the rounding of `value` in the sense of the format with overflow: a result beyond $\Omega$ in the direction of rounding is the infinity; for an infinite or NaN operand, `value` of it (the operand itself, or its absolute value for `abs_upper_2`) |
 | `upper` | as before | the output is a NaN exactly when an operand is a NaN or the operation is $0 \cdot \infty$; otherwise it is not below `value`, and `gaps` applies when it is finite |
 
 A condition of `finite_when` is `{"abs_le": EXPR, "exp": E}`: $\lvert \mathrm{EXPR}\rvert \le
@@ -434,6 +434,14 @@ Two more kinds serve the constructors
 |---|---|---|
 | `represents` | `of` | the output is canonical and is `value` exactly: a finite `value` gives a finite normalized output of that value, $\pm\infty$ gives $(\pm\infty, 0)$, a NaN gives all NaN |
 | `makes_ball` | `center`, `radius`: the outputs; `from`: the inputs given as center and radius | the output ball is canonical: empty when the given radius is a NaN or negative; otherwise the whole line when the given center is not finite or the given radius is $+\infty$; otherwise the given center and radius, exactly |
+
+`value` may be an expression there too: `neg_2` and `abs_2` carry `represents` next to their
+`normalized` and `error` entries, with the values `-x` and `abs(x)`, and that entry is what says
+which canonical value comes out for an infinite or NaN operand (the infinity with its sign
+changed or removed; a NaN for a NaN). In the real model `represents` adds nothing to
+`normalized` with an exact `error`, and the generated real-model statement does not print it.
+`ball_neg_k`, which needs no fix-up, carries the extended-domain `encloses` like the full Ball
+kernels.
 
 A kernel of this domain has a statement in the IEEE model, generated like the real-model
 statements and proved the same way. A kernel that also makes sense on finite operands alone

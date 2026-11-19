@@ -149,8 +149,8 @@ and the operations overflow as the hardware does, for formats shaped like `binar
 These statements, and the models of the kernels they are about, are **written by hand**
 (`proofs/theories/IeeeStatementsDraft.v`, `IeeeExtStatementsDraft.v`, `IeeeDraft.v`,
 `BallDraft.v`) from the listings of the design pages, and audited by `proofs/audit/HandAudit.v`.
-The generator does not print them yet, and the library does not yet contain the kernels of the
-second kind, so these theorems are not guarantees about shipped code: the claims keep those
+The generator does not print them yet, and the public headers do not yet call the kernels of the
+second kind, so these theorems are not guarantees about what the library does today: the claims keep those
 kernels `unverified`, and [What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)
 says what the library does now.
 
