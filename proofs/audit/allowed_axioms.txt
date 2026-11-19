@@ -1,0 +1,6 @@
+# Axioms a Kairn theorem may depend on. All four come from Rocq's standard library: the
+# classical real numbers and classical logic. Flocq adds none.
+ClassicalDedekindReals.sig_forall_dec
+ClassicalDedekindReals.sig_not_dec
+FunctionalExtensionality.functional_extensionality_dep
+Classical_Prop.classic

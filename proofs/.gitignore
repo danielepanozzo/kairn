@@ -1,0 +1,12 @@
+# Products of `make -C proofs`
+Makefile.rocq
+Makefile.rocq.conf
+.Makefile.rocq.d
+*.vo
+*.vok
+*.vos
+*.glob
+.*.aux
+.lia.cache
+.nia.cache
+/audit/*.out

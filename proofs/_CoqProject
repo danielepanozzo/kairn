@@ -1,0 +1,20 @@
+-Q theories Kairn
+-R third_party/mr22 Double
+-docroot Kairn
+
+third_party/mr22/Bayleyaux.v
+third_party/mr22/F2SumFLT.v
+third_party/mr22/F2SumFLX.v
+third_party/mr22/F2Sum.v
+third_party/mr22/DWPlus.v
+
+theories/ModelDraft.v
+theories/SpecDraft.v
+theories/Format.v
+theories/Transfer.v
+theories/EFT.v
+theories/Normalized.v
+theories/Add22.v
+theories/Add21.v
+theories/Mul22.v
+theories/Mul21.v
