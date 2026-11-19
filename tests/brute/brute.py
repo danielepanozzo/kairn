@@ -1525,7 +1525,16 @@ def short(dec, digits=6):
     d = decimal.Decimal(dec)
     if d == 0:
         return "0"
-    return format(decimal.Context(prec=digits).create_decimal(d), "g")
+    text = format(decimal.Context(prec=digits).create_decimal(d), "g")
+    if d != 1 and decimal.Decimal(text) == 1:
+        text = format(decimal.Context(prec=10).create_decimal(d), "g")
+    return text
+
+
+def near_one(dec, attains):
+    """A ratio that rounds to 1 at ten digits without being 1: say so rather than print 1."""
+    return (not attains and dec is not None and decimal.Decimal(dec) <= 1
+            and decimal.Decimal(dec) >= decimal.Decimal("0.99999999995"))
 
 
 def headline_columns(entries):
@@ -1534,9 +1543,9 @@ def headline_columns(entries):
     for j, e in enumerate(entries):
         lab = e["label"]
         if e["kind"] == "error":
-            cols.append(("largest error / bound" + (" (%s)" % lab.split(")")[0].split("(")[1]
-                                                    if sum(x["kind"] == "error" for x in entries)
-                                                    > 1 else ""),
+            several = sum(x["kind"] == "error" for x in entries) > 1
+            cols.append(("largest error / bound" + (" (%s)" % lab.split("form ", 1)[1][3:]
+                                                    if several else ""),
                          j, "max_ratio", None, 1))
             cols.append(("observed c", j, "observed_c", None, 1))
         elif e["kind"] == "upper":
@@ -1659,9 +1668,12 @@ def cmd_report(a):
                                                 "0 (exact)" if c else "-",
                                                 ("0 (exact; `%s`)" % i[2]) if i else "-"))
                 continue
+            ctext = "-"
+            if c:
+                ctext = ("1 - ε, ε < 10⁻⁹" if kind == "error" and near_one(c[0], c[-1]) else
+                         short(c[0]) + (" (the claim)" if c[-1] else ""))
             w("| `%s` | `%s` | %s | %s |" % (
-                k, label.replace("|", "\\|"),
-                (short(c[0]) + (" (the claim)" if c[-1] else "")) if c else "-",
+                k, label.replace("|", "\\|"), ctext,
                 ("%s (`%s`)%s" % (short(i[0]), i[2], " (the claim)" if i[-1] else "")) if i
                 else "-"))
     for k in kernels:
@@ -1712,7 +1724,7 @@ def cmd_report(a):
                          (f["kernel"], f["format"], f.get("restrict", [])) ==
                          (r["kernel"], r["format"], r["restrict"])]
                 if found:
-                    title += " (**stopped by a finding**: %s)" % "; ".join(found[0]["why"])
+                    title += " (**stopped by a finding**: %s)" % found[0]["why"][0]
                 rows.append((title, r.get("counts", {}), r.get("entries", []),
                              r["guards"] == "ok" and r.get("complete") or bool(found), False))
         if not rows:
@@ -1735,7 +1747,7 @@ def cmd_report(a):
                     continue
                 e = entries[j]
                 if field == "counts":
-                    cells.append(counts_text(e.get("counts", {})) if compiled else "")
+                    cells.append(counts_text(e.get("counts", {})))
                     continue
                 v = col_value(e, field, sub)
                 mark = " (the claim)" if (e.get("attains_claim") and field in ("max_ratio",
@@ -1743,6 +1755,9 @@ def cmd_report(a):
                 if v and field in ("max_ratio", "observed_c") and exact_claim(e["label"]) \
                         and decimal.Decimal(v[0]) == 0:
                     cells.append("0 (exact)" if field == "max_ratio" else "0")
+                    continue
+                if v and field == "max_ratio" and near_one(v[0], e.get("attains_claim")):
+                    cells.append("1 - ε, ε < 10⁻⁹")
                     continue
                 cells.append(short(v[0]) + mark if v else "-")
                 if v and field != "observed_c" and not (sub and "enclosing" in sub):
@@ -1773,6 +1788,10 @@ def cmd_report(a):
             w("```")
             for name, compiled, (v, t) in picks:
                 where = (" (%s)" % ", ".join(v[2:])) if len(v) > 2 else ""
+                if not compiled:
+                    # The enumeration, restrictions included: the tag's index is within it.
+                    where = " (%s)" % re.sub(r" \((p =|quick|another|the quick).*$", "",
+                                             t.replace("`", ""))
                 w("%s, %s %s%s:" % (name, "compiled" if compiled else "interpreter", short(v[0]),
                                     where))
                 w("  " + v[1])
