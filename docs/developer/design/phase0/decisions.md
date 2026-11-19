@@ -170,10 +170,11 @@ of the brief:
 | 10 | `float` limbs on GPUs, including Metal | `float` k-numbers keep full precision only above $10^{-31}$ ($k = 2$) to $10^{-16}$ ($k = 4$), and on Metal above $10^{-24}$ to $10^{-9}$ | Inherent to the format; documented prominently |
 | 11 | AVX-512 path, clang-cl, Windows AArch64 | No AVX-512 machine; clang-cl and ARM64 tools not installed; none of the three was run in Phase 0 | [D10](#d10-test-infrastructure) |
 | 12 | Interval semantics modeled on IEEE 1788.1 | The standard is paywalled; semantics were taken from the P1788 drafts and implementations | To be checked against the standard before Milestone 2 |
+| 13 | The oracle computes with GMP or FLINT integers and rationals | Milestone 1's oracle uses Python's built-in exact integers and fractions: the same exactness, no dependency, and code that is easy to audit; it is slower than a compiled oracle would be | Kept for $+$, $-$, $\times$, conversions and comparisons. MPFR or Arb enclosures come with division and square root (Milestone 5), where exact rationals no longer suffice |
 
 ## Decisions log
 
-Decisions taken within Phase 0 and at its review, each reversible at the owner's word.
+Decisions taken within Phase 0, at its review, and since, each reversible at the owner's word.
 
 | Date | Decision | Reason |
 |---|---|---|
@@ -190,3 +191,11 @@ Decisions taken within Phase 0 and at its review, each reversible at the owner's
 | 2026-11-18 | MSL functions start with `#pragma METAL fp math_mode(safe)` and `fp contract(off)` and use `precise::` functions | Metal probe |
 | 2026-11-18 | Generator in Python, standard library only | Small, auditable, shared with the documentation tooling |
 | 2026-11-18 | Phase 0 experiments are kept, with their recorded outputs, under `experiments/phase0/` | Every number in this report can be rerun |
+| 2026-11-19 | The repository is public, with its history; CI runs on hosted runners in four workflows (build and test, proofs, generated files and documentation, the generator's full suite) | The owner's instruction; CI was set up |
+| 2026-11-19 | The oracle is written in Python, standard library only, with exact integers and fractions | Deviation 13 above |
+| 2026-11-19 | `add_fast_2_2` is claimed with $3u^2(\lvert x\rvert + \lvert y\rvert)$, a bound relative to the operands, and ends with `Fast2Sum` | What is proved; no bound relative to $\lvert x + y\rvert$ exists for this algorithm when the operands have opposite signs |
+| 2026-11-19 | The directed steps `radd` and `rmul` are claimed for nonnegative operands only, with an excess of at most $\tfrac32$ gaps | Every use in the `Ball` kernels has nonnegative operands; for operands of any sign the excess reaches 2 gaps, and the first target ("at most 2 gaps, any sign") was dropped as unused. A narrowing of a target, flagged in the Milestone 1 report |
+| 2026-11-19 | The one-limb sum and product are kernels (`add_1_1`, `mul_1_1`) with theorems of their own | The one-limb `Ball` then takes its constants from a proved bound, like the two-limb one |
+| 2026-11-19 | Every proved statement records the smallest precision it is proved for (1 to 4 in Milestone 1) | Proofs are for every precision from that minimum, and tests on toy formats must not run below it |
+| 2026-11-19 | Overflow and non-finite operands are handled by *full kernels*: a finite core followed by a fix-up; a NaN radius is the empty ball, an infinite radius or a non-finite center the whole line | [Milestone 1 statements](../milestone1.md#ieee-like-results); D5 |
+| 2026-11-19 | The quick tier runs every kernel through the interpreter and through scalar and packed runners; the generator's own C++ tests run in a separate workflow | The quick tier must stay within a few minutes |
