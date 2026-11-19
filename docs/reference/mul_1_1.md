@@ -18,8 +18,12 @@ $$p \approx a b.$$
 | `a *= b` | `Expansion<T, 1>`, `Expansion<T, 1>` | `Expansion<T, 1>` |  |
 | `a * b` | `Expansion<T, 1>`, `T` | `Expansion<T, 1>` | the limb is converted to `Expansion<T, 1>` first, exactly |
 | `a * b` | `T`, `Expansion<T, 1>` | `Expansion<T, 1>` | the limb is converted to `Expansion<T, 1>` first, exactly |
-| `ldexp(a, n)` | `Expansion<T, 1>`, `int` | `Expansion<T, 1>` | $b = 2^n$, for an `n` with $2^n$ a number of `T`; otherwise the result is NaN |
+| `ldexp(a, n)` | `Expansion<T, 1>`, `int` | `Expansion<T, 1>` | $b = 2^n$, for every `n`: one product when $2^n$ is a number of `T`, otherwise two, which round as one does: the result is that of `std::ldexp` |
 | `half(a)` | `Expansion<T, 1>` | `Expansion<T, 1>` | $b = 1/2$ |
+| `finite::mul(a, b)` | `Expansion<T, 1>`, `Expansion<T, 1>` | `Expansion<T, 1>` | the operator itself |
+| `finite::mul(a, b)` | `Expansion<T, 1>`, `T` | `Expansion<T, 1>` |  |
+| `finite::mul(a, b)` | `T`, `Expansion<T, 1>` | `Expansion<T, 1>` |  |
+| `finite::ldexp(a, n)` | `Expansion<T, 1>`, `int` | `Expansion<T, 1>` | `ldexp(a, n)` itself |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 

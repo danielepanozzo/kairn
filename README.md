@@ -7,8 +7,10 @@ code is generated from the same source the proofs are about.
 **Status: Phase 0 (specification and feasibility) is complete and reviewed. Milestone 1 is in progress,
 and nothing here should be relied on yet.** The first public headers exist: `kairn/kairn.hpp`, with
 `kairn::Expansion<T, 1>`, `kairn::Expansion<T, 2>` and `kairn::Ball<T, 1>`, `kairn::Ball<T, 2>` for
-`T` = `float` or `double`. [What holds today](docs/getting-started/guarantees.md) says which of
-their statements are proved and what is not written yet.
+`T` = `float` or `double`. Every operation has a proved error bound or containment, and returns
+results like those of `T` at overflow and for infinities and NaN (a ball: the whole line or the
+empty set); `kairn::finite::` skips that layer. [What holds today](docs/getting-started/guarantees.md)
+says what is proved, in which model, and what is not yet.
 
 - [Phase 0 report](docs/developer/design/phase0/index.md): what Kairn will be, what was measured,
   and the decisions taken at its review.

@@ -12,7 +12,12 @@ $$x = a.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `Expansion<T, 2>(a)` | `T` | `Expansion<T, 2>` | implicit |
+| `Expansion<T, 2>(a)` | `Expansion<T, 1>` | `Expansion<T, 2>` | implicit; the limb of the `Expansion<T, 1>` operand is the limb $a$ |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED (a constructor does not take it).
 
 ## Requires
 

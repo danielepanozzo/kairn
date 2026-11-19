@@ -7,9 +7,14 @@
 //   1-9    an UNVERIFIED operation written without kairn::unverified (the control adds it)
 //   10     reading an error constant of an UNVERIFIED operation from kairn::traits (the control
 //          reads only whether it is verified)
-// Cases 1 to 10 are compiled against headers in which every kernel is marked unverified.
-//   11     a non-normalized pair given to from_limbs in a constant expression, with KAIRN_CHECKS
-//          (the control turns KAIRN_CHECKS off)
+//   12-14  an UNVERIFIED constructor: the narrowing to one limb, from a T, a ball from a center
+// Cases 1 to 14 are compiled against headers in which every kernel is marked unverified.
+//   20-26  one kernel UNVERIFIED and every other proved: the operation must not compile through a
+//          conversion to another kernel (x + a through x + Expansion(a) and add_2_2_full, a ball
+//          times a T through a point ball and ball_mul_2_full, a comparison with a limb through a
+//          two-limb one); the control marks the operand
+//   11     a pair that is not canonical given to from_limbs in a constant expression, with
+//          KAIRN_CHECKS (the control turns KAIRN_CHECKS off)
 #if KAIRN_TEST_CASE == 11
 #if defined(KAIRN_TEST_CONTROL)
 #define KAIRN_CHECKS 0
@@ -31,9 +36,12 @@ using B2 = kairn::Ball<double, 2>;
 
 int main() {
     volatile double v = 1.5;
-    [[maybe_unused]] E2 x(v), y(2 * v);
+    // The operands are built with the marker, which every constructor accepts, so that they
+    // compile against any fixture: only the case's own operation differs from the control.
+    [[maybe_unused]] E2 x(kairn::unverified(double(v))), y(kairn::unverified(2 * v));
     [[maybe_unused]] E1 a(v), b(2 * v);
-    [[maybe_unused]] B2 p(x, 0.5), q(y, 0.25);
+    [[maybe_unused]] B2 p(kairn::unverified(x), 0.5), q(kairn::unverified(y), 0.25);
+    [[maybe_unused]] double s = v;
     double sink = 0;
 #if KAIRN_TEST_CASE == 1
     sink = (MARK(x) - y).limb[0];
@@ -59,6 +67,26 @@ int main() {
 #else
     sink = kairn::traits<E2>::sub.unit;
 #endif
+#elif KAIRN_TEST_CASE == 12
+    sink = E1(MARK(x)).limb[0];
+#elif KAIRN_TEST_CASE == 13
+    sink = E2(MARK(s)).limb[0];
+#elif KAIRN_TEST_CASE == 14
+    sink = B2(MARK(x), 0.5).radius();
+#elif KAIRN_TEST_CASE == 20
+    sink = (x + MARK(s)).limb[0];
+#elif KAIRN_TEST_CASE == 21
+    sink = (x + MARK(a)).limb[0];
+#elif KAIRN_TEST_CASE == 22
+    sink = (MARK(s) - x).limb[0];
+#elif KAIRN_TEST_CASE == 23
+    sink = (x * MARK(s)).limb[0];
+#elif KAIRN_TEST_CASE == 24
+    sink = (p * MARK(s)).radius();
+#elif KAIRN_TEST_CASE == 25
+    sink = (p + MARK(s)).radius();
+#elif KAIRN_TEST_CASE == 26
+    sink = x < MARK(s);
 #elif KAIRN_TEST_CASE == 11
     static constexpr double limbs[2] = {1.0, 0x1p-52};
     constexpr E2 z = E2::from_limbs(limbs);

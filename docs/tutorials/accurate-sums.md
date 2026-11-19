@@ -54,7 +54,8 @@ Only the type of the accumulator changes:
 
 `t += v` adds a `double` to a two-limb number. Its result is normalized and within
 $2u^2\lvert t + v\rvert$ of the exact sum $t + v$, a bound with a machine-checked proof
-([`add_2_1`](../reference/add_2_1.md)). The program prints
+([`add_2_1_full`](../reference/add_2_1_full.md), whose finite results are those of its core
+[`add_2_1`](../reference/add_2_1.md)). The program prints
 
 ```text
   Expansion<double, 2>  0.99999999999939948 + 1.3877787807814457e-17 (error -6.0e-13)
@@ -92,7 +93,7 @@ uses `float` data: its output is the same on every compiler. With two limbs:
 ```
 
 The error is $5.1 \times 10^{-14}$. `Number(a[i]) * double(b[i])` multiplies a two-limb number by a
-`double` ([`mul_2_1`](../reference/mul_2_1.md)), which keeps the rounding error of the product as
+`double` ([`mul_2_1_full`](../reference/mul_2_1_full.md)), which keeps the rounding error of the product as
 well; with `double` data, whose products are not exact, that is what makes the dot product
 accurate. Writing `e += x * y` with two `double` factors instead would round each product to one
 `double` before the two-limb addition sees it (and here `a[i] * b[i]`, a product of two `float`s,
@@ -105,8 +106,8 @@ bound is what one needs. `kairn::Ball<double, 2>` is the set of reals within a r
 center $c$, $\{\, x : \lvert x - c\rvert \le r \,\}$, with a two-limb center and a `double` radius.
 Every operation on balls returns a ball that contains every result of the operation on points of its
 operands, and that containment is proved for each operation
-([`ball_add_2`](../reference/ball_add_2.md)). A `double` passed to a ball operation is a ball of
-radius 0. The sum:
+([`ball_add_2_full`](../reference/ball_add_2_full.md)). A `double` passed to a ball operation is a
+ball of radius 0. The sum:
 
 ```cpp
 --8<-- "docs/examples/cpp/accurate_sums.cpp:sum_ball"
@@ -128,7 +129,9 @@ Each addition of balls computes the new center with the two-limb addition
    and $U$ the proved bound of `add_2_2` relative to the computed result, rounded up to `double`
    (`kairn::traits<Expansion<double, 2>>::add.unit_computed`);
 
-and every step of that sum is rounded up, so that the radius never comes out too small. Here the
+and that sum, computed with ordinary operations, is then inflated once, by a factor a few units
+of $u$ above 1 and a tiny constant for underflow, so that the radius never comes out too small
+([the second radius design](../developer/design/milestone1.md#the-radius-second-design)). Here the
 data are exact, the radii start at 0, and the radius is the sum of the second terms, which the
 program recomputes by hand:
 
@@ -161,7 +164,7 @@ of $6.3 \times 10^{19}$ multiplies the errors of the data as it multiplies round
 limbs reduce rounding errors; they cannot recover what the data do not hold.
 
 The dot product works the same way, with `Ball * double` for the products
-([`ball_scale_2`](../reference/ball_scale_2.md)):
+([`ball_scale_2_full`](../reference/ball_scale_2_full.md)):
 
 ```cpp
 --8<-- "docs/examples/cpp/accurate_sums.cpp:dot_ball"
@@ -191,11 +194,13 @@ AMD Zen 2 and an Intel Core i5, with nine compiler configurations:
   3.0 to 4.4 times as long as `mul_2_2` in a dependent chain, and 13 to 20 times in packed loops of
   independent operations.
 
-Most of a ball's cost is its radius: every addition and product of the radius is rounded up by a
-step to the next number of `double`, done on the bit pattern, about ten integer operations each in
-packed code. This is known to be slow. A second design, which computes the radius with ordinary
-operations and inflates it once at the end, is proved and not yet what the library runs
-([Milestone 1 statements](../developer/design/milestone1.md#the-radius-second-design)).
+Those ball figures are for the first design of the radius, in which every addition and product of
+the radius was rounded up by a step to the next number of `double`, about ten integer operations
+each in packed code. The library now runs the second design, which computes the radius with
+ordinary operations and inflates it once at the end
+([Milestone 1 statements](../developer/design/milestone1.md#the-radius-second-design)); the
+benchmarks have not been rerun with it. Every operation also checks its result for infinities and
+NaN now (below), which adds a little more.
 
 ## What can go wrong
 
@@ -224,20 +229,18 @@ every operation ([The environment](../getting-started/guarantees.md#the-environm
 `double`, rounded before Kairn sees it. Make one factor a two-limb number:
 `e += Number(a[i]) * b[i]`.
 
-**Overflow.** The guarantees above assume that nothing overflows. When an intermediate result
-does, the leading limb of the result becomes infinite or NaN rather than a finite wrong value
-(proved for the two-limb sums and products, not yet for the other operations). Kairn does not yet return
-the canonical infinities and NaN that `double` would, and a ball whose center or radius overflows is
-returned as it is, with nothing claimed about it. Where results may come near the top of the
-range, test them: `kairn::isfinite(x)` for a number, `kairn::isfinite(X.center())` and
-`std::isfinite(X.radius())` for a ball;
-[What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what is
-proved there.
+**Overflow.** The bounds above hold whenever the result is finite. When an intermediate result
+overflows, a two-limb operation returns $(\pm\infty, 0)$, as `double` would return $\pm\infty$,
+never a finite wrong value; an infinite or NaN operand gives what `double` gives on the leading
+limbs. A ball that cannot be bounded becomes the whole line, which still contains the exact
+result, and a ball made with a NaN or negative radius is the empty set. All of this is proved
+([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)), but nothing
+yet says when a ball of finite operands stays finite. So where results may come near the top of
+the range, test them: `kairn::isfinite(x)` for a number, `X.is_finite()` for a ball.
 
 ## What the headers do not provide yet
 
 This tutorial uses all there is for an accurate sum: numbers of one and two limbs, balls around
 them, addition, subtraction and multiplication. Not yet: division and square root, three or more
-limbs, decimal input and output (print the limbs, as here), an interval type, vectors of balls, the
-special states of a ball (the empty set, the whole line), and IEEE-like results on overflow. The
-[Plan](../developer/design/phase0/plan.md#milestones) says when each is to come.
+limbs, decimal input and output (print the limbs, as here), an interval type, and vectors of
+balls. The [Plan](../developer/design/phase0/plan.md#milestones) says when each is to come.

@@ -14,7 +14,13 @@ A number of several limbs stands for their exact sum: $c = c_0 + c_1$, $c_w = c_
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `Ball<T, 2>(c, r)` | `Expansion<T, 2>`, `T` | `Ball<T, 2>` |  |
+| `Ball<T, 2>(c)` | `Expansion<T, 2>` | `Ball<T, 2>` | implicit: the point $c$, radius 0 |
+| `Ball<T, 2>(a)` | `T` | `Ball<T, 2>` | implicit: the point $a$, radius 0, with the center made by `make_2` first |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED (a constructor does not take it).
 
 ## Requires
 

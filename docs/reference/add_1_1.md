@@ -23,6 +23,13 @@ $$s \approx a + b.$$
 | `a -= b` | `Expansion<T, 1>`, `Expansion<T, 1>` | `Expansion<T, 1>` | the sum $a + (-b)$ |
 | `a - b` | `Expansion<T, 1>`, `T` | `Expansion<T, 1>` | the sum $a + (-b)$; the limb is converted to `Expansion<T, 1>` first, exactly |
 | `a - b` | `T`, `Expansion<T, 1>` | `Expansion<T, 1>` | the sum $a + (-b)$; the limb is converted to `Expansion<T, 1>` first, exactly |
+| `finite::add(a, b)` | `Expansion<T, 1>`, `Expansion<T, 1>` | `Expansion<T, 1>` | the operator itself |
+| `finite::add(a, b)` | `Expansion<T, 1>`, `T` | `Expansion<T, 1>` |  |
+| `finite::add(a, b)` | `T`, `Expansion<T, 1>` | `Expansion<T, 1>` |  |
+| `finite::sub(a, b)` | `Expansion<T, 1>`, `Expansion<T, 1>` | `Expansion<T, 1>` | the sum $a + (-b)$ |
+| `finite::sub(a, b)` | `Expansion<T, 1>`, `T` | `Expansion<T, 1>` |  |
+| `finite::sub(a, b)` | `T`, `Expansion<T, 1>` | `Expansion<T, 1>` |  |
+| `finite::add_fast(a, b)` | `Expansion<T, 1>`, `Expansion<T, 1>` | `Expansion<T, 1>` |  |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 

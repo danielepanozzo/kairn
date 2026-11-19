@@ -1134,7 +1134,11 @@ class Site:
             cores = [self.core[name]] if name in self.core else [
                 c for c in k.calls(self.all_names) if not self.kernels[c].extended]
             called = [c for c in cores if self.ops.KERNELS[c]["forms"]]
-            if called:
+            full = [f for f in self.full_of.get(name, []) if self.ops.KERNELS[f]["forms"]]
+            if full:
+                text += (" The operations of the public headers call %s, which computes this kernel and then "
+                         "the fix-up of its results." % " and ".join(self.link(f) for f in full))
+            elif called:
                 text += " The operations of the public headers call its core, %s, instead." % " and ".join(
                     self.link(c) for c in called)
             if p["note"]:
@@ -1736,8 +1740,8 @@ class Site:
           "$2^{-24}$ for `float`), $\\eta$ its smallest positive number, $\\mathrm{RN}$ rounding to nearest "
           "with ties to even, and a two-limb number $x = x_0 + x_1$ is *normalized* when "
           "$x_0 = \\mathrm{RN}(x_0 + x_1)$ ([Numbers](../developer/design/phase0/numbers.md#notation)). "
-          "An operand of type `Expansion<T, 1>` next to an `Expansion<T, 2>` is converted to two limbs, "
-          "exactly, and the two-limb form applies.")
+          "An operand of type `Expansion<T, 1>` next to an `Expansion<T, 2>` is its limb: the form with a "
+          "limb of type `T` applies.")
         w("")
         for gid, title, about in self.groups:
             rows = []

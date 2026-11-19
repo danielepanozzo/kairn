@@ -7,8 +7,8 @@ and that the code it ships is generated from the same description the proofs are
 **Status: pre-release. Milestone 1 is in progress, and nothing in this repository should be relied
 on yet.** The first public headers exist, for k-numbers of one and two limbs and balls around them,
 and the statement of each of their operations has a checked proof in a model where nothing
-overflows. At overflow less is proved, and infinities and NaN are not handled the way the design
-says yet ([What holds today](getting-started/guarantees.md)).
+overflows. At overflow and for infinities and NaN they return results like those of `float` and
+`double`, which is proved in a model of IEEE 754 ([What holds today](getting-started/guarantees.md)).
 
 ## What it is
 
@@ -71,8 +71,9 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
   underflow, the oracle and CI. Done so far: the generator and its scalar, AVX2 and NEON output,
   the oracle, the real-model proofs of every kernel of one and two limbs, and the scalar public
   headers (`Expansion` and `Ball` for $k = 1, 2$, `float` and `double` limbs), whose every
-  operation is judged by the oracle. Not yet: the treatment of non-finite values, and most
-  statements at overflow.
+  operation is judged by the oracle; and the layer of non-finite values, IEEE-like results and
+  the special states of a ball, proved in a model of IEEE 754 and called by the headers. Not yet:
+  a condition under which a Ball operation stays finite.
 - The later milestones are in the [Plan](developer/design/phase0/plan.md#milestones).
 
 ## Where to go next
