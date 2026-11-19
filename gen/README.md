@@ -21,6 +21,12 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `proofs/gen/Model.v` | One Rocq `Definition` per kernel over the reals, each operation one rounding by Flocq's `round`, calls kept as calls |
 | `proofs/gen/Statements.v` | `Definition K_spec : Prop` per kernel, from its claims; the proof `K_correct` must have this type |
 | `proofs/gen/Audit.v` | For each kernel not marked unverified, checks `K_correct : K_spec` and prints its assumptions |
+
+The three Rocq files are the real model only. The full kernels and the constructors of the
+non-finite layer have no real-model statement and are not in them; a kernel of the extended
+domain that has one (the comparisons, the conversions, `neg_2`, `abs_2`, `radd`, `rmul`) is printed
+as before, its requirement `canonical` read as `normalized`. The IEEE-model statements are not
+printed yet.
 | `include/kairn/gen/prelude.hpp` | The force-inline macro, the FMA primitive per compiler, `abs_bits`, `next_up`, `next_down`; refuses x86 without hardware FMA |
 | `include/kairn/gen/scalar.hpp` | Every kernel for `double` and `float`, in `kairn::gen` |
 | `include/kairn/gen/avx2.hpp` | Every kernel for `__m256d` and `__m256` (4 doubles, 8 floats); refuses a target without AVX2 and FMA |
@@ -30,8 +36,10 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `gen/claims.json` | What every kernel claims, with the constants per format as exact fractions |
 | `gen/tests/runner_kernels.inc` | The table of kernels of the C++ runners `gen/tests/runner.cpp` and `packed_runner.cpp` |
 
-`build` also lists the kernels that are unverified, those that are not `constexpr`, and those
-exempt from the non-finite cone. `proofs/gen` is mapped to the logical path `Kairn.Gen`, and
+`build` also lists the kernels that are unverified (in the real model, and in the IEEE model), those
+without a real-model statement, those that are not `constexpr`, those exempt from the non-finite
+cone, the entry kernels, the guards of rule R3 that are pending, and the kernels accepted only
+through a pending guard. `proofs/gen` is mapped to the logical path `Kairn.Gen`, and
 `proofs/theories` to `Kairn`.
 
 ## The code
@@ -77,6 +85,40 @@ Value names are normative: the model, the C++ and the proofs use them. In C++ a 
 and a value defined inside the callee is named `SITE_VALUE` (`sh_bb` above), which is why a value
 name has no underscore.
 
+The non-finite layer (architecture.md, "Claims of the non-finite layer"; milestone1.md, "IEEE-like
+results") adds, for example:
+
+```
+kernel:        add_2_2_full
+input:         x = x0 x1
+input:         y = y0 y1
+output:        w = w0 w1
+value:         x+y
+requires:      canonical x                  finite and normalized, (±inf, ±0) or all NaN
+requires:      canonical y
+ensures:       extends w core=add_2_2 lead=add finite_when=abs_le(x,-2);abs_le(y,-2)
+min_precision: 3
+status:        unverified                   no real-model statement: status is ieee_status
+domain:        extended                     operands may be infinite or NaN
+ieee_status:   unverified                   the IEEE-model statement; ieee_theorem once proved
+entry:         yes                          the public headers may call it (rule R3)
+cone_exempt:   the fix-up selects, after an explicit test that z0 is finite (f), ...
+
+(z0, z1) = add_2_2(x0, x1, y0, y1)
+t        = add(x0, y0)
+...
+```
+
+- `input: stored rx` (a one-limb input that is a limb of an object, in an entry kernel) and
+  `input: supplied y = h l` (a multi-limb input whose limbs the program gives, as in
+  `make_2_limbs`).
+- `requires: ball cx rx`; `ensures: encloses cw rw x*y x=cx,rx y=cy,ry [finite_when=...]`;
+  `ensures: represents x`; `ensures: makes_ball cw rw from=c,r`.
+- A condition of `finite_when` is `abs_le(EXPR,E)`, meaning $|EXPR| \le 2^{q_{\max} + p + E}$;
+  several are separated by `;`, and an empty list is written by leaving `finite_when` out.
+- `guard_pending: a REASON`: an input of an entry kernel whose guard is not written yet (only
+  `add_2_1`, whose guard changes the formal model of a proved kernel and lands with its proof).
+
 ## The operations
 
 | IR | Interpreter | Rocq (`rnd` rounds to nearest) | C++ | AVX2 (`pd`; `ps` for float) | NEON (`f64`; `f32`) |
@@ -93,8 +135,10 @@ name has no underscore.
 | `select m a b` | a if m else b | `if m then a else b` | `m ? a : b` | `_mm256_blendv_pd(b, a, m)` | `vbslq(m, a, b)` |
 | `succ a`, `pred a` | IEEE nextUp, nextDown | Flocq's `succ`, `pred` | `next_up(a)`, `next_down(a)` | `next_up`, `next_down` on integer lanes | the same |
 | `copy a` | a | `a` | `a` | `a` | `a` |
+| `guard a` | RN(a + 0): a, with −0 made +0 | `rnd (a + 0)` | `a + 0.0` (never `a - 0`) | `_mm256_add_pd(a, _mm256_setzero_pd())` | `vaddq_f64(a, vdupq_n_f64(0.0))` |
 | `0` | +0 | `0` | `0.0` | `_mm256_setzero_pd()` | `vdupq_n_f64(0.0)` |
 | `const NAME` | `consts.value` | `rocq.CONSTANTS`, or `unit_computed_K` | a hexadecimal literal | `_mm256_set1_pd(literal)` | `vdupq_n_f64(literal)` |
+| `const inf`, `const nan` | +∞, a quiet NaN | none: only kernels without a real-model statement name them | `std::numeric_limits<double>::infinity()`, `quiet_NaN()` | `_mm256_set1_pd(` that `)` | `vdupq_n_f64(` that `)` |
 | `K(args)` | evaluated as a call | `let '(…) := K args in` | inlined | inlined | inlined |
 
 A mask is a `bool` in Rocq and in scalar C++, a lane mask (every bit of a lane set or clear) in
@@ -137,11 +181,26 @@ rule:
    computed from output limb 0. A kernel that cannot comply declares `cone_exempt:` with the
    reason and what stands in for the check (`two_prod_dekker`; in the second wave, every kernel
    that selects, steps to a neighbor, returns a mask, or computes a radius).
-5. Every kernel names its theorem, source and license, or is marked `unverified`.
+5. Every kernel names its theorem, source and license, or is marked `unverified`. A kernel of the
+   extended domain also gives `ieee_status` (and `ieee_theorem` once that is proved); a kernel
+   without a real-model statement has no `theorem`, and its `status` is its `ieee_status`.
+6. R3: in a kernel marked `entry`, an input that enters from the program (a one-limb input not
+   declared `stored`, or the limbs of an input declared `supplied`), and whatever `neg`, `abs`,
+   `select` or `copy` alone make of it, is never an operand of `add` or `sub` nor the addend of an
+   FMA-family operation before it has passed through `guard`. It may be a factor and an operand of
+   a comparison. A value passed to another kernel is followed into that kernel's body, and so is
+   what that kernel returns of it. `guard_pending: INPUT REASON` excuses one input of one kernel,
+   and every kernel that passes a value into it; `build` prints both lists, and the declaration is
+   refused once the input is guarded.
 
 There are also checks of names (none may shadow what the printers use), kinds, arity, the closed
-vocabulary of the claims (that of architecture.md, "Claims of the second wave" included), of
-constant-evaluation variants (same signature, no FMA), and of computed constants (above).
+vocabulary of the claims (that of architecture.md, "Claims of the second wave" and "Claims of the
+non-finite layer" included, each kind in its domain), of the two models (a kernel with a
+real-model statement names no `const inf` or `const nan` and calls no kernel without one), of
+`extends` (its core has the same inputs, value, minimum precision, and requirements with
+`normalized` for `canonical`), of constant-evaluation variants (same signature, no FMA), and of
+computed constants (above). A kernel has no real-model statement when it claims `extends`,
+`represents` or `makes_ball`, or requires `ball`: the full kernels and the constructors.
 
 ## The tests
 
@@ -172,7 +231,21 @@ constant-evaluation variants (same signature, no FMA), and of computed constants
   1 to 6 (a sample where there are too many), with nothing overflowing (the Rocq statement, which
   also says that every output limb is a number of the format) and in the format itself whenever
   output limb 0 is finite (what the oracle checks). `test_statements.py` lists the corners where
-  the two differ.
+  the two differ;
+- the non-finite layer (`test_nonfinite.py`): a reading of milestone1.md of its own, on formats of
+  the IEEE shape ($q_{\min} + q_{\max} = 3 - 2p$) with precisions 2 to 5: F1 to F5 of the full
+  kernels (F2 against the core's claims), B1 to B4 and containment of the full Ball kernels, the
+  claims of the constructors, and the extended reading of the kernels that need no fix-up, on
+  every non-finite operand against a sample of the other, and on finite operands near overflow;
+  what fails is printed and pinned in `KNOWN`;
+- rule R3 (`test_rules.py`): each way of breaking it is refused, each allowed use accepted; the
+  entry kernels are those the public headers call (read from `include/kairn/*.hpp`) and the full
+  kernels and constructors; the pending guards are exactly `add_2_1`'s, and without it exactly
+  the kernels that pass it their scalar are refused;
+- the real model: `Model.v`, `Statements.v` and `Audit.v` are what they were before the non-finite
+  layer, byte for byte (pinned digests), and the same as with the layer stripped;
+- the runners read `inf`, `-inf` and `nan` and print non-finite outputs as exactly those words,
+  in every scalar and packed build.
 
 `--full` raises the sizes to a few hundred thousand requests per kernel; `--jobs N` (or
 `$KAIRN_GEN_JOBS`) caps the processes and compilers that run at once, on a shared machine.

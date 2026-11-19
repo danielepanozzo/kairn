@@ -1,0 +1,18 @@
+# Test kernel: the constants inf and nan, as operands of a comparison, a select, a product and a
+# sum, each visible as an output limb. They have no meaning in the real model, so this kernel is of
+# the extended domain and has no real-model statement (it claims represents).
+kernel:   ops_special
+input:    a
+output:   x = x0 x1 x2
+value:    a
+ensures:  represents x
+status:   unverified
+domain:   extended
+ieee_status: unverified
+cone_exempt: a test of the constants, not of a computation
+
+m  = lt(a, const inf)
+x0 = select(m, a, const nan)
+p  = prod(a, const inf)
+x1 = select(m, p, const inf)
+x2 = add(a, const nan)

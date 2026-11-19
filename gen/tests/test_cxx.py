@@ -33,6 +33,31 @@ RUNNER = os.path.join(common.TESTS, 'runner.cpp')
 INCLUDE = os.path.join(common.ROOT, 'include')
 
 
+# Requests with non-finite limbs and their completions, the same from the interpreter and from every
+# compiled runner, scalar and packed (test_interp checks the interpreter's by hand).
+NON_FINITE_LINES = {
+    'make_2 binary64 nan': 'nan nan',
+    'make_2 binary32 -inf': '-inf 0x0p+0',
+    'make_2 binary64 -0x0p+0': '0x0p+0 0x0p+0',
+    'add_2_2_full binary64 inf 0x0p+0 -inf 0x0p+0': 'nan nan',
+    'add_2_2_full binary32 0x1.fffffep+127 0x0p+0 0x1.fffffep+127 0x0p+0': 'inf 0x0p+0',
+    'sub_2_2_full binary64 -0x1.fffffffffffffp+1023 0x0p+0 0x1.fffffffffffffp+1023 0x0p+0': '-inf 0x0p+0',
+    'mul_2_1_full binary64 -0x1p+0 0x0p+0 inf': '-inf 0x0p+0',
+    'mul_2_2_full binary32 0x0p+0 0x0p+0 -inf 0x0p+0': 'nan nan',
+    'sub_1_2_full binary64 inf nan nan': 'nan nan',
+    'ball_make_1 binary32 0x1p+0 -0x1p+0': 'nan nan',
+    'ball_make_2 binary64 nan nan 0x1p+0': '0x0p+0 0x0p+0 inf',
+    'ball_mul_1_full binary64 0x0p+0 0x0p+0 0x0p+0 inf': '0x0p+0 inf',
+    'ball_scale_2_full binary32 0x1p+0 0x0p+0 0x0p+0 nan': '0x0p+0 0x0p+0 inf',
+    'to_up_2 binary64 0x1.fffffffffffffp+1023 0x1p+969': 'inf',
+    'to_down_2 binary32 -0x1.fffffep+127 -0x1p+102': '-inf',
+    'rmul binary64 0x0p+0 inf': 'nan',
+    'neg_2 binary64 inf 0x0p+0': '-inf -0x0p+0',
+    'le_2_2 binary64 inf 0x0p+0 inf -0x0p+0': '1',
+    'lt_2_1 binary32 nan nan 0x1p+0': '0',
+}
+
+
 def compile_(cmd):
     r = subprocess.run(cmd, capture_output=True, text=True)
     return r.returncode, r.stderr
@@ -111,7 +136,8 @@ class Kernels(unittest.TestCase):
     def test_matrix(self):
         """Every build, every kernel, both limb types: bit-identical to the interpreter."""
         for name in self.ks:
-            cases = lines_for(self.ks, [name], 'cxx')
+            # With non-finite operands in the forms of the non-finite layer, for its kernels.
+            cases = lines_for(self.ks, [name], 'cxx', lambda fmt, k: common.nonfinite_cases(fmt, k, N // 4, 'cxx'))
             want = expect(None, cases)
             text = ''.join(c[3] + '\n' for c in cases)
             reference = None
@@ -149,6 +175,19 @@ class Kernels(unittest.TestCase):
             self.assertEqual(code, 2, line)
             self.assertIn('line 2:', err)
             self.assertIn(words, err)
+
+    def test_runner_non_finite_limbs(self):
+        """Every build reads inf, -inf and nan as input limbs and prints non-finite outputs as
+        exactly inf, -inf and nan: never -nan, whatever the sign bit of the NaN the hardware made
+        (x86's default NaN has it set). Zeros keep the sign the kernel gives them."""
+        lines = NON_FINITE_LINES
+        text = ''.join(f'{x}\n' for x in lines)
+        want = ''.join(f'{x} -> {y}\n' for x, y in lines.items())
+        for i, (label, _) in enumerate(self.builds.configs):
+            with self.subTest(build=label):
+                self.assertEqual(self.builds.results[i][0], 0, self.builds.results[i][1])
+                code, out, err = self.builds.run(i, text)
+                self.assertEqual((code, out), (0, want), err)
 
     def test_runner_masks(self):
         code, out, err = self.builds.run(0, 'lt_2_1 binary64 0x1p+0 -0x1p-60 0x1p+0\n'

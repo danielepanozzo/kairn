@@ -13,6 +13,7 @@ from fractions import Fraction
 
 import common
 import hwfloat
+import test_cxx
 from kairn_gen import consts, expr, interp, ir
 
 KAIRN_GEN = os.path.join(common.GEN, 'kairn-gen')
@@ -274,6 +275,62 @@ class Specials(unittest.TestCase):
         self.assertEqual(interp.add(f, top, half_ulp), inf)
         self.assertEqual(interp.add(f, top, interp.canon(False, 1, 969)), top)
 
+    def test_non_finite_semantics(self):
+        """IEEE 754 for non-finite values, on a toy format of the IEEE shape (qmin + qmax = 3 - 2p)
+        and on the two hardware formats: overflow to infinity with the sign of the exact result,
+        NaN propagation, comparisons false on NaN, the neighbors at the ends of the format, 0 inf,
+        and guard."""
+        m = interp.Machine(common.kernels())
+        inf, ninf, nan = (interp.INF, False), (interp.INF, True), interp.NaN
+        zero, nzero = interp.canon(False, 0, 0), interp.canon(True, 0, 0)
+        one, none = interp.canon(False, 1, 0), interp.canon(True, 1, 0)
+        for name in ('fp:3:-4:1', 'binary64', 'binary32'):
+            f = interp.parse_format(name)
+
+            def op(o, *a):
+                return m._op(o, f, list(a), False)
+            top, ntop = interp.largest(f, False), interp.largest(f, True)
+            eta, neta = interp.canon(False, 1, f.qmin), interp.canon(True, 1, f.qmin)
+            # Overflow: an infinity with the sign of the exact result.
+            self.assertEqual(op('add', top, top), inf, name)
+            self.assertEqual(op('sub', ntop, top), ninf, name)
+            self.assertEqual(op('prod', top, ntop), ninf, name)
+            self.assertEqual(op('fma', ntop, top, top), ninf, name)
+            self.assertEqual(op('prod', neta, inf), ninf, name)     # a tiny t made into its infinity
+            # Underflow keeps the sign; an exact cancellation is +0; -0 + -0 is -0.
+            self.assertEqual(op('prod', neta, eta), nzero, name)
+            self.assertEqual(op('add', top, ntop), zero, name)
+            self.assertEqual(op('add', nzero, nzero), nzero, name)
+            # NaN propagates through every arithmetic operation, guard and the steps included.
+            for o in ('add', 'sub', 'prod'):
+                self.assertEqual((op(o, nan, one), op(o, one, nan), op(o, nan, inf)), (nan, nan, nan), (name, o))
+            for o in ('guard', 'neg', 'abs', 'succ', 'pred', 'copy'):
+                self.assertEqual(op(o, nan), nan, (name, o))
+            for args in ((nan, one, one), (one, nan, one), (one, one, nan)):
+                for o in ('fma', 'fms', 'fnma'):
+                    self.assertEqual(op(o, *args), nan, (name, o, args))
+            # Invalid operations.
+            self.assertEqual((op('add', inf, ninf), op('sub', inf, inf), op('prod', zero, inf),
+                              op('prod', ninf, nzero), op('fma', zero, inf, one), op('fma', inf, one, ninf)),
+                             (nan,) * 6, name)
+            # Comparisons: false whenever an operand is a NaN; the infinities at the ends.
+            for o in ('lt', 'le', 'eq'):
+                for x, y in ((nan, one), (one, nan), (nan, nan), (nan, inf)):
+                    self.assertFalse(op(o, x, y), (name, o, x, y))
+            self.assertTrue(op('lt', ninf, ntop) and op('lt', top, inf) and op('le', inf, inf) and op('eq', ninf, ninf))
+            self.assertFalse(op('lt', inf, inf) or op('eq', inf, ninf))
+            # The neighbors at the ends: succ of the largest number is +inf, succ(-inf) the most
+            # negative number, and the infinities stay where there is nothing further.
+            self.assertEqual((op('succ', top), op('succ', ninf), op('succ', inf)), (inf, ntop, inf), name)
+            self.assertEqual((op('pred', ntop), op('pred', inf), op('pred', ninf)), (ninf, top, ninf), name)
+            self.assertEqual((op('succ', nzero), op('pred', zero)), (eta, neta), name)
+            # guard: the value itself, a zero made positive.
+            for x in (one, none, top, ntop, eta, neta, inf, ninf, zero):
+                self.assertEqual(op('guard', x), x, (name, x))
+            self.assertEqual(op('guard', nzero), zero, name)
+            self.assertEqual((m._const(f, 'inf'), m._const(f, 'nan')), (inf, nan), name)
+            self.assertEqual((op('neg', inf), op('abs', ninf)), (ninf, inf), name)
+
     def test_copy_and_zero(self):
         m = interp.Machine(common.kernels())
         f = interp.parse_format('binary64')
@@ -310,7 +367,8 @@ class AgainstHardware(unittest.TestCase):
             if only and not only(k):
                 continue
             for fmt in ('binary64', 'binary32'):
-                cases = common.requests(fmt, k, self.N, 'hw') + edge_cases(fmt, k, 2000)
+                cases = common.requests(fmt, k, self.N, 'hw') + edge_cases(fmt, k, 2000) + \
+                    common.nonfinite_cases(fmt, k, self.N // 4, 'hw')
                 got = common.interpret(directory, name, fmt, cases, fused=fused, consteval=consteval)
                 bad = []
                 for case, g in zip(cases, got):
@@ -438,6 +496,60 @@ class Protocol(unittest.TestCase):
             self.assertIn('not a mask', r.stderr)
         r = self.run_interp('ops_wave2 binary64 0x1p+0 1 1\n', '--kernels', common.TEST_KERNELS)
         self.assertIn("not a limb: '1'", r.stderr)
+
+    def test_non_finite_limbs(self):
+        """The kernels of the non-finite layer on non-finite operands, written inf, -inf and nan,
+        and on finite ones that overflow; worked out by hand from milestone1.md."""
+        cases = {
+            'make_2 binary64 -0x0p+0': '0x0p+0 0x0p+0',            # guard: the zero made positive
+            'make_2 binary32 -inf': '-inf 0x0p+0',
+            'make_2 fp:3:-4:1 nan': 'nan nan',
+            'make_2_limbs binary64 0x1p+0 -0x1p-60': '0x1p+0 -0x1p-60',
+            'make_2_limbs binary64 -inf -0x0p+0': '-inf 0x0p+0',
+            # inf - inf is NaN; 14 + 14 overflows the toy format, whose largest number is 14.
+            'add_2_2_full binary64 inf 0x0p+0 -inf 0x0p+0': 'nan nan',
+            'add_2_2_full fp:3:-4:1 0x1.cp+3 0x0p+0 0x1.cp+3 0x0p+0': 'inf 0x0p+0',
+            'sub_2_2_full fp:3:-4:1 -0x1.cp+3 0x0p+0 0x1.cp+3 0x0p+0': '-inf 0x0p+0',
+            'add_2_1_full binary32 0x1p+0 0x0p+0 -inf': '-inf 0x0p+0',
+            'sub_1_2_full binary64 inf nan nan': 'nan nan',
+            'mul_2_2_full binary64 0x0p+0 0x0p+0 inf 0x0p+0': 'nan nan',      # 0 inf
+            'mul_2_1_full binary32 -0x1p+0 0x0p+0 inf': '-inf 0x0p+0',
+            'mul_pow2_2_full binary64 -inf 0x0p+0 0x1p-3': '-inf 0x0p+0',
+            'add_2_2_full binary64 0x1p+0 0x1p-60 0x1p+1 0x0p+0': '0x1.8p+1 0x1p-60',
+            # Balls: an empty operand gives the empty set; the whole line, a non-finite scalar, and
+            # an exact zero ball times the whole line give the whole line (center 0, radius inf).
+            'ball_add_1_full binary64 0x1p+0 nan 0x1p+0 0x0p+0': 'nan nan',
+            'ball_add_1_full binary64 0x0p+0 inf 0x1p+0 0x0p+0': '0x0p+0 inf',
+            'ball_mul_1_full binary64 0x0p+0 0x0p+0 0x0p+0 inf': '0x0p+0 inf',
+            'ball_scale_1_full binary64 0x1p+0 0x0p+0 nan': '0x0p+0 inf',
+            'ball_scale_2_full binary32 nan nan nan -inf': 'nan nan nan',
+            'ball_mul_2_full binary64 0x0p+0 0x0p+0 inf 0x1p+0 0x0p+0 0x0p+0': '0x0p+0 0x0p+0 inf',
+            'ball_make_1 binary64 0x1p+0 -0x1p+0': 'nan nan',                  # a negative radius
+            'ball_make_1 binary64 inf 0x1p+0': '0x0p+0 inf',
+            'ball_make_1 binary64 -0x0p+0 -0x0p+0': '0x0p+0 0x0p+0',
+            'ball_make_2 binary32 0x1p+0 0x0p+0 nan': 'nan nan nan',
+            'ball_make_2 binary32 nan nan 0x1p+0': '0x0p+0 0x0p+0 inf',
+            'ball_make_2 binary64 0x1p+0 0x1p-60 inf': '0x0p+0 0x0p+0 inf',
+            # The kernels that need no fix-up, at the ends of the range and on non-finite operands.
+            'to_up_2 binary64 0x1.fffffffffffffp+1023 0x1p+969': 'inf',
+            'to_down_2 binary64 -0x1.fffffffffffffp+1023 -0x1p+969': '-inf',
+            'abs_upper_2 binary32 -inf 0x0p+0': 'inf',
+            'radd binary64 inf 0x1p+0': 'inf',
+            'rmul binary64 0x0p+0 inf': 'nan',
+            'rmul fp:3:-4:1 0x1.cp+3 0x1p+1': 'inf',
+            'lt_2_1 binary64 nan nan 0x1p+0': '0',
+            'le_2_2 binary64 inf 0x0p+0 inf -0x0p+0': '1',
+            'eq_2_1 binary64 -inf 0x0p+0 -inf': '1',
+            'lt_1_2 binary32 -inf 0x1p+0 0x0p+0': '1',
+            'neg_2 binary64 inf 0x0p+0': '-inf -0x0p+0',
+        }
+        # And those that the compiled runners must complete the same way (test_cxx, test_simd).
+        for line, want in test_cxx.NON_FINITE_LINES.items():
+            self.assertEqual(cases.setdefault(line, want), want, line)
+        r = self.run_interp(''.join(f'{line}\n' for line in cases))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        got = dict(line.split(' -> ') for line in r.stdout.splitlines())
+        self.assertEqual(got, cases)
 
     def test_errors_name_the_line(self):
         for line, words in (('nope binary64 0x1p+0', 'unknown kernel'),

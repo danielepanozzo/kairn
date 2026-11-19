@@ -1,5 +1,6 @@
 """The two printers: what their text says, read independently of how they produce it."""
 import copy
+import hashlib
 import re
 import unittest
 
@@ -169,6 +170,33 @@ class Cpp(unittest.TestCase):
                      '    z0_out = z0;'):
             self.assertIn(line, add)
 
+    def test_guard_and_the_non_finite_constants(self):
+        # guard(a) is an addition of +0 of the limb type, never a subtraction of 0 or an addition
+        # of -0, which compilers fold away; one guard per guard of the IR, and nothing else adds +0.
+        for (name, t), f in self.fns.items():
+            zero = '0.0f' if t == 'float' else '0.0'
+            body = self.run_time(f['lines'])
+            guards = [p for p in ir.prims(self.ks[name], self.ks) if p.op == 'guard']
+            added = [x for x in body if x.endswith(f' + {zero};')]
+            self.assertEqual(len(added), len(guards), (name, t))
+            for p in guards:
+                self.assertIn(f'    const {t} {p.dst} = {p.args[0].name} + {zero};', body, name)
+            self.assertFalse(any(x.endswith((f' - {zero};', f' + -{zero};')) for x in body), name)
+        full = self.fns[('add_2_1_full', 'double')]['lines']
+        self.assertEqual(full[0], '    const double g = a + 0.0;')
+        self.assertIn('    const double t = x0 + g;', full)
+        self.assertIn('    const double r0 = fma_rn(t, std::numeric_limits<double>::infinity(), 0.0);', full)
+        self.assertIn('    const bool f = az < std::numeric_limits<double>::infinity();', full)
+        self.assertIn('    const double w1 = f ? z1 : r1;', full)
+        make = self.fns[('ball_make_2', 'float')]
+        self.assertTrue(make['constexpr'])
+        self.assertIn('    const float rw = e ? s : std::numeric_limits<float>::quiet_NaN();', make['lines'])
+        self.assertIn('    const bool e = 0.0f <= g;', make['lines'])
+        self.assertIn('#include <limits>', cpp.prelude(self.ks))
+        self.assertIn('#include <limits>', cpp.prelude(self.tks))         # ops_special
+        without = {n: k for n, k in self.tks.items() if n != 'ops_special'}
+        self.assertNotIn('#include <limits>', cpp.prelude(without))
+
     def test_name_clash_is_refused(self):
         ks = copy.deepcopy(dict(self.ks))
         k = ks['fast_two_sum']
@@ -266,6 +294,19 @@ class Packed(unittest.TestCase):
                       'uint64x2_t& m_out) noexcept {', text)
         self.assertIn('[[maybe_unused]] __m256d x1', self.texts[('avx2.hpp', 'kernels')])
         self.assertNotIn('constexpr void', text)
+        # guard: an addition of a zero vector; the non-finite constants broadcast from <limits>.
+        self.assertIn('    const __m256d x0 = _mm256_add_pd(a, _mm256_setzero_pd());', avx2[('make_2', '__m256d')])
+        self.assertIn('    const float32x4_t c0 = vaddq_f32(c, vdupq_n_f32(0.0f));', neon[('ball_make_1', 'float32x4_t')])
+        self.assertIn('    const __m256 r0 = _mm256_fmadd_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()), '
+                      '_mm256_setzero_ps());', avx2[('mul_2_2_full', '__m256')])
+        self.assertIn('    const float64x2_t rw = vbslq_f64(e, s, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));',
+                      neon[('ball_make_2', 'float64x2_t')])
+        for (file, which), t in self.texts.items():
+            ks = self.ks if which == 'kernels' else self.tks
+            for (name, vtype), lines in packed_functions(t).items():
+                guards = sum(p.op == 'guard' for p in ir.prims(ks[name], ks))
+                add_zero = r'(?:_mm256_add_p[sd]\(\w+, _mm256_setzero_p[sd]\(\)\)|vaddq_f(?:32|64)\(\w+, vdupq_n_f(?:32|64)\(0\.0f?\)\))'
+                self.assertEqual(sum(bool(re.search(add_zero, x)) for x in lines), guards, (file, name))
 
 
 class Rocq(unittest.TestCase):
@@ -325,7 +366,7 @@ class Rocq(unittest.TestCase):
         gives the hypotheses of the next. It says so by the `normalized` claim on the limb's
         group, or else by a `fmt` conjunct; these come first, in output order, and the claims
         follow unchanged. A mask gets nothing. Read from the printed text."""
-        tks = common.kernels(common.TEST_KERNELS)
+        tks = rocq.real(common.kernels(common.TEST_KERNELS))
         uncovered = {}
         for ks in (self.ks, tks):
             for name, k in ks.items():
@@ -439,6 +480,45 @@ class Rocq(unittest.TestCase):
         tks = common.kernels(common.TEST_KERNELS)
         self.assertIn('  forall a b : R,\n  forall w : bool,\n  fmt emin prec a ->\n  fmt emin prec b ->\n'
                       "  let '(r0, c1, k1, v) := ops_wave2 emin prec tie_even a w b in\n", rocq.statements(tks))
+
+    # SHA-256 of Model.v, Statements.v and Audit.v as the real model prints them, the same before
+    # the non-finite layer (commit f39b066) and after it. Change them only together with a change
+    # of the real model that is meant, and with the proofs that go with it.
+    DIGESTS = {'Model.v': 'b9317eb68cfea4256e06afc5c4711a152bacc51177639e7640eeb205453d638b',
+               'Statements.v': 'd4d3d190950921554165d0da54ba988acb98f0d69e1f9333eea2d863cc8c68d2',
+               'Audit.v': 'de3b3e3ec23ea5ef5b1a0b894dfb28257357316b9780ff22ca1cff113004fbba'}
+
+    def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
+        """The full kernels and the constructors have no real-model statement and appear nowhere in
+        the three files; a kernel of the extended domain that has one is printed exactly as if it
+        were of the finite domain with normalized for canonical. And the files are those of f39b066."""
+        printers = {'Model.v': rocq.model, 'Statements.v': rocq.statements, 'Audit.v': rocq.audit}
+        finite = {}
+        for name, k in copy.deepcopy(dict(self.all)).items():
+            if not k.real_model:
+                continue
+            k.domain, k.ieee_status, k.ieee_theorem = None, None, None
+            k.requires = [('normalized',) + r[1:] if r[0] == 'canonical' else r for r in k.requires]
+            finite[name] = k
+        self.assertEqual(len(finite), 42)
+        self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
+        for file, printer in printers.items():
+            text = printer(self.all)
+            self.assertEqual(text, printer(finite), file)
+            self.assertEqual(hashlib.sha256(text.encode()).hexdigest(), self.DIGESTS[file], file)
+            for name, k in self.all.items():
+                if not k.real_model:
+                    self.assertIsNone(re.search(rf'\b{name}\b', text), (file, name))
+
+    def test_guard_in_the_real_model(self):
+        # guard is one rounding of a + 0, which a proof reads as a; a test kernel with a constant
+        # inf or nan has no real-model statement and is not printed.
+        tks = common.kernels(common.TEST_KERNELS)
+        model, statements = rocq.model(tks), rocq.statements(tks)
+        self.assertIn('Definition ops_guard (a b : R) : R * R * R :=\n  let g1 := rnd (a + 0) in\n'
+                      '  let n := - b in\n  let g2 := rnd (n + 0) in\n', model)
+        self.assertIn('  let \'(r0, g1, g2) := ops_guard emin prec tie_even a b in\n', statements)
+        self.assertNotIn('ops_special', model + statements + rocq.audit(tks))
 
     def test_audit(self):
         ks = copy.deepcopy(dict(self.ks))
