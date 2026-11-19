@@ -45,3 +45,4 @@ theories/IeeeOps.v
 theories/IeeeRange.v
 theories/IeeeFull.v
 theories/IeeeBall.v
+theories/IeeeBallCores.v

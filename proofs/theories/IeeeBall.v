@@ -379,7 +379,13 @@ Proof.
 intros cx0 cx1 rx cy0 cy1 ry Bx By.
 destruct (add_nonneg prec emax nan_plus rx ry (ball_2_radius _ _ _ Bx) (ball_2_radius _ _ _ By))
   as [_ [_ K]].
-generalize (ball_2_empty _ _ _ Bx) (ball_2_empty _ _ _ By). tauto.
+split.
+- intros N. destruct (proj1 K N) as [Nx|Ny].
+  + left. now apply (proj1 (ball_2_empty _ _ _ Bx)).
+  + right. now apply (proj1 (ball_2_empty _ _ _ By)).
+- intros [E|E]; apply (proj2 K).
+  + left. now apply (proj2 (ball_2_empty _ _ _ Bx)).
+  + right. now apply (proj2 (ball_2_empty _ _ _ By)).
 Qed.
 
 Lemma q_empty_1 :
@@ -389,7 +395,13 @@ Proof.
 intros cx rx cy ry Bx By.
 destruct (add_nonneg prec emax nan_plus rx ry (ball_1_radius _ _ Bx) (ball_1_radius _ _ By))
   as [_ [_ K]].
-generalize (ball_1_empty _ _ Bx) (ball_1_empty _ _ By). tauto.
+split.
+- intros N. destruct (proj1 K N) as [Nx|Ny].
+  + left. now apply (proj1 (ball_1_empty _ _ Bx)).
+  + right. now apply (proj1 (ball_1_empty _ _ By)).
+- intros [E|E]; apply (proj2 K).
+  + left. now apply (proj2 (ball_1_empty _ _ Bx)).
+  + right. now apply (proj2 (ball_1_empty _ _ By)).
 Qed.
 
 (* The same for one ball operand, whose radius is q itself. *)

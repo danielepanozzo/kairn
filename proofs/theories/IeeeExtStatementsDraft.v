@@ -277,3 +277,185 @@ Definition mul_2_2_full_spec : Prop :=
    w0 = infinity prec emax (Rlt_bool ((val x0 + val x1) * (val y0 + val y1)) 0) /\ w1 = pos_zero prec emax) /\
   (~ (finite x0 /\ finite y0) -> canonical_of t w0 w1).
 
+(** * The full Ball kernels *)
+
+(* The cores are those of the second radius design (BallDraft.v). In the IEEE model the
+   statements are from precision 2 on for a center of one limb (and from the minimum of
+   the center's kernel for two limbs): the constants G and H of the radius are below
+   2^emax in every format from there on. *)
+
+(* ball_add_1_full: the sum of two balls, center of one limb. *)
+Definition ball_add_1_full_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall cx rx cy ry : binary_float prec emax,
+  ball_1 cx rx ->
+  ball_1 cy ry ->
+  let '(cw, rw) := IeeeDraft.ball_add_1_full prec emax nan_plus nan_abs nan_fma cx rx cy ry in
+  ball_1 cw rw /\
+  (ball_empty_1 cw rw <-> ball_empty_1 cx rx \/ ball_empty_1 cy ry) /\
+  (ball_finite_1 cw rw ->
+   ball_finite_1 cx rx /\ ball_finite_1 cy ry /\
+   (forall x y : R, Rabs (x - val cx) <= val rx -> Rabs (y - val cy) <= val ry ->
+    Rabs ((x + y) - val cw) <= val rw)) /\
+  (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> in_ball_1 cw rw (x + y)).
+
+(* ball_sub_1_full: the difference of two balls, center of one limb. *)
+Definition ball_sub_1_full_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall cx rx cy ry : binary_float prec emax,
+  ball_1 cx rx ->
+  ball_1 cy ry ->
+  let '(cw, rw) := IeeeDraft.ball_sub_1_full prec emax nan_plus nan_opp nan_abs nan_fma cx rx cy ry in
+  ball_1 cw rw /\
+  (ball_empty_1 cw rw <-> ball_empty_1 cx rx \/ ball_empty_1 cy ry) /\
+  (ball_finite_1 cw rw ->
+   ball_finite_1 cx rx /\ ball_finite_1 cy ry /\
+   (forall x y : R, Rabs (x - val cx) <= val rx -> Rabs (y - val cy) <= val ry ->
+    Rabs ((x - y) - val cw) <= val rw)) /\
+  (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> in_ball_1 cw rw (x - y)).
+
+(* ball_mul_1_full: the product of two balls, center of one limb. *)
+Definition ball_mul_1_full_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall cx rx cy ry : binary_float prec emax,
+  ball_1 cx rx ->
+  ball_1 cy ry ->
+  let '(cw, rw) := IeeeDraft.ball_mul_1_full prec emax nan_plus nan_abs nan_fma cx rx cy ry in
+  ball_1 cw rw /\
+  (ball_empty_1 cw rw <-> ball_empty_1 cx rx \/ ball_empty_1 cy ry) /\
+  (ball_finite_1 cw rw ->
+   ball_finite_1 cx rx /\ ball_finite_1 cy ry /\
+   (forall x y : R, Rabs (x - val cx) <= val rx -> Rabs (y - val cy) <= val ry ->
+    Rabs ((x * y) - val cw) <= val rw)) /\
+  (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> in_ball_1 cw rw (x * y)).
+
+(* ball_scale_1_full: a ball times a value a of T, center of one limb. *)
+Definition ball_scale_1_full_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall cx rx a : binary_float prec emax,
+  ball_1 cx rx ->
+  let '(cw, rw) := IeeeDraft.ball_scale_1_full prec emax nan_abs nan_fma cx rx a in
+  ball_1 cw rw /\
+  (ball_empty_1 cw rw <-> ball_empty_1 cx rx) /\
+  (ball_finite_1 cw rw ->
+   ball_finite_1 cx rx /\ finite a /\
+   (forall x : R, Rabs (x - val cx) <= val rx ->
+    Rabs ((x * val a) - val cw) <= val rw)) /\
+  (finite a -> forall x : R, in_ball_1 cx rx x -> in_ball_1 cw rw (x * val a)).
+
+(* ball_add_2_full: the sum of two balls, center of two limbs. *)
+Definition ball_add_2_full_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (3 <= prec)%Z ->
+  forall cx0 cx1 rx cy0 cy1 ry : binary_float prec emax,
+  ball_2 cx0 cx1 rx ->
+  ball_2 cy0 cy1 ry ->
+  let '(cw0, cw1, rw) := IeeeDraft.ball_add_2_full prec emax nan_plus nan_minus nan_abs nan_fma cx0 cx1 rx cy0 cy1 ry in
+  ball_2 cw0 cw1 rw /\
+  (ball_empty_2 cw0 cw1 rw <-> ball_empty_2 cx0 cx1 rx \/ ball_empty_2 cy0 cy1 ry) /\
+  (ball_finite_2 cw0 cw1 rw ->
+   ball_finite_2 cx0 cx1 rx /\ ball_finite_2 cy0 cy1 ry /\
+   (forall x y : R, Rabs (x - (val cx0 + val cx1)) <= val rx -> Rabs (y - (val cy0 + val cy1)) <= val ry ->
+    Rabs ((x + y) - (val cw0 + val cw1)) <= val rw)) /\
+  (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> in_ball_2 cw0 cw1 rw (x + y)).
+
+(* ball_sub_2_full: the difference of two balls, center of two limbs. *)
+Definition ball_sub_2_full_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (3 <= prec)%Z ->
+  forall cx0 cx1 rx cy0 cy1 ry : binary_float prec emax,
+  ball_2 cx0 cx1 rx ->
+  ball_2 cy0 cy1 ry ->
+  let '(cw0, cw1, rw) := IeeeDraft.ball_sub_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma cx0 cx1 rx cy0 cy1 ry in
+  ball_2 cw0 cw1 rw /\
+  (ball_empty_2 cw0 cw1 rw <-> ball_empty_2 cx0 cx1 rx \/ ball_empty_2 cy0 cy1 ry) /\
+  (ball_finite_2 cw0 cw1 rw ->
+   ball_finite_2 cx0 cx1 rx /\ ball_finite_2 cy0 cy1 ry /\
+   (forall x y : R, Rabs (x - (val cx0 + val cx1)) <= val rx -> Rabs (y - (val cy0 + val cy1)) <= val ry ->
+    Rabs ((x - y) - (val cw0 + val cw1)) <= val rw)) /\
+  (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> in_ball_2 cw0 cw1 rw (x - y)).
+
+(* ball_mul_2_full: the product of two balls, center of two limbs. *)
+Definition ball_mul_2_full_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (4 <= prec)%Z ->
+  forall cx0 cx1 rx cy0 cy1 ry : binary_float prec emax,
+  ball_2 cx0 cx1 rx ->
+  ball_2 cy0 cy1 ry ->
+  let '(cw0, cw1, rw) := IeeeDraft.ball_mul_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma cx0 cx1 rx cy0 cy1 ry in
+  ball_2 cw0 cw1 rw /\
+  (ball_empty_2 cw0 cw1 rw <-> ball_empty_2 cx0 cx1 rx \/ ball_empty_2 cy0 cy1 ry) /\
+  (ball_finite_2 cw0 cw1 rw ->
+   ball_finite_2 cx0 cx1 rx /\ ball_finite_2 cy0 cy1 ry /\
+   (forall x y : R, Rabs (x - (val cx0 + val cx1)) <= val rx -> Rabs (y - (val cy0 + val cy1)) <= val ry ->
+    Rabs ((x * y) - (val cw0 + val cw1)) <= val rw)) /\
+  (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> in_ball_2 cw0 cw1 rw (x * y)).
+
+(* ball_scale_2_full: a ball times a value a of T, center of two limbs. *)
+Definition ball_scale_2_full_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall cx0 cx1 rx a : binary_float prec emax,
+  ball_2 cx0 cx1 rx ->
+  let '(cw0, cw1, rw) := IeeeDraft.ball_scale_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma cx0 cx1 rx a in
+  ball_2 cw0 cw1 rw /\
+  (ball_empty_2 cw0 cw1 rw <-> ball_empty_2 cx0 cx1 rx) /\
+  (ball_finite_2 cw0 cw1 rw ->
+   ball_finite_2 cx0 cx1 rx /\ finite a /\
+   (forall x : R, Rabs (x - (val cx0 + val cx1)) <= val rx ->
+    Rabs ((x * val a) - (val cw0 + val cw1)) <= val rw)) /\
+  (finite a -> forall x : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cw0 cw1 rw (x * val a)).
+
+(* ball_neg_1: no fix-up. *)
+Definition ball_neg_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp : nan1 prec emax),
+  (1 <= prec)%Z ->
+  forall cx rx : binary_float prec emax,
+  ball_1 cx rx ->
+  let '(cz, rz) := IeeeDraft.ball_neg_1 prec emax nan_opp cx rx in
+  ball_1 cz rz /\
+  (ball_empty_1 cz rz <-> ball_empty_1 cx rx) /\
+  (ball_finite_1 cz rz ->
+   ball_finite_1 cx rx /\
+   (forall x : R, Rabs (x - val cx) <= val rx ->
+    Rabs ((- x) - val cz) <= val rz)) /\
+  (forall x : R, in_ball_1 cx rx x -> in_ball_1 cz rz (- x)).
+
+(* ball_neg_2: no fix-up. *)
+Definition ball_neg_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp : nan1 prec emax),
+  (1 <= prec)%Z ->
+  forall cx0 cx1 rx : binary_float prec emax,
+  ball_2 cx0 cx1 rx ->
+  let '(cz0, cz1, rz) := IeeeDraft.ball_neg_2 prec emax nan_opp cx0 cx1 rx in
+  ball_2 cz0 cz1 rz /\
+  (ball_empty_2 cz0 cz1 rz <-> ball_empty_2 cx0 cx1 rx) /\
+  (ball_finite_2 cz0 cz1 rz ->
+   ball_finite_2 cx0 cx1 rx /\
+   (forall x : R, Rabs (x - (val cx0 + val cx1)) <= val rx ->
+    Rabs ((- x) - (val cz0 + val cz1)) <= val rz)) /\
+  (forall x : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cz0 cz1 rz (- x)).

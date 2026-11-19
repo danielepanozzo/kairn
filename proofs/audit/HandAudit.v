@@ -17,6 +17,7 @@ From Kairn Require Import IeeeStatementsDraft IeeeEFT IeeeAdd22 IeeeMul22 IeeeMo
 From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeExtStatementsDraft IeeeOps IeeeFull.
 From Kairn Require BallDraft Ball2.
+From Kairn Require Import IeeeBallCores.
 
 (* The IEEE model: error-free transformations. *)
 Definition fast_two_sum_ieee_audit : fast_two_sum_ieee_spec := fast_two_sum_ieee_correct.
@@ -139,3 +140,35 @@ Print Assumptions Kairn.Ball2.ball_mul_2_correct.
 Definition ball_scale_2_second_audit : Kairn.BallDraft.ball_scale_2_spec :=
   Kairn.Ball2.ball_scale_2_correct.
 Print Assumptions Kairn.Ball2.ball_scale_2_correct.
+
+(* The non-finite layer: the full Ball kernels (B1 to B3 and containment in every case),
+   with the cores of the second radius design; and ball_neg_k, which needs no fix-up. *)
+Definition ball_add_1_full_audit : ball_add_1_full_spec := ball_add_1_full_correct.
+Print Assumptions ball_add_1_full_correct.
+
+Definition ball_sub_1_full_audit : ball_sub_1_full_spec := ball_sub_1_full_correct.
+Print Assumptions ball_sub_1_full_correct.
+
+Definition ball_mul_1_full_audit : ball_mul_1_full_spec := ball_mul_1_full_correct.
+Print Assumptions ball_mul_1_full_correct.
+
+Definition ball_scale_1_full_audit : ball_scale_1_full_spec := ball_scale_1_full_correct.
+Print Assumptions ball_scale_1_full_correct.
+
+Definition ball_add_2_full_audit : ball_add_2_full_spec := ball_add_2_full_correct.
+Print Assumptions ball_add_2_full_correct.
+
+Definition ball_sub_2_full_audit : ball_sub_2_full_spec := ball_sub_2_full_correct.
+Print Assumptions ball_sub_2_full_correct.
+
+Definition ball_mul_2_full_audit : ball_mul_2_full_spec := ball_mul_2_full_correct.
+Print Assumptions ball_mul_2_full_correct.
+
+Definition ball_scale_2_full_audit : ball_scale_2_full_spec := ball_scale_2_full_correct.
+Print Assumptions ball_scale_2_full_correct.
+
+Definition ball_neg_1_ieee_audit : ball_neg_1_ieee_spec := ball_neg_1_ieee_correct.
+Print Assumptions ball_neg_1_ieee_correct.
+
+Definition ball_neg_2_ieee_audit : ball_neg_2_ieee_spec := ball_neg_2_ieee_correct.
+Print Assumptions ball_neg_2_ieee_correct.

@@ -20,18 +20,18 @@
      and succ never returns -infinity. Hence on a value that is nonnegative,
      +infinity or NaN (nonneg_ext), succ returns such a value, and a finite result
      means a finite operand;
-   - add and prod on two such values, and so radd and rmul: the result is again
-     nonnegative, +infinity or NaN, and when it is finite both operands were finite
-     and it is the value of the real model. This is the argument that replaces the
-     cone for a radius computation: there is no -infinity in it, so nothing that
-     overflowed can become finite again;
+   - add, prod and fma on such values, and so radd and rmul: the result is again
+     nonnegative, +infinity or NaN, and when it is finite the operands were finite and
+     it is the value of the real model. A radius computation contains no -infinity,
+     which is what makes the test lt (rz, inf) of the Ball fix-up mean "finite";
    - abs_2, to_up_2, abs_upper_2 on a finite pair;
    - const_of r is the finite number of value r, for r a number of the format below
-     2^emax in magnitude; the eight computed constants are such numbers. *)
+     2^emax in magnitude; a nonnegative expression rounded up and bounded by such a
+     number is one (const_of_RU). *)
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Format Normalized Directed Ball Program IeeeBridge
+From Kairn Require Import Format Normalized Program IeeeBridge
   IeeeStatementsDraft IeeeExtStatementsDraft.
 From Kairn Require IeeeDraft.
 Open Scope R_scope.
@@ -622,59 +622,92 @@ Proof.
 change 1 with (bpow radix2 0). apply generic_format_bpow. unfold FLT_exp. lia.
 Qed.
 
-(* unit_of rel = RU (rel / (1 - rel)) is at most 1 when rel <= 1/2. *)
-Lemma unit_of_le_1 : forall rel : R, 0 <= rel <= / 2 -> unit_of emin prec rel <= 1.
+(* A nonnegative expression t rounded up, when it is at most a number B of the format
+   that is below 2^emax: const_of gives the finite number of that value. This is how
+   the constants of the Ball kernels enter the IEEE model. *)
+Lemma const_of_RU :
+  forall t B : R, 0 <= t -> t <= B -> format B -> B < bpow radix2 emax ->
+  fin (const_of (round radix2 fexp Zceil t)) /\
+  b2r (const_of (round radix2 fexp Zceil t)) = round radix2 fexp Zceil t /\
+  nonneg_ext (const_of (round radix2 fexp Zceil t)).
 Proof.
-intros rel [H0 H1]. unfold unit_of.
-apply round_le_generic; auto with typeclass_instances. apply format_1.
-apply Rmult_le_reg_r with (1 - rel). lra.
-unfold Rdiv. rewrite Rmult_assoc, Rinv_l by lra. lra.
-Qed.
-
-(* tiny_of rel tiny = RU (tiny / (1 - rel)) is at most 4 eta when rel <= 1/2 and
-   tiny <= 2 eta. *)
-Lemma tiny_of_le :
-  forall rel tiny : R, 0 <= rel <= / 2 -> 0 <= tiny <= 2 * bpow radix2 emin ->
-  tiny_of emin prec rel tiny <= bpow radix2 (emin + 2).
-Proof.
-intros rel tiny [H0 H1] [T0 T1]. unfold tiny_of.
-apply round_le_generic; auto with typeclass_instances.
-- apply generic_format_bpow. unfold FLT_exp. lia.
-- rewrite bpow_plus, pow2_2.
-  apply Rmult_le_reg_r with (1 - rel). lra.
-  unfold Rdiv. rewrite Rmult_assoc, Rinv_l by lra.
-  generalize (bpow_gt_0 radix2 emin). intros E0. nra.
-Qed.
-
-Lemma const_unit :
-  forall rel : R, 0 <= rel <= / 2 ->
-  fin (const_of (unit_of emin prec rel)) /\
-  b2r (const_of (unit_of emin prec rel)) = unit_of emin prec rel /\
-  nonneg_ext (const_of (unit_of emin prec rel)).
-Proof.
-intros rel Hrel.
-assert (Hr1 : 0 <= rel < 1) by lra.
-destruct (unit_of_radius emin prec rel Hr1) as [Fu Pu].
-destruct (const_of_spec (unit_of emin prec rel) Fu) as [F E].
-{ apply le_1_inrange. split. exact Pu. now apply unit_of_le_1. }
+intros t B Ht HB FB LB.
+assert (P : 0 <= round radix2 fexp Zceil t).
+{ apply round_ge_generic; auto with typeclass_instances. apply generic_format_0. }
+assert (L : round radix2 fexp Zceil t <= B).
+{ apply round_le_generic; auto with typeclass_instances. }
+destruct (const_of_spec (round radix2 fexp Zceil t)) as [F E].
+{ apply generic_format_round; auto with typeclass_instances. }
+{ rewrite Rabs_pos_eq by exact P. lra. }
 split; [exact F|split; [exact E|]].
 apply nonneg_ext_finite; trivial. unfold val. now rewrite E.
 Qed.
 
-Lemma const_tiny :
-  forall rel tiny : R, (2 <= prec)%Z -> 0 <= rel <= / 2 -> 0 <= tiny <= 2 * bpow radix2 emin ->
-  fin (const_of (tiny_of emin prec rel tiny)) /\
-  b2r (const_of (tiny_of emin prec rel tiny)) = tiny_of emin prec rel tiny /\
-  nonneg_ext (const_of (tiny_of emin prec rel tiny)).
+(** * fma on values that are nonnegative, +infinity or NaN *)
+
+Lemma fma_nan :
+  forall a b c : float,
+  is_nan prec emax a = true \/ is_nan prec emax b = true \/ is_nan prec emax c = true ->
+  is_nan prec emax (fma a b c) = true.
 Proof.
-intros rel tiny Hp2 Hrel Htiny.
-assert (Hr1 : 0 <= rel < 1) by lra.
-destruct (tiny_of_radius emin prec rel tiny Hr1 (proj1 Htiny)) as [Fu Pu].
-destruct (const_of_spec (tiny_of emin prec rel tiny) Fu) as [F E].
-{ rewrite Rabs_pos_eq by exact Pu.
-  apply Rle_lt_trans with (1 := tiny_of_le rel tiny Hrel Htiny). apply bpow_lt. lia. }
-split; [exact F|split; [exact E|]].
-apply nonneg_ext_finite; trivial. unfold val. now rewrite E.
+intros [sa|sa|sa pa Ha|sa ma ea Ha] [sb|sb|sb pb Hb|sb mb eb Hb] [sc|sc|sc pc Hc|sc mc ec Hc]
+  [K|[K|K]]; try discriminate K; reflexivity.
+Qed.
+
+Lemma nonneg_ext_cases :
+  forall x : float, nonneg_ext x ->
+  is_nan prec emax x = true \/ x = pinf \/
+  ((exists s : bool, x = B754_zero prec emax s) \/
+   (exists m e H, x = B754_finite prec emax false m e H)).
+Proof.
+intros x [N|[I|[F P]]].
+- now left.
+- right. now left.
+- right. right. destruct x as [s|s|s pl H|s m e H]; try discriminate F.
+  + left. now exists s.
+  + right. destruct s.
+    * exfalso. generalize (finite_sign_neg m e H). unfold val in P. lra.
+    * now exists m, e, H.
+Qed.
+
+(* The result is again nonnegative, +infinity or NaN: with nonnegative operands a fused
+   operation cannot return -infinity. And, as for every operands, a finite result means
+   finite operands and is the rounded real result. *)
+Lemma fma_nonneg :
+  forall a b c : float, nonneg_ext a -> nonneg_ext b -> nonneg_ext c ->
+  nonneg_ext (fma a b c) /\
+  (fin (fma a b c) ->
+   fin a /\ fin b /\ fin c /\ b2r (fma a b c) = rnd (b2r a * b2r b + b2r c)).
+Proof.
+intros a b c Ha Hb Hc. split.
+- destruct (finite_dec a) as [Fa|Fa]; destruct (finite_dec b) as [Fb|Fb];
+    destruct (finite_dec c) as [Fc|Fc].
+  1: { generalize (nonneg_ext_fin a Ha Fa) (nonneg_ext_fin b Hb Fb) (nonneg_ext_fin c Hc Fc).
+       intros Pa Pb Pc.
+       assert (P : 0 <= b2r a * b2r b + b2r c) by (generalize (Rmult_le_pos _ _ Pa Pb); lra).
+       generalize (Bfma_correct prec emax prec_gt_0_ prec_lt_emax_ nan_fma
+                     BinarySingleNaN.mode_NE a b c Fa Fb Fc).
+       cbv zeta. fold (fma a b c).
+       change (round radix2 (SpecFloat.fexp prec emax)
+                 (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) (b2r a * b2r b + b2r c))
+         with (rnd (b2r a * b2r b + b2r c)).
+       destruct (Rlt_bool_spec (Rabs (rnd (b2r a * b2r b + b2r c))) (bpow radix2 emax)) as [H|H].
+       - intros [E [F _]]. apply nonneg_ext_finite; trivial. rewrite E.
+         apply round_ge_generic; auto with typeclass_instances. apply generic_format_0.
+       - intros E. rewrite Rlt_bool_false in E by exact P.
+         rewrite overflow_NE in E. apply B2FF_inf_inv in E. rewrite E. apply nonneg_ext_pinf. }
+  all: (destruct (nonneg_ext_cases a Ha) as [Na|[Ia|Ka]]; [left; apply fma_nan; auto| |]);
+       (destruct (nonneg_ext_cases b Hb) as [Nb|[Ib|Kb]]; [left; apply fma_nan; auto| |]);
+       (destruct (nonneg_ext_cases c Hc) as [Nc|[Ic|Kc]]; [left; apply fma_nan; auto| |]);
+       repeat match goal with
+       | K : (exists s : bool, _ = B754_zero _ _ s) \/ _ |- _ =>
+           destruct K as [[? K]|[? [? [? K]]]]
+       end;
+       subst;
+       first [discriminate | left; reflexivity | right; left; reflexivity].
+- intros F. destruct (fma_finite_inv prec emax nan_fma a b c F) as [Fa [Fb Fc]].
+  split; [exact Fa|split; [exact Fb|split; [exact Fc|]]].
+  now apply (fma_spec prec emax nan_fma a b c Fa Fb Fc).
 Qed.
 
 End IeeeOps.

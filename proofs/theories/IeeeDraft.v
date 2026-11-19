@@ -41,9 +41,9 @@
      0            pzero          +0
      const inf    pinf           +infinity
      const nan    cnan           a NaN
-     const unit_computed(K), const tiny_computed(K)
+     const radius_e(K), const radius_g(K), const radius_h(K)
                   const_of       the number of the format whose value is the constant
-                                 of the same name in proofs/gen/Model.v
+                                 of the same name in the real model (BallDraft.v)
    A call stays a call, as in Model.v, and the names of the values are those of the
    kernel descriptions and of the listings of docs/developer/design/milestone1.md.
 
@@ -54,7 +54,10 @@
    the relation between the two models is proved (IeeeBridge.v); that each program is
    its kernel is checked by computation where it is used.
 
-   Three points where this draft is ahead of the generated files:
+   Four points where this draft is ahead of the generated files:
+   - the Ball cores are those of the second radius design (BallDraft.v): the radius is
+     evaluated by operations rounded to nearest and inflated once. proofs/gen/Model.v
+     still has the first design;
    - add_2_1 guards its one-limb operand in its first line, as in the listing of
      milestone1.md; the real model of proofs/gen/Model.v does not yet. The two compute
      the same values (IeeeMore.v, add_2_1_runR);
@@ -65,6 +68,7 @@
 From Stdlib Require Import Reals ZArith List.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Model.
+From Kairn Require BallDraft.
 From Kairn Require Import Program.
 Import ListNotations.
 
@@ -117,29 +121,49 @@ Definition guard (a : float) : float := add a pzero.
 
 (* The number of the format whose value is r, for a real number r that is one (r is a
    number of the format with no largest number, and below 2^emax in magnitude); for any
-   other r, some number. The computed constants of a kernel are given this way, from
-   their definitions in proofs/gen/Model.v. *)
+   other r, some number. The constants of the Ball kernels are given this way, from their
+   definitions in the real model (BallDraft.v). *)
 Definition const_of (r : R) : float :=
   binary_normalize prec emax prec_gt_0_ prec_lt_emax_ BinarySingleNaN.mode_NE
     (Ztrunc (scaled_mantissa radix2 (FLT_exp (3 - emax - prec) prec) r))
     (cexp radix2 (FLT_exp (3 - emax - prec) prec) r) false.
 
-Definition unit_computed_add_1_1 : float :=
-  const_of (Model.unit_computed_add_1_1 (3 - emax - prec) prec).
-Definition unit_computed_add_2_2 : float :=
-  const_of (Model.unit_computed_add_2_2 (3 - emax - prec) prec).
-Definition unit_computed_mul_1_1 : float :=
-  const_of (Model.unit_computed_mul_1_1 (3 - emax - prec) prec).
-Definition unit_computed_mul_2_1 : float :=
-  const_of (Model.unit_computed_mul_2_1 (3 - emax - prec) prec).
-Definition unit_computed_mul_2_2 : float :=
-  const_of (Model.unit_computed_mul_2_2 (3 - emax - prec) prec).
-Definition tiny_computed_mul_1_1 : float :=
-  const_of (Model.tiny_computed_mul_1_1 (3 - emax - prec) prec).
-Definition tiny_computed_mul_2_1 : float :=
-  const_of (Model.tiny_computed_mul_2_1 (3 - emax - prec) prec).
-Definition tiny_computed_mul_2_2 : float :=
-  const_of (Model.tiny_computed_mul_2_2 (3 - emax - prec) prec).
+Definition radius_e_ball_add_1 : float :=
+  const_of (BallDraft.radius_e_ball_add_1 (3 - emax - prec) prec).
+Definition radius_g_ball_add_1 : float :=
+  const_of (BallDraft.radius_g_ball_add_1 (3 - emax - prec) prec).
+Definition radius_h_ball_add_1 : float :=
+  const_of (BallDraft.radius_h_ball_add_1 (3 - emax - prec) prec).
+Definition radius_e_ball_add_2 : float :=
+  const_of (BallDraft.radius_e_ball_add_2 (3 - emax - prec) prec).
+Definition radius_g_ball_add_2 : float :=
+  const_of (BallDraft.radius_g_ball_add_2 (3 - emax - prec) prec).
+Definition radius_h_ball_add_2 : float :=
+  const_of (BallDraft.radius_h_ball_add_2 (3 - emax - prec) prec).
+Definition radius_e_ball_scale_1 : float :=
+  const_of (BallDraft.radius_e_ball_scale_1 (3 - emax - prec) prec).
+Definition radius_g_ball_scale_1 : float :=
+  const_of (BallDraft.radius_g_ball_scale_1 (3 - emax - prec) prec).
+Definition radius_h_ball_scale_1 : float :=
+  const_of (BallDraft.radius_h_ball_scale_1 (3 - emax - prec) prec).
+Definition radius_e_ball_scale_2 : float :=
+  const_of (BallDraft.radius_e_ball_scale_2 (3 - emax - prec) prec).
+Definition radius_g_ball_scale_2 : float :=
+  const_of (BallDraft.radius_g_ball_scale_2 (3 - emax - prec) prec).
+Definition radius_h_ball_scale_2 : float :=
+  const_of (BallDraft.radius_h_ball_scale_2 (3 - emax - prec) prec).
+Definition radius_e_ball_mul_1 : float :=
+  const_of (BallDraft.radius_e_ball_mul_1 (3 - emax - prec) prec).
+Definition radius_g_ball_mul_1 : float :=
+  const_of (BallDraft.radius_g_ball_mul_1 (3 - emax - prec) prec).
+Definition radius_h_ball_mul_1 : float :=
+  const_of (BallDraft.radius_h_ball_mul_1 (3 - emax - prec) prec).
+Definition radius_e_ball_mul_2 : float :=
+  const_of (BallDraft.radius_e_ball_mul_2 (3 - emax - prec) prec).
+Definition radius_g_ball_mul_2 : float :=
+  const_of (BallDraft.radius_g_ball_mul_2 (3 - emax - prec) prec).
+Definition radius_h_ball_mul_2 : float :=
+  const_of (BallDraft.radius_h_ball_mul_2 (3 - emax - prec) prec).
 
 (** * The finite cores *)
 
@@ -355,28 +379,30 @@ Definition rmul (a b : float) : float :=
   let r := succ p in
   r.
 
-(* The Ball kernels (Milestone 1 listing): center of one limb. *)
+(* The Ball kernels, second radius design (BallDraft.v): center of one limb. *)
 Definition ball_add_1 (cx rx cy ry : float) : float * float :=
   let cz := add cx cy in
-  let mz := abs cz in
-  let d := rmul unit_computed_add_1_1 mz in
-  let r0 := radd rx ry in
-  let rz := radd r0 d in
+  let az := abs cz in
+  let s := add rx ry in
+  let t := fma az radius_e_ball_add_1 s in
+  let rz := fma t radius_g_ball_add_1 radius_h_ball_add_1 in
+  (cz, rz).
+
+Definition ball_sub_1 (cx rx cy ry : float) : float * float :=
+  let n := neg cy in
+  let '(cz, rz) := ball_add_1 cx rx n ry in
   (cz, rz).
 
 Definition ball_mul_1 (cx rx cy ry : float) : float * float :=
   let cz := prod cx cy in
   let ax := abs cx in
   let ay := abs cy in
-  let t1 := rmul ax ry in
-  let t2 := rmul ay rx in
-  let t3 := rmul rx ry in
-  let s1 := radd t1 t2 in
-  let s2 := radd s1 t3 in
-  let mz := abs cz in
-  let d0 := rmul unit_computed_mul_1_1 mz in
-  let d := radd d0 tiny_computed_mul_1_1 in
-  let rz := radd s2 d in
+  let az := abs cz in
+  let p := prod rx ry in
+  let q := fma ay rx p in
+  let w := fma ax ry q in
+  let t := fma az radius_e_ball_mul_1 w in
+  let rz := fma t radius_g_ball_mul_1 radius_h_ball_mul_1 in
   (cz, rz).
 
 Definition ball_neg_1 (cx rx : float) : float * float :=
@@ -387,40 +413,36 @@ Definition ball_neg_1 (cx rx : float) : float * float :=
 Definition ball_scale_1 (cx rx a : float) : float * float :=
   let cz := prod cx a in
   let aa := abs a in
-  let t1 := rmul aa rx in
-  let mz := abs cz in
-  let d0 := rmul unit_computed_mul_1_1 mz in
-  let d := radd d0 tiny_computed_mul_1_1 in
-  let rz := radd t1 d in
-  (cz, rz).
-
-Definition ball_sub_1 (cx rx cy ry : float) : float * float :=
-  let n := neg cy in
-  let '(cz, rz) := ball_add_1 cx rx n ry in
+  let az := abs cz in
+  let p := prod aa rx in
+  let t := fma az radius_e_ball_scale_1 p in
+  let rz := fma t radius_g_ball_scale_1 radius_h_ball_scale_1 in
   (cz, rz).
 
 (* The Ball kernels: center of two limbs. *)
 Definition ball_add_2 (cx0 cx1 rx cy0 cy1 ry : float) : float * float * float :=
   let '(cz0, cz1) := add_2_2 cx0 cx1 cy0 cy1 in
-  let mz := abs_upper_2 cz0 cz1 in
-  let d := rmul unit_computed_add_2_2 mz in
-  let r0 := radd rx ry in
-  let rz := radd r0 d in
+  let az := abs cz0 in
+  let s := add rx ry in
+  let t := fma az radius_e_ball_add_2 s in
+  let rz := fma t radius_g_ball_add_2 radius_h_ball_add_2 in
+  (cz0, cz1, rz).
+
+Definition ball_sub_2 (cx0 cx1 rx cy0 cy1 ry : float) : float * float * float :=
+  let '(n0, n1) := neg_2 cy0 cy1 in
+  let '(cz0, cz1, rz) := ball_add_2 cx0 cx1 rx n0 n1 ry in
   (cz0, cz1, rz).
 
 Definition ball_mul_2 (cx0 cx1 rx cy0 cy1 ry : float) : float * float * float :=
   let '(cz0, cz1) := mul_2_2 cx0 cx1 cy0 cy1 in
-  let ax := abs_upper_2 cx0 cx1 in
-  let ay := abs_upper_2 cy0 cy1 in
-  let t1 := rmul ax ry in
-  let t2 := rmul ay rx in
-  let t3 := rmul rx ry in
-  let s1 := radd t1 t2 in
-  let s2 := radd s1 t3 in
-  let mz := abs_upper_2 cz0 cz1 in
-  let d0 := rmul unit_computed_mul_2_2 mz in
-  let d := radd d0 tiny_computed_mul_2_2 in
-  let rz := radd s2 d in
+  let ax := abs cx0 in
+  let ay := abs cy0 in
+  let az := abs cz0 in
+  let p := prod rx ry in
+  let q := fma ay rx p in
+  let w := fma ax ry q in
+  let t := fma az radius_e_ball_mul_2 w in
+  let rz := fma t radius_g_ball_mul_2 radius_h_ball_mul_2 in
   (cz0, cz1, rz).
 
 Definition ball_neg_2 (cx0 cx1 rx : float) : float * float * float :=
@@ -431,16 +453,10 @@ Definition ball_neg_2 (cx0 cx1 rx : float) : float * float * float :=
 Definition ball_scale_2 (cx0 cx1 rx a : float) : float * float * float :=
   let '(cz0, cz1) := mul_2_1 cx0 cx1 a in
   let aa := abs a in
-  let t1 := rmul aa rx in
-  let mz := abs_upper_2 cz0 cz1 in
-  let d0 := rmul unit_computed_mul_2_1 mz in
-  let d := radd d0 tiny_computed_mul_2_1 in
-  let rz := radd t1 d in
-  (cz0, cz1, rz).
-
-Definition ball_sub_2 (cx0 cx1 rx cy0 cy1 ry : float) : float * float * float :=
-  let '(n0, n1) := neg_2 cy0 cy1 in
-  let '(cz0, cz1, rz) := ball_add_2 cx0 cx1 rx n0 n1 ry in
+  let az := abs cz0 in
+  let p := prod aa rx in
+  let t := fma az radius_e_ball_scale_2 p in
+  let rz := fma t radius_g_ball_scale_2 radius_h_ball_scale_2 in
   (cz0, cz1, rz).
 
 (** * The full kernels *)
