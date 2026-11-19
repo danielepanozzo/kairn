@@ -1,19 +1,20 @@
-// Expansion<T, 1> and Expansion<T, 2>: a value stored as the unevaluated sum of one or two limbs
-// of type T (float or double), and their operations.
-//
-// Every operation forwards to one generated kernel (include/kairn/gen/scalar.hpp) whose claims
-// are in gen/claims.json; the comment of each operation names it. An operation whose kernel is
-// proved compiles as written; any other needs the kairn::unverified marker on one operand
-// (config.hpp). Which kernels are proved is read from include/kairn/gen/bounds.hpp, never written
-// here, so an operation loses the need for the marker when its proof is checked and the
-// generator is rerun. Each operation is gated on the kernel it calls, and the mixed forms (a
-// two-limb number with a limb or a one-limb number) are exact matches, so that an operation
-// whose kernel is not proved can never compile through a conversion to another kernel.
-//
-// The arithmetic of two limbs returns IEEE-like results (decision D5): the operators call the
-// full kernels of docs/developer/design/milestone1.md ("IEEE-like results"), each a finite core
-// followed by a fix-up, so that every result is canonical, as T's results are. kairn::finite::
-// has the same operations on the cores alone, for code that knows its values stay finite.
+/// @file
+/// Expansion<T, 1> and Expansion<T, 2>: a value stored as the unevaluated sum of one or two limbs
+/// of type T (float or double), and their operations.
+///
+/// Every operation forwards to one generated kernel (include/kairn/gen/scalar.hpp) whose claims
+/// are in gen/claims.json; the comment of each operation names it. An operation whose kernel is
+/// proved compiles as written; any other needs the kairn::unverified marker on one operand
+/// (config.hpp). Which kernels are proved is read from include/kairn/gen/bounds.hpp, never written
+/// here, so an operation loses the need for the marker when its proof is checked and the
+/// generator is rerun. Each operation is gated on the kernel it calls, and the mixed forms (a
+/// two-limb number with a limb or a one-limb number) are exact matches, so that an operation
+/// whose kernel is not proved can never compile through a conversion to another kernel.
+///
+/// The arithmetic of two limbs returns IEEE-like results (decision D5): the operators call the
+/// full kernels of docs/developer/design/milestone1.md ("IEEE-like results"), each a finite core
+/// followed by a fix-up, so that every result is canonical, as T's results are. kairn::finite::
+/// has the same operations on the cores alone, for code that knows its values stay finite.
 #pragma once
 
 #include "config.hpp"
@@ -199,10 +200,13 @@ template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> add_fast(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
     return add(x, y);
 }
-// a 2^n, rounded once. Beyond the powers of two of T, two steps: up, both exact until the last
-// one overflows; down, by 2^(n - pow2_min) and then by 2^pow2_min, where the first step is exact
-// unless its result is subnormal, and then the second rounds it to zero, as one step would.
-// Beyond the clamps every nonzero finite a overflows, or rounds to zero.
+// a 2^n, rounded once. Beyond the powers of two of T, in steps: up, by 2^pow2_max as often as
+// needed, then the rest (three steps above 2 pow2_max), each exact until one overflows; down, by
+// 2^(n - pow2_min) and then by 2^pow2_min, where the first step is exact unless its result is
+// subnormal, and then the second rounds it to zero, as one step would. Beyond the clamps every
+// nonzero finite a overflows, or rounds to zero. This composition is written by hand: argued here
+// and tested through the oracle, not machine-checked (deviation 17 of
+// docs/developer/design/phase0/decisions.md).
 template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(Expansion<T, 1> x, int n) noexcept {
     KAIRN_DETAIL_K1_CONTRACT
@@ -1368,8 +1372,11 @@ KAIRN_FORCEINLINE constexpr auto add_fast(const X& x, const Y& y) noexcept
 }
 
 /// x times 2^n, rounded once, for every n: RN(x 2^n), the result of std::ldexp. One limb (kernel
-/// mul_1_1, with b = 2^n): one product when 2^n is a number of T; otherwise two, which round as
-/// one does (the first is exact, or makes a value that the second rounds to zero either way).
+/// mul_1_1, with b = 2^n): one product when 2^n is a number of T. Otherwise two or three products
+/// by powers of two of T, of which only one rounds: scaling up, each is exact until one overflows;
+/// scaling down, the first is exact, or makes a value that the second rounds to zero either way.
+/// That this composition returns RN(x 2^n) is argued and tested through the oracle, not
+/// machine-checked.
 template <class T>
     requires detail::proof_checked<gen::bounds::mul_1_1<T>>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> ldexp(const Expansion<T, 1>& x, int n) noexcept {

@@ -68,6 +68,11 @@ ONE = "the limb of the `Expansion<T, 1>` operand is the limb $a$"
 CONVERTED = "the limb is converted to `Expansion<T, 1>` first, exactly"
 POINT = "the point is the ball of radius 0 its constructor makes"
 CORE = "the finite core: no fix-up of infinities and NaN"
+# The steps of ldexp beyond the powers of two of T are written in the header, not generated
+# (deviation 17 of docs/developer/design/phase0/decisions.md): every page that shows such a form
+# says so in these words.
+COMPOSITION = ("argued and tested but not machine-checked "
+               "([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values))")
 
 KERNELS = {
     # --- Constructors ---------------------------------------------------------------------------
@@ -127,8 +132,9 @@ KERNELS = {
         form("a * b", E1, T, result=E1, note=CONVERTED),
         form("a * b", T, E1, result=E1, note=CONVERTED),
         form("ldexp(a, n)", E1, "int", result=E1, group="scaling",
-             note="$b = 2^n$, for every `n`: one product when $2^n$ is a number of `T`, otherwise two, "
-                  "which round as one does: the result is that of `std::ldexp`"),
+             note="$b = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three products by "
+                  "powers of two of `T`, of which only one rounds; that their composition gives "
+                  "$\\mathrm{RN}(2^n a)$, the result of `std::ldexp`, is " + COMPOSITION),
         form("half(a)", E1, result=E1, group="scaling", note="$b = 1/2$"),
         form("finite::mul(a, b)", E1, E1, result=E1, group="finite", note="the operator itself"),
         form("finite::mul(a, b)", E1, T, result=E1, group="finite"),
@@ -248,7 +254,8 @@ KERNELS = {
     "mul_pow2_2": page(
         "finite", "Scaling a two-limb number by a power of two, finite core",
         form("finite::ldexp(x, n)", E2, "int", result=E2,
-             note=CORE + "; $c = 2^n$, in steps when $2^n$ is not a number of `T`, as `ldexp`"),
+             note=CORE + "; $c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, "
+                         "as for `ldexp`, whose composition is " + COMPOSITION),
         traits=["traits<Expansion<T, 2>>::ldexp"],
     ),
     # --- Two limbs: comparisons ----------------------------------------------------------------
@@ -329,8 +336,7 @@ KERNELS = {
         "scaling", "Scaling a two-limb number by a power of two",
         form("ldexp(x, n)", E2, "int", result=E2,
              note="$c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, "
-                  "whose composition is argued and tested but not machine-checked "
-                  "([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values))"),
+                  "whose composition is " + COMPOSITION),
         form("half(x)", E2, result=E2, note="$c = 1/2$"),
     ),
     # --- Balls ---------------------------------------------------------------------------------

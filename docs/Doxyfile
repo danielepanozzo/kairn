@@ -1,0 +1,45 @@
+# The C++ API reference: Doxygen's HTML, from the comments of the public headers, written into
+# api/ of the built site (docs/developer/documentation.md, "The C++ API reference"). From the
+# repository root, after `mkdocs build`:
+#
+#   doxygen docs/Doxyfile     writes site/api/, replacing the page docs/api/index.md made there;
+#                             any warning fails it
+#
+# Only the settings that differ from Doxygen's defaults are here. Checked with Doxygen 1.18.0, the
+# version the CI installs (.github/workflows/checks.yml).
+
+PROJECT_NAME           = Kairn
+PROJECT_BRIEF          = "Floating-point expansions with ball arithmetic and machine-checked error bounds"
+OUTPUT_DIRECTORY       = site
+HTML_OUTPUT            = api
+GENERATE_LATEX         = NO
+# Doxygen's own class diagrams, not Graphviz: the output must not depend on whether dot is
+# installed (some distributions' packages turn HAVE_DOT on by default).
+HAVE_DOT               = NO
+
+# The public headers, and the main page. Not recursive: include/kairn/gen/ holds the generated
+# kernels, which are not an interface to call. The namespaces kairn::detail and kairn::gen, and the
+# macros named KAIRN_DETAIL_*, are internal too.
+INPUT                  = include/kairn docs/api/mainpage.md
+FILE_PATTERNS          = *.hpp
+RECURSIVE              = NO
+USE_MDFILE_AS_MAINPAGE = docs/api/mainpage.md
+EXCLUDE_SYMBOLS        = kairn::detail kairn::gen KAIRN_DETAIL_*
+FULL_PATH_NAMES        = YES
+STRIP_FROM_PATH        = include .
+STRIP_FROM_INC_PATH    = include
+
+# KAIRN_FORCEINLINE stands before every operation; expanded to nothing, the signatures read as
+# the compiler sees them without it.
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = KAIRN_FORCEINLINE=
+
+# Every public entity has a comment, and a warning fails the build.
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+WARN_AS_ERROR          = FAIL_ON_WARNINGS

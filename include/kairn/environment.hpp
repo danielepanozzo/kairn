@@ -1,13 +1,14 @@
-// The floating-point environment Kairn's guarantees assume, and the two checks a program can make
-// of it (docs/developer/design/phase0/environment.md, "The contract"):
-//
-// - kairn::environment_ok(): the dynamic state, which can change while a program runs: the
-//   rounding mode and flush-to-zero, read from the control register;
-// - kairn::self_test(): what the compiler did with the flags of the translation unit it is
-//   compiled in, which no register shows, by computing known results and comparing.
-//
-// Kairn never reads or writes the rounding mode to do its work and never changes the environment;
-// both checks only read.
+/// @file
+/// The floating-point environment Kairn's guarantees assume, and the two checks a program can make
+/// of it (docs/developer/design/phase0/environment.md, "The contract"):
+///
+/// - kairn::environment_ok(): the dynamic state, which can change while a program runs: the
+///   rounding mode and flush-to-zero, read from the control register;
+/// - kairn::self_test(): what the compiler did with the flags of the translation unit it is
+///   compiled in, which no register shows, by computing known results and comparing.
+///
+/// Kairn never reads or writes the rounding mode to do its work and never changes the environment;
+/// both checks only read.
 #pragma once
 
 #include "config.hpp"
@@ -200,10 +201,11 @@ inline const char* self_test_limb() noexcept {
 /// compares with the results the generator's exact interpreter computed for them. Operands are
 /// read through volatile objects, so the compiler cannot evaluate any of it at compile time.
 ///
-/// What it catches: flags with no macro for config.hpp to see (Clang's -fassociative-math,
-/// -fno-signed-zeros, -freciprocal-math, Apple clang's -ffp-model=fast), a changed rounding mode
-/// or flush-to-zero at the moment it runs, and a compiler that changes a kernel's result on the
-/// operands tried. What it does not prove: the flags of other translation units, nor the result
+/// What it catches: a flag with no macro for config.hpp to see (Clang's -fassociative-math,
+/// -fno-signed-zeros, -freciprocal-math, Apple clang's -ffp-model=fast) where the flag changes one
+/// of the results it computes (with Apple clang 21, -freciprocal-math alone and -fno-signed-zeros
+/// alone changed none), a changed rounding mode or flush-to-zero at the moment it runs, and a
+/// compiler that changes a kernel's result on the operands tried. What it does not prove: the flags of other translation units, nor the result
 /// of every operand. Returns at the first failure; never aborts; only reads.
 inline Status self_test() noexcept {
     if (const char* failure = detail::self_test_limb<double>()) return {failure, nullptr};

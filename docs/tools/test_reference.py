@@ -13,7 +13,9 @@
   domain, and on a kernel the table does not have; --check fails on a stale, missing or stray page
   and on a stale nav; an UNVERIFIED kernel is marked; runs that judged other claims are flagged;
   the statements of the extended domain (F1 to F5, B1 to B4, the constructors) are printed with
-  the kernel's own names, conditions and core.
+  the kernel's own names, conditions and core; the axioms are those of the audit's allow-list, and
+  a proved theorem that no audit file prints fails; every form of ldexp beyond the powers of two
+  says that its steps are not machine-checked; the C++ API is in the nav and the index.
 
 Python 3 standard library only; no network, no compiler.
 """
@@ -103,6 +105,9 @@ def header_operations(root, known):
                 context = None
             if s.startswith("///"):
                 comment.append(s[3:].strip())
+                continue
+            if s.startswith("#"):
+                comment = []        # the comment of a file (`/// @file`) or of a macro, not of an operation
                 continue
             if not comment or s.startswith("template <") or s.startswith("requires") or not s:
                 continue
@@ -217,6 +222,17 @@ class Table(unittest.TestCase):
         self.assertEqual(used, [], "kernels the headers name or call, listed in the table without forms "
                                    "(their pages would say that no header calls them)")
 
+    def test_the_steps_of_ldexp_are_said_to_be_not_machine_checked(self):
+        # Beyond the powers of two of T, ldexp is a composition written in the header (deviation 17):
+        # every form that computes it says so, in the same words.
+        steps = [(name, f["code"]) for name, p in self.ops.KERNELS.items() for f in p["forms"]
+                 if "ldexp(" in f["code"] and "itself" not in (f["note"] or "")]
+        self.assertEqual(sorted(steps), [("mul_1_1", "ldexp(a, n)"), ("mul_pow2_2", "finite::ldexp(x, n)"),
+                                         ("mul_pow2_2_full", "ldexp(x, n)")])
+        for name, code in steps:
+            note = next(f["note"] for f in self.ops.KERNELS[name]["forms"] if f["code"] == code)
+            self.assertIn(self.ops.COMPOSITION, note, "%s, %s" % (name, code))
+
     def test_every_form_can_be_read(self):
         for name, p in self.ops.KERNELS.items():
             for f in p["forms"]:
@@ -256,7 +272,7 @@ class Table(unittest.TestCase):
 COPIED = ["gen/claims.json", "gen/kernels", "include/kairn/gen/bounds.hpp", "results",
           "docs/tools/reference_operations.py", "docs/developer/design/phase0/references.md",
           "docs/developer/results", "proofs/theories", "proofs/gen/Statements.v", "proofs/gen/Model.v",
-          "proofs/gen/IeeeModel.v",
+          "proofs/gen/IeeeModel.v", "proofs/gen/Audit.v", "proofs/gen/IeeeAudit.v", "proofs/audit",
           "mkdocs.yml",
           "docs/reference"]
 
@@ -603,6 +619,13 @@ class Tool(unittest.TestCase):
         problems = reference.check(self.copy.root)
         self.assertEqual(problems, ["mkdocs.yml differs from what docs/tools/reference.py writes"])
 
+    def test_the_cpp_api_is_in_the_nav_and_the_index(self):
+        files = reference.plan(self.copy.root)
+        nav = files["mkdocs.yml"].split("\n")
+        i = nav.index("      - How to read a page: reference/reading.md")
+        self.assertEqual(nav[i + 1], "      - C++ API: api/index.md")
+        self.assertIn("The [C++ API](../api/index.md), which Doxygen generates", files["docs/reference/index.md"])
+
     def test_crlf_checkout_is_fresh(self):
         for rel in ("docs/reference/add_2_2.md", "mkdocs.yml"):
             path = self.copy.path(rel)
@@ -644,6 +667,57 @@ class Tool(unittest.TestCase):
         self.copy.kernel(data, "abs_2")["theorem"]["name"] = "abs_2_no_such_theorem"
         self.copy.set_claims(data)
         self.fails("abs_2", "abs_2_no_such_theorem")
+
+    def edit_file(self, rel, edit):
+        path = self.copy.path(rel)
+        text = edit(reference.read(path))
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text)
+
+    def test_axioms_come_from_the_allow_list(self):
+        page = self.page("lt_2_2")
+        self.assertIn("## Axioms", page)
+        allowed, _ = reference.load_audit(self.copy.root)
+        self.assertEqual(len(allowed), 4)
+        for a in allowed:
+            self.assertIn("- `%s`" % a, page)
+        self.assertIn("one of the four listed in", page)
+        self.assertIn("(`Print Assumptions lt_2_2_correct`, in [`proofs/gen/Audit.v`]", page)
+        self.assertIn("(`Print Assumptions lt_2_2_ieee_correct`, in [`proofs/gen/IeeeAudit.v`]", page)
+        self.assertIn("the proofs of `lt_2_2_correct` and `lt_2_2_ieee_correct` depend on", page)
+        self.assertIn("the artifact `proof-audit` of each run of the [Proofs workflow](%s)" % reference.PROOFS_WORKFLOW,
+                      page)
+        self.assertIn("the proof of `add_2_2_full_correct` depends on", self.page("add_2_2_full"))
+        # The list is read from the file, not written into the script.
+        self.edit_file(reference.ALLOWED_AXIOMS, lambda t: t + "Some.new_axiom\n")
+        page = self.page("lt_2_2")
+        self.assertIn("one of the five listed in", page)
+        self.assertIn("- `Some.new_axiom`", page)
+        self.assertIn("finds none beyond the five allowed", page)
+
+    def test_an_empty_allow_list_fails(self):
+        self.edit_file(reference.ALLOWED_AXIOMS, lambda t: "\n".join(l for l in t.split("\n") if l.startswith("#")))
+        self.fails(reference.ALLOWED_AXIOMS, "lists no axiom")
+
+    def test_a_proved_theorem_that_no_audit_prints_fails(self):
+        self.edit_file("proofs/gen/Audit.v", lambda t: t.replace("Print Assumptions add_2_1_correct.", ""))
+        self.fails("add_2_1", "add_2_1_correct", "no audit file prints")
+
+    def test_an_audit_line_in_a_comment_does_not_count(self):
+        self.edit_file("proofs/gen/IeeeAudit.v", lambda t: t.replace(
+            "Print Assumptions lt_2_2_ieee_correct.", "(* Print Assumptions lt_2_2_ieee_correct. *)"))
+        self.fails("lt_2_2", "lt_2_2_ieee_correct", "no audit file prints")
+
+    def test_no_axioms_without_a_proved_theorem(self):
+        self.change("add_2_1", lambda k: k.update(status="unverified"))
+        page = self.page("add_2_1")
+        self.assertNotIn("## Axioms", page)
+        self.assertNotIn("Print Assumptions", page)
+        # An UNVERIFIED statement about infinite and NaN operands leaves only the other theorem.
+        self.change("lt_2_2", lambda k: k.update(ieee_status="unverified"))
+        page = self.page("lt_2_2")
+        self.assertIn("the proof of `lt_2_2_correct` depends on", page)
+        self.assertNotIn("Print Assumptions lt_2_2_ieee_correct", page)
 
     def test_no_brute_results(self):
         shutil.rmtree(self.copy.path("results"))

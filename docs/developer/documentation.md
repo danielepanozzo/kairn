@@ -92,10 +92,11 @@ python3 docs/tools/test_reference.py     # the tests of the script and of its ta
 ```
 
 The script reads `gen/claims.json`, the kernel descriptions under `gen/kernels/`,
-`include/kairn/gen/bounds.hpp`, `proofs/gen/Statements.v` and the stored brute-force summaries of
-the latest milestone under `results/`, and prints every number, status and formula of a page from
-them. Rerun it after any of these changes; `--check` runs in CI (the workflow `checks.yml`) and in
-ctest (`docs.reference.check`, `docs.reference.test`).
+`include/kairn/gen/bounds.hpp`, `proofs/gen/Statements.v`, the axiom audit's allow-list and files
+(below), and the stored brute-force summaries of the latest milestone under `results/`, and prints
+every number, status and formula of a page from them. Rerun it after any of these changes;
+`--check` runs in CI (the workflow `checks.yml`) and in ctest (`docs.reference.check`,
+`docs.reference.test`).
 
 The one input written by hand is `docs/tools/reference_operations.py`: for each kernel its page's
 title and group, and the C++ forms that reach it, with their operand types. A new kernel needs an
@@ -119,3 +120,43 @@ claims file, in memory, to try claims that are not committed.
 A kernel whose description says `entry: yes` and that has no form in the table is one the public
 headers may call but do not call yet, and its page and the index say so. When a header starts to
 call it, the test fails until its forms are in the table.
+
+Each page names the theorems it calls proved, the audit file that prints their assumptions
+(`Print Assumptions`, in `proofs/gen/Audit.v`, `proofs/gen/IeeeAudit.v` or
+`proofs/audit/HandAudit.v`), and the axioms of `proofs/audit/allowed_axioms.txt`; the script fails
+on a proved theorem that no audit file names. Which of the allowed axioms a theorem depends on is
+known only by running Rocq, so no page lists them per theorem: the page points to the artifact
+`proof-audit` of the workflow `proofs.yml`, which keeps what the audit printed.
+
+## The C++ API reference
+
+The pages under `api/` of the site are Doxygen's HTML, generated from the comments of the public
+headers, `include/kairn/*.hpp`. The generated headers of `include/kairn/gen/`, the namespaces
+`kairn::detail` and `kairn::gen` and the macros named `KAIRN_DETAIL_*` are left out: they are not
+part of the interface. The configuration is `docs/Doxyfile`, and the first page is
+`docs/api/mainpage.md`. Doxygen writes into `site/api/`, over the page that MkDocs makes there
+from `docs/api/index.md`, so it runs after MkDocs, from the repository root:
+
+```sh
+.venv/bin/mkdocs build --strict
+doxygen docs/Doxyfile            # writes site/api/; any warning fails it
+open site/api/index.html         # or xdg-open on Linux, start on Windows
+```
+
+`mkdocs serve` builds the site again without Doxygen, so in its preview `api/` is the page of
+`docs/api/index.md`, which says where the reference comes from.
+
+The configuration is checked with Doxygen 1.18.0, the release the CI installs (the workflow
+`checks.yml` downloads it and checks its SHA-256). Ubuntu 24.04's package, Doxygen 1.9.8, gave the
+same result, with no warning, on the headers of this version. The CI keeps the site with the API
+reference in it as the artifact `site`.
+
+Every public entity has a comment, written `///` before its declaration, and a warning fails the
+build: an entity without a comment, or a comment that Doxygen cannot read. Two rules make that
+work:
+
+- Each public header begins with a `/// @file` comment. Doxygen lists the macros and functions of
+  a file, and the members of a namespace, only when the file or the namespace has a comment of its
+  own; the namespace `kairn` has one, before `namespace kairn` in `config.hpp`.
+- In a comment, write code in backticks: outside them, `#if` is read as a link to an entity named
+  `if`, and Doxygen warns that it cannot find it.

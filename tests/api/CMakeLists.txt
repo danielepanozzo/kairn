@@ -339,7 +339,14 @@ endif()
 # --- The documentation's examples -------------------------------------------------------------
 _kairn_api_program(kairn-example-first-steps "${PROJECT_SOURCE_DIR}/docs/examples/cpp/first_steps.cpp")
 add_test(NAME api.example.first_steps COMMAND kairn-example-first-steps)
-set_tests_properties(api.example.first_steps PROPERTIES LABELS "api;example")
+# The examples of "Choosing T and k" and "Troubleshooting" in Getting started; the second changes
+# the rounding mode and flush-to-zero, and checks the messages the page quotes.
+_kairn_api_program(kairn-example-choosing "${PROJECT_SOURCE_DIR}/docs/examples/cpp/choosing.cpp")
+add_test(NAME api.example.choosing COMMAND kairn-example-choosing)
+_kairn_api_program(kairn-example-troubleshooting "${PROJECT_SOURCE_DIR}/docs/examples/cpp/troubleshooting.cpp")
+add_test(NAME api.example.troubleshooting COMMAND kairn-example-troubleshooting)
+set_tests_properties(api.example.first_steps api.example.choosing api.example.troubleshooting
+  PROPERTIES LABELS "api;example")
 
 # The tutorial's program prints the same text on every platform and under every contraction
 # setting (its data are chosen so that even its double loops give one answer), and the tutorial

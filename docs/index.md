@@ -8,9 +8,12 @@ and that the code it ships is generated from the same description the proofs are
 ([report](developer/results/milestone1.md)), and nothing in this repository should be relied
 on yet.** The first public headers exist, for k-numbers of one and two limbs and balls around them,
 and the statement of each of their operations has a checked proof in a model where nothing
-overflows (one exception: `ldexp` by a power of two outside the limb type's range is composed from
-proved steps by an argument that is tested, not machine-checked). At overflow and for infinities and NaN they return results like those of `float` and
-`double`, which is proved in a model of IEEE 754 ([What holds today](getting-started/guarantees.md)).
+overflows; the [reference](reference/index.md) has each statement and its theorem. One exception:
+`ldexp` by a power of two outside the limb type's range is composed from proved steps by an
+argument that is tested, not machine-checked ([`mul_pow2_2_full`](reference/mul_pow2_2_full.md),
+[`mul_1_1`](reference/mul_1_1.md)). At overflow and for infinities and NaN they return results
+like those of `float` and `double`, which is proved in a model of IEEE 754
+([What holds today](getting-started/guarantees.md)).
 
 ## What it is
 
@@ -31,7 +34,8 @@ k-number center with a radius of the limb type. The library is to be used as the
   $|z - \text{exact}| \le c\,u^k\,|\text{exact}| + t\,\eta$ (for some operations relative to
   the operands rather than to the exact result), where $u$ is the unit roundoff of a limb
   ($2^{-53}$ for `double`) and $\eta$ its smallest subnormal number, so that the second term
-  accounts for underflow ([Operations](developer/design/phase0/operations.md#the-shape-of-every-statement)).
+  accounts for underflow ([Operations](developer/design/phase0/operations.md#the-shape-of-every-statement);
+  the [reference](reference/index.md) has the statement of every operation that exists).
 - **A machine-checked proof of it.** The statement is proved in Rocq with the Flocq library, about
   a formal model generated from the same kernel description as the C++ code, and an audit checks
   that each proof uses no axioms beyond the four allowed

@@ -1,5 +1,7 @@
 # The Rocq proofs and the axiom audit: make -C proofs, with Rocq 9.0.1 from the Rocq team's image
-# and Flocq 4.2.2 from opam (docs/developer/testing.md).
+# and Flocq 4.2.2 from opam (docs/developer/testing.md). What the audit printed, the assumptions
+# of every audited theorem, is kept as an artifact of the run, named proof-audit; the reference
+# pages point to it (docs/tools/reference.py).
 name: Proofs
 
 on:
@@ -58,5 +60,20 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: opam install coq-flocq.4.2.2
 
+      # The shell is bash with pipefail (defaults above), so a failure of make fails the step.
       - name: Build the proofs and run the audit
-        run: opam exec -- make -C proofs -j"$(nproc)"
+        id: audit
+        run: opam exec -- make -C proofs -j"$(nproc)" 2>&1 | tee proofs/audit/make.log
+
+      # make.log has the audit's verdict on every theorem, with the axioms its proof depends on;
+      # audit/*.out are what Rocq printed for each audit file, the negative control's included.
+      # Kept when the audit fails too, so that what it rejected can be read.
+      - name: Keep what the audit printed
+        if: (success() || failure()) && steps.audit.outcome != 'skipped'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: proof-audit
+          path: |
+            proofs/audit/make.log
+            proofs/audit/*.out
+          if-no-files-found: error

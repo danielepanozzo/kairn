@@ -1,12 +1,13 @@
-// What Kairn requires of the compiler and its flags, checked where the preprocessor can see it, and
-// the marker that every operation without a checked proof needs.
-//
-// The checks follow docs/developer/design/phase0/environment.md ("Compiler flags"): a flag that
-// makes the compiler change the value of a floating-point expression breaks the error-free
-// transformations every kernel is made of, and the result still looks like a k-number. Where such
-// a flag defines a macro, including Kairn fails here. Where it does not (Clang's
-// -fassociative-math, -fno-signed-zeros, -freciprocal-math, and -ffp-model=fast on Apple clang),
-// only kairn::self_test() can tell, at run time (environment.hpp).
+/// @file
+/// What Kairn requires of the compiler and its flags, checked where the preprocessor can see it, and
+/// the marker that every operation without a checked proof needs.
+///
+/// The checks follow docs/developer/design/phase0/environment.md ("Compiler flags"): a flag that
+/// makes the compiler change the value of a floating-point expression breaks the error-free
+/// transformations every kernel is made of, and the result still looks like a k-number. Where such
+/// a flag defines a macro, including Kairn fails here. Where it does not (Clang's
+/// -fassociative-math, -fno-signed-zeros, -freciprocal-math, and -ffp-model=fast on Apple clang),
+/// only kairn::self_test() can tell, at run time (environment.hpp).
 #pragma once
 
 #if defined(_MSVC_LANG) ? _MSVC_LANG < 202002L : __cplusplus < 202002L
@@ -87,6 +88,10 @@
 #define KAIRN_DETAIL_K1_CONTRACT
 #endif
 
+/// Kairn's public interface: the number types Expansion<T, 1> and Expansion<T, 2>, the balls
+/// Ball<T, 1> and Ball<T, 2>, their operations, kairn::traits, kairn::self_test() and
+/// kairn::environment_ok(), with T float or double. The namespaces kairn::detail and kairn::gen
+/// are not part of it.
 namespace kairn {
 
 /// The marker of an operation whose proof is not checked yet ("UNVERIFIED").

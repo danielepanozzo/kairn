@@ -57,14 +57,17 @@ target_compile_features(kairn INTERFACE cxx_std_20)
 include("${PROJECT_SOURCE_DIR}/cmake/kairn_fma.cmake")
 kairn_define_fma_target("${PROJECT_SOURCE_DIR}/include" GLOBAL)
 
-# Installation: the headers, and a package configuration with a version file under
-# share/cmake/kairn, where find_package(kairn) looks. Nothing in it depends on the architecture:
-# the installed configuration chooses kairn::fma's option with the client's compiler.
+# Installation: the headers, a package configuration with a version file under share/cmake/kairn,
+# where find_package(kairn) looks, and the license under share/licenses/kairn. Nothing in it
+# depends on the architecture: the installed configuration chooses kairn::fma's option with the
+# client's compiler. No installed file derives from the third-party proofs of proofs/third_party/
+# (the headers are generated from Kairn's own kernel descriptions), so their notices stay there.
 set(_kairn_cmake_dir "${CMAKE_INSTALL_DATADIR}/cmake/kairn")
 
 install(TARGETS kairn EXPORT kairnTargets)
 install(DIRECTORY include/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" PATTERN ".*" EXCLUDE)
 install(EXPORT kairnTargets NAMESPACE kairn:: DESTINATION "${_kairn_cmake_dir}")
+install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/kairn")
 
 configure_package_config_file(cmake/kairnConfig.cmake.in
   "${PROJECT_BINARY_DIR}/kairnConfig.cmake"

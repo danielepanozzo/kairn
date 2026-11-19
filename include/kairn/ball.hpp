@@ -1,11 +1,12 @@
-// Ball<T, k>: the set of reals within a radius of a center, with a k-limb center and a radius of
-// type T (docs/developer/design/phase0/operations.md, "Ball"; the kernels are in
-// docs/developer/design/milestone1.md, "Ball kernels").
-//
-// Each operation forwards to one generated kernel: the full Ball kernels, each a finite core
-// followed by the fix-up of the special states (the empty set, the whole line), and the
-// constructor kernels ball_make_1 and ball_make_2. Like every operation, each needs the
-// kairn::unverified marker while gen/claims.json does not mark its kernel proved.
+/// @file
+/// Ball<T, k>: the set of reals within a radius of a center, with a k-limb center and a radius of
+/// type T (docs/developer/design/phase0/operations.md, "Ball"; the kernels are in
+/// docs/developer/design/milestone1.md, "Ball kernels").
+///
+/// Each operation forwards to one generated kernel: the full Ball kernels, each a finite core
+/// followed by the fix-up of the special states (the empty set, the whole line), and the
+/// constructor kernels ball_make_1 and ball_make_2. Like every operation, each needs the
+/// kairn::unverified marker while gen/claims.json does not mark its kernel proved.
 #pragma once
 
 #include "expansion.hpp"
