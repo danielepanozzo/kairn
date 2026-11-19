@@ -72,30 +72,47 @@ INTERMEDIATE_OVERFLOW = ("split", "two_prod_dekker")
 # --- The plan of the interpreter's enumerations ---------------------------------------------------
 #
 # By the roles of a kernel's inputs, as tests/CMakeLists.txt derives them (1 a limb, 2 a normalized
-# pair, r a radius, c a power of two, then _sum or _product): the quick tier's toy format, whose
-# exponent range is the base range here, and the formats beyond it. Every kernel also gets the
-# formats of precision min_precision and min_precision + 1 in the base range (precision 2 and 3
-# when min_precision is 1: the oracle reads no format of precision 1). Formats below a kernel's
+# pair, r a radius, c a power of two, then _sum or _product; for a kernel of the extended domain,
+# after "ext_", with b1 or b2 for a ball): the quick tier's toy format, whose exponent range is
+# the base range here, and the formats beyond it. Every kernel also gets the formats of precision
+# min_precision and min_precision + 1 in the base range (precision 2 and 3 when min_precision is
+# 1: the oracle reads no format of precision 1). For the extended domain every format has the
+# shape of the IEEE-model statements, qmin + qmax = 3 - 2p, and the base range is the quick
+# tier's number of exponents, qmax - qmin + 1, in that shape. Formats below a kernel's
 # min_precision are left out. Sizes: `plan`, from the oracle's gen --exhaustive --total.
 SHAPES = {
     "1": ("fp:11:-30:10", ["fp:12:-30:10", "fp:13:-30:10", "fp:13:-60:40"]),
     "1_1_sum": ("fp:5:-7:4", ["fp:6:-7:4", "fp:7:-7:4", "fp:7:-14:2"]),
     "1_1_product": ("fp:5:-12:-1", ["fp:6:-12:-1", "fp:7:-12:-1", "fp:7:-8:4", "fp:7:-20:-6"]),
-    "r_r_sum": ("fp:6:-8:4", ["fp:7:-8:4", "fp:8:-8:4", "fp:8:-14:2"]),
-    "r_r_product": ("fp:6:-13:-2", ["fp:7:-13:-2", "fp:8:-13:-2", "fp:8:-8:4"]),
-    "2": ("fp:6:-8:4", ["fp:7:-8:4", "fp:8:-8:4", "fp:8:-20:2"]),
     "2_1_sum": ("fp:4:-4:2", ["fp:5:-4:2", "fp:6:-4:2", "fp:5:-6:3", "fp:4:-7:4"]),
     "1_2_sum": ("fp:4:-4:2", ["fp:5:-4:2", "fp:6:-4:2", "fp:5:-6:3", "fp:4:-7:4"]),
     "2_1_product": ("fp:4:-8:-2", ["fp:5:-8:-2", "fp:6:-8:-2", "fp:5:-4:2"]),
     "2_2_sum": ("fp:3:-3:2", ["fp:4:-3:2", "fp:5:-3:2", "fp:4:-4:3", "fp:3:-6:4"]),
     "2_2_product": ("fp:4:-7:-3", ["fp:5:-7:-3", "fp:6:-7:-3", "fp:4:-9:-3", "fp:5:-8:-2"]),
     "2_c_product": ("fp:5:-6:2", ["fp:6:-6:2", "fp:7:-6:2", "fp:6:-12:4"]),
-    "1_r_sum": ("fp:5:-7:4", ["fp:6:-7:4", "fp:7:-7:4", "fp:7:-14:2"]),
-    "2_r_sum": ("fp:4:-4:2", ["fp:5:-4:2", "fp:6:-4:2", "fp:5:-8:4"]),
     "1_r_1_product": ("fp:3:-5:0", ["fp:4:-5:0", "fp:5:-5:0", "fp:4:-8:2", "fp:3:-8:2"]),
     "2_r_1_product": ("fp:2:-4:1", ["fp:3:-4:1", "fp:4:-4:1", "fp:3:-6:2", "fp:2:-8:3"]),
     "1_r_1_r_sum": ("fp:2:-3:1", ["fp:3:-3:1", "fp:4:-3:1", "fp:3:-4:2", "fp:2:-6:4"]),
-    "1_r_1_r_product": ("fp:2:-4:0", ["fp:3:-4:0", "fp:4:-4:0", "fp:3:-6:2", "fp:2:-7:3"]),
+    "1_r_1_r_product": ("fp:2:-4:1", ["fp:3:-4:1", "fp:4:-4:1", "fp:3:-6:2", "fp:2:-7:3"]),
+    # The extended domain: the quick tier's format with one and two bits more (the same number
+    # of exponents), then more exponents.
+    "ext_1": ("fp:11:-29:10", ["fp:12:-30:9", "fp:13:-31:8", "fp:13:-61:38"]),
+    "ext_2": ("fp:6:-10:1", ["fp:7:-11:0", "fp:8:-12:-1", "fp:8:-16:3"]),
+    "ext_r_r_sum": ("fp:6:-10:1", ["fp:7:-11:0", "fp:8:-12:-1", "fp:8:-16:3"]),
+    "ext_r_r_product": ("fp:6:-10:1", ["fp:7:-11:0", "fp:8:-12:-1", "fp:8:-16:3"]),
+    "ext_1_1_sum": ("fp:5:-7:0", ["fp:6:-8:-1", "fp:7:-9:-2", "fp:7:-13:2"]),
+    "ext_2_1_sum": ("fp:4:-5:0", ["fp:5:-6:-1", "fp:6:-7:-2", "fp:5:-8:1", "fp:4:-9:4"]),
+    "ext_1_2_sum": ("fp:4:-5:0", ["fp:5:-6:-1", "fp:6:-7:-2", "fp:5:-8:1", "fp:4:-9:4"]),
+    "ext_2_1_product": ("fp:4:-5:0", ["fp:5:-6:-1", "fp:6:-7:-2", "fp:5:-8:1", "fp:4:-9:4"]),
+    "ext_2_c_product": ("fp:5:-7:0", ["fp:6:-8:-1", "fp:7:-9:-2", "fp:6:-12:3"]),
+    "ext_2_2_sum": ("fp:3:-4:1", ["fp:4:-5:0", "fp:5:-6:-1", "fp:3:-6:3", "fp:4:-6:1"]),
+    "ext_2_2_product": ("fp:4:-4:-1", ["fp:5:-5:-2", "fp:6:-6:-3", "fp:4:-6:1", "fp:5:-6:-1"]),
+    "ext_b1": ("fp:5:-9:2", ["fp:6:-10:1", "fp:7:-11:0", "fp:5:-13:6"]),
+    "ext_b2": ("fp:4:-6:1", ["fp:5:-7:0", "fp:6:-8:-1", "fp:4:-8:3"]),
+    "ext_b1_b1_sum": ("fp:2:-3:2", ["fp:3:-4:1", "fp:2:-5:4"]),
+    "ext_b1_b1_product": ("fp:2:-3:2", ["fp:3:-4:1", "fp:2:-5:4"]),
+    "ext_b1_1_product": ("fp:3:-4:1", ["fp:4:-5:0", "fp:3:-6:3", "fp:2:-8:7"]),
+    "ext_b2_1_product": ("fp:3:-3:0", ["fp:4:-4:-1", "fp:3:-4:1", "fp:2:-4:3"]),
 }
 
 # The two-limb balls with two operands: every operand of their quick-tier format is far too many
@@ -107,6 +124,8 @@ _R_SUM_7 = "0x0p+0/0x1p-3/0x1.8p-2/0x1p-1/0x1.4p+1/0x1.cp+2/0x1.cp+4"
 _R_MUL_QUICK = "0x0p+0/0x1p-5/0x1.8p+0"
 _R_MUL_5 = "0x0p+0/0x1p-5/0x1p-3/0x1.8p+0/0x1.ep+4"
 _R_MUL_P5 = "0x0p+0/0x1p-4/0x1.8p+0"
+_R_EXT_MUL_QUICK = "0x0p+0/0x1p-4/0x1p-1/0x1.8p+0"
+_R_EXT_MUL_P5 = "0x0p+0/0x1p-5/0x1p-1/0x1.8p+0"
 EXPLICIT = {
     "2_r_2_r_sum": ("fp:3:-3:2", [
         ("fp:3:-2:1", []),
@@ -121,6 +140,24 @@ EXPLICIT = {
         ("fp:4:-5:1", ["rx.in=" + _R_MUL_5, "ry.in=" + _R_MUL_5, "cx.lead=0:0"]),
         ("fp:4:-5:1", ["cx.lead=0:0", "cy.lead=0:0"]),
         ("fp:5:-4:1", ["rx.in=" + _R_MUL_P5, "ry.in=" + _R_MUL_P5, "cx.lead=0:0"]),
+    ]),
+    # The extended domain, where a ball is one operand (every finite center with every finite
+    # radius, the whole line and the empty set) and restrictions shrink its finite part only.
+    # The sums are complete in the quick tier (fp:3:-2:-1, two exponents); here complete with one
+    # bit more and with four exponents, and restricted with six. The product is restricted in the
+    # quick tier (fp:4:-4:-1, radii 0, eta, 1/2, 3/2, cx in [1, 2)); here complete with two
+    # exponents, every center with those radii, every radius with those centers, and restricted
+    # with one bit more.
+    "ext_b2_b2_sum": ("fp:3:-2:-1", [
+        ("fp:4:-3:-2", []),
+        ("fp:3:-3:0", []),
+        ("fp:3:-4:1", ["rx.in=" + _R_SUM_QUICK, "ry.in=" + _R_SUM_QUICK]),
+    ]),
+    "ext_b2_b2_product": ("fp:4:-4:-1", [
+        ("fp:4:-3:-2", []),
+        ("fp:4:-4:-1", ["rx.in=" + _R_EXT_MUL_QUICK, "ry.in=" + _R_EXT_MUL_QUICK]),
+        ("fp:4:-4:-1", ["cx.lead=0:0", "cy.lead=0:0"]),
+        ("fp:5:-5:-2", ["rx.in=" + _R_EXT_MUL_P5, "ry.in=" + _R_EXT_MUL_P5, "cx.lead=0:0"]),
     ]),
 }
 
@@ -144,10 +181,16 @@ def load_claims():
 def shape_of(k):
     """The roles of the inputs and the operation, as tests/CMakeLists.txt derives them."""
     requires = [r.replace(" ", "") for r in k.get("requires", [])]
+    balls = dict(m.groups() for m in (re.match(r"^ball\(([^,]+),([^)]+)\)$", r) for r in requires)
+                 if m)
     roles = []
     for i in k["inputs"]:
+        if i["name"] in balls.values():
+            continue
         if i.get("type") == "mask":
             roles.append("m")
+        elif i["name"] in balls:
+            roles.append("b%d" % i.get("limbs", 1))
         elif i.get("limbs", 1) != 1:
             roles.append(str(i["limbs"]))
         elif "nonneg(%s)" % i["name"] in requires:
@@ -157,8 +200,10 @@ def shape_of(k):
         else:
             roles.append("1")
     s = "_".join(roles)
-    if len(k["inputs"]) > 1:
+    if len(roles) > 1:
         s += "_product" if "*" in (k.get("value") or "") else "_sum"
+    if k.get("domain") == "extended":
+        s = "ext_" + s
     return s
 
 
@@ -169,6 +214,13 @@ def parse_fmt(name):
     return int(m.group(1)), int(m.group(2)), int(m.group(3))
 
 
+def ieee_shaped(p, exponents):
+    """The format of precision p with that many exponents and qmin + qmax = 3 - 2p, the shape of
+    binary64, binary32 and the IEEE-model statements (exponents is even in that shape)."""
+    qmin = 2 - p - exponents // 2
+    return "fp:%d:%d:%d" % (p, qmin, 3 - 2 * p - qmin)
+
+
 def interp_plan(kernels, only=None):
     """[{kernel, format, restrict, why}] and [errors]: what the interpreter enumerates."""
     plan, errors = [], []
@@ -177,6 +229,7 @@ def interp_plan(kernels, only=None):
         if only and name not in only:
             continue
         shape = shape_of(k)
+        extended = k.get("domain") == "extended"
         pmin = k.get("min_precision")
         if not isinstance(pmin, int):
             errors.append("%s: min_precision is %r, so no format can be chosen" % (name, pmin))
@@ -191,14 +244,17 @@ def interp_plan(kernels, only=None):
             _, qmin, qmax = parse_fmt(quick)
             p0 = max(pmin, 2)
             for p in (p0, p0 + 1):
-                entries.append(("fp:%d:%d:%d" % (p, qmin, qmax), [], None))
+                if extended:
+                    entries.append((ieee_shaped(p, qmax - qmin + 1), [], None))
+                else:
+                    entries.append(("fp:%d:%d:%d" % (p, qmin, qmax), [], None))
             for fmt in extra:
                 entries.append((fmt, [], None))
         else:
             errors.append("%s: no toy formats are planned for its inputs (%s): add them to "
                           "SHAPES in tests/brute/brute.py" % (name, shape.replace("_", " ")))
             continue
-        qp = parse_fmt(quick)[0]
+        qp, qmin0, qmax0 = parse_fmt(quick)
         seen = set()
         for fmt, restrict, _ in entries:
             p, qmin, qmax = parse_fmt(fmt)
@@ -206,21 +262,28 @@ def interp_plan(kernels, only=None):
                 continue
             if name in SPLITTER_KERNELS and not splitter_fits(p, qmax):
                 continue
+            if extended and qmin + qmax != 3 - 2 * p:
+                errors.append("%s: %s is not of the shape qmin + qmax = 3 - 2p of the extended "
+                              "domain" % (name, fmt))
+                continue
             seen.add((fmt, tuple(restrict)))
             why = []
             if p == pmin:
                 why.append("p = min_precision")
             elif p <= max(pmin, 2) + 1:
                 why.append("p = min_precision + %d" % (p - pmin))
-            if (qmin, qmax) == parse_fmt(quick)[1:]:
+            # The exponent range, or in the extended domain the number of exponents.
+            if (qmax - qmin if extended else (qmin, qmax)) == (
+                    qmax0 - qmin0 if extended else (qmin0, qmax0)):
                 if p == qp:
                     why.append("the quick tier's format")
                 elif p > qp:
                     why.append("quick tier + %d bit%s" % (p - qp, "s" if p - qp > 1 else ""))
                 else:
-                    why.append("the quick tier's exponent range")
+                    why.append("the quick tier's " + ("number of exponents" if extended
+                                                       else "exponent range"))
             else:
-                why.append("another exponent range")
+                why.append("another " + ("number of exponents" if extended else "exponent range"))
             if restrict:
                 why.append("restricted")
             plan.append({"kernel": name, "format": fmt, "restrict": list(restrict),

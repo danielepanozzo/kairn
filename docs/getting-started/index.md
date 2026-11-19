@@ -69,7 +69,7 @@ Built on its own, Kairn defaults to a `Release` build, because its contraction t
 optimizing compiler does. With a multi-configuration generator (Visual Studio, Xcode), name the
 configuration instead: `cmake --build build --config Release` and `ctest --test-dir build -C
 Release --output-on-failure`. Add `--parallel N` to both of the last two commands to use N cores;
-with four, the whole run takes about two minutes on a recent machine.
+with five, the whole run takes about three and a half minutes on a recent machine.
 
 The tests:
 
@@ -85,7 +85,7 @@ The tests:
 | `crosscheck.cxx.*` | Each kernel, compiled with the build's compiler and flags, on random `binary64` and `binary32` operands, judged by the oracle. |
 | `crosscheck.neon.*`, `crosscheck.avx2.*` | The same for the packed kernels, NEON on AArch64 and AVX2 on x86-64, one operand per lane. |
 | `crosscheck.cxx-*.*`, `crosscheck.neon-*.*`, `crosscheck.avx2-*.*` | The same, under each contraction setting that matters to the compiler. |
-| `crosscheck.guards` | The cross-checks fail when they check less than they say: an incomplete enumeration, a missing stratum, nothing judged. |
+| `crosscheck.guards` | The cross-checks fail when they check less than they say: an incomplete enumeration, a missing stratum, nothing judged, a kind of non-finite case never seen. |
 | `consume.add_subdirectory` | A CMake project that adds Kairn with `add_subdirectory` and links `kairn::kairn` and `kairn::fma` builds, compiles as C++20, and runs a kernel. |
 | `consume.install` | `cmake --install` of the build tree into a prefix inside the build directory. |
 | `consume.find_package` | A CMake project that finds that installed copy with `find_package(kairn)` builds, compiles as C++20, and runs a kernel. |
