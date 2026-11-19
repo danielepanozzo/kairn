@@ -313,7 +313,9 @@ def judge_ball(k, ks, fmt, e, ins, outs, values):
             got = {e['center']: [fr(v) for v in outs[e['center']]], e['radius']: [fr(outs[e['radius']][0])]}
             if not ts.holds(e, k, fmt, exact, got):
                 bad.append('B3 (containment)')
-    if every_finite and state != 'finite' and e['finite_when']:      # B4: no condition is proved yet
+    # B4 claims something only when the kernel has conditions (the eight full kernels; not
+    # ball_neg_k): finite operands under every condition give a finite ball.
+    if every_finite and state != 'finite' and e['finite_when']:
         exact = {g.name: sum(fr(v) for v in ins[g.name]) for g in k.inputs}
         if all(abs(expr.evaluate(expr.parse(c['abs_le']), exact)) <= fmt.threshold * F(2) ** c['exp']
                for c in e['finite_when']):
@@ -591,7 +593,17 @@ class NonFinite(unittest.TestCase):
         self.assertIn('B3 (containment)', judge_ball(ks['ball_add_1_full'], ks, fmt, b, ins,
                                                      {'cw': [two], 'rw': [make(F(1, 4))]}, None))
         self.assertIn('B2', judge_ball(ks['ball_add_1_full'], ks, fmt, b, ins, {'cw': [NaN], 'rw': [NaN]}, None))
-        self.assertEqual(judge_ball(ks['ball_add_1_full'], ks, fmt, b, ins, {'cw': [ZERO], 'rw': [PINF]}, None), [])
+        # The whole line on finite operands: a failure of B4 where the condition holds (here
+        # |1 + 1| + 0 + 1/2 is within a quarter of 16), accepted beyond it, and accepted
+        # everywhere by a claim without conditions (an empty list is not "always finite").
+        whole = {'cw': [ZERO], 'rw': [PINF]}
+        self.assertEqual(judge_ball(ks['ball_add_1_full'], ks, fmt, b, ins, whole, None), ['B4'])
+        far = {'cx': [make(F(3))], 'rx': [one], 'cy': [one], 'ry': [make(F(1, 2))]}     # 5.5 > 4
+        self.assertEqual(judge_ball(ks['ball_add_1_full'], ks, fmt, b, far, whole, None), [])
+        edge = {'cx': [make(F(3))], 'rx': [ZERO], 'cy': [make(F(1, 2))], 'ry': [make(F(1, 2))]}   # exactly 4
+        self.assertEqual(judge_ball(ks['ball_add_1_full'], ks, fmt, b, edge, whole, None), ['B4'])
+        bf = dict(b, finite_when=[])
+        self.assertEqual(judge_ball(ks['ball_add_1_full'], ks, fmt, bf, ins, whole, None), [])
         self.assertIn('B1', judge_ball(ks['ball_add_1_full'], ks, fmt, b, ins, {'cw': [one], 'rw': [PINF]}, None))
         empty = dict(ins, rx=[NaN], cx=[NaN])
         self.assertEqual(judge_ball(ks['ball_add_1_full'], ks, fmt, b, empty, {'cw': [NaN], 'rw': [NaN]}, None), [])

@@ -79,7 +79,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  33 files: no Admitted, admit, Axiom or Parameter
+  46 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -152,8 +152,10 @@ and the operations overflow as the hardware does, for formats shaped like `binar
   [Ball kernels](../developer/design/milestone1.md#ball-kernels)): the full kernels return
   canonical values, the signed infinity on overflow, and what the operation of the limb type
   returns for non-finite operands; comparisons, conversions and constructors behave as stated on
-  infinities and NaN; and a Ball operation contains every result in every case, the whole line
-  and the empty set included.
+  infinities and NaN; a Ball operation contains every result in every case, the whole line
+  and the empty set included; and it returns a finite ball, not the whole line, under a stated
+  condition on its operands
+  ([when the result is a finite ball](../developer/design/milestone1.md#when-the-result-is-a-finite-ball)).
 
 These statements and the models of the kernels they are about are generated from the kernel
 descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Two files are written

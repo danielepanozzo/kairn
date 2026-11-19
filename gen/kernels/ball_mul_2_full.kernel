@@ -1,5 +1,8 @@
 # The product of balls with 2-limb centers, with the special states of a ball:
 # ball_mul_2, then the fix-up of milestone1.md, "Ball kernels".
+# finite_when (statement B4): the result is a finite ball when no product x y of members of the
+# operands exceeds a quarter of the overflow threshold in magnitude,
+# (|cx| + rx) (|cy| + ry) <= 2^(emax - 2).
 kernel:        ball_mul_2_full
 input:         cx = cx0 cx1
 input:         stored rx
@@ -10,14 +13,14 @@ output:        rw
 value:         cx*cy
 requires:      ball cx rx
 requires:      ball cy ry
-ensures:       encloses cw rw x*y x=cx,rx y=cy,ry
+ensures:       encloses cw rw x*y x=cx,rx y=cy,ry finite_when=abs_le((abs(cx)+rx)*(abs(cy)+ry),-2)
 min_precision: 4
 source:        ball_mul_2, then the fix-up of the special states of a ball (Milestone 1 listing)
 license:       core: as ball_mul_2; fix-up: MIT
 status:        proved
 domain:        extended
 ieee_status:   proved
-ieee_theorem:  proofs/theories/IeeeBallCores.v ball_mul_2_full_correct
+ieee_theorem:  proofs/theories/IeeeBallFinite.v ball_mul_2_full_correct
 entry:         yes
 ieee_only:     yes
 cone_exempt:   the fix-up selects, after explicit tests that the center and the radius are finite (f) and that no operand is empty (e); B1 to B4 of milestone1.md, "Ball kernels", state what comes out

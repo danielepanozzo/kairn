@@ -447,9 +447,14 @@ field has the domain `finite`, as before.
 A condition of `finite_when` is `{"abs_le": EXPR, "exp": E}`: $\lvert \mathrm{EXPR}\rvert \le
 2^{q_{\max} + p + E}$, with `EXPR` an expression over the input names as in `value` and $E$ an
 integer; $2^{q_{\max} + p}$ is the overflow threshold. For example `add_2_2_full` has
-`[{"abs_le": "x", "exp": -2}, {"abs_le": "y", "exp": -2}]` and `mul_2_2_full` has
-`[{"abs_le": "x*y", "exp": -1}]`. The list is empty when no condition is proved, and an empty
-list claims nothing about when the result is finite: it does not say that it always is.
+`[{"abs_le": "x", "exp": -2}, {"abs_le": "y", "exp": -2}]`, `mul_2_2_full` has
+`[{"abs_le": "x*y", "exp": -1}]`, and `ball_add_2_full` has
+`[{"abs_le": "abs(cx+cy)+rx+ry", "exp": -2}]`: for a ball the names are those of the centers and
+the radii, and the expression is the largest magnitude of a member of the exact result
+([when the result is a finite ball](design/milestone1.md#when-the-result-is-a-finite-ball)). The
+list is empty when no condition is claimed, and an empty list claims nothing about when the
+result is finite: it does not say that it always is. Every full kernel and every full Ball
+kernel has a condition; `ball_neg_k` has none.
 
 The `core` of `extends` has the inputs of the full kernel, by name, and outputs of the same shape
 under other names; they correspond by position. Its requirements are the full kernel's with
@@ -509,7 +514,7 @@ left out):
   "requires": ["ball(cx, rx)", "ball(cy, ry)"],
   "ensures": [{"kind": "encloses", "center": "cw", "radius": "rw", "set": "x*y",
                "balls": {"x": {"center": "cx", "radius": "rx"}, "y": {"center": "cy", "radius": "ry"}},
-               "finite_when": []}],
+               "finite_when": [{"abs_le": "(abs(cx)+rx)*(abs(cy)+ry)", "exp": -2}]}],
   "min_precision": 4, "status": "proved", "ieee_status": "proved",
   "instances": {"binary64": [], "binary32": []}
 },

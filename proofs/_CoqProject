@@ -49,3 +49,4 @@ theories/IeeeFinite.v
 theories/IeeeExt.v
 theories/IeeeBall.v
 theories/IeeeBallCores.v
+theories/IeeeBallFinite.v

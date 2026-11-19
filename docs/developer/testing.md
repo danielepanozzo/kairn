@@ -232,7 +232,7 @@ the classes of each statement (`oracle/README.md`, "The extended domain"):
     | Kind | Kernels | Cases the run must have seen |
     |---|---|---|
     | `extends` | the nine full kernels | a finite result (F2), an overflow on finite operands (F4), a non-finite operand (F5); where `finite_when` is not empty, a case where every condition holds (F3 applies) |
-    | `encloses` | the eight full Ball kernels, `ball_neg_1`, `ball_neg_2` | each of the three results: a finite ball, the whole line, the empty set (and B4 applying, once a `finite_when` is claimed) |
+    | `encloses` | the eight full Ball kernels, `ball_neg_1`, `ball_neg_2` | each of the three results: a finite ball, the whole line, the empty set; where `finite_when` is not empty (the eight full Ball kernels), a case where every condition holds (B4 applies) |
     | `represents` | `make_2`, `make_2_limbs`, `neg_2`, `abs_2` | a finite, an infinite and a NaN value |
     | `makes_ball` | `ball_make_1`, `ball_make_2` | each given state: a finite ball, the whole line (a center that is not finite or a radius $+\infty$), the empty set (a radius that is NaN or negative) |
     | `normalized`, `error` | `neg_2`, `abs_2`, `ball_neg_2` | a non-finite operand |
