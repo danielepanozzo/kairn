@@ -5,8 +5,10 @@
 #   that calls KERNEL (runner.cpp), computed through the constructors, operators and functions a
 #   client calls, on random binary64 and binary32 cases (in the extended domain, infinities, NaN
 #   and the special balls included, for the kernels that have it); with this build's flags and
-#   with contraction forced on, two runners on the same cases. full.api.oracle.KERNEL.FORMAT, in
-#   the full tier (../full/), does the same on more cases.
+#   with contraction forced on, two runners on the same cases, and the debug build's runner
+#   (flags/) on the first form of each kernel. full.api.oracle.KERNEL.FORMAT, in the full tier
+#   (../full/), does the same on more cases, and full.api.flags.oracle.KERNEL.FORMAT every form
+#   through the runner of every flag set of flags/.
 # - api.oracle.coverage: every kernel of gen/claims.json is reached by a public form of the
 #   runner, or is a building block, or is an entry kernel on the runner's short list of those not
 #   public yet; no entry kernel is a building block; and the lists below agree.
@@ -17,8 +19,12 @@
 #   a changed rounding mode and flush-to-zero.
 # - api.self_test.unsafe.*: with Clang, a build whose flags break Kairn without a macro to show it,
 #   which self_test() must detect.
-# - api.reject.*: what must not compile: rejected flags, and UNVERIFIED operations without the
-#   marker (each with a control that compiles).
+# - api.flags.debug.*: self_test() and constexpr.cpp in the debug build of flags/.
+# - api.checks.*: the checks of KAIRN_CHECKS, which must stop the program under a changed rounding
+#   mode or flush to zero and on an operand that is not canonical, and let the rest through.
+# - api.reject.*: what must not compile: rejected flags, UNVERIFIED operations without the
+#   marker, and with KAIRN_CHECKS constant expressions that the checks refuse (each with a control
+#   that compiles).
 # - api.k1.zero_cost: the code of Expansion<double, 1> against that of double (k1/zero_cost.py).
 # - api.example.*: the documentation's examples (docs/examples/cpp/), which check their own output;
 #   api.example.accurate_sums.* also compares it with the text its tutorial shows.
@@ -63,16 +69,37 @@ else()
 endif()
 _kairn_api_program(kairn-api-runner-contract-fast runner.cpp ${_api_contract})
 
-# Each test runs both runners, the one with the build's flags and the one with contraction forced
-# on, on the same requests, generated once (pipeline.cmake). The quick tier's KAIRN_API_QUICK_CASES
-# are at least 1000, the length of stream at which a form that computes only some lines of its
-# kernel must have computed one (runner.cpp); 2000, because with 1000 three more of the faults
-# planted in the kernels that the full tier caught went unseen (docs/developer/testing.md, "Time").
+# Each test runs the runners, the one with the build's flags and the one with contraction forced
+# on (and the debug build's, below), on the same requests, generated once (pipeline.cmake). The
+# quick tier's KAIRN_API_QUICK_CASES are at least 1000, the length of stream at which a form that
+# computes only some lines of its kernel must have computed one (runner.cpp); 2000, because with
+# 1000 three more of the faults planted in the kernels that the full tier caught went unseen
+# (docs/developer/testing.md, "Time").
 set(_api_claims "${PROJECT_SOURCE_DIR}/gen/claims.json")
+# --- The flag sets (flags/) -------------------------------------------------------------------
+#
+# flags/ builds the public interface's runner and programs once per flag set of
+# docs/developer/testing.md ("Flag sets"), and the kernels' runners for two of them, each with
+# exactly the options of its set. In the quick tier the debug build's runner joins the two above in
+# api.oracle.*, on the first form of each kernel only (FIRST_FORM): built without optimization and
+# with the checks, it takes two to three times as long. The full tier runs every form of every
+# set's runner on KAIRN_API_QUICK_CASES cases (full.api.flags.oracle.*) and the kernels' runners
+# in its cross-checks (../full/CMakeLists.txt, from the variables _flags_* passed up below).
+add_subdirectory(flags)
+set(_api_runners "build|$<TARGET_FILE:kairn-api-runner>|contract-fast|$<TARGET_FILE:kairn-api-runner-contract-fast>")
+string(APPEND _api_runners "|debug|$<TARGET_FILE:kairn-api-runner-debug>")
+set(_flags_runners "")
+foreach(_set IN LISTS _flags_names)
+  list(APPEND _flags_runners "${_set}|$<TARGET_FILE:kairn-api-runner-${_set}>")
+endforeach()
+list(JOIN _flags_runners "|" _flags_runners)
+set(_flags_names ${_flags_names} PARENT_SCOPE)
+set(_flags_gen_runners ${_flags_gen_runners} PARENT_SCOPE)
+set(_flags_gen_labels ${_flags_gen_labels} PARENT_SCOPE)
+# --- The end of the flag sets' runners ---------------------------------------------------------
 if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   set(_api_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
-    "-DRUNNERS=build|$<TARGET_FILE:kairn-api-runner>|contract-fast|$<TARGET_FILE:kairn-api-runner-contract-fast>"
-    "-DSEED=${KAIRN_API_SEED}")
+    "-DRUNNERS=${_api_runners}" "-DFIRST_FORM=debug" "-DSEED=${KAIRN_API_SEED}")
   file(READ "${_api_claims}" _api_json)
   string(JSON _api_count LENGTH "${_api_json}" kernels)
   math(EXPR _api_last "${_api_count} - 1")
@@ -92,16 +119,21 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
       set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "api;oracle")
     endforeach()
   endforeach()
-  # For ../full/CMakeLists.txt, which registers the same on KAIRN_API_CASES cases.
+  # For ../full/CMakeLists.txt, which registers the same on KAIRN_API_CASES cases, and every form of
+  # the flag sets' runners on KAIRN_API_QUICK_CASES.
   set(_api_oracle_kernels ${_api_mapped} PARENT_SCOPE)
   set(_api_oracle_common ${_api_common} PARENT_SCOPE)
+  set(_api_flags_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DRUNNERS=${_flags_runners}" "-DSEED=${KAIRN_API_SEED}" PARENT_SCOPE)
   add_test(NAME api.oracle.coverage
     COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>" "-DCLAIMS=${_api_claims}"
       "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"
       "-DNOT_PUBLIC=${_api_not_public}" -P "${CMAKE_CURRENT_SOURCE_DIR}/coverage.cmake")
   set_tests_properties(api.oracle.coverage PROPERTIES LABELS "api;oracle")
   list(LENGTH _api_mapped _n)
-  message(STATUS "Kairn tests: the public interface of ${_n} kernels against the oracle, with 2 runners")
+  list(LENGTH _flags_names _n_flags)
+  message(STATUS "Kairn tests: the public interface of ${_n} kernels against the oracle, with 2 runners "
+    "and the debug build's on the first form of each, and in the full tier the runners of ${_n_flags} flag sets")
 endif()
 
 # --- Products of the program passed into Kairn ------------------------------------------------
@@ -238,6 +270,44 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT _msvc_style)
   endforeach()
 endif()
 
+# --- The debug build and the checks of KAIRN_CHECKS -------------------------------------------
+#
+# api.flags.debug.self_test: kairn::self_test() and kairn::environment_ok() compiled as the debug
+# build of flags/ (runner.cpp --self-test), which must pass; api.flags.debug.constexpr:
+# constexpr.cpp built so, with the checks. The full tier registers the same for the other flag
+# sets (../full/).
+#
+# The checks of KAIRN_CHECKS (checks.cpp, run by checks.cmake), in the debug build
+# (api.checks.debug.*) and with the build's own flags and KAIRN_CHECKS defined to 1
+# (api.checks.release.*): .default, in the default environment every operation runs and so does
+# every operand the checks must accept; .rounding, under each directed rounding mode
+# environment_ok() is false and every operation stops the program with Kairn's message; .flush, the
+# same under flush to zero (FTZ and DAZ on x86-64, FZ on AArch64); .operands, every operand that is
+# not canonical, and every negative radius, stops the program with its message.
+# api.checks.handler: a KAIRN_ENVIRONMENT_FAILURE of the program's own is called instead
+# (checks_handler.cpp).
+add_test(NAME api.flags.debug.self_test COMMAND kairn-api-runner-debug --self-test)
+add_test(NAME api.flags.debug.constexpr COMMAND kairn-api-constexpr-debug)
+set_tests_properties(api.flags.debug.self_test api.flags.debug.constexpr PROPERTIES
+  TIMEOUT 120 LABELS "api;flags")
+_kairn_api_program(kairn-api-checks-release checks.cpp)
+target_compile_definitions(kairn-api-checks-release PRIVATE KAIRN_CHECKS=1)
+set(_api_expect_flush OFF)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64|aarch64|arm64|ARM64)$")
+  set(_api_expect_flush ON)
+endif()
+foreach(_build debug release)
+  foreach(_group default rounding flush operands)
+    add_test(NAME api.checks.${_build}.${_group}
+      COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-api-checks-${_build}>" "-DGROUP=${_group}"
+        "-DEXPECT_FLUSH=${_api_expect_flush}" -P "${CMAKE_CURRENT_SOURCE_DIR}/checks.cmake")
+    set_tests_properties(api.checks.${_build}.${_group} PROPERTIES TIMEOUT 300 LABELS "api;checks")
+  endforeach()
+endforeach()
+add_test(NAME api.checks.handler COMMAND kairn-api-checks-handler)
+set_tests_properties(api.checks.handler PROPERTIES TIMEOUT 120 LABELS "api;checks")
+# --- The end of the debug build and the checks -------------------------------------------------
+
 # --- What must not compile --------------------------------------------------------------------
 # The compilations below run the compiler directly, with the build's own flags and kairn::fma's.
 get_target_property(_api_fma kairn::fma INTERFACE_COMPILE_OPTIONS)
@@ -317,6 +387,8 @@ foreach(_case_name IN ITEMS 20:add_2_1_full:limb 21:add_2_1_full:one_limb 22:sub
     "-DUNVERIFIED_ONLY=${_kernel}")
 endforeach()
 _kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")
+_kairn_api_reject(checks.operator_not_canonical 15 "constant|constexpr")
+_kairn_api_reject(checks.ball_negative_radius 16 "constant|constexpr")
 
 # --- One limb against T -----------------------------------------------------------------------
 if(Python3_Interpreter_FOUND)

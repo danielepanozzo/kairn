@@ -7,6 +7,8 @@
 //   runner --list             every kernel that some form maps to
 //   runner --internal         the building blocks: kernels that are parts of other kernels
 //   runner --not-public       entry kernels that no public operation calls yet, each with why
+//   runner --self-test        kairn::self_test() and kairn::environment_ok() as built here: exit
+//                             0 if both pass (the tests of the flag sets, tests/api/flags/)
 //
 // Each public operation is mapped to the kernel it calls, whose claims it must satisfy; a kernel
 // can have several forms (x + a and a + x, x += y, the marked and the unmarked operator). The
@@ -24,10 +26,25 @@
 // must mean that the form itself was judged.
 //
 // binary64 requests run on double limbs, binary32 requests on float limbs; a mask is 0 or 1.
-// KAIRN_CHECKS is off: the oracle sends what the checks would stop (negative radii, which make an
-// empty ball), and judges the result instead.
+// KAIRN_CHECKS is off: the oracle sends what the checks would stop (negative radii given to a
+// Ball constructor, which make an empty ball), and judges the result instead.
+//
+// Built with KAIRN_TEST_CHECKS defined (the debug build of tests/api/flags/), the runner leaves
+// KAIRN_CHECKS to its default instead, which must then be 1, and every operation checks the
+// environment and its operands as a debug build of a program does. On the lines whose radius the
+// checks stop, the constructor's forms then compute Ball::empty(), which is the set the
+// constructor makes of such a radius, without calling the constructor, and the runner counts them
+// on its standard error; that the checks stop a negative radius is tested on its own
+// (tests/api/checks.cpp). The operand of every other kernel is canonical, so nothing else changes.
+#if !defined(KAIRN_TEST_CHECKS)
 #define KAIRN_CHECKS 0
+#endif
 #include <kairn/kairn.hpp>
+#if defined(KAIRN_TEST_CHECKS) && KAIRN_CHECKS != 1
+#error "built with KAIRN_TEST_CHECKS, the runner must have KAIRN_CHECKS 1: build it without NDEBUG"
+#endif
+
+#include "no_crash_reports.hpp"
 
 #include <cmath>
 #include <cstdio>
@@ -299,10 +316,25 @@ FORM(to_down_2_to_down, out[0] = kairn::to_down(AS(to_down_2, two(in))))
 FORM(to_up_2_to_up, out[0] = kairn::to_up(AS(to_up_2, two(in))))
 FORM(abs_upper_2_abs_upper, out[0] = kairn::abs_upper(AS(abs_upper_2, two(in))))
 
-// Balls: construction. The center and the radius as given (a negative radius makes the empty set).
-FORM(ball_make_1_center_radius, put(out, B1<T>(AS(ball_make_1, one(in)), in[1])))
-FORM(ball_make_1_limb_radius, put(out, B1<T>(in[0], in[1])))
-FORM(ball_make_2_center_radius, put(out, B2<T>(AS(ball_make_2, two(in)), in[2])))
+// Balls: construction. The center and the radius as given (a negative radius makes the empty set,
+// or, with KAIRN_CHECKS, stops the program: see the top of the file).
+long stopped = 0;
+template <class T>
+bool stopped_by_checks([[maybe_unused]] T r) {
+#if KAIRN_CHECKS
+    if (0 > r) {
+        ++stopped;
+        return true;
+    }
+#endif
+    return false;
+}
+FORM(ball_make_1_center_radius, if (stopped_by_checks(in[1])) { put(out, B1<T>::empty()); return; }
+     put(out, B1<T>(AS(ball_make_1, one(in)), in[1])))
+FORM(ball_make_1_limb_radius, if (stopped_by_checks(in[1])) { put(out, B1<T>::empty()); return; }
+     put(out, B1<T>(in[0], in[1])))
+FORM(ball_make_2_center_radius, if (stopped_by_checks(in[2])) { put(out, B2<T>::empty()); return; }
+     put(out, B2<T>(AS(ball_make_2, two(in)), in[2])))
 
 // Balls: arithmetic. Operands are (center limbs, radius); a scaling's last operand is a T. A point
 // form takes the other ball of the line as a point when its radius is zero (and, for a point of
@@ -619,14 +651,26 @@ void put_limb(double v, std::string& out) {
 }
 
 int usage() {
-    std::fprintf(stderr, "usage: runner [--form NAME] | --forms KERNEL | --list | --internal | --not-public\n");
+    std::fprintf(stderr,
+                 "usage: runner [--form NAME] | --forms KERNEL | --list | --internal | --not-public | --self-test\n");
     return 2;
+}
+
+// kairn::self_test() and kairn::environment_ok(), compiled with this runner's flags.
+int self_test() {
+    const kairn::Status s = kairn::self_test();
+    const bool env = kairn::environment_ok();
+    std::printf("self_test: %s%s%s\nenvironment_ok: %s\nKAIRN_CHECKS: %d\n", s.message(), s.kernel ? ": " : "",
+                s.kernel ? s.kernel : "", env ? "true" : "false", KAIRN_CHECKS);
+    return s.ok() && env ? 0 : 1;
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
+    kairn_test::no_crash_reports();
     const char* form_name = nullptr;
+    if (argc == 2 && std::strcmp(argv[1], "--self-test") == 0) return self_test();
     if (argc == 3 && std::strcmp(argv[1], "--forms") == 0) {
         for (const Form& f : forms)
             if (std::strcmp(f.kernel, argv[2]) == 0) std::printf("%s\n", f.name);
@@ -724,6 +768,9 @@ int main(int argc, char** argv) {
         out += '\n';
         std::fwrite(out.data(), 1, out.size(), stdout);
     }
+    if (stopped > 0)
+        std::fprintf(stderr, "runner: KAIRN_CHECKS stops a negative radius: Ball::empty() on %ld of %ld lines\n",
+                     stopped, lines);
     if (conditional) {
         std::fprintf(stderr, "runner: form %s of %s computed its own operation on %ld of %ld lines\n", conditional->name,
                      conditional->kernel, reached, lines);
