@@ -124,11 +124,11 @@ foreach(_i RANGE 0 ${_last} 2)
   endif()
   # Where the unguarded build was measured to fuse: GCC by default (it contracts across statements
   # in C++) and with =fast; Clang with =fast (on AArch64 every form, on x86-64 Clang 18 the balls'
-  # forms only); MSVC with /fp:contract.
+  # forms only); MSVC with /fp:contract. clang-cl was not measured, so its build only reports.
   set(_fuses OFF)
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND (_variant STREQUAL "" OR _variant STREQUAL "contract-fast"))
     set(_fuses ON)
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND _variant STREQUAL "contract-fast")
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT _msvc_style AND _variant STREQUAL "contract-fast")
     set(_fuses ON)
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND _variant STREQUAL "fp-contract")
     set(_fuses ON)
