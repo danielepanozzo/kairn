@@ -158,12 +158,12 @@ def main(argv):
     def n(backend, kind, kernel, variant):
         return '%s/%s/%s/%s' % (backend, kind, kernel, variant)
 
-    print('## Configurations\n')
+    print('### Configurations\n')
     print(configurations(names, runs))
-    print('\n## Checks\n')
+    print('\n### Checks\n')
     print(checks(names, runs))
 
-    print('\n## Q1: opaque product over plain product\n')
+    print('\n### 1. Opaque product over plain product\n')
     rows = []
     for b in (S, P):
         for k in ('two_prod', 'mul_2_1', 'mul_2_2', 'ball_mul_2'):
@@ -177,7 +177,7 @@ def main(argv):
                  n(S, 'prod', 'mul_1_1', 'double')))
     print(ratio_table(names, runs, rows))
 
-    print('\n## Q2: full kernel over its core\n')
+    print('\n### 2. Full kernel over its core\n')
     rows = []
     forms = (('full_sel', '(a) selects'), ('full_br', '(b) branch'), ('full_fabs', "(a') selects, `fabs`"),
              ('full_inl', "(b') branch, inline"))
@@ -203,7 +203,7 @@ def main(argv):
                                     'horner': 'Horner'}[kind], k), n(S, kind, k, 'full_br'), n(S, kind, k, 'full_sel')))
     print(ratio_table(names, runs, rows))
 
-    print('\n## Q3: Ball operations\n')
+    print('\n### 3. Ball operations\n')
     rows = []
     for b in (S, P):
         rows += [('%s throughput, `ball_add_2` (ns)' % b, n(b, 'tp', 'ball_add_2', 'kairn')),
@@ -250,7 +250,7 @@ def main(argv):
         rows.append(('scalar %s, `%s`, full (b) / core' % (kind, k), n(S, kind, k, 'full_br'), n(S, kind, k, 'kairn')))
     print(ratio_table(names, runs, rows))
 
-    print('\n## Q4: Kairn over the textbook baseline\n')
+    print('\n### 4. Kairn over the textbook baseline\n')
     rows = []
     for kind in ('tp', 'sum'):
         for k in ('add_2_2', 'add_fast_2_2'):
@@ -279,7 +279,7 @@ def main(argv):
     print(ratio_table(names, runs, rows))
 
     if asm:
-        print('\n## Machine code of the throughput loops\n')
+        print('\n### Machine code of the throughput loops\n')
         funcs = ['kb_tp_mul_2_2__kairn', 'kb_tp_mul_2_2__plain', 'kb_tp_mul_2_2__full_sel', 'kb_tp_mul_2_2__full_br',
                  'kb_tp_mul_2_2__full_fabs', 'kb_tp_mul_2_2__full_inl',
                  'kb_tp_add_2_2__kairn', 'kb_tp_add_2_2__full_sel', 'kb_tp_add_2_2__full_br',
@@ -288,7 +288,7 @@ def main(argv):
                  'kb_tp_ball_mul_2__kairn']
         print(vector_table(names, runs, asm, funcs))
 
-    print('\n## Every function\n')
+    print('\n### Every function\n')
     print(all_times(names, runs))
     return 0
 

@@ -313,7 +313,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full_br(double cx0, double cx1, double rx,
 
 namespace textbook {
 
-// JMP17 Algorithm 2, 2Sum (Knuth, Moller).
+// 2Sum (Knuth, Moller), as listed in JMP17.
 KAIRN_GEN_FORCEINLINE void two_sum(double a, double b, double& s, double& t) noexcept {
     s = a + b;
     const double ap = s - b;
@@ -323,14 +323,14 @@ KAIRN_GEN_FORCEINLINE void two_sum(double a, double b, double& s, double& t) noe
     t = da + db;
 }
 
-// JMP17 Algorithm 1, Fast2Sum (Dekker): requires |a| >= |b|, or a's exponent at least b's.
+// Fast2Sum (Dekker), as listed in JMP17: requires |a| >= |b|, or a's exponent at least b's.
 KAIRN_GEN_FORCEINLINE void fast_two_sum(double a, double b, double& s, double& t) noexcept {
     s = a + b;
     const double z = s - a;
     t = b - z;
 }
 
-// JMP17 Algorithm 3, Fast2Mult, with an FMA.
+// Fast2Mult with an FMA (2ProdFMA), as listed in JMP17.
 KAIRN_GEN_FORCEINLINE void fast_two_mult(double a, double b, double& ph, double& pl) noexcept {
     ph = a * b;
     pl = fma_rn(a, b, -ph);
