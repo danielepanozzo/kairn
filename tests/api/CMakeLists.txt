@@ -189,7 +189,7 @@ endif()
 # every kernel is marked unverified (compile_fail.cmake), so that the mechanism is tested whatever
 # gen/claims.json says today. Where the compiler explains, the message names the concept whose
 # constraint failed; Clang does not for a unary operator.
-if(_msvc_style)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   set(_api_unmarked "constraint")
 else()
   set(_api_unmarked "proof_checked|invalid argument type")
