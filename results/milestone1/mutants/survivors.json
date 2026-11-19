@@ -1,0 +1,1219 @@
+{
+ "what": "The faults of tests/kernel_mutants.py that neither tier nor the generator's comparison with the interpreter caught (class \"nothing\" in linux-x86-64.json), each judged by hand with two searches for an operand that tells it from the kernel.",
+ "search": "cases_differ: the operands on which the fault and the original kernel, compiled side by side (GCC 13 and Clang 18, -O2 -ffp-contract=off), differ, over the special values of the format in every position (every combination, or 4 million), 4 million random cases from strata like the tests' and from values just above and below a power of two, as many with non-finite operands for a kernel of the extended domain, 4 million with any value anywhere, and every binary32 number for a one-input kernel; per format. oracle_cases_differ: the same over 500 000 cases per format of the oracle's own generator (seed 7), which keep to the kernel's domain.",
+ "operands": "For a blind spot, the cases of SPECIAL_CASES (gen/tests/test_cxx.py) that tell the fault from the interpreter, with the oracle's verdict on the fault's result: \"claims kept\" (the case is in the domain and the result meets every claim), \"invalid: ...\" (outside the domain), or not judged.",
+ "counts": {
+  "equivalent": 48,
+  "blind spot": 7,
+  "blind spot outside the domain": 10
+ },
+ "faults": [
+  {
+   "id": "m0023",
+   "kernel": "ball_add_1_full",
+   "op": "cmp",
+   "fixup": false,
+   "before": "const bool f1 = std::numeric_limits<double>::infinity() > a;",
+   "after": "const bool f1 = std::numeric_limits<double>::infinity() >= a;",
+   "verdict": "equivalent",
+   "why": "f1 = inf > |cz0| loosened to >= differs only on an infinite center. f1 is used only in f1 & f2, and the radius contains |cz0| times a positive constant, so an infinite center makes the radius +inf or NaN and f2 false: the result is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0039",
+   "kernel": "ball_mul_1",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double p = fma_rn(rx, ry, 0.0);",
+   "after": "const double p = rx * ry;",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0040",
+   "kernel": "ball_mul_1",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double p = fma_rn(rx, ry, 0.0);",
+   "after": "const double p = (rx * ry + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0052",
+   "kernel": "ball_mul_1_full",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double cz_p = fma_rn(rx, ry, 0.0);",
+   "after": "const double cz_p = rx * ry;",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0053",
+   "kernel": "ball_mul_1_full",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double cz_p = fma_rn(rx, ry, 0.0);",
+   "after": "const double cz_p = (rx * ry + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0066",
+   "kernel": "ball_mul_1_full",
+   "op": "cmp",
+   "fixup": false,
+   "before": "const bool f1 = std::numeric_limits<double>::infinity() > a;",
+   "after": "const bool f1 = std::numeric_limits<double>::infinity() >= a;",
+   "verdict": "equivalent",
+   "why": "f1 = inf > |cz0| loosened to >= differs only on an infinite center. f1 is used only in f1 & f2, and the radius contains |cz0| times a positive constant, so an infinite center makes the radius +inf or NaN and f2 false: the result is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0074",
+   "kernel": "ball_scale_1",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double p = fma_rn(aa, rx, 0.0);",
+   "after": "const double p = aa * rx;",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0075",
+   "kernel": "ball_scale_1",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double p = fma_rn(aa, rx, 0.0);",
+   "after": "const double p = (aa * rx + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0083",
+   "kernel": "ball_scale_1_full",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double cz_p = fma_rn(cz_aa, rx, 0.0);",
+   "after": "const double cz_p = cz_aa * rx;",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0084",
+   "kernel": "ball_scale_1_full",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double cz_p = fma_rn(cz_aa, rx, 0.0);",
+   "after": "const double cz_p = (cz_aa * rx + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0091",
+   "kernel": "ball_scale_1_full",
+   "op": "cmp",
+   "fixup": false,
+   "before": "const bool f1 = std::numeric_limits<double>::infinity() > az;",
+   "after": "const bool f1 = std::numeric_limits<double>::infinity() >= az;",
+   "verdict": "equivalent",
+   "why": "f1 = inf > |cz0| loosened to >= differs only on an infinite center. f1 is used only in f1 & f2, and the radius contains |cz0| times a positive constant, so an infinite center makes the radius +inf or NaN and f2 false: the result is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0118",
+   "kernel": "ball_sub_1_full",
+   "op": "cmp",
+   "fixup": false,
+   "before": "const bool f1 = std::numeric_limits<double>::infinity() > a;",
+   "after": "const bool f1 = std::numeric_limits<double>::infinity() >= a;",
+   "verdict": "equivalent",
+   "why": "f1 = inf > |cz0| loosened to >= differs only on an infinite center. f1 is used only in f1 & f2, and the radius contains |cz0| times a positive constant, so an infinite center makes the radius +inf or NaN and f2 false: the result is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0137",
+   "kernel": "rmul",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double p = fma_rn(a, b, 0.0);",
+   "after": "const double p = a * b;",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. The result is next_up(p), the smallest subnormal for a zero p of either sign.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0138",
+   "kernel": "rmul",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double p = fma_rn(a, b, 0.0);",
+   "after": "const double p = (a * b + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. The result is next_up(p), the smallest subnormal for a zero p of either sign.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0140",
+   "kernel": "split",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double g = fma_rn(0x1.0000002p+27, a, 0.0);",
+   "after": "const double g = (0x1.0000002p+27 * a + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(C, a, 0) made C * a + 0.0, C = 2^s + 1 > 1: a nonzero a never gives a product that rounds to zero, and a zero a gives +0 both ways (fma(C, -0, 0) = +0, -0 + 0.0 = +0); infinities and NaN propagate alike.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0141",
+   "kernel": "split",
+   "op": "const",
+   "fixup": false,
+   "before": "const double g = fma_rn(0x1.0000002p+27, a, 0.0);",
+   "after": "const double g = fma_rn(0x1.000000p+27, a, 0.0);",
+   "verdict": "blind spot",
+   "why": "In binary32 a significand just above 1 (by less than 2^-12) gets a high half of 13 bits instead of 12, and a = ah + al still holds; in binary64 (53 = 26 + 27 bits) the searches found differences only where the original splitter product (2^27 + 1) a overflows.",
+   "operands": [
+    {
+     "request": "split binary64 0x1.ffffffffff6cap+996",
+     "interpreter": "nan nan",
+     "fault": "0x1p+997 -0x1.26cp+955",
+     "oracle": "claims kept"
+    },
+    {
+     "request": "split binary32 0x1.00086ap+78",
+     "interpreter": "0x1p+78 0x1.0d4p+65",
+     "fault": "0x1.001p+78 -0x1.e58p+64",
+     "oracle": "claims kept"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 520673,
+    "oracle_cases_differ": 1352
+   }
+  },
+  {
+   "id": "m0153",
+   "kernel": "two_prod_dekker",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double ah_g = fma_rn(0x1.0000002p+27, a, 0.0);",
+   "after": "const double ah_g = (0x1.0000002p+27 * a + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(C, a, 0) made C * a + 0.0, C = 2^s + 1 > 1: a nonzero a never gives a product that rounds to zero, and a zero a gives +0 both ways (fma(C, -0, 0) = +0, -0 + 0.0 = +0); infinities and NaN propagate alike.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0154",
+   "kernel": "two_prod_dekker",
+   "op": "const",
+   "fixup": false,
+   "before": "const double ah_g = fma_rn(0x1.0000002p+27, a, 0.0);",
+   "after": "const double ah_g = fma_rn(0x1.000000p+27, a, 0.0);",
+   "verdict": "blind spot",
+   "why": "Dekker's product with the splitter of a shortened: the error term differs near underflow in binary32, within the claim's allowance (13/8 eta), and in binary64 where the original split overflows.",
+   "operands": [
+    {
+     "request": "two_prod_dekker binary64 -0x1.ffffffff55ceap+996 -0x1.fffffffff3231p-724",
+     "interpreter": "0x1.ffffffff48f1bp+273 nan",
+     "fault": "0x1.ffffffff48f1bp+273 0x1.11a64f994p+203",
+     "oracle": "claims kept"
+    },
+    {
+     "request": "two_prod_dekker binary32 0x1.000b28p-116 -0x1.ffffaap-1",
+     "interpreter": "-0x1.000afcp-116 -0x1.fcp-141",
+     "fault": "-0x1.000afcp-116 -0x1.fdp-141",
+     "oracle": "claims kept"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 559,
+    "oracle_cases_differ": 108
+   }
+  },
+  {
+   "id": "m0162",
+   "kernel": "two_prod_dekker",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double bh_g = fma_rn(0x1.0000002p+27, b, 0.0);",
+   "after": "const double bh_g = (0x1.0000002p+27 * b + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(C, a, 0) made C * a + 0.0, C = 2^s + 1 > 1: a nonzero a never gives a product that rounds to zero, and a zero a gives +0 both ways (fma(C, -0, 0) = +0, -0 + 0.0 = +0); infinities and NaN propagate alike.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0163",
+   "kernel": "two_prod_dekker",
+   "op": "const",
+   "fixup": false,
+   "before": "const double bh_g = fma_rn(0x1.0000002p+27, b, 0.0);",
+   "after": "const double bh_g = fma_rn(0x1.000000p+27, b, 0.0);",
+   "verdict": "blind spot",
+   "why": "Dekker's product with the splitter of b shortened: as for a.",
+   "operands": [
+    {
+     "request": "two_prod_dekker binary64 -0x1.000000001107dp-69 0x1.fffffffffc106p+996",
+     "interpreter": "-0x1.000000000f1p+928 nan",
+     "fault": "-0x1.000000000f1p+928 0x1.0c218048p+853",
+     "oracle": "claims kept"
+    },
+    {
+     "request": "two_prod_dekker binary32 -0x1.00039ap-108 0x1.000a7cp-8",
+     "interpreter": "-0x1.000e16p-116 -0x1.3p-143",
+     "fault": "-0x1.000e16p-116 -0x1.2cp-143",
+     "oracle": "claims kept"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 561,
+    "oracle_cases_differ": 124
+   }
+  },
+  {
+   "id": "m0173",
+   "kernel": "two_prod_dekker",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double q0 = fma_rn(ah, bh, 0.0);",
+   "after": "const double q0 = (ah * bh + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 turns -0 into +0 for a negative partial product that rounds to zero. e = ((q0 - p) + q1 + q2) + q3, and t1 = q0 - p is never -0 where the two differ (q0 is a negative zero only when ab < 0 rounds near zero, and then p is -0 or negative: +-0 - (-0) = +0); a sum whose first operand is +0 or nonzero does not depend on the sign of a zero second operand: e is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0177",
+   "kernel": "two_prod_dekker",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double q1 = fma_rn(ah, bl, 0.0);",
+   "after": "const double q1 = (ah * bl + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 turns -0 into +0 for a negative partial product that rounds to zero. e = ((q0 - p) + q1 + q2) + q3, and t1 = q0 - p is never -0 where the two differ (q0 is a negative zero only when ab < 0 rounds near zero, and then p is -0 or negative: +-0 - (-0) = +0); a sum whose first operand is +0 or nonzero does not depend on the sign of a zero second operand: e is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0181",
+   "kernel": "two_prod_dekker",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double q2 = fma_rn(al, bh, 0.0);",
+   "after": "const double q2 = (al * bh + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 turns -0 into +0 for a negative partial product that rounds to zero. e = ((q0 - p) + q1 + q2) + q3, and t1 = q0 - p is never -0 where the two differ (q0 is a negative zero only when ab < 0 rounds near zero, and then p is -0 or negative: +-0 - (-0) = +0); a sum whose first operand is +0 or nonzero does not depend on the sign of a zero second operand: e is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0185",
+   "kernel": "two_prod_dekker",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double q3 = fma_rn(al, bl, 0.0);",
+   "after": "const double q3 = (al * bl + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 turns -0 into +0 for a negative partial product that rounds to zero. e = ((q0 - p) + q1 + q2) + q3, and t1 = q0 - p is never -0 where the two differ (q0 is a negative zero only when ab < 0 rounds near zero, and then p is -0 or negative: +-0 - (-0) = +0); a sum whose first operand is +0 or nonzero does not depend on the sign of a zero second operand: e is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0210",
+   "kernel": "add_2_1",
+   "op": "sign",
+   "fixup": false,
+   "before": "const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;",
+   "after": "const double g = __builtin_is_constant_evaluated() ? a : a - 0.0;",
+   "verdict": "equivalent",
+   "why": "g = a + 0.0, which turns -0 into +0, made a - 0.0, which keeps -0: they differ only for a = -0. g enters only a TwoSum whose error term is +0 for both signs of g; its sum differs only when the other operand is a zero too, where the last Fast2Sum adds the tail and that error term and returns (+0, +0) either way.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0231",
+   "kernel": "add_2_1_full",
+   "op": "sign",
+   "fixup": false,
+   "before": "const double z0_g = __builtin_is_constant_evaluated() ? a : a + 0.0;",
+   "after": "const double z0_g = __builtin_is_constant_evaluated() ? a : a - 0.0;",
+   "verdict": "equivalent",
+   "why": "g = a + 0.0, which turns -0 into +0, made a - 0.0, which keeps -0: they differ only for a = -0. g enters only a TwoSum whose error term is +0 for both signs of g; its sum differs only when the other operand is a zero too, where the last Fast2Sum adds the tail and that error term and returns (+0, +0) either way.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0253",
+   "kernel": "add_2_1_full",
+   "op": "sign",
+   "fixup": true,
+   "before": "const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;",
+   "after": "const double g = __builtin_is_constant_evaluated() ? a : a - 0.0;",
+   "verdict": "equivalent",
+   "why": "g = a + 0.0 made a - 0.0 differs only for a = -0. In the fix-up, g only enters t = x0 + g and r0 = t * inf: a zero t gives a NaN whatever its sign, and a nonzero t is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0340",
+   "kernel": "add_2_2_full",
+   "op": "cmp",
+   "fixup": false,
+   "before": "const bool f = std::numeric_limits<double>::infinity() > a;",
+   "after": "const bool f = std::numeric_limits<double>::infinity() >= a;",
+   "verdict": "blind spot outside the domain",
+   "why": "An infinite z0, the only case where >= differs, needs operands that are not canonical: on canonical ones add_2_2 overflows to a NaN z0. Differs only on operands outside the kernel's domain, which the comparison with the interpreter takes too (bit identity holds on any operand).",
+   "operands": [
+    {
+     "request": "add_2_2_full binary64 -0x1.0000000000003p+0 -0x1p+0 0x1.1155c6c8f72dfp+1022 -0x1.fffffffffffffp+1023",
+     "interpreter": "inf 0x0p+0",
+     "fault": "inf nan",
+     "oracle": "invalid: requires canonical(x)"
+    },
+    {
+     "request": "add_2_2_full binary32 -0x1.10f38ep+124 -0x1.4c086p-88 0x1.80ca52p+126 -0x1.fffffep+127",
+     "interpreter": "inf 0x0p+0",
+     "fault": "inf nan",
+     "oracle": "invalid: requires canonical(y)"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 506,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0497",
+   "kernel": "ball_add_2_full",
+   "op": "cmp",
+   "fixup": false,
+   "before": "const bool f1 = std::numeric_limits<double>::infinity() > a;",
+   "after": "const bool f1 = std::numeric_limits<double>::infinity() >= a;",
+   "verdict": "equivalent",
+   "why": "f1 = inf > |cz0| loosened to >= differs only on an infinite center. f1 is used only in f1 & f2, and the radius contains |cz0| times a positive constant, so an infinite center makes the radius +inf or NaN and f2 false: the result is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0514",
+   "kernel": "mul_2_2",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double ch = fma_rn(x0, y0, 0.0);",
+   "after": "const double ch = x0 * y0;",
+   "verdict": "blind spot outside the domain",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. Differs only on operands outside the kernel's domain, which the comparison with the interpreter takes too (bit identity holds on any operand).",
+   "operands": [
+    {
+     "request": "mul_2_2 binary64 -0x0p+0 -0x1p-1074 0x1.0659418fbcbb6p-521 0x1.5555555555555p-2",
+     "interpreter": "0x0p+0 -0x0p+0",
+     "fault": "0x0p+0 0x0p+0",
+     "oracle": "invalid: requires normalized(x)"
+    },
+    {
+     "request": "mul_2_2 binary64 0x0p+0 0x1p-1023 -0x0p+0 -0x1.0000000000001p-1022",
+     "interpreter": "0x0p+0 -0x0p+0",
+     "fault": "0x0p+0 0x0p+0",
+     "oracle": "invalid: requires normalized(x)"
+    },
+    {
+     "request": "mul_2_2 binary32 0x1p-127 0x0p+0 -0x0p+0 -0x1.8f681ep-51",
+     "interpreter": "0x0p+0 -0x0p+0",
+     "fault": "0x0p+0 0x0p+0",
+     "oracle": "invalid: requires normalized(y)"
+    },
+    {
+     "request": "mul_2_2 binary32 0x0p+0 0x1p-75 -0x0p+0 -0x1p-149",
+     "interpreter": "0x0p+0 -0x0p+0",
+     "fault": "0x0p+0 0x0p+0",
+     "oracle": "invalid: requires normalized(x)"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 1052,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0518",
+   "kernel": "mul_2_2",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double tl0 = fma_rn(x1, y1, 0.0);",
+   "after": "const double tl0 = x1 * y1;",
+   "verdict": "blind spot",
+   "why": "x1 * y1 gives -0 where the FMA gives +0 when a tail is zero and the other negative: a pair with a negative tail times zero has a low limb -0 instead of +0. Kairn leaves the sign of a zero unspecified.",
+   "operands": [
+    {
+     "request": "mul_2_2 binary64 -0x1p+0 -0x1p-60 0x0p+0 0x0p+0",
+     "interpreter": "0x0p+0 0x0p+0",
+     "fault": "0x0p+0 -0x0p+0",
+     "oracle": "claims kept"
+    },
+    {
+     "request": "mul_2_2 binary32 -0x1p+0 -0x1p-30 0x0p+0 0x0p+0",
+     "interpreter": "0x0p+0 0x0p+0",
+     "fault": "0x0p+0 -0x0p+0",
+     "oracle": "claims kept"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 62560,
+    "oracle_cases_differ": 7934
+   }
+  },
+  {
+   "id": "m0519",
+   "kernel": "mul_2_2",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double tl0 = fma_rn(x1, y1, 0.0);",
+   "after": "const double tl0 = (x1 * y1 + 0.0);",
+   "verdict": "blind spot outside the domain",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. Differs only on operands outside the kernel's domain, which the comparison with the interpreter takes too (bit identity holds on any operand).",
+   "operands": [
+    {
+     "request": "mul_2_2 binary64 0x0p+0 0x1p-1023 -0x0p+0 -0x1.0000000000001p-1022",
+     "interpreter": "0x0p+0 -0x0p+0",
+     "fault": "0x0p+0 0x0p+0",
+     "oracle": "invalid: requires normalized(x)"
+    },
+    {
+     "request": "mul_2_2 binary32 0x0p+0 0x1p-75 -0x0p+0 -0x1p-149",
+     "interpreter": "0x0p+0 -0x0p+0",
+     "fault": "0x0p+0 0x0p+0",
+     "oracle": "invalid: requires normalized(x)"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 29,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0532",
+   "kernel": "ball_mul_2",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double cz0_ch = fma_rn(cx0, cy0, 0.0);",
+   "after": "const double cz0_ch = cx0 * cy0;",
+   "verdict": "blind spot outside the domain",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. Differs only on operands outside the kernel's domain, which the comparison with the interpreter takes too (bit identity holds on any operand).",
+   "operands": [
+    {
+     "request": "ball_mul_2 binary64 -0x0p+0 -0x1p-1022 0x1p-53 0x1.ffffffffffffep-1023 -0x1.0000000000001p-1022 0x1.7f7beb3d7addbp-1021",
+     "interpreter": "0x0p+0 -0x0p+0 0x1.0000000000006p-1022",
+     "fault": "0x0p+0 0x0p+0 0x1.0000000000006p-1022",
+     "oracle": "invalid: requires normalized(cx)"
+    },
+    {
+     "request": "ball_mul_2 binary64 0x0p+0 0x1.0000000000001p-1022 -0x1.0000004000001p+0 -0x0p+0 -0x1.ffffffffffffep-1023 -0x1.0000004000001p+0",
+     "interpreter": "0x0p+0 -0x0p+0 0x1.0000008000007p+0",
+     "fault": "0x0p+0 0x0p+0 0x1.0000008000007p+0",
+     "oracle": "invalid: requires normalized(cx)"
+    },
+    {
+     "request": "ball_mul_2 binary32 0x1p-126 0x1p-63 -0x1p-63 -0x0p+0 -0x1p-149 -0x1p+103",
+     "interpreter": "0x0p+0 -0x0p+0 0x1.000008p+40",
+     "fault": "0x0p+0 0x0p+0 0x1.000008p+40",
+     "oracle": "invalid: requires normalized(cx)"
+    },
+    {
+     "request": "ball_mul_2 binary32 -0x0p+0 -0x1p-24 0x1.d2ac3p+125 0x0p+0 0x1p-149 -0x0p+0",
+     "interpreter": "0x0p+0 -0x0p+0 0x1.00000ap-126",
+     "fault": "0x0p+0 0x0p+0 0x1.00000ap-126",
+     "oracle": "invalid: requires normalized(cx)"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 1045,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0536",
+   "kernel": "ball_mul_2",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double cz0_tl0 = fma_rn(cx1, cy1, 0.0);",
+   "after": "const double cz0_tl0 = cx1 * cy1;",
+   "verdict": "blind spot",
+   "why": "x1 * y1 gives -0 where the FMA gives +0 when a tail is zero and the other negative: a pair with a negative tail times zero has a low limb -0 instead of +0. Kairn leaves the sign of a zero unspecified.",
+   "operands": [
+    {
+     "request": "ball_mul_2 binary64 -0x1p+0 -0x1p-60 0x0p+0 0x0p+0 0x0p+0 0x0p+0",
+     "interpreter": "0x0p+0 0x0p+0 0x1.0000000000005p-1022",
+     "fault": "0x0p+0 -0x0p+0 0x1.0000000000005p-1022",
+     "oracle": "claims kept"
+    },
+    {
+     "request": "ball_mul_2 binary32 -0x1p+0 -0x1p-30 0x0p+0 0x0p+0 0x0p+0 0x0p+0",
+     "interpreter": "0x0p+0 0x0p+0 0x1.00000ap-126",
+     "fault": "0x0p+0 -0x0p+0 0x1.00000ap-126",
+     "oracle": "claims kept"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 173361,
+    "oracle_cases_differ": 12375
+   }
+  },
+  {
+   "id": "m0537",
+   "kernel": "ball_mul_2",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double cz0_tl0 = fma_rn(cx1, cy1, 0.0);",
+   "after": "const double cz0_tl0 = (cx1 * cy1 + 0.0);",
+   "verdict": "blind spot outside the domain",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. Differs only on operands outside the kernel's domain, which the comparison with the interpreter takes too (bit identity holds on any operand).",
+   "operands": [
+    {
+     "request": "ball_mul_2 binary64 0x0p+0 0x1.0000000000001p-1022 -0x1.0000004000001p+0 -0x0p+0 -0x1.ffffffffffffep-1023 -0x1.0000004000001p+0",
+     "interpreter": "0x0p+0 -0x0p+0 0x1.0000008000007p+0",
+     "fault": "0x0p+0 0x0p+0 0x1.0000008000007p+0",
+     "oracle": "invalid: requires normalized(cx)"
+    },
+    {
+     "request": "ball_mul_2 binary32 -0x0p+0 -0x1p-24 0x1.d2ac3p+125 0x0p+0 0x1p-149 -0x0p+0",
+     "interpreter": "0x0p+0 -0x0p+0 0x1.00000ap-126",
+     "fault": "0x0p+0 0x0p+0 0x1.00000ap-126",
+     "oracle": "invalid: requires normalized(cx)"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 21,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0550",
+   "kernel": "ball_mul_2",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double p = fma_rn(rx, ry, 0.0);",
+   "after": "const double p = rx * ry;",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0551",
+   "kernel": "ball_mul_2",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double p = fma_rn(rx, ry, 0.0);",
+   "after": "const double p = (rx * ry + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0562",
+   "kernel": "ball_mul_2_full",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double cz0_ch = fma_rn(cx0, cy0, 0.0);",
+   "after": "const double cz0_ch = cx0 * cy0;",
+   "verdict": "blind spot outside the domain",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. Differs only on operands outside the kernel's domain, which the comparison with the interpreter takes too (bit identity holds on any operand).",
+   "operands": [
+    {
+     "request": "ball_mul_2_full binary64 0x1p-1023 0x1p-1022 -0x1.ffffffffc259dp+174 -0x0p+0 -0x1p-511 0x1.3faa40413b9d1p-405",
+     "interpreter": "0x0p+0 -0x0p+0 -0x1.3faa4041151fdp-230",
+     "fault": "0x0p+0 0x0p+0 -0x1.3faa4041151fdp-230",
+     "oracle": "invalid: requires ball(cx, rx)"
+    },
+    {
+     "request": "ball_mul_2_full binary64 0x0p+0 0x1.f468898dd39bdp-998 0x1.0000004000001p+0 -0x0p+0 -0x1.324a99546b27ep-151 0x1.fffffffffffffp+1",
+     "interpreter": "0x0p+0 -0x0p+0 0x1.0000004000004p+2",
+     "fault": "0x0p+0 0x0p+0 0x1.0000004000004p+2",
+     "oracle": "invalid: requires ball(cx, rx)"
+    },
+    {
+     "request": "ball_mul_2_full binary32 0x0p+0 0x1.fffffcp-127 -0x1.eb207ap-46 -0x1.5fdf8ap-122 -0x1p-127 0x1.460d48p-102",
+     "interpreter": "0x0p+0 -0x0p+0 0x1p-126",
+     "fault": "0x0p+0 0x0p+0 0x1p-126",
+     "oracle": "invalid: requires ball(cx, rx)"
+    },
+    {
+     "request": "ball_mul_2_full binary32 0x0p+0 0x1.c2bf6p-91 -0x1p+0 -0x0p+0 -0x1p-127 -0x1.000006p+0",
+     "interpreter": "0x0p+0 -0x0p+0 0x1.00000ep+0",
+     "fault": "0x0p+0 0x0p+0 0x1.00000ep+0",
+     "oracle": "invalid: requires ball(cx, rx)"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 905,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0566",
+   "kernel": "ball_mul_2_full",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double cz0_tl0 = fma_rn(cx1, cy1, 0.0);",
+   "after": "const double cz0_tl0 = cx1 * cy1;",
+   "verdict": "blind spot",
+   "why": "x1 * y1 gives -0 where the FMA gives +0 when a tail is zero and the other negative: a pair with a negative tail times zero has a low limb -0 instead of +0. Kairn leaves the sign of a zero unspecified.",
+   "operands": [
+    {
+     "request": "ball_mul_2_full binary64 -0x1p+0 -0x1p-60 0x0p+0 0x0p+0 0x0p+0 0x0p+0",
+     "interpreter": "0x0p+0 0x0p+0 0x1.0000000000005p-1022",
+     "fault": "0x0p+0 -0x0p+0 0x1.0000000000005p-1022",
+     "oracle": "claims kept"
+    },
+    {
+     "request": "ball_mul_2_full binary32 -0x1p+0 -0x1p-30 0x0p+0 0x0p+0 0x0p+0 0x0p+0",
+     "interpreter": "0x0p+0 0x0p+0 0x1.00000ap-126",
+     "fault": "0x0p+0 -0x0p+0 0x1.00000ap-126",
+     "oracle": "claims kept"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 128591,
+    "oracle_cases_differ": 6890
+   }
+  },
+  {
+   "id": "m0567",
+   "kernel": "ball_mul_2_full",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double cz0_tl0 = fma_rn(cx1, cy1, 0.0);",
+   "after": "const double cz0_tl0 = (cx1 * cy1 + 0.0);",
+   "verdict": "blind spot outside the domain",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. Differs only on operands outside the kernel's domain, which the comparison with the interpreter takes too (bit identity holds on any operand).",
+   "operands": [
+    {
+     "request": "ball_mul_2_full binary64 0x0p+0 0x1.f468898dd39bdp-998 0x1.0000004000001p+0 -0x0p+0 -0x1.324a99546b27ep-151 0x1.fffffffffffffp+1",
+     "interpreter": "0x0p+0 -0x0p+0 0x1.0000004000004p+2",
+     "fault": "0x0p+0 0x0p+0 0x1.0000004000004p+2",
+     "oracle": "invalid: requires ball(cx, rx)"
+    },
+    {
+     "request": "ball_mul_2_full binary32 0x0p+0 0x1.c2bf6p-91 -0x1p+0 -0x0p+0 -0x1p-127 -0x1.000006p+0",
+     "interpreter": "0x0p+0 -0x0p+0 0x1.00000ep+0",
+     "fault": "0x0p+0 0x0p+0 0x1.00000ep+0",
+     "oracle": "invalid: requires ball(cx, rx)"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 18,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0580",
+   "kernel": "ball_mul_2_full",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double cz0_p = fma_rn(rx, ry, 0.0);",
+   "after": "const double cz0_p = rx * ry;",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0581",
+   "kernel": "ball_mul_2_full",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double cz0_p = fma_rn(rx, ry, 0.0);",
+   "after": "const double cz0_p = (rx * ry + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0595",
+   "kernel": "ball_mul_2_full",
+   "op": "cmp",
+   "fixup": false,
+   "before": "const bool f1 = std::numeric_limits<double>::infinity() > a;",
+   "after": "const bool f1 = std::numeric_limits<double>::infinity() >= a;",
+   "verdict": "equivalent",
+   "why": "f1 = inf > |cz0| loosened to >= differs only on an infinite center. f1 is used only in f1 & f2, and the radius contains |cz0| times a positive constant, so an infinite center makes the radius +inf or NaN and f2 false: the result is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0627",
+   "kernel": "ball_scale_2",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double p = fma_rn(aa, rx, 0.0);",
+   "after": "const double p = aa * rx;",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0628",
+   "kernel": "ball_scale_2",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double p = fma_rn(aa, rx, 0.0);",
+   "after": "const double p = (aa * rx + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0647",
+   "kernel": "ball_scale_2_full",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double cz0_p = fma_rn(cz0_aa, rx, 0.0);",
+   "after": "const double cz0_p = cz0_aa * rx;",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0648",
+   "kernel": "ball_scale_2_full",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double cz0_p = fma_rn(cz0_aa, rx, 0.0);",
+   "after": "const double cz0_p = (cz0_aa * rx + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. The product only enters sums inside the radius, which ends with fma(t, G, H), H > 0: a zero t gives H whatever its sign, and a sum with a nonzero operand does not depend on the sign of a zero.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0656",
+   "kernel": "ball_scale_2_full",
+   "op": "cmp",
+   "fixup": false,
+   "before": "const bool f1 = std::numeric_limits<double>::infinity() > az;",
+   "after": "const bool f1 = std::numeric_limits<double>::infinity() >= az;",
+   "verdict": "equivalent",
+   "why": "f1 = inf > |cz0| loosened to >= differs only on an infinite center. f1 is used only in f1 & f2, and the radius contains |cz0| times a positive constant, so an infinite center makes the radius +inf or NaN and f2 false: the result is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0763",
+   "kernel": "ball_sub_2_full",
+   "op": "cmp",
+   "fixup": false,
+   "before": "const bool f1 = std::numeric_limits<double>::infinity() > a;",
+   "after": "const bool f1 = std::numeric_limits<double>::infinity() >= a;",
+   "verdict": "equivalent",
+   "why": "f1 = inf > |cz0| loosened to >= differs only on an infinite center. f1 is used only in f1 & f2, and the radius contains |cz0| times a positive constant, so an infinite center makes the radius +inf or NaN and f2 false: the result is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0805",
+   "kernel": "mul_2_1_full",
+   "op": "textbook",
+   "fixup": true,
+   "before": "const double t = fma_rn(x0, a, 0.0);",
+   "after": "const double t = x0 * a;",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. In the fix-up, t only enters r0 = t * inf, which is a NaN for a zero t of either sign.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0806",
+   "kernel": "mul_2_1_full",
+   "op": "unfused",
+   "fixup": true,
+   "before": "const double t = fma_rn(x0, a, 0.0);",
+   "after": "const double t = (x0 * a + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. In the fix-up, t only enters r0 = t * inf, which is a NaN for a zero t of either sign.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0811",
+   "kernel": "mul_2_2_full",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double z0_ch = fma_rn(x0, y0, 0.0);",
+   "after": "const double z0_ch = x0 * y0;",
+   "verdict": "blind spot outside the domain",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. Differs only on operands outside the kernel's domain, which the comparison with the interpreter takes too (bit identity holds on any operand).",
+   "operands": [
+    {
+     "request": "mul_2_2_full binary64 -0x0p+0 -0x1.2df1030122b6p-964 0x0p+0 0x1p-537",
+     "interpreter": "0x0p+0 -0x0p+0",
+     "fault": "0x0p+0 0x0p+0",
+     "oracle": "invalid: requires canonical(x)"
+    },
+    {
+     "request": "mul_2_2_full binary32 -0x0p+0 -0x1p-149 0x1p-149 0x1.fffffcp-127",
+     "interpreter": "0x0p+0 -0x0p+0",
+     "fault": "0x0p+0 0x0p+0",
+     "oracle": "invalid: requires canonical(x)"
+    },
+    {
+     "request": "mul_2_2_full binary32 0x0p+0 0x1p-149 -0x0p+0 -0x1p-24",
+     "interpreter": "0x0p+0 -0x0p+0",
+     "fault": "0x0p+0 0x0p+0",
+     "oracle": "invalid: requires canonical(x)"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 1041,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0815",
+   "kernel": "mul_2_2_full",
+   "op": "textbook",
+   "fixup": false,
+   "before": "const double z0_tl0 = fma_rn(x1, y1, 0.0);",
+   "after": "const double z0_tl0 = x1 * y1;",
+   "verdict": "blind spot",
+   "why": "x1 * y1 gives -0 where the FMA gives +0 when a tail is zero and the other negative: a pair with a negative tail times zero has a low limb -0 instead of +0. Kairn leaves the sign of a zero unspecified.",
+   "operands": [
+    {
+     "request": "mul_2_2_full binary64 -0x1p+0 -0x1p-60 0x0p+0 0x0p+0",
+     "interpreter": "0x0p+0 0x0p+0",
+     "fault": "0x0p+0 -0x0p+0",
+     "oracle": "claims kept"
+    },
+    {
+     "request": "mul_2_2_full binary32 -0x1p+0 -0x1p-30 0x0p+0 0x0p+0",
+     "interpreter": "0x0p+0 0x0p+0",
+     "fault": "0x0p+0 -0x0p+0",
+     "oracle": "claims kept"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 89444,
+    "oracle_cases_differ": 4652
+   }
+  },
+  {
+   "id": "m0816",
+   "kernel": "mul_2_2_full",
+   "op": "unfused",
+   "fixup": false,
+   "before": "const double z0_tl0 = fma_rn(x1, y1, 0.0);",
+   "after": "const double z0_tl0 = (x1 * y1 + 0.0);",
+   "verdict": "blind spot outside the domain",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. Differs only on operands outside the kernel's domain, which the comparison with the interpreter takes too (bit identity holds on any operand).",
+   "operands": [
+    {
+     "request": "mul_2_2_full binary64 -0x0p+0 -0x1.2df1030122b6p-964 0x0p+0 0x1p-537",
+     "interpreter": "0x0p+0 -0x0p+0",
+     "fault": "0x0p+0 0x0p+0",
+     "oracle": "invalid: requires canonical(x)"
+    },
+    {
+     "request": "mul_2_2_full binary32 0x0p+0 0x1p-149 -0x0p+0 -0x1p-24",
+     "interpreter": "0x0p+0 -0x0p+0",
+     "fault": "0x0p+0 0x0p+0",
+     "oracle": "invalid: requires canonical(x)"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 26,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0830",
+   "kernel": "mul_2_2_full",
+   "op": "textbook",
+   "fixup": true,
+   "before": "const double t = fma_rn(x0, y0, 0.0);",
+   "after": "const double t = x0 * y0;",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. In the fix-up, t only enters r0 = t * inf, which is a NaN for a zero t of either sign.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0831",
+   "kernel": "mul_2_2_full",
+   "op": "unfused",
+   "fixup": true,
+   "before": "const double t = fma_rn(x0, y0, 0.0);",
+   "after": "const double t = (x0 * y0 + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. In the fix-up, t only enters r0 = t * inf, which is a NaN for a zero t of either sign.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0857",
+   "kernel": "mul_pow2_2_full",
+   "op": "textbook",
+   "fixup": true,
+   "before": "const double t = fma_rn(x0, c, 0.0);",
+   "after": "const double t = x0 * c;",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y differs only in the sign of a zero: an exact zero product of negative sign is +0 from the FMA and -0 from the product. In the fix-up, t only enters r0 = t * inf, which is a NaN for a zero t of either sign.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0858",
+   "kernel": "mul_pow2_2_full",
+   "op": "unfused",
+   "fixup": true,
+   "before": "const double t = fma_rn(x0, c, 0.0);",
+   "after": "const double t = (x0 * c + 0.0);",
+   "verdict": "equivalent",
+   "why": "fma(x, y, 0) made x * y + 0.0 differs only in the sign of a zero: a negative product that rounds to zero is -0 from the FMA and +0 from x * y + 0.0. In the fix-up, t only enters r0 = t * inf, which is a NaN for a zero t of either sign.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0863",
+   "kernel": "sub_1_2",
+   "op": "sign",
+   "fixup": false,
+   "before": "const double z0_g = __builtin_is_constant_evaluated() ? a : a + 0.0;",
+   "after": "const double z0_g = __builtin_is_constant_evaluated() ? a : a - 0.0;",
+   "verdict": "equivalent",
+   "why": "g = a + 0.0, which turns -0 into +0, made a - 0.0, which keeps -0: they differ only for a = -0. g enters only a TwoSum whose error term is +0 for both signs of g; its sum differs only when the other operand is a zero too, where the last Fast2Sum adds the tail and that error term and returns (+0, +0) either way.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0884",
+   "kernel": "sub_1_2_full",
+   "op": "sign",
+   "fixup": false,
+   "before": "const double z0_g = __builtin_is_constant_evaluated() ? a : a + 0.0;",
+   "after": "const double z0_g = __builtin_is_constant_evaluated() ? a : a - 0.0;",
+   "verdict": "equivalent",
+   "why": "g = a + 0.0, which turns -0 into +0, made a - 0.0, which keeps -0: they differ only for a = -0. g enters only a TwoSum whose error term is +0 for both signs of g; its sum differs only when the other operand is a zero too, where the last Fast2Sum adds the tail and that error term and returns (+0, +0) either way.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0906",
+   "kernel": "sub_1_2_full",
+   "op": "sign",
+   "fixup": true,
+   "before": "const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;",
+   "after": "const double g = __builtin_is_constant_evaluated() ? a : a - 0.0;",
+   "verdict": "equivalent",
+   "why": "g = a + 0.0 made a - 0.0 differs only for a = -0. In the fix-up, g only enters t = x0 + g and r0 = t * inf: a zero t gives a NaN whatever its sign, and a nonzero t is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0913",
+   "kernel": "sub_2_1",
+   "op": "sign",
+   "fixup": false,
+   "before": "const double z0_g = __builtin_is_constant_evaluated() ? n : n + 0.0;",
+   "after": "const double z0_g = __builtin_is_constant_evaluated() ? n : n - 0.0;",
+   "verdict": "equivalent",
+   "why": "g = a + 0.0, which turns -0 into +0, made a - 0.0, which keeps -0: they differ only for a = -0. g enters only a TwoSum whose error term is +0 for both signs of g; its sum differs only when the other operand is a zero too, where the last Fast2Sum adds the tail and that error term and returns (+0, +0) either way.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0934",
+   "kernel": "sub_2_1_full",
+   "op": "sign",
+   "fixup": false,
+   "before": "const double z0_g = __builtin_is_constant_evaluated() ? z0_n : z0_n + 0.0;",
+   "after": "const double z0_g = __builtin_is_constant_evaluated() ? z0_n : z0_n - 0.0;",
+   "verdict": "equivalent",
+   "why": "g = a + 0.0, which turns -0 into +0, made a - 0.0, which keeps -0: they differ only for a = -0. g enters only a TwoSum whose error term is +0 for both signs of g; its sum differs only when the other operand is a zero too, where the last Fast2Sum adds the tail and that error term and returns (+0, +0) either way.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m0956",
+   "kernel": "sub_2_1_full",
+   "op": "sign",
+   "fixup": true,
+   "before": "const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;",
+   "after": "const double g = __builtin_is_constant_evaluated() ? a : a - 0.0;",
+   "verdict": "equivalent",
+   "why": "g = a + 0.0 made a - 0.0 differs only for a = -0. In the fix-up, g only enters t = x0 + g and r0 = t * inf: a zero t gives a NaN whatever its sign, and a nonzero t is the same.",
+   "search": {
+    "cases_differ": 0,
+    "oracle_cases_differ": 0
+   }
+  },
+  {
+   "id": "m1043",
+   "kernel": "sub_2_2_full",
+   "op": "cmp",
+   "fixup": false,
+   "before": "const bool f = std::numeric_limits<double>::infinity() > a;",
+   "after": "const bool f = std::numeric_limits<double>::infinity() >= a;",
+   "verdict": "blind spot outside the domain",
+   "why": "An infinite z0, the only case where >= differs, needs operands that are not canonical: on canonical ones add_2_2 overflows to a NaN z0. Differs only on operands outside the kernel's domain, which the comparison with the interpreter takes too (bit identity holds on any operand).",
+   "operands": [
+    {
+     "request": "sub_2_2_full binary64 0x1p-1022 -0x1.fffffffffffffp+1023 -0x1.5daaa8af2da63p+1022 0x1p+0",
+     "interpreter": "inf 0x0p+0",
+     "fault": "inf nan",
+     "oracle": "invalid: requires canonical(x)"
+    },
+    {
+     "request": "sub_2_2_full binary32 0x1.f4acbcp+124 0x1.c27462p-95 -0x1.00007ap+124 0x1.fffffep+127",
+     "interpreter": "inf 0x0p+0",
+     "fault": "inf nan",
+     "oracle": "invalid: requires canonical(y)"
+    }
+   ],
+   "caught_now": true,
+   "search": {
+    "cases_differ": 513,
+    "oracle_cases_differ": 0
+   }
+  }
+ ]
+}

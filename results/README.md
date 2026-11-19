@@ -7,3 +7,5 @@ Nothing here is an input of the library, of the generator, or of the proofs.
 - `milestone1/brute/`: summaries of brute-force runs (`tests/brute/brute.py collect`), one file
   per machine.
 - `milestone1/bench/`: benchmark measurements.
+- `milestone1/mutants/`: what the tests catch of the faults that `tests/kernel_mutants.py` plants
+  in the generated scalar kernels, and the analysis of those that nothing caught (its `README.md`).
