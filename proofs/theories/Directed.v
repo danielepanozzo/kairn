@@ -379,6 +379,26 @@ Proof. intros a b. unfold rmul. cbv zeta. now rewrite Rplus_0_r. Qed.
 
 End Kernel_lemmas.
 
+(* Item 1, for all operands and any tie rule: the result is a number of the format, being
+   the successor of one. *)
+Lemma radd_format :
+  forall emin prec choice, (1 <= prec)%Z ->
+  forall a b : R, fmt emin prec (radd emin prec choice a b).
+Proof.
+intros emin prec choice Hp a b.
+assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 1%Z; lia).
+rewrite radd_eq. apply up_format; trivial.
+Qed.
+
+Lemma rmul_format :
+  forall emin prec choice, (1 <= prec)%Z ->
+  forall a b : R, fmt emin prec (rmul emin prec choice a b).
+Proof.
+intros emin prec choice Hp a b.
+assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 1%Z; lia).
+rewrite rmul_eq. apply up_format; trivial.
+Qed.
+
 (* The stronger form of item 4, for any tie rule: the maximum of the two terms. *)
 Theorem radd_excess_max :
   forall emin prec choice, (2 <= prec)%Z ->
