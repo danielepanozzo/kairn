@@ -95,6 +95,9 @@ class Claims(unittest.TestCase):
             if extended:          # the domain after the name, the IEEE-model status after the status
                 want.insert(1, 'domain')
                 want.insert(want.index('status') + 1, 'ieee_status')
+            if 'ieee_only' in k:  # no real-model statement: right after the domain, and only true
+                want.insert(2, 'ieee_only')
+                self.assertIs(k['ieee_only'], True, k['name'])
             if all(e['kind'] == 'makes_ball' for e in k['ensures']):
                 want.remove('value')          # a ball made from its inputs has no value
             self.assertEqual(list(k), want, k['name'])
@@ -165,12 +168,11 @@ class Claims(unittest.TestCase):
 
     def test_the_entries_of_the_non_finite_layer_in_architecture_md(self):
         # The three entries written out in full there, with source, flops and the theorem fields
-        # left out; field for field, in that order. add_2_1_full has since gained its proved
-        # conditions of finite_when, which the example there does not show yet.
+        # left out; field for field, in that order.
         def shown(name):
             return [(key, v) for key, v in self.by[name].items() if key not in ('source', 'flops', 'theorem')]
         self.assertEqual(shown('add_2_1_full'), list({
-            'name': 'add_2_1_full', 'domain': 'extended',
+            'name': 'add_2_1_full', 'domain': 'extended', 'ieee_only': True,
             'inputs': [{'name': 'x', 'limbs': 2}, {'name': 'a', 'limbs': 1}],
             'outputs': [{'name': 'w', 'limbs': 2}],
             'value': 'x+a',
@@ -180,7 +182,7 @@ class Claims(unittest.TestCase):
             'min_precision': 3, 'status': 'unverified', 'ieee_status': 'unverified',
             'instances': {'binary64': [], 'binary32': []}}.items()))
         self.assertEqual(shown('ball_mul_2_full'), list({
-            'name': 'ball_mul_2_full', 'domain': 'extended',
+            'name': 'ball_mul_2_full', 'domain': 'extended', 'ieee_only': True,
             'inputs': [{'name': 'cx', 'limbs': 2}, {'name': 'rx', 'limbs': 1},
                        {'name': 'cy', 'limbs': 2}, {'name': 'ry', 'limbs': 1}],
             'outputs': [{'name': 'cw', 'limbs': 2}, {'name': 'rw', 'limbs': 1}],
@@ -192,7 +194,7 @@ class Claims(unittest.TestCase):
             'min_precision': 4, 'status': 'unverified', 'ieee_status': 'unverified',
             'instances': {'binary64': [], 'binary32': []}}.items()))
         self.assertEqual(shown('ball_make_2'), list({
-            'name': 'ball_make_2', 'domain': 'extended',
+            'name': 'ball_make_2', 'domain': 'extended', 'ieee_only': True,
             'inputs': [{'name': 'c', 'limbs': 2}, {'name': 'r', 'limbs': 1}],
             'outputs': [{'name': 'cw', 'limbs': 2}, {'name': 'rw', 'limbs': 1}],
             'requires': ['canonical(c)'],
@@ -245,6 +247,20 @@ class Claims(unittest.TestCase):
         for name in ('add_2_2', 'mul_2_1', 'ball_mul_2', 'ball_add_1'):
             self.assertNotIn('domain', self.by[name])
             self.assertNotIn('ieee_status', self.by[name])
+
+    def test_ieee_only(self):
+        # Exactly the kernels without a real-model statement say so: the nine full kernels, the
+        # eight full Ball kernels and the four constructors; ball_neg_k, which also requires a ball
+        # and claims encloses, has a real-model statement and no such field.
+        full = {f'{op}_full' for op in ('add_2_2', 'add_fast_2_2', 'sub_2_2', 'add_2_1', 'sub_2_1', 'sub_1_2',
+                                        'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
+        full_ball = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+        constructors = {'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2'}
+        self.assertEqual({k['name'] for k in self.doc['kernels'] if 'ieee_only' in k}, full | full_ball | constructors)
+        self.assertTrue(all(k['ieee_only'] is True for k in self.doc['kernels'] if 'ieee_only' in k))
+        self.assertEqual(list(self.by['ball_add_1_full'])[:3], ['name', 'domain', 'ieee_only'])
+        for name in ('ball_neg_1', 'ball_neg_2', 'neg_2', 'ball_add_1'):
+            self.assertNotIn('ieee_only', self.by[name])
 
     def test_instances(self):
         u = Fraction(1, 2 ** 53)
