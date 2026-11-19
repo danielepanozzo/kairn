@@ -12,6 +12,7 @@ third_party/mr22/DWPlus.v
 gen/Model.v
 gen/Statements.v
 theories/Format.v
+theories/Guard.v
 theories/Transfer.v
 theories/EFT.v
 theories/Normalized.v

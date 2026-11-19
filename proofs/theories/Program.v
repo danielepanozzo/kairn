@@ -29,19 +29,21 @@ Import ListNotations.
      Ineg a       - a
      Ifma a b c   RN(a b + c)
      Ifms a b c   RN(a b - c)
-     Iprod a b    RN(a b), computed as a fused multiply-add with addend +0 *)
+     Iprod a b    RN(a b), computed as a fused multiply-add with addend +0
+     Iguard a     RN(a + 0): the guard of a value that enters from the program (rule R3) *)
 Inductive instr : Set :=
   | Iadd (a b : nat)
   | Isub (a b : nat)
   | Ineg (a : nat)
   | Ifma (a b c : nat)
   | Ifms (a b c : nat)
-  | Iprod (a b : nat).
+  | Iprod (a b : nat)
+  | Iguard (a : nat).
 
 Definition operands (i : instr) : list nat :=
   match i with
   | Iadd a b | Isub a b | Iprod a b => [a; b]
-  | Ineg a => [a]
+  | Ineg a | Iguard a => [a]
   | Ifma a b c | Ifms a b c => [a; b; c]
   end.
 

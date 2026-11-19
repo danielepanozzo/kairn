@@ -52,6 +52,7 @@ Definition stepR (e : list R) (i : instr) : R :=
   | Ifma a b c => rnd (nth a e 0 * nth b e 0 + nth c e 0)
   | Ifms a b c => rnd (nth a e 0 * nth b e 0 + - nth c e 0)
   | Iprod a b => rnd (nth a e 0 * nth b e 0 + 0)
+  | Iguard a => rnd (nth a e 0 + 0)
   end.
 
 Definition runR : list instr -> list R -> list R := run stepR.
@@ -85,6 +86,7 @@ Notation fma := (IeeeDraft.fma prec emax nan_fma).
 Notation fms := (IeeeDraft.fms prec emax nan_opp nan_fma).
 Notation prod := (IeeeDraft.prod prec emax nan_fma).
 Notation pzero := (IeeeDraft.pzero prec emax).
+Notation guard := (IeeeDraft.guard prec emax nan_plus).
 
 (* A real number is in range when its magnitude is below 2^emax. For a number of the
    format this means: at most the largest finite number. *)
@@ -205,6 +207,7 @@ Definition stepB (e : list float) (i : instr) : float :=
   | Ifma a b c => fma (nth a e d0) (nth b e d0) (nth c e d0)
   | Ifms a b c => fms (nth a e d0) (nth b e d0) (nth c e d0)
   | Iprod a b => prod (nth a e d0) (nth b e d0)
+  | Iguard a => guard (nth a e d0)
   end.
 
 Notation stepR := (stepR emin prec tie_even).
@@ -225,7 +228,7 @@ Qed.
 Lemma step_inv :
   forall e i, fin (stepB e i) -> forall a, In a (operands i) -> fin (nth a e d0).
 Proof.
-intros e i H a Ha. destruct i as [a1 b1|a1 b1|a1|a1 b1 c1|a1 b1 c1|a1 b1]; simpl in H, Ha.
+intros e i H a Ha. destruct i as [a1 b1|a1 b1|a1|a1 b1 c1|a1 b1 c1|a1 b1|a1]; simpl in H, Ha.
 - apply add_finite_inv in H. intuition (subst; auto).
 - apply sub_finite_inv in H. intuition (subst; auto).
 - rewrite neg_finite in H. intuition (subst; auto).
@@ -233,6 +236,7 @@ intros e i H a Ha. destruct i as [a1 b1|a1 b1|a1|a1 b1 c1|a1 b1 c1|a1 b1]; simpl
 - unfold IeeeDraft.fms in H. apply fma_finite_inv in H. rewrite neg_finite in H.
   intuition (subst; auto).
 - unfold IeeeDraft.prod in H. apply fma_finite_inv in H. intuition (subst; auto).
+- unfold IeeeDraft.guard in H. apply add_finite_inv in H. intuition (subst; auto).
 Qed.
 
 (* With finite operands, the value of an instruction is finite exactly when its value
@@ -242,7 +246,7 @@ Lemma step_spec :
   (fin (stepB e i) <-> inrange (stepR (map b2r e) i)) /\
   (fin (stepB e i) -> b2r (stepB e i) = stepR (map b2r e) i).
 Proof.
-intros e i H. destruct i as [a1 b1|a1 b1|a1|a1 b1 c1|a1 b1 c1|a1 b1]; simpl in H |- *;
+intros e i H. destruct i as [a1 b1|a1 b1|a1|a1 b1 c1|a1 b1 c1|a1 b1|a1]; simpl in H |- *;
   rewrite ?nth_b2r.
 - apply add_spec; apply H; auto.
 - apply sub_spec; apply H; auto.
@@ -255,6 +259,8 @@ intros e i H. destruct i as [a1 b1|a1 b1|a1|a1 b1 c1|a1 b1 c1|a1 b1]; simpl in H
   apply fma_spec; try (apply H; auto). rewrite neg_finite. apply H; auto.
 - unfold IeeeDraft.prod. change 0 with (b2r pzero).
   apply fma_spec; try (apply H; auto). reflexivity.
+- unfold IeeeDraft.guard. change 0 with (b2r pzero).
+  apply add_spec; try (apply H; auto). reflexivity.
 Qed.
 
 (** ** A whole program *)

@@ -25,7 +25,7 @@
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements.
-From Kairn Require Import Format Normalized EFT Add21 Mul21 AddFast22 Program IeeeBridge
+From Kairn Require Import Format Guard Normalized EFT Add21 Mul21 AddFast22 Program IeeeBridge
   IeeeStatementsDraft.
 From Kairn Require IeeeDraft.
 Import ListNotations.
@@ -33,14 +33,20 @@ Open Scope R_scope.
 
 (** * The programs of IeeeDraft.v are the kernels of the real model *)
 
+(* The program guards a in its first line, as the listing of milestone1.md does; the
+   kernel of proofs/gen/Model.v does not yet. For a number a of the format the guard
+   returns a (Guard.v), so the two agree. The proof also holds, unchanged, once the
+   generated kernel has the guard. *)
 Lemma add_2_1_runR :
-  forall emin prec choice x0 x1 a,
+  forall emin prec choice x0 x1 a, Prec_gt_0 prec ->
+  generic_format radix2 (FLT_exp emin prec) a ->
   add_2_1 emin prec choice x0 x1 a =
-  (nth 10 (runR emin prec choice IeeeDraft.add_2_1_prog [x0; x1; a]) 0,
-   nth 12 (runR emin prec choice IeeeDraft.add_2_1_prog [x0; x1; a]) 0).
+  (nth 11 (runR emin prec choice IeeeDraft.add_2_1_prog [x0; x1; a]) 0,
+   nth 13 (runR emin prec choice IeeeDraft.add_2_1_prog [x0; x1; a]) 0).
 Proof.
-intros. cbv [add_2_1 two_sum fast_two_sum runR run stepR nth app IeeeDraft.add_2_1_prog].
-reflexivity.
+intros emin prec choice x0 x1 a Hp Fa.
+cbv [add_2_1 two_sum fast_two_sum runR run stepR nth app IeeeDraft.add_2_1_prog].
+rewrite ?(guard_real_any emin prec choice a Fa). reflexivity.
 Qed.
 
 Lemma mul_2_1_runR :
@@ -91,8 +97,8 @@ Notation finite_all := (Forall (fun x : float => fin x)).
 Lemma add_2_1_runB :
   forall x0 x1 a : float,
   IeeeDraft.add_2_1 prec emax nan_plus nan_minus x0 x1 a =
-  (nth 10 (runB IeeeDraft.add_2_1_prog [x0; x1; a]) d0,
-   nth 12 (runB IeeeDraft.add_2_1_prog [x0; x1; a]) d0).
+  (nth 11 (runB IeeeDraft.add_2_1_prog [x0; x1; a]) d0,
+   nth 13 (runB IeeeDraft.add_2_1_prog [x0; x1; a]) d0).
 Proof.
 intros. cbv [IeeeDraft.add_2_1 IeeeDraft.two_sum IeeeDraft.fast_two_sum run stepB nth app
              IeeeDraft.add_2_1_prog].
@@ -103,19 +109,20 @@ Theorem add_2_1_bridge :
   (3 <= prec)%Z ->
   forall x0 x1 a : float, fin x0 -> fin x1 -> fin a ->
   normalized_2 emin prec (b2r x0) (b2r x1) ->
-  fin (nth 10 (runB IeeeDraft.add_2_1_prog [x0; x1; a]) d0) ->
+  fin (nth 11 (runB IeeeDraft.add_2_1_prog [x0; x1; a]) d0) ->
   finite_all (runB IeeeDraft.add_2_1_prog [x0; x1; a]) /\
   map b2r (runB IeeeDraft.add_2_1_prog [x0; x1; a])
   = runR IeeeDraft.add_2_1_prog [b2r x0; b2r x1; b2r a].
 Proof.
 intros Hp3 x0 x1 a F0 F1 Fa Nx Hz.
 apply (bridge_f2s_prog prec emax nan_plus nan_minus nan_opp nan_fma
-         IeeeDraft.add_2_1_prog (firstn 7 IeeeDraft.add_2_1_prog) 3%nat 9%nat
-         [x0; x1; a] 10%nat); trivial.
+         IeeeDraft.add_2_1_prog (firstn 8 IeeeDraft.add_2_1_prog) 4%nat 10%nat
+         [x0; x1; a] 11%nat); trivial.
 - repeat constructor; assumption.
 - generalize (add_2_1_correct emin prec Hp3 (b2r x0) (b2r x1) (b2r a) Nx
                 (b2r_format prec emax a)).
-  rewrite add_2_1_runR. intros [N _]. exact N.
+  rewrite (add_2_1_runR emin prec tie_even _ _ _ prec_gt_0_ (b2r_format prec emax a)).
+  intros [N _]. exact N.
 Qed.
 
 Theorem add_2_1_values :
@@ -130,7 +137,8 @@ Proof.
 intros Hp3 x0 x1 a F0 F1 Fa Nx. rewrite add_2_1_runB. intros Hz.
 destruct (add_2_1_bridge Hp3 x0 x1 a F0 F1 Fa Nx Hz) as [F M]. split.
 - now apply nth_fin.
-- rewrite add_2_1_runR. f_equal; now apply sim_nth.
+- rewrite (add_2_1_runR emin prec tie_even _ _ _ prec_gt_0_ (b2r_format prec emax a)).
+  f_equal; now apply sim_nth.
 Qed.
 
 Theorem add_2_1_values_correct :
