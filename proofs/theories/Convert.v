@@ -107,30 +107,38 @@ End Neighbors.
 Theorem to_nearest_2_correct : to_nearest_2_spec.
 Proof.
 intros emin prec Hp x0 x1 Hn t. unfold t, to_nearest_2. clear t. cbv zeta.
-apply Hn.
+split; apply Hn.
 Qed.
 
 Theorem to_down_2_correct : to_down_2_spec.
 Proof.
 intros emin prec Hp x0 x1 Hn t. unfold t. clear t.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 1%Z; lia).
-unfold RD. exact (to_down_2_eq emin prec x0 x1 Hn).
+assert (F0 : fmt emin prec x0) by apply Hn.
+split.
+- (* pred (x0) or x0 *)
+  unfold to_down_2. cbv zeta. limb_format.
+- unfold RD. exact (to_down_2_eq emin prec x0 x1 Hn).
 Qed.
 
 Theorem to_up_2_correct : to_up_2_spec.
 Proof.
 intros emin prec Hp x0 x1 Hn t. unfold t. clear t.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 1%Z; lia).
-unfold RU. exact (to_up_2_eq emin prec x0 x1 Hn).
+assert (F0 : fmt emin prec x0) by apply Hn.
+split.
+- (* succ (x0) or x0 *)
+  unfold to_up_2. cbv zeta. limb_format.
+- unfold RU. exact (to_up_2_eq emin prec x0 x1 Hn).
 Qed.
 
-(* abs_2 returns a normalized pair of value |x|, which to_up_2 rounds up. *)
+(* abs_2 returns a normalized pair of value |x|, which to_up_2 rounds up: the statement of
+   to_up_2 for that pair. *)
 Theorem abs_upper_2_correct : abs_upper_2_spec.
 Proof.
 intros emin prec Hp x0 x1 Hn t. unfold t, abs_upper_2. clear t.
-assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 1%Z; lia).
 generalize (abs_2_correct emin prec Hp x0 x1 Hn).
 destruct (abs_2 x0 x1) as [a0 a1]. cbv beta iota zeta.
 intros [Na Ha]. rewrite <- Ha.
-unfold RU. exact (to_up_2_eq emin prec a0 a1 Na).
+exact (to_up_2_correct emin prec Hp a0 a1 Na).
 Qed.

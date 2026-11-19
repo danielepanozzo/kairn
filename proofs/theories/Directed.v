@@ -14,8 +14,8 @@
    the exact sum or product, s = RN(x), r = succ(s).
 
    What is proved. The generated statements radd_spec and rmul_spec
-   (proofs/gen/Statements.v; theorems radd_correct and rmul_correct) are items 2 and 3
-   below in the words of the claim "upper": x <= r, and r - x <= (3/2) (r - pred(r)),
+   (proofs/gen/Statements.v; theorems radd_correct and rmul_correct) are item 1 below, and
+   items 2 and 3 in the words of the claim "upper": x <= r, and r - x <= (3/2) (r - pred(r)),
    where pred(r) is the largest number of F below r. Since r = succ(s), pred(r) is s, and
    the gap r - pred(r) is ulp(s). They are stated from precision 2 on, as the kernels'
    descriptions say, but the proof needs only a positive precision. All four items
@@ -379,6 +379,26 @@ Proof. intros a b. unfold rmul. cbv zeta. now rewrite Rplus_0_r. Qed.
 
 End Kernel_lemmas.
 
+(* Item 1, for all operands and any tie rule: the result is a number of the format, being
+   the successor of one. *)
+Lemma radd_format :
+  forall emin prec choice, (1 <= prec)%Z ->
+  forall a b : R, fmt emin prec (radd emin prec choice a b).
+Proof.
+intros emin prec choice Hp a b.
+assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 1%Z; lia).
+rewrite radd_eq. apply up_format; trivial.
+Qed.
+
+Lemma rmul_format :
+  forall emin prec choice, (1 <= prec)%Z ->
+  forall a b : R, fmt emin prec (rmul emin prec choice a b).
+Proof.
+intros emin prec choice Hp a b.
+assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 1%Z; lia).
+rewrite rmul_eq. apply up_format; trivial.
+Qed.
+
 (* The stronger form of item 4, for any tie rule: the maximum of the two terms. *)
 Theorem radd_excess_max :
   forall emin prec choice, (2 <= prec)%Z ->
@@ -451,14 +471,18 @@ Theorem radd_correct : radd_spec.
 Proof.
 intros emin prec Hp a b Fa Fb Ha Hb r. unfold r. clear r.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
-rewrite radd_eq. apply up_upper; trivial. lra.
+split.
+- apply radd_format. lia.
+- rewrite radd_eq. apply up_upper; trivial. lra.
 Qed.
 
 Theorem rmul_correct : rmul_spec.
 Proof.
 intros emin prec Hp a b Fa Fb Ha Hb r. unfold r. clear r.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
-rewrite rmul_eq. apply up_upper; trivial. now apply Rmult_le_pos.
+split.
+- apply rmul_format. lia.
+- rewrite rmul_eq. apply up_upper; trivial. now apply Rmult_le_pos.
 Qed.
 
 (** * The four items of the header together *)

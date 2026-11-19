@@ -298,6 +298,8 @@ class Rocq(unittest.TestCase):
   fmt emin prec a ->
   fmt emin prec b ->
   let '(s, e) := two_sum emin prec tie_even a b in
+  fmt emin prec s /\\
+  fmt emin prec e /\\
   s = RN emin prec (a + b) /\\
   (s + e) = (a + b).''', s)
         self.assertIn('  Rabs b <= Rabs a ->\n', s)
@@ -307,6 +309,52 @@ class Rocq(unittest.TestCase):
         self.assertIn('<= 3 * u prec ^ 2 * (Rabs (x0 + x1) + Rabs (y0 + y1)).', s)
         self.assertIn('<= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + (3 / 2) * eta emin.', s)
         self.assertEqual(s.count('_spec : Prop :='), len(self.ks))
+
+    def test_every_output_limb_is_a_number_of_the_format(self):
+        """Statements compose: a conclusion says of every output limb what the hypotheses say of
+        every input limb, that it is a number of the format, so that the theorem of one kernel
+        gives the hypotheses of the next. It says so by the `normalized` claim on the limb's
+        group, or else by a `fmt` conjunct; these come first, in output order, and the claims
+        follow unchanged. A mask gets nothing. Read from the printed text."""
+        tks = common.kernels(common.TEST_KERNELS)
+        uncovered = {}
+        for ks in (self.ks, tks):
+            for name, k in ks.items():
+                head, _, conclusion = '\n'.join(rocq.statement(k, ks)).rpartition(' in\n  ')
+                self.assertTrue(head.splitlines()[-1].startswith('  let '), name)
+                self.assertTrue(conclusion.endswith('.'), name)
+                conjuncts = conclusion[:-1].split(' /\\\n  ')
+                normalized = {e['of'] for e in k.ensures if e['kind'] == 'normalized'}
+                want = []
+                for g in k.outputs:
+                    said = [f'fmt emin prec {v}' for v in g.limbs]
+                    if g.kind == ir.MASK:
+                        self.assertNotIn(said[0], conjuncts, name)
+                    elif g.name in normalized:
+                        claim = said[0] if len(g.limbs) == 1 else \
+                            f'normalized_{len(g.limbs)} emin prec {" ".join(g.limbs)}'
+                        self.assertIn(claim, conjuncts, (name, g.name))
+                    else:
+                        want += said
+                self.assertEqual(conjuncts[:len(want)], want, name)
+                self.assertEqual(len(conjuncts), len(want) + len(k.ensures), name)
+                uncovered[name] = len(want)
+        # The loop has something to read: both ways of saying it occur, also in one statement,
+        # and so does an output that says nothing (a mask).
+        self.assertEqual([uncovered[n] for n in ('two_sum', 'ball_add_2', 'ops_wave2', 'add_2_2', 'lt_2_2')],
+                         [2, 1, 3, 0, 0])
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 31)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 22)
+        s = self.statements
+        self.assertIn("  let '(cz0, cz1, rz) := ball_add_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in\n"
+                      '  fmt emin prec rz /\\\n  normalized_2 emin prec cz0 cz1 /\\\n  (forall x y : R, ', s)
+        self.assertIn('  let r := radd emin prec tie_even a b in\n  fmt emin prec r /\\\n  (a + b) <= r /\\ ', s)
+        self.assertIn("  let '(ah, al) := split emin prec tie_even a in\n"
+                      '  fmt emin prec ah /\\\n  fmt emin prec al /\\\n  (ah + al) = a.', s)
+        self.assertIn('  let m := lt_2_2 x0 x1 y0 y1 in\n  m = Rlt_bool (x0 + x1) (y0 + y1).', s)
+        self.assertIn("  let '(r0, c1, k1, v) := ops_wave2 emin prec tie_even a w b in\n"
+                      '  fmt emin prec r0 /\\\n  fmt emin prec c1 /\\\n  fmt emin prec k1 /\\\n  Rabs (',
+                      rocq.statements(tks))
 
     def test_muladd_choices(self):
         tks = common.kernels(common.TEST_KERNELS)

@@ -557,7 +557,7 @@ generalize (two_prod_values prec emax (fun x y => nan_fma x y y) (fun x y => nan
               (b2r_format prec emax a) (b2r_format prec emax b)).
 destruct (IeeeDraft.two_prod prec emax nan_opp nan_fma a b) as [p e].
 intros B C Fp. destruct (B Fp) as [Fe E]. unfold val, ieee_emin in *.
-rewrite <- E in C. split. exact Fe. exact C.
+rewrite <- E in C. destruct C as [_ [_ C]]. split. exact Fe. exact C.
 Qed.
 
 Theorem two_sum_ieee_correct : two_sum_ieee_spec.
@@ -577,6 +577,6 @@ split; [exact S1|split; [|split]].
   + intros Fe. destruct (proj1 V1 Fe) as [Fs Hr]. split. exact Fs. rewrite (S1 Fs). exact Hr.
   + intros [Fs Hr]. apply V1. split. exact Fs. rewrite <- (S1 Fs). exact Hr.
 - intros Fs Hb. destruct (V3 (Rlt_not_eq _ _ Hb) Fs) as [Fe _]. exact Fe.
-- intros Fe. rewrite <- (V2 Fe) in C. destruct C as [_ C]. exact C.
+- intros Fe. rewrite <- (V2 Fe) in C. destruct C as [_ [_ [_ C]]]. exact C.
 Qed.
 

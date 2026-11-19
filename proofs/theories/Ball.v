@@ -7,8 +7,9 @@
 
    What is proved (the generated statements of proofs/gen/Statements.v): containment. For
    all real x, y in the operand balls, x o y is in the result ball: |x o y - cz| <= rz.
-   For k = 2 the returned center is also normalized (it is the result of the center's
-   kernel).
+   The returned center and radius are again numbers of the format (for k = 2 the center is
+   normalized: it is the result of the center's kernel), so that the result of one ball
+   operation is an operand of the next.
 
    Why (Milestone 1 statements, Ball kernels). Write e for the error of the center,
    e = |cz - (cx o cy)|. By the triangle inequality
@@ -395,6 +396,8 @@ assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
 assert (Hp1 : (1 <= prec)%Z) by lia.
 unfold fmt in *.
 unfold ball_add_1. cbv beta iota zeta. rewrite unit_add_1_1_eq.
+split. limb_format.
+split. exact (radd_format emin prec tie_even Hp1 _ _).
 intros x y Hx Hy.
 set (cz := round radix2 (FLT_exp emin prec) (Znearest tie_even) (cx + cy)).
 set (rel := 1 / (1 + u prec) * u prec ^ 1).
@@ -407,7 +410,7 @@ assert (Ry : radius emin prec ry) by (unfold radius; split; assumption).
 assert (Ru : radius emin prec (unit_of emin prec rel))
   by exact (unit_of_radius emin prec rel Hrel).
 assert (Hb : Rabs (cz - (cx + cy)) <= rel * Rabs (cx + cy))
-  by exact (proj2 (add_1_1_correct emin prec Hp1 cx cy Fcx Fcy)).
+  by exact (proj2 (proj2 (add_1_1_correct emin prec Hp1 cx cy Fcx Fcy))).
 assert (Hc : Rabs (cz - (cx + cy)) <= unit_of emin prec rel * Rabs cz)
   by exact (center_bound_rel emin prec rel cz (cx + cy) (Rabs cz) Hrel Hb (Rle_refl _)).
 apply Rle_trans with (rx + ry + unit_of emin prec rel * Rabs cz).
@@ -425,7 +428,8 @@ unfold ball_sub_1. cbv zeta.
 generalize (ball_add_1_correct emin prec Hp cx rx (- cy) ry Fcx Frx Fn Fry Hrx Hry).
 destruct (ball_add_1 emin prec tie_even cx rx (- cy) ry) as [cz rz].
 cbv beta iota.
-intros H x y Hx Hy.
+intros [Fcz [Frz H]]. split. exact Fcz. split. exact Frz.
+intros x y Hx Hy.
 replace (x - y - cz) with (x + - y - cz) by ring.
 apply H. exact Hx.
 replace (- y - - cy) with (- (y - cy)) by ring. now rewrite Rabs_Ropp.
@@ -436,6 +440,8 @@ Theorem ball_neg_1_correct : ball_neg_1_spec.
 Proof.
 intros emin prec Hp cx rx Fcx Frx Hrx.
 unfold ball_neg_1. cbv beta iota zeta.
+split. limb_format.
+split. exact Frx.
 intros x Hx.
 replace (- x - - cx) with (- (x - cx)) by ring. now rewrite Rabs_Ropp.
 Qed.
@@ -448,6 +454,8 @@ assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
 assert (Hp1 : (1 <= prec)%Z) by lia.
 unfold fmt in *.
 unfold ball_mul_1. cbv beta iota zeta. rewrite unit_mul_1_1_eq, tiny_mul_1_1_eq.
+split. limb_format.
+split. exact (radd_format emin prec tie_even Hp1 _ _).
 intros x y Hx Hy.
 set (cz := round radix2 (FLT_exp emin prec) (Znearest tie_even) (cx * cy + 0)).
 set (rel := 1 / (1 + u prec) * u prec ^ 1).
@@ -466,7 +474,7 @@ assert (Ru : radius emin prec (unit_of emin prec rel))
 assert (Rv : radius emin prec (tiny_of emin prec rel tiny))
   by exact (tiny_of_radius emin prec rel tiny Hrel Htiny).
 assert (Hb : Rabs (cz - cx * cy) <= rel * Rabs (cx * cy) + tiny)
-  by exact (proj2 (mul_1_1_correct emin prec Hp1 cx cy Fcx Fcy)).
+  by exact (proj2 (proj2 (mul_1_1_correct emin prec Hp1 cx cy Fcx Fcy))).
 assert (Hc : Rabs (cz - cx * cy)
              <= unit_of emin prec rel * Rabs cz + tiny_of emin prec rel tiny)
   by exact (center_bound emin prec rel tiny cz (cx * cy) (Rabs cz) Hrel Htiny Hb (Rle_refl _)).
@@ -485,6 +493,8 @@ assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
 assert (Hp1 : (1 <= prec)%Z) by lia.
 unfold fmt in *.
 unfold ball_scale_1. cbv beta iota zeta. rewrite unit_mul_1_1_eq, tiny_mul_1_1_eq.
+split. limb_format.
+split. exact (radd_format emin prec tie_even Hp1 _ _).
 intros x Hx.
 set (cz := round radix2 (FLT_exp emin prec) (Znearest tie_even) (cx * a + 0)).
 set (rel := 1 / (1 + u prec) * u prec ^ 1).
@@ -501,7 +511,7 @@ assert (Ru : radius emin prec (unit_of emin prec rel))
 assert (Rv : radius emin prec (tiny_of emin prec rel tiny))
   by exact (tiny_of_radius emin prec rel tiny Hrel Htiny).
 assert (Hb : Rabs (cz - cx * a) <= rel * Rabs (cx * a) + tiny)
-  by exact (proj2 (mul_1_1_correct emin prec Hp1 cx a Fcx Fa)).
+  by exact (proj2 (proj2 (mul_1_1_correct emin prec Hp1 cx a Fcx Fa))).
 assert (Hc : Rabs (cz - cx * a)
              <= unit_of emin prec rel * Rabs cz + tiny_of emin prec rel tiny)
   by exact (center_bound emin prec rel tiny cz (cx * a) (Rabs cz) Hrel Htiny Hb (Rle_refl _)).
@@ -524,7 +534,7 @@ Proof.
 intros emin prec Hp c0 c1 Nc.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 1%Z; lia).
 assert (E : abs_upper_2 emin prec c0 c1 = RU emin prec (Rabs (c0 + c1)))
-  by exact (abs_upper_2_correct emin prec Hp c0 c1 Nc).
+  by exact (proj2 (abs_upper_2_correct emin prec Hp c0 c1 Nc)).
 rewrite E. exact (RU_radius emin prec (Rabs (c0 + c1)) (Rabs_pos _)).
 Qed.
 
@@ -539,7 +549,9 @@ unfold ball_add_2.
 generalize (add_2_2_correct emin prec Hp cx0 cx1 cy0 cy1 Ncx Ncy).
 destruct (add_2_2 emin prec tie_even cx0 cx1 cy0 cy1) as [cz0 cz1].
 cbv beta iota zeta. rewrite unit_add_2_2_eq.
-intros [Ncz Hb]. split. exact Ncz.
+intros [Ncz Hb].
+split. exact (radd_format emin prec tie_even Hp1 _ _).
+split. exact Ncz.
 intros x y Hx Hy.
 set (rel := 3 / (1 - 4 * u prec) * u prec ^ 2).
 set (mz := abs_upper_2 emin prec cz0 cz1).
@@ -565,7 +577,7 @@ generalize (ball_add_2_correct emin prec Hp cx0 cx1 rx (- cy0) (- cy1) ry Ncx Fr
 cbv beta iota.
 destruct (ball_add_2 emin prec tie_even cx0 cx1 rx (- cy0) (- cy1) ry) as [[cz0 cz1] rz].
 cbv beta iota.
-intros [Nz H]. split. exact Nz.
+intros [Frz [Nz H]]. split. exact Frz. split. exact Nz.
 intros x y Hx Hy.
 replace (x - y - (cz0 + cz1)) with (x + - y - (cz0 + cz1)) by ring.
 apply H. exact Hx.
@@ -576,6 +588,7 @@ Theorem ball_neg_2_correct : ball_neg_2_spec.
 Proof.
 intros emin prec Hp cx0 cx1 rx Ncx Frx Hrx.
 unfold ball_neg_2, neg_2. cbv beta iota zeta.
+split. exact Frx.
 split.
 - now apply normalized_2_opp.
 - intros x Hx.
@@ -593,7 +606,9 @@ unfold ball_mul_2.
 generalize (mul_2_2_correct emin prec Hp cx0 cx1 cy0 cy1 Ncx Ncy).
 destruct (mul_2_2 emin prec tie_even cx0 cx1 cy0 cy1) as [cz0 cz1].
 cbv beta iota zeta. rewrite unit_mul_2_2_eq, tiny_mul_2_2_eq.
-intros [Ncz Hb]. split. exact Ncz.
+intros [Ncz Hb].
+split. exact (radd_format emin prec tie_even Hp1 _ _).
+split. exact Ncz.
 intros x y Hx Hy.
 set (rel := 4 * u prec ^ 2).
 set (tiny := 3 / 2 * eta emin).
@@ -631,7 +646,9 @@ unfold ball_scale_2.
 generalize (mul_2_1_correct emin prec Hp cx0 cx1 a Ncx Fa).
 destruct (mul_2_1 emin prec tie_even cx0 cx1 a) as [cz0 cz1].
 cbv beta iota zeta. rewrite unit_mul_2_1_eq, tiny_mul_2_1_eq.
-intros [Ncz Hb]. split. exact Ncz.
+intros [Ncz Hb].
+split. exact (radd_format emin prec tie_even Hp1 _ _).
+split. exact Ncz.
 intros x Hx.
 set (rel := 2 * u prec ^ 2).
 set (tiny := 1 * eta emin).

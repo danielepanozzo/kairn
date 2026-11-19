@@ -245,6 +245,9 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
 - `Statements.v`: one `Definition <kernel>_spec : Prop` per kernel, built from the kernel's
   claims. A hand-written proof must have exactly this type. A statement quantifies over every
   `emin` and every `prec` from the kernel's minimum on, and fixes the tie rule to ties-to-even.
+  It assumes that every input limb is a number of the format and concludes, before the claims,
+  that every output limb is one too (unless a `normalized` claim on that output already says
+  so), so that the theorem of one kernel establishes the hypotheses of the next.
 - `Audit.v`: for every kernel not marked `unverified`, a silent definition
   `<kernel>_audit : <kernel>_spec := <kernel>_correct`, which fails to compile unless the theorem
   has the generated statement as its type, followed by `Print Assumptions <kernel>_correct`. The

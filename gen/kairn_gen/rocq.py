@@ -325,6 +325,20 @@ def _hypotheses(k, ins):
     return hyps
 
 
+def _output_formats(k):
+    """That every output limb is a number of the format, unless a `normalized` claim says so.
+
+    This is what makes statements compose. The hypotheses of every statement say `fmt` of each
+    input limb (_hypotheses), so the conclusion says it of each output limb: otherwise the theorem
+    of one kernel would not establish the hypotheses of the next one (the radius of a ball, the
+    error term of two_sum, the parts of a split). A `normalized` claim on an output group already
+    says it of the group's limbs, and a mask is not a number.
+    """
+    covered = {e['of'] for e in k.ensures if e['kind'] == 'normalized'}
+    return [f'fmt emin prec {v}' for g in k.outputs if g.kind == ir.LIMB and g.name not in covered
+            for v in g.limbs]
+
+
 class _Shared:
     def __init__(self, k):
         self.k = k
@@ -339,12 +353,13 @@ class _Shared:
 def statement(k, kernels):
     """The Definition <kernel>_spec : Prop that the kernel's proof must have as its type.
 
-    Built from the claims: the requirements become hypotheses and the ensures entries a
-    conjunction. Its exact shape is being settled with the proofs, which is why it is all here.
+    Built from the claims: the requirements become hypotheses, and the conclusion is a conjunction
+    of the formats of the output limbs (_output_formats), in output order, then of the ensures
+    entries. Its exact shape is being settled with the proofs, which is why it is all here.
     """
     s = _Shared(k)
     hyps = _hypotheses(k, s.ins)
-    claims = [CLAIMS[e['kind']](e, s) for e in k.ensures]
+    claims = _output_formats(k) + [CLAIMS[e['kind']](e, s) for e in k.ensures]
     sites = ir.muladd_sites(k, kernels)
     outl = k.output_limbs
     pattern = outl[0] if len(outl) == 1 else "'(" + ', '.join(outl) + ')'
@@ -373,7 +388,9 @@ def statements(kernels):
     lines = [HEADER, '',
              '(* One statement per kernel, built from its claims (gen/claims.json): a hand-written proof',
              '   of kernel K is a theorem K_correct whose type is exactly K_spec. Rounding is to nearest,',
-             '   ties to even, with gradual underflow and no overflow. *)',
+             '   ties to even, with gradual underflow and no overflow. A statement assumes that every',
+             '   input limb is a number of the format, and concludes the same of every output limb (by',
+             '   fmt, or by normalized), so that one statement gives the hypotheses of the next. *)',
              'From Stdlib Require Import Reals ZArith.',
              'From Flocq Require Import Core.',
              f'From {GEN_PATH} Require Import Model.',

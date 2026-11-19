@@ -271,3 +271,28 @@ replace (k + - (FLT_exp emin prec (mag radix2 x) + k))%Z
   with (- FLT_exp emin prec (mag radix2 x))%Z by ring.
 rewrite bpow_plus. ring.
 Qed.
+
+(** * The limbs a kernel computes are numbers of the format *)
+
+(* Every generated statement says that each output limb is a number of F (by fmt, or
+   through normalized), so that the theorem of one kernel gives the hypotheses of the
+   next. In the model a limb is the result of a rounding, a neighbor (succ, pred) of a
+   number of F, an exact sign change (- x, |x|) of one, or one of two limbs chosen by a
+   mask. This tactic proves fmt emin prec t for a term t of these shapes, given the same
+   fact for the limbs t is built from (hypotheses about fmt or about Flocq's
+   generic_format). It needs Prec_gt_0 prec among the hypotheses, and the kernel's
+   definition unfolded. *)
+Ltac limb_format :=
+  unfold fmt in *;
+  repeat match goal with
+  | |- generic_format _ _ (round _ _ _ _) =>
+      apply generic_format_round; auto with typeclass_instances
+  | |- generic_format _ _ (succ _ _ _) =>
+      apply generic_format_succ; auto with typeclass_instances
+  | |- generic_format _ _ (pred _ _ _) =>
+      apply generic_format_pred; auto with typeclass_instances
+  | |- generic_format _ _ (- _) => apply generic_format_opp
+  | |- generic_format _ _ (Rabs _) => apply generic_format_abs
+  | |- generic_format _ _ (if ?m then _ else _) => destruct m
+  end;
+  try assumption.
