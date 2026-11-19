@@ -21,6 +21,9 @@ library.md):
 - A mask is a bool, and select a conditional expression on values already computed, which
   compilers turn into a conditional move or a blend; succ and pred step the bit pattern
   (std::bit_cast is constexpr), so that kernels that use them stay constexpr.
+- guard is a + 0 at run time and the operand itself in constant evaluation, where nothing is fused
+  and Clang refuses NaN + 0; times_inf, exact, is a plain multiplication by infinity, so that the
+  full kernels are constexpr wherever their cores are.
 """
 from fractions import Fraction
 
@@ -55,8 +58,21 @@ SPELL = {
     # RN(a + 0). Never a - 0 or a + (-0), which are identities that compilers fold away; a + 0
     # turns -0 into +0, so a compiler that honors signed zeros keeps it.
     'guard': '{0} + {zero}',
+    # t times +infinity: exact, so a plain multiplication (its result is only compared or
+    # selected, rule R1).
+    'times_inf': '{0} * {inf}',
 }
-SPELL_CONSTEVAL = dict(SPELL, prod='{0} * {1}')
+# In constant evaluation: prod is a plain product (there is no FMA, and no contraction either),
+# and guard is not evaluated (nothing is fused there, and Clang's constant evaluator refuses
+# NaN + 0, which would make a NaN operand non-constant).
+# times_inf there is times_inf_ce (prelude.hpp), which compares instead of multiplying: GCC and
+# Clang refuse an operation that produces a NaN in constant evaluation, 0 times infinity among
+# them, even where its result is not selected.
+SPELL_CONSTEVAL = dict(SPELL, prod='{0} * {1}', guard='{0}', times_inf='times_inf_ce({0})')
+# In a kernel that is constexpr without a variant, guard and times_inf dispatch on constant
+# evaluation, as the hand-written detail::guard of include/kairn/expansion.hpp does.
+SPELL_PLAIN = dict(SPELL, guard='__builtin_is_constant_evaluated() ? {0} : {0} + {zero}',
+                   times_inf='__builtin_is_constant_evaluated() ? times_inf_ce({0}) : {0} * {inf}')
 
 # Names a value or a kernel must not take: keywords, alternative tokens, what the printed text
 # uses, and lowercase macros that common compilers and C libraries predefine.
@@ -69,7 +85,7 @@ RESERVED = frozenset('''
     return short signed sizeof static static_assert static_cast struct switch template this
     thread_local throw true try typedef typeid typename union unsigned using virtual void volatile
     wchar_t while xor xor_eq final override import module
-    kairn gen std fma_rn abs_bits next_up next_down in out
+    kairn gen std fma_rn abs_bits next_up next_down times_inf_ce in out
     linux unix i386 major minor errno stdin stdout stderr assert
 '''.split())
 
@@ -124,6 +140,7 @@ def _body(k, kernels, ctype, spell, indent):
     """The statements of the flattened kernel, one operation each."""
     pad = ' ' * indent
     zero = '0.0' + TYPES[ctype][1]
+    inf = literal('inf', kernels, ctype)
     lines = []
     for it in ir.flatten(k, kernels):
         if isinstance(it, ir.CallMark):
@@ -131,7 +148,7 @@ def _body(k, kernels, ctype, spell, indent):
             continue
         args = [literal(a.name, kernels, ctype) if a.const else a.name for a in it.args]
         vtype = ctype if ir.OPS[it.op][1] == ir.LIMB else 'bool'
-        lines.append(f'{pad}const {vtype} {it.dst} = {spell[it.op].format(*args, zero=zero)};')
+        lines.append(f'{pad}const {vtype} {it.dst} = {spell[it.op].format(*args, zero=zero, inf=inf)};')
     lines += [f'{pad}{v}_out = {v};' for v in k.output_limbs]
     return lines
 
@@ -166,7 +183,7 @@ def function(k, kernels, ctype):
                   f'        // {v.name}, with each prod a plain product.']
         lines += _body(v, kernels, ctype, SPELL_CONSTEVAL, 8)
         lines += ['        return;', '    }']
-    lines += _body(k, kernels, ctype, SPELL, 4)
+    lines += _body(k, kernels, ctype, SPELL_PLAIN if kind == 'plain' else SPELL, 4)
     lines.append('}')
     return lines
 
@@ -193,12 +210,13 @@ def _description(k, kernels):
 
 def _helpers(kernels):
     used = {p.op for k in kernels.values() for p in ir.prims(k, kernels)}
-    return used & {'abs', 'succ', 'pred'}
+    return used & {'abs', 'succ', 'pred', 'times_inf'}
 
 
 def uses_special(kernels):
-    """Whether a kernel names +infinity or NaN, which come from <limits>."""
-    return any(a.const and a.name in ir.SPECIAL for k in kernels.values() for st in k.body for a in st.args)
+    """Whether a kernel names +infinity or NaN, or multiplies by infinity: they come from <limits>."""
+    return any((a.const and a.name in ir.SPECIAL) or st.op == 'times_inf'
+               for k in kernels.values() for st in k.body for a in st.args)
 
 
 def prelude(kernels):
@@ -209,7 +227,7 @@ def prelude(kernels):
              '#if defined(_MSC_VER) && !defined(__clang__) && (defined(_M_X64) || defined(_M_IX86))',
              '#include <immintrin.h>',
              '#endif']
-    if helpers:
+    if helpers & {'abs', 'succ', 'pred'}:
         lines += ['#include <bit>', '#include <cstdint>']
     if uses_special(kernels):
         lines += ['#include <limits>']
@@ -275,6 +293,15 @@ def prelude(kernels):
                       f'    return std::bit_cast<{ctype}>((keep & b) | (~keep & r));',
                       '}',
                       f'KAIRN_GEN_FORCEINLINE constexpr {ctype} next_down({ctype} a) noexcept {{ return -next_up(-a); }}']
+        if 'times_inf' in helpers:
+            limits = f'std::numeric_limits<{ctype}>'
+            lines += ['',
+                      '// t times +infinity in constant evaluation, from comparisons alone: GCC and Clang',
+                      '// refuse an operation that produces a NaN there, 0 times infinity among them, even',
+                      '// where its result is not selected. At run time a kernel multiplies (times_inf).',
+                      f'KAIRN_GEN_FORCEINLINE constexpr {ctype} times_inf_ce({ctype} t) noexcept {{',
+                      f'    return t > 0 ? {limits}::infinity() : t < 0 ? -{limits}::infinity() : {limits}::quiet_NaN();',
+                      '}']
     lines += ['', '}  // namespace kairn::gen']
     return '\n'.join(lines) + '\n'
 

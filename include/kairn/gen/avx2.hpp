@@ -834,7 +834,7 @@ KAIRN_GEN_FORCEINLINE void add_2_1_full(__m256d x0, __m256d x1, __m256d a, __m25
     const __m256d t = _mm256_add_pd(x0, g);
     const __m256d az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), z0);
     const __m256d f = _mm256_cmp_pd(az, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
-    const __m256d r0 = _mm256_fmadd_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_setzero_pd());
+    const __m256d r0 = _mm256_mul_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()));
     const __m256d n = _mm256_cmp_pd(r0, r0, _CMP_EQ_OQ);
     const __m256d r1 = _mm256_blendv_pd(r0, _mm256_setzero_pd(), n);
     const __m256d w0 = _mm256_blendv_pd(r0, z0, f);
@@ -860,7 +860,7 @@ KAIRN_GEN_FORCEINLINE void add_2_1_full(__m256 x0, __m256 x1, __m256 a, __m256& 
     const __m256 t = _mm256_add_ps(x0, g);
     const __m256 az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), z0);
     const __m256 f = _mm256_cmp_ps(az, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
-    const __m256 r0 = _mm256_fmadd_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_setzero_ps());
+    const __m256 r0 = _mm256_mul_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()));
     const __m256 n = _mm256_cmp_ps(r0, r0, _CMP_EQ_OQ);
     const __m256 r1 = _mm256_blendv_ps(r0, _mm256_setzero_ps(), n);
     const __m256 w0 = _mm256_blendv_ps(r0, z0, f);
@@ -957,7 +957,7 @@ KAIRN_GEN_FORCEINLINE void add_2_2_full(__m256d x0, __m256d x1, __m256d y0, __m2
     const __m256d t = _mm256_add_pd(x0, y0);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), z0);
     const __m256d f = _mm256_cmp_pd(a, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
-    const __m256d r0 = _mm256_fmadd_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_setzero_pd());
+    const __m256d r0 = _mm256_mul_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()));
     const __m256d n = _mm256_cmp_pd(r0, r0, _CMP_EQ_OQ);
     const __m256d r1 = _mm256_blendv_pd(r0, _mm256_setzero_pd(), n);
     const __m256d w0 = _mm256_blendv_pd(r0, z0, f);
@@ -994,7 +994,7 @@ KAIRN_GEN_FORCEINLINE void add_2_2_full(__m256 x0, __m256 x1, __m256 y0, __m256 
     const __m256 t = _mm256_add_ps(x0, y0);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), z0);
     const __m256 f = _mm256_cmp_ps(a, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
-    const __m256 r0 = _mm256_fmadd_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_setzero_ps());
+    const __m256 r0 = _mm256_mul_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()));
     const __m256 n = _mm256_cmp_ps(r0, r0, _CMP_EQ_OQ);
     const __m256 r1 = _mm256_blendv_ps(r0, _mm256_setzero_ps(), n);
     const __m256 w0 = _mm256_blendv_ps(r0, z0, f);
@@ -1058,7 +1058,7 @@ KAIRN_GEN_FORCEINLINE void add_fast_2_2_full(__m256d x0, __m256d x1, __m256d y0,
     const __m256d t = _mm256_add_pd(x0, y0);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), z0);
     const __m256d f = _mm256_cmp_pd(a, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
-    const __m256d r0 = _mm256_fmadd_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_setzero_pd());
+    const __m256d r0 = _mm256_mul_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()));
     const __m256d n = _mm256_cmp_pd(r0, r0, _CMP_EQ_OQ);
     const __m256d r1 = _mm256_blendv_pd(r0, _mm256_setzero_pd(), n);
     const __m256d w0 = _mm256_blendv_pd(r0, z0, f);
@@ -1084,7 +1084,7 @@ KAIRN_GEN_FORCEINLINE void add_fast_2_2_full(__m256 x0, __m256 x1, __m256 y0, __
     const __m256 t = _mm256_add_ps(x0, y0);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), z0);
     const __m256 f = _mm256_cmp_ps(a, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
-    const __m256 r0 = _mm256_fmadd_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_setzero_ps());
+    const __m256 r0 = _mm256_mul_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()));
     const __m256 n = _mm256_cmp_ps(r0, r0, _CMP_EQ_OQ);
     const __m256 r1 = _mm256_blendv_ps(r0, _mm256_setzero_ps(), n);
     const __m256 w0 = _mm256_blendv_ps(r0, z0, f);
@@ -2367,7 +2367,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1_full(__m256d x0, __m256d x1, __m256d a, __m25
     const __m256d t = _mm256_fmadd_pd(x0, a, _mm256_setzero_pd());
     const __m256d az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), z0);
     const __m256d f = _mm256_cmp_pd(az, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
-    const __m256d r0 = _mm256_fmadd_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_setzero_pd());
+    const __m256d r0 = _mm256_mul_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()));
     const __m256d n = _mm256_cmp_pd(r0, r0, _CMP_EQ_OQ);
     const __m256d r1 = _mm256_blendv_pd(r0, _mm256_setzero_pd(), n);
     const __m256d w0 = _mm256_blendv_pd(r0, z0, f);
@@ -2388,7 +2388,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1_full(__m256 x0, __m256 x1, __m256 a, __m256& 
     const __m256 t = _mm256_fmadd_ps(x0, a, _mm256_setzero_ps());
     const __m256 az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), z0);
     const __m256 f = _mm256_cmp_ps(az, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
-    const __m256 r0 = _mm256_fmadd_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_setzero_ps());
+    const __m256 r0 = _mm256_mul_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()));
     const __m256 n = _mm256_cmp_ps(r0, r0, _CMP_EQ_OQ);
     const __m256 r1 = _mm256_blendv_ps(r0, _mm256_setzero_ps(), n);
     const __m256 w0 = _mm256_blendv_ps(r0, z0, f);
@@ -2414,7 +2414,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_2_full(__m256d x0, __m256d x1, __m256d y0, __m2
     const __m256d t = _mm256_fmadd_pd(x0, y0, _mm256_setzero_pd());
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), z0);
     const __m256d f = _mm256_cmp_pd(a, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
-    const __m256d r0 = _mm256_fmadd_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_setzero_pd());
+    const __m256d r0 = _mm256_mul_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()));
     const __m256d n = _mm256_cmp_pd(r0, r0, _CMP_EQ_OQ);
     const __m256d r1 = _mm256_blendv_pd(r0, _mm256_setzero_pd(), n);
     const __m256d w0 = _mm256_blendv_pd(r0, z0, f);
@@ -2438,7 +2438,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_2_full(__m256 x0, __m256 x1, __m256 y0, __m256 
     const __m256 t = _mm256_fmadd_ps(x0, y0, _mm256_setzero_ps());
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), z0);
     const __m256 f = _mm256_cmp_ps(a, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
-    const __m256 r0 = _mm256_fmadd_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_setzero_ps());
+    const __m256 r0 = _mm256_mul_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()));
     const __m256 n = _mm256_cmp_ps(r0, r0, _CMP_EQ_OQ);
     const __m256 r1 = _mm256_blendv_ps(r0, _mm256_setzero_ps(), n);
     const __m256 w0 = _mm256_blendv_ps(r0, z0, f);
@@ -2481,7 +2481,7 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(__m256d x0, __m256d x1, __m256d c, __
     const __m256d t = _mm256_fmadd_pd(x0, c, _mm256_setzero_pd());
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), z0);
     const __m256d f = _mm256_cmp_pd(a, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
-    const __m256d r0 = _mm256_fmadd_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_setzero_pd());
+    const __m256d r0 = _mm256_mul_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()));
     const __m256d n = _mm256_cmp_pd(r0, r0, _CMP_EQ_OQ);
     const __m256d r1 = _mm256_blendv_pd(r0, _mm256_setzero_pd(), n);
     const __m256d w0 = _mm256_blendv_pd(r0, z0, f);
@@ -2500,7 +2500,7 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(__m256 x0, __m256 x1, __m256 c, __m25
     const __m256 t = _mm256_fmadd_ps(x0, c, _mm256_setzero_ps());
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), z0);
     const __m256 f = _mm256_cmp_ps(a, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
-    const __m256 r0 = _mm256_fmadd_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_setzero_ps());
+    const __m256 r0 = _mm256_mul_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()));
     const __m256 n = _mm256_cmp_ps(r0, r0, _CMP_EQ_OQ);
     const __m256 r1 = _mm256_blendv_ps(r0, _mm256_setzero_ps(), n);
     const __m256 w0 = _mm256_blendv_ps(r0, z0, f);
@@ -2571,7 +2571,7 @@ KAIRN_GEN_FORCEINLINE void sub_1_2_full(__m256d a, __m256d y0, __m256d y1, __m25
     const __m256d t = _mm256_sub_pd(g, y0);
     const __m256d az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), z0);
     const __m256d f = _mm256_cmp_pd(az, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
-    const __m256d r0 = _mm256_fmadd_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_setzero_pd());
+    const __m256d r0 = _mm256_mul_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()));
     const __m256d n = _mm256_cmp_pd(r0, r0, _CMP_EQ_OQ);
     const __m256d r1 = _mm256_blendv_pd(r0, _mm256_setzero_pd(), n);
     const __m256d w0 = _mm256_blendv_pd(r0, z0, f);
@@ -2600,7 +2600,7 @@ KAIRN_GEN_FORCEINLINE void sub_1_2_full(__m256 a, __m256 y0, __m256 y1, __m256& 
     const __m256 t = _mm256_sub_ps(g, y0);
     const __m256 az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), z0);
     const __m256 f = _mm256_cmp_ps(az, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
-    const __m256 r0 = _mm256_fmadd_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_setzero_ps());
+    const __m256 r0 = _mm256_mul_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()));
     const __m256 n = _mm256_cmp_ps(r0, r0, _CMP_EQ_OQ);
     const __m256 r1 = _mm256_blendv_ps(r0, _mm256_setzero_ps(), n);
     const __m256 w0 = _mm256_blendv_ps(r0, z0, f);
@@ -2668,7 +2668,7 @@ KAIRN_GEN_FORCEINLINE void sub_2_1_full(__m256d x0, __m256d x1, __m256d a, __m25
     const __m256d t = _mm256_sub_pd(x0, g);
     const __m256d az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), z0);
     const __m256d f = _mm256_cmp_pd(az, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
-    const __m256d r0 = _mm256_fmadd_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_setzero_pd());
+    const __m256d r0 = _mm256_mul_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()));
     const __m256d n = _mm256_cmp_pd(r0, r0, _CMP_EQ_OQ);
     const __m256d r1 = _mm256_blendv_pd(r0, _mm256_setzero_pd(), n);
     const __m256d w0 = _mm256_blendv_pd(r0, z0, f);
@@ -2696,7 +2696,7 @@ KAIRN_GEN_FORCEINLINE void sub_2_1_full(__m256 x0, __m256 x1, __m256 a, __m256& 
     const __m256 t = _mm256_sub_ps(x0, g);
     const __m256 az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), z0);
     const __m256 f = _mm256_cmp_ps(az, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
-    const __m256 r0 = _mm256_fmadd_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_setzero_ps());
+    const __m256 r0 = _mm256_mul_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()));
     const __m256 n = _mm256_cmp_ps(r0, r0, _CMP_EQ_OQ);
     const __m256 r1 = _mm256_blendv_ps(r0, _mm256_setzero_ps(), n);
     const __m256 w0 = _mm256_blendv_ps(r0, z0, f);
@@ -2802,7 +2802,7 @@ KAIRN_GEN_FORCEINLINE void sub_2_2_full(__m256d x0, __m256d x1, __m256d y0, __m2
     const __m256d t = _mm256_sub_pd(x0, y0);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), z0);
     const __m256d f = _mm256_cmp_pd(a, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
-    const __m256d r0 = _mm256_fmadd_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_setzero_pd());
+    const __m256d r0 = _mm256_mul_pd(t, _mm256_set1_pd(std::numeric_limits<double>::infinity()));
     const __m256d n = _mm256_cmp_pd(r0, r0, _CMP_EQ_OQ);
     const __m256d r1 = _mm256_blendv_pd(r0, _mm256_setzero_pd(), n);
     const __m256d w0 = _mm256_blendv_pd(r0, z0, f);
@@ -2842,7 +2842,7 @@ KAIRN_GEN_FORCEINLINE void sub_2_2_full(__m256 x0, __m256 x1, __m256 y0, __m256 
     const __m256 t = _mm256_sub_ps(x0, y0);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), z0);
     const __m256 f = _mm256_cmp_ps(a, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
-    const __m256 r0 = _mm256_fmadd_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_setzero_ps());
+    const __m256 r0 = _mm256_mul_ps(t, _mm256_set1_ps(std::numeric_limits<float>::infinity()));
     const __m256 n = _mm256_cmp_ps(r0, r0, _CMP_EQ_OQ);
     const __m256 r1 = _mm256_blendv_ps(r0, _mm256_setzero_ps(), n);
     const __m256 w0 = _mm256_blendv_ps(r0, z0, f);

@@ -52,6 +52,7 @@ AVX2 = {
         'pred': 'next_down({0})',
         'copy': '{0}',
         'guard': '_mm256_add_{s}({0}, _mm256_setzero_{s}())',      # RN(a + 0), with a zero vector
+        'times_inf': '_mm256_mul_{s}({0}, _mm256_set1_{s}({inf}))',  # exact; only compared or selected
     },
 }
 
@@ -88,6 +89,7 @@ NEON = {
         'pred': 'next_down({0})',
         'copy': '{0}',
         'guard': 'vaddq_{s}({0}, vdupq_n_{s}(0.0{f}))',             # RN(a + 0), with a zero vector
+        'times_inf': 'vmulq_{s}({0}, vdupq_n_{s}({inf}))',          # exact; only compared or selected
     },
 }
 
@@ -182,7 +184,7 @@ def _operand(a, b, kernels, ctype, fmt):
 def function(b, k, kernels, ctype):
     cpp._check_names(k, kernels)
     vec, mask, s, u, _ = b['types'][ctype]
-    fmt = {'s': s, 'u': u, 'f': cpp.TYPES[ctype][1]}
+    fmt = {'s': s, 'u': u, 'f': cpp.TYPES[ctype][1], 'inf': cpp.literal('inf', kernels, ctype)}
     inline = 'KAIRN_GEN_FORCEINLINE' if k.limbs <= 2 else 'inline'
     lines = [f'{inline} void {k.name}({", ".join(cpp.parameters(k, vec, mask))}) noexcept {{']
     for it in ir.flatten(k, kernels):

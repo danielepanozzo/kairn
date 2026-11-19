@@ -53,6 +53,10 @@ kernel is described in one file, gen/kernels/NAME.kernel:
     m = lt(x1, 0)                     the literal zero (+0) as an operand
     f = lt(a, const inf)              +infinity; `const nan` is a quiet NaN
     g = guard(a)                      RN(a + 0): a value that enters from the program (R3)
+    r0 = times_inf(t)                 t times +infinity, exact: compared or selected only (R1)
+    k = prod(const up((1+u)^6), a)    an exact expression rounded up to the format: over u,
+                                      eta, integers, unit(K) and tiny(K) (the constants c u^k
+                                      and t eta of K's error claim), + - * / ^ and parentheses
 
 Expressions in `ensures` are written without spaces. A condition of finite_when is
 abs_le(EXPR,E), meaning |EXPR| <= 2^(qmax + p + E); several are separated by `;`, and none is
@@ -92,6 +96,10 @@ OPS = {
     # RN(a + 0): the value of a, a zero made positive. A value that enters from the program passes
     # through it before any addition (rule R3); its result is an addition, which nothing can fuse.
     'guard': ((LIMB,), LIMB),
+    # t times +infinity, which is exact: a NaN when t is a NaN or a zero, otherwise the infinity
+    # with the sign of t. A plain multiplication, so its result may only be compared or selected
+    # (rule R1); the fix-ups of the non-finite layer turn t into its infinity with it.
+    'times_inf': ((LIMB,), LIMB),
     # A plain multiplication. It is accepted by the parser only so that rule R1 refuses it with a
     # reason; no printer and no interpreter knows it.
     'mul': ((LIMB, LIMB), LIMB),
@@ -120,6 +128,18 @@ def computed(name):
     """(F, K) for the name of a computed constant F(K), or None."""
     m = _COMPUTED.match(name)
     return (m.group(1), m.group(2)) if m else None
+
+
+# A constant defined by an exact expression, rounded up to the format: written `const up(EXPR)`,
+# EXPR over u, eta, integers, unit(K) and tiny(K), with + - * /, parentheses and integer powers
+# (consts.py computes it; expr.py parses EXPR).
+_UP = re.compile(r'up\((.+)\)\Z')
+
+
+def up(name):
+    """The expression of a constant up(EXPR), or None."""
+    m = _UP.match(name)
+    return m.group(1) if m else None
 
 
 KERNEL_NAME = re.compile(r'[a-z][a-z0-9_]*\Z')
@@ -330,20 +350,40 @@ def _ensures(words, where):
 
 
 # The operands may hold one level of parentheses, for `const unit_computed(K)`.
-_STMT = re.compile(r'(?:\(\s*(?P<many>[^()]*)\)|(?P<one>\S+))\s*=\s*(?P<op>[a-z][a-z0-9_]*)'
-                   r'\((?P<args>(?:[^()]|\([^()]*\))*)\)')
+_HEAD = re.compile(r'(?:\(\s*(?P<many>[^()]*)\)|(?P<one>\S+))\s*=\s*(?P<op>[a-z][a-z0-9_]*)\(')
+
+
+def _arguments(text, where):
+    """The operands between a call's parentheses, split at the commas outside any parentheses (an
+    operand `const up(EXPR)` holds an expression with parentheses of its own)."""
+    out, depth, start = [], 0, 0
+    for i, ch in enumerate(text):
+        if ch == '(':
+            depth += 1
+        elif ch == ')':
+            depth -= 1
+            if depth < 0:
+                raise DescriptionError(f'{where}: unbalanced parentheses in {text!r}')
+        elif ch == ',' and depth == 0:
+            out.append(text[start:i])
+            start = i + 1
+    if depth:
+        raise DescriptionError(f'{where}: unbalanced parentheses in {text!r}')
+    out.append(text[start:])
+    return [x.strip() for x in out] if text.strip() else []
 
 
 def _stmt(text, where, lineno):
-    m = _STMT.fullmatch(text)
-    if not m:
+    m = _HEAD.match(text)
+    if not m or not text.endswith(')'):
         raise DescriptionError(f'{where}: expected "DST = OP(ARGS)" or "(DST, ...) = KERNEL(ARGS)", got {text!r}')
     dsts = tuple(d.strip() for d in (m.group('many') or m.group('one')).split(','))
     args = []
-    for a in (x.strip() for x in re.split(r',(?![^()]*\))', m.group('args'))) if m.group('args').strip() else ():
+    for a in _arguments(text[m.end():-1], where):
         words = a.split()
-        if len(words) == 2 and words[0] == 'const':
-            args.append(Operand(words[1], const=True))
+        if len(words) >= 2 and words[0] == 'const':
+            # A constant's name holds no space: one inside an expression means nothing.
+            args.append(Operand(''.join(words[1:]), const=True))
         elif words == [ZERO]:
             args.append(Operand(ZERO, const=True))
         elif len(words) == 1:
@@ -536,6 +576,7 @@ def constants(kernel):
 
 
 def flops(kernel, kernels):
-    """Floating-point operations after inlining; an FMA counts as one, and so does a guard."""
-    arith = {'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd', 'guard'}
+    """Floating-point operations after inlining; an FMA counts as one, and so do a guard and a
+    multiplication by infinity."""
+    arith = {'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd', 'guard', 'times_inf'}
     return sum(1 for p in prims(kernel, kernels) if p.op in arith)

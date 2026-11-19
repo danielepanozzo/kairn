@@ -1,5 +1,6 @@
 # x + y with IEEE-like results: add_2_2, then the fix-up.
-# The fix-up is that of milestone1.md, "IEEE-like results".
+# The fix-up is that of milestone1.md, "IEEE-like results", with r0 = times_inf(t) (exact, so not
+# a fused operation) for prod(t, const inf).
 kernel:        add_2_2_full
 input:         x = x0 x1
 input:         y = y0 y1
@@ -21,7 +22,7 @@ cone_exempt:   the fix-up selects, after an explicit test that z0 is finite (f),
 t        = add(x0, y0)
 a        = abs(z0)
 f        = lt(a, const inf)
-r0       = prod(t, const inf)
+r0       = times_inf(t)
 n        = eq(r0, r0)
 r1       = select(n, 0, r0)
 w0       = select(f, z0, r0)

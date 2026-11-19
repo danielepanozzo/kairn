@@ -31,7 +31,9 @@ MASK_OPS = frozenset(op for op, (_, result) in ir.OPS.items() if result == ir.MA
 # Rule 4: operations that map any non-finite operand to a non-finite result. Not select (it may
 # drop the operand), not succ/pred (succ(-inf) is finite), not comparisons.
 PROPAGATING = frozenset({'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd', 'neg', 'abs', 'mul',
-                         'copy', 'guard'})
+                         'copy', 'guard', 'times_inf'})
+# R1: the result of times_inf, a plain multiplication (exact), may only be compared or selected.
+TIMES_INF_USES = {'lt': (0, 1), 'le': (0, 1), 'eq': (0, 1), 'select': (1, 2)}
 # The closed vocabulary of the claims (architecture.md, "Claims", "Claims of the second wave" and
 # "Claims of the non-finite layer"): requirements and their number of operands.
 REQUIRES = {'normalized': 1, 'abs_ge': 2, 'power_of_two': 1, 'nonneg': 1, 'canonical': 1, 'ball': 2}
@@ -80,9 +82,9 @@ def well_formed(k, kernels):
     reserved = rocq.RESERVED | cpp.RESERVED | simd.RESERVED
     if k.name in reserved:
         err('-', WELL_FORMED, f'{k.name} is a name the printers use')
-    if k.name.endswith(('_spec', '_correct', '_audit')) or k.name.startswith(('fuse_',) + ir.COMPUTED):
+    if k.name.endswith(('_spec', '_correct', '_audit')) or k.name.startswith(('fuse_', 'up_') + ir.COMPUTED):
         err('-', WELL_FORMED, f'{k.name}: the Rocq printer makes names ending in _spec, _correct and '
-                              '_audit, and starting with fuse_, unit_computed and tiny_computed')
+                              '_audit, and starting with fuse_, up_, unit_computed and tiny_computed')
     groups = [g.name for g in k.inputs + k.outputs]
     for g in set(groups):
         if groups.count(g) > 1:
@@ -117,7 +119,7 @@ def well_formed(k, kernels):
         for a, kind in zip(st.args, want):
             if a.const:
                 if a.name != ir.ZERO and a.name not in ir.CONSTANTS and a.name not in ir.SPECIAL \
-                        and not ir.computed(a.name):
+                        and not ir.computed(a.name) and ir.up(a.name) is None:
                     err(a.name, WELL_FORMED, f'line {st.line}: unknown constant {a.name!r}')
                 elif kind != ir.LIMB:
                     err(a.name, WELL_FORMED, f'line {st.line}: a constant is a limb, not a mask')
@@ -173,13 +175,32 @@ def well_formed(k, kernels):
 
 
 def products(k, kernels):
-    """R1: no plain multiplication, so that no compiler can contract a product into an addition."""
+    """R1: no plain multiplication, so that no compiler can contract a product into an addition.
+
+    times_inf is a plain multiplication too, by +infinity, and exact. Its result is only compared
+    or selected, and never an output as it is: there is then no addition for a compiler to fuse it
+    into, and one that pushed an addition through the select would compute the same value."""
     errs = []
     uses = {}
     for st in k.body:
         for i, a in enumerate(st.args):
             if not a.const:
                 uses.setdefault(a.name, []).append((st, i))
+    for st in k.body:
+        if st.op != 'times_inf':
+            continue
+        v = st.dsts[0]
+        for use, i in uses.get(v, ()):
+            if use.is_call or i not in TIMES_INF_USES.get(use.op, ()):
+                what = f'an operand of {use.op}' if not use.is_call else f'passed to {use.op}'
+                errs.append(RuleError(k.name, v, RULE_R1,
+                                      f'line {st.line}: {v} = times_inf(...) is a plain multiplication and is '
+                                      f'{what} at {use.dsts[0]} (line {use.line}); it may only be an operand of '
+                                      'a comparison or of select'))
+        if v in k.output_limbs:
+            errs.append(RuleError(k.name, v, RULE_R1,
+                                  f'line {st.line}: {v} = times_inf(...) is a plain multiplication and an output '
+                                  'as it is; an output may take it only through select'))
 
     def route(v, path):
         for st, i in uses.get(v, ()):
@@ -362,7 +383,8 @@ def r3_analysis(k, kernels, tainted):
 def entry_values(k, kernels):
     """Rule R3: in an entry kernel, no value that enters from the program, nor what neg, abs or
     select alone make of it, is an operand of add or sub or the addend of an FMA before it has
-    passed through guard; a value passed to another kernel must be treated so there too.
+    passed through guard; a value passed to another kernel must be treated so there too. Nor is
+    such a value an output of the entry kernel as it is.
 
     A one-limb input enters from the program unless declared stored (a limb of an object); the
     limbs of a multi-limb input are stored unless declared supplied. guard_pending names an input
@@ -393,7 +415,12 @@ def entry_values(k, kernels):
             err(v, f'guard_pending {v}: {v} is not an input that enters from the program')
     if errs or not k.entry:
         return errs
-    hits, relied, _ = r3_analysis(k, kernels, frozenset(program))
+    hits, relied, out = r3_analysis(k, kernels, frozenset(program))
+    for v, origins in out.items():
+        # An output becomes a limb of an object, which later kernels add unguarded (it is stored).
+        o = sorted(origins)[0]
+        err(o, f'{o} enters from the program and is the output {v} as it is (through neg, abs, select or '
+               'copy alone, or a callee that returns it so); an entry kernel returns it only after guard')
     if hits:
         where, origins = hits[0]
         more = f' (and {len(hits) - 1} more)' if len(hits) > 1 else ''
@@ -606,6 +633,9 @@ def domains(k, kernels):
             err('-', 'finite_when belongs to the extended domain')
     if k.real_model:
         for st in k.body:
+            if st.op == 'times_inf':
+                err(st.dsts[0], f'line {st.line}: times_inf has no meaning in the real model, which has '
+                                'no infinity; only a kernel without a real-model statement uses it')
             for a in st.args:
                 if a.const and a.name in ir.SPECIAL:
                     err(a.name, f'line {st.line}: const {a.name} has no meaning in the real model; '
@@ -652,6 +682,9 @@ def computed_constants(k, kernels):
     and come from a proved bound unless the kernel that uses them is itself unverified."""
     errs = []
     for name in ir.constants(k):
+        if ir.up(name) is not None:
+            errs += _up_constant(k, kernels, name)
+            continue
         c = ir.computed(name)
         if c is None:
             continue
@@ -672,6 +705,45 @@ def computed_constants(k, kernels):
             errs.append(RuleError(k.name, name, COMPUTED,
                                   f'the claims of {c[1]} hold from precision {callee.min_precision} on, '
                                   f'so min_precision must be at least {callee.min_precision}'))
+    return errs
+
+
+def _up_constant(k, kernels, name):
+    """A constant up(EXPR): its vocabulary; each unit(K) and tiny(K) names a kernel with one
+    unconditional relative bound, proved unless k is unverified, and k's minimum precision is at
+    least K's; and the expression is positive in binary64 and binary32 (in another format it is
+    checked when the constant is computed)."""
+    errs = []
+
+    def err(msg):
+        errs.append(RuleError(k.name, name, COMPUTED, msg))
+
+    try:
+        tree = consts.up_tree(ir.up(name))
+    except consts.ConstError as e:
+        return [RuleError(k.name, name, COMPUTED, str(e))]
+    for fn, kname in sorted(expr.calls(tree)):
+        callee = kernels.get(kname)
+        if callee is None:
+            err(f'{fn}({kname}): {kname} is not a kernel')
+            continue
+        try:
+            consts.source_bound(callee)
+        except consts.ConstError as e:
+            err(str(e))
+            continue
+        if callee.status != 'proved' and k.status != 'unverified':
+            err(f'{kname} is {callee.status}: only an unverified kernel may use the constants of a bound '
+                'that is not proved')
+        if callee.min_precision and (k.min_precision or 1) < callee.min_precision:
+            err(f'the claims of {kname} hold from precision {callee.min_precision} on, so min_precision must '
+                f'be at least {callee.min_precision}')
+    if not errs:
+        for fmt in ((53, -1074, 971), (24, -149, 104)):
+            try:
+                consts.value(name, kernels, *fmt)
+            except consts.ConstError as e:
+                err(str(e))
     return errs
 
 

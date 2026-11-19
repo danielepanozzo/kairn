@@ -1,20 +1,28 @@
-"""Rational expressions: the `c` and `t` of an error claim, and a kernel's `value`.
+"""Rational expressions: the `c` and `t` of an error claim, a kernel's `value`, and the EXPR of a
+constant `up(EXPR)`.
 
 A small explicit parser, so that no claim text is ever evaluated as Python:
 
     expr  := term (('+' | '-') term)*
     term  := unary (('*' | '/') unary)*
-    unary := '-' unary | atom
-    atom  := INTEGER | 'abs' '(' expr ')' | NAME | '(' expr ')'
+    unary := '-' unary | power
+    power := atom ('^' ['-'] INTEGER)?
+    atom  := INTEGER | 'abs' '(' expr ')' | ('unit' | 'tiny') '(' NAME ')' | NAME | '(' expr ')'
 
-The result is a tree of tuples: ('int', n), ('name', s), ('neg', a), ('abs', a), and (op, a, b)
-for op in add, sub, mul, div. Where each kind of tree may appear is the rules' business.
+The result is a tree of tuples: ('int', n), ('name', s), ('neg', a), ('abs', a), ('pow', a, n)
+with an integer n, ('call', f, K) for unit(K) and tiny(K), and (op, a, b) for op in add, sub,
+mul, div. Where each kind of tree may appear is the rules' business: only constants up(EXPR) have
+powers and calls.
 """
 import re
 from fractions import Fraction
 
 # Every character that is not white space is part of some token (the last group catches the rest).
 _TOKEN = re.compile(r'\s*(?:([0-9]+)|([A-Za-z][A-Za-z0-9_]*)|(\S))')
+
+
+# The functions of a constant up(EXPR): unit(K) = c u^k and tiny(K) = t eta of K's error claim.
+CALLS = ('unit', 'tiny')
 
 
 class ExprError(Exception):
@@ -29,7 +37,7 @@ def parse(text):
         elif m.group(2):
             tokens.append(('name', m.group(2)))
         elif m.group(3):
-            if m.group(3) not in '+-*/()':
+            if m.group(3) not in '+-*/()^':
                 raise ExprError(f'unexpected character {m.group(3)!r} in {text!r}')
             tokens.append(('op', m.group(3)))
     pos = 0
@@ -65,11 +73,28 @@ def parse(text):
                 return a
 
     def unary():
-        return ('neg', unary()) if take('-') else atom()
+        return ('neg', unary()) if take('-') else power()
+
+    def power():
+        nonlocal pos
+        a = atom()
+        if not take('^'):
+            return a
+        sign = -1 if take('-') else 1
+        kind, val = peek()
+        if kind != 'int':
+            raise ExprError(f'an exponent is an integer, in {text!r}')
+        pos += 1
+        return ('pow', a, sign * val)
 
     def atom():
         nonlocal pos
         kind, val = peek()
+        if kind == 'name' and val in CALLS and pos + 1 < len(tokens) and tokens[pos + 1] == ('op', '('):
+            if pos + 3 >= len(tokens) or tokens[pos + 2][0] != 'name' or tokens[pos + 3] != ('op', ')'):
+                raise ExprError(f'{val}( ) takes the name of a kernel, in {text!r}')
+            pos += 4
+            return ('call', val, tokens[pos - 2][1])
         if (kind, val) == ('name', 'abs') and pos + 1 < len(tokens) and tokens[pos + 1] == ('op', '('):
             pos += 2
             a = expr()
@@ -95,9 +120,16 @@ def parse(text):
 def names(tree):
     if tree[0] == 'name':
         return {tree[1]}
-    if tree[0] == 'int':
+    if tree[0] in ('int', 'call'):
         return set()
-    return set().union(*(names(t) for t in tree[1:]))
+    return set().union(*(names(t) for t in tree[1:] if isinstance(t, tuple)))
+
+
+def calls(tree):
+    """The (f, K) of every unit(K) and tiny(K) in a tree."""
+    if tree[0] == 'call':
+        return {tree[1:]}
+    return set().union(*(calls(t) for t in tree[1:] if isinstance(t, tuple)))
 
 
 def evaluate(tree, env):
@@ -113,6 +145,16 @@ def evaluate(tree, env):
         return -evaluate(tree[1], env)
     if kind == 'abs':
         return abs(evaluate(tree[1], env))
+    if kind == 'call':
+        key = f'{tree[1]}({tree[2]})'
+        if key not in env:
+            raise ExprError(f'unknown {key}')
+        return env[key]
+    if kind == 'pow':
+        base = evaluate(tree[1], env)
+        if base == 0 and tree[2] < 0:
+            raise ExprError('division by zero')
+        return base ** tree[2]
     a, b = evaluate(tree[1], env), evaluate(tree[2], env)
     if kind == 'add':
         return a + b

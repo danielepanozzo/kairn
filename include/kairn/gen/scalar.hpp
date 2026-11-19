@@ -5,7 +5,7 @@
 // IR"). Inputs are passed by value; outputs by reference, written once at the end. Values
 // keep the names of the kernel descriptions; a value inlined from a call is named
 // SITE_VALUE, where SITE is the first value the call defines.
-// Not constexpr: rmul, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, mul_1_1, split, two_prod_dekker, add_2_1_full, add_2_2_full, add_fast_2_2_full, ball_add_2, ball_add_2_full, mul_2_2, ball_mul_2, ball_mul_2_full, mul_2_1, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, mul_2_1_full, mul_2_2_full, mul_pow2_2, mul_pow2_2_full, sub_1_2_full, sub_2_1_full, sub_2_2_full.
+// Not constexpr: rmul, ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, mul_1_1, split, two_prod_dekker, ball_add_2, ball_add_2_full, mul_2_2, ball_mul_2, ball_mul_2_full, mul_2_1, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, mul_2_1_full, mul_2_2_full, mul_pow2_2, mul_pow2_2_full.
 #pragma once
 
 #include "prelude.hpp"
@@ -140,8 +140,8 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(float cx, float rx, float cy, float r
 // ball_make_1(c, r) -> cw, rw
 // constructors (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_1(double c, double r, double& cw_out, double& rw_out) noexcept {
-    const double g = r + 0.0;
-    const double c0 = c + 0.0;
+    const double g = __builtin_is_constant_evaluated() ? r : r + 0.0;
+    const double c0 = __builtin_is_constant_evaluated() ? c : c + 0.0;
     const bool e = 0.0 <= g;
     const double a = abs_bits(c0);
     const bool f1 = a < std::numeric_limits<double>::infinity();
@@ -155,8 +155,8 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_make_1(double c, double r, double& cw_
     rw_out = rw;
 }
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_1(float c, float r, float& cw_out, float& rw_out) noexcept {
-    const float g = r + 0.0f;
-    const float c0 = c + 0.0f;
+    const float g = __builtin_is_constant_evaluated() ? r : r + 0.0f;
+    const float c0 = __builtin_is_constant_evaluated() ? c : c + 0.0f;
     const bool e = 0.0f <= g;
     const float a = abs_bits(c0);
     const bool f1 = a < std::numeric_limits<float>::infinity();
@@ -559,14 +559,14 @@ KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum(float a, float b, float& s_out
 // make_2(a) -> x = (x0, x1)
 // constructors (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void make_2(double a, double& x0_out, double& x1_out) noexcept {
-    const double x0 = a + 0.0;
+    const double x0 = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const bool n = x0 == x0;
     const double x1 = n ? 0.0 : x0;
     x0_out = x0;
     x1_out = x1;
 }
 KAIRN_GEN_FORCEINLINE constexpr void make_2(float a, float& x0_out, float& x1_out) noexcept {
-    const float x0 = a + 0.0f;
+    const float x0 = __builtin_is_constant_evaluated() ? a : a + 0.0f;
     const bool n = x0 == x0;
     const float x1 = n ? 0.0f : x0;
     x0_out = x0;
@@ -841,9 +841,9 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_1(float x0, float x1, float a, float&
 }
 
 // add_2_1_full(x = (x0, x1), a) -> w = (w0, w1)
-// add_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void add_2_1_full(double x0, double x1, double a, double& w0_out, double& w1_out) noexcept {
-    const double g = a + 0.0;
+// add_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void add_2_1_full(double x0, double x1, double a, double& w0_out, double& w1_out) noexcept {
+    const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;
     // (z0, z1) = add_2_1(x0, x1, a)
     // (z0_sh, z0_sl) = two_sum(x0, a)
     const double z0_sh = x0 + a;
@@ -860,7 +860,7 @@ KAIRN_GEN_FORCEINLINE void add_2_1_full(double x0, double x1, double a, double& 
     const double t = x0 + g;
     const double az = abs_bits(z0);
     const bool f = az < std::numeric_limits<double>::infinity();
-    const double r0 = fma_rn(t, std::numeric_limits<double>::infinity(), 0.0);
+    const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
     const double w0 = f ? z0 : r0;
@@ -868,8 +868,8 @@ KAIRN_GEN_FORCEINLINE void add_2_1_full(double x0, double x1, double a, double& 
     w0_out = w0;
     w1_out = w1;
 }
-KAIRN_GEN_FORCEINLINE void add_2_1_full(float x0, float x1, float a, float& w0_out, float& w1_out) noexcept {
-    const float g = a + 0.0f;
+KAIRN_GEN_FORCEINLINE constexpr void add_2_1_full(float x0, float x1, float a, float& w0_out, float& w1_out) noexcept {
+    const float g = __builtin_is_constant_evaluated() ? a : a + 0.0f;
     // (z0, z1) = add_2_1(x0, x1, a)
     // (z0_sh, z0_sl) = two_sum(x0, a)
     const float z0_sh = x0 + a;
@@ -886,7 +886,7 @@ KAIRN_GEN_FORCEINLINE void add_2_1_full(float x0, float x1, float a, float& w0_o
     const float t = x0 + g;
     const float az = abs_bits(z0);
     const bool f = az < std::numeric_limits<float>::infinity();
-    const float r0 = fma_rn(t, std::numeric_limits<float>::infinity(), 0.0f);
+    const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
     const float w0 = f ? z0 : r0;
@@ -955,8 +955,8 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_2(float x0, float x1, float y0, float
 }
 
 // add_2_2_full(x = (x0, x1), y = (y0, y1)) -> w = (w0, w1)
-// add_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void add_2_2_full(double x0, double x1, double y0, double y1, double& w0_out, double& w1_out) noexcept {
+// add_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void add_2_2_full(double x0, double x1, double y0, double y1, double& w0_out, double& w1_out) noexcept {
     // (z0, z1) = add_2_2(x0, x1, y0, y1)
     // (z0_sh, z0_sl) = two_sum(x0, y0)
     const double z0_sh = x0 + y0;
@@ -985,7 +985,7 @@ KAIRN_GEN_FORCEINLINE void add_2_2_full(double x0, double x1, double y0, double 
     const double t = x0 + y0;
     const double a = abs_bits(z0);
     const bool f = a < std::numeric_limits<double>::infinity();
-    const double r0 = fma_rn(t, std::numeric_limits<double>::infinity(), 0.0);
+    const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
     const double w0 = f ? z0 : r0;
@@ -993,7 +993,7 @@ KAIRN_GEN_FORCEINLINE void add_2_2_full(double x0, double x1, double y0, double 
     w0_out = w0;
     w1_out = w1;
 }
-KAIRN_GEN_FORCEINLINE void add_2_2_full(float x0, float x1, float y0, float y1, float& w0_out, float& w1_out) noexcept {
+KAIRN_GEN_FORCEINLINE constexpr void add_2_2_full(float x0, float x1, float y0, float y1, float& w0_out, float& w1_out) noexcept {
     // (z0, z1) = add_2_2(x0, x1, y0, y1)
     // (z0_sh, z0_sl) = two_sum(x0, y0)
     const float z0_sh = x0 + y0;
@@ -1022,7 +1022,7 @@ KAIRN_GEN_FORCEINLINE void add_2_2_full(float x0, float x1, float y0, float y1, 
     const float t = x0 + y0;
     const float a = abs_bits(z0);
     const bool f = a < std::numeric_limits<float>::infinity();
-    const float r0 = fma_rn(t, std::numeric_limits<float>::infinity(), 0.0f);
+    const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
     const float w0 = f ? z0 : r0;
@@ -1069,8 +1069,8 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2(float x0, float x1, float y0, 
 }
 
 // add_fast_2_2_full(x = (x0, x1), y = (y0, y1)) -> w = (w0, w1)
-// add_fast_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void add_fast_2_2_full(double x0, double x1, double y0, double y1, double& w0_out, double& w1_out) noexcept {
+// add_fast_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_full(double x0, double x1, double y0, double y1, double& w0_out, double& w1_out) noexcept {
     // (z0, z1) = add_fast_2_2(x0, x1, y0, y1)
     // (z0_sh, z0_sl) = two_sum(x0, y0)
     const double z0_sh = x0 + y0;
@@ -1088,7 +1088,7 @@ KAIRN_GEN_FORCEINLINE void add_fast_2_2_full(double x0, double x1, double y0, do
     const double t = x0 + y0;
     const double a = abs_bits(z0);
     const bool f = a < std::numeric_limits<double>::infinity();
-    const double r0 = fma_rn(t, std::numeric_limits<double>::infinity(), 0.0);
+    const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
     const double w0 = f ? z0 : r0;
@@ -1096,7 +1096,7 @@ KAIRN_GEN_FORCEINLINE void add_fast_2_2_full(double x0, double x1, double y0, do
     w0_out = w0;
     w1_out = w1;
 }
-KAIRN_GEN_FORCEINLINE void add_fast_2_2_full(float x0, float x1, float y0, float y1, float& w0_out, float& w1_out) noexcept {
+KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_full(float x0, float x1, float y0, float y1, float& w0_out, float& w1_out) noexcept {
     // (z0, z1) = add_fast_2_2(x0, x1, y0, y1)
     // (z0_sh, z0_sl) = two_sum(x0, y0)
     const float z0_sh = x0 + y0;
@@ -1114,7 +1114,7 @@ KAIRN_GEN_FORCEINLINE void add_fast_2_2_full(float x0, float x1, float y0, float
     const float t = x0 + y0;
     const float a = abs_bits(z0);
     const bool f = a < std::numeric_limits<float>::infinity();
-    const float r0 = fma_rn(t, std::numeric_limits<float>::infinity(), 0.0f);
+    const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
     const float w0 = f ? z0 : r0;
@@ -1358,7 +1358,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(float cx0, float cx1, float rx, float
 // ball_make_2(c = (c0, c1), r) -> cw = (cw0, cw1), rw
 // constructors (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(double c0, double c1, double r, double& cw0_out, double& cw1_out, double& rw_out) noexcept {
-    const double g = r + 0.0;
+    const double g = __builtin_is_constant_evaluated() ? r : r + 0.0;
     const bool e = 0.0 <= g;
     const double a = abs_bits(c0);
     const bool f1 = a < std::numeric_limits<double>::infinity();
@@ -1375,7 +1375,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(double c0, double c1, double r,
     rw_out = rw;
 }
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(float c0, float c1, float r, float& cw0_out, float& cw1_out, float& rw_out) noexcept {
-    const float g = r + 0.0f;
+    const float g = __builtin_is_constant_evaluated() ? r : r + 0.0f;
     const bool e = 0.0f <= g;
     const float a = abs_bits(c0);
     const bool f1 = a < std::numeric_limits<float>::infinity();
@@ -2393,14 +2393,14 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(float x0, float x1, float y0, float 
 // make_2_limbs(y = (h, l)) -> x = (x0, x1)
 // constructors (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void make_2_limbs(double h, double l, double& x0_out, double& x1_out) noexcept {
-    const double x0 = h + 0.0;
-    const double x1 = l + 0.0;
+    const double x0 = __builtin_is_constant_evaluated() ? h : h + 0.0;
+    const double x1 = __builtin_is_constant_evaluated() ? l : l + 0.0;
     x0_out = x0;
     x1_out = x1;
 }
 KAIRN_GEN_FORCEINLINE constexpr void make_2_limbs(float h, float l, float& x0_out, float& x1_out) noexcept {
-    const float x0 = h + 0.0f;
-    const float x1 = l + 0.0f;
+    const float x0 = __builtin_is_constant_evaluated() ? h : h + 0.0f;
+    const float x1 = __builtin_is_constant_evaluated() ? l : l + 0.0f;
     x0_out = x0;
     x1_out = x1;
 }
@@ -2420,7 +2420,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1_full(double x0, double x1, double a, double& 
     const double t = fma_rn(x0, a, 0.0);
     const double az = abs_bits(z0);
     const bool f = az < std::numeric_limits<double>::infinity();
-    const double r0 = fma_rn(t, std::numeric_limits<double>::infinity(), 0.0);
+    const double r0 = t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
     const double w0 = f ? z0 : r0;
@@ -2441,7 +2441,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1_full(float x0, float x1, float a, float& w0_o
     const float t = fma_rn(x0, a, 0.0f);
     const float az = abs_bits(z0);
     const bool f = az < std::numeric_limits<float>::infinity();
-    const float r0 = fma_rn(t, std::numeric_limits<float>::infinity(), 0.0f);
+    const float r0 = t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
     const float w0 = f ? z0 : r0;
@@ -2468,7 +2468,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_2_full(double x0, double x1, double y0, double 
     const double t = fma_rn(x0, y0, 0.0);
     const double a = abs_bits(z0);
     const bool f = a < std::numeric_limits<double>::infinity();
-    const double r0 = fma_rn(t, std::numeric_limits<double>::infinity(), 0.0);
+    const double r0 = t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
     const double w0 = f ? z0 : r0;
@@ -2492,7 +2492,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_2_full(float x0, float x1, float y0, float y1, 
     const float t = fma_rn(x0, y0, 0.0f);
     const float a = abs_bits(z0);
     const bool f = a < std::numeric_limits<float>::infinity();
-    const float r0 = fma_rn(t, std::numeric_limits<float>::infinity(), 0.0f);
+    const float r0 = t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
     const float w0 = f ? z0 : r0;
@@ -2537,7 +2537,7 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(double x0, double x1, double c, doubl
     const double t = fma_rn(x0, c, 0.0);
     const double a = abs_bits(z0);
     const bool f = a < std::numeric_limits<double>::infinity();
-    const double r0 = fma_rn(t, std::numeric_limits<double>::infinity(), 0.0);
+    const double r0 = t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
     const double w0 = f ? z0 : r0;
@@ -2556,7 +2556,7 @@ KAIRN_GEN_FORCEINLINE void mul_pow2_2_full(float x0, float x1, float c, float& w
     const float t = fma_rn(x0, c, 0.0f);
     const float a = abs_bits(z0);
     const bool f = a < std::numeric_limits<float>::infinity();
-    const float r0 = fma_rn(t, std::numeric_limits<float>::infinity(), 0.0f);
+    const float r0 = t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
     const float w0 = f ? z0 : r0;
@@ -2607,9 +2607,9 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_1_2(float a, float y0, float y1, float&
 }
 
 // sub_1_2_full(a, y = (y0, y1)) -> w = (w0, w1)
-// sub_1_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void sub_1_2_full(double a, double y0, double y1, double& w0_out, double& w1_out) noexcept {
-    const double g = a + 0.0;
+// sub_1_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_1_2_full(double a, double y0, double y1, double& w0_out, double& w1_out) noexcept {
+    const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;
     // (z0, z1) = sub_1_2(a, y0, y1)
     const double z0_n0 = -y0;
     const double z0_n1 = -y1;
@@ -2629,7 +2629,7 @@ KAIRN_GEN_FORCEINLINE void sub_1_2_full(double a, double y0, double y1, double& 
     const double t = g - y0;
     const double az = abs_bits(z0);
     const bool f = az < std::numeric_limits<double>::infinity();
-    const double r0 = fma_rn(t, std::numeric_limits<double>::infinity(), 0.0);
+    const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
     const double w0 = f ? z0 : r0;
@@ -2637,8 +2637,8 @@ KAIRN_GEN_FORCEINLINE void sub_1_2_full(double a, double y0, double y1, double& 
     w0_out = w0;
     w1_out = w1;
 }
-KAIRN_GEN_FORCEINLINE void sub_1_2_full(float a, float y0, float y1, float& w0_out, float& w1_out) noexcept {
-    const float g = a + 0.0f;
+KAIRN_GEN_FORCEINLINE constexpr void sub_1_2_full(float a, float y0, float y1, float& w0_out, float& w1_out) noexcept {
+    const float g = __builtin_is_constant_evaluated() ? a : a + 0.0f;
     // (z0, z1) = sub_1_2(a, y0, y1)
     const float z0_n0 = -y0;
     const float z0_n1 = -y1;
@@ -2658,7 +2658,7 @@ KAIRN_GEN_FORCEINLINE void sub_1_2_full(float a, float y0, float y1, float& w0_o
     const float t = g - y0;
     const float az = abs_bits(z0);
     const bool f = az < std::numeric_limits<float>::infinity();
-    const float r0 = fma_rn(t, std::numeric_limits<float>::infinity(), 0.0f);
+    const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
     const float w0 = f ? z0 : r0;
@@ -2707,9 +2707,9 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_1(float x0, float x1, float a, float&
 }
 
 // sub_2_1_full(x = (x0, x1), a) -> w = (w0, w1)
-// sub_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void sub_2_1_full(double x0, double x1, double a, double& w0_out, double& w1_out) noexcept {
-    const double g = a + 0.0;
+// sub_2_1, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_2_1_full(double x0, double x1, double a, double& w0_out, double& w1_out) noexcept {
+    const double g = __builtin_is_constant_evaluated() ? a : a + 0.0;
     // (z0, z1) = sub_2_1(x0, x1, a)
     const double z0_n = -a;
     // (z0, z1) = add_2_1(x0, x1, z0_n)
@@ -2728,7 +2728,7 @@ KAIRN_GEN_FORCEINLINE void sub_2_1_full(double x0, double x1, double a, double& 
     const double t = x0 - g;
     const double az = abs_bits(z0);
     const bool f = az < std::numeric_limits<double>::infinity();
-    const double r0 = fma_rn(t, std::numeric_limits<double>::infinity(), 0.0);
+    const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
     const double w0 = f ? z0 : r0;
@@ -2736,8 +2736,8 @@ KAIRN_GEN_FORCEINLINE void sub_2_1_full(double x0, double x1, double a, double& 
     w0_out = w0;
     w1_out = w1;
 }
-KAIRN_GEN_FORCEINLINE void sub_2_1_full(float x0, float x1, float a, float& w0_out, float& w1_out) noexcept {
-    const float g = a + 0.0f;
+KAIRN_GEN_FORCEINLINE constexpr void sub_2_1_full(float x0, float x1, float a, float& w0_out, float& w1_out) noexcept {
+    const float g = __builtin_is_constant_evaluated() ? a : a + 0.0f;
     // (z0, z1) = sub_2_1(x0, x1, a)
     const float z0_n = -a;
     // (z0, z1) = add_2_1(x0, x1, z0_n)
@@ -2756,7 +2756,7 @@ KAIRN_GEN_FORCEINLINE void sub_2_1_full(float x0, float x1, float a, float& w0_o
     const float t = x0 - g;
     const float az = abs_bits(z0);
     const bool f = az < std::numeric_limits<float>::infinity();
-    const float r0 = fma_rn(t, std::numeric_limits<float>::infinity(), 0.0f);
+    const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
     const float w0 = f ? z0 : r0;
@@ -2831,8 +2831,8 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2(float x0, float x1, float y0, float
 }
 
 // sub_2_2_full(x = (x0, x1), y = (y0, y1)) -> w = (w0, w1)
-// sub_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void sub_2_2_full(double x0, double x1, double y0, double y1, double& w0_out, double& w1_out) noexcept {
+// sub_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(double x0, double x1, double y0, double y1, double& w0_out, double& w1_out) noexcept {
     // (z0, z1) = sub_2_2(x0, x1, y0, y1)
     const double z0_n0 = -y0;
     const double z0_n1 = -y1;
@@ -2864,7 +2864,7 @@ KAIRN_GEN_FORCEINLINE void sub_2_2_full(double x0, double x1, double y0, double 
     const double t = x0 - y0;
     const double a = abs_bits(z0);
     const bool f = a < std::numeric_limits<double>::infinity();
-    const double r0 = fma_rn(t, std::numeric_limits<double>::infinity(), 0.0);
+    const double r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<double>::infinity();
     const bool n = r0 == r0;
     const double r1 = n ? 0.0 : r0;
     const double w0 = f ? z0 : r0;
@@ -2872,7 +2872,7 @@ KAIRN_GEN_FORCEINLINE void sub_2_2_full(double x0, double x1, double y0, double 
     w0_out = w0;
     w1_out = w1;
 }
-KAIRN_GEN_FORCEINLINE void sub_2_2_full(float x0, float x1, float y0, float y1, float& w0_out, float& w1_out) noexcept {
+KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(float x0, float x1, float y0, float y1, float& w0_out, float& w1_out) noexcept {
     // (z0, z1) = sub_2_2(x0, x1, y0, y1)
     const float z0_n0 = -y0;
     const float z0_n1 = -y1;
@@ -2904,7 +2904,7 @@ KAIRN_GEN_FORCEINLINE void sub_2_2_full(float x0, float x1, float y0, float y1, 
     const float t = x0 - y0;
     const float a = abs_bits(z0);
     const bool f = a < std::numeric_limits<float>::infinity();
-    const float r0 = fma_rn(t, std::numeric_limits<float>::infinity(), 0.0f);
+    const float r0 = __builtin_is_constant_evaluated() ? times_inf_ce(t) : t * std::numeric_limits<float>::infinity();
     const bool n = r0 == r0;
     const float r1 = n ? 0.0f : r0;
     const float w0 = f ? z0 : r0;
