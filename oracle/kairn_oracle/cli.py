@@ -134,6 +134,28 @@ def cmd_brute(a):
     return brute.main(a)
 
 
+def cmd_search(a):
+    from . import search
+    return search.main(a)
+
+
+def cmd_shrink(a):
+    from . import shrink
+    return shrink.main(a)
+
+
+def add_runner_options(p):
+    p.add_argument("--runner", default="interp",
+                   help="the runner: 'interp' (the generator's interpreter, the default), "
+                        "'refrun[:VARIANT]' (the oracle's reference runner, in this process), or "
+                        "any shell command of the line protocol")
+    p.add_argument("--radius", default="first", choices=("first", "second"),
+                   help="with --runner refrun: the Ball cores' radius design (default first)")
+    p.add_argument("--claims", help="claims file (default: gen/claims.json of this repository)")
+    p.add_argument("--fail-on-suspicious", action="store_true",
+                   help="a suspicious non-finite result is a failure, as in the cross-checks")
+
+
 def add_check_options(p):
     p.add_argument("--max-examples", type=int, default=5,
                    help="failing, invalid and suspicious cases kept per key (default 5)")
@@ -224,6 +246,46 @@ def main(argv=None):
     b.add_argument("--workdir", help="where chunk summaries go (default: a temporary directory)")
     add_check_options(b)
     b.set_defaults(func=cmd_brute)
+
+    s = sub.add_parser("search", help="search for the cases closest to the claims, or past them")
+    s.add_argument("kernels", help="comma-separated, or 'all': every kernel with an error, upper, "
+                                   "encloses or extends entry")
+    s.add_argument("formats", help="comma-separated")
+    add_runner_options(s)
+    s.add_argument("--seed", default="0")
+    s.add_argument("--evals", type=int, default=20000,
+                   help="cases run per kernel and format, seeds included (default 20000)")
+    s.add_argument("--batch", type=int, default=256,
+                   help="cases per generation and per runner process (default 256)")
+    s.add_argument("--elite", type=int, default=16, help="cases kept per quantity (default 16)")
+    s.add_argument("--seeds", action="append",
+                   help="more seed lines: a text file of lines or a JSON summary (repeatable)")
+    s.add_argument("--no-default-seeds", action="store_true",
+                   help="without the lines of results/*/brute/ and tests/regression/cases.txt")
+    s.add_argument("--no-literature", action="store_true",
+                   help="without the cases of the literature (tight.py)")
+    s.add_argument("--suspicious-ok", metavar="KERNELS",
+                   help="with --fail-on-suspicious: kernels whose suspicious results are not "
+                        "failures (the cross-checks exempt split,two_prod_dekker)")
+    s.add_argument("--jobs", type=int, default=1, help="kernel and format pairs at once")
+    s.add_argument("--json", help="write the results here")
+    s.add_argument("--quiet", action="store_true",
+                   help="only the last line, and the pairs that failed")
+    s.set_defaults(func=cmd_search)
+
+    k = sub.add_parser("shrink", help="shrink a failing case")
+    k.add_argument("line", help="the failing line (a request or a completed line; '-' to read "
+                                "it from standard input)")
+    add_runner_options(k)
+    k.add_argument("--entry", help="the failure to keep, as shrink lists them (default: the first)")
+    k.add_argument("--evals", type=int, default=50000,
+                   help="cases run at most, toy formats included (default 50000)")
+    k.add_argument("--no-toy", action="store_true", help="do not look for a smaller format")
+    k.add_argument("--toy-cases", type=int, default=2000,
+                   help="random cases tried in a toy format whose enumeration is larger "
+                        "(default 2000)")
+    k.add_argument("--json", help="write the result here")
+    k.set_defaults(func=cmd_shrink)
 
     a = ap.parse_args(argv)
     return a.func(a)
