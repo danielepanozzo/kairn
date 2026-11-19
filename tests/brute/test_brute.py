@@ -53,6 +53,20 @@ class Plan(unittest.TestCase):
                 ps = {brute.parse_fmt(e["format"])[0] for e in self.plan if e["kernel"] == k["name"]}
                 self.assertTrue({1, 2, 3} <= ps, (k["name"], ps))
 
+    def test_precision_one_of_the_one_limb_balls(self):
+        # Their own exponent range at precision 1 (PRECISION_ONE), and the product alone is not
+        # failed there on a suspicious non-finite result (RADIUS_OVERFLOW).
+        fmt = {e["kernel"]: e["format"] for e in self.plan if brute.parse_fmt(e["format"])[0] == 1}
+        self.assertEqual(fmt["ball_add_1"], "fp:1:-5:5")
+        self.assertEqual(fmt["ball_sub_1"], "fp:1:-5:5")
+        self.assertEqual(fmt["ball_mul_1"], "fp:1:-6:5")
+        self.assertFalse(brute.fails_on_suspicious("ball_mul_1", "fp:1:-6:5"))
+        self.assertTrue(brute.fails_on_suspicious("ball_mul_1", "fp:2:-4:1"))
+        self.assertTrue(brute.fails_on_suspicious("ball_mul_1", "binary64"))
+        self.assertTrue(brute.fails_on_suspicious("ball_add_1", "fp:1:-5:5"))
+        self.assertFalse(brute.fails_on_suspicious("split", "binary32"))
+        self.assertFalse(brute.fails_on_suspicious("two_prod_dekker", "fp:7:-16:-2"))
+
     def test_extended_formats_have_the_ieee_shape(self):
         for e in self.plan:
             if e["domain"] == "extended":
@@ -64,6 +78,18 @@ class Plan(unittest.TestCase):
                                                          for x in k.get("ensures", []))}
         complete = {e["kernel"] for e in self.plan if not e["restrict"]}
         self.assertEqual(balls - complete, set())
+
+
+class Widen(unittest.TestCase):
+    def test_non_finite_results_are_overflows(self):
+        # A small format of the kernel the oracle's suspicious test does not apply to: every
+        # infinite radius is that of a computation that exceeds the largest number.
+        import widen
+        cases, equal, nonfinite, wide, bad = widen.compare("ball_mul_1", "fp:1:-2:3", 15)
+        self.assertEqual((cases, wide, bad), (8281, "fp:1:-2:18", []))
+        self.assertEqual(equal + nonfinite, cases)
+        self.assertGreater(equal, 0)
+        self.assertGreater(nonfinite, 0)
 
 
 class FixupForms(unittest.TestCase):

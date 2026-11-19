@@ -15,7 +15,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 | Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases, both forms of the scalar fix-ups), and the interpreter on every operand of larger toy formats, with the same guards and a time budget | by hand, on the test machines, never in CI (`tests/brute/README.md`); results in [Brute force, Milestone 1](results/brute-milestone1.md) | for the final code of Milestone 1, 3.5 hours on the Linux machine and 3 hours each on the Mac and the Windows machine |
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
-which before the first test and after the summary (`Kairn tests: the quick tier, 276 tests. The
+which before the first test and after the summary (`Kairn tests: the quick tier, 277 tests. The
 full tier, 291 tests more: ctest --test-dir .../tests/full`); every test of the quick tier also
 has the label `quick`, and every test of the full tier the label `full`. Both are registered by
 the same configuration: the file `CTestCustom.cmake` that configuring writes at the top of the

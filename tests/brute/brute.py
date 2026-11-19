@@ -71,14 +71,29 @@ PY = sys.executable
 # suspicious non-finite result (tests/CMakeLists.txt, _intermediate_overflow), nor does this.
 INTERMEDIATE_OVERFLOW = ("split", "two_prod_dekker")
 
+# The product of two one-limb balls at precision 1, where u = 1/2: the factor of its radius,
+# up((1+u)^5), is 8 there, above the 4 of the oracle's test of a suspicious non-finite result
+# (operands and exact set below a quarter of the largest number). A radius beyond the largest
+# number is then no sign of a fault, in any exponent range, and the run does not fail on it;
+# tests/brute/widen.py is the exact test in its place (the result is infinite exactly when the
+# same computation in a wider exponent range exceeds the largest number).
+RADIUS_OVERFLOW = {("ball_mul_1", 1)}
+
+
+def fails_on_suspicious(kernel, fmt):
+    """Whether a suspicious non-finite result of the kernel in the format fails its run."""
+    if kernel in INTERMEDIATE_OVERFLOW:
+        return False
+    return not (fmt.startswith("fp:") and (kernel, parse_fmt(fmt)[0]) in RADIUS_OVERFLOW)
+
 # --- The plan of the interpreter's enumerations ---------------------------------------------------
 #
 # By the roles of a kernel's inputs, as tests/CMakeLists.txt derives them (1 a limb, 2 a normalized
 # pair, r a radius, c a power of two, then _sum or _product; for a kernel of the extended domain,
 # after "ext_", with b1 or b2 for a ball): the quick tier's toy format, whose exponent range is
 # the base range here, and the formats beyond it. Every kernel also gets the formats of precision
-# min_precision and min_precision + 1 in the base range (precision 2 and 3 when min_precision is
-# 1: the oracle reads no format of precision 1). For the extended domain every format has the
+# min_precision and min_precision + 1 in the base range (precision 1, 2 and 3 when min_precision
+# is 1; PRECISION_ONE below has the exceptions). For the extended domain every format has the
 # shape of the IEEE-model statements, qmin + qmax = 3 - 2p, and the base range is the quick
 # tier's number of exponents, qmax - qmin + 1, in that shape. Formats below a kernel's
 # min_precision are left out. Sizes: `plan`, from the oracle's gen --exhaustive --total.
@@ -117,6 +132,20 @@ SHAPES = {
     "ext_b1_b1_product": ("fp:2:-3:2", ["fp:3:-4:1", "fp:2:-5:4", "fp:2:-7:6"]),
     "ext_b1_1_product": ("fp:3:-4:1", ["fp:4:-5:0", "fp:3:-6:3", "fp:2:-8:7"]),
     "ext_b2_1_product": ("fp:3:-3:0", ["fp:4:-4:-1", "fp:3:-4:1", "fp:2:-4:3"]),
+}
+
+# Precision 1 of the one-limb balls with two operands, in place of the base range. There u = 1/2
+# and the constants of the radius are large against a format of few exponents: the factor
+# up((1+u)^3) of a sum is 4, and its constant H is 8 eta. In the base range moved up until the
+# interpreter accepts the constants (fp:1:-2:2 for the sums, largest number 4, H = 2;
+# fp:1:-2:3 for the product) 3.8 % of the cases of a sum and 5.3 % of those of the product end
+# as a finite ball, and the oracle shows radii that overflow on small operands as suspicious
+# (10 of each sum, 423 of the product). With more exponents the sums give a finite ball in half
+# of their cases and nothing suspicious; the product in 46 %, and its suspicious results stay
+# (RADIUS_OVERFLOW above).
+PRECISION_ONE = {
+    "1_r_1_r_sum": "fp:1:-5:5",
+    "1_r_1_r_product": "fp:1:-6:5",
 }
 
 # The two-limb balls with two operands: every operand of their quick-tier format is far too many
@@ -310,7 +339,9 @@ def interp_plan(kernels, only=None):
             # Precision 1 too, which the oracle reads since commit 2bfe39d; and 2 and 3 then.
             p0 = max(pmin, 2)
             for p in ([1] if pmin == 1 else []) + [p0, p0 + 1]:
-                if extended:
+                if p == 1 and shape in PRECISION_ONE:
+                    entries.append((PRECISION_ONE[shape], [], None))
+                elif extended:
                     entries.append((ieee_shaped(p, qmax - qmin + 1), [], None))
                 else:
                     entries.append(("fp:%d:%d:%d" % (p, qmin, qmax), [], None))
@@ -932,7 +963,7 @@ class CheckTask(Task):
         self.files.append(inp)
         _, err = self.errlog("check-%s-%s-%d-%s" % (u.kernel, u.format, u.start, r["id"]))
         check = [PY, ORACLE, "check", "--json", self.tmp, "--quiet"]
-        if u.kernel not in INTERMEDIATE_OVERFLOW:
+        if fails_on_suspicious(u.kernel, u.format):
             check.append("--fail-on-suspicious")
         run = popen([r["path"]], stdin=inp, stdout=subprocess.PIPE, stderr=err)
         chk = popen(check, stdin=run.stdout, stdout=subprocess.DEVNULL, stderr=err, cwd=REPO)
@@ -954,7 +985,7 @@ class CheckTask(Task):
         examples = []
         if summary is not None:
             more, examples, _ = summary_problems(summary,
-                                                 u.kernel not in INTERMEDIATE_OVERFLOW)
+                                                 fails_on_suspicious(u.kernel, u.format))
             why += more
             if rc_c not in (0, 1) or (rc_c == 1 and not more):
                 why.append("check exited with %d" % rc_c)
@@ -993,7 +1024,7 @@ class InterpTask(Task):
         for r in e["restrict"]:
             gen += ["--restrict", r]
         check = [PY, ORACLE, "check", "--json", self.tmp, "--quiet"]
-        if e["kernel"] not in INTERMEDIATE_OVERFLOW:
+        if fails_on_suspicious(e["kernel"], e["format"]):
             check.append("--fail-on-suspicious")
         g = popen(gen, stdout=subprocess.PIPE, stderr=err, cwd=REPO)
         i = popen([PY, KAIRN_GEN, "interp"], stdin=g.stdout, stdout=subprocess.PIPE, stderr=err,
@@ -1019,7 +1050,8 @@ class InterpTask(Task):
             summary = None
             why.append("no summary from check (exit %d): %s" % (rc[2], ex))
         if summary is not None:
-            more, examples, _ = summary_problems(summary, e["kernel"] not in INTERMEDIATE_OVERFLOW)
+            more, examples, _ = summary_problems(summary,
+                                                 fails_on_suspicious(e["kernel"], e["format"]))
             why += more
             if rc[2] not in (0, 1) or (rc[2] == 1 and not more):
                 why.append("check exited with %d" % rc[2])
@@ -1037,7 +1069,7 @@ class InterpTask(Task):
 
 def reproduce_random(kernel, fmt, seed, runner):
     check = "python3 oracle/kairn-oracle check"
-    if kernel not in INTERMEDIATE_OVERFLOW:
+    if fails_on_suspicious(kernel, fmt):
         check += " --fail-on-suspicious"
     return ("python3 oracle/kairn-oracle gen %s %s --seed %s --start INDEX --count 1 | "
             "BUILD/tests/%s | %s   (BUILD: the build %s, runner %s; INDEX from the line's tag)"
@@ -1047,7 +1079,7 @@ def reproduce_random(kernel, fmt, seed, runner):
 def reproduce_exhaustive(e):
     restrict = "".join(" --restrict %s" % r for r in e["restrict"])
     check = "python3 oracle/kairn-oracle check"
-    if e["kernel"] not in INTERMEDIATE_OVERFLOW:
+    if fails_on_suspicious(e["kernel"], e["format"]):
         check += " --fail-on-suspicious"
     return ("python3 oracle/kairn-oracle gen %s %s --exhaustive%s --start INDEX --count 1 | "
             "python3 gen/kairn-gen interp | %s   (INDEX from the line's tag)"
@@ -1635,7 +1667,7 @@ def cmd_collect(a):
         ns = argparse.Namespace(kernel=kernel, format=fmt, exhaustive=False, restrict="",
                                 count=covered, seed=seed)
         problems = list(guards.problems(s, ns))
-        more, examples, _ = summary_problems(s, kernel not in INTERMEDIATE_OVERFLOW)
+        more, examples, _ = summary_problems(s, fails_on_suspicious(kernel, fmt))
         problems += more
         counts = key_counts(keys)
         p = keys[0]["stats"]["p"] if keys else None
@@ -1695,7 +1727,7 @@ def cmd_collect(a):
         ns = argparse.Namespace(kernel=e["kernel"], format=e["format"], exhaustive=True,
                                 restrict=",".join(e["restrict"]), count=None, seed=None)
         problems = list(guards.problems(s, ns))
-        more, examples, _ = summary_problems(s, e["kernel"] not in INTERMEDIATE_OVERFLOW)
+        more, examples, _ = summary_problems(s, fails_on_suspicious(e["kernel"], e["format"]))
         problems += more
         rec["covered"] = sum(b - a for a, b in ranges) if ranges else 0
         rec["complete"] = ranges == [[0, e["total"]]]

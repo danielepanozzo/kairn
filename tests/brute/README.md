@@ -28,8 +28,9 @@ Two parts:
   chunks of `--interp-chunk` (500 000) enumeration indices. `python3 tests/brute/brute.py plan`
   prints the plan with the size of every enumeration (`kairn-oracle gen --exhaustive --total`):
   for each kernel, the formats of precision `min_precision` and `min_precision + 1` in the quick
-  tier's exponent range (1, 2 and 3 when `min_precision` is 1; the runs of Milestone 1 below
-  started at 2, from a plan written before the oracle read formats of precision 1), the quick
+  tier's exponent range (1, 2 and 3 when `min_precision` is 1; the main runs of Milestone 1
+  below started at 2, from a plan written before the oracle read formats of precision 1, and a
+  supplementary run made the enumerations of precision 1), the quick
   tier's format one and two bits more precise, and other exponent
   ranges; for the two-limb balls with two operands, complete enumerations of formats with fewer
   exponents and larger restricted domains (`SHAPES` and `EXPLICIT` in `brute.py`). For the
@@ -44,7 +45,18 @@ Two parts:
   up; in the extended domain, two exponents more at a time), and the plan says so. The Ball
   formats are chosen so that a good share of each kernel's complete enumerations ends as a
   finite ball (the comment above `EXPLICIT` has the shares, estimated on samples; `report` prints
-  the counts).
+  the counts). At precision 1 the one-limb balls with two operands have a range of their own
+  (`PRECISION_ONE`: `fp:1:-5:5` for the sums, `fp:1:-6:5` for the product), because the constants
+  of the radius are large there (u = 1/2: the factor of a sum is 4, that of the product 8) and a
+  format of few exponents leaves a finite ball in a few percent of the cases.
+  `--fail-on-suspicious` as in the compiled part, and not for `ball_mul_1` at precision 1 either
+  (`RADIUS_OVERFLOW`): the oracle shows a non-finite result as suspicious when the operands and
+  the exact set are within a quarter of the largest number, and with a factor of 8 the radius of
+  such a set can be beyond the largest number in any exponent range. `widen.py KERNEL FORMAT`
+  is the exact test in its place: every operand of the format through the interpreter, in the
+  format and in one with more exponents above, where nothing overflows; the result must be
+  non-finite exactly when the wide one exceeds the format's largest number, and equal to it
+  otherwise.
   `--interp-bins N --interp-take LIST` splits the plan into N bins of about equal size and runs
   some of them, so that machines can share it; `--interp-match REGEX` keeps only the
   enumerations whose `KERNEL FORMAT` matches.
@@ -206,5 +218,28 @@ each collected as above with NAME `linux-x86-64-b4`, `macos-arm64-b4` and `windo
 `results/milestone1/brute/supplementary/`, and reported apart:
 
 ```sh
-python3 tests/brute/brute.py report results/milestone1/brute/supplementary/*.json
+python3 tests/brute/brute.py report results/milestone1/brute/supplementary/*-b4.json
+```
+
+### The supplementary run: precision 1
+
+The plan of the runs above started at precision 2. The 26 enumerations of precision 1 that the
+plan has since then were run on the Mac, from the repository itself at the commit that added
+`PRECISION_ONE`, `RADIUS_OVERFLOW` and `widen.py` to this driver (a few seconds):
+
+```sh
+python3 tests/brute/brute.py run --work WORK1 --budget 900 --jobs 8 --nice 10 \
+    --part interp --interp-match ' fp:1:' --seed m1r2p1-mac
+python3 tests/brute/brute.py collect --work WORK1 --name macos-arm64-p1 \
+    --out results/milestone1/brute/supplementary/macos-arm64-p1.json --jobs 8
+python3 tests/brute/brute.py report results/milestone1/brute/supplementary/*-p1.json
+```
+
+and, for the non-finite results of the one-limb balls with two operands and of the scaling,
+
+```sh
+python3 tests/brute/widen.py ball_add_1 fp:1:-5:5
+python3 tests/brute/widen.py ball_sub_1 fp:1:-5:5
+python3 tests/brute/widen.py ball_mul_1 fp:1:-6:5
+python3 tests/brute/widen.py ball_scale_1 fp:1:-3:2
 ```

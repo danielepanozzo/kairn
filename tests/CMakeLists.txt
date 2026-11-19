@@ -141,6 +141,18 @@ if(Python3_Interpreter_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/docs/tools/refere
   set_tests_properties(docs.reference.check docs.reference.test PROPERTIES LABELS docs)
 endif()
 
+# --- The brute-force driver ---------------------------------------------------------------------
+#
+# brute.driver.test: the own tests of tests/brute/brute.py (the plan of the enumerations, the
+# forms of the fix-ups, widen.py on one small format). Python only; under a second. The driver
+# itself runs by hand, never here (tests/brute/README.md).
+if(Python3_Interpreter_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/tests/brute/test_brute.py")
+  add_test(NAME brute.driver.test
+    COMMAND "${Python3_EXECUTABLE}" tests/brute/test_brute.py
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(brute.driver.test PROPERTIES LABELS python)
+endif()
+
 # --- The compiled runners -----------------------------------------------------------------------
 #
 # gen/tests/runner.cpp runs the generated scalar kernels on the line protocol, and
