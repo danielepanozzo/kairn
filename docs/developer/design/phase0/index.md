@@ -35,7 +35,8 @@ obstacle.
 
 Every number in this report comes from a run recorded under
 [`experiments/phase0/`](https://github.com/danielepanozzo/kairn/tree/main/experiments/phase0),
-on the M3 Max Mac, kirby, sonic and ci-windows.
+on four machines: an Apple M3 Max, two Linux machines with NVIDIA GPUs, and a Windows machine
+([list](plan.md#testing)).
 
 | Experiment | Question | Answer |
 |---|---|---|

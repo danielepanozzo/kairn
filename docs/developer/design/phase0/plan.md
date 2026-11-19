@@ -47,9 +47,9 @@ Benchmarks run separately.
 | Machine | Covers | Gap |
 |---|---|---|
 | Apple M3 Max | AArch64 NEON, Apple clang, GCC, Metal | — |
-| kirby (Threadripper 3995WX, GeForce RTX 3080 Ti) | x86-64 AVX2, GCC, Clang, CUDA on a consumer GPU | Shared and loaded (load average 117 during Phase 0) and its disk is 98% full: fine for GPU runs, poor for timing |
-| sonic (EPYC 7452, RTX A5000 and RTX 6000 Ada) | x86-64 AVX2, CUDA, containers (the Rocq toolchain ran here) | Workstation GPUs, same 64:1 `double` penalty as GeForce |
-| ci-windows (Intel, 20 threads) | MSVC 19.52 | No clang-cl, no ARM64 cross tools, no GPU |
+| Linux workstation (Threadripper 3995WX, GeForce RTX 3080 Ti) | x86-64 AVX2, GCC, Clang, CUDA on a consumer GPU | Shared and loaded (load average 117 during Phase 0) and its disk is 98% full: fine for GPU runs, poor for timing |
+| Linux server (EPYC 7452, RTX A5000 and RTX 6000 Ada) | x86-64 AVX2, CUDA, containers (the Rocq toolchain ran here) | Workstation GPUs, same 64:1 `double` penalty as GeForce |
+| Windows machine (Intel, 20 threads) | MSVC 19.52 | No clang-cl, no ARM64 cross tools, no GPU |
 | — | **AVX-512** | **None of the four machines has AVX-512.** The AVX-512 path can be tested for correctness under Intel SDE or on a hosted runner, but not benchmarked |
 
 See [D10](decisions.md#d10-test-infrastructure).

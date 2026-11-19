@@ -4,9 +4,9 @@ The measurements behind the [Phase 0 report](../../docs/developer/design/phase0/
 directory has its sources, a script that reruns it, and the output recorded on 2026-11-18. Nothing
 here is library code: `constexpr/proto.hpp` is a throwaway prototype.
 
-Machines: an Apple M3 Max (macOS 26, Apple clang 21, Homebrew GCC 16); `sonic` (EPYC 7452, GCC 13,
-Clang 18, CUDA 13.2, RTX A5000 and RTX 6000 Ada, Docker); `kirby` (Threadripper 3995WX, CUDA 13.2,
-GeForce RTX 3080 Ti); `ci-windows` (Windows 11, Visual Studio 2026 Build Tools, MSVC 19.52).
+Machines: an Apple M3 Max (macOS 26, Apple clang 21, Homebrew GCC 16); a Linux server (EPYC 7452, GCC 13,
+Clang 18, CUDA 13.2, RTX A5000 and RTX 6000 Ada, Docker); a Linux workstation (Threadripper 3995WX, CUDA 13.2,
+GeForce RTX 3080 Ti); a Windows machine (Windows 11, Visual Studio 2026 Build Tools, MSVC 19.52).
 
 | Directory | Question | Rerun |
 |---|---|---|
