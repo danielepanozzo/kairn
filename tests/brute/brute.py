@@ -1320,6 +1320,7 @@ def headline(entries):
 
 
 def cmd_collect(a):
+    confine(a.cpus, a.nice)
     work = os.path.abspath(a.work)
     guards = load_guards()
     merged_dir = os.path.join(work, "merged")
@@ -1707,8 +1708,13 @@ def cmd_report(a):
                 title = "`%s`%s (%s)" % (r["format"], (", restricted: " + ", ".join(
                     "`%s`" % x for x in r["restrict"])) if r["restrict"] else ", every operand",
                     r["why"].replace(", restricted", ""))
+                found = [f for f in d.get("findings", []) if f["part"] == "interp" and
+                         (f["kernel"], f["format"], f.get("restrict", [])) ==
+                         (r["kernel"], r["format"], r["restrict"])]
+                if found:
+                    title += " (**stopped by a finding**: %s)" % "; ".join(found[0]["why"])
                 rows.append((title, r.get("counts", {}), r.get("entries", []),
-                             r["guards"] == "ok" and r.get("complete"), False))
+                             r["guards"] == "ok" and r.get("complete") or bool(found), False))
         if not rows:
             continue
         w("")
@@ -1843,6 +1849,8 @@ def main(argv=None):
     c.add_argument("--name", required=True)
     c.add_argument("--out", required=True)
     c.add_argument("--jobs", type=int, default=4)
+    c.add_argument("--cpus", help="as for run")
+    c.add_argument("--nice", type=int, default=0, help="as for run")
     c.set_defaults(func=cmd_collect)
 
     t = sub.add_parser("report", help="Markdown tables from compact summaries")
