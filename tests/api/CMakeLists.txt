@@ -58,7 +58,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 elseif(_msvc_style)
   set(_api_contract /clang:-ffp-contract=fast)
 else()
-  set(_api_contract -ffp-contract=fast)
+  # At -O2, like the contraction runners of the cross-checks (tests/CMakeLists.txt says why).
+  set(_api_contract -ffp-contract=fast -O2)
 endif()
 _kairn_api_program(kairn-api-runner-contract-fast runner.cpp ${_api_contract})
 

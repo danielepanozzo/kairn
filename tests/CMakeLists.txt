@@ -169,6 +169,15 @@ else()
   set(_settings contract-off -ffp-contract=off contract-on -ffp-contract=on
     contract-fast -ffp-contract=fast)
 endif()
+# With GCC and Clang the runners of a contraction setting are built at -O2, whatever the build's
+# level: Apple clang 21 fuses the textbook product of the Phase 0 experiment at -O2 and leaves it
+# alone at -O3, which is what Release gives (docs/developer/testing.md, "Contraction"). The runner
+# with the build's flags keeps the build's level, so both levels are tested.
+if(_msvc_style)
+  set(_contraction_level "")
+else()
+  set(_contraction_level -O2)
+endif()
 set(_variants "" "")    # name, option: the runner with the build's flags first
 list(APPEND _variants ${_settings})
 list(LENGTH _variants _n)
@@ -252,6 +261,9 @@ foreach(_kind scalar packed)
     target_include_directories(${_target} PRIVATE "${PROJECT_SOURCE_DIR}/gen/tests")
     target_link_libraries(${_target} PRIVATE kairn::kairn kairn::fma)
     target_compile_options(${_target} PRIVATE ${_warnings} ${_isa_option} ${_option})
+    if(NOT _variant STREQUAL "")
+      target_compile_options(${_target} PRIVATE ${_contraction_level})
+    endif()
     list(APPEND _runners ${_target})
     list(APPEND _runner_labels ${_label})
   endforeach()

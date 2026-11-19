@@ -287,8 +287,10 @@ Compilers contract only when they optimize, which is why a build of Kairn on its
 `Release`. These tests can tell: a copy of `mul_2_2` with the textbook product `p = a * b` in place
 of the generated `fma(a, b, 0)`, compiled by Apple clang 21 at `-O2`, passes with
 `-ffp-contract=off` and `on` and fails 14 148 of 20 000 binary64 cases with `=fast` (1 429 of the
-first 2 000). At `-O3`, which is what `Release` gives GCC and Clang and so what the cross-checks
-are built with, the same compiler leaves the copy as it is under every setting, and it passes.
+first 2 000). At `-O3`, which is what `Release` gives GCC and Clang, the same compiler leaves
+the copy as it is under every setting, and it passes. So with GCC and Clang the runners of a
+contraction setting are built at `-O2` whatever the build's level, and the runner with the
+build's flags keeps the build's level: both levels are tested.
 
 ## Hardware FMA
 
@@ -383,7 +385,7 @@ change of each kernel's generated scalar code was planted in turn (`tests/kernel
 about 20 minutes on the Mac: an operator turned, an operand dropped, an FMA made a product or
 given a zero addend, a comparison loosened, a constant shortened, a selection swapped: 1 052
 changes of the 63 kernels, in their `double` and `float` code alike), built into three scalar
-runners (the build's flags, `-ffp-contract=off` and `=fast`, at `-O3`) and the public
+runners (the build's flags, `-ffp-contract=off` and `=fast`, all at `-O3` as they were then built) and the public
 interface's runner, and put through the cross-checks and the public interface's tests of its
 kernel with each tier's samples. The full tier caught 863; the quick tier 861 of them, and nothing
 the full tier missed. The two it misses fail on one or two cases of the full tier's 20 000, the
