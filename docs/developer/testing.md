@@ -8,15 +8,15 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 | Tier | What | Where it runs | Time |
 |---|---|---|---|
-| Quick | `ctest --test-dir build`: every kernel through every compiled runner on a small sample, every public operation on a small sample, the examples, the negative controls, the consumer checks, and the fast parts of the generator's and the oracle's own tests ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | 44 seconds to two minutes with `--parallel 4` ([Time](#time)) |
-| Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, the interpreter's enumerations of toy formats, and the longest parts of the generator's and the oracle's own tests ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | five to eight minutes with `--parallel 4` |
+| Quick | `ctest --test-dir build`: every kernel through every compiled runner on a small sample, every public operation on a small sample, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and the fast parts of the generator's and the oracle's own tests ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | 44 seconds to two minutes with `--parallel 4` ([Time](#time)) |
+| Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the longest parts of the generator's and the oracle's own tests ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | five to eight minutes with `--parallel 4` |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI, and without its C++ tests on Windows | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
 | Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases, both forms of the scalar fix-ups), and the interpreter on every operand of larger toy formats, with the same guards and a time budget | by hand, on the test machines, never in CI (`tests/brute/README.md`); results in [Brute force, Milestone 1](results/brute-milestone1.md) | for the final code of Milestone 1, 3.5 hours on the Linux machine and 3 hours each on the Mac and the Windows machine |
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
-which before the first test and after the summary (`Kairn tests: the quick tier, 277 tests. The
-full tier, 291 tests more: ctest --test-dir .../tests/full`); every test of the quick tier also
+which before the first test and after the summary (`Kairn tests: the quick tier, 279 tests. The
+full tier, 293 tests more: ctest --test-dir .../tests/full`); every test of the quick tier also
 has the label `quick`, and every test of the full tier the label `full`. Both are registered by
 the same configuration: the file `CTestCustom.cmake` that configuring writes at the top of the
 build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`), so that
@@ -41,6 +41,9 @@ The tests that `ctest` runs in the build directory, by name:
 | `docs.reference.check`, `docs.reference.test` | The reference pages of the site are what `docs/tools/reference.py` writes, and that script's own tests ([Documentation](documentation.md#reference-pages)). |
 | `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum. |
 | `crosscheck.guards` | The cross-checks' guards fail the runs they are there to fail (`tests/test_crosscheck_guards.py`). |
+| `objcode.check` | Every kernel compiled with the build's compiler in five configurations of its flag matrix, scalar and packed, for `double` and `float`: the fused multiply-adds and the plain multiplications of its object code are what `gen/objcode.json` says the IR asks for ([below](#object-code)). |
+| `objcode.controls` | The textbook `a * b + c` fails that check in exactly the configurations where its program sees the compiler fuse it, and in at least one; counts changed on purpose fail it. |
+| `objcode.test` | The checker's own tests, on stored disassemblies of every format it reads (Python only). |
 | `consume.*` | A CMake project that uses Kairn through `add_subdirectory`, and one through `find_package` after `cmake --install`, build and run a kernel. |
 
 The tests of the public interface (`tests/api/`, label `api`):
@@ -66,6 +69,7 @@ test it extends, with `full.` in front:
 |---|---|
 | `full.crosscheck.compiled.K.F` | `crosscheck.compiled.K.F` on 20 000 cases instead of 6 000: the cases of the same seed from case 0, so that the quick tier's are the first 6 000 of these. |
 | `full.api.oracle.K.F` | `api.oracle.K.F` on 10 000 cases instead of 2 000, the quick tier's among them. |
+| `full.objcode.check`, `full.objcode.controls` | `objcode.check` and `objcode.controls` in every configuration of the compiler's flag matrix: 24 for GCC, Clang and Apple clang and for clang-cl, 9 for MSVC. |
 | `full.crosscheck.interp.K` | Kernel K run by the generator's interpreter on **every** operand combination of a toy format. |
 | `full.crosscheck.interp-restricted.K` | Kernel K run by the interpreter on every operand of a **restricted** domain of a toy format, for the kernels whose whole enumeration is too long. |
 | `full.crosscheck.interp-sampled.K` | The same kernels on 20 000 random cases of the whole toy format, from every stratum. |
@@ -82,7 +86,7 @@ machine's arithmetic as well (run on every operating system, inside the generato
 
 Labels select groups in either tier: `-L crosscheck`, `-L compiled`, `-L interp` (with
 `-L restricted` and `-L sampled` among them), `-L api` (with `-L oracle`, `-L reject` and
-`-L boundary` among them), `-L python`, `-L generator`; `-R` selects by name, for example
+`-L boundary` among them), `-L objcode`, `-L python`, `-L generator`; `-R` selects by name, for example
 `ctest --test-dir build -R mul_2_2` for the quick tier's tests of `mul_2_2`.
 
 ## Cross-checks
@@ -286,14 +290,180 @@ and packed, still satisfy their claims under each setting that matters to the co
 | MSVC | `/fp:precise`, `/fp:contract`, `/fp:strict` |
 | clang-cl | `/fp:strict` (off), `/fp:precise` and `/fp:contract` (on), `/clang:-ffp-contract=fast` |
 
-Compilers contract only when they optimize, which is why a build of Kairn on its own defaults to
-`Release`. These tests can tell: a copy of `mul_2_2` with the textbook product `p = a * b` in place
+Compilers contract across statements only when they optimize, which is why a build of Kairn on
+its own defaults to `Release` (within one expression, Clang and GCC 16 under `-ffp-contract=on` fuse
+at `-O0` too: [Object code](#object-code); the kernels have one operation per statement). These tests can tell: a copy of `mul_2_2` with the textbook product `p = a * b` in place
 of the generated `fma(a, b, 0)`, compiled by Apple clang 21 at `-O2`, passes with
 `-ffp-contract=off` and `on` and fails 14 148 of 20 000 binary64 cases with `=fast` (1 429 of the
 first 2 000). At `-O3`, which is what `Release` gives GCC and Clang, the same compiler leaves
 the copy as it is under every setting, and it passes. So with GCC and Clang the runners of a
 contraction setting are built at `-O2` whatever the build's level, and the runner with the
 build's flags keeps the build's level: both levels are tested.
+
+## Object code
+
+The tests above judge what the compiled kernels compute. This one reads what the compiler
+emitted: rules R1 and R2 ([Architecture](architecture.md#the-kernel-ir)) write every product of a
+kernel as an FMA, so that a compiler that contracts finds nothing to contract, and the check
+verifies that in the object code of every kernel, on the flag matrix of each compiler of the CI.
+It is criterion 4 of [When an operation is done](architecture.md#when-an-operation-is-done).
+
+`tests/objcode/objcode.py` compiles `tests/objcode/unit.cpp`, which has one function per kernel and
+limb type, externally visible and never inlined, that loads the operands, calls the kernel and
+stores its results: scalar (`kairn/gen/scalar.hpp`) and packed (`avx2.hpp` on x86-64, `neon.hpp`
+on AArch64). It disassembles the object file and counts, in each of these functions and in every
+function of the object that it calls or jumps to, once per call site, two kinds of instructions:
+fused multiply-adds (x86 `vfmadd`, `vfmsub`, `vfnmadd`, `vfnmsub` in all their forms; AArch64
+`fmadd`, `fmsub`, `fnmadd`, `fnmsub`, `fmla`, `fmls`) and plain floating-point multiplications
+(`mulsd`, `mulss`, `mulpd`, `mulps` and their `v` forms; `fmul`, `fnmul`, `fmulx`). A part of a
+function that GCC moves to a section of its own (`F.cold`) is counted with the function. It
+compares the two numbers with `gen/objcode.json`, which the generator writes from the IR the code
+and the proofs are printed from (`gen/README.md`, "The counts of the object-code check"), for the
+form the unit was compiled in: scalar with the fix-up inline, scalar with the fix-up a function of
+its own, or packed.
+
+### The rule
+
+For each kernel, form and limb type:
+
+- **Fused multiply-adds**: one per FMA node of the flattened IR (`fma`, `fms`, `fnma`, `prod`),
+  with identical nodes of one function (the same operation on the same operands) each compiled or
+  merged into one. The generator gives both numbers, `fma` and `fma_distinct`, and they differ in
+  three kernels only: the fix-ups of `mul_2_1_full`, `mul_2_2_full` and `mul_pow2_2_full` compute
+  the core's leading product again, `t = prod(x0, y0)`. A compiler that eliminates common
+  subexpressions computes it once. Every compiler measured does so when it optimizes, in the
+  inline form and in packed code, except MSVC under `/fp:strict` for the scalar code; none does
+  without optimization; and in the form where the fix-up is a function of its own, which receives
+  `x0` and `y0` as parameters, none can.
+- **Plain multiplications**: one per product with $+\infty$ of a fix-up (`times_inf`, which R1
+  allows: exact, and only compared or selected), in the nine full kernels that have one. In
+  addition, in the scalar forms of `two_prod`, the seven products of Dekker's product, in the
+  branch `if (__builtin_is_constant_evaluated())` that only constant evaluation takes, where a
+  compiler emits that branch: MSVC at `/Od` compiles the test as that of a register which is always
+  zero, and the branch after it. No execution reaches it.
+- **Nothing else**: every kernel has its function and every function of the unit its counts; it
+  calls nothing outside the object but the stack protector's routines and Windows' stack probe,
+  which do no arithmetic (Ubuntu's GCC protects functions by default); there is no indirect call;
+  and no kernel has a declared contractable multiply-add (`muladd`), for which the check has no
+  rule yet.
+
+So the static count does not always equal the number of FMA nodes, and a kernel does not always
+have no plain multiplication: what holds is the rule above, which allows these two differences
+and no other. On every compiler and flag set measured, no other kernel has a plain
+multiplication, in scalar or in packed code: the scalings by a power of two (`mul_pow2_2`) and the
+products by the constants of the radii are FMAs, and the constructors multiply nothing.
+
+A failure says what was found, function by function. One fused instruction more, with one
+multiplication fewer or none, is a contraction; a multiplication more and an FMA fewer is an FMA
+computed as a product and a sum, or an opaque product folded back into a plain one (as
+`-fno-signed-zeros` with contraction does with Apple clang); a call outside the object, to a
+library's `fma` for example, is arithmetic that the check cannot see.
+
+What it does not check: the order of the operations and what they compute (the cross-checks and
+the generator's comparison with the interpreter do); instructions of other kinds; a kernel inlined
+into a caller, which a compiler may optimize differently (the unit's functions are not inlined; R1
+and R2 are what make that harmless for contraction,
+[Environment](design/phase0/environment.md#the-self-test)); the public headers' operators, which
+call these kernels; nvcc, Metal and AVX-512, which have no backend yet.
+
+### The flag matrix
+
+| Compiler | Full tier: every combination of | Quick tier |
+|---|---|---|
+| GCC, Clang, Apple clang | `-O0`, `-O1`, `-O2`, `-O3`; `-ffp-contract=off`, `on`, `fast`; without and with `-frounding-math`: 24 | `-O0 -ffp-contract=fast`; `-O2` with each contraction setting; `-O3 -ffp-contract=fast -frounding-math` |
+| MSVC | `/Od`, `/O1`, `/O2`; `/fp:precise`, `/fp:contract`, `/fp:strict`: 9 | `/Od /fp:precise`; `/O2` with each setting |
+| clang-cl | `/Od`, `/O1`, `/O2`; `/fp:strict`, `/fp:precise`, `/fp:contract`, `/clang:-ffp-contract=fast`; without and with `/clang:-frounding-math`: 24 | `/Od /fp:precise`; `/O2` with `/fp:strict`, `/fp:precise` and `/clang:-ffp-contract=fast`; `/O2 /fp:contract /clang:-frounding-math` |
+
+Each configuration is compiled once with the compiler's own form of the scalar fix-ups and with
+the packed kernels, and once more with the other form, scalar only; in the quick tier only the
+configuration with contraction forced on at `/O2` or `-O2` has the second compilation. The options
+come after those of `CMAKE_CXX_FLAGS` and `kairn::fma`'s, as in `api.k1.zero_cost`, and the packed
+kernels get the backend's option (`-mavx2 -mfma`, `/arch:AVX2`). Each object file and its
+disassembly stay in the test's work directory (`tests/objcode/` of the build tree).
+
+The disassembler is found as follows, and the check fails without one and says where it looked:
+
+| Compiler | Disassembler | Object files |
+|---|---|---|
+| GCC and Clang on Linux | `objdump` of GNU binutils, `-d -r` | ELF |
+| Apple clang | `objdump` of the Xcode tools, which is LLVM's, `-d -r --show-all-symbols` | Mach-O |
+| MSVC | `dumpbin /disasm` next to `cl.exe`, else on the PATH | COFF |
+| clang-cl | `llvm-objdump` next to `clang-cl.exe`, else on the PATH | COFF |
+
+The hosted runners have each one: binutils on the Ubuntu images, the Xcode tools on macOS, the
+Visual Studio tools and LLVM on Windows. The checker's own tests (`objcode.test`) read stored
+excerpts of each format (`tests/objcode/samples/`: GNU objdump for x86-64 and AArch64, LLVM objdump
+for Mach-O and for COFF, dumpbin), so the reading of every format is tested on every platform.
+
+### The controls
+
+`objcode.controls` shows the check catching what it is for. `tests/objcode/fixture.cpp` computes
+the textbook `a * b + c` in functions of its own: as two statements (`p = a * b; s = p + c`) and as
+one expression, for `double` and `float`, and as two statements with the packed backend's
+intrinsics. The check judges each against its source, one product and one sum, so it fails exactly
+where the compiler fused it; the fixture's program, run on operands whose product is not a number
+of the format, says independently where the compiler fused it. The test requires the two to agree
+in every configuration of the tier, and at least one configuration to fuse. It also judges the
+unit against counts changed on purpose (one FMA more for `mul_2_2`, one multiplication fewer for
+`add_2_2_full`) and requires exactly those two kernels to fail.
+
+Where each compiler fused the textbook product in the configurations of the full tier, measured on
+2026-11-19; it fused nowhere else, and the check failed on exactly these:
+
+| Compiler | Where it fused | Configurations |
+|---|---|---|
+| GCC 13, x86-64 and AArch64 | both forms with `-ffp-contract=fast` at `-O2` and `-O3`, also with `-frounding-math` (GCC 13 takes `on` as `off`) | 4 of 24 |
+| GCC 16, AArch64 (the Mac) | the one expression with `-ffp-contract=on` at every level, `-O0` included; both forms with `fast` at `-O2` and `-O3` | 12 of 24 |
+| Clang 18, x86-64 | the one expression with `on` at every level, `-O0` included; both forms with `fast` from `-O1`, but not with `-frounding-math` | 11 of 24 |
+| Clang 18, AArch64; Apple clang 21 | the one expression with `on` at every level; both forms with `fast` from `-O1`, with `-frounding-math` too | 14 of 24 |
+| MSVC 19.52, x64 | both forms with `/fp:contract` at `/O1` and `/O2` | 2 of 9 |
+
+GCC 13 and Clang 18 on AArch64 were run as the cross compilers of Ubuntu 24.04 (the versions of the
+hosted arm64 runner), with binutils' AArch64 `objdump` and the fixture's program under QEMU's user
+mode (`--emulator`). clang-cl has not been run: the Windows machine has none.
+
+### The kernels, as measured
+
+On 2026-11-19 the full tier's check passed with GCC 13 and Clang 18 on x86-64 and on AArch64 (as
+the cross compilers above), with Apple clang 21 and GCC 16 on the Mac, and with MSVC 19.52 on x64: every configuration of the
+matrix, both forms of the fix-ups, 252 functions per compilation with the packed kernels and 126
+without. The fused instructions were every FMA node without optimization, and with optimization
+the identical ones merged, but for MSVC under `/fp:strict`, which merges them in packed code only;
+the branch of constant evaluation appeared with MSVC at `/Od` only. At `-O2` and `-O3` GCC 13 on
+x86-64 put the call of the fix-up function in a part of its own (`F.cold`), and without
+optimization every compiler called helpers (`std::bit_cast`, `std::numeric_limits<T>::infinity()`, and with MSVC
+`fma_rn` and the kernel itself), all counted through the calls. No kernel called a library's
+`fma`: with `-mfma`, `/arch:AVX2` and on AArch64 the FMA is an instruction at every level, `-O0`
+and `/Od` included.
+
+The check takes seconds, on the machines of [Time](#time), with `--parallel 4`:
+
+| Where | `objcode.check`, `objcode.controls` | The quick tier, in all | `full.objcode.check`, `full.objcode.controls` |
+|---|---|---|---|
+| Mac, Apple clang 21 | 1.2 s, 1.2 s | 50 s | 4.2 s, 4.4 s |
+| Linux, 16 threads, GCC 13 | 4.3 s, 2.8 s | 78 s | 14.2 s, 4.9 s |
+| Linux, 16 threads, Clang 18 | 4.2 s, 2.6 s | 76 s | 14.4 s, 4.9 s |
+| Linux, 4 threads, GCC 13 | 4.3 s, 2.8 s | | 14.1 s, 5.0 s |
+| Windows, 8 logical processors, MSVC | 2.0 s, 1.8 s | 88 s | 4.0 s, 1.7 s |
+
+In these first runs ctest, which had no record of their times yet, started the two tests of the
+quick tier near its end, so that they added up to their own length to it: the quick tier took 50,
+78 and 76 seconds on the Mac and the Linux machine, against 44 to 47 and 70 to 75 before the check,
+and 88 on the Windows machine, against 85 to 113. On a hosted runner, four times as slow by the
+cautious rule of [Time](#time), the two would take about 17 and 11 seconds, and those of the full
+tier about a minute and 20 seconds.
+
+### By hand
+
+```sh
+python3 tests/objcode/objcode.py --cxx c++ --workdir objcode            # the quick tier's configurations
+python3 tests/objcode/objcode.py --cxx g++ --flags=-mfma --packed-flags="-mavx2 -mfma" \
+    --tier full --jobs 8 --workdir objcode                              # the whole matrix
+python3 tests/objcode/objcode.py --cxx cl --flags=/arch:AVX2 --controls --workdir objcode
+```
+
+`--disassembler` names another disassembler, and `--emulator` the command that runs the controls'
+program for a cross compiler.
 
 ## Hardware FMA
 
@@ -544,7 +714,7 @@ per branch at a time (a new push cancels the run in progress); their jobs all st
 | Workflow | Jobs |
 |---|---|
 | `build.yml`, "Build and test" | The quick tier: configure, build and `ctest` with Ninja, `Release` and warnings as errors, on Linux x86-64 with GCC and with Clang (packed: AVX2), Linux arm64 with GCC and with Clang (NEON), macOS arm64 with Apple clang (NEON), and Windows x64 with MSVC and with clang-cl (AVX2) |
-| `full.yml`, "Full tier" | The full tier's tests that depend on the compiler (`ctest --test-dir build/tests/full` with `-LE` of the labels `python` and `generator`: the compiled runners' cross-checks and the public interface on more cases), on the same seven platforms and compilers, configured and built as in `build.yml`; and those in exact arithmetic (`-L python`), once, on Linux, configured but not built, in two jobs: the interpreter's enumerations (`-L interp`) and the oracle's (`-L python -LE interp`) |
+| `full.yml`, "Full tier" | The full tier's tests that depend on the compiler (`ctest --test-dir build/tests/full` with `-LE` of the labels `python` and `generator`: the compiled runners' cross-checks and the public interface on more cases, and the object code on the whole flag matrix), on the same seven platforms and compilers, configured and built as in `build.yml`; and those in exact arithmetic (`-L python`), once, on Linux, configured but not built, in two jobs: the interpreter's enumerations (`-L interp`) and the oracle's (`-L python -LE interp`) |
 | `generator.yml`, "Generator's full suite" | `python gen/kairn-gen test --cxx CXX`, C++ included, on Linux x86-64 and Linux arm64 with GCC and with Clang, and macOS arm64 with Apple clang; and `--no-cxx` on Windows x64. It contains the full tier's `full.kairn-gen.test` (label `generator`), which `full.yml` leaves out |
 | `proofs.yml`, "Proofs" | `make -C proofs` in the Rocq team's image `rocq/rocq-prover:9.0` (Rocq 9.0.1), with Flocq 4.2.2 from opam, cached between runs |
 | `checks.yml`, "Generated files and documentation" | `gen/kairn-gen check`, `docs/tools/reference.py --check` and its tests, `mkdocs build --strict`, `docs/tools/check_links.py`; the built site is kept as the run's artifact `site` |

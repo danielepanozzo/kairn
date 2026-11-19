@@ -36,6 +36,7 @@ derived from it or checked against it:
 |---|---|---|
 | `gen/` | The generator: Python, standard library only. `gen/kernels/` holds the kernel descriptions. | nothing else in the repository |
 | `gen/claims.json` | Generated and committed: what every kernel claims. | — |
+| `gen/objcode.json` | Generated and committed: the fused multiply-adds and plain multiplications that each kernel's code asks for, for the object-code check. | — |
 | `include/kairn/gen/` | Generated and committed C++ kernels. | — |
 | `include/kairn/` | The hand-written public headers. | `include/kairn/gen/` |
 | `proofs/gen/` | Generated Rocq files: model, statements, audit. | Flocq |
@@ -58,6 +59,7 @@ Entry points, so that CMake, CI and people call the same thing:
 | `python3 oracle/kairn-oracle gen ...` | Writes request lines (below). |
 | `python3 oracle/kairn-oracle check ...` | Reads completed lines, prints a verdict and statistics, exits non-zero on any violation. |
 | `python3 oracle/kairn-oracle selftest` | The oracle's own tests, including injected errors that it must catch. |
+| `python3 tests/objcode/objcode.py --cxx CXX --workdir DIR` | The object-code check with one compiler (`--tier full` for its whole flag matrix, `--controls` for its negative controls). |
 | `make -C proofs` | Builds all proofs and runs the axiom audit. |
 
 Building the library as a client never needs Python or Rocq. Running Kairn's own tests needs
@@ -108,7 +110,12 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
 1. Single assignment; every use after its definition; no unused value.
 2. **R1.** The result of `prod` is the only product-like value that may be an operand of `add`,
    `sub`, or the addend of an FMA. There is no plain multiplication in the run-time IR, except
-   `times_inf`, which is exact and whose result is only compared or selected.
+   `times_inf`, which is exact and whose result is only compared or selected. The object-code
+   check (`tests/objcode/`, [Testing](testing.md#object-code)) verifies the consequence in the
+   compiled code of every kernel, on the flag matrix of each compiler: one fused multiply-add per
+   FMA node (identical nodes of one function may be merged into one), and no plain multiplication
+   but one per `times_inf` and, where a compiler emits the branch that only constant evaluation
+   takes, the products of that branch.
 3. **R2.** No kernel output is an expression the compiler could fuse into the caller: outputs are
    results of `add`, `sub`, `fma`-family, `prod`, `select`, `neg`, `abs`, `succ`, `pred`, never of
    `muladd`.
@@ -574,5 +581,10 @@ as passed), then every `ensures` entry, in exact arithmetic.
 2. Rocq accepts the proof of the generated statement, and the audit passes.
 3. The generated code passes the quick and brute-force tiers against the oracle on every
    supported platform.
-4. Its compiled code contains the expected number of fused instructions across the flag matrix.
+4. Its compiled code contains the expected number of fused instructions across the flag matrix:
+   the object-code check (`tests/objcode/objcode.py`, tests `objcode.*` and `full.objcode.*`)
+   compares the fused multiply-adds and the plain multiplications of every kernel, scalar and
+   packed, with what `gen/objcode.json` says its IR asks for, under every setting of contraction,
+   optimization level and `-frounding-math` of each compiler of the CI
+   ([Testing](testing.md#object-code)).
 5. Its reference page is generated from the claims.
