@@ -2,9 +2,9 @@
 # bounds of the center magnitudes, plus U |cz| + V from the claims of mul_2_2.
 kernel:        ball_mul_2
 input:         cx = cx0 cx1
-input:         rx
+input:         stored rx
 input:         cy = cy0 cy1
-input:         ry
+input:         stored ry
 output:        cz = cz0 cz1
 output:        rz
 value:         cx*cy
@@ -19,6 +19,7 @@ theorem:       proofs/theories/Ball.v ball_mul_2_correct
 source:        midpoint-radius product (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
 (cz0, cz1) = mul_2_2(cx0, cx1, cy0, cy1)

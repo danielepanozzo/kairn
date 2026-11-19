@@ -1,0 +1,28 @@
+# x * y with IEEE-like results: mul_2_2, then the fix-up.
+# The fix-up is that of milestone1.md, "IEEE-like results".
+kernel:        mul_2_2_full
+input:         x = x0 x1
+input:         y = y0 y1
+output:        w = w0 w1
+value:         x*y
+requires:      canonical x
+requires:      canonical y
+ensures:       extends w core=mul_2_2 lead=mul finite_when=abs_le(x*y,-1)
+min_precision: 4
+source:        mul_2_2, then the fix-up of IEEE-like results (Milestone 1 listing)
+license:       core: as mul_2_2; fix-up: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the fix-up selects, after an explicit test that z0 is finite (f), between the core's result and the canonical form of t; F1 to F5 of milestone1.md, "IEEE-like results", state what comes out
+
+(z0, z1) = mul_2_2(x0, x1, y0, y1)
+t        = prod(x0, y0)
+a        = abs(z0)
+f        = lt(a, const inf)
+r0       = prod(t, const inf)
+n        = eq(r0, r0)
+r1       = select(n, 0, r0)
+w0       = select(f, z0, r0)
+w1       = select(f, z1, r1)

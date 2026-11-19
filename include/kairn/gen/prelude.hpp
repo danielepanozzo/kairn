@@ -9,6 +9,7 @@
 #endif
 #include <bit>
 #include <cstdint>
+#include <limits>
 
 // Kernels of at most two limbs are a few dozen flops and must disappear into the caller.
 #if defined(_MSC_VER) && !defined(__clang__)

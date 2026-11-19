@@ -1,0 +1,29 @@
+# A ball from a one-limb center and a radius, both from the program and both guarded (rule R3):
+# ball_make_2 with the center guarded as well, here c0 = guard(c), and no k1 (milestone1.md,
+# "Values that enter from the program").
+kernel:        ball_make_1
+input:         c
+input:         r
+output:        cw
+output:        rw
+ensures:       makes_ball cw rw from=c,r
+min_precision: 1
+source:        constructors (Milestone 1 listing)
+license:       algorithm: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   every output is selected after explicit tests of the center and the radius (e, f); makes_ball states what comes out
+
+g   = guard(r)
+c0  = guard(c)
+e   = le(0, g)
+a   = abs(c0)
+f1  = lt(a, const inf)
+f2  = lt(g, const inf)
+f   = and(f1, f2)
+k0  = select(f, c0, 0)
+s   = select(f, g, const inf)
+cw  = select(e, k0, const nan)
+rw  = select(e, s, const nan)

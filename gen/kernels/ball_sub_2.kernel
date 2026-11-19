@@ -1,9 +1,9 @@
 # The difference of two balls with 2-limb centers: ball_add_2 with the second center negated.
 kernel:        ball_sub_2
 input:         cx = cx0 cx1
-input:         rx
+input:         stored rx
 input:         cy = cy0 cy1
-input:         ry
+input:         stored ry
 output:        cz = cz0 cz1
 output:        rz
 value:         cx-cy
@@ -18,6 +18,7 @@ theorem:       proofs/theories/Ball.v ball_sub_2_correct
 source:        midpoint-radius difference (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
 (n0, n1)        = neg_2(cy0, cy1)

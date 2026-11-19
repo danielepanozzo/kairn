@@ -1,0 +1,31 @@
+# The scaling by a of a ball with one-limb center, with the special states of a ball:
+# ball_scale_1, then the fix-up of milestone1.md, "Ball kernels".
+# One ball operand, so q is rx itself; |cz0| is named az here, since a is the operand.
+kernel:        ball_scale_1_full
+input:         stored cx
+input:         stored rx
+input:         a
+output:        cw
+output:        rw
+value:         cx*a
+requires:      ball cx rx
+ensures:       encloses cw rw x*a x=cx,rx
+min_precision: 2
+source:        ball_scale_1, then the fix-up of the special states of a ball (Milestone 1 listing)
+license:       core: as ball_scale_1; fix-up: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the fix-up selects, after explicit tests that the center and the radius are finite (f) and that no operand is empty (e); B1 to B4 of milestone1.md, "Ball kernels", state what comes out
+
+(cz, rz) = ball_scale_1(cx, rx, a)
+e        = eq(rx, rx)
+az       = abs(cz)
+f1       = lt(az, const inf)
+f2       = lt(rz, const inf)
+f        = and(f1, f2)
+c0       = select(f, cz, 0)
+r        = select(f, rz, const inf)
+cw       = select(e, c0, rx)
+rw       = select(e, r, rx)

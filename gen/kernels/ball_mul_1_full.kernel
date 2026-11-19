@@ -1,0 +1,33 @@
+# The product of balls with one-limb centers, with the special states of a ball:
+# ball_mul_1, then the fix-up of milestone1.md, "Ball kernels".
+kernel:        ball_mul_1_full
+input:         stored cx
+input:         stored rx
+input:         stored cy
+input:         stored ry
+output:        cw
+output:        rw
+value:         cx*cy
+requires:      ball cx rx
+requires:      ball cy ry
+ensures:       encloses cw rw x*y x=cx,rx y=cy,ry
+min_precision: 2
+source:        ball_mul_1, then the fix-up of the special states of a ball (Milestone 1 listing)
+license:       core: as ball_mul_1; fix-up: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the fix-up selects, after explicit tests that the center and the radius are finite (f) and that no operand is empty (e); B1 to B4 of milestone1.md, "Ball kernels", state what comes out
+
+(cz, rz) = ball_mul_1(cx, rx, cy, ry)
+q        = add(rx, ry)
+e        = eq(q, q)
+a        = abs(cz)
+f1       = lt(a, const inf)
+f2       = lt(rz, const inf)
+f        = and(f1, f2)
+c0       = select(f, cz, 0)
+r        = select(f, rz, const inf)
+cw       = select(e, c0, q)
+rw       = select(e, r, q)

@@ -12,6 +12,8 @@ theorem:       proofs/theories/Add21.v add_2_1_correct
 source:        JMP17 Alg. 4 (DWPlusFP); bound from MR22
 license:       algorithm: published; proof: MIT
 status:        proved
+entry:         yes
+guard_pending: a milestone1.md guards a in the first line (g = guard(a)), which changes the formal model of this proved kernel: the guard lands with its proof. Until then the public headers guard a before the call
 
 (sh, sl) = two_sum(x0, a)
 v        = add(x1, sl)

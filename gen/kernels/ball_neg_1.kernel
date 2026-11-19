@@ -1,7 +1,7 @@
 # The negation of a ball with a one-limb center: exact, the radius unchanged.
 kernel:        ball_neg_1
-input:         cx
-input:         rx
+input:         stored cx
+input:         stored rx
 output:        cz
 output:        rz
 value:         -cx
@@ -12,6 +12,7 @@ theorem:       proofs/theories/Ball.v ball_neg_1_correct
 source:        midpoint-radius negation (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
 cz = neg(cx)
