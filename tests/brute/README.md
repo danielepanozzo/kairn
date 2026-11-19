@@ -28,8 +28,9 @@ Two parts:
   chunks of `--interp-chunk` (500 000) enumeration indices. `python3 tests/brute/brute.py plan`
   prints the plan with the size of every enumeration (`kairn-oracle gen --exhaustive --total`):
   for each kernel, the formats of precision `min_precision` and `min_precision + 1` in the quick
-  tier's exponent range (2 and 3 when `min_precision` is 1: the oracle reads no format of
-  precision 1), the quick tier's format one and two bits more precise, and other exponent
+  tier's exponent range (1, 2 and 3 when `min_precision` is 1; the runs of Milestone 1 below
+  started at 2, from a plan written before the oracle read formats of precision 1), the quick
+  tier's format one and two bits more precise, and other exponent
   ranges; for the two-limb balls with two operands, complete enumerations of formats with fewer
   exponents and larger restricted domains (`SHAPES` and `EXPLICIT` in `brute.py`). For the
   kernels of the extended domain (the non-finite layer) every format has the shape of the
@@ -45,7 +46,8 @@ Two parts:
   finite ball (the comment above `EXPLICIT` has the shares, estimated on samples; `report` prints
   the counts).
   `--interp-bins N --interp-take LIST` splits the plan into N bins of about equal size and runs
-  some of them, so that machines can share it.
+  some of them, so that machines can share it; `--interp-match REGEX` keeps only the
+  enumerations whose `KERNEL FORMAT` matches.
 
 A pipeline that fails (a violated claim, an invalid case, a suspicious non-finite result where
 the quick tier fails on one, a broken stream, a runner or oracle error, a timeout) is a finding:
@@ -168,3 +170,41 @@ python3 tests/brute/brute.py report results/milestone1/brute/*.json
 ```
 
 which prints the tables of the results page.
+
+### The supplementary run: B4
+
+After these runs the eight full Ball kernels gained a condition on their `encloses` claim (B4).
+A supplementary run judged them against the new claims, from a copy of commit
+`f7e0b6df20f81c0dd77482f0a71528e889cfd759` (`CODE4`) with this driver of commit
+`72f700fff5a610c82b37da05a9f55a5f0abee552` (`DRIVER4`), `BALLS` being
+`ball_add_1_full,ball_sub_1_full,ball_mul_1_full,ball_scale_1_full,ball_add_2_full,ball_sub_2_full,ball_mul_2_full,ball_scale_2_full`:
+on the Linux machine with all 128 hardware threads, both parts (every enumeration of the plan for
+these kernels),
+
+```sh
+python3 tests/brute/brute.py run --work WORK4 --budget 1800 --jobs 144 --nice 10 --cpus 0-127 \
+    --generator Ninja --build gcc13=g++ --build clang18=CLANG --seed m1r2b4-linux \
+    --kernels BALLS --part compiled,interp --commit CODE4 --driver-commit DRIVER4
+```
+
+and the compiled part on the Mac and on Windows, with 20 minutes of budget each:
+
+```sh
+python3 tests/brute/brute.py run --work WORK4 --budget 1200 --jobs 8 --nice 10 \
+    --build clang=c++ --build gcc16=g++-16 --seed m1r2b4-mac \
+    --kernels BALLS --part compiled --commit CODE4 --driver-commit DRIVER4
+```
+
+```bat
+python tests\brute\brute.py run --work WORK4 --budget 1200 --jobs 8 --nice 1 --cpus 0-7 ^
+    --generator Ninja --build msvc=cl --seed m1r2b4-windows --part compiled ^
+    --env-script "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat" ^
+    --kernels BALLS --commit CODE4 --driver-commit DRIVER4
+```
+
+each collected as above with NAME `linux-x86-64-b4`, `macos-arm64-b4` and `windows-x64-b4` into
+`results/milestone1/brute/supplementary/`, and reported apart:
+
+```sh
+python3 tests/brute/brute.py report results/milestone1/brute/supplementary/*.json
+```

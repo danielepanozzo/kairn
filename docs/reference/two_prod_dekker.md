@@ -90,11 +90,9 @@ The latest brute-force runs, from the stored summaries in [`results/milestone1/b
 
 | Run | Cases judged | Failed | largest error / bound (always) | largest error / bound (when product large) | Bound attained |
 |---|---|---|---|---|---|
-| `binary64` (`double`), compiled: 40 runners on 3 machines | 58 648 440 | 0 | 0.921384 | 0 (exact) | no |
-| `binary32` (`float`), compiled: 40 runners on 3 machines | 55 122 824 | 0 | 0.929436 | 0 (exact) | no |
-| toy formats, every operand: 6 domains of 6 formats (1 stopped before the end: see below) | 3 330 757 | 0 | 0.943510 (`fp:7:-12:-1`) | 0 (exact) | no |
-
-A finding of the run on linux-x86-64, the interpreter on `fp:7:-20:-6`: the interpreter exited with 2; stream error: line 1: stream ended before the generator's trailer: the runner stopped early or the stream was truncated.
+| `binary64` (`double`), compiled: 60 runners on 3 machines | 105 132 540 | 0 | 0.923852 | 0 (exact) | no |
+| `binary32` (`float`), compiled: 60 runners on 3 machines | 98 852 220 | 0 | 0.925880 | 0 (exact) | no |
+| toy formats, every operand: 6 domains of 6 formats | 5 638 118 | 0 | 0.943510 (`fp:7:-16:-2`) | 0 (exact) | no |
 
 ## Not claimed
 

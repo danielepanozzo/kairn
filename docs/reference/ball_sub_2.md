@@ -77,9 +77,9 @@ The latest brute-force runs, from the stored summaries in [`results/milestone1/b
 
 | Run | Cases judged | Failed | smallest slack of the radius, in gaps |
 |---|---|---|---|
-| `binary64` (`double`), compiled: 40 runners on 3 machines | 60 587 392 | 0 | 1.25202 |
-| `binary32` (`float`), compiled: 40 runners on 3 machines | 60 551 720 | 0 | 1.25199 |
-| toy formats, every operand: 5 domains of 4 formats | 41 307 398 | 0 | 1.25 (`fp:3:-3:2`) |
+| `binary64` (`double`), compiled: 60 runners on 3 machines | 102 301 560 | 0 | 1.25107 |
+| `binary32` (`float`), compiled: 60 runners on 3 machines | 102 219 012 | 0 | 1.25003 |
+| toy formats, every operand: 5 domains of 4 formats | 39 929 434 | 0 | 1.25 (`fp:3:-3:2`) |
 
 The slack is how far the returned radius is above the smallest radius that encloses the exact set, in units in the last place of the radius: below 1, a radius one unit smaller would not enclose it.
 

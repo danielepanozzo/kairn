@@ -84,13 +84,13 @@ t = select(m, s, x0)
 ## Measured
 
 The latest brute-force runs, from the stored summaries in [`results/milestone1/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone1/brute) ([the report](../developer/results/brute-milestone1.md#to_up_2)): the oracle judged, in exact arithmetic, the results of the compiled kernel (every compiler, scalar and packed code, every contraction setting) on random operands of `binary64` and `binary32`, and those of the generator's interpreter on every operand of small formats. A measurement, not a bound.
-They judged the statement on finite operands; the stored summaries hold no measurement of the statement on infinite and NaN operands.
+They judged the kernel in the extended domain, infinite and NaN operands included, as the oracle reads its statement in the IEEE model ([Claims of the non-finite layer](../developer/architecture.md#claims-of-the-non-finite-layer)).
 
 | Run | Cases judged | Failed |
 |---|---|---|
-| `binary64` (`double`), compiled: 40 runners on 3 machines | 65 271 520 | 0 |
-| `binary32` (`float`), compiled: 40 runners on 3 machines | 65 268 912 | 0 |
-| toy formats, every operand: 5 domains of 5 formats | 9 334 518 | 0 |
+| `binary64` (`double`), compiled: 60 runners on 3 machines | 112 800 000 | 0 |
+| `binary32` (`float`), compiled: 60 runners on 3 machines | 112 800 000 | 0 |
+| toy formats, every operand: 5 domains of 5 formats | 6 159 386 | 0 |
 
 ## Not claimed
 

@@ -91,8 +91,8 @@ The latest brute-force runs, from the stored summaries in [`results/milestone1/b
 
 | Run | Cases judged | Failed | largest error / bound | Bound attained |
 |---|---|---|---|---|
-| `binary64` (`double`), compiled: 40 runners on 3 machines | 64 298 000 | 0 | 0.940060 | no |
-| `binary32` (`float`), compiled: 40 runners on 3 machines | 64 285 624 | 0 | 0.992645 | no |
+| `binary64` (`double`), compiled: 60 runners on 3 machines | 110 567 088 | 0 | 0.983175 | no |
+| `binary32` (`float`), compiled: 60 runners on 3 machines | 110 540 916 | 0 | 0.987720 | no |
 | toy formats, every operand: 6 domains of 6 formats | 12 218 888 | 0 | 0.939450 (`fp:5:-6:3`) | no |
 
 ## Not claimed

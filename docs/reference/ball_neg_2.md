@@ -94,13 +94,13 @@ rz         = copy(rx)
 ## Measured
 
 The latest brute-force runs, from the stored summaries in [`results/milestone1/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone1/brute) ([the report](../developer/results/brute-milestone1.md#ball_neg_2)): the oracle judged, in exact arithmetic, the results of the compiled kernel (every compiler, scalar and packed code, every contraction setting) on random operands of `binary64` and `binary32`, and those of the generator's interpreter on every operand of small formats. A measurement, not a bound.
-They judged the statement on finite operands; the stored summaries hold no measurement of the statement on infinite and NaN operands.
+They judged the kernel in the extended domain, infinite and NaN operands included, as the oracle reads its statement in the IEEE model ([Claims of the non-finite layer](../developer/architecture.md#claims-of-the-non-finite-layer)).
 
 | Run | Cases judged | Failed | smallest slack of the radius, in gaps |
 |---|---|---|---|
-| `binary64` (`double`), compiled: 40 runners on 3 machines | 65 600 000 | 0 | 0 |
-| `binary32` (`float`), compiled: 40 runners on 3 machines | 65 600 000 | 0 | 0 |
-| toy formats, every operand: 5 domains of 5 formats | 11 051 056 | 0 | 0 (`fp:5:-8:4`) |
+| `binary64` (`double`), compiled: 60 runners on 3 machines | 110 400 000 | 0 | 0 |
+| `binary32` (`float`), compiled: 60 runners on 3 machines | 110 400 000 | 0 | 0 |
+| toy formats, every operand: 5 domains of 5 formats | 6 712 620 | 0 | 0 (`fp:6:-8:-1`) |
 
 The slack is how far the returned radius is above the smallest radius that encloses the exact set, in units in the last place of the radius: below 1, a radius one unit smaller would not enclose it.
 

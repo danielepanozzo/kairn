@@ -84,13 +84,13 @@ r = succ(p)
 ## Measured
 
 The latest brute-force runs, from the stored summaries in [`results/milestone1/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone1/brute) ([the report](../developer/results/brute-milestone1.md#rmul)): the oracle judged, in exact arithmetic, the results of the compiled kernel (every compiler, scalar and packed code, every contraction setting) on random operands of `binary64` and `binary32`, and those of the generator's interpreter on every operand of small formats. A measurement, not a bound.
-They judged the statement on finite operands; the stored summaries hold no measurement of the statement on infinite and NaN operands.
+They judged the kernel in the extended domain, infinite and NaN operands included, as the oracle reads its statement in the IEEE model ([Claims of the non-finite layer](../developer/architecture.md#claims-of-the-non-finite-layer)).
 
 | Run | Cases judged | Failed | largest excess, in gaps | Bound attained |
 |---|---|---|---|---|
-| `binary64` (`double`), compiled: 40 runners on 3 machines | 64 545 768 | 0 | 1.5 | yes |
-| `binary32` (`float`), compiled: 40 runners on 3 machines | 64 186 824 | 0 | 1.5 | yes |
-| toy formats, every operand: 5 domains of 5 formats | 5 114 084 | 0 | 1.5 (`fp:8:-8:4`) | yes |
+| `binary64` (`double`), compiled: 60 runners on 3 machines | 117 600 000 | 0 | 1.5 | yes |
+| `binary32` (`float`), compiled: 60 runners on 3 machines | 117 600 000 | 0 | 1.5 | yes |
+| toy formats, every operand: 5 domains of 5 formats | 10 710 912 | 0 | 1.5 (`fp:8:-16:3`) | yes |
 
 ## Not claimed
 

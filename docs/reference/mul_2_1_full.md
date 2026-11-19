@@ -76,7 +76,14 @@ w1       = select(f, z1, r1)
 
 ## Measured
 
-No stored brute-force run has judged this kernel yet.
+The latest brute-force runs, from the stored summaries in [`results/milestone1/brute/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone1/brute) ([the report](../developer/results/brute-milestone1.md#mul_2_1_full)): the oracle judged, in exact arithmetic, the results of the compiled kernel (every compiler, scalar and packed code, every contraction setting) on random operands of `binary64` and `binary32`, and those of the generator's interpreter on every operand of small formats. A measurement, not a bound.
+They judged the kernel in the extended domain, infinite and NaN operands included, as the oracle reads its statement in the IEEE model ([Claims of the non-finite layer](../developer/architecture.md#claims-of-the-non-finite-layer)), and the claims of its finite core `mul_2_1` on the cases where they apply (F2: finite operands, finite result), which the columns below measure.
+
+| Run | Cases judged | Failed | largest error / bound (core `mul_2_1`) | Bound attained |
+|---|---|---|---|---|
+| `binary64` (`double`), compiled: 60 runners on 3 machines | 110 400 000 | 0 | 1 − ε, ε < 10⁻⁹ | no |
+| `binary32` (`float`), compiled: 60 runners on 3 machines | 110 400 000 | 0 | 0.9999997914 | no |
+| toy formats, every operand: 6 domains of 6 formats | 11 490 416 | 0 | 0.972718 (`fp:6:-7:-2`) | no |
 
 ## Not claimed
 
