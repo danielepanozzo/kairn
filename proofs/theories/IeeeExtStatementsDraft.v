@@ -1,7 +1,8 @@
 (* DRAFT of the statements of the non-finite layer, written by hand in the form the
    generator is meant to print, one definition per statement. Nothing in this file is a
-   proof; the theorems are in IeeeOps.v, IeeeFull.v, IeeeBall.v, IeeeExt.v and
-   IeeeMake.v.
+   proof; the theorems are in IeeeOps.v (the guard), IeeeFull.v (the full kernels),
+   IeeeBallCores.v with IeeeBall.v (the full Ball kernels), IeeeExt.v (the kernels that
+   need no fix-up) and IeeeMake.v (the constructors).
 
    These are statements about the IEEE model of IeeeDraft.v in which the operands may
    be infinite or NaN (the claims call this the extended domain). As in
@@ -842,3 +843,37 @@ Definition rmul_ieee_spec : Prop :=
    (val a * val b) <= val r /\
    val r - (val a * val b)
    <= (3 / 2) * (val r - Ulp.pred radix2 (FLT_exp (ieee_emin prec emax) prec) (val r))).
+
+(* ball_make_1: a ball from a center and a radius of T, which may be anything. The result
+   is a canonical ball, and the radius and the center decide which one, in this order:
+   the empty set when the radius is a NaN, -infinity or negative; otherwise the whole
+   line when the radius is +infinity or the center is not finite; otherwise the ball of
+   that center and radius (a zero may change its sign). The three conditions are
+   exclusive and cover every case. *)
+Definition ball_make_1_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_abs : nan1 prec emax)
+         (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall c r : binary_float prec emax,
+  let '(cw, rw) := IeeeDraft.ball_make_1 prec emax nan_plus nan_abs nan_const c r in
+  ball_1 cw rw /\
+  (nan r \/ r = infinity prec emax true \/ (finite r /\ val r < 0) -> ball_empty_1 cw rw) /\
+  (finite r -> 0 <= val r -> finite c ->
+   ball_finite_1 cw rw /\ val cw = val c /\ val rw = val r) /\
+  (r = infinity prec emax false \/ (finite r /\ 0 <= val r /\ ~ finite c) -> ball_whole_1 cw rw).
+
+(* ball_make_2: the same with a canonical 2-limb center, which is kept as it is. *)
+Definition ball_make_2_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_abs : nan1 prec emax)
+         (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall c0 c1 r : binary_float prec emax,
+  canonical_2 c0 c1 ->
+  let '(cw0, cw1, rw) := IeeeDraft.ball_make_2 prec emax nan_plus nan_abs nan_const c0 c1 r in
+  ball_2 cw0 cw1 rw /\
+  (nan r \/ r = infinity prec emax true \/ (finite r /\ val r < 0) -> ball_empty_2 cw0 cw1 rw) /\
+  (finite r -> 0 <= val r -> finite c0 ->
+   ball_finite_2 cw0 cw1 rw /\ cw0 = c0 /\ cw1 = c1 /\ val rw = val r) /\
+  (r = infinity prec emax false \/ (finite r /\ 0 <= val r /\ ~ finite c0) -> ball_whole_2 cw0 cw1 rw).

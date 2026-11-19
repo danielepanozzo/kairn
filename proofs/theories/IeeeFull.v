@@ -27,6 +27,13 @@
                   the leading limbs that is not zero has the sign of the exact result;
      non-finite   t is not finite when an operand is not.
 
+   The nine full kernels are add_2_2_full and mul_2_2_full (first), then
+   add_fast_2_2_full, add_2_1_full, mul_2_1_full, mul_pow2_2_full and the three
+   subtractions, for which the five facts are stated once per core (K_core). A
+   subtraction is the addition of the opposite of an operand (sub_2_2_eq, sub_2_1_eq,
+   sub_1_2_eq), so its facts are those of the addition's core; a one-limb operand
+   that is added or subtracted enters t through guard, which keeps its value.
+
    The statements, in the form of IeeeExtStatementsDraft.v, are at the end of the file. *)
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra Psatz.
 From Flocq Require Import Core Plus_error Binary.

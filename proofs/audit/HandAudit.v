@@ -321,3 +321,11 @@ Print Assumptions radd_ieee_correct.
 Definition rmul_ieee_audit : rmul_ieee_spec := rmul_ieee_correct.
 Print Assumptions rmul_ieee_correct.
 
+
+(* The constructors of balls. *)
+Definition ball_make_1_audit : ball_make_1_spec := ball_make_1_correct.
+Print Assumptions ball_make_1_correct.
+
+Definition ball_make_2_audit : ball_make_2_spec := ball_make_2_correct.
+Print Assumptions ball_make_2_correct.
+
