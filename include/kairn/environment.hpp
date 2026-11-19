@@ -82,7 +82,9 @@ KAIRN_FORCEINLINE constexpr void check_environment() noexcept {
 /// as zero as operands. Kairn never changes these itself; other code can (a directed rounding
 /// mode set by an interval library, or flush-to-zero set at startup by any object compiled with
 /// -ffast-math), and a program that does must restore them before calling Kairn. Checked before
-/// every scalar operation when KAIRN_CHECKS is 1. Costs a few cycles; only reads.
+/// every scalar operation when KAIRN_CHECKS is 1. Only reads. Costs one read of the register:
+/// measured at about 2 cycles on an Apple M3, 5 on an Intel Core i5-13500T and 21 on an AMD
+/// Zen 2, where storing MXCSR is slow.
 ///
 /// On a target other than x86-64 and AArch64 (or MSVC on AArch64, for which Kairn's kernels do
 /// not compile yet), only the rounding mode is checked, through std::fegetround().
