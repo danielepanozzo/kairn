@@ -190,7 +190,8 @@ with Apple clang or GCC 16, for 742 tests whose times add up to about 490 second
 measured: 271 seconds on 16 cores of a 2019 x86-64 server and 453 seconds on 4 of them; with
 MSVC, 369 seconds on 8 logical processors of a Windows machine and 533 seconds on 4. On the Mac a
 cross-check of a compiled runner takes 0.3 to 0.6 seconds, one of the interpreter 1 to 7 seconds,
-and the generator's and the oracle's own tests about 45 seconds each. `KAIRN_CROSSCHECK_CASES`
+the generator's own tests about 45 seconds, and the oracle's about 75 since it judges the
+non-finite layer too. `KAIRN_CROSSCHECK_CASES`
 sets the share of the compiled runners, about three fifths of the total.
 
 ## The generator's tier
