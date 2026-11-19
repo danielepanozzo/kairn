@@ -110,7 +110,8 @@ add_2_2_full(x, y) -> w
 The other full kernels differ in their first lines only. With a one-limb operand `a` that is
 added or subtracted, the first line is `g = guard(a)` and `t` is computed from `g`
 ([values that enter from the program](#values-that-enter-from-the-program)); the core is called
-with `a` and guards it itself, which compilers merge with the first guard.
+with `a` and guards it itself, which compilers merge with the first guard. Where an input is
+already named `a`, the temporary of the fix-up is named `az`.
 
 | Full kernel | Core | `t` |
 |---|---|---|
@@ -218,8 +219,9 @@ make_2(a) -> x                     make_2_limbs(h, l) -> x          ball_make_2(
 - `ball_make_2(c, r)` takes a canonical center (an object, `stored`) and a radius from the
   program. The result is canonical: the empty set when the radius is a NaN or negative (`e` is
   then false), the whole line when the center is not finite or the radius is $+\infty$, and
-  otherwise the ball itself. `ball_make_1(c, r)` is the same with a one-limb center, guarded as
-  well, and no `k1`. `const nan` is a quiet NaN.
+  otherwise the ball itself. `ball_make_1(c, r)` is the same with a one-limb center supplied by
+  the program: its first lines are `g = guard(r)` and `c0 = guard(c)`, and it has no `k1` and
+  no `cw1`. `const nan` is a quiet NaN.
 
 All of these are targets, stated in the IEEE model like the full kernels.
 
@@ -427,9 +429,10 @@ ball_add_2_full(cx, rx, cy, ry) -> (cw, rw)
   rw  = select(e, r, q)
 ```
 
-`ball_sub_k_full` and `ball_mul_k_full` are the same after their cores; for $k = 1$ there is no
-`c1`; `ball_scale_k_full` has one ball operand, so `q` is `rx` itself. `ball_neg_k` needs no
-fix-up.
+`ball_sub_k_full` and `ball_mul_k_full` are the same after their cores; for $k = 1$ the center
+is one limb, so there is no `c1` and no `cw1`; `ball_scale_k_full` has one ball operand, so there
+is no `q` line and `rx` stands in its place (and the temporary `a` is named `az`, since `a` is the
+scalar). `ball_neg_k` needs no fix-up.
 
 **Statement of a full Ball kernel, in the IEEE model.** The ball operands are canonical; the
 scalar of `ball_scale` is any value of `T`.

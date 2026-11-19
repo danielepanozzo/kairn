@@ -117,13 +117,15 @@ Rules the generator enforces on every kernel, and refuses to generate otherwise:
    explicit finiteness test.
 5. Every kernel names its theorem, its source and that source's license, or is marked
    `unverified`.
-6. **R3. Values that enter from the program.** A kernel that the public headers may call is
-   marked `entry`. In an entry kernel, a one-limb input is a value of `T` supplied by the program
+6. **R3. Values that enter from the program.** A kernel that the public headers may call with
+   a value supplied by the program is marked `entry` (the self-test calls building blocks on
+   constants of its own; that does not make them entry kernels). In an entry kernel, a one-limb input is a value of `T` supplied by the program
    (a scalar operand, a limb or a radius given to a constructor) unless the kernel declares it
    `stored`: a limb of an object, such as the radius of a ball. An input supplied by the program,
    and anything obtained from it by `neg`, `abs` or `select` alone, is never an operand of `add`
    or `sub` nor the addend of an FMA: it passes through `guard` first. It may be a factor of
-   `prod` or of an FMA and an operand of a comparison as it is. The reason: the program may have
+   `prod` or of an FMA and an operand of a comparison as it is, and it is never an output as it
+   is. The reason: the program may have
    written
    `x + a * b`, and a compiler that contracts across statements then fuses the program's own
    multiplication into the kernel's first addition, so that the kernel no longer computes with a
@@ -405,7 +407,12 @@ A condition of `finite_when` is `{"abs_le": EXPR, "exp": E}`: $\lvert \mathrm{EX
 2^{q_{\max} + p + E}$, with `EXPR` an expression over the input names as in `value` and $E$ an
 integer; $2^{q_{\max} + p}$ is the overflow threshold. For example `add_2_2_full` has
 `[{"abs_le": "x", "exp": -2}, {"abs_le": "y", "exp": -2}]` and `mul_2_2_full` has
-`[{"abs_le": "x*y", "exp": -1}]`. The list is empty when no condition is proved.
+`[{"abs_le": "x*y", "exp": -1}]`. The list is empty when no condition is proved, and an empty
+list claims nothing about when the result is finite: it does not say that it always is.
+
+The `core` of `extends` has the inputs of the full kernel, by name, and outputs of the same shape
+under other names; they correspond by position. Its requirements are the full kernel's with
+`normalized` for `canonical`.
 
 Two more kinds serve the constructors
 ([values that enter from the program](design/milestone1.md#values-that-enter-from-the-program)):
