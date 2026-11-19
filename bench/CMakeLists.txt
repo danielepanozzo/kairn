@@ -56,7 +56,7 @@ string(REPLACE ";" " " _packed_isa_text "${_packed_isa}")
 
 foreach(_level IN LISTS _levels)
   set(_target kairn-bench-${_level})
-  add_executable(${_target} main.cpp scalar.cpp packed.cpp mpfr.cpp)
+  add_executable(${_target} main.cpp scalar.cpp packed.cpp api.cpp mpfr.cpp)
   target_link_libraries(${_target} PRIVATE kairn::kairn kairn::fma)
   target_compile_options(${_target} PRIVATE ${_opt_${_level}} ${_no_contract})
   string(STRIP "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_config}} ${_opt_${_level}} ${_no_contract} ${_fma}" _flags)

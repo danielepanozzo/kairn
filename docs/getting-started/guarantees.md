@@ -153,18 +153,19 @@ on small formats first see an overflow at 0.55 of the overflow threshold or abov
 additions and 0.86 or above for the products, where the proved conditions are a quarter and a half
 of it ([Milestone 1](../developer/design/milestone1.md#what-is-proved-about-an-arithmetic-kernel)).
 
-**Cost.** The fix-up was measured
-([Benchmarks](../developer/results/bench-milestone1.md#2-the-fix-up-for-non-finite-results)) at
-19 to 58% of a packed addition and 70 to 106% of a packed product. In scalar code the generator
-puts it behind a branch, taken only when a result is not finite
-([Milestone 1](../developer/design/milestone1.md#ieee-like-results), "Emission"). Measured with
-`double` limbs on an Apple M3 (Apple clang 21, GCC 16), an AMD Zen 2 (GCC 13, Clang 18) and an
-Intel i5 (MSVC), in a chain of dependent operations, `x + y`, `x * y` and the same on two-limb
-balls take 0.95 to 1.04 times as long as the cores (`kairn::finite::add` and
-`kairn::finite::mul`; for balls, the kernels without the fix-up); written as the listings'
-selects, they took up to 1.91 times as long with Apple clang and 1.77 times with MSVC. In loops of
-independent operations they cost 1.0 to 2.3 times the cores; such loops are what the packed
-kernels are for.
+**Cost.** Measured on the final code with `double` limbs on an Apple M3 (Apple clang 21, GCC 16),
+an AMD Zen 2 (GCC 13, Clang 18) and an Intel i5 (MSVC)
+([Benchmarks](../developer/results/bench-milestone1.md#2-the-fix-up-for-non-finite-results)). In
+a chain of dependent operations, `x + y`, `x * y`, `x + a` and `x * a` take 0.94 to 1.07 times as
+long as the cores (`kairn::finite::`), and the same on two-limb balls 0.89 to 1.06 times as long
+as the Ball kernels without the fix-up: in scalar code the generator puts the fix-up behind a
+branch, taken only when a result is not finite
+([Milestone 1](../developer/design/milestone1.md#ieee-like-results), "Emission"). In loops of
+independent operations they take 1.08 to 2.60 times as long as the cores, the most where the
+compiler vectorizes the core's loop and not the operator's (Apple clang; GCC 13 at `-O3`). The
+packed kernels, which compute the fix-up in every lane, cost 16 to 54% more on `add_2_2` and 70 to
+105% more on `mul_2_2` with it. Loops of independent operations are what the packed kernels, and
+the batch kernels that D5 plans without the fix-up, are for.
 
 ## Products the program passes in
 

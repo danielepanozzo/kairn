@@ -79,12 +79,12 @@ const char* const mpfr_version_text = MPFR_VERSION_STRING;
 
 // The product chain starts at 1, the others at the chain's start (0 in the driver).
 const Entry mpfr_entries[] = {
-    {"mpfr/tp/add_2_2/mpfr", 1, kb_mtp_add, nullptr},
-    {"mpfr/tp/mul_2_2/mpfr", 1, kb_mtp_mul, nullptr},
-    {"mpfr/sum/add_2_2/mpfr", 1, nullptr, kb_msum},
-    {"mpfr/prod/mul_2_2/mpfr", 1, nullptr, kb_mprod},
-    {"mpfr/horner/mul_2_2+add_2_2/mpfr", 1, nullptr, kb_mhorner},
-    {nullptr, 0, nullptr, nullptr},
+    {"mpfr/tp/add_2_2/mpfr", 1, kb_mtp_add, nullptr, nullptr, 0},
+    {"mpfr/tp/mul_2_2/mpfr", 1, kb_mtp_mul, nullptr, nullptr, 0},
+    {"mpfr/sum/add_2_2/mpfr", 1, nullptr, kb_msum, nullptr, 0},
+    {"mpfr/prod/mul_2_2/mpfr", 1, nullptr, kb_mprod, nullptr, 0},
+    {"mpfr/horner/mul_2_2+add_2_2/mpfr", 1, nullptr, kb_mhorner, nullptr, 0},
+    {nullptr, 0, nullptr, nullptr, nullptr, 0},
 };
 
 void mpfr_setup(int n, const double* x0, const double* x1, const double* y0, const double* y1, const ChainArgs* c) {
@@ -130,7 +130,7 @@ void mpfr_result(int i, double* r0, double* r1) {
 
 namespace kairn_bench {
 const char* const mpfr_version_text = "";
-const Entry mpfr_entries[] = {{nullptr, 0, nullptr, nullptr}};
+const Entry mpfr_entries[] = {{nullptr, 0, nullptr, nullptr, nullptr, 0}};
 void mpfr_setup(int, const double*, const double*, const double*, const double*, const ChainArgs*) {}
 void mpfr_result(int, double* r0, double* r1) { *r0 = *r1 = 0.0; }
 }  // namespace kairn_bench
