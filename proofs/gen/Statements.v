@@ -32,7 +32,7 @@ Definition normalized_2 (x0 x1 : R) : Prop :=
 
 End Vocabulary.
 
-(* fast_two_sum: Fast2Sum (Dekker 1971). Status: unverified. *)
+(* fast_two_sum: Fast2Sum (Dekker 1971). Status: proved. *)
 Definition fast_two_sum_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a b : R,
@@ -52,7 +52,7 @@ Definition split_spec : Prop :=
   let '(ah, al) := split emin prec tie_even a in
   (ah + al) = a.
 
-(* two_prod: TwoProd with an FMA (folklore; see JMP17). Status: unverified. *)
+(* two_prod: TwoProd with an FMA (folklore; see JMP17). Status: proved. *)
 Definition two_prod_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a b : R,
@@ -74,7 +74,7 @@ Definition two_prod_dekker_spec : Prop :=
   Rabs ((p + e) - (a * b)) <= (7 / 2) * eta emin /\
   (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).
 
-(* two_sum: TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965). Status: unverified. *)
+(* two_sum: TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965). Status: proved. *)
 Definition two_sum_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a b : R,
@@ -84,9 +84,9 @@ Definition two_sum_spec : Prop :=
   s = RN emin prec (a + b) /\
   (s + e) = (a + b).
 
-(* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. Status: unverified. Minimum precision not known yet. *)
+(* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. Status: proved. *)
 Definition add_2_1_spec : Prop :=
-  forall emin prec : Z, (1 <= prec)%Z ->
+  forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 a : R,
   normalized_2 emin prec x0 x1 ->
   fmt emin prec a ->
@@ -94,7 +94,7 @@ Definition add_2_1_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) + a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) + a).
 
-(* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. Status: unverified. *)
+(* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. Status: proved. *)
 Definition add_2_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
@@ -124,22 +124,22 @@ Definition add_fast_2_2_ts_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= 4 * u prec ^ 2 * (Rabs (x0 + x1) + Rabs (y0 + y1)).
 
-(* mul_2_1: JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: unverified. Minimum precision not known yet. *)
+(* mul_2_1: JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved. *)
 Definition mul_2_1_spec : Prop :=
-  forall emin prec : Z, (1 <= prec)%Z ->
+  forall emin prec : Z, (2 <= prec)%Z ->
   forall x0 x1 a : R,
   normalized_2 emin prec x0 x1 ->
   fmt emin prec a ->
   let '(z0, z1) := mul_2_1 emin prec tie_even x0 x1 a in
   normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 2 * eta emin.
+  Rabs ((z0 + z1) - ((x0 + x1) * a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) * a) + 1 * eta emin.
 
-(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. Status: unverified. *)
+(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. Status: proved. *)
 Definition mul_2_2_spec : Prop :=
-  forall emin prec : Z, (5 <= prec)%Z ->
+  forall emin prec : Z, (4 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
   let '(z0, z1) := mul_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((x0 + x1) * (y0 + y1))) <= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + 4 * eta emin.
+  Rabs ((z0 + z1) - ((x0 + x1) * (y0 + y1))) <= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + (3 / 2) * eta emin.

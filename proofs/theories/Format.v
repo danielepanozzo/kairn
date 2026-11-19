@@ -14,7 +14,7 @@
    - scaling by a power of two, which moves eta. *)
 From Stdlib Require Import Reals ZArith Lia Lra.
 From Flocq Require Import Core Plus_error Mult_error Relative.
-From Kairn Require Import ModelDraft SpecDraft.
+From Kairn.Gen Require Import Model Statements.
 Open Scope R_scope.
 
 Notation pow2 e := (bpow radix2 e).

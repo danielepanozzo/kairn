@@ -14,7 +14,8 @@
    prec = 5, 6, 7, 8. *)
 From Stdlib Require Import Reals ZArith Lia Lra Psatz.
 From Flocq Require Import Core Plus_error Mult_error Relative.
-From Kairn Require Import ModelDraft SpecDraft Format Transfer EFT Mul22.
+From Kairn.Gen Require Import Model Statements.
+From Kairn Require Import Format Transfer EFT Mul22.
 Open Scope R_scope.
 
 (** * The kernel over an arbitrary rounding function, and its scaling *)
@@ -257,7 +258,7 @@ Qed.
 
 End Core.
 
-(** * The statement of SpecDraft.v *)
+(** * The generated statement (proofs/gen/Statements.v) *)
 
 Theorem mul_2_1_correct : mul_2_1_spec.
 Proof.

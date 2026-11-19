@@ -9,10 +9,10 @@ ensures:       leading_rounded r
 ensures:       error r R c=0 k=2 t=0
 ensures:       normalized r
 min_precision: 2
-theorem:       proofs/theories/FastTwoSum.v fast_two_sum_correct
+theorem:       proofs/theories/EFT.v fast_two_sum_correct
 source:        Fast2Sum (Dekker 1971)
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 
 s = add(a, b)
 z = sub(s, a)

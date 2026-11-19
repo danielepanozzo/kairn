@@ -7,7 +7,8 @@
    here; with constant 1 instead of 1/2 it is known for every rounding (HJZRT23). *)
 From Stdlib Require Import Reals ZArith Lia Lra.
 From Flocq Require Import Core Plus_error Mult_error Relative Pff2Flocq.
-From Kairn Require Import ModelDraft SpecDraft Format Transfer.
+From Kairn.Gen Require Import Model Statements.
+From Kairn Require Import Format Transfer.
 Open Scope R_scope.
 
 (* The tie rule "to even" is symmetric: this is what makes RN (- x) = - RN x. *)
@@ -143,7 +144,7 @@ Qed.
 
 End EFT.
 
-(** * The statements of SpecDraft.v *)
+(** * The generated statements (proofs/gen/Statements.v) *)
 
 Theorem two_sum_correct : two_sum_spec.
 Proof.

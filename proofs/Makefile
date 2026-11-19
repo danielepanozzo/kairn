@@ -28,8 +28,8 @@ audit: build
 	@echo "== text scan of the proof files"
 	@$(PYTHON) $(AUDIT) scan $(VFILES)
 	@echo "== assumptions of every theorem"
-	@$(ROCQ) compile $(LIBS) -Q audit KairnAudit audit/AuditDraft.v > audit/AuditDraft.out
-	@$(PYTHON) $(AUDIT) assumptions audit/AuditDraft.v audit/AuditDraft.out $(ALLOWED)
+	@$(ROCQ) compile $(LIBS) gen/Audit.v > audit/Audit.out
+	@$(PYTHON) $(AUDIT) assumptions gen/Audit.v audit/Audit.out $(ALLOWED)
 	@echo "== negative control: a false theorem closed with Admitted must be rejected"
 	@if $(PYTHON) $(AUDIT) scan audit/Bad.v; \
 	  then echo "  ERROR: the text scan accepted audit/Bad.v"; exit 1; \

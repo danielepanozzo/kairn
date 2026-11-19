@@ -9,10 +9,10 @@ ensures:       leading_rounded r
 ensures:       error r R c=0 k=2 t=1/2
 ensures:       error r R c=0 k=2 t=0 when=product_large
 min_precision: 2
-theorem:       proofs/theories/TwoProd.v two_prod_correct
+theorem:       proofs/theories/EFT.v two_prod_correct
 source:        TwoProd with an FMA (folklore; see JMP17)
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 ce_variant:    two_prod_dekker
 
 p = prod(a, b)

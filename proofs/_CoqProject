@@ -1,4 +1,5 @@
 -Q theories Kairn
+-Q gen Kairn.Gen
 -R third_party/mr22 Double
 -docroot Kairn
 
@@ -8,8 +9,8 @@ third_party/mr22/F2SumFLX.v
 third_party/mr22/F2Sum.v
 third_party/mr22/DWPlus.v
 
-theories/ModelDraft.v
-theories/SpecDraft.v
+gen/Model.v
+gen/Statements.v
 theories/Format.v
 theories/Transfer.v
 theories/EFT.v

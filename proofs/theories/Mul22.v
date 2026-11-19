@@ -32,7 +32,8 @@
    third_party/mr22/LICENSE. No file of theirs is used by this one. *)
 From Stdlib Require Import Reals ZArith Lia Lra Psatz.
 From Flocq Require Import Core Plus_error Mult_error Relative.
-From Kairn Require Import ModelDraft SpecDraft Format Transfer EFT.
+From Kairn.Gen Require Import Model Statements.
+From Kairn Require Import Format Transfer EFT.
 Open Scope R_scope.
 
 (** * Real-number lemmas *)
@@ -749,7 +750,7 @@ repeat first [rewrite Rmult_0_r | rewrite Rminus_0_r | rewrite Rplus_0_r | rewri
 reflexivity.
 Qed.
 
-(** * The statement of SpecDraft.v *)
+(** * The generated statement (proofs/gen/Statements.v) *)
 
 Theorem mul_2_2_correct : mul_2_2_spec.
 Proof.

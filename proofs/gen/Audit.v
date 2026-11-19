@@ -4,5 +4,29 @@
    statement as its type, and the axioms it depends on are printed, for the audit
    script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import Statements.
+From Kairn Require Import Add21.
+From Kairn Require Import Add22.
+From Kairn Require Import EFT.
+From Kairn Require Import Mul21.
+From Kairn Require Import Mul22.
 
-(* No kernel is verified yet. *)
+Definition fast_two_sum_audit : fast_two_sum_spec := fast_two_sum_correct.
+Print Assumptions fast_two_sum_correct.
+
+Definition two_prod_audit : two_prod_spec := two_prod_correct.
+Print Assumptions two_prod_correct.
+
+Definition two_sum_audit : two_sum_spec := two_sum_correct.
+Print Assumptions two_sum_correct.
+
+Definition add_2_1_audit : add_2_1_spec := add_2_1_correct.
+Print Assumptions add_2_1_correct.
+
+Definition add_2_2_audit : add_2_2_spec := add_2_2_correct.
+Print Assumptions add_2_2_correct.
+
+Definition mul_2_1_audit : mul_2_1_spec := mul_2_1_correct.
+Print Assumptions mul_2_1_correct.
+
+Definition mul_2_2_audit : mul_2_2_spec := mul_2_2_correct.
+Print Assumptions mul_2_2_correct.

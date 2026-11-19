@@ -12,7 +12,7 @@ min_precision: 3
 theorem:       proofs/theories/Add22.v add_2_2_correct
 source:        JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 
 (sh, sl) = two_sum(x0, y0)
 (th, tl) = two_sum(x1, y1)

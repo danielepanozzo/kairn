@@ -7,10 +7,11 @@ value:         x+a
 requires:      normalized x
 ensures:       normalized z
 ensures:       error z R c=2 k=2 t=0
+min_precision: 3
 theorem:       proofs/theories/Add21.v add_2_1_correct
 source:        JMP17 Alg. 4 (DWPlusFP); bound from MR22
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 
 (sh, sl) = two_sum(x0, a)
 v        = add(x1, sl)

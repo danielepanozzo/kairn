@@ -20,7 +20,8 @@
 From Stdlib Require Import Reals ZArith Lia Lra.
 From Flocq Require Import Core Plus_error Relative.
 From Double Require Import F2Sum DWPlus.
-From Kairn Require Import ModelDraft SpecDraft Format Transfer EFT.
+From Kairn.Gen Require Import Model Statements.
+From Kairn Require Import Format Transfer EFT.
 Open Scope R_scope.
 
 (** * Without underflow: MR22's algorithm and what is added to their theorem *)
@@ -293,7 +294,7 @@ Qed.
 
 End NoUnderflow.
 
-(** * With gradual underflow: the statement of SpecDraft.v *)
+(** * With gradual underflow: the generated statement (proofs/gen/Statements.v) *)
 
 Theorem add_2_2_correct : add_2_2_spec.
 Proof.

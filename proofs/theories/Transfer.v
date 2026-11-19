@@ -1,7 +1,7 @@
 (* Kernels made only of additions and subtractions compute the same values in every
    format in which their operands live.
 
-   The kernels of ModelDraft.v are written with the rounding of one format. Here the same
+   The kernels of the generated model (proofs/gen/Model.v) are written with the rounding of one format. Here the same
    programs are written over an arbitrary rounding function (g_two_sum, ...), and shown to
    return the same values for two rounding functions that agree on sums and differences
    of the numbers of a set F which contains every rounded result. By the transfer lemmas
@@ -11,7 +11,8 @@
    - two formats with gradual underflow and different eta. *)
 From Stdlib Require Import Reals ZArith Lia Lra.
 From Flocq Require Import Core.
-From Kairn Require Import ModelDraft SpecDraft Format.
+From Kairn.Gen Require Import Model Statements.
+From Kairn Require Import Format.
 Open Scope R_scope.
 
 (** * The addition kernels over an arbitrary rounding function *)

@@ -13,7 +13,7 @@
 namespace kairn::gen {
 
 // fast_two_sum(a, b) -> r = (s, e)
-// Fast2Sum (Dekker 1971). Status: unverified; constexpr.
+// Fast2Sum (Dekker 1971). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum(double a, double b, double& s_out, double& e_out) noexcept {
     const double s = a + b;
     const double z = s - a;
@@ -49,7 +49,7 @@ KAIRN_GEN_FORCEINLINE void split(float a, float& ah_out, float& al_out) noexcept
 }
 
 // two_prod(a, b) -> r = (p, e)
-// TwoProd with an FMA (folklore; see JMP17). Status: unverified; constexpr through two_prod_dekker.
+// TwoProd with an FMA (folklore; see JMP17). Status: proved; constexpr through two_prod_dekker.
 KAIRN_GEN_FORCEINLINE constexpr void two_prod(double a, double b, double& p_out, double& e_out) noexcept {
     if (__builtin_is_constant_evaluated()) {
         // two_prod_dekker, with each prod a plain product.
@@ -163,7 +163,7 @@ KAIRN_GEN_FORCEINLINE void two_prod_dekker(float a, float b, float& p_out, float
 }
 
 // two_sum(a, b) -> r = (s, e)
-// TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965). Status: unverified; constexpr.
+// TwoSum (Knuth, TAOCP vol. 2, 4.2.2; Moller 1965). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void two_sum(double a, double b, double& s_out, double& e_out) noexcept {
     const double s = a + b;
     const double bb = s - a;
@@ -186,7 +186,7 @@ KAIRN_GEN_FORCEINLINE constexpr void two_sum(float a, float b, float& s_out, flo
 }
 
 // add_2_1(x = (x0, x1), a) -> z = (z0, z1)
-// JMP17 Alg. 4 (DWPlusFP); bound from MR22. Status: unverified; constexpr.
+// JMP17 Alg. 4 (DWPlusFP); bound from MR22. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_2_1(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
     // (sh, sl) = two_sum(x0, a)
     const double sh = x0 + a;
@@ -221,7 +221,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_1(float x0, float x1, float a, float&
 }
 
 // add_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. Status: unverified; constexpr.
+// JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
     // (sh, sl) = two_sum(x0, y0)
     const double sh = x0 + y0;
@@ -360,7 +360,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_ts(float x0, float x1, float y
 }
 
 // mul_2_1(x = (x0, x1), a) -> z = (z0, z1)
-// JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_2_1(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
     // (ch, cl1) = two_prod(x0, a)
     const double ch = fma_rn(x0, a, 0.0);
@@ -387,7 +387,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_1(float x0, float x1, float a, float& z0_out, f
 }
 
 // mul_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// JMP17 Alg. 12 (DWTimesDW3); bound from MR22. Status: unverified; not constexpr: it has fused operations and no constant-evaluation variant.
+// JMP17 Alg. 12 (DWTimesDW3); bound from MR22. Status: proved; not constexpr: it has fused operations and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
     // (ch, cl1) = two_prod(x0, y0)
     const double ch = fma_rn(x0, y0, 0.0);

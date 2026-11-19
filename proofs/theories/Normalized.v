@@ -1,6 +1,6 @@
 (* Consequences of the normalization invariant for two limbs.
 
-   A 2-limb number (x0, x1) is normalized when x0 = RN (x0 + x1) (SpecDraft.normalized_2).
+   A 2-limb number (x0, x1) is normalized when x0 = RN (x0 + x1) (Statements.normalized_2).
    The lemmas below are the items of the list "Consequences" of the Phase 0 report
    (Numbers), for k = 2:
 
@@ -15,7 +15,8 @@
    for the rounding RN of the statements. *)
 From Stdlib Require Import Reals ZArith Lia Lra.
 From Flocq Require Import Core Plus_error Relative.
-From Kairn Require Import ModelDraft SpecDraft Format.
+From Kairn.Gen Require Import Model Statements.
+From Kairn Require Import Format.
 Open Scope R_scope.
 
 Section Normalized.

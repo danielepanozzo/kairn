@@ -1,5 +1,5 @@
 # DWTimesDW3: the product of two double-word numbers, with the plain products written as FMAs. The
-# underflow term t is provisional: the smallest valid t is settled by exhaustive tests first.
+# underflow term (3/2) eta is the proved one; exhaustive tests on toy formats approach it.
 kernel:        mul_2_2
 input:         x = x0 x1
 input:         y = y0 y1
@@ -8,12 +8,12 @@ value:         x*y
 requires:      normalized x
 requires:      normalized y
 ensures:       normalized z
-ensures:       error z R c=4 k=2 t=4
-min_precision: 5
+ensures:       error z R c=4 k=2 t=3/2
+min_precision: 4
 theorem:       proofs/theories/Mul22.v mul_2_2_correct
 source:        JMP17 Alg. 12 (DWTimesDW3); bound from MR22
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 
 (ch, cl1) = two_prod(x0, y0)
 tl0       = prod(x1, y1)
