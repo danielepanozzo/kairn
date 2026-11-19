@@ -1,8 +1,9 @@
-(* Audit of the theorems whose statements are written by hand: the IEEE model of eight
-   kernels (drafts of the model and of the statements are in theories/IeeeDraft.v and
-   theories/IeeeStatementsDraft.v), and statements that say more about a kernel than its
-   generated statement does (the parts of a split, the exactness of mul_pow2_2, further
-   bounds on radd and rmul).
+(* Audit of the theorems whose statements are written by hand: the IEEE model of the
+   kernels (drafts of the model and of the statements are in theories/IeeeDraft.v,
+   theories/IeeeStatementsDraft.v and, for the non-finite layer,
+   theories/IeeeExtStatementsDraft.v), and statements that say more about a kernel than
+   its generated statement does (the parts of a split, the exactness of mul_pow2_2,
+   further bounds on radd and rmul, the guard).
 
    The theorems that establish generated statements are audited by the generated
    proofs/gen/Audit.v, and are not repeated here.
@@ -14,6 +15,7 @@
 From Kairn.Gen Require Import Statements.
 From Kairn Require Import IeeeStatementsDraft IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore.
 From Kairn Require Import Split Directed MulPow2.
+From Kairn Require Import Guard IeeeExtStatementsDraft IeeeOps IeeeFull.
 
 (* The IEEE model: error-free transformations. *)
 Definition fast_two_sum_ieee_audit : fast_two_sum_ieee_spec := fast_two_sum_ieee_correct.
@@ -92,3 +94,18 @@ Print Assumptions radd_excess_sharp.
 Print Assumptions rmul_excess_sharp.
 Print Assumptions radd_excess_ulp_result.
 Print Assumptions rmul_excess_ulp_result.
+
+(* The guard: in the real model it returns a number of the format unchanged; in the IEEE
+   model it keeps the value and the finiteness of its operand. *)
+Definition guard_real_audit : guard_real_spec := guard_real.
+Print Assumptions guard_real.
+
+Definition guard_ieee_audit : guard_ieee_spec := guard_ieee.
+Print Assumptions guard_ieee.
+
+(* The non-finite layer: the full kernels (F1 to F5). *)
+Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.
+Print Assumptions add_2_2_full_correct.
+
+Definition mul_2_2_full_audit : mul_2_2_full_spec := mul_2_2_full_correct.
+Print Assumptions mul_2_2_full_correct.
