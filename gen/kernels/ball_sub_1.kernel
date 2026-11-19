@@ -10,11 +10,11 @@ value:         cx-cy
 requires:      nonneg rx
 requires:      nonneg ry
 ensures:       encloses cz rz x-y x=cx,rx y=cy,ry
-min_precision: 2
-theorem:       proofs/theories/Ball.v ball_sub_1_correct
+min_precision: 1
+theorem:       proofs/theories/Ball2.v ball_sub_1_correct
 source:        midpoint-radius difference (Milestone 1 listing)
 license:       algorithm and proof: MIT
-status:        proved
+status:        unverified
 entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 

@@ -7,6 +7,7 @@ value:         abs(x)
 requires:      canonical x
 ensures:       normalized z
 ensures:       error z R c=0 k=2 t=0
+ensures:       represents z
 min_precision: 1
 theorem:       proofs/theories/Sign.v abs_2_correct
 source:        the sign of x0 (Milestone 1 listing)

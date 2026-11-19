@@ -8,7 +8,7 @@ output:        w = w0 w1
 value:         x+y
 requires:      canonical x
 requires:      canonical y
-ensures:       extends w core=add_fast_2_2 lead=add
+ensures:       extends w core=add_fast_2_2 lead=add finite_when=abs_le(x,-2);abs_le(y,-2)
 min_precision: 2
 source:        add_fast_2_2, then the fix-up of IEEE-like results (Milestone 1 listing)
 license:       core: as add_fast_2_2; fix-up: MIT

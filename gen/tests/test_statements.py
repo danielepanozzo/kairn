@@ -159,6 +159,10 @@ def cases(fmt, kernel, seed):
     """Operands that satisfy the requirements: the one-group ones by construction, abs_ge after."""
     req = {}
     for r in kernel.requires:
+        if r[0] == 'ball':      # in the real model: a normalized center and a nonnegative radius
+            req.setdefault(r[1], set()).add('normalized')
+            req.setdefault(r[2], set()).add('nonneg')
+            continue
         for n in r[1:]:
             req.setdefault(n, set()).add(r[0])
     spaces = [Space(fmt, g, req.get(g.name, set())) for g in kernel.inputs]
@@ -251,9 +255,11 @@ def holds(e, k, fmt, ins, outs):
         return out[0] == {'lt': a < b, 'le': a <= b, 'eq': a == b}[e['rel']]
     if not all(isinstance(x, F) for x in out):
         return False
-    if kind == 'normalized':
+    if kind in ('normalized', 'represents'):
+        # represents (neg_2, abs_2), read over finite values: normalized and exactly the value.
         return all(x in fmt.members for x in out) and \
-            all(out[i] == fmt.round(out[i] + out[i + 1], 'nearest') for i in range(len(out) - 1))
+            all(out[i] == fmt.round(out[i] + out[i + 1], 'nearest') for i in range(len(out) - 1)) and \
+            (kind == 'normalized' or sum(out) == value)
     if kind == 'leading_rounded':
         return out[0] == fmt.round(value, 'nearest')
     if kind == 'rounded':

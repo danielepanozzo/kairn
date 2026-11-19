@@ -322,8 +322,11 @@ def judge_ball(k, ks, fmt, e, ins, outs, values):
 
 
 def judge_represents(k, ks, fmt, e, ins, outs, values):
+    """The output is canonical and is `value` exactly. `value` is an input (a constructor) or an
+    expression over the inputs (neg_2: -x, abs_2: abs(x)), read over extended values."""
     out = outs[e['of']]
-    value = group_value(ins[k.value])
+    vals = {g.name: group_value(ins[g.name]) for g in k.inputs if g.kind == ir.LIMB}
+    value = extended(k.value, vals)
     if not fmt.canonical(out):
         return ['represents (canonical)']
     if value == NaN:
@@ -369,10 +372,7 @@ def judge_no_fix_up(k, ks, fmt, e, ins, outs, values):
             exact = {n: v for n, v in vals.items()}
             if not ts.holds(e, k, fmt, exact, {e['of']: [fr(v) for v in out]}):
                 return [kind]
-        elif kind == 'error':
-            # neg_2 and abs_2: the infinity with its sign changed or removed; a NaN stays one.
-            if group_value(out) != extended(k.value, vals):
-                return [f'{kind} (non-finite)']
+        # Which non-finite value comes out is said by represents (neg_2, abs_2), judged apart.
         return []
     if kind == 'predicate':
         a, b = (extended(x, vals) for x in e['args'])
@@ -514,13 +514,15 @@ class NonFinite(unittest.TestCase):
     def test_every_kernel_of_the_extended_domain_is_judged(self):
         judged = {name for name, _, count, _, _ in self.results if count}
         self.assertEqual(judged, set(self.names))
-        # Full kernels, full Ball kernels, constructors, and the kernels that need no fix-up.
-        self.assertEqual(len(self.names), 37)
+        # Full kernels, full Ball kernels, constructors, and the kernels that need no fix-up
+        # (ball_neg_k among them).
+        self.assertEqual(len(self.names), 39)
 
     def test_every_situation_is_reached(self):
         """The cases reach what the statements are about: every full kernel overflows on finite
         operands (F4), gets non-finite operands (F5) and finite results (F2); every full Ball
-        kernel returns each of the three states, the whole line also from finite balls; the
+        kernel returns each of the three states, the whole line also from finite balls (but
+        ball_neg_k, which keeps a finite ball finite); the
         constructors of balls make each state."""
         seen = {}
         for name, _, _, _, s in self.results:
@@ -531,8 +533,9 @@ class NonFinite(unittest.TestCase):
             if 'extends' in kinds:
                 want = {'finite', 'overflow', 'non-finite operand'}
             elif 'encloses' in kinds:
-                want = {'finite from finite operands', 'line from finite operands', 'line from non-finite operands',
-                        'empty from non-finite operands'}
+                want = {'finite from finite operands', 'line from non-finite operands', 'empty from non-finite operands'}
+                if not k.real_model:
+                    want.add('line from finite operands')      # ball_neg_k keeps a finite ball finite
             elif 'makes_ball' in kinds:
                 want = {'finite from finite operands', 'empty from finite operands',
                         'line from non-finite operands', 'empty from non-finite operands'}
@@ -577,7 +580,7 @@ class NonFinite(unittest.TestCase):
         small = {'x': [make(F(2)), ZERO], 'y': [make(F(2)), ZERO]}       # within a quarter of 16
         self.assertIn('F3', judge_extends(ks['add_2_2_full'], ks, fmt, e, small, {'w': [PINF, ZERO]}, None))
         # No condition proved: F3 claims nothing (an empty list is not "always finite").
-        ef = ks['add_fast_2_2_full'].ensures[0]
+        ef = dict(ks['add_fast_2_2_full'].ensures[0], finite_when=[])
         self.assertEqual(judge_extends(ks['add_fast_2_2_full'], ks, fmt, ef, small, {'w': [PINF, ZERO]}, None), [])
         self.assertEqual(ieee('mul', F(0), NINF), NaN)
         self.assertEqual(ieee('sub', NINF, F(-3)), NINF)

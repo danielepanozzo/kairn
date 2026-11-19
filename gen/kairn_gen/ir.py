@@ -39,7 +39,21 @@ kernel is described in one file, gen/kernels/NAME.kernel:
     ieee_status:   unverified         the domain extended only: the IEEE-model statement's status
     ieee_theorem:  FILE NAME          the domain extended only, once that statement is proved
     entry:         yes                optional: the public headers may call it (rule R3)
-    guard_pending: a free text        optional: an entry kernel's input that is not guarded yet,
+    ieee_only:     yes                optional: no real-model statement (a full Ball kernel; the
+                                      other full kernels and the constructors are recognized
+                                      by their claims)
+    ieee:          bridge spec        optional, the finite domain only: the IEEE-model statements
+                                      of the kernel (proofs/gen/IeeeStatements.v): `spec`, its
+                                      claims for finite operands and a finite output limb 0;
+                                      `bridge`, that every value it computes is then finite and
+                                      its outputs are the real model's
+    ieee_finite:   abs_le(x0,-2);abs_le(y0,-2)
+                                      optional, the finite domain only: conditions as in
+                                      finite_when (over input names and limb names) under which
+                                      every value the kernel computes is finite
+    ieee_finite_result: abs_le(x+y,-2)
+                                      optional: another such set of conditions
+    guard_pending: a free text       optional: an entry kernel's input that is not guarded yet,
                                       and why (rule R3)
     ce_variant:    KERNEL             optional: its constant-evaluation variant
     cone_exempt:   free text          optional: why rule 4 cannot hold, and what stands in for it
@@ -204,6 +218,12 @@ class Kernel:
     domain: str = None                             # None (finite) or 'extended', as written
     ieee_status: str = None
     ieee_theorem: tuple = None                     # (file, name)
+    ieee_only: bool = False                        # no real-model statement (a full Ball kernel)
+    # The IEEE-model statements of a kernel of the finite domain (ieee.py): which of `bridge` and
+    # `spec`, and the thresholds under which every value it computes is finite.
+    ieee: tuple = ()
+    ieee_finite: list = field(default_factory=list)          # conditions, as in finite_when
+    ieee_finite_result: list = field(default_factory=list)
     # Rule R3 (architecture.md, "The kernel IR").
     entry: bool = False
     stored: set = field(default_factory=set)       # one-limb input groups that are limbs of objects
@@ -219,10 +239,12 @@ class Kernel:
         """Whether the kernel has a statement in the real model. A full kernel or a constructor
         (architecture.md, "Claims of the non-finite layer") has the IEEE-model statement only: it
         says how non-finite values come out, which the real model cannot. They are recognized by
-        what they claim: `extends`, `represents`, `makes_ball`, or a requirement `ball`, which the
-        full Ball kernels have and the cores do not."""
-        return not (any(e['kind'] in ('extends', 'represents', 'makes_ball') for e in self.ensures)
-                    or any(r[0] == 'ball' for r in self.requires))
+        what they claim: nothing but `extends`, `represents` and `makes_ball` (neg_2 and abs_2
+        claim `represents` next to `normalized` and `error`, and keep their real-model
+        statement), or, for the full Ball kernels, whose claims have the shape of ball_neg_k's,
+        by `ieee_only: yes`."""
+        return not (self.ieee_only or (bool(self.ensures) and
+                                       all(e['kind'] in NON_FINITE_ONLY for e in self.ensures)))
 
     def program_values(self):
         """The input values that enter from the program, for rule R3: in an entry kernel, every
@@ -259,6 +281,13 @@ class Kernel:
     def limbs(self):
         return max(len(g.limbs) for g in self.inputs + self.outputs)
 
+
+# The IEEE-model statements a kernel of the finite domain may ask for (ieee.py, `ieee:`).
+IEEE_STATEMENTS = ('bridge', 'spec')
+
+# The claims that only the non-finite layer has: a kernel that claims nothing else has no
+# real-model statement (Kernel.real_model).
+NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball')
 
 INPUT_CLASSES = ('stored', 'supplied')   # rule R3: where an entry kernel's input comes from
 
@@ -396,7 +425,8 @@ def _stmt(text, where, lineno):
 def parse_kernel(text, path):
     k = Kernel(name=None, path=path)
     single = {'kernel', 'value', 'min_precision', 'theorem', 'source', 'license', 'status',
-              'ce_variant', 'cone_exempt', 'domain', 'ieee_status', 'ieee_theorem', 'entry'}
+              'ce_variant', 'cone_exempt', 'domain', 'ieee_status', 'ieee_theorem', 'entry', 'ieee_only',
+              'ieee', 'ieee_finite', 'ieee_finite_result'}
     seen = set()
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split('#', 1)[0].strip()
@@ -441,10 +471,20 @@ def parse_kernel(text, path):
             setattr(k, key, tuple(parts))
         elif key in ('source', 'license', 'status', 'ce_variant', 'cone_exempt', 'domain', 'ieee_status'):
             setattr(k, key, val)
-        elif key == 'entry':
+        elif key == 'ieee':
+            words = val.split()
+            if not words or any(w not in IEEE_STATEMENTS for w in words) or len(set(words)) < len(words):
+                raise DescriptionError(f'{where}: expected "ieee: " and some of {", ".join(IEEE_STATEMENTS)}')
+            k.ieee = tuple(w for w in IEEE_STATEMENTS if w in words)
+        elif key in ('ieee_finite', 'ieee_finite_result'):
+            conditions = _finite_when(val.replace(' ', ''), where)
+            if not conditions:
+                raise DescriptionError(f'{where}: {key} needs at least one condition')
+            setattr(k, key, conditions)
+        elif key in ('entry', 'ieee_only'):
             if val != 'yes':
-                raise DescriptionError(f'{where}: expected "entry: yes" (leave the line out otherwise)')
-            k.entry = True
+                raise DescriptionError(f'{where}: expected "{key}: yes" (leave the line out otherwise)')
+            setattr(k, key, True)
         elif key in ('unused', 'guard_pending'):
             name, _, why = val.partition(' ')
             table = getattr(k, key)

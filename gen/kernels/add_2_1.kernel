@@ -1,4 +1,6 @@
-# DWPlusFP: a double-word number plus a number of the format.
+# DWPlusFP: a double-word number plus a number of the format. The operand a enters from the
+# program and is guarded in the first line (rule R3; milestone1.md, "Values that enter from the
+# program"). Unverified until the proof of add_2_1_correct is attached to this listing.
 kernel:        add_2_1
 input:         x = x0 x1
 input:         a
@@ -11,10 +13,13 @@ min_precision: 3
 theorem:       proofs/theories/Add21.v add_2_1_correct
 source:        JMP17 Alg. 4 (DWPlusFP); bound from MR22
 license:       algorithm: published; proof: MIT
-status:        proved
+status:        unverified
+ieee:          bridge spec
+ieee_finite:   abs_le(x0,-2);abs_le(a,-2)
+ieee_finite_result: abs_le(x+a,-2)
 entry:         yes
-guard_pending: a milestone1.md guards a in the first line (g = guard(a)), which changes the formal model of this proved kernel: the guard lands with its proof. Until then the public headers guard a before the call
 
-(sh, sl) = two_sum(x0, a)
+g        = guard(a)
+(sh, sl) = two_sum(x0, g)
 v        = add(x1, sl)
 (z0, z1) = fast_two_sum(sh, v)

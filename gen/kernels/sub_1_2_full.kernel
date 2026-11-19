@@ -8,7 +8,7 @@ input:         y = y0 y1
 output:        w = w0 w1
 value:         a-y
 requires:      canonical y
-ensures:       extends w core=sub_1_2 lead=sub
+ensures:       extends w core=sub_1_2 lead=sub finite_when=abs_le(a,-2);abs_le(y,-2)
 min_precision: 3
 source:        sub_1_2, then the fix-up of IEEE-like results (Milestone 1 listing)
 license:       core: as sub_1_2; fix-up: MIT

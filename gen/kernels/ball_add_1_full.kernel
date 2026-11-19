@@ -18,6 +18,7 @@ status:        unverified
 domain:        extended
 ieee_status:   unverified
 entry:         yes
+ieee_only:     yes
 cone_exempt:   the fix-up selects, after explicit tests that the center and the radius are finite (f) and that no operand is empty (e); B1 to B4 of milestone1.md, "Ball kernels", state what comes out
 
 (cz, rz) = ball_add_1(cx, rx, cy, ry)

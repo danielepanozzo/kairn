@@ -165,7 +165,8 @@ class Claims(unittest.TestCase):
 
     def test_the_entries_of_the_non_finite_layer_in_architecture_md(self):
         # The three entries written out in full there, with source, flops and the theorem fields
-        # left out; field for field, in that order.
+        # left out; field for field, in that order. add_2_1_full has since gained its proved
+        # conditions of finite_when, which the example there does not show yet.
         def shown(name):
             return [(key, v) for key, v in self.by[name].items() if key not in ('source', 'flops', 'theorem')]
         self.assertEqual(shown('add_2_1_full'), list({
@@ -174,7 +175,8 @@ class Claims(unittest.TestCase):
             'outputs': [{'name': 'w', 'limbs': 2}],
             'value': 'x+a',
             'requires': ['canonical(x)'],
-            'ensures': [{'kind': 'extends', 'of': 'w', 'core': 'add_2_1', 'lead': 'add', 'finite_when': []}],
+            'ensures': [{'kind': 'extends', 'of': 'w', 'core': 'add_2_1', 'lead': 'add',
+                         'finite_when': [{'abs_le': 'x', 'exp': -2}, {'abs_le': 'a', 'exp': -2}]}],
             'min_precision': 3, 'status': 'unverified', 'ieee_status': 'unverified',
             'instances': {'binary64': [], 'binary32': []}}.items()))
         self.assertEqual(shown('ball_mul_2_full'), list({
@@ -198,14 +200,22 @@ class Claims(unittest.TestCase):
                          'from': {'center': 'c', 'radius': 'r'}}],
             'min_precision': 1, 'status': 'unverified', 'ieee_status': 'unverified',
             'instances': {'binary64': [], 'binary32': []}}.items()))
-        # The two conditions of finite_when that architecture.md gives, and no other.
-        self.assertEqual(self.by['add_2_2_full']['ensures'][0]['finite_when'],
-                         [{'abs_le': 'x', 'exp': -2}, {'abs_le': 'y', 'exp': -2}])
-        self.assertEqual(self.by['mul_2_2_full']['ensures'][0]['finite_when'], [{'abs_le': 'x*y', 'exp': -1}])
+        # The conditions of finite_when: those that architecture.md gives, and the thresholds
+        # proved for the other full kernels (IeeeExtStatementsDraft.v); none for a ball.
+        def bound(text, e):
+            return {'abs_le': text, 'exp': e}
+        want = {'add_2_2_full': [bound('x', -2), bound('y', -2)],
+                'sub_2_2_full': [bound('x', -2), bound('y', -2)],
+                'add_fast_2_2_full': [bound('x', -2), bound('y', -2)],
+                'add_2_1_full': [bound('x', -2), bound('a', -2)],
+                'sub_2_1_full': [bound('x', -2), bound('a', -2)],
+                'sub_1_2_full': [bound('a', -2), bound('y', -2)],
+                'mul_2_2_full': [bound('x*y', -1)],
+                'mul_2_1_full': [bound('x*a', -1)],
+                'mul_pow2_2_full': [bound('x*c', -1)]}
         for k in self.doc['kernels']:
-            if k['name'] not in ('add_2_2_full', 'mul_2_2_full'):
-                for e in k['ensures']:
-                    self.assertEqual(e.get('finite_when', []), [], k['name'])
+            for e in k['ensures']:
+                self.assertEqual(e.get('finite_when', []), want.get(k['name'], []), k['name'])
         self.assertEqual(self.by['make_2']['ensures'], [{'kind': 'represents', 'of': 'x'}])
         self.assertEqual(self.by['make_2']['value'], 'a')
         self.assertEqual(self.by['make_2_limbs']['inputs'], [{'name': 'y', 'limbs': 2}])
@@ -216,7 +226,8 @@ class Claims(unittest.TestCase):
     def test_the_kernels_that_need_no_fix_up(self):
         # Their real-model claims and theorems as before, canonical where normalized was.
         for name in ('neg_2', 'abs_2', 'lt_2_2', 'le_2_2', 'eq_2_2', 'lt_2_1', 'le_2_1', 'eq_2_1', 'lt_1_2',
-                     'le_1_2', 'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'radd', 'rmul'):
+                     'le_1_2', 'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'radd', 'rmul',
+                     'ball_neg_1', 'ball_neg_2'):
             k = self.by[name]
             self.assertEqual((k['domain'], k['status'], k['ieee_status']), ('extended', 'proved', 'unverified'))
             self.assertIsNotNone(k['theorem'], name)
@@ -224,8 +235,14 @@ class Claims(unittest.TestCase):
             self.assertFalse(any(r.startswith('normalized') for r in k['requires']), name)
         self.assertEqual(self.by['lt_2_1']['requires'], ['canonical(x)'])
         self.assertEqual(self.by['radd']['requires'], ['nonneg(a)', 'nonneg(b)'])
+        # neg_2 and abs_2 say with represents which non-finite value comes out; ball_neg_k reads
+        # its encloses in the extended domain, from a ball.
+        self.assertEqual(self.by['neg_2']['ensures'][2], {'kind': 'represents', 'of': 'z'})
+        self.assertEqual(self.by['abs_2']['ensures'][2], {'kind': 'represents', 'of': 'z'})
+        self.assertEqual(self.by['ball_neg_2']['requires'], ['ball(cx, rx)'])
+        self.assertEqual(self.by['ball_neg_2']['ensures'][-1]['finite_when'], [])
         # The cores keep the domain finite.
-        for name in ('add_2_2', 'mul_2_1', 'ball_mul_2', 'ball_neg_1'):
+        for name in ('add_2_2', 'mul_2_1', 'ball_mul_2', 'ball_add_1'):
             self.assertNotIn('domain', self.by[name])
             self.assertNotIn('ieee_status', self.by[name])
 

@@ -8,7 +8,7 @@ input:         a
 output:        w = w0 w1
 value:         x+a
 requires:      canonical x
-ensures:       extends w core=add_2_1 lead=add
+ensures:       extends w core=add_2_1 lead=add finite_when=abs_le(x,-2);abs_le(a,-2)
 min_precision: 3
 source:        add_2_1, then the fix-up of IEEE-like results (Milestone 1 listing)
 license:       core: as add_2_1; fix-up: MIT

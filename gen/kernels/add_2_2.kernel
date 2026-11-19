@@ -13,6 +13,9 @@ theorem:       proofs/theories/Add22.v add_2_2_correct
 source:        JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22
 license:       algorithm: published; proof: MIT
 status:        proved
+ieee:          bridge spec
+ieee_finite:   abs_le(x0,-2);abs_le(y0,-2)
+ieee_finite_result: abs_le(x+y,-2)
 entry:         yes
 
 (sh, sl) = two_sum(x0, y0)

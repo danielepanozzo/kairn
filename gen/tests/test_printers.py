@@ -168,15 +168,23 @@ class Cpp(unittest.TestCase):
                       'double& k1_out, bool& v_out) noexcept {', heads)
 
     def test_computed_constants(self):
-        # unit_computed(add_1_1) is u exactly; tiny_computed(mul_1_1) is eta (eta/2 (1 + u), rounded up).
+        # The constants E, G, H of the second radius design, rounded up to the format. For
+        # ball_add_1: E = rel / (1 - rel) with rel = u / (1 + u) is u exactly; G = (1 + u)^3 rounds
+        # up to 1 + 4u; H = (1 + u) ((1 + u)^2 eta + eta/2), just above (3/2) eta, rounds up to 2 eta.
         add = self.fns[('ball_add_1', 'double')]['lines']
-        self.assertIn('    const double d_p = fma_rn(0x1p-53, mz, 0.0);', add)
+        self.assertIn('    const double t = fma_rn(az, 0x1p-53, s);', add)
+        self.assertIn('    const double rz = fma_rn(t, 0x1.0000000000002p+0, 0x1p-1073);', add)
+        add = self.fns[('ball_add_1', 'float')]['lines']
+        self.assertIn('    const float rz = fma_rn(t, 0x1.000004p+0f, 0x1p-148f);', add)
+        # ball_mul_1: G = (1 + u)^5 rounds up to 1 + 6u; H, just above 3 eta, to 4 eta.
         mul = self.fns[('ball_mul_1', 'float')]['lines']
-        self.assertIn('    const float d_s = d0 + 0x1p-149f;', mul)
+        self.assertIn('    const float t = fma_rn(az, 0x1p-24f, w);', mul)
+        self.assertIn('    const float rz = fma_rn(t, 0x1.000006p+0f, 0x1p-147f);', mul)
+        # ball_mul_2: 4u^2 / (1 - 4u^2) rounds up to 2^-104 (1 + 2^-52); (1 + u)^6 to 1 + 8u; H,
+        # just above 4 eta, to 5 eta.
         mul2 = self.fns[('ball_mul_2', 'double')]['lines']
-        # 4u^2 / (1 - 4u^2) rounded up is 2^-104 (1 + 2^-52); (3/2) eta / (1 - 4u^2) rounded up is 2 eta.
-        self.assertIn('    const double d0_p = fma_rn(0x1.0000000000001p-104, mz, 0.0);', mul2)
-        self.assertIn('    const double d_s = d0 + 0x1p-1073;', mul2)
+        self.assertIn('    const double t = fma_rn(az, 0x1.0000000000001p-104, w);', mul2)
+        self.assertIn('    const double rz = fma_rn(t, 0x1.0000000000004p+0, 0x1.4p-1072);', mul2)
 
     def test_inlined_names(self):
         add = self.fns[('add_2_2', 'double')]['lines']
@@ -321,7 +329,7 @@ class Packed(unittest.TestCase):
         self.assertIn('    const uint32x4_t t = vandq_u32(e, l);', neon[('lt_2_2', 'float32x4_t')])
         self.assertIn('    const float64x2_t e = vfmaq_f64(vnegq_f64(p), a, b);', neon[('two_prod', 'float64x2_t')])
         self.assertIn('    const __m256d e = _mm256_fmsub_pd(a, b, p);', avx2[('two_prod', '__m256d')])
-        self.assertIn('    const __m256d d_p = _mm256_fmadd_pd(_mm256_set1_pd(0x1p-53), mz, _mm256_setzero_pd());',
+        self.assertIn('    const __m256d t = _mm256_fmadd_pd(az, _mm256_set1_pd(0x1p-53), s);',
                       avx2[('ball_add_1', '__m256d')])
         text = self.texts[('neon.hpp', 'kernels')]
         self.assertIn('void lt_2_2(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, '
@@ -423,7 +431,10 @@ class Rocq(unittest.TestCase):
                     else:
                         want += said
                 self.assertEqual(conjuncts[:len(want)], want, name)
-                self.assertEqual(len(conjuncts), len(want) + len(k.ensures), name)
+                # represents is not printed next to other claims (neg_2, abs_2): in the real model
+                # it says what normalized with an exact error says.
+                printed = [e for e in k.ensures if e['kind'] != 'represents']
+                self.assertEqual(len(conjuncts), len(want) + len(printed), name)
                 uncovered[name] = len(want)
         # The loop has something to read: both ways of saying it occur, also in one statement,
         # and so does an output that says nothing (a mask).
@@ -477,16 +488,25 @@ class Rocq(unittest.TestCase):
         self.assertIn('  let s := succ radix2 (FLT_exp emin prec) x0 in\n', m)
         self.assertIn('  let p := pred radix2 (FLT_exp emin prec) x0 in\n', m)
         self.assertIn('Definition to_nearest_2 (x0 x1 : R) : R :=\n  let t := x0 in\n  t.', m)
-        self.assertIn('Definition ball_add_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=', m)
-        self.assertIn('  let d := rmul unit_computed_add_2_2 mz in\n', m)
+        # The Ball cores of the second radius design, whose constants are named after the first
+        # kernel that uses them and their place there (BallDraft.v names them radius_e_K, ...).
+        self.assertIn('Definition ball_add_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=\n'
+                      "  let '(cz0, cz1) := add_2_2 cx0 cx1 cy0 cy1 in\n"
+                      '  let az := Rabs cz0 in\n'
+                      '  let s := rnd (rx + ry) in\n'
+                      '  let t := rnd (az * up_ball_add_2_0 + s) in\n'
+                      '  let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in\n'
+                      '  (cz0, cz1, rz).', m)
         self.assertIn("  let '(cz0, cz1, rz) := ball_add_2 cx0 cx1 rx n0 n1 ry in\n", m)
-        self.assertIn('Definition unit_computed_add_2_2 : R :=\n'
-                      '  let rel := (3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2 in\n'
-                      '  round radix2 (FLT_exp emin prec) Zceil (rel / (1 - rel)).', m)
-        self.assertIn('Definition tiny_computed_mul_2_1 : R :=\n'
-                      '  let rel := 2 * bpow radix2 (- prec) ^ 2 in\n'
-                      '  let tiny := 1 * bpow radix2 emin in\n'
-                      '  round radix2 (FLT_exp emin prec) Zceil (tiny / (1 - rel)).', m)
+        self.assertIn('Definition up_ball_add_2_0 : R :=\n  round radix2 (FLT_exp emin prec) Zceil '
+                      '((((3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2) / '
+                      '(1 - ((3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2))) * '
+                      '(1 + bpow radix2 (- prec))).', m)
+        self.assertIn('Definition up_ball_scale_2_2 : R :=\n  round radix2 (FLT_exp emin prec) Zceil '
+                      '((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + '
+                      '((1 * bpow radix2 emin) / (1 - (2 * bpow radix2 (- prec) ^ 2)))) + '
+                      '(bpow radix2 emin / 2))).', m)
+        self.assertNotIn('unit_computed', m)
         tks = common.kernels(common.TEST_KERNELS)
         self.assertIn('Definition ops_wave2 (a : R) (w : bool) (b : R) : R * R * R * bool :=', rocq.model(tks))
 
@@ -520,21 +540,37 @@ class Rocq(unittest.TestCase):
     # SHA-256 of Model.v, Statements.v and Audit.v as the real model prints them, the same before
     # the non-finite layer (commit f39b066) and after it. Change them only together with a change
     # of the real model that is meant, and with the proofs that go with it.
-    DIGESTS = {'Model.v': 'b9317eb68cfea4256e06afc5c4711a152bacc51177639e7640eeb205453d638b',
-               'Statements.v': 'd4d3d190950921554165d0da54ba988acb98f0d69e1f9333eea2d863cc8c68d2',
-               'Audit.v': 'de3b3e3ec23ea5ef5b1a0b894dfb28257357316b9780ff22ca1cff113004fbba'}
+    DIGESTS = {'Model.v': 'cde4f8a5334da82d75bb616941b1ebea04d1ae160953db7a2cbbc79da392d493',
+               'Statements.v': '2ca182f1284d5f0a5b2ea61aee06eb4641c16cd26572a41ecd85b470fb20d6ee',
+               'Audit.v': '8d3ad68a9655aa87e0259e2b6860c0291f9e754daaf8816bf9af90fa25c5778e'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in
         the three files; a kernel of the extended domain that has one is printed exactly as if it
-        were of the finite domain with normalized for canonical. And the files are those of f39b066."""
+        were of the finite domain with normalized for canonical, a normalized center (a number of
+        the format, for one limb) and a nonnegative radius for a ball, and without represents next
+        to other claims. And the files are those of f39b066 but for the Ball cores of the second
+        radius design and add_2_1 with its guard (and radd, rmul, which no kernel calls any more,
+        printed further down)."""
         printers = {'Model.v': rocq.model, 'Statements.v': rocq.statements, 'Audit.v': rocq.audit}
         finite = {}
         for name, k in copy.deepcopy(dict(self.all)).items():
             if not k.real_model:
                 continue
             k.domain, k.ieee_status, k.ieee_theorem = None, None, None
-            k.requires = [('normalized',) + r[1:] if r[0] == 'canonical' else r for r in k.requires]
+            requires = []
+            for r in k.requires:
+                if r[0] == 'canonical':
+                    requires.append(('normalized',) + r[1:])
+                elif r[0] == 'ball':
+                    center = next(g for g in k.inputs if g.name == r[1])
+                    requires += ([('normalized', r[1])] if len(center.limbs) > 1 else []) + [('nonneg', r[2])]
+                else:
+                    requires.append(r)
+            k.requires = requires
+            k.ensures = [e for e in k.ensures if e['kind'] != 'represents']
+            for e in k.ensures:
+                e.pop('finite_when', None)
             finite[name] = k
         self.assertEqual(len(finite), 42)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))

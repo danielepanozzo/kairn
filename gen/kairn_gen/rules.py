@@ -3,7 +3,7 @@
 Each rule is a short traversal of the kernel's dataflow graph and refuses with a message that
 names the kernel, the value and the rule. Nothing is printed for any kernel while one is refused.
 """
-from . import consts, cpp, expr, ir, rocq, simd
+from . import consts, cpp, expr, ieee, ir, rocq, simd
 
 RULE1 = 'rule 1 (static single assignment)'
 RULE_R1 = 'rule 2 (R1: products)'
@@ -69,7 +69,33 @@ def check_all(kernels):
         for rule in (products, outputs, nonfinite_cone, theorem, entry_values, claims, domains,
                      consteval_variant, computed_constants):
             errors += rule(k, kernels)
+    if not errors:
+        errors += ieee_printable(kernels)
     return errors
+
+
+def ieee_printable(kernels):
+    """What the IEEE-model printer refuses (ieee.PrintError): a constant without a real-model
+    definition, claims with no IEEE-model statement; and a kernel that needs an IEEE-model
+    statement (of the extended domain, or with ieee:) but uses an operation the IEEE model has not.
+    Any other kernel with such an operation (fnma, muladd, mul) is left out of the IEEE model."""
+    errs = []
+    try:
+        ieee.model(kernels)
+    except ieee.PrintError as e:
+        errs.append(RuleError('-', '-', DOMAIN, str(e)))
+    for k in kernels.values():
+        missing = ieee.missing_operations(k, kernels)
+        if missing:
+            if k.extended or k.ieee or k.ieee_finite or k.ieee_finite_result:
+                errs.append(RuleError(k.name, '-', DOMAIN, f'the IEEE model has no {", ".join(missing)}, '
+                                      'and this kernel needs an IEEE-model statement'))
+            continue
+        try:
+            ieee.kernel_statements(k, kernels)
+        except ieee.PrintError as e:
+            errs.append(RuleError(k.name, '-', DOMAIN, str(e)))
+    return errs
 
 
 def well_formed(k, kernels):
@@ -626,11 +652,33 @@ def domains(k, kernels):
     if k.domain not in (None, 'extended'):
         err('-', f'domain {k.domain!r}: it is extended, or the line is left out (the domain finite)')
     if not k.real_model and not k.extended:
-        err('-', 'a full kernel or a constructor (extends, represents, makes_ball, or a ball requirement) '
-                 'is of the extended domain')
+        err('-', 'a full kernel or a constructor (extends, represents, makes_ball, or ieee_only) is of the '
+                 'extended domain')
     for e in k.ensures:
         if 'finite_when' in e and e['kind'] == 'encloses' and not k.extended:
             err('-', 'finite_when belongs to the extended domain')
+    # The IEEE-model statements of a core (ieee.py): of the finite domain only (a kernel of the
+    # extended domain has its own); a threshold or a bridge is about the values of the kernel's
+    # straight-line program, so the kernel must be one.
+    if (k.ieee or k.ieee_finite or k.ieee_finite_result) and k.extended:
+        err('-', 'ieee, ieee_finite and ieee_finite_result are about a kernel of the finite domain; one '
+                 'of the extended domain has its IEEE-model statement from its claims')
+    if ('bridge' in k.ieee or k.ieee_finite or k.ieee_finite_result) and not ieee.has_program(k, kernels):
+        err('-', 'a bridge or a threshold is about the values of a straight-line program, and this kernel '
+                 'is not one (an operation or a constant that Program.v has not)')
+    names = {g.name for g in k.inputs if g.kind == ir.LIMB} | set(k.input_limbs)
+    for key in ('ieee_finite', 'ieee_finite_result'):
+        for c in getattr(k, key):
+            try:
+                tree = expr.parse(c['abs_le'])
+            except expr.ExprError as e:
+                err('-', f'{key}: {e}')
+                continue
+            extra = expr.names(tree) - names
+            if extra:
+                err('-', f'{key}: unknown name {", ".join(sorted(extra))} in {c["abs_le"]!r}')
+            elif not _only(tree, VALUE_TREES):
+                err('-', f'{key} {c["abs_le"]!r}: only + - *, unary minus and abs( ) of names')
     if k.real_model:
         for st in k.body:
             if st.op == 'times_inf':

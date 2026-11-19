@@ -64,102 +64,6 @@
       }
     },
     {
-      "name": "rmul",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "a",
-          "limbs": 1
-        },
-        {
-          "name": "b",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "r",
-          "limbs": 1
-        }
-      ],
-      "value": "a*b",
-      "requires": [
-        "nonneg(a)",
-        "nonneg(b)"
-      ],
-      "ensures": [
-        {
-          "kind": "upper",
-          "of": "r",
-          "gaps": "3/2"
-        }
-      ],
-      "min_precision": 2,
-      "status": "proved",
-      "ieee_status": "unverified",
-      "theorem": {
-        "file": "proofs/theories/Directed.v",
-        "name": "rmul_correct"
-      },
-      "source": {
-        "cite": "one step up from the rounded product (Milestone 1 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 1,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "radd",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "a",
-          "limbs": 1
-        },
-        {
-          "name": "b",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "r",
-          "limbs": 1
-        }
-      ],
-      "value": "a+b",
-      "requires": [
-        "nonneg(a)",
-        "nonneg(b)"
-      ],
-      "ensures": [
-        {
-          "kind": "upper",
-          "of": "r",
-          "gaps": "3/2"
-        }
-      ],
-      "min_precision": 2,
-      "status": "proved",
-      "ieee_status": "unverified",
-      "theorem": {
-        "file": "proofs/theories/Directed.v",
-        "name": "radd_correct"
-      },
-      "source": {
-        "cite": "one step up from the rounded sum (Milestone 1 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 1,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
       "name": "ball_add_1",
       "inputs": [
         {
@@ -212,14 +116,14 @@
           }
         }
       ],
-      "min_precision": 2,
-      "status": "proved",
+      "min_precision": 1,
+      "status": "unverified",
       "theorem": {
-        "file": "proofs/theories/Ball.v",
+        "file": "proofs/theories/Ball2.v",
         "name": "ball_add_1_correct"
       },
       "source": {
-        "cite": "midpoint-radius sum (Milestone 1 listing)",
+        "cite": "midpoint-radius sum (Milestone 1 listing, second radius design)",
         "license": "algorithm and proof: MIT"
       },
       "flops": 4,
@@ -399,17 +303,17 @@
           }
         }
       ],
-      "min_precision": 2,
-      "status": "proved",
+      "min_precision": 1,
+      "status": "unverified",
       "theorem": {
-        "file": "proofs/theories/Ball.v",
+        "file": "proofs/theories/Ball2.v",
         "name": "ball_mul_1_correct"
       },
       "source": {
-        "cite": "midpoint-radius product (Milestone 1 listing)",
+        "cite": "midpoint-radius product (Milestone 1 listing, second radius design)",
         "license": "algorithm and proof: MIT"
       },
-      "flops": 9,
+      "flops": 6,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -478,7 +382,7 @@
         "cite": "ball_mul_1, then the fix-up of the special states of a ball (Milestone 1 listing)",
         "license": "core: as ball_mul_1; fix-up: MIT"
       },
-      "flops": 10,
+      "flops": 7,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -486,6 +390,7 @@
     },
     {
       "name": "ball_neg_1",
+      "domain": "extended",
       "inputs": [
         {
           "name": "cx",
@@ -508,7 +413,7 @@
       ],
       "value": "-cx",
       "requires": [
-        "nonneg(rx)"
+        "ball(cx, rx)"
       ],
       "ensures": [
         {
@@ -521,11 +426,13 @@
               "center": "cx",
               "radius": "rx"
             }
-          }
+          },
+          "finite_when": []
         }
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Ball.v",
         "name": "ball_neg_1_correct"
@@ -584,17 +491,17 @@
           }
         }
       ],
-      "min_precision": 2,
-      "status": "proved",
+      "min_precision": 1,
+      "status": "unverified",
       "theorem": {
-        "file": "proofs/theories/Ball.v",
+        "file": "proofs/theories/Ball2.v",
         "name": "ball_scale_1_correct"
       },
       "source": {
-        "cite": "midpoint-radius scaling (Milestone 1 listing)",
+        "cite": "midpoint-radius scaling (Milestone 1 listing, second radius design)",
         "license": "algorithm and proof: MIT"
       },
-      "flops": 5,
+      "flops": 4,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -654,7 +561,7 @@
         "cite": "ball_scale_1, then the fix-up of the special states of a ball (Milestone 1 listing)",
         "license": "core: as ball_scale_1; fix-up: MIT"
       },
-      "flops": 5,
+      "flops": 4,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -713,10 +620,10 @@
           }
         }
       ],
-      "min_precision": 2,
-      "status": "proved",
+      "min_precision": 1,
+      "status": "unverified",
       "theorem": {
-        "file": "proofs/theories/Ball.v",
+        "file": "proofs/theories/Ball2.v",
         "name": "ball_sub_1_correct"
       },
       "source": {
@@ -962,6 +869,102 @@
             "abs": "1/1427247692705959881058285969449495136382746624"
           }
         ]
+      }
+    },
+    {
+      "name": "radd",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a+b",
+      "requires": [
+        "nonneg(a)",
+        "nonneg(b)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "r",
+          "gaps": "3/2"
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/Directed.v",
+        "name": "radd_correct"
+      },
+      "source": {
+        "cite": "one step up from the rounded sum (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "rmul",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a*b",
+      "requires": [
+        "nonneg(a)",
+        "nonneg(b)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "r",
+          "gaps": "3/2"
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "unverified",
+      "theorem": {
+        "file": "proofs/theories/Directed.v",
+        "name": "rmul_correct"
+      },
+      "source": {
+        "cite": "one step up from the rounded product (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [],
+        "binary32": []
       }
     },
     {
@@ -1266,6 +1269,10 @@
           "k": 2,
           "t": "0",
           "when": null
+        },
+        {
+          "kind": "represents",
+          "of": "z"
         }
       ],
       "min_precision": 1,
@@ -1419,7 +1426,7 @@
         }
       ],
       "min_precision": 3,
-      "status": "proved",
+      "status": "unverified",
       "theorem": {
         "file": "proofs/theories/Add21.v",
         "name": "add_2_1_correct"
@@ -1428,7 +1435,7 @@
         "cite": "JMP17 Alg. 4 (DWPlusFP); bound from MR22",
         "license": "algorithm: published; proof: MIT"
       },
-      "flops": 10,
+      "flops": 11,
       "instances": {
         "binary64": [
           {
@@ -1473,7 +1480,16 @@
           "of": "w",
           "core": "add_2_1",
           "lead": "add",
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "x",
+              "exp": -2
+            },
+            {
+              "abs_le": "a",
+              "exp": -2
+            }
+          ]
         }
       ],
       "min_precision": 3,
@@ -1484,7 +1500,7 @@
         "cite": "add_2_1, then the fix-up of IEEE-like results (Milestone 1 listing)",
         "license": "core: as add_2_1; fix-up: MIT"
       },
-      "flops": 13,
+      "flops": 14,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -1704,7 +1720,16 @@
           "of": "w",
           "core": "add_fast_2_2",
           "lead": "add",
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "x",
+              "exp": -2
+            },
+            {
+              "abs_le": "y",
+              "exp": -2
+            }
+          ]
         }
       ],
       "min_precision": 2,
@@ -1781,13 +1806,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "proved",
+      "status": "unverified",
       "theorem": {
-        "file": "proofs/theories/Ball.v",
+        "file": "proofs/theories/Ball2.v",
         "name": "ball_add_2_correct"
       },
       "source": {
-        "cite": "midpoint-radius sum (Milestone 1 listing)",
+        "cite": "midpoint-radius sum (Milestone 1 listing, second radius design)",
         "license": "algorithm and proof: MIT"
       },
       "flops": 23,
@@ -2040,16 +2065,16 @@
         }
       ],
       "min_precision": 4,
-      "status": "proved",
+      "status": "unverified",
       "theorem": {
-        "file": "proofs/theories/Ball.v",
+        "file": "proofs/theories/Ball2.v",
         "name": "ball_mul_2_correct"
       },
       "source": {
-        "cite": "midpoint-radius product (Milestone 1 listing)",
+        "cite": "midpoint-radius product (Milestone 1 listing, second radius design)",
         "license": "algorithm and proof: MIT"
       },
-      "flops": 17,
+      "flops": 14,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -2118,7 +2143,7 @@
         "cite": "ball_mul_2, then the fix-up of the special states of a ball (Milestone 1 listing)",
         "license": "core: as ball_mul_2; fix-up: MIT"
       },
-      "flops": 18,
+      "flops": 15,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -2156,6 +2181,10 @@
           "k": 2,
           "t": "0",
           "when": null
+        },
+        {
+          "kind": "represents",
+          "of": "z"
         }
       ],
       "min_precision": 1,
@@ -2187,6 +2216,7 @@
     },
     {
       "name": "ball_neg_2",
+      "domain": "extended",
       "inputs": [
         {
           "name": "cx",
@@ -2209,8 +2239,7 @@
       ],
       "value": "-cx",
       "requires": [
-        "normalized(cx)",
-        "nonneg(rx)"
+        "ball(cx, rx)"
       ],
       "ensures": [
         {
@@ -2227,11 +2256,13 @@
               "center": "cx",
               "radius": "rx"
             }
-          }
+          },
+          "finite_when": []
         }
       ],
       "min_precision": 1,
       "status": "proved",
+      "ieee_status": "unverified",
       "theorem": {
         "file": "proofs/theories/Ball.v",
         "name": "ball_neg_2_correct"
@@ -2359,16 +2390,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "proved",
+      "status": "unverified",
       "theorem": {
-        "file": "proofs/theories/Ball.v",
+        "file": "proofs/theories/Ball2.v",
         "name": "ball_scale_2_correct"
       },
       "source": {
-        "cite": "midpoint-radius scaling (Milestone 1 listing)",
+        "cite": "midpoint-radius scaling (Milestone 1 listing, second radius design)",
         "license": "algorithm and proof: MIT"
       },
-      "flops": 10,
+      "flops": 9,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -2428,7 +2459,7 @@
         "cite": "ball_scale_2, then the fix-up of the special states of a ball (Milestone 1 listing)",
         "license": "core: as ball_scale_2; fix-up: MIT"
       },
-      "flops": 10,
+      "flops": 9,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -2494,9 +2525,9 @@
         }
       ],
       "min_precision": 3,
-      "status": "proved",
+      "status": "unverified",
       "theorem": {
-        "file": "proofs/theories/Ball.v",
+        "file": "proofs/theories/Ball2.v",
         "name": "ball_sub_2_correct"
       },
       "source": {
@@ -3065,7 +3096,12 @@
           "of": "w",
           "core": "mul_2_1",
           "lead": "mul",
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "x*a",
+              "exp": -1
+            }
+          ]
         }
       ],
       "min_precision": 2,
@@ -3228,7 +3264,12 @@
           "of": "w",
           "core": "mul_pow2_2",
           "lead": "mul",
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "x*c",
+              "exp": -1
+            }
+          ]
         }
       ],
       "min_precision": 2,
@@ -3292,7 +3333,7 @@
         "cite": "add_2_1 (JMP17 Alg. 4) on -y and a",
         "license": "algorithm: published; proof: MIT"
       },
-      "flops": 10,
+      "flops": 11,
       "instances": {
         "binary64": [
           {
@@ -3337,7 +3378,16 @@
           "of": "w",
           "core": "sub_1_2",
           "lead": "sub",
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "a",
+              "exp": -2
+            },
+            {
+              "abs_le": "y",
+              "exp": -2
+            }
+          ]
         }
       ],
       "min_precision": 3,
@@ -3348,7 +3398,7 @@
         "cite": "sub_1_2, then the fix-up of IEEE-like results (Milestone 1 listing)",
         "license": "core: as sub_1_2; fix-up: MIT"
       },
-      "flops": 13,
+      "flops": 14,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -3401,7 +3451,7 @@
         "cite": "add_2_1 (JMP17 Alg. 4) on -a",
         "license": "algorithm: published; proof: MIT"
       },
-      "flops": 10,
+      "flops": 11,
       "instances": {
         "binary64": [
           {
@@ -3446,7 +3496,16 @@
           "of": "w",
           "core": "sub_2_1",
           "lead": "sub",
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "x",
+              "exp": -2
+            },
+            {
+              "abs_le": "a",
+              "exp": -2
+            }
+          ]
         }
       ],
       "min_precision": 3,
@@ -3457,7 +3516,7 @@
         "cite": "sub_2_1, then the fix-up of IEEE-like results (Milestone 1 listing)",
         "license": "core: as sub_2_1; fix-up: MIT"
       },
-      "flops": 13,
+      "flops": 14,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -3557,7 +3616,16 @@
           "of": "w",
           "core": "sub_2_2",
           "lead": "sub",
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "x",
+              "exp": -2
+            },
+            {
+              "abs_le": "y",
+              "exp": -2
+            }
+          ]
         }
       ],
       "min_precision": 3,

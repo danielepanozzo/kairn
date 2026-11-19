@@ -2,8 +2,6 @@
 // The kernels the runners of gen/tests can run: name, input and output kinds (l: limb,
 // m: mask), the call.
 KAIRN_RUNNER_KERNEL(add_1_1, "ll", "l", kairn::gen::add_1_1(in[0], in[1], out[0]))
-KAIRN_RUNNER_KERNEL(rmul, "ll", "l", kairn::gen::rmul(in[0], in[1], out[0]))
-KAIRN_RUNNER_KERNEL(radd, "ll", "l", kairn::gen::radd(in[0], in[1], out[0]))
 KAIRN_RUNNER_KERNEL(ball_add_1, "llll", "ll", kairn::gen::ball_add_1(in[0], in[1], in[2], in[3], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(ball_add_1_full, "llll", "ll", kairn::gen::ball_add_1_full(in[0], in[1], in[2], in[3], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(ball_make_1, "ll", "ll", kairn::gen::ball_make_1(in[0], in[1], out[0], out[1]))
@@ -17,6 +15,8 @@ KAIRN_RUNNER_KERNEL(ball_sub_1_full, "llll", "ll", kairn::gen::ball_sub_1_full(i
 KAIRN_RUNNER_KERNEL(fast_two_sum, "ll", "ll", kairn::gen::fast_two_sum(in[0], in[1], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(make_2, "l", "ll", kairn::gen::make_2(in[0], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(mul_1_1, "ll", "l", kairn::gen::mul_1_1(in[0], in[1], out[0]))
+KAIRN_RUNNER_KERNEL(radd, "ll", "l", kairn::gen::radd(in[0], in[1], out[0]))
+KAIRN_RUNNER_KERNEL(rmul, "ll", "l", kairn::gen::rmul(in[0], in[1], out[0]))
 KAIRN_RUNNER_KERNEL(split, "l", "ll", kairn::gen::split(in[0], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(two_prod, "ll", "ll", kairn::gen::two_prod(in[0], in[1], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(two_prod_dekker, "ll", "ll", kairn::gen::two_prod_dekker(in[0], in[1], out[0], out[1]))

@@ -8,8 +8,8 @@ in the comment beside it.
 It prints the real model only. A kernel without a real-model statement (a full kernel or a
 constructor of the non-finite layer, ir.Kernel.real_model) is left out of all three files; a kernel
 of the extended domain that has one is printed as before, its requirement canonical read as
-normalized, which is the same thing for finite operands. The IEEE-model statements are not printed
-yet.
+normalized, which is the same thing for finite operands (and a ball, as a normalized center and a
+nonnegative radius). The IEEE model and its statements are printed by ieee.py.
 
 The model is Flocq's: rnd is rounding to nearest with tie rule `choice` in FLT_exp emin prec, the
 format of precision prec with gradual underflow below 2^emin and no overflow. Every operation of
@@ -91,15 +91,18 @@ def _operand(a, ups=None):
 
 def up_names(kernels):
     """{up(EXPR): the name of its definition}, one per distinct constant, named after the first
-    kernel that uses it and its place there: up_K_0, up_K_1, ..."""
+    kernel that uses it and its place among that kernel's distinct up constants: up_K_0, up_K_1,
+    ... (so the third constant of a kernel is up_K_2 even when the first two are named after an
+    earlier kernel)."""
     names = {}
     for k in kernels.values():
-        mine = 0
+        mine = []
         for st in k.body:
             for a in st.args:
-                if a.const and ir.up(a.name) is not None and a.name not in names:
-                    names[a.name] = f'up_{k.name}_{mine}'
-                    mine += 1
+                if a.const and ir.up(a.name) is not None and a.name not in mine:
+                    mine.append(a.name)
+        for i, name in enumerate(mine):
+            names.setdefault(name, f'up_{k.name}_{i}')
     return names
 
 
@@ -369,8 +372,9 @@ CLAIMS = {'normalized': _claim_normalized, 'leading_rounded': _claim_leading_rou
 
 def _hypotheses(k, ins):
     """The requirements, and that every limb is a number of the format. A canonical operand is a
-    normalized one in the real model, where every value is finite."""
-    normalized = {r[1] for r in k.requires if r[0] in ('normalized', 'canonical')}
+    normalized one in the real model, where every value is finite; a ball(c, r) is a normalized
+    center (a number of the format, for one limb) and a nonnegative radius."""
+    normalized = {r[1] for r in k.requires if r[0] in ('normalized', 'canonical', 'ball')}
     hyps = []
     for g in k.inputs:
         if g.kind == ir.MASK:
@@ -386,6 +390,8 @@ def _hypotheses(k, ins):
             hyps.append(f'(exists n : Z, {r[1]} = bpow radix2 n)')
         elif r[0] == 'nonneg':
             hyps.append(f'0 <= {r[1]}')
+        elif r[0] == 'ball':
+            hyps.append(f'0 <= {r[2]}')
     return hyps
 
 
@@ -420,10 +426,14 @@ def statement(k, kernels):
     Built from the claims: the requirements become hypotheses, and the conclusion is a conjunction
     of the formats of the output limbs (_output_formats), in output order, then of the ensures
     entries. Its exact shape is being settled with the proofs, which is why it is all here.
+
+    A `represents` entry next to others (neg_2, abs_2) is not printed: for finite operands it says
+    what `normalized` with an exact `error` says (architecture.md, "Claims of the non-finite
+    layer").
     """
     s = _Shared(k)
     hyps = _hypotheses(k, s.ins)
-    claims = _output_formats(k) + [CLAIMS[e['kind']](e, s) for e in k.ensures]
+    claims = _output_formats(k) + [CLAIMS[e['kind']](e, s) for e in k.ensures if e['kind'] != 'represents']
     sites = ir.muladd_sites(k, kernels)
     outl = k.output_limbs
     pattern = outl[0] if len(outl) == 1 else "'(" + ', '.join(outl) + ')'

@@ -13,6 +13,7 @@ theorem:       proofs/theories/EFT.v fast_two_sum_correct
 source:        Fast2Sum (Dekker 1971)
 license:       algorithm: published; proof: MIT
 status:        proved
+ieee:          spec
 
 s = add(a, b)
 z = sub(s, a)

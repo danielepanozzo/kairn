@@ -5,8 +5,7 @@ input:         stored rx
 output:        cz = cz0 cz1
 output:        rz
 value:         -cx
-requires:      normalized cx
-requires:      nonneg rx
+requires:      ball cx rx
 ensures:       normalized cz
 ensures:       encloses cz rz -x x=cx,rx
 min_precision: 1
@@ -14,6 +13,8 @@ theorem:       proofs/theories/Ball.v ball_neg_2_correct
 source:        midpoint-radius negation (Milestone 1 listing)
 license:       algorithm and proof: MIT
 status:        proved
+domain:        extended
+ieee_status:   unverified
 entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 

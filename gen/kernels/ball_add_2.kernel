@@ -1,5 +1,8 @@
-# The sum of two balls with 2-limb centers: the center by add_2_2, whose error is at most U |cz|
-# with U = unit_computed(add_2_2); its bound has no underflow term, so there is no V term.
+# The sum of two balls with 2-limb centers: the center by add_2_2, the radius in the second design.
+# The radius is evaluated by operations rounded to nearest on nonnegative values and inflated
+# once (milestone1.md, "The radius, second design"): E turns the error bound of the center
+# kernel add_2_2 into a multiple of |cz0|, G covers the roundings of the radius, H what underflow
+# loses and the absolute term of the bound. Each is an exact expression rounded up.
 kernel:        ball_add_2
 input:         cx = cx0 cx1
 input:         stored rx
@@ -15,15 +18,15 @@ requires:      nonneg ry
 ensures:       normalized cz
 ensures:       encloses cz rz x+y x=cx,rx y=cy,ry
 min_precision: 3
-theorem:       proofs/theories/Ball.v ball_add_2_correct
-source:        midpoint-radius sum (Milestone 1 listing)
+theorem:       proofs/theories/Ball2.v ball_add_2_correct
+source:        midpoint-radius sum (Milestone 1 listing, second radius design)
 license:       algorithm and proof: MIT
-status:        proved
+status:        unverified
 entry:         yes
 cone_exempt:   the radius never reaches the center; the special states of the ball layer (Milestone 1 statements, Ball kernels) test the center and the radii
 
-(cz0, cz1) = add_2_2(cx0, cx1, cy0, cy1)
-mz         = abs_upper_2(cz0, cz1)
-d          = rmul(const unit_computed(add_2_2), mz)
-r0         = radd(rx, ry)
-rz         = radd(r0, d)
+(cz0, cz1)  = add_2_2(cx0, cx1, cy0, cy1)
+az          = abs(cz0)
+s           = add(rx, ry)
+t           = fma(az, const up(unit(add_2_2)/(1-unit(add_2_2))*(1+u)), s)
+rz          = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)))

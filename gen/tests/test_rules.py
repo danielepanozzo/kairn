@@ -1,5 +1,6 @@
 """The rules refuse wrong kernels with a message naming the kernel, the value and the rule."""
 import copy
+import dataclasses
 import os
 import re
 import unittest
@@ -423,6 +424,7 @@ status:  unverified
 domain:  extended
 ieee_status: unverified
 entry:   yes
+ieee_only: yes
 cone_exempt: selects
 e  = eq(r, r)
 cw = select(e, c, const nan)
@@ -728,7 +730,7 @@ p = prod(a, b)
 
 
 class R3OfTheKernels(unittest.TestCase):
-    """Rule R3 on gen/kernels: which kernels are entry kernels, and the one pending guard."""
+    """Rule R3 on gen/kernels: which kernels are entry kernels; no guard is pending."""
     # What the public headers call today (include/kairn/expansion.hpp and ball.hpp), and the full
     # kernels and constructors that they are to call (milestone1.md).
     CALLED = {'add_2_2', 'add_2_1', 'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_2_2', 'mul_2_1', 'neg_2', 'abs_2',
@@ -760,19 +762,23 @@ class R3OfTheKernels(unittest.TestCase):
         self.assertTrue(all(ks[n].entry for n in self.CALLED))
         self.assertFalse(any(ks[n].entry for n in self.NOT_ENTRY_BUT_CALLED))
 
-    def test_the_one_pending_guard(self):
+    def test_no_pending_guard(self):
+        # add_2_1 guards its scalar in its first line (milestone1.md), and nothing is left pending.
         ks = common.kernels()
+        self.assertEqual(ks['add_2_1'].body[0].op, 'guard')
+        self.assertEqual(ks['add_2_1'].body[0].args, (ir.Operand('a'),))
+        self.assertEqual({n: k.guard_pending for n, k in ks.items() if k.guard_pending}, {})
         pending, through = rules.r3_report(ks)
-        self.assertEqual(list(pending), ['add_2_1'])
-        self.assertEqual(list(pending['add_2_1']), ['a'])
-        self.assertEqual(through, {n: ['add_2_1'] for n in ('sub_2_1', 'sub_1_2', 'add_2_1_full', 'sub_2_1_full',
-                                                             'sub_1_2_full')})
+        self.assertEqual((pending, through), ({}, {}))
 
-    def test_accepted_because_of_it_and_for_no_other_reason(self):
-        # Without add_2_1's declaration, exactly add_2_1 and the kernels that pass it their scalar
+    def test_accepted_because_of_the_guard_and_for_no_other_reason(self):
+        # Without the guard of add_2_1, exactly add_2_1 and the kernels that pass it their scalar
         # unguarded are refused, each for that scalar.
         ks = copy.deepcopy(dict(common.kernels()))
-        ks['add_2_1'].guard_pending = {}
+        k = ks['add_2_1']
+        guard, call = k.body[0], k.body[1]
+        self.assertEqual((guard.op, call.op), ('guard', 'two_sum'))
+        k.body = [dataclasses.replace(call, args=(call.args[0], ir.Operand('a')))] + k.body[2:]
         errors = [e for e in rules.check_all(ks) if e.rule == rules.RULE_R3]
         self.assertEqual(sorted((e.kernel, e.value) for e in errors),
                          sorted((n, 'a') for n in ('add_2_1', 'sub_2_1', 'sub_1_2', 'add_2_1_full', 'sub_2_1_full',
@@ -783,12 +789,8 @@ class R3OfTheKernels(unittest.TestCase):
 
     def test_build_prints_the_pending_guards(self):
         lines = build.summary(common.kernels())
-        line = [x for x in lines if x.startswith('R3 GUARD PENDING: ')]
-        self.assertEqual(len(line), 1)
-        self.assertTrue(line[0].startswith('R3 GUARD PENDING: add_2_1 (a: '), line[0])
-        self.assertNotIn(';', line[0].split(' (a: ')[0])
-        self.assertIn('accepted by R3 only through a pending guard: add_2_1_full (add_2_1), sub_1_2 (add_2_1), '
-                      'sub_1_2_full (add_2_1), sub_2_1 (add_2_1), sub_2_1_full (add_2_1)', lines)
+        self.assertIn('R3 GUARD PENDING: none', lines)
+        self.assertIn('accepted by R3 only through a pending guard: none', lines)
 
 
 class ComputedConstants(unittest.TestCase):
@@ -1040,6 +1042,12 @@ class TheKernels(unittest.TestCase):
     # The kernels that need no fix-up (milestone1.md): the extended domain, with both statements.
     NO_FIX_UP = {'neg_2', 'abs_2', 'lt_2_2', 'le_2_2', 'eq_2_2', 'lt_2_1', 'le_2_1', 'eq_2_1', 'lt_1_2', 'le_1_2',
                  'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'radd', 'rmul'}
+    # ball_neg_k needs no fix-up either, and reads its encloses from a ball (architecture.md).
+    BALL_NEG = {'ball_neg_1', 'ball_neg_2'}
+    # The Ball cores of the second radius design, and add_2_1 with its guard: unverified until
+    # their new proofs are attached.
+    BALL_CORES = {f'ball_{op}_{k}' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+    REPROVE = BALL_CORES | {'add_2_1'}
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -1059,31 +1067,40 @@ class TheKernels(unittest.TestCase):
         # ending with TwoSum.
         self.assertEqual(body['add_fast_2_2'][-1], (('z0', 'z1'), 'fast_two_sum', ('sh', 'w')))
         # Proved means: the audit passes for that kernel (make -C proofs). Every kernel of the real
-        # model is; the full kernels and the constructors have no real-model statement, and their
-        # IEEE-model statements are not proved.
+        # model is but the Ball cores of the second radius design and add_2_1 with its guard, whose
+        # proofs (Ball2.v, Add21.v) are not yet attached to these listings; the full kernels and the
+        # constructors have no real-model statement, and their IEEE-model statements are not proved.
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.FIRST_WAVE | self.SECOND_WAVE)
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.NON_FINITE)
+                         (self.FIRST_WAVE | self.SECOND_WAVE) - self.REPROVE)
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.NON_FINITE | self.REPROVE)
+        self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
+                         {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
+        self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
         self.assertEqual({name for name, k in ks.items() if not k.real_model}, self.NON_FINITE)
-        self.assertEqual({name for name, k in ks.items() if k.extended}, self.NON_FINITE | self.NO_FIX_UP)
+        self.assertEqual({name for name, k in ks.items() if k.extended},
+                         self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG)
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
-                         dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP, 'unverified'))
+                         dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG, 'unverified'))
         self.assertFalse(any(k.ieee_theorem for k in ks.values()))
-        # The minimum precision of a full kernel is that of its core; a constructor's is 1.
+        # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
+        # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H
+        # of the radius are below the overflow threshold (IeeeExtStatementsDraft.v). A
+        # constructor's is 1.
         for name in self.FULL | self.FULL_BALL:
             core = name[:-len('_full')]
-            self.assertEqual(ks[name].min_precision, ks[core].min_precision, name)
+            want = 2 if name.endswith('_1_full') and name.startswith('ball_') else ks[core].min_precision
+            self.assertEqual(ks[name].min_precision, want, name)
         self.assertEqual({ks[n].min_precision for n in self.CONSTRUCTORS}, {1})
         self.assertEqual(ks['two_prod'].ce_variant, 'two_prod_dekker')
-        # The smallest precision from which each proved statement holds.
-        self.assertEqual({name: k.min_precision for name, k in ks.items() if k.status == 'proved'}, {
+        # The smallest precision from which each real-model statement holds.
+        self.assertEqual({name: k.min_precision for name, k in ks.items() if k.real_model}, {
             'two_sum': 2, 'fast_two_sum': 2, 'two_prod': 2, 'split': 4, 'two_prod_dekker': 4,
             'add_2_2': 3, 'add_2_1': 3, 'mul_2_2': 4, 'mul_2_1': 2, 'add_fast_2_2': 2,
             'neg_2': 1, 'abs_2': 1, 'sub_2_2': 3, 'sub_2_1': 3, 'sub_1_2': 3,
             'lt_2_2': 1, 'le_2_2': 1, 'eq_2_2': 1, 'lt_2_1': 1, 'le_2_1': 1, 'eq_2_1': 1, 'lt_1_2': 1,
             'le_1_2': 1, 'to_nearest_2': 1, 'to_down_2': 1, 'to_up_2': 1, 'abs_upper_2': 1,
             'radd': 2, 'rmul': 2, 'mul_pow2_2': 2, 'add_1_1': 1, 'mul_1_1': 1,
-            'ball_add_1': 2, 'ball_sub_1': 2, 'ball_neg_1': 1, 'ball_mul_1': 2, 'ball_scale_1': 2,
+            'ball_add_1': 1, 'ball_sub_1': 1, 'ball_neg_1': 1, 'ball_mul_1': 1, 'ball_scale_1': 1,
             'ball_add_2': 3, 'ball_sub_2': 3, 'ball_neg_2': 1, 'ball_mul_2': 4, 'ball_scale_2': 2})
 
     def test_second_wave_bodies_are_those_of_milestone1_md(self):
@@ -1107,29 +1124,54 @@ class TheKernels(unittest.TestCase):
         self.assertEqual(body('radd'), ['s = add(a, b)', 'r = succ(s)'])
         self.assertEqual(body('rmul'), ['p = prod(a, b)', 'r = succ(p)'])
         self.assertEqual(body('mul_pow2_2'), ['h = prod(x0, c)', 'l = prod(x1, c)', 'z0, z1 = fast_two_sum(h, l)'])
+        # The Ball cores of the second radius design (milestone1.md, "The radius, second design").
         self.assertEqual(body('ball_add_2'), [
-            'cz0, cz1 = add_2_2(cx0, cx1, cy0, cy1)', 'mz = abs_upper_2(cz0, cz1)',
-            'd = rmul(const unit_computed(add_2_2), mz)', 'r0 = radd(rx, ry)', 'rz = radd(r0, d)'])
+            'cz0, cz1 = add_2_2(cx0, cx1, cy0, cy1)', 'az = abs(cz0)', 's = add(rx, ry)',
+            't = fma(az, const up(unit(add_2_2)/(1-unit(add_2_2))*(1+u)), s)',
+            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)))'])
+        self.assertEqual(body('ball_add_1'), [
+            'cz = add(cx, cy)', 'az = abs(cz)', 's = add(rx, ry)',
+            't = fma(az, const up(unit(add_1_1)/(1-unit(add_1_1))), s)',
+            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)))'])
         self.assertEqual(body('ball_mul_1'), [
-            'cz = prod(cx, cy)', 'ax = abs(cx)', 'ay = abs(cy)', 't1 = rmul(ax, ry)', 't2 = rmul(ay, rx)',
-            't3 = rmul(rx, ry)', 's1 = radd(t1, t2)', 's2 = radd(s1, t3)', 'mz = abs(cz)',
-            'd0 = rmul(const unit_computed(mul_1_1), mz)', 'd = radd(d0, const tiny_computed(mul_1_1))',
-            'rz = radd(s2, d)'])
+            'cz = prod(cx, cy)', 'ax = abs(cx)', 'ay = abs(cy)', 'az = abs(cz)', 'p = prod(rx, ry)',
+            'q = fma(ay, rx, p)', 'w = fma(ax, ry, q)', 't = fma(az, const up(unit(mul_1_1)/(1-unit(mul_1_1))), w)',
+            'rz = fma(t, const up((1+u)^5), const up((1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)))'])
+        self.assertEqual(body('ball_mul_2'), [
+            'cz0, cz1 = mul_2_2(cx0, cx1, cy0, cy1)', 'ax = abs(cx0)', 'ay = abs(cy0)', 'az = abs(cz0)',
+            'p = prod(rx, ry)', 'q = fma(ay, rx, p)', 'w = fma(ax, ry, q)',
+            't = fma(az, const up(unit(mul_2_2)/(1-unit(mul_2_2))), w)',
+            'rz = fma(t, const up((1+u)^6), const up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)))'])
+        self.assertEqual(body('ball_scale_1'), [
+            'cz = prod(cx, a)', 'aa = abs(a)', 'az = abs(cz)', 'p = prod(aa, rx)',
+            't = fma(az, const up(unit(mul_1_1)/(1-unit(mul_1_1))), p)',
+            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)))'])
         self.assertEqual(body('ball_scale_2'), [
-            'cz0, cz1 = mul_2_1(cx0, cx1, a)', 'aa = abs(a)', 't1 = rmul(aa, rx)', 'mz = abs_upper_2(cz0, cz1)',
-            'd0 = rmul(const unit_computed(mul_2_1), mz)', 'd = radd(d0, const tiny_computed(mul_2_1))',
-            'rz = radd(t1, d)'])
-        # The two-limb balls take their constants from the proved kernels of their centers.
-        for name, center in (('ball_add_2', 'add_2_2'), ('ball_mul_2', 'mul_2_2'), ('ball_scale_2', 'mul_2_1')):
-            self.assertEqual(ks[name].body[0].op, center)
-            self.assertEqual({ir.computed(c)[1] for c in ir.constants(ks[name]) if ir.computed(c)}, {center})
+            'cz0, cz1 = mul_2_1(cx0, cx1, a)', 'aa = abs(a)', 'az = abs(cz0)', 'p = prod(aa, rx)',
+            't = fma(az, const up(unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)), p)',
+            'rz = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)))'])
+        self.assertEqual(body('ball_sub_1'), ['n = neg(cy)', 'cz, rz = ball_add_1(cx, rx, n, ry)'])
+        self.assertEqual(body('ball_sub_2'), ['n0, n1 = neg_2(cy0, cy1)',
+                                              'cz0, cz1, rz = ball_add_2(cx0, cx1, rx, n0, n1, ry)'])
+        # Each takes its constants from the proved bound of the kernel of its center; radd and rmul
+        # are no longer called, and stay kernels.
+        for name, center in (('ball_add_1', 'add_1_1'), ('ball_add_2', 'add_2_2'), ('ball_mul_1', 'mul_1_1'),
+                             ('ball_mul_2', 'mul_2_2'), ('ball_scale_1', 'mul_1_1'), ('ball_scale_2', 'mul_2_1')):
+            called = {k.split('(')[1].rstrip(')') for c in ir.constants(ks[name]) if ir.up(c)
+                      for k in re.findall(r'(?:unit|tiny)\([a-z0-9_]+\)', c)}
+            self.assertEqual(called, {center}, name)
             self.assertEqual(ks[center].status, 'proved')
+        self.assertTrue(all(st.op not in ('radd', 'rmul', 'abs_upper_2') for k in ks.values() for st in k.body
+                            if k.name.startswith('ball_')))
+        self.assertIn('radd', ks)
+        self.assertIn('rmul', ks)
 
     def test_flops(self):
-        # The operation counts of docs/developer/design/phase0/operations.md.
+        # The operation counts of docs/developer/design/phase0/operations.md, and the guard of add_2_1
+        # (rule R3), which is one more addition.
         ks = common.kernels()
         self.assertEqual({n: ir.flops(ks[n], ks) for n in ('add_2_2', 'add_fast_2_2', 'add_2_1', 'mul_2_2', 'mul_2_1')},
-                         {'add_2_2': 20, 'add_fast_2_2': 11, 'add_2_1': 10, 'mul_2_2': 9, 'mul_2_1': 6})
+                         {'add_2_2': 20, 'add_fast_2_2': 11, 'add_2_1': 11, 'mul_2_2': 9, 'mul_2_1': 6})
 
 
 if __name__ == '__main__':

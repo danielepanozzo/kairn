@@ -8,7 +8,7 @@ output:        w = w0 w1
 value:         x*c
 requires:      canonical x
 requires:      power_of_two c
-ensures:       extends w core=mul_pow2_2 lead=mul
+ensures:       extends w core=mul_pow2_2 lead=mul finite_when=abs_le(x*c,-1)
 min_precision: 2
 source:        mul_pow2_2, then the fix-up of IEEE-like results (Milestone 1 listing)
 license:       core: as mul_pow2_2; fix-up: MIT

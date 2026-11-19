@@ -51,42 +51,6 @@ inline const char* add_1_1_float() noexcept {
     return !same(o0, -0x1.09517p+0f) ? "add_1_1 (float)" : nullptr;
 }
 
-// rmul (double)
-inline const char* rmul_double() noexcept {
-    volatile double i0 = 0x1.9e2e482ec0a67p-19;
-    volatile double i1 = 0x1.02f14bae74eb1p-20;
-    double o0;
-    rmul(i0, i1, o0);
-    return !same(o0, 0x1.a2f108c2e1ef3p-39) ? "rmul (double)" : nullptr;
-}
-
-// rmul (float)
-inline const char* rmul_float() noexcept {
-    volatile float i0 = 0x1.26b368p-18f;
-    volatile float i1 = 0x1.651f3p-18f;
-    float o0;
-    rmul(i0, i1, o0);
-    return !same(o0, 0x1.9b1c1ap-36f) ? "rmul (float)" : nullptr;
-}
-
-// radd (double)
-inline const char* radd_double() noexcept {
-    volatile double i0 = 0x1.0fc42231eb96cp-16;
-    volatile double i1 = 0x1.48505cd27f8e2p-21;
-    double o0;
-    radd(i0, i1, o0);
-    return !same(o0, 0x1.1a06a5187f934p-16) ? "radd (double)" : nullptr;
-}
-
-// radd (float)
-inline const char* radd_float() noexcept {
-    volatile float i0 = 0x1.05ad5cp-19f;
-    volatile float i1 = 0x1.a5cb1p-18f;
-    float o0;
-    radd(i0, i1, o0);
-    return !same(o0, 0x1.1450e2p-17f) ? "radd (float)" : nullptr;
-}
-
 // ball_add_1 (double)
 inline const char* ball_add_1_double() noexcept {
     volatile double i0 = -0x1.447ffcbb8ac83p+3;
@@ -120,7 +84,7 @@ inline const char* ball_add_1_full_double() noexcept {
     double o0;
     double o1;
     ball_add_1_full(i0, i1, i2, i3, o0, o1);
-    return !same(o0, -0x1.c822436807372p-1) || !same(o1, 0x1.f18691da20a0dp-20) ? "ball_add_1_full (double)" : nullptr;
+    return !same(o0, -0x1.c822436807372p-1) || !same(o1, 0x1.f18691da20a0fp-20) ? "ball_add_1_full (double)" : nullptr;
 }
 inline const char* ball_add_1_full_nonfinite_double() noexcept {
     volatile double i0 = 0.0;
@@ -142,7 +106,7 @@ inline const char* ball_add_1_full_float() noexcept {
     float o0;
     float o1;
     ball_add_1_full(i0, i1, i2, i3, o0, o1);
-    return !same(o0, -0x1.12be48p+3f) || !same(o1, 0x1.b03c0ep-19f) ? "ball_add_1_full (float)" : nullptr;
+    return !same(o0, -0x1.12be48p+3f) || !same(o1, 0x1.b03c1p-19f) ? "ball_add_1_full (float)" : nullptr;
 }
 inline const char* ball_add_1_full_nonfinite_float() noexcept {
     volatile float i0 = std::numeric_limits<float>::quiet_NaN();
@@ -200,7 +164,7 @@ inline const char* ball_mul_1_double() noexcept {
     double o0;
     double o1;
     ball_mul_1(i0, i1, i2, i3, o0, o1);
-    return !same(o0, 0x1.4cdba4105b709p+1) || !same(o1, 0x1.15d69759effbep-17) ? "ball_mul_1 (double)" : nullptr;
+    return !same(o0, 0x1.4cdba4105b709p+1) || !same(o1, 0x1.15d69759effbcp-17) ? "ball_mul_1 (double)" : nullptr;
 }
 
 // ball_mul_1 (float)
@@ -212,7 +176,7 @@ inline const char* ball_mul_1_float() noexcept {
     float o0;
     float o1;
     ball_mul_1(i0, i1, i2, i3, o0, o1);
-    return !same(o0, 0x1.f448p-2f) || !same(o1, 0x1.05da6p-19f) ? "ball_mul_1 (float)" : nullptr;
+    return !same(o0, 0x1.f448p-2f) || !same(o1, 0x1.05da5cp-19f) ? "ball_mul_1 (float)" : nullptr;
 }
 
 // ball_mul_1_full (double)
@@ -224,7 +188,7 @@ inline const char* ball_mul_1_full_double() noexcept {
     double o0;
     double o1;
     ball_mul_1_full(i0, i1, i2, i3, o0, o1);
-    return !same(o0, -0x1.b9df9f25bb193p+2) || !same(o1, 0x1.c481e08a3f127p-14) ? "ball_mul_1_full (double)" : nullptr;
+    return !same(o0, -0x1.b9df9f25bb193p+2) || !same(o1, 0x1.c481e08a3f128p-14) ? "ball_mul_1_full (double)" : nullptr;
 }
 inline const char* ball_mul_1_full_nonfinite_double() noexcept {
     volatile double i0 = 0.0;
@@ -309,7 +273,7 @@ inline const char* ball_scale_1_full_double() noexcept {
     double o0;
     double o1;
     ball_scale_1_full(i0, i1, i2, o0, o1);
-    return !same(o0, 0x1.c2079f76201bdp+3) || !same(o1, 0x1.677a43696b203p-20) ? "ball_scale_1_full (double)" : nullptr;
+    return !same(o0, 0x1.c2079f76201bdp+3) || !same(o1, 0x1.677a43696b204p-20) ? "ball_scale_1_full (double)" : nullptr;
 }
 inline const char* ball_scale_1_full_nonfinite_double() noexcept {
     volatile double i0 = 0.0;
@@ -329,7 +293,7 @@ inline const char* ball_scale_1_full_float() noexcept {
     float o0;
     float o1;
     ball_scale_1_full(i0, i1, i2, o0, o1);
-    return !same(o0, -0x1.be77dep-4f) || !same(o1, 0x1.a857f6p-21f) ? "ball_scale_1_full (float)" : nullptr;
+    return !same(o0, -0x1.be77dep-4f) || !same(o1, 0x1.a857f8p-21f) ? "ball_scale_1_full (float)" : nullptr;
 }
 inline const char* ball_scale_1_full_nonfinite_float() noexcept {
     volatile float i0 = std::numeric_limits<float>::quiet_NaN();
@@ -350,7 +314,7 @@ inline const char* ball_sub_1_double() noexcept {
     double o0;
     double o1;
     ball_sub_1(i0, i1, i2, i3, o0, o1);
-    return !same(o0, 0x1.d1bf80c9a7d5bp+3) || !same(o1, 0x1.f88f6ae816596p-20) ? "ball_sub_1 (double)" : nullptr;
+    return !same(o0, 0x1.d1bf80c9a7d5bp+3) || !same(o1, 0x1.f88f6ae816598p-20) ? "ball_sub_1 (double)" : nullptr;
 }
 
 // ball_sub_1 (float)
@@ -477,6 +441,42 @@ inline const char* mul_1_1_float() noexcept {
     float o0;
     mul_1_1(i0, i1, o0);
     return !same(o0, 0x1.bee004p-4f) ? "mul_1_1 (float)" : nullptr;
+}
+
+// radd (double)
+inline const char* radd_double() noexcept {
+    volatile double i0 = 0x1.0fc42231eb96cp-16;
+    volatile double i1 = 0x1.48505cd27f8e2p-21;
+    double o0;
+    radd(i0, i1, o0);
+    return !same(o0, 0x1.1a06a5187f934p-16) ? "radd (double)" : nullptr;
+}
+
+// radd (float)
+inline const char* radd_float() noexcept {
+    volatile float i0 = 0x1.05ad5cp-19f;
+    volatile float i1 = 0x1.a5cb1p-18f;
+    float o0;
+    radd(i0, i1, o0);
+    return !same(o0, 0x1.1450e2p-17f) ? "radd (float)" : nullptr;
+}
+
+// rmul (double)
+inline const char* rmul_double() noexcept {
+    volatile double i0 = 0x1.9e2e482ec0a67p-19;
+    volatile double i1 = 0x1.02f14bae74eb1p-20;
+    double o0;
+    rmul(i0, i1, o0);
+    return !same(o0, 0x1.a2f108c2e1ef3p-39) ? "rmul (double)" : nullptr;
+}
+
+// rmul (float)
+inline const char* rmul_float() noexcept {
+    volatile float i0 = 0x1.26b368p-18f;
+    volatile float i1 = 0x1.651f3p-18f;
+    float o0;
+    rmul(i0, i1, o0);
+    return !same(o0, 0x1.9b1c1ap-36f) ? "rmul (float)" : nullptr;
 }
 
 // split (double)
@@ -823,7 +823,7 @@ inline const char* ball_add_2_double() noexcept {
     double o1;
     double o2;
     ball_add_2(i0, i1, i2, i3, i4, i5, o0, o1, o2);
-    return !same(o0, 0x1.8a99e6f7d1a09p+2) || !same(o1, -0x1.0429a88ef3044p-56) || !same(o2, 0x1.cb874fc7efcf4p-16) ? "ball_add_2 (double)" : nullptr;
+    return !same(o0, 0x1.8a99e6f7d1a09p+2) || !same(o1, -0x1.0429a88ef3044p-56) || !same(o2, 0x1.cb874fc7efcf6p-16) ? "ball_add_2 (double)" : nullptr;
 }
 
 // ball_add_2 (float)
@@ -853,7 +853,7 @@ inline const char* ball_add_2_full_double() noexcept {
     double o1;
     double o2;
     ball_add_2_full(i0, i1, i2, i3, i4, i5, o0, o1, o2);
-    return !same(o0, -0x1.60dbc82eb2bf5p+1) || !same(o1, -0x1.7cd4168e0624ep-53) || !same(o2, 0x1.c65bc50de9c26p-17) ? "ball_add_2_full (double)" : nullptr;
+    return !same(o0, -0x1.60dbc82eb2bf5p+1) || !same(o1, -0x1.7cd4168e0624ep-53) || !same(o2, 0x1.c65bc50de9c28p-17) ? "ball_add_2_full (double)" : nullptr;
 }
 inline const char* ball_add_2_full_nonfinite_double() noexcept {
     volatile double i0 = 0.0;
@@ -992,7 +992,7 @@ inline const char* ball_mul_2_float() noexcept {
     float o1;
     float o2;
     ball_mul_2(i0, i1, i2, i3, i4, i5, o0, o1, o2);
-    return !same(o0, 0x1.81586p-1f) || !same(o1, 0x1.0e38d8p-26f) || !same(o2, 0x1.53dc3p-19f) ? "ball_mul_2 (float)" : nullptr;
+    return !same(o0, 0x1.81586p-1f) || !same(o1, 0x1.0e38d8p-26f) || !same(o2, 0x1.53dc32p-19f) ? "ball_mul_2 (float)" : nullptr;
 }
 
 // ball_mul_2_full (double)
@@ -1035,7 +1035,7 @@ inline const char* ball_mul_2_full_float() noexcept {
     float o1;
     float o2;
     ball_mul_2_full(i0, i1, i2, i3, i4, i5, o0, o1, o2);
-    return !same(o0, 0x1.dc9254p-1f) || !same(o1, -0x1.2b4f28p-28f) || !same(o2, 0x1.0fff3cp-17f) ? "ball_mul_2_full (float)" : nullptr;
+    return !same(o0, 0x1.dc9254p-1f) || !same(o1, -0x1.2b4f28p-28f) || !same(o2, 0x1.0fff3ap-17f) ? "ball_mul_2_full (float)" : nullptr;
 }
 inline const char* ball_mul_2_full_nonfinite_float() noexcept {
     volatile float i0 = std::numeric_limits<float>::quiet_NaN();
@@ -1153,7 +1153,7 @@ inline const char* ball_scale_2_full_double() noexcept {
     double o1;
     double o2;
     ball_scale_2_full(i0, i1, i2, i3, o0, o1, o2);
-    return !same(o0, -0x1.05a87bd3ebd13p+5) || !same(o1, 0x1.aeb3be007c768p-51) || !same(o2, 0x1.de713d2b6efd7p-19) ? "ball_scale_2_full (double)" : nullptr;
+    return !same(o0, -0x1.05a87bd3ebd13p+5) || !same(o1, 0x1.aeb3be007c768p-51) || !same(o2, 0x1.de713d2b6efd9p-19) ? "ball_scale_2_full (double)" : nullptr;
 }
 inline const char* ball_scale_2_full_nonfinite_double() noexcept {
     volatile double i0 = 0.0;
@@ -1177,7 +1177,7 @@ inline const char* ball_scale_2_full_float() noexcept {
     float o1;
     float o2;
     ball_scale_2_full(i0, i1, i2, i3, o0, o1, o2);
-    return !same(o0, 0x1.02d6c8p-5f) || !same(o1, 0x1.637302p-31f) || !same(o2, 0x1.864c7p-24f) ? "ball_scale_2_full (float)" : nullptr;
+    return !same(o0, 0x1.02d6c8p-5f) || !same(o1, 0x1.637302p-31f) || !same(o2, 0x1.864c72p-24f) ? "ball_scale_2_full (float)" : nullptr;
 }
 inline const char* ball_scale_2_full_nonfinite_float() noexcept {
     volatile float i0 = std::numeric_limits<float>::quiet_NaN();
@@ -1203,7 +1203,7 @@ inline const char* ball_sub_2_double() noexcept {
     double o1;
     double o2;
     ball_sub_2(i0, i1, i2, i3, i4, i5, o0, o1, o2);
-    return !same(o0, 0x1.41919e9e03823p-1) || !same(o1, 0x1.20f969306b64fp-55) || !same(o2, 0x1.8f451909900f7p-20) ? "ball_sub_2 (double)" : nullptr;
+    return !same(o0, 0x1.41919e9e03823p-1) || !same(o1, 0x1.20f969306b64fp-55) || !same(o2, 0x1.8f451909900f8p-20) ? "ball_sub_2 (double)" : nullptr;
 }
 
 // ball_sub_2 (float)
@@ -1218,7 +1218,7 @@ inline const char* ball_sub_2_float() noexcept {
     float o1;
     float o2;
     ball_sub_2(i0, i1, i2, i3, i4, i5, o0, o1, o2);
-    return !same(o0, 0x1.6b8424p+3f) || !same(o1, 0x1.0d46ap-23f) || !same(o2, 0x1.6b0ed8p-17f) ? "ball_sub_2 (float)" : nullptr;
+    return !same(o0, 0x1.6b8424p+3f) || !same(o1, 0x1.0d46ap-23f) || !same(o2, 0x1.6b0edap-17f) ? "ball_sub_2 (float)" : nullptr;
 }
 
 // ball_sub_2_full (double)
@@ -1233,7 +1233,7 @@ inline const char* ball_sub_2_full_double() noexcept {
     double o1;
     double o2;
     ball_sub_2_full(i0, i1, i2, i3, i4, i5, o0, o1, o2);
-    return !same(o0, -0x1.737bdd4f85b6p-2) || !same(o1, 0x1.90037f6d11a38p-56) || !same(o2, 0x1.c2bfaf80d5606p-16) ? "ball_sub_2_full (double)" : nullptr;
+    return !same(o0, -0x1.737bdd4f85b6p-2) || !same(o1, 0x1.90037f6d11a38p-56) || !same(o2, 0x1.c2bfaf80d5608p-16) ? "ball_sub_2_full (double)" : nullptr;
 }
 inline const char* ball_sub_2_full_nonfinite_double() noexcept {
     volatile double i0 = 0.0;
@@ -1261,7 +1261,7 @@ inline const char* ball_sub_2_full_float() noexcept {
     float o1;
     float o2;
     ball_sub_2_full(i0, i1, i2, i3, i4, i5, o0, o1, o2);
-    return !same(o0, -0x1.20bb06p+2f) || !same(o1, 0x1.8e4becp-23f) || !same(o2, 0x1.7f1338p-22f) ? "ball_sub_2_full (float)" : nullptr;
+    return !same(o0, -0x1.20bb06p+2f) || !same(o1, 0x1.8e4becp-23f) || !same(o2, 0x1.7f133ap-22f) ? "ball_sub_2_full (float)" : nullptr;
 }
 inline const char* ball_sub_2_full_nonfinite_float() noexcept {
     volatile float i0 = std::numeric_limits<float>::quiet_NaN();
@@ -1861,10 +1861,6 @@ inline const char* run() noexcept {
     static constexpr check checks[] = {
         add_1_1_double,
         add_1_1_float,
-        rmul_double,
-        rmul_float,
-        radd_double,
-        radd_float,
         ball_add_1_double,
         ball_add_1_float,
         ball_add_1_full_double,
@@ -1903,6 +1899,10 @@ inline const char* run() noexcept {
         make_2_nonfinite_float,
         mul_1_1_double,
         mul_1_1_float,
+        radd_double,
+        radd_float,
+        rmul_double,
+        rmul_float,
         split_double,
         split_float,
         two_prod_double,

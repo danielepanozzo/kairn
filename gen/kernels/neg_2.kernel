@@ -6,6 +6,7 @@ value:         -x
 requires:      canonical x
 ensures:       normalized z
 ensures:       error z R c=0 k=2 t=0
+ensures:       represents z
 min_precision: 1
 theorem:       proofs/theories/Sign.v neg_2_correct
 source:        limb by limb (Milestone 1 listing)

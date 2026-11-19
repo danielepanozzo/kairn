@@ -4,7 +4,6 @@
    statement as its type, and the axioms it depends on are printed, for the audit
    script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import Statements.
-From Kairn Require Import Add21.
 From Kairn Require Import Add22.
 From Kairn Require Import AddFast22.
 From Kairn Require Import Ball.
@@ -23,32 +22,20 @@ From Kairn Require Import TwoProdDekker.
 Definition add_1_1_audit : add_1_1_spec := add_1_1_correct.
 Print Assumptions add_1_1_correct.
 
-Definition rmul_audit : rmul_spec := rmul_correct.
-Print Assumptions rmul_correct.
-
-Definition radd_audit : radd_spec := radd_correct.
-Print Assumptions radd_correct.
-
-Definition ball_add_1_audit : ball_add_1_spec := ball_add_1_correct.
-Print Assumptions ball_add_1_correct.
-
-Definition ball_mul_1_audit : ball_mul_1_spec := ball_mul_1_correct.
-Print Assumptions ball_mul_1_correct.
-
 Definition ball_neg_1_audit : ball_neg_1_spec := ball_neg_1_correct.
 Print Assumptions ball_neg_1_correct.
-
-Definition ball_scale_1_audit : ball_scale_1_spec := ball_scale_1_correct.
-Print Assumptions ball_scale_1_correct.
-
-Definition ball_sub_1_audit : ball_sub_1_spec := ball_sub_1_correct.
-Print Assumptions ball_sub_1_correct.
 
 Definition fast_two_sum_audit : fast_two_sum_spec := fast_two_sum_correct.
 Print Assumptions fast_two_sum_correct.
 
 Definition mul_1_1_audit : mul_1_1_spec := mul_1_1_correct.
 Print Assumptions mul_1_1_correct.
+
+Definition radd_audit : radd_spec := radd_correct.
+Print Assumptions radd_correct.
+
+Definition rmul_audit : rmul_spec := rmul_correct.
+Print Assumptions rmul_correct.
 
 Definition split_audit : split_spec := split_correct.
 Print Assumptions split_correct.
@@ -71,23 +58,14 @@ Print Assumptions to_up_2_correct.
 Definition abs_upper_2_audit : abs_upper_2_spec := abs_upper_2_correct.
 Print Assumptions abs_upper_2_correct.
 
-Definition add_2_1_audit : add_2_1_spec := add_2_1_correct.
-Print Assumptions add_2_1_correct.
-
 Definition add_2_2_audit : add_2_2_spec := add_2_2_correct.
 Print Assumptions add_2_2_correct.
 
 Definition add_fast_2_2_audit : add_fast_2_2_spec := add_fast_2_2_correct.
 Print Assumptions add_fast_2_2_correct.
 
-Definition ball_add_2_audit : ball_add_2_spec := ball_add_2_correct.
-Print Assumptions ball_add_2_correct.
-
 Definition mul_2_2_audit : mul_2_2_spec := mul_2_2_correct.
 Print Assumptions mul_2_2_correct.
-
-Definition ball_mul_2_audit : ball_mul_2_spec := ball_mul_2_correct.
-Print Assumptions ball_mul_2_correct.
 
 Definition neg_2_audit : neg_2_spec := neg_2_correct.
 Print Assumptions neg_2_correct.
@@ -97,12 +75,6 @@ Print Assumptions ball_neg_2_correct.
 
 Definition mul_2_1_audit : mul_2_1_spec := mul_2_1_correct.
 Print Assumptions mul_2_1_correct.
-
-Definition ball_scale_2_audit : ball_scale_2_spec := ball_scale_2_correct.
-Print Assumptions ball_scale_2_correct.
-
-Definition ball_sub_2_audit : ball_sub_2_spec := ball_sub_2_correct.
-Print Assumptions ball_sub_2_correct.
 
 Definition eq_2_1_audit : eq_2_1_spec := eq_2_1_correct.
 Print Assumptions eq_2_1_correct.

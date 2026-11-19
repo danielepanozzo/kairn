@@ -1,7 +1,7 @@
 """What `build` writes and what `check` compares, paths relative to the repository root."""
 import os
 
-from . import claims, cpp, ir, library, rocq, rules, simd
+from . import claims, cpp, ieee, ir, library, rocq, rules, simd
 
 # Every file in these directories must be one that build writes.
 GENERATED_DIRS = ('proofs/gen', 'include/kairn/gen')
@@ -18,6 +18,9 @@ def outputs(kernels):
         'proofs/gen/Model.v': rocq.model(kernels),
         'proofs/gen/Statements.v': rocq.statements(kernels),
         'proofs/gen/Audit.v': rocq.audit(kernels),
+        'proofs/gen/IeeeModel.v': ieee.model(kernels),
+        'proofs/gen/IeeeStatements.v': ieee.statements(kernels),
+        'proofs/gen/IeeeAudit.v': ieee.audit(kernels),
         'include/kairn/gen/prelude.hpp': cpp.prelude(kernels),
         'include/kairn/gen/scalar.hpp': cpp.scalar(kernels),
         'include/kairn/gen/avx2.hpp': simd.header(simd.AVX2, kernels),
