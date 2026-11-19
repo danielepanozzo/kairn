@@ -412,6 +412,8 @@ def valid(fmt, kernel, vals):
 
 
 def limb_text(fmt, v, neg):
+    if type(v) is not int:
+        return v                     # inf, -inf, nan (the extended domain)
     if v == 0:
         return "-0x0p+0" if neg else "0x0p+0"
     return F.to_hex(v, fmt.qmin)
@@ -430,7 +432,15 @@ class RandomGen:
     def __init__(self, kernel, fmt, seed, strata=None, index_tags=True):
         self.kernel = kernel
         self.fmt = fmt
-        if first_wave_shape(kernel):
+        self.valid = valid
+        if getattr(kernel, "extended", False):
+            # The non-finite layer (gen3.py): the family's strata and strata of its own.
+            from . import gen3
+            self.shape = gen3.ExtShape(kernel)
+            known, schedule = self.shape.strata, self.shape.schedule
+            self.make = gen3.make_case
+            self.valid = gen3.valid_ext
+        elif first_wave_shape(kernel):
             self.shape = Shape(kernel)
             known, schedule, self.make = STRATA, SCHEDULE, make_case
         else:
@@ -458,7 +468,7 @@ class RandomGen:
         rng = CaseRandom(self.key, i)
         for _attempt in range(16):
             vals, negz = self.make(self.fmt, self.shape, rng, stratum)
-            if valid(self.fmt, self.kernel, vals):
+            if self.valid(self.fmt, self.kernel, vals):
                 break
         else:
             raise GenError("could not generate a valid case %d (%s)" % (i, stratum))
@@ -581,6 +591,14 @@ def domain(fmt, limbs, restrictions, requires=(), mask=False):
 
 
 class ExhaustiveGen:
+    def __new__(cls, kernel, *args, **kw):
+        # A kernel of the extended domain has domains with non-finite values and balls as one
+        # operand: its enumeration is gen3.ExtExhaustiveGen, a subclass, whose __init__ runs.
+        if cls is ExhaustiveGen and getattr(kernel, "extended", False):
+            from . import gen3
+            cls = gen3.ExtExhaustiveGen
+        return super().__new__(cls)
+
     def __init__(self, kernel, fmt, restrictions=(), index_tags=True):
         self.kernel = kernel
         self.fmt = fmt
