@@ -111,6 +111,24 @@ if(_objcode_command)
     LABELS "full;objcode")
 endif()
 
+# --- The adversarial search (begin) -------------------------------------------------------------
+#
+# full.search.compiled: kairn-oracle search on every kernel with an error, upper, encloses or
+# extends entry, binary64 and binary32, through the scalar runner with the build's flags, 5 000
+# cases per kernel and format from its seeds (the attaining lines of results/*/brute/, the
+# regression cases, the literature, the strata), with --fail-on-suspicious as the cross-checks.
+# Four worker processes, counted (PROCESSORS). Fails on any violated claim.
+if(TARGET kairn-gen-runner)
+  add_test(NAME full.search.compiled
+    COMMAND "${Python3_EXECUTABLE}" oracle/kairn-oracle search all binary64,binary32
+      --runner "$<TARGET_FILE:kairn-gen-runner>" --evals 5000 --jobs 4 --quiet
+      --fail-on-suspicious --suspicious-ok split,two_prod_dekker
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(full.search.compiled PROPERTIES TIMEOUT 600 PROCESSORS 4
+    LABELS "full;search")
+endif()
+# --- The adversarial search (end) ---------------------------------------------------------------
+
 # --- The public interface against the oracle ----------------------------------------------------
 #
 # Every public form of every kernel api/CMakeLists.txt maps, with both of its runners, on

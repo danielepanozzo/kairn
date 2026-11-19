@@ -674,6 +674,28 @@ add_test(NAME consume.find_package
 set_tests_properties(consume.find_package PROPERTIES FIXTURES_REQUIRED kairn_installed)
 add_subdirectory(api)
 
+# --- The regression cases (begin) ---------------------------------------------------------------
+#
+# regression.cases: the lines of tests/regression/cases.txt (the cases that found a problem, and
+# those that came closest to a claim) through every compiled runner above, the generator's
+# interpreter, and both runners of the public interface (api/), every form of each public kernel,
+# judged by the oracle (tests/regression/run.py). A few seconds; the file says how a line is added.
+if(Python3_Interpreter_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/regression/cases.txt")
+  set(_regression_args "")
+  foreach(_runner _label IN ZIP_LISTS _runners _runner_labels)
+    list(APPEND _regression_args --runner "${_label}=$<TARGET_FILE:${_runner}>")
+  endforeach()
+  list(APPEND _regression_args --interp
+    --api "build=$<TARGET_FILE:kairn-api-runner>"
+    --api "contract-fast=$<TARGET_FILE:kairn-api-runner-contract-fast>")
+  add_test(NAME regression.cases
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/regression/run.py"
+      "${CMAKE_CURRENT_SOURCE_DIR}/regression/cases.txt" ${_regression_args}
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(regression.cases PROPERTIES TIMEOUT 300 LABELS regression)
+endif()
+# --- The regression cases (end) -----------------------------------------------------------------
+
 # --- The two tiers ------------------------------------------------------------------------------
 #
 # Every test of this directory and of api/ is in the quick tier, with the label quick; the full

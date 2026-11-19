@@ -16,6 +16,8 @@ at the same scale and products are integers at scale $\eta^2$. No floating-point
 python3 oracle/kairn-oracle gen KERNEL FORMAT [options]      request lines
 python3 oracle/kairn-oracle check [FILES] [options]          verdict and statistics
 python3 oracle/kairn-oracle brute --runner CMD ... [options] parallel gen | runner | check
+python3 oracle/kairn-oracle search KERNELS FORMATS [options]  the cases closest to the claims
+python3 oracle/kairn-oracle shrink 'LINE' [options]          a failing case made simpler
 python3 oracle/kairn-oracle refrun [--variant V]             the reference runner (Python)
 python3 oracle/kairn-oracle selftest [--quick]               the oracle's own tests
 ```
@@ -356,6 +358,138 @@ slowest). In-process `brute` on toy formats does gen, reference runner and check
 `encloses` (`ball_mul_2` is the slowest); in-process `brute` on the Ball kernels of toy formats
 runs at about 26 000 cases per second per job.
 
+## search
+
+```
+kairn-oracle search mul_2_2 binary64                         # the interpreter, 20 000 cases
+kairn-oracle search all binary64,binary32 --jobs 6 --json out.json \
+    --fail-on-suspicious --suspicious-ok split,two_prod_dekker
+kairn-oracle search mul_2_2 binary64 --runner build/tests/kairn-gen-runner
+kairn-oracle search mul_2_1 binary64 --claims oracle/selftest/claims-wave1.json \
+    --runner refrun:mul-drop-cross                           # a planted fault
+```
+
+An adversarial search, for each kernel and format given (`all`: every kernel with an `error`,
+`upper`, `encloses` or `extends` entry), for the cases that bring the kernel closest to its claims,
+or past them. It runs the kernel through a runner (`--runner`: `interp`, the generator's
+interpreter, by default; `refrun[:VARIANT]`, the reference runner in this process; any command
+of the line protocol, a compiled runner for example) and judges every completed line with the
+checker of `check`, whose statistics of one line give the quantities the claims bound:
+
+| Entry | Quantity | Made |
+|---|---|---|
+| `error` | the error over the bound it is allowed, and the observed constant $\lvert\text{err}\rvert/(u^k\rho)$ where $u^k\rho \ge 2^p\eta$ | large |
+| `upper` | the excess over the exact value, in gaps of the result | large |
+| `encloses` | the slack of the radius over the smallest enclosing radius, in gaps of the radius | small (below zero: not enclosed) |
+
+A kernel of the extended domain is searched on finite operands, where `extends` applies the
+entries of its core (F2); those are its quantities, and every other statement is judged on every
+line as `check` judges it.
+
+**How it searches.** Each quantity keeps an elite of the 16 best cases found (`--elite`), at most
+a quarter of them descending from one seed. A generation (`--batch`, 256 cases, one runner
+process) is made of children of elites, each with one to three moves: a bit of a significand
+flipped (the low bits more often), a limb moved by a few units in the last place, given an
+extreme significand (a power of two, all ones, and their neighbors) or another exponent, or
+negated; the second limb of a pair moved to an extreme of the normalization invariant (half an
+ulp of the first toward an even first limb, a quarter below a power of two, the largest value
+below half an ulp, $\pm\eta$, zero); operands swapped or taken from another elite; a second operand
+that nearly cancels the first (for a product, a second limb whose cross term nearly cancels the
+other's); a limb set to an odd multiple of half an ulp of another (a tie); the case scaled toward
+the underflow threshold, the overflow threshold or the bottom of the normal range (for a
+product, one factor); a radius set as the ball strata set one; a zero given the other sign; an
+operand drawn afresh; and one child in sixteen a fresh case of a stratum. Every child is then
+repaired into the kernel's requirements (a pair that is no longer normalized becomes the TwoSum
+of its limbs, a radius its magnitude, a power of two that of its leading bit, operands under
+`abs_ge` are ordered) and kept only if the generator's own test of the requirements passes, so
+that every line written is in the kernel's domain (a search that wrote one outside would stop
+with an error). The first generation is the seeds: the case lines of `--seeds FILE` (a text file
+of lines or any JSON summary), and by default the attaining lines of the summaries under
+`results/*/brute/` and the lines of `tests/regression/cases.txt` (`--no-default-seeds` leaves
+them out); the cases of the literature in `kairn_oracle/tight.py`, transcribed exactly from the
+papers that give them, with the page (`--no-literature`); and eight cases of every stratum of the
+kernel's family. Seeds count toward the budget (`--evals`, 20 000 cases per kernel and format).
+
+The search is deterministic: its choices come from a keyed hash of the seed (`--seed`), kernel,
+format and generation, so the same runner gives the same search, and the interpreter and the
+compiled runners, which write the same bits, give the same search. A line it reports is an
+ordinary completed line, which `check` judges alike. A failure (any failing entry; a suspicious
+result with `--fail-on-suspicious`, but for the kernels of `--suspicious-ok`) stops the search
+of that kernel and format at the end of the batch; the first three failing lines are printed with
+the command that runs each again and the command that shrinks it. The exit status is 1 on any
+failure. `--json FILE` writes, per kernel and format and per quantity, the best value as an exact
+fraction, its line, where it came from (which seed it descends from), and the best value of the
+seeds alone. With the interpreter it runs about 2 300 cases per second per process, with a
+compiled runner about 13 000 (Apple M3 Max); `--jobs N` runs kernel and format pairs at once.
+
+**What it found** (Milestone 1, 20 000 cases per kernel and format, seed 0, on the Mac; the
+table is in [Testing](../docs/developer/testing.md#the-adversarial-search)). No claim was
+violated. Against the extremes of the brute-force runs (13.8 billion results), over the 116
+quantities of the 47 kernels in `binary64` and `binary32` that are not exact claims: with every
+seed, closer to the claim on 86 and the same on 30; from the strata alone, without the
+brute-force lines and the literature, closer on 66, the same on 20 and farther on 30. The
+relative bound of the accurate sum (`add_2_2`, `sub_2_2` and the cores of their full kernels) is
+attained to within $8.2 \cdot 10^{-16}$ in `binary64` and $4.4 \cdot 10^{-7}$ in `binary32`, by
+the case with which [MR22](../docs/developer/design/phase0/references.md#mr22) show it
+asymptotically optimal, where the brute-force runs had come to 0.67 to 0.75 of it; that of the
+sums with one limb (`add_2_1`, `sub_2_1`, `sub_1_2`) to within $2.3 \cdot 10^{-16}$ and
+$1.2 \cdot 10^{-7}$ (0.81 to 0.997 before); `mul_2_2` comes to $1 - 8.7 \cdot 10^{-9}$ of its
+bound in `binary64` (0.977 before), with an observed constant of 3.99999996 against the claimed
+4 (3.34 before): the search carried MR22's case, 3.997, further; and the form-A bound of
+`add_fast_2_2` is attained to within $4.4 \cdot 10^{-7}$ in `binary32` (0.60 before), by a
+search that started from a brute-force line, and from the strata alone for the core of
+`add_fast_2_2_full`. A longer run, 1 000 000 cases per kernel and format through a compiled
+runner, violated nothing either and brought `mul_2_2` to within $1.9 \cdot 10^{-15}$ of its bound
+and `add_fast_2_2` to within $8.1 \cdot 10^{-16}$ of its, in `binary64`. It did not find every
+planted fault: a
+fault of `tests/kernel_mutants.py` that breaks the radius of `ball_scale_2` only where the
+correct kernel's slack is large (a zero input radius) went unseen in 100 000 cases, while the
+full tier's 20 000 random ones met it once or twice.
+
+## shrink
+
+```
+kairn-oracle shrink 'mul_2_2 binary64 -0x1.32404e4936d19p-538 ... #search:58' \
+    --claims oracle/selftest/claims-wave1.json --runner refrun:mul-drop-cross
+kairn-oracle shrink 'LINE' --runner build/tests/kairn-gen-runner     # no toy formats
+```
+
+Given one line that a runner fails (a request or a completed line; `-` reads it from standard
+input) and that runner (`--runner`, as for `search`), `shrink` looks for a simpler case that the
+same runner fails in the same way: the same `ensures` entry, and in the extended domain the same
+statement (F1 to F5, B1 to B4), as judged by the checker. It lists what the line fails and keeps
+the first (`--entry` chooses another). Simpler is a tuple compared in order: the limbs that are
+not zero, the significant bits of every limb, the distance of every limb's exponent from zero,
+the negative limbs, the negative zeros. Each round runs every one-step change of the current case
+at once (an operand replaced by zero or by the power of two of its leading bit; a limb replaced
+by zero, cut to its leading 1, 2, 3, 4, 6, 8, ... bits, its lowest set bit cleared, made
+positive; a second limb moved toward exponent zero; an operand, or every operand together, or
+for a product one factor up and the other down, scaled toward exponent zero; a negative zero made
+positive), each repaired into the requirements as the search repairs, and keeps the simplest
+that still fails. The tuple decreases at every step, so it ends; `--evals` (50 000) bounds the
+cases it runs.
+
+Then, unless `--no-toy`, it looks for the smallest toy format in which the runner fails the same
+way: precisions from the kernel's `min_precision` up to one less than the case's, 2 to 16
+exponents placed as in `binary64` ($q_{\min} + q_{\max} = 3 - 2p$; in the extended domain also
+$q_{\max} \ge 1$, the shape of the IEEE-model statements), in the order of the size of their
+enumeration. In each it runs the case rounded into the format, the case with each second limb kept
+at the same place relative to the ulp of the first, and then every case of the format, or
+`--toy-cases` random cases of every stratum (2 000) where there are more. In the first format
+that fails it shrinks the simplest failing case again. A runner that runs none of the first three
+toy formats (a compiled one: `binary64` and `binary32` only) leaves the step out, and the report
+says so. It prints the shrunk line, its completed line and the command that runs it again;
+`--json FILE` writes the same. Deterministic. A fault that depends on the text of a line rather
+than its operands (the variant `ulp-rare`, which hashes the line, tag included) cannot be shrunk.
+
+On the planted faults of the self-tests: `mul_2_2` with the cross term $x_0y_1$ dropped
+(`mul-drop-cross`), from a `binary64` line of four limbs with 195 significant bits to
+`mul_2_2 binary64 0x1p+0 0x0p+0 0x1p+0 0x1p-53` ($1 \cdot (1 + 2^{-53})$ loses $2^{-53}$) and to
+`mul_2_2 fp:5:-5:-2 0x1.8p+0 0x0p+0 -0x1p+2 -0x1p-3`; through a compiled runner with a fault of
+`tests/kernel_mutants.py` planted (the finiteness test of `add_fast_2_2_full` loosened), from the
+line the search found to `add_fast_2_2_full binary64 -0x1.fffffffffffffp+1023 -0x1p+969 -0x1p+969
+0x0p+0`, whose result $(-\infty, +\infty)$ is not canonical.
+
 ## refrun and the C++ runner
 
 `refrun` evaluates the first-wave kernels (and `split`), as written in architecture.md, and the
@@ -480,6 +614,10 @@ computed over the wrong cases, ...) and requires `selftest --quick` to fail on t
 | `merging_wave3` | the merge of summaries of the layer differs from the whole |
 | `radius_second` | a constant $E$, $G$ or $H$ of the second radius design other than worked out by hand from the page's table (binary64 and a $p = 3$ format), `ball_sub_k` with other constants than `ball_add_k`, either radius design flagged on the same streams |
 | `precision_one` | at precision 1: rounding (ties by the definition), directed rounding, neighbors, membership or normalized pairs different from brute force; a kernel proved from precision 1 invalid, flagged or unjudged at random or on every operand; a format below a kernel's minimum precision setting the kernel aside |
+| `search_finds_planted` | the search, through the reference runner with each of eight planted faults (an error term, a dropped cross term, a rounding below $\lambda$, a skipped renormalization, a step left out, a radius without a term, an infinity of the wrong sign, a radius without $E$), not failing within 2 000 cases, failing another entry than the fault's, or reporting a line that the checker, on its own, passes |
+| `search_correct_runner` | the search failing the correct runner on seven kernels of every kind it measures; a quantity it reports other than the checker's for the reported line; the same seed giving two searches, or two seeds the same |
+| `search_moves_valid` | a child of the search's moves, once repaired, outside the requirements of its kernel (pairs, radii, powers of two, `abs_ge`, balls) |
+| `shrink_planted` | a shrunk line of four planted faults that the checker passes, that fails another entry, that is not simpler, or that two runs disagree on; no toy format found where the fault exists in one; a line that passes shrunk at all |
 
 The Ball kernels of the non-finite layer run with the second radius design in these tests (the
 design their IEEE-model statements are proved with); the second wave's tests run the first.

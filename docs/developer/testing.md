@@ -44,6 +44,7 @@ The tests that `ctest` runs in the build directory, by name:
 | `objcode.check` | Every kernel compiled with the build's compiler in five configurations of its flag matrix, scalar and packed, for `double` and `float`: the fused multiply-adds and the plain multiplications of its object code are what `gen/objcode.json` says the IR asks for ([below](#object-code)). |
 | `objcode.controls` | The textbook `a * b + c` fails that check in exactly the configurations where its program sees the compiler fuse it, and in at least one; counts changed on purpose fail it. |
 | `objcode.test` | The checker's own tests, on stored disassemblies of every format it reads (Python only). |
+| `regression.cases` | The stored cases of `tests/regression/cases.txt` (the cases that found a problem, and those that came closest to a claim, [below](#the-regression-cases)) through every compiled runner of the build, the generator's interpreter, and both runners of the public interface with every form of each public kernel, judged by the oracle (`tests/regression/run.py`). |
 | `consume.*` | A CMake project that uses Kairn through `add_subdirectory`, and one through `find_package` after `cmake --install`, build and run a kernel. |
 
 The tests of the public interface (`tests/api/`, label `api`):
@@ -75,6 +76,7 @@ test it extends, with `full.` in front:
 | `full.crosscheck.interp-sampled.K` | The same kernels on 20 000 random cases of the whole toy format, from every stratum. |
 | `full.kairn-gen.test` | The four test classes of the generator that `kairn-gen.test` leaves out (`-k`): the interpreter against the machine's own arithmetic (Python's float and `math.fma`) on thousands of cases per kernel and format and against every rounding of toy formats, and the statements of the IEEE model and of the non-finite layer on every operand of small formats. With four worker processes. |
 | `full.kairn-oracle.selftest` | The six tests of the oracle that `kairn-oracle.selftest` leaves out (`--only`): its Python reference runner, correct and with injected errors, on every case of tiny formats. With four worker processes. |
+| `full.search.compiled` | The adversarial search ([below](#the-adversarial-search)) on every kernel with an `error`, `upper`, `encloses` or `extends` entry, `binary64` and `binary32`, through the scalar runner with the build's flags, 5 000 cases per kernel and format from its seeds; fails on any violated claim. With four worker processes. |
 
 The names of the parts left out are in `tests/CMakeLists.txt` (`_gen_full`, `_oracle_full`), and
 both tools fail when a name they are given matches no test, so that a test renamed cannot drop out
@@ -705,6 +707,193 @@ if any). A failing cross-check prints this command with its own runner and argum
 The request line alone is also a valid input: `echo 'add_2_2 binary64 ... #extreme:462' |
 build/tests/kairn-gen-runner` shows the result without the oracle, and `python3 gen/kairn-gen
 interp` the exact one. The packed runner evaluates a lone line in every lane.
+
+## The adversarial search
+
+The cross-checks and the brute-force tier draw their cases at random from strata; how close a
+claim came then depends on what the draws met. `python3 oracle/kairn-oracle search` looks for
+the cases that bring a kernel closest to its claims, or past them: for a kernel and a format it
+evolves a population of cases through a runner (the interpreter by default, any compiled runner
+too) and judges every completed line with the oracle's own checker, keeping the best cases for
+each quantity a claim bounds (the error over its bound and the observed constant for `error`, the
+excess in gaps for `upper`, the smallest slack of the radius for `encloses`). Its moves are those
+of floating-point operands (bits of a significand, units in the last place, extreme significands,
+second limbs at the edges of the normalization invariant, exponents, signs, swaps, ties,
+cancellation, the underflow and overflow thresholds); every case stays inside the kernel's
+requirements; its seeds are the attaining lines of the stored brute-force runs, the regression
+cases, the operands the literature gives for the double-word algorithms (`oracle/kairn_oracle/tight.py`,
+transcribed with the page) and cases of every stratum. It is deterministic, and a case it reports
+is an ordinary line that `check` judges alike (`oracle/README.md`, "search").
+
+**What it found** in Milestone 1. Each kernel with an `error`, `upper`, `encloses` or `extends`
+entry, in `binary64` and `binary32`, got 20 000 cases (seed 0), seeds included, through the
+interpreter on the Mac: 94 searches in 141 seconds with six worker processes, 825 seconds of
+process time. Through the scalar runner of an Apple clang build instead, the 94 searches gave the
+same values case for case, in 26 seconds. Its seeds were the brute-force lines, the literature and
+the strata (the regression cases came after, from this run). A second run started from the strata
+alone, to see what the search adds by itself. **No claim was violated.** The table compares the extreme of each quantity with that of the brute-force runs of
+[Brute force, Milestone 1](results/brute-milestone1.md) (13.8 billion results of the compiled
+runners, recomputed exactly from their attaining lines): bold where the search came closer to the
+claim, ↓ where it stayed farther. Exact claims ($c = 0$, $t = 0$) are left out: the search has
+nothing to climb there and found no inexact result.
+
+| Kernel | Quantity | `binary64` brute force | from the strata | with every seed | `binary32` brute force | from the strata | with every seed |
+|---|---|---|---|---|---|---|---|
+| `add_1_1` | observed c | 1 − 1.1·10<sup>-16</sup> | 1 − 1.1·10<sup>-16</sup> | 1 − 1.1·10<sup>-16</sup> | 1 − 6.0·10<sup>-8</sup> | 1 − 6.0·10<sup>-8</sup> | 1 − 6.0·10<sup>-8</sup> |
+| `add_1_1` | error / bound | 1 | 1 | 1 | 1 | 1 | 1 |
+| `add_2_1` | observed c | 1.9663 | 1 − 5.6·10<sup>-17</sup> ↓ | **2 − 4.4·10<sup>-16</sup>** | 1.9754 | **2 − 2.4·10<sup>-7</sup>** | **2 − 2.4·10<sup>-7</sup>** |
+| `add_2_1` | error / bound | 0.9832 | 0.5 ↓ | **1 − 2.2·10<sup>-16</sup>** | 0.9877 | **1 − 1.2·10<sup>-7</sup>** | **1 − 1.2·10<sup>-7</sup>** |
+| `add_2_1_full` | core's observed c | 1.9684 | **2 − 4.4·10<sup>-16</sup>** | **2 − 4.4·10<sup>-16</sup>** | 1.9693 | **2 − 2.4·10<sup>-7</sup>** | **2 − 2.4·10<sup>-7</sup>** |
+| `add_2_1_full` | core's error / bound | 0.9842 | **1 − 2.2·10<sup>-16</sup>** | **1 − 2.2·10<sup>-16</sup>** | 0.9846 | **1 − 1.2·10<sup>-7</sup>** | **1 − 1.2·10<sup>-7</sup>** |
+| `add_2_2` | observed c | 1.9966 | **2.5** | **3 − 1.1·10<sup>-15</sup>** | 2.0668 | **2.25** | **3 − 6.0·10<sup>-7</sup>** |
+| `add_2_2` | error / bound | 0.6655 | **0.8333** | **1 − 8.1·10<sup>-16</sup>** | 0.6889 | **0.75** | **1 − 4.4·10<sup>-7</sup>** |
+| `add_2_2_full` | core's observed c | 2 − 4.4·10<sup>-16</sup> | **2.5** | **3 − 1.1·10<sup>-15</sup>** | 2.1541 | **2.5** | **3 − 6.0·10<sup>-7</sup>** |
+| `add_2_2_full` | core's error / bound | 0.6667 | **0.8333** | **1 − 8.1·10<sup>-16</sup>** | 0.718 | **0.8333** | **1 − 4.4·10<sup>-7</sup>** |
+| `add_fast_2_2` | observed c | 2.2284 | 2.1693 ↓ | **2.8717** | 1.7874 | **2.8212** | **3 − 1.3·10<sup>-6</sup>** |
+| `add_fast_2_2` | error / bound | 0.7428 | 0.7231 ↓ | **0.9577** | 0.5958 | **0.9404** | **1 − 4.4·10<sup>-7</sup>** |
+| `add_fast_2_2_full` | core's observed c | 1.5711 | **2.2964** | **2.3628** | 2.2991 | **3 − 1.3·10<sup>-6</sup>** | **2.7641** |
+| `add_fast_2_2_full` | core's error / bound | 0.5237 | **0.7655** | **0.7876** | 0.7664 | **1 − 4.4·10<sup>-7</sup>** | **0.9214** |
+| `ball_add_1` | slack, gaps | 1 | 1.125 ↓ | 1 | 1 | 1 | 1 |
+| `ball_add_1_full` | slack, gaps | 1 | 1.125 ↓ | 1 | 1 | 1.125 ↓ | 1 |
+| `ball_add_2` | slack, gaps | 1.2524 | **1.1758** | **1.1719** | 1.2501 | **1.1563** | **1.125** |
+| `ball_add_2_full` | slack, gaps | 1.2589 | **1.1602** | **1.1719** | 1.2501 | **1.1094** | **1.1582** |
+| `ball_mul_1` | slack, gaps | 1.5581 | **1.5001** | **1.5037** | 1.5353 | **1.5001** | **1.5** |
+| `ball_mul_1_full` | slack, gaps | 1.5987 | **1.5** | **1.5061** | 1.5907 | **1.508** | **1.5** |
+| `ball_mul_2` | slack, gaps | 2.5041 | **2.4965** | **2.4915** | 2.5015 | 2.5327 ↓ | **2.4618** |
+| `ball_mul_2_full` | slack, gaps | 2.5 | **2.4482** | **2.4421** | 2.5608 | **2.5** | **2.5** |
+| `ball_scale_1` | slack, gaps | 1 + 2.2·10<sup>-16</sup> | 1 + 2.2·10<sup>-16</sup> | 1 + 2.2·10<sup>-16</sup> | 1 + 1.2·10<sup>-7</sup> | 1.25 ↓ | 1 + 1.2·10<sup>-7</sup> |
+| `ball_scale_1_full` | slack, gaps | 1 + 2.2·10<sup>-16</sup> | 1 + 2.2·10<sup>-16</sup> | 1 + 2.2·10<sup>-16</sup> | 1 + 1.2·10<sup>-7</sup> | 1 + 1.2·10<sup>-7</sup> | 1 + 1.2·10<sup>-7</sup> |
+| `ball_scale_2` | slack, gaps | 1.375 | **1.25** | **1.25** | 1.375 | **1.2501** | 1.375 |
+| `ball_scale_2_full` | slack, gaps | 1.329 | 1.5 ↓ | **1.2511** | 1.375 | **1.2512** | **1.2534** |
+| `ball_sub_1` | slack, gaps | 1 | 1.125 ↓ | 1 | 1 | 1 | 1 |
+| `ball_sub_1_full` | slack, gaps | 1 | 1.125 ↓ | 1 | 1 | 1.125 ↓ | 1 |
+| `ball_sub_2` | slack, gaps | 1.2511 | **1.2109** | **1.1564** | 1.25 | **1.1563** | **1.1563** |
+| `ball_sub_2_full` | slack, gaps | 1.2509 | **1.1602** | **1.1582** | 1.2513 | **1.1719** | **1.1719** |
+| `mul_1_1` | observed c | 1 − 3.3·10<sup>-16</sup> | 1 − 3.3·10<sup>-16</sup> | 1 − 3.3·10<sup>-16</sup> | 1 − 1.8·10<sup>-7</sup> | 1 − 1.8·10<sup>-7</sup> | 1 − 1.8·10<sup>-7</sup> |
+| `mul_1_1` | error / bound | 1 − 1.1·10<sup>-16</sup> | 1 − 2.2·10<sup>-16</sup> ↓ | 1 − 1.1·10<sup>-16</sup> | 1 − 6.0·10<sup>-8</sup> | 1 − 6.0·10<sup>-8</sup> | 1 − 6.0·10<sup>-8</sup> |
+| `mul_2_1` | observed c | 1.9533 | 1.6 ↓ | **1.9956** | 1.9105 | 1.8925 ↓ | **1.9697** |
+| `mul_2_1` | error / bound | 1 − 2.2·10<sup>-16</sup> | 0.9908 ↓ | **1 − 1.7·10<sup>-16</sup>** | 1 − 1.5·10<sup>-7</sup> | 0.9998 ↓ | **1 − 8.9·10<sup>-8</sup>** |
+| `mul_2_1_full` | core's observed c | 1.9561 | 1.9026 ↓ | **1.9956** | 1.9122 | 1.648 ↓ | **1.9697** |
+| `mul_2_1_full` | core's error / bound | 1 − 2.8·10<sup>-16</sup> | 0.995 ↓ | **1 − 1.7·10<sup>-16</sup>** | 1 − 2.1·10<sup>-7</sup> | 1 − 4.2·10<sup>-6</sup> ↓ | **1 − 1.2·10<sup>-7</sup>** |
+| `mul_2_2` | observed c | 3.3361 | **3.9959** | **4 − 3.5·10<sup>-8</sup>** | 3.4428 | **3.4993** | **3.5392** |
+| `mul_2_2` | error / bound | 0.9772 | **0.999** | **1 − 8.7·10<sup>-9</sup>** | 0.9738 | **0.9939** | **0.9961** |
+| `mul_2_2_full` | core's observed c | 3.4873 | 3.1298 ↓ | **4 − 1.3·10<sup>-8</sup>** | 3.4886 | 2.8815 ↓ | 3.4886 |
+| `mul_2_2_full` | core's error / bound | 0.9809 | 0.9765 ↓ | **1 − 3.1·10<sup>-9</sup>** | 0.9689 | **0.9963** | **0.999** |
+| `mul_pow2_2` | error / bound | 0.7385 | **0.75** | **0.75** | 0.75 | 0.75 | 0.75 |
+| `mul_pow2_2_full` | core's error / bound | 0.7489 | 0.7422 ↓ | **0.75** | 0.75 | 0.75 | 0.75 |
+| `radd` | excess, gaps | 1.5 | 1.5 | 1.5 | 1.5 | 1.5 | 1.5 |
+| `rmul` | excess, gaps | 1.5 | 1.5 | 1.5 | 1.5 | 1.5 | 1.5 |
+| `sub_1_2` | observed c | 1.6201 | **2 − 4.4·10<sup>-16</sup>** | **2 − 4.4·10<sup>-16</sup>** | 1.7841 | **2 − 6.0·10<sup>-7</sup>** | **2 − 2.4·10<sup>-7</sup>** |
+| `sub_1_2` | error / bound | 0.81 | **1 − 2.2·10<sup>-16</sup>** | **1 − 2.2·10<sup>-16</sup>** | 0.8921 | **1 − 3.0·10<sup>-7</sup>** | **1 − 1.2·10<sup>-7</sup>** |
+| `sub_1_2_full` | core's observed c | 1.6244 | **2 − 4.4·10<sup>-16</sup>** | **2 − 4.4·10<sup>-16</sup>** | 1.7425 | **2 − 2.4·10<sup>-7</sup>** | **2 − 2.4·10<sup>-7</sup>** |
+| `sub_1_2_full` | core's error / bound | 0.8122 | **1 − 2.2·10<sup>-16</sup>** | **1 − 2.2·10<sup>-16</sup>** | 0.9167 | **1 − 1.2·10<sup>-7</sup>** | **1 − 1.2·10<sup>-7</sup>** |
+| `sub_2_1` | observed c | 1.9947 | **2 − 4.4·10<sup>-16</sup>** | **2 − 4.4·10<sup>-16</sup>** | 1.9724 | **2 − 2.4·10<sup>-7</sup>** | **2 − 2.4·10<sup>-7</sup>** |
+| `sub_2_1` | error / bound | 0.9974 | **1 − 2.2·10<sup>-16</sup>** | **1 − 2.2·10<sup>-16</sup>** | 0.9862 | **1 − 1.2·10<sup>-7</sup>** | **1 − 1.2·10<sup>-7</sup>** |
+| `sub_2_1_full` | core's observed c | 1.8264 | **2 − 4.4·10<sup>-16</sup>** | **2 − 4.4·10<sup>-16</sup>** | 1.8864 | **2 − 2.4·10<sup>-7</sup>** | **2 − 2.4·10<sup>-7</sup>** |
+| `sub_2_1_full` | core's error / bound | 0.9132 | **1 − 2.2·10<sup>-16</sup>** | **1 − 2.2·10<sup>-16</sup>** | 0.9432 | **1 − 1.2·10<sup>-7</sup>** | **1 − 1.2·10<sup>-7</sup>** |
+| `sub_2_2` | observed c | 2.1094 | 1.5 ↓ | **3 − 1.1·10<sup>-15</sup>** | 2.2401 | **2.5** | **3 − 6.0·10<sup>-7</sup>** |
+| `sub_2_2` | error / bound | 0.7031 | 0.5 ↓ | **1 − 8.1·10<sup>-16</sup>** | 0.7467 | **0.8333** | **1 − 4.4·10<sup>-7</sup>** |
+| `sub_2_2_full` | core's observed c | 2 − 4.4·10<sup>-16</sup> | **2.0046** | **3 − 1.1·10<sup>-15</sup>** | 2 − 2.4·10<sup>-7</sup> | **2 − 2.4·10<sup>-7</sup>** | **3 − 6.0·10<sup>-7</sup>** |
+| `sub_2_2_full` | core's error / bound | 0.6667 | **0.6682** | **1 − 8.1·10<sup>-16</sup>** | 0.6667 | **0.6667** | **1 − 4.4·10<sup>-7</sup>** |
+| `two_prod` | error / bound | 1 | 1 | 1 | 1 | 1 | 1 |
+| `two_prod_dekker` | error / bound | 0.9239 | 0.885 ↓ | **0.9696** | 0.9259 | 0.9056 ↓ | **0.9687** |
+
+Over the 116 quantities, the search with every seed came closer to the claim on 86 and as close
+on 30; from the strata alone, closer on 66, as close on 20 and farther on 30 (it missed, for
+example, the structured case of `add_2_1` in `binary64`, which it found for `sub_2_1`, `sub_1_2`
+and the core of `add_2_1_full`, and the corner of the underflow range where the brute-force runs
+had met the bound of `mul_2_1`). What it brought closest:
+
+- **The accurate sum** (`add_2_2`, `sub_2_2`, the cores of their full kernels) comes within
+  $8.1 \cdot 10^{-16}$ of its bound $3u^2/(1 - 4u)$ in `binary64` and $4.4 \cdot 10^{-7}$ in
+  `binary32`, with an observed constant of $3 - \epsilon$; the brute-force runs had found 2.0 to
+  2.24, 0.67 to 0.75 of the bound. The case is the one with which
+  [MR22](design/phase0/references.md#mr22) prove the bound asymptotically optimal (Property
+  2.1, which they say random testing cannot find); from the strata alone the search reached 2.25
+  to 2.5, but 1.5 for `sub_2_2` in `binary64`.
+- **The sums with one limb** (`add_2_1`, `sub_2_1`, `sub_1_2` and their cores) come within
+  $2.2 \cdot 10^{-16}$ and $1.2 \cdot 10^{-7}$ of $2u^2$, found from the strata (but for `add_2_1`
+  in `binary64`) as well as from [JMP17](design/phase0/references.md#jmp17)'s case of DWPlusFP;
+  before, 0.81 to 0.997.
+- **The double-word product** `mul_2_2` comes within $8.7 \cdot 10^{-9}$ of $4u^2 + \tfrac32\eta$
+  in `binary64`, with an observed constant of $4 - 3.5 \cdot 10^{-8}$ (3.34 in the brute-force
+  runs; the case MR22 give for their Theorem 2.8 has 3.997, which the search carried further); in
+  `binary32` 0.996 and 3.54.
+- **The fast sum** `add_fast_2_2` comes within $4.4 \cdot 10^{-7}$ of its bound of form A in
+  `binary32` (0.60 before), from a brute-force line, and the core of `add_fast_2_2_full` from the
+  strata alone: the bound $3u^2(\lvert x\rvert + \lvert y\rvert)$ proved for Kairn is attained.
+- **The radii** of the two-limb Ball sums keep 1.11 to 1.18 gaps of slack at the closest
+  (1.25 before), those of the one-limb product 1.5 (1.54 to 1.60), of the two-limb scaling 1.25
+  (1.33 to 1.375) and of the two-limb product 2.44 to 2.5 (2.5 to 2.56); those of the one-limb
+  sums and scaling stay at one gap, as before.
+- `two_prod_dekker` comes to 0.97 of its bound near underflow (0.92 before) and `mul_pow2_2` to
+  0.75 in `binary64` (0.74).
+
+**A longer run**, on the Linux machine: 1 000 000 cases per kernel and format (94 million in all,
+seed 0, batches of 1 024) through the scalar runner of a GCC 13 build, 48 processes, 405 seconds,
+starting from the regression cases below. No claim was violated. It came closer still on 42 of the
+116 quantities: `mul_2_2` and the core of `mul_2_2_full` to within $1.9 \cdot 10^{-15}$ of their
+bound in `binary64`, with an observed constant of $4 - \epsilon$ (from a case of the stratum
+`pow2`, not from the literature), and in `binary32` to 0.998 (`mul_2_2`) and $1 - 1.9 \cdot
+10^{-7}$ (the core of `mul_2_2_full`); `add_fast_2_2` and its core to within $8.1 \cdot 10^{-16}$
+in `binary64` (0.96 at 20 000 cases); `two_prod_dekker` to 0.992 and 0.986; and the smallest
+slack of the two-limb Ball
+radii to 1.11 to 1.16 gaps for the sums, 1.25 for the scaling and 2.20 for the product in
+`binary64`. Its best lines replaced those of the shorter run in the regression cases where they
+came closer.
+
+**What it did not find.** A search climbs the quantities of the claims, and a fault that breaks a
+claim only where the correct kernel is far from its bound gives it nothing to climb. Of the
+planted faults of `tests/kernel_mutants.py` that the full tier catches and the quick tier misses,
+it found the loosened finiteness test of `add_fast_2_2_full` after 9 025 cases of `binary64`
+(the full tier's random cases meet it at case 9 280), and missed the FMA of `ball_scale_2`
+computed as a product and a sum in 100 000 cases per format: that fault breaks the radius where
+the input radius is zero and the center's error is near its bound, where the correct kernel's
+slack is large, and the full tier's 20 000 random cases met it once or twice. The search is a
+complement to the random tiers, not a replacement.
+
+**Where it runs.** By hand, as above, with any runner; and in the full tier,
+`full.search.compiled`: every kernel, both formats, 5 000 cases each through the scalar runner of
+the build, four worker processes; 10 seconds on the Mac, 16 on the Linux machine (GCC 13 and Clang
+18 alike) and 27 to 33 on the Windows machine. Its seeds then include the regression cases, so it
+starts from the closest cases known.
+
+### The shrinker
+
+A failing case found anywhere is first made as simple as it can be:
+`python3 oracle/kairn-oracle shrink 'LINE' --runner RUNNER` keeps the failure of the same `ensures`
+entry (in the extended domain, the same statement), as the oracle judges it, while it replaces
+operands by zero or powers of two, cuts significands, moves exponents toward zero, and looks for
+the smallest toy format in which the same runner fails the same way (the interpreter runs every
+format; a compiled runner `binary64` and `binary32` only). It is deterministic, ends, and prints
+the shrunk line with the command that reruns it (`oracle/README.md`, "shrink"). On the planted
+faults of the oracle's self-tests it takes, for example, a `binary64` case of `mul_2_2` with the
+cross term dropped from 195 significant bits to $1 \cdot (1 + 2^{-53})$, and to a case of
+`fp:5:-5:-2`; through a compiled runner with a planted fault of `add_fast_2_2_full`, the line the
+search found to $(-\Omega, -2^{969}) + (-2^{969}, 0)$, whose result $(-\infty, +\infty)$ is not
+canonical.
+
+### The regression cases
+
+`tests/regression/cases.txt` holds request lines that the quick tier runs through every runner it
+builds (`regression.cases`): the cases that found a problem in Milestone 1, as far as the
+repository records them with operands (the operands that the planted faults of
+`tests/kernel_mutants.py` showed no test supplied, which the generator's comparison now has in
+`SPECIAL_CASES`, where they are in their kernel's domain; the corner where TwoSum's error term
+overflows); the operands of the literature; the attaining lines of the brute-force runs for every
+claim that came within 2% of its bound; and the search's best lines where it came at least as
+close as the brute-force runs. Each line has a comment: where it came from and what it showed.
+The rule for adding one is at the top of the file: a failure is shrunk, and goes in with where it
+was found, the entry it failed, and the class of the fault (statement, generator, code, compiler or
+hardware). A case the line protocol cannot carry has a test of its own, named there: the product
+of the program fused into a kernel is `api.boundary.*`. Every line of `binary64` and `binary32`
+runs through every compiled runner and through every form of the public interface that calls its
+kernel, and every line, toy formats included, through the interpreter; the oracle judges each
+result as in the cross-checks. 185 lines today (16 from the history, 38 of the literature, 62 of
+the brute-force runs, 69 of the two searches); in the quick tier's run, 0.5 to 1.1 seconds on the Mac,
+1.1 on the Linux machine and 2.6 to 6 on the Windows machine, where starting a process costs most (one
+run of each compiled runner, of the interpreter, and of each runner of the public interface per
+name of a form).
 
 ## Continuous integration
 
