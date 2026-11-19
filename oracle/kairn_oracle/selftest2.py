@@ -68,7 +68,7 @@ def exhaustive(ctx, kernel, fmtname, restrict=(), variant="correct", ignore_mp=F
     if len(tasks) == 1:
         parts = [brute.run_inprocess(tasks[0])]
     else:
-        with cf.ProcessPoolExecutor(max_workers=os.cpu_count() or 1) as ex:
+        with cf.ProcessPoolExecutor(max_workers=ctx.jobs) as ex:
             parts = list(ex.map(brute.run_inprocess, tasks))
     s = C.Summary()
     for p in parts:

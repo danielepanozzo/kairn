@@ -110,10 +110,13 @@ pass or fail; on failure it also prints the command that reruns one case (below)
     | `ball_add_2`, `ball_sub_2` | `fp:3:-3:2` | both radii in {0, 1/8, 1/2, 5/2}, `cx` in [1/2, 2) | 148 896 |
     | `ball_mul_2` | `fp:4:-5:1` | both radii in {0, η, 3/2}, `cx` in [1, 2), `cy` in [1/8, 2) | 64 728 |
 
-- **Non-finite results.** A claim says nothing about a case whose leading output limb is not
-  finite, so the oracle does not judge such a case; a runner that returned NaN for everything
-  would pass. The cross-checks therefore pass `--fail-on-suspicious`, which fails a non-finite
-  result whose operands and exact value are all far below the overflow threshold. The exceptions
+- **Non-finite results.** A claim of the finite domain says nothing about a case whose leading
+  output limb is not finite, so the oracle does not judge such a case; a runner that returned NaN
+  for everything would pass. The cross-checks therefore pass `--fail-on-suspicious`, which fails
+  a non-finite result whose operands and exact value are all far below the overflow threshold.
+  A kernel of the extended domain (the non-finite layer) is judged on every line, non-finite
+  results included, and the same option fails its non-finite results on such operands where its
+  claims leave them open (`oracle/README.md`). The exceptions
   are `split` and `two_prod_dekker`, whose multiplication by the splitter overflows for such
   operands, as their requirement of no intermediate overflow allows; for them the guards below
   stand guard.
@@ -188,7 +191,8 @@ with Apple clang or GCC 16, for 742 tests whose times add up to about 490 second
 measured: 271 seconds on 16 cores of a 2019 x86-64 server and 453 seconds on 4 of them; with
 MSVC, 369 seconds on 8 logical processors of a Windows machine and 533 seconds on 4. On the Mac a
 cross-check of a compiled runner takes 0.3 to 0.6 seconds, one of the interpreter 1 to 7 seconds,
-and the generator's and the oracle's own tests about 45 seconds each. `KAIRN_CROSSCHECK_CASES`
+the generator's own tests about 45 seconds, and the oracle's about 75 since it judges the
+non-finite layer too. `KAIRN_CROSSCHECK_CASES`
 sets the share of the compiled runners, about three fifths of the total.
 
 ## The generator's tier

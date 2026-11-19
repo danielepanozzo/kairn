@@ -62,6 +62,29 @@ VARIANTS = {
     "abs-lead-only": "abs_2 negates only the first limb",
     "trace-mul-pow2": "correct results; before a line, a comment when the pair (h, l) of "
                       "mul_pow2_2 is not normalized before its fast_two_sum",
+    # The non-finite layer.
+    "full-no-fixup": "the full kernels return their core's output, without the fix-up",
+    "full-overflow-sign": "the full kernels give the infinity of the wrong sign when the core "
+                          "overflows on finite operands",
+    "full-overflow-nan": "the full kernels give (NaN, NaN) when the core overflows on finite "
+                         "operands",
+    "full-overflow-finite": "the full kernels give (+-Omega, 0) when the core overflows on finite "
+                            "operands",
+    "full-spurious-overflow": "the full kernels give the infinity of t's sign whenever "
+                              "|t| >= 2^(qmax+p-3) on finite operands",
+    "full-inf-tail-nan": "an infinite result of a full kernel has a NaN second limb",
+    "full-inf-tail-eta": "an infinite result of a full kernel has the second limb eta",
+    "full-nan-one-limb": "a NaN result of a full kernel has the second limb 0",
+    "full-nan-to-zero": "a NaN result of a full kernel becomes (0, 0)",
+    "ball-full-swap": "the full Ball kernels swap the empty set and the whole line",
+    "ball-full-zero-inf-empty": "the full Ball kernels take q from the computed radius instead of "
+                                "the input radii, so 0 * inf gives the empty set",
+    "ball-full-finite-whole": "the full Ball kernels keep a finite center and give the radius "
+                              "Omega when the computed radius is not finite",
+    "make-negative-radius": "ball_make tests the radius for a NaN only, so a negative radius is "
+                            "kept",
+    "make-nan-radius": "ball_make does not test the radius, so a NaN radius gives the whole line",
+    "make2-inf-nan-tail": "make_2 of an infinity has a NaN second limb",
 }
 
 ORACLE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -434,7 +457,8 @@ class Kernels:
 
     def add_2_1(self, x0, x1, a):
         A = self.A
-        sh, sl = self.two_sum(x0, a)
+        g = self.guard(a)
+        sh, sl = self.two_sum(x0, g)
         v = A.add(x1, sl)
         if self.v == "add-skip-renorm":
             return sh, v
@@ -663,6 +687,170 @@ class Kernels:
     def ball_scale_2(self, cx0, cx1, rx, a):
         return self._ball_scale("ball_scale_2", (cx0, cx1), rx, a)
 
+    # -- the non-finite layer (milestone1.md, "IEEE-like results", "Values that enter from the
+    # program", "Ball kernels"), as listed: the core, then the fix-up on the leading limbs ------
+    def guard(self, a):
+        """RN(a + 0): a itself (a zero comes out positive, which the integers cannot show)."""
+        return self.A.add(a, 0)
+
+    def _fixup(self, z, t, fin):
+        """The fix-up of a full kernel.  z = (z0, z1) is the core's result and t the operation
+        of T on the leading limbs; fin (every operand finite) is read by injected errors only."""
+        A = self.A
+        v = self.v
+        z0, z1 = z
+        if v == "full-no-fixup":
+            return z0, z1
+        a = abs(z0)
+        f = a < INF                    # z0 is finite
+        r0 = A.prod(t, INF)            # a NaN stays a NaN; any other t becomes the infinity
+        n = r0 == r0                   # r0 is not a NaN
+        r1 = 0 if n else r0
+        if v == "full-inf-tail-nan" and n:
+            r1 = NAN
+        elif v == "full-inf-tail-eta" and n:
+            r1 = 1
+        elif v == "full-nan-one-limb" and not n:
+            r1 = 0
+        if not f and fin:
+            if v == "full-overflow-sign":
+                r0 = -r0
+            elif v == "full-overflow-nan":
+                r0 = r1 = NAN
+            elif v == "full-overflow-finite":
+                r0, r1 = (A.omega if r0 > 0 else -A.omega), 0
+        if (v == "full-spurious-overflow" and f and fin and type(t) is int
+                and abs(t) >= 1 << (A.qmax + A.p - 3 - A.qmin)):
+            return (INF if t > 0 else -INF), 0
+        w0 = z0 if f else r0
+        w1 = z1 if f else r1
+        if v == "full-nan-to-zero" and w0 != w0:
+            return 0, 0
+        return w0, w1
+
+    @staticmethod
+    def _finite(*vals):
+        return all(type(v) is int for v in vals)
+
+    def add_2_2_full(self, x0, x1, y0, y1):
+        z = self.add_2_2(x0, x1, y0, y1)
+        return self._fixup(z, self.A.add(x0, y0), self._finite(x0, x1, y0, y1))
+
+    def add_fast_2_2_full(self, x0, x1, y0, y1):
+        z = self.add_fast_2_2(x0, x1, y0, y1)
+        return self._fixup(z, self.A.add(x0, y0), self._finite(x0, x1, y0, y1))
+
+    def sub_2_2_full(self, x0, x1, y0, y1):
+        z = self.sub_2_2(x0, x1, y0, y1)
+        return self._fixup(z, self.A.sub(x0, y0), self._finite(x0, x1, y0, y1))
+
+    def add_2_1_full(self, x0, x1, a):
+        g = self.guard(a)
+        z = self.add_2_1(x0, x1, a)
+        return self._fixup(z, self.A.add(x0, g), self._finite(x0, x1, a))
+
+    def sub_2_1_full(self, x0, x1, a):
+        g = self.guard(a)
+        z = self.sub_2_1(x0, x1, a)
+        return self._fixup(z, self.A.sub(x0, g), self._finite(x0, x1, a))
+
+    def sub_1_2_full(self, a, y0, y1):
+        g = self.guard(a)
+        z = self.sub_1_2(a, y0, y1)
+        return self._fixup(z, self.A.sub(g, y0), self._finite(a, y0, y1))
+
+    def mul_2_2_full(self, x0, x1, y0, y1):
+        z = self.mul_2_2(x0, x1, y0, y1)
+        return self._fixup(z, self.A.prod(x0, y0), self._finite(x0, x1, y0, y1))
+
+    def mul_2_1_full(self, x0, x1, a):
+        z = self.mul_2_1(x0, x1, a)
+        return self._fixup(z, self.A.prod(x0, a), self._finite(x0, x1, a))
+
+    def mul_pow2_2_full(self, x0, x1, c):
+        z = self.mul_pow2_2(x0, x1, c)
+        return self._fixup(z, self.A.prod(x0, c), self._finite(x0, x1, c))
+
+    def _ball_fixup(self, out, k, q):
+        """The fix-up of a full Ball kernel: out = (cz..., rz) from the core, q a NaN exactly
+        when an operand is empty."""
+        A = self.A
+        v = self.v
+        cz, rz = out[:k], out[k]
+        if v == "ball-full-zero-inf-empty":
+            q = rz
+        e = q == q
+        a = abs(cz[0])
+        f1 = a < INF                   # the center is finite
+        f2 = rz < INF                  # the radius is finite (false for a NaN)
+        f = f1 and f2
+        c = [ci if f else 0 for ci in cz]
+        r = rz if f else INF
+        if v == "ball-full-finite-whole" and f1 and not f2:
+            c, r = list(cz), A.omega
+        if v == "ball-full-swap":
+            if not e:
+                return tuple([0] * k + [INF])
+            if not f:
+                return tuple([NAN] * (k + 1))
+        return tuple(ci if e else q for ci in c) + (r if e else q,)
+
+    def ball_add_1_full(self, cx, rx, cy, ry):
+        return self._ball_fixup(self.ball_add_1(cx, rx, cy, ry), 1, self.A.add(rx, ry))
+
+    def ball_add_2_full(self, cx0, cx1, rx, cy0, cy1, ry):
+        return self._ball_fixup(self.ball_add_2(cx0, cx1, rx, cy0, cy1, ry), 2, self.A.add(rx, ry))
+
+    def ball_sub_1_full(self, cx, rx, cy, ry):
+        return self._ball_fixup(self.ball_sub_1(cx, rx, cy, ry), 1, self.A.add(rx, ry))
+
+    def ball_sub_2_full(self, cx0, cx1, rx, cy0, cy1, ry):
+        return self._ball_fixup(self.ball_sub_2(cx0, cx1, rx, cy0, cy1, ry), 2, self.A.add(rx, ry))
+
+    def ball_mul_1_full(self, cx, rx, cy, ry):
+        return self._ball_fixup(self.ball_mul_1(cx, rx, cy, ry), 1, self.A.add(rx, ry))
+
+    def ball_mul_2_full(self, cx0, cx1, rx, cy0, cy1, ry):
+        return self._ball_fixup(self.ball_mul_2(cx0, cx1, rx, cy0, cy1, ry), 2, self.A.add(rx, ry))
+
+    def ball_scale_1_full(self, cx, rx, a):
+        return self._ball_fixup(self.ball_scale_1(cx, rx, a), 1, rx)
+
+    def ball_scale_2_full(self, cx0, cx1, rx, a):
+        return self._ball_fixup(self.ball_scale_2(cx0, cx1, rx, a), 2, rx)
+
+    def make_2(self, a):
+        x0 = self.guard(a)
+        n = x0 == x0
+        x1 = 0 if n else x0
+        if self.v == "make2-inf-nan-tail" and n:
+            x1 = self.A.sub(x0, x0)
+        return x0, x1
+
+    def make_2_limbs(self, h, l):
+        return self.guard(h), self.guard(l)
+
+    def _ball_make(self, c, r):
+        g = self.guard(r)
+        e = 0 <= g                     # le(0, g): false for a NaN or a negative radius
+        if self.v == "make-negative-radius":
+            e = g == g
+        elif self.v == "make-nan-radius":
+            e = True
+        a = abs(c[0])
+        f1 = a < INF
+        f2 = g < INF
+        f = f1 and f2
+        k = [ci if f else 0 for ci in c]
+        s = g if f else INF
+        return tuple(ki if e else NAN for ki in k) + (s if e else NAN,)
+
+    def ball_make_1(self, c, r):
+        return self._ball_make((self.guard(c),), r)
+
+    def ball_make_2(self, c0, c1, r):
+        return self._ball_make((c0, c1), r)
+
 
 ARITY = {"two_sum": 2, "fast_two_sum": 2, "two_prod": 2, "two_prod_dekker": 2, "split": 1,
          "add_2_2": 4, "add_2_1": 3, "mul_2_2": 4, "mul_2_1": 3, "add_fast_2_2": 4,
@@ -672,7 +860,14 @@ ARITY = {"two_sum": 2, "fast_two_sum": 2, "two_prod": 2, "two_prod_dekker": 2, "
          "abs_upper_2": 2, "radd": 2, "rmul": 2, "mul_pow2_2": 3,
          "ball_add_1": 4, "ball_add_2": 6, "ball_sub_1": 4, "ball_sub_2": 6, "ball_neg_1": 2,
          "ball_neg_2": 3, "ball_mul_1": 4, "ball_mul_2": 6, "ball_scale_1": 3,
-         "ball_scale_2": 4}
+         "ball_scale_2": 4,
+         # The non-finite layer.
+         "add_2_2_full": 4, "add_fast_2_2_full": 4, "sub_2_2_full": 4, "add_2_1_full": 3,
+         "sub_2_1_full": 3, "sub_1_2_full": 3, "mul_2_2_full": 4, "mul_2_1_full": 3,
+         "mul_pow2_2_full": 3, "ball_add_1_full": 4, "ball_add_2_full": 6, "ball_sub_1_full": 4,
+         "ball_sub_2_full": 6, "ball_mul_1_full": 4, "ball_mul_2_full": 6, "ball_scale_1_full": 3,
+         "ball_scale_2_full": 4, "make_2": 1, "make_2_limbs": 2, "ball_make_1": 2,
+         "ball_make_2": 3}
 FIRST_WAVE = frozenset(("two_sum", "fast_two_sum", "two_prod", "two_prod_dekker", "split",
                         "add_2_2", "add_2_1", "mul_2_2", "mul_2_1", "add_fast_2_2"))
 # Which input limb pairs form a normalized 2-limb operand (for corrupt-input).
