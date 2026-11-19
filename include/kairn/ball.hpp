@@ -262,12 +262,15 @@ KAIRN_FORCEINLINE Ball<T, 2> mul(const Expansion<T, 2>& c, const Ball<T, 2>& y) 
 /// bound, evaluated with operations rounded to nearest and inflated once at the end
 /// (milestone1.md, "The radius, second design"). It calls a full Ball kernel: that core and the
 /// fix-up of the states. Proved, in Flocq's model of IEEE 754 with overflow, for canonical
-/// operands (statements B1 to B3 of milestone1.md, "Ball kernels"): the result is canonical; it
+/// operands (statements B1 to B4 of milestone1.md, "Ball kernels"): the result is canonical; it
 /// is empty exactly when an operand is empty; if it is a finite ball, every operand is a finite
 /// ball, every scalar finite, and the result contains x op y for every x in X and y in Y, with a
 /// normalized center for two limbs. So in every case the result contains every x op y, the whole
-/// line counting as containing everything. Not proved yet (B4): when the result of finite balls
-/// is guaranteed to be a finite ball rather than the whole line.
+/// line counting as containing everything. And the result of finite operands is a finite ball,
+/// not the whole line, when no x op y is larger in magnitude than a quarter of the overflow
+/// threshold of T (2^1022 for double, 2^126 for float): |cx op cy| + rx + ry for a sum or a
+/// difference, (|cx| + rx) (|cy| + ry) for a product, (|cx| + rx) |a| for a scaling by a. For the
+/// product of balls with one-limb centers the proved bound is a sixteenth of that threshold.
 ///
 /// A point operand (a T, or an Expansion of K limbs) is the ball of radius zero its constructor
 /// makes, and the operation is then the operation of two balls; times a ball, a T (and, for one

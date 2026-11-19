@@ -76,7 +76,7 @@ and values may be infinite or NaN ([below](#overflow-and-non-finite-values)).
 | constructors (`make_2`, `make_2_limbs`, `ball_make_1`, `ball_make_2`) | | the value given, canonical; for a ball, below |
 | one limb: `+`, `-`, `*`, `add_fast`, `ldexp`, `half` (`add_1_1`, `mul_1_1`) | one rounding to nearest: $\lvert z - v\rvert \le \frac{u}{1 + u}\lvert v\rvert$, plus $\tfrac12\eta$ for products | the IEEE 754 operation |
 | one limb: `-x`, `abs`, comparisons, conversions | exact (no kernel) | the IEEE 754 operation |
-| `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (`ball_add_1_full`, ..., `ball_neg_2`) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | B1 to B3: containment in every case, the empty set and the whole line included |
+| `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (`ball_add_1_full`, ..., `ball_neg_2`) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | B1 to B4: containment in every case, the empty set and the whole line included; a finite ball when no $x \circ y$ exceeds $2^{e_{\max}-2}$ in magnitude ($2^{e_{\max}-4}$ for the product of one-limb balls) |
 | `limb`, `sign`, `isfinite`, `is_normalized`, a ball's states | exact (no kernel) | |
 
 A one-limb operand next to a two-limb one is its limb: `x + y` with `y` an `Expansion<T, 1>` is
@@ -138,20 +138,45 @@ containing everything ([Ball kernels](../developer/design/milestone1.md#ball-ker
 operand, a `T` or an `Expansion` of as many limbs, is the ball of radius 0 its constructor makes;
 times a ball, a `T` (and for one limb, an `Expansion<T, 1>`) is the scaling, a kernel of its own.
 
+**When a finite ball comes out.** The whole line is always a correct answer, so the statements
+above would hold of an operation that returned nothing else. **B4** is the guarantee that this
+does not happen far from overflow: if every operand is a finite ball, every scalar finite, and no
+member of the exact result is larger in magnitude than a quarter of the overflow threshold, the
+result is a finite ball. With centers $c_x$, $c_y$ and radii $r_x$, $r_y$, and $2^{e_{\max}-2}$
+that quarter ($2^{1022}$ for `double`, $2^{126}$ for `float`):
+
+| Operation | The result is a finite ball when |
+|---|---|
+| `X + Y`, `X - Y` | $\lvert c_x \pm c_y\rvert + r_x + r_y \le 2^{e_{\max}-2}$ |
+| `X * a`, `a * X` with a `T` (and, for one limb, an `Expansion<T, 1>`) | $(\lvert c_x\rvert + r_x)\,\lvert a\rvert \le 2^{e_{\max}-2}$ |
+| `X * Y`, two-limb centers | $(\lvert c_x\rvert + r_x)(\lvert c_y\rvert + r_y) \le 2^{e_{\max}-2}$ |
+| `X * Y`, one-limb centers | $(\lvert c_x\rvert + r_x)(\lvert c_y\rvert + r_y) \le 2^{e_{\max}-4}$, a sixteenth of the threshold ($2^{1020}$, $2^{124}$) |
+
+Each left side is the largest magnitude that $x \circ y$ takes over the operands. In particular,
+for `double`, a sum of balls whose members are all at most $2^{1021}$ in magnitude is a finite
+ball, and so is a product of balls whose members are all at most $2^{510}$. The conditions are
+sufficient, not necessary; how far they are from the first whole line seen in small formats is in
+[Milestone 1](../developer/design/milestone1.md#when-the-result-is-a-finite-ball). No such
+statement is claimed for `-X`, whose kernel only changes the sign of the center.
+
 **What is proved, and in which model.** Every error bound, normalization, exact comparison,
 rounding and ball containment is proved in the real model, where nothing overflows; F1 to F5, B1
-to B3, and what the comparisons, conversions and constructors return for infinities and NaN are
+to B4, and what the comparisons, conversions and constructors return for infinities and NaN are
 proved in Flocq's model of IEEE 754, against statements the generator prints from the same kernel
 descriptions as the C++ ([Proofs](../proofs/index.md#what-is-proved-and-in-which-model); each
 kernel's page in the [reference](../reference/index.md) gives its theorem).
 
 **Not proved yet.** The two statements about `ldexp` when $2^n$ is not a number of `T`, above.
-When the result of a Ball operation on finite balls is guaranteed to be a
-finite ball rather than the whole line (B4): no such condition is proved, so a program cannot yet
-rely on a finite ball coming out. And thresholds sharper than those of the table: exhaustive runs
-on small formats first see an overflow at 0.55 of the overflow threshold or above for the
-additions and 0.86 or above for the products, where the proved conditions are a quarter and a half
-of it ([Milestone 1](../developer/design/milestone1.md#what-is-proved-about-an-arithmetic-kernel)).
+And thresholds sharper than those stated. For the two-limb arithmetic, exhaustive runs on small
+formats first see an overflow at 0.55 of the overflow threshold or above for the additions and
+0.86 or above for the products, where the proved conditions are a quarter and a half of it
+([Milestone 1](../developer/design/milestone1.md#what-is-proved-about-an-arithmetic-kernel)).
+For the Ball operations, complete searches of small formats first see the whole line at 0.34 of
+the threshold for the sums and the differences, 0.375 for the scalings, 0.094 for the product
+of one-limb balls and 0.61 for the product of two-limb balls, where the proved conditions are a
+quarter, a quarter, a sixteenth and a quarter. The first three of those are in the smallest
+format, of two bits of precision; in a format of four bits the same searches give 0.55 to 0.81
+([Milestone 1](../developer/design/milestone1.md#when-the-result-is-a-finite-ball)).
 
 **Cost.** Measured on the final code with `double` limbs on an Apple M3 (Apple clang 21, GCC 16),
 an AMD Zen 2 (GCC 13, Clang 18) and an Intel i5 (MSVC)

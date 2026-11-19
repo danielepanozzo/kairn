@@ -31,6 +31,9 @@ Definition ball_add_1_full_spec : Prop :=
    ball_finite_1 cx rx /\ ball_finite_1 cy ry /\
    (forall x y : R, Rabs (x - val cx) <= val rx -> Rabs (y - val cy) <= val ry ->
     Rabs ((x + y) - val cw) <= val rw)) /\
+  (ball_finite_1 cx rx -> ball_finite_1 cy ry ->
+   Rabs (((Rabs (val cx + val cy)) + val rx) + val ry) <= bpow radix2 (emax - 2) ->
+   ball_finite_1 cw rw) /\
   (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> in_ball_1 cw rw (x + y)).
 
 (* ball_make_1: constructors (Milestone 1 listing). IEEE-model status: proved. *)
@@ -62,6 +65,9 @@ Definition ball_mul_1_full_spec : Prop :=
    ball_finite_1 cx rx /\ ball_finite_1 cy ry /\
    (forall x y : R, Rabs (x - val cx) <= val rx -> Rabs (y - val cy) <= val ry ->
     Rabs ((x * y) - val cw) <= val rw)) /\
+  (ball_finite_1 cx rx -> ball_finite_1 cy ry ->
+   Rabs (((Rabs (val cx)) + val rx) * ((Rabs (val cy)) + val ry)) <= bpow radix2 (emax - 4) ->
+   ball_finite_1 cw rw) /\
   (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> in_ball_1 cw rw (x * y)).
 
 (* ball_neg_1: midpoint-radius negation (Milestone 1 listing). IEEE-model status: proved. *)
@@ -96,6 +102,9 @@ Definition ball_scale_1_full_spec : Prop :=
    ball_finite_1 cx rx /\ finite a /\
    (forall x : R, Rabs (x - val cx) <= val rx ->
     Rabs ((x * val a) - val cw) <= val rw)) /\
+  (ball_finite_1 cx rx -> finite a ->
+   Rabs (((Rabs (val cx)) + val rx) * val a) <= bpow radix2 (emax - 2) ->
+   ball_finite_1 cw rw) /\
   (finite a -> forall x : R, in_ball_1 cx rx x -> in_ball_1 cw rw (x * val a)).
 
 (* ball_sub_1_full: ball_sub_1, then the fix-up of the special states of a ball (Milestone 1 listing). IEEE-model status: proved. *)
@@ -114,6 +123,9 @@ Definition ball_sub_1_full_spec : Prop :=
    ball_finite_1 cx rx /\ ball_finite_1 cy ry /\
    (forall x y : R, Rabs (x - val cx) <= val rx -> Rabs (y - val cy) <= val ry ->
     Rabs ((x - y) - val cw) <= val rw)) /\
+  (ball_finite_1 cx rx -> ball_finite_1 cy ry ->
+   Rabs (((Rabs (val cx - val cy)) + val rx) + val ry) <= bpow radix2 (emax - 2) ->
+   ball_finite_1 cw rw) /\
   (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> in_ball_1 cw rw (x - y)).
 
 (* fast_two_sum: Fast2Sum (Dekker 1971). IEEE-model status: unverified. *)
@@ -519,6 +531,9 @@ Definition ball_add_2_full_spec : Prop :=
    ball_finite_2 cx0 cx1 rx /\ ball_finite_2 cy0 cy1 ry /\
    (forall x y : R, Rabs (x - (val cx0 + val cx1)) <= val rx -> Rabs (y - (val cy0 + val cy1)) <= val ry ->
     Rabs ((x + y) - (val cw0 + val cw1)) <= val rw)) /\
+  (ball_finite_2 cx0 cx1 rx -> ball_finite_2 cy0 cy1 ry ->
+   Rabs (((Rabs ((val cx0 + val cx1) + (val cy0 + val cy1))) + val rx) + val ry) <= bpow radix2 (emax - 2) ->
+   ball_finite_2 cw0 cw1 rw) /\
   (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> in_ball_2 cw0 cw1 rw (x + y)).
 
 (* ball_make_2: constructors (Milestone 1 listing). IEEE-model status: proved. *)
@@ -601,6 +616,9 @@ Definition ball_mul_2_full_spec : Prop :=
    ball_finite_2 cx0 cx1 rx /\ ball_finite_2 cy0 cy1 ry /\
    (forall x y : R, Rabs (x - (val cx0 + val cx1)) <= val rx -> Rabs (y - (val cy0 + val cy1)) <= val ry ->
     Rabs ((x * y) - (val cw0 + val cw1)) <= val rw)) /\
+  (ball_finite_2 cx0 cx1 rx -> ball_finite_2 cy0 cy1 ry ->
+   Rabs (((Rabs (val cx0 + val cx1)) + val rx) * ((Rabs (val cy0 + val cy1)) + val ry)) <= bpow radix2 (emax - 2) ->
+   ball_finite_2 cw0 cw1 rw) /\
   (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> in_ball_2 cw0 cw1 rw (x * y)).
 
 (* neg_2: limb by limb (Milestone 1 listing). IEEE-model status: proved. *)
@@ -694,6 +712,9 @@ Definition ball_scale_2_full_spec : Prop :=
    ball_finite_2 cx0 cx1 rx /\ finite a /\
    (forall x : R, Rabs (x - (val cx0 + val cx1)) <= val rx ->
     Rabs ((x * val a) - (val cw0 + val cw1)) <= val rw)) /\
+  (ball_finite_2 cx0 cx1 rx -> finite a ->
+   Rabs (((Rabs (val cx0 + val cx1)) + val rx) * val a) <= bpow radix2 (emax - 2) ->
+   ball_finite_2 cw0 cw1 rw) /\
   (finite a -> forall x : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cw0 cw1 rw (x * val a)).
 
 (* ball_sub_2_full: ball_sub_2, then the fix-up of the special states of a ball (Milestone 1 listing). IEEE-model status: proved. *)
@@ -712,6 +733,9 @@ Definition ball_sub_2_full_spec : Prop :=
    ball_finite_2 cx0 cx1 rx /\ ball_finite_2 cy0 cy1 ry /\
    (forall x y : R, Rabs (x - (val cx0 + val cx1)) <= val rx -> Rabs (y - (val cy0 + val cy1)) <= val ry ->
     Rabs ((x - y) - (val cw0 + val cw1)) <= val rw)) /\
+  (ball_finite_2 cx0 cx1 rx -> ball_finite_2 cy0 cy1 ry ->
+   Rabs (((Rabs ((val cx0 + val cx1) - (val cy0 + val cy1))) + val rx) + val ry) <= bpow radix2 (emax - 2) ->
+   ball_finite_2 cw0 cw1 rw) /\
   (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> in_ball_2 cw0 cw1 rw (x - y)).
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). IEEE-model status: proved. *)

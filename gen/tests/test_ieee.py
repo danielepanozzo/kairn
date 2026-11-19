@@ -12,7 +12,7 @@ import re
 import unittest
 
 import common
-from kairn_gen import ieee, ir, rules
+from kairn_gen import expr, ieee, ir, rocq, rules
 
 # The variables of the section of IeeeOperations.v, in their order.
 SECTION = ['Variable prec emax : Z.', 'Context {prec_gt_0_ : Prec_gt_0 prec}.',
@@ -160,6 +160,65 @@ class Statements(unittest.TestCase):
         s = self.statement('ball_scale_1_full_spec')
         self.assertIn('   ball_finite_1 cx rx /\\ finite a /\\\n', s)
         self.assertTrue(s.endswith('  (finite a -> forall x : R, in_ball_1 cx rx x -> in_ball_1 cw rw (x * val a))'))
+        # B4, between B3 and containment, when the claim has conditions: finite operands (and a
+        # finite scalar) under each condition give a finite ball, as F3 is printed for a full
+        # kernel. A one-limb name under abs( ) is an application, `val cx`, and is put in
+        # parentheses.
+        self.assertIn('    Rabs ((x * val a) - val cw) <= val rw)) /\\\n'
+                      '  (ball_finite_1 cx rx -> finite a ->\n'
+                      '   Rabs (((Rabs (val cx)) + val rx) * val a) <= bpow radix2 (emax - 2) ->\n'
+                      '   ball_finite_1 cw rw) /\\\n'
+                      '  (finite a -> forall x : R,', s)
+        s = self.statement('ball_sub_2_full_spec')
+        self.assertIn('  (ball_finite_2 cx0 cx1 rx -> ball_finite_2 cy0 cy1 ry ->\n'
+                      '   Rabs (((Rabs ((val cx0 + val cx1) - (val cy0 + val cy1))) + val rx) + val ry)'
+                      ' <= bpow radix2 (emax - 2) ->\n'
+                      '   ball_finite_2 cw0 cw1 rw) /\\\n'
+                      '  (forall x y : R, in_ball_2 cx0 cx1 rx x ->', s)
+        s = self.statement('ball_mul_1_full_spec')
+        self.assertIn('   Rabs (((Rabs (val cx)) + val rx) * ((Rabs (val cy)) + val ry)) <= bpow radix2 (emax - 4) ->\n'
+                      '   ball_finite_1 cw rw) /\\\n', s)
+        # Every full Ball kernel has the clause. ball_neg_k, whose claim has no condition, has
+        # none: an empty finite_when claims nothing, and prints nothing.
+        for name, k in self.ks.items():
+            enc = [e for e in k.ensures if e['kind'] == 'encloses']
+            if k.extended and enc:
+                s = self.statement(ieee.statement_names(k)[0])
+                out = ' '.join(k.output_limbs)
+                clause = f'->\n   ball_finite_{len(k.outputs[0].limbs)} {out}) /\\\n'
+                self.assertEqual(s.count(clause), 1 if enc[0]['finite_when'] else 0, name)
+                self.assertEqual(bool(enc[0]['finite_when']), name.endswith('_full'), name)
+
+    def test_the_finite_when_of_a_ball(self):
+        # The same kernel with its conditions taken away, and with two of them.
+        ks = copy.deepcopy(dict(self.ks))
+        k = ks['ball_add_1_full']
+        k.ensures[0]['finite_when'] = []
+        without = '\n'.join(ieee.kernel_statements(k, ks)[0])
+        self.assertNotIn('->\n   ball_finite_1 cw rw)', without)
+        self.assertIn('  (ball_finite_1 cw rw ->\n', without)                  # B3 is still there
+        self.assertIn('    Rabs ((x + y) - val cw) <= val rw)) /\\\n  (forall x y : R, in_ball_1 cx rx x ->', without)
+        k.ensures[0]['finite_when'] = [{'abs_le': 'cx', 'exp': -3}, {'abs_le': 'rx+ry', 'exp': 0}]
+        both = '\n'.join(ieee.kernel_statements(k, ks)[0])
+        self.assertIn('  (ball_finite_1 cx rx -> ball_finite_1 cy ry ->\n'
+                      '   Rabs (val cx) <= bpow radix2 (emax - 3) ->\n'
+                      '   Rabs (val rx + val ry) <= bpow radix2 emax ->\n'
+                      '   ball_finite_1 cw rw) /\\\n'
+                      '  (forall x y : R, in_ball_1 cx rx x ->', both)
+
+    def test_abs_of_a_name_in_a_condition(self):
+        # rocq._term puts the operand of Rabs in parentheses when it is an application: `val a`
+        # for a one-limb name of the IEEE model. A 2-limb name, a sum in parentheses, and the
+        # names of the real model, which are single words, are printed as before.
+        tree = expr.parse('abs(a)*abs(x)+abs(a+x)')
+        ieee_names = {'a': 'val a', 'x': '(val x0 + val x1)'}
+        self.assertEqual(rocq._term(tree, ieee_names.get),
+                         '(((Rabs (val a)) * (Rabs (val x0 + val x1))) + (Rabs (val a + (val x0 + val x1))))')
+        real_names = {'a': 'a', 'x': '(x0 + x1)'}
+        self.assertEqual(rocq._term(tree, real_names.get),
+                         '(((Rabs a) * (Rabs (x0 + x1))) + (Rabs (a + (x0 + x1))))')
+
+    def test_constructors(self):
         s = self.statement('ball_make_1_spec')
         self.assertIn('ball_finite_1 cw rw /\\ val cw = val c /\\ val rw = val r', s)
         s = self.statement('ball_make_2_spec')
@@ -186,7 +245,7 @@ class CheckedFiles(unittest.TestCase):
     # these definitions and has one of these statements as its type. A change of either file needs
     # that build again, and new digests here.
     DIGESTS = {'proofs/gen/IeeeModel.v': '2376d5d56677eaea43aaa7fe2d038df7af50f532ffe91bb37038326dfb95d4ef',
-               'proofs/gen/IeeeStatements.v': '0d2b8e66d080f2246c6fbe7fce61edf0a11210d6369aceb80284273f6beac6b3'}
+               'proofs/gen/IeeeStatements.v': '8f5601ab00378de9ac0d6415f287717305fe71faae46d66bf9caa1ab80aca055'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

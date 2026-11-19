@@ -185,7 +185,12 @@
               "radius": "ry"
             }
           },
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "abs(cx+cy)+rx+ry",
+              "exp": -2
+            }
+          ]
         }
       ],
       "min_precision": 2,
@@ -193,7 +198,7 @@
       "ieee_status": "proved",
       "theorem": null,
       "ieee_theorem": {
-        "file": "proofs/theories/IeeeBallCores.v",
+        "file": "proofs/theories/IeeeBallFinite.v",
         "name": "ball_add_1_full_correct"
       },
       "source": {
@@ -382,7 +387,12 @@
               "radius": "ry"
             }
           },
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "(abs(cx)+rx)*(abs(cy)+ry)",
+              "exp": -4
+            }
+          ]
         }
       ],
       "min_precision": 2,
@@ -390,7 +400,7 @@
       "ieee_status": "proved",
       "theorem": null,
       "ieee_theorem": {
-        "file": "proofs/theories/IeeeBallCores.v",
+        "file": "proofs/theories/IeeeBallFinite.v",
         "name": "ball_mul_1_full_correct"
       },
       "source": {
@@ -570,7 +580,12 @@
               "radius": "rx"
             }
           },
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "(abs(cx)+rx)*a",
+              "exp": -2
+            }
+          ]
         }
       ],
       "min_precision": 2,
@@ -578,7 +593,7 @@
       "ieee_status": "proved",
       "theorem": null,
       "ieee_theorem": {
-        "file": "proofs/theories/IeeeBallCores.v",
+        "file": "proofs/theories/IeeeBallFinite.v",
         "name": "ball_scale_1_full_correct"
       },
       "source": {
@@ -713,7 +728,12 @@
               "radius": "ry"
             }
           },
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "abs(cx-cy)+rx+ry",
+              "exp": -2
+            }
+          ]
         }
       ],
       "min_precision": 2,
@@ -721,7 +741,7 @@
       "ieee_status": "proved",
       "theorem": null,
       "ieee_theorem": {
-        "file": "proofs/theories/IeeeBallCores.v",
+        "file": "proofs/theories/IeeeBallFinite.v",
         "name": "ball_sub_1_full_correct"
       },
       "source": {
@@ -1943,7 +1963,12 @@
               "radius": "ry"
             }
           },
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "abs(cx+cy)+rx+ry",
+              "exp": -2
+            }
+          ]
         }
       ],
       "min_precision": 3,
@@ -1951,7 +1976,7 @@
       "ieee_status": "proved",
       "theorem": null,
       "ieee_theorem": {
-        "file": "proofs/theories/IeeeBallCores.v",
+        "file": "proofs/theories/IeeeBallFinite.v",
         "name": "ball_add_2_full_correct"
       },
       "source": {
@@ -2212,7 +2237,12 @@
               "radius": "ry"
             }
           },
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "(abs(cx)+rx)*(abs(cy)+ry)",
+              "exp": -2
+            }
+          ]
         }
       ],
       "min_precision": 4,
@@ -2220,7 +2250,7 @@
       "ieee_status": "proved",
       "theorem": null,
       "ieee_theorem": {
-        "file": "proofs/theories/IeeeBallCores.v",
+        "file": "proofs/theories/IeeeBallFinite.v",
         "name": "ball_mul_2_full_correct"
       },
       "source": {
@@ -2541,7 +2571,12 @@
               "radius": "rx"
             }
           },
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "(abs(cx)+rx)*a",
+              "exp": -2
+            }
+          ]
         }
       ],
       "min_precision": 2,
@@ -2549,7 +2584,7 @@
       "ieee_status": "proved",
       "theorem": null,
       "ieee_theorem": {
-        "file": "proofs/theories/IeeeBallCores.v",
+        "file": "proofs/theories/IeeeBallFinite.v",
         "name": "ball_scale_2_full_correct"
       },
       "source": {
@@ -2690,7 +2725,12 @@
               "radius": "ry"
             }
           },
-          "finite_when": []
+          "finite_when": [
+            {
+              "abs_le": "abs(cx-cy)+rx+ry",
+              "exp": -2
+            }
+          ]
         }
       ],
       "min_precision": 3,
@@ -2698,7 +2738,7 @@
       "ieee_status": "proved",
       "theorem": null,
       "ieee_theorem": {
-        "file": "proofs/theories/IeeeBallCores.v",
+        "file": "proofs/theories/IeeeBallFinite.v",
         "name": "ball_sub_2_full_correct"
       },
       "source": {

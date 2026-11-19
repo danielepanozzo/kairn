@@ -32,7 +32,10 @@
    number of the format below the overflow threshold; in the smallest format, prec = 2
    and emax = 3, it is the largest finite number (good_le_normal).
 
-   The statements, in the form of proofs/gen/IeeeStatements.v, are at the end of the file. *)
+   This file ends with B1 to B3 for each full kernel (the lemmas K_full_facts) and with the
+   statements of ball_neg_k, which needs no fix-up. When a full kernel returns a finite ball
+   (B4), and the statements of the full kernels in the form of
+   proofs/gen/IeeeStatements.v, are in IeeeBallFinite.v. *)
 From Stdlib Require Import Reals ZArith List Arith Bool Lia Lra Psatz.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements IeeeStatements.
@@ -1033,98 +1036,6 @@ Qed.
 End IeeeBallCores.
 
 (** * The statements of proofs/gen/IeeeStatements.v *)
-
-Theorem ball_add_1_full_correct : ball_add_1_full_spec.
-Proof.
-intros prec emax Hp He nan_plus nan_abs nan_fma Hp2 cx rx cy ry Bx By.
-generalize (ball_add_1_full_facts prec emax nan_plus nan_abs nan_fma Hp2 cx rx cy ry Bx By).
-destruct (IeeeModel.ball_add_1_full prec emax nan_plus nan_abs nan_fma cx rx cy ry) as [cw rw].
-intros [B1 [B2 B3]].
-split; [exact B1|split; [exact B2|split]].
-- intros Fw. destruct (B3 Fw) as [[Fx Fy] C]. split; [exact Fx|split; [exact Fy|exact C]].
-- exact (every_case_1 prec emax Rplus _ _ _ _ _ _ B1 B2 B3).
-Qed.
-
-Theorem ball_sub_1_full_correct : ball_sub_1_full_spec.
-Proof.
-intros prec emax Hp He nan_plus nan_opp nan_abs nan_fma Hp2 cx rx cy ry Bx By.
-generalize (ball_sub_1_full_facts prec emax nan_plus nan_opp nan_abs nan_fma Hp2 cx rx cy ry Bx By).
-destruct (IeeeModel.ball_sub_1_full prec emax nan_plus nan_opp nan_abs nan_fma cx rx cy ry) as [cw rw].
-intros [B1 [B2 B3]].
-split; [exact B1|split; [exact B2|split]].
-- intros Fw. destruct (B3 Fw) as [[Fx Fy] C]. split; [exact Fx|split; [exact Fy|exact C]].
-- exact (every_case_1 prec emax Rminus _ _ _ _ _ _ B1 B2 B3).
-Qed.
-
-Theorem ball_mul_1_full_correct : ball_mul_1_full_spec.
-Proof.
-intros prec emax Hp He nan_plus nan_abs nan_fma Hp2 cx rx cy ry Bx By.
-generalize (ball_mul_1_full_facts prec emax nan_plus nan_abs nan_fma Hp2 cx rx cy ry Bx By).
-destruct (IeeeModel.ball_mul_1_full prec emax nan_plus nan_abs nan_fma cx rx cy ry) as [cw rw].
-intros [B1 [B2 B3]].
-split; [exact B1|split; [exact B2|split]].
-- intros Fw. destruct (B3 Fw) as [[Fx Fy] C]. split; [exact Fx|split; [exact Fy|exact C]].
-- exact (every_case_1 prec emax Rmult _ _ _ _ _ _ B1 B2 B3).
-Qed.
-
-Theorem ball_scale_1_full_correct : ball_scale_1_full_spec.
-Proof.
-intros prec emax Hp He nan_abs nan_fma Hp2 cx rx a Bx.
-generalize (ball_scale_1_full_facts prec emax nan_abs nan_fma Hp2 cx rx a Bx).
-destruct (IeeeModel.ball_scale_1_full prec emax nan_abs nan_fma cx rx a) as [cw rw].
-intros [B1 [B2 B3]].
-split; [exact B1|split; [exact B2|split]].
-- intros Fw. destruct (B3 Fw) as [[Fx Fa] C]. split; [exact Fx|split; [exact Fa|exact C]].
-- intros Fa. apply (every_case_scale_1 prec emax (fun x : R => x * val a) _ _ _ _ B1 B2).
-  intros Fw. destruct (B3 Fw) as [[Fx _] C]. split; [exact Fx|exact C].
-Qed.
-
-Theorem ball_add_2_full_correct : ball_add_2_full_spec.
-Proof.
-intros prec emax Hp He nan_plus nan_minus nan_abs nan_fma Hpm cx0 cx1 rx cy0 cy1 ry Bx By.
-generalize (ball_add_2_full_facts prec emax nan_plus nan_minus (fun x => nan_plus x x) nan_abs nan_fma Hpm cx0 cx1 rx cy0 cy1 ry Bx By).
-destruct (IeeeModel.ball_add_2_full prec emax nan_plus nan_minus nan_abs nan_fma cx0 cx1 rx cy0 cy1 ry) as [[cw0 cw1] rw].
-intros [B1 [B2 B3]].
-split; [exact B1|split; [exact B2|split]].
-- intros Fw. destruct (B3 Fw) as [[Fx Fy] C]. split; [exact Fx|split; [exact Fy|exact C]].
-- exact (every_case_2 prec emax Rplus _ _ _ _ _ _ _ _ _ B1 B2 B3).
-Qed.
-
-Theorem ball_sub_2_full_correct : ball_sub_2_full_spec.
-Proof.
-intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hpm cx0 cx1 rx cy0 cy1 ry Bx By.
-generalize (ball_sub_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma Hpm cx0 cx1 rx cy0 cy1 ry Bx By).
-destruct (IeeeModel.ball_sub_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma cx0 cx1 rx cy0 cy1 ry) as [[cw0 cw1] rw].
-intros [B1 [B2 B3]].
-split; [exact B1|split; [exact B2|split]].
-- intros Fw. destruct (B3 Fw) as [[Fx Fy] C]. split; [exact Fx|split; [exact Fy|exact C]].
-- exact (every_case_2 prec emax Rminus _ _ _ _ _ _ _ _ _ B1 B2 B3).
-Qed.
-
-Theorem ball_mul_2_full_correct : ball_mul_2_full_spec.
-Proof.
-intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hpm cx0 cx1 rx cy0 cy1 ry Bx By.
-generalize (ball_mul_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma Hpm cx0 cx1 rx cy0 cy1 ry Bx By).
-destruct (IeeeModel.ball_mul_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma cx0 cx1 rx cy0 cy1 ry) as [[cw0 cw1] rw].
-intros [B1 [B2 B3]].
-split; [exact B1|split; [exact B2|split]].
-- intros Fw. destruct (B3 Fw) as [[Fx Fy] C]. split; [exact Fx|split; [exact Fy|exact C]].
-- exact (every_case_2 prec emax Rmult _ _ _ _ _ _ _ _ _ B1 B2 B3).
-Qed.
-
-Theorem ball_scale_2_full_correct : ball_scale_2_full_spec.
-Proof.
-intros prec emax Hp He nan_plus nan_minus nan_opp nan_abs nan_fma Hp2 cx0 cx1 rx a Bx.
-generalize (ball_scale_2_full_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma Hp2
-              cx0 cx1 rx a Bx).
-destruct (IeeeModel.ball_scale_2_full prec emax nan_plus nan_minus nan_opp nan_abs nan_fma
-            cx0 cx1 rx a) as [[cw0 cw1] rw].
-intros [B1 [B2 B3]].
-split; [exact B1|split; [exact B2|split]].
-- intros Fw. destruct (B3 Fw) as [[Fx Fa] C]. split; [exact Fx|split; [exact Fa|exact C]].
-- intros Fa. apply (every_case_scale_2 prec emax (fun x : R => x * val a) _ _ _ _ _ _ B1 B2).
-  intros Fw. destruct (B3 Fw) as [[Fx _] C]. split; [exact Fx|exact C].
-Qed.
 
 Theorem ball_neg_1_ieee_correct : ball_neg_1_ieee_spec.
 Proof.
