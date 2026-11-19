@@ -76,7 +76,7 @@ and values may be infinite or NaN ([below](#overflow-and-non-finite-values)).
 | constructors (`make_2`, `make_2_limbs`, `ball_make_1`, `ball_make_2`) | | the value given, canonical; for a ball, below |
 | one limb: `+`, `-`, `*`, `add_fast`, `ldexp`, `half` (`add_1_1`, `mul_1_1`) | one rounding to nearest: $\lvert z - v\rvert \le \frac{u}{1 + u}\lvert v\rvert$, plus $\tfrac12\eta$ for products | the IEEE 754 operation |
 | one limb: `-x`, `abs`, comparisons, conversions | exact (no kernel) | the IEEE 754 operation |
-| `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (`ball_add_1_full`, ..., `ball_neg_2`) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | B1 to B4: containment in every case, the empty set and the whole line included; a finite ball when no $x \circ y$ exceeds $2^{e_{\max}-2}$ in magnitude ($2^{e_{\max}-4}$ for the product of one-limb balls) |
+| `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (`ball_add_1_full`, ..., `ball_neg_2`) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | B1 to B4 (B1 to B3 for `-X`): containment in every case, the empty set and the whole line included; a finite ball when no $x \circ y$ exceeds $2^{e_{\max}-2}$ in magnitude ($2^{e_{\max}-4}$ for the product of one-limb balls) |
 | `limb`, `sign`, `isfinite`, `is_normalized`, a ball's states | exact (no kernel) | |
 
 A one-limb operand next to a two-limb one is its limb: `x + y` with `y` an `Expansion<T, 1>` is
@@ -141,9 +141,10 @@ times a ball, a `T` (and for one limb, an `Expansion<T, 1>`) is the scaling, a k
 **When a finite ball comes out.** The whole line is always a correct answer, so the statements
 above would hold of an operation that returned nothing else. **B4** is the guarantee that this
 does not happen far from overflow: if every operand is a finite ball, every scalar finite, and no
-member of the exact result is larger in magnitude than a quarter of the overflow threshold, the
-result is a finite ball. With centers $c_x$, $c_y$ and radii $r_x$, $r_y$, and $2^{e_{\max}-2}$
-that quarter ($2^{1022}$ for `double`, $2^{126}$ for `float`):
+member of the exact result is larger in magnitude than a quarter of the overflow threshold (a
+sixteenth for the product of two one-limb balls), the result is a finite ball. With centers
+$c_x$, $c_y$ and radii $r_x$, $r_y$, and $2^{e_{\max}-2}$ that quarter ($2^{1022}$ for `double`,
+$2^{126}$ for `float`):
 
 | Operation | The result is a finite ball when |
 |---|---|
