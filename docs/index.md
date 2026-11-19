@@ -4,8 +4,12 @@ Kairn is a header-only C++20 library, in development, for floating-point expansi
 and ball arithmetic. Its aim is that every error bound it states carries a machine-checked proof,
 and that the code it ships is generated from the same description the proofs are about.
 
-**Status: pre-release. Milestone 1 is in progress. There is no library code yet, no operation is
-proved yet, and nothing in this repository should be relied on.**
+**Status: pre-release. Milestone 1 is in progress, and nothing in this repository should be relied
+on yet.** The first public headers exist, for k-numbers of one and two limbs and balls around them;
+four of their arithmetic operations (the sum and the product of two-limb numbers, with each other
+and with a limb) have checked proofs, and every other operation is marked `UNVERIFIED`. Overflow
+and infinities are not handled the way the design says yet ([What holds
+today](getting-started/guarantees.md)).
 
 ## What it is
 
@@ -38,7 +42,9 @@ k-number center with a radius of the limb type. The library is to be used as the
   hardware. Results are checked in exact arithmetic by an oracle that shares no code with the
   library or the generator ([Plan](developer/design/phase0/plan.md#testing)).
 - **No unproved bound presented as one.** An operation whose proof is not checked yet is marked
-  `UNVERIFIED`, and its measured errors are reported as measurements, never as bounds. No release
+  `UNVERIFIED`: it compiles only with the marker `kairn::unverified` on an operand, its error
+  constants are not exported, and its measured errors are reported as measurements, never as
+  bounds. No release
   happens before every public operation is proved, documented and exercised by a tutorial example
   in CI ([Plan](developer/design/phase0/plan.md#milestones)).
 
@@ -63,12 +69,17 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
 - **Phase 0**, specification and feasibility: complete, reviewed on 2026-11-18.
 - **Milestone 1**, in progress: `double` limbs with $k = 1$ and $2$; addition, subtraction and
   multiplication; scalar, AVX2 and NEON code; `Ball`; the generator, the Rocq proofs with gradual
-  underflow, the oracle and CI.
+  underflow, the oracle and CI. Done so far: the generator and its scalar, AVX2 and NEON output,
+  the oracle, the proofs of the error-free transformations and of the four two-limb sums and
+  products, and the scalar public headers (`Expansion` and `Ball` for $k = 1, 2$, `float` and
+  `double` limbs), whose every operation is judged by the oracle.
 - The later milestones are in the [Plan](developer/design/phase0/plan.md#milestones).
 
 ## Where to go next
 
-- [Getting started](getting-started/index.md): what can be done with the repository today.
+- [Getting started](getting-started/index.md): build and test the repository, and a first program.
+- [What holds today](getting-started/guarantees.md): which operations are proved, and what is not
+  written yet.
 - [Architecture](developer/architecture.md): how the repository is organized and how its parts
   connect.
 - [The Phase 0 report](developer/design/phase0/index.md): the design, and the measurements behind

@@ -88,7 +88,9 @@ validation:
 
 nav:
   - Home: index.md
-  - Getting started: getting-started/index.md
+  - Getting started:
+      - getting-started/index.md
+      - What holds today: getting-started/guarantees.md
   - Developer guide:
       - Architecture: developer/architecture.md
       - Testing: developer/testing.md

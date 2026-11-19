@@ -1,9 +1,50 @@
 # Getting started
 
-**The library does not exist yet.** Milestone 1 has started: the first kernels are generated and
-some of their proofs are checked, but there is no public interface, and nothing in the repository
-should be relied on. What can be done with it today is to configure it with CMake, run its tests,
-install the CMake package, and build this site.
+**Kairn is in development, and nothing in it should be relied on yet.** Milestone 1 is in
+progress: the first public headers exist, for numbers of one and two limbs of type `float` or
+`double` and for balls around them, and four of their arithmetic operations have checked proofs.
+Everything else is marked UNVERIFIED, and the treatment of overflow and of infinities is not
+written yet; [What holds today](guarantees.md) has the details. This page shows how to build and
+test the repository, write a first program, use the CMake package, and build this site.
+
+## A first program
+
+Include `kairn/kairn.hpp`, and call `kairn::self_test()` once at startup: it checks, with the
+flags your program was compiled with, that the arithmetic behaves as Kairn's proofs assume, and
+says why if it does not.
+
+```cpp
+--8<-- "docs/examples/cpp/first_steps.cpp:include"
+
+--8<-- "docs/examples/cpp/first_steps.cpp:self_test"
+```
+
+`kairn::Expansion<double, 2>` stores a value as the exact sum of two `double`s, its *limbs*: about
+106 significant bits instead of 53. Its sums and products, with another two-limb number or with a
+`double`, have proved error bounds, which `kairn::traits` exports as constants:
+
+```cpp
+--8<-- "docs/examples/cpp/first_steps.cpp:expansion"
+```
+
+Operations whose proof is not checked yet, such as subtraction, need the marker
+`kairn::unverified` on one operand, so that each unproved step is visible in the source:
+
+```cpp
+--8<-- "docs/examples/cpp/first_steps.cpp:unverified"
+```
+
+A `kairn::Ball` is a set: a center and a radius, and every operation returns a ball that contains
+every result of the operation on points of its operands. Its operations are not proved yet either:
+
+```cpp
+--8<-- "docs/examples/cpp/first_steps.cpp:ball"
+```
+
+The whole program is
+[`docs/examples/cpp/first_steps.cpp`](https://github.com/danielepanozzo/kairn/blob/main/docs/examples/cpp/first_steps.cpp);
+ctest builds and runs it (`api.example.first_steps`), and it checks the values it prints. To build
+your own program, link `kairn::kairn` and `kairn::fma` ([Use it from CMake](#use-it-from-cmake)).
 
 ## What you need
 
@@ -47,8 +88,16 @@ The tests:
 | `consume.add_subdirectory` | A CMake project that adds Kairn with `add_subdirectory` and links `kairn::kairn` and `kairn::fma` builds, compiles as C++20, and runs a kernel. |
 | `consume.install` | `cmake --install` of the build tree into a prefix inside the build directory. |
 | `consume.find_package` | A CMake project that finds that installed copy with `find_package(kairn)` builds, compiles as C++20, and runs a kernel. |
+| `api.oracle.*` | Each public operation, computed through the operators and functions of `kairn/kairn.hpp`, on random `binary64` and `binary32` operands, judged by the oracle against the claims of its kernel; also with contraction forced on (`.contract-fast`). |
+| `api.oracle.coverage` | Every kernel of `gen/claims.json` is computed by some public operation or listed as internal to others. |
+| `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, and the same results at run time. |
+| `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass, and each detects a changed rounding mode and flush-to-zero. |
+| `api.self_test.unsafe.*` | With Clang, programs built with flags that break Kairn and define no macro; `kairn::self_test()` must report a failure. |
+| `api.reject.*` | What must not compile: the flags `config.hpp` rejects, and each kind of UNVERIFIED operation written without the marker. |
+| `api.k1.zero_cost` | The instructions emitted for loops over `Expansion<double, 1>` against the same loops over `double`. |
+| `api.example.*` | The examples of this site, which check their own output. |
 
-[Testing](../developer/testing.md) explains the cross-checks, how to run one by hand, and how to
+`ctest -L api` runs only the tests of the public interface. [Testing](../developer/testing.md) explains the cross-checks, how to run one by hand, and how to
 rerun one failing case. The entry points of the
 [Architecture](../developer/architecture.md#layout-and-ownership) page and the cross-checks are
 registered only if Python 3 is found, and each entry point only if its script exists when CMake
@@ -61,10 +110,18 @@ the option `KAIRN_BUILD_TESTS` overrides that.
 ## Use it from CMake
 
 `kairn::kairn` is an `INTERFACE` target: it adds `include/` to the include path and requires
-C++20, and there is nothing to compile. Its headers today are `kairn/version.hpp`, which defines
-`KAIRN_VERSION_MAJOR`, `KAIRN_VERSION_MINOR`, `KAIRN_VERSION_PATCH`, `KAIRN_VERSION_STRING` and
-`KAIRN_VERSION` (configuring fails if they disagree with the version in `CMakeLists.txt`), and the
-generated kernels under `kairn/gen/`, which are not yet an interface to rely on.
+C++20, and there is nothing to compile. Its headers today:
+
+| Header | Content |
+|---|---|
+| `kairn/kairn.hpp` | All of the following. |
+| `kairn/expansion.hpp` | `kairn::Expansion<T, 1>` and `kairn::Expansion<T, 2>`, `T` = `float` or `double`, and their operations. |
+| `kairn/ball.hpp` | `kairn::Ball<T, 1>` and `kairn::Ball<T, 2>`. |
+| `kairn/traits.hpp` | `kairn::traits<X>`: limb type, number of limbs, precision, and the error constants of the proved operations. |
+| `kairn/environment.hpp` | `kairn::self_test()` and `kairn::environment_ok()`. |
+| `kairn/config.hpp` | The checks of the compiler's flags, the marker `kairn::unverified`, and the macros `KAIRN_CHECKS`, `KAIRN_ENVIRONMENT_FAILURE`, `KAIRN_K1_CONTRACT`. |
+| `kairn/version.hpp` | `KAIRN_VERSION_MAJOR`, `KAIRN_VERSION_MINOR`, `KAIRN_VERSION_PATCH`, `KAIRN_VERSION_STRING` and `KAIRN_VERSION` (configuring fails if they disagree with the version in `CMakeLists.txt`). |
+| `kairn/gen/` | The generated kernels and data the headers above use; not an interface to call directly. |
 
 A project can add the source tree (directly, or through `FetchContent`), as the
 `consume.add_subdirectory` test does, with `KAIRN_SOURCE_DIR` the path of the checkout:
