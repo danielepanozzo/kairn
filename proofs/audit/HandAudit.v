@@ -16,6 +16,7 @@ From Kairn.Gen Require Import Statements.
 From Kairn Require Import IeeeStatementsDraft IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore.
 From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeExtStatementsDraft IeeeOps IeeeFull.
+From Kairn Require BallDraft Ball2.
 
 (* The IEEE model: error-free transformations. *)
 Definition fast_two_sum_ieee_audit : fast_two_sum_ieee_spec := fast_two_sum_ieee_correct.
@@ -109,3 +110,32 @@ Print Assumptions add_2_2_full_correct.
 
 Definition mul_2_2_full_audit : mul_2_2_full_spec := mul_2_2_full_correct.
 Print Assumptions mul_2_2_full_correct.
+
+(* The Ball cores of the second radius design (real model): the definitions and the
+   statements are drafts in theories/BallDraft.v, under the names the generated ones
+   have for the first design, hence the qualified names. *)
+Definition ball_add_1_second_audit : Kairn.BallDraft.ball_add_1_spec := Kairn.Ball2.ball_add_1_correct.
+Print Assumptions Kairn.Ball2.ball_add_1_correct.
+
+Definition ball_sub_1_second_audit : Kairn.BallDraft.ball_sub_1_spec := Kairn.Ball2.ball_sub_1_correct.
+Print Assumptions Kairn.Ball2.ball_sub_1_correct.
+
+Definition ball_mul_1_second_audit : Kairn.BallDraft.ball_mul_1_spec := Kairn.Ball2.ball_mul_1_correct.
+Print Assumptions Kairn.Ball2.ball_mul_1_correct.
+
+Definition ball_scale_1_second_audit : Kairn.BallDraft.ball_scale_1_spec :=
+  Kairn.Ball2.ball_scale_1_correct.
+Print Assumptions Kairn.Ball2.ball_scale_1_correct.
+
+Definition ball_add_2_second_audit : Kairn.BallDraft.ball_add_2_spec := Kairn.Ball2.ball_add_2_correct.
+Print Assumptions Kairn.Ball2.ball_add_2_correct.
+
+Definition ball_sub_2_second_audit : Kairn.BallDraft.ball_sub_2_spec := Kairn.Ball2.ball_sub_2_correct.
+Print Assumptions Kairn.Ball2.ball_sub_2_correct.
+
+Definition ball_mul_2_second_audit : Kairn.BallDraft.ball_mul_2_spec := Kairn.Ball2.ball_mul_2_correct.
+Print Assumptions Kairn.Ball2.ball_mul_2_correct.
+
+Definition ball_scale_2_second_audit : Kairn.BallDraft.ball_scale_2_spec :=
+  Kairn.Ball2.ball_scale_2_correct.
+Print Assumptions Kairn.Ball2.ball_scale_2_correct.
