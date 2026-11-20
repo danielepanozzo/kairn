@@ -15,5 +15,6 @@ ieee_lead_theorem: proofs/theories/IeeeFolds.v add_1_1_ieee_lead
 source:        one rounding to nearest
 license:       bound: published; proof: MIT
 status:        proved
+ieee:          bridge
 
 s = add(a, b)

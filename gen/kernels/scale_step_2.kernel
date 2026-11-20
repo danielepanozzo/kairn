@@ -15,5 +15,6 @@ source:        mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22
 license:       algorithm: published; proof: MIT
 status:        proved
 entry:         yes
+ieee:          bridge spec
 
 (z0, z1) = mul_2_1(x0, x1, a)

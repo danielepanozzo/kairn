@@ -742,6 +742,20 @@ product. And Clang 18 at `-O0` called `memset` to zero the 32-byte array into wh
 stores the lane states, a call outside the object that the check cannot count; the array is now
 left uninitialized, since the store writes every lane before any is read.
 
+The first code of the ball vectors ([Architecture](architecture.md#ball-vectors)) failed the check
+in three ways, at `-O2`, none of them a change of value. Its second pass, which writes the zeros of
+the whole space, was a call of `bzero` (Apple clang) or `memset`, outside the object. And the radius
+at the end of the loop was copied into the paths that leave it with part of a copy changed: Apple
+clang folded the product by the largest magnitude, which is the $+0$ of the zero state on the path
+where the loop runs no element, into an addition (three fused instructions for two copies of a
+radius of two, in `bv_add_2` and `bv_sub_2`), and GCC 13 hoisted the product by $\lvert a\rvert$ of
+`bv_scale_radius_2` out of the loop and duplicated the rest (eight for a step of three and a radius
+of three). No number of whole copies of the parts makes those counts. The radius and the finish
+are now a function of their own, never inlined, which the check follows once per call; the largest
+magnitude enters it through a volatile copy, and the zeros are volatile stores. With that the check
+and its controls pass with Apple clang 21 and GCC 16 on the Mac and with GCC 13 and Clang 18 on
+x86-64, and no compiler packs a loop of a ball vector in the vectorization control.
+
 The check takes seconds, on the machines of [Time](#time), with `--parallel 4`:
 
 | Where | `objcode.check`, `objcode.controls` | The quick tier, in all | `full.objcode.check`, `full.objcode.controls` |
@@ -1519,6 +1533,29 @@ folds, with non-finite elements; every map in place (the array written being one
 with each form, at `-O0` and `-O2` with each compiler); and rule R3 on a supplied `y` of `add`,
 `sub` and `axpy`, the maps of stored arrays as the control (fused under `-ffp-contract=fast` by
 Apple clang and GCC 16 on the Mac, and GCC 13 and Clang 18 on x86-64).
+
+**The statements of the maps and the convolutions in the IEEE model**
+([Architecture](architecture.md#maps-and-convolutions-in-the-ieee-model)), which no proof
+establishes yet, are read against the code by `gen/tests/test_ieee_writers.py` before anyone tries
+to prove them: the interpreter on formats of the IEEE shape of two to five bits whose largest number
+is below $2^{p+3}$, so that overflows are frequent, and in `binary64` and `binary32`, on canonical
+scalars and elements with infinities, NaN and numbers near the top among them, in the sequential
+order and with 0 to 4 lanes; every element written (every coefficient), every limb and the mask
+against the statement, the claims of the step in exact arithmetic with the exponent range widened;
+the lead statement of the step of every map on operands of any value; and every build of the
+runner on the same requests in `binary64` and `binary32`. No case contradicts a statement.
+
+**The ball vectors** ([Architecture](architecture.md#ball-vectors)), which the oracle does not judge
+yet (they and their radius kernels are on the lists of [Cross-checks](#cross-checks)), are tested
+here only, by `gen/tests/test_bv.py`: each check of `rules.bv_rules` refuses what it is for; the
+interpreter, on formats of the IEEE shape of two to five bits and in `binary64` and `binary32`, on
+canonical BallVectors with the whole space among them and any value of a scalar that is not a
+radius, in the sequential order and with 0 to 4 lanes, satisfies V1 to V4 and the flag in exact
+arithmetic (containment entry by entry against the exact range of the operation on the balls), every
+order the same; on finite operands the one radius equals the largest radius the entrywise Ball kernel
+returns, in every case compared; the compiled `F_seq`, `F_lanes` (0 to 8 lanes) and `F_packed` of
+every build are bit for bit the interpreter's, on the lengths of the folds; the line protocol, the
+printers, the counts of the loops and the claims (with the entries of architecture.md).
 
 **The folds, and the kernels of their stage**, are cross-checked by the oracle like every kernel
 ([above](#cross-checks)), and tested here too. `gen/tests/test_folds.py` checks:

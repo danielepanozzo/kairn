@@ -1,0 +1,26 @@
+# Proposed (milestone2.md, "BallVector", "Values"): the constructor of a BallVector of one limb from
+# the program's centers and radius. A ball vector (architecture.md, "Ball vectors"): each center
+# guarded and written; the state of norm_upper_1 on the centers written; the radius the guarded radius,
+# a NaN when a center is infinite (bv_make_radius); the finish norm_finish_1 under the mask that no
+# center was a NaN and the radius is not negative (bv_make_finish). So a radius that is negative or a
+# NaN, or +infinity, or a center that is not finite, gives the whole space; otherwise the centers and
+# the radius are those given, exactly (a zero made positive). Its claim would be a new kind,
+# makes_ball_vector (ballvector.py, B1 to B3); not in gen/kernels: the page gives no listing, and the
+# finish's claim needs a field the vocabulary has not (bv_make_finish.kernel).
+fold:          bv_make_1
+arrays:        supplied c
+scalars:       supplied r
+state:         m, mask ok
+step:          z = bv_center_entry_1(c)
+record:        (m, ok) = norm_step_1(m, ok, z)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+radius:        rz = bv_make_radius(m, r)
+finish:        (rr, finite) = bv_make_finish(rz, ok)
+orders:        sequential, lanes
+writes:        z
+output:        rr
+output:        mask finite
+value:         c
+min_precision: 1
+status:        unverified
+domain:        extended

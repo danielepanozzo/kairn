@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 155 kernels are proved.
+Of the 159 kernels, 155 are proved and 4 are **UNVERIFIED**: [`bv_add_radius_1`](bv_add_radius_1.md), [`bv_add_radius_2`](bv_add_radius_2.md), [`bv_scale_radius_1`](bv_scale_radius_1.md), [`bv_scale_radius_2`](bv_scale_radius_2.md).
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -284,4 +284,15 @@ The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry 
 | not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + 2\,\eta$, normalized | [`axpy_entry_step_2`](axpy_entry_step_2.md) |
 | not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$, normalized | [`axpy_step_2_1`](axpy_step_2_1.md) |
 | not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$, normalized | [`axpy_entry_step_2_1`](axpy_entry_step_2_1.md) |
+
+## The radius of a BallVector
+
+The one radius of the result of the BallVector kernels of Milestone 2 (the sum, the difference, the scaling), from the largest magnitude of a center of the result: the radius lines of the entrywise Ball operation. The public header of BallVector comes later.
+
+| C++ | Operands | What it gives | Kernel |
+|---|---|---|---|
+| none (internal) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_1\_1})}{1 - \mathrm{unit}(\mathtt{add\_1\_1})}$ | [`bv_add_radius_1`](bv_add_radius_1.md) **UNVERIFIED** |
+| none (internal) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - \mathrm{unit}(\mathtt{add\_2\_2})} (1 + u)$ | [`bv_add_radius_2`](bv_add_radius_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})} + \frac{\mathrm{tiny}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})}$ | [`bv_scale_radius_1`](bv_scale_radius_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})} (1 + u) + \frac{\mathrm{tiny}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})}$ | [`bv_scale_radius_2`](bv_scale_radius_2.md) **UNVERIFIED** |
 

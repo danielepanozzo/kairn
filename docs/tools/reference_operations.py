@@ -78,6 +78,10 @@ GROUPS = [
      "The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the "
      "operation of one entry, on an array the program supplies where it says so. The functions on arrays of "
      "the public headers come later."),
+    ("ball-vectors", "The radius of a BallVector",
+     "The one radius of the result of the BallVector kernels of Milestone 2 (the sum, the difference, the "
+     "scaling), from the largest magnitude of a center of the result: the radius lines of the entrywise Ball "
+     "operation. The public header of BallVector comes later."),
 ]
 
 
@@ -664,6 +668,11 @@ KERNELS = {
     "acc_merge_2": page("arrays", "Two accumulators of two limbs into one"),
     "acc_radius_1": page("arrays", "The radius of an accumulator of one limb"),
     "acc_radius_2": page("arrays", "The radius of an accumulator of two limbs"),
+    # --- Milestone 2, BallVector ---------------------------------------------------------------------
+    "bv_add_radius_1": page("ball-vectors", "The radius of the sum or the difference of two BallVectors of one limb"),
+    "bv_add_radius_2": page("ball-vectors", "The radius of the sum or the difference of two BallVectors of two limbs"),
+    "bv_scale_radius_1": page("ball-vectors", "The radius of a BallVector of one limb times a number of T"),
+    "bv_scale_radius_2": page("ball-vectors", "The radius of a BallVector of two limbs times a number of T"),
 }
 
 

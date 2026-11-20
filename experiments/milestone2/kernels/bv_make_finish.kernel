@@ -1,0 +1,20 @@
+# Proposed (milestone2.md, "BallVector", "Values": the constructor): the finish of bv_make_k. It is
+# norm_finish_1 under a mask that also says the radius is not negative: a negative radius, as a NaN
+# one, makes the result the whole space. norm_finish_1 alone, the finish of the other ball vectors,
+# whose radii are nonnegative by construction, does not test the sign; so the constructor needs a
+# finish of its own, whose claim (finite_or_nan under the mask ok and the sign of the value) the
+# vocabulary has not: one more field, `nonneg`, of finite_or_nan, would say it.
+kernel:        bv_make_finish
+input:         rz
+input:         mask ok
+output:        r
+output:        mask flag
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+ieee_only:     yes
+cone_exempt:   the outputs are those of norm_finish_1, after a test of the sign
+
+p         = le(0, rz)
+q         = and(ok, p)
+(r, flag) = norm_finish_1(rz, q)

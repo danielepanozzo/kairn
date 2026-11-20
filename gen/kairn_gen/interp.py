@@ -336,6 +336,8 @@ class Machine:
         step = self.kernels[fd.step[0]]
         if fd.is_map:
             return self._run_map(fd, f, order, lanes, elements, list(scalars))
+        if fd.is_bv:
+            return self._run_bv(fd, f, order, lanes, elements, list(scalars))
         # The zero state: every limb +0, every mask true (a fold of maxima has one of each).
         zero = [True if kind == ir.MASK else (NUM, False, 0, 0) for kind in fd.state_kinds()]
         at, parts = 0, {}
@@ -414,6 +416,50 @@ class Machine:
             written = [self._eval(check, f, w, False)[:-1] for w in written]
         width = len(fd.write_limbs())
         return [[w[j] for w in written] for j in range(width)] + [mask]
+
+    def _run_bv(self, fd, f, order, lanes, elements, scalars):
+        """A ball vector (rules.py, "Ball vectors"): every center written is the step on its element
+        (and the scalars it takes); the state, from (+0, true), is the record of each center written,
+        in the order given (fold_seq or fold_lanes of the record and the combination over the centers
+        written); then the radius on the state's limb and the scalars, and the finish on the radius and
+        the state's mask. When the finish's flag is false every center written is zero and the radius
+        +infinity. Returns one list of n values per limb array written, then the radius and the flag."""
+        step, record, combine = (self.kernels[c[0]] for c in (fd.step, fd.record, fd.combine))
+        radius, finish = self.kernels[fd.radius[0]], self.kernels[fd.finish[0]]
+        given, at = {}, 0
+        for g in fd.scalars:
+            given[g.name] = scalars[at:at + len(g.limbs)]
+            at += len(g.limbs)
+        written = []
+        for e in elements:
+            e = dict(e, **given)
+            written.append(self._eval(step, f, [v for a in fd.step[1] for v in e[a]], False))
+        zero = [(NUM, False, 0, 0), True]
+
+        def fold_seq(ws, state):
+            for w in ws:
+                state = self._eval(record, f, state + list(w), False)
+            return state
+
+        n = len(written)
+        if order == 'sequential':
+            state = fold_seq(written, zero)
+        else:
+            if lanes < 0:
+                raise InterpError('the number of lanes is at least 0')
+            full = lanes * (n // lanes) if lanes else 0
+            states = [fold_seq(written[j:full:lanes], zero) for j in range(lanes)]
+            state = states[0] if states else zero
+            for s in states[1:]:
+                state = self._eval(combine, f, state + s, False)
+            state = fold_seq(written[full:], state)
+        rz = self._eval(radius, f, [state[0]] + [v for a in fd.radius[1][1:] for v in given[a]], False)
+        r, flag = self._eval(finish, f, rz + [state[1]], False)
+        if not flag:
+            written = [[(NUM, False, 0, 0)] * len(w) for w in written]
+            r = (INF, False)
+        width = len(fd.write_limbs())
+        return [[w[j] for w in written] for j in range(width)] + [r, flag]
 
     def _run_conv(self, fd, f, arrays):
         """A convolution (rules.py, "Convolutions"): `arrays` the limb arrays of x, then of y, each of
@@ -589,6 +635,10 @@ def complete_fold(machine, fd, f, fields):
     if fd.is_map:
         written = [format_limb(v) for a in out[:-1] for v in a]
         return ' '.join(written + [format_mask(out[-1])])
+    if fd.is_bv:
+        # The centers written, limb array after limb array, then the radius and the flag.
+        written = [format_limb(v) for a in out[:-2] for v in a]
+        return ' '.join(written + [format_limb(out[-2]), format_mask(out[-1])])
     kinds = [g.kind for g in fd.results() for _ in g.limbs]
     return ' '.join(format_mask(v) if kind == ir.MASK else format_limb(v) for v, kind in zip(out, kinds))
 

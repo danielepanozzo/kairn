@@ -59,8 +59,9 @@ It calls [`fold_finish_1`](fold_finish_1.md).
 # least the magnitude of every element (normalized_2_between) and at most one step above the
 # smallest number of the format not below the largest of them, when no element was a NaN (the mask
 # ok) and that step is finite, with the flag true; otherwise the canonical NaN and the flag false.
-# The step from the largest finite number is infinite: an element above it in magnitude gives the
-# flag false.
+# The step from the largest finite number is infinite: an array of finite elements whose largest
+# leading limb is the largest finite number in magnitude gives the flag false, as does an element
+# that is not finite.
 
 s         = succ(m)
 t         = select(ok, s, const nan)

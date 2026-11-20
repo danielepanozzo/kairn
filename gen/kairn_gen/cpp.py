@@ -416,6 +416,15 @@ def prelude(kernels):
                   '#endif',
                   '#endif',
                   '']
+    if any(fd.is_bv for fd in getattr(kernels, 'folds', {}).values()):
+        # The end of a ball vector, its radius and its finish, is a function of its own (cpp.bv_end).
+        lines += ['// The end of a ball vector (its radius and its finish), a function of its own, never inlined.',
+                  '#if defined(_MSC_VER) && !defined(__clang__)',
+                  '#define KAIRN_GEN_NOINLINE inline __declspec(noinline)',
+                  '#else',
+                  '#define KAIRN_GEN_NOINLINE inline __attribute__((noinline))',
+                  '#endif',
+                  '']
     lines += ['// Every theorem assumes that fma_rn is one rounding, done by the hardware. Without the',
               '// instruction the builtin becomes a library call, and the intrinsic an illegal instruction.',
               '#if (defined(__x86_64__) || defined(__i386__)) && !defined(__FMA__)',
@@ -835,13 +844,148 @@ def conv_seq(fd, kernels, ctype):
     return lines + map_second_pass(fd, kernels, ctype, length='nz_') + ['}']
 
 
+# --- Ball vectors -----------------------------------------------------------------------------------
+#
+# A ball vector (rules.py, "Ball vectors") writes the center of each entry as a map does and keeps the
+# state of a fold of maxima, updated by the record kernel from each center written, in the order of
+# the fold (lanes combined by the combination); then the radius kernel on the state's limb and the
+# scalars, and the finish on the radius and the state's mask. When the finish's flag is false, a
+# second pass writes every center zero, and the radius returned is +infinity: the whole space.
+# Aliasing: as for a map, an array written may be exactly one of the arrays read.
+
+RAD, REC = 'rad', 'rec'
+
+
+def bv_parameters(fd, limb, mask, lanes):
+    """A map's parameters, then the radius and the flag by reference."""
+    ps = [f'const {limb}* {v}_in' for v in fd.array_limbs()] + ['std::size_t n']
+    if lanes:
+        ps.append('std::size_t lanes')
+    ps += [f'{limb} {v}' for v in fd.scalar_limbs()]
+    ps += [f'{limb}* {v}_out' for v in fd.write_limbs()]
+    return ps + [f'{mask if g.kind == ir.MASK else limb}& {v}_out' for g in fd.outputs for v in g.limbs]
+
+
+def bv_element(fd, kernels, ctype, pad, state):
+    """The statements for element i_: its limbs loaded, the step, the center written, the record on
+    the state variables `state`."""
+    step, record = kernels[fd.step[0]], kernels[fd.record[0]]
+    lines = [f'{pad}const {ctype} {v} = {v}_in[i_];' for v in fd.array_limbs()]
+    body, outs = _call(step, kernels, ctype, map_arguments(fd, {g.name: list(g.limbs) for g in fd.arrays}), STEP, pad)
+    lines += body + [f'{pad}{v}_out[i_] = {o};' for v, o in zip(fd.write_limbs(), outs)]
+    body, routs = _call(record, kernels, ctype, list(state) + outs, REC, pad)
+    return lines + body + _assign(state, routs, pad)
+
+
+def bv_end_name(fd, packed=False):
+    """The function of the end of a ball vector: F_end in scalar.hpp, F_packed_end in a packed header
+    (which does not include scalar.hpp)."""
+    return f'{fd.name}_packed_end' if packed else f'{fd.name}_end'
+
+
+def bv_end_function(fd, kernels, ctype, packed=False):
+    """The end of a ball vector, its radius on the state's limb and the scalars and its finish under
+    the state's mask, as a function of its own that is never inlined. Inline, a compiler duplicates
+    it into the paths that leave the loop (the one on which the loop runs no element among them),
+    and folds or hoists some of its operations in a copy, so that the fused operations of the
+    function are no number of whole copies of the parts, which is what the object-code check counts
+    (GCC 13 at -O2 hoists the radius's product by |a| out of the loop and duplicates the rest; Apple
+    clang at -O2 folds the product by the +0 of the zero state on the path where the loop runs no
+    element). A call is one copy."""
+    radius, finish = kernels[fd.radius[0]], kernels[fd.finish[0]]
+    m, ok = fd.state_limbs()
+    scalars = [v for a in fd.radius[1][1:] for v in next(g for g in fd.scalars if g.name == a).limbs]
+    params = [f'{ctype} {m}', f'bool {ok}'] + [f'{ctype} {v}' for v in scalars] + \
+        [f'{ctype}& {RAD}_out_', 'bool& fin_out_']
+    # The largest magnitude through a volatile copy, which computes nothing: a compiler may still
+    # specialize the function for the +0 of the zero state (a clone for a constant argument) and fold
+    # the radius's fused product by it.
+    lines = [f'KAIRN_GEN_NOINLINE void {bv_end_name(fd, packed)}({", ".join(params)}) noexcept {{',
+             f'    volatile {ctype} {m}_v_ = {m};', f'    const {ctype} {m}_e_ = {m}_v_;']
+    body, rout = _call(radius, kernels, ctype, [f'{m}_e_'] + scalars, RAD, '    ')
+    lines += body
+    body, fouts = _call(finish, kernels, ctype, rout + [ok], FIN, '    ')
+    return lines + body + [f'    {RAD}_out_ = {fouts[0]};', f'    fin_out_ = {fouts[1]};', '}']
+
+
+def bv_end(fd, kernels, ctype, state, pad='    ', packed=False):
+    """The call of the end (bv_end_function), the second pass and the results. The zeros of the whole
+    space are volatile stores, which compute nothing: otherwise the loop is a call of memset or bzero,
+    outside the object, or a loop that a compiler vectorizes."""
+    scalars = [v for a in fd.radius[1][1:] for v in next(g for g in fd.scalars if g.name == a).limbs]
+    lines = [f'{pad}{ctype} {RAD}_r_;', f'{pad}bool {RAD}_f_;',
+             f'{pad}{bv_end_name(fd, packed)}({", ".join(list(state) + scalars + [f"{RAD}_r_", f"{RAD}_f_"])});']
+    inner = pad + '        '
+    lines += [f'{pad}if (!{RAD}_f_) {{', f'{pad}    for (std::size_t i_ = 0; i_ < n; ++i_) {{']
+    lines += [f'{inner}static_cast<volatile {ctype}*>({v}_out)[i_] = {_zero(ctype)};' for v in fd.write_limbs()]
+    r, flag = (g.limbs[0] for g in fd.outputs)
+    inf = f'std::numeric_limits<{ctype}>::infinity()'
+    return lines + [f'{pad}    }}', f'{pad}}}', f'{pad}{r}_out = {RAD}_f_ ? {RAD}_r_ : {inf};',
+                    f'{pad}{flag}_out = {RAD}_f_;']
+
+
+def bv_description(fd, kernels, order):
+    step, record, radius = (kernels[c[0]] for c in (fd.step, fd.record, fd.radius))
+
+    def part(g):
+        return f'{fd.roles[g.name]} {g.name}' + (f' = ({", ".join(g.limbs)})' if len(g.limbs) > 1 else '')
+    what = {'seq': 'element after element', 'lanes': 'in the lane order with `lanes` lanes, one lane after '
+            'another', 'packed': 'in the lane order with the lanes of a register'}[order]
+    w = fd.writes[0]
+    return [f'// ball vector {fd.name}({", ".join(part(g) for g in fd.arrays + fd.scalars)}) -> {w.name}' +
+            (f' = ({", ".join(w.limbs)})' if len(w.limbs) > 1 else '') +
+            f', {", ".join(g.name for g in fd.outputs)}: step {step.name}, record {record.name}, radius {radius.name}: '
+            f'{what}.',
+            '// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is '
+            'exactly one',
+            f'// of the arrays read (in place) or overlaps none of them. Status: {fd.status}.']
+
+
+def bv_seq(fd, kernels, ctype):
+    state = fd.state_limbs()
+    lines = bv_description(fd, kernels, 'seq')
+    lines.append(f'inline void {fd.name}_seq({", ".join(bv_parameters(fd, ctype, "bool", False))}) noexcept {{')
+    lines += state_declarations(fd, ctype, state, '    ')
+    lines.append('    for (std::size_t i_ = 0; i_ < n; ++i_) {')
+    lines += bv_element(fd, kernels, ctype, ' ' * 8, state) + ['    }']
+    return lines + bv_end(fd, kernels, ctype, state) + ['}']
+
+
+def bv_lanes(fd, kernels, ctype):
+    """The lane order, as fold_lanes on the centers written: lane j_ the elements j_, j_ + lanes, ...
+    of the first lanes (n / lanes), its state from the zero state; the lane states combined from lane 0
+    upward; then the rest. The centers written are those of the sequential order."""
+    combine = kernels[fd.combine[0]]
+    state = fd.state_limbs()
+    lane = [f'{v}_lane_' for v in state]
+    lines = bv_description(fd, kernels, 'lanes')
+    lines.append(f'inline void {fd.name}_lanes({", ".join(bv_parameters(fd, ctype, "bool", True))}) noexcept {{')
+    lines.append('    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;')
+    lines += state_declarations(fd, ctype, state, '    ')
+    lines.append('    for (std::size_t j_ = 0; j_ < lanes; ++j_) {')
+    lines += state_declarations(fd, ctype, lane, '        ')
+    lines.append('        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {')
+    lines += bv_element(fd, kernels, ctype, ' ' * 12, lane) + ['        }', '        if (j_ == 0) {']
+    lines += _assign(state, lane, ' ' * 12) + ['        } else {']
+    body, outs = _call(combine, kernels, ctype, state + lane, COMB, ' ' * 12)
+    lines += body + _assign(state, outs, ' ' * 12) + ['        }', '    }']
+    lines.append('    for (std::size_t i_ = full_; i_ < n; ++i_) {')
+    lines += bv_element(fd, kernels, ctype, ' ' * 8, state) + ['    }']
+    return lines + bv_end(fd, kernels, ctype, state) + ['}']
+
+
 def folds(kernels):
     """The scalar functions of every fold, for both limb types."""
     lines = []
     for fd in getattr(kernels, 'folds', {}).values():
         printers = ((('sequential', map_seq), ('lanes', map_lanes)) if fd.is_map else
                     (('sequential', conv_seq),) if fd.is_conv else
+                    (('sequential', bv_seq), ('lanes', bv_lanes)) if fd.is_bv else
                     (('sequential', fold_seq), ('lanes', fold_lanes)))
+        if fd.is_bv:
+            lines += ['', f'// The end of ball vector {fd.name}: its radius {fd.radius[0]} and its finish {fd.finish[0]}.']
+            for ctype in TYPES:
+                lines += bv_end_function(fd, kernels, ctype)
         for order, printer in printers:
             if order in fd.orders:
                 lines.append('')
@@ -909,7 +1053,7 @@ def runner_table(kernels):
                   '// out[i] and mo[i] the outputs by position, as above.',
                   '#if defined(KAIRN_RUNNER_FOLD)']
         for fd in folds.values():
-            if fd.is_map or fd.is_conv:
+            if fd.is_map or fd.is_conv or fd.is_bv:
                 continue
             args = [f'in[{i}]' for i in range(len(fd.array_limbs()))]
             outs = [f'{"mo" if g.kind == ir.MASK else "out"}[{i}]'
@@ -940,6 +1084,23 @@ def runner_table(kernels):
                 calls.append(f'kairn::gen::{fd.name}_{suffix}({", ".join(args + ["n"] + extra + rest)})'
                              if order in fd.orders else '(void)0')
             lines.append(f'KAIRN_RUNNER_MAP({fd.name}, "{"".join(str(len(g.limbs)) for g in fd.arrays)}", '
+                         f'{len(fd.scalar_limbs())}, {len(fd.write_limbs())}, {", ".join(calls)})')
+        lines.append('#endif')
+    bvs = [fd for fd in folds.values() if fd.is_bv]
+    if bvs:
+        lines += ['// The ball vectors, for a runner that defines KAIRN_RUNNER_BV: as a map, and the radius out[0]',
+                  '// (T&) before the flag mo[0].',
+                  '#if defined(KAIRN_RUNNER_BV)']
+        for fd in bvs:
+            args = [f'in[{i}]' for i in range(len(fd.array_limbs()))]
+            rest = [f'sc[{i}]' for i in range(len(fd.scalar_limbs()))] + \
+                [f'w[{i}]' for i in range(len(fd.write_limbs()))] + ['out[0]', 'mo[0]']
+            calls = []
+            for order, suffix, extra in (('sequential', 'seq', []), ('lanes', 'lanes', ['lanes']),
+                                         ('lanes', 'packed', [])):
+                calls.append(f'kairn::gen::{fd.name}_{suffix}({", ".join(args + ["n"] + extra + rest)})'
+                             if order in fd.orders else '(void)0')
+            lines.append(f'KAIRN_RUNNER_BV({fd.name}, "{"".join(str(len(g.limbs)) for g in fd.arrays)}", '
                          f'{len(fd.scalar_limbs())}, {len(fd.write_limbs())}, {", ".join(calls)})')
         lines.append('#endif')
     convs = [fd for fd in folds.values() if fd.is_conv]

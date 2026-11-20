@@ -15,6 +15,7 @@ source:        sub_2_2 on guarded operands (rule R3); add_2_2 (JMP17 Alg. 6) on 
 license:       algorithm: published; proof: MIT
 status:        proved
 entry:         yes
+ieee:          bridge spec
 
 gx0      = guard(x0)
 gx1      = guard(x1)

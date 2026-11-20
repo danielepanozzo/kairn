@@ -1,0 +1,540 @@
+"""The ball vectors (docs/developer/design/milestone2.md, "BallVector"; docs/developer/architecture.md,
+"Ball vectors"): bv_add_k, bv_sub_k, bv_scale_k.
+
+- Their rules: the ball vectors of gen/kernels are accepted, and each way of getting one wrong is
+  refused (rules.bv_rules).
+- The interpreter, on formats of the shape of IEEE 754 of a few bits, where overflow is near, and in
+  binary64 and binary32, on canonical BallVectors (finite ones and the whole space) and any value of
+  a scalar that is not a radius, in the sequential order and with 0 to 4 lanes: V1 to V4 of the page
+  and the flag, as the claim encloses_entries and the IEEE-model statements say them (containment in
+  exact arithmetic), every order the same result; and, on finite operands, the one radius equals the
+  largest of the radii that the entrywise Ball kernel returns (the page's "equal", tested, not
+  claimed).
+- The compiled C++: F_seq and F_lanes of every build of the runner, and F_packed of every packed
+  build, bit for bit against the interpreter, on the lengths of the folds, the whole space among the
+  operands.
+- The line protocol, the model and the statements in Rocq, the claims, the C++ text and the counts.
+"""
+import math
+import random
+import unittest
+from concurrent.futures import ProcessPoolExecutor
+from fractions import Fraction as F
+
+import common
+import test_cxx as cxx
+import test_folds as folds_tests
+import test_ieee_writers as writers
+import test_simd as simd_tests
+import test_statements as st
+from kairn_gen import claims, cpp, expr, interp, ir, objcode, rocq, rules
+
+BVS = ('bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2')
+# The Ball kernel each one applies entry by entry, whose radius the one radius is the largest of.
+BALL = {'bv_add_1': 'ball_add_1', 'bv_add_2': 'ball_add_2', 'bv_sub_1': 'ball_sub_1', 'bv_sub_2': 'ball_sub_2',
+        'bv_scale_1': 'ball_scale_1', 'bv_scale_2': 'ball_scale_2'}
+ZERO = (interp.NUM, False, 0, 0)
+PINF = (interp.INF, False)
+exact, finite = writers.exact, writers.finite
+
+
+class FiniteDraw(writers.Draw):
+    """Finite numbers only: the centers and the radii of a finite BallVector."""
+
+    def one(self):
+        if self.rng.random() < 0.15 and self.big:
+            return self.rng.choice(self.big)
+        return self.rng.choice(self.nums)
+
+
+def vectors(fd):
+    """{array: its radius scalar} of a ball vector's ball_vector requirements."""
+    return {r[1]: r[2] for r in fd.requires if r[0] == 'ball_vector'}
+
+
+def bv_case(fd, f, rng, n, whole=0.12):
+    """(scalars' limbs, elements) of one case: each operand a canonical BallVector, the whole space
+    with probability `whole`; a scalar that is not a radius any value of the format."""
+    fin, anyv = FiniteDraw(f, rng), writers.Draw(f, rng, special=0.1)
+    radius_of = vectors(fd)
+    whole_of = {a: rng.random() < whole for a in radius_of}
+    els = []
+    for _ in range(n):
+        e = []
+        for g in fd.arrays:
+            e += [ZERO] * len(g.limbs) if whole_of[g.name] else fin.group(len(g.limbs))
+        els.append(e)
+    scalars = []
+    for g in fd.scalars:
+        owner = [a for a, r in radius_of.items() if r == g.name]
+        if owner:
+            if whole_of[owner[0]]:
+                scalars.append(PINF)
+            else:
+                x = fin.one()
+                scalars.append((interp.NUM, False, x[2], x[3]))     # its magnitude: a radius is nonnegative
+        else:
+            scalars.append(anyv.one())
+    return scalars, els
+
+
+def judge_bv(m, ks, fd, f, scalars, elements, out):
+    """The failures of V1 to V4 and of the flag on one case (`out` from Machine.run_fold)."""
+    written, r, flag = out[:-2], out[-2], out[-1]
+    wide = writers.widened(f)
+    n = len(elements)
+    bad = []
+    if any(len(a) != n for a in written):
+        return ['length']
+    given = dict(zip((g.name for g in fd.scalars), scalars))
+    radius_of = vectors(fd)
+    groups = []
+    for e in elements:
+        gs, at = {}, 0
+        for g in fd.arrays:
+            gs[g.name] = e[at:at + len(g.limbs)]
+            at += len(g.limbs)
+        groups.append(gs)
+    zs = [[a[i] for a in written] for i in range(n)]
+    # V1: canonical; the flag.
+    if finite(r):
+        if exact(r) < 0:
+            bad.append('V1: a negative radius')
+        for z in zs:
+            if not all(finite(v) for v in z) or (len(z) == 2 and not interp.eq(interp.add(f, z[0], z[1]), z[0])):
+                bad.append('V1: a center not finite and normalized')
+                break
+    elif r != PINF or not all(v[0] == interp.NUM and v[2] == 0 for z in zs for v in z):
+        bad.append(('V1: not the whole space', interp.format_limb(r)))
+    if flag != finite(r):
+        bad.append('the flag')
+    if bad:
+        return bad
+    operands_finite = all(finite(given[s]) for s in given)
+    # V2: containment, entry by entry, in exact arithmetic.
+    entry = fd.ensures[0]
+    tree = expr.parse(entry['set'])
+    if finite(r):
+        for i, (gs, z) in enumerate(zip(groups, zs)):
+            env = {}
+            for b, v in entry['balls'].items():
+                c, rad = sum(exact(x) for x in gs[v['center']]), exact(given[v['radius']])
+                env[b] = (c - rad, c + rad)
+            env.update({s: (exact(v), exact(v)) for s, v in given.items() if s not in radius_of.values()})
+            lo, hi = st.interval(tree, env)
+            c, rad = sum(exact(x) for x in z), exact(r)
+            if not (c - rad <= lo and hi <= c + rad):
+                bad.append(('V2', i))
+        # V3: every operand finite, the centers the step's, the radius the radius kernel's on the largest
+        # magnitude of a leading limb written.
+        if not operands_finite:
+            bad.append('V3: a finite result from an operand that is not finite')
+        else:
+            step = ks[fd.step[0]]
+            for gs, z in zip(groups, zs):
+                args = [v for a in fd.step[1] for v in (gs[a] if a in gs else [given[a]])]
+                if [exact(v) for v in m.run(step.name, wide, args)] != [exact(v) for v in z]:
+                    bad.append('V3: a center not the step\'s')
+                    break
+            big = max([abs(exact(z[0])) for z in zs], default=F(0))
+            mz = max([z[0] for z in zs], key=lambda v: abs(exact(v)), default=ZERO)
+            mz = (interp.NUM, False, mz[2], mz[3])
+            assert exact(mz) == big
+            want = m.run(fd.radius[0], wide, [mz] + [given[a] for a in fd.radius[1][1:]])
+            if exact(want[0]) != exact(r):
+                bad.append('V3: the radius is not the radius kernel\'s on the largest center')
+    elif operands_finite and n:
+        # V4: finite operands and every entry within the stated fraction of the overflow threshold
+        # give a finite result.
+        top = F(2) ** (f.qmax + f.p)
+        ok = True
+        for gs in groups:
+            env = {a: sum(exact(x) for x in gs[a]) for a in gs}
+            env.update({s: exact(v) for s, v in given.items()})
+            for c in entry['finite_when']:
+                if abs(expr.evaluate(expr.parse(c['abs_le']), env)) > top * F(2) ** c['exp']:
+                    ok = False
+        if ok:
+            bad.append('V4: not finite')
+    return bad
+
+
+def _judge(job):
+    name, p, emax, rounds = job
+    ks = common.kernels()
+    fd = ks.folds[name]
+    m = interp.Machine(ks)
+    f = writers.ieee_format(p, emax) if p else interp.parse_format(emax)
+    rng = random.Random(f'bv:{name}:{f.name}')
+    bad, count, whole, equal, compared = [], 0, 0, 0, 0
+    ball = ks[BALL[name]]
+    for r in range(rounds):
+        n = r % 7
+        scalars, elements = bv_case(fd, f, rng, n)
+        arrays = [[e[j] for e in elements] for j in range(len(fd.array_limbs()))]
+        first = None
+        for order, w in [('sequential', 0)] + [('lanes', x) for x in (0, 1, 2, 3, 4)]:
+            out = m.run_fold(name, f, order, w, arrays, scalars)
+            if first is None:
+                first = out
+                for x in judge_bv(m, ks, fd, f, scalars, elements, out):
+                    bad.append((name, f.name, n, x))
+                count += 1
+                whole += not out[-1]
+            elif out != first:
+                bad.append((name, f.name, order, w, n, 'not the sequential order\'s'))
+        # The page's equality: the one radius is the largest of the entrywise radii.
+        if first[-1] and n:
+            given = dict(zip((g.name for g in fd.scalars), scalars))
+            radii = []
+            for e in elements:
+                gs, at = {}, 0
+                for g in fd.arrays:
+                    gs[g.name] = e[at:at + len(g.limbs)]
+                    at += len(g.limbs)
+                args = []
+                for g in ball.inputs:
+                    if g.name in ('cx', 'cy'):
+                        args += gs[fd.arrays[0 if g.name == 'cx' else 1].name]
+                    elif g.name == 'rx':
+                        args.append(given[vectors(fd)[fd.arrays[0].name]])
+                    elif g.name == 'ry':
+                        args.append(given[vectors(fd)[fd.arrays[1].name]])
+                    else:
+                        args.append(given[g.name])
+                radii.append(exact(m.run(ball.name, f, args)[-1]))
+            compared += 1
+            equal += max(radii) == exact(first[-2])
+    return name, f.name, count, whole, bad[:5], equal, compared
+
+
+class Rules(unittest.TestCase):
+    BASE = '''
+fold:          tb
+arrays:        stored x = x0 x1, stored y = y0 y1
+scalars:       stored rx, stored ry
+state:         m, mask ok
+step:          z = add_2_2(x, y)
+record:        (m, ok) = norm_step_2(m, ok, z)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+radius:        rz = bv_add_radius_2(m, rx, ry)
+finish:        (r, finite) = norm_finish_1(rz, ok)
+orders:        sequential, lanes
+writes:        z = z0 z1
+output:        r
+output:        mask finite
+value:         x+y
+requires:      ball_vector x rx
+requires:      ball_vector y ry
+ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2)
+min_precision: 3
+status:        unverified
+domain:        extended
+'''
+
+    def refusals(self, text):
+        ks = common.kernels()
+        fd = ir.parse_fold(text, 'tb.fold')
+        return [str(e) for e in rules.fold_rules(fd, ir.ordered(dict(ks), dict(ks.folds, tb=fd)))]
+
+    def test_the_ball_vectors_are_accepted(self):
+        ks = common.kernels()
+        for name in BVS:
+            self.assertTrue(ks.folds[name].is_bv and not ks.folds[name].is_map, name)
+            self.assertEqual([str(e) for e in rules.fold_rules(ks.folds[name], ks)], [], name)
+        self.assertEqual(self.refusals(self.BASE), [])
+
+    def test_refused(self):
+        for old, new, words in (
+                ('record:        (m, ok) = norm_step_2(m, ok, z)', 'record:        (m, ok) = norm_combine(m, ok, m, ok)',
+                 'is not the step of a fold of maxima'),
+                ('radius:        rz = bv_add_radius_2(m, rx, ry)', 'radius:        rz = bv_add_radius_2(rx, m, ry)',
+                 "its arguments are the state's limb m"),
+                ('finish:        (r, finite) = norm_finish_1(rz, ok)', 'finish:        (r, finite) = fold_finish_1(rz)',
+                 'finish: a kernel of the radius and a mask'),
+                ('requires:      ball_vector y ry\n', '', 'every array is the centers of a BallVector'),
+                ('flag=finite', 'flag=ok', 'the flag finite'),
+                ('ensures:       encloses_entries z r x+y', 'ensures:       encloses_entries z r x-y',
+                 'is the value of the fold'),
+                ('scalars:       stored rx, stored ry', 'scalars:       stored rx, supplied ry',
+                 'requires \'ball_vector y ry\''),
+                ('combine:       (m, ok) = norm_combine(m, ok, m, ok)', 'combine:       (m, ok) = norm_combine(ok, m, m, ok)',
+                 'the combination of norm_upper_2'),
+                ('state:         m, mask ok', 'state:         mask ok', 'the state of a ball vector')):
+            text = self.BASE.replace(old, new)
+            self.assertNotEqual(text, self.BASE, old)
+            errs = self.refusals(text)
+            self.assertTrue(any(words in e for e in errs), (old, words, errs))
+
+
+class Interp(unittest.TestCase):
+    def test_v1_to_v4(self):
+        jobs = []
+        ks = common.kernels()
+        for name in BVS:
+            fd = ks.folds[name]
+            jobs += [(name, p, emax, common.size(150, 1500)) for p, emax in writers.toy_formats(fd.min_precision)]
+            jobs += [(name, None, fmt, common.size(80, 600)) for fmt in ('binary64', 'binary32')]
+        with ProcessPoolExecutor(max_workers=common.JOBS) as ex:
+            results = list(ex.map(_judge, jobs))
+        self.assertEqual([r[4] for r in results if r[4]], [])
+        for name in BVS:
+            mine = [r for r in results if r[0] == name]
+            self.assertGreater(sum(r[2] for r in mine), 500, name)
+            self.assertGreater(sum(r[3] for r in mine), 50, name)          # the whole space, often
+            # The radius is the largest entrywise radius of the Ball kernel in every case compared.
+            self.assertEqual(sum(r[5] for r in mine), sum(r[6] for r in mine), name)
+            self.assertGreater(sum(r[6] for r in mine), 200, name)
+
+    def test_the_whole_space_and_the_empty_vector(self):
+        ks = common.kernels()
+        m = interp.Machine(ks)
+        f = interp.parse_format('binary64')
+        one = interp.canon(False, 1, 0)
+        # An operand that is the whole space: the result is, its centers zero.
+        out = m.run_fold('bv_add_1', f, 'sequential', 0, [[ZERO, ZERO], [one, one]], [PINF, one])
+        self.assertEqual(out, [[ZERO, ZERO], PINF, False])
+        # No entry: a radius from the radii alone, finite.
+        out = m.run_fold('bv_add_2', f, 'lanes', 3, [[], [], [], []], [one, one])
+        self.assertTrue(out[-1] and exact(out[-2]) >= 2)
+        # An overflow in one center: the whole space.
+        top = interp.canon(False, 2 ** 53 - 1, 971)
+        out = m.run_fold('bv_add_1', f, 'sequential', 0, [[one, top], [one, top]], [ZERO, ZERO])
+        self.assertEqual(out, [[ZERO, ZERO], PINF, False])
+        # A scalar that is not finite: the whole space.
+        out = m.run_fold('bv_scale_1', f, 'sequential', 0, [[one]], [one, interp.NaN])
+        self.assertEqual(out, [[ZERO], PINF, False])
+
+    def test_the_line_protocol(self):
+        m = interp.Machine(common.kernels())
+        formats = {}
+        line = 'bv_add_1 binary64 seq 2 0x1p-4 0x1p-4 0x1p+0 0x1p+1 0x1p+0 0x1p+0 #t'
+        got = interp.complete(m, line, formats)
+        self.assertTrue(got.startswith(line + ' -> 0x1p+1 0x1.8p+1 0x1.'), got)
+        self.assertTrue(got.endswith(' 1'), got)
+        self.assertEqual(interp.complete(m, 'bv_scale_2 binary32 lanes:4 0 0x1p+0 0x1p+0', formats),
+                         'bv_scale_2 binary32 lanes:4 0 0x1p+0 0x1p+0 -> ' +
+                         interp.format_limb(m.run('bv_scale_radius_2', interp.parse_format('binary32'),
+                                                  [ZERO, interp.canon(False, 1, 0), interp.canon(False, 1, 0)])[0]) +
+                         ' 1')
+
+
+# ---------------------------------------------------------------------------------------------
+# The compiled C++.
+
+def request(fd, fmt, order, lanes, scalars, elements):
+    o = 'seq' if order == 'sequential' else f'lanes:{lanes}'
+    limbs = list(scalars) + [e[j] for j in range(len(fd.array_limbs())) for e in elements]
+    return f'{fd.name} {fmt} {o} {len(elements)}' + ''.join(' ' + interp.format_limb(v) for v in limbs)
+
+
+def corpus(fmt, orders, seed):
+    """[(name, format, order, lanes, scalars, elements, line)] of every ball vector."""
+    ks = common.kernels()
+    f = interp.parse_format(fmt)
+    rng = random.Random(f'{seed}:{fmt}')
+    out = []
+    for name in BVS:
+        fd = ks.folds[name]
+        for n in folds_tests.lengths(rng):
+            for _ in range(2):
+                scalars, elements = bv_case(fd, f, rng, n)
+                for order, w in orders:
+                    out.append((name, fmt, order, w, scalars, elements, request(fd, fmt, order, w, scalars, elements)))
+    return out
+
+
+_machines = {}
+
+
+def _run(job):
+    name, fmt, order, w, scalars, elements = job
+    if 'm' not in _machines:
+        _machines['m'] = interp.Machine(common.kernels())
+    fd = _machines['m'].kernels.folds[name]
+    arrays = [[e[j] for e in elements] for j in range(len(fd.array_limbs()))]
+    out = _machines['m'].run_fold(name, interp.parse_format(fmt), order, w, arrays, scalars)
+    return [common.to_float(v) for a in out[:-2] for v in a] + [common.to_float(out[-2]), out[-1]]
+
+
+def expected(cases):
+    with ProcessPoolExecutor(max_workers=common.JOBS) as ex:
+        return list(ex.map(_run, [c[:6] for c in cases], chunksize=4))
+
+
+class Cxx(unittest.TestCase):
+    """F_seq and F_lanes of every build of the runner, bit for bit against the interpreter."""
+
+    @classmethod
+    def setUpClass(cls):
+        if not cxx.COMPILERS:
+            raise unittest.SkipTest('no C++ compiler (set KAIRN_GEN_CXX)')
+        cls.builds = cxx.shared_builds()
+        orders = [('sequential', 0)] + [('lanes', w) for w in (0, 1, 2, 3, 4, 8)]
+        cls.cases = corpus('binary64', orders, 'cxx') + corpus('binary32', orders, 'cxx')
+        cls.want = expected(cls.cases)
+        cls.text = ''.join(c[6] + '\n' for c in cls.cases)
+
+    def test_every_build(self):
+        reference = None
+        for i, (label, _) in enumerate(self.builds.configs):
+            with self.subTest(build=label):
+                status, err = self.builds.results[i]
+                self.assertEqual(status, 0, err)
+                code, out, err = self.builds.run(i, self.text)
+                self.assertEqual(code, 0, err)
+                if out == reference:
+                    continue
+                bad = cxx.differences([(c[0], c[1], None, c[6]) for c in self.cases], self.want, out)
+                self.assertEqual([b[0][:200] for b in bad[:3]], [], f'{len(bad)} of {len(self.cases)} differ')
+                reference = out
+
+    def test_the_corpus(self):
+        self.assertTrue(any(w[-1] is False for w in self.want) and any(w[-1] is True for w in self.want))
+        self.assertTrue({0, 1, 2, 3, 4, 5, 7, 8, 9, 16} <= {len(c[5]) for c in self.cases})
+
+
+class Packed(unittest.TestCase):
+    """F_packed of every packed build: F_lanes with the lanes of the register, and the interpreter."""
+
+    @classmethod
+    def setUpClass(cls):
+        why = simd_tests.no_packed_backend()
+        if why:
+            raise unittest.SkipTest(why)
+        cls.builds = simd_tests.shared_builds()
+        cls.cases = {}
+        for label, _ in cls.builds.configs:
+            key = tuple(sorted(cls.native(label).items()))
+            if key not in cls.cases:
+                cases = []
+                for fmt, w in cls.native(label).items():
+                    cases += corpus(fmt, [('lanes', w)], 'packed')
+                cls.cases[key] = (cases, expected(cases))
+
+    @staticmethod
+    def native(label):
+        return {'binary64': 2, 'binary32': 4} if simd_tests.ARM64 and 'x86_64' not in label else \
+            {'binary64': 4, 'binary32': 8}
+
+    def test_lane_by_lane(self):
+        for i, (label, _) in enumerate(self.builds.configs):
+            cases, want = self.cases[tuple(sorted(self.native(label).items()))]
+            text = ''.join(c[6] + '\n' for c in cases)
+            with self.subTest(build=label):
+                for status, err in self.builds.results[i]:
+                    self.assertEqual(status, 0, err)
+                code, packed, err = self.builds.run(i, 'packed', text)
+                self.assertEqual(code, 0, err)
+                code, scalar, err = self.builds.run(i, 'scalar', text)
+                self.assertEqual(code, 0, err)
+                differ = [(a[:120], b[:120]) for a, b in zip(packed.splitlines(), scalar.splitlines()) if a != b]
+                self.assertEqual(differ[:3], [], f'{len(differ)} lines differ from F_lanes')
+                bad = cxx.differences([(c[0], c[1], None, c[6]) for c in cases], want, packed)
+                self.assertEqual([b[0][:200] for b in bad[:3]], [], f'{len(bad)} of {len(cases)} differ')
+
+
+# ---------------------------------------------------------------------------------------------
+# The printers.
+
+class Printers(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.ks = common.kernels()
+
+    def test_the_cxx(self):
+        text = cpp.scalar(self.ks)
+        self.assertIn('inline void bv_add_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, '
+                      'const double* y1_in, std::size_t n, double rx, double ry, double* z0_out, double* z1_out, '
+                      'double& r_out, bool& finite_out) noexcept {', text)
+        self.assertIn('    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();', text)
+        # The end, a function of its own (cpp.bv_end_function), the largest magnitude through a
+        # volatile copy; the zeros of the whole space volatile stores.
+        self.assertIn('KAIRN_GEN_NOINLINE void bv_add_2_end(double m, bool ok, double rx, double ry, double& rad_out_, '
+                      'bool& fin_out_) noexcept {\n    volatile double m_v_ = m;\n    const double m_e_ = m_v_;\n', text)
+        self.assertIn('    bv_add_2_end(m, ok, rx, ry, rad_r_, rad_f_);\n', text)
+        self.assertIn('            static_cast<volatile double*>(z0_out)[i_] = 0.0;\n', text)
+        self.assertIn('inline void bv_scale_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float rx, '
+                      'float a, float* z_out, float& r_out, bool& finite_out) noexcept {', text)
+        from kairn_gen import simd
+        self.assertIn('inline void bv_sub_2_packed(const double* x0_in', simd.header(simd.AVX2, self.ks))
+        self.assertIn('KAIRN_GEN_NOINLINE void bv_sub_2_packed_end(double m', simd.header(simd.AVX2, self.ks))
+        self.assertIn('inline void bv_sub_2_packed(const double* x0_in', simd.header(simd.NEON, self.ks))
+
+    def test_the_models_and_statements(self):
+        from kairn_gen import ieee
+        m, s = rocq.fold_model(self.ks), rocq.fold_statements(self.ks)
+        im, ist = ieee.fold_model(self.ks), ieee.fold_statements(self.ks)
+        for name in BVS:
+            for d in ('step', 'map', 'record', 'radius'):
+                self.assertIn(f'Definition {name}_{d} ', m)
+            self.assertIn(f'Definition {name}_spec : Prop :=', s)
+            for d in ('step', 'map', 'record', 'combine', 'seq', 'lanes'):
+                self.assertIn(f'Definition {name}_{d} ', im)
+            for o in ('seq', 'lanes'):
+                self.assertIn(f'Definition {name}_{o}_ieee_spec : Prop :=', ist)
+        self.assertIn('    forall x_ y_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs (y_ - (y0 + y1)) <= ry -> '
+                      'Rabs ((x_ + y_) - (z0 + z1)) <= r_)', s)
+        self.assertIn('  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).', im)
+        # No lead statement of the combination of a fold of maxima, which a ball vector names.
+        self.assertNotIn('norm_combine_ieee_lead_spec', ist)
+
+    def test_the_claims(self):
+        import json
+        doc = json.loads(claims.claims(self.ks))
+        e = {x['name']: x for x in doc['folds']}['bv_add_2']
+        self.assertEqual([k for k in e], ['name', 'bv', 'domain', 'arrays', 'scalars', 'writes', 'outputs', 'value',
+                                          'requires', 'ensures', 'orders', 'packed_lanes', 'step', 'step_args',
+                                          'record', 'combine', 'radius', 'radius_args', 'finish', 'min_precision',
+                                          'status', 'theorem', 'source'])
+        self.assertEqual(e['requires'], ['ball_vector(x, rx)', 'ball_vector(y, ry)'])
+        self.assertEqual(e['ensures'], [{'kind': 'encloses_entries', 'center': 'z', 'radius': 'r', 'flag': 'finite',
+                                         'set': 'x+y', 'balls': {'x': {'center': 'x', 'radius': 'rx'},
+                                                                 'y': {'center': 'y', 'radius': 'ry'}},
+                                         'finite_when': [{'abs_le': 'abs(x+y)+rx+ry', 'exp': -2}]}])
+
+    def test_the_entries_of_architecture_md(self):
+        """The two entries that architecture.md writes out ("Claims of Milestone 2", ball vectors) are
+        those of gen/claims.json, field for field, and so are the claims of the radius kernels it
+        quotes."""
+        import json
+        import os
+        with open(os.path.join(common.ROOT, 'docs', 'developer', 'architecture.md'), encoding='utf-8') as f:
+            text = f.read()
+        part = text.split('**Ball vectors** ([Ball vectors](#ball-vectors))', 1)[1]
+        block = part.split('```json\n', 1)[1].split('\n```', 1)[0]
+        written = json.loads('[' + block + ']')
+        with open(os.path.join(common.GEN, 'claims.json'), encoding='utf-8') as f:
+            doc = json.load(f)
+        by = {x['name']: x for x in doc['folds']}
+        self.assertEqual([w['name'] for w in written], ['bv_add_2', 'bv_scale_1'])
+        for w in written:
+            self.assertEqual(w, by[w['name']], w['name'])
+        kernels = {k['name']: k for k in doc['kernels']}
+        self.assertEqual(kernels['bv_add_radius_2']['ensures'], [
+            {'kind': 'upper', 'of': 'rz', 'value': 'rx+ry+m*unit(add_2_2)/(1-unit(add_2_2))*(1+u)'}])
+        self.assertEqual(kernels['bv_scale_radius_1']['ensures'], [
+            {'kind': 'upper', 'of': 'rz', 'value': 'abs(a)*rx+m*unit(mul_1_1)/(1-unit(mul_1_1))+tiny(mul_1_1)/(1-unit(mul_1_1))'}])
+        self.assertIn('"value": "abs(a)*rx+m*unit(mul_1_1)/(1-unit(mul_1_1))+tiny(mul_1_1)/(1-unit(mul_1_1))"',
+                      text.replace('\n', ' ').replace('"value": "abs', '"value": "abs'))
+
+    def test_the_counts_of_the_loops(self):
+        import json
+        doc = json.loads(objcode.objcode(self.ks))
+        names = doc['fold_parts']
+        for name in BVS:
+            for form, least in (('seq', {'step': 1, 'record': 1, 'radius': 1, 'finish': 1}),
+                                ('lanes', {'step': 2, 'record': 2, 'combine': 1, 'radius': 1, 'finish': 1}),
+                                ('packed', {'packed step': 1, 'packed record': 1, 'combine': 1, 'step': 1,
+                                            'record': 1, 'radius': 1, 'finish': 1})):
+                for t in objcode.LIMB_TYPES:
+                    parts = {p[0]: dict(zip(names, p)) for p in doc['folds'][name][form][t]}
+                    self.assertEqual({k: v['least'] for k, v in parts.items()}, least, (name, form))
+                    radius = self.ks[self.ks.folds[name].radius[0]]
+                    self.assertEqual(parts['radius']['fma'], objcode.kernel_counts(radius, self.ks)['packed'][t]['fma'])
+                    self.assertEqual(parts['radius']['fma'], 3 if 'scale' in name else 2)
+                    self.assertEqual(parts['record']['fma'], 0)
+
+
+if __name__ == '__main__':
+    unittest.main()

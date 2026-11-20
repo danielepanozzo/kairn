@@ -272,6 +272,11 @@ nav:
           - "a x + y of two limbs, y of the program": reference/axpy_entry_step_2.md
           - "a x + y of two limbs, a of T, y stored": reference/axpy_step_2_1.md
           - "a x + y of two limbs, a of T, y of the program": reference/axpy_entry_step_2_1.md
+      - The radius of a BallVector:
+          - The radius of the sum or the difference of two BallVectors of one limb: reference/bv_add_radius_1.md
+          - The radius of the sum or the difference of two BallVectors of two limbs: reference/bv_add_radius_2.md
+          - The radius of a BallVector of one limb times a number of T: reference/bv_scale_radius_1.md
+          - The radius of a BallVector of two limbs times a number of T: reference/bv_scale_radius_2.md
   # END reference
   - Proofs: proofs/index.md
   - Developer guide:

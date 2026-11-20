@@ -15,5 +15,6 @@ source:        one rounding to nearest of a product by a power of two
 license:       bound: published; proof: MIT
 status:        proved
 entry:         yes
+ieee:          bridge
 
 z = prod(x, c)

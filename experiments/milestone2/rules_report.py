@@ -25,7 +25,10 @@ IN_GEN = ('two_sum_ord', 'add_down_1', 'add_up_1', 'sub_down_1', 'sub_up_1', 'mu
           'mul_ext_2_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1',
           # and the accumulator, acc_radius_k as proposed here (accumulator.py).
           'acc_add_1', 'acc_add_2', 'acc_mul_1', 'acc_mul_2', 'acc_merge_1', 'acc_merge_2', 'acc_radius_1',
-          'acc_radius_2')
+          'acc_radius_2',
+          # and the radii of BallVector, bv_add_radius_2 and bv_scale_radius_2 as proposed here, with
+          # their forms of one limb.
+          'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2')
 
 
 def main():

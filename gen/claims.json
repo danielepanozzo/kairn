@@ -2378,6 +2378,192 @@
       }
     },
     {
+      "name": "bv_add_radius_1",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "nonneg(m)",
+        "nonneg(rx)",
+        "nonneg(ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "rz",
+          "value": "rx+ry+m*unit(add_1_1)/(1-unit(add_1_1))"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radius lines of ball_add_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "bv_add_radius_2",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "nonneg(m)",
+        "nonneg(rx)",
+        "nonneg(ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "rz",
+          "value": "rx+ry+m*unit(add_2_2)/(1-unit(add_2_2))*(1+u)"
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radius lines of ball_add_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "bv_scale_radius_1",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "nonneg(m)",
+        "nonneg(rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "rz",
+          "value": "abs(a)*rx+m*unit(mul_1_1)/(1-unit(mul_1_1))+tiny(mul_1_1)/(1-unit(mul_1_1))"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "bv_scale_radius_2",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "nonneg(m)",
+        "nonneg(rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "rz",
+          "value": "abs(a)*rx+m*unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)+tiny(mul_2_1)/(1-unit(mul_2_1))"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radius lines of ball_scale_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "dot_step_1",
       "inputs": [
         {
@@ -10720,6 +10906,652 @@
       "source": {
         "cite": "axpy_entry_step_2 on each element",
         "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "bv_add_1",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "ry",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "ball_vector(x, rx)",
+        "ball_vector(y, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_entries",
+          "center": "z",
+          "radius": "r",
+          "flag": "finite",
+          "set": "x+y",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "y",
+              "radius": "ry"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "abs(x+y)+rx+ry",
+              "exp": -2
+            }
+          ]
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "add_1_1",
+      "step_args": [
+        "x",
+        "y"
+      ],
+      "record": "norm_step_1",
+      "combine": "norm_combine",
+      "radius": "bv_add_radius_1",
+      "radius_args": [
+        "m",
+        "rx",
+        "ry"
+      ],
+      "finish": "norm_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_1_1 on the centers, the radius of ball_add_1 at the largest center (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_add_2",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "ry",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "ball_vector(x, rx)",
+        "ball_vector(y, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_entries",
+          "center": "z",
+          "radius": "r",
+          "flag": "finite",
+          "set": "x+y",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "y",
+              "radius": "ry"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "abs(x+y)+rx+ry",
+              "exp": -2
+            }
+          ]
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "add_2_2",
+      "step_args": [
+        "x",
+        "y"
+      ],
+      "record": "norm_step_2",
+      "combine": "norm_combine",
+      "radius": "bv_add_radius_2",
+      "radius_args": [
+        "m",
+        "rx",
+        "ry"
+      ],
+      "finish": "norm_finish_1",
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_2 on the centers, the radius of ball_add_2 at the largest center (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_scale_1",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "a",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*a",
+      "requires": [
+        "ball_vector(x, rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_entries",
+          "center": "z",
+          "radius": "r",
+          "flag": "finite",
+          "set": "x*a",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "(abs(x)+rx)*a",
+              "exp": -2
+            }
+          ]
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "scale_step_1",
+      "step_args": [
+        "x",
+        "a"
+      ],
+      "record": "norm_step_1",
+      "combine": "norm_combine",
+      "radius": "bv_scale_radius_1",
+      "radius_args": [
+        "m",
+        "rx",
+        "a"
+      ],
+      "finish": "norm_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_1_1 on the centers, the radius of ball_scale_1 at the largest center (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_scale_2",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "a",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*a",
+      "requires": [
+        "ball_vector(x, rx)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_entries",
+          "center": "z",
+          "radius": "r",
+          "flag": "finite",
+          "set": "x*a",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "(abs(x)+rx)*a",
+              "exp": -2
+            }
+          ]
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "scale_step_2",
+      "step_args": [
+        "x",
+        "a"
+      ],
+      "record": "norm_step_2",
+      "combine": "norm_combine",
+      "radius": "bv_scale_radius_2",
+      "radius_args": [
+        "m",
+        "rx",
+        "a"
+      ],
+      "finish": "norm_finish_1",
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_2_1 on the centers, the radius of ball_scale_2 at the largest center (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_sub_1",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "ry",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "ball_vector(x, rx)",
+        "ball_vector(y, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_entries",
+          "center": "z",
+          "radius": "r",
+          "flag": "finite",
+          "set": "x-y",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "y",
+              "radius": "ry"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "abs(x-y)+rx+ry",
+              "exp": -2
+            }
+          ]
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "sub_1_1",
+      "step_args": [
+        "x",
+        "y"
+      ],
+      "record": "norm_step_1",
+      "combine": "norm_combine",
+      "radius": "bv_add_radius_1",
+      "radius_args": [
+        "m",
+        "rx",
+        "ry"
+      ],
+      "finish": "norm_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_1_1 on the centers, the radius of ball_sub_1 at the largest center (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
+      }
+    },
+    {
+      "name": "bv_sub_2",
+      "bv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "scalars": [
+        {
+          "name": "rx",
+          "limbs": 1,
+          "role": "stored"
+        },
+        {
+          "name": "ry",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "ball_vector(x, rx)",
+        "ball_vector(y, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_entries",
+          "center": "z",
+          "radius": "r",
+          "flag": "finite",
+          "set": "x-y",
+          "balls": {
+            "x": {
+              "center": "x",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "y",
+              "radius": "ry"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "abs(x-y)+rx+ry",
+              "exp": -2
+            }
+          ]
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "sub_2_2",
+      "step_args": [
+        "x",
+        "y"
+      ],
+      "record": "norm_step_2",
+      "combine": "norm_combine",
+      "radius": "bv_add_radius_2",
+      "radius_args": [
+        "m",
+        "rx",
+        "ry"
+      ],
+      "finish": "norm_finish_1",
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "sub_2_2 on the centers, the radius of ball_sub_2 at the largest center (milestone2.md, BallVector)",
+        "license": "algorithm and proof: MIT"
       }
     },
     {

@@ -1,0 +1,14 @@
+# Proposed (milestone2.md, "BallVector", "Values": the constructor): the radius the program gives,
+# guarded (rule R3), carried to a NaN when the largest magnitude m of a center is not finite: m - m is
+# +0 for a finite m and a NaN for an infinite one, and the sum keeps the guarded radius otherwise.
+# In the real model, where nothing is infinite, rz = r. The radius kernel of bv_make_k.
+kernel:        bv_make_radius
+input:         stored m
+input:         r
+output:        rz
+status:        unverified
+entry:         yes
+
+g  = guard(r)
+d  = sub(m, m)
+rz = add(g, d)

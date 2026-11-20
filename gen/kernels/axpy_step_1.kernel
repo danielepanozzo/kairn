@@ -17,6 +17,7 @@ source:        the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): 
 license:       algorithm: published; proof: MIT
 status:        proved
 entry:         yes
+ieee:          bridge
 
 p = mul_1_1(a, x)
 z = add_1_1(p, y)

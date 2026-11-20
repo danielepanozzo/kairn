@@ -140,6 +140,111 @@ Definition axpy_2_entry_spec : Prop :=
     Rabs ((z0 + z1) - (((a0 + a1) * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs ((a0 + a1) * (x0 + x1)) + Rabs (y0 + y1)) + 2 * eta emin)
     xys (axpy_2_entry_map emin prec tie_even (a0, a1) xys).
 
+(* bv_add_1, each center it writes and its one radius: add_1_1 on the centers, the radius of ball_add_1 at the largest center (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_add_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall (rx ry : R) (xys : list (R * R)),
+  fmt emin prec rx ->
+  0 <= rx ->
+  fmt emin prec ry ->
+  0 <= ry ->
+  Forall (fun xy => fmt emin prec (fst xy) /\ fmt emin prec (snd xy)) xys ->
+  let r_ := bv_add_1_radius emin prec tie_even rx ry xys in
+  fmt emin prec r_ /\
+  Forall2 (fun xy w_ =>
+    let '(x, y) := xy in
+    let z := w_ in
+    fmt emin prec z /\
+    forall x_ y_ : R, Rabs (x_ - x) <= rx -> Rabs (y_ - y) <= ry -> Rabs ((x_ + y_) - z) <= r_)
+    xys (bv_add_1_map emin prec tie_even xys).
+
+(* bv_add_2, each center it writes and its one radius: add_2_2 on the centers, the radius of ball_add_2 at the largest center (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_add_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall (rx ry : R) (xys : list ((R * R) * (R * R))),
+  fmt emin prec rx ->
+  0 <= rx ->
+  fmt emin prec ry ->
+  0 <= ry ->
+  Forall (fun xy => normalized_2 emin prec (fst (fst xy)) (snd (fst xy)) /\ normalized_2 emin prec (fst (snd xy)) (snd (snd xy))) xys ->
+  let r_ := bv_add_2_radius emin prec tie_even rx ry xys in
+  fmt emin prec r_ /\
+  Forall2 (fun xy w_ =>
+    let '((x0, x1), (y0, y1)) := xy in
+    let '(z0, z1) := w_ in
+    normalized_2 emin prec z0 z1 /\
+    forall x_ y_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs (y_ - (y0 + y1)) <= ry -> Rabs ((x_ + y_) - (z0 + z1)) <= r_)
+    xys (bv_add_2_map emin prec tie_even xys).
+
+(* bv_scale_1, each center it writes and its one radius: mul_1_1 on the centers, the radius of ball_scale_1 at the largest center (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_scale_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall (rx a : R) (xs : list R),
+  fmt emin prec rx ->
+  0 <= rx ->
+  fmt emin prec a ->
+  Forall (fun x => fmt emin prec x) xs ->
+  let r_ := bv_scale_1_radius emin prec tie_even rx a xs in
+  fmt emin prec r_ /\
+  Forall2 (fun x w_ =>
+    let z := w_ in
+    fmt emin prec z /\
+    forall x_ : R, Rabs (x_ - x) <= rx -> Rabs ((x_ * a) - z) <= r_)
+    xs (bv_scale_1_map emin prec tie_even a xs).
+
+(* bv_scale_2, each center it writes and its one radius: mul_2_1 on the centers, the radius of ball_scale_2 at the largest center (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_scale_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall (rx a : R) (xs : list (R * R)),
+  fmt emin prec rx ->
+  0 <= rx ->
+  fmt emin prec a ->
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  let r_ := bv_scale_2_radius emin prec tie_even rx a xs in
+  fmt emin prec r_ /\
+  Forall2 (fun x w_ =>
+    let '(x0, x1) := x in
+    let '(z0, z1) := w_ in
+    normalized_2 emin prec z0 z1 /\
+    forall x_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs ((x_ * a) - (z0 + z1)) <= r_)
+    xs (bv_scale_2_map emin prec tie_even a xs).
+
+(* bv_sub_1, each center it writes and its one radius: sub_1_1 on the centers, the radius of ball_sub_1 at the largest center (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_sub_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall (rx ry : R) (xys : list (R * R)),
+  fmt emin prec rx ->
+  0 <= rx ->
+  fmt emin prec ry ->
+  0 <= ry ->
+  Forall (fun xy => fmt emin prec (fst xy) /\ fmt emin prec (snd xy)) xys ->
+  let r_ := bv_sub_1_radius emin prec tie_even rx ry xys in
+  fmt emin prec r_ /\
+  Forall2 (fun xy w_ =>
+    let '(x, y) := xy in
+    let z := w_ in
+    fmt emin prec z /\
+    forall x_ y_ : R, Rabs (x_ - x) <= rx -> Rabs (y_ - y) <= ry -> Rabs ((x_ - y_) - z) <= r_)
+    xys (bv_sub_1_map emin prec tie_even xys).
+
+(* bv_sub_2, each center it writes and its one radius: sub_2_2 on the centers, the radius of ball_sub_2 at the largest center (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_sub_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall (rx ry : R) (xys : list ((R * R) * (R * R))),
+  fmt emin prec rx ->
+  0 <= rx ->
+  fmt emin prec ry ->
+  0 <= ry ->
+  Forall (fun xy => normalized_2 emin prec (fst (fst xy)) (snd (fst xy)) /\ normalized_2 emin prec (fst (snd xy)) (snd (snd xy))) xys ->
+  let r_ := bv_sub_2_radius emin prec tie_even rx ry xys in
+  fmt emin prec r_ /\
+  Forall2 (fun xy w_ =>
+    let '((x0, x1), (y0, y1)) := xy in
+    let '(z0, z1) := w_ in
+    normalized_2 emin prec z0 z1 /\
+    forall x_ y_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs (y_ - (y0 + y1)) <= ry -> Rabs ((x_ - y_) - (z0 + z1)) <= r_)
+    xys (bv_sub_2_map emin prec tie_even xys).
+
 (* conv_1, each coefficient it writes: dot_1 on the terms of each coefficient. Status: proved. *)
 Definition conv_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->

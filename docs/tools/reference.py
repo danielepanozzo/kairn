@@ -558,6 +558,18 @@ def strip_rocq_comments(text):
     return "".join(out)
 
 
+def load_not_judged(root):
+    """The kernels the oracle does not judge yet: the list KAIRN_NOT_YET_CROSS_CHECKED of
+    tests/CMakeLists.txt, read as tests/brute/brute.py reads it (the words between
+    `set(KAIRN_NOT_YET_CROSS_CHECKED` at the start of a line and the next `)`), empty when the file has
+    none."""
+    path = os.path.join(root, "tests", "CMakeLists.txt")
+    if not os.path.exists(path):
+        return set()
+    m = re.search(r"^set\(KAIRN_NOT_YET_CROSS_CHECKED\s([^)]*)\)", read(path), re.M)
+    return set(m.group(1).split()) if m else set()
+
+
 def load_audit(root):
     """(allowed, audited): the axioms of the audit's allow-list, in its order, and {theorem: audit
     file} for every theorem whose assumptions an audit file prints. The allow-list is read as
@@ -1430,6 +1442,7 @@ class Site:
         self.bounds = load_bounds(root)
         self.statements = load_statements(root)
         self.allowed_axioms, self.audited = load_audit(root)
+        self.not_judged = load_not_judged(root)
         # The generated formal models (the real one, and the IEEE one where it exists) and the
         # kernels each defines.
         self.models = []
@@ -1516,10 +1529,18 @@ class Site:
             calls = ("An operation that calls this kernel compiles only with the marker `kairn::unverified` on "
                      "an operand, and `kairn::traits` exports no constants for it"
                      if p["forms"] else "No public operation calls it yet")
+            if k.extended:
+                tested = "Rocq has not checked a proof of it"
+            elif name in self.not_judged:
+                # On the list of what the oracle does not judge yet (tests/CMakeLists.txt): the
+                # generator's tests test it, and no cross-check against the oracle is registered.
+                tested = ("the generator's tests test it, but the oracle does not judge it yet (it is on the list "
+                          "`KAIRN_NOT_YET_CROSS_CHECKED` of `tests/CMakeLists.txt`) and Rocq has not checked a "
+                          "proof of it")
+            else:
+                tested = "the oracle tests it, but Rocq has not checked a proof of it"
             w("**UNVERIFIED: no proof is checked.** The statement below is a target: %s. %s "
-              "([What holds today](../getting-started/guarantees.md#proved-and-unverified))." % (
-                  "Rocq has not checked a proof of it" if k.extended else
-                  "the oracle tests it, but Rocq has not checked a proof of it", calls))
+              "([What holds today](../getting-started/guarantees.md#proved-and-unverified))." % (tested, calls))
             w("")
 
         # What it computes.
@@ -2228,9 +2249,10 @@ class Site:
             masks = sorted({x["if"] for x in e["ensures"] if "if" in x})
             bounds = [k.finite_bullet(x)[len("when $%s$ is true, " % name_tex(x["if"])):] if "if" in x
                       else k.finite_bullet(x) for x in e["ensures"] if x["kind"] == "upper"]
-            return ("Numbers of `T` that bound expressions of $%s$ from above, valid when the mask %s is true:"
+            return ("Numbers of `T` that bound expressions of $%s$ from above%s:"
                     "\n\n$$%s.$$" % (", ".join(name_tex(i) for i in k.inputs),
-                                       " and ".join("$%s$" % name_tex(m) for m in masks),
+                                       (", valid when the mask %s is true" %
+                                        " and ".join("$%s$" % name_tex(m) for m in masks)) if masks else "",
                                        ", \\qquad ".join(b.strip("$") for b in bounds)))
         if "makes_interval" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "makes_interval")
