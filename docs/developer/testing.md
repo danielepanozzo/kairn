@@ -41,6 +41,7 @@ The tests that `ctest` runs in the build directory, by name:
 | `kairn-oracle.claims` | The oracle can read every claim in `gen/claims.json`. |
 | `docs.reference.check` | The reference pages of the site are what `docs/tools/reference.py` writes ([Documentation](documentation.md#reference-pages)). |
 | `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum. |
+| `crosscheck.compiled.FOLD.F` | A fold (a sum or a dot product over arrays) compiled likewise: the scalar runners on 300 random arrays of format F, of every length class and in every order, and the packed runners on 200 arrays in the lane order of their register ([below](#cross-checks)). |
 | `objcode.check` | Every kernel compiled with the build's compiler in five configurations of its flag matrix, scalar and packed, for `double` and `float`: the fused multiply-adds and the plain multiplications of its object code are what `gen/objcode.json` says the IR asks for ([below](#object-code)); and in one of them the operations of `Ball` outlined and external, each a call of a function with the counts of its kernel ([below](#the-operations-of-ball-outlined-and-external)). |
 | `objcode.controls` | The textbook `a * b + c` fails that check in exactly the configurations where its program sees the compiler fuse it, and in at least one; counts changed on purpose fail it. |
 | `objcode.test` | The checker's own tests, on stored disassemblies of every format it reads (Python only). |
@@ -91,6 +92,7 @@ front:
 | `full.crosscheck.interp.K` | Kernel K run by the generator's interpreter on **every** operand combination of a toy format. |
 | `full.crosscheck.interp-restricted.K` | Kernel K run by the interpreter on every operand of a **restricted** domain of a toy format, for the kernels whose whole enumeration is too long. |
 | `full.crosscheck.interp-sampled.K` | The same kernels on 20 000 random cases of the whole toy format, from every stratum. |
+| `full.crosscheck.compiled.FOLD.F`, `full.crosscheck.interp.FOLD`, `full.crosscheck.interp-sampled.FOLD` | A fold: the compiled runners on 1 000 random arrays of up to 4 096 elements (the packed runners on 500), the flag sets' runners among them; the interpreter on every array of a tiny format up to a small length, in every order that differs, and on 1 000 random arrays of a toy format of up to 1 024 elements ([Cross-checks](#cross-checks)). |
 | `full.kairn-gen.test` | The four test classes of the generator that `full.tools.kairn-gen.test` leaves out (`-k`): the interpreter against the machine's own arithmetic (Python's float and `math.fma`) on thousands of cases per kernel and format and against every rounding of toy formats, and the statements of the IEEE model and of the non-finite layer on every operand of small formats. With four worker processes. |
 | `full.kairn-oracle.selftest` | The six tests of the oracle that `full.tools.kairn-oracle.selftest` leaves out (`--only`): its Python reference runner, correct and with injected errors, on every case of tiny formats. With four worker processes. |
 | `full.search.compiled` | The adversarial search ([below](#the-adversarial-search)) on every kernel with an `error`, `upper`, `encloses` or `extends` entry, `binary64` and `binary32`, through the scalar runner with the build's flags, 5 000 cases per kernel and format from its seeds; fails on any violated claim. With four worker processes. |
@@ -136,16 +138,46 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
 `ctest -V -R NAME` prints its command.
 
 - **Every kernel** in `gen/claims.json` gets its tests: adding a kernel to the generator adds them.
-  The exceptions are listed in one place, `KAIRN_NOT_YET_CROSS_CHECKED` of `tests/CMakeLists.txt`:
-  the kernels of the folds' stage of Milestone 2 (the bounds `bound_sum_k` and `bound_dot_k`, the
-  steps `dot_step_k`, `sum_entry_step_k` and `sum_fast_entry_step_2`, the finishes
-  `fold_finish_k`), whose claims (`upper` with a value of its own, `holds`, the error of form `T`,
-  `finite_or_nan`) the oracle does not judge yet. With them, `KAIRN_NOT_YET_CROSS_CHECKED_FOLDS`
-  names the folds, which are not in the list `"kernels"` and have requests of their own
-  ([the line protocol](architecture.md#the-line-protocol)). **For now these are tested by the
-  generator's tier only** ([below](#the-generators-tier)): no cross-check, no enumeration of a toy
-  format, no brute-force run and no test of the public interface is registered for them, and
-  configuring says how many are left out. A name leaves the list when the oracle judges it.
+  The exceptions would be listed in one place, `KAIRN_NOT_YET_CROSS_CHECKED` of
+  `tests/CMakeLists.txt`, kernels whose claims the oracle cannot read yet; with them
+  `KAIRN_NOT_YET_CROSS_CHECKED_FOLDS` for folds. No cross-check, no enumeration of a toy format,
+  no brute-force run and no test of the public interface is registered for a name of these lists,
+  and configuring says how many are left out. **Both are empty**: since the folds' stage of
+  Milestone 2 the oracle reads and judges every claim of the file, the kinds of that stage
+  included (`upper` with a value of its own and `holds` under a mask, the error of form `T`,
+  `count()` and `format(half)`, `finite_or_nan`, and the folds' `fold_error` on requests of
+  arrays; `oracle/README.md`, "The kinds of the folds' stage" and "Folds"). The kernels of that
+  stage (the bounds `bound_sum_k` and `bound_dot_k`, the steps `dot_step_k`, `sum_entry_step_k`
+  and `sum_fast_entry_step_2`, the finishes `fold_finish_k`) are cross-checked as every kernel is;
+  no public operation calls them yet, and `KAIRN_NOT_PUBLIC_YET` names them for the public
+  interface's tests, which register no form of them and require the runner to list them nowhere
+  (`tests/api/coverage.cmake`).
+- **Every fold** in the list `"folds"` of `gen/claims.json` gets tests of its own, under the same
+  names: `crosscheck.compiled.F.FORMAT` in the quick tier runs the scalar runners on 300 random
+  arrays (`KAIRN_CROSSCHECK_FOLD_QUICK_CASES`) of lengths 0 to 256
+  (`KAIRN_CROSSCHECK_FOLD_QUICK_LENGTH`) in every order (`seq`, `lanes:W` for W = 0, 1, 2, 3, 4,
+  5, 8 and more lanes than elements), and the packed runners on 200 arrays
+  (`KAIRN_CROSSCHECK_FOLD_PACKED_QUICK_CASES`) of their one order, `lanes:W` with the W of their
+  register (`packed_lanes` of the fold's claims), each stream generated once and judged with its
+  own guards (`tests/crosscheck.py compiled --packed-runner LABEL EXE --packed-lanes W`). In the
+  full tier, `full.crosscheck.compiled.F.FORMAT` has 1 000 arrays (`KAIRN_CROSSCHECK_FOLD_CASES`; 500 for the packed runners)
+  of lengths up to 4 096 (`KAIRN_CROSSCHECK_FOLD_LENGTH`) and the flag sets' runners too;
+  `full.crosscheck.interp.F` runs the interpreter on every array of a tiny format up to a small
+  length, in every order that differs, and `full.crosscheck.interp-sampled.F` on 1 000 random
+  arrays of a toy format, up to 1 024 elements (`crosscheck.cmake -DMAX_LENGTH`):
+
+    | Arrays | Folds | Every array of | Random arrays of |
+    |---|---|---|---|
+    | one limb | `sum_1`, `sum_1_entry` | `fp:3:-3:0` up to 3 elements: 225 835 | `fp:5:-7:4` |
+    | two limbs | `sum_2`, `sum_2_entry`, `sum_fast_2`, `sum_fast_2_entry` | `fp:3:-4:1` up to 2: 363 379 | `fp:4:-7:2` |
+    | one limb, two arrays | `dot_1` | `fp:2:-1:0` up to 2: 77 029 | `fp:5:-12:-1` |
+    | two limbs, two arrays | `dot_2` | `fp:4:-4:-1`, one element: 62 501 | `fp:4:-7:-3` |
+
+    Two elements of `dot_2` are more than $10^8$ arrays in any format of its precision 4; its
+    sums of products are in the sampled runs and in the compiled runners' lengths. The sums of
+    pairs need exponents: in a format of four to seven binades every sum of up to three pairs is
+    itself a pair, exact, and the guards fail such a run (it puts nothing of the bound to the
+    test); `fp:3:-4:1` has eight.
 - **Random cases**: 6 000 per kernel and format in the quick tier (`KAIRN_CROSSCHECK_QUICK_CASES`)
   and 20 000 in the full tier (`KAIRN_CROSSCHECK_CASES`), seed 0 (`KAIRN_CROSSCHECK_SEED`), so
   that a run is the same everywhere and can be repeated. The oracle's generator chooses the strata
@@ -226,6 +258,13 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
     | `b1 1` | `ball_scale_1_full` | `fp:3:-4:1` | yes | 89 436 |
     | `b2 1` | `ball_scale_2_full` | `fp:3:-3:0` | yes | 100 044 |
     | `b2 b2` | `ball_add_2_full`, `ball_sub_2_full` | `fp:3:-2:-1` | yes | 122 500 |
+    | `a2` | `fold_finish_2` (two limbs of any values: the state of a fold) | `fp:5:-7:0` | yes | 84 100 |
+
+    The kernels of the folds' stage of the finite domain: `n` is a count (`count()`, with
+    `format(half)`), the bounds `bound_sum_k` and `bound_dot_k` on every count of `fp:12:-30:12`
+    (49 153 cases, counts with $m \cdot \mathrm{unit}(K)$ from 0 to past 1); `dot_step_1` (`1 1 1`)
+    on every operand of `fp:3:-6:-1` (166 375) and `dot_step_2` (`2 2 2`) of `fp:4:-3:-2`
+    (226 981); the steps of the sums of supplied arrays have the formats of `add_1_1` and `add_2_2`.
 
 - **Restricted enumerations.** The two-limb balls with two operands have far too many operand
   combinations at their minimum precision (140 million for `ball_add_2` at `fp:3:-3:2`, 12.4
@@ -312,6 +351,40 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
     kind of class (no infinity for `next_up`, no row or step of `next_down`, a sum that cannot
     overflow, no NaN operand, products whose condition always holds, `exact_when` whose conditions
     never fail or never hold, a header without a stratum of the family) and must fail them.
+- **The folds' stage of Milestone 2** (`oracle/README.md`, "The kinds of the folds' stage" and
+  "Folds"). A random run's header lists the strata of the family (`integer`, `fraction`, `limit`,
+  `beyond` for the bounds; `cancel`, `state`, `zerostate`, `tie`, `exactprod` for the steps of the
+  dot products; `nonfinite`, `tails` for the finishes) and has a case of each. Then:
+
+    | Kernels | Cases the run must have seen |
+    |---|---|
+    | the bounds `bound_sum_k`, `bound_dot_k` | for each entry, its mask true at $m \cdot \mathrm{unit}(K) = 0$, at most 1/5, and between 1/5 and 1/4 (just below the limit); false between 1/4 and 1/2 and beyond 1/2 (where `holds` cannot be true); a count that is not an integer; the first bound, $g$, within 8 gaps of its stated value somewhere (the interpreter comes within 1.7 to 3.9 gaps; a $g$ twice as large would be $2^p$ gaps away); in `binary64` and `binary32` no false mask at or below 1/5 (milestone2.md: ok is true there for every $m\varepsilon \le 0.24$) |
+    | the finishes `fold_finish_k` | a finite state, an infinite and a NaN leading limb; for two limbs a finite leading limb with a lower limb that is not finite |
+
+    **A fold** must have seen, on its judged arrays with a true flag (the counts of `fold_error`):
+    every length class, 0, 1, 2, 3, 4, 5, 7, 8, 9, 16, 17 and a random length above 17 (in an
+    enumeration every length up to its largest); every order its header asks for (`seq`, each
+    `lanes:W`, and more lanes than elements for `lanes:big`; a stream of the packed runners asks
+    for its `lanes:W` only); heavy cancellation, an exact sum within $u$ of the sum of magnitudes
+    (but in an enumeration of arrays of one element); for a dot product, where $\tau > 0$, a case
+    where the absolute term is the larger part of the bound and one whose error is above the
+    relative term alone; and an error that is a visible fraction of the bound: at least 1/2 of it
+    for the folds of one limb and 1/16 for those of two, so that a bound a thousand times too
+    loose cannot pass. What the interpreter reaches, in the quick tier's 300 arrays and in toy
+    formats: 0.76 to 1.00 of the bound with one limb (an addition that drops an element just
+    below half a unit of the sum attains the bound), 0.15 to 0.33 with two (the literature's tight
+    case of `add_2_2` makes a third: its error is $3u^2$ of $\lvert x+y\rvert$, a third of
+    $\lvert x\rvert + \lvert y\rvert$) and up to 0.9995 for `dot_2` in `binary64` (MR22's case of
+    `mul_2_2`). And of the flag (the counts of `finite_or_nan`): a true flag, a false one from an
+    element that is not finite, a false one from finite elements near the overflow threshold; and
+    no false flag from finite elements far from overflow (every node of any summation tree below
+    an eighth of the threshold; the oracle also counts such a line suspicious, which fails the
+    cross-checks by itself). The stream is the one asked for: its orders and its largest length
+    are those of the header (`--orders`, `--max-length` of the drivers and of the guards).
+    `full.tools.crosscheck.guards` has runs and altered summaries that miss each of these (a
+    length, an order, a flag outcome, cancellation, the term $\tau$, a ratio a thousand times
+    smaller; the bounds on one side of the limit, never close, ok false early; a finish without a
+    NaN or a lower limb not finite; a stratum of a family) and must fail them.
 
 For a kernel of the extended domain the run must also have seen what that layer is about. The
 guards read the kernel's claims (the file the oracle's summary names) and the oracle's counts of
@@ -852,6 +925,12 @@ Windows machine an Intel i5-13500T with MSVC, each run held to 8 of its logical 
 Without `--parallel`, as the three commands of [Getting started](../getting-started/index.md)
 stand, the quick tier took 166 seconds on the Mac and 287 on 16 threads of the Linux machine.
 
+The folds' stage of Milestone 2 added 38 tests to the quick tier: the 22 cross-checks of its
+eleven kernels, 0.78 seconds of test time each as every kernel's (17 seconds), and the 16 of its
+eight folds, 0.72 seconds each (11.5 seconds: 300 arrays through the scalar runners and 200
+through the packed ones, of 36 elements on average). On the Mac under a load of about 25, the
+quick tier took 58 seconds with them and 46 without, 228 and 180 seconds of test time.
+
 On 16 threads of the Linux machine, the quick tier's 278 seconds of test time were then: the
 compiled runners' cross-checks 105 (126 tests), the oracle's own tests 54, the public interface
 against the oracle 51 (96 tests), the guards' tests 32, the generator's own tests 17, the
@@ -1319,8 +1398,8 @@ python3 gen/kairn-gen test --full           # a few hundred thousand cases per k
 python3 gen/kairn-gen test --no-cxx --skip test_statements.   # without C++, without a module
 ```
 
-**The folds, and the kernels of their stage, are tested here only for now** (they are in
-`KAIRN_NOT_YET_CROSS_CHECKED`, [above](#cross-checks)). `gen/tests/test_folds.py` checks:
+**The folds, and the kernels of their stage**, are cross-checked by the oracle like every kernel
+([above](#cross-checks)), and tested here too. `gen/tests/test_folds.py` checks:
 
 - the rules: the folds of `gen/kernels` are accepted, and each check of a fold refuses what it is
   for (shapes, names, the zero state, rule R3 on a supplied array, the claims, `eps` against the

@@ -37,7 +37,10 @@ kernels of [Milestone 2](../docs/developer/design/milestone2.md): `next_up`, `ne
 `two_sum_ord`, the directed sums and products, the scalings of a ball by a power of two and their
 full forms, the same claims of `neighbor` and of the products in the finite domain as
 `next_up_real`, `next_down_real`, `mul_down_real` and `mul_up_real`, a `bound` alone in that
-domain as `mul_down_bound_real`, and `mul_pow2_2` with an `exact_when` on its error), so that it does not depend on the generator.
+domain as `mul_down_bound_real`, and `mul_pow2_2` with an `exact_when` on its error) and
+`oracle/selftest/claims-wave5.json` (the folds' stage of Milestone 2: the eight folds, their steps,
+finishes and bounds, and the kernels whose bounds they name, frozen from the claims of
+2026-11-20), so that it does not depend on the generator.
 
 ## gen
 
@@ -127,6 +130,24 @@ keep their families and strata.
 | `dirsum` | `add_down_1`, `add_up_1`, `sub_down_1`, `sub_up_1` and their entry forms | `apart` (the smaller operand below half an ulp of the larger, around it, or far below); `cancel` ($b$ within three ulps of $-a$, of $a$ for a difference, at powers of two a third of the time); `exact` (short significands at nearby exponents: sums that are numbers of the format); `close` (exponents within $p + 2$); `beyond` (sums beyond $\pm\Omega$: top binades of one sign, $\Omega$ plus half its ulp, a quarter of it, $\eta$, its ulp); `omega` ($\pm\Omega$ with $\pm\Omega$, its predecessor, its ulp, a small, random, top or zero operand, in either position) |
 | `dirprod` | `mul_down_1`, `mul_up_1` | `aroundp` (products exactly $P$, as powers of two; a factor $a$ and $b$ one of $\mathrm{RD}(P/a)$, its successor or two, its predecessor: just below and just above $P$, exact and inexact; and a product below $P$ whose rounding to nearest is $P$ when there is one); `tiny` (products of exactly $\eta/2$, $\eta$, $2\eta$, and around them: underflow to zero or to $\eta$); `exactprod` (short significands anywhere, the subnormal range included); `beyond` (products beyond $\pm\Omega$; $\Omega$ times one and its neighbours) |
 | `ballpow2` | `ball_mul_pow2_1`, `ball_mul_pow2_2` and their full forms | `atnormal` ($c = 2^k$ and the scaled leading limb, second limb or radius exactly $\lambda$, its successor or predecessor before scaling); `sides` ($c$ = 1/4, 1/2, 1, 2, 4, or up to $2^{\pm p}$); `into` (centers and radii scaled into the subnormal range); `outof` (subnormal ones scaled out of it) |
+
+The kernels of the folds' stage of Milestone 2 ([Folds](#folds)) get families of their own too
+(`gen5.py`), chosen from claims that no earlier kernel has, each with the common strata read for
+its shape and strata of its own; the steps of the sums of supplied arrays (`sum_entry_step_k`,
+`sum_fast_entry_step_2`) claim what `add_1_1`, `add_2_2` and `add_fast_2_2` claim and keep their
+families:
+
+| Family | Kernels | Strata of its own |
+|---|---|---|
+| `count` | a `count()` input: `bound_sum_k`, `bound_dot_k` | `integer` (integers from 1 to $2^p$, log-uniform: the counts of real arrays); `fraction` (counts that are not integers, which `count()` allows); `limit` ($m \cdot \mathrm{unit}(K)$ from 1/16 to 1, log-uniform, and the numbers next to $m \cdot \mathrm{unit}(K)$ = 1/5, 1/4, 1/2 and 1, with $\mathrm{unit}(K)$ from the claims of the kernel K the bound is for); `beyond` ($m \cdot \mathrm{unit}(K)$ from 1 to the largest count). The common strata: `zero` is $m = 0$ (either sign), `underflow` 1, its successor and small integers, `overflow` the top binades, `pow2` powers of two, `extreme` the numbers next to the limits |
+| `dotstep` | a value `NAME + NAME * NAME`: `dot_step_1`, `dot_step_2` | `cancel` ($s$ within a few units of $-(xy)$ rounded to the format: the state cancels the product); `state` ($\lvert s\rvert$ $p$ to $2kp + 4$ binades above or below $\lvert xy\rvert$); `zerostate` ($s = 0$, the first step of a fold); `tie` ($xy$ exact and $s$ an odd multiple of half its unit: $s + xy$ a tie); `exactprod` (short significands) |
+| `finish` | a `finite_or_nan` entry: `fold_finish_k` | `nonfinite` (the leading limb infinite or a NaN, any lower limb); `tails` (a finite leading limb with a lower limb that is not finite, or with a finite lower limb that does not normalize it: the state is passed on as it is) |
+
+What a generator of cases gives for `count(m)`: $m = 0$, and numbers of the format from 1 up, both
+integers and others (the claim allows any $m \ge 1$; the header converts a number of terms, and a
+conversion that is not exact steps up, so non-integers reach the kernel). Negative counts and
+counts between 0 and 1 are outside the requirement: `check` reports them as invalid. A format
+without $\tfrac12$ (`format(half)`: $q_{\min} \le -1$) is refused by `gen` for these kernels.
 
 In 6 000 cases of seed 0 in `binary64` (the quick tier's), `next_up` has 91 to 277 operands of each
 special row of the table ($\pm\eta$, $\pm\Omega$, $\pm\infty$, NaN) and 520 zeros; `add_down_1` 505
@@ -369,6 +390,66 @@ and, to choose `finite_when` thresholds:
 - for finite results on finite operands, the largest of the same quotients;
 - for `encloses` with a finite result, the slack statistics above.
 
+### The kinds of the folds' stage
+
+architecture.md, "Claims of Milestone 2" (the kernels of the folds' stage), read with milestone2.md,
+"Batch kernels"; `check.py`, `extended.py` and `cexpr.py`. The folds themselves are in
+[Folds](#folds).
+
+- **`count(m)`** (a requirement of a one-limb input, the finite domain): $m = 0$ or $m \ge 1$,
+  exactly; $-0$ is a zero. A line with $0 < m < 1$ or $m < 0$ is invalid.
+- **`format(half)`** (a requirement that names no input): the format contains $\tfrac12$,
+  $\eta \le \tfrac12$. In a format without it every line of the kernel is out of scope (counted
+  as such, with the reason; `--ignore-min-precision` does not bring it in), as below the minimum
+  precision: it is a condition on the format, not on the operands.
+- **`error` of form `T`**: $\rho$ is the sum of the magnitudes of the terms of `value`, the
+  operands of its outermost sums and differences (a unary minus kept with its term): for `s+x*y`,
+  $\lvert s\rvert + \lvert xy\rvert$, each term at its own scale; otherwise as forms `R` and `A`.
+- **`upper` with `value` and `if`** and **`holds`**: when the mask output named by `if` is 1, the
+  output is at least the exact value of `value` (`upper`), or the relation holds between the exact
+  values of the two `args` (`holds`); when it is 0 nothing is claimed, and the line counts
+  `ok false: nothing claimed`. The expressions are those of `cexpr.py`: integers, `u`, `eta`, the
+  limb inputs and one-limb outputs by name, `unit(K)` and `tiny(K)` (the `rel` and `abs` of kernel
+  K's one `error` entry in the format: its listed instance in a named format, evaluated from `c`
+  and `t` otherwise), `+ - * /`, parentheses and integer powers with a constant exponent, evaluated
+  with Fractions; a division by zero where the mask is true is a failure (the stated value does
+  not exist). A kernel's entries are all under a mask or none; such a kernel (the bounds) is judged
+  on every line: an output named by an entry that is infinite or a NaN where the mask is true
+  claims nothing in the finite domain, and the line is **suspicious** (the kernel said its bound
+  holds and gave none); an output that is not a number of the format is a failure. There is no
+  "non-finite, not judged" for these kernels: with the mask false, $g = +\infty$ for a huge count
+  is no sign of anything.
+- **`finite_or_nan`** (the extended domain): the mask `flag` is 1 exactly when limb 0 of `value`
+  (an input, the state of a fold) is finite; the output is then the value limb for limb (a NaN
+  matching a NaN, the sign of a zero free); otherwise every limb of the output is a NaN. A
+  multi-limb input with neither `canonical()` nor `ball()`, refused in the extended domain
+  otherwise, is read as any limbs when every entry of its kernel is `finite_or_nan`: a finite
+  leading limb with a lower limb that is not finite, or a pair that is not normalized, is passed
+  on as it is.
+
+Statistics, per entry: for a bound kernel (a `count` input and entries naming one `unit(K)`), the
+class of $x = m \cdot \mathrm{unit}(K)$ with the mask (`ok true, 0 < m*unit(mul_2_2) <= 1/5`, `1/5 <
+... <= 1/4`, `1/4 < ... <= 1/2`, `1/2 < ... < 1`, `>= 1`, `= 0`), `m an integer` or not, the largest
+$x$ where the mask is true and the smallest where it is false; for `upper` with a value, the
+smallest and largest (output $-$ value)/value and the smallest excess over a positive stated
+value in gaps of the output; for `holds`, `holds`; for `finite_or_nan`, the class of the value
+(`value: finite leading limb, every limb finite`, `... a lower limb not finite`, `value: leading
+limb infinite`, `value: leading limb NaN`). In 2 000 to 3 000 random counts per format, the
+reference listing and the interpreter give $g$ at least 1.7 gaps above its stated value
+everywhere (1.8 to 3.9 in `binary64`, `binary32` and `fp:12:-30:12`), and ok true up to
+$x$ just below 1/4 and false from there, in every format tried.
+
+Readings chosen where the documents leave a choice:
+
+- `count()` is read in the finite domain only, and `format(half)` as a condition of the format
+  (out of scope), not of the operands (invalid).
+- `upper` takes `gaps`, or `value` with `if`; `value` without `if`, or both, are refused. Entries
+  under a mask are read only in a kernel of the finite domain whose every entry has one.
+- The exponent of a power in these expressions must be a constant integer (no input names), and
+  `u`, `eta`, `unit` and `tiny` may not be the name of an input or output.
+- `finite_or_nan` compares limb for limb by value: a NaN for a NaN, the same infinity, numbers
+  equal (zeros of either sign).
+
 ### Statistics
 
 Per (kernel, format, tag) and aggregated per (kernel, format): cases, judged, failed, invalid,
@@ -454,6 +535,21 @@ B.json ...` merges summaries (counts add, maxima combine, coverage ranges unite)
   `ieee_status` (`proved` or `unverified`) and `ieee_theorem` (an object) are read for form and
   never used for a verdict; a kernel of the extended domain without `ieee_status`, or `proved`
   without `ieee_theorem`, gives a warning.
+- The folds' stage of Milestone 2 ([above](#the-kinds-of-the-folds-stage)): the form `T` of
+  `error`; `count(NAME)` (a one-limb input, the finite domain) and `format(half)` (no input; a
+  property outside the vocabulary refused) in `requires`; `upper` with `value` and `if` in place
+  of `gaps`, `holds` with `rel`, two `args` and `if`, every entry of the kernel under a mask
+  output and in the finite domain; `unit(K)` and `tiny(K)` naming a kernel of the claims with one
+  `error` entry, readable (a kernel naming one that is not is set aside with it);
+  `finite_or_nan` with `of`, a mask `flag` and a value that is the name of an input of as many
+  limbs, in the extended domain, where a multi-limb input without `canonical()` or `ball()` is
+  read as any limbs when every entry of the kernel is `finite_or_nan`. The list `"folds"`, absent
+  or a list, each fold read as [Folds](#folds) says, with the same strictness (a name of a kernel
+  or of another fold, a field of a kind outside its vocabulary, a step, combination or finish that
+  is not a kernel of the file, the lane order without a combination, heights for another set of
+  orders, an instance other than its expression, a fold of the finite domain or without
+  `finite_or_nan`: set aside with the reason, a CLAIMS ERROR as for a kernel); fields outside the
+  documented ones are warnings.
 - `of` names one output; a list of names, or `"s+e"`, concatenates outputs in that order, which is
   how a pair of 1-limb results `(s, e)` is read as one 2-limb number. Absent means all outputs.
 - `instances` is a list with one object per `error` entry, in their order, each mapping a format
@@ -563,6 +659,139 @@ about 30 000 lines of `rational_K` per second, the echo included.
 
 `brute`, `search` and `shrink` do not run `rational_K`.
 
+## Folds
+
+```
+kairn-oracle gen dot_2 binary64 --seed 0 --count 300 --max-length 256
+kairn-oracle gen sum_2 binary32 --seed 0 --count 200 --orders lanes:4      # a packed runner's
+kairn-oracle gen sum_1 fp:3:-3:0 --exhaustive --max-length 3                # every array
+```
+
+A fold (architecture.md, "Folds") is a loop of kernels along arrays: `sum_1`, `sum_1_entry`,
+`sum_2`, `sum_2_entry`, `sum_fast_2`, `sum_fast_2_entry`, `dot_1` and `dot_2` so far. Its claims
+are in the list `"folds"` of `gen/claims.json` (`folds.py` reads them: arrays with their limbs
+and roles, outputs, `value` over the arrays' names, `requires` (`canonical()` of every array of
+two limbs), `ensures` of the kinds `normalized`, `fold_error` and `finite_or_nan`, `orders`,
+`packed_lanes`, `step`, `combine`, `finish`, `min_precision`, `status`, `theorems`, `source`,
+`instances`), and its lines carry arrays, as the oracle reads them:
+
+```
+FOLD FORMAT ORDER N LIMB ... [#TAG] -> RESULT ...
+```
+
+`ORDER` is `seq` or `lanes:W` (W in decimal, no leading zero, 0 and 1 included); `N` the number of
+elements, in decimal without a leading zero; then, for each array in the order of `arrays` and
+each of its limbs, most significant first, the N entries of that limb (an element is one entry of
+every array); the results are the fold's outputs, the flag `0` or `1`. A malformed line, an order
+the fold does not claim, or a wrong number of limbs or results, is a failure.
+
+**Judging** (`folds.py`), every line, in the extended domain (the only reading architecture.md
+gives a fold; a fold of the finite domain is refused as a claim):
+
+1. Requirements: every input limb a number of the format, $\pm\infty$ or NaN, every element of a
+   two-limb array canonical (finite and normalized, $(\pm\infty, 0)$ or all NaN); otherwise the
+   line is **invalid**. A precision below `min_precision` is out of scope.
+2. `finite_or_nan` (required, one per fold: it is what says when the others hold): the flag is 1
+   exactly when limb 0 of the result is finite; when it is 0 every limb of the result is a NaN;
+   when it is 1 every element and every limb of the result are finite.
+3. With a true flag, finite elements and a finite result: `normalized` (the invariant on the
+   result), and `fold_error`:
+   $\lvert r - \sum_i v_i\rvert \le ((1 + \mathit{term})(1 + \varepsilon)^{h_r} - 1)\sum_i\lvert
+   v_i\rvert + (1 + \varepsilon)^{h_a}\,n\,\tau$, with $v_i$ the exact value of element $i$
+   (`value`: the sum of its limbs, the product of two for a dot product), $h_r$ and $h_a$ the
+   heights `rel` and `abs` of the order of the line (`sequential` for `seq`, `lanes` for every
+   `lanes:W`), `n` or `n-1` with $0 - 1 = 0$, and `eps`, `term`, `tau` evaluated exactly in the
+   format (the listed instance in a named format, which must equal the evaluation).
+4. A false flag with finite elements is not claimed either way, but counted: `near overflow`, or
+   `far from overflow` when every node of every summation tree is certainly below an eighth of the
+   overflow threshold, $(1 + \mathit{term})(1 + \varepsilon)^{h_r}\sum\lvert v_i\rvert + (1 +
+   \varepsilon)^{h_a} n \tau \le 2^{q_{\max} + p - 3}$ (milestone2.md's bound of the value of a
+   tree), which also makes the line **suspicious**: the cross-checks fail on it.
+
+**Exact and fast.** The values of the elements are integers at the scale of `value` ($\eta$ or
+$\eta^2$); the bound's powers are bracketed: $(1 + \varepsilon)^h$ between two integers at the scale
+$2^P$, $P$ the bits of the denominators of `eps` and `term` plus 96 plus twice those of $h$, by
+binary powering with every product rounded down for the lower end and up for the upper end
+(`pow_bracket`), once per height in a plan. A line whose error is at most the lower end of the
+bound passes, one above the upper end fails, and one in between (none in any run so far: the
+count `decided with the exact powers` says) is decided with the exact powers, integers of
+thousands of bits for long arrays. The largest ratio error/allowed is kept exactly (a new
+maximum is computed with the exact powers; terms of more than 4096 bits are rounded down to a
+multiple of $2^{-128}$). The bound costs about 16 µs per new height (the brackets) and well under
+a microsecond per line after; what costs is reading the line: a 1 000-element `sum_1` line is
+judged in about 1.6 ms, a 1 000-element `dot_2` line (4 000 literals, 2 000 tests of canonical
+pairs) in about 10 ms, and `check` reads about 2 500 lines of `dot_2` per second at the quick
+tier's lengths (48 elements on average) (Apple M3 Max, under a load of about 25).
+
+**Statistics**, per entry: for `fold_error`, the largest error/allowed (also per order:
+`error / allowed, order sequential`, `... lanes`), the length of the arrays (`length 0` to
+`length 17`, then `length 18 to 64`, `65 to 256`, `257 to 1024`, `1025 to 4096`, `above 4096`),
+the order (`order: sequential`, `order: lanes, W = 0` to `8`, `W = 9 to 64`, `W above 64`, and
+`more lanes than elements (W > n >= 1)`), `cancellation: |sum| <= sum of magnitudes / 2`,
+`heavy cancellation: |sum| <= u * sum of magnitudes`, `exact sum zero, an element not zero`,
+`|exact sum| > Omega`, `result exact` or `inexact`, and where $\tau > 0$ `absolute term larger
+than the relative term` and `error above the relative term alone` (the case would fail without
+$\tau$); for `finite_or_nan`, `flag true`, `flag false: a non-finite element`, `flag false:
+finite elements, near overflow`, `... far from overflow`, `flag false: finite elements, |exact
+sum| <= Omega` (partial sums overflowed although the exact sum did not), with the lengths and
+orders of every line. The cross-checks' guards read these.
+
+**Requests** (`genfold.py`). Random mode is counter-based: case $i$ depends on the fold, the
+format, the seed, the strata, the orders and the largest length (all in the header, `orders=`
+and `maxlen=`). Each case has a stratum (the schedule `one cancel tight wide underflow sign cancel
+overflow tight nonfinite zeros pow2 tail`), a length (by a schedule of 17 places: 0, 1, 2, 3, 4,
+5, 7, 8, 9, 16, 17, the lengths around each lane count W - 1, W, W + 1, 2W, 2W + 1 for W = 2, 4,
+8, and six random lengths from 18 to `--max-length`, log-uniform; 17 is prime, so over 17 turns
+every stratum meets every length) and an order drawn from `--orders` (default `seq` twice,
+`lanes:0`, `1`, `2`, `3`, `4`, `5`, `8` and `lanes:big`, a number of lanes above the length). The
+strata, of the values $v_i$ (the products $x_i y_i$ of a dot product, split into factors):
+
+| Stratum | Elements |
+|---|---|
+| `one` | two adjacent binades, random signs |
+| `wide` | any binade from the smallest up to a sum that cannot overflow, random signs |
+| `sign` | all of one sign |
+| `cancel` | one element (one factor) chosen so that the exact sum is far smaller than the sum of magnitudes: the nearest number of one or two limbs to minus the sum of the others, or pairs $v, -v'$ a few units apart |
+| `zeros` | zeros of both signs among the elements, every element zero a quarter of the time |
+| `underflow` | subnormal and low normal values near one another; products from below $\eta$ to past $2^{2kp}\eta$, where $\tau$ is the larger part of the bound |
+| `overflow` | large values of one sign then of the other (partial sums overflow, the exact sum does not), $\Omega$ and a quarter of its unit or less (the exact sum beyond $\Omega$ rounds to it), sums that overflow, products near $\Omega$ |
+| `nonfinite` | one to three elements infinite or a NaN ($(\pm\infty, 0)$, (NaN, NaN) for two limbs); for a dot product also $0 \cdot \infty$ |
+| `tight` | a first element and others of its sign just below half a unit of it (for two limbs, of its second limb): each addition drops one, and the error comes to the bound for one limb; for two limbs, half of the time the literature's tight cases of the step or the combination (`tight.py`: MR22's and JMP17's for `add_2_2`, JMP17's for `add_fast_2_2`, MR22's and JMP17's for `mul_2_2`) scaled into the format by a power of two |
+| `pow2` | short significands at nearby exponents: exact sums and ties |
+| `tail` | (two limbs) leading limbs that cancel in pairs, second limbs at the extremes of the invariant |
+
+Exhaustive mode (`--exhaustive --max-length L`) enumerates every array of every length up to L,
+each element any value of its domain (every number of the format, $\pm\infty$ and NaN for one
+limb; every canonical pair for two), in every order that differs: `seq`, and `lanes:W` for W from
+2 to the length. Sizes: `sum_1` at `fp:3:-3:0` up to 3 elements 225 835 cases, `sum_2` at
+`fp:3:-4:1` up to 2 363 379, `dot_1` at `fp:2:-1:0` up to 2 77 029, `dot_2` at `fp:4:-4:-1` one
+element 62 501 (two elements of `dot_2` are more than $10^8$ in any format of its precision). A
+sum of pairs needs exponents: in `fp:3:-2:-1` (four binades) or `fp:4:-4:-1` every sum of up to
+three pairs is a pair, exact, and a run there checks nothing of the bound (the guards fail it);
+in `fp:3:-4:1` and `fp:3:-3:0` the reference comes to 0.19 of it.
+
+**What the reference implementation reaches**, the largest error/allowed in 400 cases of seed 0
+(the interpreter and `refrun` agree bit for bit): `sum_1` 1.00 of its bound in `binary64` and
+`binary32` (0.76 to 0.97 in toy formats), `dot_1` 0.99 (0.83 to 0.88), `dot_2` 0.9995 in
+`binary64` with MR22's case of `mul_2_2` (0.17 to 0.36 elsewhere), `sum_2` and `sum_2_entry` 0.17
+to 0.33 (MR22's case of `add_2_2` gives 1/3: its error is $3u^2$ of $\lvert x + y\rvert$, a third
+of $\lvert x\rvert + \lvert y\rvert$), `sum_fast_2` 0.15 to 0.26.
+
+`brute`, `search` and `shrink` of the oracle do not run folds (`tests/brute/brute.py` does, with
+the oracle's `gen` and `check`).
+
+**Not read yet: maps.** A fold with `writes` (milestone2.md: `axpy`, the centers of a `BallVector`
+sum), whose step also returns an element of each written array, is refused (a
+CLAIMS ERROR). It will need: in the claims, the written arrays among the outputs and
+per-entry `ensures` (the claims of the step's kernel on entry $i$, the value of entry $i$ over the
+elements read and the scalars), a flag that covers every written entry, and scalars beside the
+arrays (the $a$ of `axpy`); in the line protocol, where the scalars and the written arrays go (a
+written array as its limbs' N entries each, as an array read); in the oracle, the outputs of a
+plan as arrays, each entry judged as a kernel's line is (`check.Plan._judge` on the entry's limbs,
+the same code), the flag of a map (false: every written entry that is not finite a canonical
+NaN, the others as computed), statistics per entry, and strata that aim each entry at the corners
+of its kernel (`gen` per entry).
+
 ## brute
 
 ```
@@ -613,7 +842,10 @@ checker of `check`, whose statistics of one line give the quantities the claims 
 
 A kernel of the extended domain is searched on finite operands, where `extends` applies the
 entries of its core (F2); those are its quantities, and every other statement is judged on every
-line as `check` judges it.
+line as `check` judges it. The bounds of the folds' stage (an `upper` entry with a value of its
+own) have the quantity "smallest excess over the stated value, in gaps", made small, and their
+count is repaired into `count()` ($\lvert m\rvert$, and 1 for a magnitude below 1); the folds
+themselves are not searched.
 
 **How it searches.** Each quantity keeps an elite of the 16 best cases found (`--elite`), at most
 a quarter of them descending from one seed. A generation (`--batch`, 256 cases, one runner
@@ -800,6 +1032,23 @@ off where the scaling is exact, the radius widened to keep the set enclosed) and
 `pow2-scale-eta` (`mul_pow2_2` with $\eta$ more in its second limb where its products are exact,
 within its bound of $\eta$).
 
+**The folds' stage.** `refrun` runs the eight folds of architecture.md, "Folds", in both orders as
+defined there (the step from the zero state element after element; or the first $W\lfloor
+n/W\rfloor$ elements dealt to $W$ lanes, each folded from the zero state, the lanes combined from
+lane 0 upward, the remainder folded in; $W \le 1$ the sequential order), with the steps
+`dot_step_1` (one FMA), `dot_step_2` (`mul_2_2` then `add_2_2`), `sum_entry_step_k` and
+`sum_fast_entry_step_2` (the guarded operands, then the addition), the finishes (the state and a
+true flag when its leading limb is finite, otherwise every limb a NaN and a false flag) and the
+bounds `bound_sum_k` and `bound_dot_k` as milestone2.md's listing writes them, with the constants
+`up( )` computed exactly from `unit(K)` and `tiny(K)` of the claims (`--bound-claims`, the
+fixture by default). (The listing's `tm` constant is $2\eta$ for one limb, a subnormal number; the
+generated kernel's $t$ is larger, as if its constant were at least the smallest normal number,
+which milestone2.md asks of every listing: both satisfy the claim.) Its variants plant one fault
+each: `fold-drop-last`, `fold-lanes-reverse` (the lanes combined from the last one down: other
+bits, not an error), `fold-lanes-skip-lane`, `dot-single-product` (`dot_step_2` multiplies the
+leading limbs only), `flag-true-nan`, `flag-false-finite`, `fold-not-normalized`, `bound-g-pred`
+($g$ one number smaller when ok is true) and `bound-ok-beyond` (ok true for every count).
+
 `selftest/refrun.cpp` is a standalone C++ runner for binary64 and binary32, written from the same
 pseudo-code. The selftest compiles it with the system compiler (`$CXX`, then `c++`, `clang++`,
 `g++`, or `--cxx`) with `-std=c++17 -O2 -ffp-contract=off -fno-fast-math` (`/std:c++17 /O2
@@ -911,6 +1160,18 @@ directed rounding either, and fails there.
 | `injected_wave4`, `injected_wave4_exhaustive` | a planted fault of the wave (`refrun` variants above) not caught in the entry or statement where it belongs (`neighbor`; `rounded`; `bound`, with `rounded` allowed for a product on the wrong side; `rounded` alone for a product not exact above $P$; containment, with `exact_when` allowed, for a radius one number too small; `exact_when` alone for a radius grown or a center moved where the scaling is exact; the `exact_when` of `error` for `mul_pow2_2`), caught in another, or flagged in a kernel that does not use it, on `binary64`, `binary32` and `fp:4:-6:1`, and on every case of tiny formats |
 | `judge_wave4` | one of 157 hand-written lines judged otherwise than worked out by hand (every row of the table, the planted faults of the wave written out, overflows on each side, the sign of zeros, the finite domain's non-finite cases, each failure in its entry or statement), or a count of rows, steps, overflows, operands, roundings or conditions off |
 | `merging_wave4` | the merge of summaries of the wave differs from the whole |
+| `claims_reading_wave5` | the fixture of the folds' stage unreadable, or its new kinds read otherwise (form T, `count()`, `format(half)`, entries under a mask); 23 malformed kernels and 26 malformed folds not set aside (a form, a requirement or a format property outside the vocabulary, `count()` of an output or of two limbs, `upper` with `gaps` and `value` or without `if`, `if` naming a limb, `holds` with one argument or another relation, `unit()` of a missing kernel or of one without a single error entry, a power with a name in its exponent, an entry not under a mask beside entries that are, a bound in the extended domain, a finish in the finite domain or with a flag that is not a mask, a fold of the finite domain, without `canonical()`, with another order, a step that is not a kernel, the lane order without a combination, an unreadable value, no `finite_or_nan`, an error kind, `eps` zero or not positive in a format, `tau` negative, a name in `eps`, heights for another set of orders or of another height, a role, limbs, lanes or status out of their vocabulary, an instance other than its expression, a fold named as a kernel, a map that writes arrays); a kernel whose `unit()` names an unreadable one not set aside with it |
+| `cexpr_exact` | an expression of the stage (powers, quotients, `unit()`, `tiny()`, names) other than Python's Fractions on 3 000 random ones (600 with `--quick`), a precedence of unary minus or `^` other than `-2^2 = -4`, `2^3^2 = 512`; a malformed expression read, a division by zero evaluated |
+| `fold_brackets` | a bracket of $(1 + \varepsilon)^h$ that does not hold the exact power, or is wider than $2^{-64}$ of it, for 400 random $\varepsilon$ (to $2^{-110}$) and $h$ (to 5 000); the bound decided from integers other than from Fractions at the exact bound and one unit to either side |
+| `fold_reference` | the reference runner failing a fold, or an invalid or suspicious case, on 500 arrays (260) of each fold in `binary64`, `binary32` and a toy format; a length class, an order, a flag outcome, heavy cancellation or (dot products) the term $\tau$ never met; a largest error/allowed below 1/2 (one limb) or 1/16 (two limbs) |
+| `fold_planted` | a planted fault of the folds not caught in its entry (the last element left out: `fold_error`; the last lane left out of the combination: `fold_error`; single-limb products in `dot_2`: `fold_error`; a true flag on a NaN, a false flag on a finite result: `finite_or_nan`; a result not normalized: `normalized`), caught in another or in a fold it does not touch; the lanes combined from the last one down failing anything, or changing no bits |
+| `fold_exhaustive` | the reference runner failing any array of tiny formats up to two or three elements (86 279 arrays; more without `--quick`), in every order that differs; a planted fault not caught there |
+| `fold_judge` | one of 20 hand-written lines of folds judged otherwise than worked out by hand (the empty array, an error one unit beyond the bound of height $n - 1$, flags against results and elements, a false flag far from overflow suspicious, partial sums that overflow, elements not canonical or not numbers of the format, a result not normalized, the term $\tau$ of `dot_2`, `dot_1` around its rounding), a malformed line or an order the fold does not claim passed, a statistic of lengths, orders or cancellation off |
+| `fold_scaled` | with `eps`, `term` and `tau` times 1 024 a fold failing or its largest ratio not 500 times smaller; with them divided by 4 the tight cases passing |
+| `bound_kernels` | the reference runner (milestone2.md's listing) failing a bound kernel on random counts of `binary64`, `binary32` and `fp:12:-30:12` or on every count of `fp:8:-12:10`; a class of $m \cdot \mathrm{unit}(K)$ around the limit never met, ok false at or below 1/5, $g$ never within 8 gaps of its stated value; $g$ one number smaller failing other than at $m = 0$ (elsewhere the listing has more than a gap of slack), ok true beyond the limit not failing `holds`; one of 12 hand-written lines (`count()`, `format(half)`, nothing claimed with ok false, a non-finite $g$ with ok true suspicious, $g$ at and one number below $u$ for $m = 1$, `holds` beyond 1/2) judged otherwise |
+| `stage_kernels` | the reference runner failing a step or a finish on random cases of three formats or a finish on every state of `fp:3:-3:0`; a class of `finite_or_nan` never met; the planted flags and single products not caught; one of 13 hand-written lines (finishes passing a state on limb for limb, form T between the bounds of forms R and T, `dot_step_1` rounding) judged otherwise |
+| `gen_folds` | case $i$ alone not case $i$ of its run, a seed, the orders or the length not mattering, a length above the maximum, a stratum missing or not asked for, `lanes:big` not above the length, an invalid case, an enumeration's size other than the brute-force count, an order outside the vocabulary accepted |
+| `merging_wave5` | the merge of summaries of folds and bound kernels differs from the whole |
 
 The Ball kernels of the non-finite layer run with the second radius design in these tests (the
 design their IEEE-model statements are proved with); the second wave's tests run the first.
