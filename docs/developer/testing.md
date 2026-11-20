@@ -495,6 +495,20 @@ come after those of `CMAKE_CXX_FLAGS` and `kairn::fma`'s, as in `api.k1.zero_cos
 kernels get the backend's option (`-mavx2 -mfma`, `/arch:AVX2`). Each object file and its
 disassembly stay in the test's work directory (`tests/objcode/` of the build tree).
 
+Every compilation of the check turns the compiler's automatic vectorization off: Clang and Apple
+clang `-fno-vectorize -fno-slp-vectorize`, clang-cl the same through `/clang:`, GCC
+`-fno-tree-vectorize`, MSVC nothing (`NO_VECTORIZE` in `objcode.py`). Automatic vectorization
+packs independent operations into one instruction without changing any of them: Clang 18 at
+`-O2` on x86-64 computes two of the four directed products of `interval_mul_1`, and the two
+directed sums of `interval_add_2`, in one `vfmadd213pd` or `vfmadd213ps` of the scalar code. The
+number of operations of a packed instruction cannot be read off it (two live lanes in a four-lane
+`ps` register), so such an instruction cannot be counted. The check exists to catch a compiler
+fusing or splitting operations, and that is decided independently of the packing; whether results
+change when the compiler vectorizes is the business of the cross-checks, which run with the
+compiler's defaults and compare bits. The explicit SIMD forms, written with intrinsics, are checked
+as before: the options do not touch them. No packing by MSVC has been seen; if MSVC packs, the
+check fails on it in CI, and the option goes in `NO_VECTORIZE`.
+
 The disassembler is found as follows, and the check fails without one and says where it looked:
 
 | Compiler | Disassembler | Object files |
@@ -519,7 +533,15 @@ where the compiler fused it; the fixture's program, run on operands whose produc
 of the format, says independently where the compiler fused it. The test requires the two to agree
 in every configuration of the tier, and at least one configuration to fuse. It also judges the
 unit against counts changed on purpose (one FMA more for `mul_2_2`, one multiplication fewer for
-`add_2_2_full`) and requires exactly those two kernels to fail.
+`add_2_2_full`) and requires exactly those two kernels to fail. These controls run with automatic
+vectorization off, as the check does, and fail as they did without the options. One more records
+why the options are there: the unit compiled at `-O2 -ffp-contract=off` with the vectorizer on, the
+compiler's default. With Clang on x86-64 the check must fail there, on `interval_mul_1` among
+others, and only for the packing: each failing scalar function has fewer fused instructions than
+the IR has FMAs, at least one of them on a vector register, and the right number of
+multiplications. This is an expected failure, so a compiler that stops packing shows. With the
+other compilers what happens is reported and not judged: Apple clang 21 and GCC 16 on the Mac pack
+nothing there.
 
 Where each compiler fused the textbook product in the configurations of the full tier, measured on
 2026-11-19; it fused nowhere else, and the check failed on exactly these:
