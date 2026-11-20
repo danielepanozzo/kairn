@@ -2,15 +2,6 @@
 # as add_1_1 (a node of the tree of the summation), and the sums of the magnitudes added, rounded to
 # nearest. The counts are added in the header. Both accumulators are objects: nothing comes from the
 # program.
-#
-# The claims proposed for it in gen/kernels, which accumulator.py checks:
-#   value:         s+v
-#   requires:      nonneg a
-#   requires:      nonneg c
-#   ensures:       rounded t nearest
-#   ensures:       error t R c=1/(1+u) k=1 t=0
-#   ensures:       rounded b nearest value=a+c
-#   (needs rounded ... value=, which the generator does not have: see accumulator.py)
 kernel:        acc_merge_1
 input:         s
 input:         a
@@ -18,11 +9,18 @@ input:         v
 input:         c
 output:        t
 output:        b
+value:         s+v
+requires:      nonneg a
+requires:      nonneg c
+ensures:       rounded t nearest
+ensures:       error t R c=1/(1+u) k=1 t=0
+ensures:       rounded b nearest value=a+c
 min_precision: 1
 source:        add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md)
 license:       proof: MIT
 status:        unverified
-cone_exempt:   b, the sum of magnitudes, does not reach t; it overflows (to +inf, its operands being nonnegative) only when a + c rounds above the largest number of T, and a radius computed from it is then +inf, the whole line
+ieee:          spec
+cone_exempt:   b, the sum of magnitudes, does not reach t: its claim is read where b is finite (an entry about an output group other than the first), and where b is +inf the mask ok of acc_radius_k is false
 
 t = add(s, v)
 b = add(a, c)

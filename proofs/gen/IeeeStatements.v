@@ -15,6 +15,88 @@ From Kairn.Gen Require IeeeModel.
 Import ListNotations.
 Open Scope R_scope.
 
+(* acc_add_1: add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md). IEEE-model status: unverified. *)
+Definition acc_add_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax) (nan_abs : nan1 prec emax),
+  (1 <= prec)%Z ->
+  forall s a x : binary_float prec emax,
+  finite s -> finite a -> finite x ->
+  0 <= val a ->
+  let '(t, b) := IeeeModel.acc_add_1 prec emax nan_plus nan_abs s a x in
+  (finite t ->
+   val t = RN (ieee_emin prec emax) prec (val s + val x) /\
+   Rabs (val t - (val s + val x)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (val s + val x)) /\
+  (finite b ->
+   val b = RN (ieee_emin prec emax) prec (val a + (Rabs (val x)))).
+
+(* acc_merge_1: add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md). IEEE-model status: unverified. *)
+Definition acc_merge_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax),
+  (1 <= prec)%Z ->
+  forall s a v c : binary_float prec emax,
+  finite s -> finite a -> finite v -> finite c ->
+  0 <= val a ->
+  0 <= val c ->
+  let '(t, b) := IeeeModel.acc_merge_1 prec emax nan_plus s a v c in
+  (finite t ->
+   val t = RN (ieee_emin prec emax) prec (val s + val v) /\
+   Rabs (val t - (val s + val v)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (val s + val v)) /\
+  (finite b ->
+   val b = RN (ieee_emin prec emax) prec (val a + val c)).
+
+(* acc_mul_1: the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md). IEEE-model status: unverified. *)
+Definition acc_mul_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (1 <= prec)%Z ->
+  forall s a x y : binary_float prec emax,
+  finite s -> finite a -> finite x -> finite y ->
+  0 <= val a ->
+  let '(t, b) := IeeeModel.acc_mul_1 prec emax nan_abs nan_fma s a x y in
+  (finite t ->
+   val t = RN (ieee_emin prec emax) prec (val s + (val x * val y))) /\
+  (finite b ->
+   val b = RN (ieee_emin prec emax) prec (val a + ((Rabs (val x)) * (Rabs (val y))))).
+
+(* acc_radius_1: the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. IEEE-model status: unverified. *)
+Definition acc_radius_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall a m g t : binary_float prec emax,
+  finite a -> finite m -> finite g -> finite t ->
+  0 <= val a ->
+  (val m = 0 \/ 1 <= val m) ->
+  0 <= val g ->
+  0 <= val t ->
+  let '(r, ok) := IeeeModel.acc_radius_1 prec emax nan_plus nan_minus nan_fma a m g t in
+  finite r ->
+  (ok = true -> ((((val g * ((1 + u prec) ^ 2)) * ((1 + (val m * u prec)) + ((2 * (val m ^ 2)) * (u prec ^ 2)))) * (val a + ((val m * eta (ieee_emin prec emax)) / 2))) + val t) <= val r) /\
+  (ok = true -> (val m * u prec) <= (1 / 2)).
+
+(* acc_radius_2: acc_radius_1, for the bound of dot_2 (milestone2.md). IEEE-model status: unverified. *)
+Definition acc_radius_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall a m g t : binary_float prec emax,
+  finite a -> finite m -> finite g -> finite t ->
+  0 <= val a ->
+  (val m = 0 \/ 1 <= val m) ->
+  0 <= val g ->
+  0 <= val t ->
+  let '(r, ok) := IeeeModel.acc_radius_2 prec emax nan_plus nan_minus nan_fma a m g t in
+  finite r ->
+  (ok = true -> ((((val g * ((1 + u prec) ^ 2)) * ((1 + (val m * u prec)) + ((2 * (val m ^ 2)) * (u prec ^ 2)))) * (val a + ((val m * eta (ieee_emin prec emax)) / 2))) + val t) <= val r) /\
+  (ok = true -> (val m * u prec) <= (1 / 2)).
+
 (* fast_two_sum: Fast2Sum (Dekker 1971). IEEE-model status: unverified. *)
 Definition fast_two_sum_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -806,6 +888,218 @@ Definition abs_upper_2_ieee_spec : Prop :=
   let t := IeeeModel.abs_upper_2 prec emax nan_opp x0 x1 in
   xval t = xround emax (RU (ieee_emin prec emax) prec) (xabs (xval_2 x0 x1)).
 
+(* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. IEEE-model status: unverified. *)
+Definition add_2_2_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
+  finite z0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.add_2_2_prog [x0; x1; y0; y1]) /\
+  finite z1 /\
+  (val z0, val z1)
+  = add_2_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val y0) (val y1).
+
+(* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. IEEE-model status: unverified. *)
+Definition add_2_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax),
+  (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val x0 + val x1) + (val y0 + val y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((val x0 + val x1) + (val y0 + val y1)).
+
+(* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. IEEE-model status: unverified. *)
+Definition add_2_2_ieee_finite_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  Rabs (val x0) <= bpow radix2 (emax - 2) ->
+  Rabs (val y0) <= bpow radix2 (emax - 2) ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.add_2_2_prog [x0; x1; y0; y1]) /\
+  let '(z0, z1) := IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
+  finite z0 /\ finite z1.
+
+(* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. IEEE-model status: unverified. *)
+Definition add_2_2_ieee_finite_result_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  Rabs ((val x0 + val x1) + (val y0 + val y1)) <= bpow radix2 (emax - 2) ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.add_2_2_prog [x0; x1; y0; y1]) /\
+  let '(z0, z1) := IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
+  finite z0 /\ finite z1.
+
+(* acc_add_2: add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22. IEEE-model status: unverified. *)
+Definition acc_add_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax),
+  (3 <= prec)%Z ->
+  forall s0 s1 a x0 x1 : binary_float prec emax,
+  finite s0 -> finite s1 -> finite a -> finite x0 -> finite x1 ->
+  normalized_2 (ieee_emin prec emax) prec (val s0) (val s1) ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  0 <= val a ->
+  let '(t0, t1, b) := IeeeModel.acc_add_2 prec emax nan_plus nan_minus nan_abs s0 s1 a x0 x1 in
+  (finite t0 ->
+   finite t1 /\
+   normalized_2 (ieee_emin prec emax) prec (val t0) (val t1) /\
+   Rabs ((val t0 + val t1) - ((val s0 + val s1) + (val x0 + val x1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((val s0 + val s1) + (val x0 + val x1))) /\
+  (finite b ->
+   val b = RN (ieee_emin prec emax) prec (val a + (Rabs (val x0)))).
+
+(* acc_merge_2: add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22. IEEE-model status: unverified. *)
+Definition acc_merge_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax),
+  (3 <= prec)%Z ->
+  forall s0 s1 a v0 v1 c : binary_float prec emax,
+  finite s0 -> finite s1 -> finite a -> finite v0 -> finite v1 -> finite c ->
+  normalized_2 (ieee_emin prec emax) prec (val s0) (val s1) ->
+  normalized_2 (ieee_emin prec emax) prec (val v0) (val v1) ->
+  0 <= val a ->
+  0 <= val c ->
+  let '(t0, t1, b) := IeeeModel.acc_merge_2 prec emax nan_plus nan_minus s0 s1 a v0 v1 c in
+  (finite t0 ->
+   finite t1 /\
+   normalized_2 (ieee_emin prec emax) prec (val t0) (val t1) /\
+   Rabs ((val t0 + val t1) - ((val s0 + val s1) + (val v0 + val v1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((val s0 + val s1) + (val v0 + val v1))) /\
+  (finite b ->
+   val b = RN (ieee_emin prec emax) prec (val a + val c)).
+
+(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. IEEE-model status: unverified. *)
+Definition mul_2_2_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (4 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeModel.mul_2_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 y0 y1 in
+  finite z0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.mul_2_2_prog [x0; x1; y0; y1]) /\
+  finite z1 /\
+  (val z0, val z1)
+  = mul_2_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val y0) (val y1).
+
+(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. IEEE-model status: unverified. *)
+Definition mul_2_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (4 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(z0, z1) := IeeeModel.mul_2_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 y0 y1 in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val x0 + val x1) * (val y0 + val y1))) <= 4 * u prec ^ 2 * Rabs ((val x0 + val x1) * (val y0 + val y1)) + (3 / 2) * eta (ieee_emin prec emax).
+
+(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. IEEE-model status: unverified. *)
+Definition mul_2_2_ieee_finite_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (4 <= prec)%Z ->
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  Rabs ((val x0 + val x1) * (val y0 + val y1)) <= bpow radix2 (emax - 1) ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.mul_2_2_prog [x0; x1; y0; y1]) /\
+  let '(z0, z1) := IeeeModel.mul_2_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 y0 y1 in
+  finite z0 /\ finite z1.
+
+(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. IEEE-model status: unverified. *)
+Definition dot_step_2_ieee_bridge_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (4 <= prec)%Z ->
+  forall s0 s1 x0 x1 y0 y1 : binary_float prec emax,
+  finite s0 -> finite s1 -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val s0) (val s1) ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(t0, t1) := IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1 in
+  finite t0 ->
+  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
+                     IeeeModel.dot_step_2_prog [s0; s1; x0; x1; y0; y1]) /\
+  finite t1 /\
+  (val t0, val t1)
+  = dot_step_2 (ieee_emin prec emax) prec tie_even (val s0) (val s1) (val x0) (val x1) (val y0) (val y1).
+
+(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. IEEE-model status: unverified. *)
+Definition dot_step_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (4 <= prec)%Z ->
+  forall s0 s1 x0 x1 y0 y1 : binary_float prec emax,
+  finite s0 -> finite s1 -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val s0) (val s1) ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  let '(t0, t1) := IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1 in
+  finite t0 ->
+  finite t1 /\
+  normalized_2 (ieee_emin prec emax) prec (val t0) (val t1) /\
+  Rabs ((val t0 + val t1) - ((val s0 + val s1) + ((val x0 + val x1) * (val y0 + val y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (val s0 + val s1) + Rabs ((val x0 + val x1) * (val y0 + val y1))) + 2 * eta (ieee_emin prec emax).
+
+(* acc_mul_2: the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22. IEEE-model status: unverified. *)
+Definition acc_mul_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (4 <= prec)%Z ->
+  forall s0 s1 a x0 x1 y0 y1 : binary_float prec emax,
+  finite s0 -> finite s1 -> finite a -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
+  normalized_2 (ieee_emin prec emax) prec (val s0) (val s1) ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
+  0 <= val a ->
+  let '(t0, t1, b) := IeeeModel.acc_mul_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma s0 s1 a x0 x1 y0 y1 in
+  (finite t0 ->
+   finite t1 /\
+   normalized_2 (ieee_emin prec emax) prec (val t0) (val t1) /\
+   Rabs ((val t0 + val t1) - ((val s0 + val s1) + ((val x0 + val x1) * (val y0 + val y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (val s0 + val s1) + Rabs ((val x0 + val x1) * (val y0 + val y1))) + 2 * eta (ieee_emin prec emax)) /\
+  (finite b ->
+   val b = RN (ieee_emin prec emax) prec (val a + ((Rabs (val x0)) * (Rabs (val y0))))).
+
 (* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. IEEE-model status: unverified. *)
 Definition add_2_1_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -894,73 +1188,6 @@ Definition add_2_1_full_spec : Prop :=
   (finite x0 -> finite a -> ~ finite w0 ->
    w0 = infinity prec emax (Rlt_bool ((val x0 + val x1) + val a) 0) /\ w1 = pos_zero prec emax) /\
   (~ (finite x0 /\ finite a) -> canonical_of t w0 w1).
-
-(* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. IEEE-model status: unverified. *)
-Definition add_2_2_ieee_bridge_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (3 <= prec)%Z ->
-  forall x0 x1 y0 y1 : binary_float prec emax,
-  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  let '(z0, z1) := IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
-  finite z0 ->
-  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
-                     IeeeModel.add_2_2_prog [x0; x1; y0; y1]) /\
-  finite z1 /\
-  (val z0, val z1)
-  = add_2_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val y0) (val y1).
-
-(* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. IEEE-model status: unverified. *)
-Definition add_2_2_ieee_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax),
-  (3 <= prec)%Z ->
-  forall x0 x1 y0 y1 : binary_float prec emax,
-  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  let '(z0, z1) := IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
-  finite z0 ->
-  finite z1 /\
-  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
-  Rabs ((val z0 + val z1) - ((val x0 + val x1) + (val y0 + val y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((val x0 + val x1) + (val y0 + val y1)).
-
-(* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. IEEE-model status: unverified. *)
-Definition add_2_2_ieee_finite_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (3 <= prec)%Z ->
-  forall x0 x1 y0 y1 : binary_float prec emax,
-  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  Rabs (val x0) <= bpow radix2 (emax - 2) ->
-  Rabs (val y0) <= bpow radix2 (emax - 2) ->
-  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
-                     IeeeModel.add_2_2_prog [x0; x1; y0; y1]) /\
-  let '(z0, z1) := IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
-  finite z0 /\ finite z1.
-
-(* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. IEEE-model status: unverified. *)
-Definition add_2_2_ieee_finite_result_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (3 <= prec)%Z ->
-  forall x0 x1 y0 y1 : binary_float prec emax,
-  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  Rabs ((val x0 + val x1) + (val y0 + val y1)) <= bpow radix2 (emax - 2) ->
-  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
-                     IeeeModel.add_2_2_prog [x0; x1; y0; y1]) /\
-  let '(z0, z1) := IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
-  finite z0 /\ finite z1.
 
 (* add_2_2_full: add_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). IEEE-model status: proved. *)
 Definition add_2_2_full_spec : Prop :=
@@ -1084,56 +1311,6 @@ Definition add_fast_2_2_full_spec : Prop :=
   (finite x0 -> finite y0 -> ~ finite w0 ->
    w0 = infinity prec emax (Rlt_bool ((val x0 + val x1) + (val y0 + val y1)) 0) /\ w1 = pos_zero prec emax) /\
   (~ (finite x0 /\ finite y0) -> canonical_of t w0 w1).
-
-(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. IEEE-model status: unverified. *)
-Definition mul_2_2_ieee_bridge_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (4 <= prec)%Z ->
-  forall x0 x1 y0 y1 : binary_float prec emax,
-  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  let '(z0, z1) := IeeeModel.mul_2_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 y0 y1 in
-  finite z0 ->
-  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
-                     IeeeModel.mul_2_2_prog [x0; x1; y0; y1]) /\
-  finite z1 /\
-  (val z0, val z1)
-  = mul_2_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) (val y0) (val y1).
-
-(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. IEEE-model status: unverified. *)
-Definition mul_2_2_ieee_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (4 <= prec)%Z ->
-  forall x0 x1 y0 y1 : binary_float prec emax,
-  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  let '(z0, z1) := IeeeModel.mul_2_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 y0 y1 in
-  finite z0 ->
-  finite z1 /\
-  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
-  Rabs ((val z0 + val z1) - ((val x0 + val x1) * (val y0 + val y1))) <= 4 * u prec ^ 2 * Rabs ((val x0 + val x1) * (val y0 + val y1)) + (3 / 2) * eta (ieee_emin prec emax).
-
-(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. IEEE-model status: unverified. *)
-Definition mul_2_2_ieee_finite_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (4 <= prec)%Z ->
-  forall x0 x1 y0 y1 : binary_float prec emax,
-  finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  Rabs ((val x0 + val x1) * (val y0 + val y1)) <= bpow radix2 (emax - 1) ->
-  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
-                     IeeeModel.mul_2_2_prog [x0; x1; y0; y1]) /\
-  let '(z0, z1) := IeeeModel.mul_2_2 prec emax nan_plus nan_minus nan_opp nan_fma x0 x1 y0 y1 in
-  finite z0 /\ finite z1.
 
 (* mul_2_1: JMP17 Alg. 9 (DWTimesFP3); bound from MR22. IEEE-model status: unverified. *)
 Definition mul_2_1_ieee_bridge_spec : Prop :=
@@ -1390,42 +1567,6 @@ Definition ball_upper_as_2_spec : Prop :=
   (~ ball_empty_2 c0 c1 r -> forall hi : xreal, range_upper (in_ball_2 c0 c1 r) hi -> xle hi (xval h) = true) /\
   (finite c0 /\ finite c1 /\ finite r -> finite h ->
    Rabs (val h - ((val c0 + val c1) + val r)) <= 5 * u prec ^ 1 * (Rabs (val c0 + val c1) + Rabs (val r)) + 3 * eta (ieee_emin prec emax)).
-
-(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. IEEE-model status: unverified. *)
-Definition dot_step_2_ieee_bridge_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (4 <= prec)%Z ->
-  forall s0 s1 x0 x1 y0 y1 : binary_float prec emax,
-  finite s0 -> finite s1 -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val s0) (val s1) ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  let '(t0, t1) := IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1 in
-  finite t0 ->
-  Forall finite (run (stepB prec emax nan_plus nan_minus nan_opp nan_fma)
-                     IeeeModel.dot_step_2_prog [s0; s1; x0; x1; y0; y1]) /\
-  finite t1 /\
-  (val t0, val t1)
-  = dot_step_2 (ieee_emin prec emax) prec tie_even (val s0) (val s1) (val x0) (val x1) (val y0) (val y1).
-
-(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. IEEE-model status: unverified. *)
-Definition dot_step_2_ieee_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax) (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (4 <= prec)%Z ->
-  forall s0 s1 x0 x1 y0 y1 : binary_float prec emax,
-  finite s0 -> finite s1 -> finite x0 -> finite x1 -> finite y0 -> finite y1 ->
-  normalized_2 (ieee_emin prec emax) prec (val s0) (val s1) ->
-  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
-  normalized_2 (ieee_emin prec emax) prec (val y0) (val y1) ->
-  let '(t0, t1) := IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1 in
-  finite t0 ->
-  finite t1 /\
-  normalized_2 (ieee_emin prec emax) prec (val t0) (val t1) /\
-  Rabs ((val t0 + val t1) - ((val s0 + val s1) + ((val x0 + val x1) * (val y0 + val y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (val s0 + val s1) + Rabs ((val x0 + val x1) * (val y0 + val y1))) + 2 * eta (ieee_emin prec emax).
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). IEEE-model status: proved. *)
 Definition eq_2_1_ieee_spec : Prop :=

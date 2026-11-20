@@ -1,6 +1,9 @@
 {
   "about": "The names of the constants up(EXPR) in proofs/gen/Model.v and IeeeModel.v, by EXPR as the kernel descriptions write it, without spaces. Hand-written proofs use these names, so a name never changes: the generator consults this record first, build adds an entry only for a constant that is new, and nothing removes one (gen/README.md, \"The operations\").",
   "names": {
+    "(1+u)*u+eta/(2*u)": "up_acc_radius_1_0",
+    "(1+u)^8": "up_acc_radius_1_3",
+    "(1+u)^7*eta/2+eta/(2*u)": "up_acc_radius_1_4",
     "unit(add_1_1)/(1-unit(add_1_1))": "up_ball_add_1_0",
     "(1+u)^3": "up_ball_add_1_1",
     "(1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)": "up_ball_add_1_2",

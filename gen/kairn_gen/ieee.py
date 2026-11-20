@@ -389,7 +389,7 @@ def _claim(e, k, t, outs):
     kind = e['kind']
     if kind == 'normalized':
         return _normalized_ieee(outs[e['of']], k)
-    value = t.value()
+    value = t.value() if k.value is not None else None     # the bound kernels have none
     if kind == 'leading_rounded':
         return f'val {outs[e["of"]][0]} = RN {EMIN} prec {value}'
     if kind == 'error':
@@ -420,7 +420,37 @@ def _claim(e, k, t, outs):
         if 'exact_when' in e:
             bound += f' /\\\n  ({t.exact_condition(e["exact_when"])} ->\n   {_val_sum(limbs)} = {value})'
         return bound
+    if kind == 'rounded' and 'when' not in e:
+        # The rounding of the kernel's value, or of a value of its own over the inputs and their
+        # limbs (the accumulator's sum of magnitudes), as in the real model.
+        rounding = {'nearest': 'RN', 'down': 'RD', 'up': 'RU'}[e['mode']]
+        if 'value' in e:
+            value = _paren(rocq._term(expr.parse(e['value']), t.name,
+                                      limb=lambda g, i: f'val {t.ins[g].limbs[i]}'))
+        return f'val {outs[e["of"]][0]} = {rounding} {EMIN} prec {value}'
+    if kind == 'upper' and 'value' in e and 'gaps' not in e:
+        # The bound kernels' own value, under its mask when it has one, as in the real model.
+        claim = f'{_paren(_constant_term(e["value"], k, t))} <= val {outs[e["of"]][0]}'
+        return f'({e["if"]} = true -> {claim})' if 'if' in e else claim
+    if kind == 'holds':
+        a, b = (_constant_term(x, k, t) for x in e['args'])
+        return f'({e["if"]} = true -> {a} {({"lt": "<", "le": "<=", "eq": "="})[e["rel"]]} {b})'
     raise PrintError(f'kernel {k.name}: no IEEE reading of {kind}')
+
+
+def _constant_term(text, k, t):
+    """An expression of the claims of Milestone 2 over the IEEE model: the values of the inputs, u
+    and eta at the IEEE format's emin; no unit(K) or tiny(K) (none is needed yet)."""
+    def name(n):
+        if n == 'u':
+            return 'u prec'
+        if n == 'eta':
+            return f'eta {EMIN}'
+        return t.name(n)
+
+    def call(fn, kname):
+        raise PrintError(f'kernel {k.name}: {fn}({kname}) has no IEEE reading yet')
+    return rocq._term(expr.parse(text), name, call)
 
 
 def _head(k, nans, precision=True):
@@ -462,6 +492,8 @@ def _requires_finite(k, t):
             lines.append(f'  (exists n : Z, val {r[1]} = bpow radix2 n) ->')
         elif r[0] == 'nonneg':
             lines.append(f'  0 <= val {r[1]} ->')
+        elif r[0] == 'count':
+            lines.append(f'  (val {r[1]} = 0 \\/ 1 <= val {r[1]}) ->')
         else:
             raise PrintError(f'kernel {k.name}: no finite reading of {r[0]}')
     return lines
@@ -500,10 +532,29 @@ def _finite_ieee_spec(k, kernels):
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels)) + _requires_finite(k, t) + [_let(k, kernels)]
     out = k.outputs[0].limbs
-    lines.append(f'  finite {out[0]} ->')
     outs = {g.name: g.limbs for g in k.outputs}
-    claims = [f'finite {v}' for v in k.output_limbs[1:]] + [_claim(e, k, t, outs) for e in k.ensures]
-    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    first = k.outputs[0].name
+    # Entries about an output group other than the first hold where that group's leading limb is
+    # finite (architecture.md, "An output group other than the first"): the accumulator's sum of
+    # magnitudes. A kernel without them has the statement it had: every claim under output limb 0.
+    own = [g for g in k.outputs[1:] if g.kind == ir.LIMB and any(e.get('of') == g.name for e in k.ensures)]
+    if not own:
+        lines.append(f'  finite {out[0]} ->')
+        claims = [f'finite {v}' for v, kind in zip(k.output_limbs, k.output_kinds) if kind == ir.LIMB][1:]
+        claims += [_claim(e, k, t, outs) for e in k.ensures]
+        lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+        return _statement(f'{k.name}_ieee_spec', _comment(k, k.ieee_spec_theorem), lines)
+    mine = {g.name for g in own}
+    parts = []
+    for g in [k.outputs[0]] + own:
+        claims = [f'finite {v}' for v in g.limbs[1:]]
+        if g.name == first:
+            claims += [f'finite {v}' for h in k.outputs[1:] if h.kind == ir.LIMB and h.name not in mine
+                       for v in h.limbs]
+        claims += [_claim(e, k, t, outs) for e in k.ensures
+                   if (e.get('of') == g.name) or (g.name == first and e.get('of') not in mine)]
+        parts.append(f'  (finite {g.limbs[0]} ->\n   ' + ' /\\\n   '.join(claims) + ')')
+    lines.append(' /\\\n'.join(parts) + '.')
     return _statement(f'{k.name}_ieee_spec', _comment(k, k.ieee_spec_theorem), lines)
 
 

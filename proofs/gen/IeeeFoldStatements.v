@@ -51,15 +51,6 @@ Definition add_2_2_ieee_lead_spec : Prop :=
   let '(z0, z1) := IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
   finite z0 -> finite x0 /\ finite y0.
 
-(* add_fast_2_2, the leading limb of its result: finite only if those of its operands are. *)
-Definition add_fast_2_2_ieee_lead_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus nan_minus : nan2 prec emax),
-  forall x0 x1 y0 y1 : binary_float prec emax,
-  let '(z0, z1) := IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
-  finite z0 -> finite x0 /\ finite y0.
-
 (* dot_step_2, the leading limb of its result: finite only if those of its operands are. *)
 Definition dot_step_2_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -68,6 +59,15 @@ Definition dot_step_2_ieee_lead_spec : Prop :=
   forall s0 s1 x0 x1 y0 y1 : binary_float prec emax,
   let '(t0, t1) := IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1 in
   finite t0 -> finite s0 /\ finite x0 /\ finite y0.
+
+(* add_fast_2_2, the leading limb of its result: finite only if those of its operands are. *)
+Definition add_fast_2_2_ieee_lead_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax),
+  forall x0 x1 y0 y1 : binary_float prec emax,
+  let '(z0, z1) := IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
+  finite z0 -> finite x0 /\ finite y0.
 
 (* sum_entry_step_2, the leading limb of its result: finite only if those of its operands are. *)
 Definition sum_entry_step_2_ieee_lead_spec : Prop :=

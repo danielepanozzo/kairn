@@ -472,6 +472,10 @@ def _claim_error(e, s):
 
 def _claim_rounded(e, s):
     rounding = {'nearest': 'RN', 'down': 'RD', 'up': 'RU'}[e['mode']]
+    if 'value' in e:
+        # A value of its own, over the inputs and their limbs.
+        v = _term(expr.parse(e['value']), lambda n: _sum(s.ins[n].limbs), limb=lambda g, i: s.ins[g].limbs[i])
+        return f'{s.outs[e["of"]].limbs[0]} = {rounding} emin prec {_paren(v)}'
     claim = f'{s.outs[e["of"]].limbs[0]} = {rounding} emin prec {s.value}'
     if e.get('when') == 'product_large':
         claim = (f'(({s.value} = 0 \\/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs {s.value}) ->'

@@ -157,6 +157,11 @@ t        = add(x0, y0)
   `encloses_interval` entry whose set is a product;
   and `ordinary_inline: REASON`, for a kernel of at most two limbs whose C++ is an ordinary inline
   function rather than forced inline (`interval_mul_2`: milestone2.md, "Inlining and compile time").
+- The accumulator (architecture.md, "The accumulator"): `ensures: rounded b nearest
+  value=a+abs(x[0])`, the rounding of a value of its own over the inputs and their limbs, of the
+  finite domain; and `requires: count m` in the IEEE-model statements (`ieee: spec`) too. An
+  IEEE-model statement whose kernel has claims about an output group other than the first puts
+  each group's claims under the finiteness of that group's leading limb.
 - `guard_pending: a REASON`: an input of an entry kernel whose guard is not written yet (only
   `add_2_1`, whose guard changes the formal model of a proved kernel and lands with its proof).
 - The folds' stage (architecture.md, "Claims of Milestone 2"): `requires: count m` ($m = 0$ or

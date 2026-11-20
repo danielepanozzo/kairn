@@ -25,6 +25,9 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       the terms of value (s+x*y: |s| + |x*y|)
     ensures:       rounded t down [when=product_large]
                                       the mode: nearest, down or up
+    ensures:       rounded b nearest value=a+abs(x[0])
+                                      of a value of its own (as in value, and NAME[I] limb I of an
+                                      input) instead of the kernel's
     ensures:       upper r gaps=2
     ensures:       upper g value=m*unit(add_2_2)/(1-m*unit(add_2_2)) if=ok
                                       the value of the entry (an exact expression over the inputs,
@@ -637,6 +640,10 @@ def _ensures(words, where):
         # The condition is written only when there is one: a rounded entry without it has the
         # shape it always had.
         return {'kind': kind, 'of': words[1], 'mode': words[2], 'when': words[3][len('when='):]}
+    if kind == 'rounded' and len(words) == 4 and words[3].startswith('value='):
+        # A value of its own (the accumulator's sum of magnitudes, beside the kernel's value):
+        # written only when there is one.
+        return {'kind': kind, 'of': words[1], 'mode': words[2], 'value': words[3][len('value='):]}
     if kind == 'upper' and len(words) == 3 and words[2].startswith('gaps='):
         return {'kind': kind, 'of': words[1], 'gaps': words[2][len('gaps='):]}
     if kind == 'upper' and len(words) == 4 and words[2] == 'max' and words[3].startswith('steps='):

@@ -4,6 +4,31 @@
  "limb_types": ["double", "float"],
  "counts": ["fma", "fma_distinct", "mul", "mul_distinct", "consteval_mul", "muladd"],
  "kernels": {
+  "acc_add_1": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "acc_merge_1": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "acc_mul_1": {
+   "scalar": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
+   "scalar_call": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
+   "packed": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]}
+  },
+  "acc_radius_1": {
+   "scalar": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]},
+   "scalar_call": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]},
+   "packed": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]}
+  },
+  "acc_radius_2": {
+   "scalar": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]},
+   "scalar_call": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]},
+   "packed": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]}
+  },
   "add_1_1": {
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
@@ -374,6 +399,36 @@
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
   },
+  "add_2_2": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "acc_add_2": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "acc_merge_2": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "mul_2_2": {
+   "scalar": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
+   "scalar_call": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
+   "packed": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]}
+  },
+  "dot_step_2": {
+   "scalar": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
+   "scalar_call": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
+   "packed": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]}
+  },
+  "acc_mul_2": {
+   "scalar": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]},
+   "scalar_call": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]},
+   "packed": {"double": [6, 6, 0, 0, 0, 0], "float": [6, 6, 0, 0, 0, 0]}
+  },
   "add_2_1": {
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
@@ -383,11 +438,6 @@
    "scalar": {"double": [0, 0, 1, 1, 0, 0], "float": [0, 0, 1, 1, 0, 0]},
    "scalar_call": {"double": [0, 0, 1, 1, 0, 0], "float": [0, 0, 1, 1, 0, 0]},
    "packed": {"double": [0, 0, 1, 1, 0, 0], "float": [0, 0, 1, 1, 0, 0]}
-  },
-  "add_2_2": {
-   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
-   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
-   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
   },
   "add_2_2_full": {
    "scalar": {"double": [0, 0, 1, 1, 0, 0], "float": [0, 0, 1, 1, 0, 0]},
@@ -423,11 +473,6 @@
    "scalar": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
    "scalar_call": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
    "packed": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]}
-  },
-  "mul_2_2": {
-   "scalar": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
-   "scalar_call": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
-   "packed": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]}
   },
   "axpy_entry_step_2": {
    "scalar": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
@@ -538,11 +583,6 @@
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
-  },
-  "dot_step_2": {
-   "scalar": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
-   "scalar_call": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]},
-   "packed": {"double": [5, 5, 0, 0, 0, 0], "float": [5, 5, 0, 0, 0, 0]}
   },
   "eq_2_1": {
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},

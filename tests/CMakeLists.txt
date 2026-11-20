@@ -499,7 +499,9 @@ set(_toy_ext_a2 fp:5:-7:0)
 #   the interval kernels" and "... two limbs and the enclosure interface"): the oracle reads neither
 #   the requirements interval and not_nan, nor the claims outward, makes_interval,
 #   encloses_interval, set_bound, interval_set, ball_of_interval, interval_of_ball and splits, nor
-#   an encloses without a ball, nor a makes_ball from the bounds of an interval, yet.
+#   an encloses without a ball, nor a makes_ball from the bounds of an interval, yet;
+# - the kernels of the accumulator (architecture.md, "The accumulator"): the oracle reads neither a
+#   rounded entry with a value of its own (value=) yet, and acc_radius_k is on the list with them.
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
@@ -512,7 +514,8 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   interval_make_1 interval_neg_1 interval_add_1 interval_sub_1 interval_mul_1 interval_add_2 ball_lower_as_1
   ball_upper_as_1 ball_lower_as_2 ball_upper_as_2 ball_from_interval_2 ball_narrow_2_1 interval_neg_2 interval_sub_2
   interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
-  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1)
+  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1
+  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
   add_1 add_1_entry add_2 add_2_entry sub_1 sub_1_entry sub_2 sub_2_entry axpy_1 axpy_1_entry axpy_2 axpy_2_entry
   axpy_2_1 axpy_2_1_entry scale_1 scale_2 mul_pow2_map_1 mul_pow2_map_2
@@ -524,7 +527,8 @@ set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
 # cross-checked like every kernel; the public interface has no form of them.
 set(KAIRN_NOT_PUBLIC_YET
   bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 sum_entry_step_1 sum_entry_step_2
-  sum_fast_entry_step_2 fold_finish_1 fold_finish_2)
+  sum_fast_entry_step_2 fold_finish_1 fold_finish_2
+  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2)
 
 # The folds (gen/claims.json, "folds"): random arrays through every compiled runner in the quick
 # tier, the scalar runners on every order (seq, lanes:0, 1, 2, 3, 4, 5, 8 and more lanes than

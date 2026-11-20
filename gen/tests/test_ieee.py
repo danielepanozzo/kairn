@@ -30,6 +30,9 @@ PROGRAMS = ['fast_two_sum', 'two_prod', 'two_sum', 'add_2_2', 'mul_2_2', 'add_2_
             'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_pow2_2', 'fast_two_sum_entry']
 # And the steps of the folds, whose bridge statements the IEEE model of a fold uses.
 PROGRAMS += ['dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2']
+# And the kernels of the accumulator with an IEEE-model statement whose listing is a program of
+# Program.v (acc_merge_k: additions; the others guard or take an absolute value).
+PROGRAMS += ['acc_merge_1', 'acc_merge_2']
 
 
 def read(rel):
@@ -100,8 +103,9 @@ class Model(unittest.TestCase):
         # The thirteen of the Ball cores, N and P of Milestone 2 (eta / (2u), eta / (2u^2): the
         # scalings of a ball and the directed products); the fourteen distinct ones of the four
         # bound kernels of the folds (bound_sum_k: 4 and 2; bound_dot_k: 4 and 3, 2, 1 + 2u, 1/4 and
-        # 1 shared); and the one above.
-        self.assertEqual(len(ups), 30)
+        # 1 shared); the one above; and the three of acc_radius_1 that no other kernel has
+        # ((1+u) u + N, (1+u)^8, (1+u)^7 eta/2 + N).
+        self.assertEqual(len(ups), 33)
         self.assertIn('Definition up_ball_mul_pow2_1_0 : float := const_of (Model.up_ball_mul_pow2_1_0 (3 - emax - prec) prec).', m)
 
     def test_programs(self):
@@ -405,9 +409,12 @@ class CheckedFiles(unittest.TestCase):
     # printed earlier, callees before callers; the statements import IeeeIntervalVocabulary.v; and
     # add_down_2_2 negates no fused result through a select). The files are the regeneration of
     # the merged descriptions; up(2), which ball_from_interval_2 shares with bound_dot_1, is
-    # up_bound_dot_1_2 in both (gen/constant_names.json).
-    DIGESTS = {'proofs/gen/IeeeModel.v': '023e54103864b7cc3157ba5ccdaf9d32d5733e2424a17605bd5324e6026b4af5',
-               'proofs/gen/IeeeStatements.v': '0705ee979af0468877aeb249ebbf0fc1b9b326b7a592380101fc3ed601e066ee'}
+    # up_bound_dot_1_2 in both (gen/constant_names.json). Then the kernels of the accumulator
+    # (unverified): their definitions, the programs of acc_merge_k and their statements (ieee: spec,
+    # each output group's claims under its own leading limb) were added, every earlier line kept;
+    # add_2_2, mul_2_2 and dot_step_2, which they call, are printed earlier, before them.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '633a0b09ffb02352459c54c591f2051b88433a6b5dfe7f173355e7d8d551ee3b',
+               'proofs/gen/IeeeStatements.v': 'c7d67e93dd1dfa20f2fb56f48f92c56bfa9bf2f685e3959073ae9f9e5adbd703'}
 
 
     def test_the_checked_files(self):
