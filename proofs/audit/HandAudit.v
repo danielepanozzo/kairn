@@ -22,8 +22,10 @@
      statements: what the directed sums and products return in more detail than their
      claims say, the error of a rounded product and the sign of the error term of
      two_prod, mul_dir_1 on a model of its listing written by hand (the kernel is not
-     generated yet), the rectangle lemma of the product of intervals, and the two
-     executions of a product.
+     generated yet), the rectangle lemma of the product of intervals, the two
+     executions of a product, and the two executions of the eight kernels whose only
+     fused operations are products, on listings written by hand with the product as an
+     argument (the generator does not emit the model of the plain-product execution).
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -35,6 +37,7 @@ From Kairn Require Import Guard IeeeOps.
 From Kairn Require Import Folds Summation SummationKernels.
 From Kairn Require Import DirectedSum DirectedProd BallPow2 Rectangle IeeeProduct.
 From Kairn Require Import IeeeDirected IeeeDirectedProd IeeeEntry.
+From Kairn Require Import IeeeTwoExecutions.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
    theories/IeeeEFT.v). *)
@@ -314,6 +317,76 @@ Print Assumptions mult_prod_same.
 Print Assumptions succ_mult_prod.
 Print Assumptions rmul_two_executions.
 Print Assumptions mul_1_1_two_executions.
+
+(* The two executions of the kernels whose only fused operations are products
+   (theories/IeeeTwoExecutions.v). Limbs of the same value: equal, two zeros or two NaN,
+   and what they share. *)
+Print Assumptions same_value_iff.
+Print Assumptions same_finite.
+Print Assumptions same_nan.
+Print Assumptions same_val.
+
+(* The value of the result of each operation, as a function of the values of its
+   operands, on all operands. *)
+Print Assumptions xval_add.
+Print Assumptions xval_sub.
+Print Assumptions xval_prod.
+Print Assumptions xval_mult.
+Print Assumptions xval_abs.
+Print Assumptions xval_times_inf.
+
+(* Each operation is compatible with "same value", with any NaN on either side. *)
+Print Assumptions same_add.
+Print Assumptions same_sub.
+Print Assumptions same_prod.
+Print Assumptions same_mult.
+Print Assumptions same_mult_prod.
+Print Assumptions same_prod_mult.
+Print Assumptions same_abs.
+Print Assumptions same_neg.
+Print Assumptions same_succ.
+Print Assumptions same_pred.
+Print Assumptions same_times_inf.
+Print Assumptions same_guard.
+Print Assumptions same_lt.
+Print Assumptions same_le.
+Print Assumptions same_eq.
+Print Assumptions same_select.
+Print Assumptions mult_prod_products.
+
+(* Each listing written by hand is the generated definition when its product is the
+   fused one. *)
+Print Assumptions split_with_prod.
+Print Assumptions two_prod_dekker_with_prod.
+Print Assumptions mul_pow2_2_with_prod.
+Print Assumptions mul_pow2_2_full_with_prod.
+Print Assumptions ball_mul_pow2_1_with_prod.
+Print Assumptions ball_mul_pow2_1_full_with_prod.
+Print Assumptions ball_mul_pow2_2_with_prod.
+Print Assumptions ball_mul_pow2_2_full_with_prod.
+
+(* Two products of the same value, on operands of the same value, give outputs of the
+   same value. *)
+Print Assumptions fast_two_sum_same.
+Print Assumptions split_same.
+Print Assumptions two_prod_dekker_same.
+Print Assumptions mul_pow2_2_same.
+Print Assumptions mul_pow2_2_full_same.
+Print Assumptions ball_mul_pow2_1_same.
+Print Assumptions ball_mul_pow2_1_full_same.
+Print Assumptions ball_mul_pow2_2_same.
+Print Assumptions ball_mul_pow2_2_full_same.
+
+(* The listing with the plain product and the generated kernel return outputs of the same
+   value, on all operands. *)
+Print Assumptions split_two_executions.
+Print Assumptions two_prod_dekker_two_executions.
+Print Assumptions mul_pow2_2_two_executions.
+Print Assumptions mul_pow2_2_full_two_executions.
+Print Assumptions ball_mul_pow2_1_two_executions.
+Print Assumptions ball_mul_pow2_1_full_two_executions.
+Print Assumptions ball_mul_pow2_2_two_executions.
+Print Assumptions ball_mul_pow2_2_full_two_executions.
 
 (* Scaling a ball by a power of two (theories/BallPow2.v): the radius and the two claims
    for a center whose scaled value is exact when its test says so. *)
