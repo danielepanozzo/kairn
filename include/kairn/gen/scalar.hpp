@@ -73,7 +73,7 @@ KAIRN_GEN_FORCEINLINE void acc_mul_1(float s, float a, float x, float y, float& 
 }
 
 // acc_radius_1(a, m, g, t) -> r, mask ok
-// the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void acc_radius_1(double a, double m, double g, double t, double& r_out, bool& ok_out) noexcept {
     const double q = fma_rn(m, 0x1.0000000000001p-53, 0.0);
     const double d = fma_rn(q, 0x1p+1, 0.0);
@@ -108,7 +108,7 @@ KAIRN_GEN_FORCEINLINE void acc_radius_1(float a, float m, float g, float t, floa
 }
 
 // acc_radius_2(a, m, g, t) -> r, mask ok
-// acc_radius_1, for the bound of dot_2 (milestone2.md). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// acc_radius_1, for the bound of dot_2 (milestone2.md). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void acc_radius_2(double a, double m, double g, double t, double& r_out, bool& ok_out) noexcept {
     // (r, ok) = acc_radius_1(a, m, g, t)
     const double r_q = fma_rn(m, 0x1.0000000000001p-53, 0.0);

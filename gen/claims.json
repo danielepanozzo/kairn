@@ -280,8 +280,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/AccKernels.v",
+        "name": "acc_radius_1_correct"
+      },
       "source": {
         "cite": "the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here",
         "license": "proof: MIT"
@@ -347,8 +350,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/AccKernels.v",
+        "name": "acc_radius_2_correct"
+      },
       "source": {
         "cite": "acc_radius_1, for the bound of dot_2 (milestone2.md)",
         "license": "proof: MIT"

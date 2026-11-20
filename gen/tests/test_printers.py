@@ -903,10 +903,11 @@ class Rocq(unittest.TestCase):
     # regeneration of the merged descriptions.
     # Then the six state kernels of the accumulator were proved (AccKernels.v): in Statements.v
     # only the comments above their six statements changed, and Audit.v lists their six
-    # theorems, every earlier line kept, in its order; Model.v is the same.
+    # theorems, every earlier line kept, in its order; Model.v is the same. Then its two radii:
+    # two comments more, and two theorems.
     DIGESTS = {'Model.v': '4f8a16ca6742b2de51d29646886b36c883514da40a53752f7810d2202c096b80',
-               'Statements.v': 'e0701738f58c592ddb12e8b4e5b77c7af890b19d4ee0e2314538680e8873009f',
-               'Audit.v': 'd5b4902d9b0d4d2162faf9cddfa3f812456ae161578dcafe9fb102876893f6f2'}
+               'Statements.v': '35bf2e3bca9dea400eaed277751399e2fbcf44835088f780330a14b18e4a005a',
+               'Audit.v': '334016f6f4f8bad2c937552c66f3e114f12e558a5500be9192c3e4fda4efda53'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

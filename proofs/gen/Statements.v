@@ -85,7 +85,7 @@ Definition acc_mul_1_spec : Prop :=
   t = RN emin prec (s + (x * y)) /\
   b = RN emin prec (a + ((Rabs x) * (Rabs y))).
 
-(* acc_radius_1: the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. Status: unverified. *)
+(* acc_radius_1: the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. Status: proved. *)
 Definition acc_radius_1_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a m g t : R,
@@ -102,7 +102,7 @@ Definition acc_radius_1_spec : Prop :=
   (ok = true -> ((((g * ((1 + u prec) ^ 2)) * ((1 + (m * u prec)) + ((2 * (m ^ 2)) * (u prec ^ 2)))) * (a + ((m * eta emin) / 2))) + t) <= r) /\
   (ok = true -> (m * u prec) <= (1 / 2)).
 
-(* acc_radius_2: acc_radius_1, for the bound of dot_2 (milestone2.md). Status: unverified. *)
+(* acc_radius_2: acc_radius_1, for the bound of dot_2 (milestone2.md). Status: proved. *)
 Definition acc_radius_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a m g t : R,

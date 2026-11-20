@@ -429,6 +429,14 @@ $s$ with the claims of `add_1_1`, `add_2_2` or the step of the dot product, and 
 as the rounding to nearest of its value (`AccKernels.v`); in the IEEE model each output
 group's claims hold where its own leading limb is finite (`IeeeAccKernels.v`).
 
+The radius `acc_radius_k`, from $a$, a count $m$ (0 or at least 1) and the two numbers of
+`bound_dot_k(m)`, is proved in both models too: its result $r$ is at least
+$g\,(1+u)^2(1 + m u + 2m^2u^2)(a + m\eta/2) + t$ for every $m$, and when its mask is true,
+$m u \le \tfrac12$. The proof needs nothing of the format beyond $p \ge 2$: each of its
+roundings is in the normal range, or is covered by the constant added in the last line. In
+the IEEE model a finite $r$ is the real model's $r$, and the mask the real model's
+(`acc_radius_1_real`).
+
 ## What a proof does not cover
 
 A checked proof establishes its statement, nothing more. It does not show that the statement says

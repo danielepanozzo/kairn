@@ -63,7 +63,7 @@ Definition acc_mul_1_ieee_spec : Prop :=
   (finite b ->
    val b = RN (ieee_emin prec emax) prec (val a + ((Rabs (val x)) * (Rabs (val y))))).
 
-(* acc_radius_1: the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. IEEE-model status: unverified. *)
+(* acc_radius_1: the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. IEEE-model status: proved. *)
 Definition acc_radius_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -80,7 +80,7 @@ Definition acc_radius_1_ieee_spec : Prop :=
   (ok = true -> ((((val g * ((1 + u prec) ^ 2)) * ((1 + (val m * u prec)) + ((2 * (val m ^ 2)) * (u prec ^ 2)))) * (val a + ((val m * eta (ieee_emin prec emax)) / 2))) + val t) <= val r) /\
   (ok = true -> (val m * u prec) <= (1 / 2)).
 
-(* acc_radius_2: acc_radius_1, for the bound of dot_2 (milestone2.md). IEEE-model status: unverified. *)
+(* acc_radius_2: acc_radius_1, for the bound of dot_2 (milestone2.md). IEEE-model status: proved. *)
 Definition acc_radius_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

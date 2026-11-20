@@ -72,15 +72,23 @@ template <> struct acc_mul_1<float> {
     static constexpr bool proved = true;
 };
 
-// acc_radius_1: UNVERIFIED. Claims: upper; holds.
+// acc_radius_1: proved. Claims: upper; holds.
 template <class T> struct acc_radius_1;
-template <> struct acc_radius_1<double> { static constexpr bool proved = false; };
-template <> struct acc_radius_1<float> { static constexpr bool proved = false; };
+template <> struct acc_radius_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct acc_radius_1<float> {
+    static constexpr bool proved = true;
+};
 
-// acc_radius_2: UNVERIFIED. Claims: upper; holds.
+// acc_radius_2: proved. Claims: upper; holds.
 template <class T> struct acc_radius_2;
-template <> struct acc_radius_2<double> { static constexpr bool proved = false; };
-template <> struct acc_radius_2<float> { static constexpr bool proved = false; };
+template <> struct acc_radius_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct acc_radius_2<float> {
+    static constexpr bool proved = true;
+};
 
 // add_1_1: proved. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0.
 template <class T> struct add_1_1;

@@ -384,8 +384,8 @@ class Statements(unittest.TestCase):
         # (84); then the theorems that the descriptions of the folds' first stage name: 5
         # bridges and 3 correctness statements of the steps, 8 leading limbs, and the 8 folds in
         # their two orders (32); and the two folds of maxima in their two orders (4); and the
-        # IEEE-model statements of the six state kernels of the accumulator (6).
-        self.assertEqual(text.count('Print Assumptions'), 126)
+        # IEEE-model statements of the eight kernels of the accumulator (8).
+        self.assertEqual(text.count('Print Assumptions'), 128)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -446,9 +446,9 @@ class CheckedFiles(unittest.TestCase):
     # they call, are printed earlier, before them. Merged here: the regeneration of the merged
     # descriptions, and make -C proofs passed on these files. Then the six state kernels were
     # proved in the IEEE model (IeeeAccKernels.v): the comments above their six statements say
-    # proved, and nothing else changed.
+    # proved, and nothing else changed. Then the two radii: two words more.
     DIGESTS = {'proofs/gen/IeeeModel.v': 'e247852f05c47c29250a321f81d1237d60885001672ad3b3cd917ca02f17cd7a',
-               'proofs/gen/IeeeStatements.v': '81b6ef3f9d6c338c3d26b79b697b9bc8ad136482961b39a6447e6a8e24469dc6'}
+               'proofs/gen/IeeeStatements.v': 'fd3143f2805c3a0d5f678b5fb7a1bbc8fd3c305ebca0b5e9f09aed114c0f299c'}
 
 
     def test_the_checked_files(self):

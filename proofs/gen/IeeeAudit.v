@@ -293,6 +293,12 @@ Print Assumptions acc_merge_1_ieee_correct.
 Definition acc_mul_1_ieee_audit : acc_mul_1_ieee_spec := acc_mul_1_ieee_correct.
 Print Assumptions acc_mul_1_ieee_correct.
 
+Definition acc_radius_1_ieee_audit : acc_radius_1_ieee_spec := acc_radius_1_ieee_correct.
+Print Assumptions acc_radius_1_ieee_correct.
+
+Definition acc_radius_2_ieee_audit : acc_radius_2_ieee_spec := acc_radius_2_ieee_correct.
+Print Assumptions acc_radius_2_ieee_correct.
+
 Definition dot_step_1_ieee_bridge_audit : dot_step_1_ieee_bridge_spec := dot_step_1_ieee_bridge.
 Print Assumptions dot_step_1_ieee_bridge.
 

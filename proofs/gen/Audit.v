@@ -43,6 +43,12 @@ Print Assumptions acc_merge_1_correct.
 Definition acc_mul_1_audit : acc_mul_1_spec := acc_mul_1_correct.
 Print Assumptions acc_mul_1_correct.
 
+Definition acc_radius_1_audit : acc_radius_1_spec := acc_radius_1_correct.
+Print Assumptions acc_radius_1_correct.
+
+Definition acc_radius_2_audit : acc_radius_2_spec := acc_radius_2_correct.
+Print Assumptions acc_radius_2_correct.
+
 Definition add_1_1_audit : add_1_1_spec := add_1_1_correct.
 Print Assumptions add_1_1_correct.
 

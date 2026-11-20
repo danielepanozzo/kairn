@@ -39,10 +39,12 @@ requires:      nonneg g
 requires:      nonneg t
 ensures:       upper r value=g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t if=ok
 ensures:       holds le m*u 1/2 if=ok
+theorem:       proofs/theories/AccKernels.v acc_radius_1_correct
+ieee_spec_theorem: proofs/theories/IeeeAccKernels.v acc_radius_1_ieee_correct
 min_precision: 2
 source:        the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here
 license:       proof: MIT
-status:        unverified
+status:        proved
 ieee:          spec
 cone_exempt:   z = a - a is only compared with itself, for the mask ok: false when a is not finite, which is what it is for
 
