@@ -142,8 +142,8 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   `tests/CMakeLists.txt`, kernels whose claims the oracle cannot read yet; with them
   `KAIRN_NOT_YET_CROSS_CHECKED_FOLDS` for folds. No cross-check, no enumeration of a toy format,
   no brute-force run and no test of the public interface is registered for a name of these lists,
-  and configuring says how many are left out. **On them today**: the interval kernels of
-  Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since stage B of
+  and configuring says how many are left out. **On them today**: nothing, since the interval
+  stage and stage B of Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since stage B of
   Milestone 2 the oracle reads and judges the maps, the folds of maxima and the convolutions, and
   their kernels (`oracle/README.md`, "Maps", "Folds of maxima", "Convolutions"): they are
   cross-checked as the folds are, and the steps of the maps and the kernels of the folds of maxima
@@ -1667,8 +1667,8 @@ python3 gen/kairn-gen test --full           # a few hundred thousand cases per k
 python3 gen/kairn-gen test --no-cxx --skip test_statements.   # without C++, without a module
 ```
 
-**The maps, and their steps, are tested here only for now** (they are in
-`KAIRN_NOT_YET_CROSS_CHECKED_FOLDS` and `KAIRN_NOT_YET_CROSS_CHECKED`, [above](#cross-checks)).
+**The maps, and their steps, are tested here too** (the oracle judges them since stage B,
+[above](#cross-checks)).
 `gen/tests/test_maps.py` checks the rules of a map; that the interpreter writes the step of each
 element, the same elements and mask in both orders for every number of lanes, the canonical NaN
 for an element that is not finite and keeps the others; the compiled `F_seq`, `F_lanes` (0 to 8
@@ -1707,8 +1707,7 @@ Apple clang and GCC 16 on the Mac, and GCC 13 and Clang 18 on x86-64).
 - the printers: the model, the statements and the audit of a fold made `proved`, the C++ text and
   the counts of the loops;
 - the folds of maxima, `norm_upper_1` and `norm_upper_2` ([Architecture](architecture.md#folds-of-maxima)),
-  which the oracle does not judge yet (they and their kernels are on the lists of
-  [Cross-checks](#cross-checks)), so that these are their only tests,
+  which the oracle also judges since stage B ([Cross-checks](#cross-checks)),
   in all of the above but the claims of `fold_error`, and on their own: each check of
   `rules.max_rules` refuses what it is for (a combination that claims a maximum and computes
   something else is refused by evaluation, as not commutative); no element gives $0$ for one limb
@@ -1718,7 +1717,7 @@ Apple clang and GCC 16 on the Mac, and GCC 13 and Clang 18 on x86-64).
   6, in both orders and several numbers of lanes, more than 10 000 cases, with the exponent range
   widened (the Rocq statement) and in the format itself (the flag);
 - the convolutions, `conv_1` and `conv_2` ([Architecture](architecture.md#convolutions)), which
-  the oracle does not judge yet either, in `gen/tests/test_conv.py`: each check of `rules.conv_rules` refuses what it is for; in the
+  the oracle also judges since stage B, in `gen/tests/test_conv.py`: each check of `rules.conv_rules` refuses what it is for; in the
   interpreter every coefficient is the fold of its coefficients run on its own terms, there are
   $n_x + n_y - 1$ of them (none for an empty array), a term that is not finite makes the
   coefficients it is in the canonical NaN and the mask false and keeps the others; on toy formats
