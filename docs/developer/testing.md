@@ -684,8 +684,13 @@ center and every radius that is not negative.
   runs on its corpus to nearest, then under the mode, and must exit 0, with nothing of Kairn's on
   the standard error, and with the same bits in every result (a constructor: the same values,
   zeros compared without their sign, since its guard gives $-0 + 0 = -0$ when rounding downward).
-  So the table cannot rot either way: a function marked as not rounding that checks the mode, or
-  rounds, fails, and so does one marked as rounding that does not check it. 240 runs.
+  The sign of a zero is cleared on the bit pattern of a copy read back from memory: written in
+  floating point, `x == 0 ? 0 : x` runs under the mode too, and a compiler that assumes rounding
+  to nearest may drop it where `x` is a guard's `a + 0`, never $-0$ to nearest; on the hosted
+  runner, MSVC 19.51 at `/O2` let the guard's $-0$ through that rule under rounding downward
+  (19.52 compiles it as a comparison and a blend). On a difference the program prints both bit
+  patterns. So the table cannot rot either way: a function marked as not rounding that checks the
+  mode, or rounds, fails, and so does one marked as rounding that does not check it. 240 runs.
 - `flush`: the same with FTZ and with DAZ of MXCSR on x86-64, and FZ of FPCR on AArch64, under
   which every function that rounds and every function that does not round but is checked must
   stop the program; the 7 with no check at all are not run. On those targets a program that can

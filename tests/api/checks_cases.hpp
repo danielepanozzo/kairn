@@ -157,10 +157,19 @@ inline void put(Bits& out, const kairn::Ball<T, K>& b) {
     put(out, b.radius());
 }
 // The value, a zero without its sign: what a constructor must keep under every rounding mode (its
-// guard, a + 0, gives -0 + 0 = -0 when rounding downward and +0 otherwise).
+// guard, a + 0, gives -0 + 0 = -0 when rounding downward and +0 otherwise). Decided on the bit
+// pattern of a copy read back from memory, never as x == 0 ? 0 : x in floating point: that rule
+// runs under the directed mode, and a compiler that assumes rounding to nearest, as /fp:precise
+// lets MSVC, may drop it where x is a guard's a + 0, which is never -0 to nearest, or compute it
+// as x + 0, which keeps a -0 when rounding downward. With MSVC 19.51 at /O2 (the hosted runner of
+// 2026-11-20) the results of a -0 given to a constructor differed between rounding downward and to
+// nearest after that rule, and only there: the rule did not normalize the guard's -0 (MSVC 19.52
+// compiles it as a comparison and a blend, which do).
 template <class T>
 inline void put_value(Bits& out, T x) {
-    put(out, x == 0 ? T(0) : x);
+    using U = std::conditional_t<sizeof(T) == 8, std::uint64_t, std::uint32_t>;
+    const U u = std::bit_cast<U>(opaque(x));
+    out.push_back(U(u << 1) == 0 ? 0 : u);  // every bit but the sign zero: either zero, as +0
 }
 template <class T, int K>
 inline void put_value(Bits& out, const kairn::Expansion<T, K>& x) {

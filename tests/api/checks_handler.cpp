@@ -91,7 +91,15 @@ int main() {
             } else {
                 ++exempt;
                 if (calls != before) ++reported;
-                if (first_difference(nearest, here) >= 0) ++differ;
+                const long at = first_difference(nearest, here);
+                if (at >= 0) {
+                    ++differ;
+                    std::printf("  %s: the first result that differs is %ld", op.name, at);
+                    if (std::size_t(at) < nearest.size() && std::size_t(at) < here.size())
+                        std::printf(" (bits %016llx to nearest, %016llx here)", (unsigned long long)nearest[at],
+                                    (unsigned long long)here[at]);
+                    std::printf("\n");
+                }
             }
         }
         // An operand that is not canonical, whose check the failed environment skips.

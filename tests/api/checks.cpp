@@ -195,8 +195,12 @@ int run_state(const char* state_name, const char* op_name) {
     }
     const long at = first_difference(nearest, directed);
     if (nearest.empty() || at >= 0) {
-        std::printf("FAILED: %s under %s: %zu results, %zu to nearest, the first that differs is %ld\n", op_name,
+        std::printf("FAILED: %s under %s: %zu results, %zu to nearest, the first that differs is %ld", op_name,
                     state_name, directed.size(), nearest.size(), at);
+        if (at >= 0 && std::size_t(at) < nearest.size() && std::size_t(at) < directed.size())
+            std::printf(" (bits %016llx to nearest, %016llx under %s)", (unsigned long long)nearest[at],
+                        (unsigned long long)directed[at], state_name);
+        std::printf("\n");
         return 1;
     }
     std::printf("ok: %s does not round: under %s, %zu results with the same bits as to nearest, and no check "
