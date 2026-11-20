@@ -463,6 +463,20 @@ KERNELS = {
     "ball_upper_as_2": page("ball", "An upper bound of a ball as a limb, two-limb center"),
     "ball_from_interval_2": page("ball", "A ball with a two-limb center from an interval of two limbs"),
     "ball_narrow_2_1": page("ball", "A ball with a two-limb center as one with a one-limb center"),
+    # Stage B1: the interval kernels of two limbs, and the set operations, conversions and split of
+    # the enclosure interface.
+    "interval_neg_2": page("intervals", "The negation of an interval, two-limb bounds"),
+    "interval_sub_2": page("intervals", "Difference of intervals, two-limb bounds"),
+    "interval_make_2": page("intervals", "An interval from two two-limb numbers"),
+    "interval_mul_2": page("intervals", "Product of intervals, two-limb bounds"),
+    "interval_hull_1": page("intervals", "The hull of two intervals, one-limb bounds"),
+    "interval_intersection_1": page("intervals", "The intersection of two intervals, one-limb bounds"),
+    "interval_hull_2": page("intervals", "The hull of two intervals, two-limb bounds"),
+    "interval_intersection_2": page("intervals", "The intersection of two intervals, two-limb bounds"),
+    "interval_mid_rad_1": page("intervals", "The midpoint and radius of an interval, one-limb bounds"),
+    "interval_to_ball_1": page("intervals", "A ball that contains an interval, one-limb bounds"),
+    "interval_split_1": page("intervals", "An interval split at its midpoint, one-limb bounds"),
+    "ball_to_interval_1": page("ball", "The smallest interval that contains a ball, one-limb center"),
     # The building blocks of the intervals: parts of the interval kernels.
     "mul_dir_1": page("building-blocks", "Both directed products of two limbs, a zero factor giving zero"),
     "add_ball_2_2": page("building-blocks", "A sum of two-limb numbers with a bound of its error"),
@@ -472,6 +486,7 @@ KERNELS = {
     "sub_down_2_2": page("building-blocks", "A lower bound of a difference of two-limb numbers"),
     "sub_up_2_2": page("building-blocks", "An upper bound of a difference of two-limb numbers"),
     "mul_dir_2_2": page("building-blocks", "Two bounds of a product of two-limb numbers"),
+    "mul_ext_2_2": page("building-blocks", "Two bounds of a product of two bounds of intervals, two limbs"),
     # --- Building blocks: no public form -------------------------------------------------------
     "two_sum": page("building-blocks", "TwoSum: an exact sum as two limbs"),
     "fast_two_sum": page("building-blocks", "Fast2Sum: an exact sum of ordered operands"),
