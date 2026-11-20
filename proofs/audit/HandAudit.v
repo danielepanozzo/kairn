@@ -17,7 +17,12 @@
      exactness of mul_pow2_2, further bounds on radd and rmul);
    - the theorems of summation, which are about no single kernel and have no generated
      statement: the tree theorem, the bounds of a sum and of a dot product in the two
-     orders of a loop, and the kernels to which they apply.
+     orders of a loop, and the kernels to which they apply;
+   - the first building blocks of Milestone 2, proved before their kernels are generated:
+     the directed sums and products on models of their listings written by hand (the
+     generated models will replace them), the error of a rounded product and the sign of
+     the error term of two_prod, the rectangle lemma of the product of intervals, and the
+     two executions of a product.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -27,6 +32,7 @@ From Kairn Require Import IeeeVocabulary IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore Ie
 From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeOps.
 From Kairn Require Import Folds Summation SummationKernels.
+From Kairn Require Import DirectedSum DirectedProd Rectangle IeeeProduct.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
    theories/IeeeEFT.v). *)
@@ -245,3 +251,66 @@ Print Assumptions dot_1_seq.
 Print Assumptions dot_1_lanes.
 Print Assumptions dot_1_seq_gamma.
 Print Assumptions dot_1_lanes_gamma.
+
+(* Rounding a sum down and up (theories/DirectedSum.v), on models of the listings
+   two_sum_ord, add_down_1, add_up_1, sub_down_1 and sub_up_1 written by hand: the
+   statements in the shape of a generated statement, and the two lemmas that say what the
+   last lines of a directed sum compute. *)
+Print Assumptions two_sum_ord_listing_correct.
+Print Assumptions two_sum_ord_listing_facts.
+Print Assumptions two_sum_ord_listing_error.
+Print Assumptions add_down_1_listing_correct.
+Print Assumptions add_up_1_listing_correct.
+Print Assumptions sub_down_1_listing_correct.
+Print Assumptions sub_up_1_listing_correct.
+Print Assumptions down_of_normalized.
+Print Assumptions up_of_normalized.
+
+(* Rounding a product down and up (theories/DirectedProd.v): when the error of a rounded
+   product is a number of the format, the sign of the error term of two_prod, and the
+   models of the listings mul_down_1, mul_up_1 and mul_dir_1 written by hand. *)
+Print Assumptions mult_error_multiple.
+Print Assumptions mult_multiple_eta.
+Print Assumptions mult_error_format.
+Print Assumptions mult_error_format_pred.
+Print Assumptions mult_error_format_pred_even.
+Print Assumptions mult_error_format_ge.
+Print Assumptions two_prod_error_sign.
+Print Assumptions two_prod_error_pos.
+Print Assumptions two_prod_error_neg.
+Print Assumptions two_prod_error_exact.
+Print Assumptions two_prod_error_exact_large.
+Print Assumptions two_prod_error_exact_pred.
+Print Assumptions two_prod_error_zero.
+Print Assumptions two_prod_error_zero_iff.
+Print Assumptions two_prod_sign.
+Print Assumptions const_P_eq.
+Print Assumptions mul_down_1_listing_facts.
+Print Assumptions mul_up_1_listing_facts.
+Print Assumptions mul_dir_1_listing_eq.
+Print Assumptions mul_down_1_listing_correct.
+Print Assumptions mul_up_1_listing_correct.
+Print Assumptions mul_dir_1_listing_correct.
+
+(* The product of two intervals (theories/Rectangle.v): the rectangle lemma on extended
+   real numbers, the minimum of four lower bounds and the maximum of four upper bounds,
+   and the same on limbs for the selections of interval_mul_1. *)
+Print Assumptions rectangle.
+Print Assumptions rectangle_lower_bound.
+Print Assumptions rectangle_upper_bound.
+Print Assumptions member_nonempty.
+Print Assumptions nonempty_member.
+Print Assumptions select_lt_xmin.
+Print Assumptions select_lt_xmax.
+Print Assumptions interval_mul_lower.
+Print Assumptions interval_mul_upper.
+
+(* The two executions of a product in the IEEE model (theories/IeeeProduct.v): the plain
+   product and the fused product with a zero addend. *)
+Print Assumptions mult_prod_xval.
+Print Assumptions mult_prod_nan.
+Print Assumptions mult_prod_eq.
+Print Assumptions mult_prod_zero.
+Print Assumptions mult_prod_same.
+Print Assumptions succ_mult_prod.
+Print Assumptions rmul_two_executions.

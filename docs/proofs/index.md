@@ -47,8 +47,12 @@ lists:
   function of Flocq's binary floating-point numbers, where operations overflow and operands may
   be infinite or NaN, and its statements there;
 - `proofs/theories/`, the proofs written by hand, one theorem `K_correct` per kernel `K` and the
-  lemmas they share, and the theorems about sums and dot products of arrays, which bound a sum
-  made in any order of its additions (`Folds.v`, `Summation.v`, `SummationKernels.v`);
+  lemmas they share, the theorems about sums and dot products of arrays, which bound a sum
+  made in any order of its additions (`Folds.v`, `Summation.v`, `SummationKernels.v`), and the
+  first building blocks of Milestone 2, proved before their kernels are generated: a sum and a
+  product rounded down and up without a rounding mode, on models of their listings written by
+  hand (`DirectedSum.v`, `DirectedProd.v`), the lemma that the product of two intervals rests on
+  (`Rectangle.v`), and the comparison of the two ways a product is executed (`IeeeProduct.v`);
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -70,8 +74,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    `proofs/audit/HandAudit.v`: the IEEE-model theorems of the kernels that also have a
    real-model statement of their own domain (they have generated statements as their types),
    a few facts whose statements are written by hand because they say more about a kernel than
-   its claims can express, and the theorems about sums and dot products of arrays, which are
-   about no single kernel.
+   its claims can express, the theorems about sums and dot products of arrays, which are
+   about no single kernel, and the theorems of the first building blocks of Milestone 2, whose
+   kernels are not generated yet.
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
@@ -81,7 +86,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  49 files: no Admitted, admit, Axiom or Parameter
+  53 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
