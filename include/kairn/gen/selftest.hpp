@@ -16,6 +16,7 @@
 
 #include "scalar.hpp"
 
+KAIRN_GEN_PUSH_WARNINGS
 namespace kairn::gen::selftest {
 
 // Whether a computed limb is the stored one, from the bit patterns: a comparison would read
@@ -2034,3 +2035,4 @@ inline const char* run() noexcept {
 }
 
 }  // namespace kairn::gen::selftest
+KAIRN_GEN_POP_WARNINGS

@@ -24,7 +24,7 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `proofs/gen/IeeeModel.v` | One Rocq `Definition` per kernel that has an IEEE-model statement, over Flocq's binary floating-point numbers (signed zeros, infinities, NaN), each operation the one of `proofs/theories/IeeeOperations.v` |
 | `proofs/gen/IeeeStatements.v` | `Definition K_ieee_spec : Prop` (and the finite-domain forms) per such kernel, from its claims, in the vocabulary of `proofs/theories/IeeeVocabulary.v` |
 | `proofs/gen/IeeeAudit.v` | For each kernel whose IEEE-model status is not unverified, checks that its theorem has the generated statement as its type and prints its assumptions |
-| `include/kairn/gen/prelude.hpp` | The force-inline macro, the FMA primitive per compiler, `abs_bits`, `next_up`, `next_down`, the form of the scalar fix-ups per compiler (`KAIRN_GEN_FIXUP_CALL`); refuses x86 without hardware FMA |
+| `include/kairn/gen/prelude.hpp` | The force-inline macro, the FMA primitive per compiler, `abs_bits`, `next_up`, `next_down`, the form of the scalar fix-ups per compiler (`KAIRN_GEN_FIXUP_CALL`), the pragmas that every header puts around its declarations so that a program's globals of the same names raise no warning (`KAIRN_GEN_PUSH_WARNINGS`, `KAIRN_GEN_POP_WARNINGS`); refuses x86 without hardware FMA |
 | `include/kairn/gen/scalar.hpp` | Every kernel for `double` and `float`, in `kairn::gen`; where the fix-up is a function of its own, that function, in `kairn::gen::fixup` |
 | `include/kairn/gen/avx2.hpp` | Every kernel for `__m256d` and `__m256` (4 doubles, 8 floats); refuses a target without AVX2 and FMA |
 | `include/kairn/gen/neon.hpp` | Every kernel for `float64x2_t` and `float32x4_t` (2 doubles, 4 floats); AArch64 only |

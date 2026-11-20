@@ -27,6 +27,7 @@
 #include <limits>
 #include <type_traits>
 
+KAIRN_GEN_PUSH_WARNINGS
 namespace kairn {
 
 /// A k-number: the value limb[0] + ... + limb[K - 1], exactly, with limbs of type T (float or
@@ -1763,3 +1764,4 @@ KAIRN_FORCEINLINE constexpr auto ldexp(const X& x, int n) noexcept
 }  // namespace finite
 
 }  // namespace kairn
+KAIRN_GEN_POP_WARNINGS

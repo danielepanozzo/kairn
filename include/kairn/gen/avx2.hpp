@@ -19,6 +19,7 @@
 
 #include "prelude.hpp"
 
+KAIRN_GEN_PUSH_WARNINGS
 namespace kairn::gen {
 
 // The complement of a lane mask, and IEEE 754 nextUp and nextDown in every lane by
@@ -2328,3 +2329,4 @@ KAIRN_GEN_FORCEINLINE void to_nearest_2(__m256 x0, [[maybe_unused]] __m256 x1, _
 }
 
 }  // namespace kairn::gen
+KAIRN_GEN_POP_WARNINGS

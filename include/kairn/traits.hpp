@@ -15,6 +15,7 @@
 
 #include <limits>
 
+KAIRN_GEN_PUSH_WARNINGS
 namespace kairn {
 
 template <class T, int K>
@@ -172,3 +173,4 @@ struct traits<Expansion<T, 2>> {
 };
 
 }  // namespace kairn
+KAIRN_GEN_POP_WARNINGS

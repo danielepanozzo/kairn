@@ -184,6 +184,7 @@ The tests of the quick tier:
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass, and each detects a changed rounding mode and flush-to-zero. |
 | `api.flags.debug.*` | Built as a debug build (CMake's `Debug` flags, no `NDEBUG`): `kairn::self_test()` passes, and so do the constant expressions of `api.constexpr`. |
 | `api.checks.*` | With `KAIRN_CHECKS` 1, in a debug build and in an optimized one: under each directed rounding mode and under flush to zero `kairn::environment_ok()` is false and every operation, and every constructor that checks its operands, stops the program with the environment's message; so does every operand that is not canonical and every negative radius; what is canonical passes; with a `KAIRN_ENVIRONMENT_FAILURE` that returns, every operation goes on ([Testing](../developer/testing.md#the-checks-of-a-debug-build)). |
+| `api.shadow` | A program with a global variable of every name of a parameter or a local variable of Kairn's headers, calling every public operation, compiles with the compiler's strictest warnings about hidden declarations as errors ([Testing](../developer/testing.md#the-programs-names)). |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break Kairn and define no macro; `kairn::self_test()` must report a failure. |
 | `api.reject.*` | What must not compile: the flags `config.hpp` rejects; each kind of operation and constructor written without the marker while its kernel is UNVERIFIED (against a copy of the headers in which every kernel is); and an operation whose kernel alone is UNVERIFIED, which must not compile through a conversion to another kernel; with `KAIRN_CHECKS`, a constant expression given an operand the checks refuse. |
 | `api.boundary.*` | A product the program computes and passes into an operation (`x + a * b`, a constructor, `from_limbs`, a ball's center or radius) gives, bit for bit, the result of the same operation on the rounded product, under each contraction setting; `api.boundary.unguarded.*` checks, against a copy of the headers without the generated guard, that the compilers that fuse across statements do change it. |
@@ -418,6 +419,13 @@ which the compiler reports.
   ([Proved, and UNVERIFIED](guarantees.md#proved-and-unverified)). In this version every kernel is
   proved, so no operation needs the marker.
 - **Metal.** Kairn has no GPU code yet, so there is no Metal backend and no Metal self-test.
+- **A global variable with the name of one of Kairn's.** A program's global variable may have the
+  name of a parameter or a local variable of Kairn's headers (`x`, `a`, `inf`, ...), which MSVC
+  reports at `/W4` (C4459, "declaration hides global declaration") and under `/analyze` (C6244),
+  and GCC 11 and 13 under `-Wshadow` for the parameters of some constructors. Each header of Kairn
+  turns these warnings off for its own declarations, and only there, so that a program built with
+  warnings as errors builds; Clang's `-Wshadow` does not report it
+  ([Testing](../developer/testing.md#the-programs-names)).
 
 ## Build the documentation
 

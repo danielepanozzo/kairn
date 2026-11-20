@@ -11,6 +11,7 @@
 
 #include "expansion.hpp"
 
+KAIRN_GEN_PUSH_WARNINGS
 namespace kairn {
 
 namespace detail {
@@ -601,3 +602,4 @@ KAIRN_FORCEINLINE auto operator*=(X& x, const Y& y) noexcept -> decltype(x = det
 }
 
 }  // namespace kairn
+KAIRN_GEN_POP_WARNINGS

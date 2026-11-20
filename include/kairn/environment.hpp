@@ -27,6 +27,7 @@
 #define KAIRN_DETAIL_FPCR 1
 #endif
 
+KAIRN_GEN_PUSH_WARNINGS
 namespace kairn {
 
 namespace detail {
@@ -225,3 +226,4 @@ inline Status self_test() noexcept {
 }
 
 }  // namespace kairn
+KAIRN_GEN_POP_WARNINGS

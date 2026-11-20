@@ -105,6 +105,10 @@
 #define KAIRN_DETAIL_K1_CONTRACT
 #endif
 
+// The warnings of MSVC and GCC about a declaration that hides a global variable of the program
+// are off for the declarations of each header of Kairn (gen/prelude.hpp says why).
+KAIRN_GEN_PUSH_WARNINGS
+
 /// Kairn's public interface: the number types Expansion<T, 1> and Expansion<T, 2>, the balls
 /// Ball<T, 1> and Ball<T, 2>, their operations, kairn::traits, kairn::self_test() and
 /// kairn::environment_ok(), with T float or double. The namespaces kairn::detail and kairn::gen
@@ -189,3 +193,4 @@ KAIRN_FORCEINLINE constexpr const X& unmark(const Unverified<X>& x) noexcept {
 
 }  // namespace detail
 }  // namespace kairn
+KAIRN_GEN_POP_WARNINGS

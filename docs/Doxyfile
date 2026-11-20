@@ -30,11 +30,12 @@ STRIP_FROM_PATH        = include .
 STRIP_FROM_INC_PATH    = include
 
 # KAIRN_FORCEINLINE stands before every operation; expanded to nothing, the signatures read as
-# the compiler sees them without it.
+# the compiler sees them without it. KAIRN_GEN_PUSH_WARNINGS and KAIRN_GEN_POP_WARNINGS, around
+# the declarations of each header, are pragmas of MSVC and GCC.
 ENABLE_PREPROCESSING   = YES
 MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = YES
-PREDEFINED             = KAIRN_FORCEINLINE=
+PREDEFINED             = KAIRN_FORCEINLINE= KAIRN_GEN_PUSH_WARNINGS= KAIRN_GEN_POP_WARNINGS=
 
 # Every public entity has a comment, and a warning fails the build.
 QUIET                  = YES

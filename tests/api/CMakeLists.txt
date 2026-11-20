@@ -23,6 +23,8 @@
 # - api.checks.*: the checks of KAIRN_CHECKS, which must stop the program under a changed rounding
 #   mode or flush to zero, with the environment's message, and on an operand that is not
 #   canonical, and let the rest through; with a handler that returns, every operation goes on.
+# - api.shadow: a program with global variables named as the headers' parameters and locals,
+#   compiled with the compiler's warnings about hidden declarations as errors.
 # - api.reject.*: what must not compile: rejected flags, UNVERIFIED operations without the
 #   marker, and with KAIRN_CHECKS constant expressions that the checks refuse (each with a control
 #   that compiles).
@@ -390,6 +392,37 @@ endforeach()
 _kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")
 _kairn_api_reject(checks.operator_not_canonical 15 "constant|constexpr")
 _kairn_api_reject(checks.ball_negative_radius 16 "constant|constexpr")
+
+# --- The program's names ------------------------------------------------------------------------
+#
+# api.shadow: a program whose global variables have the names of every parameter and local
+# variable of the headers, compiled with the strictest warnings of the compiler about a
+# declaration that hides another, as errors, and with the build's own flags (shadow.py, on
+# shadow.cpp, every public operation once). MSVC reports such declarations of the headers (C4459,
+# and C6244 under /analyze), and GCC 11 and 13 some of them (-Wshadow), which the headers turn off
+# for their own; Clang reports none. With the headers' suppression lifted, the program must be
+# rejected by MSVC, and the headers alone, without the globals, must compile with every warning on.
+if(Python3_Interpreter_FOUND)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(_api_shadow_compiler msvc)
+  elseif(_msvc_style)
+    set(_api_shadow_compiler clang-cl)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(_api_shadow_compiler gcc)
+  else()
+    set(_api_shadow_compiler clang)
+  endif()
+  set(_api_shadow_sysroot "")
+  if(CMAKE_OSX_SYSROOT AND NOT _msvc_style)
+    set(_api_shadow_sysroot "--sysroot=${CMAKE_OSX_SYSROOT}")
+  endif()
+  add_test(NAME api.shadow
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/shadow.py" "--cxx=${CMAKE_CXX_COMPILER}"
+      "--compiler=${_api_shadow_compiler}" "--include=${_api_include}"
+      "--source=${CMAKE_CURRENT_SOURCE_DIR}/shadow.cpp" "--workdir=${CMAKE_CURRENT_BINARY_DIR}/shadow"
+      "--options=${_api_fma_bars}" ${_api_shadow_sysroot})
+  set_tests_properties(api.shadow PROPERTIES TIMEOUT 600 LABELS "api;shadow")
+endif()
 
 # --- One limb against T -----------------------------------------------------------------------
 if(Python3_Interpreter_FOUND)

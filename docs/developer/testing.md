@@ -57,6 +57,7 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass in the default environment and fail under each directed rounding mode and under flush-to-zero. |
 | `api.flags.debug.self_test`, `api.flags.debug.constexpr` | `kairn::self_test()` and `kairn::environment_ok()`, compiled as the [debug build](#flag-sets), pass (`runner.cpp --self-test`); `tests/api/constexpr.cpp` built so, its constant expressions evaluated with the checks on. |
 | `api.checks.debug.G`, `api.checks.release.G`, `api.checks.handler` | The [checks of a debug build](#the-checks-of-a-debug-build), in the debug build and with the build's own flags and `KAIRN_CHECKS` defined to 1: in the default environment every operation, and every constructor that checks its operands, runs (G = `default`); under each directed rounding mode (`rounding`) and each state of flush to zero (`flush`) `environment_ok()` is false and each of them stops the program with the environment's message; every operand that is not canonical, and every negative radius, stops it (`operands`); a `KAIRN_ENVIRONMENT_FAILURE` of the program's own is called instead, and every operation and constructor goes on, without the checks of its operands (`handler`). |
+| `api.shadow` | A program whose global variables have the name of every parameter and local variable of the headers, calling every public operation, compiles with the compiler's strictest warnings about a declaration that hides another, as errors; without the headers' suppression of those warnings (MSVC's C4459 and C6244, GCC's `-Wshadow`) it must not compile with MSVC, and without the globals it must compile with every warning on ([The program's names](#the-programs-names)). |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break the kernels and define no macro (reassociation; `-ffp-model=fast`; with Apple clang on AArch64, `-fno-signed-zeros` with `-ffp-contract=fast`, which Clang 18 was measured not to break the kernels with): `kairn::self_test()` must fail. |
 | `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball); with `KAIRN_CHECKS`, a constant expression given a pair that is not canonical (`from_limbs`, an operator) or a negative radius (`checks.*`). |
 | `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, `kairn::finite::add`, a ball's center, radius or point) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; built against a copy of the headers in which the generated guard is taken out of `gen/scalar.hpp` (made at configure time, which fails if it finds no guard), it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
@@ -597,6 +598,46 @@ test programs keep Microsoft's C runtime from opening a dialog on `abort()`, and
 writing a core dump, which took 0.3 seconds per case on the Linux machine
 (`tests/api/no_crash_reports.hpp`).
 
+## The program's names
+
+A program may have a global variable with the name of a parameter or a local variable of Kairn's
+headers: `x`, `a`, `limbs`, `inf`, or any of the few hundred names of the generated kernels. MSVC
+reports every such declaration of a header, at `/W4` (C4459, "declaration of 'x' hides global
+declaration") and under `/analyze` (C6244), and a program built with `/WX` then fails to build.
+Measured with MSVC 19.52, it reports every parameter and local variable of a function that is not
+a template; and of a template, once instantiated, every local variable, and the parameters of the
+members of a class template (constructors, `from_limbs`), but not those of a function template;
+for a template, whether the program declares the global before or after it includes Kairn.
+GCC's `-Wshadow` and Clang's `-Wshadow-all`, which `-Wall -Wextra` do not enable, report a
+declaration that hides a variable of its own namespace or of an enclosing block, and not one of
+the global namespace from inside `namespace kairn`, with one exception: GCC 11 and 13 report the
+parameters of a constructor of a class template and of a lambda, once instantiated, as hiding a
+global (21 declarations of Kairn's headers: the constructors of `Expansion` and `Ball`, and a
+lambda of `traits.hpp`). GCC 16, Clang 18 and Apple clang 21 report none. Renaming cannot help:
+any name of Kairn's can be the name of a program's global. Each header of Kairn, generated or
+not, therefore turns these warnings off for its own declarations, between
+`KAIRN_GEN_PUSH_WARNINGS` and `KAIRN_GEN_POP_WARNINGS`, defined in `gen/prelude.hpp`: a pushed
+and popped `#pragma warning(disable : 4459 6244)` with MSVC, and
+`#pragma GCC diagnostic ignored "-Wshadow"` with GCC; nothing with Clang, clang-cl included. Each
+compiler applies the state of the header to the templates the program instantiates later.
+
+`api.shadow` (`tests/api/shadow.py`) reads the name of every parameter and local variable of the
+headers (283 today, by a scan of their tokens, which found every name of Clang's AST of the
+headers), writes a global variable of each name, and compiles `tests/api/shadow.cpp`, which calls
+every public operation once for `float` and for `double`, with the build's flags and the
+strictest warnings of the compiler about a declaration that hides another, as errors, the front
+end only: `/W4 /WX` with C4456 to C4459 at level 1, and again under `/analyze` (MSVC);
+`-Wall -Wextra -Wpedantic -Wshadow -Werror` (GCC); `-Wall -Wextra -Wpedantic -Wshadow-all -Werror`
+(Clang; `/W4 /WX -Wshadow-all` with clang-cl). With the globals, the program must compile, with
+each form of the fix-ups (`KAIRN_GEN_FIXUP_CALL` 0 and 1). Without them, and with
+`KAIRN_GEN_KEEP_SHADOW_WARNINGS`, which keeps the warnings on in the headers, it must compile too
+(with MSVC, under `/analyze` as well): Kairn's own declarations hide nothing, so the warnings stay
+as strong as they were for Kairn's own code. With both, which is what a program saw before the headers turned them off, MSVC must reject
+it, with C4459, and with C6244 under `/analyze`; with GCC and Clang it is only reported, since
+whether they reject it depends on their version (GCC 13 rejects it, GCC 16 and Clang accept it).
+Kairn's other tests are built as a program is, with the warnings off in the headers, and with
+their own `/W4 /WX` or `-Wall -Wextra -Wpedantic -Werror` unchanged.
+
 ## Hardware FMA
 
 The kernels assume that an FMA is one rounding done by the hardware, and on x86-64 the headers
@@ -678,6 +719,15 @@ machine on Linux x86-64 and 1.4 to 2.2 times as long as on the Windows machine o
 ([Costs, Milestone 1](results/costs-milestone1.md)): by those ratios, these add about 40 seconds
 to the full tier's job on Linux and 2.5 to 4 minutes on Windows, and 15 to 30 seconds to the quick
 tier on Windows, whose ctest step is already over two minutes there.
+
+**The program's names** ([above](#the-programs-names)): `api.shadow` took 0.5 seconds with Apple
+clang 21 and 0.7 with GCC 16 on the Mac, 1.8 with Clang 18 and 1.1 with GCC 13 on 16 threads of
+the Linux machine, and 5.3 with MSVC on the Windows machine, where it compiles the program seven
+times, three of them under `/analyze`; measured on 2026-11-19 in a quick tier run with
+`--parallel 4`.
+The 8 calls of constructors that the same change added to the cases of the checks add 8 runs per
+state of the environment to each `api.checks.*.rounding` and `api.checks.*.flush`, under a second
+on every machine.
 
 **Waste removed** before anything left the quick tier, as measured on 16 threads of the Linux
 machine with GCC 13:

@@ -18,6 +18,29 @@
 #define KAIRN_GEN_FORCEINLINE inline __attribute__((always_inline))
 #endif
 
+// A program's global variables may have the name of any parameter or local variable of
+// Kairn's headers. MSVC reports each such declaration of a header at /W4 (C4459, "declaration
+// hides global declaration") and under /analyze (C6244), and GCC's -Wshadow (GCC 11 and 13, not
+// GCC 16) the parameters of a constructor of a class template and of a lambda. Every header of
+// Kairn turns these warnings off for its own declarations, from KAIRN_GEN_PUSH_WARNINGS to
+// KAIRN_GEN_POP_WARNINGS, and the compiler keeps that state for the templates it instantiates
+// later. Clang's -Wshadow, clang-cl's included, reports no declaration in a namespace that
+// hides a global one, so Clang gets nothing. tests/api/shadow.py defines
+// KAIRN_GEN_KEEP_SHADOW_WARNINGS to see the warnings for Kairn's own names.
+#if defined(KAIRN_GEN_KEEP_SHADOW_WARNINGS)
+#define KAIRN_GEN_PUSH_WARNINGS
+#define KAIRN_GEN_POP_WARNINGS
+#elif defined(_MSC_VER) && !defined(__clang__)
+#define KAIRN_GEN_PUSH_WARNINGS __pragma(warning(push)) __pragma(warning(disable : 4459 6244))
+#define KAIRN_GEN_POP_WARNINGS __pragma(warning(pop))
+#elif defined(__GNUC__) && !defined(__clang__)
+#define KAIRN_GEN_PUSH_WARNINGS _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wshadow\"")
+#define KAIRN_GEN_POP_WARNINGS _Pragma("GCC diagnostic pop")
+#else
+#define KAIRN_GEN_PUSH_WARNINGS
+#define KAIRN_GEN_POP_WARNINGS
+#endif
+
 // Where a scalar kernel puts the fix-up that it runs behind a branch
 // (docs/developer/design/milestone1.md, "Emission"): inline, except with Clang on AArch64,
 // which turns an inline branch back into selects; there the fix-up is a function of its own
@@ -49,6 +72,7 @@
 #error "Kairn: no FMA primitive has been chosen and measured for MSVC on this architecture"
 #endif
 
+KAIRN_GEN_PUSH_WARNINGS
 namespace kairn::gen {
 
 #if KAIRN_GEN_FIXUP_CALL
@@ -145,3 +169,4 @@ KAIRN_GEN_FORCEINLINE constexpr float times_inf_ce(float t) noexcept {
 }
 
 }  // namespace kairn::gen
+KAIRN_GEN_POP_WARNINGS
