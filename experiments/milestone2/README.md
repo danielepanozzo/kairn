@@ -11,14 +11,15 @@ wrong on what was run.
 ## How it works
 
 - `kernels/` holds the proposed kernels as descriptions in the generator's own format
-  (`gen/README.md`), 11 of them. They carry no claims: the claims of this milestone need
-  vocabulary that the generator does not have yet. The 22 that the generator has now are in
+  (`gen/README.md`), 7 of them. They carry no claims: the claims of this milestone need
+  vocabulary that the generator does not have yet. The 26 that the generator has now are in
   `gen/kernels`, with their claims, and only there: the nine of the first wave (`two_sum_ord`, the
   four directed sums, the two directed products and the two scalings of a ball by a power of
   two), and the thirteen of the first kernels of the intervals (`mul_dir_1`, `interval_make_1`,
   `interval_neg_1`, `interval_add_1`, `interval_sub_1`, `interval_mul_1`, `add_ball_2_2`,
   `mul_ball_2_2`, `add_down_2_2`, `add_up_2_2`, `mul_dir_2_2`, `interval_add_2` and
-  `ball_from_interval_2`). Three of those were written again there, with the same values, so that
+  `ball_from_interval_2`), and four of the next stage (`mul_ext_2_2`, `interval_mul_2`,
+  `interval_mid_rad_1` and `ball_to_interval_1`, as they were written here). Three of those were written again there, with the same values, so that
   no fused result is negated, directly or through a select (a rule of the generator): the lower
   bounds of `mul_dir_2_2` and `add_down_2_2` are minus the rounding up of $d - z_1$ (for the sum,
   $dd - z_1$, with $dd$ the radius or zero), and the radius of `ball_from_interval_2` adds minus
@@ -52,7 +53,7 @@ compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`)
 | `rational.py` | a model in integer arithmetic of `rational(num, den)`, the three-word method of the page's first version, equals the specification, limb for limb. It is not a test of the header, whose computation is another and which the oracle tests | Constants at compile time |
 | `convert.py` | conversions between a wide and a narrow format, of numbers and of balls | Limbs of another type |
 | `constants.py` | the constants $A$ and $B$ of the two-limb bounds in `binary64` and `binary32` | Bounds of two limbs |
-| `rules_report.py` | what the generator's rules say of the 33 proposed kernels (11 in `kernels/`, 22 in `gen/kernels`), and the operations of each after inlining | Experiments |
+| `rules_report.py` | what the generator's rules say of the 33 proposed kernels (7 in `kernels/`, 26 in `gen/kernels`), and the operations of each after inlining | Experiments |
 
 ## Rerun
 

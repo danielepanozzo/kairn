@@ -1,0 +1,61 @@
+# The product of two intervals with 2-limb bounds (milestone2.md, "Interval kernels", "Two
+# limbs"), without a branch: the four products of bounds by mul_ext_2_2, the least of the four
+# lower values and the greatest of the four upper ones by the comparison of 2-limb numbers, then
+# the empty set as in interval_add_2. Tightness for bounded operands and a bounded result: each
+# bound within A |v| + B of the bound v of the exact range, with the constants of mul_dir_2_2
+# (v -> v - A |v| - B does not decrease, A being below 1, so the least of four values each close
+# to its product is close to the least product); an infinite bound of the exact range is that
+# bound of the result; a nonempty operand that is [0, 0] gives [0, 0] (zero_factor). Bounded when
+# the exact range is within a quarter of the overflow threshold. The largest listing of the
+# milestone: an ordinary inline function, not forced inline (milestone2.md, "Inlining and compile
+# time" and question 13).
+kernel:        interval_mul_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+input:         yl = yl0 yl1
+input:         yu = yu0 yu1
+output:        zl = zl0 zl1
+output:        zu = zu0 zu1
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       encloses_interval zl zu x*y x=xl,xu y=yl,yu tight=outward;rel=(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u);abs=2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2) bounded_when=abs_le(x*y,-2) zero_factor
+min_precision: 4
+source:        the least and the greatest of the four products of bounds by mul_ext_2_2 (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+ordinary_inline: the largest listing of the milestone, some four hundred operations after inlining: an ordinary inline function, which the compiler may call rather than inline into every caller (milestone2.md, "Inlining and compile time", question 13)
+cone_exempt:   the bounds are selected among the values of mul_ext_2_2, and the empty set after an explicit test
+
+(a0, a1, e0, e1) = mul_ext_2_2(xl0, xl1, yl0, yl1)
+(b0, b1, f0, f1) = mul_ext_2_2(xl0, xl1, yu0, yu1)
+(c0, c1, g0, g1) = mul_ext_2_2(xu0, xu1, yl0, yl1)
+(d0, d1, h0, h1) = mul_ext_2_2(xu0, xu1, yu0, yu1)
+ma  = lt_2_2(b0, b1, a0, a1)
+p0  = select(ma, b0, a0)
+p1  = select(ma, b1, a1)
+mb  = lt_2_2(d0, d1, c0, c1)
+q0  = select(mb, d0, c0)
+q1  = select(mb, d1, c1)
+mc  = lt_2_2(q0, q1, p0, p1)
+l0  = select(mc, q0, p0)
+l1  = select(mc, q1, p1)
+na  = lt_2_2(e0, e1, f0, f1)
+r0  = select(na, f0, e0)
+r1  = select(na, f1, e1)
+nb  = lt_2_2(g0, g1, h0, h1)
+s0  = select(nb, h0, g0)
+s1  = select(nb, h1, g1)
+nc  = lt_2_2(r0, r1, s0, s1)
+u0  = select(nc, s0, r0)
+u1  = select(nc, s1, r1)
+nx  = lt(xl0, const inf)
+ny  = lt(yl0, const inf)
+ne  = and(nx, ny)
+mi  = neg(const inf)
+zl0 = select(ne, l0, const inf)
+zl1 = select(ne, l1, 0)
+zu0 = select(ne, u0, mi)
+zu1 = select(ne, u1, 0)

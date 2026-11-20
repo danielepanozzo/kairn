@@ -113,6 +113,15 @@ BRANCHED.update({k: ('ne',) for k in ('interval_add_1', 'interval_sub_1', 'inter
                                       'ball_lower_as_1', 'ball_upper_as_1', 'ball_lower_as_2',
                                       'ball_upper_as_2')})
 BRANCHED.update(interval_make_1=('v',), ball_from_interval_2=('v', 'f'))
+# Stage B1: the same test of empty operands of the difference and the product of intervals of two
+# limbs, of the midpoint and radius of an interval and of the conversion of a ball to an interval;
+# of a pair that describes an interval of the constructor of two limbs; of bounds that do not cross
+# (ok) of the intersections; and of mul_ext_2_2, a zero operand (nz) then finite operands (fo). The
+# hulls, the negation of two limbs, the conversion of an interval to a ball and the split return
+# values that are not selects of their own listings on one mask.
+BRANCHED.update({k: ('ne',) for k in ('interval_sub_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1')})
+BRANCHED.update(interval_make_2=('v',), interval_intersection_1=('ok',), interval_intersection_2=('ok',),
+                mul_ext_2_2=('nz', 'fo'))
 
 
 class Cpp(unittest.TestCase):
@@ -202,18 +211,29 @@ class Cpp(unittest.TestCase):
     # two limbs that calls them.
     NOT_CONSTEXPR |= {'mul_dir_1', 'interval_mul_1', 'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2',
                       'sub_down_2_2', 'sub_up_2_2', 'mul_dir_2_2', 'interval_add_2'}
+    # Stage B1: the difference of intervals of two limbs, and the product, through mul_dir_2_2.
+    NOT_CONSTEXPR |= {'interval_sub_2', 'mul_ext_2_2', 'interval_mul_2'}
     # The kernels whose only fused operations are prod, constexpr by the rule of the product
     # (milestone2.md, "The two executions of a product"); in Milestone 2 the ball made from an
     # interval, which halves its bounds and doubles the halves with prod.
     PRODUCT_RULE = {'rmul', 'mul_1_1', 'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full', 'ball_mul_pow2_1',
                     'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full', 'ball_from_interval_2'}
+    # Stage B1: the midpoint and radius of an interval, which halves its bounds with prod, and the
+    # conversion to a ball and the split that call it.
+    PRODUCT_RULE |= {'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1'}
+    # The kernels that are ordinary inline functions, not forced inline (ordinary_inline:).
+    ORDINARY_INLINE = {'interval_mul_2'}
 
     def test_constexpr(self):
         plain = {name for (name, _), f in self.fns.items() if not f['constexpr']}
         self.assertEqual(plain, self.NOT_CONSTEXPR)
         line = [x for x in self.text.splitlines() if x.startswith('// Not constexpr: ')]
         self.assertEqual(set(line[0][len('// Not constexpr: '):-1].split(', ')), self.NOT_CONSTEXPR)
-        self.assertTrue(all(f['head'].startswith('KAIRN_GEN_FORCEINLINE') for f in self.fns.values()))
+        self.assertTrue(all(f['head'].startswith('KAIRN_GEN_FORCEINLINE') for (n, _), f in self.fns.items()
+                            if n not in self.ORDINARY_INLINE))
+        self.assertTrue(all(f['head'].startswith('inline void ') for (n, _), f in self.fns.items()
+                            if n in self.ORDINARY_INLINE))
+        self.assertEqual({n for n, k in self.ks.items() if not k.forced_inline}, self.ORDINARY_INLINE)
 
     def test_the_rule_of_the_product(self):
         """A kernel whose only fused operations are prod is constexpr, and prints each prod as the
@@ -825,10 +845,14 @@ class Rocq(unittest.TestCase):
     # of the generator: no fused result negated through a select); Statements.v and Audit.v are the
     # same, and make -C proofs passed on the new Model.v. Then mul_dir_1 was proved: Statements.v
     # prints that one word, and Audit.v lists its theorem. Then the seven bounds of two limbs: seven
-    # words more, and their theorems (Directed2.v).
-    DIGESTS = {'Model.v': '2099ff2ba9094add1f8a66aa101b3e0da7c8e68550d7a78d432f010f5bb6668a',
-               'Statements.v': '82bd9eed8ec18b125b5279b7592290f57de9c6aed24c17aa8c3c63e55914aed5',
-               'Audit.v': 'c588636fbaeb73eb0f47dd90915a8b5d42f1c8f2481cebf1e86c47c81b62408e'}
+    # words more, and their theorems (Directed2.v). Then the kernels of stage B1 of the intervals,
+    # which have no real-model statement, changed the order of the files only: every definition,
+    # statement and audit line is the same, byte for byte, some printed earlier (callees before the
+    # new callers that sort first: sub_up_1, the comparisons of two limbs, the directed differences
+    # of two limbs); make -C proofs passed on them.
+    DIGESTS = {'Model.v': '79ed46c8deda6c447ba1b15c8882ff0a06de3ad5f727ca4130b2945a912266fe',
+               'Statements.v': 'd502d91f7fc277ff943d0f832865163152b2910163ade7bbd76f18489b0909ab',
+               'Audit.v': '394ac530b8de0e6bc76572ede54bd21908bd1bd9c3f22a76c0e75e865098a949'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in

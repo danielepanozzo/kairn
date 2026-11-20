@@ -141,6 +141,17 @@ t        = add(x0, y0)
   `ensures: encloses z d x+y` with no ball (points, the finite domain);
   `ensures: makes_ball cw rw from_interval=lo,hi [midpoint_when=half_in_format(lo);half_in_format(hi)]`;
   and `zero_factor` as the last word of a `bound` or `rounded` entry.
+- Stage B1 of the intervals (architecture.md, "Claims of the interval kernels: two limbs and the
+  enclosure interface"): `requires: not_nan x` also of a canonical input of two limbs;
+  `ensures: interval_set zl zu union x=xl,xu y=yl,yu` (or `intersection`);
+  `ensures: ball_of_interval m r from=xl,xu special=ieee1788 rel=u abs=eta [smallest_radius]`
+  (`special` is `ieee1788` or `ball`);
+  `ensures: interval_of_ball zl zu x x=c,r tight=rounded`;
+  `ensures: splits al au bl bu from=xl,xu`;
+  `zero_factor` as the last word of an `outward` entry (of the extended domain) and of an
+  `encloses_interval` entry whose set is a product;
+  and `ordinary_inline: REASON`, for a kernel of at most two limbs whose C++ is an ordinary inline
+  function rather than forced inline (`interval_mul_2`: milestone2.md, "Inlining and compile time").
 - `guard_pending: a REASON`: an input of an entry kernel whose guard is not written yet (only
   `add_2_1`, whose guard changes the formal model of a proved kernel and lands with its proof).
 
@@ -262,10 +273,11 @@ numbers, in the order of the file's `counts`:
   takes it.
 - `muladd`: the declared contractable multiply-adds (none so far; the check has no rule for them).
 
-The forms differ for three kernels, `mul_2_1_full`, `mul_2_2_full` and `mul_pow2_2_full`, whose
-fix-up computes the core's leading product again (`t = prod(x0, y0)`): one FMA node more than
-`fma_distinct` in the inline form and in packed code, and as many in `scalar_call`, where the
-recomputation is in the fix-up function; for `two_prod`, whose scalar forms have the branch of
+The forms differ for four kernels, `mul_2_1_full`, `mul_2_2_full`, `mul_pow2_2_full` and
+`mul_ext_2_2`, whose fix-up computes the core's leading product again (`t = prod(x0, y0)`, in
+`mul_ext_2_2` the infinite product of an infinite operand): one FMA node more than `fma_distinct`
+in the inline form and in packed code, and as many in `scalar_call`, where the recomputation is in
+the fix-up function; for `two_prod`, whose scalar forms have the branch of
 constant evaluation; and for the kernels constexpr by the rule of the product, whose scalar forms
 have a plain product for constant evaluation per `prod` and whose packed form has none. The limb
 types differ for no kernel today, but they could: two constants of
@@ -323,8 +335,8 @@ without one), of
 `normalized` for `canonical`), of constant-evaluation variants (same signature, no FMA), and of
 computed constants (above). A kernel has no real-model statement when it claims `extends`,
 `represents` or `makes_ball` (and the interval kinds `makes_interval`, `encloses_interval`,
-`set_bound`) and nothing else, or says `ieee_only: yes`: the full kernels, the constructors, the
-interval kernels. A constant `up(EXPR)` that only such kernels use (the halves and the doubling
+`set_bound`, `interval_set`, `ball_of_interval`, `interval_of_ball`, `splits`) and nothing else, or
+says `ieee_only: yes`: the full kernels, the constructors, the interval kernels. A constant `up(EXPR)` that only such kernels use (the halves and the doubling
 of `ball_from_interval_2`) has no definition in `Model.v`; `IeeeModel.v` defines it from its
 expression, and its name is in the record like any other.
 

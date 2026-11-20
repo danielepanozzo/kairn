@@ -114,6 +114,11 @@
    "scalar_call": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
    "packed": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]}
   },
+  "ball_to_interval_1": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
   "ball_upper_as_1": {
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
@@ -129,10 +134,30 @@
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
   },
+  "interval_hull_1": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "interval_intersection_1": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
   "interval_make_1": {
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "sub_up_1": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "interval_mid_rad_1": {
+   "scalar": {"double": [2, 2, 0, 0, 2, 0], "float": [2, 2, 0, 0, 2, 0]},
+   "scalar_call": {"double": [2, 2, 0, 0, 2, 0], "float": [2, 2, 0, 0, 2, 0]},
+   "packed": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]}
   },
   "two_prod": {
    "scalar": {"double": [2, 2, 0, 0, 7, 0], "float": [2, 2, 0, 0, 7, 0]},
@@ -154,15 +179,20 @@
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
   },
-  "sub_up_1": {
-   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
-   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
-   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  "interval_split_1": {
+   "scalar": {"double": [2, 2, 0, 0, 2, 0], "float": [2, 2, 0, 0, 2, 0]},
+   "scalar_call": {"double": [2, 2, 0, 0, 2, 0], "float": [2, 2, 0, 0, 2, 0]},
+   "packed": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]}
   },
   "interval_sub_1": {
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "interval_to_ball_1": {
+   "scalar": {"double": [2, 2, 0, 0, 2, 0], "float": [2, 2, 0, 0, 2, 0]},
+   "scalar_call": {"double": [2, 2, 0, 0, 2, 0], "float": [2, 2, 0, 0, 2, 0]},
+   "packed": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]}
   },
   "make_2": {
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
@@ -409,6 +439,71 @@
    "scalar_call": {"double": [4, 4, 0, 0, 0, 0], "float": [4, 4, 0, 0, 0, 0]},
    "packed": {"double": [4, 4, 0, 0, 0, 0], "float": [4, 4, 0, 0, 0, 0]}
   },
+  "lt_2_2": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "interval_hull_2": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "le_2_2": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "interval_intersection_2": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "interval_make_2": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "mul_ball_2_2": {
+   "scalar": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]},
+   "scalar_call": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]},
+   "packed": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]}
+  },
+  "mul_dir_2_2": {
+   "scalar": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]},
+   "scalar_call": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]},
+   "packed": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]}
+  },
+  "mul_ext_2_2": {
+   "scalar": {"double": [8, 7, 0, 0, 0, 0], "float": [8, 7, 0, 0, 0, 0]},
+   "scalar_call": {"double": [8, 8, 0, 0, 0, 0], "float": [8, 8, 0, 0, 0, 0]},
+   "packed": {"double": [8, 7, 0, 0, 0, 0], "float": [8, 7, 0, 0, 0, 0]}
+  },
+  "interval_mul_2": {
+   "scalar": {"double": [32, 28, 0, 0, 0, 0], "float": [32, 28, 0, 0, 0, 0]},
+   "scalar_call": {"double": [32, 28, 0, 0, 0, 0], "float": [32, 28, 0, 0, 0, 0]},
+   "packed": {"double": [32, 28, 0, 0, 0, 0], "float": [32, 28, 0, 0, 0, 0]}
+  },
+  "interval_neg_2": {
+   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
+   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
+  },
+  "sub_down_2_2": {
+   "scalar": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
+   "scalar_call": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
+   "packed": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]}
+  },
+  "sub_up_2_2": {
+   "scalar": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
+   "scalar_call": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
+   "packed": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]}
+  },
+  "interval_sub_2": {
+   "scalar": {"double": [4, 4, 0, 0, 0, 0], "float": [4, 4, 0, 0, 0, 0]},
+   "scalar_call": {"double": [4, 4, 0, 0, 0, 0], "float": [4, 4, 0, 0, 0, 0]},
+   "packed": {"double": [4, 4, 0, 0, 0, 0], "float": [4, 4, 0, 0, 0, 0]}
+  },
   "le_1_2": {
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
@@ -419,22 +514,12 @@
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
   },
-  "le_2_2": {
-   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
-   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
-   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
-  },
   "lt_1_2": {
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
   },
   "lt_2_1": {
-   "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
-   "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
-   "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
-  },
-  "lt_2_2": {
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "scalar_call": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},
    "packed": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]}
@@ -453,16 +538,6 @@
    "scalar": {"double": [6, 5, 1, 1, 0, 0], "float": [6, 5, 1, 1, 0, 0]},
    "scalar_call": {"double": [6, 6, 1, 1, 0, 0], "float": [6, 6, 1, 1, 0, 0]},
    "packed": {"double": [6, 5, 1, 1, 0, 0], "float": [6, 5, 1, 1, 0, 0]}
-  },
-  "mul_ball_2_2": {
-   "scalar": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]},
-   "scalar_call": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]},
-   "packed": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]}
-  },
-  "mul_dir_2_2": {
-   "scalar": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]},
-   "scalar_call": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]},
-   "packed": {"double": [7, 7, 0, 0, 0, 0], "float": [7, 7, 0, 0, 0, 0]}
   },
   "mul_pow2_2": {
    "scalar": {"double": [2, 2, 0, 0, 2, 0], "float": [2, 2, 0, 0, 2, 0]},
@@ -503,16 +578,6 @@
    "scalar": {"double": [0, 0, 1, 1, 0, 0], "float": [0, 0, 1, 1, 0, 0]},
    "scalar_call": {"double": [0, 0, 1, 1, 0, 0], "float": [0, 0, 1, 1, 0, 0]},
    "packed": {"double": [0, 0, 1, 1, 0, 0], "float": [0, 0, 1, 1, 0, 0]}
-  },
-  "sub_down_2_2": {
-   "scalar": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
-   "scalar_call": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
-   "packed": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]}
-  },
-  "sub_up_2_2": {
-   "scalar": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
-   "scalar_call": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]},
-   "packed": {"double": [2, 2, 0, 0, 0, 0], "float": [2, 2, 0, 0, 0, 0]}
   },
   "to_nearest_2": {
    "scalar": {"double": [0, 0, 0, 0, 0, 0], "float": [0, 0, 0, 0, 0, 0]},

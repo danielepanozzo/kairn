@@ -116,7 +116,8 @@ class Counts(unittest.TestCase):
 
     def test_where_the_counts_differ(self):
         """The generator says where the forms or the limb types differ: today the three kernels
-        whose fix-up recomputes the core's product, two_prod's branch of constant evaluation, and
+        whose fix-up recomputes the core's product, and mul_ext_2_2 (stage B1), whose fix-up computes
+        the leading product again as the infinite one, two_prod's branch of constant evaluation, and
         the kernels constexpr by the rule of the product, whose scalar forms have a plain product
         for constant evaluation per prod and whose packed form has none."""
         differ = set()
@@ -128,8 +129,10 @@ class Counts(unittest.TestCase):
         product_rule = {n for n, k in self.ks.items() if cpp.product_rule(k, self.ks)}
         self.assertEqual(product_rule, {'rmul', 'mul_1_1', 'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full',
                                         'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full',
-                                        'ball_mul_pow2_2_full', 'ball_from_interval_2'})
-        self.assertEqual(differ, {'mul_2_1_full', 'mul_2_2_full', 'mul_pow2_2_full', 'two_prod'} | product_rule)
+                                        'ball_mul_pow2_2_full', 'ball_from_interval_2', 'interval_mid_rad_1',
+                                        'interval_to_ball_1', 'interval_split_1'})
+        self.assertEqual(differ, {'mul_2_1_full', 'mul_2_2_full', 'mul_pow2_2_full', 'mul_ext_2_2', 'two_prod'} |
+                         product_rule)
         for name in product_rule:
             prods = sum(1 for p in ir.prims(self.ks[name], self.ks) if p.op == 'prod')
             for t in objcode.LIMB_TYPES:

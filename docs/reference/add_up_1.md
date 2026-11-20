@@ -12,7 +12,7 @@ $$r = \mathrm{RU}(a + b).$$
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`add_up_entry`](add_up_entry.md), [`ball_from_interval_2`](ball_from_interval_2.md), [`ball_upper_as_1`](ball_upper_as_1.md), [`interval_add_1`](interval_add_1.md), [`sub_up_1`](sub_up_1.md), [`add_down_2_2`](add_down_2_2.md), [`add_up_2_2`](add_up_2_2.md), [`ball_upper_as_2`](ball_upper_as_2.md), [`mul_dir_2_2`](mul_dir_2_2.md).
+No public operation computes this kernel on its own. It is part of [`add_up_entry`](add_up_entry.md), [`ball_from_interval_2`](ball_from_interval_2.md), [`ball_to_interval_1`](ball_to_interval_1.md), [`ball_upper_as_1`](ball_upper_as_1.md), [`interval_add_1`](interval_add_1.md), [`sub_up_1`](sub_up_1.md), [`add_down_2_2`](add_down_2_2.md), [`add_up_2_2`](add_up_2_2.md), [`ball_upper_as_2`](ball_upper_as_2.md), [`mul_dir_2_2`](mul_dir_2_2.md).
 
 ## Requires
 

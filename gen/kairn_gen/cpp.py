@@ -22,7 +22,8 @@ library.md):
   two executions of a product"): as real numbers both are RN(a b), and as values of T they differ
   only in the sign of an exactly zero product. A kernel with another fused operation (fma, fms,
   fnma) and no variant is not constexpr.
-- Kernels of at most two limbs are force-inlined.
+- Kernels of at most two limbs are force-inlined, but one that says `ordinary_inline:` (the largest
+  listings: milestone2.md, "Inlining and compile time"), which is an ordinary inline function.
 - A mask is a bool, and select a conditional expression on values already computed, which
   compilers turn into a conditional move or a blend; succ and pred step the bit pattern
   (std::bit_cast is constexpr), so that kernels that use them stay constexpr.
@@ -327,7 +328,7 @@ def function(k, kernels, ctype):
     _check_names(k, kernels)
     kind = constexpr_kind(k, kernels)
     params = parameters(k, ctype, 'bool')
-    inline = 'KAIRN_GEN_FORCEINLINE' if k.limbs <= 2 else 'inline'
+    inline = 'KAIRN_GEN_FORCEINLINE' if k.forced_inline else 'inline'
     lines = [f'{inline} {"constexpr " if kind else ""}void {k.name}({", ".join(params)}) noexcept {{']
     if kind == 'variant':
         v = kernels[k.ce_variant]

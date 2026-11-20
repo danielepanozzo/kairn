@@ -113,6 +113,30 @@ NONFINITE_CE_CASES = [
     ('ball_from_interval_2', 'double', [1.0, 3.0]),
     ('ball_from_interval_2', 'float', [2.0 ** -149, 1.0]),
     ('ball_from_interval_2', 'double', [2.0, 1.0]),
+    # Stage B1: the negation, the constructor, the hulls and the intersections of intervals, which
+    # only compare, select and change signs, on every kind of interval; the midpoint and radius, the
+    # conversions and the split on bounded and unbounded intervals (the empty set would make the sum
+    # of the halves +inf - inf, and the whole line the directed sums of ball_to_interval_1, which
+    # constant evaluation refuses: a compile error, never a wrong constant).
+    ('interval_neg_2', 'double', [-1.0, 2.0 ** -60, 2.0, 0.0]),
+    ('interval_neg_2', 'float', [math.inf, 0.0, -math.inf, 0.0]),
+    ('interval_make_2', 'double', [1.0, 2.0 ** -60, 2.0, 0.0]),
+    ('interval_make_2', 'float', [math.nan, math.nan, 1.0, 0.0]),
+    ('interval_make_2', 'double', [2.0, 0.0, 1.0, 2.0 ** -60]),
+    ('interval_hull_1', 'double', [1.0, 2.0, -3.0, -2.5]),
+    ('interval_hull_1', 'float', [math.inf, -math.inf, 1.0, 2.0]),
+    ('interval_intersection_1', 'double', [1.0, 3.0, 2.0, 4.0]),
+    ('interval_intersection_1', 'float', [1.0, 2.0, 3.0, 4.0]),
+    ('interval_hull_2', 'double', [1.0, 2.0 ** -60, 2.0, 0.0, -math.inf, 0.0, 0.5, 0.0]),
+    ('interval_intersection_2', 'float', [1.0, 2.0 ** -30, 3.0, 0.0, 2.0, 0.0, math.inf, 0.0]),
+    ('interval_mid_rad_1', 'double', [1.0, 2.0]),
+    ('interval_mid_rad_1', 'float', [-math.inf, 1.0]),
+    ('interval_to_ball_1', 'double', [-0.5, 2.0 ** -60]),
+    ('interval_to_ball_1', 'float', [1.0, math.inf]),
+    ('ball_to_interval_1', 'double', [1.0, 0.5]),
+    ('ball_to_interval_1', 'float', [-2.0, 2.0 ** -30]),
+    ('interval_split_1', 'double', [1.0, 2.0]),
+    ('interval_split_1', 'float', [-math.inf, math.inf]),
 ]
 
 

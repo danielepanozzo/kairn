@@ -1404,6 +1404,64 @@
       }
     },
     {
+      "name": "ball_to_interval_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "interval_of_ball",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "x",
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          },
+          "tight": {
+            "kind": "rounded"
+          }
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the directed difference and sum of the center and the radius (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 6,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_upper_as_1",
       "domain": "extended",
       "ieee_only": true,
@@ -1611,6 +1669,142 @@
       }
     },
     {
+      "name": "interval_hull_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "interval_set",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "union",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the smaller lower bound and the larger upper bound (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_intersection_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "interval_set",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "intersection",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "interval_make_1",
       "domain": "extended",
       "ieee_only": true,
@@ -1659,6 +1853,111 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "sub_up_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a-b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "up"
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "sub_up_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeDirected.v",
+        "name": "sub_up_1_ieee_correct"
+      },
+      "source": {
+        "cite": "add_up_1 on a and -b (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_mid_rad_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "ball_of_interval",
+          "center": "m",
+          "radius": "r",
+          "from": {
+            "lower": "xl",
+            "upper": "xu"
+          },
+          "special": "ieee1788",
+          "rel": "u",
+          "abs": "eta",
+          "smallest_radius": true
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 9,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -1975,49 +2274,68 @@
       }
     },
     {
-      "name": "sub_up_1",
+      "name": "interval_split_1",
       "domain": "extended",
+      "ieee_only": true,
       "inputs": [
         {
-          "name": "a",
+          "name": "xl",
           "limbs": 1
         },
         {
-          "name": "b",
+          "name": "xu",
           "limbs": 1
         }
       ],
       "outputs": [
         {
-          "name": "r",
+          "name": "al",
+          "limbs": 1
+        },
+        {
+          "name": "au",
+          "limbs": 1
+        },
+        {
+          "name": "bl",
+          "limbs": 1
+        },
+        {
+          "name": "bu",
           "limbs": 1
         }
       ],
-      "value": "a-b",
-      "requires": [],
+      "requires": [
+        "interval(xl, xu)"
+      ],
       "ensures": [
         {
-          "kind": "rounded",
-          "of": "r",
-          "mode": "up"
+          "kind": "splits",
+          "parts": [
+            {
+              "lower": "al",
+              "upper": "au"
+            },
+            {
+              "lower": "bl",
+              "upper": "bu"
+            }
+          ],
+          "from": {
+            "lower": "xl",
+            "upper": "xu"
+          }
         }
       ],
       "min_precision": 2,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/DirectedSum.v",
-        "name": "sub_up_1_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeDirected.v",
-        "name": "sub_up_1_ieee_correct"
-      },
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
       "source": {
-        "cite": "add_up_1 on a and -b (Milestone 2 listing)",
+        "cite": "the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
       },
-      "flops": 3,
+      "flops": 9,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -2100,6 +2418,62 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 6,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_to_ball_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "ball_of_interval",
+          "center": "c",
+          "radius": "r",
+          "from": {
+            "lower": "xl",
+            "upper": "xu"
+          },
+          "special": "ball",
+          "rel": "u",
+          "abs": "eta",
+          "smallest_radius": true
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 9,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -5196,6 +5570,872 @@
       }
     },
     {
+      "name": "lt_2_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "x",
+            "y"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "lt_2_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "lt_2_2_ieee_correct"
+      },
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_hull_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "yl",
+          "limbs": 2
+        },
+        {
+          "name": "yu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 2
+        },
+        {
+          "name": "zu",
+          "limbs": 2
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "interval_set",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "union",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the smaller lower bound and the larger upper bound, by lt_2_2 (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "le_2_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "le",
+          "args": [
+            "x",
+            "y"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "le_2_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "le_2_2_ieee_correct"
+      },
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_intersection_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "yl",
+          "limbs": 2
+        },
+        {
+          "name": "yu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 2
+        },
+        {
+          "name": "zu",
+          "limbs": 2
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "interval_set",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "intersection",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_make_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "lo",
+          "limbs": 2
+        },
+        {
+          "name": "hi",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 2
+        },
+        {
+          "name": "zu",
+          "limbs": 2
+        }
+      ],
+      "requires": [
+        "canonical(lo)",
+        "canonical(hi)"
+      ],
+      "ensures": [
+        {
+          "kind": "makes_interval",
+          "lower": "zl",
+          "upper": "zu",
+          "from": {
+            "lower": "lo",
+            "upper": "hi"
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "constructor of an interval of two limbs (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "mul_ball_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        },
+        {
+          "name": "d",
+          "limbs": 1
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "4",
+          "k": 2,
+          "t": "3/2",
+          "when": null
+        },
+        {
+          "kind": "encloses",
+          "center": "z",
+          "radius": "d",
+          "set": "x*y",
+          "balls": {}
+        }
+      ],
+      "min_precision": 4,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "mul_ball_2_2_correct"
+      },
+      "source": {
+        "cite": "mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 11,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/20282409603651670423947251286016",
+            "abs": "3/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/70368744177664",
+            "abs": "3/1427247692705959881058285969449495136382746624"
+          }
+        ]
+      }
+    },
+    {
+      "name": "mul_dir_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "l",
+          "limbs": 2
+        },
+        {
+          "name": "h",
+          "limbs": 2
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "l"
+        },
+        {
+          "kind": "normalized",
+          "of": "h"
+        },
+        {
+          "kind": "outward",
+          "of": "l",
+          "side": "below",
+          "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)",
+          "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)"
+        },
+        {
+          "kind": "outward",
+          "of": "h",
+          "side": "above",
+          "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)",
+          "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)"
+        }
+      ],
+      "min_precision": 4,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "mul_dir_2_2_correct"
+      },
+      "source": {
+        "cite": "mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 23,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "mul_ext_2_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "l",
+          "limbs": 2
+        },
+        {
+          "name": "h",
+          "limbs": 2
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)",
+        "not_nan(x)",
+        "not_nan(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "l"
+        },
+        {
+          "kind": "normalized",
+          "of": "h"
+        },
+        {
+          "kind": "outward",
+          "of": "l",
+          "side": "below",
+          "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)",
+          "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)",
+          "zero_factor": true
+        },
+        {
+          "kind": "outward",
+          "of": "h",
+          "side": "above",
+          "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)",
+          "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)",
+          "zero_factor": true
+        }
+      ],
+      "min_precision": 4,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_dir_2_2, with the products of a zero and of an infinity selected (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 24,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_mul_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "yl",
+          "limbs": 2
+        },
+        {
+          "name": "yu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 2
+        },
+        {
+          "name": "zu",
+          "limbs": 2
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "x*y",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "tight": {
+            "kind": "outward",
+            "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)",
+            "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)"
+          },
+          "bounded_when": [
+            {
+              "abs_le": "x*y",
+              "exp": -2
+            }
+          ],
+          "zero_factor": true
+        }
+      ],
+      "min_precision": 4,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the least and the greatest of the four products of bounds by mul_ext_2_2 (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 96,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_neg_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 2
+        },
+        {
+          "name": "zu",
+          "limbs": 2
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "-x",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "tight": {
+            "kind": "exact"
+          },
+          "bounded_when": [
+            {
+              "abs_le": "-x",
+              "exp": 0
+            }
+          ],
+          "bounded_exactly": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "neg_2 of each bound, exchanged (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "sub_down_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "l",
+          "limbs": 2
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "l"
+        },
+        {
+          "kind": "outward",
+          "of": "l",
+          "side": "below",
+          "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)",
+          "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)",
+          "exact_when": [
+            {
+              "zero": "x-y"
+            }
+          ]
+        }
+      ],
+      "min_precision": 3,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "sub_down_2_2_correct"
+      },
+      "source": {
+        "cite": "add_down_2_2 on x and -y (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 28,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "sub_up_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "h",
+          "limbs": 2
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "h"
+        },
+        {
+          "kind": "outward",
+          "of": "h",
+          "side": "above",
+          "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)",
+          "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)",
+          "exact_when": [
+            {
+              "zero": "x-y"
+            }
+          ]
+        }
+      ],
+      "min_precision": 3,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "sub_up_2_2_correct"
+      },
+      "source": {
+        "cite": "add_up_2_2 on x and -y (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 28,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_sub_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "yl",
+          "limbs": 2
+        },
+        {
+          "name": "yu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 2
+        },
+        {
+          "name": "zu",
+          "limbs": 2
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "x-y",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "tight": {
+            "kind": "outward",
+            "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)",
+            "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)",
+            "exact_when": {
+              "lower": [
+                {
+                  "zero": "xl-yu"
+                }
+              ],
+              "upper": [
+                {
+                  "zero": "xu-yl"
+                }
+              ]
+            }
+          },
+          "bounded_when": [
+            {
+              "abs_le": "x-y",
+              "exp": -2
+            }
+          ]
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the directed differences of two limbs, an infinite or empty result selected (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 56,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "le_1_2",
       "domain": "extended",
       "inputs": [
@@ -5308,63 +6548,6 @@
       }
     },
     {
-      "name": "le_2_2",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "m",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "value": "x-y",
-      "requires": [
-        "canonical(x)",
-        "canonical(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "predicate",
-          "of": "m",
-          "rel": "le",
-          "args": [
-            "x",
-            "y"
-          ]
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Compare.v",
-        "name": "le_2_2_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeExt.v",
-        "name": "le_2_2_ieee_correct"
-      },
-      "source": {
-        "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
       "name": "lt_1_2",
       "domain": "extended",
       "inputs": [
@@ -5465,63 +6648,6 @@
       "ieee_theorem": {
         "file": "proofs/theories/IeeeExt.v",
         "name": "lt_2_1_ieee_correct"
-      },
-      "source": {
-        "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "lt_2_2",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "m",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "value": "x-y",
-      "requires": [
-        "canonical(x)",
-        "canonical(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "predicate",
-          "of": "m",
-          "rel": "lt",
-          "args": [
-            "x",
-            "y"
-          ]
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Compare.v",
-        "name": "lt_2_2_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeExt.v",
-        "name": "lt_2_2_ieee_correct"
       },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
@@ -5685,148 +6811,6 @@
         "license": "core: as mul_2_2; fix-up: MIT"
       },
       "flops": 11,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "mul_ball_2_2",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "z",
-          "limbs": 2
-        },
-        {
-          "name": "d",
-          "limbs": 1
-        }
-      ],
-      "value": "x*y",
-      "requires": [
-        "normalized(x)",
-        "normalized(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "normalized",
-          "of": "z"
-        },
-        {
-          "kind": "error",
-          "of": "z",
-          "form": "R",
-          "c": "4",
-          "k": 2,
-          "t": "3/2",
-          "when": null
-        },
-        {
-          "kind": "encloses",
-          "center": "z",
-          "radius": "d",
-          "set": "x*y",
-          "balls": {}
-        }
-      ],
-      "min_precision": 4,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Directed2.v",
-        "name": "mul_ball_2_2_correct"
-      },
-      "source": {
-        "cite": "mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 11,
-      "instances": {
-        "binary64": [
-          {
-            "rel": "1/20282409603651670423947251286016",
-            "abs": "3/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
-          }
-        ],
-        "binary32": [
-          {
-            "rel": "1/70368744177664",
-            "abs": "3/1427247692705959881058285969449495136382746624"
-          }
-        ]
-      }
-    },
-    {
-      "name": "mul_dir_2_2",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "l",
-          "limbs": 2
-        },
-        {
-          "name": "h",
-          "limbs": 2
-        }
-      ],
-      "value": "x*y",
-      "requires": [
-        "normalized(x)",
-        "normalized(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "normalized",
-          "of": "l"
-        },
-        {
-          "kind": "normalized",
-          "of": "h"
-        },
-        {
-          "kind": "outward",
-          "of": "l",
-          "side": "below",
-          "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)",
-          "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)"
-        },
-        {
-          "kind": "outward",
-          "of": "h",
-          "side": "above",
-          "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)",
-          "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)"
-        }
-      ],
-      "min_precision": 4,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Directed2.v",
-        "name": "mul_dir_2_2_correct"
-      },
-      "source": {
-        "cite": "mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 23,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -6319,120 +7303,6 @@
         "license": "core: as sub_2_2; fix-up: MIT"
       },
       "flops": 22,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "sub_down_2_2",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "l",
-          "limbs": 2
-        }
-      ],
-      "value": "x-y",
-      "requires": [
-        "normalized(x)",
-        "normalized(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "normalized",
-          "of": "l"
-        },
-        {
-          "kind": "outward",
-          "of": "l",
-          "side": "below",
-          "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)",
-          "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)",
-          "exact_when": [
-            {
-              "zero": "x-y"
-            }
-          ]
-        }
-      ],
-      "min_precision": 3,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Directed2.v",
-        "name": "sub_down_2_2_correct"
-      },
-      "source": {
-        "cite": "add_down_2_2 on x and -y (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 28,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "sub_up_2_2",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "h",
-          "limbs": 2
-        }
-      ],
-      "value": "x-y",
-      "requires": [
-        "normalized(x)",
-        "normalized(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "normalized",
-          "of": "h"
-        },
-        {
-          "kind": "outward",
-          "of": "h",
-          "side": "above",
-          "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)",
-          "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)",
-          "exact_when": [
-            {
-              "zero": "x-y"
-            }
-          ]
-        }
-      ],
-      "min_precision": 3,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Directed2.v",
-        "name": "sub_up_2_2_correct"
-      },
-      "source": {
-        "cite": "add_up_2_2 on x and -y (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 28,
       "instances": {
         "binary64": [],
         "binary32": []

@@ -70,14 +70,14 @@ Print Assumptions ball_sub_1_correct.
 Definition fast_two_sum_entry_audit : fast_two_sum_entry_spec := fast_two_sum_entry_correct.
 Print Assumptions fast_two_sum_entry_correct.
 
+Definition sub_up_1_audit : sub_up_1_spec := sub_up_1_correct.
+Print Assumptions sub_up_1_correct.
+
 Definition two_prod_audit : two_prod_spec := two_prod_correct.
 Print Assumptions two_prod_correct.
 
 Definition mul_dir_1_audit : mul_dir_1_spec := mul_dir_1_correct.
 Print Assumptions mul_dir_1_correct.
-
-Definition sub_up_1_audit : sub_up_1_spec := sub_up_1_correct.
-Print Assumptions sub_up_1_correct.
 
 Definition mul_1_1_audit : mul_1_1_spec := mul_1_1_correct.
 Print Assumptions mul_1_1_correct.
@@ -184,29 +184,35 @@ Print Assumptions eq_2_1_correct.
 Definition eq_2_2_audit : eq_2_2_spec := eq_2_2_correct.
 Print Assumptions eq_2_2_correct.
 
-Definition le_1_2_audit : le_1_2_spec := le_1_2_correct.
-Print Assumptions le_1_2_correct.
-
-Definition le_2_1_audit : le_2_1_spec := le_2_1_correct.
-Print Assumptions le_2_1_correct.
+Definition lt_2_2_audit : lt_2_2_spec := lt_2_2_correct.
+Print Assumptions lt_2_2_correct.
 
 Definition le_2_2_audit : le_2_2_spec := le_2_2_correct.
 Print Assumptions le_2_2_correct.
-
-Definition lt_1_2_audit : lt_1_2_spec := lt_1_2_correct.
-Print Assumptions lt_1_2_correct.
-
-Definition lt_2_1_audit : lt_2_1_spec := lt_2_1_correct.
-Print Assumptions lt_2_1_correct.
-
-Definition lt_2_2_audit : lt_2_2_spec := lt_2_2_correct.
-Print Assumptions lt_2_2_correct.
 
 Definition mul_ball_2_2_audit : mul_ball_2_2_spec := mul_ball_2_2_correct.
 Print Assumptions mul_ball_2_2_correct.
 
 Definition mul_dir_2_2_audit : mul_dir_2_2_spec := mul_dir_2_2_correct.
 Print Assumptions mul_dir_2_2_correct.
+
+Definition sub_down_2_2_audit : sub_down_2_2_spec := sub_down_2_2_correct.
+Print Assumptions sub_down_2_2_correct.
+
+Definition sub_up_2_2_audit : sub_up_2_2_spec := sub_up_2_2_correct.
+Print Assumptions sub_up_2_2_correct.
+
+Definition le_1_2_audit : le_1_2_spec := le_1_2_correct.
+Print Assumptions le_1_2_correct.
+
+Definition le_2_1_audit : le_2_1_spec := le_2_1_correct.
+Print Assumptions le_2_1_correct.
+
+Definition lt_1_2_audit : lt_1_2_spec := lt_1_2_correct.
+Print Assumptions lt_1_2_correct.
+
+Definition lt_2_1_audit : lt_2_1_spec := lt_2_1_correct.
+Print Assumptions lt_2_1_correct.
 
 Definition mul_pow2_2_audit : mul_pow2_2_spec := mul_pow2_2_correct.
 Print Assumptions mul_pow2_2_correct.
@@ -219,12 +225,6 @@ Print Assumptions sub_2_1_correct.
 
 Definition sub_2_2_audit : sub_2_2_spec := sub_2_2_correct.
 Print Assumptions sub_2_2_correct.
-
-Definition sub_down_2_2_audit : sub_down_2_2_spec := sub_down_2_2_correct.
-Print Assumptions sub_down_2_2_correct.
-
-Definition sub_up_2_2_audit : sub_up_2_2_spec := sub_up_2_2_correct.
-Print Assumptions sub_up_2_2_correct.
 
 Definition to_nearest_2_audit : to_nearest_2_spec := to_nearest_2_correct.
 Print Assumptions to_nearest_2_correct.

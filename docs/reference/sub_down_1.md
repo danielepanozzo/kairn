@@ -12,7 +12,7 @@ $$r = \mathrm{RD}(a - b).$$
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`ball_lower_as_1`](ball_lower_as_1.md), [`interval_sub_1`](interval_sub_1.md), [`sub_down_entry`](sub_down_entry.md), [`ball_lower_as_2`](ball_lower_as_2.md).
+No public operation computes this kernel on its own. It is part of [`ball_lower_as_1`](ball_lower_as_1.md), [`ball_to_interval_1`](ball_to_interval_1.md), [`interval_sub_1`](interval_sub_1.md), [`sub_down_entry`](sub_down_entry.md), [`ball_lower_as_2`](ball_lower_as_2.md).
 
 ## Requires
 

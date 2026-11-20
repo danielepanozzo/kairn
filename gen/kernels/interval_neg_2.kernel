@@ -1,0 +1,25 @@
+# The negation of an interval with 2-limb bounds (milestone2.md, "Interval kernels", "Two limbs"):
+# neg_2 of each bound, exchanged. Exact; the empty set ((+inf, 0), (-inf, 0)) is its own negation,
+# with the signs of its zeros changed. A bounded operand gives a bounded result: a finite canonical
+# 2-limb value is below the overflow threshold 2^(qmax + p) in magnitude (its leading limb is at
+# most Omega and its second within half a gap of it, a tie going away from Omega), so every member
+# of -X is, and the condition of bounded_when, with exp 0, holds exactly when the result is bounded.
+# For every precision.
+kernel:        interval_neg_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+output:        zl = zl0 zl1
+output:        zu = zu0 zu1
+requires:      interval xl xu
+ensures:       encloses_interval zl zu -x x=xl,xu tight=exact bounded_when=abs_le(-x,0) bounded_exactly
+min_precision: 1
+source:        neg_2 of each bound, exchanged (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   sign changes only, from the upper bound to the lower one, and neg_2 is exempt; encloses_interval states what comes out for every canonical interval
+
+(zl0, zl1) = neg_2(xu0, xu1)
+(zu0, zu1) = neg_2(xl0, xl1)

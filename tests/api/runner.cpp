@@ -604,6 +604,7 @@ const char* const internal[] = {
     "add_down_1", "add_up_1", "sub_down_1", "sub_up_1",
     "mul_dir_1",                             // Milestone 2: building blocks of the interval kernels
     "add_ball_2_2", "mul_ball_2_2", "add_down_2_2", "add_up_2_2", "sub_down_2_2", "sub_up_2_2", "mul_dir_2_2",
+    "mul_ext_2_2",
 };
 // Entry kernels (entry: yes in gen/kernels) that no public operation calls yet, and why.
 struct NotPublic {
@@ -632,6 +633,10 @@ const NotPublic not_public[] = {
     {"interval_sub_1", interval}, {"interval_mul_1", interval}, {"interval_add_2", interval},
     {"ball_lower_as_1", enclosure}, {"ball_upper_as_1", enclosure}, {"ball_lower_as_2", enclosure},
     {"ball_upper_as_2", enclosure}, {"ball_from_interval_2", enclosure}, {"ball_narrow_2_1", enclosure},
+    {"interval_neg_2", interval}, {"interval_sub_2", interval}, {"interval_make_2", interval},
+    {"interval_mul_2", interval}, {"interval_hull_1", interval}, {"interval_intersection_1", interval},
+    {"interval_hull_2", interval}, {"interval_intersection_2", interval}, {"interval_mid_rad_1", interval},
+    {"interval_to_ball_1", interval}, {"interval_split_1", interval}, {"ball_to_interval_1", enclosure},
 };
 
 constexpr int max_limbs = 16;

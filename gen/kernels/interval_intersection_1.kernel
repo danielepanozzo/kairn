@@ -1,0 +1,32 @@
+# The intersection of two intervals with one-limb bounds (milestone2.md, "One enclosure
+# interface"): the larger lower bound and the smaller upper bound, and the empty set when they
+# cross, exact. An empty operand, stored as (+inf, -inf), gives a lower bound +inf and an upper
+# bound -inf, which cross; the whole line gives the other operand. No bound is a NaN, so that
+# le(l, h) is false exactly when they cross. For every precision.
+kernel:        interval_intersection_1
+input:         stored xl
+input:         stored xu
+input:         stored yl
+input:         stored yu
+output:        zl
+output:        zu
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       interval_set zl zu intersection x=xl,xu y=yl,yu
+min_precision: 1
+source:        the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the bounds are selected among the bounds of the operands and the infinities of the empty set; interval_set states what comes out for every pair of canonical intervals
+
+ml = lt(xl, yl)
+l  = select(ml, yl, xl)
+mu = lt(yu, xu)
+h  = select(mu, yu, xu)
+ok = le(l, h)
+mi = neg(const inf)
+zl = select(ok, l, const inf)
+zu = select(ok, h, mi)

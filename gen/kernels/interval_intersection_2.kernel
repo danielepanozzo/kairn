@@ -1,0 +1,35 @@
+# The intersection of two intervals with 2-limb bounds (milestone2.md, "One enclosure
+# interface"): the listing of interval_intersection_1 on the comparison of two limbs, lt_2_2, each
+# bound selected limb by limb, and the empty set ((+inf, 0), (-inf, 0)) when the bounds cross.
+# Exact. For every precision.
+kernel:        interval_intersection_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+input:         yl = yl0 yl1
+input:         yu = yu0 yu1
+output:        zl = zl0 zl1
+output:        zu = zu0 zu1
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       interval_set zl zu intersection x=xl,xu y=yl,yu
+min_precision: 1
+source:        the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the bounds are selected among the bounds of the operands and the infinities of the empty set; interval_set states what comes out for every pair of canonical intervals
+
+ml  = lt_2_2(xl0, xl1, yl0, yl1)
+l0  = select(ml, yl0, xl0)
+l1  = select(ml, yl1, xl1)
+mu  = lt_2_2(yu0, yu1, xu0, xu1)
+h0  = select(mu, yu0, xu0)
+h1  = select(mu, yu1, xu1)
+ok  = le_2_2(l0, l1, h0, h1)
+mi  = neg(const inf)
+zl0 = select(ok, l0, const inf)
+zl1 = select(ok, l1, 0)
+zu0 = select(ok, h0, mi)
+zu1 = select(ok, h1, 0)

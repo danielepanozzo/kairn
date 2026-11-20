@@ -218,6 +218,16 @@ def selftest_case(k, kernels, f):
         a, b = inputs[at[lo]], inputs[at[hi]]
         if _exact(a) > _exact(b):
             inputs[at[lo]], inputs[at[hi]] = b, a
+    # The two intervals of an intersection overlap (otherwise the result would be the empty set):
+    # of their four bounds in order, the first and the third bound one, the second and the fourth
+    # the other.
+    for e in k.ensures:
+        if e['kind'] == 'interval_set' and e['set'] == 'intersection':
+            (x, bx), (y, by) = e['intervals'].items()
+            names = [bx['lower'], by['lower'], bx['upper'], by['upper']]
+            values = sorted((inputs[at[n]] for n in names), key=_exact)
+            for n, v in zip(names, values):
+                inputs[at[n]] = v
     machine = interp.Machine(kernels)
     out = machine.run(k.name, f, inputs)
     if interp.Machine(kernels, fused=False).run(k.name, f, inputs) != out:
@@ -231,8 +241,9 @@ def selftest_case(k, kernels, f):
 def nonfinite_case(k, kernels, f):
     """For a full kernel or a constructor (a kernel without a real-model statement): the operands
     of selftest_case with the first operand made non-finite, +infinity in binary64 and NaN in
-    binary32, in its canonical form ((inf, 0) or (NaN, NaN) for two limbs; for a ball, the whole
-    line or the empty set), and the outputs. None for any other kernel."""
+    binary32 (-infinity for an operand required not to be a NaN), in its canonical form ((inf, 0) or (NaN, NaN) for two limbs; for a ball, the whole
+    line or the empty set; for an interval, the whole line or the empty set, and for a set
+    operation of intervals every operand so), and the outputs. None for any other kernel."""
     if k.real_model:
         return None
     inputs, _ = selftest_case(k, kernels, f)
@@ -255,11 +266,19 @@ def nonfinite_case(k, kernels, f):
             inputs[j] = zero if inf else interp.NaN
         inputs[at[balls[first.name]][0]] = special
     elif first.name in intervals:           # the whole line (-inf, +inf), or the empty set (+inf, -inf)
-        upper = at[intervals[first.name]]
-        for j in limbs[1:] + upper[1:]:
+        # Of a set operation (the hull, the intersection), every operand: the hull with the empty set
+        # and the intersection with the whole line are the other operand, which is finite.
+        sets = any(e['kind'] == 'interval_set' for e in k.ensures)
+        for lower in (list(intervals) if sets else [first.name]):
+            limbs, upper = at[lower], at[intervals[lower]]
+            for j in limbs[1:] + upper[1:]:
+                inputs[j] = zero
+            inputs[limbs[0]] = (interp.INF, inf)
+            inputs[upper[0]] = (interp.INF, not inf)
+    elif ('not_nan', first.name) in k.requires:    # +infinity, or -infinity in place of a NaN
+        inputs[limbs[0]] = (interp.INF, not inf)
+        for j in limbs[1:]:
             inputs[j] = zero
-        inputs[limbs[0]] = (interp.INF, inf)
-        inputs[upper[0]] = (interp.INF, not inf)
     else:
         inputs[limbs[0]] = special
         for j in limbs[1:]:

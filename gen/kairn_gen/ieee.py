@@ -533,7 +533,8 @@ def _hyps_extended(k, t):
             lo, hi = t.ins[r[1]].limbs, t.ins[r[2]].limbs
             lines.append(f'  interval_{len(lo)} {" ".join(lo + hi)} ->')
         elif r[0] == 'not_nan':
-            lines.append(f'  ~ nan {r[1]} ->')
+            # A canonical value of several limbs is a NaN exactly when its leading limb is.
+            lines.append(f'  ~ nan {t.ins[r[1]].limbs[0]} ->')
         else:
             raise PrintError(f'kernel {k.name}: no extended reading of {r[0]}')
     return lines
@@ -791,6 +792,9 @@ def _interval_spec(k, kernels, e):
                       f'   range_upper {S} (XFin hi) ->\n   ' + ' /\\\n   '.join(inner) + ')')
         claims.append(f'({nonempty}\n   (range_lower {S} (XInf true) -> {_xv(zlo)} = XInf true) /\\\n'
                       f'   (range_upper {S} (XInf false) -> {_xv(zhi)} = XInf false))')
+    if e.get('zero_factor'):
+        zero = ' \\/\n   '.join('(' + ' /\\ '.join(f'zero {groups[x][i]}' for i in (0, n)) + ')' for x in names)
+        claims.append(f'({nonempty}\n   {zero} ->\n   ' + ' /\\ '.join(f'zero {v}' for v in zlo + zhi) + ')')
     conds = []
     for c in e['bounded_when']:
         limit = 'omega prec emax' if c.get('omega') else \
@@ -814,13 +818,19 @@ def _makes_interval_spec(k, kernels, e):
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
         [_let(k, kernels)]
-    zl, zu = _limbs(k, t.outs[e['lower']].limbs, e['lower'], (1,)), t.outs[e['upper']].limbs
-    lo, hi = e['from']['lower'], e['from']['upper']
-    nonempty = f'xnonempty (xval {lo}) (xval {hi})'
-    claims = [f'interval_1 {zl[0]} {zu[0]}',
-              f'({nonempty} -> xval {zl[0]} = xval {lo} /\\ xval {zu[0]} = xval {hi})',
-              f'(nan {lo} \\/ nan {hi} -> {zl[0]} = infinity prec emax true /\\ {zu[0]} = infinity prec emax false)',
-              f'(~ nan {lo} -> ~ nan {hi} -> ~ {nonempty} -> interval_empty_1 {zl[0]} {zu[0]})']
+    zl, zu = _limbs(k, t.outs[e['lower']].limbs, e['lower'], (1, 2)), t.outs[e['upper']].limbs
+    n = len(zl)
+    lo, hi = t.ins[e['from']['lower']].limbs, t.ins[e['from']['upper']].limbs
+    nonempty = f'xnonempty ({_xv(lo)}) ({_xv(hi)})'
+    z = ' '.join(zl + zu)
+    # For two limbs an infinite bound is followed by a zero: the second limbs of the whole line.
+    zeros = ''.join(f' /\\ zero {v}' for v in (zl[1:], zu[1:]) for v in v)
+    whole = (f'{zl[0]} = infinity prec emax true /\\ {zu[0]} = infinity prec emax false' if n == 1 else
+             f'{zl[0]} = infinity prec emax true /\\ {zu[0]} = infinity prec emax false{zeros}')
+    claims = [f'interval_{n} {z}',
+              f'({nonempty} -> {_xv(zl)} = {_xv(lo)} /\\ {_xv(zu)} = {_xv(hi)})',
+              f'(nan {lo[0]} \\/ nan {hi[0]} -> {whole})',
+              f'(~ nan {lo[0]} -> ~ nan {hi[0]} -> ~ {nonempty} -> interval_empty_{n} {z})']
     lines.append('  ' + ' /\\\n  '.join(claims) + '.')
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
@@ -850,6 +860,132 @@ def _makes_ball_interval_spec(k, kernels, e):
     claims += [f'({nonempty} -> ~ (finite {lo} /\\ finite {hi}) -> ball_whole_{n} {out})',
                f'(nan {lo} \\/ nan {hi} -> ball_whole_{n} {out})',
                f'(~ nan {lo} -> ~ nan {hi} -> ~ {nonempty} -> ball_empty_{n} {out})']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _interval_set_spec(k, kernels, e):
+    """The hull or the intersection of two intervals (Milestone 2, "One enclosure interface"):
+    canonical; empty exactly when the set operation's rule says (union: when both operands are;
+    intersection: when no real number is a member of both); the members of the set are members of
+    the result; and a nonempty result has the bounds of the set, as extended real numbers."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    zlo, zhi, n, groups = _interval_bounds(k, e, t)
+    z = ' '.join(zlo + zhi)
+    names = list(groups)
+    ins = [f'in_interval_{n} {" ".join(groups[x])} z' for x in names]
+    union = e['set'] == 'union'
+    S = '(fun z : R => ' + (' \\/ ' if union else ' /\\ ').join(ins) + ')'
+    both = ' /\\ '.join(ins)
+    empty = (' /\\ '.join(f'interval_empty_{n} {" ".join(groups[x])}' for x in names) if union else
+             f'~ (exists z : R, {both})')
+    claims = [f'interval_{n} {z}',
+              f'(interval_empty_{n} {z} <-> {empty})',
+              f'(forall z : R, {_strip(S)[len("fun z : R => "):]} -> in_interval_{n} {z} z)',
+              f'(~ interval_empty_{n} {z} ->\n   forall lo hi : xreal,\n   range_lower {S} lo ->\n'
+              f'   range_upper {S} hi ->\n   {_xv(zlo)} = lo /\\ {_xv(zhi)} = hi)']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _ball_of_interval_spec(k, kernels, e):
+    """A ball made from an interval (Milestone 2, "Midpoint, radius and the conversions"): for a
+    bounded interval, a finite center between the bounds and within rel |mid| + abs of the midpoint
+    mid, a finite radius with which it contains the interval, and with smallest_radius the smallest
+    such radius of the format, RU of the larger distance to a bound; the special values of IEEE
+    1788's mid and rad (ieee1788) or of a canonical ball (ball) for the other intervals."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    c, r = _limbs(k, t.outs[e['center']].limbs, e['center'], (1, 2)), e['radius']
+    lo, hi = t.ins[e['from']['lower']].limbs, t.ins[e['from']['upper']].limbs
+    n = len(lo)
+    x = ' '.join(lo + hi)
+    vl, vh, vc = _val_sum(lo), _val_sum(hi), _val_sum(c)
+    mid = f'({vl} + {vh}) / 2'
+    rel = rocq.claim_constant_term(e['rel'], kernels, EMIN)
+    absolute = rocq.claim_constant_term(e['abs'], kernels, EMIN)
+    bounded = [f'{vl} <= {vc} <= {vh}',
+               f'Rabs ({vc} - {mid}) <= {rel} * Rabs ({mid}) + {absolute}',
+               f'(forall z : R, in_interval_{n} {x} z -> Rabs (z - {vc}) <= val {r})']
+    if e.get('smallest_radius'):
+        bounded.append(f'val {r} = RU {EMIN} prec (Rmax ({vc} - {vl}) ({vh} - {vc}))')
+    finite = ' /\\ '.join(f'finite {v}' for v in list(c) + [r])
+    claims = []
+    if e['special'] == 'ball':
+        b = _ball_args(c, r)
+        claims += [f'ball_{len(c)} {b}',
+                   f'(ball_empty_{len(c)} {b} <-> interval_empty_{n} {x})',
+                   f'(interval_nonempty_{n} {x} -> ~ interval_bounded_{n} {x} -> ball_whole_{len(c)} {b})',
+                   f'(interval_bounded_{n} {x} ->\n   ball_finite_{len(c)} {b} /\\\n   ' +
+                   ' /\\\n   '.join(bounded) + ')']
+    else:
+        zero = ' /\\ '.join(f'zero {v}' for v in c)
+        inf = f'{r} = infinity prec emax false'
+        claims += [f'(interval_empty_{n} {x} -> ' + ' /\\ '.join(f'nan {v}' for v in list(c) + [r]) + ')',
+                   f'({_xv(lo)} = XInf true -> {_xv(hi)} = XInf false -> {zero} /\\ {inf})',
+                   f'(finite {lo[0]} -> {_xv(hi)} = XInf false -> {_xv(c)} = XFin (omega prec emax) /\\ {inf})',
+                   f'({_xv(lo)} = XInf true -> finite {hi[0]} -> {_xv(c)} = XFin (- omega prec emax) /\\ {inf})',
+                   f'(interval_bounded_{n} {x} ->\n   {finite} /\\\n   ' + ' /\\\n   '.join(bounded) + ')']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _interval_of_ball_spec(k, kernels, e):
+    """An interval that encloses a ball (Milestone 2, "Ball to interval"): canonical; empty
+    exactly when the ball is; every value of the set, the ball name ranging over the members of its
+    ball, is a member; and with tight=rounded, for a ball that is not empty, the bounds of the set
+    rounded down and up in the format with overflow (stepped at most `steps` times beyond)."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    zl, zu = _limbs(k, t.outs[e['lower']].limbs, e['lower'], (1,)), _limbs(k, t.outs[e['upper']].limbs, e['upper'], (1,))
+    z = ' '.join(zl + zu)
+    groups = {b: t.ins[cr['center']].limbs + (cr['radius'],) for b, cr in e['balls'].items()}
+
+    def member(name):
+        return f'in_ball_{len(groups[name]) - 1} {" ".join(groups[name])}'
+    S = _set_of(k, e, groups, member)
+    names = list(groups)
+    empty = ' \\/ '.join(f'ball_empty_{len(g) - 1} {" ".join(g)}' for g in groups.values())
+    target = rocq._term(expr.parse(e['set']), lambda x: x)
+    claims = [f'interval_1 {z}', f'(interval_empty_1 {z} <-> {empty})',
+              f'(forall {" ".join(names)} : R, ' + ' '.join(f'{member(x)} {x} ->' for x in names) +
+              f'\n   in_interval_1 {z} {target})']
+    down, up = 'xrd prec emax lo', 'xru prec emax hi'
+    steps = e['tight'].get('steps', 0)
+    if steps:
+        ld, hu = down, up
+        for _ in range(steps):
+            ld, hu = f'xpred prec emax ({ld})', f'xsucc prec emax ({hu})'
+        body = (f'xle ({ld}) (xval {zl[0]}) = true /\\ xle (xval {zl[0]}) ({down}) = true /\\\n'
+                f'   xle ({up}) (xval {zu[0]}) = true /\\ xle (xval {zu[0]}) ({hu}) = true')
+    else:
+        body = f'xval {zl[0]} = {down} /\\ xval {zu[0]} = {up}'
+    claims.append(f'(~ ({empty}) ->\n   forall lo hi : xreal,\n   range_lower {S} lo ->\n   range_upper {S} hi ->\n'
+                  f'   {body})')
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _splits_spec(k, kernels, e):
+    """Two intervals that together are the operand (Milestone 2, the split of an interval): both
+    canonical; both empty when the operand is; otherwise both nonempty, the first from the
+    operand's lower bound to a point, the second from that point to the operand's upper bound."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    lo, hi = t.ins[e['from']['lower']].limbs, t.ins[e['from']['upper']].limbs
+    n = len(lo)
+    x = ' '.join(lo + hi)
+    (al, au), (bl, bu) = ((t.outs[q['lower']].limbs, t.outs[q['upper']].limbs) for q in e['parts'])
+    a, b = ' '.join(al + au), ' '.join(bl + bu)
+    claims = [f'interval_{n} {a}', f'interval_{n} {b}',
+              f'(interval_empty_{n} {x} -> interval_empty_{n} {a} /\\ interval_empty_{n} {b})',
+              f'(interval_nonempty_{n} {x} ->\n   interval_nonempty_{n} {a} /\\ interval_nonempty_{n} {b} /\\\n'
+              f'   {_xv(al)} = {_xv(lo)} /\\ {_xv(bu)} = {_xv(hi)} /\\ {_xv(au)} = {_xv(bl)})']
     lines.append('  ' + ' /\\\n  '.join(claims) + '.')
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
@@ -906,11 +1042,20 @@ def _extended_claim(e, k, t):
     zero_factor (Milestone 2, mul_dir_1), a zero operand gives zero, and the claim is read as
     without it for the others: 0 times infinity is 0, the product of interval arithmetic."""
     if e.get('zero_factor'):
-        a, b = (x[1] for x in expr.parse(k.value)[1:])
+        # An operand is zero when its leading limb is (it is canonical), an output when every limb is.
+        a, b = (t.ins[x[1]].limbs[0] for x in expr.parse(k.value)[1:])
+        zo = ' /\\ '.join(f'zero {v}' for v in t.outs[e['of']].limbs)
         inner = _extended_claim({x: y for x, y in e.items() if x != 'zero_factor'}, k, t)
-        return (f'(zero {a} \\/ zero {b} -> zero {e["of"]}) /\\\n'
+        return (f'(zero {a} \\/ zero {b} -> {zo}) /\\\n'
                 f'  (~ (zero {a} \\/ zero {b}) ->\n   {inner})')
     kind = e['kind']
+    if kind == 'normalized':
+        # Canonical in every case; normalized when every operand and the output are finite.
+        out = _limbs(k, t.outs[e['of']].limbs, e['of'])
+        return (f'canonical_2 {" ".join(out)} /\\\n  ({_operands_finite(k)} -> '
+                + ' -> '.join(f'finite {v}' for v in out) + f' ->\n   {_normalized_ieee(out, k)})')
+    if kind == 'outward':
+        return _outward_extended(e, k, t)
     if kind == 'set_bound':
         return _set_bound_claim(e, k, t)
     if kind == 'error':
@@ -962,9 +1107,31 @@ def _extended_claim(e, k, t):
     raise PrintError(f'kernel {k.name}: no IEEE-model statement for the claim {kind}')
 
 
+def _outward_extended(e, k, t):
+    """outward in the extended domain (Milestone 2, mul_ext_2_2): the output is not a NaN; an
+    infinite operand gives the value of IEEE 754 on the operands; finite operands give an output on
+    its side of the value as an extended real number (an infinity on that side is one), and a finite
+    output the claim of the finite domain: within rel |value| + abs of it, and equal to it under the
+    conditions of exact_when."""
+    out = _limbs(k, t.outs[e['of']].limbs, e['of'], (1, 2))
+    below = e['side'] == 'below'
+    xv, x = _xv(out), t.xterm(k.value)
+    ops = _operands_finite(k)
+    v = t.value()
+    rel = rocq.claim_constant_term(e['rel'], t.kernels, EMIN)
+    absolute = rocq.claim_constant_term(e['abs'], t.kernels, EMIN)
+    side = f'xle ({xv}) {x} = true' if below else f'xle {x} ({xv}) = true'
+    near = f'Rabs ({_val_sum(out)} - {v}) <= {rel} * Rabs {v} + {absolute}'
+    if 'exact_when' in e:
+        near += f' /\\\n    ({t.exact_condition(e["exact_when"])} -> {_val_sum(out)} = {v})'
+    return (f'~ nan {out[0]} /\\\n  (~ ({ops}) -> {xv} = {x}) /\\\n'
+            f'  ({ops} ->\n   {side} /\\\n   (finite {out[0]} ->\n    {near}))')
+
+
 def _no_fix_up_spec(k, kernels):
     """A kernel of the extended domain that needs no fix-up: its claims over extended reals."""
     t = _Terms(k)
+    t.kernels = kernels
     lines = _head(k, _used_nans(k, kernels)) + _hyps_extended(k, t) + [_let(k, kernels)]
     lines.append('  ' + ' /\\\n  '.join(_extended_claim(e, k, t) for e in k.ensures) + '.')
     return _statement(statement_names(k)[0], _comment(k), lines)
@@ -1004,6 +1171,12 @@ def kernel_statements(k, kernels):
         enc = [e for e in k.ensures if e['kind'] == 'encloses']
         if enc:
             return [_ball_spec(k, kernels, enc[0])]
+        for kind, printer in (('interval_set', _interval_set_spec), ('ball_of_interval', _ball_of_interval_spec),
+                              ('interval_of_ball', _interval_of_ball_spec), ('splits', _splits_spec)):
+            if kind in kinds:
+                if len(k.ensures) != 1:
+                    raise PrintError(f'kernel {k.name}: {kind} goes with no other claim')
+                return [printer(k, kernels, k.ensures[0])]
         intervals = [e for e in k.ensures if e['kind'] == 'encloses_interval']
         if intervals:
             if len(k.ensures) != 1:

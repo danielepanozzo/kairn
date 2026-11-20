@@ -1,0 +1,30 @@
+# An interval with one-limb bounds split at its midpoint (milestone2.md, "One enclosure
+# interface", the row of split() and "The empty set and the whole line"): [xl, m] and [m, xu], m the
+# midpoint of interval_mid_rad_1, which is in [xl, xu]; their union is the interval. The whole line
+# gives [-inf, 0] and [0, +inf], a half-line [l, +inf] gives [l, Omega] and [Omega, +inf], and the
+# empty set the empty set twice, told by its radius, a NaN.
+kernel:        interval_split_1
+input:         stored xl
+input:         stored xu
+output:        al
+output:        au
+output:        bl
+output:        bu
+requires:      interval xl xu
+ensures:       splits al au bl bu from=xl,xu
+min_precision: 2
+source:        the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the midpoint is selected after the test of the radius that tells the empty set; splits states what comes out for every canonical interval
+
+(m, r) = interval_mid_rad_1(xl, xu)
+ne     = eq(r, r)
+mi     = neg(const inf)
+al     = copy(xl)
+au     = select(ne, m, mi)
+bl     = select(ne, m, const inf)
+bu     = copy(xu)

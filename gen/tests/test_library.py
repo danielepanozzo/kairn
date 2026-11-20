@@ -227,6 +227,10 @@ class Selftest(unittest.TestCase):
                     # An interval operand has no NaN bound: the whole line (-inf, +inf) in double and
                     # the empty set (+inf, -inf) in float, both with a bound +inf.
                     special = (interp.INF, False)
+                if ('not_nan', k.inputs[0].name) in k.requires:
+                    # An operand required not to be a NaN (stage B1, mul_ext_2_2): +inf in double,
+                    # -inf in float.
+                    special = (interp.INF, t != 'double')
                 self.assertIn(special, vals, fn)
                 self.assertTrue(any(not isinstance(v, bool) and v[0] != interp.NUM for v in got), fn)
                 nonfinite.add(name)
@@ -262,7 +266,8 @@ class Selftest(unittest.TestCase):
                                                                  all(interp.le(a, b) for a, b in zip(lo[1:], hi[1:]))),
                                     (fn, r))
                 elif r[0] == 'not_nan':
-                    self.assertNotEqual(env[r[1]], interp.NaN, (fn, r))
+                    # Of one limb, or the leading limb of a canonical value of two (stage B1).
+                    self.assertNotEqual(env[g[r[1]].limbs[0]], interp.NaN, (fn, r))
                 else:
                     self.fail((fn, r))
             # Something to check: no case where every limb output is zero.

@@ -59,15 +59,21 @@ ENSURES_FINITE = ('normalized', 'leading_rounded', 'error', 'rounded', 'upper', 
                   'neighbor', 'bound', 'outward')
 ENSURES_EXTENDED = ('normalized', 'error', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
                     'represents', 'makes_ball', 'neighbor', 'bound', 'makes_interval', 'encloses_interval',
-                    'set_bound')
+                    'set_bound', 'outward', 'interval_set', 'ball_of_interval', 'interval_of_ball', 'splits')
 # Entries that say something about the value: a kernel needs at least one.
 ABOUT_THE_VALUE = ('error', 'leading_rounded', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
                    'represents', 'makes_ball', 'neighbor', 'bound', 'outward', 'makes_interval',
-                   'encloses_interval', 'set_bound')
+                   'encloses_interval', 'set_bound', 'interval_set', 'ball_of_interval', 'interval_of_ball',
+                   'splits')
 # Entries that name their own set or make a value from the inputs: a kernel whose every entry is one
-# of them has no value (Milestone 2: the interval kernels, the one-limb bounds of a ball).
-OWN_SET = ('makes_ball', 'makes_interval', 'encloses_interval', 'set_bound')
+# of them has no value (Milestone 2: the interval kernels, the one-limb bounds of a ball, and the
+# set operations, the conversions and the split of the enclosure interface).
+OWN_SET = ('makes_ball', 'makes_interval', 'encloses_interval', 'set_bound', 'interval_set', 'ball_of_interval',
+           'interval_of_ball', 'splits')
 SIDES_OUTWARD = ('below', 'above')
+# The set operations of interval_set, and the special values of ball_of_interval (Milestone 2).
+SET_OPERATIONS = ('union', 'intersection')
+BALL_SPECIALS = ('ieee1788', 'ball')
 
 
 class RuleError(Exception):
@@ -587,15 +593,19 @@ def claims(k, kernels):
                     break
 
     def zero_factor(e):
-        """zero_factor: the value is the product of two one-limb inputs, and the domain extended."""
+        """zero_factor: the value is the product of two inputs, each of one limb or required to be
+        canonical (so that it is zero exactly when its leading limb is), and the domain extended."""
         if not e.get('zero_factor'):
             return
         try:
             tree = expr.parse(k.value or '')
         except expr.ExprError:
             return
-        if not k.extended or tree[0] != 'mul' or any(t[0] != 'name' or t[1] not in one_limb_ins for t in tree[1:]):
-            err(f'{e["kind"]} zero_factor: the value is the product of two one-limb inputs, in the extended domain')
+        if not k.extended or tree[0] != 'mul' or any(
+                t[0] != 'name' or (t[1] not in one_limb_ins and ('canonical', t[1]) not in k.requires)
+                for t in tree[1:]):
+            err(f'{e["kind"]} zero_factor: the value is the product of two inputs, each of one limb or required to '
+                'be canonical, in the extended domain')
 
     def claim_constants(e, keys):
         """The constants of a claim (rel and abs): the language of up(EXPR), unit(K) and tiny(K) of a
@@ -679,8 +689,9 @@ def claims(k, kernels):
                                            len(ins[names[0]].limbs) not in (1, 2) or names[0] == names[1]):
                 err(f'requires {" ".join(req)!r}: the bounds of an interval are two inputs of one limb each, or '
                     'of two each')
-            elif req[0] == 'not_nan' and names[0] not in one_limb_ins:
-                err(f'requires {" ".join(req)!r}: not_nan is about a one-limb input')
+            elif req[0] == 'not_nan' and names[0] not in one_limb_ins and ('canonical', names[0]) not in k.requires:
+                err(f'requires {" ".join(req)!r}: not_nan is about a one-limb input, or a multi-limb input required '
+                    'to be canonical (whose leading limb is then not a NaN)')
             continue
         err(f'requires {" ".join(req)!r}: the vocabulary is "normalized INPUT", "abs_ge INPUT INPUT", '
             '"power_of_two INPUT", "nonneg INPUT", and in the extended domain "canonical INPUT", '
@@ -731,6 +742,18 @@ def claims(k, kernels):
                 err(f'outward side {e["side"]!r}: it is {" or ".join(SIDES_OUTWARD)}')
             claim_constants(e, ('rel', 'abs'))
             exact_when(e, zero=True)
+            zero_factor(e)
+            if k.extended and any(('not_nan', g) not in k.requires for g in limb_ins if len(ins[g].limbs) > 1):
+                # The extended reading (mul_ext_2_2): the operands are bounds of intervals, never NaN.
+                err('outward in the extended domain: its operands of several limbs are required not_nan')
+        elif kind == 'interval_set':
+            _interval_set(e, k, ins, outs, err)
+        elif kind == 'ball_of_interval':
+            _ball_of_interval(e, k, ins, outs, err, claim_constants)
+        elif kind == 'interval_of_ball':
+            _interval_of_ball(e, k, ins, outs, parsed, err)
+        elif kind == 'splits':
+            _splits(e, k, ins, outs, err)
         elif kind == 'makes_interval':
             _makes_interval(e, k, ins, outs, err)
         elif kind == 'encloses_interval':
@@ -984,6 +1007,95 @@ def _encloses_interval(e, k, ins, outs, parsed, err, claim_constants, exact_when
                 'with the set of the claim')
     if e.get('bounded_exactly') and not e['bounded_when']:
         err('bounded_exactly needs a condition of bounded_when')
+    if e.get('zero_factor') and (tree is None or tree[0] != 'mul' or any(x[0] != 'name' for x in tree[1:])):
+        err('encloses_interval zero_factor: the set is the product of two intervals')
+
+
+def _interval_bounds(name, outs, err, what):
+    """The number of limbs of an output group that is a bound of an interval (1 or 2), or None."""
+    g = outs.get(name)
+    if g is None or g.kind != ir.LIMB or len(g.limbs) not in (1, 2):
+        err(f'{what} {name!r}: not a limb output of one limb or two')
+        return None
+    return len(g.limbs)
+
+
+def _interval_operand(b, k, ins, err, what):
+    """The number of limbs of an interval operand {lower, upper} of an `interval` requirement, or None."""
+    if ('interval', b['lower'], b['upper']) not in k.requires:
+        err(f'{what}: its operand is required to be an interval: "requires: interval {b["lower"]} {b["upper"]}"')
+        return None
+    return len(ins[b['lower']].limbs)
+
+
+def _interval_set(e, k, ins, outs, err):
+    """The hull or the intersection of two intervals (Milestone 2): bounds of the result of as many
+    limbs as those of the two interval operands, and a set operation of the vocabulary."""
+    if e['set'] not in SET_OPERATIONS:
+        err(f'interval_set {e["set"]!r}: the set operation is {" or ".join(SET_OPERATIONS)}')
+    n = {_interval_bounds(e[side], outs, err, f'interval_set {side}') for side in ('lower', 'upper')}
+    if len(e['intervals']) != 2:
+        err('interval_set names two intervals')
+    taken = set()
+    for name, b in e['intervals'].items():
+        if name in ins or name in outs or not ir.VALUE_NAME.match(name):
+            err(f'interval name {name!r} is the name of a group, or not a value name')
+        n.add(_interval_operand(b, k, ins, err, f'interval {name}'))
+        if taken & {b['lower'], b['upper']}:
+            err(f'interval {name}: a bound belongs to two intervals')
+        taken |= {b['lower'], b['upper']}
+    if None not in n and len(n) != 1:
+        err('interval_set: the bounds of the result and of the operands have as many limbs each')
+
+
+def _ball_of_interval(e, k, ins, outs, err, claim_constants):
+    """A ball made from an interval (Milestone 2: the midpoint and radius of an interval, and its
+    conversion to a ball): a center of one or two limbs and a one-limb radius, from the bounds of an
+    `interval` requirement, the special values of IEEE 1788 or of a canonical ball, and the constants
+    of the center's distance to the midpoint."""
+    c, r = outs.get(e['center']), outs.get(e['radius'])
+    if c is None or c.kind != ir.LIMB or len(c.limbs) not in (1, 2):
+        err(f'ball_of_interval center {e["center"]!r}: not a limb output of one limb or two')
+    if r is None or r.kind != ir.LIMB or len(r.limbs) != 1:
+        err(f'ball_of_interval radius {e["radius"]!r}: not a one-limb limb output')
+    n = _interval_operand(e['from'], k, ins, err, 'ball_of_interval from')
+    if n is not None and c is not None and n != len(c.limbs):
+        err('ball_of_interval: the center has as many limbs as the bounds of the interval')
+    if e['special'] not in BALL_SPECIALS:
+        err(f'ball_of_interval special {e["special"]!r}: it is {" or ".join(BALL_SPECIALS)}')
+    claim_constants(e, ('rel', 'abs'))
+
+
+def _interval_of_ball(e, k, ins, outs, parsed, err):
+    """An interval that encloses a ball (Milestone 2, the conversion of a ball to an interval):
+    bounds of one limb, one ball name of a `ball` requirement, its set an expression of the ball
+    name, the tightness rounded."""
+    for side in ('lower', 'upper'):
+        if _interval_bounds(e[side], outs, err, f'interval_of_ball {side}') not in (None, 1):
+            err('interval_of_ball: the bounds of the result have one limb (two limbs are a later stage)')
+    if len(e['balls']) != 1:
+        err('interval_of_ball names one ball')
+    for b, cr in e['balls'].items():
+        if b in ins or b in outs or not ir.VALUE_NAME.match(b):
+            err(f'ball name {b!r} is the name of a group, or not a value name')
+        if ('ball', cr['center'], cr['radius']) not in k.requires:
+            err(f'ball {b}: its operand is required to be a ball: "requires: ball {cr["center"]} {cr["radius"]}"')
+    parsed(e['set'], set(e['balls']), 'interval_of_ball set', VALUE_TREES)
+    t = e['tight']
+    if t['kind'] != 'rounded' or set(t) - {'kind', 'steps'}:
+        err('interval_of_ball: tight is rounded, with optional steps')
+
+
+def _splits(e, k, ins, outs, err):
+    """Two intervals that together are an interval operand (Milestone 2, the split of an interval):
+    four bounds of as many limbs as those of the operand, an `interval` requirement."""
+    n = {_interval_bounds(p[side], outs, err, f'splits {side}') for p in e['parts'] for side in ('lower', 'upper')}
+    names = [p[side] for p in e['parts'] for side in ('lower', 'upper')]
+    if len(set(names)) != 4:
+        err('splits: the four bounds of the parts are four outputs')
+    n.add(_interval_operand(e['from'], k, ins, err, 'splits from'))
+    if None not in n and len(n) != 1:
+        err('splits: the bounds of the parts and of the operand have as many limbs each')
 
 
 def _only(tree, allowed):

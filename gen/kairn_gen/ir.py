@@ -49,7 +49,18 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       on that side of the value, within rel |value| + abs; EXPR
                                       may name a constant up(EXPR) as the format rounds it
     ensures:       bound d below steps=1 zero_factor
-                                      zero_factor: a zero operand gives zero (0 times inf is 0)
+                                      zero_factor: a zero operand gives zero (0 times inf is 0);
+                                      also on outward (extended domain: mul_ext_2_2) and as the
+                                      last word of encloses_interval (an operand [0, 0] gives [0, 0])
+    ensures:       interval_set zl zu union x=xl,xu y=yl,yu
+                                      the hull (union) or the intersection of two intervals, exact
+    ensures:       ball_of_interval m r from=xl,xu special=ieee1788 rel=u abs=eta [smallest_radius]
+                                      a ball made from an interval: special is ieee1788 (the mid and
+                                      rad of IEEE 1788) or ball (a canonical ball)
+    ensures:       interval_of_ball zl zu x x=c,r tight=rounded
+                                      an interval that encloses a ball
+    ensures:       splits al au bl bu from=xl,xu
+                                      two intervals that together are the interval split
     min_precision: 3                  optional
     theorem:       proofs/theories/Add22.v add_2_2_correct
     source:        free text
@@ -77,6 +88,8 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       and why (rule R3)
     ce_variant:    KERNEL             optional: its constant-evaluation variant
     cone_exempt:   free text          optional: why rule 4 cannot hold, and what stands in for it
+    ordinary_inline: free text        optional: the C++ is an ordinary inline function, not forced
+                                      inline though it has at most two limbs, and why
     unused:        x1 free text       optional: an input the computation does not need, and why
 
     sh = add(x0, y0)                  one operation per line
@@ -237,6 +250,9 @@ class Kernel:
     status: str = None
     ce_variant: str = None
     cone_exempt: str = None
+    # The C++ function is an ordinary inline function, not forced inline (milestone2.md, "Inlining
+    # and compile time"): why, or None for the rule (forced inline up to two limbs).
+    ordinary_inline: str = None
     unused: dict = field(default_factory=dict)     # input value -> why the computation ignores it
     # The non-finite layer (architecture.md, "Claims of the non-finite layer").
     domain: str = None                             # None (finite) or 'extended', as written
@@ -308,6 +324,12 @@ class Kernel:
     def limbs(self):
         return max(len(g.limbs) for g in self.inputs + self.outputs)
 
+    @property
+    def forced_inline(self):
+        """Whether the C++ function is forced inline: a kernel of at most two limbs, unless it says
+        `ordinary_inline:`."""
+        return self.limbs <= 2 and self.ordinary_inline is None
+
 
 # The IEEE-model statements a kernel of the finite domain may ask for (ieee.py, `ieee:`).
 IEEE_STATEMENTS = ('bridge', 'spec')
@@ -315,7 +337,8 @@ IEEE_STATEMENTS = ('bridge', 'spec')
 # The claims that only the non-finite layer has: a kernel that claims nothing else has no
 # real-model statement (Kernel.real_model). The interval kinds of Milestone 2 are among them: an
 # interval has infinite bounds as ordinary values, so its kernels are stated in the IEEE model only.
-NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball', 'makes_interval', 'encloses_interval', 'set_bound')
+NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball', 'makes_interval', 'encloses_interval', 'set_bound',
+                   'interval_set', 'ball_of_interval', 'interval_of_ball', 'splits')
 
 INPUT_CLASSES = ('stored', 'supplied')   # rule R3: where an entry kernel's input comes from
 
@@ -469,9 +492,10 @@ def _ensures(words, where):
             raise DescriptionError(f'{where}: expected "makes_interval LOWER UPPER from=LOWER,UPPER"')
         return {'kind': kind, 'lower': words[1], 'upper': words[2],
                 'from': {'lower': m.group(1), 'upper': m.group(2)}}
-    if kind in ('rounded', 'bound') and words[-1] == 'zero_factor' and len(words) > 3:
-        # The extended reading of a product with a zero factor: zero (Milestone 2, mul_dir_1).
-        # Written only when it is claimed, after the entry's other fields.
+    if kind in ('rounded', 'bound', 'outward') and words[-1] == 'zero_factor' and len(words) > 3:
+        # The extended reading of a product with a zero factor: zero (Milestone 2, mul_dir_1, and
+        # the bounds of two limbs of mul_ext_2_2). Written only when it is claimed, after the entry's
+        # other fields.
         entry = _ensures(words[:-1], where)
         entry['zero_factor'] = True
         return entry
@@ -514,7 +538,7 @@ def _ensures(words, where):
                 if key in opts:
                     raise DescriptionError(f'{where}: {key} given twice')
                 opts[key] = val
-            elif w == 'bounded_exactly' and kind == 'encloses_interval' and w not in opts:
+            elif w in ('bounded_exactly', 'zero_factor') and kind == 'encloses_interval' and w not in opts:
                 opts[w] = True
             else:
                 names.append(w)
@@ -539,7 +563,47 @@ def _ensures(words, where):
         entry['bounded_when'] = _bounded_when(opts.get('bounded_when', ''), where)
         if opts.get('bounded_exactly'):
             entry['bounded_exactly'] = True
+        if opts.get('zero_factor'):
+            # A nonempty operand [0, 0] gives [0, 0] (interval_mul_2): only when it is claimed.
+            entry['zero_factor'] = True
         return entry
+    if kind == 'interval_set' and len(words) == 6:
+        # The hull (union) or the intersection of two intervals (Milestone 2): exact.
+        return {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
+                'intervals': _pairs(words[4:], where, 'interval', ('lower', 'upper'))}
+    if kind == 'ball_of_interval' and len(words) >= 4:
+        # ball_of_interval CENTER RADIUS from=LOWER,UPPER special=S rel=EXPR abs=EXPR [smallest_radius]
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
+        if not m:
+            raise DescriptionError(f'{where}: expected "ball_of_interval CENTER RADIUS from=LOWER,UPPER special=... '
+                                   'rel=EXPR abs=EXPR [smallest_radius]"')
+        entry = {'kind': kind, 'center': words[1], 'radius': words[2],
+                 'from': {'lower': m.group(1), 'upper': m.group(2)}, 'special': None, 'rel': None, 'abs': None}
+        for w in words[4:]:
+            key, eq, val = w.partition('=')
+            if key in ('special', 'rel', 'abs') and eq and val and entry[key] is None:
+                entry[key] = val
+            elif w == 'smallest_radius' and w not in entry:
+                entry[w] = True
+            else:
+                raise DescriptionError(f'{where}: bad or repeated field {w!r} in ball_of_interval entry')
+        if None in (entry['special'], entry['rel'], entry['abs']):
+            raise DescriptionError(f'{where}: a ball_of_interval entry needs special=, rel= and abs=')
+        if 'smallest_radius' in entry:
+            entry['smallest_radius'] = entry.pop('smallest_radius')     # last, after the constants
+        return entry
+    if kind == 'interval_of_ball' and len(words) == 6 and words[5].startswith('tight='):
+        # interval_of_ball LOWER UPPER SET NAME=CENTER,RADIUS tight=...: an interval that encloses a ball.
+        return {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
+                'balls': _pairs(words[4:5], where, 'ball', ('center', 'radius')),
+                'tight': _tight(words[5][len('tight='):], where)}
+    if kind == 'splits' and len(words) == 6:
+        # splits AL AU BL BU from=LOWER,UPPER: two intervals that together are the operand.
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[5])
+        if not m:
+            raise DescriptionError(f'{where}: expected "splits AL AU BL BU from=LOWER,UPPER"')
+        return {'kind': kind, 'parts': [{'lower': words[1], 'upper': words[2]}, {'lower': words[3], 'upper': words[4]}],
+                'from': {'lower': m.group(1), 'upper': m.group(2)}}
     if kind == 'predicate' and len(words) == 5:
         return {'kind': kind, 'of': words[1], 'rel': words[2], 'args': words[3:5]}
     if kind == 'encloses' and len(words) >= 4:
@@ -630,7 +694,7 @@ def parse_kernel(text, path):
     k = Kernel(name=None, path=path)
     single = {'kernel', 'value', 'min_precision', 'theorem', 'source', 'license', 'status',
               'ce_variant', 'cone_exempt', 'domain', 'ieee_status', 'ieee_theorem', 'entry', 'ieee_only',
-              'ieee', 'ieee_finite', 'ieee_finite_result'}
+              'ieee', 'ieee_finite', 'ieee_finite_result', 'ordinary_inline'}
     seen = set()
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split('#', 1)[0].strip()
@@ -675,6 +739,10 @@ def parse_kernel(text, path):
             setattr(k, key, tuple(parts))
         elif key in ('source', 'license', 'status', 'ce_variant', 'cone_exempt', 'domain', 'ieee_status'):
             setattr(k, key, val)
+        elif key == 'ordinary_inline':
+            if not val:
+                raise DescriptionError(f'{where}: expected "ordinary_inline: REASON"')
+            k.ordinary_inline = val
         elif key == 'ieee':
             words = val.split()
             if not words or any(w not in IEEE_STATEMENTS for w in words) or len(set(words)) < len(words):
