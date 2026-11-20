@@ -562,12 +562,12 @@ class FoldClaims(unittest.TestCase):
                 self.assertEqual(f['packed_lanes'], {'binary64': {'avx2': 4, 'neon': 2},
                                                      'binary32': {'avx2': 8, 'neon': 4}})
                 self.assertIn({'kind': 'finite_or_nan', 'of': f['outputs'][0]['name'], 'flag': 'flag'}, f['ensures'])
-                self.assertEqual(f['theorems'], {'sequential': None, 'lanes': None})
-                self.assertEqual(f['status'], 'unverified')
                 uppers = [e for e in f['ensures'] if e['kind'] == 'upper']
                 if uppers:
                     # A fold of maxima: one upper entry over the largest value, the result of one
-                    # limb, no fold_error and no constants.
+                    # limb, no fold_error and no constants; unverified.
+                    self.assertEqual(f['theorems'], {'sequential': None, 'lanes': None})
+                    self.assertEqual(f['status'], 'unverified')
                     self.assertEqual(f['ensures'], [{'kind': 'upper', 'of': 'r', 'over': 'max',
                                                      'steps': f['arrays'][0]['limbs'] - 1},
                                                     {'kind': 'finite_or_nan', 'of': 'r', 'flag': 'flag'}])
