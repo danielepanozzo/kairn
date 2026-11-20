@@ -12,7 +12,11 @@ $$p + e \approx a b.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`mul_down_1`](mul_down_1.md), [`mul_up_1`](mul_up_1.md), [`mul_2_2`](mul_2_2.md), [`mul_2_1`](mul_2_1.md).
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `two_prod(a, b)` | `T`, `T` | `ProductAndError<T>` | `constexpr`, through Dekker's product ([`two_prod_dekker`](two_prod_dekker.md)) in constant evaluation: the same values when the product is exact, each its own error term below the threshold; rounds; `r.product` is $p$ and `r.error` is $e$ |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

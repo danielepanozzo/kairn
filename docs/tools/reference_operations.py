@@ -15,10 +15,11 @@ docs/reference/KERNEL.md. An entry gives:
   conversion (a limb converted to a one-limb number, a point to a ball) has no declaration of
   its own, and says so in its note;
   A kernel with no forms is either a building block, part of other kernels, or an entry kernel
-  (`entry: yes` in its description: today the finite cores of the Ball operations, and the
-  building blocks and scalings of a ball of Milestone 2) that the public headers do not call yet; its page and the index say which. Give it forms only when a
+  (`entry: yes` in its description: today the finite cores of the Ball operations) that the
+  public headers do not call yet; its page and the index say which. Give it forms only when a
   header calls it: the test fails on a form of a kernel that no header comment names. A function
-  of `kairn::finite` is written `finite::add(x, y)`;
+  of `kairn::finite` is written `finite::add(x, y)`, a member function `X.name()`, with the object
+  as its first operand;
 - traits: the entries of kairn::traits whose constants come from this kernel's claims
   (traits<T> is also traits<float>, traits<double> and traits<Expansion<T, 1>>);
 - note: optional, one sentence about the forms, shown under them.
@@ -52,9 +53,18 @@ GROUPS = [
      "infinities and NaN canonical; for one limb, the operators themselves."),
     ("comparisons", "Comparisons", "Whether one value is below, at most, or equal to another."),
     ("conversions", "Conversions to one limb", "A two-limb number rounded to a value of `T`."),
-    ("scaling", "Scaling by a power of two", "`ldexp` and `half`."),
-    ("ball", "Ball operations", "Arithmetic on balls: the result contains every result on points of the operands."),
-    ("building-blocks", "Building blocks",
+    ("scaling", "Scaling by a power of two", "`ldexp` and `half`, of numbers and of balls; for a ball exact when "
+     "nothing underflows, unlike the scaling `X * a` by a `T`, whose radius grows even when `a` is a power of two."),
+    ("ball", "Ball operations", "Arithmetic on balls: the result contains every result on points of the operands; "
+     "and the sign predicates of a ball, comparisons of its radius with its center."),
+    ("blocks", "Building blocks on T",
+     "Functions of `float` and `double` (`kairn/blocks.hpp`) for a program's own tests of exactness, its own "
+     "radius arithmetic, and bounds rounded down or up without changing the rounding mode. Each is one call of "
+     "its kernel, whose page says what it states. All are `constexpr` but `mul_down` and `mul_up`; all round, "
+     "and so are preceded by the debug build's check of the rounding mode, but `next_up` and `next_down`, which "
+     "are integer operations on the bit pattern and are checked for nothing. The note of each form on its page "
+     "says what constant evaluation gives."),
+    ("building-blocks", "Parts of other kernels",
      "Kernels that other kernels call, and that no public operation computes on its own."),
     ("arrays", "Sums and dot products of arrays",
      "The kernels of the loops over arrays (the folds of Milestone 2): their steps, the finish of their "
@@ -73,6 +83,12 @@ def page(group, title, *forms, traits=(), note=None):
 
 
 ONE = "the limb of the `Expansion<T, 1>` operand is the limb $a$"
+# The notes of the building blocks on T: whether constant evaluation has them, with what, and that
+# they round.
+SAME_BITS = "`constexpr`, with the same bits in constant evaluation; rounds"
+SAME_VALUES = ("`constexpr`, with the same values in constant evaluation (a zero result can differ in sign); "
+               "rounds")
+GUARDED = "; the operands are guarded ([rule R3](../developer/architecture.md#the-kernel-ir))"
 CONVERTED = "the limb is converted to `Expansion<T, 1>` first, exactly"
 POINT = "the point is the ball of radius 0 its constructor makes"
 CORE = "the finite core: no fix-up of infinities and NaN"
@@ -95,12 +111,19 @@ KERNELS = {
              note="`Expansion<T, 2>::from_limbs(p)`, with `p` pointing to the two limbs; checked when "
                   "`KAIRN_CHECKS` is 1"),
         form("from_limbs_unchecked(p)", "T*", result=E2, note="the same, never checked"),
+        form("Expansion<T, 2>(r)", "SumAndError<T>", result=E2,
+             note="explicit: the result `r` of `two_sum` or `fast_two_sum` as the pair (`r.sum`, `r.error`), "
+                  "through `from_limbs_unchecked`; canonical, of value $a + b$ exactly, when both members are "
+                  "finite, which a debug build checks ([`two_sum_entry`](two_sum_entry.md) says when)"),
     ),
     "ball_make_1": page(
         "construction", "A ball from a one-limb center and a radius",
         form("Ball<T, 1>(c, r)", E1, T, result=B1),
         form("Ball<T, 1>(c)", E1, result=B1, note="implicit: the point $c$, radius 0"),
         form("Ball<T, 1>(a)", T, result=B1, note="implicit: the point $a$, radius 0"),
+        form("Ball<T, 1>(q)", "Constant<Expansion<T, 1>>", result=B1,
+             note="explicit: center `q.value`, radius `q.error`, for `q` a result of `rational` or `integer`; "
+                  "`constexpr`; does not round"),
     ),
     "ball_make_2": page(
         "construction", "A ball from a two-limb center and a radius",
@@ -108,6 +131,10 @@ KERNELS = {
         form("Ball<T, 2>(c)", E2, result=B2, note="implicit: the point $c$, radius 0"),
         form("Ball<T, 2>(a)", T, result=B2,
              note="implicit: the point $a$, radius 0, with the center made by `make_2` first"),
+        form("Ball<T, 2>(q)", "Constant<Expansion<T, 2>>", result=B2,
+             note="explicit: center `q.value`, radius `q.error`, for `q` a result of `rational` or `integer`: "
+                  "how to multiply a ball by $1/s$, `X * Ball<T, 2>(rational<Expansion<T, 2>>(1, s))`, until "
+                  "Kairn has a division; `constexpr`; its check of the center rounds"),
     ),
     # --- One limb -----------------------------------------------------------------------------
     "add_1_1": page(
@@ -288,6 +315,9 @@ KERNELS = {
         form("a > x", T, E2, result="bool"),
         form("x < y", E2, E1, result="bool", note=ONE),
         form("y > x", E1, E2, result="bool", note=ONE),
+        form("X.certainly_negative()", B2, result="bool", group="ball",
+             note="whether every member of the ball is negative: $c < -r$, exactly; false for the empty set and "
+                  "the whole line; `constexpr`; does not round"),
     ),
     "le_2_1": page(
         "comparisons", "A two-limb number at most a limb",
@@ -306,6 +336,9 @@ KERNELS = {
         form("y == x", E1, E2, result="bool", note=ONE),
         form("x != y", E2, E1, result="bool", note="the negation of `x == y`; " + ONE),
         form("y != x", E1, E2, result="bool", note="the negation of `y == x`; " + ONE),
+        form("X.certainly_zero()", B2, result="bool", group="ball",
+             note="whether the ball is the point 0: $c = 0$, and $r = 0$ by a comparison of `T`; false for the "
+                  "empty set and the whole line; `constexpr`; does not round"),
     ),
     "lt_1_2": page(
         "comparisons", "A limb less than a two-limb number",
@@ -313,6 +346,9 @@ KERNELS = {
         form("y > a", E2, T, result="bool"),
         form("x < y", E1, E2, result="bool", note="the limb of the `Expansion<T, 1>` operand is the limb $a$"),
         form("y > x", E2, E1, result="bool", note="the limb of the `Expansion<T, 1>` operand is the limb $a$"),
+        form("X.certainly_positive()", B2, result="bool", group="ball",
+             note="whether every member of the ball is positive: $r < c$, exactly; false for the empty set and "
+                  "the whole line; `constexpr`; does not round"),
     ),
     "le_1_2": page(
         "comparisons", "A limb at most a two-limb number",
@@ -435,30 +471,106 @@ KERNELS = {
     "ball_mul_2": page("ball", "Product of balls, two-limb center, finite core"),
     "ball_scale_1": page("ball", "A ball times a limb, one-limb center, finite core"),
     "ball_scale_2": page("ball", "A ball times a limb, two-limb center, finite core"),
-    # --- Milestone 2, wave 1: entry kernels no public operation calls yet ------------------------
+    # --- Milestone 2: the scaling of a ball by a power of two ----------------------------------
     "ball_mul_pow2_1": page("ball", "A ball times a power of two, one-limb center, finite core"),
     "ball_mul_pow2_2": page("ball", "A ball times a power of two, two-limb center, finite core"),
-    "ball_mul_pow2_1_full": page("ball", "A ball times a power of two, one-limb center"),
-    "ball_mul_pow2_2_full": page("ball", "A ball times a power of two, two-limb center"),
-    "next_up": page("building-blocks", "The next number of T above a value"),
-    "next_down": page("building-blocks", "The next number of T below a value"),
-    "mul_down_1": page("building-blocks", "A lower bound of a product of two limbs"),
-    "mul_up_1": page("building-blocks", "An upper bound of a product of two limbs"),
-    "two_sum_entry": page("building-blocks", "TwoSum on values of the program"),
-    "fast_two_sum_entry": page("building-blocks", "Fast2Sum on values of the program"),
-    "radd_entry": page("building-blocks", "An upper bound of a sum, for radii, on values of the program"),
-    "add_down_entry": page("building-blocks", "A sum of two limbs rounded down, on values of the program"),
-    "add_up_entry": page("building-blocks", "A sum of two limbs rounded up, on values of the program"),
-    "sub_down_entry": page("building-blocks", "A difference of two limbs rounded down, on values of the program"),
-    "sub_up_entry": page("building-blocks", "A difference of two limbs rounded up, on values of the program"),
+    "ball_mul_pow2_1_full": page(
+        "ball", "A ball times a power of two, one-limb center",
+        form("ldexp(X, n)", B1, "int", result=B1, group="scaling",
+             note="$c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, whose "
+                  "composition is " + COMPOSITION + "; not `constexpr` yet"),
+        form("half(X)", B1, result=B1, group="scaling", note="$c = 1/2$; not `constexpr` yet"),
+    ),
+    "ball_mul_pow2_2_full": page(
+        "ball", "A ball times a power of two, two-limb center",
+        form("ldexp(X, n)", B2, "int", result=B2, group="scaling",
+             note="$c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, whose "
+                  "composition is " + COMPOSITION + "; not `constexpr` yet"),
+        form("half(X)", B2, result=B2, group="scaling", note="$c = 1/2$; not `constexpr` yet"),
+    ),
+    # --- Milestone 2: the building blocks on T (kairn/blocks.hpp) ---------------------------------
+    "two_sum_entry": page(
+        "blocks", "TwoSum on values of the program",
+        form("two_sum(a, b)", T, T, result="SumAndError<T>",
+             note=SAME_VALUES + GUARDED + "; `r.sum` is $s$ and `r.error` is $e$; `Expansion<T, 2>(r)` is the "
+                  "pair as a number, canonical when both are finite: for finite $a$, $b$ whose sum does not "
+                  "overflow and $\\lvert b\\rvert < \\Omega$ (with $b = \\pm\\Omega$ the error term can be a NaN "
+                  "although the sum is finite)"),
+    ),
+    "fast_two_sum_entry": page(
+        "blocks", "Fast2Sum on values of the program",
+        form("fast_two_sum(a, b)", T, T, result="SumAndError<T>",
+             note=SAME_VALUES + GUARDED + "; requires $\\lvert a\\rvert \\ge \\lvert b\\rvert$, which a debug build "
+                  "checks; without it the sum is still $\\mathrm{RN}(a + b)$ and the error term a number of `T`, "
+                  "but their sum need not be $a + b$"),
+    ),
+    "two_prod": page(
+        "blocks", "TwoProd: an exact product as two limbs",
+        form("two_prod(a, b)", T, T, result="ProductAndError<T>",
+             note="`constexpr`, through Dekker's product ([`two_prod_dekker`](two_prod_dekker.md)) in constant "
+                  "evaluation: the same values when the product is exact, each its own error term below the "
+                  "threshold; rounds; `r.product` is $p$ and `r.error` is $e$"),
+    ),
+    "next_up": page(
+        "blocks", "The next number of T above a value",
+        form("next_up(a)", T, result=T,
+             note="`constexpr`, with the same bits in constant evaluation; does not round: an integer operation "
+                  "on the bit pattern, checked for nothing"),
+    ),
+    "next_down": page(
+        "blocks", "The next number of T below a value",
+        form("next_down(a)", T, result=T,
+             note="`constexpr`, with the same bits in constant evaluation; does not round: an integer operation "
+                  "on the bit pattern, checked for nothing"),
+    ),
+    "radd_entry": page(
+        "blocks", "An upper bound of a sum, for radii, on values of the program",
+        form("radd(a, b)", T, T, result=T, note=SAME_BITS + GUARDED),
+    ),
+    "rmul": page(
+        "blocks", "An upper bound of a product, for radii",
+        form("rmul(a, b)", T, T, result=T,
+             note=SAME_BITS + ": the plain product in constant evaluation, whose zero can have the other sign, "
+                  "and the step after either zero is $\\eta$"),
+    ),
+    "add_down_entry": page(
+        "blocks", "A sum of two limbs rounded down, on values of the program",
+        form("add_down(a, b)", T, T, result=T,
+             note=SAME_VALUES + ": computes under rounding to nearest what rounding down gives" + GUARDED),
+    ),
+    "add_up_entry": page(
+        "blocks", "A sum of two limbs rounded up, on values of the program",
+        form("add_up(a, b)", T, T, result=T,
+             note=SAME_VALUES + ": computes under rounding to nearest what rounding up gives" + GUARDED),
+    ),
+    "sub_down_entry": page(
+        "blocks", "A difference of two limbs rounded down, on values of the program",
+        form("sub_down(a, b)", T, T, result=T,
+             note=SAME_VALUES + ": computes under rounding to nearest what rounding down gives" + GUARDED),
+    ),
+    "sub_up_entry": page(
+        "blocks", "A difference of two limbs rounded up, on values of the program",
+        form("sub_up(a, b)", T, T, result=T,
+             note=SAME_VALUES + ": computes under rounding to nearest what rounding up gives" + GUARDED),
+    ),
+    "mul_down_1": page(
+        "blocks", "A lower bound of a product of two limbs",
+        form("mul_down(a, b)", T, T, result=T,
+             note="not `constexpr`: its statement is about the fused product, which constant evaluation does not "
+                  "have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds"),
+    ),
+    "mul_up_1": page(
+        "blocks", "An upper bound of a product of two limbs",
+        form("mul_up(a, b)", T, T, result=T,
+             note="not `constexpr`: its statement is about the fused product, which constant evaluation does not "
+                  "have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds"),
+    ),
     # --- Building blocks: no public form -------------------------------------------------------
     "two_sum": page("building-blocks", "TwoSum: an exact sum as two limbs"),
     "fast_two_sum": page("building-blocks", "Fast2Sum: an exact sum of ordered operands"),
-    "two_prod": page("building-blocks", "TwoProd: an exact product as two limbs"),
     "two_prod_dekker": page("building-blocks", "Dekker's product: TwoProd without an FMA"),
     "split": page("building-blocks", "Veltkamp's split"),
     "radd": page("building-blocks", "An upper bound of a sum, for radii"),
-    "rmul": page("building-blocks", "An upper bound of a product, for radii"),
     "two_sum_ord": page("building-blocks", "TwoSum by ordering: Fast2Sum of the operands ordered by magnitude"),
     "add_down_1": page("building-blocks", "A sum of two limbs rounded down"),
     "add_up_1": page("building-blocks", "A sum of two limbs rounded up"),
@@ -518,6 +630,14 @@ EXACT = [
           form("isfinite(x)", "Expansion<T, K>", result="bool")),
     exact("construction", "whether every limb is finite and, for two limbs, $x_0 + x_1$ rounds to $x_0$",
           form("is_normalized(x)", "Expansion<T, K>", result="bool")),
+    exact("ball", "whether every member is positive: $r < c$, the comparison of `T`; false for the empty set and "
+          "the whole line",
+          form("X.certainly_positive()", B1, result="bool")),
+    exact("ball", "whether every member is negative: $c < -r$, the comparison of `T`; false for the empty set and "
+          "the whole line",
+          form("X.certainly_negative()", B1, result="bool")),
+    exact("ball", "whether the ball is the point 0: $c = 0$ and $r = 0$; false for the empty set and the whole line",
+          form("X.certainly_zero()", B1, result="bool")),
     exact("arithmetic", "the IEEE 754 operation of `T`: exact",
           form("-x", E1, result=E1),
           form("abs(x)", E1, result=E1)),

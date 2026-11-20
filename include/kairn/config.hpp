@@ -53,10 +53,10 @@
 #define KAIRN_FORCEINLINE KAIRN_GEN_FORCEINLINE
 
 /// @def KAIRN_CHECKS
-/// 1 to check, before every operation of Expansion and Ball that rounds, and in the constructors
-/// that are given limbs or a center (Expansion<T, 2>::from_limbs, the narrowing to one limb, the
-/// constructors of Ball), first that the floating-point environment is the default one
-/// (kairn::environment_ok()), then the operands:
+/// 1 to check, before every operation of Expansion and Ball that rounds and every building block
+/// of blocks.hpp that rounds, and in the constructors that are given limbs or a center
+/// (Expansion<T, 2>::from_limbs, the narrowing to one limb, the constructors of Ball), first that
+/// the floating-point environment is the default one (kairn::environment_ok()), then the operands:
 /// - an operator, and a function of kairn:: such as ldexp or to_down, requires each two-limb
 ///   operand to be canonical: finite and normalized (x0 + x1 == x0 in floating point), (+-inf, 0)
 ///   or (NaN, NaN); a one-limb operand and a T may be any value;
@@ -65,7 +65,11 @@
 /// - a Ball operation requires each ball to be canonical: a finite ball with a canonical center
 ///   and a radius r >= 0, the whole line, or the empty set;
 /// - from_limbs requires a canonical pair, and a constructor of Ball a canonical center and a
-///   radius that is not negative (a NaN radius, which makes the empty set, is accepted).
+///   radius that is not negative (a NaN radius, which makes the empty set, is accepted);
+/// - fast_two_sum requires |a| >= |b|, and the conversion of the result of two_sum or fast_two_sum
+///   to Expansion<T, 2> a pair that is canonical but for the test of normalization, which the
+///   block's statement gives: a finite error term with a finite sum, a zero with an infinite one,
+///   a NaN with a NaN (blocks.hpp); the other building blocks take any value of T.
 ///
 /// An operand that fails prints a message and calls std::abort(); an environment that fails calls
 /// KAIRN_ENVIRONMENT_FAILURE. 0 for no checks. The default is 1 when NDEBUG is not defined, as for
@@ -83,21 +87,29 @@
 /// - the comparisons <, <=, >, >=, ==, != of numbers of one and two limbs (comparisons of limbs);
 /// - to_nearest, to_down, to_up and abs_upper, and the narrowing to one limb, which is to_nearest
 ///   (a limb; or a comparison, a step of the bit pattern and a select);
-/// - the negation of a Ball (sign bits and a copy of the radius);
-/// - the constructors of a Ball from a T or from a number of one limb: Ball<T, 1>(a),
-///   Ball<T, 1>(c), Ball<T, 1>(c, r) and Ball<T, 2>(a). Their only rounded operations are the
-///   guards a + 0, whose value is a under every rounding mode; only the sign of a zero depends on
-///   the mode, and Kairn leaves it unspecified;
-/// - and, with no check at all, as before: the constructors of two limbs from a T or a number of
-///   one limb and from_limbs_unchecked (the same guards), sign, isfinite, is_normalized of one
-///   limb, the constructors that copy a value (Expansion<T, 1>(a), Expansion<T, 1>::from_limbs),
-///   Ball::empty(), Ball::whole(), the accessors center() and radius() and the tests is_finite(),
-///   is_whole(), is_empty() of a Ball, the constants of kairn::traits, and kairn::rational
-///   (rational.hpp).
-/// Every other function rounds and is checked as above: the arithmetic, ldexp and half, the
-/// functions of kairn::finite::, from_limbs and is_normalized of two limbs (each tests
-/// x0 + x1 == x0), and the constructors of Ball<T, 2> from a center (the test of a canonical
-/// center).
+/// - the negation of a Ball (sign bits and a copy of the radius), and its sign predicates
+///   certainly_positive(), certainly_negative() and certainly_zero() (comparisons of the radius
+///   with the center);
+/// - the constructors of a Ball from a T or from a number or a constant of one limb: Ball<T, 1>(a),
+///   Ball<T, 1>(c), Ball<T, 1>(c, r), Ball<T, 1>(q) and Ball<T, 2>(a). Their only rounded
+///   operations are the guards a + 0, whose value is a under every rounding mode; only the sign of
+///   a zero depends on the mode, and Kairn leaves it unspecified;
+/// - the conversion of a SumAndError (the result of two_sum or fast_two_sum) to Expansion<T, 2>:
+///   the same guards, and a test of the pair that compares and does not round (blocks.hpp);
+/// - and, with no check at all: next_up and next_down (integer operations on the bit pattern,
+///   which no state of the environment changes); as before, the constructors of two limbs from a
+///   T or a number of one limb and from_limbs_unchecked (the same guards), sign, isfinite,
+///   is_normalized of one limb, the constructors that copy a value (Expansion<T, 1>(a),
+///   Expansion<T, 1>::from_limbs), Ball::empty(), Ball::whole(), the accessors center() and
+///   radius() and the tests is_finite(), is_whole(), is_empty() of a Ball, the constants of
+///   kairn::traits, and kairn::rational (rational.hpp).
+/// Every other function rounds and is checked as above: the arithmetic, ldexp and half (of numbers
+/// and of balls), the functions of kairn::finite::, the building blocks of blocks.hpp but next_up
+/// and next_down (two_sum, fast_two_sum, which also checks |a| >= |b|, two_prod, radd, rmul, and
+/// the sums and products rounded down and up, which compute under rounding to nearest what
+/// rounding down or up gives), from_limbs and is_normalized of two limbs (each tests
+/// x0 + x1 == x0), and the constructors of Ball<T, 2> from a center or a constant (the test of a
+/// canonical center).
 #if !defined(KAIRN_CHECKS)
 #if defined(NDEBUG)
 #define KAIRN_CHECKS 0
@@ -139,8 +151,9 @@
 #define KAIRN_ENCLOSURE_CODE_EXTERNAL 8
 
 /// @def KAIRN_ENCLOSURE_CODE
-/// Where the code of the operations of a Ball that round is: + - * and the scaling by a T, for one
-/// and two limbs (docs/developer/design/milestone2.md, "Inlining and compile time"). One of:
+/// Where the code of the operations of a Ball that round is: + - *, the scaling by a T, and the
+/// scaling by a power of two that ldexp and half call, for one and two limbs
+/// (docs/developer/design/milestone2.md, "Inlining and compile time"). One of:
 /// - KAIRN_ENCLOSURE_CODE_INLINE, the default: each operation is forced inline into its caller,
 ///   as every kernel of at most two limbs is. The fastest code, and the longest compilations
 ///   where many operations are inlined into one function.
@@ -152,8 +165,12 @@
 ///   limbs, and one translation unit of the program defines them all, by including
 ///   <kairn/definitions.hpp> (with the same settings as the others). The other translation units
 ///   do not compile them at all.
-/// The negation of a Ball and its constructors, a few instructions each, stay inline in every
-/// setting, and so does everything of Expansion. The three settings compute the same bits: the
+/// The negation of a Ball, its sign predicates and its constructors, a few instructions each, stay
+/// inline in every setting, and so do the steps of ldexp (two or three calls of the scaling by a
+/// power of two of T, when 2^n is not one) and everything of Expansion and of blocks.hpp. None of
+/// the operations it places is usable in constant evaluation, ldexp and half of a ball included,
+/// whose kernel is constexpr: in the external setting their code is in another translation unit.
+/// The three settings compute the same bits: the
 /// body of each operation is the same code, the generated kernel force-inlined into it, whose
 /// rules R1 to R3 make it immune to what a compiler does at the call boundary or across it.
 ///

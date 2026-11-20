@@ -12,7 +12,11 @@ $$s + e = a + b.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `two_sum(a, b)` | `T`, `T` | `SumAndError<T>` | `constexpr`, with the same values in constant evaluation (a zero result can differ in sign); rounds; the operands are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); `r.sum` is $s$ and `r.error` is $e$; `Expansion<T, 2>(r)` is the pair as a number, canonical when both are finite: for finite $a$, $b$ whose sum does not overflow and $\lvert b\rvert < \Omega$ (with $b = \pm\Omega$ the error term can be a NaN although the sum is finite) |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

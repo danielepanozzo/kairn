@@ -1,7 +1,7 @@
 /// @file
 /// The definitions of the operations that KAIRN_ENCLOSURE_CODE_EXTERNAL only declares (config.hpp,
-/// KAIRN_ENCLOSURE_CODE): the operations of Ball that round, + - * and the scaling, for float and
-/// double with one and two limbs. Include it in exactly one translation unit of the program, a file
+/// KAIRN_ENCLOSURE_CODE): the operations of Ball that round, + - *, the scaling by a T and the
+/// scaling by a power of two of ldexp and half, for float and double with one and two limbs. Include it in exactly one translation unit of the program, a file
 /// of the program's own, compiled with the same settings as every other one (KAIRN_ENCLOSURE_CODE,
 /// KAIRN_CHECKS, KAIRN_ENVIRONMENT_FAILURE, and the compiler and its flags), for example
 ///

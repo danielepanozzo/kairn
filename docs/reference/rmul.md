@@ -12,7 +12,11 @@ $$r \ge a b.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `rmul(a, b)` | `T`, `T` | `T` | `constexpr`, with the same bits in constant evaluation; rounds: the plain product in constant evaluation, whose zero can have the other sign, and the step after either zero is $\eta$ |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

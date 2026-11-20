@@ -1489,9 +1489,9 @@ template <class T>
 KAIRN_FORCEINLINE Expansion<T, 2> ldexp(const Expansion<T, 2>& x, int n) noexcept {
     return detail::ldexp(x, n);
 }
-/// x times 2^n with a marked operand.
+/// x times 2^n with a marked operand (a ball has its own, in ball.hpp).
 template <class X>
-    requires detail::marked<X>
+    requires detail::marked<X> && (!detail::ball<X>)
 KAIRN_FORCEINLINE constexpr auto ldexp(const X& x, int n) noexcept -> decltype(detail::ldexp(detail::unmark(x), n)) {
     return detail::ldexp(detail::unmark(x), n);
 }
@@ -1508,9 +1508,9 @@ template <class T>
 KAIRN_FORCEINLINE Expansion<T, 2> half(const Expansion<T, 2>& x) noexcept {
     return detail::half(x);
 }
-/// x / 2 with a marked operand.
+/// x / 2 with a marked operand (a ball has its own, in ball.hpp).
 template <class X>
-    requires detail::marked<X>
+    requires detail::marked<X> && (!detail::ball<X>)
 KAIRN_FORCEINLINE constexpr auto half(const X& x) noexcept -> decltype(detail::half(detail::unmark(x))) {
     return detail::half(detail::unmark(x));
 }

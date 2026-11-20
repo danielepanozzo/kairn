@@ -83,7 +83,7 @@ def header_operations(root, known):
     """[(where, key, kernels)] for every public declaration whose /// comment names a kernel; key
     is ('op', name, operand types) for an operation and ('traits', 'traits<...>::member')."""
     found = []
-    for fname in ("expansion.hpp", "ball.hpp", "traits.hpp"):
+    for fname in ("expansion.hpp", "ball.hpp", "traits.hpp", "blocks.hpp"):
         path = os.path.join(root, "include", "kairn", fname)
         lines = reference.read(path).split("\n")
         context, detail, comment, prefix = None, False, [], ""
@@ -160,6 +160,9 @@ def form_key(f):
     m = re.fullmatch(r"-(\w+)", code)
     if m:
         return ("op", "operator-", tuple(f["operands"]))
+    m = re.fullmatch(r"\w+\.(\w+)\(\)", code)                     # a member function, X.name()
+    if m:
+        return ("op", m.group(1), tuple(f["operands"][1:]))
     m = re.fullmatch(r"([\w:]+(?:<[^>]*>)?)\((.*)\)", code)
     if m:
         return ("op", m.group(1), tuple(f["operands"]))
@@ -228,7 +231,8 @@ class Table(unittest.TestCase):
         # every form that computes it says so, in the same words.
         steps = [(name, f["code"]) for name, p in self.ops.KERNELS.items() for f in p["forms"]
                  if "ldexp(" in f["code"] and "itself" not in (f["note"] or "")]
-        self.assertEqual(sorted(steps), [("mul_1_1", "ldexp(a, n)"), ("mul_pow2_2", "finite::ldexp(x, n)"),
+        self.assertEqual(sorted(steps), [("ball_mul_pow2_1_full", "ldexp(X, n)"), ("ball_mul_pow2_2_full", "ldexp(X, n)"),
+                                         ("mul_1_1", "ldexp(a, n)"), ("mul_pow2_2", "finite::ldexp(x, n)"),
                                          ("mul_pow2_2_full", "ldexp(x, n)")])
         for name, code in steps:
             note = next(f["note"] for f in self.ops.KERNELS[name]["forms"] if f["code"] == code)
@@ -265,6 +269,9 @@ class Table(unittest.TestCase):
         self.assertIn((("op", "Expansion<T, 2>", ("T",)), ("make_2",)), keys)
         self.assertIn((("op", "operator+", ("Ball<T, K>", "Ball<T, K>")), ("ball_add_1_full", "ball_add_2_full")), keys)
         self.assertIn((("op", "Ball<T, K>", ("Expansion<T, K>", "T")), ("ball_make_1", "ball_make_2")), keys)
+        self.assertIn((("op", "two_sum", ("T", "T")), ("two_sum_entry",)), keys)
+        self.assertIn((("op", "certainly_positive", ()), ("lt_1_2",)), keys)
+        self.assertIn((("op", "Ball<T, K>", ("Constant<Expansion<T, K>>",)), ("ball_make_1", "ball_make_2")), keys)
         self.assertIn((("traits", "traits<Expansion<T, 2>>::sub_limb"), ("sub_2_1", "sub_1_2")), keys)
 
 

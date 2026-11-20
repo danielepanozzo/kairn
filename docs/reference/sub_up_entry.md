@@ -12,7 +12,11 @@ $$r = \mathrm{RU}(a - b).$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `sub_up(a, b)` | `T`, `T` | `T` | `constexpr`, with the same values in constant evaluation (a zero result can differ in sign); rounds: computes under rounding to nearest what rounding up gives; the operands are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)) |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 
