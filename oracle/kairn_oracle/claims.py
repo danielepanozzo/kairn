@@ -10,7 +10,7 @@ import re
 from fractions import Fraction
 
 from . import expr as X
-from .fmt import parse_format, FormatError
+from .fmt import parse_format, FormatError, Format
 
 
 class ClaimsError(ValueError):
@@ -39,6 +39,12 @@ CORE_KINDS = ("normalized", "error", "leading_rounded")
 # mul_pow2_2 ("each of the two products is zero or at least 2^(p-1) eta in magnitude"), which
 # the vocabulary cannot otherwise express.  Proposed as an addition.
 WHEN_VOCABULARY = ("product_large", "limb_products_normal")
+# Milestone 2 (architecture.md, "Claims of Milestone 2"): the condition a `rounded` entry may
+# carry, the sides of `neighbor` and `bound`, and the conditions of `exact_when`.
+ROUNDED_WHEN = ("product_large",)
+NEIGHBOR_SIDES = ("up", "down")
+BOUND_SIDES = ("below", "above")
+EXACT_CONDITIONS = ("zero_or_abs_gt", "zero_or_abs_ge")
 FORMS = ("R", "A")
 ROUNDING_MODES = ("nearest", "down", "up")
 RELATIONS = ("lt", "le", "eq")
@@ -140,6 +146,111 @@ def eval_rational(expr, u):
     return v
 
 
+_CONST_TOKEN_RE = re.compile(r"\s*(?:(\d+)|([-+*/^()])|([A-Za-z_][A-Za-z0-9_]*))")
+
+
+def eval_const(expr, u, eta):
+    """Exact value of the threshold K of an exact_when condition (architecture.md, "Claims of
+    Milestone 2"): integers, u, eta, + - * /, parentheses and integer powers ^ (possibly
+    negative, 2^-3), the language of const up(EXPR) without unit( ), tiny( ) or a rounding.
+    A unary minus binds less tightly than ^ (-2^2 is -4), and ^ groups to the right."""
+    if isinstance(expr, bool) or not isinstance(expr, (str, int)):
+        raise ClaimsError("constant %r is not an expression" % (expr,))
+    s = str(expr).strip()
+    toks = []
+    pos = 0
+    while pos < len(s):
+        m = _CONST_TOKEN_RE.match(s, pos)
+        if m is None or m.end() == pos:
+            raise ClaimsError("cannot parse constant %r at %r" % (expr, s[pos:]))
+        pos = m.end()
+        if m.group(1) is not None:
+            toks.append(("num", Fraction(int(m.group(1)))))
+        elif m.group(3) is not None:
+            if m.group(3) == "u":
+                toks.append(("num", u))
+            elif m.group(3) == "eta":
+                toks.append(("num", eta))
+            else:
+                raise ClaimsError("constant %r names %r, which is not u or eta" % (expr, m.group(3)))
+        else:
+            toks.append(("op", m.group(2)))
+    toks.append(("end", None))
+    i = [0]
+
+    def peek():
+        return toks[i[0]]
+
+    def take():
+        t = toks[i[0]]
+        i[0] += 1
+        return t
+
+    def c_sum():
+        v = c_prod()
+        while peek() in (("op", "+"), ("op", "-")):
+            op = take()[1]
+            w = c_prod()
+            v = v + w if op == "+" else v - w
+        return v
+
+    def c_prod():
+        v = c_unary()
+        while peek() in (("op", "*"), ("op", "/")):
+            op = take()[1]
+            w = c_unary()
+            if op == "/":
+                if w == 0:
+                    raise ClaimsError("division by zero in constant %r" % expr)
+                v = v / w
+            else:
+                v = v * w
+        return v
+
+    def c_unary():
+        if peek() == ("op", "-"):
+            take()
+            return -c_unary()
+        return c_pow()
+
+    def c_pow():
+        base = c_atom()
+        if peek() == ("op", "^"):
+            take()
+            e = c_unary()
+            if e.denominator != 1:
+                raise ClaimsError("non-integer exponent in constant %r" % expr)
+            if abs(e) > 1 << 16:
+                raise ClaimsError("exponent %s too large in constant %r" % (e, expr))
+            if base == 0 and e < 0:
+                raise ClaimsError("division by zero in constant %r" % expr)
+            return base ** int(e)
+        return base
+
+    def c_atom():
+        t = take()
+        if t[0] == "num":
+            return t[1]
+        if t == ("op", "("):
+            v = c_sum()
+            if take() != ("op", ")"):
+                raise ClaimsError("unbalanced parentheses in constant %r" % expr)
+            return v
+        raise ClaimsError("unexpected %r in constant %r" % (t[1] if t[1] is not None else "end",
+                                                            expr))
+
+    v = c_sum()
+    if peek()[0] != "end":
+        raise ClaimsError("trailing input in constant %r" % expr)
+    return v
+
+
+def format_u_eta(fmt):
+    """u = 2^-p and eta = 2^qmin of a format, as Fractions."""
+    eta = Fraction(1, 1 << -fmt.qmin) if fmt.qmin < 0 else Fraction(1 << fmt.qmin)
+    return Fraction(1, 1 << fmt.p), eta
+
+
 def parse_fraction(s, what):
     try:
         if isinstance(s, bool):
@@ -160,22 +271,33 @@ def _fw_text(fw):
                         for _t, text, e in fw)
 
 
+def ew_condition_text(text, op, k):
+    return "%s = 0 or |%s| %s %s" % (text, text, ">" if op == "zero_or_abs_gt" else ">=", k)
+
+
+def _ew_text(ew):
+    return " and ".join("(%s)" % ew_condition_text(text, op, k) for _t, text, op, k in ew)
+
+
 # ---------------------------------------------------------------------------
 
 class Entry:
     """One `ensures` entry."""
 
     KNOWN = {"normalized": {"kind", "of"},
-             "error": {"kind", "of", "form", "c", "k", "t", "when", "instances"},
+             "error": {"kind", "of", "form", "c", "k", "t", "when", "instances", "exact_when"},
              "leading_rounded": {"kind", "of"},
-             "rounded": {"kind", "of", "mode"},
+             "rounded": {"kind", "of", "mode", "when"},
              "upper": {"kind", "of", "gaps"},
              "predicate": {"kind", "of", "rel", "args"},
-             "encloses": {"kind", "center", "radius", "set", "balls", "finite_when"},
+             "encloses": {"kind", "center", "radius", "set", "balls", "finite_when", "exact_when"},
              # The non-finite layer.
              "extends": {"kind", "of", "core", "lead", "finite_when"},
              "represents": {"kind", "of"},
-             "makes_ball": {"kind", "center", "radius", "from"}}
+             "makes_ball": {"kind", "center", "radius", "from"},
+             # Milestone 2 (architecture.md, "Claims of Milestone 2").
+             "neighbor": {"kind", "of", "side"},
+             "bound": {"kind", "of", "side", "steps"}}
 
     def __init__(self, kernel, raw, index, error_index):
         self.raw = raw
@@ -192,12 +314,18 @@ class Entry:
             raise ClaimsError("%s: unknown fields %s" % (where, sorted(extra)))
         self.error_index = None
         self.finite_when = None
+        # exact_when of error and encloses: [(tree, text, op, K text)], or None when absent.
+        self.exact_when = None
+        # The condition of a rounded entry (product_large), or None.
+        self.when = None
         if self.kind in EXTENDED_KINDS and not kernel.extended:
             raise ClaimsError("%s: this kind belongs to the extended domain, and the kernel has "
                               "no \"domain\": \"extended\"" % where)
         if self.kind == "encloses":
             self._read_encloses(kernel, raw, where)
             self.of = [self.center, self.radius]
+            if "exact_when" in raw:
+                self.exact_when = self._read_exact_when(kernel, raw, where)
             if kernel.extended:
                 self.finite_when = self._read_finite_when(kernel, raw, where)
                 # Every ball of the set is a ball operand of the kernel: its states (finite,
@@ -222,18 +350,44 @@ class Entry:
                 raise ClaimsError("%s: 'of' must name one mask output" % where)
         elif masks:
             raise ClaimsError("%s: 'of' names the mask %s" % (where, masks[0]))
-        if (self.kind in ("error", "leading_rounded", "rounded", "upper", "extends", "represents")
+        if (self.kind in ("error", "leading_rounded", "rounded", "upper", "extends", "represents",
+                          "neighbor", "bound")
                 and kernel.value_tree is None):
             raise ClaimsError("%s: the kernel has no value" % where)
         if self.kind == "extends":
             self._read_extends(kernel, raw, where)
-        if self.kind in ("rounded", "upper"):
+        if self.kind in ("rounded", "upper", "neighbor", "bound"):
             if len(self.of) != 1 or kernel.limbs_of(self.of[0]) != 1:
                 raise ClaimsError("%s: 'of' must name one 1-limb output" % where)
         if self.kind == "rounded":
             self.mode = raw.get("mode")
             if self.mode not in ROUNDING_MODES:
                 raise ClaimsError("%s: mode must be nearest, down or up, got %r" % (where, self.mode))
+            # Absent when there is no condition (architecture.md); null is read the same way.
+            self.when = raw.get("when")
+            if self.when is not None and self.when not in ROUNDED_WHEN:
+                raise ClaimsError("%s: unknown condition when=%r (a rounded entry takes "
+                                  "product_large)" % (where, self.when))
+            if self.when is not None and self.mode == "nearest":
+                raise ClaimsError("%s: a condition on a rounding to nearest is not in the "
+                                  "vocabulary" % where)
+        elif self.kind == "neighbor":
+            self.side = raw.get("side")
+            if self.side not in NEIGHBOR_SIDES:
+                raise ClaimsError("%s: side must be up or down, got %r" % (where, self.side))
+            t = kernel.value_tree
+            if t[0] != "name" or kernel.limbs_of(t[1]) != 1:
+                raise ClaimsError("%s: the value must be the name of a one-limb input, not %r"
+                                  % (where, kernel.value_text))
+            self.operand = t[1]
+        elif self.kind == "bound":
+            self.side = raw.get("side")
+            if self.side not in BOUND_SIDES:
+                raise ClaimsError("%s: side must be below or above, got %r" % (where, self.side))
+            self.steps = raw.get("steps")
+            if (not isinstance(self.steps, int) or isinstance(self.steps, bool)
+                    or self.steps < 0):
+                raise ClaimsError("%s: steps must be an integer >= 0, got %r" % (where, self.steps))
         elif self.kind == "upper":
             self.gaps = parse_fraction(raw.get("gaps"), where + " gaps")
             if self.gaps < 0:
@@ -269,7 +423,62 @@ class Entry:
                 raise ClaimsError("%s: limb_products_normal needs a value that is one input "
                                   "times another" % where)
             self.entry_instances = raw.get("instances")
+            if "exact_when" in raw:
+                self.exact_when = self._read_exact_when(kernel, raw, where)
         self.label = self._label()
+
+    def _read_exact_when(self, kernel, raw, where):
+        """[(tree, text, op, K)]: each condition {"zero_or_abs_gt": EXPR, "than": K} or
+        {"zero_or_abs_ge": EXPR, "than": K} means EXPR = 0 or |EXPR| > K (>= K), EXPR over the
+        limb inputs and their limbs NAME[I], K an exact expression over u, eta and integers that
+        is positive in every format (checked for each format the plan is made for).  The list
+        holds when every condition does; absent when there is none, so an empty list is refused."""
+        ew = raw["exact_when"]
+        if not isinstance(ew, list) or not ew:
+            raise ClaimsError("%s: exact_when must be a nonempty list of conditions (absent when "
+                              "there is none)" % where)
+        out = []
+        ins = dict(kernel.inputs)
+        for j, cond in enumerate(ew):
+            w = "%s: exact_when[%d]" % (where, j)
+            ops = [k for k in EXACT_CONDITIONS if isinstance(cond, dict) and k in cond]
+            if len(ops) != 1 or set(cond) != {ops[0], "than"}:
+                raise ClaimsError("%s must be {\"zero_or_abs_gt\": EXPR, \"than\": K} or "
+                                  "{\"zero_or_abs_ge\": EXPR, \"than\": K}, got %r" % (w, cond))
+            op = ops[0]
+            text = cond[op]
+            if not isinstance(text, str):
+                raise ClaimsError("%s: %s must be an expression" % (w, op))
+            try:
+                tree = X.parse(text, limbs=True)
+            except X.ExprError as ex:
+                raise ClaimsError("%s: %s" % (w, ex))
+            for n in X.names(tree):
+                if n not in ins or n in kernel.masks:
+                    raise ClaimsError("%s: %r is not a limb input" % (w, n))
+            for n, i in X.limb_refs(tree):
+                if i >= ins[n]:
+                    raise ClaimsError("%s: %s[%d] is not a limb of %s, which has %d" % (
+                        w, n, i, n, ins[n]))
+            k = cond["than"]
+            # Read now, in the units of binary64, so that a malformed constant is refused with the
+            # claims; its value is computed exactly for each format the plan is made for.
+            u, eta = format_u_eta(Format(53, -1074, 971))
+            if eval_const(k, u, eta) <= 0:
+                raise ClaimsError("%s: than %r is not positive" % (w, k))
+            out.append((tree, text.strip(), op, k))
+        return out
+
+    def exact_threshold(self, fmt, j):
+        """K of condition j of exact_when, exactly, in format fmt; a K that is not positive there
+        is an error of the claims."""
+        tree, text, op, k = self.exact_when[j]
+        u, eta = format_u_eta(fmt)
+        v = eval_const(k, u, eta)
+        if v <= 0:
+            raise ClaimsError("%s: exact_when %s: than %r is not positive in %s" % (
+                self.label, text, k, fmt.name))
+        return v
 
     def _read_encloses(self, kernel, raw, where):
         """center and radius name outputs; balls maps each ball name to its center and radius
@@ -418,6 +627,8 @@ class Entry:
                 ", ".join("%s=[%s +- %s]" % (b, c, r) for b, (c, r) in self.balls.items()))
             if self.finite_when is not None:
                 s += ", B1-B4, finite when %s" % _fw_text(self.finite_when)
+            if self.exact_when is not None:
+                s += ", exactly the set when %s" % _ew_text(self.exact_when)
             return s
         if self.kind == "makes_ball":
             return "makes_ball(%s, %s) from center %s, radius %s" % (
@@ -430,9 +641,17 @@ class Entry:
             s = "error(%s) form %s, c=%s, k=%d, t=%s" % (of, self.form, self.c, self.k, self.t)
             if self.when:
                 s += ", when %s" % self.when
+            if self.exact_when is not None:
+                s += ", exact when %s" % _ew_text(self.exact_when)
             return s
         if self.kind == "rounded":
+            if self.when:
+                return "rounded(%s) %s, when %s" % (of, self.mode, self.when)
             return "rounded(%s) %s" % (of, self.mode)
+        if self.kind == "neighbor":
+            return "neighbor(%s) %s of %s" % (of, self.side, self.operand)
+        if self.kind == "bound":
+            return "bound(%s) %s, steps=%d" % (of, self.side, self.steps)
         if self.kind == "upper":
             return "upper(%s) gaps=%s" % (of, self.gaps)
         if self.kind == "predicate":

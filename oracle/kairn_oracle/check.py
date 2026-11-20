@@ -11,11 +11,12 @@ import re
 import sys
 from fractions import Fraction
 
+from . import directed as D
 from . import expr as EX
 from . import extended as XT
 from . import fmt as F
 from . import rational as RAT
-from .claims import ClaimsError
+from .claims import ClaimsError, ew_condition_text
 
 SUMMARY_VERSION = 1
 MASK_TEXT = {"0": 0, "1": 1}
@@ -410,8 +411,17 @@ class Plan:
             self.lp = (self.in_slices[a], self.in_slices[b], fmt.p - 1 - q)
         self.entries = []
         self.rounded = []                            # indices of the rounded entries
+        self.neighbors = []                          # ... of the neighbor entries
+        self.bounds = []                             # ... of the bound entries
         self.uppers = [e for e in kernel.ensures if e.kind == "upper"]
         self.balls = None
+        # A value of two operands, NAME op NAME (the directed sums and products of Milestone 2):
+        # the input slots of its two operands, for the classes of the extended domain.
+        t = kernel.value_tree
+        self.two = None
+        if (t is not None and t[0] in ("+", "-", "*") and t[1][0] == "name" and t[2][0] == "name"
+                and t[1][1] != t[2][1]):
+            self.two = (self.in_slices[t[1][1]], self.in_slices[t[2][1]])
         for e in kernel.ensures:
             ranges = [self.out_slices[n] for n in e.of]
             c = {"kind": e.kind, "ranges": ranges, "first": ranges[0][0]}
@@ -428,9 +438,18 @@ class Plan:
                 c.update(rel_n=rel.numerator, rel_d=rel.denominator,
                          abs_n=abs_sc.numerator, abs_d=abs_sc.denominator,
                          k=e.k, kp=e.k * fmt.p, form=e.form, when=e.when, source=src)
+                if e.exact_when is not None:
+                    c["exact"] = self._exact_conditions(e)
             elif e.kind == "rounded":
                 c["mode"] = e.mode
+                c["when"] = e.when
                 self.rounded.append(len(self.entries))
+            elif e.kind == "neighbor":
+                c["side"] = e.side
+                self.neighbors.append(len(self.entries))
+            elif e.kind == "bound":
+                c.update(side=e.side, steps=e.steps)
+                self.bounds.append(len(self.entries))
             elif e.kind == "upper":
                 c.update(gn=e.gaps.numerator, gd=e.gaps.denominator)
             elif e.kind == "predicate":
@@ -441,9 +460,32 @@ class Plan:
                 c["rel"] = e.rel
             elif e.kind == "encloses":
                 c.update(self._encloses(e))
+                if e.exact_when is not None and self.in_scope:
+                    c["exact"] = self._exact_conditions(e)
             self.entries.append(c)
         # The extended domain (the non-finite layer) is judged by extended.py.
         self.ext = XT.ExtPlan(self, Plan) if kernel.extended and self.in_scope else None
+
+    def _exact_conditions(self, e):
+        """[(holds, text)] for the conditions of an exact_when list: holds(x) on finite input
+        limbs is EXPR = 0 or |EXPR| > K (>= K), decided with integers: EXPR is an integer E at a
+        scale s and K = n/d exactly, so |E| 2^s > n/d is |E| d 2^s > n."""
+        out = []
+        for j, (tree, text, op, k) in enumerate(e.exact_when):
+            src, s = EX.compile_tree(tree, self._leaf)
+            fn = EX.make_function(["x"], src)
+            K = e.exact_threshold(self.fmt, j)
+            n, d = K.numerator, K.denominator
+            ls, rs = (s, 0) if s >= 0 else (0, -s)
+
+            def holds(x, fn=fn, n=n, d=d, ls=ls, rs=rs, strict=op == "zero_or_abs_gt"):
+                v = fn(x)
+                if v == 0:
+                    return True
+                a, b = (abs(v) * d) << ls, n << rs
+                return a > b if strict else a >= b
+            out.append((holds, ew_condition_text(text, op, k)))
+        return out
 
     def limb_products_normal(self, x):
         (alo, ahi), (blo, bhi), te = self.lp
@@ -456,6 +498,10 @@ class Plan:
         return True
 
     def _leaf(self, name):
+        if isinstance(name, tuple):
+            # NAME[I], limb I of an input (the conditions of exact_when).
+            n, i = name
+            return "x[%d]" % (self.in_slices[n][0] + i), self.fmt.qmin
         lo, hi = self.in_slices[name]
         return "(%s)" % "+".join("x[%d]" % i for i in range(lo, hi)), self.fmt.qmin
 
@@ -726,6 +772,11 @@ class Checker:
         beyond = False
         for i in pl.rounded:
             mode = pl.entries[i]["mode"]
+            if pl.entries[i]["when"] == "product_large" and not (V == 0 or abs(V) >= pl.pl_thr):
+                # Nothing is claimed where the condition does not hold (None: not judged), and
+                # so nothing makes the case non-finite either.
+                expected[i] = None
+                continue
             if mode == "nearest":
                 r = F.rn(fmt, V, pl.sv)
                 beyond = beyond or type(r) is not int
@@ -735,6 +786,17 @@ class Checker:
             expected[i] = r
         if pl.uppers and abs(F.rdir(fmt, V, pl.sv, True)) > fmt.omega:
             beyond = True
+        # neighbor: the next number of the format, which beyond +-Omega does not exist in the
+        # finite domain (the case is non-finite, as an overflow is); bound: the directed rounding
+        # in the format unbounded above, beyond +-Omega likewise.
+        for i in pl.neighbors:
+            r = D.neighbor(fmt, V, pl.entries[i]["side"] == "up")
+            beyond = beyond or type(r) is not int
+            expected[i] = r
+        for i in pl.bounds:
+            r = F.rdir(fmt, V, pl.sv, pl.entries[i]["side"] == "above")
+            beyond = beyond or abs(r) > fmt.omega
+            expected[i] = r
         if beyond or any(type(v) is not int for v in z):
             if any(v == F.OUTSIDE for v in z):
                 self._fail(st, line, "output limb not a number of the format")
@@ -805,6 +867,15 @@ class Checker:
                     es.failures += 1
                     reasons.append(why)
             else:
+                inexact = None
+                if "exact" in e:
+                    # exact_when: when every condition holds, the output is the value exactly.
+                    # Read as a claim of its own, whether or not `when` holds.
+                    inexact = self._exact_error(pl, e, es, x, z, V)
+                    if inexact:
+                        es.failures += 1
+                        es.count("failed exact_when")
+                        reasons.append(inexact)
                 if e["when"] == "product_large" and not (V == 0 or abs(V) >= pl.pl_thr):
                     continue
                 if e["when"] == "limb_products_normal" and not pl.limb_products_normal(x):
@@ -827,7 +898,10 @@ class Checker:
                 num = Err * rd * ad
                 den = rn_ * rho * ad + an * rd
                 if num > den:
-                    es.failures += 1
+                    if not inexact:
+                        es.failures += 1
+                    if "exact" in e:
+                        es.count("failed bound")
                     reasons.append("error above bound (%s)" % es.label)
                 # A zero bound gives the ratio 0 for an exact result and (1, 0), which
                 # compares above every finite ratio, for an inexact one.
@@ -851,6 +925,12 @@ class Checker:
 
     def _rounded(self, pl, e, es, x, z, V, r, line):
         fmt = pl.fmt
+        if e.get("when"):
+            if r is None:
+                # The condition does not hold: nothing is claimed (Milestone 2, `when`).
+                es.count(D.WHEN_FAILS)
+                return None
+            es.count(D.WHEN_HOLDS)
         es.applicable += 1
         o = z[e["first"]]
         Vc = V << pl.sh_val
@@ -899,7 +979,101 @@ class Checker:
 
     def _encloses(self, pl, e, es, x, z, V, _r, line):
         es.applicable += 1
-        return self._containment(pl, e, es, x, z, line)
+        contained = self._containment(pl, e, es, x, z, line)
+        if "exact" not in e:
+            return contained
+        # With exact_when (Milestone 2), each of the two statements that fails is counted under
+        # its name, as the statements of the extended domain are.
+        exact = self._exactness(pl, e, es, x, z, line)
+        if contained:
+            es.count("failed containment")
+        if exact:
+            es.count("failed exact_when")
+        return "; ".join(w for w in (contained, exact) if w) or None
+
+    # -- the kinds of Milestone 2 (architecture.md, "Claims of Milestone 2") ------------------
+
+    def _exact_failing(self, e, es, x):
+        """The texts of the conditions of exact_when that do not hold, each counted."""
+        failing = [t for holds, t in e["exact"] if not holds(x)]
+        for t in failing:
+            es.count(D.EXACT_FAILS + t)
+        if not failing:
+            es.count(D.EXACT_HOLDS)
+        return failing
+
+    def _exact_error(self, pl, e, es, x, z, V):
+        """exact_when of an error entry: the output limbs sum to the value when every condition
+        holds."""
+        if self._exact_failing(e, es, x):
+            return None
+        O = 0
+        for lo, hi in e["ranges"]:
+            O += sum(z[lo:hi])
+        if (O << pl.sh_out) != (V << pl.sh_val):
+            return "exact_when holds but the output is not the value exactly (%s)" % es.label
+        return None
+
+    def _exactness(self, pl, e, es, x, z, line):
+        """exact_when of an encloses entry: when every condition holds, the output ball is
+        exactly the set, so center - radius and center + radius are the least and the greatest
+        value of the set (with containment, which _containment judges)."""
+        if "exact" not in e or self._exact_failing(e, es, x):
+            return None
+        rg = pl.set_range(e, x)
+        if rg is None:
+            # An empty set (a negative input radius, outside every requirement nonneg()).
+            es.count("exact_when holds, the set empty (a negative input radius)")
+            return None
+        lo, hi = rg
+        clo, chi = e["center"]
+        sh = e["sh_q"]
+        cz = sum(z[clo:chi]) << sh
+        rz = z[e["radius"]] << sh
+        if cz - rz == lo and cz + rz == hi:
+            return None
+        unit = "units of 2^%d" % (pl.fmt.qmin - sh)
+        if 2 * cz != lo + hi:
+            return ("exact_when holds but the center is not the center of the set: it is %s, the "
+                    "set's is %s/2 (%s)" % (cz, lo + hi, unit))
+        return ("exact_when holds but the radius is not the radius of the set: it is %s, the "
+                "set's is %s/2 (%s)" % (rz, hi - lo, unit))
+
+    def _neighbor(self, pl, e, es, x, z, V, r, line):
+        """The output is the next number of the format above (up) or below the operand."""
+        fmt = pl.fmt
+        es.applicable += 1
+        up = e["side"] == "up"
+        es.count(D.neighbor_row(fmt, V))
+        for cl in D.neighbor_steps(fmt, V, r, up):
+            es.count(cl)
+        if z[e["first"]] != r:
+            return "output is not the next number of the format %s the operand (%s)" % (
+                "above" if up else "below", F.fixed_hex(fmt, r))
+        return None
+
+    def _bound(self, pl, e, es, x, z, V, d, line):
+        """below: the value rounded down, stepped down `steps` times, <= output <= value;
+        above, symmetrically; in the format unbounded above (beyond +-Omega the case is
+        non-finite, not judged).  d is the directed rounding."""
+        fmt = pl.fmt
+        es.applicable += 1
+        below = e["side"] == "below"
+        o = z[e["first"]]
+        Vc = V << pl.sh_val
+        es.count(D.BOUND_EXACT if (d << pl.sh_out) == Vc else D.BOUND_INEXACT)
+        oc = o << pl.sh_out
+        if (oc > Vc) if below else (oc < Vc):
+            return "output %s the value" % ("above" if below else "below")
+        k, t = 0, d
+        while t != o:
+            if k == e["steps"]:
+                return "output more than %d steps beyond the value rounded %s" % (
+                    e["steps"], "down" if below else "up")
+            t = D.step_unbounded(fmt, t, below)
+            k += 1
+        es.count(D.steps_text(k))
+        return None
 
     def _containment(self, pl, e, es, x, z, line):
         """The set is within the returned radius of the returned center (finite operands and
@@ -948,7 +1122,8 @@ class Checker:
 
 
 SECOND_WAVE_KINDS = {"rounded": Checker._rounded, "upper": Checker._upper,
-                     "predicate": Checker._predicate, "encloses": Checker._encloses}
+                     "predicate": Checker._predicate, "encloses": Checker._encloses,
+                     "neighbor": Checker._neighbor, "bound": Checker._bound}
 
 
 # ---------------------------------------------------------------------------

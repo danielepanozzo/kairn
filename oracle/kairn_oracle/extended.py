@@ -13,6 +13,7 @@ the arithmetic of the extended reals with IEEE 754's NaN for the undefined cases
 0 * inf), and nothing else.
 """
 
+from . import directed as D
 from . import expr as EX
 from . import fmt as F
 
@@ -215,6 +216,8 @@ class ExtPlan:
             elif e.kind == "makes_ball":
                 it["from_center"] = pl.in_slices[e.from_center]
                 it["from_radius"] = pl.in_slices[e.from_radius][0]
+            elif e.kind == "neighbor":
+                it["at"] = pl.in_slices[e.operand][0]
             self.items.append(it)
 
     def _condition(self, tree, e):
@@ -473,9 +476,16 @@ def k_encloses(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
             fail("B3", "a finite ball although an operand is not a finite ball or a scalar is "
                        "not finite")
         else:
-            r = ck._encloses(pl, c, es, x, z, None, None, line)
+            es.applicable += 1
+            r = ck._containment(pl, c, es, x, z, line)
             if r:
                 fail("B3", r)
+            # exact_when (Milestone 2): with a finite ball from finite operands, the ball is
+            # exactly the set when every condition holds; a statement of its own, between B3
+            # and B4.
+            r = ck._exactness(pl, c, es, x, z, line)
+            if r:
+                fail("exact_when", r)
             es.track_max("finite result on finite operands: max |leading limb| / 2^(qmax+p)",
                          ep.ratio_lead(x), line)
     else:
@@ -604,13 +614,35 @@ def k_predicate(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     return []
 
 
+def _operand_classes(pl, x, es, v):
+    """The classes of the operands of a value of two operands (NAME op NAME) when one is not
+    finite: a NaN operand, or an infinite one and no NaN; and a NaN value from operands that are
+    not NaN (inf - inf, 0 * inf)."""
+    ops = [group_value(x[lo:hi]) for lo, hi in pl.two]
+    if NAN in ops:
+        es.count(D.NAN_OPERAND)
+    else:
+        es.count(D.INF_OPERAND)
+        if v == NAN:
+            es.count(D.NAN_FROM_INF)
+
+
 def k_rounded(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     """For a finite operand, the rounding of value in the format with overflow (beyond Omega in
-    the direction of rounding is the infinity); a non-finite operand gives itself."""
+    the direction of rounding is the infinity); a non-finite operand gives itself, which for a
+    value of two operands is the value IEEE 754 gives the operation (a NaN for a NaN operand,
+    inf - inf and 0 * inf).  With `when` (Milestone 2), nothing is claimed on finite operands
+    where the condition does not hold."""
     fmt = pl.fmt
     o = z[c["first"]]
     v, s = V
+    two = pl.two is not None
     if type(v) is int:
+        if c.get("when") == "product_large" and fin:
+            # V is (value_fn(x), sv) on finite operands, at the scale of pl_thr.
+            if not (v == 0 or abs(v) >= pl.pl_thr):
+                es.count(D.WHEN_FAILS)
+                return []
         mode = c["mode"]
         om = fmt.omega
         if mode == "nearest":
@@ -621,15 +653,78 @@ def k_rounded(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
         else:
             r = F.rdir(fmt, v, s, True)
             r = INF if r > om else -om if r < -om else r
+        if two and fin:
+            ov = D.overflow_class(fmt, v, s)
+            if ov:
+                es.count(ov)
         if fin and type(r) is int:
             why = ck._rounded(pl, c, es, x, z, v, r, line)
             return [why] if why else []
+        if c.get("when") == "product_large" and fin:
+            es.count(D.WHEN_HOLDS)
     else:
         r = v
     es.applicable += 1
     es.count("a non-finite operand" if not fin else "rounds to %s" % r)
+    if two and not fin:
+        _operand_classes(pl, x, es, v)
     if o != r:
         return ["output is not the value rounded %s (%s)" % (c["mode"], F.fixed_hex(fmt, r))]
+    return []
+
+
+def k_neighbor(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
+    """The next number of the format above (up) or below the operand, on every value of the
+    format: the table of architecture.md, "Claims of Milestone 2"."""
+    fmt = pl.fmt
+    a = x[ep.items[i]["at"]]
+    up = c["side"] == "up"
+    r = D.neighbor(fmt, a, up)
+    es.applicable += 1
+    es.count(D.neighbor_row(fmt, a))
+    for cl in D.neighbor_steps(fmt, a, r, up):
+        es.count(cl)
+    if z[c["first"]] != r:
+        return ["neighbor: the output is not the next number of the format %s the operand (%s)"
+                % ("above" if up else "below", F.fixed_hex(fmt, r))]
+    return []
+
+
+def k_bound(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
+    """below: on finite operands, value rounded down in the format with overflow and stepped down
+    `steps` times <= output <= value (above, symmetrically); the output may be an infinity.  With
+    an infinite or NaN operand the output is the value as IEEE 754 defines it."""
+    fmt = pl.fmt
+    o = z[c["first"]]
+    v, s = V
+    es.applicable += 1
+    below = c["side"] == "below"
+    if not fin or type(v) is not int:
+        es.count("a non-finite operand")
+        if pl.two is not None:
+            _operand_classes(pl, x, es, v)
+        if o != v:
+            return ["bound: the output is not %s, the value of IEEE 754 on the operands" % v]
+        return []
+    ov = D.overflow_class(fmt, v, s)
+    if ov:
+        es.count(ov)
+    d = D.round_overflow(fmt, v, s, "down" if below else "up")
+    exact = type(d) is int and x_cmp(d, fmt.qmin, v, s) == 0
+    es.count(D.BOUND_EXACT if exact else D.BOUND_INEXACT)
+    if o == NAN:
+        return ["bound: a NaN output on finite operands"]
+    side = x_cmp(o, fmt.qmin, v, s)
+    if (side > 0) if below else (side < 0):
+        return ["bound: the output is %s the value" % ("above" if below else "below")]
+    k, t = 0, d
+    while t != o:
+        if k == c["steps"]:
+            return ["bound: the output is more than %d steps beyond the value rounded %s (%s)" % (
+                c["steps"], "down" if below else "up", F.fixed_hex(fmt, d))]
+        t = D.neighbor(fmt, t, not below)
+        k += 1
+    es.count(D.steps_text(k))
     return []
 
 
@@ -666,4 +761,4 @@ def k_upper(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
 KINDS = {"extends": k_extends, "encloses": k_encloses, "represents": k_represents,
          "makes_ball": k_makes_ball, "normalized": k_finite_kind, "error": k_finite_kind,
          "leading_rounded": k_finite_kind, "predicate": k_predicate, "rounded": k_rounded,
-         "upper": k_upper}
+         "upper": k_upper, "neighbor": k_neighbor, "bound": k_bound}

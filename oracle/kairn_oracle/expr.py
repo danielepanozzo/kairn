@@ -1,10 +1,11 @@
 """Expressions of the claims: `value`, the arguments of a `predicate`, the `set` of an
-`encloses` entry.
+`encloses` entry, the conditions of `finite_when` and `exact_when`.
 
 Grammar (architecture.md, "Claims of the second wave"): names, binary `+`, `-`, `*`, unary
-minus, `abs( )` and parentheses.  An expression is compiled, once per format, into Python
-source over integers: every leaf is an integer N standing for N * 2^s with a scale s known
-before any operand is seen (the format's qmin for a limb sum), a product adds scales and a
+minus, `abs( )` and parentheses; and, in the conditions of `exact_when` only ("Claims of
+Milestone 2"), `NAME[I]`, limb I of the input NAME.  An expression is compiled, once per format,
+into Python source over integers: every leaf is an integer N standing for N * 2^s with a scale s
+known before any operand is seen (the format's qmin for a limb sum), a product adds scales and a
 sum aligns its operands to the smaller scale with a constant shift.  The exact value of the
 expression is then the returned integer times 2^scale, so no verdict needs Fraction.
 """
@@ -17,23 +18,33 @@ class ExprError(ValueError):
 
 
 _TOKEN = re.compile(r"\s*(?:([A-Za-z_][A-Za-z0-9_]*)|([-+*()]))")
+# With limb references: NAME[I] as one token.
+_TOKEN_LIMBS = re.compile(r"\s*(?:([A-Za-z_][A-Za-z0-9_]*)(?:\s*\[\s*(\d+)\s*\])?|([-+*()]))")
 FUNCTIONS = ("abs",)
 
 
-def parse(text):
+def parse(text, limbs=False):
     """The syntax tree: ("name", n), ("neg", a), ("abs", a), ("+", a, b), ("-", a, b) or
-    ("*", a, b)."""
+    ("*", a, b); with limbs=True also ("limb", n, i) for NAME[I]."""
     if not isinstance(text, str):
         raise ExprError("expression %r is not a string" % (text,))
     toks = []
     s = text.rstrip()
     pos = 0
+    rx = _TOKEN_LIMBS if limbs else _TOKEN
     while pos < len(s):
-        m = _TOKEN.match(s, pos)
+        m = rx.match(s, pos)
         if m is None or m.end() == pos:
             raise ExprError("cannot read expression %r at %r" % (text, s[pos:]))
         pos = m.end()
-        toks.append(("name", m.group(1)) if m.group(1) else ("op", m.group(2)))
+        if not limbs:
+            toks.append(("name", m.group(1)) if m.group(1) else ("op", m.group(2)))
+        elif m.group(1) and m.group(2) is not None:
+            if m.group(1) in FUNCTIONS:
+                raise ExprError("%s is not an input in %r" % (m.group(1), text))
+            toks.append(("limb", (m.group(1), int(m.group(2)))))
+        else:
+            toks.append(("name", m.group(1)) if m.group(1) else ("op", m.group(3)))
     toks.append(("end", None))
     i = [0]
 
@@ -67,6 +78,8 @@ def parse(text):
 
     def atom_():
         t = take()
+        if t[0] == "limb":
+            return ("limb", t[1][0], t[1][1])
         if t[0] == "name":
             if t[1] in FUNCTIONS:
                 if take() != ("op", "("):
@@ -92,9 +105,10 @@ def parse(text):
 
 
 def names(tree, out=None):
-    """The names of a tree in order of appearance, with repetitions."""
+    """The names of a tree in order of appearance, with repetitions (the input of a limb
+    reference NAME[I] among them)."""
     out = [] if out is None else out
-    if tree[0] == "name":
+    if tree[0] in ("name", "limb"):
         out.append(tree[1])
     else:
         for sub in tree[1:]:
@@ -102,16 +116,29 @@ def names(tree, out=None):
     return out
 
 
+def limb_refs(tree, out=None):
+    """The limb references (NAME, I) of a tree."""
+    out = [] if out is None else out
+    if tree[0] == "limb":
+        out.append((tree[1], tree[2]))
+    elif tree[0] != "name":
+        for sub in tree[1:]:
+            limb_refs(sub, out)
+    return out
+
+
 def uses(tree, kind):
     if tree[0] == kind:
         return True
-    return tree[0] != "name" and any(uses(t, kind) for t in tree[1:])
+    return tree[0] not in ("name", "limb") and any(uses(t, kind) for t in tree[1:])
 
 
 def to_text(tree):
     k = tree[0]
     if k == "name":
         return tree[1]
+    if k == "limb":
+        return "%s[%d]" % (tree[1], tree[2])
     if k == "neg":
         return "-(%s)" % to_text(tree[1])
     if k == "abs":
@@ -121,10 +148,13 @@ def to_text(tree):
 
 def compile_tree(tree, leaf):
     """(source, scale): Python source of an integer whose value times 2^scale is the exact
-    value of the tree.  leaf(name) gives the (source, scale) of a name."""
+    value of the tree.  leaf(name) gives the (source, scale) of a name, and leaf((name, i)) that
+    of limb i of the input name."""
     k = tree[0]
     if k == "name":
         return leaf(tree[1])
+    if k == "limb":
+        return leaf((tree[1], tree[2]))
     if k == "neg":
         c, s = compile_tree(tree[1], leaf)
         return "(-%s)" % c, s
