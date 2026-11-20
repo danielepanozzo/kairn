@@ -85,6 +85,7 @@ and their limbs (`cx[1]`, limb 1 of the input cx) and K an exact expression over
 integers (`eta/(2*u)`); several are separated by `;`, and all must hold. This module only reads
 and represents descriptions; rules.py decides whether they are acceptable.
 """
+import json
 import os
 import re
 from dataclasses import dataclass, field
@@ -237,6 +238,9 @@ class Kernel:
     stored: set = field(default_factory=set)       # one-limb input groups that are limbs of objects
     supplied: set = field(default_factory=set)     # multi-limb input groups the program gives
     guard_pending: dict = field(default_factory=dict)   # input value -> why it is not guarded yet
+    # The record of the names of the constants up(EXPR) of the set the kernel was loaded with
+    # (load_kernels), shared by its kernels: {EXPR: name}. None for a kernel read on its own.
+    constant_names: dict = field(default=None, repr=False, compare=False)
 
     @property
     def extended(self):
@@ -553,9 +557,58 @@ def parse_kernel(text, path):
     return k
 
 
+# The record of the names of the constants up(EXPR) in the Rocq models: a file next to the
+# directory of the kernel descriptions (gen/constant_names.json for gen/kernels), read by
+# load_kernels and written by build (rocq.constant_names_file). EXPR is written as the
+# descriptions write it, without spaces (the text of ir.up of the operand).
+CONSTANT_NAMES = 'constant_names.json'
+CONSTANT_NAMES_ABOUT = (
+    'The names of the constants up(EXPR) in proofs/gen/Model.v and IeeeModel.v, by EXPR as the kernel '
+    'descriptions write it, without spaces. Hand-written proofs use these names, so a name never '
+    'changes: the generator consults this record first, build adds an entry only for a constant that '
+    'is new, and nothing removes one (gen/README.md, "The operations").')
+
+
+def constant_names_path(directory):
+    return os.path.join(os.path.dirname(os.path.abspath(directory)), CONSTANT_NAMES)
+
+
+def load_constant_names(directory):
+    """The record next to a directory of descriptions, {EXPR: name}, or None when there is none."""
+    path = constant_names_path(directory)
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding='utf-8') as f:
+        try:
+            doc = json.load(f)
+        except ValueError as e:
+            raise DescriptionError(f'{path}: {e}')
+    names = doc.get('names') if isinstance(doc, dict) else None
+    if not isinstance(names, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in names.items()):
+        raise DescriptionError(f'{path}: expected {{"about": ..., "names": {{EXPR: NAME, ...}}}}')
+    if len(set(names.values())) != len(names):
+        raise DescriptionError(f'{path}: a name is given to two constants')
+    for text, name in names.items():
+        if not re.fullmatch(r'up_[a-z][a-z0-9_]*_[0-9]+', name) or ' ' in text:
+            raise DescriptionError(f'{path}: {text!r}: {name!r} is not a name up_K_i, or EXPR has a space')
+    return names
+
+
+def constant_names_text(record):
+    """The record as build writes it: its entries in the order of their names."""
+    entries = sorted(record.items(), key=lambda kv: (kv[1].rsplit('_', 1)[0], int(kv[1].rsplit('_', 1)[1])))
+    lines = ['{', f'  "about": {json.dumps(CONSTANT_NAMES_ABOUT)},', '  "names": {']
+    lines += [f'    {json.dumps(text)}: {json.dumps(name)}{"," if i + 1 < len(entries) else ""}'
+              for i, (text, name) in enumerate(entries)]
+    lines += ['  }', '}']
+    return '\n'.join(lines) + '\n'
+
+
 def load_kernels(directory):
-    """Every *.kernel file of a directory, as {name: Kernel} in output order (see `ordered`)."""
+    """Every *.kernel file of a directory, as {name: Kernel} in output order (see `ordered`), each
+    with the record of constant names next to the directory, if there is one."""
     kernels = {}
+    record = load_constant_names(directory)
     for fn in sorted(os.listdir(directory)):
         if not fn.endswith('.kernel'):
             continue
@@ -566,6 +619,7 @@ def load_kernels(directory):
             raise DescriptionError(f'{fn}: kernel {k.name} is also defined in {kernels[k.name].path}')
         if fn != k.name + '.kernel':
             raise DescriptionError(f'{fn}: kernel {k.name} must be in {k.name}.kernel')
+        k.constant_names = record
         kernels[k.name] = k
     return ordered(kernels)
 

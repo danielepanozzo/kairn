@@ -89,11 +89,22 @@ def _operand(a, ups=None):
     return _const_name(a.name, ups) if a.const else a.name
 
 
+def constant_record(kernels):
+    """The record of the names of the constants up(EXPR) that the kernel set was loaded with
+    (gen/constant_names.json for gen/kernels; ir.load_constant_names): {EXPR: name}. Empty for a
+    set loaded without one (the kernels of the tests)."""
+    return next((k.constant_names for k in kernels.values() if k.constant_names), {})
+
+
 def up_names(kernels):
-    """{up(EXPR): the name of its definition}, one per distinct constant, named after the first
-    kernel that uses it and its place among that kernel's distinct up constants: up_K_0, up_K_1,
-    ... (so the third constant of a kernel is up_K_2 even when the first two are named after an
-    earlier kernel)."""
+    """{up(EXPR): the name of its definition}, one per distinct constant. A constant the record
+    names keeps that name (constant_record): hand-written proofs use it, and a kernel added later
+    must not rename it. A constant the record does not have is named after the first kernel K that
+    uses it and its place i among K's distinct up constants, up_K_i (so the third constant of a
+    kernel is up_K_2 even when the first two are named after an earlier kernel), with the next
+    place when that name is the record's for another constant; build then adds it to the record."""
+    record = constant_record(kernels)
+    taken = set(record.values())
     names = {}
     for k in kernels.values():
         mine = []
@@ -102,8 +113,26 @@ def up_names(kernels):
                 if a.const and ir.up(a.name) is not None and a.name not in mine:
                     mine.append(a.name)
         for i, name in enumerate(mine):
-            names.setdefault(name, f'up_{k.name}_{i}')
+            if name in names:
+                continue
+            if ir.up(name) in record:
+                names[name] = record[ir.up(name)]
+                continue
+            while f'up_{k.name}_{i}' in taken:
+                i += 1
+            names[name] = f'up_{k.name}_{i}'
+            taken.add(names[name])
     return names
+
+
+def constant_names_file(kernels):
+    """gen/constant_names.json: the record the kernels were loaded with, and the names of the
+    constants of the real model that it does not have yet. Nothing is removed from it, so that a
+    name, once given, is never given to another constant."""
+    record = dict(constant_record(kernels))
+    for name, rname in up_names(real(kernels)).items():
+        record.setdefault(ir.up(name), rname)
+    return ir.constant_names_text(record)
 
 
 def _fuse(name):

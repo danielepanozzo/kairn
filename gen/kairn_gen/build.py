@@ -28,6 +28,7 @@ def outputs(kernels):
         'include/kairn/gen/bounds.hpp': library.bounds(kernels),
         'include/kairn/gen/selftest.hpp': library.selftest(kernels),
         'gen/claims.json': claims.claims(kernels),
+        'gen/constant_names.json': rocq.constant_names_file(kernels),
         'gen/objcode.json': objcode.objcode(kernels),
         'gen/tests/runner_kernels.inc': cpp.runner_table(kernels),
     }

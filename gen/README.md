@@ -31,6 +31,7 @@ python3 gen/kairn-gen interp    # the exact interpreter, as a runner of the line
 | `include/kairn/gen/bounds.hpp` | Per kernel and limb type, whether it is proved and, only then, the constants of its error claim rounded up (`unit`, `tiny`, `unit_computed`, `tiny_computed`) and its form; what the public headers gate on and export through `kairn::traits` |
 | `include/kairn/gen/selftest.hpp` | Every kernel on fixed operands, with the results the interpreter computes: the stored bit patterns of `kairn::self_test()` |
 | `gen/claims.json` | What every kernel claims, with the constants per format as exact fractions |
+| `gen/constant_names.json` | The names of the constants `up(EXPR)` in the Rocq models, read first and only added to (below, "The operations") |
 | `gen/objcode.json` | Per kernel, form of its C++ (scalar with the fix-up inline, scalar with the fix-up a function of its own, packed) and limb type, the fused multiply-adds and plain multiplications its code asks for: the expectations of the object-code check (`tests/objcode/`) |
 | `gen/tests/runner_kernels.inc` | The table of kernels of the C++ runners `gen/tests/runner.cpp` and `packed_runner.cpp` |
 
@@ -172,8 +173,15 @@ one error entry, of form R and unconditional), with `+ - * /`, parentheses and i
 `const up(unit(mul_2_2)/(1-unit(mul_2_2))*(1+u))`, and with spaces, which mean nothing,
 `const up((1+u)*((1+u)^5*2*eta + tiny(mul_2_2)/(1-unit(mul_2_2)) + eta/2))`. It is computed exactly
 for every format (`consts.py`, below η it is η); C++ prints it as an exact hexadecimal literal per
-type; Rocq as one definition per distinct constant, `up_K_i` after the first kernel K that uses it,
-`round radix2 (FLT_exp emin prec) Zceil (EXPR)` with u, η, `unit(K)` and `tiny(K)` spelled out. The
+type; Rocq as one definition per distinct constant,
+`round radix2 (FLT_exp emin prec) Zceil (EXPR)` with u, η, `unit(K)` and `tiny(K)` spelled out.
+Its name is stable, because hand-written proofs use it: `gen/constant_names.json` records, for each
+EXPR as the descriptions write it without spaces, the name of its definition (`{"about": ...,
+"names": {EXPR: NAME}}`, ordered by name). The printers take a recorded name first; a constant that
+is new is named `up_K_i` after the first kernel K that uses it, i being its place among K's
+distinct constants (the next free place if the record has that name for another constant), and
+`build` adds it to the record, which is one of the files it writes and `check` compares. Nothing
+removes an entry, and a test pins every recorded name (`test_printers.ConstantNames`). The
 rules of `unit_computed` apply (K proved unless the kernel is unverified, its minimum precision at
 least K's), and the expression is checked to be positive in binary64 and binary32.
 

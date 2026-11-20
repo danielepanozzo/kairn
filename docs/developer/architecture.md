@@ -36,6 +36,7 @@ derived from it or checked against it:
 |---|---|---|
 | `gen/` | The generator: Python, standard library only. `gen/kernels/` holds the kernel descriptions. | nothing else in the repository |
 | `gen/claims.json` | Generated and committed: what every kernel claims. | — |
+| `gen/constant_names.json` | Committed, and only added to by `build`: the name of each constant `up(EXPR)` of the Rocq models, which hand-written proofs use and which a new kernel must not change (`gen/README.md`, "The operations"). | — |
 | `gen/objcode.json` | Generated and committed: the fused multiply-adds and plain multiplications that each kernel's code asks for, for the object-code check. | — |
 | `include/kairn/gen/` | Generated and committed C++ kernels. | — |
 | `include/kairn/` | The hand-written public headers. | `include/kairn/gen/` |

@@ -1,6 +1,7 @@
 """The two printers: what their text says, read independently of how they produce it."""
 import copy
 import hashlib
+import os
 import re
 import unittest
 
@@ -864,6 +865,87 @@ class Rocq(unittest.TestCase):
         self.assertIn('Definition mul_2_2_audit : mul_2_2_spec := mul_2_2_correct.\n'
                       'Print Assumptions mul_2_2_correct.', audit)
         self.assertNotIn('Check', audit)       # the audit prints nothing but assumptions
+
+
+class ConstantNames(unittest.TestCase):
+    """The names of the constants up(EXPR) in the Rocq models are stable: gen/constant_names.json
+    records them, the printers take a recorded name before anything else, and build only adds to
+    the record. Hand-written proofs name these definitions (Ball2.v, IeeeBallCores.v,
+    IeeeBallFinite.v, DirectedProd.v, IeeeDirectedProd.v, Directed2.v, ...)."""
+
+    # Every name recorded so far, by the expression of its constant. A recorded name never changes
+    # and never disappears: this list only grows, with the record.
+    RECORDED = {
+        'unit(add_1_1)/(1-unit(add_1_1))': 'up_ball_add_1_0',
+        '(1+u)^3': 'up_ball_add_1_1',
+        '(1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)': 'up_ball_add_1_2',
+        'unit(add_2_2)/(1-unit(add_2_2))*(1+u)': 'up_ball_add_2_0',
+        'unit(mul_1_1)/(1-unit(mul_1_1))': 'up_ball_mul_1_0',
+        '(1+u)^5': 'up_ball_mul_1_1',
+        '(1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)': 'up_ball_mul_1_2',
+        'unit(mul_2_2)/(1-unit(mul_2_2))': 'up_ball_mul_2_0',
+        '(1+u)^6': 'up_ball_mul_2_1',
+        '(1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)': 'up_ball_mul_2_2',
+        'eta/(2*u)': 'up_ball_mul_pow2_1_0',
+        '(1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)': 'up_ball_scale_1_2',
+        'unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)': 'up_ball_scale_2_0',
+        '(1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)+eta/(2*u)': 'up_ball_scale_2_2',
+        'eta/(2*u^2)': 'up_mul_down_1_0',
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        cls.ks = common.kernels()
+        cls.record = ir.load_constant_names(os.path.join(common.GEN, 'kernels'))
+
+    def test_no_recorded_name_changes_or_disappears(self):
+        for text, name in self.RECORDED.items():
+            self.assertEqual(self.record.get(text), name, text)
+        self.assertEqual(len(set(self.record.values())), len(self.record))
+
+    def test_the_printers_use_the_record(self):
+        names = rocq.up_names(rocq.real(self.ks))
+        for const, name in names.items():
+            self.assertEqual(self.record[ir.up(const)], name, const)
+        model = rocq.model(self.ks)
+        for const, name in names.items():
+            self.assertIn(f'(* up({ir.up(const)}): the smallest number of the format not below it. *)\n'
+                          f'Definition {name} : R :=', model)
+        # The committed record is what build writes: nothing is missing from it.
+        with open(os.path.join(common.GEN, ir.CONSTANT_NAMES), encoding='utf-8') as f:
+            self.assertEqual(f.read(), rocq.constant_names_file(self.ks))
+
+    def test_a_kernel_added_first_renames_nothing(self):
+        """A kernel that comes first (one limb, a name that sorts early) and uses a recorded
+        constant takes the recorded name; its new constant gets up_K_i, i its place among the
+        kernel's constants, and is the one entry build adds. Without the record the old rule would
+        have renamed the recorded constant after the new kernel."""
+        text = ('kernel: aaa_first\ninput: a\noutput: r\nvalue: a\nensures: upper r gaps=4\n'
+                'status: unverified\ncone_exempt: test\n'
+                'p = prod(a, const up(eta/(2*u^2)))\nr = prod(p, const up(3*eta+u))\n')
+        k = ir.parse_kernel(text, 'aaa_first.kernel')
+        ks = copy.deepcopy(dict(self.ks))
+        k.constant_names = next(iter(ks.values())).constant_names
+        ks = ir.ordered(dict(ks, aaa_first=k))
+        self.assertEqual(next(iter(ks)), 'aaa_first')
+        names = rocq.up_names(rocq.real(ks))
+        self.assertEqual(names['up(eta/(2*u^2))'], 'up_mul_down_1_0')
+        self.assertEqual(names['up(3*eta+u)'], 'up_aaa_first_1')
+        added = ir.constant_names_text(dict(self.record, **{'3*eta+u': 'up_aaa_first_1'}))
+        self.assertEqual(rocq.constant_names_file(ks), added)
+        for other in ks.values():
+            other.constant_names = None
+        self.assertEqual(rocq.up_names(rocq.real(ks))['up(eta/(2*u^2))'], 'up_aaa_first_0')
+
+    def test_a_new_name_avoids_the_recorded_ones(self):
+        """A new constant whose name up_K_i the record already gives to another constant takes the
+        next place."""
+        text = ('kernel: ball_add_1x\ninput: a\noutput: r\nvalue: a\nensures: upper r gaps=4\n'
+                'status: unverified\ncone_exempt: test\nr = prod(a, const up(5*eta+u))\n')
+        k = ir.parse_kernel(text, 'ball_add_1x.kernel')
+        k.name = 'ball_add_1'                  # as if the kernel had this name and a new constant
+        k.constant_names = {'(1+u)^3': 'up_ball_add_1_0'}
+        self.assertEqual(rocq.up_names({'ball_add_1': k}), {'up(5*eta+u)': 'up_ball_add_1_1'})
 
 
 if __name__ == '__main__':
