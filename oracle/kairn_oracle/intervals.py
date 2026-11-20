@@ -97,6 +97,8 @@ SIDE_PL_FAILS = "%s: product_large does not hold (within the steps)"
 SIDE_RATIO = "%s: distance from the range bound / (rel*|bound| + abs)"
 SIDE_RATIO_REL = ("%s: distance from the range bound / (rel*|bound| + abs), where the relative "
                   "term is the larger")
+SIDE_RATIO_UNCLAIMED = ("%s: distance from the range bound / (rel*|bound| + abs), beside an "
+                        "infinite bound (not claimed)")
 SIDE_EW_HOLDS = "%s: exact_when holds"
 SIDE_EW_FAILS = "%s: exact_when fails: "
 OUT_RATIO = "|output - value| / (rel*|value| + abs)"
@@ -1507,12 +1509,17 @@ def k_encloses_interval(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
                 if _cmp(zv, q, v, s) != 0:
                     fail("I4", "exact_when holds for the %s bound, and it is not the range's %s"
                          % (name, _hexv(fmt, v, s)))
-            if not bounded(zs) or type(zv) is not int:
+            if type(zv) is not int:
                 continue
             m = min(s, q)
             Z, Vv = zv << (q - m), v << (s - m)
             dist = (Vv - Z) if down else (Z - Vv)
             ok, r = ratio_le(dist, abs(Vv), rel, ab, m)
+            if not bounded(zs):
+                # A finite bound beside an infinite one: not claimed (I4 is for a bounded result);
+                # its distance is kept, to show what the stricter reading would give.
+                es.track_max(SIDE_RATIO_UNCLAIMED % name, r, line)
+                continue
             es.track_max(SIDE_RATIO % name, r, line)
             a = ab * (Fraction(1 << -m) if m < 0 else Fraction(1, 1 << m))
             if a <= rel * abs(Vv):
