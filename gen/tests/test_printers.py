@@ -785,9 +785,10 @@ class Rocq(unittest.TestCase):
     # that call them; Audit.v lists the same theorems, those two earlier. Then the kernels of the
     # folds' stage (nine with a real-model statement: the steps of the folds and the four exported
     # bounds, and their constants): every earlier definition and statement is the same, byte for
-    # byte, mul_2_2 and add_2_2 printed earlier, before dot_step_2; Audit.v is the same.
+    # byte, mul_2_2 and add_2_2 printed earlier, before dot_step_2; Audit.v is the same. Then the
+    # statements of bound_dot_1 and bound_dot_2 gained m unit <= 1/2 when ok, as those of bound_sum_k.
     DIGESTS = {'Model.v': '8b9cb1e627de7342805dc3f29feaf7e5d86f931e4593902343ae09b1c2dbfc20',
-               'Statements.v': '638028d5c502619d8bb7c0d001b2963f97a3b5512761096b985db12b81ec13e7',
+               'Statements.v': '0b74f290fcaec0a072d5504e04833c81af083530cf9a1a6a0c44891a531a7d6a',
                'Audit.v': '0c93acbf8651ff7bc342d1c9ab1f80d0f98718ddf3d0123dbff0d0547a871f15'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

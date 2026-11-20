@@ -226,12 +226,12 @@ template <> struct ball_sub_1_full<float> {
     static constexpr bool proved = true;
 };
 
-// bound_dot_1: UNVERIFIED. Claims: upper; upper.
+// bound_dot_1: UNVERIFIED. Claims: holds; upper; upper.
 template <class T> struct bound_dot_1;
 template <> struct bound_dot_1<double> { static constexpr bool proved = false; };
 template <> struct bound_dot_1<float> { static constexpr bool proved = false; };
 
-// bound_dot_2: UNVERIFIED. Claims: upper; upper.
+// bound_dot_2: UNVERIFIED. Claims: holds; upper; upper.
 template <class T> struct bound_dot_2;
 template <> struct bound_dot_2<double> { static constexpr bool proved = false; };
 template <> struct bound_dot_2<float> { static constexpr bool proved = false; };

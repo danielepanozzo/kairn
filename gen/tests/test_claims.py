@@ -460,8 +460,10 @@ class FoldClaims(unittest.TestCase):
         self.assertEqual(b['ensures'], [
             {'kind': 'holds', 'rel': 'le', 'args': ['m*unit(add_2_2)', '1/2'], 'if': 'ok'},
             {'kind': 'upper', 'of': 'g', 'value': 'm*unit(add_2_2)/(1-m*unit(add_2_2))', 'if': 'ok'}])
-        self.assertEqual(by['bound_dot_1']['ensures'][1], {'kind': 'upper', 'of': 't', 'value': 'm*tiny(mul_1_1)*(1+g)',
-                                                            'if': 'ok'})
+        self.assertEqual(by['bound_dot_1']['ensures'], [
+            {'kind': 'holds', 'rel': 'le', 'args': ['m*unit(mul_1_1)', '1/2'], 'if': 'ok'},
+            {'kind': 'upper', 'of': 'g', 'value': 'm*unit(mul_1_1)/(1-m*unit(mul_1_1))', 'if': 'ok'},
+            {'kind': 'upper', 'of': 't', 'value': 'm*tiny(mul_1_1)*(1+g)', 'if': 'ok'}])
         self.assertEqual(by['dot_step_2']['ensures'][1]['form'], 'T')
         self.assertEqual(by['fold_finish_2']['ensures'], [{'kind': 'finite_or_nan', 'of': 'r', 'flag': 'flag'}])
 

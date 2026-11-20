@@ -16,6 +16,7 @@ output:        t
 output:        mask ok
 requires:      count m
 requires:      format half
+ensures:       holds le m*unit(mul_2_2) 1/2 if=ok
 ensures:       upper g value=m*unit(mul_2_2)/(1-m*unit(mul_2_2)) if=ok
 ensures:       upper t value=m*tiny(mul_2_2)*(1+g) if=ok
 min_precision: 4

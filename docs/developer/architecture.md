@@ -957,7 +957,8 @@ finishes `fold_finish_1` and `fold_finish_2` (`finite_or_nan`, `ieee_only`), and
   "inputs": [{"name": "m", "limbs": 1}],
   "outputs": [{"name": "g", "limbs": 1}, {"name": "t", "limbs": 1}, {"name": "ok", "limbs": 1, "type": "mask"}],
   "requires": ["count(m)", "format(half)"],
-  "ensures": [{"kind": "upper", "of": "g", "value": "m*unit(mul_2_2)/(1-m*unit(mul_2_2))", "if": "ok"},
+  "ensures": [{"kind": "holds", "rel": "le", "args": ["m*unit(mul_2_2)", "1/2"], "if": "ok"},
+              {"kind": "upper", "of": "g", "value": "m*unit(mul_2_2)/(1-m*unit(mul_2_2))", "if": "ok"},
               {"kind": "upper", "of": "t", "value": "m*tiny(mul_2_2)*(1+g)", "if": "ok"}],
   "min_precision": 4, "status": "unverified",
   "instances": {"binary64": [], "binary32": []}
