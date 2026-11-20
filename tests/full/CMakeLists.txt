@@ -258,19 +258,20 @@ endforeach()
 # full.api.rational.KIND.FORMAT: KAIRN_RATIONAL_CASES cases of rational_KIND (the quick tier has
 # KAIRN_RATIONAL_QUICK_CASES of the same seed), through the runner with the build's flags and the
 # runner of every flag set, the debug build's included: integer code, so every output must be the
-# same bytes, and the oracle judges one (tests/api/rational.cmake).
+# same bytes, and the oracle judges each distinct output once (tests/crosscheck.py compiled).
 if(_api_rational_common)
-  set(_runners "build|$<TARGET_FILE:kairn-api-rational-runner>")
+  set(_runners --runner build "$<TARGET_FILE:kairn-api-rational-runner>")
   foreach(_set IN LISTS _flags_names)
-    string(APPEND _runners "|${_set}|$<TARGET_FILE:kairn-api-rational-runner-${_set}>")
+    list(APPEND _runners --runner ${_set} "$<TARGET_FILE:kairn-api-rational-runner-${_set}>")
   endforeach()
   foreach(_kind 1 2)
     foreach(_format binary64 binary32)
       set(_name full.api.rational.${_kind}.${_format})
       add_test(NAME ${_name}
-        COMMAND "${CMAKE_COMMAND}" ${_api_rational_common} "-DRUNNERS=${_runners}" "-DKIND=rational_${_kind}"
-          "-DFORMAT=${_format}" "-DCOUNT=${KAIRN_RATIONAL_CASES}" "-DSUMMARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/rational"
-          -P "${PROJECT_SOURCE_DIR}/tests/api/rational.cmake")
+        COMMAND ${_api_rational_common} --kernel rational_${_kind} --format ${_format}
+          --count ${KAIRN_RATIONAL_CASES}
+          --summary "${CMAKE_CURRENT_BINARY_DIR}/rational/rational_${_kind}.${_format}.json"
+          ${_runners})
       set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle;rational")
     endforeach()
   endforeach()

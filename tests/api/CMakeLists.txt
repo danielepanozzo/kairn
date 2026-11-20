@@ -32,7 +32,7 @@
 # - api.rational.constexpr: kairn::rational and kairn::integer (rational.cpp): constants computed
 #   independently, the checker against results changed by one unit, and the same bits at run time
 #   under the four rounding modes; api.rational.K.FORMAT: the oracle's cases of rational_K through
-#   rational_runner.cpp (rational.cmake). The full tier has more cases, through the runner of every
+#   rational_runner.cpp (../crosscheck.py compiled). The full tier has more cases, through the runner of every
 #   flag set too, and rational.cpp built with every flag set.
 # - api.example.*: the documentation's examples (docs/examples/cpp/), which check their own output;
 #   api.example.accurate_sums.* also compares it with the text its tutorial shows.
@@ -170,15 +170,20 @@ set(KAIRN_RATIONAL_CASES 20000 CACHE STRING "Cases per kind and format of kairn:
 set(KAIRN_RATIONAL_QUICK_CASES 2000 CACHE STRING
   "Cases per kind and format of kairn::rational judged by the oracle, in the quick tier")
 if(Python3_Interpreter_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-oracle")
-  set(_api_rational_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
-    "-DSEED=${KAIRN_API_SEED}")
+  # The driver of the kernels' cross-checks, in one process: the oracle's requests, the runner,
+  # the oracle's verdict and the guards (../crosscheck.py compiled, which knows rational_K without
+  # claims; ../crosscheck_guards.py: every stratum, exact and inexact cases, den = 0 and, for two
+  # limbs, a pair that the two roundings alone do not normalize).
+  set(_api_rational_common "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/crosscheck.py" compiled
+    --seed "${KAIRN_API_SEED}" --fail-on-suspicious)
   foreach(_kind 1 2)
     foreach(_format binary64 binary32)
       set(_name api.rational.${_kind}.${_format})
       add_test(NAME ${_name}
-        COMMAND "${CMAKE_COMMAND}" ${_api_rational_common} "-DRUNNERS=build|$<TARGET_FILE:kairn-api-rational-runner>"
-          "-DKIND=rational_${_kind}" "-DFORMAT=${_format}" "-DCOUNT=${KAIRN_RATIONAL_QUICK_CASES}"
-          "-DSUMMARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/rational" -P "${CMAKE_CURRENT_SOURCE_DIR}/rational.cmake")
+        COMMAND ${_api_rational_common} --kernel rational_${_kind} --format ${_format}
+          --count ${KAIRN_RATIONAL_QUICK_CASES}
+          --summary "${CMAKE_CURRENT_BINARY_DIR}/rational/rational_${_kind}.${_format}.json"
+          --runner build "$<TARGET_FILE:kairn-api-rational-runner>")
       set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "api;oracle;rational")
     endforeach()
   endforeach()

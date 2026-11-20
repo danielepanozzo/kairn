@@ -83,7 +83,7 @@ With integers only, in 64-bit words, no `__int128`:
 4. Each limb, and the error, assembled from its sign, significand and exponent with
    `std::bit_cast`.
 
-The design of Milestone 2 ("Constants at compile time") forms the dividend of the second
+[The design of Milestone 2](../developer/design/milestone2.md#constants-at-compile-time) forms the dividend of the second
 division and the sum of the two limbs as integers of up to three words, below $2^{180}$ (168 bits
 observed); computing the quotient bit by bit keeps the remainder below the divisor instead, and
 recognizing the one case that needs renormalization replaces the sum, so that no integer is wider
