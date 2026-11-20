@@ -20,9 +20,9 @@
      orders of a loop, and the kernels to which they apply;
    - the first building blocks of Milestone 2, proved before their kernels are generated:
      the directed sums and products on models of their listings written by hand (the
-     generated models will replace them), the error of a rounded product and the sign of
-     the error term of two_prod, the rectangle lemma of the product of intervals, and the
-     two executions of a product.
+     generated models will replace them), in the real model and in the IEEE model, the
+     error of a rounded product and the sign of the error term of two_prod, the rectangle
+     lemma of the product of intervals, and the two executions of a product.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -33,6 +33,7 @@ From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeOps.
 From Kairn Require Import Folds Summation SummationKernels.
 From Kairn Require Import DirectedSum DirectedProd Rectangle IeeeProduct.
+From Kairn Require Import IeeeDirected IeeeDirectedProd.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
    theories/IeeeEFT.v). *)
@@ -314,3 +315,30 @@ Print Assumptions mult_prod_zero.
 Print Assumptions mult_prod_same.
 Print Assumptions succ_mult_prod.
 Print Assumptions rmul_two_executions.
+
+(* The directed sums in the IEEE model (theories/IeeeDirected.v), on IEEE models of the
+   listings written by hand: the neighbors of the infinities, two_sum_ord, add_down_1 and
+   add_up_1 on finite operands (the directed rounding in the format with overflow) and
+   with an operand that is not finite (the sum of IEEE 754), and the differences. *)
+Print Assumptions pred_pinf.
+Print Assumptions succ_ninf.
+Print Assumptions two_sum_ord_ieee_finite.
+Print Assumptions two_sum_ord_ieee_nonfinite.
+Print Assumptions add_down_1_ieee_finite.
+Print Assumptions add_up_1_ieee_finite.
+Print Assumptions add_down_1_ieee_nonfinite.
+Print Assumptions add_up_1_ieee_nonfinite.
+Print Assumptions add_down_1_ieee.
+Print Assumptions add_up_1_ieee.
+Print Assumptions sub_down_1_ieee.
+Print Assumptions sub_up_1_ieee.
+
+(* The directed products in the IEEE model (theories/IeeeDirectedProd.v), likewise:
+   mul_down_1 and mul_up_1 on finite operands and with an operand that is not finite, and
+   the enclosure of a product of bounds by mul_dir_1. *)
+Print Assumptions mul_down_1_ieee_finite.
+Print Assumptions mul_up_1_ieee_finite.
+Print Assumptions mul_down_1_ieee_nonfinite.
+Print Assumptions mul_up_1_ieee_nonfinite.
+Print Assumptions mul_dir_1_ieee_eq.
+Print Assumptions mul_dir_1_ieee_encloses.

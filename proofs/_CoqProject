@@ -54,6 +54,8 @@ theories/IeeeFinite.v
 theories/IeeeExt.v
 theories/Rectangle.v
 theories/IeeeProduct.v
+theories/IeeeDirected.v
+theories/IeeeDirectedProd.v
 theories/IeeeBall.v
 theories/IeeeBallCores.v
 theories/IeeeBallFinite.v

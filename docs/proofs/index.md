@@ -51,8 +51,10 @@ lists:
   made in any order of its additions (`Folds.v`, `Summation.v`, `SummationKernels.v`), and the
   first building blocks of Milestone 2, proved before their kernels are generated: a sum and a
   product rounded down and up without a rounding mode, on models of their listings written by
-  hand (`DirectedSum.v`, `DirectedProd.v`), the lemma that the product of two intervals rests on
-  (`Rectangle.v`), and the comparison of the two ways a product is executed (`IeeeProduct.v`);
+  hand, over the real numbers (`DirectedSum.v`, `DirectedProd.v`) and with overflow, infinities
+  and NaN (`IeeeDirected.v`, `IeeeDirectedProd.v`), the lemma that the product of two intervals
+  rests on (`Rectangle.v`), and the comparison of the two ways a product is executed
+  (`IeeeProduct.v`);
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -86,7 +88,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  53 files: no Admitted, admit, Axiom or Parameter
+  55 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
