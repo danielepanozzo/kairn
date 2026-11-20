@@ -630,7 +630,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_lower_as_1(float c, float r, float& l_
 }
 
 // ball_make_1(c, r) -> cw, rw
-// constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). Status: unverified (IEEE model only); constexpr.
+// constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> ball_make_1(double g, double c0, bool ok, bool f) noexcept {
@@ -4205,7 +4205,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_lower_as_2(float c0, float c1, float r
 }
 
 // ball_make_2(c = (c0, c1), r) -> cw = (cw0, cw1), rw
-// constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). Status: unverified (IEEE model only); constexpr.
+// constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 3> ball_make_2(double c0, double c1, double g, bool ok, bool f) noexcept {

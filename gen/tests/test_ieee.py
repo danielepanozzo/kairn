@@ -366,9 +366,7 @@ class Statements(unittest.TestCase):
     def test_audit(self):
         text = ieee.audit(self.ks)
         # Every kernel of the extended domain names its theorem.
-        # 54, but the two constructors of a ball, unverified while their proof is redone for a NaN
-        # radius that gives the whole line (decided on 2026-11-20).
-        self.assertEqual(text.count('Print Assumptions'), 52)
+        self.assertEqual(text.count('Print Assumptions'), 54)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -391,10 +389,11 @@ class CheckedFiles(unittest.TestCase):
     # definition and statement is the same, byte for byte, some printed earlier; make -C proofs passed
     # on these files. Then a NaN radius given to a constructor of a ball became the whole line
     # (decided on 2026-11-20): the definitions and statements of ball_make_1 and ball_make_2 changed,
-    # their status is unverified, and make -C proofs builds every file but theories/IeeeMake.v, whose
-    # proof of the rule before fails, and the IEEE audit, which needs it; IeeeMake.v is being redone.
+    # and nothing else; their theorems were proved again on the new definitions for the new
+    # statements (theories/IeeeMake.v), the statements file prints their status, proved, and
+    # make -C proofs passed on these files.
     DIGESTS = {'proofs/gen/IeeeModel.v': 'bad9bdbb870aeb2c18b2d6034c54b0d267f823ab0d02de198fb5a1cb08e276e9',
-               'proofs/gen/IeeeStatements.v': 'ac755681e1db6c9d5d475876e3026c4593cefa9e01eed3e725da828abeff4ec4'}
+               'proofs/gen/IeeeStatements.v': '3bb2c42ddbc77b59985a8ee87ef966ad2e229639ddf6172a2be11df40acb1f29'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

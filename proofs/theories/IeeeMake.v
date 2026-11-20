@@ -9,9 +9,18 @@
      make_2(a)            canonical, with the value of a (as an extended real number).
      make_2_limbs(h, l)   requires (h, l) canonical; canonical, with the same value, and
                           with limbs of the same values when h is finite.
-     ball_make_1(c, r)    a canonical ball: empty when r is a NaN or negative (-infinity
-     ball_make_2(c, r)    included); else the whole line when r is +infinity or the center
-                          is not finite; else the ball of center c and radius r.
+     ball_make_1(c, r)    a canonical ball: empty when r is negative (-infinity included),
+     ball_make_2(c, r)    whatever the center is; else the whole line when r is a NaN or
+                          +infinity or the center is not finite; else the ball of center
+                          c and radius r (a radius -0 is the radius 0).
+
+   A NaN radius given by the program makes the whole line, as a NaN bound given to an
+   interval does (decided on 2026-11-20; before, it made the empty set). The empty ball
+   that comes out is still the one whose limbs are all NaN: that is how an empty ball is
+   stored, and it is not what the program gives. The kernels return the empty ball when
+   lt(g, 0) holds of the guarded radius g, which it does not for a NaN (a NaN is below
+   nothing); then they return the ball given when lt(g, inf) holds and the center is
+   finite, and lt(g, inf) does not hold for a NaN either, as it does not for +infinity.
 
    The statements are in proofs/gen/IeeeStatements.v. *)
 From Stdlib Require Import Reals ZArith Bool Lia Lra.
@@ -110,44 +119,72 @@ Qed.
 
 (** * ball_make_1 and ball_make_2 *)
 
-(* The radii that give the empty set: a NaN, -infinity, a negative number. *)
+(* The radii that give the empty set: -infinity, a negative number. A NaN is not one of
+   them, and neither is -0, whose value is 0. *)
 Definition r_empty (r : float) : Prop :=
-  is_nan prec emax r = true \/ r = ninf \/ (fin r /\ b2r r < 0).
+  r = ninf \/ (fin r /\ b2r r < 0).
+
+(* The radii that give the whole line whatever the center is: a NaN, +infinity. *)
+Definition r_whole (r : float) : Prop :=
+  is_nan prec emax r = true \/ r = pinf.
 
 Lemma r_empty_not_nonneg : forall r : float, r_empty r -> fin r -> 0 <= b2r r -> False.
 Proof.
-intros r [N|[E|[_ L]]] F P.
-- rewrite (nan_not_finite prec emax r N) in F. discriminate F.
+intros r [E|[_ L]] F P.
 - subst r. discriminate F.
 - lra.
 Qed.
 
-Lemma r_empty_not_pinf : forall r : float, r_empty r -> r = pinf -> False.
-Proof. intros r [N|[E|[F _]]] K; subst r; discriminate. Qed.
+Lemma r_empty_not_whole : forall r : float, r_empty r -> r_whole r -> False.
+Proof.
+intros r [E|[F _]] [N|K].
+- subst r. discriminate N.
+- subst r. discriminate K.
+- rewrite (nan_not_finite prec emax r N) in F. discriminate F.
+- subst r. discriminate F.
+Qed.
 
-(* The two tests on the guarded radius, in the three cases. *)
+Lemma r_whole_not_finite : forall r : float, r_whole r -> fin r -> False.
+Proof.
+intros r [N|K] F.
+- rewrite (nan_not_finite prec emax r N) in F. discriminate F.
+- subst r. discriminate F.
+Qed.
+
+(* A NaN is not below any value. *)
+Lemma lt_nan_l : forall x y : float, is_nan prec emax x = true -> flt x y = false.
+Proof.
+intros [s|s|s pl H|s m e H] y N; try discriminate N.
+destruct y; reflexivity.
+Qed.
+
+(* The two tests on the guarded radius, in the three cases: a negative radius, -infinity
+   included; a nonnegative number of the format; a NaN or +infinity. Every radius is in
+   one of them, and in one only (r_empty_not_nonneg, r_empty_not_whole,
+   r_whole_not_finite). *)
 Lemma radius_tests :
   forall r : float,
-  (r_empty r /\ fle pzero (guard r) = false) \/
-  (fin r /\ 0 <= b2r r /\ fle pzero (guard r) = true /\ flt (guard r) pinf = true) \/
-  (r = pinf /\ fle pzero (guard r) = true /\ flt (guard r) pinf = false).
+  (r_empty r /\ flt (guard r) pzero = true) \/
+  (fin r /\ 0 <= b2r r /\ flt (guard r) pzero = false /\ flt (guard r) pinf = true) \/
+  (r_whole r /\ flt (guard r) pzero = false /\ flt (guard r) pinf = false).
 Proof.
 intros r. destruct (finite_dec prec emax r) as [F|F].
 - assert (Fg : fin (guard r)) by now rewrite (guard_finite prec emax nan_plus).
   assert (Fz : fin pzero) by reflexivity.
-  assert (E : fle pzero (guard r) = Rle_bool 0 (b2r r)).
-  { rewrite (le_finite prec emax pzero (guard r) Fz Fg), (guard_val prec emax nan_plus).
+  assert (E : flt (guard r) pzero = Rlt_bool (b2r r) 0).
+  { rewrite (lt_finite prec emax (guard r) pzero Fg Fz), (guard_val prec emax nan_plus).
     reflexivity. }
   destruct (Rle_or_lt 0 (b2r r)) as [P|P].
-  + right. left. rewrite (Rle_bool_true _ _ P) in E.
+  + right. left. rewrite (Rlt_bool_false _ _ P) in E.
     split; [exact F|split; [exact P|split; [exact E|]]].
     now apply (lt_pinf_finite prec emax).
-  + left. rewrite (Rle_bool_false _ _ P) in E. split; [right; right; now split|exact E].
+  + left. rewrite (Rlt_bool_true _ _ P) in E. split; [right; now split|exact E].
 - destruct (not_finite_cases prec emax r F) as [N|[[|] E]].
-  + left. split; [now left|].
-    destruct r as [s|s|s pl H|s m e H]; try discriminate N. reflexivity.
-  + subst r. left. split; [right; now left|reflexivity].
-  + subst r. right. right. split; [reflexivity|split; reflexivity].
+  + (* a NaN: both tests are false *)
+    assert (Ng : is_nan prec emax (guard r) = true) by now rewrite (guard_nan prec emax nan_plus).
+    right. right. split; [now left|split; apply lt_nan_l; exact Ng].
+  + subst r. left. split; [now left|reflexivity].
+  + subst r. right. right. split; [now right|split; reflexivity].
 Qed.
 
 Lemma ball_make_1_facts :
@@ -157,17 +194,20 @@ Lemma ball_make_1_facts :
   (r_empty r -> ball_empty_1 cw rw) /\
   (fin r -> 0 <= b2r r -> fin c ->
    ball_finite_1 cw rw /\ b2r cw = b2r c /\ b2r rw = b2r r) /\
-  (r = pinf \/ (fin r /\ 0 <= b2r r /\ ~ fin c) -> ball_whole_1 cw rw).
+  (is_nan prec emax r = true \/ r = pinf \/ (fin r /\ 0 <= b2r r /\ ~ fin c) ->
+   ball_whole_1 cw rw).
 Proof.
 intros c r. unfold IeeeModel.ball_make_1. cbv beta iota zeta.
 rewrite (lt_abs_pinf prec emax nan_abs), (guard_finite prec emax nan_plus).
 assert (Ne : ball_empty_1 cnan cnan) by (split; exact (proj2_sig nan_const)).
 assert (Nw : ball_whole_1 pzero pinf) by (split; [now exists false|reflexivity]).
-destruct (radius_tests r) as [[HE Ee]|[[Fr [Pr [Ee Ef]]]|[Er [Ee Ef]]]]; rewrite Ee.
-- (* the empty set *)
+destruct (radius_tests r) as [[HE En]|[[Fr [Pr [En Ef]]]|[HW [En Ef]]]]; rewrite En; cbn [negb].
+- (* a negative radius: the empty set, whatever the center is *)
   split; [right; right; exact Ne|split; [intros _; exact Ne|split]].
   + intros F P _. elim (r_empty_not_nonneg r HE F P).
-  + intros [K|[F [P _]]]; [elim (r_empty_not_pinf r HE K)|elim (r_empty_not_nonneg r HE F P)].
+  + intros [K|[K|[F [P _]]]];
+      [elim (r_empty_not_whole r HE (or_introl K))|elim (r_empty_not_whole r HE (or_intror K))
+      |elim (r_empty_not_nonneg r HE F P)].
 - rewrite Ef. destruct (is_finite prec emax c) eqn:Fc; cbn [andb].
   + (* the ball itself *)
     assert (B : ball_finite_1 (guard c) (guard r)).
@@ -177,17 +217,19 @@ destruct (radius_tests r) as [[HE Ee]|[[Fr [Pr [Ee Ef]]]|[Er [Ee Ef]]]]; rewrite
     split; [left; exact B|split; [|split]].
     * intros HE. elim (r_empty_not_nonneg r HE Fr Pr).
     * intros _ _ _. split; [exact B|split; apply (guard_val prec emax nan_plus)].
-    * intros [K|[_ [_ K]]]; [subst r; discriminate Fr|now elim K].
+    * intros [K|[K|[_ [_ K]]]];
+        [elim (r_whole_not_finite r (or_introl K) Fr)|elim (r_whole_not_finite r (or_intror K) Fr)
+        |now elim K].
   + (* the center is not finite: the whole line *)
     split; [right; left; exact Nw|split; [|split]].
     * intros HE. elim (r_empty_not_nonneg r HE Fr Pr).
     * intros _ _ K. discriminate K.
     * intros _. exact Nw.
-- (* the radius is +infinity: the whole line *)
+- (* the radius is a NaN or +infinity: the whole line, whatever the center is *)
   rewrite Ef, andb_false_r.
   split; [right; left; exact Nw|split; [|split]].
-  + intros HE. elim (r_empty_not_pinf r HE Er).
-  + intros F _ _. subst r. discriminate F.
+  + intros HE. elim (r_empty_not_whole r HE HW).
+  + intros F _ _. elim (r_whole_not_finite r HW F).
   + intros _. exact Nw.
 Qed.
 
@@ -198,18 +240,21 @@ Lemma ball_make_2_facts :
   (r_empty r -> ball_empty_2 cw0 cw1 rw) /\
   (fin r -> 0 <= b2r r -> fin c0 ->
    ball_finite_2 cw0 cw1 rw /\ cw0 = c0 /\ cw1 = c1 /\ b2r rw = b2r r) /\
-  (r = pinf \/ (fin r /\ 0 <= b2r r /\ ~ fin c0) -> ball_whole_2 cw0 cw1 rw).
+  (is_nan prec emax r = true \/ r = pinf \/ (fin r /\ 0 <= b2r r /\ ~ fin c0) ->
+   ball_whole_2 cw0 cw1 rw).
 Proof.
 intros c0 c1 r C. unfold IeeeModel.ball_make_2. cbv beta iota zeta.
 rewrite (lt_abs_pinf prec emax nan_abs).
 assert (Ne : ball_empty_2 cnan cnan cnan) by (repeat split; exact (proj2_sig nan_const)).
 assert (Nw : ball_whole_2 pzero pzero pinf)
   by (split; [now exists false|split; [now exists false|reflexivity]]).
-destruct (radius_tests r) as [[HE Ee]|[[Fr [Pr [Ee Ef]]]|[Er [Ee Ef]]]]; rewrite Ee.
-- (* the empty set *)
+destruct (radius_tests r) as [[HE En]|[[Fr [Pr [En Ef]]]|[HW [En Ef]]]]; rewrite En; cbn [negb].
+- (* a negative radius: the empty set, whatever the center is *)
   split; [right; right; exact Ne|split; [intros _; exact Ne|split]].
   + intros F P _. elim (r_empty_not_nonneg r HE F P).
-  + intros [K|[F [P _]]]; [elim (r_empty_not_pinf r HE K)|elim (r_empty_not_nonneg r HE F P)].
+  + intros [K|[K|[F [P _]]]];
+      [elim (r_empty_not_whole r HE (or_introl K))|elim (r_empty_not_whole r HE (or_intror K))
+      |elim (r_empty_not_nonneg r HE F P)].
 - rewrite Ef. destruct (is_finite prec emax c0) eqn:Fc; cbn [andb].
   + (* the ball itself *)
     assert (B : ball_finite_2 c0 c1 (guard r)).
@@ -223,17 +268,19 @@ destruct (radius_tests r) as [[HE Ee]|[[Fr [Pr [Ee Ef]]]|[Er [Ee Ef]]]]; rewrite
     * intros HE. elim (r_empty_not_nonneg r HE Fr Pr).
     * intros _ _ _.
       split; [exact B|split; [reflexivity|split; [reflexivity|apply (guard_val prec emax nan_plus)]]].
-    * intros [K|[_ [_ K]]]; [subst r; discriminate Fr|now elim K].
+    * intros [K|[K|[_ [_ K]]]];
+        [elim (r_whole_not_finite r (or_introl K) Fr)|elim (r_whole_not_finite r (or_intror K) Fr)
+        |now elim K].
   + (* the center is not finite: the whole line *)
     split; [right; left; exact Nw|split; [|split]].
     * intros HE. elim (r_empty_not_nonneg r HE Fr Pr).
     * intros _ _ K. discriminate K.
     * intros _. exact Nw.
-- (* the radius is +infinity: the whole line *)
+- (* the radius is a NaN or +infinity: the whole line, whatever the center is *)
   rewrite Ef, andb_false_r.
   split; [right; left; exact Nw|split; [|split]].
-  + intros HE. elim (r_empty_not_pinf r HE Er).
-  + intros F _ _. subst r. discriminate F.
+  + intros HE. elim (r_empty_not_whole r HE HW).
+  + intros F _ _. elim (r_whole_not_finite r HW F).
   + intros _. exact Nw.
 Qed.
 

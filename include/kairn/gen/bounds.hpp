@@ -153,10 +153,14 @@ template <class T> struct ball_lower_as_1;
 template <> struct ball_lower_as_1<double> { static constexpr bool proved = false; };
 template <> struct ball_lower_as_1<float> { static constexpr bool proved = false; };
 
-// ball_make_1: UNVERIFIED. Claims: makes_ball.
+// ball_make_1: proved. Claims: makes_ball.
 template <class T> struct ball_make_1;
-template <> struct ball_make_1<double> { static constexpr bool proved = false; };
-template <> struct ball_make_1<float> { static constexpr bool proved = false; };
+template <> struct ball_make_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_make_1<float> {
+    static constexpr bool proved = true;
+};
 
 // ball_mul_1: proved. Claims: encloses.
 template <class T> struct ball_mul_1;
@@ -700,10 +704,14 @@ template <class T> struct ball_lower_as_2;
 template <> struct ball_lower_as_2<double> { static constexpr bool proved = false; };
 template <> struct ball_lower_as_2<float> { static constexpr bool proved = false; };
 
-// ball_make_2: UNVERIFIED. Claims: makes_ball.
+// ball_make_2: proved. Claims: makes_ball.
 template <class T> struct ball_make_2;
-template <> struct ball_make_2<double> { static constexpr bool proved = false; };
-template <> struct ball_make_2<float> { static constexpr bool proved = false; };
+template <> struct ball_make_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_make_2<float> {
+    static constexpr bool proved = true;
+};
 
 // mul_2_2: proved. Claims: normalized; error, form R, c = 4, k = 2, t = 3/2.
 template <class T> struct mul_2_2;

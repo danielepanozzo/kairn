@@ -737,9 +737,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeMake.v",
+        "name": "ball_make_1_correct"
+      },
       "source": {
         "cite": "constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20)",
         "license": "algorithm: MIT"
@@ -4276,9 +4280,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeMake.v",
+        "name": "ball_make_2_correct"
+      },
       "source": {
         "cite": "constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20)",
         "license": "algorithm: MIT"

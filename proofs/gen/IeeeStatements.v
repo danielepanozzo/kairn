@@ -148,7 +148,7 @@ Definition ball_lower_as_1_spec : Prop :=
   (ball_empty_1 c r -> l = infinity prec emax false) /\
   (~ ball_empty_1 c r -> forall lo : xreal, range_lower (in_ball_1 c r) lo -> xval l = xrd prec emax lo).
 
-(* ball_make_1: constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). IEEE-model status: unverified. *)
+(* ball_make_1: constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). IEEE-model status: proved. *)
 Definition ball_make_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1065,7 +1065,7 @@ Definition ball_lower_as_2_spec : Prop :=
   (finite c0 /\ finite c1 /\ finite r -> finite l ->
    Rabs (val l - ((val c0 + val c1) - val r)) <= 5 * u prec ^ 1 * (Rabs (val c0 + val c1) + Rabs (val r)) + 3 * eta (ieee_emin prec emax)).
 
-(* ball_make_2: constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). IEEE-model status: unverified. *)
+(* ball_make_2: constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). IEEE-model status: proved. *)
 Definition ball_make_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

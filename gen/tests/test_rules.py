@@ -1361,9 +1361,6 @@ class TheKernels(unittest.TestCase):
     WAVE_2_BALLS = {'ball_lower_as_1', 'ball_upper_as_1', 'ball_lower_as_2', 'ball_upper_as_2',
                     'ball_from_interval_2', 'ball_narrow_2_1'}
     WAVE_2 = WAVE_2_INTERVALS | WAVE_2_CORES | WAVE_2_BALLS | {'mul_dir_1'}
-    # The constructors of a ball, proved for the rule before 2026-11-20 (a NaN radius the empty set)
-    # and unverified until IeeeMake.v is redone for the rule of that day (a NaN radius the whole line).
-    REDO = {'ball_make_1', 'ball_make_2'}
     # Stage B1 of wave 2, unverified, the IEEE-model statement only: the interval kernels of two limbs
     # (negation, difference, constructor, product) and the set operations, conversions and split of
     # the enclosure interface, entry kernels; and mul_ext_2_2, the building block of the product.
@@ -1395,13 +1392,13 @@ class TheKernels(unittest.TestCase):
         # constructors, which have no real-model statement, by their IEEE-model theorems.
         # Of wave 1 of Milestone 2, every kernel is proved too, the two full scalings of a ball by
         # their IEEE-model theorems (IeeeBallPow2.v).
-        # The two constructors of a ball are unverified since a NaN radius gives the whole line
-        # (decided on 2026-11-20): IeeeMake.v proves the rule before, and is being redone.
+        # The two constructors of a ball are proved for the rule of 2026-11-20, that a NaN radius
+        # gives the whole line (IeeeMake.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         (self.MILESTONE1 | self.WAVE_1) - self.REDO)
+                         self.MILESTONE1 | self.WAVE_1)
         # The first kernels of wave 2 are unverified, in both models, until their proofs (which
         # exist for hand-written copies of their listings) are pointed at the generated text.
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.WAVE_2 | self.REDO)
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.WAVE_2)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
@@ -1412,14 +1409,14 @@ class TheKernels(unittest.TestCase):
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL
                          | wave_2_ieee_only | {'mul_dir_1'})
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
-                         dict(dict.fromkeys((self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
-                                             | self.WAVE_1_EXTENDED | self.WAVE_1_FULL) - self.REDO, 'proved'),
-                              **dict.fromkeys(wave_2_ieee_only | {'mul_dir_1'} | self.REDO, 'unverified')))
+                         dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
+                                            | self.WAVE_1_EXTENDED | self.WAVE_1_FULL, 'proved'),
+                              **dict.fromkeys(wave_2_ieee_only | {'mul_dir_1'}, 'unverified')))
         # Every kernel of the extended domain that is proved names its IEEE-model theorem, and no
         # other kernel does.
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
-                         (self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED
-                          | self.WAVE_1_FULL) - self.REDO)
+                         self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED
+                         | self.WAVE_1_FULL)
         # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
         # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H
         # of the radius are below the overflow threshold (IeeeExtStatementsDraft.v). A

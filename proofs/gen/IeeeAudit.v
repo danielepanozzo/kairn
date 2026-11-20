@@ -32,6 +32,9 @@ Print Assumptions ball_add_1_full_correct.
 Definition sub_down_1_ieee_audit : sub_down_1_ieee_spec := sub_down_1_ieee_correct.
 Print Assumptions sub_down_1_ieee_correct.
 
+Definition ball_make_1_audit : ball_make_1_spec := ball_make_1_correct.
+Print Assumptions ball_make_1_correct.
+
 Definition ball_mul_1_full_audit : ball_mul_1_full_spec := ball_mul_1_full_correct.
 Print Assumptions ball_mul_1_full_correct.
 
@@ -103,6 +106,9 @@ Print Assumptions ball_add_2_full_correct.
 
 Definition to_down_2_ieee_audit : to_down_2_ieee_spec := to_down_2_ieee_correct.
 Print Assumptions to_down_2_ieee_correct.
+
+Definition ball_make_2_audit : ball_make_2_spec := ball_make_2_correct.
+Print Assumptions ball_make_2_correct.
 
 Definition ball_mul_2_full_audit : ball_mul_2_full_spec := ball_mul_2_full_correct.
 Print Assumptions ball_mul_2_full_correct.

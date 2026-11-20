@@ -4,9 +4,7 @@
 # NaN (f false: lt(g, const inf) is false for a NaN), as a NaN bound given to an interval is (the
 # owner's decision of 2026-11-20); and otherwise the ball itself (milestone1.md, "Values that enter
 # from the program"). The ordinary case is the first arm of each select (ok = not(n)), as the
-# scalar printer's branch over a fix-up wants. The IEEE-model proof (proofs/theories/IeeeMake.v)
-# is of the rule before, that a NaN radius gives the empty set, and is being redone for this one:
-# unverified until then.
+# scalar printer's branch over a fix-up wants.
 kernel:        ball_make_2
 input:         c = c0 c1
 input:         r
@@ -17,9 +15,10 @@ ensures:       makes_ball cw rw from=c,r
 min_precision: 1
 source:        constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20)
 license:       algorithm: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeMake.v ball_make_2_correct
 entry:         yes
 cone_exempt:   every output is selected after explicit tests of the center and the radius (ok, f); makes_ball states what comes out
 
