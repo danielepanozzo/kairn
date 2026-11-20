@@ -1,0 +1,2086 @@
+{
+ "schema": 1,
+ "what": "objects",
+ "date": "2026-11-19",
+ "commit": "unknown",
+ "machine": "",
+ "compiler": "Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64",
+ "flags": [
+  "/nologo",
+  "/std:c++20",
+  "/EHsc",
+  "/O2",
+  "/DNDEBUG",
+  "/arch:AVX2",
+  "/fp:precise",
+  "/wd4190",
+  "/I",
+  "include"
+ ],
+ "results": {
+  "before /GS kairn-bench-costs-O0": {
+   "kc_env_loop": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_loop": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "kc_mul_loop": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "kc_add_sum": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "kc_mul_prod": {
+    "instructions": 70,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "kc_k1_loop": {
+    "instructions": 41,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "kc_k1_sum": {
+    "instructions": 61,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 80
+   },
+   "kc_k1_add": {
+    "instructions": 28,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "kc_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_loop": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kc_double_sum": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_fma_chain": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   }
+  },
+  "before /GS kairn-bench-costs-O2": {
+   "kc_env_loop": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_add_loop": {
+    "instructions": 59,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_mul_loop": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_add_sum": {
+    "instructions": 62,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kc_mul_prod": {
+    "instructions": 57,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_k1_loop": {
+    "instructions": 20,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "kc_k1_sum": {
+    "instructions": 24,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   },
+   "kc_k1_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_fma_chain": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_add": {
+    "instructions": 12,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24
+   }
+  },
+  "before /GS kairn-bench-costs-checks-O0": {
+   "kc_env_loop": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_loop": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "kc_mul_loop": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "kc_add_sum": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "kc_mul_prod": {
+    "instructions": 70,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "kc_k1_loop": {
+    "instructions": 41,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "kc_k1_sum": {
+    "instructions": 61,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 80
+   },
+   "kc_k1_add": {
+    "instructions": 28,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "kc_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_loop": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kc_double_sum": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_fma_chain": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   }
+  },
+  "before /GS kairn-bench-costs-checks-O2": {
+   "kc_env_loop": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_add_loop": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_mul_loop": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_add_sum": {
+    "instructions": 119,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_mul_prod": {
+    "instructions": 123,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kc_k1_loop": {
+    "instructions": 35,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "kc_k1_sum": {
+    "instructions": 37,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "kc_k1_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_fma_chain": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_add": {
+    "instructions": 29,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   }
+  },
+  "before /GS- kairn-bench-costs-O0": {
+   "kc_env_loop": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_loop": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_mul_loop": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_sum": {
+    "instructions": 67,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_mul_prod": {
+    "instructions": 63,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_k1_loop": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_k1_sum": {
+    "instructions": 51,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "kc_k1_add": {
+    "instructions": 34,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kc_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_loop": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kc_double_sum": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_fma_chain": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   }
+  },
+  "before /GS- kairn-bench-costs-O2": {
+   "kc_env_loop": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_add_loop": {
+    "instructions": 59,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_mul_loop": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_add_sum": {
+    "instructions": 62,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kc_mul_prod": {
+    "instructions": 57,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_k1_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_fma_chain": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  },
+  "before /GS- kairn-bench-costs-checks-O0": {
+   "kc_env_loop": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_loop": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_mul_loop": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_sum": {
+    "instructions": 67,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_mul_prod": {
+    "instructions": 63,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_k1_loop": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_k1_sum": {
+    "instructions": 51,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "kc_k1_add": {
+    "instructions": 34,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kc_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_loop": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kc_double_sum": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_fma_chain": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   }
+  },
+  "before /GS- kairn-bench-costs-checks-O2": {
+   "kc_env_loop": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_add_loop": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_mul_loop": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_add_sum": {
+    "instructions": 119,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_mul_prod": {
+    "instructions": 123,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kc_k1_loop": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_k1_sum": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_k1_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_fma_chain": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_add": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   }
+  },
+  "after /GS kairn-bench-costs-O0": {
+   "kc_env_loop": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_loop": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "kc_mul_loop": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "kc_add_sum": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "kc_mul_prod": {
+    "instructions": 70,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "kc_k1_loop": {
+    "instructions": 53,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "kc_k1_sum": {
+    "instructions": 59,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 80
+   },
+   "kc_k1_add": {
+    "instructions": 32,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "kc_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_loop": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kc_double_sum": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_fma_chain": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   }
+  },
+  "after /GS kairn-bench-costs-O2": {
+   "kc_env_loop": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_add_loop": {
+    "instructions": 59,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_mul_loop": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_add_sum": {
+    "instructions": 62,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kc_mul_prod": {
+    "instructions": 57,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_k1_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_fma_chain": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  },
+  "after /GS kairn-bench-costs-checks-O0": {
+   "kc_env_loop": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_loop": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "kc_mul_loop": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "kc_add_sum": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "kc_mul_prod": {
+    "instructions": 70,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "kc_k1_loop": {
+    "instructions": 53,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "kc_k1_sum": {
+    "instructions": 59,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 80
+   },
+   "kc_k1_add": {
+    "instructions": 32,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "kc_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_loop": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kc_double_sum": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_fma_chain": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   }
+  },
+  "after /GS kairn-bench-costs-checks-O2": {
+   "kc_env_loop": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_add_loop": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_mul_loop": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_add_sum": {
+    "instructions": 119,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_mul_prod": {
+    "instructions": 123,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kc_k1_loop": {
+    "instructions": 28,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_k1_sum": {
+    "instructions": 28,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_k1_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_fma_chain": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_add": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   }
+  },
+  "after /GS- kairn-bench-costs-O0": {
+   "kc_env_loop": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_loop": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_mul_loop": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_sum": {
+    "instructions": 67,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_mul_prod": {
+    "instructions": 63,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_k1_loop": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_k1_sum": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "kc_k1_add": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kc_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_loop": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kc_double_sum": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_fma_chain": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   }
+  },
+  "after /GS- kairn-bench-costs-O2": {
+   "kc_env_loop": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_add_loop": {
+    "instructions": 59,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_mul_loop": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_add_sum": {
+    "instructions": 62,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kc_mul_prod": {
+    "instructions": 57,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_k1_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_fma_chain": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  },
+  "after /GS- kairn-bench-costs-checks-O0": {
+   "kc_env_loop": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_loop": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_mul_loop": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_sum": {
+    "instructions": 67,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_mul_prod": {
+    "instructions": 63,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_k1_loop": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_k1_sum": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "kc_k1_add": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kc_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_loop": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kc_double_sum": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_fma_chain": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   }
+  },
+  "after /GS- kairn-bench-costs-checks-O2": {
+   "kc_env_loop": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_add_loop": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_mul_loop": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_add_sum": {
+    "instructions": 119,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_mul_prod": {
+    "instructions": 123,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kc_k1_loop": {
+    "instructions": 28,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_k1_sum": {
+    "instructions": 28,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_k1_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_fma_chain": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_add": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   }
+  },
+  "varH /GS kairn-bench-costs-O0": {
+   "kc_env_loop": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_loop": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "kc_mul_loop": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "kc_add_sum": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "kc_mul_prod": {
+    "instructions": 70,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "kc_k1_loop": {
+    "instructions": 53,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "kc_k1_sum": {
+    "instructions": 59,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 80
+   },
+   "kc_k1_add": {
+    "instructions": 32,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "kc_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_loop": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kc_double_sum": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_fma_chain": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   }
+  },
+  "varH /GS kairn-bench-costs-O2": {
+   "kc_env_loop": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_add_loop": {
+    "instructions": 59,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_mul_loop": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_add_sum": {
+    "instructions": 62,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kc_mul_prod": {
+    "instructions": 57,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_k1_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_fma_chain": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  },
+  "varH /GS kairn-bench-costs-checks-O0": {
+   "kc_env_loop": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_loop": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "kc_mul_loop": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "kc_add_sum": {
+    "instructions": 58,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "kc_mul_prod": {
+    "instructions": 70,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "kc_k1_loop": {
+    "instructions": 53,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "kc_k1_sum": {
+    "instructions": 59,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 80
+   },
+   "kc_k1_add": {
+    "instructions": 32,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "kc_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_loop": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kc_double_sum": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_fma_chain": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   }
+  },
+  "varH /GS kairn-bench-costs-checks-O2": {
+   "kc_env_loop": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_add_loop": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_mul_loop": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_add_sum": {
+    "instructions": 119,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_mul_prod": {
+    "instructions": 123,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kc_k1_loop": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kc_k1_sum": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kc_k1_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_fma_chain": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_add": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   }
+  },
+  "varH /GS- kairn-bench-costs-O0": {
+   "kc_env_loop": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_loop": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_mul_loop": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_sum": {
+    "instructions": 67,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_mul_prod": {
+    "instructions": 63,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_k1_loop": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_k1_sum": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "kc_k1_add": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kc_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_loop": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kc_double_sum": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_fma_chain": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   }
+  },
+  "varH /GS- kairn-bench-costs-O2": {
+   "kc_env_loop": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_add_loop": {
+    "instructions": 59,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_mul_loop": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_add_sum": {
+    "instructions": 62,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "kc_mul_prod": {
+    "instructions": 57,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "kc_k1_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_fma_chain": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   }
+  },
+  "varH /GS- kairn-bench-costs-checks-O0": {
+   "kc_env_loop": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_loop": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_mul_loop": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_add_sum": {
+    "instructions": 67,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_mul_prod": {
+    "instructions": 63,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_k1_loop": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "kc_k1_sum": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "kc_k1_add": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "kc_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_call": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "kc_double_loop": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "kc_double_sum": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_fma_chain": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   }
+  },
+  "varH /GS- kairn-bench-costs-checks-O2": {
+   "kc_env_loop": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_add_loop": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_mul_loop": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_add_sum": {
+    "instructions": 119,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "kc_mul_prod": {
+    "instructions": 123,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "kc_k1_loop": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_k1_sum": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "kc_k1_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_call": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32
+   },
+   "kc_double_loop": {
+    "instructions": 12,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_sum": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_fma_chain": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_double_add": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "kc_k1_add": {
+    "instructions": 23,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   }
+  }
+ }
+}

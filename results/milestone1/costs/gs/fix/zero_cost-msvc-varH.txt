@@ -1,0 +1,20 @@
+== cl (msvc), /nologo /std:c++20 /EHsc /DNDEBUG /O2 /IINCLUDE /arch:AVX2
+  /fp:precise (default) (reported only):
+    add     double:   4 instructions   Expansion<double, 1>:   4   same instructions
+    sum     double:  20 instructions   Expansion<double, 1>:  28   DIFFERENT: double has nothing more; Expansion<double, 1> has 1 cmp, 1 jb, 1 mov, 2 ret, 1 vmovsd, 1 vxorpd, 1 xor more
+    axpy    double:  69 instructions   Expansion<double, 1>:  32   DIFFERENT, fewer vector operations: double has 1 add, 1 and, 5 cmp, 1 ja, 2 jae, 2 jb, 1 je, 6 lea, 2 mov, 1 npad, 1 sub, 1 test, 4 vaddpd, 1 vbroadcastsd, 4 vmovupd, 1 vmovups, 4 vmulpd, 1 vzeroupper more; Expansion<double, 1> has 1 jmp, 1 vmovq more
+    dot     double:  30 instructions   Expansion<double, 1>:  30   same instructions
+    horner  double:  16 instructions   Expansion<double, 1>:  15   k1 has fewer: 1 vmovups
+  /fp:contract (reported only):
+    add     double:   4 instructions   Expansion<double, 1>:   4   same instructions
+    sum     double:  20 instructions   Expansion<double, 1>:  28   DIFFERENT: double has nothing more; Expansion<double, 1> has 1 cmp, 1 jb, 1 mov, 2 ret, 1 vmovsd, 1 vxorpd, 1 xor more
+    axpy    double:  68 instructions   Expansion<double, 1>:  32   DIFFERENT, fewer vector operations: double has 1 add, 1 and, 5 cmp, 1 ja, 2 jae, 2 jb, 1 je, 6 lea, 2 mov, 1 sub, 1 test, 1 vbroadcastsd, 5 vfmadd213sd, 4 vfmadd231pd, 5 vmovsd, 8 vmovupd, 1 vmovups, 1 vzeroupper more; Expansion<double, 1> has 1 jmp, 5 vaddsd, 1 vmovq, 5 vmulsd more
+    dot     double:  30 instructions   Expansion<double, 1>:  30   same instructions
+    horner  double:   9 instructions   Expansion<double, 1>:  15   DIFFERENT: double has 7 vfmadd213sd, 1 vmovsd more; Expansion<double, 1> has 7 vaddsd, 7 vmulsd more
+  /fp:strict (reported only):
+    add     double:   4 instructions   Expansion<double, 1>:   4   same instructions
+    sum     double:  20 instructions   Expansion<double, 1>:  34   DIFFERENT: double has 1 vxorpd more; Expansion<double, 1> has 3 add, 1 cmp, 1 jb, 2 mov, 1 npad, 2 ret, 1 sub, 3 vmovsd, 1 xor more
+    axpy    double:  69 instructions   Expansion<double, 1>:  32   DIFFERENT, fewer vector operations: double has 1 add, 1 and, 5 cmp, 1 ja, 2 jae, 2 jb, 1 je, 6 lea, 2 mov, 1 npad, 1 sub, 1 test, 4 vaddpd, 1 vbroadcastsd, 4 vmovupd, 1 vmovups, 4 vmulpd, 1 vzeroupper more; Expansion<double, 1> has 1 jmp, 1 vmovq more
+    dot     double:  30 instructions   Expansion<double, 1>:  32   DIFFERENT: double has 1 vxorpd more; Expansion<double, 1> has 1 mov, 1 npad, 1 vmovsd more
+    horner  double:  16 instructions   Expansion<double, 1>:  16   same instructions
+ok

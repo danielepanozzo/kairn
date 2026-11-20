@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "date": "2026-11-20",
+  "commit": "76da414+before",
+  "machine": {"description": "Linux x86-64, AMD EPYC 7452 (Zen 2), two sockets of 32 cores; one logical CPU, its SMT sibling idle", "cpu": "AMD EPYC 7452 32-Core Processor", "pinning": "pinned to one logical CPU"},
+  "compiler": "GCC 13.3.0",
+  "flags": "-O3 -DNDEBUG -O3 -ffp-contract=off -mfma -DKAIRN_CHECKS=1",
+  "kairn_checks": 1,
+  "elements": 256, "reps": 31, "sample_ms": 4,
+  "results": [
+    {"name": "env/loop", "ns_min": 6.508, "ns_median": 6.542, "ns_max": 6.809, "checksum": "0b6050e73d686f4a"},
+    {"name": "add/loop", "ns_min": 8.469, "ns_median": 8.516, "ns_max": 11.22, "checksum": "7e3392f21c52a76d"},
+    {"name": "mul/loop", "ns_min": 8.75, "ns_median": 8.799, "ns_max": 10.15, "checksum": "9e9d2271ebac13ac"},
+    {"name": "add/sum", "ns_min": 10.32, "ns_median": 10.39, "ns_max": 11.25, "checksum": "955263da45fcd4a3"},
+    {"name": "mul/prod", "ns_min": 8.307, "ns_median": 8.349, "ns_max": 9.579, "checksum": "caa9f609468cd84f"},
+    {"name": "k1/loop", "ns_min": 6.355, "ns_median": 6.379, "ns_max": 7.08, "checksum": "937765c9899a3f28"},
+    {"name": "k1/sum", "ns_min": 6.358, "ns_median": 6.378, "ns_max": 7.115, "checksum": "5fab4184c96bb7e1"},
+    {"name": "k1/call", "ns_min": 6.659, "ns_median": 6.682, "ns_max": 7.111, "checksum": "937765c9899a3f28"},
+    {"name": "double/loop", "ns_min": 0.1593, "ns_median": 0.1634, "ns_max": 0.336, "checksum": "f60fda2a2cf2af28"},
+    {"name": "double/call", "ns_min": 1.844, "ns_median": 1.858, "ns_max": 3.075, "checksum": "f60fda2a2cf2af28"},
+    {"name": "double/sum", "ns_min": 0.7964, "ns_median": 0.7998, "ns_max": 0.8471, "checksum": "3673372519bd4b21"},
+    {"name": "fma/chain", "ns_min": 1.32, "ns_median": 1.328, "ns_max": 1.412, "checksum": "f4c8579346367334"}
+  ]
+}
