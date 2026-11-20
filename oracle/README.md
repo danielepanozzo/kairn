@@ -40,7 +40,9 @@ full forms, the same claims of `neighbor` and of the products in the finite doma
 domain as `mul_down_bound_real`, and `mul_pow2_2` with an `exact_when` on its error) and
 `oracle/selftest/claims-wave5.json` (the folds' stage of Milestone 2: the eight folds, their steps,
 finishes and bounds, and the kernels whose bounds they name, frozen from the claims of
-2026-11-20), so that it does not depend on the generator.
+2026-11-20) and `oracle/selftest/claims-wave6.json` (stage B: the eighteen maps and their steps,
+the folds of maxima and their kernels, the convolutions, and the kernels and folds they name,
+frozen from the claims of 2026-11-20), so that it does not depend on the generator.
 
 ## gen
 
@@ -142,6 +144,27 @@ families:
 | `count` | a `count()` input: `bound_sum_k`, `bound_dot_k` | `integer` (integers from 1 to $2^p$, log-uniform: the counts of real arrays); `fraction` (counts that are not integers, which `count()` allows); `limit` ($m \cdot \mathrm{unit}(K)$ from 1/16 to 1, log-uniform, and the numbers next to $m \cdot \mathrm{unit}(K)$ = 1/5, 1/4, 1/2 and 1, with $\mathrm{unit}(K)$ from the claims of the kernel K the bound is for); `beyond` ($m \cdot \mathrm{unit}(K)$ from 1 to the largest count). The common strata: `zero` is $m = 0$ (either sign), `underflow` 1, its successor and small integers, `overflow` the top binades, `pow2` powers of two, `extreme` the numbers next to the limits |
 | `dotstep` | a value `NAME + NAME * NAME`: `dot_step_1`, `dot_step_2` | `cancel` ($s$ within a few units of $-(xy)$ rounded to the format: the state cancels the product); `state` ($\lvert s\rvert$ $p$ to $2kp + 4$ binades above or below $\lvert xy\rvert$); `zerostate` ($s = 0$, the first step of a fold); `tie` ($xy$ exact and $s$ an odd multiple of half its unit: $s + xy$ a tie); `exactprod` (short significands) |
 | `finish` | a `finite_or_nan` entry: `fold_finish_k` | `nonfinite` (the leading limb infinite or a NaN, any lower limb); `tails` (a finite leading limb with a lower limb that is not finite, or with a finite lower limb that does not normalize it: the state is passed on as it is) |
+
+The steps of the maps and the kernels of the folds of maxima of stage B ([Maps](#maps), [Folds of
+maxima](#folds-of-maxima)) get two more families (`gen6.py`), and the finishes of the folds of
+maxima one in `gen5.py`, chosen from claims that no earlier kernel has; the other steps of the
+maps (`add_entry_step_k`, `sub_1_1`, `sub_entry_step_k`, `scale_step_k`, `mul_pow2_step_k`) claim
+what `add_1_1`, `add_2_2`, `sub_2_2`, `mul_1_1`, `mul_2_1` and `mul_pow2_2` claim and keep their
+families (the scale family of `gen2.py` has a branch of its own for a one-limb operand beside the
+power of two, `mul_pow2_step_1`: the same strata, with `halfscaled` aiming the lowest bit of $x c$
+at $\eta/2$, a tie of the subnormal range, or at $\eta/4$ and $\eta/8$, just off one):
+
+| Family | Kernels | Strata of its own |
+|---|---|---|
+| `axpy` | a value `NAME * NAME + NAME`: the steps of axpy, `axpy_step_k`, `axpy_step_2_1` and their entry forms | `cancel` ($y$ within a few units of $-(a x)$ rounded to $y$'s limbs); `state` ($\lvert y\rvert$ $p$ to $2kp + 4$ binades from $\lvert a x\rvert$); `tie` ($a x$ exact and $y$ an odd multiple of half its unit); `exactprod` (short significands); `tight` (one limb: $a = 1 + 2uk$, $x = 1 - (2k - 1)u$, $y = (4j + 1)u$, scaled, of one sign: $a x = 1 + u - 2u^2k(2k-1)$ rounds down to 1 and $1 + (4j + 1)u$ is a tie that rounds down to the even $1 + 4ju$, so both roundings lose about $u$ the same way, $2u$ of the $2u$ the bound allows; two limbs: the literature's tight case of the product, MR22's of `mul_2_2` or JMP17's of `mul_2_1` (`tight.py`, $p = 53$), with $y = 0$ or tiny) |
+| `maxof` | a `maximum` entry: `norm_combine`, `norm_step_k` | `equal` (the two arguments of one value, zeros of both signs among them); `neighbor` (one the number next to the other); `negative` (arguments of both signs: a state below zero, which the fold never has but the claim covers) |
+| `maxfinish` | a `finite_or_nan` entry with `if` or `steps`: `norm_finish_k` | `nonfinite` (as `finish`); `top` ($\Omega$, its two predecessors, $-\Omega$: the step up to $+\infty$); `smallstep` (the zeros, $\pm\eta$, $\pm 2\eta$, $\pm\lambda$ and its neighbours: the steps from $-\eta$ to a zero and from a zero to $\eta$); the mask drawn at random |
+
+In 2 000 cases of seed 0 the interpreter brings `axpy_step_1` and `axpy_entry_step_1` to $1 - O(u)$
+of their bound of form T in `binary64` and `binary32`, `axpy_step_2` to 0.571 in `binary64` (MR22's
+case of `mul_2_2`: its error $3.998u^2\lvert a x\rvert$ against the bound's $7u^2$; 0.25 to 0.55 in
+`binary32`, where the literature has no case), `axpy_step_2_1` to 0.40 to 0.73, `mul_pow2_step_1`
+to exactly 1 (an odd multiple of $\eta/2$ rounds by $\eta/2$, its whole bound).
 
 What a generator of cases gives for `count(m)`: $m = 0$, and numbers of the format from 1 up, both
 integers and others (the claim allows any $m \ge 1$; the header converts a number of terms, and a
@@ -782,17 +805,226 @@ of $\lvert x\rvert + \lvert y\rvert$), `sum_fast_2` 0.15 to 0.26.
 `brute`, `search` and `shrink` of the oracle do not run folds (`tests/brute/brute.py` does, with
 the oracle's `gen` and `check`).
 
-**Not read yet: maps.** A fold with `writes` (milestone2.md: `axpy`, the centers of a `BallVector`
-sum), whose step also returns an element of each written array, is refused (a
-CLAIMS ERROR). It will need: in the claims, the written arrays among the outputs and
-per-entry `ensures` (the claims of the step's kernel on entry $i$, the value of entry $i$ over the
-elements read and the scalars), a flag that covers every written entry, and scalars beside the
-arrays (the $a$ of `axpy`); in the line protocol, where the scalars and the written arrays go (a
-written array as its limbs' N entries each, as an array read); in the oracle, the outputs of a
-plan as arrays, each entry judged as a kernel's line is (`check.Plan._judge` on the entry's limbs,
-the same code), the flag of a map (false: every written entry that is not finite a canonical
-NaN, the others as computed), statistics per entry, and strata that aim each entry at the corners
-of its kernel (`gen` per entry).
+A fold with `writes` but neither `"map": true` nor `"conv": true` is refused (a CLAIMS ERROR):
+a fold that writes arrays is a map or a convolution, below.
+
+### Maps
+
+```
+kairn-oracle gen axpy_2 binary64 --seed 0 --count 100 --max-length 24
+kairn-oracle gen add_1 fp:2:-1:0 --exhaustive --max-length 2          # every array and order
+```
+
+A map (architecture.md, "Maps") writes an array: written element $z_i$ is its step, a kernel of the
+claims, on the scalars and element $i$ of each array read, in the order of `step_args`. `maps.py`
+reads it (`"map": true` in the list `"folds"`): arrays and scalars with their limbs and roles, one
+array written, one mask output (the flag), `value` over the arrays and scalars, `requires`
+(`canonical()` of every group of two limbs, `power_of_two()` of a one-limb scalar, which in this
+domain is a finite power of two), the two entries `entries` (`of` the written array, `kernel` the
+step) and `finite_or_nan` (`of` the written array, `flag` the mask), `orders`, `packed_lanes`,
+`step`, `step_args`, `check`, `min_precision`, `status`, `theorem`, `source`. The step must be a
+readable kernel of the finite domain whose inputs are, limb for limb, the groups of `step_args` and
+whose one output has the written array's limbs; the map's value must be the step's on those
+groups (compared as polynomials at random integer points, as a full kernel's value with its
+core's); every requirement of the step on what the map passes must be the map's (`normalized()` as
+`canonical()`, `power_of_two()` as itself); the minimum precision at least the step's; `check` a
+kernel of the shape of `fold_finish_k`. Anything else is a CLAIMS ERROR, and a map whose step
+cannot be read is set aside with it.
+
+**Lines**: `MAP FORMAT ORDER N SCALAR... LIMB... [#TAG] -> Z... MASK`, the limbs of the scalars in
+the order of `scalars` between the length and the arrays, the arrays as a fold's; the result, for
+each limb of the written array, most significant first, its N entries, then the flag.
+
+**Judging** (`maps.py`), every line, in the extended domain:
+
+1. The line's form (order, length, counts of limbs and results, an order the map claims), then the
+   requirements: every limb a number of the format or not finite, every group of two limbs
+   canonical, a power of two finite; otherwise **invalid**. Then the written limbs must be
+   numbers of the format or not finite and the flag `0` or `1` (otherwise a failure).
+2. Each written element $z_i$, with $x_i$ the step's operands (the scalars and element $i$):
+    - leading limb finite: every operand must be finite (otherwise `entries` fails: a finite
+      element from an operand that is not finite), and the step's verdict on $(x_i, z_i)$ is
+      the one a line of the step would get, by the same code (`check.Checker.verdict`, the
+      requirements first by `check.Checker.violated`): its failures are failures of `entries`,
+      and the statistics of each entry of the step are kept in entries of their own, after the
+      map's two (`entries(z), step K: ...`). Where the step's claims leave a finite result
+      unclaimed in the finite domain, the map's reading does not: a finite element whose step's
+      exact result rounds beyond $\Omega$ (`rounded` of a one-limb step), or with a lower limb that
+      is not finite, fails `entries`;
+    - leading limb not finite: every limb must be a NaN, the canonical NaN of the second pass
+      (otherwise `finite_or_nan` fails); from finite operands it is an overflow, counted, and
+      **suspicious** when the operands and the exact value are below $\Omega/4$ (the step's own
+      test of a suspicious non-finite result), which the cross-checks fail.
+3. The flag: 1 exactly when the leading limb of every written element is finite (so 1 for no
+   element, whatever the scalars).
+
+An element of a map costs what a line of its step costs (the step's verdict and statistics), far
+more than an element of a fold: on the Mac under a load of about 80, 41 µs per element of `add_1`
+and 76 of `axpy_2` (16 and 41 ms for lines of 384 and 542 elements on average), against 8 µs per
+element of `norm_upper_2` and 26 µs per term of `conv_2`.
+
+Statistics, per entry: for `entries` the length and order classes of a fold and, per element,
+`element: finite operands, finite result`, `element: finite operands, not finite (an overflow)`,
+`element: a non-finite operand`; for `finite_or_nan` `flag true`, `flag false: a non-finite
+operand`, `flag false: finite operands, an overflow`; for the step's entries those of a kernel's
+(the largest error/allowed of an `error` entry, the outcomes of `rounded`, ...).
+
+**Requests** (`genmap.py`). Random mode is the folds' (counter-based, the 17 places of lengths,
+the orders drawn per case, all in the header). The scalars are drawn once per case for its
+stratum; the elements are aimed at the corners of the step, three in four at the stratum's and the
+others at an ordinary one (`one`), so that the overflow stratum has finite elements beside those
+that overflow and the flag and the second pass are put to the test. The step is read from the
+map's value: a sum or a difference of two arrays (`add_k`, `sub_k` and their entry forms), an
+array times a scalar (`scale_k`), times a power of two (`mul_pow2_map_k`), $a x + y$ (`axpy_k`):
+
+| Stratum | Elements |
+|---|---|
+| `one` | operands in nearby binades, random signs |
+| `wide` | operands anywhere a result cannot overflow |
+| `cancel` | the result cancels: $y$ within a few units of $-x$ ($x$ for a difference), of $-(a x)$ for axpy; a scalar of one bit for a scaling |
+| `tie` | results halfway between two numbers: sums $N 2^E$ with $N$ odd; for a scaling of one limb $a = 3 \cdot 2^k$ and $x = m 2^e$ with $3m$ odd of $p + 1$ bits; for axpy $a x$ exact and $y$ an odd multiple of half its unit; for two limbs second limbs at half a unit |
+| `exact` | short significands: results that are numbers of the format |
+| `overflow` | results beyond $\Omega$ from finite operands (the top binades of one sign, $\Omega$ and half its unit, a scalar that brings the products past $\Omega$), beside finite ones |
+| `underflow` | results in the subnormal range (a power of two or a scalar that scales into it) |
+| `zeros` | zeros of both signs, a zero scalar, results that are exactly zero |
+| `nonfinite` | one to three elements with an operand infinite or a NaN; a scalar not finite a quarter of the time; $0 \cdot \infty$ |
+| `tight` | the closest to the step's bound: sums $2^E + u 2^E$ (a tie, an error of $u/(1+u)$ of the sum: the whole bound) and for two limbs the literature's case of `add_2_2` or `sub_2_2`; products just below a midpoint ($a = 1 + 2u$, $x = 1 - u$) and for two limbs the literature's case of `mul_2_1` or `mul_2_2` with the scalar its factor; axpy as the family `axpy`; for a power of two, products that are odd multiples of $\eta/2$ |
+| `tail` | (two limbs) leading limbs that cancel, second limbs at the extremes of the invariant |
+
+Exhaustive mode enumerates every value of each scalar (every power of two for `power_of_two()`)
+with every array up to `--max-length`, every order that differs. Sizes: `add_1` at `fp:2:-1:0`
+up to 2 elements 77 029; `add_2` at `fp:3:-4:1` one element 181 477; `axpy_1` at `fp:3:-3:0` one
+element 74 130, `axpy_2` at `fp:4:-3:-2` 262 208, `axpy_2_1` at `fp:3:-2:-1` 26 650; `scale_1` at
+`fp:3:-3:0` up to 2 149 982, `scale_2` at `fp:2:-2:1` up to 2 149 314; `mul_pow2_map_1` at
+`fp:4:-5:0` up to 2 234 963, `mul_pow2_map_2` at `fp:3:-3:0` up to 2 179 346 (two elements of a
+map of pairs, or of axpy, are more than ten million arrays in any format of its precision).
+
+What the compiled runners reach in the quick tier's 100 arrays per format, `binary64` and
+`binary32` (the largest error/allowed of the step's error entry; the interpreter writes the same
+bits): 1 for the steps of one limb (`add_1`, `sub_1`, `scale_1`, `mul_pow2_map_1` and the entry
+forms: exactly 1 at a tie; axpy $1 - O(u)$), $1 - 8u$ for the sums of two limbs (MR22's case of
+`add_2_2`, asymptotically optimal), 0.69 to 0.99 for `scale_2`, 0.50 to 0.57 for `mul_pow2_map_2`,
+0.39 to 0.57 for `axpy_2` and its entry form, 0.57 to 0.74 for `axpy_2_1` and its entry form; in
+the full tier's 1 000 arrays 0.61 to 0.71 for `axpy_2`, 0.77 to 0.80 for `axpy_2_1`, 0.75 for
+`mul_pow2_map_2`, 0.98 to 0.99 for `scale_2`, and in its toy formats 0.44 to 1.
+
+**In-place use** (architecture.md: an array written may be exactly one of the arrays read) is not
+in the line protocol: a request gives the operands, and every runner writes into an array of its
+own, so the lines judge the elements and not the aliasing. A request for it would need a field
+the runners read, `ORDER` followed by `/inplace:NAME` (say `lanes:4/inplace:y`), naming the array
+read that the runner passes as the array written, the same pointer; and the runners of the line
+protocol (the interpreter, the compiled and packed runners) to copy that array into the output
+buffer and pass it as both. The oracle's judgement would be the same, element by element against
+the operands of the request, which is what in-place use must preserve (every element read whole
+before it is written); the generator's `test_maps.Aliasing` runs every map in place today.
+
+### Folds of maxima
+
+```
+kairn-oracle gen norm_upper_2 binary64 --seed 0 --count 100 --max-length 24
+```
+
+A fold of maxima (architecture.md, "Folds of maxima") is read by `folds.py` as a fold, with the
+entry `upper` (`of` one one-limb output, `over: max`, `steps` an integer $S \ge 0$) in place of
+`fold_error` (a fold with both is refused), and judged as a fold: requirements, the flag, then,
+with a true flag, finite elements and a finite result, `upper`: with $V = \max_i v_i$ ($v_i$ the
+exact value of element $i$, `abs(x)`: for two limbs $\lvert x_0 + x_1\rvert$; $V = 0$ for no
+element), $V \le r$ and $r$ is $\mathrm{RU}(V)$ stepped up at most $S$ times, $\mathrm{RU}$ in the
+format with overflow (a $V$ above $\Omega$ leaves no finite $r$). For one limb $r = V$.
+
+**The flag with finite elements.** architecture.md: "the flag is true exactly when the result is
+finite ...; a NaN or infinite element, or a result whose step up is infinite, gives the flag false
+and a NaN". It leaves open whether a false flag from finite elements is a failure when the bound
+has a finite top. The stricter reading is taken: with every element finite the flag may be false
+only where $\mathrm{RU}(V)$ stepped up $S$ times is $+\infty$ ($V > \mathrm{pred}(\Omega)$ for two
+limbs, never for one), which is the only false flag the listing gives ($m = \Omega$, whose step
+up is $+\infty$); any other false flag from finite elements fails `finite_or_nan`. (Under the other
+reading it would be suspicious only, as a fold's false flag far from overflow is, which the
+cross-checks fail all the same.)
+
+Statistics of `upper`: the length and order classes, `result at RU(V)`, `result 1 step above
+RU(V)`, `V a number of the format` or not, `no element: V = 0`, `every element zero`, where the
+largest is (`the largest at the first element`, `... at the last element`, `... at another
+element`, `the largest attained more than once`), and the largest number of steps above
+$\mathrm{RU}(V)$ (the fraction of the bound used: 1 of 1 for `norm_upper_2`); of `finite_or_nan`,
+besides a fold's, `flag false: finite elements, the bound's top beyond Omega`.
+
+Its kernels claim kinds of their own:
+
+- **`maximum`** (`of` a one-limb output, `args` two expressions of the language of `value` in which
+  `NAME[I]` is limb I of an input, as in `exact_when`), the finite domain: the output is the
+  larger of the exact values of the two arguments. Counted: `first argument larger`, `second
+  argument larger`, `arguments equal`, `arguments of both signs`. The mask outputs of
+  `norm_combine` and the steps are claimed by nothing (the generator checks that they are the `and`
+  of the masks); the fold's flag is what judges them.
+- **`finite_or_nan` with `if` and `steps`** (`if` a mask input, `steps` an integer $\ge 1$, absent
+  for none; a value of one limb): with $t$ the value stepped up $S$ times by IEEE 754's nextUp (a
+  NaN stays a NaN, $+\infty$ stays, $-\infty$ goes to $-\Omega$, $\Omega$ to $+\infty$), the flag is
+  true exactly when the mask is true and $t$ is finite, and the output is then $t$; otherwise
+  every limb is a NaN. So `norm_finish_2` of $(-\infty, \text{true})$ is $-\Omega$ with a true flag,
+  a state the fold never has (its maximum is a magnitude). Counted: `mask true`, `mask false`,
+  `value finite, stepped up finite`, `value finite, stepped up +inf`, `value: NaN`, `value:
+  infinite`.
+
+**Requests** (`genmap.py`), as a fold's, with strata that place the largest magnitude: `one`,
+`wide` (magnitudes in two adjacent binades, or anywhere), `ties` (the largest attained more than
+once, with both signs and other tails), `position` (the largest first, last, at the end of a lane
+or the start of the remainder), `zeros` (every element zero half of the time), `underflow`, `top`
+($(\Omega, t)$ with $t < 0$, whose step up is $+\infty$; with $t > 0$, beyond $\Omega$; the
+predecessor of $\Omega$ with half a unit above; $\Omega$ alone), `nonfinite` (an infinity or a NaN
+anywhere, the last element a quarter of the time), `tail` (two limbs: the largest leading limb with
+a tail of its sign, of the other, or zero). Exhaustive mode as a fold's: `norm_upper_1` at
+`fp:3:-3:0` up to 3 elements 225 835, `norm_upper_2` at `fp:3:-4:1` up to 2 363 379.
+
+### Convolutions
+
+```
+kairn-oracle gen conv_2 binary64 --seed 0 --count 100 --max-length 20
+kairn-oracle gen conv_1 fp:2:-1:0 --exhaustive --max-length 2       # both lengths up to 2
+```
+
+A convolution (architecture.md, "Convolutions"; `"conv": true`) is read by `maps.py`: two arrays,
+one written, one mask, `orders` the sequential one only, the two entries `coefficients` (`of` the
+written array, `fold` the fold of the coefficients, which `coefficients` names too) and
+`finite_or_nan`, `check`. The fold of the coefficients must be a readable fold of the list (a sum,
+not a map, a convolution or a fold of maxima) with the sequential order and the convolution's
+arrays, value and requirements; convolutions are read after the other folds, whatever the order
+of the list.
+
+**Lines**: `CONV FORMAT seq N_X N_Y LIMB... [#TAG] -> Z... MASK`, the limbs of the first array
+($N_X$ entries each), then those of the second; the result $N_Z = N_X + N_Y - 1$ entries per limb
+($0$ when a length is $0$), then the flag. Any order but `seq` fails.
+
+**Judging**: requirements as a map's; then each coefficient $j$, with its terms $(x_i, y_{j-i})$ for
+$i$ from $\max(0, j - n_y + 1)$ to $\min(j, n_x - 1)$, in increasing order, $m_j$ of them: leading
+limb finite, every term must be finite and every limb of the coefficient finite (otherwise
+`coefficients` fails), and the entries of the fold of the coefficients other than `finite_or_nan`
+(`normalized`, `fold_error` with the heights of its sequential order and $n = m_j$) are judged on
+the list of its terms by the code that judges a line of that fold (`folds.py`: its plan, `_Case`
+and `_fold_error`), with their statistics in entries of their own (`coefficients(z), fold dot_2:
+...`); leading limb not finite, the canonical NaN, and from finite terms suspicious when every
+partial sum of the terms is below an eighth of the overflow threshold (the fold's test). The flag
+is a map's.
+
+Statistics of `coefficients`: `n_x = 0`, `= 1`, `= 2` or `above 2`, the same of $n_y$, `n_x = n_y`
+or `n_x != n_y`, `terms at most ...` (the class of $\min(n_x, n_y)$), and per coefficient
+`coefficient: finite terms, finite result`, `... not finite (an overflow)`, `coefficient: a
+non-finite term`; the fold's entries count the number of terms of each coefficient as the length
+of its array (`length 1`, `length 2`, ...).
+
+**Requests**: two lengths by a schedule of 13 places that pairs 0 and 1 on either side with
+other lengths and unequal lengths with each other ((0, 0), (0, s), (s, 0), (1, 1), (1, s), (s, 1),
+(2, 3), (3, 2), (s, s), (1, r), (r, 1), (r, s), (s, r): s from 2 to 9, r random from 18 to the
+largest); the strata of the dot products (genfold.py), with `cancel` making one coefficient cancel
+and `tight` $y$ all ones and $x$ the tight case of a sum, so that every coefficient is a sum near
+its bound (or $x$ all ones and $y$ the sum reversed; for two limbs, a quarter of the time, the
+literature's case of `mul_2_2` as the first term). Exhaustive mode: both lengths up to
+`--max-length`, every array: `conv_1` at `fp:2:-1:0` up to 2 and 2, 44 521; `conv_2` at
+`fp:4:-4:-1` up to 1 and 1, 63 001.
+
+What the compiled runners reach in the quick tier's 100 pairs per format: `conv_1` 0.95 to 0.98
+of the bound of `dot_1`, `conv_2` 0.9995 in `binary64` (MR22's case of `mul_2_2`) and 0.48 in
+`binary32`; in the full tier's 300, `conv_1` 0.99 to 1.00 and `conv_2` 0.71 in `binary32`.
 
 ## brute
 
@@ -1051,6 +1283,28 @@ bits, not an error), `fold-lanes-skip-lane`, `dot-single-product` (`dot_step_2` 
 leading limbs only), `flag-true-nan`, `flag-false-finite`, `fold-not-normalized`, `bound-g-pred`
 ($g$ one number smaller when ok is true) and `bound-ok-beyond` (ok true for every count).
 
+**Stage B.** `refrun` runs the steps of the maps as the claims' sources list them (`sub_1_1`, the
+entry forms of the sums with both operands through `guard`, `axpy_step_1` as `mul_1_1` then
+`add_1_1`, `axpy_step_2` as `mul_2_2` then `add_2_2`, `axpy_step_2_1` as `mul_2_1` then `add_2_2`,
+their entry forms with $y$ through `guard`, `scale_step_k` as `mul_1_1` and `mul_2_1`,
+`mul_pow2_step_1` as one rounding of the product, `mul_pow2_step_2` as `mul_pow2_2`), the kernels of
+the folds of maxima as architecture.md lists them (`norm_combine` the maximum by a comparison,
+`select(lt(m, n), n, m)`, false on a NaN, and the `and` of the masks; `norm_step_k` the combination
+of the state with $\lvert x_0\rvert$ and the mask `eq(a, a)`; `norm_finish_k` the state's limb
+stepped up $k - 1$ times by its own nextUp, with a true flag when the mask is true and that is
+finite, otherwise a NaN and a false flag), the maps (the step on the scalars and each element,
+the check `fold_finish_k`'s mask and-ed into the flag, and when it is false the second pass), the
+folds of maxima as folds (their state $(+0, \text{true})$), and the convolutions (each coefficient
+the fold of its coefficients, sequential, on its terms, unfinished, then the check and the second
+pass). Its variants plant one fault each: `map-drop-last` (the last element left zero),
+`map-no-second-pass`, `map-flag-true`, `map-lanes-swap` (in a lane order of two lanes or more the
+elements of lanes 0 and 1 of each block written in each other's place), `max-step-small` (the
+finish's result one step smaller), `max-nan-lost` (the step's mask always true), `max-two-steps`
+(one step up more), `conv-drop-last-term`, `conv-neighbor-term` (coefficient $j \ge 1$ takes the
+last term of coefficient $j - 1$ in place of its own), `conv-flag-true`. The steps of two limbs give
+the canonical NaN by themselves wherever the result is not finite, so `map-no-second-pass`
+changes nothing on the maps of two limbs but `mul_pow2_map_2`.
+
 `selftest/refrun.cpp` is a standalone C++ runner for binary64 and binary32, written from the same
 pseudo-code. The selftest compiles it with the system compiler (`$CXX`, then `c++`, `clang++`,
 `g++`, or `--cxx`) with `-std=c++17 -O2 -ffp-contract=off -fno-fast-math` (`/std:c++17 /O2
@@ -1100,7 +1354,15 @@ kept finite, the condition of `when` ignored or its threshold halved, the classe
 of overflows miscounted, `exact_when` not judged, a strict condition read as $\ge$, a zero that
 does not satisfy a condition, a limb reference read as the leading limb, `eta` read as `u`, a
 threshold that is not positive accepted, the value of `neighbor` not checked, a stratum aimed
-elsewhere) and requires `selftest --quick` to fail on the copy. The test of the side of a `bound`
+elsewhere; for stage B, a finite element from an operand that is not finite or beyond $\Omega$
+accepted, the second pass or the flag not checked, the step's verdict ignored or its arguments
+reversed, a requirement of a map or a convolution not checked, a step's requirement or value not
+compared, a coefficient without its last term or not judged, the lengths swapped, a convolution
+read before its fold, a maximum below $V$ or a step above $\mathrm{RU}(V)$ more allowed, $V$ an
+element's other than the largest, a false flag with a finite top accepted, `maximum` not compared,
+reversed or its outcomes swapped, the mask, the steps or nextUp of $-\infty$ of a finish wrong,
+`steps` 0 or an `if` naming an output accepted, a stratum without overflow, a tight case or an
+empty polynomial) and requires `selftest --quick` to fail on the copy. The test of the side of a `bound`
 alone has no mutant: an output on the wrong side is not reached by the steps outward from the
 directed rounding either, and fails there.
 
@@ -1174,6 +1436,15 @@ directed rounding either, and fails there.
 | `stage_kernels` | the reference runner failing a step or a finish on random cases of three formats or a finish on every state of `fp:3:-3:0`; a class of `finite_or_nan` never met; the planted flags and single products not caught; one of 13 hand-written lines (finishes passing a state on limb for limb, form T between the bounds of forms R and T, `dot_step_1` rounding) judged otherwise |
 | `gen_folds` | case $i$ alone not case $i$ of its run, a seed, the orders or the length not mattering, a length above the maximum, a stratum missing or not asked for, `lanes:big` not above the length, an invalid case, an enumeration's size other than the brute-force count, an order outside the vocabulary accepted |
 | `merging_wave5` | the merge of summaries of folds and bound kernels differs from the whole |
+| `claims_reading_wave6` | the fixture of stage B unreadable, a map, a convolution or a fold of maxima read as another; 11 malformed kernels and 29 malformed folds not set aside (a `maximum` with one argument, over a name or a mask that is not an input, a limb an input does not have, of a mask, with another field; `steps` 0 or a boolean, `if` naming an output or a limb, a finish of the finite domain; a map without `"map"`, of the finite domain, whose step is missing, whose `entries` names another kernel, whose `step_args` are another order or incomplete, whose value is not the step's, which lacks a requirement of the step or has one outside the vocabulary, writes one limb or nothing, has a flag of two limbs, an entry of the wrong flag or array, one entry, a check that is not a finish, a minimum precision below the step's, a power of two not required or required of an array; a convolution of a fold that is not a dot product's, with the lane order, a `coefficients` entry naming another fold, one array, another value, scalars; a fold of maxima `over` a sum, with negative steps, of the flag, with `fold_error` beside `upper`); a map whose step cannot be read not set aside with it, a convolution listed before its fold not read |
+| `gen_shapes` | a family of the kernels' generator failing (other than refusing the kernel with a `GenError`) on any stratum of any kernel of the six fixtures, or of the same kernel with a two-limb input made one limb (192 kernels and variants): the test that would have caught the crash of the scale family on `mul_pow2_step_1`, which assumed a two-limb operand beside the power of two |
+| `stage_b_kernels` | the reference runner failing a step of a map or a kernel of a fold of maxima, or an invalid or suspicious case, on random cases of `binary64`, `binary32` and `fp:5:-12:6`; a class of `maximum` (each argument larger, equal) or of the finishes (the mask both ways, a finite value stepped up to a finite one and, for `norm_finish_2`, to $+\infty$, a NaN, an infinity) never met; `axpy_step_1` and its entry form more than $10^{-6}$ below their bound, `axpy_step_2` and its entry form below 0.57 of it in `binary64`, `mul_pow2_step_1` below exactly 1 |
+| `maps_reference` | the reference runner failing a map, a fold of maxima or a convolution, or an invalid or suspicious case, on 400 arrays (170 with `--quick`) of each in `binary64`, `binary32` and `fp:5:-12:6`; a class the guards ask for never met (elements of each kind, both flags, lengths and orders; the largest at each place, at and one step above $\mathrm{RU}(V)$, the bound's top beyond $\Omega$; coefficients of each kind, lengths 0 and 1 on each side, unequal lengths, coefficients of one and two terms, heavy cancellation); a step of one limb below 0.99 of its bound in `binary64` (0.3 for two limbs) |
+| `maps_planted` | a planted fault of stage B not caught in its entry (an element dropped or swapped between lanes: `entries`; no second pass, a flag that lies, a lost NaN: `finite_or_nan`; a maximum one step too small or too large: `upper`; a coefficient that drops a term or takes its neighbour's: `coefficients`), caught in another, or in an object it does not touch |
+| `maps_exhaustive` | the reference runner failing any array (and scalar) of tiny formats up to one to three elements, in every order that differs (4 142 arrays with `--quick`, more without), or a line not judged, or the coverage not complete; a planted fault not caught there; the size of the enumeration of `axpy_1` and of `conv_1` other than counted from the definition |
+| `maps_judge` | one of 91 hand-written lines of stage B judged otherwise than worked out by hand (a written element off, a flag that lies both ways, a missing second pass, a finite element from a non-finite operand and from a sum that rounds beyond $\Omega$, the empty array with a NaN scalar, malformed lines, invalid scalars and elements; the maxima at, one and two steps above $\mathrm{RU}(V)$, a lost NaN, the bound's top beyond $\Omega$ and finite; the convolutions of architecture.md's examples, a coefficient off, $0 \cdot \infty$, lengths that do not match the limbs; `maximum`, the finishes on $\Omega$, $-\eta$, $-\infty$, a NaN and a false mask; the tight case of `axpy_step_1`) |
+| `gen_maps` | case $i$ of a map, a fold of maxima or a convolution alone not case $i$ of its run, a seed or the largest length not mattering, a length above the largest, a stratum missing or not listed, an invalid case, an unknown stratum accepted, a convolution accepting the lane order |
+| `merging_wave6` | the merge of summaries of stage B differs from the whole |
 
 The Ball kernels of the non-finite layer run with the second radius design in these tests (the
 design their IEEE-model statements are proved with); the second wave's tests run the first.

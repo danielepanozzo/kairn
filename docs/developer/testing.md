@@ -41,7 +41,7 @@ The tests that `ctest` runs in the build directory, by name:
 | `kairn-oracle.claims` | The oracle can read every claim in `gen/claims.json`. |
 | `docs.reference.check` | The reference pages of the site are what `docs/tools/reference.py` writes ([Documentation](documentation.md#reference-pages)). |
 | `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum. |
-| `crosscheck.compiled.FOLD.F` | A fold (a sum or a dot product over arrays) compiled likewise: the scalar runners on 300 random arrays of format F, of every length class and in every order, and the packed runners on 200 arrays in the lane order of their register ([below](#cross-checks)). |
+| `crosscheck.compiled.FOLD.F` | A fold (a sum or a dot product over arrays) compiled likewise: the scalar runners on 300 random arrays of format F, of every length class and in every order, and the packed runners on 200 arrays in the lane order of their register ([below](#cross-checks)). A map, a fold of maxima and a convolution likewise, on 100 arrays of up to 24 elements (pairs of polynomials of up to 20 coefficients for a convolution, which has no packed form). |
 | `objcode.check` | Every kernel compiled with the build's compiler in five configurations of its flag matrix, scalar and packed, for `double` and `float`: the fused multiply-adds and the plain multiplications of its object code are what `gen/objcode.json` says the IR asks for ([below](#object-code)); and in one of them the operations of `Ball` outlined and external, each a call of a function with the counts of its kernel ([below](#the-operations-of-ball-outlined-and-external)). |
 | `objcode.controls` | The textbook `a * b + c` fails that check in exactly the configurations where its program sees the compiler fuse it, and in at least one; counts changed on purpose fail it. |
 | `objcode.test` | The checker's own tests, on stored disassemblies of every format it reads (Python only). |
@@ -92,7 +92,7 @@ front:
 | `full.crosscheck.interp.K` | Kernel K run by the generator's interpreter on **every** operand combination of a toy format. |
 | `full.crosscheck.interp-restricted.K` | Kernel K run by the interpreter on every operand of a **restricted** domain of a toy format, for the kernels whose whole enumeration is too long. |
 | `full.crosscheck.interp-sampled.K` | The same kernels on 20 000 random cases of the whole toy format, from every stratum. |
-| `full.crosscheck.compiled.FOLD.F`, `full.crosscheck.interp.FOLD`, `full.crosscheck.interp-sampled.FOLD` | A fold: the compiled runners on 1 000 random arrays of up to 4 096 elements (the packed runners on 500), the flag sets' runners among them; the interpreter on every array of a tiny format up to a small length, in every order that differs, and on 1 000 random arrays of a toy format of up to 1 024 elements ([Cross-checks](#cross-checks)). |
+| `full.crosscheck.compiled.FOLD.F`, `full.crosscheck.interp.FOLD`, `full.crosscheck.interp-sampled.FOLD` | A fold: the compiled runners on 1 000 random arrays of up to 4 096 elements (the packed runners on 500), the flag sets' runners among them; the interpreter on every array of a tiny format up to a small length, in every order that differs, and on 1 000 random arrays of a toy format of up to 1 024 elements ([Cross-checks](#cross-checks)). A map the same on arrays of up to 1 024 elements, a fold of maxima as a fold, a convolution on 300 pairs of polynomials of up to 64 coefficients. |
 | `full.kairn-gen.test` | The four test classes of the generator that `full.tools.kairn-gen.test` leaves out (`-k`): the interpreter against the machine's own arithmetic (Python's float and `math.fma`) on thousands of cases per kernel and format and against every rounding of toy formats, and the statements of the IEEE model and of the non-finite layer on every operand of small formats. With four worker processes. |
 | `full.kairn-oracle.selftest` | The six tests of the oracle that `full.tools.kairn-oracle.selftest` leaves out (`--only`): its Python reference runner, correct and with injected errors, on every case of tiny formats. With four worker processes. |
 | `full.search.compiled` | The adversarial search ([below](#the-adversarial-search)) on every kernel with an `error`, `upper`, `encloses` or `extends` entry, `binary64` and `binary32`, through the scalar runner with the build's flags, 5 000 cases per kernel and format from its seeds; fails on any violated claim. With four worker processes. |
@@ -142,13 +142,12 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   `tests/CMakeLists.txt`, kernels whose claims the oracle cannot read yet; with them
   `KAIRN_NOT_YET_CROSS_CHECKED_FOLDS` for folds. No cross-check, no enumeration of a toy format,
   no brute-force run and no test of the public interface is registered for a name of these lists,
-  and configuring says how many are left out. **On them today**: the maps of stage B
-  ([Maps](architecture.md#maps)), which the oracle refuses (a fold that writes arrays: the requests
-  of written arrays and the claim `entries`), and their steps with them; the folds of maxima
-  ([Folds of maxima](architecture.md#folds-of-maxima)) and their kernels (the claim `maximum`,
-  `finite_or_nan` with `if` and `steps`, a fold's `upper` entry); and the convolutions
-  ([Convolutions](architecture.md#convolutions); requests of two lengths, the claim
-  `coefficients`). The generator's tier tests them ([below](#the-generators-tier)). Since the folds' stage of
+  and configuring says how many are left out. **On them today**: the interval kernels of
+  Milestone 2. The generator's tier tests them ([below](#the-generators-tier)). Since stage B of
+  Milestone 2 the oracle reads and judges the maps, the folds of maxima and the convolutions, and
+  their kernels (`oracle/README.md`, "Maps", "Folds of maxima", "Convolutions"): they are
+  cross-checked as the folds are, and the steps of the maps and the kernels of the folds of maxima
+  are on `KAIRN_NOT_PUBLIC_YET` with those of the folds' stage. Since the folds' stage of
   Milestone 2 the oracle reads and judges every claim of that stage, the kinds of that stage
   included (`upper` with a value of its own and `holds` under a mask, the error of form `T`,
   `count()` and `format(half)`, `finite_or_nan`, and the folds' `fold_error` on requests of
@@ -185,6 +184,38 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
     `fp:4:-4:-1`) every sum of up to three pairs is itself a pair, exact, and the guards fail
     such a run (it puts nothing of the bound to the test); `fp:3:-4:1` has eight binades for
     three bits.
+
+    The maps, the folds of maxima and the convolutions of stage B, by their kind, their scalars
+    (`s1` of one limb, `s2` of two, `sc` a power of two) and their arrays; an enumeration of a map
+    is every value of each scalar with every array up to the length, of a convolution both lengths
+    up to it:
+
+    | Shape | Objects | Every array of | Random arrays of |
+    |---|---|---|---|
+    | map 1 1 | `add_1`, `sub_1` and their entry forms | `fp:2:-1:0` up to 2: 77 029 | `fp:5:-7:4` |
+    | map 2 2 | `add_2`, `sub_2` and their entry forms | `fp:3:-4:1`, one element: 181 477 | `fp:4:-7:2` |
+    | map s1 1 1 | `axpy_1`, `axpy_1_entry` | `fp:3:-3:0`, one: 74 130 | `fp:5:-12:-1` |
+    | map s2 2 2 | `axpy_2`, `axpy_2_entry` | `fp:4:-3:-2`, one: 262 208 | `fp:4:-7:-3` |
+    | map s1 2 2 | `axpy_2_1`, `axpy_2_1_entry` | `fp:3:-2:-1`, one: 26 650 | `fp:4:-7:-3` |
+    | map s1 1 | `scale_1` | `fp:3:-3:0` up to 2: 149 982 | `fp:5:-12:-1` |
+    | map s1 2 | `scale_2` | `fp:2:-2:1` up to 2: 149 314 | `fp:4:-8:-2` |
+    | map sc 1 | `mul_pow2_map_1` | `fp:4:-5:0` up to 2: 234 963 | `fp:5:-6:2` |
+    | map sc 2 | `mul_pow2_map_2` | `fp:3:-3:0` up to 2: 179 346 | `fp:5:-6:2` |
+    | max 1 | `norm_upper_1` | `fp:3:-3:0` up to 3: 225 835 | `fp:5:-7:4` |
+    | max 2 | `norm_upper_2` | `fp:3:-4:1` up to 2: 363 379 | `fp:4:-7:2` |
+    | conv 1 1 | `conv_1` | `fp:2:-1:0` up to 2 and 2: 44 521 | `fp:5:-12:-1` |
+    | conv 2 2 | `conv_2` | `fp:4:-4:-1` up to 1 and 1: 63 001 | `fp:4:-7:-3` |
+
+    Two elements of a map of pairs, or of axpy, are more than ten million arrays in any format of
+    its precision: the enumeration of one element is every case of the step, with every flag and
+    second pass of one element, and the sampled runs and the compiled runners have the rest. The
+    quick tier's cross-checks of these objects have 100 arrays of up to 24 elements
+    (`KAIRN_CROSSCHECK_MAP_QUICK_CASES`, `KAIRN_CROSSCHECK_MAP_QUICK_LENGTH`; a convolution two
+    polynomials of up to 20 coefficients each, `KAIRN_CROSSCHECK_CONV_QUICK_LENGTH`), each group
+    of runners; the full tier's 1 000 of up to 1 024 for a map (`KAIRN_CROSSCHECK_MAP_LENGTH`), a
+    fold of maxima as a fold, and 300 pairs of up to 64 coefficients for a convolution
+    (`KAIRN_CROSSCHECK_CONV_CASES`, `KAIRN_CROSSCHECK_CONV_LENGTH`), whose lines hold $n_x n_y$
+    terms.
 - **Random cases**: 6 000 per kernel and format in the quick tier (`KAIRN_CROSSCHECK_QUICK_CASES`)
   and 20 000 in the full tier (`KAIRN_CROSSCHECK_CASES`), seed 0 (`KAIRN_CROSSCHECK_SEED`), so
   that a run is the same everywhere and can be repeated. The oracle's generator chooses the strata
@@ -272,6 +303,14 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
     (49 153 cases, counts with $m \cdot \mathrm{unit}(K)$ from 0 to past 1); `dot_step_1` (`1 1 1`)
     on every operand of `fp:3:-6:-1` (166 375) and `dot_step_2` (`2 2 2`) of `fp:4:-3:-2`
     (226 981); the steps of the sums of supplied arrays have the formats of `add_1_1` and `add_2_2`.
+    Stage B: the steps of the maps that claim what a kernel above claims have its format
+    (`add_entry_step_k`, `sub_1_1`, `sub_entry_step_k`, `scale_step_k`, `mul_pow2_step_2`), the
+    steps of axpy those of the dot products' steps (`1 1 1`, `2 2 2`), and `mul_pow2_step_1`
+    (`1 c`) every operand of `fp:7:-14:6` (76 005), `axpy_step_2_1` and its entry form (`1 2 2`) of
+    `fp:3:-5:-3` (107 911); the kernels of the folds of maxima, `m` a mask: `norm_combine`
+    (`1 m 1 m`) on `fp:4:-6:1` (81 796), `norm_step_1` (`1 m 1`) on `fp:5:-7:0` (164 738),
+    `norm_step_2` (`1 m 2`) on `fp:3:-6:2` (214 722), and the finishes `norm_finish_k` (extended,
+    `1 m`) on every value of `fp:11:-29:10` with the mask both ways (167 940).
 
 - **Restricted enumerations.** The two-limb balls with two operands have far too many operand
   combinations at their minimum precision (140 million for `ball_add_2` at `fp:3:-3:2`, 12.4
@@ -394,6 +433,29 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
     length, an order, a flag outcome, cancellation, the term $\tau$, a ratio a thousand times
     smaller; the bounds on one side of the limit, never close, ok false early; a finish without a
     NaN or a lower limb not finite; a stratum of a family) and must fail them.
+- **Stage B of Milestone 2** (`oracle/README.md`, "Maps", "Folds of maxima", "Convolutions"). A
+  random run's header lists the strata of the generator (`genmap.py`): for a map `one`, `wide`,
+  `cancel`, `tie`, `exact`, `overflow`, `underflow`, `zeros`, `nonfinite`, `tight` and, for groups of
+  two limbs, `tail`; for a fold of maxima `one`, `wide`, `ties`, `position`, `zeros`, `underflow`,
+  `top`, `nonfinite` (and `tail`); for a convolution those of a dot product; for the kernels the
+  families `axpy` (`cancel`, `state`, `tie`, `exactprod`, `tight`), `maxof` (`equal`,
+  `neighbor`, `negative`) and `maxfinish` (`nonfinite`, `top`, `smallstep`). Then:
+
+    | Objects | Cases the run must have seen |
+    |---|---|
+    | a map | every length class and order asked for (as a fold); an element of finite operands with a finite result, one of finite operands that is not finite (an overflow), one with an operand that is not finite; the flag true, false from a non-finite operand, false from an overflow; every entry of the step applied, a rounding to nearest inexact, and the step's error at least 1/2 of its bound for one limb and 1/16 for two (the compiled runners reach 1 with one limb, $1 - 8u$ for the sums of two, 0.39 to 0.99 for the products and axpy of two in the quick tier, 0.61 to 0.99 in the full tier) |
+    | a fold of maxima | every length class and order; the largest at the first, the last and another element, attained more than once; every element zero, no element; the result at $\mathrm{RU}(V)$ and, for two limbs, one step above it, and $V$ not a number of the format; the flag true and false from a non-finite element, and for two limbs false from finite elements whose bound's top is beyond $\Omega$ (in an enumeration only what its lengths can have) |
+    | a convolution | lengths 0 and 1 of each array, unequal lengths, lengths above 2 of each (in a random run); a coefficient of finite terms with a finite result, one that overflows, one with a term that is not finite; the flags of a map; coefficients of one and of two terms, heavy cancellation, for the products the term $\tau$ mattering both ways, and the fold's error at least 1/2 of its bound for one limb and 1/16 for two |
+    | the steps of axpy | the error at least 1/2 of its bound for one limb and 1/64 for two (the interpreter: $1 - O(u)$ with one limb, 0.25 to 0.73 with two) |
+    | `norm_combine`, `norm_step_k` | each argument larger, and both equal |
+    | `norm_finish_k` | the mask true and false, a finite value stepped up to a finite one, a NaN, an infinity, and for `norm_finish_2` a finite value stepped up to $+\infty$ |
+
+    `full.tools.crosscheck.guards` has runs and altered summaries that miss each of these (a class
+    of elements or of the flag, a step far from its bound, entries other than the step's; where the
+    largest is, the result one step above $\mathrm{RU}(V)$, the bound's top beyond $\Omega$; a
+    length of a convolution, a coefficient's class, cancellation, its error far from the bound, an
+    order other than `seq`; the strata of the families of the kernels, axpy far from its bound, a
+    class of a finish or of a maximum) and must fail them.
 
 For a kernel of the extended domain the run must also have seen what that layer is about. The
 guards read the kernel's claims (the file the oracle's summary names) and the oracle's counts of
@@ -1012,6 +1074,15 @@ eleven kernels, 0.78 seconds of test time each as every kernel's (17 seconds), a
 eight folds, 0.72 seconds each (11.5 seconds: 300 arrays through the scalar runners and 200
 through the packed ones, of 36 elements on average). On the Mac under a load of about 25, the
 quick tier took 58 seconds with them and 46 without, 228 and 180 seconds of test time.
+
+Stage B of Milestone 2 added 84 tests to the quick tier: the 40 cross-checks of its twenty
+kernels (the steps of the maps and the kernels of the folds of maxima), 0.9 seconds of test time
+each as every kernel's (36 seconds), and the 44 of its eighteen maps, two folds of maxima and two
+convolutions, 0.52 seconds each (23 seconds: 100 arrays of up to 24 elements through the scalar
+runners and 100 through the packed ones, pairs of polynomials of up to 20 coefficients for a
+convolution). On 16 threads of the Linux machine, shared with other runs, with `--parallel 4`, the
+quick tier took 97 to 98 seconds with them and 83 without, 351 and 291 seconds of test time; they
+alone took 15 seconds.
 
 On 16 threads of the Linux machine, the quick tier's 278 seconds of test time were then: the
 compiled runners' cross-checks 105 (126 tests), the oracle's own tests 54, the public interface
