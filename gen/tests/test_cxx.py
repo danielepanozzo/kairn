@@ -92,6 +92,15 @@ NONFINITE_CE_CASES = [
     ('ball_make_2', 'double', [1.0, 2.0 ** -60, -1.0]),
     ('ball_make_2', 'float', [math.inf, 0.0, 0.5]),
     ('ball_make_2', 'double', [1.0, 2.0 ** -60, math.inf]),
+    # The finishes of the folds: a finite state as it is with the flag true, the canonical NaN with
+    # the flag false otherwise.
+    ('fold_finish_1', 'double', [-2.0 ** -1074]),
+    ('fold_finish_1', 'float', [math.inf]),
+    ('fold_finish_1', 'double', [math.nan]),
+    ('fold_finish_2', 'double', [1.0, 2.0 ** -60]),
+    ('fold_finish_2', 'float', [-math.inf, 0.0]),
+    ('fold_finish_2', 'double', [math.nan, math.nan]),
+    ('fold_finish_2', 'float', [math.inf, math.nan]),
 ]
 
 
