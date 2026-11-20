@@ -112,6 +112,11 @@ constexpr std::size_t loop_n = 67;
 template <class T>
 const char* loop_verdict(void (*f)(const T*, const T*, T, T, T, T*, std::size_t), const T* ops, T fused) {
     T x[loop_n], y[loop_n], z[loop_n];
+    // These two loops only prepare and count: MSVC, which the check asks to name every loop it
+    // vectorizes (it has no option to turn that off), must not name them.
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma loop(no_vector)
+#endif
     for (std::size_t i = 0; i < loop_n; ++i) {
         x[i] = ops[0];
         y[i] = 0;
@@ -120,6 +125,9 @@ const char* loop_verdict(void (*f)(const T*, const T*, T, T, T, T*, std::size_t)
     static volatile T one = 1;
     f(x, y, one, ops[1], ops[2], z, loop_n);
     std::size_t nf = 0, nu = 0;
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma loop(no_vector)
+#endif
     for (std::size_t i = 0; i < loop_n; ++i) {
         nf += z[i] == fused;
         nu += z[i] == 0;
