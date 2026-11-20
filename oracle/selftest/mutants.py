@@ -292,6 +292,97 @@ MUTANTS = {
         "        if True:\n            return\n        i = self.start"),
     "rational: near-ties never aimed at a pair to renormalize": (
         "rational.py", "        aim = rng.bits(1) and self.window1", "        aim = rng.bits(1) and []"),
+    # The folds' stage of Milestone 2: the folds, the bound kernels, form T, finite_or_nan.
+    "fold_error: height n-1 read as n": (
+        "folds.py", '    return n if h == "n" else max(n - 1, 0)', "    return n"),
+    "fold_error: absolute term left out": (
+        "folds.py", "    abs_lo, abs_hi = h.al * n * tn * tdd, h.ah * n * tn * tdd",
+        "    abs_lo, abs_hi = 0, 0"),
+    "fold_error: term left out": (
+        "folds.py", "        self.gl = (td + tn) * xl - (td << P)\n        self.gh = (td + tn) * xh - (td << P)",
+        "        self.gl = td * xl - (td << P)\n        self.gh = td * xh - (td << P)"),
+    "fold_error: the bracket's upper end rounded down": (
+        "folds.py", "        hi = -((-(hi * hi)) >> P)", "        hi = (hi * hi) >> P"),
+    "fold: the value of an element without its second limbs": (
+        "folds.py", '        return "(%s)" % "+".join("x[%d]" % i for i in range(lo, hi)), self.fmt.qmin',
+        '        return "x[%d]" % lo, self.fmt.qmin'),
+    "fold: a true flag with a non-finite element accepted": (
+        "folds.py", "        if not case.finite:\n            return \"the flag is true although an element",
+        "        if False:\n            return \"the flag is true although an element"),
+    "fold: a false flag with a limb that is not a NaN accepted": (
+        "folds.py", "    if not all(v == NAN for v in w):\n        return \"the flag is false",
+        "    if False:\n        return \"the flag is false"),
+    "fold: the flag not compared with limb 0": (
+        "folds.py", "    if flag != (1 if lead else 0):", "    if False:"),
+    "fold: normalized not judged": (
+        "folds.py", "            if not F.normalized_limbs(fmt, w):\n                why = \"not normalized\"",
+        "            if False:\n                why = \"not normalized\""),
+    "fold: canonical elements not required": (
+        "folds.py", "            if not XT.canonical(fmt, x[lo:hi]):", "            if False:"),
+    "fold: a false flag far from overflow not suspicious": (
+        "folds.py", "        if far:\n            es.count(\"flag false: finite elements far",
+        "        if False:\n            es.count(\"flag false: finite elements far"),
+    "fold: the lane order counted as the sequential one": (
+        "folds.py", "    if order is None:\n        return [\"order: sequential\"]",
+        "    if True:\n        return [\"order: sequential\"]"),
+    "fold: more lanes than elements counted at W = n": (
+        "folds.py", "    if W > n >= 1:", "    if W >= n >= 1:"),
+    "fold: lengths counted one off": (
+        "folds.py", '        return "length %d" % n', '        return "length %d" % (n + 1)'),
+    "fold: heavy cancellation counted without u": (
+        "folds.py", "    if S and (abs(sig) << pl.p) <= S:", "    if S and 2 * abs(sig) <= S:"),
+    "fold claims: heights not checked against the orders": (
+        "folds.py", "            if not isinstance(h, dict) or set(h) != set(fold.orders):",
+        "            if not isinstance(h, dict):"),
+    "fold claims: instances not compared with the expressions": (
+        "folds.py", "                if li != ev:", "                if False:"),
+    "fold claims: a fold without finite_or_nan read": (
+        "folds.py", "        if len(flags) != 1:", "        if len(flags) > 1:"),
+    "genfold: the tight stratum aimed elsewhere": (
+        "genfold.py", "        return _tight_sum(gen, rng, n, k)",
+        '        return _sum_values(gen, rng, "one", n, k)'),
+    "genfold: lanes:big not above the length": (
+        "genfold.py", '            o = "lanes:%d" % (n + 1 + rng.below(8))',
+        '            o = "lanes:%d" % (n + rng.below(8))'),
+    "bound kernels: the mask ignored": (
+        "check.py", '            on = z[c["cond"]] == 1', "            on = True"),
+    "bound kernels: upper not compared": (
+        "check.py", "        if ov < v:", "        if False:"),
+    "bound kernels: holds not judged": (
+        "check.py", '                es.count("holds" if truth else "does not hold")',
+        '                truth = True\n                es.count("holds")'),
+    "bound kernels: an output not finite under a true mask not suspicious": (
+        "check.py", '                sus.append("%s: an output is not finite although %s is true" % (',
+        '                (lambda *a: None)("%s: an output is not finite although %s is true" % ('),
+    "bound kernels: tiny(K) read as unit(K)": (
+        "check.py", '"tiny": lambda k: pl.units[k][1]}', '"tiny": lambda k: pl.units[k][0]}'),
+    "bound kernels: unit(K) read as tiny(K)": (
+        "check.py", '"unit": lambda k: pl.units[k][0], ', '"unit": lambda k: pl.units[k][1], '),
+    "count(m) not checked": (
+        "check.py", "                if v != 0 and v < pl.one:", "                if False:"),
+    "format(half) ignored": (
+        "check.py", "        if self.format_missing:\n            self.in_scope = False",
+        "        if False:\n            self.in_scope = False"),
+    "form T read as form R": (
+        "check.py", "                    for fn, sh in e[\"terms\"]:\n                        rho += abs(fn(x)) << sh",
+        "                    rho = abs(Vc)"),
+    "form T: the terms' magnitudes not taken": (
+        "check.py", "                        rho += abs(fn(x)) << sh", "                        rho += fn(x) << sh"),
+    "claims: count() of a two-limb input accepted": (
+        "claims.py", "                if limbs[m.group(1)] != 1:\n                    raise ClaimsError(\"%s: requirement %r: count()",
+        "                if False:\n                    raise ClaimsError(\"%s: requirement %r: count()"),
+    "cexpr: unary minus binds tighter than ^": (
+        "cexpr.py", '            return ("neg", unary_())', '            return ("neg", atom_())'),
+    "cexpr: division read as a product": (
+        "cexpr.py", "        return a / b", "        return a * b"),
+    "finite_or_nan: the output not compared with the value": (
+        "extended.py", "        if len(w) != len(s) or not all(same_limb(a, b) for a, b in zip(w, s)):",
+        "        if False:"),
+    "finite_or_nan: the flag not compared": (
+        "extended.py", "    if f != (1 if lead else 0):", "    if False:"),
+    "finite_or_nan: a non-NaN output of a non-finite value accepted": (
+        "extended.py", "    elif not all(v == NAN for v in w):\n        out.append(\"finite_or_nan: limb 0",
+        "    elif False:\n        out.append(\"finite_or_nan: limb 0"),
 }
 
 

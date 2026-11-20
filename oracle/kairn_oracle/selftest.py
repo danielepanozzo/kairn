@@ -907,6 +907,7 @@ from . import selftest3  # noqa: E402,F401
 from . import selftest4  # noqa: E402,F401
 from . import selftest5  # noqa: E402,F401
 from . import selftest6  # noqa: E402,F401
+from . import selftest7  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------

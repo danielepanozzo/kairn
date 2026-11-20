@@ -114,6 +114,19 @@ VARIANTS = {
                        "it is exact, and widens the radius to keep the set enclosed",
     "pow2-scale-eta": "mul_pow2_2 adds eta to its second limb where both limb products are zero "
                       "or at least N, keeping the error within eta",
+    # The folds' stage of Milestone 2: the folds, their steps, finishes and bounds.
+    "fold-drop-last": "every fold leaves out its last element",
+    "fold-lanes-reverse": "the lane order combines the lanes from the last one down (other bits, "
+                          "not an error: the claim is a bound for every order)",
+    "fold-lanes-skip-lane": "the lane order leaves the last lane out of the combination",
+    "dot-single-product": "dot_step_2, and so dot_2, multiplies the leading limbs only, rounded",
+    "flag-true-nan": "the finishes return the state with the flag true, whatever its leading limb",
+    "flag-false-finite": "the finishes return a negative finite state as it is, with the flag "
+                         "false",
+    "fold-not-normalized": "the folds of two limbs return (succ z0, z1 - (succ z0 - z0)) when that "
+                           "is exact: the same value, not normalized",
+    "bound-g-pred": "the bound kernels return g one number of the format smaller when ok is true",
+    "bound-ok-beyond": "the bound kernels return ok true for every count",
     # kairn::rational<X>(num, den) (rational_1, rational_2).
     "rat-lead-ulp": "rational: the first limb one unit in the last place too large, in about 1 "
                     "line in 4",
@@ -130,6 +143,23 @@ VARIANTS = {
 
 ORACLE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_CENTER_CLAIMS = os.path.join(ORACLE_DIR, "selftest", "claims-wave1.json")
+# The bounds of the folds' stage take unit(K) and tiny(K) of add_1_1, add_2_2, mul_1_1 and mul_2_2
+# from a claims file: the fixture of that stage unless --bound-claims says otherwise.
+DEFAULT_BOUND_CLAIMS = os.path.join(ORACLE_DIR, "selftest", "claims-wave5.json")
+BOUND_KERNEL = {"bound_sum_1": "add_1_1", "bound_sum_2": "add_2_2", "bound_dot_1": "mul_1_1",
+                "bound_dot_2": "mul_2_2"}
+# The folds of architecture.md, "Folds": step, combination, finish and the limbs of the state.
+FOLDS = {"sum_1": ("add_1_1", "add_1_1", "fold_finish_1", 1),
+         "sum_1_entry": ("sum_entry_step_1", "add_1_1", "fold_finish_1", 1),
+         "sum_2": ("add_2_2", "add_2_2", "fold_finish_2", 2),
+         "sum_2_entry": ("sum_entry_step_2", "add_2_2", "fold_finish_2", 2),
+         "sum_fast_2": ("add_fast_2_2", "add_fast_2_2", "fold_finish_2", 2),
+         "sum_fast_2_entry": ("sum_fast_entry_step_2", "add_fast_2_2", "fold_finish_2", 2),
+         "dot_1": ("dot_step_1", "add_1_1", "fold_finish_1", 1),
+         "dot_2": ("dot_step_2", "add_2_2", "fold_finish_2", 2)}
+# The limbs of an element of each fold: those of its arrays, in order.
+FOLD_WIDTH = {"sum_1": 1, "sum_1_entry": 1, "sum_2": 2, "sum_2_entry": 2, "sum_fast_2": 2,
+              "sum_fast_2_entry": 2, "dot_1": 2, "dot_2": 4}
 
 # The kernel of each Ball kernel's center.  For one limb it is one operation of the format,
 # whose bound no claims entry states: |RN(v) - v| <= u|v| + t eta with t = 0 for a sum (sums
@@ -484,9 +514,11 @@ def _exact_hex_out(v, scale):
 # Kernels, value names as in architecture.md
 
 class Kernels:
-    def __init__(self, ar, center_claims=DEFAULT_CENTER_CLAIMS, radius="first"):
+    def __init__(self, ar, center_claims=DEFAULT_CENTER_CLAIMS, radius="first",
+                 bound_claims=None):
         self.A = ar
         self.v = ar.variant
+        self.bound_claims = bound_claims or DEFAULT_BOUND_CLAIMS
         self.trace = [] if ar.variant in ("trace-fast-two-sum", "trace-mul-pow2") else None
         self.center_claims = center_claims
         self.radius = radius
@@ -1195,6 +1227,149 @@ class Kernels:
     def ball_mul_pow2_2_full(self, cx0, cx1, rx, c):
         return self._ball_fixup(self.ball_mul_pow2_2(cx0, cx1, rx, c), 2, rx)
 
+    # -- the folds' stage of Milestone 2 (architecture.md, "Folds"; milestone2.md, "Batch
+    # kernels"), as listed there ----------------------------------------------------------------
+    def dot_step_1(self, s, x, y):
+        """t = fma(x, y, s)."""
+        return (self.A.fma(x, y, s),)
+
+    def dot_step_2(self, s0, s1, x0, x1, y0, y1):
+        """p = mul_2_2(x, y); t = add_2_2(s, p)."""
+        if self.v == "dot-single-product":
+            p = (self.A.prod(x0, y0), 0)
+        else:
+            p = self.mul_2_2(x0, x1, y0, y1)
+        return self.add_2_2(s0, s1, p[0], p[1])
+
+    def sum_entry_step_1(self, s, x):
+        return self.add_1_1(s, self.guard(x))
+
+    def sum_entry_step_2(self, s0, s1, x0, x1):
+        return self.add_2_2(s0, s1, self.guard(x0), self.guard(x1))
+
+    def sum_fast_entry_step_2(self, s0, s1, x0, x1):
+        return self.add_fast_2_2(s0, s1, self.guard(x0), self.guard(x1))
+
+    def _finish(self, s):
+        """The state with the flag true when its leading limb is finite; otherwise the canonical
+        NaN, every limb a NaN, with the flag false."""
+        f = type(s[0]) is int
+        if self.v == "flag-true-nan":
+            return tuple(s) + (True,)
+        if self.v == "flag-false-finite" and f and s[0] < 0:
+            return tuple(s) + (False,)
+        if f:
+            return tuple(s) + (True,)
+        return (NAN,) * len(s) + (False,)
+
+    def fold_finish_1(self, s):
+        return self._finish((s,))
+
+    def fold_finish_2(self, s0, s1):
+        return self._finish((s0, s1))
+
+    def _const_up(self, f):
+        """const up(EXPR): the smallest number of the format not below the rational f."""
+        A = self.A
+        per_eta = Fraction(1 << -A.qmin) if A.qmin < 0 else Fraction(1, 1 << A.qmin)
+        return A.round_up_fraction(f * per_eta)
+
+    def _bound_constants(self, kname):
+        """unit and tiny of the kernel K the bound is for (c u^k and t eta of its error entry in
+        the bound claims, by default the fixture claims-wave5.json), and the constants of the
+        listing of milestone2.md, "The bound as a function of n", rounded up to the format."""
+        key = ("bound", kname)
+        c = self._consts.get(key)
+        if c is None:
+            K = BOUND_KERNEL[kname]
+            cc, k, t = center_bound(K, self.bound_claims)
+            A = self.A
+            u = Fraction(1, 1 << A.p)
+            eta = Fraction(1, 1 << -A.qmin) if A.qmin < 0 else Fraction(1 << A.qmin)
+            unit = _eval_rational(cc, u) * u ** k
+            tiny = t * eta
+            up = self._const_up
+            c = self._consts[key] = {
+                "a": up((1 + u) * (unit + eta / 2)), "aa": up((1 + u) ** 2 * (unit + eta)),
+                "w": up(1 + 2 * u), "quarter": up(Fraction(1, 4)), "one": up(Fraction(1)),
+                "tm": up((1 + u) ** 2 * (tiny + eta))}
+        return c
+
+    def _bound(self, kname, m):
+        A = self.A
+        c = self._bound_constants(kname)
+        a = A.prod(m, c["a"])
+        aa = A.prod(m, c["aa"])
+        d = A.add(a, a)
+        w = A.add(d, c["w"])
+        g = A.prod(aa, w)
+        ok = a <= c["quarter"]
+        out = [g]
+        if kname.startswith("bound_dot"):
+            tm = A.prod(m, c["tm"])
+            wg = A.add(g, c["w"])
+            t = A.prod(tm, wg)
+            ok = ok and g <= c["one"]
+            out.append(t)
+        if self.v == "bound-ok-beyond":
+            ok = True
+        if self.v == "bound-g-pred" and ok and type(g) is int:
+            out[0] = A.next_down(g)
+        return tuple(out) + (bool(ok),)
+
+    def bound_sum_1(self, m):
+        return self._bound("bound_sum_1", m)
+
+    def bound_sum_2(self, m):
+        return self._bound("bound_sum_2", m)
+
+    def bound_dot_1(self, m):
+        return self._bound("bound_dot_1", m)
+
+    def bound_dot_2(self, m):
+        return self._bound("bound_dot_2", m)
+
+    def fold(self, name, order, elems):
+        """A fold of architecture.md, "Folds", in an order: None for the sequential one (the step
+        element after element from the zero state), W for the lane order (the first W floor(n/W)
+        elements dealt to W lanes, element i to lane i mod W; each lane folded from the zero
+        state; the lanes combined from lane 0 upward; the remaining n mod W folded into the
+        result).  Returns the finish's outputs."""
+        step, combine, finish, k = FOLDS[name]
+        step, combine, finish = getattr(self, step), getattr(self, combine), getattr(self, finish)
+        v = self.v
+        zero = (0,) * k
+        if v == "fold-drop-last" and elems:
+            elems = elems[:-1]
+
+        def run(state, xs):
+            for x in xs:
+                state = step(*(tuple(state) + tuple(x)))
+            return state
+
+        n = len(elems)
+        if order is None or order <= 1:
+            s = run(zero, elems)
+        else:
+            W = order
+            full = W * (n // W)
+            lanes = [run(zero, elems[j:full:W]) for j in range(W)]
+            if v == "fold-lanes-reverse":
+                lanes = lanes[::-1]
+            if v == "fold-lanes-skip-lane" and full:
+                lanes = lanes[:-1]
+            s = lanes[0]
+            for l in lanes[1:]:
+                s = combine(*(tuple(s) + tuple(l)))
+            s = run(s, elems[full:])
+        out = list(finish(*s))
+        if v == "fold-not-normalized" and k == 2 and out[-1] and type(out[0]) is int and out[0]:
+            z0, z1 = out[0], out[1]
+            nb = self.A.succ(z0)
+            if type(nb) is int and self.A.member(z1 - (nb - z0)):
+                out[0], out[1] = nb, z1 - (nb - z0)
+        return out
+
 
 # A negative zero as an output (next-down-zero): the fixed values have one zero.
 NEG_ZERO = "-0x0p+0"
@@ -1223,7 +1398,11 @@ ARITY = {"two_sum": 2, "fast_two_sum": 2, "two_prod": 2, "two_prod_dekker": 2, "
          "two_sum_entry": 2,
          "fast_two_sum_entry": 2, "radd_entry": 2, "add_down_entry": 2, "add_up_entry": 2,
          "sub_down_entry": 2, "sub_up_entry": 2, "ball_mul_pow2_1": 3, "ball_mul_pow2_2": 4,
-         "ball_mul_pow2_1_full": 3, "ball_mul_pow2_2_full": 4}
+         "ball_mul_pow2_1_full": 3, "ball_mul_pow2_2_full": 4,
+         # The folds' stage.
+         "dot_step_1": 3, "dot_step_2": 6, "sum_entry_step_1": 2, "sum_entry_step_2": 4,
+         "sum_fast_entry_step_2": 4, "fold_finish_1": 1, "fold_finish_2": 2, "bound_sum_1": 1,
+         "bound_sum_2": 1, "bound_dot_1": 1, "bound_dot_2": 1}
 FIRST_WAVE = frozenset(("two_sum", "fast_two_sum", "two_prod", "two_prod_dekker", "split",
                         "add_2_2", "add_2_1", "mul_2_2", "mul_2_1", "add_fast_2_2"))
 # kairn::rational<X>(num, den), with its number of limbs.
@@ -1234,13 +1413,14 @@ PAIRS = {"add_2_2": (0, 2), "add_2_1": (0,), "mul_2_2": (0, 2), "mul_2_1": (0,),
 
 
 class Runner:
-    def __init__(self, variant="correct", center_claims=None, radius="first"):
+    def __init__(self, variant="correct", center_claims=None, radius="first", bound_claims=None):
         if variant not in VARIANTS:
             raise ValueError("unknown variant %r (known: %s)" % (variant, ", ".join(VARIANTS)))
         if radius not in RADIUS_DESIGNS:
             raise ValueError("unknown radius design %r (first or second)" % radius)
         self.variant = variant
         self.center_claims = center_claims or DEFAULT_CENTER_CLAIMS
+        self.bound_claims = bound_claims or DEFAULT_BOUND_CLAIMS
         self.radius = radius
         self.cache = {}
 
@@ -1248,8 +1428,29 @@ class Runner:
         k = self.cache.get(fmtname)
         if k is None:
             k = self.cache[fmtname] = Kernels(Arith(parse_format_triple(fmtname), self.variant),
-                                              self.center_claims, self.radius)
+                                              self.center_claims, self.radius, self.bound_claims)
         return k
+
+    def fold_line(self, line, toks, tag):
+        """FOLD FORMAT ORDER N LIMB ... [#TAG]: the arrays, limb by limb, N entries each."""
+        name, fname, order, n = toks[0], toks[1], toks[2], int(toks[3])
+        K = self.kernels(fname)
+        A = K.A
+        width = FOLD_WIDTH[name]
+        limbs = toks[4:]
+        if len(limbs) != n * width:
+            raise ValueError("cannot run %r with %d limbs for %d elements" % (name, len(limbs), n))
+        cols = [[A.read(t) for t in limbs[j * n:(j + 1) * n]] for j in range(width)]
+        elems = list(zip(*cols)) if n else []
+        if order == "seq":
+            W = None
+        elif order.startswith("lanes:"):
+            W = int(order[6:])
+        else:
+            raise ValueError("unknown order %r" % order)
+        out = K.fold(name, W, elems)
+        return [line + " -> " + " ".join(("1" if v else "0") if type(v) is bool else A.write(v)
+                                         for v in out)]
 
     def complete(self, line):
         """The completed line(s) for one request line."""
@@ -1264,6 +1465,8 @@ class Runner:
         kname, fname, args = toks[0], toks[1], toks[2:]
         if kname in RATIONAL:
             return [line + " -> " + self.rational(kname, fname, args, line)]
+        if kname in FOLDS:
+            return self.fold_line(line, toks, tag)
         K = self.kernels(fname)
         A = K.A
         if ARITY.get(kname) != len(args):
@@ -1429,6 +1632,10 @@ def main(argv):
                                  description="Reference runner (pure Python, any binary format).")
     ap.add_argument("--variant", default="correct", help="one of: " + ", ".join(VARIANTS))
     ap.add_argument("--list-variants", action="store_true")
+    ap.add_argument("--bound-claims",
+                    help="claims file whose bounds of add_1_1, add_2_2, mul_1_1 and mul_2_2 give "
+                         "the constants of the bound kernels of the folds (default: the oracle's "
+                         "fixture of the folds' stage, claims-wave5.json)")
     ap.add_argument("--center-claims",
                     help="claims file whose bounds of add_2_2, mul_2_2 and mul_2_1 give the Ball "
                          "constants U and V (default: the oracle's first-wave fixture)")
@@ -1463,6 +1670,6 @@ def main(argv):
             for which, v in zip("EGH", consts):
                 print("%s.%s.%s=%s" % (a.print_constants, kname, which, ar.write(v)))
         return 0
-    Runner(a.variant, a.center_claims, a.radius).run(sys.stdin, sys.stdout)
+    Runner(a.variant, a.center_claims, a.radius, a.bound_claims).run(sys.stdin, sys.stdout)
     sys.stdout.flush()
     return 0
