@@ -348,10 +348,10 @@ set(KAIRN_CROSSCHECK_CASES 20000 CACHE STRING
 set(KAIRN_CROSSCHECK_QUICK_CASES 6000 CACHE STRING
   "Random cases in each cross-check of the compiled runners of the quick tier")
 set(KAIRN_CROSSCHECK_SEED 0 CACHE STRING "Seed of the random cases of the cross-checks")
-# The interval kernels of Milestone 2 (33, the kernels of KAIRN_NOT_PUBLIC_YET from mul_dir_1 on)
-# have fewer cases in the quick tier, to keep its time on the hosted runners: 2000, the first of
-# the full tier's 20 000, on which their guards still see every class (docs/developer/testing.md,
-# "Time").
+# The interval kernels of Milestone 2 (33, the kernels of KAIRN_NOT_PUBLIC_YET from mul_dir_1 to
+# ball_to_interval_1) have fewer cases in the quick tier, to keep its time on the hosted runners:
+# 2000, the first of the full tier's 20 000, on which their guards still see every class
+# (docs/developer/testing.md, "Time").
 set(KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES 2000 CACHE STRING
   "Random cases in each cross-check of the compiled runners of an interval kernel, quick tier")
 set(_interval_kernels
@@ -483,13 +483,35 @@ set(_toy_ext_b2_b2_product fp:4:-4:-1 "rx.in=${_radii},ry.in=${_radii},cx.lead=0
 #   inputs   kernels of the folds' stage of Milestone 2   format         cases
 #   n        bound_sum_k, bound_dot_k (count(m) and        fp:12:-30:12    49 153
 #            format(half): m*unit(K) up to past 1)
-#   1 1 1    dot_step_1                                   fp:3:-6:-1     166 375
-#   2 2 2    dot_step_2                                   fp:4:-3:-2     226 981
+#   1 1 1    dot_step_1, axpy_step_1, axpy_entry_step_1   fp:3:-6:-1     166 375
+#   2 2 2    dot_step_2, axpy_step_2, axpy_entry_step_2   fp:4:-3:-2     226 981
 #   ext a2   fold_finish_2 (two limbs, any values)        fp:5:-7:0       84 100
+#
+# The steps of the maps (architecture.md, "Maps") that claim what a kernel above claims have its
+# format (add_entry_step_k, sub_1_1, sub_entry_step_k, scale_step_k, mul_pow2_step_2), and:
+#
+#   1 c      mul_pow2_step_1 (x c, rounded where it       fp:7:-14:6      76 005
+#            leaves the normal range)
+#   1 2 2    axpy_step_2_1, axpy_entry_step_2_1 (a of     fp:3:-5:-3     107 911
+#            one limb; products below 1)
+#
+# The kernels of the folds of maxima (architecture.md, "Folds of maxima"), m a mask:
+#
+#   1 m 1 m  norm_combine                                 fp:4:-6:1       81 796
+#   1 m 1    norm_step_1                                  fp:5:-7:0      164 738
+#   1 m 2    norm_step_2                                  fp:3:-6:2      214 722
+#   ext 1 m  norm_finish_1, norm_finish_2 (any value of   fp:11:-29:10   167 940
+#            the state's limb, the mask both ways)
 set(_toy_n fp:12:-30:12)
 set(_toy_1_1_1_product fp:3:-6:-1)
 set(_toy_2_2_2_product fp:4:-3:-2)
 set(_toy_ext_a2 fp:5:-7:0)
+set(_toy_1_c_product fp:7:-14:6)
+set(_toy_1_2_2_product fp:3:-5:-3)
+set(_toy_1_m_1_m_sum fp:4:-6:1)
+set(_toy_1_m_1_sum fp:5:-7:0)
+set(_toy_1_m_2_sum fp:3:-6:2)
+set(_toy_ext_1_m_sum fp:11:-29:10)
 
 # The interval kernels of Milestone 2, in the extended domain: i1 and i2 an interval of one limb
 # and of two, its two bounds together (interval()), which the oracle enumerates as one operand:
@@ -535,39 +557,26 @@ set(_toy_sampled_ext_i2_i2_product fp:5:-12:5)
 # a name of these lists, and configuring says how many are left out. A kernel or a fold added to the
 # generator with claims the oracle cannot read goes here until the oracle reads them. Since the
 # folds' stage of Milestone 2 the oracle judges every claim of that stage (folds, their steps,
-# finishes and bounds included; oracle/README.md). On the lists:
-#
-# - the maps of stage B, part 1 (architecture.md, "Maps"), and their steps: the oracle reads neither
-#   the requests of written arrays nor the claim entries yet (it refuses a map, "a fold that writes
-#   arrays"); the steps, whose claims it reads, are on the list with their maps until it reads them;
-# - the folds of maxima of stage B, part 2 (architecture.md, "Folds of maxima"), and their kernels:
-#   the oracle reads neither the claim maximum, nor finite_or_nan with if and steps, nor a fold's
-#   upper entry yet;
-# - the convolutions (architecture.md, "Convolutions"): the oracle reads neither requests of two
-#   lengths nor the claim coefficients yet (it refuses them as folds that write arrays).
+# finishes and bounds included; oracle/README.md).
 #
 # Since the interval stage of Milestone 2 the oracle reads and judges every claim of the interval
 # kernels and of the kernels of their bounds (architecture.md, "Claims of the interval kernels" and
 # "... two limbs and the enclosure interface"; oracle/README.md, "The kinds of the interval
-# kernels").
+# kernels"), and since stage B every claim of the maps and their steps, the folds of maxima and
+# their kernels, and the convolutions (oracle/README.md, "Maps", "Folds of maxima",
+# "Convolutions"): both lists are empty.
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
-set(KAIRN_NOT_YET_CROSS_CHECKED
-  sub_1_1 add_entry_step_1 sub_entry_step_1 add_entry_step_2 sub_entry_step_2 scale_step_1 scale_step_2
-  mul_pow2_step_1 mul_pow2_step_2 axpy_step_1 axpy_entry_step_1 axpy_step_2 axpy_entry_step_2 axpy_step_2_1
-  axpy_entry_step_2_1
-  norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2)
-set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
-  add_1 add_1_entry add_2 add_2_entry sub_1 sub_1_entry sub_2 sub_2_entry axpy_1 axpy_1_entry axpy_2 axpy_2_entry
-  axpy_2_1 axpy_2_1_entry scale_1 scale_2 mul_pow2_map_1 mul_pow2_map_2
-  norm_upper_1 norm_upper_2
-  conv_1 conv_2)
+set(KAIRN_NOT_YET_CROSS_CHECKED)
+set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
-# whose public functions (sum, dot, the bounds as functions of n) come with BallVector, and the
+# whose public functions (sum, dot, the bounds as functions of n) come with BallVector, the
 # interval kernels and the kernels of their bounds, whose public functions (Interval, the
-# conversions and the bounds of a Ball) come later. They are cross-checked like every kernel; the
+# conversions and the bounds of a Ball) come later, and the steps of the maps and the kernels of
+# the folds of maxima (architecture.md, "Maps", "Folds of maxima"), whose public functions come
+# with BallVector too. They are cross-checked like every kernel; the
 # public interface has no form of them.
 set(KAIRN_NOT_PUBLIC_YET
   bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 sum_entry_step_1 sum_entry_step_2
@@ -576,7 +585,11 @@ set(KAIRN_NOT_PUBLIC_YET
   interval_make_1 interval_neg_1 interval_add_1 interval_sub_1 interval_mul_1 interval_add_2 ball_lower_as_1
   ball_upper_as_1 ball_lower_as_2 ball_upper_as_2 ball_from_interval_2 ball_narrow_2_1 interval_neg_2 interval_sub_2
   interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
-  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1)
+  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1
+  sub_1_1 add_entry_step_1 sub_entry_step_1 add_entry_step_2 sub_entry_step_2 scale_step_1 scale_step_2
+  mul_pow2_step_1 mul_pow2_step_2 axpy_step_1 axpy_entry_step_1 axpy_step_2 axpy_entry_step_2 axpy_step_2_1
+  axpy_entry_step_2_1
+  norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2)
 
 # The folds (gen/claims.json, "folds"): random arrays through every compiled runner in the quick
 # tier, the scalar runners on every order (seq, lanes:0, 1, 2, 3, 4, 5, 8 and more lanes than
@@ -612,6 +625,58 @@ set(KAIRN_CROSSCHECK_FOLD_PACKED_CASES 500 CACHE STRING
   "Random arrays in each cross-check of a fold through the packed runners, full tier")
 set(KAIRN_CROSSCHECK_FOLD_LENGTH 4096 CACHE STRING
   "The longest random array of the full tier's cross-checks of folds")
+
+# The maps, the convolutions and the folds of maxima of stage B (architecture.md, "Maps",
+# "Convolutions", "Folds of maxima"), in the same tests, by the same drivers; in the quick tier on
+# fewer and shorter arrays (reading a long line is what costs, and these have the weight of their
+# tests in the full tier), and a convolution, whose lines hold n_x n_y terms, on shorter ones in
+# both tiers. Their toy formats, by the kind, the scalars (s1 a scalar of one limb, s2 of two, sc a
+# power of two) and the arrays, each enumeration a complete one of the tiny format up to the
+# length given (for a convolution, both lengths up to it):
+#
+#   shape        folds                          every array of                  random arrays of
+#   map 1 1      add_1, sub_1, entries          fp:2:-1:0 up to 2:      77 029  fp:5:-7:4
+#   map 2 2      add_2, sub_2, entries          fp:3:-4:1, one element: 181 477 fp:4:-7:2
+#   map s1 1 1   axpy_1, axpy_1_entry           fp:3:-3:0, one:          74 130 fp:5:-12:-1
+#   map s2 2 2   axpy_2, axpy_2_entry           fp:4:-3:-2, one:        262 208 fp:4:-7:-3
+#   map s1 2 2   axpy_2_1, axpy_2_1_entry       fp:3:-2:-1, one:         26 650 fp:4:-7:-3
+#   map s1 1     scale_1                        fp:3:-3:0 up to 2:     149 982  fp:5:-12:-1
+#   map s1 2     scale_2                        fp:2:-2:1 up to 2:     149 314  fp:4:-8:-2
+#   map sc 1     mul_pow2_map_1                 fp:4:-5:0 up to 2:     234 963  fp:5:-6:2
+#   map sc 2     mul_pow2_map_2                 fp:3:-3:0 up to 2:     179 346  fp:5:-6:2
+#   max 1        norm_upper_1                   fp:3:-3:0 up to 3:     225 835  fp:5:-7:4
+#   max 2        norm_upper_2                   fp:3:-4:1 up to 2:     363 379  fp:4:-7:2
+#   conv 1 1     conv_1                         fp:2:-1:0 up to 2, 2:   44 521  fp:5:-12:-1
+#   conv 2 2     conv_2                         fp:4:-4:-1 up to 1, 1:  63 001  fp:4:-7:-3
+#
+# Two elements of the maps of pairs, and of axpy, are more than ten million arrays in any format of
+# their precision: their single elements are every case of the step (with every flag and second
+# pass of one element), and the sampled runs and the compiled runners have the rest.
+set(_fold_toy_map_1_1 fp:2:-1:0 2 fp:5:-7:4)
+set(_fold_toy_map_2_2 fp:3:-4:1 1 fp:4:-7:2)
+set(_fold_toy_map_s1_1_1 fp:3:-3:0 1 fp:5:-12:-1)
+set(_fold_toy_map_s2_2_2 fp:4:-3:-2 1 fp:4:-7:-3)
+set(_fold_toy_map_s1_2_2 fp:3:-2:-1 1 fp:4:-7:-3)
+set(_fold_toy_map_s1_1 fp:3:-3:0 2 fp:5:-12:-1)
+set(_fold_toy_map_s1_2 fp:2:-2:1 2 fp:4:-8:-2)
+set(_fold_toy_map_sc_1 fp:4:-5:0 2 fp:5:-6:2)
+set(_fold_toy_map_sc_2 fp:3:-3:0 2 fp:5:-6:2)
+set(_fold_toy_max_1 fp:3:-3:0 3 fp:5:-7:4)
+set(_fold_toy_max_2 fp:3:-4:1 2 fp:4:-7:2)
+set(_fold_toy_conv_1_1 fp:2:-1:0 2 fp:5:-12:-1)
+set(_fold_toy_conv_2_2 fp:4:-4:-1 1 fp:4:-7:-3)
+set(KAIRN_CROSSCHECK_MAP_QUICK_CASES 100 CACHE STRING
+  "Random arrays in each cross-check of a map, a convolution or a fold of maxima, quick tier")
+set(KAIRN_CROSSCHECK_MAP_QUICK_LENGTH 24 CACHE STRING
+  "The longest random array of the quick tier's cross-checks of maps and folds of maxima")
+set(KAIRN_CROSSCHECK_MAP_LENGTH 1024 CACHE STRING
+  "The longest random array of the full tier's cross-checks of maps")
+set(KAIRN_CROSSCHECK_CONV_QUICK_LENGTH 20 CACHE STRING
+  "The longest polynomial of the quick tier's cross-checks of convolutions")
+set(KAIRN_CROSSCHECK_CONV_CASES 300 CACHE STRING
+  "Random pairs of polynomials in each cross-check of a convolution, full tier")
+set(KAIRN_CROSSCHECK_CONV_LENGTH 64 CACHE STRING
+  "The longest polynomial of the full tier's cross-checks of convolutions")
 
 # Kernels whose intermediate values can overflow for operands far below the largest number (the
 # product by the splitter), as their requirement of no intermediate overflow allows. The oracle
@@ -833,7 +898,50 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       string(JSON _min ERROR_VARIABLE _no_min GET "${_claims}" folds ${_i} min_precision)
       string(JSON _value GET "${_claims}" folds ${_i} value)
       string(JSON _n_arrays LENGTH "${_claims}" folds ${_i} arrays)
+      # A map ("map": true), a convolution ("conv": true) or a fold of maxima (an upper entry):
+      # its kind first, then for a map its scalars, in the shape of its toy formats; and its
+      # counts and lengths in both tiers.
+      string(JSON _is_map ERROR_VARIABLE _no_map GET "${_claims}" folds ${_i} map)
+      string(JSON _is_conv ERROR_VARIABLE _no_conv GET "${_claims}" folds ${_i} conv)
+      string(JSON _kind0 ERROR_VARIABLE _no_kind0 GET "${_claims}" folds ${_i} ensures 0 kind)
       set(_shape "")
+      set(_quick_count ${KAIRN_CROSSCHECK_FOLD_QUICK_CASES})
+      set(_quick_packed ${KAIRN_CROSSCHECK_FOLD_PACKED_QUICK_CASES})
+      set(_quick_length ${KAIRN_CROSSCHECK_FOLD_QUICK_LENGTH})
+      set(_full_fold_${_fold}_cases ${KAIRN_CROSSCHECK_FOLD_CASES})
+      set(_full_fold_${_fold}_length ${KAIRN_CROSSCHECK_FOLD_LENGTH})
+      set(_full_fold_${_fold}_sampled_length 1024)
+      if(_is_map OR _is_conv OR _kind0 STREQUAL "upper")
+        set(_quick_count ${KAIRN_CROSSCHECK_MAP_QUICK_CASES})
+        set(_quick_packed ${KAIRN_CROSSCHECK_MAP_QUICK_CASES})
+        set(_quick_length ${KAIRN_CROSSCHECK_MAP_QUICK_LENGTH})
+      endif()
+      if(_is_map)
+        set(_shape "_map")
+        set(_full_fold_${_fold}_length ${KAIRN_CROSSCHECK_MAP_LENGTH})
+        string(JSON _n_scalars LENGTH "${_claims}" folds ${_i} scalars)
+        string(JSON _requires GET "${_claims}" folds ${_i} requires)
+        if(_n_scalars GREATER 0)
+          math(EXPR _s_last "${_n_scalars} - 1")
+          foreach(_j RANGE ${_s_last})
+            string(JSON _sname GET "${_claims}" folds ${_i} scalars ${_j} name)
+            string(JSON _limbs GET "${_claims}" folds ${_i} scalars ${_j} limbs)
+            if(_requires MATCHES "power_of_two\\(${_sname}\\)")
+              string(APPEND _shape "_sc")
+            else()
+              string(APPEND _shape "_s${_limbs}")
+            endif()
+          endforeach()
+        endif()
+      elseif(_is_conv)
+        set(_shape "_conv")
+        set(_quick_length ${KAIRN_CROSSCHECK_CONV_QUICK_LENGTH})
+        set(_full_fold_${_fold}_cases ${KAIRN_CROSSCHECK_CONV_CASES})
+        set(_full_fold_${_fold}_length ${KAIRN_CROSSCHECK_CONV_LENGTH})
+        set(_full_fold_${_fold}_sampled_length ${KAIRN_CROSSCHECK_CONV_LENGTH})
+      elseif(_kind0 STREQUAL "upper")
+        set(_shape "_max")
+      endif()
       math(EXPR _a_last "${_n_arrays} - 1")
       foreach(_j RANGE ${_a_last})
         string(JSON _limbs GET "${_claims}" folds ${_i} arrays ${_j} limbs)
@@ -871,16 +979,15 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
           string(JSON _w ERROR_VARIABLE _no_w GET "${_claims}" folds ${_i} packed_lanes ${_format}
             ${_packed_backend})
           if(NOT _no_w)
-            set(_packed_args ${_compiled_packed} --packed-lanes ${_w}
-              --packed-count ${KAIRN_CROSSCHECK_FOLD_PACKED_QUICK_CASES})
+            set(_packed_args ${_compiled_packed} --packed-lanes ${_w} --packed-count ${_quick_packed})
             set(_full_fold_${_fold}_${_format}_lanes ${_w})
           endif()
         endif()
         if(_compiled_scalar)
           set(_name crosscheck.compiled.${_fold}.${_format})
           add_test(NAME ${_name} COMMAND ${_crosscheck} ${_this_fold} --format ${_format}
-            --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_FOLD_QUICK_CASES}"
-            --max-length "${KAIRN_CROSSCHECK_FOLD_QUICK_LENGTH}"
+            --seed "${KAIRN_CROSSCHECK_SEED}" --count "${_quick_count}"
+            --max-length "${_quick_length}"
             --summary "${_summaries}/${_name}.json" ${_compiled_scalar} ${_packed_args})
           set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "crosscheck;compiled;fold")
         endif()

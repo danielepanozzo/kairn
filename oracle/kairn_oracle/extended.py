@@ -813,6 +813,8 @@ def k_finite_or_nan(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     w = _gather(z, c["ranges"])
     f = z[c["flag"]]
     es.applicable += 1
+    if "steps" in c:
+        return _finite_or_nan_if(pl, c, es, x, s, w, f)
     lead = type(s[0]) is int
     if lead:
         es.count("value: finite leading limb, every limb finite" if all(type(v) is int for v in s)
@@ -829,6 +831,46 @@ def k_finite_or_nan(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     elif not all(v == NAN for v in w):
         out.append("finite_or_nan: limb 0 of the value is not finite, and a limb of the output is "
                    "not a NaN")
+    return out
+
+
+def next_up(fmt, v):
+    """IEEE 754's nextUp of a limb: a NaN stays a NaN, +inf stays +inf, -inf goes to -Omega,
+    Omega to +inf, and a finite number to the next number of the format above it."""
+    if v == NAN or v == INF:
+        return v
+    if v == NINF:
+        return -fmt.omega
+    return F.succ(fmt, v)
+
+
+def _finite_or_nan_if(pl, c, es, x, s, w, f):
+    """finite_or_nan with `if` (a mask input) and `steps` (the finishes of the folds of maxima):
+    with t the value stepped up S times, the flag is true exactly when the mask is true and t is
+    finite, and the output is then t; otherwise every limb of the output is a NaN."""
+    fmt = pl.fmt
+    t = s[0]
+    for _ in range(c["steps"]):
+        t = next_up(fmt, t)
+    on = c["cond_in"] is None or x[c["cond_in"]] == 1
+    es.count("mask true" if on else "mask false")
+    if type(s[0]) is int:
+        es.count("value finite, stepped up finite" if type(t) is int
+                 else "value finite, stepped up +inf")
+    else:
+        es.count("value: NaN" if s[0] == NAN else "value: infinite")
+    want = on and type(t) is int
+    out = []
+    if f != (1 if want else 0):
+        out.append("finite_or_nan: the flag is %d although the mask is %s and the value stepped up "
+                   "%d times is %s" % (f, "true" if on else "false", c["steps"],
+                                       F.fixed_hex(fmt, t)))
+    if want:
+        if len(w) != 1 or not same_limb(w[0], t):
+            out.append("finite_or_nan: the output is not the value stepped up %d times"
+                       % c["steps"])
+    elif not all(v == NAN for v in w):
+        out.append("finite_or_nan: the flag is false, and a limb of the output is not a NaN")
     return out
 
 

@@ -309,7 +309,11 @@ class Entry:
              "bound": {"kind", "of", "side", "steps"},
              # The folds' stage of Milestone 2.
              "holds": {"kind", "rel", "args", "if"},
-             "finite_or_nan": {"kind", "of", "flag"}}
+             # The folds' stage; `if` (a mask input) and `steps` for the finishes of the folds of
+             # maxima.
+             "finite_or_nan": {"kind", "of", "flag", "if", "steps"},
+             # The folds of maxima: the larger of two exact values.
+             "maximum": {"kind", "of", "args"}}
 
     def __init__(self, kernel, raw, index, error_index):
         self.raw = raw
@@ -393,9 +397,11 @@ class Entry:
             self._read_finite_or_nan(kernel, raw, where)
         if self.kind == "extends":
             self._read_extends(kernel, raw, where)
-        if self.kind in ("rounded", "upper", "neighbor", "bound"):
+        if self.kind in ("rounded", "upper", "neighbor", "bound", "maximum"):
             if len(self.of) != 1 or kernel.limbs_of(self.of[0]) != 1:
                 raise ClaimsError("%s: 'of' must name one 1-limb output" % where)
+        if self.kind == "maximum":
+            self._read_maximum(kernel, raw, where)
         if self.kind == "rounded":
             self.mode = raw.get("mode")
             if self.mode not in ROUNDING_MODES:
@@ -524,13 +530,52 @@ class Entry:
         self.args_text = [str(a).strip() for a in args]
         self.cond = self._read_mask_name(kernel, raw["if"], where)
 
+    def _read_maximum(self, kernel, raw, where):
+        """{"kind": "maximum", "of": R, "args": [A, B]}: R is the larger of the exact values of A
+        and B, expressions of the language of value in which NAME[I] is limb I of an input."""
+        args = raw.get("args")
+        if not isinstance(args, list) or len(args) != 2 or not all(isinstance(a, str) for a in args):
+            raise ClaimsError("%s: args must be a list of two expressions" % where)
+        ins = dict(kernel.inputs)
+        self.margs = []
+        for a in args:
+            try:
+                tree = X.parse(a, limbs=True)
+            except X.ExprError as ex:
+                raise ClaimsError("%s: %s" % (where, ex))
+            for n in X.names(tree):
+                if n not in ins or n in kernel.masks:
+                    raise ClaimsError("%s: %r is not a limb input" % (where, n))
+            for n, i in X.limb_refs(tree):
+                if i >= ins[n]:
+                    raise ClaimsError("%s: %s[%d] is not a limb of %s, which has %d" % (
+                        where, n, i, n, ins[n]))
+            self.margs.append(tree)
+        self.args_text = [a.strip() for a in args]
+
     def _read_finite_or_nan(self, kernel, raw, where):
         """{"kind": "finite_or_nan", "of": R, "flag": F}: F is true exactly when limb 0 of value
         (an input) is finite, and R is then value, limb for limb; otherwise every limb of R is a
-        NaN."""
+        NaN.  With "if": M (a mask input) and "steps": S (an integer >= 1), the finishes of the
+        folds of maxima: with t the value stepped up S times (IEEE 754's nextUp; S = 0 without
+        steps), F is true exactly when M is true and t is finite, and R is then t; otherwise every
+        limb of R is a NaN."""
         if "flag" not in raw:
             raise ClaimsError("%s: missing flag" % where)
         self.flag = self._read_mask_name(kernel, raw["flag"], where)
+        self.cond_in = None
+        self.steps = 0
+        if "if" in raw:
+            m = raw["if"]
+            if not isinstance(m, str) or m not in kernel.input_names or m not in kernel.masks:
+                raise ClaimsError("%s: if must name a mask input, got %r" % (where, m))
+            self.cond_in = m
+        if "steps" in raw:
+            st = raw["steps"]
+            if not isinstance(st, int) or isinstance(st, bool) or st < 1:
+                raise ClaimsError("%s: steps must be an integer >= 1 (absent for none), got %r"
+                                  % (where, st))
+            self.steps = st
         t = kernel.value_tree
         if t[0] != "name":
             raise ClaimsError("%s: the value must be the name of an input, not %r"
@@ -540,6 +585,9 @@ class Entry:
         if kernel.limbs_of(self.operand) != limbs:
             raise ClaimsError("%s: the output %s has %d limbs and the value %s %d" % (
                 where, "+".join(self.of), limbs, self.operand, kernel.limbs_of(self.operand)))
+        if self.steps and limbs != 1:
+            raise ClaimsError("%s: steps of a value of %d limbs (a step is of one number)"
+                              % (where, limbs))
 
     def _read_exact_when(self, kernel, raw, where):
         """[(tree, text, op, K)]: each condition {"zero_or_abs_gt": EXPR, "than": K} or
@@ -776,7 +824,14 @@ class Entry:
             return "holds %s(%s, %s) if %s" % (self.rel, self.args_text[0], self.args_text[1],
                                                self.cond)
         if self.kind == "finite_or_nan":
-            return "finite_or_nan(%s) flag %s" % (of, self.flag)
+            s = "finite_or_nan(%s) flag %s" % (of, self.flag)
+            if self.cond_in is not None:
+                s += " if %s" % self.cond_in
+            if self.steps:
+                s += ", stepped up %d" % self.steps
+            return s
+        if self.kind == "maximum":
+            return "maximum(%s) of %s, %s" % (of, self.args_text[0], self.args_text[1])
         if self.kind == "predicate":
             return "predicate(%s) %s(%s, %s)" % (of, self.rel, self.args_text[0], self.args_text[1])
         return "%s(%s)" % (self.kind, of)
@@ -1164,10 +1219,16 @@ class Claims:
         self.kernel_names = {raw.get("name") for raw in ks if isinstance(raw, dict)}
         if "folds" in data:
             from . import folds as FO
+            from . import maps as MP
             fl = data["folds"]
             if not isinstance(fl, list):
                 raise ClaimsError("claims: folds must be a list")
-            for raw in fl:
+            # The convolutions name a fold of the list (their coefficients'): they are read after
+            # the others, whatever the order of the list.  A map ("map": true) and a convolution
+            # ("conv": true) are read by maps.py, every other fold by folds.py.
+            convs = [r for r in fl if isinstance(r, dict) and r.get("conv") is True
+                     and "map" not in r]
+            for raw in [r for r in fl if not any(r is c for c in convs)] + convs:
                 name = raw.get("name") if isinstance(raw, dict) else None
                 name = name if isinstance(name, str) else "<fold without a name>"
                 if name in self.kernel_names:
@@ -1179,7 +1240,12 @@ class Claims:
                     self.broken[name] = "%s: listed twice" % name
                     continue
                 try:
-                    self.folds[name] = FO.Fold(raw, self)
+                    if raw.get("map") is not None and "conv" not in raw:
+                        self.folds[name] = MP.Map(raw, self)
+                    elif raw.get("conv") is not None and "map" not in raw:
+                        self.folds[name] = MP.Conv(raw, self)
+                    else:
+                        self.folds[name] = FO.Fold(raw, self)
                 except ClaimsError as ex:
                     self.broken[name] = str(ex)
 

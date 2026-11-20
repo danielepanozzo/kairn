@@ -124,6 +124,7 @@ class Problem:
         self.fmt = fmt
         from . import gen5
         from . import gen6
+        from . import gen7
         self.valid5 = None
         try:
             if gen6.family_of(kernel) is not None:
@@ -133,6 +134,11 @@ class Problem:
                 self.shape = gen6.Shape6(kernel)
                 self.make, self.strata = gen6.make_case, tuple(self.shape.strata)
                 self.valid5 = gen6.valid6
+            elif gen7.family_of(kernel) is not None:
+                # The steps of axpy and of the folds of maxima (gen7.py).
+                self.view = kernel
+                self.shape = gen7.Shape7(kernel)
+                self.make, self.strata = gen7.make_case, tuple(self.shape.strata)
             elif gen5.family_of(kernel) is not None:
                 # The kernels of the folds' stage: their own families (the bounds' count, the
                 # steps of the dot products, the finishes).

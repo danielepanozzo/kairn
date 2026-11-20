@@ -531,6 +531,16 @@ class Plan:
                 c.update(gn=e.gaps.numerator, gd=e.gaps.denominator)
             elif e.kind == "finite_or_nan":
                 c.update(flag=self.out_slices[e.flag][0], operand=self.in_slices[e.operand])
+                if e.cond_in is not None or e.steps:
+                    # The finishes of the folds of maxima: the mask input and the steps up.
+                    c.update(cond_in=(self.in_slices[e.cond_in][0] if e.cond_in is not None
+                                      else None), steps=e.steps)
+            elif e.kind == "maximum":
+                (a, sa), (b, sb) = [EX.compile_tree(t, self._leaf) for t in e.margs]
+                s = min(sa, sb, q)
+                # Both arguments and the output at their common scale: integers compared.
+                c["fn"] = EX.make_function(["x"], "(%s<<%d, %s<<%d)" % (a, sa - s, b, sb - s))
+                c["sh_out"] = q - s
             elif e.kind == "predicate":
                 (a, sa), (b, sb) = [EX.compile_tree(t, self._leaf) for t in e.args]
                 s = min(sa, sb)
@@ -821,34 +831,10 @@ class Checker:
             if not F.is_member(fmt, v):
                 self._invalid(st, line, "input limb not a number of the format")
                 return
-        for r in pl.requires:
-            if r[0] == "normalized":
-                lo, hi = r[2]
-                if not F.normalized_limbs(fmt, x[lo:hi]):
-                    self._invalid(st, line, "requires normalized(%s)" % r[1])
-                    return
-            elif r[0] == "nonneg":
-                lo, hi = r[2]
-                if sum(x[lo:hi]) < 0:
-                    self._invalid(st, line, "requires nonneg(%s)" % r[1])
-                    return
-            elif r[0] == "power_of_two":
-                lo, hi = r[2]
-                v = sum(x[lo:hi])
-                if v <= 0 or v & (v - 1):
-                    self._invalid(st, line, "requires power_of_two(%s)" % r[1])
-                    return
-            elif r[0] == "count":
-                lo, hi = r[2]
-                v = sum(x[lo:hi])
-                if v != 0 and v < pl.one:
-                    self._invalid(st, line, "requires count(%s)" % r[1])
-                    return
-            else:
-                (alo, ahi), (blo, bhi) = r[2], r[3]
-                if abs(sum(x[alo:ahi])) < abs(sum(x[blo:bhi])):
-                    self._invalid(st, line, "requires abs_ge(%s, %s)" % (r[1][1], r[1][2]))
-                    return
+        why = self.violated(pl, x)
+        if why:
+            self._invalid(st, line, why)
+            return
         for i in pl.out_masks:
             if outs[i] not in MASK_TEXT:
                 self._fail(st, line, "mask output %r is not 0 or 1" % outs[i])
@@ -871,6 +857,67 @@ class Checker:
             # Entries about output groups other than the first (intervals.py).
             IV.judge_by_groups(self, pl, st, x, z, line)
             return
+        v = self.verdict(pl, st.entries, x, z, line)
+        if v[0] == "fail":
+            self._fail(st, line, v[1])
+        elif v[0] == "nonfinite":
+            _kind, lead, beyond, small = v
+            st.c["nonfinite" if lead else "nonfinite_tail"] += 1
+            if beyond:
+                st.c["beyond"] += 1
+            if small:
+                st.c["suspicious"] += 1
+                st.example("suspicious", line, "non-finite %s with operands and exact value "
+                           "below Omega/4" % ("leading limb" if lead else "lower limb"),
+                           self.max_examples)
+        else:
+            st.c["judged"] += 1
+            reasons = v[1]
+            if reasons:
+                st.c["failed"] += 1
+                for r in reasons:
+                    st.reason(r)
+                st.example("failure", line, "; ".join(reasons), self.max_examples)
+            else:
+                st.c["passed"] += 1
+
+    def violated(self, pl, x):
+        """The first requirement of a kernel of the finite domain that finite operands violate,
+        or None."""
+        fmt = pl.fmt
+        for r in pl.requires:
+            if r[0] == "normalized":
+                lo, hi = r[2]
+                if not F.normalized_limbs(fmt, x[lo:hi]):
+                    return "requires normalized(%s)" % r[1]
+            elif r[0] == "nonneg":
+                lo, hi = r[2]
+                if sum(x[lo:hi]) < 0:
+                    return "requires nonneg(%s)" % r[1]
+            elif r[0] == "power_of_two":
+                lo, hi = r[2]
+                v = sum(x[lo:hi])
+                if v <= 0 or v & (v - 1):
+                    return "requires power_of_two(%s)" % r[1]
+            elif r[0] == "count":
+                lo, hi = r[2]
+                v = sum(x[lo:hi])
+                if v != 0 and v < pl.one:
+                    return "requires count(%s)" % r[1]
+            else:
+                (alo, ahi), (blo, bhi) = r[2], r[3]
+                if abs(sum(x[alo:ahi])) < abs(sum(x[blo:bhi])):
+                    return "requires abs_ge(%s, %s)" % (r[1][1], r[1][2])
+        return None
+
+    def verdict(self, pl, ents, x, z, line):
+        """The verdict of a kernel of the finite domain (not conditional) on operands that satisfy
+        its requirements and outputs read from the line, with the statistics of its entries in
+        ents: ("fail", why) for an output that is not a number of the format; ("nonfinite", lead,
+        beyond, small) for a case outside the statements (a non-finite output, in its leading limb
+        or a lower one only, or an exact result beyond Omega), small when it is suspicious; or
+        ("judged", reasons), the reasons of the failures of the entries."""
+        fmt = pl.fmt
         V = pl.value_fn(x) if pl.value_fn is not None else None
         # A rounding whose exact result in unbounded range is beyond Omega is outside the
         # statement (no operation overflows): the case counts as non-finite, as an infinite
@@ -906,12 +953,8 @@ class Checker:
             expected[i] = r
         if beyond or any(type(v) is not int for v in z):
             if any(v == F.OUTSIDE for v in z):
-                self._fail(st, line, "output limb not a number of the format")
-                return
+                return ("fail", "output limb not a number of the format")
             lead = beyond or (pl.lead is not None and type(z[pl.lead]) is not int)
-            st.c["nonfinite" if lead else "nonfinite_tail"] += 1
-            if beyond:
-                st.c["beyond"] += 1
             q4 = fmt.omega
             small = not beyond and all(4 * abs(v) < q4 for v in x) and all(
                 4 * abs(sum(x[lo:hi])) < q4 for lo, hi in pl.groups)
@@ -923,25 +966,11 @@ class Checker:
                     rg = pl.set_range(e, x)
                     sh = e["sh_q"]
                     small = rg is None or all(4 * abs(v) < (q4 << sh) for v in rg)
-            if small:
-                st.c["suspicious"] += 1
-                st.example("suspicious", line, "non-finite %s with operands and exact value "
-                           "below Omega/4" % ("leading limb" if lead else "lower limb"),
-                           self.max_examples)
-            return
+            return ("nonfinite", lead, beyond, small)
         for v in z:
             if not F.is_member(fmt, v):
-                self._fail(st, line, "output limb not a number of the format")
-                return
-        st.c["judged"] += 1
-        reasons = self._judge(pl, st.entries, x, z, V, expected, line)
-        if reasons:
-            st.c["failed"] += 1
-            for r in reasons:
-                st.reason(r)
-            st.example("failure", line, "; ".join(reasons), self.max_examples)
-        else:
-            st.c["passed"] += 1
+                return ("fail", "output limb not a number of the format")
+        return ("judged", self._judge(pl, ents, x, z, V, expected, line))
 
     def _judge(self, pl, ents, x, z, V, expected, line, only=None):
         """The reasons of the failures of every `ensures` entry of the plan (those listed in
@@ -1347,6 +1376,19 @@ class Checker:
         else:
             es.track_min("m*unit(%s) where %s" % (kn, what), tt, line)
 
+    def _maximum(self, pl, e, es, x, z, V, _r, line):
+        """The output is the larger of the exact values of the two arguments (the folds of
+        maxima): counts of which one it is."""
+        es.applicable += 1
+        a, b = e["fn"](x)
+        es.count("first argument larger" if a > b else "second argument larger" if b > a
+                 else "arguments equal")
+        if (a < 0) != (b < 0):
+            es.count("arguments of both signs")
+        if z[e["first"]] << e["sh_out"] != max(a, b):
+            return "maximum: the output is not the larger of %s" % es.label.split(" of ", 1)[-1]
+        return None
+
     def _fail(self, st, line, why):
         st.c["failed"] += 1
         st.reason(why)
@@ -1360,7 +1402,8 @@ class Checker:
 
 SECOND_WAVE_KINDS = {"rounded": Checker._rounded, "upper": Checker._upper,
                      "predicate": Checker._predicate, "encloses": Checker._encloses,
-                     "neighbor": Checker._neighbor, "bound": Checker._bound}
+                     "neighbor": Checker._neighbor, "bound": Checker._bound,
+                     "maximum": Checker._maximum}
 # outward in the finite domain (the interval kernels, intervals.py).
 SECOND_WAVE_KINDS.update(IV.FINITE_KINDS)
 

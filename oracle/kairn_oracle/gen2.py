@@ -474,7 +474,10 @@ def _tie(fmt, rng, mul):
 
 
 def _scale(fmt, sh, rng, stratum):
-    xn = next(n for n in sh.names if sh.roles[n] == "x2")
+    xn = next((n for n in sh.names if sh.roles[n] == "x2"), None)
+    if xn is None:
+        # A one-limb operand beside the power of two (mul_pow2_step_1).
+        return _scale1(fmt, sh, rng, stratum)
     cn = next(n for n in sh.names if sh.roles[n] == "pow2")
     vals = {n: operand(fmt, rng, sh, n, "uniform") for n in sh.names}
     p = fmt.p
@@ -513,6 +516,51 @@ def _scale(fmt, sh, rng, stratum):
     else:
         raise GenError("unknown stratum %r" % stratum)
     vals[xn] = x
+    vals[cn] = [_pow2(fmt, n)]
+    return vals
+
+
+def _trailing_zeros(v):
+    v = abs(v)
+    return (v & -v).bit_length() - 1 if v else 0
+
+
+def _scale1(fmt, sh, rng, stratum):
+    """A one-limb operand x and a power of two c: x c is exact but where it leaves the normal
+    range, below (a rounding, with ties at odd multiples of eta/2) or above (an overflow)."""
+    xn = next(n for n in sh.names if sh.roles[n] == "limb")
+    cn = next(n for n in sh.names if sh.roles[n] == "pow2")
+    vals = {n: operand(fmt, rng, sh, n, "uniform") for n in sh.names}
+    p = fmt.p
+    if stratum in COMMON:
+        x = limb(fmt, rng, stratum)
+        if stratum == "overflow" and x:
+            # Products near Omega and beyond.
+            n = fmt.emax - fmt.binade(x) + rng.between(-1, 1)
+        elif stratum == "underflow":
+            n = rng.between(-2 * p, 2 * p)
+        else:
+            n = _e_any(fmt, rng)
+    elif stratum in ("into", "outof"):
+        if stratum == "into":
+            x = limb(fmt, rng, "uniform" if rng.bits(1) else "pow2")
+            target = rng.between(fmt.qmin - p - 1, fmt.emin_normal + p)
+        else:
+            x = limb(fmt, rng, "underflow")
+            target = _e_mid(fmt, rng)
+        n = target - fmt.binade(x) if x else _e_any(fmt, rng)
+    elif stratum == "halfscaled":
+        # The lowest set bit of x scaled to eta/2 (x c an odd multiple of eta/2: a tie, rounded to
+        # even) or to eta/4 and eta/8 (just off a tie).
+        e = rng.between(fmt.emin_normal, max(fmt.emin_normal, min(fmt.emax, -2)))
+        x = _limb(fmt, rng, e, "short" if rng.bits(1) else "uniform")
+        low = fmt.qmin + _trailing_zeros(x)
+        n = fmt.qmin - 1 - rng.below(3) - low
+        if n < fmt.qmin or n > fmt.emax:
+            n = _e_any(fmt, rng)
+    else:
+        raise GenError("unknown stratum %r" % stratum)
+    vals[xn] = [x]
     vals[cn] = [_pow2(fmt, n)]
     return vals
 

@@ -165,6 +165,21 @@ VARIANTS = {
     "iv-narrow-no-tail": "ball_narrow_2_1 keeps the radius without the second limb of the center",
     "iv-ball-no-term": "add_ball_2_2 and mul_ball_2_2 return d = H, without the center's error",
     "iv-to-interval-nearest": "ball_to_interval_1 rounds c - r and c + r to nearest",
+    # The maps, the folds of maxima and the convolutions of stage B.
+    "map-drop-last": "a map leaves its last element as zero (not written)",
+    "map-no-second-pass": "a map leaves an element that is not finite as computed when its flag "
+                          "is false (no second pass)",
+    "map-flag-true": "a map returns the flag true whatever its elements",
+    "map-lanes-swap": "a map in a lane order of two lanes or more writes the elements of lanes 0 "
+                      "and 1 of each block in each other's place",
+    "max-step-small": "the finishes of the folds of maxima return their result one step smaller",
+    "max-nan-lost": "the steps of the folds of maxima take a NaN as a number (the mask stays "
+                    "true), so the maximum loses it",
+    "max-two-steps": "the finishes of the folds of maxima step up once more",
+    "conv-drop-last-term": "each coefficient of a convolution leaves out its last term",
+    "conv-neighbor-term": "each coefficient j >= 1 of a convolution takes the last term of "
+                          "coefficient j - 1 in place of its own",
+    "conv-flag-true": "a convolution returns the flag true whatever its coefficients",
     # kairn::rational<X>(num, den) (rational_1, rational_2).
     "rat-lead-ulp": "rational: the first limb one unit in the last place too large, in about 1 "
                     "line in 4",
@@ -197,7 +212,40 @@ FOLDS = {"sum_1": ("add_1_1", "add_1_1", "fold_finish_1", 1),
          "dot_2": ("dot_step_2", "add_2_2", "fold_finish_2", 2)}
 # The limbs of an element of each fold: those of its arrays, in order.
 FOLD_WIDTH = {"sum_1": 1, "sum_1_entry": 1, "sum_2": 2, "sum_2_entry": 2, "sum_fast_2": 2,
-              "sum_fast_2_entry": 2, "dot_1": 2, "dot_2": 4}
+              "sum_fast_2_entry": 2, "dot_1": 2, "dot_2": 4, "norm_upper_1": 1, "norm_upper_2": 2}
+# The folds of maxima (architecture.md, "Folds of maxima"): their state is a limb and a mask,
+# (+0, true) at the start.
+FOLDS.update({"norm_upper_1": ("norm_step_1", "norm_combine", "norm_finish_1", (0, True)),
+              "norm_upper_2": ("norm_step_2", "norm_combine", "norm_finish_2", (0, True))})
+# The maps (architecture.md, "Maps"): the step, the limbs of the scalars, of the arrays read (in
+# the order of the line) and of the element written, the step's arguments by position (("s", i)
+# scalar i, ("a", j) array j), and the limbs of the check (fold_finish_k).
+MAPS = {
+    "add_1": ("add_1_1", (), (1, 1), 1, (("a", 0), ("a", 1))),
+    "add_1_entry": ("add_entry_step_1", (), (1, 1), 1, (("a", 0), ("a", 1))),
+    "add_2": ("add_2_2", (), (2, 2), 2, (("a", 0), ("a", 1))),
+    "add_2_entry": ("add_entry_step_2", (), (2, 2), 2, (("a", 0), ("a", 1))),
+    "sub_1": ("sub_1_1", (), (1, 1), 1, (("a", 0), ("a", 1))),
+    "sub_1_entry": ("sub_entry_step_1", (), (1, 1), 1, (("a", 0), ("a", 1))),
+    "sub_2": ("sub_2_2", (), (2, 2), 2, (("a", 0), ("a", 1))),
+    "sub_2_entry": ("sub_entry_step_2", (), (2, 2), 2, (("a", 0), ("a", 1))),
+    "axpy_1": ("axpy_step_1", (1,), (1, 1), 1, (("s", 0), ("a", 0), ("a", 1))),
+    "axpy_1_entry": ("axpy_entry_step_1", (1,), (1, 1), 1, (("s", 0), ("a", 0), ("a", 1))),
+    "axpy_2": ("axpy_step_2", (2,), (2, 2), 2, (("s", 0), ("a", 0), ("a", 1))),
+    "axpy_2_entry": ("axpy_entry_step_2", (2,), (2, 2), 2, (("s", 0), ("a", 0), ("a", 1))),
+    "axpy_2_1": ("axpy_step_2_1", (1,), (2, 2), 2, (("s", 0), ("a", 0), ("a", 1))),
+    "axpy_2_1_entry": ("axpy_entry_step_2_1", (1,), (2, 2), 2, (("s", 0), ("a", 0), ("a", 1))),
+    "scale_1": ("scale_step_1", (1,), (1,), 1, (("a", 0), ("s", 0))),
+    "scale_2": ("scale_step_2", (1,), (2,), 2, (("a", 0), ("s", 0))),
+    "mul_pow2_map_1": ("mul_pow2_step_1", (1,), (1,), 1, (("a", 0), ("s", 0))),
+    "mul_pow2_map_2": ("mul_pow2_step_2", (1,), (2,), 2, (("a", 0), ("s", 0))),
+}
+# The convolutions (architecture.md, "Convolutions"): the fold of the coefficients and the limbs
+# of each array.
+CONVS = {"conv_1": ("dot_1", 1), "conv_2": ("dot_2", 2)}
+# The kernels with mask inputs, and their positions.
+MASK_INPUTS = {"norm_combine": (1, 3), "norm_step_1": (1,), "norm_step_2": (1,),
+               "norm_finish_1": (1,), "norm_finish_2": (1,)}
 
 # The kernel of each Ball kernel's center.  For one limb it is one operation of the format,
 # whose bound no claims entry states: |RN(v) - v| <= u|v| + t eta with t = 0 for a sum (sums
@@ -1372,7 +1420,167 @@ class Kernels:
     def bound_dot_2(self, m):
         return self._bound("bound_dot_2", m)
 
-    def fold(self, name, order, elems):
+    # -- the maps of stage B (architecture.md, "Maps"; milestone2.md, "sum, dot, axpy,
+    # convolution"): their steps, as the claims' sources list them -----------------------------
+    def sub_1_1(self, a, b):
+        return (self.A.sub(a, b),)
+
+    def add_entry_step_1(self, x, y):
+        return self.add_1_1(self.guard(x), self.guard(y))
+
+    def sub_entry_step_1(self, x, y):
+        return self.sub_1_1(self.guard(x), self.guard(y))
+
+    def add_entry_step_2(self, x0, x1, y0, y1):
+        g = self.guard
+        return self.add_2_2(g(x0), g(x1), g(y0), g(y1))
+
+    def sub_entry_step_2(self, x0, x1, y0, y1):
+        g = self.guard
+        return self.sub_2_2(g(x0), g(x1), g(y0), g(y1))
+
+    def axpy_step_1(self, a, x, y):
+        """The product, then the sum: mul_1_1 then add_1_1."""
+        p = self.A.prod(a, x)
+        return (self.A.add(p, y),)
+
+    def axpy_entry_step_1(self, a, x, y):
+        return self.axpy_step_1(a, x, self.guard(y))
+
+    def axpy_step_2(self, a0, a1, x0, x1, y0, y1):
+        """mul_2_2 then add_2_2."""
+        p = self.mul_2_2(a0, a1, x0, x1)
+        return self.add_2_2(p[0], p[1], y0, y1)
+
+    def axpy_entry_step_2(self, a0, a1, x0, x1, y0, y1):
+        return self.axpy_step_2(a0, a1, x0, x1, self.guard(y0), self.guard(y1))
+
+    def axpy_step_2_1(self, a, x0, x1, y0, y1):
+        """mul_2_1 then add_2_2."""
+        p = self.mul_2_1(x0, x1, a)
+        return self.add_2_2(p[0], p[1], y0, y1)
+
+    def axpy_entry_step_2_1(self, a, x0, x1, y0, y1):
+        return self.axpy_step_2_1(a, x0, x1, self.guard(y0), self.guard(y1))
+
+    def scale_step_1(self, x, a):
+        return self.mul_1_1(x, a)
+
+    def scale_step_2(self, x0, x1, a):
+        return self.mul_2_1(x0, x1, a)
+
+    def mul_pow2_step_1(self, x, c):
+        return (self.A.prod(x, c),)
+
+    def mul_pow2_step_2(self, x0, x1, c):
+        return self.mul_pow2_2(x0, x1, c)
+
+    # -- the folds of maxima (architecture.md, "Folds of maxima") ---------------------------
+    def norm_combine(self, m, ok, n, okn):
+        """The maximum by a comparison, select(lt(m, n), n, m), and the and of the masks."""
+        r = n if self._ieee_lt(m, n) else m
+        return (r, bool(ok) and bool(okn))
+
+    @staticmethod
+    def _ieee_lt(a, b):
+        """a < b as IEEE compares: false when either is a NaN (ints are numbers, floats the
+        values that are not finite)."""
+        if (type(a) is float and a != a) or (type(b) is float and b != b):
+            return False
+        if type(a) is type(b):
+            return a < b
+        if type(a) is float:
+            return a < 0
+        return b > 0
+
+    def norm_step_1(self, m, ok, x):
+        """a = abs(x); e = eq(a, a); norm_combine(m, ok, a, e)."""
+        a = abs(x) if type(x) is int else abs(x)
+        e = a == a
+        if self.v == "max-nan-lost":
+            e = True
+        return self.norm_combine(m, ok, a, e)
+
+    def norm_step_2(self, m, ok, x0, x1):
+        return self.norm_step_1(m, ok, x0)
+
+    def _norm_finish(self, m, ok, steps):
+        A = self.A
+        if self.v == "max-two-steps":
+            steps += 1
+        t = m
+        for _ in range(steps):
+            t = A.next_up(t)
+        if ok and type(t) is int:
+            if self.v == "max-step-small":
+                t = A.next_down(t)
+            return (t, True)
+        return (NAN, False)
+
+    def norm_finish_1(self, m, ok):
+        return self._norm_finish(m, ok, 0)
+
+    def norm_finish_2(self, m, ok):
+        return self._norm_finish(m, ok, 1)
+
+    def map(self, name, order, scalars, elems):
+        """A map, in an order: the step on the scalars and each element (none depends on the
+        order), the check's mask and-ed into the flag, and when it is false the second pass, the
+        check's output in place of each element.  Returns the written elements and the flag."""
+        step, _sl, _al, k, args = MAPS[name]
+        step = getattr(self, step)
+        check = self.fold_finish_1 if k == 1 else self.fold_finish_2
+        v = self.v
+        out = []
+        for e in elems:
+            ops = []
+            for where, j in args:
+                ops.extend(scalars[j] if where == "s" else e[j])
+            out.append(list(step(*ops)))
+        if v == "map-drop-last" and out:
+            out[-1] = [0] * k
+        if v == "map-lanes-swap" and order is not None and order >= 2:
+            W = order
+            for b in range(0, W * (len(out) // W), W):
+                out[b], out[b + 1] = out[b + 1], out[b]
+        flag = True
+        for z in out:
+            flag = check(*z)[-1] and flag
+        if not flag and v != "map-no-second-pass":
+            out = [list(check(*z)[:-1]) for z in out]
+        if v == "map-flag-true":
+            flag = True
+        return out, flag
+
+    def conv(self, name, xs, ys):
+        """A convolution: coefficient j is the fold of the coefficients, sequential, on the terms
+        (x_i, y_{j-i}) in increasing i; the mask and the second pass of a map."""
+        fold, k = CONVS[name]
+        nx, ny = len(xs), len(ys)
+        nz = nx + ny - 1 if nx and ny else 0
+        v = self.v
+        check = self.fold_finish_1 if k == 1 else self.fold_finish_2
+        out = []
+        for j in range(nz):
+            terms = [(i, j - i) for i in range(max(0, j - ny + 1), min(j, nx - 1) + 1)]
+            if v == "conv-drop-last-term" and terms:
+                terms = terms[:-1]
+            if v == "conv-neighbor-term" and j >= 1:
+                prev = [(i, j - 1 - i) for i in range(max(0, j - ny), min(j - 1, nx - 1) + 1)]
+                terms = terms[:-1] + prev[-1:]
+            elems = [tuple(xs[i]) + tuple(ys[t]) for i, t in terms]
+            r = self.fold(fold, None, elems, raw=True)
+            out.append(list(r))
+        flag = True
+        for z in out:
+            flag = check(*z)[-1] and flag
+        if not flag:
+            out = [list(check(*z)[:-1]) for z in out]
+        if v == "conv-flag-true":
+            flag = True
+        return out, flag
+
+    def fold(self, name, order, elems, raw=False):
         """A fold of architecture.md, "Folds", in an order: None for the sequential one (the step
         element after element from the zero state), W for the lane order (the first W floor(n/W)
         elements dealt to W lanes, element i to lane i mod W; each lane folded from the zero
@@ -1381,7 +1589,7 @@ class Kernels:
         step, combine, finish, k = FOLDS[name]
         step, combine, finish = getattr(self, step), getattr(self, combine), getattr(self, finish)
         v = self.v
-        zero = (0,) * k
+        zero = (0,) * k if type(k) is int else k
         if v == "fold-drop-last" and elems:
             elems = elems[:-1]
 
@@ -1405,6 +1613,9 @@ class Kernels:
             for l in lanes[1:]:
                 s = combine(*(tuple(s) + tuple(l)))
             s = run(s, elems[full:])
+        if raw:
+            # The final state, unfinished (the coefficients of a convolution).
+            return s
         out = list(finish(*s))
         if v == "fold-not-normalized" and k == 2 and out[-1] and type(out[0]) is int and out[0]:
             z0, z1 = out[0], out[1]
@@ -1789,7 +2000,13 @@ ARITY = {"two_sum": 2, "fast_two_sum": 2, "two_prod": 2, "two_prod_dekker": 2, "
          "interval_sub_2": 8, "interval_make_2": 4, "mul_ext_2_2": 4, "interval_mul_2": 8,
          "interval_hull_1": 4, "interval_hull_2": 8, "interval_intersection_1": 4,
          "interval_intersection_2": 8, "interval_mid_rad_1": 2, "interval_to_ball_1": 2,
-         "ball_to_interval_1": 2, "interval_split_1": 2}
+         "ball_to_interval_1": 2, "interval_split_1": 2,
+         # The maps and the folds of maxima of stage B.
+         "sub_1_1": 2, "add_entry_step_1": 2, "sub_entry_step_1": 2, "add_entry_step_2": 4,
+         "sub_entry_step_2": 4, "axpy_step_1": 3, "axpy_entry_step_1": 3, "axpy_step_2": 6,
+         "axpy_entry_step_2": 6, "axpy_step_2_1": 5, "axpy_entry_step_2_1": 5, "scale_step_1": 2,
+         "scale_step_2": 3, "mul_pow2_step_1": 2, "mul_pow2_step_2": 3, "norm_combine": 4,
+         "norm_step_1": 3, "norm_step_2": 4, "norm_finish_1": 2, "norm_finish_2": 2}
 FIRST_WAVE = frozenset(("two_sum", "fast_two_sum", "two_prod", "two_prod_dekker", "split",
                         "add_2_2", "add_2_1", "mul_2_2", "mul_2_1", "add_fast_2_2"))
 # kairn::rational<X>(num, den), with its number of limbs.
@@ -1817,6 +2034,48 @@ class Runner:
             k = self.cache[fmtname] = Kernels(Arith(parse_format_triple(fmtname), self.variant),
                                               self.center_claims, self.radius, self.bound_claims)
         return k
+
+    def map_line(self, line, toks, tag):
+        """MAP FORMAT ORDER N SCALAR... LIMB... [#TAG] -> Z... MASK."""
+        name, fname, order, n = toks[0], toks[1], toks[2], int(toks[3])
+        K = self.kernels(fname)
+        A = K.A
+        _step, sl, al, k, _args = MAPS[name]
+        limbs = toks[4:]
+        ns = sum(sl)
+        if len(limbs) != ns + n * sum(al):
+            raise ValueError("cannot run %r with %d limbs for %d elements" % (name, len(limbs), n))
+        vals = [A.read(t) for t in limbs]
+        scalars, pos = [], 0
+        for l in sl:
+            scalars.append(vals[pos:pos + l])
+            pos += l
+        cols = [vals[ns + j * n:ns + (j + 1) * n] for j in range(sum(al))]
+        elems = []
+        for i in range(n):
+            e, c = [], 0
+            for l in al:
+                e.append([cols[c + t][i] for t in range(l)])
+                c += l
+            elems.append(e)
+        W = None if order == "seq" else int(order[6:])
+        out, flag = K.map(name, W, scalars, elems)
+        res = [A.write(z[t]) for t in range(k) for z in out]
+        return [line + " -> " + " ".join(res + ["1" if flag else "0"])]
+
+    def conv_line(self, line, toks, tag):
+        """CONV FORMAT seq N_X N_Y LIMB... [#TAG] -> Z... MASK."""
+        name, fname, nx, ny = toks[0], toks[1], int(toks[3]), int(toks[4])
+        K = self.kernels(fname)
+        A = K.A
+        _fold, k = CONVS[name]
+        vals = [A.read(t) for t in toks[5:]]
+        xs = [[vals[t * nx + i] for t in range(k)] for i in range(nx)]
+        base = nx * k
+        ys = [[vals[base + t * ny + i] for t in range(k)] for i in range(ny)]
+        out, flag = K.conv(name, xs, ys)
+        res = [A.write(z[t]) for t in range(k) for z in out]
+        return [line + " -> " + " ".join(res + ["1" if flag else "0"])]
 
     def fold_line(self, line, toks, tag):
         """FOLD FORMAT ORDER N LIMB ... [#TAG]: the arrays, limb by limb, N entries each."""
@@ -1854,6 +2113,10 @@ class Runner:
             return [line + " -> " + self.rational(kname, fname, args, line)]
         if kname in FOLDS:
             return self.fold_line(line, toks, tag)
+        if kname in MAPS:
+            return self.map_line(line, toks, tag)
+        if kname in CONVS:
+            return self.conv_line(line, toks, tag)
         K = self.kernels(fname)
         A = K.A
         if ARITY.get(kname) != len(args):
@@ -1863,7 +2126,8 @@ class Runner:
             args = self.corrupt(kname, A, args)
             line = " ".join([kname, fname] + args + tag)
             pre = ["# refrun: corrupted input"]
-        vals = [A.read(t) for t in args]
+        masks = MASK_INPUTS.get(kname, ())
+        vals = [(t == "1") if i in masks else A.read(t) for i, t in enumerate(args)]
         if K.trace is not None:
             del K.trace[:]
         out = list(getattr(K, kname)(*vals))

@@ -448,12 +448,18 @@ class RandomGen:
         check_format(kernel, fmt)
         from . import gen5
         from . import gen6
+        from . import gen7
         if gen6.family_of(kernel) is not None:
             # The interval kernels (gen6.py).
             self.shape = gen6.Shape6(kernel)
             known, schedule = self.shape.strata, self.shape.schedule
             self.make = gen6.make_case
             self.valid = gen6.valid6
+        elif gen7.family_of(kernel) is not None:
+            # The steps of the maps of axpy and of the folds of maxima (gen7.py).
+            self.shape = gen7.Shape7(kernel)
+            known, schedule = self.shape.strata, self.shape.schedule
+            self.make = gen7.make_case
         elif gen5.family_of(kernel) is not None:
             # The kernels of the folds' stage (gen5.py): the bounds, the steps of the dot
             # products and the finishes.

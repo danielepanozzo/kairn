@@ -91,7 +91,10 @@ def _gen_fold(a, fold):
     """gen for a fold (genfold.py): random arrays, or every array up to --max-length."""
     from . import gen as G
     from . import genfold as GF
+    from . import genmap as GM
     fmt = _format(a.format)
+    # The maps, the convolutions and the folds of maxima have generators of their own.
+    other = GM.kind_of(fold) is not None
     try:
         if a.restrict:
             print("kairn-oracle gen: --restrict is not read for a fold", file=sys.stderr)
@@ -101,7 +104,8 @@ def _gen_fold(a, fold):
                 print("kairn-oracle gen: an enumeration of a fold has every order that differs; "
                       "--orders is for random runs", file=sys.stderr)
                 return 2
-            g = GF.ExhaustiveFoldGen(fold, fmt, a.max_length, index_tags=not a.no_index)
+            g = (GM.exhaustive_gen(fold, fmt, a.max_length, index_tags=not a.no_index) if other
+                 else GF.ExhaustiveFoldGen(fold, fmt, a.max_length, index_tags=not a.no_index))
             if a.total:
                 print("%d enumeration indices for %s %s (every array of length up to %d, every "
                       "order that differs)" % (g.total, fold.name, fmt.name, a.max_length))
@@ -111,8 +115,10 @@ def _gen_fold(a, fold):
         else:
             strata = a.strata.split(",") if a.strata else None
             orders = a.orders.split(",") if a.orders else None
-            g = GF.RandomFoldGen(fold, fmt, a.seed, strata, orders, a.max_length,
-                                 index_tags=not a.no_index)
+            g = (GM.random_gen(fold, fmt, a.seed, strata, orders, a.max_length,
+                               index_tags=not a.no_index) if other else
+                 GF.RandomFoldGen(fold, fmt, a.seed, strata, orders, a.max_length,
+                                  index_tags=not a.no_index))
             G.write_lines(g.lines(a.start, 1000 if a.count is None else a.count))
     except G.GenError as ex:
         print("kairn-oracle gen: %s" % ex, file=sys.stderr)

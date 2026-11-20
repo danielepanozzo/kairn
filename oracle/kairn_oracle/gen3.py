@@ -663,6 +663,10 @@ class ExtExhaustiveGen(G.ExhaustiveGen):
                 for w in widths:
                     parts.append(t[i:i + w])
                     i += w
+                if nms[0] in kernel.masks:
+                    # A mask is written 0 or 1 (the finishes of the folds of maxima take one).
+                    txt.append([str(t[0])])
+                    continue
                 txt.append([" ".join(_text(fmt, v) for v in p) for p in parts])
             self.texts.append(txt)
         self.total = 1

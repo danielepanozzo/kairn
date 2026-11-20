@@ -154,6 +154,16 @@ SHAPES = {
     "ext_i1_i1_sum": ("fp:2:-3:2", ["fp:2:-5:4", "fp:3:-3:0"]),
     "ext_i1_i1_product": ("fp:2:-3:2", ["fp:2:-5:4", "fp:3:-3:0"]),
     "ext_i2": ("fp:3:-4:1", ["fp:4:-5:0", "fp:3:-5:2", "fp:4:-4:-1"]),
+    # The steps of the maps of stage B (the others have the shapes of the kernels they call): a
+    # product by a power of two of one limb, the steps of axpy_2_1 (a of one limb).
+    "1_c_product": ("fp:7:-14:6", ["fp:8:-14:6", "fp:7:-20:10"]),
+    "1_2_2_product": ("fp:3:-5:-3", ["fp:4:-5:-3", "fp:3:-6:-3"]),
+    # The kernels of the folds of maxima (m a mask): the maxima of a state and an element, the
+    # finishes on every value of the state's limb with the mask both ways.
+    "1_m_1_m_sum": ("fp:4:-6:1", ["fp:5:-6:1", "fp:4:-9:4"]),
+    "1_m_1_sum": ("fp:5:-7:0", ["fp:6:-7:0", "fp:5:-10:3"]),
+    "1_m_2_sum": ("fp:3:-6:2", ["fp:4:-6:2", "fp:3:-8:4"]),
+    "ext_1_m_sum": ("fp:11:-29:10", ["fp:12:-30:9", "fp:13:-61:38"]),
 }
 
 # The folds (gen/claims.json, "folds"), by their arrays as tests/CMakeLists.txt names them (_1 a
@@ -166,6 +176,21 @@ FOLD_SHAPES = {
     "2": [("fp:3:-4:1", 2), ("fp:3:-3:0", 2), ("fp:3:-5:2", 2)],
     "1_1": [("fp:2:-1:0", 2), ("fp:2:-2:1", 2), ("fp:3:-3:0", 1)],
     "2_2": [("fp:4:-4:-1", 1), ("fp:4:-5:0", 1)],
+    # The maps (map, the scalars: s1 of one limb, s2 of two, sc a power of two; then the arrays),
+    # the folds of maxima (max) and the convolutions (conv, both lengths up to the one given).
+    "map_1_1": [("fp:2:-1:0", 2), ("fp:2:-2:1", 2), ("fp:3:-3:0", 1)],
+    "map_2_2": [("fp:3:-4:1", 1), ("fp:3:-3:0", 1), ("fp:4:-5:0", 1)],
+    "map_s1_1_1": [("fp:3:-3:0", 1), ("fp:2:-1:0", 2), ("fp:3:-4:1", 1)],
+    "map_s2_2_2": [("fp:4:-3:-2", 1), ("fp:4:-4:-1", 1)],
+    "map_s1_2_2": [("fp:3:-2:-1", 1), ("fp:3:-3:0", 1)],
+    "map_s1_1": [("fp:3:-3:0", 2), ("fp:5:-7:0", 1), ("fp:2:-2:1", 3)],
+    "map_s1_2": [("fp:2:-2:1", 2), ("fp:3:-3:0", 1), ("fp:3:-4:1", 1)],
+    "map_sc_1": [("fp:4:-5:0", 2), ("fp:5:-7:0", 2), ("fp:3:-3:0", 3)],
+    "map_sc_2": [("fp:3:-3:0", 2), ("fp:3:-4:1", 2), ("fp:4:-5:0", 1)],
+    "max_1": [("fp:3:-3:0", 3), ("fp:4:-4:-1", 3), ("fp:2:-2:1", 4)],
+    "max_2": [("fp:3:-4:1", 2), ("fp:3:-3:0", 2), ("fp:3:-5:2", 2)],
+    "conv_1_1": [("fp:2:-1:0", 2), ("fp:2:-2:1", 2), ("fp:3:-3:0", 1)],
+    "conv_2_2": [("fp:4:-4:-1", 1), ("fp:4:-5:0", 1)],
 }
 FOLD_LENGTH = 4096
 FOLD_CHUNK_DIVISOR = 100
@@ -353,7 +378,20 @@ def load_folds():
 
 
 def fold_shape(f):
-    return "_".join(str(a.get("limbs", 1)) for a in f.get("arrays", []))
+    """The shape of a fold's toy formats, as tests/CMakeLists.txt names it: the limbs of its
+    arrays; for a map first its scalars (s1, s2, sc for a power of two), and map, conv or max for
+    a map, a convolution and a fold of maxima."""
+    shape = "_".join(str(a.get("limbs", 1)) for a in f.get("arrays", []))
+    if f.get("map"):
+        req = [r.replace(" ", "") for r in f.get("requires", [])]
+        sc = ["sc" if "power_of_two(%s)" % s.get("name") in req else "s%d" % s.get("limbs", 1)
+              for s in f.get("scalars", [])]
+        return "_".join(["map"] + sc + [shape])
+    if f.get("conv"):
+        return "conv_" + shape
+    if any(e.get("kind") == "upper" for e in f.get("ensures", [])):
+        return "max_" + shape
+    return shape
 
 
 def fold_plan(folds, only=None):
