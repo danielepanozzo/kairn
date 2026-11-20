@@ -69,7 +69,7 @@ lists:
   the negation and the constructor of an interval whose bounds have two limbs, and the hull
   and the intersection of two intervals with bounds of one and of two limbs
   (`IeeeIntervalExact.v`), the difference of two intervals whose bounds have two limbs
-  (`IeeeIntervalSub2.v`), and the conversions between an interval and a ball of one limb, with
+  (`IeeeIntervalSub2.v`), the conversions between an interval and a ball of one limb, with
   the midpoint and the radius of an interval and its split at the midpoint
   (`IeeeIntervalConvert.v`), and the product of two intervals whose bounds have two limbs,
   with the product of two bounds on all values (`IeeeIntervalMul2.v`);
@@ -99,7 +99,7 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    not generated statements, among them what is proved of `mul_dir_1`, of the interval
    kernels with bounds of one limb, of the bounds of two limbs, of the sum of two intervals
    of two limbs, of the conversions of a ball, of the exact interval kernels (the hull and
-   the intersection of intervals of extended real numbers) and of the difference of two
+   the intersection of intervals of extended real numbers), of the difference of two
    intervals of two limbs (the sum with the negated operand), of the conversions between an
    interval and a ball (the midpoint of a bounded interval) and of the product of two
    intervals of two limbs (the finite core of the directed product, and what each product of
