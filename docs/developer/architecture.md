@@ -450,6 +450,125 @@ overlaps no array read or written, nor the other arrays written. A partial overl
 supported. The generated comment of each map says so, and `test_maps.Aliasing` runs every map in
 place in each of its forms.
 
+### Folds of maxima
+
+A fold of maxima computes the largest magnitude of the elements of an array, or a bound of it:
+`norm_upper_k` ([sum, dot, axpy, convolution](design/milestone2.md#sum-dot-axpy-convolution),
+and `bv_norm_upper_k` of [BallVector](design/milestone2.md#ballvector), which applies it to the
+centers). `norm_upper_2` in full:
+
+```
+fold:          norm_upper_2
+arrays:        stored x = x0 x1
+state:         m, mask ok
+step:          (m, ok) = norm_step_2(m, ok, x)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+orders:        sequential, lanes
+writes:        none
+output:        r
+output:        mask flag
+finish:        (r, flag) = norm_finish_2(m, ok)
+value:         abs(x)
+requires:      canonical x
+ensures:       upper r max steps=1
+ensures:       finite_or_nan r flag=flag
+min_precision: 1
+status:        unverified
+domain:        extended
+```
+
+- **The state** is two groups: a limb `m`, the largest magnitude so far, which starts at $+0$, and
+  a mask `ok`, which starts true (`state: m, mask ok`; the step, the combination and the finish
+  take and return the groups in that order). A maximum computed by a comparison,
+  `select(lt(m, a), a, m)`, keeps `m` when `a` is a NaN, so the NaN would be lost: the mask is
+  the `and`, over the elements, of `eq(a, a)`, false for a NaN only, and the finish tests it
+  ([When something is not finite](design/milestone2.md#sum-dot-axpy-convolution)). An infinite
+  element needs no mask: the comparison keeps it in `m`.
+- **The combination** `norm_combine` is the maximum of the two limbs and the `and` of the two
+  masks, and claims `maximum r m n`. **The step** is the combination applied to the state and to
+  what the element gives: `norm_step_1(m, ok, x)` is `a = abs(x); e = eq(a, a); (r, okr) =
+  norm_combine(m, ok, a, e)`, and `norm_step_2` is `norm_step_1` on the leading limb $x_0$ (its
+  $x_1$ is `unused`, and its limb array is a parameter of the C++ functions that is not loaded).
+  So the step is the combination of the state and of a function of the element, and the
+  combination is associative, commutative and idempotent on every state: every order computes
+  the same final state.
+- **The finish** returns the limb when the mask is true and its result is finite, stepped up
+  `steps` times: `norm_finish_1` returns $m$, `norm_finish_2` returns $\mathrm{succ}(m)$, which is
+  above every element (a normalized pair is strictly between the neighbors of its leading limb,
+  `normalized_2_between` of `proofs/theories/Convert.v`, and a step is monotone) and at most one
+  step above the smallest number of `T` not below the largest of them; otherwise the canonical
+  NaN and the flag false. Each finish claims `finite_or_nan r flag=flag if=ok`, with `steps=1`
+  for two limbs.
+- **The claim** `upper r max steps=S`: with $v_i$ the value of element $i$ (`abs(x)`, the exact
+  magnitude of the element) and $V = \max_i v_i$ ($0$ for no element), $V \le r \le
+  \mathrm{RU}(V)$ stepped up $S$ times; for one limb ($S = 0$) $r$ is $V$ itself.
+
+**What the generator checks of a fold of maxima** (`rules.max_rules`, and the claims in
+`_fold_claims`), besides the names, the shapes and rule R3 of every fold: the state is a limb and
+a mask; the fold reads one array, and its value is `abs(ARRAY)`; the combination claims the
+maximum of its two limb operands, and the operation that defines its mask in its listing is the
+`and` of its two masks; the step takes the state first, claims the maximum of the state and of the
+magnitude of the leading limb of the element, and is, on its listing with its calls inlined, a call
+of the combination on the state whose outputs are the step's; the finish claims `finite_or_nan`
+with `if=` the state's mask, and the `steps` of the fold's `upper` claim are those of the finish.
+Of the zero state, $(+0, \text{true})$, it checks syntactically that every limb is $+0$ and every
+mask true, and by evaluation in the formats of `ZERO_FORMATS` that $0 \oplus 0$ is the zero state,
+limb for limb (what the lane order with fewer elements than lanes needs); and by evaluation, on
+every pair and triple of states of two small formats ($p = 2$ and $3$; every magnitude, both values
+of the mask), that the combination is commutative, associative and idempotent, the hypotheses of
+the order lemma. Left to the proofs: those laws in every format (from the claim `maximum` and the
+definition of `and`), that the step is the combination of the state and of a function of the
+element (by unfolding), and the bound. No lemma of `SummationKernels.v` is asked for: the zero
+state of a maximum is not an identity of an addition, and `ZERO_LEMMAS` is about additions.
+
+**The order lemma** that `proofs/theories/Folds.v` needs (written and checked against the
+generated statements in a scratch file, not in the repository):
+
+```coq
+Lemma fold_lanes_aci :
+  forall (A B : Type) (P : A -> Prop) (combine : A -> A -> A) (g : B -> A) (zero : A),
+  P zero ->
+  (forall a b : A, P a -> P b -> P (combine a b)) ->
+  (forall a b : A, P a -> P b -> combine a b = combine b a) ->
+  (forall a b c : A, P a -> P b -> P c -> combine (combine a b) c = combine a (combine b c)) ->
+  combine zero zero = zero ->
+  forall (W : nat) (xs : list B), Forall (fun x => P (g x)) xs ->
+  fold_lanes (fun s x => combine s (g x)) combine zero W xs =
+  fold_seq (fun s x => combine s (g x)) zero xs.
+```
+
+It asks the laws only on a set $P$ (in the real model the states whose limb is a number of the
+format, where the claim `maximum` gives the combination; in the IEEE model those whose limb is
+not a NaN and not $-0$, since a maximum by comparison is not commutative on a NaN), and of the
+zero state only that $0 \oplus 0 = 0$, which idempotence gives: the $W$ lanes all start from it.
+
+**In C++, in Rocq, in the claims**: as every fold, with the state's mask a `bool` (true at the
+start) in scalar code, a lane mask in packed code (all bits set at the start, its lanes stored
+after the loop with `movemask` on AVX2 and `vst1q_u64`, `vst1q_u32` on NEON, and read one by one
+as `bool`s for the combination from lane 0), and a `bool` of the tuple of the state in Rocq
+(`R * bool`, from `(0, true)`). The real-model statement (`FoldStatements.v`) is about the result
+that the finish computes from the final state, its limb stepped up `S` times ($r$; Flocq's `succ`),
+which the finish's claim says is what it returns when its flag is true:
+
+```coq
+Definition norm_upper_2_seq_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall xs : list (R * R),
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  let mok := norm_upper_2_seq xs in
+  let r_ := succ radix2 (FLT_exp emin prec) (fst mok) in
+  let v_ := fold_right Rmax 0 (map (fun x => (Rabs (fst x + snd x))) xs) in
+  fmt emin prec r_ /\
+  v_ <= r_ /\
+  r_ <= succ radix2 (FLT_exp emin prec) (RU emin prec v_).
+```
+
+The IEEE-model statement (`IeeeFoldStatements.v`) says that a true flag means finite elements, a
+finite result whose value is that $r$ of the real model on the values of the elements, and these
+claims; a false flag, a NaN. The steps and the combination of a fold of maxima have no lead
+statement (`K_ieee_lead_spec`): their maximum keeps a finite state when the element is a NaN, so
+the statement would be false of them, and the mask says it instead.
+
 ## Kernels of the first wave
 
 Names of values are normative: the Rocq model, the C++ and the proofs use the same ones. Each
@@ -1210,6 +1329,20 @@ short here):
   that is not finite (an operand not finite, or an overflow) is the canonical NaN. The order makes
   no difference: `F_seq`, `F_lanes` with any $W$ and `F_packed` write the same elements and the
   same flag.
+
+**The folds of maxima** ([Folds of maxima](#folds-of-maxima)) and their kernels add one kind of
+claim of a kernel, two fields of `finite_or_nan`, and one kind of claim of a fold:
+
+| Kind | Fields | Meaning |
+|---|---|---|
+| `maximum` (a kernel, the finite domain) | `of` (a one-limb output), `args`: two expressions | the output is the larger of the exact values of the two expressions, which are expressions of the language of `value` in which `NAME[I]` is limb I of an input, as in `exact_when`: `{"kind": "maximum", "of": "r", "args": ["m", "abs(x[0])"]}` |
+| `finite_or_nan` with `if` and `steps` (a kernel, the extended domain) | `if`: a mask input; `steps`: an integer $S \ge 1$ | let $t$ be `value` stepped up $S$ times ($S = 0$ when the field is absent), each step IEEE 754's nextUp (a NaN stays a NaN, $+\infty$ stays $+\infty$, $\Omega$ goes to $+\infty$). The flag is true exactly when the mask `if` is true and $t$ is finite; the output is then $t$; otherwise it is a NaN. `{"kind": "finite_or_nan", "of": "r", "flag": "flag", "if": "ok", "steps": 1}` |
+| `upper` with `over` (a fold) | `of`, `over`: `max`, `steps`: an integer $S \ge 0$ | with $v_i$ the value of element $i$ and $V = \max_i v_i$ ($0$ for no element): $V \le r \le \mathrm{RU}(V)$ stepped up $S$ times, $\mathrm{RU}$ in the format with overflow (so that a $V$ above $\Omega$ makes the bound $+\infty$, and then no finite $r$ satisfies the first inequality). `{"kind": "upper", "of": "r", "over": "max", "steps": 1}` |
+
+A fold with an `upper` entry has no `fold_error` entry, and its `instances` are empty lists. Its
+reading in the extended domain is that of the other folds: the flag is true exactly when the
+result is finite, and then every element is finite and the claim holds; a NaN or infinite element,
+or a result whose step up is infinite, gives the flag false and a NaN.
 
 ## The line protocol
 

@@ -1,0 +1,20 @@
+# The finish of norm_upper_1 (milestone2.md, "When something is not finite"): the largest magnitude
+# when no element was a NaN (the mask ok) and it is finite, with the flag true; otherwise the
+# canonical NaN and the flag false. An infinite element made m infinite.
+kernel:        norm_finish_1
+input:         m
+input:         mask ok
+output:        r
+output:        mask flag
+value:         m
+ensures:       finite_or_nan r flag=flag if=ok
+min_precision: 1
+source:        the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md)
+license:       proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+cone_exempt:   the outputs are selects after the mask ok and an explicit test that the maximum is finite (fold_finish_1), which is what the kernel claims
+
+t         = select(ok, m, const nan)
+(r, flag) = fold_finish_1(t)

@@ -1,0 +1,29 @@
+# An upper bound of the largest magnitude of an array of 2-limb numbers written through Kairn
+# (milestone2.md, "sum, dot, axpy, convolution": norm_upper_k; "BallVector", bv_norm_upper_k): the
+# step after the largest magnitude M of a leading limb. A normalized pair is strictly between the
+# neighbors of its leading limb (normalized_2_between, proofs/theories/Convert.v), and a step is
+# monotone, so if every element is canonical and the flag is true, the result r satisfies
+#   max_i |x_i| <= r <= succ(RU(max_i |x_i|)),
+# at least the largest magnitude and at most one step above the smallest number of the format not
+# below it: one step for the whole array instead of one abs_upper per element. A fold of maxima
+# (architecture.md, "Folds of maxima"), with a mask that no element was a NaN; the flag is false,
+# and the result a NaN, when an element is not finite or the step up is not.
+fold:          norm_upper_2
+arrays:        stored x = x0 x1
+state:         m, mask ok
+step:          (m, ok) = norm_step_2(m, ok, x)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+orders:        sequential, lanes
+writes:        none
+output:        r
+output:        mask flag
+finish:        (r, flag) = norm_finish_2(m, ok)
+value:         abs(x)
+requires:      canonical x
+ensures:       upper r max steps=1
+ensures:       finite_or_nan r flag=flag
+min_precision: 1
+status:        unverified
+domain:        extended
+source:        a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between)
+license:       proof: MIT

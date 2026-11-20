@@ -1,0 +1,26 @@
+# The largest magnitude of an array of numbers of one limb written through Kairn (milestone2.md,
+# "sum, dot, axpy, convolution": norm_upper_k), with a mask that no element was a NaN, which a
+# maximum by comparison would lose ("When something is not finite"). A fold of maxima
+# (architecture.md, "Folds of maxima"): the combination is a maximum and an and, associative,
+# commutative and idempotent, and the step is the combination of the state and of what the element
+# gives, so that every order computes the same state. If the flag is true, the result is
+#   max_i |x_i|       (0 for no element),
+# exactly; it is false, and the result a NaN, when an element is not finite.
+fold:          norm_upper_1
+arrays:        stored x
+state:         m, mask ok
+step:          (m, ok) = norm_step_1(m, ok, x)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+orders:        sequential, lanes
+writes:        none
+output:        r
+output:        mask flag
+finish:        (r, flag) = norm_finish_1(m, ok)
+value:         abs(x)
+ensures:       upper r max steps=0
+ensures:       finite_or_nan r flag=flag
+min_precision: 1
+status:        unverified
+domain:        extended
+source:        a maximum by comparisons, in any order
+license:       proof: MIT

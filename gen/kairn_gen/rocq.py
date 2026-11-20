@@ -420,6 +420,13 @@ def _claim_upper(e, s):
     return f'({e["if"]} = true -> {claim})' if 'if' in e else claim
 
 
+def _claim_maximum(e, s):
+    """The output is the larger of the two expressions, over the inputs and their limbs."""
+    a, b = (_term(expr.parse(x), lambda n: _sum(s.ins[n].limbs), limb=lambda g, i: s.ins[g].limbs[i])
+            for x in e['args'])
+    return f'{s.outs[e["of"]].limbs[0]} = Rmax {_paren(a)} {_paren(b)}'
+
+
 def _claim_holds(e, s):
     """The relation between two expressions of the inputs and the constants, under a mask."""
     a, b = (s.constant_term(x) for x in e['args'])
@@ -459,7 +466,7 @@ def _claim_encloses(e, s):
 CLAIMS = {'normalized': _claim_normalized, 'leading_rounded': _claim_leading_rounded,
           'error': _claim_error, 'rounded': _claim_rounded, 'upper': _claim_upper,
           'predicate': _claim_predicate, 'encloses': _claim_encloses, 'neighbor': _claim_neighbor,
-          'bound': _claim_bound, 'holds': _claim_holds}
+          'bound': _claim_bound, 'holds': _claim_holds, 'maximum': _claim_maximum}
 
 
 def terms(tree):
@@ -664,6 +671,28 @@ def fold_groups(fd, element):
     return {g.name: p for g, p in zip(fd.arrays, parts)}
 
 
+def state_type(fd, real='R', mask='bool'):
+    """The type of a fold's state: the tuple of its limbs, R * R for two limbs, R * bool for a limb
+    and a mask (a fold of maxima)."""
+    return ' * '.join(mask if kind == ir.MASK else real for kind in fd.state_kinds())
+
+
+def state_zero(fd, zero, true):
+    """The zero state: every limb `zero`, every mask `true`, as a tuple."""
+    parts = [true if kind == ir.MASK else zero for kind in fd.state_kinds()]
+    return parts[0] if len(parts) == 1 else '(' + ', '.join(parts) + ')'
+
+
+def state_groups(fd, state):
+    """{state group name: the terms of its limbs in the state tuple `state`}."""
+    parts = tuple_parts(state, len(fd.state_limbs()))
+    out, at = {}, 0
+    for g in fd.states:
+        out[g.name] = parts[at:at + len(g.limbs)]
+        at += len(g.limbs)
+    return out
+
+
 def fold_model(kernels):
     """proofs/gen/FoldModel.v: every fold's step, combination and two orders."""
     folds = getattr(kernels, 'folds', {})
@@ -690,23 +719,26 @@ def fold_model(kernels):
             continue
         step, combine = kernels[fd.step[0]], kernels[fd.combine[0]] if fd.combine else None
         st, el, _ = _fold_binders(fd)
-        stype = tuple_type(len(fd.state.limbs))
+        stype = state_type(fd)
         etype = fold_element_type(fd)
-        zero = '0' if len(fd.state.limbs) == 1 else '(' + ', '.join(['0'] * len(fd.state.limbs)) + ')'
+        zero = state_zero(fd, '0', 'true')
         groups = fold_groups(fd, el)
+        groups.update(state_groups(fd, st))
+        sizes = {g.name: len(g.limbs) for g in fd.arrays}
         args = []
         for a in fd.step[1]:
-            term = st if a == fd.state.name else groups[a]
-            args += tuple_parts(term, len(fd.state.limbs if a == fd.state.name else
-                                          next(g for g in fd.arrays if g.name == a).limbs))
+            args += groups[a] if a in fd.state_names() else tuple_parts(groups[a], sizes[a])
         arrays = ', '.join(f'{fd.roles[g.name]} {g.name}' for g in fd.arrays)
-        lines += ['', f'(* {fd.name}: arrays {arrays}; state {fd.state.name} of {len(fd.state.limbs)} limb'
-                      f'{"s" if len(fd.state.limbs) > 1 else ""}; step {step.name}'
+        if len(fd.states) == 1:
+            what = f'state {fd.state.name} of {len(fd.state.limbs)} limb{"s" if len(fd.state.limbs) > 1 else ""}'
+        else:
+            what = 'state ' + ', '.join(f'{g.name} (a {"mask" if g.kind == ir.MASK else "limb"})' for g in fd.states)
+        lines += ['', f'(* {fd.name}: arrays {arrays}; {what}; step {step.name}'
                       + (f', combination {combine.name}' if combine else '') + '. *)',
                   f'Definition {fd.name}_step ({st} : {stype}) ({el} : {etype}) : {stype} :=',
                   f'  {_apply(step, kernels, args)}.']
         if combine is not None:
-            n = len(fd.state.limbs)
+            n = len(fd.state_limbs())
             lines += ['', f'Definition {fd.name}_combine (a b : {stype}) : {stype} :=',
                       f'  {_apply(combine, kernels, tuple_parts("a", n) + tuple_parts("b", n))}.']
         lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
@@ -722,7 +754,7 @@ def fold_model(kernels):
 
 def _fold_binders(fd):
     element = ''.join(g.name for g in fd.arrays)
-    return fd.state.name, element, element + 's'
+    return ''.join(fd.state_names()), element, element + 's'
 
 
 def _fold_term(text, groups, fd):
@@ -775,6 +807,68 @@ def fold_statement(fd, kernels, order):
     return lines
 
 
+def max_steps(fd):
+    """The number of steps up of the result of a fold of maxima from the limb of its final state
+    (the claim upper ... steps=S, which rules.py checks against its finish)."""
+    return next(e['steps'] for e in fd.ensures if e['kind'] == 'upper' and e.get('over') == 'max')
+
+
+def max_result(fd, st, emin='emin'):
+    """The result of a fold of maxima from the term `st` of its final state: its limb, stepped up
+    as many times as the finish does (succ, Flocq's)."""
+    r = tuple_parts(st, len(fd.state_limbs()))[0]
+    for _ in range(max_steps(fd)):
+        r = f'succ radix2 (FLT_exp {emin} prec) {_paren(r)}'
+    return r
+
+
+def max_conclusion(fd, r, el, xs, emin='emin'):
+    """The conclusion of the statement of a fold of maxima: with v_ the largest value of an element
+    (fold_right Rmax from 0), the result `r` (a term, let-bound to r_ by the caller) is a number of
+    the format, at least v_, and at most RU(v_) stepped up S times (upper ... max steps=S). Returns
+    (the let lines, the conjuncts)."""
+    groups = fold_groups(fd, el)
+    value = f'(fun {el} => {_fold_term(fd.value, groups, fd)})'
+    limit = f'RU {emin} prec v_'
+    for _ in range(max_steps(fd)):
+        limit = f'succ radix2 (FLT_exp {emin} prec) ({limit})'
+    lets = [f'let r_ := {r} in', f'let v_ := fold_right Rmax 0 (map {value} {xs}) in']
+    return lets, [f'fmt {emin} prec r_', 'v_ <= r_', f'r_ <= {limit}']
+
+
+def max_statement(fd, kernels, order):
+    """F_seq_spec or F_lanes_spec of a fold of maxima, from its claims: for every list of valid
+    elements, the result computed from the final state (max_result) is a number of the format
+    between the largest value of an element and that value rounded up then stepped up S times."""
+    st, el, xs = _fold_binders(fd)
+    suffix = ir.ORDER_SUFFIX[order]
+    step, combine = kernels[fd.step[0]], kernels[fd.combine[0]] if fd.combine else None
+    parts = [step] + ([combine] if order == 'lanes' else [])
+    section = [{'choice': 'tie_even'}.get(v, v) for v in fold_section_args(parts, kernels)]
+    etype = fold_element_type(fd)
+    lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+    groups = fold_groups(fd, el)
+    normalized = {r[1] for r in fd.requires if r[0] in ('normalized', 'canonical')}
+    valid = []
+    for g in fd.arrays:
+        limbs = tuple_parts(groups[g.name], len(g.limbs))
+        if g.name in normalized:
+            valid.append(f'normalized_{len(limbs)} emin prec {" ".join(_paren(x) for x in limbs)}')
+        else:
+            valid += [f'fmt emin prec {_paren(x)}' for x in limbs]
+    lets, claims = max_conclusion(fd, max_result(fd, st), el, xs)
+    binders = f'forall (W : nat) ({xs} : {lt}),' if order == 'lanes' else f'forall {xs} : {lt},'
+    call = ' '.join([f'{fd.name}_{suffix}'] + section + (['W'] if order == 'lanes' else []) + [xs])
+    what = {'sequential': 'the sequential order', 'lanes': 'the lane order, for every number of lanes W'}[order]
+    return [f'(* {fd.name}, {what}: {fd.source or "no source given"}. Status: {fd.status}. *)',
+            f'Definition {fd.name}_{suffix}_spec : Prop :=',
+            f'  forall emin prec : Z, ({fd.min_precision} <= prec)%Z ->',
+            f'  {binders}',
+            f'  Forall (fun {el} => {" /\\ ".join(valid)}) {xs} ->',
+            f'  let {st} := {call} in'] + [f'  {x}' for x in lets] + [
+            '  ' + ' /\\\n  '.join(claims) + '.']
+
+
 def fold_conclusion(fd, st, el, xs, indent='    '):
     """The conclusion of a fold's statement over the real model, a list of conjuncts: the final
     state `st` (a term) is valid and within the bound of fold_error, over the list of elements `xs`
@@ -822,7 +916,7 @@ def fold_statements(kernels):
             continue
         for order in ir.ORDERS:
             if order in fd.orders:
-                lines += [''] + fold_statement(fd, kernels, order)
+                lines += [''] + (max_statement if fd.is_max else fold_statement)(fd, kernels, order)
     return '\n'.join(lines) + '\n'
 
 

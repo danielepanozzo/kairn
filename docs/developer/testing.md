@@ -1400,12 +1400,22 @@ Apple clang and GCC 16 on the Mac, and GCC 13 and Clang 18 on x86-64).
   are the control, and must differ in some case where a compiler fuses (GCC and Apple clang with
   `-ffp-contract=fast`, measured);
 - the printers: the model, the statements and the audit of a fold made `proved`, the C++ text and
-  the counts of the loops.
+  the counts of the loops;
+- the folds of maxima, `norm_upper_1` and `norm_upper_2` ([Architecture](architecture.md#folds-of-maxima)),
+  in all of the above but the claims of `fold_error`, and on their own: each check of
+  `rules.max_rules` refuses what it is for (a combination that claims a maximum and computes
+  something else is refused by evaluation, as not commutative); no element gives $0$ for one limb
+  and $\eta$ for two, with the flag true; a NaN or infinite element at any position, in every
+  order, the canonical NaN and the flag false, and so does a leading limb of $\Omega$ for two
+  limbs; and the claim `upper r max steps=S` in exact arithmetic on toy formats of precision 1 to
+  6, in both orders and several numbers of lanes, more than 10 000 cases, with the exponent range
+  widened (the Rocq statement) and in the format itself (the flag).
 
 The kernels of the stage (the steps, the finishes, the bounds) are in the suite's other tests like
 every kernel: the interpreter against the host, the claims in exact arithmetic on toy formats
-(`test_statements.py`; `upper` with its own value, `holds`, the form `T`), the non-finite reading
-of the finishes (`test_nonfinite.py`), the compiled runners bit for bit, and the self-test.
+(`test_statements.py`; `upper` with its own value, `holds`, the form `T`, `maximum`), the
+non-finite reading of the finishes (`test_nonfinite.py`, the finishes of the folds of maxima with
+both values of their mask), the compiled runners bit for bit, and the self-test.
 ## A cross-check by hand
 
 From the repository root, a toy format with the interpreter, and binary64 with a compiled runner

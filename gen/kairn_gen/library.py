@@ -191,10 +191,13 @@ def selftest_case(k, kernels, f):
     pow2 = {r[0] for r in req.get('power_of_two', [])}
     counts = {r[0] for r in req.get('count', [])}
     smaller = {r[1] for r in req.get('abs_ge', [])}
+    # The mask that gates the result of the finish of a fold of maxima (finite_or_nan if=) is true:
+    # otherwise the result is the canonical NaN, which is the non-finite case.
+    gates = {e['if'] for e in k.ensures if e['kind'] == 'finite_or_nan' and 'if' in e}
     inputs = []
     for g in k.inputs:
         if g.kind == ir.MASK:
-            inputs.append(bool(rng.bits(1)))
+            inputs.append(True if g.name in gates else bool(rng.bits(1)))
         elif g.name in counts:              # a number of terms: an integer from 1 to 1000
             inputs.append(interp.canon(False, rng.pick(1, 1000), 0))
         elif g.name in pow2:

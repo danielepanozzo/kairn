@@ -2242,6 +2242,216 @@
       }
     },
     {
+      "name": "norm_combine",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "n",
+          "limbs": 1
+        },
+        {
+          "name": "okn",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "okr",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "maximum",
+          "of": "r",
+          "args": [
+            "m",
+            "n"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the larger of two numbers, by a comparison (milestone2.md, norm_upper_k)",
+        "license": "proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "norm_finish_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "m",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag",
+          "if": "ok"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "norm_finish_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "m",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag",
+          "if": "ok",
+          "steps": 1
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "norm_step_1",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "x",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "okr",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "maximum",
+          "of": "r",
+          "args": [
+            "m",
+            "abs(x)"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k)",
+        "license": "proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "radd",
       "domain": "extended",
       "inputs": [
@@ -5923,6 +6133,60 @@
       }
     },
     {
+      "name": "norm_step_2",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "okr",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "maximum",
+          "of": "r",
+          "args": [
+            "m",
+            "abs(x[0])"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k)",
+        "license": "proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "scale_step_2",
       "inputs": [
         {
@@ -7762,6 +8026,144 @@
       "source": {
         "cite": "mul_pow2_2 on each element",
         "license": "algorithm: published; proof: MIT"
+      }
+    },
+    {
+      "name": "norm_upper_1",
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "abs(x)",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "r",
+          "over": "max",
+          "steps": 0
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "norm_step_1",
+      "combine": "norm_combine",
+      "finish": "norm_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorems": {
+        "sequential": null,
+        "lanes": null
+      },
+      "source": {
+        "cite": "a maximum by comparisons, in any order",
+        "license": "proof: MIT"
+      },
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "norm_upper_2",
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "abs(x)",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "r",
+          "over": "max",
+          "steps": 1
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "norm_step_2",
+      "combine": "norm_combine",
+      "finish": "norm_finish_2",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorems": {
+        "sequential": null,
+        "lanes": null
+      },
+      "source": {
+        "cite": "a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between)",
+        "license": "proof: MIT"
+      },
+      "instances": {
+        "binary64": [],
+        "binary32": []
       }
     },
     {

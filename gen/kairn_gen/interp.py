@@ -334,12 +334,17 @@ class Machine:
         step = self.kernels[fd.step[0]]
         if fd.is_map:
             return self._run_map(fd, f, order, lanes, elements, list(scalars))
-        zero = [(NUM, False, 0, 0)] * len(fd.state.limbs)
+        # The zero state: every limb +0, every mask true (a fold of maxima has one of each).
+        zero = [True if kind == ir.MASK else (NUM, False, 0, 0) for kind in fd.state_kinds()]
+        at, parts = 0, {}
+        for g in fd.states:
+            parts[g.name] = (at, at + len(g.limbs))
+            at += len(g.limbs)
 
         def apply_step(state, e):
             args = []
             for a in fd.step[1]:
-                args += state if a == fd.state.name else e[a]
+                args += state[parts[a][0]:parts[a][1]] if a in parts else e[a]
             return self._eval(step, f, args, False)
 
         def fold_seq(xs, state):

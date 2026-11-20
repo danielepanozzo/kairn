@@ -38,6 +38,13 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       the finish of a fold: f is true exactly when limb 0 of the
                                       value is finite, and r is then the value, limb for limb;
                                       otherwise every limb of r is a NaN
+    ensures:       finite_or_nan r flag=f if=ok steps=1
+                                      the finish of a fold of maxima: the same of the value stepped
+                                      up that many times (steps, 0 when left out), and f false, r
+                                      a NaN, when the mask input ok is false
+    ensures:       maximum r m abs(x[0])
+                                      the one-limb output is the larger of the exact values of the
+                                      two expressions (as in value, and NAME[I] limb I of an input)
     ensures:       neighbor r up      the next number of the format above (down: below) the value
     ensures:       bound r below steps=1
                                       on that side of the value (below or above), and at most
@@ -161,6 +168,19 @@ A map is a fold that writes an array (docs/developer/architecture.md, "Maps"):
     requires:      canonical a
     ensures:       entries z          each written element satisfies the step's claims
     ensures:       finite_or_nan z flag=finite
+
+A fold of maxima (docs/developer/architecture.md, "Folds of maxima") has a state of a value and a
+mask, several groups given in order, and claims an upper bound of the largest value of an element:
+
+    fold:          norm_upper_2
+    arrays:        stored x = x0 x1
+    state:         m, mask ok         a limb that starts at +0 and a mask that starts true
+    step:          (m, ok) = norm_step_2(m, ok, x)
+    combine:       (m, ok) = norm_combine(m, ok, m, ok)
+    finish:        (r, flag) = norm_finish_2(m, ok)
+    value:         abs(x)
+    ensures:       upper r max steps=1
+                                      max_i v_i <= r <= RU(max_i v_i) stepped up that many times
 """
 import os
 import re
@@ -432,6 +452,12 @@ def _exact_when(text, where):
     return out
 
 
+def _steps(text, where):
+    if not re.fullmatch(r'[0-9]+', text):
+        raise DescriptionError(f'{where}: steps must be an integer, got {text!r}')
+    return int(text)
+
+
 def _ensures(words, where):
     kind = words[0] if words else None
     if kind in ('normalized', 'leading_rounded', 'represents') and len(words) == 2:
@@ -463,6 +489,9 @@ def _ensures(words, where):
         return {'kind': kind, 'of': words[1], 'mode': words[2], 'when': words[3][len('when='):]}
     if kind == 'upper' and len(words) == 3 and words[2].startswith('gaps='):
         return {'kind': kind, 'of': words[1], 'gaps': words[2][len('gaps='):]}
+    if kind == 'upper' and len(words) == 4 and words[2] == 'max' and words[3].startswith('steps='):
+        # A fold of maxima: an upper bound of the largest value of an element.
+        return {'kind': kind, 'of': words[1], 'over': 'max', 'steps': _steps(words[3][len('steps='):], where)}
     if kind == 'upper' and len(words) >= 3:
         # Milestone 2: an upper bound of an expression of its own, under the condition of a mask
         # output. The fields are written only when there are: an upper entry with gaps alone has
@@ -478,6 +507,18 @@ def _ensures(words, where):
         return {'kind': kind, 'rel': words[1], 'args': words[2:4], 'if': words[4][len('if='):]}
     if kind == 'finite_or_nan' and len(words) == 3 and words[2].startswith('flag='):
         return {'kind': kind, 'of': words[1], 'flag': words[2][len('flag='):]}
+    if kind == 'finite_or_nan' and len(words) > 3 and words[2].startswith('flag='):
+        # The finish of a fold of maxima: a mask input that must be true (if=), and the number of
+        # steps up from the value (steps=). The fields are written only when there are.
+        entry = {'kind': kind, 'of': words[1], 'flag': words[2][len('flag='):]}
+        for w in words[3:]:
+            key, eq, val = w.partition('=')
+            if not eq or key not in ('if', 'steps') or key in entry or not val:
+                raise DescriptionError(f'{where}: bad or repeated field {w!r} in finite_or_nan entry')
+            entry[key] = _steps(val, where) if key == 'steps' else val
+        return entry
+    if kind == 'maximum' and len(words) == 4:
+        return {'kind': kind, 'of': words[1], 'args': words[2:4]}
     if kind == 'entries' and len(words) == 2:
         return {'kind': kind, 'of': words[1]}
     if kind == 'fold_error' and len(words) >= 3:
@@ -498,10 +539,7 @@ def _ensures(words, where):
     if kind == 'neighbor' and len(words) == 3:
         return {'kind': kind, 'of': words[1], 'side': words[2]}
     if kind == 'bound' and len(words) == 4 and words[3].startswith('steps='):
-        steps = words[3][len('steps='):]
-        if not re.fullmatch(r'[0-9]+', steps):
-            raise DescriptionError(f'{where}: steps must be an integer, got {steps!r}')
-        return {'kind': kind, 'of': words[1], 'side': words[2], 'steps': int(steps)}
+        return {'kind': kind, 'of': words[1], 'side': words[2], 'steps': _steps(words[3][len('steps='):], where)}
     if kind == 'predicate' and len(words) == 5:
         return {'kind': kind, 'of': words[1], 'rel': words[2], 'args': words[3:5]}
     if kind == 'encloses' and len(words) >= 5:
@@ -695,7 +733,8 @@ class Fold:
     arrays: list = field(default_factory=list)      # Groups, in order
     roles: dict = field(default_factory=dict)       # array name -> 'stored' or 'supplied'
     scalars: list = field(default_factory=list)     # Groups given once and passed to every step (a map)
-    state: Group = None
+    state: Group = None         # the first group of the state (a map's mask)
+    states: list = field(default_factory=list)      # every group of the state, in order (a fold of maxima: two)
     step: tuple = None          # (kernel, argument group names, the line's destination)
     combine: tuple = None       # the same (for a map, the operation and), or None
     finish: tuple = None        # (kernel, argument group names, destination group names), or None
@@ -727,7 +766,21 @@ class Fold:
     def results(self):
         """The groups the fold returns: the finish's outputs, or the state when there is none (for
         a map, its mask; the written arrays are apart, write_limbs)."""
-        return self.outputs if self.finish else [self.state]
+        return self.outputs if self.finish else list(self.states)
+
+    @property
+    def is_max(self):
+        """A fold of maxima: it claims an upper bound of the largest value of an element."""
+        return any(e['kind'] == 'upper' and e.get('over') == 'max' for e in self.ensures)
+
+    def state_names(self):
+        return tuple(g.name for g in self.states)
+
+    def state_limbs(self):
+        return [v for g in self.states for v in g.limbs]
+
+    def state_kinds(self):
+        return [g.kind for g in self.states for _ in g.limbs]
 
     def array_limbs(self):
         return [v for g in self.arrays for v in g.limbs]
@@ -797,7 +850,8 @@ def parse_fold(text, path):
                 (fd.arrays if key == 'arrays' else fd.scalars).append(g)
                 fd.roles[g.name] = cls
         elif key == 'state':
-            fd.state = _group(val, where)[0]
+            fd.states = [_group(part, where)[0] for part in val.split(',')]
+            fd.state = fd.states[0]
         elif key in ('step', 'combine'):
             setattr(fd, key, _fold_call(val, where, key))
         elif key == 'finish':

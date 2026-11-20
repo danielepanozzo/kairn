@@ -60,12 +60,12 @@ EXACT_TREES = VALUE_TREES | {'limb'}
 THRESHOLD_TREES = {'int', 'name', 'add', 'sub', 'mul', 'div', 'neg', 'pow'}
 # The kinds of ensures entries in each domain.
 ENSURES_FINITE = ('normalized', 'leading_rounded', 'error', 'rounded', 'upper', 'predicate', 'encloses',
-                  'neighbor', 'bound', 'holds')
+                  'neighbor', 'bound', 'holds', 'maximum')
 ENSURES_EXTENDED = ('normalized', 'error', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
                     'represents', 'makes_ball', 'neighbor', 'bound', 'finite_or_nan')
 # Entries that say something about the value: a kernel needs at least one.
 ABOUT_THE_VALUE = ('error', 'leading_rounded', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
-                   'represents', 'makes_ball', 'neighbor', 'bound', 'holds', 'finite_or_nan')
+                   'represents', 'makes_ball', 'neighbor', 'bound', 'holds', 'finite_or_nan', 'maximum')
 # The forms of an error entry: relative to |value| (R), to the sum of the magnitudes of the inputs
 # (A), to the sum of the magnitudes of the terms of value (T: s+x*y gives |s| + |x*y|).
 ERROR_FORMS = ('R', 'A', 'T')
@@ -621,7 +621,7 @@ def claims(k, kernels):
 
     makes_balls = bool(k.ensures) and all(e['kind'] == 'makes_ball' for e in k.ensures)
     # The bound kernels of Milestone 2: every entry says what it bounds, and the kernel has no value.
-    own_values = bool(k.ensures) and all(e['kind'] == 'holds' or (e['kind'] == 'upper' and 'value' in e)
+    own_values = bool(k.ensures) and all(e['kind'] in ('holds', 'maximum') or (e['kind'] == 'upper' and 'value' in e)
                                          for e in k.ensures)
     if makes_balls:
         if k.value:
@@ -724,6 +724,24 @@ def claims(k, kernels):
             g = ins.get(k.value)
             if g is None or g.kind != ir.LIMB or len(g.limbs) != len(outs.get(e['of'], ir.Group('', ())).limbs):
                 err(f'finite_or_nan: the value is an input of as many limbs as {e["of"]}, not {k.value!r}')
+            if 'if' in e and (e['if'] not in ins or ins[e['if']].kind != ir.MASK):
+                err(f'finite_or_nan if={e["if"]}: the condition is a mask input')
+            if 'steps' in e and (e['steps'] < 1 or g is None or len(g.limbs) != 1):
+                err(f'finite_or_nan steps={e["steps"]}: a number of steps up, at least 1, from a one-limb value')
+        elif kind == 'maximum':
+            output(e['of'], kind, one=True)
+            for a in e['args']:
+                try:
+                    tree = expr.parse(a)
+                except expr.ExprError as x:
+                    err(f'maximum: {x}')
+                    continue
+                if expr.names(tree) - limb_ins or not _only(tree, EXACT_TREES):
+                    err(f'maximum {a!r}: + - *, unary minus, abs( ), the names of limb inputs and their limbs NAME[I]')
+                    continue
+                for gname, i in sorted(expr.limbs(tree)):
+                    if i >= len(ins[gname].limbs):
+                        err(f'maximum {a!r}: {gname} has {len(ins[gname].limbs)} limbs, so no limb {gname}[{i}]')
         elif kind == 'predicate':
             output(e['of'], kind, kind=ir.MASK)
             if e['rel'] not in RELATIONS:
@@ -1011,8 +1029,10 @@ def consteval_variant(k, kernels):
 # Folds (milestone2.md, "Folds, the extension of the IR").
 
 FOLD = 'fold'
-# The kinds of a fold's claims (architecture.md, "Claims of Milestone 2", "Folds").
+# The kinds of a fold's claims (architecture.md, "Claims of Milestone 2", "Folds"), and of a fold of
+# maxima's ("Folds of maxima").
 FOLD_ENSURES = ('normalized', 'fold_error', 'finite_or_nan')
+MAX_ENSURES = ('upper', 'finite_or_nan')
 # The heights of a fold's bound: n or n - 1, natural numbers (0 - 1 is 0, as in Rocq's nat).
 FOLD_HEIGHTS = ('n', 'n-1')
 # Names a fold's groups and limbs must not take: the parameters of its C++ functions and the
@@ -1022,10 +1042,11 @@ FOLD_RESERVED = frozenset({'n', 'lanes', 'emin', 'prec', 'choice'})
 
 
 def fold_binders(fd):
-    """The binders of a fold's Rocq model and statements: the state, one element (the arrays'
-    names joined: x, or xy for x and y) and the list of elements (xs, xys)."""
+    """The binders of a fold's Rocq model and statements: the state (its groups' names joined: s,
+    or mok for m and ok), one element (the arrays' names joined: x, or xy for x and y) and the list
+    of elements (xs, xys)."""
     element = ''.join(g.name for g in fd.arrays)
-    return fd.state.name, element, element + 's'
+    return ''.join(fd.state_names()), element, element + 's'
 # The combinations whose zero state has the four properties the theorems use (zero_identity of
 # proofs/theories/Summation.v), each a lemma of proofs/theories/SummationKernels.v proved once: a
 # fold of the lane order whose combination has none is refused.
@@ -1063,7 +1084,7 @@ def fold_rules(fd, kernels):
     for n in fold_names(fd) + [fd.name]:
         if n in kernels:
             err('-', WELL_FORMED, f'{n} is a name the printers make for the fold, and the name of a kernel')
-    groups = fd.arrays + fd.scalars + ([fd.state] if fd.state else []) + fd.outputs + fd.writes
+    groups = fd.arrays + fd.scalars + list(fd.states) + fd.outputs + fd.writes
     names = [g.name for g in groups] + [v for g in groups for v in g.limbs if v != g.name]
     for n in sorted(set(names)):
         if names.count(n) > 1:
@@ -1074,8 +1095,16 @@ def fold_rules(fd, kernels):
             err(n, WELL_FORMED, 'a name of a group or a limb is [a-z][a-z0-9]*')
     if not fd.arrays:
         err('-', WELL_FORMED, 'a fold reads at least one array')
-    if fd.state is None or (fd.state.kind != ir.LIMB and not fd.is_map):
-        err('-', WELL_FORMED, 'the state is a group of limbs (a mask, for a map)')
+    # The state: a group of limbs; a map's, one mask; a fold of maxima's, a value of one limb and a
+    # mask (FoldsOfMaxima below).
+    shapes = [_shape(g) for g in fd.states]
+    if not fd.states or (not fd.is_map and shapes != [(len(fd.state.limbs), ir.LIMB)] and
+                         not (fd.is_max and shapes == [(1, ir.LIMB), (1, ir.MASK)])):
+        err('-', WELL_FORMED, 'the state is a group of limbs (a mask, for a map; a limb and a mask, for a fold of '
+                              'maxima)')
+        return errs
+    if fd.is_map and len(fd.states) != 1:
+        err('-', WELL_FORMED, 'the state of a map is one mask (state: mask NAME), true at the start')
         return errs
     binders = fold_binders(fd)
     if len(set(binders)) < 3 or any(b in reserved | {'a', 'b'} for b in binders):
@@ -1085,7 +1114,13 @@ def fold_rules(fd, kernels):
         err('-', WELL_FORMED, f'orders: some of {", ".join(ir.ORDERS)}, each once')
     if fd.is_map or fd.scalars or fd.check:
         return errs + map_rules(fd, kernels, reserved)
-    groups_of = {g.name: g for g in fd.arrays + [fd.state]}
+    groups_of = {g.name: g for g in fd.arrays + list(fd.states)}
+    names = fd.state_names()
+    shapes = [_shape(g) for g in fd.states]
+    # The state as a line of a description names it: s, or (m, ok) for a state of two groups.
+    st = names[0] if len(names) == 1 else '(' + ', '.join(names) + ')'
+    width = f'{len(fd.state.limbs)} limbs' if len(names) == 1 else ', '.join(
+        f'{g.name} of {len(g.limbs)} {"mask" if g.kind == ir.MASK else "limb"}' for g in fd.states)
 
     def kernel_of(what, call):
         if call is None:
@@ -1100,9 +1135,9 @@ def fold_rules(fd, kernels):
     step = kernel_of('step', fd.step)
     if step is not None:
         _, args, dsts = fd.step
-        if dsts != (fd.state.name,):
-            err('-', WELL_FORMED, f'step: it gives the next state, {fd.state.name} = {step.name}(...)')
-        want = sorted([fd.state.name] + [g.name for g in fd.arrays])
+        if dsts != names:
+            err('-', WELL_FORMED, f'step: it gives the next state, {st} = {step.name}(...)')
+        want = sorted(list(names) + [g.name for g in fd.arrays])
         if sorted(args) != want:
             err('-', WELL_FORMED, f'step: its arguments are the state and every array once: {", ".join(want)}')
         elif len(step.inputs) != len(args):
@@ -1112,9 +1147,9 @@ def fold_rules(fd, kernels):
                 if _shape(g) != _shape(groups_of[a]):
                     err(a, WELL_FORMED, f'step: {step.name} takes {g.name} of {len(g.limbs)} limbs where the '
                                         f'fold passes {a} of {len(groups_of[a].limbs)}')
-        if len(step.outputs) != 1 or _shape(step.outputs[0]) != _shape(fd.state):
-            err('-', WELL_FORMED, f'step: {step.name} returns one group of the shape of the state '
-                                  f'({len(fd.state.limbs)} limbs)')
+        if [_shape(g) for g in step.outputs] != shapes:
+            err('-', WELL_FORMED, f'step: {step.name} returns {"one group" if len(names) == 1 else "groups"} of '
+                                  f'the shape of the state ({width})')
         if not step.real_model:
             err('-', DOMAIN, f'step: {step.name} has no real-model statement, and the step is in the real model')
     elif fd.step is None:
@@ -1125,12 +1160,11 @@ def fold_rules(fd, kernels):
         err('-', WELL_FORMED, 'the lane order combines the lanes: the fold needs "combine:"')
     if combine is not None:
         _, args, dsts = fd.combine
-        if dsts != (fd.state.name,) or args != (fd.state.name, fd.state.name):
-            err('-', WELL_FORMED, f'combine: {fd.state.name} = {combine.name}({fd.state.name}, {fd.state.name})')
-        if [_shape(g) for g in combine.inputs] != [_shape(fd.state)] * 2 or \
-                [_shape(g) for g in combine.outputs] != [_shape(fd.state)]:
-            err('-', WELL_FORMED, f'combine: {combine.name} takes two groups and returns one, each of the shape '
-                                  f'of the state ({len(fd.state.limbs)} limbs)')
+        if dsts != names or args != names + names:
+            err('-', WELL_FORMED, f'combine: {st} = {combine.name}({", ".join(names + names)})')
+        if [_shape(g) for g in combine.inputs] != shapes * 2 or [_shape(g) for g in combine.outputs] != shapes:
+            err('-', WELL_FORMED, f'combine: {combine.name} takes two {"groups" if len(names) == 1 else "states"} '
+                                  f'and returns one, each of the shape of the state ({width})')
         if not combine.real_model:
             err('-', DOMAIN, f'combine: {combine.name} has no real-model statement, and the combination is in the '
                              'real model')
@@ -1138,10 +1172,11 @@ def fold_rules(fd, kernels):
     finish = kernel_of('finish', fd.finish)
     if finish is not None:
         _, args, dsts = fd.finish
-        if args != (fd.state.name,):
-            err('-', WELL_FORMED, f'finish: it takes the final state, {finish.name}({fd.state.name})')
-        if [_shape(g) for g in finish.inputs] != [_shape(fd.state)]:
-            err('-', WELL_FORMED, f'finish: {finish.name} takes one group of the shape of the state')
+        if args != names:
+            err('-', WELL_FORMED, f'finish: it takes the final state, {finish.name}({", ".join(names)})')
+        if [_shape(g) for g in finish.inputs] != shapes:
+            err('-', WELL_FORMED, f'finish: {finish.name} takes {"one group" if len(names) == 1 else "the groups"} '
+                                  'of the shape of the state')
         if dsts != tuple(g.name for g in fd.outputs):
             err('-', WELL_FORMED, 'finish: its destinations are the fold\'s outputs, in order: '
                                   + ', '.join(g.name for g in fd.outputs))
@@ -1152,7 +1187,9 @@ def fold_rules(fd, kernels):
     if errs:
         return errs
     errs += _fold_r3(fd, step, kernels)
-    if combine is not None and 'lanes' in fd.orders:
+    if fd.is_max:
+        errs += max_rules(fd, step, combine, finish, kernels)
+    elif combine is not None and 'lanes' in fd.orders:
         errs += zero_state(fd, combine, kernels)
     errs += _fold_claims(fd, kernels, step, combine, finish)
     errs += _fold_theorem(fd)
@@ -1355,7 +1392,7 @@ def _fold_r3(fd, step, kernels):
     tainted = []
     for a in args:
         g = by_arg[a]
-        if a == fd.state.name:
+        if a in fd.state_names():
             if set(g.limbs) & program:
                 errs.append(RuleError(fd.name, a, RULE_R3, f'the step {step.name} takes the state as values of the '
                                                            f'program ({g.name}); the state is stored'))
@@ -1476,6 +1513,118 @@ def _operands(f, limbs):
     return out
 
 
+# --- Folds of maxima ------------------------------------------------------------------------------
+#
+# A fold of maxima (norm_upper_k; architecture.md, "Folds of maxima") has a state of a limb, which
+# starts at +0, and a mask, which starts true; its combination is a maximum of the limbs and an and
+# of the masks, and its step is that combination applied to the state and to a function of the
+# element (its magnitude, and the mask that it is not a NaN). The combination is then associative,
+# commutative and idempotent on every state, and the result of the fold does not depend on the order
+# (fold_lanes_aci, the lemma that proofs/theories/Folds.v needs): no ZERO_LEMMAS entry, which is
+# about additions. What the generator checks of it is in max_rules.
+MAX_FORMATS = ((2, -3, 3), (3, -2, 2))
+
+
+def _defining(k, kernels, value):
+    """The operation of k's flattened listing that defines `value`, or None."""
+    for it in ir.flatten(k, kernels):
+        if isinstance(it, ir.Prim) and it.dst == value:
+            return it
+    return None
+
+
+def max_rules(fd, step, combine, finish, kernels):
+    """A fold of maxima:
+    1. its combination claims the maximum of its two limb operands (maximum r m n), and its mask is
+       the and of the two masks (the operation that defines it in the listing);
+    2. its step is a call of the combination on the state and on values computed from the element,
+       whose limbs are the step's outputs (on the listing with its calls inlined), and it claims the
+       maximum of the state and of the magnitude of the element's leading limb;
+    3. the zero state, +0 and true, is the combination of two zero states, limb for limb, in
+       ZERO_FORMATS (what fold_lanes_short needs: the lanes of a list shorter than the lanes are
+       zero states); and on the magnitudes of the small formats MAX_FORMATS and both values of each
+       mask, the combination is commutative and associative, and idempotent: by evaluation, the
+       hypotheses of the order lemma, which the proof has from the claim in every format;
+    4. its finish claims finite_or_nan with if= the state's mask (the claim's steps are checked
+       against the fold's upper entry in _fold_claims)."""
+    errs = []
+
+    def err(msg):
+        errs.append(RuleError(fd.name, '-', FOLD, msg))
+
+    if len(fd.arrays) != 1:
+        err('a fold of maxima reads one array')
+        return errs
+    x = fd.arrays[0]
+    cm, cok, cn, cokn = combine.input_limbs
+    claims = [e for e in combine.ensures if e['kind'] == 'maximum']
+    if len(claims) != 1 or claims[0]['of'] != combine.output_limbs[0] or sorted(claims[0]['args']) != sorted([cm, cn]):
+        err(f'the combination {combine.name} of a fold of maxima claims the maximum of its two limb operands: '
+            f'maximum {combine.output_limbs[0]} {cm} {cn}')
+    d = _defining(combine, kernels, combine.output_limbs[1])
+    if d is None or d.op != 'and' or sorted(a.name for a in d.args if not a.const) != sorted([cok, cokn]):
+        err(f'the combination {combine.name} of a fold of maxima returns the and of its two masks, '
+            f'{combine.output_limbs[1]} = and({cok}, {cokn})')
+    sm, sok = step.input_limbs[0], step.input_limbs[1]
+    by_arg = dict(zip(fd.step[1], step.inputs))
+    xg = by_arg[x.name]
+    lead = f'abs({xg.name})' if len(xg.limbs) == 1 else f'abs({xg.name}[0])'
+    claims = [e for e in step.ensures if e['kind'] == 'maximum']
+    if fd.step[1][:2] != fd.state_names() or len(claims) != 1 or claims[0]['of'] != step.output_limbs[0] or \
+            sorted(claims[0]['args']) != sorted([sm, lead]):
+        err(f'the step {step.name} of a fold of maxima takes the state first and claims the maximum of the state '
+            f'and of the magnitude of the leading limb of the element: maximum {step.output_limbs[0]} {sm} {lead}')
+    calls = [it for it in ir.flatten(step, kernels) if isinstance(it, ir.CallMark) and it.callee == combine.name]
+    if not any(it.dsts == tuple(step.output_limbs) and [a.name for a in it.args[:2]] == [sm, sok] for it in calls):
+        err(f'the step {step.name} of a fold of maxima is a call of its combination {combine.name} on the state and '
+            'on values of the element, which returns the next state')
+    fin = [e for e in finish.ensures if e['kind'] == 'finite_or_nan'] if finish else []
+    if not fin or fin[0].get('if') != finish.input_limbs[1]:
+        err(f'the finish of a fold of maxima claims finite_or_nan with if= its mask, {finish.input_limbs[1] if finish else "?"}')
+    if errs:
+        return errs
+    key = ('max', combine.name, id(kernels))
+    if key not in _ZERO_CACHE:
+        _ZERO_CACHE[key] = _max_evaluation(combine, kernels)
+    return [RuleError(fd.name, '-', FOLD, msg) for msg in _ZERO_CACHE[key]]
+
+
+def _max_evaluation(combine, kernels):
+    """The zero state and the laws of the combination of a fold of maxima, by evaluation (max_rules, 3)."""
+    from . import interp
+    found = []
+    m = interp.Machine(kernels)
+    zero = [(interp.NUM, False, 0, 0), True]
+    for p, qmin, qmax in ZERO_FORMATS:
+        f = interp.Format(f'fp:{p}:{qmin}:{qmax}', p, qmin, qmax)
+        zz = m.run(combine.name, f, zero + zero)
+        if zz[1] is not True or zz[0][0] != interp.NUM or zz[0][2] != 0 or zz[0][1]:
+            found.append(f'{combine.name}(0, 0) is not the zero state (+0, true) in {f.name}')
+    for p, qmin, qmax in MAX_FORMATS:
+        f = interp.Format(f'fp:{p}:{qmin}:{qmax}', p, qmin, qmax)
+        mags = [(interp.NUM, False, 0, 0)] + sorted({interp.canon(False, mm, q) for q in range(qmin, qmax + 1)
+                                                     for mm in range(1, 2 ** p)}, key=str)
+        states = [[a, ok] for a in mags for ok in (False, True)]
+
+        table = {(i, j): m.run(combine.name, f, s + t) for i, s in enumerate(states) for j, t in enumerate(states)}
+        index = {(v[0], v[1]): i for i, v in enumerate(states)}
+
+        def comb(i, j):
+            v = table[(i, j)]
+            return index.get((v[0], v[1]))
+        n = len(states)
+        if any(comb(i, j) is None for i in range(n) for j in range(n)):
+            found.append(f'{combine.name} of two states of magnitudes is not one in {f.name}')
+            continue
+        if any(comb(i, i) != i for i in range(n)):
+            found.append(f'{combine.name} is not idempotent in {f.name}')
+        if any(comb(i, j) != comb(j, i) for i in range(n) for j in range(n)):
+            found.append(f'{combine.name} is not commutative in {f.name}')
+        if any(comb(comb(i, j), k) != comb(i, comb(j, k)) for i in range(n) for j in range(n) for k in range(n)):
+            found.append(f'{combine.name} is not associative in {f.name}')
+    return found
+
+
 def _fold_claims(fd, kernels, step, combine, finish):
     """A fold's claims, in the vocabulary of architecture.md ("Claims of Milestone 2", folds)."""
     errs = []
@@ -1504,18 +1653,28 @@ def _fold_claims(fd, kernels, step, combine, finish):
         if r[0] != want or len(arrays[r[1]].limbs) < 2:
             err(f'requires {" ".join(r)!r}: a fold of the {"extended" if fd.extended else "finite"} domain requires '
                 f'"{want} ARRAY" of an array of more than one limb')
-    if 'fold_error' not in [e['kind'] for e in fd.ensures]:
+    allowed = MAX_ENSURES if fd.is_max else FOLD_ENSURES
+    if fd.is_max:
+        if len(fd.arrays) != 1 or fd.value != f'abs({fd.arrays[0].name})':
+            err(f'value {fd.value!r}: a fold of maxima reads one array, and the value of an element is its magnitude, '
+                'abs(ARRAY)')
+        fin = [x for x in finish.ensures if x['kind'] == 'finite_or_nan'] if finish else []
+        for e in fd.ensures:
+            if e['kind'] == 'upper' and fin and e['steps'] != fin[0].get('steps', 0):
+                err(f'upper steps={e["steps"]}: the result is the maximum stepped up as many times as the finish '
+                    f'{finish.name} steps it ({fin[0].get("steps", 0)})')
+    elif 'fold_error' not in [e['kind'] for e in fd.ensures]:
         err('a fold claims its bound: an ensures entry fold_error')
     if fd.min_precision is None or fd.min_precision < 1:
         err('min_precision: an integer, at least 1')
         return errs
-    for k in (step, combine):
+    for k in (step, combine, finish if fd.is_max else None):
         if k is not None and (k.min_precision or 1) > fd.min_precision:
             err(f'min_precision {fd.min_precision}: the claims of {k.name} hold from precision {k.min_precision} on')
     for e in fd.ensures:
         kind = e['kind']
-        if kind not in FOLD_ENSURES:
-            err(f'ensures {kind}: a fold claims {", ".join(FOLD_ENSURES)}')
+        if kind not in allowed or (kind == 'upper' and e.get('over') != 'max'):
+            err(f'ensures {kind}: a fold claims {", ".join(allowed)}')
             continue
         g = results.get(e['of'])
         if g is None or g.kind != ir.LIMB:

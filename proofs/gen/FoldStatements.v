@@ -212,6 +212,54 @@ Definition mul_pow2_map_2_spec : Prop :=
     Rabs ((z0 + z1) - ((x0 + x1) * c)) <= 1 * eta emin)
     xs (mul_pow2_map_2_map emin prec tie_even c xs).
 
+(* norm_upper_1, the sequential order: a maximum by comparisons, in any order. Status: unverified. *)
+Definition norm_upper_1_seq_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall xs : list R,
+  Forall (fun x => fmt emin prec x) xs ->
+  let mok := norm_upper_1_seq xs in
+  let r_ := fst mok in
+  let v_ := fold_right Rmax 0 (map (fun x => (Rabs x)) xs) in
+  fmt emin prec r_ /\
+  v_ <= r_ /\
+  r_ <= RU emin prec v_.
+
+(* norm_upper_1, the lane order, for every number of lanes W: a maximum by comparisons, in any order. Status: unverified. *)
+Definition norm_upper_1_lanes_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall (W : nat) (xs : list R),
+  Forall (fun x => fmt emin prec x) xs ->
+  let mok := norm_upper_1_lanes W xs in
+  let r_ := fst mok in
+  let v_ := fold_right Rmax 0 (map (fun x => (Rabs x)) xs) in
+  fmt emin prec r_ /\
+  v_ <= r_ /\
+  r_ <= RU emin prec v_.
+
+(* norm_upper_2, the sequential order: a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between). Status: unverified. *)
+Definition norm_upper_2_seq_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall xs : list (R * R),
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  let mok := norm_upper_2_seq xs in
+  let r_ := succ radix2 (FLT_exp emin prec) (fst mok) in
+  let v_ := fold_right Rmax 0 (map (fun x => (Rabs (fst x + snd x))) xs) in
+  fmt emin prec r_ /\
+  v_ <= r_ /\
+  r_ <= succ radix2 (FLT_exp emin prec) (RU emin prec v_).
+
+(* norm_upper_2, the lane order, for every number of lanes W: a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between). Status: unverified. *)
+Definition norm_upper_2_lanes_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall (W : nat) (xs : list (R * R)),
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  let mok := norm_upper_2_lanes W xs in
+  let r_ := succ radix2 (FLT_exp emin prec) (fst mok) in
+  let v_ := fold_right Rmax 0 (map (fun x => (Rabs (fst x + snd x))) xs) in
+  fmt emin prec r_ /\
+  v_ <= r_ /\
+  r_ <= succ radix2 (FLT_exp emin prec) (RU emin prec v_).
+
 (* scale_1, each element it writes: mul_1_1 on each element. Status: unverified. *)
 Definition scale_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->

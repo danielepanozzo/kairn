@@ -127,6 +127,32 @@ Definition mul_pow2_map_2_step (c : R) (x : R * R) : R * R :=
 Definition mul_pow2_map_2_map (c : R) (xs : list (R * R)) : list (R * R) :=
   map (mul_pow2_map_2_step c) xs.
 
+(* norm_upper_1: arrays stored x; state m (a limb), ok (a mask); step norm_step_1, combination norm_combine. *)
+Definition norm_upper_1_step (mok : R * bool) (x : R) : R * bool :=
+  norm_step_1 (fst mok) (snd mok) x.
+
+Definition norm_upper_1_combine (a b : R * bool) : R * bool :=
+  norm_combine (fst a) (snd a) (fst b) (snd b).
+
+Definition norm_upper_1_seq (xs : list R) : R * bool :=
+  fold_seq norm_upper_1_step (0, true) xs.
+
+Definition norm_upper_1_lanes (W : nat) (xs : list R) : R * bool :=
+  fold_lanes norm_upper_1_step norm_upper_1_combine (0, true) W xs.
+
+(* norm_upper_2: arrays stored x; state m (a limb), ok (a mask); step norm_step_2, combination norm_combine. *)
+Definition norm_upper_2_step (mok : R * bool) (x : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst x) (snd x).
+
+Definition norm_upper_2_combine (a b : R * bool) : R * bool :=
+  norm_combine (fst a) (snd a) (fst b) (snd b).
+
+Definition norm_upper_2_seq (xs : list (R * R)) : R * bool :=
+  fold_seq norm_upper_2_step (0, true) xs.
+
+Definition norm_upper_2_lanes (W : nat) (xs : list (R * R)) : R * bool :=
+  fold_lanes norm_upper_2_step norm_upper_2_combine (0, true) W xs.
+
 (* scale_1: a map; arrays supplied x; scalars supplied a; it writes z by the step scale_step_1. *)
 Definition scale_1_step (a : R) (x : R) : R :=
   scale_step_1 emin prec choice x a.

@@ -33,6 +33,10 @@ import test_simd as simd_tests
 from kairn_gen import cpp, interp, ir, objcode, rocq, rules
 
 FOLDS = ('sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2', 'sum_fast_2_entry', 'dot_1', 'dot_2')
+# The folds of maxima (architecture.md, "Folds of maxima"): a state of a limb and a mask, and an upper
+# bound of the largest magnitude instead of fold_error. ALL: every fold that is not a map.
+MAX_FOLDS = ('norm_upper_1', 'norm_upper_2')
+ALL = FOLDS + MAX_FOLDS
 # The maps, the folds that write an array, have tests of their own (test_maps.py).
 MAPS = {'add_1', 'add_1_entry', 'add_2', 'add_2_entry', 'sub_1', 'sub_1_entry', 'sub_2', 'sub_2_entry', 'axpy_1',
         'axpy_1_entry', 'axpy_2', 'axpy_2_entry', 'axpy_2_1', 'axpy_2_1_entry', 'scale_1', 'scale_2',
@@ -94,10 +98,89 @@ c        = add(a0, const up(eta))
 '''
 
 
+# A fold of maxima: norm_upper_2 under another name.
+MAXBASE = '''
+fold:          tf
+arrays:        stored x = x0 x1
+state:         m, mask ok
+step:          (m, ok) = norm_step_2(m, ok, x)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+orders:        sequential, lanes
+writes:        none
+output:        r
+output:        mask flag
+finish:        (r, flag) = norm_finish_2(m, ok)
+value:         abs(x)
+requires:      canonical x
+ensures:       upper r max steps=1
+ensures:       finite_or_nan r flag=flag
+min_precision: 1
+status:        unverified
+domain:        extended
+'''
+
+# A combination that claims a maximum and returns its second operand: idempotent and associative,
+# not commutative.
+TMIN = '''
+kernel:        tmin
+input:         m
+input:         mask ok
+input:         n
+input:         mask okn
+output:        r
+output:        mask okr
+ensures:       maximum r m n
+min_precision: 1
+status:        unverified
+cone_exempt:   a select
+c   = lt(m, n)
+r   = select(c, n, n)
+okr = and(ok, okn)
+'''
+
+# The step of norm_upper_2 on tmin.
+TSTEP = '''
+kernel:        tstep
+input:         m
+input:         mask ok
+input:         x = x0 x1
+output:        r
+output:        mask okr
+ensures:       maximum r m abs(x[0])
+min_precision: 1
+status:        unverified
+unused:        x1 the finish covers it
+cone_exempt:   a select
+a        = abs(x0)
+e        = eq(a, a)
+(r, okr) = tmin(m, ok, a, e)
+'''
+
+# A finish that does not say that the mask gates its result.
+TFIN = '''
+kernel:        tfin
+input:         m
+input:         mask ok
+output:        r
+output:        mask flag
+value:         m
+ensures:       finite_or_nan r flag=flag
+min_precision: 1
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+cone_exempt:   selects
+s         = succ(m)
+t         = select(ok, s, const nan)
+(r, flag) = fold_finish_1(t)
+'''
+
+
 class Rules(unittest.TestCase):
     def test_the_folds_are_accepted(self):
         ks = common.kernels()
-        self.assertEqual(set(ks.folds), set(FOLDS) | MAPS)
+        self.assertEqual(set(ks.folds), set(ALL) | MAPS)
+        self.assertEqual({n for n, fd in ks.folds.items() if fd.is_max}, set(MAX_FOLDS))
         self.assertEqual({n for n, fd in ks.folds.items() if fd.is_map}, MAPS)
         for fd in ks.folds.values():
             self.assertEqual(rules.fold_rules(fd, ks), [], fd.name)
@@ -185,6 +268,35 @@ class Rules(unittest.TestCase):
         self.refused(BASE, 'tf_seq is a name the printers make for the fold', tf_seq)
         self.refused(BASE.replace('r = r0 r1', 'r = n r1'), 'n is a name the printers use')
 
+    def test_folds_of_maxima(self):
+        """The checks of a fold of maxima (rules.max_rules, _fold_claims): its state, its
+        combination and step, the zero state and the laws of the combination by evaluation, its
+        finish and its claims."""
+        self.assertEqual(refusals(MAXBASE), [])
+        self.refused(MAXBASE.replace('state:         m, mask ok', 'state:         m, ok'),
+                     'a limb and a mask, for a fold of maxima')
+        self.refused(MAXBASE.replace('upper r max steps=1', 'upper r max steps=0'),
+                     'as many times as the finish norm_finish_2 steps it (1)')
+        self.refused(MAXBASE.replace('value:         abs(x)', 'value:         x'),
+                     'the value of an element is its magnitude')
+        self.refused(MAXBASE.replace('ensures:       upper r max steps=1\n',
+                                     'ensures:       upper r max steps=1\nensures:       normalized r\n'),
+                     'a fold claims upper, finite_or_nan')
+        # A combination that is a minimum, or whose mask is an or: refused by their claims and
+        # listings; one that claims a maximum and computes something else, by evaluation.
+        self.refused(MAXBASE.replace('norm_combine', 'tmin'),
+                     'claims the maximum of its two limb operands', TMIN.replace('maximum r m n', 'upper r value=m'))
+        self.refused(MAXBASE.replace('norm_combine', 'tmin'), 'returns the and of its two masks',
+                     TMIN.replace('okr = and(ok, okn)', 'okr = or(ok, okn)'))
+        errors = refusals(MAXBASE.replace('norm_combine(m, ok, m, ok)', 'tmin(m, ok, m, ok)'), TMIN)
+        self.assertTrue(any('the step norm_step_2 of a fold of maxima is a call of its combination tmin' in e
+                            for e in errors), errors)
+        errors = refusals(MAXBASE.replace('norm_combine', 'tmin').replace('norm_step_2', 'tstep'), TMIN, TSTEP)
+        self.assertTrue(any('tmin is not commutative' in e for e in errors), errors)
+        self.assertFalse(any('tmin(0, 0) is not the zero state' in e for e in errors), errors)
+        self.refused(MAXBASE.replace('norm_finish_2(m, ok)', 'tfin(m, ok)'), 'claims finite_or_nan with if= its mask',
+                     TFIN)
+
     def test_every_normalized_pair_of_small_formats(self):
         """Property 3 of the zero state (0 + x has the value of x; for these additions it is x,
         limb for limb), on every normalized pair of three formats, and property 4."""
@@ -216,7 +328,8 @@ def by_definition(machine, fd, f, lanes, elements):
     the head, or the zero state), the rest folded into it. `elements` are lists of limb values,
     in the order of the fold's arrays and limbs."""
     step, combine = machine.kernels[fd.step[0]], machine.kernels[fd.combine[0]]
-    zero = [(interp.NUM, False, 0, 0)] * len(fd.state.limbs)
+    # The zero state: every limb +0, every mask true.
+    zero = [True if g.kind == ir.MASK else (interp.NUM, False, 0, 0) for g in fd.states for _ in g.limbs]
     sizes = [len(g.limbs) for g in fd.arrays]
 
     def apply_step(s, e):
@@ -224,9 +337,13 @@ def by_definition(machine, fd, f, lanes, elements):
         for g, size in zip(fd.arrays, sizes):
             groups[g.name] = e[at:at + size]
             at += size
+        at = 0
+        for g in fd.states:
+            groups[g.name] = s[at:at + len(g.limbs)]
+            at += len(g.limbs)
         args = []
         for a in fd.step[1]:
-            args += s if a == fd.state.name else groups[a]
+            args += groups[a]
         return machine.run(step.name, f, args)
 
     def fold_seq(xs, s):
@@ -320,7 +437,7 @@ class Interp(unittest.TestCase):
 
     def test_the_lane_order_is_the_definition(self):
         rng = random.Random('lanes')
-        for name in FOLDS:
+        for name in ALL:
             fd = self.ks.folds[name]
             for fmt in ('binary64', 'binary32'):
                 f = interp.parse_format(fmt)
@@ -345,7 +462,7 @@ class Interp(unittest.TestCase):
     def test_short_lists_one_lane_and_none_are_the_sequential_order(self):
         """fold_lanes_short, fold_lanes_1 and fold_lanes_0: bit for bit, the sign of a zero too."""
         rng = random.Random('short')
-        for name in FOLDS:
+        for name in ALL:
             fd = self.ks.folds[name]
             f = interp.parse_format('binary64')
             for n in range(0, 12):
@@ -375,6 +492,49 @@ class Interp(unittest.TestCase):
         big = interp.canon(False, 2 ** 24 - 1, 104)
         out = self.m.run_fold('sum_1', f, 'sequential', 0, [[big, big]])
         self.assertEqual(out, [interp.NaN, False])
+
+    def test_folds_of_maxima_empty_and_not_finite(self):
+        """norm_upper_k: no element gives 0 for one limb and the step after it, eta, for two, with
+        the flag true; an infinite or NaN element anywhere, in every order, the canonical NaN and the
+        flag false (the NaN through the mask of the state, which a maximum by comparison would lose);
+        and for two limbs a largest leading limb of Omega, whose step up is infinite, too."""
+        for fmt in ('binary32', 'fp:4:-6:3'):
+            f = interp.parse_format(fmt)
+            zero = (interp.NUM, False, 0, 0)
+            self.assertEqual(self.m.run_fold('norm_upper_1', f, 'sequential', 0, [[]]), [zero, True])
+            self.assertEqual(self.m.run_fold('norm_upper_2', f, 'lanes', 4, [[], []]),
+                             [interp.canon(False, 1, f.qmin), True])
+            one, two = interp.canon(False, 1, 0), interp.canon(True, 1, 1)
+            for name in MAX_FOLDS:
+                limbs = len(self.ks.folds[name].array_limbs())
+                for bad in ((interp.INF, False), (interp.INF, True), interp.NaN):
+                    for at in range(5):
+                        arrays = [[one, two, one, two, one]] + [[zero] * 5 for _ in range(limbs - 1)]
+                        arrays[0][at] = bad
+                        if limbs == 2 and bad == interp.NaN:
+                            arrays[1][at] = interp.NaN
+                        for order, w in (('sequential', 0), ('lanes', 2), ('lanes', 3), ('lanes', 4)):
+                            self.assertEqual(self.m.run_fold(name, f, order, w, arrays), [interp.NaN, False],
+                                             (name, fmt, bad, at, order, w))
+            omega = interp.canon(False, 2 ** f.p - 1, f.qmax)
+            self.assertEqual(self.m.run_fold('norm_upper_2', f, 'sequential', 0, [[one, omega], [zero, zero]]),
+                             [interp.NaN, False])
+            self.assertEqual(self.m.run_fold('norm_upper_1', f, 'sequential', 0, [[one, omega]]), [omega, True])
+
+    def test_folds_of_maxima_in_exact_arithmetic(self):
+        """On toy formats of precision 1 to 6, every fold of maxima in both orders: with the exponent
+        range widened, the result is a number of the format at least the largest magnitude of an
+        element and at most that magnitude rounded up then stepped up as the claim says; in the format
+        itself, the same when the flag is true, the canonical NaN otherwise. Lists of up to 12
+        elements, two limbs at the ends of what a normalized pair allows."""
+        doc = {fd['name']: fd for fd in json.loads(open(os.path.join(common.GEN, 'claims.json')).read())['folds']}
+        jobs = [(name, fmt, doc[name]) for name in MAX_FOLDS
+                for fmt in ((1, -6, 3), (2, -6, 3), (3, -8, 4), (4, -10, 4), (5, -12, 5), (6, -12, 5))]
+        with ProcessPoolExecutor(max_workers=common.JOBS) as ex:
+            results = list(ex.map(_judge_max_fold, jobs))
+        bad = [r for r in results if r[2]]
+        self.assertEqual(bad, [])
+        self.assertGreater(sum(r[1] for r in results), 10000)
 
     def test_the_line_protocol(self):
         formats = {}
@@ -481,6 +641,76 @@ def _judge_fold(job):
     return name, count, failures[:3]
 
 
+def _round_up(f, x):
+    """The smallest number of format f (without its top: an unbounded exponent) not below the
+    nonnegative rational x, as an interpreter value."""
+    if x == 0:
+        return (interp.NUM, False, 0, 0)
+    q = max(f.qmin, x.numerator.bit_length() - x.denominator.bit_length() - f.p - 1)
+    while x >= F(2 ** f.p) * F(2) ** q:            # the exponent at which x has p digits or fewer
+        q += 1
+    m = -(-x // (F(2) ** q))                         # ceil(x / 2^q)
+    return interp.canon(False, int(m), q)
+
+
+def _judge_max_fold(job):
+    """(name, cases judged, failures) of one fold of maxima on one toy format: the claim
+    upper r max steps=S, max_i |x_i| <= r <= RU(max_i |x_i|) stepped up S times, with the exponent
+    range widened (the Rocq statement) and in the format itself (the flag)."""
+    name, (p, qmin, qmax), claim = job
+    ks = common.kernels()
+    fd = ks.folds[name]
+    m = interp.Machine(ks)
+    rng = random.Random(f'max:{name}:{p}')
+    tight = interp.Format(f'fp:{p}:{qmin}:{qmax}', p, qmin, qmax)
+    wide = interp.Format(f'fp:{p}:{qmin}:{qmax + 200}', p, qmin, qmax + 200)
+    steps = next(e['steps'] for e in claim['ensures'] if e['kind'] == 'upper')
+    omega = F(2 ** p - 1) * F(2) ** qmax
+    nums = sorted({interp.canon(s, mm, q) for q in range(qmin, qmax + 1) for mm in range(1, 2 ** p)
+                   for s in (False, True)}, key=str) + [(interp.NUM, False, 0, 0), (interp.NUM, True, 0, 0)]
+    tails = {}
+    for x0, x1 in rules._operands(tight, 2):
+        tails.setdefault(x0, []).append(x1)
+    failures, count = [], 0
+    for case in range(400):
+        n = rng.randrange(0, 13)
+        els = []
+        for _ in range(n):
+            x0 = rng.choice(nums)
+            limbs = [x0]
+            if len(fd.arrays[0].limbs) == 2:
+                cands = [y for y in tails.get(x0, []) if interp.eq(interp.add(tight, x0, y), x0)]
+                limbs.append(rng.choice(cands or [(interp.NUM, False, 0, 0)]))
+            els.append(limbs)
+        arrays = [[e[i] for e in els] for i in range(len(fd.array_limbs()))]
+        big = max([abs(sum(_value(v) for v in e)) for e in els], default=F(0))
+        for order, w in (('sequential', 0), ('lanes', 2), ('lanes', 3), ('lanes', 4), ('lanes', 8)):
+            r_wide = None
+            for f, reading in ((wide, 'statement'), (tight, 'format')):
+                out = m.run_fold(name, f, order, w, arrays)
+                r, flag = out[0], out[1]
+                count += 1
+                if reading == 'statement':
+                    if not flag or r[0] != interp.NUM:
+                        failures.append((reading, order, w, 'not finite'))
+                        break
+                    r_wide = _value(r)
+                elif flag != (r_wide <= omega):
+                    failures.append((reading, order, w, 'flag', r_wide))
+                    continue
+                if not flag:
+                    if r != interp.NaN:
+                        failures.append((reading, order, w, 'not the NaN'))
+                    continue
+                limit = _round_up(f, big)
+                for _ in range(steps):
+                    limit = interp.succ(f, limit)             # a step from Omega is +infinity
+                top = _value(limit) if limit[0] == interp.NUM else None
+                if not (big <= _value(r) and (top is None or _value(r) <= top)) or not interp.member(f, r):
+                    failures.append((reading, order, w, 'upper', n, big, _value(r)))
+    return name, count, failures[:3]
+
+
 # ---------------------------------------------------------------------------------------------
 # The compiled C++.
 
@@ -497,7 +727,7 @@ def fold_corpus(fmt, orders, seed):
     ks = common.kernels()
     rng = random.Random(f'{seed}:{fmt}')
     out = []
-    for name in FOLDS:
+    for name in ALL:
         fd = ks.folds[name]
         for n in lengths(rng):
             for special in (0.0, 0.0, 0.02 if n else 0.0):
@@ -721,6 +951,18 @@ class Printers(unittest.TestCase):
         self.assertIn('Definition dot_2_lanes (W : nat) (xs : list ((R * R) * (R * R))) : R * R :=\n'
                       '  fold_lanes dot_2_step dot_2_combine (0, 0) W xs.', m)
         self.assertIn('Definition sum_1_seq (xs : list R) : R :=\n  fold_seq sum_1_step 0 xs.', m)
+        # A fold of maxima: a state of a limb and a mask, from (0, true); no section variable,
+        # since nothing in its step or combination rounds.
+        self.assertIn('(* norm_upper_2: arrays stored x; state m (a limb), ok (a mask); step norm_step_2, combination '
+                      'norm_combine. *)\n'
+                      'Definition norm_upper_2_step (mok : R * bool) (x : R * R) : R * bool :=\n'
+                      '  norm_step_2 (fst mok) (snd mok) (fst x) (snd x).\n\n'
+                      'Definition norm_upper_2_combine (a b : R * bool) : R * bool :=\n'
+                      '  norm_combine (fst a) (snd a) (fst b) (snd b).\n\n'
+                      'Definition norm_upper_2_seq (xs : list (R * R)) : R * bool :=\n'
+                      '  fold_seq norm_upper_2_step (0, true) xs.\n\n'
+                      'Definition norm_upper_2_lanes (W : nat) (xs : list (R * R)) : R * bool :=\n'
+                      '  fold_lanes norm_upper_2_step norm_upper_2_combine (0, true) W xs.', m)
         # Without folds the files say nothing but their header.
         empty = rocq.fold_model(common.kernels(common.TEST_KERNELS))
         self.assertNotIn('Definition', empty)
@@ -740,16 +982,37 @@ class Printers(unittest.TestCase):
         self.assertIn('    (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * '
                       '((3 / 2) * eta emin)).', s)
         self.assertIn('    ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs', s)
-        self.assertEqual(s.count('_spec : Prop'), 2 * len(FOLDS) + len(MAPS))
+        self.assertEqual(s.count('_spec : Prop'), 2 * len(ALL) + len(MAPS))
+        # A fold of maxima: its result is the limb of the state stepped up as the finish does, a
+        # number of the format between the largest magnitude and that rounded up and stepped up.
+        self.assertIn('Definition norm_upper_2_seq_spec : Prop :=\n'
+                      '  forall emin prec : Z, (1 <= prec)%Z ->\n'
+                      '  forall xs : list (R * R),\n'
+                      '  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->\n'
+                      '  let mok := norm_upper_2_seq xs in\n'
+                      '  let r_ := succ radix2 (FLT_exp emin prec) (fst mok) in\n'
+                      '  let v_ := fold_right Rmax 0 (map (fun x => (Rabs (fst x + snd x))) xs) in\n'
+                      '  fmt emin prec r_ /\\\n'
+                      '  v_ <= r_ /\\\n'
+                      '  r_ <= succ radix2 (FLT_exp emin prec) (RU emin prec v_).', s)
+        self.assertIn('  let mok := norm_upper_1_lanes W xs in\n'
+                      '  let r_ := fst mok in\n'
+                      '  let v_ := fold_right Rmax 0 (map (fun x => (Rabs x)) xs) in\n'
+                      '  fmt emin prec r_ /\\\n'
+                      '  v_ <= r_ /\\\n'
+                      '  r_ <= RU emin prec v_.', s)
 
     def test_the_ieee_model(self):
         """IeeeFoldModel.v: every fold in both orders, in the shape of FoldModel.v over floats, the
         finish on the final state; the section of IeeeModel.v."""
         from kairn_gen import ieee
         m = ieee.fold_model(self.ks)
-        for name in FOLDS:
+        for name in ALL:
             for d in ('step', 'combine', 'seq', 'lanes'):
                 self.assertIn(f'Definition {name}_{d} ', m)
+        self.assertIn('Definition norm_upper_1_lanes (W : nat) (xs : list float) : float * bool :=\n'
+                      '  let s := fold_lanes norm_upper_1_step norm_upper_1_combine (pzero, true) W xs in\n'
+                      '  IeeeModel.norm_finish_1 prec emax nan_abs nan_const (fst s) (snd s).', m)
         self.assertIn('Definition dot_2_step (s : float * float) (xy : (float * float) * (float * float)) : float * float :=\n'
                       '  IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst s) (snd s) (fst (fst xy)) '
                       '(snd (fst xy)) (fst (snd xy)) (snd (snd xy)).', m)
@@ -769,10 +1032,20 @@ class Printers(unittest.TestCase):
         and combination of a fold."""
         from kairn_gen import ieee
         s = ieee.fold_statements(self.ks)
-        for name in FOLDS:
+        for name in ALL:
             self.assertIn(f'Definition {name}_seq_ieee_spec : Prop :=', s)
             self.assertIn(f'Definition {name}_lanes_ieee_spec : Prop :=', s)
+        # Not the steps and the combination of the folds of maxima, whose maximum keeps a finite
+        # state for a NaN element (their mask says it instead).
         parts = {self.ks.folds[n].step[0] for n in FOLDS} | {self.ks.folds[n].combine[0] for n in FOLDS}
+        self.assertIn('   let s := FoldModel.norm_upper_2_lanes W vs in\n'
+                      '   let r_ := succ radix2 (FLT_exp (ieee_emin prec emax) prec) (fst s) in\n'
+                      '   let v_ := fold_right Rmax 0 (map (fun x => (Rabs (fst x + snd x))) vs) in\n'
+                      '   val r = r_ /\\\n'
+                      '   fmt (ieee_emin prec emax) prec r_ /\\\n'
+                      '   v_ <= r_ /\\\n'
+                      '   r_ <= succ radix2 (FLT_exp (ieee_emin prec emax) prec) (RU (ieee_emin prec emax) prec v_)) /\\\n'
+                      '  (flag = false -> nan r).', s)
         self.assertEqual(set(re.findall(r'^Definition (\w+)_ieee_lead_spec', s, flags=re.M)), parts)
         self.assertIn('  let \'(t0, t1) := IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 '
                       'y0 y1 in\n  finite t0 -> finite s0 /\\ finite x0 /\\ finite y0.', s)
@@ -817,9 +1090,9 @@ class Printers(unittest.TestCase):
         of its kernel's listing, the step's fused operations those of the step kernel."""
         doc = json.loads(objcode.objcode(self.ks))
         self.assertEqual(doc['fold_forms'], ['seq', 'lanes', 'packed'])
-        self.assertEqual(set(doc['folds']), set(FOLDS) | MAPS)
+        self.assertEqual(set(doc['folds']), set(ALL) | MAPS)
         names = doc['fold_parts']
-        for name in FOLDS:
+        for name in ALL:
             fd = self.ks.folds[name]
             step = self.ks[fd.step[0]]
             want = objcode.kernel_counts(step, self.ks)['packed']

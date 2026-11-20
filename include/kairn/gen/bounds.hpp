@@ -378,6 +378,26 @@ template <> struct next_up<float> {
     static constexpr bool proved = true;
 };
 
+// norm_combine: UNVERIFIED. Claims: maximum.
+template <class T> struct norm_combine;
+template <> struct norm_combine<double> { static constexpr bool proved = false; };
+template <> struct norm_combine<float> { static constexpr bool proved = false; };
+
+// norm_finish_1: UNVERIFIED. Claims: finite_or_nan.
+template <class T> struct norm_finish_1;
+template <> struct norm_finish_1<double> { static constexpr bool proved = false; };
+template <> struct norm_finish_1<float> { static constexpr bool proved = false; };
+
+// norm_finish_2: UNVERIFIED. Claims: finite_or_nan.
+template <class T> struct norm_finish_2;
+template <> struct norm_finish_2<double> { static constexpr bool proved = false; };
+template <> struct norm_finish_2<float> { static constexpr bool proved = false; };
+
+// norm_step_1: UNVERIFIED. Claims: maximum.
+template <class T> struct norm_step_1;
+template <> struct norm_step_1<double> { static constexpr bool proved = false; };
+template <> struct norm_step_1<float> { static constexpr bool proved = false; };
+
 // radd: proved. Claims: upper.
 template <class T> struct radd;
 template <> struct radd<double> {
@@ -985,6 +1005,11 @@ template <> struct mul_pow2_2_full<float> {
 template <class T> struct mul_pow2_step_2;
 template <> struct mul_pow2_step_2<double> { static constexpr bool proved = false; };
 template <> struct mul_pow2_step_2<float> { static constexpr bool proved = false; };
+
+// norm_step_2: UNVERIFIED. Claims: maximum.
+template <class T> struct norm_step_2;
+template <> struct norm_step_2<double> { static constexpr bool proved = false; };
+template <> struct norm_step_2<float> { static constexpr bool proved = false; };
 
 // scale_step_2: UNVERIFIED. Claims: normalized; error, form R, c = 2, k = 2, t = 1.
 template <class T> struct scale_step_2;

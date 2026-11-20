@@ -498,6 +498,33 @@ Definition next_up (a : float) : float :=
   let r := succ a in
   r.
 
+(* norm_combine: the larger of two numbers, by a comparison (milestone2.md, norm_upper_k). *)
+Definition norm_combine (m : float) (ok : bool) (n : float) (okn : bool) : float * bool :=
+  let c := lt m n in
+  let r := if c then n else m in
+  let okr := andb ok okn in
+  (r, okr).
+
+(* norm_finish_1: the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). *)
+Definition norm_finish_1 (m : float) (ok : bool) : float * bool :=
+  let t := if ok then m else cnan in
+  let '(r, flag) := fold_finish_1 t in
+  (r, flag).
+
+(* norm_finish_2: the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md). *)
+Definition norm_finish_2 (m : float) (ok : bool) : float * bool :=
+  let s := succ m in
+  let t := if ok then s else cnan in
+  let '(r, flag) := fold_finish_1 t in
+  (r, flag).
+
+(* norm_step_1: the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k). *)
+Definition norm_step_1 (m : float) (ok : bool) (x : float) : float * bool :=
+  let a := abs x in
+  let e := eq a a in
+  let '(r, okr) := norm_combine m ok a e in
+  (r, okr).
+
 (* radd: one step up from the rounded sum (Milestone 1 listing). *)
 Definition radd (a b : float) : float :=
   let s := add a b in
@@ -1056,6 +1083,11 @@ Definition mul_pow2_2_full (x0 x1 c : float) : float * float :=
 Definition mul_pow2_step_2 (x0 x1 c : float) : float * float :=
   let '(z0, z1) := mul_pow2_2 x0 x1 c in
   (z0, z1).
+
+(* norm_step_2: the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k). *)
+Definition norm_step_2 (m : float) (ok : bool) (x0 x1 : float) : float * bool :=
+  let '(r, okr) := norm_step_1 m ok x0 in
+  (r, okr).
 
 (* scale_step_2: mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. *)
 Definition scale_step_2 (x0 x1 a : float) : float * float :=

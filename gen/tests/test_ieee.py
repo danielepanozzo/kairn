@@ -289,9 +289,11 @@ class CheckedFiles(unittest.TestCase):
     # the steps of the folds and their bridge statements (and the spec of those of two limbs) were
     # added, every earlier one the same, byte for byte. Then the steps of the maps (unverified):
     # their definitions were added, every earlier one the same, byte for byte, and mul_1_1, which
-    # axpy_step_1 calls, is printed earlier, before the first kernel that calls it.
-    DIGESTS = {'proofs/gen/IeeeModel.v': 'e22837e7e16f542441ecf40dd05f74f51140455ba479c44c5ed342cebacdf611',
-               'proofs/gen/IeeeStatements.v': '1566f414acb25d69e6ff5c195e36191571d073bb3e6408e3c8006e462ae3270c'}
+    # axpy_step_1 calls, is printed earlier, before the first kernel that calls it. Then the
+    # kernels of the folds of maxima (unverified): their definitions and the statements of their two
+    # finishes were added, every earlier line kept, in its order.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '14a2b0d33f3439dc2dc380d7fd166a85fae493886590173e517a7f259cc66037',
+               'proofs/gen/IeeeStatements.v': 'ff406541eca23d19c1cf0bd19226478f0a83310e962a22fad73c6de78a3f7bc4'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

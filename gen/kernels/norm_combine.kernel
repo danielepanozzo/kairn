@@ -1,0 +1,23 @@
+# The combination of the folds of maxima norm_upper_k (milestone2.md, "sum, dot, axpy,
+# convolution": norm_upper_k; architecture.md, "Folds of maxima"): the larger of two magnitudes,
+# and the and of two masks, each true when no element folded into its state was a NaN. A maximum
+# computed by a comparison keeps m when n is a NaN (lt is false): the steps keep such a NaN in the
+# mask instead (norm_step_1). On every pair of states it is a maximum and an and, which are
+# associative, commutative and idempotent: the result of the fold does not depend on the order.
+kernel:        norm_combine
+input:         m
+input:         mask ok
+input:         n
+input:         mask okn
+output:        r
+output:        mask okr
+ensures:       maximum r m n
+min_precision: 1
+source:        the larger of two numbers, by a comparison (milestone2.md, norm_upper_k)
+license:       proof: MIT
+status:        unverified
+cone_exempt:   a maximum is a select after a comparison; an infinite operand is kept (lt(m, inf) is true for every finite m), and a NaN one is the business of the masks, which the finish of the fold tests
+
+c   = lt(m, n)
+r   = select(c, n, m)
+okr = and(ok, okn)

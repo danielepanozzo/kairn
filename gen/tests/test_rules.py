@@ -849,7 +849,7 @@ class R3OfTheKernels(unittest.TestCase):
         ks = common.kernels()
         lines = build.summary(ks)
         self.assertEqual(set(ks.folds), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
-                                         'sum_fast_2_entry', 'dot_1', 'dot_2'} | MAPS)
+                                         'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2'} | MAPS)
         self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
         unverified = [n for n, f in ks.folds.items() if f.status == 'unverified']
         self.assertIn('folds UNVERIFIED: %s' % (', '.join(unverified) or 'none'), lines)
@@ -1168,7 +1168,11 @@ class TheKernels(unittest.TestCase):
     FOLDS_FINITE = {'dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2',
                     'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2'}
     FOLDS_FINISH = {'fold_finish_1', 'fold_finish_2'}
-    FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS
+    # The folds of maxima, norm_upper_k (stage B, part 2): the combination and the steps, of the
+    # finite domain, and the finishes, with the IEEE-model statement only.
+    NORM_FINISH = {'norm_finish_1', 'norm_finish_2'}
+    NORM = {'norm_combine', 'norm_step_1', 'norm_step_2'} | NORM_FINISH
+    FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -1200,14 +1204,14 @@ class TheKernels(unittest.TestCase):
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
         self.assertEqual({name for name, k in ks.items() if not k.real_model},
-                         self.NON_FINITE | self.WAVE_1_FULL | self.FOLDS_FINISH)
+                         self.NON_FINITE | self.WAVE_1_FULL | self.FOLDS_FINISH | self.NORM_FINISH)
         self.assertEqual({name for name, k in ks.items() if k.extended},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL |
-                         self.FOLDS_FINISH)
+                         self.FOLDS_FINISH | self.NORM_FINISH)
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
                          dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
                                             | self.WAVE_1_EXTENDED | self.WAVE_1_FULL, 'proved'),
-                              **dict.fromkeys(self.FOLDS_FINISH, 'unverified')))
+                              **dict.fromkeys(self.FOLDS_FINISH | self.NORM_FINISH, 'unverified')))
         # Every kernel of the extended domain that is proved names its IEEE-model theorem, and no
         # other kernel does.
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
@@ -1245,7 +1249,9 @@ class TheKernels(unittest.TestCase):
             'sub_1_1': 1, 'add_entry_step_1': 1, 'sub_entry_step_1': 1, 'add_entry_step_2': 3,
             'sub_entry_step_2': 3, 'scale_step_1': 1, 'scale_step_2': 2, 'mul_pow2_step_1': 1,
             'mul_pow2_step_2': 2, 'axpy_step_1': 1, 'axpy_entry_step_1': 1, 'axpy_step_2': 4,
-            'axpy_entry_step_2': 4, 'axpy_step_2_1': 3, 'axpy_entry_step_2_1': 3})
+            'axpy_entry_step_2': 4, 'axpy_step_2_1': 3, 'axpy_entry_step_2_1': 3,
+            # the folds of maxima: comparisons and selects, from one bit on
+            'norm_combine': 1, 'norm_step_1': 1, 'norm_step_2': 1})
 
     def test_milestone2_bodies_are_those_of_milestone2_md(self):
         """The listings of wave 1, line for line as the page writes them ("Building blocks on T",

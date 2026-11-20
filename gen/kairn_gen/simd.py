@@ -35,6 +35,11 @@ AVX2 = {
     'store': '_mm256_storeu_{s}({0}, {1})',
     # Whether every lane of a mask is set (a map's mask, at the end of its packed loop).
     'all': {'double': '_mm256_movemask_pd({0}) == 0xF', 'float': '_mm256_movemask_ps({0}) == 0xFF'},
+    # The lanes of a mask of a fold's state, stored and read one by one (a fold of maxima): the
+    # declaration of the store (none: the bits are an int), the store, and lane {1} as a bool.
+    'mask_decl': {'double': None, 'float': None},
+    'mask_store': {'double': 'const int {0} = _mm256_movemask_pd({1})', 'float': 'const int {0} = _mm256_movemask_ps({1})'},
+    'mask_lane': {'double': '(({0} >> {1}) & 1) != 0', 'float': '(({0} >> {1}) & 1) != 0'},
     'spell': {
         'add': '_mm256_add_{s}({0}, {1})',
         'sub': '_mm256_sub_{s}({0}, {1})',
@@ -75,6 +80,9 @@ NEON = {
     'load': 'vld1q_{s}({0})',
     'store': 'vst1q_{s}({0}, {1})',
     'all': {'double': 'vminvq_u32(vreinterpretq_u32_u64({0})) != 0U', 'float': 'vminvq_u32({0}) != 0U'},
+    'mask_decl': {'double': 'uint64_t {0}[2]', 'float': 'uint32_t {0}[4]'},
+    'mask_store': {'double': 'vst1q_u64({0}, {1})', 'float': 'vst1q_u32({0}, {1})'},
+    'mask_lane': {'double': '{0}[{1}] != 0U', 'float': '{0}[{1}] != 0U'},
     'spell': {
         'add': 'vaddq_{s}({0}, {1})',
         'sub': 'vsubq_{s}({0}, {1})',
@@ -265,29 +273,41 @@ def fold_packed(b, fd, kernels, ctype):
     upward by the scalar combination; the remaining elements folded into the result by the scalar
     step; the finish. In every lane the packed step computes what the scalar step computes, so
     this is, bit for bit, F_lanes of scalar.hpp with lanes = W."""
-    vec, _, _, _, w = b['types'][ctype]
+    vec, mask, _, _, w = b['types'][ctype]
     fmt = _format(b, kernels, ctype)
     step, combine, _ = cpp.fold_kernels(fd, kernels)
-    state = list(fd.state.limbs)
+    state = fd.state_limbs()
+    kinds = fd.state_kinds()
     lane = [f'{v}_lane_' for v in state]
     stored = [f'{v}_lanes_' for v in state]
     nxt = [f'{v}_next_' for v in state]
+    zero = b['zero'].format(**fmt)
     lines = cpp.fold_description(fd, kernels, 'packed')
-    lines.append(f'inline void {fd.name}_packed({", ".join(cpp.fold_parameters(fd, ctype, "bool", False))}) noexcept {{')
+    lines.append(f'inline void {fd.name}_packed({", ".join(cpp.fold_parameters(fd, ctype, "bool", False, kernels))}) '
+                 'noexcept {')
     lines.append(f'    const std::size_t full_ = n - n % {w};')
-    lines += [f'    {vec} {v} = {b["zero"].format(**fmt)};' for v in lane]
+    # The zero state in every lane: +0, and a mask true (every bit set).
+    lines += [f'    {mask} {v} = {b["spell"]["eq"].format(zero, zero, **fmt)};' if kind == ir.MASK else
+              f'    {vec} {v} = {zero};' for v, kind in zip(lane, kinds)]
     lines.append(f'    for (std::size_t i_ = 0; i_ < full_; i_ += {w}) {{')
-    lines += [f'        const {vec} {v} = {b["load"].format(f"{v}_in + i_", **fmt)};' for v in fd.array_limbs()]
+    lines += [f'        const {vec} {v} = {b["load"].format(f"{v}_in + i_", **fmt)};' for v in cpp.loaded_limbs(fd, kernels)]
     items, outs = ir.inline_call(step, kernels, [ir.Operand(a) for a in cpp.step_arguments(
         fd, lane, {g.name: list(g.limbs) for g in fd.arrays})], cpp.STEP)
     lines += _statements(b, items, kernels, ctype, ' ' * 8) + cpp._assign(lane, outs, ' ' * 8) + ['    }']
     # Not initialized: the store writes every lane before any is read. (An initializer `= {}` is a
-    # call of memset at -O0 with Clang for 32 bytes, which the object-code check cannot count.)
-    lines += [f'    {ctype} {v}[{w}];' for v in stored]
-    lines += [f'    {b["store"].format(v, r, **fmt)};' for v, r in zip(stored, lane)]
-    lines += [f'    {ctype} {v} = {r}[0];' for v, r in zip(state, stored)]
+    # call of memset at -O0 with Clang for 32 bytes, which the object-code check cannot count.) A
+    # mask is stored as the bits of its lanes, one per lane (mask_store), and read as a bool.
+    for v, kind in zip(stored, kinds):
+        decl = b['mask_decl'][ctype] if kind == ir.MASK else f'{ctype} {{0}}[{w}]'
+        if decl:
+            lines.append(f'    {decl.format(v)};')
+    lines += [f'    {(b["mask_store"][ctype] if kind == ir.MASK else b["store"]).format(v, r, **fmt)};'
+              for v, r, kind in zip(stored, lane, kinds)]
+    lines += [f'    bool {v} = {b["mask_lane"][ctype].format(r, "0")};' if kind == ir.MASK else
+              f'    {ctype} {v} = {r}[0];' for v, r, kind in zip(state, stored, kinds)]
     lines.append(f'    for (std::size_t j_ = 1; j_ < {w}; ++j_) {{')
-    lines += [f'        const {ctype} {v} = {r}[j_];' for v, r in zip(nxt, stored)]
+    lines += [f'        const bool {v} = {b["mask_lane"][ctype].format(r, "j_")};' if kind == ir.MASK else
+              f'        const {ctype} {v} = {r}[j_];' for v, r, kind in zip(nxt, stored, kinds)]
     body, outs = cpp._call(combine, kernels, ctype, state + nxt, cpp.COMB, ' ' * 8)
     lines += body + cpp._assign(state, outs, ' ' * 8) + ['    }']
     lines += cpp.fold_step_loop(fd, kernels, ctype, state, 'full_')

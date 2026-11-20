@@ -1,0 +1,21 @@
+# The step of norm_upper_1 (milestone2.md, "sum, dot, axpy, convolution": norm_upper_k): the state
+# combined with what the element gives, its magnitude and the mask that it is not a NaN (eq(a, a)
+# is false for a NaN only). The step is norm_combine of the state and of that pair, so that it is
+# the combination applied to a function of the element, which is what makes the order of the fold
+# irrelevant (architecture.md, "Folds of maxima").
+kernel:        norm_step_1
+input:         m
+input:         mask ok
+input:         x
+output:        r
+output:        mask okr
+ensures:       maximum r m abs(x)
+min_precision: 1
+source:        the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k)
+license:       proof: MIT
+status:        unverified
+cone_exempt:   a maximum is a select after a comparison (norm_combine); a NaN element is kept in the mask okr, and an infinite one in r, which the finish of the fold tests
+
+a        = abs(x)
+e        = eq(a, a)
+(r, okr) = norm_combine(m, ok, a, e)

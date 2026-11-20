@@ -683,9 +683,10 @@ class Rocq(unittest.TestCase):
         # With the kernels of the folds: g of bound_sum_k, g and t of bound_dot_k, t of dot_step_1
         # and of sum_entry_step_1, 8 limbs in 6 kernels. With the steps of the maps: the one limb of
         # sub_1_1, add_entry_step_1, sub_entry_step_1, scale_step_1, mul_pow2_step_1, axpy_step_1 and
-        # axpy_entry_step_1, 7 limbs in 7 kernels.
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7)
+        # axpy_entry_step_1, 7 limbs in 7 kernels. With the folds of maxima: r of norm_combine,
+        # norm_step_1 and norm_step_2, 3 limbs in 3 kernels.
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3)
         s = self.statements
         self.assertIn("  let '(cz0, cz1, rz) := ball_add_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in\n"
                       '  fmt emin prec rz /\\\n  normalized_2 emin prec cz0 cz1 /\\\n  (forall x y : R, ', s)
@@ -795,9 +796,11 @@ class Rocq(unittest.TestCase):
     # statements of bound_dot_1 and bound_dot_2 gained m unit <= 1/2 when ok, as those of bound_sum_k.
     # Then the steps of the maps (fifteen, unverified): every earlier definition and statement is
     # the same, byte for byte, and mul_1_1, which axpy_step_1 calls, is printed earlier, before the
-    # first kernel that calls it; Audit.v lists the same theorems, mul_1_1_correct earlier.
-    DIGESTS = {'Model.v': 'd23dababab5e004ab91f7ccc1e87d40cf206e62aa460714e99b04e95f430ccb0',
-               'Statements.v': '695b4fb7a22a3e46cd1a29f7faa0b534bf3c46c820d70a60cf3ad42dc6fc02f5',
+    # first kernel that calls it; Audit.v lists the same theorems, mul_1_1_correct earlier. Then
+    # the combination and the steps of the folds of maxima (three, unverified): only lines added,
+    # every earlier line kept in its order; Audit.v is the same.
+    DIGESTS = {'Model.v': '54d17099e0e1a7e4856ee586251c0ad909c533f23506838284cc29e1598857f6',
+               'Statements.v': '561deb6e1a0c58ddac8998aa1d2f8e9b70ecbb5caf92f9d148869d81b38afe2d',
                'Audit.v': '67608859876adf8cc9ecf3fdba41d114aaba6040a731d4890e3a10ed5a12c4c0'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
@@ -829,7 +832,7 @@ class Rocq(unittest.TestCase):
             for e in k.ensures:
                 e.pop('finite_when', None)
             finite[name] = k
-        self.assertEqual(len(finite), 69 + 15)          # and the fifteen steps of the maps
+        self.assertEqual(len(finite), 69 + 15 + 3)      # the fifteen steps of the maps, the three of norm_upper_k
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

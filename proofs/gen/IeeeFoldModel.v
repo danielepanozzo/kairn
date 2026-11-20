@@ -60,6 +60,36 @@ Definition dot_2_lanes (W : nat) (xys : list ((float * float) * (float * float))
   let s := fold_lanes dot_2_step dot_2_combine (pzero, pzero) W xys in
   IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst s) (snd s).
 
+(* norm_upper_1: step norm_step_1, combination norm_combine, finish norm_finish_1. *)
+Definition norm_upper_1_step (mok : float * bool) (x : float) : float * bool :=
+  IeeeModel.norm_step_1 prec emax nan_abs (fst mok) (snd mok) x.
+
+Definition norm_upper_1_combine (a b : float * bool) : float * bool :=
+  IeeeModel.norm_combine prec emax (fst a) (snd a) (fst b) (snd b).
+
+Definition norm_upper_1_seq (xs : list float) : float * bool :=
+  let s := fold_seq norm_upper_1_step (pzero, true) xs in
+  IeeeModel.norm_finish_1 prec emax nan_abs nan_const (fst s) (snd s).
+
+Definition norm_upper_1_lanes (W : nat) (xs : list float) : float * bool :=
+  let s := fold_lanes norm_upper_1_step norm_upper_1_combine (pzero, true) W xs in
+  IeeeModel.norm_finish_1 prec emax nan_abs nan_const (fst s) (snd s).
+
+(* norm_upper_2: step norm_step_2, combination norm_combine, finish norm_finish_2. *)
+Definition norm_upper_2_step (mok : float * bool) (x : float * float) : float * bool :=
+  IeeeModel.norm_step_2 prec emax nan_abs (fst mok) (snd mok) (fst x) (snd x).
+
+Definition norm_upper_2_combine (a b : float * bool) : float * bool :=
+  IeeeModel.norm_combine prec emax (fst a) (snd a) (fst b) (snd b).
+
+Definition norm_upper_2_seq (xs : list (float * float)) : float * bool :=
+  let s := fold_seq norm_upper_2_step (pzero, true) xs in
+  IeeeModel.norm_finish_2 prec emax nan_abs nan_const (fst s) (snd s).
+
+Definition norm_upper_2_lanes (W : nat) (xs : list (float * float)) : float * bool :=
+  let s := fold_lanes norm_upper_2_step norm_upper_2_combine (pzero, true) W xs in
+  IeeeModel.norm_finish_2 prec emax nan_abs nan_const (fst s) (snd s).
+
 (* sum_1: step add_1_1, combination add_1_1, finish fold_finish_1. *)
 Definition sum_1_step (s : float) (x : float) : float :=
   IeeeModel.add_1_1 prec emax nan_plus s x.
