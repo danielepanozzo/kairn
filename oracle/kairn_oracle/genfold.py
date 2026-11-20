@@ -393,6 +393,7 @@ def _tight_sum(gen, rng, n, k):
         if lit is not None:
             x, y = lit
             return [tuple(s * v for v in x), tuple(s * v for v in y)] + [(0, 0)] * (n - 2)
+    e0 = _clamp(fmt, e0)
     a0 = s * (1 << (e0 - fmt.qmin) if rng.bits(1) else G.in_binade(fmt, rng, e0))
     if k == 1:
         h = F.ulp(fmt, a0) >> 1
@@ -563,6 +564,7 @@ def _tight_dot(gen, rng, n, ka, kb):
     one = (1 << -fmt.qmin) if fmt.qmin < 0 else None
     if one is None or not F.is_member(fmt, one):
         one = 1 << (fmt.emin_normal - fmt.qmin)
+    e0 = _clamp(fmt, e0)
     a0 = s * (1 << (e0 - fmt.qmin) if rng.bits(1) else G.in_binade(fmt, rng, e0))
     unit_y = (one,) + (0,) * (kb - 1)
     if ka == 1:

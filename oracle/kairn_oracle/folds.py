@@ -36,7 +36,7 @@ from .claims import (ClaimsError, DOMAINS, parse_fraction, format_u_eta, _CANONI
 
 FOLD_FIELDS = {"name", "domain", "arrays", "outputs", "value", "requires", "ensures", "orders",
                "packed_lanes", "step", "combine", "finish", "min_precision", "status",
-               "theorems", "source", "instances"}
+               "theorems", "source", "instances", "writes"}
 ORDERS = ("sequential", "lanes")
 ROLES = ("stored", "supplied")
 HEIGHTS = ("n", "n-1")
@@ -167,6 +167,10 @@ class Fold:
             raise ClaimsError("%s: a fold of the %s domain, whose reading architecture.md does not "
                               "give (every fold of this stage is extended)" % (nm, self.domain))
         self.extended = True
+        if raw.get("writes") not in (None, [], "none"):
+            # A map, whose step writes arrays: its outputs and per-entry claims are not read yet
+            # (oracle/README.md, "Folds", "Not read yet: maps").
+            raise ClaimsError("%s: a fold that writes arrays (a map) is not read yet" % nm)
         arrays = raw.get("arrays")
         if not isinstance(arrays, list) or not arrays:
             raise ClaimsError("%s: arrays must be a nonempty list" % nm)

@@ -203,6 +203,7 @@ def claims_reading_wave5(ctx):
         fold("sum_2", lambda f: f.update(status="maybe")),
         fold("sum_2", lambda f: f["instances"]["binary64"][0].update(eps="1/3")),
         fold("sum_2", lambda f: f.update(name="add_2_2")),
+        fold("sum_2", lambda f: f.update(writes=[{"name": "z", "limbs": 2}])),
     ]
     data = copy.deepcopy(raw)
     for i, k in enumerate(bad_kernels):
