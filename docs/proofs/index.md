@@ -92,8 +92,10 @@ lists:
   the theorems of the maps, `F_correct` per map `F`, and of their steps (`FoldMaps.v`,
   `MapSteps.v`; [below](#loops-that-write-an-array)); of the largest magnitude of an array and
   its kernels, over the real numbers and with overflow, infinities and NaN (`FoldNorm.v`,
-  `IeeeFoldNorm.v`; [below](#the-largest-magnitude-of-an-array)); and of the product of two
-  polynomials (`FoldConv.v`; [below](#the-product-of-two-polynomials));
+  `IeeeFoldNorm.v`; [below](#the-largest-magnitude-of-an-array)); of the product of two
+  polynomials (`FoldConv.v`; [below](#the-product-of-two-polynomials)); and of the kernels of
+  the accumulator, over the real numbers and with overflow, infinities and NaN
+  (`AccKernels.v`, `IeeeAccKernels.v`; [below](#the-accumulator));
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -143,7 +145,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  87 files: no Admitted, admit, Axiom or Parameter
+  89 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -415,6 +417,17 @@ least $\min(n_x, n_y)$, its two numbers bound the error of every coefficient (`c
 These are statements of the real model, as for a map: the statement of a convolution in the
 model with overflow is not generated yet, so nothing is proved of its mask or of a coefficient
 that overflows. No theorem is about the product as a polynomial (its value at a point).
+
+## The accumulator
+
+`Accumulator<T, k>` keeps a running sum $s$ of $k$ limbs, a running sum $a$ in `T` of the
+magnitudes of the leading limbs of what was added, and a count
+([the design](../developer/design/milestone2.md#the-accumulator)). Its state kernels are
+proved against their generated statements in both models: `acc_add_k` (one term),
+`acc_mul_k` (one product) and `acc_merge_k` (another accumulator's state) return the next
+$s$ with the claims of `add_1_1`, `add_2_2` or the step of the dot product, and the next $a$
+as the rounding to nearest of its value (`AccKernels.v`); in the IEEE model each output
+group's claims hold where its own leading limb is finite (`IeeeAccKernels.v`).
 
 ## What a proof does not cover
 

@@ -25,20 +25,52 @@ namespace kairn::gen::bounds {
 // What an error bound is relative to.
 enum class Form { result, operands, terms };
 
-// acc_add_1: UNVERIFIED. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0; rounded.
+// acc_add_1: proved. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0; rounded.
 template <class T> struct acc_add_1;
-template <> struct acc_add_1<double> { static constexpr bool proved = false; };
-template <> struct acc_add_1<float> { static constexpr bool proved = false; };
+template <> struct acc_add_1<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1p-53;
+    static constexpr double tiny = 0.0;
+    static constexpr double unit_computed = 0x1p-53;
+    static constexpr double tiny_computed = 0.0;
+};
+template <> struct acc_add_1<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1p-24f;
+    static constexpr float tiny = 0.0f;
+    static constexpr float unit_computed = 0x1p-24f;
+    static constexpr float tiny_computed = 0.0f;
+};
 
-// acc_merge_1: UNVERIFIED. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0; rounded.
+// acc_merge_1: proved. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0; rounded.
 template <class T> struct acc_merge_1;
-template <> struct acc_merge_1<double> { static constexpr bool proved = false; };
-template <> struct acc_merge_1<float> { static constexpr bool proved = false; };
+template <> struct acc_merge_1<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1p-53;
+    static constexpr double tiny = 0.0;
+    static constexpr double unit_computed = 0x1p-53;
+    static constexpr double tiny_computed = 0.0;
+};
+template <> struct acc_merge_1<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1p-24f;
+    static constexpr float tiny = 0.0f;
+    static constexpr float unit_computed = 0x1p-24f;
+    static constexpr float tiny_computed = 0.0f;
+};
 
-// acc_mul_1: UNVERIFIED. Claims: rounded; rounded.
+// acc_mul_1: proved. Claims: rounded; rounded.
 template <class T> struct acc_mul_1;
-template <> struct acc_mul_1<double> { static constexpr bool proved = false; };
-template <> struct acc_mul_1<float> { static constexpr bool proved = false; };
+template <> struct acc_mul_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct acc_mul_1<float> {
+    static constexpr bool proved = true;
+};
 
 // acc_radius_1: UNVERIFIED. Claims: upper; holds.
 template <class T> struct acc_radius_1;
@@ -917,15 +949,43 @@ template <> struct add_2_2<float> {
     static constexpr float tiny_computed = 0.0f;
 };
 
-// acc_add_2: UNVERIFIED. Claims: normalized; error, form R, c = 3/(1-4*u), k = 2, t = 0; rounded.
+// acc_add_2: proved. Claims: normalized; error, form R, c = 3/(1-4*u), k = 2, t = 0; rounded.
 template <class T> struct acc_add_2;
-template <> struct acc_add_2<double> { static constexpr bool proved = false; };
-template <> struct acc_add_2<float> { static constexpr bool proved = false; };
+template <> struct acc_add_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1.8000000000004p-105;
+    static constexpr double tiny = 0.0;
+    static constexpr double unit_computed = 0x1.8000000000004p-105;
+    static constexpr double tiny_computed = 0.0;
+};
+template <> struct acc_add_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1.800008p-47f;
+    static constexpr float tiny = 0.0f;
+    static constexpr float unit_computed = 0x1.800008p-47f;
+    static constexpr float tiny_computed = 0.0f;
+};
 
-// acc_merge_2: UNVERIFIED. Claims: normalized; error, form R, c = 3/(1-4*u), k = 2, t = 0; rounded.
+// acc_merge_2: proved. Claims: normalized; error, form R, c = 3/(1-4*u), k = 2, t = 0; rounded.
 template <class T> struct acc_merge_2;
-template <> struct acc_merge_2<double> { static constexpr bool proved = false; };
-template <> struct acc_merge_2<float> { static constexpr bool proved = false; };
+template <> struct acc_merge_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr double unit = 0x1.8000000000004p-105;
+    static constexpr double tiny = 0.0;
+    static constexpr double unit_computed = 0x1.8000000000004p-105;
+    static constexpr double tiny_computed = 0.0;
+};
+template <> struct acc_merge_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::result;
+    static constexpr float unit = 0x1.800008p-47f;
+    static constexpr float tiny = 0.0f;
+    static constexpr float unit_computed = 0x1.800008p-47f;
+    static constexpr float tiny_computed = 0.0f;
+};
 
 // mul_2_2: proved. Claims: normalized; error, form R, c = 4, k = 2, t = 3/2.
 template <class T> struct mul_2_2;
@@ -961,10 +1021,20 @@ template <> struct dot_step_2<float> {
     static constexpr float tiny = 0x1p-148f;
 };
 
-// acc_mul_2: UNVERIFIED. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2; rounded.
+// acc_mul_2: proved. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2; rounded.
 template <class T> struct acc_mul_2;
-template <> struct acc_mul_2<double> { static constexpr bool proved = false; };
-template <> struct acc_mul_2<float> { static constexpr bool proved = false; };
+template <> struct acc_mul_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr double unit = 0x1.c000000000002p-104;
+    static constexpr double tiny = 0x1p-1073;
+};
+template <> struct acc_mul_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr float unit = 0x1.c00004p-46f;
+    static constexpr float tiny = 0x1p-148f;
+};
 
 // add_2_1: proved. Claims: normalized; error, form R, c = 2, k = 2, t = 0.
 template <class T> struct add_2_1;

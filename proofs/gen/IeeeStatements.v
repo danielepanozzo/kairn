@@ -15,7 +15,7 @@ From Kairn.Gen Require IeeeModel.
 Import ListNotations.
 Open Scope R_scope.
 
-(* acc_add_1: add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md). IEEE-model status: unverified. *)
+(* acc_add_1: add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md). IEEE-model status: proved. *)
 Definition acc_add_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -31,7 +31,7 @@ Definition acc_add_1_ieee_spec : Prop :=
   (finite b ->
    val b = RN (ieee_emin prec emax) prec (val a + (Rabs (val x)))).
 
-(* acc_merge_1: add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md). IEEE-model status: unverified. *)
+(* acc_merge_1: add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md). IEEE-model status: proved. *)
 Definition acc_merge_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -48,7 +48,7 @@ Definition acc_merge_1_ieee_spec : Prop :=
   (finite b ->
    val b = RN (ieee_emin prec emax) prec (val a + val c)).
 
-(* acc_mul_1: the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md). IEEE-model status: unverified. *)
+(* acc_mul_1: the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md). IEEE-model status: proved. *)
 Definition acc_mul_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -955,7 +955,7 @@ Definition add_2_2_ieee_finite_result_spec : Prop :=
   let '(z0, z1) := IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1 in
   finite z0 /\ finite z1.
 
-(* acc_add_2: add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22. IEEE-model status: unverified. *)
+(* acc_add_2: add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22. IEEE-model status: proved. *)
 Definition acc_add_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -974,7 +974,7 @@ Definition acc_add_2_ieee_spec : Prop :=
   (finite b ->
    val b = RN (ieee_emin prec emax) prec (val a + (Rabs (val x0)))).
 
-(* acc_merge_2: add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22. IEEE-model status: unverified. *)
+(* acc_merge_2: add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22. IEEE-model status: proved. *)
 Definition acc_merge_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1080,7 +1080,7 @@ Definition dot_step_2_ieee_spec : Prop :=
   normalized_2 (ieee_emin prec emax) prec (val t0) (val t1) /\
   Rabs ((val t0 + val t1) - ((val s0 + val s1) + ((val x0 + val x1) * (val y0 + val y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (val s0 + val s1) + Rabs ((val x0 + val x1) * (val y0 + val y1))) + 2 * eta (ieee_emin prec emax).
 
-(* acc_mul_2: the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22. IEEE-model status: unverified. *)
+(* acc_mul_2: the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22. IEEE-model status: proved. *)
 Definition acc_mul_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

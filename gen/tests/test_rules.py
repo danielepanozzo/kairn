@@ -1428,6 +1428,7 @@ class TheKernels(unittest.TestCase):
     NORM = {'norm_combine', 'norm_step_1', 'norm_step_2'} | NORM_FINISH
     # The kernels of the accumulator (milestone2.md, "The accumulator"), of the finite domain.
     ACC = {f'acc_{op}_{k}' for op in ('add', 'mul', 'merge', 'radius') for k in (1, 2)}
+    ACC_RADIUS = {'acc_radius_1', 'acc_radius_2'}
     FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # which were unverified until their proofs were about the generated text: the interval kernels of one
@@ -1483,17 +1484,18 @@ class TheKernels(unittest.TestCase):
         # constructors, which have no real-model statement, by their IEEE-model theorems.
         # Of wave 1 of Milestone 2, every kernel is proved too, the two full scalings of a ball by
         # their IEEE-model theorems (IeeeBallPow2.v), and so is every kernel of the folds' stage,
-        # every step of the maps (MapSteps.v) and those of the folds of maxima included (FoldNorm.v;
-        # the two finishes by their IEEE-model theorems, IeeeFoldNorm.v), but not the kernels of
-        # the accumulator, which are unverified.
+        # every step of the maps (MapSteps.v), those of the folds of maxima (FoldNorm.v; the two
+        # finishes by their IEEE-model theorems, IeeeFoldNorm.v) and the six state kernels of the
+        # accumulator, in both models (AccKernels.v, IeeeAccKernels.v); its two radii are
+        # unverified.
         # The two constructors of a ball are proved for the rule of 2026-11-20, that a NaN radius
         # gives the whole line (IeeeMake.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.MILESTONE1 | self.WAVE_1 | (self.FOLDS - self.ACC) | self.WAVE_2_PROVED)
+                         self.MILESTONE1 | self.WAVE_1 | (self.FOLDS - self.ACC_RADIUS) | self.WAVE_2_PROVED)
         # The kernels of wave 2 were unverified, in both models, until their proofs were about the
-        # generated text; the kernels of the accumulator are unverified.
+        # generated text; the radii of the accumulator are unverified.
         self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
-                         (self.WAVE_2 - self.WAVE_2_PROVED) | self.ACC)
+                         (self.WAVE_2 - self.WAVE_2_PROVED) | self.ACC_RADIUS)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))

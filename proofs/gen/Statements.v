@@ -38,7 +38,7 @@ Definition normalized_2 (x0 x1 : R) : Prop :=
 
 End Vocabulary.
 
-(* acc_add_1: add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md). Status: unverified. *)
+(* acc_add_1: add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md). Status: proved. *)
 Definition acc_add_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall s a x : R,
@@ -53,7 +53,7 @@ Definition acc_add_1_spec : Prop :=
   Rabs (t - (s + x)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (s + x) /\
   b = RN emin prec (a + (Rabs x)).
 
-(* acc_merge_1: add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md). Status: unverified. *)
+(* acc_merge_1: add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md). Status: proved. *)
 Definition acc_merge_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall s a v c : R,
@@ -70,7 +70,7 @@ Definition acc_merge_1_spec : Prop :=
   Rabs (t - (s + v)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (s + v) /\
   b = RN emin prec (a + c).
 
-(* acc_mul_1: the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md). Status: unverified. *)
+(* acc_mul_1: the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md). Status: proved. *)
 Definition acc_mul_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall s a x y : R,
@@ -704,7 +704,7 @@ Definition add_2_2_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) + (y0 + y1)).
 
-(* acc_add_2: add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22. Status: unverified. *)
+(* acc_add_2: add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22. Status: proved. *)
 Definition acc_add_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall s0 s1 a x0 x1 : R,
@@ -718,7 +718,7 @@ Definition acc_add_2_spec : Prop :=
   Rabs ((t0 + t1) - ((s0 + s1) + (x0 + x1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((s0 + s1) + (x0 + x1)) /\
   b = RN emin prec (a + (Rabs x0)).
 
-(* acc_merge_2: add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22. Status: unverified. *)
+(* acc_merge_2: add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22. Status: proved. *)
 Definition acc_merge_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall s0 s1 a v0 v1 c : R,
@@ -755,7 +755,7 @@ Definition dot_step_2_spec : Prop :=
   normalized_2 emin prec t0 t1 /\
   Rabs ((t0 + t1) - ((s0 + s1) + ((x0 + x1) * (y0 + y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (s0 + s1) + Rabs ((x0 + x1) * (y0 + y1))) + 2 * eta emin.
 
-(* acc_mul_2: the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22. Status: unverified. *)
+(* acc_mul_2: the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22. Status: proved. *)
 Definition acc_mul_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall s0 s1 a x0 x1 y0 y1 : R,

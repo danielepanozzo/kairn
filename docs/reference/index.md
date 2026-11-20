@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 155 kernels, 147 are proved and 8 are **UNVERIFIED**: [`acc_add_1`](acc_add_1.md), [`acc_add_2`](acc_add_2.md), [`acc_merge_1`](acc_merge_1.md), [`acc_merge_2`](acc_merge_2.md), [`acc_mul_1`](acc_mul_1.md), [`acc_mul_2`](acc_mul_2.md), [`acc_radius_1`](acc_radius_1.md), [`acc_radius_2`](acc_radius_2.md).
+Of the 155 kernels, 153 are proved and 2 are **UNVERIFIED**: [`acc_radius_1`](acc_radius_1.md), [`acc_radius_2`](acc_radius_2.md).
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -254,12 +254,12 @@ The kernels of the loops over arrays (the folds of Milestone 2): their steps, th
 | none (internal) | - | $r = \max(m, \lvert x_0\rvert)$ | [`norm_step_2`](norm_step_2.md) |
 | none (internal) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_1`](norm_finish_1.md) |
 | none (internal) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_2`](norm_finish_2.md) |
-| not yet called by the public headers | - | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x\rvert)$ | [`acc_add_1`](acc_add_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x_0\rvert)$, normalized | [`acc_add_2`](acc_add_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | $t = \mathrm{RN}(s + x y)$; $b = \mathrm{RN}(a + \lvert x\rvert \lvert y\rvert)$ | [`acc_mul_1`](acc_mul_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$; $b = \mathrm{RN}(a + \lvert x_0\rvert \lvert y_0\rvert)$, normalized | [`acc_mul_2`](acc_mul_2.md) **UNVERIFIED** |
-| none (internal) | - | $t = \mathrm{RN}(s + v)$; $\lvert t - (s + v)\rvert \le \frac{u}{1 + u}\,\lvert s + v\rvert$; $b = \mathrm{RN}(a + c)$ | [`acc_merge_1`](acc_merge_1.md) **UNVERIFIED** |
-| none (internal) | - | $\lvert t - (s + v)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + v\rvert$; $b = \mathrm{RN}(a + c)$, normalized | [`acc_merge_2`](acc_merge_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x\rvert)$ | [`acc_add_1`](acc_add_1.md) |
+| not yet called by the public headers | - | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$; $b = \mathrm{RN}(a + \lvert x_0\rvert)$, normalized | [`acc_add_2`](acc_add_2.md) |
+| not yet called by the public headers | - | $t = \mathrm{RN}(s + x y)$; $b = \mathrm{RN}(a + \lvert x\rvert \lvert y\rvert)$ | [`acc_mul_1`](acc_mul_1.md) |
+| not yet called by the public headers | - | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$; $b = \mathrm{RN}(a + \lvert x_0\rvert \lvert y_0\rvert)$, normalized | [`acc_mul_2`](acc_mul_2.md) |
+| none (internal) | - | $t = \mathrm{RN}(s + v)$; $\lvert t - (s + v)\rvert \le \frac{u}{1 + u}\,\lvert s + v\rvert$; $b = \mathrm{RN}(a + c)$ | [`acc_merge_1`](acc_merge_1.md) |
+| none (internal) | - | $\lvert t - (s + v)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + v\rvert$; $b = \mathrm{RN}(a + c)$, normalized | [`acc_merge_2`](acc_merge_2.md) |
 | none (internal) | - | when $\mathit{ok}$ is true, $r \ge g (1 + u)^{2} (1 + m u + 2m^{2} u^{2}) (a + \frac{m \eta}{2}) + t$; when $\mathit{ok}$ is true, $m u \le \frac{1}{2}$ | [`acc_radius_1`](acc_radius_1.md) **UNVERIFIED** |
 | none (internal) | - | when $\mathit{ok}$ is true, $r \ge g (1 + u)^{2} (1 + m u + 2m^{2} u^{2}) (a + \frac{m \eta}{2}) + t$; when $\mathit{ok}$ is true, $m u \le \frac{1}{2}$ | [`acc_radius_2`](acc_radius_2.md) **UNVERIFIED** |
 

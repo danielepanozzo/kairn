@@ -15,10 +15,12 @@ requires:      nonneg c
 ensures:       rounded t nearest
 ensures:       error t R c=1/(1+u) k=1 t=0
 ensures:       rounded b nearest value=a+c
+theorem:       proofs/theories/AccKernels.v acc_merge_1_correct
+ieee_spec_theorem: proofs/theories/IeeeAccKernels.v acc_merge_1_ieee_correct
 min_precision: 1
 source:        add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md)
 license:       proof: MIT
-status:        unverified
+status:        proved
 ieee:          spec
 cone_exempt:   b, the sum of magnitudes, does not reach t: its claim is read where b is finite (an entry about an output group other than the first), and where b is +inf the mask ok of acc_radius_k is false
 

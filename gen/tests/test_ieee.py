@@ -383,8 +383,9 @@ class Statements(unittest.TestCase):
         # of the folds of maxima and the interval kernels of the extended domain among them
         # (84); then the theorems that the descriptions of the folds' first stage name: 5
         # bridges and 3 correctness statements of the steps, 8 leading limbs, and the 8 folds in
-        # their two orders (32); and the two folds of maxima in their two orders (4).
-        self.assertEqual(text.count('Print Assumptions'), 120)
+        # their two orders (32); and the two folds of maxima in their two orders (4); and the
+        # IEEE-model statements of the six state kernels of the accumulator (6).
+        self.assertEqual(text.count('Print Assumptions'), 126)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -443,9 +444,11 @@ class CheckedFiles(unittest.TestCase):
     # of acc_merge_k and their statements (ieee: spec, each output group's claims under its own
     # leading limb) were added, every earlier line kept; add_2_2, mul_2_2 and dot_step_2, which
     # they call, are printed earlier, before them. Merged here: the regeneration of the merged
-    # descriptions, and make -C proofs passed on these files.
+    # descriptions, and make -C proofs passed on these files. Then the six state kernels were
+    # proved in the IEEE model (IeeeAccKernels.v): the comments above their six statements say
+    # proved, and nothing else changed.
     DIGESTS = {'proofs/gen/IeeeModel.v': 'e247852f05c47c29250a321f81d1237d60885001672ad3b3cd917ca02f17cd7a',
-               'proofs/gen/IeeeStatements.v': '1545a154a8bdf834b0295f8039ef9de80784e3690c52b070e23c32485d2d22e6'}
+               'proofs/gen/IeeeStatements.v': '81b6ef3f9d6c338c3d26b79b697b9bc8ad136482961b39a6447e6a8e24469dc6'}
 
 
     def test_the_checked_files(self):

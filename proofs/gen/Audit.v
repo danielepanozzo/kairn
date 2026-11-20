@@ -5,6 +5,7 @@
    script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import Statements.
 From Kairn.Gen Require Import FoldStatements.
+From Kairn Require Import AccKernels.
 From Kairn Require Import Add21.
 From Kairn Require Import Add22.
 From Kairn Require Import AddFast22.
@@ -32,6 +33,15 @@ From Kairn Require Import Sign.
 From Kairn Require Import Split.
 From Kairn Require Import StepKernels.
 From Kairn Require Import TwoProdDekker.
+
+Definition acc_add_1_audit : acc_add_1_spec := acc_add_1_correct.
+Print Assumptions acc_add_1_correct.
+
+Definition acc_merge_1_audit : acc_merge_1_spec := acc_merge_1_correct.
+Print Assumptions acc_merge_1_correct.
+
+Definition acc_mul_1_audit : acc_mul_1_spec := acc_mul_1_correct.
+Print Assumptions acc_mul_1_correct.
 
 Definition add_1_1_audit : add_1_1_spec := add_1_1_correct.
 Print Assumptions add_1_1_correct.
@@ -186,11 +196,20 @@ Print Assumptions abs_upper_2_correct.
 Definition add_2_2_audit : add_2_2_spec := add_2_2_correct.
 Print Assumptions add_2_2_correct.
 
+Definition acc_add_2_audit : acc_add_2_spec := acc_add_2_correct.
+Print Assumptions acc_add_2_correct.
+
+Definition acc_merge_2_audit : acc_merge_2_spec := acc_merge_2_correct.
+Print Assumptions acc_merge_2_correct.
+
 Definition mul_2_2_audit : mul_2_2_spec := mul_2_2_correct.
 Print Assumptions mul_2_2_correct.
 
 Definition dot_step_2_audit : dot_step_2_spec := dot_step_2_correct.
 Print Assumptions dot_step_2_correct.
+
+Definition acc_mul_2_audit : acc_mul_2_spec := acc_mul_2_correct.
+Print Assumptions acc_mul_2_correct.
 
 Definition add_2_1_audit : add_2_1_spec := add_2_1_correct.
 Print Assumptions add_2_1_correct.

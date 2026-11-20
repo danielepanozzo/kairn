@@ -5,6 +5,7 @@
    for the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import IeeeStatements.
 From Kairn.Gen Require Import IeeeFoldStatements.
+From Kairn Require Import IeeeAccKernels.
 From Kairn Require Import IeeeBallConvert.
 From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
@@ -283,17 +284,35 @@ Print Assumptions to_nearest_2_ieee_correct.
    theorems are named (ieee_bridge_theorem, ieee_spec_theorem, ieee_lead_theorem; the
    ieee_theorem of a fold). *)
 
+Definition acc_add_1_ieee_audit : acc_add_1_ieee_spec := acc_add_1_ieee_correct.
+Print Assumptions acc_add_1_ieee_correct.
+
+Definition acc_merge_1_ieee_audit : acc_merge_1_ieee_spec := acc_merge_1_ieee_correct.
+Print Assumptions acc_merge_1_ieee_correct.
+
+Definition acc_mul_1_ieee_audit : acc_mul_1_ieee_spec := acc_mul_1_ieee_correct.
+Print Assumptions acc_mul_1_ieee_correct.
+
 Definition dot_step_1_ieee_bridge_audit : dot_step_1_ieee_bridge_spec := dot_step_1_ieee_bridge.
 Print Assumptions dot_step_1_ieee_bridge.
 
 Definition sum_entry_step_1_ieee_bridge_audit : sum_entry_step_1_ieee_bridge_spec := sum_entry_step_1_ieee_bridge.
 Print Assumptions sum_entry_step_1_ieee_bridge.
 
+Definition acc_add_2_ieee_audit : acc_add_2_ieee_spec := acc_add_2_ieee_correct.
+Print Assumptions acc_add_2_ieee_correct.
+
+Definition acc_merge_2_ieee_audit : acc_merge_2_ieee_spec := acc_merge_2_ieee_correct.
+Print Assumptions acc_merge_2_ieee_correct.
+
 Definition dot_step_2_ieee_bridge_audit : dot_step_2_ieee_bridge_spec := dot_step_2_ieee_bridge.
 Print Assumptions dot_step_2_ieee_bridge.
 
 Definition dot_step_2_ieee_audit : dot_step_2_ieee_spec := dot_step_2_ieee_correct.
 Print Assumptions dot_step_2_ieee_correct.
+
+Definition acc_mul_2_ieee_audit : acc_mul_2_ieee_spec := acc_mul_2_ieee_correct.
+Print Assumptions acc_mul_2_ieee_correct.
 
 Definition sum_entry_step_2_ieee_bridge_audit : sum_entry_step_2_ieee_bridge_spec := sum_entry_step_2_ieee_bridge.
 Print Assumptions sum_entry_step_2_ieee_bridge.

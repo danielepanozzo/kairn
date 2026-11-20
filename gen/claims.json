@@ -54,8 +54,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/AccKernels.v",
+        "name": "acc_add_1_correct"
+      },
       "source": {
         "cite": "add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md)",
         "license": "proof: MIT"
@@ -134,8 +137,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/AccKernels.v",
+        "name": "acc_merge_1_correct"
+      },
       "source": {
         "cite": "add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md)",
         "license": "proof: MIT"
@@ -204,8 +210,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/AccKernels.v",
+        "name": "acc_mul_1_correct"
+      },
       "source": {
         "cite": "the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md)",
         "license": "proof: MIT"
@@ -5005,8 +5014,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/AccKernels.v",
+        "name": "acc_add_2_correct"
+      },
       "source": {
         "cite": "add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22",
         "license": "algorithm: published; proof: MIT"
@@ -5086,8 +5098,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/AccKernels.v",
+        "name": "acc_merge_2_correct"
+      },
       "source": {
         "cite": "add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22",
         "license": "algorithm: published; proof: MIT"
@@ -5300,8 +5315,11 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/AccKernels.v",
+        "name": "acc_mul_2_correct"
+      },
       "source": {
         "cite": "the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22",
         "license": "algorithm: published; proof: MIT"

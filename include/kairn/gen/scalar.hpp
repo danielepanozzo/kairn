@@ -20,7 +20,7 @@ KAIRN_GEN_PUSH_WARNINGS
 namespace kairn::gen {
 
 // acc_add_1(s, a, x) -> t, b
-// add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md). Status: unverified; constexpr.
+// add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void acc_add_1(double s, double a, double x, double& t_out, double& b_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? x : x + 0.0;
     const double t = s + g;
@@ -39,7 +39,7 @@ KAIRN_GEN_FORCEINLINE constexpr void acc_add_1(float s, float a, float x, float&
 }
 
 // acc_merge_1(s, a, v, c) -> t, b
-// add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md). Status: unverified; constexpr.
+// add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void acc_merge_1(double s, double a, double v, double c, double& t_out, double& b_out) noexcept {
     const double t = s + v;
     const double b = a + c;
@@ -54,7 +54,7 @@ KAIRN_GEN_FORCEINLINE constexpr void acc_merge_1(float s, float a, float v, floa
 }
 
 // acc_mul_1(s, a, x, y) -> t, b
-// the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void acc_mul_1(double s, double a, double x, double y, double& t_out, double& b_out) noexcept {
     const double t = fma_rn(x, y, s);
     const double ax = abs_bits(x);
@@ -3652,7 +3652,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_2(float x0, float x1, float y0, float
 }
 
 // acc_add_2(s = (s0, s1), a, x = (x0, x1)) -> t = (t0, t1), b
-// add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22. Status: unverified; constexpr.
+// add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void acc_add_2(double s0, double s1, double a, double x0, double x1, double& t0_out, double& t1_out, double& b_out) noexcept {
     const double g0 = __builtin_is_constant_evaluated() ? x0 : x0 + 0.0;
     const double g1 = __builtin_is_constant_evaluated() ? x1 : x1 + 0.0;
@@ -3723,7 +3723,7 @@ KAIRN_GEN_FORCEINLINE constexpr void acc_add_2(float s0, float s1, float a, floa
 }
 
 // acc_merge_2(s = (s0, s1), a, v = (v0, v1), c) -> t = (t0, t1), b
-// add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22. Status: unverified; constexpr.
+// add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void acc_merge_2(double s0, double s1, double a, double v0, double v1, double c, double& t0_out, double& t1_out, double& b_out) noexcept {
     // (t0, t1) = add_2_2(s0, s1, v0, v1)
     // (t0_sh, t0_sl) = two_sum(s0, v0)
@@ -3906,7 +3906,7 @@ KAIRN_GEN_FORCEINLINE void dot_step_2(float s0, float s1, float x0, float x1, fl
 }
 
 // acc_mul_2(s = (s0, s1), a, x = (x0, x1), y = (y0, y1)) -> t = (t0, t1), b
-// the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22. Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void acc_mul_2(double s0, double s1, double a, double x0, double x1, double y0, double y1, double& t0_out, double& t1_out, double& b_out) noexcept {
     // (t0, t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
     // (t0_p0, t0_p1) = mul_2_2(x0, x1, y0, y1)
