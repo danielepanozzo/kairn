@@ -48,7 +48,7 @@ of an UNVERIFIED one has `verified == false` and no constants to read, so that n
 be built on a number that is only a target.
 
 In this version every kernel that an operation of these headers calls is proved, so no operation
-needs the marker; the kernels of Milestone 2 written so far are UNVERIFIED and no operation calls
+needs the marker; the kernels of Milestone 2 written so far are proved too, and no operation calls
 them yet ([reference](../reference/index.md)). It is how the operations still to come (three and four limbs, division, square
 root) will ship before their proofs.
 

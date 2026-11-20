@@ -18,9 +18,10 @@ ensures:       encloses cw rw x*c x=cx,rx finite_when=abs_le((abs(cx)+rx)*c,-2) 
 min_precision: 2
 source:        ball_mul_pow2_2, then the fix-up of the special states of a ball (Milestone 2 listing)
 license:       core: as ball_mul_pow2_2; fix-up: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallPow2.v ball_mul_pow2_2_full_correct
 entry:         yes
 ieee_only:     yes
 cone_exempt:   the fix-up selects, after explicit tests that the center and the radius are finite (f) and that the operand is not empty (e); B1 to B4 of milestone1.md, "Ball kernels", state what comes out

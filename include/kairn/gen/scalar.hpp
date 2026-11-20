@@ -561,7 +561,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_1(float cx, float rx, float c
 }
 
 // ball_mul_pow2_1_full(cx, rx, c) -> cw, rw
-// ball_mul_pow2_1, then the fix-up of the special states of a ball (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// ball_mul_pow2_1, then the fix-up of the special states of a ball (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> ball_mul_pow2_1_full(double rx, double cz, double rz, bool e, bool f) noexcept {
@@ -2528,7 +2528,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2(float cx0, float cx1, float
 }
 
 // ball_mul_pow2_2_full(cx = (cx0, cx1), rx, c) -> cw = (cw0, cw1), rw
-// ball_mul_pow2_2, then the fix-up of the special states of a ball (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// ball_mul_pow2_2, then the fix-up of the special states of a ball (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 3> ball_mul_pow2_2_full(double rx, double cz0, double cz1, double rz, bool e, bool f) noexcept {

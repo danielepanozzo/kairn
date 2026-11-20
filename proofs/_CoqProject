@@ -62,3 +62,4 @@ theories/IeeeEntry.v
 theories/IeeeBall.v
 theories/IeeeBallCores.v
 theories/IeeeBallFinite.v
+theories/IeeeBallPow2.v

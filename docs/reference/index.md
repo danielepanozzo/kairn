@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 83 kernels, 81 are proved and 2 are **UNVERIFIED**: [`ball_mul_pow2_1_full`](ball_mul_pow2_1_full.md), [`ball_mul_pow2_2_full`](ball_mul_pow2_2_full.md).
+All 83 kernels are proved.
 
 31 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -146,8 +146,8 @@ Arithmetic on balls: the result contains every result on points of the operands.
 | not yet called by the public headers | - | contains every $x a$, normalized | [`ball_scale_2`](ball_scale_2.md) |
 | not yet called by the public headers | - | contains every $x c$, exactly when nothing underflows | [`ball_mul_pow2_1`](ball_mul_pow2_1.md) |
 | not yet called by the public headers | - | contains every $x c$, exactly when nothing underflows, normalized | [`ball_mul_pow2_2`](ball_mul_pow2_2.md) |
-| not yet called by the public headers | - | a canonical ball that contains every $x c$; the empty set and the whole line included | [`ball_mul_pow2_1_full`](ball_mul_pow2_1_full.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical ball that contains every $x c$; the empty set and the whole line included | [`ball_mul_pow2_2_full`](ball_mul_pow2_2_full.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical ball that contains every $x c$; the empty set and the whole line included | [`ball_mul_pow2_1_full`](ball_mul_pow2_1_full.md) |
+| not yet called by the public headers | - | a canonical ball that contains every $x c$; the empty set and the whole line included | [`ball_mul_pow2_2_full`](ball_mul_pow2_2_full.md) |
 
 ## Building blocks
 

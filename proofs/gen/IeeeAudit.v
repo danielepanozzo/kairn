@@ -6,6 +6,7 @@
 From Kairn.Gen Require Import IeeeStatements.
 From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
+From Kairn Require Import IeeeBallPow2.
 From Kairn Require Import IeeeDirected.
 From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
@@ -33,6 +34,9 @@ Print Assumptions ball_make_1_correct.
 
 Definition ball_mul_1_full_audit : ball_mul_1_full_spec := ball_mul_1_full_correct.
 Print Assumptions ball_mul_1_full_correct.
+
+Definition ball_mul_pow2_1_full_audit : ball_mul_pow2_1_full_spec := ball_mul_pow2_1_full_correct.
+Print Assumptions ball_mul_pow2_1_full_correct.
 
 Definition ball_neg_1_ieee_audit : ball_neg_1_ieee_spec := ball_neg_1_ieee_correct.
 Print Assumptions ball_neg_1_ieee_correct.
@@ -105,6 +109,9 @@ Print Assumptions ball_make_2_correct.
 
 Definition ball_mul_2_full_audit : ball_mul_2_full_spec := ball_mul_2_full_correct.
 Print Assumptions ball_mul_2_full_correct.
+
+Definition ball_mul_pow2_2_full_audit : ball_mul_pow2_2_full_spec := ball_mul_pow2_2_full_correct.
+Print Assumptions ball_mul_pow2_2_full_correct.
 
 Definition neg_2_ieee_audit : neg_2_ieee_spec := neg_2_ieee_correct.
 Print Assumptions neg_2_ieee_correct.

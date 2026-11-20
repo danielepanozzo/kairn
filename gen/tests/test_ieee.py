@@ -266,7 +266,7 @@ class Statements(unittest.TestCase):
     def test_audit(self):
         text = ieee.audit(self.ks)
         # Every kernel of the extended domain names its theorem.
-        self.assertEqual(text.count('Print Assumptions'), 52)
+        self.assertEqual(text.count('Print Assumptions'), 54)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -278,9 +278,10 @@ class CheckedFiles(unittest.TestCase):
     # that build again, and new digests here.
     # With the kernels of wave 1 of Milestone 2, whose definitions and statements were added
     # (every earlier one is the same, byte for byte) and whose statuses the statements file
-    # prints: proved, but the two full scalings of a ball.
+    # prints: proved, the two full scalings of a ball included (the only change of the file when
+    # their proofs landed is those two words).
     DIGESTS = {'proofs/gen/IeeeModel.v': '5f8b52744c5b159c79b59b54a7ab0d6315550e917d4d997962d21f971ce27031',
-               'proofs/gen/IeeeStatements.v': 'e9bc3802c982e641cb4803bffbd0f764b47978942eb2ddf15944b0aa248e5b03'}
+               'proofs/gen/IeeeStatements.v': '71547afdfa7855358d802f2a836dd0a0ec4b0eaa4c67cc8c6b36a17ac39c9179'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

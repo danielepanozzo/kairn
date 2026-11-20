@@ -692,7 +692,7 @@ the generator writes them (`source`, `flops` and the theorem fields left out):
                "finite_when": [{"abs_le": "(abs(cx)+rx)*c", "exp": -2}],
                "exact_when": [{"zero_or_abs_gt": "cx*c", "than": "eta/(2*u)"},
                               {"zero_or_abs_gt": "rx*c", "than": "eta/(2*u)"}]}],
-  "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+  "min_precision": 2, "status": "proved", "ieee_status": "proved",
   "instances": {"binary64": [], "binary32": []}
 }
 ```

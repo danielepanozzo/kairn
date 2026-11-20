@@ -141,7 +141,7 @@ Definition ball_mul_1_full_spec : Prop :=
    ball_finite_1 cw rw) /\
   (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> in_ball_1 cw rw (x * y)).
 
-(* ball_mul_pow2_1_full: ball_mul_pow2_1, then the fix-up of the special states of a ball (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_mul_pow2_1_full: ball_mul_pow2_1, then the fix-up of the special states of a ball (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_mul_pow2_1_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -822,7 +822,7 @@ Definition ball_mul_2_full_spec : Prop :=
    ball_finite_2 cw0 cw1 rw) /\
   (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> in_ball_2 cw0 cw1 rw (x * y)).
 
-(* ball_mul_pow2_2_full: ball_mul_pow2_2, then the fix-up of the special states of a ball (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_mul_pow2_2_full: ball_mul_pow2_2, then the fix-up of the special states of a ball (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_mul_pow2_2_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

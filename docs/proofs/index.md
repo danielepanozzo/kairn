@@ -53,7 +53,8 @@ lists:
   rounding mode, over the real numbers (`DirectedSum.v`, `DirectedProd.v`) and with overflow,
   infinities and NaN (`IeeeDirected.v`, `IeeeDirectedProd.v`), the neighbors of a number and the
   building blocks that guard their operands (`EntryKernels.v`, `IeeeEntry.v`), the scaling of a
-  ball by a power of two over the real numbers (`BallPow2.v`), the lemma that the product of two
+  ball by a power of two over the real numbers (`BallPow2.v`) and, with the special states of a
+  ball, with overflow, infinities and NaN (`IeeeBallPow2.v`), the lemma that the product of two
   intervals rests on (`Rectangle.v`), and the comparison of the two ways a product is executed
   (`IeeeProduct.v`);
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
@@ -90,7 +91,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  58 files: no Admitted, admit, Axiom or Parameter
+  59 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
