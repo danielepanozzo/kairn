@@ -151,7 +151,23 @@ M2_STRATA = {"neighbor": ("special", "binade", "subnormal"),
              "ballpow2": ("atnormal", "sides", "into", "outof"),
              "count": ("integer", "fraction", "limit", "beyond"),
              "dotstep": ("cancel", "state", "zerostate", "tie", "exactprod"),
-             "finish": ("nonfinite", "tails")}
+             "finish": ("nonfinite", "tails"),
+             # The steps of the maps and the kernels of the folds of maxima (gen6.py, gen5.py).
+             "maxfinish": ("nonfinite", "top", "smallstep"),
+             "axpy": ("cancel", "state", "tie", "exactprod", "tight"),
+             "maxof": ("equal", "neighbor", "negative")}
+# The kinds of the folds of maxima: a maximum (norm_combine, norm_step_k) saw each argument
+# larger and both equal; a finish with a mask input and steps up (norm_finish_k) saw the mask
+# both ways, a finite value stepped up to a finite one, a NaN and an infinite value, and, with
+# steps, a finite value stepped up to +inf (Omega).
+MAXIMUM_COUNTS = ("first argument larger", "second argument larger", "arguments equal")
+FINISH_IF_COUNTS = ("mask true", "mask false", "value finite, stepped up finite", "value: NaN",
+                    "value: infinite")
+FINISH_STEP_COUNT = "value finite, stepped up +inf"
+# The steps of axpy (a value a*x+y, an error of form T): the largest error over its bound that a
+# run must reach, by the limbs of y (the reference and the interpreter reach about 1 with one limb
+# and 4/7 with two, in binary64, from the cases of the tight stratum; see oracle/README.md).
+AXPY_FRACTION = {1: (1, 2), 2: (1, 64)}
 
 # The kernels of the bounds (every entry under a mask, a count m): the classes of m * unit(K)
 # that the run must have seen (oracle/README.md, "The kinds of the folds' stage"), with the mask
@@ -187,6 +203,28 @@ FOLD_TAU = ("absolute term larger than the relative term", "error above the rela
 # a thousand times too loose cannot pass.
 FOLD_FRACTION = {1: (1, 2), 2: (1, 16)}
 
+# The maps, the convolutions and the folds of maxima (architecture.md, "Maps", "Convolutions",
+# "Folds of maxima"; oracle/README.md, "Maps", "Convolutions", "Folds of maxima"): the strata of
+# the oracle's generator (genmap.py), tail only for groups of two limbs; the counts each entry
+# must have seen.
+MAP_STRATA = ("one", "wide", "cancel", "tie", "exact", "overflow", "underflow", "zeros",
+              "nonfinite", "tight")
+MAX_STRATA = ("one", "wide", "ties", "position", "zeros", "underflow", "top", "nonfinite")
+MAP_ELEMENTS = ("element: finite operands, finite result",
+                "element: finite operands, not finite (an overflow)",
+                "element: a non-finite operand")
+MAP_FLAGS = ("flag true", "flag false: a non-finite operand",
+             "flag false: finite operands, an overflow")
+CONV_COEFFICIENTS = ("coefficient: finite terms, finite result",
+                     "coefficient: finite terms, not finite (an overflow)",
+                     "coefficient: a non-finite term")
+CONV_LENGTHS = ("n_x = 0", "n_y = 0", "n_x = 1", "n_y = 1", "n_x != n_y")
+MAX_UPPER = ("the largest at the first element", "the largest at the last element",
+             "the largest at another element", "the largest attained more than once",
+             "every element zero", "no element: V = 0", "result at RU(V)")
+MAX_FLAGS = ("flag true", "flag false: a non-finite element")
+MAX_TOP = "flag false: finite elements, the bound's top beyond Omega"
+
 
 def two_operands(kernel):
     """The two operands of a value NAME op NAME (op +, - or *), or None."""
@@ -212,7 +250,17 @@ def m2_family(kernel):
     if any(r.startswith("count(") for r in req):
         return "count"
     if "finite_or_nan" in kinds:
+        if any(e.get("kind") == "finite_or_nan" and ("if" in e or "steps" in e) for e in ens):
+            return "maxfinish"
         return "finish"
+    # The maps and the folds of maxima (gen6.family_of): a maximum, a value a*x+y.
+    if kernel.get("domain", "finite") != "extended":
+        if "maximum" in kinds:
+            return "maxof"
+        m = re.fullmatch(r"\s*([A-Za-z_]\w*)\s*\*\s*([A-Za-z_]\w*)\s*\+\s*([A-Za-z_]\w*)\s*",
+                         kernel.get("value") or "")
+        if m and len({m.group(1), m.group(2), m.group(3)}) == 3:
+            return "axpy"
     if re.fullmatch(r"\s*([A-Za-z_]\w*)\s*\+\s*([A-Za-z_]\w*)\s*\*\s*([A-Za-z_]\w*)\s*",
                     kernel.get("value") or ""):
         return "dotstep"
@@ -282,6 +330,12 @@ def m2_needs(kernel, e, extended):
     if kind in ("error", "encloses") and e.get("exact_when"):
         need.append(EXACT_HOLDS)
         need += [EXACT_FAILS + ew_text(c) for c in e["exact_when"] if isinstance(c, dict)]
+    if kind == "maximum":
+        need += MAXIMUM_COUNTS
+    if kind == "finite_or_nan" and ("if" in e or "steps" in e):
+        need += FINISH_IF_COUNTS
+        if isinstance(e.get("steps"), int) and e.get("steps") >= 1:
+            need.append(FINISH_STEP_COUNT)
     return need
 
 
@@ -389,9 +443,38 @@ def count_problems(kernel, keys, a):
                        % (label, CLOSE_GAPS, "none" if r is None else "%s/%s" % r))
 
 
+def axpy_problems(kernel, keys, a):
+    """The steps of axpy (gen6's family axpy): the error entry came to at least AXPY_FRACTION of
+    its bound somewhere, so that a bound far too loose cannot pass (a random run; an enumeration of
+    a toy format is complete by itself)."""
+    if m2_family(kernel) != "axpy" or a.exhaustive:
+        return
+    ky = {i.get("name"): i.get("limbs", 1) for i in kernel.get("inputs", [])}.get(
+        re.findall(r"[A-Za-z_]\w*", kernel.get("value") or "")[-1], 1)
+    num, den = AXPY_FRACTION[2 if ky >= 2 else 1]
+    for j, e in enumerate(kernel.get("ensures", [])):
+        if e.get("kind") != "error":
+            continue
+        best = None
+        for k in keys:
+            r = k["stats"]["entries"][j].get("max_ratio") if j < len(k["stats"]["entries"]) else None
+            if r is not None and int(r[1]):
+                v = (int(r[0]), int(r[1]))
+                best = v if best is None or v[0] * best[1] > best[0] * v[1] else best
+        if best is None or best[0] * den < num * best[1]:
+            yield ('the claim "%s" came to at most %s of its bound, below %d/%d: a bound far too '
+                   'loose would pass' % (keys[0]["stats"]["entries"][j]["label"] if keys else
+                                         e.get("kind"), "nothing" if best is None else
+                                         "%.3g" % (best[0] / best[1]), num, den))
+
+
 def fold_problems(fold, summary, a, desc, ranges):
     """The guards of a fold (oracle/README.md, "Folds"; docs/developer/testing.md, "What a pass
     requires")."""
+    if fold.get("map") or fold.get("conv") or any(e.get("kind") == "upper"
+                                                  for e in fold.get("ensures", [])):
+        yield from other_fold_problems(fold, summary, a, desc, ranges)
+        return
     two = max(x.get("limbs", 1) for x in fold.get("arrays", [{}])) >= 2
     maxlen = getattr(a, "max_length", None)
     maxlen = int(maxlen) if maxlen is not None else None
@@ -502,6 +585,191 @@ def fold_problems(fold, summary, a, desc, ranges):
             yield ('the claim "%s" came to at most %s of its bound, below %d/%d: a bound far too '
                    'loose would pass' % (label, "nothing" if r is None else
                                          "%.3g" % (r[0] / r[1]) if r[1] else "inf", num, den))
+
+
+def _merged(keys, j):
+    """The counts of entry j over the keys, its applicable cases and its largest ratio."""
+    counts, applicable, best = {}, 0, None
+    for k in keys:
+        ents = k["stats"]["entries"]
+        if j >= len(ents):
+            continue
+        e = ents[j]
+        applicable += e["applicable"]
+        for name, n in e.get("counts", {}).items():
+            counts[name] = counts.get(name, 0) + n
+        r = e.get("max_ratio")
+        if r is not None:
+            v = (int(r[0]), int(r[1]))
+            if best is None or v[0] * best[1] > best[0] * v[1]:
+                best = v
+    return counts, applicable, best
+
+
+def _lengths_orders(counts, label, lengths, orders, a, want_max):
+    for n in lengths:
+        if not counts.get("length %d" % n):
+            yield 'the claim "%s" saw no judged array of length %d' % (label, n)
+    if not a.exhaustive and want_max >= 18 and not any(
+            counts.get(c) for c in counts if c.startswith("length ") and " to " in c
+            or c.startswith("length above")):
+        yield 'the claim "%s" saw no judged array of a random length above 17' % label
+    for o in orders:
+        if o == "seq":
+            name = "order: sequential"
+        elif o == "lanes:big":
+            name = "order: lanes, more lanes than elements (W > n >= 1)"
+        else:
+            W = int(o[6:])
+            name = ("order: lanes, W = %d" % W if W <= 8 else
+                    "order: lanes, W = 9 to 64" if W <= 64 else "order: lanes, W above 64")
+        if not counts.get(name):
+            yield 'the claim "%s" saw no judged case of "%s"' % (label, name)
+
+
+def _fraction(label, best, num, den):
+    if best is None or best[1] == 0 or best[0] * den < num * best[1]:
+        yield ('the claim "%s" came to at most %s of its bound, below %d/%d: a bound far too '
+               'loose would pass' % (label, "nothing" if best is None else
+                                     "%.3g" % (best[0] / best[1]) if best[1] else "inf", num, den))
+
+
+def other_fold_problems(fold, summary, a, desc, ranges):
+    """The guards of a map, a convolution and a fold of maxima (oracle/README.md, "Maps",
+    "Convolutions", "Folds of maxima")."""
+    kind = "map" if fold.get("map") else "conv" if fold.get("conv") else "max"
+    lim = [x.get("limbs", 1) for x in fold.get("arrays", [])] + [
+        x.get("limbs", 1) for x in fold.get("scalars", [])]
+    two = max(lim or [1]) >= 2
+    maxlen = getattr(a, "max_length", None)
+    maxlen = int(maxlen) if maxlen is not None else None
+    default_orders = "seq" if kind == "conv" else FOLD_DEFAULT_ORDERS
+    if a.exhaustive:
+        total = int(desc.get("total", -1))
+        if ranges != [[0, total]]:
+            yield "the enumeration of %d cases was not covered (indices seen: %s)" % (total, ranges)
+        if maxlen is None or desc.get("maxlen") != str(maxlen):
+            yield ("the enumeration is of arrays up to length %s, not %s"
+                   % (desc.get("maxlen"), maxlen))
+        strata = ["exhaustive"]
+        want_max = maxlen or 0
+        lengths = list(range(want_max + 1))
+        orders = ["seq"] + (["lanes:%d" % W for W in range(2, want_max + 1)] if kind != "conv"
+                            else [])
+    else:
+        if desc.get("seed") != a.seed or ranges != [[0, a.count]]:
+            yield ("the stream is indices %s of seed %s, not cases 0 to %d of seed %s"
+                   % (ranges, desc.get("seed"), a.count, a.seed))
+        want_orders = getattr(a, "orders", None) or default_orders
+        if desc.get("orders") != want_orders:
+            yield "the stream's orders are %s, not %s" % (desc.get("orders"), want_orders)
+        want_max = maxlen if maxlen is not None else FOLD_DEFAULT_MAX_LENGTH
+        if desc.get("maxlen") != str(want_max):
+            yield "the stream's largest length is %s, not %s" % (desc.get("maxlen"), want_max)
+        strata = [x for x in desc.get("strata", "").split(",") if x]
+        want = {"map": MAP_STRATA, "max": MAX_STRATA, "conv": FOLD_STRATA}[kind]
+        for x in want + (("tail",) if two else ()):
+            if x not in strata:
+                yield ("the oracle's generator lists the strata %s, without %s, which it writes "
+                       "for %s" % (",".join(strata), x, a.kernel))
+        lengths = [n for n in FOLD_LENGTHS if n <= want_max]
+        orders = sorted(set(want_orders.split(",")))
+    keys = [k for k in summary.get("keys", []) if (k["kernel"], k["format"]) == (a.kernel, a.format)]
+    if len(keys) != len(summary.get("keys", [])):
+        yield "the summary has lines of other kernels or formats"
+    tags = {k["tag"] for k in keys}
+    for x in strata:
+        if x not in tags:
+            yield "no case of stratum %s, although the oracle's generator lists it" % x
+    for t in sorted(tags - set(strata)):
+        yield "lines tagged %s, which the generator's header does not list" % t
+    if not sum(k["stats"]["counts"]["judged"] for k in keys):
+        yield "the oracle passed it, but judged no case, so nothing was checked"
+        return
+    ens = fold.get("ensures", [])
+    entries = keys[0]["stats"]["entries"]
+    # The entries of the claims first, then those of the step (a map) or of the fold of the
+    # coefficients (a convolution) that the first one applies.
+    if kind == "map":
+        sub_claims, _ = kernel_claims(summary, argparse.Namespace(kernel=fold.get("step"),
+                                                                  claims=getattr(a, "claims", None)))
+        sub = list((sub_claims or {}).get("ensures", []))
+    elif kind == "conv":
+        data_fold, _ = kernel_claims(summary, argparse.Namespace(
+            kernel=fold.get("coefficients"), claims=getattr(a, "claims", None)), folds=True)
+        sub = [e for e in (data_fold or {}).get("ensures", []) if e.get("kind") != "finite_or_nan"]
+    else:
+        sub = []
+    want_kinds = [e.get("kind") for e in ens] + [e.get("kind") for e in sub]
+    if [e["kind"] for e in entries] != want_kinds:
+        yield ("the summary's entries (%s) are not those of the claims of %s (%s)"
+               % (", ".join(e["kind"] for e in entries), a.kernel, ", ".join(map(str, want_kinds))))
+        return
+    for j, e in enumerate(entries):
+        counts, applicable, best = _merged(keys, j)
+        label = e["label"]
+        if not applicable:
+            yield 'the claim "%s" applied to no judged case, so it was not checked' % label
+            continue
+        k = e["kind"]
+        if k == "entries":
+            yield from _lengths_orders(counts, label, lengths, orders, a, want_max)
+            for name in MAP_ELEMENTS:
+                if not counts.get(name) and (not a.exhaustive or want_max >= 1):
+                    yield 'the claim "%s" saw no case "%s"' % (label, name)
+        elif k == "coefficients":
+            need = CONV_COEFFICIENTS + tuple(c for c in CONV_LENGTHS
+                                             if not a.exhaustive or want_max >= 1)
+            if not a.exhaustive:
+                need += ("n_x above 2", "n_y above 2")
+            for name in need:
+                if not counts.get(name):
+                    yield 'the claim "%s" saw no case "%s"' % (label, name)
+        elif k == "finite_or_nan":
+            for name in (MAX_FLAGS if kind == "max" else MAP_FLAGS):
+                if not counts.get(name):
+                    yield 'the claim "%s" saw no case "%s"' % (label, name)
+            if kind == "max" and two and not counts.get(MAX_TOP):
+                yield 'the claim "%s" saw no case "%s"' % (label, MAX_TOP)
+        elif k == "upper":
+            yield from _lengths_orders(counts, label, lengths, orders, a, want_max)
+            steps = next((x.get("steps") for x in ens if x.get("kind") == "upper"), 0)
+            need = list(MAX_UPPER) + (["result %d step%s above RU(V)" % (steps, "" if steps == 1
+                                                                          else "s")]
+                                      if steps else [])
+            if two:
+                need.append("V not a number of the format")
+            if a.exhaustive and want_max < 3:
+                # Arrays of one or two elements have no element between the first and the last,
+                # and of one element no last one apart from the first, nor a largest twice.
+                need.remove("the largest at another element")
+                if want_max < 2:
+                    need.remove("the largest at the last element")
+                    need.remove("the largest attained more than once")
+            for name in need:
+                if not counts.get(name):
+                    yield 'the claim "%s" saw no case "%s"' % (label, name)
+        elif k == "rounded" and "nearest" in label:
+            if not counts.get("inexact") and not counts.get("tie"):
+                yield 'the claim "%s" saw only exact cases' % label
+        elif k == "fold_error":
+            # The coefficients of a convolution: their terms counted as a dot product's array.
+            if not a.exhaustive and not counts.get(FOLD_CANCEL):
+                yield 'the claim "%s" saw no judged case of "%s"' % (label, FOLD_CANCEL)
+            if not a.exhaustive or want_max >= 2:
+                for n in (1, 2):
+                    if not counts.get("length %d" % n):
+                        yield 'the claim "%s" saw no coefficient of %d terms' % (label, n)
+            if "*" in (fold.get("value") or "") and not a.exhaustive:
+                for name in FOLD_TAU:
+                    if not counts.get(name):
+                        yield 'the claim "%s" saw no judged case of "%s"' % (label, name)
+            num, den = FOLD_FRACTION[2 if two else 1]
+            yield from _fraction(label, best, num, den)
+        elif k == "error":
+            # The step of a map: as close to its bound as its tight stratum brings it.
+            num, den = (1, 2) if not two else (1, 16)
+            yield from _fraction(label, best, num, den)
 
 
 def problems(summary, a):
@@ -615,6 +883,7 @@ def problems(summary, a):
                        'direction was not checked' % label)
     yield from m2_problems(kernel, entries, merged, extended)
     yield from count_problems(kernel, keys, a)
+    yield from axpy_problems(kernel, keys, a)
     if not extended:
         return
 
@@ -630,7 +899,9 @@ def problems(summary, a):
     for j, e in enumerate(own):
         label, counts = entries[j]["label"], merged[j]
         need = list(EXTENDED_COUNTS.get(e.get("kind"), ()))
-        if e.get("kind") == "finite_or_nan":
+        if e.get("kind") == "finite_or_nan" and ("if" in e or "steps" in e):
+            need = []
+        elif e.get("kind") == "finite_or_nan":
             ins = {i.get("name"): i.get("limbs", 1) for i in kernel.get("inputs", [])}
             if ins.get((kernel.get("value") or "").strip(), 1) > 1:
                 need.append(FINITE_OR_NAN_TAIL)
@@ -736,6 +1007,22 @@ def describe(summary, a):
             "exact", "inexact", "den = 0", "first rounding a tie", "second rounding a tie",
             "naive pair not normalized", "second limb subnormal"))
     fold, _ = kernel_claims(summary, a, folds=True)
+    if fold is not None and (fold.get("map") or fold.get("conv") or any(
+            e.get("kind") == "upper" for e in fold.get("ensures", []))):
+        out = []
+        entries = summary["keys"][0]["stats"]["entries"] if summary["keys"] else []
+        for j, e in enumerate(entries):
+            counts, _app, best = _merged(summary["keys"], j)
+            if e["kind"] in ("error", "fold_error") and best is not None and best[1]:
+                out.append("%s: largest error/allowed %.4g" % (e["label"].split(":")[0],
+                                                               best[0] / best[1]))
+            elif e["kind"] == "finite_or_nan":
+                out += ["%s %d" % (n, counts.get(n, 0)) for n in sorted(counts)
+                        if n.startswith("flag")]
+            elif e["kind"] == "upper":
+                out += ["%s %d" % (n, counts.get(n, 0)) for n in sorted(counts)
+                        if n.startswith("result")]
+        return text + "; " + ", ".join(out)
     if fold is not None:
         out = []
         for j, f in enumerate(fold.get("ensures", [])):

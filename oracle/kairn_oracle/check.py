@@ -530,6 +530,16 @@ class Plan:
                 c.update(gn=e.gaps.numerator, gd=e.gaps.denominator)
             elif e.kind == "finite_or_nan":
                 c.update(flag=self.out_slices[e.flag][0], operand=self.in_slices[e.operand])
+                if e.cond_in is not None or e.steps:
+                    # The finishes of the folds of maxima: the mask input and the steps up.
+                    c.update(cond_in=(self.in_slices[e.cond_in][0] if e.cond_in is not None
+                                      else None), steps=e.steps)
+            elif e.kind == "maximum":
+                (a, sa), (b, sb) = [EX.compile_tree(t, self._leaf) for t in e.margs]
+                s = min(sa, sb, q)
+                # Both arguments and the output at their common scale: integers compared.
+                c["fn"] = EX.make_function(["x"], "(%s<<%d, %s<<%d)" % (a, sa - s, b, sb - s))
+                c["sh_out"] = q - s
             elif e.kind == "predicate":
                 (a, sa), (b, sb) = [EX.compile_tree(t, self._leaf) for t in e.args]
                 s = min(sa, sb)
@@ -1355,6 +1365,19 @@ class Checker:
         else:
             es.track_min("m*unit(%s) where %s" % (kn, what), tt, line)
 
+    def _maximum(self, pl, e, es, x, z, V, _r, line):
+        """The output is the larger of the exact values of the two arguments (the folds of
+        maxima): counts of which one it is."""
+        es.applicable += 1
+        a, b = e["fn"](x)
+        es.count("first argument larger" if a > b else "second argument larger" if b > a
+                 else "arguments equal")
+        if (a < 0) != (b < 0):
+            es.count("arguments of both signs")
+        if z[e["first"]] << e["sh_out"] != max(a, b):
+            return "maximum: the output is not the larger of %s" % es.label.split(" of ", 1)[-1]
+        return None
+
     def _fail(self, st, line, why):
         st.c["failed"] += 1
         st.reason(why)
@@ -1368,7 +1391,8 @@ class Checker:
 
 SECOND_WAVE_KINDS = {"rounded": Checker._rounded, "upper": Checker._upper,
                      "predicate": Checker._predicate, "encloses": Checker._encloses,
-                     "neighbor": Checker._neighbor, "bound": Checker._bound}
+                     "neighbor": Checker._neighbor, "bound": Checker._bound,
+                     "maximum": Checker._maximum}
 
 
 # ---------------------------------------------------------------------------

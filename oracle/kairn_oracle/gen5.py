@@ -26,6 +26,11 @@ shape, and strata of its own, which come round two or three times per cycle:
              tails     a finite leading limb with a lower limb that is not finite, or with a
                        finite lower limb that does not normalize it (the state is passed on as it
                        is)
+    maxfinish          a finite_or_nan entry with `if` or `steps` (the finishes of the folds of
+                       maxima, norm_finish_k): the strata of finish, the mask random, and
+             top       Omega, the numbers just below it and -Omega: the step up to +inf
+             smallstep the zeros, +-eta, +-2 eta, +-lambda and its neighbours: the steps up from
+                       -eta to a zero and from a zero to eta
 
 `count` takes unit(K) of the kernel K that the bound is for from the claims (the kernel's entries
 name it), so that the limit is placed in every format.  Every case is checked against the
@@ -46,6 +51,7 @@ FAMILY_STRATA = {
     "count": COMMON + ("integer", "fraction", "limit", "beyond"),
     "dotstep": COMMON + ("cancel", "state", "zerostate", "tie", "exactprod"),
     "finish": COMMON + ("nonfinite", "tails"),
+    "maxfinish": COMMON + ("nonfinite", "top", "smallstep"),
 }
 FAMILY_SCHEDULE = {
     "count": ("uniform", "integer", "limit", "fraction", "integer", "limit", "beyond", "underflow",
@@ -54,6 +60,8 @@ FAMILY_SCHEDULE = {
                 "underflow", "cancel", "state", "overflow", "pow2", "extreme", "zero"),
     "finish": ("uniform", "nonfinite", "tails", "nonfinite", "underflow", "tails", "overflow",
                "nonfinite", "zero", "pow2", "extreme"),
+    "maxfinish": ("uniform", "nonfinite", "top", "smallstep", "nonfinite", "underflow", "top",
+                  "overflow", "smallstep", "zero", "pow2", "extreme"),
 }
 FAMILIES = tuple(FAMILY_STRATA)
 
@@ -63,6 +71,9 @@ def family_of(kernel):
     if any(r[0] == "count" for r in kernel.requires):
         return "count"
     if any(e.kind == "finite_or_nan" for e in kernel.ensures):
+        if any(e.kind == "finite_or_nan" and (getattr(e, "cond_in", None) is not None
+                                              or getattr(e, "steps", 0)) for e in kernel.ensures):
+            return "maxfinish"
         return "finish"
     t = kernel.value_tree
     if t is not None and t[0] == "+":
@@ -364,11 +375,28 @@ def _finish(fmt, sh, rng, stratum):
 
 # ---------------------------------------------------------------------------
 
+def _maxfinish(fmt, sh, rng, stratum):
+    """The state of a fold of maxima, a limb m (the mask is drawn by make_case)."""
+    if stratum == "top":
+        om = fmt.omega
+        k = rng.below(5)
+        v = om if k < 2 else F.pred(fmt, om) if k == 2 else F.pred(fmt, F.pred(fmt, om)) \
+            if k == 3 else -om
+        return {sh.state: [v if type(v) is int else om]}
+    if stratum == "smallstep":
+        cands = [0, 1, -1, 2, -2, fmt.lam, fmt.lam - 1, fmt.lam + 1, -fmt.lam, -(fmt.lam - 1)]
+        v = cands[rng.below(len(cands))]
+        return {sh.state: [v if F.is_member(fmt, v) else 0]}
+    return _finish(fmt, sh, rng, "uniform" if stratum == "tails" else stratum)
+
+
 def make_case(fmt, sh, rng, stratum):
     if sh.family == "count":
         vals = {sh.m: [_count(fmt, sh, rng, stratum)]}
     elif sh.family == "dotstep":
         vals = _dotstep(fmt, sh, rng, stratum)
+    elif sh.family == "maxfinish":
+        vals = _maxfinish(fmt, sh, rng, stratum)
     else:
         vals = _finish(fmt, sh, rng, stratum)
     for n in sh.names:

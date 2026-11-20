@@ -36,6 +36,25 @@ class Plan(unittest.TestCase):
             self.assertIn("--max-length", brute.gen_extra(e))
             self.assertTrue(brute.enum_key(e).endswith("__L%d" % e["maxlen"]))
 
+    def test_the_shapes_of_folds(self):
+        # The maps, the convolutions and the folds of maxima have shapes of their own, those of
+        # tests/CMakeLists.txt (_fold_toy_SHAPE), and the first format of each is the full tier's.
+        folds = {f["name"]: f for f in brute.load_folds()}
+        want = {"add_1": "map_1_1", "sub_2_entry": "map_2_2", "axpy_1": "map_s1_1_1",
+                "axpy_2": "map_s2_2_2", "axpy_2_1_entry": "map_s1_2_2", "scale_1": "map_s1_1",
+                "scale_2": "map_s1_2", "mul_pow2_map_1": "map_sc_1", "mul_pow2_map_2": "map_sc_2",
+                "norm_upper_1": "max_1", "norm_upper_2": "max_2", "conv_1": "conv_1_1",
+                "conv_2": "conv_2_2", "sum_2": "2", "dot_1": "1_1"}
+        for name, shape in want.items():
+            if name in folds:
+                self.assertEqual(brute.fold_shape(folds[name]), shape, name)
+        with open(os.path.join(brute.REPO, "tests", "CMakeLists.txt"), encoding="utf-8") as f:
+            cm = f.read()
+        for shape, formats in brute.FOLD_SHAPES.items():
+            m = brute.re.search(r"^set\(_fold_toy_%s (\S+) (\d+) " % shape, cm, brute.re.M)
+            self.assertIsNotNone(m, shape)
+            self.assertEqual((m.group(1), int(m.group(2))), formats[0], shape)
+
     def test_the_interpreter_accepts_every_format(self):
         # Every constant of every kernel (the splitter, the constants of the Ball radii) is a
         # number of each format the plan gives it.

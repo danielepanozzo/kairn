@@ -383,6 +383,89 @@ MUTANTS = {
     "finite_or_nan: a non-NaN output of a non-finite value accepted": (
         "extended.py", "    elif not all(v == NAN for v in w):\n        out.append(\"finite_or_nan: limb 0",
         "    elif False:\n        out.append(\"finite_or_nan: limb 0"),
+    # Stage B of Milestone 2: the maps, the folds of maxima, the convolutions, their kernels.
+    "map: a finite element from a non-finite operand accepted": (
+        "maps.py", '                bad_e.append("element %d is finite although an operand is not" % i)',
+        "                pass"),
+    "map: the canonical NaN of the second pass not required": (
+        "maps.py", "        if not all(t == NAN for t in z):\n            reasons.append(\"finite_or_nan: element",
+        "        if False:\n            reasons.append(\"finite_or_nan: element"),
+    "map and conv: the flag not compared": (
+        "maps.py", "    if flag != want:", "    if False:"),
+    "map: the step's verdict on an element ignored": (
+        "maps.py", '                bad_e.extend("element %d: %s" % (i, r) for r in v[1])',
+        "                pass"),
+    "map: a finite element beyond Omega accepted": (
+        "maps.py", '                bad_e.append("element %d: %s" % (i, "the step\'s exact result rounds beyond Omega, "',
+        '                ("element %d: %s" % (i, "the step\'s exact result rounds beyond Omega, "'),
+    "map: power_of_two of a scalar not checked": (
+        "maps.py", "        if type(v) is not int or v <= 0 or v & (v - 1):", "        if False:"),
+    "map: canonical of an element not checked": (
+        "maps.py", "            if not XT.canonical(fmt, x[lo:lo + 2]):", "            if False:"),
+    "map: the step's arguments in the reverse order": (
+        "maps.py", "        self.args = [pos[n] for n in m.step_args]",
+        "        self.args = [pos[n] for n in reversed(m.step_args)]"),
+    "map: a step requirement the map lacks accepted": (
+        "maps.py", '            raise ClaimsError("%s: the step requires %s(%s), which the map does not require of %s"\n                              % (nm, r[0], ", ".join(r[1:]), arg))',
+        "            pass"),
+    "map: the value not compared with the step's": (
+        "maps.py", "        if k.value_tree is None or not _same_value(k.value_tree, self.value_tree, rename):",
+        "        if k.value_tree is None:"),
+    "conv: each coefficient without its last term": (
+        "maps.py", "    return [(i, j - i) for i in range(max(0, j - ny + 1), min(j, nx - 1) + 1)]",
+        "    return [(i, j - i) for i in range(max(0, j - ny + 1), min(j, nx - 1))]"),
+    "conv: a coefficient's fold_error not judged": (
+        "maps.py", "                    why = FO._fold_error(dot, e, es, case, zz, line)\n                    if why:",
+        "                    why = FO._fold_error(dot, e, es, case, zz, line)\n                    if False:"),
+    "conv: the canonical NaN not required": (
+        "maps.py", "        if not all(t == NAN for t in z):\n            reasons.append(\"finite_or_nan: coefficient",
+        "        if False:\n            reasons.append(\"finite_or_nan: coefficient"),
+    "conv: canonical() of an entry not checked": (
+        "maps.py", "            if not XT.canonical(fmt, e[lo - off:hi - off]):", "            if False:"),
+    "conv: the two lengths read swapped": (
+        "maps.py", "    nx, ny = int(lt[3]), int(lt[4])", "    ny, nx = int(lt[3]), int(lt[4])"),
+    "claims: a convolution read in the order of the list": (
+        "claims.py", "            for raw in [r for r in fl if not any(r is c for c in convs)] + convs:",
+        "            for raw in fl:"),
+    "maxima: a result below V accepted": (
+        "folds.py", "    if rc < Vc:\n        # (Beyond Omega too", "    if False:\n        # (Beyond Omega too"),
+    "maxima: a step more allowed": (
+        "folds.py", '    while t != r and k < c["steps"]:', '    while t != r and k < c["steps"] + 1:'),
+    "maxima: a false flag with a finite top accepted": (
+        "folds.py", "        if type(top) is int:\n            return (\"the flag is false although every element is finite and the bound",
+        "        if False:\n            return (\"the flag is false although every element is finite and the bound"),
+    "maxima: V the value of the first element": (
+        "folds.py", "    return max(case.vals) if case.vals else 0", "    return case.vals[0] if case.vals else 0"),
+    "maxima: over not read": (
+        "folds.py", '            if raw["over"] != "max":', "            if False:"),
+    "maximum: the output not compared": (
+        "check.py", '        if z[e["first"]] << e["sh_out"] != max(a, b):', "        if False:"),
+    "maximum: the smaller argument expected": (
+        "check.py", '        if z[e["first"]] << e["sh_out"] != max(a, b):', '        if z[e["first"]] << e["sh_out"] != min(a, b):'),
+    "maximum: the outcomes swapped": (
+        "check.py", 'es.count("first argument larger" if a > b else "second argument larger" if b > a',
+        'es.count("second argument larger" if a > b else "first argument larger" if b > a'),
+    "finite_or_nan with if: the mask ignored": (
+        "extended.py", '    on = c["cond_in"] is None or x[c["cond_in"]] == 1', "    on = True"),
+    "finite_or_nan with steps: the steps ignored": (
+        "extended.py", '    for _ in range(c["steps"]):\n        t = next_up(fmt, t)', "    for _ in range(0):\n        t = next_up(fmt, t)"),
+    "finite_or_nan with steps: nextUp of -inf is -inf": (
+        "extended.py", "    if v == NINF:\n        return -fmt.omega", "    if v == NINF:\n        return v"),
+    "claims: steps 0 of finite_or_nan accepted": (
+        "claims.py", "            if not isinstance(st, int) or isinstance(st, bool) or st < 1:",
+        "            if not isinstance(st, int) or isinstance(st, bool) or st < 0:"),
+    "claims: if of finite_or_nan naming an output accepted": (
+        "claims.py", "            if not isinstance(m, str) or m not in kernel.input_names or m not in kernel.masks:",
+        "            if not isinstance(m, str):"),
+    "genmap: no overflow among the elements of a sum": (
+        "genmap.py", '    elif mode == "overflow":\n        t = rng.below(3)', '    elif mode == "no overflow":\n        t = rng.below(3)'),
+    "genmap: no convolution of an empty array": (
+        "genmap.py", 'CONV_LENGTHS = ((0, 0), (0, "s"), ("s", 0),', 'CONV_LENGTHS = ((1, 1), (1, "s"), ("s", 1),'),
+    "gen6: the tight case of axpy off the tie": (
+        "gen6.py", "        y = _scaled_exact(fmt, (4 * j + 1) * u, E)", "        y = _scaled_exact(fmt, (4 * j + 3) * u, E)"),
+    "gen2: the one-limb scale family's operand of two limbs": (
+        "gen2.py", "    vals[xn] = [x]\n    vals[cn] = [_pow2(fmt, n)]\n    return vals",
+        "    vals[xn] = [x, 0]\n    vals[cn] = [_pow2(fmt, n)]\n    return vals"),
 }
 
 

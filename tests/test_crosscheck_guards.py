@@ -761,6 +761,142 @@ class FoldGuards(unittest.TestCase):
             self.assertIn("did not check what it set out to", bad.stdout)
 
 
+class StageBGuards(unittest.TestCase):
+    """Stage B of Milestone 2: the maps (lengths, orders, the classes of the elements and of the
+    flag, the step's entries and how close its error comes to its bound), the folds of maxima (where
+    the largest is, the result at and one step above RU(V), the bound's top beyond Omega), the
+    convolutions (lengths 0 and 1 on either side, unequal lengths, the classes of the coefficients,
+    the fold's error), and the kernels: the steps of axpy (their strata, the fraction of their
+    bound), the maximum and the finishes of the folds of maxima."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.args = ("--seed", "0", "--count", "120", "--max-length", "24")
+        cls.toy = "fp:5:-12:6"
+        cls.map = pipeline("add_1", cls.toy, *cls.args)
+        cls.map2 = pipeline("axpy_2_1", "binary64", *cls.args)
+        cls.max = pipeline("norm_upper_2", cls.toy, *cls.args)
+        cls.conv = pipeline("conv_1", cls.toy, "--seed", "0", "--count", "120", "--max-length", "12")
+        cls.cargs = ("--seed", "0", "--count", "120", "--max-length", "12")
+        cls.kargs = ("--seed", "0", "--count", "600")
+        cls.axpy = pipeline("axpy_step_1", "binary64", *cls.kargs)
+        cls.finish = pipeline("norm_finish_2", "binary64", *cls.kargs)
+        cls.comb = pipeline("norm_combine", "binary64", *cls.kargs)
+
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def test_good_runs_pass(self):
+        out = self.passes(self.map, "add_1", self.toy, *self.args)
+        self.assertIn("largest error/allowed", out)
+        self.passes(self.map2, "axpy_2_1", "binary64", *self.args)
+        self.passes(self.max, "norm_upper_2", self.toy, *self.args)
+        self.passes(self.conv, "conv_1", self.toy, *self.cargs)
+        self.passes(self.axpy, "axpy_step_1", "binary64", *self.kargs)
+        self.passes(self.finish, "norm_finish_2", "binary64", *self.kargs)
+        self.passes(self.comb, "norm_combine", "binary64", *self.kargs)
+        for name, fmt, L in (("add_1", "fp:2:-1:0", "1"), ("norm_upper_2", "fp:2:-2:1", "1"),
+                             ("conv_1", "fp:2:-1:0", "1")):
+            e = pipeline(name, fmt, "--exhaustive", "--max-length", L)
+            self.passes(e, name, fmt, "--exhaustive", "--max-length", L)
+
+    def test_a_map_without_a_class_of_elements_or_of_the_flag(self):
+        for name in ("element: finite operands, not finite (an overflow)",
+                     "element: a non-finite operand", "length 5", "order: lanes, W = 3"):
+            s = edited(self.map, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "add_1", self.toy, *self.args, reason=name.split(":")[-1].strip()
+                       if name.startswith("order") else name.replace("length ", "length "))
+        for name in ("flag true", "flag false: a non-finite operand",
+                     "flag false: finite operands, an overflow"):
+            s = edited(self.map, 1, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "add_1", self.toy, *self.args, reason='saw no case "%s"' % name)
+        s = pipeline("add_1", self.toy, *self.args, "--strata",
+                     "one,wide,cancel,tie,exact,underflow,zeros,nonfinite,tight")
+        self.fails(s, "add_1", self.toy, *self.args, reason="without overflow")
+
+    def test_a_map_whose_step_is_far_from_its_bound(self):
+        # The step's error entry is the summary's entry 3 (after the map's two and its rounded).
+        s = edited(self.map, 3, lambda e: e.update(max_ratio=["1", "3"]))
+        self.fails(s, "add_1", self.toy, *self.args, reason="below 1/2: a bound far too loose")
+        s = edited(self.map2, 3, lambda e: e.update(max_ratio=["1", "17"]))
+        self.fails(s, "axpy_2_1", "binary64", *self.args, reason="below 1/16")
+        s = edited(self.map, 2, lambda e: e["counts"].pop("inexact", None) and
+                   e["counts"].pop("tie", None))
+        self.fails(s, "add_1", self.toy, *self.args, reason="saw only exact cases")
+        # Entries that are not those of the step.
+        s = copy.deepcopy(self.map)
+        for k in s["keys"]:
+            k["stats"]["entries"].pop()
+        self.fails(s, "add_1", self.toy, *self.args, reason="are not those of the claims")
+
+    def test_a_fold_of_maxima_without_its_classes(self):
+        for name in ("the largest at another element", "result 1 step above RU(V)",
+                     "result at RU(V)", "V not a number of the format",
+                     "the largest attained more than once", "no element: V = 0"):
+            s = edited(self.max, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "norm_upper_2", self.toy, *self.args, reason='saw no case "%s"' % name)
+        s = edited(self.max, 1, lambda e: e["counts"].pop(
+            "flag false: finite elements, the bound's top beyond Omega", None))
+        self.fails(s, "norm_upper_2", self.toy, *self.args, reason="the bound's top beyond Omega")
+        s = pipeline("norm_upper_2", self.toy, *self.args, "--strata",
+                     "one,wide,ties,position,zeros,underflow,nonfinite,tail")
+        self.fails(s, "norm_upper_2", self.toy, *self.args, reason="without top")
+
+    def test_a_convolution_without_its_lengths(self):
+        for name in ("n_x = 0", "n_y = 1", "n_x != n_y", "coefficient: a non-finite term",
+                     "coefficient: finite terms, not finite (an overflow)", "n_y above 2"):
+            s = edited(self.conv, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "conv_1", self.toy, *self.cargs, reason='saw no case "%s"' % name)
+        s = edited(self.conv, 2, lambda e: e["counts"].pop("length 2", None))
+        self.fails(s, "conv_1", self.toy, *self.cargs, reason="saw no coefficient of 2 terms")
+        s = edited(self.conv, 2, lambda e: e["counts"].pop(
+            "heavy cancellation: |sum| <= u * sum of magnitudes", None))
+        self.fails(s, "conv_1", self.toy, *self.cargs, reason="heavy cancellation")
+        s = edited(self.conv, 2, lambda e: e.update(max_ratio=["1", "3"]))
+        self.fails(s, "conv_1", self.toy, *self.cargs, reason="below 1/2")
+        self.fails(self.conv, "conv_1", self.toy, *self.cargs, "--orders", "seq,seq",
+                   reason="orders are seq, not seq,seq")
+
+    def test_the_kernels_of_stage_b(self):
+        s = edited(self.axpy, 0, lambda e: e.update(max_ratio=["1", "3"]))
+        self.fails(s, "axpy_step_1", "binary64", *self.kargs, reason="below 1/2")
+        s = pipeline("axpy_step_1", "binary64", *self.kargs, "--strata",
+                     "uniform,underflow,overflow,zero,pow2,extreme,cancel,state,tie,exactprod")
+        self.fails(s, "axpy_step_1", "binary64", *self.kargs,
+                   reason="without tight, which its family axpy has")
+        for name in ("value finite, stepped up +inf", "mask false", "value: infinite"):
+            s = edited(self.finish, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "norm_finish_2", "binary64", *self.kargs, reason='"%s"' % name)
+        for name in ("arguments equal", "second argument larger"):
+            s = edited(self.comb, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "norm_combine", "binary64", *self.kargs, reason='"%s"' % name)
+        s = pipeline("norm_combine", "binary64", *self.kargs, "--strata",
+                     "uniform,underflow,overflow,zero,pow2,extreme,equal,neighbor")
+        self.fails(s, "norm_combine", "binary64", *self.kargs, reason="without negative")
+
+    def test_the_one_process_driver(self):
+        with tempfile.TemporaryDirectory() as d:
+            def drive(name, fmt, *args):
+                return subprocess.run(
+                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", name,
+                     "--format", fmt, "--summary", os.path.join(d, name + ".json"),
+                     "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
+                    capture_output=True, text=True)
+            good = drive("scale_1", self.toy, "--count", "120", "--max-length", "24")
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            self.assertIn("largest error/allowed", good.stdout)
+            bad = drive("scale_1", self.toy, "--count", "12", "--max-length", "24")
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("did not check what it set out to", bad.stdout)
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         CMAKE = sys.argv.pop(1)

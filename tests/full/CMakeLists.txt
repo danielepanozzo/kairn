@@ -211,8 +211,9 @@ foreach(_fold IN LISTS _full_folds)
     set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "full;python;crosscheck;interp;fold")
     set(_name full.crosscheck.interp-sampled.${_fold})
     add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_sampled}"
-      -DRUNNER=interp "-DCOUNT=${KAIRN_CROSSCHECK_FOLD_CASES}" "-DSEED=${KAIRN_CROSSCHECK_SEED}"
-      -DMAX_LENGTH=1024 "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
+      -DRUNNER=interp "-DCOUNT=${_full_fold_${_fold}_cases}" "-DSEED=${KAIRN_CROSSCHECK_SEED}"
+      "-DMAX_LENGTH=${_full_fold_${_fold}_sampled_length}" "-DSUMMARY=${_summaries}/${_name}.json"
+      -P "${_driver}")
     set_tests_properties(${_name} PROPERTIES TIMEOUT 300
       LABELS "full;python;crosscheck;interp;sampled;fold")
   endif()
@@ -225,8 +226,8 @@ foreach(_fold IN LISTS _full_folds)
       endif()
       set(_name full.crosscheck.compiled.${_fold}.${_format})
       add_test(NAME ${_name} COMMAND ${_crosscheck} ${_full_fold_${_fold}_compiled} --format ${_format}
-        --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_FOLD_CASES}"
-        --max-length "${KAIRN_CROSSCHECK_FOLD_LENGTH}" --summary "${_summaries}/${_name}.json"
+        --seed "${KAIRN_CROSSCHECK_SEED}" --count "${_full_fold_${_fold}_cases}"
+        --max-length "${_full_fold_${_fold}_length}" --summary "${_summaries}/${_name}.json"
         ${_compiled_full_scalar} ${_packed_args})
       set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;crosscheck;compiled;fold")
     endforeach()

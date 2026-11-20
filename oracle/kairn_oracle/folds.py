@@ -84,7 +84,9 @@ def order_classes(order, n):
 class FoldEntry:
     KNOWN = {"normalized": {"kind", "of"},
              "fold_error": {"kind", "of", "eps", "term", "tau", "heights"},
-             "finite_or_nan": {"kind", "of", "flag"}}
+             "finite_or_nan": {"kind", "of", "flag"},
+             # The folds of maxima: the largest value of an element, bounded above.
+             "upper": {"kind", "of", "over", "steps"}}
 
     def __init__(self, fold, raw, index, ferr_index):
         self.raw = raw
@@ -94,7 +96,7 @@ class FoldEntry:
         self.kind = raw["kind"]
         where = "%s: ensures entry %d (%s)" % (fold.name, index, self.kind)
         if self.kind not in self.KNOWN:
-            raise ClaimsError("%s: unknown kind (a fold has normalized, fold_error and "
+            raise ClaimsError("%s: unknown kind (a fold has normalized, fold_error, upper and "
                               "finite_or_nan)" % where)
         extra = set(raw) - self.KNOWN[self.kind]
         if extra:
@@ -135,6 +137,17 @@ class FoldEntry:
             if not isinstance(f, str) or f not in fold.masks:
                 raise ClaimsError("%s: flag must name a mask output, got %r" % (where, f))
             self.flag = f
+        elif self.kind == "upper":
+            # architecture.md, "Claims of Milestone 2", the folds of maxima: with V the largest
+            # value of an element (0 for none), V <= r <= RU(V) stepped up `steps` times.
+            if raw["over"] != "max":
+                raise ClaimsError("%s: over must be max, got %r" % (where, raw["over"]))
+            st = raw["steps"]
+            if not isinstance(st, int) or isinstance(st, bool) or st < 0:
+                raise ClaimsError("%s: steps must be an integer >= 0, got %r" % (where, st))
+            if len(self.of) != 1 or dict(fold.outputs)[self.of[0]] != 1:
+                raise ClaimsError("%s: 'of' must name one 1-limb output" % where)
+            self.steps = st
         self.label = self._label()
 
     def _label(self):
@@ -145,6 +158,8 @@ class FoldEntry:
                 of, self.consts["eps"][1], self.consts["term"][1], self.consts["tau"][1], hs)
         if self.kind == "finite_or_nan":
             return "finite_or_nan(%s) flag %s" % (of, self.flag)
+        if self.kind == "upper":
+            return "upper(%s) over max, steps=%d" % (of, self.steps)
         return "normalized(%s)" % of
 
 
@@ -167,10 +182,11 @@ class Fold:
             raise ClaimsError("%s: a fold of the %s domain, whose reading architecture.md does not "
                               "give (every fold of this stage is extended)" % (nm, self.domain))
         self.extended = True
-        if raw.get("writes") not in (None, [], "none"):
-            # A map, whose step writes arrays: its outputs and per-entry claims are not read yet
-            # (oracle/README.md, "Folds", "Not read yet: maps").
-            raise ClaimsError("%s: a fold that writes arrays (a map) is not read yet" % nm)
+        if raw.get("writes") not in (None, [], "none") or "map" in raw or "conv" in raw:
+            # A fold that writes arrays is a map or a convolution, with "map": true or "conv":
+            # true (maps.py); in a fold, writes, map and conv are refused.
+            raise ClaimsError("%s: a fold that writes arrays is a map (\"map\": true) or a "
+                              "convolution (\"conv\": true)" % nm)
         arrays = raw.get("arrays")
         if not isinstance(arrays, list) or not arrays:
             raise ClaimsError("%s: arrays must be a nonempty list" % nm)
@@ -246,6 +262,9 @@ class Fold:
             raise ClaimsError("%s: a fold of the extended domain has one finite_or_nan entry, "
                               "not %d" % (nm, len(flags)))
         self.flag_entry = flags[0]
+        self.maxima = any(e.kind == "upper" for e in self.ensures)
+        if self.maxima and any(e.kind == "fold_error" for e in self.ensures):
+            raise ClaimsError("%s: a fold with an upper entry has no fold_error entry" % nm)
         for k in ("step", "combine", "finish"):
             s = raw.get(k)
             if s is None and k != "step":
@@ -509,8 +528,11 @@ class FoldPlan:
                          heights=e.heights, cache={})
             elif e.kind == "finite_or_nan":
                 c["flag"] = self.out_slices[e.flag][0]
+            elif e.kind == "upper":
+                c["steps"] = e.steps
             self.entries.append(c)
         self.flag_index = fold.ensures.index(fold.flag_entry)
+        self.maxima = fold.maxima
 
     def _leaf(self, name):
         lo, hi = self.slices[name]
@@ -538,8 +560,15 @@ def parse_order(text):
 
 def judge_line(ck, line, lt, sep, right, tag):
     """The verdict on one completed line of a fold: FOLD FORMAT ORDER N LIMB ... [#TAG] -> RESULT
-    ... (the tag already taken off lt)."""
+    ... (the tag already taken off lt).  A map's and a convolution's lines are maps.py's."""
     fold = ck.claims.get_fold(lt[0])
+    if not isinstance(fold, Fold):
+        from . import maps as MP
+        if isinstance(fold, MP.Map):
+            MP.judge_map_line(ck, line, lt, sep, right, tag)
+        else:
+            MP.judge_conv_line(ck, line, lt, sep, right, tag)
+        return
     fname = lt[1] if len(lt) > 1 else "?"
     try:
         fmt = F.parse_format(fname)
@@ -665,6 +694,8 @@ def judge_line(ck, line, lt, sep, right, tag):
                 w.extend(z[lo:hi])
             if not F.normalized_limbs(fmt, w):
                 why = "not normalized"
+        elif kind == "upper":
+            why = _upper_max(pl, c, es, case, z, line)
         else:
             why = _fold_error(pl, c, es, case, z, line)
         if why:
@@ -729,6 +760,15 @@ def _finite_or_nan(pl, c, es, case, z, line, sus):
         return None
     if not case.finite:
         es.count("flag false: a non-finite element")
+    elif pl.maxima:
+        # A fold of maxima: with finite elements the flag may be false only where its bound has
+        # no finite top, RU(V) stepped up S times beyond Omega (the reading chosen,
+        # oracle/README.md, "Folds of maxima").
+        top = _max_top(pl, case)
+        if type(top) is int:
+            return ("the flag is false although every element is finite and the bound's top, "
+                    "RU(V) stepped up, is %s" % F.fixed_hex(pl.fmt, top))
+        es.count("flag false: finite elements, the bound's top beyond Omega")
     else:
         far = _far(pl, case)
         if far:
@@ -742,6 +782,70 @@ def _finite_or_nan(pl, c, es, case, z, line, sus):
             es.count("flag false: finite elements, |exact sum| <= Omega")
     if not all(v == NAN for v in w):
         return "the flag is false but a limb of the result is not a NaN"
+    return None
+
+
+def _max_value(pl, case):
+    """V, the largest value of an element (0 for none), at the scale of the fold's value."""
+    return max(case.vals) if case.vals else 0
+
+
+def _max_top(pl, case):
+    """RU(V) stepped up S times in the format with overflow (S the steps of the fold's upper
+    entry): a fixed value, or POS_INF."""
+    fmt = pl.fmt
+    c = next(c for c in pl.entries if c["kind"] == "upper")
+    ru = F.rdir(fmt, _max_value(pl, case), pl.sv, True)
+    t = ru if ru <= fmt.omega else INF
+    for _ in range(c["steps"]):
+        if t == INF:
+            break
+        t = F.succ(fmt, t)
+    return t
+
+
+def _upper_max(pl, c, es, case, z, line):
+    """V <= r <= RU(V) stepped up S times, V the largest value of an element (0 for none), RU in
+    the format with overflow; with the statistics of where r lies and of the elements."""
+    es.applicable += 1
+    for k in case.classes:
+        es.count(k)
+    fmt = pl.fmt
+    lo = c["ranges"][0][0]
+    r = z[lo]
+    V = _max_value(pl, case)
+    Vc = V << pl.sh_val
+    rc = r << pl.sh_out
+    n = case.n
+    if n == 0:
+        es.count("no element: V = 0")
+    else:
+        vals = case.vals
+        at = [i for i, v in enumerate(vals) if v == V]
+        es.count("the largest at the first element" if at[0] == 0 else
+                 "the largest at the last element" if at[0] == n - 1 else
+                 "the largest at another element")
+        if len(at) > 1:
+            es.count("the largest attained more than once")
+        if V == 0:
+            es.count("every element zero")
+    ru = F.rdir(fmt, V, pl.sv, True)
+    es.count("V a number of the format" if ru << pl.sh_out == Vc else "V not a number of the format")
+    if rc < Vc:
+        # (Beyond Omega too: a finite result is then below V.)
+        return "upper: the result is below the largest value of an element"
+    t, k = ru, 0
+    while t != r and k < c["steps"]:
+        t = F.succ(fmt, t)
+        k += 1
+        if type(t) is not int:
+            break
+    if t != r:
+        return ("upper: the result is above RU(V) stepped up %d time%s"
+                % (c["steps"], "" if c["steps"] == 1 else "s"))
+    es.count("result at RU(V)" if k == 0 else "result %d step%s above RU(V)" % (k, "" if k == 1
+                                                                                 else "s"))
+    es.track_max("steps above RU(V)", (k, 1), line)
     return None
 
 

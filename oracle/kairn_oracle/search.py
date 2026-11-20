@@ -111,10 +111,15 @@ class Problem:
     def __init__(self, kernel, fmt):
         self.kernel = kernel
         self.fmt = fmt
-        from . import gen5
+        from . import gen5, gen6
         self.valid5 = None
         try:
-            if gen5.family_of(kernel) is not None:
+            if gen6.family_of(kernel) is not None:
+                # The steps of axpy and of the folds of maxima (gen6.py).
+                self.view = kernel
+                self.shape = gen6.Shape6(kernel)
+                self.make, self.strata = gen6.make_case, tuple(self.shape.strata)
+            elif gen5.family_of(kernel) is not None:
                 # The kernels of the folds' stage: their own families (the bounds' count, the
                 # steps of the dot products, the finishes).
                 self.view = kernel
