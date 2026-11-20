@@ -672,6 +672,22 @@ def corpus(fmt, orders, seed):
     return out
 
 
+def same_completion(a, b):
+    """Two completions, the same limbs as values (printf's %a and Python's float.hex may spell a
+    subnormal number differently) and the same masks."""
+    ta, tb = a.split(' '), b.split(' ')
+    if len(ta) != len(tb):
+        return False
+    for x, y in zip(ta, tb):
+        if x != y:
+            try:
+                if interp.parse_limb(x) != interp.parse_limb(y):
+                    return False
+            except interp.InterpError:
+                return False
+    return True
+
+
 def in_place_corpus(orders=None, formats=('binary64', 'binary32')):
     """([in-place request], [the same request without the field]) of every map and ball vector, for
     each array read with as many limbs as the array written, on random canonical operands of lengths
@@ -763,7 +779,8 @@ class Cxx(unittest.TestCase):
                 self.assertEqual(code, 0, err)
                 got = [x.split(' -> ', 1)[1] for x in out.splitlines() if ' -> ' in x]
                 self.assertEqual(len(got), len(want))
-                bad = [(lines[j][:120], got[j][:80], want[j][:80]) for j in range(len(want)) if got[j] != want[j]]
+                bad = [(lines[j][:120], got[j][:80], want[j][:80]) for j in range(len(want))
+                       if not same_completion(got[j], want[j])]
                 self.assertEqual(bad[:3], [], f'{len(bad)} of {len(want)} differ')
 
     def test_the_corpus(self):
@@ -807,7 +824,8 @@ class Packed(unittest.TestCase):
                 self.assertEqual(code, 0, err)
                 got = [x.split(' -> ', 1)[1] for x in out.splitlines() if ' -> ' in x]
                 self.assertEqual(len(got), len(want))
-                bad = [(lines[j][:120], got[j][:80], want[j][:80]) for j in range(len(want)) if got[j] != want[j]]
+                bad = [(lines[j][:120], got[j][:80], want[j][:80]) for j in range(len(want))
+                       if not same_completion(got[j], want[j])]
                 self.assertEqual(bad[:3], [], f'{len(bad)} of {len(want)} differ')
 
     def test_lane_by_lane(self):
