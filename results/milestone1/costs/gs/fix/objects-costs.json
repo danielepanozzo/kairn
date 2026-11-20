@@ -706,7 +706,7 @@
     "frame": 40
    }
   },
-  "after /GS kairn-bench-costs-O0": {
+  "A /GS kairn-bench-costs-O0": {
    "kc_env_loop": {
     "instructions": 49,
     "cookie_reads": 0,
@@ -792,7 +792,7 @@
     "frame": 72
    }
   },
-  "after /GS kairn-bench-costs-O2": {
+  "A /GS kairn-bench-costs-O2": {
    "kc_env_loop": {
     "instructions": 22,
     "cookie_reads": 0,
@@ -878,7 +878,7 @@
     "frame": 0
    }
   },
-  "after /GS kairn-bench-costs-checks-O0": {
+  "A /GS kairn-bench-costs-checks-O0": {
    "kc_env_loop": {
     "instructions": 49,
     "cookie_reads": 0,
@@ -964,7 +964,7 @@
     "frame": 72
    }
   },
-  "after /GS kairn-bench-costs-checks-O2": {
+  "A /GS kairn-bench-costs-checks-O2": {
    "kc_env_loop": {
     "instructions": 22,
     "cookie_reads": 0,
@@ -1050,7 +1050,7 @@
     "frame": 40
    }
   },
-  "after /GS- kairn-bench-costs-O0": {
+  "A /GS- kairn-bench-costs-O0": {
    "kc_env_loop": {
     "instructions": 49,
     "cookie_reads": 0,
@@ -1136,7 +1136,7 @@
     "frame": 72
    }
   },
-  "after /GS- kairn-bench-costs-O2": {
+  "A /GS- kairn-bench-costs-O2": {
    "kc_env_loop": {
     "instructions": 22,
     "cookie_reads": 0,
@@ -1222,7 +1222,7 @@
     "frame": 0
    }
   },
-  "after /GS- kairn-bench-costs-checks-O0": {
+  "A /GS- kairn-bench-costs-checks-O0": {
    "kc_env_loop": {
     "instructions": 49,
     "cookie_reads": 0,
@@ -1308,7 +1308,7 @@
     "frame": 72
    }
   },
-  "after /GS- kairn-bench-costs-checks-O2": {
+  "A /GS- kairn-bench-costs-checks-O2": {
    "kc_env_loop": {
     "instructions": 22,
     "cookie_reads": 0,
@@ -1394,7 +1394,7 @@
     "frame": 40
    }
   },
-  "varH /GS kairn-bench-costs-O0": {
+  "H /GS kairn-bench-costs-O0": {
    "kc_env_loop": {
     "instructions": 49,
     "cookie_reads": 0,
@@ -1480,7 +1480,7 @@
     "frame": 72
    }
   },
-  "varH /GS kairn-bench-costs-O2": {
+  "H /GS kairn-bench-costs-O2": {
    "kc_env_loop": {
     "instructions": 22,
     "cookie_reads": 0,
@@ -1566,7 +1566,7 @@
     "frame": 0
    }
   },
-  "varH /GS kairn-bench-costs-checks-O0": {
+  "H /GS kairn-bench-costs-checks-O0": {
    "kc_env_loop": {
     "instructions": 49,
     "cookie_reads": 0,
@@ -1652,7 +1652,7 @@
     "frame": 72
    }
   },
-  "varH /GS kairn-bench-costs-checks-O2": {
+  "H /GS kairn-bench-costs-checks-O2": {
    "kc_env_loop": {
     "instructions": 22,
     "cookie_reads": 0,
@@ -1738,7 +1738,7 @@
     "frame": 56
    }
   },
-  "varH /GS- kairn-bench-costs-O0": {
+  "H /GS- kairn-bench-costs-O0": {
    "kc_env_loop": {
     "instructions": 49,
     "cookie_reads": 0,
@@ -1824,7 +1824,7 @@
     "frame": 72
    }
   },
-  "varH /GS- kairn-bench-costs-O2": {
+  "H /GS- kairn-bench-costs-O2": {
    "kc_env_loop": {
     "instructions": 22,
     "cookie_reads": 0,
@@ -1910,7 +1910,7 @@
     "frame": 0
    }
   },
-  "varH /GS- kairn-bench-costs-checks-O0": {
+  "H /GS- kairn-bench-costs-checks-O0": {
    "kc_env_loop": {
     "instructions": 49,
     "cookie_reads": 0,
@@ -1996,7 +1996,7 @@
     "frame": 72
    }
   },
-  "varH /GS- kairn-bench-costs-checks-O2": {
+  "H /GS- kairn-bench-costs-checks-O2": {
    "kc_env_loop": {
     "instructions": 22,
     "cookie_reads": 0,
