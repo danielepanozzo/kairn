@@ -293,15 +293,23 @@ template <> struct interval_add_1<float> {
     static constexpr bool proved = true;
 };
 
-// interval_hull_1: UNVERIFIED. Claims: interval_set.
+// interval_hull_1: proved. Claims: interval_set.
 template <class T> struct interval_hull_1;
-template <> struct interval_hull_1<double> { static constexpr bool proved = false; };
-template <> struct interval_hull_1<float> { static constexpr bool proved = false; };
+template <> struct interval_hull_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_hull_1<float> {
+    static constexpr bool proved = true;
+};
 
-// interval_intersection_1: UNVERIFIED. Claims: interval_set.
+// interval_intersection_1: proved. Claims: interval_set.
 template <class T> struct interval_intersection_1;
-template <> struct interval_intersection_1<double> { static constexpr bool proved = false; };
-template <> struct interval_intersection_1<float> { static constexpr bool proved = false; };
+template <> struct interval_intersection_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_intersection_1<float> {
+    static constexpr bool proved = true;
+};
 
 // interval_make_1: proved. Claims: makes_interval.
 template <class T> struct interval_make_1;
@@ -979,10 +987,14 @@ template <> struct lt_2_2<float> {
     static constexpr bool proved = true;
 };
 
-// interval_hull_2: UNVERIFIED. Claims: interval_set.
+// interval_hull_2: proved. Claims: interval_set.
 template <class T> struct interval_hull_2;
-template <> struct interval_hull_2<double> { static constexpr bool proved = false; };
-template <> struct interval_hull_2<float> { static constexpr bool proved = false; };
+template <> struct interval_hull_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_hull_2<float> {
+    static constexpr bool proved = true;
+};
 
 // le_2_2: proved. Claims: predicate.
 template <class T> struct le_2_2;
@@ -993,15 +1005,23 @@ template <> struct le_2_2<float> {
     static constexpr bool proved = true;
 };
 
-// interval_intersection_2: UNVERIFIED. Claims: interval_set.
+// interval_intersection_2: proved. Claims: interval_set.
 template <class T> struct interval_intersection_2;
-template <> struct interval_intersection_2<double> { static constexpr bool proved = false; };
-template <> struct interval_intersection_2<float> { static constexpr bool proved = false; };
+template <> struct interval_intersection_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_intersection_2<float> {
+    static constexpr bool proved = true;
+};
 
-// interval_make_2: UNVERIFIED. Claims: makes_interval.
+// interval_make_2: proved. Claims: makes_interval.
 template <class T> struct interval_make_2;
-template <> struct interval_make_2<double> { static constexpr bool proved = false; };
-template <> struct interval_make_2<float> { static constexpr bool proved = false; };
+template <> struct interval_make_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_make_2<float> {
+    static constexpr bool proved = true;
+};
 
 // mul_ball_2_2: proved. Claims: normalized; error, form R, c = 4, k = 2, t = 3/2; encloses.
 template <class T> struct mul_ball_2_2;
@@ -1041,10 +1061,14 @@ template <class T> struct interval_mul_2;
 template <> struct interval_mul_2<double> { static constexpr bool proved = false; };
 template <> struct interval_mul_2<float> { static constexpr bool proved = false; };
 
-// interval_neg_2: UNVERIFIED. Claims: encloses_interval.
+// interval_neg_2: proved. Claims: encloses_interval.
 template <class T> struct interval_neg_2;
-template <> struct interval_neg_2<double> { static constexpr bool proved = false; };
-template <> struct interval_neg_2<float> { static constexpr bool proved = false; };
+template <> struct interval_neg_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_neg_2<float> {
+    static constexpr bool proved = true;
+};
 
 // sub_down_2_2: proved. Claims: normalized; outward.
 template <class T> struct sub_down_2_2;

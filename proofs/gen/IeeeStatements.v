@@ -337,7 +337,7 @@ Definition interval_add_1_spec : Prop :=
     range_2 (fun x y : R => x + y) (in_interval_1 xl xu) (in_interval_1 yl yu) z ->
     Rabs z <= omega prec emax)).
 
-(* interval_hull_1: the smaller lower bound and the larger upper bound (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_hull_1: the smaller lower bound and the larger upper bound (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_hull_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -354,7 +354,7 @@ Definition interval_hull_1_spec : Prop :=
    range_upper (fun z : R => in_interval_1 xl xu z \/ in_interval_1 yl yu z) hi ->
    xval zl = lo /\ xval zu = hi).
 
-(* interval_intersection_1: the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_intersection_1: the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_intersection_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1390,7 +1390,7 @@ Definition lt_2_2_ieee_spec : Prop :=
   let m := IeeeModel.lt_2_2 prec emax x0 x1 y0 y1 in
   m = xlt (xval_2 x0 x1) (xval_2 y0 y1).
 
-(* interval_hull_2: the smaller lower bound and the larger upper bound, by lt_2_2 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_hull_2: the smaller lower bound and the larger upper bound, by lt_2_2 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_hull_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -1418,7 +1418,7 @@ Definition le_2_2_ieee_spec : Prop :=
   let m := IeeeModel.le_2_2 prec emax x0 x1 y0 y1 in
   m = xle (xval_2 x0 x1) (xval_2 y0 y1).
 
-(* interval_intersection_2: the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_intersection_2: the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_intersection_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1436,7 +1436,7 @@ Definition interval_intersection_2_spec : Prop :=
    range_upper (fun z : R => in_interval_2 xl0 xl1 xu0 xu1 z /\ in_interval_2 yl0 yl1 yu0 yu1 z) hi ->
    xval_2 zl0 zl1 = lo /\ xval_2 zu0 zu1 = hi).
 
-(* interval_make_2: constructor of an interval of two limbs (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_make_2: constructor of an interval of two limbs (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_make_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1519,7 +1519,7 @@ Definition interval_mul_2_spec : Prop :=
     Rabs z <= bpow radix2 (emax - 2)) ->
    interval_bounded_2 zl0 zl1 zu0 zu1).
 
-(* interval_neg_2: neg_2 of each bound, exchanged (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_neg_2: neg_2 of each bound, exchanged (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_neg_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

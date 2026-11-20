@@ -1723,9 +1723,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_hull_1_correct"
+      },
       "source": {
         "cite": "the smaller lower bound and the larger upper bound (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1791,9 +1795,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_intersection_1_correct"
+      },
       "source": {
         "cite": "the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5681,9 +5689,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_hull_2_correct"
+      },
       "source": {
         "cite": "the smaller lower bound and the larger upper bound, by lt_2_2 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5806,9 +5818,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_intersection_2_correct"
+      },
       "source": {
         "cite": "the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5859,9 +5875,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_make_2_correct"
+      },
       "source": {
         "cite": "constructor of an interval of two limbs (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -6217,9 +6237,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_neg_2_correct"
+      },
       "source": {
         "cite": "neg_2 of each bound, exchanged (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

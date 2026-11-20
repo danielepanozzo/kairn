@@ -69,3 +69,4 @@ theories/IeeeBallPow2.v
 theories/IeeeTwoExecutions.v
 theories/IeeeInterval2.v
 theories/IeeeBallConvert.v
+theories/IeeeIntervalExact.v

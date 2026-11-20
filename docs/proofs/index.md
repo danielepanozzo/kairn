@@ -65,7 +65,10 @@ lists:
   (`Directed2.v`), and, with overflow, infinities and NaN, the sum of two intervals whose
   bounds have two limbs (`IeeeInterval2.v`) and the conversions of a ball: its bounds as
   numbers of the limb type, the ball of one limb that contains a ball of two, and the ball
-  made from an interval of two numbers (`IeeeBallConvert.v`);
+  made from an interval of two numbers (`IeeeBallConvert.v`), and the exact interval kernels:
+  the negation and the constructor of an interval whose bounds have two limbs, and the hull
+  and the intersection of two intervals with bounds of one and of two limbs
+  (`IeeeIntervalExact.v`);
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -91,7 +94,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    about no single kernel, and the lemmas of the first building blocks of Milestone 2 that are
    not generated statements, among them what is proved of `mul_dir_1`, of the interval
    kernels with bounds of one limb, of the bounds of two limbs, of the sum of two intervals
-   of two limbs and of the conversions of a ball beside their generated statements, and those
+   of two limbs, of the conversions of a ball and of the exact interval kernels (the hull and
+   the intersection of intervals of extended real numbers) beside their generated
+   statements, and those
    about the two executions of a product, whose plain-product listings are written by hand.
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
@@ -102,7 +107,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  65 files: no Admitted, admit, Axiom or Parameter
+  66 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec

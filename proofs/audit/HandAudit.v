@@ -38,7 +38,10 @@
      error), the same bounds in the values of the kernel and with the constants of the
      closed form by name, and the lemmas they rest on; and for the sum of two intervals
      with bounds of two limbs in the IEEE model, its finite cores, when they are finite,
-     and its statement with the constants of the closed form by name.
+     and its statement with the constants of the closed form by name; for the exact
+     interval kernels of stage B1 (the negation and the constructor of two limbs, the hulls
+     and the intersections), the hull and the intersection of intervals of extended real
+     numbers and the lemmas that carry them to limbs and to 2-limb values.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -560,3 +563,26 @@ Print Assumptions format_double.
 Print Assumptions half_of_bound.
 Print Assumptions ball_from_interval_2_eq.
 Print Assumptions ball_from_interval_2_finite.
+
+(* The exact interval kernels of stage B1, in the IEEE model (theories/IeeeIntervalExact.v):
+   the negation and the constructor of an interval of two limbs, and the hulls and the
+   intersections of intervals of one and of two limbs. The theorems of their generated
+   statements are listed by proofs/gen/IeeeAudit.v. Here, the lemmas they rest on: the hull
+   and the intersection of two intervals of extended real numbers; a canonical interval of
+   two limbs and its emptiness, by what its bounds stand for; the selection of a 2-limb
+   value by lt_2_2; the negated interval of two limbs; and the four kernels of the set
+   operations for any limbs that stand for the minimum and the maximum of the bounds. *)
+From Kairn Require Import IeeeIntervalExact.
+Print Assumptions xhull.
+Print Assumptions xinter.
+Print Assumptions interval_2_iff.
+Print Assumptions select_lt_2_xmin.
+Print Assumptions select_lt_2_xmax.
+Print Assumptions xval_2_neg.
+Print Assumptions interval_neg_2_facts.
+Print Assumptions interval_neg_2_all.
+Print Assumptions interval_make_2_all.
+Print Assumptions hull_1_of.
+Print Assumptions intersection_1_of.
+Print Assumptions hull_2_of.
+Print Assumptions intersection_2_of.

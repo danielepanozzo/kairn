@@ -1522,7 +1522,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_add_1(float xl, float xu, float yl
 }
 
 // interval_hull_1(xl, xu, yl, yu) -> zl, zu
-// the smaller lower bound and the larger upper bound (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the smaller lower bound and the larger upper bound (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_hull_1(double xl, double xu, double yl, double yu, double& zl_out, double& zu_out) noexcept {
     const bool ml = xl > yl;
     const double zl = ml ? yl : xl;
@@ -1541,7 +1541,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_hull_1(float xl, float xu, float y
 }
 
 // interval_intersection_1(xl, xu, yl, yu) -> zl, zu
-// the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> interval_intersection_1(double l, double h, bool ok) noexcept {
@@ -5606,7 +5606,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(float x0, float x1, float y0, float 
 }
 
 // interval_hull_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// the smaller lower bound and the larger upper bound, by lt_2_2 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the smaller lower bound and the larger upper bound, by lt_2_2 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_hull_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, double& zl0_out, double& zl1_out, double& zu0_out, double& zu1_out) noexcept {
     // (ml) = lt_2_2(yl0, yl1, xl0, xl1)
     const bool ml_h = xl0 > yl0;
@@ -5672,7 +5672,7 @@ KAIRN_GEN_FORCEINLINE constexpr void le_2_2(float x0, float x1, float y0, float 
 }
 
 // interval_intersection_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 4> interval_intersection_2(double l0, double l1, double h0, double h1, bool ok) noexcept {
@@ -5791,7 +5791,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_intersection_2(float xl0, float xl
 }
 
 // interval_make_2(lo = (lo0, lo1), hi = (hi0, hi1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// constructor of an interval of two limbs (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// constructor of an interval of two limbs (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 4> interval_make_2(double lo0, double lo1, double hi0, double hi1, double mi, bool v) noexcept {
@@ -7292,7 +7292,7 @@ inline void interval_mul_2(float xl0, float xl1, float xu0, float xu1, float yl0
 }
 
 // interval_neg_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// neg_2 of each bound, exchanged (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// neg_2 of each bound, exchanged (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_neg_2(double xl0, double xl1, double xu0, double xu1, double& zl0_out, double& zl1_out, double& zu0_out, double& zu1_out) noexcept {
     // (zl0, zl1) = neg_2(xu0, xu1)
     const double zl0 = -xu0;
