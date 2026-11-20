@@ -112,6 +112,9 @@ SHAPES = {
     "2_r_1_product": ("fp:2:-4:1", ["fp:3:-4:1", "fp:4:-4:1", "fp:3:-6:2", "fp:2:-8:3"]),
     "1_r_1_r_sum": ("fp:2:-3:1", ["fp:3:-3:1", "fp:4:-3:1", "fp:3:-4:2", "fp:2:-6:4"]),
     "1_r_1_r_product": ("fp:2:-4:1", ["fp:3:-4:1", "fp:4:-4:1", "fp:3:-6:2", "fp:2:-7:3"]),
+    # The scalings of a ball by a power of two (Milestone 2): 0.4 to 3.9 million cases each.
+    "1_r_c_product": ("fp:4:-6:1", ["fp:5:-6:1", "fp:6:-6:1", "fp:5:-8:2", "fp:4:-9:3"]),
+    "2_r_c_product": ("fp:3:-4:1", ["fp:4:-4:1", "fp:5:-4:1", "fp:4:-6:2", "fp:3:-7:3"]),
     # The extended domain: the quick tier's format with one and two bits more (the same number
     # of exponents), then more exponents.
     "ext_1": ("fp:11:-29:10", ["fp:12:-30:9", "fp:13:-31:8", "fp:13:-61:38"]),
@@ -119,6 +122,8 @@ SHAPES = {
     "ext_r_r_sum": ("fp:6:-10:1", ["fp:7:-11:0", "fp:8:-12:-1", "fp:8:-16:3"]),
     "ext_r_r_product": ("fp:6:-10:1", ["fp:7:-11:0", "fp:8:-12:-1", "fp:8:-16:3"]),
     "ext_1_1_sum": ("fp:5:-7:0", ["fp:6:-8:-1", "fp:7:-9:-2", "fp:7:-13:2"]),
+    # The directed products of Milestone 2, as the directed sums.
+    "ext_1_1_product": ("fp:5:-7:0", ["fp:6:-8:-1", "fp:7:-9:-2", "fp:7:-13:2"]),
     "ext_2_1_sum": ("fp:4:-5:0", ["fp:5:-6:-1", "fp:6:-7:-2", "fp:5:-8:1", "fp:4:-9:4"]),
     "ext_1_2_sum": ("fp:4:-5:0", ["fp:5:-6:-1", "fp:6:-7:-2", "fp:5:-8:1", "fp:4:-9:4"]),
     "ext_2_1_product": ("fp:4:-5:0", ["fp:5:-6:-1", "fp:6:-7:-2", "fp:5:-8:1", "fp:4:-9:4"]),
@@ -133,6 +138,9 @@ SHAPES = {
     "ext_b1_b1_product": ("fp:2:-3:2", ["fp:3:-4:1", "fp:2:-5:4", "fp:2:-7:6"]),
     "ext_b1_1_product": ("fp:3:-4:1", ["fp:4:-5:0", "fp:3:-6:3", "fp:2:-8:7"]),
     "ext_b2_1_product": ("fp:3:-3:0", ["fp:4:-4:-1", "fp:3:-4:1", "fp:2:-4:3"]),
+    # The full scalings of a ball by a power of two (Milestone 2): 0.3 to 2.3 million cases each.
+    "ext_b1_c_product": ("fp:4:-6:1", ["fp:5:-7:0", "fp:6:-8:-1", "fp:4:-8:3"]),
+    "ext_b2_c_product": ("fp:3:-4:1", ["fp:4:-5:0", "fp:5:-6:-1", "fp:3:-6:3"]),
 }
 
 # Precision 1 of the one-limb balls with two operands, in place of the base range. There u = 1/2
