@@ -15,8 +15,8 @@ docs/reference/KERNEL.md. An entry gives:
   conversion (a limb converted to a one-limb number, a point to a ball) has no declaration of
   its own, and says so in its note;
   A kernel with no forms is either a building block, part of other kernels, or an entry kernel
-  (`entry: yes` in its description: today the finite cores of the Ball operations) that the
-  public headers do not call yet; its page and the index say which. Give it forms only when a
+  (`entry: yes` in its description: today the finite cores of the Ball operations, and the
+  building blocks and scalings of a ball of Milestone 2) that the public headers do not call yet; its page and the index say which. Give it forms only when a
   header calls it: the test fails on a form of a kernel that no header comment names. A function
   of `kairn::finite` is written `finite::add(x, y)`;
 - traits: the entries of kairn::traits whose constants come from this kernel's claims
@@ -431,6 +431,22 @@ KERNELS = {
     "ball_mul_2": page("ball", "Product of balls, two-limb center, finite core"),
     "ball_scale_1": page("ball", "A ball times a limb, one-limb center, finite core"),
     "ball_scale_2": page("ball", "A ball times a limb, two-limb center, finite core"),
+    # --- Milestone 2, wave 1: entry kernels no public operation calls yet ------------------------
+    "ball_mul_pow2_1": page("ball", "A ball times a power of two, one-limb center, finite core"),
+    "ball_mul_pow2_2": page("ball", "A ball times a power of two, two-limb center, finite core"),
+    "ball_mul_pow2_1_full": page("ball", "A ball times a power of two, one-limb center"),
+    "ball_mul_pow2_2_full": page("ball", "A ball times a power of two, two-limb center"),
+    "next_up": page("building-blocks", "The next number of T above a value"),
+    "next_down": page("building-blocks", "The next number of T below a value"),
+    "mul_down_1": page("building-blocks", "A lower bound of a product of two limbs"),
+    "mul_up_1": page("building-blocks", "An upper bound of a product of two limbs"),
+    "two_sum_entry": page("building-blocks", "TwoSum on values of the program"),
+    "fast_two_sum_entry": page("building-blocks", "Fast2Sum on values of the program"),
+    "radd_entry": page("building-blocks", "An upper bound of a sum, for radii, on values of the program"),
+    "add_down_entry": page("building-blocks", "A sum of two limbs rounded down, on values of the program"),
+    "add_up_entry": page("building-blocks", "A sum of two limbs rounded up, on values of the program"),
+    "sub_down_entry": page("building-blocks", "A difference of two limbs rounded down, on values of the program"),
+    "sub_up_entry": page("building-blocks", "A difference of two limbs rounded up, on values of the program"),
     # --- Building blocks: no public form -------------------------------------------------------
     "two_sum": page("building-blocks", "TwoSum: an exact sum as two limbs"),
     "fast_two_sum": page("building-blocks", "Fast2Sum: an exact sum of ordered operands"),
@@ -439,6 +455,11 @@ KERNELS = {
     "split": page("building-blocks", "Veltkamp's split"),
     "radd": page("building-blocks", "An upper bound of a sum, for radii"),
     "rmul": page("building-blocks", "An upper bound of a product, for radii"),
+    "two_sum_ord": page("building-blocks", "TwoSum by ordering: Fast2Sum of the operands ordered by magnitude"),
+    "add_down_1": page("building-blocks", "A sum of two limbs rounded down"),
+    "add_up_1": page("building-blocks", "A sum of two limbs rounded up"),
+    "sub_down_1": page("building-blocks", "A difference of two limbs rounded down"),
+    "sub_up_1": page("building-blocks", "A difference of two limbs rounded up"),
 }
 
 

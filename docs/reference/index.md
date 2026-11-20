@@ -6,9 +6,9 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 63 kernels are proved.
+Of the 83 kernels, 63 are proved and 20 are **UNVERIFIED**: [`add_down_1`](add_down_1.md), [`add_down_entry`](add_down_entry.md), [`add_up_1`](add_up_1.md), [`add_up_entry`](add_up_entry.md), [`ball_mul_pow2_1`](ball_mul_pow2_1.md), [`ball_mul_pow2_1_full`](ball_mul_pow2_1_full.md), [`ball_mul_pow2_2`](ball_mul_pow2_2.md), [`ball_mul_pow2_2_full`](ball_mul_pow2_2_full.md), [`fast_two_sum_entry`](fast_two_sum_entry.md), [`mul_down_1`](mul_down_1.md), [`mul_up_1`](mul_up_1.md), [`next_down`](next_down.md), [`next_up`](next_up.md), [`radd_entry`](radd_entry.md), [`sub_down_1`](sub_down_1.md), [`sub_down_entry`](sub_down_entry.md), [`sub_up_1`](sub_up_1.md), [`sub_up_entry`](sub_up_entry.md), [`two_sum_entry`](two_sum_entry.md), [`two_sum_ord`](two_sum_ord.md).
 
-18 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
+31 kernels have a statement on finite operands and one on infinite and NaN operands; the second is **UNVERIFIED** for [`add_down_1`](add_down_1.md), [`add_down_entry`](add_down_entry.md), [`add_up_1`](add_up_1.md), [`add_up_entry`](add_up_entry.md), [`mul_down_1`](mul_down_1.md), [`mul_up_1`](mul_up_1.md), [`next_down`](next_down.md), [`next_up`](next_up.md), [`radd_entry`](radd_entry.md), [`sub_down_1`](sub_down_1.md), [`sub_down_entry`](sub_down_entry.md), [`sub_up_1`](sub_up_1.md), [`sub_up_entry`](sub_up_entry.md).
 
 No public operation calls an UNVERIFIED kernel, so none needs the marker `kairn::unverified`.
 
@@ -144,6 +144,10 @@ Arithmetic on balls: the result contains every result on points of the operands.
 | not yet called by the public headers | - | contains every $x y$, normalized | [`ball_mul_2`](ball_mul_2.md) |
 | not yet called by the public headers | - | contains every $x a$ | [`ball_scale_1`](ball_scale_1.md) |
 | not yet called by the public headers | - | contains every $x a$, normalized | [`ball_scale_2`](ball_scale_2.md) |
+| not yet called by the public headers | - | contains every $x c$, exactly when nothing underflows | [`ball_mul_pow2_1`](ball_mul_pow2_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | contains every $x c$, exactly when nothing underflows, normalized | [`ball_mul_pow2_2`](ball_mul_pow2_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical ball that contains every $x c$; the empty set and the whole line included | [`ball_mul_pow2_1_full`](ball_mul_pow2_1_full.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical ball that contains every $x c$; the empty set and the whole line included | [`ball_mul_pow2_2_full`](ball_mul_pow2_2_full.md) **UNVERIFIED** |
 
 ## Building blocks
 
@@ -151,11 +155,27 @@ Kernels that other kernels call, and that no public operation computes on its ow
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
+| not yet called by the public headers | - | $r = \mathrm{succ}(a)$ | [`next_up`](next_up.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $r = \mathrm{pred}(a)$ | [`next_down`](next_down.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $r \le a b$, at most 1 step below $\mathrm{RD}(a b)$ | [`mul_down_1`](mul_down_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $r \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_up_1`](mul_up_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly | [`two_sum_entry`](two_sum_entry.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly, normalized | [`fast_two_sum_entry`](fast_two_sum_entry.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $r \ge a + b$, at most $\tfrac{3}{2}$ gaps above | [`radd_entry`](radd_entry.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $r = \mathrm{RD}(a + b)$ | [`add_down_entry`](add_down_entry.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $r = \mathrm{RU}(a + b)$ | [`add_up_entry`](add_up_entry.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $r = \mathrm{RD}(a - b)$ | [`sub_down_entry`](sub_down_entry.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $r = \mathrm{RU}(a - b)$ | [`sub_up_entry`](sub_up_entry.md) **UNVERIFIED** |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly | [`two_sum`](two_sum.md) |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly, normalized | [`fast_two_sum`](fast_two_sum.md) |
-| none (internal) | - | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{1}{2}\,\eta$ | [`two_prod`](two_prod.md) |
+| not yet called by the public headers | - | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{1}{2}\,\eta$ | [`two_prod`](two_prod.md) |
 | none (internal) | - | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{13}{8}\,\eta$ | [`two_prod_dekker`](two_prod_dekker.md) |
 | none (internal) | - | $a_h + a_l = a$ exactly | [`split`](split.md) |
 | none (internal) | - | $r \ge a + b$, at most $\tfrac{3}{2}$ gaps above | [`radd`](radd.md) |
-| none (internal) | - | $r \ge a b$, at most $\tfrac{3}{2}$ gaps above | [`rmul`](rmul.md) |
+| not yet called by the public headers | - | $r \ge a b$, at most $\tfrac{3}{2}$ gaps above | [`rmul`](rmul.md) |
+| none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly, normalized | [`two_sum_ord`](two_sum_ord.md) **UNVERIFIED** |
+| none (internal) | - | $r = \mathrm{RD}(a + b)$ | [`add_down_1`](add_down_1.md) **UNVERIFIED** |
+| none (internal) | - | $r = \mathrm{RU}(a + b)$ | [`add_up_1`](add_up_1.md) **UNVERIFIED** |
+| none (internal) | - | $r = \mathrm{RD}(a - b)$ | [`sub_down_1`](sub_down_1.md) **UNVERIFIED** |
+| none (internal) | - | $r = \mathrm{RU}(a - b)$ | [`sub_up_1`](sub_up_1.md) **UNVERIFIED** |
 

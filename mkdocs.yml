@@ -168,7 +168,22 @@ nav:
           - Product of balls, two-limb center, finite core: reference/ball_mul_2.md
           - A ball times a limb, one-limb center, finite core: reference/ball_scale_1.md
           - A ball times a limb, two-limb center, finite core: reference/ball_scale_2.md
+          - A ball times a power of two, one-limb center, finite core: reference/ball_mul_pow2_1.md
+          - A ball times a power of two, two-limb center, finite core: reference/ball_mul_pow2_2.md
+          - A ball times a power of two, one-limb center: reference/ball_mul_pow2_1_full.md
+          - A ball times a power of two, two-limb center: reference/ball_mul_pow2_2_full.md
       - Building blocks:
+          - The next number of T above a value: reference/next_up.md
+          - The next number of T below a value: reference/next_down.md
+          - A lower bound of a product of two limbs: reference/mul_down_1.md
+          - An upper bound of a product of two limbs: reference/mul_up_1.md
+          - TwoSum on values of the program: reference/two_sum_entry.md
+          - Fast2Sum on values of the program: reference/fast_two_sum_entry.md
+          - An upper bound of a sum, for radii, on values of the program: reference/radd_entry.md
+          - A sum of two limbs rounded down, on values of the program: reference/add_down_entry.md
+          - A sum of two limbs rounded up, on values of the program: reference/add_up_entry.md
+          - A difference of two limbs rounded down, on values of the program: reference/sub_down_entry.md
+          - A difference of two limbs rounded up, on values of the program: reference/sub_up_entry.md
           - "TwoSum: an exact sum as two limbs": reference/two_sum.md
           - "Fast2Sum: an exact sum of ordered operands": reference/fast_two_sum.md
           - "TwoProd: an exact product as two limbs": reference/two_prod.md
@@ -176,6 +191,11 @@ nav:
           - Veltkamp's split: reference/split.md
           - An upper bound of a sum, for radii: reference/radd.md
           - An upper bound of a product, for radii: reference/rmul.md
+          - "TwoSum by ordering: Fast2Sum of the operands ordered by magnitude": reference/two_sum_ord.md
+          - A sum of two limbs rounded down: reference/add_down_1.md
+          - A sum of two limbs rounded up: reference/add_up_1.md
+          - A difference of two limbs rounded down: reference/sub_down_1.md
+          - A difference of two limbs rounded up: reference/sub_up_1.md
   # END reference
   - Proofs: proofs/index.md
   - Developer guide:

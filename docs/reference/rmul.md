@@ -12,7 +12,7 @@ $$r \ge a b.$$
 
 ## C++
 
-No public operation computes this kernel on its own.
+**Not yet called by the public headers.** No public operation computes this kernel yet.
 
 ## Requires
 

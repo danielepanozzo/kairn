@@ -71,8 +71,13 @@ KNOWN_MODES = {"nearest": "RN", "down": "RD", "up": "RU"}
 KNOWN_RELS = {"lt": "<", "le": "\\le", "eq": "="}
 KNOWN_LEADS = {"add": "+", "sub": "-", "mul": "\\cdot"}
 KNOWN_CONDITION_FIELDS = {"abs_le", "exp"}
+# The conditions of exact_when (architecture.md, "Claims of Milestone 2"): EXPR = 0 or |EXPR| > K,
+# or >= K.
+KNOWN_EXACT_CONDITIONS = {"zero_or_abs_gt": ">", "zero_or_abs_ge": "\\ge"}
+KNOWN_SIDES = {"neighbor": {"up": ("succ", "above"), "down": ("pred", "below")},
+               "bound": {"below": ("RD", "down"), "above": ("RU", "up")}}
 
-# The fields of each kind of `ensures` entry: required, optional.
+# The fields of each kind of `ensures` entry: required, optional in the extended domain.
 KIND_FIELDS = {
     "normalized": ({"of"}, set()),
     "error": ({"of", "form", "c", "k", "t", "when"}, set()),
@@ -84,12 +89,18 @@ KIND_FIELDS = {
     "extends": ({"of", "core", "lead", "finite_when"}, set()),
     "represents": ({"of"}, set()),
     "makes_ball": ({"center", "radius", "from"}, set()),
+    "neighbor": ({"of", "side"}, set()),
+    "bound": ({"of", "side", "steps"}, set()),
 }
+# The fields an entry of these kinds has in either domain when it uses them (Milestone 2): a
+# rounding under a condition, and a condition of exactness.
+KIND_OPTIONAL = {"rounded": {"when"}, "error": {"exact_when"}, "encloses": {"exact_when"}}
 # Which kinds and requirements each domain has a reading of.
 DOMAIN_KINDS = {
-    "finite": {"normalized", "error", "leading_rounded", "rounded", "upper", "predicate", "encloses"},
+    "finite": {"normalized", "error", "leading_rounded", "rounded", "upper", "predicate", "encloses",
+               "neighbor", "bound"},
     "extended": {"normalized", "error", "rounded", "upper", "predicate", "encloses", "extends",
-                 "represents", "makes_ball"},
+                 "represents", "makes_ball", "neighbor", "bound"},
 }
 DOMAIN_REQUIRES = {
     "finite": {"normalized", "abs_ge", "nonneg", "power_of_two"},
@@ -213,8 +224,17 @@ def has_product(node):
     return any(isinstance(n, tuple) and has_product(n) for n in node[1:])
 
 
+def has_binary(node):
+    """Whether a value has a sum, a difference or a product: a value of two operands."""
+    if node[0] in ("+", "-", "*"):
+        return True
+    return any(isinstance(n, tuple) and has_binary(n) for n in node[1:])
+
+
 def name_tex(name):
-    """x -> x, x0 -> x_0, cx -> c_x, cz0 -> c_{z0}."""
+    """x -> x, x0 -> x_0, cx -> c_x, cz0 -> c_{z0}; eta, in the threshold of a condition, -> eta."""
+    if name == "eta":
+        return "\\eta"
     m = re.fullmatch(r"([a-z])([a-z]?)(\d*)", name)
     if not m:
         fail("no TeX form for the name %r" % name)
@@ -471,6 +491,7 @@ class Kernel:
             required, optional = KIND_FIELDS[kind]
             if self.domain == "finite":
                 optional = set()
+            optional = optional | KIND_OPTIONAL.get(kind, set())
             fields = set(e) - {"kind"}
             if not required <= fields or fields - required - optional:
                 fail("%s: a %s claim has the fields %s; this script knows %s" % (
@@ -479,6 +500,14 @@ class Kernel:
                 if set(c) != KNOWN_CONDITION_FIELDS or not isinstance(c["exp"], int):
                     fail("%s: the finite_when condition %r is not one this script knows" % (where, c))
                 parse(c["abs_le"], "%s, finite_when" % where, set(self.inputs))
+            if "exact_when" in e:
+                self.exact_tex(e["exact_when"])          # every condition is one this script can print
+            if kind == "rounded" and "when" in e and e["when"] not in KNOWN_WHEN - {None}:
+                fail("%s: the condition when=%r of a rounded claim has no template" % (where, e["when"]))
+            if kind in KNOWN_SIDES and e["side"] not in KNOWN_SIDES[kind]:
+                fail("%s: the side %r of a %s claim has no template" % (where, e["side"], kind))
+            if kind == "bound" and (not isinstance(e["steps"], int) or e["steps"] < 0):
+                fail("%s: the steps %r of a bound claim are not an integer >= 0" % (where, e["steps"]))
             if kind != "makes_ball" and self.value is None:
                 fail("%s: a %s claim needs a value, and the kernel has none" % (where, kind))
         # Whether the kernel has a statement on finite operands (the real model) is what the claims
@@ -627,10 +656,37 @@ class Kernel:
         terms = [x for x in (rel, tiny) if x]
         return " + ".join(terms) if terms else None
 
+    def exact_tex(self, conds):
+        """The conditions of an exact_when as text: EXPR, over the inputs and their limbs NAME[I],
+        is zero or above (at least) K, an expression over u and eta."""
+        if not conds:
+            fail("kernel %s: an exact_when with no condition" % self.name)
+        limbs = {l for i in self.inputs for l in self.limbs(i)}
+        parts = []
+        for c in conds:
+            kinds = [x for x in KNOWN_EXACT_CONDITIONS if x in c]
+            if len(kinds) != 1 or set(c) != {kinds[0], "than"}:
+                fail("kernel %s: the exact_when condition %r is not one this script knows" % (self.name, c))
+            text = c[kinds[0]]
+
+            def limb(m):
+                name, i = m.group(1), int(m.group(2))
+                if name not in self.inputs or i >= len(self.limbs(name)):
+                    fail("kernel %s: the exact_when condition %r names a limb %s[%d] that is not one" % (
+                        self.name, c, name, i))
+                return self.limbs(name)[i]
+            node = parse(re.sub(r"([a-z][a-z0-9]*)\[(\d+)\]", limb, text), "kernel %s, exact_when" % self.name,
+                         set(self.inputs) | limbs)
+            bound = parse(c["than"], "kernel %s, exact_when" % self.name, {"u", "eta"})
+            x = tex(node)
+            parts.append("$%s = 0$ or $\\lvert %s\\rvert %s %s$" % (x, x, KNOWN_EXACT_CONDITIONS[kinds[0]], tex(bound)))
+        return ", ".join(parts[:-1]) + (", and " if len(parts) > 2 else " and ") + parts[-1] if len(parts) > 1 \
+            else parts[0]
+
     def when_tex(self, e):
-        if e["when"] not in KNOWN_WHEN:
+        if e.get("when") not in KNOWN_WHEN:
             fail("kernel %s: the condition when=%r has no template" % (self.name, e["when"]))
-        if e["when"] == "product_large":
+        if e.get("when") == "product_large":
             v = tex(self.value)
             # 2^(2p-1) eta, written without p, which a kernel may use as a name (two_prod's product).
             return "when $%s = 0$ or $\\lvert %s\\rvert \\ge \\eta/(2u^2)$" % (v, v)
@@ -670,20 +726,41 @@ class Kernel:
             else:
                 left = "%s - %s" % (of, tex(self.value, 1, right=True))
                 text = "$\\lvert %s\\rvert \\le %s$" % (left, bound)
-            return text + (", " + when if when else "")
+            text += (", " + when if when else "")
+            if "exact_when" in e and not short:
+                text += "; and $%s = %s$ exactly when %s" % (of, v, self.exact_tex(e["exact_when"]))
+            return text
         if kind == "leading_rounded":
             return "$%s = \\mathrm{RN}(%s)$" % (name_tex(self.lead_limb(e["of"])), tex(self.value))
         if kind == "rounded":
             if e["mode"] not in KNOWN_MODES:
                 fail("kernel %s: the rounding mode %r has no template" % (self.name, e["mode"]))
             text = "$%s = \\mathrm{%s}(%s)$" % (name_tex(e["of"]), KNOWN_MODES[e["mode"]], tex(self.value))
+            when = self.when_tex(e)
             if short:
-                return text
+                return text + (" " + when if when else "")
             return text + {
                 "nearest": ": the number of the format nearest to $%s$, ties to even",
                 "down": ": the largest number of the format not above $%s$",
                 "up": ": the smallest number of the format not below $%s$",
-            }[e["mode"]] % tex(self.value)
+            }[e["mode"]] % tex(self.value) + (", " + when if when else "")
+        if kind == "neighbor":
+            r, v = name_tex(e["of"]), tex(self.value)
+            step, where = KNOWN_SIDES[kind][e["side"]]
+            text = "$%s = \\mathrm{%s}(%s)$" % (r, step, v)
+            return text if short else text + ": the next number of the format %s $%s$" % (where, v)
+        if kind == "bound":
+            r, v, n = name_tex(e["of"]), tex(self.value), e["steps"]
+            rounding, direction = KNOWN_SIDES[kind][e["side"]]
+            below = e["side"] == "below"
+            side = "$%s \\le %s$" % (r, v) if below else "$%s \\ge %s$" % (r, v)
+            if short:
+                return "%s, at most %d step%s %s $\\mathrm{%s}(%s)$" % (
+                    side, n, "" if n == 1 else "s", "below" if below else "above", rounding, v)
+            return ("%s, and $%s$ is $\\mathrm{%s}(%s)$ or at most %d step%s of the format %s it: a bound on that "
+                    "side of the exact value, at most %d number%s of the format beyond its rounding %s" % (
+                        side, r, rounding, v, n, "" if n == 1 else "s", "below" if below else "above", n,
+                        "" if n == 1 else "s", direction))
         if kind == "upper":
             r, v = name_tex(e["of"]), tex(self.value)
             gaps = num_tex(fractions.Fraction(e["gaps"]))
@@ -697,9 +774,16 @@ class Kernel:
                 return "exactly whether $%s$" % rel
             return "$%s$ is true exactly when $%s$, for the exact values" % (name_tex(e["of"]), rel)
         if kind == "encloses":
+            s = tex(self.expr(e["set"], "encloses", set(e["balls"]) | set(self.inputs)))
             if short:
-                return "contains every $%s$" % tex(self.expr(e["set"], "encloses", set(e["balls"]) | set(self.inputs)))
-            return self.encloses_text(e)
+                return "contains every $%s$%s" % (s, ", exactly when nothing underflows" if "exact_when" in e else "")
+            text = self.encloses_text(e)
+            if "exact_when" in e:
+                text += ("; and when %s, the ball is exactly the set: every number within $%s$ of $%s$ is a $%s$ "
+                         "of that kind, so that $%s \\mp %s$ are the least and the greatest $%s$" % (
+                             self.exact_tex(e["exact_when"]), name_tex(e["radius"]), name_tex(e["center"]), s,
+                             name_tex(e["center"]), name_tex(e["radius"]), s))
+            return text
         fail("kernel %s: the claim kind %r has no reading on finite operands" % (self.name, kind))
 
     def relation(self, e):
@@ -711,7 +795,7 @@ class Kernel:
     def finite_short(self):
         entries = self.finite_entries
         parts = [self.finite_bullet(e, short=True) for e in entries
-                 if e["kind"] != "normalized" and not (e["kind"] == "error" and e["when"])]
+                 if e["kind"] != "normalized" and not (e["kind"] in ("error", "rounded") and e.get("when"))]
         normalized = [e for e in entries if e["kind"] == "normalized"]
         if normalized and parts:
             parts[-1] += ", normalized"
@@ -1236,6 +1320,9 @@ class Site:
             elif called:
                 text += " The operations of the public headers call its core, %s, instead." % " and ".join(
                     self.link(c) for c in called)
+            elif self.callers.get(name):
+                # A building block made public by Milestone 2 (two_prod), which kernels also call.
+                text += " It is part of %s." % ", ".join(self.link(c) for c in self.callers[name])
             if p["note"]:
                 text += " " + p["note"]
             return text
@@ -1298,6 +1385,10 @@ class Site:
                 lines.extend(self.extended_rounded(k, x))
             elif kind == "upper":
                 lines.extend(self.extended_upper(k, x))
+            elif kind == "neighbor":
+                lines.extend(self.extended_neighbor(k, x))
+            elif kind == "bound":
+                lines.extend(self.extended_bound(k, x))
             elif kind == "extends":
                 lines.extend(self.extended_extends(k, x))
             elif kind == "encloses":
@@ -1325,8 +1416,36 @@ class Site:
             "down": "$%s$ is the largest number of `T` not above $%s$, or $-\\infty$ when $%s < -\\Omega$" % (t, v, v),
             "up": "$%s$ is the smallest number of `T` not below $%s$, or $+\\infty$ when $%s > \\Omega$" % (t, v, v),
         }[mode]
-        return ["If every operand is finite: %s ($\\Omega$ is the largest finite number of `T`)." % what,
-                "If an operand is infinite or NaN: $%s = %s$." % (t, tex(self.leading(k, k.value)))]
+        when = k.when_tex(x)
+        return ["If every operand is finite%s: %s ($\\Omega$ is the largest finite number of `T`)." % (
+                    " and " + when[len("when "):] if when else "", what),
+                "If an operand is infinite or NaN: $%s = %s$%s." % (
+                    t, tex(self.leading(k, k.value)), ", as `T` computes it" if has_binary(k.value) else "")]
+
+    def extended_neighbor(self, k, x):
+        r, a = name_tex(x["of"]), tex(k.value)
+        if x["side"] == "up":
+            return ["$%s$ is the next number of `T` above $%s$: for a finite $%s$ the smallest number of `T` "
+                    "above it, $+\\infty$ above $\\Omega$ and $\\eta$ above either zero; $-\\Omega$ for "
+                    "$%s = -\\infty$; $+\\infty$ for $%s = +\\infty$; a NaN for a NaN." % (r, a, a, a, a)]
+        return ["$%s$ is the next number of `T` below $%s$: for a finite $%s$ the largest number of `T` "
+                "below it, $-\\infty$ below $-\\Omega$ and $-\\eta$ below either zero; $\\Omega$ for "
+                "$%s = +\\infty$; $-\\infty$ for $%s = -\\infty$; a NaN for a NaN." % (r, a, a, a, a)]
+
+    def extended_bound(self, k, x):
+        r, v, n = name_tex(x["of"]), tex(k.value), x["steps"]
+        below = x["side"] == "below"
+        if below:
+            rounding = ("the largest number of `T` not above $%s$, which is $\\Omega$ when $%s > \\Omega$ and "
+                        "$-\\infty$ when $%s < -\\Omega$" % (v, v, v))
+        else:
+            rounding = ("the smallest number of `T` not below $%s$, which is $+\\infty$ when $%s > \\Omega$ and "
+                        "$-\\Omega$ when $%s < -\\Omega$" % (v, v, v))
+        return ["If every operand is finite: $%s %s %s$, and $%s$ is at most %d step%s of `T` %s %s (a step %s "
+                "$%s\\Omega$ gives $%s\\infty$)." % (
+                    r, "\\le" if below else "\\ge", v, r, n, "" if n == 1 else "s", "below" if below else "above",
+                    rounding, "below" if below else "above", "-" if below else "", "-" if below else "+"),
+                "If an operand is infinite or NaN: $%s = %s$, as `T` computes it." % (r, tex(k.value))]
 
     def extended_upper(self, k, x):
         r, v = name_tex(x["of"]), tex(k.value)
@@ -1406,6 +1525,10 @@ class Site:
                      "an operand ball is empty" if len(balls) > 1 else "$%s$ is empty" % names[0]),
                  "**B3.** If $Z$ is a finite ball, then %s, and %s." % (finite_ops, k.encloses_text(
                      dict(x, center=x["center"], radius=x["radius"])))]
+        if "exact_when" in x:
+            lines.append("**Exact.** If $Z$ is a finite ball and %s, then $Z$ is exactly the set of the $%s$: every "
+                         "number within $%s$ of $%s$ is one of them." % (
+                             k.exact_tex(x["exact_when"]), tex(s), rw, cw))
         conds = self.conditions(k, x.get("finite_when", []))
         if conds:
             lines.append("**B4.** If %s and %s, then $Z$ is a finite ball. %s" % (
@@ -1473,6 +1596,20 @@ class Site:
             rel = k.relation(x)
             return "Whether $%s$, for the exact values:\n\n$$%s = [\\, %s \\,].$$" % (rel, name_tex(x["of"]), rel)
         out = name_tex(k.outputs[0]) if len(k.outputs) == 1 else None
+        if "neighbor" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] == "neighbor")
+            step, where = KNOWN_SIDES["neighbor"][x["side"]]
+            return "The next number of `T` %s $%s$, for every value of `T`:\n\n$$%s = \\mathrm{%s}(%s).$$" % (
+                where, v, out, step, v)
+        if "bound" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] == "bound")
+            below = x["side"] == "below"
+            return ("A%s bound of $%s$, a number of `T` within %d step%s of its rounding %s, and that rounding "
+                    "itself %s:\n\n$$%s %s %s.$$" % (
+                        " lower" if below else "n upper", v, x["steps"], "" if x["steps"] == 1 else "s",
+                        KNOWN_SIDES["bound"][x["side"]][1],
+                        "where the claims say so (below)" if "rounded" in kinds else "in no case claimed",
+                        out, "\\le" if below else "\\ge", v))
         if "rounded" in kinds and len(k.outputs) == 1 and len(k.limbs(k.outputs[0])) == 1 and "error" not in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "rounded")
             return "$%s$ rounded to a number of `T`:\n\n$$%s = \\mathrm{%s}(%s).$$" % (

@@ -12,7 +12,7 @@ $$s + e = a + b.$$
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`add_2_1`](add_2_1.md), [`add_2_2`](add_2_2.md), [`add_fast_2_2`](add_fast_2_2.md).
+No public operation computes this kernel on its own. It is part of [`two_sum_entry`](two_sum_entry.md), [`add_2_1`](add_2_1.md), [`add_2_2`](add_2_2.md), [`add_fast_2_2`](add_fast_2_2.md).
 
 ## Requires
 

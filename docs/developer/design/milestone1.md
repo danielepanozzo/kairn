@@ -14,7 +14,8 @@ proofs too are against what the generator prints: the IEEE model of every kernel
 (`proofs/gen/IeeeModel.v`) and its statements (`proofs/gen/IeeeStatements.v`), from the same
 kernel descriptions as the C++. Written by hand, and imported by the generated files, are only
 the meaning of each operation in Flocq's terms (`proofs/theories/IeeeOperations.v`) and the
-vocabulary of the statements (`IeeeVocabulary.v`). Every kernel of `gen/claims.json` is `proved`.
+vocabulary of the statements (`IeeeVocabulary.v`). Every kernel of this page in `gen/claims.json`
+is `proved`.
 What is not proved is said where it applies: thresholds sharper than the ones stated, for the
 arithmetic kernels (F3) and for the conditions under which a Ball operation returns a finite ball
 (B4).
