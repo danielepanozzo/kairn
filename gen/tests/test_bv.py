@@ -611,6 +611,17 @@ class Interp(unittest.TestCase):
         got = interp.complete(m, line, formats)
         self.assertTrue(got.startswith(line + ' -> 0x1p+1 0x1.8p+1 0x1.'), got)
         self.assertTrue(got.endswith(' 1'), got)
+        # In place (architecture.md's examples): the completion of the request without the field.
+        line = 'add_2 binary64 seq 2 inplace=1 0x1p+0 0x1p+1 0x0p+0 0x0p+0 0x1p-1 0x1p-1 0x0p+0 0x0p+0'
+        self.assertEqual(interp.complete(m, line, formats), line + ' -> 0x1.8p+0 0x1.4p+1 0x0p+0 0x0p+0 1')
+        line = 'bv_add_1 binary64 lanes:2 2 inplace=0 0x1p-4 0x1p-4 0x1p+0 0x1p+1 0x1p+0 0x1p+0'
+        self.assertEqual(interp.complete(m, line, formats).split(' -> ')[1],
+                         interp.complete(m, line.replace(' inplace=0', ''), formats).split(' -> ')[1])
+        for bad in ('add_2 binary64 seq 1 inplace=2 0x1p+0 0x0p+0 0x1p+0 0x0p+0',
+                    'sum_2 binary64 seq 1 inplace=0 0x1p+0 0x0p+0',
+                    'bv_scale_1 binary64 seq 1 inplace=1 0x1p+0 0x1p+0 0x1p+0'):
+            with self.assertRaises(interp.InterpError, msg=bad):
+                interp.complete(m, bad, formats)
         # The constructor: the radius, then the centers given; a negative radius gives the whole space.
         self.assertEqual(interp.complete(m, 'bv_make_1 binary64 seq 2 0x1p-4 -0x1p+0 0x1p+1', formats),
                          'bv_make_1 binary64 seq 2 0x1p-4 -0x1p+0 0x1p+1 -> -0x1p+0 0x1p+1 0x1p-4 1')
@@ -661,6 +672,35 @@ def corpus(fmt, orders, seed):
     return out
 
 
+def in_place_corpus(orders=None, formats=('binary64', 'binary32')):
+    """([in-place request], [the same request without the field]) of every map and ball vector, for
+    each array read with as many limbs as the array written, on random canonical operands of lengths
+    0 to 9 (the constructors' and the maps' operands any value, specials among them)."""
+    ks = common.kernels()
+    lines, plain = [], []
+    for fmt in formats:
+        f = interp.parse_format(fmt)
+        rng = random.Random(f'inplace:{fmt}')
+        for name, fd in ks.folds.items():
+            if not (fd.is_map or fd.is_bv):
+                continue
+            places = [i for i, g in enumerate(fd.arrays) if len(g.limbs) == len(fd.write_limbs())]
+            for n in (0, 1, 2, 3, 5, 9):
+                if fd.is_map:
+                    scalars, elements = writers.map_case(fd, writers.Draw(f, rng, special=0.02), n)
+                elif fd.ensures[0]['kind'] == 'makes_ball_vector':
+                    scalars, elements = make_case(fd, f, rng, n, 0.02)
+                else:
+                    scalars, elements = bv_case(fd, f, rng, n)
+                for order, w in (orders.get(fmt, []) if orders else [('sequential', 0), ('lanes', 3)]):
+                    p = request(fd, fmt, order, w, scalars, elements)
+                    head = p.split(' ')
+                    for i in places:
+                        lines.append(' '.join(head[:4] + [f'inplace={i}'] + head[4:]))
+                        plain.append(p)
+    return lines, plain
+
+
 _machines = {}
 
 
@@ -706,6 +746,26 @@ class Cxx(unittest.TestCase):
                 self.assertEqual([b[0][:200] for b in bad[:3]], [], f'{len(bad)} of {len(self.cases)} differ')
                 reference = out
 
+    def test_in_place(self):
+        """The request form inplace=I (architecture.md, "The line protocol"): every map and every ball
+        vector with each array read that has the limbs of the array written, through every build of the
+        runner, which then passes that array as the one written, completes exactly as the same request
+        without the field; the interpreter too."""
+        lines, plain = in_place_corpus()
+        m = interp.Machine(common.kernels())
+        formats = {}
+        want = [interp.complete(m, p, formats).split(' -> ', 1)[1] for p in plain]
+        self.assertEqual([interp.complete(m, x, formats).split(' -> ', 1)[1] for x in lines], want)
+        text = ''.join(x + '\n' for x in lines)
+        for i, (label, _) in enumerate(self.builds.configs):
+            with self.subTest(build=label):
+                code, out, err = self.builds.run(i, text)
+                self.assertEqual(code, 0, err)
+                got = [x.split(' -> ', 1)[1] for x in out.splitlines() if ' -> ' in x]
+                self.assertEqual(len(got), len(want))
+                bad = [(lines[j][:120], got[j][:80], want[j][:80]) for j in range(len(want)) if got[j] != want[j]]
+                self.assertEqual(bad[:3], [], f'{len(bad)} of {len(want)} differ')
+
     def test_the_corpus(self):
         self.assertTrue(any(w[-1] is False for w in self.want) and any(w[-1] is True for w in self.want))
         self.assertTrue({0, 1, 2, 3, 4, 5, 7, 8, 9, 16} <= {len(c[5]) for c in self.cases})
@@ -733,6 +793,22 @@ class Packed(unittest.TestCase):
     def native(label):
         return {'binary64': 2, 'binary32': 4} if simd_tests.ARM64 and 'x86_64' not in label else \
             {'binary64': 4, 'binary32': 8}
+
+    def test_in_place(self):
+        """inplace=I through every packed build: as the same request without the field."""
+        m = interp.Machine(common.kernels())
+        for i, (label, _) in enumerate(self.builds.configs):
+            native = self.native(label)
+            lines, plain = in_place_corpus({fmt: [('lanes', w)] for fmt, w in native.items()}, tuple(native))
+            formats = {}
+            want = [interp.complete(m, p, formats).split(' -> ', 1)[1] for p in plain]
+            with self.subTest(build=label):
+                code, out, err = self.builds.run(i, 'packed', ''.join(x + '\n' for x in lines))
+                self.assertEqual(code, 0, err)
+                got = [x.split(' -> ', 1)[1] for x in out.splitlines() if ' -> ' in x]
+                self.assertEqual(len(got), len(want))
+                bad = [(lines[j][:120], got[j][:80], want[j][:80]) for j in range(len(want)) if got[j] != want[j]]
+                self.assertEqual(bad[:3], [], f'{len(bad)} of {len(want)} differ')
 
     def test_lane_by_lane(self):
         for i, (label, _) in enumerate(self.builds.configs):

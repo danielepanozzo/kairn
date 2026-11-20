@@ -501,6 +501,20 @@ domain:        extended
   So the step is the combination of the state and of a function of the element, and the
   combination is associative, commutative and idempotent on every state: every order computes
   the same final state.
+- **The masks of the combination and of the step are claimed by nothing.** Their outputs `okr` are
+  the `and` of the incoming masks (`norm_combine`) and that and "the element's leading limb is not a
+  NaN" (`norm_step_k`), and no kind of the vocabulary says that of a mask: `predicate` is a relation
+  between the exact values of two expressions, false for a NaN operand, and a mask input is no value.
+  The entries of `gen/claims.json` for these two kernels have only `maximum` of the limb. It is
+  safe: the masks are only ever combined and given to a finish, and what comes out of the finish is
+  claimed (`finite_or_nan` with `if=ok` of `norm_finish_k`, `upper r max` and `finite_or_nan` of the
+  fold, `encloses_entries` of a ball vector), so a wrong mask makes a claim of the fold or of the
+  ball vector false wherever it matters (a NaN element whose mask stayed true gives a finite result
+  from a NaN element, which the fold's reading forbids). And the generator checks the definitions by
+  rule (`rules.max_rules`: the operation that defines the combination's mask is the `and` of its two
+  masks, and the step is the combination on the state and on `(abs(x0), eq(abs(x0), abs(x0)))`, its
+  listing with its calls inlined). A reader that judges these kernels alone can judge the limb, and
+  may check the masks against that definition as a test of its own, not as a claim.
 - **The finish** returns the limb when the mask is true and its result is finite, stepped up
   `steps` times: `norm_finish_1` returns $m$, `norm_finish_2` returns $\mathrm{succ}(m)$, which is
   above every element (a normalized pair is strictly between the neighbors of its leading limb,
@@ -1997,6 +2011,13 @@ short here):
 - `entries`, the claim kind of a map: every written element $z_i$ satisfies every `ensures` entry
   of the kernel `kernel` (the step), whose inputs are given, in order, the groups of `step_args`:
   the scalars, and element $i$ of each array. `value` is the step's value of those.
+- **The map's `value` and `requires` are the step's**, a rule of the generator (`rules.map_rules`)
+  that a reader may rely on: the map's `value` is the step's `value` with each input of the step
+  renamed to the group of `step_args` at its position (`axpy_step_2(a, x, y)` has the value
+  `a*x+y` over its own inputs `a`, `x`, `y`; a step `scale_step_1(x, a)` with `step_args`
+  `["x", "a"]` gives `x*a`), as expressions, not only as values; and every requirement of the step on
+  what the map passes is a requirement of the map, `normalized` read as `canonical`, `power_of_two`
+  as it is. So the claims of `entries` are about exactly the operands the map's `requires` describe.
 - `finite_or_nan` of a written array: the flag is true exactly when the leading limb of every
   written element is finite; when it is false, every element whose leading limb is not finite has
   every limb a NaN, and the others are as computed.
@@ -2006,6 +2027,20 @@ short here):
   that is not finite (an operand not finite, or an overflow) is the canonical NaN. The order makes
   no difference: `F_seq`, `F_lanes` with any $W$ and `F_packed` write the same elements and the
   same flag.
+- **What is a violation**, for a reader that judges a written element. A written element whose
+  leading limb is finite and that has a lower limb that is not finite violates the claim: it is not
+  canonical (`entries` includes `normalized` of the step, and the IEEE-model statement says that a
+  finite leading limb means every limb finite). So does a written element whose leading limb is
+  finite though a rounding inside the step overflowed, or though an operand is not finite: in the
+  extended domain a finite leading limb claims finite operands and a computation in which nothing
+  overflowed, so that the values are those the step computes without overflow (the IEEE-model
+  statement: those of the real model) and the step's claims hold; a reader that cannot see inside
+  the step judges this through those claims, `normalized` and `error`, in exact arithmetic. A
+  written element that is not finite (the canonical NaN) from finite operands far below
+  the overflow threshold violates nothing: a map claims nothing about when its elements are finite
+  (it has no `finite_when`), so that is at most suspicious; the same holds of a coefficient of a
+  convolution. The flag that is false while every element written is finite, or true while one is
+  not, violates `finite_or_nan`.
 
 **The folds of maxima** ([Folds of maxima](#folds-of-maxima)) and their kernels add one kind of
 claim of a kernel, two fields of `finite_or_nan`, and one kind of claim of a fold:
@@ -2013,13 +2048,20 @@ claim of a kernel, two fields of `finite_or_nan`, and one kind of claim of a fol
 | Kind | Fields | Meaning |
 |---|---|---|
 | `maximum` (a kernel, the finite domain) | `of` (a one-limb output), `args`: two expressions | the output is the larger of the exact values of the two expressions, which are expressions of the language of `value` in which `NAME[I]` is limb I of an input, as in `exact_when`: `{"kind": "maximum", "of": "r", "args": ["m", "abs(x[0])"]}` |
-| `finite_or_nan` with `if` and `steps` (a kernel, the extended domain) | `if`: a mask input; `steps`: an integer $S \ge 1$ | let $t$ be `value` stepped up $S$ times ($S = 0$ when the field is absent), each step IEEE 754's nextUp (a NaN stays a NaN, $+\infty$ stays $+\infty$, $\Omega$ goes to $+\infty$). The flag is true exactly when the mask `if` is true and $t$ is finite; the output is then $t$; otherwise it is a NaN. `{"kind": "finite_or_nan", "of": "r", "flag": "flag", "if": "ok", "steps": 1}` |
+| `finite_or_nan` with `if` and `steps` (a kernel, the extended domain) | `if`: a mask input; `steps`: an integer $S \ge 1$ | let $t$ be `value` stepped up $S$ times ($S = 0$ when the field is absent), each step IEEE 754's nextUp (a NaN stays a NaN, $+\infty$ stays $+\infty$, $\Omega$ goes to $+\infty$, and $-\infty$ goes to $-\Omega$, the most negative finite number, which is finite: the table of `neighbor`). The flag is true exactly when the mask `if` is true and $t$ is finite; the output is then $t$; otherwise it is a NaN. `{"kind": "finite_or_nan", "of": "r", "flag": "flag", "if": "ok", "steps": 1}` |
 | `upper` with `over` (a fold) | `of`, `over`: `max`, `steps`: an integer $S \ge 0$ | with $v_i$ the value of element $i$ and $V = \max_i v_i$ ($0$ for no element): $V \le r \le \mathrm{RU}(V)$ stepped up $S$ times, $\mathrm{RU}$ in the format with overflow (so that a $V$ above $\Omega$ makes the bound $+\infty$, and then no finite $r$ satisfies the first inequality). `{"kind": "upper", "of": "r", "over": "max", "steps": 1}` |
 
 A fold with an `upper` entry has no `fold_error` entry, and its `instances` are empty lists. Its
 reading in the extended domain is that of the other folds: the flag is true exactly when the
 result is finite, and then every element is finite and the claim holds; a NaN or infinite element,
-or a result whose step up is infinite, gives the flag false and a NaN.
+or a result whose step up is infinite, gives the flag false and a NaN. As a rule: **the flag is true
+exactly when the leading limb of every element is finite and the largest of their magnitudes,
+stepped up $S$ times, is finite**. So with finite elements the flag is false exactly when that step
+up is $+\infty$: never for one limb ($S = 0$), and for two limbs ($S = 1$) exactly when a leading
+limb is $\pm\Omega$ (the step up from $\Omega$ is $+\infty$). The proofs established it in this form
+(for two limbs, the flag is true exactly when every leading limb is finite and the step up from the
+largest is finite); the generator's tests check it in every order (`test_folds.py`, the folds of
+maxima).
 
 **Convolutions** ([Convolutions](#convolutions)) are in the list `"folds"` too, with `"conv":
 true` (and no `"map"`):
@@ -2572,6 +2614,22 @@ the radius given: `bv_make_1 binary64 seq 2 0x1p-4 -0x1p+0 0x1p+1` is completed 
 ` -> -0x1p+0 0x1p+1 0x1p-4 1`, and the same request with the radius `-0x1p-4` with
 ` -> 0x0p+0 0x0p+0 inf 0`. The interpreter, the compiled runner (`F_seq`, `F_lanes` for any W) and the
 packed runner (`F_packed`, its register's W only) complete them, with the same bits.
+
+**In place.** A map or a ball vector may write the array it reads (the array written being exactly
+one of the arrays read, [Maps](#maps)). A request asks for that with one more field, `inplace=I`,
+right after the length: `MAP FORMAT ORDER N inplace=I SCALAR... LIMB...`, I the index (from 0, in the
+order of the fold's `arrays`) of an array read whose limbs are as many as those of the array written.
+The compiled runners and the packed runner then pass that array's buffers as the array written; the
+interpreter computes as without the field. The completion is that of the request without the field,
+the field copied with the rest of the line before the arrow, and every claim is judged as for that
+request: in place changes nothing that is claimed. For example `add_2 binary64 seq 2 inplace=1 0x1p+0
+0x1p+1 0x0p+0 0x0p+0 0x1p-1 0x1p-1 0x0p+0 0x0p+0` ($y \leftarrow x + y$, $x = (1, 2)$, $y = (\tfrac12,
+\tfrac12)$) is completed with ` -> 0x1.8p+0 0x1.4p+1 0x0p+0 0x0p+0 1`, and `bv_add_1 binary64 lanes:2 2
+inplace=0 0x1p-4 0x1p-4 0x1p+0 0x1p+1 0x1p+0 0x1p+0` ($x \leftarrow x + y$) as the same request without
+`inplace=0`. A request whose I is not such an array, or of a fold that is not a map or a ball vector,
+is refused. The generator's tests (`test_bv.Cxx.test_in_place`, `test_bv.Packed.test_in_place`) run
+every map and every ball vector in place this way, with each array that can be written, through every
+build of the runners, and find the completions of the requests without the field.
 
 **Convolutions** have two lengths, and the sequential order only:
 

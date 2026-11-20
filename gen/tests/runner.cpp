@@ -222,6 +222,20 @@ void complete_fold(const Fold& f, const std::vector<std::string>& fields, std::s
     }
 }
 
+// In place (architecture.md, "The line protocol"): an optional field inplace=I after the length,
+// I the index of an array read (in the order of the fold's arrays) whose limbs are as many as those
+// of the array written; the runner then passes that array's buffers as the array written. Returns
+// the index, or -1 without the field; `at` is moved past it.
+long in_place(const Map& m, const std::vector<std::string>& fields, std::size_t& at) {
+    const std::string head = "inplace=";
+    if (fields.size() <= at || fields[at].compare(0, head.size(), head) != 0) return -1;
+    const std::size_t i = length(fields[at].substr(head.size()));
+    if (i >= std::strlen(m.arrays) || m.arrays[i] - '0' != m.writes)
+        fail(fields[at] + ": not an array read with as many limbs as the array written");
+    ++at;
+    return long(i);
+}
+
 template <class T>
 void complete_map(const Map& m, const std::vector<std::string>& fields, std::string& out,
                   void (*seq)(const T* const*, std::size_t, std::size_t, const T*, T* const*, T*, bool*),
@@ -233,23 +247,32 @@ void complete_map(const Map& m, const std::vector<std::string>& fields, std::str
     std::size_t arrays = 0;
     for (const char* a = m.arrays; *a; ++a) arrays += std::size_t(*a - '0');
     const std::size_t scalars = std::size_t(m.scalars);
-    if (fields.size() - 4 != scalars + arrays * n)
+    std::size_t at = 4;
+    const long place = in_place(m, fields, at);
+    if (fields.size() - at != scalars + arrays * n)
         fail(std::string(m.name) + " of length " + fields[3] + " takes " + std::to_string(scalars + arrays * n) + " limbs");
     std::vector<T> sc(scalars + 1), data(arrays * n + 1);
-    for (std::size_t i = 0; i < scalars; ++i) sc[i] = limb(T(), fields[4 + i]);
-    for (std::size_t i = 0; i < arrays * n; ++i) data[i] = limb(T(), fields[4 + scalars + i]);
+    for (std::size_t i = 0; i < scalars; ++i) sc[i] = limb(T(), fields[at + i]);
+    for (std::size_t i = 0; i < arrays * n; ++i) data[i] = limb(T(), fields[at + scalars + i]);
     std::vector<const T*> in(arrays + 1);
     for (std::size_t l = 0; l < arrays; ++l) in[l] = data.data() + l * n;
     std::vector<T> written(std::size_t(m.writes) * n + 1);
     std::vector<T*> w(std::size_t(m.writes) + 1);
     for (int l = 0; l < m.writes; ++l) w[std::size_t(l)] = written.data() + std::size_t(l) * n;
+    if (place >= 0) {
+        // The array written is the array read: its first limb is after the limbs of the arrays before it.
+        std::size_t first = 0;
+        for (long a = 0; a < place; ++a) first += std::size_t(m.arrays[a] - '0');
+        for (int l = 0; l < m.writes; ++l) w[std::size_t(l)] = data.data() + (first + std::size_t(l)) * n;
+    }
     bool mo[1] = {};
     T res[1] = {};
     (by_lanes ? lanes_fn : seq)(in.data(), n, lanes, sc.data(), w.data(), res, mo);
-    for (std::size_t i = 0; i < std::size_t(m.writes) * n; ++i) {
-        out += ' ';
-        put(static_cast<double>(written[i]), out);
-    }
+    for (int l = 0; l < m.writes; ++l)
+        for (std::size_t i = 0; i < n; ++i) {
+            out += ' ';
+            put(static_cast<double>(w[std::size_t(l)][i]), out);
+        }
     if (m.radius) {
         out += ' ';
         put(static_cast<double>(res[0]), out);

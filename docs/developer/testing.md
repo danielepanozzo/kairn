@@ -1532,7 +1532,9 @@ printers, the counts of the loops and the claims (with the entries of architectu
 tests the constructors (`makes_ball_vector` on every small case and at random, every order), the
 negations (exactness), and `bv_norm_upper_k` as the header writes it, `norm_upper_k` then `add_up_1`
 of the radius: every member at most the bound, the bound at most one rounding up above the claims of
-the two calls, in exact arithmetic.
+the two calls, in exact arithmetic. And the request form `inplace=I` of the line protocol: every map
+and every ball vector, with each array read that can be the array written, through every build of
+the runner and of the packed runner, completes exactly as the same request without the field.
 
 **The folds, and the kernels of their stage**, are cross-checked by the oracle like every kernel
 ([above](#cross-checks)), and tested here too. `gen/tests/test_folds.py` checks:

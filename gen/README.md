@@ -277,7 +277,9 @@ it; `cpp.bv_seq`, `cpp.bv_lanes` and `simd.bv_packed` print it; `rocq.bv_model` 
 by entry); `ieee.bv_model` and `ieee.bv_statement` its IEEE model and V1 to V4 of milestone2.md;
 `claims.bv_claims`, its entry of `"folds"`, with `"bv": true`; the interpreter runs it
 (`Machine.run_fold`), and the runners complete its requests (`KAIRN_RUNNER_BV` of
-`runner_kernels.inc`), the centers written, then the radius and the flag.
+`runner_kernels.inc`), the centers written, then the radius and the flag. The requests of a map and of a
+ball vector may say `inplace=I` after the length (architecture.md, "The line protocol"): the runners
+then pass array I as the array written, and the interpreter computes as without the field.
 
 ## The operations
 

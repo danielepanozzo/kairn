@@ -624,6 +624,17 @@ def complete_fold(machine, fd, f, fields):
     if not re.fullmatch(r'0|[1-9][0-9]*', fields[1]):
         raise InterpError(f'not a length: {fields[1]!r} (a decimal number)')
     n = int(fields[1])
+    if len(fields) > 2 and fields[2].startswith('inplace='):
+        # In place (architecture.md, "The line protocol"): the array written is the array read of
+        # index I, which a compiled runner passes as the array written. The result is the same: every
+        # element is read whole before it is written (a map's and a ball vector's aliasing rule).
+        m = re.fullmatch(r'inplace=(0|[1-9][0-9]*)', fields[2])
+        i = int(m.group(1)) if m else -1
+        if not (fd.is_map or fd.is_bv) or not 0 <= i < len(fd.arrays) or \
+                len(fd.arrays[i].limbs) != len(fd.write_limbs()):
+            raise InterpError(f'{fields[2]}: in place is a form of the requests of a map or a ball vector, I the '
+                              'index of an array read with as many limbs as the array written')
+        fields = fields[:2] + fields[3:]
     limbs, given = fd.array_limbs(), len(fd.scalar_limbs())
     if len(fields) - 2 != given + n * len(limbs):
         raise InterpError(f'{fd.name} of length {n} takes {given + n * len(limbs)} limbs ({given} of its scalars, '
