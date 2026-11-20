@@ -40,6 +40,8 @@ full forms, the same claims of `neighbor` and of the products in the finite doma
 domain as `mul_down_bound_real`, and `mul_pow2_2` with an `exact_when` on its error) and
 `oracle/selftest/claims-wave5.json` (the folds' stage of Milestone 2: the eight folds, their steps,
 finishes and bounds, and the kernels whose bounds they name, frozen from the claims of
+2026-11-20) and `oracle/selftest/claims-wave6.json` (the 33 interval kernels of Milestone 2 and
+`add_2_2` and `mul_2_2`, whose bounds their constants name, frozen from the claims of
 2026-11-20), so that it does not depend on the generator.
 
 ## gen
@@ -142,6 +144,30 @@ families:
 | `count` | a `count()` input: `bound_sum_k`, `bound_dot_k` | `integer` (integers from 1 to $2^p$, log-uniform: the counts of real arrays); `fraction` (counts that are not integers, which `count()` allows); `limit` ($m \cdot \mathrm{unit}(K)$ from 1/16 to 1, log-uniform, and the numbers next to $m \cdot \mathrm{unit}(K)$ = 1/5, 1/4, 1/2 and 1, with $\mathrm{unit}(K)$ from the claims of the kernel K the bound is for); `beyond` ($m \cdot \mathrm{unit}(K)$ from 1 to the largest count). The common strata: `zero` is $m = 0$ (either sign), `underflow` 1, its successor and small integers, `overflow` the top binades, `pow2` powers of two, `extreme` the numbers next to the limits |
 | `dotstep` | a value `NAME + NAME * NAME`: `dot_step_1`, `dot_step_2` | `cancel` ($s$ within a few units of $-(xy)$ rounded to the format: the state cancels the product); `state` ($\lvert s\rvert$ $p$ to $2kp + 4$ binades above or below $\lvert xy\rvert$); `zerostate` ($s = 0$, the first step of a fold); `tie` ($xy$ exact and $s$ an odd multiple of half its unit: $s + xy$ a tie); `exactprod` (short significands) |
 | `finish` | a `finite_or_nan` entry: `fold_finish_k` | `nonfinite` (the leading limb infinite or a NaN, any lower limb); `tails` (a finite leading limb with a lower limb that is not finite, or with a finite lower limb that does not normalize it: the state is passed on as it is) |
+
+The interval kernels of Milestone 2 ([The kinds of the interval
+kernels](#the-kinds-of-the-interval-kernels)) get families of their own (`gen6.py`), chosen from
+their claims before every earlier family; `ball_narrow_2_1`, an `encloses` of a ball of the
+extended domain, keeps the family of the non-finite layer. An interval is one operand: its two
+bounds, drawn as two numbers of a stratum and sorted, or a special interval. Each family has the
+common strata, read for its operands, and strata of its own, each coming round twice per cycle:
+
+| Family | Kernels | Strata of its own |
+|---|---|---|
+| `ivop` | an `encloses_interval` entry: `interval_neg_k`, `interval_add_k`, `interval_sub_k`, `interval_mul_k` | `special` (each operand the empty set, the whole line, a half-line on either side, $[0, 0]$, a point or bounded, one of them special); `point` (points, bounds one step apart, $[0, 0]$, $[-\eta, \eta]$); sums and products: `threshold` (bounded operands whose range reaches the limit of `bounded_when`, $\Omega$ or $2^{q_{\max}+p+E}$, exactly or one unit inside or outside, on the upper or the lower side); sums: `cancel` (a bound of one operand within a step of minus a bound of the other; for two limbs the leading limbs cancelling and not the tails) and `zerosum` (a bound of the range exactly zero: `exact_when` true); products: `zeroinf` ($[0, 0]$ or a zero bound against an unbounded operand) and `aroundp` (products of bounds around $P = 2^{2p-1}\eta$, `product_large` both ways) |
+| `ivset` | `interval_set`: the hulls and intersections | `special` (both empty an eighth of the time), `point` (equal intervals and points), `disjoint`, `touch` (one common point), `nested` |
+| `ivmake` | `makes_interval`, `makes_ball` from an interval: `interval_make_k`, `ball_from_interval_2` | `nanbound` (a NaN bound, the other any value), `reversed` ($lo > hi$, $[+\infty, h]$, $[l, -\infty]$), `infinities` (each bound an infinity or a number: half-lines, the whole line, equal infinities), `point`; for the ball also `oddeta` (bounds odd multiples of $\eta$ below $2N$, whose halves are not numbers) and `top` (bounds at and next to $\pm\Omega$) |
+| `ivmid` | `ball_of_interval`, `splits`: `interval_mid_rad_1`, `interval_to_ball_1`, `interval_split_1` | `special`, `point`, `step` (bounds one or two steps apart), `oddeta`, `top` ($[-\Omega, \Omega]$, $[\Omega, \Omega]$, $[\mathrm{pred}(\Omega), \Omega]$, ...) |
+| `ballbound` | `set_bound`, `interval_of_ball`: `ball_lower_as_k`, `ball_upper_as_k`, `ball_to_interval_1` | `ballstates` (the whole line, the empty set), `radii` (radii of every size against the center), `cross` (a radius about $\lvert c\rvert$: $c - r$ small, zero or of the other sign), `beyond` ($c - r$ below $-\Omega$, $c + r$ above $\Omega$), `exactend` ($c \pm r$ a number of the format, or not) |
+| `outward` | `outward`, or `encloses` with no ball: `add_ball_2_2`, `mul_ball_2_2`, `add_down_2_2` ... `mul_dir_2_2`, `mul_ext_2_2` | sums: `cancel`, `zerosum` ($x + y = 0$, $x - y = 0$ exactly), `close`, `apart`, `tiny` (values near the smallest normal number, where the absolute term is most of the bound); products: `close`, `tiny`, `aroundp`, `exactprod`; in the extended domain (`mul_ext_2_2`) also `nonfinite` (an infinite operand), `zeroinf` (a zero against an infinity) and `edge` (products near the overflow threshold) |
+| `dirmul` | `bound` and `rounded` with `zero_factor`: `mul_dir_1` | the strata of `dirprod` on finite operands (`aroundp`, `tiny`, `exactprod`, `beyond`), and `nonfinite` (an infinite operand, the other finite, zero or infinite; never a NaN: `not_nan()`), `zeroinf`, `zerofactor` (a zero against any number) |
+
+The exhaustive mode of a kernel with `interval()` or `not_nan()` (`gen6.IvExhaustiveGen`) takes
+an interval as one operand, as a ball is one: the empty set and every pair $l \le h$ of bounds,
+$l$ a number of the format (or a normalized pair) or $-\infty$ and $h$ a number or $+\infty$; a
+restriction on the lower (upper) input keeps the finite lower (upper) bounds whose leading limb it
+keeps, and the infinite bounds and the empty set are always enumerated. `not_nan()` leaves NaN out
+of the domain of its input. Sizes are in [Testing](../docs/developer/testing.md#cross-checks).
 
 What a generator of cases gives for `count(m)`: $m = 0$, and numbers of the format from 1 up, both
 integers and others (the claim allows any $m \ge 1$; the header converts a number of terms, and a
@@ -451,6 +477,161 @@ Readings chosen where the documents leave a choice:
 - `finite_or_nan` compares limb for limb by value: a NaN for a NaN, the same infinity, numbers
   equal (zeros of either sign).
 
+### The kinds of the interval kernels
+
+architecture.md, "Claims of the interval kernels" and "Claims of the interval kernels: two limbs
+and the enclosure interface", read with milestone2.md, "Interval kernels" and "One enclosure
+interface" (`intervals.py`, hooked into `claims.py`, `check.py` and `extended.py`). A bound of an
+interval is a number, an infinity, or part of the empty set's representation; the members of an
+interval are real numbers ($[1, +\infty]$ does not contain $+\infty$); the sign of a zero bound is
+never judged.
+
+- **`interval(L, U)`** (the extended domain; L and U both of one limb or both of two): the empty
+  set $(+\infty, -\infty)$ (for two limbs $(+\infty, \pm 0)$ and $(-\infty, \pm 0)$), or no NaN
+  bound, $l \le h$ as extended reals, $l < +\infty$, $h > -\infty$, each bound a number of the
+  format or an infinity (for two limbs canonical). A line outside it is invalid; the same test
+  decides I1 of an output. **`not_nan(NAME)`**: a one-limb input, or a two-limb input that is also
+  `canonical()`, whose leading limb is not a NaN.
+- **The exact range** of a set over interval (or ball) names, each name once and no `abs`: interval
+  arithmetic in the extended reals, a sum adding lower bounds and upper bounds, a negation
+  exchanging them, a product the least and the greatest of the four products of bounds with
+  $0 \cdot \infty = 0$; for a single-use expression this is the greatest lower bound and the least
+  upper bound of the values over the members (a finite ball is $[c - r, c + r]$, the whole line
+  $[-\infty, +\infty]$). Values are integers at the scale of the expression.
+- **`encloses_interval`**, each statement counted under its name when it fails: **I1** the output
+  is a canonical interval; **I2** it is empty exactly when an operand is; **I3** its lower bound is
+  at most the range's greatest lower bound and its upper at least the least upper bound; **I4** by
+  `tight`: `exact`, the bounds of the range; `rounded`, the range's bounds rounded down and up in
+  the format with overflow (an infinite bound stays), within `steps` steps outward, and with
+  `when: product_large` exactly the roundings when every product of a finite bound of $x$ and a
+  finite bound of $y$ is zero or at least $2^{2p-1}\eta$; `outward`, for bounded operands and a
+  bounded result $lo - z_\ell \le \mathrm{rel}\lvert lo\rvert + \mathrm{abs}$ and
+  $z_u - hi \le \mathrm{rel}\lvert hi\rvert + \mathrm{abs}$, for bounded operands the bound of a
+  side the range's own where every condition of that side's `exact_when` holds, and an infinite
+  bound of the range that bound of the result; **I5** for bounded operands, every member within
+  the limit of each `bounded_when` condition ($\lvert z\rvert \le \Omega$, or
+  $\le 2^{q_{\max}+p+E}$; the members' largest magnitude is that of a bound of the range) makes
+  the result bounded, and with `bounded_exactly` a result beyond it unbounded; **I6**
+  (`zero_factor`) for nonempty operands, an operand $[0, 0]$ makes the result $[0, 0]$.
+- **`outward`**, the finite domain: the output on its side of `value`,
+  $\lvert\text{output} - \text{value}\rvert \le \mathrm{rel}\lvert\text{value}\rvert + \mathrm{abs}$,
+  and the value itself where every condition of `exact_when` holds (`{"zero": EXPR}`: EXPR $= 0$,
+  besides `zero_or_abs_gt` and `zero_or_abs_ge`); judged where the output's leading limb is finite.
+  The extended domain (`mul_ext_2_2`): never a NaN; with `zero_factor` a zero operand (its leading
+  limb zero) gives every limb zero; otherwise an infinite operand gives the infinity of the
+  product of the leading limbs followed by zeros; with finite operands the output on its side as
+  an extended real ($-\infty$ is always below, $+\infty$ always above), and a finite output within
+  the bound, exact where `exact_when` holds. An infinite bound from operands and value below
+  $\Omega/4$ is suspicious.
+- **`encloses` with `"balls": {}`** (the finite domain only): the operands are points,
+  $\lvert\text{set} - \text{center}\rvert \le$ radius: the judge of `encloses`, whose range is then
+  the one value.
+- **`makes_interval`**: the output canonical; the interval of the given bounds when $lo \le hi$,
+  $lo < +\infty$, $hi > -\infty$; the whole line when a given bound is a NaN, whatever the other;
+  the empty set otherwise. Two limbs: canonical inputs, a NaN bound is $(\mathrm{NaN},
+  \mathrm{NaN})$, and the values are compared (a normalized pair is unique for its value).
+- **`makes_ball` from an interval** (`from` with `lower` and `upper`, one limb each): the whole line
+  for a NaN bound; for $lo \le hi$, $lo < +\infty$, $hi > -\infty$ a finite ball containing
+  $[lo, hi]$ when both are finite (with every `midpoint_when` condition, `half_in_format`: the bound
+  is even as a multiple of $\eta$, its center $(lo + hi)/2$ exactly and its radius
+  $\mathrm{RU}((hi - lo)/2)$), the whole line when a bound is infinite; the empty set otherwise.
+- **`set_bound`**: $+\infty$ (`below`) or $-\infty$ (`above`) for an empty ball; otherwise at most
+  (at least) the set's greatest lower (least upper) bound $t$, and with `tight` the rounding of $t$
+  down (up) in the format with overflow, within `steps`. **`interval_of_ball`**: the output
+  canonical, empty exactly when the ball is, containing the set, its bounds the roundings of the
+  set's bounds, within `steps`.
+- **`interval_set`**: exact; `union` the smaller lower and the larger upper bound of the nonempty
+  operands, empty when both are; `intersection` the larger lower and the smaller upper bound,
+  empty when an operand is or they cross.
+- **`ball_of_interval`**: for a bounded $X = [\ell, h]$ and $m = (\ell + h)/2$: the center and
+  radius finite (the center normalized), $\ell \le c \le h$,
+  $\lvert c - m\rvert \le \mathrm{rel}\lvert m\rvert + \mathrm{abs}$, $[c - r, c + r] \supseteq X$,
+  and with `smallest_radius` $r = \mathrm{RU}(\max(c - \ell, h - c))$ in the format with overflow.
+  Otherwise `ieee1788`: $(0, +\infty)$ for the whole line, $(\Omega, +\infty)$ and
+  $(-\Omega, +\infty)$ for the half-lines, two NaN for the empty set; `ball`: the whole line for an
+  unbounded $X$ and the empty ball for the empty set. Each part counted under its name when it
+  fails (`special`, `finite`, `center`, `midpoint`, `containment`, `smallest_radius`).
+- **`splits`**: both parts canonical; the empty set gives the empty set twice; otherwise the first
+  part's lower bound is $X$'s, the second's upper bound $X$'s, and the first part's upper bound the
+  second's lower bound, a member of $X$ (implied by the rest: both parts canonical).
+- **`zero_factor` on `bound` and `rounded`** (the extended domain, the value a product of two
+  one-limb inputs): a zero operand gives a zero output, $0 \cdot \infty = 0$; otherwise as without
+  the field.
+- **The constants of a claim**, `rel` and `abs` of `outward`, of the outward `tight` and of
+  `ball_of_interval`: integers, `u`, `eta`, `unit(K)`, `tiny(K)`, `+ - * /`, parentheses, integer
+  powers (a constant integer exponent), and `up(EXPR)`, the smallest number of the format not below
+  EXPR (computed as the format's rounding up of $\lceil \text{EXPR}/\eta\rceil$), evaluated exactly
+  per format with Fractions; an `up( )` beyond $\Omega$, a division by zero or a negative constant
+  in a format sets the kernel aside for that format (a CLAIMS ERROR), and `unit(K)`, `tiny(K)` must
+  name a readable kernel with one `error` entry (`add_2_2`, `mul_2_2`), checked in `binary64` when
+  the claims are read.
+- **An entry about an output group other than the first** (the finite domain, an entry not under
+  a mask; `mul_dir_2_2` alone): each entry holds where the leading limb of its own group is finite.
+  An entry whose group is not finite claims nothing (counted, `the leading limb of its output is
+  not finite: nothing claimed`); the line is judged when one entry is, and non-finite otherwise; a
+  group that is not finite on operands and value below $\Omega/4$ makes the line suspicious.
+  Kernels whose entries are under a mask (`bound_sum_k`, `bound_dot_k`) are read as before.
+
+Readings chosen where the documents leave a choice, the stricter where they differ:
+
+- I4 of an outward `tight` bounds the distance only when both bounds of the result are finite (the
+  text says "a bounded $Z$"); the exactness of a side, for bounded operands, whether or not the
+  result is bounded. A finite bound beside an infinite one is not judged; its distance is kept
+  (`...: distance from the range bound / (rel*|bound| + abs), beside an infinite bound (not
+  claimed)`), and comes to at most 0.50 of the bound in the runs so far, so the stricter reading,
+  each finite bound measured, would hold on them too.
+- The `abs_le` set of `bounded_when` must be the entry's own `set` (the same expression), or the
+  claims are refused; for bounded operands the condition on every member is the condition on the
+  largest magnitude of a bound of the range.
+- `tight` `rounded` is refused for bounds of two limbs (a two-limb number has no rounding of its
+  own), `when` without a set that is the product of two interval names, and `zero_factor` likewise.
+- `outward` in the extended domain requires `not_nan()` of every operand of its value (the output
+  is never a NaN); `zero_factor` there needs a value that is the product of two inputs.
+- A field that is written only when it is so (`bounded_exactly`, `zero_factor`, `smallest_radius`)
+  must be `true`; `midpoint_when` belongs to `makes_ball` from an interval only.
+- `half_in_format(NAME)` of a finite bound is read as "an even multiple of $\eta$" (its half is a
+  number of the format exactly then: halving keeps the significand's bits).
+
+Statistics, per entry (the cross-checks' guards read them; `intervals.py` names them): for
+`encloses_interval`, `operands: an empty operand`, `... nonempty, an unbounded operand`,
+`operands: bounded`, `result: empty`, `bounded`, `unbounded`, `bounded operands, unbounded
+result`, `bounded operands, bounded_when holds` and `fails` with the largest
+$\max\lvert\text{member}\rvert$/limit where it holds and the smallest where it fails, `I6 applies:
+...`; per side (`lower`, `upper`) `range bound a number of the format`, `not a number`,
+`infinite`, `beyond Omega`, `zero`, `at the directed rounding`, `one step beyond ...`,
+`product_large holds` and `does not hold (within the steps)`, `exact_when holds`, `exact_when
+fails: COND`, and the largest distance from the range bound over $\mathrm{rel}\lvert
+\text{bound}\rvert + \mathrm{abs}$ (also where the relative term is the larger); for `outward` the
+same fraction of $\lvert\text{output} - \text{value}\rvert$, `value zero`, `output the value
+exactly` or not, `absolute term larger than the relative term`, `exact_when holds` and fails, and
+in the extended domain `a zero operand`, `an infinite operand, none zero`, `finite operands,
+finite output` and `infinite output`; for the constructors the given states (`given: an interval`,
+`a point`, `an unbounded interval`, `a NaN bound`, `reversed bounds`, `equal infinities`,
+`midpoint_when holds` and `fails`); for `set_bound` and `interval_of_ball` `ball: empty`, `whole
+line`, `finite` with the sides' classes; for `interval_set` `an operand empty`, `both operands
+empty`, `nonempty operands, disjoint`, `touching (one common point)`, `overlapping`; for
+`ball_of_interval` and `splits` the class of $X$ (`X: empty`, `whole line`, `half-line [l, +inf]`,
+`half-line [-inf, h]`, `bounded`, `a point`, `a bound an odd multiple of eta below 2N`) and the
+largest $\lvert c - m\rvert / (\mathrm{rel}\lvert m\rvert + \mathrm{abs})$; for `zero_factor`
+`zero_factor: a zero operand` and `a zero against an infinite operand`.
+
+**What the reference implementation, the interpreter and the compiled kernels reach** (the
+interpreter and the compiled kernels on the full tier's 20 000 random cases per format, with the
+same maxima, the scalar and packed runners writing the same bytes in every cross-check; the
+interpreter on the enumerations of the full tier; on the quick tier's 2 000 cases per format the
+compiled kernels come to 0.60 to 0.67): the bounds of two limbs come to 0.62 to 0.70 of
+$\mathrm{rel}\lvert v\rvert + \mathrm{abs}$ in `binary64` and `binary32` (`add_down_2_2` 0.648,
+`mul_dir_2_2` 0.642, `mul_ext_2_2` 0.70, `interval_add_2` 0.625, `interval_mul_2` 0.641 in
+`binary64`; `add_down_2_2` 0.685, `mul_dir_2_2` 0.695 and `interval_mul_2` 0.646 in `binary32`),
+the relative term the larger part of the bound there, and 0.36 to 0.49 in the toy formats of the
+enumerations, where the absolute term is (milestone2.md measured 0.61 to 0.65 at four and five
+bits), 0.47 to 0.52 in the sampled formats. The midpoint of `interval_mid_rad_1` reaches its bound
+$u\lvert m\rvert + \eta$ itself in `binary64` and `binary32` (an odd multiple of $\eta$ below
+$2N$) and 0.97 of it at `fp:5:-9:2`; the error of `ball_lower_as_2` and `ball_upper_as_2` comes to
+0.8 of $5u(\lvert c\rvert + r) + 3\eta$, that of `mul_ball_2_2` to 0.95, and the products of
+`interval_mul_1` and `mul_dir_1` are one step beyond the directed rounding, all their `steps`
+allow, on 22 000 to 35 000 lines a side.
+
 ### Statistics
 
 Per (kernel, format, tag) and aggregated per (kernel, format): cases, judged, failed, invalid,
@@ -551,6 +732,17 @@ B.json ...` merges summaries (counts add, maxima combine, coverage ranges unite)
   orders, an instance other than its expression, a fold of the finite domain or without
   `finite_or_nan`: set aside with the reason, a CLAIMS ERROR as for a kernel); fields outside the
   documented ones are warnings.
+- The interval kernels ([above](#the-kinds-of-the-interval-kernels)): `interval(L, U)` and
+  `not_nan(NAME)` in `requires` (the extended domain; a two-limb `not_nan()` input must be
+  `canonical()`, the bounds of an `interval()` of two limbs are canonical by it, and an input is in
+  one interval or ball at most); the kinds `outward` (`of` one two-limb output, `side`, `rel`,
+  `abs`, optional `exact_when` and `zero_factor`), `makes_interval`, `encloses_interval`
+  (`lower`, `upper`, `set` over the names of `intervals`, `tight`, `bounded_when`, optional
+  `bounded_exactly` and `zero_factor`), `set_bound`, `interval_set`, `ball_of_interval`,
+  `interval_of_ball` and `splits` with their fields, the extended domain only but `outward`;
+  `encloses` with `"balls": {}` in the finite domain only; `makes_ball` with `from` `lower` and
+  `upper` (one limb each) and `midpoint_when`; `zero_factor` on `bound` and `rounded`. Anything
+  else in these is refused, as everywhere.
 - `of` names one output; a list of names, or `"s+e"`, concatenates outputs in that order, which is
   how a pair of 1-limb results `(s, e)` is read as one 2-limb number. Absent means all outputs.
 - `instances` is a list with one object per `error` entry, in their order, each mapping a format
@@ -847,7 +1039,11 @@ entries of its core (F2); those are its quantities, and every other statement is
 line as `check` judges it. The bounds of the folds' stage (an `upper` entry with a value of its
 own) have the quantity "smallest excess over the stated value, in gaps", made small, and their
 count is repaired into `count()` ($\lvert m\rvert$, and 1 for a magnitude below 1); the folds
-themselves are not searched.
+themselves are not searched. Of the interval kernels, those with an `error` or an `encloses` entry
+are searched (`add_ball_2_2`, `mul_ball_2_2`, `ball_lower_as_2`, `ball_upper_as_2`,
+`ball_narrow_2_1`), from the strata of their families (`gen6.py`), a ball's radius repaired into
+its magnitude and the reversed bounds of an `interval()` exchanged; the shrinker repairs the same
+way and checks a case with `gen6.valid6`.
 
 **How it searches.** Each quantity keeps an elite of the 16 best cases found (`--elite`), at most
 a quarter of them descending from one seed. A generation (`--batch`, 256 cases, one runner
@@ -1051,6 +1247,27 @@ bits, not an error), `fold-lanes-skip-lane`, `dot-single-product` (`dot_step_2` 
 leading limbs only), `flag-true-nan`, `flag-false-finite`, `fold-not-normalized`, `bound-g-pred`
 ($g$ one number smaller when ok is true) and `bound-ok-beyond` (ok true for every count).
 
+**The interval kernels.** `refrun` runs the 33 interval kernels of milestone2.md as listed there
+("Interval kernels", "One enclosure interface"): `mul_dir_1` (the lines of the directed products
+on one `two_prod`, a zero factor the literal zero), the intervals of one limb on the directed sums
+and products and their selects, `interval_make_k`, `add_ball_2_2` and `mul_ball_2_2` (the center's
+kernel and $d = \mathrm{RN}(\mathrm{RN}(\lvert z_0\rvert E) G + H)$ with the $E$, $G$, $H$ of
+`ball_add_2` and `ball_mul_2` of the second radius design), the bounds of two limbs (the zero rule
+of the sums, `sub_down_1` and `add_up_1` of the second limb, `two_sum_ord`), `mul_ext_2_2`, the
+intervals of two limbs, the hulls and intersections, `interval_mid_rad_1`, `interval_to_ball_1`,
+`ball_to_interval_1`, `interval_split_1`, `ball_from_interval_2`, the bounds of a ball, and
+`ball_narrow_2_1`, which the page does not list: its leading limb as the center and the radius
+`next_up(r + |c1|)` (the whole line when that is not finite). Its variants plant one fault each
+(`refrun --list-variants`, `iv-...`): `iv-sum-nearest`, `iv-empty-whole`, `iv-mul-zero-nan`,
+`iv-mul-step-large`, `iv-neg-not-swapped`, `iv-make-nan-empty` (the rule of IEEE 1788),
+`iv-make-reversed`, `iv2-no-zero-rule`, `iv2-wrong-side`, `iv2-wide` ($4d$: valid, not tight),
+`iv2-keep-nonfinite`, `iv-mulext-inf-sign`, `iv-hull-as-intersection`, `iv-intersection-no-empty`,
+`iv-mid-no-move`, `iv-mid-radius-small`, `iv-mid-radius-large`, `iv-tball-halfline`,
+`iv-split-gap`, `iv-ballbound-nearest`, `iv-ballbound-empty-nan`, `iv-fromint-no-step`,
+`iv-fromint-nan-empty`, `iv-narrow-no-tail`, `iv-ball-no-term` ($d = H$: caught in `binary64` and
+`binary32`; in a format of few exponents every error of a sum is below $H$) and
+`iv-to-interval-nearest`. The C++ runner has no kernel of Milestone 2.
+
 `selftest/refrun.cpp` is a standalone C++ runner for binary64 and binary32, written from the same
 pseudo-code. The selftest compiles it with the system compiler (`$CXX`, then `c++`, `clang++`,
 `g++`, or `--cxx`) with `-std=c++17 -O2 -ffp-contract=off -fno-fast-math` (`/std:c++17 /O2
@@ -1100,9 +1317,16 @@ kept finite, the condition of `when` ignored or its threshold halved, the classe
 of overflows miscounted, `exact_when` not judged, a strict condition read as $\ge$, a zero that
 does not satisfy a condition, a limb reference read as the leading limb, `eta` read as `u`, a
 threshold that is not positive accepted, the value of `neighbor` not checked, a stratum aimed
-elsewhere) and requires `selftest --quick` to fail on the copy. The test of the side of a `bound`
-alone has no mutant: an output on the wrong side is not reached by the steps outward from the
-directed rounding either, and fails there.
+elsewhere; for the interval kernels, reversed bounds or the empty set misread, a requirement not
+checked, a range without $0 \cdot \infty = 0$ or a negation not exchanging its bounds, a statement
+of I2 to I6 not judged, a step more allowed, `product_large` ignored, a relative term doubled, the
+absolute term left out, the zero condition always true, a zero factor or an infinity not judged,
+the special values of 1788 exchanged, an output group judged only where the first is finite,
+`up( )` read as its argument, a malformed claim accepted, a stratum aimed elsewhere) and requires
+`selftest --quick` to fail on the copy. The test of the side of a `bound` alone has no mutant: an
+output on the wrong side is not reached by the steps outward from the directed rounding either,
+and fails there; nor has the test that the split point of `splits` is a member of $X$, which
+follows from both parts being canonical.
 
 | Test | What would make it fail |
 |---|---|
@@ -1174,6 +1398,15 @@ directed rounding either, and fails there.
 | `stage_kernels` | the reference runner failing a step or a finish on random cases of three formats or a finish on every state of `fp:3:-3:0`; a class of `finite_or_nan` never met; the planted flags and single products not caught; one of 13 hand-written lines (finishes passing a state on limb for limb, form T between the bounds of forms R and T, `dot_step_1` rounding) judged otherwise |
 | `gen_folds` | case $i$ alone not case $i$ of its run, a seed, the orders or the length not mattering, a length above the maximum, a stratum missing or not asked for, `lanes:big` not above the length, an invalid case, an enumeration's size other than the brute-force count, an order outside the vocabulary accepted |
 | `merging_wave5` | the merge of summaries of folds and bound kernels differs from the whole |
+| `claims_reading_wave6` | the fixture of the interval kernels unreadable, or its requirements, kinds and fields read otherwise (`interval()`, `not_nan()`, `tight`, `bounded_when`, `zero_factor`, `midpoint_when`, an `encloses` with no ball); 59 malformed kernels not set aside (requirements on one input, of bounds of other limbs, in the finite domain, missing, listed twice, a two-limb `not_nan()` without `canonical()`, an interval sharing a ball's input; `outward` with another side, of a one-limb output, a malformed `up( )`, a name in a constant, a missing kernel in `unit( )`, a fractional power, a negative constant, an empty or malformed `exact_when`, `zero_factor` in the finite domain or false, `abs` missing; `encloses_interval` with a name twice, `abs`, an input in the set, bounds that are not an `interval()`, an interval named like an input, an unknown `tight`, negative steps, `when` on a sum, `rounded` on two limbs, `bounded_when` over another set or malformed, `bounded_exactly` false, `zero_factor` on a sum, an output twice, a field missing, `exact_when` of an unknown side or as a list; the other kinds with a bound that is not a requirement, another side, a ball without `ball()`, an unknown `tight`, `set` or `special`, a name in a constant, `smallest_radius` not true, an output twice, `tight` missing, one part, `midpoint_when` on another input or empty; `zero_factor` not true or in the finite domain; balls `{}` in the extended domain); a constant's `unit( )` of an unreadable kernel not setting its kernels aside; `midpoint_when` on a ball from a center |
+| `iv_constants` | the constants of a claim with `up( )` other than Python's Fractions with an `up( )` of their own (the smallest number of the format not below, by a walk over its numbers) on 1 500 random ones (300 with `--quick`), the precedence of `-` and `^`; a malformed constant read, an `up( )` beyond $\Omega$ evaluated; the `rel` and `abs` of the bounds of two limbs other than the closed forms $A$ and $B$ of milestone2.md built from the reference runner's own $E$, $G$, $H$ in five formats, and other than the page's table ($8.000000000000009u^2$, $2.000000000000002N$; $10.000000000000012u^2$, $2.000000000000003N$; $8.0000049u^2$, $10.0000068u^2$) |
+| `iv_reference` | the reference runner failing an interval kernel, or an invalid or suspicious case, on 1 200 random cases (300) of each in `binary64`, `binary32` and `fp:4:-6:1`; an entry never applied; a class the guards ask for never reached in `binary64` or `binary32` (empty, unbounded and bounded operands and results, `bounded_when` both ways and within a factor 2 below its limit, a rounded bound inexact or exact or a step beyond, `product_large` both ways, `exact_when` holding, I6, a NaN bound, reversed bounds, equal infinities, the states of a ball, disjoint and touching intervals, both empty, every class of $X$, an odd bound, a zero against an infinity); a fraction of the bounds of two limbs or of the midpoint below 1/4 |
+| `iv_exhaustive` | the reference runner failing any case of tiny formats (`fp:2:-2:1`, `fp:3:-2:-1`, `fp:4:-3:-2`; the product of two-limb intervals on a restricted domain), every line of the extended domain judged; eight planted faults not caught there, or caught in another entry |
+| `iv_planted` | a planted fault of the interval kernels not caught in the kernels and entries where it belongs (in `binary64`, `binary32` and `fp:4:-6:1`, `iv-ball-no-term` in the first two), caught in a kernel that does not use it, or seen as an invalid or suspicious case |
+| `iv_judge` | one of 123 hand-written lines judged otherwise than worked out by hand (each failure in its statement: I1 to I6, the parts of `ball_of_interval` and `interval_of_ball`, the kind otherwise; results at and one unit past the bounds of two limbs; the zero rule; $0 \cdot \infty$; the special values of 1788; the constructors on every kind of given bounds), one of 8 lines outside the requirements not invalid; an infinite lower bound of `mul_dir_2_2` beside a finite upper one not judging the upper, or not suspicious; both infinite not non-finite |
+| `iv_gen` | case $i$ alone not case $i$ of its run, a seed not mattering, an invalid case, a stratum of the header without a case or a case of none, a common stratum missing, in every interval kernel in two formats; the enumeration of intervals other than every canonical interval of the definition, counted in three tiny formats; a restriction dropping the infinite bounds or the empty set |
+| `iv_merging` | the merge of the summaries of two halves of streams of four interval kernels differs from the whole |
+| `iv_scaled` | with `rel` and `abs` of the outward bounds times 1 024 a failure, or a largest fraction of the bound not exactly 1 024 times smaller; divided by 8 no failure |
 
 The Ball kernels of the non-finite layer run with the second radius design in these tests (the
 design their IEEE-model statements are proved with); the second wave's tests run the first.

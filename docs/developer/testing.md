@@ -91,7 +91,7 @@ front:
 | `full.objcode.check`, `full.objcode.controls` | `objcode.check` and `objcode.controls` in every configuration of the compiler's flag matrix: 24 for GCC, Clang and Apple clang and for clang-cl, 9 for MSVC; the operations of `Ball` outlined and external in each. |
 | `full.crosscheck.interp.K` | Kernel K run by the generator's interpreter on **every** operand combination of a toy format. |
 | `full.crosscheck.interp-restricted.K` | Kernel K run by the interpreter on every operand of a **restricted** domain of a toy format, for the kernels whose whole enumeration is too long. |
-| `full.crosscheck.interp-sampled.K` | The same kernels on 20 000 random cases of the whole toy format, from every stratum. |
+| `full.crosscheck.interp-sampled.K` | The same kernels on 20 000 random cases of the whole toy format, from every stratum; and the interval kernels whose shape names a sampled format of its own (`_toy_sampled...` of `tests/CMakeLists.txt`), on 20 000 random cases of that format. |
 | `full.crosscheck.compiled.FOLD.F`, `full.crosscheck.interp.FOLD`, `full.crosscheck.interp-sampled.FOLD` | A fold: the compiled runners on 1 000 random arrays of up to 4 096 elements (the packed runners on 500), the flag sets' runners among them; the interpreter on every array of a tiny format up to a small length, in every order that differs, and on 1 000 random arrays of a toy format of up to 1 024 elements ([Cross-checks](#cross-checks)). |
 | `full.kairn-gen.test` | The four test classes of the generator that `full.tools.kairn-gen.test` leaves out (`-k`): the interpreter against the machine's own arithmetic (Python's float and `math.fma`) on thousands of cases per kernel and format and against every rounding of toy formats, and the statements of the IEEE model and of the non-finite layer on every operand of small formats. With four worker processes. |
 | `full.kairn-oracle.selftest` | The six tests of the oracle that `full.tools.kairn-oracle.selftest` leaves out (`--only`): its Python reference runner, correct and with injected errors, on every case of tiny formats. With four worker processes. |
@@ -157,7 +157,17 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   and `sum_fast_entry_step_2`, the finishes `fold_finish_k`) are cross-checked as every kernel is;
   no public operation calls them yet, and `KAIRN_NOT_PUBLIC_YET` names them for the public
   interface's tests, which register no form of them and require the runner to list them nowhere
-  (`tests/api/coverage.cmake`).
+  (`tests/api/coverage.cmake`). Since the interval stage of Milestone 2 the oracle also reads and
+  judges every claim of the 33 kernels of the interval stage, the intervals of one and two limbs,
+  the bounds of two limbs they are built on and the conversions between an interval and a ball
+  (the requirements `interval()` and `not_nan()`, the kinds `outward`, `makes_interval`,
+  `encloses_interval`, `set_bound`, `interval_set`, `ball_of_interval`, `interval_of_ball` and
+  `splits`, `encloses` with no ball, `makes_ball` from an interval, `zero_factor`, the constants
+  of a claim with `up( )`, and an entry about an output group other than the first;
+  `oracle/README.md`, "The kinds of the interval kernels"). They are cross-checked as every
+  kernel is, on fewer cases in the quick tier (`KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES`, 2 000, the
+  first of the full tier's 20 000: [Time](#time)), and are on `KAIRN_NOT_PUBLIC_YET` with the
+  folds' stage until `Interval` and the conversions of a `Ball` are public.
 - **Every fold** in the list `"folds"` of `gen/claims.json` gets tests of its own, under the same
   names: `crosscheck.compiled.F.FORMAT` in the quick tier runs the scalar runners on 300 random
   arrays (`KAIRN_CROSSCHECK_FOLD_QUICK_CASES`) of lengths 0 to 256
@@ -272,6 +282,36 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
     (49 153 cases, counts with $m \cdot \mathrm{unit}(K)$ from 0 to past 1); `dot_step_1` (`1 1 1`)
     on every operand of `fp:3:-6:-1` (166 375) and `dot_step_2` (`2 2 2`) of `fp:4:-3:-2`
     (226 981); the steps of the sums of supplied arrays have the formats of `add_1_1` and `add_2_2`.
+
+    The interval kernels of Milestone 2: `i1` and `i2` are an interval of one limb and of two, its
+    two bounds together (`interval()`), which the oracle enumerates as one operand: the empty set,
+    and every pair $l \le h$ of bounds, $l$ a number or $-\infty$, $h$ a number or $+\infty$. A
+    kernel without a value whose set is a product (`interval_mul_k`) has the shape of a product.
+    The kernels of the bounds of the interval work have shapes that exist: `ext 1 1`
+    (`interval_make_1` and `ball_from_interval_2` at `fp:5:-7:0`, 84 100 pairs of any values;
+    `mul_dir_1` there too, 83 521 without NaN), `ext 2 2` (`interval_make_2` at `fp:3:-4:1`,
+    181 476; `mul_ext_2_2` at `fp:4:-4:-1`, 62 001 without NaN), `ext b1` (`ball_lower_as_1`,
+    `ball_upper_as_1`, `ball_to_interval_1` at `fp:5:-9:2`, 86 322), `ext b2` (`ball_lower_as_2`,
+    `ball_upper_as_2`, `ball_narrow_2_1` at `fp:4:-6:1`, 198 074), and the finite `2 2`
+    (`add_ball_2_2` and the bounds of two-limb sums at `fp:3:-3:2`, 178 929; `mul_ball_2_2` and
+    `mul_dir_2_2` at `fp:4:-7:-3`, 245 025). Where a sampled format is named, the full tier also
+    runs the interpreter on 20 000 random cases of it (`full.crosscheck.interp-sampled.K`): an
+    enumeration of two intervals is of a tiny format, of two or three exponents for two limbs,
+    where every sum of pairs is exact.
+
+    | Inputs | Kernels | Toy format | Cases | Sampled |
+    |---|---|---|---|---|
+    | `ext i1` | `interval_neg_1`, `interval_mid_rad_1`, `interval_to_ball_1`, `interval_split_1` | `fp:5:-9:2` | 87 152 | |
+    | `ext i1 i1` | `interval_add_1`, `interval_sub_1`, `interval_hull_1`, `interval_intersection_1` | `fp:2:-3:2` | 188 356 | `fp:5:-7:0` |
+    | `ext i1 i1`, a product | `interval_mul_1` | `fp:2:-3:2` | 188 356 | `fp:5:-12:5` |
+    | `ext i2` | `interval_neg_2` | `fp:3:-4:1` | 90 524 | |
+    | `ext i2 i2` | `interval_add_2`, `interval_sub_2`, `interval_hull_2`, `interval_intersection_2` | `fp:3:-2:-1` | 245 025 | `fp:4:-10:5` |
+    | `ext i2 i2`, a product | `interval_mul_2`: the bounds of $x$ with leading limbs in $\{0, \pm\tfrac18, \pm 1, \pm\tfrac32, \pm 3\}$ (RESTRICTED) | `fp:4:-3:-2` | 239 785 | `fp:5:-12:5` |
+
+    Every format of a kernel of the extended domain has the shape $q_{\min} + q_{\max} = 3 - 2p$,
+    and every constant of the kernel a number of it (at `fp:2:-1:0` the constant $P = 2^{2p-1}\eta$
+    of the directed products is not, and the interpreter refuses `interval_mul_1` there). On the
+    Mac the 33 enumerations take 6 to 129 seconds each through the interpreter, 20 to 40 for most.
 
 - **Restricted enumerations.** The two-limb balls with two operands have far too many operand
   combinations at their minimum precision (140 million for `ball_add_2` at `fp:3:-3:2`, 12.4
@@ -394,6 +434,40 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
     length, an order, a flag outcome, cancellation, the term $\tau$, a ratio a thousand times
     smaller; the bounds on one side of the limit, never close, ok false early; a finish without a
     NaN or a lower limb not finite; a stratum of a family) and must fail them.
+
+- **The interval kernels of Milestone 2** (`oracle/README.md`, "The kinds of the interval
+  kernels"). A random run's header lists the strata of the family (`gen6.py`: `special`, `point`,
+  and `threshold`, `cancel`, `zerosum` for the sums, `threshold`, `zeroinf`, `aroundp` for the
+  products of intervals; `special`, `point`, `disjoint`, `touch`, `nested` for the hulls and
+  intersections; `nanbound`, `reversed`, `infinities`, `point`, and `oddeta`, `top` for a ball,
+  for the constructors; `special`, `point`, `step`, `oddeta`, `top` for the midpoint, the
+  conversion and the split; `ballstates`, `radii`, `cross`, `beyond`, `exactend` for the bounds of
+  a ball; `cancel`, `zerosum`, `close`, `apart`, `tiny` for the bounds of two-limb sums, `close`,
+  `tiny`, `aroundp`, `exactprod` for the products, with `nonfinite`, `zeroinf`, `edge` in the
+  extended domain; the directed products' strata and `nonfinite`, `zeroinf`, `zerofactor` for
+  `mul_dir_1`), and a case of each (they replace the strata the non-finite layer adds). Then:
+
+    | Kind | Kernels | Cases the run must have seen |
+    |---|---|---|
+    | `encloses_interval` | `interval_neg_k`, `interval_add_k`, `interval_sub_k`, `interval_mul_k` | an empty operand, an unbounded one, bounded operands; an empty, a bounded and an unbounded result; `bounded_when` holding and, for two operands, failing, with a range within a factor 2 below its limit and one within a factor 2 above it (the results near the overflow threshold on each side); with `tight` rounded, each bound of the range a number of the format, not one, and infinite, one step beyond the rounding where `steps` is 1 and `product_large` both ways; with `tight` outward, an infinite bound of the range, each side's `exact_when` holding and each of its conditions failing, and a distance of at least 1/4 of $\mathrm{rel}\lvert v\rvert + \mathrm{abs}$ on each side; with `zero_factor`, an operand $[0, 0]$, against an unbounded one too |
+    | `outward` | the bounds of two limbs, `mul_ext_2_2` | `exact_when` holding and each condition failing; a distance of at least 1/4 of $\mathrm{rel}\lvert v\rvert + \mathrm{abs}$; in the extended domain a zero operand, an infinite one, a finite and an infinite output from finite operands |
+    | `makes_interval`, `makes_ball` from an interval | `interval_make_k`, `ball_from_interval_2` | an interval, a point, an unbounded interval, a NaN bound, reversed bounds, equal infinities; `midpoint_when` holding and failing |
+    | `set_bound`, `interval_of_ball` | the bounds of a ball, `ball_to_interval_1` | the empty ball, the whole line, a finite ball; each bound of the set a number of the format and not one |
+    | `interval_set` | the hulls and intersections | an empty operand, both empty, disjoint, touching and overlapping operands; an empty, a bounded and an unbounded result |
+    | `ball_of_interval`, `splits` | `interval_mid_rad_1`, `interval_to_ball_1`, `interval_split_1` | $X$ empty, the whole line, a half-line on each side, bounded, a point; for the midpoint a bound an odd multiple of $\eta$ below $2N$ and a distance of at least 1/2 of $u\lvert m\rvert + \eta$ |
+    | `bound`, `rounded` with `zero_factor` | `mul_dir_1` | a zero operand, a zero against an infinite one; the classes of the directed products, but a NaN operand (`not_nan()`) |
+
+    The floors: the interpreter and the compiled kernels come to 0.60 to 0.70 of the bounds of two
+    limbs in `binary64` and `binary32` and 0.36 to 0.49 in the toy formats, and to 0.97 to 1 of
+    the midpoint's bound; 1/4 and 1/2 let a bound four (two) times too loose fail. The
+    interpreter's output meets every one of these on the quick and full tiers' random cases and on
+    the enumerations of the toy formats; `full.tools.crosscheck.guards` has runs and summaries
+    that miss each (no empty operand, `bounded_when` that never fails or a range never near its
+    limit, a rounding never a step beyond or never inexact, `product_large` one way, a bound or a
+    midpoint far from its bound, `exact_when` that never holds or never fails, I6 never applied,
+    no zero against an infinity, a constructor never given a NaN bound, no empty ball, no disjoint
+    intervals, no odd bound, no half-line, a header without a stratum of the family) and must fail
+    them.
 
 For a kernel of the extended domain the run must also have seen what that layer is about. The
 guards read the kernel's claims (the file the oracle's summary names) and the oracle's counts of
@@ -1012,6 +1086,20 @@ eleven kernels, 0.78 seconds of test time each as every kernel's (17 seconds), a
 eight folds, 0.72 seconds each (11.5 seconds: 300 arrays through the scalar runners and 200
 through the packed ones, of 36 elements on average). On the Mac under a load of about 25, the
 quick tier took 58 seconds with them and 46 without, 228 and 180 seconds of test time.
+
+The interval stage of Milestone 2 added 66 tests to the quick tier, the cross-checks of its 33
+kernels in `binary64` and `binary32`, on 2 000 cases each (`KAIRN_CROSSCHECK_INTERVAL_QUICK_CASES`)
+where every other kernel has 6 000: a case of an interval kernel costs the oracle about twice what
+one of a first-milestone kernel does (two intervals, the exact range of the set and the classes of
+each side), so 6 000 would have doubled their share. On 2026-11-20, with the claims of this stage
+alone, they took 37.3 of the quick tier's 375.1 seconds of test time on the Mac with GCC 16
+(9.9 %, under a load of 60 to 75 from other jobs), and on 16 threads of the Linux machine 57.3 of
+451.8 with GCC 13 (12.7 %) and 36.6 of 373.8 with Clang 18 (9.8 %). Run back to back, the quick
+tier took 93.5 seconds with them and 82.2 without (452 and 386 tests) with GCC 13 on 16 threads
+of the Linux machine, and 91.3 and 84.9 with GCC 16 on the Mac (load 24 to 41). The full tier keeps
+20 000 cases per kernel and format and adds the 33 enumerations of toy formats and the 10 sampled
+runs: 109 tests, 894.6 of its 3 921.9 seconds of test time on the Linux machine with GCC 13
+(22.8 %), 1 468 seconds of wall time in all.
 
 On 16 threads of the Linux machine, the quick tier's 278 seconds of test time were then: the
 compiled runners' cross-checks 105 (126 tests), the oracle's own tests 54, the public interface
