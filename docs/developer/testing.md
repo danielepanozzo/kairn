@@ -238,6 +238,19 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   runner, are `split` and `two_prod_dekker`, whose multiplication by the splitter overflows for
   such operands, as their requirement of no intermediate overflow allows; for them the guards
   below stand guard.
+- **`kairn::rational`**: `rational_1` and `rational_2`, `kairn::rational<X>(num, den)` for one
+  limb and for two, are not kernels of `gen/claims.json`. Their specification
+  (`docs/developer/design/milestone2.md`, "Constants at compile time") fixes every bit of the
+  result, and the oracle knows them itself (`oracle/README.md`, "rational"): `gen rational_K F`
+  writes requests of two 64-bit integers from strata of their own (every pair of small terms,
+  random terms, powers of two, the extremes, $den = 0$, exact values, near-ties of either
+  rounding built with the extended Euclidean algorithm, tiny second limbs), and `check` computes
+  the answer in exact rationals and compares the limbs, the error and the flag for equality: one
+  unit off anywhere is a failure. `tests/crosscheck.py compiled --kernel rational_K` runs them as
+  it runs a kernel, without claims, and the guards ask, besides the stream and a judged case of
+  every stratum, for no invalid request, exact and inexact cases and $den = 0$, and for
+  `rational_2` a near-tie whose naive pair $(\mathrm{RN}(q), \mathrm{RN}(q - \mathrm{RN}(q)))$ is
+  not normalized; `full.tools.crosscheck.guards` runs them on the oracle's reference runner.
 
 ## What a pass requires
 

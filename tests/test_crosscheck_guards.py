@@ -7,11 +7,14 @@ stream the oracle passes but which did not check what a cross-check sets out to 
 partial or restricted enumeration, strata missing, nothing judged, a comparison seen one way
 only; in the extended domain, a class of results never seen: no overflow, no non-finite operand,
 finite_when never put to the test, a ball result or a constructor's outcome missing, the strata
-of the layer missing), or alters the summary of a good run where no stream can produce the fault;
-and requires the guards to fail it, with their reason. It also runs the driver of the compiled
-runners' cross-checks, tests/crosscheck.py, with the interpreter as its runner, on such runs,
-which it must fail with the guards' reason, and on good ones, and with a runner that changes an
-operand, whose invalid case must fail the run. With CMAKE, the path of cmake, it
+of the layer missing; for rational_1 and rational_2, kairn::rational, which the interpreter does
+not know, the oracle's reference runner in its place, and a stratum, an exact or inexact case,
+den = 0 or a pair the naive way does not normalize missing), or alters the summary of a good run
+where no stream can produce the fault; and requires the guards to fail it, with their reason. It
+also runs the driver of the compiled runners' cross-checks, tests/crosscheck.py, with the
+interpreter (and for rational_2 the reference runner) as its runner, on such runs, which it must
+fail with the guards' reason, and on good ones, and with a runner that changes an operand, whose
+invalid case must fail the run. With CMAKE, the path of cmake, it
 runs crosscheck.cmake, the driver of the interpreter's enumerations, likewise; with API_RUNNER,
 the public interface's runner (tests/api/runner.cpp), crosscheck.py api on a good run, on one
 whose cases miss a stratum, and on a kernel the runner maps no form to.
@@ -32,14 +35,18 @@ API_RUNNER = None
 
 
 def pipeline(kernel, fmt, *gen_args, fail_on_suspicious=True):
-    """The oracle's summary of gen KERNEL FMT GEN_ARGS | interp | check, which must pass."""
+    """The oracle's summary of gen KERNEL FMT GEN_ARGS | interp | check, which must pass; for
+    rational_1 and rational_2, which the interpreter does not know, the oracle's reference runner
+    (refrun) in its place."""
     with tempfile.TemporaryDirectory() as d:
         js = os.path.join(d, "s.json")
         gen = subprocess.run([PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "gen", kernel, fmt]
                              + list(gen_args), capture_output=True, text=True, cwd=ROOT)
         assert gen.returncode == 0, gen.stderr
-        run = subprocess.run([PY, os.path.join(ROOT, "gen", "kairn-gen"), "interp"],
-                             input=gen.stdout, capture_output=True, text=True, cwd=ROOT)
+        runner = ([PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "refrun"]
+                  if kernel.startswith("rational_") else
+                  [PY, os.path.join(ROOT, "gen", "kairn-gen"), "interp"])
+        run = subprocess.run(runner, input=gen.stdout, capture_output=True, text=True, cwd=ROOT)
         assert run.returncode == 0, run.stderr
         check = [PY, os.path.join(ROOT, "oracle", "kairn-oracle"), "check", "--json", js]
         if fail_on_suspicious:
@@ -152,6 +159,104 @@ class Guards(unittest.TestCase):
             k["stats"]["entries"][0]["counts"].pop("inexact, != RN", None)
         self.fails(s, "to_down_2", "fp:4:-6:4", "--seed", "0", "--count", "200",
                    reason="never differed from the rounding to nearest")
+
+
+# kairn::rational<X>(num, den), which the oracle judges for equality without claims, through its
+# reference runner.
+R2 = ("rational_2", "binary32", "--seed", "0", "--count", "400")
+R1 = ("rational_1", "fp:4:-6:4", "--seed", "0", "--count", "200")
+
+
+class RationalGuards(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.good2 = pipeline(*R2)
+        cls.good1 = pipeline(*R1)
+
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def test_good_runs_pass(self):
+        out = self.passes(self.good2, *R2)
+        self.assertIn("400 cases judged (400 random cases, seed 0", out)
+        self.assertIn("naive pair not normalized", out)
+        self.passes(self.good1, *R1)
+
+    def test_another_stream(self):
+        for kernel, fmt in (("rational_1", "binary32"), ("rational_2", "binary64")):
+            self.fails(self.good2, kernel, fmt, *R2[2:], reason="the stream is of rational_2")
+        self.fails(self.good2, "rational_2", "binary32", "--seed", "1", "--count", "400",
+                   reason="of seed 0, not cases 0 to 400 of seed 1")
+        self.fails(self.good2, "rational_2", "binary32", "--exhaustive", reason="in mode random")
+
+    def test_a_stratum_missing(self):
+        s = pipeline("rational_2", "binary32", "--seed", "0", "--count", "5")
+        self.fails(s, "rational_2", "binary32", "--seed", "0", "--count", "5",
+                   reason="no case of stratum tail")
+        s = pipeline("rational_2", "binary32", "--seed", "0", "--count", "100",
+                     "--strata", "small,random,pow2,extreme,exact,tie1,tie2,tail")
+        self.fails(s, "rational_2", "binary32", "--seed", "0", "--count", "100",
+                   reason="without den0, which it writes for rational_2")
+        s = copy.deepcopy(self.good2)
+        for k in s["keys"]:
+            if k["tag"] == "tail":
+                k["stats"]["counts"]["judged"] = 0
+        self.fails(s, *R2, reason="no case of stratum tail was judged")
+        s = copy.deepcopy(self.good2)
+        s["keys"][0]["tag"] = "elsewhere"
+        self.fails(s, *R2, reason="lines tagged elsewhere")
+
+    def test_no_renormalized_pair(self):
+        s = copy.deepcopy(self.good2)
+        for k in s["keys"]:
+            k["stats"]["entries"][0]["counts"].pop("naive pair not normalized", None)
+        self.fails(s, *R2, reason="the renormalization of the pair was not checked")
+        # rational_1 has no pair: no such case is asked of it.
+        counts = [k["stats"]["entries"][0]["counts"] for k in self.good1["keys"]]
+        self.assertNotIn("naive pair not normalized", json.dumps(counts))
+
+    def test_cases_missing(self):
+        for name in ("exact", "inexact", "den = 0"):
+            s = copy.deepcopy(self.good1)
+            for k in s["keys"]:
+                k["stats"]["entries"][0]["counts"].pop(name, None)
+            self.fails(s, *R1, reason='no judged case "%s"' % name)
+
+    def test_invalid_requests_and_other_lines(self):
+        s = copy.deepcopy(self.good2)
+        s["keys"][0]["stats"]["counts"]["invalid"] = 1
+        self.fails(s, *R2, reason="the runner did not echo them")
+        s = copy.deepcopy(self.good2)
+        s["keys"].append(dict(copy.deepcopy(s["keys"][0]), kernel="add_2_2"))
+        self.fails(s, *R2, reason="lines of other kernels or formats")
+
+    # The driver of the compiled runners, crosscheck.py, as the tests api.rational.K.F run it, with
+    # the oracle's reference runner as its runner.
+    def test_the_one_process_driver(self):
+        with tempfile.TemporaryDirectory() as d:
+            def drive(*args):
+                return subprocess.run(
+                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", "rational_2",
+                     "--format", "binary32", "--summary", os.path.join(d, "r.json"),
+                     "--fail-on-suspicious", "--refrun"] + list(args),
+                    capture_output=True, text=True)
+            good = drive("--seed", "0", "--count", "400")
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            self.assertIn("with refrun: passed, 400 cases judged", good.stdout)
+            self.assertTrue(os.path.exists(os.path.join(d, "r.refrun.json")))
+            self.assertFalse(os.path.exists(os.path.join(d, "r.work")))
+            bad = drive("--seed", "0", "--count", "5")
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("did not check what it set out to", bad.stdout)
+            self.assertIn("no case of stratum", bad.stdout)
+            self.assertTrue(os.path.isdir(os.path.join(d, "r.work")))
 
 
 # The extended domain (the non-finite layer): toy formats of the shape qmin + qmax = 3 - 2p, as

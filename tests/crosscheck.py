@@ -4,7 +4,7 @@ on each distinct output and, for the kernels' runners, the guards (docs/develope
 
     python3 tests/crosscheck.py compiled --kernel K --format F --summary FILE
         (--seed S --count N | --exhaustive [--restrict R1,R2,...]) [--fail-on-suspicious]
-        (--runner LABEL EXECUTABLE)... [--interp]
+        (--runner LABEL EXECUTABLE)... [--interp] [--refrun]
     python3 tests/crosscheck.py api --kernel K --format F --seed S --count N --summary-dir DIR
         (--runner LABEL EXECUTABLE)... [--first-form LABEL]...
 
@@ -29,9 +29,14 @@ standard input would read the same bytes (the encoding and newlines of a process
 compiled, the tests crosscheck.compiled.K.F of the quick tier and full.crosscheck.compiled.K.F of
 the full tier: the runners of the generated kernels (gen/tests/runner.cpp, packed_runner.cpp),
 each named by its LABEL; --interp adds the generator's interpreter (python3 gen/kairn-gen interp)
-as one more, labelled interp. WORK is SUMMARY's name, without its extension, with .work; the
-summary of each output judged is written next to SUMMARY, as SUMMARY's name with the label of the
-first runner that wrote that output (check --json). The test fails if a runner fails, if the
+as one more, labelled interp, and --refrun the oracle's reference runner (python3
+oracle/kairn-oracle refrun), labelled refrun, which tests/test_crosscheck_guards.py runs for
+rational_1 and rational_2. K is a kernel of gen/claims.json or one of these two,
+kairn::rational<X>(num, den), which the oracle knows without claims (oracle/README.md,
+"rational"): the same pipeline and guards, with no enumeration. WORK is SUMMARY's name, without
+its extension, with .work; the summary of each output judged is written next to SUMMARY, as
+SUMMARY's name with the label of the first runner that wrote that output (check --json). The
+test fails if a runner fails, if the
 oracle fails an output (any violated claim or broken stream, an invalid case, which is one whose
 operands are outside the kernel's requirements and is not judged: check --expect-valid; and with
 --fail-on-suspicious a suspicious non-finite result), or if the guards fail its summary: the run
@@ -70,6 +75,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 ORACLE = os.path.join(REPO, "oracle", "kairn-oracle")
 INTERP = [sys.executable, os.path.join(REPO, "gen", "kairn-gen"), "interp"]
+REFRUN = [sys.executable, ORACLE, "refrun"]
 
 # The oracle runs from the source tree; nothing may write caches into it (oracle/kairn-oracle).
 sys.dont_write_bytecode = True
@@ -255,8 +261,11 @@ def compiled(a):
     runs = [(label, [exe]) for label, exe in a.runner or []]
     if a.interp:
         runs.append(("interp", INTERP))
+    if a.refrun:
+        runs.append(("refrun", REFRUN))
     if not runs:
-        print("crosscheck.py: no runner (--runner LABEL EXECUTABLE, --interp)", file=sys.stderr)
+        print("crosscheck.py: no runner (--runner LABEL EXECUTABLE, --interp, --refrun)",
+              file=sys.stderr)
         return 2
 
     status, requests = generate(gen, work)
@@ -452,6 +461,9 @@ def main(argv=None):
     c.add_argument("--runner", nargs=2, action="append", metavar=("LABEL", "EXECUTABLE"))
     c.add_argument("--interp", action="store_true",
                    help="the generator's interpreter as a runner too")
+    c.add_argument("--refrun", action="store_true",
+                   help="the oracle's reference runner as a runner too (for rational_K: a test of "
+                        "the driver and the guards)")
     p = sub.add_parser("api", help="the runners of the public interface, with their forms")
     p.add_argument("--kernel", required=True)
     p.add_argument("--format", required=True)

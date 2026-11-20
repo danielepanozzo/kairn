@@ -36,9 +36,22 @@ also when the run did not see what that layer is about:
   NaN and an infinity from them).
 
 The claims are those the oracle judged against, the file its summary names (or --claims).
+
+rational_1 and rational_2, kairn::rational<X>(num, den), have no claims: the oracle computes their
+answer itself and judges it for equality (oracle/README.md, "rational"). For them the guards read
+no claims and fail the run when:
+
+- the stream is not the one asked for (as above; there is no enumeration of them);
+- the header lacks one of the strata of RATIONAL_STRATA, a stratum the header lists has no judged
+  case, or a line is tagged with a stratum it does not list;
+- a request was invalid (the generator writes none: the runner did not echo it);
+- no judged case was exact, none inexact, none had den = 0; or, for rational_2, none was a
+  near-tie whose naive pair (RN(q), RN(q - RN(q))) is not normalized, so that the renormalization
+  was not checked.
+
 Otherwise it prints one line saying what was checked. Python's standard library only, and
-nothing from the oracle but the format of its summary (oracle/README.md, "Statistics" and "The
-extended domain").
+nothing from the oracle but the format of its summary (oracle/README.md, "Statistics", "The
+extended domain" and "rational").
 """
 import argparse
 import json
@@ -70,6 +83,14 @@ FINITE_WHEN_COUNTS = {
     "extends": "F3 applies: finite operands, every finite_when condition holds",
     "encloses": "B4 applies: finite operands, every finite_when condition holds",
 }
+
+# kairn::rational<X>(num, den): its number of limbs, the strata of the oracle's generator
+# (oracle/README.md, "rational"), and the counts of the oracle's judge (on its first entry) that
+# must not be zero, with the kernels they are asked of.
+RATIONAL = {"rational_1": 1, "rational_2": 2}
+RATIONAL_STRATA = ("small", "random", "pow2", "extreme", "den0", "exact", "tie1", "tie2", "tail")
+RATIONAL_COUNTS = (("exact", (1, 2)), ("inexact", (1, 2)), ("den = 0", (1, 2)),
+                   ("naive pair not normalized", (2,)))
 
 
 def extended_strata(kernel):
@@ -120,6 +141,9 @@ def problems(summary, a):
     got = (desc.get("kernel"), desc.get("format"), desc.get("mode"))
     if got != (a.kernel, a.format, mode):
         yield "the stream is of %s %s in mode %s, not of %s in mode %s" % (got + (what, mode))
+        return
+    if a.kernel in RATIONAL:
+        yield from rational_problems(summary, a, desc, ranges)
         return
     kernel, why = kernel_claims(summary, a)
     if kernel is None:
@@ -224,6 +248,60 @@ def problems(summary, a):
                    'finite_when was not checked' % label)
 
 
+def rational_counts(keys, entry=0):
+    """The counts of one entry of the judge of rational_K, summed over the keys."""
+    counts = {}
+    for k in keys:
+        entries = k["stats"]["entries"]
+        if len(entries) > entry:
+            for name, n in entries[entry].get("counts", {}).items():
+                counts[name] = counts.get(name, 0) + n
+    return counts
+
+
+def rational_problems(summary, a, desc, ranges):
+    """The guards of rational_K, whose answer the oracle computes and compares for equality."""
+    if a.exhaustive:
+        yield "the oracle's generator has no enumeration of %s, only random runs" % a.kernel
+        return
+    if desc.get("seed") != a.seed or ranges != [[0, a.count]]:
+        yield ("the stream is indices %s of seed %s, not cases 0 to %d of seed %s"
+               % (ranges, desc.get("seed"), a.count, a.seed))
+    strata = [s for s in desc.get("strata", "").split(",") if s]
+    for s in RATIONAL_STRATA:
+        if s not in strata:
+            yield ("the oracle's generator lists the strata %s, without %s, which it writes for %s"
+                   % (",".join(strata), s, a.kernel))
+    keys = [k for k in summary.get("keys", [])
+            if (k["kernel"], k["format"]) == (a.kernel, a.format)]
+    if len(keys) != len(summary.get("keys", [])):
+        yield "the summary has lines of other kernels or formats"
+    judged = {}
+    for k in keys:
+        judged[k["tag"]] = judged.get(k["tag"], 0) + k["stats"]["counts"]["judged"]
+    for s in strata:
+        if s not in judged:
+            yield ("no case of stratum %s in %d cases, although the oracle's generator lists it "
+                   "for %s" % (s, a.count, a.kernel))
+        elif not judged[s]:
+            yield "no case of stratum %s was judged" % s
+    for t in sorted(set(judged) - set(strata)):
+        yield "lines tagged %s, which the generator's header does not list" % t
+    invalid = sum(k["stats"]["counts"]["invalid"] for k in keys)
+    if invalid:
+        yield ("%d requests were invalid, and the oracle's generator writes none: the runner did "
+               "not echo them" % invalid)
+    if not sum(judged.values()):
+        yield "the oracle passed it, but judged no case, so nothing was checked"
+        return
+    counts = rational_counts(keys)
+    for name, kernels in RATIONAL_COUNTS:
+        if RATIONAL[a.kernel] in kernels and not counts.get(name):
+            yield ('no judged case "%s", so %s was not checked there'
+                   % (name, "the renormalization of the pair" if name.startswith("naive")
+                      else a.kernel))
+
+
 # How describe() names the counts of EXTENDED_COUNTS and FINITE_WHEN_COUNTS.
 SHORT = {
     "class F2: finite operands, finite result": "F2 finite",
@@ -256,6 +334,11 @@ def describe(summary, a):
     else:
         what = "%d random cases, seed %s, strata %s" % (a.count, a.seed, desc["strata"])
     text = "%d cases judged (%s)" % (judged, what)
+    if a.kernel in RATIONAL:
+        counts = rational_counts(summary["keys"])
+        return text + "; " + ", ".join("%s %d" % (name, counts.get(name, 0)) for name in (
+            "exact", "inexact", "den = 0", "first rounding a tie", "second rounding a tie",
+            "naive pair not normalized", "second limb subnormal"))
     kernel, _ = kernel_claims(summary, a)
     if kernel and kernel.get("domain") == "extended":
         seen = []
