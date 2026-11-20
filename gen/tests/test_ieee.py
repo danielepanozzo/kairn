@@ -408,23 +408,32 @@ class TheoremFields(unittest.TestCase):
     """The theorems of the IEEE-model statements of the finite domain and of the folds
     (ieee_bridge_theorem, ieee_spec_theorem, ieee_lead_theorem; the ieee_theorem of a fold): the
     statements they prove are printed as proved, and IeeeAudit.v checks each theorem against its
-    statement; without them, nothing changes (the committed files, whose digests are pinned
-    above, have none)."""
+    statement; without them, nothing changes. Judged from the descriptions with every such field
+    removed (kernels_with), so that it means the same whether the committed ones have none, as
+    now, or some."""
     STEP = ['ieee_bridge_theorem: proofs/theories/IeeeSteps.v dot_step_2_ieee_bridge',
             'ieee_spec_theorem: proofs/theories/IeeeSteps.v dot_step_2_ieee_correct',
             'ieee_lead_theorem: proofs/theories/IeeeSteps.v dot_step_2_ieee_lead']
     FOLD = ['ieee_theorem: proofs/theories/IeeeFolds.v']
+    # The theorem fields: those of a kernel (its ieee_theorem, of the extended domain, is another
+    # field and stays), and that of a fold.
+    KERNEL_FIELDS = ('ieee_bridge_theorem:', 'ieee_spec_theorem:', 'ieee_lead_theorem:')
+    FOLD_FIELDS = ('ieee_theorem:',)
 
     def kernels_with(self, kernels=None, folds=None):
+        """The descriptions of gen/kernels with every theorem field removed, then those given added:
+        the test means the same whether or not the committed descriptions have such fields."""
         ks = common.kernels()
-        new = dict(ks)
-        for name, extra in (kernels or {}).items():
-            with open(os.path.join(common.GEN, 'kernels', ks[name].path), encoding='utf-8') as f:
-                new[name] = ir.parse_kernel(f.read().rstrip('\n') + '\n' + '\n'.join(extra) + '\n', ks[name].path)
-        fds = dict(ks.folds)
-        for name, extra in (folds or {}).items():
-            with open(os.path.join(common.GEN, 'kernels', fds[name].path), encoding='utf-8') as f:
-                fds[name] = ir.parse_fold(f.read().rstrip('\n') + '\n' + '\n'.join(extra) + '\n', fds[name].path)
+
+        def text(path, fields, extra):
+            with open(os.path.join(common.GEN, 'kernels', path), encoding='utf-8') as f:
+                lines = [line for line in f.read().rstrip('\n').split('\n') if not line.startswith(fields)]
+            return '\n'.join(lines) + '\n' + '\n'.join(extra) + '\n'
+
+        new = {name: ir.parse_kernel(text(k.path, self.KERNEL_FIELDS, (kernels or {}).get(name, [])), k.path)
+               for name, k in ks.items()}
+        fds = {name: ir.parse_fold(text(fd.path, self.FOLD_FIELDS, (folds or {}).get(name, [])), fd.path)
+               for name, fd in ks.folds.items()}
         return ir.ordered(new, fds)
 
     def errors(self, name, kernels=None, folds=None):
@@ -434,7 +443,7 @@ class TheoremFields(unittest.TestCase):
         from kairn_gen import build
         ks = self.kernels_with({'dot_step_2': self.STEP}, {'dot_2': self.FOLD})
         self.assertEqual(rules.check_all(ks), [])
-        before, after = build.outputs(common.kernels()), build.outputs(ks)
+        before, after = build.outputs(self.kernels_with()), build.outputs(ks)
         changed = sorted(rel for rel in after if after[rel] != before[rel])
         self.assertEqual(changed, ['proofs/gen/IeeeAudit.v', 'proofs/gen/IeeeFoldStatements.v',
                                    'proofs/gen/IeeeStatements.v'])

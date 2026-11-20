@@ -826,8 +826,9 @@ class R3OfTheKernels(unittest.TestCase):
 
     def test_accepted_because_of_the_guard_and_for_no_other_reason(self):
         # Without the guard of add_2_1, exactly add_2_1 and the kernels that pass it their scalar
-        # unguarded are refused, each for that scalar.
-        ks = copy.deepcopy(dict(common.kernels()))
+        # unguarded are refused, each for that scalar: nothing else, the folds and maps judged too.
+        ks = copy.deepcopy(common.kernels())
+        self.assertEqual(set(ks.folds), set(common.kernels().folds))
         k = ks['add_2_1']
         guard, call = k.body[0], k.body[1]
         self.assertEqual((guard.op, call.op), ('guard', 'two_sum'))
