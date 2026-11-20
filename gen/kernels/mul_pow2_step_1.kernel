@@ -1,0 +1,18 @@
+# The step of the map mul_pow2_map_1, an array of one limb times a power of two: the product
+# rounded to nearest, exact but in the underflow range. The program supplies both; a product needs
+# no guard (rule R3).
+kernel:        mul_pow2_step_1
+input:         x
+input:         c
+output:        z
+value:         x*c
+requires:      power_of_two c
+ensures:       rounded z nearest
+ensures:       error z R c=0 k=1 t=1/2
+min_precision: 1
+source:        one rounding to nearest of a product by a power of two
+license:       bound: published; proof: MIT
+status:        unverified
+entry:         yes
+
+z = prod(x, c)

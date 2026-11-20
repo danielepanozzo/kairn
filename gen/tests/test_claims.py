@@ -389,14 +389,17 @@ class FoldClaims(unittest.TestCase):
         cls.by = {f['name']: f for f in cls.doc['folds']}
 
     def test_the_folds(self):
-        self.assertEqual(set(self.by), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
-                                        'sum_fast_2_entry', 'dot_1', 'dot_2'})
+        maps = {name for name, fd in self.ks.folds.items() if fd.is_map}
+        self.assertEqual(set(self.by) - maps, {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
+                                               'sum_fast_2_entry', 'dot_1', 'dot_2'})
         self.assertEqual(list(self.doc), ['schema', 'kernels', 'folds'])
         # Without folds the file has the shape it had: the test kernels have none.
         self.assertEqual(list(json.loads(claims.claims(common.kernels(common.TEST_KERNELS)))), ['schema', 'kernels'])
 
     def test_schema(self):
         for f in self.doc['folds']:
+            if f.get('map'):
+                continue                # MapClaims
             with self.subTest(fold=f['name']):
                 self.assertEqual(list(f), self.KEYS)
                 self.assertEqual(f['domain'], 'extended')
@@ -451,6 +454,44 @@ class FoldClaims(unittest.TestCase):
             {'kind': 'fold_error', 'of': 'r', 'eps': 'u/(1+u)', 'term': '0', 'tau': '0',
              'heights': {'sequential': {'rel': 'n-1', 'abs': 'n-1'}, 'lanes': {'rel': 'n-1', 'abs': 'n-1'}}},
             {'kind': 'finite_or_nan', 'of': 'r', 'flag': 'flag'}])
+
+    def test_the_maps(self):
+        """The maps' entries (architecture.md, "Claims of Milestone 2", maps): the arrays read, the
+        scalars, the array written, the mask; the step's claims entry by entry and finite_or_nan."""
+        keys = ['name', 'map', 'domain', 'arrays', 'scalars', 'writes', 'outputs', 'value', 'requires', 'ensures',
+                'orders', 'packed_lanes', 'step', 'step_args', 'check', 'min_precision', 'status', 'theorem',
+                'source']
+        maps = [f for f in self.doc['folds'] if f.get('map')]
+        self.assertEqual(len(maps), 18)
+        kernels = {k['name']: k for k in self.doc['kernels']}
+        for f in maps:
+            with self.subTest(map=f['name']):
+                self.assertEqual(list(f), keys)
+                self.assertIs(f['map'], True)
+                self.assertEqual(f['domain'], 'extended')
+                self.assertEqual(f['outputs'], [{'name': 'finite', 'limbs': 1, 'type': 'mask'}])
+                self.assertEqual(len(f['writes']), 1)
+                z = f['writes'][0]['name']
+                self.assertEqual(f['ensures'], [{'kind': 'entries', 'of': z, 'kernel': f['step']},
+                                                {'kind': 'finite_or_nan', 'of': z, 'flag': 'finite'}])
+                step = kernels[f['step']]
+                self.assertEqual(len(f['step_args']), len(step['inputs']))
+                sizes = {g['name']: g['limbs'] for g in f['arrays'] + f['scalars']}
+                self.assertEqual([sizes[a] for a in f['step_args']], [g['limbs'] for g in step['inputs']])
+                self.assertEqual(step['outputs'][0]['limbs'], f['writes'][0]['limbs'])
+                self.assertEqual(f['check'], f'fold_finish_{f["writes"][0]["limbs"]}')
+                self.assertEqual(f['status'], 'unverified')
+                self.assertIsNone(f['theorem'])
+        by = {f['name']: f for f in maps}
+        a = by['axpy_2']
+        self.assertEqual(a['arrays'], [{'name': 'x', 'limbs': 2, 'role': 'supplied'},
+                                       {'name': 'y', 'limbs': 2, 'role': 'stored'}])
+        self.assertEqual(a['scalars'], [{'name': 'a', 'limbs': 2, 'role': 'supplied'}])
+        self.assertEqual(a['writes'], [{'name': 'z', 'limbs': 2}])
+        self.assertEqual((a['value'], a['step'], a['step_args']), ('a*x+y', 'axpy_step_2', ['a', 'x', 'y']))
+        self.assertEqual(a['requires'], ['canonical(a)', 'canonical(x)', 'canonical(y)'])
+        self.assertEqual(by['mul_pow2_map_1']['requires'], ['power_of_two(c)'])
+        self.assertEqual(by['axpy_2_entry']['arrays'][1]['role'], 'supplied')
 
     def test_the_bound_kernels(self):
         by = {k['name']: k for k in self.doc['kernels']}

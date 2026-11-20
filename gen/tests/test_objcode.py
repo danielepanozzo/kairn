@@ -129,7 +129,8 @@ class Counts(unittest.TestCase):
         self.assertEqual(product_rule, {'rmul', 'mul_1_1', 'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full',
                                         'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full',
                                         'ball_mul_pow2_2_full', 'bound_sum_1', 'bound_sum_2', 'bound_dot_1',
-                                        'bound_dot_2'})
+                                        'bound_dot_2', 'scale_step_1', 'mul_pow2_step_1', 'mul_pow2_step_2',
+                                        'axpy_step_1', 'axpy_entry_step_1'})
         self.assertEqual(differ, {'mul_2_1_full', 'mul_2_2_full', 'mul_pow2_2_full', 'two_prod'} | product_rule)
         for name in product_rule:
             prods = sum(1 for p in ir.prims(self.ks[name], self.ks) if p.op == 'prod')

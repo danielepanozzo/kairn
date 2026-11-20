@@ -1026,6 +1026,8 @@ def fold_names(fd):
     """The names the printers make for a fold: its C++ functions and its Rocq definitions and
     statements. None may be the name of a kernel."""
     out = [f'{fd.name}_{s}' for s in ('step', 'combine', 'packed')]
+    if fd.is_map:
+        out += [f'{fd.name}_{s}' for s in ('map', 'spec', 'correct', 'audit')]
     for order in fd.orders:
         base = f'{fd.name}_{ir.ORDER_SUFFIX.get(order, order)}'
         out += [base, f'{base}_spec', f'{base}_correct', f'{base}_audit']
@@ -1048,7 +1050,7 @@ def fold_rules(fd, kernels):
     for n in fold_names(fd) + [fd.name]:
         if n in kernels:
             err('-', WELL_FORMED, f'{n} is a name the printers make for the fold, and the name of a kernel')
-    groups = fd.arrays + ([fd.state] if fd.state else []) + fd.outputs
+    groups = fd.arrays + fd.scalars + ([fd.state] if fd.state else []) + fd.outputs + fd.writes
     names = [g.name for g in groups] + [v for g in groups for v in g.limbs if v != g.name]
     for n in sorted(set(names)):
         if names.count(n) > 1:
@@ -1059,8 +1061,8 @@ def fold_rules(fd, kernels):
             err(n, WELL_FORMED, 'a name of a group or a limb is [a-z][a-z0-9]*')
     if not fd.arrays:
         err('-', WELL_FORMED, 'a fold reads at least one array')
-    if fd.state is None or fd.state.kind != ir.LIMB:
-        err('-', WELL_FORMED, 'the state is a group of limbs')
+    if fd.state is None or (fd.state.kind != ir.LIMB and not fd.is_map):
+        err('-', WELL_FORMED, 'the state is a group of limbs (a mask, for a map)')
         return errs
     binders = fold_binders(fd)
     if len(set(binders)) < 3 or any(b in reserved | {'a', 'b'} for b in binders):
@@ -1068,9 +1070,8 @@ def fold_rules(fd, kernels):
                               'joined, and that and s), are distinct and none is a name the printers use')
     if not fd.orders or len(set(fd.orders)) < len(fd.orders) or set(fd.orders) - set(ir.ORDERS):
         err('-', WELL_FORMED, f'orders: some of {", ".join(ir.ORDERS)}, each once')
-    if fd.writes:
-        err('-', WELL_FORMED, 'writes: a map (a step that also returns elements of arrays it writes) is '
-                              'not in this stage of the generator; a fold of this stage writes none')
+    if fd.is_map or fd.scalars or fd.check:
+        return errs + map_rules(fd, kernels, reserved)
     groups_of = {g.name: g for g in fd.arrays + [fd.state]}
 
     def kernel_of(what, call):
@@ -1143,6 +1144,189 @@ def fold_rules(fd, kernels):
     errs += _fold_claims(fd, kernels, step, combine, finish)
     errs += _fold_theorem(fd)
     return errs
+
+
+# --- Maps -----------------------------------------------------------------------------------------
+#
+# A map (milestone2.md, "Folds, the extension of the IR": a fold with writes) applies its step to
+# every element and writes what the step returns: the step takes the scalars and one element of
+# each array, never the state, so that a written element does not depend on the order. The state is
+# one mask, which starts true and is combined by `and`, exact, associative and commutative, with
+# the test of each written element by the check kernel (its flag: the leading limb is finite); when
+# it is false at the end, a second pass writes each element as the check gives it, the canonical NaN
+# for one that is not finite (milestone2.md, "When something is not finite"). The zero state of
+# `and` is true, a left identity and its own conjunction: andb_true_l of Rocq's Bool stands for
+# zero_identity here.
+MAP_ENSURES = ('entries', 'finite_or_nan')
+MAP_ZERO_LEMMA = 'Bool.andb_true_l'
+
+
+def map_rules(fd, kernels, reserved):
+    """Every refusal of one map, after the names (fold_rules): its parts and their shapes, R3 on
+    its supplied arrays and scalars, its claims, its theorem."""
+    errs = []
+
+    def err(value, rule, msg):
+        errs.append(RuleError(fd.name, value, rule, msg))
+
+    if len(fd.writes) != 1 or any(g.kind != ir.LIMB for g in fd.writes):
+        err('-', WELL_FORMED, 'a map writes one array of limbs (writes: NAME = LIMB ...)')
+        return errs
+    written = fd.writes[0]
+    if fd.state.kind != ir.MASK:
+        err('-', WELL_FORMED, 'the state of a map is one mask (state: mask NAME), true at the start')
+    if not fd.orders or len(set(fd.orders)) < len(fd.orders) or set(fd.orders) - set(ir.ORDERS):
+        err('-', WELL_FORMED, f'orders: some of {", ".join(ir.ORDERS)}, each once')
+    if fd.combine != ('and', (fd.state.name, fd.state.name), (fd.state.name,)):
+        err('-', WELL_FORMED, f'combine: the states of a map are combined by and: {fd.state.name} = '
+                              f'and({fd.state.name}, {fd.state.name})')
+    if fd.finish is not None or fd.outputs:
+        err('-', WELL_FORMED, 'a map returns its state, the mask, and the array it writes: finish: none, and no '
+                              'output line')
+    groups_of = {g.name: g for g in fd.arrays + fd.scalars}
+    step = kernels.get(fd.step[0]) if fd.step else None
+    if step is None:
+        err('-', WELL_FORMED, f'step: {fd.step[0] if fd.step else "(none)"} is not a kernel')
+    else:
+        _, args, dsts = fd.step
+        if dsts != (written.name,):
+            err('-', WELL_FORMED, f'step: it gives the element written, {written.name} = {step.name}(...); a '
+                                  "map's step takes no state, so that no element depends on the order")
+        want = sorted(groups_of)
+        if sorted(args) != want:
+            err('-', WELL_FORMED, f'step: its arguments are every scalar and every array once: {", ".join(want)}')
+        elif len(step.inputs) != len(args):
+            err('-', WELL_FORMED, f'step: {step.name} takes {len(step.inputs)} groups, not {len(args)}')
+        else:
+            for a, g in zip(args, step.inputs):
+                if _shape(g) != _shape(groups_of[a]):
+                    err(a, WELL_FORMED, f'step: {step.name} takes {g.name} of {len(g.limbs)} limbs where the '
+                                        f'map passes {a} of {len(groups_of[a].limbs)}')
+        if len(step.outputs) != 1 or _shape(step.outputs[0]) != _shape(written):
+            err('-', WELL_FORMED, f'step: {step.name} returns one group of the shape of {written.name} '
+                                  f'({len(written.limbs)} limbs)')
+        if not step.real_model:
+            err('-', DOMAIN, f'step: {step.name} has no real-model statement, and the step is in the real model')
+    check = kernels.get(fd.check) if fd.check else None
+    if check is None:
+        err('-', WELL_FORMED, f'check: {fd.check or "(none)"} is not a kernel; a map names the kernel that tests '
+                              'a written element and gives its canonical NaN (fold_finish_k)')
+    elif [_shape(g) for g in check.inputs] != [_shape(written)] or \
+            [_shape(g) for g in check.outputs] != [_shape(written), (1, ir.MASK)] or \
+            not any(e['kind'] == 'finite_or_nan' for e in check.ensures):
+        err('-', WELL_FORMED, f'check: {check.name} takes an element of {written.name} and returns it, or its '
+                              'canonical NaN, and the mask that it is finite (finite_or_nan, as fold_finish_k)')
+    if errs:
+        return errs
+    errs += _map_r3(fd, step, kernels)
+    errs += _map_claims(fd, kernels, step, check)
+    errs += _fold_theorem(fd)
+    return errs
+
+
+def _map_r3(fd, step, kernels):
+    """Rule R3 on a map: the elements of a supplied array and the limbs of a supplied scalar enter
+    from the program, so the step takes them as values of the program and adds none of them before
+    guard (r3_analysis, as for a fold); nothing written is such a limb as it is."""
+    errs = []
+    _, args, _ = fd.step
+    by_arg = dict(zip(args, step.inputs))
+    program = set(step.program_values())
+    tainted = []
+    for a in args:
+        g = by_arg[a]
+        if fd.roles[a] == 'supplied':
+            if not set(g.limbs) <= program:
+                errs.append(RuleError(fd.name, a, RULE_R3,
+                                      f'{a} is supplied by the program, and the step {step.name} does not take '
+                                      f'{g.name} as a value of the program (entry: yes, and the input not '
+                                      'stored, or supplied for more than one limb)'))
+            tainted += list(g.limbs)
+    hits, _, out = r3_analysis(step, kernels, frozenset(tainted))
+    for where, origins in hits:
+        errs.append(RuleError(fd.name, sorted(origins)[0], RULE_R3,
+                              f'a limb the program supplies reaches {where} in the step {step.name} without '
+                              'passing through guard'))
+    for v in out:
+        errs.append(RuleError(fd.name, v, RULE_R3, f'a limb the program supplies is written ({v}) as it is; it '
+                                                   'passes through guard first'))
+    return errs
+
+
+def _map_claims(fd, kernels, step, check):
+    """A map's claims (architecture.md, "Claims of Milestone 2", maps): its value is the step's, its
+    requirements are of an element or a scalar, and it claims the step's claims entry by entry
+    (entries) and what its check makes of an element that is not finite (finite_or_nan)."""
+    errs = []
+
+    def err(msg):
+        errs.append(RuleError(fd.name, '-', CLAIMS, msg))
+
+    groups = {g.name: g for g in fd.arrays + fd.scalars}
+    written = fd.writes[0]
+    if not fd.value:
+        err("no value: the exact value of one written element, over the arrays' and the scalars' names")
+    else:
+        try:
+            tree = expr.parse(fd.value)
+            if expr.names(tree) - set(groups) or not _only(tree, VALUE_TREES):
+                err(f"value {fd.value!r}: + - *, unary minus and abs( ) of the arrays' and the scalars' names")
+            elif step.value is not None:
+                # The step's value, its inputs renamed to the groups the map passes them.
+                rename = {g.name: a for a, g in zip(fd.step[1], step.inputs)}
+                if _renamed(expr.parse(step.value), rename) != tree:
+                    err(f'value {fd.value!r}: not the value of the step {step.name}, {step.value}, of what the map '
+                        'passes it')
+        except expr.ExprError as e:
+            err(f'value: {e}')
+    if not fd.extended:
+        err('a map is of the extended domain: an element that is not finite gives the canonical NaN and a false flag')
+    scalars = {g.name for g in fd.scalars}
+    for r in fd.requires:
+        if len(r) != 2 or r[1] not in groups:
+            err(f'requires {" ".join(r)!r}: a requirement of a map is about each element of one array, or a scalar')
+            continue
+        if r[0] == 'canonical' and len(groups[r[1]].limbs) >= 2:
+            continue
+        if r[0] == 'power_of_two' and len(groups[r[1]].limbs) == 1 and r[1] in scalars:
+            continue
+        err(f'requires {" ".join(r)!r}: canonical ARRAY or SCALAR of more than one limb, or power_of_two SCALAR '
+            'of one limb')
+    # The step's requirements are the map's, on what it passes: a normalized operand is a canonical
+    # element or scalar (its finite case), a power of two is one; otherwise the step's claims could
+    # not be had of every element.
+    passed = dict(zip((g.name for g in step.inputs), fd.step[1]))
+    have = {(r[0], r[1]) for r in fd.requires if len(r) == 2}
+    for r in step.requires:
+        if r[0] in ('normalized', 'power_of_two') and len(r) == 2 and r[1] in passed:
+            want = ('canonical' if r[0] == 'normalized' else 'power_of_two', passed[r[1]])
+            if want not in have:
+                err(f'requires: the step {step.name} requires {" ".join(r)}, so the map requires '
+                    f'{want[0]} {want[1]}')
+    if sorted(e['kind'] for e in fd.ensures) != sorted(MAP_ENSURES):
+        err('ensures: a map claims, of the array it writes, entries (the claims of its step, element by element) '
+            'and finite_or_nan with its state as the flag')
+    for e in fd.ensures:
+        if e['kind'] in MAP_ENSURES and e['of'] != written.name:
+            err(f'ensures {e["kind"]} of {e["of"]!r}: of the array the map writes, {written.name}')
+        if e['kind'] == 'finite_or_nan' and e['flag'] != fd.state.name:
+            err(f'finite_or_nan flag={e["flag"]}: the flag of a map is its state, {fd.state.name}')
+    if fd.min_precision is None or fd.min_precision < 1:
+        err('min_precision: an integer, at least 1')
+    else:
+        for k in (step, check):
+            if (k.min_precision or 1) > fd.min_precision:
+                err(f'min_precision {fd.min_precision}: the claims of {k.name} hold from precision {k.min_precision} on')
+    return errs
+
+
+def _renamed(tree, rename):
+    """An expression tree with its names renamed."""
+    if isinstance(tree, tuple):
+        if tree and tree[0] == 'name':
+            return ('name', rename.get(tree[1], tree[1]))
+        return tuple(_renamed(t, rename) for t in tree)
+    return tree
 
 
 def _fold_r3(fd, step, kernels):

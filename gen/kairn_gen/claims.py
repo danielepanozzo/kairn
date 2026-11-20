@@ -80,6 +80,34 @@ def fold_instance(entry, fmt, kernels):
     return {key: str(consts.evaluate(expr.parse(entry[key]), kernels, fmt.p, fmt.qmin)) for key in ('eps', 'term', 'tau')}
 
 
+def map_claims(fd, kernels):
+    """One map's entry (architecture.md, "Claims of Milestone 2", maps): the arrays read, the
+    scalars, the array written, the mask; the value of one written element; the requirements of
+    each element and of the scalars; entries (each written element satisfies the claims of the
+    step, `step`, of the scalars and its element, given to the step's inputs in the order of
+    `step_args`) and finite_or_nan; the check, the orders, the statuses."""
+    out = {'name': fd.name, 'map': True}
+    if fd.extended:
+        out['domain'] = 'extended'
+    out['arrays'] = [{'name': g.name, 'limbs': len(g.limbs), 'role': fd.roles[g.name]} for g in fd.arrays]
+    out['scalars'] = [{'name': g.name, 'limbs': len(g.limbs), 'role': fd.roles[g.name]} for g in fd.scalars]
+    out['writes'] = [_group(g) for g in fd.writes]
+    out['outputs'] = [_group(fd.state)]
+    out['value'] = fd.value
+    out['requires'] = [_requires(r) for r in fd.requires]
+    out['ensures'] = [dict(e, kernel=fd.step[0]) if e['kind'] == 'entries' else dict(e) for e in fd.ensures]
+    out['orders'] = list(fd.orders)
+    out['packed_lanes'] = PACKED_LANES
+    out['step'] = fd.step[0]
+    out['step_args'] = list(fd.step[1])
+    out['check'] = fd.check
+    out['min_precision'] = fd.min_precision
+    out['status'] = fd.status
+    out['theorem'] = {'file': fd.theorem, 'name': f'{fd.name}_correct'} if fd.theorem else None
+    out['source'] = {'cite': fd.source, 'license': fd.license}
+    return out
+
+
 def fold_claims(fd, kernels):
     """One fold's entry (architecture.md, "Claims of Milestone 2", folds): the arrays and their
     roles, the results, the value of an element, the requirements of each element, the claims
@@ -120,5 +148,5 @@ def claims(kernels):
     doc = {'schema': SCHEMA, 'kernels': [kernel_claims(k, kernels) for k in kernels.values()]}
     folds = getattr(kernels, 'folds', {})
     if folds:
-        doc['folds'] = [fold_claims(fd, kernels) for fd in folds.values()]
+        doc['folds'] = [(map_claims if fd.is_map else fold_claims)(fd, kernels) for fd in folds.values()]
     return json.dumps(doc, indent=2) + '\n'

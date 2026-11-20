@@ -183,6 +183,8 @@ class Cpp(unittest.TestCase):
                      'ball_scale_2', 'ball_sub_1', 'ball_sub_2', 'mul_down_1', 'mul_up_1'}
     # The steps of the dot products, with an fma (one limb) and the products of mul_2_2 (two).
     NOT_CONSTEXPR |= {'dot_step_1', 'dot_step_2'}
+    # The steps of the maps with the products of two limbs: mul_2_2 and mul_2_1.
+    NOT_CONSTEXPR |= {'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1', 'scale_step_2'}
     # The full kernels are constexpr where their cores are: their fix-up turns t into an infinity
     # with times_inf, which is no fused operation. Those of the products of two limbs are not, nor
     # are the full Ball kernels but the scalings by a power of two. The constructors are.
@@ -192,7 +194,9 @@ class Cpp(unittest.TestCase):
     # (milestone2.md, "The two executions of a product").
     PRODUCT_RULE = {'rmul', 'mul_1_1', 'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full', 'ball_mul_pow2_1',
                     'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full',
-                    'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2'}   # the exported bounds of the folds
+                    'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2',   # the exported bounds of the folds
+                    # the steps of the maps whose only products are prod: mul_1_1, mul_pow2_2
+                    'scale_step_1', 'mul_pow2_step_1', 'mul_pow2_step_2', 'axpy_step_1', 'axpy_entry_step_1'}
 
     def test_constexpr(self):
         plain = {name for (name, _), f in self.fns.items() if not f['constexpr']}
@@ -677,9 +681,11 @@ class Rocq(unittest.TestCase):
         self.assertEqual([uncovered[n] for n in ('two_sum', 'ball_add_2', 'ops_wave2', 'add_2_2', 'lt_2_2')],
                          [2, 1, 3, 0, 0])
         # With the kernels of the folds: g of bound_sum_k, g and t of bound_dot_k, t of dot_step_1
-        # and of sum_entry_step_1, 8 limbs in 6 kernels.
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6)
+        # and of sum_entry_step_1, 8 limbs in 6 kernels. With the steps of the maps: the one limb of
+        # sub_1_1, add_entry_step_1, sub_entry_step_1, scale_step_1, mul_pow2_step_1, axpy_step_1 and
+        # axpy_entry_step_1, 7 limbs in 7 kernels.
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7)
         s = self.statements
         self.assertIn("  let '(cz0, cz1, rz) := ball_add_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in\n"
                       '  fmt emin prec rz /\\\n  normalized_2 emin prec cz0 cz1 /\\\n  (forall x y : R, ', s)
@@ -787,9 +793,12 @@ class Rocq(unittest.TestCase):
     # bounds, and their constants): every earlier definition and statement is the same, byte for
     # byte, mul_2_2 and add_2_2 printed earlier, before dot_step_2; Audit.v is the same. Then the
     # statements of bound_dot_1 and bound_dot_2 gained m unit <= 1/2 when ok, as those of bound_sum_k.
-    DIGESTS = {'Model.v': '8b9cb1e627de7342805dc3f29feaf7e5d86f931e4593902343ae09b1c2dbfc20',
-               'Statements.v': '0b74f290fcaec0a072d5504e04833c81af083530cf9a1a6a0c44891a531a7d6a',
-               'Audit.v': '0c93acbf8651ff7bc342d1c9ab1f80d0f98718ddf3d0123dbff0d0547a871f15'}
+    # Then the steps of the maps (fifteen, unverified): every earlier definition and statement is
+    # the same, byte for byte, and mul_1_1, which axpy_step_1 calls, is printed earlier, before the
+    # first kernel that calls it; Audit.v lists the same theorems, mul_1_1_correct earlier.
+    DIGESTS = {'Model.v': 'd23dababab5e004ab91f7ccc1e87d40cf206e62aa460714e99b04e95f430ccb0',
+               'Statements.v': '695b4fb7a22a3e46cd1a29f7faa0b534bf3c46c820d70a60cf3ad42dc6fc02f5',
+               'Audit.v': '67608859876adf8cc9ecf3fdba41d114aaba6040a731d4890e3a10ed5a12c4c0'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in
@@ -820,7 +829,7 @@ class Rocq(unittest.TestCase):
             for e in k.ensures:
                 e.pop('finite_when', None)
             finite[name] = k
-        self.assertEqual(len(finite), 69)
+        self.assertEqual(len(finite), 69 + 15)          # and the fifteen steps of the maps
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

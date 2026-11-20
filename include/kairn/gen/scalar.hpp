@@ -9,7 +9,7 @@
 // the first arms of its selects need come first; when the masks are true the outputs are
 // those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,
 // "Emission").
-// Not constexpr: ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, dot_step_1, mul_down_1, mul_up_1, ball_add_2, ball_add_2_full, mul_2_2, ball_mul_2, ball_mul_2_full, mul_2_1, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, dot_step_2, mul_2_1_full, mul_2_2_full.
+// Not constexpr: ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, dot_step_1, mul_down_1, mul_up_1, mul_2_2, axpy_entry_step_2, mul_2_1, axpy_entry_step_2_1, axpy_step_2, axpy_step_2_1, ball_add_2, ball_add_2_full, ball_mul_2, ball_mul_2_full, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, dot_step_2, mul_2_1_full, mul_2_2_full, scale_step_2.
 #pragma once
 
 #include <cstddef>
@@ -152,6 +152,23 @@ KAIRN_GEN_FORCEINLINE constexpr void add_down_entry(float a, float b, float& r_o
     r_out = r;
 }
 
+// add_entry_step_1(x, y) -> z
+// add_1_1 on guarded operands (rule R3); one rounding to nearest. Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void add_entry_step_1(double x, double y, double& z_out) noexcept {
+    const double gx = __builtin_is_constant_evaluated() ? x : x + 0.0;
+    const double gy = __builtin_is_constant_evaluated() ? y : y + 0.0;
+    // (z) = add_1_1(gx, gy)
+    const double z = gx + gy;
+    z_out = z;
+}
+KAIRN_GEN_FORCEINLINE constexpr void add_entry_step_1(float x, float y, float& z_out) noexcept {
+    const float gx = __builtin_is_constant_evaluated() ? x : x + 0.0f;
+    const float gy = __builtin_is_constant_evaluated() ? y : y + 0.0f;
+    // (z) = add_1_1(gx, gy)
+    const float z = gx + gy;
+    z_out = z;
+}
+
 // add_up_1(a, b) -> r
 // the rounded sum and the sign of its exact error (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_up_1(double a, double b, double& r_out) noexcept {
@@ -226,6 +243,53 @@ KAIRN_GEN_FORCEINLINE constexpr void add_up_entry(float a, float b, float& r_out
     const float r_q = next_up_bits(r_s);
     const float r = r_n ? r_q : r_s;
     r_out = r;
+}
+
+// mul_1_1(a, b) -> p
+// one rounding to nearest. Status: proved; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void mul_1_1(double a, double b, double& p_out) noexcept {
+    const double p = __builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0);
+    p_out = p;
+}
+KAIRN_GEN_FORCEINLINE constexpr void mul_1_1(float a, float b, float& p_out) noexcept {
+    const float p = __builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0f);
+    p_out = p;
+}
+
+// axpy_entry_step_1(a, x, y) -> z
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y. Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void axpy_entry_step_1(double a, double x, double y, double& z_out) noexcept {
+    // (p) = mul_1_1(a, x)
+    const double p = __builtin_is_constant_evaluated() ? a * x : fma_rn(a, x, 0.0);
+    const double gy = __builtin_is_constant_evaluated() ? y : y + 0.0;
+    // (z) = add_1_1(p, gy)
+    const double z = p + gy;
+    z_out = z;
+}
+KAIRN_GEN_FORCEINLINE constexpr void axpy_entry_step_1(float a, float x, float y, float& z_out) noexcept {
+    // (p) = mul_1_1(a, x)
+    const float p = __builtin_is_constant_evaluated() ? a * x : fma_rn(a, x, 0.0f);
+    const float gy = __builtin_is_constant_evaluated() ? y : y + 0.0f;
+    // (z) = add_1_1(p, gy)
+    const float z = p + gy;
+    z_out = z;
+}
+
+// axpy_step_1(a, x, y) -> z
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1. Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void axpy_step_1(double a, double x, double y, double& z_out) noexcept {
+    // (p) = mul_1_1(a, x)
+    const double p = __builtin_is_constant_evaluated() ? a * x : fma_rn(a, x, 0.0);
+    // (z) = add_1_1(p, y)
+    const double z = p + y;
+    z_out = z;
+}
+KAIRN_GEN_FORCEINLINE constexpr void axpy_step_1(float a, float x, float y, float& z_out) noexcept {
+    // (p) = mul_1_1(a, x)
+    const float p = __builtin_is_constant_evaluated() ? a * x : fma_rn(a, x, 0.0f);
+    // (z) = add_1_1(p, y)
+    const float z = p + y;
+    z_out = z;
 }
 
 // ball_add_1(cx, rx, cy, ry) -> cz, rz
@@ -1076,17 +1140,6 @@ KAIRN_GEN_FORCEINLINE constexpr void make_2(float a, float& x0_out, float& x1_ou
     x1_out = x1;
 }
 
-// mul_1_1(a, b) -> p
-// one rounding to nearest. Status: proved; constexpr, each prod a plain product in constant evaluation.
-KAIRN_GEN_FORCEINLINE constexpr void mul_1_1(double a, double b, double& p_out) noexcept {
-    const double p = __builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0);
-    p_out = p;
-}
-KAIRN_GEN_FORCEINLINE constexpr void mul_1_1(float a, float b, float& p_out) noexcept {
-    const float p = __builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0.0f);
-    p_out = p;
-}
-
 // two_prod(a, b) -> r = (p, e)
 // TwoProd with an FMA (folklore; see JMP17). Status: proved; constexpr through two_prod_dekker.
 KAIRN_GEN_FORCEINLINE constexpr void two_prod(double a, double b, double& p_out, double& e_out) noexcept {
@@ -1189,6 +1242,17 @@ KAIRN_GEN_FORCEINLINE void mul_down_1(float a, float b, float& r_out) noexcept {
     const bool zz = za | zb;
     const float r = zz ? p : d;
     r_out = r;
+}
+
+// mul_pow2_step_1(x, c) -> z
+// one rounding to nearest of a product by a power of two. Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_step_1(double x, double c, double& z_out) noexcept {
+    const double z = __builtin_is_constant_evaluated() ? x * c : fma_rn(x, c, 0.0);
+    z_out = z;
+}
+KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_step_1(float x, float c, float& z_out) noexcept {
+    const float z = __builtin_is_constant_evaluated() ? x * c : fma_rn(x, c, 0.0f);
+    z_out = z;
 }
 
 // mul_up_1(a, b) -> r
@@ -1297,6 +1361,19 @@ KAIRN_GEN_FORCEINLINE constexpr void rmul(float a, float b, float& r_out) noexce
     r_out = r;
 }
 
+// scale_step_1(x, a) -> z
+// mul_1_1, one rounding to nearest. Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void scale_step_1(double x, double a, double& z_out) noexcept {
+    // (z) = mul_1_1(x, a)
+    const double z = __builtin_is_constant_evaluated() ? x * a : fma_rn(x, a, 0.0);
+    z_out = z;
+}
+KAIRN_GEN_FORCEINLINE constexpr void scale_step_1(float x, float a, float& z_out) noexcept {
+    // (z) = mul_1_1(x, a)
+    const float z = __builtin_is_constant_evaluated() ? x * a : fma_rn(x, a, 0.0f);
+    z_out = z;
+}
+
 // split(a) -> r = (ah, al)
 // Veltkamp's split (Dekker 1971). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void split(double a, double& ah_out, double& al_out) noexcept {
@@ -1314,6 +1391,17 @@ KAIRN_GEN_FORCEINLINE constexpr void split(float a, float& ah_out, float& al_out
     const float al = a - ah;
     ah_out = ah;
     al_out = al;
+}
+
+// sub_1_1(a, b) -> s
+// one rounding to nearest. Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_1_1(double a, double b, double& s_out) noexcept {
+    const double s = a - b;
+    s_out = s;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sub_1_1(float a, float b, float& s_out) noexcept {
+    const float s = a - b;
+    s_out = s;
 }
 
 // sub_down_1(a, b) -> r
@@ -1398,6 +1486,23 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_down_entry(float a, float b, float& r_o
     const float r_p = next_down_bits(r_s);
     const float r = r_n ? r_p : r_s;
     r_out = r;
+}
+
+// sub_entry_step_1(x, y) -> z
+// sub_1_1 on guarded operands (rule R3); one rounding to nearest. Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_entry_step_1(double x, double y, double& z_out) noexcept {
+    const double gx = __builtin_is_constant_evaluated() ? x : x + 0.0;
+    const double gy = __builtin_is_constant_evaluated() ? y : y + 0.0;
+    // (z) = sub_1_1(gx, gy)
+    const double z = gx - gy;
+    z_out = z;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sub_entry_step_1(float x, float y, float& z_out) noexcept {
+    const float gx = __builtin_is_constant_evaluated() ? x : x + 0.0f;
+    const float gy = __builtin_is_constant_evaluated() ? y : y + 0.0f;
+    // (z) = sub_1_1(gx, gy)
+    const float z = gx - gy;
+    z_out = z;
 }
 
 // sub_up_1(a, b) -> r
@@ -1983,6 +2088,75 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_2_full(float x0, float x1, float y0, 
     }
 }
 
+// add_entry_step_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+// add_2_2 on guarded operands (rule R3); JMP17 Alg. 6, bound from MR22. Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void add_entry_step_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
+    const double gx0 = __builtin_is_constant_evaluated() ? x0 : x0 + 0.0;
+    const double gx1 = __builtin_is_constant_evaluated() ? x1 : x1 + 0.0;
+    const double gy0 = __builtin_is_constant_evaluated() ? y0 : y0 + 0.0;
+    const double gy1 = __builtin_is_constant_evaluated() ? y1 : y1 + 0.0;
+    // (z0, z1) = add_2_2(gx0, gx1, gy0, gy1)
+    // (z0_sh, z0_sl) = two_sum(gx0, gy0)
+    const double z0_sh = gx0 + gy0;
+    const double z0_sh_bb = z0_sh - gx0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = gx0 - z0_sh_t0;
+    const double z0_sh_t2 = gy0 - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(gx1, gy1)
+    const double z0_th = gx1 + gy1;
+    const double z0_th_bb = z0_th - gx1;
+    const double z0_th_t0 = z0_th - z0_th_bb;
+    const double z0_th_t1 = gx1 - z0_th_t0;
+    const double z0_th_t2 = gy1 - z0_th_bb;
+    const double z0_tl = z0_th_t1 + z0_th_t2;
+    const double z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const double z0_vh = z0_sh + z0_c;
+    const double z0_vh_z = z0_vh - z0_sh;
+    const double z0_vl = z0_c - z0_vh_z;
+    const double z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const double z0 = z0_vh + z0_w;
+    const double z0_z = z0 - z0_vh;
+    const double z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void add_entry_step_2(float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
+    const float gx0 = __builtin_is_constant_evaluated() ? x0 : x0 + 0.0f;
+    const float gx1 = __builtin_is_constant_evaluated() ? x1 : x1 + 0.0f;
+    const float gy0 = __builtin_is_constant_evaluated() ? y0 : y0 + 0.0f;
+    const float gy1 = __builtin_is_constant_evaluated() ? y1 : y1 + 0.0f;
+    // (z0, z1) = add_2_2(gx0, gx1, gy0, gy1)
+    // (z0_sh, z0_sl) = two_sum(gx0, gy0)
+    const float z0_sh = gx0 + gy0;
+    const float z0_sh_bb = z0_sh - gx0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = gx0 - z0_sh_t0;
+    const float z0_sh_t2 = gy0 - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(gx1, gy1)
+    const float z0_th = gx1 + gy1;
+    const float z0_th_bb = z0_th - gx1;
+    const float z0_th_t0 = z0_th - z0_th_bb;
+    const float z0_th_t1 = gx1 - z0_th_t0;
+    const float z0_th_t2 = gy1 - z0_th_bb;
+    const float z0_tl = z0_th_t1 + z0_th_t2;
+    const float z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float z0_vh = z0_sh + z0_c;
+    const float z0_vh_z = z0_vh - z0_sh;
+    const float z0_vl = z0_c - z0_vh_z;
+    const float z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float z0 = z0_vh + z0_w;
+    const float z0_z = z0 - z0_vh;
+    const float z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
 // add_fast_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
 // JMP17 Alg. 5 (SloppyDWPlusDW); the bound and the normalization are proved here. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
@@ -2117,6 +2291,402 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_full(float x0, float x1, float
         w1_out = w1;
 #endif
     }
+}
+
+// mul_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+// JMP17 Alg. 12 (DWTimesDW3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
+    // (ch, cl1) = two_prod(x0, y0)
+    const double ch = fma_rn(x0, y0, 0.0);
+    const double cl1 = fma_rn(x0, y0, -ch);
+    const double tl0 = fma_rn(x1, y1, 0.0);
+    const double tl1 = fma_rn(x0, y1, tl0);
+    const double cl2 = fma_rn(x1, y0, tl1);
+    const double cl3 = cl1 + cl2;
+    // (z0, z1) = fast_two_sum(ch, cl3)
+    const double z0 = ch + cl3;
+    const double z0_z = z0 - ch;
+    const double z1 = cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void mul_2_2(float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
+    // (ch, cl1) = two_prod(x0, y0)
+    const float ch = fma_rn(x0, y0, 0.0f);
+    const float cl1 = fma_rn(x0, y0, -ch);
+    const float tl0 = fma_rn(x1, y1, 0.0f);
+    const float tl1 = fma_rn(x0, y1, tl0);
+    const float cl2 = fma_rn(x1, y0, tl1);
+    const float cl3 = cl1 + cl2;
+    // (z0, z1) = fast_two_sum(ch, cl3)
+    const float z0 = ch + cl3;
+    const float z0_z = z0 - ch;
+    const float z1 = cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// axpy_entry_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22. Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void axpy_entry_step_2(double a0, double a1, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
+    // (p0, p1) = mul_2_2(a0, a1, x0, x1)
+    // (p0_ch, p0_cl1) = two_prod(a0, x0)
+    const double p0_ch = fma_rn(a0, x0, 0.0);
+    const double p0_cl1 = fma_rn(a0, x0, -p0_ch);
+    const double p0_tl0 = fma_rn(a1, x1, 0.0);
+    const double p0_tl1 = fma_rn(a0, x1, p0_tl0);
+    const double p0_cl2 = fma_rn(a1, x0, p0_tl1);
+    const double p0_cl3 = p0_cl1 + p0_cl2;
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const double p0 = p0_ch + p0_cl3;
+    const double p0_z = p0 - p0_ch;
+    const double p1 = p0_cl3 - p0_z;
+    const double gy0 = y0 + 0.0;
+    const double gy1 = y1 + 0.0;
+    // (z0, z1) = add_2_2(p0, p1, gy0, gy1)
+    // (z0_sh, z0_sl) = two_sum(p0, gy0)
+    const double z0_sh = p0 + gy0;
+    const double z0_sh_bb = z0_sh - p0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = p0 - z0_sh_t0;
+    const double z0_sh_t2 = gy0 - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(p1, gy1)
+    const double z0_th = p1 + gy1;
+    const double z0_th_bb = z0_th - p1;
+    const double z0_th_t0 = z0_th - z0_th_bb;
+    const double z0_th_t1 = p1 - z0_th_t0;
+    const double z0_th_t2 = gy1 - z0_th_bb;
+    const double z0_tl = z0_th_t1 + z0_th_t2;
+    const double z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const double z0_vh = z0_sh + z0_c;
+    const double z0_vh_z = z0_vh - z0_sh;
+    const double z0_vl = z0_c - z0_vh_z;
+    const double z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const double z0 = z0_vh + z0_w;
+    const double z0_z = z0 - z0_vh;
+    const double z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void axpy_entry_step_2(float a0, float a1, float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
+    // (p0, p1) = mul_2_2(a0, a1, x0, x1)
+    // (p0_ch, p0_cl1) = two_prod(a0, x0)
+    const float p0_ch = fma_rn(a0, x0, 0.0f);
+    const float p0_cl1 = fma_rn(a0, x0, -p0_ch);
+    const float p0_tl0 = fma_rn(a1, x1, 0.0f);
+    const float p0_tl1 = fma_rn(a0, x1, p0_tl0);
+    const float p0_cl2 = fma_rn(a1, x0, p0_tl1);
+    const float p0_cl3 = p0_cl1 + p0_cl2;
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const float p0 = p0_ch + p0_cl3;
+    const float p0_z = p0 - p0_ch;
+    const float p1 = p0_cl3 - p0_z;
+    const float gy0 = y0 + 0.0f;
+    const float gy1 = y1 + 0.0f;
+    // (z0, z1) = add_2_2(p0, p1, gy0, gy1)
+    // (z0_sh, z0_sl) = two_sum(p0, gy0)
+    const float z0_sh = p0 + gy0;
+    const float z0_sh_bb = z0_sh - p0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = p0 - z0_sh_t0;
+    const float z0_sh_t2 = gy0 - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(p1, gy1)
+    const float z0_th = p1 + gy1;
+    const float z0_th_bb = z0_th - p1;
+    const float z0_th_t0 = z0_th - z0_th_bb;
+    const float z0_th_t1 = p1 - z0_th_t0;
+    const float z0_th_t2 = gy1 - z0_th_bb;
+    const float z0_tl = z0_th_t1 + z0_th_t2;
+    const float z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float z0_vh = z0_sh + z0_c;
+    const float z0_vh_z = z0_vh - z0_sh;
+    const float z0_vl = z0_c - z0_vh_z;
+    const float z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float z0 = z0_vh + z0_w;
+    const float z0_z = z0 - z0_vh;
+    const float z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// mul_2_1(x = (x0, x1), a) -> z = (z0, z1)
+// JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_2_1(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
+    // (ch, cl1) = two_prod(x0, a)
+    const double ch = fma_rn(x0, a, 0.0);
+    const double cl1 = fma_rn(x0, a, -ch);
+    const double cl3 = fma_rn(x1, a, cl1);
+    // (z0, z1) = fast_two_sum(ch, cl3)
+    const double z0 = ch + cl3;
+    const double z0_z = z0 - ch;
+    const double z1 = cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void mul_2_1(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
+    // (ch, cl1) = two_prod(x0, a)
+    const float ch = fma_rn(x0, a, 0.0f);
+    const float cl1 = fma_rn(x0, a, -ch);
+    const float cl3 = fma_rn(x1, a, cl1);
+    // (z0, z1) = fast_two_sum(ch, cl3)
+    const float z0 = ch + cl3;
+    const float z0_z = z0 - ch;
+    const float z1 = cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// axpy_entry_step_2_1(a, x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2 on the guarded y; bounds from MR22. Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void axpy_entry_step_2_1(double a, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
+    // (p0, p1) = mul_2_1(x0, x1, a)
+    // (p0_ch, p0_cl1) = two_prod(x0, a)
+    const double p0_ch = fma_rn(x0, a, 0.0);
+    const double p0_cl1 = fma_rn(x0, a, -p0_ch);
+    const double p0_cl3 = fma_rn(x1, a, p0_cl1);
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const double p0 = p0_ch + p0_cl3;
+    const double p0_z = p0 - p0_ch;
+    const double p1 = p0_cl3 - p0_z;
+    const double gy0 = y0 + 0.0;
+    const double gy1 = y1 + 0.0;
+    // (z0, z1) = add_2_2(p0, p1, gy0, gy1)
+    // (z0_sh, z0_sl) = two_sum(p0, gy0)
+    const double z0_sh = p0 + gy0;
+    const double z0_sh_bb = z0_sh - p0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = p0 - z0_sh_t0;
+    const double z0_sh_t2 = gy0 - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(p1, gy1)
+    const double z0_th = p1 + gy1;
+    const double z0_th_bb = z0_th - p1;
+    const double z0_th_t0 = z0_th - z0_th_bb;
+    const double z0_th_t1 = p1 - z0_th_t0;
+    const double z0_th_t2 = gy1 - z0_th_bb;
+    const double z0_tl = z0_th_t1 + z0_th_t2;
+    const double z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const double z0_vh = z0_sh + z0_c;
+    const double z0_vh_z = z0_vh - z0_sh;
+    const double z0_vl = z0_c - z0_vh_z;
+    const double z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const double z0 = z0_vh + z0_w;
+    const double z0_z = z0 - z0_vh;
+    const double z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void axpy_entry_step_2_1(float a, float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
+    // (p0, p1) = mul_2_1(x0, x1, a)
+    // (p0_ch, p0_cl1) = two_prod(x0, a)
+    const float p0_ch = fma_rn(x0, a, 0.0f);
+    const float p0_cl1 = fma_rn(x0, a, -p0_ch);
+    const float p0_cl3 = fma_rn(x1, a, p0_cl1);
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const float p0 = p0_ch + p0_cl3;
+    const float p0_z = p0 - p0_ch;
+    const float p1 = p0_cl3 - p0_z;
+    const float gy0 = y0 + 0.0f;
+    const float gy1 = y1 + 0.0f;
+    // (z0, z1) = add_2_2(p0, p1, gy0, gy1)
+    // (z0_sh, z0_sl) = two_sum(p0, gy0)
+    const float z0_sh = p0 + gy0;
+    const float z0_sh_bb = z0_sh - p0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = p0 - z0_sh_t0;
+    const float z0_sh_t2 = gy0 - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(p1, gy1)
+    const float z0_th = p1 + gy1;
+    const float z0_th_bb = z0_th - p1;
+    const float z0_th_t0 = z0_th - z0_th_bb;
+    const float z0_th_t1 = p1 - z0_th_t0;
+    const float z0_th_t2 = gy1 - z0_th_bb;
+    const float z0_tl = z0_th_t1 + z0_th_t2;
+    const float z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float z0_vh = z0_sh + z0_c;
+    const float z0_vh_z = z0_vh - z0_sh;
+    const float z0_vl = z0_c - z0_vh_z;
+    const float z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float z0 = z0_vh + z0_w;
+    const float z0_z = z0 - z0_vh;
+    const float z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// axpy_step_2(a = (a0, a1), x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22. Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void axpy_step_2(double a0, double a1, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
+    // (p0, p1) = mul_2_2(a0, a1, x0, x1)
+    // (p0_ch, p0_cl1) = two_prod(a0, x0)
+    const double p0_ch = fma_rn(a0, x0, 0.0);
+    const double p0_cl1 = fma_rn(a0, x0, -p0_ch);
+    const double p0_tl0 = fma_rn(a1, x1, 0.0);
+    const double p0_tl1 = fma_rn(a0, x1, p0_tl0);
+    const double p0_cl2 = fma_rn(a1, x0, p0_tl1);
+    const double p0_cl3 = p0_cl1 + p0_cl2;
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const double p0 = p0_ch + p0_cl3;
+    const double p0_z = p0 - p0_ch;
+    const double p1 = p0_cl3 - p0_z;
+    // (z0, z1) = add_2_2(p0, p1, y0, y1)
+    // (z0_sh, z0_sl) = two_sum(p0, y0)
+    const double z0_sh = p0 + y0;
+    const double z0_sh_bb = z0_sh - p0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = p0 - z0_sh_t0;
+    const double z0_sh_t2 = y0 - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(p1, y1)
+    const double z0_th = p1 + y1;
+    const double z0_th_bb = z0_th - p1;
+    const double z0_th_t0 = z0_th - z0_th_bb;
+    const double z0_th_t1 = p1 - z0_th_t0;
+    const double z0_th_t2 = y1 - z0_th_bb;
+    const double z0_tl = z0_th_t1 + z0_th_t2;
+    const double z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const double z0_vh = z0_sh + z0_c;
+    const double z0_vh_z = z0_vh - z0_sh;
+    const double z0_vl = z0_c - z0_vh_z;
+    const double z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const double z0 = z0_vh + z0_w;
+    const double z0_z = z0 - z0_vh;
+    const double z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void axpy_step_2(float a0, float a1, float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
+    // (p0, p1) = mul_2_2(a0, a1, x0, x1)
+    // (p0_ch, p0_cl1) = two_prod(a0, x0)
+    const float p0_ch = fma_rn(a0, x0, 0.0f);
+    const float p0_cl1 = fma_rn(a0, x0, -p0_ch);
+    const float p0_tl0 = fma_rn(a1, x1, 0.0f);
+    const float p0_tl1 = fma_rn(a0, x1, p0_tl0);
+    const float p0_cl2 = fma_rn(a1, x0, p0_tl1);
+    const float p0_cl3 = p0_cl1 + p0_cl2;
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const float p0 = p0_ch + p0_cl3;
+    const float p0_z = p0 - p0_ch;
+    const float p1 = p0_cl3 - p0_z;
+    // (z0, z1) = add_2_2(p0, p1, y0, y1)
+    // (z0_sh, z0_sl) = two_sum(p0, y0)
+    const float z0_sh = p0 + y0;
+    const float z0_sh_bb = z0_sh - p0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = p0 - z0_sh_t0;
+    const float z0_sh_t2 = y0 - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(p1, y1)
+    const float z0_th = p1 + y1;
+    const float z0_th_bb = z0_th - p1;
+    const float z0_th_t0 = z0_th - z0_th_bb;
+    const float z0_th_t1 = p1 - z0_th_t0;
+    const float z0_th_t2 = y1 - z0_th_bb;
+    const float z0_tl = z0_th_t1 + z0_th_t2;
+    const float z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float z0_vh = z0_sh + z0_c;
+    const float z0_vh_z = z0_vh - z0_sh;
+    const float z0_vl = z0_c - z0_vh_z;
+    const float z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float z0 = z0_vh + z0_w;
+    const float z0_z = z0 - z0_vh;
+    const float z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// axpy_step_2_1(a, x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+// the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22. Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void axpy_step_2_1(double a, double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
+    // (p0, p1) = mul_2_1(x0, x1, a)
+    // (p0_ch, p0_cl1) = two_prod(x0, a)
+    const double p0_ch = fma_rn(x0, a, 0.0);
+    const double p0_cl1 = fma_rn(x0, a, -p0_ch);
+    const double p0_cl3 = fma_rn(x1, a, p0_cl1);
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const double p0 = p0_ch + p0_cl3;
+    const double p0_z = p0 - p0_ch;
+    const double p1 = p0_cl3 - p0_z;
+    // (z0, z1) = add_2_2(p0, p1, y0, y1)
+    // (z0_sh, z0_sl) = two_sum(p0, y0)
+    const double z0_sh = p0 + y0;
+    const double z0_sh_bb = z0_sh - p0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = p0 - z0_sh_t0;
+    const double z0_sh_t2 = y0 - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(p1, y1)
+    const double z0_th = p1 + y1;
+    const double z0_th_bb = z0_th - p1;
+    const double z0_th_t0 = z0_th - z0_th_bb;
+    const double z0_th_t1 = p1 - z0_th_t0;
+    const double z0_th_t2 = y1 - z0_th_bb;
+    const double z0_tl = z0_th_t1 + z0_th_t2;
+    const double z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const double z0_vh = z0_sh + z0_c;
+    const double z0_vh_z = z0_vh - z0_sh;
+    const double z0_vl = z0_c - z0_vh_z;
+    const double z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const double z0 = z0_vh + z0_w;
+    const double z0_z = z0 - z0_vh;
+    const double z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void axpy_step_2_1(float a, float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
+    // (p0, p1) = mul_2_1(x0, x1, a)
+    // (p0_ch, p0_cl1) = two_prod(x0, a)
+    const float p0_ch = fma_rn(x0, a, 0.0f);
+    const float p0_cl1 = fma_rn(x0, a, -p0_ch);
+    const float p0_cl3 = fma_rn(x1, a, p0_cl1);
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const float p0 = p0_ch + p0_cl3;
+    const float p0_z = p0 - p0_ch;
+    const float p1 = p0_cl3 - p0_z;
+    // (z0, z1) = add_2_2(p0, p1, y0, y1)
+    // (z0_sh, z0_sl) = two_sum(p0, y0)
+    const float z0_sh = p0 + y0;
+    const float z0_sh_bb = z0_sh - p0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = p0 - z0_sh_t0;
+    const float z0_sh_t2 = y0 - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(p1, y1)
+    const float z0_th = p1 + y1;
+    const float z0_th_bb = z0_th - p1;
+    const float z0_th_t0 = z0_th - z0_th_bb;
+    const float z0_th_t1 = p1 - z0_th_t0;
+    const float z0_th_t2 = y1 - z0_th_bb;
+    const float z0_tl = z0_th_t1 + z0_th_t2;
+    const float z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float z0_vh = z0_sh + z0_c;
+    const float z0_vh_z = z0_vh - z0_sh;
+    const float z0_vl = z0_c - z0_vh_z;
+    const float z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float z0 = z0_vh + z0_w;
+    const float z0_z = z0 - z0_vh;
+    const float z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
 }
 
 // ball_add_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
@@ -2418,39 +2988,6 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(float c0, float c1, float r, fl
         rw_out = rw;
 #endif
     }
-}
-
-// mul_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
-// JMP17 Alg. 12 (DWTimesDW3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void mul_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
-    // (ch, cl1) = two_prod(x0, y0)
-    const double ch = fma_rn(x0, y0, 0.0);
-    const double cl1 = fma_rn(x0, y0, -ch);
-    const double tl0 = fma_rn(x1, y1, 0.0);
-    const double tl1 = fma_rn(x0, y1, tl0);
-    const double cl2 = fma_rn(x1, y0, tl1);
-    const double cl3 = cl1 + cl2;
-    // (z0, z1) = fast_two_sum(ch, cl3)
-    const double z0 = ch + cl3;
-    const double z0_z = z0 - ch;
-    const double z1 = cl3 - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-KAIRN_GEN_FORCEINLINE void mul_2_2(float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
-    // (ch, cl1) = two_prod(x0, y0)
-    const float ch = fma_rn(x0, y0, 0.0f);
-    const float cl1 = fma_rn(x0, y0, -ch);
-    const float tl0 = fma_rn(x1, y1, 0.0f);
-    const float tl1 = fma_rn(x0, y1, tl0);
-    const float cl2 = fma_rn(x1, y0, tl1);
-    const float cl3 = cl1 + cl2;
-    // (z0, z1) = fast_two_sum(ch, cl3)
-    const float z0 = ch + cl3;
-    const float z0_z = z0 - ch;
-    const float z1 = cl3 - z0_z;
-    z0_out = z0;
-    z1_out = z1;
 }
 
 // ball_mul_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
@@ -2845,33 +3382,6 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_neg_2(float cx0, float cx1, float rx, 
     cz0_out = cz0;
     cz1_out = cz1;
     rz_out = rz;
-}
-
-// mul_2_1(x = (x0, x1), a) -> z = (z0, z1)
-// JMP17 Alg. 9 (DWTimesFP3); bound from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
-KAIRN_GEN_FORCEINLINE void mul_2_1(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
-    // (ch, cl1) = two_prod(x0, a)
-    const double ch = fma_rn(x0, a, 0.0);
-    const double cl1 = fma_rn(x0, a, -ch);
-    const double cl3 = fma_rn(x1, a, cl1);
-    // (z0, z1) = fast_two_sum(ch, cl3)
-    const double z0 = ch + cl3;
-    const double z0_z = z0 - ch;
-    const double z1 = cl3 - z0_z;
-    z0_out = z0;
-    z1_out = z1;
-}
-KAIRN_GEN_FORCEINLINE void mul_2_1(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
-    // (ch, cl1) = two_prod(x0, a)
-    const float ch = fma_rn(x0, a, 0.0f);
-    const float cl1 = fma_rn(x0, a, -ch);
-    const float cl3 = fma_rn(x1, a, cl1);
-    // (z0, z1) = fast_two_sum(ch, cl3)
-    const float z0 = ch + cl3;
-    const float z0_z = z0 - ch;
-    const float z1 = cl3 - z0_z;
-    z0_out = z0;
-    z1_out = z1;
 }
 
 // ball_scale_2(cx = (cx0, cx1), rx, a) -> cz = (cz0, cz1), rz
@@ -3817,6 +4327,60 @@ KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_2_full(float x0, float x1, float c
     }
 }
 
+// mul_pow2_step_2(x = (x0, x1), c) -> z = (z0, z1)
+// mul_pow2_2, the two limbs scaled and renormalized. Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_step_2(double x0, double x1, double c, double& z0_out, double& z1_out) noexcept {
+    // (z0, z1) = mul_pow2_2(x0, x1, c)
+    const double z0_h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0);
+    const double z0_l = __builtin_is_constant_evaluated() ? x1 * c : fma_rn(x1, c, 0.0);
+    // (z0, z1) = fast_two_sum(z0_h, z0_l)
+    const double z0 = z0_h + z0_l;
+    const double z0_z = z0 - z0_h;
+    const double z1 = z0_l - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_step_2(float x0, float x1, float c, float& z0_out, float& z1_out) noexcept {
+    // (z0, z1) = mul_pow2_2(x0, x1, c)
+    const float z0_h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0f);
+    const float z0_l = __builtin_is_constant_evaluated() ? x1 * c : fma_rn(x1, c, 0.0f);
+    // (z0, z1) = fast_two_sum(z0_h, z0_l)
+    const float z0 = z0_h + z0_l;
+    const float z0_z = z0 - z0_h;
+    const float z1 = z0_l - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// scale_step_2(x = (x0, x1), a) -> z = (z0, z1)
+// mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void scale_step_2(double x0, double x1, double a, double& z0_out, double& z1_out) noexcept {
+    // (z0, z1) = mul_2_1(x0, x1, a)
+    // (z0_ch, z0_cl1) = two_prod(x0, a)
+    const double z0_ch = fma_rn(x0, a, 0.0);
+    const double z0_cl1 = fma_rn(x0, a, -z0_ch);
+    const double z0_cl3 = fma_rn(x1, a, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const double z0 = z0_ch + z0_cl3;
+    const double z0_z = z0 - z0_ch;
+    const double z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void scale_step_2(float x0, float x1, float a, float& z0_out, float& z1_out) noexcept {
+    // (z0, z1) = mul_2_1(x0, x1, a)
+    // (z0_ch, z0_cl1) = two_prod(x0, a)
+    const float z0_ch = fma_rn(x0, a, 0.0f);
+    const float z0_cl1 = fma_rn(x0, a, -z0_ch);
+    const float z0_cl3 = fma_rn(x1, a, z0_cl1);
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const float z0 = z0_ch + z0_cl3;
+    const float z0_z = z0 - z0_ch;
+    const float z1 = z0_cl3 - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
 // sub_1_2(a, y = (y0, y1)) -> z = (z0, z1)
 // add_2_1 (JMP17 Alg. 4) on -y and a. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_1_2(double a, double y0, double y1, double& z0_out, double& z1_out) noexcept {
@@ -4309,6 +4873,81 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(float x0, float x1, float y0, 
     }
 }
 
+// sub_entry_step_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
+// sub_2_2 on guarded operands (rule R3); add_2_2 (JMP17 Alg. 6) on -y, bound from MR22. Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_entry_step_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
+    const double gx0 = __builtin_is_constant_evaluated() ? x0 : x0 + 0.0;
+    const double gx1 = __builtin_is_constant_evaluated() ? x1 : x1 + 0.0;
+    const double gy0 = __builtin_is_constant_evaluated() ? y0 : y0 + 0.0;
+    const double gy1 = __builtin_is_constant_evaluated() ? y1 : y1 + 0.0;
+    // (z0, z1) = sub_2_2(gx0, gx1, gy0, gy1)
+    const double z0_n0 = -gy0;
+    const double z0_n1 = -gy1;
+    // (z0, z1) = add_2_2(gx0, gx1, z0_n0, z0_n1)
+    // (z0_sh, z0_sl) = two_sum(gx0, z0_n0)
+    const double z0_sh = gx0 + z0_n0;
+    const double z0_sh_bb = z0_sh - gx0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = gx0 - z0_sh_t0;
+    const double z0_sh_t2 = z0_n0 - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(gx1, z0_n1)
+    const double z0_th = gx1 + z0_n1;
+    const double z0_th_bb = z0_th - gx1;
+    const double z0_th_t0 = z0_th - z0_th_bb;
+    const double z0_th_t1 = gx1 - z0_th_t0;
+    const double z0_th_t2 = z0_n1 - z0_th_bb;
+    const double z0_tl = z0_th_t1 + z0_th_t2;
+    const double z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const double z0_vh = z0_sh + z0_c;
+    const double z0_vh_z = z0_vh - z0_sh;
+    const double z0_vl = z0_c - z0_vh_z;
+    const double z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const double z0 = z0_vh + z0_w;
+    const double z0_z = z0 - z0_vh;
+    const double z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sub_entry_step_2(float x0, float x1, float y0, float y1, float& z0_out, float& z1_out) noexcept {
+    const float gx0 = __builtin_is_constant_evaluated() ? x0 : x0 + 0.0f;
+    const float gx1 = __builtin_is_constant_evaluated() ? x1 : x1 + 0.0f;
+    const float gy0 = __builtin_is_constant_evaluated() ? y0 : y0 + 0.0f;
+    const float gy1 = __builtin_is_constant_evaluated() ? y1 : y1 + 0.0f;
+    // (z0, z1) = sub_2_2(gx0, gx1, gy0, gy1)
+    const float z0_n0 = -gy0;
+    const float z0_n1 = -gy1;
+    // (z0, z1) = add_2_2(gx0, gx1, z0_n0, z0_n1)
+    // (z0_sh, z0_sl) = two_sum(gx0, z0_n0)
+    const float z0_sh = gx0 + z0_n0;
+    const float z0_sh_bb = z0_sh - gx0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = gx0 - z0_sh_t0;
+    const float z0_sh_t2 = z0_n0 - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(gx1, z0_n1)
+    const float z0_th = gx1 + z0_n1;
+    const float z0_th_bb = z0_th - gx1;
+    const float z0_th_t0 = z0_th - z0_th_bb;
+    const float z0_th_t1 = gx1 - z0_th_t0;
+    const float z0_th_t2 = z0_n1 - z0_th_bb;
+    const float z0_tl = z0_th_t1 + z0_th_t2;
+    const float z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float z0_vh = z0_sh + z0_c;
+    const float z0_vh_z = z0_vh - z0_sh;
+    const float z0_vl = z0_c - z0_vh_z;
+    const float z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float z0 = z0_vh + z0_w;
+    const float z0_z = z0 - z0_vh;
+    const float z1 = z0_w - z0_z;
+    z0_out = z0;
+    z1_out = z1;
+}
+
 // sum_entry_step_2(s = (s0, s1), x = (x0, x1)) -> t = (t0, t1)
 // add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22. Status: unverified; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sum_entry_step_2(double s0, double s1, double x0, double x1, double& t0_out, double& t1_out) noexcept {
@@ -4447,6 +5086,2804 @@ KAIRN_GEN_FORCEINLINE constexpr void to_nearest_2(float x0, [[maybe_unused]] flo
 // One pointer per limb array and a length; nothing is allocated. Ordinary inline functions,
 // the step inlined in the loop: a value of the step is named step_V, of the combination comb_V,
 // of the finish fin_V; the loop's own variables end with an underscore.
+
+// map add_1(stored x, stored y) -> z, step add_1_1, check fold_finish_1: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_1_seq(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_s) = add_1_1(x, y)
+        const double step_s = x + y;
+        z_out[i_] = step_s;
+        // (chk_r, chk_flag) = fold_finish_1(step_s)
+        const double chk_a = abs_bits(step_s);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_1_seq(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_s) = add_1_1(x, y)
+        const float step_s = x + y;
+        z_out[i_] = step_s;
+        // (chk_r, chk_flag) = fold_finish_1(step_s)
+        const float chk_a = abs_bits(step_s);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map add_1(stored x, stored y) -> z, step add_1_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            const double y = y_in[i_];
+            // (step_s) = add_1_1(x, y)
+            const double step_s = x + y;
+            z_out[i_] = step_s;
+            // (chk_r, chk_flag) = fold_finish_1(step_s)
+            const double chk_a = abs_bits(step_s);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_s) = add_1_1(x, y)
+        const double step_s = x + y;
+        z_out[i_] = step_s;
+        // (chk_r, chk_flag) = fold_finish_1(step_s)
+        const double chk_a = abs_bits(step_s);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_1_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            const float y = y_in[i_];
+            // (step_s) = add_1_1(x, y)
+            const float step_s = x + y;
+            z_out[i_] = step_s;
+            // (chk_r, chk_flag) = fold_finish_1(step_s)
+            const float chk_a = abs_bits(step_s);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_s) = add_1_1(x, y)
+        const float step_s = x + y;
+        z_out[i_] = step_s;
+        // (chk_r, chk_flag) = fold_finish_1(step_s)
+        const float chk_a = abs_bits(step_s);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map add_1_entry(supplied x, supplied y) -> z, step add_entry_step_1, check fold_finish_1: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_1_entry_seq(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_z) = add_entry_step_1(x, y)
+        const double step_gx = x + 0.0;
+        const double step_gy = y + 0.0;
+        // (step_z) = add_1_1(step_gx, step_gy)
+        const double step_z = step_gx + step_gy;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const double chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_1_entry_seq(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_z) = add_entry_step_1(x, y)
+        const float step_gx = x + 0.0f;
+        const float step_gy = y + 0.0f;
+        // (step_z) = add_1_1(step_gx, step_gy)
+        const float step_z = step_gx + step_gy;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const float chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map add_1_entry(supplied x, supplied y) -> z, step add_entry_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_1_entry_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            const double y = y_in[i_];
+            // (step_z) = add_entry_step_1(x, y)
+            const double step_gx = x + 0.0;
+            const double step_gy = y + 0.0;
+            // (step_z) = add_1_1(step_gx, step_gy)
+            const double step_z = step_gx + step_gy;
+            z_out[i_] = step_z;
+            // (chk_r, chk_flag) = fold_finish_1(step_z)
+            const double chk_a = abs_bits(step_z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_z) = add_entry_step_1(x, y)
+        const double step_gx = x + 0.0;
+        const double step_gy = y + 0.0;
+        // (step_z) = add_1_1(step_gx, step_gy)
+        const double step_z = step_gx + step_gy;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const double chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_1_entry_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            const float y = y_in[i_];
+            // (step_z) = add_entry_step_1(x, y)
+            const float step_gx = x + 0.0f;
+            const float step_gy = y + 0.0f;
+            // (step_z) = add_1_1(step_gx, step_gy)
+            const float step_z = step_gx + step_gy;
+            z_out[i_] = step_z;
+            // (chk_r, chk_flag) = fold_finish_1(step_z)
+            const float chk_a = abs_bits(step_z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_z) = add_entry_step_1(x, y)
+        const float step_gx = x + 0.0f;
+        const float step_gy = y + 0.0f;
+        // (step_z) = add_1_1(step_gx, step_gy)
+        const float step_z = step_gx + step_gy;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const float chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map add_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step add_2_2, check fold_finish_2: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = add_2_2(x0, x1, y0, y1)
+        // (step_sh, step_sl) = two_sum(x0, y0)
+        const double step_sh = x0 + y0;
+        const double step_sh_bb = step_sh - x0;
+        const double step_sh_t0 = step_sh - step_sh_bb;
+        const double step_sh_t1 = x0 - step_sh_t0;
+        const double step_sh_t2 = y0 - step_sh_bb;
+        const double step_sl = step_sh_t1 + step_sh_t2;
+        // (step_th, step_tl) = two_sum(x1, y1)
+        const double step_th = x1 + y1;
+        const double step_th_bb = step_th - x1;
+        const double step_th_t0 = step_th - step_th_bb;
+        const double step_th_t1 = x1 - step_th_t0;
+        const double step_th_t2 = y1 - step_th_bb;
+        const double step_tl = step_th_t1 + step_th_t2;
+        const double step_c = step_sl + step_th;
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const double step_vh = step_sh + step_c;
+        const double step_vh_z = step_vh - step_sh;
+        const double step_vl = step_c - step_vh_z;
+        const double step_w = step_tl + step_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const double step_z0 = step_vh + step_w;
+        const double step_z0_z = step_z0 - step_vh;
+        const double step_z1 = step_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_2_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = add_2_2(x0, x1, y0, y1)
+        // (step_sh, step_sl) = two_sum(x0, y0)
+        const float step_sh = x0 + y0;
+        const float step_sh_bb = step_sh - x0;
+        const float step_sh_t0 = step_sh - step_sh_bb;
+        const float step_sh_t1 = x0 - step_sh_t0;
+        const float step_sh_t2 = y0 - step_sh_bb;
+        const float step_sl = step_sh_t1 + step_sh_t2;
+        // (step_th, step_tl) = two_sum(x1, y1)
+        const float step_th = x1 + y1;
+        const float step_th_bb = step_th - x1;
+        const float step_th_t0 = step_th - step_th_bb;
+        const float step_th_t1 = x1 - step_th_t0;
+        const float step_th_t2 = y1 - step_th_bb;
+        const float step_tl = step_th_t1 + step_th_t2;
+        const float step_c = step_sl + step_th;
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const float step_vh = step_sh + step_c;
+        const float step_vh_z = step_vh - step_sh;
+        const float step_vl = step_c - step_vh_z;
+        const float step_w = step_tl + step_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const float step_z0 = step_vh + step_w;
+        const float step_z0_z = step_z0 - step_vh;
+        const float step_z1 = step_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map add_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step add_2_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[i_];
+            const double y1 = y1_in[i_];
+            // (step_z0, step_z1) = add_2_2(x0, x1, y0, y1)
+            // (step_sh, step_sl) = two_sum(x0, y0)
+            const double step_sh = x0 + y0;
+            const double step_sh_bb = step_sh - x0;
+            const double step_sh_t0 = step_sh - step_sh_bb;
+            const double step_sh_t1 = x0 - step_sh_t0;
+            const double step_sh_t2 = y0 - step_sh_bb;
+            const double step_sl = step_sh_t1 + step_sh_t2;
+            // (step_th, step_tl) = two_sum(x1, y1)
+            const double step_th = x1 + y1;
+            const double step_th_bb = step_th - x1;
+            const double step_th_t0 = step_th - step_th_bb;
+            const double step_th_t1 = x1 - step_th_t0;
+            const double step_th_t2 = y1 - step_th_bb;
+            const double step_tl = step_th_t1 + step_th_t2;
+            const double step_c = step_sl + step_th;
+            // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+            const double step_vh = step_sh + step_c;
+            const double step_vh_z = step_vh - step_sh;
+            const double step_vl = step_c - step_vh_z;
+            const double step_w = step_tl + step_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+            const double step_z0 = step_vh + step_w;
+            const double step_z0_z = step_z0 - step_vh;
+            const double step_z1 = step_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const double chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = add_2_2(x0, x1, y0, y1)
+        // (step_sh, step_sl) = two_sum(x0, y0)
+        const double step_sh = x0 + y0;
+        const double step_sh_bb = step_sh - x0;
+        const double step_sh_t0 = step_sh - step_sh_bb;
+        const double step_sh_t1 = x0 - step_sh_t0;
+        const double step_sh_t2 = y0 - step_sh_bb;
+        const double step_sl = step_sh_t1 + step_sh_t2;
+        // (step_th, step_tl) = two_sum(x1, y1)
+        const double step_th = x1 + y1;
+        const double step_th_bb = step_th - x1;
+        const double step_th_t0 = step_th - step_th_bb;
+        const double step_th_t1 = x1 - step_th_t0;
+        const double step_th_t2 = y1 - step_th_bb;
+        const double step_tl = step_th_t1 + step_th_t2;
+        const double step_c = step_sl + step_th;
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const double step_vh = step_sh + step_c;
+        const double step_vh_z = step_vh - step_sh;
+        const double step_vl = step_c - step_vh_z;
+        const double step_w = step_tl + step_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const double step_z0 = step_vh + step_w;
+        const double step_z0_z = step_z0 - step_vh;
+        const double step_z1 = step_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_2_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[i_];
+            const float y1 = y1_in[i_];
+            // (step_z0, step_z1) = add_2_2(x0, x1, y0, y1)
+            // (step_sh, step_sl) = two_sum(x0, y0)
+            const float step_sh = x0 + y0;
+            const float step_sh_bb = step_sh - x0;
+            const float step_sh_t0 = step_sh - step_sh_bb;
+            const float step_sh_t1 = x0 - step_sh_t0;
+            const float step_sh_t2 = y0 - step_sh_bb;
+            const float step_sl = step_sh_t1 + step_sh_t2;
+            // (step_th, step_tl) = two_sum(x1, y1)
+            const float step_th = x1 + y1;
+            const float step_th_bb = step_th - x1;
+            const float step_th_t0 = step_th - step_th_bb;
+            const float step_th_t1 = x1 - step_th_t0;
+            const float step_th_t2 = y1 - step_th_bb;
+            const float step_tl = step_th_t1 + step_th_t2;
+            const float step_c = step_sl + step_th;
+            // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+            const float step_vh = step_sh + step_c;
+            const float step_vh_z = step_vh - step_sh;
+            const float step_vl = step_c - step_vh_z;
+            const float step_w = step_tl + step_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+            const float step_z0 = step_vh + step_w;
+            const float step_z0_z = step_z0 - step_vh;
+            const float step_z1 = step_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const float chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = add_2_2(x0, x1, y0, y1)
+        // (step_sh, step_sl) = two_sum(x0, y0)
+        const float step_sh = x0 + y0;
+        const float step_sh_bb = step_sh - x0;
+        const float step_sh_t0 = step_sh - step_sh_bb;
+        const float step_sh_t1 = x0 - step_sh_t0;
+        const float step_sh_t2 = y0 - step_sh_bb;
+        const float step_sl = step_sh_t1 + step_sh_t2;
+        // (step_th, step_tl) = two_sum(x1, y1)
+        const float step_th = x1 + y1;
+        const float step_th_bb = step_th - x1;
+        const float step_th_t0 = step_th - step_th_bb;
+        const float step_th_t1 = x1 - step_th_t0;
+        const float step_th_t2 = y1 - step_th_bb;
+        const float step_tl = step_th_t1 + step_th_t2;
+        const float step_c = step_sl + step_th;
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const float step_vh = step_sh + step_c;
+        const float step_vh_z = step_vh - step_sh;
+        const float step_vl = step_c - step_vh_z;
+        const float step_w = step_tl + step_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const float step_z0 = step_vh + step_w;
+        const float step_z0_z = step_z0 - step_vh;
+        const float step_z1 = step_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map add_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step add_entry_step_2, check fold_finish_2: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_2_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = add_entry_step_2(x0, x1, y0, y1)
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
+        const double step_gy0 = y0 + 0.0;
+        const double step_gy1 = y1 + 0.0;
+        // (step_z0, step_z1) = add_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_gx0, step_gy0)
+        const double step_z0_sh = step_gx0 + step_gy0;
+        const double step_z0_sh_bb = step_z0_sh - step_gx0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = step_gx0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_gx1, step_gy1)
+        const double step_z0_th = step_gx1 + step_gy1;
+        const double step_z0_th_bb = step_z0_th - step_gx1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = step_gx1 - step_z0_th_t0;
+        const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_2_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = add_entry_step_2(x0, x1, y0, y1)
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
+        const float step_gy0 = y0 + 0.0f;
+        const float step_gy1 = y1 + 0.0f;
+        // (step_z0, step_z1) = add_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_gx0, step_gy0)
+        const float step_z0_sh = step_gx0 + step_gy0;
+        const float step_z0_sh_bb = step_z0_sh - step_gx0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = step_gx0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_gx1, step_gy1)
+        const float step_z0_th = step_gx1 + step_gy1;
+        const float step_z0_th_bb = step_z0_th - step_gx1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = step_gx1 - step_z0_th_t0;
+        const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map add_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step add_entry_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_2_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[i_];
+            const double y1 = y1_in[i_];
+            // (step_z0, step_z1) = add_entry_step_2(x0, x1, y0, y1)
+            const double step_gx0 = x0 + 0.0;
+            const double step_gx1 = x1 + 0.0;
+            const double step_gy0 = y0 + 0.0;
+            const double step_gy1 = y1 + 0.0;
+            // (step_z0, step_z1) = add_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_gx0, step_gy0)
+            const double step_z0_sh = step_gx0 + step_gy0;
+            const double step_z0_sh_bb = step_z0_sh - step_gx0;
+            const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const double step_z0_sh_t1 = step_gx0 - step_z0_sh_t0;
+            const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+            const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(step_gx1, step_gy1)
+            const double step_z0_th = step_gx1 + step_gy1;
+            const double step_z0_th_bb = step_z0_th - step_gx1;
+            const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const double step_z0_th_t1 = step_gx1 - step_z0_th_t0;
+            const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+            const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const double step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const double step_z0_vh = step_z0_sh + step_z0_c;
+            const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const double step_z0_vl = step_z0_c - step_z0_vh_z;
+            const double step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const double step_z0 = step_z0_vh + step_z0_w;
+            const double step_z0_z = step_z0 - step_z0_vh;
+            const double step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const double chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = add_entry_step_2(x0, x1, y0, y1)
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
+        const double step_gy0 = y0 + 0.0;
+        const double step_gy1 = y1 + 0.0;
+        // (step_z0, step_z1) = add_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_gx0, step_gy0)
+        const double step_z0_sh = step_gx0 + step_gy0;
+        const double step_z0_sh_bb = step_z0_sh - step_gx0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = step_gx0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_gx1, step_gy1)
+        const double step_z0_th = step_gx1 + step_gy1;
+        const double step_z0_th_bb = step_z0_th - step_gx1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = step_gx1 - step_z0_th_t0;
+        const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void add_2_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[i_];
+            const float y1 = y1_in[i_];
+            // (step_z0, step_z1) = add_entry_step_2(x0, x1, y0, y1)
+            const float step_gx0 = x0 + 0.0f;
+            const float step_gx1 = x1 + 0.0f;
+            const float step_gy0 = y0 + 0.0f;
+            const float step_gy1 = y1 + 0.0f;
+            // (step_z0, step_z1) = add_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_gx0, step_gy0)
+            const float step_z0_sh = step_gx0 + step_gy0;
+            const float step_z0_sh_bb = step_z0_sh - step_gx0;
+            const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const float step_z0_sh_t1 = step_gx0 - step_z0_sh_t0;
+            const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+            const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(step_gx1, step_gy1)
+            const float step_z0_th = step_gx1 + step_gy1;
+            const float step_z0_th_bb = step_z0_th - step_gx1;
+            const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const float step_z0_th_t1 = step_gx1 - step_z0_th_t0;
+            const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+            const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const float step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const float step_z0_vh = step_z0_sh + step_z0_c;
+            const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const float step_z0_vl = step_z0_c - step_z0_vh_z;
+            const float step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const float step_z0 = step_z0_vh + step_z0_w;
+            const float step_z0_z = step_z0 - step_z0_vh;
+            const float step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const float chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = add_entry_step_2(x0, x1, y0, y1)
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
+        const float step_gy0 = y0 + 0.0f;
+        const float step_gy1 = y1 + 0.0f;
+        // (step_z0, step_z1) = add_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_gx0, step_gy0)
+        const float step_z0_sh = step_gx0 + step_gy0;
+        const float step_z0_sh_bb = step_z0_sh - step_gx0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = step_gx0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_gx1, step_gy1)
+        const float step_z0_th = step_gx1 + step_gy1;
+        const float step_z0_th_bb = step_z0_th - step_gx1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = step_gx1 - step_z0_th_t0;
+        const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map axpy_1(supplied x, stored y, supplied a) -> z, step axpy_step_1, check fold_finish_1: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_1_seq(const double* x_in, const double* y_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_z) = axpy_step_1(a, x, y)
+        // (step_p) = mul_1_1(a, x)
+        const double step_p = fma_rn(a, x, 0.0);
+        // (step_z) = add_1_1(step_p, y)
+        const double step_z = step_p + y;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const double chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_1_seq(const float* x_in, const float* y_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_z) = axpy_step_1(a, x, y)
+        // (step_p) = mul_1_1(a, x)
+        const float step_p = fma_rn(a, x, 0.0f);
+        // (step_z) = add_1_1(step_p, y)
+        const float step_z = step_p + y;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const float chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map axpy_1(supplied x, stored y, supplied a) -> z, step axpy_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double a, double* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            const double y = y_in[i_];
+            // (step_z) = axpy_step_1(a, x, y)
+            // (step_p) = mul_1_1(a, x)
+            const double step_p = fma_rn(a, x, 0.0);
+            // (step_z) = add_1_1(step_p, y)
+            const double step_z = step_p + y;
+            z_out[i_] = step_z;
+            // (chk_r, chk_flag) = fold_finish_1(step_z)
+            const double chk_a = abs_bits(step_z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_z) = axpy_step_1(a, x, y)
+        // (step_p) = mul_1_1(a, x)
+        const double step_p = fma_rn(a, x, 0.0);
+        // (step_z) = add_1_1(step_p, y)
+        const double step_z = step_p + y;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const double chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_1_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float a, float* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            const float y = y_in[i_];
+            // (step_z) = axpy_step_1(a, x, y)
+            // (step_p) = mul_1_1(a, x)
+            const float step_p = fma_rn(a, x, 0.0f);
+            // (step_z) = add_1_1(step_p, y)
+            const float step_z = step_p + y;
+            z_out[i_] = step_z;
+            // (chk_r, chk_flag) = fold_finish_1(step_z)
+            const float chk_a = abs_bits(step_z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_z) = axpy_step_1(a, x, y)
+        // (step_p) = mul_1_1(a, x)
+        const float step_p = fma_rn(a, x, 0.0f);
+        // (step_z) = add_1_1(step_p, y)
+        const float step_z = step_p + y;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const float chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map axpy_1_entry(supplied x, supplied y, supplied a) -> z, step axpy_entry_step_1, check fold_finish_1: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_1_entry_seq(const double* x_in, const double* y_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_z) = axpy_entry_step_1(a, x, y)
+        // (step_p) = mul_1_1(a, x)
+        const double step_p = fma_rn(a, x, 0.0);
+        const double step_gy = y + 0.0;
+        // (step_z) = add_1_1(step_p, step_gy)
+        const double step_z = step_p + step_gy;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const double chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_1_entry_seq(const float* x_in, const float* y_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_z) = axpy_entry_step_1(a, x, y)
+        // (step_p) = mul_1_1(a, x)
+        const float step_p = fma_rn(a, x, 0.0f);
+        const float step_gy = y + 0.0f;
+        // (step_z) = add_1_1(step_p, step_gy)
+        const float step_z = step_p + step_gy;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const float chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map axpy_1_entry(supplied x, supplied y, supplied a) -> z, step axpy_entry_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_1_entry_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double a, double* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            const double y = y_in[i_];
+            // (step_z) = axpy_entry_step_1(a, x, y)
+            // (step_p) = mul_1_1(a, x)
+            const double step_p = fma_rn(a, x, 0.0);
+            const double step_gy = y + 0.0;
+            // (step_z) = add_1_1(step_p, step_gy)
+            const double step_z = step_p + step_gy;
+            z_out[i_] = step_z;
+            // (chk_r, chk_flag) = fold_finish_1(step_z)
+            const double chk_a = abs_bits(step_z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_z) = axpy_entry_step_1(a, x, y)
+        // (step_p) = mul_1_1(a, x)
+        const double step_p = fma_rn(a, x, 0.0);
+        const double step_gy = y + 0.0;
+        // (step_z) = add_1_1(step_p, step_gy)
+        const double step_z = step_p + step_gy;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const double chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_1_entry_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float a, float* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            const float y = y_in[i_];
+            // (step_z) = axpy_entry_step_1(a, x, y)
+            // (step_p) = mul_1_1(a, x)
+            const float step_p = fma_rn(a, x, 0.0f);
+            const float step_gy = y + 0.0f;
+            // (step_z) = add_1_1(step_p, step_gy)
+            const float step_z = step_p + step_gy;
+            z_out[i_] = step_z;
+            // (chk_r, chk_flag) = fold_finish_1(step_z)
+            const float chk_a = abs_bits(step_z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_z) = axpy_entry_step_1(a, x, y)
+        // (step_p) = mul_1_1(a, x)
+        const float step_p = fma_rn(a, x, 0.0f);
+        const float step_gy = y + 0.0f;
+        // (step_z) = add_1_1(step_p, step_gy)
+        const float step_z = step_p + step_gy;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const float chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map axpy_2(supplied x = (x0, x1), stored y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_step_2(a0, a1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
+        const double step_p0_ch = fma_rn(a0, x0, 0.0);
+        const double step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
+        const double step_p0_tl0 = fma_rn(a1, x1, 0.0);
+        const double step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
+        const double step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
+        const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const double step_p0 = step_p0_ch + step_p0_cl3;
+        const double step_p0_z = step_p0 - step_p0_ch;
+        const double step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, y0, y1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, y0)
+        const double step_z0_sh = step_p0 + y0;
+        const double step_z0_sh_bb = step_z0_sh - step_p0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = y0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, y1)
+        const double step_z0_th = step_p1 + y1;
+        const double step_z0_th_bb = step_z0_th - step_p1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const double step_z0_th_t2 = y1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_step_2(a0, a1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
+        const float step_p0_ch = fma_rn(a0, x0, 0.0f);
+        const float step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
+        const float step_p0_tl0 = fma_rn(a1, x1, 0.0f);
+        const float step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
+        const float step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
+        const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const float step_p0 = step_p0_ch + step_p0_cl3;
+        const float step_p0_z = step_p0 - step_p0_ch;
+        const float step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, y0, y1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, y0)
+        const float step_z0_sh = step_p0 + y0;
+        const float step_z0_sh_bb = step_z0_sh - step_p0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = y0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, y1)
+        const float step_z0_th = step_p1 + y1;
+        const float step_z0_th_bb = step_z0_th - step_p1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const float step_z0_th_t2 = y1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map axpy_2(supplied x = (x0, x1), stored y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[i_];
+            const double y1 = y1_in[i_];
+            // (step_z0, step_z1) = axpy_step_2(a0, a1, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
+            // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
+            const double step_p0_ch = fma_rn(a0, x0, 0.0);
+            const double step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
+            const double step_p0_tl0 = fma_rn(a1, x1, 0.0);
+            const double step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
+            const double step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
+            const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const double step_p0 = step_p0_ch + step_p0_cl3;
+            const double step_p0_z = step_p0 - step_p0_ch;
+            const double step_p1 = step_p0_cl3 - step_p0_z;
+            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, y0, y1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, y0)
+            const double step_z0_sh = step_p0 + y0;
+            const double step_z0_sh_bb = step_z0_sh - step_p0;
+            const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const double step_z0_sh_t2 = y0 - step_z0_sh_bb;
+            const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(step_p1, y1)
+            const double step_z0_th = step_p1 + y1;
+            const double step_z0_th_bb = step_z0_th - step_p1;
+            const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const double step_z0_th_t2 = y1 - step_z0_th_bb;
+            const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const double step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const double step_z0_vh = step_z0_sh + step_z0_c;
+            const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const double step_z0_vl = step_z0_c - step_z0_vh_z;
+            const double step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const double step_z0 = step_z0_vh + step_z0_w;
+            const double step_z0_z = step_z0 - step_z0_vh;
+            const double step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const double chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_step_2(a0, a1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
+        const double step_p0_ch = fma_rn(a0, x0, 0.0);
+        const double step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
+        const double step_p0_tl0 = fma_rn(a1, x1, 0.0);
+        const double step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
+        const double step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
+        const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const double step_p0 = step_p0_ch + step_p0_cl3;
+        const double step_p0_z = step_p0 - step_p0_ch;
+        const double step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, y0, y1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, y0)
+        const double step_z0_sh = step_p0 + y0;
+        const double step_z0_sh_bb = step_z0_sh - step_p0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = y0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, y1)
+        const double step_z0_th = step_p1 + y1;
+        const double step_z0_th_bb = step_z0_th - step_p1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const double step_z0_th_t2 = y1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[i_];
+            const float y1 = y1_in[i_];
+            // (step_z0, step_z1) = axpy_step_2(a0, a1, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
+            // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
+            const float step_p0_ch = fma_rn(a0, x0, 0.0f);
+            const float step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
+            const float step_p0_tl0 = fma_rn(a1, x1, 0.0f);
+            const float step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
+            const float step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
+            const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const float step_p0 = step_p0_ch + step_p0_cl3;
+            const float step_p0_z = step_p0 - step_p0_ch;
+            const float step_p1 = step_p0_cl3 - step_p0_z;
+            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, y0, y1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, y0)
+            const float step_z0_sh = step_p0 + y0;
+            const float step_z0_sh_bb = step_z0_sh - step_p0;
+            const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const float step_z0_sh_t2 = y0 - step_z0_sh_bb;
+            const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(step_p1, y1)
+            const float step_z0_th = step_p1 + y1;
+            const float step_z0_th_bb = step_z0_th - step_p1;
+            const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const float step_z0_th_t2 = y1 - step_z0_th_bb;
+            const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const float step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const float step_z0_vh = step_z0_sh + step_z0_c;
+            const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const float step_z0_vl = step_z0_c - step_z0_vh_z;
+            const float step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const float step_z0 = step_z0_vh + step_z0_w;
+            const float step_z0_z = step_z0 - step_z0_vh;
+            const float step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const float chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_step_2(a0, a1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
+        const float step_p0_ch = fma_rn(a0, x0, 0.0f);
+        const float step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
+        const float step_p0_tl0 = fma_rn(a1, x1, 0.0f);
+        const float step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
+        const float step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
+        const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const float step_p0 = step_p0_ch + step_p0_cl3;
+        const float step_p0_z = step_p0 - step_p0_ch;
+        const float step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, y0, y1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, y0)
+        const float step_z0_sh = step_p0 + y0;
+        const float step_z0_sh_bb = step_z0_sh - step_p0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = y0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, y1)
+        const float step_z0_th = step_p1 + y1;
+        const float step_z0_th_bb = step_z0_th - step_p1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const float step_z0_th_t2 = y1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map axpy_2_1(supplied x = (x0, x1), stored y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_1_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_step_2_1(a, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
+        const double step_p0_ch = fma_rn(x0, a, 0.0);
+        const double step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
+        const double step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const double step_p0 = step_p0_ch + step_p0_cl3;
+        const double step_p0_z = step_p0 - step_p0_ch;
+        const double step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, y0, y1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, y0)
+        const double step_z0_sh = step_p0 + y0;
+        const double step_z0_sh_bb = step_z0_sh - step_p0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = y0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, y1)
+        const double step_z0_th = step_p1 + y1;
+        const double step_z0_th_bb = step_z0_th - step_p1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const double step_z0_th_t2 = y1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_1_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_step_2_1(a, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
+        const float step_p0_ch = fma_rn(x0, a, 0.0f);
+        const float step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
+        const float step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const float step_p0 = step_p0_ch + step_p0_cl3;
+        const float step_p0_z = step_p0 - step_p0_ch;
+        const float step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, y0, y1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, y0)
+        const float step_z0_sh = step_p0 + y0;
+        const float step_z0_sh_bb = step_z0_sh - step_p0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = y0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, y1)
+        const float step_z0_th = step_p1 + y1;
+        const float step_z0_th_bb = step_z0_th - step_p1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const float step_z0_th_t2 = y1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map axpy_2_1(supplied x = (x0, x1), stored y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_1_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[i_];
+            const double y1 = y1_in[i_];
+            // (step_z0, step_z1) = axpy_step_2_1(a, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_1(x0, x1, a)
+            // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
+            const double step_p0_ch = fma_rn(x0, a, 0.0);
+            const double step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
+            const double step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const double step_p0 = step_p0_ch + step_p0_cl3;
+            const double step_p0_z = step_p0 - step_p0_ch;
+            const double step_p1 = step_p0_cl3 - step_p0_z;
+            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, y0, y1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, y0)
+            const double step_z0_sh = step_p0 + y0;
+            const double step_z0_sh_bb = step_z0_sh - step_p0;
+            const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const double step_z0_sh_t2 = y0 - step_z0_sh_bb;
+            const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(step_p1, y1)
+            const double step_z0_th = step_p1 + y1;
+            const double step_z0_th_bb = step_z0_th - step_p1;
+            const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const double step_z0_th_t2 = y1 - step_z0_th_bb;
+            const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const double step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const double step_z0_vh = step_z0_sh + step_z0_c;
+            const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const double step_z0_vl = step_z0_c - step_z0_vh_z;
+            const double step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const double step_z0 = step_z0_vh + step_z0_w;
+            const double step_z0_z = step_z0 - step_z0_vh;
+            const double step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const double chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_step_2_1(a, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
+        const double step_p0_ch = fma_rn(x0, a, 0.0);
+        const double step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
+        const double step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const double step_p0 = step_p0_ch + step_p0_cl3;
+        const double step_p0_z = step_p0 - step_p0_ch;
+        const double step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, y0, y1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, y0)
+        const double step_z0_sh = step_p0 + y0;
+        const double step_z0_sh_bb = step_z0_sh - step_p0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = y0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, y1)
+        const double step_z0_th = step_p1 + y1;
+        const double step_z0_th_bb = step_z0_th - step_p1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const double step_z0_th_t2 = y1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_1_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[i_];
+            const float y1 = y1_in[i_];
+            // (step_z0, step_z1) = axpy_step_2_1(a, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_1(x0, x1, a)
+            // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
+            const float step_p0_ch = fma_rn(x0, a, 0.0f);
+            const float step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
+            const float step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const float step_p0 = step_p0_ch + step_p0_cl3;
+            const float step_p0_z = step_p0 - step_p0_ch;
+            const float step_p1 = step_p0_cl3 - step_p0_z;
+            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, y0, y1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, y0)
+            const float step_z0_sh = step_p0 + y0;
+            const float step_z0_sh_bb = step_z0_sh - step_p0;
+            const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const float step_z0_sh_t2 = y0 - step_z0_sh_bb;
+            const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(step_p1, y1)
+            const float step_z0_th = step_p1 + y1;
+            const float step_z0_th_bb = step_z0_th - step_p1;
+            const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const float step_z0_th_t2 = y1 - step_z0_th_bb;
+            const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const float step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const float step_z0_vh = step_z0_sh + step_z0_c;
+            const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const float step_z0_vl = step_z0_c - step_z0_vh_z;
+            const float step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const float step_z0 = step_z0_vh + step_z0_w;
+            const float step_z0_z = step_z0 - step_z0_vh;
+            const float step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const float chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_step_2_1(a, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
+        const float step_p0_ch = fma_rn(x0, a, 0.0f);
+        const float step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
+        const float step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const float step_p0 = step_p0_ch + step_p0_cl3;
+        const float step_p0_z = step_p0 - step_p0_ch;
+        const float step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, y0, y1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, y0)
+        const float step_z0_sh = step_p0 + y0;
+        const float step_z0_sh_bb = step_z0_sh - step_p0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = y0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, y1)
+        const float step_z0_th = step_p1 + y1;
+        const float step_z0_th_bb = step_z0_th - step_p1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const float step_z0_th_t2 = y1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map axpy_2_1_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_entry_step_2_1, check fold_finish_2: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_1_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
+        const double step_p0_ch = fma_rn(x0, a, 0.0);
+        const double step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
+        const double step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const double step_p0 = step_p0_ch + step_p0_cl3;
+        const double step_p0_z = step_p0 - step_p0_ch;
+        const double step_p1 = step_p0_cl3 - step_p0_z;
+        const double step_gy0 = y0 + 0.0;
+        const double step_gy1 = y1 + 0.0;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
+        const double step_z0_sh = step_p0 + step_gy0;
+        const double step_z0_sh_bb = step_z0_sh - step_p0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
+        const double step_z0_th = step_p1 + step_gy1;
+        const double step_z0_th_bb = step_z0_th - step_p1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_1_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
+        const float step_p0_ch = fma_rn(x0, a, 0.0f);
+        const float step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
+        const float step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const float step_p0 = step_p0_ch + step_p0_cl3;
+        const float step_p0_z = step_p0 - step_p0_ch;
+        const float step_p1 = step_p0_cl3 - step_p0_z;
+        const float step_gy0 = y0 + 0.0f;
+        const float step_gy1 = y1 + 0.0f;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
+        const float step_z0_sh = step_p0 + step_gy0;
+        const float step_z0_sh_bb = step_z0_sh - step_p0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
+        const float step_z0_th = step_p1 + step_gy1;
+        const float step_z0_th_bb = step_z0_th - step_p1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map axpy_2_1_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_entry_step_2_1, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_1_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[i_];
+            const double y1 = y1_in[i_];
+            // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_1(x0, x1, a)
+            // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
+            const double step_p0_ch = fma_rn(x0, a, 0.0);
+            const double step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
+            const double step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const double step_p0 = step_p0_ch + step_p0_cl3;
+            const double step_p0_z = step_p0 - step_p0_ch;
+            const double step_p1 = step_p0_cl3 - step_p0_z;
+            const double step_gy0 = y0 + 0.0;
+            const double step_gy1 = y1 + 0.0;
+            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
+            const double step_z0_sh = step_p0 + step_gy0;
+            const double step_z0_sh_bb = step_z0_sh - step_p0;
+            const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+            const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
+            const double step_z0_th = step_p1 + step_gy1;
+            const double step_z0_th_bb = step_z0_th - step_p1;
+            const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+            const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const double step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const double step_z0_vh = step_z0_sh + step_z0_c;
+            const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const double step_z0_vl = step_z0_c - step_z0_vh_z;
+            const double step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const double step_z0 = step_z0_vh + step_z0_w;
+            const double step_z0_z = step_z0 - step_z0_vh;
+            const double step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const double chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
+        const double step_p0_ch = fma_rn(x0, a, 0.0);
+        const double step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
+        const double step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const double step_p0 = step_p0_ch + step_p0_cl3;
+        const double step_p0_z = step_p0 - step_p0_ch;
+        const double step_p1 = step_p0_cl3 - step_p0_z;
+        const double step_gy0 = y0 + 0.0;
+        const double step_gy1 = y1 + 0.0;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
+        const double step_z0_sh = step_p0 + step_gy0;
+        const double step_z0_sh_bb = step_z0_sh - step_p0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
+        const double step_z0_th = step_p1 + step_gy1;
+        const double step_z0_th_bb = step_z0_th - step_p1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_1_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[i_];
+            const float y1 = y1_in[i_];
+            // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_1(x0, x1, a)
+            // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
+            const float step_p0_ch = fma_rn(x0, a, 0.0f);
+            const float step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
+            const float step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const float step_p0 = step_p0_ch + step_p0_cl3;
+            const float step_p0_z = step_p0 - step_p0_ch;
+            const float step_p1 = step_p0_cl3 - step_p0_z;
+            const float step_gy0 = y0 + 0.0f;
+            const float step_gy1 = y1 + 0.0f;
+            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
+            const float step_z0_sh = step_p0 + step_gy0;
+            const float step_z0_sh_bb = step_z0_sh - step_p0;
+            const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+            const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
+            const float step_z0_th = step_p1 + step_gy1;
+            const float step_z0_th_bb = step_z0_th - step_p1;
+            const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+            const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const float step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const float step_z0_vh = step_z0_sh + step_z0_c;
+            const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const float step_z0_vl = step_z0_c - step_z0_vh_z;
+            const float step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const float step_z0 = step_z0_vh + step_z0_w;
+            const float step_z0_z = step_z0 - step_z0_vh;
+            const float step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const float chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_entry_step_2_1(a, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_1(x0, x1, a)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, a)
+        const float step_p0_ch = fma_rn(x0, a, 0.0f);
+        const float step_p0_cl1 = fma_rn(x0, a, -step_p0_ch);
+        const float step_p0_cl3 = fma_rn(x1, a, step_p0_cl1);
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const float step_p0 = step_p0_ch + step_p0_cl3;
+        const float step_p0_z = step_p0 - step_p0_ch;
+        const float step_p1 = step_p0_cl3 - step_p0_z;
+        const float step_gy0 = y0 + 0.0f;
+        const float step_gy1 = y1 + 0.0f;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
+        const float step_z0_sh = step_p0 + step_gy0;
+        const float step_z0_sh_bb = step_z0_sh - step_p0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
+        const float step_z0_th = step_p1 + step_gy1;
+        const float step_z0_th_bb = step_z0_th - step_p1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map axpy_2_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_entry_step_2, check fold_finish_2: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
+        const double step_p0_ch = fma_rn(a0, x0, 0.0);
+        const double step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
+        const double step_p0_tl0 = fma_rn(a1, x1, 0.0);
+        const double step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
+        const double step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
+        const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const double step_p0 = step_p0_ch + step_p0_cl3;
+        const double step_p0_z = step_p0 - step_p0_ch;
+        const double step_p1 = step_p0_cl3 - step_p0_z;
+        const double step_gy0 = y0 + 0.0;
+        const double step_gy1 = y1 + 0.0;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
+        const double step_z0_sh = step_p0 + step_gy0;
+        const double step_z0_sh_bb = step_z0_sh - step_p0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
+        const double step_z0_th = step_p1 + step_gy1;
+        const double step_z0_th_bb = step_z0_th - step_p1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
+        const float step_p0_ch = fma_rn(a0, x0, 0.0f);
+        const float step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
+        const float step_p0_tl0 = fma_rn(a1, x1, 0.0f);
+        const float step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
+        const float step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
+        const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const float step_p0 = step_p0_ch + step_p0_cl3;
+        const float step_p0_z = step_p0 - step_p0_ch;
+        const float step_p1 = step_p0_cl3 - step_p0_z;
+        const float step_gy0 = y0 + 0.0f;
+        const float step_gy1 = y1 + 0.0f;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
+        const float step_z0_sh = step_p0 + step_gy0;
+        const float step_z0_sh_bb = step_z0_sh - step_p0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
+        const float step_z0_th = step_p1 + step_gy1;
+        const float step_z0_th_bb = step_z0_th - step_p1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map axpy_2_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_entry_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[i_];
+            const double y1 = y1_in[i_];
+            // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
+            // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
+            const double step_p0_ch = fma_rn(a0, x0, 0.0);
+            const double step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
+            const double step_p0_tl0 = fma_rn(a1, x1, 0.0);
+            const double step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
+            const double step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
+            const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const double step_p0 = step_p0_ch + step_p0_cl3;
+            const double step_p0_z = step_p0 - step_p0_ch;
+            const double step_p1 = step_p0_cl3 - step_p0_z;
+            const double step_gy0 = y0 + 0.0;
+            const double step_gy1 = y1 + 0.0;
+            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
+            const double step_z0_sh = step_p0 + step_gy0;
+            const double step_z0_sh_bb = step_z0_sh - step_p0;
+            const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+            const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
+            const double step_z0_th = step_p1 + step_gy1;
+            const double step_z0_th_bb = step_z0_th - step_p1;
+            const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+            const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const double step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const double step_z0_vh = step_z0_sh + step_z0_c;
+            const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const double step_z0_vl = step_z0_c - step_z0_vh_z;
+            const double step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const double step_z0 = step_z0_vh + step_z0_w;
+            const double step_z0_z = step_z0 - step_z0_vh;
+            const double step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const double chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
+        const double step_p0_ch = fma_rn(a0, x0, 0.0);
+        const double step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
+        const double step_p0_tl0 = fma_rn(a1, x1, 0.0);
+        const double step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
+        const double step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
+        const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const double step_p0 = step_p0_ch + step_p0_cl3;
+        const double step_p0_z = step_p0 - step_p0_ch;
+        const double step_p1 = step_p0_cl3 - step_p0_z;
+        const double step_gy0 = y0 + 0.0;
+        const double step_gy1 = y1 + 0.0;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
+        const double step_z0_sh = step_p0 + step_gy0;
+        const double step_z0_sh_bb = step_z0_sh - step_p0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
+        const double step_z0_th = step_p1 + step_gy1;
+        const double step_z0_th_bb = step_z0_th - step_p1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const double step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void axpy_2_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[i_];
+            const float y1 = y1_in[i_];
+            // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
+            // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
+            const float step_p0_ch = fma_rn(a0, x0, 0.0f);
+            const float step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
+            const float step_p0_tl0 = fma_rn(a1, x1, 0.0f);
+            const float step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
+            const float step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
+            const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const float step_p0 = step_p0_ch + step_p0_cl3;
+            const float step_p0_z = step_p0 - step_p0_ch;
+            const float step_p1 = step_p0_cl3 - step_p0_z;
+            const float step_gy0 = y0 + 0.0f;
+            const float step_gy1 = y1 + 0.0f;
+            // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
+            const float step_z0_sh = step_p0 + step_gy0;
+            const float step_z0_sh_bb = step_z0_sh - step_p0;
+            const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+            const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+            const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
+            const float step_z0_th = step_p1 + step_gy1;
+            const float step_z0_th_bb = step_z0_th - step_p1;
+            const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+            const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+            const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const float step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const float step_z0_vh = step_z0_sh + step_z0_c;
+            const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const float step_z0_vl = step_z0_c - step_z0_vh_z;
+            const float step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const float step_z0 = step_z0_vh + step_z0_w;
+            const float step_z0_z = step_z0 - step_z0_vh;
+            const float step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const float chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = axpy_entry_step_2(a0, a1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(a0, a1, x0, x1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(a0, x0)
+        const float step_p0_ch = fma_rn(a0, x0, 0.0f);
+        const float step_p0_cl1 = fma_rn(a0, x0, -step_p0_ch);
+        const float step_p0_tl0 = fma_rn(a1, x1, 0.0f);
+        const float step_p0_tl1 = fma_rn(a0, x1, step_p0_tl0);
+        const float step_p0_cl2 = fma_rn(a1, x0, step_p0_tl1);
+        const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const float step_p0 = step_p0_ch + step_p0_cl3;
+        const float step_p0_z = step_p0 - step_p0_ch;
+        const float step_p1 = step_p0_cl3 - step_p0_z;
+        const float step_gy0 = y0 + 0.0f;
+        const float step_gy1 = y1 + 0.0f;
+        // (step_z0, step_z1) = add_2_2(step_p0, step_p1, step_gy0, step_gy1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_p0, step_gy0)
+        const float step_z0_sh = step_p0 + step_gy0;
+        const float step_z0_sh_bb = step_z0_sh - step_p0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = step_p0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = step_gy0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_p1, step_gy1)
+        const float step_z0_th = step_p1 + step_gy1;
+        const float step_z0_th_bb = step_z0_th - step_p1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = step_p1 - step_z0_th_t0;
+        const float step_z0_th_t2 = step_gy1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
 
 // fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
 inline void dot_1_seq(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
@@ -4952,6 +8389,1660 @@ inline void dot_2_lanes(const float* x0_in, const float* x1_in, const float* y0_
     r0_out = fin_r0;
     r1_out = fin_r1;
     flag_out = fin_flag;
+}
+
+// map mul_pow2_map_1(supplied x, supplied c) -> z, step mul_pow2_step_1, check fold_finish_1: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void mul_pow2_map_1_seq(const double* x_in, std::size_t n, double c, double* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z) = mul_pow2_step_1(x, c)
+        const double step_z = fma_rn(x, c, 0.0);
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const double chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void mul_pow2_map_1_seq(const float* x_in, std::size_t n, float c, float* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z) = mul_pow2_step_1(x, c)
+        const float step_z = fma_rn(x, c, 0.0f);
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const float chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map mul_pow2_map_1(supplied x, supplied c) -> z, step mul_pow2_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void mul_pow2_map_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double c, double* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            // (step_z) = mul_pow2_step_1(x, c)
+            const double step_z = fma_rn(x, c, 0.0);
+            z_out[i_] = step_z;
+            // (chk_r, chk_flag) = fold_finish_1(step_z)
+            const double chk_a = abs_bits(step_z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z) = mul_pow2_step_1(x, c)
+        const double step_z = fma_rn(x, c, 0.0);
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const double chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void mul_pow2_map_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float c, float* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            // (step_z) = mul_pow2_step_1(x, c)
+            const float step_z = fma_rn(x, c, 0.0f);
+            z_out[i_] = step_z;
+            // (chk_r, chk_flag) = fold_finish_1(step_z)
+            const float chk_a = abs_bits(step_z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z) = mul_pow2_step_1(x, c)
+        const float step_z = fma_rn(x, c, 0.0f);
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const float chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map mul_pow2_map_2(supplied x = (x0, x1), supplied c) -> z = (z0, z1), step mul_pow2_step_2, check fold_finish_2: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void mul_pow2_map_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double c, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = mul_pow2_step_2(x0, x1, c)
+        // (step_z0, step_z1) = mul_pow2_2(x0, x1, c)
+        const double step_z0_h = fma_rn(x0, c, 0.0);
+        const double step_z0_l = fma_rn(x1, c, 0.0);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_h, step_z0_l)
+        const double step_z0 = step_z0_h + step_z0_l;
+        const double step_z0_z = step_z0 - step_z0_h;
+        const double step_z1 = step_z0_l - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void mul_pow2_map_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float c, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = mul_pow2_step_2(x0, x1, c)
+        // (step_z0, step_z1) = mul_pow2_2(x0, x1, c)
+        const float step_z0_h = fma_rn(x0, c, 0.0f);
+        const float step_z0_l = fma_rn(x1, c, 0.0f);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_h, step_z0_l)
+        const float step_z0 = step_z0_h + step_z0_l;
+        const float step_z0_z = step_z0 - step_z0_h;
+        const float step_z1 = step_z0_l - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map mul_pow2_map_2(supplied x = (x0, x1), supplied c) -> z = (z0, z1), step mul_pow2_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void mul_pow2_map_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double c, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            // (step_z0, step_z1) = mul_pow2_step_2(x0, x1, c)
+            // (step_z0, step_z1) = mul_pow2_2(x0, x1, c)
+            const double step_z0_h = fma_rn(x0, c, 0.0);
+            const double step_z0_l = fma_rn(x1, c, 0.0);
+            // (step_z0, step_z1) = fast_two_sum(step_z0_h, step_z0_l)
+            const double step_z0 = step_z0_h + step_z0_l;
+            const double step_z0_z = step_z0 - step_z0_h;
+            const double step_z1 = step_z0_l - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const double chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = mul_pow2_step_2(x0, x1, c)
+        // (step_z0, step_z1) = mul_pow2_2(x0, x1, c)
+        const double step_z0_h = fma_rn(x0, c, 0.0);
+        const double step_z0_l = fma_rn(x1, c, 0.0);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_h, step_z0_l)
+        const double step_z0 = step_z0_h + step_z0_l;
+        const double step_z0_z = step_z0 - step_z0_h;
+        const double step_z1 = step_z0_l - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void mul_pow2_map_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float c, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            // (step_z0, step_z1) = mul_pow2_step_2(x0, x1, c)
+            // (step_z0, step_z1) = mul_pow2_2(x0, x1, c)
+            const float step_z0_h = fma_rn(x0, c, 0.0f);
+            const float step_z0_l = fma_rn(x1, c, 0.0f);
+            // (step_z0, step_z1) = fast_two_sum(step_z0_h, step_z0_l)
+            const float step_z0 = step_z0_h + step_z0_l;
+            const float step_z0_z = step_z0 - step_z0_h;
+            const float step_z1 = step_z0_l - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const float chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = mul_pow2_step_2(x0, x1, c)
+        // (step_z0, step_z1) = mul_pow2_2(x0, x1, c)
+        const float step_z0_h = fma_rn(x0, c, 0.0f);
+        const float step_z0_l = fma_rn(x1, c, 0.0f);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_h, step_z0_l)
+        const float step_z0 = step_z0_h + step_z0_l;
+        const float step_z0_z = step_z0 - step_z0_h;
+        const float step_z1 = step_z0_l - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map scale_1(supplied x, supplied a) -> z, step scale_step_1, check fold_finish_1: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void scale_1_seq(const double* x_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z) = scale_step_1(x, a)
+        // (step_z) = mul_1_1(x, a)
+        const double step_z = fma_rn(x, a, 0.0);
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const double chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void scale_1_seq(const float* x_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z) = scale_step_1(x, a)
+        // (step_z) = mul_1_1(x, a)
+        const float step_z = fma_rn(x, a, 0.0f);
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const float chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map scale_1(supplied x, supplied a) -> z, step scale_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void scale_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double a, double* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            // (step_z) = scale_step_1(x, a)
+            // (step_z) = mul_1_1(x, a)
+            const double step_z = fma_rn(x, a, 0.0);
+            z_out[i_] = step_z;
+            // (chk_r, chk_flag) = fold_finish_1(step_z)
+            const double chk_a = abs_bits(step_z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z) = scale_step_1(x, a)
+        // (step_z) = mul_1_1(x, a)
+        const double step_z = fma_rn(x, a, 0.0);
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const double chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void scale_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float a, float* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            // (step_z) = scale_step_1(x, a)
+            // (step_z) = mul_1_1(x, a)
+            const float step_z = fma_rn(x, a, 0.0f);
+            z_out[i_] = step_z;
+            // (chk_r, chk_flag) = fold_finish_1(step_z)
+            const float chk_a = abs_bits(step_z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z) = scale_step_1(x, a)
+        // (step_z) = mul_1_1(x, a)
+        const float step_z = fma_rn(x, a, 0.0f);
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const float chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map scale_2(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void scale_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = scale_step_2(x0, x1, a)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, a)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, a)
+        const double step_z0_ch = fma_rn(x0, a, 0.0);
+        const double step_z0_cl1 = fma_rn(x0, a, -step_z0_ch);
+        const double step_z0_cl3 = fma_rn(x1, a, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const double step_z0 = step_z0_ch + step_z0_cl3;
+        const double step_z0_z = step_z0 - step_z0_ch;
+        const double step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void scale_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = scale_step_2(x0, x1, a)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, a)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, a)
+        const float step_z0_ch = fma_rn(x0, a, 0.0f);
+        const float step_z0_cl1 = fma_rn(x0, a, -step_z0_ch);
+        const float step_z0_cl3 = fma_rn(x1, a, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const float step_z0 = step_z0_ch + step_z0_cl3;
+        const float step_z0_z = step_z0 - step_z0_ch;
+        const float step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map scale_2(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void scale_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            // (step_z0, step_z1) = scale_step_2(x0, x1, a)
+            // (step_z0, step_z1) = mul_2_1(x0, x1, a)
+            // (step_z0_ch, step_z0_cl1) = two_prod(x0, a)
+            const double step_z0_ch = fma_rn(x0, a, 0.0);
+            const double step_z0_cl1 = fma_rn(x0, a, -step_z0_ch);
+            const double step_z0_cl3 = fma_rn(x1, a, step_z0_cl1);
+            // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+            const double step_z0 = step_z0_ch + step_z0_cl3;
+            const double step_z0_z = step_z0 - step_z0_ch;
+            const double step_z1 = step_z0_cl3 - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const double chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = scale_step_2(x0, x1, a)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, a)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, a)
+        const double step_z0_ch = fma_rn(x0, a, 0.0);
+        const double step_z0_cl1 = fma_rn(x0, a, -step_z0_ch);
+        const double step_z0_cl3 = fma_rn(x1, a, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const double step_z0 = step_z0_ch + step_z0_cl3;
+        const double step_z0_z = step_z0 - step_z0_ch;
+        const double step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void scale_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            // (step_z0, step_z1) = scale_step_2(x0, x1, a)
+            // (step_z0, step_z1) = mul_2_1(x0, x1, a)
+            // (step_z0_ch, step_z0_cl1) = two_prod(x0, a)
+            const float step_z0_ch = fma_rn(x0, a, 0.0f);
+            const float step_z0_cl1 = fma_rn(x0, a, -step_z0_ch);
+            const float step_z0_cl3 = fma_rn(x1, a, step_z0_cl1);
+            // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+            const float step_z0 = step_z0_ch + step_z0_cl3;
+            const float step_z0_z = step_z0 - step_z0_ch;
+            const float step_z1 = step_z0_cl3 - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const float chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = scale_step_2(x0, x1, a)
+        // (step_z0, step_z1) = mul_2_1(x0, x1, a)
+        // (step_z0_ch, step_z0_cl1) = two_prod(x0, a)
+        const float step_z0_ch = fma_rn(x0, a, 0.0f);
+        const float step_z0_cl1 = fma_rn(x0, a, -step_z0_ch);
+        const float step_z0_cl3 = fma_rn(x1, a, step_z0_cl1);
+        // (step_z0, step_z1) = fast_two_sum(step_z0_ch, step_z0_cl3)
+        const float step_z0 = step_z0_ch + step_z0_cl3;
+        const float step_z0_z = step_z0 - step_z0_ch;
+        const float step_z1 = step_z0_cl3 - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map sub_1(stored x, stored y) -> z, step sub_1_1, check fold_finish_1: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_1_seq(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_s) = sub_1_1(x, y)
+        const double step_s = x - y;
+        z_out[i_] = step_s;
+        // (chk_r, chk_flag) = fold_finish_1(step_s)
+        const double chk_a = abs_bits(step_s);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_1_seq(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_s) = sub_1_1(x, y)
+        const float step_s = x - y;
+        z_out[i_] = step_s;
+        // (chk_r, chk_flag) = fold_finish_1(step_s)
+        const float chk_a = abs_bits(step_s);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map sub_1(stored x, stored y) -> z, step sub_1_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            const double y = y_in[i_];
+            // (step_s) = sub_1_1(x, y)
+            const double step_s = x - y;
+            z_out[i_] = step_s;
+            // (chk_r, chk_flag) = fold_finish_1(step_s)
+            const double chk_a = abs_bits(step_s);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_s) = sub_1_1(x, y)
+        const double step_s = x - y;
+        z_out[i_] = step_s;
+        // (chk_r, chk_flag) = fold_finish_1(step_s)
+        const double chk_a = abs_bits(step_s);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_1_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            const float y = y_in[i_];
+            // (step_s) = sub_1_1(x, y)
+            const float step_s = x - y;
+            z_out[i_] = step_s;
+            // (chk_r, chk_flag) = fold_finish_1(step_s)
+            const float chk_a = abs_bits(step_s);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_s) = sub_1_1(x, y)
+        const float step_s = x - y;
+        z_out[i_] = step_s;
+        // (chk_r, chk_flag) = fold_finish_1(step_s)
+        const float chk_a = abs_bits(step_s);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map sub_1_entry(supplied x, supplied y) -> z, step sub_entry_step_1, check fold_finish_1: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_1_entry_seq(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_z) = sub_entry_step_1(x, y)
+        const double step_gx = x + 0.0;
+        const double step_gy = y + 0.0;
+        // (step_z) = sub_1_1(step_gx, step_gy)
+        const double step_z = step_gx - step_gy;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const double chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_1_entry_seq(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_z) = sub_entry_step_1(x, y)
+        const float step_gx = x + 0.0f;
+        const float step_gy = y + 0.0f;
+        // (step_z) = sub_1_1(step_gx, step_gy)
+        const float step_z = step_gx - step_gy;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const float chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map sub_1_entry(supplied x, supplied y) -> z, step sub_entry_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_1_entry_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            const double y = y_in[i_];
+            // (step_z) = sub_entry_step_1(x, y)
+            const double step_gx = x + 0.0;
+            const double step_gy = y + 0.0;
+            // (step_z) = sub_1_1(step_gx, step_gy)
+            const double step_z = step_gx - step_gy;
+            z_out[i_] = step_z;
+            // (chk_r, chk_flag) = fold_finish_1(step_z)
+            const double chk_a = abs_bits(step_z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_z) = sub_entry_step_1(x, y)
+        const double step_gx = x + 0.0;
+        const double step_gy = y + 0.0;
+        // (step_z) = sub_1_1(step_gx, step_gy)
+        const double step_z = step_gx - step_gy;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const double chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_1_entry_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float* z_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            const float y = y_in[i_];
+            // (step_z) = sub_entry_step_1(x, y)
+            const float step_gx = x + 0.0f;
+            const float step_gy = y + 0.0f;
+            // (step_z) = sub_1_1(step_gx, step_gy)
+            const float step_z = step_gx - step_gy;
+            z_out[i_] = step_z;
+            // (chk_r, chk_flag) = fold_finish_1(step_z)
+            const float chk_a = abs_bits(step_z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_z) = sub_entry_step_1(x, y)
+        const float step_gx = x + 0.0f;
+        const float step_gy = y + 0.0f;
+        // (step_z) = sub_1_1(step_gx, step_gy)
+        const float step_z = step_gx - step_gy;
+        z_out[i_] = step_z;
+        // (chk_r, chk_flag) = fold_finish_1(step_z)
+        const float chk_a = abs_bits(step_z);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// map sub_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step sub_2_2, check fold_finish_2: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = sub_2_2(x0, x1, y0, y1)
+        const double step_n0 = -y0;
+        const double step_n1 = -y1;
+        // (step_z0, step_z1) = add_2_2(x0, x1, step_n0, step_n1)
+        // (step_z0_sh, step_z0_sl) = two_sum(x0, step_n0)
+        const double step_z0_sh = x0 + step_n0;
+        const double step_z0_sh_bb = step_z0_sh - x0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = x0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = step_n0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(x1, step_n1)
+        const double step_z0_th = x1 + step_n1;
+        const double step_z0_th_bb = step_z0_th - x1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = x1 - step_z0_th_t0;
+        const double step_z0_th_t2 = step_n1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_2_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = sub_2_2(x0, x1, y0, y1)
+        const float step_n0 = -y0;
+        const float step_n1 = -y1;
+        // (step_z0, step_z1) = add_2_2(x0, x1, step_n0, step_n1)
+        // (step_z0_sh, step_z0_sl) = two_sum(x0, step_n0)
+        const float step_z0_sh = x0 + step_n0;
+        const float step_z0_sh_bb = step_z0_sh - x0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = x0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = step_n0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(x1, step_n1)
+        const float step_z0_th = x1 + step_n1;
+        const float step_z0_th_bb = step_z0_th - x1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = x1 - step_z0_th_t0;
+        const float step_z0_th_t2 = step_n1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map sub_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step sub_2_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[i_];
+            const double y1 = y1_in[i_];
+            // (step_z0, step_z1) = sub_2_2(x0, x1, y0, y1)
+            const double step_n0 = -y0;
+            const double step_n1 = -y1;
+            // (step_z0, step_z1) = add_2_2(x0, x1, step_n0, step_n1)
+            // (step_z0_sh, step_z0_sl) = two_sum(x0, step_n0)
+            const double step_z0_sh = x0 + step_n0;
+            const double step_z0_sh_bb = step_z0_sh - x0;
+            const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const double step_z0_sh_t1 = x0 - step_z0_sh_t0;
+            const double step_z0_sh_t2 = step_n0 - step_z0_sh_bb;
+            const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(x1, step_n1)
+            const double step_z0_th = x1 + step_n1;
+            const double step_z0_th_bb = step_z0_th - x1;
+            const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const double step_z0_th_t1 = x1 - step_z0_th_t0;
+            const double step_z0_th_t2 = step_n1 - step_z0_th_bb;
+            const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const double step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const double step_z0_vh = step_z0_sh + step_z0_c;
+            const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const double step_z0_vl = step_z0_c - step_z0_vh_z;
+            const double step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const double step_z0 = step_z0_vh + step_z0_w;
+            const double step_z0_z = step_z0 - step_z0_vh;
+            const double step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const double chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = sub_2_2(x0, x1, y0, y1)
+        const double step_n0 = -y0;
+        const double step_n1 = -y1;
+        // (step_z0, step_z1) = add_2_2(x0, x1, step_n0, step_n1)
+        // (step_z0_sh, step_z0_sl) = two_sum(x0, step_n0)
+        const double step_z0_sh = x0 + step_n0;
+        const double step_z0_sh_bb = step_z0_sh - x0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = x0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = step_n0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(x1, step_n1)
+        const double step_z0_th = x1 + step_n1;
+        const double step_z0_th_bb = step_z0_th - x1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = x1 - step_z0_th_t0;
+        const double step_z0_th_t2 = step_n1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_2_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[i_];
+            const float y1 = y1_in[i_];
+            // (step_z0, step_z1) = sub_2_2(x0, x1, y0, y1)
+            const float step_n0 = -y0;
+            const float step_n1 = -y1;
+            // (step_z0, step_z1) = add_2_2(x0, x1, step_n0, step_n1)
+            // (step_z0_sh, step_z0_sl) = two_sum(x0, step_n0)
+            const float step_z0_sh = x0 + step_n0;
+            const float step_z0_sh_bb = step_z0_sh - x0;
+            const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const float step_z0_sh_t1 = x0 - step_z0_sh_t0;
+            const float step_z0_sh_t2 = step_n0 - step_z0_sh_bb;
+            const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(x1, step_n1)
+            const float step_z0_th = x1 + step_n1;
+            const float step_z0_th_bb = step_z0_th - x1;
+            const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const float step_z0_th_t1 = x1 - step_z0_th_t0;
+            const float step_z0_th_t2 = step_n1 - step_z0_th_bb;
+            const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const float step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const float step_z0_vh = step_z0_sh + step_z0_c;
+            const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const float step_z0_vl = step_z0_c - step_z0_vh_z;
+            const float step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const float step_z0 = step_z0_vh + step_z0_w;
+            const float step_z0_z = step_z0 - step_z0_vh;
+            const float step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const float chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = sub_2_2(x0, x1, y0, y1)
+        const float step_n0 = -y0;
+        const float step_n1 = -y1;
+        // (step_z0, step_z1) = add_2_2(x0, x1, step_n0, step_n1)
+        // (step_z0_sh, step_z0_sl) = two_sum(x0, step_n0)
+        const float step_z0_sh = x0 + step_n0;
+        const float step_z0_sh_bb = step_z0_sh - x0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = x0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = step_n0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(x1, step_n1)
+        const float step_z0_th = x1 + step_n1;
+        const float step_z0_th_bb = step_z0_th - x1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = x1 - step_z0_th_t0;
+        const float step_z0_th_t2 = step_n1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map sub_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step sub_entry_step_2, check fold_finish_2: element after element. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_2_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = sub_entry_step_2(x0, x1, y0, y1)
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
+        const double step_gy0 = y0 + 0.0;
+        const double step_gy1 = y1 + 0.0;
+        // (step_z0, step_z1) = sub_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        const double step_z0_n0 = -step_gy0;
+        const double step_z0_n1 = -step_gy1;
+        // (step_z0, step_z1) = add_2_2(step_gx0, step_gx1, step_z0_n0, step_z0_n1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_gx0, step_z0_n0)
+        const double step_z0_sh = step_gx0 + step_z0_n0;
+        const double step_z0_sh_bb = step_z0_sh - step_gx0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = step_gx0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = step_z0_n0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_gx1, step_z0_n1)
+        const double step_z0_th = step_gx1 + step_z0_n1;
+        const double step_z0_th_bb = step_z0_th - step_gx1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = step_gx1 - step_z0_th_t0;
+        const double step_z0_th_t2 = step_z0_n1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_2_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    bool finite = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = sub_entry_step_2(x0, x1, y0, y1)
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
+        const float step_gy0 = y0 + 0.0f;
+        const float step_gy1 = y1 + 0.0f;
+        // (step_z0, step_z1) = sub_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        const float step_z0_n0 = -step_gy0;
+        const float step_z0_n1 = -step_gy1;
+        // (step_z0, step_z1) = add_2_2(step_gx0, step_gx1, step_z0_n0, step_z0_n1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_gx0, step_z0_n0)
+        const float step_z0_sh = step_gx0 + step_z0_n0;
+        const float step_z0_sh_bb = step_z0_sh - step_gx0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = step_gx0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = step_z0_n0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_gx1, step_z0_n1)
+        const float step_z0_th = step_gx1 + step_z0_n1;
+        const float step_z0_th_bb = step_z0_th - step_gx1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = step_gx1 - step_z0_th_t0;
+        const float step_z0_th_t2 = step_z0_n1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
+// map sub_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step sub_entry_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_2_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[i_];
+            const double y1 = y1_in[i_];
+            // (step_z0, step_z1) = sub_entry_step_2(x0, x1, y0, y1)
+            const double step_gx0 = x0 + 0.0;
+            const double step_gx1 = x1 + 0.0;
+            const double step_gy0 = y0 + 0.0;
+            const double step_gy1 = y1 + 0.0;
+            // (step_z0, step_z1) = sub_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+            const double step_z0_n0 = -step_gy0;
+            const double step_z0_n1 = -step_gy1;
+            // (step_z0, step_z1) = add_2_2(step_gx0, step_gx1, step_z0_n0, step_z0_n1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_gx0, step_z0_n0)
+            const double step_z0_sh = step_gx0 + step_z0_n0;
+            const double step_z0_sh_bb = step_z0_sh - step_gx0;
+            const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const double step_z0_sh_t1 = step_gx0 - step_z0_sh_t0;
+            const double step_z0_sh_t2 = step_z0_n0 - step_z0_sh_bb;
+            const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(step_gx1, step_z0_n1)
+            const double step_z0_th = step_gx1 + step_z0_n1;
+            const double step_z0_th_bb = step_z0_th - step_gx1;
+            const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const double step_z0_th_t1 = step_gx1 - step_z0_th_t0;
+            const double step_z0_th_t2 = step_z0_n1 - step_z0_th_bb;
+            const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const double step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const double step_z0_vh = step_z0_sh + step_z0_c;
+            const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const double step_z0_vl = step_z0_c - step_z0_vh_z;
+            const double step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const double step_z0 = step_z0_vh + step_z0_w;
+            const double step_z0_z = step_z0 - step_z0_vh;
+            const double step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const double chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_z0, step_z1) = sub_entry_step_2(x0, x1, y0, y1)
+        const double step_gx0 = x0 + 0.0;
+        const double step_gx1 = x1 + 0.0;
+        const double step_gy0 = y0 + 0.0;
+        const double step_gy1 = y1 + 0.0;
+        // (step_z0, step_z1) = sub_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        const double step_z0_n0 = -step_gy0;
+        const double step_z0_n1 = -step_gy1;
+        // (step_z0, step_z1) = add_2_2(step_gx0, step_gx1, step_z0_n0, step_z0_n1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_gx0, step_z0_n0)
+        const double step_z0_sh = step_gx0 + step_z0_n0;
+        const double step_z0_sh_bb = step_z0_sh - step_gx0;
+        const double step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const double step_z0_sh_t1 = step_gx0 - step_z0_sh_t0;
+        const double step_z0_sh_t2 = step_z0_n0 - step_z0_sh_bb;
+        const double step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_gx1, step_z0_n1)
+        const double step_z0_th = step_gx1 + step_z0_n1;
+        const double step_z0_th_bb = step_z0_th - step_gx1;
+        const double step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const double step_z0_th_t1 = step_gx1 - step_z0_th_t0;
+        const double step_z0_th_t2 = step_z0_n1 - step_z0_th_bb;
+        const double step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const double step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const double step_z0_vh = step_z0_sh + step_z0_c;
+        const double step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const double step_z0_vl = step_z0_c - step_z0_vh_z;
+        const double step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const double step_z0 = step_z0_vh + step_z0_w;
+        const double step_z0_z = step_z0 - step_z0_vh;
+        const double step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const double chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+inline void sub_2_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        bool finite_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[i_];
+            const float y1 = y1_in[i_];
+            // (step_z0, step_z1) = sub_entry_step_2(x0, x1, y0, y1)
+            const float step_gx0 = x0 + 0.0f;
+            const float step_gx1 = x1 + 0.0f;
+            const float step_gy0 = y0 + 0.0f;
+            const float step_gy1 = y1 + 0.0f;
+            // (step_z0, step_z1) = sub_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+            const float step_z0_n0 = -step_gy0;
+            const float step_z0_n1 = -step_gy1;
+            // (step_z0, step_z1) = add_2_2(step_gx0, step_gx1, step_z0_n0, step_z0_n1)
+            // (step_z0_sh, step_z0_sl) = two_sum(step_gx0, step_z0_n0)
+            const float step_z0_sh = step_gx0 + step_z0_n0;
+            const float step_z0_sh_bb = step_z0_sh - step_gx0;
+            const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+            const float step_z0_sh_t1 = step_gx0 - step_z0_sh_t0;
+            const float step_z0_sh_t2 = step_z0_n0 - step_z0_sh_bb;
+            const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+            // (step_z0_th, step_z0_tl) = two_sum(step_gx1, step_z0_n1)
+            const float step_z0_th = step_gx1 + step_z0_n1;
+            const float step_z0_th_bb = step_z0_th - step_gx1;
+            const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+            const float step_z0_th_t1 = step_gx1 - step_z0_th_t0;
+            const float step_z0_th_t2 = step_z0_n1 - step_z0_th_bb;
+            const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+            const float step_z0_c = step_z0_sl + step_z0_th;
+            // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+            const float step_z0_vh = step_z0_sh + step_z0_c;
+            const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+            const float step_z0_vl = step_z0_c - step_z0_vh_z;
+            const float step_z0_w = step_z0_tl + step_z0_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+            const float step_z0 = step_z0_vh + step_z0_w;
+            const float step_z0_z = step_z0 - step_z0_vh;
+            const float step_z1 = step_z0_w - step_z0_z;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+            const float chk_a = abs_bits(step_z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            finite_lane_ = finite_lane_ & chk_flag;
+        }
+        finite = j_ == 0 ? finite_lane_ : finite & finite_lane_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_z0, step_z1) = sub_entry_step_2(x0, x1, y0, y1)
+        const float step_gx0 = x0 + 0.0f;
+        const float step_gx1 = x1 + 0.0f;
+        const float step_gy0 = y0 + 0.0f;
+        const float step_gy1 = y1 + 0.0f;
+        // (step_z0, step_z1) = sub_2_2(step_gx0, step_gx1, step_gy0, step_gy1)
+        const float step_z0_n0 = -step_gy0;
+        const float step_z0_n1 = -step_gy1;
+        // (step_z0, step_z1) = add_2_2(step_gx0, step_gx1, step_z0_n0, step_z0_n1)
+        // (step_z0_sh, step_z0_sl) = two_sum(step_gx0, step_z0_n0)
+        const float step_z0_sh = step_gx0 + step_z0_n0;
+        const float step_z0_sh_bb = step_z0_sh - step_gx0;
+        const float step_z0_sh_t0 = step_z0_sh - step_z0_sh_bb;
+        const float step_z0_sh_t1 = step_gx0 - step_z0_sh_t0;
+        const float step_z0_sh_t2 = step_z0_n0 - step_z0_sh_bb;
+        const float step_z0_sl = step_z0_sh_t1 + step_z0_sh_t2;
+        // (step_z0_th, step_z0_tl) = two_sum(step_gx1, step_z0_n1)
+        const float step_z0_th = step_gx1 + step_z0_n1;
+        const float step_z0_th_bb = step_z0_th - step_gx1;
+        const float step_z0_th_t0 = step_z0_th - step_z0_th_bb;
+        const float step_z0_th_t1 = step_gx1 - step_z0_th_t0;
+        const float step_z0_th_t2 = step_z0_n1 - step_z0_th_bb;
+        const float step_z0_tl = step_z0_th_t1 + step_z0_th_t2;
+        const float step_z0_c = step_z0_sl + step_z0_th;
+        // (step_z0_vh, step_z0_vl) = fast_two_sum(step_z0_sh, step_z0_c)
+        const float step_z0_vh = step_z0_sh + step_z0_c;
+        const float step_z0_vh_z = step_z0_vh - step_z0_sh;
+        const float step_z0_vl = step_z0_c - step_z0_vh_z;
+        const float step_z0_w = step_z0_tl + step_z0_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_z0_vh, step_z0_w)
+        const float step_z0 = step_z0_vh + step_z0_w;
+        const float step_z0_z = step_z0 - step_z0_vh;
+        const float step_z1 = step_z0_w - step_z0_z;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(step_z0, step_z1)
+        const float chk_a = abs_bits(step_z0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
 }
 
 // fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.

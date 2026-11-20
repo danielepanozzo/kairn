@@ -287,9 +287,11 @@ class CheckedFiles(unittest.TestCase):
     # their definitions, the constants of the bound kernels, and the statements of the two
     # finishes were added, and every earlier one is the same, byte for byte. Then the programs of
     # the steps of the folds and their bridge statements (and the spec of those of two limbs) were
-    # added, every earlier one the same, byte for byte.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '2bd4b1a87c6946bc4676edfade74cf4a22636d7f4e5ea176c78ece1c266a6ac5',
-               'proofs/gen/IeeeStatements.v': 'e15a56b2d2b1fd27470049d65c9a29d6cde3c695eac92eaeeb2840a0fc3e34de'}
+    # added, every earlier one the same, byte for byte. Then the steps of the maps (unverified):
+    # their definitions were added, every earlier one the same, byte for byte, and mul_1_1, which
+    # axpy_step_1 calls, is printed earlier, before the first kernel that calls it.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'e22837e7e16f542441ecf40dd05f74f51140455ba479c44c5ed342cebacdf611',
+               'proofs/gen/IeeeStatements.v': '1566f414acb25d69e6ff5c195e36191571d073bb3e6408e3c8006e462ae3270c'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

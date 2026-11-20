@@ -1,0 +1,24 @@
+# z = x + y, entry by entry, on stored arrays (written through Kairn).
+# A map (milestone2.md, "Folds", "sum, dot, axpy, convolution"): every element of z is the step
+# on one element of each array read, in any order; the mask finite is the and of the
+# tests of the written elements, and when it is false a second pass makes every element that
+# is not finite the canonical NaN ("When something is not finite").
+fold:          add_2
+arrays:        stored x = x0 x1, stored y = y0 y1
+state:         mask finite
+step:          z = add_2_2(x, y)
+combine:       finite = and(finite, finite)
+orders:        sequential, lanes
+writes:        z = z0 z1
+check:         fold_finish_2
+finish:        none
+value:         x+y
+requires:      canonical x
+requires:      canonical y
+ensures:       entries z
+ensures:       finite_or_nan z flag=finite
+min_precision: 3
+status:        unverified
+domain:        extended
+source:        add_2_2 on each element
+license:       algorithm: published; proof: MIT

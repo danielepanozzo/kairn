@@ -64,7 +64,26 @@ Local Notation up_bound_sum_1_1 := (IeeeModel.up_bound_sum_1_1 prec emax).
 Local Notation up_bound_sum_2_0 := (IeeeModel.up_bound_sum_2_0 prec emax).
 Local Notation up_bound_sum_2_1 := (IeeeModel.up_bound_sum_2_1 prec emax).
 Local Notation splitter := (IeeeModel.splitter prec emax).
+Local Notation add_1_1 := (IeeeModel.add_1_1 prec emax nan_plus).
 Local Notation fast_two_sum := (IeeeModel.fast_two_sum prec emax nan_plus nan_minus).
+
+(* mul_1_1: one rounding to nearest. *)
+Definition mul_1_1_with (p_ : float -> float -> float) (a b : float) : float :=
+  let p := p_ a b in
+  p.
+
+(* axpy_entry_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y. *)
+Definition axpy_entry_step_1_with (p_ : float -> float -> float) (a x y : float) : float :=
+  let p := mul_1_1_with p_ a x in
+  let gy := guard y in
+  let z := add_1_1 p gy in
+  z.
+
+(* axpy_step_1: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1. *)
+Definition axpy_step_1_with (p_ : float -> float -> float) (a x y : float) : float :=
+  let p := mul_1_1_with p_ a x in
+  let z := add_1_1 p y in
+  z.
 
 (* ball_mul_pow2_1: midpoint-radius scaling by a power of two (Milestone 2 listing). *)
 Definition ball_mul_pow2_1_with (p_ : float -> float -> float) (cx rx c : float) : float * float :=
@@ -147,16 +166,21 @@ Definition bound_sum_2_with (p_ : float -> float -> float) (m : float) : float *
   let ok := le a up_bound_dot_1_5 in
   (g, ok).
 
-(* mul_1_1: one rounding to nearest. *)
-Definition mul_1_1_with (p_ : float -> float -> float) (a b : float) : float :=
-  let p := p_ a b in
-  p.
+(* mul_pow2_step_1: one rounding to nearest of a product by a power of two. *)
+Definition mul_pow2_step_1_with (p_ : float -> float -> float) (x c : float) : float :=
+  let z := p_ x c in
+  z.
 
 (* rmul: one step up from the rounded product (Milestone 1 listing). *)
 Definition rmul_with (p_ : float -> float -> float) (a b : float) : float :=
   let p := p_ a b in
   let r := succ p in
   r.
+
+(* scale_step_1: mul_1_1, one rounding to nearest. *)
+Definition scale_step_1_with (p_ : float -> float -> float) (x a : float) : float :=
+  let z := mul_1_1_with p_ x a in
+  z.
 
 (* split: Veltkamp's split (Dekker 1971). *)
 Definition split_with (p_ : float -> float -> float) (a : float) : float * float :=
@@ -237,5 +261,10 @@ Definition mul_pow2_2_full_with (p_ : float -> float -> float) (x0 x1 c : float)
   let w0 := if f then z0 else r0 in
   let w1 := if f then z1 else r1 in
   (w0, w1).
+
+(* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. *)
+Definition mul_pow2_step_2_with (p_ : float -> float -> float) (x0 x1 c : float) : float * float :=
+  let '(z0, z1) := mul_pow2_2_with p_ x0 x1 c in
+  (z0, z1).
 
 End IeeeWith.
