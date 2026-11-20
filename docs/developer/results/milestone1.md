@@ -1,10 +1,10 @@
 # Milestone 1 report
 
-**Status: being completed.** After the first version of this report, an audit of the milestone
-against the brief found requirements that were neither met nor flagged; they are being closed or
-recorded as deviations ([Decisions](../design/phase0/decisions.md#deviations-from-the-brief-flagged)),
-and this page is updated as each lands. Milestone 1 is the
-vertical slice of the [brief](../design/brief.md): `double`, one and two limbs, scalar code with
+**Status: complete, with the deviations and open issues listed below.** The first version of
+this report said the same too early: an audit of the milestone against the brief, made after it,
+found requirements that were neither met nor flagged. Most were then met; the others are recorded
+as deviations or open issues ([what the audit found](#what-an-audit-against-the-brief-found)).
+Milestone 1 is the vertical slice of the [brief](../design/brief.md): `double`, one and two limbs, scalar code with
 AVX2 and NEON, $+$, $-$, $\times$, `Ball`, proofs, the oracle with both test tiers, CI, and the
 skeleton of this site. This page says what exists, what is proved, what the tests and the
 benchmarks measured, and what is still open. Each section links to the page that has the details.
@@ -16,17 +16,22 @@ benchmarks measured, and what is still open. Each section links to the page that
   from the same descriptions as the C++.
 - **Overflow, infinities and NaN have defined results** (decision D5), proved in a model of
   IEEE 754 arithmetic: an operation never returns a finite wrong result.
-- **No claim was violated by the brute-force runs**: 13.8 billion results of the compiled kernels
-  and 0.78 billion of the interpreter on every operand of small formats, on three machines, with
-  five compilers. Four bounds were attained exactly, so those four cannot be tightened.
+- **No claim was violated by any test.** The brute-force runs judged 13.8 billion results of the
+  compiled kernels and 0.78 billion of the interpreter on every operand of small formats, on
+  three machines, with five compilers. An adversarial search then drove most bounds to within
+  $10^{-15}$ of the claim without crossing one: the proved bounds are tight.
+- **The compiled code is what the descriptions ask for.** Every kernel, under every flag set of
+  every compiler of CI, has exactly the fused instructions and the multiplications of its
+  description.
 - **The finite-only functions are within 1.2 times textbook double-word code** in all but one
   configuration. The libraries the brief names as the reference are timed at Milestone 8, as
-  planned; until then the textbook code is the baseline. The default operators, which also handle overflow, cost the same in
-  dependent chains and 1.05 to 2.7 times the textbook code in loops of independent operations.
-- **One composition is argued and tested but not machine-checked**: `ldexp` when $2^n$ is not a
-  number of the limb type (deviation 17).
-- **Two decisions are for the owner**, listed at the end: whether the default operators keep the
-  handling of overflow (recommended: yes), and whether to publish this site at a URL.
+  planned; until then the textbook code is the baseline. The default operators, which also handle
+  overflow, cost the same in dependent chains and 1.05 to 2.7 times the textbook code in loops of
+  independent operations.
+- **Not machine-checked**: `ldexp` when $2^n$ is not a number of the limb type, which is composed
+  by hand from proved steps (deviation 17). **Proved for gradual underflow only**: the
+  flush-to-zero arithmetic of Metal needs proofs of its own in Milestone 3 (deviation 19).
+- **Five decisions are for the owner**, listed at the end.
 
 ## What is done
 
@@ -38,8 +43,8 @@ benchmarks measured, and what is still open. Each section links to the page that
 | `Ball` | `Ball<T, 1>` and `Ball<T, 2>`: $+$, $-$, $\times$, scaling by a `T`, negation, and the three states (finite ball, whole line, empty set) |
 | proofs | [Proofs](../../proofs/index.md); the table below |
 | the oracle with both test tiers | An independent oracle in exact arithmetic (Python, deviation 13); a quick tier, a full tier and the brute-force tier ([Testing](../testing.md)) |
-| CI | Five workflows on hosted runners: the quick tier and the full tier on seven platform and compiler pairs (Linux x86-64 and arm64 with GCC and Clang, macOS arm64 with Apple clang, Windows x64 with MSVC and clang-cl), the generator's suite, the proofs with their audit, and the generated files and this site |
-| website skeleton | Home, Getting started, What holds today, one tutorial, 64 generated reference pages (the 63 kernels and their index), Proofs, the developer guide |
+| CI | Five workflows on hosted runners: the quick tier and the full tier on seven platform and compiler pairs (Linux x86-64 and arm64 with GCC and Clang, macOS arm64 with Apple clang, Windows x64 with MSVC and clang-cl), with the flag sets of a client and the check of the object code; the generator's suite; the proofs with their audit; the generated files and this site |
+| website skeleton | Home, Getting started (with how to choose `T` and $k$, and troubleshooting), What holds today, one tutorial, 64 generated reference pages (the 63 kernels and their index), the C++ API reference, Proofs, the developer guide |
 
 Added beyond the brief, because the tests showed they were needed:
 
@@ -118,7 +123,9 @@ generator's own tests compare every compiled kernel with its exact interpreter, 
   formats first see an overflow at 0.55 of the overflow threshold for sums and 0.86 for products,
   where the proved conditions are a quarter and a half of it, and a ball that is the whole line
   at 0.55 to 0.81 where the proved condition is a quarter;
-- `ldexp` when $2^n$ is not a number of `T` (deviation 17);
+- `ldexp` when $2^n$ is not a number of `T`, for one limb and for two (deviation 17);
+- anything about arithmetic that flushes subnormal results to zero: the proofs hold for every
+  precision and exponent range, with gradual underflow (deviation 19);
 - on MSVC, that the compiler keeps the guard: MSVC has been seen to remove an addition of zero,
   so there the guard rests on tests that run on every change.
 
@@ -174,6 +181,38 @@ Not run: every operand of the quick tier's formats for the two-limb balls with t
 (140 million to 12.4 billion cases each; smaller complete formats and restricted domains ran in
 their place), enumerations on the Windows machine, and clang-cl, which only the CI's tiers cover.
 
+### The adversarial search
+
+The brief asks for a search that tries to make the error large, seeded with the near-misses of
+the proofs. It did not exist at the first version of this report; it was built after the audit
+([Testing](../testing.md#the-adversarial-search)). `kairn-oracle search` keeps a population of
+cases per bounded quantity and mutates them (bits of a limb, a tail at the edge of the
+normalization invariant, exponents, signs, moves toward cancellation, ties and the underflow and
+overflow thresholds), judged by the oracle's own exact judge. Its seeds are the lines that came
+closest in the brute-force runs, the structured cases of the strata, and the tight cases that
+[JMP17](../design/phase0/references.md#jmp17) and [MR22](../design/phase0/references.md#mr22)
+give, transcribed exactly.
+
+- **No claim was violated** in about 100 million searched cases (one million for each of the 94
+  pairs of a kernel and a format, and three runs of 20 000 per pair, one of them through a
+  compiled runner).
+- **The bounds are tight.** With every seed, the search came closer to the claim than the
+  13.8 billion random results on 86 of the 116 quantities that are not exact claims, as close on
+  30, and farther on none. The accurate sum and difference reached $1 - 8\times10^{-16}$ of their
+  bound in `binary64` (0.67 to 0.75 in the brute-force runs), the sums with a one-limb operand
+  $1 - 2\times10^{-16}$, the two-limb product $1 - 2\times10^{-15}$ (0.977), `add_fast`
+  $1 - 8\times10^{-16}$ (0.74). The smallest slack of a `Ball` radius went from 1.25 gaps to 1.11
+  for the two-limb sums and from 2.5 to 2.2 for the two-limb product.
+- **What it does not replace.** From the strata alone, without the seeds, it was farther than the
+  random runs on 30 quantities. Of the two planted faults that only the full tier catches, it
+  found one no sooner than random cases do and missed the other, which breaks containment only at
+  radius zero, where nothing leads a search.
+- **A failing case is shrunk** by `kairn-oracle shrink` to a simpler case that fails the same
+  claim with the same runner, down to the smallest toy format where a failure of the same kind
+  exists; it was tested on the faults the oracle's self-tests inject. The cases that found a
+  problem and those closest to a claim, 185 lines, are stored in `tests/regression/cases.txt` and
+  run in the quick tier through every runner.
+
 ## Benchmarks
 
 Three machines (Apple M3 Max, AMD EPYC 7452 "Zen 2", Intel Core i5-13500T), five compilers, nine
@@ -204,13 +243,66 @@ holds in scalar chains everywhere (at most 7%) and in scalar loops with four of 
 configurations; it does not hold where the compiler stops vectorizing the loop, nor in packed code
 on the M3 (33 to 54%) and the i5 (27 to 53%).
 
+### Compile times and other costs
+
+Measured after the audit, which found them promised and missing
+([Compile times and other costs](costs-milestone1.md)).
+
+- **Compile times.** Including `kairn.hpp` takes 0.06 to 0.23 s, less than `<iostream>` with every
+  compiler. A unit that uses every operation of all eight types (389 functions) takes 0.27 to
+  3.1 s at `-O2`, MSVC being the slowest. The largest kernels today are the two-limb `Ball` sums
+  and differences (36 to 38 operations); no kernel dominates.
+- **The environment query** `kairn::environment_ok()` costs about 2 cycles on the M3, 5 on the i5
+  and 21 on Zen 2, where reading the control register is slow; Phase 0 had said a few cycles.
+- **A debug build's checks** (`KAIRN_CHECKS`) add at most 14% to a chain of two-limb operations
+  and make loops 1.3 to 4.2 times as long; a one-limb loop up to 35 times.
+- **MSVC's stack cookie**, an open issue of Phase 0: with MSVC at `/O2`, a function using a
+  one-limb operator got a stack-protection check that the same code on `double` did not, and one
+  operation called once per element took 1.97 times as long. The cause was the array of one
+  element passed by value; the one-limb operators now take their operands by reference, the
+  cookie is gone at `/O2`, and a test fails if it comes back.
+
 ## Tests and CI
 
-- **Quick tier** (`ctest`): 276 tests in 49 s on the M3; 76 s on Zen 2 with GCC 13 and 85 to
-  113 s with MSVC (measured before the last test, of half a second, was added), with
-  `--parallel 4`. The brief asks for under two minutes per platform.
-- **Full tier** (`ctest --test-dir build/tests/full`): 291 more tests, 4.5 to 7.5 minutes; in CI
-  on every push, in jobs of its own.
+- **Quick tier** (`ctest`): the tests of the library with the build's compiler and flags, 288 to
+  293 tests in 31 to 44 s on the M3, 47 to 54 s on Zen 2 with GCC 13 and Clang 18, and 63 to 71 s
+  with MSVC, with `--parallel 4`. The brief asks for under about two minutes per platform, in CI
+  too. On the hosted Windows runners the quick tier took 128 to 202 s; the tools' own tests then
+  moved to the full tier, which CI also runs on every change. Since then its test step takes 32
+  to 44 s on Linux, 75 to 79 s on macOS and 90 to 94 s on Windows with clang-cl, and 126 and
+  154 s on Windows with MSVC in the first two runs: still over the budget in that one job (open
+  issue 20).
+- **Full tier** (`ctest --test-dir build/tests/full`): 407 to 409 more tests, 5 to 11 minutes; in
+  CI on every push, in jobs of its own.
+- **The flag sets of a client** ([Testing](../testing.md#flag-sets)). The audit found that the
+  compiler-flag matrix of the brief was applied to the generated kernels only, and that nothing
+  compiled Kairn without optimization on Windows. The public interface is now built and judged by
+  the oracle under `-O0` to `-O3` with contraction off, on and fast and with `-frounding-math`
+  (GCC, Clang, Apple clang), under `/Od`, `/O1`, `/O2` with each `/fp:` setting (MSVC), and
+  under the clang-cl spellings, and the self-test runs under each. Every configuration gives
+  correct results.
+- **A debug build that runs the checks** ([Testing](../testing.md#the-checks-of-a-debug-build)).
+  With `KAIRN_CHECKS` at 1, each of 29 operations and 8 calls of constructors must stop with
+  Kairn's message under a directed rounding mode and under flush-to-zero, `environment_ok()` must say so, and operands that are
+  not canonical must be refused. They are. The tests found
+  four defects in the hand-written headers, all fixed: a constructor called under a directed
+  rounding mode stopped the program with a message that named the operands instead of the
+  environment; a failure handler that returned could not let the operation continue, against
+  the documentation; the documentation of what the checks accept was wrong for the operators;
+  and a program compiled with MSVC's `/W4 /WX` that had a global variable named like a local of
+  the headers did not build. Two more were found on the way and fixed: `kairn::finite::ldexp`
+  of a marked one-limb number did not compile, and neither did a Windows program that includes
+  `<windows.h>` before Kairn.
+- **The object-code check** ([Testing](../testing.md#object-code)), which the audit found
+  missing. The generator writes, for every kernel, how many fused multiply-adds and plain
+  multiplications its code asks for; the check compiles one function per kernel and limb type,
+  scalar and packed, with both forms of the fix-up, under 24 flag sets per GCC-style compiler
+  (`-O0` to `-O3`, contraction off, on and fast, with and without `-frounding-math`) and 9 for
+  MSVC, disassembles the object file and compares the counts. Every kernel has exactly the
+  instructions its description asks for, on all seven platform and compiler pairs of CI. As a
+  control, the textbook `a * b + c` is put through the same check, which must fail exactly in
+  the configurations where the compiler fused it (4 to 14 of the 24 with the GCC-style compilers,
+  2 of the 9 with MSVC), and does.
 - **Planted faults.** 1 052 one-statement changes of the generated scalar kernels were planted in
   turn ([Testing](../testing.md#time)). The quick tier catches 863, the full tier 2
   more, and the generator's comparison of every compiled kernel with its interpreter, bit for
@@ -219,33 +311,67 @@ on the M3 (33 to 54%) and the i5 (27 to 53%).
   Special operands added to the generator's tests now catch all 17. No planted fault broke a
   claim without being caught.
 - **CI** is green on `main` on Linux x86-64 and arm64 (GCC, Clang), macOS (Apple clang) and
-  Windows (MSVC, clang-cl); a job takes 1 to 9 minutes.
-- **The object-code check** ([Testing](../testing.md#object-code)). The brief asks CI to
-  disassemble the compiled kernels and look for fused instructions that the kernel descriptions
-  did not ask for. The first version of this report had to say that the check did not exist; it
-  was added after an audit of the milestone against the brief. The generator writes, for every
-  kernel, how many fused multiply-adds and plain multiplications its code asks for; the check
-  compiles one function per kernel and limb type, scalar and packed, with both forms of the
-  fix-up, under 24 flag sets per GCC-style compiler (`-O0` to `-O3`, contraction off, on and
-  fast, with and without `-frounding-math`) and 9 for MSVC, disassembles the object file and
-  compares the counts. Every kernel has exactly the instructions its description asks for, on
-  all seven platform and compiler pairs of CI. As a control, the textbook `a * b + c` is put
-  through the same check, which must fail exactly in the configurations where the compiler
-  fused it (4 to 14 of the 24 with the GCC-style compilers, 2 of the 9 with MSVC), and does.
+  Windows (MSVC, clang-cl); a job takes 1 to 10 minutes. It keeps two artifacts per run: the
+  built site, and what the audit of the proofs printed.
 
 ## Documentation added
 
-[Home](../../index.md); [Getting started](../../getting-started/index.md) and
+[Home](../../index.md); [Getting started](../../getting-started/index.md), with how to choose
+`T` and $k$ and a troubleshooting section that quotes each message a user can meet today, and
 [What holds today](../../getting-started/guarantees.md); the tutorial
-[Accurate sums and dot products](../../tutorials/accurate-sums.md), whose examples are compiled and
-run by the tests; 64 [reference](../../reference/index.md) pages generated from the claims (one per kernel, and their index), each
-with the statement in plain mathematics, the same statement as Rocq reads it, its theorem, its
-constants and what the brute-force runs measured; [Proofs](../../proofs/index.md), with how to
-check them yourself; the developer guide ([Architecture](../architecture.md),
-[Testing](../testing.md), [Documentation](../documentation.md)); the
-[Milestone 1 statements](../design/milestone1.md); and the results pages. `mkdocs build --strict`
-and a link check run in CI, which keeps the built site as an artifact. The site is not published
-at a URL; the brief makes that optional.
+[Accurate sums and dot products](../../tutorials/accurate-sums.md); 64
+[reference](../../reference/index.md) pages generated from the claims (one per kernel, and their
+index), each with the statement in plain mathematics, the same statement as Rocq reads it, its
+theorem, the axioms it may depend on, its constants and what the brute-force runs measured; the
+C++ API reference, generated by Doxygen from the comments of the public headers;
+[Proofs](../../proofs/index.md), with how to check them yourself; the developer guide
+([Architecture](../architecture.md), [Testing](../testing.md),
+[Documentation](../documentation.md)); the [Milestone 1 statements](../design/milestone1.md);
+and the results pages. Every example is a file that the tests compile and run. `mkdocs build
+--strict`, Doxygen with warnings as errors and a link check run in CI, which keeps the built site
+as an artifact. The site is not published at a URL; the brief makes that optional.
+
+## What an audit against the brief found
+
+After the first version of this report, the brief and the Phase 0 plan were read again, line by
+line, against the repository, in a separate pass that started from the brief and not from this
+report. It found the
+requirements below, which had been neither met nor flagged. The table says what was done about
+each.
+
+| The brief or the plan asks | Found | Now |
+|---|---|---|
+| CI checks the disassembly of the kernels for fused instructions the descriptions did not ask for | No such check | Built; every kernel passes on every flag set and platform of CI |
+| The flag matrix (`-O0` to `-O3`, `-frounding-math`, `/Od`, `/fp:strict`) on what a client compiles | Applied to the generated kernels only, and not on Windows without optimization | Built for the public interface and the kernels, in both tiers |
+| In debug builds the scalar operations check the floating-point environment and fail loudly | Implemented, compiled once and never run by a test | Tested on every operation and state; the tests found four defects, now fixed |
+| An adversarial search that maximizes error over bound | None | Built; no claim violated, most bounds reached to within $10^{-15}$ |
+| A failing case is shrunk automatically and added to the quick tier | No shrinker, no stored cases | Built; 185 stored cases run in the quick tier |
+| The quick tier runs in under about two minutes per platform, in CI | 128 to 202 s on the hosted Windows runners | The tools' own tests moved to the full tier: under two minutes in every job except Windows with MSVC, 126 and 154 s |
+| Compile times are reported | Not measured | Measured |
+| The cost of the environment check is reported in Milestone 1 | Not measured | Measured: 2 to 21 cycles |
+| MSVC's stack cookie on one-limb values, an open issue for Milestone 1 | Not followed up | Cause found and fixed |
+| The printed assumptions of every theorem are kept as a CI artifact and shown on the reference pages | Printed and discarded | Kept as an artifact; the pages name the allowed axioms and point to it (deviation 21) |
+| Getting started covers choosing `T` and $k$, and troubleshooting | Neither section | Written, with tested examples |
+| Every claim about a bound links to its reference page | Kernel names without links | Linked |
+| The C++ API reference by Doxygen; its warnings fail the build | Doxygen was not run | Run in CI, warnings as errors |
+| The license travels with an installation | Not installed | Installed |
+| Proofs are parametric in the underflow model | Gradual underflow only; the planned symbolic underflow error was not built | Deviation 19; for Milestone 3 |
+| The brute-force tier runs nightly | By hand, before a milestone report | Deviation 20; for the owner |
+| Core arithmetic is `constexpr` | Deviation 14 named the two-limb products only | Deviation 14 corrected: also `ldexp` and `half` on two limbs and every `Ball` operation |
+| Clang's scoped contraction pragma as extra protection | Deviation 2 said it would be kept; no kernel has it | Deviation 2 corrected: not emitted, and why |
+| Shipped code is generated | The one-limb `ldexp` beyond the exponent range is composed by hand too | Deviation 17 extended; the pages say so |
+| `Interval` and `Ball` share one enclosure interface (`lower`, `upper`, `contains`, `hull`, ...) | `Ball` has its center, its radius and its three states | Open: with `Interval` in Milestone 2 |
+| A small generator, budgeted at 1 500 to 2 000 lines | About 5 000 lines, of which the four printers are 2 000 | Open: recorded |
+| Whether the "madd" sum replaces the accurate sum is decided by a Milestone 1 benchmark | Not evaluated | Open: the proved accurate sum stays |
+| Windows on AArch64 is compiled in CI | The headers stop the build there with MSVC; no job | Open (deviation 11) |
+| Statements in the documentation | Three were stale or said too much | Corrected |
+
+The audit could not decide some points, which are for the owner or for later milestones: whether
+the fourth test machine counts for CPU-only runs; the pages beyond the skeleton (concepts, about,
+citation, changelog), which the brief asks of later milestones; the building blocks
+(`two_sum`, `two_prod`, the directed steps) and the constants from an integer or a rational,
+which the brief wants public and no milestone of the plan names; and macOS on x86-64, which no
+job tests.
 
 ## Deviations flagged in this milestone
 
@@ -255,11 +381,14 @@ Each is recorded in [Decisions](../design/phase0/decisions.md#deviations-from-th
 |---|---|---|
 | 1b | The guard of rule R3 was added | One addition per value that enters from the program: 7 to 13% on an independent $x + a$, at most 5% in a chain |
 | 13 | The oracle uses Python's exact integers and fractions instead of GMP or FLINT | The same exactness, no dependency; slower than a compiled oracle |
-| 14 | The two-limb products are not `constexpr` yet | Sums, differences, comparisons, conversions and constructors are; products need variant kernels with proofs of their own |
+| 14 | Not `constexpr` yet: the two-limb products, `ldexp` and `half` on two limbs, and every arithmetic operation of `Ball` | Sums, differences, comparisons, conversions, constructors and everything on one limb are; the others need variant kernels with proofs of their own |
 | 15 | Reference pages are generated by a tool and committed, not generated when the site is built | A check in CI fails on a stale page |
 | 16 | The fix-up for non-finite results costs more than D5 expected in loops and in packed code | See the benchmarks above; `kairn::finite::` is the opt-out |
-| 17 | `ldexp(x, n)` for $2^n$ outside the powers of two of `T` is composed by hand in the header from two or three calls of the proved kernel | What it returns is argued in the design and tested through the oracle, not machine-checked |
-| 18 | The quick tier's cases are generated from a fixed seed at test time, not stored as a corpus | The same cases on every run and machine; a failing case is reproduced by its index |
+| 17 | `ldexp(x, n)` for $2^n$ outside the powers of two of `T` is composed by hand in the header, for one limb and for two, from two or three proved steps | What it returns is argued and tested through the oracle, not machine-checked |
+| 18 | The quick tier's random cases are generated from a fixed seed at test time, not stored | The same cases on every run and machine; the cases that found a problem or came closest to a claim are stored and run |
+| 19 | The proofs are parametric in the precision and the exponent range, not in the underflow model | `float` and `double` with gradual underflow are covered; Metal's flush-to-zero needs proofs of its own in Milestone 3, and none of that framework exists yet |
+| 20 | The brute-force tier runs by hand before a milestone report, not nightly | For the owner, below |
+| 21 | The reference pages name the axioms a theorem may depend on and point to the audit's artifact; they do not show the printed list | The printed list is one download away; the pages are written without Rocq |
 | | `radd` and `rmul` are claimed for nonnegative operands only | Every use has nonnegative operands; with any sign the excess reaches 2 gaps, which was not claimed |
 | | `add_fast` has a bound relative to $\lvert x\rvert + \lvert y\rvert$, not to $\lvert x + y\rvert$ | No bound relative to the sum exists for this algorithm when the operands have opposite signs |
 
@@ -267,36 +396,81 @@ No theorem was weakened and no axiom was added.
 
 ## Open issues
 
+Performance:
+
 1. **Loops of independent operations with the default operators** are 1.05 to 2.7 times the
    textbook code, because the fix-up keeps compilers from vectorizing them. Two remedies are
    known: a fix-up without a floating-point operation on its unlikely path (it changes the
    listings and the proofs of F1 to F5), and the batch kernels of Milestone 2, which skip the
    fix-up and canonicalize once.
-2. **Sharper conditions for a finite result** are not proved, and some toy formats of the
+2. **A `Ball` whose radius is itself subnormal** still takes about 60 ns per operation on Intel
+   processors; it needs a ball around zero with a radius near $2^{-1022}$.
+3. **The libraries the brief names were not timed** (QD, CAMPARY, MultiFloats.jl, CCCL fpmp2);
+   the 1.2 budget was checked against textbook code of the same algorithms. The plan times them
+   at Milestone 8.
+4. **The `double` chain step of the benchmarks is below the latency of the operation**, so the
+   ratios of a one-limb ball to one `double` operation are upper estimates.
+
+Proofs and statements:
+
+5. **Sharper conditions for a finite result** are not proved, and some toy formats of the
    enumerations (those whose largest exponent is not positive) lie outside the family of formats
    the IEEE-model theorems cover: the claims hold on them, but they do not test those theorems.
-3. **`ldexp` beyond the exponent range** should become a generated kernel with a proved statement.
-4. **`constexpr` two-limb products** need variant kernels and their proofs.
-5. **MSVC and the guard**: no rule of the language keeps it there; tests do.
-6. **`-fno-signed-zeros`** is not supported and cannot be detected at compile time with Clang;
-   `kairn::self_test()` reports it.
-7. **A `Ball` whose radius is itself subnormal** still takes about 60 ns per operation on Intel
-   processors; it needs a ball around zero with a radius near $2^{-1022}$.
-8. **Flush-to-zero variants of the toy formats** are not in the exhaustive runs; they come with
-   the GPU backends of Milestone 3, as planned.
+6. **`ldexp` beyond the exponent range** should become a generated kernel with a proved
+   statement, for one limb and for two.
+7. **`constexpr`** for the two-limb products, `ldexp` and `half` on two limbs and the `Ball`
+   arithmetic needs variant kernels and their proofs.
+8. **Flush-to-zero**: no proof (deviation 19) and no toy format with flushing in the exhaustive
+   runs; both come with the GPU backends of Milestone 3.
 9. **`split` claims less than its description says**: that the two halves sum to the operand,
    not that the high half has half the precision. It is an internal building block, and Dekker's
    product met its claims in every search; the claim should say it.
-10. **Faults were planted in the scalar kernels only**, not in the packed ones.
-11. **The contraction setting that fuses with Apple clang** (`-O2`) was in the brute-force
+10. **The "madd" sum** that Phase 0 meant to compare with the accurate sum in this milestone was
+    not evaluated; the accurate sum, which is proved, stays.
+
+Compilers and platforms:
+
+11. **MSVC and the guard**: no rule of the language keeps it there; tests do, now also at `/Od`
+    and `/O1`.
+12. **`-fno-signed-zeros`** is not supported and cannot be detected at compile time with Clang.
+    `kairn::self_test()` reports it only where it changes a result the self-test computes (with
+    `-ffp-contract=fast` and Apple clang); alone, nothing detects it.
+13. **Windows on AArch64** is not supported: the headers stop the build with MSVC there, because
+    no FMA primitive has been chosen and measured, and CI has no compile-only job for it.
+    **macOS on x86-64** is in no job.
+14. **The generator's own C++ tests do not run on Windows**: they drive a GCC-style compiler. The
+    flag sets of the two test tiers are the coverage of MSVC and clang-cl.
+15. **MSVC at `/Od`** keeps its stack cookie in every function that holds a value with an array,
+    as for any such type.
+
+Tests:
+
+16. **Faults were planted in the scalar kernels only**, not in the packed ones.
+17. **The contraction setting that fuses with Apple clang** (`-O2`) was in the brute-force
     tier only for the eight `Ball` kernels of the supplementary run: the main runs built the
     contraction runners at the build's `-O3`. The quick and the full tier run every kernel at
-    `-O2` on every change.
-12. **The oracle's test of a suspicious infinity** does not apply to `ball_mul_1` at 1 bit of
+    `-O2` on every change, and clang-cl is in those tiers and in no brute-force run.
+18. **The oracle's test of a suspicious infinity** does not apply to `ball_mul_1` at 1 bit of
     precision; the exact check `tests/brute/widen.py` stands in its place there.
-13. **clang-cl** is in the CI's quick and full tiers and in no brute-force run.
-14. **QD, CAMPARY, MultiFloats.jl and CCCL fpmp2 were not timed**; the 1.2 budget was checked
-    against textbook code of the same algorithms. The plan times the libraries at Milestone 8.
+19. **No stratum is named for long carry chains**, which the brief lists. With two limbs a carry
+    goes from one limb to the other, which the strata of cancellation, of ties and of limbs at
+    the edge of the invariant exercise; a stratum of its own belongs with three limbs and more.
+20. **The quick tier on the hosted Windows runners with MSVC** still takes 126 to 154 s, over
+    the two-minute budget; every other job is under it, and on the Windows test machine it takes
+    63 to 71 s. Running the generator of cases, the judge and the guards in one process per test
+    would save an estimated 15 to 20 s there without dropping a check; fewer cases per test would
+    save more and catch fewer planted faults.
+
+Scope:
+
+21. **The enclosure interface of `Ball`** (`lower`, `upper`, directed conversions of the bounds,
+    `contains`, the certain signs, `hull`, `intersection`, `split`) is not there; it needs
+    kernels with proofs and arrives with `Interval` in Milestone 2.
+22. **The generator is 4 973 lines** against a budget of 1 500 to 2 000 in Phase 0; the four
+    printers that matter for trust are 2 004. It gained a SIMD printer, an IEEE-model printer,
+    the rule of the scalar branch and the counts of the object code.
+23. **Doxygen describes the public headers only**; the pages beyond the skeleton (concepts,
+    about, citation, changelog) come with later milestones.
 
 ## For the owner
 
@@ -306,9 +480,23 @@ No theorem was weakened and no axiom was added.
    dependent chains is nil, and the loops where it costs are the ones the batch kernels of
    Milestone 2 are for. The alternative is to make the finite-only functions the default and the
    handling of overflow the option.
-2. **Publishing the site.** CI builds this site on every change and keeps it as an artifact; it
+2. **The brute-force tier, nightly** (deviation 20). The brief asks for a nightly run on each
+   test machine; decision D10 keeps CI off those machines. *Recommended: a nightly run with a
+   budget of an hour or two on the hosted runners*, which costs nothing for a public repository,
+   and the full runs on the test machines before each milestone report as now. The alternatives
+   are a scheduled job on the machines themselves, or by hand only.
+3. **Publishing the site.** CI builds this site on every change and keeps it as an artifact; it
    is not published at a URL, which the brief leaves optional. Publishing it with GitHub Pages
    is one workflow more.
+4. **Two items of the brief have no milestone in the plan**: making the building blocks
+   (`two_sum`, `two_prod`, the directed steps) public, and constants built at compile time from
+   an integer or a rational with their error bound. *Recommended: both in Milestone 2*, with the
+   enclosure interface.
+
+5. **The quick tier with MSVC on the hosted runners** (open issue 20). *Recommended: put each
+   cross-check in one process, which loses no check, in Milestone 2, and accept 2 to 2.5 minutes
+   in that one job until then.* The alternative is fewer cases per test in the quick tier, which
+   the experiment with planted faults advises against.
 
 Milestone 2 adds `Interval`, `BallVector` and the batch kernels, and ends with a pull request to
-the first client. Nothing in Milestone 1 changes that plan.
+the first client. Nothing in Milestone 1 changes that plan; deviation 19 adds work to Milestone 3.
