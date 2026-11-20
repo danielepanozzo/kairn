@@ -102,4 +102,6 @@ def summary(kernels):
         f'entry kernels (rule R3): {names(lambda k: k.entry)}',
         f'R3 GUARD PENDING: {pending_text or "none"}',
         f'accepted by R3 only through a pending guard: {through_text or "none"}',
+        f'folds: {len(kernels.folds)} ({", ".join(kernels.folds) or "none"})',
+        f'folds UNVERIFIED: {", ".join(n for n, f in kernels.folds.items() if f.status == "unverified") or "none"}',
     ]

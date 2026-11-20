@@ -811,6 +811,15 @@ class R3OfTheKernels(unittest.TestCase):
         self.assertIn('R3 GUARD PENDING: none', lines)
         self.assertIn('accepted by R3 only through a pending guard: none', lines)
 
+    def test_build_prints_the_folds(self):
+        ks = common.kernels()
+        lines = build.summary(ks)
+        self.assertEqual(set(ks.folds), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
+                                         'sum_fast_2_entry', 'dot_1', 'dot_2'})
+        self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
+        unverified = [n for n, f in ks.folds.items() if f.status == 'unverified']
+        self.assertIn('folds UNVERIFIED: %s' % (', '.join(unverified) or 'none'), lines)
+
 
 class ComputedConstants(unittest.TestCase):
     BOUND = '''
