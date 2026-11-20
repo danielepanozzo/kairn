@@ -89,7 +89,27 @@ struct Kernel {
 const Kernel kernels[] = {
 #include "runner_kernels.inc"
 };
+#undef KAIRN_RUNNER_KERNEL
 constexpr int max_limbs = 16;
+
+// The folds: the lane order computed by the packed form, F_packed, with the lanes of the register
+// of the limb type, the only order this runner computes (lanes:W with W = D::lanes or F::lanes).
+struct Fold {
+    const char* name;
+    const char* arrays;     // the limbs of each array
+    const char* out_kinds;
+    void (*binary64)(const double* const* in, std::size_t n, double* out, bool* mo);
+    void (*binary32)(const float* const* in, std::size_t n, float* out, bool* mo);
+};
+#define KAIRN_RUNNER_FOLD_ARGS(T) \
+    [[maybe_unused]] const T* const* in, [[maybe_unused]] std::size_t n, [[maybe_unused]] T* out, [[maybe_unused]] bool* mo
+#define KAIRN_RUNNER_KERNEL(NAME, IN, OUT, CALL)
+#define KAIRN_RUNNER_FOLD(NAME, ARRAYS, OUT, SEQ, LANES, PACKED) \
+    {#NAME, ARRAYS, OUT, [](KAIRN_RUNNER_FOLD_ARGS(double)) { PACKED; }, [](KAIRN_RUNNER_FOLD_ARGS(float)) { PACKED; }},
+const Fold folds[] = {
+#include "runner_kernels.inc"
+    {nullptr, nullptr, nullptr, nullptr, nullptr},
+};
 
 long lineno = 0;
 
@@ -191,6 +211,53 @@ void flush() {
     batch.clear();
 }
 
+std::size_t decimal(const std::string& text, const char* what) {
+    if (text.empty() || text.find_first_not_of("0123456789") != std::string::npos || (text[0] == '0' && text.size() > 1))
+        fail(std::string("not ") + what + ": " + text);
+    return std::stoull(text);
+}
+
+// A request of a fold, FOLD FORMAT lanes:W N LIMB..., computed at once (no batch).
+template <class T>
+void complete_fold(const Fold& f, const Request& r, void (*fn)(const T* const*, std::size_t, T*, bool*)) {
+    const std::vector<std::string>& fields = r.fields;
+    if (fields.size() < 4) fail(std::string("expected ") + f.name + " FORMAT ORDER N LIMB ... [#TAG]");
+    const std::string head = "lanes:";
+    if (fields[2].compare(0, head.size(), head) != 0 ||
+        decimal(fields[2].substr(head.size()), "an order") != std::size_t(Lanes<T>::lanes))
+        fail("the packed runner computes the lane order with the lanes of its register only, lanes:" +
+             std::to_string(Lanes<T>::lanes) + " for this format, not " + fields[2]);
+    const std::size_t n = decimal(fields[3], "a length");
+    std::size_t arrays = 0;
+    for (const char* a = f.arrays; *a; ++a) arrays += std::size_t(*a - '0');
+    if (fields.size() - 4 != arrays * n)
+        fail(std::string(f.name) + " of length " + fields[3] + " takes " + std::to_string(arrays * n) + " limbs");
+    const int outputs = int(std::strlen(f.out_kinds));
+    if (outputs > max_limbs) fail("too many outputs for this runner");
+    std::vector<T> data(arrays * n);
+    for (std::size_t i = 0; i < data.size(); ++i) {
+        const double v = parse(fields[4 + i]);
+        const double top = std::numeric_limits<float>::max();
+        if (sizeof(T) == sizeof(float) && v == v && v - v == 0 && (v > top || v < -top))
+            fail(fields[4 + i] + " is not a binary32 number");
+        data[i] = static_cast<T>(v);
+        if (v == v && static_cast<double>(data[i]) != v) fail(fields[4 + i] + " is not a binary32 number");
+    }
+    std::vector<const T*> in(arrays);
+    for (std::size_t l = 0; l < arrays; ++l) in[l] = data.data() + l * n;
+    T res[max_limbs] = {};
+    bool mo[max_limbs] = {};
+    fn(in.data(), n, res, mo);
+    std::string text = r.line + " ->";
+    for (int i = 0; i < outputs; ++i) {
+        text += ' ';
+        if (f.out_kinds[i] == 'm') text += mo[i] ? '1' : '0';
+        else put(static_cast<double>(res[i]), text);
+    }
+    text += '\n';
+    std::fwrite(text.data(), 1, text.size(), stdout);
+}
+
 }  // namespace
 
 int main() {
@@ -215,6 +282,16 @@ int main() {
         }
         if (r.fields.back()[0] == '#') r.fields.pop_back();  // the tag
         if (r.fields.size() < 2) fail("expected KERNEL FORMAT LIMB ... [#TAG]");
+        const Fold* fo = nullptr;
+        for (const Fold* c = folds; c->name; ++c)
+            if (r.fields[0] == c->name) fo = c;
+        if (fo) {
+            flush();
+            if (r.fields[1] == "binary64") complete_fold<double>(*fo, r, fo->binary64);
+            else if (r.fields[1] == "binary32") complete_fold<float>(*fo, r, fo->binary32);
+            else fail("this runner knows binary64 and binary32, not " + r.fields[1]);
+            continue;
+        }
         const Kernel* k = nullptr;
         for (const Kernel& c : kernels)
             if (r.fields[0] == c.name) k = &c;

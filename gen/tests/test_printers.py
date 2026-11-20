@@ -181,6 +181,8 @@ class Cpp(unittest.TestCase):
     # its variant: milestone2.md, "Building blocks on T").
     NOT_CONSTEXPR = {'mul_2_2', 'mul_2_1', 'ball_add_1', 'ball_add_2', 'ball_mul_1', 'ball_mul_2', 'ball_scale_1',
                      'ball_scale_2', 'ball_sub_1', 'ball_sub_2', 'mul_down_1', 'mul_up_1'}
+    # The steps of the dot products, with an fma (one limb) and the products of mul_2_2 (two).
+    NOT_CONSTEXPR |= {'dot_step_1', 'dot_step_2'}
     # The full kernels are constexpr where their cores are: their fix-up turns t into an infinity
     # with times_inf, which is no fused operation. Those of the products of two limbs are not, nor
     # are the full Ball kernels but the scalings by a power of two. The constructors are.
@@ -189,7 +191,8 @@ class Cpp(unittest.TestCase):
     # The kernels whose only fused operations are prod, constexpr by the rule of the product
     # (milestone2.md, "The two executions of a product").
     PRODUCT_RULE = {'rmul', 'mul_1_1', 'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full', 'ball_mul_pow2_1',
-                    'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
+                    'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full',
+                    'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2'}   # the exported bounds of the folds
 
     def test_constexpr(self):
         plain = {name for (name, _), f in self.fns.items() if not f['constexpr']}
@@ -475,10 +478,11 @@ class FixupBranch(unittest.TestCase):
 
 
 def packed_functions(text):
-    """{(name, vector type): body lines} of a generated packed header."""
+    """{(name, vector type): body lines} of the kernels of a generated packed header (the folds,
+    whose functions take pointers, `const T*`, are test_folds.py's)."""
     out, current = {}, None
     for line in text.splitlines():
-        m = re.match(r'(?:KAIRN_GEN_FORCEINLINE|inline) void (\w+)\((?:\[\[maybe_unused\]\] )?(\w+) ', line)
+        m = re.match(r'(?:KAIRN_GEN_FORCEINLINE|inline) void (\w+)\((?:\[\[maybe_unused\]\] )?(?!const )(\w+) ', line)
         if m:
             current = out.setdefault((m.group(1), m.group(2)), [])
         elif line == '}':
@@ -672,8 +676,10 @@ class Rocq(unittest.TestCase):
         # and so does an output that says nothing (a mask).
         self.assertEqual([uncovered[n] for n in ('two_sum', 'ball_add_2', 'ops_wave2', 'add_2_2', 'lt_2_2')],
                          [2, 1, 3, 0, 0])
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38)
+        # With the kernels of the folds: g of bound_sum_k, g and t of bound_dot_k, t of dot_step_1
+        # and of sum_entry_step_1, 8 limbs in 6 kernels.
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6)
         s = self.statements
         self.assertIn("  let '(cz0, cz1, rz) := ball_add_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in\n"
                       '  fmt emin prec rz /\\\n  normalized_2 emin prec cz0 cz1 /\\\n  (forall x y : R, ', s)
@@ -776,9 +782,12 @@ class Rocq(unittest.TestCase):
     # up_ball_*_2). Then the kernels of wave 1 of Milestone 2 were added (eighteen with a real-model
     # statement, and the constants N, P and eta): every earlier definition and statement is the
     # same, byte for byte, and fast_two_sum and two_prod are printed earlier, before the new kernels
-    # that call them; Audit.v lists the same theorems, those two earlier.
-    DIGESTS = {'Model.v': '3f2e3f54b76c21bf6d904880d082677af7821f4830b57d2152ee97618df8bbec',
-               'Statements.v': '93ad4903d8fc398325f82f1d55cfcbd59c65d4fb88cf404efdcf6616fb3796fe',
+    # that call them; Audit.v lists the same theorems, those two earlier. Then the kernels of the
+    # folds' stage (nine with a real-model statement: the steps of the folds and the four exported
+    # bounds, and their constants): every earlier definition and statement is the same, byte for
+    # byte, mul_2_2 and add_2_2 printed earlier, before dot_step_2; Audit.v is the same.
+    DIGESTS = {'Model.v': '2b797c6bad9c87ea80820323eed67101a66088bf700a6317e96702354016832e',
+               'Statements.v': '638028d5c502619d8bb7c0d001b2963f97a3b5512761096b985db12b81ec13e7',
                'Audit.v': '0c93acbf8651ff7bc342d1c9ab1f80d0f98718ddf3d0123dbff0d0547a871f15'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
@@ -810,7 +819,7 @@ class Rocq(unittest.TestCase):
             for e in k.ensures:
                 e.pop('finite_when', None)
             finite[name] = k
-        self.assertEqual(len(finite), 60)
+        self.assertEqual(len(finite), 69)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

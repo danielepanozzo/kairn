@@ -97,11 +97,15 @@ class Claims(unittest.TestCase):
               'encloses': ['kind', 'center', 'radius', 'set', 'balls'],
               'extends': ['kind', 'of', 'core', 'lead', 'finite_when'], 'represents': ['kind', 'of'],
               'makes_ball': ['kind', 'center', 'radius', 'from'],
-              'neighbor': ['kind', 'of', 'side'], 'bound': ['kind', 'of', 'side', 'steps']}
+              'neighbor': ['kind', 'of', 'side'], 'bound': ['kind', 'of', 'side', 'steps'],
+              'holds': ['kind', 'rel', 'args', 'if'], 'finite_or_nan': ['kind', 'of', 'flag']}
     # The fields that some entries of a kind have, after the others, and only when they say
     # something: a rounding under a condition, and an exactness condition (Milestone 2). Every
     # entry without them has the shape it had before.
     OPTIONAL = {'rounded': ['when'], 'error': ['exact_when'], 'encloses': ['exact_when']}
+    # The bound kernels of Milestone 2 (the folds' stage): an upper entry with a value of its own
+    # under a mask, and no gaps.
+    UPPER_OWN = ['kind', 'of', 'value', 'if']
 
     def test_schema(self):
         self.assertEqual(self.doc['schema'], 1)
@@ -120,6 +124,8 @@ class Claims(unittest.TestCase):
                 want.insert(want.index('theorem') + 1, 'ieee_theorem')
             if all(e['kind'] == 'makes_ball' for e in k['ensures']):
                 want.remove('value')          # a ball made from its inputs has no value
+            if all(e['kind'] == 'holds' or (e['kind'] == 'upper' and 'value' in e) for e in k['ensures']):
+                want.remove('value')          # a bound kernel: every entry has its own value
             self.assertEqual(list(k), want, k['name'])
             if extended:
                 self.assertIn(k['ieee_status'], ('proved', 'unverified'))
@@ -131,10 +137,13 @@ class Claims(unittest.TestCase):
                 if extended:
                     self.assertRegex(r, r'^(canonical\(\w+\)|ball\(\w+, \w+\)|power_of_two\(\w+\)|nonneg\(\w+\))$')
                 else:
-                    self.assertRegex(r, r'^(normalized\(\w+\)|abs_ge\(\w+, \w+\)|power_of_two\(\w+\)|nonneg\(\w+\))$')
+                    self.assertRegex(r, r'^(normalized\(\w+\)|abs_ge\(\w+, \w+\)|power_of_two\(\w+\)|nonneg\(\w+\)'
+                                        r'|count\(\w+\)|format\(half\))$')
             errors = [e for e in k['ensures'] if e['kind'] == 'error']
             for e in k['ensures']:
                 fields = self.FIELDS[e['kind']] + (['finite_when'] if e['kind'] == 'encloses' and extended else [])
+                if e['kind'] == 'upper' and 'value' in e:
+                    fields = list(self.UPPER_OWN)
                 fields += [f for f in self.OPTIONAL.get(e['kind'], []) if f in e]
                 self.assertEqual(list(e), fields, k['name'])
                 for c in e.get('finite_when', []):
@@ -343,7 +352,10 @@ class Claims(unittest.TestCase):
                                         'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
         full_ball = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale', 'mul_pow2') for k in (1, 2)}
         constructors = {'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2'}
-        self.assertEqual({k['name'] for k in self.doc['kernels'] if 'ieee_only' in k}, full | full_ball | constructors)
+        # and the two finishes of the folds, which say what comes out when the state is not finite
+        finishes = {'fold_finish_1', 'fold_finish_2'}
+        self.assertEqual({k['name'] for k in self.doc['kernels'] if 'ieee_only' in k},
+                         full | full_ball | constructors | finishes)
         self.assertTrue(all(k['ieee_only'] is True for k in self.doc['kernels'] if 'ieee_only' in k))
         self.assertEqual(list(self.by['ball_add_1_full'])[:3], ['name', 'domain', 'ieee_only'])
         for name in ('ball_neg_1', 'ball_neg_2', 'neg_2', 'ball_add_1'):
@@ -362,6 +374,96 @@ class Claims(unittest.TestCase):
         self.assertEqual(Fraction(self.by['two_sum']['instances']['binary64'][0]['rel']), 0)
         u = Fraction(1, 2 ** 53)
         self.assertEqual(Fraction(self.by['mul_1_1']['instances']['binary64'][0]['rel']), u / (1 + u))
+
+
+class FoldClaims(unittest.TestCase):
+    """The folds' entries of gen/claims.json ("folds", architecture.md, "Claims of Milestone 2")."""
+
+    KEYS = ['name', 'domain', 'arrays', 'outputs', 'value', 'requires', 'ensures', 'orders', 'packed_lanes',
+            'step', 'combine', 'finish', 'min_precision', 'status', 'theorems', 'source', 'instances']
+
+    @classmethod
+    def setUpClass(cls):
+        cls.ks = common.kernels()
+        cls.doc = json.loads(claims.claims(cls.ks))
+        cls.by = {f['name']: f for f in cls.doc['folds']}
+
+    def test_the_folds(self):
+        self.assertEqual(set(self.by), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
+                                        'sum_fast_2_entry', 'dot_1', 'dot_2'})
+        self.assertEqual(list(self.doc), ['schema', 'kernels', 'folds'])
+        # Without folds the file has the shape it had: the test kernels have none.
+        self.assertEqual(list(json.loads(claims.claims(common.kernels(common.TEST_KERNELS)))), ['schema', 'kernels'])
+
+    def test_schema(self):
+        for f in self.doc['folds']:
+            with self.subTest(fold=f['name']):
+                self.assertEqual(list(f), self.KEYS)
+                self.assertEqual(f['domain'], 'extended')
+                for a in f['arrays']:
+                    self.assertEqual(list(a), ['name', 'limbs', 'role'])
+                    self.assertIn(a['role'], ('stored', 'supplied'))
+                self.assertEqual(f['outputs'][-1], {'name': 'flag', 'limbs': 1, 'type': 'mask'})
+                self.assertEqual(f['orders'], ['sequential', 'lanes'])
+                self.assertEqual(f['packed_lanes'], {'binary64': {'avx2': 4, 'neon': 2},
+                                                     'binary32': {'avx2': 8, 'neon': 4}})
+                errors = [e for e in f['ensures'] if e['kind'] == 'fold_error']
+                self.assertEqual(len(errors), 1)
+                e = errors[0]
+                self.assertEqual(list(e), ['kind', 'of', 'eps', 'term', 'tau', 'heights'])
+                self.assertEqual(set(e['heights']), set(f['orders']))
+                for h in e['heights'].values():
+                    self.assertEqual(list(h), ['rel', 'abs'])
+                    self.assertTrue(set(h.values()) <= {'n', 'n-1'})
+                self.assertIn({'kind': 'finite_or_nan', 'of': f['outputs'][0]['name'], 'flag': 'flag'}, f['ensures'])
+                self.assertEqual(f['theorems'], {'sequential': None, 'lanes': None})
+                self.assertEqual(f['status'], 'unverified')
+                for fmt in ('binary64', 'binary32'):
+                    self.assertEqual(len(f['instances'][fmt]), 1)
+                    self.assertEqual(set(f['instances'][fmt][0]), {'eps', 'term', 'tau'})
+
+    def test_the_example_of_architecture_md(self):
+        f = self.by['dot_2']
+        self.assertEqual(f['arrays'], [{'name': 'x', 'limbs': 2, 'role': 'supplied'},
+                                       {'name': 'y', 'limbs': 2, 'role': 'supplied'}])
+        self.assertEqual(f['outputs'], [{'name': 'r', 'limbs': 2}, {'name': 'flag', 'limbs': 1, 'type': 'mask'}])
+        self.assertEqual(f['value'], 'x*y')
+        self.assertEqual(f['requires'], ['canonical(x)', 'canonical(y)'])
+        self.assertEqual(f['ensures'], [
+            {'kind': 'normalized', 'of': 'r'},
+            {'kind': 'fold_error', 'of': 'r', 'eps': '3*u^2/(1-4*u)', 'term': '4*u^2', 'tau': '3/2*eta',
+             'heights': {'sequential': {'rel': 'n-1', 'abs': 'n-1'}, 'lanes': {'rel': 'n-1', 'abs': 'n-1'}}},
+            {'kind': 'finite_or_nan', 'of': 'r', 'flag': 'flag'}])
+        self.assertEqual((f['step'], f['combine'], f['finish']), ('dot_step_2', 'add_2_2', 'fold_finish_2'))
+        self.assertEqual(f['min_precision'], 4)
+        u = Fraction(1, 2 ** 53)
+        inst = f['instances']['binary64'][0]
+        self.assertEqual(Fraction(inst['eps']), 3 * u * u / (1 - 4 * u))
+        self.assertEqual(Fraction(inst['term']), 4 * u * u)
+        self.assertEqual(Fraction(inst['tau']), Fraction(3, 2) * Fraction(2) ** -1074)
+        d1 = self.by['dot_1']
+        self.assertEqual(d1['ensures'][0]['heights']['lanes'], {'rel': 'n', 'abs': 'n-1'})
+        self.assertEqual(Fraction(d1['instances']['binary32'][0]['tau']), Fraction(2) ** -150)
+        self.assertEqual(self.by['sum_2_entry']['arrays'][0]['role'], 'supplied')
+        self.assertEqual(self.by['sum_2']['arrays'][0]['role'], 'stored')
+        self.assertEqual(Fraction(self.by['sum_fast_2']['instances']['binary32'][0]['eps']), 3 * Fraction(1, 2 ** 24) ** 2)
+        self.assertEqual(self.by['sum_1']['ensures'], [
+            {'kind': 'fold_error', 'of': 'r', 'eps': 'u/(1+u)', 'term': '0', 'tau': '0',
+             'heights': {'sequential': {'rel': 'n-1', 'abs': 'n-1'}, 'lanes': {'rel': 'n-1', 'abs': 'n-1'}}},
+            {'kind': 'finite_or_nan', 'of': 'r', 'flag': 'flag'}])
+
+    def test_the_bound_kernels(self):
+        by = {k['name']: k for k in self.doc['kernels']}
+        b = by['bound_sum_2']
+        self.assertNotIn('value', b)
+        self.assertEqual(b['requires'], ['count(m)', 'format(half)'])
+        self.assertEqual(b['ensures'], [
+            {'kind': 'holds', 'rel': 'le', 'args': ['m*unit(add_2_2)', '1/2'], 'if': 'ok'},
+            {'kind': 'upper', 'of': 'g', 'value': 'm*unit(add_2_2)/(1-m*unit(add_2_2))', 'if': 'ok'}])
+        self.assertEqual(by['bound_dot_1']['ensures'][1], {'kind': 'upper', 'of': 't', 'value': 'm*tiny(mul_1_1)*(1+g)',
+                                                            'if': 'ok'})
+        self.assertEqual(by['dot_step_2']['ensures'][1]['form'], 'T')
+        self.assertEqual(by['fold_finish_2']['ensures'], [{'kind': 'finite_or_nan', 'of': 'r', 'flag': 'flag'}])
 
 
 if __name__ == '__main__':

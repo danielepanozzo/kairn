@@ -328,13 +328,25 @@ class Builds:
         return r.returncode, r.stdout, r.stderr
 
 
+_shared = None
+
+
+def shared_builds():
+    """The runner of gen/tests built in every configuration, once per run of the suite: the
+    kernels' tests here and the folds' (test_folds.py) use the same builds."""
+    global _shared
+    if _shared is None:
+        _shared = Builds('cxx', [RUNNER], ['-I', INCLUDE, '-I', common.TESTS])
+    return _shared
+
+
 class Kernels(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not COMPILERS:
             raise unittest.SkipTest('no C++ compiler (set KAIRN_GEN_CXX)')
         cls.ks = common.kernels()
-        cls.builds = Builds('cxx', [RUNNER], ['-I', INCLUDE, '-I', common.TESTS])
+        cls.builds = shared_builds()
 
     def test_matrix(self):
         """Every build, every kernel, both limb types: bit-identical to the interpreter."""

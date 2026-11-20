@@ -488,8 +488,20 @@ def extended(text, vals):
     return ev(tree)
 
 
+def judge_finite_or_nan(k, ks, fmt, e, ins, outs, values):
+    """The finish of a fold (milestone2.md, "When something is not finite"): the flag is true
+    exactly when limb 0 of the value is finite; the output is then the value, limb for limb, and
+    otherwise every limb of it is a NaN."""
+    src, out, flag = ins[k.value], outs[e['of']], outs[e['flag']][0]
+    if flag != finite(src[0]):
+        return ['finite_or_nan (flag)']
+    if flag:
+        return [] if out == src else ['finite_or_nan (not the value)']
+    return [] if all(v[0] == NAN for v in out) else ['finite_or_nan (not NaN)']
+
+
 JUDGES = {'extends': judge_extends, 'encloses': judge_ball, 'represents': judge_represents,
-          'makes_ball': judge_makes_ball}
+          'makes_ball': judge_makes_ball, 'finite_or_nan': judge_finite_or_nan}
 
 
 def judge(job):
@@ -567,8 +579,9 @@ class NonFinite(unittest.TestCase):
         self.assertEqual(judged, set(self.names))
         # Full kernels, full Ball kernels, constructors, and the kernels that need no fix-up
         # (ball_neg_k among them): 39 of Milestone 1, and 15 of wave 1 of Milestone 2 (the steps,
-        # the directed sums and products, five entry forms, the full scalings by a power of two).
-        self.assertEqual(len(self.names), 54)
+        # the directed sums and products, five entry forms, the full scalings by a power of two);
+        # and the two finishes of the folds.
+        self.assertEqual(len(self.names), 56)
 
     def test_every_situation_is_reached(self):
         """The cases reach what the statements are about: every full kernel overflows on finite

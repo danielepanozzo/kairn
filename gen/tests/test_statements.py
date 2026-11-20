@@ -34,7 +34,7 @@ from concurrent.futures import ProcessPoolExecutor
 from fractions import Fraction as F
 
 import common
-from kairn_gen import expr, interp, ir
+from kairn_gen import consts, expr, interp, ir, rocq
 
 # (p, qmin, qmax): every precision from 1, with subnormals and a top within a few binades.
 FORMATS = [(1, -3, 3), (2, -4, 3), (3, -5, 4), (4, -6, 4), (5, -8, 5), (6, -8, 5)]
@@ -129,6 +129,8 @@ class Space:
             vals = [v for x in fmt.line for v in signs(x)]
             if 'nonneg' in want:
                 vals = [v for v in vals if not v[0] or v[1] == 0]
+            if 'count' in want:          # a number of terms or of additions: zero, or at least 1
+                vals = [v for v in vals if v[1] == 0 or (not v[0] and v[1] >= 1)]
             if 'power_of_two' in want:   # a reduced fraction of two powers of two is one
                 vals = [v for v in vals if not v[0] and v[1] > 0 and v[1].numerator & (v[1].numerator - 1) == 0
                         and v[1].denominator & (v[1].denominator - 1) == 0]
@@ -176,6 +178,9 @@ def cases(fmt, kernel, seed):
     """Operands that satisfy the requirements: the one-group ones by construction, abs_ge after."""
     req = {}
     for r in kernel.requires:
+        if r[0] == 'format':    # format half: every format here contains 1/2 (qmin <= -1)
+            assert r[1] == 'half' and fmt.qmin <= -1, (kernel.name, r)
+            continue
         if r[0] == 'ball':      # in the real model: a normalized center and a nonnegative radius
             req.setdefault(r[1], set()).add('normalized')
             req.setdefault(r[2], set()).add('nonneg')
@@ -269,11 +274,28 @@ def product_large(fmt, value):
     return value == 0 or abs(value) >= F(2) ** (2 * fmt.p - 1) * fmt.eta
 
 
-def holds(e, k, fmt, ins, outs, limbs=None):
+def constant(text, k, fmt, ins, outs, kernels):
+    """An expression of the claims of Milestone 2 (an upper entry's own value, the operands of
+    holds): over the inputs, the one-limb outputs, u, eta, unit(K) and tiny(K)."""
+    names = dict((n, v) for n, v in ins.items() if not isinstance(v, bool))
+    names.update((n, v[0]) for n, v in outs.items() if len(v) == 1 and isinstance(v[0], F))
+    return consts.evaluate(expr.parse(text), kernels, fmt.p, fmt.qmin, names)
+
+
+def holds(e, k, fmt, ins, outs, limbs=None, kernels=None):
     """Whether the entry holds; `limbs` gives each input limb's value under expr.limb_key, for the
-    conditions of exact_when."""
-    value = expr.evaluate(expr.parse(k.value), ins)
+    conditions of exact_when; `kernels`, the constants unit(K) and tiny(K) of the claims of the
+    bound kernels."""
+    value = expr.evaluate(expr.parse(k.value), ins) if k.value is not None else None
     kind = e['kind']
+    if kind == 'holds':
+        # Under its mask: the relation between the two expressions, exactly.
+        if not outs[e['if']][0]:
+            return True
+        a, b = (constant(x, k, fmt, ins, outs, kernels) for x in e['args'])
+        return {'lt': a < b, 'le': a <= b, 'eq': a == b}[e['rel']]
+    if kind == 'upper' and 'if' in e and not outs[e['if']][0]:
+        return True
     if kind == 'encloses':
         c, r = outs[e['center']], outs[e['radius']][0]
         if not all(isinstance(x, F) for x in c) or r is None:
@@ -316,8 +338,14 @@ def holds(e, k, fmt, ins, outs, limbs=None):
         return limit <= r <= value if below else value <= r <= limit
     if kind == 'upper':
         r = out[0]
+        if 'value' in e:
+            value = constant(e['value'], k, fmt, ins, outs, kernels)
+        if not value <= r:
+            return False
+        if 'gaps' not in e:
+            return True
         gaps = expr.evaluate(expr.parse(e['gaps']), {})
-        return value <= r and r - value <= gaps * (r - fmt.pred(r))
+        return r - value <= gaps * (r - fmt.pred(r))
     if kind == 'error':
         if 'exact_when' in e and exact_conditions(e, fmt, ins, limbs) and sum(out) != value:
             return False
@@ -325,7 +353,12 @@ def holds(e, k, fmt, ins, outs, limbs=None):
             return True
         c = expr.evaluate(expr.parse(e['c']), {'u': fmt.u}) * fmt.u ** e['k']
         t = expr.evaluate(expr.parse(e['t']), {}) * fmt.eta
-        rho = abs(value) if e['form'] == 'R' else sum(abs(v) for v in ins.values() if not isinstance(v, bool))
+        if e['form'] == 'R':
+            rho = abs(value)
+        elif e['form'] == 'A':
+            rho = sum(abs(v) for v in ins.values() if not isinstance(v, bool))
+        else:           # T: the magnitudes of the terms of the value (s+x*y: |s| + |x*y|)
+            rho = sum(abs(expr.evaluate(t, ins)) for t in rocq.terms(expr.parse(k.value)))
         return abs(sum(out) - value) <= c * rho + t
     raise AssertionError(kind)
 
@@ -364,7 +397,7 @@ def judge(job):
                 if reading == 'statement':
                     bad.append((reading, case, 'overflow', 'output limb 0 is not finite'))
                 continue    # the claims hold whenever output limb 0 is finite
-            failed = [e['kind'] for e in k.ensures if not holds(e, k, judged, ins, outs, limbs)]
+            failed = [e['kind'] for e in k.ensures if not holds(e, k, judged, ins, outs, limbs, ks)]
             # What a statement says of every output limb besides its claims, so that statements
             # compose (rocq.py, _output_formats): it is a number of the format.
             if reading == 'statement' and not all(x in judged.members for g in k.outputs if g.kind == ir.LIMB

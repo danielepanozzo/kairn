@@ -126,6 +126,18 @@ def no_packed_backend():
     return None
 
 
+_shared = None
+
+
+def shared_builds():
+    """The packed and the scalar runner in every packed configuration, once per run of the suite:
+    the kernels' tests here and the folds' (test_folds.py) use the same builds."""
+    global _shared
+    if _shared is None:
+        _shared = Builds('packed', ['-I', cxx.INCLUDE, '-I', common.TESTS])
+    return _shared
+
+
 class Kernels(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -133,7 +145,7 @@ class Kernels(unittest.TestCase):
         if why:
             raise unittest.SkipTest(why)
         cls.ks = common.kernels()
-        cls.builds = Builds('packed', ['-I', cxx.INCLUDE, '-I', common.TESTS])
+        cls.builds = shared_builds()
         cls.cases = packed_cases(cls.ks, list(cls.ks), 'packed')
         cls.want = cxx.expect(None, cls.cases)
         cls.text = ''.join(c[3] + '\n' for c in cls.cases)

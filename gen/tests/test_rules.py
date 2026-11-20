@@ -754,10 +754,15 @@ class R3OfTheKernels(unittest.TestCase):
               'sub_up_entry', 'two_prod', 'rmul', 'mul_down_1', 'mul_up_1', 'next_up', 'next_down',
               'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
 
+    # The steps of the folds whose arrays the program supplies (milestone2.md, "Arrays that the
+    # program fills"): those of the sums guard the element, those of the dot products only multiply
+    # it. The functions on arrays of the public headers, which come later, call them through the folds.
+    FOLD_STEPS = {'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2', 'dot_step_1', 'dot_step_2'}
+
     def test_entry_kernels(self):
         ks = common.kernels()
         self.assertEqual({n for n, k in ks.items() if k.entry},
-                         self.CORES | self.BALL_CORES | TheKernels.NON_FINITE | self.WAVE_1)
+                         self.CORES | self.BALL_CORES | TheKernels.NON_FINITE | self.WAVE_1 | self.FOLD_STEPS)
 
     def test_every_kernel_the_public_headers_call_is_an_entry_kernel(self):
         ks = common.kernels()
@@ -1114,10 +1119,17 @@ class TheKernels(unittest.TestCase):
     WAVE_1_FINITE = {'two_sum_ord', 'two_sum_entry', 'fast_two_sum_entry', 'ball_mul_pow2_1', 'ball_mul_pow2_2'}
     WAVE_1_FULL = {'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
     WAVE_1 = WAVE_1_EXTENDED | WAVE_1_FINITE | WAVE_1_FULL
+    # milestone2.md, "Batch kernels" (the folds' stage), unverified until their proofs land: the
+    # steps of the folds and the exported bounds, of the finite domain; and the two finishes, with
+    # the IEEE-model statement only.
+    FOLDS_FINITE = {'dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2',
+                    'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2'}
+    FOLDS_FINISH = {'fold_finish_1', 'fold_finish_2'}
+    FOLDS = FOLDS_FINITE | FOLDS_FINISH
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
-        self.assertEqual(set(ks), self.MILESTONE1 | self.WAVE_1)
+        self.assertEqual(set(ks), self.MILESTONE1 | self.WAVE_1 | self.FOLDS)
         body = {name: [(st.dsts, st.op, tuple(map(str, st.args))) for st in k.body] for name, k in ks.items()}
         self.assertEqual(body['two_sum'], [
             (('s',), 'add', ('a', 'b')), (('bb',), 'sub', ('s', 'a')), (('t0',), 'sub', ('s', 'bb')),
@@ -1137,19 +1149,22 @@ class TheKernels(unittest.TestCase):
         # among them (Ball2.v, Add21.v), by their real-model theorems; the full kernels and the
         # constructors, which have no real-model statement, by their IEEE-model theorems.
         # Of wave 1 of Milestone 2, every kernel is proved too, the two full scalings of a ball by
-        # their IEEE-model theorems (IeeeBallPow2.v).
+        # their IEEE-model theorems (IeeeBallPow2.v). The kernels of the folds' stage are unverified.
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
                          self.MILESTONE1 | self.WAVE_1)
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, set())
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.FOLDS)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
-        self.assertEqual({name for name, k in ks.items() if not k.real_model}, self.NON_FINITE | self.WAVE_1_FULL)
+        self.assertEqual({name for name, k in ks.items() if not k.real_model},
+                         self.NON_FINITE | self.WAVE_1_FULL | self.FOLDS_FINISH)
         self.assertEqual({name for name, k in ks.items() if k.extended},
-                         self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL)
+                         self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL |
+                         self.FOLDS_FINISH)
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
-                         dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
-                                       | self.WAVE_1_EXTENDED | self.WAVE_1_FULL, 'proved'))
+                         dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
+                                            | self.WAVE_1_EXTENDED | self.WAVE_1_FULL, 'proved'),
+                              **dict.fromkeys(self.FOLDS_FINISH, 'unverified')))
         # Every kernel of the extended domain that is proved names its IEEE-model theorem, and no
         # other kernel does.
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
@@ -1179,7 +1194,10 @@ class TheKernels(unittest.TestCase):
             'next_up': 1, 'next_down': 1, 'two_sum_ord': 2, 'add_down_1': 2, 'add_up_1': 2, 'sub_down_1': 2,
             'sub_up_1': 2, 'mul_down_1': 2, 'mul_up_1': 2, 'two_sum_entry': 2, 'fast_two_sum_entry': 2,
             'radd_entry': 2, 'add_down_entry': 2, 'add_up_entry': 2, 'sub_down_entry': 2, 'sub_up_entry': 2,
-            'ball_mul_pow2_1': 2, 'ball_mul_pow2_2': 2})
+            'ball_mul_pow2_1': 2, 'ball_mul_pow2_2': 2,
+            # the folds' stage: that of the kernels of one limb and of add_2_2, add_fast_2_2, mul_2_2
+            'dot_step_1': 1, 'dot_step_2': 4, 'sum_entry_step_1': 1, 'sum_entry_step_2': 3,
+            'sum_fast_entry_step_2': 2, 'bound_sum_1': 1, 'bound_sum_2': 3, 'bound_dot_1': 1, 'bound_dot_2': 4})
 
     def test_milestone2_bodies_are_those_of_milestone2_md(self):
         """The listings of wave 1, line for line as the page writes them ("Building blocks on T",
