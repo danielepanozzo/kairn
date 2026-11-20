@@ -705,7 +705,10 @@ struct Expansion<T, 1> {
     static_assert(detail::limb<T>, "Expansion<T, k>: the limb type T is float or double");
 
     /// The limb, which is the value.
-    T limb[1] = {};
+    // Initialized with its zero written out, not with empty braces: MSVC 19.52 cannot bit_cast,
+    // in constant evaluation, an element of a float array member whose initializer is {}, and the
+    // kernels that work on the bit pattern (abs, next_up, the guards of a Ball) are constexpr.
+    T limb[1] = {T(0)};
 
     /// Zero.
     constexpr Expansion() noexcept = default;
@@ -840,7 +843,8 @@ struct Expansion<T, 2> {
     /// contraction it could be fused into the next operation's sums. from_limbs and the
     /// constructors guard what they are given; use them to build a number from computed values.
     /// The pair written must be canonical.
-    T limb[2] = {};
+    // Zeros written out, not empty braces: see Expansion<T, 1>.
+    T limb[2] = {T(0), T(0)};
 
     /// Zero.
     constexpr Expansion() noexcept = default;
