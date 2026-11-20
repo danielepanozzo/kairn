@@ -78,6 +78,9 @@ and values may be infinite or NaN ([below](#overflow-and-non-finite-values)).
 | one limb: `+`, `-`, `*`, `add_fast`, `ldexp`, `half` ([`add_1_1`](../reference/add_1_1.md), [`mul_1_1`](../reference/mul_1_1.md)) | one rounding to nearest: $\lvert z - v\rvert \le \frac{u}{1 + u}\lvert v\rvert$, plus $\tfrac12\eta$ for products (`ldexp`: when $2^n$ is a number of `T`, [below](#overflow-and-non-finite-values) for the other $n$) | the IEEE 754 operation |
 | one limb: `-x`, `abs`, comparisons, conversions | exact (no kernel) | the IEEE 754 operation |
 | `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (the kernels of [Ball operations](../reference/index.md#ball-operations)) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | B1 to B4 (B1 to B3 for `-X`): containment in every case, the empty set and the whole line included; a finite ball when no $x \circ y$ exceeds $2^{e_{\max}-2}$ in magnitude ($2^{e_{\max}-4}$ for the product of one-limb balls) |
+| `Ball`: `ldexp(X, n)`, `half(X)` ([`ball_mul_pow2_1_full`](../reference/ball_mul_pow2_1_full.md), [`ball_mul_pow2_2_full`](../reference/ball_mul_pow2_2_full.md)) | containment of $2^n x$ for all $x \in X$, and the result is $2^n X$ exactly when each limb of its center and its radius is zero or above the smallest normal number of `T`; when $2^n$ is a number of `T` ([below](#overflow-and-non-finite-values) for the other $n$) | B1 to B4; a finite ball when $(\lvert c\rvert + r)\,2^n \le 2^{e_{\max}-2}$ |
+| `Ball`: `X.certainly_positive()`, `X.certainly_negative()`, `X.certainly_zero()` (for two limbs [`lt_1_2`](../reference/lt_1_2.md), [`lt_2_1`](../reference/lt_2_1.md), [`eq_2_1`](../reference/eq_2_1.md); for one, comparisons of `T`) | exactly whether every member is positive, negative, or zero | false for the empty set and for the whole line |
+| the building blocks on `T`: `two_sum`, `fast_two_sum`, `two_prod`, `next_up`, `next_down`, `radd`, `rmul`, `add_down`, `add_up`, `sub_down`, `sub_up`, `mul_down`, `mul_up` ([Building blocks on T](../reference/index.md#building-blocks-on-t)) | each its kernel's statement: an exact sum, an exact product above $2^{2p-1}\eta$, an upper bound for radii, the exact rounding down or up of a sum, a bound of a product on the side asked for | the neighbors, the directed sums and the directed products on every value of `T`; `radd`, `rmul` a NaN for a NaN or $0 \cdot \infty$; `two_sum`, `fast_two_sum`, `two_prod` stated for finite operands, which their pages say more of |
 | `limb`, `sign`, `isfinite`, `is_normalized`, a ball's states | exact (no kernel) | |
 | `rational<X>(num, den)`, `integer<X>(n)` (no kernel: [Constants from fractions](../reference/rational.md)) | specified exactly, bit for bit; tested for equality with the oracle; **not machine-checked** ([below](#constants-from-fractions)) | integer arithmetic only: the same result in every environment; for `den` = 0, the canonical NaN at run time |
 
@@ -126,7 +129,14 @@ scaling up, the result is $2^n x$ exactly or $(\pm\infty, 0)$ on overflow; scali
 $\lvert z - 2^n x\rvert \le \eta$, the bound of one call. For one limb, whose kernel is one rounded
 product ([`mul_1_1`](../reference/mul_1_1.md)), the header multiplies two or three times by powers
 of two of `T`, so that only one of the products rounds; that the result is $\mathrm{RN}(2^n x)$,
-what `std::ldexp` returns, holds by the same argument, tested and not machine-checked either.
+what `std::ldexp` returns, holds by the same argument, tested and not machine-checked either. For
+a ball, `ldexp(X, n)` calls its kernel ([`ball_mul_pow2_2_full`](../reference/ball_mul_pow2_2_full.md))
+in the same steps, and that composition needs no argument of its own: each call returns a ball
+that contains $c$ times every member of its operand, so the last contains $2^n$ times every member
+of $X$, and each call is exact when nothing it scales underflows, which the steps up and the first
+step down keep if the whole scaling does. What is argued and not machine-checked is that the steps
+may stop at $n = \pm 2098$ or so for `double`, as for a number: beyond, every ball but the point 0
+is the whole line, or a ball of radius at least $2\eta$ around 0.
 
 **A `Ball` is in one of three states**, each a set of real numbers: a *finite ball*, the reals
 within its radius of its center (center finite, radius finite and $\ge 0$); the *whole line*,
@@ -173,7 +183,8 @@ descriptions as the C++ ([Proofs](../proofs/index.md#what-is-proved-and-in-which
 kernel's page in the [reference](../reference/index.md) gives its theorem).
 
 **Not proved yet.** The two statements about `ldexp` when $2^n$ is not a number of `T`, above,
-and the one about `ldexp` on one limb; `rational` ([below](#constants-from-fractions)).
+the one about `ldexp` on one limb, and the end of the steps of `ldexp` of a ball; `rational`
+([below](#constants-from-fractions)).
 And thresholds sharper than those stated. For the two-limb arithmetic, exhaustive runs on small
 formats first see an overflow at 0.55 of the overflow threshold or above for the additions and
 0.86 or above for the products, where the proved conditions are a quarter and a half of it
@@ -217,9 +228,12 @@ $+0$, before any kernel adds it: rule R3 of the
 plus $+0$ is at most fused into one FMA that rounds the product, and its result is a sum, which
 nothing later can fuse; a compiler that honors signed zeros cannot remove the addition. The guard
 is in the kernels that receive such a value: `add_2_1` (and through it `sub_2_1`, `sub_1_2` and
-their full kernels) on its limb operand, and the constructors `make_2`, `make_2_limbs`,
-`ball_make_1` and `ball_make_2` on what they are given. A limb operand that a kernel only
-multiplies or compares needs none (`x * a`, comparisons, the scaling of a ball, `ldexp`). Limbs
+their full kernels) on its limb operand, the constructors `make_2`, `make_2_limbs`,
+`ball_make_1` and `ball_make_2` on what they are given, and the entry forms of the building blocks
+that add their operands (`two_sum_entry`, `fast_two_sum_entry`, `radd_entry` and the four directed
+sums), on both: `two_sum(a * b, c)` would otherwise not be error-free. A limb operand that a kernel
+only multiplies or compares needs none (`x * a`, comparisons, the scaling of a ball, `ldexp`,
+`two_prod`, `rmul`, the directed products, `next_up` and `next_down`). Limbs
 written directly into `limb[]` are not guarded: a limb written that way must not be a product the
 compiler can see being computed; `from_limbs` is the way to build a number from computed values.
 
@@ -242,12 +256,17 @@ same flags were measured to break nothing. It is not supported with any compiler
 
 ## Constant evaluation
 
-`constexpr`: the constructors, the sums and differences of two limbs (their full kernels, whose
-fix-up evaluates at compile time), negation and absolute value, the comparisons and conversions,
-every operation of one limb, a ball's negation, states and constants, `kairn::finite::add`,
-`sub` and `add_fast`, and `rational` and `integer` (below). Not yet: the products of two limbs,
-`ldexp` and `half` on two limbs, and the Ball arithmetic, whose kernels contain fused operations
-without a constant-evaluation variant.
+`constexpr`: the constructors, the ball of a constant among them, the sums and differences of two
+limbs (their full kernels, whose fix-up evaluates at compile time), negation and absolute value,
+the comparisons and conversions, every operation of one limb, a ball's negation, states, sign
+predicates and constants, `kairn::finite::add`, `sub` and `add_fast`, `rational` and `integer`
+(below), and the building blocks on `T` but `mul_down` and `mul_up`: `next_up`, `next_down`,
+`radd` and `rmul` with the same bits as at run time, the others with the same values (`two_prod`
+through Dekker's product, the same values when its product is exact). Not yet: the products of two
+limbs, `ldexp` and `half` on two limbs and on balls, and the Ball arithmetic, whose kernels contain
+fused operations without a constant-evaluation variant, or whose code is where
+`KAIRN_ENCLOSURE_CODE` puts it; and, by design, `mul_down` and `mul_up`, whose statements are about
+the fused product, which constant evaluation does not have.
 The canonical infinities and NaN come out of the constructors at compile time
 (`Expansion<double, 2>(INFINITY)` is $(+\infty, 0)$), and so do the states of a ball. GCC and
 Clang refuse, at compile time, an operation that produces an infinity from finite operands or a

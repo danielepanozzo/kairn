@@ -104,8 +104,10 @@ struct SumAndError {
 
 /// The result of kairn::two_prod: the product of a and b rounded to nearest, and the error term.
 /// Two named members, as SumAndError; an aggregate, so `auto [p, e] = kairn::two_prod(a, b);`
-/// binds them in that order. Unlike a sum, a product below 2^(2p-1) eta in magnitude has an error
-/// term that need not be a number of T, so the pair is not offered as a two-limb number.
+/// binds them in that order. Unlike that of a sum, the exact error of a product below
+/// 2^(2p-1) eta in magnitude (2^-969 for double) need not be a number of T, and the error term is
+/// then its rounding: the pair is not offered as a two-limb number, which would not always be the
+/// product.
 template <class T>
 struct ProductAndError {
     static_assert(detail::limb<T>, "ProductAndError<T>: T is float or double");
