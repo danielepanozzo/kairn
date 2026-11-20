@@ -2020,6 +2020,14 @@ def bv_statement(fd, kernels, order):
         e = c['exp']
         bound = 'emax' if e == 0 else f'(emax {"-" if e < 0 else "+"} {abs(e)})'
         conds.append(f'Rabs {_paren(term)} <= bpow radix2 {bound}')
+    # V4 is a statement of every length: the radii's own condition (radii_when, over the scalars) is
+    # a hypothesis, which the conditions of finite_when at any entry imply.
+    rconds = []
+    for c in entry.get('radii_when', []):
+        term = rocq._term(expr.parse(c['abs_le']), vname)
+        e = c['exp']
+        bound = 'emax' if e == 0 else f'(emax {"-" if e < 0 else "+"} {abs(e)})'
+        rconds.append(f'Rabs {_paren(term)} <= bpow radix2 {bound}')
     section = [{'emin': EMIN, 'prec': 'prec', 'choice': 'tie_even'}[v] for v in rocq.section_args(step, kernels)]
     real_step = ' '.join([step.name] + section +
                          [f'(val {v})' for a in fd.step[1] for v in (arrays.get(a) or scalars[a]).limbs])
@@ -2061,13 +2069,15 @@ def bv_statement(fd, kernels, order):
     lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
     lines += [f'     {rocq._let(wp, "w_")}',
               f'     {vals} = {real_step}) {xs} ws_ /\\',
-              f'   val r_ = {real_r}) /\\',
-              '  (' + ' -> '.join(f'finite {v}' for v in scalar_limbs) + f' -> {xs} <> nil ->']
+              f'   val r_ = {real_r})' + (' /\\' if conds else '.')]
     if conds:
-        lines += [f'   Forall (fun {el} =>']
+        # V4, for every length (the empty vector included).
+        lines += ['  (' + ' -> '.join(f'finite {v}' for v in scalar_limbs) + ' ->',
+                  '   ' + ' /\\ '.join(rconds) + ' ->',
+                  f'   Forall (fun {el} =>']
         lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
-        lines += ['     ' + ' /\\ '.join(conds) + f') {xs} ->']
-    lines += ['   finite r_).']
+        lines += ['     ' + ' /\\ '.join(conds) + f') {xs} ->',
+                  '   finite r_).']
     return lines
 
 

@@ -10781,6 +10781,12 @@
               "abs_le": "abs(x+y)+rx+ry",
               "exp": -2
             }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx+ry",
+              "exp": -2
+            }
           ]
         }
       ],
@@ -10892,6 +10898,12 @@
               "abs_le": "abs(x+y)+rx+ry",
               "exp": -2
             }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx+ry",
+              "exp": -2
+            }
           ]
         }
       ],
@@ -10993,6 +11005,12 @@
               "abs_le": "(abs(x)+rx)*a",
               "exp": -2
             }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx*a",
+              "exp": -2
+            }
           ]
         }
       ],
@@ -11092,6 +11110,12 @@
           "finite_when": [
             {
               "abs_le": "(abs(x)+rx)*a",
+              "exp": -2
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx*a",
               "exp": -2
             }
           ]
@@ -11205,6 +11229,12 @@
               "abs_le": "abs(x-y)+rx+ry",
               "exp": -2
             }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx+ry",
+              "exp": -2
+            }
           ]
         }
       ],
@@ -11314,6 +11344,12 @@
           "finite_when": [
             {
               "abs_le": "abs(x-y)+rx+ry",
+              "exp": -2
+            }
+          ],
+          "radii_when": [
+            {
+              "abs_le": "rx+ry",
               "exp": -2
             }
           ]

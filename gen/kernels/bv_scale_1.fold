@@ -19,7 +19,7 @@ output:        r
 output:        mask finite
 value:         x*a
 requires:      ball_vector x rx
-ensures:       encloses_entries z r x*a x=x,rx flag=finite finite_when=abs_le((abs(x)+rx)*a,-2)
+ensures:       encloses_entries z r x*a x=x,rx flag=finite finite_when=abs_le((abs(x)+rx)*a,-2) radii_when=abs_le(rx*a,-2)
 min_precision: 1
 status:        unverified
 domain:        extended

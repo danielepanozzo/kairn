@@ -877,7 +877,7 @@ output:        mask finite
 value:         x+y
 requires:      ball_vector x rx
 requires:      ball_vector y ry
-ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2)
+ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2) radii_when=abs_le(rx+ry,-2)
 min_precision: 3
 status:        unverified
 domain:        extended
@@ -918,7 +918,8 @@ outputs are the radius and the flag; rule R3 on the step (supplied arrays and sc
 map) and on the radius (a supplied scalar it takes is a value of the program there); each array is
 required `ball_vector` with a stored scalar of one limb as its radius; the one claim is
 `encloses_entries` of the centers written, the radius and the flag, over the fold's value, one ball
-name per array; the extended domain; the minimum precision, at least that of the step, the record and
+name per array, with `radii_when` over the scalars alone exactly when `finite_when` is not empty;
+the extended domain; the minimum precision, at least that of the step, the record and
 the radius; the status.
 
 **In C++** a ball vector has the three functions of a map, with the radius and the flag by
@@ -1004,13 +1005,21 @@ radius, with `(ws_, r_, flag_)` the result:
   (`in_ball_k`, for the whole space every real);
 - **V3** if `r_` is finite, every scalar is finite, the centers' values are those of the real-model
   step on the values given, and the radius is `FoldModel.F_radius` on the values;
-- **V4** if every scalar is finite, the vector is not empty, and every entry satisfies the
-  conditions of `finite_when` ($\lvert$EXPR$\rvert \le 2^{e_{\max} + E}$ with EXPR over the values of
-  the entry's centers and the scalars), `r_` is finite.
+- **V4** if every scalar is finite, the scalars satisfy the conditions of `radii_when`, and every
+  entry satisfies the conditions of `finite_when` ($\lvert$EXPR$\rvert \le 2^{e_{\max} + E}$ with
+  EXPR over the values of the entry's centers and the scalars, and for `radii_when` over the scalars
+  alone), `r_` is finite. It is stated for every length, the empty list included.
 
-V4 is stated for a vector that is not empty: with no entry the conditions say nothing, and a radius
-computed from radii near the overflow threshold alone can overflow (`bv_add_radius_k` of two radii
-of about $\Omega/2$), so the page's V4, read for $N = 0$, would be false.
+V4 has the condition on the radii as a hypothesis of its own, `radii_when`: with no entry the
+conditions of `finite_when` say nothing, and a radius computed from radii near the overflow
+threshold alone can overflow (`bv_add_radius_k` of two radii of about $\Omega/2$), so the page's V4,
+read for $N = 0$ with the entries' conditions alone, would be false. `radii_when` is
+$r_x + r_y$ within $2^{e_{\max}-2}$ for `bv_add_k` and `bv_sub_k`, and $\lvert a\rvert r_x$ for
+`bv_scale_k`: what the condition of an entry says with its centers zero. At any entry the conditions
+of `finite_when` imply it (EXPR of `finite_when` is at least EXPR of `radii_when` in magnitude), so for
+a vector with entries V4 is the statement it was, and the hypothesis adds nothing; for the empty
+vector it is the whole condition. The first form of V4, of 2026-11-20, assumed the vector not empty
+instead.
 
 **What their proofs need**: the theorems of the step (bridge and claims, as for a map), of the
 record and the combination (`maximum`, and in the IEEE model that the record keeps a finite state on
@@ -1018,7 +1027,9 @@ a finite center and records a NaN or an infinity), of the radius kernel (`upper`
 model that a finite radius from finite operands is the real model's), of `norm_finish_1`; for the
 lane order, `fold_lanes_aci_step` (the state of the lane order is that of the sequential order); and
 for V4, B4 of the entrywise full Ball kernel at the entry of the largest magnitude, whose radius is
-the one radius (`ball_add_k_full`, `ball_scale_k_full`: the same lines).
+the one radius (`ball_add_k_full`, `ball_scale_k_full`: the same lines), and for the empty vector the
+same at the magnitude $+0$ of the zero state: the radius kernel on $+0$ and radii within `radii_when`
+is finite (each of its roundings is of a nonnegative value at most a few units above $2^{e_{\max}-2}$).
 
 **`bv_norm_upper_k`** ([BallVector](design/milestone2.md#ballvector)) is `norm_upper_k` on the
 centers, which are stored and canonical: it needs no kernel of its own, and the header of `BallVector`
@@ -1926,7 +1937,8 @@ true` (and no `"map"`):
   "requires": ["ball_vector(x, rx)", "ball_vector(y, ry)"],
   "ensures": [{"kind": "encloses_entries", "center": "z", "radius": "r", "flag": "finite", "set": "x+y",
                "balls": {"x": {"center": "x", "radius": "rx"}, "y": {"center": "y", "radius": "ry"}},
-               "finite_when": [{"abs_le": "abs(x+y)+rx+ry", "exp": -2}]}],
+               "finite_when": [{"abs_le": "abs(x+y)+rx+ry", "exp": -2}],
+               "radii_when": [{"abs_le": "rx+ry", "exp": -2}]}],
   "orders": ["sequential", "lanes"],
   "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
   "step": "add_2_2", "step_args": ["x", "y"], "record": "norm_step_2", "combine": "norm_combine",
@@ -1945,7 +1957,8 @@ true` (and no `"map"`):
   "requires": ["ball_vector(x, rx)"],
   "ensures": [{"kind": "encloses_entries", "center": "z", "radius": "r", "flag": "finite", "set": "x*a",
                "balls": {"x": {"center": "x", "radius": "rx"}},
-               "finite_when": [{"abs_le": "(abs(x)+rx)*a", "exp": -2}]}],
+               "finite_when": [{"abs_le": "(abs(x)+rx)*a", "exp": -2}],
+               "radii_when": [{"abs_le": "rx*a", "exp": -2}]}],
   "orders": ["sequential", "lanes"],
   "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
   "step": "scale_step_1", "step_args": ["x", "a"], "record": "norm_step_1", "combine": "norm_combine",
@@ -1968,7 +1981,9 @@ true` (and no `"map"`):
   `flag` the outputs, `set` an expression over the ball names and the other scalars (the language of
   `value`), `balls` for each ball name its `center` (an array read) and `radius` (a scalar), and
   `finite_when` a list of conditions `{"abs_le": EXPR, "exp": E}` as for `encloses`, EXPR over the
-  arrays' names (an entry's value) and the scalars'. For canonical operands:
+  arrays' names (an entry's value) and the scalars', and `radii_when` a list of the same conditions
+  with EXPR over the scalars' names alone (the radii and the other scalars), present exactly when
+  `finite_when` is not empty. For canonical operands:
     - **V1**: the result is canonical: a finite ball vector (`radius` finite and nonnegative, every
       entry written finite and, for two limbs, normalized) or the whole space (`radius` $= +\infty$,
       every limb of every entry written a zero);
@@ -1979,10 +1994,16 @@ true` (and no `"map"`):
       $i$ written; for the whole space, trivially;
     - **V3**: if the result is a finite ball vector, every operand is one and every scalar is
       finite;
-    - **V4**: if every operand is a finite ball vector, every scalar is finite, $n \ge 1$, and every
-      entry $i$ satisfies every condition of `finite_when` ($\lvert$EXPR$\rvert \le 2^{q_{\max} + p
-      + E}$, EXPR evaluated on the values of entry $i$ of the arrays and on the scalars), the result
-      is a finite ball vector. An empty list claims nothing about when the result is finite.
+    - **V4**, for every $n$, $0$ included: if every operand is a finite ball vector, every scalar is
+      finite, the scalars satisfy every condition of `radii_when` ($\lvert$EXPR$\rvert \le 2^{q_{\max}
+      + p + E}$, EXPR evaluated on the scalars), and every entry $i$ satisfies every condition of
+      `finite_when` (EXPR evaluated on the values of entry $i$ of the arrays and on the scalars), the
+      result is a finite ball vector. For $n = 0$ only `radii_when` is a condition. An empty
+      `finite_when` (and so no `radii_when`) claims nothing about when the result is finite. At any
+      entry the conditions of `finite_when` imply those of `radii_when`: for `bv_add_2`,
+      $\lvert x + y\rvert + r_x + r_y \ge r_x + r_y$, and for `bv_scale_1`,
+      $(\lvert x\rvert + r_x)\lvert a\rvert \ge r_x\lvert a\rvert$. (Until 2026-11-20 V4 was stated
+      for $n \ge 1$ only and `radii_when` did not exist.)
 
     What is claimed of the one radius is that and nothing more: containment (V2) and when it is
     finite (V4). That it is the largest of the $n$ radii the entrywise Ball kernel (`ball_add_k`,

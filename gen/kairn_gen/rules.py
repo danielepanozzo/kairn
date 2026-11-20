@@ -1890,6 +1890,19 @@ def _bv_claims(fd, kernels, step, radius, host):
                 err(f'finite_when {c["abs_le"]!r}: an expression of the arrays\' and the scalars\' names')
         except expr.ExprError as x:
             err(f'finite_when: {x}')
+    # V4 is a statement of every length: with no entry, finite_when says nothing, and the radius,
+    # computed from the radii alone, can overflow; radii_when is the radii's own condition, over the
+    # scalars only, which finite_when at any entry implies (the tests check both, in exact arithmetic).
+    if bool(e['finite_when']) != bool(e.get('radii_when')):
+        err('encloses_entries: finite_when and radii_when come together (V4 for every length, the empty vector '
+            'included, needs the condition on the radii alone)')
+    for c in e.get('radii_when', []):
+        try:
+            ctree = expr.parse(c['abs_le'])
+            if expr.names(ctree) - set(scalars) or not _only(ctree, VALUE_TREES):
+                err(f'radii_when {c["abs_le"]!r}: an expression of the scalars\' names only')
+        except expr.ExprError as x:
+            err(f'radii_when: {x}')
     if fd.min_precision is None or fd.min_precision < 1:
         err('min_precision: an integer, at least 1')
     else:

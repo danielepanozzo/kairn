@@ -78,6 +78,14 @@ def bv_case(fd, f, rng, n, whole=0.12):
     return scalars, els
 
 
+def radii_within(fd, f, given):
+    """Whether the scalars satisfy radii_when, the radii's own condition of V4."""
+    top = F(2) ** (f.qmax + f.p)
+    env = {s: exact(v) for s, v in given.items()}
+    return all(abs(expr.evaluate(expr.parse(c['abs_le']), env)) <= top * F(2) ** c['exp']
+               for c in fd.ensures[0].get('radii_when', []))
+
+
 def judge_bv(m, ks, fd, f, scalars, elements, out):
     """The failures of V1 to V4 and of the flag on one case (`out` from Machine.run_fold)."""
     written, r, flag = out[:-2], out[-2], out[-1]
@@ -143,11 +151,11 @@ def judge_bv(m, ks, fd, f, scalars, elements, out):
             want = m.run(fd.radius[0], wide, [mz] + [given[a] for a in fd.radius[1][1:]])
             if exact(want[0]) != exact(r):
                 bad.append('V3: the radius is not the radius kernel\'s on the largest center')
-    elif operands_finite and n:
-        # V4: finite operands and every entry within the stated fraction of the overflow threshold
-        # give a finite result.
+    elif operands_finite:
+        # V4, of every length: finite operands, the radii within their condition (radii_when), and
+        # every entry within the stated fraction of the overflow threshold give a finite result.
         top = F(2) ** (f.qmax + f.p)
-        ok = True
+        ok = radii_within(fd, f, given)
         for gs in groups:
             env = {a: sum(exact(x) for x in gs[a]) for a in gs}
             env.update({s: exact(v) for s, v in given.items()})
@@ -157,6 +165,27 @@ def judge_bv(m, ks, fd, f, scalars, elements, out):
         if ok:
             bad.append('V4: not finite')
     return bad
+
+
+def empty_cases(fd, f):
+    """[(scalars, within)] of the vector with no entry, the radii (and the other scalars) on each side of
+    the limit of radii_when, which is then the whole of V4: a radius of 2^(L-1) and its neighbors, 2^L
+    and the next number, the largest number and zero, with L the exponent of the limit, and each other
+    scalar 1, 2, -2, the number after 2 or 4."""
+    c = fd.ensures[0]['radii_when'][0]
+    L = f.qmax + f.p + c['exp']
+    half = interp.canon(False, 1, L - 1)
+    radii = [ZERO, half, interp.pred(f, half), interp.succ(f, half), interp.canon(False, 1, L),
+             interp.succ(f, interp.canon(False, 1, L)), interp.largest(f, False)]
+    two = interp.canon(False, 1, 1)
+    others = [interp.canon(False, 1, 0), two, interp.neg(two), interp.succ(f, two), interp.canon(False, 1, 2)]
+    radius_names = set(vectors(fd).values())
+    choices = [radii if g.name in radius_names else others for g in fd.scalars]
+    import itertools
+    out = []
+    for scalars in itertools.product(*choices):
+        out.append((list(scalars), radii_within(fd, f, dict(zip((g.name for g in fd.scalars), scalars)))))
+    return out
 
 
 def _judge(job):
@@ -226,7 +255,7 @@ output:        mask finite
 value:         x+y
 requires:      ball_vector x rx
 requires:      ball_vector y ry
-ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2)
+ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2) radii_when=abs_le(rx+ry,-2)
 min_precision: 3
 status:        unverified
 domain:        extended
@@ -260,7 +289,9 @@ domain:        extended
                  'requires \'ball_vector y ry\''),
                 ('combine:       (m, ok) = norm_combine(m, ok, m, ok)', 'combine:       (m, ok) = norm_combine(ok, m, m, ok)',
                  'the combination of norm_upper_2'),
-                ('state:         m, mask ok', 'state:         mask ok', 'the state of a ball vector')):
+                ('state:         m, mask ok', 'state:         mask ok', 'the state of a ball vector'),
+                (' radii_when=abs_le(rx+ry,-2)', '', 'finite_when and radii_when come together'),
+                ('radii_when=abs_le(rx+ry,-2)', 'radii_when=abs_le(x+rx+ry,-2)', "the scalars' names only")):
             text = self.BASE.replace(old, new)
             self.assertNotEqual(text, self.BASE, old)
             errs = self.refusals(text)
@@ -285,6 +316,62 @@ class Interp(unittest.TestCase):
             # The radius is the largest entrywise radius of the Ball kernel in every case compared.
             self.assertEqual(sum(r[5] for r in mine), sum(r[6] for r in mine), name)
             self.assertGreater(sum(r[6] for r in mine), 200, name)
+
+    def test_v4_of_the_empty_vector(self):
+        """V4 for every length: with no entry, the radius comes from the radii (and the other scalars)
+        alone, and radii_when is the whole condition. On each side of its limit, in toy formats of the
+        IEEE shape and in binary64 and binary32, in every order: within the limit the result is finite;
+        beyond it nothing is claimed, and far beyond (the largest radius) it is the whole space."""
+        ks = common.kernels()
+        m = interp.Machine(ks)
+        for name in BVS:
+            fd = ks.folds[name]
+            formats = [writers.ieee_format(p, emax) for p, emax in writers.toy_formats(fd.min_precision)] + \
+                [interp.parse_format('binary64'), interp.parse_format('binary32')]
+            at_limit, beyond, whole = 0, 0, 0
+            for f in formats:
+                top = F(2) ** (f.qmax + f.p + fd.ensures[0]['radii_when'][0]['exp'])
+                for scalars, within in empty_cases(fd, f):
+                    outs = [m.run_fold(name, f, order, w, [[] for _ in fd.array_limbs()], scalars)
+                            for order, w in [('sequential', 0), ('lanes', 0), ('lanes', 3)]]
+                    self.assertTrue(all(o == outs[0] for o in outs), (name, f.name, scalars))
+                    self.assertEqual(judge_bv(m, ks, fd, f, scalars, [], outs[0]), [], (name, f.name, scalars))
+                    env = {g.name: exact(v) for g, v in zip(fd.scalars, scalars)}
+                    value = abs(expr.evaluate(expr.parse(fd.ensures[0]['radii_when'][0]['abs_le']), env))
+                    at_limit += within and value == top and outs[0][-1]
+                    beyond += not within
+                    whole += not outs[0][-1]
+            self.assertGreater(at_limit, 0, name)       # exactly at the limit, and finite
+            self.assertGreater(beyond, 0, name)
+            self.assertGreater(whole, 0, name)
+
+    def test_radii_when_is_implied_by_finite_when(self):
+        """At any entry, the conditions of finite_when imply radii_when: V4 of a vector with entries is
+        the statement it was, and the new hypothesis adds nothing there. In exact arithmetic, on random
+        centers and scalars of binary64 and of a toy format, the condition's values near the limit."""
+        ks = common.kernels()
+        for name in BVS:
+            fd = ks.folds[name]
+            e = fd.ensures[0]
+            for f in (interp.parse_format('binary64'), writers.ieee_format(4, 5)):
+                rng = random.Random(f'implied:{name}:{f.name}')
+                top = F(2) ** (f.qmax + f.p)
+                tested = 0
+                for _ in range(3000):
+                    scalars, elements = bv_case(fd, f, rng, 1, whole=0)
+                    if not all(finite(v) for v in scalars):
+                        continue
+                    env = {g.name: exact(v) for g, v in zip(fd.scalars, scalars)}
+                    at = 0
+                    for g in fd.arrays:
+                        env[g.name] = sum(exact(x) for x in elements[0][at:at + len(g.limbs)])
+                        at += len(g.limbs)
+                    if all(abs(expr.evaluate(expr.parse(c['abs_le']), env)) <= top * F(2) ** c['exp']
+                           for c in e['finite_when']):
+                        tested += 1
+                        self.assertTrue(radii_within(fd, f, dict(zip((g.name for g in fd.scalars), scalars))),
+                                        (name, f.name, scalars, elements))
+                self.assertGreater(tested, 100, (name, f.name))
 
     def test_the_whole_space_and_the_empty_vector(self):
         ks = common.kernels()
@@ -341,6 +428,10 @@ def corpus(fmt, orders, seed):
                 scalars, elements = bv_case(fd, f, rng, n)
                 for order, w in orders:
                     out.append((name, fmt, order, w, scalars, elements, request(fd, fmt, order, w, scalars, elements)))
+        # The vector with no entry, its radii on each side of the limit of V4 (empty_cases).
+        for scalars, _ in empty_cases(fd, f):
+            for order, w in orders:
+                out.append((name, fmt, order, w, scalars, [], request(fd, fmt, order, w, scalars, [])))
     return out
 
 
@@ -491,7 +582,8 @@ class Printers(unittest.TestCase):
         self.assertEqual(e['ensures'], [{'kind': 'encloses_entries', 'center': 'z', 'radius': 'r', 'flag': 'finite',
                                          'set': 'x+y', 'balls': {'x': {'center': 'x', 'radius': 'rx'},
                                                                  'y': {'center': 'y', 'radius': 'ry'}},
-                                         'finite_when': [{'abs_le': 'abs(x+y)+rx+ry', 'exp': -2}]}])
+                                         'finite_when': [{'abs_le': 'abs(x+y)+rx+ry', 'exp': -2}],
+                                         'radii_when': [{'abs_le': 'rx+ry', 'exp': -2}]}])
 
     def test_the_entries_of_architecture_md(self):
         """The two entries that architecture.md writes out ("Claims of Milestone 2", ball vectors) are

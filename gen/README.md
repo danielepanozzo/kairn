@@ -265,7 +265,9 @@ written, `combine:` is that fold's combination, `radius: rz = bv_add_radius_k(m,
 one radius from the largest magnitude and the scalars, and `finish: (r, finite) = norm_finish_1(rz,
 ok)` tests it; when the flag is false a second pass writes every center zero and the radius is
 +infinity, the whole space. Each array is required `ball_vector ARRAY RADIUS`, and the fold claims
-`encloses_entries z r SET NAME=ARRAY,RADIUS... flag=F [finite_when=...]`. `rules.bv_rules` checks
+`encloses_entries z r SET NAME=ARRAY,RADIUS... flag=F [finite_when=... radii_when=...]`, `radii_when`
+the conditions of V4 on the scalars alone, so that V4 holds of every length, the empty vector
+included (it comes with `finite_when`). `rules.bv_rules` checks
 it; `cpp.bv_seq`, `cpp.bv_lanes` and `simd.bv_packed` print it; `rocq.bv_model` and
 `rocq.bv_statement` give it a model (the centers and the radius) and a statement (containment entry
 by entry); `ieee.bv_model` and `ieee.bv_statement` its IEEE model and V1 to V4 of milestone2.md;

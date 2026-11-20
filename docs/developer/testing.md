@@ -1523,8 +1523,9 @@ here only, by `gen/tests/test_bv.py`: each check of `rules.bv_rules` refuses wha
 interpreter, on formats of the IEEE shape of two to five bits and in `binary64` and `binary32`, on
 canonical BallVectors with the whole space among them and any value of a scalar that is not a
 radius, in the sequential order and with 0 to 4 lanes, satisfies V1 to V4 and the flag in exact
-arithmetic (containment entry by entry against the exact range of the operation on the balls), every
-order the same; on finite operands the one radius equals the largest radius the entrywise Ball kernel
+arithmetic (containment entry by entry against the exact range of the operation on the balls; V4 of
+every length, and of the vector with no entry with its radii on each side of the limit of
+`radii_when`, which the conditions of an entry imply), every order the same; on finite operands the one radius equals the largest radius the entrywise Ball kernel
 returns, in every case compared; the compiled `F_seq`, `F_lanes` (0 to 8 lanes) and `F_packed` of
 every build are bit for bit the interpreter's, on the lengths of the folds; the line protocol, the
 printers, the counts of the loops and the claims (with the entries of architecture.md).

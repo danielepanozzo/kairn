@@ -256,6 +256,9 @@ result; when the result is not a finite ball vector, every center written is zer
     requires:      ball_vector x rx   the centers x with the radius rx: canonical (finite, or the
                                       whole space: every center zero and the radius +infinity)
     ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2)
+                   radii_when=abs_le(rx+ry,-2)
+                                      V4 for every length: the radii's own condition (over the
+                                      scalars), which finite_when at any entry implies
 """
 import json
 import os
@@ -838,11 +841,16 @@ def _ensures(words, where):
     if kind == 'encloses_entries' and len(words) >= 5:
         # A ball vector (milestone2.md, "BallVector"): the centers written, the one radius and the
         # mask that the result is a finite ball vector; each ball name an array of centers and a
-        # radius (a scalar).
-        balls, finite_when, flag = {}, None, None
+        # radius (a scalar). radii_when: the conditions of V4 on the scalars alone, which make it
+        # a statement of every length, the empty vector included (finite_when at any entry implies
+        # them).
+        balls, finite_when, radii_when, flag = {}, None, None, None
         for w in words[4:]:
             if w.startswith('finite_when=') and finite_when is None:
                 finite_when = _finite_when(w[len('finite_when='):], where)
+                continue
+            if w.startswith('radii_when=') and radii_when is None:
+                radii_when = _finite_when(w[len('radii_when='):], where)
                 continue
             if w.startswith('flag=') and flag is None:
                 flag = w[len('flag='):]
@@ -853,8 +861,11 @@ def _ensures(words, where):
             balls[m.group(1)] = {'center': m.group(2), 'radius': m.group(3)}
         if not flag:
             raise DescriptionError(f'{where}: an encloses_entries entry needs flag=MASK')
-        return {'kind': kind, 'center': words[1], 'radius': words[2], 'flag': flag, 'set': words[3],
-                'balls': balls, 'finite_when': finite_when or []}
+        entry = {'kind': kind, 'center': words[1], 'radius': words[2], 'flag': flag, 'set': words[3],
+                 'balls': balls, 'finite_when': finite_when or []}
+        if radii_when is not None:
+            entry['radii_when'] = radii_when
+        return entry
     if kind == 'error' and len(words) >= 3:
         entry = {'kind': 'error', 'of': words[1], 'form': words[2],
                  'c': None, 'k': None, 't': None, 'when': None}
