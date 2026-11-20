@@ -49,6 +49,12 @@ endfunction()
 _kairn_api_program(kairn-api-constexpr constexpr.cpp)
 add_test(NAME api.constexpr COMMAND kairn-api-constexpr)
 
+# api.platform_macros: the headers after a platform header that defines min, max, small, near, far,
+# hyper and interface as macros (<windows.h> without NOMINMAX, included for real on Windows).
+_kairn_api_program(kairn-api-platform-macros platform_macros.cpp)
+add_test(NAME api.platform_macros COMMAND kairn-api-platform-macros)
+set_tests_properties(api.platform_macros PROPERTIES LABELS api)
+
 # --- The public interface against the oracle --------------------------------------------------
 #
 # The building blocks, which no public operation computes on its own, and the entry kernels that no

@@ -149,7 +149,9 @@ inline const char* self_test_limb() noexcept {
     // Operands are read from volatile objects: the compiler cannot know their values, so it must
     // emit the arithmetic, compiled as the flags of this translation unit say.
     constexpr T u = std::numeric_limits<T>::epsilon() / 2;   // 2^-p
-    constexpr T lambda = std::numeric_limits<T>::min();      // the smallest normal number
+    // In parentheses, and no name below is `small`: <windows.h> defines min, max and small as
+    // macros unless the program asks it not to (tests/api/platform_macros.cpp).
+    constexpr T lambda = (std::numeric_limits<T>::min)();    // the smallest normal number
     constexpr T eta = std::numeric_limits<T>::denorm_min();  // the smallest subnormal number
     volatile T v_one = T(1), v_u = u, v_3u = 3 * u, v_lambda = lambda, v_eta = eta, v_half = T(0.5);
     volatile T v_zero = T(0), v_minus_one = T(-1), v_small = u / 2;
@@ -169,12 +171,12 @@ inline const char* self_test_limb() noexcept {
     if (!bits_equal(T(e + e), two_eta)) return "subnormal operands are read as zero";
     // Reassociation: (1 + u/2) - 1 is 0 in floating point and u/2 in real arithmetic, and the
     // error of that sum, which TwoSum computes, is u/2.
-    const T small = v_small;
-    const T s = one + small;
+    const T half_u = v_small;
+    const T s = one + half_u;
     if (s - one != 0) return "the compiler reassociates floating-point sums (-fassociative-math)";
     T ts, te;
-    gen::two_sum(one, small, ts, te);
-    if (ts != one || te != small) return "TwoSum is not error-free: the compiler rewrites floating-point sums";
+    gen::two_sum(one, half_u, ts, te);
+    if (ts != one || te != half_u) return "TwoSum is not error-free: the compiler rewrites floating-point sums";
     // fma(-1, +0, +0) is +0; a compiler that ignores signs of zeros turns it into -1 * +0 = -0,
     // and may then fold any opaque product back into a plain one.
     if (!bits_equal(gen::fma_rn(v_minus_one, v_zero, v_zero), T(0)))
