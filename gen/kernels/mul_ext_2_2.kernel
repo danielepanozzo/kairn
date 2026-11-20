@@ -23,9 +23,10 @@ ensures:       outward h above rel=(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-un
 min_precision: 4
 source:        mul_dir_2_2, with the products of a zero and of an infinity selected (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalMul2.v mul_ext_2_2_correct
 ieee_only:     yes
 cone_exempt:   every output is selected after explicit tests of the operands and of the finite results
 

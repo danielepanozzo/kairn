@@ -20,7 +20,9 @@ value:         abs(x)
 ensures:       upper r max steps=0
 ensures:       finite_or_nan r flag=flag
 min_precision: 1
-status:        unverified
+theorem:       proofs/theories/FoldNorm.v
+ieee_theorem:  proofs/theories/IeeeFoldNorm.v
+status:        proved
 domain:        extended
 source:        a maximum by comparisons, in any order
 license:       proof: MIT

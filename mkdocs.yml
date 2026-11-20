@@ -197,18 +197,21 @@ nav:
           - The midpoint and radius of an interval, one-limb bounds: reference/interval_mid_rad_1.md
           - A ball that contains an interval, one-limb bounds: reference/interval_to_ball_1.md
           - An interval split at its midpoint, one-limb bounds: reference/interval_split_1.md
-      - Building blocks:
-          - The next number of T above a value: reference/next_up.md
-          - The next number of T below a value: reference/next_down.md
-          - A lower bound of a product of two limbs: reference/mul_down_1.md
-          - An upper bound of a product of two limbs: reference/mul_up_1.md
+      - Building blocks on T:
           - TwoSum on values of the program: reference/two_sum_entry.md
           - Fast2Sum on values of the program: reference/fast_two_sum_entry.md
+          - "TwoProd: an exact product as two limbs": reference/two_prod.md
+          - The next number of T above a value: reference/next_up.md
+          - The next number of T below a value: reference/next_down.md
           - An upper bound of a sum, for radii, on values of the program: reference/radd_entry.md
+          - An upper bound of a product, for radii: reference/rmul.md
           - A sum of two limbs rounded down, on values of the program: reference/add_down_entry.md
           - A sum of two limbs rounded up, on values of the program: reference/add_up_entry.md
           - A difference of two limbs rounded down, on values of the program: reference/sub_down_entry.md
           - A difference of two limbs rounded up, on values of the program: reference/sub_up_entry.md
+          - A lower bound of a product of two limbs: reference/mul_down_1.md
+          - An upper bound of a product of two limbs: reference/mul_up_1.md
+      - Parts of other kernels:
           - Both directed products of two limbs, a zero factor giving zero: reference/mul_dir_1.md
           - A sum of two-limb numbers with a bound of its error: reference/add_ball_2_2.md
           - A product of two-limb numbers with a bound of its error: reference/mul_ball_2_2.md
@@ -220,11 +223,9 @@ nav:
           - Two bounds of a product of two bounds of intervals, two limbs: reference/mul_ext_2_2.md
           - "TwoSum: an exact sum as two limbs": reference/two_sum.md
           - "Fast2Sum: an exact sum of ordered operands": reference/fast_two_sum.md
-          - "TwoProd: an exact product as two limbs": reference/two_prod.md
           - "Dekker's product: TwoProd without an FMA": reference/two_prod_dekker.md
           - Veltkamp's split: reference/split.md
           - An upper bound of a sum, for radii: reference/radd.md
-          - An upper bound of a product, for radii: reference/rmul.md
           - "TwoSum by ordering: Fast2Sum of the operands ordered by magnitude": reference/two_sum_ord.md
           - A sum of two limbs rounded down: reference/add_down_1.md
           - A sum of two limbs rounded up: reference/add_up_1.md

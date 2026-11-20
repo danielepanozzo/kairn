@@ -12,7 +12,7 @@ $$Z \supseteq \{\, x c : x \in X \,\}.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`ball_mul_pow2_1_full`](ball_mul_pow2_1_full.md).
+**Not yet called by the public headers.** No public operation computes this kernel yet. The operations of the public headers call [`ball_mul_pow2_1_full`](ball_mul_pow2_1_full.md), which computes this kernel and then the fix-up of its results.
 
 ## Requires
 
@@ -102,5 +102,5 @@ No stored brute-force run has judged this kernel yet.
 
 ## Not claimed
 
-- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: [`ball_mul_pow2_1_full`](ball_mul_pow2_1_full.md) states that, and the public headers do not call it yet ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the library does now).
+- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: [`ball_mul_pow2_1_full`](ball_mul_pow2_1_full.md) states that ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the library does now).
 

@@ -16,9 +16,10 @@ ensures:       makes_interval zl zu from=lo,hi
 min_precision: 1
 source:        constructor of an interval of two limbs (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalExact.v interval_make_2_correct
 entry:         yes
 cone_exempt:   every output is selected after explicit tests of the bounds; makes_interval states what comes out
 

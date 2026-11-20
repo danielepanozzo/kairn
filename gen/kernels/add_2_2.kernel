@@ -10,6 +10,7 @@ ensures:       normalized z
 ensures:       error z R c=3/(1-4*u) k=2 t=0
 min_precision: 3
 theorem:       proofs/theories/Add22.v add_2_2_correct
+ieee_lead_theorem: proofs/theories/IeeeFolds.v add_2_2_ieee_lead
 source:        JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22
 license:       algorithm: published; proof: MIT
 status:        proved

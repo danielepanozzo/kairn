@@ -13,7 +13,8 @@ int main() {
     const kairn::Ball<float, 2> f{float(one)};
     const bool ok = (x + y).center().limb[0] == 3.0 && (x - y).center().limb[0] == -1.0 &&
                     (x * y).center().limb[0] == 2.0 && (x * double(two)).center().limb[0] == 2.0 &&
-                    (p * p).center().limb[0] == 4.0 && (f + f).center().limb[0] == 2.0f;
+                    (p * p).center().limb[0] == 4.0 && (f + f).center().limb[0] == 2.0f &&
+                    kairn::half(x).radius() == 0x1p-31 && kairn::ldexp(p, 3).center().limb[0] == 16.0;
     std::printf("%s\n", ok ? "ok" : "FAILED: a result is not what it must be");
     return ok ? 0 : 1;
 }

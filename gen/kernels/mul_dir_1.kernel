@@ -21,9 +21,11 @@ ensures:       rounded v up when=product_large zero_factor
 min_precision: 2
 source:        two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+theorem:       proofs/theories/DirectedProd.v mul_dir_1_correct
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeDirectedProd.v mul_dir_1_ieee_correct
 cone_exempt:   d and v are p, a neighbor of p or zero, chosen by select, and succ(-inf) and pred(+inf) are finite; the bound and rounded claims state the outputs for infinite operands
 
 (p, e) = two_prod(a, b)

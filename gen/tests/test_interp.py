@@ -680,7 +680,7 @@ class Protocol(unittest.TestCase):
             'ball_make_1 binary64 0x1p+0 -0x1p+0': 'nan nan',                  # a negative radius
             'ball_make_1 binary64 inf 0x1p+0': '0x0p+0 inf',
             'ball_make_1 binary64 -0x0p+0 -0x0p+0': '0x0p+0 0x0p+0',
-            'ball_make_2 binary32 0x1p+0 0x0p+0 nan': 'nan nan nan',
+            'ball_make_2 binary32 0x1p+0 0x0p+0 nan': '0x0p+0 0x0p+0 inf',      # a NaN radius (2026-11-20)
             'ball_make_2 binary32 nan nan 0x1p+0': '0x0p+0 0x0p+0 inf',
             'ball_make_2 binary64 0x1p+0 0x1p-60 inf': '0x0p+0 0x0p+0 inf',
             # The kernels that need no fix-up, at the ends of the range and on non-finite operands.

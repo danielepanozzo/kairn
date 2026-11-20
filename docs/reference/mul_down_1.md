@@ -12,7 +12,11 @@ $$r \le a b.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `mul_down(a, b)` | `T`, `T` | `T` | not `constexpr`: its statement is about the fused product, which constant evaluation does not have ([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)); rounds |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

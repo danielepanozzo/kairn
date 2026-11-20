@@ -12,7 +12,12 @@ $$Z \supseteq \{\, x c : x \in X \,\}.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `ldexp(X, n)` | `Ball<T, 1>`, `int` | `Ball<T, 1>` | $c = 2^n$, for every `n`: when $2^n$ is not a number of `T`, two or three calls, whose composition is argued and tested but not machine-checked ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)); not `constexpr` yet |
+| `half(X)` | `Ball<T, 1>` | `Ball<T, 1>` | $c = 1/2$; not `constexpr` yet |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

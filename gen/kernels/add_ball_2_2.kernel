@@ -18,7 +18,8 @@ ensures:       encloses z d x+y
 min_precision: 3
 source:        add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+theorem:       proofs/theories/Directed2.v add_ball_2_2_correct
+status:        proved
 
 (z0, z1) = add_2_2(x0, x1, y0, y1)
 az       = abs(z0)

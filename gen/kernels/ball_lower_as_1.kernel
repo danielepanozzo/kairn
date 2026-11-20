@@ -12,9 +12,10 @@ ensures:       set_bound l below x x=c,r tight=rounded
 min_precision: 2
 source:        the center minus the radius, rounded down (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallConvert.v ball_lower_as_1_correct
 entry:         yes
 ieee_only:     yes
 cone_exempt:   l is selected after the test of the radius that tells the empty ball; set_bound states what comes out for each state of the ball

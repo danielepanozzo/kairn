@@ -16,9 +16,10 @@ ensures:       encloses cz rz x x=c,r finite_when=abs_le(abs(c)+r,-2)
 min_precision: 2
 source:        the leading limb, and the radius widened by the second limb (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallConvert.v ball_narrow_2_1_correct
 entry:         yes
 ieee_only:     yes
 cone_exempt:   the radius never reaches the center, which is selected after the test of a radius that overflowed; B1 to B4 of milestone1.md, "Ball kernels", state what comes out

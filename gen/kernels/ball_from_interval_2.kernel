@@ -22,9 +22,10 @@ ensures:       makes_ball cw rw from_interval=lo,hi midpoint_when=half_in_format
 min_precision: 2
 source:        the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallConvert.v ball_from_interval_2_correct
 entry:         yes
 cone_exempt:   every output is selected after explicit tests of the bounds; makes_ball states what comes out
 

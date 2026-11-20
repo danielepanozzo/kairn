@@ -108,7 +108,9 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/tests/test_crosscheck_guards.py")
     COMMAND "${Python3_EXECUTABLE}" tests/test_crosscheck_guards.py "${CMAKE_COMMAND}"
       "$<TARGET_FILE:kairn-api-runner>"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  set_tests_properties(full.tools.crosscheck.guards PROPERTIES TIMEOUT 300
+  # About a minute on a desktop; more than 300 s on a hosted Windows runner since the folds' guards
+  # were added (it starts several hundred Python processes, which is slow there).
+  set_tests_properties(full.tools.crosscheck.guards PROPERTIES TIMEOUT 900
     LABELS "full;tools;crosscheck")
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/docs/tools/test_reference.py")

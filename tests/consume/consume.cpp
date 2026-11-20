@@ -1,7 +1,8 @@
 // The consumer checks' program (tests/CMakeLists.txt). It compiles only if linking kairn::kairn
 // is enough to find Kairn's headers and to compile as C++20, and kairn::fma enough to compile the
 // kernels; it fails unless version.hpp states the version it is given on the command line, the one
-// in CMakeLists.txt, and unless a kernel with a fused operation computes what it must.
+// in CMakeLists.txt, and unless a kernel with a fused operation computes what it must; and it
+// compiles only if KAIRN_VERSION_AT_LEAST agrees with that version.
 #include <kairn/gen/scalar.hpp>
 #include <kairn/version.hpp>
 
@@ -11,6 +12,10 @@
 #if (defined(_MSVC_LANG) ? _MSVC_LANG : __cplusplus) < 202002L
 #error "kairn::kairn must make its users compile as C++20"
 #endif
+
+// The test of a version that a program writes: true at the version itself, false one patch later.
+static_assert(KAIRN_VERSION_AT_LEAST(KAIRN_VERSION_MAJOR, KAIRN_VERSION_MINOR, KAIRN_VERSION_PATCH) &&
+              !KAIRN_VERSION_AT_LEAST(KAIRN_VERSION_MAJOR, KAIRN_VERSION_MINOR, KAIRN_VERSION_PATCH + 1));
 
 int main(int argc, char** argv) {
   if (argc != 2 || std::strcmp(argv[1], KAIRN_VERSION_STRING) != 0) {

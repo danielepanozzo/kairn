@@ -19,7 +19,8 @@ ensures:       outward h above rel=(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-un
 min_precision: 4
 source:        mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+theorem:       proofs/theories/Directed2.v mul_dir_2_2_correct
+status:        proved
 cone_exempt:   through the directed sums and two_sum_ord, which select; the interval kernels test l0 and h0
 
 (z0, z1, d) = mul_ball_2_2(x0, x1, y0, y1)

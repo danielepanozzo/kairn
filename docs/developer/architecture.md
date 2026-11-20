@@ -1097,7 +1097,7 @@ Two more kinds serve the constructors
 | Kind | Fields | Meaning |
 |---|---|---|
 | `represents` | `of` | the output is canonical and is `value` exactly: a finite `value` gives a finite normalized output of that value, $\pm\infty$ gives $(\pm\infty, 0)$, a NaN gives all NaN |
-| `makes_ball` | `center`, `radius`: the outputs; `from`: the inputs given as center and radius | the output ball is canonical: empty when the given radius is a NaN or negative; otherwise the whole line when the given center is not finite or the given radius is $+\infty$; otherwise the given center and radius, exactly |
+| `makes_ball` | `center`, `radius`: the outputs; `from`: the inputs given as center and radius | the output ball is canonical: empty when the given radius is negative, $-\infty$ included; otherwise the whole line when the given radius is a NaN or $+\infty$ or the given center is not finite; otherwise the given center and radius, exactly. (A NaN radius gave the empty set until the owner's decision of 2026-11-20, which made it the whole line, as a NaN bound given to an interval is.) |
 
 `value` may be an expression there too: `neg_2` and `abs_2` carry `represents` next to their
 `normalized` and `error` entries, with the values `-x` and `abs(x)`, and that entry is what says
@@ -1608,10 +1608,13 @@ format rounds it, so that a bound can name the constants $E$, $G$, $H$ of a radi
 is a constant of a kernel with a real-model statement. The oracle evaluates them per format;
 `instances` is unchanged: one object per `error` entry.
 
-**An output group other than the first.** In the finite domain an entry whose `of` is an output
-group other than the first holds whenever the requirements hold and that group's leading limb is
-finite (the two bounds of `mul_dir_2_2` overflow apart; the second output of `mul_dir_1`, of the
-extended domain, has the infinity that its claims say). No earlier kernel has such an entry.
+**An output group other than the first.** In the finite domain an entry without a mask whose
+`of` is an output group other than the first holds whenever the requirements hold and that group's
+leading limb is finite (the two bounds of `mul_dir_2_2` overflow apart; the second output of
+`mul_dir_1`, of the extended domain, has the infinity that its claims say). No earlier kernel has
+such an entry. An entry with a mask (`if=MASK`) is read by its mask, whatever output group it is
+about: `upper t … if=ok` of `bound_dot_k` holds whenever the requirements hold, output limb 0 is
+finite and `ok` is true.
 
 Entries as the generator writes them (`source`, `flops` and the theorem fields left out; the
 constants of `outward` are those of
@@ -1627,14 +1630,14 @@ $H$ of `ball_add_2` and the $\mathrm{rel}$, $\mathrm{tiny}$ of `add_2_2`):
               "intervals": {"x": {"lower": "xl", "upper": "xu"}, "y": {"lower": "yl", "upper": "yu"}},
               "tight": {"kind": "rounded"}, "bounded_when": [{"abs_le": "x+y", "omega": true}],
               "bounded_exactly": true}],
- "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 2, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}},
 {"name": "interval_make_1", "domain": "extended", "ieee_only": true,
  "inputs": [{"name": "lo", "limbs": 1}, {"name": "hi", "limbs": 1}],
  "outputs": [{"name": "zl", "limbs": 1}, {"name": "zu", "limbs": 1}],
  "requires": [],
  "ensures": [{"kind": "makes_interval", "lower": "zl", "upper": "zu", "from": {"lower": "lo", "upper": "hi"}}],
- "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 1, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}},
 {"name": "mul_dir_1", "domain": "extended",
  "inputs": [{"name": "a", "limbs": 1}, {"name": "b", "limbs": 1}],
@@ -1644,7 +1647,7 @@ $H$ of `ball_add_2` and the $\mathrm{rel}$, $\mathrm{tiny}$ of `add_2_2`):
              {"kind": "rounded", "of": "d", "mode": "down", "when": "product_large", "zero_factor": true},
              {"kind": "bound", "of": "v", "side": "above", "steps": 1, "zero_factor": true},
              {"kind": "rounded", "of": "v", "mode": "up", "when": "product_large", "zero_factor": true}],
- "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 2, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}},
 {"name": "add_ball_2_2",
  "inputs": [{"name": "x", "limbs": 2}, {"name": "y", "limbs": 2}],
@@ -1653,7 +1656,7 @@ $H$ of `ball_add_2` and the $\mathrm{rel}$, $\mathrm{tiny}$ of `add_2_2`):
  "ensures": [{"kind": "normalized", "of": "z"},
              {"kind": "error", "of": "z", "form": "R", "c": "3/(1-4*u)", "k": 2, "t": "0", "when": null},
              {"kind": "encloses", "center": "z", "radius": "d", "set": "x+y", "balls": {}}],
- "min_precision": 3, "status": "unverified",
+ "min_precision": 3, "status": "proved",
  "instances": {"binary64": [{"rel": "3/81129638414606645666991986180096", "abs": "0"}],
                "binary32": [{"rel": "1/93824969867264", "abs": "0"}]}},
 {"name": "ball_lower_as_1", "domain": "extended", "ieee_only": true,
@@ -1662,7 +1665,7 @@ $H$ of `ball_add_2` and the $\mathrm{rel}$, $\mathrm{tiny}$ of `add_2_2`):
  "requires": ["ball(c, r)"],
  "ensures": [{"kind": "set_bound", "of": "l", "side": "below", "set": "x",
               "balls": {"x": {"center": "c", "radius": "r"}}, "tight": {"kind": "rounded"}}],
- "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 2, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}}
 ```
 
@@ -1762,42 +1765,42 @@ Entries as the generator writes them (`source`, `flops` and the theorem fields l
  "outputs": [{"name": "zl", "limbs": 1}, {"name": "zu", "limbs": 1}],
  "requires": ["interval(xl, xu)", "interval(yl, yu)"],
  "ensures": [{"kind": "interval_set", "lower": "zl", "upper": "zu", "set": "union", "intervals": {"x": {"lower": "xl", "upper": "xu"}, "y": {"lower": "yl", "upper": "yu"}}}],
- "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 1, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}},
 {"name": "interval_mid_rad_1", "domain": "extended", "ieee_only": true,
  "inputs": [{"name": "xl", "limbs": 1}, {"name": "xu", "limbs": 1}],
  "outputs": [{"name": "m", "limbs": 1}, {"name": "r", "limbs": 1}],
  "requires": ["interval(xl, xu)"],
  "ensures": [{"kind": "ball_of_interval", "center": "m", "radius": "r", "from": {"lower": "xl", "upper": "xu"}, "special": "ieee1788", "rel": "u", "abs": "eta", "smallest_radius": true}],
- "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 2, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}},
 {"name": "ball_to_interval_1", "domain": "extended", "ieee_only": true,
  "inputs": [{"name": "c", "limbs": 1}, {"name": "r", "limbs": 1}],
  "outputs": [{"name": "zl", "limbs": 1}, {"name": "zu", "limbs": 1}],
  "requires": ["ball(c, r)"],
  "ensures": [{"kind": "interval_of_ball", "lower": "zl", "upper": "zu", "set": "x", "balls": {"x": {"center": "c", "radius": "r"}}, "tight": {"kind": "rounded"}}],
- "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 2, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}},
 {"name": "interval_split_1", "domain": "extended", "ieee_only": true,
  "inputs": [{"name": "xl", "limbs": 1}, {"name": "xu", "limbs": 1}],
  "outputs": [{"name": "al", "limbs": 1}, {"name": "au", "limbs": 1}, {"name": "bl", "limbs": 1}, {"name": "bu", "limbs": 1}],
  "requires": ["interval(xl, xu)"],
  "ensures": [{"kind": "splits", "parts": [{"lower": "al", "upper": "au"}, {"lower": "bl", "upper": "bu"}], "from": {"lower": "xl", "upper": "xu"}}],
- "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 2, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}},
 {"name": "interval_make_2", "domain": "extended", "ieee_only": true,
  "inputs": [{"name": "lo", "limbs": 2}, {"name": "hi", "limbs": 2}],
  "outputs": [{"name": "zl", "limbs": 2}, {"name": "zu", "limbs": 2}],
  "requires": ["canonical(lo)", "canonical(hi)"],
  "ensures": [{"kind": "makes_interval", "lower": "zl", "upper": "zu", "from": {"lower": "lo", "upper": "hi"}}],
- "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 1, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}},
 {"name": "mul_ext_2_2", "domain": "extended", "ieee_only": true,
  "inputs": [{"name": "x", "limbs": 2}, {"name": "y", "limbs": 2}],
  "outputs": [{"name": "l", "limbs": 2}, {"name": "h", "limbs": 2}],
  "value": "x*y", "requires": ["canonical(x)", "canonical(y)", "not_nan(x)", "not_nan(y)"],
  "ensures": [{"kind": "normalized", "of": "l"}, {"kind": "normalized", "of": "h"}, {"kind": "outward", "of": "l", "side": "below", "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)", "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)", "zero_factor": true}, {"kind": "outward", "of": "h", "side": "above", "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)", "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)", "zero_factor": true}],
- "min_precision": 4, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 4, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}}
 ```
 

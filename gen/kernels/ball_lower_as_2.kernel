@@ -18,9 +18,10 @@ ensures:       error l A c=5 k=1 t=3
 min_precision: 2
 source:        the center rounded down, minus the radius, rounded down (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallConvert.v ball_lower_as_2_correct
 entry:         yes
 ieee_only:     yes
 cone_exempt:   l is selected after the test of the radius that tells the empty ball; set_bound states what comes out for each state of the ball

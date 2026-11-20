@@ -475,3 +475,218 @@ intros B t W xs. destruct W as [|w].
   rewrite (forallb_perm B t _ _ (deal_perm B (S w) (firstn k xs) (Nat.lt_0_succ w))).
   rewrite <- forallb_app, firstn_skipn. reflexivity.
 Qed.
+
+(** * A combination that is associative and commutative *)
+
+(* A fold of maxima: the step combines the state with something made of the element
+   alone, s <- combine s (g x), and the combination is associative and commutative. Then
+   the order in which the elements are combined does not matter, and the lane order
+   returns the state of the sequential order, for every number of lanes and every list.
+
+   The hypotheses, and why each is there.
+   - The laws are asked on a set P of states only, which holds the zero state and is
+     closed under the combination. In a model where the combination is associative and
+     commutative on every state, P is everything (a maximum of real numbers). In a model
+     where it is not (a maximum computed by a comparison of floating-point numbers is
+     not commutative when an operand is a NaN, nor on the two zeros), P is the set the
+     states of the loop stay in.
+   - combine zero zero = zero: the W lanes all start from zero and the sequential order
+     starts from it once, so the two differ by W - 1 combinations with it; with no
+     element at all, the lane order returns the combination of W zero states. The zero
+     state need not be an identity of the combination on P.
+   - Of an element x: g x is in P, and on a state of P the step is the combination with
+     g x. The step is given on its own and has to agree with the combination on the
+     states of P only, so that g can be chosen. (A floating-point maximum that skips a
+     NaN element and records it in a mask is, on every state the loop can be in, the
+     combination with (|x|, true) for an x that is not a NaN and with (+0, false) for a
+     NaN; the pair it combines the state with in its listing, (NaN, false), is not in
+     P.)
+   fold_lanes_aci is the case in which the step is the combination after g, as written.
+
+   How. On P the combination of a list of states into a state s, fold_left combine l s,
+   does not depend on the order of the list (combine_all_perm), and a state combined
+   into the result is that state combined into the start (combine_all_shift). So the
+   combination of the states of the lanes, each the combination of its own elements
+   from zero, is the combination from zero of the lanes one after the other, each
+   preceded by zero (combine_lanes_concat); that list is a permutation of W zeros
+   followed by the elements dealt (concat_cons_perm, deal_perm); and the zeros combine
+   to zero. *)
+Section Order.
+Variables A B : Type.
+Variable P : A -> Prop.
+Variable step : A -> B -> A.
+Variable combine : A -> A -> A.
+Variable g : B -> A.
+Variable zero : A.
+
+Hypothesis P_zero : P zero.
+Hypothesis P_combine : forall a b : A, P a -> P b -> P (combine a b).
+Hypothesis combine_comm : forall a b : A, P a -> P b -> combine a b = combine b a.
+Hypothesis combine_assoc :
+  forall a b c : A, P a -> P b -> P c -> combine (combine a b) c = combine a (combine b c).
+Hypothesis zero_zero : combine zero zero = zero.
+
+(* What is asked of an element. *)
+Local Notation combined x := (P (g x) /\ forall s : A, P s -> step s x = combine s (g x)).
+
+Lemma combine_all_P :
+  forall (l : list A) (s : A), P s -> Forall P l -> P (fold_left combine l s).
+Proof.
+induction l as [|a l IH]; intros s Ps Hl; cbn [fold_left].
+- exact Ps.
+- apply IH.
+  + apply P_combine. exact Ps. exact (Forall_inv Hl).
+  + exact (Forall_inv_tail Hl).
+Qed.
+
+(* The combination of a list of states of P into a state of P does not depend on the
+   order of the list. *)
+Lemma combine_all_perm :
+  forall l l' : list A, Permutation l l' -> Forall P l ->
+  forall s : A, P s -> fold_left combine l s = fold_left combine l' s.
+Proof.
+intros l l' H.
+induction H as [|x l l' H IH|x y l|l l' l'' H1 IH1 H2 IH2]; intros Hl s Ps; cbn [fold_left].
+- reflexivity.
+- apply IH. exact (Forall_inv_tail Hl). apply P_combine. exact Ps. exact (Forall_inv Hl).
+- pose proof (Forall_inv Hl) as Py.
+  pose proof (Forall_inv (Forall_inv_tail Hl)) as Px.
+  rewrite (combine_assoc s y x Ps Py Px), (combine_comm y x Py Px).
+  rewrite <- (combine_assoc s x y Ps Px Py). reflexivity.
+- rewrite (IH1 Hl s Ps). apply IH2; [|exact Ps].
+  apply Forall_forall. intros z Hz. apply (proj1 (Forall_forall P l) Hl).
+  apply Permutation_in with (1 := Permutation_sym H1). exact Hz.
+Qed.
+
+(* A state combined into the result is that state combined into the start. *)
+Lemma combine_all_shift :
+  forall (l : list A) (s t : A), P s -> P t -> Forall P l ->
+  combine s (fold_left combine l t) = fold_left combine l (combine s t).
+Proof.
+induction l as [|a l IH]; intros s t Ps Pt Hl; cbn [fold_left].
+- reflexivity.
+- rewrite (IH s (combine t a) Ps (P_combine t a Pt (Forall_inv Hl)) (Forall_inv_tail Hl)).
+  rewrite (combine_assoc s t a Ps Pt (Forall_inv Hl)). reflexivity.
+Qed.
+
+Lemma combine_all_zeros :
+  forall k : nat, fold_left combine (repeat zero k) zero = zero.
+Proof.
+induction k as [|k IH]; cbn [repeat fold_left].
+- reflexivity.
+- rewrite zero_zero. exact IH.
+Qed.
+
+(* From a state of P the loop of the step is the combination of the images of the
+   elements, in their order. *)
+Lemma fold_left_combined :
+  forall (xs : list B) (s : A), P s -> Forall (fun x => combined x) xs ->
+  fold_left step xs s = fold_left combine (map g xs) s.
+Proof.
+induction xs as [|x r IH]; intros s Ps H; cbn [map fold_left].
+- reflexivity.
+- destruct (Forall_inv H) as [Pg Hs]. rewrite (Hs s Ps).
+  apply IH. now apply P_combine. exact (Forall_inv_tail H).
+Qed.
+
+Lemma combined_images :
+  forall xs : list B, Forall (fun x => combined x) xs -> Forall P (map g xs).
+Proof.
+intros xs H. apply Forall_map. revert H. apply Forall_impl. intros x Hx. apply Hx.
+Qed.
+
+(* The sequential order is the combination, from zero, of the images of the elements. *)
+Lemma fold_seq_combined :
+  forall xs : list B, Forall (fun x => combined x) xs ->
+  fold_seq step zero xs = fold_left combine (map g xs) zero.
+Proof. intros xs H. unfold fold_seq. now apply fold_left_combined. Qed.
+
+(* The states of lanes, each the combination of its list from zero, combined into t: the
+   combination into t of the lists one after the other, each preceded by zero. *)
+Lemma combine_lanes_concat :
+  forall (ls : list (list A)) (t : A), P t -> Forall (Forall P) ls ->
+  fold_left combine (map (fun l => fold_left combine l zero) ls) t =
+  fold_left combine (concat (map (cons zero) ls)) t.
+Proof.
+induction ls as [|l ls IH]; intros t Pt H; cbn [map concat fold_left].
+- reflexivity.
+- pose proof (Forall_inv H) as Hl.
+  rewrite (combine_all_shift l t zero Pt P_zero Hl).
+  rewrite fold_left_app. cbn [fold_left].
+  apply IH; [|exact (Forall_inv_tail H)].
+  apply combine_all_P; [|exact Hl]. now apply P_combine.
+Qed.
+
+(* The combination of the states of the lanes, from lane 0 upward, when every lane is the
+   combination from zero of a list of states of P: the combination from zero of all of
+   them, in any order. *)
+Lemma combine_lanes_all :
+  forall (ls : list (list A)) (l : list A), Forall (Forall P) ls ->
+  Permutation (concat ls) l ->
+  combine_lanes combine zero (map (fun l => fold_left combine l zero) ls) =
+  fold_left combine l zero.
+Proof.
+intros ls l H Hp.
+assert (E : combine_lanes combine zero (map (fun l => fold_left combine l zero) ls) =
+            fold_left combine (map (fun l => fold_left combine l zero) ls) zero).
+{ unfold combine_lanes. destruct ls as [|l0 ls']; cbn [map hd tl fold_left].
+  - reflexivity.
+  - rewrite (combine_all_shift l0 zero zero P_zero P_zero (Forall_inv H)), zero_zero.
+    reflexivity. }
+rewrite E, (combine_lanes_concat ls zero P_zero H).
+assert (Hz : Forall P (concat (map (cons zero) ls))).
+{ apply Forall_concat. apply Forall_map. revert H. apply Forall_impl.
+  intros l0 H0. now constructor. }
+rewrite (combine_all_perm _ _ (concat_cons_perm A zero ls) Hz zero P_zero).
+rewrite fold_left_app, combine_all_zeros.
+apply combine_all_perm. exact Hp. now apply Forall_concat. exact P_zero.
+Qed.
+
+(* The lane order is the sequential order, for every number of lanes. *)
+Theorem fold_lanes_aci_step :
+  forall (W : nat) (xs : list B), Forall (fun x => combined x) xs ->
+  fold_lanes step combine zero W xs = fold_seq step zero xs.
+Proof.
+intros W xs H. destruct W as [|w]. apply fold_lanes_0.
+unfold fold_lanes.
+set (b := (S w * (length xs / S w))%nat).
+assert (Hsplit : Forall (fun x => combined x) (firstn b xs) /\
+                 Forall (fun x => combined x) (skipn b xs)).
+{ apply Forall_app. now rewrite firstn_skipn. }
+destruct Hsplit as [Hpre Hrest].
+assert (E1 : map (fold_seq step zero) (deal (S w) (firstn b xs)) =
+             map (fun l => fold_left combine l zero) (deal (S w) (map g (firstn b xs)))).
+{ rewrite deal_map, map_map. apply map_ext_in. intros l Hl.
+  apply fold_seq_combined.
+  unfold deal in Hl. apply in_map_iff in Hl. destruct Hl as [j [Ej _]]. rewrite <- Ej.
+  now apply lane_Forall. }
+assert (Pls : Forall (Forall P) (deal (S w) (map g (firstn b xs)))).
+{ unfold deal. apply Forall_map. apply Forall_forall. intros j _.
+  apply lane_Forall. now apply combined_images. }
+rewrite E1.
+rewrite (combine_lanes_all _ (map g (firstn b xs)) Pls
+           (deal_perm A (S w) (map g (firstn b xs)) (Nat.lt_0_succ w))).
+rewrite (fold_left_combined (skipn b xs) _
+           (combine_all_P _ _ P_zero (combined_images _ Hpre)) Hrest).
+rewrite <- fold_left_app, <- map_app, firstn_skipn.
+symmetry. now apply fold_seq_combined.
+Qed.
+
+End Order.
+
+(* The case in which the step is the combination after a function of the element. *)
+Lemma fold_lanes_aci :
+  forall (A B : Type) (P : A -> Prop) (combine : A -> A -> A) (g : B -> A) (zero : A),
+  P zero ->
+  (forall a b : A, P a -> P b -> P (combine a b)) ->
+  (forall a b : A, P a -> P b -> combine a b = combine b a) ->
+  (forall a b c : A, P a -> P b -> P c -> combine (combine a b) c = combine a (combine b c)) ->
+  combine zero zero = zero ->
+  forall (W : nat) (xs : list B), Forall (fun x => P (g x)) xs ->
+  fold_lanes (fun s x => combine s (g x)) combine zero W xs =
+  fold_seq (fun s x => combine s (g x)) zero xs.
+Proof.
+intros A B P combine g zero Pz Pc Hc Ha Hz W xs H.
+apply (fold_lanes_aci_step A B P (fun s x => combine s (g x)) combine g zero Pz Pc Hc Ha Hz).
+revert H. apply Forall_impl. intros x Px. split. exact Px. reflexivity.
+Qed.

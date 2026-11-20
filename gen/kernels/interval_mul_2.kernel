@@ -22,9 +22,10 @@ ensures:       encloses_interval zl zu x*y x=xl,xu y=yl,yu tight=outward;rel=(2*
 min_precision: 4
 source:        the least and the greatest of the four products of bounds by mul_ext_2_2 (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalMul2.v interval_mul_2_correct
 entry:         yes
 ordinary_inline: the largest listing of the milestone, some four hundred operations after inlining: an ordinary inline function, which the compiler may call rather than inline into every caller (milestone2.md, "Inlining and compile time", question 13)
 cone_exempt:   the bounds are selected among the values of mul_ext_2_2, and the empty set after an explicit test

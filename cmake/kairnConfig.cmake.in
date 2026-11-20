@@ -6,10 +6,12 @@ include("${CMAKE_CURRENT_LIST_DIR}/kairnTargets.cmake")
 if(CMAKE_CXX_COMPILER_LOADED)
   include("${CMAKE_CURRENT_LIST_DIR}/kairn_fma.cmake")
   set_and_check(_kairn_include_dir "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+  # Found by another project, Kairn is never the top-level project: its notice about the option of
+  # kairn::fma is at the VERBOSE log level, and none at all with find_package(kairn QUIET).
   if(kairn_FIND_QUIETLY)
     kairn_define_fma_target("${_kairn_include_dir}" QUIET)
   else()
-    kairn_define_fma_target("${_kairn_include_dir}")
+    kairn_define_fma_target("${_kairn_include_dir}" VERBOSE)
   endif()
 endif()
 check_required_components(kairn)
