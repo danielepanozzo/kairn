@@ -53,6 +53,15 @@ also when the run did not see what that layer is about:
   non-finite operands (and, for a comparison, both outcomes on them; for an upper bound, both a
   NaN and an infinity from them).
 
+For the folds' stage of Milestone 2 (oracle/README.md, "The kinds of the folds' stage", "Folds";
+docs/developer/testing.md, "What a pass requires"): the bound kernels must have seen their mask
+true and false on both sides of the limit of m*unit(K), a count that is not an integer, g close to
+its stated value, and in binary64 and binary32 no false mask at or below 1/5 (count_problems);
+the finishes every class of their state; a fold (--orders, --max-length: the stream asked for)
+every length class and order asked for, both outcomes of its flag and no false one far from
+overflow, heavy cancellation, for a dot product the term tau mattering, and an error of at least
+1/2 (one limb) or 1/16 (two limbs) of the bound (fold_problems).
+
 The claims are those the oracle judged against, the file its summary names (or --claims).
 
 rational_1 and rational_2, kairn::rational<X>(num, den), have no claims: the oracle computes their
@@ -95,7 +104,12 @@ EXTENDED_COUNTS = {
     "predicate": ("a non-finite operand, true", "a non-finite operand, false"),
     "rounded": ("a non-finite operand",),
     "upper": ("value NaN (a NaN operand, or 0 * inf)", "output +inf on a non-finite operand"),
+    "finite_or_nan": ("value: finite leading limb, every limb finite", "value: leading limb infinite",
+                      "value: leading limb NaN"),
 }
+# For a finite_or_nan entry of a state of several limbs: a finite leading limb with a lower limb
+# that is not finite, which the finish passes on as it is.
+FINITE_OR_NAN_TAIL = "value: finite leading limb, a lower limb not finite"
 # Where finite_when is not empty: the cases where every condition holds, so that F3 or B4 was
 # put to the test.
 FINITE_WHEN_COUNTS = {
@@ -129,11 +143,49 @@ BOUND_COUNTS = ("at the directed rounding", "value not a number of the format")
 BOUND_ONE = "one step beyond the directed rounding"
 EXACT_HOLDS = "exact_when holds"
 EXACT_FAILS = "exact_when fails: "
-# The strata of the families of Milestone 2 beyond the common ones (oracle/kairn_oracle/gen4.py).
+# The strata of the families of Milestone 2 beyond the common ones (oracle/kairn_oracle/gen4.py,
+# and gen5.py for the kernels of the folds' stage).
 M2_STRATA = {"neighbor": ("special", "binade", "subnormal"),
              "dirsum": ("apart", "cancel", "exact", "close", "beyond", "omega"),
              "dirprod": ("aroundp", "tiny", "exactprod", "beyond"),
-             "ballpow2": ("atnormal", "sides", "into", "outof")}
+             "ballpow2": ("atnormal", "sides", "into", "outof"),
+             "count": ("integer", "fraction", "limit", "beyond"),
+             "dotstep": ("cancel", "state", "zerostate", "tie", "exactprod"),
+             "finish": ("nonfinite", "tails")}
+
+# The kernels of the bounds (every entry under a mask, a count m): the classes of m * unit(K)
+# that the run must have seen (oracle/README.md, "The kinds of the folds' stage"), with the mask
+# MASK, and those it must not have seen in binary64 and binary32, where milestone2.md says that
+# ok is true for every m with m eps <= 0.24.
+COUNT_NEEDS = ("%s true, m*unit(%s) = 0", "%s true, 0 < m*unit(%s) <= 1/5",
+               "%s true, 1/5 < m*unit(%s) <= 1/4", "%s false, 1/4 < m*unit(%s) <= 1/2")
+COUNT_BEYOND = ("%s false, 1/2 < m*unit(%s) < 1", "%s false, m*unit(%s) >= 1")
+COUNT_NEVER = ("%s false, m*unit(%s) = 0", "%s false, 0 < m*unit(%s) <= 1/5")
+COUNT_FINE_PRECISION = 8
+HARDWARE = ("binary64", "binary32")
+# How close the first bound of a bound kernel (g) must come to its stated value somewhere: the
+# interpreter's g exceeds it by 1.8 to 3.9 gaps of g at least, in binary64, binary32 and
+# fp:11:-30:10; a g twice too large would be 2^p gaps away.
+CLOSE = "excess over a positive stated value, in gaps of the output"
+CLOSE_GAPS = 8
+
+# The folds (architecture.md, "Folds"; oracle/README.md, "Folds"): the strata of the oracle's
+# generator (genfold.py), tail only for arrays of two limbs; its default orders; the classes of
+# lengths every run asks for; the counts each entry must have seen.
+FOLD_STRATA = ("one", "wide", "sign", "cancel", "zeros", "underflow", "overflow", "nonfinite",
+               "tight", "pow2")
+FOLD_DEFAULT_ORDERS = "seq,seq,lanes:0,lanes:1,lanes:2,lanes:3,lanes:4,lanes:5,lanes:8,lanes:big"
+FOLD_DEFAULT_MAX_LENGTH = 256
+FOLD_LENGTHS = (0, 1, 2, 3, 4, 5, 7, 8, 9, 16, 17)
+FOLD_FLAGS = ("flag true", "flag false: a non-finite element",
+              "flag false: finite elements, near overflow")
+FOLD_FAR = "flag false: finite elements far from overflow"
+FOLD_CANCEL = "heavy cancellation: |sum| <= u * sum of magnitudes"
+FOLD_TAU = ("absolute term larger than the relative term", "error above the relative term alone")
+# The largest error over its bound that a run must reach: the interpreter reaches 0.83 to 1 of
+# the bound with one limb and 0.16 to 1 with two (oracle/README.md, "Folds"), so a bound
+# a thousand times too loose cannot pass.
+FOLD_FRACTION = {1: (1, 2), 2: (1, 16)}
 
 
 def two_operands(kernel):
@@ -156,6 +208,14 @@ def m2_family(kernel):
     def plain(n):
         return (limbs.get(n) == 1 and "nonneg(%s)" % n not in req
                 and "power_of_two(%s)" % n not in req)
+    # The folds' stage (gen5.family_of): a count(), a finite_or_nan entry, a value s+x*y.
+    if any(r.startswith("count(") for r in req):
+        return "count"
+    if "finite_or_nan" in kinds:
+        return "finish"
+    if re.fullmatch(r"\s*([A-Za-z_]\w*)\s*\+\s*([A-Za-z_]\w*)\s*\*\s*([A-Za-z_]\w*)\s*",
+                    kernel.get("value") or ""):
+        return "dotstep"
     two = two_operands(kernel)
     two = two if two and plain(two[0]) and plain(two[2]) else None
     if "neighbor" in kinds:
@@ -246,20 +306,202 @@ def extended_strata(kernel):
     return strata
 
 
-def kernel_claims(summary, a):
-    """The kernel's entry in the claims the oracle judged against, or a reason why not."""
+def kernel_claims(summary, a, folds=False):
+    """The kernel's entry in the claims the oracle judged against, or a reason why not; with
+    folds=True, the fold's entry (the list "folds"), or None and no reason when there is none."""
     path = getattr(a, "claims", None) or summary.get("claims")
     if not path:
         return None, "the oracle's summary names no claims file, and --claims is not given"
     try:
         with open(path, encoding="utf-8") as f:
-            kernels = json.load(f)["kernels"]
+            data = json.load(f)
+        kernels = data["kernels"] if not folds else data.get("folds", [])
     except (OSError, ValueError, KeyError, TypeError) as ex:
         return None, "cannot read the claims %s: %s" % (path, ex)
     for k in kernels:
         if k.get("name") == a.kernel:
             return k, None
+    if folds:
+        return None, None
     return None, "the claims %s have no kernel %s" % (path, a.kernel)
+
+
+def count_problems(kernel, keys, a):
+    """The guards of the bound kernels (every entry under a mask, a count m): each entry's mask
+    seen true at m * unit(K) = 0, at or below 1/5 and between 1/5 and 1/4, and false between 1/4
+    and 1/2 and beyond 1/2; m not an integer; in binary64 and binary32 never false at or below
+    1/5; and the first upper entry (g) within CLOSE_GAPS gaps of its stated value somewhere."""
+    if not any(r.replace(" ", "").startswith("count(") for r in kernel.get("requires", [])):
+        return
+    ens = kernel.get("ensures", [])
+    units = set()
+    for e in ens:
+        for t in [e.get("value") or ""] + list(e.get("args") or []):
+            units |= set(re.findall(r"unit\(\s*(\w+)\s*\)", str(t)))
+    if len(units) != 1:
+        return
+    kn = units.pop()
+    first_upper = next((j for j, e in enumerate(ens) if e.get("kind") == "upper"), None)
+    p = next((k["stats"].get("p") for k in keys if k["stats"].get("p")), None)
+    for j, e in enumerate(ens):
+        mask = e.get("if")
+        if not mask:
+            continue
+        counts, minima = {}, {}
+        for k in keys:
+            entries = k["stats"]["entries"]
+            if j >= len(entries):
+                return
+            for name, n in entries[j].get("counts", {}).items():
+                counts[name] = counts.get(name, 0) + n
+            for name, (r, _line) in entries[j].get("minima", {}).items():
+                v = (int(r[0]), int(r[1]))
+                if name not in minima or v[0] * minima[name][1] < minima[name][0] * v[1]:
+                    minima[name] = v
+        label = entries[j]["label"]
+        # The classes around the limit need counts placed finely and constants rounded up by
+        # little: at a precision of 8 or more (binary64, binary32 and the full tier's
+        # fp:12:-30:12). At a lower precision the format may have no count in a class (at p = 1,
+        # unit(mul_1_1) = 1/3 and 1 * 1/3 is already beyond 1/4): there, the mask both ways.
+        fine = p is None or p >= COUNT_FINE_PRECISION
+        needs = COUNT_NEEDS if fine else ("%s true, m*unit(%s) = 0",)
+        for t in needs:
+            name = t % (mask, kn)
+            if not counts.get(name):
+                yield 'the claim "%s" saw no case "%s"' % (label, name)
+        if not any(counts.get(t % (mask, kn)) for t in COUNT_BEYOND):
+            yield ('the claim "%s" saw no count beyond m*unit(%s) = 1/2 with %s false, where the '
+                   'statement cannot hold' % (label, kn, mask))
+        if (p is None or p >= 2) and not counts.get("m not an integer"):
+            yield 'the claim "%s" saw no count that is not an integer, which count() allows' % label
+        if a.format in HARDWARE:
+            for t in COUNT_NEVER:
+                name = t % (mask, kn)
+                if counts.get(name):
+                    yield ('the claim "%s" saw %d cases "%s": in %s, milestone2.md says, %s is true '
+                           'for every m with m*eps <= 0.24' % (label, counts[name], name, a.format,
+                                                               mask))
+        if j == first_upper:
+            r = minima.get(CLOSE)
+            if r is None or r[0] > CLOSE_GAPS * r[1]:
+                yield ('the claim "%s" never came within %d gaps of its stated value (smallest '
+                       'excess: %s), so a bound far too large would pass'
+                       % (label, CLOSE_GAPS, "none" if r is None else "%s/%s" % r))
+
+
+def fold_problems(fold, summary, a, desc, ranges):
+    """The guards of a fold (oracle/README.md, "Folds"; docs/developer/testing.md, "What a pass
+    requires")."""
+    two = max(x.get("limbs", 1) for x in fold.get("arrays", [{}])) >= 2
+    maxlen = getattr(a, "max_length", None)
+    maxlen = int(maxlen) if maxlen is not None else None
+    if a.exhaustive:
+        total = int(desc.get("total", -1))
+        if ranges != [[0, total]]:
+            yield "the enumeration of %d cases was not covered (indices seen: %s)" % (total, ranges)
+        if maxlen is None or desc.get("maxlen") != str(maxlen):
+            yield ("the enumeration is of arrays up to length %s, not %s"
+                   % (desc.get("maxlen"), maxlen))
+        strata = ["exhaustive"]
+        lengths = list(range((maxlen or 0) + 1))
+        orders = ["seq"] + ["lanes:%d" % W for W in range(2, (maxlen or 0) + 1)]
+    else:
+        if desc.get("seed") != a.seed or ranges != [[0, a.count]]:
+            yield ("the stream is indices %s of seed %s, not cases 0 to %d of seed %s"
+                   % (ranges, desc.get("seed"), a.count, a.seed))
+        want_orders = getattr(a, "orders", None) or FOLD_DEFAULT_ORDERS
+        if desc.get("orders") != want_orders:
+            yield "the stream's orders are %s, not %s" % (desc.get("orders"), want_orders)
+        want_max = maxlen if maxlen is not None else FOLD_DEFAULT_MAX_LENGTH
+        if desc.get("maxlen") != str(want_max):
+            yield "the stream's largest length is %s, not %s" % (desc.get("maxlen"), want_max)
+        strata = [s for s in desc.get("strata", "").split(",") if s]
+        for s in FOLD_STRATA + (("tail",) if two else ()):
+            if s not in strata:
+                yield ("the oracle's generator lists the strata %s, without %s, which it writes "
+                       "for %s" % (",".join(strata), s, a.kernel))
+        lengths = [n for n in FOLD_LENGTHS if n <= want_max]
+        orders = sorted(set(want_orders.split(",")))
+    keys = [k for k in summary.get("keys", []) if (k["kernel"], k["format"]) == (a.kernel, a.format)]
+    if len(keys) != len(summary.get("keys", [])):
+        yield "the summary has lines of other kernels or formats"
+    tags = {k["tag"] for k in keys}
+    for s in strata:
+        if s not in tags:
+            yield "no case of stratum %s, although the oracle's generator lists it" % s
+    for t in sorted(tags - set(strata)):
+        yield "lines tagged %s, which the generator's header does not list" % t
+    if not sum(k["stats"]["counts"]["judged"] for k in keys):
+        yield "the oracle passed it, but judged no case, so nothing was checked"
+        return
+    ens = fold.get("ensures", [])
+    entries = keys[0]["stats"]["entries"]
+    if len(entries) != len(ens) or any(e["kind"] != f.get("kind") for e, f in zip(entries, ens)):
+        yield ("the summary's entries (%s) are not those of the claims of %s"
+               % (", ".join(e["kind"] for e in entries), a.kernel))
+        return
+    merged = []
+    best = [None] * len(ens)
+    for j in range(len(ens)):
+        counts = {}
+        applicable = 0
+        for k in keys:
+            e = k["stats"]["entries"][j]
+            applicable += e["applicable"]
+            for name, n in e.get("counts", {}).items():
+                counts[name] = counts.get(name, 0) + n
+            r = e.get("max_ratio")
+            if r is not None:
+                v = (int(r[0]), int(r[1]))
+                if best[j] is None or v[0] * best[j][1] > best[j][0] * v[1]:
+                    best[j] = v
+        merged.append(counts)
+        if not applicable:
+            yield 'the claim "%s" applied to no judged case, so it was not checked' % entries[j]["label"]
+    for j, f in enumerate(ens):
+        label, counts = entries[j]["label"], merged[j]
+        kind = f.get("kind")
+        if kind == "finite_or_nan":
+            for name in FOLD_FLAGS:
+                if not counts.get(name):
+                    yield 'the claim "%s" saw no case "%s"' % (label, name)
+            if counts.get(FOLD_FAR):
+                yield ('the claim "%s" saw %d false flags from finite elements far from overflow'
+                       % (label, counts[FOLD_FAR]))
+        if kind != "fold_error":
+            continue
+        for n in lengths:
+            if not counts.get("length %d" % n):
+                yield 'the claim "%s" saw no judged array of length %d' % (label, n)
+        if not a.exhaustive and want_max >= 18 and not any(
+                counts.get(c) for c in counts if c.startswith("length ") and " to " in c
+                or c.startswith("length above")):
+            yield 'the claim "%s" saw no judged array of a random length above 17' % label
+        for o in orders:
+            if o == "seq":
+                name = "order: sequential"
+            elif o == "lanes:big":
+                name = "order: lanes, more lanes than elements (W > n >= 1)"
+            else:
+                W = int(o[6:])
+                name = ("order: lanes, W = %d" % W if W <= 8 else
+                        "order: lanes, W = 9 to 64" if W <= 64 else "order: lanes, W above 64")
+            if not counts.get(name):
+                yield 'the claim "%s" saw no judged case of "%s"' % (label, name)
+        if (not a.exhaustive or (maxlen or 0) >= 2) and not counts.get(FOLD_CANCEL):
+            # (An enumeration of arrays of one element cannot cancel.)
+            yield 'the claim "%s" saw no judged case of "%s"' % (label, FOLD_CANCEL)
+        tau = "*" in (fold.get("value") or "")
+        if tau:
+            for name in FOLD_TAU:
+                if not counts.get(name):
+                    yield 'the claim "%s" saw no judged case of "%s"' % (label, name)
+        num, den = FOLD_FRACTION[2 if two else 1]
+        r = best[j]
+        if r is None or r[1] == 0 or r[0] * den < num * r[1]:
+            yield ('the claim "%s" came to at most %s of its bound, below %d/%d: a bound far too '
+                   'loose would pass' % (label, "nothing" if r is None else
+                                         "%.3g" % (r[0] / r[1]) if r[1] else "inf", num, den))
 
 
 def problems(summary, a):
@@ -276,6 +518,16 @@ def problems(summary, a):
         return
     if a.kernel in RATIONAL:
         yield from rational_problems(summary, a, desc, ranges)
+        return
+    fold, why = kernel_claims(summary, a, folds=True)
+    if why:
+        yield why
+        return
+    if fold is not None:
+        yield from fold_problems(fold, summary, a, desc, ranges)
+        return
+    if getattr(a, "orders", None) or getattr(a, "max_length", None) is not None:
+        yield "--orders and --max-length are for folds; %s is not one" % a.kernel
         return
     kernel, why = kernel_claims(summary, a)
     if kernel is None:
@@ -362,6 +614,7 @@ def problems(summary, a):
                 yield ('the claim "%s" never differed from the rounding to nearest, so the '
                        'direction was not checked' % label)
     yield from m2_problems(kernel, entries, merged, extended)
+    yield from count_problems(kernel, keys, a)
     if not extended:
         return
 
@@ -376,7 +629,12 @@ def problems(summary, a):
         return
     for j, e in enumerate(own):
         label, counts = entries[j]["label"], merged[j]
-        for name in EXTENDED_COUNTS.get(e.get("kind"), ()):
+        need = list(EXTENDED_COUNTS.get(e.get("kind"), ()))
+        if e.get("kind") == "finite_or_nan":
+            ins = {i.get("name"): i.get("limbs", 1) for i in kernel.get("inputs", [])}
+            if ins.get((kernel.get("value") or "").strip(), 1) > 1:
+                need.append(FINITE_OR_NAN_TAIL)
+        for name in need:
             if not counts.get(name):
                 yield ('the claim "%s" saw no case of "%s", so the extended domain was not '
                        'checked there' % (label, name))
@@ -477,6 +735,24 @@ def describe(summary, a):
         return text + "; " + ", ".join("%s %d" % (name, counts.get(name, 0)) for name in (
             "exact", "inexact", "den = 0", "first rounding a tie", "second rounding a tie",
             "naive pair not normalized", "second limb subnormal"))
+    fold, _ = kernel_claims(summary, a, folds=True)
+    if fold is not None:
+        out = []
+        for j, f in enumerate(fold.get("ensures", [])):
+            counts = rational_counts(summary["keys"], j)
+            if f.get("kind") == "fold_error":
+                best = None
+                for k in summary["keys"]:
+                    r = k["stats"]["entries"][j].get("max_ratio")
+                    if r is not None and int(r[1]):
+                        v = int(r[0]) / int(r[1])
+                        best = v if best is None or v > best else best
+                out.append("largest error/allowed %s" % ("-" if best is None else "%.4g" % best))
+                out += ["%s %d" % (n, counts.get(n, 0)) for n in (FOLD_CANCEL,) + FOLD_TAU
+                        if counts.get(n)]
+            elif f.get("kind") == "finite_or_nan":
+                out += ["%s %d" % (n, counts.get(n, 0)) for n in FOLD_FLAGS + (FOLD_FAR,)]
+        return text + "; fold: " + ", ".join(out)
     kernel, _ = kernel_claims(summary, a)
     if kernel:
         # The classes of the kinds of Milestone 2 that the guards asked for, with their counts.
@@ -516,6 +792,8 @@ def parser():
     p.add_argument("--count", type=int)
     p.add_argument("--seed")
     p.add_argument("--claims", help="the claims file (default: the one the summary names)")
+    p.add_argument("--orders", help="a fold: the orders asked of the generator (gen --orders)")
+    p.add_argument("--max-length", help="a fold: the largest length asked (gen --max-length)")
     return p
 
 

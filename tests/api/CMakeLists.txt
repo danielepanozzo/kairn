@@ -133,9 +133,10 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
     if(_kernel IN_LIST _api_internal OR _kernel IN_LIST _api_not_public)
       continue()
     endif()
-    # The kernels the oracle does not judge yet (KAIRN_NOT_YET_CROSS_CHECKED, ../CMakeLists.txt):
-    # no public operation calls them either.
-    if(_kernel IN_LIST KAIRN_NOT_YET_CROSS_CHECKED)
+    # The kernels the oracle does not judge yet (KAIRN_NOT_YET_CROSS_CHECKED, ../CMakeLists.txt),
+    # and those that no public operation calls yet and the runner does not list
+    # (KAIRN_NOT_PUBLIC_YET, there: the folds' stage of Milestone 2): no form to judge.
+    if(_kernel IN_LIST KAIRN_NOT_YET_CROSS_CHECKED OR _kernel IN_LIST KAIRN_NOT_PUBLIC_YET)
       continue()
     endif()
     list(APPEND _api_mapped ${_kernel})
@@ -153,10 +154,11 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   set(_api_oracle_kernels ${_api_mapped} PARENT_SCOPE)
   set(_api_oracle_common ${_api_common} PARENT_SCOPE)
   set(_api_flags_common --seed "${KAIRN_API_SEED}" ${_flags_runners} PARENT_SCOPE)
+  set(_api_unlisted ${KAIRN_NOT_YET_CROSS_CHECKED} ${KAIRN_NOT_PUBLIC_YET})
   add_test(NAME api.oracle.coverage
     COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>" "-DCLAIMS=${_api_claims}"
       "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"
-      "-DNOT_PUBLIC=${_api_not_public}" "-DNOT_CHECKED=${KAIRN_NOT_YET_CROSS_CHECKED}"
+      "-DNOT_PUBLIC=${_api_not_public}" "-DNOT_CHECKED=${_api_unlisted}"
       -P "${CMAKE_CURRENT_SOURCE_DIR}/coverage.cmake")
   set_tests_properties(api.oracle.coverage PROPERTIES LABELS "api;oracle")
   list(LENGTH _api_mapped _n)

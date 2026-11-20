@@ -603,6 +603,164 @@ class Milestone2Guards(unittest.TestCase):
                    reason="without aroundp, which its family dirprod has")
 
 
+def edited(summary, j, f):
+    """A copy of a summary whose entry j of every key is changed by f(entry)."""
+    s = copy.deepcopy(summary)
+    for k in s["keys"]:
+        f(k["stats"]["entries"][j])
+    return s
+
+
+class FoldGuards(unittest.TestCase):
+    """The folds' stage of Milestone 2: the folds (lengths, orders, flags, cancellation, the
+    fraction of the bound reached, the term tau), the bound kernels (the classes of m*unit(K)
+    against the limit, g close to its stated value), the finishes and the steps."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.args = ("--seed", "0", "--count", "300", "--max-length", "64")
+        cls.dot = pipeline("dot_2", "fp:5:-12:5", *cls.args)
+        cls.sum = pipeline("sum_1", "fp:4:-6:1", *cls.args)
+        cls.bound = pipeline("bound_dot_2", "binary64", "--seed", "0", "--count", "400")
+
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def test_good_runs_pass(self):
+        out = self.passes(self.dot, "dot_2", "fp:5:-12:5", *self.args)
+        self.assertIn("fold: largest error/allowed", out)
+        self.passes(self.sum, "sum_1", "fp:4:-6:1", *self.args)
+        self.passes(self.bound, "bound_dot_2", "binary64", "--seed", "0", "--count", "400")
+        s = pipeline("sum_2", "fp:3:-3:0", "--exhaustive", "--max-length", "2")
+        self.passes(s, "sum_2", "fp:3:-3:0", "--exhaustive", "--max-length", "2")
+        s = pipeline("fold_finish_2", "fp:3:-3:0", "--exhaustive")
+        self.passes(s, "fold_finish_2", "fp:3:-3:0", "--exhaustive")
+
+    def test_another_stream(self):
+        self.fails(self.sum, "sum_1", "fp:4:-6:1", "--seed", "0", "--count", "300",
+                   "--max-length", "65", reason="largest length is 64, not 65")
+        self.fails(self.sum, "sum_1", "fp:4:-6:1", *self.args, "--orders", "seq",
+                   reason="orders are seq,seq,lanes:0")
+        self.fails(self.sum, "sum_1", "fp:4:-6:1", "--seed", "0", "--count", "300",
+                   reason="largest length is 64, not 256")
+        self.fails(self.sum, "sum_1", "fp:4:-6:1", "--exhaustive", "--max-length", "64",
+                   reason="mode random")
+
+    def test_a_length_or_an_order_missing(self):
+        for name in ("length 0", "length 9", "length 17"):
+            s = edited(self.sum, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "sum_1", "fp:4:-6:1", *self.args,
+                       reason="saw no judged array of length %s" % name.split()[1])
+        s = edited(self.sum, 0, lambda e: [e["counts"].pop(c) for c in list(e["counts"])
+                                           if c.startswith("length ") and " to " in c])
+        self.fails(s, "sum_1", "fp:4:-6:1", *self.args, reason="random length above 17")
+        for name in ("order: sequential", "order: lanes, W = 4",
+                     "order: lanes, more lanes than elements (W > n >= 1)"):
+            s = edited(self.sum, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "sum_1", "fp:4:-6:1", *self.args, reason='no judged case of "%s"' % name)
+        # A run of the lane order of a packed register only asks for that order.
+        s = pipeline("sum_1", "fp:4:-6:1", *self.args, "--orders", "lanes:4")
+        self.passes(s, "sum_1", "fp:4:-6:1", *self.args, "--orders", "lanes:4")
+
+    def test_a_flag_outcome_missing(self):
+        s = pipeline("sum_1", "fp:4:-6:1", *self.args, "--strata",
+                     "one,wide,sign,cancel,zeros,underflow,tight,pow2")
+        self.fails(s, "sum_1", "fp:4:-6:1", *self.args,
+                   reason='saw no case "flag false: a non-finite element"')
+        self.fails(s, "sum_1", "fp:4:-6:1", *self.args,
+                   reason='saw no case "flag false: finite elements, near overflow"')
+        self.fails(s, "sum_1", "fp:4:-6:1", *self.args, reason="without overflow")
+        far = edited(self.sum, 1, lambda e: e["counts"].update(
+            {"flag false: finite elements far from overflow": 1}))
+        self.fails(far, "sum_1", "fp:4:-6:1", *self.args,
+                   reason="false flags from finite elements far from overflow")
+
+    def test_no_cancellation_or_a_bound_far_from_reached(self):
+        s = edited(self.sum, 0, lambda e: e["counts"].pop(
+            "heavy cancellation: |sum| <= u * sum of magnitudes", None))
+        self.fails(s, "sum_1", "fp:4:-6:1", *self.args, reason='no judged case of "heavy cancellation')
+        # A bound a thousand times too loose: the largest ratio a thousand times smaller.
+        s = edited(self.dot, 1, lambda e: e.update(max_ratio=[e["max_ratio"][0], str(
+            1000 * int(e["max_ratio"][1]))]))
+        self.fails(s, "dot_2", "fp:5:-12:5", *self.args, reason="below 1/16: a bound far too loose")
+        s = edited(self.sum, 0, lambda e: e.update(max_ratio=["1", "3"]))
+        self.fails(s, "sum_1", "fp:4:-6:1", *self.args, reason="below 1/2")
+
+    def test_an_enumeration_where_every_sum_is_exact(self):
+        # Four binades: every sum of two pairs is a pair, so the run puts nothing of the bound to
+        # the test.
+        args = ("--exhaustive", "--max-length", "2")
+        s = pipeline("sum_2", "fp:3:-2:-1", *args)
+        self.fails(s, "sum_2", "fp:3:-2:-1", *args, reason="came to at most 0 of its bound")
+
+    def test_a_dot_product_whose_tau_never_matters(self):
+        for name in ("error above the relative term alone",
+                     "absolute term larger than the relative term"):
+            s = edited(self.dot, 1, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "dot_2", "fp:5:-12:5", *self.args, reason='no judged case of "%s"' % name)
+
+    def test_bounds_on_one_side_of_the_limit(self):
+        args = ("--seed", "0", "--count", "400")
+        s = pipeline("bound_dot_2", "binary64", *args, "--strata", "uniform,underflow,overflow,zero,"
+                     "pow2,extreme,integer,fraction")
+        self.fails(s, "bound_dot_2", "binary64", *args, reason="without limit")
+        for name in ("ok true, 1/5 < m*unit(mul_2_2) <= 1/4", "ok false, 1/4 < m*unit(mul_2_2) <= 1/2",
+                     "ok true, m*unit(mul_2_2) = 0"):
+            s = edited(self.bound, 1, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "bound_dot_2", "binary64", *args, reason='saw no case "%s"' % name)
+        s = edited(self.bound, 1, lambda e: [e["counts"].pop(c, None) for c in (
+            "ok false, 1/2 < m*unit(mul_2_2) < 1", "ok false, m*unit(mul_2_2) >= 1")])
+        self.fails(s, "bound_dot_2", "binary64", *args, reason="no count beyond")
+        s = edited(self.bound, 1, lambda e: e["counts"].update(
+            {"ok false, 0 < m*unit(mul_2_2) <= 1/5": 3}))
+        self.fails(s, "bound_dot_2", "binary64", *args, reason="is true for every m with")
+        s = edited(self.bound, 1, lambda e: e["counts"].pop("m not an integer", None))
+        self.fails(s, "bound_dot_2", "binary64", *args, reason="not an integer")
+        # g never close to its stated value: a g twice as large would be.
+        s = edited(self.bound, 1, lambda e: e["minima"].update(
+            {"excess over a positive stated value, in gaps of the output": [["9", "1"], ""]}))
+        self.fails(s, "bound_dot_2", "binary64", *args, reason="never came within 8 gaps")
+
+    def test_a_finish_without_a_state(self):
+        good = pipeline("fold_finish_2", "fp:3:-3:0", "--exhaustive")
+        for name in ("value: leading limb NaN", "value: finite leading limb, a lower limb not finite"):
+            s = edited(good, 0, lambda e: e["counts"].pop(name, None))
+            self.fails(s, "fold_finish_2", "fp:3:-3:0", "--exhaustive",
+                       reason='saw no case of "%s"' % name)
+
+    def test_strata_of_the_families_not_promised(self):
+        args = ("--seed", "0", "--count", "200")
+        s = pipeline("dot_step_1", "binary64", *args, "--strata",
+                     "uniform,underflow,overflow,zero,pow2,extreme,cancel,state,zerostate,tie")
+        self.fails(s, "dot_step_1", "binary64", *args, reason="without exactprod, which its family "
+                   "dotstep has")
+        s = pipeline("sum_2", "fp:4:-6:1", *self.args, "--strata",
+                     "one,wide,sign,cancel,zeros,underflow,overflow,nonfinite,tight,pow2")
+        self.fails(s, "sum_2", "fp:4:-6:1", *self.args, reason="without tail")
+
+    def test_the_one_process_driver(self):
+        with tempfile.TemporaryDirectory() as d:
+            def drive(fold, fmt, *args):
+                return subprocess.run(
+                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", fold,
+                     "--format", fmt, "--summary", os.path.join(d, fold + ".json"),
+                     "--fail-on-suspicious", "--interp", "--seed", "0"] + list(args),
+                    capture_output=True, text=True)
+            good = drive("dot_1", "fp:4:-6:1", "--count", "300", "--max-length", "64")
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            self.assertIn("fold: largest error/allowed", good.stdout)
+            bad = drive("dot_1", "fp:4:-6:1", "--count", "12", "--max-length", "64")
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("did not check what it set out to", bad.stdout)
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         CMAKE = sys.argv.pop(1)

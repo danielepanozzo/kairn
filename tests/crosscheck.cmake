@@ -6,7 +6,10 @@
 #
 #   cmake -DPYTHON=... -DSOURCE_DIR=... -DKERNEL=... -DFORMAT=... -DSUMMARY=FILE -DRUNNER=interp
 #         (-DEXHAUSTIVE=ON [-DRESTRICT=R1,R2,...] | -DCOUNT=N -DSEED=S)
-#         [-DFAIL_ON_SUSPICIOUS=ON] -P crosscheck.cmake
+#         [-DMAX_LENGTH=L] [-DORDERS=O1,O2,...] [-DFAIL_ON_SUSPICIOUS=ON] -P crosscheck.cmake
+#
+# KERNEL may be a fold, whose requests carry arrays: MAX_LENGTH is then the largest length (of
+# every array enumerated, or of the random ones) and ORDERS the orders of a random run.
 #
 # RESTRICT is a comma-separated list of the oracle's restrictions (NAME.lead=LO:HI,
 # NAME.sign=+|-, NAME.in=V1/V2/...), as the generator's header writes them. RUNNER may also be
@@ -66,6 +69,16 @@ else()
   endforeach()
   list(APPEND _gen --seed "${SEED}" --count "${COUNT}")
   list(APPEND _guard_args --seed "${SEED}" --count "${COUNT}")
+endif()
+# A fold: the largest length of its arrays (of the enumeration, or of the random arrays), and the
+# orders of a random run (comma-separated), as gen --max-length and --orders take them.
+if(DEFINED MAX_LENGTH)
+  list(APPEND _gen --max-length "${MAX_LENGTH}")
+  list(APPEND _guard_args --max-length "${MAX_LENGTH}")
+endif()
+if(DEFINED ORDERS)
+  list(APPEND _gen --orders "${ORDERS}")
+  list(APPEND _guard_args --orders "${ORDERS}")
 endif()
 set(_check ${_oracle} check --expect-valid)
 if(FAIL_ON_SUSPICIOUS)

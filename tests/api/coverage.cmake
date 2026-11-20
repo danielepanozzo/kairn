@@ -4,9 +4,10 @@
 # same two lists. An entry kernel (entry: yes in its description in gen/kernels, one the public
 # headers may call with values from the program) can never be a building block: it is reached
 # by a public form or it is on the short list. A kernel added to the generator fails here until
-# someone decides which it is. The kernels that the oracle does not judge yet (NOT_CHECKED, the
-# list KAIRN_NOT_YET_CROSS_CHECKED of tests/CMakeLists.txt: the folds' stage of Milestone 2) are
-# in none of the runner's lists, and no public operation calls them yet.
+# someone decides which it is. The kernels of NOT_CHECKED, the lists KAIRN_NOT_YET_CROSS_CHECKED
+# (the kernels the oracle does not judge yet) and KAIRN_NOT_PUBLIC_YET (the folds' stage of
+# Milestone 2, judged by the oracle, whose public functions come later) of tests/CMakeLists.txt,
+# are in none of the runner's lists, and no public operation calls them yet.
 #
 #   cmake -DRUNNER=... -DCLAIMS=gen/claims.json -DKERNELS=gen/kernels "-DINTERNAL=a;b"
 #         "-DNOT_PUBLIC=c;d" "-DNOT_CHECKED=e;f" -P coverage.cmake
@@ -76,7 +77,7 @@ endif()
 set(_not_checked ${NOT_CHECKED})
 foreach(_k IN LISTS _not_checked)
   if(NOT _k IN_LIST _claims)
-    list(APPEND _problems "${_k}, not cross-checked yet, is not a kernel of ${CLAIMS}")
+    list(APPEND _problems "${_k}, in none of the runner's lists (not cross-checked or not public yet), is not a kernel of ${CLAIMS}")
   endif()
 endforeach()
 foreach(_k IN LISTS _claims)
@@ -88,7 +89,7 @@ foreach(_k IN LISTS _claims)
   endforeach()
   if(_k IN_LIST _not_checked)
     if(NOT _n EQUAL 0)
-      list(APPEND _problems "${_k} is not cross-checked yet, and in ${_n} of the runner's lists")
+      list(APPEND _problems "${_k} is not cross-checked or not public yet, and in ${_n} of the runner's lists")
     endif()
     continue()
   endif()
@@ -128,4 +129,5 @@ list(LENGTH _runner_not_public _p)
 list(LENGTH _entry _e)
 list(LENGTH _not_checked _q)
 message(STATUS "${_n} kernels reached by public forms, ${_m} building blocks, ${_p} entry kernels not public yet "
-  "(${_e} entry kernels in all), ${_q} kernels not cross-checked yet")
+  "(${_e} entry kernels in all), ${_q} kernels in none of the runner's lists (not cross-checked "
+  "or not public yet)")

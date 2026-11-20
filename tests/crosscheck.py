@@ -5,6 +5,8 @@ on each distinct output and, for the kernels' runners, the guards (docs/develope
     python3 tests/crosscheck.py compiled --kernel K --format F --summary FILE
         (--seed S --count N | --exhaustive [--restrict R1,R2,...]) [--fail-on-suspicious]
         (--runner LABEL EXECUTABLE)... [--interp] [--refrun]
+        [--orders O1,O2,...] [--max-length L]
+        [(--packed-runner LABEL EXECUTABLE)... --packed-lanes W [--packed-count N]]
     python3 tests/crosscheck.py api --kernel K --format F --seed S --count N --summary-dir DIR
         (--runner LABEL EXECUTABLE)... [--first-form LABEL]... [--same-as LABEL OTHER]...
 
@@ -33,7 +35,11 @@ as one more, labelled interp, and --refrun the oracle's reference runner (python
 oracle/kairn-oracle refrun), labelled refrun, which tests/test_crosscheck_guards.py runs for
 rational_1 and rational_2. K is a kernel of gen/claims.json or one of these two,
 kairn::rational<X>(num, den), which the oracle knows without claims (oracle/README.md,
-"rational"): the same pipeline and guards, with no enumeration. WORK is SUMMARY's name, without
+"rational"): the same pipeline and guards, with no enumeration. K may also be a fold of the list
+"folds" (architecture.md, "Folds"), whose requests carry arrays: --orders and --max-length go to
+the oracle's gen and to the guards; the packed runners (--packed-runner) complete only the lane
+order of their register, so they run on a stream of their own, gen --orders lanes:W with W of
+--packed-lanes (and --packed-count cases), judged and guarded as the first. WORK is SUMMARY's name, without
 its extension, with .work; the summary of each output judged is written next to SUMMARY, as
 SUMMARY's name with the label of the first runner that wrote that output (check --json). The
 test fails if a runner fails, if the
@@ -159,11 +165,11 @@ def oracle(argv, stdin=None, capture=False):
     return status, (out.getvalue() if capture else None)
 
 
-def generate(argv, work):
-    """The oracle's gen ARGV into WORK/requests.txt, as its standard output would have written
-    them to that file: (exit status, the file's path)."""
+def generate(argv, work, name="requests.txt"):
+    """The oracle's gen ARGV into WORK/NAME, as its standard output would have written them to
+    that file: (exit status, the file's path)."""
     status, text = oracle(argv, capture=True)
-    requests = os.path.join(work, "requests.txt")
+    requests = os.path.join(work, name)
     encoding, errors = stdio_codec()
     with open(requests, "w", encoding=encoding, errors=errors) as f:    # newlines: os.linesep
         f.write(text)
@@ -244,6 +250,46 @@ def compiled(a):
     work = os.path.join(summary_dir, base + ".work")
     fresh(work)
 
+    # The streams: the runners given by --runner (and --interp, --refrun) on the requests asked
+    # for; for a fold, the packed runners (--packed-runner) on requests of their one order,
+    # lanes:W of their register (--packed-lanes), which is all they complete.
+    streams = []
+    runs = [(label, [exe]) for label, exe in a.runner or []]
+    if a.interp:
+        runs.append(("interp", INTERP))
+    if a.refrun:
+        runs.append(("refrun", REFRUN))
+    if runs:
+        streams.append(("requests", a.orders, a.count, runs))
+    if a.packed_runner:
+        if not a.packed_lanes:
+            print("crosscheck.py: --packed-runner needs --packed-lanes W", file=sys.stderr)
+            return 2
+        streams.append(("requests-packed", "lanes:%s" % a.packed_lanes,
+                        a.packed_count or a.count,
+                        [(label, [exe]) for label, exe in a.packed_runner]))
+    if not streams:
+        print("crosscheck.py: no runner (--runner LABEL EXECUTABLE, --interp, --refrun, "
+              "--packed-runner LABEL EXECUTABLE)", file=sys.stderr)
+        return 2
+    failed = []
+    reports = []
+    for name, orders, count, runs in streams:
+        failed += compiled_stream(a, name, orders, count, runs, summary_dir, base, work, reports)
+    if failed:
+        print("cross-check of %s %s failed for:\n%s\nThe requests and the outputs that failed are "
+              "in %s" % (kernel, fmt, "\n".join(failed), work), flush=True)
+        return 1
+    for text in reports:
+        say(text)
+    shutil.rmtree(work, ignore_errors=True)
+    return 0
+
+
+def compiled_stream(a, name, orders, count, runs, summary_dir, base, work, reports):
+    """One stream of requests through its runners: the texts of the failures (and, on a pass, what
+    was checked, appended to reports)."""
+    kernel, fmt = a.kernel, a.format
     gen = ["gen", kernel, fmt]
     guard_args = ["--kernel", kernel, "--format", fmt]
     if a.exhaustive:
@@ -253,28 +299,27 @@ def compiled(a):
             for r in a.restrict.split(","):
                 gen += ["--restrict", r]
             guard_args += ["--restrict", a.restrict]
-        one = gen + ["--start", "INDEX", "--count", "1"]
     else:
-        gen += ["--seed", a.seed, "--count", a.count]
-        guard_args += ["--seed", a.seed, "--count", a.count]
-        one = gen[:-2] + ["--start", "INDEX", "--count", "1"]
+        gen += ["--seed", a.seed]
+        guard_args += ["--seed", a.seed, "--count", count]
+    # A fold's requests: its orders and its maximum length, which the guards check too.
+    if orders:
+        gen += ["--orders", orders]
+        guard_args += ["--orders", orders]
+    if a.max_length is not None:
+        gen += ["--max-length", a.max_length]
+        guard_args += ["--max-length", a.max_length]
+    one = gen + ["--start", "INDEX", "--count", "1"]
+    if not a.exhaustive:
+        gen += ["--count", count]
     check = ["check", "--expect-valid"] + (["--fail-on-suspicious"] if a.fail_on_suspicious else [])
     python_oracle = [sys.executable, ORACLE]
-    runs = [(label, [exe]) for label, exe in a.runner or []]
-    if a.interp:
-        runs.append(("interp", INTERP))
-    if a.refrun:
-        runs.append(("refrun", REFRUN))
-    if not runs:
-        print("crosscheck.py: no runner (--runner LABEL EXECUTABLE, --interp, --refrun)",
-              file=sys.stderr)
-        return 2
 
-    status, requests = generate(gen, work)
+    status, requests = generate(gen, work, name + ".txt")
     if status != 0:
         print("cross-check of %s %s: the request generator failed (%s): %s"
               % (kernel, fmt, status, shell(python_oracle + gen)))
-        return 1
+        return ["%s: the request generator failed" % name]
 
     command_of = dict(runs)
     failed = []             # one text per runner that failed
@@ -321,15 +366,10 @@ def compiled(a):
         passed.append(label)
         report_of[label] = report
 
-    if failed:
-        print("cross-check of %s %s failed for:\n%s\nThe requests and the outputs that failed are "
-              "in %s" % (kernel, fmt, "\n".join(failed), work), flush=True)
-        return 1
     for label in passed:
-        say("cross-check of %s %s with %s: passed, %s"
-            % (kernel, fmt, ", ".join(sharing[label]), report_of[label]))
-    shutil.rmtree(work, ignore_errors=True)
-    return 0
+        reports.append("cross-check of %s %s with %s: passed, %s"
+                       % (kernel, fmt, ", ".join(sharing[label]), report_of[label]))
+    return failed
 
 
 # --- The public interface -------------------------------------------------------------------------
@@ -480,6 +520,14 @@ def main(argv=None):
     c.add_argument("--refrun", action="store_true",
                    help="the oracle's reference runner as a runner too (for rational_K: a test of "
                         "the driver and the guards)")
+    c.add_argument("--orders", help="a fold: the orders of the requests (gen --orders)")
+    c.add_argument("--max-length", help="a fold: the largest length (gen --max-length)")
+    c.add_argument("--packed-runner", nargs=2, action="append", metavar=("LABEL", "EXECUTABLE"),
+                   help="a fold: a runner of the packed form, which completes the lane order of "
+                        "its register only, on requests of their own in that order")
+    c.add_argument("--packed-lanes", help="a fold: W, the lanes of the packed runners' register")
+    c.add_argument("--packed-count", help="a fold: the cases of the packed runners (default "
+                                          "--count)")
     p = sub.add_parser("api", help="the runners of the public interface, with their forms")
     p.add_argument("--kernel", required=True)
     p.add_argument("--format", required=True)

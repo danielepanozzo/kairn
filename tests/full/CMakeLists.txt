@@ -176,6 +176,63 @@ foreach(_kernel IN LISTS _full_kernels)
   endif()
 endforeach()
 
+# The folds, as tests/CMakeLists.txt worked them out: the interpreter on every array of a tiny
+# format up to a small length (full.crosscheck.interp.FOLD) and on KAIRN_CROSSCHECK_FOLD_CASES
+# random arrays of a toy format up to 1024 elements (full.crosscheck.interp-sampled.FOLD); every
+# compiled runner on KAIRN_CROSSCHECK_FOLD_CASES random arrays up to KAIRN_CROSSCHECK_FOLD_LENGTH
+# elements of each format, the scalar ones on every order and the packed ones on the lane order of
+# their register, with the kernels' runners of the flag sets (full.crosscheck.compiled.FOLD.FORMAT).
+set(_compiled_full_scalar ${_compiled_scalar})
+set(_compiled_full_packed ${_compiled_packed})
+foreach(_runner _label IN ZIP_LISTS _flags_gen_runners _flags_gen_labels)
+  if(_label MATCHES "^cxx")
+    list(APPEND _compiled_full_scalar --runner "${_label}" "$<TARGET_FILE:${_runner}>")
+  else()
+    list(APPEND _compiled_full_packed --packed-runner "${_label}" "$<TARGET_FILE:${_runner}>")
+  endif()
+endforeach()
+foreach(_fold IN LISTS _full_folds)
+  set(_toy "${_full_fold_${_fold}_toy}")
+  set(_error "${_full_fold_${_fold}_error}")
+  set(_this ${_common} "-DKERNEL=${_fold}" -DFAIL_ON_SUSPICIOUS=ON)
+  if(_error)
+    add_test(NAME full.crosscheck.interp.${_fold} COMMAND "${CMAKE_COMMAND}" "-DERROR=${_error}"
+      -P "${_driver}")
+    set_tests_properties(full.crosscheck.interp.${_fold} PROPERTIES LABELS
+      "full;python;crosscheck;interp;fold")
+  else()
+    list(GET _toy 0 _toy_enum)
+    list(GET _toy 1 _toy_length)
+    list(GET _toy 2 _toy_sampled)
+    set(_name full.crosscheck.interp.${_fold})
+    add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_enum}"
+      -DRUNNER=interp -DEXHAUSTIVE=ON "-DMAX_LENGTH=${_toy_length}"
+      "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "full;python;crosscheck;interp;fold")
+    set(_name full.crosscheck.interp-sampled.${_fold})
+    add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_toy_sampled}"
+      -DRUNNER=interp "-DCOUNT=${KAIRN_CROSSCHECK_FOLD_CASES}" "-DSEED=${KAIRN_CROSSCHECK_SEED}"
+      -DMAX_LENGTH=1024 "-DSUMMARY=${_summaries}/${_name}.json" -P "${_driver}")
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 300
+      LABELS "full;python;crosscheck;interp;sampled;fold")
+  endif()
+  if(_compiled_full_scalar)
+    foreach(_format binary64 binary32)
+      set(_packed_args "")
+      if(_full_fold_${_fold}_${_format}_lanes)
+        set(_packed_args ${_compiled_full_packed} --packed-lanes ${_full_fold_${_fold}_${_format}_lanes}
+          --packed-count ${KAIRN_CROSSCHECK_FOLD_PACKED_CASES})
+      endif()
+      set(_name full.crosscheck.compiled.${_fold}.${_format})
+      add_test(NAME ${_name} COMMAND ${_crosscheck} ${_full_fold_${_fold}_compiled} --format ${_format}
+        --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_FOLD_CASES}"
+        --max-length "${KAIRN_CROSSCHECK_FOLD_LENGTH}" --summary "${_summaries}/${_name}.json"
+        ${_compiled_full_scalar} ${_packed_args})
+      set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;crosscheck;compiled;fold")
+    endforeach()
+  endif()
+endforeach()
+
 # --- The object code ----------------------------------------------------------------------------
 #
 # objcode.check and objcode.controls of tests/CMakeLists.txt on every configuration of the

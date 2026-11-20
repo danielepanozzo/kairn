@@ -467,22 +467,69 @@ set(_toy_ext_b2_b2_sum fp:3:-2:-1)
 set(_radii "0x0p+0/0x1p-4/0x1p-1/0x1.8p+0")
 set(_toy_ext_b2_b2_product fp:4:-4:-1 "rx.in=${_radii},ry.in=${_radii},cx.lead=0:0")
 
+#   inputs   kernels of the folds' stage of Milestone 2   format         cases
+#   n        bound_sum_k, bound_dot_k (count(m) and        fp:12:-30:12    49 153
+#            format(half): m*unit(K) up to past 1)
+#   1 1 1    dot_step_1                                   fp:3:-6:-1     166 375
+#   2 2 2    dot_step_2                                   fp:4:-3:-2     226 981
+#   ext a2   fold_finish_2 (two limbs, any values)        fp:5:-7:0       84 100
+set(_toy_n fp:12:-30:12)
+set(_toy_1_1_1_product fp:3:-6:-1)
+set(_toy_2_2_2_product fp:4:-3:-2)
+set(_toy_ext_a2 fp:5:-7:0)
+
 # --- Not yet cross-checked by the oracle ------------------------------------------------------
 #
-# The kernels and the folds of the folds' stage of Milestone 2 (docs/developer/design/milestone2.md,
-# "Batch kernels"; docs/developer/architecture.md, "Folds"): the oracle does not judge their claims
-# yet (upper with a value of its own and holds of the exported bounds, the error of form T of
-# dot_step_2, finite_or_nan, and the folds' fold_error on requests of arrays), and its author extends
-# it next. Until then the generator's tier is what tests them (docs/developer/testing.md, "The
-# generator's tier"): the interpreter in exact arithmetic on toy formats, and the compiled code
-# against the interpreter, bit for bit. No cross-check, no enumeration of a toy format and no test of
-# the public interface is registered for a name of these lists, and the public interface's coverage
-# (api/coverage.cmake) takes them as not cross-checked. A name leaves the list when the oracle judges
-# it; the folds are not in gen/claims.json's "kernels" and have no test registered either way.
-set(KAIRN_NOT_YET_CROSS_CHECKED
+# Kernels of gen/claims.json and folds of its list "folds" that the oracle does not judge yet: no
+# cross-check, no enumeration of a toy format and no test of the public interface is registered for
+# a name of these lists, and configuring says how many are left out. A kernel or a fold added to the
+# generator with claims the oracle cannot read goes here until the oracle reads them. Empty: since
+# the folds' stage of Milestone 2 the oracle judges every claim of the file (folds, their steps,
+# finishes and bounds included; oracle/README.md).
+set(KAIRN_NOT_YET_CROSS_CHECKED)
+set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
+# The kernels that no public operation calls yet and that the public interface's runner lists in
+# none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
+# whose public functions (sum, dot, the bounds as functions of n) come with BallVector. They are
+# cross-checked like every kernel; the public interface has no form of them.
+set(KAIRN_NOT_PUBLIC_YET
   bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 sum_entry_step_1 sum_entry_step_2
   sum_fast_entry_step_2 fold_finish_1 fold_finish_2)
-set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS sum_1 sum_1_entry sum_2 sum_2_entry sum_fast_2 sum_fast_2_entry dot_1 dot_2)
+
+# The folds (gen/claims.json, "folds"): random arrays through every compiled runner in the quick
+# tier, the scalar runners on every order (seq, lanes:0, 1, 2, 3, 4, 5, 8 and more lanes than
+# elements) and the packed runners on the lane order of their register, KAIRN_CROSSCHECK_FOLD_
+# QUICK_CASES and KAIRN_CROSSCHECK_FOLD_PACKED_QUICK_CASES arrays of lengths 0 to
+# KAIRN_CROSSCHECK_FOLD_QUICK_LENGTH; in the full tier more and longer arrays, and the interpreter
+# on every array of a tiny format up to a small length and on random arrays of a toy format, by the
+# fold's arrays (a sum of one or two limbs, a dot product of one or two):
+#
+#   arrays   folds                         every array of                      random arrays of
+#   1        sum_1, sum_1_entry            fp:3:-3:0 up to 3 elements: 225 835 fp:5:-7:4
+#   2        sum_2, sum_fast_2, entries    fp:3:-4:1 up to 2:          363 379 fp:4:-7:2
+#   1 1      dot_1                         fp:2:-1:0 up to 2:           77 029 fp:5:-12:-1
+#   2 2      dot_2                         fp:4:-4:-1, one element:     62 501 fp:4:-7:-3
+#
+# (each format of the shape qmin + qmax = 3 - 2p of the extended domain, which every fold has, and
+# at least the fold's min_precision).
+set(_fold_toy_1 fp:3:-3:0 3 fp:5:-7:4)
+set(_fold_toy_2 fp:3:-4:1 2 fp:4:-7:2)
+set(_fold_toy_1_1 fp:2:-1:0 2 fp:5:-12:-1)
+set(_fold_toy_2_2 fp:4:-4:-1 1 fp:4:-7:-3)
+set(KAIRN_CROSSCHECK_FOLD_QUICK_CASES 300 CACHE STRING
+  "Random arrays in each cross-check of a fold through the scalar runners, quick tier")
+set(KAIRN_CROSSCHECK_FOLD_PACKED_QUICK_CASES 200 CACHE STRING
+  "Random arrays in each cross-check of a fold through the packed runners, quick tier")
+set(KAIRN_CROSSCHECK_FOLD_QUICK_LENGTH 256 CACHE STRING
+  "The longest random array of the quick tier's cross-checks of folds")
+# (Arrays of up to 4 096 elements are 265 elements on average: 1 000 of dot_2 take the oracle's
+# generator 7 seconds and its judge 3, per stream; the generator, not the judge, is the slower.)
+set(KAIRN_CROSSCHECK_FOLD_CASES 1000 CACHE STRING
+  "Random arrays in each cross-check of a fold (and each sampled run of the interpreter), full tier")
+set(KAIRN_CROSSCHECK_FOLD_PACKED_CASES 500 CACHE STRING
+  "Random arrays in each cross-check of a fold through the packed runners, full tier")
+set(KAIRN_CROSSCHECK_FOLD_LENGTH 4096 CACHE STRING
+  "The longest random array of the full tier's cross-checks of folds")
 
 # Kernels whose intermediate values can overflow for operands far below the largest number (the
 # product by the splitter), as their requirement of no intermediate overflow allows. The oracle
@@ -561,8 +608,14 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
         set(_role m)
       elseif(_input IN_LIST _ball_centers)
         set(_role "b${_limbs}")
+      elseif(NOT _limbs STREQUAL "1" AND _domain STREQUAL "extended"
+             AND NOT "canonical(${_input})" IN_LIST _requires)
+        # Several limbs of any values (the state a fold's finish takes).
+        set(_role "a${_limbs}")
       elseif(NOT _limbs STREQUAL "1")
         set(_role "${_limbs}")
+      elseif("count(${_input})" IN_LIST _requires)
+        set(_role n)
       elseif("nonneg(${_input})" IN_LIST _requires)
         set(_role r)
       elseif("power_of_two(${_input})" IN_LIST _requires)
@@ -638,6 +691,92 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   # That the guards fail the runs they are there to fail, and that crosscheck.py and
   # crosscheck.cmake fail with them, is tested in the full tier (full.tools.crosscheck.guards).
 
+  # The folds: the scalar runners (labels cxx*) on requests of every order, the packed runners on
+  # requests of the lane order of their register (packed_lanes of the fold's claims, for the
+  # target's backend), each stream with its own guards (crosscheck.py compiled --packed-runner).
+  set(_compiled_scalar "")
+  set(_compiled_packed "")
+  foreach(_runner _label IN ZIP_LISTS _runners _runner_labels)
+    if(_label MATCHES "^cxx")
+      list(APPEND _compiled_scalar --runner "${_label}" "$<TARGET_FILE:${_runner}>")
+    else()
+      list(APPEND _compiled_packed --packed-runner "${_label}" "$<TARGET_FILE:${_runner}>")
+    endif()
+  endforeach()
+  set(_full_folds "")
+  set(_n_folds 0)
+  set(_n_folds_not_checked 0)
+  string(JSON _fold_count ERROR_VARIABLE _no_folds LENGTH "${_claims}" folds)
+  if(_no_folds)
+    set(_fold_count 0)
+  endif()
+  if(_fold_count GREATER 0)
+    math(EXPR _fold_last "${_fold_count} - 1")
+    foreach(_i RANGE ${_fold_last})
+      string(JSON _fold GET "${_claims}" folds ${_i} name)
+      if(_fold IN_LIST KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
+        math(EXPR _n_folds_not_checked "${_n_folds_not_checked} + 1")
+        continue()
+      endif()
+      math(EXPR _n_folds "${_n_folds} + 1")
+      string(JSON _min ERROR_VARIABLE _no_min GET "${_claims}" folds ${_i} min_precision)
+      string(JSON _value GET "${_claims}" folds ${_i} value)
+      string(JSON _n_arrays LENGTH "${_claims}" folds ${_i} arrays)
+      set(_shape "")
+      math(EXPR _a_last "${_n_arrays} - 1")
+      foreach(_j RANGE ${_a_last})
+        string(JSON _limbs GET "${_claims}" folds ${_i} arrays ${_j} limbs)
+        string(APPEND _shape "_${_limbs}")
+      endforeach()
+      # The toy formats of the full tier: the enumeration's format and length, the sampled format.
+      set(_toy "${_fold_toy${_shape}}")
+      set(_error "")
+      if(NOT _toy)
+        string(REPLACE "_" " " _operands "${_shape}")
+        set(_error "no toy format is chosen for the arrays of ${_fold} (${_operands}): add one in "
+          "tests/CMakeLists.txt")
+      else()
+        list(GET _toy 0 _toy_enum)
+        list(GET _toy 1 _toy_length)
+        list(GET _toy 2 _toy_sampled)
+        foreach(_f IN ITEMS ${_toy_enum} ${_toy_sampled})
+          string(REGEX REPLACE "^fp:([0-9]+):.*" "\\1" _p "${_f}")
+          if(_min MATCHES "^[0-9]+$" AND _p LESS _min)
+            set(_error "the toy format ${_f} of ${_fold} is below its min_precision ${_min}: "
+              "choose another in tests/CMakeLists.txt")
+          endif()
+        endforeach()
+      endif()
+      string(JOIN "" _error ${_error})
+      list(APPEND _full_folds ${_fold})
+      set(_full_fold_${_fold}_toy "${_toy}")
+      set(_full_fold_${_fold}_error "${_error}")
+      set(_this_fold compiled --kernel "${_fold}" --fail-on-suspicious)
+      set(_full_fold_${_fold}_compiled ${_this_fold})
+      foreach(_format binary64 binary32)
+        set(_packed_args "")
+        set(_full_fold_${_fold}_${_format}_lanes "")
+        if(_packed_backend AND _compiled_packed)
+          string(JSON _w ERROR_VARIABLE _no_w GET "${_claims}" folds ${_i} packed_lanes ${_format}
+            ${_packed_backend})
+          if(NOT _no_w)
+            set(_packed_args ${_compiled_packed} --packed-lanes ${_w}
+              --packed-count ${KAIRN_CROSSCHECK_FOLD_PACKED_QUICK_CASES})
+            set(_full_fold_${_fold}_${_format}_lanes ${_w})
+          endif()
+        endif()
+        if(_compiled_scalar)
+          set(_name crosscheck.compiled.${_fold}.${_format})
+          add_test(NAME ${_name} COMMAND ${_crosscheck} ${_this_fold} --format ${_format}
+            --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_FOLD_QUICK_CASES}"
+            --max-length "${KAIRN_CROSSCHECK_FOLD_QUICK_LENGTH}"
+            --summary "${_summaries}/${_name}.json" ${_compiled_scalar} ${_packed_args})
+          set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "crosscheck;compiled;fold")
+        endif()
+      endforeach()
+    endforeach()
+  endif()
+
   set(_packed "no packed runners (no packed backend for this target)")
   if(_packed_backend)
     if(_isa_option)
@@ -649,10 +788,11 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   endif()
   list(JOIN _runner_labels ", " _labels)
   math(EXPR _count "${_count} - ${_n_not_checked}")
-  list(LENGTH KAIRN_NOT_YET_CROSS_CHECKED_FOLDS _n_folds)
-  message(STATUS "Kairn tests: not yet cross-checked by the oracle (KAIRN_NOT_YET_CROSS_CHECKED): "
-    "${_n_not_checked} kernels and ${_n_folds} folds, tested by the generator's tier")
-  message(STATUS "Kairn tests: cross-checks of ${_count} kernels: the compiled runners ${_labels} "
+  if(_n_not_checked GREATER 0 OR _n_folds_not_checked GREATER 0)
+    message(STATUS "Kairn tests: not yet cross-checked by the oracle (KAIRN_NOT_YET_CROSS_CHECKED): "
+      "${_n_not_checked} kernels and ${_n_folds_not_checked} folds, tested by the generator's tier")
+  endif()
+  message(STATUS "Kairn tests: cross-checks of ${_count} kernels and ${_n_folds} folds: the compiled runners ${_labels} "
     "(${_packed}), on ${KAIRN_CROSSCHECK_QUICK_CASES} cases per kernel and format in the quick "
     "tier and ${KAIRN_CROSSCHECK_CASES} in the full tier; and, in the full tier, the interpreter "
     "on ${_n_complete} complete enumerations of toy formats and ${_n_restricted} restricted ones "
