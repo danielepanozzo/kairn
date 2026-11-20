@@ -428,11 +428,13 @@ def judge(job):
                 if reading == 'statement':
                     bad.append((reading, case, 'overflow', 'output limb 0 is not finite'))
                 continue    # the claims hold whenever output limb 0 is finite
-            # In the format itself an entry about an output group other than the first holds when
-            # that group's leading limb is finite (architecture.md, "Claims of the interval
-            # kernels"): the two bounds of mul_dir_2_2 and of mul_dir_1 overflow apart.
+            # In the format itself an entry about an output group other than the first, without a
+            # mask, holds when that group's leading limb is finite (architecture.md, "Claims of the
+            # interval kernels"): the two bounds of mul_dir_2_2 and of mul_dir_1 overflow apart. An
+            # entry with a mask (if=, the bound kernels of the folds) is read by its mask.
             failed = [e['kind'] for e in k.ensures
-                      if not (reading == 'claims file' and e.get('of') not in (None, k.outputs[0].name)
+                      if not (reading == 'claims file' and 'if' not in e
+                              and e.get('of') not in (None, k.outputs[0].name)
                               and not isinstance(outs[e['of']][0], F))
                       and not holds(e, k, judged, ins, outs, limbs, ks)]
             # What a statement says of every output limb besides its claims, so that statements

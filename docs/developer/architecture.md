@@ -1608,10 +1608,13 @@ format rounds it, so that a bound can name the constants $E$, $G$, $H$ of a radi
 is a constant of a kernel with a real-model statement. The oracle evaluates them per format;
 `instances` is unchanged: one object per `error` entry.
 
-**An output group other than the first.** In the finite domain an entry whose `of` is an output
-group other than the first holds whenever the requirements hold and that group's leading limb is
-finite (the two bounds of `mul_dir_2_2` overflow apart; the second output of `mul_dir_1`, of the
-extended domain, has the infinity that its claims say). No earlier kernel has such an entry.
+**An output group other than the first.** In the finite domain an entry without a mask whose
+`of` is an output group other than the first holds whenever the requirements hold and that group's
+leading limb is finite (the two bounds of `mul_dir_2_2` overflow apart; the second output of
+`mul_dir_1`, of the extended domain, has the infinity that its claims say). No earlier kernel has
+such an entry. An entry with a mask (`if=MASK`) is read by its mask, whatever output group it is
+about: `upper t … if=ok` of `bound_dot_k` holds whenever the requirements hold, output limb 0 is
+finite and `ok` is true.
 
 Entries as the generator writes them (`source`, `flops` and the theorem fields left out; the
 constants of `outward` are those of
