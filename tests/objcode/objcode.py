@@ -31,6 +31,14 @@ A contraction the IR did not ask for shows as a fused instruction more, with a m
 or none; an FMA computed as a product and a sum, or an opaque product folded back into a plain one,
 as a multiplication more. The forms and the counts are described in gen/kairn_gen/objcode.py.
 
+Every compilation has the compiler's own vectorization off (Tools.no_vectorize: Clang
+-fno-vectorize -fno-slp-vectorize, GCC -fno-tree-vectorize, clang-cl the same through /clang:;
+MSVC, which has no such option, /Qvec-report:1, and the check fails on any loop it says it
+vectorized): vectorization packs independent operations into one instruction without changing
+them, which an instruction count cannot see through; the check is for fusing and splitting, and
+the cross-checks run the vectorized code. The packed forms are intrinsics, which this leaves as
+written.
+
 In each configuration that compiles both forms of the fix-ups, enclosure_unit.cpp, the public
 operations of Ball, is compiled with KAIRN_ENCLOSURE_CODE outlined, external, and external with
 kairn/definitions.hpp (include/kairn/config.hpp): each of its functions must have no fused
@@ -41,13 +49,16 @@ object and nothing that computes (check_enclosure_program).
 The negative controls (--controls), each in every configuration of the tier:
 
 - fixture.cpp has the textbook `a * b + c`, as two statements and as one expression, scalar and
-  packed. Each function is judged by the same rule against its own source, one product and one
-  sum, and the program says at run time whether the compiler fused it. The check must fail on a
-  function exactly when it was fused, and at least one configuration must fuse something.
+  packed, and a loop whose step has an FMA and then the textbook product and sum. Each function is
+  judged by the same rule against its own source (the loop by the rule of the loops of folds), and
+  the program says at run time whether the compiler fused it. The check must fail on a function
+  exactly when it was fused, at least one configuration must fuse something, and one the loop.
 - the unit, compiled once, is judged against counts with two kernels changed (one FMA more for
   mul_2_2, one multiplication fewer for add_2_2_full): exactly those kernels must fail.
 - enclosure_unit.cpp, compiled once with the operations of Ball inline (the default), is judged
   as the outlined form: every function must fail, its operation not being a call.
+- the unit, compiled once WITH the compiler's own vectorization, must fail on exactly the
+  functions recorded for that compiler (vectorized_failures): the packing alone.
 
 Standard library only. Exits 1 on any failure, with what was found; a compiler or disassembler that
 cannot be run is a failure, never a skip.
@@ -163,28 +174,51 @@ class Tools:
         else:
             self.family = 'gnu'
         self.name = args.compiler_id or {'msvc': 'MSVC', 'clang-cl': 'clang-cl'}.get(self.family)
-        if not self.name:
+        version = ''
+        if not self.name or self.family == 'gnu':
             version = subprocess.run([path, '--version'], capture_output=True, text=True, errors='replace',
                                      timeout=60).stdout
+        if not self.name:
             self.name = (version.splitlines() or ['unknown compiler'])[0]
+        # Which compiler of the family: Clang (and Apple clang) or GCC, from CMake's id or from what
+        # --version prints.
+        self.clang = self.family == 'clang-cl' or (
+            self.family == 'gnu' and 'clang' in ((args.compiler_id or '') + ' ' + version).lower())
+        self.apple = 'apple' in ((args.compiler_id or '') + ' ' + version).lower()
+        # The compiler's own vectorization, off in every compilation of the check (docs/developer/
+        # testing.md, "Object code"): it packs independent operations into one instruction, which an
+        # instruction count cannot see through. MSVC has no option that turns its vectorizer off:
+        # /Qvec-report:1 makes it name every loop it vectorized (info C5001), and the check fails on
+        # any (compile).
+        self.no_vectorize = {'clang-cl': ['/clang:-fno-vectorize', '/clang:-fno-slp-vectorize'],
+                             'msvc': ['/Qvec-report:1']}.get(self.family) or (
+            ['-fno-vectorize', '-fno-slp-vectorize'] if self.clang else ['-fno-tree-vectorize'])
         self.flags = args.flags.split()
         self.packed = args.packed or default_packed()
         self.packed_flags = args.packed_flags.split()
         self.emulator = args.emulator.split()
         self.disassembler, self.flavor = find_disassembler(args.disassembler, self.family, path)
 
-    def compile(self, source, obj, options, defines, packed, cwd):
+    def compile(self, source, obj, options, defines, packed, cwd, vectorize=False):
+        """Compiles source into obj, with the compiler's own vectorization off (no_vectorize)
+        unless `vectorize` (the control that shows why it is off)."""
         include = os.path.join(ROOT, 'include')
         table = os.path.join(ROOT, 'gen', 'tests')
         defs = list(defines) + (['KAIRN_OBJCODE_PACKED'] if packed else [])
         isa = self.packed_flags if packed else []
+        novec = [] if vectorize else self.no_vectorize
         if self.msvc_style:
             cmd = ([self.cxx, '/nologo', '/std:c++20', '/c'] + list(options) + [f'/D{d}' for d in defs]
-                   + self.flags + isa + ['/I', include, '/I', table, source, f'/Fo{obj}'])
+                   + self.flags + isa + novec + ['/I', include, '/I', table, source, f'/Fo{obj}'])
         else:
             cmd = ([self.cxx, '-std=c++20', '-c'] + list(options) + [f'-D{d}' for d in defs]
-                   + self.flags + isa + ['-I', include, '-I', table, source, '-o', obj])
-        run(cmd, cwd, 'compiling')
+                   + self.flags + isa + novec + ['-I', include, '-I', table, source, '-o', obj])
+        out = run(cmd, cwd, 'compiling')
+        vectorized = [line.strip() for line in out.splitlines() if 'C5001' in line]
+        if self.family == 'msvc' and not vectorize and vectorized:
+            raise Failure(f'MSVC vectorized {len(vectorized)} loops of {os.path.basename(source)}, which the '
+                          f'check counts compiled without vectorization (/Qvec-report:1, info C5001):\n      '
+                          + '\n      '.join(vectorized))
         return cmd
 
     def link(self, obj, exe, cwd):
@@ -592,7 +626,9 @@ def check(tools, args, expected, limb_types, folds=None):
     print(f'objcode: {tools.cxx_path} ({tools.name}, {tools.family} matrix, {args.tier} tier: '
           f'{len(configs)} configurations); disassembler {tools.disassembler} ({tools.flavor}); '
           f'packed: {tools.packed}{" with " + " ".join(tools.packed_flags) if tools.packed_flags else ""}; '
-          f'options for every compilation: {" ".join(tools.flags) or "none"}', flush=True)
+          f'options for every compilation: {" ".join(tools.flags) or "none"}; the compiler\'s own '
+          f'vectorization: ' + ('none allowed, reported by /Qvec-report:1' if tools.family == 'msvc' else
+                                'off, ' + ' '.join(tools.no_vectorize)), flush=True)
     if tools.packed == 'none':
         print('objcode: no packed backend for this target: the packed kernels are NOT checked')
     ok = True
@@ -610,6 +646,11 @@ def check(tools, args, expected, limb_types, folds=None):
 
 FIXTURE_COUNTS = {'fma': 0, 'fma_distinct': 0, 'mul': 1, 'mul_distinct': 1, 'consteval_mul': 0,
                   'muladd': 0}
+# The loop of the fixture, judged as the loop of a fold: its step, one FMA and one product per
+# element, at least once.
+LOOP_PARTS = [{'part': 'step', 'least': 1, 'fma': 1, 'fma_distinct': 1, 'mul': 1, 'mul_distinct': 1,
+               'consteval_mul': 0, 'muladd': 0}]
+LOOP_PREFIX = 'kairn_objcode_fixture_loop_'
 
 
 def control_fixture(tools, config, index, workdir):
@@ -636,16 +677,20 @@ def control_fixture(tools, config, index, workdir):
             lines.append(f'{name}: no such function in the disassembly')
             ok = False
             continue
-        text, _ = judge(program.count(f), FIXTURE_COUNTS)
-        if verdict not in ('fused', 'unfused'):
+        if name.startswith(LOOP_PREFIX):
+            text, _ = judge_fold(program.count(f), LOOP_PARTS)
+        else:
+            text, _ = judge(program.count(f), FIXTURE_COUNTS)
+        contracted = verdict in ('fused', 'mixed')
+        if verdict not in ('fused', 'unfused', 'mixed') or (verdict == 'mixed' and not name.startswith(LOOP_PREFIX)):
             lines.append(f'{name}: the program computed neither result ({verdict})')
             ok = False
-        elif (text is not None) != (verdict == 'fused'):
+        elif (text is not None) != contracted:
             ok = False
             lines.append(f'{name}: {verdict} at run time, but the check '
                          f'{"failed: " + text if text else "passed"}')
-        if verdict == 'fused':
-            fused.append(name.replace('kairn_objcode_fixture_', ''))
+        if contracted:
+            fused.append(name.replace('kairn_objcode_fixture_', '') + (' (some elements)' if verdict == 'mixed' else ''))
     head = f'{label(config)}: ' + (f'fused {", ".join(fused)}; the check fails on exactly those'
                                    if fused else 'nothing fused; the check passes')
     return [head + ('' if ok else ': FAILED')] + ['    ' + x for x in lines], ok, fused
@@ -680,6 +725,49 @@ def control_counts(tools, workdir, expected, limb_types, folds=None):
                                                       'functions of those two kernels')], ok
 
 
+# What the check finds when the unit is compiled WITH the compiler's own vectorization, in the
+# configuration of control_vectorized: the functions it fails on for the packing alone, by
+# compiler. Clang on x86-64 vectorizes the loop of axpy_2 and axpy_2_entry (double) and, in its
+# scalar rest, packs two of the step's five independent FMAs into one 128-bit vfmadd231pd: nine
+# fused instructions in F_seq, fourteen in F_packed (whose rest is a loop too), which no number of
+# copies of the step makes, with the same operations. The other compilers seen (GCC 13 on x86-64,
+# Apple clang and GCC 16 on AArch64) vectorize these loops in whole copies of the step, which the
+# rule counts as copies. An entry that stops holding, a compiler that stops packing or another that
+# starts, fails the control: the table is what we know, not what we expect.
+def vectorized_failures(tools, packed):
+    x86 = platform.machine().lower() in ('x86_64', 'amd64')
+    if tools.clang and not tools.apple and x86:
+        forms = ['seq'] + (['packed'] if packed else [])
+        return sorted(f'fold {fold} {form} double' for fold in ('axpy_2', 'axpy_2_entry') for form in forms)
+    return []
+
+
+def control_vectorized(tools, workdir, expected, limb_types, folds=None):
+    """(lines, ok): the unit compiled with the compiler's own vectorization, as by default, and
+    judged by the same rule: it must fail on exactly the functions of vectorized_failures."""
+    config = next(c for c in configurations(tools.family, 'quick') if c[0] not in ('-O0', '/Od'))
+    obj = os.path.join(workdir, f'unit-vectorized.{"obj" if tools.msvc_style else "o"}')
+    packed = tools.packed != 'none'
+    try:
+        level, contraction, rounding, _ = config
+        tools.compile(UNIT, obj, (level,) + contraction + rounding, [], packed, workdir, vectorize=True)
+        program = disasm.Program(tools.disassemble(obj, workdir))
+        failures, _, n = check_program(program, expected, limb_types, packed, folds)
+    except (Failure, ValueError) as e:
+        return [f'with the compiler\'s own vectorization, {label(config)}: FAILED: {e}'], False
+    found = sorted(text.split(':')[0] for _, text in failures)
+    want = vectorized_failures(tools, packed)
+    ok = found == want
+    head = (f'with the compiler\'s own vectorization (no {" ".join(tools.no_vectorize)}), {label(config)}: '
+            f'the check fails on {len(found)} of {n} functions'
+            + (f' ({", ".join(found)})' if found else ''))
+    if ok:
+        return [head + (', as recorded for this compiler: the packing alone' if want else
+                        ', as recorded for this compiler')], True
+    return ([head + f': FAILED, recorded for this compiler: {", ".join(want) or "none"}']
+            + ['    ' + text for _, text in failures]), False
+
+
 def control_enclosures(tools, workdir, expected, limb_types):
     """(lines, ok): enclosure_unit.cpp compiled with the operations of Ball inline, as by default,
     and judged as the outlined form: every function must fail, its operation not being a call."""
@@ -710,10 +798,13 @@ def controls(tools, args, expected, limb_types, folds=None):
         jobs = [pool.submit(control_fixture, tools, c, i, args.workdir) for i, c in enumerate(configs)]
         counts = pool.submit(control_counts, tools, args.workdir, expected, limb_types, folds)
         enclosures = pool.submit(control_enclosures, tools, args.workdir, expected, limb_types)
-        print('  The textbook a * b + c (fixture.cpp), judged against its source:')
+        vectorized = pool.submit(control_vectorized, tools, args.workdir, expected, limb_types, folds)
+        print('  The textbook a * b + c and the loop (fixture.cpp), judged against their source:')
+        loops = 0
         for job in jobs:
             lines, good, fused = job.result()
             contracted += bool(fused)
+            loops += any(f.startswith('loop_') for f in fused)
             ok = ok and good
             for line in lines:
                 print('    ' + line, flush=True)
@@ -725,6 +816,14 @@ def controls(tools, args, expected, limb_types, folds=None):
         ok = ok and good
         for line in lines:
             print('  ' + line)
+        lines, good = vectorized.result()
+        ok = ok and good
+        for line in lines:
+            print('  ' + line)
+    if loops == 0:
+        ok = False
+        print(f'  FAILED: no configuration fused the product of the loop, so nothing shows that the '
+              f'check catches a contraction in a loop with {tools.name}')
     if contracted == 0:
         ok = False
         print(f'  FAILED: no configuration fused the textbook product, so nothing shows that the '
