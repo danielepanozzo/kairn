@@ -25,7 +25,11 @@
      generated yet), the rectangle lemma of the product of intervals, the two
      executions of a product, and the two executions of the eight kernels whose only
      fused operations are products, on listings written by hand with the product as an
-     argument (the generator does not emit the model of the plain-product execution).
+     argument (the generator does not emit the model of the plain-product execution);
+   - the theorems of the interval kernels of Milestone 2, on models of their listings
+     written by hand (the kernels are not generated yet): the interval kernels with
+     bounds of one limb in the IEEE model, with the lemmas about the bounds of the exact
+     range of an operation.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -431,3 +435,26 @@ Print Assumptions mul_up_1_ieee_nonfinite.
 Print Assumptions xval_prod_nonfinite.
 Print Assumptions mul_dir_1_ieee_eq.
 Print Assumptions mul_dir_1_ieee_encloses.
+
+(* The interval kernels with bounds of one limb, in the IEEE model
+   (theories/IeeeInterval1.v, with the vocabulary of theories/IeeeIntervalVocabulary.v), on
+   IEEE models of their listings written by hand (the kernels are not generated yet): the
+   constructor, the negation, the sum, the difference and the product; then the lemmas
+   they rest on: a set of real numbers has one lower bound and one upper bound, the
+   bounds of the exact range of a sum and of a difference, and the last five lines that
+   the sum, the difference and the product share. *)
+From Kairn Require Import IeeeIntervalVocabulary IeeeInterval1.
+Print Assumptions interval_make_1_correct.
+Print Assumptions interval_make_1_reversed.
+Print Assumptions interval_make_1_equal_infinities.
+Print Assumptions interval_neg_1_correct.
+Print Assumptions interval_add_1_correct.
+Print Assumptions interval_sub_1_correct.
+Print Assumptions interval_mul_1_correct.
+Print Assumptions range_lower_unique.
+Print Assumptions range_upper_unique.
+Print Assumptions range_add_lower.
+Print Assumptions range_add_upper.
+Print Assumptions range_sub_lower.
+Print Assumptions range_sub_upper.
+Print Assumptions interval_tail.
