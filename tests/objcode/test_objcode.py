@@ -13,6 +13,9 @@ object file's name in the first lines:
                                                 at -O2 -ffp-contract=fast)
     gnu-aarch64-O0.txt, -O2.txt, -fixture.txt   GNU objdump 2.42, ELF AArch64, GCC 13
     llvm-macho-arm64.txt                        LLVM objdump of Apple clang 21, Mach-O arm64, -O2
+    llvm-macho-arm64-O0.txt                     the same at -O0 -ffp-contract=fast: a packed kernel
+                                                whose frame is above a page, which calls Darwin's
+                                                stack probe through the GOT
     llvm-coff-x64.txt                           LLVM objdump 21, COFF x64, an object of MSVC 19.52 at
                                                 /Od (the format of the objects of clang-cl)
     dumpbin-x64-Od.txt, -O2.txt                 dumpbin of MSVC 19.52, COFF x64
@@ -60,6 +63,8 @@ FOUND = {
         ('kairn_objcode_scalar_double_mul_2_2_full', 'mul_2_2_full', 'scalar_call', 'double', 6, 1, True),
         ('kairn_objcode_packed_double_mul_2_2_full', 'mul_2_2_full', 'packed', 'double', 5, 1, False),
         ('kairn_objcode_packed_float_abs_2', 'abs_2', 'packed', 'float', 0, 0, False)],
+    'llvm-macho-arm64-O0.txt': [
+        ('kairn_objcode_packed_double_ball_mul_pow2_1', 'ball_mul_pow2_1', 'packed', 'double', 2, 0, False)],
     'llvm-coff-x64.txt': [
         # /Od: the kernel and fma_rn are functions of their own, and the branch that only constant
         # evaluation takes is compiled: Dekker's product, seven plain multiplications.
@@ -73,6 +78,7 @@ FOUND = {
 }
 FORMS = {'gnu-x86-64-O0.txt': 'scalar', 'gnu-x86-64-O2.txt': 'scalar_call', 'gnu-aarch64-O0.txt': 'scalar',
          'gnu-aarch64-O2.txt': 'scalar_call', 'llvm-macho-arm64.txt': 'scalar_call',
+         'llvm-macho-arm64-O0.txt': 'scalar_call',
          'llvm-coff-x64.txt': 'scalar', 'dumpbin-x64-Od.txt': 'scalar', 'dumpbin-x64-O2.txt': 'scalar'}
 FIXTURES = {
     'gnu-x86-64-fixture.txt': ['kairn_objcode_fixture_scalar_double_statements',
@@ -173,6 +179,23 @@ class Samples(unittest.TestCase):
         self.assertEqual(p.count(f).external, [])
         self.assertTrue(disasm.allowed_external('___stack_chk_fail'))
         self.assertFalse(disasm.allowed_external('fma'))
+        # Darwin's stack probe, called through a register loaded from the GOT (adrp, ldr, blr x16):
+        # the call is to that symbol, and the probe computes nothing.
+        p = program('llvm-macho-arm64-O0.txt')
+        f = p.find('kairn_objcode_packed_double_ball_mul_pow2_1')
+        call = next(i for i in f.insns if i.mnemonic == 'blr')
+        self.assertEqual(p.target(f, call), ('external', '___chkstk_darwin'))
+        self.assertTrue(disasm.allowed_external('___chkstk_darwin'))
+        self.assertEqual((p.count(f).external, p.count(f).unknown), ([], []))
+        # A register written after its load, or never loaded from the GOT, leaves the call indirect.
+        for between in ('   8:\tmov\tx16, x0\n', ''):
+            text = ('Disassembly of section __TEXT,__text:\n\n0000000000000000 <_f>:\n'
+                    '   0:\tadrp\tx16, 0x0 <_f>\n\t\t0000000000000000:  ARM64_RELOC_GOT_LOAD_PAGE21\t___chkstk_darwin\n'
+                    + ('   4:\tldr\tx16, [x16]\n\t\t0000000000000004:  ARM64_RELOC_GOT_LOAD_PAGEOFF12\t___chkstk_darwin\n'
+                       if between else '   4:\tldr\tx16, [x16]\n')
+                    + between + '   c:\tblr\tx16\n  10:\tret\n')
+            q = disasm.Program(text)
+            self.assertEqual(q.count(q.find('_f')).unknown, [('_f', 'blr x16')], between)
 
     def test_constant_evaluation_branch(self):
         p = program('dumpbin-x64-Od.txt')

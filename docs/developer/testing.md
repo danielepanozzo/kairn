@@ -57,7 +57,7 @@ The tests of the public interface (`tests/api/`, label `api`):
 | Test | Checks |
 |---|---|
 | `api.oracle.K.F` | Every public operation that calls kernel K, computed through the constructors, operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on 2 000 random cases of format F, judged by the oracle against K's claims; by two runners on the same cases, one built with the build's flags and one with contraction forced on. For a kernel of the extended domain the cases include infinite and NaN operands and empty and whole balls, built through the public constructors. Each form of the operation (`x + a` and `a + x`, `x += a`, `x + y` with a one-limb `y`, the marked and the unmarked operator, `kairn::finite::add`) is judged on its own. A few forms can compute only some lines of their kernel (`ldexp` needs a power of two among the operands of `mul_1_1`, a point form a ball of radius 0, the steps of `ldexp` an operand that can be scaled exactly); they compute the plain operation on the others, and fail if a stream of 1000 lines or more reached their own operation on none, which is why the quick tier has at least 1 000 cases. |
-| `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the finite cores of the Ball operations); no entry kernel is a building block. |
+| `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the finite cores of the Ball operations, and the building blocks and scalings of a ball of Milestone 2, whose public functions come later); no entry kernel is a building block. |
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, comparisons with a NaN among them; the same results at run time; the properties of the types; and that an operation compiles without `kairn::unverified` exactly when the kernel it calls is proved. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass in the default environment and fail under each directed rounding mode and under flush-to-zero. |
 | `api.flags.debug.self_test`, `api.flags.debug.constexpr`, `api.flags.debug.rational` | `kairn::self_test()` and `kairn::environment_ok()`, compiled as the [debug build](#flag-sets), pass (`runner.cpp --self-test`); `tests/api/constexpr.cpp` and `tests/api/rational.cpp` built so, their constant expressions evaluated with the checks on; `kairn::rational`, which does not round, runs under each directed rounding mode without the checks stopping the program. |
@@ -402,18 +402,25 @@ For each kernel, form and limb type:
   addition, in the scalar forms of `two_prod`, the seven products of Dekker's product, in the
   branch `if (__builtin_is_constant_evaluated())` that only constant evaluation takes, where a
   compiler emits that branch: MSVC at `/Od` compiles the test as that of a register which is always
-  zero, and the branch after it. No execution reaches it.
+  zero, and the branch after it. No execution reaches it. The kernels `constexpr` by the rule of
+  the product ([Architecture](architecture.md#the-kernel-ir)) have the same kind of branch per
+  `prod`, `__builtin_is_constant_evaluated() ? a * b : fma_rn(a, b, 0)`, and the same allowance:
+  one plain product per `prod`, where a compiler emits the first arm.
 - **Nothing else**: every kernel has its function and every function of the unit its counts; it
-  calls nothing outside the object but the stack protector's routines and Windows' stack probe,
-  which do no arithmetic (Ubuntu's GCC protects functions by default); there is no indirect call;
-  and no kernel has a declared contractable multiply-add (`muladd`), for which the check has no
-  rule yet.
+  calls nothing outside the object but the stack protector's routines and the stack probes of
+  Windows and of Darwin, which do no arithmetic (Ubuntu's GCC protects functions by default; Apple
+  clang at `-O0` probes the stack of a frame above a page, through a register loaded from the
+  GOT, which `disasm.py` follows to its symbol: the packed scalings of a ball by a power of two);
+  there is no other indirect call; and no kernel has a declared contractable multiply-add
+  (`muladd`), for which the check has no rule yet.
 
 So the static count does not always equal the number of FMA nodes, and a kernel does not always
 have no plain multiplication: what holds is the rule above, which allows these two differences
 and no other. On every compiler and flag set measured, no other kernel has a plain
 multiplication, in scalar or in packed code: the scalings by a power of two (`mul_pow2_2`) and the
-products by the constants of the radii are FMAs, and the constructors multiply nothing.
+products by the constants of the radii are FMAs, and the constructors multiply nothing. (These
+measurements are of Milestone 1. The plain products that the rule of the product adds are in arms
+that run time never takes; the check allows them where a compiler emits them, as above.)
 
 A failure says what was found, function by function. One fused instruction more, with one
 multiplication fewer or none, is a contraction; a multiplication more and an FMA fewer is an FMA

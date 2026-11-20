@@ -597,9 +597,11 @@ const Form forms[] = {
 // Kernels that are parts of other kernels and that no public operation calls on its own. Every
 // kernel of gen/claims.json is mapped above, listed here, or listed below (coverage.cmake).
 const char* const internal[] = {
-    "two_sum", "fast_two_sum", "two_prod",   // building blocks of the kernels above
+    "two_sum", "fast_two_sum",               // building blocks of the kernels above
     "split", "two_prod_dekker",              // the constant-evaluation variant of two_prod
-    "radd", "rmul",                          // radius arithmetic of the first Ball design
+    "radd",                                  // radius arithmetic of the first Ball design
+    "two_sum_ord",                           // Milestone 2: building blocks of the directed sums
+    "add_down_1", "add_up_1", "sub_down_1", "sub_up_1",
 };
 // Entry kernels (entry: yes in gen/kernels) that no public operation calls yet, and why.
 struct NotPublic {
@@ -608,9 +610,18 @@ struct NotPublic {
 };
 const char* const ball_core = "the finite core of a Ball operation: the operators call the full kernel, and "
                               "kairn::finite has no Ball forms (decision D5 names the Expansion arithmetic)";
+const char* const block = "a building block that Milestone 2 makes public (milestone2.md, \"Building blocks on "
+                          "T\"), whose function comes with the public headers of the milestone";
+const char* const scaling = "the scaling of a Ball by a power of two (milestone2.md), for ldexp and half on Ball, "
+                            "which come with the public headers of the milestone";
 const NotPublic not_public[] = {
     {"ball_add_1", ball_core}, {"ball_sub_1", ball_core}, {"ball_mul_1", ball_core}, {"ball_scale_1", ball_core},
     {"ball_add_2", ball_core}, {"ball_sub_2", ball_core}, {"ball_mul_2", ball_core}, {"ball_scale_2", ball_core},
+    {"two_prod", block}, {"rmul", block}, {"next_up", block}, {"next_down", block}, {"mul_down_1", block},
+    {"mul_up_1", block}, {"two_sum_entry", block}, {"fast_two_sum_entry", block}, {"radd_entry", block},
+    {"add_down_entry", block}, {"add_up_entry", block}, {"sub_down_entry", block}, {"sub_up_entry", block},
+    {"ball_mul_pow2_1", scaling}, {"ball_mul_pow2_2", scaling}, {"ball_mul_pow2_1_full", scaling},
+    {"ball_mul_pow2_2_full", scaling},
 };
 
 constexpr int max_limbs = 16;

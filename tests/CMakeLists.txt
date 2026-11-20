@@ -361,7 +361,9 @@ set(KAIRN_CROSSCHECK_SEED 0 CACHE STRING "Seed of the random cases of the cross-
 #
 #   inputs   kernels                                  format         cases
 #   1        split                                    fp:11:-30:10    86 015
-#   1 1      two_sum, fast_two_sum, add_1_1           fp:5:-7:4      172 225
+#   1 1      two_sum, fast_two_sum, add_1_1,          fp:5:-7:4      172 225
+#            two_sum_ord, two_sum_entry,
+#            fast_two_sum_entry
 #            two_prod, two_prod_dekker, mul_1_1       fp:5:-12:-1    172 225
 #   2 1      add_2_1, sub_2_1                         fp:4:-4:2      221 361
 #   1 2      sub_1_2                                  fp:4:-4:2      221 361
@@ -369,6 +371,8 @@ set(KAIRN_CROSSCHECK_SEED 0 CACHE STRING "Seed of the random cases of the cross-
 #   2 2      add_2_2, add_fast_2_2, sub_2_2           fp:3:-3:2      178 929
 #   2 2      mul_2_2                                  fp:4:-7:-3     245 025
 #   2 c      mul_pow2_2                               fp:5:-6:2      144 755
+#   1 r c    ball_mul_pow2_1                          fp:4:-6:1      113 256
+#   2 r c    ball_mul_pow2_2                          fp:3:-4:1       94 752
 #   1 r 1    ball_scale_1                             fp:3:-5:0       84 700
 #   2 r 1    ball_scale_2                             fp:2:-4:1       60 102
 #   1 r 1 r  ball_add_1, ball_sub_1                   fp:2:-3:1       76 176
@@ -387,6 +391,8 @@ set(_toy_2_1_product fp:4:-8:-2)
 set(_toy_2_2_sum fp:3:-3:2)
 set(_toy_2_2_product fp:4:-7:-3)
 set(_toy_2_c_product fp:5:-6:2)
+set(_toy_1_r_c_product fp:4:-6:1)
+set(_toy_2_r_c_product fp:3:-4:1)
 set(_toy_1_r_1_product fp:3:-5:0)
 set(_toy_2_r_1_product fp:2:-4:1)
 set(_toy_1_r_1_r_sum fp:2:-3:1)
@@ -410,11 +416,15 @@ set(_toy_2_r_2_r_product fp:4:-5:1 "rx.in=${_radii},ry.in=${_radii},cx.lead=0:0,
 # (two to twelve, and forty for make_2), so overflow is common, which the layer is about.
 #
 #   inputs   kernels                                  format         cases
-#   1        make_2                                   fp:11:-29:10    83 970
+#   1        make_2, next_up, next_down               fp:11:-29:10    83 970
 #   2        neg_2, abs_2, the conversions,           fp:6:-10:1      89 730
 #            make_2_limbs
-#   r r      radd, rmul                               fp:6:-10:1     174 724
-#   1 1      ball_make_1                              fp:5:-7:0       84 100
+#   r r      radd, rmul, radd_entry                   fp:6:-10:1     174 724
+#   1 1      ball_make_1, the directed sums of one    fp:5:-7:0       84 100
+#            limb and their entry forms
+#            mul_down_1, mul_up_1 (their constant     fp:5:-7:0       84 100
+#            2^(2p-1) eta must be a number of the
+#            format)
 #   2 1      add_2_1_full, sub_2_1_full, mul_2_1_full, fp:4:-5:0     113 316
 #            comparisons, ball_make_2
 #   1 2      sub_1_2_full, comparisons                fp:4:-5:0      113 316
@@ -428,6 +438,8 @@ set(_toy_2_r_2_r_product fp:4:-5:1 "rx.in=${_radii},ry.in=${_radii},cx.lead=0:0,
 #            ball_mul_1_full
 #   b1 1     ball_scale_1_full                        fp:3:-4:1       89 436
 #   b2 1     ball_scale_2_full                        fp:3:-3:0      100 044
+#   b1 c     ball_mul_pow2_1_full                     fp:4:-6:1      113 278
+#   b2 c     ball_mul_pow2_2_full                     fp:3:-4:1       94 768
 #   b2 b2    ball_add_2_full, ball_sub_2_full         fp:3:-2:-1     122 500
 #            ball_mul_2_full: radii 0, eta, 1/2, 3/2  fp:4:-4:-1     120 780 of 97.6 million
 #            and cx in [1, 2)
@@ -436,6 +448,7 @@ set(_toy_ext_2 fp:6:-10:1)
 set(_toy_ext_r_r_sum fp:6:-10:1)
 set(_toy_ext_r_r_product fp:6:-10:1)
 set(_toy_ext_1_1_sum fp:5:-7:0)
+set(_toy_ext_1_1_product fp:5:-7:0)
 set(_toy_ext_2_1_sum fp:4:-5:0)
 set(_toy_ext_1_2_sum fp:4:-5:0)
 set(_toy_ext_2_1_product fp:4:-5:0)
@@ -448,6 +461,8 @@ set(_toy_ext_b1_b1_sum fp:2:-3:2)
 set(_toy_ext_b1_b1_product fp:2:-3:2)
 set(_toy_ext_b1_1_product fp:3:-4:1)
 set(_toy_ext_b2_1_product fp:3:-3:0)
+set(_toy_ext_b1_c_product fp:4:-6:1)
+set(_toy_ext_b2_c_product fp:3:-4:1)
 set(_toy_ext_b2_b2_sum fp:3:-2:-1)
 set(_radii "0x0p+0/0x1p-4/0x1p-1/0x1.8p+0")
 set(_toy_ext_b2_b2_product fp:4:-4:-1 "rx.in=${_radii},ry.in=${_radii},cx.lead=0:0")

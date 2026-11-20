@@ -13,7 +13,10 @@ Of the instructions it knows three kinds:
 - calls and jumps. Where one goes is read from the relocation on the instruction when there is
   one (in an object file, a call to another function always has one, which GNU and LLVM objdump
   print with -r and dumpbin prints as the operand), and otherwise from the target the disassembler
-  printed. A jump within the function is not a call.
+  printed. A jump within the function is not a call. An AArch64 call through a register (`blr
+  x16`) goes to the symbol whose GOT entry an `ldr` with a relocation loaded into that register,
+  when no instruction between writes it: so Apple clang calls Darwin's stack probe for a frame
+  larger than a page.
 
 The mnemonics are those of every syntax these tools print: AT&T and Intel for x86, and both GNU's
 `fmla v0.2d, ...` and LLVM's Apple form `fmla.2d v0, ...` for AArch64.
@@ -36,9 +39,11 @@ PREFIXES = frozenset({'notrack', 'bnd', 'rep', 'repz', 'repe', 'repnz', 'repne',
 
 # Routines a function may call outside the object without making its count incomplete, none of
 # which computes with floating-point numbers: the stack protector's, which compare a canary and
-# abort (Ubuntu's GCC protects functions by default, MSVC and clang-cl with /GS), and Windows' stack
-# probe for a large frame. Leading underscores are not part of the comparison.
-ALLOWED_EXTERNAL = frozenset({'stack_chk_fail', 'security_check_cookie', 'chkstk'})
+# abort (Ubuntu's GCC protects functions by default, MSVC and clang-cl with /GS), and the stack
+# probes of Windows and of Darwin for a frame larger than a page (Apple clang at -O0 calls
+# ___chkstk_darwin for the packed scalings of a ball, whose frame is above 4 KiB there). Leading
+# underscores are not part of the comparison.
+ALLOWED_EXTERNAL = frozenset({'stack_chk_fail', 'security_check_cookie', 'chkstk', 'chkstk_darwin'})
 
 # GNU and LLVM objdump
 SECTION = re.compile(r'^Disassembly of section (.+?):?\s*$')
@@ -157,7 +162,28 @@ def _parse_objdump(text):
             mnemonic, operands = _split(m.group(2))
             if mnemonic and mnemonic != '...':
                 current.insns.append(Insn(int(m.group(1), 16), mnemonic, operands))
+    for f in funcs:
+        _calls_through_the_got(f)
     return funcs
+
+
+def _calls_through_the_got(f):
+    """Gives a `blr REG` without a relocation the symbol whose GOT entry an earlier `ldr REG, ...`
+    with a relocation loaded (Mach-O's ARM64_RELOC_GOT_LOAD_PAGEOFF12, ELF's
+    R_AARCH64_LD64_GOT_LO12_NC), when no instruction between has REG as its first operand. Any other
+    call through a register stays indirect, and the count says it cannot follow it."""
+    loaded = {}
+    for insn in f.insns:
+        first = insn.operands.split(',')[0].strip()
+        if insn.mnemonic == 'blr':
+            if not insn.relocs and first in loaded:
+                insn.relocs.append(loaded[first])
+            continue
+        if insn.mnemonic == 'ldr' and insn.relocs and first.startswith('x'):
+            loaded[first] = insn.relocs[0]
+        else:
+            loaded.pop(first, None)
+            loaded.pop('x' + first[1:] if first.startswith('w') else first, None)
 
 
 def _parse_dumpbin(text):

@@ -64,8 +64,12 @@ set_tests_properties(api.platform_macros PROPERTIES LABELS api)
 #
 # The building blocks, which no public operation computes on its own, and the entry kernels that no
 # public operation calls yet; runner.cpp lists the same, with why.
-set(_api_internal two_sum fast_two_sum two_prod split two_prod_dekker radd rmul)
-set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2)
+set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord add_down_1 add_up_1 sub_down_1
+  sub_up_1)
+set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2
+  two_prod rmul next_up next_down mul_down_1 mul_up_1 two_sum_entry fast_two_sum_entry radd_entry add_down_entry
+  add_up_entry sub_down_entry sub_up_entry ball_mul_pow2_1 ball_mul_pow2_2 ball_mul_pow2_1_full
+  ball_mul_pow2_2_full)
 set(KAIRN_API_CASES 10000 CACHE STRING
   "Random cases per kernel, format and form of the public interface judged by the oracle, in the full tier")
 set(KAIRN_API_QUICK_CASES 2000 CACHE STRING
