@@ -83,7 +83,9 @@ KIND_FIELDS = {
     "error": ({"of", "form", "c", "k", "t", "when"}, set()),
     "leading_rounded": ({"of"}, set()),
     "rounded": ({"of", "mode"}, set()),
-    "upper": ({"of", "gaps"}, set()),
+    "upper": ({"of"}, set()),
+    "holds": ({"rel", "args", "if"}, set()),
+    "finite_or_nan": ({"of", "flag"}, set()),
     "predicate": ({"of", "rel", "args"}, set()),
     "encloses": ({"center", "radius", "set", "balls"}, {"finite_when"}),
     "extends": ({"of", "core", "lead", "finite_when"}, set()),
@@ -94,21 +96,23 @@ KIND_FIELDS = {
 }
 # The fields an entry of these kinds has in either domain when it uses them (Milestone 2): a
 # rounding under a condition, and a condition of exactness.
-KIND_OPTIONAL = {"rounded": {"when"}, "error": {"exact_when"}, "encloses": {"exact_when"}}
+KIND_OPTIONAL = {"rounded": {"when"}, "error": {"exact_when"}, "encloses": {"exact_when"},
+                 # gaps, or a value of its own (the exported bounds of the folds), under a mask (if)
+                 "upper": {"gaps", "value", "if"}}
 # Which kinds and requirements each domain has a reading of.
 DOMAIN_KINDS = {
     "finite": {"normalized", "error", "leading_rounded", "rounded", "upper", "predicate", "encloses",
-               "neighbor", "bound"},
+               "neighbor", "bound", "holds"},
     "extended": {"normalized", "error", "rounded", "upper", "predicate", "encloses", "extends",
-                 "represents", "makes_ball", "neighbor", "bound"},
+                 "represents", "makes_ball", "neighbor", "bound", "finite_or_nan"},
 }
 DOMAIN_REQUIRES = {
-    "finite": {"normalized", "abs_ge", "nonneg", "power_of_two"},
+    "finite": {"normalized", "abs_ge", "nonneg", "power_of_two", "count", "format"},
     "extended": {"canonical", "ball", "nonneg", "power_of_two"},
 }
 # The kinds that exist only for a kernel without a statement on finite operands (a full kernel, a
 # constructor), which the claims mark "ieee_only": true; represents too, when it is the only entry.
-IEEE_ONLY_KINDS = {"extends", "makes_ball"}
+IEEE_ONLY_KINDS = {"extends", "makes_ball", "finite_or_nan"}
 
 # The one sentence every page with an UNVERIFIED statement about infinite and NaN operands carries,
 # word for word: gen/claims.json is the only source of a status here.
@@ -146,15 +150,17 @@ def read(path):
 # never evaluated, and printed as TeX.
 
 def tokenize(text, where):
-    tokens = re.findall(r"\s*([A-Za-z_][A-Za-z0-9_]*|\d+|[-+*/()])", text)
+    tokens = re.findall(r"\s*([A-Za-z_][A-Za-z0-9_]*|\d+|[-+*/()^])", text)
     if "".join(tokens) != re.sub(r"\s+", "", text):
         fail("%s: cannot read the expression %r" % (where, text))
     return tokens
 
 
-def parse(text, where, names=None):
+def parse(text, where, names=None, constants=False):
     """An expression into a tree: ('num', Fraction), ('name', s), ('neg', e), ('abs', e),
-    ('+' | '-' | '*' | '/', a, b). Names are checked against `names` when it is given."""
+    ('+' | '-' | '*' | '/', a, b), and in the expressions of constants of Milestone 2 ('^', e, n) for
+    an integer power and ('call', 'unit' | 'tiny', K) for the constants of kernel K's bound, which only
+    `constants` admits. Names are checked against `names` when it is given."""
     if not isinstance(text, str):
         fail("%s: %r is not an expression" % (where, text))
     tokens = tokenize(text, where)
@@ -188,6 +194,22 @@ def parse(text, where, names=None):
         tok = take()
         if tok == "-":
             return ("neg", factor())
+        node = atom(tok)
+        if peek() == "^" and constants:
+            take("^")
+            sign = -1 if peek() == "-" and take("-") else 1
+            n = take()
+            if not n.isdigit():
+                fail("%s: an exponent is an integer, in %r" % (where, text))
+            node = ("^", node, sign * int(n))
+        return node
+
+    def atom(tok):
+        if tok in ("unit", "tiny") and peek() == "(" and constants:
+            take("(")
+            kernel = take()
+            take(")")
+            return ("call", tok, kernel)
         if tok == "(":
             node = expr()
             take(")")
@@ -213,9 +235,18 @@ def substitute(node, mapping):
     """The tree with each name in mapping replaced by the name it maps to."""
     if node[0] == "name":
         return ("name", mapping.get(node[1], node[1]))
-    if node[0] == "num":
+    if node[0] in ("num", "call"):
         return node
-    return (node[0],) + tuple(substitute(n, mapping) for n in node[1:])
+    return (node[0],) + tuple(substitute(n, mapping) if isinstance(n, tuple) else n for n in node[1:])
+
+
+def sum_terms(node):
+    """The terms of a value read as a sum: s + x y gives s and x y (a - b gives a and -b)."""
+    if node[0] == "+":
+        return sum_terms(node[1]) + sum_terms(node[2])
+    if node[0] == "-":
+        return sum_terms(node[1]) + [("neg", t) for t in sum_terms(node[2])]
+    return [node]
 
 
 def has_product(node):
@@ -236,6 +267,8 @@ def name_tex(name):
     if name == "eta":
         return "\\eta"
     m = re.fullmatch(r"([a-z])([a-z]?)(\d*)", name)
+    if name == "ok" or (not m and re.fullmatch(r"[a-z]{3,}", name)):
+        return "\\mathit{%s}" % name            # a word: the mask of an exported bound, the flag of a fold
     if not m:
         fail("no TeX form for the name %r" % name)
     base, sub, digits = m.groups()
@@ -252,7 +285,7 @@ def num_tex(q, small=True):
     return "%s\\%sfrac{%d}{%d}" % (sign, "t" if small else "", abs(q.numerator), q.denominator)
 
 
-PREC = {"+": 1, "-": 1, "*": 2, "/": 2, "neg": 3, "num": 4, "name": 4, "abs": 4}
+PREC = {"+": 1, "-": 1, "*": 2, "/": 2, "neg": 3, "num": 4, "name": 4, "abs": 4, "^": 4, "call": 4}
 
 
 def tex(node, parent=0, right=False):
@@ -265,6 +298,11 @@ def tex(node, parent=0, right=False):
         out = "\\lvert %s\\rvert" % tex(node[1])
     elif kind == "neg":
         out = "-" + tex(node[1], PREC["neg"])
+    elif kind == "^":
+        base = tex(node[1]) if node[1][0] in ("num", "name", "call", "abs") else "(%s)" % tex(node[1])
+        out = "%s^{%d}" % (base, node[2])
+    elif kind == "call":
+        out = "\\mathrm{%s}(\\mathtt{%s})" % (node[1], node[2].replace("_", "\\_"))
     elif kind == "/":
         return "\\frac{%s}{%s}" % (tex(node[1]), tex(node[2]))
     elif kind == "*":
@@ -476,6 +514,11 @@ class Kernel:
                 fail("%s: the requirement %r has no template in docs/tools/reference.py for the %s domain"
                      % (where, req, self.domain))
             args = [a.strip() for a in m.group(2).split(",")]
+            if m.group(1) == "format":                # format(half): about the format, not an input
+                if args != ["half"]:
+                    fail("%s: the requirement %r has no template" % (where, req))
+                self.requires.append(("format", args))
+                continue
             for a in args:
                 if a not in self.inputs:
                     fail("%s: the requirement %r names %r, which is not an input" % (where, req, a))
@@ -508,7 +551,17 @@ class Kernel:
                 fail("%s: the side %r of a %s claim has no template" % (where, e["side"], kind))
             if kind == "bound" and (not isinstance(e["steps"], int) or e["steps"] < 0):
                 fail("%s: the steps %r of a bound claim are not an integer >= 0" % (where, e["steps"]))
-            if kind != "makes_ball" and self.value is None:
+            if kind == "upper" and "gaps" not in e and "value" not in e:
+                fail("%s: an upper claim has gaps or a value of its own" % where)
+            if kind == "upper" and "value" in e:
+                self.expr(e["value"], "upper value", self.names | {"u", "eta"}, constants=True)
+            if kind == "holds":
+                for a in e["args"]:
+                    self.expr(a, "holds", self.names | {"u", "eta"}, constants=True)
+                if e["rel"] not in KNOWN_RELS:
+                    fail("%s: the relation %r of a holds claim has no template" % (where, e["rel"]))
+            own = kind == "holds" or (kind == "upper" and "value" in e)
+            if kind != "makes_ball" and not own and self.value is None:
                 fail("%s: a %s claim needs a value, and the kernel has none" % (where, kind))
         # Whether the kernel has a statement on finite operands (the real model) is what the claims
         # say with ieee_only, and nothing else (architecture.md, "Claims of the non-finite layer").
@@ -559,8 +612,8 @@ class Kernel:
         limbs = self.limbs(name)
         return "%s = %s" % (name_tex(name), " + ".join(name_tex(l) for l in limbs))
 
-    def expr(self, text, where, names=None):
-        return parse(text, "kernel %s, %s" % (self.name, where), names or self.names)
+    def expr(self, text, where, names=None, constants=False):
+        return parse(text, "kernel %s, %s" % (self.name, where), names or self.names, constants)
 
     def ball_names(self):
         """{(center, radius): ball name} of the encloses claims, to name the balls of requirements."""
@@ -601,6 +654,11 @@ class Kernel:
         if kind == "power_of_two":
             c = name_tex(args[0])
             return ["$%s$ is a power of two: $%s = 2^n$ for an integer $n$" % (c, c)]
+        if kind == "count":
+            m = name_tex(args[0])
+            return ["$%s = 0$ or $%s \\ge 1$, as a number of terms is" % (m, m)]
+        if kind == "format":
+            return ["The format contains $\\tfrac12$: $\\eta \\le \\tfrac12$, as `float` and `double` do"]
         fail("kernel %s: the requirement %s has no reading on finite operands" % (self.name, kind))
 
     def extended_requirement(self, kind, args):
@@ -622,9 +680,10 @@ class Kernel:
         fail("kernel %s: the requirement %s has no reading in the extended domain" % (self.name, kind))
 
     def extended_free_inputs(self):
-        """The one-limb inputs no requirement constrains: in the extended domain, any value of T."""
+        """The inputs no requirement constrains: in the extended domain, any value of T (for several
+        limbs, every limb: the finish of a fold takes any state)."""
         covered = {a for _, args in self.requires for a in args}
-        return [i for i in self.inputs if i not in covered and len(self.limbs(i)) == 1]
+        return [i for i in self.inputs if i not in covered]
 
     # Claims, in the finite reading.
     def bound_tex(self, e):
@@ -638,6 +697,8 @@ class Kernel:
             rho = "\\lvert %s\\rvert" % tex(self.value)
         elif e["form"] == "A":
             rho = "(%s)" % " + ".join("\\lvert %s\\rvert" % name_tex(i) for i in self.inputs)
+        elif e["form"] == "T":      # the magnitudes of the terms of the value
+            rho = "(%s)" % " + ".join("\\lvert %s\\rvert" % tex(t) for t in sum_terms(self.value))
         else:
             fail("kernel %s: the error form %r has no template" % (self.name, e["form"]))
         rel = None
@@ -761,6 +822,19 @@ class Kernel:
                     "side of the exact value, at most %d number%s of the format beyond its rounding %s" % (
                         side, r, rounding, v, n, "" if n == 1 else "s", "below" if below else "above", n,
                         "" if n == 1 else "s", direction))
+        if kind == "upper" and "value" in e:
+            # An exported bound: its own value, under its mask, and no closeness claimed.
+            r, v = name_tex(e["of"]), tex(self.expr(e["value"], "upper value", self.names | {"u", "eta"},
+                                                    constants=True))
+            text = "$%s \\ge %s$" % (r, v)
+            if "gaps" in e:
+                text += ", at most $%s$ gaps above" % num_tex(fractions.Fraction(e["gaps"]))
+            if "if" in e:
+                text = ("when $%s$ is true, " % name_tex(e["if"])) + text
+            return text
+        if kind == "holds":
+            a, b = (tex(self.expr(x, "holds", self.names | {"u", "eta"}, constants=True)) for x in e["args"])
+            return "when $%s$ is true, $%s %s %s$" % (name_tex(e["if"]), a, KNOWN_RELS[e["rel"]], b)
         if kind == "upper":
             r, v = name_tex(e["of"]), tex(self.value)
             gaps = num_tex(fractions.Fraction(e["gaps"]))
@@ -829,6 +903,8 @@ class Kernel:
             return "%s(%s)" % (kind, e["of"])
         if kind == "rounded":
             return "rounded(%s) %s" % (e["of"], e["mode"])
+        if kind == "upper" and "value" in e:
+            return "upper(%s) %s%s" % (e["of"], e["value"], " if %s" % e["if"] if "if" in e else "")
         if kind == "upper":
             return "upper(%s) gaps=%s" % (e["of"], e["gaps"])
         if kind == "predicate":
@@ -1345,8 +1421,10 @@ class Site:
         lines = [(min(k.inputs.index(a) for a in args), k.extended_requirement(kind, args))
                  for kind, args in k.requires]
         for a in k.extended_free_inputs():
-            lines.append((k.inputs.index(a), "$%s$ is any value of `T`: a number, $\\pm\\infty$ or a NaN"
-                          % name_tex(a)))
+            lines.append((k.inputs.index(a), ("$%s$ is any value of `T`: a number, $\\pm\\infty$ or a NaN"
+                                              if len(k.limbs(a)) == 1 else
+                                              "every limb of $%s$ is any value of `T`: a number, $\\pm\\infty$ "
+                                              "or a NaN") % name_tex(a)))
         return [text for _, text in sorted(lines, key=lambda x: x[0])]
 
     # The statement in the extended domain, as a Markdown list.
@@ -1395,6 +1473,12 @@ class Site:
                 lines.extend(self.extended_encloses(k, x))
             elif kind == "makes_ball":
                 lines.extend(self.extended_makes_ball(k, x))
+            elif kind == "finite_or_nan":
+                s, r, f = tex(k.value), name_tex(x["of"]), name_tex(x["flag"])
+                lead = k.limbs(k.value[1])[0]
+                lines += ["$%s$ is true exactly when $%s$ is finite." % (f, name_tex(lead)),
+                          "When it is, $%s = %s$, limb for limb." % (r, s),
+                          "Otherwise every limb of $%s$ is a NaN." % r]
             else:
                 fail("kernel %s: the claim kind %r has no reading in the extended domain" % (k.name, kind))
         if not kinds:
@@ -1572,6 +1656,24 @@ class Site:
             return ("$%s$ with results like those of `T` for infinite and NaN operands and on overflow: the "
                     "result of its core, %s, when that is finite, and otherwise a canonical infinity or NaN:"
                     "\n\n$$%s \\approx %s.$$" % (v, self.link(self.core[k.name]), w, v))
+        if "finite_or_nan" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] == "finite_or_nan")
+            s, r, f = k.value[1], x["of"], x["flag"]
+            return ("The result of a fold from its final state $%s$: the state itself when its leading limb is "
+                    "finite, with the flag $%s$ true; otherwise a NaN in every limb and the flag false (the "
+                    "canonical NaN of [When something is not finite](../developer/design/milestone2.md#"
+                    "sum-dot-axpy-convolution)):\n\n$$%s = %s \\ \\text{when } %s_0 \\text{ is finite}, "
+                    "\\qquad %s = \\mathrm{NaN} \\text{ otherwise}.$$" % (
+                        name_tex(s), name_tex(f), name_tex(r), name_tex(s), name_tex(s), name_tex(r)))
+        if kinds and all(x["kind"] == "holds" or (x["kind"] == "upper" and "value" in x) for x in e["ensures"]):
+            # An exported bound: each output bounds an expression of the inputs, under a mask.
+            masks = sorted({x["if"] for x in e["ensures"] if "if" in x})
+            bounds = [k.finite_bullet(x)[len("when $%s$ is true, " % name_tex(x["if"])):] if "if" in x
+                      else k.finite_bullet(x) for x in e["ensures"] if x["kind"] == "upper"]
+            return ("Numbers of `T` that bound expressions of $%s$ from above, valid when the mask %s is true:"
+                    "\n\n$$%s.$$" % (", ".join(name_tex(i) for i in k.inputs),
+                                       " and ".join("$%s$" % name_tex(m) for m in masks),
+                                       ", \\qquad ".join(b.strip("$") for b in bounds)))
         if "makes_ball" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "makes_ball")
             c, r = name_tex(x["from"]["center"]), name_tex(x["from"]["radius"])
@@ -1641,6 +1743,9 @@ class Site:
             elif x["kind"] == "makes_ball":
                 parts.append("the ball of center $%s$ and radius $%s$, canonical" % (
                     name_tex(x["from"]["center"]), name_tex(x["from"]["radius"])))
+            elif x["kind"] == "finite_or_nan":
+                parts.append("$%s$ when its leading limb is finite, flag true; otherwise NaN, flag false" % (
+                    tex(k.value)))
             else:
                 fail("kernel %s: no index line for the claim kind %r" % (k.name, x["kind"]))
         return "; ".join(parts)
