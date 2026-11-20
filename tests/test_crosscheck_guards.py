@@ -497,6 +497,112 @@ sys.stdout.write("\\n".join(lines))
             self.assertIn("extended domain: F2 finite", " ".join((good.stdout + good.stderr).split()))
 
 
+# The kinds of Milestone 2 (architecture.md, "Claims of Milestone 2"), on fp:3:-3:0, of the shape of
+# the IEEE-model statements: Omega = 7 = 0x1.cp+2, N = 1/2, P = 2^(2p-1) eta = 4.
+M2 = "fp:3:-3:0"
+M2_COMMON = "uniform,underflow,overflow,zero,pow2,extreme"
+
+
+class Milestone2Guards(unittest.TestCase):
+    def passes(self, summary, kernel, fmt, *args):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 0, out)
+        return out
+
+    def fails(self, summary, kernel, fmt, *args, reason):
+        status, out = guards(summary, kernel, fmt, *args)
+        self.assertEqual(status, 1, out)
+        self.assertIn(reason, out)
+
+    def test_good_runs_pass(self):
+        for kernel in ("next_up", "add_down_1", "sub_up_1", "mul_down_1", "ball_mul_pow2_1",
+                       "ball_mul_pow2_2_full"):
+            s = pipeline(kernel, M2, "--exhaustive")
+            out = self.passes(s, kernel, M2, "--exhaustive")
+            self.assertIn("Milestone 2, ", out)
+        s = pipeline("next_down", M2, "--seed", "0", "--count", "400")
+        self.passes(s, "next_down", M2, "--seed", "0", "--count", "400")
+
+    # neighbor: every row of the table, and the steps where the spacing changes.
+    def test_neighbor_without_the_infinities(self):
+        s = pipeline("next_up", M2, "--seed", "0", "--count", "200", "--strata",
+                     M2_COMMON + ",special,binade,subnormal")
+        self.fails(s, "next_up", M2, "--seed", "0", "--count", "200",
+                   reason='saw no case of "row: -inf"')
+
+    def test_neighbor_without_a_row_or_a_step(self):
+        good = pipeline("next_down", M2, "--exhaustive")
+        for name in ("row: eta", "row: -Omega",
+                     "a step toward zero from a power of two above the smallest normal number",
+                     "a step between the subnormal and the normal range"):
+            s = copy.deepcopy(good)
+            for k in s["keys"]:
+                k["stats"]["entries"][0]["counts"].pop(name, None)
+            self.fails(s, "next_down", M2, "--exhaustive", reason='saw no case of "%s"' % name)
+
+    # rounded of two operands: exact and inexact, an overflow on each side, NaN and infinities.
+    def test_directed_sum_without_an_overflow(self):
+        # Operands in [1/2, 2): their sums stay below Omega = 7.
+        s = pipeline("add_down_1", M2, "--exhaustive", "--restrict", "a.lead=-1:0",
+                     "--restrict", "b.lead=-1:0")
+        self.fails(s, "add_down_1", M2, "--exhaustive", "--restrict", "a.lead=-1:0,b.lead=-1:0",
+                   reason='saw no case of "overflow: value above Omega"')
+
+    def test_directed_sum_without_a_nan_operand(self):
+        s = pipeline("sub_down_1", M2, "--seed", "0", "--count", "300", "--strata",
+                     M2_COMMON + ",apart,cancel,exact,close,beyond,omega")
+        self.fails(s, "sub_down_1", M2, "--seed", "0", "--count", "300",
+                   reason='saw no case of "a NaN operand"')
+        self.fails(s, "sub_down_1", M2, "--seed", "0", "--count", "300",
+                   reason="without nonfinite")
+
+    # rounded with when and bound: the condition both ways, results at the rounding and beyond.
+    def test_directed_product_whose_condition_always_holds(self):
+        # Factors of at least 2: every product of finite operands is at least P = 4.
+        s = pipeline("mul_down_1", M2, "--exhaustive", "--restrict", "a.lead=1:2",
+                     "--restrict", "b.lead=1:2")
+        args = ("--exhaustive", "--restrict", "a.lead=1:2,b.lead=1:2")
+        self.fails(s, "mul_down_1", M2, *args,
+                   reason='saw no case of "product_large does not hold (nothing claimed)"')
+        self.fails(s, "mul_down_1", M2, *args,
+                   reason='saw no case of "one step beyond the directed rounding"')
+
+    def test_directed_product_never_at_the_rounding(self):
+        s = copy.deepcopy(pipeline("mul_up_1", M2, "--exhaustive"))
+        for k in s["keys"]:
+            k["stats"]["entries"][0]["counts"].pop("at the directed rounding", None)
+            k["stats"]["entries"][1]["counts"].pop("product_large holds", None)
+        self.fails(s, "mul_up_1", M2, "--exhaustive",
+                   reason='saw no case of "at the directed rounding"')
+        self.fails(s, "mul_up_1", M2, "--exhaustive",
+                   reason='saw no case of "product_large holds"')
+
+    # exact_when: the conditions hold, and each fails.
+    def test_exact_when_whose_condition_never_fails(self):
+        # Centers and powers of two of at least 1: |cx c| >= 1 > N; radius 0.
+        args = ("--exhaustive", "--restrict", "cx.lead=0:2,c.lead=0:2,rx.in=0x0p+0")
+        s = pipeline("ball_mul_pow2_1", M2, "--exhaustive", "--restrict", "cx.lead=0:2",
+                     "--restrict", "c.lead=0:2", "--restrict", "rx.in=0x0p+0")
+        self.fails(s, "ball_mul_pow2_1", M2, *args,
+                   reason='saw no case of "exact_when fails: rx*c = 0 or |rx*c| > eta/(2*u)"')
+        self.fails(s, "ball_mul_pow2_1", M2, *args,
+                   reason='saw no case of "exact_when fails: cx*c = 0 or |cx*c| > eta/(2*u)"')
+
+    def test_exact_when_that_never_holds(self):
+        s = copy.deepcopy(pipeline("ball_mul_pow2_2_full", M2, "--exhaustive"))
+        for k in s["keys"]:
+            k["stats"]["entries"][0]["counts"].pop("exact_when holds", None)
+        self.fails(s, "ball_mul_pow2_2_full", M2, "--exhaustive",
+                   reason='saw no case of "exact_when holds"')
+
+    # The strata of the families of Milestone 2, in a random run's header.
+    def test_strata_of_the_families_not_promised(self):
+        s = pipeline("mul_up_1", M2, "--seed", "0", "--count", "200", "--strata",
+                     M2_COMMON + ",nonfinite,zeroinf,tiny,exactprod,beyond")
+        self.fails(s, "mul_up_1", M2, "--seed", "0", "--count", "200",
+                   reason="without aroundp, which its family dirprod has")
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         CMAKE = sys.argv.pop(1)

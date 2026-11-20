@@ -19,6 +19,24 @@ run: no claim violated, no broken stream, no invalid case (the cross-checks pass
   (predicate) did not see both outcomes; a rounding to nearest saw only exact cases; a rounding
   down or up never differed from the rounding to nearest.
 
+For the kinds of Milestone 2 (architecture.md, "Claims of Milestone 2"), in either domain, also
+when the run did not see what their statements are about (m2_needs below):
+
+- a random run's header lacks a stratum of the family the oracle's generator has for the kernel
+  (oracle/README.md, "gen": neighbor, dirsum, dirprod, ballpow2);
+- neighbor never saw a row of the table of next_up and next_down (in the finite domain, the rows
+  that are judged there: not Omega for up, not -Omega for down, not the infinities or NaN), or a
+  step toward zero from a power of two above the smallest normal number, or a step between the
+  subnormal and the normal range;
+- a rounded entry with a when condition never saw it hold, or never saw it fail;
+- a rounded entry of a value of two operands (NAME op NAME), in the extended domain, never saw an
+  exact result, an overflow above Omega and one below -Omega, a NaN operand, an infinite operand
+  without a NaN;
+- a bound entry never saw an output at the directed rounding, one step beyond it (when steps is
+  at least 1), a value that is not a number of the format; in the extended domain a non-finite
+  operand, and for a value of two operands the overflows, a NaN operand and an infinite one;
+- an exact_when list never held, or one of its conditions never failed.
+
 For a kernel of the extended domain (the non-finite layer, "domain": "extended" in its claims),
 also when the run did not see what that layer is about:
 
@@ -51,10 +69,11 @@ no claims and fail the run when:
 
 Otherwise it prints one line saying what was checked. Python's standard library only, and
 nothing from the oracle but the format of its summary (oracle/README.md, "Statistics", "The
-extended domain" and "rational").
+extended domain", "The kinds of Milestone 2" and "rational").
 """
 import argparse
 import json
+import re
 import sys
 
 # The strata of every family of the oracle's generator (oracle/README.md, "gen").
@@ -91,6 +110,119 @@ RATIONAL = {"rational_1": 1, "rational_2": 2}
 RATIONAL_STRATA = ("small", "random", "pow2", "extreme", "den0", "exact", "tie1", "tie2", "tail")
 RATIONAL_COUNTS = (("exact", (1, 2)), ("inexact", (1, 2)), ("den = 0", (1, 2)),
                    ("naive pair not normalized", (2,)))
+
+
+# The kinds of Milestone 2 (architecture.md, "Claims of Milestone 2"): the counts of the oracle's
+# judge (oracle/README.md, "check"; oracle/kairn_oracle/directed.py) that must not be zero.
+NEIGHBOR_ROWS = ("row: a NaN", "row: +inf", "row: Omega", "row: positive finite", "row: eta",
+                 "row: zero", "row: -eta", "row: negative finite", "row: -Omega", "row: -inf")
+# The rows that a neighbor entry of the finite domain does not judge: the step outward from
+# +-Omega, which is not a number of the format there, and the values that are not finite.
+NEIGHBOR_NOT_FINITE = {"up": ("row: a NaN", "row: +inf", "row: -inf", "row: Omega"),
+                       "down": ("row: a NaN", "row: +inf", "row: -inf", "row: -Omega")}
+NEIGHBOR_STEPS = ("a step toward zero from a power of two above the smallest normal number",
+                  "a step between the subnormal and the normal range")
+WHEN_COUNTS = ("product_large holds", "product_large does not hold (nothing claimed)")
+OVERFLOW_COUNTS = ("overflow: value above Omega", "overflow: value below -Omega")
+OPERAND_COUNTS = ("a NaN operand", "an infinite operand, no NaN operand")
+BOUND_COUNTS = ("at the directed rounding", "value not a number of the format")
+BOUND_ONE = "one step beyond the directed rounding"
+EXACT_HOLDS = "exact_when holds"
+EXACT_FAILS = "exact_when fails: "
+# The strata of the families of Milestone 2 beyond the common ones (oracle/kairn_oracle/gen4.py).
+M2_STRATA = {"neighbor": ("special", "binade", "subnormal"),
+             "dirsum": ("apart", "cancel", "exact", "close", "beyond", "omega"),
+             "dirprod": ("aroundp", "tiny", "exactprod", "beyond"),
+             "ballpow2": ("atnormal", "sides", "into", "outof")}
+
+
+def two_operands(kernel):
+    """The two operands of a value NAME op NAME (op +, - or *), or None."""
+    m = re.fullmatch(r"\s*([A-Za-z_]\w*)\s*([-+*])\s*([A-Za-z_]\w*)\s*", kernel.get("value") or "")
+    names = [i.get("name") for i in kernel.get("inputs", [])]
+    if not m or m.group(1) == m.group(3) or not {m.group(1), m.group(3)} <= set(names):
+        return None
+    return m.group(1), m.group(2), m.group(3)
+
+
+def m2_family(kernel):
+    """The family the oracle's generator has for a kernel of Milestone 2 (gen4.family_of), or
+    None."""
+    ens = kernel.get("ensures", [])
+    kinds = {e.get("kind") for e in ens}
+    req = [r.replace(" ", "") for r in kernel.get("requires", [])]
+    limbs = {i.get("name"): i.get("limbs", 1) for i in kernel.get("inputs", [])}
+
+    def plain(n):
+        return (limbs.get(n) == 1 and "nonneg(%s)" % n not in req
+                and "power_of_two(%s)" % n not in req)
+    two = two_operands(kernel)
+    two = two if two and plain(two[0]) and plain(two[2]) else None
+    if "neighbor" in kinds:
+        return "neighbor"
+    directed = any(e.get("kind") == "rounded" and e.get("mode") != "nearest" for e in ens)
+    if two and two[1] == "*" and ("bound" in kinds or directed):
+        return "dirprod"
+    if two and two[1] in "+-" and directed:
+        return "dirsum"
+    for e in ens:
+        if e.get("kind") == "encloses":
+            balls = e.get("balls") or {}
+            inball = set(balls)
+            for b in balls.values():
+                inball |= set(b.values() if isinstance(b, dict) else b)
+            names = set(re.findall(r"[A-Za-z_]\w*", e.get("set") or "")) - inball - {"abs"}
+            if any("power_of_two(%s)" % n in req for n in names):
+                return "ballpow2"
+    return None
+
+
+def ew_text(cond):
+    """The text the oracle counts a failing exact_when condition under (claims.ew_condition_text)."""
+    op = "zero_or_abs_gt" if "zero_or_abs_gt" in cond else "zero_or_abs_ge"
+    text = str(cond.get(op, "")).strip()
+    return "%s = 0 or |%s| %s %s" % (text, text, ">" if op == "zero_or_abs_gt" else ">=",
+                                     cond.get("than"))
+
+
+def m2_problems(kernel, entries, merged, extended):
+    """The guards of the kinds of Milestone 2 on each entry of the kernel's own claims."""
+    for j, e in enumerate(kernel.get("ensures", [])):
+        if j >= len(entries) or entries[j]["kind"] != e.get("kind"):
+            return                  # not the claims' entries: reported below, or not ours
+        label, counts = entries[j]["label"], merged[j]
+        for name in m2_needs(kernel, e, extended):
+            if not counts.get(name):
+                yield ('the claim "%s" saw no case of "%s", so its statement was not checked '
+                       'there' % (label, name))
+
+
+def m2_needs(kernel, e, extended):
+    """The counts an entry e of the kernel's claims must have seen, for the kinds of Milestone 2
+    (none for the other kinds)."""
+    two = two_operands(kernel)
+    kind = e.get("kind")
+    need = []
+    if kind == "neighbor":
+        skip = () if extended else NEIGHBOR_NOT_FINITE.get(e.get("side"), ())
+        need = [r for r in NEIGHBOR_ROWS if r not in skip] + list(NEIGHBOR_STEPS)
+    elif kind == "rounded":
+        if e.get("when"):
+            need += WHEN_COUNTS
+        if extended and two:
+            need += ("exact",) + OVERFLOW_COUNTS + OPERAND_COUNTS
+    elif kind == "bound":
+        need += BOUND_COUNTS
+        if isinstance(e.get("steps"), int) and e.get("steps") >= 1:
+            need.append(BOUND_ONE)
+        if extended:
+            need.append("a non-finite operand")
+            if two:
+                need += OVERFLOW_COUNTS + OPERAND_COUNTS
+    if kind in ("error", "encloses") and e.get("exact_when"):
+        need.append(EXACT_HOLDS)
+        need += [EXACT_FAILS + ew_text(c) for c in e["exact_when"] if isinstance(c, dict)]
+    return need
 
 
 def extended_strata(kernel):
@@ -173,6 +305,11 @@ def problems(summary, a):
                 if s not in strata:
                     yield ("the oracle's generator lists the strata %s, without %s, which it "
                            "adds for %s in the extended domain" % (",".join(strata), s, a.kernel))
+        family = m2_family(kernel)
+        for s in M2_STRATA.get(family, ()):
+            if s not in strata:
+                yield ("the oracle's generator lists the strata %s, without %s, which its family "
+                       "%s has (Milestone 2)" % (",".join(strata), s, family))
 
     keys = [k for k in summary.get("keys", [])
             if (k["kernel"], k["format"]) == (a.kernel, a.format)]
@@ -224,6 +361,7 @@ def problems(summary, a):
             if not counts.get("inexact, != RN"):
                 yield ('the claim "%s" never differed from the rounding to nearest, so the '
                        'direction was not checked' % label)
+    yield from m2_problems(kernel, entries, merged, extended)
     if not extended:
         return
 
@@ -340,6 +478,18 @@ def describe(summary, a):
             "exact", "inexact", "den = 0", "first rounding a tie", "second rounding a tie",
             "naive pair not normalized", "second limb subnormal"))
     kernel, _ = kernel_claims(summary, a)
+    if kernel:
+        # The classes of the kinds of Milestone 2 that the guards asked for, with their counts.
+        seen = []
+        ext = kernel.get("domain") == "extended"
+        for j, e in enumerate(kernel.get("ensures", [])):
+            items = ["%s %d" % (name, sum(k["stats"]["entries"][j].get("counts", {}).get(name, 0)
+                                          for k in summary["keys"]))
+                     for name in m2_needs(kernel, e, ext)]
+            if items:
+                seen.append("%s: %s" % (e.get("kind"), ", ".join(items)))
+        if seen:
+            text += "; Milestone 2, %s" % "; ".join(seen)
     if kernel and kernel.get("domain") == "extended":
         seen = []
         for j, e in enumerate(kernel.get("ensures", [])):
