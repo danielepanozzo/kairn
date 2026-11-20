@@ -1319,6 +1319,17 @@ python3 gen/kairn-gen test --full           # a few hundred thousand cases per k
 python3 gen/kairn-gen test --no-cxx --skip test_statements.   # without C++, without a module
 ```
 
+**The maps, and their steps, are tested here only for now** too (`KAIRN_NOT_YET_CROSS_CHECKED_MAPS`
+and `KAIRN_NOT_YET_CROSS_CHECKED_MAP_STEPS`, which `tests/CMakeLists.txt` adds to the two lists).
+`gen/tests/test_maps.py` checks the rules of a map; that the interpreter writes the step of each
+element, the same elements and mask in both orders for every number of lanes, the canonical NaN
+for an element that is not finite and keeps the others; the compiled `F_seq`, `F_lanes` (0 to 8
+lanes) and `F_packed` of every build bit for bit against the interpreter, on the lengths of the
+folds, with non-finite elements; every map in place (the array written being one of those read,
+with each form, at `-O0` and `-O2` with each compiler); and rule R3 on a supplied `y` of `add`,
+`sub` and `axpy`, the maps of stored arrays as the control (fused under `-ffp-contract=fast` by
+Apple clang and GCC 16 on the Mac, and GCC 13 and Clang 18 on x86-64).
+
 **The folds, and the kernels of their stage, are tested here only for now** (they are in
 `KAIRN_NOT_YET_CROSS_CHECKED`, [above](#cross-checks)). `gen/tests/test_folds.py` checks:
 
