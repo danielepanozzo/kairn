@@ -883,9 +883,13 @@ class Rocq(unittest.TestCase):
     # earlier line kept, in its order.
     # Then the two convolutions were proved (FoldConv.v): Audit.v lists their theorems, one each,
     # every earlier line kept, in its order.
+    # Then the proofs of the intervals met them in a merge. On their own line mul_dir_1 was
+    # proved: Statements.v prints that one word, and Audit.v lists its theorem; then the seven
+    # bounds of two limbs: seven words more, and their theorems (Directed2.v). The files are
+    # the regeneration of the merged descriptions.
     DIGESTS = {'Model.v': '87fb181c8e6c93c1f4464b97b919af311fa8a00a9a9d941c3db262f8489375ee',
-               'Statements.v': '2e4e840dd6d829557bd29c8de4dda3d04bc2968382d771f41ffb8da3bf7717c7',
-               'Audit.v': 'bf7fa40c7144bdb2dc40415465e5f16e0fc8d446e853bce9247129dc91f11a01'}
+               'Statements.v': '3e7e7c5148914c45a32bc5a285f4f552889434d0b714971783fe1f7521308fbc',
+               'Audit.v': '655b9f566eb3b51ca85aaffbe68da179ac2e76de08861bca21e0695ec5dcf129'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
@@ -1006,8 +1010,9 @@ class ConstantNames(unittest.TestCase):
         # The constants of the bound kernels of the folds' stage, as their line printed them before
         # the record joined it (BoundKernels.v names them). Among them the doubling, 2, which
         # ball_from_interval_2 shares: the two lines named it apart (up_bound_dot_1_2 and
-        # up_ball_from_interval_2_1), the proofs of the bound kernels use the first and no
-        # hand-written proof the second, so the joined record has the first (one name per constant).
+        # up_ball_from_interval_2_1), the proofs of the bound kernels use the first and one proof of
+        # the intervals the second (IeeeBallConvert.v, renamed to the first when the proofs of the
+        # interval kernels joined), so the joined record has the first (one name per constant).
         '(1+u)*(unit(mul_1_1)+eta/2)': 'up_bound_dot_1_0',
         '(1+u)^2*(unit(mul_1_1)+eta)': 'up_bound_dot_1_1',
         '2': 'up_bound_dot_1_2',

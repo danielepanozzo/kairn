@@ -74,8 +74,18 @@ lists:
   two limbs over the real numbers: a sum, a difference and a product of two 2-limb numbers,
   moved down or up by a bound of their own error, with how far that moves them
   (`Directed2.v`), and, with overflow, infinities and NaN, the sum of two intervals whose
-  bounds have two limbs (`IeeeInterval2.v`); and the theorems of the folds, `F_seq_correct`
-  and `F_lanes_correct` per fold `F` (`FoldSums.v`), of their steps, finishes and bound kernels
+  bounds have two limbs (`IeeeInterval2.v`) and the conversions of a ball: its bounds as
+  numbers of the limb type, the ball of one limb that contains a ball of two, and the ball
+  made from an interval of two numbers (`IeeeBallConvert.v`), and the exact interval kernels:
+  the negation and the constructor of an interval whose bounds have two limbs, and the hull
+  and the intersection of two intervals with bounds of one and of two limbs
+  (`IeeeIntervalExact.v`), the difference of two intervals whose bounds have two limbs
+  (`IeeeIntervalSub2.v`), the conversions between an interval and a ball of one limb, with
+  the midpoint and the radius of an interval and its split at the midpoint
+  (`IeeeIntervalConvert.v`), and the product of two intervals whose bounds have two limbs,
+  with the product of two bounds on all values (`IeeeIntervalMul2.v`); and the theorems of the
+  folds, `F_seq_correct` and `F_lanes_correct` per fold `F` (`FoldSums.v`), of their steps,
+  finishes and bound kernels
   (`StepKernels.v`, `IeeeFoldFinish.v`, `BoundKernels.v`), of the two together
   (`FoldGuarantee.v`), and of the folds and their steps in the model with overflow
   (`FoldTransfer.v`, `IeeeSteps.v`, `IeeeFolds.v`; [below](#sums-and-dot-products-of-arrays));
@@ -110,15 +120,18 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    form; their descriptions do not name them yet),
    a few facts whose statements are written by hand because they say more about a kernel than
    its claims can express, the theorems about sums and dot products of arrays, which are
-   about no single kernel, the lemmas of the first building blocks of Milestone 2 that are
-   not generated statements, among them those about `mul_dir_1`, whose kernel is not generated
-   yet, those about the two executions of a product, whose plain-product listings are
-   written by hand, and the theorems of the interval kernels with bounds of one limb, of the
-   bounds of two limbs and of the sum of two intervals of two limbs, which are not generated
-   yet either: they are proved on models of their listings written by hand in the text the
-   generator prints; and the theorems about the folds, the largest magnitude and the product
-   of polynomials whose statements are written by hand
-   ([below](#sums-and-dot-products-of-arrays)).
+   about no single kernel, and the lemmas of the first building blocks of Milestone 2 that are
+   not generated statements, among them what is proved of `mul_dir_1`, of the interval
+   kernels with bounds of one limb, of the bounds of two limbs, of the sum of two intervals
+   of two limbs, of the conversions of a ball, of the exact interval kernels (the hull and
+   the intersection of intervals of extended real numbers), of the difference of two
+   intervals of two limbs (the sum with the negated operand), of the conversions between an
+   interval and a ball (the midpoint of a bounded interval) and of the product of two
+   intervals of two limbs (the finite core of the directed product, and what each product of
+   bounds gives) beside their generated
+   statements, those about the two executions of a product, whose plain-product listings are
+   written by hand, and the theorems about the folds, the largest magnitude and the product of
+   polynomials whose statements are written by hand ([below](#sums-and-dot-products-of-arrays)).
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
@@ -130,7 +143,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  82 files: no Admitted, admit, Axiom or Parameter
+  87 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -200,7 +213,7 @@ is the guarantee whenever no operation inside the kernel overflows.
 **What happens at overflow and with infinities and NaN is proved in Flocq's model of IEEE 754.**
 There, values are Flocq's binary floating-point numbers, with signed zeros, infinities and NaN,
 and the operations overflow as the hardware does, for formats shaped like `binary32` and
-`binary64`. Two kinds of statements are proved there:
+`binary64`. Four kinds of statements are proved there:
 
 - For the arithmetic kernels of two limbs: an overflow anywhere in the kernel never produces a
   finite wrong result (if the leading limb of the result is finite, the result is normalized and
@@ -215,17 +228,36 @@ and the operations overflow as the hardware does, for formats shaped like `binar
   and the empty set included; and it returns a finite ball, not the whole line, under a stated
   condition on its operands
   ([when the result is a finite ball](../developer/design/milestone1.md#when-the-result-is-a-finite-ball)).
+- For the interval kernels, whose bounds may be infinite and which are stated in this model only
+  ([Interval kernels](../developer/design/milestone2.md#what-is-stated-of-an-interval-kernel)):
+  the result is a canonical interval, it is empty exactly when an operand is, and it contains the
+  exact result for all members of the operands, unbounded operands included; and how close its
+  bounds are to those of the exact range. For bounds of one limb, the constructor, the negation,
+  the sum, the difference and the product are proved: the bounds of a sum and of a difference
+  are the bounds of the exact range rounded outward, those of a product are within one number
+  of `T` of that, and the result is bounded exactly when the exact range is within the largest
+  number of `T`. For bounds of two limbs, the sum is proved: each bound of a bounded result is
+  within $A\lvert v\rvert + B$ of the bound $v$ of the exact range, with the constants of
+  [Bounds of two limbs](../developer/design/milestone2.md#bounds-of-two-limbs), a bound of the
+  exact range that is zero is returned as zero, and the result is bounded when the exact range
+  is within a quarter of the overflow threshold.
+- For the conversions of a ball
+  ([Midpoint, radius and the conversions](../developer/design/milestone2.md#midpoint-radius-and-the-conversions)):
+  the bounds of a ball as numbers of `T` are on their side of every member, with $+\infty$ and
+  $-\infty$ for the empty ball, and they are the bounds rounded outward for a center of one
+  limb; a ball of two limbs narrowed to one limb, and a ball of two limbs made from an interval
+  of two numbers of `T`, are canonical and contain what they are made from, whatever the
+  operands are.
 
 These statements and the models of the kernels they are about are generated from the kernel
-descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Two files are written
-by hand and are part of what must be trusted: `proofs/theories/IeeeOperations.v`, which says
-what each operation of a kernel means in Flocq's terms, and `IeeeVocabulary.v`, the definitions
-the statements use (what a canonical value is, what a ball contains). A third,
-`IeeeIntervalVocabulary.v`, has the definitions for intervals (a canonical interval, its members,
-the exact range of an operation and its bounds); no generated statement uses it yet, because the
-interval kernels are not generated yet, and the theorems about them are stated with it by hand.
-The kernels of the second
-kind are in the generated headers and are `proved` in the claims; whether an operator of the
+descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Three files are
+written by hand and are part of what must be trusted: `proofs/theories/IeeeOperations.v`, which
+says what each operation of a kernel means in Flocq's terms, `IeeeVocabulary.v`, the definitions
+the statements use (what a canonical value is, what a ball contains), and
+`IeeeIntervalVocabulary.v`, the definitions the statements of the interval kernels use (a
+canonical interval, its members, the exact range of an operation and its bounds).
+The kernels of the last three
+kinds are in the generated headers and are `proved` in the claims; whether an operator of the
 library calls them yet is said in
 [What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values).
 

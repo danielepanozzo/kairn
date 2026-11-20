@@ -47,8 +47,11 @@
       - otherwise mul_down_1 a b is RD(a b) or the number of F before it, and mul_up_1 a b
         is RU(a b) or the number after it; the wider result happens only for a nonzero
         product with |RN(a b)| < P.
-      mul_dir_1 returns the pair (mul_down_1, mul_up_1): in the real model a zero factor
-      gives p = 0, which is the literal zero of its last two lines.
+      mul_dir_1 returns the pair (mul_down_1, mul_up_1) (mul_dir_1_eq): in the real model
+      a zero factor gives p = 0, which is the literal zero of its last two lines. Its
+      generated statement, mul_dir_1_spec, is the statements of mul_down_1 and of
+      mul_up_1 on its two outputs (mul_dir_1_correct); mul_dir_1_cases says which of the
+      two values each output is.
       The facts hold for every positive precision and every tie rule
       (mul_down_1_facts, mul_up_1_facts); the generated statements mul_down_1_spec and
       mul_up_1_spec (theorems mul_down_1_correct, mul_up_1_correct) are for ties to even
@@ -57,10 +60,9 @@
    The fallback of the design page (the test le(ap, P) and a statement for |a b| > P) is
    not needed: the lemma holds at the boundary.
 
-   mul_down_1 and mul_up_1 are the generated models of proofs/gen/Model.v. mul_dir_1 is
-   not generated yet (it comes with the interval kernels): mul_dir_1_listing, in section
-   Listings, is its listing written by hand in the text the generator prints, and the
-   generated Model.mul_dir_1 will replace it. *)
+   mul_down_1, mul_up_1 and mul_dir_1 are the generated models of proofs/gen/Model.v, and
+   mul_down_1_correct, mul_up_1_correct and mul_dir_1_correct establish their generated
+   statements. *)
 From Stdlib Require Import Reals ZArith Bool Lia Lra Psatz.
 From Flocq Require Import Core Mult_error.
 From Kairn.Gen Require Import Model Statements.
@@ -468,40 +470,6 @@ intros emin prec Hp a b Fa Fb. split.
   replace (emin - 1)%Z with (-1 + emin)%Z by ring. rewrite bpow_plus, pow2_m1. exact H.
 Qed.
 
-(** * The listing of mul_dir_1 *)
-
-Section Listings.
-Variable emin prec : Z.
-Variable choice : Z -> bool.
-
-(* Hand-written model of the listing mul_dir_1 (both directed products from one
-   two_prod, a zero factor giving the literal zero), in the text the generator prints
-   for such a listing; the kernel comes with the interval kernels, and the generated
-   Model.mul_dir_1 will replace this definition. The constant is the generated one of
-   mul_down_1 and mul_up_1. *)
-Definition mul_dir_1_listing (a b : R) : R * R :=
-  let '(p, e) := two_prod emin prec choice a b in
-  let ap := Rabs p in
-  let bd := Rlt_bool ap (up_mul_down_1_0 emin prec) in
-  let ez := Req_bool e 0 in
-  let un := andb bd ez in
-  let n := Rlt_bool e 0 in
-  let sd := orb n un in
-  let pp := pred radix2 (FLT_exp emin prec) p in
-  let dz := if sd then pp else p in
-  let q := Rlt_bool 0 e in
-  let su := orb q un in
-  let sp := succ radix2 (FLT_exp emin prec) p in
-  let vz := if su then sp else p in
-  let za := Req_bool a 0 in
-  let zb := Req_bool b 0 in
-  let zz := orb za zb in
-  let d := if zz then 0 else dz in
-  let v := if zz then 0 else vz in
-  (d, v).
-
-End Listings.
-
 (* The constant of the listings is P = eta / (2 u^2) = 2^(2 prec - 1) eta, which is a
    number of the format: rounding it up changes nothing. For every positive precision. *)
 Lemma up_mul_down_1_0_eq :
@@ -733,13 +701,13 @@ End DirectedProduct.
 (* mul_dir_1 returns the results of mul_down_1 and of mul_up_1: with a zero factor the
    rounded product p that those return is the zero that mul_dir_1 returns. For all real
    numbers a and b. *)
-Lemma mul_dir_1_listing_eq :
+Lemma mul_dir_1_eq :
   forall emin prec {prec_gt_0_ : Prec_gt_0 prec} choice a b,
-  mul_dir_1_listing emin prec choice a b
+  mul_dir_1 emin prec choice a b
   = (mul_down_1 emin prec choice a b, mul_up_1 emin prec choice a b).
 Proof.
 intros emin prec Hp choice a b.
-unfold mul_dir_1_listing, mul_down_1, mul_up_1.
+unfold mul_dir_1, mul_down_1, mul_up_1.
 rewrite two_prod_eq. cbv beta iota zeta.
 assert (Zero : a * b = 0 -> round radix2 (FLT_exp emin prec) (Znearest choice) (a * b) = 0).
 { intros Z. rewrite Z. apply round_0; auto with typeclass_instances. }
@@ -824,13 +792,16 @@ split; [exact F|split; [exact L|split; [|exact X]]].
 destruct C as [C|C]; rewrite C; [apply succ_ge_id|apply Rle_refl].
 Qed.
 
-(* mul_dir_1: its two outputs satisfy the statements of mul_down_1 and of mul_up_1. *)
-Theorem mul_dir_1_listing_correct :
+(* mul_dir_1, for numbers a, b of the format, ties to even, from precision 2: each of its
+   two outputs is what mul_down_1_cases and mul_up_1_cases say of mul_down_1 and of
+   mul_up_1: the directed rounding of a b or the number of the format one step beyond
+   it, and the directed rounding when a b = 0 or |a b| >= 2^(2 prec - 1) eta. *)
+Theorem mul_dir_1_cases :
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a b : R,
   fmt emin prec a ->
   fmt emin prec b ->
-  let '(d, v) := mul_dir_1_listing emin prec tie_even a b in
+  let '(d, v) := mul_dir_1 emin prec tie_even a b in
   fmt emin prec d /\
   fmt emin prec v /\
   d <= (a * b) /\
@@ -842,9 +813,21 @@ Theorem mul_dir_1_listing_correct :
 Proof.
 intros emin prec Hp a b Fa Fb.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
-rewrite (mul_dir_1_listing_eq emin prec).
+rewrite (mul_dir_1_eq emin prec).
 destruct (mul_down_1_cases emin prec Hp a b Fa Fb) as [F1 [L1 [C1 X1]]].
 destruct (mul_up_1_cases emin prec Hp a b Fa Fb) as [F2 [L2 [C2 X2]]].
+exact (conj F1 (conj F2 (conj L1 (conj C1 (conj X1 (conj L2 (conj C2 X2))))))).
+Qed.
+
+(* The generated statement of mul_dir_1: the statements of mul_down_1 and of mul_up_1 on
+   its two outputs. *)
+Theorem mul_dir_1_correct : mul_dir_1_spec.
+Proof.
+intros emin prec Hp a b Fa Fb.
+assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
+rewrite (mul_dir_1_eq emin prec).
+destruct (mul_down_1_correct emin prec Hp a b Fa Fb) as [F1 [L1 [C1 X1]]].
+destruct (mul_up_1_correct emin prec Hp a b Fa Fb) as [F2 [L2 [C2 X2]]].
 exact (conj F1 (conj F2 (conj L1 (conj C1 (conj X1 (conj L2 (conj C2 X2))))))).
 Qed.
 

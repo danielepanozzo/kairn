@@ -16,9 +16,10 @@ ensures:       ball_of_interval m r from=xl,xu special=ieee1788 rel=u abs=eta sm
 min_precision: 2
 source:        the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalConvert.v interval_mid_rad_1_correct
 entry:         yes
 cone_exempt:   every output is selected after explicit tests of the bounds; ball_of_interval states what comes out for every canonical interval
 

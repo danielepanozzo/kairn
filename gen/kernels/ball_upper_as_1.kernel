@@ -12,9 +12,10 @@ ensures:       set_bound h above x x=c,r tight=rounded
 min_precision: 2
 source:        the center plus the radius, rounded up (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeBallConvert.v ball_upper_as_1_correct
 entry:         yes
 ieee_only:     yes
 cone_exempt:   h is selected after the test of the radius that tells the empty ball; set_bound states what comes out for each state of the ball

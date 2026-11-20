@@ -14,6 +14,7 @@ From Kairn Require Import BoundKernels.
 From Kairn Require Import Compare.
 From Kairn Require Import Convert.
 From Kairn Require Import Directed.
+From Kairn Require Import Directed2.
 From Kairn Require Import DirectedProd.
 From Kairn Require Import DirectedSum.
 From Kairn Require Import EFT.
@@ -110,6 +111,9 @@ Print Assumptions sub_up_1_correct.
 Definition two_prod_audit : two_prod_spec := two_prod_correct.
 Print Assumptions two_prod_correct.
 
+Definition mul_dir_1_audit : mul_dir_1_spec := mul_dir_1_correct.
+Print Assumptions mul_dir_1_correct.
+
 Definition mul_down_1_audit : mul_down_1_spec := mul_down_1_correct.
 Print Assumptions mul_down_1_correct.
 
@@ -185,11 +189,20 @@ Print Assumptions add_2_1_correct.
 Definition add_2_2_audit : add_2_2_spec := add_2_2_correct.
 Print Assumptions add_2_2_correct.
 
+Definition add_ball_2_2_audit : add_ball_2_2_spec := add_ball_2_2_correct.
+Print Assumptions add_ball_2_2_correct.
+
+Definition add_down_2_2_audit : add_down_2_2_spec := add_down_2_2_correct.
+Print Assumptions add_down_2_2_correct.
+
 Definition add_entry_step_2_audit : add_entry_step_2_spec := add_entry_step_2_correct.
 Print Assumptions add_entry_step_2_correct.
 
 Definition add_fast_2_2_audit : add_fast_2_2_spec := add_fast_2_2_correct.
 Print Assumptions add_fast_2_2_correct.
+
+Definition add_up_2_2_audit : add_up_2_2_spec := add_up_2_2_correct.
+Print Assumptions add_up_2_2_correct.
 
 Definition mul_2_2_audit : mul_2_2_spec := mul_2_2_correct.
 Print Assumptions mul_2_2_correct.
@@ -247,6 +260,18 @@ Print Assumptions lt_2_2_correct.
 
 Definition le_2_2_audit : le_2_2_spec := le_2_2_correct.
 Print Assumptions le_2_2_correct.
+
+Definition mul_ball_2_2_audit : mul_ball_2_2_spec := mul_ball_2_2_correct.
+Print Assumptions mul_ball_2_2_correct.
+
+Definition mul_dir_2_2_audit : mul_dir_2_2_spec := mul_dir_2_2_correct.
+Print Assumptions mul_dir_2_2_correct.
+
+Definition sub_down_2_2_audit : sub_down_2_2_spec := sub_down_2_2_correct.
+Print Assumptions sub_down_2_2_correct.
+
+Definition sub_up_2_2_audit : sub_up_2_2_spec := sub_up_2_2_correct.
+Print Assumptions sub_up_2_2_correct.
 
 Definition le_1_2_audit : le_1_2_spec := le_1_2_correct.
 Print Assumptions le_1_2_correct.

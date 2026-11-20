@@ -16,9 +16,10 @@ ensures:       interval_set zl zu intersection x=xl,xu y=yl,yu
 min_precision: 1
 source:        the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalExact.v interval_intersection_1_correct
 entry:         yes
 cone_exempt:   the bounds are selected among the bounds of the operands and the infinities of the empty set; interval_set states what comes out for every pair of canonical intervals
 

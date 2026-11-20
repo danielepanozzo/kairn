@@ -397,7 +397,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(float cx, float rx, float cy, float r
 }
 
 // ball_from_interval_2(lo, hi) -> cw = (cw0, cw1), rw
-// the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 3> ball_from_interval_2(double gl, double gu, double c0, double c1, double r, bool v, bool f) noexcept {
@@ -621,7 +621,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_down_1(float a, float b, float& r_out) 
 }
 
 // ball_lower_as_1(c, r) -> l
-// the center minus the radius, rounded down (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center minus the radius, rounded down (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 1> ball_lower_as_1(double t, bool ne) noexcept {
@@ -1256,7 +1256,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(float cx, float rx, float cy, float r
 }
 
 // ball_to_interval_1(c, r) -> zl, zu
-// the directed difference and sum of the center and the radius (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the directed difference and sum of the center and the radius (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> ball_to_interval_1(double l, double h, bool ne) noexcept {
@@ -1373,7 +1373,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_to_interval_1(float c, float r, float&
 }
 
 // ball_upper_as_1(c, r) -> h
-// the center plus the radius, rounded up (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center plus the radius, rounded up (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 1> ball_upper_as_1(double t, bool ne) noexcept {
@@ -1615,7 +1615,7 @@ KAIRN_GEN_FORCEINLINE constexpr void fold_finish_1(float s, float& r_out, bool& 
 }
 
 // interval_add_1(xl, xu, yl, yu) -> zl, zu
-// directed sums of the bounds (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// directed sums of the bounds (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> interval_add_1(double l, double h, bool ne) noexcept {
@@ -1732,7 +1732,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_add_1(float xl, float xu, float yl
 }
 
 // interval_hull_1(xl, xu, yl, yu) -> zl, zu
-// the smaller lower bound and the larger upper bound (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the smaller lower bound and the larger upper bound (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_hull_1(double xl, double xu, double yl, double yu, double& zl_out, double& zu_out) noexcept {
     const bool ml = xl > yl;
     const double zl = ml ? yl : xl;
@@ -1751,7 +1751,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_hull_1(float xl, float xu, float y
 }
 
 // interval_intersection_1(xl, xu, yl, yu) -> zl, zu
-// the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> interval_intersection_1(double l, double h, bool ok) noexcept {
@@ -1816,7 +1816,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_intersection_1(float xl, float xu,
 }
 
 // interval_make_1(lo, hi) -> zl, zu
-// constructor of an interval (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// constructor of an interval (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> interval_make_1(double gl, double gu, double mi, bool v) noexcept {
@@ -1942,7 +1942,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_up_1(float a, float b, float& r_out) no
 }
 
 // interval_mid_rad_1(xl, xu) -> m, r
-// the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> interval_mid_rad_1(double mf, double rd, bool ne) noexcept {
@@ -2166,7 +2166,7 @@ KAIRN_GEN_FORCEINLINE constexpr void two_prod(float a, float b, float& p_out, fl
 }
 
 // mul_dir_1(a, b) -> d, v
-// two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). Status: proved (real model), proved (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_dir_1(double a, double b, double& d_out, double& v_out) noexcept {
     // (p, e) = two_prod(a, b)
     const double p = fma_rn(a, b, 0.0);
@@ -2217,7 +2217,7 @@ KAIRN_GEN_FORCEINLINE void mul_dir_1(float a, float b, float& d_out, float& v_ou
 }
 
 // interval_mul_1(xl, xu, yl, yu) -> zl, zu
-// the least and the greatest of the directed products of the bounds (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the least and the greatest of the directed products of the bounds (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 2> interval_mul_1(double l, double h, bool ne) noexcept {
@@ -2470,7 +2470,7 @@ KAIRN_GEN_FORCEINLINE void interval_mul_1(float xl, float xu, float yl, float yu
 }
 
 // interval_neg_1(xl, xu) -> zl, zu
-// the bounds negated and exchanged (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the bounds negated and exchanged (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_neg_1(double xl, double xu, double& zl_out, double& zu_out) noexcept {
     const double zl = -xu;
     const double zu = -xl;
@@ -2485,7 +2485,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_neg_1(float xl, float xu, float& z
 }
 
 // interval_split_1(xl, xu) -> al, au, bl, bu
-// the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void interval_split_1(double xl, double xu, double& al_out, double& au_out, double& bl_out, double& bu_out) noexcept {
     // (m, r) = interval_mid_rad_1(xl, xu)
     const double m_om = next_down_bits(std::numeric_limits<double>::infinity());
@@ -2626,7 +2626,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_split_1(float xl, float xu, float&
 }
 
 // interval_sub_1(xl, xu, yl, yu) -> zl, zu
-// directed differences of the bounds (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// directed differences of the bounds (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> interval_sub_1(double l, double h, bool ne) noexcept {
@@ -2751,7 +2751,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_sub_1(float xl, float xu, float yl
 }
 
 // interval_to_ball_1(xl, xu) -> c, r
-// interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void interval_to_ball_1(double xl, double xu, double& c_out, double& r_out) noexcept {
     // (m, r) = interval_mid_rad_1(xl, xu)
     const double m_om = next_down_bits(std::numeric_limits<double>::infinity());
@@ -3786,7 +3786,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_2_full(float x0, float x1, float y0, 
 }
 
 // add_ball_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1), d
-// add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void add_ball_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out, double& d_out) noexcept {
     // (z0, z1) = add_2_2(x0, x1, y0, y1)
     // (z0_sh, z0_sl) = two_sum(x0, y0)
@@ -3855,7 +3855,7 @@ KAIRN_GEN_FORCEINLINE void add_ball_2_2(float x0, float x1, float y0, float y1, 
 }
 
 // add_down_2_2(x = (x0, x1), y = (y0, y1)) -> l = (l0, l1)
-// add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void add_down_2_2(double x0, double x1, double y0, double y1, double& l0_out, double& l1_out) noexcept {
     // (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
     // (z0, z1) = add_2_2(x0, x1, y0, y1)
@@ -4185,7 +4185,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_full(float x0, float x1, float
 }
 
 // add_up_2_2(x = (x0, x1), y = (y0, y1)) -> h = (h0, h1)
-// add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void add_up_2_2(double x0, double x1, double y0, double y1, double& h0_out, double& h1_out) noexcept {
     // (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
     // (z0, z1) = add_2_2(x0, x1, y0, y1)
@@ -4933,7 +4933,7 @@ KAIRN_GEN_FORCEINLINE constexpr void to_down_2(float x0, float x1, float& t_out)
 }
 
 // ball_lower_as_2(c = (c0, c1), r) -> l
-// the center rounded down, minus the radius, rounded down (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center rounded down, minus the radius, rounded down (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 1> ball_lower_as_2(double t, bool ne) noexcept {
@@ -5459,7 +5459,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2_full(float cx0, float cx1, 
 }
 
 // ball_narrow_2_1(c = (c0, c1), r) -> cz, rz
-// the leading limb, and the radius widened by the second limb (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the leading limb, and the radius widened by the second limb (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_narrow_2_1(double c0, double c1, double r, double& cz_out, double& rz_out) noexcept {
     const double a = abs_bits(c1);
     // (rz) = radd(r, a)
@@ -5904,7 +5904,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(float cx0, float cx1, float rx, float
 }
 
 // ball_upper_as_2(c = (c0, c1), r) -> h
-// the center rounded up, plus the radius, rounded up (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center rounded up, plus the radius, rounded up (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 1> ball_upper_as_2(double t, bool ne) noexcept {
@@ -6123,7 +6123,7 @@ KAIRN_GEN_FORCEINLINE constexpr void fold_finish_2(float s0, float s1, float& r0
 }
 
 // interval_add_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// the directed sums of two limbs, an infinite or empty result selected (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the directed sums of two limbs, an infinite or empty result selected (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 4> interval_add_2(double mi, double a0, double a1, double b0, double b1, bool ne) noexcept {
@@ -6465,7 +6465,7 @@ KAIRN_GEN_FORCEINLINE constexpr void lt_2_2(float x0, float x1, float y0, float 
 }
 
 // interval_hull_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// the smaller lower bound and the larger upper bound, by lt_2_2 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the smaller lower bound and the larger upper bound, by lt_2_2 (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_hull_2(double xl0, double xl1, double xu0, double xu1, double yl0, double yl1, double yu0, double yu1, double& zl0_out, double& zl1_out, double& zu0_out, double& zu1_out) noexcept {
     // (ml) = lt_2_2(yl0, yl1, xl0, xl1)
     const bool ml_h = xl0 > yl0;
@@ -6531,7 +6531,7 @@ KAIRN_GEN_FORCEINLINE constexpr void le_2_2(float x0, float x1, float y0, float 
 }
 
 // interval_intersection_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 4> interval_intersection_2(double l0, double l1, double h0, double h1, bool ok) noexcept {
@@ -6650,7 +6650,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_intersection_2(float xl0, float xl
 }
 
 // interval_make_2(lo = (lo0, lo1), hi = (hi0, hi1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// constructor of an interval of two limbs (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// constructor of an interval of two limbs (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 4> interval_make_2(double lo0, double lo1, double hi0, double hi1, double mi, bool v) noexcept {
@@ -6763,7 +6763,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_make_2(float lo0, float lo1, float
 }
 
 // mul_ball_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1), d
-// mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_ball_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out, double& d_out) noexcept {
     // (z0, z1) = mul_2_2(x0, x1, y0, y1)
     // (z0_ch, z0_cl1) = two_prod(x0, y0)
@@ -6806,7 +6806,7 @@ KAIRN_GEN_FORCEINLINE void mul_ball_2_2(float x0, float x1, float y0, float y1, 
 }
 
 // mul_dir_2_2(x = (x0, x1), y = (y0, y1)) -> l = (l0, l1), h = (h0, h1)
-// mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_dir_2_2(double x0, double x1, double y0, double y1, double& l0_out, double& l1_out, double& h0_out, double& h1_out) noexcept {
     // (z0, z1, d) = mul_ball_2_2(x0, x1, y0, y1)
     // (z0, z1) = mul_2_2(x0, x1, y0, y1)
@@ -6953,7 +6953,7 @@ KAIRN_GEN_FORCEINLINE void mul_dir_2_2(float x0, float x1, float y0, float y1, f
 }
 
 // mul_ext_2_2(x = (x0, x1), y = (y0, y1)) -> l = (l0, l1), h = (h0, h1)
-// mul_dir_2_2, with the products of a zero and of an infinity selected (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// mul_dir_2_2, with the products of a zero and of an infinity selected (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 4> mul_ext_2_2(double x0, double y0, bool fo, bool nz, double p0, double p1, double q0, double q1) noexcept {
@@ -7214,7 +7214,7 @@ KAIRN_GEN_FORCEINLINE void mul_ext_2_2(float x0, float x1, float y0, float y1, f
 }
 
 // interval_mul_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// the least and the greatest of the four products of bounds by mul_ext_2_2 (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the least and the greatest of the four products of bounds by mul_ext_2_2 (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 4> interval_mul_2(double l0, double l1, double u0, double u1, bool ne) noexcept {
@@ -8151,7 +8151,7 @@ inline void interval_mul_2(float xl0, float xl1, float xu0, float xu1, float yl0
 }
 
 // interval_neg_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// neg_2 of each bound, exchanged (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// neg_2 of each bound, exchanged (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void interval_neg_2(double xl0, double xl1, double xu0, double xu1, double& zl0_out, double& zl1_out, double& zu0_out, double& zu1_out) noexcept {
     // (zl0, zl1) = neg_2(xu0, xu1)
     const double zl0 = -xu0;
@@ -8178,7 +8178,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_neg_2(float xl0, float xl1, float 
 }
 
 // sub_down_2_2(x = (x0, x1), y = (y0, y1)) -> l = (l0, l1)
-// add_down_2_2 on x and -y (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// add_down_2_2 on x and -y (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void sub_down_2_2(double x0, double x1, double y0, double y1, double& l0_out, double& l1_out) noexcept {
     // (n0, n1) = neg_2(y0, y1)
     const double n0 = -y0;
@@ -8311,7 +8311,7 @@ KAIRN_GEN_FORCEINLINE void sub_down_2_2(float x0, float x1, float y0, float y1, 
 }
 
 // sub_up_2_2(x = (x0, x1), y = (y0, y1)) -> h = (h0, h1)
-// add_up_2_2 on x and -y (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// add_up_2_2 on x and -y (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void sub_up_2_2(double x0, double x1, double y0, double y1, double& h0_out, double& h1_out) noexcept {
     // (n0, n1) = neg_2(y0, y1)
     const double n0 = -y0;
@@ -8440,7 +8440,7 @@ KAIRN_GEN_FORCEINLINE void sub_up_2_2(float x0, float x1, float y0, float y1, fl
 }
 
 // interval_sub_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// the directed differences of two limbs, an infinite or empty result selected (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the directed differences of two limbs, an infinite or empty result selected (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 4> interval_sub_2(double mi, double a0, double a1, double b0, double b1, bool ne) noexcept {
