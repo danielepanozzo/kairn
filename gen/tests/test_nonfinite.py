@@ -188,6 +188,9 @@ def operands(k, fmt):
             bounded, special = interval_operand(fmt, [g, upper], k.name)
             out.append(Operand([g, upper], bounded, special))
             continue
+        if 'not_nan' in kinds and len(g.limbs) == 2:      # canonical and not NaN (stage B1, mul_ext_2_2)
+            out.append(Operand([g], fmt.pairs(), [(PINF, ZERO), (PINF, NZERO), (NINF, ZERO), (NINF, NZERO)]))
+            continue
         if 'not_nan' in kinds:
             out.append(Operand([g], [(v,) for v in fmt.values], [(PINF,), (NINF,)]))
             continue
@@ -228,6 +231,11 @@ def cases(k, fmt, seed):
             combos = list(itertools.product(*others)) if others else [()]
             if len(combos) > PARTNERS:
                 combos = rng.sample(combos, PARTNERS)
+            # And every combination with the later operands non-finite too, which a sample can miss:
+            # the hull of two empty intervals is the empty set only there (stage B1).
+            later = [o.special if j > i else o.finite[:1] for j, o in enumerate(ops) if j != i]
+            seen_combos = set(combos)
+            combos += [c for c in itertools.product(*later) if c not in seen_combos] if others else []
             for c in combos:
                 out.append(c[:i] + (s,) + c[i:])
     # The finite cases.
@@ -539,6 +547,10 @@ def judge_interval(k, ks, fmt, e, ins, outs, values):
                 rel, absolute = ts.claim_constant(t['rel'], fmt), ts.claim_constant(t['abs'], fmt)
                 if lo - a > rel * abs(lo) + absolute or z - hi > rel * abs(hi) + absolute:
                     bad.append('I4 (outward)')
+    if e.get('zero_factor'):
+        # Stage B1 (interval_mul_2): a nonempty operand [0, 0] gives [0, 0].
+        if any(env[x] == (0, 0) for x in names) and (a, z) != (0, 0):
+            bad.append('I6 (zero factor)')
     if e['bounded_when'] and all(s == 'bounded' for s in ops.values()):
         within = all(max(abs(lo), abs(hi)) <= (fmt.top if c.get('omega') else fmt.threshold * F(2) ** c['exp'])
                      for c in e['bounded_when'])
@@ -549,18 +561,134 @@ def judge_interval(k, ks, fmt, e, ins, outs, values):
     return bad
 
 
+def judge_interval_set(k, ks, fmt, e, ins, outs, values):
+    """The hull (union) or the intersection of two intervals (stage B1): canonical; empty exactly
+    when both operands are (union) or when no real number is a member of both (intersection);
+    otherwise the bounds of the set."""
+    zl, zu = outs[e['lower']], outs[e['upper']]
+    state = interval_state(fmt, zl, zu)
+    if state is None:
+        return ['interval_set (canonical)']
+    bounds = [(bound_value(ins[b['lower']]), bound_value(ins[b['upper']])) for b in e['intervals'].values()]
+    nonempty = [b for b, x in zip(bounds, e['intervals'].values())
+                if interval_state(fmt, ins[x['lower']], ins[x['upper']]) != 'empty']
+    if e['set'] == 'union':
+        if not nonempty:
+            return [] if state == 'empty' else ['interval_set (empty)']
+        lo = min((b[0] for b in nonempty), key=_rank)
+        hi = max((b[1] for b in nonempty), key=_rank)
+    else:
+        lo = max((b[0] for b in bounds), key=_rank) if len(nonempty) == len(bounds) else PINF
+        hi = min((b[1] for b in bounds), key=_rank) if len(nonempty) == len(bounds) else NINF
+        if lo == PINF or hi == NINF or less(hi, lo):
+            return [] if state == 'empty' else ['interval_set (empty)']
+    if state == 'empty':
+        return ['interval_set (empty)']
+    return [] if (bound_value(zl), bound_value(zu)) == (lo, hi) else ['interval_set (bounds)']
+
+
+def _rank(x):
+    """A key that orders extended values that are not NaN."""
+    return (-1, 0) if x == NINF else (1, 0) if x == PINF else (0, x)
+
+
+def judge_ball_of_interval(k, ks, fmt, e, ins, outs, values):
+    """A ball made from an interval (stage B1): the special values of IEEE 1788's mid and rad, or of
+    a canonical ball, for an interval that is not bounded; for a bounded one a finite center within
+    the bounds and within rel |mid| + abs of the midpoint, a finite radius with which it contains
+    the interval, and with smallest_radius RU of the larger distance to a bound."""
+    lo, hi = ins[e['from']['lower']], ins[e['from']['upper']]
+    c, r = outs[e['center']], outs[e['radius']][0]
+    state = interval_state(fmt, lo, hi)
+    a, z = bound_value(lo), bound_value(hi)
+    if e['special'] == 'ball':
+        ball = ball_state(fmt, c, r)
+        want = {'empty': 'empty', 'unbounded': 'line', 'bounded': 'finite'}[state]
+        if ball != want:
+            return [f'ball_of_interval ({want} expected)']
+    elif state == 'empty':
+        return [] if all(v[0] == NAN for v in list(c) + [r]) else ['ball_of_interval (empty)']
+    elif state == 'unbounded':
+        want = F(0) if (a, z) == (NINF, PINF) else (fmt.top if z == PINF else -fmt.top)
+        ok = all(finite(v) for v in c) and sum(fr(v) for v in c) == want and r == PINF
+        return [] if ok else ['ball_of_interval (unbounded)']
+    if state != 'bounded':
+        return []
+    if not (all(finite(v) for v in c) and finite(r)):
+        return ['ball_of_interval (finite)']
+    m, rad = sum(fr(v) for v in c), fr(r)
+    mid = (a + z) / 2
+    rel, absolute = ts.claim_constant(e['rel'], fmt), ts.claim_constant(e['abs'], fmt)
+    if not (a <= m <= z) or abs(m - mid) > rel * abs(mid) + absolute:
+        return ['ball_of_interval (center)']
+    if max(m - a, z - m) > rad:
+        return ['ball_of_interval (containment)']
+    if e.get('smallest_radius') and rad != fmt.round(max(m - a, z - m), 'up'):
+        return ['ball_of_interval (smallest radius)']
+    return []
+
+
+def judge_interval_of_ball(k, ks, fmt, e, ins, outs, values):
+    """An interval that encloses a ball (stage B1): canonical; empty exactly when a ball operand
+    is; containing every value of the set; and with tight=rounded the bounds of the set rounded
+    down and up in the format with overflow."""
+    zl, zu = outs[e['lower']], outs[e['upper']]
+    state = interval_state(fmt, zl, zu)
+    if state is None:
+        return ['interval_of_ball (canonical)']
+    states = {b: ball_state(fmt, ins[cr['center']], ins[cr['radius']][0]) for b, cr in e['balls'].items()}
+    if 'empty' in states.values():
+        return [] if state == 'empty' else ['interval_of_ball (empty)']
+    if state == 'empty':
+        return ['interval_of_ball (empty)']
+    env = {}
+    for b, cr in e['balls'].items():
+        if states[b] == 'line':
+            env[b] = (NINF, PINF)
+        else:
+            cv, rv = sum(fr(v) for v in ins[cr['center']]), fr(ins[cr['radius']][0])
+            env[b] = (cv - rv, cv + rv)
+    lo, hi = exact_range(expr.parse(e['set']), env)
+    a, z = bound_value(zl), bound_value(zu)
+    if not (xle(a, lo) and xle(hi, z)):
+        return ['interval_of_ball (containment)']
+    rd, ru = directed(fmt, lo, 'down'), directed(fmt, hi, 'up')
+    steps = e['tight'].get('steps', 0)
+    if not (xle(stepped(fmt, rd, True, steps), a) and xle(a, rd) and xle(ru, z) and xle(z, stepped(fmt, ru, False, steps))):
+        return ['interval_of_ball (rounded)']
+    return []
+
+
+def judge_splits(k, ks, fmt, e, ins, outs, values):
+    """Two intervals that together are the operand (stage B1): both canonical; both empty for the
+    empty set; otherwise both nonempty, from the operand's lower bound to a point and from that
+    point to its upper bound."""
+    lo, hi = ins[e['from']['lower']], ins[e['from']['upper']]
+    (al, au), (bl, bu) = ((outs[q['lower']], outs[q['upper']]) for q in e['parts'])
+    sa, sb = interval_state(fmt, al, au), interval_state(fmt, bl, bu)
+    if sa is None or sb is None:
+        return ['splits (canonical)']
+    if interval_state(fmt, lo, hi) == 'empty':
+        return [] if sa == sb == 'empty' else ['splits (empty)']
+    if 'empty' in (sa, sb):
+        return ['splits (empty part)']
+    ok = (bound_value(al) == bound_value(lo) and bound_value(bu) == bound_value(hi) and
+          bound_value(au) == bound_value(bl))
+    return [] if ok else ['splits (cover)']
+
+
 def judge_makes_interval(k, ks, fmt, e, ins, outs, values):
     """The constructor of an interval: canonical; the interval of the bounds given when they
     describe a nonempty one; the whole line when a bound is a NaN; the empty set otherwise."""
-    lo, hi = ins[e['from']['lower']][0], ins[e['from']['upper']][0]
+    lo, hi = ins[e['from']['lower']], ins[e['from']['upper']]      # of one limb, or two (stage B1)
     zl, zu = outs[e['lower']], outs[e['upper']]
     state = interval_state(fmt, zl, zu)
     if state is None:
         return ['makes_interval (canonical)']
-    if NAN in (lo[0], hi[0]):
-        ok = zl[0] == NINF and zu[0] == PINF
-    elif xle(bound_value([lo]), bound_value([hi])) and lo != PINF and hi != NINF:
-        ok = state != 'empty' and bound_value(zl) == bound_value([lo]) and bound_value(zu) == bound_value([hi])
+    if NAN in (lo[0][0], hi[0][0]):
+        ok = zl[0] == NINF and zu[0] == PINF and all(finite(v) and v[2] == 0 for v in zl[1:] + zu[1:])
+    elif xle(bound_value(lo), bound_value(hi)) and lo[0] != PINF and hi[0] != NINF:
+        ok = state != 'empty' and bound_value(zl) == bound_value(lo) and bound_value(zu) == bound_value(hi)
     else:
         ok = state == 'empty'
     return [] if ok else ['makes_interval']
@@ -658,8 +786,7 @@ def judge_no_fix_up(k, ks, fmt, e, ins, outs, values):
         # entry is read as without the field.
         a, b = (vals[x[1]] for x in expr.parse(k.value)[1:])
         if a == 0 or b == 0:
-            t = outs[e['of']][0]
-            return [] if finite(t) and t[2] == 0 else [f'{kind} (zero factor)']
+            return [] if all(finite(t) and t[2] == 0 for t in outs[e['of']]) else [f'{kind} (zero factor)']
     if kind in ('normalized', 'error'):
         out = outs[e['of']]
         if not fmt.canonical(out):
@@ -727,6 +854,25 @@ def judge_no_fix_up(k, ks, fmt, e, ins, outs, values):
         lv = limit if limit in (PINF, NINF) else fr(limit)
         ok = le(lv, tv) and le(tv, x) if below else le(x, tv) and le(tv, lv)
         return [] if ok else ['bound']
+    if kind == 'outward':
+        # Stage B1 (mul_ext_2_2): not a NaN; an infinite operand gives the value of IEEE 754; finite
+        # operands an output on its side of the value, within rel |value| + abs when it is finite.
+        out = outs[e['of']]
+        if out[0][0] == NAN:
+            return ['outward (NaN)']
+        got = group_value(out)
+        if not all_finite:
+            return [] if got == extended(k.value, vals) else ['outward (non-finite operand)']
+        v = extended(k.value, vals)
+        below = e['side'] == 'below'
+        if not (xle(got, v) if below else xle(v, got)):
+            return ['outward (side)']
+        if got in (PINF, NINF):
+            return []
+        rel, absolute = ts.claim_constant(e['rel'], fmt), ts.claim_constant(e['abs'], fmt)
+        if abs(got - v) > rel * abs(v) + absolute:
+            return ['outward (bound)']
+        return []
     if kind == 'upper':
         a, b = (vals[g.name] for g in k.inputs)
         x = ieee('add' if '+' in k.value else 'mul', a, b)
@@ -774,7 +920,9 @@ def extended(text, vals):
 
 JUDGES = {'extends': judge_extends, 'encloses': judge_ball, 'represents': judge_represents,
           'makes_ball': judge_makes_ball, 'encloses_interval': judge_interval,
-          'makes_interval': judge_makes_interval, 'set_bound': judge_set_bound}
+          'makes_interval': judge_makes_interval, 'set_bound': judge_set_bound,
+          'interval_set': judge_interval_set, 'ball_of_interval': judge_ball_of_interval,
+          'interval_of_ball': judge_interval_of_ball, 'splits': judge_splits}
 
 
 def judge(job):
@@ -824,8 +972,13 @@ def situation(k, fmt, e, values, outs):
     if e['kind'] in ('encloses', 'makes_ball'):
         state = ball_state(fmt, outs[e['center']], outs[e['radius']][0])
         return f'{state} from {"finite" if operands_finite else "non-finite"} operands'
-    if e['kind'] in ('encloses_interval', 'makes_interval'):
+    if e['kind'] in ('encloses_interval', 'makes_interval', 'interval_set', 'interval_of_ball'):
         return f'{interval_state(fmt, outs[e["lower"]], outs[e["upper"]])} result'
+    if e['kind'] in ('ball_of_interval', 'splits'):
+        lo, hi = e['from']['lower'], e['from']['upper']
+        it = iter(values)
+        ins = {g.name: [next(it) for _ in g.limbs] for g in k.inputs}
+        return f'{interval_state(fmt, ins[lo], ins[hi])} operand'
     return 'finite operands' if operands_finite else 'non-finite operand'
 
 
@@ -856,8 +1009,8 @@ class NonFinite(unittest.TestCase):
         # (ball_neg_k among them): 39 of Milestone 1, and 15 of wave 1 of Milestone 2 (the steps,
         # the directed sums and products, five entry forms, the full scalings by a power of two),
         # and 13 of wave 2: the interval kernels, mul_dir_1, the bounds of a ball as numbers of T,
-        # the ball from an interval and the narrowing of a ball.
-        self.assertEqual(len(self.names), 54 + 13)
+        # the ball from an interval and the narrowing of a ball; and 13 of stage B1.
+        self.assertEqual(len(self.names), 54 + 13 + 13)
 
     def test_every_situation_is_reached(self):
         """The cases reach what the statements are about: every full kernel overflows on finite
@@ -880,9 +1033,12 @@ class NonFinite(unittest.TestCase):
             elif 'makes_ball' in kinds:
                 want = {'finite from finite operands', 'empty from finite operands',
                         'line from non-finite operands', 'empty from non-finite operands'}
-            elif kinds & {'encloses_interval', 'makes_interval'}:
+            elif kinds & {'encloses_interval', 'makes_interval', 'interval_set', 'interval_of_ball'}:
                 # The interval kernels and their constructor return each of the three states.
                 want = {'empty result', 'bounded result', 'unbounded result'}
+            elif kinds & {'ball_of_interval', 'splits'}:
+                # They are given intervals in each of the three states.
+                want = {'empty operand', 'bounded operand', 'unbounded operand'}
             else:
                 want = {'finite operands', 'non-finite operand'}
             self.assertLessEqual(want, seen[name], name)
@@ -1014,6 +1170,68 @@ class NonFinite(unittest.TestCase):
         self.assertEqual(judge_set_bound(lb, ks, fmt, lb.ensures[0], {'c': [NaN], 'r': [NaN]}, {'l': [PINF]}, None), [])
         self.assertEqual(judge_set_bound(lb, ks, fmt, lb.ensures[0], {'c': [two], 'r': [one]}, {'l': [make(F(7, 8))]},
                                          None), ['set_bound (rounded)'])
+        # Stage B1: the hull and the intersection, the midpoint and radius, a ball from an interval, an
+        # interval from a ball, the split, the zero of a product of intervals, mul_ext_2_2.
+        hull, inter = ks['interval_hull_1'], ks['interval_intersection_1']
+        xy = {'xl': [one], 'xu': [two], 'yl': [make(F(3))], 'yu': [make(F(4))]}
+        self.assertEqual(judge_interval_set(hull, ks, fmt, hull.ensures[0], xy, {'zl': [one], 'zu': [make(F(4))]}, None), [])
+        self.assertEqual(judge_interval_set(hull, ks, fmt, hull.ensures[0], xy, {'zl': [one], 'zu': [two]}, None),
+                         ['interval_set (bounds)'])
+        self.assertEqual(judge_interval_set(inter, ks, fmt, inter.ensures[0], xy, {'zl': [PINF], 'zu': [NINF]}, None), [])
+        self.assertEqual(judge_interval_set(inter, ks, fmt, inter.ensures[0], dict(xy, yl=[two]),
+                                            {'zl': [PINF], 'zu': [NINF]}, None), ['interval_set (empty)'])
+        self.assertEqual(judge_interval_set(inter, ks, fmt, inter.ensures[0], dict(xy, yl=[two]),
+                                            {'zl': [two], 'zu': [two]}, None), [])
+        empty_x = dict(xy, xl=[PINF], xu=[NINF])
+        self.assertEqual(judge_interval_set(hull, ks, fmt, hull.ensures[0], empty_x,
+                                            {'zl': [make(F(3))], 'zu': [make(F(4))]}, None), [])
+        mr, tb = ks['interval_mid_rad_1'], ks['interval_to_ball_1']
+        half = {'xl': [NINF], 'xu': [one]}
+        self.assertEqual(judge_ball_of_interval(mr, ks, fmt, mr.ensures[0], half, {'m': [make(-fmt.top)], 'r': [PINF]},
+                                                None), [])
+        self.assertEqual(judge_ball_of_interval(tb, ks, fmt, tb.ensures[0], half, {'c': [ZERO], 'r': [PINF]}, None), [])
+        self.assertEqual(judge_ball_of_interval(tb, ks, fmt, tb.ensures[0], half, {'c': [make(-fmt.top)], 'r': [PINF]},
+                                                None), ['ball_of_interval (line expected)'])
+        onetwo = {'xl': [one], 'xu': [two]}
+        self.assertEqual(judge_ball_of_interval(mr, ks, fmt, mr.ensures[0], onetwo, {'m': [make(F(3, 2))],
+                                                                                    'r': [make(F(1, 2))]}, None), [])
+        self.assertEqual(judge_ball_of_interval(mr, ks, fmt, mr.ensures[0], onetwo, {'m': [make(F(3, 2))], 'r': [one]},
+                                                None), ['ball_of_interval (smallest radius)'])
+        bt = ks['ball_to_interval_1']
+        self.assertEqual(judge_interval_of_ball(bt, ks, fmt, bt.ensures[0], {'c': [two], 'r': [one]},
+                                                {'zl': [one], 'zu': [make(F(3))]}, None), [])
+        self.assertEqual(judge_interval_of_ball(bt, ks, fmt, bt.ensures[0], {'c': [two], 'r': [one]},
+                                                {'zl': [ZERO], 'zu': [make(F(3))]}, None), ['interval_of_ball (rounded)'])
+        self.assertEqual(judge_interval_of_ball(bt, ks, fmt, bt.ensures[0], {'c': [ZERO], 'r': [PINF]},
+                                                {'zl': [NINF], 'zu': [PINF]}, None), [])
+        sp = ks['interval_split_1']
+        self.assertEqual(judge_splits(sp, ks, fmt, sp.ensures[0], onetwo, {'al': [one], 'au': [make(F(3, 2))],
+                                                                         'bl': [make(F(3, 2))], 'bu': [two]}, None), [])
+        self.assertEqual(judge_splits(sp, ks, fmt, sp.ensures[0], onetwo, {'al': [one], 'au': [make(F(3, 2))],
+                                                                         'bl': [make(F(7, 4))], 'bu': [two]}, None),
+                         ['splits (cover)'])
+        im2 = ks['interval_mul_2']
+        zero2 = {'xl': [ZERO, ZERO], 'xu': [ZERO, ZERO], 'yl': [one, ZERO], 'yu': [PINF, ZERO]}
+        self.assertEqual(judge_interval(im2, ks, fmt, im2.ensures[0], zero2, {'zl': [ZERO, ZERO], 'zu': [ZERO, ZERO]},
+                                        None), [])
+        self.assertIn('I6 (zero factor)', judge_interval(im2, ks, fmt, im2.ensures[0], zero2,
+                                                         {'zl': [make(F(-1, 8)), ZERO], 'zu': [ZERO, ZERO]}, None))
+        me = ks['mul_ext_2_2']
+        ext = {'x': [two, ZERO], 'y': [NINF, ZERO]}
+        self.assertEqual(judge_no_fix_up(me, ks, fmt, me.ensures[2], ext, {'l': [NINF, ZERO], 'h': [NINF, ZERO]}, None), [])
+        self.assertEqual(judge_no_fix_up(me, ks, fmt, me.ensures[2], ext, {'l': [PINF, ZERO], 'h': [NINF, ZERO]}, None),
+                         ['outward (non-finite operand)'])
+        ext = {'x': [ZERO, ZERO], 'y': [NINF, ZERO]}
+        self.assertEqual(judge_no_fix_up(me, ks, fmt, me.ensures[3], ext, {'l': [ZERO, ZERO], 'h': [ZERO, ZERO]}, None), [])
+        ext = {'x': [two, ZERO], 'y': [two, ZERO]}
+        self.assertEqual(judge_no_fix_up(me, ks, fmt, me.ensures[2], ext, {'l': [make(F(5)), ZERO], 'h': [PINF, ZERO]},
+                                         None), ['outward (side)'])
+        self.assertEqual(judge_no_fix_up(me, ks, fmt, me.ensures[3], ext, {'l': [NINF, ZERO], 'h': [PINF, ZERO]}, None), [])
+        mk2 = ks['interval_make_2']
+        self.assertEqual(judge_makes_interval(mk2, ks, fmt, mk2.ensures[0], {'lo': [NaN, NaN], 'hi': [one, ZERO]},
+                                              {'zl': [NINF, ZERO], 'zu': [PINF, ZERO]}, None), [])
+        self.assertEqual(judge_makes_interval(mk2, ks, fmt, mk2.ensures[0], {'lo': [two, ZERO], 'hi': [one, ZERO]},
+                                              {'zl': [NINF, ZERO], 'zu': [PINF, ZERO]}, None), ['makes_interval'])
         rep = ks['make_2'].ensures[0]
         self.assertEqual(judge_represents(ks['make_2'], ks, fmt, rep, {'a': [NINF]}, {'x': [NINF, ZERO]}, None), [])
         self.assertEqual(judge_represents(ks['make_2'], ks, fmt, rep, {'a': [NINF]}, {'x': [NINF, NaN]}, None),

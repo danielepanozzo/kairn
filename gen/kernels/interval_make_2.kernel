@@ -1,0 +1,39 @@
+# An interval from two canonical 2-limb values (milestone2.md, "Interval kernels", "Values of an
+# interval"): the listing of interval_make_1 on the comparisons of two limbs, le_2_2 for the order
+# of the bounds and the leading limbs for the tests against infinity and of a NaN (a canonical NaN
+# is all NaN). The values are limbs of objects, already canonical, so nothing is guarded. [lo, hi]
+# when lo <= hi, lo < +inf and hi > -inf, an infinite bound returned as (+-inf, 0); the whole line
+# when a bound is a NaN, whatever the other bound is (decided on 2026-11-20); the empty set
+# otherwise, that is for lo > hi, [+inf, +inf] and [-inf, -inf]. For every precision.
+kernel:        interval_make_2
+input:         lo = lo0 lo1
+input:         hi = hi0 hi1
+output:        zl = zl0 zl1
+output:        zu = zu0 zu1
+requires:      canonical lo
+requires:      canonical hi
+ensures:       makes_interval zl zu from=lo,hi
+min_precision: 1
+source:        constructor of an interval of two limbs (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   every output is selected after explicit tests of the bounds; makes_interval states what comes out
+
+ok  = le_2_2(lo0, lo1, hi0, hi1)
+nl  = lt(lo0, const inf)
+mi  = neg(const inf)
+nu  = lt(mi, hi0)
+va  = and(ok, nl)
+v   = and(va, nu)
+ql  = eq(lo0, lo0)
+qu  = eq(hi0, hi0)
+nn  = and(ql, qu)
+el  = select(nn, const inf, mi)
+eu  = select(nn, mi, const inf)
+zl0 = select(v, lo0, el)
+zl1 = select(v, lo1, 0)
+zu0 = select(v, hi0, eu)
+zu1 = select(v, hi1, 0)

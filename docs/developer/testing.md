@@ -412,8 +412,10 @@ For each kernel, form and limb type:
 - **Fused multiply-adds**: one per FMA node of the flattened IR (`fma`, `fms`, `fnma`, `prod`),
   with identical nodes of one function (the same operation on the same operands) each compiled or
   merged into one. The generator gives both numbers, `fma` and `fma_distinct`, and they differ in
-  three kernels only: the fix-ups of `mul_2_1_full`, `mul_2_2_full` and `mul_pow2_2_full` compute
-  the core's leading product again, `t = prod(x0, y0)`. A compiler that eliminates common
+  five kernels only: the fix-ups of `mul_2_1_full`, `mul_2_2_full` and `mul_pow2_2_full` compute
+  the core's leading product again, `t = prod(x0, y0)`, and so does `mul_ext_2_2`, whose product of
+  an infinite operand is the leading product of its `mul_2_2`, with `interval_mul_2`, which has four
+  `mul_ext_2_2` (32 FMA nodes, 28 distinct). A compiler that eliminates common
   subexpressions computes it once. Every compiler measured does so when it optimizes, in the
   inline form and in packed code, except MSVC under `/fp:strict` for the scalar code; none does
   without optimization; and in the form where the fix-up is a function of its own, which receives

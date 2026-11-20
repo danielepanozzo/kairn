@@ -117,17 +117,26 @@ class Claims(unittest.TestCase):
               'outward': ['kind', 'of', 'side', 'rel', 'abs'],
               'makes_interval': ['kind', 'lower', 'upper', 'from'],
               'encloses_interval': ['kind', 'lower', 'upper', 'set', 'intervals', 'tight', 'bounded_when'],
-              'set_bound': ['kind', 'of', 'side', 'set', 'balls']}
+              'set_bound': ['kind', 'of', 'side', 'set', 'balls'],
+              # Stage B1 of the intervals: the set operations, the conversions and the split.
+              'interval_set': ['kind', 'lower', 'upper', 'set', 'intervals'],
+              'ball_of_interval': ['kind', 'center', 'radius', 'from', 'special', 'rel', 'abs'],
+              'interval_of_ball': ['kind', 'lower', 'upper', 'set', 'balls', 'tight'],
+              'splits': ['kind', 'parts', 'from']}
     # The fields that some entries of a kind have, after the others, and only when they say
     # something: a rounding under a condition, an exactness condition, the zero of a product of
     # bounds, the midpoint of a ball made from an interval, an equivalence for the bounded result,
-    # a tightness (Milestone 2). Every entry without them has the shape it had before.
+    # a tightness (Milestone 2); the zero of a product of intervals or of bounds of two limbs, the
+    # smallest radius of a ball made from an interval (stage B1). Every entry without them has the
+    # shape it had before.
     OPTIONAL = {'rounded': ['when', 'zero_factor'], 'error': ['exact_when'], 'encloses': ['exact_when'],
-                'bound': ['zero_factor'], 'outward': ['exact_when'], 'makes_ball': ['midpoint_when'],
-                'encloses_interval': ['bounded_exactly'], 'set_bound': ['tight']}
+                'bound': ['zero_factor'], 'outward': ['exact_when', 'zero_factor'], 'makes_ball': ['midpoint_when'],
+                'encloses_interval': ['bounded_exactly', 'zero_factor'], 'set_bound': ['tight'],
+                'ball_of_interval': ['smallest_radius']}
     # The kinds whose entries name their own set or make a value from the inputs: a kernel whose
     # every entry is one of them has no value.
-    OWN_SET = ('makes_ball', 'makes_interval', 'encloses_interval', 'set_bound')
+    OWN_SET = ('makes_ball', 'makes_interval', 'encloses_interval', 'set_bound', 'interval_set', 'ball_of_interval',
+               'interval_of_ball', 'splits')
 
     def test_schema(self):
         self.assertEqual(self.doc['schema'], 1)
@@ -174,13 +183,22 @@ class Claims(unittest.TestCase):
                     self.assertEqual(e['when'], 'product_large', k['name'])
                 if e['kind'] == 'bound':
                     self.assertIsInstance(e['steps'], int)
-                if 'zero_factor' in e or 'bounded_exactly' in e:
-                    self.assertIs(e.get('zero_factor', e.get('bounded_exactly')), True, k['name'])
+                for flag in ('zero_factor', 'bounded_exactly', 'smallest_radius'):
+                    if flag in e:
+                        self.assertIs(e[flag], True, k['name'])
                 if e['kind'] == 'makes_ball':
                     self.assertIn(list(e['from']), (['center', 'radius'], ['lower', 'upper']), k['name'])
                     for c in e.get('midpoint_when', []):
                         self.assertEqual(list(c), ['half_in_format'], k['name'])
-                if e['kind'] in ('encloses_interval', 'set_bound'):
+                if e['kind'] == 'interval_set':
+                    self.assertIn(e['set'], ('union', 'intersection'), k['name'])
+                if e['kind'] == 'ball_of_interval':
+                    self.assertIn(e['special'], ('ieee1788', 'ball'), k['name'])
+                if e['kind'] in ('ball_of_interval', 'splits'):
+                    self.assertEqual(list(e['from']), ['lower', 'upper'], k['name'])
+                if e['kind'] == 'splits':
+                    self.assertEqual([list(q) for q in e['parts']], [['lower', 'upper']] * 2, k['name'])
+                if e['kind'] in ('encloses_interval', 'set_bound', 'interval_set', 'interval_of_ball'):
                     t = e.get('tight')
                     if t is not None:
                         self.assertIn(list(t), (['kind'], ['kind', 'steps'], ['kind', 'steps', 'when'],
@@ -418,6 +436,39 @@ class Claims(unittest.TestCase):
                            'midpoint_when': [{'half_in_format': 'lo'}, {'half_in_format': 'hi'}]}])
         self.assertNotIn('value', self.by['ball_from_interval_2'])
 
+    def test_the_entries_of_stage_b1_in_architecture_md(self):
+        # The entries that architecture.md writes out ("Claims of the interval kernels: two limbs and
+        # the enclosure interface"), field for field and in order, the ensures of four more, and what
+        # the text says of the others.
+        with open(os.path.join(common.ROOT, 'docs', 'developer', 'architecture.md'), encoding='utf-8') as f:
+            text = f.read()
+        section = text.split('### Claims of the interval kernels: two limbs and the enclosure interface')[1] \
+            .split('\n## ')[0]
+        blocks = re.findall(r'```json\n(.*?)```', section, re.S)
+        shown = json.loads('[' + blocks[0] + ']')
+        self.assertEqual([e['name'] for e in shown], ['interval_hull_1', 'interval_mid_rad_1', 'ball_to_interval_1',
+                                                     'interval_split_1', 'interval_make_2', 'mul_ext_2_2'])
+        for e in shown:
+            want = [(key, v) for key, v in self.by[e['name']].items()
+                    if key not in ('source', 'flops', 'theorem', 'ieee_theorem')]
+            self.assertEqual(list(e.items()), want, e['name'])
+        ensures = json.loads('[' + blocks[1] + ']')
+        names = ('interval_intersection_2', 'interval_to_ball_1', 'interval_neg_2', 'interval_mul_2')
+        self.assertEqual(len(ensures), len(names))
+        for name, e in zip(names, ensures):
+            self.assertEqual(e, self.by[name]['ensures'], name)
+        hull, inter = self.by['interval_hull_2']['ensures'], self.by['interval_intersection_1']['ensures']
+        self.assertEqual(hull, [dict(self.by['interval_hull_1']['ensures'][0])])
+        self.assertEqual(inter, [dict(self.by['interval_intersection_2']['ensures'][0])])
+        sub, add = self.by['interval_sub_2']['ensures'][0], self.by['interval_add_2']['ensures'][0]
+        self.assertEqual(sub, dict(add, set='x-y', tight=dict(add['tight'], exact_when={
+            'lower': [{'zero': 'xl-yu'}], 'upper': [{'zero': 'xu-yl'}]}), bounded_when=[{'abs_le': 'x-y', 'exp': -2}]))
+        mul = self.by['interval_mul_2']['ensures'][0]
+        dirs = self.by['mul_dir_2_2']['ensures'][2]
+        self.assertEqual((mul['tight']['rel'], mul['tight']['abs']), (dirs['rel'], dirs['abs']))
+        for e in self.by['mul_ext_2_2']['ensures'][2:]:
+            self.assertEqual((e['rel'], e['abs']), (dirs['rel'], dirs['abs']))
+
     def test_ieee_only(self):
         # Exactly the kernels without a real-model statement say so: the nine full kernels, the
         # ten full Ball kernels and the four constructors; ball_neg_k, which also requires a ball
@@ -432,6 +483,11 @@ class Claims(unittest.TestCase):
         milestone2 = {'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1', 'interval_mul_1',
                       'interval_add_2', 'ball_from_interval_2', 'ball_lower_as_1', 'ball_upper_as_1',
                       'ball_lower_as_2', 'ball_upper_as_2', 'ball_narrow_2_1'}
+        # Stage B1: the interval kernels of two limbs, mul_ext_2_2 (a bound of two limbs over
+        # extended reals), the set operations, the conversions and the split.
+        milestone2 |= {'interval_neg_2', 'interval_sub_2', 'interval_make_2', 'mul_ext_2_2', 'interval_mul_2',
+                       'interval_hull_1', 'interval_intersection_1', 'interval_hull_2', 'interval_intersection_2',
+                       'interval_mid_rad_1', 'interval_to_ball_1', 'ball_to_interval_1', 'interval_split_1'}
         self.assertEqual({k['name'] for k in self.doc['kernels'] if 'ieee_only' in k},
                          full | full_ball | constructors | milestone2)
         self.assertTrue(all(k['ieee_only'] is True for k in self.doc['kernels'] if 'ieee_only' in k))

@@ -204,6 +204,12 @@ Definition fast_two_sum_entry (a b : R) : R * R :=
   let '(s, e) := fast_two_sum ga gb in
   (s, e).
 
+(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
+Definition sub_up_1 (a b : R) : R :=
+  let nb := - b in
+  let r := add_up_1 a nb in
+  r.
+
 (* two_prod: TwoProd with an FMA (folklore; see JMP17). *)
 Definition two_prod (a b : R) : R * R :=
   let p := rnd (a * b + 0) in
@@ -231,12 +237,6 @@ Definition mul_dir_1 (a b : R) : R * R :=
   let d := if zz then 0 else dz in
   let v := if zz then 0 else vz in
   (d, v).
-
-(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
-Definition sub_up_1 (a b : R) : R :=
-  let nb := - b in
-  let r := add_up_1 a nb in
-  r.
 
 (* mul_1_1: one rounding to nearest. *)
 Definition mul_1_1 (a b : R) : R :=
@@ -545,20 +545,11 @@ Definition eq_2_2 (x0 x1 y0 y1 : R) : bool :=
   let m := andb h l in
   m.
 
-(* le_1_2: limbs compared in order (Milestone 1 listing). *)
-Definition le_1_2 (a y0 y1 : R) : bool :=
-  let h := Rlt_bool a y0 in
-  let e := Req_bool a y0 in
-  let l := Rle_bool 0 y1 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
-
-(* le_2_1: limbs compared in order (Milestone 1 listing). *)
-Definition le_2_1 (x0 x1 a : R) : bool :=
-  let h := Rlt_bool x0 a in
-  let e := Req_bool x0 a in
-  let l := Rle_bool x1 0 in
+(* lt_2_2: limbs compared in order (Milestone 1 listing). *)
+Definition lt_2_2 (x0 x1 y0 y1 : R) : bool :=
+  let h := Rlt_bool x0 y0 in
+  let e := Req_bool x0 y0 in
+  let l := Rlt_bool x1 y1 in
   let t := andb e l in
   let m := orb h t in
   m.
@@ -568,33 +559,6 @@ Definition le_2_2 (x0 x1 y0 y1 : R) : bool :=
   let h := Rlt_bool x0 y0 in
   let e := Req_bool x0 y0 in
   let l := Rle_bool x1 y1 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
-
-(* lt_1_2: limbs compared in order (Milestone 1 listing). *)
-Definition lt_1_2 (a y0 y1 : R) : bool :=
-  let h := Rlt_bool a y0 in
-  let e := Req_bool a y0 in
-  let l := Rlt_bool 0 y1 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
-
-(* lt_2_1: limbs compared in order (Milestone 1 listing). *)
-Definition lt_2_1 (x0 x1 a : R) : bool :=
-  let h := Rlt_bool x0 a in
-  let e := Req_bool x0 a in
-  let l := Rlt_bool x1 0 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
-
-(* lt_2_2: limbs compared in order (Milestone 1 listing). *)
-Definition lt_2_2 (x0 x1 y0 y1 : R) : bool :=
-  let h := Rlt_bool x0 y0 in
-  let e := Req_bool x0 y0 in
-  let l := Rlt_bool x1 y1 in
   let t := andb e l in
   let m := orb h t in
   m.
@@ -617,6 +581,54 @@ Definition mul_dir_2_2 (x0 x1 y0 y1 : R) : R * R * R * R :=
   let '(l0, l1) := two_sum_ord z0 wl in
   let '(h0, h1) := two_sum_ord z0 wu in
   (l0, l1, h0, h1).
+
+(* sub_down_2_2: add_down_2_2 on x and -y (Milestone 2 listing). *)
+Definition sub_down_2_2 (x0 x1 y0 y1 : R) : R * R :=
+  let '(n0, n1) := neg_2 y0 y1 in
+  let '(l0, l1) := add_down_2_2 x0 x1 n0 n1 in
+  (l0, l1).
+
+(* sub_up_2_2: add_up_2_2 on x and -y (Milestone 2 listing). *)
+Definition sub_up_2_2 (x0 x1 y0 y1 : R) : R * R :=
+  let '(n0, n1) := neg_2 y0 y1 in
+  let '(h0, h1) := add_up_2_2 x0 x1 n0 n1 in
+  (h0, h1).
+
+(* le_1_2: limbs compared in order (Milestone 1 listing). *)
+Definition le_1_2 (a y0 y1 : R) : bool :=
+  let h := Rlt_bool a y0 in
+  let e := Req_bool a y0 in
+  let l := Rle_bool 0 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* le_2_1: limbs compared in order (Milestone 1 listing). *)
+Definition le_2_1 (x0 x1 a : R) : bool :=
+  let h := Rlt_bool x0 a in
+  let e := Req_bool x0 a in
+  let l := Rle_bool x1 0 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* lt_1_2: limbs compared in order (Milestone 1 listing). *)
+Definition lt_1_2 (a y0 y1 : R) : bool :=
+  let h := Rlt_bool a y0 in
+  let e := Req_bool a y0 in
+  let l := Rlt_bool 0 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* lt_2_1: limbs compared in order (Milestone 1 listing). *)
+Definition lt_2_1 (x0 x1 a : R) : bool :=
+  let h := Rlt_bool x0 a in
+  let e := Req_bool x0 a in
+  let l := Rlt_bool x1 0 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
 
 (* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
 Definition mul_pow2_2 (x0 x1 c : R) : R * R :=
@@ -644,18 +656,6 @@ Definition sub_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let n1 := - y1 in
   let '(z0, z1) := add_2_2 x0 x1 n0 n1 in
   (z0, z1).
-
-(* sub_down_2_2: add_down_2_2 on x and -y (Milestone 2 listing). *)
-Definition sub_down_2_2 (x0 x1 y0 y1 : R) : R * R :=
-  let '(n0, n1) := neg_2 y0 y1 in
-  let '(l0, l1) := add_down_2_2 x0 x1 n0 n1 in
-  (l0, l1).
-
-(* sub_up_2_2: add_up_2_2 on x and -y (Milestone 2 listing). *)
-Definition sub_up_2_2 (x0 x1 y0 y1 : R) : R * R :=
-  let '(n0, n1) := neg_2 y0 y1 in
-  let '(h0, h1) := add_up_2_2 x0 x1 n0 n1 in
-  (h0, h1).
 
 (* to_nearest_2: the definition of normalized (Milestone 1 listing). *)
 Definition to_nearest_2 (x0 x1 : R) : R :=

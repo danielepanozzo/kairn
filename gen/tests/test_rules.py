@@ -876,6 +876,88 @@ l1 = sub(l0, s)
         self.refused('makes_interval: the bounds given and returned', mk)
 
 
+class EnclosureClaims(unittest.TestCase):
+    """The claims of stage B1 (architecture.md, "Claims of the interval kernels: two limbs and the
+    enclosure interface"): toy kernels of each new kind are accepted and parsed, and each misuse is
+    refused."""
+    TAIL = 'status:  unverified\ndomain:  extended\nieee_status: unverified\nentry:   yes\ncone_exempt: selects\n'
+    HULL = ('kernel:  hull\ninput:   stored xl\ninput:   stored xu\ninput:   stored yl\ninput:   stored yu\n'
+            'output:  zl\noutput:  zu\nrequires: interval xl xu\nrequires: interval yl yu\n'
+            'ensures: interval_set zl zu union x=xl,xu y=yl,yu\n' + TAIL +
+            'ml = lt(yl, xl)\nzl = select(ml, yl, xl)\nmu = lt(xu, yu)\nzu = select(mu, yu, xu)\n')
+    MID = ('kernel:  mid\ninput:   stored xl\ninput:   stored xu\noutput:  m\noutput:  r\nrequires: interval xl xu\n'
+           'ensures: ball_of_interval m r from=xl,xu special=ieee1788 rel=u abs=eta smallest_radius\n'
+           'min_precision: 2\n' + TAIL +
+           'hl = prod(xl, const up(1/2))\nhu = prod(xu, const up(1/2))\ns = add(hl, hu)\nd = sub(xu, s)\n'
+           'ne = lt(xl, const inf)\nm = select(ne, s, const nan)\nr = select(ne, d, const nan)\n')
+    TOI = ('kernel:  toi\ninput:   stored c\ninput:   stored r\noutput:  zl\noutput:  zu\nrequires: ball c r\n'
+           'ensures: interval_of_ball zl zu x x=c,r tight=rounded\nmin_precision: 2\n' + TAIL +
+           'l = sub(c, r)\nh = add(c, r)\nne = eq(r, r)\nmi = neg(const inf)\nzl = select(ne, l, const inf)\n'
+           'zu = select(ne, h, mi)\n')
+    SPLIT = ('kernel:  sp\ninput:   stored xl\ninput:   stored xu\noutput:  al\noutput:  au\noutput:  bl\n'
+             'output:  bu\nrequires: interval xl xu\nensures: splits al au bl bu from=xl,xu\n' + TAIL +
+             's = add(xl, xu)\nal = copy(xl)\nau = copy(s)\nbl = copy(s)\nbu = copy(xu)\n')
+    EXT = ('kernel:  ext\ninput:   x = x0 x1\ninput:   y = y0 y1\noutput:  l = l0 l1\nvalue:   x*y\n'
+           'requires: canonical x\nrequires: canonical y\nrequires: not_nan x\nrequires: not_nan y\n'
+           'ensures: normalized l\nensures: outward l below rel=4*u^2 abs=eta zero_factor\nieee_only: yes\n' + TAIL +
+           'p = prod(x0, y0)\nq = add(x1, y1)\nm = lt(p, const inf)\nl0 = select(m, p, 0)\nl1 = select(m, q, 0)\n')
+
+    def refused(self, words, *texts):
+        errs = check(*texts)
+        self.assertTrue(any(words in str(e) for e in errs), f'nothing mentions {words!r} in:\n' +
+                        ('\n'.join(map(str, errs)) or 'accepted'))
+
+    def test_accepted_and_parsed(self):
+        self.assertEqual(check(self.HULL), [])
+        self.assertEqual(check(self.MID), [])
+        self.assertEqual(check(self.TOI), [])
+        self.assertEqual(check(self.SPLIT), [])
+        self.assertEqual(check(self.EXT), [])
+        intervals = {'x': {'lower': 'xl', 'upper': 'xu'}, 'y': {'lower': 'yl', 'upper': 'yu'}}
+        self.assertEqual(ir.parse_kernel(self.HULL, 't').ensures, [
+            {'kind': 'interval_set', 'lower': 'zl', 'upper': 'zu', 'set': 'union', 'intervals': intervals}])
+        self.assertEqual(ir.parse_kernel(self.MID, 't').ensures, [
+            {'kind': 'ball_of_interval', 'center': 'm', 'radius': 'r', 'from': {'lower': 'xl', 'upper': 'xu'},
+             'special': 'ieee1788', 'rel': 'u', 'abs': 'eta', 'smallest_radius': True}])
+        self.assertNotIn('smallest_radius', ir.parse_kernel(self.MID.replace(' smallest_radius', ''), 't').ensures[0])
+        self.assertEqual(ir.parse_kernel(self.TOI, 't').ensures, [
+            {'kind': 'interval_of_ball', 'lower': 'zl', 'upper': 'zu', 'set': 'x',
+             'balls': {'x': {'center': 'c', 'radius': 'r'}}, 'tight': {'kind': 'rounded'}}])
+        self.assertEqual(ir.parse_kernel(self.SPLIT, 't').ensures, [
+            {'kind': 'splits', 'parts': [{'lower': 'al', 'upper': 'au'}, {'lower': 'bl', 'upper': 'bu'}],
+             'from': {'lower': 'xl', 'upper': 'xu'}}])
+        self.assertEqual(ir.parse_kernel(self.EXT, 't').ensures[1], {
+            'kind': 'outward', 'of': 'l', 'side': 'below', 'rel': '4*u^2', 'abs': 'eta', 'zero_factor': True})
+        for text in (self.HULL, self.MID, self.TOI, self.SPLIT, self.EXT):
+            self.assertFalse(ir.parse_kernel(text, 't').real_model)
+        imul = IntervalClaims.IADD.replace('x+y x=xl,xu', 'x*y x=xl,xu').replace('abs_le(x+y', 'abs_le(x*y') \
+            .replace('bounded_exactly', 'zero_factor')
+        self.assertEqual(check(imul), [])
+        e = ir.parse_kernel(imul, 't').ensures[0]
+        self.assertEqual(list(e)[-2:], ['bounded_when', 'zero_factor'])
+        self.assertIs(e['zero_factor'], True)
+
+    def test_refused(self):
+        self.refused('the set operation is union or intersection', self.HULL.replace(' union ', ' join '))
+        with self.assertRaises(ir.DescriptionError):        # two intervals, always
+            ir.parse_kernel(self.HULL.replace(' y=yl,yu', ''), 't')
+        self.refused('its operand is required to be an interval', self.HULL.replace('requires: interval yl yu\n', ''))
+        self.refused('not a claim of the finite domain', self.HULL.replace('domain:  extended\nieee_status: unverified\n', ''))
+        self.refused('special \'midpoint\'', self.MID.replace('special=ieee1788', 'special=midpoint'))
+        self.refused('unknown name v', self.MID.replace('abs=eta', 'abs=v'))
+        self.refused("ball_of_interval radius 'q': not a one-limb limb output",
+                     self.MID.replace('ball_of_interval m r', 'ball_of_interval m q'))
+        self.refused('tight is rounded', self.TOI.replace('tight=rounded', 'tight=exact'))
+        self.refused('its operand is required to be a ball', self.TOI.replace('requires: ball c r\n', ''))
+        self.refused('the four bounds of the parts are four outputs', self.SPLIT.replace('splits al au bl bu', 'splits al au al bu'))
+        self.refused('its operand is required to be an interval', self.SPLIT.replace('requires: interval xl xu\n', ''))
+        self.refused('not_nan is about a one-limb input, or a multi-limb input required to be canonical',
+                     self.EXT.replace('requires: canonical x\n', ''))
+        self.refused('its operands of several limbs are required not_nan', self.EXT.replace('requires: not_nan y\n', ''))
+        self.refused('encloses_interval zero_factor: the set is the product of two intervals',
+                     IntervalClaims.IADD.replace('bounded_exactly', 'zero_factor'))
+
+
 class R3OfTheKernels(unittest.TestCase):
     """Rule R3 on gen/kernels: which kernels are entry kernels; no guard is pending."""
     # What the public headers call (include/kairn/expansion.hpp and ball.hpp): the cores, through
@@ -907,7 +989,7 @@ class R3OfTheKernels(unittest.TestCase):
         # (milestone2.md, "Interval kernels", "One enclosure interface"), for the public headers of
         # wave 2, which do not call them yet: their inputs are limbs of objects (stored), or bounds
         # the program gives (interval_make_1 and ball_from_interval_2, which guard them).
-        wave_2 = TheKernels.WAVE_2_INTERVALS | TheKernels.WAVE_2_BALLS
+        wave_2 = TheKernels.WAVE_2_INTERVALS | TheKernels.WAVE_2_BALLS | TheKernels.WAVE_2_B1
         self.assertEqual({n for n, k in ks.items() if k.entry},
                          self.CORES | self.BALL_CORES | TheKernels.NON_FINITE | self.WAVE_1 | wave_2)
 
@@ -1279,6 +1361,13 @@ class TheKernels(unittest.TestCase):
     WAVE_2_BALLS = {'ball_lower_as_1', 'ball_upper_as_1', 'ball_lower_as_2', 'ball_upper_as_2',
                     'ball_from_interval_2', 'ball_narrow_2_1'}
     WAVE_2 = WAVE_2_INTERVALS | WAVE_2_CORES | WAVE_2_BALLS | {'mul_dir_1'}
+    # Stage B1 of wave 2, unverified, the IEEE-model statement only: the interval kernels of two limbs
+    # (negation, difference, constructor, product) and the set operations, conversions and split of
+    # the enclosure interface, entry kernels; and mul_ext_2_2, the building block of the product.
+    WAVE_2_B1 = {'interval_neg_2', 'interval_sub_2', 'interval_make_2', 'interval_mul_2', 'interval_hull_1',
+                 'interval_intersection_1', 'interval_hull_2', 'interval_intersection_2', 'interval_mid_rad_1',
+                 'interval_to_ball_1', 'ball_to_interval_1', 'interval_split_1'}
+    WAVE_2 |= WAVE_2_B1 | {'mul_ext_2_2'}
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -1311,7 +1400,7 @@ class TheKernels(unittest.TestCase):
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
-        wave_2_ieee_only = self.WAVE_2_INTERVALS | self.WAVE_2_BALLS
+        wave_2_ieee_only = self.WAVE_2_INTERVALS | self.WAVE_2_BALLS | self.WAVE_2_B1 | {'mul_ext_2_2'}
         self.assertEqual({name for name, k in ks.items() if not k.real_model},
                          self.NON_FINITE | self.WAVE_1_FULL | wave_2_ieee_only)
         self.assertEqual({name for name, k in ks.items() if k.extended},
@@ -1362,6 +1451,14 @@ class TheKernels(unittest.TestCase):
             'interval_make_1': 1, 'interval_neg_1': 1, 'interval_mul_1': 1, 'interval_add_1': 2,
             'interval_sub_1': 2, 'interval_add_2': 3, 'ball_lower_as_1': 2, 'ball_upper_as_1': 2,
             'ball_lower_as_2': 2, 'ball_upper_as_2': 2, 'ball_from_interval_2': 2, 'ball_narrow_2_1': 2})
+        # Stage B1: none for the negation and the constructor of two limbs, the hulls and the
+        # intersections (comparisons and selects); that of the directed sums for the difference of two
+        # limbs, 3, and of mul_dir_2_2 for the product, 4; 2 for the midpoint and radius, which
+        # rounds a difference up, and for the conversions and the split.
+        self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_B1 | {'mul_ext_2_2'}}, {
+            'interval_neg_2': 1, 'interval_make_2': 1, 'interval_sub_2': 3, 'mul_ext_2_2': 4, 'interval_mul_2': 4,
+            'interval_hull_1': 1, 'interval_intersection_1': 1, 'interval_hull_2': 1, 'interval_intersection_2': 1,
+            'interval_mid_rad_1': 2, 'interval_to_ball_1': 2, 'ball_to_interval_1': 2, 'interval_split_1': 2})
 
     def test_milestone2_bodies_are_those_of_milestone2_md(self):
         """The listings of wave 1, line for line as the page writes them ("Building blocks on T",

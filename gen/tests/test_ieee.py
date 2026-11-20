@@ -209,6 +209,44 @@ class Statements(unittest.TestCase):
         self.assertIn('Definition up_ball_from_interval_2_1 : float := const_of (round radix2 '
                       '(FLT_exp (3 - emax - prec) prec) Zceil 2).', m)
 
+    def test_the_kernels_of_stage_b1(self):
+        # The statements of the claims of stage B1 (architecture.md, "Claims of the interval kernels:
+        # two limbs and the enclosure interface"), in their shapes.
+        text = ieee.statements(self.ks)
+
+        def spec(name):
+            return re.search(rf'^Definition {name}_spec : Prop :=\n(.*?)\.\n', text, flags=re.M | re.S).group(1)
+        s = spec('interval_hull_1')
+        self.assertIn('  (interval_empty_1 zl zu <-> interval_empty_1 xl xu /\\ interval_empty_1 yl yu) /\\\n', s)
+        self.assertIn('   range_lower (fun z : R => in_interval_1 xl xu z \\/ in_interval_1 yl yu z) lo ->\n', s)
+        s = spec('interval_intersection_1')
+        self.assertIn('  (interval_empty_1 zl zu <-> ~ (exists z : R, in_interval_1 xl xu z /\\ in_interval_1 yl yu z))',
+                      s)
+        s = spec('interval_mid_rad_1')
+        self.assertIn('  (interval_empty_1 xl xu -> nan m /\\ nan r) /\\\n', s)
+        self.assertIn('  (finite xl -> xval xu = XInf false -> xval m = XFin (omega prec emax) /\\ '
+                      'r = infinity prec emax false) /\\\n', s)
+        self.assertIn('   val r = RU (ieee_emin prec emax) prec (Rmax (val m - val xl) (val xu - val m))', s)
+        s = spec('interval_to_ball_1')
+        self.assertIn('  (ball_empty_1 c r <-> interval_empty_1 xl xu) /\\\n', s)
+        self.assertIn('  (interval_nonempty_1 xl xu -> ~ interval_bounded_1 xl xu -> ball_whole_1 c r) /\\\n', s)
+        s = spec('ball_to_interval_1')
+        self.assertIn('   xval zl = xrd prec emax lo /\\ xval zu = xru prec emax hi', s)
+        s = spec('interval_split_1')
+        self.assertIn('   xval al = xval xl /\\ xval bu = xval xu /\\ xval au = xval bl', s)
+        s = spec('interval_make_2')
+        self.assertIn('  (nan lo0 \\/ nan hi0 -> zl0 = infinity prec emax true /\\ zu0 = infinity prec emax false '
+                      '/\\ zero zl1 /\\ zero zu1) /\\\n', s)
+        s = spec('mul_ext_2_2')
+        self.assertIn('  ~ nan x0 ->\n  ~ nan y0 ->\n', s)
+        self.assertIn('  (zero x0 \\/ zero y0 -> zero l0 /\\ zero l1) /\\\n', s)
+        self.assertIn('   xle (xval_2 l0 l1) (xmul (xval_2 x0 x1) (xval_2 y0 y1)) = true /\\\n', s)
+        s = spec('interval_mul_2')
+        self.assertIn('   (zero xl0 /\\ zero xu0) \\/\n   (zero yl0 /\\ zero yu0) ->\n'
+                      '   zero zl0 /\\ zero zl1 /\\ zero zu0 /\\ zero zu1) /\\\n', s)
+        # mul_dir_1, whose zero_factor is of one-limb operands, is printed as before.
+        self.assertIn('  (zero a \\/ zero b -> zero d) /\\\n', spec('mul_dir_1_ieee'))
+
     def test_represents(self):
         # neg_2 and abs_2 say it next to normalized and an exact error, which it implies.
         self.assertTrue(self.statement('neg_2_ieee_spec').endswith(
@@ -343,8 +381,11 @@ class CheckedFiles(unittest.TestCase):
     # IeeeIntervalVocabulary.v; make -C proofs passed on these files. Then the definition of
     # add_down_2_2 changed alone (no fused result negated through a select: the rounding down of
     # z1 - dd as minus the rounding up of dd - z1), and make -C proofs passed on the new model.
-    DIGESTS = {'proofs/gen/IeeeModel.v': 'dcc579a123ba1f706224bcadf90ce316b5c2b6f3487a5367a886a8c49cdb07a0',
-               'proofs/gen/IeeeStatements.v': '6c606e00b9580b92d8009a5d53266043a34e3bb402cb042000c64b8967c98545'}
+    # Then the thirteen kernels of stage B1 of the intervals, unverified, were added: every earlier
+    # definition and statement is the same, byte for byte, some printed earlier; make -C proofs passed
+    # on these files.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '5648f899068f611e16d06faf4506495f5efac9ddc7d4ce775d7ebd75f8024b25',
+               'proofs/gen/IeeeStatements.v': '5e3868fb045d772ba11fc980379f50f2568381d600765184a6797774ae53fb41'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

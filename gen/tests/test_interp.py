@@ -402,8 +402,9 @@ class Specials(unittest.TestCase):
         self.assertEqual(subnormal, [])
         # E, G, H of the six cores, and the splitter; P of the two directed products, and N of the
         # two scalings of a ball by a power of two. Milestone 2: E, G, H of add_ball_2_2 and
-        # mul_ball_2_2, P of mul_dir_1, and 1/2 and 2 of ball_from_interval_2.
-        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 3 * 2 + 1 + 2))
+        # mul_ball_2_2, P of mul_dir_1, and 1/2 and 2 of ball_from_interval_2. Stage B1: 1/2 of
+        # interval_mid_rad_1.
+        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 3 * 2 + 1 + 2 + 1))
         cores = {'ball_add_1': 2, 'ball_add_2': 2, 'ball_scale_1': 3, 'ball_scale_2': 3, 'ball_mul_1': 4,
                  'ball_mul_2': 5}
         for name, more in cores.items():
@@ -492,9 +493,12 @@ class TwoExecutionsOfAProduct(unittest.TestCase):
     results by test_cxx (constant evaluation: ConstantEvaluation; run time: Kernels.test_matrix)."""
     N = common.size(4000, 100000)
     # ball_from_interval_2 (Milestone 2) halves its bounds with prod: its center is the exact sum of
-    # the two halves, which for two zeros is a zero product of either sign.
+    # the two halves, which for two zeros is a zero product of either sign. So does
+    # interval_mid_rad_1 (stage B1), whose midpoint of [-0, -0] is the sum of the two halves, and
+    # interval_to_ball_1 and interval_split_1, which return that midpoint.
     ZERO_SIGN = {'mul_pow2_2', 'mul_pow2_2_full', 'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full',
-                 'ball_mul_pow2_2_full', 'mul_1_1', 'two_prod_dekker', 'ball_from_interval_2'}
+                 'ball_mul_pow2_2_full', 'mul_1_1', 'two_prod_dekker', 'ball_from_interval_2',
+                 'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1'}
 
     def test_the_kernels(self):
         from kairn_gen import cpp
