@@ -1,0 +1,23 @@
+# z = x a, entry by entry, a of T (milestone2.md: scale_k by a T).
+# A map (milestone2.md, "Folds", "sum, dot, axpy, convolution"): every element of z is the step
+# on one element of each array read, and the scalar a, in any order; the mask finite is the and of the
+# tests of the written elements, and when it is false a second pass makes every element that
+# is not finite the canonical NaN ("When something is not finite").
+fold:          scale_1
+arrays:        supplied x
+scalars:       supplied a
+state:         mask finite
+step:          z = scale_step_1(x, a)
+combine:       finite = and(finite, finite)
+orders:        sequential, lanes
+writes:        z
+check:         fold_finish_1
+finish:        none
+value:         x*a
+ensures:       entries z
+ensures:       finite_or_nan z flag=finite
+min_precision: 1
+status:        unverified
+domain:        extended
+source:        mul_1_1 on each element
+license:       algorithm: published; proof: MIT

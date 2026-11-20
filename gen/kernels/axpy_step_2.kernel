@@ -1,0 +1,26 @@
+# The step of axpy_2: z = (a x) + y with the products and sums of two limbs, mul_2_2 then add_2_2
+# (milestone2.md, "sum, dot, axpy, convolution"). The program supplies a and x, which mul_2_2 only
+# multiplies (rule R3 asks no guard of them); y is a stored array, written through Kairn.
+# Its bound, relative to the terms |a x| + |y|, from those of mul_2_2 and add_2_2, with
+# eps+ = 3u^2/(1-4u): |z - (a x + y)| <= (eps+ (1 + 4u^2) + 4u^2) |a x| + eps+ |y| + (1 + eps+) 3/2 eta,
+# the bound of dot_step_2, and (1 + eps+) 3/2 <= 2 from precision 4.
+kernel:        axpy_step_2
+input:         supplied a = a0 a1
+input:         supplied x = x0 x1
+input:         y = y0 y1
+output:        z = z0 z1
+value:         a*x+y
+requires:      normalized a
+requires:      normalized x
+requires:      normalized y
+ensures:       normalized z
+ensures:       error z T c=3*(1+4*u*u)/(1-4*u)+4 k=2 t=2
+min_precision: 4
+theorem:       proofs/theories/MapSteps.v axpy_step_2_correct
+source:        the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22
+license:       algorithm: published; proof: MIT
+status:        proved
+entry:         yes
+
+(p0, p1) = mul_2_2(a0, a1, x0, x1)
+(z0, z1) = add_2_2(p0, p1, y0, y1)

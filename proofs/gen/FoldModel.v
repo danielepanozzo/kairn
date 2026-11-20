@@ -17,6 +17,76 @@ Section Folds.
 Variable emin prec : Z.
 Variable choice : Z -> bool.
 
+(* add_1: a map; arrays stored x, stored y; it writes z by the step add_1_1. *)
+Definition add_1_step (xy : R * R) : R :=
+  add_1_1 emin prec choice (fst xy) (snd xy).
+
+Definition add_1_map (xys : list (R * R)) : list R :=
+  map (add_1_step) xys.
+
+(* add_1_entry: a map; arrays supplied x, supplied y; it writes z by the step add_entry_step_1. *)
+Definition add_1_entry_step (xy : R * R) : R :=
+  add_entry_step_1 emin prec choice (fst xy) (snd xy).
+
+Definition add_1_entry_map (xys : list (R * R)) : list R :=
+  map (add_1_entry_step) xys.
+
+(* add_2: a map; arrays stored x, stored y; it writes z by the step add_2_2. *)
+Definition add_2_step (xy : (R * R) * (R * R)) : R * R :=
+  add_2_2 emin prec choice (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition add_2_map (xys : list ((R * R) * (R * R))) : list (R * R) :=
+  map (add_2_step) xys.
+
+(* add_2_entry: a map; arrays supplied x, supplied y; it writes z by the step add_entry_step_2. *)
+Definition add_2_entry_step (xy : (R * R) * (R * R)) : R * R :=
+  add_entry_step_2 emin prec choice (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition add_2_entry_map (xys : list ((R * R) * (R * R))) : list (R * R) :=
+  map (add_2_entry_step) xys.
+
+(* axpy_1: a map; arrays supplied x, stored y; scalars supplied a; it writes z by the step axpy_step_1. *)
+Definition axpy_1_step (a : R) (xy : R * R) : R :=
+  axpy_step_1 emin prec choice a (fst xy) (snd xy).
+
+Definition axpy_1_map (a : R) (xys : list (R * R)) : list R :=
+  map (axpy_1_step a) xys.
+
+(* axpy_1_entry: a map; arrays supplied x, supplied y; scalars supplied a; it writes z by the step axpy_entry_step_1. *)
+Definition axpy_1_entry_step (a : R) (xy : R * R) : R :=
+  axpy_entry_step_1 emin prec choice a (fst xy) (snd xy).
+
+Definition axpy_1_entry_map (a : R) (xys : list (R * R)) : list R :=
+  map (axpy_1_entry_step a) xys.
+
+(* axpy_2: a map; arrays supplied x, stored y; scalars supplied a; it writes z by the step axpy_step_2. *)
+Definition axpy_2_step (a : R * R) (xy : (R * R) * (R * R)) : R * R :=
+  axpy_step_2 emin prec choice (fst a) (snd a) (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition axpy_2_map (a : R * R) (xys : list ((R * R) * (R * R))) : list (R * R) :=
+  map (axpy_2_step a) xys.
+
+(* axpy_2_1: a map; arrays supplied x, stored y; scalars supplied a; it writes z by the step axpy_step_2_1. *)
+Definition axpy_2_1_step (a : R) (xy : (R * R) * (R * R)) : R * R :=
+  axpy_step_2_1 emin prec choice a (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition axpy_2_1_map (a : R) (xys : list ((R * R) * (R * R))) : list (R * R) :=
+  map (axpy_2_1_step a) xys.
+
+(* axpy_2_1_entry: a map; arrays supplied x, supplied y; scalars supplied a; it writes z by the step axpy_entry_step_2_1. *)
+Definition axpy_2_1_entry_step (a : R) (xy : (R * R) * (R * R)) : R * R :=
+  axpy_entry_step_2_1 emin prec choice a (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition axpy_2_1_entry_map (a : R) (xys : list ((R * R) * (R * R))) : list (R * R) :=
+  map (axpy_2_1_entry_step a) xys.
+
+(* axpy_2_entry: a map; arrays supplied x, supplied y; scalars supplied a; it writes z by the step axpy_entry_step_2. *)
+Definition axpy_2_entry_step (a : R * R) (xy : (R * R) * (R * R)) : R * R :=
+  axpy_entry_step_2 emin prec choice (fst a) (snd a) (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition axpy_2_entry_map (a : R * R) (xys : list ((R * R) * (R * R))) : list (R * R) :=
+  map (axpy_2_entry_step a) xys.
+
 (* dot_1: arrays supplied x, supplied y; state s of 1 limb; step dot_step_1, combination add_1_1. *)
 Definition dot_1_step (s : R) (xy : R * R) : R :=
   dot_step_1 emin prec choice s (fst xy) (snd xy).
@@ -42,6 +112,62 @@ Definition dot_2_seq (xs : list ((R * R) * (R * R))) : R * R :=
 
 Definition dot_2_lanes (W : nat) (xs : list ((R * R) * (R * R))) : R * R :=
   fold_lanes dot_2_step dot_2_combine (0, 0) W xs.
+
+(* mul_pow2_map_1: a map; arrays supplied x; scalars supplied c; it writes z by the step mul_pow2_step_1. *)
+Definition mul_pow2_map_1_step (c : R) (x : R) : R :=
+  mul_pow2_step_1 emin prec choice x c.
+
+Definition mul_pow2_map_1_map (c : R) (xs : list R) : list R :=
+  map (mul_pow2_map_1_step c) xs.
+
+(* mul_pow2_map_2: a map; arrays supplied x; scalars supplied c; it writes z by the step mul_pow2_step_2. *)
+Definition mul_pow2_map_2_step (c : R) (x : R * R) : R * R :=
+  mul_pow2_step_2 emin prec choice (fst x) (snd x) c.
+
+Definition mul_pow2_map_2_map (c : R) (xs : list (R * R)) : list (R * R) :=
+  map (mul_pow2_map_2_step c) xs.
+
+(* scale_1: a map; arrays supplied x; scalars supplied a; it writes z by the step scale_step_1. *)
+Definition scale_1_step (a : R) (x : R) : R :=
+  scale_step_1 emin prec choice x a.
+
+Definition scale_1_map (a : R) (xs : list R) : list R :=
+  map (scale_1_step a) xs.
+
+(* scale_2: a map; arrays supplied x; scalars supplied a; it writes z by the step scale_step_2. *)
+Definition scale_2_step (a : R) (x : R * R) : R * R :=
+  scale_step_2 emin prec choice (fst x) (snd x) a.
+
+Definition scale_2_map (a : R) (xs : list (R * R)) : list (R * R) :=
+  map (scale_2_step a) xs.
+
+(* sub_1: a map; arrays stored x, stored y; it writes z by the step sub_1_1. *)
+Definition sub_1_step (xy : R * R) : R :=
+  sub_1_1 emin prec choice (fst xy) (snd xy).
+
+Definition sub_1_map (xys : list (R * R)) : list R :=
+  map (sub_1_step) xys.
+
+(* sub_1_entry: a map; arrays supplied x, supplied y; it writes z by the step sub_entry_step_1. *)
+Definition sub_1_entry_step (xy : R * R) : R :=
+  sub_entry_step_1 emin prec choice (fst xy) (snd xy).
+
+Definition sub_1_entry_map (xys : list (R * R)) : list R :=
+  map (sub_1_entry_step) xys.
+
+(* sub_2: a map; arrays stored x, stored y; it writes z by the step sub_2_2. *)
+Definition sub_2_step (xy : (R * R) * (R * R)) : R * R :=
+  sub_2_2 emin prec choice (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition sub_2_map (xys : list ((R * R) * (R * R))) : list (R * R) :=
+  map (sub_2_step) xys.
+
+(* sub_2_entry: a map; arrays supplied x, supplied y; it writes z by the step sub_entry_step_2. *)
+Definition sub_2_entry_step (xy : (R * R) * (R * R)) : R * R :=
+  sub_entry_step_2 emin prec choice (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition sub_2_entry_map (xys : list ((R * R) * (R * R))) : list (R * R) :=
+  map (sub_2_entry_step) xys.
 
 (* sum_1: arrays stored x; state s of 1 limb; step add_1_1, combination add_1_1. *)
 Definition sum_1_step (s : R) (x : R) : R :=

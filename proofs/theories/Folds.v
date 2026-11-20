@@ -13,8 +13,13 @@
    lists only: what the lanes of a list are, and how the two orders behave when the step
    is replaced by an equal one, when it is op after a function of the element, and with
    no lane, one lane, or fewer elements than lanes. The error bounds of sums and dot
-   products in these orders are in Summation.v. *)
-From Stdlib Require Import List Arith Lia Permutation.
+   products in these orders are in Summation.v.
+
+   A loop that writes an array (a map) is the last section: its model is map f xs, and
+   the lemmas there relate that list to the list read entry by entry (Forall2), which is
+   the form of a map's generated statement; and they show that the mask such a loop
+   keeps, the and of a test of every element written, is the same in both orders. *)
+From Stdlib Require Import List Arith Lia Permutation Bool.
 Import ListNotations.
 
 (** * The lanes of a list *)
@@ -342,4 +347,131 @@ Proof.
 intros A B C op combine g zero W xs. unfold fold_lanes.
 rewrite length_map, firstn_map, skipn_map, deal_map, map_map, fold_left_map_eq.
 rewrite (map_ext _ _ (fold_seq_map _ _ _ op g zero)). reflexivity.
+Qed.
+
+(** * A loop that writes an array *)
+
+(* A map writes one element for every element it reads: element i of the array written
+   is a function f of element i of the arrays read (the scalars given once are part of
+   f), and of nothing else, so it does not depend on the order in which the loop goes
+   through the arrays. Its model is the list map f xs, with no state and no order
+   (proofs/gen/FoldModel.v, F_map), and its statement relates the two lists entry by
+   entry, with Forall2: Forall2 P xs (map f xs) says that the list written has the
+   length of the list read and that P holds of element i of one and element i of the
+   other, for every i (Forall2_map_nth below).
+
+   The first lemma is that this follows from P x (f x) for every element x of the list
+   read, and the second that it says no more. The third is the form in which a map's
+   statement follows from its step's: if every element satisfies a requirement Q, and
+   the step takes an element that satisfies Q to a result that P relates to it, then P
+   relates every element to the one written for it. *)
+Lemma Forall2_map_r :
+  forall (A B : Type) (P : A -> B -> Prop) (f : A -> B) (xs : list A),
+  Forall (fun x => P x (f x)) xs -> Forall2 P xs (map f xs).
+Proof.
+intros A B P f. induction xs as [|x r IH]; intros H; cbn [map].
+- constructor.
+- constructor. exact (Forall_inv H). apply IH. exact (Forall_inv_tail H).
+Qed.
+
+Lemma Forall2_map_r_inv :
+  forall (A B : Type) (P : A -> B -> Prop) (f : A -> B) (xs : list A),
+  Forall2 P xs (map f xs) -> Forall (fun x => P x (f x)) xs.
+Proof.
+intros A B P f. induction xs as [|x r IH]; cbn [map]; intros H.
+- constructor.
+- inversion H as [|a b l l' Hx Hr E1 E2]. subst. constructor. exact Hx. now apply IH.
+Qed.
+
+Lemma map_entries :
+  forall (A B : Type) (Q : A -> Prop) (P : A -> B -> Prop) (f : A -> B),
+  (forall x : A, Q x -> P x (f x)) ->
+  forall xs : list A, Forall Q xs -> Forall2 P xs (map f xs).
+Proof.
+intros A B Q P f H xs Hx. apply Forall2_map_r.
+revert Hx. apply Forall_impl. exact H.
+Qed.
+
+(* What the conclusion says, position by position. *)
+Lemma Forall2_map_nth :
+  forall (A B : Type) (P : A -> B -> Prop) (f : A -> B) (xs : list A),
+  Forall2 P xs (map f xs) ->
+  length (map f xs) = length xs /\
+  forall (i : nat) (d : A) (e : B), (i < length xs)%nat -> P (nth i xs d) (nth i (map f xs) e).
+Proof.
+intros A B P f xs H. split. apply length_map.
+apply Forall2_map_r_inv in H. revert H.
+induction xs as [|x r IH]; intros H i d e Hi; cbn [length] in Hi.
+- lia.
+- destruct i as [|i]; cbn [map nth].
+  + exact (Forall_inv H).
+  + apply IH. exact (Forall_inv_tail H). lia.
+Qed.
+
+(** * The mask of a loop that writes an array *)
+
+(* A map keeps one mask, true at the start. Its step ands into the mask a test t of the
+   element just written, and the lane order combines the masks of the lanes by and. In
+   both orders, and for every number of lanes, the result is the test of every element
+   (forallb t): the mask does not depend on the order either. Nothing of the real model
+   uses this (there a map has no mask); it is what a statement about the mask in the two
+   orders rests on. *)
+Lemma fold_left_and :
+  forall (B : Type) (t : B -> bool) (xs : list B) (m : bool),
+  fold_left (fun m x => andb m (t x)) xs m = andb m (forallb t xs).
+Proof.
+intros B t. induction xs as [|x r IH]; intros m; cbn [fold_left forallb].
+- now rewrite andb_true_r.
+- rewrite IH. now rewrite andb_assoc.
+Qed.
+
+Lemma fold_seq_and :
+  forall (B : Type) (t : B -> bool) (xs : list B),
+  fold_seq (fun m x => andb m (t x)) true xs = forallb t xs.
+Proof. intros B t xs. unfold fold_seq. rewrite fold_left_and. reflexivity. Qed.
+
+(* The masks of the lanes, each the image of its lane by g, combined from lane 0 upward. *)
+Lemma combine_lanes_and :
+  forall (C : Type) (g : C -> bool) (ls : list C),
+  combine_lanes andb true (map g ls) = forallb g ls.
+Proof.
+intros C g ls. unfold combine_lanes. destruct ls as [|l ls]; cbn [map hd tl forallb].
+- reflexivity.
+- generalize (g l). induction ls as [|a ls IH]; intros m; cbn [map fold_left forallb].
+  + now rewrite andb_true_r.
+  + rewrite IH. now rewrite andb_assoc.
+Qed.
+
+Lemma forallb_concat_lanes :
+  forall (B : Type) (t : B -> bool) (ls : list (list B)),
+  forallb (forallb t) ls = forallb t (concat ls).
+Proof.
+intros B t. induction ls as [|l ls IH]; cbn [forallb concat].
+- reflexivity.
+- now rewrite forallb_app, IH.
+Qed.
+
+Lemma forallb_perm :
+  forall (B : Type) (t : B -> bool) (l l' : list B),
+  Permutation l l' -> forallb t l = forallb t l'.
+Proof.
+intros B t l l' H. induction H as [|x l l' H IH|x y l|l l' l'' H1 IH1 H2 IH2]; cbn [forallb].
+- reflexivity.
+- now rewrite IH.
+- rewrite !andb_assoc. now rewrite (andb_comm (t y) (t x)).
+- now rewrite IH1.
+Qed.
+
+Lemma fold_lanes_and :
+  forall (B : Type) (t : B -> bool) (W : nat) (xs : list B),
+  fold_lanes (fun m x => andb m (t x)) andb true W xs = forallb t xs.
+Proof.
+intros B t W xs. destruct W as [|w].
+- rewrite fold_lanes_0. apply fold_seq_and.
+- unfold fold_lanes. set (k := (S w * (length xs / S w))%nat).
+  rewrite fold_left_and.
+  rewrite (map_ext _ _ (fold_seq_and B t)).
+  rewrite combine_lanes_and, forallb_concat_lanes.
+  rewrite (forallb_perm B t _ _ (deal_perm B (S w) (firstn k xs) (Nat.lt_0_succ w))).
+  rewrite <- forallb_app, firstn_skipn. reflexivity.
 Qed.

@@ -45,12 +45,23 @@
      theories/IeeeFolds.v proves of the generated models of the folds in the IEEE model
      beyond their generated statements: the two facts about one application of each
      step, a fold of such steps with its finish, and the state after every element in
-     the sequential order.
+     the sequential order;
+   - the arithmetic of the steps of the maps (theories/MapSteps.v), beside their theorems,
+     which proofs/gen/Audit.v lists: the error of a product followed by a sum, and its
+     three instances, with the constants of the steps of axpy;
+   - the theorems of the maps (theories/FoldMaps.v). Their types are generated
+     statements, F_spec of proofs/gen/FoldStatements.v, and they are checked here by a
+     definition of the same form as in the generated audit. They are here because the
+     description of a map cannot name its theorem yet: for a fold marked proved the
+     generator lists F_seq_correct and F_lanes_correct against F_seq_spec and
+     F_lanes_spec, and a map has one statement, without an order. With them, the lemmas
+     of theories/Folds.v about a loop that writes an array.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
    the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import Statements IeeeStatements.
+From Kairn.Gen Require Import FoldStatements.
 From Kairn.Gen Require Import IeeeFoldStatements.
 From Kairn Require Import IeeeVocabulary IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore IeeeSub IeeeFinite.
 From Kairn Require Import Split Directed MulPow2.
@@ -60,6 +71,7 @@ From Kairn Require Import DirectedSum DirectedProd BallPow2 Rectangle IeeeProduc
 From Kairn Require Import IeeeDirected IeeeDirectedProd IeeeEntry.
 From Kairn Require Import IeeeTwoExecutions.
 From Kairn Require Import StepKernels FoldTransfer BoundKernels FoldGuarantee.
+From Kairn Require Import MapSteps FoldMaps.
 From Kairn Require Import IeeeSteps IeeeFolds.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
@@ -227,14 +239,21 @@ Definition mul_pow2_2_ieee_finite_any_audit : mul_pow2_2_ieee_finite_any_spec :=
   mul_pow2_2_ieee_finite_any.
 Print Assumptions mul_pow2_2_ieee_finite_any.
 
-(* Summation: the two orders of a loop over arrays as functions on lists
-   (theories/Folds.v), then the tree theorem, its closed forms, and the bounds of the two
-   orders (theories/Summation.v). Real arithmetic about an addition of which only an
-   error bound is known; no kernel is named. *)
+(* Summation: the two orders of a loop over arrays as functions on lists, and a loop
+   that writes an array: the list it writes, entry by entry, and its mask in the two
+   orders (theories/Folds.v); then the tree theorem, its closed forms, and the bounds of
+   the two orders (theories/Summation.v). Real arithmetic about an addition of which only
+   an error bound is known; no kernel is named. *)
 Print Assumptions lane_nth.
 Print Assumptions fold_lanes_short.
 Print Assumptions fold_seq_map.
 Print Assumptions fold_lanes_map.
+Print Assumptions Forall2_map_r.
+Print Assumptions Forall2_map_r_inv.
+Print Assumptions map_entries.
+Print Assumptions Forall2_map_nth.
+Print Assumptions fold_seq_and.
+Print Assumptions fold_lanes_and.
 Print Assumptions height_le_leaves.
 Print Assumptions pow_minus_1_le_gamma.
 Print Assumptions div_one_minus_le.
@@ -723,3 +742,72 @@ Print Assumptions sum_2_entry_seq_ieee_facts.
 Print Assumptions sum_fast_2_seq_ieee_facts.
 Print Assumptions sum_fast_2_entry_seq_ieee_facts.
 Print Assumptions dot_2_seq_ieee_facts.
+
+(* The steps of the maps (theories/MapSteps.v): the theorems of their generated statements
+   are listed by proofs/gen/Audit.v; these are the lemmas beside them. A product within
+   em |X| + tm of X, then a sum of relative error ea, is within
+   (ea (1 + em) + em) (|X| + |Y|) + (1 + ea) tm of X + Y; the three instances have the
+   constants that the steps of axpy claim; and the relative error of add_2_2 is at most
+   3/32 from precision 3. *)
+Print Assumptions axpy_compose.
+Print Assumptions rel_add_2_2_le.
+Print Assumptions axpy_step_1_arith.
+Print Assumptions axpy_step_2_arith.
+Print Assumptions axpy_step_2_1_arith.
+
+(* The maps (theories/FoldMaps.v): the generated statements of proofs/gen/FoldStatements.v,
+   about the generated models of proofs/gen/FoldModel.v. Every element written satisfies
+   the statement of the step for its own element and the scalars. *)
+Definition add_1_audit : add_1_spec := add_1_correct.
+Print Assumptions add_1_correct.
+
+Definition add_1_entry_audit : add_1_entry_spec := add_1_entry_correct.
+Print Assumptions add_1_entry_correct.
+
+Definition add_2_audit : add_2_spec := add_2_correct.
+Print Assumptions add_2_correct.
+
+Definition add_2_entry_audit : add_2_entry_spec := add_2_entry_correct.
+Print Assumptions add_2_entry_correct.
+
+Definition sub_1_audit : sub_1_spec := sub_1_correct.
+Print Assumptions sub_1_correct.
+
+Definition sub_1_entry_audit : sub_1_entry_spec := sub_1_entry_correct.
+Print Assumptions sub_1_entry_correct.
+
+Definition sub_2_audit : sub_2_spec := sub_2_correct.
+Print Assumptions sub_2_correct.
+
+Definition sub_2_entry_audit : sub_2_entry_spec := sub_2_entry_correct.
+Print Assumptions sub_2_entry_correct.
+
+Definition axpy_1_audit : axpy_1_spec := axpy_1_correct.
+Print Assumptions axpy_1_correct.
+
+Definition axpy_1_entry_audit : axpy_1_entry_spec := axpy_1_entry_correct.
+Print Assumptions axpy_1_entry_correct.
+
+Definition axpy_2_audit : axpy_2_spec := axpy_2_correct.
+Print Assumptions axpy_2_correct.
+
+Definition axpy_2_entry_audit : axpy_2_entry_spec := axpy_2_entry_correct.
+Print Assumptions axpy_2_entry_correct.
+
+Definition axpy_2_1_audit : axpy_2_1_spec := axpy_2_1_correct.
+Print Assumptions axpy_2_1_correct.
+
+Definition axpy_2_1_entry_audit : axpy_2_1_entry_spec := axpy_2_1_entry_correct.
+Print Assumptions axpy_2_1_entry_correct.
+
+Definition scale_1_audit : scale_1_spec := scale_1_correct.
+Print Assumptions scale_1_correct.
+
+Definition scale_2_audit : scale_2_spec := scale_2_correct.
+Print Assumptions scale_2_correct.
+
+Definition mul_pow2_map_1_audit : mul_pow2_map_1_spec := mul_pow2_map_1_correct.
+Print Assumptions mul_pow2_map_1_correct.
+
+Definition mul_pow2_map_2_audit : mul_pow2_map_2_spec := mul_pow2_map_2_correct.
+Print Assumptions mul_pow2_map_2_correct.

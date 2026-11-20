@@ -483,11 +483,23 @@ set(_toy_ext_a2 fp:5:-7:0)
 # Kernels of gen/claims.json and folds of its list "folds" that the oracle does not judge yet: no
 # cross-check, no enumeration of a toy format and no test of the public interface is registered for
 # a name of these lists, and configuring says how many are left out. A kernel or a fold added to the
-# generator with claims the oracle cannot read goes here until the oracle reads them. Empty: since
-# the folds' stage of Milestone 2 the oracle judges every claim of the file (folds, their steps,
-# finishes and bounds included; oracle/README.md).
-set(KAIRN_NOT_YET_CROSS_CHECKED)
-set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS)
+# generator with claims the oracle cannot read goes here until the oracle reads them. Since the
+# folds' stage of Milestone 2 the oracle judges every claim of that stage (folds, their steps,
+# finishes and bounds included; oracle/README.md). On the lists:
+#
+# - the maps of stage B, part 1 (architecture.md, "Maps"), and their steps: the oracle reads neither
+#   the requests of written arrays nor the claim entries yet (it refuses a map, "a fold that writes
+#   arrays"); the steps, whose claims it reads, are on the list with their maps until it reads them.
+#
+# Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
+# them as written).
+set(KAIRN_NOT_YET_CROSS_CHECKED
+  sub_1_1 add_entry_step_1 sub_entry_step_1 add_entry_step_2 sub_entry_step_2 scale_step_1 scale_step_2
+  mul_pow2_step_1 mul_pow2_step_2 axpy_step_1 axpy_entry_step_1 axpy_step_2 axpy_entry_step_2 axpy_step_2_1
+  axpy_entry_step_2_1)
+set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
+  add_1 add_1_entry add_2 add_2_entry sub_1 sub_1_entry sub_2 sub_2_entry axpy_1 axpy_1_entry axpy_2 axpy_2_entry
+  axpy_2_1 axpy_2_1_entry scale_1 scale_2 mul_pow2_map_1 mul_pow2_map_2)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
 # whose public functions (sum, dot, the bounds as functions of n) come with BallVector. They are

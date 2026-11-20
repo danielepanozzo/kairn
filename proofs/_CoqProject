@@ -43,11 +43,14 @@ theories/BallPow2.v
 gen/FoldModel.v
 gen/FoldStatements.v
 theories/StepKernels.v
+theories/MapSteps.v
 theories/FoldSums.v
+theories/FoldMaps.v
 theories/BoundKernels.v
 theories/FoldGuarantee.v
 theories/IeeeOperations.v
 gen/IeeeModel.v
+gen/IeeeWith.v
 theories/IeeeBridge.v
 theories/IeeeVocabulary.v
 theories/IeeeIntervalVocabulary.v

@@ -1,0 +1,18 @@
+# The step of the map scale_1, an array of one limb times a scalar of T (milestone2.md, "sum, dot,
+# axpy, convolution"): the product rounded to nearest, mul_1_1. The program supplies both; a
+# product needs no guard (rule R3). Its claims are those of mul_1_1.
+kernel:        scale_step_1
+input:         x
+input:         a
+output:        z
+value:         x*a
+ensures:       rounded z nearest
+ensures:       error z R c=1/(1+u) k=1 t=1/2
+min_precision: 1
+theorem:       proofs/theories/MapSteps.v scale_step_1_correct
+source:        mul_1_1, one rounding to nearest
+license:       bound: published; proof: MIT
+status:        proved
+entry:         yes
+
+z = mul_1_1(x, a)

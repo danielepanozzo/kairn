@@ -289,14 +289,70 @@ class CheckedFiles(unittest.TestCase):
     # finishes were added, and every earlier one is the same, byte for byte. Then the programs of
     # the steps of the folds and their bridge statements (and the spec of those of two limbs) were
     # added, every earlier one the same, byte for byte. Then the two finishes were proved: the
-    # comments above their statements say so, and nothing else changed.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '2bd4b1a87c6946bc4676edfade74cf4a22636d7f4e5ea176c78ece1c266a6ac5',
-               'proofs/gen/IeeeStatements.v': 'a28cf6cdee65221db4ec2b308f0c9dbf8cf2a392a9b067452d59d13641cef657'}
+    # comments above their statements say so, and nothing else changed. Then the steps of the maps
+    # (unverified): their definitions were added, every earlier one the same, byte for byte, and
+    # mul_1_1, which axpy_step_1 calls, is printed earlier, before the first kernel that calls it.
+    # (The two lines of work met in a merge: the files are the regeneration of the merged
+    # descriptions, IeeeModel.v that of the maps' side, byte for byte.)
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'e22837e7e16f542441ecf40dd05f74f51140455ba479c44c5ed342cebacdf611',
+               'proofs/gen/IeeeStatements.v': 'd9c584ccdcbc9a7e83a306e3be6d11a072cf76cb8485936731a02d95d01b03a0'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():
             text = read(path)
             self.assertEqual(hashlib.sha256(text.encode()).hexdigest(), digest, path)
+
+
+class WithProduct(unittest.TestCase):
+    """proofs/gen/IeeeWith.v: the kernels constexpr by the rule of the product with the product as
+    an argument. Each K_with is the definition of IeeeModel.v with `prod a b` written `p_ a b` and
+    a call of another such kernel written as its K_with p_, line for line; the section has the
+    variables of IeeeModel.v; the kernels are those build lists as constexpr by the rule."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.ks = common.kernels()
+        cls.text = read('proofs/gen/IeeeWith.v')
+        cls.model = read('proofs/gen/IeeeModel.v')
+
+    @staticmethod
+    def block(text, name):
+        m = re.search(r'^Definition ' + re.escape(name) + r'\b.*?\.\n(?=\n|End )', text, flags=re.M | re.S)
+        return m.group(0) if m else None
+
+    def test_the_kernels(self):
+        from kairn_gen import build, cpp
+        rule = [k.name for k in self.ks.values() if cpp.product_rule(k, self.ks)]
+        self.assertEqual(definitions(self.text), [f'{n}_with' for n in rule])
+        line = next(x for x in build.summary(self.ks) if x.startswith('constexpr by the rule of the product'))
+        self.assertEqual(sorted(line.split(': ', 1)[1].split(', ')), sorted(rule))
+        self.assertGreaterEqual(set(rule), {'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full',
+                                            'ball_mul_pow2_1', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2',
+                                            'ball_mul_pow2_2_full'})
+
+    def test_each_is_the_model_with_the_product_as_argument(self):
+        rule = {k.name for k in ieee.with_kernels(self.ks)}
+        for name in rule:
+            with self.subTest(kernel=name):
+                mine = self.block(self.text, f'{name}_with')
+                model = self.block(self.model, name)
+                self.assertIsNotNone(mine)
+                self.assertIsNotNone(model)
+                back = mine.replace(f'Definition {name}_with (p_ : float -> float -> float)', f'Definition {name}')
+                back = re.sub(r':= p_ ', ':= prod ', back)
+                for callee in rule:
+                    back = back.replace(f' {callee}_with p_ ', f' {callee} ')
+                self.assertIsNone(re.search(r'\bp_\b', back))
+                self.assertEqual(back, model)
+
+    def test_the_section(self):
+        section = self.text.split('Section IeeeWith.\n', 1)[1].split('\n\n(*', 1)[0]
+        self.assertEqual([x for x in section.splitlines() if x.startswith(('Variable', 'Context'))], SECTION)
+        self.assertIn('From Kairn.Gen Require IeeeModel.', self.text)
+        # The constants and the other kernels are IeeeModel's, by local notations.
+        for m in re.finditer(r'^Local Notation (\w+) := \(IeeeModel\.(\w+) prec emax', self.text, flags=re.M):
+            self.assertEqual(m.group(1), m.group(2))
+            self.assertIn(f'Definition {m.group(2)} ', self.model)
 
 
 class Fields(unittest.TestCase):
@@ -348,6 +404,96 @@ v        = add(x1, sl)
         errors = [str(e) for e in rules.check_all(ks) if e.kernel == 'ops_special']
         self.assertTrue(any('x has 4 limbs, and the IEEE-model statements have words for 2' in e for e in errors),
                         errors)
+
+
+class TheoremFields(unittest.TestCase):
+    """The theorems of the IEEE-model statements of the finite domain and of the folds
+    (ieee_bridge_theorem, ieee_spec_theorem, ieee_lead_theorem; the ieee_theorem of a fold): the
+    statements they prove are printed as proved, and IeeeAudit.v checks each theorem against its
+    statement; without them, nothing changes (the committed files, whose digests are pinned
+    above, have none)."""
+    STEP = ['ieee_bridge_theorem: proofs/theories/IeeeSteps.v dot_step_2_ieee_bridge',
+            'ieee_spec_theorem: proofs/theories/IeeeSteps.v dot_step_2_ieee_correct',
+            'ieee_lead_theorem: proofs/theories/IeeeSteps.v dot_step_2_ieee_lead']
+    FOLD = ['ieee_theorem: proofs/theories/IeeeFolds.v']
+
+    def kernels_with(self, kernels=None, folds=None):
+        ks = common.kernels()
+        new = dict(ks)
+        for name, extra in (kernels or {}).items():
+            with open(os.path.join(common.GEN, 'kernels', ks[name].path), encoding='utf-8') as f:
+                new[name] = ir.parse_kernel(f.read().rstrip('\n') + '\n' + '\n'.join(extra) + '\n', ks[name].path)
+        fds = dict(ks.folds)
+        for name, extra in (folds or {}).items():
+            with open(os.path.join(common.GEN, 'kernels', fds[name].path), encoding='utf-8') as f:
+                fds[name] = ir.parse_fold(f.read().rstrip('\n') + '\n' + '\n'.join(extra) + '\n', fds[name].path)
+        return ir.ordered(new, fds)
+
+    def errors(self, name, kernels=None, folds=None):
+        return [str(e) for e in rules.check_all(self.kernels_with(kernels, folds)) if e.kernel == name]
+
+    def test_printed_and_audited(self):
+        from kairn_gen import build
+        ks = self.kernels_with({'dot_step_2': self.STEP}, {'dot_2': self.FOLD})
+        self.assertEqual(rules.check_all(ks), [])
+        before, after = build.outputs(common.kernels()), build.outputs(ks)
+        changed = sorted(rel for rel in after if after[rel] != before[rel])
+        self.assertEqual(changed, ['proofs/gen/IeeeAudit.v', 'proofs/gen/IeeeFoldStatements.v',
+                                   'proofs/gen/IeeeStatements.v'])
+
+        def diff(rel):
+            old, new = before[rel].splitlines(), after[rel].splitlines()
+            return [a for a in new if a not in old], [a for a in old if a not in new]
+
+        added, gone = diff('proofs/gen/IeeeStatements.v')
+        self.assertEqual(len(added), 2)
+        self.assertEqual(len(gone), 2)      # the comment of both statements, then unverified
+        self.assertTrue(all(g.endswith('IEEE-model status: unverified. *)') for g in gone), gone)
+        self.assertTrue(all(a.startswith('(* dot_step_2: ') and a.endswith('IEEE-model status: proved. *)')
+                            for a in added), added)
+        added, gone = diff('proofs/gen/IeeeFoldStatements.v')
+        self.assertEqual(sorted(added), sorted([
+            '(* dot_step_2, the leading limb of its result: finite only if those of its operands are. '
+            'IEEE-model status: proved. *)',
+            '(* dot_2, the sequential order, in the IEEE model. Status: proved. *)',
+            '(* dot_2, the lane order, for every number of lanes W, in the IEEE model. Status: proved. *)']))
+        self.assertEqual(len(gone), 3)
+        added, gone = diff('proofs/gen/IeeeAudit.v')
+        self.assertEqual(gone, [])
+        audit = after['proofs/gen/IeeeAudit.v']
+        for line in ('From Kairn.Gen Require Import IeeeFoldStatements.',
+                     'From Kairn Require Import IeeeFolds.',
+                     'From Kairn Require Import IeeeSteps.',
+                     'Definition dot_step_2_ieee_bridge_audit : dot_step_2_ieee_bridge_spec := dot_step_2_ieee_bridge.',
+                     'Print Assumptions dot_step_2_ieee_bridge.',
+                     'Definition dot_step_2_ieee_audit : dot_step_2_ieee_spec := dot_step_2_ieee_correct.',
+                     'Print Assumptions dot_step_2_ieee_correct.',
+                     'Definition dot_step_2_ieee_lead_audit : dot_step_2_ieee_lead_spec := dot_step_2_ieee_lead.',
+                     'Print Assumptions dot_step_2_ieee_lead.',
+                     'Definition dot_2_seq_ieee_audit : dot_2_seq_ieee_spec := dot_2_seq_ieee_correct.',
+                     'Print Assumptions dot_2_seq_ieee_correct.',
+                     'Definition dot_2_lanes_ieee_audit : dot_2_lanes_ieee_spec := dot_2_lanes_ieee_correct.',
+                     'Print Assumptions dot_2_lanes_ieee_correct.'):
+            self.assertIn(line + '\n', audit)
+        # Only a bridge: IeeeFoldStatements.v is not imported.
+        ks = self.kernels_with({'dot_step_2': self.STEP[:1]})
+        self.assertFalse('Require Import IeeeFoldStatements.' in build.outputs(ks)['proofs/gen/IeeeAudit.v'])
+
+    def test_refused(self):
+        self.assertTrue(any('must be named dot_step_2_ieee_correct, not dot_step_2_correct' in e for e in self.errors(
+            'dot_step_2', {'dot_step_2': ['ieee_spec_theorem: proofs/theories/IeeeSteps.v dot_step_2_correct']})))
+        self.assertTrue(any('only with "ieee: spec"' in e for e in self.errors(
+            'dot_step_1', {'dot_step_1': ['ieee_spec_theorem: proofs/theories/IeeeSteps.v dot_step_1_ieee_correct']})))
+        self.assertTrue(any('only the step or the combination of a fold has' in e for e in self.errors(
+            'mul_2_2', {'mul_2_2': ['ieee_lead_theorem: proofs/theories/IeeeSteps.v mul_2_2_ieee_lead']})))
+        self.assertTrue(any('belong to kernels of the finite domain' in e for e in self.errors(
+            'abs_2', {'abs_2': ['ieee_bridge_theorem: proofs/theories/IeeeExt.v abs_2_ieee_bridge']})))
+        self.assertTrue(any('file must be proofs/theories/*.v' in e for e in self.errors(
+            'dot_step_2', {'dot_step_2': ['ieee_lead_theorem: theories/IeeeSteps.v dot_step_2_ieee_lead']})))
+        self.assertTrue(any('a map has no statement in the IEEE model' in e for e in self.errors(
+            'axpy_2', folds={'axpy_2': self.FOLD})))
+        self.assertTrue(any('the ieee_theorem file must be proofs/theories/*.v' in e for e in self.errors(
+            'dot_2', folds={'dot_2': ['ieee_theorem: IeeeFolds.v']})))
 
 
 if __name__ == '__main__':

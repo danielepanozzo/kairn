@@ -208,6 +208,22 @@ nav:
           - The bound of a sum of two limbs, as a function of the number of additions: reference/bound_sum_2.md
           - The bound of a dot product of one limb, as a function of the number of terms: reference/bound_dot_1.md
           - The bound of a dot product of two limbs, as a function of the number of terms: reference/bound_dot_2.md
+      - Operations on arrays, entry by entry:
+          - The difference of two numbers of one limb, rounded to nearest: reference/sub_1_1.md
+          - "x + y of one limb, on arrays of the program": reference/add_entry_step_1.md
+          - x - y of one limb, on arrays of the program: reference/sub_entry_step_1.md
+          - "x + y of two limbs, on arrays of the program": reference/add_entry_step_2.md
+          - x - y of two limbs, on arrays of the program: reference/sub_entry_step_2.md
+          - x a of one limb, a of T: reference/scale_step_1.md
+          - x a of two limbs, a of T: reference/scale_step_2.md
+          - x c of one limb, c a power of two: reference/mul_pow2_step_1.md
+          - x c of two limbs, c a power of two: reference/mul_pow2_step_2.md
+          - "a x + y of one limb, y stored": reference/axpy_step_1.md
+          - "a x + y of one limb, y of the program": reference/axpy_entry_step_1.md
+          - "a x + y of two limbs, y stored": reference/axpy_step_2.md
+          - "a x + y of two limbs, y of the program": reference/axpy_entry_step_2.md
+          - "a x + y of two limbs, a of T, y stored": reference/axpy_step_2_1.md
+          - "a x + y of two limbs, a of T, y of the program": reference/axpy_entry_step_2_1.md
   # END reference
   - Proofs: proofs/index.md
   - Developer guide:

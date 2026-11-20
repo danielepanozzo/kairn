@@ -1,0 +1,19 @@
+# The step of the map scale_2, an array of two limbs times a scalar of T: mul_2_1 (milestone2.md:
+# mul_2_1 when the scalar of scale is a T). Both come from the program; mul_2_1 only multiplies
+# them, so rule R3 asks no guard. Its claims are those of mul_2_1.
+kernel:        scale_step_2
+input:         supplied x = x0 x1
+input:         a
+output:        z = z0 z1
+value:         x*a
+requires:      normalized x
+ensures:       normalized z
+ensures:       error z R c=2 k=2 t=1
+min_precision: 2
+theorem:       proofs/theories/MapSteps.v scale_step_2_correct
+source:        mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22
+license:       algorithm: published; proof: MIT
+status:        proved
+entry:         yes
+
+(z0, z1) = mul_2_1(x0, x1, a)

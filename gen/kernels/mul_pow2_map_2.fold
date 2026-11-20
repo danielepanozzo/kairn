@@ -1,0 +1,25 @@
+# z = x c, entry by entry, x of two limbs and c a power of two (mul_pow2_2).
+# A map (milestone2.md, "Folds", "sum, dot, axpy, convolution"): every element of z is the step
+# on one element of each array read, and the scalar c, in any order; the mask finite is the and of the
+# tests of the written elements, and when it is false a second pass makes every element that
+# is not finite the canonical NaN ("When something is not finite").
+fold:          mul_pow2_map_2
+arrays:        supplied x = x0 x1
+scalars:       supplied c
+state:         mask finite
+step:          z = mul_pow2_step_2(x, c)
+combine:       finite = and(finite, finite)
+orders:        sequential, lanes
+writes:        z = z0 z1
+check:         fold_finish_2
+finish:        none
+value:         x*c
+requires:      canonical x
+requires:      power_of_two c
+ensures:       entries z
+ensures:       finite_or_nan z flag=finite
+min_precision: 2
+status:        unverified
+domain:        extended
+source:        mul_pow2_2 on each element
+license:       algorithm: published; proof: MIT

@@ -33,6 +33,17 @@ def check(*texts):
     return rules.check_all(ir.ordered(kernels))
 
 
+# The steps of the maps (stage B), unverified: sub_1_1, and the steps that guard or only
+# multiply what the program supplies.
+MAP_STEPS = {'sub_1_1', 'add_entry_step_1', 'sub_entry_step_1', 'add_entry_step_2', 'sub_entry_step_2',
+             'scale_step_1', 'scale_step_2', 'mul_pow2_step_1', 'mul_pow2_step_2', 'axpy_step_1',
+             'axpy_entry_step_1', 'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1'}
+# The maps (stage B).
+MAPS = {'add_1', 'add_1_entry', 'add_2', 'add_2_entry', 'sub_1', 'sub_1_entry', 'sub_2', 'sub_2_entry', 'axpy_1',
+        'axpy_1_entry', 'axpy_2', 'axpy_2_entry', 'axpy_2_1', 'axpy_2_1_entry', 'scale_1', 'scale_2',
+        'mul_pow2_map_1', 'mul_pow2_map_2'}
+
+
 class Refusals(unittest.TestCase):
     def refused(self, errors, kernel, value, rule, words):
         for e in errors:
@@ -779,6 +790,8 @@ class R3OfTheKernels(unittest.TestCase):
     # program fills"): those of the sums guard the element, those of the dot products only multiply
     # it. The functions on arrays of the public headers, which come later, call them through the folds.
     FOLD_STEPS = {'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2', 'dot_step_1', 'dot_step_2'}
+    # And the steps of the maps that read what the program supplies (sub_1_1 reads stored arrays).
+    FOLD_STEPS |= MAP_STEPS - {'sub_1_1'}
 
     def test_entry_kernels(self):
         ks = common.kernels()
@@ -836,7 +849,7 @@ class R3OfTheKernels(unittest.TestCase):
         ks = common.kernels()
         lines = build.summary(ks)
         self.assertEqual(set(ks.folds), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
-                                         'sum_fast_2_entry', 'dot_1', 'dot_2'})
+                                         'sum_fast_2_entry', 'dot_1', 'dot_2'} | MAPS)
         self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
         unverified = [n for n, f in ks.folds.items() if f.status == 'unverified']
         self.assertIn('folds UNVERIFIED: %s' % (', '.join(unverified) or 'none'), lines)
@@ -1155,7 +1168,7 @@ class TheKernels(unittest.TestCase):
     FOLDS_FINITE = {'dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2',
                     'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2'}
     FOLDS_FINISH = {'fold_finish_1', 'fold_finish_2'}
-    FOLDS = FOLDS_FINITE | FOLDS_FINISH
+    FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -1226,7 +1239,12 @@ class TheKernels(unittest.TestCase):
             'ball_mul_pow2_1': 2, 'ball_mul_pow2_2': 2,
             # the folds' stage: that of the kernels of one limb and of add_2_2, add_fast_2_2, mul_2_2
             'dot_step_1': 1, 'dot_step_2': 4, 'sum_entry_step_1': 1, 'sum_entry_step_2': 3,
-            'sum_fast_entry_step_2': 2, 'bound_sum_1': 1, 'bound_sum_2': 3, 'bound_dot_1': 1, 'bound_dot_2': 4})
+            'sum_fast_entry_step_2': 2, 'bound_sum_1': 1, 'bound_sum_2': 3, 'bound_dot_1': 1, 'bound_dot_2': 4,
+            # the steps of the maps: that of the kernels they call (axpy_step_2_1: mul_2_1 and add_2_2)
+            'sub_1_1': 1, 'add_entry_step_1': 1, 'sub_entry_step_1': 1, 'add_entry_step_2': 3,
+            'sub_entry_step_2': 3, 'scale_step_1': 1, 'scale_step_2': 2, 'mul_pow2_step_1': 1,
+            'mul_pow2_step_2': 2, 'axpy_step_1': 1, 'axpy_entry_step_1': 1, 'axpy_step_2': 4,
+            'axpy_entry_step_2': 4, 'axpy_step_2_1': 3, 'axpy_entry_step_2_1': 3})
 
     def test_milestone2_bodies_are_those_of_milestone2_md(self):
         """The listings of wave 1, line for line as the page writes them ("Building blocks on T",

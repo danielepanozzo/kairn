@@ -297,11 +297,12 @@ class Machine:
             plain = True
         return self._eval(k, f, list(inputs), plain)
 
-    def run_fold(self, name, f, order, lanes, arrays):
+    def run_fold(self, name, f, order, lanes, arrays, scalars=()):
         """The outputs of fold `name` on the arrays: `arrays` has one list of n values per limb
         array, in the order of the fold's arrays and of their limbs (x0, x1, y0, y1). `order` is
         'sequential' or 'lanes', with `lanes` the number of lanes W >= 0 (fold_lanes W of
-        proofs/theories/Folds.v; W = 0 is the sequential order)."""
+        proofs/theories/Folds.v; W = 0 is the sequential order). A map takes its scalars' limbs
+        too, and returns one list of n values per limb array it writes, then its mask."""
         fd = getattr(self.kernels, 'folds', {}).get(name)
         if fd is None:
             raise InterpError(f'unknown fold {name!r}')
@@ -315,7 +316,9 @@ class Machine:
         n = len(arrays[0]) if arrays else 0
         if any(len(a) != n for a in arrays):
             raise InterpError(f'{name}: the limb arrays have different lengths')
-        for a in arrays:
+        if len(scalars) != len(fd.scalar_limbs()):
+            raise InterpError(f'{name} takes {len(fd.scalar_limbs())} scalar limbs, not {len(scalars)}')
+        for a in list(arrays) + [list(scalars)]:
             for v in a:
                 if isinstance(v, bool) or not member(f, v):
                     raise InterpError(f'{format_limb(v) if not isinstance(v, bool) else v} is not a number '
@@ -329,6 +332,8 @@ class Machine:
                 at += len(g.limbs)
             elements.append(e)
         step = self.kernels[fd.step[0]]
+        if fd.is_map:
+            return self._run_map(fd, f, order, lanes, elements, list(scalars))
         zero = [(NUM, False, 0, 0)] * len(fd.state.limbs)
 
         def apply_step(state, e):
@@ -358,6 +363,50 @@ class Machine:
         if fd.finish is None:
             return state
         return self._eval(self.kernels[fd.finish[0]], f, state, False)
+
+    def _run_map(self, fd, f, order, lanes, elements, scalars):
+        """A map (rules.py, "Maps"): every written element is the step on the scalars and one
+        element; the mask starts true and is the `and` of the check's flag on each written element,
+        in the order given (the same in both, `and` being exact, associative and commutative); when
+        it is false, each written element is replaced by what the check returns of it."""
+        step, check = self.kernels[fd.step[0]], self.kernels[fd.check]
+        given = {}
+        at = 0
+        for g in fd.scalars:
+            given[g.name] = scalars[at:at + len(g.limbs)]
+            at += len(g.limbs)
+        n = len(elements)
+        written = [None] * n
+
+        def one(i):
+            e = dict(elements[i], **given)
+            args = [v for a in fd.step[1] for v in e[a]]
+            written[i] = self._eval(step, f, args, False)
+            return self._eval(check, f, written[i], False)[-1]
+
+        if order == 'sequential':
+            mask = True
+            for i in range(n):
+                flag = one(i)                   # every element is written, whatever the mask
+                mask = mask and flag
+        else:
+            if lanes < 0:
+                raise InterpError('the number of lanes is at least 0')
+            full = lanes * (n // lanes) if lanes else 0
+            mask = True
+            for j in range(lanes):
+                lane = True
+                for i in range(j, full, lanes):
+                    flag = one(i)
+                    lane = lane and flag
+                mask = lane if j == 0 else (mask and lane)
+            for i in range(full, n):
+                flag = one(i)
+                mask = mask and flag
+        if not mask:
+            written = [self._eval(check, f, w, False)[:-1] for w in written]
+        width = len(fd.write_limbs())
+        return [[w[j] for w in written] for j in range(width)] + [mask]
 
     def _const(self, f, name):
         if name == 'inf':
@@ -478,21 +527,26 @@ def parse_order(text):
 
 
 def complete_fold(machine, fd, f, fields):
-    """The output fields of a request of a fold: ORDER N, then for each array of the fold in
-    order, for each of its limbs, the N entries of that limb array."""
+    """The output fields of a request of a fold: ORDER N, then the limbs of the scalars (a map),
+    then for each array of the fold in order, for each of its limbs, the N entries of that limb
+    array. A map's result is, for each limb of the array it writes, its N entries, then the mask."""
     if len(fields) < 2:
         raise InterpError(f'expected "{fd.name} FORMAT ORDER N LIMB ... [#TAG]"')
     order, lanes = parse_order(fields[0])
     if not re.fullmatch(r'0|[1-9][0-9]*', fields[1]):
         raise InterpError(f'not a length: {fields[1]!r} (a decimal number)')
     n = int(fields[1])
-    limbs = fd.array_limbs()
-    if len(fields) - 2 != n * len(limbs):
-        raise InterpError(f'{fd.name} of length {n} takes {n * len(limbs)} limbs ({len(limbs)} arrays of {n}), '
-                          f'not {len(fields) - 2}')
+    limbs, given = fd.array_limbs(), len(fd.scalar_limbs())
+    if len(fields) - 2 != given + n * len(limbs):
+        raise InterpError(f'{fd.name} of length {n} takes {given + n * len(limbs)} limbs ({given} of its scalars, '
+                          f'{len(limbs)} arrays of {n}), not {len(fields) - 2}')
     values = [parse_limb(t) for t in fields[2:]]
+    scalars, values = values[:given], values[given:]
     arrays = [values[i * n:(i + 1) * n] for i in range(len(limbs))]
-    out = machine.run_fold(fd.name, f, order, lanes, arrays)
+    out = machine.run_fold(fd.name, f, order, lanes, arrays, scalars)
+    if fd.is_map:
+        written = [format_limb(v) for a in out[:-1] for v in a]
+        return ' '.join(written + [format_mask(out[-1])])
     kinds = [g.kind for g in fd.results() for _ in g.limbs]
     return ' '.join(format_mask(v) if kind == ir.MASK else format_limb(v) for v, kind in zip(out, kinds))
 

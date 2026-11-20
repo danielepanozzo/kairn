@@ -69,6 +69,13 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       claims for finite operands and a finite output limb 0;
                                       `bridge`, that every value it computes is then finite and
                                       its outputs are the real model's
+    ieee_bridge_theorem: FILE K_ieee_bridge   the finite domain only, once K_ieee_bridge_spec is
+                                      proved (with `ieee: bridge`)
+    ieee_spec_theorem: FILE K_ieee_correct    likewise for K_ieee_spec (with `ieee: spec`)
+    ieee_lead_theorem: FILE K_ieee_lead       likewise for K_ieee_lead_spec of
+                                      proofs/gen/IeeeFoldStatements.v (a step or a combination
+                                      of a fold); a statement whose theorem is not named is
+                                      unverified
     ieee_finite:   abs_le(x0,-2);abs_le(y0,-2)
                                       optional, the finite domain only: conditions as in
                                       finite_when (over input names and limb names) under which
@@ -115,7 +122,7 @@ along arrays, described in gen/kernels/NAME.fold:
                                       order the kernel's inputs take them, to the next state
     combine:       s = add_2_2(s, s)  a kernel: two states into one (the lane order)
     orders:        sequential, lanes  the orders emitted
-    writes:        none               the arrays written, for a map (not in this stage)
+    writes:        none               the array written, for a map (below)
     output:        r = r0 r1          the fold's results: the outputs of the finish
     output:        mask flag
     finish:        (r, flag) = fold_finish_2(s)
@@ -132,7 +139,28 @@ along arrays, described in gen/kernels/NAME.fold:
     ensures:       finite_or_nan r flag=flag
     min_precision: 4
     status:        unverified         or proved, with theorem: FILE (F_seq_correct, F_lanes_correct)
+    ieee_theorem:  FILE               optional, once the statements of proofs/gen/IeeeFoldStatements.v
+                                      are proved: F_seq_ieee_correct and F_lanes_ieee_correct, of
+                                      the orders the fold has (not for a map, which has none)
     domain:        extended           elements may be infinite or NaN (the flag says what comes out)
+
+A map is a fold that writes an array (docs/developer/architecture.md, "Maps"):
+
+    fold:          axpy_2
+    arrays:        supplied x = x0 x1, stored y = y0 y1
+    scalars:       supplied a = a0 a1  given once, passed to every step
+    state:         mask finite        true at the start
+    step:          z = axpy_step_2(a, x, y)
+                                      the scalars and one element to the element written; no state
+    combine:       finite = and(finite, finite)
+    orders:        sequential, lanes
+    writes:        z = z0 z1          the array written
+    check:         fold_finish_2      the test of a written element, and its canonical NaN
+    finish:        none               a map returns its mask
+    value:         a*x+y              the step's value
+    requires:      canonical a
+    ensures:       entries z          each written element satisfies the step's claims
+    ensures:       finite_or_nan z flag=finite
 """
 import os
 import re
@@ -276,6 +304,11 @@ class Kernel:
     ieee_status: str = None
     ieee_theorem: tuple = None                     # (file, name)
     ieee_only: bool = False                        # no real-model statement (a full Ball kernel)
+    # The theorems of the IEEE-model statements of a kernel of the finite domain, (file, name), once
+    # each is proved: K_ieee_bridge_spec, K_ieee_spec and K_ieee_lead_spec.
+    ieee_bridge_theorem: tuple = None
+    ieee_spec_theorem: tuple = None
+    ieee_lead_theorem: tuple = None
     # The IEEE-model statements of a kernel of the finite domain (ieee.py): which of `bridge` and
     # `spec`, and the thresholds under which every value it computes is finite.
     ieee: tuple = ()
@@ -341,6 +374,12 @@ class Kernel:
 
 # The IEEE-model statements a kernel of the finite domain may ask for (ieee.py, `ieee:`).
 IEEE_STATEMENTS = ('bridge', 'spec')
+
+# The fields that name the theorems of the IEEE-model statements of a kernel of the finite domain,
+# and the name each theorem has (K standing for the kernel's name).
+IEEE_THEOREM_KEYS = ('ieee_bridge_theorem', 'ieee_spec_theorem', 'ieee_lead_theorem')
+IEEE_THEOREM_NAMES = {'ieee_bridge_theorem': '{}_ieee_bridge', 'ieee_spec_theorem': '{}_ieee_correct',
+                      'ieee_lead_theorem': '{}_ieee_lead'}
 
 # The claims that only the non-finite layer has: a kernel that claims nothing else has no
 # real-model statement (Kernel.real_model).
@@ -439,6 +478,8 @@ def _ensures(words, where):
         return {'kind': kind, 'rel': words[1], 'args': words[2:4], 'if': words[4][len('if='):]}
     if kind == 'finite_or_nan' and len(words) == 3 and words[2].startswith('flag='):
         return {'kind': kind, 'of': words[1], 'flag': words[2][len('flag='):]}
+    if kind == 'entries' and len(words) == 2:
+        return {'kind': kind, 'of': words[1]}
     if kind == 'fold_error' and len(words) >= 3:
         entry = {'kind': kind, 'of': words[1], 'eps': None, 'term': '0', 'tau': '0', 'rel': None, 'abs': None}
         seen = set()
@@ -550,7 +591,7 @@ def parse_kernel(text, path):
     k = Kernel(name=None, path=path)
     single = {'kernel', 'value', 'min_precision', 'theorem', 'source', 'license', 'status',
               'ce_variant', 'cone_exempt', 'domain', 'ieee_status', 'ieee_theorem', 'entry', 'ieee_only',
-              'ieee', 'ieee_finite', 'ieee_finite_result'}
+              'ieee', 'ieee_finite', 'ieee_finite_result'} | set(IEEE_THEOREM_KEYS)
     seen = set()
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split('#', 1)[0].strip()
@@ -588,7 +629,7 @@ def parse_kernel(text, path):
             if not re.fullmatch(r'[0-9]+', val):
                 raise DescriptionError(f'{where}: min_precision must be an integer')
             k.min_precision = int(val)
-        elif key in ('theorem', 'ieee_theorem'):
+        elif key in ('theorem', 'ieee_theorem') + IEEE_THEOREM_KEYS:
             parts = val.split()
             if len(parts) != 2:
                 raise DescriptionError(f'{where}: expected "{key}: FILE NAME"')
@@ -653,18 +694,21 @@ class Fold:
     path: str
     arrays: list = field(default_factory=list)      # Groups, in order
     roles: dict = field(default_factory=dict)       # array name -> 'stored' or 'supplied'
+    scalars: list = field(default_factory=list)     # Groups given once and passed to every step (a map)
     state: Group = None
     step: tuple = None          # (kernel, argument group names, the line's destination)
-    combine: tuple = None       # the same, or None
+    combine: tuple = None       # the same (for a map, the operation and), or None
     finish: tuple = None        # (kernel, argument group names, destination group names), or None
     orders: tuple = ()
-    writes: tuple = ()
+    writes: list = field(default_factory=list)      # Groups: the arrays a map writes, one element per step
+    check: str = None           # a map: the kernel that tests a written element and gives its canonical NaN
     outputs: list = field(default_factory=list)     # Groups: the finish's outputs as the fold names them
     value: str = None
     requires: list = field(default_factory=list)
     ensures: list = field(default_factory=list)
     min_precision: int = None
     theorem: str = None         # the file of F_seq_correct and F_lanes_correct
+    ieee_theorem: str = None    # the file of F_seq_ieee_correct and F_lanes_ieee_correct
     source: str = None
     license: str = None
     status: str = None
@@ -675,15 +719,30 @@ class Fold:
     def extended(self):
         return self.domain == 'extended'
 
+    @property
+    def is_map(self):
+        """A map: the step writes an element of each written array, from the elements read."""
+        return bool(self.writes)
+
     def results(self):
-        """The groups the fold returns: the finish's outputs, or the state when there is none."""
+        """The groups the fold returns: the finish's outputs, or the state when there is none (for
+        a map, its mask; the written arrays are apart, write_limbs)."""
         return self.outputs if self.finish else [self.state]
 
     def array_limbs(self):
         return [v for g in self.arrays for v in g.limbs]
 
+    def scalar_limbs(self):
+        return [v for g in self.scalars for v in g.limbs]
+
+    def write_limbs(self):
+        return [v for g in self.writes for v in g.limbs]
+
     def theorem_name(self, order):
         return f'{self.name}_{ORDER_SUFFIX[order]}_correct'
+
+    def ieee_theorem_name(self, order):
+        return f'{self.name}_{ORDER_SUFFIX[order]}_ieee_correct'
 
 
 # What each order is called in the names of the C++ functions, the Rocq definitions and the
@@ -708,8 +767,8 @@ def _fold_call(text, where, key):
 
 def parse_fold(text, path):
     fd = Fold(name=None, path=path)
-    single = {'fold', 'arrays', 'state', 'step', 'combine', 'orders', 'writes', 'finish', 'value',
-              'min_precision', 'theorem', 'source', 'license', 'status', 'domain'}
+    single = {'fold', 'arrays', 'scalars', 'state', 'step', 'combine', 'orders', 'writes', 'check', 'finish',
+              'value', 'min_precision', 'theorem', 'source', 'license', 'status', 'domain'}
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split('#', 1)[0].strip()
         where = f'{path}:{lineno}'
@@ -726,15 +785,16 @@ def parse_fold(text, path):
             fd.declared.add(key)
         if key == 'fold':
             fd.name = val
-        elif key == 'arrays':
+        elif key in ('arrays', 'scalars'):
+            what = 'an array' if key == 'arrays' else 'a scalar'
             for part in val.split(','):
                 g, cls = _group(part, where, INPUT_CLASSES)
                 if cls is None:
-                    raise DescriptionError(f'{where}: an array is declared stored (written through Kairn) or '
+                    raise DescriptionError(f'{where}: {what} is declared stored (written through Kairn) or '
                                            f'supplied (the program\'s): {part.strip()!r}')
                 if g.kind != LIMB:
-                    raise DescriptionError(f'{where}: an array holds limbs, not masks')
-                fd.arrays.append(g)
+                    raise DescriptionError(f'{where}: {what} holds limbs, not masks')
+                (fd.arrays if key == 'arrays' else fd.scalars).append(g)
                 fd.roles[g.name] = cls
         elif key == 'state':
             fd.state = _group(val, where)[0]
@@ -745,7 +805,11 @@ def parse_fold(text, path):
         elif key == 'orders':
             fd.orders = tuple(w.strip() for w in val.split(','))
         elif key == 'writes':
-            fd.writes = () if val == 'none' else tuple(w.strip() for w in val.split(','))
+            fd.writes = [] if val == 'none' else [_group(part, where)[0] for part in val.split(',')]
+        elif key == 'check':
+            if not KERNEL_NAME.match(val):
+                raise DescriptionError(f'{where}: expected "check: KERNEL", got {val!r}')
+            fd.check = val
         elif key == 'output':
             fd.outputs.append(_group(val, where)[0])
         elif key == 'value':
@@ -766,6 +830,11 @@ def parse_fold(text, path):
                 raise DescriptionError(f'{where}: expected "theorem: FILE" (its theorems are F_seq_correct '
                                        'and F_lanes_correct)')
             fd.theorem = val
+        elif key == 'ieee_theorem':
+            if len(val.split()) != 1:
+                raise DescriptionError(f'{where}: expected "ieee_theorem: FILE" (its theorems are '
+                                       'F_seq_ieee_correct and F_lanes_ieee_correct)')
+            fd.ieee_theorem = val
         elif key in ('source', 'license', 'status', 'domain'):
             setattr(fd, key, val)
         else:

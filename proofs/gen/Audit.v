@@ -19,6 +19,7 @@ From Kairn Require Import DirectedSum.
 From Kairn Require Import EFT.
 From Kairn Require Import EntryKernels.
 From Kairn Require Import FoldSums.
+From Kairn Require Import MapSteps.
 From Kairn Require Import Mul21.
 From Kairn Require Import Mul22.
 From Kairn Require Import MulPow2.
@@ -43,11 +44,23 @@ Print Assumptions add_down_1_correct.
 Definition add_down_entry_audit : add_down_entry_spec := add_down_entry_correct.
 Print Assumptions add_down_entry_correct.
 
+Definition add_entry_step_1_audit : add_entry_step_1_spec := add_entry_step_1_correct.
+Print Assumptions add_entry_step_1_correct.
+
 Definition add_up_1_audit : add_up_1_spec := add_up_1_correct.
 Print Assumptions add_up_1_correct.
 
 Definition add_up_entry_audit : add_up_entry_spec := add_up_entry_correct.
 Print Assumptions add_up_entry_correct.
+
+Definition mul_1_1_audit : mul_1_1_spec := mul_1_1_correct.
+Print Assumptions mul_1_1_correct.
+
+Definition axpy_entry_step_1_audit : axpy_entry_step_1_spec := axpy_entry_step_1_correct.
+Print Assumptions axpy_entry_step_1_correct.
+
+Definition axpy_step_1_audit : axpy_step_1_spec := axpy_step_1_correct.
+Print Assumptions axpy_step_1_correct.
 
 Definition ball_add_1_audit : ball_add_1_spec := ball_add_1_correct.
 Print Assumptions ball_add_1_correct.
@@ -85,14 +98,14 @@ Print Assumptions dot_step_1_correct.
 Definition fast_two_sum_entry_audit : fast_two_sum_entry_spec := fast_two_sum_entry_correct.
 Print Assumptions fast_two_sum_entry_correct.
 
-Definition mul_1_1_audit : mul_1_1_spec := mul_1_1_correct.
-Print Assumptions mul_1_1_correct.
-
 Definition two_prod_audit : two_prod_spec := two_prod_correct.
 Print Assumptions two_prod_correct.
 
 Definition mul_down_1_audit : mul_down_1_spec := mul_down_1_correct.
 Print Assumptions mul_down_1_correct.
+
+Definition mul_pow2_step_1_audit : mul_pow2_step_1_spec := mul_pow2_step_1_correct.
+Print Assumptions mul_pow2_step_1_correct.
 
 Definition mul_up_1_audit : mul_up_1_spec := mul_up_1_correct.
 Print Assumptions mul_up_1_correct.
@@ -112,14 +125,23 @@ Print Assumptions radd_entry_correct.
 Definition rmul_audit : rmul_spec := rmul_correct.
 Print Assumptions rmul_correct.
 
+Definition scale_step_1_audit : scale_step_1_spec := scale_step_1_correct.
+Print Assumptions scale_step_1_correct.
+
 Definition split_audit : split_spec := split_correct.
 Print Assumptions split_correct.
+
+Definition sub_1_1_audit : sub_1_1_spec := sub_1_1_correct.
+Print Assumptions sub_1_1_correct.
 
 Definition sub_down_1_audit : sub_down_1_spec := sub_down_1_correct.
 Print Assumptions sub_down_1_correct.
 
 Definition sub_down_entry_audit : sub_down_entry_spec := sub_down_entry_correct.
 Print Assumptions sub_down_entry_correct.
+
+Definition sub_entry_step_1_audit : sub_entry_step_1_spec := sub_entry_step_1_correct.
+Print Assumptions sub_entry_step_1_correct.
 
 Definition sub_up_1_audit : sub_up_1_spec := sub_up_1_correct.
 Print Assumptions sub_up_1_correct.
@@ -154,14 +176,32 @@ Print Assumptions add_2_1_correct.
 Definition add_2_2_audit : add_2_2_spec := add_2_2_correct.
 Print Assumptions add_2_2_correct.
 
+Definition add_entry_step_2_audit : add_entry_step_2_spec := add_entry_step_2_correct.
+Print Assumptions add_entry_step_2_correct.
+
 Definition add_fast_2_2_audit : add_fast_2_2_spec := add_fast_2_2_correct.
 Print Assumptions add_fast_2_2_correct.
 
-Definition ball_add_2_audit : ball_add_2_spec := ball_add_2_correct.
-Print Assumptions ball_add_2_correct.
-
 Definition mul_2_2_audit : mul_2_2_spec := mul_2_2_correct.
 Print Assumptions mul_2_2_correct.
+
+Definition axpy_entry_step_2_audit : axpy_entry_step_2_spec := axpy_entry_step_2_correct.
+Print Assumptions axpy_entry_step_2_correct.
+
+Definition mul_2_1_audit : mul_2_1_spec := mul_2_1_correct.
+Print Assumptions mul_2_1_correct.
+
+Definition axpy_entry_step_2_1_audit : axpy_entry_step_2_1_spec := axpy_entry_step_2_1_correct.
+Print Assumptions axpy_entry_step_2_1_correct.
+
+Definition axpy_step_2_audit : axpy_step_2_spec := axpy_step_2_correct.
+Print Assumptions axpy_step_2_correct.
+
+Definition axpy_step_2_1_audit : axpy_step_2_1_spec := axpy_step_2_1_correct.
+Print Assumptions axpy_step_2_1_correct.
+
+Definition ball_add_2_audit : ball_add_2_spec := ball_add_2_correct.
+Print Assumptions ball_add_2_correct.
 
 Definition ball_mul_2_audit : ball_mul_2_spec := ball_mul_2_correct.
 Print Assumptions ball_mul_2_correct.
@@ -174,9 +214,6 @@ Print Assumptions neg_2_correct.
 
 Definition ball_neg_2_audit : ball_neg_2_spec := ball_neg_2_correct.
 Print Assumptions ball_neg_2_correct.
-
-Definition mul_2_1_audit : mul_2_1_spec := mul_2_1_correct.
-Print Assumptions mul_2_1_correct.
 
 Definition ball_scale_2_audit : ball_scale_2_spec := ball_scale_2_correct.
 Print Assumptions ball_scale_2_correct.
@@ -214,6 +251,12 @@ Print Assumptions lt_2_2_correct.
 Definition mul_pow2_2_audit : mul_pow2_2_spec := mul_pow2_2_correct.
 Print Assumptions mul_pow2_2_correct.
 
+Definition mul_pow2_step_2_audit : mul_pow2_step_2_spec := mul_pow2_step_2_correct.
+Print Assumptions mul_pow2_step_2_correct.
+
+Definition scale_step_2_audit : scale_step_2_spec := scale_step_2_correct.
+Print Assumptions scale_step_2_correct.
+
 Definition sub_1_2_audit : sub_1_2_spec := sub_1_2_correct.
 Print Assumptions sub_1_2_correct.
 
@@ -222,6 +265,9 @@ Print Assumptions sub_2_1_correct.
 
 Definition sub_2_2_audit : sub_2_2_spec := sub_2_2_correct.
 Print Assumptions sub_2_2_correct.
+
+Definition sub_entry_step_2_audit : sub_entry_step_2_spec := sub_entry_step_2_correct.
+Print Assumptions sub_entry_step_2_correct.
 
 Definition sum_entry_step_2_audit : sum_entry_step_2_spec := sum_entry_step_2_correct.
 Print Assumptions sum_entry_step_2_correct.

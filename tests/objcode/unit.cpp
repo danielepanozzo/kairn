@@ -62,13 +62,25 @@ extern "C" KAIRN_OBJCODE_NOINLINE void kairn_objcode_fixups_inline() noexcept {}
         [[maybe_unused]] L* out, [[maybe_unused]] bool* mo
 #define KAIRN_OBJCODE_FOLD(PREFIX, NAME, L, CALL) \
     extern "C" KAIRN_OBJCODE_NOINLINE void PREFIX##NAME(KAIRN_OBJCODE_FOLD_ARGS(L)) noexcept { CALL; }
+// The maps have the same functions, which also take the scalars' limbs and the arrays written.
+#define KAIRN_OBJCODE_MAP_ARGS(L)                                                                    \
+    [[maybe_unused]] const L* const* in, [[maybe_unused]] std::size_t n, [[maybe_unused]] std::size_t lanes, \
+        [[maybe_unused]] const L* sc, [[maybe_unused]] L* const* w, [[maybe_unused]] bool* mo
+#define KAIRN_OBJCODE_MAP(PREFIX, NAME, L, CALL) \
+    extern "C" KAIRN_OBJCODE_NOINLINE void PREFIX##NAME(KAIRN_OBJCODE_MAP_ARGS(L)) noexcept { CALL; }
 #define KAIRN_RUNNER_KERNEL(NAME, IN, OUT, CALL)
 #define KAIRN_RUNNER_FOLD(NAME, ARRAYS, OUT, SEQ, LANES, PACKED)        \
     KAIRN_OBJCODE_FOLD(kairn_objcode_fold_seq_double_, NAME, double, SEQ)     \
     KAIRN_OBJCODE_FOLD(kairn_objcode_fold_seq_float_, NAME, float, SEQ)       \
     KAIRN_OBJCODE_FOLD(kairn_objcode_fold_lanes_double_, NAME, double, LANES) \
     KAIRN_OBJCODE_FOLD(kairn_objcode_fold_lanes_float_, NAME, float, LANES)
+#define KAIRN_RUNNER_MAP(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED) \
+    KAIRN_OBJCODE_MAP(kairn_objcode_fold_seq_double_, NAME, double, SEQ)       \
+    KAIRN_OBJCODE_MAP(kairn_objcode_fold_seq_float_, NAME, float, SEQ)         \
+    KAIRN_OBJCODE_MAP(kairn_objcode_fold_lanes_double_, NAME, double, LANES)   \
+    KAIRN_OBJCODE_MAP(kairn_objcode_fold_lanes_float_, NAME, float, LANES)
 #include "runner_kernels.inc"
+#undef KAIRN_RUNNER_MAP
 #undef KAIRN_RUNNER_FOLD
 #undef KAIRN_RUNNER_KERNEL
 
@@ -93,7 +105,11 @@ using kairn_objcode_fm = uint32x4_t;
 #define KAIRN_RUNNER_FOLD(NAME, ARRAYS, OUT, SEQ, LANES, PACKED)            \
     KAIRN_OBJCODE_FOLD(kairn_objcode_fold_packed_double_, NAME, double, PACKED) \
     KAIRN_OBJCODE_FOLD(kairn_objcode_fold_packed_float_, NAME, float, PACKED)
+#define KAIRN_RUNNER_MAP(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED)   \
+    KAIRN_OBJCODE_MAP(kairn_objcode_fold_packed_double_, NAME, double, PACKED)  \
+    KAIRN_OBJCODE_MAP(kairn_objcode_fold_packed_float_, NAME, float, PACKED)
 #include "runner_kernels.inc"
+#undef KAIRN_RUNNER_MAP
 #undef KAIRN_RUNNER_FOLD
 #undef KAIRN_RUNNER_KERNEL
 #endif

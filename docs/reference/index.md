@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 94 kernels are proved.
+All 109 kernels are proved.
 
 31 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -196,4 +196,26 @@ The kernels of the loops over arrays (the folds of Milestone 2): their steps, th
 | none (internal) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{add\_2\_2}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - m \mathrm{unit}(\mathtt{add\_2\_2})}$ | [`bound_sum_2`](bound_sum_2.md) |
 | none (internal) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{mul\_1\_1}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - m \mathrm{unit}(\mathtt{mul\_1\_1})}$; when $\mathit{ok}$ is true, $t \ge m \mathrm{tiny}(\mathtt{mul\_1\_1}) (1 + g)$ | [`bound_dot_1`](bound_dot_1.md) |
 | none (internal) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{mul\_2\_2}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{mul\_2\_2})}{1 - m \mathrm{unit}(\mathtt{mul\_2\_2})}$; when $\mathit{ok}$ is true, $t \ge m \mathrm{tiny}(\mathtt{mul\_2\_2}) (1 + g)$ | [`bound_dot_2`](bound_dot_2.md) |
+
+## Operations on arrays, entry by entry
+
+The steps of the maps of Milestone 2 (z = x + y, x - y, a x + y, x a, x c entry by entry): each is the operation of one entry, on an array the program supplies where it says so. The functions on arrays of the public headers come later.
+
+| C++ | Operands | What it gives | Kernel |
+|---|---|---|---|
+| none (internal) | - | $s = \mathrm{RN}(a - b)$; $\lvert s - (a - b)\rvert \le \frac{u}{1 + u}\,\lvert a - b\rvert$ | [`sub_1_1`](sub_1_1.md) |
+| not yet called by the public headers | - | $z = \mathrm{RN}(x + y)$; $\lvert z - (x + y)\rvert \le \frac{u}{1 + u}\,\lvert x + y\rvert$ | [`add_entry_step_1`](add_entry_step_1.md) |
+| not yet called by the public headers | - | $z = \mathrm{RN}(x - y)$; $\lvert z - (x - y)\rvert \le \frac{u}{1 + u}\,\lvert x - y\rvert$ | [`sub_entry_step_1`](sub_entry_step_1.md) |
+| not yet called by the public headers | - | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$, normalized | [`add_entry_step_2`](add_entry_step_2.md) |
+| not yet called by the public headers | - | $\lvert z - (x - y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x - y\rvert$, normalized | [`sub_entry_step_2`](sub_entry_step_2.md) |
+| not yet called by the public headers | - | $z = \mathrm{RN}(x a)$; $\lvert z - x a\rvert \le \frac{u}{1 + u}\,\lvert x a\rvert + \tfrac{1}{2}\,\eta$ | [`scale_step_1`](scale_step_1.md) |
+| not yet called by the public headers | - | $\lvert z - x a\rvert \le 2\,u^2\,\lvert x a\rvert + \eta$, normalized | [`scale_step_2`](scale_step_2.md) |
+| not yet called by the public headers | - | $z = \mathrm{RN}(x c)$; $\lvert z - x c\rvert \le \tfrac{1}{2}\,\eta$ | [`mul_pow2_step_1`](mul_pow2_step_1.md) |
+| not yet called by the public headers | - | $\lvert z - x c\rvert \le \eta$, normalized | [`mul_pow2_step_2`](mul_pow2_step_2.md) |
+| not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{2 + 3u}{(1 + u) (1 + u)}\right) u\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{2}{3}\,\eta$ | [`axpy_step_1`](axpy_step_1.md) |
+| not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{2 + 3u}{(1 + u) (1 + u)}\right) u\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{2}{3}\,\eta$ | [`axpy_entry_step_1`](axpy_entry_step_1.md) |
+| not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + 2\,\eta$, normalized | [`axpy_step_2`](axpy_step_2.md) |
+| not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + 2\,\eta$, normalized | [`axpy_entry_step_2`](axpy_entry_step_2.md) |
+| not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$, normalized | [`axpy_step_2_1`](axpy_step_2_1.md) |
+| not yet called by the public headers | - | $\lvert z - (a x + y)\rvert \le \left(\frac{3(1 + 2u u)}{1 - 4u} + 2\right) u^2\,(\lvert a x\rvert + \lvert y\rvert) + \tfrac{5}{4}\,\eta$, normalized | [`axpy_entry_step_2_1`](axpy_entry_step_2_1.md) |
 

@@ -477,8 +477,11 @@ def _statement(name, comment, lines):
     return [f'(* {comment} *)', f'Definition {name} : Prop :='] + lines
 
 
-def _comment(k):
-    status = k.ieee_status or 'unverified'
+def _comment(k, theorem=None):
+    """The comment above a statement of kernel k: its status is that of the kernel's IEEE-model
+    statement (ieee_status), or, for a statement of the finite domain whose theorem the kernel
+    names (`theorem`, one of ir.IEEE_THEOREM_KEYS), proved."""
+    status = 'proved' if theorem else (k.ieee_status or 'unverified')
     return f'{k.name}: {k.source or "no source given"}. IEEE-model status: {status}.'
 
 
@@ -490,7 +493,7 @@ def _finite_ieee_spec(k, kernels):
     outs = {g.name: g.limbs for g in k.outputs}
     claims = [f'finite {v}' for v in k.output_limbs[1:]] + [_claim(e, k, t, outs) for e in k.ensures]
     lines.append('  ' + ' /\\\n  '.join(claims) + '.')
-    return _statement(f'{k.name}_ieee_spec', _comment(k), lines)
+    return _statement(f'{k.name}_ieee_spec', _comment(k, k.ieee_spec_theorem), lines)
 
 
 def _bridge_spec(k, kernels):
@@ -503,7 +506,7 @@ def _bridge_spec(k, kernels):
     lines += [f'  finite {out[0]} ->', _run(k) + ' /\\']
     lines += [f'  finite {v} /\\' for v in out[1:]]
     lines += [f'  ({", ".join(f"val {v}" for v in out)})', f'  = {real}.']
-    return _statement(f'{k.name}_ieee_bridge_spec', _comment(k), lines)
+    return _statement(f'{k.name}_ieee_bridge_spec', _comment(k, k.ieee_bridge_theorem), lines)
 
 
 def _threshold_spec(k, kernels, conditions, suffix):
@@ -809,23 +812,173 @@ def statements(kernels):
     return '\n'.join(lines) + '\n'
 
 
+# ---------------------------------------------------------------------------------------------
+# IeeeWith.v: the kernels of the rule of the product, with the product as an argument
+
+def with_kernels(kernels):
+    """The kernels constexpr by the rule of the product (cpp.product_rule) that the IEEE model
+    defines, callees first."""
+    from . import cpp
+    return [k for k in in_model(kernels).values() if cpp.product_rule(k, kernels)]
+
+
+def _with_definition(k, kernels, cnames, rule):
+    """K_with: the definition of IeeeModel.K with every prod the argument p_, and every call of a
+    kernel of `rule` that kernel's K_with p_; any other call stays a call of IeeeModel. The
+    argument's name has an underscore, which no value of a listing has (ir.py), so that no value
+    hides it (mul_1_1, rmul and two_prod_dekker have a value p)."""
+    lines = [f'(* {k.name}: {k.source or "no source given"}. *)',
+             f'Definition {k.name}_with (p_ : float -> float -> float)'
+             f'{_params(k.input_limbs, k.input_kinds)} : {" * ".join(map(_type, k.output_kinds))} :=']
+    for st in k.body:
+        args = [_operand(a, cnames) for a in st.args]
+        if st.is_call:
+            callee = f'{st.op}_with p_' if st.op in rule else st.op
+            pattern = st.dsts[0] if len(st.dsts) == 1 else "'(" + ', '.join(st.dsts) + ')'
+            lines.append(f'  let {pattern} := {" ".join([callee] + args)} in')
+        elif st.op == 'prod':
+            lines.append(f'  let {st.dsts[0]} := p_ {args[0]} {args[1]} in')
+        else:
+            if st.op not in SPELL:
+                raise PrintError(f'kernel {k.name}: the IEEE model has no {st.op}')
+            lines.append(f'  let {st.dsts[0]} := {SPELL[st.op].format(*args)} in')
+    outs = k.output_limbs
+    lines.append(f'  {outs[0]}.' if len(outs) == 1 else f'  ({", ".join(outs)}).')
+    return lines
+
+
+def with_model(kernels):
+    """proofs/gen/IeeeWith.v (docs/developer/architecture.md, "The formal model")."""
+    real = rocq.real(kernels)
+    model_kernels = in_model(kernels)
+    cnames = _const_names(model_kernels, real)
+    rule = with_kernels(kernels)
+    names = {k.name for k in rule}
+    lines = [HEADER, '',
+             '(* The kernels constexpr by the rule of the product (docs/developer/design/milestone2.md, "The',
+             '   two executions of a product"), in the IEEE model, with the product as an argument: K_with p_',
+             '   is the definition of IeeeModel.K with every `prod a b` written p_ a b, and every call of',
+             '   another such kernel written as its K_with p_. With p_ the fused product IeeeOperations.prod',
+             '   it is IeeeModel.K, by conversion; with the plain product of constant evaluation it is the',
+             '   listing that constant evaluation runs. The section has the variables of IeeeModel.v, in',
+             '   the same order, and the names of the values are those of the kernel descriptions. *)',
+             'From Stdlib Require Import Reals ZArith.',
+             'From Flocq Require Import Core Binary.',
+             f'From {THEORIES_PATH} Require IeeeOperations.',
+             f'From {GEN_PATH} Require IeeeModel.',
+             '',
+             'Section IeeeWith.',
+             'Variable prec emax : Z.',
+             'Context {prec_gt_0_ : Prec_gt_0 prec}.',
+             'Context {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}.',
+             '',
+             'Notation float := (binary_float prec emax).',
+             'Notation nan_of := {x : float | is_nan prec emax x = true}.',
+             '']
+    lines += [f'Variable {n} : {t}.' for n, t in (
+        ('nan_plus', 'float -> float -> nan_of'), ('nan_minus', 'float -> float -> nan_of'),
+        ('nan_opp', 'float -> nan_of'), ('nan_abs', 'float -> nan_of'),
+        ('nan_fma', 'float -> float -> float -> nan_of'), ('nan_mult', 'float -> float -> nan_of'),
+        ('nan_const', 'nan_of'))]
+    lines += ['',
+              '(* The operations of IeeeOperations.v, applied to the variables of this section, as in',
+              '   IeeeModel.v. *)',
+              'Local Notation pzero := (IeeeOperations.pzero prec emax).',
+              'Local Notation pinf := (IeeeOperations.pinf prec emax).',
+              'Local Notation cnan := (IeeeOperations.cnan prec emax nan_const).',
+              'Local Notation add := (IeeeOperations.add prec emax nan_plus).',
+              'Local Notation sub := (IeeeOperations.sub prec emax nan_minus).',
+              'Local Notation neg := (IeeeOperations.neg prec emax nan_opp).',
+              'Local Notation abs := (IeeeOperations.abs prec emax nan_abs).',
+              'Local Notation fma := (IeeeOperations.fma prec emax nan_fma).',
+              'Local Notation fms := (IeeeOperations.fms prec emax nan_opp nan_fma).',
+              'Local Notation times_inf := (IeeeOperations.times_inf prec emax nan_mult).',
+              'Local Notation lt := (IeeeOperations.lt prec emax).',
+              'Local Notation le := (IeeeOperations.le prec emax).',
+              'Local Notation eq := (IeeeOperations.eq prec emax).',
+              'Local Notation succ := (IeeeOperations.succ prec emax).',
+              'Local Notation pred := (IeeeOperations.pred prec emax).',
+              'Local Notation guard := (IeeeOperations.guard prec emax nan_plus).']
+    # The constants and the kernels of IeeeModel.v that these listings use, as there.
+    consts, callees = [], []
+    for k in rule:
+        for st in k.body:
+            for a in st.args:
+                if a.const and a.name not in (ir.ZERO,) + ir.SPECIAL and cnames[a.name] not in consts:
+                    consts.append(cnames[a.name])
+            if st.is_call and st.op not in names and st.op not in callees:
+                callees.append(st.op)
+    if consts or callees:
+        lines += ['', '(* The constants and the other kernels of IeeeModel.v that the listings use. *)']
+    lines += [f'Local Notation {c} := (IeeeModel.{c} prec emax).' for c in consts]
+    for c in callees:
+        lines.append(f'Local Notation {c} := (IeeeModel.{c} prec emax{"".join(" " + n for n in _used_nans(kernels[c], kernels))}).')
+    for k in rule:
+        lines += [''] + _with_definition(k, kernels, cnames, names)
+    lines += ['', 'End IeeeWith.']
+    return '\n'.join(lines) + '\n'
+
+
+def proved_statements(kernels):
+    """[(statement, theorem file, theorem name, generated file)] of the IEEE-model statements of the finite domain
+    and of the folds whose theorems are named: K_ieee_bridge_spec and K_ieee_spec of
+    IeeeStatements.v (ieee_bridge_theorem, ieee_spec_theorem), K_ieee_lead_spec (ieee_lead_theorem)
+    and F_O_ieee_spec (a fold's ieee_theorem) of IeeeFoldStatements.v; the first two, then the
+    others, each in the order of their file."""
+    model = in_model(kernels)
+    out = []
+    for k in model.values():
+        if k.extended:
+            continue
+        for key, spec in (('ieee_bridge_theorem', f'{k.name}_ieee_bridge_spec'), ('ieee_spec_theorem', f'{k.name}_ieee_spec')):
+            have = getattr(k, key)
+            if have and spec in statement_names(k):
+                out.append((spec, have[0], have[1], 'IeeeStatements'))
+    for k in lead_kernels(kernels):
+        if k.ieee_lead_theorem:
+            out.append((f'{k.name}_ieee_lead_spec', k.ieee_lead_theorem[0], k.ieee_lead_theorem[1], 'IeeeFoldStatements'))
+    for fd in getattr(kernels, 'folds', {}).values():
+        if getattr(fd, 'is_map', False) or not fd.ieee_theorem:
+            continue
+        for order in ir.ORDERS:
+            if order in fd.orders:
+                suffix = ir.ORDER_SUFFIX[order]
+                out.append((f'{fd.name}_{suffix}_ieee_spec', fd.ieee_theorem, fd.ieee_theorem_name(order),
+                            'IeeeFoldStatements'))
+    return out
+
+
 def audit(kernels):
-    """For every IEEE-model statement with a theorem (ieee_theorem:), the check that the theorem
-    has exactly that statement as its type, and its assumptions; nothing else is printed."""
+    """For every IEEE-model statement with a theorem (ieee_theorem: of a kernel of the extended
+    domain; then those of proved_statements), the check that the theorem has exactly that statement
+    as its type, and its assumptions; nothing else is printed. With no theorem of the second kind,
+    the file is what it was before they could be named."""
     verified = [k for k in kernels.values() if k.ieee_theorem and k.ieee_status == 'proved']
+    more = proved_statements(kernels)
+    folds = any(g == 'IeeeFoldStatements' for _, _, _, g in more)
     lines = [HEADER, '',
              '(* For every IEEE-model statement whose theorem is named (ieee_theorem): the theorem has',
              '   exactly the generated statement as its type, and the axioms it depends on are printed,',
              '   for the audit script to compare with the allow-list. Nothing else is printed. *)',
              f'From {GEN_PATH} Require Import IeeeStatements.']
-    for m in sorted({rocq.theory_module(k.ieee_theorem[0]) for k in verified}):
+    if folds:
+        lines.append(f'From {GEN_PATH} Require Import IeeeFoldStatements.')
+    for m in sorted({rocq.theory_module(k.ieee_theorem[0]) for k in verified} | {rocq.theory_module(f) for _, f, _, _ in more}):
         lines.append(f'From {THEORIES_PATH} Require Import {m}.')
-    if not verified:
+    if not verified and not more:
         lines += ['', '(* No IEEE-model statement has a theorem yet. *)']
     for k in verified:
         spec = statement_names(k)[0]
         lines += ['', f'Definition {spec[:-len("_spec")]}_audit : {spec} := {k.ieee_theorem[1]}.',
                   f'Print Assumptions {k.ieee_theorem[1]}.']
+    if more:
+        lines += ['', '(* The statements of the kernels of the finite domain (IeeeStatements.v), and those of the',
+                  '   steps and combinations of the folds and of the folds (IeeeFoldStatements.v), whose',
+                  '   theorems are named (ieee_bridge_theorem, ieee_spec_theorem, ieee_lead_theorem; the',
+                  '   ieee_theorem of a fold). *)']
+    for spec, _, name, _ in more:
+        lines += ['', f'Definition {spec[:-len("_spec")]}_audit : {spec} := {name}.',
+                  f'Print Assumptions {name}.']
     return '\n'.join(lines) + '\n'
 
 
@@ -972,7 +1125,7 @@ def fold_statement(fd, kernels, order):
     call = ' '.join([f'IeeeFoldModel.{fd.name}_{suffix}', 'prec', 'emax'] + nans +
                     (['W'] if order == 'lanes' else []) + [xs])
     what = {'sequential': 'the sequential order', 'lanes': 'the lane order, for every number of lanes W'}[order]
-    lines = [f'(* {fd.name}, {what}, in the IEEE model. Status: {fd.status}. *)',
+    lines = [f'(* {fd.name}, {what}, in the IEEE model. Status: {"proved" if fd.ieee_theorem else "unverified"}. *)',
              f'Definition {fd.name}_{suffix}_ieee_spec : Prop :=',
              '  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
              '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
@@ -1014,8 +1167,9 @@ def lead_statement(k, kernels):
     leads = [g.limbs[0] for g in k.inputs if g.kind == ir.LIMB]
     lines = _head(k, _used_nans(k, kernels), precision=False) + [_let(k, kernels)]
     lines.append(f'  finite {out} -> ' + ' /\\ '.join(f'finite {v}' for v in leads) + '.')
+    status = ' IEEE-model status: proved.' if k.ieee_lead_theorem else ''
     return _statement(f'{k.name}_ieee_lead_spec', f'{k.name}, the leading limb of its result: finite only if those of '
-                      'its operands are.', lines)
+                      f'its operands are.{status}', lines)
 
 
 def fold_statements(kernels):
