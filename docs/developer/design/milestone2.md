@@ -436,8 +436,13 @@ returned is unspecified in both.
   model, *the plain product and the FMA with a zero addend are equal as extended real numbers,
   and equal as values unless the product is an exact zero*, and one remark, that no operation
   of the IR distinguishes the two zeros in its value (the IR has no division and no copy of a
-  sign). The IEEE-model statements, which never mention the sign of a zero, then hold of both
-  executions. This is a lemma and a printer rule, not the "variant kernels with proofs of their
+  sign). The IEEE-model statements are about values, in which the two zeros are the same, so
+  they hold of both executions; the one exception in their wording is a fix-up that returns its
+  own literal $+0$ (`mul_pow2_2_full`), which no product reaches. As proved
+  (`IeeeTwoExecutions.v`, `IeeeProduct.v`): for each kernel that the rule makes `constexpr`, the
+  listing with plain products returns outputs of the same value as the generated model on all
+  operands, for every choice of NaN; that the compiled constant evaluation is that listing is
+  what the generator's tests compare. This is a lemma and a printer rule, not the "variant kernels with proofs of their
   own" of [deviation 14](phase0/decisions.md#deviations-from-the-brief-flagged); those remain
   necessary for every kernel with an FMA whose addend is not zero: `two_prod` has one, and the
   two-limb products and the radius of a `Ball` operation need theirs.
