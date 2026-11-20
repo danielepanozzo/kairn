@@ -73,7 +73,9 @@ It calls [`fast_two_sum`](fast_two_sum.md).
 # the scaled last nonzero limb of the center is above the smallest normal number N = eta / (2u) in
 # magnitude (or the center is zero) and so is the scaled radius (or the radius is zero), both
 # scalings are exact and the radius is c rx itself: the result is c X. Otherwise the radius is the
-# number after RN(succ(RN(c rx)) + eta), which covers the eta that the center may have lost.
+# second number after RN(c rx): the first step covers a scaled radius that was rounded, the second
+# the eta that the center may have lost, since no two numbers of the format are closer than eta.
+# No constant of the listing is subnormal.
 # The condition of exactness is written limb by limb, each limb times c zero or above N: for a
 # normalized center that is the page's "the center is zero or its last nonzero limb times c is
 # above N", because a nonzero second limb makes the first one nonzero and larger in magnitude.
@@ -93,8 +95,7 @@ zr         = eq(rx, 0)
 er         = or(br, zr)
 ex         = and(ec, er)
 su         = succ(rr)
-sw         = add(su, const up(eta))
-rw         = succ(sw)
+rw         = succ(su)
 rz         = select(ex, rr, rw)
 ```
 

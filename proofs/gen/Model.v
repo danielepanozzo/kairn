@@ -62,10 +62,6 @@ Definition up_ball_mul_2_2 : R :=
 Definition up_ball_mul_pow2_1_0 : R :=
   round radix2 (FLT_exp emin prec) Zceil (bpow radix2 emin / (2 * bpow radix2 (- prec))).
 
-(* up(eta): the smallest number of the format not below it. *)
-Definition up_ball_mul_pow2_1_1 : R :=
-  round radix2 (FLT_exp emin prec) Zceil (bpow radix2 emin).
-
 (* up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)): the smallest number of the format not below it. *)
 Definition up_ball_scale_1_2 : R :=
   round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + (((1 / 2) * bpow radix2 emin) / (1 - ((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1)))) + (bpow radix2 emin / 2))) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
@@ -169,8 +165,7 @@ Definition ball_mul_pow2_1 (cx rx c : R) : R * R :=
   let er := orb br zr in
   let ex := andb ec er in
   let su := succ radix2 (FLT_exp emin prec) rr in
-  let sw := rnd (su + up_ball_mul_pow2_1_1) in
-  let rw := succ radix2 (FLT_exp emin prec) sw in
+  let rw := succ radix2 (FLT_exp emin prec) su in
   let rz := if ex then rr else rw in
   (cz, rz).
 
@@ -440,8 +435,7 @@ Definition ball_mul_pow2_2 (cx0 cx1 rx c : R) : R * R * R :=
   let er := orb br zr in
   let ex := andb ec er in
   let su := succ radix2 (FLT_exp emin prec) rr in
-  let sw := rnd (su + up_ball_mul_pow2_1_1) in
-  let rw := succ radix2 (FLT_exp emin prec) sw in
+  let rw := succ radix2 (FLT_exp emin prec) su in
   let rz := if ex then rr else rw in
   (cz0, cz1, rz).
 

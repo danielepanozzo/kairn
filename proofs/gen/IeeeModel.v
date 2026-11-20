@@ -87,9 +87,6 @@ Definition up_ball_mul_2_2 : float := const_of (Model.up_ball_mul_2_2 (3 - emax 
 (* up(eta/(2*u)), as a number of the format. *)
 Definition up_ball_mul_pow2_1_0 : float := const_of (Model.up_ball_mul_pow2_1_0 (3 - emax - prec) prec).
 
-(* up(eta), as a number of the format. *)
-Definition up_ball_mul_pow2_1_1 : float := const_of (Model.up_ball_mul_pow2_1_1 (3 - emax - prec) prec).
-
 (* up((1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)), as a number of the format. *)
 Definition up_ball_scale_1_2 : float := const_of (Model.up_ball_scale_1_2 (3 - emax - prec) prec).
 
@@ -234,8 +231,7 @@ Definition ball_mul_pow2_1 (cx rx c : float) : float * float :=
   let er := orb br zr in
   let ex := andb ec er in
   let su := succ rr in
-  let sw := add su up_ball_mul_pow2_1_1 in
-  let rw := succ sw in
+  let rw := succ su in
   let rz := if ex then rr else rw in
   (cz, rz).
 
@@ -645,8 +641,7 @@ Definition ball_mul_pow2_2 (cx0 cx1 rx c : float) : float * float * float :=
   let er := orb br zr in
   let ex := andb ec er in
   let su := succ rr in
-  let sw := add su up_ball_mul_pow2_1_1 in
-  let rw := succ sw in
+  let rw := succ su in
   let rz := if ex then rr else rw in
   (cz0, cz1, rz).
 

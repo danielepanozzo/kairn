@@ -777,7 +777,7 @@ class Rocq(unittest.TestCase):
     # statement, and the constants N, P and eta): every earlier definition and statement is the
     # same, byte for byte, and fast_two_sum and two_prod are printed earlier, before the new kernels
     # that call them; Audit.v lists the same theorems, those two earlier.
-    DIGESTS = {'Model.v': '7de4a50f5ea2be5d808f3ccda0021ba8f1646a7d593e8d34db4851d116342ea9',
+    DIGESTS = {'Model.v': '3f2e3f54b76c21bf6d904880d082677af7821f4830b57d2152ee97618df8bbec',
                'Statements.v': 'aa62c34c13cf335ef1751cb3897f095830c9d60de04a869c78968c1dc74a9463',
                'Audit.v': '5a84d4a89dfd30d82fe18c89c6a11975c291c1b6226d70d23ff9bf9ed4c5e7a1'}
 

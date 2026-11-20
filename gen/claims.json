@@ -772,7 +772,7 @@
         "cite": "midpoint-radius scaling by a power of two (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
       },
-      "flops": 3,
+      "flops": 2,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -849,7 +849,7 @@
         "cite": "ball_mul_pow2_1, then the fix-up of the special states of a ball (Milestone 2 listing)",
         "license": "core: as ball_mul_pow2_1; fix-up: MIT"
       },
-      "flops": 3,
+      "flops": 2,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -3218,7 +3218,7 @@
         "cite": "midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
       },
-      "flops": 7,
+      "flops": 6,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -3299,7 +3299,7 @@
         "cite": "ball_mul_pow2_2, then the fix-up of the special states of a ball (Milestone 2 listing)",
         "license": "core: as ball_mul_pow2_2; fix-up: MIT"
       },
-      "flops": 7,
+      "flops": 6,
       "instances": {
         "binary64": [],
         "binary32": []

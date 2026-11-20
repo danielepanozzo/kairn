@@ -67,9 +67,10 @@ From [`gen/kernels/ball_mul_pow2_1.kernel`](https://github.com/danielepanozzo/ka
 # a power of two"): exact whenever nothing underflows. When the scaled center is above the
 # smallest normal number N = eta / (2u) in magnitude (or the center is zero) and so is the scaled
 # radius (or the radius is zero), both scalings are exact and the radius is c rx itself: the
-# result is c X. Otherwise the radius is the number after RN(succ(RN(c rx)) + eta), which covers
-# the eta / 2 that the center may have lost and the rounding of the scaled radius. N and eta are
-# exact constants of every format.
+# result is c X. Otherwise the radius is the second number after RN(c rx): the first step covers
+# a scaled radius that was rounded, the second the eta / 2 that the center may have lost, since no
+# two numbers of the format are closer than eta. N is an exact constant of every format, and no
+# constant of the listing is subnormal.
 
 cz = prod(cx, c)
 rr = prod(rx, c)
@@ -82,8 +83,7 @@ zr = eq(rx, 0)
 er = or(br, zr)
 ex = and(ec, er)
 su = succ(rr)
-sw = add(su, const up(eta))
-rw = succ(sw)
+rw = succ(su)
 rz = select(ex, rr, rw)
 ```
 

@@ -84,9 +84,9 @@ class Model(unittest.TestCase):
         self.assertIn('Definition splitter : float := const_of (Model.splitter prec).', m)
         ups = {n for n in definitions(m) if n.startswith('up_')}
         self.assertEqual(ups, {n for n in definitions(read('proofs/gen/Model.v')) if n.startswith('up_')})
-        # The thirteen of the Ball cores, and N, P and eta of Milestone 2 (eta / (2u), eta / (2u^2),
-        # eta: the scalings of a ball and the directed products).
-        self.assertEqual(len(ups), 16)
+        # The thirteen of the Ball cores, and N and P of Milestone 2 (eta / (2u), eta / (2u^2): the
+        # scalings of a ball and the directed products).
+        self.assertEqual(len(ups), 15)
         self.assertIn('Definition up_ball_mul_pow2_1_0 : float := const_of (Model.up_ball_mul_pow2_1_0 (3 - emax - prec) prec).', m)
 
     def test_programs(self):
@@ -278,8 +278,8 @@ class CheckedFiles(unittest.TestCase):
     # that build again, and new digests here.
     # With the kernels of wave 1 of Milestone 2 (unverified), whose definitions and statements were
     # added: every earlier one is the same, byte for byte.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '3532a2dcc2532be750def088297f35ba6a9355f685cf01bfba77fbb13cddbd19',
-               'proofs/gen/IeeeStatements.v': 'b303e0a683508405d84746aa26b5fe67e15daa63ef4cc5628d69903cbe26273b'}
+    DIGESTS = {'proofs/gen/IeeeModel.v': '5f8b52744c5b159c79b59b54a7ab0d6315550e917d4d997962d21f971ce27031',
+               'proofs/gen/IeeeStatements.v': '27c797c09a607eb0c6cd23ea021b24a3a5e17bad2624190da2d4533eb395e906'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

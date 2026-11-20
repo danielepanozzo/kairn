@@ -467,8 +467,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_1(__m256d cx, __m256d rx, __m256d c, __
     const __m256d er = _mm256_or_pd(br, zr);
     const __m256d ex = _mm256_and_pd(ec, er);
     const __m256d su = next_up_bits(rr);
-    const __m256d sw = _mm256_add_pd(su, _mm256_set1_pd(0x1p-1074));
-    const __m256d rw = next_up_bits(sw);
+    const __m256d rw = next_up_bits(su);
     const __m256d rz = _mm256_blendv_pd(rw, rr, ex);
     cz_out = cz;
     rz_out = rz;
@@ -485,8 +484,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_1(__m256 cx, __m256 rx, __m256 c, __m25
     const __m256 er = _mm256_or_ps(br, zr);
     const __m256 ex = _mm256_and_ps(ec, er);
     const __m256 su = next_up_bits(rr);
-    const __m256 sw = _mm256_add_ps(su, _mm256_set1_ps(0x1p-149f));
-    const __m256 rw = next_up_bits(sw);
+    const __m256 rw = next_up_bits(su);
     const __m256 rz = _mm256_blendv_ps(rw, rr, ex);
     cz_out = cz;
     rz_out = rz;
@@ -506,8 +504,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_1_full(__m256d cx, __m256d rx, __m256d 
     const __m256d cz_er = _mm256_or_pd(cz_br, cz_zr);
     const __m256d cz_ex = _mm256_and_pd(cz_ec, cz_er);
     const __m256d cz_su = next_up_bits(cz_rr);
-    const __m256d cz_sw = _mm256_add_pd(cz_su, _mm256_set1_pd(0x1p-1074));
-    const __m256d cz_rw = next_up_bits(cz_sw);
+    const __m256d cz_rw = next_up_bits(cz_su);
     const __m256d rz = _mm256_blendv_pd(cz_rw, cz_rr, cz_ex);
     const __m256d e = _mm256_cmp_pd(rx, rx, _CMP_EQ_OQ);
     const __m256d az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz);
@@ -534,8 +531,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_1_full(__m256 cx, __m256 rx, __m256 c, 
     const __m256 cz_er = _mm256_or_ps(cz_br, cz_zr);
     const __m256 cz_ex = _mm256_and_ps(cz_ec, cz_er);
     const __m256 cz_su = next_up_bits(cz_rr);
-    const __m256 cz_sw = _mm256_add_ps(cz_su, _mm256_set1_ps(0x1p-149f));
-    const __m256 cz_rw = next_up_bits(cz_sw);
+    const __m256 cz_rw = next_up_bits(cz_su);
     const __m256 rz = _mm256_blendv_ps(cz_rw, cz_rr, cz_ex);
     const __m256 e = _mm256_cmp_ps(rx, rx, _CMP_EQ_OQ);
     const __m256 az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz);
@@ -1940,8 +1936,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_2(__m256d cx0, __m256d cx1, __m256d rx,
     const __m256d er = _mm256_or_pd(br, zr);
     const __m256d ex = _mm256_and_pd(ec, er);
     const __m256d su = next_up_bits(rr);
-    const __m256d sw = _mm256_add_pd(su, _mm256_set1_pd(0x1p-1074));
-    const __m256d rw = next_up_bits(sw);
+    const __m256d rw = next_up_bits(su);
     const __m256d rz = _mm256_blendv_pd(rw, rr, ex);
     cz0_out = cz0;
     cz1_out = cz1;
@@ -1966,8 +1961,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_2(__m256 cx0, __m256 cx1, __m256 rx, __
     const __m256 er = _mm256_or_ps(br, zr);
     const __m256 ex = _mm256_and_ps(ec, er);
     const __m256 su = next_up_bits(rr);
-    const __m256 sw = _mm256_add_ps(su, _mm256_set1_ps(0x1p-149f));
-    const __m256 rw = next_up_bits(sw);
+    const __m256 rw = next_up_bits(su);
     const __m256 rz = _mm256_blendv_ps(rw, rr, ex);
     cz0_out = cz0;
     cz1_out = cz1;
@@ -1995,8 +1989,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_2_full(__m256d cx0, __m256d cx1, __m256
     const __m256d cz0_er = _mm256_or_pd(cz0_br, cz0_zr);
     const __m256d cz0_ex = _mm256_and_pd(cz0_ec, cz0_er);
     const __m256d cz0_su = next_up_bits(cz0_rr);
-    const __m256d cz0_sw = _mm256_add_pd(cz0_su, _mm256_set1_pd(0x1p-1074));
-    const __m256d cz0_rw = next_up_bits(cz0_sw);
+    const __m256d cz0_rw = next_up_bits(cz0_su);
     const __m256d rz = _mm256_blendv_pd(cz0_rw, cz0_rr, cz0_ex);
     const __m256d e = _mm256_cmp_pd(rx, rx, _CMP_EQ_OQ);
     const __m256d az = _mm256_andnot_pd(_mm256_set1_pd(-0.0), cz0);
@@ -2033,8 +2026,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_2_full(__m256 cx0, __m256 cx1, __m256 r
     const __m256 cz0_er = _mm256_or_ps(cz0_br, cz0_zr);
     const __m256 cz0_ex = _mm256_and_ps(cz0_ec, cz0_er);
     const __m256 cz0_su = next_up_bits(cz0_rr);
-    const __m256 cz0_sw = _mm256_add_ps(cz0_su, _mm256_set1_ps(0x1p-149f));
-    const __m256 cz0_rw = next_up_bits(cz0_sw);
+    const __m256 cz0_rw = next_up_bits(cz0_su);
     const __m256 rz = _mm256_blendv_ps(cz0_rw, cz0_rr, cz0_ex);
     const __m256 e = _mm256_cmp_ps(rx, rx, _CMP_EQ_OQ);
     const __m256 az = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), cz0);

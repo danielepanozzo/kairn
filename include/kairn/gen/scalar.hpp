@@ -537,8 +537,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_1(double cx, double rx, doubl
     const bool er = br | zr;
     const bool ex = ec & er;
     const double su = next_up_bits(rr);
-    const double sw = su + 0x1p-1074;
-    const double rw = next_up_bits(sw);
+    const double rw = next_up_bits(su);
     const double rz = ex ? rr : rw;
     cz_out = cz;
     rz_out = rz;
@@ -555,8 +554,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_1(float cx, float rx, float c
     const bool er = br | zr;
     const bool ex = ec & er;
     const float su = next_up_bits(rr);
-    const float sw = su + 0x1p-149f;
-    const float rw = next_up_bits(sw);
+    const float rw = next_up_bits(su);
     const float rz = ex ? rr : rw;
     cz_out = cz;
     rz_out = rz;
@@ -595,8 +593,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_1_full(double cx, double rx, 
     const bool cz_er = cz_br | cz_zr;
     const bool cz_ex = cz_ec & cz_er;
     const double cz_su = next_up_bits(cz_rr);
-    const double cz_sw = cz_su + 0x1p-1074;
-    const double cz_rw = next_up_bits(cz_sw);
+    const double cz_rw = next_up_bits(cz_su);
     const double rz = cz_ex ? cz_rr : cz_rw;
     const bool e = rx == rx;
     const double az = abs_bits(cz);
@@ -634,8 +631,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_1_full(float cx, float rx, fl
     const bool cz_er = cz_br | cz_zr;
     const bool cz_ex = cz_ec & cz_er;
     const float cz_su = next_up_bits(cz_rr);
-    const float cz_sw = cz_su + 0x1p-149f;
-    const float cz_rw = next_up_bits(cz_sw);
+    const float cz_rw = next_up_bits(cz_su);
     const float rz = cz_ex ? cz_rr : cz_rw;
     const bool e = rx == rx;
     const float az = abs_bits(cz);
@@ -2499,8 +2495,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2(double cx0, double cx1, dou
     const bool er = br | zr;
     const bool ex = ec & er;
     const double su = next_up_bits(rr);
-    const double sw = su + 0x1p-1074;
-    const double rw = next_up_bits(sw);
+    const double rw = next_up_bits(su);
     const double rz = ex ? rr : rw;
     cz0_out = cz0;
     cz1_out = cz1;
@@ -2525,8 +2520,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2(float cx0, float cx1, float
     const bool er = br | zr;
     const bool ex = ec & er;
     const float su = next_up_bits(rr);
-    const float sw = su + 0x1p-149f;
-    const float rw = next_up_bits(sw);
+    const float rw = next_up_bits(su);
     const float rz = ex ? rr : rw;
     cz0_out = cz0;
     cz1_out = cz1;
@@ -2577,8 +2571,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2_full(double cx0, double cx1
     const bool cz0_er = cz0_br | cz0_zr;
     const bool cz0_ex = cz0_ec & cz0_er;
     const double cz0_su = next_up_bits(cz0_rr);
-    const double cz0_sw = cz0_su + 0x1p-1074;
-    const double cz0_rw = next_up_bits(cz0_sw);
+    const double cz0_rw = next_up_bits(cz0_su);
     const double rz = cz0_ex ? cz0_rr : cz0_rw;
     const bool e = rx == rx;
     const double az = abs_bits(cz0);
@@ -2628,8 +2621,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2_full(float cx0, float cx1, 
     const bool cz0_er = cz0_br | cz0_zr;
     const bool cz0_ex = cz0_ec & cz0_er;
     const float cz0_su = next_up_bits(cz0_rr);
-    const float cz0_sw = cz0_su + 0x1p-149f;
-    const float cz0_rw = next_up_bits(cz0_sw);
+    const float cz0_rw = next_up_bits(cz0_su);
     const float rz = cz0_ex ? cz0_rr : cz0_rw;
     const bool e = rx == rx;
     const float az = abs_bits(cz0);

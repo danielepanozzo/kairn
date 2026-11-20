@@ -1179,8 +1179,8 @@ class TheKernels(unittest.TestCase):
 
     def test_milestone2_bodies_are_those_of_milestone2_md(self):
         """The listings of wave 1, line for line as the page writes them ("Building blocks on T",
-        "Scaling a ball by a power of two"), with const P = up(eta/(2*u^2)), const N = up(eta/(2*u))
-        and const eta = up(eta) spelled out, and one operation per line."""
+        "Scaling a ball by a power of two"), with const P = up(eta/(2*u^2)) and const N = up(eta/(2*u))
+        spelled out, and one operation per line."""
         ks = common.kernels()
 
         def body(name):
@@ -1209,8 +1209,8 @@ class TheKernels(unittest.TestCase):
                            ('sub_down_entry', 'sub_down_1'), ('sub_up_entry', 'sub_up_1')):
             outs = ', '.join(ks[core].output_limbs)
             self.assertEqual(body(name), ['ga = guard(a)', 'gb = guard(b)', f'{outs} = {core}(ga, gb)'], name)
-        n, eta = 'const up(eta/(2*u))', 'const up(eta)'
-        radius = ['su = succ(rr)', f'sw = add(su, {eta})', 'rw = succ(sw)', 'rz = select(ex, rr, rw)']
+        n = 'const up(eta/(2*u))'
+        radius = ['su = succ(rr)', 'rw = succ(su)', 'rz = select(ex, rr, rw)']
         self.assertEqual(body('ball_mul_pow2_2'), [
             'h = prod(cx0, c)', 'l = prod(cx1, c)', 'cz0, cz1 = fast_two_sum(h, l)', 'rr = prod(rx, c)',
             'ze = eq(cx1, 0)', 'm = select(ze, h, l)', 'am = abs(m)', f'bc = lt({n}, am)', 'zc = eq(cx0, 0)',

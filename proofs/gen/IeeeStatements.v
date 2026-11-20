@@ -145,13 +145,13 @@ Definition ball_mul_1_full_spec : Prop :=
 Definition ball_mul_pow2_1_full_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_plus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+         (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
   (2 <= prec)%Z ->
   forall cx rx c : binary_float prec emax,
   ball_1 cx rx ->
   finite c ->
   (exists n : Z, val c = bpow radix2 n) ->
-  let '(cw, rw) := IeeeModel.ball_mul_pow2_1_full prec emax nan_plus nan_abs nan_fma cx rx c in
+  let '(cw, rw) := IeeeModel.ball_mul_pow2_1_full prec emax nan_abs nan_fma cx rx c in
   ball_1 cw rw /\
   (ball_empty_1 cw rw <-> ball_empty_1 cx rx) /\
   (ball_finite_1 cw rw ->

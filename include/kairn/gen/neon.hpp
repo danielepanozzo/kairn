@@ -455,8 +455,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_1(float64x2_t cx, float64x2_t rx, float
     const uint64x2_t er = vorrq_u64(br, zr);
     const uint64x2_t ex = vandq_u64(ec, er);
     const float64x2_t su = next_up_bits(rr);
-    const float64x2_t sw = vaddq_f64(su, vdupq_n_f64(0x1p-1074));
-    const float64x2_t rw = next_up_bits(sw);
+    const float64x2_t rw = next_up_bits(su);
     const float64x2_t rz = vbslq_f64(ex, rr, rw);
     cz_out = cz;
     rz_out = rz;
@@ -473,8 +472,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_1(float32x4_t cx, float32x4_t rx, float
     const uint32x4_t er = vorrq_u32(br, zr);
     const uint32x4_t ex = vandq_u32(ec, er);
     const float32x4_t su = next_up_bits(rr);
-    const float32x4_t sw = vaddq_f32(su, vdupq_n_f32(0x1p-149f));
-    const float32x4_t rw = next_up_bits(sw);
+    const float32x4_t rw = next_up_bits(su);
     const float32x4_t rz = vbslq_f32(ex, rr, rw);
     cz_out = cz;
     rz_out = rz;
@@ -494,8 +492,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_1_full(float64x2_t cx, float64x2_t rx, 
     const uint64x2_t cz_er = vorrq_u64(cz_br, cz_zr);
     const uint64x2_t cz_ex = vandq_u64(cz_ec, cz_er);
     const float64x2_t cz_su = next_up_bits(cz_rr);
-    const float64x2_t cz_sw = vaddq_f64(cz_su, vdupq_n_f64(0x1p-1074));
-    const float64x2_t cz_rw = next_up_bits(cz_sw);
+    const float64x2_t cz_rw = next_up_bits(cz_su);
     const float64x2_t rz = vbslq_f64(cz_ex, cz_rr, cz_rw);
     const uint64x2_t e = vceqq_f64(rx, rx);
     const float64x2_t az = vabsq_f64(cz);
@@ -522,8 +519,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_1_full(float32x4_t cx, float32x4_t rx, 
     const uint32x4_t cz_er = vorrq_u32(cz_br, cz_zr);
     const uint32x4_t cz_ex = vandq_u32(cz_ec, cz_er);
     const float32x4_t cz_su = next_up_bits(cz_rr);
-    const float32x4_t cz_sw = vaddq_f32(cz_su, vdupq_n_f32(0x1p-149f));
-    const float32x4_t cz_rw = next_up_bits(cz_sw);
+    const float32x4_t cz_rw = next_up_bits(cz_su);
     const float32x4_t rz = vbslq_f32(cz_ex, cz_rr, cz_rw);
     const uint32x4_t e = vceqq_f32(rx, rx);
     const float32x4_t az = vabsq_f32(cz);
@@ -1928,8 +1924,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_2(float64x2_t cx0, float64x2_t cx1, flo
     const uint64x2_t er = vorrq_u64(br, zr);
     const uint64x2_t ex = vandq_u64(ec, er);
     const float64x2_t su = next_up_bits(rr);
-    const float64x2_t sw = vaddq_f64(su, vdupq_n_f64(0x1p-1074));
-    const float64x2_t rw = next_up_bits(sw);
+    const float64x2_t rw = next_up_bits(su);
     const float64x2_t rz = vbslq_f64(ex, rr, rw);
     cz0_out = cz0;
     cz1_out = cz1;
@@ -1954,8 +1949,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_2(float32x4_t cx0, float32x4_t cx1, flo
     const uint32x4_t er = vorrq_u32(br, zr);
     const uint32x4_t ex = vandq_u32(ec, er);
     const float32x4_t su = next_up_bits(rr);
-    const float32x4_t sw = vaddq_f32(su, vdupq_n_f32(0x1p-149f));
-    const float32x4_t rw = next_up_bits(sw);
+    const float32x4_t rw = next_up_bits(su);
     const float32x4_t rz = vbslq_f32(ex, rr, rw);
     cz0_out = cz0;
     cz1_out = cz1;
@@ -1983,8 +1977,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_2_full(float64x2_t cx0, float64x2_t cx1
     const uint64x2_t cz0_er = vorrq_u64(cz0_br, cz0_zr);
     const uint64x2_t cz0_ex = vandq_u64(cz0_ec, cz0_er);
     const float64x2_t cz0_su = next_up_bits(cz0_rr);
-    const float64x2_t cz0_sw = vaddq_f64(cz0_su, vdupq_n_f64(0x1p-1074));
-    const float64x2_t cz0_rw = next_up_bits(cz0_sw);
+    const float64x2_t cz0_rw = next_up_bits(cz0_su);
     const float64x2_t rz = vbslq_f64(cz0_ex, cz0_rr, cz0_rw);
     const uint64x2_t e = vceqq_f64(rx, rx);
     const float64x2_t az = vabsq_f64(cz0);
@@ -2021,8 +2014,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_pow2_2_full(float32x4_t cx0, float32x4_t cx1
     const uint32x4_t cz0_er = vorrq_u32(cz0_br, cz0_zr);
     const uint32x4_t cz0_ex = vandq_u32(cz0_ec, cz0_er);
     const float32x4_t cz0_su = next_up_bits(cz0_rr);
-    const float32x4_t cz0_sw = vaddq_f32(cz0_su, vdupq_n_f32(0x1p-149f));
-    const float32x4_t cz0_rw = next_up_bits(cz0_sw);
+    const float32x4_t cz0_rw = next_up_bits(cz0_su);
     const float32x4_t rz = vbslq_f32(cz0_ex, cz0_rr, cz0_rw);
     const uint32x4_t e = vceqq_f32(rx, rx);
     const float32x4_t az = vabsq_f32(cz0);
