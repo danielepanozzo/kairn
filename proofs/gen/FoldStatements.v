@@ -240,7 +240,7 @@ Definition mul_pow2_map_2_spec : Prop :=
     Rabs ((z0 + z1) - ((x0 + x1) * c)) <= 1 * eta emin)
     xs (mul_pow2_map_2_map emin prec tie_even c xs).
 
-(* norm_upper_1, the sequential order: a maximum by comparisons, in any order. Status: unverified. *)
+(* norm_upper_1, the sequential order: a maximum by comparisons, in any order. Status: proved. *)
 Definition norm_upper_1_seq_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall xs : list R,
@@ -252,7 +252,7 @@ Definition norm_upper_1_seq_spec : Prop :=
   v_ <= r_ /\
   r_ <= RU emin prec v_.
 
-(* norm_upper_1, the lane order, for every number of lanes W: a maximum by comparisons, in any order. Status: unverified. *)
+(* norm_upper_1, the lane order, for every number of lanes W: a maximum by comparisons, in any order. Status: proved. *)
 Definition norm_upper_1_lanes_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (W : nat) (xs : list R),
@@ -264,7 +264,7 @@ Definition norm_upper_1_lanes_spec : Prop :=
   v_ <= r_ /\
   r_ <= RU emin prec v_.
 
-(* norm_upper_2, the sequential order: a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between). Status: unverified. *)
+(* norm_upper_2, the sequential order: a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between). Status: proved. *)
 Definition norm_upper_2_seq_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall xs : list (R * R),
@@ -276,7 +276,7 @@ Definition norm_upper_2_seq_spec : Prop :=
   v_ <= r_ /\
   r_ <= succ radix2 (FLT_exp emin prec) (RU emin prec v_).
 
-(* norm_upper_2, the lane order, for every number of lanes W: a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between). Status: unverified. *)
+(* norm_upper_2, the lane order, for every number of lanes W: a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between). Status: proved. *)
 Definition norm_upper_2_lanes_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (W : nat) (xs : list (R * R)),

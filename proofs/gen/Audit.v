@@ -19,6 +19,7 @@ From Kairn Require Import DirectedSum.
 From Kairn Require Import EFT.
 From Kairn Require Import EntryKernels.
 From Kairn Require Import FoldMaps.
+From Kairn Require Import FoldNorm.
 From Kairn Require Import FoldSums.
 From Kairn Require Import MapSteps.
 From Kairn Require Import Mul21.
@@ -116,6 +117,12 @@ Print Assumptions next_down_correct.
 
 Definition next_up_audit : next_up_spec := next_up_correct.
 Print Assumptions next_up_correct.
+
+Definition norm_combine_audit : norm_combine_spec := norm_combine_correct.
+Print Assumptions norm_combine_correct.
+
+Definition norm_step_1_audit : norm_step_1_spec := norm_step_1_correct.
+Print Assumptions norm_step_1_correct.
 
 Definition radd_audit : radd_spec := radd_correct.
 Print Assumptions radd_correct.
@@ -255,6 +262,9 @@ Print Assumptions mul_pow2_2_correct.
 Definition mul_pow2_step_2_audit : mul_pow2_step_2_spec := mul_pow2_step_2_correct.
 Print Assumptions mul_pow2_step_2_correct.
 
+Definition norm_step_2_audit : norm_step_2_spec := norm_step_2_correct.
+Print Assumptions norm_step_2_correct.
+
 Definition scale_step_2_audit : scale_step_2_spec := scale_step_2_correct.
 Print Assumptions scale_step_2_correct.
 
@@ -329,6 +339,18 @@ Print Assumptions mul_pow2_map_1_correct.
 
 Definition mul_pow2_map_2_audit : mul_pow2_map_2_spec := mul_pow2_map_2_correct.
 Print Assumptions mul_pow2_map_2_correct.
+
+Definition norm_upper_1_seq_audit : norm_upper_1_seq_spec := norm_upper_1_seq_correct.
+Print Assumptions norm_upper_1_seq_correct.
+
+Definition norm_upper_1_lanes_audit : norm_upper_1_lanes_spec := norm_upper_1_lanes_correct.
+Print Assumptions norm_upper_1_lanes_correct.
+
+Definition norm_upper_2_seq_audit : norm_upper_2_seq_spec := norm_upper_2_seq_correct.
+Print Assumptions norm_upper_2_seq_correct.
+
+Definition norm_upper_2_lanes_audit : norm_upper_2_lanes_spec := norm_upper_2_lanes_correct.
+Print Assumptions norm_upper_2_lanes_correct.
 
 Definition scale_1_audit : scale_1_spec := scale_1_correct.
 Print Assumptions scale_1_correct.

@@ -169,7 +169,7 @@ Definition dot_2_lanes_ieee_spec : Prop :=
       (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length vs - 1) * (INR (length vs) * ((3 / 2) * eta (ieee_emin prec emax)))) /\
   (flag = false -> nan r0 /\ nan r1).
 
-(* norm_upper_1, the sequential order, in the IEEE model. Status: unverified. *)
+(* norm_upper_1, the sequential order, in the IEEE model. Status: proved. *)
 Definition norm_upper_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -190,7 +190,7 @@ Definition norm_upper_1_seq_ieee_spec : Prop :=
    r_ <= RU (ieee_emin prec emax) prec v_) /\
   (flag = false -> nan r).
 
-(* norm_upper_1, the lane order, for every number of lanes W, in the IEEE model. Status: unverified. *)
+(* norm_upper_1, the lane order, for every number of lanes W, in the IEEE model. Status: proved. *)
 Definition norm_upper_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -211,7 +211,7 @@ Definition norm_upper_1_lanes_ieee_spec : Prop :=
    r_ <= RU (ieee_emin prec emax) prec v_) /\
   (flag = false -> nan r).
 
-(* norm_upper_2, the sequential order, in the IEEE model. Status: unverified. *)
+(* norm_upper_2, the sequential order, in the IEEE model. Status: proved. *)
 Definition norm_upper_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -233,7 +233,7 @@ Definition norm_upper_2_seq_ieee_spec : Prop :=
    r_ <= succ radix2 (FLT_exp (ieee_emin prec emax) prec) (RU (ieee_emin prec emax) prec v_)) /\
   (flag = false -> nan r).
 
-(* norm_upper_2, the lane order, for every number of lanes W, in the IEEE model. Status: unverified. *)
+(* norm_upper_2, the lane order, for every number of lanes W, in the IEEE model. Status: proved. *)
 Definition norm_upper_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

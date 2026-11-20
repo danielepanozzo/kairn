@@ -45,6 +45,7 @@ theories/StepKernels.v
 theories/MapSteps.v
 theories/FoldSums.v
 theories/FoldMaps.v
+theories/FoldNorm.v
 theories/BoundKernels.v
 theories/FoldGuarantee.v
 theories/IeeeOperations.v
@@ -79,3 +80,4 @@ theories/IeeeTwoExecutions.v
 theories/IeeeFoldFinish.v
 theories/IeeeSteps.v
 theories/IeeeFolds.v
+theories/IeeeFoldNorm.v

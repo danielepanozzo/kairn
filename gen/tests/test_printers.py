@@ -811,9 +811,13 @@ class Rocq(unittest.TestCase):
     # Then the eighteen maps were proved (FoldMaps.v): Audit.v lists their theorems, one per map,
     # among those of the folds, every earlier line kept, in its order; Model.v and Statements.v
     # are the same.
+    # Then the combination and the steps of the folds of maxima were proved, and the two folds
+    # (FoldNorm.v): in Statements.v only the comments above the three statements changed, and
+    # Audit.v lists the three theorems and those of the two folds in their two orders, every
+    # earlier line kept, in its order.
     DIGESTS = {'Model.v': '54d17099e0e1a7e4856ee586251c0ad909c533f23506838284cc29e1598857f6',
-               'Statements.v': '9f3eea15b11b185d2e1db246c6f6397ec571aef2d7fd9e996e3eed34b1dd6552',
-               'Audit.v': '5866cdf008c61b36d142f8800650fb5227c968494b934471e75ca20618c58338'}
+               'Statements.v': '3d8add0de2ac601a4d7ff3991b01cf7801f83ebe7c78abffc557fb806f678cad',
+               'Audit.v': 'f61c02e3713e0cc2fe5fb2bab49e5fceaecac3a518a8ddaeba382568c3144224'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in

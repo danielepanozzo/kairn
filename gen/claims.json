@@ -2317,8 +2317,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldNorm.v",
+        "name": "norm_combine_correct"
+      },
       "source": {
         "cite": "the larger of two numbers, by a comparison (milestone2.md, norm_upper_k)",
         "license": "proof: MIT"
@@ -2366,9 +2369,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFoldNorm.v",
+        "name": "norm_finish_1_correct"
+      },
       "source": {
         "cite": "the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md)",
         "license": "proof: MIT"
@@ -2417,9 +2424,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFoldNorm.v",
+        "name": "norm_finish_2_correct"
+      },
       "source": {
         "cite": "the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md)",
         "license": "proof: MIT"
@@ -2470,8 +2481,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldNorm.v",
+        "name": "norm_step_1_correct"
+      },
       "source": {
         "cite": "the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k)",
         "license": "proof: MIT"
@@ -6242,8 +6256,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldNorm.v",
+        "name": "norm_step_2_correct"
+      },
       "source": {
         "cite": "the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k)",
         "license": "proof: MIT"
@@ -8325,10 +8342,16 @@
       "combine": "norm_combine",
       "finish": "norm_finish_1",
       "min_precision": 1,
-      "status": "unverified",
+      "status": "proved",
       "theorems": {
-        "sequential": null,
-        "lanes": null
+        "sequential": {
+          "file": "proofs/theories/FoldNorm.v",
+          "name": "norm_upper_1_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldNorm.v",
+          "name": "norm_upper_1_lanes_correct"
+        }
       },
       "source": {
         "cite": "a maximum by comparisons, in any order",
@@ -8395,10 +8418,16 @@
       "combine": "norm_combine",
       "finish": "norm_finish_2",
       "min_precision": 1,
-      "status": "unverified",
+      "status": "proved",
       "theorems": {
-        "sequential": null,
-        "lanes": null
+        "sequential": {
+          "file": "proofs/theories/FoldNorm.v",
+          "name": "norm_upper_2_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldNorm.v",
+          "name": "norm_upper_2_lanes_correct"
+        }
       },
       "source": {
         "cite": "a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between)",

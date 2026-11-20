@@ -383,7 +383,7 @@ Definition next_up_spec : Prop :=
   fmt emin prec r /\
   r = succ radix2 (FLT_exp emin prec) a.
 
-(* norm_combine: the larger of two numbers, by a comparison (milestone2.md, norm_upper_k). Status: unverified. *)
+(* norm_combine: the larger of two numbers, by a comparison (milestone2.md, norm_upper_k). Status: proved. *)
 Definition norm_combine_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall m n : R,
@@ -394,7 +394,7 @@ Definition norm_combine_spec : Prop :=
   fmt emin prec r /\
   r = Rmax m n.
 
-(* norm_step_1: the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k). Status: unverified. *)
+(* norm_step_1: the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k). Status: proved. *)
 Definition norm_step_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall m x : R,
@@ -904,7 +904,7 @@ Definition mul_pow2_step_2_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) * c)) <= 1 * eta emin.
 
-(* norm_step_2: the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k). Status: unverified. *)
+(* norm_step_2: the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k). Status: proved. *)
 Definition norm_step_2_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall m x0 x1 : R,

@@ -13,9 +13,10 @@ output:        r
 output:        mask okr
 ensures:       maximum r m n
 min_precision: 1
+theorem:       proofs/theories/FoldNorm.v norm_combine_correct
 source:        the larger of two numbers, by a comparison (milestone2.md, norm_upper_k)
 license:       proof: MIT
-status:        unverified
+status:        proved
 cone_exempt:   a maximum is a select after a comparison; an infinite operand is kept (lt(m, inf) is true for every finite m), and a NaN one is the business of the masks, which the finish of the fold tests
 
 c   = lt(m, n)

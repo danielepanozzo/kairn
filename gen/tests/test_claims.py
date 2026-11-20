@@ -420,10 +420,11 @@ class FoldClaims(unittest.TestCase):
                 uppers = [e for e in f['ensures'] if e['kind'] == 'upper']
                 if uppers:
                     # A fold of maxima: one upper entry over the largest value, the result of one
-                    # limb, no fold_error and no constants. Unverified; the sums and the dot
-                    # products are proved (below).
-                    self.assertEqual(f['theorems'], {'sequential': None, 'lanes': None})
-                    self.assertEqual(f['status'], 'unverified')
+                    # limb, no fold_error and no constants. Proved (FoldNorm.v).
+                    self.assertEqual(f['theorems'], {
+                        'sequential': {'file': 'proofs/theories/FoldNorm.v', 'name': f['name'] + '_seq_correct'},
+                        'lanes': {'file': 'proofs/theories/FoldNorm.v', 'name': f['name'] + '_lanes_correct'}})
+                    self.assertEqual(f['status'], 'proved')
                     self.assertEqual(f['ensures'], [{'kind': 'upper', 'of': 'r', 'over': 'max',
                                                      'steps': f['arrays'][0]['limbs'] - 1},
                                                     {'kind': 'finite_or_nan', 'of': 'r', 'flag': 'flag'}])

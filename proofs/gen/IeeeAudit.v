@@ -13,6 +13,7 @@ From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
 From Kairn Require Import IeeeExt.
 From Kairn Require Import IeeeFoldFinish.
+From Kairn Require Import IeeeFoldNorm.
 From Kairn Require Import IeeeFolds.
 From Kairn Require Import IeeeFull.
 From Kairn Require Import IeeeMake.
@@ -68,6 +69,12 @@ Print Assumptions next_down_ieee_correct.
 
 Definition next_up_ieee_audit : next_up_ieee_spec := next_up_ieee_correct.
 Print Assumptions next_up_ieee_correct.
+
+Definition norm_finish_1_audit : norm_finish_1_spec := norm_finish_1_correct.
+Print Assumptions norm_finish_1_correct.
+
+Definition norm_finish_2_audit : norm_finish_2_spec := norm_finish_2_correct.
+Print Assumptions norm_finish_2_correct.
 
 Definition radd_ieee_audit : radd_ieee_spec := radd_ieee_correct.
 Print Assumptions radd_ieee_correct.
@@ -250,6 +257,18 @@ Print Assumptions dot_2_seq_ieee_correct.
 
 Definition dot_2_lanes_ieee_audit : dot_2_lanes_ieee_spec := dot_2_lanes_ieee_correct.
 Print Assumptions dot_2_lanes_ieee_correct.
+
+Definition norm_upper_1_seq_ieee_audit : norm_upper_1_seq_ieee_spec := norm_upper_1_seq_ieee_correct.
+Print Assumptions norm_upper_1_seq_ieee_correct.
+
+Definition norm_upper_1_lanes_ieee_audit : norm_upper_1_lanes_ieee_spec := norm_upper_1_lanes_ieee_correct.
+Print Assumptions norm_upper_1_lanes_ieee_correct.
+
+Definition norm_upper_2_seq_ieee_audit : norm_upper_2_seq_ieee_spec := norm_upper_2_seq_ieee_correct.
+Print Assumptions norm_upper_2_seq_ieee_correct.
+
+Definition norm_upper_2_lanes_ieee_audit : norm_upper_2_lanes_ieee_spec := norm_upper_2_lanes_ieee_correct.
+Print Assumptions norm_upper_2_lanes_ieee_correct.
 
 Definition sum_1_seq_ieee_audit : sum_1_seq_ieee_spec := sum_1_seq_ieee_correct.
 Print Assumptions sum_1_seq_ieee_correct.

@@ -339,7 +339,7 @@ Definition next_up_ieee_spec : Prop :=
   let r := IeeeModel.next_up prec emax a in
   xval r = xsucc prec emax (xval a).
 
-(* norm_finish_1: the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). IEEE-model status: unverified. *)
+(* norm_finish_1: the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
 Definition norm_finish_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -351,7 +351,7 @@ Definition norm_finish_1_spec : Prop :=
   (flag = true -> r = m) /\
   (flag = false -> nan r).
 
-(* norm_finish_2: the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md). IEEE-model status: unverified. *)
+(* norm_finish_2: the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md). IEEE-model status: proved. *)
 Definition norm_finish_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

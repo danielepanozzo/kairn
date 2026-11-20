@@ -269,11 +269,12 @@ class Statements(unittest.TestCase):
 
     def test_audit(self):
         text = ieee.audit(self.ks)
-        # Every kernel of the extended domain names its theorem, the two finishes of the folds
-        # among them (56); then the theorems that the descriptions of the folds' first stage
-        # name: 5 bridges and 3 correctness statements of the steps, 8 leading limbs, and the 8
-        # folds in their two orders (32).
-        self.assertEqual(text.count('Print Assumptions'), 88)
+        # Every kernel of the extended domain names its theorem, the finishes of the folds and
+        # of the folds of maxima among them (58); then the theorems that the descriptions of the
+        # folds' first stage name: 5 bridges and 3 correctness statements of the steps, 8 leading
+        # limbs, and the 8 folds in their two orders (32); and the two folds of maxima in their
+        # two orders (4).
+        self.assertEqual(text.count('Print Assumptions'), 94)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -302,9 +303,10 @@ class CheckedFiles(unittest.TestCase):
     # IeeeStatements.v is that side's with the words proved above the two finishes of the folds.)
     # Then the descriptions of the steps of the folds named the theorems of their bridge and
     # correctness statements (IeeeSteps.v): the comments above those eight statements say proved,
-    # and nothing else changed.
+    # and nothing else changed. Then the two finishes of the folds of maxima were proved
+    # (IeeeFoldNorm.v): the two comments above their statements say so, and nothing else changed.
     DIGESTS = {'proofs/gen/IeeeModel.v': '14a2b0d33f3439dc2dc380d7fd166a85fae493886590173e517a7f259cc66037',
-               'proofs/gen/IeeeStatements.v': '02dcc0668b8586b533bb44e160e6ea3924db46a903acb48ce99343a18e68daa3'}
+               'proofs/gen/IeeeStatements.v': '7b8907f683045490fe3efec89f3180926a27a630098b72c52e0bab21e9b62628'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

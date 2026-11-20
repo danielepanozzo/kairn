@@ -48,7 +48,16 @@
      three instances, with the constants of the steps of axpy;
    - the lemmas of theories/Folds.v about a loop that writes an array, beside the
      theorems of the maps (theories/FoldMaps.v), which the descriptions of the maps
-     name and proofs/gen/Audit.v lists.
+     name and proofs/gen/Audit.v lists;
+   - the folds of maxima, beside the theorems of their generated statements, which the
+     generated audits list: the lemma of theories/Folds.v they rest on, that a
+     combination which is associative and commutative on the states of a loop makes the
+     lane order return the state of the sequential order; in the real model
+     (theories/FoldNorm.v), that the two orders return the same state, what that state
+     is, and the facts about a normalized pair behind the bound of two limbs; in the
+     IEEE model (theories/IeeeFoldNorm.v), that the two orders return the same result
+     and the same flag on every input, the statements of the sequential order with the
+     elements as finite normalized pairs, and when the flag is true.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -64,6 +73,7 @@ From Kairn Require Import IeeeTwoExecutions.
 From Kairn Require Import StepKernels FoldTransfer BoundKernels FoldGuarantee.
 From Kairn Require Import MapSteps.
 From Kairn Require Import IeeeFolds.
+From Kairn Require Import FoldNorm IeeeFoldNorm.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
    theories/IeeeEFT.v). *)
@@ -556,3 +566,43 @@ Print Assumptions rel_add_2_2_le.
 Print Assumptions axpy_step_1_arith.
 Print Assumptions axpy_step_2_arith.
 Print Assumptions axpy_step_2_1_arith.
+
+(* A combination that is associative and commutative on the states of a loop
+   (theories/Folds.v): lists only. The sequential order is the combination of the images
+   of the elements, and the lane order returns its state, for every number of lanes; the
+   second theorem is the case of a step that is the combination after a function of the
+   element. *)
+Print Assumptions fold_seq_combined.
+Print Assumptions fold_lanes_aci_step.
+Print Assumptions fold_lanes_aci.
+
+(* The folds of maxima in the real model (theories/FoldNorm.v): the theorems of their
+   generated statements are listed by proofs/gen/Audit.v; these are beside them. The two
+   orders return the same state; the final state is the largest magnitude (of the leading
+   limbs, for two limbs) with a true mask; a normalized pair is below the successor of
+   the magnitude of its leading limb, and a number of the format above the pair is above
+   that limb; and the bound of two limbs on the two largest magnitudes. *)
+Print Assumptions norm_upper_1_lanes_seq.
+Print Assumptions norm_upper_2_lanes_seq.
+Print Assumptions norm_upper_1_seq_value.
+Print Assumptions norm_upper_2_seq_value.
+Print Assumptions normalized_2_abs_lt_succ.
+Print Assumptions normalized_2_lead_le.
+Print Assumptions norm_upper_2_bound.
+
+(* The folds of maxima in the IEEE model (theories/IeeeFoldNorm.v): the theorems of the
+   generated statements of the finishes and of the folds are listed by
+   proofs/gen/IeeeAudit.v; these are beside them. The lane order returns the state, the
+   result and the flag of the sequential order on every list, NaN and infinities
+   included; the sequential order with what its generated statement does not say (for two
+   limbs, the elements are finite normalized pairs); and the flag is true exactly when
+   every element is finite (one limb), or every leading limb is finite and the step up
+   from the final state is (two limbs). *)
+Print Assumptions norm_upper_1_lanes_seq_state.
+Print Assumptions norm_upper_2_lanes_seq_state.
+Print Assumptions norm_upper_1_lanes_seq_ieee.
+Print Assumptions norm_upper_2_lanes_seq_ieee.
+Print Assumptions norm_upper_1_seq_ieee_facts.
+Print Assumptions norm_upper_2_seq_ieee_facts.
+Print Assumptions norm_upper_1_seq_ieee_flag.
+Print Assumptions norm_upper_2_seq_ieee_flag.

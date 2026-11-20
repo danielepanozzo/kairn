@@ -6435,7 +6435,7 @@ inline void mul_pow2_map_2_packed(const float* x0_in, const float* x1_in, std::s
     finite_out = finite;
 }
 
-// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved.
 inline void norm_upper_1_packed(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t m_lane_ = vdupq_n_f64(0.0);
@@ -6543,7 +6543,7 @@ inline void norm_upper_1_packed(const float* x_in, std::size_t n, float& r_out, 
     flag_out = fin_flag;
 }
 
-// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved.
 inline void norm_upper_2_packed(const double* x0_in, [[maybe_unused]] const double* x1_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 2;
     float64x2_t m_lane_ = vdupq_n_f64(0.0);

@@ -1317,7 +1317,7 @@ KAIRN_GEN_FORCEINLINE constexpr void next_up(float a, float& r_out) noexcept {
 }
 
 // norm_combine(m, mask ok, n, mask okn) -> r, mask okr
-// the larger of two numbers, by a comparison (milestone2.md, norm_upper_k). Status: unverified; constexpr.
+// the larger of two numbers, by a comparison (milestone2.md, norm_upper_k). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void norm_combine(double m, bool ok, double n, bool okn, double& r_out, bool& okr_out) noexcept {
     const bool c = n > m;
     const double r = c ? n : m;
@@ -1334,7 +1334,7 @@ KAIRN_GEN_FORCEINLINE constexpr void norm_combine(float m, bool ok, float n, boo
 }
 
 // norm_finish_1(m, mask ok) -> r, mask flag
-// the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). Status: unverified (IEEE model only); constexpr.
+// the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void norm_finish_1(double m, bool ok, double& r_out, bool& flag_out) noexcept {
     const double t = ok ? m : std::numeric_limits<double>::quiet_NaN();
     // (r, flag) = fold_finish_1(t)
@@ -1355,7 +1355,7 @@ KAIRN_GEN_FORCEINLINE constexpr void norm_finish_1(float m, bool ok, float& r_ou
 }
 
 // norm_finish_2(m, mask ok) -> r, mask flag
-// the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md). Status: unverified (IEEE model only); constexpr.
+// the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void norm_finish_2(double m, bool ok, double& r_out, bool& flag_out) noexcept {
     const double s = next_up_bits(m);
     const double t = ok ? s : std::numeric_limits<double>::quiet_NaN();
@@ -1378,7 +1378,7 @@ KAIRN_GEN_FORCEINLINE constexpr void norm_finish_2(float m, bool ok, float& r_ou
 }
 
 // norm_step_1(m, mask ok, x) -> r, mask okr
-// the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k). Status: unverified; constexpr.
+// the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void norm_step_1(double m, bool ok, double x, double& r_out, bool& okr_out) noexcept {
     const double a = abs_bits(x);
     const bool e = a == a;
@@ -4437,7 +4437,7 @@ KAIRN_GEN_FORCEINLINE constexpr void mul_pow2_step_2(float x0, float x1, float c
 }
 
 // norm_step_2(m, mask ok, x = (x0, x1)) -> r, mask okr
-// the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k). Status: unverified; constexpr.
+// the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void norm_step_2(double m, bool ok, double x0, [[maybe_unused]] double x1, double& r_out, bool& okr_out) noexcept {
     // (r, okr) = norm_step_1(m, ok, x0)
     const double r_a = abs_bits(x0);
@@ -9056,7 +9056,7 @@ inline void mul_pow2_map_2_lanes(const float* x0_in, const float* x1_in, std::si
     finite_out = finite;
 }
 
-// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
 inline void norm_upper_1_seq(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -9106,7 +9106,7 @@ inline void norm_upper_1_seq(const float* x_in, std::size_t n, float& r_out, boo
     flag_out = fin_flag;
 }
 
-// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
 inline void norm_upper_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;
@@ -9212,7 +9212,7 @@ inline void norm_upper_1_lanes(const float* x_in, std::size_t n, std::size_t lan
     flag_out = fin_flag;
 }
 
-// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: proved.
 inline void norm_upper_2_seq(const double* x0_in, [[maybe_unused]] const double* x1_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double m = 0.0;
     bool ok = true;
@@ -9266,7 +9266,7 @@ inline void norm_upper_2_seq(const float* x0_in, [[maybe_unused]] const float* x
     flag_out = fin_flag;
 }
 
-// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: proved.
 inline void norm_upper_2_lanes(const double* x0_in, [[maybe_unused]] const double* x1_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     double m = 0.0;

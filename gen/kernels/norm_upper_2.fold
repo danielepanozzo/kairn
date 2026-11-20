@@ -23,7 +23,9 @@ requires:      canonical x
 ensures:       upper r max steps=1
 ensures:       finite_or_nan r flag=flag
 min_precision: 1
-status:        unverified
+theorem:       proofs/theories/FoldNorm.v
+ieee_theorem:  proofs/theories/IeeeFoldNorm.v
+status:        proved
 domain:        extended
 source:        a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between)
 license:       proof: MIT
