@@ -26,14 +26,19 @@ ZERO = (NUM, False, 0, 0)
 
 
 def load():
-    """The kernels of gen/kernels and those of this directory's kernels/, as one set."""
+    """The kernels of gen/kernels and those of this directory's kernels/, as one set. A kernel
+    that gen/kernels has (the proposals that the generator now has, with their claims) is taken
+    from there: there is one listing of each kernel."""
     kernels = {}
     for directory in (os.path.join(ROOT, 'gen', 'kernels'), os.path.join(HERE, 'kernels')):
+        mine = directory == os.path.join(HERE, 'kernels')
         for fn in sorted(os.listdir(directory)):
             if fn.endswith('.kernel'):
                 with open(os.path.join(directory, fn), encoding='utf-8') as f:
                     k = ir.parse_kernel(f.read(), fn)
                 if k.name in kernels:
+                    if mine:
+                        continue           # gen/kernels/NAME.kernel is preferred
                     raise SystemExit(f'{fn}: kernel {k.name} is defined twice')
                 kernels[k.name] = k
     return ir.ordered(kernels)

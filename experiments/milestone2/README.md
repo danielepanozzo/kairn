@@ -11,9 +11,12 @@ wrong on what was run.
 ## How it works
 
 - `kernels/` holds the proposed kernels as descriptions in the generator's own format
-  (`gen/README.md`), 33 of them. They carry no claims: the claims of this milestone need
-  vocabulary that the generator does not have yet.
-- `common.py` loads them together with the kernels of `gen/kernels` and evaluates them with the
+  (`gen/README.md`), 24 of them. They carry no claims: the claims of this milestone need
+  vocabulary that the generator does not have yet. The nine of the first wave that the
+  generator has now (`two_sum_ord`, the four directed sums, the two directed products and the two
+  scalings of a ball by a power of two) are in `gen/kernels`, with their claims, and only there.
+- `common.py` loads them together with the kernels of `gen/kernels`, taking a kernel from
+  `gen/kernels` when it has one, and evaluates them with the
   generator's exact interpreter (`gen/kairn_gen/interp.py`), on any format `(p, qmin, qmax)`. It
   also has rounding down, up and to nearest, the neighbors and the normalization test written
   with Python's `fractions.Fraction`, independently of the interpreter; the scripts judge with
@@ -41,7 +44,7 @@ compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`)
 | `rational.py` | a model in integer arithmetic of `rational(num, den)`, the three-word method of the page's first version, equals the specification, limb for limb. It is not a test of the header, whose computation is another and which the oracle tests | Constants at compile time |
 | `convert.py` | conversions between a wide and a narrow format, of numbers and of balls | Limbs of another type |
 | `constants.py` | the constants $A$ and $B$ of the two-limb bounds in `binary64` and `binary32` | Bounds of two limbs |
-| `rules_report.py` | what the generator's rules say of the 33 descriptions, and the operations of each after inlining | Experiments |
+| `rules_report.py` | what the generator's rules say of the 33 proposed kernels (24 in `kernels/`, 9 in `gen/kernels`), and the operations of each after inlining | Experiments |
 
 ## Rerun
 
