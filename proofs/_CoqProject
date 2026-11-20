@@ -51,6 +51,7 @@ theories/BoundKernels.v
 theories/FoldGuarantee.v
 theories/FoldConv.v
 theories/AccKernels.v
+theories/Accumulator.v
 theories/IeeeOperations.v
 gen/IeeeModel.v
 gen/IeeeWith.v
@@ -93,3 +94,4 @@ theories/IeeeIntervalSub2.v
 theories/IeeeIntervalConvert.v
 theories/IeeeIntervalMul2.v
 theories/IeeeAccKernels.v
+theories/IeeeAccumulator.v

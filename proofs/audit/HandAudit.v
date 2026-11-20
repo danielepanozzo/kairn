@@ -82,7 +82,14 @@
    - the convolutions (theories/FoldConv.v), beside their theorems, which
      proofs/gen/Audit.v lists: what the terms of a coefficient are, which the generated
      statements name and do not describe, how many there are, and that one answer of
-     the bound kernel of the dot product covers every coefficient.
+     the bound kernel of the dot product covers every coefficient;
+   - the accumulator, beside the theorems of the generated statements of its eight
+     kernels, which the generated audits list: the lemmas of its radius
+     (theories/AccKernels.v, IeeeAccKernels.v), and what a user of the accumulator relies
+     on, whose statements are written by hand (theories/Accumulator.v in the real model,
+     theories/IeeeAccumulator.v in the IEEE model): for any history of add, add_product
+     and merge, the bound of the sum of magnitudes, the error of the running sum in the
+     form of the statement of dot_k, and the error within the radius of error_bound().
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -863,3 +870,47 @@ Print Assumptions conv_terms_eq.
 Print Assumptions Forall2_seq_nth.
 Print Assumptions conv_1_bound.
 Print Assumptions conv_2_bound.
+
+(* The accumulator (theories/AccKernels.v, IeeeAccKernels.v, Accumulator.v,
+   IeeeAccumulator.v). The theorems of the generated statements of its eight kernels are
+   listed by proofs/gen/Audit.v and IeeeAudit.v; these are beside them. The lemmas of the
+   radius: one rounding to nearest in the normal range loses at most a factor 1 + u, the
+   last three lines of the listing, everything acc_radius_1 gives in the real model (its
+   bound on r holds whatever the mask), and in the IEEE model a finite constant has its
+   value, a finite r is the real model's, a finite r was computed from finite g and t, and a
+   true mask means a finite sum of magnitudes. Then what a user of the accumulator relies
+   on, for any history of add, add_product and merge (a tree): the sum of magnitudes bounds
+   the true one (acc_k_mags, acc_2_terms_mags), the running sum is the value of a tree of
+   the summation theorem (tree1_facts, tree2_facts) and within the statement of dot_k for n
+   terms (acc_k_error), and within g sum |terms| + t <= r when both masks are true
+   (acc_k_chain, acc_k_bound); and the same in the IEEE model, where a finite final
+   state is the real model's (run1i_real, run2i_real), a finite t of bound_dot_k too
+   (bound_dot_k_real), and acc_k_ieee_bound is acc_k_bound on the values. *)
+From Kairn Require Import AccKernels IeeeAccKernels Accumulator IeeeAccumulator.
+Print Assumptions rnd_lower_normal.
+Print Assumptions acc_tail.
+Print Assumptions acc_radius_1_facts.
+Print Assumptions const_of_val.
+Print Assumptions acc_radius_1_real.
+Print Assumptions acc_pow_le_poly.
+Print Assumptions acc_1_mags.
+Print Assumptions leads_1.
+Print Assumptions tree1_facts.
+Print Assumptions acc_1_error.
+Print Assumptions acc_1_chain.
+Print Assumptions acc_1_bound.
+Print Assumptions acc_2_mags.
+Print Assumptions acc_2_terms_leads.
+Print Assumptions acc_2_terms_mags.
+Print Assumptions tree2_facts.
+Print Assumptions acc_2_error.
+Print Assumptions acc_2_chain.
+Print Assumptions acc_2_bound.
+Print Assumptions run1i_real.
+Print Assumptions bound_dot_1_real.
+Print Assumptions acc_radius_1_inputs.
+Print Assumptions acc_radius_1_ok_finite.
+Print Assumptions acc_1_ieee_bound.
+Print Assumptions run2i_real.
+Print Assumptions bound_dot_2_real.
+Print Assumptions acc_2_ieee_bound.

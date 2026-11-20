@@ -94,8 +94,9 @@ lists:
   its kernels, over the real numbers and with overflow, infinities and NaN (`FoldNorm.v`,
   `IeeeFoldNorm.v`; [below](#the-largest-magnitude-of-an-array)); of the product of two
   polynomials (`FoldConv.v`; [below](#the-product-of-two-polynomials)); and of the kernels of
-  the accumulator, over the real numbers and with overflow, infinities and NaN
-  (`AccKernels.v`, `IeeeAccKernels.v`; [below](#the-accumulator));
+  the accumulator and what a user of it relies on, over the real numbers and with overflow,
+  infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
+  `IeeeAccumulator.v`; [below](#the-accumulator));
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -132,8 +133,10 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    intervals of two limbs (the finite core of the directed product, and what each product of
    bounds gives) beside their generated
    statements, those about the two executions of a product, whose plain-product listings are
-   written by hand, and the theorems about the folds, the largest magnitude and the product of
-   polynomials whose statements are written by hand ([below](#sums-and-dot-products-of-arrays)).
+   written by hand, the theorems about the folds, the largest magnitude and the product of
+   polynomials whose statements are written by hand ([below](#sums-and-dot-products-of-arrays)),
+   and the lemmas of the radius of the accumulator and what a user of it relies on
+   ([below](#the-accumulator)).
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
@@ -145,7 +148,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  89 files: no Admitted, admit, Axiom or Parameter
+  91 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -436,6 +439,36 @@ $m u \le \tfrac12$. The proof needs nothing of the format beyond $p \ge 2$: each
 roundings is in the normal range, or is covered by the constant added in the last line. In
 the IEEE model a finite $r$ is the real model's $r$, and the mask the real model's
 (`acc_radius_1_real`).
+
+**What a user of the accumulator relies on** (`Accumulator.v` in the real model,
+`IeeeAccumulator.v` in the IEEE model; written by hand and audited in step 3). A history of
+an accumulator is a tree: `add` and `add_product` add a term to a history, and `merge` joins
+two histories, each of which may contain merges. For every such history whose elements are
+numbers of the format (normalized pairs for two limbs), with $n$ the number of terms, $s$
+the running sum, $a$ the sum of magnitudes and $\Sigma$ the exact sum of the terms ($x$ for
+an `add`, $x y$ for an `add_product`):
+
+- $\sum_i \lvert x_i y_i\rvert \le (1+u)^{n+2}\,(a + n\eta/2)$ (`acc_2_terms_mags`; for one
+  limb with $(1+u)^n$, `acc_1_mags`): the magnitudes the kernels add are those of the leading
+  limbs, each rounding of a nonnegative sum loses at most a factor $1+u$, and $\eta/2$ only in
+  a fused multiply-add, and a merge of two histories of $n_1, n_2 \ge 1$ terms costs one
+  factor for $n_1 + n_2$ terms;
+- $\lvert s - \Sigma\rvert$ is within the statement of `dot_k` for $n$ terms, whatever the
+  shape of the tree (`acc_1_error`, `acc_2_error`): the history is mapped to a tree of the
+  summation theorem, of height at most $n - 1$ for two limbs and $n$ for one;
+- with $(g, t)$ from `bound_dot_k(m)` and $r$ from `acc_radius_k(a, m, g, t)`, for $m$ a
+  number of `T` that is 0 or at least 1 and at least $n$, in a format that contains
+  $\tfrac12$, when both masks are true:
+  $\lvert s - \Sigma\rvert \le g\sum_i\lvert x_i y_i\rvert + t \le r$
+  (`acc_1_chain`, `acc_2_chain`; the final statements `acc_1_bound`, `acc_2_bound`).
+
+In the IEEE model, for elements whose limbs are finite: if the running sum and $r$ are
+finite and both masks are true, then every state on the way was finite and had the values
+of the real model, and the same bound holds (`acc_1_ieee_bound`, `acc_2_ieee_bound`). A true
+mask of `acc_radius_k` means a finite $a$ (`acc_radius_1_ok_finite`). Not proved: what the
+header does when a value is not finite or a mask is false (it returns the whole line), the
+count as a machine integer and its conversion to `T`, and that the header calls the kernels
+in this way.
 
 ## What a proof does not cover
 
