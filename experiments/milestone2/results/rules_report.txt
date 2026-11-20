@@ -1,4 +1,4 @@
-33 kernel descriptions (9 of them in gen/kernels, with their claims); 41 remarks that a description has no claim (expected); 0 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
+33 kernel descriptions (12 of them in gen/kernels, with their claims); 35 remarks that a description has no claim (expected); 0 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
 
 kernel                 operations after inlining
 add_ball_2_2            22 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations

@@ -14,9 +14,10 @@ from collections import Counter
 
 from common import HERE, KERNELS, ir, rules
 
-# The proposals of the page that are in gen/kernels now, with their claims (wave 1).
+# The proposals of the page that are in gen/kernels now, with their claims (wave 1, and the bound
+# kernels of the folds' stage).
 IN_GEN = ('two_sum_ord', 'add_down_1', 'add_up_1', 'sub_down_1', 'sub_up_1', 'mul_down_1', 'mul_up_1',
-          'ball_mul_pow2_1', 'ball_mul_pow2_2')
+          'ball_mul_pow2_1', 'ball_mul_pow2_2', 'bound_sum_2', 'bound_dot_2', 'bound_dot_1')
 
 
 def main():
