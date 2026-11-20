@@ -1,7 +1,8 @@
 // Which functions that use Kairn's types get MSVC's /GS stack cookie (bench/README.md, "MSVC's
 // stack cookie"; bench/gs_probe.py compiles this file and reads the disassembly). The same shapes
 // of code for double, Expansion<double, 1>, Expansion<double, 2>, Ball<double, 1> and
-// Ball<double, 2>, written with the public operators, each a non-inlined function with C linkage:
+// Ball<double, 2>, and for float and the same types with float limbs (tags float, e1f, e2f, b1f,
+// b2f), written with the public operators, each a non-inlined function with C linkage:
 //
 // - ret_add, ret_mul: one operation on operands passed by reference, the result returned by value
 //   (C++ linkage: MSVC does not let a function with C linkage return a class);
@@ -31,6 +32,11 @@ using E1 = kairn::Expansion<double, 1>;
 using E2 = kairn::Expansion<double, 2>;
 using B1 = kairn::Ball<double, 1>;
 using B2 = kairn::Ball<double, 2>;
+using F = float;
+using E1F = kairn::Expansion<float, 1>;
+using E2F = kairn::Expansion<float, 2>;
+using B1F = kairn::Ball<float, 1>;
+using B2F = kairn::Ball<float, 2>;
 
 #define GS_SHAPES(TAG, X, A)                                                                        \
     GS_NOINLINE X gs_##TAG##_ret_add(const X& x, const X& y) { return x + y; }                     \
@@ -72,6 +78,11 @@ GS_SHAPES(e1, E1, E1)
 GS_SHAPES(e2, E2, E2)
 GS_SHAPES(b1, B1, B1)
 GS_SHAPES(b2, B2, B2)
+GS_SHAPES(float, F, F)
+GS_SHAPES(e1f, E1F, E1F)
+GS_SHAPES(e2f, E2F, E2F)
+GS_SHAPES(b1f, B1F, B1F)
+GS_SHAPES(b2f, B2F, B2F)
 
 #if defined(GS_PLAIN)
 // The same members as Expansion<double, K> and Ball<double, K>, in plain structures whose

@@ -1,0 +1,2976 @@
+{
+ "schema": 1,
+ "what": "probe",
+ "date": "2026-11-19",
+ "commit": "3672c2a",
+ "machine": "Windows 11 x64, Intel Core i5-13500T",
+ "compiler": "Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64",
+ "flags": [
+  "/nologo",
+  "/std:c++20",
+  "/EHsc",
+  "/Od",
+  "/DNDEBUG",
+  "/arch:AVX2",
+  "/fp:precise",
+  "/wd4190",
+  "/I",
+  "include"
+ ],
+ "results": {
+  "/GS": {
+   "gs_double_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_mul": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_tp_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_double_tp_mul": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_double_sum": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_double_prod": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_double_dot": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_double_axpy": {
+    "instructions": 42,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_double_horner": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e1_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e1_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e1_add": {
+    "instructions": 32,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "gs_e1_mul": {
+    "instructions": 32,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "gs_e1_tp_add": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_e1_tp_mul": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_e1_sum": {
+    "instructions": 62,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 64
+   },
+   "gs_e1_prod": {
+    "instructions": 48,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_e1_dot": {
+    "instructions": 67,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 80
+   },
+   "gs_e1_axpy": {
+    "instructions": 50,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_e1_horner": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_e2_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e2_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e2_add": {
+    "instructions": 45,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_e2_mul": {
+    "instructions": 45,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_e2_tp_add": {
+    "instructions": 62,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_e2_tp_mul": {
+    "instructions": 62,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_e2_sum": {
+    "instructions": 61,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_e2_prod": {
+    "instructions": 72,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_e2_dot": {
+    "instructions": 71,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_e2_axpy": {
+    "instructions": 70,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_e2_horner": {
+    "instructions": 76,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 120
+   },
+   "gs_b1_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b1_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b1_add": {
+    "instructions": 45,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b1_mul": {
+    "instructions": 45,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b1_tp_add": {
+    "instructions": 62,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b1_tp_mul": {
+    "instructions": 62,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b1_sum": {
+    "instructions": 61,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_b1_prod": {
+    "instructions": 72,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_b1_dot": {
+    "instructions": 71,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_b1_axpy": {
+    "instructions": 70,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_b1_horner": {
+    "instructions": 76,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 120
+   },
+   "gs_b2_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b2_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b2_add": {
+    "instructions": 45,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b2_mul": {
+    "instructions": 45,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b2_tp_add": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_b2_tp_mul": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_b2_sum": {
+    "instructions": 71,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_b2_prod": {
+    "instructions": 63,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_b2_dot": {
+    "instructions": 81,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 136
+   },
+   "gs_b2_axpy": {
+    "instructions": 70,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 120
+   },
+   "gs_b2_horner": {
+    "instructions": 64,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 152
+   },
+   "gs_float_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_float_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_float_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_float_mul": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_float_tp_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_float_tp_mul": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_float_sum": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_float_prod": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_float_dot": {
+    "instructions": 39,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_float_axpy": {
+    "instructions": 42,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_float_horner": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1f_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e1f_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e1f_add": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1f_mul": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1f_tp_add": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1f_tp_mul": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1f_sum": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 48
+   },
+   "gs_e1f_prod": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1f_dot": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "gs_e1f_axpy": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e1f_horner": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e2f_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e2f_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e2f_add": {
+    "instructions": 32,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "gs_e2f_mul": {
+    "instructions": 32,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "gs_e2f_tp_add": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_e2f_tp_mul": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_e2f_sum": {
+    "instructions": 62,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 64
+   },
+   "gs_e2f_prod": {
+    "instructions": 48,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_e2f_dot": {
+    "instructions": 67,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 80
+   },
+   "gs_e2f_axpy": {
+    "instructions": 50,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_e2f_horner": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_b1f_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b1f_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b1f_add": {
+    "instructions": 32,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "gs_b1f_mul": {
+    "instructions": 32,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "gs_b1f_tp_add": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b1f_tp_mul": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b1f_sum": {
+    "instructions": 62,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 64
+   },
+   "gs_b1f_prod": {
+    "instructions": 48,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b1f_dot": {
+    "instructions": 67,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 80
+   },
+   "gs_b1f_axpy": {
+    "instructions": 50,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_b1f_horner": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_b2f_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b2f_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b2f_add": {
+    "instructions": 45,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b2f_mul": {
+    "instructions": 45,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b2f_tp_add": {
+    "instructions": 62,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b2f_tp_mul": {
+    "instructions": 62,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_b2f_sum": {
+    "instructions": 61,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_b2f_prod": {
+    "instructions": 72,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_b2f_dot": {
+    "instructions": 71,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_b2f_axpy": {
+    "instructions": 70,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_b2f_horner": {
+    "instructions": 76,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 120
+   },
+   "gs_p1_ret_add": {
+    "instructions": 24,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "gs_p1_ret_mul": {
+    "instructions": 24,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "gs_p1_add": {
+    "instructions": 30,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "gs_p1_mul": {
+    "instructions": 30,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 56
+   },
+   "gs_p1_tp_add": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_p1_tp_mul": {
+    "instructions": 56,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_p1_sum": {
+    "instructions": 52,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 64
+   },
+   "gs_p1_prod": {
+    "instructions": 46,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_p1_dot": {
+    "instructions": 57,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 80
+   },
+   "gs_p1_axpy": {
+    "instructions": 54,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_p1_horner": {
+    "instructions": 61,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_p2_ret_add": {
+    "instructions": 39,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_p2_ret_mul": {
+    "instructions": 39,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_p2_add": {
+    "instructions": 41,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_p2_mul": {
+    "instructions": 41,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_p2_tp_add": {
+    "instructions": 68,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_p2_tp_mul": {
+    "instructions": 68,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 88
+   },
+   "gs_p2_sum": {
+    "instructions": 62,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_p2_prod": {
+    "instructions": 78,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_p2_dot": {
+    "instructions": 82,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 136
+   },
+   "gs_p2_axpy": {
+    "instructions": 74,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 120
+   },
+   "gs_p2_horner": {
+    "instructions": 79,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 152
+   },
+   "gs_pb2_ret_add": {
+    "instructions": 39,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_pb2_ret_mul": {
+    "instructions": 39,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 72
+   },
+   "gs_pb2_add": {
+    "instructions": 51,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_pb2_mul": {
+    "instructions": 51,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_pb2_tp_add": {
+    "instructions": 62,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_pb2_tp_mul": {
+    "instructions": 62,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 104
+   },
+   "gs_pb2_sum": {
+    "instructions": 64,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 136
+   },
+   "gs_pb2_prod": {
+    "instructions": 72,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 136
+   },
+   "gs_pb2_dot": {
+    "instructions": 78,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 184
+   },
+   "gs_pb2_axpy": {
+    "instructions": 78,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 152
+   },
+   "gs_pb2_horner": {
+    "instructions": 66,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 184
+   },
+   "??$?DM$00@kairn@@YA?AV?$Ball@M$00@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<float,1> __cdecl kairn::operator*<float,1>(class kairn::Ball<float,1> const &,class kairn::Ball<float,1> const &)"
+   },
+   "??$?DM$01@kairn@@YA?AV?$Ball@M$01@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<float,2> __cdecl kairn::operator*<float,2>(class kairn::Ball<float,2> const &,class kairn::Ball<float,2> const &)"
+   },
+   "??$?DM@kairn@@YA?AU?$Expansion@M$01@0@AEBU10@0@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<float,2> __cdecl kairn::operator*<float>(struct kairn::Expansion<float,2> const &,struct kairn::Expansion<float,2> const &)"
+   },
+   "??$?DN$00@kairn@@YA?AV?$Ball@N$00@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<double,1> __cdecl kairn::operator*<double,1>(class kairn::Ball<double,1> const &,class kairn::Ball<double,1> const &)"
+   },
+   "??$?DN$01@kairn@@YA?AV?$Ball@N$01@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<double,2> __cdecl kairn::operator*<double,2>(class kairn::Ball<double,2> const &,class kairn::Ball<double,2> const &)"
+   },
+   "??$?DN@kairn@@YA?AU?$Expansion@N$01@0@AEBU10@0@Z": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72,
+    "declaration": "struct kairn::Expansion<double,2> __cdecl kairn::operator*<double>(struct kairn::Expansion<double,2> const &,struct kairn::Expansion<double,2> const &)"
+   },
+   "??$?HM$00@kairn@@YA?AV?$Ball@M$00@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<float,1> __cdecl kairn::operator+<float,1>(class kairn::Ball<float,1> const &,class kairn::Ball<float,1> const &)"
+   },
+   "??$?HM$01@kairn@@YA?AV?$Ball@M$01@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<float,2> __cdecl kairn::operator+<float,2>(class kairn::Ball<float,2> const &,class kairn::Ball<float,2> const &)"
+   },
+   "??$?HM@kairn@@YA?AU?$Expansion@M$01@0@AEBU10@0@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<float,2> __cdecl kairn::operator+<float>(struct kairn::Expansion<float,2> const &,struct kairn::Expansion<float,2> const &)"
+   },
+   "??$?HN$00@kairn@@YA?AV?$Ball@N$00@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<double,1> __cdecl kairn::operator+<double,1>(class kairn::Ball<double,1> const &,class kairn::Ball<double,1> const &)"
+   },
+   "??$?HN$01@kairn@@YA?AV?$Ball@N$01@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<double,2> __cdecl kairn::operator+<double,2>(class kairn::Ball<double,2> const &,class kairn::Ball<double,2> const &)"
+   },
+   "??$?HN@kairn@@YA?AU?$Expansion@N$01@0@AEBU10@0@Z": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72,
+    "declaration": "struct kairn::Expansion<double,2> __cdecl kairn::operator+<double>(struct kairn::Expansion<double,2> const &,struct kairn::Expansion<double,2> const &)"
+   },
+   "??$add@M@detail@kairn@@YA?AU?$Expansion@M$00@1@U21@0@Z": {
+    "instructions": 19,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<float,1> __cdecl kairn::detail::add<float>(struct kairn::Expansion<float,1>,struct kairn::Expansion<float,1>)"
+   },
+   "??$add@M@detail@kairn@@YA?AU?$Expansion@M$01@1@U21@0@Z": {
+    "instructions": 37,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56,
+    "declaration": "struct kairn::Expansion<float,2> __cdecl kairn::detail::add<float>(struct kairn::Expansion<float,2>,struct kairn::Expansion<float,2>)"
+   },
+   "??$add@M@detail@kairn@@YA?AV?$Ball@M$00@1@AEBV21@0@Z": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120,
+    "declaration": "class kairn::Ball<float,1> __cdecl kairn::detail::add<float>(class kairn::Ball<float,1> const &,class kairn::Ball<float,1> const &)"
+   },
+   "??$add@M@detail@kairn@@YA?AV?$Ball@M$01@1@AEBV21@0@Z": {
+    "instructions": 83,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 168,
+    "declaration": "class kairn::Ball<float,2> __cdecl kairn::detail::add<float>(class kairn::Ball<float,2> const &,class kairn::Ball<float,2> const &)"
+   },
+   "??$add@N@detail@kairn@@YA?AU?$Expansion@N$00@1@U21@0@Z": {
+    "instructions": 19,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<double,1> __cdecl kairn::detail::add<double>(struct kairn::Expansion<double,1>,struct kairn::Expansion<double,1>)"
+   },
+   "??$add@N@detail@kairn@@YA?AU?$Expansion@N$01@1@U21@0@Z": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56,
+    "declaration": "struct kairn::Expansion<double,2> __cdecl kairn::detail::add<double>(struct kairn::Expansion<double,2>,struct kairn::Expansion<double,2>)"
+   },
+   "??$add@N@detail@kairn@@YA?AV?$Ball@N$00@1@AEBV21@0@Z": {
+    "instructions": 67,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 168,
+    "declaration": "class kairn::Ball<double,1> __cdecl kairn::detail::add<double>(class kairn::Ball<double,1> const &,class kairn::Ball<double,1> const &)"
+   },
+   "??$add@N@detail@kairn@@YA?AV?$Ball@N$01@1@AEBV21@0@Z": {
+    "instructions": 83,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 200,
+    "declaration": "class kairn::Ball<double,2> __cdecl kairn::detail::add<double>(class kairn::Ball<double,2> const &,class kairn::Ball<double,2> const &)"
+   },
+   "??$bit_cast@IM@std@@YAIAEBM@Z": {
+    "instructions": 8,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24,
+    "declaration": "unsigned int __cdecl std::bit_cast<unsigned int,float>(float const &)"
+   },
+   "??$bit_cast@MI@std@@YAMAEBI@Z": {
+    "instructions": 8,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24,
+    "declaration": "float __cdecl std::bit_cast<float,unsigned int>(unsigned int const &)"
+   },
+   "??$bit_cast@N_K@std@@YANAEB_K@Z": {
+    "instructions": 8,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24,
+    "declaration": "double __cdecl std::bit_cast<double,unsigned __int64>(unsigned __int64 const &)"
+   },
+   "??$bit_cast@_KN@std@@YA_KAEBN@Z": {
+    "instructions": 8,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24,
+    "declaration": "unsigned __int64 __cdecl std::bit_cast<unsigned __int64,double>(double const &)"
+   },
+   "??$check@U?$Expansion@M$00@kairn@@U12@@detail@kairn@@YAXAEBU?$Expansion@M$00@1@0@Z": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check<struct kairn::Expansion<float,1>,struct kairn::Expansion<float,1> >(struct kairn::Expansion<float,1> const &,struct kairn::Expansion<float,1> const &)"
+   },
+   "??$check@U?$Expansion@M$01@kairn@@U12@@detail@kairn@@YAXAEBU?$Expansion@M$01@1@0@Z": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check<struct kairn::Expansion<float,2>,struct kairn::Expansion<float,2> >(struct kairn::Expansion<float,2> const &,struct kairn::Expansion<float,2> const &)"
+   },
+   "??$check@U?$Expansion@N$00@kairn@@U12@@detail@kairn@@YAXAEBU?$Expansion@N$00@1@0@Z": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check<struct kairn::Expansion<double,1>,struct kairn::Expansion<double,1> >(struct kairn::Expansion<double,1> const &,struct kairn::Expansion<double,1> const &)"
+   },
+   "??$check@U?$Expansion@N$01@kairn@@U12@@detail@kairn@@YAXAEBU?$Expansion@N$01@1@0@Z": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check<struct kairn::Expansion<double,2>,struct kairn::Expansion<double,2> >(struct kairn::Expansion<double,2> const &,struct kairn::Expansion<double,2> const &)"
+   },
+   "??$check_ball@M$00@detail@kairn@@YAXAEBV?$Ball@M$00@1@@Z": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check_ball<float,1>(class kairn::Ball<float,1> const &)"
+   },
+   "??$check_ball@M$01@detail@kairn@@YAXAEBV?$Ball@M$01@1@@Z": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check_ball<float,2>(class kairn::Ball<float,2> const &)"
+   },
+   "??$check_ball@N$00@detail@kairn@@YAXAEBV?$Ball@N$00@1@@Z": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check_ball<double,1>(class kairn::Ball<double,1> const &)"
+   },
+   "??$check_ball@N$01@detail@kairn@@YAXAEBV?$Ball@N$01@1@@Z": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check_ball<double,2>(class kairn::Ball<double,2> const &)"
+   },
+   "??$mul@M@detail@kairn@@YA?AU?$Expansion@M$00@1@U21@0@Z": {
+    "instructions": 19,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<float,1> __cdecl kairn::detail::mul<float>(struct kairn::Expansion<float,1>,struct kairn::Expansion<float,1>)"
+   },
+   "??$mul@M@detail@kairn@@YA?AU?$Expansion@M$01@1@U21@0@Z": {
+    "instructions": 37,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56,
+    "declaration": "struct kairn::Expansion<float,2> __cdecl kairn::detail::mul<float>(struct kairn::Expansion<float,2>,struct kairn::Expansion<float,2>)"
+   },
+   "??$mul@M@detail@kairn@@YA?AV?$Ball@M$00@1@AEBV21@0@Z": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120,
+    "declaration": "class kairn::Ball<float,1> __cdecl kairn::detail::mul<float>(class kairn::Ball<float,1> const &,class kairn::Ball<float,1> const &)"
+   },
+   "??$mul@M@detail@kairn@@YA?AV?$Ball@M$01@1@AEBV21@0@Z": {
+    "instructions": 83,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 168,
+    "declaration": "class kairn::Ball<float,2> __cdecl kairn::detail::mul<float>(class kairn::Ball<float,2> const &,class kairn::Ball<float,2> const &)"
+   },
+   "??$mul@N@detail@kairn@@YA?AU?$Expansion@N$00@1@U21@0@Z": {
+    "instructions": 19,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<double,1> __cdecl kairn::detail::mul<double>(struct kairn::Expansion<double,1>,struct kairn::Expansion<double,1>)"
+   },
+   "??$mul@N@detail@kairn@@YA?AU?$Expansion@N$01@1@U21@0@Z": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56,
+    "declaration": "struct kairn::Expansion<double,2> __cdecl kairn::detail::mul<double>(struct kairn::Expansion<double,2>,struct kairn::Expansion<double,2>)"
+   },
+   "??$mul@N@detail@kairn@@YA?AV?$Ball@N$00@1@AEBV21@0@Z": {
+    "instructions": 67,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 168,
+    "declaration": "class kairn::Ball<double,1> __cdecl kairn::detail::mul<double>(class kairn::Ball<double,1> const &,class kairn::Ball<double,1> const &)"
+   },
+   "??$mul@N@detail@kairn@@YA?AV?$Ball@N$01@1@AEBV21@0@Z": {
+    "instructions": 83,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 200,
+    "declaration": "class kairn::Ball<double,2> __cdecl kairn::detail::mul<double>(class kairn::Ball<double,2> const &,class kairn::Ball<double,2> const &)"
+   },
+   "??0?$Ball@M$00@kairn@@QEAA@Ukernel_result_t@detail@1@AEBU?$Expansion@M$00@1@M@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Ball<float,1>::Ball<float,1>(struct kairn::detail::kernel_result_t,struct kairn::Expansion<float,1> const &,float)"
+   },
+   "??0?$Ball@M$00@kairn@@QEAA@XZ": {
+    "instructions": 18,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32,
+    "declaration": "public: __cdecl kairn::Ball<float,1>::Ball<float,1>(void)"
+   },
+   "??0?$Ball@M$01@kairn@@QEAA@Ukernel_result_t@detail@1@AEBU?$Expansion@M$01@1@M@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Ball<float,2>::Ball<float,2>(struct kairn::detail::kernel_result_t,struct kairn::Expansion<float,2> const &,float)"
+   },
+   "??0?$Ball@M$01@kairn@@QEAA@XZ": {
+    "instructions": 18,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32,
+    "declaration": "public: __cdecl kairn::Ball<float,2>::Ball<float,2>(void)"
+   },
+   "??0?$Ball@N$00@kairn@@QEAA@Ukernel_result_t@detail@1@AEBU?$Expansion@N$00@1@N@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Ball<double,1>::Ball<double,1>(struct kairn::detail::kernel_result_t,struct kairn::Expansion<double,1> const &,double)"
+   },
+   "??0?$Ball@N$00@kairn@@QEAA@XZ": {
+    "instructions": 18,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32,
+    "declaration": "public: __cdecl kairn::Ball<double,1>::Ball<double,1>(void)"
+   },
+   "??0?$Ball@N$01@kairn@@QEAA@Ukernel_result_t@detail@1@AEBU?$Expansion@N$01@1@N@Z": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Ball<double,2>::Ball<double,2>(struct kairn::detail::kernel_result_t,struct kairn::Expansion<double,2> const &,double)"
+   },
+   "??0?$Ball@N$01@kairn@@QEAA@XZ": {
+    "instructions": 18,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32,
+    "declaration": "public: __cdecl kairn::Ball<double,2>::Ball<double,2>(void)"
+   },
+   "??0?$Expansion@M$00@kairn@@QEAA@M@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Expansion<float,1>::Expansion<float,1>(float)"
+   },
+   "??0?$Expansion@M$00@kairn@@QEAA@XZ": {
+    "instructions": 10,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Expansion<float,1>::Expansion<float,1>(void)"
+   },
+   "??0?$Expansion@M$01@kairn@@QEAA@XZ": {
+    "instructions": 10,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Expansion<float,2>::Expansion<float,2>(void)"
+   },
+   "??0?$Expansion@N$00@kairn@@QEAA@N@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Expansion<double,1>::Expansion<double,1>(double)"
+   },
+   "??0?$Expansion@N$00@kairn@@QEAA@XZ": {
+    "instructions": 10,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Expansion<double,1>::Expansion<double,1>(void)"
+   },
+   "??0?$Expansion@N$01@kairn@@QEAA@XZ": {
+    "instructions": 10,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Expansion<double,2>::Expansion<double,2>(void)"
+   },
+   "??A?$array@M$07@std@@QEBAAEBM_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: float const & __cdecl std::array<float,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@N$07@std@@QEBAAEBN_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: double const & __cdecl std::array<double,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@U?$Expansion@M$00@kairn@@$07@std@@QEBAAEBU?$Expansion@M$00@kairn@@_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct kairn::Expansion<float,1> const & __cdecl std::array<struct kairn::Expansion<float,1>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@U?$Expansion@M$01@kairn@@$07@std@@QEBAAEBU?$Expansion@M$01@kairn@@_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct kairn::Expansion<float,2> const & __cdecl std::array<struct kairn::Expansion<float,2>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@U?$Expansion@N$00@kairn@@$07@std@@QEBAAEBU?$Expansion@N$00@kairn@@_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct kairn::Expansion<double,1> const & __cdecl std::array<struct kairn::Expansion<double,1>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@U?$Expansion@N$01@kairn@@$07@std@@QEBAAEBU?$Expansion@N$01@kairn@@_K@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct kairn::Expansion<double,2> const & __cdecl std::array<struct kairn::Expansion<double,2>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@UP1@@$07@std@@QEBAAEBUP1@@_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct P1 const & __cdecl std::array<struct P1,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@UP2@@$07@std@@QEBAAEBUP2@@_K@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct P2 const & __cdecl std::array<struct P2,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@UPB2@@$07@std@@QEBAAEBUPB2@@_K@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct PB2 const & __cdecl std::array<struct PB2,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@V?$Ball@M$00@kairn@@$07@std@@QEBAAEBV?$Ball@M$00@kairn@@_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: class kairn::Ball<float,1> const & __cdecl std::array<class kairn::Ball<float,1>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@V?$Ball@M$01@kairn@@$07@std@@QEBAAEBV?$Ball@M$01@kairn@@_K@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: class kairn::Ball<float,2> const & __cdecl std::array<class kairn::Ball<float,2>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@V?$Ball@N$00@kairn@@$07@std@@QEBAAEBV?$Ball@N$00@kairn@@_K@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: class kairn::Ball<double,1> const & __cdecl std::array<class kairn::Ball<double,1>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@V?$Ball@N$01@kairn@@$07@std@@QEBAAEBV?$Ball@N$01@kairn@@_K@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: class kairn::Ball<double,2> const & __cdecl std::array<class kairn::Ball<double,2>,8>::operator[](unsigned __int64)const "
+   },
+   "??D@YA?AUP1@@AEBU0@0@Z": {
+    "instructions": 21,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24,
+    "declaration": "struct P1 __cdecl operator*(struct P1 const &,struct P1 const &)"
+   },
+   "??D@YA?AUP2@@AEBU0@0@Z": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "struct P2 __cdecl operator*(struct P2 const &,struct P2 const &)"
+   },
+   "??D@YA?AUPB2@@AEBU0@0@Z": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56,
+    "declaration": "struct PB2 __cdecl operator*(struct PB2 const &,struct PB2 const &)"
+   },
+   "??Dkairn@@YA?AU?$Expansion@M$00@0@AEBU10@0@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<float,1> __cdecl kairn::operator*(struct kairn::Expansion<float,1> const &,struct kairn::Expansion<float,1> const &)"
+   },
+   "??Dkairn@@YA?AU?$Expansion@N$00@0@AEBU10@0@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<double,1> __cdecl kairn::operator*(struct kairn::Expansion<double,1> const &,struct kairn::Expansion<double,1> const &)"
+   },
+   "??H@YA?AUP1@@AEBU0@0@Z": {
+    "instructions": 21,
+    "cookie_reads": 1,
+    "cookie_checks": 1,
+    "frame": 24,
+    "declaration": "struct P1 __cdecl operator+(struct P1 const &,struct P1 const &)"
+   },
+   "??H@YA?AUP2@@AEBU0@0@Z": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "struct P2 __cdecl operator+(struct P2 const &,struct P2 const &)"
+   },
+   "??H@YA?AUPB2@@AEBU0@0@Z": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56,
+    "declaration": "struct PB2 __cdecl operator+(struct PB2 const &,struct PB2 const &)"
+   },
+   "??Hkairn@@YA?AU?$Expansion@M$00@0@AEBU10@0@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<float,1> __cdecl kairn::operator+(struct kairn::Expansion<float,1> const &,struct kairn::Expansion<float,1> const &)"
+   },
+   "??Hkairn@@YA?AU?$Expansion@N$00@0@AEBU10@0@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<double,1> __cdecl kairn::operator+(struct kairn::Expansion<double,1> const &,struct kairn::Expansion<double,1> const &)"
+   },
+   "abs_bits": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "add_2_2_full": {
+    "instructions": 149,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 296
+   },
+   "ball_add_1_full": {
+    "instructions": 119,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "ball_add_2_full": {
+    "instructions": 202,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 360
+   },
+   "ball_mul_1_full": {
+    "instructions": 139,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 200
+   },
+   "ball_mul_2_full": {
+    "instructions": 199,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 296
+   },
+   "center": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "fma_rn": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "infinity": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "mul_2_2_full": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 200
+   },
+   "quiet_NaN": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "radius": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "times_inf_ce": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   }
+  },
+  "/GS-": {
+   "gs_double_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_mul": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_double_tp_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_double_tp_mul": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_double_sum": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_double_prod": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_double_dot": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_double_axpy": {
+    "instructions": 42,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_double_horner": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e1_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e1_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e1_add": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1_mul": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1_tp_add": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1_tp_mul": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1_sum": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "gs_e1_prod": {
+    "instructions": 38,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e1_dot": {
+    "instructions": 57,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "gs_e1_axpy": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e1_horner": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_e2_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e2_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e2_add": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e2_mul": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e2_tp_add": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e2_tp_mul": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e2_sum": {
+    "instructions": 51,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_e2_prod": {
+    "instructions": 62,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_e2_dot": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_e2_axpy": {
+    "instructions": 50,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_e2_horner": {
+    "instructions": 66,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "gs_b1_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b1_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b1_add": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_b1_mul": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_b1_tp_add": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_b1_tp_mul": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_b1_sum": {
+    "instructions": 51,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b1_prod": {
+    "instructions": 62,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b1_dot": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_b1_axpy": {
+    "instructions": 50,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b1_horner": {
+    "instructions": 66,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "gs_b2_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b2_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b2_add": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_b2_mul": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_b2_tp_add": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_b2_tp_mul": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_b2_sum": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_b2_prod": {
+    "instructions": 53,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_b2_dot": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "gs_b2_axpy": {
+    "instructions": 60,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_b2_horner": {
+    "instructions": 60,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "gs_float_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_float_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_float_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_float_mul": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "gs_float_tp_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_float_tp_mul": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_float_sum": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_float_prod": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_float_dot": {
+    "instructions": 39,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_float_axpy": {
+    "instructions": 42,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24
+   },
+   "gs_float_horner": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1f_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e1f_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e1f_add": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1f_mul": {
+    "instructions": 24,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1f_tp_add": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1f_tp_mul": {
+    "instructions": 48,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1f_sum": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 48
+   },
+   "gs_e1f_prod": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e1f_dot": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "gs_e1f_axpy": {
+    "instructions": 43,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e1f_horner": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e2f_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e2f_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_e2f_add": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e2f_mul": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e2f_tp_add": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e2f_tp_mul": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_e2f_sum": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "gs_e2f_prod": {
+    "instructions": 38,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e2f_dot": {
+    "instructions": 57,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "gs_e2f_axpy": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_e2f_horner": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b1f_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b1f_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b1f_add": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_b1f_mul": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_b1f_tp_add": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_b1f_tp_mul": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_b1f_sum": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "gs_b1f_prod": {
+    "instructions": 38,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_b1f_dot": {
+    "instructions": 57,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "gs_b1f_axpy": {
+    "instructions": 56,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_b1f_horner": {
+    "instructions": 49,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b2f_ret_add": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b2f_ret_mul": {
+    "instructions": 26,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40
+   },
+   "gs_b2f_add": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_b2f_mul": {
+    "instructions": 35,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_b2f_tp_add": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_b2f_tp_mul": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_b2f_sum": {
+    "instructions": 51,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b2f_prod": {
+    "instructions": 62,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b2f_dot": {
+    "instructions": 67,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b2f_axpy": {
+    "instructions": 50,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_b2f_horner": {
+    "instructions": 66,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_p1_ret_add": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_p1_ret_mul": {
+    "instructions": 30,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_p1_add": {
+    "instructions": 20,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_p1_mul": {
+    "instructions": 20,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_p1_tp_add": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_p1_tp_mul": {
+    "instructions": 46,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_p1_sum": {
+    "instructions": 42,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "gs_p1_prod": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_p1_dot": {
+    "instructions": 47,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 64
+   },
+   "gs_p1_axpy": {
+    "instructions": 44,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_p1_horner": {
+    "instructions": 51,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_p2_ret_add": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_p2_ret_mul": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "gs_p2_add": {
+    "instructions": 34,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_p2_mul": {
+    "instructions": 34,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_p2_tp_add": {
+    "instructions": 58,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_p2_tp_mul": {
+    "instructions": 58,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_p2_sum": {
+    "instructions": 68,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_p2_prod": {
+    "instructions": 68,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_p2_dot": {
+    "instructions": 72,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "gs_p2_axpy": {
+    "instructions": 64,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "gs_p2_horner": {
+    "instructions": 75,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 136
+   },
+   "gs_pb2_ret_add": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_pb2_ret_mul": {
+    "instructions": 29,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72
+   },
+   "gs_pb2_add": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_pb2_mul": {
+    "instructions": 31,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "gs_pb2_tp_add": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_pb2_tp_mul": {
+    "instructions": 52,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 104
+   },
+   "gs_pb2_sum": {
+    "instructions": 60,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "gs_pb2_prod": {
+    "instructions": 68,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120
+   },
+   "gs_pb2_dot": {
+    "instructions": 77,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "gs_pb2_axpy": {
+    "instructions": 74,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152
+   },
+   "gs_pb2_horner": {
+    "instructions": 60,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 184
+   },
+   "??$?DM$00@kairn@@YA?AV?$Ball@M$00@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<float,1> __cdecl kairn::operator*<float,1>(class kairn::Ball<float,1> const &,class kairn::Ball<float,1> const &)"
+   },
+   "??$?DM$01@kairn@@YA?AV?$Ball@M$01@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<float,2> __cdecl kairn::operator*<float,2>(class kairn::Ball<float,2> const &,class kairn::Ball<float,2> const &)"
+   },
+   "??$?DM@kairn@@YA?AU?$Expansion@M$01@0@AEBU10@0@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<float,2> __cdecl kairn::operator*<float>(struct kairn::Expansion<float,2> const &,struct kairn::Expansion<float,2> const &)"
+   },
+   "??$?DN$00@kairn@@YA?AV?$Ball@N$00@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<double,1> __cdecl kairn::operator*<double,1>(class kairn::Ball<double,1> const &,class kairn::Ball<double,1> const &)"
+   },
+   "??$?DN$01@kairn@@YA?AV?$Ball@N$01@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<double,2> __cdecl kairn::operator*<double,2>(class kairn::Ball<double,2> const &,class kairn::Ball<double,2> const &)"
+   },
+   "??$?DN@kairn@@YA?AU?$Expansion@N$01@0@AEBU10@0@Z": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72,
+    "declaration": "struct kairn::Expansion<double,2> __cdecl kairn::operator*<double>(struct kairn::Expansion<double,2> const &,struct kairn::Expansion<double,2> const &)"
+   },
+   "??$?HM$00@kairn@@YA?AV?$Ball@M$00@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<float,1> __cdecl kairn::operator+<float,1>(class kairn::Ball<float,1> const &,class kairn::Ball<float,1> const &)"
+   },
+   "??$?HM$01@kairn@@YA?AV?$Ball@M$01@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<float,2> __cdecl kairn::operator+<float,2>(class kairn::Ball<float,2> const &,class kairn::Ball<float,2> const &)"
+   },
+   "??$?HM@kairn@@YA?AU?$Expansion@M$01@0@AEBU10@0@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<float,2> __cdecl kairn::operator+<float>(struct kairn::Expansion<float,2> const &,struct kairn::Expansion<float,2> const &)"
+   },
+   "??$?HN$00@kairn@@YA?AV?$Ball@N$00@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<double,1> __cdecl kairn::operator+<double,1>(class kairn::Ball<double,1> const &,class kairn::Ball<double,1> const &)"
+   },
+   "??$?HN$01@kairn@@YA?AV?$Ball@N$01@0@AEBV10@0@Z": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "class kairn::Ball<double,2> __cdecl kairn::operator+<double,2>(class kairn::Ball<double,2> const &,class kairn::Ball<double,2> const &)"
+   },
+   "??$?HN@kairn@@YA?AU?$Expansion@N$01@0@AEBU10@0@Z": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 72,
+    "declaration": "struct kairn::Expansion<double,2> __cdecl kairn::operator+<double>(struct kairn::Expansion<double,2> const &,struct kairn::Expansion<double,2> const &)"
+   },
+   "??$add@M@detail@kairn@@YA?AU?$Expansion@M$00@1@U21@0@Z": {
+    "instructions": 19,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<float,1> __cdecl kairn::detail::add<float>(struct kairn::Expansion<float,1>,struct kairn::Expansion<float,1>)"
+   },
+   "??$add@M@detail@kairn@@YA?AU?$Expansion@M$01@1@U21@0@Z": {
+    "instructions": 37,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56,
+    "declaration": "struct kairn::Expansion<float,2> __cdecl kairn::detail::add<float>(struct kairn::Expansion<float,2>,struct kairn::Expansion<float,2>)"
+   },
+   "??$add@M@detail@kairn@@YA?AV?$Ball@M$00@1@AEBV21@0@Z": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120,
+    "declaration": "class kairn::Ball<float,1> __cdecl kairn::detail::add<float>(class kairn::Ball<float,1> const &,class kairn::Ball<float,1> const &)"
+   },
+   "??$add@M@detail@kairn@@YA?AV?$Ball@M$01@1@AEBV21@0@Z": {
+    "instructions": 77,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168,
+    "declaration": "class kairn::Ball<float,2> __cdecl kairn::detail::add<float>(class kairn::Ball<float,2> const &,class kairn::Ball<float,2> const &)"
+   },
+   "??$add@N@detail@kairn@@YA?AU?$Expansion@N$00@1@U21@0@Z": {
+    "instructions": 19,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<double,1> __cdecl kairn::detail::add<double>(struct kairn::Expansion<double,1>,struct kairn::Expansion<double,1>)"
+   },
+   "??$add@N@detail@kairn@@YA?AU?$Expansion@N$01@1@U21@0@Z": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56,
+    "declaration": "struct kairn::Expansion<double,2> __cdecl kairn::detail::add<double>(struct kairn::Expansion<double,2>,struct kairn::Expansion<double,2>)"
+   },
+   "??$add@N@detail@kairn@@YA?AV?$Ball@N$00@1@AEBV21@0@Z": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152,
+    "declaration": "class kairn::Ball<double,1> __cdecl kairn::detail::add<double>(class kairn::Ball<double,1> const &,class kairn::Ball<double,1> const &)"
+   },
+   "??$add@N@detail@kairn@@YA?AV?$Ball@N$01@1@AEBV21@0@Z": {
+    "instructions": 77,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 200,
+    "declaration": "class kairn::Ball<double,2> __cdecl kairn::detail::add<double>(class kairn::Ball<double,2> const &,class kairn::Ball<double,2> const &)"
+   },
+   "??$bit_cast@IM@std@@YAIAEBM@Z": {
+    "instructions": 8,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24,
+    "declaration": "unsigned int __cdecl std::bit_cast<unsigned int,float>(float const &)"
+   },
+   "??$bit_cast@MI@std@@YAMAEBI@Z": {
+    "instructions": 8,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24,
+    "declaration": "float __cdecl std::bit_cast<float,unsigned int>(unsigned int const &)"
+   },
+   "??$bit_cast@N_K@std@@YANAEB_K@Z": {
+    "instructions": 8,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24,
+    "declaration": "double __cdecl std::bit_cast<double,unsigned __int64>(unsigned __int64 const &)"
+   },
+   "??$bit_cast@_KN@std@@YA_KAEBN@Z": {
+    "instructions": 8,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24,
+    "declaration": "unsigned __int64 __cdecl std::bit_cast<unsigned __int64,double>(double const &)"
+   },
+   "??$check@U?$Expansion@M$00@kairn@@U12@@detail@kairn@@YAXAEBU?$Expansion@M$00@1@0@Z": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check<struct kairn::Expansion<float,1>,struct kairn::Expansion<float,1> >(struct kairn::Expansion<float,1> const &,struct kairn::Expansion<float,1> const &)"
+   },
+   "??$check@U?$Expansion@M$01@kairn@@U12@@detail@kairn@@YAXAEBU?$Expansion@M$01@1@0@Z": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check<struct kairn::Expansion<float,2>,struct kairn::Expansion<float,2> >(struct kairn::Expansion<float,2> const &,struct kairn::Expansion<float,2> const &)"
+   },
+   "??$check@U?$Expansion@N$00@kairn@@U12@@detail@kairn@@YAXAEBU?$Expansion@N$00@1@0@Z": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check<struct kairn::Expansion<double,1>,struct kairn::Expansion<double,1> >(struct kairn::Expansion<double,1> const &,struct kairn::Expansion<double,1> const &)"
+   },
+   "??$check@U?$Expansion@N$01@kairn@@U12@@detail@kairn@@YAXAEBU?$Expansion@N$01@1@0@Z": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check<struct kairn::Expansion<double,2>,struct kairn::Expansion<double,2> >(struct kairn::Expansion<double,2> const &,struct kairn::Expansion<double,2> const &)"
+   },
+   "??$check_ball@M$00@detail@kairn@@YAXAEBV?$Ball@M$00@1@@Z": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check_ball<float,1>(class kairn::Ball<float,1> const &)"
+   },
+   "??$check_ball@M$01@detail@kairn@@YAXAEBV?$Ball@M$01@1@@Z": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check_ball<float,2>(class kairn::Ball<float,2> const &)"
+   },
+   "??$check_ball@N$00@detail@kairn@@YAXAEBV?$Ball@N$00@1@@Z": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check_ball<double,1>(class kairn::Ball<double,1> const &)"
+   },
+   "??$check_ball@N$01@detail@kairn@@YAXAEBV?$Ball@N$01@1@@Z": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "void __cdecl kairn::detail::check_ball<double,2>(class kairn::Ball<double,2> const &)"
+   },
+   "??$mul@M@detail@kairn@@YA?AU?$Expansion@M$00@1@U21@0@Z": {
+    "instructions": 19,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<float,1> __cdecl kairn::detail::mul<float>(struct kairn::Expansion<float,1>,struct kairn::Expansion<float,1>)"
+   },
+   "??$mul@M@detail@kairn@@YA?AU?$Expansion@M$01@1@U21@0@Z": {
+    "instructions": 37,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56,
+    "declaration": "struct kairn::Expansion<float,2> __cdecl kairn::detail::mul<float>(struct kairn::Expansion<float,2>,struct kairn::Expansion<float,2>)"
+   },
+   "??$mul@M@detail@kairn@@YA?AV?$Ball@M$00@1@AEBV21@0@Z": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 120,
+    "declaration": "class kairn::Ball<float,1> __cdecl kairn::detail::mul<float>(class kairn::Ball<float,1> const &,class kairn::Ball<float,1> const &)"
+   },
+   "??$mul@M@detail@kairn@@YA?AV?$Ball@M$01@1@AEBV21@0@Z": {
+    "instructions": 77,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168,
+    "declaration": "class kairn::Ball<float,2> __cdecl kairn::detail::mul<float>(class kairn::Ball<float,2> const &,class kairn::Ball<float,2> const &)"
+   },
+   "??$mul@N@detail@kairn@@YA?AU?$Expansion@N$00@1@U21@0@Z": {
+    "instructions": 19,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<double,1> __cdecl kairn::detail::mul<double>(struct kairn::Expansion<double,1>,struct kairn::Expansion<double,1>)"
+   },
+   "??$mul@N@detail@kairn@@YA?AU?$Expansion@N$01@1@U21@0@Z": {
+    "instructions": 41,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56,
+    "declaration": "struct kairn::Expansion<double,2> __cdecl kairn::detail::mul<double>(struct kairn::Expansion<double,2>,struct kairn::Expansion<double,2>)"
+   },
+   "??$mul@N@detail@kairn@@YA?AV?$Ball@N$00@1@AEBV21@0@Z": {
+    "instructions": 61,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 152,
+    "declaration": "class kairn::Ball<double,1> __cdecl kairn::detail::mul<double>(class kairn::Ball<double,1> const &,class kairn::Ball<double,1> const &)"
+   },
+   "??$mul@N@detail@kairn@@YA?AV?$Ball@N$01@1@AEBV21@0@Z": {
+    "instructions": 77,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 200,
+    "declaration": "class kairn::Ball<double,2> __cdecl kairn::detail::mul<double>(class kairn::Ball<double,2> const &,class kairn::Ball<double,2> const &)"
+   },
+   "??0?$Ball@M$00@kairn@@QEAA@Ukernel_result_t@detail@1@AEBU?$Expansion@M$00@1@M@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Ball<float,1>::Ball<float,1>(struct kairn::detail::kernel_result_t,struct kairn::Expansion<float,1> const &,float)"
+   },
+   "??0?$Ball@M$00@kairn@@QEAA@XZ": {
+    "instructions": 18,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32,
+    "declaration": "public: __cdecl kairn::Ball<float,1>::Ball<float,1>(void)"
+   },
+   "??0?$Ball@M$01@kairn@@QEAA@Ukernel_result_t@detail@1@AEBU?$Expansion@M$01@1@M@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Ball<float,2>::Ball<float,2>(struct kairn::detail::kernel_result_t,struct kairn::Expansion<float,2> const &,float)"
+   },
+   "??0?$Ball@M$01@kairn@@QEAA@XZ": {
+    "instructions": 18,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32,
+    "declaration": "public: __cdecl kairn::Ball<float,2>::Ball<float,2>(void)"
+   },
+   "??0?$Ball@N$00@kairn@@QEAA@Ukernel_result_t@detail@1@AEBU?$Expansion@N$00@1@N@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Ball<double,1>::Ball<double,1>(struct kairn::detail::kernel_result_t,struct kairn::Expansion<double,1> const &,double)"
+   },
+   "??0?$Ball@N$00@kairn@@QEAA@XZ": {
+    "instructions": 18,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32,
+    "declaration": "public: __cdecl kairn::Ball<double,1>::Ball<double,1>(void)"
+   },
+   "??0?$Ball@N$01@kairn@@QEAA@Ukernel_result_t@detail@1@AEBU?$Expansion@N$01@1@N@Z": {
+    "instructions": 17,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Ball<double,2>::Ball<double,2>(struct kairn::detail::kernel_result_t,struct kairn::Expansion<double,2> const &,double)"
+   },
+   "??0?$Ball@N$01@kairn@@QEAA@XZ": {
+    "instructions": 18,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 32,
+    "declaration": "public: __cdecl kairn::Ball<double,2>::Ball<double,2>(void)"
+   },
+   "??0?$Expansion@M$00@kairn@@QEAA@M@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Expansion<float,1>::Expansion<float,1>(float)"
+   },
+   "??0?$Expansion@M$00@kairn@@QEAA@XZ": {
+    "instructions": 10,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Expansion<float,1>::Expansion<float,1>(void)"
+   },
+   "??0?$Expansion@M$01@kairn@@QEAA@XZ": {
+    "instructions": 10,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Expansion<float,2>::Expansion<float,2>(void)"
+   },
+   "??0?$Expansion@N$00@kairn@@QEAA@N@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Expansion<double,1>::Expansion<double,1>(double)"
+   },
+   "??0?$Expansion@N$00@kairn@@QEAA@XZ": {
+    "instructions": 10,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Expansion<double,1>::Expansion<double,1>(void)"
+   },
+   "??0?$Expansion@N$01@kairn@@QEAA@XZ": {
+    "instructions": 10,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: __cdecl kairn::Expansion<double,2>::Expansion<double,2>(void)"
+   },
+   "??A?$array@M$07@std@@QEBAAEBM_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: float const & __cdecl std::array<float,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@N$07@std@@QEBAAEBN_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: double const & __cdecl std::array<double,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@U?$Expansion@M$00@kairn@@$07@std@@QEBAAEBU?$Expansion@M$00@kairn@@_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct kairn::Expansion<float,1> const & __cdecl std::array<struct kairn::Expansion<float,1>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@U?$Expansion@M$01@kairn@@$07@std@@QEBAAEBU?$Expansion@M$01@kairn@@_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct kairn::Expansion<float,2> const & __cdecl std::array<struct kairn::Expansion<float,2>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@U?$Expansion@N$00@kairn@@$07@std@@QEBAAEBU?$Expansion@N$00@kairn@@_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct kairn::Expansion<double,1> const & __cdecl std::array<struct kairn::Expansion<double,1>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@U?$Expansion@N$01@kairn@@$07@std@@QEBAAEBU?$Expansion@N$01@kairn@@_K@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct kairn::Expansion<double,2> const & __cdecl std::array<struct kairn::Expansion<double,2>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@UP1@@$07@std@@QEBAAEBUP1@@_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct P1 const & __cdecl std::array<struct P1,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@UP2@@$07@std@@QEBAAEBUP2@@_K@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct P2 const & __cdecl std::array<struct P2,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@UPB2@@$07@std@@QEBAAEBUPB2@@_K@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: struct PB2 const & __cdecl std::array<struct PB2,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@V?$Ball@M$00@kairn@@$07@std@@QEBAAEBV?$Ball@M$00@kairn@@_K@Z": {
+    "instructions": 6,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: class kairn::Ball<float,1> const & __cdecl std::array<class kairn::Ball<float,1>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@V?$Ball@M$01@kairn@@$07@std@@QEBAAEBV?$Ball@M$01@kairn@@_K@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: class kairn::Ball<float,2> const & __cdecl std::array<class kairn::Ball<float,2>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@V?$Ball@N$00@kairn@@$07@std@@QEBAAEBV?$Ball@N$00@kairn@@_K@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: class kairn::Ball<double,1> const & __cdecl std::array<class kairn::Ball<double,1>,8>::operator[](unsigned __int64)const "
+   },
+   "??A?$array@V?$Ball@N$01@kairn@@$07@std@@QEBAAEBV?$Ball@N$01@kairn@@_K@Z": {
+    "instructions": 7,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "public: class kairn::Ball<double,2> const & __cdecl std::array<class kairn::Ball<double,2>,8>::operator[](unsigned __int64)const "
+   },
+   "??D@YA?AUP1@@AEBU0@0@Z": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24,
+    "declaration": "struct P1 __cdecl operator*(struct P1 const &,struct P1 const &)"
+   },
+   "??D@YA?AUP2@@AEBU0@0@Z": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "struct P2 __cdecl operator*(struct P2 const &,struct P2 const &)"
+   },
+   "??D@YA?AUPB2@@AEBU0@0@Z": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56,
+    "declaration": "struct PB2 __cdecl operator*(struct PB2 const &,struct PB2 const &)"
+   },
+   "??Dkairn@@YA?AU?$Expansion@M$00@0@AEBU10@0@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<float,1> __cdecl kairn::operator*(struct kairn::Expansion<float,1> const &,struct kairn::Expansion<float,1> const &)"
+   },
+   "??Dkairn@@YA?AU?$Expansion@N$00@0@AEBU10@0@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<double,1> __cdecl kairn::operator*(struct kairn::Expansion<double,1> const &,struct kairn::Expansion<double,1> const &)"
+   },
+   "??H@YA?AUP1@@AEBU0@0@Z": {
+    "instructions": 15,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 24,
+    "declaration": "struct P1 __cdecl operator+(struct P1 const &,struct P1 const &)"
+   },
+   "??H@YA?AUP2@@AEBU0@0@Z": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0,
+    "declaration": "struct P2 __cdecl operator+(struct P2 const &,struct P2 const &)"
+   },
+   "??H@YA?AUPB2@@AEBU0@0@Z": {
+    "instructions": 27,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56,
+    "declaration": "struct PB2 __cdecl operator+(struct PB2 const &,struct PB2 const &)"
+   },
+   "??Hkairn@@YA?AU?$Expansion@M$00@0@AEBU10@0@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<float,1> __cdecl kairn::operator+(struct kairn::Expansion<float,1> const &,struct kairn::Expansion<float,1> const &)"
+   },
+   "??Hkairn@@YA?AU?$Expansion@N$00@0@AEBU10@0@Z": {
+    "instructions": 13,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 40,
+    "declaration": "struct kairn::Expansion<double,1> __cdecl kairn::operator+(struct kairn::Expansion<double,1> const &,struct kairn::Expansion<double,1> const &)"
+   },
+   "abs_bits": {
+    "instructions": 11,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   },
+   "add_2_2_full": {
+    "instructions": 149,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 296
+   },
+   "ball_add_1_full": {
+    "instructions": 119,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 168
+   },
+   "ball_add_2_full": {
+    "instructions": 202,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 360
+   },
+   "ball_mul_1_full": {
+    "instructions": 139,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 200
+   },
+   "ball_mul_2_full": {
+    "instructions": 199,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 296
+   },
+   "center": {
+    "instructions": 3,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "fma_rn": {
+    "instructions": 25,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 88
+   },
+   "infinity": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "mul_2_2_full": {
+    "instructions": 121,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 200
+   },
+   "quiet_NaN": {
+    "instructions": 2,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "radius": {
+    "instructions": 4,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 0
+   },
+   "times_inf_ce": {
+    "instructions": 22,
+    "cookie_reads": 0,
+    "cookie_checks": 0,
+    "frame": 56
+   }
+  }
+ }
+}

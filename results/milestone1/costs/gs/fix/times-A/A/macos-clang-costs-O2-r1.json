@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "date": "2026-11-19",
+  "commit": "f7ac43e",
+  "machine": {"description": "macOS arm64, Apple M3 Max (12 performance and 4 efficiency cores); not pinned (macOS has no affinity), QoS user-interactive", "cpu": "Apple M3 Max", "pinning": "not pinned (no affinity on macOS); QoS user-interactive"},
+  "compiler": "Apple clang 21.0.0 (clang-2100.4.1.1)",
+  "flags": "-O3 -DNDEBUG -O2 -ffp-contract=off -DKAIRN_CHECKS=0",
+  "kairn_checks": 0,
+  "elements": 256, "reps": 31, "sample_ms": 4,
+  "results": [
+    {"name": "env/loop", "ns_min": 0.3628, "ns_median": 0.3867, "ns_max": 0.3944, "checksum": "0b6050e73d686f4a"},
+    {"name": "add/loop", "ns_min": 1.439, "ns_median": 1.447, "ns_max": 1.453, "checksum": "7e3392f21c52a76d"},
+    {"name": "mul/loop", "ns_min": 0.7169, "ns_median": 0.7194, "ns_max": 0.7244, "checksum": "9e9d2271ebac13ac"},
+    {"name": "add/sum", "ns_min": 7.125, "ns_median": 7.556, "ns_max": 7.602, "checksum": "955263da45fcd4a3"},
+    {"name": "mul/prod", "ns_min": 5.272, "ns_median": 5.649, "ns_max": 5.719, "checksum": "caa9f609468cd84f"},
+    {"name": "k1/loop", "ns_min": 0.1402, "ns_median": 0.1431, "ns_max": 0.1476, "checksum": "937765c9899a3f28"},
+    {"name": "k1/sum", "ns_min": 0.3915, "ns_median": 0.3926, "ns_max": 0.3946, "checksum": "5fab4184c96bb7e1"},
+    {"name": "k1/call", "ns_min": 0.8102, "ns_median": 0.8118, "ns_max": 0.8322, "checksum": "937765c9899a3f28"},
+    {"name": "double/loop", "ns_min": 0.1422, "ns_median": 0.1432, "ns_max": 0.1474, "checksum": "f60fda2a2cf2af28"},
+    {"name": "double/call", "ns_min": 0.8102, "ns_median": 0.8119, "ns_max": 0.8359, "checksum": "f60fda2a2cf2af28"},
+    {"name": "double/sum", "ns_min": 0.3916, "ns_median": 0.3929, "ns_max": 0.3997, "checksum": "3673372519bd4b21"},
+    {"name": "fma/chain", "ns_min": 0.7616, "ns_median": 0.763, "ns_max": 0.7795, "checksum": "f4c8579346367334"}
+  ]
+}

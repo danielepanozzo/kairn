@@ -710,55 +710,67 @@ struct Expansion<T, 1> {
     static constexpr Expansion from_limbs_unchecked(const T* limbs) noexcept { return Expansion(limbs[0]); }
 
     /// x + y, rounded to nearest (kernel add_1_1).
-    friend KAIRN_FORCEINLINE constexpr Expansion operator+(Expansion x, Expansion y) noexcept
+    friend KAIRN_FORCEINLINE constexpr Expansion operator+(const Expansion& x, const Expansion& y) noexcept
         requires detail::proof_checked<gen::bounds::add_1_1<T>>
     {
         return detail::add(x, y);
     }
     /// x - y, rounded to nearest (kernel add_1_1 on x and -y).
-    friend KAIRN_FORCEINLINE constexpr Expansion operator-(Expansion x, Expansion y) noexcept
+    friend KAIRN_FORCEINLINE constexpr Expansion operator-(const Expansion& x, const Expansion& y) noexcept
         requires detail::proof_checked<gen::bounds::add_1_1<T>>
     {
         return detail::sub(x, y);
     }
     /// x * y, rounded to nearest (kernel mul_1_1).
-    friend KAIRN_FORCEINLINE constexpr Expansion operator*(Expansion x, Expansion y) noexcept
+    friend KAIRN_FORCEINLINE constexpr Expansion operator*(const Expansion& x, const Expansion& y) noexcept
         requires detail::proof_checked<gen::bounds::mul_1_1<T>>
     {
         return detail::mul(x, y);
     }
     /// x = x + y (kernel add_1_1).
-    friend KAIRN_FORCEINLINE constexpr Expansion& operator+=(Expansion& x, Expansion y) noexcept
+    friend KAIRN_FORCEINLINE constexpr Expansion& operator+=(Expansion& x, const Expansion& y) noexcept
         requires detail::proof_checked<gen::bounds::add_1_1<T>>
     {
         return x = detail::add(x, y);
     }
     /// x = x - y (kernel add_1_1).
-    friend KAIRN_FORCEINLINE constexpr Expansion& operator-=(Expansion& x, Expansion y) noexcept
+    friend KAIRN_FORCEINLINE constexpr Expansion& operator-=(Expansion& x, const Expansion& y) noexcept
         requires detail::proof_checked<gen::bounds::add_1_1<T>>
     {
         return x = detail::sub(x, y);
     }
     /// x = x * y (kernel mul_1_1).
-    friend KAIRN_FORCEINLINE constexpr Expansion& operator*=(Expansion& x, Expansion y) noexcept
+    friend KAIRN_FORCEINLINE constexpr Expansion& operator*=(Expansion& x, const Expansion& y) noexcept
         requires detail::proof_checked<gen::bounds::mul_1_1<T>>
     {
         return x = detail::mul(x, y);
     }
     /// -x, exactly.
-    friend KAIRN_FORCEINLINE constexpr Expansion operator-(Expansion x) noexcept { return detail::neg(x); }
+    friend KAIRN_FORCEINLINE constexpr Expansion operator-(const Expansion& x) noexcept { return detail::neg(x); }
     /// Whether x < y, exactly: the comparison of T. False if either is NaN.
-    friend KAIRN_FORCEINLINE constexpr bool operator<(Expansion x, Expansion y) noexcept { return detail::lt(x, y); }
+    friend KAIRN_FORCEINLINE constexpr bool operator<(const Expansion& x, const Expansion& y) noexcept {
+        return detail::lt(x, y);
+    }
     /// Whether x > y, exactly. False if either is NaN.
-    friend KAIRN_FORCEINLINE constexpr bool operator>(Expansion x, Expansion y) noexcept { return detail::lt(y, x); }
+    friend KAIRN_FORCEINLINE constexpr bool operator>(const Expansion& x, const Expansion& y) noexcept {
+        return detail::lt(y, x);
+    }
     /// Whether x <= y, exactly. False if either is NaN.
-    friend KAIRN_FORCEINLINE constexpr bool operator<=(Expansion x, Expansion y) noexcept { return detail::le(x, y); }
+    friend KAIRN_FORCEINLINE constexpr bool operator<=(const Expansion& x, const Expansion& y) noexcept {
+        return detail::le(x, y);
+    }
     /// Whether x >= y, exactly. False if either is NaN.
-    friend KAIRN_FORCEINLINE constexpr bool operator>=(Expansion x, Expansion y) noexcept { return detail::le(y, x); }
+    friend KAIRN_FORCEINLINE constexpr bool operator>=(const Expansion& x, const Expansion& y) noexcept {
+        return detail::le(y, x);
+    }
     /// Whether x == y, exactly (+0 equals -0). False if either is NaN.
-    friend KAIRN_FORCEINLINE constexpr bool operator==(Expansion x, Expansion y) noexcept { return detail::eq(x, y); }
+    friend KAIRN_FORCEINLINE constexpr bool operator==(const Expansion& x, const Expansion& y) noexcept {
+        return detail::eq(x, y);
+    }
     /// Whether x != y, exactly. True if either is NaN.
-    friend KAIRN_FORCEINLINE constexpr bool operator!=(Expansion x, Expansion y) noexcept { return !detail::eq(x, y); }
+    friend KAIRN_FORCEINLINE constexpr bool operator!=(const Expansion& x, const Expansion& y) noexcept {
+        return !detail::eq(x, y);
+    }
 };
 
 /// Two limbs (a double-word number): the value is limb[0] + limb[1], exactly, and limb[1] is at

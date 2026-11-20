@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "date": "2026-11-20",
+  "commit": "f7ac43e",
+  "machine": {"description": "Windows 11 x64, Intel Core i5-13500T (6 performance and 8 efficiency cores); one logical processor of a performance core, its sibling mostly idle; a shared CI machine", "cpu": "13th Gen Intel(R) Core(TM) i5-13500T", "pinning": "pinned to one logical CPU"},
+  "compiler": "MSVC 19.52.37029",
+  "flags": "/DWIN32 /D_WINDOWS /EHsc /GS- /O2 /Ob2 /DNDEBUG /Od /Ob0 /fp:precise /arch:AVX2 -DKAIRN_CHECKS=1",
+  "kairn_checks": 1,
+  "elements": 256, "reps": 31, "sample_ms": 4,
+  "results": [
+    {"name": "env/loop", "ns_min": 2.624, "ns_median": 2.626, "ns_max": 2.784, "checksum": "09b4ec233e6176a6"},
+    {"name": "add/loop", "ns_min": 40.71, "ns_median": 41.94, "ns_max": 43.05, "checksum": "7e3392f21c52a76d"},
+    {"name": "mul/loop", "ns_min": 48.49, "ns_median": 49.18, "ns_max": 50.78, "checksum": "9e9d2271ebac13ac"},
+    {"name": "add/sum", "ns_min": 41.85, "ns_median": 42.52, "ns_max": 45.63, "checksum": "955263da45fcd4a3"},
+    {"name": "mul/prod", "ns_min": 48.99, "ns_median": 49.56, "ns_max": 53.36, "checksum": "caa9f609468cd84f"},
+    {"name": "k1/loop", "ns_min": 5.029, "ns_median": 5.047, "ns_max": 5.244, "checksum": "937765c9899a3f28"},
+    {"name": "k1/sum", "ns_min": 4.833, "ns_median": 4.835, "ns_max": 5.073, "checksum": "5fab4184c96bb7e1"},
+    {"name": "k1/call", "ns_min": 6.671, "ns_median": 7.44, "ns_max": 8.302, "checksum": "937765c9899a3f28"},
+    {"name": "double/loop", "ns_min": 0.9702, "ns_median": 0.9745, "ns_max": 0.9969, "checksum": "f60fda2a2cf2af28"},
+    {"name": "double/call", "ns_min": 1.372, "ns_median": 1.389, "ns_max": 1.468, "checksum": "f60fda2a2cf2af28"},
+    {"name": "double/sum", "ns_min": 1.655, "ns_median": 1.662, "ns_max": 1.739, "checksum": "3673372519bd4b21"},
+    {"name": "fma/chain", "ns_min": 7.026, "ns_median": 7.033, "ns_max": 8.438, "checksum": "f4c8579346367334"}
+  ]
+}

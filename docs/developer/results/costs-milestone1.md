@@ -10,7 +10,9 @@ be reported in Milestone 1"; the `/GS` stack cookie that MSVC put in functions h
 hazards](../design/phase0/environment.md#compiler-hazards-found-on-the-way); and the time of the
 quick tier on GitHub's hosted runners, which the brief wants
 "[under ~2 minutes per platform](../design/brief.md#tiers)". The library is that of commit
-`040922c` (its headers last changed in `24f751a`); the tools are in
+`040922c` (its headers last changed in `24f751a`), except for the fix of the stack cookie, measured
+on the headers before it (those of `76da414`, which differ from them in comments only) and after it;
+the tools are in
 [`bench/`](https://github.com/danielepanozzo/kairn/tree/main/bench) (`compile_time.py`,
 `costs.cpp`, `gs_probe.py`, `ci_times.py`, documented in its README), and the measurements, as
 JSON, in
@@ -107,7 +109,10 @@ checks that its operands are canonical. Times per call or per operation, at `-O2
 
 ### 3. MSVC and the `/GS` stack cookie
 
-With the headers of today and MSVC 19.52 at `/O2 /arch:AVX2`, from the disassembly:
+**Fixed** in the headers of `3672c2a`: the operators of `Expansion<T, 1>` take their operands by
+`const&`. The first four items are the problem as it was measured, with the headers of `040922c`
+and MSVC 19.52 at `/O2 /arch:AVX2`, from the disassembly; the last four are what was done
+([the fix in detail](#the-fix-applied)).
 
 - **Functions that hold an `Expansion<double, 1>` get the cookie**: 10 of the 11 shapes tried
   (one operation returned by value or through a pointer, loops, chains, a dot product, `axpy`);
@@ -132,12 +137,51 @@ With the headers of today and MSVC 19.52 at `/O2 /arch:AVX2`, from the disassemb
   recompiled with today's MSVC, its plain structure gets it too (`dot_k1`, 40 instructions against
   30 for `double`). `Expansion<double, 2>`, an array of two passed by value in `detail`, does not
   trigger it.
-- **The fix is evident and was not applied**: pass `Expansion<T, 1>` by `const&` in its operators
-  and in the functions of `expansion.hpp` that take it (81 parameters). Applied to a copy of the
-  headers, it removes the cookie from every function of the probe, and the code is that of
-  `/GS-` (4 instructions for `*z = x + y`), except the dot product (47 instructions against 40).
-  Whether GCC and Clang still compile `Expansion<double, 1>` exactly as `double` with it is for
-  `api.k1.zero_cost` to say; it was not run.
+- **The evident fix**: pass `Expansion<T, 1>` by `const&` in its operators and in the functions of
+  `expansion.hpp` that take it (81 parameters). Applied to a copy of the headers, it removes the
+  cookie from every function of the probe, and the code is that of `/GS-` (4 instructions for
+  `*z = x + y`), except the dot product (47 instructions against 40).
+- **That fix, A, was applied and taken back.** Measured on the five compilers, it removes the
+  cookie at `/O2`, but it makes the dot product 7 instructions longer with MSVC, with `double` and
+  `float` limbs (a callee-saved register saved and restored once per call; `float` limbs never had
+  the cookie), and every one-limb function of the probe 3 to 8 instructions longer with GCC 13 and
+  16 at `-O0`: on the M3, the loop of one-limb sums takes 1.07 to 1.09 times as long, and the call
+  per element 1.12 to 1.13 times.
+- **What the headers have, H: the 22 parameters of the operators alone.** The operators of
+  `Expansion<T, 1>`, its hidden friends, take it by `const&`, as the operators of two limbs do; the
+  functions of `detail` keep it by value, as those of two limbs do. In every shape measured the
+  cookie went to the function whose own code passes an `Expansion<T, 1>` by value, and not to the
+  functions this one is inlined into; of the public interface only these operators took it by
+  value. With MSVC at `/O2` no function of the probe gets the cookie, with `double` or `float`
+  limbs, and its code is that of `/GS-` before the fix, the dot product included (40
+  instructions). Called once per element, `x + y` takes 0.90 ns instead of 1.77; `/GS` over
+  `/GS-` is 1.00 (1.97 before; 1.00 with `KAIRN_CHECKS`, 1.25 before), a chain of sums 1.00
+  (1.04). With GCC 13 and 16, Clang 18 and Apple clang every function of the probe is identical
+  to before at `-O2`; at `-O0` the 22 one-limb functions differ and none is longer (up to 7
+  instructions shorter). On Zen 2, `costs.cpp`'s one-limb rows take 0.98 to 1.05 times as long as
+  before at `-O2` and `-O3`, and 0.81 to 1.01 times at `-O0`.
+- **H leaves the cookie in two functions that a program built at `/O2` does not call.** MSVC
+  compiles a copy of each operator a translation unit uses, out of line, beside the inlined code;
+  the copies of `operator+` and `operator*` for `double` read the cookie (13 instructions), because
+  `detail::add` and `detail::mul` take their operands by value there. With inlining on (`/Ob1`,
+  `/Ob2`, the default at `/O2`) every call of an operator is inlined (they are `__forceinline`;
+  with `/W4` MSVC warns, C4714, when it cannot inline one), and a hidden friend has no name a
+  program could take the address of. Only code compiled
+  without inlining calls a copy (`/Ob0`, which `/Od` implies, as in CMake's Debug configuration),
+  and such a unit compiles its own copy, without the cookie (measured at `/O2 /Ob0` and at `/Od`).
+  The copy with the cookie is called only if such a unit is linked with a unit compiled with
+  inlining and the linker keeps the latter's copy: it keeps one of the copies of an inline
+  function, any. Two ways of removing it were measured and not taken: `__declspec(safebuffers)` on
+  the operators leaves it, and the seven functions of `detail` they call taking `const&` removes
+  it, but the dot product is then 47 instructions, as with A.
+- **At `/Od` the cookie stays**, before the fix, with A and with H: 104 of the 233 functions of the
+  probe read it, every one that holds a structure with an array of 8 bytes or more (every type but
+  `double`, `float` and `Expansion<float, 1>`), except the two of each of Kairn's types that return
+  their result by value. Called once per element, `x + y` takes 1.14 to 1.22 times as long with
+  `/GS` as with `/GS-` with H (1.19 to 1.26 before, in the same runs), 1.08 to 1.15 with
+  `KAIRN_CHECKS` (1.16 to 1.20). **`api.k1.zero_cost` fails** with MSVC when a function it
+  compiles has the cookie; it compiles two shapes that had it, one operation stored through a
+  pointer and a running sum, and against the headers before the fix it fails on both.
 
 ### 4. The quick tier on the hosted runners
 
@@ -587,6 +631,160 @@ function), median 1.000; one function is above 3%, `api/tp/ball_add_1/kairn` (1.
 which has no cookie: with `/GS` MSVC also lays out the stack frame differently, and 11 of the 186
 functions of `api.cpp` differ in a few instructions or in the size of the frame.
 
+### The fix, applied
+
+Three versions of the headers: *before* (`76da414`); *A* (`f7ac43e`), every one of the 81
+one-limb parameters by `const&`, the fix of the copy above; *H* (`3672c2a`), what the headers
+have: the 22 parameters of the hidden friends of `Expansion<T, 1>` (its arithmetic, compound
+assignments, negation and comparisons) by `const&`, the functions of `detail` and the mixed forms
+by value, as before. The probe now has the same shapes for `float` limbs, and `gs_probe.py probe
+--all` also reports the functions of Kairn that MSVC compiles out of line (233 functions in all).
+
+With MSVC at `/O2`, instructions with `/GS` (with `/GS-` where they differ):
+
+| Shape | `Expansion<double, 1>`, before | A | H | `Expansion<float, 1>`, before | A | H |
+|---|---|---|---|---|---|---|
+| `ret_add` | **cookie**, 13 (5) | 5 | 5 | 5 | 5 | 5 |
+| `ret_mul` | **cookie**, 13 (5) | 5 | 5 | 5 | 5 | 5 |
+| `add` | **cookie**, 12 (4) | 4 | 4 | 4 | 4 | 4 |
+| `mul` | **cookie**, 12 (4) | 4 | 4 | 4 | 4 | 4 |
+| `tp_add` | **cookie**, 38 (30) | 30 | 30 | 30 | 30 | 30 |
+| `tp_mul` | **cookie**, 38 (30) | 30 | 30 | 30 | 30 | 30 |
+| `sum` | **cookie**, 44 (28) | 28 | 28 | 28 | 28 | 28 |
+| `prod` | **cookie**, 32 (24) | 24 | 24 | 24 | 24 | 24 |
+| `dot` | **cookie**, 55 (40) | 47 | 40 | 40 | 47 | 40 |
+| `axpy` | **cookie**, 40 (32) | 32 | 32 | 32 | 32 | 32 |
+| `horner` | 17 | 17 | 17 | 17 | 17 | 17 |
+
+Of the 233 functions, 10 read the cookie before, 0 with A, and 2 with H: the out-of-line copies of
+`kairn::operator+` and `kairn::operator*` for `Expansion<double, 1>`, 13 instructions each, which
+no function of the probe calls. Every other type is compiled as before by A and H. With A the dot
+product keeps one more register live in its unrolled loop, `xmm6`, which the Windows calling
+convention makes the callee save: 7 instructions more per call, none in the loop. In
+`api.k1.zero_cost`'s own dot product A gives 35 instructions, H the 30 of `double`.
+
+When a copy is called. Each translation unit that uses an operator gets a copy of it, compiled with
+that unit's options, and the linker keeps one of them. With inlining (`/Ob1`, `/Ob2`, the default
+at `/O2`) every call of a `__forceinline` function is inlined, and the copy is not called; MSVC
+says when it cannot inline one (warning C4714, at `/W4`). A program cannot take the address of a
+hidden friend: no name finds it but a call. Without inlining (`/Ob0`, the default at `/Od`, and
+CMake's Debug configuration), each call goes to a copy, and the copies compiled at `/O2 /Ob0` and
+at `/Od` do not read the cookie, with H as before the fix. The copy with the cookie is called only
+in a program that links a unit compiled without inlining with one compiled with it, when the
+linker keeps the latter's copy. At `/O2 /Ob0`, 15 of the 233 functions read the cookie before the
+fix (8 of `Expansion<double, 1>`, `add` among them with 18 instructions, and 7 of
+`Ball<double, 1>` and `Ball<float, 1>`), and 7 with H (those of the balls; `add` has 12).
+
+Two ways to remove those two copies' cookie, on H, at `/O2`: `__declspec(safebuffers)` on the
+hidden friends leaves it (2 functions still read it); the seven functions of `detail` that they
+call (`add`, `sub`, `mul`, `neg`, `lt`, `le`, `eq` of two one-limb operands) taking `const&`
+removes it, and the dot product is 47 instructions, as with A. Neither was taken.
+
+With MSVC at `/Od` (`gs_probe.py --level /Od`), the same table:
+
+| Shape | `Expansion<double, 1>`, before | A | H | `Expansion<float, 1>`, before | A | H |
+|---|---|---|---|---|---|---|
+| `ret_add` | 22 | 26 | 26 | 23 | 26 | 26 |
+| `ret_mul` | 22 | 26 | 26 | 23 | 26 | 26 |
+| `add` | **cookie**, 28 (34) | **cookie**, 32 (22) | **cookie**, 32 (22) | 21 | 24 | 24 |
+| `mul` | **cookie**, 28 (34) | **cookie**, 32 (22) | **cookie**, 32 (22) | 21 | 24 | 24 |
+| `tp_add` | **cookie**, 44 (34) | **cookie**, 56 (46) | **cookie**, 56 (46) | 37 | 48 | 48 |
+| `tp_mul` | **cookie**, 44 (34) | **cookie**, 56 (46) | **cookie**, 56 (46) | 37 | 48 | 48 |
+| `sum` | **cookie**, 48 (54) | **cookie**, 62 (52) | **cookie**, 62 (52) | 43 | 56 | 56 |
+| `prod` | **cookie**, 50 (40) | **cookie**, 48 (38) | **cookie**, 48 (38) | 47 | 44 | 44 |
+| `dot` | **cookie**, 65 (61) | **cookie**, 67 (57) | **cookie**, 67 (57) | 55 | 61 | 61 |
+| `axpy` | **cookie**, 62 (52) | **cookie**, 50 (56) | **cookie**, 50 (56) | 45 | 43 | 43 |
+| `horner` | **cookie**, 52 (61) | **cookie**, 56 (49) | **cookie**, 56 (49) | 58 | 56 | 56 |
+
+104 of the 233 functions read the cookie before, with A and with H. At `/Od` nothing is inlined,
+so a function of the probe is the same with A and H: it passes its operands to the operator by
+reference instead of copying them, which is 2 to 14 instructions more in most shapes, and 2 to 12
+fewer in `prod`, `axpy` and, with `float` limbs, `horner`.
+
+GCC and Clang (`gs_probe.py listing`), the 143 functions of the probe against those before the fix;
+"identical" is the same instructions, once labels are anonymized:
+
+| | `-O2`, A | `-O2`, H | `-O0`, A | `-O0`, H |
+|---|---|---|---|---|
+| M3, Apple clang | identical | identical | 22 differ (`e1`, `e1f`): −14 to −6 instructions each | 22 differ: −6 to −2 instructions each |
+| M3, GCC 16 | 2 differ (`e1`, `e1f`), as many instructions | identical | 22 differ: +3 to +8 instructions each | 22 differ: −7 to 0 instructions each |
+| Zen 2, GCC 13 | 2 differ (`e1`, `e1f`), as many instructions | identical | 22 differ: +3 to +8 instructions each | 22 differ: −4 to 0 instructions each |
+| Zen 2, Clang 18 | identical | identical | 22 differ: −11 to −4 instructions each | 22 differ: −4 to 0 instructions each |
+
+The two functions that differ with A at `-O2` are the Horner evaluations of GCC, whose loop
+compares its two registers in the other order, as the one for `double` does. With GCC at `-O0`, A
+passes a pointer through every inlined level (the operator, the function of `detail`, the checks)
+and loads the limb through it at the end; H passes a pointer to the operator only, and copies the
+limb from there on, as before.
+
+The one-limb rows of `costs.cpp`, the variant over before, both built from the same tree but for
+the headers and run one after the other in each of three runs (pinned as above; the i5 with `/GS`
+and with `/GS-`):
+
+| Configuration | `k1/loop`, A | `k1/sum`, A | `k1/call`, A | `k1/loop`, H | `k1/sum`, H | `k1/call`, H |
+|---|---|---|---|---|---|---|
+| M3, Apple clang -O0, `KAIRN_CHECKS` 0 | 0.81 | 0.71 | 0.84 to 0.85 | - | - | - |
+| M3, Apple clang -O2, `KAIRN_CHECKS` 0 | 0.99 to 1.00 | 1.00 | 0.99 to 1.00 | - | - | - |
+| M3, Apple clang -O3, `KAIRN_CHECKS` 0 | 1.00 | 0.99 to 1.00 | 1.00 | - | - | - |
+| M3, Apple clang -O0, `KAIRN_CHECKS` 1 | 0.92 | 0.74 | 0.82 to 0.83 | - | - | - |
+| M3, Apple clang -O2, `KAIRN_CHECKS` 1 | 1.00 to 1.03 | 1.00 | 1.00 to 1.05 | - | - | - |
+| M3, Apple clang -O3, `KAIRN_CHECKS` 1 | 0.98 to 1.01 | 1.00 | 1.00 | - | - | - |
+| M3, GCC 16 -O0, `KAIRN_CHECKS` 0 | 1.07 to 1.09 | 0.63 | 1.12 to 1.13 | - | - | - |
+| M3, GCC 16 -O2, `KAIRN_CHECKS` 0 | 1.00 | 0.99 to 1.00 | 0.99 to 1.02 | - | - | - |
+| M3, GCC 16 -O3, `KAIRN_CHECKS` 0 | 1.00 | 1.00 to 1.06 | 1.00 to 1.06 | - | - | - |
+| M3, GCC 16 -O0, `KAIRN_CHECKS` 1 | 1.07 | 0.74 | 1.00 to 1.01 | - | - | - |
+| M3, GCC 16 -O2, `KAIRN_CHECKS` 1 | 1.00 to 1.01 | 1.00 | 0.94 to 1.00 | - | - | - |
+| M3, GCC 16 -O3, `KAIRN_CHECKS` 1 | 0.99 to 1.00 | 1.00 | 1.00 | - | - | - |
+| Zen 2, GCC 13 -O0, `KAIRN_CHECKS` 0 | 0.96 | 0.70 | 0.93 to 0.94 | 0.92 to 0.93 | 0.84 | 0.93 to 0.94 |
+| Zen 2, GCC 13 -O2, `KAIRN_CHECKS` 0 | 1.00 to 1.02 | 1.00 | 1.00 | 0.99 to 1.00 | 1.00 | 1.00 |
+| Zen 2, GCC 13 -O3, `KAIRN_CHECKS` 0 | 1.01 | 1.00 | 1.00 | 0.98 to 1.00 | 1.00 | 1.00 |
+| Zen 2, GCC 13 -O0, `KAIRN_CHECKS` 1 | 1.03 | 0.79 | 1.02 to 1.03 | 1.01 | 0.83 to 0.84 | 0.99 to 1.00 |
+| Zen 2, GCC 13 -O2, `KAIRN_CHECKS` 1 | 0.98 | 1.00 | 0.96 | 0.99 to 1.00 | 1.00 | 1.00 |
+| Zen 2, GCC 13 -O3, `KAIRN_CHECKS` 1 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| Zen 2, Clang 18 -O0, `KAIRN_CHECKS` 0 | 0.64 | 0.66 | 0.68 | 0.81 to 0.82 | 0.88 | 0.81 to 0.82 |
+| Zen 2, Clang 18 -O2, `KAIRN_CHECKS` 0 | 1.00 to 1.01 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| Zen 2, Clang 18 -O3, `KAIRN_CHECKS` 0 | 1.00 | 1.00 | 1.00 to 1.01 | 1.00 to 1.01 | 1.00 | 1.00 |
+| Zen 2, Clang 18 -O0, `KAIRN_CHECKS` 1 | 0.86 | 0.64 | 0.88 | 0.90 | 0.88 to 0.89 | 0.89 to 0.90 |
+| Zen 2, Clang 18 -O2, `KAIRN_CHECKS` 1 | 1.00 | 1.00 | 1.00 | 1.00 to 1.03 | 1.00 to 1.04 | 1.00 to 1.05 |
+| Zen 2, Clang 18 -O3, `KAIRN_CHECKS` 1 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0.99 to 1.00 |
+| i5, MSVC /Od /GS, `KAIRN_CHECKS` 0 | 1.01 to 1.04 | 0.90 | 1.01 to 1.03 | 1.01 to 1.04 | 0.95 to 0.96 | 0.95 to 0.96 |
+| i5, MSVC /O2 /GS, `KAIRN_CHECKS` 0 | 0.69 to 0.99 | 0.96 | 0.51 | 0.69 to 1.05 | 0.96 | 0.51 |
+| i5, MSVC /Od /GS, `KAIRN_CHECKS` 1 | 1.03 | 1.00 | 1.07 to 1.11 | 1.02 | 1.00 | 0.98 to 1.04 |
+| i5, MSVC /O2 /GS, `KAIRN_CHECKS` 1 | 1.00 | 1.00 | 0.80 | 1.00 | 1.00 | 0.80 |
+| i5, MSVC /Od /GS-, `KAIRN_CHECKS` 0 | 1.01 to 1.04 | 0.90 | 0.94 to 1.06 | 1.01 to 1.04 | 0.95 | 0.93 to 1.06 |
+| i5, MSVC /O2 /GS-, `KAIRN_CHECKS` 0 | 0.95 to 1.05 | 1.00 | 1.00 | 0.95 to 1.43 | 1.00 | 1.00 |
+| i5, MSVC /Od /GS-, `KAIRN_CHECKS` 1 | 1.04 | 1.00 | 1.02 to 1.05 | 1.04 | 1.00 | 1.04 to 1.09 |
+| i5, MSVC /O2 /GS-, `KAIRN_CHECKS` 1 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+
+The loop on the i5 at `/O2` varies from run to run by up to 1.7 times with every version of the
+headers, as in the table of [what it costs](#what-it-costs). The M3's runs of H were not kept: on
+two attempts the machine was shared and the median spread of a run was 6%.
+
+`/GS` over `/GS-` on the i5, measured as in [what it costs](#what-it-costs):
+
+| Headers, program | `k1/loop` | `k1/sum` | `k1/call` | `double/call` | `add/sum` |
+|---|---|---|---|---|---|
+| before, `KAIRN_CHECKS` 0, `/O2` | 1.01 to 1.44 | 1.04 | 1.97 | 1.00 to 1.08 | 1.00 |
+| before, `KAIRN_CHECKS` 0, `/Od` | 0.97 to 1.00 | 0.99 to 1.00 | 1.19 to 1.26 | 0.82 to 1.00 | 0.99 to 1.00 |
+| before, `KAIRN_CHECKS` 1, `/O2` | 1.00 | 1.00 | 1.25 | 1.00 | 1.00 |
+| before, `KAIRN_CHECKS` 1, `/Od` | 1.02 | 1.00 | 1.16 to 1.20 | 1.00 to 1.01 | 0.98 to 1.00 |
+| A, `KAIRN_CHECKS` 0, `/O2` | 0.66 to 1.43 | 1.00 | 1.00 | 0.88 to 1.02 | 1.00 |
+| A, `KAIRN_CHECKS` 0, `/Od` | 1.00 | 1.00 | 1.20 to 1.28 | 1.01 | 0.99 to 1.01 |
+| A, `KAIRN_CHECKS` 1, `/O2` | 1.00 | 1.00 | 1.00 | 0.89 to 0.92 | 1.00 |
+| A, `KAIRN_CHECKS` 1, `/Od` | 1.00 | 1.00 | 1.22 to 1.26 | 1.01 to 1.03 | 0.98 |
+| H, `KAIRN_CHECKS` 0, `/O2` | 0.70 to 1.05 | 1.00 | 1.00 | 0.98 to 1.05 | 1.00 |
+| H, `KAIRN_CHECKS` 0, `/Od` | 1.00 | 1.00 | 1.14 to 1.22 | 1.02 | 1.00 to 1.01 |
+| H, `KAIRN_CHECKS` 1, `/O2` | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| H, `KAIRN_CHECKS` 1, `/Od` | 1.00 | 1.00 | 1.08 to 1.15 | 1.01 to 1.02 | 1.00 to 1.01 |
+
+In nanoseconds, `x + y` called once per element at `/O2` takes 1.77 before and 0.897 to 0.899 with
+A and with H (`/GS-`: 0.898 to 0.899 in all three); with `KAIRN_CHECKS`, 2.19 before and 1.75.
+
+`api.k1.zero_cost` against the three headers, with MSVC: before the fix it fails, its new
+functions `add_k1` (12 instructions against 4) and `sum_k1` reading the cookie in all three
+settings of `/fp`; with A and with H it passes. The raw results of this section are in
+[`results/milestone1/costs/gs/fix/`](https://github.com/danielepanozzo/kairn/tree/main/results/milestone1/costs/gs/fix).
+
 ## The quick tier in detail
 
 ### The tests that take the time
@@ -638,6 +836,19 @@ clang-cl job failed to build in `d0a5b29` and `a906647`. The full tables, per jo
   the i5's phases and threads, and the stack cookie). They differ in the reports, in a unit added
   (`kairn_std`), in MSVC's options of the unoptimized benchmarks (`/Ob0`) and in two variants of
   `gs_isolate.cpp`; every JSON file records its commit, compiler, flags and commands.
+- **The fix of the cookie** ([the fix, applied](#the-fix-applied)), on 2026-11-19: the tools of
+  `dc0f2ab` (`gs_probe.py` with `--include`, `--level`, `--all` and `listing`, and `gs_probe.cpp`
+  with `float` limbs), and for `/O2 /Ob0` those of `a5d6598`, whose `--level` takes several
+  options. Before and A: the headers of `76da414` and `f7ac43e`. H: the probes and listings
+  against the headers of `3672c2a`; `zero_cost.py`, the objects of `costs.cpp` and its runs
+  against those of `76da414` with the 22 parameters changed, which differ from `3672c2a` in the
+  line breaks of six comparisons only (their probes and listings were compared: every function
+  has the same instructions). The runs of `costs.cpp` as above, each run building before and the
+  variant from trees that differ in `include/kairn/expansion.hpp` only: on Zen 2 pinned to one
+  logical CPU of the second socket whose sibling `mpstat` showed 99.6% idle on average for A,
+  95.8% for H; on the i5 to one logical processor of a performance core whose sibling `typeperf`
+  showed 9.7% busy on average, started when no build or test of another job was running; on the
+  M3 as above, for A only.
 - **Benchmarks** (`costs.cpp`): as `kairn-bench` ([the benchmark page](bench-milestone1.md#how-it-was-measured)):
   256 operations per call on arrays in L1, inputs from a fixed seed as in `api.cpp`, samples of
   about 4 ms, 31 per function, in rounds; contraction off, hardware FMA as `kairn::fma` gives it;
@@ -649,5 +860,5 @@ clang-cl job failed to build in `d0a5b29` and `a906647`. The full tables, per jo
   at 22:27 UTC; step times have the one-second resolution of the API.
 - **Not measured**: clang-cl and nvcc compile times; compile times of a whole client project, or
   with precompiled headers or modules; `KAIRN_CHECKS` with `float` limbs, with balls, or in packed
-  code (which has no checks); the cookie with clang-cl; the fix of the cookie against
-  `api.k1.zero_cost`; CI under QEMU, which the brief mentions and the workflow does not run.
+  code (which has no checks); the cookie with clang-cl; the M3's one-limb timings of H; CI under
+  QEMU, which the brief mentions and the workflow does not run.

@@ -2,8 +2,8 @@
 """zero_cost.py --cxx COMPILER --include DIR --workdir DIR [--msvc] [--flags "..."]
 
 Compiles k1.cpp to assembly under each contraction setting that matters to the compiler and
-compares, for each pair of functions (axpy, dot, horner), the instructions emitted for double and
-for kairn::Expansion<double, 1> (docs/developer/design/phase0/library.md, "One limb").
+compares, for each pair of functions (add, sum, axpy, dot, horner), the instructions emitted for
+double and for kairn::Expansion<double, 1> (docs/developer/design/phase0/library.md, "One limb").
 
 A pair is "identical" (the same lines once labels and names are anonymized), "same instructions"
 (the same multiset of mnemonics), "k1 has fewer" (no mnemonic more for Expansion<double, 1>),
@@ -12,6 +12,12 @@ instructions in all), or DIFFERENT. The run fails on a DIFFERENT pair in a setti
 documents say the costs must match; where they say they do not (Clang's default contraction without
 KAIRN_K1_CONTRACT, decision D6, and every MSVC setting, which does not vectorize loops over a
 wrapper), the result is reported.
+
+With MSVC the run also fails, in every setting, when one of these functions has a /GS stack cookie
+(reads __security_cookie or calls __security_check_cookie): functions holding an
+Expansion<double, 1> got one while its operators took it by value, and the same code on double did
+not (docs/developer/results/costs-milestone1.md, "MSVC and the /GS stack cookie"). add and sum
+are shapes that got it; axpy, dot and horner did not.
 """
 import argparse
 import os
@@ -22,7 +28,7 @@ from collections import Counter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SOURCE = os.path.join(HERE, 'k1.cpp')
-NAMES = ('axpy', 'dot', 'horner')
+NAMES = ('add', 'sum', 'axpy', 'dot', 'horner')
 
 
 def functions(path):
@@ -32,7 +38,7 @@ def functions(path):
     funcs, cur = {}, None
     for line in text:
         line = line.split(';')[0].rstrip() if msvc else line.split('//')[0].rstrip()
-        m = re.match(r'^_?(?:_Z\w*?|\?)?(\w*?(axpy|dot|horner)_(plain|k1))\w*(?:@@\S*)?\s*(?::|PROC)', line)
+        m = re.match(r'^_?(?:_Z\w*?|\?)?(\w*?(add|sum|axpy|dot|horner)_(plain|k1))\w*(?:@@\S*)?\s*(?::|PROC)', line)
         if m:
             cur = m.group(2) + '_' + m.group(3)
             funcs[cur] = []
@@ -47,7 +53,7 @@ def functions(path):
         if re.match(r'^[.\w$@?]+:$', s) or s.startswith('$LN') or s.startswith('$LL'):
             continue   # a label
         s = re.sub(r'\.?L[A-Za-z_]*\d+\b|\$L[LN]\d+@\w+|Ltmp\d+|LBB\d+_\d+', '<label>', s)
-        s = re.sub(r'\b\w*(axpy|dot|horner)_(plain|k1)\w*', '<self>', s)
+        s = re.sub(r'\b\w*(add|sum|axpy|dot|horner)_(plain|k1)\w*', '<self>', s)
         funcs[cur].append(re.sub(r'\s+', ' ', s))
     return funcs
 
@@ -55,6 +61,12 @@ def functions(path):
 # Floating-point arithmetic, scalar or packed: x86 (SSE, AVX, FMA) and AArch64 mnemonics.
 ARITHMETIC = re.compile(r'^(v?(add|sub|mul|div|sqrt|min|max)[sp][sd]|vf?n?m(add|sub)(132|213|231)?[sp][sd]'
                         r'|f(add|sub|mul|div|sqrt|madd|msub|nmadd|nmsub|nmul|mla|mls|neg|abs|min|max)(\.\w+)?)$')
+
+
+def cookie(lines):
+    """Whether an MSVC function has the /GS stack cookie: it reads __security_cookie at its entry
+    and calls __security_check_cookie at its exit."""
+    return any('__security_cookie' in x or '__security_check_cookie' in x for x in lines)
 
 
 def listing(counter):
@@ -147,6 +159,11 @@ def main():
             print(f'    {name:7s} double: {len(a):3d} instructions   Expansion<double, 1>: {len(b):3d}   {text}')
             if must and not ok:
                 failed = True
+            if args.msvc:
+                for which, lines in (('double', a), ('Expansion<double, 1>', b)):
+                    if cookie(lines):
+                        print(f'    {name:7s} FAILED: the function for {which} has a /GS stack cookie')
+                        failed = True
     print('FAILED' if failed else 'ok')
     return 1 if failed else 0
 
