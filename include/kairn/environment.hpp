@@ -61,16 +61,22 @@ inline const char* environment_problem() noexcept {
 #endif
 }
 
-// The environment check of KAIRN_CHECKS, before a scalar operation; nothing in constant
-// evaluation, which has its own fixed rounding.
-KAIRN_FORCEINLINE constexpr void check_environment() noexcept {
+// The environment check of KAIRN_CHECKS, first in every check of an operation: whether the checks
+// of its operands may follow. False when the environment is not the default one and
+// KAIRN_ENVIRONMENT_FAILURE returned: the operation then goes on without them, since they
+// compute in that environment (x0 + x1 == x0 under a directed rounding mode can be false for a
+// canonical pair). Always true in constant evaluation, which has its own fixed rounding.
+KAIRN_FORCEINLINE constexpr bool check_environment() noexcept {
+    bool ok = true;
 #if KAIRN_CHECKS
     if (!__builtin_is_constant_evaluated()) {
         if (const char* problem = environment_problem()) {
+            ok = false;
             KAIRN_ENVIRONMENT_FAILURE(problem);
         }
     }
 #endif
+    return ok;
 }
 
 }  // namespace detail
@@ -82,7 +88,8 @@ KAIRN_FORCEINLINE constexpr void check_environment() noexcept {
 /// as zero as operands. Kairn never changes these itself; other code can (a directed rounding
 /// mode set by an interval library, or flush-to-zero set at startup by any object compiled with
 /// -ffast-math), and a program that does must restore them before calling Kairn. Checked before
-/// every scalar operation when KAIRN_CHECKS is 1. Only reads. Costs one read of the register:
+/// every operation, and in the constructors that check their operands, when KAIRN_CHECKS is 1,
+/// before the operands (config.hpp). Only reads. Costs one read of the register:
 /// measured at about 2 cycles on an Apple M3, 5 on an Intel Core i5-13500T and 21 on an AMD
 /// Zen 2, where storing MXCSR is slow.
 ///

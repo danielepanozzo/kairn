@@ -183,7 +183,7 @@ The tests of the quick tier:
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, and the same results at run time. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass, and each detects a changed rounding mode and flush-to-zero. |
 | `api.flags.debug.*` | Built as a debug build (CMake's `Debug` flags, no `NDEBUG`): `kairn::self_test()` passes, and so do the constant expressions of `api.constexpr`. |
-| `api.checks.*` | With `KAIRN_CHECKS` 1, in a debug build and in an optimized one: under each directed rounding mode and under flush to zero `kairn::environment_ok()` is false and every operation stops the program with a message; so does every operand that is not canonical and every negative radius; what is canonical passes ([Testing](../developer/testing.md#the-checks-of-a-debug-build)). |
+| `api.checks.*` | With `KAIRN_CHECKS` 1, in a debug build and in an optimized one: under each directed rounding mode and under flush to zero `kairn::environment_ok()` is false and every operation, and every constructor that checks its operands, stops the program with the environment's message; so does every operand that is not canonical and every negative radius; what is canonical passes; with a `KAIRN_ENVIRONMENT_FAILURE` that returns, every operation goes on ([Testing](../developer/testing.md#the-checks-of-a-debug-build)). |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break Kairn and define no macro; `kairn::self_test()` must report a failure. |
 | `api.reject.*` | What must not compile: the flags `config.hpp` rejects; each kind of operation and constructor written without the marker while its kernel is UNVERIFIED (against a copy of the headers in which every kernel is); and an operation whose kernel alone is UNVERIFIED, which must not compile through a conversion to another kernel; with `KAIRN_CHECKS`, a constant expression given an operand the checks refuse. |
 | `api.boundary.*` | A product the program computes and passes into an operation (`x + a * b`, a constructor, `from_limbs`, a ball's center or radius) gives, bit for bit, the result of the same operation on the rounded product, under each contraction setting; `api.boundary.unguarded.*` checks, against a copy of the headers without the generated guard, that the compilers that fuse across statements do change it. |
@@ -359,10 +359,12 @@ defined in the example.
 ### When a check of a build without `NDEBUG` fails
 
 In a build without `NDEBUG`, or with `KAIRN_CHECKS` defined to 1 (the same in every file of the
-program), every operation first checks the environment and its operands. A failed check prints a
-line on the standard error and stops the program with `std::abort()`. In constant evaluation only
-the operands are checked, and an operand that fails makes the expression not a constant
-expression, which the compiler reports.
+program), every operation, and every constructor that is given limbs or a center (`from_limbs`,
+the constructors of `Ball`), checks first the environment and then its operands. A failed check
+prints a line on the standard error and stops the program with `std::abort()`; in a wrong
+environment the line is the environment's, whatever the operands. In constant evaluation only the
+operands are checked, and an operand that fails makes the expression not a constant expression,
+which the compiler reports.
 
 - `kairn: the floating-point environment: ` followed by what is wrong:
   `the rounding mode is not to nearest (MXCSR.RC is not zero)`,
@@ -373,7 +375,8 @@ expression, which the compiler reports.
   `alternate floating-point behavior is on (FPCR.AH is set)` or
   `subnormal operands are read as zero (FPCR.FIZ is set)` on AArch64. Restore the environment as
   above. A program that would rather log it can define `KAIRN_ENVIRONMENT_FAILURE` before
-  including Kairn; the operation then goes on, with no guarantee for its result:
+  including Kairn; the operation then goes on without checking its operands (in that environment
+  the check could refuse a canonical one), with no guarantee for its result:
 
   ```cpp
   --8<-- "docs/examples/cpp/troubleshooting.cpp:handler"

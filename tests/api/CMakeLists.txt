@@ -21,7 +21,8 @@
 #   which self_test() must detect.
 # - api.flags.debug.*: self_test() and constexpr.cpp in the debug build of flags/.
 # - api.checks.*: the checks of KAIRN_CHECKS, which must stop the program under a changed rounding
-#   mode or flush to zero and on an operand that is not canonical, and let the rest through.
+#   mode or flush to zero, with the environment's message, and on an operand that is not
+#   canonical, and let the rest through; with a handler that returns, every operation goes on.
 # - api.reject.*: what must not compile: rejected flags, UNVERIFIED operations without the
 #   marker, and with KAIRN_CHECKS constant expressions that the checks refuse (each with a control
 #   that compiles).

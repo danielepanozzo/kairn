@@ -114,12 +114,13 @@ KAIRN_FORCEINLINE constexpr bool admissible(const Expansion<T, 2>& x) noexcept {
     return canonical(x);
 }
 
-// The checks of KAIRN_CHECKS, once per operation: the environment, and canonical operands.
+// The checks of KAIRN_CHECKS, once per operation: the environment, then canonical operands, which
+// are not checked when the environment is not the default one and KAIRN_ENVIRONMENT_FAILURE
+// returned (check_environment).
 template <class... X>
 KAIRN_FORCEINLINE constexpr void check([[maybe_unused]] const X&... x) noexcept {
 #if KAIRN_CHECKS
-    check_environment();
-    if (!(admissible(x) && ...))
+    if (check_environment() && !(admissible(x) && ...))
         fail("an operand", "is not canonical (finite with x0 + x1 == x0, (+-inf, 0) or (NaN, NaN)), so no "
                            "guarantee applies to the result");
 #endif
@@ -128,8 +129,7 @@ KAIRN_FORCEINLINE constexpr void check([[maybe_unused]] const X&... x) noexcept 
 template <class T>
 KAIRN_FORCEINLINE constexpr void check_core([[maybe_unused]] const Expansion<T, 2>& x) noexcept {
 #if KAIRN_CHECKS
-    check_environment();
-    if (!core_admissible(x))
+    if (check_environment() && !core_admissible(x))
         fail("an operand", "is not normalized (x0 + x1 is not x0), so no guarantee applies to the result");
 #endif
 }
@@ -838,13 +838,14 @@ struct Expansion<T, 2> {
     /// The number with the limbs limbs[0], limbs[1] (kernel make_2_limbs), each guarded. They must
     /// form a canonical pair: finite and normalized (limbs[0] + limbs[1] rounded to nearest is
     /// limbs[0]), or an infinity and a zero, or two NaN; the result has the same limbs (a zero may
-    /// change sign). Checked when KAIRN_CHECKS is 1, and then a violation fails a constant
-    /// expression or calls the failure handler; not checked otherwise.
+    /// change sign). Checked when KAIRN_CHECKS is 1, after the environment as for an operation
+    /// (config.hpp); then a pair that is not canonical fails a constant expression, or prints a
+    /// message and calls std::abort(). Not checked otherwise.
     static constexpr Expansion from_limbs(const T* limbs) noexcept
         requires detail::proof_checked<gen::bounds::make_2_limbs<T>>
     {
 #if KAIRN_CHECKS
-        if (!detail::canonical(Expansion(limbs[0], limbs[1])))
+        if (detail::check_environment() && !detail::canonical(Expansion(limbs[0], limbs[1])))
             detail::fail("from_limbs", "the limbs are not a canonical pair (finite with x0 + x1 == x0, an "
                                        "infinity and a zero, or two NaN)");
 #endif
