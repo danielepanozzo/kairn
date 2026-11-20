@@ -1495,12 +1495,12 @@ class TheKernels(unittest.TestCase):
         # The two constructors of a ball are proved for the rule of 2026-11-20, that a NaN radius
         # gives the whole line (IeeeMake.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.MILESTONE1 | self.WAVE_1 | (self.FOLDS - self.BV) | self.WAVE_2_PROVED)
-        # The radius kernels of BallVector are unverified; no other kernel is: the kernels of wave 2
-        # were, in both models, until their proofs were about the generated text, and so were those
-        # of the accumulator.
+                         self.MILESTONE1 | self.WAVE_1 | self.FOLDS | self.WAVE_2_PROVED)
+        # No kernel is unverified: the kernels of wave 2 were, in both models, until their proofs
+        # were about the generated text, and so were those of the accumulator and the radius
+        # kernels of BallVector (BvRadius.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
-                         self.BV | (self.WAVE_2 - self.WAVE_2_PROVED))
+                         self.WAVE_2 - self.WAVE_2_PROVED)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))

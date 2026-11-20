@@ -1691,7 +1691,7 @@ KAIRN_GEN_FORCEINLINE constexpr void bound_sum_2(float m, float& g_out, bool& ok
 }
 
 // bv_add_radius_1(m, rx, ry) -> rz
-// the radius lines of ball_add_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the radius lines of ball_add_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void bv_add_radius_1(double m, double rx, double ry, double& rz_out) noexcept {
     const double s = rx + ry;
     const double t = fma_rn(m, 0x1p-53, s);
@@ -1706,7 +1706,7 @@ KAIRN_GEN_FORCEINLINE void bv_add_radius_1(float m, float rx, float ry, float& r
 }
 
 // bv_add_radius_2(m, rx, ry) -> rz
-// the radius lines of ball_add_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the radius lines of ball_add_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void bv_add_radius_2(double m, double rx, double ry, double& rz_out) noexcept {
     const double s = rx + ry;
     const double t = fma_rn(m, 0x1.8000000000004p-105, s);
@@ -1721,7 +1721,7 @@ KAIRN_GEN_FORCEINLINE void bv_add_radius_2(float m, float rx, float ry, float& r
 }
 
 // bv_scale_radius_1(m, rx, a) -> rz
-// the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void bv_scale_radius_1(double m, double rx, double a, double& rz_out) noexcept {
     const double aa = abs_bits(a);
     const double p = fma_rn(aa, rx, 0.0);
@@ -1738,7 +1738,7 @@ KAIRN_GEN_FORCEINLINE void bv_scale_radius_1(float m, float rx, float a, float& 
 }
 
 // bv_scale_radius_2(m, rx, a) -> rz
-// the radius lines of ball_scale_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the radius lines of ball_scale_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void bv_scale_radius_2(double m, double rx, double a, double& rz_out) noexcept {
     const double aa = abs_bits(a);
     const double p = fma_rn(aa, rx, 0.0);

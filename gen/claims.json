@@ -2412,8 +2412,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvRadius.v",
+        "name": "bv_add_radius_1_correct"
+      },
       "source": {
         "cite": "the radius lines of ball_add_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -2459,8 +2462,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvRadius.v",
+        "name": "bv_add_radius_2_correct"
+      },
       "source": {
         "cite": "the radius lines of ball_add_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -2505,8 +2511,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvRadius.v",
+        "name": "bv_scale_radius_1_correct"
+      },
       "source": {
         "cite": "the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"
@@ -2551,8 +2560,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BvRadius.v",
+        "name": "bv_scale_radius_2_correct"
+      },
       "source": {
         "cite": "the radius lines of ball_scale_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector)",
         "license": "algorithm and proof: MIT"

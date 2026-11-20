@@ -16,9 +16,10 @@ requires:      nonneg m
 requires:      nonneg rx
 ensures:       upper rz value=abs(a)*rx+m*unit(mul_1_1)/(1-unit(mul_1_1))+tiny(mul_1_1)/(1-unit(mul_1_1))
 min_precision: 1
+theorem:       proofs/theories/BvRadius.v bv_scale_radius_1_correct
 source:        the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 
 aa = abs(a)

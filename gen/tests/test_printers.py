@@ -912,9 +912,12 @@ class Rocq(unittest.TestCase):
     # statements were added, every earlier line kept; their constants are those of ball_add_k and
     # ball_scale_k, under the names they had; Audit.v is the same. Merged here: the regeneration of
     # the merged descriptions.
+    # Then the four radius kernels were proved (BvRadius.v): in Statements.v only the comments above
+    # their four statements changed, and Audit.v lists their four theorems, every earlier line kept,
+    # in its order; Model.v is the same.
     DIGESTS = {'Model.v': '852cded22919dbde42ddc40eec7f67444a76a7e6bb03018ec69df53022dd5c6e',
-               'Statements.v': '7714ada92a2117ef3b15619b32d6ca013faa6f10656a6334c4d364d0e4cd0ccb',
-               'Audit.v': '334016f6f4f8bad2c937552c66f3e114f12e558a5500be9192c3e4fda4efda53'}
+               'Statements.v': '21cc4fd9de3c7b7729aa4ac7a4213374a9df630833f9f49ed4e5f541a39db804',
+               'Audit.v': '8d9bed8f614561a0d9e830437d68483d73fc656ce8157e6063100052e9ea26a8'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

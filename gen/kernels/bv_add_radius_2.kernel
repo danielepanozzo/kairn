@@ -18,9 +18,10 @@ requires:      nonneg rx
 requires:      nonneg ry
 ensures:       upper rz value=rx+ry+m*unit(add_2_2)/(1-unit(add_2_2))*(1+u)
 min_precision: 3
+theorem:       proofs/theories/BvRadius.v bv_add_radius_2_correct
 source:        the radius lines of ball_add_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 
 s  = add(rx, ry)
 t  = fma(m, const up(unit(add_2_2)/(1-unit(add_2_2))*(1+u)), s)

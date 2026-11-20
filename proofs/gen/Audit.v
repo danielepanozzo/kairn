@@ -12,6 +12,7 @@ From Kairn Require Import AddFast22.
 From Kairn Require Import Ball2.
 From Kairn Require Import BallPow2.
 From Kairn Require Import BoundKernels.
+From Kairn Require Import BvRadius.
 From Kairn Require Import Compare.
 From Kairn Require Import Convert.
 From Kairn Require Import Directed.
@@ -114,6 +115,18 @@ Print Assumptions bound_sum_1_correct.
 
 Definition bound_sum_2_audit : bound_sum_2_spec := bound_sum_2_correct.
 Print Assumptions bound_sum_2_correct.
+
+Definition bv_add_radius_1_audit : bv_add_radius_1_spec := bv_add_radius_1_correct.
+Print Assumptions bv_add_radius_1_correct.
+
+Definition bv_add_radius_2_audit : bv_add_radius_2_spec := bv_add_radius_2_correct.
+Print Assumptions bv_add_radius_2_correct.
+
+Definition bv_scale_radius_1_audit : bv_scale_radius_1_spec := bv_scale_radius_1_correct.
+Print Assumptions bv_scale_radius_1_correct.
+
+Definition bv_scale_radius_2_audit : bv_scale_radius_2_spec := bv_scale_radius_2_correct.
+Print Assumptions bv_scale_radius_2_correct.
 
 Definition dot_step_1_audit : dot_step_1_spec := dot_step_1_correct.
 Print Assumptions dot_step_1_correct.

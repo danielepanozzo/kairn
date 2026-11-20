@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 159 kernels, 155 are proved and 4 are **UNVERIFIED**: [`bv_add_radius_1`](bv_add_radius_1.md), [`bv_add_radius_2`](bv_add_radius_2.md), [`bv_scale_radius_1`](bv_scale_radius_1.md), [`bv_scale_radius_2`](bv_scale_radius_2.md).
+All 159 kernels are proved.
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -291,8 +291,8 @@ The one radius of the result of the BallVector kernels of Milestone 2 (the sum, 
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| none (internal) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_1\_1})}{1 - \mathrm{unit}(\mathtt{add\_1\_1})}$ | [`bv_add_radius_1`](bv_add_radius_1.md) **UNVERIFIED** |
-| none (internal) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - \mathrm{unit}(\mathtt{add\_2\_2})} (1 + u)$ | [`bv_add_radius_2`](bv_add_radius_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})} + \frac{\mathrm{tiny}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})}$ | [`bv_scale_radius_1`](bv_scale_radius_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})} (1 + u) + \frac{\mathrm{tiny}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})}$ | [`bv_scale_radius_2`](bv_scale_radius_2.md) **UNVERIFIED** |
+| none (internal) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_1\_1})}{1 - \mathrm{unit}(\mathtt{add\_1\_1})}$ | [`bv_add_radius_1`](bv_add_radius_1.md) |
+| none (internal) | - | $r_z \ge r_x + r_y + \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - \mathrm{unit}(\mathtt{add\_2\_2})} (1 + u)$ | [`bv_add_radius_2`](bv_add_radius_2.md) |
+| not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})} + \frac{\mathrm{tiny}(\mathtt{mul\_1\_1})}{1 - \mathrm{unit}(\mathtt{mul\_1\_1})}$ | [`bv_scale_radius_1`](bv_scale_radius_1.md) |
+| not yet called by the public headers | - | $r_z \ge \lvert a\rvert r_x + \frac{m \mathrm{unit}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})} (1 + u) + \frac{\mathrm{tiny}(\mathtt{mul\_2\_1})}{1 - \mathrm{unit}(\mathtt{mul\_2\_1})}$ | [`bv_scale_radius_2`](bv_scale_radius_2.md) |
 

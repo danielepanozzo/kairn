@@ -386,7 +386,7 @@ Definition bound_sum_2_spec : Prop :=
   (ok = true -> (m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)) <= (1 / 2)) /\
   (ok = true -> ((m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)) / (1 - (m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)))) <= g).
 
-(* bv_add_radius_1: the radius lines of ball_add_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified. *)
+(* bv_add_radius_1: the radius lines of ball_add_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: proved. *)
 Definition bv_add_radius_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall m rx ry : R,
@@ -400,7 +400,7 @@ Definition bv_add_radius_1_spec : Prop :=
   fmt emin prec rz /\
   ((rx + ry) + ((m * ((1 / (1 + u prec)) * u prec ^ 1)) / (1 - ((1 / (1 + u prec)) * u prec ^ 1)))) <= rz.
 
-(* bv_add_radius_2: the radius lines of ball_add_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified. *)
+(* bv_add_radius_2: the radius lines of ball_add_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: proved. *)
 Definition bv_add_radius_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall m rx ry : R,
@@ -414,7 +414,7 @@ Definition bv_add_radius_2_spec : Prop :=
   fmt emin prec rz /\
   ((rx + ry) + (((m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)) / (1 - ((3 / (1 - (4 * u prec))) * u prec ^ 2))) * (1 + u prec))) <= rz.
 
-(* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified. *)
+(* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: proved. *)
 Definition bv_scale_radius_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall m rx a : R,
@@ -427,7 +427,7 @@ Definition bv_scale_radius_1_spec : Prop :=
   fmt emin prec rz /\
   ((((Rabs a) * rx) + ((m * ((1 / (1 + u prec)) * u prec ^ 1)) / (1 - ((1 / (1 + u prec)) * u prec ^ 1)))) + (((1 / 2) * eta emin) / (1 - ((1 / (1 + u prec)) * u prec ^ 1)))) <= rz.
 
-(* bv_scale_radius_2: the radius lines of ball_scale_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified. *)
+(* bv_scale_radius_2: the radius lines of ball_scale_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: proved. *)
 Definition bv_scale_radius_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall m rx a : R,

@@ -96,7 +96,8 @@ lists:
   its kernels, over the real numbers and with overflow, infinities and NaN (`FoldNorm.v`,
   `IeeeFoldNorm.v`; [below](#the-largest-magnitude-of-an-array)); of the product of two
   polynomials, over the real numbers and with overflow, infinities and NaN (`FoldConv.v`,
-  `IeeeFoldConv.v`; [below](#the-product-of-two-polynomials)); and of the kernels of
+  `IeeeFoldConv.v`; [below](#the-product-of-two-polynomials)); of the radius kernels of the
+  ball vectors (`BvRadius.v`; [below](#ball-vectors)); and of the kernels of
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
   infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
   `IeeeAccumulator.v`; [below](#the-accumulator));
@@ -152,7 +153,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  94 files: no Admitted, admit, Axiom or Parameter
+  95 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -464,6 +465,22 @@ statement hold; otherwise every limb of the coefficient is a NaN; and the mask i
 when every leading limb is finite. The proof reads the IEEE-model theorem of the dot product
 (`dot_k_seq_ieee_correct`, about the finish of that state) on the state: the finish of a state
 whose leading limb is finite returns it, with the flag true.
+
+## Ball vectors
+
+A ball vector is $N$ centers with one radius ([the design](../developer/design/milestone2.md#ballvector)):
+`bv_add_k`, `bv_sub_k` and `bv_scale_k` write the centers of the result by the map of their
+operation, record the largest magnitude $m$ of a center written (of its leading limb, for two
+limbs), and compute the one radius by a radius kernel on $m$ and the scalars.
+
+**The radius kernels** (`BvRadius.v`): `bv_add_radius_k` and `bv_scale_radius_k` have their
+generated statements as types. They are the radius lines of `ball_add_k` and `ball_scale_k`
+with $m$ in place of the magnitude of one entry's center, and their claim is that the radius
+is a number of the format and at least $r_x + r_y + U\kappa\,m$ (sum and difference) or
+$\lvert a\rvert r_x + U\kappa\,m + V$ (scaling), with $U$ and $V$ from the bound of the step
+relative to its result and $\kappa = (1+u)^{k-1}$: the bound of the radius of the Ball
+kernels (`Ball2.v`, `radius_2`) at $m$, for every $m \ge 0$ and radii $\ge 0$. These are
+statements of the real model.
 
 ## The accumulator
 
