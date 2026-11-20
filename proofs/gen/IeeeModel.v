@@ -1074,6 +1074,11 @@ Definition fast_two_sum_prog : list instr :=
   ; Isub 1 3  (*  4 e *)
   ].
 
+(* inputs: 0 s, 1 x, 2 y *)
+Definition dot_step_1_prog : list instr :=
+  [ Ifma 1 2 0  (*  3 t *)
+  ].
+
 (* inputs: 0 a, 1 b *)
 Definition fast_two_sum_entry_prog : list instr :=
   [ Iguard 0  (*  2 ga *)
@@ -1087,6 +1092,12 @@ Definition fast_two_sum_entry_prog : list instr :=
 Definition two_prod_prog : list instr :=
   [ Iprod 0 1   (*  2 p *)
   ; Ifms 0 1 2  (*  3 e *)
+  ].
+
+(* inputs: 0 s, 1 x *)
+Definition sum_entry_step_1_prog : list instr :=
+  [ Iguard 1  (*  2 g *)
+  ; Iadd 0 2  (*  3 t *)
   ].
 
 (* inputs: 0 a, 1 b *)
@@ -1176,6 +1187,39 @@ Definition mul_2_1_prog : list instr :=
   ; Isub 5 7    (*  8 z1 *)
   ].
 
+(* inputs: 0 s0, 1 s1, 2 x0, 3 x1, 4 y0, 5 y1 *)
+Definition dot_step_2_prog : list instr :=
+  [ Iprod 2 4   (*  6 p0_ch *)
+  ; Ifms 2 4 6  (*  7 p0_cl1 *)
+  ; Iprod 3 5   (*  8 p0_tl0 *)
+  ; Ifma 2 5 8  (*  9 p0_tl1 *)
+  ; Ifma 3 4 9  (* 10 p0_cl2 *)
+  ; Iadd 7 10   (* 11 p0_cl3 *)
+  ; Iadd 6 11   (* 12 p0 *)
+  ; Isub 12 6   (* 13 p0_z *)
+  ; Isub 11 13  (* 14 p1 *)
+  ; Iadd 0 12   (* 15 t0_sh *)
+  ; Isub 15 0   (* 16 t0_sh_bb *)
+  ; Isub 15 16  (* 17 t0_sh_t0 *)
+  ; Isub 0 17   (* 18 t0_sh_t1 *)
+  ; Isub 12 16  (* 19 t0_sh_t2 *)
+  ; Iadd 18 19  (* 20 t0_sl *)
+  ; Iadd 1 14   (* 21 t0_th *)
+  ; Isub 21 1   (* 22 t0_th_bb *)
+  ; Isub 21 22  (* 23 t0_th_t0 *)
+  ; Isub 1 23   (* 24 t0_th_t1 *)
+  ; Isub 14 22  (* 25 t0_th_t2 *)
+  ; Iadd 24 25  (* 26 t0_tl *)
+  ; Iadd 20 21  (* 27 t0_c *)
+  ; Iadd 15 27  (* 28 t0_vh *)
+  ; Isub 28 15  (* 29 t0_vh_z *)
+  ; Isub 27 29  (* 30 t0_vl *)
+  ; Iadd 26 30  (* 31 t0_w *)
+  ; Iadd 28 31  (* 32 t0 *)
+  ; Isub 32 28  (* 33 t0_z *)
+  ; Isub 31 33  (* 34 t1 *)
+  ].
+
 (* inputs: 0 x0, 1 x1, 2 c *)
 Definition mul_pow2_2_prog : list instr :=
   [ Iprod 0 2  (*  3 h *)
@@ -1242,4 +1286,47 @@ Definition sub_2_2_prog : list instr :=
   ; Iadd 19 22  (* 23 z0 *)
   ; Isub 23 19  (* 24 z0_z *)
   ; Isub 22 24  (* 25 z1 *)
+  ].
+
+(* inputs: 0 s0, 1 s1, 2 x0, 3 x1 *)
+Definition sum_entry_step_2_prog : list instr :=
+  [ Iguard 2    (*  4 g0 *)
+  ; Iguard 3    (*  5 g1 *)
+  ; Iadd 0 4    (*  6 t0_sh *)
+  ; Isub 6 0    (*  7 t0_sh_bb *)
+  ; Isub 6 7    (*  8 t0_sh_t0 *)
+  ; Isub 0 8    (*  9 t0_sh_t1 *)
+  ; Isub 4 7    (* 10 t0_sh_t2 *)
+  ; Iadd 9 10   (* 11 t0_sl *)
+  ; Iadd 1 5    (* 12 t0_th *)
+  ; Isub 12 1   (* 13 t0_th_bb *)
+  ; Isub 12 13  (* 14 t0_th_t0 *)
+  ; Isub 1 14   (* 15 t0_th_t1 *)
+  ; Isub 5 13   (* 16 t0_th_t2 *)
+  ; Iadd 15 16  (* 17 t0_tl *)
+  ; Iadd 11 12  (* 18 t0_c *)
+  ; Iadd 6 18   (* 19 t0_vh *)
+  ; Isub 19 6   (* 20 t0_vh_z *)
+  ; Isub 18 20  (* 21 t0_vl *)
+  ; Iadd 17 21  (* 22 t0_w *)
+  ; Iadd 19 22  (* 23 t0 *)
+  ; Isub 23 19  (* 24 t0_z *)
+  ; Isub 22 24  (* 25 t1 *)
+  ].
+
+(* inputs: 0 s0, 1 s1, 2 x0, 3 x1 *)
+Definition sum_fast_entry_step_2_prog : list instr :=
+  [ Iguard 2    (*  4 g0 *)
+  ; Iguard 3    (*  5 g1 *)
+  ; Iadd 0 4    (*  6 t0_sh *)
+  ; Isub 6 0    (*  7 t0_sh_bb *)
+  ; Isub 6 7    (*  8 t0_sh_t0 *)
+  ; Isub 0 8    (*  9 t0_sh_t1 *)
+  ; Isub 4 7    (* 10 t0_sh_t2 *)
+  ; Iadd 9 10   (* 11 t0_sl *)
+  ; Iadd 1 5    (* 12 t0_v *)
+  ; Iadd 11 12  (* 13 t0_w *)
+  ; Iadd 6 13   (* 14 t0 *)
+  ; Isub 14 6   (* 15 t0_z *)
+  ; Isub 13 15  (* 16 t1 *)
   ].

@@ -14,6 +14,7 @@ source:        add_1_1 on a guarded element (rule R3)
 license:       proof: MIT
 status:        unverified
 entry:         yes
+ieee:          bridge
 
 g = guard(x)
 t = add(s, g)

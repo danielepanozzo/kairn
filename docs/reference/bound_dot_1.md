@@ -26,6 +26,7 @@ No public operation computes this kernel on its own.
 
 When the requirements hold and no operation of the kernel overflows:
 
+- when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{mul\_1\_1}) \le \frac{1}{2}$.
 - when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - m \mathrm{unit}(\mathtt{mul\_1\_1})}$.
 - when $\mathit{ok}$ is true, $t \ge m \mathrm{tiny}(\mathtt{mul\_1\_1}) (1 + g)$.
 
@@ -47,6 +48,7 @@ Definition bound_dot_1_spec : Prop :=
   let '(g, t, ok) := bound_dot_1 emin prec tie_even m in
   fmt emin prec g /\
   fmt emin prec t /\
+  (ok = true -> (m * ((1 / (1 + u prec)) * u prec ^ 1)) <= (1 / 2)) /\
   (ok = true -> ((m * ((1 / (1 + u prec)) * u prec ^ 1)) / (1 - (m * ((1 / (1 + u prec)) * u prec ^ 1)))) <= g) /\
   (ok = true -> ((m * ((1 / 2) * eta emin)) * (1 + g)) <= t).
 ```

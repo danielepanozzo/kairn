@@ -22,6 +22,7 @@ source:        the step of the dot product of two limbs, add_2_2 of mul_2_2 (mil
 license:       algorithm: published; proof: MIT
 status:        unverified
 entry:         yes
+ieee:          bridge spec
 
 (p0, p1) = mul_2_2(x0, x1, y0, y1)
 (t0, t1) = add_2_2(s0, s1, p0, p1)

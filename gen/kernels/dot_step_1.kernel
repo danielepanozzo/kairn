@@ -14,5 +14,6 @@ source:        the step of the fused dot product of one limb, s <- RN(x y + s) (
 license:       proof: MIT
 status:        unverified
 entry:         yes
+ieee:          bridge
 
 t = fma(x, y, s)

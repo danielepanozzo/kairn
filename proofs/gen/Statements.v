@@ -209,6 +209,7 @@ Definition bound_dot_1_spec : Prop :=
   let '(g, t, ok) := bound_dot_1 emin prec tie_even m in
   fmt emin prec g /\
   fmt emin prec t /\
+  (ok = true -> (m * ((1 / (1 + u prec)) * u prec ^ 1)) <= (1 / 2)) /\
   (ok = true -> ((m * ((1 / (1 + u prec)) * u prec ^ 1)) / (1 - (m * ((1 / (1 + u prec)) * u prec ^ 1)))) <= g) /\
   (ok = true -> ((m * ((1 / 2) * eta emin)) * (1 + g)) <= t).
 
@@ -222,6 +223,7 @@ Definition bound_dot_2_spec : Prop :=
   let '(g, t, ok) := bound_dot_2 emin prec tie_even m in
   fmt emin prec g /\
   fmt emin prec t /\
+  (ok = true -> (m * (4 * u prec ^ 2)) <= (1 / 2)) /\
   (ok = true -> ((m * (4 * u prec ^ 2)) / (1 - (m * (4 * u prec ^ 2)))) <= g) /\
   (ok = true -> ((m * ((3 / 2) * eta emin)) * (1 + g)) <= t).
 

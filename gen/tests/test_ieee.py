@@ -27,6 +27,8 @@ SECTION = ['Variable prec emax : Z.', 'Context {prec_gt_0_ : Prec_gt_0 prec}.',
 # it selects).
 PROGRAMS = ['fast_two_sum', 'two_prod', 'two_sum', 'add_2_2', 'mul_2_2', 'add_2_1', 'mul_2_1', 'add_fast_2_2',
             'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_pow2_2', 'fast_two_sum_entry']
+# And the steps of the folds, whose bridge statements the IEEE model of a fold uses.
+PROGRAMS += ['dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2']
 
 
 def read(rel):
@@ -283,9 +285,11 @@ class CheckedFiles(unittest.TestCase):
     # prints: proved, the two full scalings of a ball included (the only change of the file when
     # their proofs landed is those two words). Then the kernels of the folds' stage (unverified):
     # their definitions, the constants of the bound kernels, and the statements of the two
-    # finishes were added, and every earlier one is the same, byte for byte.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '9a2adeb31a19e09f9d9cc8b0cc1e27dc76080535bf4275445f59b3098b42aee6',
-               'proofs/gen/IeeeStatements.v': '743d04d20c50b4cb1e58383045466e514b9b6e23463239c470d13ca330ad941e'}
+    # finishes were added, and every earlier one is the same, byte for byte. Then the programs of
+    # the steps of the folds and their bridge statements (and the spec of those of two limbs) were
+    # added, every earlier one the same, byte for byte.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '2bd4b1a87c6946bc4676edfade74cf4a22636d7f4e5ea176c78ece1c266a6ac5',
+               'proofs/gen/IeeeStatements.v': 'e15a56b2d2b1fd27470049d65c9a29d6cde3c695eac92eaeeb2840a0fc3e34de'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

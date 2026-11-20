@@ -29,6 +29,8 @@ Like the real-model printer, this one is trusted. Before the hand-written drafts
 model were retired, a Rocq file checked by conversion alone that what it prints was the drafts'
 text, kernel by kernel and statement by statement; the theorems are now about the printed text.
 """
+import re
+
 from . import expr, ir, rocq
 
 THEORIES_PATH = 'Kairn'
@@ -393,8 +395,12 @@ def _claim(e, k, t, outs):
         else:
             if e['form'] == 'R':
                 rho = f'Rabs {value}'
-            else:
+            elif e['form'] == 'A':
                 rho = '(' + ' + '.join(f'Rabs {_val_sum(g.limbs)}' for g in k.inputs) + ')'
+            else:
+                # Relative to the terms of the value, as in the real model: s+x*y gives |s| + |x*y|.
+                rho = '(' + ' + '.join(f'Rabs {_paren(rocq._term(x, t.name))}'
+                                       for x in rocq.terms(expr.parse(k.value))) + ')'
             terms = []
             if c != zero:
                 terms.append(f'{rocq._term(c, lambda n: "u prec")} * u prec ^ {e["k"]} * {rho}')
@@ -820,4 +826,220 @@ def audit(kernels):
         spec = statement_names(k)[0]
         lines += ['', f'Definition {spec[:-len("_spec")]}_audit : {spec} := {k.ieee_theorem[1]}.',
                   f'Print Assumptions {k.ieee_theorem[1]}.']
+    return '\n'.join(lines) + '\n'
+
+
+# ---------------------------------------------------------------------------------------------
+# IeeeFoldModel.v and IeeeFoldStatements.v: the folds in the IEEE model
+
+def _ftype(n):
+    return rocq.tuple_type(n, 'float')
+
+
+def _fold_element_ftype(fd):
+    types = [_ftype(len(g.limbs)) for g in fd.arrays]
+    if len(types) == 1:
+        return types[0]
+    return ' * '.join(f'({t})' if ' ' in t else t for t in types)
+
+
+def _kernel_call(k, kernels, args):
+    """IeeeModel.K applied to the format, the NaN choices it takes, and `args` (terms)."""
+    return ' '.join([f'IeeeModel.{k.name}', 'prec', 'emax'] + _used_nans(k, kernels) + [rocq._paren(a) for a in args])
+
+
+def _fold_parts(fd, kernels):
+    step = kernels[fd.step[0]]
+    combine = kernels[fd.combine[0]] if fd.combine else None
+    finish = kernels[fd.finish[0]] if fd.finish else None
+    return step, combine, finish
+
+
+def fold_model(kernels):
+    """proofs/gen/IeeeFoldModel.v: every fold of the extended domain in the IEEE model, in the shape
+    of its real model (FoldModel.v): F_step and F_combine apply the IEEE models of the step and the
+    combination (IeeeModel.v) to the limbs of tuples; F_seq is the finish on fold_seq of the step
+    from the zero state, every limb +0; F_lanes W the finish on fold_lanes W."""
+    folds = [fd for fd in getattr(kernels, 'folds', {}).values() if not getattr(fd, 'is_map', False)]
+    lines = [HEADER, '',
+             '(* The folds in the IEEE model (docs/developer/architecture.md, "Folds"), in the shape of their',
+             '   real model (FoldModel.v): the state is a tuple of limbs and an element one entry of every array,',
+             '   read with fst and snd; F_step and F_combine apply the IEEE models of the step and the',
+             '   combination (IeeeModel.v) to those limbs; the zero state has every limb +0; F_seq is the',
+             '   finish of the fold on fold_seq of the step, F_lanes W on fold_lanes with W lanes',
+             '   (proofs/theories/Folds.v). The section has the variables of IeeeModel.v, in the same order. *)',
+             'From Stdlib Require Import Reals ZArith List.',
+             'From Flocq Require Import Core Binary.',
+             f'From {THEORIES_PATH} Require Import Folds.',
+             f'From {THEORIES_PATH} Require IeeeOperations.',
+             f'From {GEN_PATH} Require IeeeModel.',
+             '',
+             'Section IeeeFolds.',
+             'Variable prec emax : Z.',
+             'Context {prec_gt_0_ : Prec_gt_0 prec}.',
+             'Context {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}.',
+             '',
+             'Notation float := (binary_float prec emax).',
+             'Notation nan_of := {x : float | is_nan prec emax x = true}.',
+             '']
+    lines += [f'Variable {n} : {t}.' for n, t in (
+        ('nan_plus', 'float -> float -> nan_of'), ('nan_minus', 'float -> float -> nan_of'),
+        ('nan_opp', 'float -> nan_of'), ('nan_abs', 'float -> nan_of'),
+        ('nan_fma', 'float -> float -> float -> nan_of'), ('nan_mult', 'float -> float -> nan_of'),
+        ('nan_const', 'nan_of'))]
+    lines += ['', 'Local Notation pzero := (IeeeOperations.pzero prec emax).']
+    for fd in folds:
+        step, combine, finish = _fold_parts(fd, kernels)
+        st, el, xs = rocq._fold_binders(fd)
+        n = len(fd.state.limbs)
+        stype = _ftype(n)
+        etype = _fold_element_ftype(fd)
+        lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+        zero = 'pzero' if n == 1 else '(' + ', '.join(['pzero'] * n) + ')'
+        groups = rocq.fold_groups(fd, el)
+        sizes = {g.name: len(g.limbs) for g in fd.arrays}
+        args = []
+        for a in fd.step[1]:
+            args += rocq.tuple_parts(st if a == fd.state.name else groups[a], n if a == fd.state.name else sizes[a])
+        rtype = ' * '.join(['float'] * len(fd.state.limbs) if finish is None else
+                           [('bool' if g.kind == ir.MASK else 'float') for g in finish.outputs for _ in g.limbs])
+        lines += ['', f'(* {fd.name}: step {step.name}' + (f', combination {combine.name}' if combine else '') +
+                  (f', finish {finish.name}' if finish else '') + '. *)',
+                  f'Definition {fd.name}_step ({st} : {stype}) ({el} : {etype}) : {stype} :=',
+                  f'  {_kernel_call(step, kernels, args)}.']
+        if combine is not None:
+            lines += ['', f'Definition {fd.name}_combine (a b : {stype}) : {stype} :=',
+                      f'  {_kernel_call(combine, kernels, rocq.tuple_parts("a", n) + rocq.tuple_parts("b", n))}.']
+
+        def result(fold):
+            if finish is None:
+                return [f'  {fold}.']
+            return [f'  let s := {fold} in', f'  {_kernel_call(finish, kernels, rocq.tuple_parts("s", n))}.']
+        if 'sequential' in fd.orders:
+            lines += ['', f'Definition {fd.name}_seq ({xs} : {lt}) : {rtype} :='] + \
+                result(f'fold_seq {fd.name}_step {zero} {xs}')
+        if 'lanes' in fd.orders:
+            lines += ['', f'Definition {fd.name}_lanes (W : nat) ({xs} : {lt}) : {rtype} :='] + \
+                result(f'fold_lanes {fd.name}_step {fd.name}_combine {zero} W {xs}')
+    lines += ['', 'End IeeeFolds.']
+    return '\n'.join(lines) + '\n'
+
+
+def _fold_nans(fd, kernels, order):
+    step, combine, finish = _fold_parts(fd, kernels)
+    used = set()
+    for k in [step, finish] + ([combine] if order == 'lanes' else []):
+        if k is not None:
+            used.update(_used_nans(k, kernels))
+    return [n for n, _ in NANS if n in used]
+
+
+def fold_statement(fd, kernels, order):
+    """F_seq_ieee_spec or F_lanes_ieee_spec: for every list of elements, with the requirements of
+    the fold (canonical_2 of an array of two limbs; any value, for one limb), and (r, flag) the
+    result: if flag is true, every limb of every element is finite, every limb of the result is,
+    the values of the result are those of the real model of the fold (FoldModel.v) on the values
+    of the elements, and these are valid and within the bound of the fold's claims; if it is false,
+    every limb of the result is a NaN (milestone2.md, "When something is not finite")."""
+    st, el, xs = rocq._fold_binders(fd)
+    suffix = ir.ORDER_SUFFIX[order]
+    nans = _fold_nans(fd, kernels, order)
+    etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
+    lt = f'list ({etype})'
+    groups = rocq.fold_groups(fd, el)
+    sizes = {g.name: len(g.limbs) for g in fd.arrays}
+    canonical = {r[1] for r in fd.requires if r[0] == 'canonical'}
+    hyps = []
+    for g in fd.arrays:
+        if g.name in canonical:
+            limbs = rocq.tuple_parts(groups[g.name], sizes[g.name])
+            hyps.append(f'canonical_2 {" ".join(rocq._paren(x) for x in limbs)}')
+    finite = [f'finite {rocq._paren(x)}' for g in fd.arrays for x in rocq.tuple_parts(groups[g.name], sizes[g.name])]
+    values = []
+    for g in fd.arrays:
+        parts = [f'val {rocq._paren(x)}' for x in rocq.tuple_parts(groups[g.name], sizes[g.name])]
+        values.append(parts[0] if len(parts) == 1 else '(' + ', '.join(parts) + ')')
+    value = values[0] if len(values) == 1 else '(' + ', '.join(values) + ')'
+    results = [v for g in fd.results() for v in g.limbs]
+    limbs = [v for g in fd.results() if g.kind == ir.LIMB for v in g.limbs]
+    flags = [v for g in fd.results() if g.kind == ir.MASK for v in g.limbs]
+    flag = flags[0]
+    pattern = results[0] if len(results) == 1 else "'(" + ', '.join(results) + ')'
+    real = f'FoldModel.{fd.name}_{suffix} {EMIN} prec tie_even' + (' W' if order == 'lanes' else '') + ' vs'
+    vals = f'val {limbs[0]}' if len(limbs) == 1 else '(' + ', '.join(f'val {v}' for v in limbs) + ')'
+    claims = [re.sub(r'\bemin\b', EMIN, c) for c in rocq.fold_conclusion(fd, 's', el, 'vs', indent='      ')]
+    binders = f'forall (W : nat) ({xs} : {lt}),' if order == 'lanes' else f'forall {xs} : {lt},'
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_{suffix}', 'prec', 'emax'] + nans +
+                    (['W'] if order == 'lanes' else []) + [xs])
+    what = {'sequential': 'the sequential order', 'lanes': 'the lane order, for every number of lanes W'}[order]
+    lines = [f'(* {fd.name}, {what}, in the IEEE model. Status: {fd.status}. *)',
+             f'Definition {fd.name}_{suffix}_ieee_spec : Prop :=',
+             '  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
+             '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
+             (f'\n         {_binders(nans)},' if nans else ','),
+             f'  ({fd.min_precision} <= prec)%Z ->',
+             f'  {binders}']
+    if hyps:
+        lines.append(f'  Forall (fun {el} => {" /\\ ".join(hyps)}) {xs} ->')
+    lines += [f'  let {pattern} := {call} in',
+              f'  ({flag} = true ->',
+              f'   Forall (fun {el} => {" /\\ ".join(finite)}) {xs} /\\',
+              '   ' + ' /\\ '.join(f'finite {v}' for v in limbs) + ' /\\',
+              f'   let vs := map (fun {el} => {value}) {xs} in',
+              f'   let s := {real} in',
+              f'   {vals} = s /\\',
+              '   ' + ' /\\\n   '.join(claims) + ') /\\',
+              f'  ({flag} = false -> ' + ' /\\ '.join(f'nan {v}' for v in limbs) + ').']
+    return lines
+
+
+# The kernels that are the steps or the combinations of the folds: each has a statement that its
+# result's leading limb is finite only if that of each of its operands is (lead_statement).
+def lead_kernels(kernels):
+    names = set()
+    for fd in getattr(kernels, 'folds', {}).values():
+        if getattr(fd, 'is_map', False):
+            continue
+        names.add(fd.step[0])
+        if fd.combine:
+            names.add(fd.combine[0])
+    return [k for k in in_model(kernels).values() if k.name in names]
+
+
+def lead_statement(k, kernels):
+    """K_ieee_lead_spec: if limb 0 of the output is finite, so is limb 0 of every operand. This is
+    the non-finite cone of rules.py (every limb reaches output limb 0 through operations that keep a
+    value that is not finite so) as a statement, for the kernels whose results a fold carries."""
+    out = k.outputs[0].limbs[0]
+    leads = [g.limbs[0] for g in k.inputs if g.kind == ir.LIMB]
+    lines = _head(k, _used_nans(k, kernels), precision=False) + [_let(k, kernels)]
+    lines.append(f'  finite {out} -> ' + ' /\\ '.join(f'finite {v}' for v in leads) + '.')
+    return _statement(f'{k.name}_ieee_lead_spec', f'{k.name}, the leading limb of its result: finite only if those of '
+                      'its operands are.', lines)
+
+
+def fold_statements(kernels):
+    lines = [HEADER, '',
+             '(* The statements of the folds in the IEEE model (IeeeFoldModel.v), one per fold and order: for',
+             '   every precision from the fold\'s minimum on, every emax with prec < emax and every choice of',
+             '   the NaN each operation returns, with rounding to nearest, ties to even; emin = 3 - emax - prec',
+             '   (docs/developer/design/milestone2.md, "When something is not finite"). And, for each kernel',
+             '   that is the step or the combination of a fold, that the leading limb of its result is finite',
+             '   only if those of its operands are. A hand-written proof of statement S is a theorem whose type',
+             '   is exactly S. *)',
+             'From Stdlib Require Import Reals ZArith List.',
+             'From Flocq Require Import Core Binary.',
+             f'From {GEN_PATH} Require Import Model Statements FoldModel.',
+             f'From {THEORIES_PATH} Require Import IeeeVocabulary Folds Summation.',
+             f'From {THEORIES_PATH} Require IeeeOperations.',
+             f'From {GEN_PATH} Require IeeeModel IeeeFoldModel.',
+             'Open Scope R_scope.']
+    for k in lead_kernels(kernels):
+        lines += [''] + lead_statement(k, kernels)
+    for fd in getattr(kernels, 'folds', {}).values():
+        if getattr(fd, 'is_map', False):
+            continue
+        for order in ir.ORDERS:
+            if order in fd.orders:
+                lines += [''] + fold_statement(fd, kernels, order)
     return '\n'.join(lines) + '\n'

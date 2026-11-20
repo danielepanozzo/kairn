@@ -1263,6 +1263,15 @@
       ],
       "ensures": [
         {
+          "kind": "holds",
+          "rel": "le",
+          "args": [
+            "m*unit(mul_1_1)",
+            "1/2"
+          ],
+          "if": "ok"
+        },
+        {
           "kind": "upper",
           "of": "g",
           "value": "m*unit(mul_1_1)/(1-m*unit(mul_1_1))",
@@ -1316,6 +1325,15 @@
         "format(half)"
       ],
       "ensures": [
+        {
+          "kind": "holds",
+          "rel": "le",
+          "args": [
+            "m*unit(mul_2_2)",
+            "1/2"
+          ],
+          "if": "ok"
+        },
         {
           "kind": "upper",
           "of": "g",
