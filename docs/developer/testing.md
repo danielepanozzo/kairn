@@ -963,7 +963,7 @@ and popped `#pragma warning(disable : 4459 6244)` with MSVC, and
 compiler applies the state of the header to the templates the program instantiates later.
 
 `api.shadow` (`tests/api/shadow.py`) reads the name of every parameter and local variable of the
-headers (556 today, by a scan of their tokens, which found every name of Clang's AST of the
+headers (1440 today, the generated headers included, by a scan of their tokens, which found every name of Clang's AST of the
 headers), writes a global variable of each name, and compiles `tests/api/shadow.cpp`, which calls
 every public operation once for `float` and for `double`, with the build's flags and the
 strictest warnings of the compiler about a declaration that hides another, as errors, the front
