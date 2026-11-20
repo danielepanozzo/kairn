@@ -121,10 +121,12 @@ J. Sci. Comput. 26(6), 2005 ([PDF](https://www.tuhh.de/ti3/paper/rump/OgRuOi05.p
 Dot2, DotK with underflow terms. Also S. M. Rump, *Error estimation of floating-point summation
 and dot product*, BIT 52, 2012, for a priori bounds in round-to-nearest.
 
-**Higham.** N. J. Higham. *Accuracy and Stability of Numerical Algorithms*, 2nd ed., SIAM, 2002.
+<a id="higham"></a>**Higham.** N. J. Higham. *Accuracy and Stability of Numerical Algorithms*, 2nd ed., SIAM, 2002.
 The standard model and $\gamma_n$; the form in which Kairn exports its error model, and the
 reference cited by the proofs of the first client (a library for verified computation with balls
-on CPU and CUDA).
+on CPU and CUDA). Section 4.2 gives the bound of a sum for any order of the additions, and
+Lemma 3.1 the bound $(1 + \varepsilon)^n - 1 \le \gamma_n$, which the
+[Milestone 2 statements](../milestone2.md#summation-over-any-tree) restate over trees.
 
 <a id="rzbm09"></a>**RZBM09.** S. M. Rump, P. Zimmermann, S. Boldo, G. Melquiond. *Computing
 predecessor and successor in rounding to nearest.* BIT 49, 2009
@@ -154,6 +156,19 @@ Midpoint-radius arithmetic overestimates by at most 1.5 in radius.
 themselves were not consulted** (paywalled); the semantics in this report come from the P1788
 drafts D9.2 and D9.7, N. Revol's overview, and the documentation of the Octave interval package
 and IntervalArithmetic.jl.
+
+<a id="itf1788"></a>**ITF1788.** M. Kiesner, M. Nehmeier, J. Wolff von Gudenberg. *ITF1788:
+An Interval Testframework for IEEE 1788*, 2015 (the reference its README gives); the copy read
+is O. Heimlich's fork, [github.com/oheim/ITF1788](https://github.com/oheim/ITF1788).
+Test cases for the operations of IEEE Std 1788-2015 on intervals with `binary64` bounds, in a
+language of its own (`.itl` files). The framework is under the **Apache License 2.0**. The cases
+carry the license of the library they were taken from, stated at the top of each file, as read
+on 2026-11-19: the `libieeep1788_*.itl` files (from M. Nehmeier's libieeep1788, converted by
+O. Heimlich) are **Apache 2.0** and may be converted and stored with their notice and a
+statement of the change; `mpfi.itl` (GNU MPFI), `fi_lib.itl` (FI_LIB) and `c-xsc.itl` (C-XSC)
+are **LGPL 2.1 or later** and are not copied. Used by the
+[Milestone 2 statements](../milestone2.md#ieee-1788) as the public check of the semantics taken
+from the drafts.
 
 **CORE-MATH** ([core-math.gitlabpages.inria.fr](https://core-math.gitlabpages.inria.fr/), MIT)
 and **CRlibm**: prior art for elementary functions with proofs; the first client's current source
