@@ -207,16 +207,6 @@ Definition lt_2_2_spec : Prop :=
   let m := lt_2_2 x0 x1 y0 y1 in
   m = Rlt_bool (x0 + x1) (y0 + y1).
 
-(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). Status: proved. *)
-Definition sub_down_1_spec : Prop :=
-  forall emin prec : Z, (2 <= prec)%Z ->
-  forall a b : R,
-  fmt emin prec a ->
-  fmt emin prec b ->
-  let r := sub_down_1 emin prec tie_even a b in
-  fmt emin prec r /\
-  r = RD emin prec (a - b).
-
 (* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). Status: proved. *)
 Definition sub_up_1_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -226,6 +216,16 @@ Definition sub_up_1_spec : Prop :=
   let r := sub_up_1 emin prec tie_even a b in
   fmt emin prec r /\
   r = RU emin prec (a - b).
+
+(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). Status: proved. *)
+Definition sub_down_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := sub_down_1 emin prec tie_even a b in
+  fmt emin prec r /\
+  r = RD emin prec (a - b).
 
 (* ball_mul_1: midpoint-radius product (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_mul_1_spec : Prop :=
@@ -813,6 +813,17 @@ Definition eq_2_2_spec : Prop :=
   let m := eq_2_2 x0 x1 y0 y1 in
   m = Req_bool (x0 + x1) (y0 + y1).
 
+(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved. *)
+Definition mul_pow2_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall x0 x1 c : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec c ->
+  (exists n : Z, c = bpow radix2 n) ->
+  let '(z0, z1) := mul_pow2_2 emin prec tie_even x0 x1 c in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) * c)) <= 1 * eta emin.
+
 (* ball_mul_2: midpoint-radius product (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_mul_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
@@ -990,17 +1001,6 @@ Definition le_1_2_spec : Prop :=
   normalized_2 emin prec y0 y1 ->
   let m := le_1_2 a y0 y1 in
   m = Rle_bool a (y0 + y1).
-
-(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved. *)
-Definition mul_pow2_2_spec : Prop :=
-  forall emin prec : Z, (2 <= prec)%Z ->
-  forall x0 x1 c : R,
-  normalized_2 emin prec x0 x1 ->
-  fmt emin prec c ->
-  (exists n : Z, c = bpow radix2 n) ->
-  let '(z0, z1) := mul_pow2_2 emin prec tie_even x0 x1 c in
-  normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((x0 + x1) * c)) <= 1 * eta emin.
 
 (* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. Status: proved. *)
 Definition mul_pow2_step_2_spec : Prop :=

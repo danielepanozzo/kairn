@@ -53,6 +53,18 @@ Print Assumptions le_2_1_ieee_correct.
 Definition lt_2_2_ieee_audit : lt_2_2_ieee_spec := lt_2_2_ieee_correct.
 Print Assumptions lt_2_2_ieee_correct.
 
+Definition interval_make_1_audit : interval_make_1_spec := interval_make_1_correct.
+Print Assumptions interval_make_1_correct.
+
+Definition sub_up_1_ieee_audit : sub_up_1_ieee_spec := sub_up_1_ieee_correct.
+Print Assumptions sub_up_1_ieee_correct.
+
+Definition interval_mid_rad_1_audit : interval_mid_rad_1_spec := interval_mid_rad_1_correct.
+Print Assumptions interval_mid_rad_1_correct.
+
+Definition interval_to_ball_1_audit : interval_to_ball_1_spec := interval_to_ball_1_correct.
+Print Assumptions interval_to_ball_1_correct.
+
 Definition ball_from_interval_2_audit : ball_from_interval_2_spec := ball_from_interval_2_correct.
 Print Assumptions ball_from_interval_2_correct.
 
@@ -64,15 +76,6 @@ Print Assumptions ball_to_interval_1_correct.
 
 Definition interval_hull_1_audit : interval_hull_1_spec := interval_hull_1_correct.
 Print Assumptions interval_hull_1_correct.
-
-Definition sub_up_1_ieee_audit : sub_up_1_ieee_spec := sub_up_1_ieee_correct.
-Print Assumptions sub_up_1_ieee_correct.
-
-Definition interval_mid_rad_1_audit : interval_mid_rad_1_spec := interval_mid_rad_1_correct.
-Print Assumptions interval_mid_rad_1_correct.
-
-Definition interval_to_ball_1_audit : interval_to_ball_1_spec := interval_to_ball_1_correct.
-Print Assumptions interval_to_ball_1_correct.
 
 Definition interval_intersection_1_audit : interval_intersection_1_spec := interval_intersection_1_correct.
 Print Assumptions interval_intersection_1_correct.
@@ -106,9 +109,6 @@ Print Assumptions fold_finish_1_correct.
 
 Definition interval_add_1_audit : interval_add_1_spec := interval_add_1_correct.
 Print Assumptions interval_add_1_correct.
-
-Definition interval_make_1_audit : interval_make_1_spec := interval_make_1_correct.
-Print Assumptions interval_make_1_correct.
 
 Definition mul_dir_1_ieee_audit : mul_dir_1_ieee_spec := mul_dir_1_ieee_correct.
 Print Assumptions mul_dir_1_ieee_correct.
@@ -185,6 +185,12 @@ Print Assumptions to_down_2_ieee_correct.
 Definition eq_2_2_ieee_audit : eq_2_2_ieee_spec := eq_2_2_ieee_correct.
 Print Assumptions eq_2_2_ieee_correct.
 
+Definition interval_hull_2_audit : interval_hull_2_spec := interval_hull_2_correct.
+Print Assumptions interval_hull_2_correct.
+
+Definition interval_intersection_2_audit : interval_intersection_2_spec := interval_intersection_2_correct.
+Print Assumptions interval_intersection_2_correct.
+
 Definition ball_lower_as_2_audit : ball_lower_as_2_spec := ball_lower_as_2_correct.
 Print Assumptions ball_lower_as_2_correct.
 
@@ -229,12 +235,6 @@ Print Assumptions fold_finish_2_correct.
 
 Definition interval_add_2_audit : interval_add_2_spec := interval_add_2_correct.
 Print Assumptions interval_add_2_correct.
-
-Definition interval_hull_2_audit : interval_hull_2_spec := interval_hull_2_correct.
-Print Assumptions interval_hull_2_correct.
-
-Definition interval_intersection_2_audit : interval_intersection_2_spec := interval_intersection_2_correct.
-Print Assumptions interval_intersection_2_correct.
 
 Definition interval_make_2_audit : interval_make_2_spec := interval_make_2_correct.
 Print Assumptions interval_make_2_correct.

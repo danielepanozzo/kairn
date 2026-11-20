@@ -135,9 +135,14 @@ KIND_FIELDS = {
 # rounding under a condition, a condition of exactness, a zero factor, the midpoint of a ball made
 # from an interval, an equivalence for a bounded result, a tightness.
 KIND_OPTIONAL = {"rounded": {"when", "zero_factor"}, "error": {"exact_when"}, "encloses": {"exact_when"},
-                 "bound": {"zero_factor"}, "outward": {"exact_when", "zero_factor"}, "makes_ball": {"midpoint_when"},
+                 "bound": {"zero_factor"}, "outward": {"exact_when", "zero_factor"},
+                 # the midpoint of a ball made from an interval; its center and radius (stage B2)
+                 "makes_ball": {"midpoint_when", "rel", "abs", "smallest_radius"},
                  "encloses_interval": {"bounded_exactly", "zero_factor"}, "set_bound": {"tight"},
-                 "ball_of_interval": {"smallest_radius"},
+                 # the smallest radius; a radius finite under conditions (stage B2)
+                 "ball_of_interval": {"smallest_radius", "finite_when"},
+                 # the condition of a bounded result of two limbs (stage B2)
+                 "interval_of_ball": {"bounded_when"},
                  # the sets of a predicate (intervals or balls, one of them), and its exactness
                  "certain": {"intervals", "balls", "exact", "exact_when"},
                  "trit": {"intervals", "balls", "exact", "exact_when"},
@@ -2111,7 +2116,7 @@ class Site:
         """A ball made from an interval (stage B1): the midpoint and radius, or a canonical ball."""
         lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
         c, r = k.out_tex(x["center"]), name_tex(x["radius"])
-        rel, absolute = (tex(parse(x[key], "kernel %s, %s" % (k.name, key), {"u", "eta"})) for key in ("rel", "abs"))
+        rel, absolute = (tex(parse(x[key], "kernel %s, %s" % (k.name, key), {"u", "eta"}, constants=True)) for key in ("rel", "abs"))
         mid = "\\tfrac{%s + %s}{2}" % (lo, hi)
         bounded = ("If $[%s, %s]$ is bounded: $%s$ and $%s$ are finite, $%s \\le %s \\le %s$, "
                    "$\\lvert %s - %s\\rvert \\le %s\\,\\lvert %s\\rvert + %s$, and $[%s - %s, %s + %s] "
@@ -2119,12 +2124,19 @@ class Site:
                        lo, hi, c, r, lo, c, hi, c, mid, rel, mid, absolute, c, r, c, r, lo, hi,
                        (": $%s$ is the smallest number of `T` with that property, "
                         "$\\mathrm{RU}(\\max(%s - %s, %s - %s))$" % (r, c, lo, hi, c)) if x.get("smallest_radius") else ""))
+        if "finite_when" in x:
+            conds = " and ".join("$\\lvert %s\\rvert \\le 2^{e_{\\max}%s}$" % (
+                name_tex(cnd["abs_le"]), "" if cnd["exp"] == 0 else "%+d" % cnd["exp"]) for cnd in x["finite_when"])
+            bounded = bounded.replace("$%s$ and $%s$ are finite, " % (c, r), "$%s$ is finite, " % c)
+            bounded += (" The radius $%s$ may be $+\\infty$ for a bounded interval near the top of the range (an "
+                        "infinite radius contains everything); it is finite when %s." % (r, conds))
         if x["special"] == "ieee1788":
             return [bounded,
                     "The whole line gives $%s = 0$, $%s = +\\infty$; $[%s, +\\infty]$ with $%s$ finite gives "
                     "$%s = \\Omega$, the largest finite number of `T`, and $[-\\infty, %s]$ gives $%s = -\\Omega$, both "
-                    "with $%s = +\\infty$; the empty set gives two NaN. These are the values of `mid` and `rad` of "
-                    "IEEE 1788." % (c, r, lo, lo, c, hi, c, r)]
+                    "with $%s = +\\infty$; the empty set gives %s. These are the values of `mid` and `rad` of "
+                    "IEEE 1788." % (c, r, lo, lo, c, hi, c, r,
+                                    "two NaN" if len(k.limbs(x["center"])) == 1 else "a NaN in every limb")]
         return ["The ball of center $%s$ and radius $%s$ is canonical, and empty exactly when the interval is." % (c, r),
                 bounded + " It is then a finite ball.",
                 "An unbounded interval gives the whole line, center 0 and radius $+\\infty$ (a ball cannot be a "
@@ -2138,6 +2150,8 @@ class Site:
         s = tex(k.expr(x["set"], "interval_of_ball", set(x["balls"]) | set(k.inputs)))
         ball = "the ball $%s$ of center $%s$ and radius $%s$" % (name_tex(b).upper(), c, r)
         steps = x["tight"].get("steps", 0)
+        if x["tight"]["kind"] == "outward":
+            return self.extended_interval_of_ball_outward(k, x, b, zl, zu, c, r, s, ball)
         return ["The result $Z = [%s, %s]$ is a canonical interval, empty exactly when %s is." % (zl, zu, ball),
                 "$Z$ contains $%s$ for every $%s \\in %s$: the whole line gives $[-\\infty, +\\infty]$." % (
                     s, name_tex(b), name_tex(b).upper()),
@@ -2145,6 +2159,24 @@ class Site:
                 "format with overflow%s: the smallest interval of `T` that contains the ball." % (
                     zl, c, r, zu, c, r, "" if not steps else ", or at most %d step%s beyond" % (
                         steps, "" if steps == 1 else "s"))]
+
+    def extended_interval_of_ball_outward(self, k, x, b, zl, zu, c, r, s, ball):
+        """An interval of two limbs that encloses a ball (stage B2, ball_to_interval_2)."""
+        t = x["tight"]
+        lines = ["The result $Z = [%s, %s]$ is a canonical interval, empty exactly when %s is." % (zl, zu, ball),
+                 "$Z$ contains $%s$ for every $%s \\in %s$: the whole line gives $[-\\infty, +\\infty]$." % (
+                     s, name_tex(b), name_tex(b).upper()),
+                 "For a finite ball and a bounded $Z$: $%s \\le %s - %s$ and $%s + %s \\le %s$, each within "
+                 "$A\\,\\lvert v\\rvert + B$ of the bound $v$ ($c \\mp r$), with the constants $A$ and $B$ below." % (
+                     zl, c, r, c, r, zu)]
+        sides = t.get("exact_when", {})
+        for side, z, v in (("lower", zl, "%s - %s" % (c, r)), ("upper", zu, "%s + %s" % (c, r))):
+            if side in sides:
+                lines.append("When %s, $%s = %s$ exactly." % (k.exact_tex(sides[side]), z, v))
+        for cnd in x.get("bounded_when", []):
+            lines.append("For a finite ball, $Z$ is bounded when every member $%s$ of the ball has $\\lvert %s\\rvert "
+                         "\\le 2^{e_{\\max}%s}$." % (name_tex(b), name_tex(b), "" if cnd["exp"] == 0 else "%+d" % cnd["exp"]))
+        return lines
 
     def extended_splits(self, k, x):
         """Two intervals that together are the operand (stage B1)."""
@@ -2346,6 +2378,14 @@ class Site:
             lines.append("When moreover %s are numbers of `T`: $%s = (%s + %s)/2$ exactly and $%s = "
                          "\\mathrm{RU}((%s - %s)/2)$, the smallest radius of `T` for that center." % (
                              halves, c, lo, hi, r, hi, lo))
+        if "rel" in x:
+            # Stage B2 (ball_from_interval_1): the center near the midpoint, and the smallest radius.
+            rel, absolute = (tex(parse(x[key], "kernel %s, %s" % (k.name, key), {"u", "eta"}, constants=True)) for key in ("rel", "abs"))
+            mid = "\\tfrac{%s + %s}{2}" % (lo, hi)
+            lines.append("Then $%s \\le %s \\le %s$ and $\\lvert %s - %s\\rvert \\le %s\\,\\lvert %s\\rvert + %s$%s." % (
+                lo, c, hi, c, mid, rel, mid, absolute,
+                (", and $%s = \\mathrm{RU}(\\max(%s - %s, %s - %s))$, the smallest radius of `T` for that center" % (
+                    r, c, lo, hi, c)) if x.get("smallest_radius") else ""))
         lines += ["If $%s \\le %s$, $%s < +\\infty$, $%s > -\\infty$ and a bound is infinite: $Z$ is the whole line." % (
                       lo, hi, lo, hi),
                   "Otherwise ($%s > %s$, $[+\\infty, +\\infty]$, $[-\\infty, -\\infty]$): $Z$ is the empty set." % (lo, hi)]
@@ -2463,6 +2503,14 @@ class Site:
             return ("A ball of center $%s$ and radius $%s$ that contains the interval $[%s, %s]$: the whole line for "
                     "an unbounded interval, the empty set for the empty one:\n\n$$[%s - %s, %s + %s] \\supseteq "
                     "[%s, %s].$$" % (c, r, lo, hi, c, r, c, r, lo, hi))
+        if "interval_of_ball" in kinds and next(x for x in e["ensures"] if x["kind"] == "interval_of_ball")[
+                "tight"]["kind"] == "outward":
+            x = next(x for x in e["ensures"] if x["kind"] == "interval_of_ball")
+            b, cr = next(iter(x["balls"].items()))
+            c, r = name_tex(cr["center"]), name_tex(cr["radius"])
+            return ("An interval with bounds of two limbs that contains the ball of center $%s$ and radius $%s$, each "
+                    "bound within $A\\lvert v\\rvert + B$ of the bound $v$ of the ball:\n\n"
+                    "$$Z \\supseteq [%s - %s, %s + %s].$$" % (c, r, c, r, c, r))
         if "interval_of_ball" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "interval_of_ball")
             b, cr = next(iter(x["balls"].items()))
@@ -2628,6 +2676,9 @@ class Site:
                 parts.append("the midpoint and radius, the values of IEEE 1788 when unbounded or empty"
                              if x["special"] == "ieee1788" else
                              "a canonical ball that contains the interval; the whole line when it is unbounded")
+            elif x["kind"] == "interval_of_ball" and x["tight"]["kind"] == "outward":
+                parts.append("an interval of two limbs that contains the ball, within $A\\lvert v\\rvert + B$ of its "
+                             "bounds; empty for the empty ball")
             elif x["kind"] == "interval_of_ball":
                 parts.append("the smallest interval of `T` that contains the ball; empty for the empty ball")
             elif x["kind"] == "splits":

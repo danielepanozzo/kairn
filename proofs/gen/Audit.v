@@ -81,11 +81,11 @@ Print Assumptions le_2_1_correct.
 Definition lt_2_2_audit : lt_2_2_spec := lt_2_2_correct.
 Print Assumptions lt_2_2_correct.
 
-Definition sub_down_1_audit : sub_down_1_spec := sub_down_1_correct.
-Print Assumptions sub_down_1_correct.
-
 Definition sub_up_1_audit : sub_up_1_spec := sub_up_1_correct.
 Print Assumptions sub_up_1_correct.
+
+Definition sub_down_1_audit : sub_down_1_spec := sub_down_1_correct.
+Print Assumptions sub_down_1_correct.
 
 Definition ball_mul_1_audit : ball_mul_1_spec := ball_mul_1_correct.
 Print Assumptions ball_mul_1_correct.
@@ -240,6 +240,9 @@ Print Assumptions to_down_2_correct.
 Definition eq_2_2_audit : eq_2_2_spec := eq_2_2_correct.
 Print Assumptions eq_2_2_correct.
 
+Definition mul_pow2_2_audit : mul_pow2_2_spec := mul_pow2_2_correct.
+Print Assumptions mul_pow2_2_correct.
+
 Definition ball_mul_2_audit : ball_mul_2_spec := ball_mul_2_correct.
 Print Assumptions ball_mul_2_correct.
 
@@ -284,9 +287,6 @@ Print Assumptions sub_up_2_2_correct.
 
 Definition le_1_2_audit : le_1_2_spec := le_1_2_correct.
 Print Assumptions le_1_2_correct.
-
-Definition mul_pow2_2_audit : mul_pow2_2_spec := mul_pow2_2_correct.
-Print Assumptions mul_pow2_2_correct.
 
 Definition mul_pow2_step_2_audit : mul_pow2_step_2_spec := mul_pow2_step_2_correct.
 Print Assumptions mul_pow2_step_2_correct.

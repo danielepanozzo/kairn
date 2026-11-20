@@ -513,6 +513,168 @@ inline const char* ball_equal_1_nonfinite_float() noexcept {
     return !same(o0, false) || !same(o1, false) ? "ball_equal_1 (float, a non-finite operand)" : nullptr;
 }
 
+// interval_make_1 (double)
+inline const char* interval_make_1_double() noexcept {
+    volatile double i0 = -0x1.9399c13a99bdep+3;
+    volatile double i1 = -0x1.2c08a1090ef11p-2;
+    double o0;
+    double o1;
+    interval_make_1(i0, i1, o0, o1);
+    return !same(o0, -0x1.9399c13a99bdep+3) || !same(o1, -0x1.2c08a1090ef11p-2) ? "interval_make_1 (double)" : nullptr;
+}
+inline const char* interval_make_1_nonfinite_double() noexcept {
+    volatile double i0 = std::numeric_limits<double>::infinity();
+    volatile double i1 = -0x1.2c08a1090ef11p-2;
+    double o0;
+    double o1;
+    interval_make_1(i0, i1, o0, o1);
+    return !same(o0, std::numeric_limits<double>::infinity()) || !same(o1, -std::numeric_limits<double>::infinity()) ? "interval_make_1 (double, a non-finite operand)" : nullptr;
+}
+
+// interval_make_1 (float)
+inline const char* interval_make_1_float() noexcept {
+    volatile float i0 = -0x1.5c0de2p-1f;
+    volatile float i1 = 0x1.3bc996p+3f;
+    float o0;
+    float o1;
+    interval_make_1(i0, i1, o0, o1);
+    return !same(o0, -0x1.5c0de2p-1f) || !same(o1, 0x1.3bc996p+3f) ? "interval_make_1 (float)" : nullptr;
+}
+inline const char* interval_make_1_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i1 = 0x1.3bc996p+3f;
+    float o0;
+    float o1;
+    interval_make_1(i0, i1, o0, o1);
+    return !same(o0, -std::numeric_limits<float>::infinity()) || !same(o1, std::numeric_limits<float>::infinity()) ? "interval_make_1 (float, a non-finite operand)" : nullptr;
+}
+
+// sub_up_1 (double)
+inline const char* sub_up_1_double() noexcept {
+    volatile double i0 = 0x1.9dedbb621ba9fp-2;
+    volatile double i1 = -0x1.ce335029f8603p+0;
+    double o0;
+    sub_up_1(i0, i1, o0);
+    return !same(o0, 0x1.1ad75f813fa56p+1) ? "sub_up_1 (double)" : nullptr;
+}
+
+// sub_up_1 (float)
+inline const char* sub_up_1_float() noexcept {
+    volatile float i0 = -0x1.eaadc6p-3f;
+    volatile float i1 = 0x1.25d532p+2f;
+    float o0;
+    sub_up_1(i0, i1, o0);
+    return !same(o0, -0x1.352aap+2f) ? "sub_up_1 (float)" : nullptr;
+}
+
+// interval_mid_rad_1 (double)
+inline const char* interval_mid_rad_1_double() noexcept {
+    volatile double i0 = 0x1.06ce2c0034becp-2;
+    volatile double i1 = 0x1.0fa30cec060b1p+0;
+    double o0;
+    double o1;
+    interval_mid_rad_1(i0, i1, o0, o1);
+    return !same(o0, 0x1.515697ec133acp-1) || !same(o1, 0x1.9bdf03d7f1b6cp-2) ? "interval_mid_rad_1 (double)" : nullptr;
+}
+inline const char* interval_mid_rad_1_nonfinite_double() noexcept {
+    volatile double i0 = -std::numeric_limits<double>::infinity();
+    volatile double i1 = std::numeric_limits<double>::infinity();
+    double o0;
+    double o1;
+    interval_mid_rad_1(i0, i1, o0, o1);
+    return !same(o0, 0.0) || !same(o1, std::numeric_limits<double>::infinity()) ? "interval_mid_rad_1 (double, a non-finite operand)" : nullptr;
+}
+
+// interval_mid_rad_1 (float)
+inline const char* interval_mid_rad_1_float() noexcept {
+    volatile float i0 = -0x1.efd36cp-1f;
+    volatile float i1 = 0x1.5860ap-3f;
+    float o0;
+    float o1;
+    interval_mid_rad_1(i0, i1, o0, o1);
+    return !same(o0, -0x1.99bb44p-2f) || !same(o1, 0x1.22f5cap-1f) ? "interval_mid_rad_1 (float)" : nullptr;
+}
+inline const char* interval_mid_rad_1_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::infinity();
+    volatile float i1 = -std::numeric_limits<float>::infinity();
+    float o0;
+    float o1;
+    interval_mid_rad_1(i0, i1, o0, o1);
+    return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) ? "interval_mid_rad_1 (float, a non-finite operand)" : nullptr;
+}
+
+// interval_to_ball_1 (double)
+inline const char* interval_to_ball_1_double() noexcept {
+    volatile double i0 = 0x1.217a8548bc303p-3;
+    volatile double i1 = 0x1.5f7ec1a34b311p+2;
+    double o0;
+    double o1;
+    interval_to_ball_1(i0, i1, o0, o1);
+    return !same(o0, 0x1.688a95cd91129p+1) || !same(o1, 0x1.5672ed79054f9p+1) ? "interval_to_ball_1 (double)" : nullptr;
+}
+inline const char* interval_to_ball_1_nonfinite_double() noexcept {
+    volatile double i0 = -std::numeric_limits<double>::infinity();
+    volatile double i1 = std::numeric_limits<double>::infinity();
+    double o0;
+    double o1;
+    interval_to_ball_1(i0, i1, o0, o1);
+    return !same(o0, 0.0) || !same(o1, std::numeric_limits<double>::infinity()) ? "interval_to_ball_1 (double, a non-finite operand)" : nullptr;
+}
+
+// interval_to_ball_1 (float)
+inline const char* interval_to_ball_1_float() noexcept {
+    volatile float i0 = -0x1.14e7fep+2f;
+    volatile float i1 = -0x1.05f4e2p+2f;
+    float o0;
+    float o1;
+    interval_to_ball_1(i0, i1, o0, o1);
+    return !same(o0, -0x1.0d6e7p+2f) || !same(o1, 0x1.de638p-4f) ? "interval_to_ball_1 (float)" : nullptr;
+}
+inline const char* interval_to_ball_1_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::infinity();
+    volatile float i1 = -std::numeric_limits<float>::infinity();
+    float o0;
+    float o1;
+    interval_to_ball_1(i0, i1, o0, o1);
+    return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) ? "interval_to_ball_1 (float, a non-finite operand)" : nullptr;
+}
+
+// ball_from_interval_1 (double)
+inline const char* ball_from_interval_1_double() noexcept {
+    volatile double i0 = -0x1.14043b74f6ec7p-2;
+    volatile double i1 = 0x1.9db0d75d0dd2p-2;
+    double o0;
+    double o1;
+    ball_from_interval_1(i0, i1, o0, o1);
+    return !same(o0, 0x1.135937d02dcb2p-4) || !same(o1, 0x1.58da8969025f4p-2) ? "ball_from_interval_1 (double)" : nullptr;
+}
+inline const char* ball_from_interval_1_nonfinite_double() noexcept {
+    volatile double i0 = std::numeric_limits<double>::infinity();
+    volatile double i1 = 0x1.9db0d75d0dd2p-2;
+    double o0;
+    double o1;
+    ball_from_interval_1(i0, i1, o0, o1);
+    return !same(o0, std::numeric_limits<double>::quiet_NaN()) || !same(o1, std::numeric_limits<double>::quiet_NaN()) ? "ball_from_interval_1 (double, a non-finite operand)" : nullptr;
+}
+
+// ball_from_interval_1 (float)
+inline const char* ball_from_interval_1_float() noexcept {
+    volatile float i0 = -0x1.458e02p+2f;
+    volatile float i1 = 0x1.1daff6p+3f;
+    float o0;
+    float o1;
+    ball_from_interval_1(i0, i1, o0, o1);
+    return !same(o0, 0x1.eba3d4p+0f) || !same(o1, 0x1.c076f8p+2f) ? "ball_from_interval_1 (float)" : nullptr;
+}
+inline const char* ball_from_interval_1_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i1 = 0x1.1daff6p+3f;
+    float o0;
+    float o1;
+    ball_from_interval_1(i0, i1, o0, o1);
+    return !same(o0, 0.0f) || !same(o1, std::numeric_limits<float>::infinity()) ? "ball_from_interval_1 (float, a non-finite operand)" : nullptr;
+}
+
 // ball_from_interval_2 (double)
 inline const char* ball_from_interval_2_double() noexcept {
     volatile double i0 = -0x1.1c52cc2d6f5f1p+3;
@@ -649,96 +811,6 @@ inline const char* interval_hull_1_nonfinite_float() noexcept {
     float o1;
     interval_hull_1(i0, i1, i2, i3, o0, o1);
     return !same(o0, std::numeric_limits<float>::infinity()) || !same(o1, -std::numeric_limits<float>::infinity()) ? "interval_hull_1 (float, a non-finite operand)" : nullptr;
-}
-
-// sub_up_1 (double)
-inline const char* sub_up_1_double() noexcept {
-    volatile double i0 = 0x1.9dedbb621ba9fp-2;
-    volatile double i1 = -0x1.ce335029f8603p+0;
-    double o0;
-    sub_up_1(i0, i1, o0);
-    return !same(o0, 0x1.1ad75f813fa56p+1) ? "sub_up_1 (double)" : nullptr;
-}
-
-// sub_up_1 (float)
-inline const char* sub_up_1_float() noexcept {
-    volatile float i0 = -0x1.eaadc6p-3f;
-    volatile float i1 = 0x1.25d532p+2f;
-    float o0;
-    sub_up_1(i0, i1, o0);
-    return !same(o0, -0x1.352aap+2f) ? "sub_up_1 (float)" : nullptr;
-}
-
-// interval_mid_rad_1 (double)
-inline const char* interval_mid_rad_1_double() noexcept {
-    volatile double i0 = 0x1.06ce2c0034becp-2;
-    volatile double i1 = 0x1.0fa30cec060b1p+0;
-    double o0;
-    double o1;
-    interval_mid_rad_1(i0, i1, o0, o1);
-    return !same(o0, 0x1.515697ec133acp-1) || !same(o1, 0x1.9bdf03d7f1b6cp-2) ? "interval_mid_rad_1 (double)" : nullptr;
-}
-inline const char* interval_mid_rad_1_nonfinite_double() noexcept {
-    volatile double i0 = -std::numeric_limits<double>::infinity();
-    volatile double i1 = std::numeric_limits<double>::infinity();
-    double o0;
-    double o1;
-    interval_mid_rad_1(i0, i1, o0, o1);
-    return !same(o0, 0.0) || !same(o1, std::numeric_limits<double>::infinity()) ? "interval_mid_rad_1 (double, a non-finite operand)" : nullptr;
-}
-
-// interval_mid_rad_1 (float)
-inline const char* interval_mid_rad_1_float() noexcept {
-    volatile float i0 = -0x1.efd36cp-1f;
-    volatile float i1 = 0x1.5860ap-3f;
-    float o0;
-    float o1;
-    interval_mid_rad_1(i0, i1, o0, o1);
-    return !same(o0, -0x1.99bb44p-2f) || !same(o1, 0x1.22f5cap-1f) ? "interval_mid_rad_1 (float)" : nullptr;
-}
-inline const char* interval_mid_rad_1_nonfinite_float() noexcept {
-    volatile float i0 = std::numeric_limits<float>::infinity();
-    volatile float i1 = -std::numeric_limits<float>::infinity();
-    float o0;
-    float o1;
-    interval_mid_rad_1(i0, i1, o0, o1);
-    return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) ? "interval_mid_rad_1 (float, a non-finite operand)" : nullptr;
-}
-
-// interval_to_ball_1 (double)
-inline const char* interval_to_ball_1_double() noexcept {
-    volatile double i0 = 0x1.217a8548bc303p-3;
-    volatile double i1 = 0x1.5f7ec1a34b311p+2;
-    double o0;
-    double o1;
-    interval_to_ball_1(i0, i1, o0, o1);
-    return !same(o0, 0x1.688a95cd91129p+1) || !same(o1, 0x1.5672ed79054f9p+1) ? "interval_to_ball_1 (double)" : nullptr;
-}
-inline const char* interval_to_ball_1_nonfinite_double() noexcept {
-    volatile double i0 = -std::numeric_limits<double>::infinity();
-    volatile double i1 = std::numeric_limits<double>::infinity();
-    double o0;
-    double o1;
-    interval_to_ball_1(i0, i1, o0, o1);
-    return !same(o0, 0.0) || !same(o1, std::numeric_limits<double>::infinity()) ? "interval_to_ball_1 (double, a non-finite operand)" : nullptr;
-}
-
-// interval_to_ball_1 (float)
-inline const char* interval_to_ball_1_float() noexcept {
-    volatile float i0 = -0x1.14e7fep+2f;
-    volatile float i1 = -0x1.05f4e2p+2f;
-    float o0;
-    float o1;
-    interval_to_ball_1(i0, i1, o0, o1);
-    return !same(o0, -0x1.0d6e7p+2f) || !same(o1, 0x1.de638p-4f) ? "interval_to_ball_1 (float)" : nullptr;
-}
-inline const char* interval_to_ball_1_nonfinite_float() noexcept {
-    volatile float i0 = std::numeric_limits<float>::infinity();
-    volatile float i1 = -std::numeric_limits<float>::infinity();
-    float o0;
-    float o1;
-    interval_to_ball_1(i0, i1, o0, o1);
-    return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) ? "interval_to_ball_1 (float, a non-finite operand)" : nullptr;
 }
 
 // ball_hull_1 (double)
@@ -1903,42 +1975,6 @@ inline const char* interval_less_equal_1_nonfinite_float() noexcept {
     bool o1;
     interval_less_equal_1(i0, i1, i2, i3, o0, o1);
     return !same(o0, false) || !same(o1, false) ? "interval_less_equal_1 (float, a non-finite operand)" : nullptr;
-}
-
-// interval_make_1 (double)
-inline const char* interval_make_1_double() noexcept {
-    volatile double i0 = -0x1.9399c13a99bdep+3;
-    volatile double i1 = -0x1.2c08a1090ef11p-2;
-    double o0;
-    double o1;
-    interval_make_1(i0, i1, o0, o1);
-    return !same(o0, -0x1.9399c13a99bdep+3) || !same(o1, -0x1.2c08a1090ef11p-2) ? "interval_make_1 (double)" : nullptr;
-}
-inline const char* interval_make_1_nonfinite_double() noexcept {
-    volatile double i0 = std::numeric_limits<double>::infinity();
-    volatile double i1 = -0x1.2c08a1090ef11p-2;
-    double o0;
-    double o1;
-    interval_make_1(i0, i1, o0, o1);
-    return !same(o0, std::numeric_limits<double>::infinity()) || !same(o1, -std::numeric_limits<double>::infinity()) ? "interval_make_1 (double, a non-finite operand)" : nullptr;
-}
-
-// interval_make_1 (float)
-inline const char* interval_make_1_float() noexcept {
-    volatile float i0 = -0x1.5c0de2p-1f;
-    volatile float i1 = 0x1.3bc996p+3f;
-    float o0;
-    float o1;
-    interval_make_1(i0, i1, o0, o1);
-    return !same(o0, -0x1.5c0de2p-1f) || !same(o1, 0x1.3bc996p+3f) ? "interval_make_1 (float)" : nullptr;
-}
-inline const char* interval_make_1_nonfinite_float() noexcept {
-    volatile float i0 = std::numeric_limits<float>::quiet_NaN();
-    volatile float i1 = 0x1.3bc996p+3f;
-    float o0;
-    float o1;
-    interval_make_1(i0, i1, o0, o1);
-    return !same(o0, -std::numeric_limits<float>::infinity()) || !same(o1, std::numeric_limits<float>::infinity()) ? "interval_make_1 (float, a non-finite operand)" : nullptr;
 }
 
 // two_prod (double)
@@ -3641,6 +3677,420 @@ inline const char* ball_equal_2_nonfinite_float() noexcept {
     return !same(o0, false) || !same(o1, false) ? "ball_equal_2 (float, a non-finite operand)" : nullptr;
 }
 
+// ball_to_interval_2 (double)
+inline const char* ball_to_interval_2_double() noexcept {
+    volatile double i0 = -0x1.4f48ed9dd2bffp+1;
+    volatile double i1 = 0x1.22f9be0abef3ap-53;
+    volatile double i2 = 0x1.9209ccfce6cc1p-19;
+    double o0;
+    double o1;
+    double o2;
+    double o3;
+    ball_to_interval_2(i0, i1, i2, o0, o1, o2, o3);
+    return !same(o0, -0x1.4f4906be6f8fcp+1) || !same(o1, 0x1.87c97e0abef36p-53) || !same(o2, -0x1.4f48d47d35f02p+1) || !same(o3, 0x1.7c53fc157de7cp-54) ? "ball_to_interval_2 (double)" : nullptr;
+}
+inline const char* ball_to_interval_2_nonfinite_double() noexcept {
+    volatile double i0 = 0.0;
+    volatile double i1 = 0.0;
+    volatile double i2 = std::numeric_limits<double>::infinity();
+    double o0;
+    double o1;
+    double o2;
+    double o3;
+    ball_to_interval_2(i0, i1, i2, o0, o1, o2, o3);
+    return !same(o0, -std::numeric_limits<double>::infinity()) || !same(o1, 0.0) || !same(o2, std::numeric_limits<double>::infinity()) || !same(o3, 0.0) ? "ball_to_interval_2 (double, a non-finite operand)" : nullptr;
+}
+
+// ball_to_interval_2 (float)
+inline const char* ball_to_interval_2_float() noexcept {
+    volatile float i0 = 0x1.7b8a14p+0f;
+    volatile float i1 = 0x1.d4ea06p-28f;
+    volatile float i2 = 0x1.b61426p-20f;
+    float o0;
+    float o1;
+    float o2;
+    float o3;
+    ball_to_interval_2(i0, i1, i2, o0, o1, o2, o3);
+    return !same(o0, 0x1.7b89f8p+0f) || !same(o1, 0x1.781876p-25f) || !same(o2, 0x1.7b8a3p+0f) || !same(o3, -0x1.02ddf6p-25f) ? "ball_to_interval_2 (float)" : nullptr;
+}
+inline const char* ball_to_interval_2_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i1 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i2 = std::numeric_limits<float>::quiet_NaN();
+    float o0;
+    float o1;
+    float o2;
+    float o3;
+    ball_to_interval_2(i0, i1, i2, o0, o1, o2, o3);
+    return !same(o0, std::numeric_limits<float>::infinity()) || !same(o1, 0.0f) || !same(o2, -std::numeric_limits<float>::infinity()) || !same(o3, 0.0f) ? "ball_to_interval_2 (float, a non-finite operand)" : nullptr;
+}
+
+// interval_hull_2 (double)
+inline const char* interval_hull_2_double() noexcept {
+    volatile double i0 = -0x1.8e1e03e95a7c3p-1;
+    volatile double i1 = 0x1.3eb6a6505d192p-56;
+    volatile double i2 = 0x1.c4cf62279fa22p-1;
+    volatile double i3 = -0x1.6027e1f3ee5e3p-56;
+    volatile double i4 = 0x1.3bee73f5d9c8ep-1;
+    volatile double i5 = -0x1.1cf71d63b5699p-56;
+    volatile double i6 = 0x1.01e1ab9c038c5p+2;
+    volatile double i7 = 0x1.a62cdbdd27221p-52;
+    double o0;
+    double o1;
+    double o2;
+    double o3;
+    interval_hull_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
+    return !same(o0, -0x1.8e1e03e95a7c3p-1) || !same(o1, 0x1.3eb6a6505d192p-56) || !same(o2, 0x1.01e1ab9c038c5p+2) || !same(o3, 0x1.a62cdbdd27221p-52) ? "interval_hull_2 (double)" : nullptr;
+}
+inline const char* interval_hull_2_nonfinite_double() noexcept {
+    volatile double i0 = -std::numeric_limits<double>::infinity();
+    volatile double i1 = 0.0;
+    volatile double i2 = std::numeric_limits<double>::infinity();
+    volatile double i3 = 0.0;
+    volatile double i4 = -std::numeric_limits<double>::infinity();
+    volatile double i5 = 0.0;
+    volatile double i6 = std::numeric_limits<double>::infinity();
+    volatile double i7 = 0.0;
+    double o0;
+    double o1;
+    double o2;
+    double o3;
+    interval_hull_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
+    return !same(o0, -std::numeric_limits<double>::infinity()) || !same(o1, 0.0) || !same(o2, std::numeric_limits<double>::infinity()) || !same(o3, 0.0) ? "interval_hull_2 (double, a non-finite operand)" : nullptr;
+}
+
+// interval_hull_2 (float)
+inline const char* interval_hull_2_float() noexcept {
+    volatile float i0 = 0x1.046abap-3f;
+    volatile float i1 = -0x1.e13a2p-28f;
+    volatile float i2 = 0x1.360404p-2f;
+    volatile float i3 = -0x1.3bebp-27f;
+    volatile float i4 = 0x1.696df4p-1f;
+    volatile float i5 = -0x1.054d44p-27f;
+    volatile float i6 = 0x1.f1b8fap+3f;
+    volatile float i7 = -0x1.323656p-24f;
+    float o0;
+    float o1;
+    float o2;
+    float o3;
+    interval_hull_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
+    return !same(o0, 0x1.046abap-3f) || !same(o1, -0x1.e13a2p-28f) || !same(o2, 0x1.f1b8fap+3f) || !same(o3, -0x1.323656p-24f) ? "interval_hull_2 (float)" : nullptr;
+}
+inline const char* interval_hull_2_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::infinity();
+    volatile float i1 = 0.0f;
+    volatile float i2 = -std::numeric_limits<float>::infinity();
+    volatile float i3 = 0.0f;
+    volatile float i4 = std::numeric_limits<float>::infinity();
+    volatile float i5 = 0.0f;
+    volatile float i6 = -std::numeric_limits<float>::infinity();
+    volatile float i7 = 0.0f;
+    float o0;
+    float o1;
+    float o2;
+    float o3;
+    interval_hull_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
+    return !same(o0, std::numeric_limits<float>::infinity()) || !same(o1, 0.0f) || !same(o2, -std::numeric_limits<float>::infinity()) || !same(o3, 0.0f) ? "interval_hull_2 (float, a non-finite operand)" : nullptr;
+}
+
+// mul_pow2_2 (double)
+inline const char* mul_pow2_2_double() noexcept {
+    volatile double i0 = -0x1.fc4ed3fb9232bp-1;
+    volatile double i1 = 0x1.119dcd31692d6p-55;
+    volatile double i2 = 0x1p-1;
+    double o0;
+    double o1;
+    mul_pow2_2(i0, i1, i2, o0, o1);
+    return !same(o0, -0x1.fc4ed3fb9232bp-2) || !same(o1, 0x1.119dcd31692d6p-56) ? "mul_pow2_2 (double)" : nullptr;
+}
+
+// mul_pow2_2 (float)
+inline const char* mul_pow2_2_float() noexcept {
+    volatile float i0 = -0x1.5debfep-2f;
+    volatile float i1 = 0x1.de35c8p-27f;
+    volatile float i2 = 0x1p+3f;
+    float o0;
+    float o1;
+    mul_pow2_2(i0, i1, i2, o0, o1);
+    return !same(o0, -0x1.5debfep+1f) || !same(o1, 0x1.de35c8p-24f) ? "mul_pow2_2 (float)" : nullptr;
+}
+
+// interval_mid_rad_2 (double)
+inline const char* interval_mid_rad_2_double() noexcept {
+    volatile double i0 = 0x1.6f534c55738c9p-2;
+    volatile double i1 = -0x1.8873f2c6b8aa3p-57;
+    volatile double i2 = 0x1.3a964533cbc8fp+3;
+    volatile double i3 = 0x1.251cd76220ddbp-51;
+    double o0;
+    double o1;
+    double o2;
+    interval_mid_rad_2(i0, i1, i2, i3, o0, o1, o2);
+    return !same(o0, 0x1.4610df9677656p+2) || !same(o1, -0x1.c104f868fa05p-52) || !same(o2, 0x1.2f1baad1202cbp+2) ? "interval_mid_rad_2 (double)" : nullptr;
+}
+inline const char* interval_mid_rad_2_nonfinite_double() noexcept {
+    volatile double i0 = -std::numeric_limits<double>::infinity();
+    volatile double i1 = 0.0;
+    volatile double i2 = std::numeric_limits<double>::infinity();
+    volatile double i3 = 0.0;
+    double o0;
+    double o1;
+    double o2;
+    interval_mid_rad_2(i0, i1, i2, i3, o0, o1, o2);
+    return !same(o0, 0.0) || !same(o1, 0.0) || !same(o2, std::numeric_limits<double>::infinity()) ? "interval_mid_rad_2 (double, a non-finite operand)" : nullptr;
+}
+
+// interval_mid_rad_2 (float)
+inline const char* interval_mid_rad_2_float() noexcept {
+    volatile float i0 = -0x1.8cd4ap+2f;
+    volatile float i1 = -0x1.58db78p-24f;
+    volatile float i2 = -0x1.b103p-3f;
+    volatile float i3 = 0x1.019344p-30f;
+    float o0;
+    float o1;
+    float o2;
+    interval_mid_rad_2(i0, i1, i2, i3, o0, o1, o2);
+    return !same(o0, -0x1.9a5cb8p+1f) || !same(o1, -0x1.54d52ap-25f) || !same(o2, 0x1.7f4c8cp+1f) ? "interval_mid_rad_2 (float)" : nullptr;
+}
+inline const char* interval_mid_rad_2_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::infinity();
+    volatile float i1 = 0.0f;
+    volatile float i2 = -std::numeric_limits<float>::infinity();
+    volatile float i3 = 0.0f;
+    float o0;
+    float o1;
+    float o2;
+    interval_mid_rad_2(i0, i1, i2, i3, o0, o1, o2);
+    return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) || !same(o2, std::numeric_limits<float>::quiet_NaN()) ? "interval_mid_rad_2 (float, a non-finite operand)" : nullptr;
+}
+
+// interval_to_ball_2 (double)
+inline const char* interval_to_ball_2_double() noexcept {
+    volatile double i0 = -0x1.edba88b74fadep+2;
+    volatile double i1 = 0x1.885d52fa842a1p-56;
+    volatile double i2 = -0x1.b1037e0228e47p+2;
+    volatile double i3 = -0x1.6bfb7e46a4a75p-54;
+    double o0;
+    double o1;
+    double o2;
+    interval_to_ball_2(i0, i1, i2, i3, o0, o1, o2);
+    return !same(o0, -0x1.cf5f035cbc493p+2) || !same(o1, 0x1.dec37aceff8c6p-52) || !same(o2, 0x1.e5b855a9364b9p-2) ? "interval_to_ball_2 (double)" : nullptr;
+}
+inline const char* interval_to_ball_2_nonfinite_double() noexcept {
+    volatile double i0 = -std::numeric_limits<double>::infinity();
+    volatile double i1 = 0.0;
+    volatile double i2 = std::numeric_limits<double>::infinity();
+    volatile double i3 = 0.0;
+    double o0;
+    double o1;
+    double o2;
+    interval_to_ball_2(i0, i1, i2, i3, o0, o1, o2);
+    return !same(o0, 0.0) || !same(o1, 0.0) || !same(o2, std::numeric_limits<double>::infinity()) ? "interval_to_ball_2 (double, a non-finite operand)" : nullptr;
+}
+
+// interval_to_ball_2 (float)
+inline const char* interval_to_ball_2_float() noexcept {
+    volatile float i0 = -0x1.1eed96p+2f;
+    volatile float i1 = -0x1.e640c8p-24f;
+    volatile float i2 = 0x1.fb3784p+2f;
+    volatile float i3 = -0x1.29db3ep-28f;
+    float o0;
+    float o1;
+    float o2;
+    interval_to_ball_2(i0, i1, i2, i3, o0, o1, o2);
+    return !same(o0, 0x1.b893dcp+0f) || !same(o1, -0x1.f8de7cp-25f) || !same(o2, 0x1.8d129p+2f) ? "interval_to_ball_2 (float)" : nullptr;
+}
+inline const char* interval_to_ball_2_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::infinity();
+    volatile float i1 = 0.0f;
+    volatile float i2 = -std::numeric_limits<float>::infinity();
+    volatile float i3 = 0.0f;
+    float o0;
+    float o1;
+    float o2;
+    interval_to_ball_2(i0, i1, i2, i3, o0, o1, o2);
+    return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) || !same(o2, std::numeric_limits<float>::quiet_NaN()) ? "interval_to_ball_2 (float, a non-finite operand)" : nullptr;
+}
+
+// ball_hull_2 (double)
+inline const char* ball_hull_2_double() noexcept {
+    volatile double i0 = 0x1.b5f60bf85709fp+3;
+    volatile double i1 = -0x1.83057e8217e49p-53;
+    volatile double i2 = 0x1.2304c8ad7f487p-22;
+    volatile double i3 = 0x1.8391ce74f6c26p+2;
+    volatile double i4 = 0x1.a105a3bf4fbd7p-55;
+    volatile double i5 = 0x1.28561abfd54d8p-24;
+    double o0;
+    double o1;
+    double o2;
+    ball_hull_2(i0, i1, i2, i3, i4, i5, o0, o1, o2);
+    return !same(o0, 0x1.3bdf79cfa5061p+3) || !same(o1, -0x1.2ae4c6c921fa2p-53) || !same(o2, 0x1.e85a4ae8d1a0fp+1) ? "ball_hull_2 (double)" : nullptr;
+}
+inline const char* ball_hull_2_nonfinite_double() noexcept {
+    volatile double i0 = 0.0;
+    volatile double i1 = 0.0;
+    volatile double i2 = std::numeric_limits<double>::infinity();
+    volatile double i3 = 0.0;
+    volatile double i4 = 0.0;
+    volatile double i5 = std::numeric_limits<double>::infinity();
+    double o0;
+    double o1;
+    double o2;
+    ball_hull_2(i0, i1, i2, i3, i4, i5, o0, o1, o2);
+    return !same(o0, 0.0) || !same(o1, 0.0) || !same(o2, std::numeric_limits<double>::infinity()) ? "ball_hull_2 (double, a non-finite operand)" : nullptr;
+}
+
+// ball_hull_2 (float)
+inline const char* ball_hull_2_float() noexcept {
+    volatile float i0 = -0x1.251fa4p-2f;
+    volatile float i1 = -0x1.50cd1cp-27f;
+    volatile float i2 = 0x1.b28e9ep-16f;
+    volatile float i3 = -0x1.490e54p+1f;
+    volatile float i4 = 0x1.f12462p-26f;
+    volatile float i5 = 0x1.8c0c0ep-19f;
+    float o0;
+    float o1;
+    float o2;
+    ball_hull_2(i0, i1, i2, i3, i4, i5, o0, o1, o2);
+    return !same(o0, -0x1.6db188p+0f) || !same(o1, 0x1.7d2eb6p-27f) || !same(o2, 0x1.246b54p+0f) ? "ball_hull_2 (float)" : nullptr;
+}
+inline const char* ball_hull_2_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i1 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i2 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i3 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i4 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i5 = std::numeric_limits<float>::quiet_NaN();
+    float o0;
+    float o1;
+    float o2;
+    ball_hull_2(i0, i1, i2, i3, i4, i5, o0, o1, o2);
+    return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) || !same(o2, std::numeric_limits<float>::quiet_NaN()) ? "ball_hull_2 (float, a non-finite operand)" : nullptr;
+}
+
+// interval_intersection_2 (double)
+inline const char* interval_intersection_2_double() noexcept {
+    volatile double i0 = -0x1.b1555428d35fap-3;
+    volatile double i1 = 0x1.855c5fb08c91cp-60;
+    volatile double i2 = 0x1.4f29b6abde966p-1;
+    volatile double i3 = 0x1.ea2b3163efaabp-55;
+    volatile double i4 = 0x1.5716ad738bfd9p-3;
+    volatile double i5 = -0x1.383d6249d928fp-57;
+    volatile double i6 = 0x1.66e54ab22a817p+0;
+    volatile double i7 = 0x1.47c2286a74ccep-54;
+    double o0;
+    double o1;
+    double o2;
+    double o3;
+    interval_intersection_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
+    return !same(o0, 0x1.5716ad738bfd9p-3) || !same(o1, -0x1.383d6249d928fp-57) || !same(o2, 0x1.4f29b6abde966p-1) || !same(o3, 0x1.ea2b3163efaabp-55) ? "interval_intersection_2 (double)" : nullptr;
+}
+inline const char* interval_intersection_2_nonfinite_double() noexcept {
+    volatile double i0 = -std::numeric_limits<double>::infinity();
+    volatile double i1 = 0.0;
+    volatile double i2 = std::numeric_limits<double>::infinity();
+    volatile double i3 = 0.0;
+    volatile double i4 = -std::numeric_limits<double>::infinity();
+    volatile double i5 = 0.0;
+    volatile double i6 = std::numeric_limits<double>::infinity();
+    volatile double i7 = 0.0;
+    double o0;
+    double o1;
+    double o2;
+    double o3;
+    interval_intersection_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
+    return !same(o0, -std::numeric_limits<double>::infinity()) || !same(o1, 0.0) || !same(o2, std::numeric_limits<double>::infinity()) || !same(o3, 0.0) ? "interval_intersection_2 (double, a non-finite operand)" : nullptr;
+}
+
+// interval_intersection_2 (float)
+inline const char* interval_intersection_2_float() noexcept {
+    volatile float i0 = -0x1.523d04p+0f;
+    volatile float i1 = 0x1.ffbdc2p-25f;
+    volatile float i2 = -0x1.d66634p-2f;
+    volatile float i3 = 0x1.cbeca2p-30f;
+    volatile float i4 = -0x1.f3f48ap-1f;
+    volatile float i5 = 0x1.a37a1ap-26f;
+    volatile float i6 = 0x1.da5fdcp-1f;
+    volatile float i7 = 0x1.b5f3d8p-26f;
+    float o0;
+    float o1;
+    float o2;
+    float o3;
+    interval_intersection_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
+    return !same(o0, -0x1.f3f48ap-1f) || !same(o1, 0x1.a37a1ap-26f) || !same(o2, -0x1.d66634p-2f) || !same(o3, 0x1.cbeca2p-30f) ? "interval_intersection_2 (float)" : nullptr;
+}
+inline const char* interval_intersection_2_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::infinity();
+    volatile float i1 = 0.0f;
+    volatile float i2 = -std::numeric_limits<float>::infinity();
+    volatile float i3 = 0.0f;
+    volatile float i4 = std::numeric_limits<float>::infinity();
+    volatile float i5 = 0.0f;
+    volatile float i6 = -std::numeric_limits<float>::infinity();
+    volatile float i7 = 0.0f;
+    float o0;
+    float o1;
+    float o2;
+    float o3;
+    interval_intersection_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
+    return !same(o0, std::numeric_limits<float>::infinity()) || !same(o1, 0.0f) || !same(o2, -std::numeric_limits<float>::infinity()) || !same(o3, 0.0f) ? "interval_intersection_2 (float, a non-finite operand)" : nullptr;
+}
+
+// ball_intersection_2 (double)
+inline const char* ball_intersection_2_double() noexcept {
+    volatile double i0 = -0x1.e7a0982435402p+1;
+    volatile double i1 = 0x1.d7ad0b790d3a5p-53;
+    volatile double i2 = 0x1.68111bdac1a5ep-19;
+    volatile double i3 = -0x1.e7a0982435402p+1;
+    volatile double i4 = 0x1.d7ad0b790d3a5p-53;
+    volatile double i5 = 0x1.83d510dd3d6d9p-19;
+    double o0;
+    double o1;
+    double o2;
+    ball_intersection_2(i0, i1, i2, i3, i4, i5, o0, o1, o2);
+    return !same(o0, -0x1.e7a0982435402p+1) || !same(o1, 0x1.d7ad0b790d3a4p-53) || !same(o2, 0x1.68111bdac1a6p-19) ? "ball_intersection_2 (double)" : nullptr;
+}
+inline const char* ball_intersection_2_nonfinite_double() noexcept {
+    volatile double i0 = 0.0;
+    volatile double i1 = 0.0;
+    volatile double i2 = std::numeric_limits<double>::infinity();
+    volatile double i3 = 0.0;
+    volatile double i4 = 0.0;
+    volatile double i5 = std::numeric_limits<double>::infinity();
+    double o0;
+    double o1;
+    double o2;
+    ball_intersection_2(i0, i1, i2, i3, i4, i5, o0, o1, o2);
+    return !same(o0, 0.0) || !same(o1, 0.0) || !same(o2, std::numeric_limits<double>::infinity()) ? "ball_intersection_2 (double, a non-finite operand)" : nullptr;
+}
+
+// ball_intersection_2 (float)
+inline const char* ball_intersection_2_float() noexcept {
+    volatile float i0 = -0x1.fe6eecp-2f;
+    volatile float i1 = 0x1.d48382p-27f;
+    volatile float i2 = 0x1.05e67p-21f;
+    volatile float i3 = -0x1.fe6eecp-2f;
+    volatile float i4 = 0x1.d48382p-27f;
+    volatile float i5 = 0x1.36c74ap-21f;
+    float o0;
+    float o1;
+    float o2;
+    ball_intersection_2(i0, i1, i2, i3, i4, i5, o0, o1, o2);
+    return !same(o0, -0x1.fe6eecp-2f) || !same(o1, 0x1.d4838p-27f) || !same(o2, 0x1.05e674p-21f) ? "ball_intersection_2 (float)" : nullptr;
+}
+inline const char* ball_intersection_2_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i1 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i2 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i3 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i4 = std::numeric_limits<float>::quiet_NaN();
+    volatile float i5 = std::numeric_limits<float>::quiet_NaN();
+    float o0;
+    float o1;
+    float o2;
+    ball_intersection_2(i0, i1, i2, i3, i4, i5, o0, o1, o2);
+    return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) || !same(o2, std::numeric_limits<float>::quiet_NaN()) ? "ball_intersection_2 (float, a non-finite operand)" : nullptr;
+}
+
 // ball_less_2 (double)
 inline const char* ball_less_2_double() noexcept {
     volatile double i0 = 0x1.ea012ff72b66bp+2;
@@ -4813,142 +5263,6 @@ inline const char* interval_equal_2_nonfinite_float() noexcept {
     return !same(o0, false) || !same(o1, false) ? "interval_equal_2 (float, a non-finite operand)" : nullptr;
 }
 
-// interval_hull_2 (double)
-inline const char* interval_hull_2_double() noexcept {
-    volatile double i0 = -0x1.8e1e03e95a7c3p-1;
-    volatile double i1 = 0x1.3eb6a6505d192p-56;
-    volatile double i2 = 0x1.c4cf62279fa22p-1;
-    volatile double i3 = -0x1.6027e1f3ee5e3p-56;
-    volatile double i4 = 0x1.3bee73f5d9c8ep-1;
-    volatile double i5 = -0x1.1cf71d63b5699p-56;
-    volatile double i6 = 0x1.01e1ab9c038c5p+2;
-    volatile double i7 = 0x1.a62cdbdd27221p-52;
-    double o0;
-    double o1;
-    double o2;
-    double o3;
-    interval_hull_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
-    return !same(o0, -0x1.8e1e03e95a7c3p-1) || !same(o1, 0x1.3eb6a6505d192p-56) || !same(o2, 0x1.01e1ab9c038c5p+2) || !same(o3, 0x1.a62cdbdd27221p-52) ? "interval_hull_2 (double)" : nullptr;
-}
-inline const char* interval_hull_2_nonfinite_double() noexcept {
-    volatile double i0 = -std::numeric_limits<double>::infinity();
-    volatile double i1 = 0.0;
-    volatile double i2 = std::numeric_limits<double>::infinity();
-    volatile double i3 = 0.0;
-    volatile double i4 = -std::numeric_limits<double>::infinity();
-    volatile double i5 = 0.0;
-    volatile double i6 = std::numeric_limits<double>::infinity();
-    volatile double i7 = 0.0;
-    double o0;
-    double o1;
-    double o2;
-    double o3;
-    interval_hull_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
-    return !same(o0, -std::numeric_limits<double>::infinity()) || !same(o1, 0.0) || !same(o2, std::numeric_limits<double>::infinity()) || !same(o3, 0.0) ? "interval_hull_2 (double, a non-finite operand)" : nullptr;
-}
-
-// interval_hull_2 (float)
-inline const char* interval_hull_2_float() noexcept {
-    volatile float i0 = 0x1.046abap-3f;
-    volatile float i1 = -0x1.e13a2p-28f;
-    volatile float i2 = 0x1.360404p-2f;
-    volatile float i3 = -0x1.3bebp-27f;
-    volatile float i4 = 0x1.696df4p-1f;
-    volatile float i5 = -0x1.054d44p-27f;
-    volatile float i6 = 0x1.f1b8fap+3f;
-    volatile float i7 = -0x1.323656p-24f;
-    float o0;
-    float o1;
-    float o2;
-    float o3;
-    interval_hull_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
-    return !same(o0, 0x1.046abap-3f) || !same(o1, -0x1.e13a2p-28f) || !same(o2, 0x1.f1b8fap+3f) || !same(o3, -0x1.323656p-24f) ? "interval_hull_2 (float)" : nullptr;
-}
-inline const char* interval_hull_2_nonfinite_float() noexcept {
-    volatile float i0 = std::numeric_limits<float>::infinity();
-    volatile float i1 = 0.0f;
-    volatile float i2 = -std::numeric_limits<float>::infinity();
-    volatile float i3 = 0.0f;
-    volatile float i4 = std::numeric_limits<float>::infinity();
-    volatile float i5 = 0.0f;
-    volatile float i6 = -std::numeric_limits<float>::infinity();
-    volatile float i7 = 0.0f;
-    float o0;
-    float o1;
-    float o2;
-    float o3;
-    interval_hull_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
-    return !same(o0, std::numeric_limits<float>::infinity()) || !same(o1, 0.0f) || !same(o2, -std::numeric_limits<float>::infinity()) || !same(o3, 0.0f) ? "interval_hull_2 (float, a non-finite operand)" : nullptr;
-}
-
-// interval_intersection_2 (double)
-inline const char* interval_intersection_2_double() noexcept {
-    volatile double i0 = -0x1.b1555428d35fap-3;
-    volatile double i1 = 0x1.855c5fb08c91cp-60;
-    volatile double i2 = 0x1.4f29b6abde966p-1;
-    volatile double i3 = 0x1.ea2b3163efaabp-55;
-    volatile double i4 = 0x1.5716ad738bfd9p-3;
-    volatile double i5 = -0x1.383d6249d928fp-57;
-    volatile double i6 = 0x1.66e54ab22a817p+0;
-    volatile double i7 = 0x1.47c2286a74ccep-54;
-    double o0;
-    double o1;
-    double o2;
-    double o3;
-    interval_intersection_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
-    return !same(o0, 0x1.5716ad738bfd9p-3) || !same(o1, -0x1.383d6249d928fp-57) || !same(o2, 0x1.4f29b6abde966p-1) || !same(o3, 0x1.ea2b3163efaabp-55) ? "interval_intersection_2 (double)" : nullptr;
-}
-inline const char* interval_intersection_2_nonfinite_double() noexcept {
-    volatile double i0 = -std::numeric_limits<double>::infinity();
-    volatile double i1 = 0.0;
-    volatile double i2 = std::numeric_limits<double>::infinity();
-    volatile double i3 = 0.0;
-    volatile double i4 = -std::numeric_limits<double>::infinity();
-    volatile double i5 = 0.0;
-    volatile double i6 = std::numeric_limits<double>::infinity();
-    volatile double i7 = 0.0;
-    double o0;
-    double o1;
-    double o2;
-    double o3;
-    interval_intersection_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
-    return !same(o0, -std::numeric_limits<double>::infinity()) || !same(o1, 0.0) || !same(o2, std::numeric_limits<double>::infinity()) || !same(o3, 0.0) ? "interval_intersection_2 (double, a non-finite operand)" : nullptr;
-}
-
-// interval_intersection_2 (float)
-inline const char* interval_intersection_2_float() noexcept {
-    volatile float i0 = -0x1.523d04p+0f;
-    volatile float i1 = 0x1.ffbdc2p-25f;
-    volatile float i2 = -0x1.d66634p-2f;
-    volatile float i3 = 0x1.cbeca2p-30f;
-    volatile float i4 = -0x1.f3f48ap-1f;
-    volatile float i5 = 0x1.a37a1ap-26f;
-    volatile float i6 = 0x1.da5fdcp-1f;
-    volatile float i7 = 0x1.b5f3d8p-26f;
-    float o0;
-    float o1;
-    float o2;
-    float o3;
-    interval_intersection_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
-    return !same(o0, -0x1.f3f48ap-1f) || !same(o1, 0x1.a37a1ap-26f) || !same(o2, -0x1.d66634p-2f) || !same(o3, 0x1.cbeca2p-30f) ? "interval_intersection_2 (float)" : nullptr;
-}
-inline const char* interval_intersection_2_nonfinite_float() noexcept {
-    volatile float i0 = std::numeric_limits<float>::infinity();
-    volatile float i1 = 0.0f;
-    volatile float i2 = -std::numeric_limits<float>::infinity();
-    volatile float i3 = 0.0f;
-    volatile float i4 = std::numeric_limits<float>::infinity();
-    volatile float i5 = 0.0f;
-    volatile float i6 = -std::numeric_limits<float>::infinity();
-    volatile float i7 = 0.0f;
-    float o0;
-    float o1;
-    float o2;
-    float o3;
-    interval_intersection_2(i0, i1, i2, i3, i4, i5, i6, i7, o0, o1, o2, o3);
-    return !same(o0, std::numeric_limits<float>::infinity()) || !same(o1, 0.0f) || !same(o2, -std::numeric_limits<float>::infinity()) || !same(o3, 0.0f) ? "interval_intersection_2 (float, a non-finite operand)" : nullptr;
-}
-
 // interval_less_2 (double)
 inline const char* interval_less_2_double() noexcept {
     volatile double i0 = -0x1.c3d2a50e7b402p+3;
@@ -5595,6 +5909,74 @@ inline const char* interval_rel_interior_2_nonfinite_float() noexcept {
     return !same(o0, true) ? "interval_rel_interior_2 (float, a non-finite operand)" : nullptr;
 }
 
+// interval_split_2 (double)
+inline const char* interval_split_2_double() noexcept {
+    volatile double i0 = 0x1.89afe361f0a27p-1;
+    volatile double i1 = -0x1.2198c8804fdc6p-56;
+    volatile double i2 = 0x1.8ea528208e822p+1;
+    volatile double i3 = 0x1.bb250f9b1d17ap-53;
+    double o0;
+    double o1;
+    double o2;
+    double o3;
+    double o4;
+    double o5;
+    double o6;
+    double o7;
+    interval_split_2(i0, i1, i2, i3, o0, o1, o2, o3, o4, o5, o6, o7);
+    return !same(o0, 0x1.89afe361f0a27p-1) || !same(o1, -0x1.2198c8804fdc6p-56) || !same(o2, 0x1.f11120f90aaacp+0) || !same(o3, 0x1.2de3ed1626382p-55) || !same(o4, 0x1.f11120f90aaacp+0) || !same(o5, 0x1.2de3ed1626382p-55) || !same(o6, 0x1.8ea528208e822p+1) || !same(o7, 0x1.bb250f9b1d17ap-53) ? "interval_split_2 (double)" : nullptr;
+}
+inline const char* interval_split_2_nonfinite_double() noexcept {
+    volatile double i0 = -std::numeric_limits<double>::infinity();
+    volatile double i1 = 0.0;
+    volatile double i2 = std::numeric_limits<double>::infinity();
+    volatile double i3 = 0.0;
+    double o0;
+    double o1;
+    double o2;
+    double o3;
+    double o4;
+    double o5;
+    double o6;
+    double o7;
+    interval_split_2(i0, i1, i2, i3, o0, o1, o2, o3, o4, o5, o6, o7);
+    return !same(o0, -std::numeric_limits<double>::infinity()) || !same(o1, 0.0) || !same(o2, 0.0) || !same(o3, 0.0) || !same(o4, 0.0) || !same(o5, 0.0) || !same(o6, std::numeric_limits<double>::infinity()) || !same(o7, 0.0) ? "interval_split_2 (double, a non-finite operand)" : nullptr;
+}
+
+// interval_split_2 (float)
+inline const char* interval_split_2_float() noexcept {
+    volatile float i0 = 0x1.ee1ba6p-1f;
+    volatile float i1 = 0x1.b18edcp-28f;
+    volatile float i2 = 0x1.af268ap+0f;
+    volatile float i3 = -0x1.016242p-25f;
+    float o0;
+    float o1;
+    float o2;
+    float o3;
+    float o4;
+    float o5;
+    float o6;
+    float o7;
+    interval_split_2(i0, i1, i2, i3, o0, o1, o2, o3, o4, o5, o6, o7);
+    return !same(o0, 0x1.ee1ba6p-1f) || !same(o1, 0x1.b18edcp-28f) || !same(o2, 0x1.531a2ep+0f) || !same(o3, 0x1.34cf9ap-26f) || !same(o4, 0x1.531a2ep+0f) || !same(o5, 0x1.34cf9ap-26f) || !same(o6, 0x1.af268ap+0f) || !same(o7, -0x1.016242p-25f) ? "interval_split_2 (float)" : nullptr;
+}
+inline const char* interval_split_2_nonfinite_float() noexcept {
+    volatile float i0 = std::numeric_limits<float>::infinity();
+    volatile float i1 = 0.0f;
+    volatile float i2 = -std::numeric_limits<float>::infinity();
+    volatile float i3 = 0.0f;
+    float o0;
+    float o1;
+    float o2;
+    float o3;
+    float o4;
+    float o5;
+    float o6;
+    float o7;
+    interval_split_2(i0, i1, i2, i3, o0, o1, o2, o3, o4, o5, o6, o7);
+    return !same(o0, std::numeric_limits<float>::infinity()) || !same(o1, 0.0f) || !same(o2, -std::numeric_limits<float>::infinity()) || !same(o3, 0.0f) || !same(o4, std::numeric_limits<float>::infinity()) || !same(o5, 0.0f) || !same(o6, -std::numeric_limits<float>::infinity()) || !same(o7, 0.0f) ? "interval_split_2 (float, a non-finite operand)" : nullptr;
+}
+
 // sub_down_2_2 (double)
 inline const char* sub_down_2_2_double() noexcept {
     volatile double i0 = -0x1.c172816f01c1p+2;
@@ -5945,28 +6327,6 @@ inline const char* mul_2_2_full_nonfinite_float() noexcept {
     float o1;
     mul_2_2_full(i0, i1, i2, i3, o0, o1);
     return !same(o0, std::numeric_limits<float>::quiet_NaN()) || !same(o1, std::numeric_limits<float>::quiet_NaN()) ? "mul_2_2_full (float, a non-finite operand)" : nullptr;
-}
-
-// mul_pow2_2 (double)
-inline const char* mul_pow2_2_double() noexcept {
-    volatile double i0 = -0x1.fc4ed3fb9232bp-1;
-    volatile double i1 = 0x1.119dcd31692d6p-55;
-    volatile double i2 = 0x1p-1;
-    double o0;
-    double o1;
-    mul_pow2_2(i0, i1, i2, o0, o1);
-    return !same(o0, -0x1.fc4ed3fb9232bp-2) || !same(o1, 0x1.119dcd31692d6p-56) ? "mul_pow2_2 (double)" : nullptr;
-}
-
-// mul_pow2_2 (float)
-inline const char* mul_pow2_2_float() noexcept {
-    volatile float i0 = -0x1.5debfep-2f;
-    volatile float i1 = 0x1.de35c8p-27f;
-    volatile float i2 = 0x1p+3f;
-    float o0;
-    float o1;
-    mul_pow2_2(i0, i1, i2, o0, o1);
-    return !same(o0, -0x1.5debfep+1f) || !same(o1, 0x1.de35c8p-24f) ? "mul_pow2_2 (float)" : nullptr;
 }
 
 // mul_pow2_2_full (double)
@@ -6413,6 +6773,24 @@ inline const char* run() noexcept {
         ball_equal_1_nonfinite_double,
         ball_equal_1_float,
         ball_equal_1_nonfinite_float,
+        interval_make_1_double,
+        interval_make_1_nonfinite_double,
+        interval_make_1_float,
+        interval_make_1_nonfinite_float,
+        sub_up_1_double,
+        sub_up_1_float,
+        interval_mid_rad_1_double,
+        interval_mid_rad_1_nonfinite_double,
+        interval_mid_rad_1_float,
+        interval_mid_rad_1_nonfinite_float,
+        interval_to_ball_1_double,
+        interval_to_ball_1_nonfinite_double,
+        interval_to_ball_1_float,
+        interval_to_ball_1_nonfinite_float,
+        ball_from_interval_1_double,
+        ball_from_interval_1_nonfinite_double,
+        ball_from_interval_1_float,
+        ball_from_interval_1_nonfinite_float,
         ball_from_interval_2_double,
         ball_from_interval_2_nonfinite_double,
         ball_from_interval_2_float,
@@ -6427,16 +6805,6 @@ inline const char* run() noexcept {
         interval_hull_1_nonfinite_double,
         interval_hull_1_float,
         interval_hull_1_nonfinite_float,
-        sub_up_1_double,
-        sub_up_1_float,
-        interval_mid_rad_1_double,
-        interval_mid_rad_1_nonfinite_double,
-        interval_mid_rad_1_float,
-        interval_mid_rad_1_nonfinite_float,
-        interval_to_ball_1_double,
-        interval_to_ball_1_nonfinite_double,
-        interval_to_ball_1_float,
-        interval_to_ball_1_nonfinite_float,
         ball_hull_1_double,
         ball_hull_1_nonfinite_double,
         ball_hull_1_float,
@@ -6555,10 +6923,6 @@ inline const char* run() noexcept {
         interval_less_equal_1_nonfinite_double,
         interval_less_equal_1_float,
         interval_less_equal_1_nonfinite_float,
-        interval_make_1_double,
-        interval_make_1_nonfinite_double,
-        interval_make_1_float,
-        interval_make_1_nonfinite_float,
         two_prod_double,
         two_prod_float,
         mul_dir_1_double,
@@ -6723,6 +7087,36 @@ inline const char* run() noexcept {
         ball_equal_2_nonfinite_double,
         ball_equal_2_float,
         ball_equal_2_nonfinite_float,
+        ball_to_interval_2_double,
+        ball_to_interval_2_nonfinite_double,
+        ball_to_interval_2_float,
+        ball_to_interval_2_nonfinite_float,
+        interval_hull_2_double,
+        interval_hull_2_nonfinite_double,
+        interval_hull_2_float,
+        interval_hull_2_nonfinite_float,
+        mul_pow2_2_double,
+        mul_pow2_2_float,
+        interval_mid_rad_2_double,
+        interval_mid_rad_2_nonfinite_double,
+        interval_mid_rad_2_float,
+        interval_mid_rad_2_nonfinite_float,
+        interval_to_ball_2_double,
+        interval_to_ball_2_nonfinite_double,
+        interval_to_ball_2_float,
+        interval_to_ball_2_nonfinite_float,
+        ball_hull_2_double,
+        ball_hull_2_nonfinite_double,
+        ball_hull_2_float,
+        ball_hull_2_nonfinite_float,
+        interval_intersection_2_double,
+        interval_intersection_2_nonfinite_double,
+        interval_intersection_2_float,
+        interval_intersection_2_nonfinite_float,
+        ball_intersection_2_double,
+        ball_intersection_2_nonfinite_double,
+        ball_intersection_2_float,
+        ball_intersection_2_nonfinite_float,
         ball_less_2_double,
         ball_less_2_nonfinite_double,
         ball_less_2_float,
@@ -6823,14 +7217,6 @@ inline const char* run() noexcept {
         interval_equal_2_nonfinite_double,
         interval_equal_2_float,
         interval_equal_2_nonfinite_float,
-        interval_hull_2_double,
-        interval_hull_2_nonfinite_double,
-        interval_hull_2_float,
-        interval_hull_2_nonfinite_float,
-        interval_intersection_2_double,
-        interval_intersection_2_nonfinite_double,
-        interval_intersection_2_float,
-        interval_intersection_2_nonfinite_float,
         interval_less_2_double,
         interval_less_2_nonfinite_double,
         interval_less_2_float,
@@ -6879,6 +7265,10 @@ inline const char* run() noexcept {
         interval_rel_interior_2_nonfinite_double,
         interval_rel_interior_2_float,
         interval_rel_interior_2_nonfinite_float,
+        interval_split_2_double,
+        interval_split_2_nonfinite_double,
+        interval_split_2_float,
+        interval_split_2_nonfinite_float,
         sub_down_2_2_double,
         sub_down_2_2_float,
         sub_up_2_2_double,
@@ -6909,8 +7299,6 @@ inline const char* run() noexcept {
         mul_2_2_full_nonfinite_double,
         mul_2_2_full_float,
         mul_2_2_full_nonfinite_float,
-        mul_pow2_2_double,
-        mul_pow2_2_float,
         mul_pow2_2_full_double,
         mul_pow2_2_full_nonfinite_double,
         mul_pow2_2_full_float,

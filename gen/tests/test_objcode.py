@@ -133,8 +133,9 @@ class Counts(unittest.TestCase):
                                         'bound_dot_2', 'scale_step_1', 'mul_pow2_step_1', 'mul_pow2_step_2',
                                         'axpy_step_1', 'axpy_entry_step_1', 'ball_from_interval_2',
                                         'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1',
-                                        # stage B2: the hull and the intersection of balls of one limb
-                                        'ball_hull_1', 'ball_intersection_1'})
+                                        # stage B2: the hull and the intersection of balls of one limb,
+                                        # the ball from an interval of one limb
+                                        'ball_hull_1', 'ball_intersection_1', 'ball_from_interval_1'})
         self.assertEqual(differ, {'mul_2_1_full', 'mul_2_2_full', 'mul_pow2_2_full', 'mul_ext_2_2', 'two_prod'} |
                          product_rule)
         for name in product_rule:

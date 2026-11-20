@@ -299,6 +299,16 @@ class Statements(unittest.TestCase):
         self.assertIn('  (forall z : R, in_ball_1 cx rx z \\/ in_ball_1 cy ry z -> in_ball_1 cz rz z)', s)
         s = spec('ball_intersection_1')
         self.assertIn('  (ball_whole_1 cy ry -> cz = cx /\\ rz = rx) /\\\n', s)
+        # The conversions of two limbs.
+        s = spec('interval_mid_rad_2')
+        self.assertIn('   (r = infinity prec emax false \\/ (finite r /\\ (forall z : R, in_interval_2 xl0 xl1 xu0 xu1 z -> '
+                      'Rabs (z - (val m0 + val m1)) <= val r))) /\\\n', s)
+        self.assertIn('-> finite r))', s)
+        s = spec('ball_to_interval_2')
+        self.assertIn('   (((val c0 + val c1) - val r) = 0 -> xval_2 zl0 zl1 = XFin lo) /\\\n', s)
+        self.assertIn('   interval_bounded_2 zl0 zl1 zu0 zu1)', s)
+        s = spec('ball_from_interval_1')
+        self.assertIn('   val rw = RU (ieee_emin prec emax) prec (Rmax (val cw - val lo) (val hi - val cw))) /\\\n', s)
         s = spec('ball_split_2')
         self.assertIn('   (forall z : R, (val c0 + val c1) - val r <= z <= (val c0 + val c1) -> in_ball_2 ca0 ca1 ra z)', s)
 
@@ -487,8 +497,11 @@ class CheckedFiles(unittest.TestCase):
     # Then the 20 predicates, comparisons and set operations of a ball (unverified): their
     # definitions and statements added, every earlier one the same, byte for byte, some printed
     # earlier; make -C proofs passed on these files.
-    DIGESTS = {'proofs/gen/IeeeModel.v': 'e21a83a273a7c53ded5c6436673b6d09dbad18f4c336102a18bdc3eddc292fa5',
-               'proofs/gen/IeeeStatements.v': 'ad4387ff91fe5fad7500384faf3d1f5a98a449c23eb6dfcf7d9e153e218acf89'}
+    # Then the conversions of two limbs, the ball from an interval of one limb and the hull and the
+    # intersection of balls of two limbs (seven, unverified): their definitions and statements
+    # added, every earlier one the same, byte for byte; make -C proofs passed on these files.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'ee63659056d82e2072fa7fbbc652f47c1a8ce144fbf8c8887cd74b428d74a042',
+               'proofs/gen/IeeeStatements.v': '1f12dc89f396b237906239d3e543041dd717e0c00b4d9eb89430e7b22318a041'}
 
 
     def test_the_checked_files(self):

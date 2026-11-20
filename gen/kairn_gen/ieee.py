@@ -892,6 +892,15 @@ def _makes_ball_interval_spec(k, kernels, e):
         claims.append(f'({nonempty} -> finite {lo} -> finite {hi} -> {halves} ->\n'
                       f'   {_val_sum(c_out)} = (val {lo} + val {hi}) / 2 /\\\n'
                       f'   val {r_out} = RU {EMIN} prec ((val {hi} - val {lo}) / 2))')
+    if 'rel' in e:
+        # Stage B2 (ball_from_interval_1): the center near the midpoint, and the smallest radius.
+        vc, mid = _val_sum(c_out), f'(val {lo} + val {hi}) / 2'
+        rel = rocq.claim_constant_term(e['rel'], kernels, EMIN)
+        absolute = rocq.claim_constant_term(e['abs'], kernels, EMIN)
+        near = [f'val {lo} <= {vc} <= val {hi}', f'Rabs ({vc} - {mid}) <= {rel} * Rabs ({mid}) + {absolute}']
+        if e.get('smallest_radius'):
+            near.append(f'val {r_out} = RU {EMIN} prec (Rmax ({vc} - val {lo}) (val {hi} - {vc}))')
+        claims.append(f'({nonempty} -> finite {lo} -> finite {hi} ->\n   ' + ' /\\\n   '.join(near) + ')')
     claims += [f'({nonempty} -> ~ (finite {lo} /\\ finite {hi}) -> ball_whole_{n} {out})',
                f'(nan {lo} \\/ nan {hi} -> ball_whole_{n} {out})',
                f'(~ nan {lo} -> ~ nan {hi} -> ~ {nonempty} -> ball_empty_{n} {out})']
@@ -945,6 +954,8 @@ def _ball_of_interval_spec(k, kernels, e):
     bounded = [f'{vl} <= {vc} <= {vh}',
                f'Rabs ({vc} - {mid}) <= {rel} * Rabs ({mid}) + {absolute}',
                f'(forall z : R, in_interval_{n} {x} z -> Rabs (z - {vc}) <= val {r})']
+    if 'finite_when' in e:
+        return _ball_of_interval_finite_when(k, e, lines, c, r, lo, hi, n, x, bounded, mid, rel, absolute)
     if e.get('smallest_radius'):
         bounded.append(f'val {r} = RU {EMIN} prec (Rmax ({vc} - {vl}) ({vh} - {vc}))')
     finite = ' /\\ '.join(f'finite {v}' for v in list(c) + [r])
@@ -968,6 +979,40 @@ def _ball_of_interval_spec(k, kernels, e):
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
 
+def _ball_of_interval_finite_when(k, e, lines, c, r, lo, hi, n, x, bounded, mid, rel, absolute):
+    """ball_of_interval with finite_when (stage B2, interval_mid_rad_2 and interval_to_ball_2): for a
+    bounded interval the radius may be +infinity (a step past Omega near the top of the range), and
+    is finite under the conditions. ieee1788: the center as without the field, and the radius +inf
+    or a finite one with which the center contains the interval. ball: a canonical ball that contains
+    the interval, and under the conditions a finite ball with the center and radius as without the
+    field."""
+    t = _Terms(k)
+    conds = ' -> '.join(_condition(cond, t) for cond in e['finite_when'])
+    vc = _val_sum(c)
+    contains = f'(forall z : R, in_interval_{n} {x} z -> Rabs (z - {vc}) <= val {r})'
+    claims = []
+    if e['special'] == 'ball':
+        b = _ball_args(c, r)
+        claims += [f'ball_{len(c)} {b}',
+                   f'(ball_empty_{len(c)} {b} <-> interval_empty_{n} {x})',
+                   f'(interval_nonempty_{n} {x} -> ~ interval_bounded_{n} {x} -> ball_whole_{len(c)} {b})',
+                   f'(interval_bounded_{n} {x} ->\n   forall z : R, in_interval_{n} {x} z -> in_ball_{len(c)} {b} z)',
+                   f'(interval_bounded_{n} {x} -> {conds} ->\n   ball_finite_{len(c)} {b} /\\\n   ' +
+                   ' /\\\n   '.join(bounded) + ')']
+    else:
+        zero = ' /\\ '.join(f'zero {v}' for v in c)
+        inf = f'{r} = infinity prec emax false'
+        finite = ' /\\ '.join(f'finite {v}' for v in c)
+        claims += [f'(interval_empty_{n} {x} -> ' + ' /\\ '.join(f'nan {v}' for v in list(c) + [r]) + ')',
+                   f'({_xv(lo)} = XInf true -> {_xv(hi)} = XInf false -> {zero} /\\ {inf})',
+                   f'(finite {lo[0]} -> {_xv(hi)} = XInf false -> {_xv(c)} = XFin (omega prec emax) /\\ {inf})',
+                   f'({_xv(lo)} = XInf true -> finite {hi[0]} -> {_xv(c)} = XFin (- omega prec emax) /\\ {inf})',
+                   f'(interval_bounded_{n} {x} ->\n   {finite} /\\\n   ' + ' /\\\n   '.join(bounded[:2]) +
+                   f' /\\\n   ({inf} \\/ (finite {r} /\\ {contains})) /\\\n   ({conds} -> finite {r}))']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
 def _interval_of_ball_spec(k, kernels, e):
     """An interval that encloses a ball (Milestone 2, "Ball to interval"): canonical; empty
     exactly when the ball is; every value of the set, the ball name ranging over the members of its
@@ -976,6 +1021,8 @@ def _interval_of_ball_spec(k, kernels, e):
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
         [_let(k, kernels)]
+    if e['tight']['kind'] == 'outward':
+        return _interval_of_ball_outward(k, kernels, e, t, lines)
     zl, zu = _limbs(k, t.outs[e['lower']].limbs, e['lower'], (1,)), _limbs(k, t.outs[e['upper']].limbs, e['upper'], (1,))
     z = ' '.join(zl + zu)
     groups = {b: t.ins[cr['center']].limbs + (cr['radius'],) for b, cr in e['balls'].items()}
@@ -1001,6 +1048,48 @@ def _interval_of_ball_spec(k, kernels, e):
         body = f'xval {zl[0]} = {down} /\\ xval {zu[0]} = {up}'
     claims.append(f'(~ ({empty}) ->\n   forall lo hi : xreal,\n   range_lower {S} lo ->\n   range_upper {S} hi ->\n'
                   f'   {body})')
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _interval_of_ball_outward(k, kernels, e, t, lines):
+    """An interval of two limbs that encloses a ball (stage B2, ball_to_interval_2): canonical; empty
+    exactly when the ball is; every value of the set a member; for a finite ball and a bounded result,
+    each bound within rel |v| + abs of the bound v of the set, outward; the exact bound when its
+    condition holds; an infinite bound of the set returned as that infinity; bounded under the
+    conditions of bounded_when."""
+    zl, zu = _limbs(k, t.outs[e['lower']].limbs, e['lower'], (2,)), _limbs(k, t.outs[e['upper']].limbs, e['upper'], (2,))
+    z = ' '.join(zl + zu)
+    groups = {b: t.ins[cr['center']].limbs + (cr['radius'],) for b, cr in e['balls'].items()}
+
+    def member(name):
+        return f'in_ball_{len(groups[name]) - 1} {" ".join(groups[name])}'
+    S = _set_of(k, e, groups, member)
+    names = list(groups)
+    empty = ' \\/ '.join(f'ball_empty_{len(g) - 1} {" ".join(g)}' for g in groups.values())
+    finite = ' -> '.join(f'ball_finite_{len(g) - 1} {" ".join(g)}' for g in groups.values())
+    target = rocq._term(expr.parse(e['set']), lambda x: x)
+    tight = e['tight']
+    rel = rocq.claim_constant_term(tight['rel'], kernels, EMIN)
+    absolute = rocq.claim_constant_term(tight['abs'], kernels, EMIN)
+    vl, vh = _val_sum(zl), _val_sum(zu)
+    inner = [f'(interval_bounded_2 {z} ->\n    lo - {vl} <= {rel} * Rabs lo + {absolute} /\\\n'
+             f'    {vh} - hi <= {rel} * Rabs hi + {absolute})']
+    for side, var, limbs in (('lower', 'lo', zl), ('upper', 'hi', zu)):
+        conds = tight.get('exact_when', {}).get(side)
+        if conds:
+            inner.append(f'({t.exact_condition(conds)} -> {_xv(limbs)} = XFin {var})')
+    claims = [f'interval_2 {z}', f'(interval_empty_2 {z} <-> {empty})',
+              f'(forall {" ".join(names)} : R, ' + ' '.join(f'{member(x)} {x} ->' for x in names) +
+              f'\n   in_interval_2 {z} {target})',
+              f'({finite} ->\n   forall lo hi : R,\n   range_lower {S} (XFin lo) ->\n'
+              f'   range_upper {S} (XFin hi) ->\n   ' + ' /\\\n   '.join(inner) + ')',
+              f'(~ ({empty}) ->\n   (range_lower {S} (XInf true) -> {_xv(zl)} = XInf true) /\\\n'
+              f'   (range_upper {S} (XInf false) -> {_xv(zu)} = XInf false))']
+    for c in e.get('bounded_when', []):
+        limit = 'bpow radix2 ' + ('emax' if c['exp'] == 0 else f'(emax {"-" if c["exp"] < 0 else "+"} {abs(c["exp"])})')
+        claims.append(f'({finite} ->\n   (forall z : R,\n    {_strip(S)} z ->\n    Rabs z <= {limit}) ->\n'
+                      f'   interval_bounded_2 {z})')
     lines.append('  ' + ' /\\\n  '.join(claims) + '.')
     return _statement(f'{k.name}_spec', _comment(k), lines)
 

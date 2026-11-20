@@ -256,16 +256,16 @@ Definition lt_2_2 (x0 x1 y0 y1 : R) : bool :=
   let m := orb h t in
   m.
 
-(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). *)
-Definition sub_down_1 (a b : R) : R :=
-  let nb := - b in
-  let r := add_down_1 a nb in
-  r.
-
 (* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
 Definition sub_up_1 (a b : R) : R :=
   let nb := - b in
   let r := add_up_1 a nb in
+  r.
+
+(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). *)
+Definition sub_down_1 (a b : R) : R :=
+  let nb := - b in
+  let r := add_down_1 a nb in
   r.
 
 (* ball_mul_1: midpoint-radius product (Milestone 1 listing, second radius design). *)
@@ -713,6 +713,13 @@ Definition eq_2_2 (x0 x1 y0 y1 : R) : bool :=
   let m := andb h l in
   m.
 
+(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
+Definition mul_pow2_2 (x0 x1 c : R) : R * R :=
+  let h := rnd (x0 * c + 0) in
+  let l := rnd (x1 * c + 0) in
+  let '(z0, z1) := fast_two_sum h l in
+  (z0, z1).
+
 (* ball_mul_2: midpoint-radius product (Milestone 1 listing, second radius design). *)
 Definition ball_mul_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
   let '(cz0, cz1) := mul_2_2 cx0 cx1 cy0 cy1 in
@@ -845,13 +852,6 @@ Definition le_1_2 (a y0 y1 : R) : bool :=
   let t := andb e l in
   let m := orb h t in
   m.
-
-(* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
-Definition mul_pow2_2 (x0 x1 c : R) : R * R :=
-  let h := rnd (x0 * c + 0) in
-  let l := rnd (x1 * c + 0) in
-  let '(z0, z1) := fast_two_sum h l in
-  (z0, z1).
 
 (* mul_pow2_step_2: mul_pow2_2, the two limbs scaled and renormalized. *)
 Definition mul_pow2_step_2 (x0 x1 c : R) : R * R :=

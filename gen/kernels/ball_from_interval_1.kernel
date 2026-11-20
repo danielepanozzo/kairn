@@ -1,0 +1,25 @@
+# A ball with a one-limb center from an interval [lo, hi] of two values of T supplied by the program
+# (milestone2.md, "One enclosure interface", "A ball from an interval of two T"): interval_make_1,
+# which guards the bounds (rule R3), followed by interval_to_ball_1, as the page says of Ball<T, 1>
+# from two T. So it has the three cases of ball_from_interval_2: a NaN bound gives the whole line
+# through the whole-line interval, lo > hi, [+inf, +inf] and [-inf, -inf] the empty ball through the
+# empty interval, and an interval with an infinite bound the whole line; finite bounds lo <= hi give
+# the ball of interval_to_ball_1: its center within u |m| + eta of the midpoint m and in [lo, hi], and
+# the smallest radius of T for that center.
+kernel:        ball_from_interval_1
+input:         lo
+input:         hi
+output:        cw
+output:        rw
+ensures:       makes_ball cw rw from_interval=lo,hi rel=u abs=eta smallest_radius
+min_precision: 2
+source:        interval_make_1, then interval_to_ball_1 (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   every output is selected after explicit tests of the bounds, in interval_make_1 and interval_to_ball_1; makes_ball states what comes out
+
+(zl, zu) = interval_make_1(lo, hi)
+(cw, rw) = interval_to_ball_1(zl, zu)

@@ -508,6 +508,11 @@ class Tool(unittest.TestCase):
         self.assertIn("when one is empty, $Z$ is the other, as it is", self.page("ball_hull_1"))
         self.assertIn("when one is the whole line, $Z$ is the other", self.page("ball_intersection_1"))
         self.assertIn("is a member of the first part", self.page("ball_split_2"))
+        # The conversions of two limbs.
+        self.assertIn("The radius $r$ may be $+\\infty$ for a bounded interval near the top of the range",
+                      self.page("interval_mid_rad_2"))
+        self.assertIn("When $c - r = 0$, $z_l = c - r$ exactly.", self.page("ball_to_interval_2"))
+        self.assertIn("the smallest radius of `T` for that center", self.page("ball_from_interval_1"))
 
     def test_interval_kernels(self):
         # The claims of the interval kernels (architecture.md, "Claims of the interval kernels").

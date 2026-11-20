@@ -179,6 +179,10 @@ nav:
           - A ball with a two-limb center from an interval of two limbs: reference/ball_from_interval_2.md
           - A ball with a two-limb center as one with a one-limb center: reference/ball_narrow_2_1.md
           - The smallest interval that contains a ball, one-limb center: reference/ball_to_interval_1.md
+          - An interval that contains a ball, two-limb center: reference/ball_to_interval_2.md
+          - A ball with a one-limb center from an interval of two limbs: reference/ball_from_interval_1.md
+          - A ball that contains two balls, two-limb center: reference/ball_hull_2.md
+          - A ball that contains the intersection of two balls, two-limb center: reference/ball_intersection_2.md
           - A ball that contains two balls, one-limb center: reference/ball_hull_1.md
           - A ball that contains the intersection of two balls, one-limb center: reference/ball_intersection_1.md
           - Two balls that cover a ball, one-limb center: reference/ball_split_1.md
@@ -243,6 +247,9 @@ nav:
           - The relation equal of IEEE 1788, two-limb bounds: reference/interval_rel_equal_2.md
           - The relation interior of IEEE 1788, two-limb bounds: reference/interval_rel_interior_2.md
           - The relation disjoint of IEEE 1788, two-limb bounds: reference/interval_rel_disjoint_2.md
+          - The midpoint and radius of an interval, two-limb bounds: reference/interval_mid_rad_2.md
+          - A ball that contains an interval, two-limb bounds: reference/interval_to_ball_2.md
+          - An interval split at its midpoint, two-limb bounds: reference/interval_split_2.md
       - Building blocks on T:
           - TwoSum on values of the program: reference/two_sum_entry.md
           - Fast2Sum on values of the program: reference/fast_two_sum_entry.md

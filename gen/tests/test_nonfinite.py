@@ -605,6 +605,31 @@ def judge_ball_of_interval(k, ks, fmt, e, ins, outs, values):
     c, r = outs[e['center']], outs[e['radius']][0]
     state = interval_state(fmt, lo, hi)
     a, z = bound_value(lo), bound_value(hi)
+    within = all(abs(bound_value(ins[cond['abs_le']])) <= fmt.threshold * F(2) ** cond['exp']
+                 for cond in e.get('finite_when', [])) if state == 'bounded' else True
+    if 'finite_when' in e and state == 'bounded' and not within:
+        # Stage B2: outside the conditions the radius may be +inf; the ball still contains the interval.
+        ball = ball_state(fmt, c, r)
+        if e['special'] == 'ball':
+            if ball == 'line':
+                return []
+            if ball != 'finite':
+                return ['ball_of_interval (canonical)']
+        elif not all(finite(v) for v in c):
+            return ['ball_of_interval (finite)']
+        m = sum(fr(v) for v in c)
+        if e['special'] == 'ieee1788':
+            # The center as without the field: between the bounds, near the midpoint.
+            mid = (a + z) / 2
+            rel, absolute = ts.claim_constant(e['rel'], fmt), ts.claim_constant(e['abs'], fmt)
+            if not (a <= m <= z) or abs(m - mid) > rel * abs(mid) + absolute:
+                return ['ball_of_interval (center)']
+        if r == PINF:
+            return []
+        rad = fr(r) if finite(r) else None
+        if rad is None or max(m - a, z - m) > rad:
+            return ['ball_of_interval (containment)']
+        return []
     if e['special'] == 'ball':
         ball = ball_state(fmt, c, r)
         want = {'empty': 'empty', 'unbounded': 'line', 'bounded': 'finite'}[state]
@@ -656,6 +681,27 @@ def judge_interval_of_ball(k, ks, fmt, e, ins, outs, values):
     a, z = bound_value(zl), bound_value(zu)
     if not (xle(a, lo) and xle(hi, z)):
         return ['interval_of_ball (containment)']
+    if e['tight']['kind'] == 'outward':
+        # Stage B2 (ball_to_interval_2): for a finite ball and a bounded result, each bound within
+        # rel |v| + abs of the bound v of the set, exact under its condition; bounded under the
+        # conditions of bounded_when; an infinite bound of the set is that infinity (containment).
+        bad = []
+        finite_balls = all(s == 'finite' for s in states.values())
+        t = e['tight']
+        if finite_balls:
+            exact_env = {g.name: group_value(ins[g.name]) for g in k.inputs}
+            for side, v, w in (('lower', lo, a), ('upper', hi, z)):
+                conds = t.get('exact_when', {}).get(side)
+                if conds and ts.exact_conditions(e, fmt, exact_env, {}, conds) and w != v:
+                    bad.append(f'interval_of_ball (exact {side})')
+            if state == 'bounded':
+                rel, absolute = ts.claim_constant(t['rel'], fmt), ts.claim_constant(t['abs'], fmt)
+                if lo - a > rel * abs(lo) + absolute or z - hi > rel * abs(hi) + absolute:
+                    bad.append('interval_of_ball (outward)')
+            for c in e.get('bounded_when', []):
+                if max(abs(lo), abs(hi)) <= fmt.threshold * F(2) ** c['exp'] and state != 'bounded':
+                    bad.append('interval_of_ball (bounded)')
+        return bad
     rd, ru = directed(fmt, lo, 'down'), directed(fmt, hi, 'up')
     steps = e['tight'].get('steps', 0)
     if not (xle(stepped(fmt, rd, True, steps), a) and xle(a, rd) and xle(ru, z) and xle(z, stepped(fmt, ru, False, steps))):
@@ -905,6 +951,14 @@ def judge_ball_from_interval(k, ks, fmt, e, ins, outs):
     halves = all(fr(ins[x['half_in_format']][0]) / 2 in fmt.members for x in e.get('midpoint_when', []))
     if e.get('midpoint_when') and halves and (c != (a + b) / 2 or r != fmt.round((b - a) / 2, 'up')):
         return ['makes_ball (midpoint)']
+    if 'rel' in e:
+        # Stage B2 (ball_from_interval_1): the center near the midpoint, and the smallest radius.
+        mid = (a + b) / 2
+        rel, absolute = ts.claim_constant(e['rel'], fmt), ts.claim_constant(e['abs'], fmt)
+        if not (a <= c <= b) or abs(c - mid) > rel * abs(mid) + absolute:
+            return ['makes_ball (center)']
+        if e.get('smallest_radius') and r != fmt.round(max(c - a, b - c), 'up'):
+            return ['makes_ball (smallest radius)']
     return []
 
 
@@ -1222,8 +1276,9 @@ class NonFinite(unittest.TestCase):
         # the ball from an interval and the narrowing of a ball; and 13 of stage B1; and the two
         # finishes of the folds, and the two of the folds of maxima; and of stage B2, the 26
         # predicates and comparisons of an interval and the 16 of a ball, the hull, the
-        # intersection and the split of a ball (4).
-        self.assertEqual(len(self.names), 54 + 13 + 13 + 4 + 26 + 16 + 4)
+        # intersection and the split of a ball (4), the conversions of two limbs and the ball from
+        # an interval of one limb (5), the hull and the intersection of two limbs (2).
+        self.assertEqual(len(self.names), 54 + 13 + 13 + 4 + 26 + 16 + 4 + 5 + 2)
 
     def test_every_situation_is_reached(self):
         """The cases reach what the statements are about: every full kernel overflows on finite
@@ -1518,6 +1573,27 @@ class NonFinite(unittest.TestCase):
         self.assertEqual(judge_ball_splits(bs, ks, fmt, bs.ensures[0], {'c': [ZERO], 'r': [PINF]},
                                            {'ca': [ZERO], 'ra': [PINF], 'cb': [NaN], 'rb': [NaN]}, None),
                          ['ball_splits (special)'])
+        # The conversions of two limbs and the ball from an interval of one limb.
+        bt2, fi1, mr2 = ks['ball_to_interval_2'], ks['ball_from_interval_1'], ks['interval_mid_rad_2']
+        cr = {'c': [two, ZERO], 'r': [one]}
+        self.assertEqual(judge_interval_of_ball(bt2, ks, fmt, bt2.ensures[0], cr,
+                                                {'zl': [one, ZERO], 'zu': [make(F(3)), ZERO]}, None), [])
+        self.assertEqual(judge_interval_of_ball(bt2, ks, fmt, bt2.ensures[0], cr,
+                                                {'zl': [make(F(-2)), ZERO], 'zu': [make(F(3)), ZERO]}, None),
+                         ['interval_of_ball (outward)'])
+        self.assertEqual(judge_interval_of_ball(bt2, ks, fmt, bt2.ensures[0], {'c': [one, ZERO], 'r': [one]},
+                                                {'zl': [make(F(-1, 16)), ZERO], 'zu': [two, ZERO]}, None),
+                         ['interval_of_ball (exact lower)'])
+        self.assertEqual(judge_makes_ball(fi1, ks, fmt, fi1.ensures[0], {'lo': [one], 'hi': [two]},
+                                          {'cw': [make(F(3, 2))], 'rw': [make(F(1, 2))]}, None), [])
+        self.assertEqual(judge_makes_ball(fi1, ks, fmt, fi1.ensures[0], {'lo': [one], 'hi': [two]},
+                                          {'cw': [make(F(3, 2))], 'rw': [one]}, None), ['makes_ball (smallest radius)'])
+        top = {'xl': [make(-fmt.top), ZERO], 'xu': [make(fmt.top), ZERO]}       # beyond 2^(emax-1): r may be +inf
+        self.assertEqual(judge_ball_of_interval(mr2, ks, fmt, mr2.ensures[0], top, {'m': [ZERO, ZERO], 'r': [PINF]},
+                                                None), [])
+        self.assertEqual(judge_ball_of_interval(mr2, ks, fmt, mr2.ensures[0], {'xl': [one, ZERO], 'xu': [two, ZERO]},
+                                                {'m': [make(F(3, 2)), ZERO], 'r': [PINF]}, None),
+                         ['ball_of_interval (finite)'])
         self.assertEqual(fmt.ieee_round(F(15), 'nearest'), PINF)           # 15 is a tie between 14 and 16
         self.assertEqual(fmt.ieee_round(F(29, 2), 'down'), make(F(14)))
         self.assertEqual(fmt.ieee_round(F(-29, 2), 'down'), NINF)

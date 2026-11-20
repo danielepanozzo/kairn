@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $x_l = x_{l0} + x_{l1}$, $
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`ball_hull_2`](ball_hull_2.md).
 
 ## Requires
 

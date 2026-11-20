@@ -1456,7 +1456,11 @@ class TheKernels(unittest.TestCase):
     # And the set operations of a ball: the hull and the intersection of one limb, the split of one
     # and of two.
     WAVE_2_B2_BALL_SETS = {'ball_hull_1', 'ball_intersection_1', 'ball_split_1', 'ball_split_2'}
-    WAVE_2_B2 = WAVE_2_B2_INTERVALS | WAVE_2_B2_BALLS | WAVE_2_B2_BALL_SETS
+    # And the conversions of two limbs, the ball from an interval of one limb, and the hull and the
+    # intersection of balls of two limbs, which convert them.
+    WAVE_2_B2_CONVERSIONS = {'interval_mid_rad_2', 'interval_to_ball_2', 'ball_to_interval_2', 'interval_split_2',
+                             'ball_from_interval_1', 'ball_hull_2', 'ball_intersection_2'}
+    WAVE_2_B2 = WAVE_2_B2_INTERVALS | WAVE_2_B2_BALLS | WAVE_2_B2_BALL_SETS | WAVE_2_B2_CONVERSIONS
     WAVE_2 |= WAVE_2_B2
     # Of these, the kernels whose theorems are about the generated text and pass the audit: all
     # of the first stage. The interval kernels of one limb (IeeeInterval1.v), mul_dir_1 in both models
@@ -1590,6 +1594,11 @@ class TheKernels(unittest.TestCase):
         # split of two limbs (the ball sum of two).
         self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_B2_BALL_SETS}, {
             'ball_hull_1': 2, 'ball_intersection_1': 2, 'ball_split_1': 2, 'ball_split_2': 3})
+        # Of the conversions: 3 for two limbs (add_2_2, add_ball_2_2, the directed sums), 2 for the
+        # ball from an interval of one limb (interval_to_ball_1).
+        self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_B2_CONVERSIONS}, {
+            'interval_mid_rad_2': 3, 'interval_to_ball_2': 3, 'ball_to_interval_2': 3, 'interval_split_2': 3,
+            'ball_from_interval_1': 2, 'ball_hull_2': 3, 'ball_intersection_2': 3})
 
     def test_milestone2_bodies_are_those_of_milestone2_md(self):
         """The listings of wave 1, line for line as the page writes them ("Building blocks on T",

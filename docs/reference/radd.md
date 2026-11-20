@@ -12,7 +12,7 @@ $$r \ge a + b.$$
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`radd_entry`](radd_entry.md), [`ball_contains_ball_2`](ball_contains_ball_2.md), [`ball_contains_point_2`](ball_contains_point_2.md), [`ball_equal_2`](ball_equal_2.md), [`ball_less_2`](ball_less_2.md), [`ball_less_equal_2`](ball_less_equal_2.md), [`ball_narrow_2_1`](ball_narrow_2_1.md).
+No public operation computes this kernel on its own. It is part of [`radd_entry`](radd_entry.md), [`ball_contains_ball_2`](ball_contains_ball_2.md), [`ball_contains_point_2`](ball_contains_point_2.md), [`ball_equal_2`](ball_equal_2.md), [`interval_mid_rad_2`](interval_mid_rad_2.md), [`ball_less_2`](ball_less_2.md), [`ball_less_equal_2`](ball_less_equal_2.md), [`ball_narrow_2_1`](ball_narrow_2_1.md).
 
 ## Requires
 

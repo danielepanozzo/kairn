@@ -751,11 +751,16 @@ def control_counts(tools, workdir, expected, limb_types, folds=None):
 # interval kernels into one instruction, for double and float (control_packing: interval_mul_1
 # among them), and Apple clang on AArch64 two of interval_add_2 and of interval_sub_2 into one
 # fmla on .2d or .2s, in the form of the fix-ups that is a call (measured with Clang 18, Apple
-# clang 21 and GCC 16 on the joined tree of the folds and the intervals; GCC packs none). An entry
-# that stops holding, a compiler that stops packing or another that starts, fails the control: the
-# table is what we know, not what we expect.
+# clang 21 and GCC 16 on the joined tree of the folds and the intervals; GCC packs none). With the
+# conversions of two limbs of stage B2, Apple clang packs the same pairs in the kernels that make
+# the bounds of a ball of two limbs by the directed sums (ball_to_interval_2, and the hull and the
+# intersection of balls of two limbs, which call it) and in the midpoint and radius of two limbs
+# (two add_ball_2_2 of independent differences: interval_mid_rad_2 and interval_to_ball_2). An
+# entry that stops holding, a compiler that stops packing or another that starts, fails the
+# control: the table is what we know, not what we expect.
 VECTORIZED_SCALAR = {'clang x86-64': ('ball_from_interval_2', 'interval_add_2', 'interval_mul_1', 'interval_sub_2'),
-                     'apple clang aarch64': ('interval_add_2', 'interval_sub_2')}
+                     'apple clang aarch64': ('interval_add_2', 'interval_sub_2', 'ball_to_interval_2', 'ball_hull_2',
+                                             'ball_intersection_2', 'interval_mid_rad_2', 'interval_to_ball_2')}
 
 
 def vectorized_failures(tools, packed):

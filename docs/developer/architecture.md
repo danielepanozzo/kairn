@@ -1977,6 +1977,49 @@ The listings: `ball_hull_1` and `ball_intersection_1` are `ball_to_interval_1` o
 
 **In the formal models.** IEEE model only: `ball_n` of the result; for `union`, `(ball_empty_n Z <-> ball_empty_n X /\ ball_empty_n Y)`, `(ball_empty_n X -> cz = cy /\ rz = ry)` (the limbs themselves) and the same with X and Y exchanged; for `intersection`, `(ball_empty_n X \/ ball_empty_n Y -> ball_empty_n Z)` and `(ball_whole_n X -> cz = cy /\ rz = ry)`, and exchanged; then `forall z : R, in_ball_n X z \/ in_ball_n Y z -> in_ball_n Z z` (`/\` for the intersection). For `ball_splits`: `ball_n` of each part, the empty set and the whole line twice (`ball_empty_n`, `ball_whole_n`), and for `ball_finite_n X`, `forall z : R, c - r <= z <= c -> in_ball_n A z` and `forall z : R, c <= z <= c + r -> in_ball_n B z`, $c$ the value of the center limbs.
 
+### Claims of the enclosure interface: the conversions of two limbs
+
+The conversions between an interval and a ball of two limbs ([Midpoint, radius and the conversions](design/milestone2.md#midpoint-radius-and-the-conversions)), stage B2: `interval_mid_rad_2`, `interval_to_ball_2`, `interval_split_2`, `ball_to_interval_2`; the ball of one limb from an interval of two `T`, `ball_from_interval_1`; and the hull and the intersection of balls of two limbs, `ball_hull_2` and `ball_intersection_2`, which convert them (their claims are those of `ball_hull_1` and `ball_intersection_1`, [above](#claims-of-the-enclosure-interface-the-set-operations-of-a-ball)). These are other listings than those of one limb (the halves by `mul_pow2_2`, the sum by `add_2_2`, each side of the radius by `radd(to_up_2(z), e)` with $(z, e)$ = `add_ball_2_2`; the bounds of a ball by `add_down_2_2` and `add_up_2_2`), and their claims use kinds that exist, three of them with a field that is new. Everything above keeps its meaning and its shape: each new field is written only in an entry that uses it.
+
+**Fields new to existing kinds:**
+- `ball_of_interval` with `finite_when`: a list of conditions `{"abs_le": BOUND, "exp": E}`, BOUND one of the inputs of `from`, $\lvert \mathrm{BOUND}\rvert \le 2^{q_{\max} + p + E}$ (the conditions of `finite_when` of the other kinds). The radius of two limbs is the larger of two upper bounds, each `radd` of the rounding up of a difference by `add_ball_2_2`: near the top of the range `radd` steps past $\Omega$, or a TwoSum inside `add_2_2` overflows and gives a NaN, and the listing makes such a side $+\infty$, so that for a bounded interval the radius can be $+\infty$. It is finite when both bounds are at most $2^{q_{\max}+p-2}$ in magnitude, where the sums of two limbs are finite (`interval_mid_rad_2` and `interval_to_ball_2` claim `[{"abs_le": "xl", "exp": -2}, {"abs_le": "xu", "exp": -2}]`). So, for a bounded $X$: with `ieee1788`, the center is finite, between the bounds and within `rel` $\cdot\lvert m\rvert$ + `abs` of the midpoint $m$, as without the field, and the radius is $+\infty$ or a finite number with which the center contains $X$; it is finite when every condition holds. With `ball`, the result is a canonical ball that contains $X$, and, when every condition holds, a finite ball whose center and radius are as without the field; otherwise it may be the whole line. The unbounded and the empty $X$ are as without the field.
+- `interval_of_ball` with bounds of two limbs: `tight` is `{"kind": "outward", "rel": ..., "abs": ..., "exact_when": {"lower": [...], "upper": [...]}}`, the outward tightness of `encloses_interval`, and an optional `bounded_when`, a list of conditions `{"abs_le": SET, "exp": E}`. $Z$ is canonical, empty exactly when the ball is, and contains every value of `set` (I1 to I3, as before). For a finite ball and a bounded $Z$, with $lo$ and $hi$ the greatest lower and least upper bounds of the set ($c - r$ and $c + r$ for the set `x`): $lo - z_\ell \le \mathrm{rel}\cdot\lvert lo\rvert + \mathrm{abs}$ and $z_u - hi \le \mathrm{rel}\cdot\lvert hi\rvert + \mathrm{abs}$; when every condition of a side holds (`{"zero": EXPR}` over the inputs, $c - r = 0$ for the lower bound), that bound of $Z$ is exactly that bound of the set, zero. For a finite ball, $Z$ is bounded when every member $z$ of the set has $\lvert z\rvert \le 2^{q_{\max} + p + E}$.
+- `makes_ball` from an interval with `rel`, `abs` and `smallest_radius` (all three optional, `smallest_radius` only with the other two): for finite bounds $lo \le hi$, the center $c$ is between them and within `rel` $\cdot\lvert m\rvert$ + `abs` of the midpoint $m = (lo + hi)/2$, and with `smallest_radius` the radius is $\mathrm{RU}(\max(c - lo, hi - c))$, the smallest number of the format with which the ball contains $[lo, hi]$. They come after `midpoint_when` when an entry has both.
+
+The constants of the midpoint of two limbs are those of the page: `rel` $3u^2/(1 - 4u)$, the bound of `add_2_2`, and `abs` $2\eta$. They need one fact beyond the claims of the kernels called: `mul_pow2_2` by $\tfrac12$ loses at most $\tfrac12\eta$, not the $\eta$ of its claim, because of a normalized pair at most one limb is an odd multiple of $\eta$ (a leading limb below $2^p\eta$ has a zero tail); so the two halves are within $\eta$ of their sum together, and $\eta(1 + 3u^2/(1-4u)) \le 2\eta$. The move into $[\ell, h]$ only brings the center closer.
+
+Entries as the generator writes them (`source`, `flops` and the theorem fields left out):
+
+```json
+{"name": "interval_mid_rad_2", "domain": "extended", "ieee_only": true,
+ "inputs": [{"name": "xl", "limbs": 2}, {"name": "xu", "limbs": 2}],
+ "outputs": [{"name": "m", "limbs": 2}, {"name": "r", "limbs": 1}],
+ "requires": ["interval(xl, xu)"],
+ "ensures": [{"kind": "ball_of_interval", "center": "m", "radius": "r", "from": {"lower": "xl", "upper": "xu"}, "special": "ieee1788", "rel": "3*u^2/(1-4*u)", "abs": "2*eta", "finite_when": [{"abs_le": "xl", "exp": -2}, {"abs_le": "xu", "exp": -2}]}],
+ "min_precision": 3, "status": "unverified", "ieee_status": "unverified",
+ "instances": {"binary64": [], "binary32": []}},
+{"name": "ball_from_interval_1", "domain": "extended", "ieee_only": true,
+ "inputs": [{"name": "lo", "limbs": 1}, {"name": "hi", "limbs": 1}],
+ "outputs": [{"name": "cw", "limbs": 1}, {"name": "rw", "limbs": 1}],
+ "requires": [],
+ "ensures": [{"kind": "makes_ball", "center": "cw", "radius": "rw", "from": {"lower": "lo", "upper": "hi"}, "rel": "u", "abs": "eta", "smallest_radius": true}],
+ "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "instances": {"binary64": [], "binary32": []}}
+```
+
+and the `ensures` of two more:
+
+```json
+[{"kind": "interval_of_ball", "lower": "zl", "upper": "zu", "set": "x", "balls": {"x": {"center": "c", "radius": "r"}}, "tight": {"kind": "outward", "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)", "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)", "exact_when": {"lower": [{"zero": "c-r"}], "upper": [{"zero": "c+r"}]}}, "bounded_when": [{"abs_le": "x", "exp": -2}]}],
+[{"kind": "ball_of_interval", "center": "c", "radius": "r", "from": {"lower": "xl", "upper": "xu"}, "special": "ball", "rel": "3*u^2/(1-4*u)", "abs": "2*eta", "finite_when": [{"abs_le": "xl", "exp": -2}, {"abs_le": "xu", "exp": -2}]}]
+```
+
+those of `ball_to_interval_2` (whose constants are those of `interval_add_2`, the sum of two limbs) and `interval_to_ball_2`. `interval_split_2` claims what `interval_split_1` claims, on bounds of two limbs; its listing has one step more, the midpoint moved into $[x_\ell, x_u]$ by `lt_2_2`: a bound of two limbs can lie beyond $\Omega$ (by less than half a gap of `T`), and the midpoint $\pm\Omega$ of a half-line is then outside the interval, where the bound itself is the point of the split.
+
+Two listings differ from the page's in form, not in value: the page writes the radius of `ball_to_interval_2` as the 2-limb numbers $(-r, 0)$ and $(r, 0)$, and the listing makes them by `make_2` (whose guard leaves a radius as it is), so that no limb is added to a literal zero, which the C++ printer would write as an addition of $+0$, the form of a guard; `ball_split_2`, above, does the same with $\mp h$.
+
+**In the formal models.** IEEE model only. `ball_of_interval` with `finite_when`: for `ieee1788`, `(interval_bounded_n X -> finite c /\ l <= c <= h /\ Rabs (c - m) <= ... /\ (r = infinity prec emax false \/ (finite r /\ forall z : R, in_interval_n X z -> Rabs (z - c) <= val r)) /\ (C -> finite r))`; for `ball`, `(interval_bounded_n X -> forall z : R, in_interval_n X z -> in_ball_n B z)` and `(interval_bounded_n X -> C -> ball_finite_n B /\ ...)`, C the conditions `Rabs (val xl0 + val xl1) <= bpow radix2 (emax - 2)` and the same of the upper bound. `interval_of_ball` of two limbs: the shape of the outward tightness of `encloses_interval` (`range_lower S (XFin lo)`, `range_upper S (XFin hi)`, the exact bound as `xval_2 zl0 zl1 = XFin lo`, and an infinite bound of the set as the infinity of $Z$), under `ball_finite_n` of the ball, and `bounded_when` as I5. `makes_ball` with `rel`: one conjunct more, for `xnonempty` finite bounds, `val lo <= c <= val hi /\ Rabs (c - m) <= ...` and the radius as `RU`.
+
 ## The line protocol
 
 Runners and the oracle exchange text lines, the same on every platform and for every format.

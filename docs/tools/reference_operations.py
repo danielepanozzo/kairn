@@ -628,6 +628,15 @@ KERNELS = {
     "interval_rel_equal_2": page("intervals", "The relation equal of IEEE 1788, two-limb bounds"),
     "interval_rel_interior_2": page("intervals", "The relation interior of IEEE 1788, two-limb bounds"),
     "interval_rel_disjoint_2": page("intervals", "The relation disjoint of IEEE 1788, two-limb bounds"),
+    # The conversions of two limbs, the ball from an interval of one limb, and the hull and the
+    # intersection of balls of two limbs.
+    "interval_mid_rad_2": page("intervals", "The midpoint and radius of an interval, two-limb bounds"),
+    "interval_to_ball_2": page("intervals", "A ball that contains an interval, two-limb bounds"),
+    "interval_split_2": page("intervals", "An interval split at its midpoint, two-limb bounds"),
+    "ball_to_interval_2": page("ball", "An interval that contains a ball, two-limb center"),
+    "ball_from_interval_1": page("ball", "A ball with a one-limb center from an interval of two limbs"),
+    "ball_hull_2": page("ball", "A ball that contains two balls, two-limb center"),
+    "ball_intersection_2": page("ball", "A ball that contains the intersection of two balls, two-limb center"),
     # The set operations of a ball.
     "ball_hull_1": page("ball", "A ball that contains two balls, one-limb center"),
     "ball_intersection_1": page("ball", "A ball that contains the intersection of two balls, one-limb center"),

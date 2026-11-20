@@ -99,6 +99,14 @@ kernel is described in one file, gen/kernels/NAME.kernel:
     ensures:       ball_splits ca ra cb rb from=c,r
                                       two balls, the first containing [c - r, c], the second
                                       [c, c + r]
+    ensures:       ball_of_interval m r from=xl,xu ... finite_when=abs_le(xl,-2);abs_le(xu,-2)
+                                      the radius may be +inf for a bounded interval, and is finite
+                                      under the conditions (two limbs)
+    ensures:       interval_of_ball zl zu x x=c,r tight=outward;rel=EXPR;abs=EXPR
+                   [exact_lower=zero(c-r)] [exact_upper=zero(c+r)] [bounded_when=abs_le(x,-2)]
+                                      an interval of two limbs that encloses a ball
+    ensures:       makes_ball cw rw from_interval=lo,hi rel=u abs=eta [smallest_radius]
+                                      the center near the midpoint and the smallest radius
     min_precision: 3                  optional
     theorem:       proofs/theories/Add22.v add_2_2_correct
     source:        free text
@@ -638,24 +646,39 @@ def _ensures(words, where):
             raise DescriptionError(f'{where}: expected "makes_ball CENTER RADIUS from=CENTER,RADIUS"')
         return {'kind': kind, 'center': words[1], 'radius': words[2],
                 'from': {'center': m.group(1), 'radius': m.group(2)}}
-    if kind == 'makes_ball' and len(words) in (4, 5) and words[3].startswith('from_interval='):
+    if kind == 'makes_ball' and len(words) >= 4 and words[3].startswith('from_interval='):
         # A ball from the bounds of an interval (Milestone 2): `from` names a lower and an upper
-        # input, and midpoint_when the conditions under which the center is the exact midpoint.
+        # input, and midpoint_when the conditions under which the center is the exact midpoint; or
+        # (stage B2, ball_from_interval_1) rel and abs, the distance of the center to the midpoint,
+        # and smallest_radius, as ball_of_interval has them.
         m = re.fullmatch(r'from_interval=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
-        if not m or (len(words) == 5 and not words[4].startswith('midpoint_when=')):
+        opts = {}
+        for w in words[4:]:
+            key, eq, val = w.partition('=')
+            if key in ('midpoint_when', 'rel', 'abs') and eq and val and key not in opts:
+                opts[key] = val
+            elif w == 'smallest_radius' and w not in opts:
+                opts[w] = True
+            else:
+                m = None
+        if not m:
             raise DescriptionError(f'{where}: expected "makes_ball CENTER RADIUS from_interval=LOWER,UPPER '
-                                   '[midpoint_when=CONDITIONS]"')
+                                   '[midpoint_when=CONDITIONS] [rel=EXPR abs=EXPR] [smallest_radius]"')
         entry = {'kind': kind, 'center': words[1], 'radius': words[2],
                  'from': {'lower': m.group(1), 'upper': m.group(2)}}
-        if len(words) == 5:
+        for key in ('rel', 'abs', 'smallest_radius'):
+            if key in opts:
+                entry[key] = opts[key]
+        if 'midpoint_when' in opts:
             conds = []
-            for part in words[4][len('midpoint_when='):].split(';'):
+            for part in opts['midpoint_when'].split(';'):
                 c = re.fullmatch(r'half_in_format\(([a-z][a-z0-9]*)\)', part)
                 if not c:
                     raise DescriptionError(f'{where}: a condition of midpoint_when is half_in_format(INPUT), '
                                            f'got {part!r}')
                 conds.append({'half_in_format': c.group(1)})
-            entry['midpoint_when'] = conds
+            entry = {key: v for key, v in entry.items() if key not in ('rel', 'abs', 'smallest_radius')} | \
+                {'midpoint_when': conds} | {key: v for key, v in entry.items() if key in ('rel', 'abs', 'smallest_radius')}
         return entry
     if kind == 'makes_interval' and len(words) == 4:
         m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
@@ -800,18 +823,40 @@ def _ensures(words, where):
                 entry[key] = val
             elif w == 'smallest_radius' and w not in entry:
                 entry[w] = True
+            elif key == 'finite_when' and eq and val and key not in entry:
+                # Stage B2 (interval_mid_rad_2): the radius is finite when the conditions hold.
+                entry[key] = _finite_when(val, where)
             else:
                 raise DescriptionError(f'{where}: bad or repeated field {w!r} in ball_of_interval entry')
         if None in (entry['special'], entry['rel'], entry['abs']):
             raise DescriptionError(f'{where}: a ball_of_interval entry needs special=, rel= and abs=')
         if 'smallest_radius' in entry:
             entry['smallest_radius'] = entry.pop('smallest_radius')     # last, after the constants
+        if 'finite_when' in entry:
+            entry['finite_when'] = entry.pop('finite_when')
         return entry
-    if kind == 'interval_of_ball' and len(words) == 6 and words[5].startswith('tight='):
-        # interval_of_ball LOWER UPPER SET NAME=CENTER,RADIUS tight=...: an interval that encloses a ball.
-        return {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
-                'balls': _pairs(words[4:5], where, 'ball', ('center', 'radius')),
-                'tight': _tight(words[5][len('tight='):], where)}
+    if kind == 'interval_of_ball' and len(words) >= 6 and words[5].startswith('tight='):
+        # interval_of_ball LOWER UPPER SET NAME=CENTER,RADIUS tight=... [exact_lower=...]
+        #   [exact_upper=...] [bounded_when=...]: an interval that encloses a ball; the tightness
+        #   outward, with the exactness of each side and the condition of a bounded result, of two
+        #   limbs (stage B2).
+        entry = {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
+                 'balls': _pairs(words[4:5], where, 'ball', ('center', 'radius')),
+                 'tight': _tight(words[5][len('tight='):], where)}
+        opts = {}
+        for w in words[6:]:
+            key, eq, val = w.partition('=')
+            if key not in ('exact_lower', 'exact_upper', 'bounded_when') or not eq or key in opts:
+                raise DescriptionError(f'{where}: bad or repeated field {w!r} in interval_of_ball entry')
+            opts[key] = val
+        sides = {s: _exact_when(opts[f'exact_{s}'], where) for s in ('lower', 'upper') if f'exact_{s}' in opts}
+        if sides:
+            if entry['tight']['kind'] != 'outward':
+                raise DescriptionError(f'{where}: exact_lower and exact_upper belong to tight=outward')
+            entry['tight']['exact_when'] = sides
+        if 'bounded_when' in opts:
+            entry['bounded_when'] = _bounded_when(opts['bounded_when'], where)
+        return entry
     if kind == 'splits' and len(words) == 6:
         # splits AL AU BL BU from=LOWER,UPPER: two intervals that together are the operand.
         m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[5])

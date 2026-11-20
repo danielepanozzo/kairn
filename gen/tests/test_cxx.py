@@ -222,6 +222,11 @@ NONFINITE_CE_CASES = [
     ('ball_hull_1', 'float', [1.0, 2.0 ** -30, -2.0, 1.0]),
     ('ball_intersection_1', 'double', [1.0, 1.0, 1.5, 1.0]),
     ('ball_intersection_1', 'float', [1.0, 0.5, 1.25, 2.0 ** -30]),
+    # The ball from an interval of one limb, on every kind of pair whose interval is not empty (the
+    # empty interval would make the sum of the halves +inf - inf, as for interval_to_ball_1).
+    ('ball_from_interval_1', 'double', [1.0, 2.0]),
+    ('ball_from_interval_1', 'float', [math.nan, 1.0]),
+    ('ball_from_interval_1', 'double', [-math.inf, 1.0]),
 ]
 
 

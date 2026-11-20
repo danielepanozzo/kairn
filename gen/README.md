@@ -165,7 +165,14 @@ t        = add(x0, y0)
   `lt`, `le`, `eq` and `member`. A set `x=A,B` is an interval or a ball as the requirements say
   (`requires: interval A B`, `requires: ball A B`), and parse_kernel writes it under `intervals` or
   `balls` (`ir._set_kinds`). The C++ parameter of an input the computation does not need
-  (`unused:`) may be the first one (`interval_empty_1` reads only the lower bound).
+  (`unused:`) may be the first one (`interval_empty_1` reads only the lower bound). The set
+  operations of a ball: `ensures: ball_set cz rz union x=cx,rx y=cy,ry` (or `intersection`) and
+  `ensures: ball_splits ca ra cb rb from=c,r`. The conversions of two limbs: `finite_when=abs_le(xl,-2);
+  abs_le(xu,-2)` after a `ball_of_interval` entry (the radius finite under the conditions);
+  `interval_of_ball zl zu x x=c,r tight=outward;rel=EXPR;abs=EXPR [exact_lower=zero(c-r)]
+  [exact_upper=zero(c+r)] [bounded_when=abs_le(x,-2)]` with bounds of two limbs; and `rel=EXPR
+  abs=EXPR [smallest_radius]` after a `makes_ball ... from_interval=lo,hi` entry
+  (`ball_from_interval_1`).
 - `guard_pending: a REASON`: an input of an entry kernel whose guard is not written yet (only
   `add_2_1`, whose guard changes the formal model of a proved kernel and lands with its proof).
 - The folds' stage (architecture.md, "Claims of Milestone 2"): `requires: count m` ($m = 0$ or
@@ -456,7 +463,8 @@ without one), of
 `normalized` for `canonical`), of constant-evaluation variants (same signature, no FMA), and of
 computed constants (above). A kernel has no real-model statement when it claims `extends`,
 `represents`, `makes_ball` or `finite_or_nan` (and the interval kinds `makes_interval`, `encloses_interval`,
-`set_bound`, `interval_set`, `ball_of_interval`, `interval_of_ball`, `splits`, `certain`, `trit`) and nothing else, or
+`set_bound`, `interval_set`, `ball_of_interval`, `interval_of_ball`, `splits`, `certain`, `trit`, `ball_set`,
+`ball_splits`) and nothing else, or
 says `ieee_only: yes`: the full kernels, the constructors, the interval kernels, the finishes of
 the folds. A constant `up(EXPR)` that only such kernels use (the halving of `ball_from_interval_2`
 and `interval_mid_rad_1`) has no definition in `Model.v`; `IeeeModel.v` defines it from its

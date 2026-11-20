@@ -12,7 +12,7 @@ $$[c - r, c + r] \supseteq [x_l, x_u].$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`ball_hull_1`](ball_hull_1.md), [`ball_intersection_1`](ball_intersection_1.md).
+**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`ball_from_interval_1`](ball_from_interval_1.md), [`ball_hull_1`](ball_hull_1.md), [`ball_intersection_1`](ball_intersection_1.md).
 
 ## Requires
 

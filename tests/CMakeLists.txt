@@ -506,7 +506,11 @@ set(_toy_ext_a2 fp:5:-7:0)
 #   comparisons"): the oracle reads neither the claims certain and trit nor the condition abs_le of
 #   their exact_when yet;
 # - the set operations of a ball, of stage B2 (architecture.md, "Claims of the enclosure interface:
-#   the set operations of a ball"): the oracle reads neither ball_set nor ball_splits yet.
+#   the set operations of a ball"): the oracle reads neither ball_set nor ball_splits yet;
+# - the conversions of two limbs of stage B2 (architecture.md, "Claims of the enclosure interface:
+#   the conversions of two limbs"), with the hull and the intersection of balls of two limbs: the
+#   oracle reads neither finite_when of ball_of_interval, nor interval_of_ball of two limbs, nor
+#   rel, abs and smallest_radius of a makes_ball from an interval, yet.
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
@@ -528,7 +532,9 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   ball_contains_point_1 ball_contains_ball_1 ball_positive_1 ball_negative_1 ball_zero_1 ball_less_1
   ball_less_equal_1 ball_equal_1 ball_contains_point_2 ball_contains_ball_2 ball_positive_2 ball_negative_2
   ball_zero_2 ball_less_2 ball_less_equal_2 ball_equal_2
-  ball_hull_1 ball_intersection_1 ball_split_1 ball_split_2)
+  ball_hull_1 ball_intersection_1 ball_split_1 ball_split_2
+  interval_mid_rad_2 interval_to_ball_2 interval_split_2 ball_to_interval_2 ball_from_interval_1 ball_hull_2
+  ball_intersection_2)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
   add_1 add_1_entry add_2 add_2_entry sub_1 sub_1_entry sub_2 sub_2_entry axpy_1 axpy_1_entry axpy_2 axpy_2_entry
   axpy_2_1 axpy_2_1_entry scale_1 scale_2 mul_pow2_map_1 mul_pow2_map_2

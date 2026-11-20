@@ -136,13 +136,16 @@ class Claims(unittest.TestCase):
     # smallest radius of a ball made from an interval (stage B1); the mask and the steps of the
     # finish of a fold of maxima. Every entry without them has the shape it had before.
     OPTIONAL = {'rounded': ['when', 'zero_factor'], 'error': ['exact_when'], 'encloses': ['exact_when'],
-                'bound': ['zero_factor'], 'outward': ['exact_when', 'zero_factor'], 'makes_ball': ['midpoint_when'],
+                'bound': ['zero_factor'], 'outward': ['exact_when', 'zero_factor'],
                 'encloses_interval': ['bounded_exactly', 'zero_factor'], 'set_bound': ['tight'],
-                'ball_of_interval': ['smallest_radius'],
                 'finite_or_nan': ['if', 'steps'],   # the finish of a fold of maxima
                 # the sets of a predicate (one of the two), and its exactness (stage B2)
                 'certain': ['intervals', 'balls', 'exact', 'exact_when'],
-                'trit': ['intervals', 'balls', 'exact', 'exact_when']}
+                'trit': ['intervals', 'balls', 'exact', 'exact_when'],
+                # the conversions of two limbs and the ball from an interval of one limb (stage B2)
+                'makes_ball': ['midpoint_when', 'rel', 'abs', 'smallest_radius'],
+                'ball_of_interval': ['smallest_radius', 'finite_when'],
+                'interval_of_ball': ['bounded_when']}
     # The bound kernels of Milestone 2 (the folds' stage): an upper entry with a value of its own
     # under a mask, and no gaps.
     UPPER_OWN = ['kind', 'of', 'value', 'if']
@@ -357,7 +360,12 @@ class Claims(unittest.TestCase):
                 'mul_pow2_2_full': [bound('x*c', -1)],
                 # Milestone 2: a ball of two limbs narrowed to one, finite while no member exceeds a
                 # quarter of the threshold (its radius plus the second limb then stays below it).
-                'ball_narrow_2_1': [bound('abs(c)+r', -2)]}
+                'ball_narrow_2_1': [bound('abs(c)+r', -2)],
+                # Stage B2: the midpoint and radius of an interval of two limbs, and its ball, whose
+                # radius is finite while both bounds are within a quarter of the threshold
+                # (ball_of_interval with finite_when).
+                'interval_mid_rad_2': [bound('xl', -2), bound('xu', -2)],
+                'interval_to_ball_2': [bound('xl', -2), bound('xu', -2)]}
         for k in self.doc['kernels']:
             for e in k['ensures']:
                 self.assertEqual(e.get('finite_when', []), want.get(k['name'], []), k['name'])
@@ -585,8 +593,34 @@ class Claims(unittest.TestCase):
         self.assertEqual(self.by['ball_intersection_1']['ensures'],
                          [dict(self.by['ball_hull_1']['ensures'][0], set='intersection')])
         self.assertEqual(self.by['ball_split_1']['ensures'], self.by['ball_split_2']['ensures'])
+        self.assertEqual(self.by['ball_hull_2']['ensures'], self.by['ball_hull_1']['ensures'])
+        self.assertEqual(self.by['ball_intersection_2']['ensures'], self.by['ball_intersection_1']['ensures'])
         self.assertEqual(self.by['ball_split_1']['min_precision'], 2)
         self.assertEqual([g['limbs'] for g in self.by['ball_split_1']['outputs']], [1, 1, 1, 1])
+
+    def test_the_entries_of_the_conversions_of_two_limbs_in_architecture_md(self):
+        # The entries that architecture.md writes out ("Claims of the enclosure interface: the
+        # conversions of two limbs"), field for field and in order, and what the text says of the others.
+        with open(os.path.join(common.ROOT, 'docs', 'developer', 'architecture.md'), encoding='utf-8') as f:
+            text = f.read()
+        section = text.split('### Claims of the enclosure interface: the conversions of two limbs')[1] \
+            .split('\n## ')[0].split('\n### ')[0]
+        blocks = re.findall(r'```json\n(.*?)```', section, re.S)
+        shown = json.loads('[' + blocks[0] + ']')
+        self.assertEqual([e['name'] for e in shown], ['interval_mid_rad_2', 'ball_from_interval_1'])
+        for e in shown:
+            want = [(key, v) for key, v in self.by[e['name']].items()
+                    if key not in ('source', 'flops', 'theorem', 'ieee_theorem')]
+            self.assertEqual(list(e.items()), want, e['name'])
+        ensures = json.loads('[' + blocks[1] + ']')
+        names = ('ball_to_interval_2', 'interval_to_ball_2')
+        self.assertEqual(len(ensures), len(names))
+        for name, e in zip(names, ensures):
+            self.assertEqual(e, self.by[name]['ensures'], name)
+        self.assertEqual(self.by['interval_split_2']['ensures'], self.by['interval_split_1']['ensures'])
+        add = self.by['interval_add_2']['ensures'][0]['tight']
+        conv = self.by['ball_to_interval_2']['ensures'][0]['tight']
+        self.assertEqual((conv['rel'], conv['abs']), (add['rel'], add['abs']))
 
     def test_ieee_only(self):
         # Exactly the kernels without a real-model statement say so: the nine full kernels, the
@@ -616,6 +650,8 @@ class Claims(unittest.TestCase):
         milestone2 |= {f'ball_{name}_{k}' for k in (1, 2) for name in (
             'contains_point', 'contains_ball', 'positive', 'negative', 'zero', 'less', 'less_equal', 'equal')}
         milestone2 |= {'ball_hull_1', 'ball_intersection_1', 'ball_split_1', 'ball_split_2'}
+        milestone2 |= {'interval_mid_rad_2', 'interval_to_ball_2', 'ball_to_interval_2', 'interval_split_2',
+                       'ball_from_interval_1', 'ball_hull_2', 'ball_intersection_2'}
         self.assertEqual({k['name'] for k in self.doc['kernels'] if 'ieee_only' in k},
                          full | full_ball | constructors | finishes | milestone2)
         self.assertTrue(all(k['ieee_only'] is True for k in self.doc['kernels'] if 'ieee_only' in k))

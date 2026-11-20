@@ -830,7 +830,7 @@ def claims(k, kernels):
         elif kind == 'ball_of_interval':
             _ball_of_interval(e, k, ins, outs, err, claim_constants)
         elif kind == 'interval_of_ball':
-            _interval_of_ball(e, k, ins, outs, parsed, err)
+            _interval_of_ball(e, k, ins, outs, parsed, err, claim_constants, exact_when)
         elif kind == 'splits':
             _splits(e, k, ins, outs, err)
         elif kind == 'ball_set':
@@ -937,6 +937,12 @@ def claims(k, kernels):
                 for c in e.get('midpoint_when', []):
                     if c.get('half_in_format') not in e['from'].values():
                         err(f'midpoint_when {c!r}: half_in_format names a bound the ball is made from')
+                if ('rel' in e) != ('abs' in e) or ('smallest_radius' in e and 'rel' not in e):
+                    err('makes_ball from an interval: rel and abs go together, and smallest_radius with them')
+                if 'rel' in e:
+                    claim_constants(e, ('rel', 'abs'))
+                if e.get('smallest_radius') not in (None, True):
+                    err('makes_ball smallest_radius: true or left out')
                 continue
             for what, n in (('center', e['from']['center']), ('radius', e['from']['radius'])):
                 g = ins.get(n)
@@ -1194,15 +1200,39 @@ def _ball_of_interval(e, k, ins, outs, err, claim_constants):
     if e['special'] not in BALL_SPECIALS:
         err(f'ball_of_interval special {e["special"]!r}: it is {" or ".join(BALL_SPECIALS)}')
     claim_constants(e, ('rel', 'abs'))
+    for cond in e.get('finite_when', []):
+        # Stage B2: a condition on a bound of the interval, |bound| <= 2^(qmax + p + E).
+        if cond['abs_le'] not in e['from'].values():
+            err(f'ball_of_interval finite_when {cond!r}: the condition is about a bound of the interval')
+    if 'finite_when' in e and not e['finite_when']:
+        err('ball_of_interval finite_when: at least one condition')
 
 
-def _interval_of_ball(e, k, ins, outs, parsed, err):
+def _interval_of_ball(e, k, ins, outs, parsed, err, claim_constants=None, exact_when=None):
     """An interval that encloses a ball (Milestone 2, the conversion of a ball to an interval):
-    bounds of one limb, one ball name of a `ball` requirement, its set an expression of the ball
-    name, the tightness rounded."""
-    for side in ('lower', 'upper'):
-        if _interval_bounds(e[side], outs, err, f'interval_of_ball {side}') not in (None, 1):
-            err('interval_of_ball: the bounds of the result have one limb (two limbs are a later stage)')
+    bounds of one limb with the tightness rounded, or (stage B2) of two limbs with the tightness
+    outward, as many limbs as the ball's center; one ball name of a `ball` requirement, its set an
+    expression of the ball name; with bounded_when, conditions on the set."""
+    t = e['tight']
+    n = {_interval_bounds(e[side], outs, err, f'interval_of_ball {side}') for side in ('lower', 'upper')}
+    for b, cr in e['balls'].items():
+        if cr['center'] in ins:
+            n.add(len(ins[cr['center']].limbs))
+    if None not in n and len(n) != 1:
+        err('interval_of_ball: the bounds of the result have as many limbs as the center of the ball')
+    if t['kind'] == 'outward':
+        if n != {2}:
+            err('interval_of_ball: an outward tightness is of bounds of two limbs')
+        if claim_constants is not None:
+            claim_constants(t, ('rel', 'abs'))
+        for side, conds in t.get('exact_when', {}).items():
+            if exact_when is not None:
+                exact_when(dict(e, kind='interval_of_ball'), conds, zero=True)
+    elif n - {None} and n != {1}:
+        err('interval_of_ball: bounds of two limbs have an outward tightness')
+    for c in e.get('bounded_when', []):
+        if c.get('abs_le') != e['set'] or 'omega' in c:
+            err(f'interval_of_ball bounded_when {c!r}: abs_le(SET,E) of the entry\'s set')
     if len(e['balls']) != 1:
         err('interval_of_ball names one ball')
     for b, cr in e['balls'].items():
@@ -1211,9 +1241,10 @@ def _interval_of_ball(e, k, ins, outs, parsed, err):
         if ('ball', cr['center'], cr['radius']) not in k.requires:
             err(f'ball {b}: its operand is required to be a ball: "requires: ball {cr["center"]} {cr["radius"]}"')
     parsed(e['set'], set(e['balls']), 'interval_of_ball set', VALUE_TREES)
-    t = e['tight']
-    if t['kind'] != 'rounded' or set(t) - {'kind', 'steps'}:
-        err('interval_of_ball: tight is rounded, with optional steps')
+    if t['kind'] == 'rounded' and set(t) - {'kind', 'steps'}:
+        err('interval_of_ball: tight rounded has optional steps and nothing else')
+    if t['kind'] not in ('rounded', 'outward'):
+        err('interval_of_ball: tight is rounded, with optional steps, or outward')
 
 
 def _ball_output(c, r, outs, err, what):
