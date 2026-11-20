@@ -1440,12 +1440,14 @@ def fold_names(fd):
     statements. None may be the name of a kernel."""
     out = [f'{fd.name}_{s}' for s in ('step', 'combine', 'packed')]
     if fd.is_map:
-        out += [f'{fd.name}_{s}' for s in ('map', 'spec', 'correct', 'audit')]
+        out += [f'{fd.name}_{s}' for s in ('map', 'spec', 'correct', 'audit', 'check')]
     if fd.is_conv:
-        out += [f'{fd.name}_{s}' for s in ('conv', 'spec', 'correct', 'audit')]
+        out += [f'{fd.name}_{s}' for s in ('conv', 'spec', 'correct', 'audit', 'check', 'ieee_spec', 'ieee_correct',
+                                           'ieee_audit')]
     for order in fd.orders:
         base = f'{fd.name}_{ir.ORDER_SUFFIX.get(order, order)}'
-        out += [base, f'{base}_spec', f'{base}_correct', f'{base}_audit']
+        out += [base, f'{base}_spec', f'{base}_correct', f'{base}_audit', f'{base}_ieee_spec', f'{base}_ieee_correct',
+                f'{base}_ieee_audit']
     return out
 
 
@@ -2217,9 +2219,6 @@ def _fold_theorem(fd):
         err(f'the theorem file must be proofs/theories/*.v, not {fd.theorem}')
     if fd.theorem and fd.status != 'proved':
         err('a theorem file is named only once the fold is proved (status: proved)')
-    if fd.ieee_theorem and (fd.is_map or fd.is_conv):
-        err(f'a {"convolution" if fd.is_conv else "map"} has no statement in the IEEE model (IeeeFoldStatements.v), '
-            'so no ieee_theorem')
     if fd.ieee_theorem and not (fd.ieee_theorem.startswith('proofs/theories/') and fd.ieee_theorem.endswith('.v')):
         err(f'the ieee_theorem file must be proofs/theories/*.v, not {fd.ieee_theorem}')
     return errs

@@ -1492,6 +1492,17 @@ with each form, at `-O0` and `-O2` with each compiler); and rule R3 on a supplie
 `sub` and `axpy`, the maps of stored arrays as the control (fused under `-ffp-contract=fast` by
 Apple clang and GCC 16 on the Mac, and GCC 13 and Clang 18 on x86-64).
 
+**The statements of the maps and the convolutions in the IEEE model**
+([Architecture](architecture.md#maps-and-convolutions-in-the-ieee-model)), which no proof
+establishes yet, are read against the code by `gen/tests/test_ieee_writers.py` before anyone tries
+to prove them: the interpreter on formats of the IEEE shape of two to five bits whose largest number
+is below $2^{p+3}$, so that overflows are frequent, and in `binary64` and `binary32`, on canonical
+scalars and elements with infinities, NaN and numbers near the top among them, in the sequential
+order and with 0 to 4 lanes; every element written (every coefficient), every limb and the mask
+against the statement, the claims of the step in exact arithmetic with the exponent range widened;
+the lead statement of the step of every map on operands of any value; and every build of the
+runner on the same requests in `binary64` and `binary32`. No case contradicts a statement.
+
 **The folds, and the kernels of their stage**, are cross-checked by the oracle like every kernel
 ([above](#cross-checks)), and tested here too. `gen/tests/test_folds.py` checks:
 

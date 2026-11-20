@@ -20,6 +20,7 @@ source:        the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): 
 license:       algorithm: published; proof: MIT
 status:        proved
 entry:         yes
+ieee:          bridge spec
 
 (p0, p1) = mul_2_2(a0, a1, x0, x1)
 gy0      = guard(y0)

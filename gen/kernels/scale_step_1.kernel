@@ -14,5 +14,6 @@ source:        mul_1_1, one rounding to nearest
 license:       bound: published; proof: MIT
 status:        proved
 entry:         yes
+ieee:          bridge
 
 z = mul_1_1(x, a)

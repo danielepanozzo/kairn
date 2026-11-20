@@ -530,8 +530,8 @@ definition of `and`), that the step is the combination of the state and of a fun
 element (by unfolding), and the bound. No lemma of `SummationKernels.v` is asked for: the zero
 state of a maximum is not an identity of an addition, and `ZERO_LEMMAS` is about additions.
 
-**The order lemma** that `proofs/theories/Folds.v` needs (written and checked against the
-generated statements in a scratch file, not in the repository):
+**The order lemmas** are in `proofs/theories/Folds.v`. The first, for a step that is the
+combination of the state and of a function `g` of the element:
 
 ```coq
 Lemma fold_lanes_aci :
@@ -547,9 +547,16 @@ Lemma fold_lanes_aci :
 ```
 
 It asks the laws only on a set $P$ (in the real model the states whose limb is a number of the
-format, where the claim `maximum` gives the combination; in the IEEE model those whose limb is
-not a NaN and not $-0$, since a maximum by comparison is not commutative on a NaN), and of the
-zero state only that $0 \oplus 0 = 0$, which idempotence gives: the $W$ lanes all start from it.
+format, where the claim `maximum` gives the combination), and of the zero state only that
+$0 \oplus 0 = 0$, which idempotence gives: the $W$ lanes all start from it. It cannot be applied in
+the IEEE model to a list with a NaN element: the step combines the state with the pair the
+element gives, $(\mathrm{NaN}, \text{false})$ for a NaN, and that pair lies outside every set on
+which the maximum by comparison is commutative. The proofs use the second lemma,
+`fold_lanes_aci_step`, which takes the step separately: of each element $x$ it asks that $g(x)$ be
+in $P$ and that, on every state of $P$, the step be the combination with $g(x)$. In the IEEE model
+$P$ is the set of states whose limb is not a NaN and not $-0$, and $g$ of a NaN element is
+$(+0, \text{false})$, with which the step agrees on $P$ though its listing combines with
+$(\mathrm{NaN}, \text{false})$.
 
 **In C++, in Rocq, in the claims**: as every fold, with the state's mask a `bool` (true at the
 start) in scalar code, a lane mask in packed code (all bits set at the start, its lanes stored
@@ -685,7 +692,8 @@ Definition conv_2_spec : Prop :=
 
 Its proof is `dot_2_seq_correct` on each coefficient, through the lemma `Forall2_map_r` of
 `Folds.v` (that of the maps, with the list `seq 0 (conv_length ...)`) and two lemmas about
-`conv_terms` that `Folds.v` does not have yet:
+`conv_terms` of `proofs/theories/FoldConv.v` (not of `Folds.v`: `conv_terms` is defined in the
+generated `FoldModel.v`, which imports `Folds.v`):
 
 ```coq
 Lemma conv_terms_Forall :
@@ -709,9 +717,138 @@ Lemma conv_terms_nth :
   (nth (j - (length ys - 1) + k) xs a, nth (j - (j - (length ys - 1) + k)) ys b).
 ```
 
-(the generator's tests check that list against the definition on every pair of lengths up to 7,
-`test_conv.Printers.test_conv_terms_is_the_terms`). A convolution has no IEEE-model statement, as
-a map has none.
+(`FoldConv.v` again, with `conv_terms_eq`, the list as a `map` over the consecutive $i$; the
+generator's tests check that list against the definition on every pair of lengths up to 7,
+`test_conv.Printers.test_conv_terms_is_the_terms`). The statements of a convolution and of a map in
+the IEEE model are below ([In the IEEE model](#maps-and-convolutions-in-the-ieee-model)).
+
+### Maps and convolutions in the IEEE model
+
+A map and a convolution have, besides the real-model statement above, a model and a statement in
+the IEEE model (`proofs/gen/IeeeFoldModel.v`, `IeeeFoldStatements.v`), in the shape of what is
+printed for the sums and dot products: the code they describe is that of the scalar loops, the
+first pass, the mask and the second pass included.
+
+**The steps.** The step of every map has the bridge of its core (`ieee: bridge`, and `spec` for
+those of two limbs): `K_prog`, the step as a straight-line program, `K_ieee_bridge_spec`, that a
+finite leading limb of its result from finite operands means that every value it computes is
+finite and that the result is the real model's, and `K_ieee_spec`, its claims under the same
+hypotheses (`add_2_2` and `sub_2_2`, steps of `add_2` and `sub_2`, had them already). And each
+step has a lead statement, `K_ieee_lead_spec`, printed with those of the folds: for any operands,
+with no requirement, a finite leading limb of the result means a finite leading limb of every
+operand, the scalars included. The step of a fold of maxima has none (above); the convolutions
+use the step of the fold of their coefficients, which has one.
+
+**The model.** For a map `F` (`axpy_2` in full):
+
+```coq
+Definition axpy_2_step (a : float * float) (xy : (float * float) * (float * float)) : float * float :=
+  IeeeModel.axpy_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst a) (snd a) (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition axpy_2_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition axpy_2_seq (a : float * float) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map (axpy_2_step a) xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (axpy_2_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_2_check w_)) ws_, m_).
+
+Definition axpy_2_lanes (W : nat) (a : float * float) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map (axpy_2_step a) xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (axpy_2_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_2_check w_)) ws_, m_).
+```
+
+`F_step` is the IEEE model of the step on the scalars and one element, `F_check` the check on one
+element written (`fold_finish_k`: the element or its canonical NaN, and the mask that its leading
+limb is finite); the mask is `fold_seq` (`fold_lanes` with `andb`, from `true`) of the check's mask
+over the elements written, the form of `fold_seq_and` and `fold_lanes_and` of `Folds.v`; when it is
+false every element written is what the check returns of it. The names of the model's own binders
+end with an underscore, so that none is a name of a description. A convolution `F` has `F_check`
+and `F_conv`, with `D` the fold of its coefficients (`conv_2`, `D` = `dot_2`):
+
+```coq
+Definition conv_2_conv (xs : list (float * float)) (ys : list (float * float)) : list (float * float) * bool :=
+  let ws_ := map (fun j => fold_seq dot_2_step (pzero, pzero) (FoldModel.conv_terms xs ys j))
+                 (seq 0 (FoldModel.conv_length (length xs) (length ys))) in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (conv_2_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (conv_2_check w_)) ws_, m_).
+```
+
+where `dot_2_step` is the IEEE step of `dot_2` (`IeeeFoldModel.v`, above it) and `conv_terms`,
+`conv_length` those of `FoldModel.v`, on lists of floats.
+
+**The statements.** `F_seq_ieee_spec` and `F_lanes_ieee_spec` of a map (the second for every `W`),
+for every precision from the map's minimum, every `emax` and every choice of NaN, for canonical
+scalars and elements (`canonical_2` for two limbs, any value for one, a finite power of two for a
+scalar `power_of_two`), with `(ws_, flag_)` the result: `Forall2` of the elements and the elements
+written of
+
+- if the leading limb written is finite: every limb of the scalars, of the element and of the
+  element written is finite; the values written are those of the real-model step (`Model.v`, at
+  `ieee_emin prec emax`) on the values given; and the step's claims hold of them, as its
+  `K_ieee_spec` prints them;
+- otherwise: every limb written is a NaN, and `flag_` is false;
+
+and `flag_ = true` exactly when the leading limb of every element written is finite. The finiteness
+of the scalars is stated element by element, not once: of an empty list nothing is said of them,
+and the mask is true. `axpy_2` in full:
+
+```coq
+Definition axpy_2_seq_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (4 <= prec)%Z ->
+  forall (a0 a1 : binary_float prec emax) (xys : list ((binary_float prec emax * binary_float prec emax) * (binary_float prec emax * binary_float prec emax))),
+  canonical_2 a0 a1 ->
+  Forall (fun xy => canonical_2 (fst (fst xy)) (snd (fst xy)) /\ canonical_2 (fst (snd xy)) (snd (snd xy))) xys ->
+  let '(ws_, flag_) := IeeeFoldModel.axpy_2_seq prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const (a0, a1) xys in
+  Forall2 (fun xy w_ =>
+    let '((x0, x1), (y0, y1)) := xy in
+    let '(z0, z1) := w_ in
+    (finite z0 ->
+     finite a0 /\ finite a1 /\ finite x0 /\ finite x1 /\ finite y0 /\ finite y1 /\ finite z1 /\
+     (val z0, val z1) = axpy_step_2 (ieee_emin prec emax) prec tie_even (val a0) (val a1) (val x0) (val x1) (val y0) (val y1) /\
+     normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+     Rabs ((val z0 + val z1) - (((val a0 + val a1) * (val x0 + val x1)) + (val y0 + val y1))) <= ...) /\
+    (~ finite z0 -> nan z0 /\ nan z1 /\ flag_ = false))
+    xys ws_ /\
+  (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
+```
+
+`F_ieee_spec` of a convolution, for canonical entries of the two arrays: `Forall2` of the indices
+`seq 0 (conv_length ...)` and the coefficients of
+
+- if the leading limb of coefficient $j$ is finite: every limb of every term of `conv_terms xs ys j`
+  and of the coefficient is finite, its values are those of the real model `D_seq` (`FoldModel.v`)
+  on the values of those terms, and the conclusions of `D_seq_spec` hold of them;
+- otherwise: every limb of the coefficient is a NaN;
+
+and `flag_ = true` exactly when the leading limb of every coefficient is finite.
+
+**What the generator checks** of them, besides the rules of a map and of a convolution: that the
+names it prints (`F_check`, `F_O_ieee_spec`, `F_ieee_spec` and their theorems and audits) are no
+kernel's. **Their theorems**: a map or a convolution may name `ieee_theorem: FILE`, which holds
+`F_seq_ieee_correct` and `F_lanes_ieee_correct` (a map) or `F_ieee_correct` (a convolution), checked
+in `IeeeAudit.v` against the statements, after the other theorems of `IeeeFoldStatements.v`.
+
+**Judged before they are proved.** `gen/tests/test_ieee_writers.py` reads these statements against
+what the code computes: the interpreter on formats of the IEEE shape of two to five bits, whose
+largest number is below $2^{p+3}$, so that overflows are frequent, and in `binary64` and `binary32`,
+on canonical scalars and elements drawn with infinities, NaN and numbers near the top, in every
+order and for several numbers of lanes, the claims of the step in exact arithmetic with the
+exponent range widened; the lead statement of every step of a map on operands of any value; and
+every build of the compiled runner on the same requests in `binary64` and `binary32`. No case
+contradicts a statement.
+
+**What their proofs need**, besides the theorems of the steps: `fold_seq_and` and `fold_lanes_and`
+(`Folds.v`: the mask is `forallb` of the check's mask, in both orders); the theorem of
+`fold_finish_k` (`IeeeFoldFinish.v`) on each element; `Forall2_map_r` and its converse; and for a
+convolution, `conv_terms_Forall` (each term canonical) and the theorem `D_seq_ieee_correct` of the
+fold of the coefficients, read on the final state rather than on the finish (a lemma: when the
+leading limb of the final state is finite, the finish returns it, so the statement of `D_seq` gives
+the claims of the state; when it is not, the check returns the canonical NaN).
 
 ### The accumulator
 
@@ -924,12 +1061,16 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   step or the combination of a fold, `K_ieee_lead_spec`: if limb 0 of its result is finite, so is
   limb 0 of each operand, the non-finite cone of the rules as a statement. The steps of the folds
   have the bridge of their cores (`ieee: bridge`, and `spec` for those of two limbs), which the
-  proof of a fold uses step by step.
+  proof of a fold uses step by step. The maps and the convolutions follow, with their statements
+  `F_seq_ieee_spec`, `F_lanes_ieee_spec` and `F_ieee_spec`, and the steps of the maps have their
+  lead statements and bridges too ([Maps and convolutions in the IEEE
+  model](#maps-and-convolutions-in-the-ieee-model)).
 - **Their theorems.** A kernel of the finite domain names the theorem of each IEEE-model
   statement once it is proved: `ieee_bridge_theorem` (`K_ieee_bridge`, of `K_ieee_bridge_spec`),
   `ieee_spec_theorem` (`K_ieee_correct`, of `K_ieee_spec`) and `ieee_lead_theorem`
-  (`K_ieee_lead`, of `K_ieee_lead_spec`), each as `FILE NAME`; a fold, `ieee_theorem: FILE`, whose
-  theorems are `F_seq_ieee_correct` and `F_lanes_ieee_correct`. The comment above a statement
+  (`K_ieee_lead`, of `K_ieee_lead_spec`), each as `FILE NAME`; a fold or a map, `ieee_theorem: FILE`,
+  whose theorems are `F_seq_ieee_correct` and `F_lanes_ieee_correct`, and a convolution the same
+  field, whose theorem is `F_ieee_correct`. The comment above a statement
   says `proved` when its theorem is named and `unverified` otherwise, and `IeeeAudit.v` checks
   every named theorem against its statement (`Definition S_audit : S := theorem.` and `Print
   Assumptions`), after the theorems of the extended domain, importing `IeeeFoldStatements` only

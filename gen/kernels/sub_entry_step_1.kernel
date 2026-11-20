@@ -13,6 +13,7 @@ source:        sub_1_1 on guarded operands (rule R3); one rounding to nearest
 license:       bound: published; proof: MIT
 status:        proved
 entry:         yes
+ieee:          bridge
 
 gx = guard(x)
 gy = guard(y)

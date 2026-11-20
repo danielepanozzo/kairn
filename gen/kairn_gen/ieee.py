@@ -1413,8 +1413,8 @@ def proved_statements(kernels):
     """[(statement, theorem file, theorem name, generated file)] of the IEEE-model statements of the finite domain
     and of the folds whose theorems are named: K_ieee_bridge_spec and K_ieee_spec of
     IeeeStatements.v (ieee_bridge_theorem, ieee_spec_theorem), K_ieee_lead_spec (ieee_lead_theorem)
-    and F_O_ieee_spec (a fold's ieee_theorem) of IeeeFoldStatements.v; the first two, then the
-    others, each in the order of their file."""
+    and F_O_ieee_spec (a fold's or a map's ieee_theorem; F_ieee_spec, a convolution's) of
+    IeeeFoldStatements.v; the first two, then the others, each in the order of their file."""
     model = in_model(kernels)
     out = []
     for k in model.values():
@@ -1427,8 +1427,12 @@ def proved_statements(kernels):
     for k in lead_kernels(kernels):
         if k.ieee_lead_theorem:
             out.append((f'{k.name}_ieee_lead_spec', k.ieee_lead_theorem[0], k.ieee_lead_theorem[1], 'IeeeFoldStatements'))
-    for fd in getattr(kernels, 'folds', {}).values():
-        if getattr(fd, 'is_map', False) or not fd.ieee_theorem:
+    for fd in _folds_in_order(kernels):
+        if not fd.ieee_theorem:
+            continue
+        if getattr(fd, 'is_conv', False):
+            # A convolution has one statement, of its one order (F_ieee_spec).
+            out.append((f'{fd.name}_ieee_spec', fd.ieee_theorem, f'{fd.name}_ieee_correct', 'IeeeFoldStatements'))
             continue
         for order in ir.ORDERS:
             if order in fd.orders:
@@ -1498,13 +1502,25 @@ def _fold_parts(fd, kernels):
     return step, combine, finish
 
 
+def _folds_in_order(kernels):
+    """The folds in the order of IeeeFoldModel.v and IeeeFoldStatements.v: those that are neither
+    maps nor convolutions, then the maps, then the convolutions (each after the fold of its
+    coefficients), each group in the order of the set."""
+    folds = list(getattr(kernels, 'folds', {}).values())
+    maps = [fd for fd in folds if getattr(fd, 'is_map', False)]
+    convs = [fd for fd in folds if getattr(fd, 'is_conv', False)]
+    return [fd for fd in folds if fd not in maps and fd not in convs] + maps + convs
+
+
 def fold_model(kernels):
     """proofs/gen/IeeeFoldModel.v: every fold of the extended domain in the IEEE model, in the shape
     of its real model (FoldModel.v): F_step and F_combine apply the IEEE models of the step and the
     combination (IeeeModel.v) to the limbs of tuples; F_seq is the finish on fold_seq of the step
-    from the zero state, every limb +0; F_lanes W the finish on fold_lanes W."""
-    folds = [fd for fd in getattr(kernels, 'folds', {}).values()
-             if not getattr(fd, 'is_map', False) and not getattr(fd, 'is_conv', False)]
+    from the zero state, every limb +0; F_lanes W the finish on fold_lanes W. Then the maps and the
+    convolutions (map_model, conv_model)."""
+    every = _folds_in_order(kernels)
+    folds = [fd for fd in every if not getattr(fd, 'is_map', False) and not getattr(fd, 'is_conv', False)]
+    writers = [fd for fd in every if fd not in folds]
     lines = [HEADER, '',
              '(* The folds in the IEEE model (docs/developer/architecture.md, "Folds"), in the shape of their',
              '   real model (FoldModel.v): the state is a tuple of limbs and an element one entry of every array,',
@@ -1516,7 +1532,8 @@ def fold_model(kernels):
              'From Flocq Require Import Core Binary.',
              f'From {THEORIES_PATH} Require Import Folds.',
              f'From {THEORIES_PATH} Require IeeeOperations.',
-             f'From {GEN_PATH} Require IeeeModel.',
+             f'From {GEN_PATH} Require IeeeModel.'] + \
+        ([f'From {GEN_PATH} Require FoldModel.'] if any(getattr(fd, 'is_conv', False) for fd in writers) else []) + [
              '',
              'Section IeeeFolds.',
              'Variable prec emax : Z.',
@@ -1566,8 +1583,91 @@ def fold_model(kernels):
         if 'lanes' in fd.orders:
             lines += ['', f'Definition {fd.name}_lanes (W : nat) ({xs} : {lt}) : {rtype} :='] + \
                 result(f'fold_lanes {fd.name}_step {fd.name}_combine {zero} W {xs}')
+    if writers:
+        lines += ['', '(* The maps and the convolutions (architecture.md, "Maps", "Convolutions"): F_check is the check',
+                  '   of an element written (fold_finish_k), which returns it, or its canonical NaN, and the mask that',
+                  '   its leading limb is finite. A map writes ws_, its step on the scalars and each element (map); a',
+                  '   convolution writes the final state of the sequential order of the fold of its coefficients on',
+                  '   the terms of each coefficient. The mask m_ is the and of the check\'s mask on every element',
+                  '   written, by fold_seq (and, for a map, fold_lanes with andb, from true); when it is false, every',
+                  '   element written is what the check returns of it (the second pass). F_seq, F_lanes W and F_conv',
+                  '   return the list written and the mask. *)']
+    for fd in writers:
+        lines += map_model(fd, kernels) if getattr(fd, 'is_map', False) else conv_model(fd, kernels)
     lines += ['', 'End IeeeFolds.']
     return '\n'.join(lines) + '\n'
+
+
+def _check_model(fd, kernels):
+    """F_check: the IEEE model of the check of a map or a convolution, on one element written."""
+    check = kernels[fd.check]
+    n = len(fd.writes[0].limbs)
+    rtype = ' * '.join(_type(kind) for kind in check.output_kinds)
+    return [f'Definition {fd.name}_check (w_ : {_ftype(n)}) : {rtype} :=',
+            f'  {_kernel_call(check, kernels, rocq.tuple_parts("w_", n))}.']
+
+
+def _second_pass(fd, mask, written='ws_'):
+    """The last two lines of F_seq, F_lanes or F_conv: the mask, then the list written, each element
+    as the check returns it when the mask is false, and the mask."""
+    return [f'  let m_ := {mask} in',
+            f'  (if m_ then {written} else map (fun w_ => fst ({fd.name}_check w_)) {written}, m_).']
+
+
+def _mask_step(fd):
+    return f'(fun m_ w_ => andb m_ (snd ({fd.name}_check w_)))'
+
+
+def map_model(fd, kernels):
+    """A map in the IEEE model: F_step on the scalars and one element, from the IEEE model of the
+    step (the shape of FoldModel.F_step); F_check; F_seq and F_lanes W, which return the list written
+    and the mask (architecture.md, "Maps"; the code of cpp.map_seq, cpp.map_lanes)."""
+    step = kernels[fd.step[0]]
+    _, el, xs = rocq._fold_binders(fd)
+    etype = _fold_element_ftype(fd)
+    lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+    groups = rocq.fold_groups(fd, el)
+    sizes = {g.name: len(g.limbs) for g in fd.arrays + fd.scalars}
+    groups.update({g.name: g.name for g in fd.scalars})
+    args = [p for a in fd.step[1] for p in rocq.tuple_parts(groups[a], sizes[a])]
+    params = ''.join(f' ({g.name} : {_ftype(len(g.limbs))})' for g in fd.scalars)
+    wtype = _ftype(len(fd.writes[0].limbs))
+    lw = f'list ({wtype})' if ' ' in wtype else f'list {wtype}'
+    scalars = ''.join(' ' + g.name for g in fd.scalars)
+    stepped = f'({fd.name}_step{scalars})' if scalars else f'{fd.name}_step'
+    lines = ['', f'(* {fd.name}: a map; step {step.name}, check {fd.check}. *)',
+             f'Definition {fd.name}_step{params} ({el} : {etype}) : {wtype} :=',
+             f'  {_kernel_call(step, kernels, args)}.', ''] + _check_model(fd, kernels)
+    if 'sequential' in fd.orders:
+        lines += ['', f'Definition {fd.name}_seq{params} ({xs} : {lt}) : {lw} * bool :=',
+                  f'  let ws_ := map {stepped} {xs} in'] + _second_pass(fd, f'fold_seq {_mask_step(fd)} true ws_')
+    if 'lanes' in fd.orders:
+        lines += ['', f'Definition {fd.name}_lanes (W : nat){params} ({xs} : {lt}) : {lw} * bool :=',
+                  f'  let ws_ := map {stepped} {xs} in'] + \
+            _second_pass(fd, f'fold_lanes {_mask_step(fd)} andb true W ws_')
+    return lines
+
+
+def conv_model(fd, kernels):
+    """A convolution in the IEEE model: F_check, and F_conv xs ys, which returns the coefficients and
+    the mask: coefficient j is fold_seq of the IEEE step of the fold of its coefficients (F_step of
+    that fold, above) from its zero state on FoldModel.conv_terms xs ys j (architecture.md,
+    "Convolutions"; the code of cpp.conv_seq)."""
+    cf = kernels.folds[fd.coefficients]
+    x, y = fd.arrays
+    tx, ty = _ftype(len(x.limbs)), _ftype(len(y.limbs))
+    lx = f'list ({tx})' if ' ' in tx else f'list {tx}'
+    ly = f'list ({ty})' if ' ' in ty else f'list {ty}'
+    wtype = _ftype(len(fd.writes[0].limbs))
+    lw = f'list ({wtype})' if ' ' in wtype else f'list {wtype}'
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    zero = rocq.state_zero(cf, 'pzero', 'true')
+    return ['', f'(* {fd.name}: a convolution; coefficient j is {cf.name} in the sequential order on the terms '
+                f'FoldModel.conv_terms {xs} {ys} j, checked by {fd.check}. *)'] + _check_model(fd, kernels) + [
+            '', f'Definition {fd.name}_conv ({xs} : {lx}) ({ys} : {ly}) : {lw} * bool :=',
+            f'  let ws_ := map (fun j => fold_seq {cf.name}_step {zero} (FoldModel.conv_terms {xs} {ys} j))',
+            f'                 (seq 0 (FoldModel.conv_length (length {xs}) (length {ys}))) in'] + \
+        _second_pass(fd, f'fold_seq {_mask_step(fd)} true ws_')
 
 
 def _fold_nans(fd, kernels, order):
@@ -1647,6 +1747,152 @@ def fold_statement(fd, kernels, order):
     return lines
 
 
+def _writer_nans(fd, kernels, parts):
+    used = set()
+    for k in parts + [kernels[fd.check]]:
+        used.update(_used_nans(k, kernels))
+    return [n for n, _ in NANS if n in used]
+
+
+def _writer_head(fd, nans):
+    return ['  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
+            '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
+            (f'\n         {_binders(nans)},' if nans else ','),
+            f'  ({fd.min_precision} <= prec)%Z ->']
+
+
+def _written_limbs(fd, w='w_'):
+    return rocq.tuple_parts(w, len(fd.writes[0].limbs))
+
+
+def map_statement(fd, kernels, order):
+    """F_seq_ieee_spec or F_lanes_ieee_spec of a map (the second for every W): for canonical scalars
+    and elements (any value, for one limb; a finite power of two for a scalar power_of_two), with
+    (ws_, flag_) the list written and the mask, Forall2 of the elements and the elements written of:
+    if the leading limb of the element written is finite, every limb of the scalars, of the element
+    and of the element written is finite, the values written are those of the real model of the step
+    (Model.v, at ieee_emin prec emax) on the values given, and the claims of the step hold of them
+    (as in K_ieee_spec); otherwise every limb written is a NaN and the mask is false. And the mask is
+    true exactly when the leading limb of every element written is finite. The scalars are said to
+    be finite element by element: of an empty list nothing is said of them, and the mask is true."""
+    step = kernels[fd.step[0]]
+    _, el, xs = rocq._fold_binders(fd)
+    suffix = ir.ORDER_SUFFIX[order]
+    nans = _writer_nans(fd, kernels, [step])
+    etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
+    lt = f'list ({etype})'
+    # The step's own names for what the map passes it, as in the real model (rocq.map_statement).
+    kgroup = dict(zip(fd.step[1], step.inputs))
+    canonical = {r[1] for r in fd.requires if r[0] == 'canonical'}
+    pow2 = {r[1] for r in fd.requires if r[0] == 'power_of_two'}
+    hyps = []
+    for g in fd.scalars:
+        limbs = list(kgroup[g.name].limbs)
+        if g.name in canonical:
+            hyps.append(f'canonical_2 {" ".join(_limbs(step, limbs, g.name))}')
+        if g.name in pow2:
+            hyps += [f'finite {limbs[0]}', f'(exists n : Z, val {limbs[0]} = bpow radix2 n)']
+    groups = rocq.fold_groups(fd, el)
+    element = [f'canonical_2 {" ".join(rocq._paren(x) for x in _limbs(step, rocq.tuple_parts(groups[g.name], len(g.limbs)), g.name))}'
+               for g in fd.arrays if g.name in canonical]
+    pattern = rocq._pattern([rocq._pattern(list(kgroup[g.name].limbs)) for g in fd.arrays])
+    outs = list(step.outputs[0].limbs)
+    t = _Terms(step)
+    claims = [_claim(e, step, t, {g.name: g.limbs for g in step.outputs}) for e in step.ensures]
+    section = [{'emin': EMIN, 'prec': 'prec', 'choice': 'tie_even'}[v] for v in rocq.section_args(step, kernels)]
+    real = ' '.join([step.name] + section + [f'(val {v})' for v in step.input_limbs])
+    vals = f'val {outs[0]}' if len(outs) == 1 else '(' + ', '.join(f'val {v}' for v in outs) + ')'
+    finite = [f'finite {v}' for v in step.input_limbs] + [f'finite {v}' for v in outs[1:]]
+    scalars = ' '.join('(' + ', '.join(kgroup[g.name].limbs) + ')' if len(g.limbs) > 1 else kgroup[g.name].limbs[0]
+                       for g in fd.scalars)
+    scalar_limbs = [v for g in fd.scalars for v in kgroup[g.name].limbs]
+    if order == 'lanes':
+        binders = f'forall (W : nat) ({" ".join(scalar_limbs)} : binary_float prec emax) ({xs} : {lt}),' \
+            if scalar_limbs else f'forall (W : nat) ({xs} : {lt}),'
+    else:
+        binders = f'forall ({" ".join(scalar_limbs)} : binary_float prec emax) ({xs} : {lt}),' \
+            if scalar_limbs else f'forall {xs} : {lt},'
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_{suffix}', 'prec', 'emax'] + nans + (['W'] if order == 'lanes' else []) +
+                    ([scalars] if scalars else []) + [xs])
+    what = {'sequential': 'the sequential order', 'lanes': 'the lane order, for every number of lanes W'}[order]
+    lines = [f'(* {fd.name}, {what}, in the IEEE model: each element it writes, and its mask. Status: '
+             f'{"proved" if fd.ieee_theorem else "unverified"}. *)',
+             f'Definition {fd.name}_{suffix}_ieee_spec : Prop :='] + _writer_head(fd, nans) + [f'  {binders}']
+    lines += [f'  {h} ->' for h in hyps]
+    if element:
+        lines.append(f'  Forall (fun {el} => {" /\\ ".join(element)}) {xs} ->')
+    lines += [f"  let '(ws_, flag_) := {call} in",
+              f'  Forall2 (fun {el} w_ =>']
+    lines += [f'    {rocq._let(pattern, el)}'] if pattern != el else []
+    lines += [f'    {rocq._let(rocq._pattern(outs), "w_")}',
+              f'    (finite {outs[0]} ->',
+              '     ' + ' /\\ '.join(finite) + (' /\\' if finite else ''),
+              f'     {vals} = {real} /\\',
+              '     ' + ' /\\\n     '.join(claims) + ') /\\',
+              f'    (~ finite {outs[0]} -> ' + ' /\\ '.join(f'nan {v}' for v in outs) + ' /\\ flag_ = false))',
+              f'    {xs} ws_ /\\',
+              f'  (flag_ = true <-> Forall (fun w_ => finite {rocq._paren(_written_limbs(fd)[0])}) ws_).']
+    return lines
+
+
+def conv_statement(fd, kernels):
+    """F_ieee_spec of a convolution: for canonical entries of the two arrays (any value, for one
+    limb), with (ws_, flag_) the coefficients written and the mask, Forall2 of the indices of the
+    coefficients and the coefficients of: if the leading limb of coefficient j is finite, every limb
+    of every term of it (conv_terms xs ys j) and of the coefficient is finite, its values are the
+    real model of the sequential order of the fold of its coefficients (FoldModel.v, at ieee_emin
+    prec emax) on the values of the terms, and the claims of that fold's statement hold of them;
+    otherwise every limb of the coefficient is a NaN. And the mask is true exactly when the leading
+    limb of every coefficient is finite."""
+    cf = kernels.folds[fd.coefficients]
+    step = kernels[cf.step[0]]
+    nans = _writer_nans(fd, kernels, [step])
+    x, y = fd.arrays
+    _, el, txs = rocq._fold_binders(cf)
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    canonical = {r[1] for r in fd.requires if r[0] == 'canonical'}
+    hyps = []
+    for g, l in ((x, xs), (y, ys)):
+        if g.name in canonical:
+            limbs = _limbs(step, rocq.tuple_parts(g.name, len(g.limbs)), g.name)
+            hyps.append(f'Forall (fun {g.name} => canonical_2 {" ".join(rocq._paren(v) for v in limbs)}) {l}')
+    tx = _ftype(len(x.limbs)).replace('float', 'binary_float prec emax')
+    ty = _ftype(len(y.limbs)).replace('float', 'binary_float prec emax')
+    binders = f'forall ({xs} : list ({tx})) ({ys} : list ({ty})),' if tx != ty else f'forall {xs} {ys} : list ({tx}),'
+    groups = rocq.fold_groups(cf, el)
+    sizes = {g.name: len(g.limbs) for g in cf.arrays}
+    terms = [f'finite {rocq._paren(v)}' for g in cf.arrays for v in rocq.tuple_parts(groups[g.name], sizes[g.name])]
+    values = []
+    for g in cf.arrays:
+        parts = [f'val {rocq._paren(v)}' for v in rocq.tuple_parts(groups[g.name], sizes[g.name])]
+        values.append(parts[0] if len(parts) == 1 else '(' + ', '.join(parts) + ')')
+    value = values[0] if len(values) == 1 else '(' + ', '.join(values) + ')'
+    section = [{'emin': EMIN, 'prec': 'prec', 'choice': 'tie_even'}[v] for v in rocq.fold_section_args([step], kernels)]
+    real = ' '.join([f'FoldModel.{cf.name}_seq'] + section + ['vs'])
+    w = [rocq._paren(v) for v in _written_limbs(fd)]
+    vals = f'val {w[0]}' if len(w) == 1 else '(' + ', '.join(f'val {v}' for v in w) + ')'
+    claims = [re.sub(r'\bemin\b', EMIN, c) for c in rocq.fold_conclusion(cf, 's', el, 'vs', indent='         ')]
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_conv', 'prec', 'emax'] + nans + [xs, ys])
+    lines = [f'(* {fd.name}, each coefficient it writes, and its mask, in the IEEE model. Status: '
+             f'{"proved" if fd.ieee_theorem else "unverified"}. *)',
+             f'Definition {fd.name}_ieee_spec : Prop :='] + _writer_head(fd, nans) + [f'  {binders}']
+    lines += [f'  {h} ->' for h in hyps]
+    lines += [f"  let '(ws_, flag_) := {call} in",
+              '  Forall2 (fun j w_ =>',
+              f'    let {txs} := conv_terms {xs} {ys} j in',
+              f'    (finite {w[0]} ->',
+              f'     Forall (fun {el} => {" /\\ ".join(terms)}) {txs} /\\'] + \
+        ([f'     ' + ' /\\ '.join(f'finite {v}' for v in w[1:]) + ' /\\'] if len(w) > 1 else []) + [
+              f'     let vs := map (fun {el} => {value}) {txs} in',
+              f'     let s := {real} in',
+              f'     {vals} = s /\\',
+              '     ' + ' /\\\n     '.join(claims) + ') /\\',
+              f'    (~ finite {w[0]} -> ' + ' /\\ '.join(f'nan {v}' for v in w) + '))',
+              f'    (seq 0 (conv_length (length {xs}) (length {ys}))) ws_ /\\',
+              f'  (flag_ = true <-> Forall (fun w_ => finite {w[0]}) ws_).']
+    return lines
+
+
 # The kernels that are the steps or the combinations of the folds: each has a statement that its
 # result's leading limb is finite only if that of each of its operands is (lead_statement). Not
 # those of a fold of maxima, whose maximum keeps a finite state when the element is a NaN (the
@@ -1654,10 +1900,12 @@ def fold_statement(fd, kernels, order):
 def lead_kernels(kernels):
     names = set()
     for fd in getattr(kernels, 'folds', {}).values():
-        if getattr(fd, 'is_map', False) or getattr(fd, 'is_max', False) or getattr(fd, 'is_conv', False):
+        if getattr(fd, 'is_max', False) or getattr(fd, 'is_conv', False):
             continue
         names.add(fd.step[0])
-        if fd.combine:
+        # A map's combination is the operation and, not a kernel; its step's operands are the
+        # scalars and the element, and the statement is about every one of them.
+        if fd.combine and not getattr(fd, 'is_map', False):
             names.add(fd.combine[0])
     return [k for k in in_model(kernels).values() if k.name in names]
 
@@ -1693,10 +1941,11 @@ def fold_statements(kernels):
              'Open Scope R_scope.']
     for k in lead_kernels(kernels):
         lines += [''] + lead_statement(k, kernels)
-    for fd in getattr(kernels, 'folds', {}).values():
-        if getattr(fd, 'is_map', False) or getattr(fd, 'is_conv', False):
+    for fd in _folds_in_order(kernels):
+        if getattr(fd, 'is_conv', False):
+            lines += [''] + conv_statement(fd, kernels)
             continue
         for order in ir.ORDERS:
             if order in fd.orders:
-                lines += [''] + fold_statement(fd, kernels, order)
+                lines += [''] + (map_statement if getattr(fd, 'is_map', False) else fold_statement)(fd, kernels, order)
     return '\n'.join(lines) + '\n'

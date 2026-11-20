@@ -33,6 +33,11 @@ PROGRAMS += ['dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2',
 # And the kernels of the accumulator with an IEEE-model statement whose listing is a program of
 # Program.v (acc_merge_k: additions; the others guard or take an absolute value).
 PROGRAMS += ['acc_merge_1', 'acc_merge_2']
+# And the steps of the maps, with their bridge statements (ieee: bridge), and mul_1_1, which
+# axpy_step_1 and its entry form call; the steps add_2_2 and sub_2_2 had theirs already.
+PROGRAMS += ['add_1_1', 'sub_1_1', 'add_entry_step_1', 'sub_entry_step_1', 'scale_step_1', 'mul_pow2_step_1',
+             'axpy_step_1', 'axpy_entry_step_1', 'mul_1_1', 'add_entry_step_2', 'sub_entry_step_2', 'scale_step_2',
+             'mul_pow2_step_2', 'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1']
 
 
 def read(rel):
@@ -413,8 +418,11 @@ class CheckedFiles(unittest.TestCase):
     # (unverified): their definitions, the programs of acc_merge_k and their statements (ieee: spec,
     # each output group's claims under its own leading limb) were added, every earlier line kept;
     # add_2_2, mul_2_2 and dot_step_2, which they call, are printed earlier, before them.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '633a0b09ffb02352459c54c591f2051b88433a6b5dfe7f173355e7d8d551ee3b',
-               'proofs/gen/IeeeStatements.v': 'c7d67e93dd1dfa20f2fb56f48f92c56bfa9bf2f685e3959073ae9f9e5adbd703'}
+    # Then the steps of the maps got their bridges (ieee: bridge, and spec for those of two limbs):
+    # the programs of sixteen steps and of mul_1_1, and their statements, were added, every earlier
+    # line kept.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'aa65f060e8d3240f696744592e9aae121d0d6fe1aec41d8c698c75d3117fdd25',
+               'proofs/gen/IeeeStatements.v': '8239608aca271a04a602527b71621f009f4c0ecfff4dc4857522c703440563e1'}
 
 
     def test_the_checked_files(self):
@@ -604,6 +612,25 @@ class TheoremFields(unittest.TestCase):
                      'Definition dot_2_lanes_ieee_audit : dot_2_lanes_ieee_spec := dot_2_lanes_ieee_correct.',
                      'Print Assumptions dot_2_lanes_ieee_correct.'):
             self.assertIn(line + '\n', audit)
+        # A map names F_seq_ieee_correct and F_lanes_ieee_correct, a convolution F_ieee_correct; the
+        # comments of their statements say proved, and the audit checks each, after the folds'.
+        ks = self.kernels_with(folds={'axpy_2': self.FOLD, 'conv_1': self.FOLD})
+        self.assertEqual(rules.check_all(ks), [])
+        out = build.outputs(ks)
+        added, gone = [a for a in out['proofs/gen/IeeeFoldStatements.v'].splitlines()
+                       if a not in before['proofs/gen/IeeeFoldStatements.v'].splitlines()], None
+        self.assertEqual(sorted(added), sorted([
+            '(* axpy_2, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)',
+            '(* axpy_2, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and '
+            'its mask. Status: proved. *)',
+            '(* conv_1, each coefficient it writes, and its mask, in the IEEE model. Status: proved. *)']))
+        audit = out['proofs/gen/IeeeAudit.v']
+        for line in ('Definition axpy_2_seq_ieee_audit : axpy_2_seq_ieee_spec := axpy_2_seq_ieee_correct.',
+                     'Definition axpy_2_lanes_ieee_audit : axpy_2_lanes_ieee_spec := axpy_2_lanes_ieee_correct.',
+                     'Definition conv_1_ieee_audit : conv_1_ieee_spec := conv_1_ieee_correct.',
+                     'Print Assumptions conv_1_ieee_correct.'):
+            self.assertIn(line + '\n', audit)
+        self.assertLess(audit.index('axpy_2_lanes_ieee_audit'), audit.index('conv_1_ieee_audit'))
         # Only a bridge: IeeeFoldStatements.v is not imported.
         ks = self.kernels_with({'dot_step_2': self.STEP[:1]})
         self.assertFalse('Require Import IeeeFoldStatements.' in build.outputs(ks)['proofs/gen/IeeeAudit.v'])
@@ -619,8 +646,9 @@ class TheoremFields(unittest.TestCase):
             'abs_2', {'abs_2': ['ieee_bridge_theorem: proofs/theories/IeeeExt.v abs_2_ieee_bridge']})))
         self.assertTrue(any('file must be proofs/theories/*.v' in e for e in self.errors(
             'dot_step_2', {'dot_step_2': ['ieee_lead_theorem: theories/IeeeSteps.v dot_step_2_ieee_lead']})))
-        self.assertTrue(any('a map has no statement in the IEEE model' in e for e in self.errors(
-            'axpy_2', folds={'axpy_2': self.FOLD})))
+        # A map and a convolution have statements in the IEEE model and name their file like a fold.
+        self.assertEqual(self.errors('axpy_2', folds={'axpy_2': self.FOLD}), [])
+        self.assertEqual(self.errors('conv_2', folds={'conv_2': self.FOLD}), [])
         self.assertTrue(any('the ieee_theorem file must be proofs/theories/*.v' in e for e in self.errors(
             'dot_2', folds={'dot_2': ['ieee_theorem: IeeeFolds.v']})))
 

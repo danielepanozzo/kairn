@@ -179,7 +179,8 @@ along arrays, described in gen/kernels/NAME.fold:
     status:        unverified         or proved, with theorem: FILE (F_seq_correct, F_lanes_correct)
     ieee_theorem:  FILE               optional, once the statements of proofs/gen/IeeeFoldStatements.v
                                       are proved: F_seq_ieee_correct and F_lanes_ieee_correct, of
-                                      the orders the fold has (not for a map, which has none)
+                                      the orders the fold (or the map) has; F_ieee_correct, of a
+                                      convolution
     domain:        extended           elements may be infinite or NaN (the flag says what comes out)
 
 A map is a fold that writes an array (docs/developer/architecture.md, "Maps"):
@@ -1054,6 +1055,10 @@ class Fold:
         return f'{self.name}_{ORDER_SUFFIX[order]}_correct'
 
     def ieee_theorem_name(self, order):
+        """The theorem of the IEEE-model statement of one order (of a convolution, of its one
+        statement: F_ieee_correct)."""
+        if self.is_conv:
+            return f'{self.name}_ieee_correct'
         return f'{self.name}_{ORDER_SUFFIX[order]}_ieee_correct'
 
 

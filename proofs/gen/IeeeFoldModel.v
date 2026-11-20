@@ -11,6 +11,7 @@ From Flocq Require Import Core Binary.
 From Kairn Require Import Folds.
 From Kairn Require IeeeOperations.
 From Kairn.Gen Require IeeeModel.
+From Kairn.Gen Require FoldModel.
 
 Section IeeeFolds.
 Variable prec emax : Z.
@@ -179,5 +180,340 @@ Definition sum_fast_2_entry_seq (xs : list (float * float)) : float * float * bo
 Definition sum_fast_2_entry_lanes (W : nat) (xs : list (float * float)) : float * float * bool :=
   let s := fold_lanes sum_fast_2_entry_step sum_fast_2_entry_combine (pzero, pzero) W xs in
   IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst s) (snd s).
+
+(* The maps and the convolutions (architecture.md, "Maps", "Convolutions"): F_check is the check
+   of an element written (fold_finish_k), which returns it, or its canonical NaN, and the mask that
+   its leading limb is finite. A map writes ws_, its step on the scalars and each element (map); a
+   convolution writes the final state of the sequential order of the fold of its coefficients on
+   the terms of each coefficient. The mask m_ is the and of the check's mask on every element
+   written, by fold_seq (and, for a map, fold_lanes with andb, from true); when it is false, every
+   element written is what the check returns of it (the second pass). F_seq, F_lanes W and F_conv
+   return the list written and the mask. *)
+
+(* add_1: a map; step add_1_1, check fold_finish_1. *)
+Definition add_1_step (xy : float * float) : float :=
+  IeeeModel.add_1_1 prec emax nan_plus (fst xy) (snd xy).
+
+Definition add_1_check (w_ : float) : float * bool :=
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const w_.
+
+Definition add_1_seq (xys : list (float * float)) : list float * bool :=
+  let ws_ := map add_1_step xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (add_1_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (add_1_check w_)) ws_, m_).
+
+Definition add_1_lanes (W : nat) (xys : list (float * float)) : list float * bool :=
+  let ws_ := map add_1_step xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (add_1_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (add_1_check w_)) ws_, m_).
+
+(* add_1_entry: a map; step add_entry_step_1, check fold_finish_1. *)
+Definition add_1_entry_step (xy : float * float) : float :=
+  IeeeModel.add_entry_step_1 prec emax nan_plus (fst xy) (snd xy).
+
+Definition add_1_entry_check (w_ : float) : float * bool :=
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const w_.
+
+Definition add_1_entry_seq (xys : list (float * float)) : list float * bool :=
+  let ws_ := map add_1_entry_step xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (add_1_entry_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (add_1_entry_check w_)) ws_, m_).
+
+Definition add_1_entry_lanes (W : nat) (xys : list (float * float)) : list float * bool :=
+  let ws_ := map add_1_entry_step xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (add_1_entry_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (add_1_entry_check w_)) ws_, m_).
+
+(* add_2: a map; step add_2_2, check fold_finish_2. *)
+Definition add_2_step (xy : (float * float) * (float * float)) : float * float :=
+  IeeeModel.add_2_2 prec emax nan_plus nan_minus (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition add_2_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition add_2_seq (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map add_2_step xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (add_2_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (add_2_check w_)) ws_, m_).
+
+Definition add_2_lanes (W : nat) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map add_2_step xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (add_2_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (add_2_check w_)) ws_, m_).
+
+(* add_2_entry: a map; step add_entry_step_2, check fold_finish_2. *)
+Definition add_2_entry_step (xy : (float * float) * (float * float)) : float * float :=
+  IeeeModel.add_entry_step_2 prec emax nan_plus nan_minus (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition add_2_entry_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition add_2_entry_seq (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map add_2_entry_step xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (add_2_entry_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (add_2_entry_check w_)) ws_, m_).
+
+Definition add_2_entry_lanes (W : nat) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map add_2_entry_step xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (add_2_entry_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (add_2_entry_check w_)) ws_, m_).
+
+(* axpy_1: a map; step axpy_step_1, check fold_finish_1. *)
+Definition axpy_1_step (a : float) (xy : float * float) : float :=
+  IeeeModel.axpy_step_1 prec emax nan_plus nan_fma a (fst xy) (snd xy).
+
+Definition axpy_1_check (w_ : float) : float * bool :=
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const w_.
+
+Definition axpy_1_seq (a : float) (xys : list (float * float)) : list float * bool :=
+  let ws_ := map (axpy_1_step a) xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (axpy_1_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_1_check w_)) ws_, m_).
+
+Definition axpy_1_lanes (W : nat) (a : float) (xys : list (float * float)) : list float * bool :=
+  let ws_ := map (axpy_1_step a) xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (axpy_1_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_1_check w_)) ws_, m_).
+
+(* axpy_1_entry: a map; step axpy_entry_step_1, check fold_finish_1. *)
+Definition axpy_1_entry_step (a : float) (xy : float * float) : float :=
+  IeeeModel.axpy_entry_step_1 prec emax nan_plus nan_fma a (fst xy) (snd xy).
+
+Definition axpy_1_entry_check (w_ : float) : float * bool :=
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const w_.
+
+Definition axpy_1_entry_seq (a : float) (xys : list (float * float)) : list float * bool :=
+  let ws_ := map (axpy_1_entry_step a) xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (axpy_1_entry_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_1_entry_check w_)) ws_, m_).
+
+Definition axpy_1_entry_lanes (W : nat) (a : float) (xys : list (float * float)) : list float * bool :=
+  let ws_ := map (axpy_1_entry_step a) xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (axpy_1_entry_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_1_entry_check w_)) ws_, m_).
+
+(* axpy_2: a map; step axpy_step_2, check fold_finish_2. *)
+Definition axpy_2_step (a : float * float) (xy : (float * float) * (float * float)) : float * float :=
+  IeeeModel.axpy_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst a) (snd a) (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition axpy_2_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition axpy_2_seq (a : float * float) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map (axpy_2_step a) xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (axpy_2_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_2_check w_)) ws_, m_).
+
+Definition axpy_2_lanes (W : nat) (a : float * float) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map (axpy_2_step a) xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (axpy_2_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_2_check w_)) ws_, m_).
+
+(* axpy_2_1: a map; step axpy_step_2_1, check fold_finish_2. *)
+Definition axpy_2_1_step (a : float) (xy : (float * float) * (float * float)) : float * float :=
+  IeeeModel.axpy_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition axpy_2_1_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition axpy_2_1_seq (a : float) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map (axpy_2_1_step a) xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (axpy_2_1_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_2_1_check w_)) ws_, m_).
+
+Definition axpy_2_1_lanes (W : nat) (a : float) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map (axpy_2_1_step a) xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (axpy_2_1_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_2_1_check w_)) ws_, m_).
+
+(* axpy_2_1_entry: a map; step axpy_entry_step_2_1, check fold_finish_2. *)
+Definition axpy_2_1_entry_step (a : float) (xy : (float * float) * (float * float)) : float * float :=
+  IeeeModel.axpy_entry_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition axpy_2_1_entry_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition axpy_2_1_entry_seq (a : float) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map (axpy_2_1_entry_step a) xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (axpy_2_1_entry_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_2_1_entry_check w_)) ws_, m_).
+
+Definition axpy_2_1_entry_lanes (W : nat) (a : float) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map (axpy_2_1_entry_step a) xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (axpy_2_1_entry_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_2_1_entry_check w_)) ws_, m_).
+
+(* axpy_2_entry: a map; step axpy_entry_step_2, check fold_finish_2. *)
+Definition axpy_2_entry_step (a : float * float) (xy : (float * float) * (float * float)) : float * float :=
+  IeeeModel.axpy_entry_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst a) (snd a) (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition axpy_2_entry_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition axpy_2_entry_seq (a : float * float) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map (axpy_2_entry_step a) xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (axpy_2_entry_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_2_entry_check w_)) ws_, m_).
+
+Definition axpy_2_entry_lanes (W : nat) (a : float * float) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map (axpy_2_entry_step a) xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (axpy_2_entry_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (axpy_2_entry_check w_)) ws_, m_).
+
+(* mul_pow2_map_1: a map; step mul_pow2_step_1, check fold_finish_1. *)
+Definition mul_pow2_map_1_step (c : float) (x : float) : float :=
+  IeeeModel.mul_pow2_step_1 prec emax nan_fma x c.
+
+Definition mul_pow2_map_1_check (w_ : float) : float * bool :=
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const w_.
+
+Definition mul_pow2_map_1_seq (c : float) (xs : list float) : list float * bool :=
+  let ws_ := map (mul_pow2_map_1_step c) xs in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (mul_pow2_map_1_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (mul_pow2_map_1_check w_)) ws_, m_).
+
+Definition mul_pow2_map_1_lanes (W : nat) (c : float) (xs : list float) : list float * bool :=
+  let ws_ := map (mul_pow2_map_1_step c) xs in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (mul_pow2_map_1_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (mul_pow2_map_1_check w_)) ws_, m_).
+
+(* mul_pow2_map_2: a map; step mul_pow2_step_2, check fold_finish_2. *)
+Definition mul_pow2_map_2_step (c : float) (x : float * float) : float * float :=
+  IeeeModel.mul_pow2_step_2 prec emax nan_plus nan_minus nan_fma (fst x) (snd x) c.
+
+Definition mul_pow2_map_2_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition mul_pow2_map_2_seq (c : float) (xs : list (float * float)) : list (float * float) * bool :=
+  let ws_ := map (mul_pow2_map_2_step c) xs in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (mul_pow2_map_2_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (mul_pow2_map_2_check w_)) ws_, m_).
+
+Definition mul_pow2_map_2_lanes (W : nat) (c : float) (xs : list (float * float)) : list (float * float) * bool :=
+  let ws_ := map (mul_pow2_map_2_step c) xs in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (mul_pow2_map_2_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (mul_pow2_map_2_check w_)) ws_, m_).
+
+(* scale_1: a map; step scale_step_1, check fold_finish_1. *)
+Definition scale_1_step (a : float) (x : float) : float :=
+  IeeeModel.scale_step_1 prec emax nan_fma x a.
+
+Definition scale_1_check (w_ : float) : float * bool :=
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const w_.
+
+Definition scale_1_seq (a : float) (xs : list float) : list float * bool :=
+  let ws_ := map (scale_1_step a) xs in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (scale_1_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (scale_1_check w_)) ws_, m_).
+
+Definition scale_1_lanes (W : nat) (a : float) (xs : list float) : list float * bool :=
+  let ws_ := map (scale_1_step a) xs in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (scale_1_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (scale_1_check w_)) ws_, m_).
+
+(* scale_2: a map; step scale_step_2, check fold_finish_2. *)
+Definition scale_2_step (a : float) (x : float * float) : float * float :=
+  IeeeModel.scale_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst x) (snd x) a.
+
+Definition scale_2_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition scale_2_seq (a : float) (xs : list (float * float)) : list (float * float) * bool :=
+  let ws_ := map (scale_2_step a) xs in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (scale_2_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (scale_2_check w_)) ws_, m_).
+
+Definition scale_2_lanes (W : nat) (a : float) (xs : list (float * float)) : list (float * float) * bool :=
+  let ws_ := map (scale_2_step a) xs in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (scale_2_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (scale_2_check w_)) ws_, m_).
+
+(* sub_1: a map; step sub_1_1, check fold_finish_1. *)
+Definition sub_1_step (xy : float * float) : float :=
+  IeeeModel.sub_1_1 prec emax nan_minus (fst xy) (snd xy).
+
+Definition sub_1_check (w_ : float) : float * bool :=
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const w_.
+
+Definition sub_1_seq (xys : list (float * float)) : list float * bool :=
+  let ws_ := map sub_1_step xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (sub_1_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (sub_1_check w_)) ws_, m_).
+
+Definition sub_1_lanes (W : nat) (xys : list (float * float)) : list float * bool :=
+  let ws_ := map sub_1_step xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (sub_1_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (sub_1_check w_)) ws_, m_).
+
+(* sub_1_entry: a map; step sub_entry_step_1, check fold_finish_1. *)
+Definition sub_1_entry_step (xy : float * float) : float :=
+  IeeeModel.sub_entry_step_1 prec emax nan_plus nan_minus (fst xy) (snd xy).
+
+Definition sub_1_entry_check (w_ : float) : float * bool :=
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const w_.
+
+Definition sub_1_entry_seq (xys : list (float * float)) : list float * bool :=
+  let ws_ := map sub_1_entry_step xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (sub_1_entry_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (sub_1_entry_check w_)) ws_, m_).
+
+Definition sub_1_entry_lanes (W : nat) (xys : list (float * float)) : list float * bool :=
+  let ws_ := map sub_1_entry_step xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (sub_1_entry_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (sub_1_entry_check w_)) ws_, m_).
+
+(* sub_2: a map; step sub_2_2, check fold_finish_2. *)
+Definition sub_2_step (xy : (float * float) * (float * float)) : float * float :=
+  IeeeModel.sub_2_2 prec emax nan_plus nan_minus nan_opp (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition sub_2_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition sub_2_seq (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map sub_2_step xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (sub_2_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (sub_2_check w_)) ws_, m_).
+
+Definition sub_2_lanes (W : nat) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map sub_2_step xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (sub_2_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (sub_2_check w_)) ws_, m_).
+
+(* sub_2_entry: a map; step sub_entry_step_2, check fold_finish_2. *)
+Definition sub_2_entry_step (xy : (float * float) * (float * float)) : float * float :=
+  IeeeModel.sub_entry_step_2 prec emax nan_plus nan_minus nan_opp (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
+
+Definition sub_2_entry_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition sub_2_entry_seq (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map sub_2_entry_step xys in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (sub_2_entry_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (sub_2_entry_check w_)) ws_, m_).
+
+Definition sub_2_entry_lanes (W : nat) (xys : list ((float * float) * (float * float))) : list (float * float) * bool :=
+  let ws_ := map sub_2_entry_step xys in
+  let m_ := fold_lanes (fun m_ w_ => andb m_ (snd (sub_2_entry_check w_))) andb true W ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (sub_2_entry_check w_)) ws_, m_).
+
+(* conv_1: a convolution; coefficient j is dot_1 in the sequential order on the terms FoldModel.conv_terms xs ys j, checked by fold_finish_1. *)
+Definition conv_1_check (w_ : float) : float * bool :=
+  IeeeModel.fold_finish_1 prec emax nan_abs nan_const w_.
+
+Definition conv_1_conv (xs : list float) (ys : list float) : list float * bool :=
+  let ws_ := map (fun j => fold_seq dot_1_step pzero (FoldModel.conv_terms xs ys j))
+                 (seq 0 (FoldModel.conv_length (length xs) (length ys))) in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (conv_1_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (conv_1_check w_)) ws_, m_).
+
+(* conv_2: a convolution; coefficient j is dot_2 in the sequential order on the terms FoldModel.conv_terms xs ys j, checked by fold_finish_2. *)
+Definition conv_2_check (w_ : float * float) : float * float * bool :=
+  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst w_) (snd w_).
+
+Definition conv_2_conv (xs : list (float * float)) (ys : list (float * float)) : list (float * float) * bool :=
+  let ws_ := map (fun j => fold_seq dot_2_step (pzero, pzero) (FoldModel.conv_terms xs ys j))
+                 (seq 0 (FoldModel.conv_length (length xs) (length ys))) in
+  let m_ := fold_seq (fun m_ w_ => andb m_ (snd (conv_2_check w_))) true ws_ in
+  (if m_ then ws_ else map (fun w_ => fst (conv_2_check w_)) ws_, m_).
 
 End IeeeFolds.

@@ -1040,6 +1040,8 @@ class Printers(unittest.TestCase):
         # Not the steps and the combination of the folds of maxima, whose maximum keeps a finite
         # state for a NaN element (their mask says it instead).
         parts = {self.ks.folds[n].step[0] for n in FOLDS} | {self.ks.folds[n].combine[0] for n in FOLDS}
+        # And the steps of the maps (their combination is the operation and).
+        parts |= {self.ks.folds[n].step[0] for n in MAPS}
         self.assertIn('   let s := FoldModel.norm_upper_2_lanes W vs in\n'
                       '   let r_ := succ radix2 (FLT_exp (ieee_emin prec emax) prec) (fst s) in\n'
                       '   let v_ := fold_right Rmax 0 (map (fun x => (Rabs (fst x + snd x))) vs) in\n'
