@@ -1839,7 +1839,8 @@ def _fold_theorem(fd):
     if fd.theorem and fd.status != 'proved':
         err('a theorem file is named only once the fold is proved (status: proved)')
     if fd.ieee_theorem and (fd.is_map or fd.is_conv):
-        err('a map or a convolution has no statement in the IEEE model (IeeeFoldStatements.v), so no ieee_theorem')
+        err(f'a {"convolution" if fd.is_conv else "map"} has no statement in the IEEE model (IeeeFoldStatements.v), '
+            'so no ieee_theorem')
     if fd.ieee_theorem and not (fd.ieee_theorem.startswith('proofs/theories/') and fd.ieee_theorem.endswith('.v')):
         err(f'the ieee_theorem file must be proofs/theories/*.v, not {fd.ieee_theorem}')
     return errs
