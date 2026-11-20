@@ -2005,6 +2005,12 @@ $(1+u)$), and `bv_scale_radius_1` `{"kind": "upper", "of": "rz", "value":
 with `mul_2_1` and the factor $(1+u)$ on `m`), with the requirements `nonneg(m)`, `nonneg(rx)`
 (and `nonneg(ry)`), in the finite domain.
 
+Two things in those entries are new forms, which a reader of the claims must learn. The entry has a
+`value` and **no `if`**: no mask is named, and the claim holds unconditionally (under the
+requirements): the output is at least the exact value of `value`, whether it is finite or the
+rounding has overflowed to $+\infty$. Nothing is said of how far above. And `value` may hold
+`abs(X)` of an input `X`, its exact magnitude.
+
 ### Claims of the interval kernels
 
 The first kernels of the interval work ([Interval kernels](design/milestone2.md#interval-kernels):
