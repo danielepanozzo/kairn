@@ -70,6 +70,20 @@ static int run() {
     if (third_at_run_time.value.limb[0] != third.value.limb[0] || third_at_run_time.error != third.error ||
         third.exact || !kairn::is_rational_result(third, 1, 3) || !kairn::integer<E1>(-7).exact)
         ++failures;
+    // Intervals, and the functions of a ball of the interface the two share.
+    using I1 = kairn::Interval<T, 1>;
+    using I2 = kairn::Interval<T, 2>;
+    const I1 u = (I1(T(1), T(2)) + I1(T(3))) * I1(T(2)) - I1(T(1));  // [7, 9]
+    const I2 w = I2(T(1), T(2)) * I2(T(3), T(4));                    // about [3, 8]
+    const kairn::Split<I1> halves = u.split();
+    if (u.lower().limb[0] != T(7) || u.upper().limb[0] != T(9) || u.midpoint().limb[0] != T(8) || u.radius() != T(1) ||
+        halves.left.upper().limb[0] != T(8) || (-u).lower().limb[0] != T(-9) ||
+        u.hull(I1(T(0))).lower().limb[0] != T(0) || u.intersection(I1(T(8), T(20))).lower().limb[0] != T(8))
+        ++failures;
+    if (!(w.template lower_as<T>() <= T(3)) || !(w.template upper_as<T>() >= T(8)) || B1(u).radius() != T(1) ||
+        I1(B1(T(2), T(1))).upper().limb[0] != T(3) || kairn::Ball<T, 2>::from_interval(T(1), T(3)).radius() != T(1) ||
+        B1(B2(T(3))).center().limb[0] != T(3) || B1(T(2), T(1)).template lower_as<T>() != T(1))
+        ++failures;
     if (y.limb[0] != T(0.75) || y.limb[1] != T(0)) ++failures;
     if (a.limb[0] != T(0.75)) ++failures;
     if (z.limb[0] != T(12) || z.limb[1] != T(0)) ++failures;

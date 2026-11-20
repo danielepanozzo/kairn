@@ -25,6 +25,8 @@ using E2 = kairn::Expansion<double, 2>;
 using F2 = kairn::Expansion<float, 2>;
 using B1 = kairn::Ball<double, 1>;
 using B2 = kairn::Ball<double, 2>;
+using I1 = kairn::Interval<double, 1>;
+using I2 = kairn::Interval<double, 2>;
 using kairn::unverified;
 
 // Operands read from volatile objects, so that nothing is computed before the program asks. The
@@ -58,6 +60,8 @@ struct Operands {
     F2 fx;
     B1 p, q;
     B2 bp, bq;
+    I1 ix, iy;
+    I2 jx, jy;
 };
 inline Operands o;
 
@@ -78,6 +82,10 @@ struct Corpus {
     // The results of two_sum on every pair of finite values of one, and on two NaN: what converts
     // to Expansion<T, 2>.
     std::vector<kairn::SumAndError<T>> sums;
+    // Canonical intervals: those that the constructors make of the pairs of values of one, and of
+    // two (a NaN bound gives the whole line, reversed ones the empty set), each once.
+    std::vector<kairn::Interval<T, 1>> intervals1;
+    std::vector<kairn::Interval<T, 2>> intervals2;
 };
 template <class T>
 inline T opaque(T x) {
@@ -119,6 +127,25 @@ inline Corpus<T> make_corpus() {
             if (std::isfinite(r.sum) && std::isfinite(r.error)) c.sums.push_back(r);
         }
     c.sums.push_back(kairn::two_sum(nan, nan));
+    // The intervals: every pair of bounds of the corpus that is not a NaN and that the constructor
+    // does not make the empty set (it keeps their bounds as they are), then the empty set and the
+    // whole line once each.
+    for (T lo : c.one)
+        for (T hi : c.one) {
+            if (lo != lo || hi != hi) continue;
+            const kairn::Interval<T, 1> x(unverified(lo), hi);
+            if (x.lower().limb[0] != inf) c.intervals1.push_back(x);
+        }
+    c.intervals1.push_back(kairn::Interval<T, 1>::empty());
+    c.intervals1.push_back(kairn::Interval<T, 1>::whole());
+    for (const auto& lo : c.two)
+        for (const auto& hi : c.two) {
+            if (lo.limb[0] != lo.limb[0] || hi.limb[0] != hi.limb[0]) continue;
+            const kairn::Interval<T, 2> x(unverified(lo), hi);
+            if (x.lower().limb[0] != inf) c.intervals2.push_back(x);
+        }
+    c.intervals2.push_back(kairn::Interval<T, 2>::empty());
+    c.intervals2.push_back(kairn::Interval<T, 2>::whole());
     return c;
 }
 inline Corpus<double> corpus_d;
@@ -133,6 +160,10 @@ inline void make_operands() {
     o.q = B1(unverified(E1(v_c)), v_r);
     o.bp = B2(unverified(o.x), v_r);
     o.bq = B2(unverified(o.y), v_r);
+    o.ix = I1(unverified(double(v_b)), v_a);
+    o.iy = I1(unverified(double(v_a)), v_c);
+    o.jx = I2(unverified(o.y), o.y);
+    o.jy = I2(unverified(o.x), o.y);
     corpus_d = make_corpus<double>();
     corpus_f = make_corpus<float>();
 }
@@ -176,6 +207,16 @@ inline void put(Bits& out, const kairn::Ball<T, K>& b) {
     put(out, b.center());
     put(out, b.radius());
 }
+template <class T, int K>
+inline void put(Bits& out, const kairn::Interval<T, K>& x) {
+    put(out, x.lower());
+    put(out, x.upper());
+}
+template <class X>
+inline void put(Bits& out, const kairn::Split<X>& s) {
+    put(out, s.left);
+    put(out, s.right);
+}
 // The value, a zero without its sign: what a constructor must keep under every rounding mode (its
 // guard, a + 0, gives -0 + 0 = -0 when rounding downward and +0 otherwise). Decided on the bit
 // pattern of a copy read back from memory, never as x == 0 ? 0 : x in floating point: that rule
@@ -199,6 +240,11 @@ template <class T, int K>
 inline void put_value(Bits& out, const kairn::Ball<T, K>& b) {
     put_value(out, b.center());
     put_value(out, b.radius());
+}
+template <class T, int K>
+inline void put_value(Bits& out, const kairn::Interval<T, K>& x) {
+    put_value(out, x.lower());
+    put_value(out, x.upper());
 }
 
 // The six comparisons of a pair of operands.
@@ -342,6 +388,38 @@ inline const Operation operations[] = {
     // The constant is integer arithmetic, made here under the state, which does not change it.
     {"ball2.constant", Kind::rounds,
      [](Bits& b) { put(b, B2(kairn::rational<E2>(1, static_cast<long long>(opaque(3.0))))); }},
+    // Intervals, the arithmetic (interval.hpp, interval_operations.hpp).
+    {"interval1.add", Kind::rounds, [](Bits& b) { put(b, unverified(o.ix) + o.iy); }},
+    {"interval1.sub", Kind::rounds, [](Bits& b) { put(b, unverified(o.ix) - o.iy); }},
+    {"interval1.mul", Kind::rounds, [](Bits& b) { put(b, unverified(o.ix) * o.iy); }},
+    {"interval1.add_assign", Kind::rounds, [](Bits& b) {
+         I1 z = o.ix;
+         z += unverified(o.iy);
+         put(b, z);
+     }},
+    {"interval2.add", Kind::rounds, [](Bits& b) { put(b, unverified(o.jx) + o.jy); }},
+    {"interval2.sub", Kind::rounds, [](Bits& b) { put(b, unverified(o.jx) - o.jy); }},
+    {"interval2.mul", Kind::rounds, [](Bits& b) { put(b, unverified(o.jx) * o.jy); }},
+    {"interval2.mul_assign", Kind::rounds, [](Bits& b) {
+         I2 z = o.jx;
+         z *= unverified(o.jy);
+         put(b, z);
+     }},
+    // The functions of the interface that Ball and Interval share that compute bounds or centers
+    // (milestone2.md, "Functions that do not round", its second table).
+    {"interval1.midpoint", Kind::rounds, [](Bits& b) { put(b, o.ix.midpoint()); }},
+    {"interval1.radius", Kind::rounds, [](Bits& b) { put(b, o.ix.radius()); }},
+    {"interval1.split", Kind::rounds, [](Bits& b) { put(b, o.ix.split()); }},
+    {"interval1.to_ball", Kind::rounds, [](Bits& b) { put(b, B1(unverified(o.ix))); }},
+    {"ball1.to_interval", Kind::rounds, [](Bits& b) { put(b, I1(unverified(o.p))); }},
+    {"ball2.from_interval", Kind::rounds, [](Bits& b) { put(b, B2::from_interval(unverified(double(v_b)), v_a)); }},
+    {"ball1.lower_as", Kind::rounds, [](Bits& b) { put(b, o.p.lower_as<double>()); }},
+    {"ball1.upper_as", Kind::rounds, [](Bits& b) { put(b, o.p.upper_as<double>()); }},
+    {"ball1.lower", Kind::rounds, [](Bits& b) { put(b, o.p.lower()); }},
+    {"ball1.upper", Kind::rounds, [](Bits& b) { put(b, o.p.upper()); }},
+    {"ball2.lower_as", Kind::rounds, [](Bits& b) { put(b, o.bp.lower_as<double>()); }},
+    {"ball2.upper_as", Kind::rounds, [](Bits& b) { put(b, o.bp.upper_as<double>()); }},
+    {"ball2.narrow", Kind::rounds, [](Bits& b) { put(b, B1(unverified(o.bp))); }},
 
     // The functions that do not round, each on its whole corpus, for double and float.
     {"e1.neg", Kind::exact, [](Bits& b) {
@@ -493,6 +571,75 @@ inline const Operation operations[] = {
              }
          });
      }},
+    // Intervals: the negation, the hull and the intersection (comparisons and selects), and the
+    // bounds of two limbs as numbers of T (to_down and to_up of a bound).
+    {"interval1.neg", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : c.intervals1) put(out, -unverified(x));
+         });
+     }},
+    {"interval2.neg", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : c.intervals2) put(out, -unverified(x));
+         });
+     }},
+    {"interval1.hull_intersection", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : c.intervals1)
+                 for (const auto& y : c.intervals1) {
+                     put(out, x.hull(unverified(y)));
+                     put(out, x.intersection(unverified(y)));
+                 }
+         });
+     }},
+    {"interval2.hull_intersection", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             for (const auto& x : c.intervals2)
+                 for (const auto& y : c.intervals2) {
+                     put(out, x.hull(unverified(y)));
+                     put(out, x.intersection(unverified(y)));
+                 }
+         });
+     }},
+    {"interval2.lower_upper_as", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             for (const auto& x : c.intervals2) {
+                 put(out, x.template lower_as<T>());
+                 put(out, x.template upper_as<T>());
+             }
+         });
+     }},
+    // The constructors of an interval: of one limb, and of two from a T, whose only rounded
+    // operations are the guards (the same values, zeros without their sign); of two limbs from
+    // numbers of two limbs, comparisons and selects (the same bits).
+    {"interval1.make", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             using X = kairn::Interval<T, 1>;
+             for (auto lo : c.one) {
+                 put_value(out, X(unverified(lo)));
+                 for (auto hi : c.one) {
+                     put_value(out, X(unverified(lo), hi));
+                     put_value(out, X(unverified(kairn::Expansion<T, 1>(lo)), kairn::Expansion<T, 1>(hi)));
+                 }
+             }
+         });
+     }},
+    {"interval2.make", Kind::exact, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             using X = kairn::Interval<T, 2>;
+             for (auto lo : c.one) {
+                 put_value(out, X(unverified(lo)));
+                 for (auto hi : c.one) put_value(out, X(unverified(lo), hi));
+             }
+             for (const auto& lo : c.two) {
+                 put(out, X(unverified(lo)));
+                 for (const auto& hi : c.two) put(out, X(unverified(lo), hi));
+             }
+         });
+     }},
     // The conversion of a SumAndError to a two-limb number: its guards, a + 0, as from_limbs_unchecked
     // (the same values, zeros without their sign), and its check of the pair, which does not round.
     {"blocks.to_expansion", Kind::exact, [](Bits& b) {
@@ -568,6 +715,27 @@ inline const Operation operations[] = {
              look(kairn::Ball<T, 2>::empty());
              look(kairn::Ball<T, 2>::whole());
              look(kairn::Ball<T, 2>());
+             for (const auto& x : c.balls1) put(out, x.midpoint());
+             for (const auto& x : c.balls2) put(out, x.midpoint());
+         });
+     }},
+    {"interval.accessors", Kind::unchecked, [](Bits& b) {
+         for_both(b, [](Bits& out, const auto& c) {
+             using T = std::decay_t<decltype(c.one[0])>;
+             for (const auto& x : c.intervals1) {
+                 put(out, x.lower());
+                 put(out, x.upper());
+                 put(out, x.template lower_as<T>());
+                 put(out, x.template upper_as<T>());
+             }
+             for (const auto& x : c.intervals2) {
+                 put(out, x.lower());
+                 put(out, x.upper());
+             }
+             put(out, kairn::Interval<T, 1>());
+             put(out, kairn::Interval<T, 2>::empty());
+             put(out, kairn::Interval<T, 2>::whole());
+             put(out, kairn::Interval<T, 1>::empty());
          });
      }},
     {"traits", Kind::unchecked, [](Bits& b) {

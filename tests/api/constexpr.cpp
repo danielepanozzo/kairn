@@ -10,10 +10,15 @@
 // limb, a ball's negation, states, sign predicates and constants, and the building blocks on T
 // but mul_down and mul_up (blocks.hpp), each against values computed by hand, with the same bits at
 // run time where milestone2.md says so ("The two executions of a product") and the same values
-// where a zero can differ in sign. Not yet: the products of two limbs, ldexp and half on two limbs
-// and on balls, and the Ball arithmetic: their kernels have fused operations without a
-// constant-evaluation variant, or their code is where KAIRN_ENCLOSURE_CODE puts it. mul_down and
-// mul_up are not constexpr, by design (api.reject.not_constexpr.*); main() checks them at run time.
+// where a zero can differ in sign; and of intervals (interval.hpp) the constructors, the states,
+// the bounds, the negation, the hull, the intersection, the midpoint, the radius, the split and
+// the conversions, and of a ball the functions of the interface it shares with intervals, the
+// empty set and the whole line through each. Not yet: the products of two limbs, ldexp and half on
+// two limbs and on balls, and the Ball and Interval arithmetic: their kernels have fused operations
+// without a constant-evaluation variant, or their code is where KAIRN_ENCLOSURE_CODE puts it
+// (main() checks the arithmetic of intervals at run time, against values computed by hand).
+// mul_down and mul_up are not constexpr, by design (api.reject.not_constexpr.*); main() checks them
+// at run time.
 // Also: KAIRN_VERSION_AT_LEAST, in #if and in a constant expression.
 //
 // The comparisons are evaluated with NaN operands too: one compiler's constant evaluator takes
@@ -396,6 +401,156 @@ struct Blocks {
 template struct Blocks<double>;
 template struct Blocks<float>;
 
+template <class X, class Y>
+concept can_hull = requires(X x, Y y) { x.hull(y); };
+template <class X>
+concept can_midpoint = requires(X x) { x.midpoint(); };
+template <class X>
+concept can_split = requires(X x) { x.split(); };
+
+// Intervals (interval.hpp) and the functions of a Ball of the interface the two share: every
+// constexpr function, the empty set and the whole line through each, against values computed by
+// hand; the types and the conversions that exist and those that do not.
+template <class T>
+struct Intervals {
+    using E1 = kairn::Expansion<T, 1>;
+    using E2 = kairn::Expansion<T, 2>;
+    using B1 = kairn::Ball<T, 1>;
+    using B2 = kairn::Ball<T, 2>;
+    using I1 = kairn::Interval<T, 1>;
+    using I2 = kairn::Interval<T, 2>;
+    using L = std::numeric_limits<T>;
+    static constexpr T u = L::epsilon() / 2;
+    static constexpr T eta = L::denorm_min();
+    static constexpr T omega = (L::max)();
+    static constexpr T inf = L::infinity();
+    static constexpr T nan = L::quiet_NaN();
+
+    // The bounds of an interval of one limb, and whether it is the empty set or the whole line.
+    static constexpr bool is(const I1& x, T l, T h) { return x.lower().limb[0] == l && x.upper().limb[0] == h; }
+    static constexpr bool empty(const I1& x) { return is(x, inf, -inf); }
+    static constexpr bool whole(const I1& x) { return is(x, -inf, inf); }
+    static constexpr bool is(const I2& x, T l0, T l1, T h0, T h1) {
+        return x.lower().limb[0] == l0 && x.lower().limb[1] == l1 && x.upper().limb[0] == h0 && x.upper().limb[1] == h1;
+    }
+    static constexpr bool empty(const I2& x) { return is(x, inf, 0, -inf, 0); }
+    static constexpr bool whole(const I2& x) { return is(x, -inf, 0, inf, 0); }
+
+    // Regular value types, of two bounds; the conversions that exist, and that none is implicit
+    // but those of a point; no conversion between numbers of limbs.
+    static_assert(std::is_trivially_copyable_v<I1> && std::is_trivially_copyable_v<I2>);
+    static_assert(std::is_standard_layout_v<I1> && std::is_standard_layout_v<I2>);
+    static_assert(sizeof(I1) == 2 * sizeof(T) && sizeof(I2) == 4 * sizeof(T));
+    static_assert(std::is_convertible_v<T, I1> && std::is_convertible_v<E1, I1> && std::is_convertible_v<T, I2>);
+    static_assert(std::is_convertible_v<E2, I2> && !std::is_constructible_v<I2, I1> && !std::is_constructible_v<I1, I2>);
+    static_assert(std::is_constructible_v<I1, B1> && !std::is_convertible_v<B1, I1> && !std::is_constructible_v<I2, B2>);
+    static_assert(std::is_constructible_v<B1, I1> && !std::is_convertible_v<I1, B1> && !std::is_constructible_v<B2, I2>);
+    static_assert(std::is_constructible_v<B1, B2> && !std::is_convertible_v<B2, B1> && !std::is_constructible_v<B2, B1>);
+    static_assert(!std::is_constructible_v<B1, I2> && !std::is_constructible_v<I1, B2>);
+    // The operations exist exactly when the kernel they call is proved, between intervals of one
+    // T and one number of limbs, and never with a number as an operand.
+    static_assert(can_add<I1, I1> == bounds::interval_add_1<T>::proved && can_add<I2, I2> == bounds::interval_add_2<T>::proved);
+    static_assert(can_sub<I1, I1> == bounds::interval_sub_1<T>::proved && can_mul<I2, I2> == bounds::interval_mul_2<T>::proved);
+    static_assert(can_mul<I1, I1> == bounds::interval_mul_1<T>::proved && can_negate<I2> == bounds::interval_neg_2<T>::proved);
+    static_assert(can_hull<I1, I1> == bounds::interval_hull_1<T>::proved && can_midpoint<I1> == bounds::interval_mid_rad_1<T>::proved);
+    static_assert(can_split<I1> == bounds::interval_split_1<T>::proved && !can_midpoint<I2> && !can_split<I2>);
+    static_assert(std::is_constructible_v<I1, T, T> == bounds::interval_make_1<T>::proved);
+    static_assert(!can_add<I1, I2> && !can_add<I1, T> && !can_add<T, I1> && !can_mul<I2, E2> && !can_sub<I1, B1>);
+    static_assert(!can_add<I1, kairn::Interval<float, 1>> || std::is_same_v<T, float>);
+    static_assert(can_add<kairn::Unverified<I1>, I1> && can_negate<kairn::Unverified<I2>> && !can_add<kairn::Unverified<I1>, I2>);
+    static_assert(can_midpoint<B1> && can_midpoint<B2>);
+
+    // Construction: the point 0 by default; two bounds; a NaN bound the whole line; reversed
+    // bounds and equal infinities the empty set; a point; the named states.
+    static_assert(is(I1(), 0, 0) && is(I2(), 0, 0, 0, 0));
+    static_assert(is(I1(T(1), T(2)), 1, 2) && is(I1(E1(T(-3)), E1(T(5))), -3, 5) && is(I1(unverified(T(1)), T(2)), 1, 2));
+    static_assert(whole(I1(nan, T(1))) && whole(I1(T(1), nan)) && whole(I1(nan, nan)) && whole(I1(nan, -inf)));
+    static_assert(whole(I1(inf, nan)) && whole(I1(-inf, inf)) && is(I1(-inf, T(1)), -inf, 1) && is(I1(T(1), inf), 1, inf));
+    static_assert(empty(I1(T(2), T(1))) && empty(I1(inf, inf)) && empty(I1(-inf, -inf)) && empty(I1(inf, -inf)));
+    static_assert(is(I1(T(3)), 3, 3) && whole(I1(nan)) && empty(I1(inf)) && empty(I1(-inf)) && is(I1(E1(T(3))), 3, 3));
+    static_assert(empty(I1::empty()) && whole(I1::whole()) && empty(I2::empty()) && whole(I2::whole()));
+    static constexpr T above[2] = {1, u / 2};
+    static constexpr E2 x2 = E2::from_limbs(above);  // 1 + u/2
+    static_assert(is(I2(x2, E2(T(2))), 1, u / 2, 2, 0) && is(I2(T(1), T(2)), 1, 0, 2, 0) && is(I2(x2), 1, u / 2, 1, u / 2));
+    static_assert(whole(I2(E2(nan), x2)) && whole(I2(x2, E2(nan))) && whole(I2(nan)) && empty(I2(E2(T(2)), x2)));
+    static_assert(empty(I2(inf)) && empty(I2(E2(-inf), E2(-inf))) && whole(I2(E2(-inf), E2(inf))) && is(I2(T(3)), 3, 0, 3, 0));
+    static_assert(is(I2(unverified(x2), E2(T(2))), 1, u / 2, 2, 0) && is(I2(unverified(T(1)), T(2)), 1, 0, 2, 0));
+    // The bounds as numbers of T: for two limbs rounded outward.
+    static_assert(I1(T(1), T(2)).template lower_as<T>() == 1 && I1::empty().template upper_as<T>() == -inf);
+    static_assert(I2(x2, x2).template lower_as<T>() == 1 && I2(x2, x2).template upper_as<T>() == 1 + 2 * u);
+    static_assert(I2::empty().template lower_as<T>() == inf && I2::whole().template lower_as<T>() == -inf);
+    static_assert(I2(-x2, -x2).template lower_as<T>() == -1 - 2 * u && I2(-x2, -x2).template upper_as<T>() == -1);
+
+    // The negation, the hull and the intersection: exact.
+    static_assert(is(-I1(T(1), T(2)), -2, -1) && empty(-I1::empty()) && whole(-I1::whole()) && is(-I1(T(1), inf), -inf, -1));
+    static_assert(is(-I2(x2, E2(T(2))), -2, 0, -1, -u / 2) && empty(-I2::empty()) && whole(-I2::whole()));
+    static_assert(is(-unverified(I1(T(1), T(2))), -2, -1));
+    static_assert(is(I1(T(1), T(2)).hull(I1(T(3), T(4))), 1, 4) && is(I1(T(1), T(2)).hull(I1::empty()), 1, 2));
+    static_assert(is(I1::empty().hull(I1(T(3), T(4))), 3, 4) && empty(I1::empty().hull(I1::empty())));
+    static_assert(whole(I1::whole().hull(I1(T(3), T(4)))) && is(I1(T(1), T(2)).hull(unverified(I1(-inf, T(0)))), -inf, 2));
+    static_assert(is(I1(T(1), T(3)).intersection(I1(T(2), T(4))), 2, 3) && empty(I1(T(1), T(2)).intersection(I1(T(3), T(4)))));
+    static_assert(is(I1(T(1), T(2)).intersection(I1(T(2), T(4))), 2, 2) && empty(I1(T(1), T(2)).intersection(I1::empty())));
+    static_assert(is(I1::whole().intersection(I1(T(3), T(4))), 3, 4) && whole(I1::whole().intersection(I1::whole())));
+    static_assert(is(I2(T(1), T(3)).hull(I2(x2, E2(T(4)))), 1, 0, 4, 0) && is(I2(x2, E2(T(3))).intersection(I2(T(1), T(2))), 1, u / 2, 2, 0));
+    static_assert(empty(I2(T(1), T(2)).intersection(I2(T(3), T(4)))) && empty(I2::empty().intersection(I2::whole())));
+    static_assert(is(I2::empty().hull(I2(x2)), 1, u / 2, 1, u / 2) && whole(I2::whole().hull(I2::empty())));
+
+    // The midpoint, the radius and the split: the values of mid and rad of IEEE 1788 on the
+    // special states; for [eta, eta] the halves round to zero and the midpoint is moved back in.
+    static_assert(I1(T(1), T(3)).midpoint().limb[0] == 2 && I1(T(1), T(3)).radius() == 1);
+    static_assert(I1(T(1), T(2)).midpoint().limb[0] == T(1.5) && I1(T(1), T(2)).radius() == T(0.5));
+    static_assert(I1::whole().midpoint().limb[0] == 0 && I1::whole().radius() == inf);
+    static_assert(I1(T(1), inf).midpoint().limb[0] == omega && I1(-inf, T(1)).midpoint().limb[0] == -omega);
+    static_assert(I1(T(1), inf).radius() == inf && I1(eta, eta).midpoint().limb[0] == eta && I1(eta, eta).radius() == 0);
+    static_assert(I1(-omega, omega).midpoint().limb[0] == 0 && I1(-omega, omega).radius() == omega);
+    static constexpr kairn::Split<I1> s13 = I1(T(1), T(3)).split();
+    static_assert(is(s13.left, 1, 2) && is(s13.right, 2, 3));
+    // On the empty set these listings compute a NaN before the select that returns their result
+    // (inf + -inf), which GCC and Clang refuse in constant evaluation, as an overflowing sum: the
+    // empty set is not a constant expression for the midpoint, the radius, the split and the
+    // conversion to a ball. intervals_run_time checks them.
+    // The whole line and a half-line: split at the listing's midpoint, 0 and Omega (only a point of
+    // the interval is claimed).
+    static_assert(is(I1::whole().split().left, -inf, 0) && is(I1::whole().split().right, 0, inf));
+    static_assert(is(I1(T(1), inf).split().left, 1, omega) && is(I1(T(1), inf).split().right, omega, inf));
+
+    // The conversions between an interval and a ball of one limb.
+    static_assert(B1(I1(T(1), T(3))).center().limb[0] == 2 && B1(I1(T(1), T(3))).radius() == 1);
+    static_assert(B1(I1(T(1), inf)).is_whole() && B1(I1::whole()).is_whole());
+    static_assert(B1(unverified(I1(T(1), T(3)))).radius() == 1);
+    // The empty set and the whole line are not constant expressions for the functions below, nor
+    // an infinite or NaN bound for the ball from an interval of two T: their listings compute with
+    // the NaN of the empty ball, or compute inf - inf on the way (c - r for the whole line, the sum
+    // of two infinite halves), before the selects that return their results, and GCC and Clang
+    // refuse such an operation in constant evaluation. intervals_run_time checks them.
+    static_assert(is(I1(B1(T(2), T(1))), 1, 3) && is(I1(B1(T(5))), 5, 5));
+    static_assert(is(I1(B1(T(1), u)), 1 - u, 1 + 2 * u) && is(I1(unverified(B1(T(2), T(1)))), 1, 3));
+    // The ball of two limbs from an interval of two T: the exact midpoint when the halves are exact.
+    static constexpr B2 f13 = B2::from_interval(T(1), T(1) + 2 * u);
+    static_assert(f13.center().limb[0] == 1 && f13.center().limb[1] == u && f13.radius() == u);
+    static_assert(B2::from_interval(T(1), T(3)).radius() == 1 && B2::from_interval(T(1), T(3)).center().limb[0] == 2);
+    static_assert(B2::from_interval(T(2), T(1)).is_empty() && B2::from_interval(unverified(T(1)), T(3)).radius() == 1);
+    // [eta, 3 eta]: the halves are not exact; the radius is the number after d, and covers.
+    static_assert(B2::from_interval(eta, 3 * eta).radius() >= eta);
+
+    // The bounds of a ball as numbers of T, its midpoint, and the narrowing to one limb.
+    static_assert(B1(T(2), T(1)).template lower_as<T>() == 1 && B1(T(2), T(1)).template upper_as<T>() == 3);
+    static_assert(B1(T(1), u).template lower_as<T>() == 1 - u && B1(T(1), u).template upper_as<T>() == 1 + 2 * u);
+    static_assert(B1(T(2), T(1)).lower().limb[0] == 1 && B1(T(2), T(1)).upper().limb[0] == 3);
+    // For two limbs the center is rounded to T first: c + r = 1 + 3u/2, RU(c + r) = 1 + 2u, but
+    // RU(RU(c) + r) = RU(1 + 3u) = 1 + 4u, within the claim's 5 u (|c| + r) + 3 eta.
+    static_assert(B2(x2, u).template lower_as<T>() == 1 - u && B2(x2, u).template upper_as<T>() == 1 + 4 * u);
+    static_assert(B2(x2, u).midpoint().limb[1] == u / 2 && B1(T(2), T(1)).midpoint().limb[0] == 2);
+    static_assert(B2::whole().midpoint().limb[0] == 0 && B1::empty().midpoint().limb[0] != B1::empty().midpoint().limb[0]);
+    // The radius grows by radd(r, |c1|), the number after the rounded sum: eta for a point.
+    static_assert(B1(B2(x2, T(0))).center().limb[0] == 1 && B1(B2(x2, T(0))).radius() > u / 2);
+    static_assert(B1(B2(T(3))).center().limb[0] == 3 && B1(B2(T(3))).radius() == eta);
+    static_assert(B1(unverified(B2(T(3)))).radius() == eta);
+};
+
+template struct Intervals<double>;
+template struct Intervals<float>;
+
 int failures = 0;
 
 template <class T>
@@ -587,6 +742,120 @@ void blocks_run_time() {
            B1(kairn::rational<kairn::Expansion<T, 1>>(1, v_zero_den)).is_whole());
 }
 
+// Intervals at run time: the constexpr functions on operands read through volatile objects give
+// the values of constant evaluation (a zero can differ in sign: a guard, or a plain product there
+// for a fused one here); and the arithmetic, which is not constexpr, against values computed by
+// hand, the empty set, the whole line, overflow and the zero rules among them.
+template <class T>
+void intervals_run_time() {
+    using C = Intervals<T>;
+    using E2 = kairn::Expansion<T, 2>;
+    using B1 = kairn::Ball<T, 1>;
+    using B2 = kairn::Ball<T, 2>;
+    using I1 = kairn::Interval<T, 1>;
+    using I2 = kairn::Interval<T, 2>;
+    constexpr T u = C::u, eta = C::eta, omega = C::omega, inf = C::inf;
+    volatile T v_one = 1, v_two = 2, v_three = 3, v_four = 4, v_nan = C::nan, v_inf = inf, v_eta = eta,
+               v_omega = omega, v_zero = 0, v_half_u = u / 2;
+    const T one = v_one, two = v_two, three = v_three, four = v_four, nan = v_nan;
+    // The constexpr functions.
+    const I1 x(one, three);
+    same("midpoint", x.midpoint().limb[0], I1(T(1), T(3)).midpoint().limb[0]);
+    same("radius", x.radius(), I1(T(1), T(3)).radius());
+    same("midpoint of [eta, eta]", I1(T(v_eta), T(v_eta)).midpoint().limb[0], eta);
+    same("midpoint of [1, inf]", I1(one, T(v_inf)).midpoint().limb[0], omega);
+    const T m_empty = I1(T(v_inf), -T(v_inf)).midpoint().limb[0];
+    expect("midpoint of the empty set", m_empty != m_empty);
+    expect("split", C::is(x.split().left, 1, 2) && C::is(x.split().right, 2, 3));
+    expect("split of the whole line", C::is(I1(-T(v_inf), T(v_inf)).split().left, -inf, 0));
+    expect("the constructor with a NaN bound", C::whole(I1(nan, one)) && C::whole(I2(E2(one), E2(nan))));
+    expect("reversed bounds", C::empty(I1(two, one)) && C::empty(I2(two, one)) && C::empty(I1(T(v_inf))));
+    expect("the hull", C::is(x.hull(I1(four, four)), 1, 4) && C::is(I1::empty().hull(x), 1, 3));
+    expect("the intersection", C::is(x.intersection(I1(two, four)), 2, 3) && C::empty(x.intersection(I1(four, four))));
+    expect("the negation", C::is(-x, -3, -1) && C::empty(-I1(two, one)));
+    expect("a ball of an interval", B1(x).center().limb[0] == 2 && B1(x).radius() == 1 && B1(I1(one, T(v_inf))).is_whole());
+    expect("the interval of a ball", C::is(I1(B1(two, one)), 1, 3) && C::empty(I1(B1::empty())));
+    const B2 f = B2::from_interval(one, T(one + 2 * u));
+    same_bits("from_interval, center", f.center().limb[1], C::f13.center().limb[1]);
+    same_bits("from_interval, radius", f.radius(), C::f13.radius());
+    same("from_interval([eta, 3 eta])", B2::from_interval(T(v_eta), T(3 * v_eta)).radius(),
+         B2::from_interval(eta, 3 * eta).radius());
+    expect("lower_as of a ball", B1(two, one).template lower_as<T>() == 1 && B2(E2(two), one).template upper_as<T>() == 3);
+    same("the narrowing", B1(B2(E2(three), T(v_zero))).radius(), eta);
+    expect("lower_as of an interval of two limbs", I2(E2(one), E2(two)).template upper_as<T>() == 2);
+    // The special states, which are not constant expressions for these (Intervals says why).
+    const I1 e1 = I1::empty();
+    const T m_e = e1.midpoint().limb[0], r_e = e1.radius();
+    expect("the midpoint and the radius of the empty set", m_e != m_e && r_e != r_e);
+    expect("the split of the empty set", C::empty(e1.split().left) && C::empty(e1.split().right));
+    expect("the ball of the empty set", B1(e1).is_empty() && B1(I1(T(v_inf), -T(v_inf))).is_empty());
+    expect("the interval of the whole line and of the empty ball", C::whole(I1(B1::whole())) && C::empty(I1(B1::empty())));
+    expect("from_interval with a NaN", B2::from_interval(nan, one).is_whole() && B2::from_interval(one, nan).is_whole());
+    expect("from_interval of a half-line, of the whole line",
+           B2::from_interval(one, T(v_inf)).is_whole() && B2::from_interval(-T(v_inf), T(v_inf)).is_whole());
+    expect("from_interval of reversed bounds, of equal infinities", B2::from_interval(two, one).is_empty() &&
+                                                                     B2::from_interval(T(v_inf), T(v_inf)).is_empty() &&
+                                                                     B2::from_interval(-T(v_inf), -T(v_inf)).is_empty());
+    expect("the bounds of the empty ball", B1::empty().template lower_as<T>() == inf && B1::empty().template upper_as<T>() == -inf &&
+                                               B2::empty().template lower_as<T>() == inf &&
+                                               B2::empty().template upper_as<T>() == -inf);
+    expect("the bounds of the whole line", B1::whole().template lower_as<T>() == -inf && B1::whole().upper().limb[0] == inf &&
+                                               B2::whole().template lower_as<T>() == -inf &&
+                                               B2::whole().template upper_as<T>() == inf);
+    expect("the narrowing of the empty set and of the whole line", B1(B2::empty()).is_empty() && B1(B2::whole()).is_whole());
+
+    // One limb: the tightest interval of T for a sum and a difference.
+    expect("[1, 2] + [3, 4]", C::is(I1(one, two) + I1(three, four), 4, 6));
+    expect("[1, 2] - [3, 4]", C::is(I1(one, two) - I1(three, four), -3, -1));
+    expect("[1, 2] * [3, 4]", C::is(I1(one, two) * I1(three, four), 3, 8));
+    expect("[-1, 2] * [3, 4]", C::is(I1(-one, two) * I1(three, four), -4, 8));
+    expect("[1, 1] + [u/2, u/2]: rounded outward", C::is(I1(one) + I1(T(v_half_u)), 1, 1 + 2 * u));
+    expect("[1, 1] - [u/2, u/2]: rounded outward", C::is(I1(one) - I1(T(v_half_u)), 1 - u, 1));
+    expect("[Omega, Omega] + [Omega, Omega]: [Omega, +inf]", C::is(I1(T(v_omega)) + I1(T(v_omega)), omega, inf));
+    expect("[Omega, Omega] * [2, 2]: [Omega, +inf]", C::is(I1(T(v_omega)) * I1(two), omega, inf));
+    expect("the empty set + X", C::empty(I1::empty() + x) && C::empty(x * I1::empty()) && C::empty(I1::empty() - I1::empty()));
+    expect("the whole line + X", C::whole(I1::whole() + x) && C::whole(x * I1::whole()));
+    expect("[0, 0] * the whole line is [0, 0]", C::is(I1(T(v_zero)) * I1::whole(), 0, 0));
+    expect("[0, 0] * [1, +inf] is [0, 0]", C::is(I1(T(v_zero)) * I1(one, T(v_inf)), 0, 0));
+    expect("[1, +inf] * [-1, 1] is the whole line", C::whole(I1(one, T(v_inf)) * I1(-one, one)));
+    // eta * eta is below 2^(2p-1) eta: the bounds are RD and RU of eta^2 or one number beyond.
+    const I1 tiny = I1(T(v_eta)) * I1(T(v_eta));
+    expect("[eta, eta]^2", tiny.lower().limb[0] <= 0 && tiny.lower().limb[0] >= -eta && tiny.upper().limb[0] >= eta &&
+                               tiny.upper().limb[0] <= 2 * eta);
+    I1 acc = x;
+    acc += I1(one);
+    acc -= I1(two);
+    acc *= I1(two);
+    expect("compound assignments", C::is(acc, 0, 4));
+    expect("marked operands", C::is(kairn::unverified(x) + x, 2, 6) && C::is(x - kairn::unverified(x), -2, 2));
+
+    // Two limbs: an enclosure within about 8 u^2 (sums) and 10 u^2 (products) of the exact range,
+    // not the tightest interval, but zero where the exact bound is zero.
+    const I2 p{E2(one), E2(two)}, q{E2(three), E2(four)};
+    const I2 s = p + q;
+    expect("[1, 2] + [3, 4] contains [4, 6]", s.lower() <= E2(four) && s.upper() >= E2(T(6)));
+    expect("... within 8.1 u^2 of it", E2(four) - s.lower() <= E2(T(8.1) * u * u * 4) &&
+                                           s.upper() - E2(T(6)) <= E2(T(8.1) * u * u * 6));
+    const I2 pr = p * q;
+    expect("[1, 2] * [3, 4] contains [3, 8]", pr.lower() <= E2(three) && pr.upper() >= E2(T(8)));
+    expect("... within 10.1 u^2 of it", E2(three) - pr.lower() <= E2(T(10.1) * u * u * 3) &&
+                                            pr.upper() - E2(T(8)) <= E2(T(10.1) * u * u * 8));
+    expect("[0, 0] + [0, 0] is [0, 0]", C::is(I2(T(v_zero)) + I2(T(v_zero)), 0, 0, 0, 0));
+    expect("X - X is [0, 0] for a point X", C::is(I2(E2(three)) - I2(E2(three)), 0, 0, 0, 0));
+    expect("[0, 0] * the whole line is [0, 0]", C::is(I2(T(v_zero)) * I2::whole(), 0, 0, 0, 0));
+    expect("[1, 1] + [1, 1] is not [2, 2]", !C::is(I2(one) + I2(one), 2, 0, 2, 0));
+    expect("the empty set and the whole line, two limbs", C::empty(I2::empty() * p) && C::whole(p + I2::whole()) &&
+                                                               C::whole(I2::whole() * p) && C::empty(p - I2::empty()));
+    expect("[1, +inf] * [-1, 1] is the whole line, two limbs", C::whole(I2(E2(one), E2(T(v_inf))) * I2(-one, one)));
+    expect("[Omega, Omega] + [Omega, Omega]: an infinite upper bound", (I2(T(v_omega)) + I2(T(v_omega))).upper().limb[0] == inf);
+    I2 acc2 = p;
+    acc2 += q;
+    acc2 -= q;
+    acc2 *= I2(E2(two));
+    expect("compound assignments, two limbs", acc2.lower() <= E2(two) && acc2.upper() >= E2(four));
+    expect("marked operands, two limbs", (kairn::unverified(p) * q).upper() >= E2(T(8)));
+}
+
 // The constexpr operations computed at run time, from operands read through volatile objects, and
 // the operations that are not constexpr on values whose results are known.
 template <class T>
@@ -635,6 +904,8 @@ int main() {
     run_time<float>();
     blocks_run_time<double>();
     blocks_run_time<float>();
+    intervals_run_time<double>();
+    intervals_run_time<float>();
     std::printf("%s\n", failures ? "FAILED" : "ok");
     return failures ? 1 : 0;
 }

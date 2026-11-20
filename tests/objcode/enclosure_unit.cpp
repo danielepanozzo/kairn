@@ -46,6 +46,14 @@ extern "C" KAIRN_OBJCODE_NOINLINE void kairn_objcode_fixups_inline() noexcept {}
         (void)a;                                                                                             \
         *z = EXPR;                                                                                           \
     }
+// The same for the operations of Interval that KAIRN_ENCLOSURE_CODE places, the sum, the difference
+// and the product of one and two limbs, each its interval kernel.
+#define KAIRN_OBJCODE_INTERVAL(T, K, KERNEL, EXPR)                                                                   \
+    extern "C" KAIRN_OBJCODE_NOINLINE void kairn_objcode_enclosure_##T##_##KERNEL(                                   \
+        const kairn::Interval<T, K>* x, const kairn::Interval<T, K>* y, const T* a, kairn::Interval<T, K>* z) noexcept { \
+        (void)a;                                                                                                     \
+        *z = EXPR;                                                                                                   \
+    }
 #define KAIRN_OBJCODE_ENCLOSURES(T)                                      \
     KAIRN_OBJCODE_ENCLOSURE(T, 1, ball_add_1_full, *x + *y)              \
     KAIRN_OBJCODE_ENCLOSURE(T, 1, ball_sub_1_full, *x - *y)              \
@@ -56,6 +64,12 @@ extern "C" KAIRN_OBJCODE_NOINLINE void kairn_objcode_fixups_inline() noexcept {}
     KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_mul_2_full, *x * *y)              \
     KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_scale_2_full, *x * *a)            \
     KAIRN_OBJCODE_ENCLOSURE(T, 1, ball_mul_pow2_1_full, kairn::half(*x)) \
-    KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_mul_pow2_2_full, kairn::half(*x))
+    KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_mul_pow2_2_full, kairn::half(*x)) \
+    KAIRN_OBJCODE_INTERVAL(T, 1, interval_add_1, *x + *y)                \
+    KAIRN_OBJCODE_INTERVAL(T, 1, interval_sub_1, *x - *y)                \
+    KAIRN_OBJCODE_INTERVAL(T, 1, interval_mul_1, *x * *y)                \
+    KAIRN_OBJCODE_INTERVAL(T, 2, interval_add_2, *x + *y)                \
+    KAIRN_OBJCODE_INTERVAL(T, 2, interval_sub_2, *x - *y)                \
+    KAIRN_OBJCODE_INTERVAL(T, 2, interval_mul_2, *x * *y)
 KAIRN_OBJCODE_ENCLOSURES(double)
 KAIRN_OBJCODE_ENCLOSURES(float)
