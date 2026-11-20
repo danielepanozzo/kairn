@@ -11,8 +11,10 @@ wrong on what was run.
 ## How it works
 
 - `kernels/` holds the proposed kernels as descriptions in the generator's own format
-  (`gen/README.md`), 21 of them. They carry no claims: the claims of this milestone need
-  vocabulary that the generator does not have yet. The nine of the first wave that the
+  (`gen/README.md`), 28 of them. They carry no claims: the claims of this milestone need
+  vocabulary that the generator does not have yet. The seven of the accumulator (`acc_add_k`,
+  `acc_mul_k`, `acc_merge_k` and `acc_radius`) carry the claims proposed for them as comments,
+  and `accumulator.py` says why they are not in `gen/kernels`. The nine of the first wave that the
   generator has now (`two_sum_ord`, the four directed sums, the two directed products and the two
   scalings of a ball by a power of two), and three bound kernels of the folds' stage
   (`bound_sum_2`, `bound_dot_2`, `bound_dot_1`, whose constant of `tm` holds the smallest normal
@@ -47,7 +49,8 @@ compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`)
 | `rational.py` | a model in integer arithmetic of `rational(num, den)`, the three-word method of the page's first version, equals the specification, limb for limb. It is not a test of the header, whose computation is another and which the oracle tests | Constants at compile time |
 | `convert.py` | conversions between a wide and a narrow format, of numbers and of balls | Limbs of another type |
 | `constants.py` | the constants $A$ and $B$ of the two-limb bounds in `binary64` and `binary32` | Bounds of two limbs |
-| `rules_report.py` | what the generator's rules say of the 33 proposed kernels (21 in `kernels/`, 12 in `gen/kernels`), and the operations of each after inlining | Experiments |
+| `accumulator.py` | the kernels of the accumulator: the inequality the radius rests on, $\sum_i \lvert x_i y_i\rvert \le (1+u)^{n+2}(a + n\eta/2)$, after random sequences of `add`, `add_product` and `merge`; the proposed `acc_radius` above its claimed expression, and the chain error $\le$ radius with `bound_dot_k`; in the format itself, the sum of magnitudes $+\infty$ while the running sum is finite | The accumulator |
+| `rules_report.py` | what the generator's rules say of the 40 proposed kernels (28 in `kernels/`, 12 in `gen/kernels`), and the operations of each after inlining | Experiments |
 
 ## Rerun
 
