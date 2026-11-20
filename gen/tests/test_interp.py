@@ -405,8 +405,9 @@ class Specials(unittest.TestCase):
         # bound_sum_2 and the seven of bound_dot_1 and of bound_dot_2 (2, of the doubling, among them).
         # Milestone 2: E, G, H of add_ball_2_2 and mul_ball_2_2, P of mul_dir_1, and 1/2 and 2 of
         # ball_from_interval_2. Stage B1: 1/2 of interval_mid_rad_1. Stage B2: 1/2 of ball_split_1,
-        # of ball_split_2 and of interval_mid_rad_2.
-        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 5 + 5 + 7 + 7 + 3 * 2 + 1 + 2 + 1 + 2 + 1))
+        # of ball_split_2, of interval_mid_rad_2 and of interval_split_2 (which computes the midpoint
+        # itself).
+        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 5 + 5 + 7 + 7 + 3 * 2 + 1 + 2 + 1 + 2 + 1 + 1))
         # The constant of tm in bound_dot_k, (1 + u)^2 (tiny + eta) of milestone2.md, is subnormal: it
         # holds the smallest normal number besides, as H does (1 + 5/2 eta or 3/2 eta, rounded up).
         for name, more in (('bound_dot_1', 2), ('bound_dot_2', 3)):
@@ -518,8 +519,10 @@ class TwoExecutionsOfAProduct(unittest.TestCase):
                  'ball_from_interval_1'}
     # The kernels of the rule whose two executions give the same bits on the corpus: rmul and split,
     # and (stage B2) the hull and the intersection of balls of one limb, through interval_to_ball_1:
-    # no case of the corpus gives them a zero center of either sign from the two products.
-    SAME_BITS = {'rmul', 'split', 'ball_hull_1', 'ball_intersection_1'}
+    # no case of the corpus gives them a zero center of either sign from the two products; and the
+    # split of an interval of two limbs, whose point is the sum of two halves by mul_pow2_2 and
+    # add_2_2, which on the corpus gives no zero of the other sign.
+    SAME_BITS = {'rmul', 'split', 'ball_hull_1', 'ball_intersection_1', 'interval_split_2'}
 
     def test_the_kernels(self):
         from kairn_gen import cpp

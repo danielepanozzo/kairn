@@ -207,6 +207,8 @@ kernels `constexpr` by this rule are `rmul`, `mul_1_1`, `split`, `two_prod_dekke
 `bound_sum_k` and `bound_dot_k`; and, unverified, of Milestone 2, `ball_from_interval_2`,
 `interval_mid_rad_1` and the two kernels that call it, `interval_to_ball_1` and
 `interval_split_1`, which halve with `prod` (their two executions are compared by the tests only);
+and of stage B2, through `interval_to_ball_1`, `ball_hull_1`, `ball_intersection_1` and
+`ball_from_interval_1`, and `interval_split_2`, whose midpoint halves the bounds with `mul_pow2_2`;
 `build` lists them.
 
 C++ emission rules: non-template functions, one overload per limb type; one operation per

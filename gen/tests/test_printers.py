@@ -240,7 +240,7 @@ class Cpp(unittest.TestCase):
                       'ball_equal_2', 'ball_split_1', 'ball_split_2'}
     # And the conversions of two limbs (add_ball_2_2, the directed sums of two limbs), with the hull and
     # the intersection of balls of two limbs that call them.
-    NOT_CONSTEXPR |= {'ball_hull_2', 'ball_intersection_2', 'ball_to_interval_2', 'interval_mid_rad_2', 'interval_split_2', 'interval_to_ball_2'}
+    NOT_CONSTEXPR |= {'ball_hull_2', 'ball_intersection_2', 'ball_to_interval_2', 'interval_mid_rad_2', 'interval_to_ball_2'}
     # The kernels whose only fused operations are prod, constexpr by the rule of the product
     # (milestone2.md, "The two executions of a product"); in Milestone 2 the ball made from an
     # interval, which halves its bounds and doubles the halves with prod.
@@ -255,8 +255,10 @@ class Cpp(unittest.TestCase):
     PRODUCT_RULE |= {'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1'}
     # Stage B2: the hull and the intersection of balls of one limb, through interval_to_ball_1.
     PRODUCT_RULE |= {'ball_hull_1', 'ball_intersection_1'}
-    # And the ball from an interval of one limb, interval_make_1 then interval_to_ball_1.
-    PRODUCT_RULE |= {'ball_from_interval_1'}
+    # And the ball from an interval of one limb, interval_make_1 then interval_to_ball_1; and the split
+    # of an interval of two limbs, whose midpoint halves the bounds by mul_pow2_2 (it does not compute
+    # the radius of interval_mid_rad_2, whose add_ball_2_2 has an FMA).
+    PRODUCT_RULE |= {'ball_from_interval_1', 'interval_split_2'}
     # The kernels that are ordinary inline functions, not forced inline (ordinary_inline:).
     ORDINARY_INLINE = {'interval_mul_2'}
 

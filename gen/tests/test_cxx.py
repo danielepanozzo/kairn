@@ -227,6 +227,12 @@ NONFINITE_CE_CASES = [
     ('ball_from_interval_1', 'double', [1.0, 2.0]),
     ('ball_from_interval_1', 'float', [math.nan, 1.0]),
     ('ball_from_interval_1', 'double', [-math.inf, 1.0]),
+    # The split of an interval of two limbs, constexpr by the rule of the product: a bounded
+    # interval, the whole line and a half-line (the empty set would make the sum of the halves
+    # +inf - inf, as for interval_split_1).
+    ('interval_split_2', 'double', [1.0, 2.0 ** -60, 2.0, 0.0]),
+    ('interval_split_2', 'float', [-math.inf, 0.0, math.inf, 0.0]),
+    ('interval_split_2', 'double', [1.0, 0.0, math.inf, 0.0]),
 ]
 
 
