@@ -19,6 +19,7 @@ A number of several limbs stands for their exact sum: $c = c_0 + c_1$, $c_w = c_
 | `Ball<T, 2>(c, r)` | `Expansion<T, 2>`, `T` | `Ball<T, 2>` |  |
 | `Ball<T, 2>(c)` | `Expansion<T, 2>` | `Ball<T, 2>` | implicit: the point $c$, radius 0 |
 | `Ball<T, 2>(a)` | `T` | `Ball<T, 2>` | implicit: the point $a$, radius 0, with the center made by `make_2` first |
+| `Ball<T, 2>(q)` | `Constant<Expansion<T, 2>>` | `Ball<T, 2>` | explicit: center `q.value`, radius `q.error`, for `q` a result of `rational` or `integer`: how to multiply a ball by $1/s$, `X * Ball<T, 2>(rational<Expansion<T, 2>>(1, s))`, until Kairn has a division; `constexpr`; its check of the center rounds |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED (a constructor does not take it).
 

@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $c_x = c_{x0} + c_{x1}$, $
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`ball_mul_pow2_2_full`](ball_mul_pow2_2_full.md).
+**Not yet called by the public headers.** No public operation computes this kernel yet. The operations of the public headers call [`ball_mul_pow2_2_full`](ball_mul_pow2_2_full.md), which computes this kernel and then the fix-up of its results.
 
 ## Requires
 
@@ -114,6 +114,6 @@ No stored brute-force run has judged this kernel yet.
 
 ## Not claimed
 
-- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: [`ball_mul_pow2_2_full`](ball_mul_pow2_2_full.md) states that, and the public headers do not call it yet ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the library does now).
+- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: [`ball_mul_pow2_2_full`](ball_mul_pow2_2_full.md) states that ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the library does now).
 - Anything about an operand that is not normalized, which only limbs given by the program can make: `from_limbs` in a build without checks, `from_limbs_unchecked`, or `limb[]` written directly.
 

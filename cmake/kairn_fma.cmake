@@ -19,10 +19,14 @@ include_guard(GLOBAL)
 include(CheckCXXSourceCompiles)
 include(CMakePushCheckState)
 
-# kairn_define_fma_target(INCLUDE_DIR [GLOBAL] [QUIET]): defines kairn::fma, whose prelude is
-# INCLUDE_DIR/kairn/gen/prelude.hpp.
+# kairn_define_fma_target(INCLUDE_DIR [GLOBAL] [QUIET | VERBOSE]): defines kairn::fma, whose
+# prelude is INCLUDE_DIR/kairn/gen/prelude.hpp. It says which option it adds in a STATUS line;
+# with VERBOSE in a VERBOSE one, which CMake prints only at that log level (cmake --log-level=VERBOSE),
+# as Kairn's CMakeLists.txt asks when Kairn is not the top-level project and the installed package
+# configuration always does; with QUIET not at all. The warning that no option works is always
+# printed.
 function(kairn_define_fma_target include_dir)
-  cmake_parse_arguments(PARSE_ARGV 1 _arg "GLOBAL;QUIET" "" "")
+  cmake_parse_arguments(PARSE_ARGV 1 _arg "GLOBAL;QUIET;VERBOSE" "" "")
   if(TARGET kairn::fma)
     return()
   endif()
@@ -46,8 +50,13 @@ function(kairn_define_fma_target include_dir)
     check_cxx_source_compiles("${_source}" KAIRN_FMA_WITH_OPTION)
     if(KAIRN_FMA_WITH_OPTION)
       set(_option "${_candidate}")
+      if(_arg_VERBOSE)
+        set(_level VERBOSE)
+      else()
+        set(_level STATUS)
+      endif()
       if(NOT _arg_QUIET)
-        message(STATUS "Kairn: this compiler does not target hardware FMA by default; targets that "
+        message(${_level} "Kairn: this compiler does not target hardware FMA by default; targets that "
           "use the kernels must enable it, for example by linking kairn::fma (adds ${_option})")
       endif()
     else()

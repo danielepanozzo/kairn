@@ -83,6 +83,14 @@ const OperandCase operand_cases[] = {
      [] { return (unverified(B1(kairn::detail::kernel_result, E1(v_a), -v_r)) + o.q).radius(); }},
     {"ball.negation", "a ball: is not canonical",
      [] { return (-unverified(B2(kairn::detail::kernel_result, raw(1.0, double(v_a)), v_r))).radius(); }},
+    // fast_two_sum's requirement, |a| >= |b|: 2^-60 and 1.5 in the wrong order.
+    {"fast_two_sum.order", "fast_two_sum: [|]a[|] < [|]b[|]", [] { return kairn::fast_two_sum(double(v_b), double(v_a)).sum; }},
+    // The corner of two_sum: b the largest finite number, a sum that is finite, and an error term
+    // that is a NaN, which the conversion to a two-limb number refuses.
+    {"sum_pair.not_canonical", "SumAndError: the sum and the error term are not a canonical pair", [] {
+         const double omega = opaque(std::numeric_limits<double>::max());
+         return E2(kairn::two_sum(-1.5 * 0x1p971 * opaque(1.0), omega)).limb[1];
+     }},
 };
 
 // What the checks must let through: canonical values that are not finite, the special balls,
@@ -106,6 +114,9 @@ const Accepted accepted[] = {
     {"Ball(c, -0)", [] { return B1(unverified(E1(v_a)), -0.0).radius(); }},
     {"empty + ball", [] { return (unverified(B1::empty()) + o.q).radius(); }},
     {"whole * ball", [] { return (unverified(B2::whole()) * o.bq).radius(); }},
+    {"fast_two_sum with a NaN operand", [] { return kairn::fast_two_sum(not_a_number, double(v_a)).sum; }},
+    {"(NaN, NaN) of two_sum, converted", [] { return E2(kairn::two_sum(not_a_number, double(v_a))).limb[0]; }},
+    {"half of the whole line", [] { return kairn::half(unverified(B2::whole())).radius(); }},
 };
 
 void say(const char* format, const char* a = "", const char* b = "") {

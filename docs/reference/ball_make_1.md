@@ -17,6 +17,7 @@ $$Z = \{\, t : \lvert t - c\rvert \le r \,\}.$$
 | `Ball<T, 1>(c, r)` | `Expansion<T, 1>`, `T` | `Ball<T, 1>` |  |
 | `Ball<T, 1>(c)` | `Expansion<T, 1>` | `Ball<T, 1>` | implicit: the point $c$, radius 0 |
 | `Ball<T, 1>(a)` | `T` | `Ball<T, 1>` | implicit: the point $a$, radius 0 |
+| `Ball<T, 1>(q)` | `Constant<Expansion<T, 1>>` | `Ball<T, 1>` | explicit: center `q.value`, radius `q.error`, for `q` a result of `rational` or `integer`; `constexpr`; does not round |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED (a constructor does not take it).
 
