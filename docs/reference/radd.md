@@ -12,7 +12,7 @@ $$r \ge a + b.$$
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`radd_entry`](radd_entry.md).
+No public operation computes this kernel on its own. It is part of [`radd_entry`](radd_entry.md), [`ball_narrow_2_1`](ball_narrow_2_1.md).
 
 ## Requires
 

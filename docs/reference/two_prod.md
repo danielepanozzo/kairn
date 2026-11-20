@@ -12,7 +12,7 @@ $$p + e \approx a b.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`mul_down_1`](mul_down_1.md), [`mul_up_1`](mul_up_1.md), [`mul_2_2`](mul_2_2.md), [`mul_2_1`](mul_2_1.md).
+**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`mul_dir_1`](mul_dir_1.md), [`mul_down_1`](mul_down_1.md), [`mul_up_1`](mul_up_1.md), [`mul_2_2`](mul_2_2.md), [`mul_2_1`](mul_2_1.md).
 
 ## Requires
 

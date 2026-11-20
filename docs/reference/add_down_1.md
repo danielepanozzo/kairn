@@ -12,7 +12,7 @@ $$r = \mathrm{RD}(a + b).$$
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`add_down_entry`](add_down_entry.md), [`sub_down_1`](sub_down_1.md).
+No public operation computes this kernel on its own. It is part of [`add_down_entry`](add_down_entry.md), [`sub_down_1`](sub_down_1.md), [`interval_add_1`](interval_add_1.md).
 
 ## Requires
 

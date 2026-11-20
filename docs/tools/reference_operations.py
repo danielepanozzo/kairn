@@ -54,6 +54,9 @@ GROUPS = [
     ("conversions", "Conversions to one limb", "A two-limb number rounded to a value of `T`."),
     ("scaling", "Scaling by a power of two", "`ldexp` and `half`."),
     ("ball", "Ball operations", "Arithmetic on balls: the result contains every result on points of the operands."),
+    ("intervals", "Interval operations",
+     "Arithmetic on intervals of numbers of `T` and of two limbs: the result contains every result on members of "
+     "the operands, unbounded and empty intervals included. No public operation computes them yet."),
     ("building-blocks", "Building blocks",
      "Kernels that other kernels call, and that no public operation computes on its own."),
 ]
@@ -447,6 +450,24 @@ KERNELS = {
     "add_up_entry": page("building-blocks", "A sum of two limbs rounded up, on values of the program"),
     "sub_down_entry": page("building-blocks", "A difference of two limbs rounded down, on values of the program"),
     "sub_up_entry": page("building-blocks", "A difference of two limbs rounded up, on values of the program"),
+    # --- Milestone 2, wave 2: the interval kernels, entry kernels no public operation calls yet --
+    "interval_make_1": page("intervals", "An interval from two limbs"),
+    "interval_neg_1": page("intervals", "The negation of an interval, one-limb bounds"),
+    "interval_add_1": page("intervals", "Sum of intervals, one-limb bounds"),
+    "interval_sub_1": page("intervals", "Difference of intervals, one-limb bounds"),
+    "ball_lower_as_1": page("ball", "The lower bound of a ball as a limb, one-limb center"),
+    "ball_upper_as_1": page("ball", "The upper bound of a ball as a limb, one-limb center"),
+    "ball_lower_as_2": page("ball", "A lower bound of a ball as a limb, two-limb center"),
+    "ball_upper_as_2": page("ball", "An upper bound of a ball as a limb, two-limb center"),
+    "ball_narrow_2_1": page("ball", "A ball with a two-limb center as one with a one-limb center"),
+    # The building blocks of the intervals: parts of the interval kernels.
+    "mul_dir_1": page("building-blocks", "Both directed products of two limbs, a zero factor giving zero"),
+    "add_ball_2_2": page("building-blocks", "A sum of two-limb numbers with a bound of its error"),
+    "mul_ball_2_2": page("building-blocks", "A product of two-limb numbers with a bound of its error"),
+    "add_down_2_2": page("building-blocks", "A lower bound of a sum of two-limb numbers"),
+    "add_up_2_2": page("building-blocks", "An upper bound of a sum of two-limb numbers"),
+    "sub_down_2_2": page("building-blocks", "A lower bound of a difference of two-limb numbers"),
+    "sub_up_2_2": page("building-blocks", "An upper bound of a difference of two-limb numbers"),
     # --- Building blocks: no public form -------------------------------------------------------
     "two_sum": page("building-blocks", "TwoSum: an exact sum as two limbs"),
     "fast_two_sum": page("building-blocks", "Fast2Sum: an exact sum of ordered operands"),

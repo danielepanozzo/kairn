@@ -12,7 +12,7 @@ $$s + e = a + b.$$
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`add_down_1`](add_down_1.md), [`add_up_1`](add_up_1.md).
+No public operation computes this kernel on its own. It is part of [`add_down_1`](add_down_1.md), [`add_up_1`](add_up_1.md), [`add_down_2_2`](add_down_2_2.md), [`add_up_2_2`](add_up_2_2.md).
 
 ## Requires
 
