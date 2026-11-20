@@ -67,3 +67,4 @@ theories/IeeeBallCores.v
 theories/IeeeBallFinite.v
 theories/IeeeBallPow2.v
 theories/IeeeTwoExecutions.v
+theories/IeeeInterval2.v

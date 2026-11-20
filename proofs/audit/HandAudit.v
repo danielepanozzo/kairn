@@ -29,8 +29,9 @@
    - the theorems of the interval kernels of Milestone 2, on models of their listings
      written by hand (the kernels are not generated yet): the interval kernels with
      bounds of one limb in the IEEE model, with the lemmas about the bounds of the exact
-     range of an operation, and the bounds of two limbs in the real model (a sum, a
-     difference and a product moved outward by a bound of their own error).
+     range of an operation, the bounds of two limbs in the real model (a sum, a
+     difference and a product moved outward by a bound of their own error), and the sum
+     of two intervals with bounds of two limbs in the IEEE model.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -498,3 +499,14 @@ Print Assumptions range_mul_lower.
 Print Assumptions range_mul_upper.
 Print Assumptions interval_mul_1_tight.
 Print Assumptions interval_mul_1_tight_range.
+
+(* The sum of two intervals with bounds of two limbs, in the IEEE model
+   (theories/IeeeInterval2.v), on IEEE models of the listings written by hand (the kernels
+   are not generated yet): the finite cores add_ball_2_2, add_down_2_2 and add_up_2_2,
+   whose finite result is that of the real model, and interval_add_2. *)
+From Kairn Require Import IeeeInterval2.
+Print Assumptions add_ball_2_2_ieee_core.
+Print Assumptions add_down_2_2_ieee_core.
+Print Assumptions add_up_2_2_ieee_core.
+Print Assumptions interval_tail_2.
+Print Assumptions interval_add_2_correct.
