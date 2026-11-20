@@ -33,8 +33,8 @@ def check(*texts):
     return rules.check_all(ir.ordered(kernels))
 
 
-# The steps of the maps (stage B), unverified: sub_1_1, and the steps that guard or only
-# multiply what the program supplies.
+# The steps of the maps (stage B): sub_1_1, and the steps that guard or only multiply what the
+# program supplies.
 MAP_STEPS = {'sub_1_1', 'add_entry_step_1', 'sub_entry_step_1', 'add_entry_step_2', 'sub_entry_step_2',
              'scale_step_1', 'scale_step_2', 'mul_pow2_step_1', 'mul_pow2_step_2', 'axpy_step_1',
              'axpy_entry_step_1', 'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1'}

@@ -674,9 +674,9 @@ Definition conv_2_spec : Prop :=
     (seq 0 (conv_length (length xs) (length ys))) (conv_2_conv emin prec tie_even xs ys).
 ```
 
-Its proof is `dot_2_seq_correct` on each coefficient, through `Forall2_map_r` (the lemma the maps
-need, with the list `seq 0 (conv_length ...)`) and two lemmas about `conv_terms` that `Folds.v`
-does not have yet:
+Its proof is `dot_2_seq_correct` on each coefficient, through the lemma `Forall2_map_r` of
+`Folds.v` (that of the maps, with the list `seq 0 (conv_length ...)`) and two lemmas about
+`conv_terms` that `Folds.v` does not have yet:
 
 ```coq
 Lemma conv_terms_Forall :
@@ -920,8 +920,8 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
       xys (axpy_2_map emin prec tie_even (a0, a1) xys).
   ```
 
-  Its proof is the step's theorem on each element, through a lemma that `Folds.v` does not have
-  yet: `Forall2_map_r : forall (A B : Type) (P : A -> B -> Prop) (f : A -> B) (xs : list A),
+  Its proof is the step's theorem on each element, through the lemma `Forall2_map_r` of
+  `Folds.v`: `Forall2_map_r : forall (A B : Type) (P : A -> B -> Prop) (f : A -> B) (xs : list A),
   Forall (fun x => P x (f x)) xs -> Forall2 P xs (map f xs)`.
 - `FoldStatements.v`: `<fold>_seq_spec` and `<fold>_lanes_spec`, the second for every number of
   lanes `W`. For every list of elements whose limbs are numbers of the format and that satisfy the
