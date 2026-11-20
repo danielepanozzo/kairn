@@ -111,8 +111,17 @@ class Problem:
     def __init__(self, kernel, fmt):
         self.kernel = kernel
         self.fmt = fmt
+        from . import gen5
+        self.valid5 = None
         try:
-            if kernel.extended:
+            if gen5.family_of(kernel) is not None:
+                # The kernels of the folds' stage: their own families (the bounds' count, the
+                # steps of the dot products, the finishes).
+                self.view = kernel
+                self.shape = gen5.Shape5(kernel)
+                self.make, self.strata = gen5.make_case, tuple(self.shape.strata)
+                self.valid5 = gen5.valid5
+            elif kernel.extended:
                 from . import gen3
                 ext = gen3.ExtShape(kernel)
                 self.view = gen3.FiniteView(kernel)
@@ -141,6 +150,8 @@ class Problem:
                 role = "pow2"
             elif ("nonneg", n) in req:
                 role = "radius"
+            elif ("count", n) in req:
+                role = "count"
             else:
                 role = "limb"
             self.roles[n] = role
@@ -220,6 +231,9 @@ class Problem:
         return (vals, negz) if self.valid(vals) else None
 
     def valid(self, vals):
+        if self.valid5 is not None:
+            return (all(type(v) is int for vs in vals.values() for v in vs)
+                    and self.valid5(self.fmt, self.kernel, vals))
         return all(type(v) is int for vs in vals.values() for v in vs) and G.valid(
             self.fmt, self.view, vals)
 
@@ -256,6 +270,11 @@ class Problem:
             elif role == "pow2":
                 a = abs(v[0])
                 v = [1 << (a.bit_length() - 1) if a else _pow2(fmt, 0)]
+            elif role == "count":
+                # count(m): m = 0 or m >= 1; a magnitude below 1 becomes 1.
+                a = abs(v[0])
+                one = (1 << -fmt.qmin) if fmt.qmin < 0 else 1
+                v = [a if a == 0 or a >= one else one]
             elif role == "mask":
                 v = [v[0] & 1]
             vals[n] = v
@@ -532,7 +551,8 @@ class Objective:
         return {"ratio": "largest error/allowed",
                 "c": "largest observed c (where u^k rho >= 2^%d eta)" % p,
                 "excess": "largest excess in gaps",
-                "slack": "smallest slack in gaps of the radius"}[self.what]
+                "slack": "smallest slack in gaps of the radius",
+                "stated": "smallest excess over the stated value, in gaps"}[self.what]
 
 
 def _frac(r):
@@ -564,6 +584,10 @@ class Judge:
             if kind == "error":
                 self.objectives.append(Objective(i, label, kind, "ratio", 1))
                 self.objectives.append(Objective(i, label, kind, "c", 1))
+            elif kind == "upper" and i < self.n_own and kernel.ensures[i].cond is not None:
+                # An upper bound with a value of its own (the bounds of the folds' stage): how
+                # close the output comes to its stated value, in gaps (below zero: under it).
+                self.objectives.append(Objective(i, label, kind, "stated", -1))
             elif kind == "upper":
                 self.objectives.append(Objective(i, label, kind, "excess", 1))
             elif kind == "encloses":
@@ -608,6 +632,9 @@ class Verdict:
                     s = None if a is None else _frac(a[0])
                 elif o.what == "excess":
                     m = es.maxima.get("excess in gaps")
+                    s = None if m is None else _frac(m[0])
+                elif o.what == "stated":
+                    m = es.minima.get("excess over a positive stated value, in gaps of the output")
                     s = None if m is None else _frac(m[0])
                 else:
                     m = es.minima.get("slack in gaps of the radius")
