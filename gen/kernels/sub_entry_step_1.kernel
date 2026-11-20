@@ -9,6 +9,8 @@ ensures:       rounded z nearest
 ensures:       error z R c=1/(1+u) k=1 t=0
 min_precision: 1
 theorem:       proofs/theories/MapSteps.v sub_entry_step_1_correct
+ieee_bridge_theorem: proofs/theories/IeeeMapSteps.v sub_entry_step_1_ieee_bridge
+ieee_lead_theorem: proofs/theories/IeeeMapSteps.v sub_entry_step_1_ieee_lead
 source:        sub_1_1 on guarded operands (rule R3); one rounding to nearest
 license:       bound: published; proof: MIT
 status:        proved

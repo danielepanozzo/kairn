@@ -90,7 +90,8 @@ lists:
   (`FoldGuarantee.v`), and of the folds and their steps in the model with overflow
   (`FoldTransfer.v`, `IeeeSteps.v`, `IeeeFolds.v`; [below](#sums-and-dot-products-of-arrays));
   the theorems of the maps, `F_correct` per map `F`, and of their steps (`FoldMaps.v`,
-  `MapSteps.v`; [below](#loops-that-write-an-array)); of the largest magnitude of an array and
+  `MapSteps.v`), and of the steps in the model with overflow (`IeeeMapSteps.v`;
+  [below](#loops-that-write-an-array)); of the largest magnitude of an array and
   its kernels, over the real numbers and with overflow, infinities and NaN (`FoldNorm.v`,
   `IeeeFoldNorm.v`; [below](#the-largest-magnitude-of-an-array)); of the product of two
   polynomials (`FoldConv.v`; [below](#the-product-of-two-polynomials)); and of the kernels of
@@ -142,13 +143,13 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
    generated `proofs/gen/IeeeAudit.v`, like step 2; then, in the same file, every other
    IEEE-model theorem that a description names: those of the steps and the combinations of
-   the folds, and of the folds in their two orders.
+   the folds and of the steps of the maps, and of the folds in their two orders.
 
 What it prints, after the compilation lines, shortened where it says `...` (a run of this version):
 
 ```text
 == text scan of the proof files
-  91 files: no Admitted, admit, Axiom or Parameter
+  92 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -356,8 +357,18 @@ that are kernels of their own are proved in `MapSteps.v`.
 
 These are statements of the real model. They say nothing of the order in which the loop runs
 (the model has none: an element written depends on its own element only), of the mask the loop
-returns, or of an array written over one it reads; the statement of a map in the model with
-overflow is not generated yet, so nothing is proved of the mask.
+returns, or of an array written over one it reads.
+
+**The steps in the model with overflow** (`IeeeMapSteps.v`). Each of the sixteen steps that is
+not a kernel of Milestone 1 (`add_2_2` and `sub_2_2`, the steps of `add_2` and `sub_2`, have
+theirs already) has its generated bridge: from finite operands that satisfy its requirements, a
+finite leading limb of its result means that every value it computes is finite and that the
+result is that of the real model (`K_ieee_bridge`); for the eight of two limbs, its claims under
+the same hypotheses (`K_ieee_correct`); and, for any operands, that a finite leading limb of its
+result means a finite leading limb of every operand, the scalars included (`K_ieee_lead`, also
+for `sub_2_2`). Each value of a program at an input position or before its leading limb is in
+the cone of that limb, which is computed: the same theorems of `IeeeBridge.v` as for the steps
+of the folds.
 
 ## The largest magnitude of an array
 

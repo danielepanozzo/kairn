@@ -25,6 +25,7 @@ From Kairn Require Import IeeeIntervalExact.
 From Kairn Require Import IeeeIntervalMul2.
 From Kairn Require Import IeeeIntervalSub2.
 From Kairn Require Import IeeeMake.
+From Kairn Require Import IeeeMapSteps.
 From Kairn Require Import IeeeSteps.
 
 Definition add_down_1_ieee_audit : add_down_1_ieee_spec := add_down_1_ieee_correct.
@@ -299,8 +300,32 @@ Print Assumptions acc_radius_1_ieee_correct.
 Definition acc_radius_2_ieee_audit : acc_radius_2_ieee_spec := acc_radius_2_ieee_correct.
 Print Assumptions acc_radius_2_ieee_correct.
 
+Definition add_1_1_ieee_bridge_audit : add_1_1_ieee_bridge_spec := add_1_1_ieee_bridge.
+Print Assumptions add_1_1_ieee_bridge.
+
+Definition add_entry_step_1_ieee_bridge_audit : add_entry_step_1_ieee_bridge_spec := add_entry_step_1_ieee_bridge.
+Print Assumptions add_entry_step_1_ieee_bridge.
+
+Definition axpy_entry_step_1_ieee_bridge_audit : axpy_entry_step_1_ieee_bridge_spec := axpy_entry_step_1_ieee_bridge.
+Print Assumptions axpy_entry_step_1_ieee_bridge.
+
+Definition axpy_step_1_ieee_bridge_audit : axpy_step_1_ieee_bridge_spec := axpy_step_1_ieee_bridge.
+Print Assumptions axpy_step_1_ieee_bridge.
+
 Definition dot_step_1_ieee_bridge_audit : dot_step_1_ieee_bridge_spec := dot_step_1_ieee_bridge.
 Print Assumptions dot_step_1_ieee_bridge.
+
+Definition mul_pow2_step_1_ieee_bridge_audit : mul_pow2_step_1_ieee_bridge_spec := mul_pow2_step_1_ieee_bridge.
+Print Assumptions mul_pow2_step_1_ieee_bridge.
+
+Definition scale_step_1_ieee_bridge_audit : scale_step_1_ieee_bridge_spec := scale_step_1_ieee_bridge.
+Print Assumptions scale_step_1_ieee_bridge.
+
+Definition sub_1_1_ieee_bridge_audit : sub_1_1_ieee_bridge_spec := sub_1_1_ieee_bridge.
+Print Assumptions sub_1_1_ieee_bridge.
+
+Definition sub_entry_step_1_ieee_bridge_audit : sub_entry_step_1_ieee_bridge_spec := sub_entry_step_1_ieee_bridge.
+Print Assumptions sub_entry_step_1_ieee_bridge.
 
 Definition sum_entry_step_1_ieee_bridge_audit : sum_entry_step_1_ieee_bridge_spec := sum_entry_step_1_ieee_bridge.
 Print Assumptions sum_entry_step_1_ieee_bridge.
@@ -320,6 +345,54 @@ Print Assumptions dot_step_2_ieee_correct.
 Definition acc_mul_2_ieee_audit : acc_mul_2_ieee_spec := acc_mul_2_ieee_correct.
 Print Assumptions acc_mul_2_ieee_correct.
 
+Definition add_entry_step_2_ieee_bridge_audit : add_entry_step_2_ieee_bridge_spec := add_entry_step_2_ieee_bridge.
+Print Assumptions add_entry_step_2_ieee_bridge.
+
+Definition add_entry_step_2_ieee_audit : add_entry_step_2_ieee_spec := add_entry_step_2_ieee_correct.
+Print Assumptions add_entry_step_2_ieee_correct.
+
+Definition axpy_entry_step_2_ieee_bridge_audit : axpy_entry_step_2_ieee_bridge_spec := axpy_entry_step_2_ieee_bridge.
+Print Assumptions axpy_entry_step_2_ieee_bridge.
+
+Definition axpy_entry_step_2_ieee_audit : axpy_entry_step_2_ieee_spec := axpy_entry_step_2_ieee_correct.
+Print Assumptions axpy_entry_step_2_ieee_correct.
+
+Definition axpy_entry_step_2_1_ieee_bridge_audit : axpy_entry_step_2_1_ieee_bridge_spec := axpy_entry_step_2_1_ieee_bridge.
+Print Assumptions axpy_entry_step_2_1_ieee_bridge.
+
+Definition axpy_entry_step_2_1_ieee_audit : axpy_entry_step_2_1_ieee_spec := axpy_entry_step_2_1_ieee_correct.
+Print Assumptions axpy_entry_step_2_1_ieee_correct.
+
+Definition axpy_step_2_ieee_bridge_audit : axpy_step_2_ieee_bridge_spec := axpy_step_2_ieee_bridge.
+Print Assumptions axpy_step_2_ieee_bridge.
+
+Definition axpy_step_2_ieee_audit : axpy_step_2_ieee_spec := axpy_step_2_ieee_correct.
+Print Assumptions axpy_step_2_ieee_correct.
+
+Definition axpy_step_2_1_ieee_bridge_audit : axpy_step_2_1_ieee_bridge_spec := axpy_step_2_1_ieee_bridge.
+Print Assumptions axpy_step_2_1_ieee_bridge.
+
+Definition axpy_step_2_1_ieee_audit : axpy_step_2_1_ieee_spec := axpy_step_2_1_ieee_correct.
+Print Assumptions axpy_step_2_1_ieee_correct.
+
+Definition mul_pow2_step_2_ieee_bridge_audit : mul_pow2_step_2_ieee_bridge_spec := mul_pow2_step_2_ieee_bridge.
+Print Assumptions mul_pow2_step_2_ieee_bridge.
+
+Definition mul_pow2_step_2_ieee_audit : mul_pow2_step_2_ieee_spec := mul_pow2_step_2_ieee_correct.
+Print Assumptions mul_pow2_step_2_ieee_correct.
+
+Definition scale_step_2_ieee_bridge_audit : scale_step_2_ieee_bridge_spec := scale_step_2_ieee_bridge.
+Print Assumptions scale_step_2_ieee_bridge.
+
+Definition scale_step_2_ieee_audit : scale_step_2_ieee_spec := scale_step_2_ieee_correct.
+Print Assumptions scale_step_2_ieee_correct.
+
+Definition sub_entry_step_2_ieee_bridge_audit : sub_entry_step_2_ieee_bridge_spec := sub_entry_step_2_ieee_bridge.
+Print Assumptions sub_entry_step_2_ieee_bridge.
+
+Definition sub_entry_step_2_ieee_audit : sub_entry_step_2_ieee_spec := sub_entry_step_2_ieee_correct.
+Print Assumptions sub_entry_step_2_ieee_correct.
+
 Definition sum_entry_step_2_ieee_bridge_audit : sum_entry_step_2_ieee_bridge_spec := sum_entry_step_2_ieee_bridge.
 Print Assumptions sum_entry_step_2_ieee_bridge.
 
@@ -335,8 +408,29 @@ Print Assumptions sum_fast_entry_step_2_ieee_correct.
 Definition add_1_1_ieee_lead_audit : add_1_1_ieee_lead_spec := add_1_1_ieee_lead.
 Print Assumptions add_1_1_ieee_lead.
 
+Definition add_entry_step_1_ieee_lead_audit : add_entry_step_1_ieee_lead_spec := add_entry_step_1_ieee_lead.
+Print Assumptions add_entry_step_1_ieee_lead.
+
+Definition axpy_entry_step_1_ieee_lead_audit : axpy_entry_step_1_ieee_lead_spec := axpy_entry_step_1_ieee_lead.
+Print Assumptions axpy_entry_step_1_ieee_lead.
+
+Definition axpy_step_1_ieee_lead_audit : axpy_step_1_ieee_lead_spec := axpy_step_1_ieee_lead.
+Print Assumptions axpy_step_1_ieee_lead.
+
 Definition dot_step_1_ieee_lead_audit : dot_step_1_ieee_lead_spec := dot_step_1_ieee_lead.
 Print Assumptions dot_step_1_ieee_lead.
+
+Definition mul_pow2_step_1_ieee_lead_audit : mul_pow2_step_1_ieee_lead_spec := mul_pow2_step_1_ieee_lead.
+Print Assumptions mul_pow2_step_1_ieee_lead.
+
+Definition scale_step_1_ieee_lead_audit : scale_step_1_ieee_lead_spec := scale_step_1_ieee_lead.
+Print Assumptions scale_step_1_ieee_lead.
+
+Definition sub_1_1_ieee_lead_audit : sub_1_1_ieee_lead_spec := sub_1_1_ieee_lead.
+Print Assumptions sub_1_1_ieee_lead.
+
+Definition sub_entry_step_1_ieee_lead_audit : sub_entry_step_1_ieee_lead_spec := sub_entry_step_1_ieee_lead.
+Print Assumptions sub_entry_step_1_ieee_lead.
 
 Definition sum_entry_step_1_ieee_lead_audit : sum_entry_step_1_ieee_lead_spec := sum_entry_step_1_ieee_lead.
 Print Assumptions sum_entry_step_1_ieee_lead.
@@ -347,8 +441,35 @@ Print Assumptions add_2_2_ieee_lead.
 Definition dot_step_2_ieee_lead_audit : dot_step_2_ieee_lead_spec := dot_step_2_ieee_lead.
 Print Assumptions dot_step_2_ieee_lead.
 
+Definition add_entry_step_2_ieee_lead_audit : add_entry_step_2_ieee_lead_spec := add_entry_step_2_ieee_lead.
+Print Assumptions add_entry_step_2_ieee_lead.
+
 Definition add_fast_2_2_ieee_lead_audit : add_fast_2_2_ieee_lead_spec := add_fast_2_2_ieee_lead.
 Print Assumptions add_fast_2_2_ieee_lead.
+
+Definition axpy_entry_step_2_ieee_lead_audit : axpy_entry_step_2_ieee_lead_spec := axpy_entry_step_2_ieee_lead.
+Print Assumptions axpy_entry_step_2_ieee_lead.
+
+Definition axpy_entry_step_2_1_ieee_lead_audit : axpy_entry_step_2_1_ieee_lead_spec := axpy_entry_step_2_1_ieee_lead.
+Print Assumptions axpy_entry_step_2_1_ieee_lead.
+
+Definition axpy_step_2_ieee_lead_audit : axpy_step_2_ieee_lead_spec := axpy_step_2_ieee_lead.
+Print Assumptions axpy_step_2_ieee_lead.
+
+Definition axpy_step_2_1_ieee_lead_audit : axpy_step_2_1_ieee_lead_spec := axpy_step_2_1_ieee_lead.
+Print Assumptions axpy_step_2_1_ieee_lead.
+
+Definition mul_pow2_step_2_ieee_lead_audit : mul_pow2_step_2_ieee_lead_spec := mul_pow2_step_2_ieee_lead.
+Print Assumptions mul_pow2_step_2_ieee_lead.
+
+Definition scale_step_2_ieee_lead_audit : scale_step_2_ieee_lead_spec := scale_step_2_ieee_lead.
+Print Assumptions scale_step_2_ieee_lead.
+
+Definition sub_2_2_ieee_lead_audit : sub_2_2_ieee_lead_spec := sub_2_2_ieee_lead.
+Print Assumptions sub_2_2_ieee_lead.
+
+Definition sub_entry_step_2_ieee_lead_audit : sub_entry_step_2_ieee_lead_spec := sub_entry_step_2_ieee_lead.
+Print Assumptions sub_entry_step_2_ieee_lead.
 
 Definition sum_entry_step_2_ieee_lead_audit : sum_entry_step_2_ieee_lead_spec := sum_entry_step_2_ieee_lead.
 Print Assumptions sum_entry_step_2_ieee_lead.

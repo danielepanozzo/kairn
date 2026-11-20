@@ -456,9 +456,12 @@ class CheckedFiles(unittest.TestCase):
     # two limbs): the programs of sixteen steps and of mul_1_1, and their statements, were added,
     # every earlier line kept. Then the radius kernels of BallVector (unverified): their definitions
     # were added, every earlier line kept. Merged here: the regeneration of the merged descriptions,
-    # and make -C proofs passed on these files.
+    # and make -C proofs passed on these files. Then the descriptions of the sixteen steps of the
+    # maps named the theorems of their bridges and, for those of two limbs, of their claims
+    # (IeeeMapSteps.v): the comments above those twenty-four statements say proved, and nothing
+    # else changed.
     DIGESTS = {'proofs/gen/IeeeModel.v': '7f91c92badfbe635ff194dde541692f258f1dac33c0aa85f714d3a4940c3c02e',
-               'proofs/gen/IeeeStatements.v': '07e45006ab4b4cb9ddbab33db9e32210179a901b1dd501c4a37668410644d49e'}
+               'proofs/gen/IeeeStatements.v': 'eeaf3e81071891ecd32f7493a38e555347facfa2232219e4e1261025bd0d9e43'}
 
 
     def test_the_checked_files(self):
