@@ -68,6 +68,31 @@ const Fold folds[] = {
 #include "runner_kernels.inc"
     {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
 };
+#undef KAIRN_RUNNER_FOLD
+
+// The maps: MAP FORMAT ORDER N SCALAR... LIMB..., the scalars' limbs after the length; the result
+// is each limb array written, N entries each, then the mask.
+struct Map {
+    const char* name;
+    const char* arrays;
+    int scalars;
+    int writes;
+    void (*seq64)(const double* const* in, std::size_t n, std::size_t lanes, const double* sc, double* const* w, bool* mo);
+    void (*lanes64)(const double* const* in, std::size_t n, std::size_t lanes, const double* sc, double* const* w, bool* mo);
+    void (*seq32)(const float* const* in, std::size_t n, std::size_t lanes, const float* sc, float* const* w, bool* mo);
+    void (*lanes32)(const float* const* in, std::size_t n, std::size_t lanes, const float* sc, float* const* w, bool* mo);
+};
+#define KAIRN_RUNNER_MAP_ARGS(T)                                                                    \
+    [[maybe_unused]] const T* const* in, [[maybe_unused]] std::size_t n, [[maybe_unused]] std::size_t lanes, \
+        [[maybe_unused]] const T* sc, [[maybe_unused]] T* const* w, [[maybe_unused]] bool* mo
+#define KAIRN_RUNNER_FOLD(NAME, ARRAYS, OUT, SEQ, LANES, PACKED)
+#define KAIRN_RUNNER_MAP(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED)                        \
+    {#NAME, ARRAYS, SCALARS, WRITES, [](KAIRN_RUNNER_MAP_ARGS(double)) { SEQ; }, [](KAIRN_RUNNER_MAP_ARGS(double)) { LANES; }, \
+     [](KAIRN_RUNNER_MAP_ARGS(float)) { SEQ; }, [](KAIRN_RUNNER_MAP_ARGS(float)) { LANES; }},
+const Map maps[] = {
+#include "runner_kernels.inc"
+    {nullptr, nullptr, 0, 0, nullptr, nullptr, nullptr, nullptr},
+};
 
 long lineno = 0;
 
@@ -165,6 +190,36 @@ void complete_fold(const Fold& f, const std::vector<std::string>& fields, std::s
     }
 }
 
+template <class T>
+void complete_map(const Map& m, const std::vector<std::string>& fields, std::string& out,
+                  void (*seq)(const T* const*, std::size_t, std::size_t, const T*, T* const*, bool*),
+                  void (*lanes_fn)(const T* const*, std::size_t, std::size_t, const T*, T* const*, bool*)) {
+    if (fields.size() < 4) fail(std::string("expected ") + m.name + " FORMAT ORDER N SCALAR ... LIMB ... [#TAG]");
+    std::size_t lanes = 0;
+    const bool by_lanes = lane_order(fields[2], lanes);
+    const std::size_t n = length(fields[3]);
+    std::size_t arrays = 0;
+    for (const char* a = m.arrays; *a; ++a) arrays += std::size_t(*a - '0');
+    const std::size_t scalars = std::size_t(m.scalars);
+    if (fields.size() - 4 != scalars + arrays * n)
+        fail(std::string(m.name) + " of length " + fields[3] + " takes " + std::to_string(scalars + arrays * n) + " limbs");
+    std::vector<T> sc(scalars + 1), data(arrays * n + 1);
+    for (std::size_t i = 0; i < scalars; ++i) sc[i] = limb(T(), fields[4 + i]);
+    for (std::size_t i = 0; i < arrays * n; ++i) data[i] = limb(T(), fields[4 + scalars + i]);
+    std::vector<const T*> in(arrays + 1);
+    for (std::size_t l = 0; l < arrays; ++l) in[l] = data.data() + l * n;
+    std::vector<T> written(std::size_t(m.writes) * n + 1);
+    std::vector<T*> w(std::size_t(m.writes) + 1);
+    for (int l = 0; l < m.writes; ++l) w[std::size_t(l)] = written.data() + std::size_t(l) * n;
+    bool mo[1] = {};
+    (by_lanes ? lanes_fn : seq)(in.data(), n, lanes, sc.data(), w.data(), mo);
+    for (std::size_t i = 0; i < std::size_t(m.writes) * n; ++i) {
+        out += ' ';
+        put(static_cast<double>(written[i]), out);
+    }
+    out += mo[0] ? " 1" : " 0";
+}
+
 }  // namespace
 
 int main() {
@@ -190,6 +245,18 @@ int main() {
         }
         if (fields.back()[0] == '#') fields.pop_back();  // the tag
         if (fields.size() < 2) fail("expected KERNEL FORMAT LIMB ... [#TAG]");
+        const Map* ma = nullptr;
+        for (const Map* c = maps; c->name; ++c)
+            if (fields[0] == c->name) ma = c;
+        if (ma) {
+            out += " ->";
+            if (fields[1] == "binary64") complete_map<double>(*ma, fields, out, ma->seq64, ma->lanes64);
+            else if (fields[1] == "binary32") complete_map<float>(*ma, fields, out, ma->seq32, ma->lanes32);
+            else fail("this runner knows binary64 and binary32, not " + fields[1]);
+            out += '\n';
+            std::fwrite(out.data(), 1, out.size(), stdout);
+            continue;
+        }
         const Fold* fo = nullptr;
         for (const Fold* c = folds; c->name; ++c)
             if (fields[0] == c->name) fo = c;
