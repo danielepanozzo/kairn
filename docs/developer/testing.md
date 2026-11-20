@@ -281,6 +281,27 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
   to at least one judged case (an `error` entry with a `when` condition, for instance); a
   comparison saw both outcomes; a rounding to nearest saw an inexact case; a rounding down or up
   saw a case where it differs from the rounding to nearest.
+- **The statements of Milestone 2** ([Claims of Milestone 2](architecture.md#claims-of-milestone-2)),
+  in either domain, by the oracle's counts for each entry of the kernel's claims
+  (`oracle/README.md`, "The kinds of Milestone 2"); and a random run's header lists the strata of
+  the kernel's family (`special`, `binade` and `subnormal` for the neighbors; `apart`, `cancel`,
+  `exact`, `close`, `beyond` and `omega` for the directed sums; `aroundp`, `tiny`, `exactprod` and
+  `beyond` for the directed products; `atnormal`, `sides`, `into` and `outof` for the scalings of a
+  ball by a power of two):
+
+    | Kind | Kernels | Cases the run must have seen |
+    |---|---|---|
+    | `neighbor` | `next_up`, `next_down` | every row of the table of next_up and next_down: a NaN, $+\infty$, $\Omega$, a positive finite number, $\eta$, a zero, $-\eta$, a negative finite number, $-\Omega$, $-\infty$ (in the finite domain the rows it judges); a step toward zero from a power of two above the smallest normal number; a step between the subnormal and the normal range |
+    | `rounded` of two operands, extended domain | the directed sums and their entry forms, `mul_down_1`, `mul_up_1` | an exact result, an inexact one that differs from the rounding to nearest, an overflow above $\Omega$ and one below $-\Omega$, a NaN operand, an infinite operand without a NaN |
+    | `rounded` with `when` | `mul_down_1`, `mul_up_1` | cases where the condition holds and cases where it does not |
+    | `bound` | `mul_down_1`, `mul_up_1` | a result at the directed rounding, one a step beyond it (`steps` is 1, and the listing steps below $P$), a value that is not a number of the format; in the extended domain a non-finite operand, both overflows, a NaN operand and an infinite one |
+    | `exact_when` | the scalings of a ball by a power of two and their full forms | cases where every condition holds, and for each condition cases where it fails |
+
+    The interpreter's output meets each of them on the quick and full tiers' random cases and on
+    the toy formats of the enumerations; `full.tools.crosscheck.guards` has runs that miss each
+    kind of class (no infinity for `next_up`, no row or step of `next_down`, a sum that cannot
+    overflow, no NaN operand, products whose condition always holds, `exact_when` whose conditions
+    never fail or never hold, a header without a stratum of the family) and must fail them.
 
 For a kernel of the extended domain the run must also have seen what that layer is about. The
 guards read the kernel's claims (the file the oracle's summary names) and the oracle's counts of

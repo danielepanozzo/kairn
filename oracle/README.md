@@ -6,7 +6,8 @@ the ones its specification fixes ([rational](#rational)). It is Python 3, standa
 and shares no code with the generator or the library; it reads `gen/claims.json` as data and
 nothing else. The contract it implements is
 [docs/developer/architecture.md](../docs/developer/architecture.md) ("Number formats", "Claims",
-"Claims of the second wave", "Claims of the non-finite layer", "The line protocol").
+"Claims of the second wave", "Claims of the non-finite layer", "Claims of Milestone 2", "The line
+protocol").
 
 Every verdict is decided with Python integers. A limb of a format with smallest subnormal
 $\eta = 2^{q_{\min}}$ is stored as the integer $N$ with value $N\eta$; sums of limbs are integers
@@ -31,7 +32,12 @@ The selftest uses its own hand-written fixtures, `oracle/selftest/claims-wave1.j
 statements](../docs/developer/design/milestone1.md)) and `oracle/selftest/claims-wave3.json`
 (the non-finite layer: the full kernels with their cores, the full Ball kernels and `ball_neg_k`,
 the constructors, the kernels that gain the extended domain, `neg_2` and `abs_2` with
-`represents`, and `add_1_1` and `mul_1_1`), so that it does not depend on the generator.
+`represents`, and `add_1_1` and `mul_1_1`) and `oracle/selftest/claims-wave4.json` (the first
+kernels of [Milestone 2](../docs/developer/design/milestone2.md): `next_up`, `next_down`,
+`two_sum_ord`, the directed sums and products, the scalings of a ball by a power of two and their
+full forms, the same claims of `neighbor` and of the products in the finite domain as
+`next_up_real`, `next_down_real`, `mul_down_real` and `mul_up_real`, a `bound` alone in that
+domain as `mul_down_bound_real`, and `mul_pow2_2` with an `exact_when` on its error), so that it does not depend on the generator.
 
 ## gen
 
@@ -98,6 +104,36 @@ and gets strata of its own, each coming round twice per cycle (`gen3.py`):
 | `hugeradius` | `encloses` | finite balls with radii in the top binades |
 | `badradius` | `makes_ball` | radii negative, $-\infty$, NaN, $+\infty$, zero, $\eta$, huge or ordinary; centers not finite a quarter of the time |
 
+The `threshold` stratum also aims at a condition $\lvert E \cdot c\rvert \le 2^{q_{\max}+p+e}$ with
+$c$ a power of two and $E$ any expression ($(\lvert c_x\rvert + r_x)\,c$ of the scaling of a ball):
+it takes the largest $c$ inside, or twice it.
+
+The first kernels of [Milestone 2](../docs/developer/design/milestone2.md) ("Building blocks on T",
+"Scaling a ball by a power of two") get families of their own (`gen4.py`), chosen from claims that
+no earlier kernel has: `neighbor` for a `neighbor` entry, `dirprod` for a `bound` entry or a
+directed `rounded` entry of a value `NAME * NAME`, `dirsum` for a directed `rounded` entry of
+`NAME + NAME` or `NAME - NAME`, `ballpow2` for an `encloses` set that multiplies a ball by a
+`power_of_two()` input. Each has the common strata, read for its shape (for the products:
+`underflow` from below $\eta$ to past $P = 2^{2p-1}\eta$, `overflow` near and beyond the threshold,
+`zero` a zero factor with zero, $\eta$, $\Omega$, $\lambda$, one or a random operand), and strata of
+its own, which come round two or three times per cycle; a kernel of the extended domain gets
+those of the non-finite layer on top. The first two waves, the non-finite layer and `two_sum_ord`,
+`two_sum_entry`, `fast_two_sum_entry` and `radd_entry` (whose claims are of the earlier kinds)
+keep their families and strata.
+
+| Family | Kernels | Strata of its own |
+|---|---|---|
+| `neighbor` | `next_up`, `next_down` | `special` (zeros, $\pm\eta$, $\pm 2\eta$, $\pm 3\eta$, $\pm\lambda$ and its neighbours, $\pm 2\lambda$ and its predecessor, $\pm\Omega$ and its predecessor, $\pm 2^{e_{\max}}$, $\pm 1$); `binade` (powers of two of the whole range, subnormal ones included, and their two neighbours); `subnormal` ($\lambda$, $\mathrm{pred}(\lambda)$, $\mathrm{succ}(\lambda)$, $2\lambda$, $\mathrm{pred}(2\lambda)$, random subnormal numbers) |
+| `dirsum` | `add_down_1`, `add_up_1`, `sub_down_1`, `sub_up_1` and their entry forms | `apart` (the smaller operand below half an ulp of the larger, around it, or far below); `cancel` ($b$ within three ulps of $-a$, of $a$ for a difference, at powers of two a third of the time); `exact` (short significands at nearby exponents: sums that are numbers of the format); `close` (exponents within $p + 2$); `beyond` (sums beyond $\pm\Omega$: top binades of one sign, $\Omega$ plus half its ulp, a quarter of it, $\eta$, its ulp); `omega` ($\pm\Omega$ with $\pm\Omega$, its predecessor, its ulp, a small, random, top or zero operand, in either position) |
+| `dirprod` | `mul_down_1`, `mul_up_1` | `aroundp` (products exactly $P$, as powers of two; a factor $a$ and $b$ one of $\mathrm{RD}(P/a)$, its successor or two, its predecessor: just below and just above $P$, exact and inexact; and a product below $P$ whose rounding to nearest is $P$ when there is one); `tiny` (products of exactly $\eta/2$, $\eta$, $2\eta$, and around them: underflow to zero or to $\eta$); `exactprod` (short significands anywhere, the subnormal range included); `beyond` (products beyond $\pm\Omega$; $\Omega$ times one and its neighbours) |
+| `ballpow2` | `ball_mul_pow2_1`, `ball_mul_pow2_2` and their full forms | `atnormal` ($c = 2^k$ and the scaled leading limb, second limb or radius exactly $\lambda$, its successor or predecessor before scaling); `sides` ($c$ = 1/4, 1/2, 1, 2, 4, or up to $2^{\pm p}$); `into` (centers and radii scaled into the subnormal range); `outof` (subnormal ones scaled out of it) |
+
+In 6 000 cases of seed 0 in `binary64` (the quick tier's), `next_up` has 91 to 277 operands of each
+special row of the table ($\pm\eta$, $\pm\Omega$, $\pm\infty$, NaN) and 520 zeros; `add_down_1` 505
+sums above $\Omega$ and 547 below $-\Omega$; `mul_down_1` 678 results one step beyond the rounding
+and 1 696 cases where `product_large` does not hold; `ball_mul_pow2_2` fails each of its three
+conditions of exactness 1 252 to 1 849 times and holds them all 2 719 times.
+
 **Exhaustive mode** (`--exhaustive`) enumerates the product of the operand domains: every number
 of the format for a 1-limb input (one zero), every normalized pair for a 2-limb input, 0 and 1
 for a mask; `nonneg()` and `power_of_two()` remove the operands they exclude from the domain of
@@ -154,8 +190,10 @@ line, in this order:
    limb, every input value and the exact value (for `encloses`, both ends of the set) are below
    $\Omega/4$. Suspicious cases are listed; they fail the run only with `--fail-on-suspicious`.
    A line is also non-finite, whatever its output, when a `rounded` entry's exact rounding in a
-   range unbounded above exceeds $\Omega$, or an `upper` entry's smallest upper bound does
-   (counted again as "with an exact result beyond Omega").
+   range unbounded above exceeds $\Omega$ (for a `rounded` entry with `when`, only where its
+   condition holds), an `upper` entry's smallest upper bound does, a `bound` entry's directed
+   rounding does, or a `neighbor` entry's operand is $\pm\Omega$ stepped outward, which has no next
+   number in this domain (counted again as "with an exact result beyond Omega").
 5. Every output limb must be a number of the format and every mask output `0` or `1`.
    Otherwise: **failure**.
 6. Every `ensures` entry: `normalized` (the invariant on the named outputs), `leading_rounded`
@@ -175,6 +213,9 @@ line, in this order:
       corner value. The smallest radius around the returned center that encloses it,
       $r_{\min} = \max(c_z - \mathrm{lo}, \mathrm{hi} - c_z)$, must be at most the returned
       radius. A ball with a negative radius is empty and the entry holds (counted as such).
+
+   and those of [Milestone 2](#the-kinds-of-milestone-2) (`neighbor`, `bound`, `rounded` with
+   `when`, `exact_when` on `error` and `encloses`).
 
    A line with any violated entry is a **failure**.
 
@@ -236,6 +277,85 @@ is judged: nothing is "non-finite, not judged". Steps 1 and 2 are as above; then
    design's steps reach $+\infty$ far below $\Omega$ on small formats (at $p = 2$ a set within
    $\pm 1.25$ becomes the whole line with $\Omega = 6$). A Ball kernel of the extended domain
    need not be a full kernel: `ball_neg_k` carries the extended `encloses` itself.
+
+### The kinds of Milestone 2
+
+architecture.md, "Claims of Milestone 2", read with milestone2.md, "Notation and vocabulary",
+"Building blocks on T" and "Scaling a ball by a power of two" (`check.py` and `extended.py`, with
+the helpers of `directed.py`). *Rounded down in the format with overflow*, $\mathrm{RD}$, is the
+largest number not above the value, $\Omega$ above $\Omega$ and $-\infty$ below $-\Omega$;
+$\mathrm{RU}$ symmetrically; a *step* is to the next number of the format above or below, and in the
+extended domain a step outward from $\pm\Omega$ is the infinity and a step from an infinity is the
+table's.
+
+- **`neighbor`** (`of` one one-limb output, `side` `up` or `down`; `value` must be the name of a
+  one-limb input). The expected output is the table of next_up and next_down, row by row: a NaN
+  for a NaN, $+\infty$ up and $\Omega$ down from $+\infty$, $-\Omega$ up and $-\infty$ down from
+  $-\infty$, $+\infty$ up from $\Omega$ and $-\infty$ down from $-\Omega$, and for any other
+  finite number the smallest number above it or the largest below (so from either zero
+  $\pm\eta$, and to a zero from $\mp\eta$, of either sign: the sign of a zero is not judged). The
+  output must be exactly that value. In the finite domain the step outward from $\pm\Omega$ is not
+  a number of the format, and the line is non-finite, not judged.
+- **`rounded`, of a value of two operands** (`NAME op NAME`), in the extended domain: on finite
+  operands the rounding in the format with overflow (for `down`, a value above $\Omega$ gives
+  $\Omega$ and one below $-\Omega$ gives $-\infty$); with an infinite or NaN operand the value of
+  IEEE 754, computed in the extended reals: a NaN for a NaN operand, $\infty - \infty$ and
+  $0 \cdot \infty$, otherwise the infinity. This is the reading the non-finite layer already had
+  for `rounded`; what is new is the statistics below.
+- **`rounded` with `when: product_large`**: on finite operands, judged only when the value is zero
+  or at least $2^{2p-1}\eta$ in magnitude, and then as `rounded` (in the format with overflow in the
+  extended domain); otherwise nothing is claimed and the line counts for the entry as "does not
+  hold". With an infinite or NaN operand, as without `when`.
+- **`bound`** (`side` `below` or `above`, `steps` an integer $\ge 0$): `below` on finite
+  operands: the output is not above the value, and stepping down from $\mathrm{RD}(\text{value})$
+  reaches it within `steps` steps; `above` symmetrically from $\mathrm{RU}$. In the extended domain
+  the rounding is in the format with overflow and the steps are those of that format (so a value
+  below $-\Omega$ allows only $-\infty$ below it, and a value above $\Omega$ allows $\Omega$ or its
+  predecessor for `steps: 1`); a NaN output on finite operands fails. With an infinite or NaN
+  operand the output must be the value of IEEE 754, as for `rounded`. In the finite domain the
+  format is unbounded above, and a directed rounding beyond $\pm\Omega$ makes the line non-finite.
+- **`exact_when`** on `error` and on `encloses`: a list of conditions
+  `{"zero_or_abs_gt": EXPR, "than": K}` (EXPR $= 0$ or $\lvert\mathrm{EXPR}\rvert > K$) or
+  `zero_or_abs_ge` ($\ge K$), decided with integers: EXPR over the inputs and their limbs
+  `NAME[I]` is an integer at a known scale, and K is evaluated exactly (`claims.eval_const`:
+  integers, `u`, `eta`, `+ - * /`, parentheses, integer powers `^`, possibly negative; a unary
+  minus binds less tightly than `^` and `^` groups to the right) for each format and must be
+  positive there. On `error`, when every condition holds, the output limbs must sum to the value
+  exactly, whether or not the entry's `when` holds; on `encloses`, when every condition holds, the
+  output ball must be the set exactly: $c - r$ and $c + r$ its least and greatest values, besides
+  containment. In the extended domain both apply when the operands and the output are finite (for
+  a ball: a finite ball from finite operands, so that B1, B2 and B4 are judged as before and the
+  exactness, counted as the statement `exact_when`, comes after B3). A failure of either is
+  counted as `failed exact_when` in the entry, next to `failed containment` (`failed B3` in the
+  extended domain) or `failed bound` for the other half of the entry.
+
+Readings that the documents leave open, and the one taken:
+
+- `exact_when` on an `error` entry that also has `when`: judged on its own, whether or not `when`
+  holds (no claim has both; the formal reading "adds a conjunct" fits either).
+- `exact_when` on `encloses` with an empty set (a negative input radius in the finite domain,
+  which every `nonneg()` excludes): counted, not judged.
+- A `rounded` entry with `when` on a rounding to nearest, and an empty `exact_when` list, are
+  refused as claims (the vocabulary gives `when` to the directed roundings, and says that
+  `exact_when` is absent when there is no condition); `"when": null` on `rounded` is read as no
+  condition.
+- The sign of a zero is never judged: `next_down(-eta)` may be $-0$ or $+0$, `add_down_1(1, -1)`
+  either zero, a zero factor's product either zero.
+
+Statistics, per entry: for `neighbor` the row of the operand (`row: a NaN`, `row: +inf`,
+`row: Omega`, `row: positive finite`, `row: eta`, `row: zero`, `row: -eta`,
+`row: negative finite`, `row: -Omega`, `row: -inf`; a positive or negative finite number is one
+of no other row) and the steps where the spacing changes (`a step toward zero from a power of two
+above the smallest normal number`, `a step between the subnormal and the normal range`); for a
+`rounded` entry of two operands in the extended domain `overflow: value above Omega`,
+`overflow: value below -Omega`, `a NaN operand`, `an infinite operand, no NaN operand` and
+`value NaN from operands that are not NaN`, next to `exact`, `inexact, = RN` and
+`inexact, != RN`; with `when`, `product_large holds` and `product_large does not hold (nothing
+claimed)`; for `bound` `at the directed rounding`, `one step beyond the directed rounding`,
+`K steps beyond ...`, `value a number of the format`, `value not a number of the format`, the
+overflows and the classes of operands that are not finite; for `exact_when`, `exact_when holds`
+and, for each condition that fails, `exact_when fails: ` followed by the condition (`cx[1]*c = 0
+or |cx[1]*c| > eta/(2*u)`). The cross-checks' guards read these.
 
 Statistics of the extended domain, per entry: the classes (`class F2: finite operands, finite
 result`, `class F4: finite operands, non-finite result`, `class F5: a non-finite operand`;
@@ -303,6 +423,14 @@ B.json ...` merges summaries (counts add, maxima combine, coverage ranges unite)
   factor of the value by a limb of the other is zero or at least $2^{p-1}\eta$ in magnitude
   (the exactness condition of `mul_pow2_2`, which architecture.md's vocabulary cannot express;
   proposed as an addition).
+- Milestone 2: `neighbor` (`of` one 1-limb output, `side` `up` or `down`, the value the name of a
+  one-limb input), `bound` (`of` one 1-limb output, `side` `below` or `above`, `steps` a JSON
+  integer $\ge 0$, not a boolean), `when` on a directed `rounded` entry (`product_large` only, or
+  absent or `null`), and `exact_when` on `error` and `encloses` (a nonempty list of conditions,
+  each exactly one of `zero_or_abs_gt` and `zero_or_abs_ge` with `than`; EXPR in the language of
+  `value` with `NAME[I]`, I below the input's limbs, which no other expression may use; K
+  positive, checked in `binary64` when the claims are read and in every format a plan is made
+  for, where a K that is not positive sets the kernel aside with a CLAIMS ERROR).
 - Anything else is never ignored. A kernel whose claims cannot be read (unknown vocabulary, a
   listed instance that disagrees with its `c` and `t`, a name listed twice) is set aside with the
   reason: the report starts with a CLAIMS ERROR line, its lines fail, and the run fails; the other
@@ -651,6 +779,27 @@ place too large in about one line in four), `rat-naive-pair`, `rat-error-small` 
 to nearest, the renormalization's included: at an exact tie $V = q$ whichever neighbour the
 first rounding took).
 
+**Milestone 2.** `refrun` runs the kernels of milestone2.md's "Building blocks on T" and "Scaling a
+ball by a power of two" as listed there, on IEEE values: `next_up` and `next_down` (its own
+`nextUp`, from the canonical significand), `two_sum_ord` (Fast2Sum on the operands ordered by two
+selects), `add_down_1`, `add_up_1`, `sub_down_1` and `sub_up_1` (the test of the sign of the error
+term and a step), `mul_down_1` and `mul_up_1` (`two_prod`, the constant $P$ rounded up, the tests of
+the listing), the entry forms (both operands through `guard`), `ball_mul_pow2_1` and
+`ball_mul_pow2_2` (the products, `fast_two_sum`, the tests against $N$, two steps up when not
+exact) and their full forms (the fix-up of `ball_scale`, with `q` the input radius); and the
+fixture's `next_up_real`, `next_down_real`, `mul_down_real`, `mul_up_real` as the same code. Its
+variants plant one fault each: `next-up-neg-away` (`next_up` of a negative number away from zero),
+`next-up-ninf` ($-\infty$ for $-\infty$), `next-down-zero` ($-0$ for a zero), `dir-sum-nearest`
+(the directed sums return the rounding to nearest), `dir-sum-overflow-inf` (the infinity of the
+rounded sum at an overflow: $+\infty$ for rounding down above the range), `mul-bound-wrong-side`
+(the products step the other way), `mul-bound-two-beyond` (two steps where they cannot decide),
+`mul-large-step` (a step whenever the computed error is zero, above $P$ too), `pow2-radius-small`
+(the radius one number smaller), `pow2-grow-exact` (two steps where the scaling is exact),
+`pow2-zero-radius-grows` (a zero radius taken as not exact), `pow2-center-off` (the center one unit
+off where the scaling is exact, the radius widened to keep the set enclosed) and
+`pow2-scale-eta` (`mul_pow2_2` with $\eta$ more in its second limb where its products are exact,
+within its bound of $\eta$).
+
 `selftest/refrun.cpp` is a standalone C++ runner for binary64 and binary32, written from the same
 pseudo-code. The selftest compiles it with the system compiler (`$CXX`, then `c++`, `clang++`,
 `g++`, or `--cxx`) with `-std=c++17 -O2 -ffp-contract=off -fno-fast-math` (`/std:c++17 /O2
@@ -665,7 +814,7 @@ one per format, Ball kernel and constant), which the selftest computes with the 
 ## selftest
 
 ```
-python3 oracle/kairn-oracle selftest              # about two minutes
+python3 oracle/kairn-oracle selftest              # about three minutes
 python3 oracle/kairn-oracle selftest --quick      # smaller samples, about 90 seconds
 python3 oracle/selftest/mutants.py --jobs 6       # tests the selftest, about fifteen minutes
 ```
@@ -677,9 +826,11 @@ ctest's full tier runs it in two parts: `--quick` with `--skip` for the six enum
 formats (`correct_runner_toy_exhaustive`, `injected_exhaustive`, `exhaustive_wave2`,
 `injected_wave2_exhaustive`, `exhaustive_wave3`, `injected_wave3_exhaustive`) with the build's
 compiler (`full.tools.kairn-oracle.selftest`), and `--only` those six, three quarters of the time
-(`full.kairn-oracle.selftest`), which run in Python alone (`tests/full/CMakeLists.txt`). Of the
-mutants below, the first part catches all but one: `exhaustive: -inf left out of a one-limb
-domain`, which only an enumeration can see (`exhaustive_wave3`).
+(`full.kairn-oracle.selftest`), which run in Python alone (`tests/full/CMakeLists.txt`). The
+enumerations of Milestone 2 (`exhaustive_wave4`, `injected_wave4_exhaustive`) take under two
+seconds with `--quick` and stay in the first part. Of the mutants below, the first part catches
+all but one: `exhaustive: -inf left out of a one-limb domain`, which only an enumeration can see
+(`exhaustive_wave3`).
 
 `mutants.py` copies the oracle into a temporary directory once per mutant, plants one deliberate
 bug in the checker or the arithmetic (rounding ties away from zero, no gradual underflow,
@@ -691,8 +842,16 @@ enclosure or the input radii or two of the four corners ignored, a requirement n
 computed over the wrong cases, ...; for `rational_K`, the naive pair expected, the error rounded
 to nearest, ties away from zero, a binade misread, overflow at twice $\Omega$, the flag never 1,
 zero limbs for $den = 0$, anything equal to a NaN, a field not compared, a term beyond 64 bits
-accepted, the echo of requests not checked, near-ties never aimed at a pair to renormalize) and
-requires `selftest --quick` to fail on the copy.
+accepted, the echo of requests not checked, near-ties never aimed at a pair to renormalize; for
+the kinds of Milestone 2, up and down swapped, a row of the table changed, an output not compared,
+a step more allowed, the steps of a bound taken toward the value, the rounding up above $\Omega$
+kept finite, the condition of `when` ignored or its threshold halved, the classes of operands or
+of overflows miscounted, `exact_when` not judged, a strict condition read as $\ge$, a zero that
+does not satisfy a condition, a limb reference read as the leading limb, `eta` read as `u`, a
+threshold that is not positive accepted, the value of `neighbor` not checked, a stratum aimed
+elsewhere) and requires `selftest --quick` to fail on the copy. The test of the side of a `bound`
+alone has no mutant: an output on the wrong side is not reached by the steps outward from the
+directed rounding either, and fails there.
 
 | Test | What would make it fail |
 |---|---|
@@ -745,6 +904,13 @@ requires `selftest --quick` to fail on the copy.
 | `rational_reference` | the reference runner flagged on a stream of either kernel in `binary64`, `binary32` or four toy formats; a dropped, repeated, dropped-and-repeated, altered or reordered line, or a missing trailer, not a stream error; a stream of `add_2_2` and `rational_2` together judged otherwise than each alone |
 | `rational_injected` | a planted fault of the reference runner (`rat-*`) not failing in `binary64`, `binary32` and `fp:4:-6:4`, failing in another field than its own, or changing the kernel it does not apply to; the naive pair failing on other lines than those the judge counts as not normalized, and likewise for $den = 0$ and the error's faults |
 | `rational_merging` | the merge of the summaries of two halves of rational streams differing from the whole; `check --json` and its exit status on a correct and a faulty runner, the report without the expected value of a failure |
+| `claims_reading_wave4` | the fixture of Milestone 2 unreadable or its labels other than the claims say; 36 malformed kernels of the wave not set aside (a side or a number of steps of the wrong form, a field of another kind, the value of `neighbor` not an input's name, `when` on a rounding to nearest or outside its vocabulary, `exact_when` empty, not a list, on `rounded`, with two relations or none, with another field, over an unknown input or a limb the input does not have, a threshold that is negative, zero, a division by zero, over a name, a fractional power, unbalanced or null; a limb reference in a value or in `finite_when`); a threshold other than its exact value, or one positive in `binary64` but not in a toy format not setting the kernel aside for that format alone; a condition other than the same in Fractions, limb by limb, on random operands of three formats |
+| `directed_arithmetic` | on every value of seven toy formats (precision 1 included), the neighbors of the table (infinities and NaN included), the row of each operand and the classes of its steps other than from their definitions; the directed roundings and the rounding to nearest in the format with overflow, and the overflow classes, other than a brute-force search on every multiple of $\eta/8$ to beyond twice $\Omega$; the steps of the format unbounded above other than the sorted list of its numbers |
+| `gen_wave4` | an invalid generated case, a missing stratum or another family than the claims call for, the correct runner flagged or suspicious, a class the guards ask for never reached (every row of the table and both classes of steps, both outcomes of `when`, both overflows, a NaN and an infinite operand, an exact and an inexact rounding, a result at the rounding and one step beyond, each condition of `exact_when` failing and all holding) in `binary64`, `binary32` and `fp:5:-10:5`; a corner a stratum is for never reached (the special values, powers of two of both signs, $\lambda$ and the subnormal numbers; sums beyond each side, $\Omega$ in either position, exact and near cancellations, exact sums, an operand below half an ulp of the other; products exactly $P$, just below and just above it, below it and rounded to it, of $\eta/2$, $\eta$ and below $\eta/2$, beyond each side, a zero factor with $\Omega$; scaled leading limbs, second limbs and radii exactly $N$, just below and just above it, powers of two on both sides of 1); case $i$ not reproducible |
+| `exhaustive_wave4` | the domains of the wave against brute-force counts; the correct runner flagged, a line of the extended domain not judged, or a class the guards ask for never reached, on any of 22 enumerations of tiny formats (32 without `--quick`), the neighbors at precision 1 and 2 among them |
+| `injected_wave4`, `injected_wave4_exhaustive` | a planted fault of the wave (`refrun` variants above) not caught in the entry or statement where it belongs (`neighbor`; `rounded`; `bound`, with `rounded` allowed for a product on the wrong side; `rounded` alone for a product not exact above $P$; containment, with `exact_when` allowed, for a radius one number too small; `exact_when` alone for a radius grown or a center moved where the scaling is exact; the `exact_when` of `error` for `mul_pow2_2`), caught in another, or flagged in a kernel that does not use it, on `binary64`, `binary32` and `fp:4:-6:1`, and on every case of tiny formats |
+| `judge_wave4` | one of 157 hand-written lines judged otherwise than worked out by hand (every row of the table, the planted faults of the wave written out, overflows on each side, the sign of zeros, the finite domain's non-finite cases, each failure in its entry or statement), or a count of rows, steps, overflows, operands, roundings or conditions off |
+| `merging_wave4` | the merge of summaries of the wave differs from the whole |
 
 The Ball kernels of the non-finite layer run with the second radius design in these tests (the
 design their IEEE-model statements are proved with); the second wave's tests run the first.
