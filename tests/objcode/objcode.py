@@ -748,18 +748,25 @@ def control_counts(tools, workdir, expected, limb_types, folds=None):
 # Apple clang and GCC 16 on AArch64) vectorize these loops in whole copies of the step, which the
 # rule counts as copies. Clang on x86-64 also packs two independent FMAs of the scalar code of four
 # interval kernels into one instruction, for double and float (control_packing: interval_mul_1
-# among them; measured with Clang 18 on the joined tree of the folds and the intervals). An entry
+# among them), and Apple clang on AArch64 two of interval_add_2 and of interval_sub_2 into one
+# fmla on .2d or .2s, in the form of the fix-ups that is a call (measured with Clang 18, Apple
+# clang 21 and GCC 16 on the joined tree of the folds and the intervals; GCC packs none). An entry
 # that stops holding, a compiler that stops packing or another that starts, fails the control: the
 # table is what we know, not what we expect.
-VECTORIZED_SCALAR = ('ball_from_interval_2', 'interval_add_2', 'interval_mul_1', 'interval_sub_2')
+VECTORIZED_SCALAR = {'clang x86-64': ('ball_from_interval_2', 'interval_add_2', 'interval_mul_1', 'interval_sub_2'),
+                     'apple clang aarch64': ('interval_add_2', 'interval_sub_2')}
 
 
 def vectorized_failures(tools, packed):
-    x86 = platform.machine().lower() in ('x86_64', 'amd64')
-    if tools.vendor in ('clang', 'clang-cl') and not tools.apple and x86:
+    machine = platform.machine().lower()
+    if tools.vendor in ('clang', 'clang-cl') and not tools.apple and machine in ('x86_64', 'amd64'):
         forms = ['seq'] + (['packed'] if packed else [])
         return sorted([f'fold {fold} {form} double' for fold in ('axpy_2', 'axpy_2_entry') for form in forms]
-                      + [f'scalar {t} {k} (scalar)' for k in VECTORIZED_SCALAR for t in ('double', 'float')])
+                      + [f'scalar {t} {k} (scalar)' for k in VECTORIZED_SCALAR['clang x86-64']
+                         for t in ('double', 'float')])
+    if tools.vendor == 'clang' and tools.apple and machine in ('arm64', 'aarch64'):
+        return sorted(f'scalar {t} {k} (scalar_call)' for k in VECTORIZED_SCALAR['apple clang aarch64']
+                      for t in ('double', 'float'))
     return []
 
 

@@ -675,8 +675,9 @@ control judges the scalar functions of the kernels: with Clang on x86-64 the che
 on `interval_mul_1` among others, and only for the packing: each failing scalar function has fewer
 fused instructions than the IR has FMAs, at least one of them on a vector register, and the right
 number of multiplications. This is an expected failure, so a compiler that stops packing shows.
-With the other compilers what happens is reported and not judged: Apple clang 21 and GCC 16 on the
-Mac pack nothing there.
+With the other compilers what happens is reported and not judged: GCC 16 on the Mac packs nothing
+there, and Apple clang 21 packs two FMAs of `interval_add_2` and of `interval_sub_2` into one
+`fmla` (measured on 2026-11-20, on the tip of the intervals' line as on the joined tree).
 
 The fixture has a loop too, the step of a map: `t = fma_rn(x[i], a, y[i]); z[i] = t * b + c`, its
 first product written as the generator writes every product and its second as the textbook
@@ -693,9 +694,11 @@ same rule. It records what the check then finds per compiler: with Clang on x86-
 clang-cl), the packing alone fails `F_seq` and `F_packed` of `axpy_2` and `axpy_2_entry` for
 `double`, and the scalar functions of `ball_from_interval_2`, `interval_add_2`, `interval_mul_1`
 and `interval_sub_2` for `double` and `float` (those the packing control finds; measured with
-Clang 18 on 2026-11-20, clang-cl by analogy); with every other compiler measured (GCC 13 on x86-64,
-Apple clang 21 and GCC 16 on AArch64), nothing, their vectorized loops holding whole copies of the
-step. A compiler that stops packing, or one that starts, fails the control, so that we learn it.
+Clang 18 on 2026-11-20, clang-cl by analogy); with Apple clang 21 on AArch64, the scalar functions
+of `interval_add_2` and `interval_sub_2` for `double` and `float`, in the form of the fix-ups that
+is a call; with GCC 13 on x86-64 and GCC 16 on AArch64, nothing. Their vectorized loops hold whole
+copies of the step. A compiler that stops packing, or one that starts, fails the control, so that
+we learn it.
 
 Where each compiler fused the textbook product in the configurations of the full tier, measured on
 2026-11-19; it fused nowhere else, and the check failed on exactly these:
