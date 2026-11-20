@@ -488,3 +488,13 @@ Print Assumptions sub_down_2_2_listing_correct.
 Print Assumptions sub_up_2_2_listing_correct.
 Print Assumptions mul_dir_2_2_listing_values.
 Print Assumptions mul_dir_2_2_listing_correct.
+
+(* The tightness of the product of intervals of one limb (theories/IeeeInterval1.v): the
+   two outputs of mul_dir_1 against the directed roundings of a product of bounds, the
+   bounds of the exact range of a product, and the bounds of the result against them. *)
+Print Assumptions mul_dir_1_lower.
+Print Assumptions mul_dir_1_upper.
+Print Assumptions range_mul_lower.
+Print Assumptions range_mul_upper.
+Print Assumptions interval_mul_1_tight.
+Print Assumptions interval_mul_1_tight_range.
