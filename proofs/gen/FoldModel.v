@@ -13,6 +13,21 @@ From Kairn.Gen Require Import Model.
 From Kairn Require Import Folds.
 Open Scope R_scope.
 
+(* The terms of coefficient j of the product of the polynomials xs and ys: the pairs (x_i, y_(j-i))
+   for max(0, j - (length ys - 1)) <= i <= min(j, length xs - 1), in increasing i. The entries of xs
+   from that i on, among the first j + 1, against those of ys from j - i down, the first j + 1 of ys
+   reversed; combine stops at the shorter list, which is the first. *)
+Definition conv_terms {A B : Type} (xs : list A) (ys : list B) (j : nat) : list (A * B) :=
+  combine (skipn (j - (length ys - 1)) (firstn (S j) xs)) (rev (firstn (S j) ys)).
+
+(* The number of coefficients of the product: length xs + length ys - 1, none when a polynomial
+   is empty. *)
+Definition conv_length (nx ny : nat) : nat :=
+  match nx, ny with
+  | O, _ | _, O => O
+  | _, _ => (nx + ny - 1)%nat
+  end.
+
 Section Folds.
 Variable emin prec : Z.
 Variable choice : Z -> bool.
@@ -272,5 +287,13 @@ Definition sum_fast_2_entry_seq (xs : list (R * R)) : R * R :=
 
 Definition sum_fast_2_entry_lanes (W : nat) (xs : list (R * R)) : R * R :=
   fold_lanes sum_fast_2_entry_step sum_fast_2_entry_combine (0, 0) W xs.
+
+(* conv_1: a convolution; arrays supplied x, supplied y; coefficient j is dot_1 in the sequential order on conv_terms xs ys j; it writes z. *)
+Definition conv_1_conv (xs : list R) (ys : list R) : list R :=
+  map (fun j => dot_1_seq (conv_terms xs ys j)) (seq 0 (conv_length (length xs) (length ys))).
+
+(* conv_2: a convolution; arrays supplied x, supplied y; coefficient j is dot_2 in the sequential order on conv_terms xs ys j; it writes z. *)
+Definition conv_2_conv (xs : list (R * R)) (ys : list (R * R)) : list (R * R) :=
+  map (fun j => dot_2_seq (conv_terms xs ys j)) (seq 0 (conv_length (length xs) (length ys))).
 
 End Folds.

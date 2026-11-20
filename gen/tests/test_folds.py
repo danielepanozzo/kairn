@@ -37,6 +37,8 @@ FOLDS = ('sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2', 'sum_fast
 # bound of the largest magnitude instead of fold_error. ALL: every fold that is not a map.
 MAX_FOLDS = ('norm_upper_1', 'norm_upper_2')
 ALL = FOLDS + MAX_FOLDS
+# The convolutions, which write an array, have tests of their own (test_conv.py).
+CONVS = {'conv_1', 'conv_2'}
 # The maps, the folds that write an array, have tests of their own (test_maps.py).
 MAPS = {'add_1', 'add_1_entry', 'add_2', 'add_2_entry', 'sub_1', 'sub_1_entry', 'sub_2', 'sub_2_entry', 'axpy_1',
         'axpy_1_entry', 'axpy_2', 'axpy_2_entry', 'axpy_2_1', 'axpy_2_1_entry', 'scale_1', 'scale_2',
@@ -179,7 +181,7 @@ t         = select(ok, s, const nan)
 class Rules(unittest.TestCase):
     def test_the_folds_are_accepted(self):
         ks = common.kernels()
-        self.assertEqual(set(ks.folds), set(ALL) | MAPS)
+        self.assertEqual(set(ks.folds), set(ALL) | MAPS | CONVS)
         self.assertEqual({n for n, fd in ks.folds.items() if fd.is_max}, set(MAX_FOLDS))
         self.assertEqual({n for n, fd in ks.folds.items() if fd.is_map}, MAPS)
         for fd in ks.folds.values():
@@ -982,7 +984,7 @@ class Printers(unittest.TestCase):
         self.assertIn('    (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * '
                       '((3 / 2) * eta emin)).', s)
         self.assertIn('    ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs', s)
-        self.assertEqual(s.count('_spec : Prop'), 2 * len(ALL) + len(MAPS))
+        self.assertEqual(s.count('_spec : Prop'), 2 * len(ALL) + len(MAPS) + len(CONVS))
         # A fold of maxima: its result is the limb of the state stepped up as the finish does, a
         # number of the format between the largest magnitude and that rounded up and stepped up.
         self.assertIn('Definition norm_upper_2_seq_spec : Prop :=\n'
@@ -1090,7 +1092,7 @@ class Printers(unittest.TestCase):
         of its kernel's listing, the step's fused operations those of the step kernel."""
         doc = json.loads(objcode.objcode(self.ks))
         self.assertEqual(doc['fold_forms'], ['seq', 'lanes', 'packed'])
-        self.assertEqual(set(doc['folds']), set(ALL) | MAPS)
+        self.assertEqual(set(doc['folds']), set(ALL) | MAPS | CONVS)
         names = doc['fold_parts']
         for name in ALL:
             fd = self.ks.folds[name]

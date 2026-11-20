@@ -108,6 +108,31 @@ def map_claims(fd, kernels):
     return out
 
 
+def conv_claims(fd, kernels):
+    """One convolution's entry (architecture.md, "Claims of Milestone 2", convolutions): the two
+    arrays, each of its own length, the array written, the mask; the value of a term; the
+    requirements of each entry of either array; coefficients (each coefficient satisfies the claims
+    of the fold `coefficients` on its own terms) and finite_or_nan; the check, the order, the
+    statuses."""
+    out = {'name': fd.name, 'conv': True}
+    if fd.extended:
+        out['domain'] = 'extended'
+    out['arrays'] = [{'name': g.name, 'limbs': len(g.limbs), 'role': fd.roles[g.name]} for g in fd.arrays]
+    out['writes'] = [_group(g) for g in fd.writes]
+    out['outputs'] = [_group(fd.state)]
+    out['value'] = fd.value
+    out['requires'] = [_requires(r) for r in fd.requires]
+    out['ensures'] = [dict(e, fold=fd.coefficients) if e['kind'] == 'coefficients' else dict(e) for e in fd.ensures]
+    out['orders'] = list(fd.orders)
+    out['coefficients'] = fd.coefficients
+    out['check'] = fd.check
+    out['min_precision'] = fd.min_precision
+    out['status'] = fd.status
+    out['theorem'] = {'file': fd.theorem, 'name': f'{fd.name}_correct'} if fd.theorem else None
+    out['source'] = {'cite': fd.source, 'license': fd.license}
+    return out
+
+
 def fold_claims(fd, kernels):
     """One fold's entry (architecture.md, "Claims of Milestone 2", folds): the arrays and their
     roles, the results, the value of an element, the requirements of each element, the claims
@@ -148,5 +173,6 @@ def claims(kernels):
     doc = {'schema': SCHEMA, 'kernels': [kernel_claims(k, kernels) for k in kernels.values()]}
     folds = getattr(kernels, 'folds', {})
     if folds:
-        doc['folds'] = [(map_claims if fd.is_map else fold_claims)(fd, kernels) for fd in folds.values()]
+        doc['folds'] = [(map_claims if fd.is_map else conv_claims if fd.is_conv else fold_claims)(fd, kernels)
+                        for fd in folds.values()]
     return json.dumps(doc, indent=2) + '\n'

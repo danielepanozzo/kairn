@@ -569,6 +569,141 @@ claims; a false flag, a NaN. The steps and the combination of a fold of maxima h
 statement (`K_ieee_lead_spec`): their maximum keeps a finite state when the element is a NaN, so
 the statement would be false of them, and the mask says it instead.
 
+### Convolutions
+
+A convolution writes the coefficients of the product of two polynomials: `conv_k`
+([sum, dot, axpy, convolution](design/milestone2.md#sum-dot-axpy-convolution)), which
+`bv_conv_k` of [BallVector](design/milestone2.md#the-product-of-polynomials) applies to the
+centers. `conv_2` in full:
+
+```
+fold:          conv_2
+arrays:        supplied x = x0 x1, supplied y = y0 y1
+coefficients:  dot_2
+state:         mask finite
+combine:       finite = and(finite, finite)
+orders:        sequential
+writes:        z = z0 z1
+check:         fold_finish_2
+finish:        none
+value:         x*y
+requires:      canonical x
+requires:      canonical y
+ensures:       coefficients z
+ensures:       finite_or_nan z flag=finite
+min_precision: 4
+status:        unverified
+domain:        extended
+```
+
+- **The arrays** are the two polynomials, $x$ of $n_x$ coefficients and $y$ of $n_y$, each of its
+  own length. **The array written**, $z$, has $n_x + n_y - 1$ coefficients, none when a length is
+  $0$.
+- **Coefficient $j$** is the fold `coefficients:` (`dot_2`, `dot_1` for one limb) in its
+  sequential order on the terms $(x_i, y_{j-i})$, $i$ from $\max(0, j - n_y + 1)$ to
+  $\min(j, n_x - 1)$ in increasing order: its zero state, its step on each term, its final state
+  written as the coefficient. A convolution has no step of its own. The number of terms of a
+  coefficient, $m_j$, is at most $\min(n_x, n_y)$, so the exported bound of `dot` for
+  $\min(n_x, n_y)$ terms covers every coefficient; the statement of each is the one for its own
+  $m_j$.
+- **The mask and the second pass** are a map's: the mask is the `and` of the check's flag on every
+  coefficient, the check is the finish of the fold of the coefficients (`fold_finish_k`), and when
+  the mask is false a second pass makes every coefficient that is not finite the canonical NaN.
+- **The order** is the sequential one only, and there is no packed form. The lanes of a register
+  would compute $W$ consecutive coefficients, whose ranges of terms differ at both ends: each lane
+  would need a blend at every step near the ends, or zero terms that the coefficient does not have,
+  which add terms to what its statement is about and change the sign of a zero. That is not a
+  plain use of the packed step, so it is left out.
+- **Aliasing**: the array written overlaps neither array read (a coefficient reads several entries
+  of each, after earlier coefficients were written), nor itself. The generated comment says so;
+  the generated code has no check of it, as the maps have none.
+
+**What the generator checks of a convolution** (`rules.conv_rules`): the fold of its coefficients
+is a fold of a sum with a finish and a combination, not a map, a convolution or a fold of maxima,
+and has the sequential order; the convolution's two arrays are that fold's, names, limbs and roles
+included (so that rule R3, which that fold passes, holds of the convolution); it has no step and
+no scalar; it writes one array of the shape of that fold's state; its state is one mask combined
+by `and`; its order is `sequential`; its check is that fold's finish; no name of that fold's state
+is one of its own; its value and requirements are that fold's; it claims `coefficients` and
+`finite_or_nan` of the array written, with its mask as the flag; it is of the extended domain, and
+its minimum precision is at least that fold's.
+
+**In C++** a convolution is one function per limb type, with each array's length after its limb
+pointers:
+
+```
+void conv_2_seq(const T* x0_in, const T* x1_in, std::size_t n_x, const T* y0_in, const T* y1_in,
+                std::size_t n_y, T* z0_out, T* z1_out, bool& finite_out)
+```
+
+A loop over the coefficients: the state of the fold of the coefficients from zero, a loop over the
+terms (`lo_` to `hi_`, `x` at `i_` and `y` at `j_ - i_`) with the step inlined, the coefficient
+written, the check's flag and-ed into the mask; then the second pass of a map over the
+$n_x + n_y - 1$ coefficients.
+
+**In Rocq** (`FoldModel.v`) the terms of coefficient $j$ are a list built with stdlib's list
+functions, and the coefficients a `map` over their indices:
+
+```coq
+Definition conv_terms {A B : Type} (xs : list A) (ys : list B) (j : nat) : list (A * B) :=
+  combine (skipn (j - (length ys - 1)) (firstn (S j) xs)) (rev (firstn (S j) ys)).
+
+Definition conv_length (nx ny : nat) : nat :=
+  match nx, ny with
+  | O, _ | _, O => O
+  | _, _ => (nx + ny - 1)%nat
+  end.
+
+Definition conv_2_conv (xs : list (R * R)) (ys : list (R * R)) : list (R * R) :=
+  map (fun j => dot_2_seq (conv_terms xs ys j)) (seq 0 (conv_length (length xs) (length ys))).
+```
+
+and its statement (`FoldStatements.v`) is, coefficient by coefficient (`Forall2` of the indices and
+the coefficients), the conclusion of `dot_2_seq_spec` on the list of its own terms:
+
+```coq
+Definition conv_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall xs ys : list (R * R),
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  Forall (fun y => normalized_2 emin prec (fst y) (snd y)) ys ->
+  Forall2 (fun j s =>
+    let xys := conv_terms xs ys j in
+    normalized_2 emin prec (fst s) (snd s) /\
+    Rabs ((fst s + snd s) - sumR (map (fun xy => ...) xys)) <= ... (length xys - 1) ... (INR (length xys) * ...))
+    (seq 0 (conv_length (length xs) (length ys))) (conv_2_conv emin prec tie_even xs ys).
+```
+
+Its proof is `dot_2_seq_correct` on each coefficient, through `Forall2_map_r` (the lemma the maps
+need, with the list `seq 0 (conv_length ...)`) and two lemmas about `conv_terms` that `Folds.v`
+does not have yet:
+
+```coq
+Lemma conv_terms_Forall :
+  forall (A B : Type) (P : A -> Prop) (Q : B -> Prop) (xs : list A) (ys : list B) (j : nat),
+  Forall P xs -> Forall Q ys -> Forall (fun ab => P (fst ab) /\ Q (snd ab)) (conv_terms xs ys j).
+
+Lemma conv_terms_length :
+  forall (A B : Type) (xs : list A) (ys : list B) (j : nat),
+  (length (conv_terms xs ys j) <= Nat.min (length xs) (length ys))%nat.
+```
+
+The first gives each coefficient the hypothesis of `dot_2_seq_spec`; the second is what lets a
+program bound every coefficient by `dot(min(n_x, n_y))`. That `conv_terms xs ys j` is exactly the
+list of the pairs $(x_i, y_{j-i})$ in increasing $i$ is what makes the model the convolution:
+
+```coq
+Lemma conv_terms_nth :
+  forall (A B : Type) (xs : list A) (ys : list B) (j k : nat) (a : A) (b : B),
+  (k < length (conv_terms xs ys j))%nat ->
+  nth k (conv_terms xs ys j) (a, b) =
+  (nth (j - (length ys - 1) + k) xs a, nth (j - (j - (length ys - 1) + k)) ys b).
+```
+
+(the generator's tests check that list against the definition on every pair of lengths up to 7,
+`test_conv.Printers.test_conv_terms_is_the_terms`). A convolution has no IEEE-model statement, as
+a map has none.
+
 ## Kernels of the first wave
 
 Names of values are normative: the Rocq model, the C++ and the proofs use the same ones. Each
@@ -1344,6 +1479,38 @@ reading in the extended domain is that of the other folds: the flag is true exac
 result is finite, and then every element is finite and the claim holds; a NaN or infinite element,
 or a result whose step up is infinite, gives the flag false and a NaN.
 
+**Convolutions** ([Convolutions](#convolutions)) are in the list `"folds"` too, with `"conv":
+true` (and no `"map"`):
+
+```json
+{
+  "name": "conv_2", "conv": true, "domain": "extended",
+  "arrays": [{"name": "x", "limbs": 2, "role": "supplied"}, {"name": "y", "limbs": 2, "role": "supplied"}],
+  "writes": [{"name": "z", "limbs": 2}],
+  "outputs": [{"name": "finite", "limbs": 1, "type": "mask"}],
+  "value": "x*y",
+  "requires": ["canonical(x)", "canonical(y)"],
+  "ensures": [{"kind": "coefficients", "of": "z", "fold": "dot_2"},
+              {"kind": "finite_or_nan", "of": "z", "flag": "finite"}],
+  "orders": ["sequential"],
+  "coefficients": "dot_2", "check": "fold_finish_2",
+  "min_precision": 4, "status": "unverified", "theorem": null,
+  "source": {"cite": "dot_2 on the terms of each coefficient", "license": "bound: published; proof: MIT"}
+}
+```
+
+- `arrays` are the two polynomials, each of its own length, $n_x$ and $n_y$ (the line protocol
+  gives both); `writes` has $n_x + n_y - 1$ entries, none when a length is $0$; `value` and
+  `requires` are those of a term, of each entry of either array.
+- `coefficients`, the claim kind of a convolution: written entry $j$, when its leading limb is
+  finite, satisfies every `ensures` entry of the fold `fold` (here `dot_2`) other than
+  `finite_or_nan`, in that fold's `sequential` order (its heights), on the list of the terms
+  $(x_i, y_{j-i})$ for $i$ from $\max(0, j - n_y + 1)$ to $\min(j, n_x - 1)$, in increasing order:
+  $n$ in its claims is the number of those terms, at most $\min(n_x, n_y)$.
+- `finite_or_nan` and the reading in the extended domain are a map's: the flag is true exactly when
+  the leading limb of every coefficient is finite; a coefficient that is not finite (a term not
+  finite, or an overflow) is the canonical NaN, the others are as computed.
+
 ## The line protocol
 
 Runners and the oracle exchange text lines, the same on every platform and for every format.
@@ -1398,6 +1565,27 @@ is, for each limb array written, most significant first, its N entries, then the
 y = 1/2, 1/2, 1/2) the completion ` -> 0x1.4p+1 0x1.2p+2 0x1.1p+3 1`. The interpreter, the
 compiled runner (`F_seq`, `F_lanes` for any W) and the packed runner (`F_packed`, its register's W
 only) complete them, with the same bits.
+
+**Convolutions** have two lengths, and the sequential order only:
+
+```
+request:    CONV FORMAT seq N_X N_Y LIMB ... [#TAG]
+completed:  CONV FORMAT seq N_X N_Y LIMB ... [#TAG] -> RESULT ...
+```
+
+- `ORDER` is `seq`; any other order is refused. `N_X` and `N_Y` are the lengths of the two arrays,
+  decimal numbers, `0` allowed.
+- Then, for each limb of the first array, most significant first, its `N_X` entries; then, for each
+  limb of the second, its `N_Y` entries: for `conv_2` of lengths 2 and 3,
+  `x0[0] x0[1] x1[0] x1[1] y0[0] y0[1] y0[2] y1[0] y1[1] y1[2]`.
+- The result is, for each limb array written, most significant first, its $N_Z$ entries, with
+  $N_Z = N_X + N_Y - 1$, or $0$ when `N_X` or `N_Y` is $0$; then the mask, `0` or `1`.
+
+For example `conv_1 fp:5:-12:6 seq 3 2 0x1p+0 0x1p+1 0x1p+2 0x1p+0 0x1p-1` ($x = 1, 2, 4$ and
+$y = 1, \tfrac12$: the product of $1 + 2t + 4t^2$ and $1 + \tfrac12 t$) is completed with
+` -> 0x1p+0 0x1.4p+1 0x1.4p+2 0x1p+1 1` ($1, \tfrac52, 5, 2$), and `conv_2 binary64 seq 0 1 0x1p+0
+0x0p+0` with ` -> 1`. The interpreter and the compiled runner (`F_seq`) complete them, with the same
+bits; the packed runner refuses them, a convolution having no packed form.
 
 The constants of `include/kairn/rational.hpp`, which are not kernels, have lines of their own
 ([Constants from fractions](../reference/rational.md)): `rational_K FORMAT NUM DEN [#TAG]`, with K

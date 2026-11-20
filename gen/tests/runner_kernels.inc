@@ -155,3 +155,11 @@ KAIRN_RUNNER_MAP(sub_1_entry, "11", 0, 1, kairn::gen::sub_1_entry_seq(in[0], in[
 KAIRN_RUNNER_MAP(sub_2, "22", 0, 2, kairn::gen::sub_2_seq(in[0], in[1], in[2], in[3], n, w[0], w[1], mo[0]), kairn::gen::sub_2_lanes(in[0], in[1], in[2], in[3], n, lanes, w[0], w[1], mo[0]), kairn::gen::sub_2_packed(in[0], in[1], in[2], in[3], n, w[0], w[1], mo[0]))
 KAIRN_RUNNER_MAP(sub_2_entry, "22", 0, 2, kairn::gen::sub_2_entry_seq(in[0], in[1], in[2], in[3], n, w[0], w[1], mo[0]), kairn::gen::sub_2_entry_lanes(in[0], in[1], in[2], in[3], n, lanes, w[0], w[1], mo[0]), kairn::gen::sub_2_entry_packed(in[0], in[1], in[2], in[3], n, w[0], w[1], mo[0]))
 #endif
+// The convolutions, for a runner that defines KAIRN_RUNNER_CONV: name, the limbs of each array
+// read, the number of limb arrays written, the call of the sequential order. in[i] is limb array
+// i read (const T*), the limbs of the first array before those of the second, nx and ny their
+// lengths, w[i] limb array i written (T*), mo[0] the mask.
+#if defined(KAIRN_RUNNER_CONV)
+KAIRN_RUNNER_CONV(conv_1, "11", 1, kairn::gen::conv_1_seq(in[0], nx, in[1], ny, w[0], mo[0]))
+KAIRN_RUNNER_CONV(conv_2, "22", 2, kairn::gen::conv_2_seq(in[0], in[1], nx, in[2], in[3], ny, w[0], w[1], mo[0]))
+#endif

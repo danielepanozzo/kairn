@@ -392,16 +392,20 @@ class FoldClaims(unittest.TestCase):
 
     def test_the_folds(self):
         maps = {name for name, fd in self.ks.folds.items() if fd.is_map}
-        self.assertEqual(set(self.by) - maps, {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
-                                               'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2'})
+        convs = {name for name, fd in self.ks.folds.items() if fd.is_conv}
+        self.assertEqual(convs, {'conv_1', 'conv_2'})
+        self.assertTrue(all(self.by[n]['conv'] is True and 'map' not in self.by[n] for n in convs))
+        self.assertEqual(set(self.by) - maps - convs, {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
+                                                      'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1',
+                                                      'norm_upper_2'})
         self.assertEqual(list(self.doc), ['schema', 'kernels', 'folds'])
         # Without folds the file has the shape it had: the test kernels have none.
         self.assertEqual(list(json.loads(claims.claims(common.kernels(common.TEST_KERNELS)))), ['schema', 'kernels'])
 
     def test_schema(self):
         for f in self.doc['folds']:
-            if f.get('map'):
-                continue                # MapClaims
+            if f.get('map') or f.get('conv'):
+                continue                # MapClaims; the convolutions, test_conv.py
             with self.subTest(fold=f['name']):
                 self.assertEqual(list(f), self.KEYS)
                 self.assertEqual(f['domain'], 'extended')

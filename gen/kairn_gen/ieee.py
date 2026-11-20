@@ -1023,7 +1023,8 @@ def fold_model(kernels):
     of its real model (FoldModel.v): F_step and F_combine apply the IEEE models of the step and the
     combination (IeeeModel.v) to the limbs of tuples; F_seq is the finish on fold_seq of the step
     from the zero state, every limb +0; F_lanes W the finish on fold_lanes W."""
-    folds = [fd for fd in getattr(kernels, 'folds', {}).values() if not getattr(fd, 'is_map', False)]
+    folds = [fd for fd in getattr(kernels, 'folds', {}).values()
+             if not getattr(fd, 'is_map', False) and not getattr(fd, 'is_conv', False)]
     lines = [HEADER, '',
              '(* The folds in the IEEE model (docs/developer/architecture.md, "Folds"), in the shape of their',
              '   real model (FoldModel.v): the state is a tuple of limbs and an element one entry of every array,',
@@ -1173,7 +1174,7 @@ def fold_statement(fd, kernels, order):
 def lead_kernels(kernels):
     names = set()
     for fd in getattr(kernels, 'folds', {}).values():
-        if getattr(fd, 'is_map', False) or getattr(fd, 'is_max', False):
+        if getattr(fd, 'is_map', False) or getattr(fd, 'is_max', False) or getattr(fd, 'is_conv', False):
             continue
         names.add(fd.step[0])
         if fd.combine:
@@ -1213,7 +1214,7 @@ def fold_statements(kernels):
     for k in lead_kernels(kernels):
         lines += [''] + lead_statement(k, kernels)
     for fd in getattr(kernels, 'folds', {}).values():
-        if getattr(fd, 'is_map', False):
+        if getattr(fd, 'is_map', False) or getattr(fd, 'is_conv', False):
             continue
         for order in ir.ORDERS:
             if order in fd.orders:

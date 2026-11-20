@@ -181,6 +181,24 @@ mask, several groups given in order, and claims an upper bound of the largest va
     value:         abs(x)
     ensures:       upper r max steps=1
                                       max_i v_i <= r <= RU(max_i v_i) stepped up that many times
+
+A convolution (docs/developer/architecture.md, "Convolutions") writes the coefficients of the
+product of two polynomials, one array per polynomial, of lengths of their own: coefficient j is a
+fold of the dot product (named, in its sequential order) on the terms (x_i, y_(j-i)), i increasing.
+It has no step of its own, and is otherwise described as a map:
+
+    fold:          conv_2
+    arrays:        supplied x = x0 x1, supplied y = y0 y1
+    coefficients:  dot_2              the fold of each coefficient; its arrays are these
+    state:         mask finite
+    combine:       finite = and(finite, finite)
+    orders:        sequential
+    writes:        z = z0 z1          n_x + n_y - 1 coefficients (none when an array is empty)
+    check:         fold_finish_2      the finish of the fold of the coefficients
+    finish:        none
+    value:         x*y
+    ensures:       coefficients z     each coefficient satisfies that fold's claims on its terms
+    ensures:       finite_or_nan z flag=finite
 """
 import os
 import re
@@ -519,7 +537,7 @@ def _ensures(words, where):
         return entry
     if kind == 'maximum' and len(words) == 4:
         return {'kind': kind, 'of': words[1], 'args': words[2:4]}
-    if kind == 'entries' and len(words) == 2:
+    if kind in ('entries', 'coefficients') and len(words) == 2:
         return {'kind': kind, 'of': words[1]}
     if kind == 'fold_error' and len(words) >= 3:
         entry = {'kind': kind, 'of': words[1], 'eps': None, 'term': '0', 'tau': '0', 'rel': None, 'abs': None}
@@ -741,6 +759,7 @@ class Fold:
     orders: tuple = ()
     writes: list = field(default_factory=list)      # Groups: the arrays a map writes, one element per step
     check: str = None           # a map: the kernel that tests a written element and gives its canonical NaN
+    coefficients: str = None    # a convolution: the fold of each coefficient (a dot product)
     outputs: list = field(default_factory=list)     # Groups: the finish's outputs as the fold names them
     value: str = None
     requires: list = field(default_factory=list)
@@ -761,7 +780,13 @@ class Fold:
     @property
     def is_map(self):
         """A map: the step writes an element of each written array, from the elements read."""
-        return bool(self.writes)
+        return bool(self.writes) and not self.coefficients
+
+    @property
+    def is_conv(self):
+        """A convolution: each element written is a fold of the dot product on terms of the two
+        arrays read."""
+        return bool(self.coefficients)
 
     def results(self):
         """The groups the fold returns: the finish's outputs, or the state when there is none (for
@@ -821,7 +846,7 @@ def _fold_call(text, where, key):
 def parse_fold(text, path):
     fd = Fold(name=None, path=path)
     single = {'fold', 'arrays', 'scalars', 'state', 'step', 'combine', 'orders', 'writes', 'check', 'finish',
-              'value', 'min_precision', 'theorem', 'source', 'license', 'status', 'domain'}
+              'value', 'min_precision', 'theorem', 'source', 'license', 'status', 'domain', 'coefficients'}
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split('#', 1)[0].strip()
         where = f'{path}:{lineno}'
@@ -864,6 +889,10 @@ def parse_fold(text, path):
             if not KERNEL_NAME.match(val):
                 raise DescriptionError(f'{where}: expected "check: KERNEL", got {val!r}')
             fd.check = val
+        elif key == 'coefficients':
+            if not KERNEL_NAME.match(val):
+                raise DescriptionError(f'{where}: expected "coefficients: FOLD", got {val!r}')
+            fd.coefficients = val
         elif key == 'output':
             fd.outputs.append(_group(val, where)[0])
         elif key == 'value':
@@ -897,7 +926,8 @@ def parse_fold(text, path):
         raise DescriptionError(f'{path}: no "fold:" line')
     if not KERNEL_NAME.match(fd.name):
         raise DescriptionError(f'{path}: bad fold name {fd.name!r}')
-    for key in ('arrays', 'state', 'step', 'orders', 'writes', 'finish'):
+    # A convolution has no step of its own: that of the fold of its coefficients.
+    for key in ('arrays', 'state', 'orders', 'writes', 'finish') + (() if fd.coefficients else ('step',)):
         if key not in fd.declared:
             raise DescriptionError(f'{path}: a fold needs "{key}:"' +
                                    (' (none, when there is none)' if key in ('writes', 'finish') else ''))

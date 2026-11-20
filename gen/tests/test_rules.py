@@ -849,7 +849,8 @@ class R3OfTheKernels(unittest.TestCase):
         ks = common.kernels()
         lines = build.summary(ks)
         self.assertEqual(set(ks.folds), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
-                                         'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2'} | MAPS)
+                                         'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2',
+                                         'conv_1', 'conv_2'} | MAPS)
         self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
         unverified = [n for n, f in ks.folds.items() if f.status == 'unverified']
         self.assertIn('folds UNVERIFIED: %s' % (', '.join(unverified) or 'none'), lines)

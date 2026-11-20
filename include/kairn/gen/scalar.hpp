@@ -7994,6 +7994,234 @@ inline void axpy_2_entry_lanes(const float* x0_in, const float* x1_in, const flo
     finite_out = finite;
 }
 
+// convolution conv_1(supplied x, supplied y) -> z: coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_1 in its
+// sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_1. The array written
+// overlaps neither x nor y. Status: unverified.
+inline void conv_1_seq(const double* x_in, std::size_t n_x, const double* y_in, std::size_t n_y, double* z_out, bool& finite_out) noexcept {
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        double s = 0.0;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const double x = x_in[i_];
+            const double y = y_in[j_ - i_];
+            // (step_t) = dot_step_1(s, x, y)
+            const double step_t = fma_rn(x, y, s);
+            s = step_t;
+        }
+        z_out[j_] = s;
+        // (chk_r, chk_flag) = fold_finish_1(s)
+        const double chk_a = abs_bits(s);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            const double z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const double chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r = chk_flag ? z : std::numeric_limits<double>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+// sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_1. The array written
+// overlaps neither x nor y. Status: unverified.
+inline void conv_1_seq(const float* x_in, std::size_t n_x, const float* y_in, std::size_t n_y, float* z_out, bool& finite_out) noexcept {
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        float s = 0.0f;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const float x = x_in[i_];
+            const float y = y_in[j_ - i_];
+            // (step_t) = dot_step_1(s, x, y)
+            const float step_t = fma_rn(x, y, s);
+            s = step_t;
+        }
+        z_out[j_] = s;
+        // (chk_r, chk_flag) = fold_finish_1(s)
+        const float chk_a = abs_bits(s);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            const float z = z_out[i_];
+            // (chk_r, chk_flag) = fold_finish_1(z)
+            const float chk_a = abs_bits(z);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r = chk_flag ? z : std::numeric_limits<float>::quiet_NaN();
+            z_out[i_] = chk_r;
+        }
+    }
+    finite_out = finite;
+}
+
+// convolution conv_2(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1): coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_2 in its
+// sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_2. The array written
+// overlaps neither x nor y. Status: unverified.
+inline void conv_2_seq(const double* x0_in, const double* x1_in, std::size_t n_x, const double* y0_in, const double* y1_in, std::size_t n_y, double* z0_out, double* z1_out, bool& finite_out) noexcept {
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        double s0 = 0.0;
+        double s1 = 0.0;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[j_ - i_];
+            const double y1 = y1_in[j_ - i_];
+            // (step_t0, step_t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+            // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+            const double step_p0_ch = fma_rn(x0, y0, 0.0);
+            const double step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+            const double step_p0_tl0 = fma_rn(x1, y1, 0.0);
+            const double step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+            const double step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+            const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const double step_p0 = step_p0_ch + step_p0_cl3;
+            const double step_p0_z = step_p0 - step_p0_ch;
+            const double step_p1 = step_p0_cl3 - step_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0, s1, step_p0, step_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0, step_p0)
+            const double step_t0_sh = s0 + step_p0;
+            const double step_t0_sh_bb = step_t0_sh - s0;
+            const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+            const double step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+            const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1, step_p1)
+            const double step_t0_th = s1 + step_p1;
+            const double step_t0_th_bb = step_t0_th - s1;
+            const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const double step_t0_th_t1 = s1 - step_t0_th_t0;
+            const double step_t0_th_t2 = step_p1 - step_t0_th_bb;
+            const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const double step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const double step_t0_vh = step_t0_sh + step_t0_c;
+            const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const double step_t0_vl = step_t0_c - step_t0_vh_z;
+            const double step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const double step_t0 = step_t0_vh + step_t0_w;
+            const double step_t0_z = step_t0 - step_t0_vh;
+            const double step_t1 = step_t0_w - step_t0_z;
+            s0 = step_t0;
+            s1 = step_t1;
+        }
+        z0_out[j_] = s0;
+        z1_out[j_] = s1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(s0, s1)
+        const double chk_a = abs_bits(s0);
+        const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            const double z0 = z0_out[i_];
+            const double z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const double chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<double>::infinity() > chk_a;
+            const double chk_r0 = chk_flag ? z0 : std::numeric_limits<double>::quiet_NaN();
+            const double chk_r1 = chk_flag ? z1 : std::numeric_limits<double>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+// sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_2. The array written
+// overlaps neither x nor y. Status: unverified.
+inline void conv_2_seq(const float* x0_in, const float* x1_in, std::size_t n_x, const float* y0_in, const float* y1_in, std::size_t n_y, float* z0_out, float* z1_out, bool& finite_out) noexcept {
+    const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
+    bool finite = true;
+    for (std::size_t j_ = 0; j_ < nz_; ++j_) {
+        float s0 = 0.0f;
+        float s1 = 0.0f;
+        const std::size_t lo_ = j_ < n_y ? 0 : j_ - (n_y - 1);
+        const std::size_t hi_ = j_ < n_x ? j_ : n_x - 1;
+        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[j_ - i_];
+            const float y1 = y1_in[j_ - i_];
+            // (step_t0, step_t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+            // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+            const float step_p0_ch = fma_rn(x0, y0, 0.0f);
+            const float step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+            const float step_p0_tl0 = fma_rn(x1, y1, 0.0f);
+            const float step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+            const float step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+            const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const float step_p0 = step_p0_ch + step_p0_cl3;
+            const float step_p0_z = step_p0 - step_p0_ch;
+            const float step_p1 = step_p0_cl3 - step_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0, s1, step_p0, step_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0, step_p0)
+            const float step_t0_sh = s0 + step_p0;
+            const float step_t0_sh_bb = step_t0_sh - s0;
+            const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+            const float step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+            const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1, step_p1)
+            const float step_t0_th = s1 + step_p1;
+            const float step_t0_th_bb = step_t0_th - s1;
+            const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const float step_t0_th_t1 = s1 - step_t0_th_t0;
+            const float step_t0_th_t2 = step_p1 - step_t0_th_bb;
+            const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const float step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const float step_t0_vh = step_t0_sh + step_t0_c;
+            const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const float step_t0_vl = step_t0_c - step_t0_vh_z;
+            const float step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const float step_t0 = step_t0_vh + step_t0_w;
+            const float step_t0_z = step_t0 - step_t0_vh;
+            const float step_t1 = step_t0_w - step_t0_z;
+            s0 = step_t0;
+            s1 = step_t1;
+        }
+        z0_out[j_] = s0;
+        z1_out[j_] = s1;
+        // (chk_r0, chk_r1, chk_flag) = fold_finish_2(s0, s1)
+        const float chk_a = abs_bits(s0);
+        const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+        finite = finite & chk_flag;
+    }
+    if (!finite) {
+        for (std::size_t i_ = 0; i_ < nz_; ++i_) {
+            const float z0 = z0_out[i_];
+            const float z1 = z1_out[i_];
+            // (chk_r0, chk_r1, chk_flag) = fold_finish_2(z0, z1)
+            const float chk_a = abs_bits(z0);
+            const bool chk_flag = std::numeric_limits<float>::infinity() > chk_a;
+            const float chk_r0 = chk_flag ? z0 : std::numeric_limits<float>::quiet_NaN();
+            const float chk_r1 = chk_flag ? z1 : std::numeric_limits<float>::quiet_NaN();
+            z0_out[i_] = chk_r0;
+            z1_out[i_] = chk_r1;
+        }
+    }
+    finite_out = finite;
+}
+
 // fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
 inline void dot_1_seq(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     double s = 0.0;

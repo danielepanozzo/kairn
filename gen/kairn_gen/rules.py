@@ -1062,6 +1062,8 @@ def fold_names(fd):
     out = [f'{fd.name}_{s}' for s in ('step', 'combine', 'packed')]
     if fd.is_map:
         out += [f'{fd.name}_{s}' for s in ('map', 'spec', 'correct', 'audit')]
+    if fd.is_conv:
+        out += [f'{fd.name}_{s}' for s in ('conv', 'spec', 'correct', 'audit')]
     for order in fd.orders:
         base = f'{fd.name}_{ir.ORDER_SUFFIX.get(order, order)}'
         out += [base, f'{base}_spec', f'{base}_correct', f'{base}_audit']
@@ -1098,12 +1100,13 @@ def fold_rules(fd, kernels):
     # The state: a group of limbs; a map's, one mask; a fold of maxima's, a value of one limb and a
     # mask (FoldsOfMaxima below).
     shapes = [_shape(g) for g in fd.states]
-    if not fd.states or (not fd.is_map and shapes != [(len(fd.state.limbs), ir.LIMB)] and
+    writer = fd.is_map or fd.is_conv
+    if not fd.states or (not writer and shapes != [(len(fd.state.limbs), ir.LIMB)] and
                          not (fd.is_max and shapes == [(1, ir.LIMB), (1, ir.MASK)])):
         err('-', WELL_FORMED, 'the state is a group of limbs (a mask, for a map; a limb and a mask, for a fold of '
                               'maxima)')
         return errs
-    if fd.is_map and len(fd.states) != 1:
+    if writer and len(fd.states) != 1:
         err('-', WELL_FORMED, 'the state of a map is one mask (state: mask NAME), true at the start')
         return errs
     binders = fold_binders(fd)
@@ -1112,6 +1115,8 @@ def fold_rules(fd, kernels):
                               'joined, and that and s), are distinct and none is a name the printers use')
     if not fd.orders or len(set(fd.orders)) < len(fd.orders) or set(fd.orders) - set(ir.ORDERS):
         err('-', WELL_FORMED, f'orders: some of {", ".join(ir.ORDERS)}, each once')
+    if fd.is_conv:
+        return errs + conv_rules(fd, kernels, reserved)
     if fd.is_map or fd.scalars or fd.check:
         return errs + map_rules(fd, kernels, reserved)
     groups_of = {g.name: g for g in fd.arrays + list(fd.states)}
@@ -1270,6 +1275,75 @@ def map_rules(fd, kernels, reserved):
         return errs
     errs += _map_r3(fd, step, kernels)
     errs += _map_claims(fd, kernels, step, check)
+    errs += _fold_theorem(fd)
+    return errs
+
+
+# --- Convolutions -----------------------------------------------------------------------------------
+#
+# A convolution (architecture.md, "Convolutions") writes the n_x + n_y - 1 coefficients of the product
+# of two polynomials: coefficient j is the fold of its `coefficients:` (a dot product, accepted by
+# fold_rules on its own) in the sequential order on the terms (x_i, y_(j-i)), i increasing, written as
+# that fold's final state and tested by its finish, as the elements of a map are by its check.
+
+CONV_ENSURES = ('coefficients', 'finite_or_nan')
+
+
+def conv_rules(fd, kernels, reserved):
+    """Every refusal of one convolution, after the names (fold_rules)."""
+    errs = []
+
+    def err(msg, rule=WELL_FORMED):
+        errs.append(RuleError(fd.name, '-', rule, msg))
+
+    cf = getattr(kernels, 'folds', {}).get(fd.coefficients)
+    if cf is None or cf.is_map or cf.is_conv or cf.is_max or cf.finish is None or cf.combine is None:
+        err(f'coefficients: {fd.coefficients} is not a fold of a sum with a finish (a dot product, dot_k)')
+        return errs
+    if 'sequential' not in cf.orders:
+        err(f'coefficients: {cf.name} has no sequential order, in which each coefficient is computed')
+    if len(fd.arrays) != 2 or [(g.name, g.limbs, g.kind, fd.roles[g.name]) for g in fd.arrays] != \
+            [(g.name, g.limbs, g.kind, cf.roles[g.name]) for g in cf.arrays]:
+        err(f'arrays: two, those of {cf.name}, with their names, limbs and roles (stored or supplied)')
+    if fd.step is not None:
+        err(f'a convolution has no step of its own: its coefficients are folds of {cf.name}, with its step')
+    if fd.scalars:
+        err('a convolution has no scalar')
+    if len(fd.writes) != 1 or [_shape(g) for g in fd.writes] != [_shape(g) for g in cf.states]:
+        err(f'writes: one array, of the shape of the state of {cf.name}: each coefficient is its final state')
+    if fd.state.kind != ir.MASK:
+        err('the state of a convolution is one mask (state: mask NAME), true at the start')
+    if fd.combine != ('and', (fd.state.name, fd.state.name), (fd.state.name,)):
+        err(f'combine: the masks are combined by and: {fd.state.name} = and({fd.state.name}, {fd.state.name})')
+    if fd.orders != ('sequential',):
+        err('orders: sequential: each coefficient is its fold in the sequential order of its terms, and there is '
+            'no packed form (the coefficients of a register would have terms of different ranges)')
+    if fd.check != cf.finish[0]:
+        err(f'check: {cf.finish[0]}, the finish of {cf.name}, so that a coefficient is what that fold returns')
+    if fd.finish is not None or fd.outputs:
+        err('a convolution returns its mask and the array it writes: finish: none, and no output line')
+    mine = {g.name for g in fd.arrays + fd.writes + fd.states} | {v for g in fd.arrays + fd.writes + fd.states
+                                                                  for v in g.limbs}
+    clash = sorted(mine & ({g.name for g in cf.states} | set(cf.state_limbs())))
+    if clash:
+        err(f'{", ".join(clash)}: a name of the state of {cf.name}, which the loop of each coefficient declares')
+    if errs:
+        return errs
+    # The claims: those of the fold of the coefficients, of each coefficient.
+    if fd.value != cf.value:
+        err(f'value {fd.value!r}: that of a term of {cf.name}, {cf.value}', CLAIMS)
+    if fd.requires != cf.requires:
+        err(f'requires: those of {cf.name}, of each term: ' + ', '.join(' '.join(r) for r in cf.requires), CLAIMS)
+    written = fd.writes[0].name
+    want = [{'kind': 'coefficients', 'of': written}, {'kind': 'finite_or_nan', 'of': written, 'flag': fd.state.name}]
+    if sorted(fd.ensures, key=lambda e: e['kind']) != want:
+        err(f'ensures: coefficients {written} (each satisfies the claims of {cf.name} on its terms) and '
+            f'finite_or_nan {written} flag={fd.state.name}', CLAIMS)
+    if not fd.extended:
+        err('a convolution is of the extended domain: a coefficient that is not finite gives the canonical NaN and a '
+            'false flag', CLAIMS)
+    if fd.min_precision is None or fd.min_precision < (cf.min_precision or 1):
+        err(f'min_precision: at least that of {cf.name}, {cf.min_precision}', CLAIMS)
     errs += _fold_theorem(fd)
     return errs
 
@@ -1764,8 +1838,8 @@ def _fold_theorem(fd):
         err(f'the theorem file must be proofs/theories/*.v, not {fd.theorem}')
     if fd.theorem and fd.status != 'proved':
         err('a theorem file is named only once the fold is proved (status: proved)')
-    if fd.ieee_theorem and fd.is_map:
-        err('a map has no statement in the IEEE model (IeeeFoldStatements.v), so no ieee_theorem')
+    if fd.ieee_theorem and (fd.is_map or fd.is_conv):
+        err('a map or a convolution has no statement in the IEEE model (IeeeFoldStatements.v), so no ieee_theorem')
     if fd.ieee_theorem and not (fd.ieee_theorem.startswith('proofs/theories/') and fd.ieee_theorem.endswith('.v')):
         err(f'the ieee_theorem file must be proofs/theories/*.v, not {fd.ieee_theorem}')
     return errs

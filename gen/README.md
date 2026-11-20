@@ -212,6 +212,18 @@ scalar code and in Rocq and a lane mask in packed code, and `rocq.max_statement`
 An array limb that the step declares `unused` (`norm_step_2`'s `x1`) is a parameter of the C++
 functions, `[[maybe_unused]]`, and is not loaded (`cpp.loaded_limbs`).
 
+A convolution (architecture.md, "Convolutions") names the fold of its coefficients,
+`coefficients: dot_2`, and has no `step:`; it reads two arrays of their own lengths (those of that
+fold), writes one array (`writes: z = z0 z1`), has the mask, the `and`, the check (that fold's
+finish) and the second pass of a map, the order `sequential` only, and claims `coefficients z` and
+`finite_or_nan z flag=finite`. `rules.conv_rules` checks it; `cpp.conv_seq` prints it (no packed
+form); `rocq.conv_model` and `rocq.conv_statement` give it a model, a `map` over the indices of the
+coefficients of that fold's sequential order on `conv_terms xs ys j`, and a statement, `Forall2` of
+the indices and the coefficients; `claims.conv_claims`, its entry of `"folds"`, with `"conv": true`;
+the interpreter runs it (`Machine.run_fold`) and completes its requests, which have two lengths
+(`interp.complete_conv`), and so does the compiled runner (`KAIRN_RUNNER_CONV` of
+`runner_kernels.inc`).
+
 ## The operations
 
 | IR | Interpreter | Rocq (`rnd` rounds to nearest) | C++ | AVX2 (`pd`; `ps` for float) | NEON (`f64`; `f32`) |
@@ -464,7 +476,13 @@ computed constants (above). A kernel has no real-model statement when it claims 
   included, rule R3 on a supplied array with each compiler, and the printers; the folds of maxima
   with them, and on their own the checks of `rules.max_rules`, the empty list and non-finite
   elements in every order, and their claim in exact arithmetic on random lists of toy formats of
-  precision 1 to 6.
+  precision 1 to 6;
+- the convolutions (`test_conv.py`): the rules of a convolution; the interpreter, each coefficient
+  the fold of its coefficients on its terms, their number, the canonical NaN of the coefficients a
+  non-finite term reaches; the claims in exact arithmetic on toy formats, each coefficient within
+  the bound of `dot` for its own number of terms; the compiled `F_seq` bit for bit against the
+  interpreter on every pair of lengths up to 5 and random ones; the line protocol with two lengths;
+  `conv_terms` of the model against its definition; the printers.
 
 `--full` raises the sizes to a few hundred thousand requests per kernel; `--jobs N` (or
 `$KAIRN_GEN_JOBS`) caps the processes and compilers that run at once, on a shared machine.

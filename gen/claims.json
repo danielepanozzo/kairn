@@ -7679,6 +7679,121 @@
       }
     },
     {
+      "name": "conv_1",
+      "conv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "coefficients",
+          "of": "z",
+          "fold": "dot_1"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential"
+      ],
+      "coefficients": "dot_1",
+      "check": "fold_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "dot_1 on the terms of each coefficient",
+        "license": "bound: published; proof: MIT"
+      }
+    },
+    {
+      "name": "conv_2",
+      "conv": true,
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "writes": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "finite",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "coefficients",
+          "of": "z",
+          "fold": "dot_2"
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "z",
+          "flag": "finite"
+        }
+      ],
+      "orders": [
+        "sequential"
+      ],
+      "coefficients": "dot_2",
+      "check": "fold_finish_2",
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "dot_2 on the terms of each coefficient",
+        "license": "bound: published; proof: MIT"
+      }
+    },
+    {
       "name": "dot_1",
       "domain": "extended",
       "arrays": [

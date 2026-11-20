@@ -709,13 +709,19 @@ def fold_model(kernels):
              f'From {GEN_PATH} Require Import Model.',
              f'From {THEORIES_PATH} Require Import Folds.',
              'Open Scope R_scope.',
-             '',
-             'Section Folds.',
-             'Variable emin prec : Z.',
-             'Variable choice : Z -> bool.']
-    for fd in folds.values():
+             '']
+    if any(fd.is_conv for fd in folds.values()):
+        lines += CONV_LISTS + ['']
+    lines += ['Section Folds.',
+              'Variable emin prec : Z.',
+              'Variable choice : Z -> bool.']
+    # A convolution names the sequential order of the fold of its coefficients: after the others.
+    for fd in [fd for fd in folds.values() if not fd.is_conv] + [fd for fd in folds.values() if fd.is_conv]:
         if fd.is_map:
             lines += map_model(fd, kernels)
+            continue
+        if fd.is_conv:
+            lines += conv_model(fd, kernels)
             continue
         step, combine = kernels[fd.step[0]], kernels[fd.combine[0]] if fd.combine else None
         st, el, _ = _fold_binders(fd)
@@ -914,6 +920,9 @@ def fold_statements(kernels):
         if fd.is_map:
             lines += [''] + map_statement(fd, kernels)
             continue
+        if fd.is_conv:
+            lines += [''] + conv_statement(fd, kernels)
+            continue
         for order in ir.ORDERS:
             if order in fd.orders:
                 lines += [''] + (max_statement if fd.is_max else fold_statement)(fd, kernels, order)
@@ -1009,6 +1018,84 @@ def map_statement(fd, kernels):
     return lines
 
 
+# --- Convolutions ------------------------------------------------------------------------------------
+#
+# A convolution (rules.py, "Convolutions") is in the real model the list of its coefficients, each the
+# sequential order of the fold of its coefficients on the list of its terms. The terms of coefficient
+# j are built by stdlib's list functions (conv_terms), and the number of coefficients by conv_length,
+# both printed once before the section, since they are about lists only.
+
+CONV_LISTS = [
+    '(* The terms of coefficient j of the product of the polynomials xs and ys: the pairs (x_i, y_(j-i))',
+    '   for max(0, j - (length ys - 1)) <= i <= min(j, length xs - 1), in increasing i. The entries of xs',
+    '   from that i on, among the first j + 1, against those of ys from j - i down, the first j + 1 of ys',
+    '   reversed; combine stops at the shorter list, which is the first. *)',
+    'Definition conv_terms {A B : Type} (xs : list A) (ys : list B) (j : nat) : list (A * B) :=',
+    '  combine (skipn (j - (length ys - 1)) (firstn (S j) xs)) (rev (firstn (S j) ys)).',
+    '',
+    '(* The number of coefficients of the product: length xs + length ys - 1, none when a polynomial',
+    '   is empty. *)',
+    'Definition conv_length (nx ny : nat) : nat :=',
+    '  match nx, ny with',
+    '  | O, _ | _, O => O',
+    '  | _, _ => (nx + ny - 1)%nat',
+    '  end.']
+
+
+def conv_model(fd, kernels):
+    """A convolution: the map of the sequential order of the fold of its coefficients on the terms
+    of each coefficient."""
+    cf = kernels.folds[fd.coefficients]
+    x, y = fd.arrays
+    tx, ty = tuple_type(len(x.limbs)), tuple_type(len(y.limbs))
+    lx = f'list ({tx})' if ' ' in tx else f'list {tx}'
+    ly = f'list ({ty})' if ' ' in ty else f'list {ty}'
+    st = state_type(cf)
+    lw = f'list ({st})' if ' ' in st else f'list {st}'
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    return ['', f'(* {fd.name}: a convolution; arrays {fd.roles[x.name]} {x.name}, {fd.roles[y.name]} {y.name}; '
+                f'coefficient j is {cf.name} in the sequential order on conv_terms {xs} {ys} j; it writes '
+                f'{fd.writes[0].name}. *)',
+            f'Definition {fd.name}_conv ({xs} : {lx}) ({ys} : {ly}) : {lw} :=',
+            f'  map (fun j => {cf.name}_seq (conv_terms {xs} {ys} j)) (seq 0 (conv_length (length {xs}) (length {ys}))).']
+
+
+def conv_statement(fd, kernels):
+    """The Definition F_spec : Prop of a convolution: for all lists of valid entries of the two
+    arrays, every limb a number of the format, each coefficient satisfies, on its own terms, the
+    conclusion of the statement of the fold of its coefficients in the sequential order (Forall2 of
+    the indices of the coefficients and the coefficients)."""
+    cf = kernels.folds[fd.coefficients]
+    x, y = fd.arrays
+    st, el, txs = _fold_binders(cf)
+    section = [{'choice': 'tie_even'}.get(v, v) for v in fold_section_args([kernels[cf.step[0]]], kernels)]
+    xs, ys = f'{x.name}s', f'{y.name}s'
+    normalized = {r[1] for r in fd.requires if r[0] in ('normalized', 'canonical')}
+    hyps = []
+    for g, l in ((x, xs), (y, ys)):
+        limbs = tuple_parts(g.name, len(g.limbs))
+        valid = ([f'normalized_{len(limbs)} emin prec {" ".join(_paren(v) for v in limbs)}'] if g.name in normalized
+                 else [f'fmt emin prec {_paren(v)}' for v in limbs])
+        hyps.append(f'Forall (fun {g.name} => {" /\\ ".join(valid)}) {l}')
+    tx = tuple_type(len(x.limbs))
+    lx = f'list ({tx})' if ' ' in tx else f'list {tx}'
+    ty = tuple_type(len(y.limbs))
+    ly = f'list ({ty})' if ' ' in ty else f'list {ty}'
+    binders = f'forall ({xs} : {lx}) ({ys} : {ly}),' if lx != ly else f'forall {xs} {ys} : {lx},'
+    claims = fold_conclusion(cf, st, el, txs, indent='      ')
+    call = ' '.join([f'{fd.name}_conv'] + section + [xs, ys])
+    lines = [f'(* {fd.name}, each coefficient it writes: {fd.source or "no source given"}. Status: {fd.status}. *)',
+             f'Definition {fd.name}_spec : Prop :=',
+             f'  forall emin prec : Z, ({fd.min_precision} <= prec)%Z ->',
+             f'  {binders}']
+    lines += [f'  {h} ->' for h in hyps]
+    lines += [f'  Forall2 (fun j {st} =>',
+              f'    let {txs} := conv_terms {xs} {ys} j in',
+              '    ' + ' /\\\n    '.join(claims) + ')',
+              f'    (seq 0 (conv_length (length {xs}) (length {ys}))) ({call}).']
+    return lines
+
+
 def theory_module(path):
     """proofs/theories/A/B.v -> A.B"""
     return path[len('proofs/theories/'):-len('.v')].replace('/', '.')
@@ -1034,9 +1121,10 @@ def audit(kernels):
         lines += ['', f'Definition {k.name}_audit : {k.name}_spec := {k.name}_correct.',
                   f'Print Assumptions {k.name}_correct.']
     for fd in folds:
-        for order in ir.ORDERS:
-            if order in fd.orders:
-                name = f'{fd.name}_{ir.ORDER_SUFFIX[order]}'
-                lines += ['', f'Definition {name}_audit : {name}_spec := {name}_correct.',
-                          f'Print Assumptions {name}_correct.']
+        # A convolution has one statement, F_spec, not one per order.
+        names = [fd.name] if fd.is_conv else \
+            [f'{fd.name}_{ir.ORDER_SUFFIX[order]}' for order in ir.ORDERS if order in fd.orders]
+        for name in names:
+            lines += ['', f'Definition {name}_audit : {name}_spec := {name}_correct.',
+                      f'Print Assumptions {name}_correct.']
     return '\n'.join(lines) + '\n'

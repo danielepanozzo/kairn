@@ -1,0 +1,30 @@
+# The coefficients of the product of two polynomials of 2-limb coefficients (milestone2.md, "sum,
+# dot, axpy, convolution": conv_k; "The product of polynomials"): x of n_x coefficients and y of
+# n_y, z of n_x + n_y - 1 (none when a polynomial is empty). Coefficient j is the dot product dot_2,
+# in its sequential order, of the terms (x_i, y_(j-i)), i from max(0, j - n_y + 1) to
+# min(j, n_x - 1) in increasing order: if every coefficient is canonical, each coefficient that is
+# finite satisfies the statement of dot_2 for its own m_j terms, m_j <= min(n_x, n_y), so that the
+# exported bound of dot for min(n_x, n_y) terms covers every one. The program supplies x and y,
+# which the step only multiplies (rule R3). A convolution (architecture.md, "Convolutions"): the
+# mask finite is the and of the tests of the coefficients, and when it is false a second pass makes
+# every coefficient that is not finite the canonical NaN ("When something is not finite"). The array
+# written overlaps neither x nor y.
+fold:          conv_2
+arrays:        supplied x = x0 x1, supplied y = y0 y1
+coefficients:  dot_2
+state:         mask finite
+combine:       finite = and(finite, finite)
+orders:        sequential
+writes:        z = z0 z1
+check:         fold_finish_2
+finish:        none
+value:         x*y
+requires:      canonical x
+requires:      canonical y
+ensures:       coefficients z
+ensures:       finite_or_nan z flag=finite
+min_precision: 4
+status:        unverified
+domain:        extended
+source:        dot_2 on the terms of each coefficient
+license:       bound: published; proof: MIT

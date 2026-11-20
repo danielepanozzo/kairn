@@ -79,7 +79,18 @@ extern "C" KAIRN_OBJCODE_NOINLINE void kairn_objcode_fixups_inline() noexcept {}
     KAIRN_OBJCODE_MAP(kairn_objcode_fold_seq_float_, NAME, float, SEQ)         \
     KAIRN_OBJCODE_MAP(kairn_objcode_fold_lanes_double_, NAME, double, LANES)   \
     KAIRN_OBJCODE_MAP(kairn_objcode_fold_lanes_float_, NAME, float, LANES)
+// The convolutions have the sequential order only: two arrays of their own lengths, the arrays
+// written, the mask.
+#define KAIRN_OBJCODE_CONV_ARGS(L)                                                                   \
+    [[maybe_unused]] const L* const* in, [[maybe_unused]] std::size_t nx, [[maybe_unused]] std::size_t ny, \
+        [[maybe_unused]] L* const* w, [[maybe_unused]] bool* mo
+#define KAIRN_OBJCODE_CONV(PREFIX, NAME, L, CALL) \
+    extern "C" KAIRN_OBJCODE_NOINLINE void PREFIX##NAME(KAIRN_OBJCODE_CONV_ARGS(L)) noexcept { CALL; }
+#define KAIRN_RUNNER_CONV(NAME, ARRAYS, WRITES, SEQ)                    \
+    KAIRN_OBJCODE_CONV(kairn_objcode_fold_seq_double_, NAME, double, SEQ) \
+    KAIRN_OBJCODE_CONV(kairn_objcode_fold_seq_float_, NAME, float, SEQ)
 #include "runner_kernels.inc"
+#undef KAIRN_RUNNER_CONV
 #undef KAIRN_RUNNER_MAP
 #undef KAIRN_RUNNER_FOLD
 #undef KAIRN_RUNNER_KERNEL
