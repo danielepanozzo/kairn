@@ -33,13 +33,7 @@
      of each fold in each order (theories/FoldGuarantee.v), and the folds in the IEEE
      model, which the generator does not print yet: the models are written by hand in
      theories/IeeeFolds.v from the generated IEEE models of the kernels, with the
-     statement of the flag for each fold and order;
-   - the theorem of a real-model statement whose kernel description cannot name it yet:
-     dot_step_2, whose error entry has the form T (relative to the terms of the value).
-     The generator writes the constants of every proved kernel into
-     include/kairn/gen/bounds.hpp and has no export for that form, so the description
-     keeps the status unverified and the theorem is audited here against the generated
-     statement, as proofs/gen/Audit.v would.
+     statement of the flag for each fold and order.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -447,12 +441,6 @@ Print Assumptions mul_up_1_ieee_nonfinite.
 Print Assumptions xval_prod_nonfinite.
 Print Assumptions mul_dir_1_ieee_eq.
 Print Assumptions mul_dir_1_ieee_encloses.
-(* The step of the dot product of two limbs (theories/StepKernels.v): the generated
-   statement dot_step_2_spec of proofs/gen/Statements.v. See the head of this file for
-   why it is here and not in proofs/gen/Audit.v. *)
-Definition dot_step_2_audit : dot_step_2_spec := dot_step_2_correct.
-Print Assumptions dot_step_2_correct.
-
 (* A fold in two models (theories/FoldTransfer.v): lists only, no real number. *)
 Print Assumptions fold_seq_transfer.
 Print Assumptions fold_seq_transfer_prefix.

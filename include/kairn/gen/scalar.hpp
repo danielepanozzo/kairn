@@ -3261,7 +3261,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(float cx0, float cx1, float rx, float
 }
 
 // dot_step_2(s = (s0, s1), x = (x0, x1), y = (y0, y1)) -> t = (t0, t1)
-// the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void dot_step_2(double s0, double s1, double x0, double x1, double y0, double y1, double& t0_out, double& t1_out) noexcept {
     // (p0, p1) = mul_2_2(x0, x1, y0, y1)
     // (p0_ch, p0_cl1) = two_prod(x0, y0)

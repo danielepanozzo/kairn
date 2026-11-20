@@ -92,9 +92,7 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    not generated statements, among them those about `mul_dir_1`, whose kernel is not generated
    yet, and those about the two executions of a product, whose plain-product listings are
    written by hand, and the theorems about the folds that have no generated statement
-   ([below](#sums-and-dot-products-of-arrays)). One theorem of a generated real-model statement
-   is audited here and not in step 2: that of `dot_step_2`, whose description stays UNVERIFIED
-   until the generator can export a bound of its form.
+   ([below](#sums-and-dot-products-of-arrays)).
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the

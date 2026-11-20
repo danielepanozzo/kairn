@@ -787,12 +787,11 @@ class Rocq(unittest.TestCase):
     # bounds, and their constants): every earlier definition and statement is the same, byte for
     # byte, mul_2_2 and add_2_2 printed earlier, before dot_step_2; Audit.v is the same. Then the
     # statements of bound_dot_1 and bound_dot_2 gained m unit <= 1/2 when ok, as those of bound_sum_k.
-    # Then eight of those nine were proved (all but dot_step_2), and the eight folds: in
-    # Statements.v only the comments above their statements changed, and Audit.v lists their
-    # theorems.
+    # Then those nine were proved, and the eight folds: in Statements.v only the comments above
+    # their statements changed, and Audit.v lists their theorems.
     DIGESTS = {'Model.v': '8b9cb1e627de7342805dc3f29feaf7e5d86f931e4593902343ae09b1c2dbfc20',
-               'Statements.v': '6e9242e9e4f9594f3b9c815a585a4410ca276195c487f1419da70f3287b66856',
-               'Audit.v': 'dcf577eeb6d79051b8c5599e7e94de2a9fe54543106f84c893c9b166303f8169'}
+               'Statements.v': '51ef0dafb5efd9839866476b705b69c188c8d54cf717f41a3cf871a24876d253',
+               'Audit.v': '24ed7fe3187e0a1c3271a488e2674bd863b979d2b44ba220baec90bc49d0b7e6'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in

@@ -645,7 +645,7 @@ Definition ball_sub_2_spec : Prop :=
   normalized_2 emin prec cz0 cz1 /\
   (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x - y) - (cz0 + cz1)) <= rz).
 
-(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. Status: unverified. *)
+(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. Status: proved. *)
 Definition dot_step_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall s0 s1 x0 x1 y0 y1 : R,

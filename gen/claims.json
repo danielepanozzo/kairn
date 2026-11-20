@@ -4352,8 +4352,11 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/StepKernels.v",
+        "name": "dot_step_2_correct"
+      },
       "source": {
         "cite": "the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22",
         "license": "algorithm: published; proof: MIT"

@@ -1151,13 +1151,11 @@ class TheKernels(unittest.TestCase):
     WAVE_1 = WAVE_1_EXTENDED | WAVE_1_FINITE | WAVE_1_FULL
     # milestone2.md, "Batch kernels" (the folds' stage): the steps of the folds and the exported
     # bounds, of the finite domain; and the two finishes, with the IEEE-model statement only.
-    # Proved (StepKernels.v, BoundKernels.v, IeeeFoldFinish.v), but for dot_step_2, whose theorem
-    # is audited by hand (proofs/audit/HandAudit.v) until bounds.hpp can export an error of form T.
+    # Proved (StepKernels.v, BoundKernels.v, IeeeFoldFinish.v).
     FOLDS_FINITE = {'dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2',
                     'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2'}
     FOLDS_FINISH = {'fold_finish_1', 'fold_finish_2'}
     FOLDS = FOLDS_FINITE | FOLDS_FINISH
-    FOLDS_UNVERIFIED = {'dot_step_2'}
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -1181,12 +1179,10 @@ class TheKernels(unittest.TestCase):
         # among them (Ball2.v, Add21.v), by their real-model theorems; the full kernels and the
         # constructors, which have no real-model statement, by their IEEE-model theorems.
         # Of wave 1 of Milestone 2, every kernel is proved too, the two full scalings of a ball by
-        # their IEEE-model theorems (IeeeBallPow2.v). The kernels of the folds' stage are proved
-        # but for dot_step_2 (above).
+        # their IEEE-model theorems (IeeeBallPow2.v), and so is every kernel of the folds' stage.
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.MILESTONE1 | self.WAVE_1 | (self.FOLDS - self.FOLDS_UNVERIFIED))
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
-                         self.FOLDS_UNVERIFIED)
+                         self.MILESTONE1 | self.WAVE_1 | self.FOLDS)
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, set())
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))

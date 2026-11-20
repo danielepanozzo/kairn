@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 94 kernels, 93 are proved and 1 are **UNVERIFIED**: [`dot_step_2`](dot_step_2.md).
+All 94 kernels are proved.
 
 31 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -186,7 +186,7 @@ The kernels of the loops over arrays (the folds of Milestone 2): their steps, th
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
 | not yet called by the public headers | - | $t = \mathrm{RN}(s + x y)$ | [`dot_step_1`](dot_step_1.md) |
-| not yet called by the public headers | - | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | $\lvert t - (s + x y)\rvert \le \left(\frac{3(1 + 4u u)}{1 - 4u} + 4\right) u^2\,(\lvert s\rvert + \lvert x y\rvert) + 2\,\eta$, normalized | [`dot_step_2`](dot_step_2.md) |
 | not yet called by the public headers | - | $t = \mathrm{RN}(s + x)$; $\lvert t - (s + x)\rvert \le \frac{u}{1 + u}\,\lvert s + x\rvert$ | [`sum_entry_step_1`](sum_entry_step_1.md) |
 | not yet called by the public headers | - | $\lvert t - (s + x)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert s + x\rvert$, normalized | [`sum_entry_step_2`](sum_entry_step_2.md) |
 | not yet called by the public headers | - | $\lvert t - (s + x)\rvert \le 3\,u^2\,(\lvert s\rvert + \lvert x\rvert)$, normalized | [`sum_fast_entry_step_2`](sum_fast_entry_step_2.md) |

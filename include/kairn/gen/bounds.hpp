@@ -822,10 +822,20 @@ template <> struct ball_sub_2_full<float> {
     static constexpr bool proved = true;
 };
 
-// dot_step_2: UNVERIFIED. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2.
+// dot_step_2: proved. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2.
 template <class T> struct dot_step_2;
-template <> struct dot_step_2<double> { static constexpr bool proved = false; };
-template <> struct dot_step_2<float> { static constexpr bool proved = false; };
+template <> struct dot_step_2<double> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr double unit = 0x1.c000000000002p-104;
+    static constexpr double tiny = 0x1p-1073;
+};
+template <> struct dot_step_2<float> {
+    static constexpr bool proved = true;
+    static constexpr Form form = Form::terms;
+    static constexpr float unit = 0x1.c00004p-46f;
+    static constexpr float tiny = 0x1p-148f;
+};
 
 // eq_2_1: proved. Claims: predicate.
 template <class T> struct eq_2_1;
