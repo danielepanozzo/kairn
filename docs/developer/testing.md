@@ -376,8 +376,8 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
     below half a unit of the sum attains the bound), 0.15 to 0.33 with two (the literature's tight
     case of `add_2_2` makes a third: its error is $3u^2$ of $\lvert x+y\rvert$, a third of
     $\lvert x\rvert + \lvert y\rvert$) and up to 0.9995 for `dot_2` in `binary64` (MR22's case of
-    `mul_2_2`). In the full tier (2 000 arrays per format of the compiled folds, 2 000 sampled in
-    a toy format, every array of the enumerations): 0.83 to 1.00 with one limb, 0.11 to 0.47 for
+    `mul_2_2`). In the full tier (1 000 arrays per format and scalar runner of the compiled folds,
+    500 per packed one, 1 000 sampled in a toy format, every array of the enumerations): 0.83 to 1.00 with one limb, 0.11 to 0.47 for
     the sums of two, 0.21 to 0.9995 for `dot_2`. And of the flag (the counts of `finite_or_nan`): a true flag, a false one from an
     element that is not finite, a false one from finite elements near the overflow threshold; and
     no false flag from finite elements far from overflow (every node of any summation tree below
