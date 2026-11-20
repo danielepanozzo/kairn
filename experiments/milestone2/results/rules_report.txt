@@ -7,8 +7,8 @@ add_down_2_2            28 rounded operations, 1 steps to a neighbor,  16 compar
 add_up_1                 3 rounded operations, 1 steps to a neighbor,   7 comparisons, selects, sign and mask operations
 add_up_2_2              28 rounded operations, 1 steps to a neighbor,  15 comparisons, selects, sign and mask operations
 ball_from_interval_2    12 rounded operations, 2 steps to a neighbor,  37 comparisons, selects, sign and mask operations
-ball_mul_pow2_1          3 rounded operations, 2 steps to a neighbor,   9 comparisons, selects, sign and mask operations
-ball_mul_pow2_2          7 rounded operations, 2 steps to a neighbor,  11 comparisons, selects, sign and mask operations
+ball_mul_pow2_1          2 rounded operations, 2 steps to a neighbor,   9 comparisons, selects, sign and mask operations
+ball_mul_pow2_2          6 rounded operations, 2 steps to a neighbor,  11 comparisons, selects, sign and mask operations
 ball_split_1            12 rounded operations, 0 steps to a neighbor,  31 comparisons, selects, sign and mask operations
 ball_to_interval_1       6 rounded operations, 2 steps to a neighbor,  19 comparisons, selects, sign and mask operations
 bound_dot_1              8 rounded operations, 0 steps to a neighbor,   3 comparisons, selects, sign and mask operations
