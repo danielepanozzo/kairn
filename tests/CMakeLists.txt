@@ -500,7 +500,10 @@ set(_toy_ext_a2 fp:5:-7:0)
 #   the interval kernels" and "... two limbs and the enclosure interface"): the oracle reads neither
 #   the requirements interval and not_nan, nor the claims outward, makes_interval,
 #   encloses_interval, set_bound, interval_set, ball_of_interval, interval_of_ball and splits, nor
-#   an encloses without a ball, nor a makes_ball from the bounds of an interval, yet.
+#   an encloses without a ball, nor a makes_ball from the bounds of an interval, yet;
+# - the predicates and three-valued comparisons of the enclosure interface, of stage B2
+#   (architecture.md, "Claims of the enclosure interface: predicates and comparisons"): the oracle
+#   reads neither the claims certain and trit nor the condition abs_le of their exact_when yet.
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
@@ -513,7 +516,12 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   interval_make_1 interval_neg_1 interval_add_1 interval_sub_1 interval_mul_1 interval_add_2 ball_lower_as_1
   ball_upper_as_1 ball_lower_as_2 ball_upper_as_2 ball_from_interval_2 ball_narrow_2_1 interval_neg_2 interval_sub_2
   interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
-  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1)
+  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1
+  interval_empty_1 interval_entire_1 interval_contains_1 interval_subset_1 interval_positive_1 interval_negative_1
+  interval_zero_1 interval_less_1 interval_less_equal_1 interval_equal_1 interval_rel_equal_1 interval_rel_interior_1
+  interval_rel_disjoint_1 interval_empty_2 interval_entire_2 interval_contains_2 interval_subset_2 interval_positive_2
+  interval_negative_2 interval_zero_2 interval_less_2 interval_less_equal_2 interval_equal_2 interval_rel_equal_2
+  interval_rel_interior_2 interval_rel_disjoint_2)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
   add_1 add_1_entry add_2 add_2_entry sub_1 sub_1_entry sub_2 sub_2_entry axpy_1 axpy_1_entry axpy_2 axpy_2_entry
   axpy_2_1 axpy_2_1_entry scale_1 scale_2 mul_pow2_map_1 mul_pow2_map_2

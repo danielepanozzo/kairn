@@ -85,6 +85,15 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       an interval that encloses a ball
     ensures:       splits al au bl bu from=xl,xu
                                       two intervals that together are the interval split
+    ensures:       certain m lt 0 x x=xl,xu [exact | exact_when=abs_le(EXPR,omega)]
+                                      a predicate of sets (intervals or balls, as the requirements
+                                      say): the mask is true only if the relation holds (lt, le,
+                                      eq of every choice of members, or member, subset, equal,
+                                      interior, disjoint, empty, entire); exact: and whenever it
+                                      holds
+    ensures:       trit yes no lt x y x=xl,xu y=yl,yu [exact | exact_when=...]
+                                      a three-valued comparison: yes only if the relation holds for
+                                      every choice of members, no only if it fails for every one
     min_precision: 3                  optional
     theorem:       proofs/theories/Add22.v add_2_2_correct
     source:        free text
@@ -464,7 +473,7 @@ IEEE_THEOREM_NAMES = {'ieee_bridge_theorem': '{}_ieee_bridge', 'ieee_spec_theore
 # real-model statement (Kernel.real_model). The interval kinds of Milestone 2 are among them: an
 # interval has infinite bounds as ordinary values, so its kernels are stated in the IEEE model only.
 NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball', 'finite_or_nan', 'makes_interval', 'encloses_interval',
-                   'set_bound', 'interval_set', 'ball_of_interval', 'interval_of_ball', 'splits')
+                   'set_bound', 'interval_set', 'ball_of_interval', 'interval_of_ball', 'splits', 'certain', 'trit')
 
 INPUT_CLASSES = ('stored', 'supplied')   # rule R3: where an entry kernel's input comes from
 
@@ -504,13 +513,17 @@ ZERO_CONDITION = 'zero'
 
 def _exact_when(text, where):
     """zero_or_abs_gt(EXPR,K);zero_or_abs_ge(EXPR,K);zero(EXPR) as
-    [{'zero_or_abs_gt': EXPR, 'than': K}, ..., {'zero': EXPR}]."""
+    [{'zero_or_abs_gt': EXPR, 'than': K}, ..., {'zero': EXPR}]; and abs_le(EXPR,omega), |EXPR| <=
+    Omega, as {'abs_le': EXPR, 'omega': True} (a condition of certain and trit only: rules.py)."""
     out = []
     for part in text.split(';'):
         m = re.fullmatch(r'([a-z_]+)\((.+)\)', part)
         args = _arguments(m.group(2), where) if m else []
         if m and m.group(1) == ZERO_CONDITION and len(args) == 1 and args[0]:
             out.append({ZERO_CONDITION: args[0]})
+            continue
+        if m and m.group(1) == 'abs_le' and len(args) == 2 and args[0] and args[1] == 'omega':
+            out.append({'abs_le': args[0], 'omega': True})
             continue
         if not m or m.group(1) not in EXACT_CONDITIONS or len(args) != 2 or not all(args):
             raise DescriptionError(f'{where}: a condition of exact_when is zero_or_abs_gt(EXPR,K), '
@@ -562,6 +575,26 @@ def _tight(text, where):
         out[key] = val
     if kind == 'outward' and ('rel' not in out or 'abs' not in out):
         raise DescriptionError(f'{where}: tight=outward needs rel= and abs=')
+    return out
+
+
+# The relations of the predicates of sets, certain and trit (Milestone 2, the enclosure interface),
+# and their number of arguments: empty and entire take one set, the others two arguments.
+SET_RELATION_ARITY = {'empty': 1, 'entire': 1, 'member': 2, 'subset': 2, 'equal': 2, 'interior': 2,
+                      'disjoint': 2, 'lt': 2, 'le': 2, 'eq': 2}
+
+
+def _set_kinds(e, k):
+    """A certain or trit entry with its sets named as what the requirements say they are: the
+    bounds of an interval ("intervals", NAME: {lower, upper}) or a ball ("balls", NAME: {center,
+    radius}). The sets of an entry are of one kind; a set that is neither is written as an interval,
+    which rules.py then refuses for want of its requirement."""
+    sets = e.pop('sets')
+    balls = bool(sets) and all(('ball', s['a'], s['b']) in k.requires for s in sets.values())
+    key, names = ('balls', ('center', 'radius')) if balls else ('intervals', ('lower', 'upper'))
+    out = {x: v for x, v in e.items() if x not in ('exact', 'exact_when')}
+    out[key] = {x: {names[0]: s['a'], names[1]: s['b']} for x, s in sets.items()}
+    out.update({x: v for x, v in e.items() if x in ('exact', 'exact_when')})
     return out
 
 
@@ -780,6 +813,40 @@ def _ensures(words, where):
             raise DescriptionError(f'{where}: expected "splits AL AU BL BU from=LOWER,UPPER"')
         return {'kind': kind, 'parts': [{'lower': words[1], 'upper': words[2]}, {'lower': words[3], 'upper': words[4]}],
                 'from': {'lower': m.group(1), 'upper': m.group(2)}}
+    if kind in ('certain', 'trit') and len(words) >= 4:
+        # certain MASK REL ARG... NAME=A,B ... [exact | exact_when=CONDITIONS]
+        # trit YES NO REL ARG ARG NAME=A,B ... [exact | exact_when=CONDITIONS]
+        # A predicate of sets of real numbers, intervals or balls (Milestone 2, the enclosure
+        # interface). The sets are written NAME=A,B as elsewhere; parse_kernel says, from the
+        # requirements, whether they are intervals or balls (_set_kinds).
+        masks = words[1:3] if kind == 'trit' else words[1:2]
+        rest = words[1 + len(masks):]
+        if not rest:
+            raise DescriptionError(f'{where}: a {kind} entry needs a relation')
+        rel = rest[0]
+        n = SET_RELATION_ARITY.get(rel, 2)
+        args, tail = rest[1:1 + n], rest[1 + n:]
+        if len(args) != n:
+            raise DescriptionError(f'{where}: {kind} {rel} has {n} argument{"s" if n > 1 else ""}')
+        pairs, exact = [], None
+        for w in tail:
+            if w == 'exact' and exact is None:
+                exact = True
+            elif w.startswith('exact_when=') and exact is None:
+                exact = _exact_when(w[len('exact_when='):], where)
+            else:
+                pairs.append(w)
+        entry = {'kind': kind}
+        if kind == 'trit':
+            entry.update(yes=masks[0], no=masks[1])
+        else:
+            entry['of'] = masks[0]
+        entry.update(rel=rel, args=args, sets=_pairs(pairs, where, 'set', ('a', 'b')))
+        if exact is True:
+            entry['exact'] = True
+        elif exact is not None:
+            entry['exact_when'] = exact
+        return entry
     if kind == 'predicate' and len(words) == 5:
         return {'kind': kind, 'of': words[1], 'rel': words[2], 'args': words[3:5]}
     if kind == 'encloses' and len(words) >= 4:
@@ -949,6 +1016,9 @@ def parse_kernel(text, path):
         for e in k.ensures:
             if e['kind'] == 'encloses':
                 e.setdefault('finite_when', [])
+    for i, e in enumerate(k.ensures):
+        if e['kind'] in ('certain', 'trit'):
+            k.ensures[i] = _set_kinds(e, k)
     if not KERNEL_NAME.match(k.name):
         raise DescriptionError(f'{path}: bad kernel name {k.name!r}')
     if not k.inputs or not k.outputs:

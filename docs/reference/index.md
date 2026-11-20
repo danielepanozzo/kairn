@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 147 kernels are proved.
+Of the 173 kernels, 147 are proved and 26 are **UNVERIFIED**: [`interval_contains_1`](interval_contains_1.md), [`interval_contains_2`](interval_contains_2.md), [`interval_empty_1`](interval_empty_1.md), [`interval_empty_2`](interval_empty_2.md), [`interval_entire_1`](interval_entire_1.md), [`interval_entire_2`](interval_entire_2.md), [`interval_equal_1`](interval_equal_1.md), [`interval_equal_2`](interval_equal_2.md), [`interval_less_1`](interval_less_1.md), [`interval_less_2`](interval_less_2.md), [`interval_less_equal_1`](interval_less_equal_1.md), [`interval_less_equal_2`](interval_less_equal_2.md), [`interval_negative_1`](interval_negative_1.md), [`interval_negative_2`](interval_negative_2.md), [`interval_positive_1`](interval_positive_1.md), [`interval_positive_2`](interval_positive_2.md), [`interval_rel_disjoint_1`](interval_rel_disjoint_1.md), [`interval_rel_disjoint_2`](interval_rel_disjoint_2.md), [`interval_rel_equal_1`](interval_rel_equal_1.md), [`interval_rel_equal_2`](interval_rel_equal_2.md), [`interval_rel_interior_1`](interval_rel_interior_1.md), [`interval_rel_interior_2`](interval_rel_interior_2.md), [`interval_subset_1`](interval_subset_1.md), [`interval_subset_2`](interval_subset_2.md), [`interval_zero_1`](interval_zero_1.md), [`interval_zero_2`](interval_zero_2.md).
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -185,6 +185,32 @@ Arithmetic on intervals of numbers of `T` and of two limbs: the result contains 
 | not yet called by the public headers | - | the midpoint and radius, the values of IEEE 1788 when unbounded or empty | [`interval_mid_rad_1`](interval_mid_rad_1.md) |
 | not yet called by the public headers | - | a canonical ball that contains the interval; the whole line when it is unbounded | [`interval_to_ball_1`](interval_to_ball_1.md) |
 | not yet called by the public headers | - | two intervals that together are the operand, split at a point of it | [`interval_split_1`](interval_split_1.md) |
+| not yet called by the public headers | - | whether $X = \emptyset$; exact | [`interval_empty_1`](interval_empty_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X = \mathbb{R}$; exact | [`interval_entire_1`](interval_entire_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $t \in X$; exact | [`interval_contains_1`](interval_contains_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \subseteq Y$; exact | [`interval_subset_1`](interval_subset_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`interval_positive_1`](interval_positive_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`interval_negative_1`](interval_negative_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`interval_zero_1`](interval_zero_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; exact | [`interval_less_1`](interval_less_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; exact | [`interval_less_equal_1`](interval_less_equal_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; exact | [`interval_equal_1`](interval_equal_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X = Y$; exact | [`interval_rel_equal_1`](interval_rel_equal_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \subseteq \operatorname{int} Y$; exact | [`interval_rel_interior_1`](interval_rel_interior_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \cap Y = \emptyset$; exact | [`interval_rel_disjoint_1`](interval_rel_disjoint_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X = \emptyset$; exact | [`interval_empty_2`](interval_empty_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X = \mathbb{R}$; exact | [`interval_entire_2`](interval_entire_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $t = t_0 + t_1 \in X$; exact | [`interval_contains_2`](interval_contains_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \subseteq Y$; exact | [`interval_subset_2`](interval_subset_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } 0 < x \text{ for every } x \in X$; exact | [`interval_positive_2`](interval_positive_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x < 0 \text{ for every } x \in X$; exact | [`interval_negative_2`](interval_negative_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \ne \emptyset \text{ and } x = 0 \text{ for every } x \in X$; exact | [`interval_zero_2`](interval_zero_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x < y \text{ for every } x \in X, y \in Y$; exact | [`interval_less_2`](interval_less_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x \le y \text{ for every } x \in X, y \in Y$; exact | [`interval_less_equal_2`](interval_less_equal_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | yes, no or unknown: whether $X \ne \emptyset, Y \ne \emptyset \text{ and } x = y \text{ for every } x \in X, y \in Y$; exact | [`interval_equal_2`](interval_equal_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X = Y$; exact | [`interval_rel_equal_2`](interval_rel_equal_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \subseteq \operatorname{int} Y$; exact | [`interval_rel_interior_2`](interval_rel_interior_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | whether $X \cap Y = \emptyset$; exact | [`interval_rel_disjoint_2`](interval_rel_disjoint_2.md) **UNVERIFIED** |
 
 ## Building blocks on T
 

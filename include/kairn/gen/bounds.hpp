@@ -421,6 +421,26 @@ template <> struct interval_add_1<float> {
     static constexpr bool proved = true;
 };
 
+// interval_contains_1: UNVERIFIED. Claims: certain.
+template <class T> struct interval_contains_1;
+template <> struct interval_contains_1<double> { static constexpr bool proved = false; };
+template <> struct interval_contains_1<float> { static constexpr bool proved = false; };
+
+// interval_empty_1: UNVERIFIED. Claims: certain.
+template <class T> struct interval_empty_1;
+template <> struct interval_empty_1<double> { static constexpr bool proved = false; };
+template <> struct interval_empty_1<float> { static constexpr bool proved = false; };
+
+// interval_entire_1: UNVERIFIED. Claims: certain.
+template <class T> struct interval_entire_1;
+template <> struct interval_entire_1<double> { static constexpr bool proved = false; };
+template <> struct interval_entire_1<float> { static constexpr bool proved = false; };
+
+// interval_equal_1: UNVERIFIED. Claims: trit.
+template <class T> struct interval_equal_1;
+template <> struct interval_equal_1<double> { static constexpr bool proved = false; };
+template <> struct interval_equal_1<float> { static constexpr bool proved = false; };
+
 // interval_hull_1: proved. Claims: interval_set.
 template <class T> struct interval_hull_1;
 template <> struct interval_hull_1<double> {
@@ -438,6 +458,16 @@ template <> struct interval_intersection_1<double> {
 template <> struct interval_intersection_1<float> {
     static constexpr bool proved = true;
 };
+
+// interval_less_1: UNVERIFIED. Claims: trit.
+template <class T> struct interval_less_1;
+template <> struct interval_less_1<double> { static constexpr bool proved = false; };
+template <> struct interval_less_1<float> { static constexpr bool proved = false; };
+
+// interval_less_equal_1: UNVERIFIED. Claims: trit.
+template <class T> struct interval_less_equal_1;
+template <> struct interval_less_equal_1<double> { static constexpr bool proved = false; };
+template <> struct interval_less_equal_1<float> { static constexpr bool proved = false; };
 
 // interval_make_1: proved. Claims: makes_interval.
 template <class T> struct interval_make_1;
@@ -512,6 +542,31 @@ template <> struct interval_neg_1<float> {
     static constexpr bool proved = true;
 };
 
+// interval_negative_1: UNVERIFIED. Claims: certain.
+template <class T> struct interval_negative_1;
+template <> struct interval_negative_1<double> { static constexpr bool proved = false; };
+template <> struct interval_negative_1<float> { static constexpr bool proved = false; };
+
+// interval_positive_1: UNVERIFIED. Claims: certain.
+template <class T> struct interval_positive_1;
+template <> struct interval_positive_1<double> { static constexpr bool proved = false; };
+template <> struct interval_positive_1<float> { static constexpr bool proved = false; };
+
+// interval_rel_disjoint_1: UNVERIFIED. Claims: certain.
+template <class T> struct interval_rel_disjoint_1;
+template <> struct interval_rel_disjoint_1<double> { static constexpr bool proved = false; };
+template <> struct interval_rel_disjoint_1<float> { static constexpr bool proved = false; };
+
+// interval_rel_equal_1: UNVERIFIED. Claims: certain.
+template <class T> struct interval_rel_equal_1;
+template <> struct interval_rel_equal_1<double> { static constexpr bool proved = false; };
+template <> struct interval_rel_equal_1<float> { static constexpr bool proved = false; };
+
+// interval_rel_interior_1: UNVERIFIED. Claims: certain.
+template <class T> struct interval_rel_interior_1;
+template <> struct interval_rel_interior_1<double> { static constexpr bool proved = false; };
+template <> struct interval_rel_interior_1<float> { static constexpr bool proved = false; };
+
 // interval_split_1: proved. Claims: splits.
 template <class T> struct interval_split_1;
 template <> struct interval_split_1<double> {
@@ -530,6 +585,11 @@ template <> struct interval_sub_1<float> {
     static constexpr bool proved = true;
 };
 
+// interval_subset_1: UNVERIFIED. Claims: certain.
+template <class T> struct interval_subset_1;
+template <> struct interval_subset_1<double> { static constexpr bool proved = false; };
+template <> struct interval_subset_1<float> { static constexpr bool proved = false; };
+
 // interval_to_ball_1: proved. Claims: ball_of_interval.
 template <class T> struct interval_to_ball_1;
 template <> struct interval_to_ball_1<double> {
@@ -538,6 +598,11 @@ template <> struct interval_to_ball_1<double> {
 template <> struct interval_to_ball_1<float> {
     static constexpr bool proved = true;
 };
+
+// interval_zero_1: UNVERIFIED. Claims: certain.
+template <class T> struct interval_zero_1;
+template <> struct interval_zero_1<double> { static constexpr bool proved = false; };
+template <> struct interval_zero_1<float> { static constexpr bool proved = false; };
 
 // make_2: proved. Claims: represents.
 template <class T> struct make_2;
@@ -1333,6 +1398,30 @@ template <> struct interval_add_2<float> {
     static constexpr bool proved = true;
 };
 
+// le_2_2: proved. Claims: predicate.
+template <class T> struct le_2_2;
+template <> struct le_2_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct le_2_2<float> {
+    static constexpr bool proved = true;
+};
+
+// interval_contains_2: UNVERIFIED. Claims: certain.
+template <class T> struct interval_contains_2;
+template <> struct interval_contains_2<double> { static constexpr bool proved = false; };
+template <> struct interval_contains_2<float> { static constexpr bool proved = false; };
+
+// interval_empty_2: UNVERIFIED. Claims: certain.
+template <class T> struct interval_empty_2;
+template <> struct interval_empty_2<double> { static constexpr bool proved = false; };
+template <> struct interval_empty_2<float> { static constexpr bool proved = false; };
+
+// interval_entire_2: UNVERIFIED. Claims: certain.
+template <class T> struct interval_entire_2;
+template <> struct interval_entire_2<double> { static constexpr bool proved = false; };
+template <> struct interval_entire_2<float> { static constexpr bool proved = false; };
+
 // lt_2_2: proved. Claims: predicate.
 template <class T> struct lt_2_2;
 template <> struct lt_2_2<double> {
@@ -1342,21 +1431,17 @@ template <> struct lt_2_2<float> {
     static constexpr bool proved = true;
 };
 
+// interval_equal_2: UNVERIFIED. Claims: trit.
+template <class T> struct interval_equal_2;
+template <> struct interval_equal_2<double> { static constexpr bool proved = false; };
+template <> struct interval_equal_2<float> { static constexpr bool proved = false; };
+
 // interval_hull_2: proved. Claims: interval_set.
 template <class T> struct interval_hull_2;
 template <> struct interval_hull_2<double> {
     static constexpr bool proved = true;
 };
 template <> struct interval_hull_2<float> {
-    static constexpr bool proved = true;
-};
-
-// le_2_2: proved. Claims: predicate.
-template <class T> struct le_2_2;
-template <> struct le_2_2<double> {
-    static constexpr bool proved = true;
-};
-template <> struct le_2_2<float> {
     static constexpr bool proved = true;
 };
 
@@ -1368,6 +1453,16 @@ template <> struct interval_intersection_2<double> {
 template <> struct interval_intersection_2<float> {
     static constexpr bool proved = true;
 };
+
+// interval_less_2: UNVERIFIED. Claims: trit.
+template <class T> struct interval_less_2;
+template <> struct interval_less_2<double> { static constexpr bool proved = false; };
+template <> struct interval_less_2<float> { static constexpr bool proved = false; };
+
+// interval_less_equal_2: UNVERIFIED. Claims: trit.
+template <class T> struct interval_less_equal_2;
+template <> struct interval_less_equal_2<double> { static constexpr bool proved = false; };
+template <> struct interval_less_equal_2<float> { static constexpr bool proved = false; };
 
 // interval_make_2: proved. Claims: makes_interval.
 template <class T> struct interval_make_2;
@@ -1433,6 +1528,31 @@ template <> struct interval_neg_2<float> {
     static constexpr bool proved = true;
 };
 
+// interval_negative_2: UNVERIFIED. Claims: certain.
+template <class T> struct interval_negative_2;
+template <> struct interval_negative_2<double> { static constexpr bool proved = false; };
+template <> struct interval_negative_2<float> { static constexpr bool proved = false; };
+
+// interval_positive_2: UNVERIFIED. Claims: certain.
+template <class T> struct interval_positive_2;
+template <> struct interval_positive_2<double> { static constexpr bool proved = false; };
+template <> struct interval_positive_2<float> { static constexpr bool proved = false; };
+
+// interval_rel_disjoint_2: UNVERIFIED. Claims: certain.
+template <class T> struct interval_rel_disjoint_2;
+template <> struct interval_rel_disjoint_2<double> { static constexpr bool proved = false; };
+template <> struct interval_rel_disjoint_2<float> { static constexpr bool proved = false; };
+
+// interval_rel_equal_2: UNVERIFIED. Claims: certain.
+template <class T> struct interval_rel_equal_2;
+template <> struct interval_rel_equal_2<double> { static constexpr bool proved = false; };
+template <> struct interval_rel_equal_2<float> { static constexpr bool proved = false; };
+
+// interval_rel_interior_2: UNVERIFIED. Claims: certain.
+template <class T> struct interval_rel_interior_2;
+template <> struct interval_rel_interior_2<double> { static constexpr bool proved = false; };
+template <> struct interval_rel_interior_2<float> { static constexpr bool proved = false; };
+
 // sub_down_2_2: proved. Claims: normalized; outward.
 template <class T> struct sub_down_2_2;
 template <> struct sub_down_2_2<double> {
@@ -1459,6 +1579,16 @@ template <> struct interval_sub_2<double> {
 template <> struct interval_sub_2<float> {
     static constexpr bool proved = true;
 };
+
+// interval_subset_2: UNVERIFIED. Claims: certain.
+template <class T> struct interval_subset_2;
+template <> struct interval_subset_2<double> { static constexpr bool proved = false; };
+template <> struct interval_subset_2<float> { static constexpr bool proved = false; };
+
+// interval_zero_2: UNVERIFIED. Claims: certain.
+template <class T> struct interval_zero_2;
+template <> struct interval_zero_2<double> { static constexpr bool proved = false; };
+template <> struct interval_zero_2<float> { static constexpr bool proved = false; };
 
 // le_1_2: proved. Claims: predicate.
 template <class T> struct le_1_2;

@@ -255,11 +255,11 @@ Print Assumptions eq_2_1_correct.
 Definition eq_2_2_audit : eq_2_2_spec := eq_2_2_correct.
 Print Assumptions eq_2_2_correct.
 
-Definition lt_2_2_audit : lt_2_2_spec := lt_2_2_correct.
-Print Assumptions lt_2_2_correct.
-
 Definition le_2_2_audit : le_2_2_spec := le_2_2_correct.
 Print Assumptions le_2_2_correct.
+
+Definition lt_2_2_audit : lt_2_2_spec := lt_2_2_correct.
+Print Assumptions lt_2_2_correct.
 
 Definition mul_ball_2_2_audit : mul_ball_2_2_spec := mul_ball_2_2_correct.
 Print Assumptions mul_ball_2_2_correct.

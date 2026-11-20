@@ -1323,6 +1323,86 @@ KAIRN_GEN_FORCEINLINE void interval_add_1(__m256 xl, __m256 xu, __m256 yl, __m25
     zu_out = zu;
 }
 
+// interval_contains_1(xl, xu, t) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_contains_1(__m256d xl, __m256d xu, __m256d t, __m256d& m_out) noexcept {
+    const __m256d a = _mm256_cmp_pd(xl, t, _CMP_LE_OQ);
+    const __m256d b = _mm256_cmp_pd(t, xu, _CMP_LE_OQ);
+    const __m256d ta = _mm256_andnot_pd(_mm256_set1_pd(-0.0), t);
+    const __m256d ft = _mm256_cmp_pd(ta, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ab = _mm256_and_pd(a, b);
+    const __m256d m = _mm256_and_pd(ab, ft);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_contains_1(__m256 xl, __m256 xu, __m256 t, __m256& m_out) noexcept {
+    const __m256 a = _mm256_cmp_ps(xl, t, _CMP_LE_OQ);
+    const __m256 b = _mm256_cmp_ps(t, xu, _CMP_LE_OQ);
+    const __m256 ta = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), t);
+    const __m256 ft = _mm256_cmp_ps(ta, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ab = _mm256_and_ps(a, b);
+    const __m256 m = _mm256_and_ps(ab, ft);
+    m_out = m;
+}
+
+// interval_empty_1(xl, xu) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_empty_1(__m256d xl, [[maybe_unused]] __m256d xu, __m256d& m_out) noexcept {
+    const __m256d m = _mm256_cmp_pd(xl, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_empty_1(__m256 xl, [[maybe_unused]] __m256 xu, __m256& m_out) noexcept {
+    const __m256 m = _mm256_cmp_ps(xl, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    m_out = m;
+}
+
+// interval_entire_1(xl, xu) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_entire_1(__m256d xl, __m256d xu, __m256d& m_out) noexcept {
+    const __m256d mi = _mm256_xor_pd(_mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_set1_pd(-0.0));
+    const __m256d a = _mm256_cmp_pd(xl, mi, _CMP_EQ_OQ);
+    const __m256d b = _mm256_cmp_pd(xu, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    const __m256d m = _mm256_and_pd(a, b);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_entire_1(__m256 xl, __m256 xu, __m256& m_out) noexcept {
+    const __m256 mi = _mm256_xor_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_set1_ps(-0.0f));
+    const __m256 a = _mm256_cmp_ps(xl, mi, _CMP_EQ_OQ);
+    const __m256 b = _mm256_cmp_ps(xu, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    const __m256 m = _mm256_and_ps(a, b);
+    m_out = m;
+}
+
+// interval_equal_1(xl, xu, yl, yu) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void interval_equal_1(__m256d xl, __m256d xu, __m256d yl, __m256d yu, __m256d& yes_out, __m256d& no_out) noexcept {
+    const __m256d ea = _mm256_cmp_pd(xl, xu, _CMP_EQ_OQ);
+    const __m256d eb = _mm256_cmp_pd(xu, yl, _CMP_EQ_OQ);
+    const __m256d ec = _mm256_cmp_pd(yl, yu, _CMP_EQ_OQ);
+    const __m256d eab = _mm256_and_pd(ea, eb);
+    const __m256d yes = _mm256_and_pd(eab, ec);
+    const __m256d nx = _mm256_cmp_pd(xl, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ny = _mm256_cmp_pd(yl, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ne = _mm256_and_pd(nx, ny);
+    const __m256d da = _mm256_cmp_pd(xu, yl, _CMP_LT_OQ);
+    const __m256d db = _mm256_cmp_pd(yu, xl, _CMP_LT_OQ);
+    const __m256d dd = _mm256_or_pd(da, db);
+    const __m256d no = _mm256_and_pd(dd, ne);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void interval_equal_1(__m256 xl, __m256 xu, __m256 yl, __m256 yu, __m256& yes_out, __m256& no_out) noexcept {
+    const __m256 ea = _mm256_cmp_ps(xl, xu, _CMP_EQ_OQ);
+    const __m256 eb = _mm256_cmp_ps(xu, yl, _CMP_EQ_OQ);
+    const __m256 ec = _mm256_cmp_ps(yl, yu, _CMP_EQ_OQ);
+    const __m256 eab = _mm256_and_ps(ea, eb);
+    const __m256 yes = _mm256_and_ps(eab, ec);
+    const __m256 nx = _mm256_cmp_ps(xl, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ny = _mm256_cmp_ps(yl, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ne = _mm256_and_ps(nx, ny);
+    const __m256 da = _mm256_cmp_ps(xu, yl, _CMP_LT_OQ);
+    const __m256 db = _mm256_cmp_ps(yu, xl, _CMP_LT_OQ);
+    const __m256 dd = _mm256_or_ps(da, db);
+    const __m256 no = _mm256_and_ps(dd, ne);
+    yes_out = yes;
+    no_out = no;
+}
+
 // interval_hull_1(xl, xu, yl, yu) -> zl, zu
 KAIRN_GEN_FORCEINLINE void interval_hull_1(__m256d xl, __m256d xu, __m256d yl, __m256d yu, __m256d& zl_out, __m256d& zu_out) noexcept {
     const __m256d ml = _mm256_cmp_pd(yl, xl, _CMP_LT_OQ);
@@ -1365,6 +1445,54 @@ KAIRN_GEN_FORCEINLINE void interval_intersection_1(__m256 xl, __m256 xu, __m256 
     const __m256 zu = _mm256_blendv_ps(mi, h, ok);
     zl_out = zl;
     zu_out = zu;
+}
+
+// interval_less_1(xl, xu, yl, yu) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void interval_less_1(__m256d xl, __m256d xu, __m256d yl, __m256d yu, __m256d& yes_out, __m256d& no_out) noexcept {
+    const __m256d nx = _mm256_cmp_pd(xl, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ny = _mm256_cmp_pd(yl, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ne = _mm256_and_pd(nx, ny);
+    const __m256d a = _mm256_cmp_pd(xu, yl, _CMP_LT_OQ);
+    const __m256d c = _mm256_cmp_pd(yu, xl, _CMP_LE_OQ);
+    const __m256d yes = _mm256_and_pd(a, ne);
+    const __m256d no = _mm256_and_pd(c, ne);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void interval_less_1(__m256 xl, __m256 xu, __m256 yl, __m256 yu, __m256& yes_out, __m256& no_out) noexcept {
+    const __m256 nx = _mm256_cmp_ps(xl, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ny = _mm256_cmp_ps(yl, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ne = _mm256_and_ps(nx, ny);
+    const __m256 a = _mm256_cmp_ps(xu, yl, _CMP_LT_OQ);
+    const __m256 c = _mm256_cmp_ps(yu, xl, _CMP_LE_OQ);
+    const __m256 yes = _mm256_and_ps(a, ne);
+    const __m256 no = _mm256_and_ps(c, ne);
+    yes_out = yes;
+    no_out = no;
+}
+
+// interval_less_equal_1(xl, xu, yl, yu) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void interval_less_equal_1(__m256d xl, __m256d xu, __m256d yl, __m256d yu, __m256d& yes_out, __m256d& no_out) noexcept {
+    const __m256d nx = _mm256_cmp_pd(xl, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ny = _mm256_cmp_pd(yl, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ne = _mm256_and_pd(nx, ny);
+    const __m256d a = _mm256_cmp_pd(xu, yl, _CMP_LE_OQ);
+    const __m256d c = _mm256_cmp_pd(yu, xl, _CMP_LT_OQ);
+    const __m256d yes = _mm256_and_pd(a, ne);
+    const __m256d no = _mm256_and_pd(c, ne);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void interval_less_equal_1(__m256 xl, __m256 xu, __m256 yl, __m256 yu, __m256& yes_out, __m256& no_out) noexcept {
+    const __m256 nx = _mm256_cmp_ps(xl, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ny = _mm256_cmp_ps(yl, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ne = _mm256_and_ps(nx, ny);
+    const __m256 a = _mm256_cmp_ps(xu, yl, _CMP_LE_OQ);
+    const __m256 c = _mm256_cmp_ps(yu, xl, _CMP_LT_OQ);
+    const __m256 yes = _mm256_and_ps(a, ne);
+    const __m256 no = _mm256_and_ps(c, ne);
+    yes_out = yes;
+    no_out = no;
 }
 
 // interval_make_1(lo, hi) -> zl, zu
@@ -1859,6 +1987,108 @@ KAIRN_GEN_FORCEINLINE void interval_neg_1(__m256 xl, __m256 xu, __m256& zl_out, 
     zu_out = zu;
 }
 
+// interval_negative_1(xl, xu) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_negative_1([[maybe_unused]] __m256d xl, __m256d xu, __m256d& m_out) noexcept {
+    const __m256d mi = _mm256_xor_pd(_mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_set1_pd(-0.0));
+    const __m256d a = _mm256_cmp_pd(xu, _mm256_setzero_pd(), _CMP_LT_OQ);
+    const __m256d b = _mm256_cmp_pd(mi, xu, _CMP_LT_OQ);
+    const __m256d m = _mm256_and_pd(a, b);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_negative_1([[maybe_unused]] __m256 xl, __m256 xu, __m256& m_out) noexcept {
+    const __m256 mi = _mm256_xor_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_set1_ps(-0.0f));
+    const __m256 a = _mm256_cmp_ps(xu, _mm256_setzero_ps(), _CMP_LT_OQ);
+    const __m256 b = _mm256_cmp_ps(mi, xu, _CMP_LT_OQ);
+    const __m256 m = _mm256_and_ps(a, b);
+    m_out = m;
+}
+
+// interval_positive_1(xl, xu) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_positive_1(__m256d xl, [[maybe_unused]] __m256d xu, __m256d& m_out) noexcept {
+    const __m256d a = _mm256_cmp_pd(_mm256_setzero_pd(), xl, _CMP_LT_OQ);
+    const __m256d b = _mm256_cmp_pd(xl, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d m = _mm256_and_pd(a, b);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_positive_1(__m256 xl, [[maybe_unused]] __m256 xu, __m256& m_out) noexcept {
+    const __m256 a = _mm256_cmp_ps(_mm256_setzero_ps(), xl, _CMP_LT_OQ);
+    const __m256 b = _mm256_cmp_ps(xl, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 m = _mm256_and_ps(a, b);
+    m_out = m;
+}
+
+// interval_rel_disjoint_1(xl, xu, yl, yu) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_rel_disjoint_1(__m256d xl, __m256d xu, __m256d yl, __m256d yu, __m256d& m_out) noexcept {
+    const __m256d ex = _mm256_cmp_pd(xl, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    const __m256d ey = _mm256_cmp_pd(yl, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    const __m256d ee = _mm256_or_pd(ex, ey);
+    const __m256d da = _mm256_cmp_pd(xu, yl, _CMP_LT_OQ);
+    const __m256d db = _mm256_cmp_pd(yu, xl, _CMP_LT_OQ);
+    const __m256d dd = _mm256_or_pd(da, db);
+    const __m256d m = _mm256_or_pd(ee, dd);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_rel_disjoint_1(__m256 xl, __m256 xu, __m256 yl, __m256 yu, __m256& m_out) noexcept {
+    const __m256 ex = _mm256_cmp_ps(xl, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    const __m256 ey = _mm256_cmp_ps(yl, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    const __m256 ee = _mm256_or_ps(ex, ey);
+    const __m256 da = _mm256_cmp_ps(xu, yl, _CMP_LT_OQ);
+    const __m256 db = _mm256_cmp_ps(yu, xl, _CMP_LT_OQ);
+    const __m256 dd = _mm256_or_ps(da, db);
+    const __m256 m = _mm256_or_ps(ee, dd);
+    m_out = m;
+}
+
+// interval_rel_equal_1(xl, xu, yl, yu) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_rel_equal_1(__m256d xl, __m256d xu, __m256d yl, __m256d yu, __m256d& m_out) noexcept {
+    const __m256d a = _mm256_cmp_pd(xl, yl, _CMP_EQ_OQ);
+    const __m256d c = _mm256_cmp_pd(xu, yu, _CMP_EQ_OQ);
+    const __m256d m = _mm256_and_pd(a, c);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_rel_equal_1(__m256 xl, __m256 xu, __m256 yl, __m256 yu, __m256& m_out) noexcept {
+    const __m256 a = _mm256_cmp_ps(xl, yl, _CMP_EQ_OQ);
+    const __m256 c = _mm256_cmp_ps(xu, yu, _CMP_EQ_OQ);
+    const __m256 m = _mm256_and_ps(a, c);
+    m_out = m;
+}
+
+// interval_rel_interior_1(xl, xu, yl, yu) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_rel_interior_1(__m256d xl, __m256d xu, __m256d yl, __m256d yu, __m256d& m_out) noexcept {
+    const __m256d ex = _mm256_cmp_pd(xl, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    const __m256d mi = _mm256_xor_pd(_mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_set1_pd(-0.0));
+    const __m256d la = _mm256_cmp_pd(yl, xl, _CMP_LT_OQ);
+    const __m256d lb = _mm256_cmp_pd(yl, mi, _CMP_EQ_OQ);
+    const __m256d lc = _mm256_cmp_pd(xl, mi, _CMP_EQ_OQ);
+    const __m256d ld = _mm256_and_pd(lb, lc);
+    const __m256d lo = _mm256_or_pd(la, ld);
+    const __m256d ua = _mm256_cmp_pd(xu, yu, _CMP_LT_OQ);
+    const __m256d ub = _mm256_cmp_pd(xu, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    const __m256d uc = _mm256_cmp_pd(yu, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    const __m256d ud = _mm256_and_pd(ub, uc);
+    const __m256d hi = _mm256_or_pd(ua, ud);
+    const __m256d lu = _mm256_and_pd(lo, hi);
+    const __m256d m = _mm256_or_pd(ex, lu);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_rel_interior_1(__m256 xl, __m256 xu, __m256 yl, __m256 yu, __m256& m_out) noexcept {
+    const __m256 ex = _mm256_cmp_ps(xl, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    const __m256 mi = _mm256_xor_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_set1_ps(-0.0f));
+    const __m256 la = _mm256_cmp_ps(yl, xl, _CMP_LT_OQ);
+    const __m256 lb = _mm256_cmp_ps(yl, mi, _CMP_EQ_OQ);
+    const __m256 lc = _mm256_cmp_ps(xl, mi, _CMP_EQ_OQ);
+    const __m256 ld = _mm256_and_ps(lb, lc);
+    const __m256 lo = _mm256_or_ps(la, ld);
+    const __m256 ua = _mm256_cmp_ps(xu, yu, _CMP_LT_OQ);
+    const __m256 ub = _mm256_cmp_ps(xu, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    const __m256 uc = _mm256_cmp_ps(yu, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    const __m256 ud = _mm256_and_ps(ub, uc);
+    const __m256 hi = _mm256_or_ps(ua, ud);
+    const __m256 lu = _mm256_and_ps(lo, hi);
+    const __m256 m = _mm256_or_ps(ex, lu);
+    m_out = m;
+}
+
 // interval_split_1(xl, xu) -> al, au, bl, bu
 KAIRN_GEN_FORCEINLINE void interval_split_1(__m256d xl, __m256d xu, __m256d& al_out, __m256d& au_out, __m256d& bl_out, __m256d& bu_out) noexcept {
     // (m, r) = interval_mid_rad_1(xl, xu)
@@ -2085,6 +2315,20 @@ KAIRN_GEN_FORCEINLINE void interval_sub_1(__m256 xl, __m256 xu, __m256 yl, __m25
     zu_out = zu;
 }
 
+// interval_subset_1(xl, xu, yl, yu) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_subset_1(__m256d xl, __m256d xu, __m256d yl, __m256d yu, __m256d& m_out) noexcept {
+    const __m256d a = _mm256_cmp_pd(yl, xl, _CMP_LE_OQ);
+    const __m256d b = _mm256_cmp_pd(xu, yu, _CMP_LE_OQ);
+    const __m256d m = _mm256_and_pd(a, b);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_subset_1(__m256 xl, __m256 xu, __m256 yl, __m256 yu, __m256& m_out) noexcept {
+    const __m256 a = _mm256_cmp_ps(yl, xl, _CMP_LE_OQ);
+    const __m256 b = _mm256_cmp_ps(xu, yu, _CMP_LE_OQ);
+    const __m256 m = _mm256_and_ps(a, b);
+    m_out = m;
+}
+
 // interval_to_ball_1(xl, xu) -> c, r
 KAIRN_GEN_FORCEINLINE void interval_to_ball_1(__m256d xl, __m256d xu, __m256d& c_out, __m256d& r_out) noexcept {
     // (m, r) = interval_mid_rad_1(xl, xu)
@@ -2211,6 +2455,20 @@ KAIRN_GEN_FORCEINLINE void interval_to_ball_1(__m256 xl, __m256 xu, __m256& c_ou
     const __m256 c = _mm256_blendv_ps(m, _mm256_setzero_ps(), un);
     c_out = c;
     r_out = r;
+}
+
+// interval_zero_1(xl, xu) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_zero_1(__m256d xl, __m256d xu, __m256d& m_out) noexcept {
+    const __m256d a = _mm256_cmp_pd(xl, _mm256_setzero_pd(), _CMP_EQ_OQ);
+    const __m256d b = _mm256_cmp_pd(xu, _mm256_setzero_pd(), _CMP_EQ_OQ);
+    const __m256d m = _mm256_and_pd(a, b);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_zero_1(__m256 xl, __m256 xu, __m256& m_out) noexcept {
+    const __m256 a = _mm256_cmp_ps(xl, _mm256_setzero_ps(), _CMP_EQ_OQ);
+    const __m256 b = _mm256_cmp_ps(xu, _mm256_setzero_ps(), _CMP_EQ_OQ);
+    const __m256 m = _mm256_and_ps(a, b);
+    m_out = m;
 }
 
 // make_2(a) -> x = (x0, x1)
@@ -5185,6 +5443,90 @@ KAIRN_GEN_FORCEINLINE void interval_add_2(__m256 xl0, __m256 xl1, __m256 xu0, __
     zu1_out = zu1;
 }
 
+// le_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
+KAIRN_GEN_FORCEINLINE void le_2_2(__m256d x0, __m256d x1, __m256d y0, __m256d y1, __m256d& m_out) noexcept {
+    const __m256d h = _mm256_cmp_pd(x0, y0, _CMP_LT_OQ);
+    const __m256d e = _mm256_cmp_pd(x0, y0, _CMP_EQ_OQ);
+    const __m256d l = _mm256_cmp_pd(x1, y1, _CMP_LE_OQ);
+    const __m256d t = _mm256_and_pd(e, l);
+    const __m256d m = _mm256_or_pd(h, t);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void le_2_2(__m256 x0, __m256 x1, __m256 y0, __m256 y1, __m256& m_out) noexcept {
+    const __m256 h = _mm256_cmp_ps(x0, y0, _CMP_LT_OQ);
+    const __m256 e = _mm256_cmp_ps(x0, y0, _CMP_EQ_OQ);
+    const __m256 l = _mm256_cmp_ps(x1, y1, _CMP_LE_OQ);
+    const __m256 t = _mm256_and_ps(e, l);
+    const __m256 m = _mm256_or_ps(h, t);
+    m_out = m;
+}
+
+// interval_contains_2(xl = (xl0, xl1), xu = (xu0, xu1), t = (t0, t1)) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_contains_2(__m256d xl0, __m256d xl1, __m256d xu0, __m256d xu1, __m256d t0, __m256d t1, __m256d& m_out) noexcept {
+    // (a) = le_2_2(xl0, xl1, t0, t1)
+    const __m256d a_h = _mm256_cmp_pd(xl0, t0, _CMP_LT_OQ);
+    const __m256d a_e = _mm256_cmp_pd(xl0, t0, _CMP_EQ_OQ);
+    const __m256d a_l = _mm256_cmp_pd(xl1, t1, _CMP_LE_OQ);
+    const __m256d a_t = _mm256_and_pd(a_e, a_l);
+    const __m256d a = _mm256_or_pd(a_h, a_t);
+    // (b) = le_2_2(t0, t1, xu0, xu1)
+    const __m256d b_h = _mm256_cmp_pd(t0, xu0, _CMP_LT_OQ);
+    const __m256d b_e = _mm256_cmp_pd(t0, xu0, _CMP_EQ_OQ);
+    const __m256d b_l = _mm256_cmp_pd(t1, xu1, _CMP_LE_OQ);
+    const __m256d b_t = _mm256_and_pd(b_e, b_l);
+    const __m256d b = _mm256_or_pd(b_h, b_t);
+    const __m256d ta = _mm256_andnot_pd(_mm256_set1_pd(-0.0), t0);
+    const __m256d ft = _mm256_cmp_pd(ta, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ab = _mm256_and_pd(a, b);
+    const __m256d m = _mm256_and_pd(ab, ft);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_contains_2(__m256 xl0, __m256 xl1, __m256 xu0, __m256 xu1, __m256 t0, __m256 t1, __m256& m_out) noexcept {
+    // (a) = le_2_2(xl0, xl1, t0, t1)
+    const __m256 a_h = _mm256_cmp_ps(xl0, t0, _CMP_LT_OQ);
+    const __m256 a_e = _mm256_cmp_ps(xl0, t0, _CMP_EQ_OQ);
+    const __m256 a_l = _mm256_cmp_ps(xl1, t1, _CMP_LE_OQ);
+    const __m256 a_t = _mm256_and_ps(a_e, a_l);
+    const __m256 a = _mm256_or_ps(a_h, a_t);
+    // (b) = le_2_2(t0, t1, xu0, xu1)
+    const __m256 b_h = _mm256_cmp_ps(t0, xu0, _CMP_LT_OQ);
+    const __m256 b_e = _mm256_cmp_ps(t0, xu0, _CMP_EQ_OQ);
+    const __m256 b_l = _mm256_cmp_ps(t1, xu1, _CMP_LE_OQ);
+    const __m256 b_t = _mm256_and_ps(b_e, b_l);
+    const __m256 b = _mm256_or_ps(b_h, b_t);
+    const __m256 ta = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), t0);
+    const __m256 ft = _mm256_cmp_ps(ta, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ab = _mm256_and_ps(a, b);
+    const __m256 m = _mm256_and_ps(ab, ft);
+    m_out = m;
+}
+
+// interval_empty_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_empty_2(__m256d xl0, [[maybe_unused]] __m256d xl1, [[maybe_unused]] __m256d xu0, [[maybe_unused]] __m256d xu1, __m256d& m_out) noexcept {
+    const __m256d m = _mm256_cmp_pd(xl0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_empty_2(__m256 xl0, [[maybe_unused]] __m256 xl1, [[maybe_unused]] __m256 xu0, [[maybe_unused]] __m256 xu1, __m256& m_out) noexcept {
+    const __m256 m = _mm256_cmp_ps(xl0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    m_out = m;
+}
+
+// interval_entire_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_entire_2(__m256d xl0, [[maybe_unused]] __m256d xl1, __m256d xu0, [[maybe_unused]] __m256d xu1, __m256d& m_out) noexcept {
+    const __m256d mi = _mm256_xor_pd(_mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_set1_pd(-0.0));
+    const __m256d a = _mm256_cmp_pd(xl0, mi, _CMP_EQ_OQ);
+    const __m256d b = _mm256_cmp_pd(xu0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    const __m256d m = _mm256_and_pd(a, b);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_entire_2(__m256 xl0, [[maybe_unused]] __m256 xl1, __m256 xu0, [[maybe_unused]] __m256 xu1, __m256& m_out) noexcept {
+    const __m256 mi = _mm256_xor_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_set1_ps(-0.0f));
+    const __m256 a = _mm256_cmp_ps(xl0, mi, _CMP_EQ_OQ);
+    const __m256 b = _mm256_cmp_ps(xu0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    const __m256 m = _mm256_and_ps(a, b);
+    m_out = m;
+}
+
 // lt_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
 KAIRN_GEN_FORCEINLINE void lt_2_2(__m256d x0, __m256d x1, __m256d y0, __m256d y1, __m256d& m_out) noexcept {
     const __m256d h = _mm256_cmp_pd(x0, y0, _CMP_LT_OQ);
@@ -5201,6 +5543,78 @@ KAIRN_GEN_FORCEINLINE void lt_2_2(__m256 x0, __m256 x1, __m256 y0, __m256 y1, __
     const __m256 t = _mm256_and_ps(e, l);
     const __m256 m = _mm256_or_ps(h, t);
     m_out = m;
+}
+
+// interval_equal_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void interval_equal_2(__m256d xl0, __m256d xl1, __m256d xu0, __m256d xu1, __m256d yl0, __m256d yl1, __m256d yu0, __m256d yu1, __m256d& yes_out, __m256d& no_out) noexcept {
+    // (ea) = eq_2_2(xl0, xl1, xu0, xu1)
+    const __m256d ea_h = _mm256_cmp_pd(xl0, xu0, _CMP_EQ_OQ);
+    const __m256d ea_l = _mm256_cmp_pd(xl1, xu1, _CMP_EQ_OQ);
+    const __m256d ea = _mm256_and_pd(ea_h, ea_l);
+    // (eb) = eq_2_2(xu0, xu1, yl0, yl1)
+    const __m256d eb_h = _mm256_cmp_pd(xu0, yl0, _CMP_EQ_OQ);
+    const __m256d eb_l = _mm256_cmp_pd(xu1, yl1, _CMP_EQ_OQ);
+    const __m256d eb = _mm256_and_pd(eb_h, eb_l);
+    // (ec) = eq_2_2(yl0, yl1, yu0, yu1)
+    const __m256d ec_h = _mm256_cmp_pd(yl0, yu0, _CMP_EQ_OQ);
+    const __m256d ec_l = _mm256_cmp_pd(yl1, yu1, _CMP_EQ_OQ);
+    const __m256d ec = _mm256_and_pd(ec_h, ec_l);
+    const __m256d eab = _mm256_and_pd(ea, eb);
+    const __m256d yes = _mm256_and_pd(eab, ec);
+    const __m256d nx = _mm256_cmp_pd(xl0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ny = _mm256_cmp_pd(yl0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ne = _mm256_and_pd(nx, ny);
+    // (da) = lt_2_2(xu0, xu1, yl0, yl1)
+    const __m256d da_h = _mm256_cmp_pd(xu0, yl0, _CMP_LT_OQ);
+    const __m256d da_e = _mm256_cmp_pd(xu0, yl0, _CMP_EQ_OQ);
+    const __m256d da_l = _mm256_cmp_pd(xu1, yl1, _CMP_LT_OQ);
+    const __m256d da_t = _mm256_and_pd(da_e, da_l);
+    const __m256d da = _mm256_or_pd(da_h, da_t);
+    // (db) = lt_2_2(yu0, yu1, xl0, xl1)
+    const __m256d db_h = _mm256_cmp_pd(yu0, xl0, _CMP_LT_OQ);
+    const __m256d db_e = _mm256_cmp_pd(yu0, xl0, _CMP_EQ_OQ);
+    const __m256d db_l = _mm256_cmp_pd(yu1, xl1, _CMP_LT_OQ);
+    const __m256d db_t = _mm256_and_pd(db_e, db_l);
+    const __m256d db = _mm256_or_pd(db_h, db_t);
+    const __m256d dd = _mm256_or_pd(da, db);
+    const __m256d no = _mm256_and_pd(dd, ne);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void interval_equal_2(__m256 xl0, __m256 xl1, __m256 xu0, __m256 xu1, __m256 yl0, __m256 yl1, __m256 yu0, __m256 yu1, __m256& yes_out, __m256& no_out) noexcept {
+    // (ea) = eq_2_2(xl0, xl1, xu0, xu1)
+    const __m256 ea_h = _mm256_cmp_ps(xl0, xu0, _CMP_EQ_OQ);
+    const __m256 ea_l = _mm256_cmp_ps(xl1, xu1, _CMP_EQ_OQ);
+    const __m256 ea = _mm256_and_ps(ea_h, ea_l);
+    // (eb) = eq_2_2(xu0, xu1, yl0, yl1)
+    const __m256 eb_h = _mm256_cmp_ps(xu0, yl0, _CMP_EQ_OQ);
+    const __m256 eb_l = _mm256_cmp_ps(xu1, yl1, _CMP_EQ_OQ);
+    const __m256 eb = _mm256_and_ps(eb_h, eb_l);
+    // (ec) = eq_2_2(yl0, yl1, yu0, yu1)
+    const __m256 ec_h = _mm256_cmp_ps(yl0, yu0, _CMP_EQ_OQ);
+    const __m256 ec_l = _mm256_cmp_ps(yl1, yu1, _CMP_EQ_OQ);
+    const __m256 ec = _mm256_and_ps(ec_h, ec_l);
+    const __m256 eab = _mm256_and_ps(ea, eb);
+    const __m256 yes = _mm256_and_ps(eab, ec);
+    const __m256 nx = _mm256_cmp_ps(xl0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ny = _mm256_cmp_ps(yl0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ne = _mm256_and_ps(nx, ny);
+    // (da) = lt_2_2(xu0, xu1, yl0, yl1)
+    const __m256 da_h = _mm256_cmp_ps(xu0, yl0, _CMP_LT_OQ);
+    const __m256 da_e = _mm256_cmp_ps(xu0, yl0, _CMP_EQ_OQ);
+    const __m256 da_l = _mm256_cmp_ps(xu1, yl1, _CMP_LT_OQ);
+    const __m256 da_t = _mm256_and_ps(da_e, da_l);
+    const __m256 da = _mm256_or_ps(da_h, da_t);
+    // (db) = lt_2_2(yu0, yu1, xl0, xl1)
+    const __m256 db_h = _mm256_cmp_ps(yu0, xl0, _CMP_LT_OQ);
+    const __m256 db_e = _mm256_cmp_ps(yu0, xl0, _CMP_EQ_OQ);
+    const __m256 db_l = _mm256_cmp_ps(yu1, xl1, _CMP_LT_OQ);
+    const __m256 db_t = _mm256_and_ps(db_e, db_l);
+    const __m256 db = _mm256_or_ps(db_h, db_t);
+    const __m256 dd = _mm256_or_ps(da, db);
+    const __m256 no = _mm256_and_ps(dd, ne);
+    yes_out = yes;
+    no_out = no;
 }
 
 // interval_hull_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
@@ -5247,24 +5661,6 @@ KAIRN_GEN_FORCEINLINE void interval_hull_2(__m256 xl0, __m256 xl1, __m256 xu0, _
     zl1_out = zl1;
     zu0_out = zu0;
     zu1_out = zu1;
-}
-
-// le_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
-KAIRN_GEN_FORCEINLINE void le_2_2(__m256d x0, __m256d x1, __m256d y0, __m256d y1, __m256d& m_out) noexcept {
-    const __m256d h = _mm256_cmp_pd(x0, y0, _CMP_LT_OQ);
-    const __m256d e = _mm256_cmp_pd(x0, y0, _CMP_EQ_OQ);
-    const __m256d l = _mm256_cmp_pd(x1, y1, _CMP_LE_OQ);
-    const __m256d t = _mm256_and_pd(e, l);
-    const __m256d m = _mm256_or_pd(h, t);
-    m_out = m;
-}
-KAIRN_GEN_FORCEINLINE void le_2_2(__m256 x0, __m256 x1, __m256 y0, __m256 y1, __m256& m_out) noexcept {
-    const __m256 h = _mm256_cmp_ps(x0, y0, _CMP_LT_OQ);
-    const __m256 e = _mm256_cmp_ps(x0, y0, _CMP_EQ_OQ);
-    const __m256 l = _mm256_cmp_ps(x1, y1, _CMP_LE_OQ);
-    const __m256 t = _mm256_and_ps(e, l);
-    const __m256 m = _mm256_or_ps(h, t);
-    m_out = m;
 }
 
 // interval_intersection_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
@@ -5333,6 +5729,94 @@ KAIRN_GEN_FORCEINLINE void interval_intersection_2(__m256 xl0, __m256 xl1, __m25
     zl1_out = zl1;
     zu0_out = zu0;
     zu1_out = zu1;
+}
+
+// interval_less_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void interval_less_2(__m256d xl0, __m256d xl1, __m256d xu0, __m256d xu1, __m256d yl0, __m256d yl1, __m256d yu0, __m256d yu1, __m256d& yes_out, __m256d& no_out) noexcept {
+    const __m256d nx = _mm256_cmp_pd(xl0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ny = _mm256_cmp_pd(yl0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ne = _mm256_and_pd(nx, ny);
+    // (a) = lt_2_2(xu0, xu1, yl0, yl1)
+    const __m256d a_h = _mm256_cmp_pd(xu0, yl0, _CMP_LT_OQ);
+    const __m256d a_e = _mm256_cmp_pd(xu0, yl0, _CMP_EQ_OQ);
+    const __m256d a_l = _mm256_cmp_pd(xu1, yl1, _CMP_LT_OQ);
+    const __m256d a_t = _mm256_and_pd(a_e, a_l);
+    const __m256d a = _mm256_or_pd(a_h, a_t);
+    // (c) = le_2_2(yu0, yu1, xl0, xl1)
+    const __m256d c_h = _mm256_cmp_pd(yu0, xl0, _CMP_LT_OQ);
+    const __m256d c_e = _mm256_cmp_pd(yu0, xl0, _CMP_EQ_OQ);
+    const __m256d c_l = _mm256_cmp_pd(yu1, xl1, _CMP_LE_OQ);
+    const __m256d c_t = _mm256_and_pd(c_e, c_l);
+    const __m256d c = _mm256_or_pd(c_h, c_t);
+    const __m256d yes = _mm256_and_pd(a, ne);
+    const __m256d no = _mm256_and_pd(c, ne);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void interval_less_2(__m256 xl0, __m256 xl1, __m256 xu0, __m256 xu1, __m256 yl0, __m256 yl1, __m256 yu0, __m256 yu1, __m256& yes_out, __m256& no_out) noexcept {
+    const __m256 nx = _mm256_cmp_ps(xl0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ny = _mm256_cmp_ps(yl0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ne = _mm256_and_ps(nx, ny);
+    // (a) = lt_2_2(xu0, xu1, yl0, yl1)
+    const __m256 a_h = _mm256_cmp_ps(xu0, yl0, _CMP_LT_OQ);
+    const __m256 a_e = _mm256_cmp_ps(xu0, yl0, _CMP_EQ_OQ);
+    const __m256 a_l = _mm256_cmp_ps(xu1, yl1, _CMP_LT_OQ);
+    const __m256 a_t = _mm256_and_ps(a_e, a_l);
+    const __m256 a = _mm256_or_ps(a_h, a_t);
+    // (c) = le_2_2(yu0, yu1, xl0, xl1)
+    const __m256 c_h = _mm256_cmp_ps(yu0, xl0, _CMP_LT_OQ);
+    const __m256 c_e = _mm256_cmp_ps(yu0, xl0, _CMP_EQ_OQ);
+    const __m256 c_l = _mm256_cmp_ps(yu1, xl1, _CMP_LE_OQ);
+    const __m256 c_t = _mm256_and_ps(c_e, c_l);
+    const __m256 c = _mm256_or_ps(c_h, c_t);
+    const __m256 yes = _mm256_and_ps(a, ne);
+    const __m256 no = _mm256_and_ps(c, ne);
+    yes_out = yes;
+    no_out = no;
+}
+
+// interval_less_equal_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void interval_less_equal_2(__m256d xl0, __m256d xl1, __m256d xu0, __m256d xu1, __m256d yl0, __m256d yl1, __m256d yu0, __m256d yu1, __m256d& yes_out, __m256d& no_out) noexcept {
+    const __m256d nx = _mm256_cmp_pd(xl0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ny = _mm256_cmp_pd(yl0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d ne = _mm256_and_pd(nx, ny);
+    // (a) = le_2_2(xu0, xu1, yl0, yl1)
+    const __m256d a_h = _mm256_cmp_pd(xu0, yl0, _CMP_LT_OQ);
+    const __m256d a_e = _mm256_cmp_pd(xu0, yl0, _CMP_EQ_OQ);
+    const __m256d a_l = _mm256_cmp_pd(xu1, yl1, _CMP_LE_OQ);
+    const __m256d a_t = _mm256_and_pd(a_e, a_l);
+    const __m256d a = _mm256_or_pd(a_h, a_t);
+    // (c) = lt_2_2(yu0, yu1, xl0, xl1)
+    const __m256d c_h = _mm256_cmp_pd(yu0, xl0, _CMP_LT_OQ);
+    const __m256d c_e = _mm256_cmp_pd(yu0, xl0, _CMP_EQ_OQ);
+    const __m256d c_l = _mm256_cmp_pd(yu1, xl1, _CMP_LT_OQ);
+    const __m256d c_t = _mm256_and_pd(c_e, c_l);
+    const __m256d c = _mm256_or_pd(c_h, c_t);
+    const __m256d yes = _mm256_and_pd(a, ne);
+    const __m256d no = _mm256_and_pd(c, ne);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void interval_less_equal_2(__m256 xl0, __m256 xl1, __m256 xu0, __m256 xu1, __m256 yl0, __m256 yl1, __m256 yu0, __m256 yu1, __m256& yes_out, __m256& no_out) noexcept {
+    const __m256 nx = _mm256_cmp_ps(xl0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ny = _mm256_cmp_ps(yl0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 ne = _mm256_and_ps(nx, ny);
+    // (a) = le_2_2(xu0, xu1, yl0, yl1)
+    const __m256 a_h = _mm256_cmp_ps(xu0, yl0, _CMP_LT_OQ);
+    const __m256 a_e = _mm256_cmp_ps(xu0, yl0, _CMP_EQ_OQ);
+    const __m256 a_l = _mm256_cmp_ps(xu1, yl1, _CMP_LE_OQ);
+    const __m256 a_t = _mm256_and_ps(a_e, a_l);
+    const __m256 a = _mm256_or_ps(a_h, a_t);
+    // (c) = lt_2_2(yu0, yu1, xl0, xl1)
+    const __m256 c_h = _mm256_cmp_ps(yu0, xl0, _CMP_LT_OQ);
+    const __m256 c_e = _mm256_cmp_ps(yu0, xl0, _CMP_EQ_OQ);
+    const __m256 c_l = _mm256_cmp_ps(yu1, xl1, _CMP_LT_OQ);
+    const __m256 c_t = _mm256_and_ps(c_e, c_l);
+    const __m256 c = _mm256_or_ps(c_h, c_t);
+    const __m256 yes = _mm256_and_ps(a, ne);
+    const __m256 no = _mm256_and_ps(c, ne);
+    yes_out = yes;
+    no_out = no;
 }
 
 // interval_make_2(lo = (lo0, lo1), hi = (hi0, hi1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
@@ -6691,6 +7175,160 @@ KAIRN_GEN_FORCEINLINE void interval_neg_2(__m256 xl0, __m256 xl1, __m256 xu0, __
     zu1_out = zu1;
 }
 
+// interval_negative_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_negative_2([[maybe_unused]] __m256d xl0, [[maybe_unused]] __m256d xl1, __m256d xu0, [[maybe_unused]] __m256d xu1, __m256d& m_out) noexcept {
+    const __m256d mi = _mm256_xor_pd(_mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_set1_pd(-0.0));
+    const __m256d a = _mm256_cmp_pd(xu0, _mm256_setzero_pd(), _CMP_LT_OQ);
+    const __m256d b = _mm256_cmp_pd(mi, xu0, _CMP_LT_OQ);
+    const __m256d m = _mm256_and_pd(a, b);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_negative_2([[maybe_unused]] __m256 xl0, [[maybe_unused]] __m256 xl1, __m256 xu0, [[maybe_unused]] __m256 xu1, __m256& m_out) noexcept {
+    const __m256 mi = _mm256_xor_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_set1_ps(-0.0f));
+    const __m256 a = _mm256_cmp_ps(xu0, _mm256_setzero_ps(), _CMP_LT_OQ);
+    const __m256 b = _mm256_cmp_ps(mi, xu0, _CMP_LT_OQ);
+    const __m256 m = _mm256_and_ps(a, b);
+    m_out = m;
+}
+
+// interval_positive_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_positive_2(__m256d xl0, [[maybe_unused]] __m256d xl1, [[maybe_unused]] __m256d xu0, [[maybe_unused]] __m256d xu1, __m256d& m_out) noexcept {
+    const __m256d a = _mm256_cmp_pd(_mm256_setzero_pd(), xl0, _CMP_LT_OQ);
+    const __m256d b = _mm256_cmp_pd(xl0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d m = _mm256_and_pd(a, b);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_positive_2(__m256 xl0, [[maybe_unused]] __m256 xl1, [[maybe_unused]] __m256 xu0, [[maybe_unused]] __m256 xu1, __m256& m_out) noexcept {
+    const __m256 a = _mm256_cmp_ps(_mm256_setzero_ps(), xl0, _CMP_LT_OQ);
+    const __m256 b = _mm256_cmp_ps(xl0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 m = _mm256_and_ps(a, b);
+    m_out = m;
+}
+
+// interval_rel_disjoint_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_rel_disjoint_2(__m256d xl0, __m256d xl1, __m256d xu0, __m256d xu1, __m256d yl0, __m256d yl1, __m256d yu0, __m256d yu1, __m256d& m_out) noexcept {
+    const __m256d ex = _mm256_cmp_pd(xl0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    const __m256d ey = _mm256_cmp_pd(yl0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    const __m256d ee = _mm256_or_pd(ex, ey);
+    // (da) = lt_2_2(xu0, xu1, yl0, yl1)
+    const __m256d da_h = _mm256_cmp_pd(xu0, yl0, _CMP_LT_OQ);
+    const __m256d da_e = _mm256_cmp_pd(xu0, yl0, _CMP_EQ_OQ);
+    const __m256d da_l = _mm256_cmp_pd(xu1, yl1, _CMP_LT_OQ);
+    const __m256d da_t = _mm256_and_pd(da_e, da_l);
+    const __m256d da = _mm256_or_pd(da_h, da_t);
+    // (db) = lt_2_2(yu0, yu1, xl0, xl1)
+    const __m256d db_h = _mm256_cmp_pd(yu0, xl0, _CMP_LT_OQ);
+    const __m256d db_e = _mm256_cmp_pd(yu0, xl0, _CMP_EQ_OQ);
+    const __m256d db_l = _mm256_cmp_pd(yu1, xl1, _CMP_LT_OQ);
+    const __m256d db_t = _mm256_and_pd(db_e, db_l);
+    const __m256d db = _mm256_or_pd(db_h, db_t);
+    const __m256d dd = _mm256_or_pd(da, db);
+    const __m256d m = _mm256_or_pd(ee, dd);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_rel_disjoint_2(__m256 xl0, __m256 xl1, __m256 xu0, __m256 xu1, __m256 yl0, __m256 yl1, __m256 yu0, __m256 yu1, __m256& m_out) noexcept {
+    const __m256 ex = _mm256_cmp_ps(xl0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    const __m256 ey = _mm256_cmp_ps(yl0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    const __m256 ee = _mm256_or_ps(ex, ey);
+    // (da) = lt_2_2(xu0, xu1, yl0, yl1)
+    const __m256 da_h = _mm256_cmp_ps(xu0, yl0, _CMP_LT_OQ);
+    const __m256 da_e = _mm256_cmp_ps(xu0, yl0, _CMP_EQ_OQ);
+    const __m256 da_l = _mm256_cmp_ps(xu1, yl1, _CMP_LT_OQ);
+    const __m256 da_t = _mm256_and_ps(da_e, da_l);
+    const __m256 da = _mm256_or_ps(da_h, da_t);
+    // (db) = lt_2_2(yu0, yu1, xl0, xl1)
+    const __m256 db_h = _mm256_cmp_ps(yu0, xl0, _CMP_LT_OQ);
+    const __m256 db_e = _mm256_cmp_ps(yu0, xl0, _CMP_EQ_OQ);
+    const __m256 db_l = _mm256_cmp_ps(yu1, xl1, _CMP_LT_OQ);
+    const __m256 db_t = _mm256_and_ps(db_e, db_l);
+    const __m256 db = _mm256_or_ps(db_h, db_t);
+    const __m256 dd = _mm256_or_ps(da, db);
+    const __m256 m = _mm256_or_ps(ee, dd);
+    m_out = m;
+}
+
+// interval_rel_equal_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_rel_equal_2(__m256d xl0, __m256d xl1, __m256d xu0, __m256d xu1, __m256d yl0, __m256d yl1, __m256d yu0, __m256d yu1, __m256d& m_out) noexcept {
+    // (a) = eq_2_2(xl0, xl1, yl0, yl1)
+    const __m256d a_h = _mm256_cmp_pd(xl0, yl0, _CMP_EQ_OQ);
+    const __m256d a_l = _mm256_cmp_pd(xl1, yl1, _CMP_EQ_OQ);
+    const __m256d a = _mm256_and_pd(a_h, a_l);
+    // (c) = eq_2_2(xu0, xu1, yu0, yu1)
+    const __m256d c_h = _mm256_cmp_pd(xu0, yu0, _CMP_EQ_OQ);
+    const __m256d c_l = _mm256_cmp_pd(xu1, yu1, _CMP_EQ_OQ);
+    const __m256d c = _mm256_and_pd(c_h, c_l);
+    const __m256d m = _mm256_and_pd(a, c);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_rel_equal_2(__m256 xl0, __m256 xl1, __m256 xu0, __m256 xu1, __m256 yl0, __m256 yl1, __m256 yu0, __m256 yu1, __m256& m_out) noexcept {
+    // (a) = eq_2_2(xl0, xl1, yl0, yl1)
+    const __m256 a_h = _mm256_cmp_ps(xl0, yl0, _CMP_EQ_OQ);
+    const __m256 a_l = _mm256_cmp_ps(xl1, yl1, _CMP_EQ_OQ);
+    const __m256 a = _mm256_and_ps(a_h, a_l);
+    // (c) = eq_2_2(xu0, xu1, yu0, yu1)
+    const __m256 c_h = _mm256_cmp_ps(xu0, yu0, _CMP_EQ_OQ);
+    const __m256 c_l = _mm256_cmp_ps(xu1, yu1, _CMP_EQ_OQ);
+    const __m256 c = _mm256_and_ps(c_h, c_l);
+    const __m256 m = _mm256_and_ps(a, c);
+    m_out = m;
+}
+
+// interval_rel_interior_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_rel_interior_2(__m256d xl0, __m256d xl1, __m256d xu0, __m256d xu1, __m256d yl0, __m256d yl1, __m256d yu0, __m256d yu1, __m256d& m_out) noexcept {
+    const __m256d ex = _mm256_cmp_pd(xl0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    const __m256d mi = _mm256_xor_pd(_mm256_set1_pd(std::numeric_limits<double>::infinity()), _mm256_set1_pd(-0.0));
+    // (la) = lt_2_2(yl0, yl1, xl0, xl1)
+    const __m256d la_h = _mm256_cmp_pd(yl0, xl0, _CMP_LT_OQ);
+    const __m256d la_e = _mm256_cmp_pd(yl0, xl0, _CMP_EQ_OQ);
+    const __m256d la_l = _mm256_cmp_pd(yl1, xl1, _CMP_LT_OQ);
+    const __m256d la_t = _mm256_and_pd(la_e, la_l);
+    const __m256d la = _mm256_or_pd(la_h, la_t);
+    const __m256d lb = _mm256_cmp_pd(yl0, mi, _CMP_EQ_OQ);
+    const __m256d lc = _mm256_cmp_pd(xl0, mi, _CMP_EQ_OQ);
+    const __m256d ld = _mm256_and_pd(lb, lc);
+    const __m256d lo = _mm256_or_pd(la, ld);
+    // (ua) = lt_2_2(xu0, xu1, yu0, yu1)
+    const __m256d ua_h = _mm256_cmp_pd(xu0, yu0, _CMP_LT_OQ);
+    const __m256d ua_e = _mm256_cmp_pd(xu0, yu0, _CMP_EQ_OQ);
+    const __m256d ua_l = _mm256_cmp_pd(xu1, yu1, _CMP_LT_OQ);
+    const __m256d ua_t = _mm256_and_pd(ua_e, ua_l);
+    const __m256d ua = _mm256_or_pd(ua_h, ua_t);
+    const __m256d ub = _mm256_cmp_pd(xu0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    const __m256d uc = _mm256_cmp_pd(yu0, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_EQ_OQ);
+    const __m256d ud = _mm256_and_pd(ub, uc);
+    const __m256d hi = _mm256_or_pd(ua, ud);
+    const __m256d lu = _mm256_and_pd(lo, hi);
+    const __m256d m = _mm256_or_pd(ex, lu);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_rel_interior_2(__m256 xl0, __m256 xl1, __m256 xu0, __m256 xu1, __m256 yl0, __m256 yl1, __m256 yu0, __m256 yu1, __m256& m_out) noexcept {
+    const __m256 ex = _mm256_cmp_ps(xl0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    const __m256 mi = _mm256_xor_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()), _mm256_set1_ps(-0.0f));
+    // (la) = lt_2_2(yl0, yl1, xl0, xl1)
+    const __m256 la_h = _mm256_cmp_ps(yl0, xl0, _CMP_LT_OQ);
+    const __m256 la_e = _mm256_cmp_ps(yl0, xl0, _CMP_EQ_OQ);
+    const __m256 la_l = _mm256_cmp_ps(yl1, xl1, _CMP_LT_OQ);
+    const __m256 la_t = _mm256_and_ps(la_e, la_l);
+    const __m256 la = _mm256_or_ps(la_h, la_t);
+    const __m256 lb = _mm256_cmp_ps(yl0, mi, _CMP_EQ_OQ);
+    const __m256 lc = _mm256_cmp_ps(xl0, mi, _CMP_EQ_OQ);
+    const __m256 ld = _mm256_and_ps(lb, lc);
+    const __m256 lo = _mm256_or_ps(la, ld);
+    // (ua) = lt_2_2(xu0, xu1, yu0, yu1)
+    const __m256 ua_h = _mm256_cmp_ps(xu0, yu0, _CMP_LT_OQ);
+    const __m256 ua_e = _mm256_cmp_ps(xu0, yu0, _CMP_EQ_OQ);
+    const __m256 ua_l = _mm256_cmp_ps(xu1, yu1, _CMP_LT_OQ);
+    const __m256 ua_t = _mm256_and_ps(ua_e, ua_l);
+    const __m256 ua = _mm256_or_ps(ua_h, ua_t);
+    const __m256 ub = _mm256_cmp_ps(xu0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    const __m256 uc = _mm256_cmp_ps(yu0, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_EQ_OQ);
+    const __m256 ud = _mm256_and_ps(ub, uc);
+    const __m256 hi = _mm256_or_ps(ua, ud);
+    const __m256 lu = _mm256_and_ps(lo, hi);
+    const __m256 m = _mm256_or_ps(ex, lu);
+    m_out = m;
+}
+
 // sub_down_2_2(x = (x0, x1), y = (y0, y1)) -> l = (l0, l1)
 KAIRN_GEN_FORCEINLINE void sub_down_2_2(__m256d x0, __m256d x1, __m256d y0, __m256d y1, __m256d& l0_out, __m256d& l1_out) noexcept {
     // (n0, n1) = neg_2(y0, y1)
@@ -7239,6 +7877,54 @@ KAIRN_GEN_FORCEINLINE void interval_sub_2(__m256 xl0, __m256 xl1, __m256 xu0, __
     zl1_out = zl1;
     zu0_out = zu0;
     zu1_out = zu1;
+}
+
+// interval_subset_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_subset_2(__m256d xl0, __m256d xl1, __m256d xu0, __m256d xu1, __m256d yl0, __m256d yl1, __m256d yu0, __m256d yu1, __m256d& m_out) noexcept {
+    // (a) = le_2_2(yl0, yl1, xl0, xl1)
+    const __m256d a_h = _mm256_cmp_pd(yl0, xl0, _CMP_LT_OQ);
+    const __m256d a_e = _mm256_cmp_pd(yl0, xl0, _CMP_EQ_OQ);
+    const __m256d a_l = _mm256_cmp_pd(yl1, xl1, _CMP_LE_OQ);
+    const __m256d a_t = _mm256_and_pd(a_e, a_l);
+    const __m256d a = _mm256_or_pd(a_h, a_t);
+    // (b) = le_2_2(xu0, xu1, yu0, yu1)
+    const __m256d b_h = _mm256_cmp_pd(xu0, yu0, _CMP_LT_OQ);
+    const __m256d b_e = _mm256_cmp_pd(xu0, yu0, _CMP_EQ_OQ);
+    const __m256d b_l = _mm256_cmp_pd(xu1, yu1, _CMP_LE_OQ);
+    const __m256d b_t = _mm256_and_pd(b_e, b_l);
+    const __m256d b = _mm256_or_pd(b_h, b_t);
+    const __m256d m = _mm256_and_pd(a, b);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_subset_2(__m256 xl0, __m256 xl1, __m256 xu0, __m256 xu1, __m256 yl0, __m256 yl1, __m256 yu0, __m256 yu1, __m256& m_out) noexcept {
+    // (a) = le_2_2(yl0, yl1, xl0, xl1)
+    const __m256 a_h = _mm256_cmp_ps(yl0, xl0, _CMP_LT_OQ);
+    const __m256 a_e = _mm256_cmp_ps(yl0, xl0, _CMP_EQ_OQ);
+    const __m256 a_l = _mm256_cmp_ps(yl1, xl1, _CMP_LE_OQ);
+    const __m256 a_t = _mm256_and_ps(a_e, a_l);
+    const __m256 a = _mm256_or_ps(a_h, a_t);
+    // (b) = le_2_2(xu0, xu1, yu0, yu1)
+    const __m256 b_h = _mm256_cmp_ps(xu0, yu0, _CMP_LT_OQ);
+    const __m256 b_e = _mm256_cmp_ps(xu0, yu0, _CMP_EQ_OQ);
+    const __m256 b_l = _mm256_cmp_ps(xu1, yu1, _CMP_LE_OQ);
+    const __m256 b_t = _mm256_and_ps(b_e, b_l);
+    const __m256 b = _mm256_or_ps(b_h, b_t);
+    const __m256 m = _mm256_and_ps(a, b);
+    m_out = m;
+}
+
+// interval_zero_2(xl = (xl0, xl1), xu = (xu0, xu1)) -> mask m
+KAIRN_GEN_FORCEINLINE void interval_zero_2(__m256d xl0, [[maybe_unused]] __m256d xl1, __m256d xu0, [[maybe_unused]] __m256d xu1, __m256d& m_out) noexcept {
+    const __m256d a = _mm256_cmp_pd(xl0, _mm256_setzero_pd(), _CMP_EQ_OQ);
+    const __m256d b = _mm256_cmp_pd(xu0, _mm256_setzero_pd(), _CMP_EQ_OQ);
+    const __m256d m = _mm256_and_pd(a, b);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void interval_zero_2(__m256 xl0, [[maybe_unused]] __m256 xl1, __m256 xu0, [[maybe_unused]] __m256 xu1, __m256& m_out) noexcept {
+    const __m256 a = _mm256_cmp_ps(xl0, _mm256_setzero_ps(), _CMP_EQ_OQ);
+    const __m256 b = _mm256_cmp_ps(xu0, _mm256_setzero_ps(), _CMP_EQ_OQ);
+    const __m256 m = _mm256_and_ps(a, b);
+    m_out = m;
 }
 
 // le_1_2(a, y = (y0, y1)) -> mask m

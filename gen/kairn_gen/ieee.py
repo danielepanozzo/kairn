@@ -1025,6 +1025,146 @@ def _splits_spec(k, kernels, e):
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
 
+class _Sets:
+    """The sets of a certain or trit entry (Milestone 2, the enclosure interface) in the vocabulary
+    of IeeeIntervalVocabulary.v and IeeeVocabulary.v: membership, nonempty, empty, the special
+    states (the empty set and the whole line), a finite operand; and the relation as a proposition
+    of the reals, and its negation of every choice of members."""
+
+    REL = {'lt': '<', 'le': '<=', 'eq': '='}
+
+    def __init__(self, k, e, t):
+        self.k, self.e, self.t = k, e, t
+        self.balls = 'balls' in e
+        sets = e['balls'] if self.balls else e['intervals']
+        if self.balls:
+            self.groups = {x: t.ins[b['center']].limbs + (b['radius'],) for x, b in sets.items()}
+            self.n = {x: len(g) - 1 for x, g in self.groups.items()}
+        else:
+            self.groups = {x: t.ins[b['lower']].limbs + t.ins[b['upper']].limbs for x, b in sets.items()}
+            self.n = {x: len(g) // 2 for x, g in self.groups.items()}
+        for x, n in self.n.items():
+            _limbs(k, self.groups[x][:n], x, (1, 2))
+        # Bound names of the propositions: none may be a name of the kernel's inputs.
+        taken = set(k.input_limbs) | {g.name for g in k.inputs} | set(sets)
+        if taken & {'z', 'w', 'd'}:
+            raise PrintError(f'kernel {k.name}: z, w and d are bound in the statements of a predicate of sets')
+
+    def args(self, x):
+        return ' '.join(self.groups[x])
+
+    def member(self, x, z):
+        sort = 'ball' if self.balls else 'interval'
+        return f'in_{sort}_{self.n[x]} {self.args(x)} {z}'
+
+    def nonempty(self, x):
+        n = self.n[x]
+        return f'~ ball_empty_{n} {self.args(x)}' if self.balls else f'interval_nonempty_{n} {self.args(x)}'
+
+    def empty(self, x):
+        n = self.n[x]
+        return f'ball_empty_{n} {self.args(x)}' if self.balls else f'interval_empty_{n} {self.args(x)}'
+
+    def whole(self, x):
+        n, g = self.n[x], self.groups[x]
+        if self.balls:
+            return f'ball_whole_{n} {self.args(x)}'
+        return f'{_xv(g[:n])} = XInf true /\\ {_xv(g[n:])} = XInf false'
+
+    def finite(self, x):
+        n = self.n[x]
+        return f'ball_finite_{n} {self.args(x)}' if self.balls else f'interval_bounded_{n} {self.args(x)}'
+
+    def point(self):
+        """The point of a membership: its limbs, and its value as a real."""
+        p = self.t.ins[self.e['args'][0]].limbs
+        return p, _val_sum(p)
+
+    def special(self):
+        """An operand that is not finite: a set that is the empty set or the whole line, a point
+        that is not a finite number."""
+        parts = [f'{self.empty(x)} \\/ {self.whole(x)}' for x in self.groups]
+        if self.e['rel'] == 'member':
+            parts.append(f'~ finite {self.point()[0][0]}')
+        return ' \\/ '.join(parts)
+
+    def all_finite(self):
+        parts = [self.finite(x) for x in self.groups]
+        if self.e['rel'] == 'member':
+            parts.append(f'finite {self.point()[0][0]}')
+        return ' /\\ '.join(parts)
+
+    def holds(self, negated=False):
+        """The relation as a proposition; with `negated` (the `no` of a trit), its failure for every
+        choice of members: for lt, le, eq of nonempty sets, the negated relation of each pair; for
+        member, that the point is not a member."""
+        rel, args = self.e['rel'], self.e['args']
+        if rel in self.REL:
+            sets = [a for a in args if a != ir.ZERO]
+            body = f'{args[0]} {self.REL[rel]} {args[1]}'
+            if negated:
+                body = f'~ ({body})'
+            ne = ' /\\ '.join(self.nonempty(x) for x in sets)
+            return (f'{ne} /\\\n    (forall {" ".join(sets)} : R, ' + ' '.join(f'{self.member(x, x)} ->' for x in sets) +
+                    f' {body})')
+        if rel == 'member':
+            p, v = self.point()
+            inside = f'finite {p[0]} /\\ {self.member(args[1], _paren(v))}'
+            return f'~ ({inside})' if negated else inside
+        if negated:
+            raise PrintError(f'kernel {self.k.name}: {rel} has no three-valued reading')
+        x = args[0]
+        if rel == 'empty':
+            return self.empty(x)
+        if rel == 'entire':
+            return f'(forall z : R, {self.member(x, "z")})'
+        y = args[1]
+        if rel == 'subset':
+            return f'(forall z : R, {self.member(x, "z")} -> {self.member(y, "z")})'
+        if rel == 'equal':
+            return f'(forall z : R, {self.member(x, "z")} <-> {self.member(y, "z")})'
+        if rel == 'interior':
+            return (f'(forall z : R, {self.member(x, "z")} ->\n    exists d : R, 0 < d /\\ '
+                    f'(forall w : R, Rabs (w - z) < d -> {self.member(y, "w")}))')
+        if rel == 'disjoint':
+            return f'~ (exists z : R, {self.member(x, "z")} /\\ {self.member(y, "z")})'
+        raise PrintError(f'kernel {self.k.name}: no IEEE reading of the relation {rel}')
+
+
+def _set_predicate_spec(k, kernels, e):
+    """A predicate of sets (Milestone 2, the enclosure interface), certain or trit, in the
+    vocabulary of IeeeIntervalVocabulary.v: a mask true only if the relation holds (certain; for
+    trit, yes only if it holds for every choice of members and no only if it fails for every one,
+    never both); exactly the relation when an operand is not finite (the empty set, the whole line,
+    a point that is not a finite number); and exactly it always (exact), or for finite operands
+    under the conditions of exact_when."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    s = _Sets(k, e, t)
+    held = s.holds()
+    if e['kind'] == 'certain':
+        m = e['of']
+        sound = [f'({m} = true ->\n    {held})']
+        exact = [f'({m} = true <->\n    {held})']
+    else:
+        yes, no = e['yes'], e['no']
+        failed = s.holds(negated=True)
+        sound = [f'({yes} = true ->\n    {held})', f'({no} = true ->\n    {failed})',
+                 f'~ ({yes} = true /\\ {no} = true)']
+        exact = [f'({yes} = true <->\n    {held})', f'({no} = true <->\n    {failed})']
+    if e.get('exact'):
+        claims = exact if e['kind'] == 'certain' else exact + [sound[-1]]
+    else:
+        both = ' /\\\n   '.join(exact)
+        claims = sound + [f'({s.special()} ->\n   {both})']
+        if 'exact_when' in e:
+            cond = t.exact_condition(e['exact_when'])
+            claims.append(f'({s.all_finite()} -> {cond} ->\n   {both})')
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
 def _set_bound_claim(e, k, t):
     """A bound of a set over balls (Milestone 2, the bounds of a ball as numbers of T): the empty
     set gives the infinity beyond it (+inf below, -inf above); otherwise the output is on its side
@@ -1209,7 +1349,8 @@ def kernel_statements(k, kernels):
         if enc:
             return [_ball_spec(k, kernels, enc[0])]
         for kind, printer in (('interval_set', _interval_set_spec), ('ball_of_interval', _ball_of_interval_spec),
-                              ('interval_of_ball', _interval_of_ball_spec), ('splits', _splits_spec)):
+                              ('interval_of_ball', _interval_of_ball_spec), ('splits', _splits_spec),
+                              ('certain', _set_predicate_spec), ('trit', _set_predicate_spec)):
             if kind in kinds:
                 if len(k.ensures) != 1:
                     raise PrintError(f'kernel {k.name}: {kind} goes with no other claim')

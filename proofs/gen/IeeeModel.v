@@ -522,6 +522,45 @@ Definition interval_add_1 (xl xu yl yu : float) : float * float :=
   let zu := if ne then h else mi in
   (zl, zu).
 
+(* interval_contains_1: the bounds compared with the point, and a test that the point is finite (Milestone 2 listing). *)
+Definition interval_contains_1 (xl xu t : float) : bool :=
+  let a := le xl t in
+  let b := le t xu in
+  let ta := abs t in
+  let ft := lt ta pinf in
+  let ab := andb a b in
+  let m := andb ab ft in
+  m.
+
+(* interval_empty_1: the lower bound compared with +inf (Milestone 2 listing). *)
+Definition interval_empty_1 (xl xu : float) : bool :=
+  let m := eq xl pinf in
+  m.
+
+(* interval_entire_1: the two bounds compared with the infinities (Milestone 2 listing). *)
+Definition interval_entire_1 (xl xu : float) : bool :=
+  let mi := neg pinf in
+  let a := eq xl mi in
+  let b := eq xu pinf in
+  let m := andb a b in
+  m.
+
+(* interval_equal_1: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_equal_1 (xl xu yl yu : float) : bool * bool :=
+  let ea := eq xl xu in
+  let eb := eq xu yl in
+  let ec := eq yl yu in
+  let eab := andb ea eb in
+  let yes := andb eab ec in
+  let nx := lt xl pinf in
+  let ny := lt yl pinf in
+  let ne := andb nx ny in
+  let da := lt xu yl in
+  let db := lt yu xl in
+  let dd := orb da db in
+  let no := andb dd ne in
+  (yes, no).
+
 (* interval_hull_1: the smaller lower bound and the larger upper bound (Milestone 2 listing). *)
 Definition interval_hull_1 (xl xu yl yu : float) : float * float :=
   let ml := lt yl xl in
@@ -541,6 +580,28 @@ Definition interval_intersection_1 (xl xu yl yu : float) : float * float :=
   let zl := if ok then l else pinf in
   let zu := if ok then h else mi in
   (zl, zu).
+
+(* interval_less_1: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_less_1 (xl xu yl yu : float) : bool * bool :=
+  let nx := lt xl pinf in
+  let ny := lt yl pinf in
+  let ne := andb nx ny in
+  let a := lt xu yl in
+  let c := le yu xl in
+  let yes := andb a ne in
+  let no := andb c ne in
+  (yes, no).
+
+(* interval_less_equal_1: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_less_equal_1 (xl xu yl yu : float) : bool * bool :=
+  let nx := lt xl pinf in
+  let ny := lt yl pinf in
+  let ne := andb nx ny in
+  let a := le xu yl in
+  let c := lt yu xl in
+  let yes := andb a ne in
+  let no := andb c ne in
+  (yes, no).
 
 (* interval_make_1: constructor of an interval (Milestone 2 listing). *)
 Definition interval_make_1 (lo hi : float) : float * float :=
@@ -657,6 +718,57 @@ Definition interval_neg_1 (xl xu : float) : float * float :=
   let zu := neg xl in
   (zl, zu).
 
+(* interval_negative_1: the upper bound compared with 0 and -inf (Milestone 2 listing). *)
+Definition interval_negative_1 (xl xu : float) : bool :=
+  let mi := neg pinf in
+  let a := lt xu pzero in
+  let b := lt mi xu in
+  let m := andb a b in
+  m.
+
+(* interval_positive_1: the lower bound compared with 0 and +inf (Milestone 2 listing). *)
+Definition interval_positive_1 (xl xu : float) : bool :=
+  let a := lt pzero xl in
+  let b := lt xl pinf in
+  let m := andb a b in
+  m.
+
+(* interval_rel_disjoint_1: the stored bounds compared, and tests of emptiness (Milestone 2 listing). *)
+Definition interval_rel_disjoint_1 (xl xu yl yu : float) : bool :=
+  let ex := eq xl pinf in
+  let ey := eq yl pinf in
+  let ee := orb ex ey in
+  let da := lt xu yl in
+  let db := lt yu xl in
+  let dd := orb da db in
+  let m := orb ee dd in
+  m.
+
+(* interval_rel_equal_1: the stored bounds compared (Milestone 2 listing). *)
+Definition interval_rel_equal_1 (xl xu yl yu : float) : bool :=
+  let a := eq xl yl in
+  let c := eq xu yu in
+  let m := andb a c in
+  m.
+
+(* interval_rel_interior_1: the stored bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_rel_interior_1 (xl xu yl yu : float) : bool :=
+  let ex := eq xl pinf in
+  let mi := neg pinf in
+  let la := lt yl xl in
+  let lb := eq yl mi in
+  let lc := eq xl mi in
+  let ld := andb lb lc in
+  let lo := orb la ld in
+  let ua := lt xu yu in
+  let ub := eq xu pinf in
+  let uc := eq yu pinf in
+  let ud := andb ub uc in
+  let hi := orb ua ud in
+  let lu := andb lo hi in
+  let m := orb ex lu in
+  m.
+
 (* interval_split_1: the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing). *)
 Definition interval_split_1 (xl xu : float) : float * float * float * float :=
   let '(m, r) := interval_mid_rad_1 xl xu in
@@ -680,12 +792,26 @@ Definition interval_sub_1 (xl xu yl yu : float) : float * float :=
   let zu := if ne then h else mi in
   (zl, zu).
 
+(* interval_subset_1: the bounds compared (Milestone 2 listing). *)
+Definition interval_subset_1 (xl xu yl yu : float) : bool :=
+  let a := le yl xl in
+  let b := le xu yu in
+  let m := andb a b in
+  m.
+
 (* interval_to_ball_1: interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). *)
 Definition interval_to_ball_1 (xl xu : float) : float * float :=
   let '(m, r) := interval_mid_rad_1 xl xu in
   let un := eq r pinf in
   let c := if un then pzero else m in
   (c, r).
+
+(* interval_zero_1: the bounds compared with 0 (Milestone 2 listing). *)
+Definition interval_zero_1 (xl xu : float) : bool :=
+  let a := eq xl pzero in
+  let b := eq xu pzero in
+  let m := andb a b in
+  m.
 
 (* make_2: constructors (Milestone 1 listing). *)
 Definition make_2 (a : float) : float * float :=
@@ -1289,6 +1415,38 @@ Definition interval_add_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : float * fl
   let zu1 := if ne then b1 else pzero in
   (zl0, zl1, zu0, zu1).
 
+(* le_2_2: limbs compared in order (Milestone 1 listing). *)
+Definition le_2_2 (x0 x1 y0 y1 : float) : bool :=
+  let h := lt x0 y0 in
+  let e := eq x0 y0 in
+  let l := le x1 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* interval_contains_2: the bounds compared with the point by le_2_2, and a test that the point is finite (Milestone 2 listing). *)
+Definition interval_contains_2 (xl0 xl1 xu0 xu1 t0 t1 : float) : bool :=
+  let a := le_2_2 xl0 xl1 t0 t1 in
+  let b := le_2_2 t0 t1 xu0 xu1 in
+  let ta := abs t0 in
+  let ft := lt ta pinf in
+  let ab := andb a b in
+  let m := andb ab ft in
+  m.
+
+(* interval_empty_2: the leading limb of the lower bound compared with +inf (Milestone 2 listing). *)
+Definition interval_empty_2 (xl0 xl1 xu0 xu1 : float) : bool :=
+  let m := eq xl0 pinf in
+  m.
+
+(* interval_entire_2: the leading limbs of the bounds compared with the infinities (Milestone 2 listing). *)
+Definition interval_entire_2 (xl0 xl1 xu0 xu1 : float) : bool :=
+  let mi := neg pinf in
+  let a := eq xl0 mi in
+  let b := eq xu0 pinf in
+  let m := andb a b in
+  m.
+
 (* lt_2_2: limbs compared in order (Milestone 1 listing). *)
 Definition lt_2_2 (x0 x1 y0 y1 : float) : bool :=
   let h := lt x0 y0 in
@@ -1297,6 +1455,22 @@ Definition lt_2_2 (x0 x1 y0 y1 : float) : bool :=
   let t := andb e l in
   let m := orb h t in
   m.
+
+(* interval_equal_2: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_equal_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool * bool :=
+  let ea := eq_2_2 xl0 xl1 xu0 xu1 in
+  let eb := eq_2_2 xu0 xu1 yl0 yl1 in
+  let ec := eq_2_2 yl0 yl1 yu0 yu1 in
+  let eab := andb ea eb in
+  let yes := andb eab ec in
+  let nx := lt xl0 pinf in
+  let ny := lt yl0 pinf in
+  let ne := andb nx ny in
+  let da := lt_2_2 xu0 xu1 yl0 yl1 in
+  let db := lt_2_2 yu0 yu1 xl0 xl1 in
+  let dd := orb da db in
+  let no := andb dd ne in
+  (yes, no).
 
 (* interval_hull_2: the smaller lower bound and the larger upper bound, by lt_2_2 (Milestone 2 listing). *)
 Definition interval_hull_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : float * float * float * float :=
@@ -1307,15 +1481,6 @@ Definition interval_hull_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : float * f
   let zu0 := if mu then yu0 else xu0 in
   let zu1 := if mu then yu1 else xu1 in
   (zl0, zl1, zu0, zu1).
-
-(* le_2_2: limbs compared in order (Milestone 1 listing). *)
-Definition le_2_2 (x0 x1 y0 y1 : float) : bool :=
-  let h := lt x0 y0 in
-  let e := eq x0 y0 in
-  let l := le x1 y1 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
 
 (* interval_intersection_2: the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing). *)
 Definition interval_intersection_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : float * float * float * float :=
@@ -1332,6 +1497,28 @@ Definition interval_intersection_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : f
   let zu0 := if ok then h0 else mi in
   let zu1 := if ok then h1 else pzero in
   (zl0, zl1, zu0, zu1).
+
+(* interval_less_2: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_less_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool * bool :=
+  let nx := lt xl0 pinf in
+  let ny := lt yl0 pinf in
+  let ne := andb nx ny in
+  let a := lt_2_2 xu0 xu1 yl0 yl1 in
+  let c := le_2_2 yu0 yu1 xl0 xl1 in
+  let yes := andb a ne in
+  let no := andb c ne in
+  (yes, no).
+
+(* interval_less_equal_2: the bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_less_equal_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool * bool :=
+  let nx := lt xl0 pinf in
+  let ny := lt yl0 pinf in
+  let ne := andb nx ny in
+  let a := le_2_2 xu0 xu1 yl0 yl1 in
+  let c := lt_2_2 yu0 yu1 xl0 xl1 in
+  let yes := andb a ne in
+  let no := andb c ne in
+  (yes, no).
 
 (* interval_make_2: constructor of an interval of two limbs (Milestone 2 listing). *)
 Definition interval_make_2 (lo0 lo1 hi0 hi1 : float) : float * float * float * float :=
@@ -1443,6 +1630,57 @@ Definition interval_neg_2 (xl0 xl1 xu0 xu1 : float) : float * float * float * fl
   let '(zu0, zu1) := neg_2 xl0 xl1 in
   (zl0, zl1, zu0, zu1).
 
+(* interval_negative_2: the leading limb of the upper bound compared with 0 and -inf (Milestone 2 listing). *)
+Definition interval_negative_2 (xl0 xl1 xu0 xu1 : float) : bool :=
+  let mi := neg pinf in
+  let a := lt xu0 pzero in
+  let b := lt mi xu0 in
+  let m := andb a b in
+  m.
+
+(* interval_positive_2: the leading limb of the lower bound compared with 0 and +inf (Milestone 2 listing). *)
+Definition interval_positive_2 (xl0 xl1 xu0 xu1 : float) : bool :=
+  let a := lt pzero xl0 in
+  let b := lt xl0 pinf in
+  let m := andb a b in
+  m.
+
+(* interval_rel_disjoint_2: the stored bounds compared, and tests of emptiness (Milestone 2 listing). *)
+Definition interval_rel_disjoint_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool :=
+  let ex := eq xl0 pinf in
+  let ey := eq yl0 pinf in
+  let ee := orb ex ey in
+  let da := lt_2_2 xu0 xu1 yl0 yl1 in
+  let db := lt_2_2 yu0 yu1 xl0 xl1 in
+  let dd := orb da db in
+  let m := orb ee dd in
+  m.
+
+(* interval_rel_equal_2: the stored bounds compared (Milestone 2 listing). *)
+Definition interval_rel_equal_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool :=
+  let a := eq_2_2 xl0 xl1 yl0 yl1 in
+  let c := eq_2_2 xu0 xu1 yu0 yu1 in
+  let m := andb a c in
+  m.
+
+(* interval_rel_interior_2: the stored bounds compared, and a test of emptiness (Milestone 2 listing). *)
+Definition interval_rel_interior_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool :=
+  let ex := eq xl0 pinf in
+  let mi := neg pinf in
+  let la := lt_2_2 yl0 yl1 xl0 xl1 in
+  let lb := eq yl0 mi in
+  let lc := eq xl0 mi in
+  let ld := andb lb lc in
+  let lo := orb la ld in
+  let ua := lt_2_2 xu0 xu1 yu0 yu1 in
+  let ub := eq xu0 pinf in
+  let uc := eq yu0 pinf in
+  let ud := andb ub uc in
+  let hi := orb ua ud in
+  let lu := andb lo hi in
+  let m := orb ex lu in
+  m.
+
 (* sub_down_2_2: add_down_2_2 on x and -y (Milestone 2 listing). *)
 Definition sub_down_2_2 (x0 x1 y0 y1 : float) : float * float :=
   let '(n0, n1) := neg_2 y0 y1 in
@@ -1476,6 +1714,20 @@ Definition interval_sub_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : float * fl
   let zu0 := if ne then b0 else mi in
   let zu1 := if ne then b1 else pzero in
   (zl0, zl1, zu0, zu1).
+
+(* interval_subset_2: the bounds compared by le_2_2 (Milestone 2 listing). *)
+Definition interval_subset_2 (xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : float) : bool :=
+  let a := le_2_2 yl0 yl1 xl0 xl1 in
+  let b := le_2_2 xu0 xu1 yu0 yu1 in
+  let m := andb a b in
+  m.
+
+(* interval_zero_2: the leading limbs of the bounds compared with 0 (Milestone 2 listing). *)
+Definition interval_zero_2 (xl0 xl1 xu0 xu1 : float) : bool :=
+  let a := eq xl0 pzero in
+  let b := eq xu0 pzero in
+  let m := andb a b in
+  m.
 
 (* le_1_2: limbs compared in order (Milestone 1 listing). *)
 Definition le_1_2 (a y0 y1 : float) : bool :=

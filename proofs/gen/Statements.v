@@ -887,15 +887,6 @@ Definition eq_2_2_spec : Prop :=
   let m := eq_2_2 x0 x1 y0 y1 in
   m = Req_bool (x0 + x1) (y0 + y1).
 
-(* lt_2_2: limbs compared in order (Milestone 1 listing). Status: proved. *)
-Definition lt_2_2_spec : Prop :=
-  forall emin prec : Z, (1 <= prec)%Z ->
-  forall x0 x1 y0 y1 : R,
-  normalized_2 emin prec x0 x1 ->
-  normalized_2 emin prec y0 y1 ->
-  let m := lt_2_2 x0 x1 y0 y1 in
-  m = Rlt_bool (x0 + x1) (y0 + y1).
-
 (* le_2_2: limbs compared in order (Milestone 1 listing). Status: proved. *)
 Definition le_2_2_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -904,6 +895,15 @@ Definition le_2_2_spec : Prop :=
   normalized_2 emin prec y0 y1 ->
   let m := le_2_2 x0 x1 y0 y1 in
   m = Rle_bool (x0 + x1) (y0 + y1).
+
+(* lt_2_2: limbs compared in order (Milestone 1 listing). Status: proved. *)
+Definition lt_2_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let m := lt_2_2 x0 x1 y0 y1 in
+  m = Rlt_bool (x0 + x1) (y0 + y1).
 
 (* mul_ball_2_2: mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). Status: proved. *)
 Definition mul_ball_2_2_spec : Prop :=

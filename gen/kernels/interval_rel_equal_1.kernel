@@ -1,0 +1,26 @@
+# The relation equal of IEEE 1788 of two intervals with one-limb bounds (milestone2.md,
+# "Comparisons", the relations of IEEE 1788, and "IEEE 1788"): X and Y have the same members, x_l =
+# y_l and x_u = y_u on the stored bounds. With the empty set stored as (+inf, -inf), two empty sets
+# are equal and an empty and a nonempty one are not, the standard's conventions (Table 4.6). Not
+# Kairn's three-valued equal, whose yes is X = Y = [v, v]. Exact. For every precision.
+kernel:        interval_rel_equal_1
+input:         stored xl
+input:         stored xu
+input:         stored yl
+input:         stored yu
+output:        mask m
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       certain m equal x y x=xl,xu y=yl,yu exact
+min_precision: 1
+source:        the stored bounds compared (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+
+a = eq(xl, yl)
+c = eq(xu, yu)
+m = and(a, c)

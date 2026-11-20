@@ -84,11 +84,16 @@ KNOWN_TIGHT = {"exact": set(), "rounded": {"steps", "when"}, "outward": {"rel", 
 # The kinds whose entries name their own set, or make a value from the inputs: a kernel whose every
 # entry is one of them has no value.
 OWN_SET_KINDS = {"makes_ball", "makes_interval", "encloses_interval", "set_bound", "interval_set",
-                 "ball_of_interval", "interval_of_ball", "splits"}
+                 "ball_of_interval", "interval_of_ball", "splits", "certain", "trit"}
 # The set operations of interval_set and the special values of ball_of_interval (architecture.md,
 # "Claims of the interval kernels: two limbs and the enclosure interface").
 KNOWN_SET_OPERATIONS = {"union": ("\\cup", "hull"), "intersection": ("\\cap", "intersection")}
 KNOWN_BALL_SPECIALS = {"ieee1788", "ball"}
+# The relations of the predicates of sets, certain and trit (architecture.md, "Claims of the
+# enclosure interface"): those of trit have a three-valued reading.
+KNOWN_SET_RELATIONS = {"lt": 2, "le": 2, "eq": 2, "member": 2, "subset": 2, "equal": 2, "interior": 2,
+                       "disjoint": 2, "empty": 1, "entire": 1}
+KNOWN_TRIT_RELATIONS = {"lt", "le", "eq", "member"}
 
 # The fields of each kind of `ensures` entry: required, optional in the extended domain.
 KIND_FIELDS = {
@@ -119,6 +124,9 @@ KIND_FIELDS = {
     "ball_of_interval": ({"center", "radius", "from", "special", "rel", "abs"}, set()),
     "interval_of_ball": ({"lower", "upper", "set", "balls", "tight"}, set()),
     "splits": ({"parts", "from"}, set()),
+    # The predicates and comparisons of the enclosure interface: one mask, or yes and no.
+    "certain": ({"of", "rel", "args"}, set()),
+    "trit": ({"yes", "no", "rel", "args"}, set()),
 }
 # The fields an entry of these kinds has in either domain when it uses them (Milestone 2): a
 # rounding under a condition, a condition of exactness, a zero factor, the midpoint of a ball made
@@ -127,6 +135,9 @@ KIND_OPTIONAL = {"rounded": {"when", "zero_factor"}, "error": {"exact_when"}, "e
                  "bound": {"zero_factor"}, "outward": {"exact_when", "zero_factor"}, "makes_ball": {"midpoint_when"},
                  "encloses_interval": {"bounded_exactly", "zero_factor"}, "set_bound": {"tight"},
                  "ball_of_interval": {"smallest_radius"},
+                 # the sets of a predicate (intervals or balls, one of them), and its exactness
+                 "certain": {"intervals", "balls", "exact", "exact_when"},
+                 "trit": {"intervals", "balls", "exact", "exact_when"},
                  # gaps, or a value of its own (the exported bounds of the folds), under a mask (if)
                  "upper": {"gaps", "value", "if"},
                  # the finish of a fold of maxima: under a mask (if), the value stepped up (steps)
@@ -138,7 +149,7 @@ DOMAIN_KINDS = {
     "extended": {"normalized", "error", "rounded", "upper", "predicate", "encloses", "extends",
                  "represents", "makes_ball", "neighbor", "bound", "finite_or_nan", "makes_interval",
                  "encloses_interval", "set_bound", "outward", "interval_set", "ball_of_interval", "interval_of_ball",
-                 "splits"},
+                 "splits", "certain", "trit"},
 }
 DOMAIN_REQUIRES = {
     "finite": {"normalized", "abs_ge", "nonneg", "power_of_two", "count", "format"},
@@ -148,7 +159,7 @@ DOMAIN_REQUIRES = {
 # constructor, an interval kernel, the finish of a fold), which the claims mark "ieee_only": true;
 # represents too, when it is the only entry.
 IEEE_ONLY_KINDS = {"extends", "makes_ball", "finite_or_nan", "makes_interval", "encloses_interval", "set_bound",
-                   "interval_set", "ball_of_interval", "interval_of_ball", "splits"}
+                   "interval_set", "ball_of_interval", "interval_of_ball", "splits", "certain", "trit"}
 
 # The one sentence every page with an UNVERIFIED statement about infinite and NaN operands carries,
 # word for word: gen/claims.json is the only source of a status here.
@@ -420,8 +431,9 @@ def name_tex(name):
     if name == "eta":
         return "\\eta"
     m = re.fullmatch(r"([a-z])([a-z]?)(\d*)", name)
-    if name == "ok" or (not m and re.fullmatch(r"[a-z]{3,}", name)):
-        return "\\mathit{%s}" % name            # a word: the mask of an exported bound, the flag of a fold
+    if name in ("ok", "no") or (not m and re.fullmatch(r"[a-z]{3,}", name)):
+        # a word: the mask of an exported bound, the flag of a fold, the answers of a comparison
+        return "\\mathit{%s}" % name
     if not m:
         fail("no TeX form for the name %r" % name)
     base, sub, digits = m.groups()
@@ -730,6 +742,8 @@ class Kernel:
                 fail("%s: zero_factor and bounded_exactly are true, or left out" % where)
             if e.get("smallest_radius") not in (None, True):
                 fail("%s: smallest_radius is true, or left out" % where)
+            if kind in ("certain", "trit"):
+                self.check_set_predicate(e, where)
             if kind == "interval_set" and e["set"] not in KNOWN_SET_OPERATIONS:
                 fail("%s: the set operation %r of an interval_set claim has no template" % (where, e["set"]))
             if kind == "ball_of_interval" and e["special"] not in KNOWN_BALL_SPECIALS:
@@ -819,7 +833,7 @@ class Kernel:
         """{(center, radius): ball name} of the encloses claims, to name the balls of requirements."""
         out = {}
         for e in self.entry["ensures"]:
-            if e["kind"] == "encloses":
+            if e["kind"] == "encloses" or (e["kind"] in ("certain", "trit") and "balls" in e):
                 for b, cr in e["balls"].items():
                     out[(cr["center"], cr["radius"])] = b
         return out
@@ -901,7 +915,8 @@ class Kernel:
         """{(lower, upper): interval name} of the encloses_interval claims."""
         out = {}
         for e in self.entry["ensures"]:
-            if e["kind"] in ("encloses_interval", "interval_set"):
+            if e["kind"] in ("encloses_interval", "interval_set") or (e["kind"] in ("certain", "trit") and
+                                                                     "intervals" in e):
                 for n, b in e["intervals"].items():
                     out[(b["lower"], b["upper"])] = n
         return out
@@ -957,6 +972,11 @@ class Kernel:
                 parts.append("$%s = 0$" % tex(parse(c["zero"], "kernel %s, exact_when" % self.name,
                                                     set(self.inputs))))
                 continue
+            if set(c) == {"abs_le", "omega"} and c["omega"] is True:
+                # abs_le(EXPR,omega), of certain and trit: |EXPR| <= Omega.
+                parts.append("$\\lvert %s\\rvert \\le \\Omega$" % tex(parse(
+                    c["abs_le"], "kernel %s, exact_when" % self.name, set(self.inputs))))
+                continue
             kinds = [x for x in KNOWN_EXACT_CONDITIONS if x in c]
             if len(kinds) != 1 or set(c) != {kinds[0], "than"}:
                 fail("kernel %s: the exact_when condition %r is not one this script knows" % (self.name, c))
@@ -975,6 +995,28 @@ class Kernel:
             parts.append("$%s = 0$ or $\\lvert %s\\rvert %s %s$" % (x, x, KNOWN_EXACT_CONDITIONS[kinds[0]], tex(bound)))
         return ", ".join(parts[:-1]) + (", and " if len(parts) > 2 else " and ") + parts[-1] if len(parts) > 1 \
             else parts[0]
+
+    def check_set_predicate(self, e, where):
+        """The relation, the arguments and the sets of a certain or trit claim are ones the pages
+        have words for: intervals or balls (one of them), each named by an argument."""
+        rel, args = e["rel"], e["args"]
+        known = KNOWN_TRIT_RELATIONS if e["kind"] == "trit" else set(KNOWN_SET_RELATIONS)
+        if rel not in known or len(args) != KNOWN_SET_RELATIONS[rel]:
+            fail("%s: the relation %r of a %s claim has no template" % (where, rel, e["kind"]))
+        if ("intervals" in e) == ("balls" in e):
+            fail("%s: a %s claim names intervals or balls, one of them" % (where, e["kind"]))
+        sets = e.get("intervals", e.get("balls"))
+        if e.get("exact") not in (None, True) or ("exact" in e and "exact_when" in e):
+            fail("%s: exact is true or left out, and not with exact_when" % where)
+        for a in args[1:] if rel == "member" else args:
+            if a not in sets and not (rel in ("lt", "le", "eq") and a == "0"):
+                fail("%s: the argument %r of a %s claim is not one of its sets" % (where, a, e["kind"]))
+        if rel == "member" and args[0] not in self.inputs:
+            fail("%s: the point %r of a member claim is not an input" % (where, args[0]))
+        for b in sets.values():
+            for v in b.values():
+                if v not in self.inputs:
+                    fail("%s: %r of a set of a %s claim is not an input" % (where, v, e["kind"]))
 
     def limb_expr(self, text, what):
         """An expression over the inputs and their limbs NAME[I] (a maximum claim), as a tree, each
@@ -1787,6 +1829,8 @@ class Site:
                 lines.extend(self.extended_interval_of_ball(k, x))
             elif kind == "splits":
                 lines.extend(self.extended_splits(k, x))
+            elif kind in ("certain", "trit"):
+                lines.extend(self.extended_set_predicate(k, x))
             else:
                 fail("kernel %s: the claim kind %r has no reading in the extended domain" % (k.name, kind))
         if not kinds:
@@ -2101,6 +2145,95 @@ class Site:
                 "Otherwise neither is, $%s = %s$, $%s = %s$ and $%s = %s$: the two together are $X$, split at that "
                 "point, which is in $X$." % (al, lo, bu, hi, au, bl)]
 
+    def set_definitions(self, k, x):
+        """What the sets of a certain or trit claim are, in words."""
+        if "intervals" in x:
+            return " and ".join("$%s = [%s, %s]$" % (name_tex(n).upper(), name_tex(b["lower"]), name_tex(b["upper"]))
+                                for n, b in x["intervals"].items())
+        return " and ".join("$%s$ the ball of center $%s$ and radius $%s$" % (
+            name_tex(n).upper(), k.out_tex(b["center"]) if b["center"] in k.outputs else
+            k.value_of(b["center"]) if len(k.limbs(b["center"])) > 1 else name_tex(b["center"]),
+            name_tex(b["radius"])) for n, b in x["balls"].items())
+
+    def set_relation(self, k, x, formula=False, negated=False):
+        """The relation of a certain or trit claim, in words, or as a formula; with `negated`, its
+        failure for every choice of members (the no of a trit)."""
+        rel, args = x["rel"], x["args"]
+
+        def S(n):
+            return name_tex(n).upper()
+        if rel in ("lt", "le", "eq"):
+            sets = [a for a in args if a != "0"]
+            a, b = (name_tex(n) if n != "0" else "0" for n in args)
+            op = KNOWN_RELS[rel]
+            body = ("\\lnot(%s %s %s)" % (a, op, b)) if negated else "%s %s %s" % (a, op, b)
+            over = ", ".join("%s \\in %s" % (name_tex(n), S(n)) for n in sets)
+            nonempty = " \\ne \\emptyset, ".join(S(n) for n in sets) + " \\ne \\emptyset"
+            if formula:
+                return "%s \\text{ and } %s \\text{ for every } %s" % (nonempty, body, over)
+            return "$%s$ for every $%s$, %s not being empty" % (body, over, " and ".join("$%s$" % S(n) for n in sets))
+        if rel == "member":
+            t = k.value_of(args[0]) if len(k.limbs(args[0])) > 1 else name_tex(args[0])
+            if formula:
+                return ("%s \\notin %s" if negated else "%s \\in %s") % (t, S(args[1]))
+            return "the point $%s$ is a finite number and a member of $%s$%s" % (
+                t, S(args[1]), "" if not negated else " (negated)")
+        X = S(args[0])
+        if rel == "empty":
+            return "%s = \\emptyset" % X if formula else "$%s$ is the empty set" % X
+        if rel == "entire":
+            return "%s = \\mathbb{R}" % X if formula else "$%s$ is the whole line" % X
+        Y = S(args[1])
+        if rel == "subset":
+            return "%s \\subseteq %s" % (X, Y) if formula else "$%s \\subseteq %s$, every member of $%s$ a member of $%s$" % (
+                X, Y, X, Y)
+        if rel == "equal":
+            return "%s = %s" % (X, Y) if formula else "$%s$ and $%s$ have the same members" % (X, Y)
+        if rel == "interior":
+            return ("%s \\subseteq \\operatorname{int} %s" % (X, Y) if formula else
+                    "every member of $%s$ is in the interior of $%s$" % (X, Y))
+        if rel == "disjoint":
+            return "%s \\cap %s = \\emptyset" % (X, Y) if formula else "$%s$ and $%s$ have no member in common" % (X, Y)
+        fail("kernel %s: the relation %r has no template" % (k.name, rel))
+
+    def extended_set_predicate(self, k, x):
+        """certain and trit: the predicates and three-valued comparisons of the enclosure interface."""
+        special = ("an operand is the empty set or the whole line" +
+                   (", or the point is not a finite number" if x["rel"] == "member" else ""))
+        finite_ops = "every operand is finite (%s)" % (
+            "a finite ball" if "balls" in x else "a bounded interval") + \
+            (" and so is the point" if x["rel"] == "member" else "")
+        if x["kind"] == "certain":
+            m = name_tex(x["of"])
+            if x.get("exact"):
+                return ["$%s$ is true exactly when %s: the answer is exact." % (m, self.set_relation(k, x))]
+            lines = ["$%s$ is true only if %s." % (m, self.set_relation(k, x)),
+                     "When %s, it is true exactly then." % special]
+            if "exact_when" in x:
+                lines.append("When %s and %s, it is true exactly then." % (finite_ops, k.exact_tex(x["exact_when"])))
+            else:
+                lines.append("For finite operands it may be false although the relation holds, close to where it "
+                             "stops holding: the answer is certain, not exact.")
+            return lines
+        yes, no = name_tex(x["yes"]), name_tex(x["no"])
+        held = self.set_relation(k, x, formula=True)
+        failed = self.set_relation(k, x, formula=True, negated=True)
+        lines = ["$%s$ is true only if $%s$; $%s$ only if $%s$; never both. Both false is the answer *unknown*." % (
+            yes, held, no, failed)]
+        if x["rel"] in ("lt", "le", "eq"):
+            lines.append("An empty operand gives *unknown*, and so does the whole line.")
+        if x.get("exact"):
+            lines.append("Exact: $%s$ is true exactly when $%s$, and $%s$ exactly when $%s$; *unknown* is returned "
+                         "exactly when neither holds." % (yes, held, no, failed))
+        else:
+            lines.append("When %s, the answer is exact: each mask is true exactly when its relation holds." % special)
+            if "exact_when" in x:
+                lines.append("When %s and %s, the answer is exact as well." % (finite_ops, k.exact_tex(x["exact_when"])))
+            else:
+                lines.append("For finite operands the answer may be *unknown* although one of the relations holds, "
+                             "close to where it stops holding: certain, not exact.")
+        return lines
+
     def extended_set_bound(self, k, x):
         b = next(iter(x["balls"]))
         cr = x["balls"][b]
@@ -2229,6 +2362,17 @@ class Site:
                     "\n\n$$%s.$$" % (", ".join(name_tex(i) for i in k.inputs),
                                        " and ".join("$%s$" % name_tex(m) for m in masks),
                                        ", \\qquad ".join(b.strip("$") for b in bounds)))
+        if "certain" in kinds or "trit" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] in ("certain", "trit"))
+            sets = self.set_definitions(k, x)
+            if x["kind"] == "certain":
+                return ("Whether %s, %s; a mask that is true only if it holds:\n\n$$%s \\implies %s.$$" % (
+                    self.set_relation(k, x), sets, name_tex(x["of"]), self.set_relation(k, x, formula=True)))
+            return ("The three-valued answer to whether %s, %s: *yes* only if it holds for every choice of members, "
+                    "*no* only if it fails for every choice, otherwise *unknown*, both masks false:\n\n$$%s "
+                    "\\implies %s, \\qquad %s \\implies %s.$$" % (
+                        self.set_relation(k, x), sets, name_tex(x["yes"]), self.set_relation(k, x, formula=True),
+                        name_tex(x["no"]), self.set_relation(k, x, formula=True, negated=True)))
         if "makes_interval" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "makes_interval")
             lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
@@ -2422,6 +2566,12 @@ class Site:
                 parts.append("the smallest interval of `T` that contains the ball; empty for the empty ball")
             elif x["kind"] == "splits":
                 parts.append("two intervals that together are the operand, split at a point of it")
+            elif x["kind"] == "certain":
+                parts.append("whether $%s$; %s" % (self.set_relation(k, x, formula=True),
+                                                   "exact" if x.get("exact") else "true only if it holds"))
+            elif x["kind"] == "trit":
+                parts.append("yes, no or unknown: whether $%s$; %s" % (
+                    self.set_relation(k, x, formula=True), "exact" if x.get("exact") else "never wrong"))
             else:
                 fail("kernel %s: no index line for the claim kind %r" % (k.name, x["kind"]))
         return "; ".join(parts)

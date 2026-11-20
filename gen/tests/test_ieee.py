@@ -257,6 +257,31 @@ class Statements(unittest.TestCase):
         # mul_dir_1, whose zero_factor is of one-limb operands, is printed as before.
         self.assertIn('  (zero a \\/ zero b -> zero d) /\\\n', spec('mul_dir_1_ieee'))
 
+    def test_the_kernels_of_stage_b2(self):
+        # The statements of certain and trit (architecture.md, "Claims of the enclosure interface:
+        # predicates and comparisons"), in their shapes: an exact predicate is one equivalence, a
+        # three-valued comparison two and the exclusion of both.
+        text = ieee.statements(self.ks)
+
+        def spec(name):
+            return re.search(rf'^Definition {name}_spec : Prop :=\n(.*?)\.\n', text, flags=re.M | re.S).group(1)
+        self.assertTrue(spec('interval_empty_1').endswith('  (m = true <->\n    interval_empty_1 xl xu)'))
+        self.assertIn('  (m = true <->\n    finite t0 /\\ in_interval_2 xl0 xl1 xu0 xu1 (val t0 + val t1))',
+                      spec('interval_contains_2'))
+        self.assertIn('  (m = true <->\n    interval_nonempty_1 xl xu /\\\n'
+                      '    (forall x : R, in_interval_1 xl xu x -> 0 < x))', spec('interval_positive_1'))
+        self.assertIn('  (m = true <->\n    (forall z : R, in_interval_1 xl xu z -> in_interval_1 yl yu z))',
+                      spec('interval_subset_1'))
+        self.assertIn('exists d : R, 0 < d /\\ (forall w : R, Rabs (w - z) < d -> in_interval_1 yl yu w)',
+                      spec('interval_rel_interior_1'))
+        s = spec('interval_less_2')
+        self.assertIn('  (yes = true <->\n    interval_nonempty_2 xl0 xl1 xu0 xu1 /\\ interval_nonempty_2 yl0 yl1 yu0 yu1 /\\\n'
+                      '    (forall x y : R, in_interval_2 xl0 xl1 xu0 xu1 x -> in_interval_2 yl0 yl1 yu0 yu1 y -> x < y)) /\\\n',
+                      s)
+        self.assertIn('-> ~ (x < y))) /\\\n  ~ (yes = true /\\ no = true)', s)
+        # No hypothesis on the precision: comparisons and selects, for every precision.
+        self.assertNotIn('<= prec)%Z', s)
+
     def test_represents(self):
         # neg_2 and abs_2 say it next to normalized and an exact error, which it implies.
         self.assertTrue(self.statement('neg_2_ieee_spec').endswith(
@@ -435,8 +460,12 @@ class CheckedFiles(unittest.TestCase):
     # the new definitions for the new statements (theories/IeeeMake.v), the statements file prints
     # their status, proved, and make -C proofs passed on these files. Merged here: the
     # regeneration of the merged descriptions.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '88d13229fd112f3d8b1c8e4b12cac3283b4dc130f118fef93ab77d46a858c26d',
-               'proofs/gen/IeeeStatements.v': 'a49c798868fe7f681a4631b0af56f8e7264ecc3bdafb27fefa418f9438b996de'}
+    # Then the 26 predicates and three-valued comparisons of an interval of stage B2, unverified,
+    # were added: their definitions and statements (certain and trit), every earlier definition
+    # and statement the same, byte for byte, some printed earlier (le_2_2 before lt_2_2, callees
+    # before callers); make -C proofs passed on these files.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '15831b5e35256bca85a77a081987f9cb0ded7020538e83b08c139ffa24bbb294',
+               'proofs/gen/IeeeStatements.v': 'f0d0b51ca4b9b676a03337ffdf36ac5a68bd397c17112929c9ea56c86ef5ab4e'}
 
 
     def test_the_checked_files(self):

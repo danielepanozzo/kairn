@@ -1,0 +1,27 @@
+# Whether a value t of T is a member of an interval with one-limb bounds (milestone2.md, "One
+# enclosure interface", the row of contains(t)): x_l <= t, t <= x_u, and t finite. Members are real
+# numbers: +inf is not a member of [1, +inf] although both comparisons hold, hence the test of
+# finiteness; a NaN fails every comparison, and the empty set (+inf, -inf) has no member. Exact. t
+# is a value of the program, only compared (rule R3 asks no guard). For every precision.
+kernel:        interval_contains_1
+input:         stored xl
+input:         stored xu
+input:         t
+output:        mask m
+requires:      interval xl xu
+ensures:       certain m member t x x=xl,xu exact
+min_precision: 1
+source:        the bounds compared with the point, and a test that the point is finite (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+
+a  = le(xl, t)
+b  = le(t, xu)
+ta = abs(t)
+ft = lt(ta, const inf)
+ab = and(a, b)
+m  = and(ab, ft)

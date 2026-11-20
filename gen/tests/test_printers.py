@@ -48,8 +48,11 @@ def functions(text, fixups=False):
             m = re.match(r'KAIRN_GEN_COLD (constexpr )?result<(double|float), [0-9]+> (\w+)\(', line)
             key = (m.group(3), m.group(2)) if m else None
         else:
-            m = re.match(r'KAIRN_GEN_FORCEINLINE (constexpr )?void (\w+)\((double|float) ', line) or \
-                re.match(r'inline (constexpr )?void (\w+)\((double|float) ', line)
+            # The first parameter may be an input the computation does not need (stage B2: the
+            # predicates of an interval that read one of its bounds).
+            m = re.match(r'KAIRN_GEN_FORCEINLINE (constexpr )?void (\w+)\((?:\[\[maybe_unused\]\] )?(double|float) ',
+                         line) or \
+                re.match(r'inline (constexpr )?void (\w+)\((?:\[\[maybe_unused\]\] )?(double|float) ', line)
             key = (m.group(2), m.group(3)) if m else None
         if m:
             current = out.setdefault(key, {'constexpr': bool(m.group(1)), 'lines': [], 'head': line})
@@ -891,9 +894,12 @@ class Rocq(unittest.TestCase):
     # proved: Statements.v prints that one word, and Audit.v lists its theorem; then the seven
     # bounds of two limbs: seven words more, and their theorems (Directed2.v). The files are
     # the regeneration of the merged descriptions.
-    DIGESTS = {'Model.v': '87fb181c8e6c93c1f4464b97b919af311fa8a00a9a9d941c3db262f8489375ee',
-               'Statements.v': '3e7e7c5148914c45a32bc5a285f4f552889434d0b714971783fe1f7521308fbc',
-               'Audit.v': '655b9f566eb3b51ca85aaffbe68da179ac2e76de08861bca21e0695ec5dcf129'}
+    # Then the predicates and comparisons of an interval of stage B2, which have no real-model
+    # statement, changed the order of the three files only: le_2_2, which interval_contains_2
+    # calls, is printed before lt_2_2 (callees before callers), every block the same, byte for byte.
+    DIGESTS = {'Model.v': '0dbcef843ac7965484d9db78b6398d2eb80f040d15400f32316ed3ec9164c99e',
+               'Statements.v': 'cfb46655cfc043a5236b61f39dacae174d0e86ea03a4f899237d1769c33e2066',
+               'Audit.v': 'b5ffaf0b75f2215cded078a66ccd034fd60aa0eb600292fb8007624f8453f0ea'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

@@ -1829,6 +1829,80 @@ those of `interval_intersection_2`, `interval_to_ball_1`, `interval_neg_2` and `
 
 A statement about intervals or balls made from them has a hypothesis on the precision only when its minimum is above 1, as before. These kernels have no real-model statement.
 
+### Claims of the enclosure interface: predicates and comparisons
+
+The third stage of the interval work (stage B2) needs the additions below, for these kernels of [One enclosure interface](design/milestone2.md#one-enclosure-interface), each of one limb and of two (`_1`, `_2`):
+- the predicates of an interval: `interval_empty_k`, `interval_entire_k`, `interval_contains_k` (a point), `interval_subset_k`, `interval_positive_k`, `interval_negative_k`, `interval_zero_k`;
+- its three-valued comparisons: `interval_less_k`, `interval_less_equal_k`, `interval_equal_k`;
+- the relations of IEEE 1788 that are not one of those: `interval_rel_equal_k`, `interval_rel_interior_k`, `interval_rel_disjoint_k`.
+
+Everything above keeps its meaning and its JSON shape: the two kinds below are new, and `abs_le` with `omega`, a condition of `bounded_when`, is also a condition of their `exact_when`.
+
+**New kinds.** Both are about *sets*, named in the entry as the interval and ball operands are named elsewhere, by one of two fields: `intervals`, each name with the `lower` and `upper` inputs of an `interval` requirement; or `balls`, each name with the `center` and `radius` inputs of a `ball` requirement. The sets of one entry are all intervals or all balls. The *members* of a set are real numbers: those between the bounds of an interval ($[1, +\infty]$ does not contain $+\infty$), those within the radius of a finite ball's center, every real number for the whole line, none for the empty set.
+
+| Kind | Fields | Meaning |
+|---|---|---|
+| `certain` | `of`: a mask output; `rel`, `args` (below); `intervals` or `balls`; `exact` (optional): `true`; `exact_when` (optional): a list of conditions | The mask is true only if the relation holds. When an operand is not finite (a set that is the empty set or the whole line, a point that is not a finite number), it is true exactly when the relation holds. With `exact`, it is true exactly when the relation holds, for every operand. With `exact_when`, it is so when every operand is finite (a bounded interval, a finite ball, a finite point) and every condition holds. Without either, nothing more is claimed: the mask may be false although the relation holds |
+| `trit` | `yes`, `no`: two mask outputs; `rel`, `args`; `intervals` or `balls`; `exact` or `exact_when` (optional), as for `certain` | `yes` is true only if the relation holds *for every choice of members* (below), `no` only if it fails for every choice; they are never both true, and both false is the answer *unknown*. When an operand is not finite, and with `exact` always, `yes` is true exactly when the relation holds for every choice and `no` exactly when it fails for every choice; `exact_when` as for `certain` |
+
+The relations, `rel` and its `args` (a set is named by its name in `intervals` or `balls`):
+
+| `rel` | `args` | Holds when | Of `trit`: fails for every choice when |
+|---|---|---|---|
+| `lt`, `le`, `eq` | two, each a set or the integer `0`, one of them a set | every set named is nonempty, and $a < b$ ($\le$, $=$) for every choice of a member $a$ of the first and $b$ of the second (`0` stands for the number 0) | every set named is nonempty, and $a < b$ ($\le$, $=$) is false for every choice |
+| `member` | a point and a set: the point an input of one limb, or of two required `canonical` | the point is a finite number and a member of the set | the point is not a finite number, or not a member |
+| `subset` | two sets | every member of the first is a member of the second | (no `trit`) |
+| `equal` | two sets | they have the same members | (no `trit`) |
+| `interior` | two sets | every member of the first has a neighbourhood, an open interval around it, made of members of the second | (no `trit`) |
+| `disjoint` | two sets | no real number is a member of both | (no `trit`) |
+| `empty` | one set | it has no member | (no `trit`) |
+| `entire` | one set | every real number is a member | (no `trit`) |
+
+So, on the special sets: `lt`, `le` and `eq` neither hold nor fail for every choice when a set is empty (a three-valued comparison with the empty set is *unknown*, and so is `certainly_positive`, which is `lt` with `0`: [The empty set and the whole line](design/milestone2.md#the-empty-set-and-the-whole-line)); with the whole line they never hold and never fail for every choice either. `subset`, `equal`, `interior` and `disjoint` have the vacuous readings of the empty set, which are those of IEEE 1788: the empty set is a subset of every set, interior to every set, disjoint from every set, and equal to the empty set only.
+
+**A condition of `exact_when`** of these kinds is `{"abs_le": EXPR, "omega": true}`, $\lvert \mathrm{EXPR}\rvert \le \Omega$, EXPR an expression of the language of `value` over the inputs (for a ball, its center and radius inputs), evaluated on finite operands. No other condition is one of these kinds.
+
+**The relations of IEEE 1788.** The standard IEEE Std 1788.1-2017 has four relations of two intervals, `equal`, `subset`, `interior` and `disjoint` ([IEEE 1788](design/milestone2.md#ieee-1788)). Each is a kernel, exact, with the standard's conventions for the empty set, which are the readings of the table above: `subset(X, Y)` is `interval_subset_k`, which is also Kairn's predicate `Y.contains(X)` with the operands exchanged; `equal(X, Y)` is `interval_rel_equal_k`, which is *not* Kairn's three-valued `equal`; `interior(X, Y)` is `interval_rel_interior_k`; `disjoint(X, Y)` is `interval_rel_disjoint_k`, which for nonempty operands is the *no* of Kairn's three-valued `equal`, and is also true when an operand is empty. The four relations that only the full standard has, `less`, `precedes`, `strict_less` and `strict_precedes`, are not kernels of this stage: the page asks that their definitions be checked against the test cases of ITF1788 first, and those are not in the repository.
+
+Entries as the generator writes them (`source`, `flops` and the theorem fields left out):
+
+```json
+{"name": "interval_contains_1", "domain": "extended", "ieee_only": true,
+ "inputs": [{"name": "xl", "limbs": 1}, {"name": "xu", "limbs": 1}, {"name": "t", "limbs": 1}],
+ "outputs": [{"name": "m", "limbs": 1, "type": "mask"}],
+ "requires": ["interval(xl, xu)"],
+ "ensures": [{"kind": "certain", "of": "m", "rel": "member", "args": ["t", "x"], "intervals": {"x": {"lower": "xl", "upper": "xu"}}, "exact": true}],
+ "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+ "instances": {"binary64": [], "binary32": []}},
+{"name": "interval_less_2", "domain": "extended", "ieee_only": true,
+ "inputs": [{"name": "xl", "limbs": 2}, {"name": "xu", "limbs": 2}, {"name": "yl", "limbs": 2}, {"name": "yu", "limbs": 2}],
+ "outputs": [{"name": "yes", "limbs": 1, "type": "mask"}, {"name": "no", "limbs": 1, "type": "mask"}],
+ "requires": ["interval(xl, xu)", "interval(yl, yu)"],
+ "ensures": [{"kind": "trit", "yes": "yes", "no": "no", "rel": "lt", "args": ["x", "y"], "intervals": {"x": {"lower": "xl", "upper": "xu"}, "y": {"lower": "yl", "upper": "yu"}}, "exact": true}],
+ "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+ "instances": {"binary64": [], "binary32": []}}
+```
+
+and the `ensures` of six more:
+
+```json
+[{"kind": "certain", "of": "m", "rel": "lt", "args": ["0", "x"], "intervals": {"x": {"lower": "xl", "upper": "xu"}}, "exact": true}],
+[{"kind": "certain", "of": "m", "rel": "eq", "args": ["x", "0"], "intervals": {"x": {"lower": "xl", "upper": "xu"}}, "exact": true}],
+[{"kind": "certain", "of": "m", "rel": "empty", "args": ["x"], "intervals": {"x": {"lower": "xl", "upper": "xu"}}, "exact": true}],
+[{"kind": "certain", "of": "m", "rel": "subset", "args": ["x", "y"], "intervals": {"x": {"lower": "xl", "upper": "xu"}, "y": {"lower": "yl", "upper": "yu"}}, "exact": true}],
+[{"kind": "certain", "of": "m", "rel": "interior", "args": ["x", "y"], "intervals": {"x": {"lower": "xl", "upper": "xu"}, "y": {"lower": "yl", "upper": "yu"}}, "exact": true}],
+[{"kind": "trit", "yes": "yes", "no": "no", "rel": "eq", "args": ["x", "y"], "intervals": {"x": {"lower": "xl", "upper": "xu"}, "y": {"lower": "yl", "upper": "yu"}}, "exact": true}]
+```
+
+those of `interval_positive_1`, `interval_zero_1`, `interval_empty_2`, `interval_subset_1`, `interval_rel_interior_2` and `interval_equal_1`. The other kernels of this part:
+- `interval_negative_k` is `lt` with the arguments `["x", "0"]`; `interval_entire_k` is `entire`; `interval_contains_2` is `interval_contains_1` with bounds of two limbs and a point of two limbs, required `canonical`; `interval_rel_equal_k` and `interval_rel_disjoint_k` are `equal` and `disjoint`; `interval_less_equal_k` is `interval_less_k` with `le`. Every one is `exact`, and each kernel of two limbs claims what the kernel of one limb claims.
+- The masks of a `trit` are the outputs `yes` and `no`, in that order; in the line protocol each is `0` or `1`, as every mask.
+
+**In the formal models.** IEEE model only, in the vocabulary of `IeeeIntervalVocabulary.v` and `IeeeVocabulary.v`. A mask is a `bool`, and the claims are about `m = true`:
+- the relation, with the members `in_interval_n` (or `in_ball_n`) of the sets: for `lt`, `le` and `eq`, `interval_nonempty_n` of each set named (for a ball, `~ ball_empty_n`) and `forall x y : R, in X x -> in Y y -> x < y` (the failure of `trit`: `~ (x < y)`); for `member`, `finite t0 /\ in X (val t0 + val t1)`; for `subset`, `forall z : R, in X z -> in Y z`; for `equal`, the same with `<->`; for `interior`, `forall z : R, in X z -> exists d : R, 0 < d /\ (forall w : R, Rabs (w - z) < d -> in Y w)`; for `disjoint`, `~ (exists z : R, in X z /\ in Y z)`; for `empty`, `interval_empty_n` (`ball_empty_n`); for `entire`, `forall z : R, in X z`;
+- `certain`: `(m = true -> R)`; then, without `exact`, `(S -> (m = true <-> R))` with S the disjunction of `interval_empty_n X \/ (xval xl = XInf true /\ xval xu = XInf false)` of each interval (for a ball, `ball_empty_n \/ ball_whole_n`) and, for `member`, `~ finite t0`; and with `exact_when`, `(F -> C -> (m = true <-> R))`, F the conjunction of `interval_bounded_n` (for a ball, `ball_finite_n`) of each set and, for `member`, `finite t0`, C the conditions (`Rabs E <= omega prec emax`). With `exact`, the statement is `(m = true <-> R)` alone;
+- `trit`: `(yes = true -> R)`, `(no = true -> N)` and `~ (yes = true /\ no = true)`, N the failure for every choice; then as for `certain`, with `(yes = true <-> R) /\ (no = true <-> N)` for each equivalence.
+
 ## The line protocol
 
 Runners and the oracle exchange text lines, the same on every platform and for every format.

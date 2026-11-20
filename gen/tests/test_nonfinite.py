@@ -681,6 +681,117 @@ def judge_splits(k, ks, fmt, e, ins, outs, values):
     return [] if ok else ['splits (cover)']
 
 
+def _set_of(fmt, e, ins, name):
+    """A set of a certain or trit entry as ('empty', None, None) or (state, lo, hi), lo and hi
+    extended values, the members the reals between them: an interval's bounds (state 'bounded',
+    'unbounded' or 'line' for the whole line), a ball's c - r and c + r ('finite') or the whole
+    line ('line')."""
+    if 'balls' in e:
+        cr = e['balls'][name]
+        state = ball_state(fmt, ins[cr['center']], ins[cr['radius']][0])
+        if state == 'empty':
+            return 'empty', None, None
+        if state == 'line':
+            return 'line', NINF, PINF
+        c, r = sum(fr(v) for v in ins[cr['center']]), fr(ins[cr['radius']][0])
+        return 'finite', c - r, c + r
+    b = e['intervals'][name]
+    lo, hi = ins[b['lower']], ins[b['upper']]
+    state = interval_state(fmt, lo, hi)
+    if state == 'empty':
+        return 'empty', None, None
+    a, z = bound_value(lo), bound_value(hi)
+    return ('line' if (a, z) == (NINF, PINF) else state), a, z
+
+
+def _member(s, x):
+    """Whether the real x is a member of the set s of _set_of."""
+    return s[0] != 'empty' and xle(s[1], x) and xle(x, s[2])
+
+
+def set_relation(fmt, e, ins, negated=False):
+    """The relation of a certain or trit entry, read on the sets (a reading of milestone2.md, "One
+    enclosure interface", of its own): for lt, le and eq, every set nonempty and the relation of
+    every choice of members (with `negated`, its failure for every choice), read on the closed sets
+    by their least and greatest members; member, the point a finite number in the set (negated: not
+    so); subset, equal, interior, disjoint, empty and entire, of the sets of reals."""
+    rel, args = e['rel'], e['args']
+    sets = {x: _set_of(fmt, e, ins, x) for x in e.get('intervals', e.get('balls', {}))}
+    if rel == 'member':
+        t = ins[args[0]]
+        inside = all(finite(v) for v in t) and _member(sets[args[1]], sum(fr(v) for v in t))
+        return not inside if negated else inside
+    if rel in ('lt', 'le', 'eq'):
+        point = ('finite', F(0), F(0))
+        a, b = (point if x == '0' else sets[x] for x in args)
+        if 'empty' in (a[0], b[0]):
+            return False
+        # The members are the reals between the bounds; an infinite bound is no member, so the least
+        # (greatest) member does not exist there, and no choice relation of all pairs holds.
+        if not negated:
+            if rel == 'lt':
+                return a[2] not in (PINF, NINF) and b[1] not in (PINF, NINF) and a[2] < b[1]
+            if rel == 'le':
+                return a[2] not in (PINF, NINF) and b[1] not in (PINF, NINF) and a[2] <= b[1]
+            return a[1] == a[2] == b[1] == b[2] and a[1] not in (PINF, NINF)
+        if rel == 'lt':                 # x >= y for every pair: the least of a at least the greatest of b
+            return a[1] not in (PINF, NINF) and b[2] not in (PINF, NINF) and a[1] >= b[2]
+        if rel == 'le':                 # x > y for every pair
+            return a[1] not in (PINF, NINF) and b[2] not in (PINF, NINF) and a[1] > b[2]
+        return less(a[2], b[1]) or less(b[2], a[1])      # x != y for every pair: disjoint closed sets
+    x = sets[args[0]]
+    if rel == 'empty':
+        return x[0] == 'empty'
+    if rel == 'entire':
+        return x[0] == 'line'
+    y = sets[args[1]]
+    if rel == 'subset':
+        return x[0] == 'empty' or (y[0] != 'empty' and xle(y[1], x[1]) and xle(x[2], y[2]))
+    if rel == 'equal':
+        return (x[0] == 'empty') == (y[0] == 'empty') and (x[0] == 'empty' or (x[1], x[2]) == (y[1], y[2]))
+    if rel == 'disjoint':
+        return 'empty' in (x[0], y[0]) or less(x[2], y[1]) or less(y[2], x[1])
+    if rel == 'interior':
+        # Every member of x has a neighborhood in y: y's interior is the open interval between its
+        # bounds; a lower bound -inf of x needs one of y, a finite one a bound of y below it.
+        if x[0] == 'empty':
+            return True
+        if y[0] == 'empty':
+            return False
+        low = y[1] == NINF or (x[1] != NINF and less(y[1], x[1]))
+        high = y[2] == PINF or (x[2] != PINF and less(x[2], y[2]))
+        return low and high
+    raise AssertionError(rel)
+
+
+def judge_set_predicate(k, ks, fmt, e, ins, outs, values):
+    """certain and trit (the predicates and comparisons of the enclosure interface): the masks are
+    right when true, never both true; exactly the relation when an operand is not finite (a set that
+    is empty or the whole line, a point that is not a finite number), always with exact, and for
+    finite operands under the conditions of exact_when."""
+    holds = set_relation(fmt, e, ins)
+    if e['kind'] == 'certain':
+        masks = [(outs[e['of']][0], holds)]
+    else:
+        masks = [(outs[e['yes']][0], holds), (outs[e['no']][0], set_relation(fmt, e, ins, negated=True))]
+    bad = []
+    if any(m and not want for m, want in masks):
+        bad.append(f'{e["kind"]} (wrong)')
+    if e['kind'] == 'trit' and masks[0][0] and masks[1][0]:
+        bad.append('trit (both)')
+    sets = {x: _set_of(fmt, e, ins, x)[0] for x in e.get('intervals', e.get('balls', {}))}
+    special = any(s in ('empty', 'line') for s in sets.values())
+    if e['rel'] == 'member' and not all(finite(v) for v in ins[e['args'][0]]):
+        special = True
+    exact = e.get('exact') or special
+    if not exact and 'exact_when' in e:
+        env = {g.name: group_value(ins[g.name]) for g in k.inputs if g.kind == ir.LIMB}
+        exact = all(abs(extended(c['abs_le'], env)) <= fmt.top for c in e['exact_when'])
+    if exact and any(m != want for m, want in masks):
+        bad.append(f'{e["kind"]} (not exact)')
+    return bad
+
+
 def judge_makes_interval(k, ks, fmt, e, ins, outs, values):
     """The constructor of an interval: canonical; the interval of the bounds given when they
     describe a nonempty one; the whole line when a bound is a NaN; the empty set otherwise."""
@@ -943,7 +1054,8 @@ JUDGES = {'extends': judge_extends, 'encloses': judge_ball, 'represents': judge_
           'encloses_interval': judge_interval,
           'makes_interval': judge_makes_interval, 'set_bound': judge_set_bound,
           'interval_set': judge_interval_set, 'ball_of_interval': judge_ball_of_interval,
-          'interval_of_ball': judge_interval_of_ball, 'splits': judge_splits}
+          'interval_of_ball': judge_interval_of_ball, 'splits': judge_splits,
+          'certain': judge_set_predicate, 'trit': judge_set_predicate}
 
 
 def judge(job):
@@ -1031,8 +1143,9 @@ class NonFinite(unittest.TestCase):
         # the directed sums and products, five entry forms, the full scalings by a power of two),
         # and 13 of wave 2: the interval kernels, mul_dir_1, the bounds of a ball as numbers of T,
         # the ball from an interval and the narrowing of a ball; and 13 of stage B1; and the two
-        # finishes of the folds, and the two of the folds of maxima.
-        self.assertEqual(len(self.names), 54 + 13 + 13 + 4)
+        # finishes of the folds, and the two of the folds of maxima; and of stage B2, the 26
+        # predicates and comparisons of an interval.
+        self.assertEqual(len(self.names), 54 + 13 + 13 + 4 + 26)
 
     def test_every_situation_is_reached(self):
         """The cases reach what the statements are about: every full kernel overflows on finite
@@ -1258,6 +1371,32 @@ class NonFinite(unittest.TestCase):
         self.assertEqual(judge_represents(ks['make_2'], ks, fmt, rep, {'a': [NINF]}, {'x': [NINF, ZERO]}, None), [])
         self.assertEqual(judge_represents(ks['make_2'], ks, fmt, rep, {'a': [NINF]}, {'x': [NINF, NaN]}, None),
                          ['represents (canonical)'])
+        # Stage B2: the predicates and three-valued comparisons of an interval.
+        less, sub, inner = ks['interval_less_1'], ks['interval_subset_1'], ks['interval_rel_interior_1']
+        lt = less.ensures[0]
+        apart = {'xl': [one], 'xu': [two], 'yl': [make(F(3))], 'yu': [make(F(4))]}
+        self.assertEqual(judge_set_predicate(less, ks, fmt, lt, apart, {'yes': [True], 'no': [False]}, None), [])
+        self.assertEqual(judge_set_predicate(less, ks, fmt, lt, apart, {'yes': [False], 'no': [False]}, None),
+                         ['trit (not exact)'])
+        self.assertEqual(judge_set_predicate(less, ks, fmt, lt, apart, {'yes': [True], 'no': [True]}, None),
+                         ['trit (wrong)', 'trit (both)', 'trit (not exact)'])
+        touch = dict(apart, yl=[two])          # [1, 2] and [2, 4]: 2 < 2 fails, 1 < 4 holds: unknown
+        self.assertEqual(judge_set_predicate(less, ks, fmt, lt, touch, {'yes': [False], 'no': [False]}, None), [])
+        self.assertEqual(judge_set_predicate(less, ks, fmt, lt, touch, {'yes': [True], 'no': [False]}, None),
+                         ['trit (wrong)', 'trit (not exact)'])
+        empty_y = dict(apart, yl=[PINF], yu=[NINF])
+        self.assertEqual(judge_set_predicate(less, ks, fmt, lt, empty_y, {'yes': [False], 'no': [False]}, None), [])
+        self.assertEqual(judge_set_predicate(sub, ks, fmt, sub.ensures[0], empty_y, {'m': [False]}, None), [])
+        self.assertEqual(judge_set_predicate(sub, ks, fmt, sub.ensures[0], dict(apart, xl=[PINF], xu=[NINF]),
+                                             {'m': [False]}, None), ['certain (not exact)'])
+        # The interior with infinite bounds: [-inf, 1] is interior to [-inf, 2], and not to [0, 2].
+        down = {'xl': [NINF], 'xu': [one], 'yl': [NINF], 'yu': [two]}
+        self.assertEqual(judge_set_predicate(inner, ks, fmt, inner.ensures[0], down, {'m': [True]}, None), [])
+        self.assertEqual(judge_set_predicate(inner, ks, fmt, inner.ensures[0], dict(down, yl=[ZERO]), {'m': [True]},
+                                             None), ['certain (wrong)', 'certain (not exact)'])
+        cont = ks['interval_contains_1']
+        self.assertEqual(judge_set_predicate(cont, ks, fmt, cont.ensures[0], {'xl': [one], 'xu': [PINF], 't': [PINF]},
+                                             {'m': [True]}, None), ['certain (wrong)', 'certain (not exact)'])
         self.assertEqual(fmt.ieee_round(F(15), 'nearest'), PINF)           # 15 is a tie between 14 and 16
         self.assertEqual(fmt.ieee_round(F(29, 2), 'down'), make(F(14)))
         self.assertEqual(fmt.ieee_round(F(-29, 2), 'down'), NINF)

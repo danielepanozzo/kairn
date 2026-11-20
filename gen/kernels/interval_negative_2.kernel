@@ -1,0 +1,25 @@
+# Whether every member of an interval with 2-limb bounds is negative, and the interval is not empty
+# (milestone2.md, "One enclosure interface", the row of certainly_negative()): the same on the
+# leading limb of the upper bound. Exact. For every precision.
+kernel:        interval_negative_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+output:        mask m
+requires:      interval xl xu
+ensures:       certain m lt x 0 x=xl,xu exact
+min_precision: 1
+source:        the leading limb of the upper bound compared with 0 and -inf (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+unused:        xl0 the upper bound alone tells
+unused:        xl1 the upper bound alone tells
+unused:        xu1 the leading limb of a canonical bound has its sign, and is -inf exactly when the bound is
+
+mi = neg(const inf)
+a  = lt(xu0, 0)
+b  = lt(mi, xu0)
+m  = and(a, b)

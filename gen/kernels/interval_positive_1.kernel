@@ -1,0 +1,23 @@
+# Whether every member of an interval with one-limb bounds is positive, and the interval is not
+# empty (milestone2.md, "One enclosure interface", the row of certainly_positive()): 0 < x_l < +inf.
+# A query about the empty set answers no ("The empty set and the whole line"). Exact. For every
+# precision.
+kernel:        interval_positive_1
+input:         stored xl
+input:         stored xu
+output:        mask m
+requires:      interval xl xu
+ensures:       certain m lt 0 x x=xl,xu exact
+min_precision: 1
+source:        the lower bound compared with 0 and +inf (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+unused:        xu the lower bound alone tells: every member is at least it, and the interval is empty exactly when it is +inf
+
+a = lt(0, xl)
+b = lt(xl, const inf)
+m = and(a, b)

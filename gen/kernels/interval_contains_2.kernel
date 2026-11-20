@@ -1,0 +1,27 @@
+# Whether a 2-limb value t is a member of an interval with 2-limb bounds (milestone2.md, "One
+# enclosure interface", the row of contains(t)): x_l <= t and t <= x_u by le_2_2, which is exact on
+# canonical values, and t finite (its leading limb). As for one limb, an infinite t is no member, a
+# NaN fails every comparison and the empty set has no member. Exact. For every precision.
+kernel:        interval_contains_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+input:         t = t0 t1
+output:        mask m
+requires:      interval xl xu
+requires:      canonical t
+ensures:       certain m member t x x=xl,xu exact
+min_precision: 1
+source:        the bounds compared with the point by le_2_2, and a test that the point is finite (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+
+a  = le_2_2(xl0, xl1, t0, t1)
+b  = le_2_2(t0, t1, xu0, xu1)
+ta = abs(t0)
+ft = lt(ta, const inf)
+ab = and(a, b)
+m  = and(ab, ft)

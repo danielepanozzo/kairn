@@ -1,0 +1,23 @@
+# Whether an interval with 2-limb bounds is the empty set (milestone2.md, "One enclosure interface",
+# the row of is_empty()): the leading limb of the lower bound is +inf. The empty set is ((+inf, 0),
+# (-inf, 0)), and the lower bound of a nonempty canonical interval is below +inf, so its leading
+# limb is. For every precision.
+kernel:        interval_empty_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+output:        mask m
+requires:      interval xl xu
+ensures:       certain m empty x x=xl,xu exact
+min_precision: 1
+source:        the leading limb of the lower bound compared with +inf (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the result is a mask, which has no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical operand
+unused:        xl1 the leading limb of the lower bound alone tells the empty set from a nonempty interval
+unused:        xu0 the lower bound alone tells the empty set from a nonempty interval
+unused:        xu1 the lower bound alone tells the empty set from a nonempty interval
+
+m = eq(xl0, const inf)

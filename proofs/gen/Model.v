@@ -761,20 +761,20 @@ Definition eq_2_2 (x0 x1 y0 y1 : R) : bool :=
   let m := andb h l in
   m.
 
-(* lt_2_2: limbs compared in order (Milestone 1 listing). *)
-Definition lt_2_2 (x0 x1 y0 y1 : R) : bool :=
-  let h := Rlt_bool x0 y0 in
-  let e := Req_bool x0 y0 in
-  let l := Rlt_bool x1 y1 in
-  let t := andb e l in
-  let m := orb h t in
-  m.
-
 (* le_2_2: limbs compared in order (Milestone 1 listing). *)
 Definition le_2_2 (x0 x1 y0 y1 : R) : bool :=
   let h := Rlt_bool x0 y0 in
   let e := Req_bool x0 y0 in
   let l := Rle_bool x1 y1 in
+  let t := andb e l in
+  let m := orb h t in
+  m.
+
+(* lt_2_2: limbs compared in order (Milestone 1 listing). *)
+Definition lt_2_2 (x0 x1 y0 y1 : R) : bool :=
+  let h := Rlt_bool x0 y0 in
+  let e := Req_bool x0 y0 in
+  let l := Rlt_bool x1 y1 in
   let t := andb e l in
   let m := orb h t in
   m.

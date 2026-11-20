@@ -66,12 +66,12 @@ ENSURES_FINITE = ('normalized', 'leading_rounded', 'error', 'rounded', 'upper', 
 ENSURES_EXTENDED = ('normalized', 'error', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
                     'represents', 'makes_ball', 'neighbor', 'bound', 'finite_or_nan', 'makes_interval',
                     'encloses_interval', 'set_bound', 'outward', 'interval_set', 'ball_of_interval', 'interval_of_ball',
-                    'splits')
+                    'splits', 'certain', 'trit')
 # Entries that say something about the value: a kernel needs at least one.
 ABOUT_THE_VALUE = ('error', 'leading_rounded', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
                    'represents', 'makes_ball', 'neighbor', 'bound', 'holds', 'finite_or_nan', 'maximum', 'outward',
                    'makes_interval', 'encloses_interval', 'set_bound', 'interval_set', 'ball_of_interval',
-                   'interval_of_ball', 'splits')
+                   'interval_of_ball', 'splits', 'certain', 'trit')
 # The forms of an error entry: relative to |value| (R), to the sum of the magnitudes of the inputs
 # (A), to the sum of the magnitudes of the terms of value (T: s+x*y gives |s| + |x*y|).
 ERROR_FORMS = ('R', 'A', 'T')
@@ -79,11 +79,16 @@ ERROR_FORMS = ('R', 'A', 'T')
 # of them has no value (Milestone 2: the interval kernels, the one-limb bounds of a ball, and the
 # set operations, the conversions and the split of the enclosure interface).
 OWN_SET = ('makes_ball', 'makes_interval', 'encloses_interval', 'set_bound', 'interval_set', 'ball_of_interval',
-           'interval_of_ball', 'splits')
+           'interval_of_ball', 'splits', 'certain', 'trit')
 SIDES_OUTWARD = ('below', 'above')
 # The set operations of interval_set, and the special values of ball_of_interval (Milestone 2).
 SET_OPERATIONS = ('union', 'intersection')
 BALL_SPECIALS = ('ieee1788', 'ball')
+# The relations of the predicates of sets (Milestone 2, the enclosure interface): certain takes all
+# of them, trit those that have a three-valued reading, of every choice of members.
+CERTAIN_RELATIONS = tuple(ir.SET_RELATION_ARITY)
+TRIT_RELATIONS = ('lt', 'le', 'eq', 'member')
+ORDER_RELATIONS = ('lt', 'le', 'eq')
 
 
 class RuleError(Exception):
@@ -587,16 +592,26 @@ def claims(k, kernels):
         elif one and len(g.limbs) != 1:
             err(f'ensures {what} of {name!r}: the output must have one limb')
 
-    def exact_when(e, conds=None, zero=False):
+    def exact_when(e, conds=None, zero=False, abs_le=False):
         """The conditions of an exact_when: each EXPR = 0 or |EXPR| > K (or >= K), EXPR over the
         input names and their limbs, K an exact positive expression over u, eta and integers; and,
-        where `zero` (outward, and the outward tightness of an interval), EXPR = 0."""
+        where `zero` (outward, and the outward tightness of an interval), EXPR = 0; where `abs_le`
+        (certain and trit, Milestone 2), |EXPR| <= Omega, EXPR over the input names, and only that."""
         conds = e.get('exact_when') if conds is None else conds
         if conds is None:
             return
         if not conds:
             err(f'ensures {e["kind"]}: exact_when needs at least one condition')
         for c in conds:
+            if abs_le:
+                if set(c) != {'abs_le', 'omega'} or c['omega'] is not True:
+                    err(f'exact_when {c!r}: a condition of {e["kind"]} is abs_le(EXPR,omega)')
+                    continue
+                parsed(c['abs_le'], limb_ins, f'{e["kind"]} exact_when abs_le', VALUE_TREES)
+                continue
+            if 'abs_le' in c:
+                err(f'exact_when {c!r}: abs_le(EXPR,omega) is a condition of certain and trit only')
+                continue
             if set(c) == {ir.ZERO_CONDITION}:
                 if not zero:
                     err(f'exact_when {c!r}: zero(EXPR) is a condition of outward and of the outward tightness of '
@@ -818,6 +833,13 @@ def claims(k, kernels):
             _interval_of_ball(e, k, ins, outs, parsed, err)
         elif kind == 'splits':
             _splits(e, k, ins, outs, err)
+        elif kind in ('certain', 'trit'):
+            _certain(e, k, ins, outs, err)
+            if 'exact' in e and 'exact_when' in e:
+                err(f'{kind}: exact and exact_when exclude each other')
+            if 'exact' in e and e['exact'] is not True:
+                err(f'{kind}: exact is true or absent')
+            exact_when(e, abs_le=True)
         elif kind == 'makes_interval':
             _makes_interval(e, k, ins, outs, err)
         elif kind == 'encloses_interval':
@@ -1188,6 +1210,67 @@ def _interval_of_ball(e, k, ins, outs, parsed, err):
     t = e['tight']
     if t['kind'] != 'rounded' or set(t) - {'kind', 'steps'}:
         err('interval_of_ball: tight is rounded, with optional steps')
+
+
+def _certain(e, k, ins, outs, err):
+    """A predicate of sets (Milestone 2, the enclosure interface), certain (one mask) or trit (two):
+    the masks are mask outputs; the relation is of the vocabulary, with its number of arguments; the
+    sets are all intervals (of an `interval` requirement) or all balls (of a `ball` requirement),
+    each named in the arguments, their bounds or centers and radii inputs of no other set; an
+    argument of lt, le and eq is a set or the integer 0, one of them a set; of member, a point (an
+    input of one limb, or of two required canonical, no bound of a set) and a set; of the others,
+    sets, two distinct ones for a relation between two sets."""
+    kind = e['kind']
+    masks = [e['yes'], e['no']] if kind == 'trit' else [e['of']]
+    for m in masks:
+        g = outs.get(m)
+        if g is None or g.kind != ir.MASK:
+            err(f'{kind}: {m!r} is not a mask output')
+    if len(set(masks)) != len(masks):
+        err(f'{kind}: yes and no are two masks')
+    rel = e['rel']
+    allowed = TRIT_RELATIONS if kind == 'trit' else CERTAIN_RELATIONS
+    if rel not in allowed:
+        err(f'{kind} relation {rel!r}: it is {", ".join(allowed)}')
+        return
+    sets = e.get('intervals', e.get('balls', {}))
+    sort, req = ('ball', ('center', 'radius')) if 'balls' in e else ('interval', ('lower', 'upper'))
+    if not sets:
+        err(f'{kind}: names at least one set')
+    taken = set()
+    for name, b in sets.items():
+        if name in ins or name in outs or not ir.VALUE_NAME.match(name):
+            err(f'{kind}: set name {name!r} is the name of a group, or not a value name')
+        if (sort, b[req[0]], b[req[1]]) not in k.requires:
+            err(f'{kind} set {name}: its operand is required to be an interval or a ball: "requires: {sort} '
+                f'{b[req[0]]} {b[req[1]]}"')
+        if taken & {b[req[0]], b[req[1]]}:
+            err(f'{kind} set {name}: a bound, center or radius belongs to two sets')
+        taken |= {b[req[0]], b[req[1]]}
+    args = e['args']
+    if len(args) != ir.SET_RELATION_ARITY[rel]:
+        err(f'{kind} {rel}: {ir.SET_RELATION_ARITY[rel]} arguments')
+        return
+    if rel in ORDER_RELATIONS:
+        if any(a not in sets and a != ir.ZERO for a in args) or all(a == ir.ZERO for a in args):
+            err(f'{kind} {rel}: each argument is a set or 0, and one is a set')
+    elif rel == 'member':
+        p, s = args
+        g = ins.get(p)
+        if g is None or g.kind != ir.LIMB or p in taken or \
+                not (len(g.limbs) == 1 or ('canonical', p) in k.requires):
+            err(f'{kind} member: the point {p!r} is an input of one limb, or of several required canonical, and no '
+                'bound of a set')
+        if s not in sets:
+            err(f'{kind} member: {s!r} is not a set of the entry')
+    else:
+        if any(a not in sets for a in args) or len(set(args)) != len(args):
+            err(f'{kind} {rel}: the arguments are {"a set" if len(args) == 1 else "two distinct sets"} of the entry')
+    named = {a for a in args if a in sets}
+    if set(sets) - named:
+        err(f'{kind}: set {", ".join(sorted(set(sets) - named))} is named by no argument')
+    if not k.extended:
+        err(f'{kind}: a claim of the extended domain')
 
 
 def _splits(e, k, ins, outs, err):

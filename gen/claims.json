@@ -2258,6 +2258,251 @@
       }
     },
     {
+      "name": "interval_contains_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "member",
+          "args": [
+            "t",
+            "x"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds compared with the point, and a test that the point is finite (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_empty_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "empty",
+          "args": [
+            "x"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the lower bound compared with +inf (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_entire_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "entire",
+          "args": [
+            "x"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the two bounds compared with the infinities (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_equal_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "eq",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds compared, and a test of emptiness (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "interval_hull_1",
       "domain": "extended",
       "ieee_only": true,
@@ -2393,6 +2638,156 @@
       },
       "source": {
         "cite": "the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_less_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "lt",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds compared, and a test of emptiness (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_less_equal_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "le",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds compared, and a test of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
       },
       "flops": 0,
@@ -2875,6 +3270,325 @@
       }
     },
     {
+      "name": "interval_negative_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "x",
+            "0"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the upper bound compared with 0 and -inf (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_positive_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "0",
+            "x"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the lower bound compared with 0 and +inf (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_rel_disjoint_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "disjoint",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the stored bounds compared, and tests of emptiness (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_rel_equal_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "equal",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the stored bounds compared (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_rel_interior_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "interior",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the stored bounds compared, and a test of emptiness (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "interval_split_1",
       "domain": "extended",
       "ieee_only": true,
@@ -3029,6 +3743,75 @@
       }
     },
     {
+      "name": "interval_subset_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "subset",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds compared (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "interval_to_ball_1",
       "domain": "extended",
       "ieee_only": true,
@@ -3083,6 +3866,62 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 9,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_zero_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "eq",
+          "args": [
+            "x",
+            "0"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds compared with 0 (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -7108,6 +7947,234 @@
       }
     },
     {
+      "name": "le_2_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "le",
+          "args": [
+            "x",
+            "y"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "le_2_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "le_2_2_ieee_correct"
+      },
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_contains_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "t",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "canonical(t)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "member",
+          "args": [
+            "t",
+            "x"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds compared with the point by le_2_2, and a test that the point is finite (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_empty_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "empty",
+          "args": [
+            "x"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the leading limb of the lower bound compared with +inf (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_entire_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "entire",
+          "args": [
+            "x"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the leading limbs of the bounds compared with the infinities (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "lt_2_2",
       "domain": "extended",
       "inputs": [
@@ -7156,6 +8223,81 @@
       },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_equal_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "yl",
+          "limbs": 2
+        },
+        {
+          "name": "yu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "eq",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds compared, and a test of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
       },
       "flops": 0,
@@ -7237,63 +8379,6 @@
       }
     },
     {
-      "name": "le_2_2",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "m",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "value": "x-y",
-      "requires": [
-        "canonical(x)",
-        "canonical(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "predicate",
-          "of": "m",
-          "rel": "le",
-          "args": [
-            "x",
-            "y"
-          ]
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Compare.v",
-        "name": "le_2_2_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeExt.v",
-        "name": "le_2_2_ieee_correct"
-      },
-      "source": {
-        "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
       "name": "interval_intersection_2",
       "domain": "extended",
       "ieee_only": true,
@@ -7357,6 +8442,156 @@
       },
       "source": {
         "cite": "the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_less_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "yl",
+          "limbs": 2
+        },
+        {
+          "name": "yu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "lt",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds compared, and a test of emptiness (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_less_equal_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "yl",
+          "limbs": 2
+        },
+        {
+          "name": "yu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "le",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds compared, and a test of emptiness (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
       },
       "flops": 0,
@@ -7793,6 +9028,325 @@
       }
     },
     {
+      "name": "interval_negative_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "x",
+            "0"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the leading limb of the upper bound compared with 0 and -inf (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_positive_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "0",
+            "x"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the leading limb of the lower bound compared with 0 and +inf (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_rel_disjoint_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "yl",
+          "limbs": 2
+        },
+        {
+          "name": "yu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "disjoint",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the stored bounds compared, and tests of emptiness (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_rel_equal_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "yl",
+          "limbs": 2
+        },
+        {
+          "name": "yu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "equal",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the stored bounds compared (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_rel_interior_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "yl",
+          "limbs": 2
+        },
+        {
+          "name": "yu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "interior",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the stored bounds compared, and a test of emptiness (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "sub_down_2_2",
       "inputs": [
         {
@@ -7996,6 +9550,131 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 56,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_subset_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "yl",
+          "limbs": 2
+        },
+        {
+          "name": "yu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "subset",
+          "args": [
+            "x",
+            "y"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds compared by le_2_2 (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_zero_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "eq",
+          "args": [
+            "x",
+            "0"
+          ],
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the leading limbs of the bounds compared with 0 (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
       "instances": {
         "binary64": [],
         "binary32": []

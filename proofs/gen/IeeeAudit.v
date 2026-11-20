@@ -215,14 +215,14 @@ Print Assumptions fold_finish_2_correct.
 Definition interval_add_2_audit : interval_add_2_spec := interval_add_2_correct.
 Print Assumptions interval_add_2_correct.
 
+Definition le_2_2_ieee_audit : le_2_2_ieee_spec := le_2_2_ieee_correct.
+Print Assumptions le_2_2_ieee_correct.
+
 Definition lt_2_2_ieee_audit : lt_2_2_ieee_spec := lt_2_2_ieee_correct.
 Print Assumptions lt_2_2_ieee_correct.
 
 Definition interval_hull_2_audit : interval_hull_2_spec := interval_hull_2_correct.
 Print Assumptions interval_hull_2_correct.
-
-Definition le_2_2_ieee_audit : le_2_2_ieee_spec := le_2_2_ieee_correct.
-Print Assumptions le_2_2_ieee_correct.
 
 Definition interval_intersection_2_audit : interval_intersection_2_spec := interval_intersection_2_correct.
 Print Assumptions interval_intersection_2_correct.

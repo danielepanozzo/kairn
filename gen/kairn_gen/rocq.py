@@ -426,6 +426,10 @@ def exact_condition(conditions, term, threshold):
             # zero(EXPR) (Milestone 2, outward): EXPR = 0, written as the theorems write it.
             parts.append(f'{term(c[ir.ZERO_CONDITION])} = 0')
             continue
+        if 'abs_le' in c:
+            # abs_le(EXPR,omega) (Milestone 2, certain and trit, of the IEEE model only): |EXPR| <= Omega.
+            parts.append(f'Rabs {_paren(term(c["abs_le"]))} <= omega prec emax')
+            continue
         kind = next(x for x in ir.EXACT_CONDITIONS if x in c)
         e = term(c[kind])
         rel = '<' if kind == 'zero_or_abs_gt' else '<='

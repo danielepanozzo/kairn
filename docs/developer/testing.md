@@ -148,7 +148,11 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
   ([Folds of maxima](architecture.md#folds-of-maxima)) and their kernels (the claim `maximum`,
   `finite_or_nan` with `if` and `steps`, a fold's `upper` entry); and the convolutions
   ([Convolutions](architecture.md#convolutions); requests of two lengths, the claim
-  `coefficients`). The generator's tier tests them ([below](#the-generators-tier)). Since the folds' stage of
+  `coefficients`); and the interval kernels of Milestone 2 with the kernels of their bounds and of
+  the enclosure interface ([Claims of the interval kernels](architecture.md#claims-of-the-interval-kernels)
+  and the two sections after it: the requirements `interval` and `not_nan`, the kinds of the
+  intervals, and the predicates and comparisons `certain` and `trit`). The generator's tier tests
+  them ([below](#the-generators-tier)). Since the folds' stage of
   Milestone 2 the oracle reads and judges every claim of that stage, the kinds of that stage
   included (`upper` with a value of its own and `holds` under a mask, the error of form `T`,
   `count()` and `format(half)`, `finite_or_nan`, and the folds' `fold_error` on requests of
