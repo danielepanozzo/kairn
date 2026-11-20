@@ -61,6 +61,14 @@ Two parts:
   some of them, so that machines can share it; `--interp-match REGEX` keeps only the
   enumerations whose `KERNEL FORMAT` matches.
 
+The folds of `gen/claims.json` ("folds") take part in both: in the compiled part, random arrays of
+up to 4 096 elements (`FOLD_LENGTH`) in units of a hundredth of `--chunk`, one stream for the
+scalar runners in every order and one per packed backend in the lane order of its register
+(`packed_lanes` of the fold), each judged and guarded with its orders and length; in the interp
+part, every array of the formats of `FOLD_SHAPES` up to a length, in every order that differs
+(`gen --exhaustive --max-length`). A format of the sums of two limbs needs eight binades or more:
+with fewer, every sum of up to three pairs is a pair, exact, and the guards fail the run.
+
 A pipeline that fails (a violated claim, an invalid case, a suspicious non-finite result where
 the quick tier fails on one, a broken stream, a runner or oracle error, a timeout) is a finding:
 its series (one kernel, format and runner, or one enumeration) stops, and the finding goes to
