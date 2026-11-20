@@ -68,9 +68,12 @@ not call yet says "not yet called by the public headers".
 operand is finite. Every operation of Kairn returns normalized numbers when the leading limb of its
 result is finite, so the requirement that an operand be normalized can fail only for a number whose
 limbs the program gave: `from_limbs` in a build without checks, `from_limbs_unchecked`, or `limb[]`
-written directly. In a build with `KAIRN_CHECKS` (the default without `NDEBUG`), every operation
-checks it and stops the program if it fails. A statement about infinite and NaN operands requires
-canonical operands instead, and a one-limb operand it does not constrain may be any value of `T`.
+written directly. In a build with `KAIRN_CHECKS` (the default without `NDEBUG`), every operator
+and function of `kairn::` checks that its two-limb operands are canonical (finite and normalized,
+or an infinity or a NaN in canonical form), every function of `kairn::finite::` that they are
+normalized or have a leading limb that is not finite, and the program stops if one fails. A
+statement about infinite and NaN operands requires canonical operands instead, and a one-limb
+operand it does not constrain may be any value of `T`.
 
 **Guarantees.** The statement, then its constants. For a bound, the table gives $c\,u^k$ and
 $t\,\eta$ for `double` and `float`, exactly and approximately, and the constants that

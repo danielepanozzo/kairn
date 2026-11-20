@@ -4,10 +4,11 @@
 #
 # - default: `PROGRAM default` must exit 0: in the default environment every operation runs, as
 #   does every operand the checks must let through.
-# - rounding: for each directed rounding mode and each operation the program lists, `PROGRAM MODE
-#   OPERATION` must stop the program in the operation, with Kairn's message that the rounding mode
-#   is not to nearest; before that, the program says that environment_ok() was true in the default
-#   environment and false under the mode.
+# - rounding: for each directed rounding mode and each operation the program lists (the
+#   constructors that check their operands among them), `PROGRAM MODE OPERATION` must stop the
+#   program in the operation, with Kairn's message that the rounding mode is not to nearest, and
+#   not with a message about an operand; before that, the program says that environment_ok() was
+#   true in the default environment and false under the mode.
 # - flush: the same for the states of flush to zero the program can set on this target (FTZ and
 #   DAZ of MXCSR on x86-64, FZ of FPCR on AArch64). With EXPECT_FLUSH, a program that lists none
 #   fails the test, so that a target where they should be tested cannot pass without them.
@@ -63,7 +64,8 @@ function(_kairn_expect_stop what message says)
   string(STRIP "${_err}" _err_text)
   string(REPLACE "\n" " / " _err_text "${_err_text}")
   if(_why)
-    list(JOIN _why "; " _why)
+    # Joined with " / ": a semicolon would split the case in two in the list of failures.
+    list(JOIN _why " / " _why)
     message(STATUS "FAILED ${what}: ${_why} (status ${_status}; standard error: ${_err_text})")
     set(_failed ${_failed} "${what}: ${_why}" PARENT_SCOPE)
   else()

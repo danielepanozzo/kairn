@@ -1,16 +1,14 @@
 // KAIRN_ENVIRONMENT_FAILURE (include/kairn/config.hpp): a program that defines it before including
 // Kairn gets its statement instead of the message and abort() when the check of the environment
-// fails, and the operation goes on if the statement returns. Built with KAIRN_CHECKS 1 (without
-// NDEBUG, in the debug build of tests/api/flags/): in the default environment the handler is not
-// called; under rounding upward each operation below calls it, with the reason, and returns.
-// Exits 0 when all of that holds.
-//
-// The operands are those whose check does not depend on the rounding mode: one limb, two limbs
-// with a zero second limb, a ball of one limb. After the handler returns, an operation goes on to
-// check that its two-limb operands are canonical, by computing x0 + x1 == x0 in the rounding mode
-// in force; under rounding upward that fails for a canonical pair with a positive second limb, and
-// the operation then stops the program with "an operand: is not canonical" instead of going on
-// (docs/developer/testing.md, "The checks of a debug build").
+// fails, and if the statement returns, the operation goes on without checking its operands. Built
+// with KAIRN_CHECKS 1 (without NDEBUG, in the debug build of tests/api/flags/): in the default
+// environment the handler is not called; under each state of the environment that checks.cpp sets
+// (each directed rounding mode, and flush to zero), every operation and constructor of
+// checks_cases.hpp calls it, with the reason, and returns. Their two-limb operands are canonical
+// pairs whose test, x0 + x1 == x0, is false under a directed rounding mode: an operation that
+// went on to check them there would stop the program with "an operand: is not canonical". So does,
+// in the default environment, an operand that is not canonical; under each state, with the
+// handler, it goes on too, since its check is skipped. Exits 0 when all of that holds.
 #include <cstdio>
 #include <cstring>
 
@@ -24,63 +22,73 @@ void record(const char* reason) {
 }  // namespace
 
 #define KAIRN_ENVIRONMENT_FAILURE(reason) record(reason)
-#include <kairn/kairn.hpp>
+#include "checks_cases.hpp"
 #if KAIRN_CHECKS != 1
 #error "checks_handler.cpp tests a check of KAIRN_CHECKS: build it without NDEBUG"
 #endif
 
 #include "no_crash_reports.hpp"
 
-#include <cfenv>
+using namespace kairn_test;
+
+namespace {
+int failures = 0;
+void expect(bool ok, const char* what, const char* where = nullptr) {
+    if (where) {
+        std::printf("%s: under %s, %s\n", ok ? "ok" : "FAILED", where, what);
+    } else {
+        std::printf("%s: %s\n", ok ? "ok" : "FAILED", what);
+    }
+    std::fflush(stdout);
+    if (!ok) ++failures;
+}
+// Says what is about to run, flushed: if it stops the program, the line is the last one.
+void calling(const char* what, const char* where) {
+    std::printf("calling %s under %s\n", what, where);
+    std::fflush(stdout);
+}
+}  // namespace
 
 int main() {
     kairn_test::no_crash_reports();
-    using E1 = kairn::Expansion<double, 1>;
-    using E2 = kairn::Expansion<double, 2>;
-    using B1 = kairn::Ball<double, 1>;
-    using kairn::unverified;
-    volatile double a = 1.5, c = 2.25, r = 0x1p-20;
-    const double la[2] = {a, 0.0}, lc[2] = {c, 0.0};
-    const E2 x = E2::from_limbs(la), y = E2::from_limbs(lc);
-    const B1 p(unverified(E1(a)), r), q(unverified(E1(c)), r);
-    int failures = 0;
-    auto expect = [&](bool ok, const char* what) {
-        std::printf("%s: %s\n", ok ? "ok" : "FAILED", what);
-        if (!ok) ++failures;
-    };
-
-    volatile double sink = (unverified(x) + y).limb[0];
-    sink = (unverified(E1(a)) * E1(c)).limb[0];
-    sink = (unverified(p) + q).radius();
+    make_operands();
+    for (const Operation& op : operations) sink = op.run();
     expect(calls == 0, "in the default environment the handler is not called");
 
-    if (std::fesetround(FE_UPWARD) != 0) {
-        std::printf("FAILED: rounding upward cannot be set here\n");
-        return 1;
+    for (const State& state : states) {
+        if (!state.set()) {
+            state.restore();
+            expect(false, "the state can be set", state.name);
+            continue;
+        }
+        const bool env = kairn::environment_ok();
+        state.restore();
+        expect(!env, "environment_ok() is false", state.name);
+        int quiet = 0, wrong = 0;
+        for (const Operation& op : operations) {
+            calling(op.name, state.name);
+            const int before = calls;
+            last_reason = nullptr;
+            state.set();
+            sink = op.run();
+            state.restore();
+            if (calls == before) ++quiet;
+            if (!last_reason || !std::strstr(last_reason, state.reason)) ++wrong;
+        }
+        // An operand that is not canonical, whose check the failed environment skips.
+        calling("x + y with an x that is not canonical", state.name);
+        const int before = calls;
+        state.set();
+        sink = (unverified(raw(1.0, v_a)) + o.y).limb[1];
+        state.restore();
+        expect(calls > before, "x + y with an x that is not canonical calls the handler, and goes on", state.name);
+        expect(quiet == 0, "every operation and constructor calls the handler, and goes on", state.name);
+        expect(wrong == 0, "the handler is given the reason", state.name);
+        if (last_reason) std::printf("the reason given: %s\n", last_reason);
     }
-    const bool env = kairn::environment_ok();
-    int n[4] = {};
-    sink = (unverified(E1(a)) * E1(c)).limb[0];
-    n[0] = calls;
-    sink = (unverified(x) + y).limb[0];
-    n[1] = calls - n[0];
-    sink = kairn::to_up(unverified(x));
-    n[2] = calls - n[0] - n[1];
-    sink = (unverified(p) + q).radius();
-    n[3] = calls - n[0] - n[1] - n[2];
-    std::fesetround(FE_TONEAREST);
-    (void)sink;
-
-    expect(!env, "environment_ok() is false under rounding upward");
-    expect(n[0] >= 1, "a * b of one limb under rounding upward calls the handler, and returns");
-    expect(n[1] >= 1, "x + y of two limbs under rounding upward calls the handler, and returns");
-    expect(n[2] >= 1, "to_up(x) under rounding upward calls the handler, and returns");
-    expect(n[3] >= 1, "p + q of balls under rounding upward calls the handler, and returns");
-    std::printf("calls of the handler: %d, %d, %d and %d\n", n[0], n[1], n[2], n[3]);
-    expect(last_reason && std::strstr(last_reason, "rounding mode is not to nearest"),
-           "the handler is given the reason: the rounding mode");
-    if (last_reason) std::printf("the reason given: %s\n", last_reason);
-    expect(kairn::environment_ok(), "environment_ok() is true again once the rounding mode is restored");
-    std::printf("%d failed\n", failures);
+    expect(kairn::environment_ok(), "environment_ok() is true again once the environment is restored");
+    std::printf("%d operations and constructors under %d states; %d calls of the handler; %d failed\n",
+                int(sizeof(operations) / sizeof(operations[0])), int(sizeof(states) / sizeof(states[0])), calls,
+                failures);
     return failures == 0 ? 0 : 1;
 }

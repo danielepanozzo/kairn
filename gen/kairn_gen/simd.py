@@ -213,6 +213,7 @@ def header(b, kernels, prelude_name='prelude.hpp'):
              '',
              f'#include {b["include"]}', '',
              f'#include "{prelude_name}"', '',
+             'KAIRN_GEN_PUSH_WARNINGS',
              'namespace kairn::gen {', '',
              '// The complement of a lane mask, and IEEE 754 nextUp and nextDown in every lane by',
              '// stepping the bit pattern, as next_up of prelude.hpp does for one number.',
@@ -221,5 +222,5 @@ def header(b, kernels, prelude_name='prelude.hpp'):
         lines += [''] + cpp._description(k, kernels)[:1]
         for ctype in cpp.TYPES:
             lines += function(b, k, kernels, ctype)
-    lines += ['', '}  // namespace kairn::gen']
+    lines += ['', '}  // namespace kairn::gen', 'KAIRN_GEN_POP_WARNINGS']
     return '\n'.join(lines) + '\n'

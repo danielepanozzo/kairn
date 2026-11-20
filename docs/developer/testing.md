@@ -61,7 +61,8 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, comparisons with a NaN among them; the same results at run time; the properties of the types; and that an operation compiles without `kairn::unverified` exactly when the kernel it calls is proved. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass in the default environment and fail under each directed rounding mode and under flush-to-zero. |
 | `api.flags.debug.self_test`, `api.flags.debug.constexpr` | `kairn::self_test()` and `kairn::environment_ok()`, compiled as the [debug build](#flag-sets), pass (`runner.cpp --self-test`); `tests/api/constexpr.cpp` built so, its constant expressions evaluated with the checks on. |
-| `api.checks.debug.G`, `api.checks.release.G`, `api.checks.handler` | The [checks of a debug build](#the-checks-of-a-debug-build), in the debug build and with the build's own flags and `KAIRN_CHECKS` defined to 1: in the default environment every operation runs (G = `default`); under each directed rounding mode (`rounding`) and each state of flush to zero (`flush`) `environment_ok()` is false and every operation stops the program with Kairn's message; every operand that is not canonical, and every negative radius, stops it (`operands`); a `KAIRN_ENVIRONMENT_FAILURE` of the program's own is called instead and the operation goes on (`handler`). |
+| `api.checks.debug.G`, `api.checks.release.G`, `api.checks.handler` | The [checks of a debug build](#the-checks-of-a-debug-build), in the debug build and with the build's own flags and `KAIRN_CHECKS` defined to 1: in the default environment every operation, and every constructor that checks its operands, runs (G = `default`); under each directed rounding mode (`rounding`) and each state of flush to zero (`flush`) `environment_ok()` is false and each of them stops the program with the environment's message; every operand that is not canonical, and every negative radius, stops it (`operands`); a `KAIRN_ENVIRONMENT_FAILURE` of the program's own is called instead, and every operation and constructor goes on, without the checks of its operands (`handler`). |
+| `api.shadow` | A program whose global variables have the name of every parameter and local variable of the headers, calling every public operation, compiles with the compiler's strictest warnings about a declaration that hides another, as errors; without the headers' suppression of those warnings (MSVC's C4459 and C6244, GCC's `-Wshadow`) it must not compile with MSVC, and without the globals it must compile with every warning on ([The program's names](#the-programs-names)). |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break the kernels and define no macro (reassociation; `-ffp-model=fast`; with Apple clang on AArch64, `-fno-signed-zeros` with `-ffp-contract=fast`, which Clang 18 was measured not to break the kernels with): `kairn::self_test()` must fail. |
 | `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball); with `KAIRN_CHECKS`, a constant expression given a pair that is not canonical (`from_limbs`, an operator) or a negative radius (`checks.*`). |
 | `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, `kairn::finite::add`, a ball's center, radius or point) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; built against a copy of the headers in which the generated guard is taken out of `gen/scalar.hpp` (made at configure time, which fails if it finds no guard), it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
@@ -547,37 +548,50 @@ are the tests that build them at `/Od` with MSVC and clang-cl, and at `-O1` with
 ## The checks of a debug build
 
 `KAIRN_CHECKS` is 1 when `NDEBUG` is not defined (or when a program defines it to 1); what it then
-does, as the headers are written:
+does, as the headers are written (`config.hpp` says the same):
 
 - Before every operation of `Expansion` and `Ball` (the arithmetic, `ldexp` and `half`, negation
   and `abs`, the comparisons, the conversions to `T` and the narrowing to one limb, and
-  `kairn::finite::`), `kairn::environment_ok()`; if it fails, `KAIRN_ENVIRONMENT_FAILURE` with the
-  reason, by default a message and `std::abort()`.
+  `kairn::finite::`), and in the constructors that check what they are given (`from_limbs`, and
+  every constructor of `Ball` that is given a center, a radius or a `T`), first
+  `kairn::environment_ok()`; if it fails, `KAIRN_ENVIRONMENT_FAILURE` with the reason, by default
+  a message and `std::abort()`.
 - Then the operands: an operation of two limbs requires canonical operands, a function of
   `kairn::finite::` normalized ones or a leading limb that is not finite (what a core returns), a
-  `Ball` operation canonical balls; if one is not, a message and `std::abort()`.
-- The constructors check what they are given, and not the environment: `from_limbs` requires a
-  canonical pair, and `Ball(c, r)` reports a negative radius and, for two limbs, a center that is
-  not canonical.
+  `Ball` operation canonical balls, `from_limbs` a canonical pair, and a constructor of `Ball` a
+  radius that is not negative and, for two limbs, a canonical center; if one is not, a message
+  and `std::abort()`.
+- If the environment is not the default one and a `KAIRN_ENVIRONMENT_FAILURE` of the program's
+  own returns, the operation goes on without checking its operands: those checks compute in that
+  environment, where the test of a canonical pair, $x_0 + x_1 = x_0$, can be false (for
+  $(1.5, 2^{-60})$ under rounding upward). So a program stopped in a wrong environment is stopped
+  with the environment's message, and a handler that returns lets every operation go on, with no
+  guarantee for its result.
 - In constant evaluation the environment is not checked, and an operand that fails a check makes
   the constant expression invalid.
 
-`tests/api/checks.cpp` runs them, built as the [debug build](#flag-sets) (`api.checks.debug.*`)
-and with the build's own flags and `KAIRN_CHECKS` defined to 1 (`api.checks.release.*`, where an
-optimizer could move or drop a check), and `tests/api/checks.cmake` judges each case from the
-program's exit status and output:
+`tests/api/checks.cpp` runs them, on the cases of `tests/api/checks_cases.hpp`, built as the
+[debug build](#flag-sets) (`api.checks.debug.*`) and with the build's own flags and `KAIRN_CHECKS`
+defined to 1 (`api.checks.release.*`, where an optimizer could move or drop a check), and
+`tests/api/checks.cmake` judges each case from the program's exit status and output:
 
 - `default`: in the default environment `environment_ok()` is true, and 29 operations run (a sum,
   a product, `ldexp` and a comparison of one limb; every kind above of two limbs, and a sum of
   `float` limbs; three of `kairn::finite::`; sums, products, scalings, negations and a point form
-  of balls), as do 13 operands the checks must let through: the canonical
-  infinities and NaN, the empty set and the whole line, a NaN and a $-0$ radius, and what a finite
-  core returns, given back to `kairn::finite::`.
-- `rounding`: for each directed rounding mode and each of the 29 operations, a run of its own:
-  `environment_ok()` is true, the mode is set and `environment_ok()` is false, and the operation
-  must stop the program, with an exit status other than 0 (`SIGABRT`; exit status 3 with
-  Microsoft's C runtime), after the line in which the program says it calls it, and with Kairn's
-  message on the standard error ("the rounding mode is not to nearest").
+  of balls) and 8 calls of constructors (`from_limbs` twice; `Ball` of one limb from a center and
+  a radius and from a `T`; of two limbs from a center and a radius twice, from a center and from a
+  `T`), as do 13 operands the checks must let through: the
+  canonical infinities and NaN, the empty set and the whole line, a NaN and a $-0$ radius, and
+  what a finite core returns, given back to `kairn::finite::`.
+- `rounding`: for each directed rounding mode and each of the 37 operations and constructors, a
+  run of its own: `environment_ok()` is true, the mode is set and `environment_ok()` is false, and
+  the operation must stop the program, with an exit status other than 0 (`SIGABRT`; exit status 3
+  with Microsoft's C runtime), after the line in which the program says it calls it, and with
+  Kairn's message on the standard error ("the rounding mode is not to nearest"), not one about an
+  operand. The two-limb operands, $(1.5, 2^{-60})$ and $(2.25, -2^{-58})$, are canonical pairs
+  whose test is false under rounding upward, and under rounding downward and toward zero; those of
+  the operations are made before the mode is set, so that each operation is what meets it, and the
+  constructors meet it in cases of their own.
 - `flush`: the same with FTZ and with DAZ of MXCSR on x86-64, and FZ of FPCR on AArch64; on those
   targets a program that can set none fails the test.
 - `operands`: 15 operands that are not canonical, each given to an operation, must stop the
@@ -587,27 +601,58 @@ program's exit status and output:
   canonical, and a ball that is not canonical, made by the internal constructor that takes a
   kernel's result as it is, the only way to make one.
 
-`api.checks.handler` (`tests/api/checks_handler.cpp`) defines `KAIRN_ENVIRONMENT_FAILURE`: under
-rounding upward each operation calls it with the reason and returns. `api.reject.checks.*` are
-the constant expressions, and `api.oracle.K.F` judges the debug build's runner: the checks let
-every canonical case through and change no result. On the lines of `ball_make_1` and
-`ball_make_2` whose radius is negative, about 40% of their cases, which the checks stop by design,
-the debug build's runner computes `Ball::empty()`, the set the constructor makes of such a
-radius, and says on how many lines. The test programs keep Microsoft's C runtime from opening a
-dialog on `abort()`, and Linux from writing a core dump, which took 0.3 seconds per case on the
-Linux machine (`tests/api/no_crash_reports.hpp`).
+`api.checks.handler` (`tests/api/checks_handler.cpp`) defines `KAIRN_ENVIRONMENT_FAILURE` as a
+function that records the reason and returns. In the default environment it is not called; under
+each state of `rounding` and `flush`, each of the 37 operations and constructors calls it with the
+reason and goes on, and so does `x + y` with an `x` that is not canonical, which stops the
+program in the default environment. `api.reject.checks.*` are the constant expressions, and
+`api.oracle.K.F` judges the debug build's runner: the checks let every canonical case through and
+change no result. On the lines of `ball_make_1` and `ball_make_2` whose radius is negative, about
+40% of their cases, which the checks stop by design, the debug build's runner computes
+`Ball::empty()`, the set the constructor makes of such a radius, and says on how many lines. The
+test programs keep Microsoft's C runtime from opening a dialog on `abort()`, and Linux from
+writing a core dump, which took 0.3 seconds per case on the Linux machine
+(`tests/api/no_crash_reports.hpp`).
 
-Two behaviours shape these tests, and the documentation of `KAIRN_CHECKS` does not describe them:
+## The program's names
 
-- The test of a canonical pair, $x_0 + x_1 = x_0$, is computed in the rounding mode in force. The
-  constructors do not check the environment first, so under rounding upward `from_limbs` refuses
-  the canonical pair $(1.5, 2^{-60})$ with "the limbs are not a canonical pair", and a `Ball`
-  constructor of two limbs its center: the program stops, with a message that names the wrong
-  cause. The operands of `checks.cpp` are made before the state is set.
-- A `KAIRN_ENVIRONMENT_FAILURE` that returns does not let every operation go on, as `config.hpp`
-  says: the check of the operands follows, in the same rounding mode, and under rounding upward
-  `x + x` with $x = (1.5, 2^{-60})$ stops the program with "an operand: is not canonical". The
-  operands of `checks_handler.cpp` are those whose check does not depend on the rounding mode.
+A program may have a global variable with the name of a parameter or a local variable of Kairn's
+headers: `x`, `a`, `limbs`, `inf`, or any of the few hundred names of the generated kernels. MSVC
+reports every such declaration of a header, at `/W4` (C4459, "declaration of 'x' hides global
+declaration") and under `/analyze` (C6244), and a program built with `/WX` then fails to build.
+Measured with MSVC 19.52, it reports every parameter and local variable of a function that is not
+a template; and of a template, once instantiated, every local variable, and the parameters of the
+members of a class template (constructors, `from_limbs`), but not those of a function template;
+for a template, whether the program declares the global before or after it includes Kairn.
+GCC's `-Wshadow` and Clang's `-Wshadow-all`, which `-Wall -Wextra` do not enable, report a
+declaration that hides a variable of its own namespace or of an enclosing block, and not one of
+the global namespace from inside `namespace kairn`, with one exception: GCC 11 and 13 report the
+parameters of a constructor of a class template and of a lambda, once instantiated, as hiding a
+global (21 declarations of Kairn's headers: the constructors of `Expansion` and `Ball`, and a
+lambda of `traits.hpp`). GCC 16, Clang 18 and Apple clang 21 report none. Renaming cannot help:
+any name of Kairn's can be the name of a program's global. Each header of Kairn, generated or
+not, therefore turns these warnings off for its own declarations, between
+`KAIRN_GEN_PUSH_WARNINGS` and `KAIRN_GEN_POP_WARNINGS`, defined in `gen/prelude.hpp`: a pushed
+and popped `#pragma warning(disable : 4459 6244)` with MSVC, and
+`#pragma GCC diagnostic ignored "-Wshadow"` with GCC; nothing with Clang, clang-cl included. Each
+compiler applies the state of the header to the templates the program instantiates later.
+
+`api.shadow` (`tests/api/shadow.py`) reads the name of every parameter and local variable of the
+headers (283 today, by a scan of their tokens, which found every name of Clang's AST of the
+headers), writes a global variable of each name, and compiles `tests/api/shadow.cpp`, which calls
+every public operation once for `float` and for `double`, with the build's flags and the
+strictest warnings of the compiler about a declaration that hides another, as errors, the front
+end only: `/W4 /WX` with C4456 to C4459 at level 1, and again under `/analyze` (MSVC);
+`-Wall -Wextra -Wpedantic -Wshadow -Werror` (GCC); `-Wall -Wextra -Wpedantic -Wshadow-all -Werror`
+(Clang; `/W4 /WX -Wshadow-all` with clang-cl). With the globals, the program must compile, with
+each form of the fix-ups (`KAIRN_GEN_FIXUP_CALL` 0 and 1). Without them, and with
+`KAIRN_GEN_KEEP_SHADOW_WARNINGS`, which keeps the warnings on in the headers, it must compile too
+(with MSVC, under `/analyze` as well): Kairn's own declarations hide nothing, so the warnings stay
+as strong as they were for Kairn's own code. With both, which is what a program saw before the headers turned them off, MSVC must reject
+it, with C4459, and with C6244 under `/analyze`; with GCC and Clang it is only reported, since
+whether they reject it depends on their version (GCC 13 rejects it, GCC 16 and Clang accept it).
+Kairn's other tests are built as a program is, with the warnings off in the headers, and with
+their own `/W4 /WX` or `-Wall -Wextra -Wpedantic -Werror` unchanged.
 
 ## Hardware FMA
 
@@ -691,6 +736,15 @@ machine on Linux x86-64 and 1.4 to 2.2 times as long as on the Windows machine o
 ([Costs, Milestone 1](results/costs-milestone1.md)): by those ratios, these add about 40 seconds
 to the full tier's job on Linux and 2.5 to 4 minutes on Windows, and 15 to 30 seconds to the quick
 tier on Windows, whose ctest step is already over two minutes there.
+
+**The program's names** ([above](#the-programs-names)): `api.shadow` took 0.5 seconds with Apple
+clang 21 and 0.7 with GCC 16 on the Mac, 1.8 with Clang 18 and 1.1 with GCC 13 on 16 threads of
+the Linux machine, and 5.3 with MSVC on the Windows machine, where it compiles the program seven
+times, three of them under `/analyze`; measured on 2026-11-19 in a quick tier run with
+`--parallel 4`.
+The 8 calls of constructors that the same change added to the cases of the checks add 8 runs per
+state of the environment to each `api.checks.*.rounding` and `api.checks.*.flush`, under a second
+on every machine.
 
 **Waste removed** before anything left the quick tier, as measured on 16 threads of the Linux
 machine with GCC 13:

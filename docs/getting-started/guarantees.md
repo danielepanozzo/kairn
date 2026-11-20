@@ -280,5 +280,11 @@ Including Kairn fails with `#error` under the flags a macro reveals (`-ffast-mat
 
 `kairn::environment_ok()` reads the control register and says whether the rounding mode and
 flush-to-zero are in their default state; Kairn never changes them. In a build without `NDEBUG`
-(or with `KAIRN_CHECKS` defined to 1), every operation checks the environment and that its
-operands are canonical, and stops the program with a message if not.
+(or with `KAIRN_CHECKS` defined to 1), every operation checks the environment, then its operands:
+an operator or a function of `kairn::` requires canonical two-limb operands (finite and
+normalized, $(\pm\infty, 0)$ or (NaN, NaN)), a function of `kairn::finite::` normalized ones or a
+leading limb that is not finite, a `Ball` operation canonical balls; `from_limbs` and the
+constructors of `Ball` check what they are given in the same way. A failed check stops the
+program with a message, the environment's when the environment is wrong. A program that defines
+`KAIRN_ENVIRONMENT_FAILURE` to a statement that returns gets that statement instead, and the
+operation then goes on without checking its operands, with no guarantee for its result.

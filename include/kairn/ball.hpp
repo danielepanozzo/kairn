@@ -11,6 +11,7 @@
 
 #include "expansion.hpp"
 
+KAIRN_GEN_PUSH_WARNINGS
 namespace kairn {
 
 namespace detail {
@@ -73,8 +74,9 @@ KAIRN_FORCEINLINE constexpr bool canonical_ball(const Expansion<T, K>& c, T r) n
 }
 
 // A ball from a canonical center and a radius (kernel ball_make_1 or ball_make_2), without the
-// constraint, for the constructors and the marked forms. Under KAIRN_CHECKS a negative radius is
-// reported, as almost surely a bug, though the kernel gives it a meaning (the empty set).
+// constraint, for the constructors and the marked forms. Under KAIRN_CHECKS the environment is
+// checked, then a center of two limbs that is not canonical and a negative radius are reported:
+// the latter as almost surely a bug, though the kernel gives it a meaning (the empty set).
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 1> make_ball(const Expansion<T, 1>& c, std::type_identity_t<T> r) noexcept;
 template <class T>
@@ -88,11 +90,13 @@ KAIRN_FORCEINLINE constexpr Ball<T, K> make_point(std::type_identity_t<T> a) noe
     }
 }
 
+// The checks of KAIRN_CHECKS, once per operand: the environment, then a canonical ball, which is
+// not checked when the environment is not the default one and KAIRN_ENVIRONMENT_FAILURE returned
+// (check_environment).
 template <class T, int K>
 KAIRN_FORCEINLINE constexpr void check_ball([[maybe_unused]] const Ball<T, K>& x) noexcept {
 #if KAIRN_CHECKS
-    check_environment();
-    if (!canonical_ball(x.center(), x.radius()))
+    if (check_environment() && !canonical_ball(x.center(), x.radius()))
         fail("a ball", "is not canonical (a finite ball with a canonical center and r >= 0, the whole line or the "
                        "empty set), so no guarantee applies to the result");
 #endif
@@ -305,8 +309,9 @@ public:
     /// The ball of center c and radius r (kernel ball_make_1 or ball_make_2), each guarded. For a
     /// canonical c: the empty set when r is a NaN or negative (-inf included); otherwise the whole
     /// line when c is not finite or r is +inf; otherwise center c and radius r, exactly. When
-    /// KAIRN_CHECKS is 1, c must be canonical and a negative r is reported (it is almost surely a
-    /// mistake; write Ball::empty() for the empty set).
+    /// KAIRN_CHECKS is 1, the environment is checked as for an operation (config.hpp), then c
+    /// must be canonical and a negative r is reported (it is almost surely a mistake; write
+    /// Ball::empty() for the empty set); the constructors of a point above check the same.
     constexpr Ball(const Expansion<T, K>& c, T r) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::make>
         : Ball(detail::make_ball(c, r)) {}
@@ -341,10 +346,13 @@ public:
 };
 
 namespace detail {
+// Under KAIRN_CHECKS the environment first, as for an operation; then, for two limbs, the center,
+// and the radius, which are not checked when the environment is not the default one and
+// KAIRN_ENVIRONMENT_FAILURE returned (check_environment).
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 1> make_ball(const Expansion<T, 1>& c, std::type_identity_t<T> r) noexcept {
 #if KAIRN_CHECKS
-    if (0 > r) fail("a ball", "has a negative radius (Ball::empty() is the empty set)");
+    if (check_environment() && 0 > r) fail("a ball", "has a negative radius (Ball::empty() is the empty set)");
 #endif
     T cw = T(0), rw = T(0);
     gen::ball_make_1(c.limb[0], r, cw, rw);
@@ -353,8 +361,10 @@ KAIRN_FORCEINLINE constexpr Ball<T, 1> make_ball(const Expansion<T, 1>& c, std::
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 2> make_ball(const Expansion<T, 2>& c, std::type_identity_t<T> r) noexcept {
 #if KAIRN_CHECKS
-    if (!canonical(c)) fail("a ball", "has a center that is not canonical");
-    if (0 > r) fail("a ball", "has a negative radius (Ball::empty() is the empty set)");
+    if (check_environment()) {
+        if (!canonical(c)) fail("a ball", "has a center that is not canonical");
+        if (0 > r) fail("a ball", "has a negative radius (Ball::empty() is the empty set)");
+    }
 #endif
     Expansion<T, 2> cw;
     T rw = T(0);
@@ -592,3 +602,4 @@ KAIRN_FORCEINLINE auto operator*=(X& x, const Y& y) noexcept -> decltype(x = det
 }
 
 }  // namespace kairn
+KAIRN_GEN_POP_WARNINGS

@@ -14,6 +14,7 @@
 
 #include "prelude.hpp"
 
+KAIRN_GEN_PUSH_WARNINGS
 namespace kairn::gen {
 
 // add_1_1(a, b) -> s
@@ -3238,3 +3239,4 @@ KAIRN_GEN_FORCEINLINE constexpr void to_nearest_2(float x0, [[maybe_unused]] flo
 }
 
 }  // namespace kairn::gen
+KAIRN_GEN_POP_WARNINGS

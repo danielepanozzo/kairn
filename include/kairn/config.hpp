@@ -53,11 +53,26 @@
 #define KAIRN_FORCEINLINE KAIRN_GEN_FORCEINLINE
 
 /// @def KAIRN_CHECKS
-/// 1 to check, before every scalar operation, that the floating-point environment is the default
-/// one (kairn::environment_ok()) and that each operand is normalized or has a non-finite leading
-/// limb; 0 for no checks. The default is 1 when NDEBUG is not defined, as for assert(). The checks
-/// are skipped in constant evaluation, except that an operand that fails them makes the constant
-/// expression invalid. Define it the same way in every translation unit of a program.
+/// 1 to check, before every operation of Expansion and Ball (all but sign, isfinite,
+/// is_normalized and the accessors of Ball, which only read limbs) and in the constructors that
+/// are given limbs or a center (Expansion<T, 2>::from_limbs, the narrowing to one limb, the
+/// constructors of Ball), first that the floating-point environment is the default one
+/// (kairn::environment_ok()), then the operands:
+/// - an operator, and a function of kairn:: such as ldexp or to_down, requires each two-limb
+///   operand to be canonical: finite and normalized (x0 + x1 == x0 in floating point), (+-inf, 0)
+///   or (NaN, NaN); a one-limb operand and a T may be any value;
+/// - a function of kairn::finite:: accepts what its cores may return: each two-limb operand
+///   normalized, or with a leading limb that is not finite;
+/// - a Ball operation requires each ball to be canonical: a finite ball with a canonical center
+///   and a radius r >= 0, the whole line, or the empty set;
+/// - from_limbs requires a canonical pair, and a constructor of Ball a canonical center and a
+///   radius that is not negative (a NaN radius, which makes the empty set, is accepted).
+///
+/// An operand that fails prints a message and calls std::abort(); an environment that fails calls
+/// KAIRN_ENVIRONMENT_FAILURE. 0 for no checks. The default is 1 when NDEBUG is not defined, as for
+/// assert(). The checks are skipped in constant evaluation, except that an operand that fails them
+/// makes the constant expression invalid. Define it the same way in every translation unit of a
+/// program.
 #if !defined(KAIRN_CHECKS)
 #if defined(NDEBUG)
 #define KAIRN_CHECKS 0
@@ -69,8 +84,10 @@
 /// @def KAIRN_ENVIRONMENT_FAILURE(reason)
 /// What a check of KAIRN_CHECKS does when the floating-point environment is not the default one:
 /// by default, prints the reason (a string literal) to the standard error and calls std::abort().
-/// A program may define it, before including Kairn, as any statement; Kairn continues with the
-/// operation if it returns, and the result then has no guarantee.
+/// A program may define it, before including Kairn, as any statement. If it returns, the operation
+/// (or the constructor) continues without checking its operands, since those checks compute in
+/// the environment that failed (under a directed rounding mode x0 + x1 == x0 can be false for a
+/// canonical pair), and its result has no guarantee.
 #if !defined(KAIRN_ENVIRONMENT_FAILURE)
 #define KAIRN_ENVIRONMENT_FAILURE(reason) ::kairn::detail::fail("the floating-point environment", reason)
 #endif
@@ -87,6 +104,10 @@
 #else
 #define KAIRN_DETAIL_K1_CONTRACT
 #endif
+
+// The warnings of MSVC and GCC about a declaration that hides a global variable of the program
+// are off for the declarations of each header of Kairn (gen/prelude.hpp says why).
+KAIRN_GEN_PUSH_WARNINGS
 
 /// Kairn's public interface: the number types Expansion<T, 1> and Expansion<T, 2>, the balls
 /// Ball<T, 1> and Ball<T, 2>, their operations, kairn::traits, kairn::self_test() and
@@ -172,3 +193,4 @@ KAIRN_FORCEINLINE constexpr const X& unmark(const Unverified<X>& x) noexcept {
 
 }  // namespace detail
 }  // namespace kairn
+KAIRN_GEN_POP_WARNINGS

@@ -271,6 +271,7 @@ def selftest(kernels):
              '#include <cstdint>',
              '#include <limits>', '',
              '#include "scalar.hpp"', '',
+             'KAIRN_GEN_PUSH_WARNINGS',
              'namespace kairn::gen::selftest {', '',
              '// Whether a computed limb is the stored one, from the bit patterns: a comparison would read',
              '// a subnormal operand as zero under flush-to-zero, the very thing to detect. Any two NaNs are',
@@ -319,5 +320,5 @@ def selftest(kernels):
               '    static constexpr check checks[] = {']
     lines += [f'        {fn},' for fn in names]
     lines += ['    };', '    for (check c : checks)', '        if (const char* failed = c()) return failed;',
-              '    return nullptr;', '}', '', '}  // namespace kairn::gen::selftest']
+              '    return nullptr;', '}', '', '}  // namespace kairn::gen::selftest', 'KAIRN_GEN_POP_WARNINGS']
     return '\n'.join(lines) + '\n'
