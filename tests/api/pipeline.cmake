@@ -5,7 +5,12 @@
 #     | python3 oracle/kairn-oracle check --fail-on-suspicious
 #
 #   cmake -DPYTHON=... -DSOURCE_DIR=... -DRUNNERS=LABEL|EXECUTABLE|LABEL|EXECUTABLE...
-#         -DKERNEL=... -DFORMAT=... -DCOUNT=N -DSEED=S -DSUMMARY_DIR=DIR -P pipeline.cmake
+#         -DKERNEL=... -DFORMAT=... -DCOUNT=N -DSEED=S -DSUMMARY_DIR=DIR
+#         [-DFIRST_FORM=LABEL|LABEL...] -P pipeline.cmake
+#
+# The runners named in FIRST_FORM complete the requests with the kernel's first form only, its
+# canonical one, and the others with every form (the debug build in the quick tier, whose runner
+# takes two to three times as long: tests/api/CMakeLists.txt).
 #
 # The requests are generated once, into a file, and every runner completes the same file with
 # every form (../run_runners.py). Every output is judged, but an output identical byte for byte to one judged before is
@@ -27,6 +32,7 @@ endforeach()
 # The stages run in SOURCE_DIR: a relative SUMMARY_DIR is taken from where cmake runs.
 get_filename_component(SUMMARY_DIR "${SUMMARY_DIR}" ABSOLUTE)
 string(REPLACE "|" ";" _pairs "${RUNNERS}")
+string(REPLACE "|" ";" _first_form "${FIRST_FORM}")
 list(LENGTH _pairs _n)
 math(EXPR _odd "${_n} % 2")
 if(_n EQUAL 0 OR _odd)
@@ -105,6 +111,9 @@ foreach(_i RANGE 0 ${_last} 2)
   string(REPLACE "\n" ";" _forms "${_forms}")
   if(NOT _forms)
     message(FATAL_ERROR "no public operation of the API runner ${_label} maps to ${KERNEL}")
+  endif()
+  if(_label IN_LIST _first_form)
+    list(GET _forms 0 _forms)
   endif()
   foreach(_form IN LISTS _forms)
     math(EXPR _n_forms "${_n_forms} + 1")

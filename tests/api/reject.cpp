@@ -15,7 +15,9 @@
 //          two-limb one); the control marks the operand
 //   11     a pair that is not canonical given to from_limbs in a constant expression, with
 //          KAIRN_CHECKS (the control turns KAIRN_CHECKS off)
-#if KAIRN_TEST_CASE == 11
+//   15     the same for an operator given a pair that is not canonical, written into its limbs
+//   16     the same for a Ball constructor given a negative radius
+#if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16
 #if defined(KAIRN_TEST_CONTROL)
 #define KAIRN_CHECKS 0
 #else
@@ -91,6 +93,17 @@ int main() {
     static constexpr double limbs[2] = {1.0, 0x1p-52};
     constexpr E2 z = E2::from_limbs(limbs);
     sink = z.limb[1];
+#elif KAIRN_TEST_CASE == 15
+    constexpr E2 z = [] {
+        E2 w;
+        w.limb[0] = 1.0;
+        w.limb[1] = 0x1p-52;
+        return kairn::unverified(w) + w;
+    }();
+    sink = z.limb[1];
+#elif KAIRN_TEST_CASE == 16
+    constexpr B2 z(kairn::unverified(E2(kairn::unverified(1.0))), -0.5);
+    sink = z.radius();
 #endif
     return sink == 12345 ? 1 : 0;
 }

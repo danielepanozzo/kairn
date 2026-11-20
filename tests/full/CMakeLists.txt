@@ -56,8 +56,13 @@ endif()
 #
 # Kernel by kernel, as tests/CMakeLists.txt worked them out: the interpreter on every operand of
 # the kernel's toy format, or of a restricted domain of it and on random cases of all of it; and
-# every compiled runner on KAIRN_CROSSCHECK_CASES cases of each format.
+# every compiled runner on KAIRN_CROSSCHECK_CASES cases of each format, with the kernels' runners
+# of the flag sets (api/flags/: the debug build, and one set at -O1 or /O1).
 set(_summaries "${CMAKE_CURRENT_BINARY_DIR}/crosscheck")
+set(_compiled_full "${_compiled}")
+foreach(_runner _label IN ZIP_LISTS _flags_gen_runners _flags_gen_labels)
+  string(APPEND _compiled_full "|${_label}|$<TARGET_FILE:${_runner}>")
+endforeach()
 foreach(_kernel IN LISTS _full_kernels)
   set(_this ${_full_${_kernel}_this})
   set(_toy "${_full_${_kernel}_toy}")
@@ -90,7 +95,7 @@ foreach(_kernel IN LISTS _full_kernels)
     foreach(_format binary64 binary32)
       set(_name full.crosscheck.compiled.${_kernel}.${_format})
       add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_format}"
-        "-DRUNNERS=${_compiled}" ${_random} "-DSUMMARY=${_summaries}/${_name}.json"
+        "-DRUNNERS=${_compiled_full}" ${_random} "-DSUMMARY=${_summaries}/${_name}.json"
         -P "${_driver}")
       set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;crosscheck;compiled")
     endforeach()
@@ -142,4 +147,32 @@ foreach(_kernel IN LISTS _api_oracle_kernels)
         -P "${PROJECT_SOURCE_DIR}/tests/api/pipeline.cmake")
     set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle")
   endforeach()
+endforeach()
+
+# --- The flag sets (api/flags/) -----------------------------------------------------------------
+#
+# full.api.flags.oracle.KERNEL.FORMAT: every public form of the kernel, through the runner of each
+# flag set, on KAIRN_API_QUICK_CASES cases (the quick tier's, which judge the debug build's runner
+# on the first form only). For each set but the debug build, which the quick tier has:
+# full.api.flags.SET.self_test, kairn::self_test() and kairn::environment_ok() compiled with the
+# set's flags (tests/api/runner.cpp --self-test), and full.api.flags.SET.constexpr,
+# tests/api/constexpr.cpp built with them.
+foreach(_kernel IN LISTS _api_oracle_kernels)
+  foreach(_format binary64 binary32)
+    set(_name full.api.flags.oracle.${_kernel}.${_format})
+    add_test(NAME ${_name}
+      COMMAND "${CMAKE_COMMAND}" ${_api_flags_common} "-DKERNEL=${_kernel}" "-DFORMAT=${_format}"
+        "-DCOUNT=${KAIRN_API_QUICK_CASES}" "-DSUMMARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/api-flags"
+        -P "${PROJECT_SOURCE_DIR}/tests/api/pipeline.cmake")
+    set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle;flags")
+  endforeach()
+endforeach()
+foreach(_set IN LISTS _flags_names)
+  if(_set STREQUAL "debug")
+    continue()
+  endif()
+  add_test(NAME full.api.flags.${_set}.self_test COMMAND kairn-api-runner-${_set} --self-test)
+  add_test(NAME full.api.flags.${_set}.constexpr COMMAND kairn-api-constexpr-${_set})
+  set_tests_properties(full.api.flags.${_set}.self_test full.api.flags.${_set}.constexpr PROPERTIES
+    TIMEOUT 120 LABELS "full;api;flags")
 endforeach()
