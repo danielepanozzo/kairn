@@ -279,6 +279,8 @@ def main(argv=None):
     s.add_argument("--cxx", help="C++ compiler (default: $CXX, then c++, clang++, g++)")
     s.add_argument("--only", help="comma-separated test names")
     s.add_argument("--skip", help="comma-separated test names to leave out")
+    s.add_argument("--last", help="comma-separated test names to run after the others, in order")
+    s.add_argument("--fail-fast", action="store_true", help="stop at the first failing test")
     s.add_argument("--jobs", type=int, default=None,
                    help="worker processes of the exhaustive tests (default: $KAIRN_ORACLE_JOBS, "
                         "then the number of CPUs)")

@@ -916,17 +916,24 @@ from . import selftest8  # noqa: E402,F401
 def main(a):
     only = set(a.only.split(",")) if a.only else None
     leave_out = set(a.skip.split(",")) if getattr(a, "skip", None) else set()
+    last = a.last.split(",") if getattr(a, "last", None) else []
     # A name that is not a test's (a test renamed, a typo) would select or leave out nothing.
-    unknown = sorted(((only or set()) | leave_out) - {fn.__name__ for fn in TESTS})
+    unknown = sorted(((only or set()) | leave_out | set(last)) - {fn.__name__ for fn in TESTS})
     if unknown:
         print("selftest: no test named %s" % ", ".join(unknown))
         return 2
+    # --last: these tests after the others, in the order given (the mutants' harness puts the
+    # longest last, with --fail-fast, which stops at the first failure).
+    order = ([fn for fn in TESTS if fn.__name__ not in last]
+             + [fn for name in last for fn in TESTS if fn.__name__ == name])
     workdir = a.workdir or tempfile.mkdtemp(prefix="kairn-oracle-selftest-")
     os.makedirs(workdir, exist_ok=True)
     ctx = Ctx(workdir, a.quick, a.cxx, getattr(a, "jobs", None))
     failed = skipped = 0
     t0 = time.time()
-    for fn in TESTS:
+    for fn in order:
+        if failed and getattr(a, "fail_fast", False):
+            break
         if (only and fn.__name__ not in only) or fn.__name__ in leave_out:
             continue
         t = time.time()

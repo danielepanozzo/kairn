@@ -486,7 +486,7 @@ the classes of each statement (`oracle/README.md`, "The extended domain"):
     | `extends` | the nine full kernels | a finite result (F2), an overflow on finite operands (F4), a non-finite operand (F5); where `finite_when` is not empty, a case where every condition holds (F3 applies) |
     | `encloses` | the eight full Ball kernels, `ball_neg_1`, `ball_neg_2` | each of the three results: a finite ball, the whole line, the empty set; where `finite_when` is not empty (the eight full Ball kernels), a case where every condition holds (B4 applies) |
     | `represents` | `make_2`, `make_2_limbs`, `neg_2`, `abs_2` | a finite, an infinite and a NaN value |
-    | `makes_ball` | `ball_make_1`, `ball_make_2` | each given state: a finite ball, the whole line (a center that is not finite, or a radius $+\infty$ or NaN), the empty set (a negative radius, $-\infty$ included) |
+    | `makes_ball` | `ball_make_1`, `ball_make_2` | each given state: a finite ball, the whole line (a center that is not finite, or a radius $+\infty$ or NaN), the empty set (a negative radius, $-\infty$ included, whatever the center); and each class of the given radius (negative, $-\infty$, NaN, $+\infty$, $+0$, $-0$, positive) with a finite center and with one that is not, $-0$ but in an enumeration, which has one zero |
     | `normalized`, `error` | `neg_2`, `abs_2`, `ball_neg_2` | a non-finite operand |
     | `rounded` | the conversions | a non-finite operand |
     | `predicate` | the comparisons | a non-finite operand with each outcome |
@@ -503,7 +503,7 @@ enumeration, a restricted one passed off as complete, missing strata, nothing ju
 that was never true; in the extended domain, an enumeration of `add_2_2_full` without an overflow
 or where `finite_when` never holds, one of `ball_add_1_full` whose radius makes every result from
 finite operands the whole line, random runs without non-finite operands, without the empty set or
-without one of a constructor's outcomes, headers without the strata of the layer), and summaries
+without one of a constructor's outcomes, a constructor's good run with one class of radius taken out of its summary, headers without the strata of the layer), and summaries
 altered where no stream can produce the fault (entries that are not those of the claims, claims
 that cannot be read); and both drivers on such runs, which they must fail with the guards'
 reason, and on good ones: `tests/crosscheck.py compiled` with the interpreter as its runner

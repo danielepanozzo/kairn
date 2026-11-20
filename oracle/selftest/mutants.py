@@ -147,8 +147,24 @@ MUTANTS = {
     "nonneg admits -inf": (
         "extended.py", "ok = v in (INF, NAN) or", "ok = v in (INF, NAN, NINF) or"),
     "makes_ball: negative radius not empty": (
-        "extended.py", "if r == NAN or r == NINF or (type(r) is int and r < 0):",
-        "if r == NAN or r == NINF:"),
+        "extended.py", "if r == NINF or (type(r) is int and r < 0):",
+        "if r == NINF:"),
+    # The rule of 2026-11-20: a NaN radius gives the whole line, a negative one the empty set
+    # whatever the center.
+    "makes_ball: a NaN radius read as the empty set (the old rule)": (
+        "extended.py", "if r == NINF or (type(r) is int and r < 0):",
+        "if r == NAN or r == NINF or (type(r) is int and r < 0):"),
+    "makes_ball: the center tested before the radius": (
+        "extended.py", "if r == NINF or (type(r) is int and r < 0):",
+        "if finite_center and (r == NINF or (type(r) is int and r < 0)):"),
+    "makes_ball: the class of the radius not counted": (
+        "extended.py", "es.count(\"given radius %s, center %s\" % (radius_class(r, token),",
+        "es.count(\"given radius %s, center %s\" % (\"positive\","),
+    "makes_ball: the sign of a zero radius not read": (
+        "extended.py", "return \"-0\" if token.startswith(\"-\") else \"+0\"", "return \"+0\""),
+    "badradius: a center never left finite": (
+        "gen3.py", "        if rng.bits(1):\n            vals[c] = _nonfinite(",
+        "        if False:\n            vals[c] = _nonfinite("),
     "represents: value not compared": (
         "extended.py", '    if not ok:\n        es.count("failed: not the value")',
         '    if False:\n        es.count("failed: not the value")'),
@@ -501,6 +517,15 @@ MUTANTS = {
 }
 
 
+# The selftest's longest tests (the exhaustive ones, the planted faults on every case), which
+# --fail-fast runs after the others: a mutant is caught at the first test that fails, and most
+# fail in a short one. A survivor still runs every test.
+LONG = ("correct_runner_toy_exhaustive", "exhaustive_wave2", "injected_wave2_exhaustive",
+        "injected_wave3_exhaustive", "exhaustive_wave3", "iv_planted", "fold_planted",
+        "injected_wave3", "injected_exhaustive", "fold_brackets", "fold_reference", "iv_exhaustive")
+FAIL_FAST = False
+
+
 def run_one(work, name, fn, old, new):
     """(status, failing tests) of one mutant in its own copy of the oracle."""
     copy = os.path.join(work, "m%d" % sorted(MUTANTS).index(name), "oracle")
@@ -513,9 +538,12 @@ def run_one(work, name, fn, old, new):
         return "STALE", "(the text to mutate is not in %s once)" % fn
     with open(path, "w") as fh:
         fh.write(src.replace(old, new))
+    fast = ["--fail-fast", "--last", ",".join(LONG)] if FAIL_FAST else []
     r = subprocess.run([sys.executable, os.path.join(copy, "kairn-oracle"), "selftest",
-                        "--quick", "--workdir", os.path.join(os.path.dirname(copy), "wd")],
+                        "--quick", "--workdir", os.path.join(os.path.dirname(copy), "wd")] + fast,
                        capture_output=True, text=True)
+    if "selftest: no test named" in r.stdout:
+        return "STALE", "(%s)" % r.stdout.strip()   # a name of LONG that is no test's
     failing = [ln.split()[1] for ln in r.stdout.splitlines() if ln.startswith("FAIL")]
     return ("caught" if r.returncode else "SURVIVED"), ", ".join(failing)
 
@@ -524,7 +552,12 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--jobs", type=int, default=1, help="mutants run at the same time")
     ap.add_argument("--only", help="comma-separated mutant names")
+    ap.add_argument("--fail-fast", action="store_true",
+                    help="stop each mutant's selftest at its first failing test, the longest "
+                         "tests last (the failing tests listed are then the first only)")
     a = ap.parse_args()
+    global FAIL_FAST
+    FAIL_FAST = a.fail_fast
     names = [n for n in MUTANTS if not a.only or n in a.only.split(",")]
     work = tempfile.mkdtemp(prefix="kairn-oracle-mutants-")
     survivors, stale = [], []

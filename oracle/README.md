@@ -1295,7 +1295,8 @@ python3 oracle/selftest/mutants.py --jobs 6       # tests the selftest, about fi
 
 The exhaustive tests run one worker process per CPU; `--jobs N` (or `KAIRN_ORACLE_JOBS=N`)
 caps them. The times are for an Apple M3 Max with `--jobs 6`. `--only NAMES` runs only the tests
-named (comma-separated), `--skip NAMES` all but those; a name that is not a test's is an error.
+named (comma-separated), `--skip NAMES` all but those, `--last NAMES` runs those after the others
+and `--fail-fast` stops at the first failing test; a name that is not a test's is an error.
 ctest's full tier runs it in two parts: `--quick` with `--skip` for the six enumerations of toy
 formats (`correct_runner_toy_exhaustive`, `injected_exhaustive`, `exhaustive_wave2`,
 `injected_wave2_exhaustive`, `exhaustive_wave3`, `injected_wave3_exhaustive`) with the build's
@@ -1328,8 +1329,14 @@ checked, a range without $0 \cdot \infty = 0$ or a negation not exchanging its b
 of I2 to I6 not judged, a step more allowed, `product_large` ignored, a relative term doubled, the
 absolute term left out, the zero condition always true, a zero factor or an infinity not judged,
 the special values of 1788 exchanged, an output group judged only where the first is finite,
-`up( )` read as its argument, a malformed claim accepted, a stratum aimed elsewhere) and requires
-`selftest --quick` to fail on the copy. The test of the side of a `bound` alone has no mutant: an
+`up( )` read as its argument, a malformed claim accepted, a stratum aimed elsewhere; for the
+constructors under the rule of 2026-11-20, a NaN radius read as the empty set, the center tested
+before the radius, the class of the radius or the sign of a zero radius not counted, a center
+never left finite by `badradius`) and requires `selftest --quick` to fail on the copy. With
+`--fail-fast` each copy's selftest stops at its first failing test and runs the longest tests
+(`LONG` in `mutants.py`) last (`selftest --fail-fast --last NAMES`), so a mutant is caught in
+seconds; a survivor still runs every test, and the tests listed are then the first that failed
+only. The test of the side of a `bound` alone has no mutant: an
 output on the wrong side is not reached by the steps outward from the directed rounding either,
 and fails there; nor has the test that the split point of `splits` is a member of $X$, which
 follows from both parts being canonical.
