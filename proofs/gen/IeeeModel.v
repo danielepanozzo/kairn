@@ -96,6 +96,45 @@ Definition up_ball_scale_2_0 : float := const_of (Model.up_ball_scale_2_0 (3 - e
 (* up((1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)+eta/(2*u)), as a number of the format. *)
 Definition up_ball_scale_2_2 : float := const_of (Model.up_ball_scale_2_2 (3 - emax - prec) prec).
 
+(* up((1+u)*(unit(mul_1_1)+eta/2)), as a number of the format. *)
+Definition up_bound_dot_1_0 : float := const_of (Model.up_bound_dot_1_0 (3 - emax - prec) prec).
+
+(* up((1+u)^2*(unit(mul_1_1)+eta)), as a number of the format. *)
+Definition up_bound_dot_1_1 : float := const_of (Model.up_bound_dot_1_1 (3 - emax - prec) prec).
+
+(* up(1+2*u), as a number of the format. *)
+Definition up_bound_dot_1_2 : float := const_of (Model.up_bound_dot_1_2 (3 - emax - prec) prec).
+
+(* up((1+u)^2*(tiny(mul_1_1)+eta)+eta/(2*u)), as a number of the format. *)
+Definition up_bound_dot_1_3 : float := const_of (Model.up_bound_dot_1_3 (3 - emax - prec) prec).
+
+(* up(1/4), as a number of the format. *)
+Definition up_bound_dot_1_4 : float := const_of (Model.up_bound_dot_1_4 (3 - emax - prec) prec).
+
+(* up(1), as a number of the format. *)
+Definition up_bound_dot_1_5 : float := const_of (Model.up_bound_dot_1_5 (3 - emax - prec) prec).
+
+(* up((1+u)*(unit(mul_2_2)+eta/2)), as a number of the format. *)
+Definition up_bound_dot_2_0 : float := const_of (Model.up_bound_dot_2_0 (3 - emax - prec) prec).
+
+(* up((1+u)^2*(unit(mul_2_2)+eta)), as a number of the format. *)
+Definition up_bound_dot_2_1 : float := const_of (Model.up_bound_dot_2_1 (3 - emax - prec) prec).
+
+(* up((1+u)^2*(tiny(mul_2_2)+eta)+eta/(2*u)), as a number of the format. *)
+Definition up_bound_dot_2_3 : float := const_of (Model.up_bound_dot_2_3 (3 - emax - prec) prec).
+
+(* up((1+u)*(unit(add_1_1)+eta/2)), as a number of the format. *)
+Definition up_bound_sum_1_0 : float := const_of (Model.up_bound_sum_1_0 (3 - emax - prec) prec).
+
+(* up((1+u)^2*(unit(add_1_1)+eta)), as a number of the format. *)
+Definition up_bound_sum_1_1 : float := const_of (Model.up_bound_sum_1_1 (3 - emax - prec) prec).
+
+(* up((1+u)*(unit(add_2_2)+eta/2)), as a number of the format. *)
+Definition up_bound_sum_2_0 : float := const_of (Model.up_bound_sum_2_0 (3 - emax - prec) prec).
+
+(* up((1+u)^2*(unit(add_2_2)+eta)), as a number of the format. *)
+Definition up_bound_sum_2_1 : float := const_of (Model.up_bound_sum_2_1 (3 - emax - prec) prec).
+
 (* up(eta/(2*u^2)), as a number of the format. *)
 Definition up_mul_down_1_0 : float := const_of (Model.up_mul_down_1_0 (3 - emax - prec) prec).
 
@@ -300,12 +339,74 @@ Definition ball_sub_1_full (cx rx cy ry : float) : float * float :=
   let rw := if e then r else q in
   (cw, rw).
 
+(* bound_dot_1: the exported bound of a dot product as a function of n (milestone2.md). *)
+Definition bound_dot_1 (m : float) : float * float * bool :=
+  let a := prod m up_bound_dot_1_0 in
+  let aa := prod m up_bound_dot_1_1 in
+  let d := add a a in
+  let w := add d up_bound_dot_1_2 in
+  let g := prod aa w in
+  let tm := prod m up_bound_dot_1_3 in
+  let wg := add g up_bound_dot_1_2 in
+  let t := prod tm wg in
+  let oa := le a up_bound_dot_1_4 in
+  let ob := le g up_bound_dot_1_5 in
+  let ok := andb oa ob in
+  (g, t, ok).
+
+(* bound_dot_2: the exported bound of a dot product as a function of n (milestone2.md). *)
+Definition bound_dot_2 (m : float) : float * float * bool :=
+  let a := prod m up_bound_dot_2_0 in
+  let aa := prod m up_bound_dot_2_1 in
+  let d := add a a in
+  let w := add d up_bound_dot_1_2 in
+  let g := prod aa w in
+  let tm := prod m up_bound_dot_2_3 in
+  let wg := add g up_bound_dot_1_2 in
+  let t := prod tm wg in
+  let oa := le a up_bound_dot_1_4 in
+  let ob := le g up_bound_dot_1_5 in
+  let ok := andb oa ob in
+  (g, t, ok).
+
+(* bound_sum_1: the exported bound of a sum as a function of n (milestone2.md). *)
+Definition bound_sum_1 (m : float) : float * bool :=
+  let a := prod m up_bound_sum_1_0 in
+  let aa := prod m up_bound_sum_1_1 in
+  let d := add a a in
+  let w := add d up_bound_dot_1_2 in
+  let g := prod aa w in
+  let ok := le a up_bound_dot_1_4 in
+  (g, ok).
+
+(* bound_sum_2: the exported bound of a sum as a function of n (milestone2.md). *)
+Definition bound_sum_2 (m : float) : float * bool :=
+  let a := prod m up_bound_sum_2_0 in
+  let aa := prod m up_bound_sum_2_1 in
+  let d := add a a in
+  let w := add d up_bound_dot_1_2 in
+  let g := prod aa w in
+  let ok := le a up_bound_dot_1_4 in
+  (g, ok).
+
+(* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). *)
+Definition dot_step_1 (s x y : float) : float :=
+  let t := fma x y s in
+  t.
+
 (* fast_two_sum_entry: fast_two_sum on its guarded operands (Milestone 2 listing). *)
 Definition fast_two_sum_entry (a b : float) : float * float :=
   let ga := guard a in
   let gb := guard b in
   let '(s, e) := fast_two_sum ga gb in
   (s, e).
+
+(* fold_finish_1: the finish of a fold: the state or the canonical NaN (milestone2.md). *)
+Definition fold_finish_1 (s : float) : float * bool :=
+  let a := abs s in
+  let flag := lt a pinf in
+  let r := if flag then s else cnan in
+  (r, flag).
 
 (* make_2: constructors (Milestone 1 listing). *)
 Definition make_2 (a : float) : float * float :=
@@ -421,6 +522,12 @@ Definition sub_up_entry (a b : float) : float :=
   let gb := guard b in
   let r := sub_up_1 ga gb in
   r.
+
+(* sum_entry_step_1: add_1_1 on a guarded element (rule R3). *)
+Definition sum_entry_step_1 (s x : float) : float :=
+  let g := guard x in
+  let t := add s g in
+  t.
 
 (* two_prod_dekker: Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11. *)
 Definition two_prod_dekker (a b : float) : float * float :=
@@ -729,6 +836,12 @@ Definition ball_sub_2_full (cx0 cx1 rx cy0 cy1 ry : float) : float * float * flo
   let rw := if e then r else q in
   (cw0, cw1, rw).
 
+(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. *)
+Definition dot_step_2 (s0 s1 x0 x1 y0 y1 : float) : float * float :=
+  let '(p0, p1) := mul_2_2 x0 x1 y0 y1 in
+  let '(t0, t1) := add_2_2 s0 s1 p0 p1 in
+  (t0, t1).
+
 (* eq_2_1: limbs compared in order (Milestone 1 listing). *)
 Definition eq_2_1 (x0 x1 a : float) : bool :=
   let h := eq x0 a in
@@ -742,6 +855,14 @@ Definition eq_2_2 (x0 x1 y0 y1 : float) : bool :=
   let l := eq x1 y1 in
   let m := andb h l in
   m.
+
+(* fold_finish_2: the finish of a fold: the state or the canonical NaN (milestone2.md). *)
+Definition fold_finish_2 (s0 s1 : float) : float * float * bool :=
+  let a := abs s0 in
+  let flag := lt a pinf in
+  let r0 := if flag then s0 else cnan in
+  let r1 := if flag then s1 else cnan in
+  (r0, r1, flag).
 
 (* le_1_2: limbs compared in order (Milestone 1 listing). *)
 Definition le_1_2 (a y0 y1 : float) : bool :=
@@ -909,6 +1030,20 @@ Definition sub_2_2_full (x0 x1 y0 y1 : float) : float * float :=
   let w0 := if f then z0 else r0 in
   let w1 := if f then z1 else r1 in
   (w0, w1).
+
+(* sum_entry_step_2: add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22. *)
+Definition sum_entry_step_2 (s0 s1 x0 x1 : float) : float * float :=
+  let g0 := guard x0 in
+  let g1 := guard x1 in
+  let '(t0, t1) := add_2_2 s0 s1 g0 g1 in
+  (t0, t1).
+
+(* sum_fast_entry_step_2: add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5. *)
+Definition sum_fast_entry_step_2 (s0 s1 x0 x1 : float) : float * float :=
+  let g0 := guard x0 in
+  let g1 := guard x1 in
+  let '(t0, t1) := add_fast_2_2 s0 s1 g0 g1 in
+  (t0, t1).
 
 (* to_down_2: the sign of x1 (Milestone 1 listing). *)
 Definition to_down_2 (x0 x1 : float) : float :=

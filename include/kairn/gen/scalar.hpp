@@ -9,8 +9,10 @@
 // the first arms of its selects need come first; when the masks are true the outputs are
 // those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,
 // "Emission").
-// Not constexpr: ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, mul_down_1, mul_up_1, ball_add_2, ball_add_2_full, mul_2_2, ball_mul_2, ball_mul_2_full, mul_2_1, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, mul_2_1_full, mul_2_2_full.
+// Not constexpr: ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, dot_step_1, mul_down_1, mul_up_1, ball_add_2, ball_add_2_full, mul_2_2, ball_mul_2, ball_mul_2_full, mul_2_1, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, dot_step_2, mul_2_1_full, mul_2_2_full.
 #pragma once
+
+#include <cstddef>
 
 #include "prelude.hpp"
 
@@ -890,6 +892,133 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(float cx, float rx, float cy, float r
     }
 }
 
+// bound_dot_1(m) -> g, t, mask ok
+// the exported bound of a dot product as a function of n (milestone2.md). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void bound_dot_1(double m, double& g_out, double& t_out, bool& ok_out) noexcept {
+    const double a = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-53 : fma_rn(m, 0x1.0000000000001p-53, 0.0);
+    const double aa = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-53 : fma_rn(m, 0x1.0000000000001p-53, 0.0);
+    const double d = a + a;
+    const double w = d + 0x1.0000000000001p+0;
+    const double g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0);
+    const double tm = __builtin_is_constant_evaluated() ? m * 0x1.0000000000002p-1022 : fma_rn(m, 0x1.0000000000002p-1022, 0.0);
+    const double wg = g + 0x1.0000000000001p+0;
+    const double t = __builtin_is_constant_evaluated() ? tm * wg : fma_rn(tm, wg, 0.0);
+    const bool oa = 0x1p-2 >= a;
+    const bool ob = 0x1p+0 >= g;
+    const bool ok = oa & ob;
+    g_out = g;
+    t_out = t;
+    ok_out = ok;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bound_dot_1(float m, float& g_out, float& t_out, bool& ok_out) noexcept {
+    const float a = __builtin_is_constant_evaluated() ? m * 0x1.000002p-24f : fma_rn(m, 0x1.000002p-24f, 0.0f);
+    const float aa = __builtin_is_constant_evaluated() ? m * 0x1.000002p-24f : fma_rn(m, 0x1.000002p-24f, 0.0f);
+    const float d = a + a;
+    const float w = d + 0x1.000002p+0f;
+    const float g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0f);
+    const float tm = __builtin_is_constant_evaluated() ? m * 0x1.000004p-126f : fma_rn(m, 0x1.000004p-126f, 0.0f);
+    const float wg = g + 0x1.000002p+0f;
+    const float t = __builtin_is_constant_evaluated() ? tm * wg : fma_rn(tm, wg, 0.0f);
+    const bool oa = 0x1p-2f >= a;
+    const bool ob = 0x1p+0f >= g;
+    const bool ok = oa & ob;
+    g_out = g;
+    t_out = t;
+    ok_out = ok;
+}
+
+// bound_dot_2(m) -> g, t, mask ok
+// the exported bound of a dot product as a function of n (milestone2.md). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void bound_dot_2(double m, double& g_out, double& t_out, bool& ok_out) noexcept {
+    const double a = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-104 : fma_rn(m, 0x1.0000000000001p-104, 0.0);
+    const double aa = __builtin_is_constant_evaluated() ? m * 0x1.0000000000002p-104 : fma_rn(m, 0x1.0000000000002p-104, 0.0);
+    const double d = a + a;
+    const double w = d + 0x1.0000000000001p+0;
+    const double g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0);
+    const double tm = __builtin_is_constant_evaluated() ? m * 0x1.0000000000003p-1022 : fma_rn(m, 0x1.0000000000003p-1022, 0.0);
+    const double wg = g + 0x1.0000000000001p+0;
+    const double t = __builtin_is_constant_evaluated() ? tm * wg : fma_rn(tm, wg, 0.0);
+    const bool oa = 0x1p-2 >= a;
+    const bool ob = 0x1p+0 >= g;
+    const bool ok = oa & ob;
+    g_out = g;
+    t_out = t;
+    ok_out = ok;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bound_dot_2(float m, float& g_out, float& t_out, bool& ok_out) noexcept {
+    const float a = __builtin_is_constant_evaluated() ? m * 0x1.000002p-46f : fma_rn(m, 0x1.000002p-46f, 0.0f);
+    const float aa = __builtin_is_constant_evaluated() ? m * 0x1.000004p-46f : fma_rn(m, 0x1.000004p-46f, 0.0f);
+    const float d = a + a;
+    const float w = d + 0x1.000002p+0f;
+    const float g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0f);
+    const float tm = __builtin_is_constant_evaluated() ? m * 0x1.000006p-126f : fma_rn(m, 0x1.000006p-126f, 0.0f);
+    const float wg = g + 0x1.000002p+0f;
+    const float t = __builtin_is_constant_evaluated() ? tm * wg : fma_rn(tm, wg, 0.0f);
+    const bool oa = 0x1p-2f >= a;
+    const bool ob = 0x1p+0f >= g;
+    const bool ok = oa & ob;
+    g_out = g;
+    t_out = t;
+    ok_out = ok;
+}
+
+// bound_sum_1(m) -> g, mask ok
+// the exported bound of a sum as a function of n (milestone2.md). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void bound_sum_1(double m, double& g_out, bool& ok_out) noexcept {
+    const double a = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-53 : fma_rn(m, 0x1.0000000000001p-53, 0.0);
+    const double aa = __builtin_is_constant_evaluated() ? m * 0x1.0000000000001p-53 : fma_rn(m, 0x1.0000000000001p-53, 0.0);
+    const double d = a + a;
+    const double w = d + 0x1.0000000000001p+0;
+    const double g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0);
+    const bool ok = 0x1p-2 >= a;
+    g_out = g;
+    ok_out = ok;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bound_sum_1(float m, float& g_out, bool& ok_out) noexcept {
+    const float a = __builtin_is_constant_evaluated() ? m * 0x1.000002p-24f : fma_rn(m, 0x1.000002p-24f, 0.0f);
+    const float aa = __builtin_is_constant_evaluated() ? m * 0x1.000002p-24f : fma_rn(m, 0x1.000002p-24f, 0.0f);
+    const float d = a + a;
+    const float w = d + 0x1.000002p+0f;
+    const float g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0f);
+    const bool ok = 0x1p-2f >= a;
+    g_out = g;
+    ok_out = ok;
+}
+
+// bound_sum_2(m) -> g, mask ok
+// the exported bound of a sum as a function of n (milestone2.md). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void bound_sum_2(double m, double& g_out, bool& ok_out) noexcept {
+    const double a = __builtin_is_constant_evaluated() ? m * 0x1.8000000000004p-105 : fma_rn(m, 0x1.8000000000004p-105, 0.0);
+    const double aa = __builtin_is_constant_evaluated() ? m * 0x1.8000000000005p-105 : fma_rn(m, 0x1.8000000000005p-105, 0.0);
+    const double d = a + a;
+    const double w = d + 0x1.0000000000001p+0;
+    const double g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0);
+    const bool ok = 0x1p-2 >= a;
+    g_out = g;
+    ok_out = ok;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bound_sum_2(float m, float& g_out, bool& ok_out) noexcept {
+    const float a = __builtin_is_constant_evaluated() ? m * 0x1.800008p-47f : fma_rn(m, 0x1.800008p-47f, 0.0f);
+    const float aa = __builtin_is_constant_evaluated() ? m * 0x1.80000ap-47f : fma_rn(m, 0x1.80000ap-47f, 0.0f);
+    const float d = a + a;
+    const float w = d + 0x1.000002p+0f;
+    const float g = __builtin_is_constant_evaluated() ? aa * w : fma_rn(aa, w, 0.0f);
+    const bool ok = 0x1p-2f >= a;
+    g_out = g;
+    ok_out = ok;
+}
+
+// dot_step_1(s, x, y) -> t
+// the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void dot_step_1(double s, double x, double y, double& t_out) noexcept {
+    const double t = fma_rn(x, y, s);
+    t_out = t;
+}
+KAIRN_GEN_FORCEINLINE void dot_step_1(float s, float x, float y, float& t_out) noexcept {
+    const float t = fma_rn(x, y, s);
+    t_out = t;
+}
+
 // fast_two_sum_entry(a, b) -> r = (s, e)
 // fast_two_sum on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum_entry(double a, double b, double& s_out, double& e_out) noexcept {
@@ -911,6 +1040,23 @@ KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum_entry(float a, float b, float&
     const float e = gb - s_z;
     s_out = s;
     e_out = e;
+}
+
+// fold_finish_1(s) -> r, mask flag
+// the finish of a fold: the state or the canonical NaN (milestone2.md). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void fold_finish_1(double s, double& r_out, bool& flag_out) noexcept {
+    const double a = abs_bits(s);
+    const bool flag = std::numeric_limits<double>::infinity() > a;
+    const double r = flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = r;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE constexpr void fold_finish_1(float s, float& r_out, bool& flag_out) noexcept {
+    const float a = abs_bits(s);
+    const bool flag = std::numeric_limits<float>::infinity() > a;
+    const float r = flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = r;
+    flag_out = flag;
 }
 
 // make_2(a) -> x = (x0, x1)
@@ -1336,6 +1482,19 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_up_entry(float a, float b, float& r_out
     const float r_q = next_up_bits(r_s);
     const float r = r_n ? r_q : r_s;
     r_out = r;
+}
+
+// sum_entry_step_1(s, x) -> t
+// add_1_1 on a guarded element (rule R3). Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sum_entry_step_1(double s, double x, double& t_out) noexcept {
+    const double g = __builtin_is_constant_evaluated() ? x : x + 0.0;
+    const double t = s + g;
+    t_out = t;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sum_entry_step_1(float s, float x, float& t_out) noexcept {
+    const float g = __builtin_is_constant_evaluated() ? x : x + 0.0f;
+    const float t = s + g;
+    t_out = t;
 }
 
 // two_prod_dekker(a, b) -> r = (p, e)
@@ -3101,6 +3260,91 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(float cx0, float cx1, float rx, float
     }
 }
 
+// dot_step_2(s = (s0, s1), x = (x0, x1), y = (y0, y1)) -> t = (t0, t1)
+// the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void dot_step_2(double s0, double s1, double x0, double x1, double y0, double y1, double& t0_out, double& t1_out) noexcept {
+    // (p0, p1) = mul_2_2(x0, x1, y0, y1)
+    // (p0_ch, p0_cl1) = two_prod(x0, y0)
+    const double p0_ch = fma_rn(x0, y0, 0.0);
+    const double p0_cl1 = fma_rn(x0, y0, -p0_ch);
+    const double p0_tl0 = fma_rn(x1, y1, 0.0);
+    const double p0_tl1 = fma_rn(x0, y1, p0_tl0);
+    const double p0_cl2 = fma_rn(x1, y0, p0_tl1);
+    const double p0_cl3 = p0_cl1 + p0_cl2;
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const double p0 = p0_ch + p0_cl3;
+    const double p0_z = p0 - p0_ch;
+    const double p1 = p0_cl3 - p0_z;
+    // (t0, t1) = add_2_2(s0, s1, p0, p1)
+    // (t0_sh, t0_sl) = two_sum(s0, p0)
+    const double t0_sh = s0 + p0;
+    const double t0_sh_bb = t0_sh - s0;
+    const double t0_sh_t0 = t0_sh - t0_sh_bb;
+    const double t0_sh_t1 = s0 - t0_sh_t0;
+    const double t0_sh_t2 = p0 - t0_sh_bb;
+    const double t0_sl = t0_sh_t1 + t0_sh_t2;
+    // (t0_th, t0_tl) = two_sum(s1, p1)
+    const double t0_th = s1 + p1;
+    const double t0_th_bb = t0_th - s1;
+    const double t0_th_t0 = t0_th - t0_th_bb;
+    const double t0_th_t1 = s1 - t0_th_t0;
+    const double t0_th_t2 = p1 - t0_th_bb;
+    const double t0_tl = t0_th_t1 + t0_th_t2;
+    const double t0_c = t0_sl + t0_th;
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const double t0_vh = t0_sh + t0_c;
+    const double t0_vh_z = t0_vh - t0_sh;
+    const double t0_vl = t0_c - t0_vh_z;
+    const double t0_w = t0_tl + t0_vl;
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const double t0 = t0_vh + t0_w;
+    const double t0_z = t0 - t0_vh;
+    const double t1 = t0_w - t0_z;
+    t0_out = t0;
+    t1_out = t1;
+}
+KAIRN_GEN_FORCEINLINE void dot_step_2(float s0, float s1, float x0, float x1, float y0, float y1, float& t0_out, float& t1_out) noexcept {
+    // (p0, p1) = mul_2_2(x0, x1, y0, y1)
+    // (p0_ch, p0_cl1) = two_prod(x0, y0)
+    const float p0_ch = fma_rn(x0, y0, 0.0f);
+    const float p0_cl1 = fma_rn(x0, y0, -p0_ch);
+    const float p0_tl0 = fma_rn(x1, y1, 0.0f);
+    const float p0_tl1 = fma_rn(x0, y1, p0_tl0);
+    const float p0_cl2 = fma_rn(x1, y0, p0_tl1);
+    const float p0_cl3 = p0_cl1 + p0_cl2;
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const float p0 = p0_ch + p0_cl3;
+    const float p0_z = p0 - p0_ch;
+    const float p1 = p0_cl3 - p0_z;
+    // (t0, t1) = add_2_2(s0, s1, p0, p1)
+    // (t0_sh, t0_sl) = two_sum(s0, p0)
+    const float t0_sh = s0 + p0;
+    const float t0_sh_bb = t0_sh - s0;
+    const float t0_sh_t0 = t0_sh - t0_sh_bb;
+    const float t0_sh_t1 = s0 - t0_sh_t0;
+    const float t0_sh_t2 = p0 - t0_sh_bb;
+    const float t0_sl = t0_sh_t1 + t0_sh_t2;
+    // (t0_th, t0_tl) = two_sum(s1, p1)
+    const float t0_th = s1 + p1;
+    const float t0_th_bb = t0_th - s1;
+    const float t0_th_t0 = t0_th - t0_th_bb;
+    const float t0_th_t1 = s1 - t0_th_t0;
+    const float t0_th_t2 = p1 - t0_th_bb;
+    const float t0_tl = t0_th_t1 + t0_th_t2;
+    const float t0_c = t0_sl + t0_th;
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const float t0_vh = t0_sh + t0_c;
+    const float t0_vh_z = t0_vh - t0_sh;
+    const float t0_vl = t0_c - t0_vh_z;
+    const float t0_w = t0_tl + t0_vl;
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const float t0 = t0_vh + t0_w;
+    const float t0_z = t0 - t0_vh;
+    const float t1 = t0_w - t0_z;
+    t0_out = t0;
+    t1_out = t1;
+}
+
 // eq_2_1(x = (x0, x1), a) -> mask m
 // limbs compared in order (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void eq_2_1(double x0, double x1, double a, bool& m_out) noexcept {
@@ -3129,6 +3373,27 @@ KAIRN_GEN_FORCEINLINE constexpr void eq_2_2(float x0, float x1, float y0, float 
     const bool l = x1 == y1;
     const bool m = h & l;
     m_out = m;
+}
+
+// fold_finish_2(s = (s0, s1)) -> r = (r0, r1), mask flag
+// the finish of a fold: the state or the canonical NaN (milestone2.md). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void fold_finish_2(double s0, double s1, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    const double a = abs_bits(s0);
+    const bool flag = std::numeric_limits<double>::infinity() > a;
+    const double r0 = flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double r1 = flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = r0;
+    r1_out = r1;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE constexpr void fold_finish_2(float s0, float s1, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    const float a = abs_bits(s0);
+    const bool flag = std::numeric_limits<float>::infinity() > a;
+    const float r0 = flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float r1 = flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = r0;
+    r1_out = r1;
+    flag_out = flag;
 }
 
 // le_1_2(a, y = (y0, y1)) -> mask m
@@ -4044,6 +4309,114 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(float x0, float x1, float y0, 
     }
 }
 
+// sum_entry_step_2(s = (s0, s1), x = (x0, x1)) -> t = (t0, t1)
+// add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22. Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sum_entry_step_2(double s0, double s1, double x0, double x1, double& t0_out, double& t1_out) noexcept {
+    const double g0 = __builtin_is_constant_evaluated() ? x0 : x0 + 0.0;
+    const double g1 = __builtin_is_constant_evaluated() ? x1 : x1 + 0.0;
+    // (t0, t1) = add_2_2(s0, s1, g0, g1)
+    // (t0_sh, t0_sl) = two_sum(s0, g0)
+    const double t0_sh = s0 + g0;
+    const double t0_sh_bb = t0_sh - s0;
+    const double t0_sh_t0 = t0_sh - t0_sh_bb;
+    const double t0_sh_t1 = s0 - t0_sh_t0;
+    const double t0_sh_t2 = g0 - t0_sh_bb;
+    const double t0_sl = t0_sh_t1 + t0_sh_t2;
+    // (t0_th, t0_tl) = two_sum(s1, g1)
+    const double t0_th = s1 + g1;
+    const double t0_th_bb = t0_th - s1;
+    const double t0_th_t0 = t0_th - t0_th_bb;
+    const double t0_th_t1 = s1 - t0_th_t0;
+    const double t0_th_t2 = g1 - t0_th_bb;
+    const double t0_tl = t0_th_t1 + t0_th_t2;
+    const double t0_c = t0_sl + t0_th;
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const double t0_vh = t0_sh + t0_c;
+    const double t0_vh_z = t0_vh - t0_sh;
+    const double t0_vl = t0_c - t0_vh_z;
+    const double t0_w = t0_tl + t0_vl;
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const double t0 = t0_vh + t0_w;
+    const double t0_z = t0 - t0_vh;
+    const double t1 = t0_w - t0_z;
+    t0_out = t0;
+    t1_out = t1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sum_entry_step_2(float s0, float s1, float x0, float x1, float& t0_out, float& t1_out) noexcept {
+    const float g0 = __builtin_is_constant_evaluated() ? x0 : x0 + 0.0f;
+    const float g1 = __builtin_is_constant_evaluated() ? x1 : x1 + 0.0f;
+    // (t0, t1) = add_2_2(s0, s1, g0, g1)
+    // (t0_sh, t0_sl) = two_sum(s0, g0)
+    const float t0_sh = s0 + g0;
+    const float t0_sh_bb = t0_sh - s0;
+    const float t0_sh_t0 = t0_sh - t0_sh_bb;
+    const float t0_sh_t1 = s0 - t0_sh_t0;
+    const float t0_sh_t2 = g0 - t0_sh_bb;
+    const float t0_sl = t0_sh_t1 + t0_sh_t2;
+    // (t0_th, t0_tl) = two_sum(s1, g1)
+    const float t0_th = s1 + g1;
+    const float t0_th_bb = t0_th - s1;
+    const float t0_th_t0 = t0_th - t0_th_bb;
+    const float t0_th_t1 = s1 - t0_th_t0;
+    const float t0_th_t2 = g1 - t0_th_bb;
+    const float t0_tl = t0_th_t1 + t0_th_t2;
+    const float t0_c = t0_sl + t0_th;
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const float t0_vh = t0_sh + t0_c;
+    const float t0_vh_z = t0_vh - t0_sh;
+    const float t0_vl = t0_c - t0_vh_z;
+    const float t0_w = t0_tl + t0_vl;
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const float t0 = t0_vh + t0_w;
+    const float t0_z = t0 - t0_vh;
+    const float t1 = t0_w - t0_z;
+    t0_out = t0;
+    t1_out = t1;
+}
+
+// sum_fast_entry_step_2(s = (s0, s1), x = (x0, x1)) -> t = (t0, t1)
+// add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5. Status: unverified; constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sum_fast_entry_step_2(double s0, double s1, double x0, double x1, double& t0_out, double& t1_out) noexcept {
+    const double g0 = __builtin_is_constant_evaluated() ? x0 : x0 + 0.0;
+    const double g1 = __builtin_is_constant_evaluated() ? x1 : x1 + 0.0;
+    // (t0, t1) = add_fast_2_2(s0, s1, g0, g1)
+    // (t0_sh, t0_sl) = two_sum(s0, g0)
+    const double t0_sh = s0 + g0;
+    const double t0_sh_bb = t0_sh - s0;
+    const double t0_sh_t0 = t0_sh - t0_sh_bb;
+    const double t0_sh_t1 = s0 - t0_sh_t0;
+    const double t0_sh_t2 = g0 - t0_sh_bb;
+    const double t0_sl = t0_sh_t1 + t0_sh_t2;
+    const double t0_v = s1 + g1;
+    const double t0_w = t0_sl + t0_v;
+    // (t0, t1) = fast_two_sum(t0_sh, t0_w)
+    const double t0 = t0_sh + t0_w;
+    const double t0_z = t0 - t0_sh;
+    const double t1 = t0_w - t0_z;
+    t0_out = t0;
+    t1_out = t1;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sum_fast_entry_step_2(float s0, float s1, float x0, float x1, float& t0_out, float& t1_out) noexcept {
+    const float g0 = __builtin_is_constant_evaluated() ? x0 : x0 + 0.0f;
+    const float g1 = __builtin_is_constant_evaluated() ? x1 : x1 + 0.0f;
+    // (t0, t1) = add_fast_2_2(s0, s1, g0, g1)
+    // (t0_sh, t0_sl) = two_sum(s0, g0)
+    const float t0_sh = s0 + g0;
+    const float t0_sh_bb = t0_sh - s0;
+    const float t0_sh_t0 = t0_sh - t0_sh_bb;
+    const float t0_sh_t1 = s0 - t0_sh_t0;
+    const float t0_sh_t2 = g0 - t0_sh_bb;
+    const float t0_sl = t0_sh_t1 + t0_sh_t2;
+    const float t0_v = s1 + g1;
+    const float t0_w = t0_sl + t0_v;
+    // (t0, t1) = fast_two_sum(t0_sh, t0_w)
+    const float t0 = t0_sh + t0_w;
+    const float t0_z = t0 - t0_sh;
+    const float t1 = t0_w - t0_z;
+    t0_out = t0;
+    t1_out = t1;
+}
+
 // to_down_2(x = (x0, x1)) -> t
 // the sign of x1 (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void to_down_2(double x0, double x1, double& t_out) noexcept {
@@ -4068,6 +4441,1827 @@ KAIRN_GEN_FORCEINLINE constexpr void to_nearest_2(double x0, [[maybe_unused]] do
 KAIRN_GEN_FORCEINLINE constexpr void to_nearest_2(float x0, [[maybe_unused]] float x1, float& t_out) noexcept {
     const float t = x0;
     t_out = t;
+}
+
+// --- Folds: loops of the kernels above along arrays (docs/developer/architecture.md, "Folds").
+// One pointer per limb array and a length; nothing is allocated. Ordinary inline functions,
+// the step inlined in the loop: a value of the step is named step_V, of the combination comb_V,
+// of the finish fin_V; the loop's own variables end with an underscore.
+
+// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+inline void dot_1_seq(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
+    double s = 0.0;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_t) = dot_step_1(s, x, y)
+        const double step_t = fma_rn(x, y, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void dot_1_seq(const float* x_in, const float* y_in, std::size_t n, float& r_out, bool& flag_out) noexcept {
+    float s = 0.0f;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_t) = dot_step_1(s, x, y)
+        const float step_t = fma_rn(x, y, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+inline void dot_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double s = 0.0;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double s_lane_ = 0.0;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            const double y = y_in[i_];
+            // (step_t) = dot_step_1(s_lane_, x, y)
+            const double step_t = fma_rn(x, y, s_lane_);
+            s_lane_ = step_t;
+        }
+        if (j_ == 0) {
+            s = s_lane_;
+        } else {
+            // (comb_s) = add_1_1(s, s_lane_)
+            const double comb_s = s + s_lane_;
+            s = comb_s;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_t) = dot_step_1(s, x, y)
+        const double step_t = fma_rn(x, y, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void dot_1_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float s = 0.0f;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float s_lane_ = 0.0f;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            const float y = y_in[i_];
+            // (step_t) = dot_step_1(s_lane_, x, y)
+            const float step_t = fma_rn(x, y, s_lane_);
+            s_lane_ = step_t;
+        }
+        if (j_ == 0) {
+            s = s_lane_;
+        } else {
+            // (comb_s) = add_1_1(s, s_lane_)
+            const float comb_s = s + s_lane_;
+            s = comb_s;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_t) = dot_step_1(s, x, y)
+        const float step_t = fma_rn(x, y, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+inline void dot_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    double s0 = 0.0;
+    double s1 = 0.0;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_t0, step_t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+        const double step_p0_ch = fma_rn(x0, y0, 0.0);
+        const double step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+        const double step_p0_tl0 = fma_rn(x1, y1, 0.0);
+        const double step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+        const double step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+        const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const double step_p0 = step_p0_ch + step_p0_cl3;
+        const double step_p0_z = step_p0 - step_p0_ch;
+        const double step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_p0, step_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_p0)
+        const double step_t0_sh = s0 + step_p0;
+        const double step_t0_sh_bb = step_t0_sh - s0;
+        const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const double step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+        const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_p1)
+        const double step_t0_th = s1 + step_p1;
+        const double step_t0_th_bb = step_t0_th - s1;
+        const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const double step_t0_th_t1 = s1 - step_t0_th_t0;
+        const double step_t0_th_t2 = step_p1 - step_t0_th_bb;
+        const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const double step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const double step_t0_vh = step_t0_sh + step_t0_c;
+        const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const double step_t0_vl = step_t0_c - step_t0_vh_z;
+        const double step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const double step_t0 = step_t0_vh + step_t0_w;
+        const double step_t0_z = step_t0 - step_t0_vh;
+        const double step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void dot_2_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_t0, step_t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+        const float step_p0_ch = fma_rn(x0, y0, 0.0f);
+        const float step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+        const float step_p0_tl0 = fma_rn(x1, y1, 0.0f);
+        const float step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+        const float step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+        const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const float step_p0 = step_p0_ch + step_p0_cl3;
+        const float step_p0_z = step_p0 - step_p0_ch;
+        const float step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_p0, step_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_p0)
+        const float step_t0_sh = s0 + step_p0;
+        const float step_t0_sh_bb = step_t0_sh - s0;
+        const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const float step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+        const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_p1)
+        const float step_t0_th = s1 + step_p1;
+        const float step_t0_th_bb = step_t0_th - s1;
+        const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const float step_t0_th_t1 = s1 - step_t0_th_t0;
+        const float step_t0_th_t2 = step_p1 - step_t0_th_bb;
+        const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const float step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const float step_t0_vh = step_t0_sh + step_t0_c;
+        const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const float step_t0_vl = step_t0_c - step_t0_vh_z;
+        const float step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const float step_t0 = step_t0_vh + step_t0_w;
+        const float step_t0_z = step_t0 - step_t0_vh;
+        const float step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+inline void dot_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double s0 = 0.0;
+    double s1 = 0.0;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double s0_lane_ = 0.0;
+        double s1_lane_ = 0.0;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            const double y0 = y0_in[i_];
+            const double y1 = y1_in[i_];
+            // (step_t0, step_t1) = dot_step_2(s0_lane_, s1_lane_, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+            // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+            const double step_p0_ch = fma_rn(x0, y0, 0.0);
+            const double step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+            const double step_p0_tl0 = fma_rn(x1, y1, 0.0);
+            const double step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+            const double step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+            const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const double step_p0 = step_p0_ch + step_p0_cl3;
+            const double step_p0_z = step_p0 - step_p0_ch;
+            const double step_p1 = step_p0_cl3 - step_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0_lane_, s1_lane_, step_p0, step_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_p0)
+            const double step_t0_sh = s0_lane_ + step_p0;
+            const double step_t0_sh_bb = step_t0_sh - s0_lane_;
+            const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const double step_t0_sh_t1 = s0_lane_ - step_t0_sh_t0;
+            const double step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+            const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1_lane_, step_p1)
+            const double step_t0_th = s1_lane_ + step_p1;
+            const double step_t0_th_bb = step_t0_th - s1_lane_;
+            const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const double step_t0_th_t1 = s1_lane_ - step_t0_th_t0;
+            const double step_t0_th_t2 = step_p1 - step_t0_th_bb;
+            const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const double step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const double step_t0_vh = step_t0_sh + step_t0_c;
+            const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const double step_t0_vl = step_t0_c - step_t0_vh_z;
+            const double step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const double step_t0 = step_t0_vh + step_t0_w;
+            const double step_t0_z = step_t0 - step_t0_vh;
+            const double step_t1 = step_t0_w - step_t0_z;
+            s0_lane_ = step_t0;
+            s1_lane_ = step_t1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const double comb_sh = s0 + s0_lane_;
+            const double comb_sh_bb = comb_sh - s0;
+            const double comb_sh_t0 = comb_sh - comb_sh_bb;
+            const double comb_sh_t1 = s0 - comb_sh_t0;
+            const double comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const double comb_sl = comb_sh_t1 + comb_sh_t2;
+            // (comb_th, comb_tl) = two_sum(s1, s1_lane_)
+            const double comb_th = s1 + s1_lane_;
+            const double comb_th_bb = comb_th - s1;
+            const double comb_th_t0 = comb_th - comb_th_bb;
+            const double comb_th_t1 = s1 - comb_th_t0;
+            const double comb_th_t2 = s1_lane_ - comb_th_bb;
+            const double comb_tl = comb_th_t1 + comb_th_t2;
+            const double comb_c = comb_sl + comb_th;
+            // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+            const double comb_vh = comb_sh + comb_c;
+            const double comb_vh_z = comb_vh - comb_sh;
+            const double comb_vl = comb_c - comb_vh_z;
+            const double comb_w = comb_tl + comb_vl;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+            const double comb_z0 = comb_vh + comb_w;
+            const double comb_z0_z = comb_z0 - comb_vh;
+            const double comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_t0, step_t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+        const double step_p0_ch = fma_rn(x0, y0, 0.0);
+        const double step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+        const double step_p0_tl0 = fma_rn(x1, y1, 0.0);
+        const double step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+        const double step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+        const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const double step_p0 = step_p0_ch + step_p0_cl3;
+        const double step_p0_z = step_p0 - step_p0_ch;
+        const double step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_p0, step_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_p0)
+        const double step_t0_sh = s0 + step_p0;
+        const double step_t0_sh_bb = step_t0_sh - s0;
+        const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const double step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+        const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_p1)
+        const double step_t0_th = s1 + step_p1;
+        const double step_t0_th_bb = step_t0_th - s1;
+        const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const double step_t0_th_t1 = s1 - step_t0_th_t0;
+        const double step_t0_th_t2 = step_p1 - step_t0_th_bb;
+        const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const double step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const double step_t0_vh = step_t0_sh + step_t0_c;
+        const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const double step_t0_vl = step_t0_c - step_t0_vh_z;
+        const double step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const double step_t0 = step_t0_vh + step_t0_w;
+        const double step_t0_z = step_t0 - step_t0_vh;
+        const double step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void dot_2_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float s0_lane_ = 0.0f;
+        float s1_lane_ = 0.0f;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            const float y0 = y0_in[i_];
+            const float y1 = y1_in[i_];
+            // (step_t0, step_t1) = dot_step_2(s0_lane_, s1_lane_, x0, x1, y0, y1)
+            // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+            // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+            const float step_p0_ch = fma_rn(x0, y0, 0.0f);
+            const float step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+            const float step_p0_tl0 = fma_rn(x1, y1, 0.0f);
+            const float step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+            const float step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+            const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+            // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+            const float step_p0 = step_p0_ch + step_p0_cl3;
+            const float step_p0_z = step_p0 - step_p0_ch;
+            const float step_p1 = step_p0_cl3 - step_p0_z;
+            // (step_t0, step_t1) = add_2_2(s0_lane_, s1_lane_, step_p0, step_p1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_p0)
+            const float step_t0_sh = s0_lane_ + step_p0;
+            const float step_t0_sh_bb = step_t0_sh - s0_lane_;
+            const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const float step_t0_sh_t1 = s0_lane_ - step_t0_sh_t0;
+            const float step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+            const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1_lane_, step_p1)
+            const float step_t0_th = s1_lane_ + step_p1;
+            const float step_t0_th_bb = step_t0_th - s1_lane_;
+            const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const float step_t0_th_t1 = s1_lane_ - step_t0_th_t0;
+            const float step_t0_th_t2 = step_p1 - step_t0_th_bb;
+            const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const float step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const float step_t0_vh = step_t0_sh + step_t0_c;
+            const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const float step_t0_vl = step_t0_c - step_t0_vh_z;
+            const float step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const float step_t0 = step_t0_vh + step_t0_w;
+            const float step_t0_z = step_t0 - step_t0_vh;
+            const float step_t1 = step_t0_w - step_t0_z;
+            s0_lane_ = step_t0;
+            s1_lane_ = step_t1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const float comb_sh = s0 + s0_lane_;
+            const float comb_sh_bb = comb_sh - s0;
+            const float comb_sh_t0 = comb_sh - comb_sh_bb;
+            const float comb_sh_t1 = s0 - comb_sh_t0;
+            const float comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const float comb_sl = comb_sh_t1 + comb_sh_t2;
+            // (comb_th, comb_tl) = two_sum(s1, s1_lane_)
+            const float comb_th = s1 + s1_lane_;
+            const float comb_th_bb = comb_th - s1;
+            const float comb_th_t0 = comb_th - comb_th_bb;
+            const float comb_th_t1 = s1 - comb_th_t0;
+            const float comb_th_t2 = s1_lane_ - comb_th_bb;
+            const float comb_tl = comb_th_t1 + comb_th_t2;
+            const float comb_c = comb_sl + comb_th;
+            // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+            const float comb_vh = comb_sh + comb_c;
+            const float comb_vh_z = comb_vh - comb_sh;
+            const float comb_vl = comb_c - comb_vh_z;
+            const float comb_w = comb_tl + comb_vl;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+            const float comb_z0 = comb_vh + comb_w;
+            const float comb_z0_z = comb_z0 - comb_vh;
+            const float comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_t0, step_t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+        const float step_p0_ch = fma_rn(x0, y0, 0.0f);
+        const float step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+        const float step_p0_tl0 = fma_rn(x1, y1, 0.0f);
+        const float step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+        const float step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+        const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const float step_p0 = step_p0_ch + step_p0_cl3;
+        const float step_p0_z = step_p0 - step_p0_ch;
+        const float step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_p0, step_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_p0)
+        const float step_t0_sh = s0 + step_p0;
+        const float step_t0_sh_bb = step_t0_sh - s0;
+        const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const float step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+        const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_p1)
+        const float step_t0_th = s1 + step_p1;
+        const float step_t0_th_bb = step_t0_th - s1;
+        const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const float step_t0_th_t1 = s1 - step_t0_th_t0;
+        const float step_t0_th_t2 = step_p1 - step_t0_th_bb;
+        const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const float step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const float step_t0_vh = step_t0_sh + step_t0_c;
+        const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const float step_t0_vl = step_t0_c - step_t0_vh_z;
+        const float step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const float step_t0 = step_t0_vh + step_t0_w;
+        const float step_t0_z = step_t0 - step_t0_vh;
+        const float step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+inline void sum_1_seq(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
+    double s = 0.0;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_s) = add_1_1(s, x)
+        const double step_s = s + x;
+        s = step_s;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void sum_1_seq(const float* x_in, std::size_t n, float& r_out, bool& flag_out) noexcept {
+    float s = 0.0f;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_s) = add_1_1(s, x)
+        const float step_s = s + x;
+        s = step_s;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+inline void sum_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double s = 0.0;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double s_lane_ = 0.0;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            // (step_s) = add_1_1(s_lane_, x)
+            const double step_s = s_lane_ + x;
+            s_lane_ = step_s;
+        }
+        if (j_ == 0) {
+            s = s_lane_;
+        } else {
+            // (comb_s) = add_1_1(s, s_lane_)
+            const double comb_s = s + s_lane_;
+            s = comb_s;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_s) = add_1_1(s, x)
+        const double step_s = s + x;
+        s = step_s;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void sum_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float s = 0.0f;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float s_lane_ = 0.0f;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            // (step_s) = add_1_1(s_lane_, x)
+            const float step_s = s_lane_ + x;
+            s_lane_ = step_s;
+        }
+        if (j_ == 0) {
+            s = s_lane_;
+        } else {
+            // (comb_s) = add_1_1(s, s_lane_)
+            const float comb_s = s + s_lane_;
+            s = comb_s;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_s) = add_1_1(s, x)
+        const float step_s = s + x;
+        s = step_s;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+inline void sum_1_entry_seq(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
+    double s = 0.0;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_t) = sum_entry_step_1(s, x)
+        const double step_g = x + 0.0;
+        const double step_t = s + step_g;
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void sum_1_entry_seq(const float* x_in, std::size_t n, float& r_out, bool& flag_out) noexcept {
+    float s = 0.0f;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_t) = sum_entry_step_1(s, x)
+        const float step_g = x + 0.0f;
+        const float step_t = s + step_g;
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+inline void sum_1_entry_lanes(const double* x_in, std::size_t n, std::size_t lanes, double& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double s = 0.0;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double s_lane_ = 0.0;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            // (step_t) = sum_entry_step_1(s_lane_, x)
+            const double step_g = x + 0.0;
+            const double step_t = s_lane_ + step_g;
+            s_lane_ = step_t;
+        }
+        if (j_ == 0) {
+            s = s_lane_;
+        } else {
+            // (comb_s) = add_1_1(s, s_lane_)
+            const double comb_s = s + s_lane_;
+            s = comb_s;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_t) = sum_entry_step_1(s, x)
+        const double step_g = x + 0.0;
+        const double step_t = s + step_g;
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void sum_1_entry_lanes(const float* x_in, std::size_t n, std::size_t lanes, float& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float s = 0.0f;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float s_lane_ = 0.0f;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            // (step_t) = sum_entry_step_1(s_lane_, x)
+            const float step_g = x + 0.0f;
+            const float step_t = s_lane_ + step_g;
+            s_lane_ = step_t;
+        }
+        if (j_ == 0) {
+            s = s_lane_;
+        } else {
+            // (comb_s) = add_1_1(s, s_lane_)
+            const float comb_s = s + s_lane_;
+            s = comb_s;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_t) = sum_entry_step_1(s, x)
+        const float step_g = x + 0.0f;
+        const float step_t = s + step_g;
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+inline void sum_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    double s0 = 0.0;
+    double s1 = 0.0;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = add_2_2(s0, s1, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0, x0)
+        const double step_sh = s0 + x0;
+        const double step_sh_bb = step_sh - s0;
+        const double step_sh_t0 = step_sh - step_sh_bb;
+        const double step_sh_t1 = s0 - step_sh_t0;
+        const double step_sh_t2 = x0 - step_sh_bb;
+        const double step_sl = step_sh_t1 + step_sh_t2;
+        // (step_th, step_tl) = two_sum(s1, x1)
+        const double step_th = s1 + x1;
+        const double step_th_bb = step_th - s1;
+        const double step_th_t0 = step_th - step_th_bb;
+        const double step_th_t1 = s1 - step_th_t0;
+        const double step_th_t2 = x1 - step_th_bb;
+        const double step_tl = step_th_t1 + step_th_t2;
+        const double step_c = step_sl + step_th;
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const double step_vh = step_sh + step_c;
+        const double step_vh_z = step_vh - step_sh;
+        const double step_vl = step_c - step_vh_z;
+        const double step_w = step_tl + step_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const double step_z0 = step_vh + step_w;
+        const double step_z0_z = step_z0 - step_vh;
+        const double step_z1 = step_w - step_z0_z;
+        s0 = step_z0;
+        s1 = step_z1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void sum_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = add_2_2(s0, s1, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0, x0)
+        const float step_sh = s0 + x0;
+        const float step_sh_bb = step_sh - s0;
+        const float step_sh_t0 = step_sh - step_sh_bb;
+        const float step_sh_t1 = s0 - step_sh_t0;
+        const float step_sh_t2 = x0 - step_sh_bb;
+        const float step_sl = step_sh_t1 + step_sh_t2;
+        // (step_th, step_tl) = two_sum(s1, x1)
+        const float step_th = s1 + x1;
+        const float step_th_bb = step_th - s1;
+        const float step_th_t0 = step_th - step_th_bb;
+        const float step_th_t1 = s1 - step_th_t0;
+        const float step_th_t2 = x1 - step_th_bb;
+        const float step_tl = step_th_t1 + step_th_t2;
+        const float step_c = step_sl + step_th;
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const float step_vh = step_sh + step_c;
+        const float step_vh_z = step_vh - step_sh;
+        const float step_vl = step_c - step_vh_z;
+        const float step_w = step_tl + step_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const float step_z0 = step_vh + step_w;
+        const float step_z0_z = step_z0 - step_vh;
+        const float step_z1 = step_w - step_z0_z;
+        s0 = step_z0;
+        s1 = step_z1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+inline void sum_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double s0 = 0.0;
+    double s1 = 0.0;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double s0_lane_ = 0.0;
+        double s1_lane_ = 0.0;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            // (step_z0, step_z1) = add_2_2(s0_lane_, s1_lane_, x0, x1)
+            // (step_sh, step_sl) = two_sum(s0_lane_, x0)
+            const double step_sh = s0_lane_ + x0;
+            const double step_sh_bb = step_sh - s0_lane_;
+            const double step_sh_t0 = step_sh - step_sh_bb;
+            const double step_sh_t1 = s0_lane_ - step_sh_t0;
+            const double step_sh_t2 = x0 - step_sh_bb;
+            const double step_sl = step_sh_t1 + step_sh_t2;
+            // (step_th, step_tl) = two_sum(s1_lane_, x1)
+            const double step_th = s1_lane_ + x1;
+            const double step_th_bb = step_th - s1_lane_;
+            const double step_th_t0 = step_th - step_th_bb;
+            const double step_th_t1 = s1_lane_ - step_th_t0;
+            const double step_th_t2 = x1 - step_th_bb;
+            const double step_tl = step_th_t1 + step_th_t2;
+            const double step_c = step_sl + step_th;
+            // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+            const double step_vh = step_sh + step_c;
+            const double step_vh_z = step_vh - step_sh;
+            const double step_vl = step_c - step_vh_z;
+            const double step_w = step_tl + step_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+            const double step_z0 = step_vh + step_w;
+            const double step_z0_z = step_z0 - step_vh;
+            const double step_z1 = step_w - step_z0_z;
+            s0_lane_ = step_z0;
+            s1_lane_ = step_z1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const double comb_sh = s0 + s0_lane_;
+            const double comb_sh_bb = comb_sh - s0;
+            const double comb_sh_t0 = comb_sh - comb_sh_bb;
+            const double comb_sh_t1 = s0 - comb_sh_t0;
+            const double comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const double comb_sl = comb_sh_t1 + comb_sh_t2;
+            // (comb_th, comb_tl) = two_sum(s1, s1_lane_)
+            const double comb_th = s1 + s1_lane_;
+            const double comb_th_bb = comb_th - s1;
+            const double comb_th_t0 = comb_th - comb_th_bb;
+            const double comb_th_t1 = s1 - comb_th_t0;
+            const double comb_th_t2 = s1_lane_ - comb_th_bb;
+            const double comb_tl = comb_th_t1 + comb_th_t2;
+            const double comb_c = comb_sl + comb_th;
+            // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+            const double comb_vh = comb_sh + comb_c;
+            const double comb_vh_z = comb_vh - comb_sh;
+            const double comb_vl = comb_c - comb_vh_z;
+            const double comb_w = comb_tl + comb_vl;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+            const double comb_z0 = comb_vh + comb_w;
+            const double comb_z0_z = comb_z0 - comb_vh;
+            const double comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = add_2_2(s0, s1, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0, x0)
+        const double step_sh = s0 + x0;
+        const double step_sh_bb = step_sh - s0;
+        const double step_sh_t0 = step_sh - step_sh_bb;
+        const double step_sh_t1 = s0 - step_sh_t0;
+        const double step_sh_t2 = x0 - step_sh_bb;
+        const double step_sl = step_sh_t1 + step_sh_t2;
+        // (step_th, step_tl) = two_sum(s1, x1)
+        const double step_th = s1 + x1;
+        const double step_th_bb = step_th - s1;
+        const double step_th_t0 = step_th - step_th_bb;
+        const double step_th_t1 = s1 - step_th_t0;
+        const double step_th_t2 = x1 - step_th_bb;
+        const double step_tl = step_th_t1 + step_th_t2;
+        const double step_c = step_sl + step_th;
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const double step_vh = step_sh + step_c;
+        const double step_vh_z = step_vh - step_sh;
+        const double step_vl = step_c - step_vh_z;
+        const double step_w = step_tl + step_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const double step_z0 = step_vh + step_w;
+        const double step_z0_z = step_z0 - step_vh;
+        const double step_z1 = step_w - step_z0_z;
+        s0 = step_z0;
+        s1 = step_z1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void sum_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float s0_lane_ = 0.0f;
+        float s1_lane_ = 0.0f;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            // (step_z0, step_z1) = add_2_2(s0_lane_, s1_lane_, x0, x1)
+            // (step_sh, step_sl) = two_sum(s0_lane_, x0)
+            const float step_sh = s0_lane_ + x0;
+            const float step_sh_bb = step_sh - s0_lane_;
+            const float step_sh_t0 = step_sh - step_sh_bb;
+            const float step_sh_t1 = s0_lane_ - step_sh_t0;
+            const float step_sh_t2 = x0 - step_sh_bb;
+            const float step_sl = step_sh_t1 + step_sh_t2;
+            // (step_th, step_tl) = two_sum(s1_lane_, x1)
+            const float step_th = s1_lane_ + x1;
+            const float step_th_bb = step_th - s1_lane_;
+            const float step_th_t0 = step_th - step_th_bb;
+            const float step_th_t1 = s1_lane_ - step_th_t0;
+            const float step_th_t2 = x1 - step_th_bb;
+            const float step_tl = step_th_t1 + step_th_t2;
+            const float step_c = step_sl + step_th;
+            // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+            const float step_vh = step_sh + step_c;
+            const float step_vh_z = step_vh - step_sh;
+            const float step_vl = step_c - step_vh_z;
+            const float step_w = step_tl + step_vl;
+            // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+            const float step_z0 = step_vh + step_w;
+            const float step_z0_z = step_z0 - step_vh;
+            const float step_z1 = step_w - step_z0_z;
+            s0_lane_ = step_z0;
+            s1_lane_ = step_z1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const float comb_sh = s0 + s0_lane_;
+            const float comb_sh_bb = comb_sh - s0;
+            const float comb_sh_t0 = comb_sh - comb_sh_bb;
+            const float comb_sh_t1 = s0 - comb_sh_t0;
+            const float comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const float comb_sl = comb_sh_t1 + comb_sh_t2;
+            // (comb_th, comb_tl) = two_sum(s1, s1_lane_)
+            const float comb_th = s1 + s1_lane_;
+            const float comb_th_bb = comb_th - s1;
+            const float comb_th_t0 = comb_th - comb_th_bb;
+            const float comb_th_t1 = s1 - comb_th_t0;
+            const float comb_th_t2 = s1_lane_ - comb_th_bb;
+            const float comb_tl = comb_th_t1 + comb_th_t2;
+            const float comb_c = comb_sl + comb_th;
+            // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+            const float comb_vh = comb_sh + comb_c;
+            const float comb_vh_z = comb_vh - comb_sh;
+            const float comb_vl = comb_c - comb_vh_z;
+            const float comb_w = comb_tl + comb_vl;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+            const float comb_z0 = comb_vh + comb_w;
+            const float comb_z0_z = comb_z0 - comb_vh;
+            const float comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = add_2_2(s0, s1, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0, x0)
+        const float step_sh = s0 + x0;
+        const float step_sh_bb = step_sh - s0;
+        const float step_sh_t0 = step_sh - step_sh_bb;
+        const float step_sh_t1 = s0 - step_sh_t0;
+        const float step_sh_t2 = x0 - step_sh_bb;
+        const float step_sl = step_sh_t1 + step_sh_t2;
+        // (step_th, step_tl) = two_sum(s1, x1)
+        const float step_th = s1 + x1;
+        const float step_th_bb = step_th - s1;
+        const float step_th_t0 = step_th - step_th_bb;
+        const float step_th_t1 = s1 - step_th_t0;
+        const float step_th_t2 = x1 - step_th_bb;
+        const float step_tl = step_th_t1 + step_th_t2;
+        const float step_c = step_sl + step_th;
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const float step_vh = step_sh + step_c;
+        const float step_vh_z = step_vh - step_sh;
+        const float step_vl = step_c - step_vh_z;
+        const float step_w = step_tl + step_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const float step_z0 = step_vh + step_w;
+        const float step_z0_z = step_z0 - step_vh;
+        const float step_z1 = step_w - step_z0_z;
+        s0 = step_z0;
+        s1 = step_z1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+inline void sum_2_entry_seq(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    double s0 = 0.0;
+    double s1 = 0.0;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_t0, step_t1) = sum_entry_step_2(s0, s1, x0, x1)
+        const double step_g0 = x0 + 0.0;
+        const double step_g1 = x1 + 0.0;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_g0)
+        const double step_t0_sh = s0 + step_g0;
+        const double step_t0_sh_bb = step_t0_sh - s0;
+        const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const double step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+        const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_g1)
+        const double step_t0_th = s1 + step_g1;
+        const double step_t0_th_bb = step_t0_th - s1;
+        const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const double step_t0_th_t1 = s1 - step_t0_th_t0;
+        const double step_t0_th_t2 = step_g1 - step_t0_th_bb;
+        const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const double step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const double step_t0_vh = step_t0_sh + step_t0_c;
+        const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const double step_t0_vl = step_t0_c - step_t0_vh_z;
+        const double step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const double step_t0 = step_t0_vh + step_t0_w;
+        const double step_t0_z = step_t0 - step_t0_vh;
+        const double step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void sum_2_entry_seq(const float* x0_in, const float* x1_in, std::size_t n, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_t0, step_t1) = sum_entry_step_2(s0, s1, x0, x1)
+        const float step_g0 = x0 + 0.0f;
+        const float step_g1 = x1 + 0.0f;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_g0)
+        const float step_t0_sh = s0 + step_g0;
+        const float step_t0_sh_bb = step_t0_sh - s0;
+        const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const float step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+        const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_g1)
+        const float step_t0_th = s1 + step_g1;
+        const float step_t0_th_bb = step_t0_th - s1;
+        const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const float step_t0_th_t1 = s1 - step_t0_th_t0;
+        const float step_t0_th_t2 = step_g1 - step_t0_th_bb;
+        const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const float step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const float step_t0_vh = step_t0_sh + step_t0_c;
+        const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const float step_t0_vl = step_t0_c - step_t0_vh_z;
+        const float step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const float step_t0 = step_t0_vh + step_t0_w;
+        const float step_t0_z = step_t0 - step_t0_vh;
+        const float step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+inline void sum_2_entry_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double s0 = 0.0;
+    double s1 = 0.0;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double s0_lane_ = 0.0;
+        double s1_lane_ = 0.0;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            // (step_t0, step_t1) = sum_entry_step_2(s0_lane_, s1_lane_, x0, x1)
+            const double step_g0 = x0 + 0.0;
+            const double step_g1 = x1 + 0.0;
+            // (step_t0, step_t1) = add_2_2(s0_lane_, s1_lane_, step_g0, step_g1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_g0)
+            const double step_t0_sh = s0_lane_ + step_g0;
+            const double step_t0_sh_bb = step_t0_sh - s0_lane_;
+            const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const double step_t0_sh_t1 = s0_lane_ - step_t0_sh_t0;
+            const double step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+            const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1_lane_, step_g1)
+            const double step_t0_th = s1_lane_ + step_g1;
+            const double step_t0_th_bb = step_t0_th - s1_lane_;
+            const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const double step_t0_th_t1 = s1_lane_ - step_t0_th_t0;
+            const double step_t0_th_t2 = step_g1 - step_t0_th_bb;
+            const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const double step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const double step_t0_vh = step_t0_sh + step_t0_c;
+            const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const double step_t0_vl = step_t0_c - step_t0_vh_z;
+            const double step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const double step_t0 = step_t0_vh + step_t0_w;
+            const double step_t0_z = step_t0 - step_t0_vh;
+            const double step_t1 = step_t0_w - step_t0_z;
+            s0_lane_ = step_t0;
+            s1_lane_ = step_t1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const double comb_sh = s0 + s0_lane_;
+            const double comb_sh_bb = comb_sh - s0;
+            const double comb_sh_t0 = comb_sh - comb_sh_bb;
+            const double comb_sh_t1 = s0 - comb_sh_t0;
+            const double comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const double comb_sl = comb_sh_t1 + comb_sh_t2;
+            // (comb_th, comb_tl) = two_sum(s1, s1_lane_)
+            const double comb_th = s1 + s1_lane_;
+            const double comb_th_bb = comb_th - s1;
+            const double comb_th_t0 = comb_th - comb_th_bb;
+            const double comb_th_t1 = s1 - comb_th_t0;
+            const double comb_th_t2 = s1_lane_ - comb_th_bb;
+            const double comb_tl = comb_th_t1 + comb_th_t2;
+            const double comb_c = comb_sl + comb_th;
+            // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+            const double comb_vh = comb_sh + comb_c;
+            const double comb_vh_z = comb_vh - comb_sh;
+            const double comb_vl = comb_c - comb_vh_z;
+            const double comb_w = comb_tl + comb_vl;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+            const double comb_z0 = comb_vh + comb_w;
+            const double comb_z0_z = comb_z0 - comb_vh;
+            const double comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_t0, step_t1) = sum_entry_step_2(s0, s1, x0, x1)
+        const double step_g0 = x0 + 0.0;
+        const double step_g1 = x1 + 0.0;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_g0)
+        const double step_t0_sh = s0 + step_g0;
+        const double step_t0_sh_bb = step_t0_sh - s0;
+        const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const double step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+        const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_g1)
+        const double step_t0_th = s1 + step_g1;
+        const double step_t0_th_bb = step_t0_th - s1;
+        const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const double step_t0_th_t1 = s1 - step_t0_th_t0;
+        const double step_t0_th_t2 = step_g1 - step_t0_th_bb;
+        const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const double step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const double step_t0_vh = step_t0_sh + step_t0_c;
+        const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const double step_t0_vl = step_t0_c - step_t0_vh_z;
+        const double step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const double step_t0 = step_t0_vh + step_t0_w;
+        const double step_t0_z = step_t0 - step_t0_vh;
+        const double step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void sum_2_entry_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float s0_lane_ = 0.0f;
+        float s1_lane_ = 0.0f;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            // (step_t0, step_t1) = sum_entry_step_2(s0_lane_, s1_lane_, x0, x1)
+            const float step_g0 = x0 + 0.0f;
+            const float step_g1 = x1 + 0.0f;
+            // (step_t0, step_t1) = add_2_2(s0_lane_, s1_lane_, step_g0, step_g1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_g0)
+            const float step_t0_sh = s0_lane_ + step_g0;
+            const float step_t0_sh_bb = step_t0_sh - s0_lane_;
+            const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const float step_t0_sh_t1 = s0_lane_ - step_t0_sh_t0;
+            const float step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+            const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            // (step_t0_th, step_t0_tl) = two_sum(s1_lane_, step_g1)
+            const float step_t0_th = s1_lane_ + step_g1;
+            const float step_t0_th_bb = step_t0_th - s1_lane_;
+            const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+            const float step_t0_th_t1 = s1_lane_ - step_t0_th_t0;
+            const float step_t0_th_t2 = step_g1 - step_t0_th_bb;
+            const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+            const float step_t0_c = step_t0_sl + step_t0_th;
+            // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+            const float step_t0_vh = step_t0_sh + step_t0_c;
+            const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+            const float step_t0_vl = step_t0_c - step_t0_vh_z;
+            const float step_t0_w = step_t0_tl + step_t0_vl;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+            const float step_t0 = step_t0_vh + step_t0_w;
+            const float step_t0_z = step_t0 - step_t0_vh;
+            const float step_t1 = step_t0_w - step_t0_z;
+            s0_lane_ = step_t0;
+            s1_lane_ = step_t1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const float comb_sh = s0 + s0_lane_;
+            const float comb_sh_bb = comb_sh - s0;
+            const float comb_sh_t0 = comb_sh - comb_sh_bb;
+            const float comb_sh_t1 = s0 - comb_sh_t0;
+            const float comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const float comb_sl = comb_sh_t1 + comb_sh_t2;
+            // (comb_th, comb_tl) = two_sum(s1, s1_lane_)
+            const float comb_th = s1 + s1_lane_;
+            const float comb_th_bb = comb_th - s1;
+            const float comb_th_t0 = comb_th - comb_th_bb;
+            const float comb_th_t1 = s1 - comb_th_t0;
+            const float comb_th_t2 = s1_lane_ - comb_th_bb;
+            const float comb_tl = comb_th_t1 + comb_th_t2;
+            const float comb_c = comb_sl + comb_th;
+            // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+            const float comb_vh = comb_sh + comb_c;
+            const float comb_vh_z = comb_vh - comb_sh;
+            const float comb_vl = comb_c - comb_vh_z;
+            const float comb_w = comb_tl + comb_vl;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+            const float comb_z0 = comb_vh + comb_w;
+            const float comb_z0_z = comb_z0 - comb_vh;
+            const float comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_t0, step_t1) = sum_entry_step_2(s0, s1, x0, x1)
+        const float step_g0 = x0 + 0.0f;
+        const float step_g1 = x1 + 0.0f;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_g0)
+        const float step_t0_sh = s0 + step_g0;
+        const float step_t0_sh_bb = step_t0_sh - s0;
+        const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const float step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+        const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_g1)
+        const float step_t0_th = s1 + step_g1;
+        const float step_t0_th_bb = step_t0_th - s1;
+        const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const float step_t0_th_t1 = s1 - step_t0_th_t0;
+        const float step_t0_th_t2 = step_g1 - step_t0_th_bb;
+        const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const float step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const float step_t0_vh = step_t0_sh + step_t0_c;
+        const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const float step_t0_vl = step_t0_c - step_t0_vh_z;
+        const float step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const float step_t0 = step_t0_vh + step_t0_w;
+        const float step_t0_z = step_t0 - step_t0_vh;
+        const float step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+inline void sum_fast_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    double s0 = 0.0;
+    double s1 = 0.0;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = add_fast_2_2(s0, s1, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0, x0)
+        const double step_sh = s0 + x0;
+        const double step_sh_bb = step_sh - s0;
+        const double step_sh_t0 = step_sh - step_sh_bb;
+        const double step_sh_t1 = s0 - step_sh_t0;
+        const double step_sh_t2 = x0 - step_sh_bb;
+        const double step_sl = step_sh_t1 + step_sh_t2;
+        const double step_v = s1 + x1;
+        const double step_w = step_sl + step_v;
+        // (step_z0, step_z1) = fast_two_sum(step_sh, step_w)
+        const double step_z0 = step_sh + step_w;
+        const double step_z0_z = step_z0 - step_sh;
+        const double step_z1 = step_w - step_z0_z;
+        s0 = step_z0;
+        s1 = step_z1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void sum_fast_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = add_fast_2_2(s0, s1, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0, x0)
+        const float step_sh = s0 + x0;
+        const float step_sh_bb = step_sh - s0;
+        const float step_sh_t0 = step_sh - step_sh_bb;
+        const float step_sh_t1 = s0 - step_sh_t0;
+        const float step_sh_t2 = x0 - step_sh_bb;
+        const float step_sl = step_sh_t1 + step_sh_t2;
+        const float step_v = s1 + x1;
+        const float step_w = step_sl + step_v;
+        // (step_z0, step_z1) = fast_two_sum(step_sh, step_w)
+        const float step_z0 = step_sh + step_w;
+        const float step_z0_z = step_z0 - step_sh;
+        const float step_z1 = step_w - step_z0_z;
+        s0 = step_z0;
+        s1 = step_z1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+inline void sum_fast_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double s0 = 0.0;
+    double s1 = 0.0;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double s0_lane_ = 0.0;
+        double s1_lane_ = 0.0;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            // (step_z0, step_z1) = add_fast_2_2(s0_lane_, s1_lane_, x0, x1)
+            // (step_sh, step_sl) = two_sum(s0_lane_, x0)
+            const double step_sh = s0_lane_ + x0;
+            const double step_sh_bb = step_sh - s0_lane_;
+            const double step_sh_t0 = step_sh - step_sh_bb;
+            const double step_sh_t1 = s0_lane_ - step_sh_t0;
+            const double step_sh_t2 = x0 - step_sh_bb;
+            const double step_sl = step_sh_t1 + step_sh_t2;
+            const double step_v = s1_lane_ + x1;
+            const double step_w = step_sl + step_v;
+            // (step_z0, step_z1) = fast_two_sum(step_sh, step_w)
+            const double step_z0 = step_sh + step_w;
+            const double step_z0_z = step_z0 - step_sh;
+            const double step_z1 = step_w - step_z0_z;
+            s0_lane_ = step_z0;
+            s1_lane_ = step_z1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_fast_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const double comb_sh = s0 + s0_lane_;
+            const double comb_sh_bb = comb_sh - s0;
+            const double comb_sh_t0 = comb_sh - comb_sh_bb;
+            const double comb_sh_t1 = s0 - comb_sh_t0;
+            const double comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const double comb_sl = comb_sh_t1 + comb_sh_t2;
+            const double comb_v = s1 + s1_lane_;
+            const double comb_w = comb_sl + comb_v;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_sh, comb_w)
+            const double comb_z0 = comb_sh + comb_w;
+            const double comb_z0_z = comb_z0 - comb_sh;
+            const double comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = add_fast_2_2(s0, s1, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0, x0)
+        const double step_sh = s0 + x0;
+        const double step_sh_bb = step_sh - s0;
+        const double step_sh_t0 = step_sh - step_sh_bb;
+        const double step_sh_t1 = s0 - step_sh_t0;
+        const double step_sh_t2 = x0 - step_sh_bb;
+        const double step_sl = step_sh_t1 + step_sh_t2;
+        const double step_v = s1 + x1;
+        const double step_w = step_sl + step_v;
+        // (step_z0, step_z1) = fast_two_sum(step_sh, step_w)
+        const double step_z0 = step_sh + step_w;
+        const double step_z0_z = step_z0 - step_sh;
+        const double step_z1 = step_w - step_z0_z;
+        s0 = step_z0;
+        s1 = step_z1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void sum_fast_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float s0_lane_ = 0.0f;
+        float s1_lane_ = 0.0f;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            // (step_z0, step_z1) = add_fast_2_2(s0_lane_, s1_lane_, x0, x1)
+            // (step_sh, step_sl) = two_sum(s0_lane_, x0)
+            const float step_sh = s0_lane_ + x0;
+            const float step_sh_bb = step_sh - s0_lane_;
+            const float step_sh_t0 = step_sh - step_sh_bb;
+            const float step_sh_t1 = s0_lane_ - step_sh_t0;
+            const float step_sh_t2 = x0 - step_sh_bb;
+            const float step_sl = step_sh_t1 + step_sh_t2;
+            const float step_v = s1_lane_ + x1;
+            const float step_w = step_sl + step_v;
+            // (step_z0, step_z1) = fast_two_sum(step_sh, step_w)
+            const float step_z0 = step_sh + step_w;
+            const float step_z0_z = step_z0 - step_sh;
+            const float step_z1 = step_w - step_z0_z;
+            s0_lane_ = step_z0;
+            s1_lane_ = step_z1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_fast_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const float comb_sh = s0 + s0_lane_;
+            const float comb_sh_bb = comb_sh - s0;
+            const float comb_sh_t0 = comb_sh - comb_sh_bb;
+            const float comb_sh_t1 = s0 - comb_sh_t0;
+            const float comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const float comb_sl = comb_sh_t1 + comb_sh_t2;
+            const float comb_v = s1 + s1_lane_;
+            const float comb_w = comb_sl + comb_v;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_sh, comb_w)
+            const float comb_z0 = comb_sh + comb_w;
+            const float comb_z0_z = comb_z0 - comb_sh;
+            const float comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = add_fast_2_2(s0, s1, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0, x0)
+        const float step_sh = s0 + x0;
+        const float step_sh_bb = step_sh - s0;
+        const float step_sh_t0 = step_sh - step_sh_bb;
+        const float step_sh_t1 = s0 - step_sh_t0;
+        const float step_sh_t2 = x0 - step_sh_bb;
+        const float step_sl = step_sh_t1 + step_sh_t2;
+        const float step_v = s1 + x1;
+        const float step_w = step_sl + step_v;
+        // (step_z0, step_z1) = fast_two_sum(step_sh, step_w)
+        const float step_z0 = step_sh + step_w;
+        const float step_z0_z = step_z0 - step_sh;
+        const float step_z1 = step_w - step_z0_z;
+        s0 = step_z0;
+        s1 = step_z1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the sequential order (fold_seq of proofs/theories/Folds.v). Status: unverified.
+inline void sum_fast_2_entry_seq(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    double s0 = 0.0;
+    double s1 = 0.0;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_t0, step_t1) = sum_fast_entry_step_2(s0, s1, x0, x1)
+        const double step_g0 = x0 + 0.0;
+        const double step_g1 = x1 + 0.0;
+        // (step_t0, step_t1) = add_fast_2_2(s0, s1, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_g0)
+        const double step_t0_sh = s0 + step_g0;
+        const double step_t0_sh_bb = step_t0_sh - s0;
+        const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const double step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+        const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        const double step_t0_v = s1 + step_g1;
+        const double step_t0_w = step_t0_sl + step_t0_v;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_sh, step_t0_w)
+        const double step_t0 = step_t0_sh + step_t0_w;
+        const double step_t0_z = step_t0 - step_t0_sh;
+        const double step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void sum_fast_2_entry_seq(const float* x0_in, const float* x1_in, std::size_t n, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_t0, step_t1) = sum_fast_entry_step_2(s0, s1, x0, x1)
+        const float step_g0 = x0 + 0.0f;
+        const float step_g1 = x1 + 0.0f;
+        // (step_t0, step_t1) = add_fast_2_2(s0, s1, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_g0)
+        const float step_t0_sh = s0 + step_g0;
+        const float step_t0_sh_bb = step_t0_sh - s0;
+        const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const float step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+        const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        const float step_t0_v = s1 + step_g1;
+        const float step_t0_w = step_t0_sl + step_t0_v;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_sh, step_t0_w)
+        const float step_t0 = step_t0_sh + step_t0_w;
+        const float step_t0_z = step_t0 - step_t0_sh;
+        const float step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with `lanes` lanes, computed one lane after another. Status: unverified.
+inline void sum_fast_2_entry_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double s0 = 0.0;
+    double s1 = 0.0;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double s0_lane_ = 0.0;
+        double s1_lane_ = 0.0;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            // (step_t0, step_t1) = sum_fast_entry_step_2(s0_lane_, s1_lane_, x0, x1)
+            const double step_g0 = x0 + 0.0;
+            const double step_g1 = x1 + 0.0;
+            // (step_t0, step_t1) = add_fast_2_2(s0_lane_, s1_lane_, step_g0, step_g1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_g0)
+            const double step_t0_sh = s0_lane_ + step_g0;
+            const double step_t0_sh_bb = step_t0_sh - s0_lane_;
+            const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const double step_t0_sh_t1 = s0_lane_ - step_t0_sh_t0;
+            const double step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+            const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            const double step_t0_v = s1_lane_ + step_g1;
+            const double step_t0_w = step_t0_sl + step_t0_v;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_sh, step_t0_w)
+            const double step_t0 = step_t0_sh + step_t0_w;
+            const double step_t0_z = step_t0 - step_t0_sh;
+            const double step_t1 = step_t0_w - step_t0_z;
+            s0_lane_ = step_t0;
+            s1_lane_ = step_t1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_fast_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const double comb_sh = s0 + s0_lane_;
+            const double comb_sh_bb = comb_sh - s0;
+            const double comb_sh_t0 = comb_sh - comb_sh_bb;
+            const double comb_sh_t1 = s0 - comb_sh_t0;
+            const double comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const double comb_sl = comb_sh_t1 + comb_sh_t2;
+            const double comb_v = s1 + s1_lane_;
+            const double comb_w = comb_sl + comb_v;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_sh, comb_w)
+            const double comb_z0 = comb_sh + comb_w;
+            const double comb_z0_z = comb_z0 - comb_sh;
+            const double comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_t0, step_t1) = sum_fast_entry_step_2(s0, s1, x0, x1)
+        const double step_g0 = x0 + 0.0;
+        const double step_g1 = x1 + 0.0;
+        // (step_t0, step_t1) = add_fast_2_2(s0, s1, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_g0)
+        const double step_t0_sh = s0 + step_g0;
+        const double step_t0_sh_bb = step_t0_sh - s0;
+        const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const double step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+        const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        const double step_t0_v = s1 + step_g1;
+        const double step_t0_w = step_t0_sl + step_t0_v;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_sh, step_t0_w)
+        const double step_t0 = step_t0_sh + step_t0_w;
+        const double step_t0_z = step_t0 - step_t0_sh;
+        const double step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void sum_fast_2_entry_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float s0 = 0.0f;
+    float s1 = 0.0f;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float s0_lane_ = 0.0f;
+        float s1_lane_ = 0.0f;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            // (step_t0, step_t1) = sum_fast_entry_step_2(s0_lane_, s1_lane_, x0, x1)
+            const float step_g0 = x0 + 0.0f;
+            const float step_g1 = x1 + 0.0f;
+            // (step_t0, step_t1) = add_fast_2_2(s0_lane_, s1_lane_, step_g0, step_g1)
+            // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_g0)
+            const float step_t0_sh = s0_lane_ + step_g0;
+            const float step_t0_sh_bb = step_t0_sh - s0_lane_;
+            const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+            const float step_t0_sh_t1 = s0_lane_ - step_t0_sh_t0;
+            const float step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+            const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+            const float step_t0_v = s1_lane_ + step_g1;
+            const float step_t0_w = step_t0_sl + step_t0_v;
+            // (step_t0, step_t1) = fast_two_sum(step_t0_sh, step_t0_w)
+            const float step_t0 = step_t0_sh + step_t0_w;
+            const float step_t0_z = step_t0 - step_t0_sh;
+            const float step_t1 = step_t0_w - step_t0_z;
+            s0_lane_ = step_t0;
+            s1_lane_ = step_t1;
+        }
+        if (j_ == 0) {
+            s0 = s0_lane_;
+            s1 = s1_lane_;
+        } else {
+            // (comb_z0, comb_z1) = add_fast_2_2(s0, s1, s0_lane_, s1_lane_)
+            // (comb_sh, comb_sl) = two_sum(s0, s0_lane_)
+            const float comb_sh = s0 + s0_lane_;
+            const float comb_sh_bb = comb_sh - s0;
+            const float comb_sh_t0 = comb_sh - comb_sh_bb;
+            const float comb_sh_t1 = s0 - comb_sh_t0;
+            const float comb_sh_t2 = s0_lane_ - comb_sh_bb;
+            const float comb_sl = comb_sh_t1 + comb_sh_t2;
+            const float comb_v = s1 + s1_lane_;
+            const float comb_w = comb_sl + comb_v;
+            // (comb_z0, comb_z1) = fast_two_sum(comb_sh, comb_w)
+            const float comb_z0 = comb_sh + comb_w;
+            const float comb_z0_z = comb_z0 - comb_sh;
+            const float comb_z1 = comb_w - comb_z0_z;
+            s0 = comb_z0;
+            s1 = comb_z1;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_t0, step_t1) = sum_fast_entry_step_2(s0, s1, x0, x1)
+        const float step_g0 = x0 + 0.0f;
+        const float step_g1 = x1 + 0.0f;
+        // (step_t0, step_t1) = add_fast_2_2(s0, s1, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_g0)
+        const float step_t0_sh = s0 + step_g0;
+        const float step_t0_sh_bb = step_t0_sh - s0;
+        const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const float step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+        const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        const float step_t0_v = s1 + step_g1;
+        const float step_t0_w = step_t0_sl + step_t0_v;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_sh, step_t0_w)
+        const float step_t0 = step_t0_sh + step_t0_w;
+        const float step_t0_z = step_t0 - step_t0_sh;
+        const float step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
 }
 
 }  // namespace kairn::gen

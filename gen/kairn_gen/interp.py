@@ -297,6 +297,68 @@ class Machine:
             plain = True
         return self._eval(k, f, list(inputs), plain)
 
+    def run_fold(self, name, f, order, lanes, arrays):
+        """The outputs of fold `name` on the arrays: `arrays` has one list of n values per limb
+        array, in the order of the fold's arrays and of their limbs (x0, x1, y0, y1). `order` is
+        'sequential' or 'lanes', with `lanes` the number of lanes W >= 0 (fold_lanes W of
+        proofs/theories/Folds.v; W = 0 is the sequential order)."""
+        fd = getattr(self.kernels, 'folds', {}).get(name)
+        if fd is None:
+            raise InterpError(f'unknown fold {name!r}')
+        if self.consteval:
+            raise InterpError(f'{name} is a fold, which is not evaluated in constant evaluation')
+        if order not in fd.orders:
+            raise InterpError(f'{name} has no order {order!r}')
+        limbs = fd.array_limbs()
+        if len(arrays) != len(limbs):
+            raise InterpError(f'{name} reads {len(limbs)} limb arrays, not {len(arrays)}')
+        n = len(arrays[0]) if arrays else 0
+        if any(len(a) != n for a in arrays):
+            raise InterpError(f'{name}: the limb arrays have different lengths')
+        for a in arrays:
+            for v in a:
+                if isinstance(v, bool) or not member(f, v):
+                    raise InterpError(f'{format_limb(v) if not isinstance(v, bool) else v} is not a number '
+                                      f'of format {f.name}')
+        # An element is one entry of every limb array, grouped by array: {array: [limbs]}.
+        elements = []
+        for i in range(n):
+            e, at = {}, 0
+            for g in fd.arrays:
+                e[g.name] = [arrays[at + j][i] for j in range(len(g.limbs))]
+                at += len(g.limbs)
+            elements.append(e)
+        step = self.kernels[fd.step[0]]
+        zero = [(NUM, False, 0, 0)] * len(fd.state.limbs)
+
+        def apply_step(state, e):
+            args = []
+            for a in fd.step[1]:
+                args += state if a == fd.state.name else e[a]
+            return self._eval(step, f, args, False)
+
+        def fold_seq(xs, state):
+            for e in xs:
+                state = apply_step(state, e)
+            return state
+
+        if order == 'sequential':
+            state = fold_seq(elements, zero)
+        else:
+            if lanes < 0:
+                raise InterpError('the number of lanes is at least 0')
+            combine = self.kernels[fd.combine[0]]
+            full = lanes * (n // lanes) if lanes else 0
+            # deal W: lane j holds elements j, j + W, j + 2 W, ... of the first W (n / W).
+            states = [fold_seq(elements[j:full:lanes], zero) for j in range(lanes)]
+            state = states[0] if states else zero
+            for s in states[1:]:
+                state = self._eval(combine, f, state + s, False)
+            state = fold_seq(elements[full:], state)
+        if fd.finish is None:
+            return state
+        return self._eval(self.kernels[fd.finish[0]], f, state, False)
+
     def _const(self, f, name):
         if name == 'inf':
             return (INF, False)
@@ -390,6 +452,9 @@ def complete(machine, line, formats):
     name, fmt = fields[0], fields[1]
     if fmt not in formats:
         formats[fmt] = parse_format(fmt)
+    fd = getattr(machine.kernels, 'folds', {}).get(name)
+    if fd is not None:
+        return line + ' -> ' + complete_fold(machine, fd, formats[fmt], fields[2:])
     k = machine.kernels.get(name)
     if k is None:
         raise InterpError(f'unknown kernel {name!r}')
@@ -399,6 +464,37 @@ def complete(machine, line, formats):
     out = machine.run(name, formats[fmt], ins)
     return line + ' -> ' + ' '.join(format_mask(v) if kind == ir.MASK else format_limb(v)
                                     for v, kind in zip(out, k.output_kinds))
+
+
+def parse_order(text):
+    """('sequential', 0) for `seq`, ('lanes', W) for `lanes:W` (architecture.md, "The line
+    protocol", arrays)."""
+    if text == 'seq':
+        return 'sequential', 0
+    m = re.fullmatch(r'lanes:(0|[1-9][0-9]*)', text)
+    if not m:
+        raise InterpError(f'not an order: {text!r} (seq, or lanes:W with W a decimal number of lanes)')
+    return 'lanes', int(m.group(1))
+
+
+def complete_fold(machine, fd, f, fields):
+    """The output fields of a request of a fold: ORDER N, then for each array of the fold in
+    order, for each of its limbs, the N entries of that limb array."""
+    if len(fields) < 2:
+        raise InterpError(f'expected "{fd.name} FORMAT ORDER N LIMB ... [#TAG]"')
+    order, lanes = parse_order(fields[0])
+    if not re.fullmatch(r'0|[1-9][0-9]*', fields[1]):
+        raise InterpError(f'not a length: {fields[1]!r} (a decimal number)')
+    n = int(fields[1])
+    limbs = fd.array_limbs()
+    if len(fields) - 2 != n * len(limbs):
+        raise InterpError(f'{fd.name} of length {n} takes {n * len(limbs)} limbs ({len(limbs)} arrays of {n}), '
+                          f'not {len(fields) - 2}')
+    values = [parse_limb(t) for t in fields[2:]]
+    arrays = [values[i * n:(i + 1) * n] for i in range(len(limbs))]
+    out = machine.run_fold(fd.name, f, order, lanes, arrays)
+    kinds = [g.kind for g in fd.results() for _ in g.limbs]
+    return ' '.join(format_mask(v) if kind == ir.MASK else format_limb(v) for v, kind in zip(out, kinds))
 
 
 def serve(machine, infile, outfile, errfile):

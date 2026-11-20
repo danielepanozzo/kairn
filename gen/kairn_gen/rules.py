@@ -38,9 +38,15 @@ PROPAGATING = frozenset({'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd', '
 TIMES_INF_USES = {'lt': (0, 1), 'le': (0, 1), 'eq': (0, 1), 'select': (1, 2)}
 # The closed vocabulary of the claims (architecture.md, "Claims", "Claims of the second wave" and
 # "Claims of the non-finite layer"): requirements and their number of operands.
-REQUIRES = {'normalized': 1, 'abs_ge': 2, 'power_of_two': 1, 'nonneg': 1, 'canonical': 1, 'ball': 2}
-REQUIRES_FINITE = ('normalized', 'abs_ge', 'power_of_two', 'nonneg')
+REQUIRES = {'normalized': 1, 'abs_ge': 2, 'power_of_two': 1, 'nonneg': 1, 'canonical': 1, 'ball': 2, 'count': 1}
+REQUIRES_FINITE = ('normalized', 'abs_ge', 'power_of_two', 'nonneg', 'count')
 REQUIRES_EXTENDED = ('canonical', 'ball', 'power_of_two', 'nonneg')
+# Requirements about the format rather than an input (milestone2.md, "Additions to the claims"):
+# format half, the format contains 1/2.
+FORMAT_REQUIRES = ('half',)
+# The expressions of the claims of Milestone 2 that name inputs and constants of the format: an
+# upper entry's own value, the operands of holds. Those of up(EXPR), with names.
+CONSTANT_TREES = {'int', 'name', 'add', 'sub', 'mul', 'div', 'neg', 'pow', 'call'}
 ROUNDING_MODES = ('nearest', 'down', 'up')
 RELATIONS = ('lt', 'le', 'eq')
 LEADS = ('add', 'sub', 'mul')
@@ -54,12 +60,15 @@ EXACT_TREES = VALUE_TREES | {'limb'}
 THRESHOLD_TREES = {'int', 'name', 'add', 'sub', 'mul', 'div', 'neg', 'pow'}
 # The kinds of ensures entries in each domain.
 ENSURES_FINITE = ('normalized', 'leading_rounded', 'error', 'rounded', 'upper', 'predicate', 'encloses',
-                  'neighbor', 'bound')
+                  'neighbor', 'bound', 'holds')
 ENSURES_EXTENDED = ('normalized', 'error', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
-                    'represents', 'makes_ball', 'neighbor', 'bound')
+                    'represents', 'makes_ball', 'neighbor', 'bound', 'finite_or_nan')
 # Entries that say something about the value: a kernel needs at least one.
 ABOUT_THE_VALUE = ('error', 'leading_rounded', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
-                   'represents', 'makes_ball', 'neighbor', 'bound')
+                   'represents', 'makes_ball', 'neighbor', 'bound', 'holds', 'finite_or_nan')
+# The forms of an error entry: relative to |value| (R), to the sum of the magnitudes of the inputs
+# (A), to the sum of the magnitudes of the terms of value (T: s+x*y gives |s| + |x*y|).
+ERROR_FORMS = ('R', 'A', 'T')
 
 
 class RuleError(Exception):
@@ -81,6 +90,9 @@ def check_all(kernels):
             errors += rule(k, kernels)
     if not errors:
         errors += ieee_printable(kernels)
+    if not errors:
+        for fd in getattr(kernels, 'folds', {}).values():
+            errors += fold_rules(fd, kernels)
     return errors
 
 
@@ -571,15 +583,29 @@ def claims(k, kernels):
                     break
 
     makes_balls = bool(k.ensures) and all(e['kind'] == 'makes_ball' for e in k.ensures)
+    # The bound kernels of Milestone 2: every entry says what it bounds, and the kernel has no value.
+    own_values = bool(k.ensures) and all(e['kind'] == 'holds' or (e['kind'] == 'upper' and 'value' in e)
+                                         for e in k.ensures)
     if makes_balls:
         if k.value:
             err('a kernel that makes a ball from its inputs has no value')
+    elif own_values:
+        if k.value:
+            err('every claim of the kernel has its own value (upper value=, holds): the kernel has none')
     elif not k.value:
         err('no value')
     else:
         parsed(k.value, limb_ins, 'value', VALUE_TREES)
+    one_limb_outs = {n for n, g in outs.items() if g.kind == ir.LIMB and len(g.limbs) == 1}
+    mask_outs = {n for n, g in outs.items() if g.kind == ir.MASK}
     allowed = REQUIRES_EXTENDED if k.extended else REQUIRES_FINITE
     for req in k.requires:
+        if req[0] == 'format':
+            if len(req) != 2 or req[1] not in FORMAT_REQUIRES:
+                err(f'requires {" ".join(req)!r}: the requirement on the format is "format half"')
+            elif k.extended:
+                err('requires format half: a requirement of the finite domain')
+            continue
         n = REQUIRES.get(req[0])
         names = req[1:]
         if n is not None and len(names) == n and all(x in limb_ins for x in names):
@@ -587,7 +613,7 @@ def claims(k, kernels):
                 err(f'requires {" ".join(req)!r}: {req[0]} is not a requirement of the '
                     f'{"extended" if k.extended else "finite"} domain'
                     + (' (canonical stands for normalized there)' if req[0] == 'normalized' else ''))
-            elif req[0] in ('power_of_two', 'nonneg') and names[0] not in one_limb_ins:
+            elif req[0] in ('power_of_two', 'nonneg', 'count') and names[0] not in one_limb_ins:
                 err(f'requires {" ".join(req)!r}: {req[0]} is about a one-limb input')
             elif req[0] == 'canonical' and len(ins[names[0]].limbs) < 2:
                 err(f'requires {" ".join(req)!r}: canonical is about a multi-limb input (a one-limb '
@@ -596,8 +622,8 @@ def claims(k, kernels):
                 err(f'requires {" ".join(req)!r}: the radius of a ball is a one-limb input')
             continue
         err(f'requires {" ".join(req)!r}: the vocabulary is "normalized INPUT", "abs_ge INPUT INPUT", '
-            '"power_of_two INPUT", "nonneg INPUT", and in the extended domain "canonical INPUT", '
-            '"ball CENTER RADIUS"')
+            '"power_of_two INPUT", "nonneg INPUT", "count INPUT", "format half", and in the extended '
+            'domain "canonical INPUT", "ball CENTER RADIUS"')
     if not any(e['kind'] in ABOUT_THE_VALUE for e in k.ensures):
         err(f'ensures says nothing about the value: it needs an entry of kind {", ".join(ABOUT_THE_VALUE)}')
     kinds = ENSURES_EXTENDED if k.extended else ENSURES_FINITE
@@ -610,8 +636,8 @@ def claims(k, kernels):
             output(e['of'], kind)
         elif kind == 'error':
             output(e['of'], kind)
-            if e['form'] not in ('R', 'A'):
-                err(f'error form {e["form"]!r}: it is R or A')
+            if e['form'] not in ERROR_FORMS:
+                err(f'error form {e["form"]!r}: it is R, A or T')
             for key in ('c', 'k', 't'):
                 if e[key] is None:
                     err(f'error entry without {key}')
@@ -636,9 +662,31 @@ def claims(k, kernels):
                 err(f'neighbor: the value is the one-limb operand whose neighbor is the output, not {k.value!r}')
         elif kind == 'upper':
             output(e['of'], kind, one=True)
-            tree = parsed(e['gaps'], set(), 'gaps')
-            if tree is not None and not expr.evaluate(tree, {}) > 0:
-                err(f'gaps={e["gaps"]}: the number of gaps is positive')
+            if 'gaps' not in e and 'value' not in e:
+                err('upper: an entry says how far above (gaps=) or what it bounds (value=), or both')
+            if 'gaps' in e:
+                tree = parsed(e['gaps'], set(), 'gaps')
+                if tree is not None and not expr.evaluate(tree, {}) > 0:
+                    err(f'gaps={e["gaps"]}: the number of gaps is positive')
+            if 'value' in e:
+                _constant_expression(e['value'], limb_ins | (one_limb_outs - {e['of']}), k, kernels, err,
+                                     'upper value')
+            if 'if' in e and e['if'] not in mask_outs:
+                err(f'upper if={e["if"]}: the condition is a mask output')
+        elif kind == 'holds':
+            if e['rel'] not in RELATIONS:
+                err(f'holds relation {e["rel"]!r}: it is {", ".join(RELATIONS)}')
+            for a in e['args']:
+                _constant_expression(a, limb_ins | one_limb_outs, k, kernels, err, 'holds')
+            if e['if'] not in mask_outs:
+                err(f'holds if={e["if"]}: the condition is a mask output')
+        elif kind == 'finite_or_nan':
+            output(e['of'], kind)
+            if e['flag'] not in mask_outs:
+                err(f'finite_or_nan flag={e["flag"]}: the flag is a mask output')
+            g = ins.get(k.value)
+            if g is None or g.kind != ir.LIMB or len(g.limbs) != len(outs.get(e['of'], ir.Group('', ())).limbs):
+                err(f'finite_or_nan: the value is an input of as many limbs as {e["of"]}, not {k.value!r}')
         elif kind == 'predicate':
             output(e['of'], kind, kind=ir.MASK)
             if e['rel'] not in RELATIONS:
@@ -823,6 +871,43 @@ def computed_constants(k, kernels):
     return errs
 
 
+def _constant_expression(text, names, k, kernels, err, what):
+    """An expression of the claims of Milestone 2 over `names` and the constants of the format: u,
+    eta, integers, unit(K) and tiny(K) of a kernel K with one unconditional error entry, proved
+    unless the kernel that claims it is unverified, with + - * /, integer powers and parentheses.
+    Returns the tree, or None after reporting through err. `k` is a kernel or a fold (it has
+    status and min_precision)."""
+    try:
+        tree = expr.parse(text)
+    except expr.ExprError as e:
+        err(f'{what}: {e}')
+        return None
+    if not _only(tree, CONSTANT_TREES):
+        err(f'{what} {text!r}: only + - * /, integer powers, names, u, eta, integers, unit(K) and tiny(K)')
+        return None
+    extra = expr.names(tree) - set(names) - {'u', 'eta'}
+    if extra:
+        err(f'{what}: unknown name {", ".join(sorted(extra))} in {text!r}')
+        return None
+    for fn, kname in sorted(expr.calls(tree)):
+        callee = kernels.get(kname)
+        if callee is None:
+            err(f'{what}: {fn}({kname}): {kname} is not a kernel')
+            continue
+        try:
+            consts.source_bound(callee)
+        except consts.ConstError as e:
+            err(f'{what}: {e}')
+            continue
+        if callee.status != 'proved' and k.status != 'unverified':
+            err(f'{what}: {kname} is {callee.status}: only an unverified claim may use the constants of a '
+                'bound that is not proved')
+        if callee.min_precision and (k.min_precision or 1) < callee.min_precision:
+            err(f'{what}: the claims of {kname} hold from precision {callee.min_precision} on, so '
+                f'min_precision must be at least {callee.min_precision}')
+    return tree
+
+
 def _up_constant(k, kernels, name):
     """A constant up(EXPR): its vocabulary; each unit(K) and tiny(K) names a kernel with one
     unconditional relative bound, proved unless k is unverified, and k's minimum precision is at
@@ -883,3 +968,420 @@ def consteval_variant(k, kernels):
             return err(p.dst, f'its variant {v.name} computes {p.dst} with {p.op}, and constant '
                               'evaluation has no FMA (only prod, as a plain product)')
     return []
+
+
+# ---------------------------------------------------------------------------------------------
+# Folds (milestone2.md, "Folds, the extension of the IR").
+
+FOLD = 'fold'
+# The kinds of a fold's claims (architecture.md, "Claims of Milestone 2", "Folds").
+FOLD_ENSURES = ('normalized', 'fold_error', 'finite_or_nan')
+# The heights of a fold's bound: n or n - 1, natural numbers (0 - 1 is 0, as in Rocq's nat).
+FOLD_HEIGHTS = ('n', 'n-1')
+# Names a fold's groups and limbs must not take: the parameters of its C++ functions and the
+# section variables of its Rocq model. (The binders of the model and the statements are the name
+# of the state, the element, the arrays' names joined, and the list, that and s: fold_binders.)
+FOLD_RESERVED = frozenset({'n', 'lanes', 'emin', 'prec', 'choice'})
+
+
+def fold_binders(fd):
+    """The binders of a fold's Rocq model and statements: the state, one element (the arrays'
+    names joined: x, or xy for x and y) and the list of elements (xs, xys)."""
+    element = ''.join(g.name for g in fd.arrays)
+    return fd.state.name, element, element + 's'
+# The combinations whose zero state has the four properties the theorems use (zero_identity of
+# proofs/theories/Summation.v), each a lemma of proofs/theories/SummationKernels.v proved once: a
+# fold of the lane order whose combination has none is refused.
+ZERO_LEMMAS = {'add_1_1': 'add_1_1_zero', 'add_2_2': 'add_2_2_zero', 'add_fast_2_2': 'add_fast_2_2_zero'}
+# The formats the generator evaluates the zero state in (zero_state): the two of the library and
+# small ones, where every operand can be tried.
+ZERO_FORMATS = ((53, -1074, 971), (24, -149, 104)) + tuple((p, -5, 5) for p in range(1, 6))
+
+
+def fold_names(fd):
+    """The names the printers make for a fold: its C++ functions and its Rocq definitions and
+    statements. None may be the name of a kernel."""
+    out = [f'{fd.name}_{s}' for s in ('step', 'combine', 'packed')]
+    for order in fd.orders:
+        base = f'{fd.name}_{ir.ORDER_SUFFIX.get(order, order)}'
+        out += [base, f'{base}_spec', f'{base}_correct', f'{base}_audit']
+    return out
+
+
+def _shape(g):
+    return (len(g.limbs), g.kind)
+
+
+def fold_rules(fd, kernels):
+    """Every refusal of one fold: its description, the shapes of its state, R3 on its supplied
+    arrays, its zero state, its claims, its theorem."""
+    errs = []
+
+    def err(value, rule, msg):
+        errs.append(RuleError(fd.name, value, rule, msg))
+
+    reserved = rocq.RESERVED | cpp.RESERVED | simd.RESERVED | FOLD_RESERVED
+    for n in fold_names(fd) + [fd.name]:
+        if n in kernels:
+            err('-', WELL_FORMED, f'{n} is a name the printers make for the fold, and the name of a kernel')
+    groups = fd.arrays + ([fd.state] if fd.state else []) + fd.outputs
+    names = [g.name for g in groups] + [v for g in groups for v in g.limbs if v != g.name]
+    for n in sorted(set(names)):
+        if names.count(n) > 1:
+            err(n, WELL_FORMED, f'{n} names two groups or limbs of the fold')
+        if n in reserved or n in kernels:
+            err(n, WELL_FORMED, f'{n} is a name the printers use')
+        if not ir.VALUE_NAME.match(n):
+            err(n, WELL_FORMED, 'a name of a group or a limb is [a-z][a-z0-9]*')
+    if not fd.arrays:
+        err('-', WELL_FORMED, 'a fold reads at least one array')
+    if fd.state is None or fd.state.kind != ir.LIMB:
+        err('-', WELL_FORMED, 'the state is a group of limbs')
+        return errs
+    binders = fold_binders(fd)
+    if len(set(binders)) < 3 or any(b in reserved | {'a', 'b'} for b in binders):
+        err('-', WELL_FORMED, f'the binders of the model, {", ".join(binders)} (the state, the arrays\' names '
+                              'joined, and that and s), are distinct and none is a name the printers use')
+    if not fd.orders or len(set(fd.orders)) < len(fd.orders) or set(fd.orders) - set(ir.ORDERS):
+        err('-', WELL_FORMED, f'orders: some of {", ".join(ir.ORDERS)}, each once')
+    if fd.writes:
+        err('-', WELL_FORMED, 'writes: a map (a step that also returns elements of arrays it writes) is '
+                              'not in this stage of the generator; a fold of this stage writes none')
+    groups_of = {g.name: g for g in fd.arrays + [fd.state]}
+
+    def kernel_of(what, call):
+        if call is None:
+            return None
+        k = kernels.get(call[0])
+        if k is None:
+            err('-', WELL_FORMED, f'{what}: {call[0]} is not a kernel')
+        return k
+
+    # The step: the state and one element of each array, in the order of the kernel's inputs, to
+    # the next state; every group once.
+    step = kernel_of('step', fd.step)
+    if step is not None:
+        _, args, dsts = fd.step
+        if dsts != (fd.state.name,):
+            err('-', WELL_FORMED, f'step: it gives the next state, {fd.state.name} = {step.name}(...)')
+        want = sorted([fd.state.name] + [g.name for g in fd.arrays])
+        if sorted(args) != want:
+            err('-', WELL_FORMED, f'step: its arguments are the state and every array once: {", ".join(want)}')
+        elif len(step.inputs) != len(args):
+            err('-', WELL_FORMED, f'step: {step.name} takes {len(step.inputs)} groups, not {len(args)}')
+        else:
+            for a, g in zip(args, step.inputs):
+                if _shape(g) != _shape(groups_of[a]):
+                    err(a, WELL_FORMED, f'step: {step.name} takes {g.name} of {len(g.limbs)} limbs where the '
+                                        f'fold passes {a} of {len(groups_of[a].limbs)}')
+        if len(step.outputs) != 1 or _shape(step.outputs[0]) != _shape(fd.state):
+            err('-', WELL_FORMED, f'step: {step.name} returns one group of the shape of the state '
+                                  f'({len(fd.state.limbs)} limbs)')
+        if not step.real_model:
+            err('-', DOMAIN, f'step: {step.name} has no real-model statement, and the step is in the real model')
+    elif fd.step is None:
+        err('-', WELL_FORMED, 'a fold needs "step:"')
+    # The combination: two states into one.
+    combine = kernel_of('combine', fd.combine)
+    if 'lanes' in fd.orders and fd.combine is None:
+        err('-', WELL_FORMED, 'the lane order combines the lanes: the fold needs "combine:"')
+    if combine is not None:
+        _, args, dsts = fd.combine
+        if dsts != (fd.state.name,) or args != (fd.state.name, fd.state.name):
+            err('-', WELL_FORMED, f'combine: {fd.state.name} = {combine.name}({fd.state.name}, {fd.state.name})')
+        if [_shape(g) for g in combine.inputs] != [_shape(fd.state)] * 2 or \
+                [_shape(g) for g in combine.outputs] != [_shape(fd.state)]:
+            err('-', WELL_FORMED, f'combine: {combine.name} takes two groups and returns one, each of the shape '
+                                  f'of the state ({len(fd.state.limbs)} limbs)')
+        if not combine.real_model:
+            err('-', DOMAIN, f'combine: {combine.name} has no real-model statement, and the combination is in the '
+                             'real model')
+    # The finish: the final state to the fold's results.
+    finish = kernel_of('finish', fd.finish)
+    if finish is not None:
+        _, args, dsts = fd.finish
+        if args != (fd.state.name,):
+            err('-', WELL_FORMED, f'finish: it takes the final state, {finish.name}({fd.state.name})')
+        if [_shape(g) for g in finish.inputs] != [_shape(fd.state)]:
+            err('-', WELL_FORMED, f'finish: {finish.name} takes one group of the shape of the state')
+        if dsts != tuple(g.name for g in fd.outputs):
+            err('-', WELL_FORMED, 'finish: its destinations are the fold\'s outputs, in order: '
+                                  + ', '.join(g.name for g in fd.outputs))
+        elif [_shape(g) for g in finish.outputs] != [_shape(g) for g in fd.outputs]:
+            err('-', WELL_FORMED, f'finish: the outputs of {finish.name} do not have the shapes of the fold\'s')
+    elif fd.outputs:
+        err('-', WELL_FORMED, 'a fold without a finish returns its state: it declares no output')
+    if errs:
+        return errs
+    errs += _fold_r3(fd, step, kernels)
+    if combine is not None and 'lanes' in fd.orders:
+        errs += zero_state(fd, combine, kernels)
+    errs += _fold_claims(fd, kernels, step, combine, finish)
+    errs += _fold_theorem(fd)
+    return errs
+
+
+def _fold_r3(fd, step, kernels):
+    """Rule R3 on a fold. The elements of a supplied array enter from the program: the step's
+    inputs that receive them are values of the program, and nothing the step adds is one before
+    guard (r3_analysis, the analysis of an entry kernel, on exactly those inputs). The step is an
+    entry kernel that declares them so; the state is a limb of an object (stored). The elements
+    of a stored array were written through Kairn, and nothing is asked of them."""
+    errs = []
+    _, args, _ = fd.step
+    by_arg = dict(zip(args, step.inputs))
+    program = set(step.program_values())
+    tainted = []
+    for a in args:
+        g = by_arg[a]
+        if a == fd.state.name:
+            if set(g.limbs) & program:
+                errs.append(RuleError(fd.name, a, RULE_R3, f'the step {step.name} takes the state as values of the '
+                                                           f'program ({g.name}); the state is stored'))
+        elif fd.roles[a] == 'supplied':
+            if not set(g.limbs) <= program:
+                errs.append(RuleError(fd.name, a, RULE_R3,
+                                      f'{a} is supplied by the program, and the step {step.name} does not take '
+                                      f'{g.name} as a value of the program (entry: yes, and the input not '
+                                      'stored, or supplied for more than one limb)'))
+            tainted += list(g.limbs)
+    hits, _, out = r3_analysis(step, kernels, frozenset(tainted))
+    for where, origins in hits:
+        errs.append(RuleError(fd.name, sorted(origins)[0], RULE_R3,
+                              f'an element of a supplied array reaches {where} in the step {step.name} without '
+                              'passing through guard'))
+    for v in out:
+        errs.append(RuleError(fd.name, v, RULE_R3, f'an element of a supplied array is the next state ({v}) as '
+                                                   'it is; it passes through guard first'))
+    return errs
+
+
+def _is_valid(f, k, group, values):
+    """Whether values (interpreter values) are finite numbers of f that satisfy what kernel k
+    requires of its input group."""
+    from . import interp
+    if not all(v[0] == interp.NUM and interp.member(f, v) for v in values):
+        return False
+    if ('normalized', group.name) in k.requires or ('canonical', group.name) in k.requires:
+        return all(interp.eq(values[i], interp.add(f, values[i], values[i + 1])) for i in range(len(values) - 1))
+    return True
+
+
+def _value(values):
+    return sum((-1 if v[1] else 1) * Fraction(v[2]) * Fraction(2) ** v[3] for v in values)
+
+
+_ZERO_CACHE = {}
+
+
+def zero_state(fd, combine, kernels):
+    """The four properties of the zero state that the theorems take as one hypothesis
+    (zero_identity, proofs/theories/Summation.v), for the combination of the lane order:
+    1. the zero state is valid: checked by evaluation, in ZERO_FORMATS, against the combination's
+       requirements on its operands (for two limbs, (0, 0) normalized);
+    2. its value is 0: syntactic, every limb of the zero state is the literal +0;
+    3. 0 + x has the value of x for every valid x: checked by evaluation, on every valid operand
+       of the small formats of ZERO_FORMATS and on edge values of the two others;
+    4. 0 + 0 is the zero state, limb for limb: checked by evaluation in ZERO_FORMATS.
+    That they hold in every format is the lemma of ZERO_LEMMAS the proof uses: a combination
+    without one is refused."""
+    from . import interp
+    if combine.name not in ZERO_LEMMAS:
+        return [RuleError(fd.name, '-', FOLD, f'the combination {combine.name} has no lemma that its zero state '
+                                              'has the properties of zero_identity (proofs/theories/'
+                                              f'SummationKernels.v: {", ".join(ZERO_LEMMAS.values())})')]
+    key = (combine.name, id(kernels))
+    if key not in _ZERO_CACHE:
+        found = []
+        m = interp.Machine(kernels)
+        a, b = combine.inputs
+        zero = [(interp.NUM, False, 0, 0)] * len(a.limbs)
+        for p, qmin, qmax in ZERO_FORMATS:
+            if combine.min_precision and p < combine.min_precision:
+                continue
+            f = interp.Format(f'fp:{p}:{qmin}:{qmax}', p, qmin, qmax)
+            if not _is_valid(f, combine, a, zero) or not _is_valid(f, combine, b, zero):
+                found.append(f'the zero state is not a valid operand of {combine.name} in {f.name}')
+                continue
+            zz = m.run(combine.name, f, zero + zero)
+            if not all(v[0] == interp.NUM and v[2] == 0 for v in zz):
+                found.append(f'{combine.name}(0, 0) is not the zero state in {f.name}: '
+                             + ' '.join(interp.format_limb(v) for v in zz))
+            for x in _operands(f, len(b.limbs)):
+                if not _is_valid(f, combine, b, x):
+                    continue
+                z = m.run(combine.name, f, zero + x)
+                if not all(v[0] == interp.NUM for v in z) or _value(z) != _value(x):
+                    found.append(f'{combine.name}(0, x) does not have the value of x in {f.name}, x = '
+                                 + ' '.join(interp.format_limb(v) for v in x))
+                    break
+        _ZERO_CACHE[key] = found
+    return [RuleError(fd.name, '-', FOLD, msg) for msg in _ZERO_CACHE[key]]
+
+
+def _operands(f, limbs):
+    """The operands zero_state tries: every number of a small format, edge values of a large one;
+    for two limbs, each of them as a leading limb with the second limbs near the ends of what a
+    normalized pair allows (zero, eta, a half and a quarter of the gap, just below the half), of
+    either sign. Every normalized pair of small formats is tried by the generator's tests."""
+    from . import interp
+    if f.qmax - f.qmin <= 12:
+        nums = sorted({interp.canon(s, m, q) for q in range(f.qmin, f.qmax + 1) for m in range(1, 2 ** f.p)
+                       for s in (False, True)}, key=str)
+    else:
+        nums = [interp.canon(s, m, q) for q in (f.qmin, f.qmin + f.p, 0, f.qmax - f.p, f.qmax)
+                for m in (1, 3, 2 ** f.p - 1, 2 ** (f.p - 1) + 1) for s in (False, True)]
+    zeros = [(interp.NUM, False, 0, 0), (interp.NUM, True, 0, 0)]
+    nums += zeros
+    if limbs == 1:
+        return [[x] for x in nums]
+    if limbs != 2:
+        raise AssertionError(limbs)
+    out = []
+    for x in nums:
+        if x[2] == 0:
+            out += [[x, y] for y in zeros]
+            continue
+        q = max(x[3] + x[2].bit_length() - f.p, f.qmin)     # the gap at x is 2^q
+        tails = [(1, f.qmin)] + [(1, e) for e in (q - 1, q - 2) if e >= f.qmin]
+        if q - 1 > f.qmin:
+            tails.append(((1 << (q - 1 - f.qmin)) - 1, f.qmin))    # just below half the gap
+        for m, e in tails:
+            for s in (False, True):
+                y = interp.canon(s, m, e)
+                if interp.member(f, y):
+                    out.append([x, y])
+        out += [[x, y] for y in zeros]
+    return out
+
+
+def _fold_claims(fd, kernels, step, combine, finish):
+    """A fold's claims, in the vocabulary of architecture.md ("Claims of Milestone 2", folds)."""
+    errs = []
+
+    def err(msg):
+        errs.append(RuleError(fd.name, '-', CLAIMS, msg))
+
+    arrays = {g.name: g for g in fd.arrays}
+    results = {g.name: g for g in fd.results()}
+    if not fd.value:
+        err('no value: the exact value of one element, of which the fold computes the sum')
+    else:
+        try:
+            tree = expr.parse(fd.value)
+            if expr.names(tree) - set(arrays) or not _only(tree, VALUE_TREES):
+                err(f'value {fd.value!r}: + - *, unary minus and abs( ) of the arrays\' names')
+        except expr.ExprError as e:
+            err(f'value: {e}')
+    if fd.domain not in (None, 'extended'):
+        err(f'domain {fd.domain!r}: it is extended, or the line is left out')
+    for r in fd.requires:
+        if len(r) != 2 or r[1] not in arrays:
+            err(f'requires {" ".join(r)!r}: a requirement of a fold is about each element of one array')
+            continue
+        want = 'canonical' if fd.extended else 'normalized'
+        if r[0] != want or len(arrays[r[1]].limbs) < 2:
+            err(f'requires {" ".join(r)!r}: a fold of the {"extended" if fd.extended else "finite"} domain requires '
+                f'"{want} ARRAY" of an array of more than one limb')
+    if 'fold_error' not in [e['kind'] for e in fd.ensures]:
+        err('a fold claims its bound: an ensures entry fold_error')
+    if fd.min_precision is None or fd.min_precision < 1:
+        err('min_precision: an integer, at least 1')
+        return errs
+    for k in (step, combine):
+        if k is not None and (k.min_precision or 1) > fd.min_precision:
+            err(f'min_precision {fd.min_precision}: the claims of {k.name} hold from precision {k.min_precision} on')
+    for e in fd.ensures:
+        kind = e['kind']
+        if kind not in FOLD_ENSURES:
+            err(f'ensures {kind}: a fold claims {", ".join(FOLD_ENSURES)}')
+            continue
+        g = results.get(e['of'])
+        if g is None or g.kind != ir.LIMB:
+            err(f'ensures {kind} of {e["of"]!r}: not a group of limbs that the fold returns')
+            continue
+        if _shape(g) != _shape(fd.state):
+            err(f'ensures {kind} of {e["of"]!r}: the result has the shape of the state')
+        if kind == 'normalized' and len(g.limbs) < 2:
+            err('normalized: of a result of more than one limb')
+        elif kind == 'fold_error':
+            for key in ('eps', 'term', 'tau'):
+                tree = _constant_expression(e[key], (), fd, kernels, err, f'fold_error {key}')
+                if tree is None:
+                    continue
+                for p, qmin in ((53, -1074), (24, -149)):
+                    try:
+                        x = consts.evaluate(tree, kernels, p, qmin)
+                    except consts.ConstError as x_err:
+                        err(f'fold_error {key}={e[key]}: {x_err}')
+                        break
+                    if x < 0 or (key == 'eps' and x <= 0):
+                        err(f'fold_error {key}={e[key]}: it is {"positive" if key == "eps" else "nonnegative"}')
+                        break
+            for key in ('rel', 'abs'):
+                if e[key] not in FOLD_HEIGHTS:
+                    err(f'fold_error {key}={e[key]}: a height is {" or ".join(FOLD_HEIGHTS)}')
+            if combine is not None and not errs:
+                errs += _eps_of_combination(fd, e, combine, kernels)
+        elif kind == 'finite_or_nan':
+            flag = results.get(e['flag'])
+            if flag is None or flag.kind != ir.MASK:
+                err(f'finite_or_nan flag={e["flag"]}: the flag is a mask the fold returns')
+            if finish is None or not any(x['kind'] == 'finite_or_nan' for x in finish.ensures):
+                err('finite_or_nan: what the finish of the fold claims, and its finish claims no such thing')
+            elif not fd.extended:
+                err('finite_or_nan: about elements that are not finite, a claim of the extended domain')
+    return errs
+
+
+def _unit_of(k):
+    """c u^k of the one error entry of a kernel, as a function of the precision, when the entry
+    has no absolute term and no condition and is of form R or A (an error relative to |x + y| is
+    one relative to |x| + |y| as well); None otherwise."""
+    entries = [e for e in k.ensures if e['kind'] == 'error']
+    if len(entries) != 1 or entries[0]['when'] is not None or entries[0]['form'] not in ('R', 'A'):
+        return None
+    e = entries[0]
+    if expr.evaluate(expr.parse(e['t']), {}) != 0:
+        return None
+    return lambda p: expr.evaluate(expr.parse(e['c']), {'u': Fraction(1, 2 ** p)}) * Fraction(1, 2 ** p) ** e['k']
+
+
+def _eps_of_combination(fd, e, combine, kernels):
+    """The eps of a fold's bound is the relative error of its combination, the addition of the
+    tree: checked by evaluation at every precision from the fold's minimum to 64, which, for two
+    rational functions of u of small degree, shows they are one function."""
+    unit = _unit_of(combine)
+    if unit is None:
+        return [RuleError(fd.name, '-', CLAIMS, f'the combination {combine.name} has no error entry of form R or A '
+                                                'without an absolute term: the bound of a sum needs one')]
+    tree = expr.parse(e['eps'])
+    for p in range(max(fd.min_precision, combine.min_precision or 1), 65):
+        try:
+            x = consts.evaluate(tree, kernels, p, -1074)
+        except consts.ConstError as x_err:
+            return [RuleError(fd.name, '-', CLAIMS, f'fold_error eps={e["eps"]}: {x_err}')]
+        if x != unit(p):
+            return [RuleError(fd.name, '-', CLAIMS, f'fold_error eps={e["eps"]} is not the relative error of the '
+                                                    f'combination {combine.name} at precision {p}')]
+    return []
+
+
+def _fold_theorem(fd):
+    errs = []
+
+    def err(msg):
+        errs.append(RuleError(fd.name, '-', RULE_THEOREM, msg))
+
+    if fd.status not in STATUSES:
+        return [RuleError(fd.name, '-', RULE_THEOREM, f'status is {fd.status!r}; it must be one of '
+                                                      f'{", ".join(STATUSES)}')]
+    if fd.status != 'unverified':
+        for what, have in (('theorem', fd.theorem), ('source', fd.source), ('license', fd.license)):
+            if not have:
+                err(f'the fold is not marked unverified and names no {what}')
+    if fd.theorem and not (fd.theorem.startswith('proofs/theories/') and fd.theorem.endswith('.v')):
+        err(f'the theorem file must be proofs/theories/*.v, not {fd.theorem}')
+    if fd.theorem and fd.status != 'proved':
+        err('a theorem file is named only once the fold is proved (status: proved)')
+    return errs

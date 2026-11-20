@@ -1,0 +1,22 @@
+# The sum of an array of numbers of one limb that the program supplies (milestone2.md, "Arrays that
+# the program fills"; question 19, recommended (a)): the sum_1 fold with each element passed
+# through guard first (sum_entry_step_1), rule R3. One addition more per element, and the bound
+# holds of the values in the array whatever the compiler does. Its claims are those of sum_1.
+fold:          sum_1_entry
+arrays:        supplied x
+state:         s
+step:          s = sum_entry_step_1(s, x)
+combine:       s = add_1_1(s, s)
+orders:        sequential, lanes
+writes:        none
+output:        r
+output:        mask flag
+finish:        (r, flag) = fold_finish_1(s)
+value:         x
+ensures:       fold_error r eps=u/(1+u) rel=n-1
+ensures:       finite_or_nan r flag=flag
+min_precision: 1
+status:        unverified
+domain:        extended
+source:        Higham's bound for summation over any tree, with the bound of one rounding
+license:       bound: published; proof: MIT

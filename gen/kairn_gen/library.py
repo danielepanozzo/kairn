@@ -183,11 +183,14 @@ def selftest_case(k, kernels, f):
     nonneg = {r[0] for r in req.get('nonneg', [])} | {r[1] for r in req.get('ball', [])} | \
         {e['from']['radius'] for e in k.ensures if e['kind'] == 'makes_ball'}
     pow2 = {r[0] for r in req.get('power_of_two', [])}
+    counts = {r[0] for r in req.get('count', [])}
     smaller = {r[1] for r in req.get('abs_ge', [])}
     inputs = []
     for g in k.inputs:
         if g.kind == ir.MASK:
             inputs.append(bool(rng.bits(1)))
+        elif g.name in counts:              # a number of terms: an integer from 1 to 1000
+            inputs.append(interp.canon(False, rng.pick(1, 1000), 0))
         elif g.name in pow2:
             inputs.append(interp.canon(False, 1, rng.pick(-6, 6)))
         elif g.name in nonneg:

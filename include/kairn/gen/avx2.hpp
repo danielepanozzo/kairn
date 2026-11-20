@@ -16,6 +16,7 @@
 #endif
 
 #include <immintrin.h>
+#include <cstddef>
 
 #include "prelude.hpp"
 
@@ -694,6 +695,128 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(__m256 cx, __m256 rx, __m256 cy, __m2
     rw_out = rw;
 }
 
+// bound_dot_1(m) -> g, t, mask ok
+KAIRN_GEN_FORCEINLINE void bound_dot_1(__m256d m, __m256d& g_out, __m256d& t_out, __m256d& ok_out) noexcept {
+    const __m256d a = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000001p-53), _mm256_setzero_pd());
+    const __m256d aa = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000001p-53), _mm256_setzero_pd());
+    const __m256d d = _mm256_add_pd(a, a);
+    const __m256d w = _mm256_add_pd(d, _mm256_set1_pd(0x1.0000000000001p+0));
+    const __m256d g = _mm256_fmadd_pd(aa, w, _mm256_setzero_pd());
+    const __m256d tm = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000002p-1022), _mm256_setzero_pd());
+    const __m256d wg = _mm256_add_pd(g, _mm256_set1_pd(0x1.0000000000001p+0));
+    const __m256d t = _mm256_fmadd_pd(tm, wg, _mm256_setzero_pd());
+    const __m256d oa = _mm256_cmp_pd(a, _mm256_set1_pd(0x1p-2), _CMP_LE_OQ);
+    const __m256d ob = _mm256_cmp_pd(g, _mm256_set1_pd(0x1p+0), _CMP_LE_OQ);
+    const __m256d ok = _mm256_and_pd(oa, ob);
+    g_out = g;
+    t_out = t;
+    ok_out = ok;
+}
+KAIRN_GEN_FORCEINLINE void bound_dot_1(__m256 m, __m256& g_out, __m256& t_out, __m256& ok_out) noexcept {
+    const __m256 a = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000002p-24f), _mm256_setzero_ps());
+    const __m256 aa = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000002p-24f), _mm256_setzero_ps());
+    const __m256 d = _mm256_add_ps(a, a);
+    const __m256 w = _mm256_add_ps(d, _mm256_set1_ps(0x1.000002p+0f));
+    const __m256 g = _mm256_fmadd_ps(aa, w, _mm256_setzero_ps());
+    const __m256 tm = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000004p-126f), _mm256_setzero_ps());
+    const __m256 wg = _mm256_add_ps(g, _mm256_set1_ps(0x1.000002p+0f));
+    const __m256 t = _mm256_fmadd_ps(tm, wg, _mm256_setzero_ps());
+    const __m256 oa = _mm256_cmp_ps(a, _mm256_set1_ps(0x1p-2f), _CMP_LE_OQ);
+    const __m256 ob = _mm256_cmp_ps(g, _mm256_set1_ps(0x1p+0f), _CMP_LE_OQ);
+    const __m256 ok = _mm256_and_ps(oa, ob);
+    g_out = g;
+    t_out = t;
+    ok_out = ok;
+}
+
+// bound_dot_2(m) -> g, t, mask ok
+KAIRN_GEN_FORCEINLINE void bound_dot_2(__m256d m, __m256d& g_out, __m256d& t_out, __m256d& ok_out) noexcept {
+    const __m256d a = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000001p-104), _mm256_setzero_pd());
+    const __m256d aa = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000002p-104), _mm256_setzero_pd());
+    const __m256d d = _mm256_add_pd(a, a);
+    const __m256d w = _mm256_add_pd(d, _mm256_set1_pd(0x1.0000000000001p+0));
+    const __m256d g = _mm256_fmadd_pd(aa, w, _mm256_setzero_pd());
+    const __m256d tm = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000003p-1022), _mm256_setzero_pd());
+    const __m256d wg = _mm256_add_pd(g, _mm256_set1_pd(0x1.0000000000001p+0));
+    const __m256d t = _mm256_fmadd_pd(tm, wg, _mm256_setzero_pd());
+    const __m256d oa = _mm256_cmp_pd(a, _mm256_set1_pd(0x1p-2), _CMP_LE_OQ);
+    const __m256d ob = _mm256_cmp_pd(g, _mm256_set1_pd(0x1p+0), _CMP_LE_OQ);
+    const __m256d ok = _mm256_and_pd(oa, ob);
+    g_out = g;
+    t_out = t;
+    ok_out = ok;
+}
+KAIRN_GEN_FORCEINLINE void bound_dot_2(__m256 m, __m256& g_out, __m256& t_out, __m256& ok_out) noexcept {
+    const __m256 a = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000002p-46f), _mm256_setzero_ps());
+    const __m256 aa = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000004p-46f), _mm256_setzero_ps());
+    const __m256 d = _mm256_add_ps(a, a);
+    const __m256 w = _mm256_add_ps(d, _mm256_set1_ps(0x1.000002p+0f));
+    const __m256 g = _mm256_fmadd_ps(aa, w, _mm256_setzero_ps());
+    const __m256 tm = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000006p-126f), _mm256_setzero_ps());
+    const __m256 wg = _mm256_add_ps(g, _mm256_set1_ps(0x1.000002p+0f));
+    const __m256 t = _mm256_fmadd_ps(tm, wg, _mm256_setzero_ps());
+    const __m256 oa = _mm256_cmp_ps(a, _mm256_set1_ps(0x1p-2f), _CMP_LE_OQ);
+    const __m256 ob = _mm256_cmp_ps(g, _mm256_set1_ps(0x1p+0f), _CMP_LE_OQ);
+    const __m256 ok = _mm256_and_ps(oa, ob);
+    g_out = g;
+    t_out = t;
+    ok_out = ok;
+}
+
+// bound_sum_1(m) -> g, mask ok
+KAIRN_GEN_FORCEINLINE void bound_sum_1(__m256d m, __m256d& g_out, __m256d& ok_out) noexcept {
+    const __m256d a = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000001p-53), _mm256_setzero_pd());
+    const __m256d aa = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.0000000000001p-53), _mm256_setzero_pd());
+    const __m256d d = _mm256_add_pd(a, a);
+    const __m256d w = _mm256_add_pd(d, _mm256_set1_pd(0x1.0000000000001p+0));
+    const __m256d g = _mm256_fmadd_pd(aa, w, _mm256_setzero_pd());
+    const __m256d ok = _mm256_cmp_pd(a, _mm256_set1_pd(0x1p-2), _CMP_LE_OQ);
+    g_out = g;
+    ok_out = ok;
+}
+KAIRN_GEN_FORCEINLINE void bound_sum_1(__m256 m, __m256& g_out, __m256& ok_out) noexcept {
+    const __m256 a = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000002p-24f), _mm256_setzero_ps());
+    const __m256 aa = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.000002p-24f), _mm256_setzero_ps());
+    const __m256 d = _mm256_add_ps(a, a);
+    const __m256 w = _mm256_add_ps(d, _mm256_set1_ps(0x1.000002p+0f));
+    const __m256 g = _mm256_fmadd_ps(aa, w, _mm256_setzero_ps());
+    const __m256 ok = _mm256_cmp_ps(a, _mm256_set1_ps(0x1p-2f), _CMP_LE_OQ);
+    g_out = g;
+    ok_out = ok;
+}
+
+// bound_sum_2(m) -> g, mask ok
+KAIRN_GEN_FORCEINLINE void bound_sum_2(__m256d m, __m256d& g_out, __m256d& ok_out) noexcept {
+    const __m256d a = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.8000000000004p-105), _mm256_setzero_pd());
+    const __m256d aa = _mm256_fmadd_pd(m, _mm256_set1_pd(0x1.8000000000005p-105), _mm256_setzero_pd());
+    const __m256d d = _mm256_add_pd(a, a);
+    const __m256d w = _mm256_add_pd(d, _mm256_set1_pd(0x1.0000000000001p+0));
+    const __m256d g = _mm256_fmadd_pd(aa, w, _mm256_setzero_pd());
+    const __m256d ok = _mm256_cmp_pd(a, _mm256_set1_pd(0x1p-2), _CMP_LE_OQ);
+    g_out = g;
+    ok_out = ok;
+}
+KAIRN_GEN_FORCEINLINE void bound_sum_2(__m256 m, __m256& g_out, __m256& ok_out) noexcept {
+    const __m256 a = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.800008p-47f), _mm256_setzero_ps());
+    const __m256 aa = _mm256_fmadd_ps(m, _mm256_set1_ps(0x1.80000ap-47f), _mm256_setzero_ps());
+    const __m256 d = _mm256_add_ps(a, a);
+    const __m256 w = _mm256_add_ps(d, _mm256_set1_ps(0x1.000002p+0f));
+    const __m256 g = _mm256_fmadd_ps(aa, w, _mm256_setzero_ps());
+    const __m256 ok = _mm256_cmp_ps(a, _mm256_set1_ps(0x1p-2f), _CMP_LE_OQ);
+    g_out = g;
+    ok_out = ok;
+}
+
+// dot_step_1(s, x, y) -> t
+KAIRN_GEN_FORCEINLINE void dot_step_1(__m256d s, __m256d x, __m256d y, __m256d& t_out) noexcept {
+    const __m256d t = _mm256_fmadd_pd(x, y, s);
+    t_out = t;
+}
+KAIRN_GEN_FORCEINLINE void dot_step_1(__m256 s, __m256 x, __m256 y, __m256& t_out) noexcept {
+    const __m256 t = _mm256_fmadd_ps(x, y, s);
+    t_out = t;
+}
+
 // fast_two_sum_entry(a, b) -> r = (s, e)
 KAIRN_GEN_FORCEINLINE void fast_two_sum_entry(__m256d a, __m256d b, __m256d& s_out, __m256d& e_out) noexcept {
     const __m256d ga = _mm256_add_pd(a, _mm256_setzero_pd());
@@ -714,6 +837,22 @@ KAIRN_GEN_FORCEINLINE void fast_two_sum_entry(__m256 a, __m256 b, __m256& s_out,
     const __m256 e = _mm256_sub_ps(gb, s_z);
     s_out = s;
     e_out = e;
+}
+
+// fold_finish_1(s) -> r, mask flag
+KAIRN_GEN_FORCEINLINE void fold_finish_1(__m256d s, __m256d& r_out, __m256d& flag_out) noexcept {
+    const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), s);
+    const __m256d flag = _mm256_cmp_pd(a, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d r = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), s, flag);
+    r_out = r;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE void fold_finish_1(__m256 s, __m256& r_out, __m256& flag_out) noexcept {
+    const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), s);
+    const __m256 flag = _mm256_cmp_ps(a, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 r = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), s, flag);
+    r_out = r;
+    flag_out = flag;
 }
 
 // make_2(a) -> x = (x0, x1)
@@ -1074,6 +1213,18 @@ KAIRN_GEN_FORCEINLINE void sub_up_entry(__m256 a, __m256 b, __m256& r_out) noexc
     const __m256 r_q = next_up_bits(r_s);
     const __m256 r = _mm256_blendv_ps(r_s, r_q, r_n);
     r_out = r;
+}
+
+// sum_entry_step_1(s, x) -> t
+KAIRN_GEN_FORCEINLINE void sum_entry_step_1(__m256d s, __m256d x, __m256d& t_out) noexcept {
+    const __m256d g = _mm256_add_pd(x, _mm256_setzero_pd());
+    const __m256d t = _mm256_add_pd(s, g);
+    t_out = t;
+}
+KAIRN_GEN_FORCEINLINE void sum_entry_step_1(__m256 s, __m256 x, __m256& t_out) noexcept {
+    const __m256 g = _mm256_add_ps(x, _mm256_setzero_ps());
+    const __m256 t = _mm256_add_ps(s, g);
+    t_out = t;
 }
 
 // two_prod_dekker(a, b) -> r = (p, e)
@@ -2390,6 +2541,90 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(__m256 cx0, __m256 cx1, __m256 rx, __
     rw_out = rw;
 }
 
+// dot_step_2(s = (s0, s1), x = (x0, x1), y = (y0, y1)) -> t = (t0, t1)
+KAIRN_GEN_FORCEINLINE void dot_step_2(__m256d s0, __m256d s1, __m256d x0, __m256d x1, __m256d y0, __m256d y1, __m256d& t0_out, __m256d& t1_out) noexcept {
+    // (p0, p1) = mul_2_2(x0, x1, y0, y1)
+    // (p0_ch, p0_cl1) = two_prod(x0, y0)
+    const __m256d p0_ch = _mm256_fmadd_pd(x0, y0, _mm256_setzero_pd());
+    const __m256d p0_cl1 = _mm256_fmsub_pd(x0, y0, p0_ch);
+    const __m256d p0_tl0 = _mm256_fmadd_pd(x1, y1, _mm256_setzero_pd());
+    const __m256d p0_tl1 = _mm256_fmadd_pd(x0, y1, p0_tl0);
+    const __m256d p0_cl2 = _mm256_fmadd_pd(x1, y0, p0_tl1);
+    const __m256d p0_cl3 = _mm256_add_pd(p0_cl1, p0_cl2);
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const __m256d p0 = _mm256_add_pd(p0_ch, p0_cl3);
+    const __m256d p0_z = _mm256_sub_pd(p0, p0_ch);
+    const __m256d p1 = _mm256_sub_pd(p0_cl3, p0_z);
+    // (t0, t1) = add_2_2(s0, s1, p0, p1)
+    // (t0_sh, t0_sl) = two_sum(s0, p0)
+    const __m256d t0_sh = _mm256_add_pd(s0, p0);
+    const __m256d t0_sh_bb = _mm256_sub_pd(t0_sh, s0);
+    const __m256d t0_sh_t0 = _mm256_sub_pd(t0_sh, t0_sh_bb);
+    const __m256d t0_sh_t1 = _mm256_sub_pd(s0, t0_sh_t0);
+    const __m256d t0_sh_t2 = _mm256_sub_pd(p0, t0_sh_bb);
+    const __m256d t0_sl = _mm256_add_pd(t0_sh_t1, t0_sh_t2);
+    // (t0_th, t0_tl) = two_sum(s1, p1)
+    const __m256d t0_th = _mm256_add_pd(s1, p1);
+    const __m256d t0_th_bb = _mm256_sub_pd(t0_th, s1);
+    const __m256d t0_th_t0 = _mm256_sub_pd(t0_th, t0_th_bb);
+    const __m256d t0_th_t1 = _mm256_sub_pd(s1, t0_th_t0);
+    const __m256d t0_th_t2 = _mm256_sub_pd(p1, t0_th_bb);
+    const __m256d t0_tl = _mm256_add_pd(t0_th_t1, t0_th_t2);
+    const __m256d t0_c = _mm256_add_pd(t0_sl, t0_th);
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const __m256d t0_vh = _mm256_add_pd(t0_sh, t0_c);
+    const __m256d t0_vh_z = _mm256_sub_pd(t0_vh, t0_sh);
+    const __m256d t0_vl = _mm256_sub_pd(t0_c, t0_vh_z);
+    const __m256d t0_w = _mm256_add_pd(t0_tl, t0_vl);
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const __m256d t0 = _mm256_add_pd(t0_vh, t0_w);
+    const __m256d t0_z = _mm256_sub_pd(t0, t0_vh);
+    const __m256d t1 = _mm256_sub_pd(t0_w, t0_z);
+    t0_out = t0;
+    t1_out = t1;
+}
+KAIRN_GEN_FORCEINLINE void dot_step_2(__m256 s0, __m256 s1, __m256 x0, __m256 x1, __m256 y0, __m256 y1, __m256& t0_out, __m256& t1_out) noexcept {
+    // (p0, p1) = mul_2_2(x0, x1, y0, y1)
+    // (p0_ch, p0_cl1) = two_prod(x0, y0)
+    const __m256 p0_ch = _mm256_fmadd_ps(x0, y0, _mm256_setzero_ps());
+    const __m256 p0_cl1 = _mm256_fmsub_ps(x0, y0, p0_ch);
+    const __m256 p0_tl0 = _mm256_fmadd_ps(x1, y1, _mm256_setzero_ps());
+    const __m256 p0_tl1 = _mm256_fmadd_ps(x0, y1, p0_tl0);
+    const __m256 p0_cl2 = _mm256_fmadd_ps(x1, y0, p0_tl1);
+    const __m256 p0_cl3 = _mm256_add_ps(p0_cl1, p0_cl2);
+    // (p0, p1) = fast_two_sum(p0_ch, p0_cl3)
+    const __m256 p0 = _mm256_add_ps(p0_ch, p0_cl3);
+    const __m256 p0_z = _mm256_sub_ps(p0, p0_ch);
+    const __m256 p1 = _mm256_sub_ps(p0_cl3, p0_z);
+    // (t0, t1) = add_2_2(s0, s1, p0, p1)
+    // (t0_sh, t0_sl) = two_sum(s0, p0)
+    const __m256 t0_sh = _mm256_add_ps(s0, p0);
+    const __m256 t0_sh_bb = _mm256_sub_ps(t0_sh, s0);
+    const __m256 t0_sh_t0 = _mm256_sub_ps(t0_sh, t0_sh_bb);
+    const __m256 t0_sh_t1 = _mm256_sub_ps(s0, t0_sh_t0);
+    const __m256 t0_sh_t2 = _mm256_sub_ps(p0, t0_sh_bb);
+    const __m256 t0_sl = _mm256_add_ps(t0_sh_t1, t0_sh_t2);
+    // (t0_th, t0_tl) = two_sum(s1, p1)
+    const __m256 t0_th = _mm256_add_ps(s1, p1);
+    const __m256 t0_th_bb = _mm256_sub_ps(t0_th, s1);
+    const __m256 t0_th_t0 = _mm256_sub_ps(t0_th, t0_th_bb);
+    const __m256 t0_th_t1 = _mm256_sub_ps(s1, t0_th_t0);
+    const __m256 t0_th_t2 = _mm256_sub_ps(p1, t0_th_bb);
+    const __m256 t0_tl = _mm256_add_ps(t0_th_t1, t0_th_t2);
+    const __m256 t0_c = _mm256_add_ps(t0_sl, t0_th);
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const __m256 t0_vh = _mm256_add_ps(t0_sh, t0_c);
+    const __m256 t0_vh_z = _mm256_sub_ps(t0_vh, t0_sh);
+    const __m256 t0_vl = _mm256_sub_ps(t0_c, t0_vh_z);
+    const __m256 t0_w = _mm256_add_ps(t0_tl, t0_vl);
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const __m256 t0 = _mm256_add_ps(t0_vh, t0_w);
+    const __m256 t0_z = _mm256_sub_ps(t0, t0_vh);
+    const __m256 t1 = _mm256_sub_ps(t0_w, t0_z);
+    t0_out = t0;
+    t1_out = t1;
+}
+
 // eq_2_1(x = (x0, x1), a) -> mask m
 KAIRN_GEN_FORCEINLINE void eq_2_1(__m256d x0, __m256d x1, __m256d a, __m256d& m_out) noexcept {
     const __m256d h = _mm256_cmp_pd(x0, a, _CMP_EQ_OQ);
@@ -2416,6 +2651,26 @@ KAIRN_GEN_FORCEINLINE void eq_2_2(__m256 x0, __m256 x1, __m256 y0, __m256 y1, __
     const __m256 l = _mm256_cmp_ps(x1, y1, _CMP_EQ_OQ);
     const __m256 m = _mm256_and_ps(h, l);
     m_out = m;
+}
+
+// fold_finish_2(s = (s0, s1)) -> r = (r0, r1), mask flag
+KAIRN_GEN_FORCEINLINE void fold_finish_2(__m256d s0, __m256d s1, __m256d& r0_out, __m256d& r1_out, __m256d& flag_out) noexcept {
+    const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), s0);
+    const __m256d flag = _mm256_cmp_pd(a, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
+    const __m256d r0 = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), s0, flag);
+    const __m256d r1 = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), s1, flag);
+    r0_out = r0;
+    r1_out = r1;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE void fold_finish_2(__m256 s0, __m256 s1, __m256& r0_out, __m256& r1_out, __m256& flag_out) noexcept {
+    const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), s0);
+    const __m256 flag = _mm256_cmp_ps(a, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
+    const __m256 r0 = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), s0, flag);
+    const __m256 r1 = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), s1, flag);
+    r0_out = r0;
+    r1_out = r1;
+    flag_out = flag;
 }
 
 // le_1_2(a, y = (y0, y1)) -> mask m
@@ -3046,6 +3301,112 @@ KAIRN_GEN_FORCEINLINE void sub_2_2_full(__m256 x0, __m256 x1, __m256 y0, __m256 
     w1_out = w1;
 }
 
+// sum_entry_step_2(s = (s0, s1), x = (x0, x1)) -> t = (t0, t1)
+KAIRN_GEN_FORCEINLINE void sum_entry_step_2(__m256d s0, __m256d s1, __m256d x0, __m256d x1, __m256d& t0_out, __m256d& t1_out) noexcept {
+    const __m256d g0 = _mm256_add_pd(x0, _mm256_setzero_pd());
+    const __m256d g1 = _mm256_add_pd(x1, _mm256_setzero_pd());
+    // (t0, t1) = add_2_2(s0, s1, g0, g1)
+    // (t0_sh, t0_sl) = two_sum(s0, g0)
+    const __m256d t0_sh = _mm256_add_pd(s0, g0);
+    const __m256d t0_sh_bb = _mm256_sub_pd(t0_sh, s0);
+    const __m256d t0_sh_t0 = _mm256_sub_pd(t0_sh, t0_sh_bb);
+    const __m256d t0_sh_t1 = _mm256_sub_pd(s0, t0_sh_t0);
+    const __m256d t0_sh_t2 = _mm256_sub_pd(g0, t0_sh_bb);
+    const __m256d t0_sl = _mm256_add_pd(t0_sh_t1, t0_sh_t2);
+    // (t0_th, t0_tl) = two_sum(s1, g1)
+    const __m256d t0_th = _mm256_add_pd(s1, g1);
+    const __m256d t0_th_bb = _mm256_sub_pd(t0_th, s1);
+    const __m256d t0_th_t0 = _mm256_sub_pd(t0_th, t0_th_bb);
+    const __m256d t0_th_t1 = _mm256_sub_pd(s1, t0_th_t0);
+    const __m256d t0_th_t2 = _mm256_sub_pd(g1, t0_th_bb);
+    const __m256d t0_tl = _mm256_add_pd(t0_th_t1, t0_th_t2);
+    const __m256d t0_c = _mm256_add_pd(t0_sl, t0_th);
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const __m256d t0_vh = _mm256_add_pd(t0_sh, t0_c);
+    const __m256d t0_vh_z = _mm256_sub_pd(t0_vh, t0_sh);
+    const __m256d t0_vl = _mm256_sub_pd(t0_c, t0_vh_z);
+    const __m256d t0_w = _mm256_add_pd(t0_tl, t0_vl);
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const __m256d t0 = _mm256_add_pd(t0_vh, t0_w);
+    const __m256d t0_z = _mm256_sub_pd(t0, t0_vh);
+    const __m256d t1 = _mm256_sub_pd(t0_w, t0_z);
+    t0_out = t0;
+    t1_out = t1;
+}
+KAIRN_GEN_FORCEINLINE void sum_entry_step_2(__m256 s0, __m256 s1, __m256 x0, __m256 x1, __m256& t0_out, __m256& t1_out) noexcept {
+    const __m256 g0 = _mm256_add_ps(x0, _mm256_setzero_ps());
+    const __m256 g1 = _mm256_add_ps(x1, _mm256_setzero_ps());
+    // (t0, t1) = add_2_2(s0, s1, g0, g1)
+    // (t0_sh, t0_sl) = two_sum(s0, g0)
+    const __m256 t0_sh = _mm256_add_ps(s0, g0);
+    const __m256 t0_sh_bb = _mm256_sub_ps(t0_sh, s0);
+    const __m256 t0_sh_t0 = _mm256_sub_ps(t0_sh, t0_sh_bb);
+    const __m256 t0_sh_t1 = _mm256_sub_ps(s0, t0_sh_t0);
+    const __m256 t0_sh_t2 = _mm256_sub_ps(g0, t0_sh_bb);
+    const __m256 t0_sl = _mm256_add_ps(t0_sh_t1, t0_sh_t2);
+    // (t0_th, t0_tl) = two_sum(s1, g1)
+    const __m256 t0_th = _mm256_add_ps(s1, g1);
+    const __m256 t0_th_bb = _mm256_sub_ps(t0_th, s1);
+    const __m256 t0_th_t0 = _mm256_sub_ps(t0_th, t0_th_bb);
+    const __m256 t0_th_t1 = _mm256_sub_ps(s1, t0_th_t0);
+    const __m256 t0_th_t2 = _mm256_sub_ps(g1, t0_th_bb);
+    const __m256 t0_tl = _mm256_add_ps(t0_th_t1, t0_th_t2);
+    const __m256 t0_c = _mm256_add_ps(t0_sl, t0_th);
+    // (t0_vh, t0_vl) = fast_two_sum(t0_sh, t0_c)
+    const __m256 t0_vh = _mm256_add_ps(t0_sh, t0_c);
+    const __m256 t0_vh_z = _mm256_sub_ps(t0_vh, t0_sh);
+    const __m256 t0_vl = _mm256_sub_ps(t0_c, t0_vh_z);
+    const __m256 t0_w = _mm256_add_ps(t0_tl, t0_vl);
+    // (t0, t1) = fast_two_sum(t0_vh, t0_w)
+    const __m256 t0 = _mm256_add_ps(t0_vh, t0_w);
+    const __m256 t0_z = _mm256_sub_ps(t0, t0_vh);
+    const __m256 t1 = _mm256_sub_ps(t0_w, t0_z);
+    t0_out = t0;
+    t1_out = t1;
+}
+
+// sum_fast_entry_step_2(s = (s0, s1), x = (x0, x1)) -> t = (t0, t1)
+KAIRN_GEN_FORCEINLINE void sum_fast_entry_step_2(__m256d s0, __m256d s1, __m256d x0, __m256d x1, __m256d& t0_out, __m256d& t1_out) noexcept {
+    const __m256d g0 = _mm256_add_pd(x0, _mm256_setzero_pd());
+    const __m256d g1 = _mm256_add_pd(x1, _mm256_setzero_pd());
+    // (t0, t1) = add_fast_2_2(s0, s1, g0, g1)
+    // (t0_sh, t0_sl) = two_sum(s0, g0)
+    const __m256d t0_sh = _mm256_add_pd(s0, g0);
+    const __m256d t0_sh_bb = _mm256_sub_pd(t0_sh, s0);
+    const __m256d t0_sh_t0 = _mm256_sub_pd(t0_sh, t0_sh_bb);
+    const __m256d t0_sh_t1 = _mm256_sub_pd(s0, t0_sh_t0);
+    const __m256d t0_sh_t2 = _mm256_sub_pd(g0, t0_sh_bb);
+    const __m256d t0_sl = _mm256_add_pd(t0_sh_t1, t0_sh_t2);
+    const __m256d t0_v = _mm256_add_pd(s1, g1);
+    const __m256d t0_w = _mm256_add_pd(t0_sl, t0_v);
+    // (t0, t1) = fast_two_sum(t0_sh, t0_w)
+    const __m256d t0 = _mm256_add_pd(t0_sh, t0_w);
+    const __m256d t0_z = _mm256_sub_pd(t0, t0_sh);
+    const __m256d t1 = _mm256_sub_pd(t0_w, t0_z);
+    t0_out = t0;
+    t1_out = t1;
+}
+KAIRN_GEN_FORCEINLINE void sum_fast_entry_step_2(__m256 s0, __m256 s1, __m256 x0, __m256 x1, __m256& t0_out, __m256& t1_out) noexcept {
+    const __m256 g0 = _mm256_add_ps(x0, _mm256_setzero_ps());
+    const __m256 g1 = _mm256_add_ps(x1, _mm256_setzero_ps());
+    // (t0, t1) = add_fast_2_2(s0, s1, g0, g1)
+    // (t0_sh, t0_sl) = two_sum(s0, g0)
+    const __m256 t0_sh = _mm256_add_ps(s0, g0);
+    const __m256 t0_sh_bb = _mm256_sub_ps(t0_sh, s0);
+    const __m256 t0_sh_t0 = _mm256_sub_ps(t0_sh, t0_sh_bb);
+    const __m256 t0_sh_t1 = _mm256_sub_ps(s0, t0_sh_t0);
+    const __m256 t0_sh_t2 = _mm256_sub_ps(g0, t0_sh_bb);
+    const __m256 t0_sl = _mm256_add_ps(t0_sh_t1, t0_sh_t2);
+    const __m256 t0_v = _mm256_add_ps(s1, g1);
+    const __m256 t0_w = _mm256_add_ps(t0_sl, t0_v);
+    // (t0, t1) = fast_two_sum(t0_sh, t0_w)
+    const __m256 t0 = _mm256_add_ps(t0_sh, t0_w);
+    const __m256 t0_z = _mm256_sub_ps(t0, t0_sh);
+    const __m256 t1 = _mm256_sub_ps(t0_w, t0_z);
+    t0_out = t0;
+    t1_out = t1;
+}
+
 // to_down_2(x = (x0, x1)) -> t
 KAIRN_GEN_FORCEINLINE void to_down_2(__m256d x0, __m256d x1, __m256d& t_out) noexcept {
     const __m256d m = _mm256_cmp_pd(x1, _mm256_setzero_pd(), _CMP_LT_OQ);
@@ -3068,6 +3429,1292 @@ KAIRN_GEN_FORCEINLINE void to_nearest_2(__m256d x0, [[maybe_unused]] __m256d x1,
 KAIRN_GEN_FORCEINLINE void to_nearest_2(__m256 x0, [[maybe_unused]] __m256 x1, __m256& t_out) noexcept {
     const __m256 t = x0;
     t_out = t;
+}
+
+// --- Folds: the lane order with the lanes of a register (docs/developer/architecture.md,
+// "Folds"): 4 for double, 8 for float. The packed step in the loop, the scalar combination, step and
+// finish of scalar.hpp after it, inlined in the same way: values step_V, comb_V, fin_V.
+
+// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+inline void dot_1_packed(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    __m256d s_lane_ = _mm256_setzero_pd();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const __m256d x = _mm256_loadu_pd(x_in + i_);
+        const __m256d y = _mm256_loadu_pd(y_in + i_);
+        // (step_t) = dot_step_1(s_lane_, x, y)
+        const __m256d step_t = _mm256_fmadd_pd(x, y, s_lane_);
+        s_lane_ = step_t;
+    }
+    double s_lanes_[4] = {};
+    _mm256_storeu_pd(s_lanes_, s_lane_);
+    double s = s_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const double s_next_ = s_lanes_[j_];
+        // (comb_s) = add_1_1(s, s_next_)
+        const double comb_s = s + s_next_;
+        s = comb_s;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        const double y = y_in[i_];
+        // (step_t) = dot_step_1(s, x, y)
+        const double step_t = fma_rn(x, y, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void dot_1_packed(const float* x_in, const float* y_in, std::size_t n, float& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 8;
+    __m256 s_lane_ = _mm256_setzero_ps();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 8) {
+        const __m256 x = _mm256_loadu_ps(x_in + i_);
+        const __m256 y = _mm256_loadu_ps(y_in + i_);
+        // (step_t) = dot_step_1(s_lane_, x, y)
+        const __m256 step_t = _mm256_fmadd_ps(x, y, s_lane_);
+        s_lane_ = step_t;
+    }
+    float s_lanes_[8] = {};
+    _mm256_storeu_ps(s_lanes_, s_lane_);
+    float s = s_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 8; ++j_) {
+        const float s_next_ = s_lanes_[j_];
+        // (comb_s) = add_1_1(s, s_next_)
+        const float comb_s = s + s_next_;
+        s = comb_s;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        const float y = y_in[i_];
+        // (step_t) = dot_step_1(s, x, y)
+        const float step_t = fma_rn(x, y, s);
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+inline void dot_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    __m256d s0_lane_ = _mm256_setzero_pd();
+    __m256d s1_lane_ = _mm256_setzero_pd();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const __m256d x0 = _mm256_loadu_pd(x0_in + i_);
+        const __m256d x1 = _mm256_loadu_pd(x1_in + i_);
+        const __m256d y0 = _mm256_loadu_pd(y0_in + i_);
+        const __m256d y1 = _mm256_loadu_pd(y1_in + i_);
+        // (step_t0, step_t1) = dot_step_2(s0_lane_, s1_lane_, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+        const __m256d step_p0_ch = _mm256_fmadd_pd(x0, y0, _mm256_setzero_pd());
+        const __m256d step_p0_cl1 = _mm256_fmsub_pd(x0, y0, step_p0_ch);
+        const __m256d step_p0_tl0 = _mm256_fmadd_pd(x1, y1, _mm256_setzero_pd());
+        const __m256d step_p0_tl1 = _mm256_fmadd_pd(x0, y1, step_p0_tl0);
+        const __m256d step_p0_cl2 = _mm256_fmadd_pd(x1, y0, step_p0_tl1);
+        const __m256d step_p0_cl3 = _mm256_add_pd(step_p0_cl1, step_p0_cl2);
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const __m256d step_p0 = _mm256_add_pd(step_p0_ch, step_p0_cl3);
+        const __m256d step_p0_z = _mm256_sub_pd(step_p0, step_p0_ch);
+        const __m256d step_p1 = _mm256_sub_pd(step_p0_cl3, step_p0_z);
+        // (step_t0, step_t1) = add_2_2(s0_lane_, s1_lane_, step_p0, step_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_p0)
+        const __m256d step_t0_sh = _mm256_add_pd(s0_lane_, step_p0);
+        const __m256d step_t0_sh_bb = _mm256_sub_pd(step_t0_sh, s0_lane_);
+        const __m256d step_t0_sh_t0 = _mm256_sub_pd(step_t0_sh, step_t0_sh_bb);
+        const __m256d step_t0_sh_t1 = _mm256_sub_pd(s0_lane_, step_t0_sh_t0);
+        const __m256d step_t0_sh_t2 = _mm256_sub_pd(step_p0, step_t0_sh_bb);
+        const __m256d step_t0_sl = _mm256_add_pd(step_t0_sh_t1, step_t0_sh_t2);
+        // (step_t0_th, step_t0_tl) = two_sum(s1_lane_, step_p1)
+        const __m256d step_t0_th = _mm256_add_pd(s1_lane_, step_p1);
+        const __m256d step_t0_th_bb = _mm256_sub_pd(step_t0_th, s1_lane_);
+        const __m256d step_t0_th_t0 = _mm256_sub_pd(step_t0_th, step_t0_th_bb);
+        const __m256d step_t0_th_t1 = _mm256_sub_pd(s1_lane_, step_t0_th_t0);
+        const __m256d step_t0_th_t2 = _mm256_sub_pd(step_p1, step_t0_th_bb);
+        const __m256d step_t0_tl = _mm256_add_pd(step_t0_th_t1, step_t0_th_t2);
+        const __m256d step_t0_c = _mm256_add_pd(step_t0_sl, step_t0_th);
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const __m256d step_t0_vh = _mm256_add_pd(step_t0_sh, step_t0_c);
+        const __m256d step_t0_vh_z = _mm256_sub_pd(step_t0_vh, step_t0_sh);
+        const __m256d step_t0_vl = _mm256_sub_pd(step_t0_c, step_t0_vh_z);
+        const __m256d step_t0_w = _mm256_add_pd(step_t0_tl, step_t0_vl);
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const __m256d step_t0 = _mm256_add_pd(step_t0_vh, step_t0_w);
+        const __m256d step_t0_z = _mm256_sub_pd(step_t0, step_t0_vh);
+        const __m256d step_t1 = _mm256_sub_pd(step_t0_w, step_t0_z);
+        s0_lane_ = step_t0;
+        s1_lane_ = step_t1;
+    }
+    double s0_lanes_[4] = {};
+    double s1_lanes_[4] = {};
+    _mm256_storeu_pd(s0_lanes_, s0_lane_);
+    _mm256_storeu_pd(s1_lanes_, s1_lane_);
+    double s0 = s0_lanes_[0];
+    double s1 = s1_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const double s0_next_ = s0_lanes_[j_];
+        const double s1_next_ = s1_lanes_[j_];
+        // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_next_, s1_next_)
+        // (comb_sh, comb_sl) = two_sum(s0, s0_next_)
+        const double comb_sh = s0 + s0_next_;
+        const double comb_sh_bb = comb_sh - s0;
+        const double comb_sh_t0 = comb_sh - comb_sh_bb;
+        const double comb_sh_t1 = s0 - comb_sh_t0;
+        const double comb_sh_t2 = s0_next_ - comb_sh_bb;
+        const double comb_sl = comb_sh_t1 + comb_sh_t2;
+        // (comb_th, comb_tl) = two_sum(s1, s1_next_)
+        const double comb_th = s1 + s1_next_;
+        const double comb_th_bb = comb_th - s1;
+        const double comb_th_t0 = comb_th - comb_th_bb;
+        const double comb_th_t1 = s1 - comb_th_t0;
+        const double comb_th_t2 = s1_next_ - comb_th_bb;
+        const double comb_tl = comb_th_t1 + comb_th_t2;
+        const double comb_c = comb_sl + comb_th;
+        // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+        const double comb_vh = comb_sh + comb_c;
+        const double comb_vh_z = comb_vh - comb_sh;
+        const double comb_vl = comb_c - comb_vh_z;
+        const double comb_w = comb_tl + comb_vl;
+        // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+        const double comb_z0 = comb_vh + comb_w;
+        const double comb_z0_z = comb_z0 - comb_vh;
+        const double comb_z1 = comb_w - comb_z0_z;
+        s0 = comb_z0;
+        s1 = comb_z1;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        const double y0 = y0_in[i_];
+        const double y1 = y1_in[i_];
+        // (step_t0, step_t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+        const double step_p0_ch = fma_rn(x0, y0, 0.0);
+        const double step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+        const double step_p0_tl0 = fma_rn(x1, y1, 0.0);
+        const double step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+        const double step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+        const double step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const double step_p0 = step_p0_ch + step_p0_cl3;
+        const double step_p0_z = step_p0 - step_p0_ch;
+        const double step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_p0, step_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_p0)
+        const double step_t0_sh = s0 + step_p0;
+        const double step_t0_sh_bb = step_t0_sh - s0;
+        const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const double step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+        const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_p1)
+        const double step_t0_th = s1 + step_p1;
+        const double step_t0_th_bb = step_t0_th - s1;
+        const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const double step_t0_th_t1 = s1 - step_t0_th_t0;
+        const double step_t0_th_t2 = step_p1 - step_t0_th_bb;
+        const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const double step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const double step_t0_vh = step_t0_sh + step_t0_c;
+        const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const double step_t0_vl = step_t0_c - step_t0_vh_z;
+        const double step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const double step_t0 = step_t0_vh + step_t0_w;
+        const double step_t0_z = step_t0 - step_t0_vh;
+        const double step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void dot_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 8;
+    __m256 s0_lane_ = _mm256_setzero_ps();
+    __m256 s1_lane_ = _mm256_setzero_ps();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 8) {
+        const __m256 x0 = _mm256_loadu_ps(x0_in + i_);
+        const __m256 x1 = _mm256_loadu_ps(x1_in + i_);
+        const __m256 y0 = _mm256_loadu_ps(y0_in + i_);
+        const __m256 y1 = _mm256_loadu_ps(y1_in + i_);
+        // (step_t0, step_t1) = dot_step_2(s0_lane_, s1_lane_, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+        const __m256 step_p0_ch = _mm256_fmadd_ps(x0, y0, _mm256_setzero_ps());
+        const __m256 step_p0_cl1 = _mm256_fmsub_ps(x0, y0, step_p0_ch);
+        const __m256 step_p0_tl0 = _mm256_fmadd_ps(x1, y1, _mm256_setzero_ps());
+        const __m256 step_p0_tl1 = _mm256_fmadd_ps(x0, y1, step_p0_tl0);
+        const __m256 step_p0_cl2 = _mm256_fmadd_ps(x1, y0, step_p0_tl1);
+        const __m256 step_p0_cl3 = _mm256_add_ps(step_p0_cl1, step_p0_cl2);
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const __m256 step_p0 = _mm256_add_ps(step_p0_ch, step_p0_cl3);
+        const __m256 step_p0_z = _mm256_sub_ps(step_p0, step_p0_ch);
+        const __m256 step_p1 = _mm256_sub_ps(step_p0_cl3, step_p0_z);
+        // (step_t0, step_t1) = add_2_2(s0_lane_, s1_lane_, step_p0, step_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_p0)
+        const __m256 step_t0_sh = _mm256_add_ps(s0_lane_, step_p0);
+        const __m256 step_t0_sh_bb = _mm256_sub_ps(step_t0_sh, s0_lane_);
+        const __m256 step_t0_sh_t0 = _mm256_sub_ps(step_t0_sh, step_t0_sh_bb);
+        const __m256 step_t0_sh_t1 = _mm256_sub_ps(s0_lane_, step_t0_sh_t0);
+        const __m256 step_t0_sh_t2 = _mm256_sub_ps(step_p0, step_t0_sh_bb);
+        const __m256 step_t0_sl = _mm256_add_ps(step_t0_sh_t1, step_t0_sh_t2);
+        // (step_t0_th, step_t0_tl) = two_sum(s1_lane_, step_p1)
+        const __m256 step_t0_th = _mm256_add_ps(s1_lane_, step_p1);
+        const __m256 step_t0_th_bb = _mm256_sub_ps(step_t0_th, s1_lane_);
+        const __m256 step_t0_th_t0 = _mm256_sub_ps(step_t0_th, step_t0_th_bb);
+        const __m256 step_t0_th_t1 = _mm256_sub_ps(s1_lane_, step_t0_th_t0);
+        const __m256 step_t0_th_t2 = _mm256_sub_ps(step_p1, step_t0_th_bb);
+        const __m256 step_t0_tl = _mm256_add_ps(step_t0_th_t1, step_t0_th_t2);
+        const __m256 step_t0_c = _mm256_add_ps(step_t0_sl, step_t0_th);
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const __m256 step_t0_vh = _mm256_add_ps(step_t0_sh, step_t0_c);
+        const __m256 step_t0_vh_z = _mm256_sub_ps(step_t0_vh, step_t0_sh);
+        const __m256 step_t0_vl = _mm256_sub_ps(step_t0_c, step_t0_vh_z);
+        const __m256 step_t0_w = _mm256_add_ps(step_t0_tl, step_t0_vl);
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const __m256 step_t0 = _mm256_add_ps(step_t0_vh, step_t0_w);
+        const __m256 step_t0_z = _mm256_sub_ps(step_t0, step_t0_vh);
+        const __m256 step_t1 = _mm256_sub_ps(step_t0_w, step_t0_z);
+        s0_lane_ = step_t0;
+        s1_lane_ = step_t1;
+    }
+    float s0_lanes_[8] = {};
+    float s1_lanes_[8] = {};
+    _mm256_storeu_ps(s0_lanes_, s0_lane_);
+    _mm256_storeu_ps(s1_lanes_, s1_lane_);
+    float s0 = s0_lanes_[0];
+    float s1 = s1_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 8; ++j_) {
+        const float s0_next_ = s0_lanes_[j_];
+        const float s1_next_ = s1_lanes_[j_];
+        // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_next_, s1_next_)
+        // (comb_sh, comb_sl) = two_sum(s0, s0_next_)
+        const float comb_sh = s0 + s0_next_;
+        const float comb_sh_bb = comb_sh - s0;
+        const float comb_sh_t0 = comb_sh - comb_sh_bb;
+        const float comb_sh_t1 = s0 - comb_sh_t0;
+        const float comb_sh_t2 = s0_next_ - comb_sh_bb;
+        const float comb_sl = comb_sh_t1 + comb_sh_t2;
+        // (comb_th, comb_tl) = two_sum(s1, s1_next_)
+        const float comb_th = s1 + s1_next_;
+        const float comb_th_bb = comb_th - s1;
+        const float comb_th_t0 = comb_th - comb_th_bb;
+        const float comb_th_t1 = s1 - comb_th_t0;
+        const float comb_th_t2 = s1_next_ - comb_th_bb;
+        const float comb_tl = comb_th_t1 + comb_th_t2;
+        const float comb_c = comb_sl + comb_th;
+        // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+        const float comb_vh = comb_sh + comb_c;
+        const float comb_vh_z = comb_vh - comb_sh;
+        const float comb_vl = comb_c - comb_vh_z;
+        const float comb_w = comb_tl + comb_vl;
+        // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+        const float comb_z0 = comb_vh + comb_w;
+        const float comb_z0_z = comb_z0 - comb_vh;
+        const float comb_z1 = comb_w - comb_z0_z;
+        s0 = comb_z0;
+        s1 = comb_z1;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        const float y0 = y0_in[i_];
+        const float y1 = y1_in[i_];
+        // (step_t0, step_t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
+        // (step_p0, step_p1) = mul_2_2(x0, x1, y0, y1)
+        // (step_p0_ch, step_p0_cl1) = two_prod(x0, y0)
+        const float step_p0_ch = fma_rn(x0, y0, 0.0f);
+        const float step_p0_cl1 = fma_rn(x0, y0, -step_p0_ch);
+        const float step_p0_tl0 = fma_rn(x1, y1, 0.0f);
+        const float step_p0_tl1 = fma_rn(x0, y1, step_p0_tl0);
+        const float step_p0_cl2 = fma_rn(x1, y0, step_p0_tl1);
+        const float step_p0_cl3 = step_p0_cl1 + step_p0_cl2;
+        // (step_p0, step_p1) = fast_two_sum(step_p0_ch, step_p0_cl3)
+        const float step_p0 = step_p0_ch + step_p0_cl3;
+        const float step_p0_z = step_p0 - step_p0_ch;
+        const float step_p1 = step_p0_cl3 - step_p0_z;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_p0, step_p1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_p0)
+        const float step_t0_sh = s0 + step_p0;
+        const float step_t0_sh_bb = step_t0_sh - s0;
+        const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const float step_t0_sh_t2 = step_p0 - step_t0_sh_bb;
+        const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_p1)
+        const float step_t0_th = s1 + step_p1;
+        const float step_t0_th_bb = step_t0_th - s1;
+        const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const float step_t0_th_t1 = s1 - step_t0_th_t0;
+        const float step_t0_th_t2 = step_p1 - step_t0_th_bb;
+        const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const float step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const float step_t0_vh = step_t0_sh + step_t0_c;
+        const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const float step_t0_vl = step_t0_c - step_t0_vh_z;
+        const float step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const float step_t0 = step_t0_vh + step_t0_w;
+        const float step_t0_z = step_t0 - step_t0_vh;
+        const float step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+inline void sum_1_packed(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    __m256d s_lane_ = _mm256_setzero_pd();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const __m256d x = _mm256_loadu_pd(x_in + i_);
+        // (step_s) = add_1_1(s_lane_, x)
+        const __m256d step_s = _mm256_add_pd(s_lane_, x);
+        s_lane_ = step_s;
+    }
+    double s_lanes_[4] = {};
+    _mm256_storeu_pd(s_lanes_, s_lane_);
+    double s = s_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const double s_next_ = s_lanes_[j_];
+        // (comb_s) = add_1_1(s, s_next_)
+        const double comb_s = s + s_next_;
+        s = comb_s;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_s) = add_1_1(s, x)
+        const double step_s = s + x;
+        s = step_s;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void sum_1_packed(const float* x_in, std::size_t n, float& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 8;
+    __m256 s_lane_ = _mm256_setzero_ps();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 8) {
+        const __m256 x = _mm256_loadu_ps(x_in + i_);
+        // (step_s) = add_1_1(s_lane_, x)
+        const __m256 step_s = _mm256_add_ps(s_lane_, x);
+        s_lane_ = step_s;
+    }
+    float s_lanes_[8] = {};
+    _mm256_storeu_ps(s_lanes_, s_lane_);
+    float s = s_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 8; ++j_) {
+        const float s_next_ = s_lanes_[j_];
+        // (comb_s) = add_1_1(s, s_next_)
+        const float comb_s = s + s_next_;
+        s = comb_s;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_s) = add_1_1(s, x)
+        const float step_s = s + x;
+        s = step_s;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+inline void sum_1_entry_packed(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    __m256d s_lane_ = _mm256_setzero_pd();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const __m256d x = _mm256_loadu_pd(x_in + i_);
+        // (step_t) = sum_entry_step_1(s_lane_, x)
+        const __m256d step_g = _mm256_add_pd(x, _mm256_setzero_pd());
+        const __m256d step_t = _mm256_add_pd(s_lane_, step_g);
+        s_lane_ = step_t;
+    }
+    double s_lanes_[4] = {};
+    _mm256_storeu_pd(s_lanes_, s_lane_);
+    double s = s_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const double s_next_ = s_lanes_[j_];
+        // (comb_s) = add_1_1(s, s_next_)
+        const double comb_s = s + s_next_;
+        s = comb_s;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_t) = sum_entry_step_1(s, x)
+        const double step_g = x + 0.0;
+        const double step_t = s + step_g;
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const double fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r = fin_flag ? s : std::numeric_limits<double>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+inline void sum_1_entry_packed(const float* x_in, std::size_t n, float& r_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 8;
+    __m256 s_lane_ = _mm256_setzero_ps();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 8) {
+        const __m256 x = _mm256_loadu_ps(x_in + i_);
+        // (step_t) = sum_entry_step_1(s_lane_, x)
+        const __m256 step_g = _mm256_add_ps(x, _mm256_setzero_ps());
+        const __m256 step_t = _mm256_add_ps(s_lane_, step_g);
+        s_lane_ = step_t;
+    }
+    float s_lanes_[8] = {};
+    _mm256_storeu_ps(s_lanes_, s_lane_);
+    float s = s_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 8; ++j_) {
+        const float s_next_ = s_lanes_[j_];
+        // (comb_s) = add_1_1(s, s_next_)
+        const float comb_s = s + s_next_;
+        s = comb_s;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_t) = sum_entry_step_1(s, x)
+        const float step_g = x + 0.0f;
+        const float step_t = s + step_g;
+        s = step_t;
+    }
+    // (fin_r, fin_flag) = fold_finish_1(s)
+    const float fin_a = abs_bits(s);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r = fin_flag ? s : std::numeric_limits<float>::quiet_NaN();
+    r_out = fin_r;
+    flag_out = fin_flag;
+}
+
+// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+inline void sum_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    __m256d s0_lane_ = _mm256_setzero_pd();
+    __m256d s1_lane_ = _mm256_setzero_pd();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const __m256d x0 = _mm256_loadu_pd(x0_in + i_);
+        const __m256d x1 = _mm256_loadu_pd(x1_in + i_);
+        // (step_z0, step_z1) = add_2_2(s0_lane_, s1_lane_, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0_lane_, x0)
+        const __m256d step_sh = _mm256_add_pd(s0_lane_, x0);
+        const __m256d step_sh_bb = _mm256_sub_pd(step_sh, s0_lane_);
+        const __m256d step_sh_t0 = _mm256_sub_pd(step_sh, step_sh_bb);
+        const __m256d step_sh_t1 = _mm256_sub_pd(s0_lane_, step_sh_t0);
+        const __m256d step_sh_t2 = _mm256_sub_pd(x0, step_sh_bb);
+        const __m256d step_sl = _mm256_add_pd(step_sh_t1, step_sh_t2);
+        // (step_th, step_tl) = two_sum(s1_lane_, x1)
+        const __m256d step_th = _mm256_add_pd(s1_lane_, x1);
+        const __m256d step_th_bb = _mm256_sub_pd(step_th, s1_lane_);
+        const __m256d step_th_t0 = _mm256_sub_pd(step_th, step_th_bb);
+        const __m256d step_th_t1 = _mm256_sub_pd(s1_lane_, step_th_t0);
+        const __m256d step_th_t2 = _mm256_sub_pd(x1, step_th_bb);
+        const __m256d step_tl = _mm256_add_pd(step_th_t1, step_th_t2);
+        const __m256d step_c = _mm256_add_pd(step_sl, step_th);
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const __m256d step_vh = _mm256_add_pd(step_sh, step_c);
+        const __m256d step_vh_z = _mm256_sub_pd(step_vh, step_sh);
+        const __m256d step_vl = _mm256_sub_pd(step_c, step_vh_z);
+        const __m256d step_w = _mm256_add_pd(step_tl, step_vl);
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const __m256d step_z0 = _mm256_add_pd(step_vh, step_w);
+        const __m256d step_z0_z = _mm256_sub_pd(step_z0, step_vh);
+        const __m256d step_z1 = _mm256_sub_pd(step_w, step_z0_z);
+        s0_lane_ = step_z0;
+        s1_lane_ = step_z1;
+    }
+    double s0_lanes_[4] = {};
+    double s1_lanes_[4] = {};
+    _mm256_storeu_pd(s0_lanes_, s0_lane_);
+    _mm256_storeu_pd(s1_lanes_, s1_lane_);
+    double s0 = s0_lanes_[0];
+    double s1 = s1_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const double s0_next_ = s0_lanes_[j_];
+        const double s1_next_ = s1_lanes_[j_];
+        // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_next_, s1_next_)
+        // (comb_sh, comb_sl) = two_sum(s0, s0_next_)
+        const double comb_sh = s0 + s0_next_;
+        const double comb_sh_bb = comb_sh - s0;
+        const double comb_sh_t0 = comb_sh - comb_sh_bb;
+        const double comb_sh_t1 = s0 - comb_sh_t0;
+        const double comb_sh_t2 = s0_next_ - comb_sh_bb;
+        const double comb_sl = comb_sh_t1 + comb_sh_t2;
+        // (comb_th, comb_tl) = two_sum(s1, s1_next_)
+        const double comb_th = s1 + s1_next_;
+        const double comb_th_bb = comb_th - s1;
+        const double comb_th_t0 = comb_th - comb_th_bb;
+        const double comb_th_t1 = s1 - comb_th_t0;
+        const double comb_th_t2 = s1_next_ - comb_th_bb;
+        const double comb_tl = comb_th_t1 + comb_th_t2;
+        const double comb_c = comb_sl + comb_th;
+        // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+        const double comb_vh = comb_sh + comb_c;
+        const double comb_vh_z = comb_vh - comb_sh;
+        const double comb_vl = comb_c - comb_vh_z;
+        const double comb_w = comb_tl + comb_vl;
+        // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+        const double comb_z0 = comb_vh + comb_w;
+        const double comb_z0_z = comb_z0 - comb_vh;
+        const double comb_z1 = comb_w - comb_z0_z;
+        s0 = comb_z0;
+        s1 = comb_z1;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = add_2_2(s0, s1, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0, x0)
+        const double step_sh = s0 + x0;
+        const double step_sh_bb = step_sh - s0;
+        const double step_sh_t0 = step_sh - step_sh_bb;
+        const double step_sh_t1 = s0 - step_sh_t0;
+        const double step_sh_t2 = x0 - step_sh_bb;
+        const double step_sl = step_sh_t1 + step_sh_t2;
+        // (step_th, step_tl) = two_sum(s1, x1)
+        const double step_th = s1 + x1;
+        const double step_th_bb = step_th - s1;
+        const double step_th_t0 = step_th - step_th_bb;
+        const double step_th_t1 = s1 - step_th_t0;
+        const double step_th_t2 = x1 - step_th_bb;
+        const double step_tl = step_th_t1 + step_th_t2;
+        const double step_c = step_sl + step_th;
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const double step_vh = step_sh + step_c;
+        const double step_vh_z = step_vh - step_sh;
+        const double step_vl = step_c - step_vh_z;
+        const double step_w = step_tl + step_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const double step_z0 = step_vh + step_w;
+        const double step_z0_z = step_z0 - step_vh;
+        const double step_z1 = step_w - step_z0_z;
+        s0 = step_z0;
+        s1 = step_z1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void sum_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 8;
+    __m256 s0_lane_ = _mm256_setzero_ps();
+    __m256 s1_lane_ = _mm256_setzero_ps();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 8) {
+        const __m256 x0 = _mm256_loadu_ps(x0_in + i_);
+        const __m256 x1 = _mm256_loadu_ps(x1_in + i_);
+        // (step_z0, step_z1) = add_2_2(s0_lane_, s1_lane_, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0_lane_, x0)
+        const __m256 step_sh = _mm256_add_ps(s0_lane_, x0);
+        const __m256 step_sh_bb = _mm256_sub_ps(step_sh, s0_lane_);
+        const __m256 step_sh_t0 = _mm256_sub_ps(step_sh, step_sh_bb);
+        const __m256 step_sh_t1 = _mm256_sub_ps(s0_lane_, step_sh_t0);
+        const __m256 step_sh_t2 = _mm256_sub_ps(x0, step_sh_bb);
+        const __m256 step_sl = _mm256_add_ps(step_sh_t1, step_sh_t2);
+        // (step_th, step_tl) = two_sum(s1_lane_, x1)
+        const __m256 step_th = _mm256_add_ps(s1_lane_, x1);
+        const __m256 step_th_bb = _mm256_sub_ps(step_th, s1_lane_);
+        const __m256 step_th_t0 = _mm256_sub_ps(step_th, step_th_bb);
+        const __m256 step_th_t1 = _mm256_sub_ps(s1_lane_, step_th_t0);
+        const __m256 step_th_t2 = _mm256_sub_ps(x1, step_th_bb);
+        const __m256 step_tl = _mm256_add_ps(step_th_t1, step_th_t2);
+        const __m256 step_c = _mm256_add_ps(step_sl, step_th);
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const __m256 step_vh = _mm256_add_ps(step_sh, step_c);
+        const __m256 step_vh_z = _mm256_sub_ps(step_vh, step_sh);
+        const __m256 step_vl = _mm256_sub_ps(step_c, step_vh_z);
+        const __m256 step_w = _mm256_add_ps(step_tl, step_vl);
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const __m256 step_z0 = _mm256_add_ps(step_vh, step_w);
+        const __m256 step_z0_z = _mm256_sub_ps(step_z0, step_vh);
+        const __m256 step_z1 = _mm256_sub_ps(step_w, step_z0_z);
+        s0_lane_ = step_z0;
+        s1_lane_ = step_z1;
+    }
+    float s0_lanes_[8] = {};
+    float s1_lanes_[8] = {};
+    _mm256_storeu_ps(s0_lanes_, s0_lane_);
+    _mm256_storeu_ps(s1_lanes_, s1_lane_);
+    float s0 = s0_lanes_[0];
+    float s1 = s1_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 8; ++j_) {
+        const float s0_next_ = s0_lanes_[j_];
+        const float s1_next_ = s1_lanes_[j_];
+        // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_next_, s1_next_)
+        // (comb_sh, comb_sl) = two_sum(s0, s0_next_)
+        const float comb_sh = s0 + s0_next_;
+        const float comb_sh_bb = comb_sh - s0;
+        const float comb_sh_t0 = comb_sh - comb_sh_bb;
+        const float comb_sh_t1 = s0 - comb_sh_t0;
+        const float comb_sh_t2 = s0_next_ - comb_sh_bb;
+        const float comb_sl = comb_sh_t1 + comb_sh_t2;
+        // (comb_th, comb_tl) = two_sum(s1, s1_next_)
+        const float comb_th = s1 + s1_next_;
+        const float comb_th_bb = comb_th - s1;
+        const float comb_th_t0 = comb_th - comb_th_bb;
+        const float comb_th_t1 = s1 - comb_th_t0;
+        const float comb_th_t2 = s1_next_ - comb_th_bb;
+        const float comb_tl = comb_th_t1 + comb_th_t2;
+        const float comb_c = comb_sl + comb_th;
+        // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+        const float comb_vh = comb_sh + comb_c;
+        const float comb_vh_z = comb_vh - comb_sh;
+        const float comb_vl = comb_c - comb_vh_z;
+        const float comb_w = comb_tl + comb_vl;
+        // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+        const float comb_z0 = comb_vh + comb_w;
+        const float comb_z0_z = comb_z0 - comb_vh;
+        const float comb_z1 = comb_w - comb_z0_z;
+        s0 = comb_z0;
+        s1 = comb_z1;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = add_2_2(s0, s1, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0, x0)
+        const float step_sh = s0 + x0;
+        const float step_sh_bb = step_sh - s0;
+        const float step_sh_t0 = step_sh - step_sh_bb;
+        const float step_sh_t1 = s0 - step_sh_t0;
+        const float step_sh_t2 = x0 - step_sh_bb;
+        const float step_sl = step_sh_t1 + step_sh_t2;
+        // (step_th, step_tl) = two_sum(s1, x1)
+        const float step_th = s1 + x1;
+        const float step_th_bb = step_th - s1;
+        const float step_th_t0 = step_th - step_th_bb;
+        const float step_th_t1 = s1 - step_th_t0;
+        const float step_th_t2 = x1 - step_th_bb;
+        const float step_tl = step_th_t1 + step_th_t2;
+        const float step_c = step_sl + step_th;
+        // (step_vh, step_vl) = fast_two_sum(step_sh, step_c)
+        const float step_vh = step_sh + step_c;
+        const float step_vh_z = step_vh - step_sh;
+        const float step_vl = step_c - step_vh_z;
+        const float step_w = step_tl + step_vl;
+        // (step_z0, step_z1) = fast_two_sum(step_vh, step_w)
+        const float step_z0 = step_vh + step_w;
+        const float step_z0_z = step_z0 - step_vh;
+        const float step_z1 = step_w - step_z0_z;
+        s0 = step_z0;
+        s1 = step_z1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+inline void sum_2_entry_packed(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    __m256d s0_lane_ = _mm256_setzero_pd();
+    __m256d s1_lane_ = _mm256_setzero_pd();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const __m256d x0 = _mm256_loadu_pd(x0_in + i_);
+        const __m256d x1 = _mm256_loadu_pd(x1_in + i_);
+        // (step_t0, step_t1) = sum_entry_step_2(s0_lane_, s1_lane_, x0, x1)
+        const __m256d step_g0 = _mm256_add_pd(x0, _mm256_setzero_pd());
+        const __m256d step_g1 = _mm256_add_pd(x1, _mm256_setzero_pd());
+        // (step_t0, step_t1) = add_2_2(s0_lane_, s1_lane_, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_g0)
+        const __m256d step_t0_sh = _mm256_add_pd(s0_lane_, step_g0);
+        const __m256d step_t0_sh_bb = _mm256_sub_pd(step_t0_sh, s0_lane_);
+        const __m256d step_t0_sh_t0 = _mm256_sub_pd(step_t0_sh, step_t0_sh_bb);
+        const __m256d step_t0_sh_t1 = _mm256_sub_pd(s0_lane_, step_t0_sh_t0);
+        const __m256d step_t0_sh_t2 = _mm256_sub_pd(step_g0, step_t0_sh_bb);
+        const __m256d step_t0_sl = _mm256_add_pd(step_t0_sh_t1, step_t0_sh_t2);
+        // (step_t0_th, step_t0_tl) = two_sum(s1_lane_, step_g1)
+        const __m256d step_t0_th = _mm256_add_pd(s1_lane_, step_g1);
+        const __m256d step_t0_th_bb = _mm256_sub_pd(step_t0_th, s1_lane_);
+        const __m256d step_t0_th_t0 = _mm256_sub_pd(step_t0_th, step_t0_th_bb);
+        const __m256d step_t0_th_t1 = _mm256_sub_pd(s1_lane_, step_t0_th_t0);
+        const __m256d step_t0_th_t2 = _mm256_sub_pd(step_g1, step_t0_th_bb);
+        const __m256d step_t0_tl = _mm256_add_pd(step_t0_th_t1, step_t0_th_t2);
+        const __m256d step_t0_c = _mm256_add_pd(step_t0_sl, step_t0_th);
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const __m256d step_t0_vh = _mm256_add_pd(step_t0_sh, step_t0_c);
+        const __m256d step_t0_vh_z = _mm256_sub_pd(step_t0_vh, step_t0_sh);
+        const __m256d step_t0_vl = _mm256_sub_pd(step_t0_c, step_t0_vh_z);
+        const __m256d step_t0_w = _mm256_add_pd(step_t0_tl, step_t0_vl);
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const __m256d step_t0 = _mm256_add_pd(step_t0_vh, step_t0_w);
+        const __m256d step_t0_z = _mm256_sub_pd(step_t0, step_t0_vh);
+        const __m256d step_t1 = _mm256_sub_pd(step_t0_w, step_t0_z);
+        s0_lane_ = step_t0;
+        s1_lane_ = step_t1;
+    }
+    double s0_lanes_[4] = {};
+    double s1_lanes_[4] = {};
+    _mm256_storeu_pd(s0_lanes_, s0_lane_);
+    _mm256_storeu_pd(s1_lanes_, s1_lane_);
+    double s0 = s0_lanes_[0];
+    double s1 = s1_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const double s0_next_ = s0_lanes_[j_];
+        const double s1_next_ = s1_lanes_[j_];
+        // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_next_, s1_next_)
+        // (comb_sh, comb_sl) = two_sum(s0, s0_next_)
+        const double comb_sh = s0 + s0_next_;
+        const double comb_sh_bb = comb_sh - s0;
+        const double comb_sh_t0 = comb_sh - comb_sh_bb;
+        const double comb_sh_t1 = s0 - comb_sh_t0;
+        const double comb_sh_t2 = s0_next_ - comb_sh_bb;
+        const double comb_sl = comb_sh_t1 + comb_sh_t2;
+        // (comb_th, comb_tl) = two_sum(s1, s1_next_)
+        const double comb_th = s1 + s1_next_;
+        const double comb_th_bb = comb_th - s1;
+        const double comb_th_t0 = comb_th - comb_th_bb;
+        const double comb_th_t1 = s1 - comb_th_t0;
+        const double comb_th_t2 = s1_next_ - comb_th_bb;
+        const double comb_tl = comb_th_t1 + comb_th_t2;
+        const double comb_c = comb_sl + comb_th;
+        // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+        const double comb_vh = comb_sh + comb_c;
+        const double comb_vh_z = comb_vh - comb_sh;
+        const double comb_vl = comb_c - comb_vh_z;
+        const double comb_w = comb_tl + comb_vl;
+        // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+        const double comb_z0 = comb_vh + comb_w;
+        const double comb_z0_z = comb_z0 - comb_vh;
+        const double comb_z1 = comb_w - comb_z0_z;
+        s0 = comb_z0;
+        s1 = comb_z1;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_t0, step_t1) = sum_entry_step_2(s0, s1, x0, x1)
+        const double step_g0 = x0 + 0.0;
+        const double step_g1 = x1 + 0.0;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_g0)
+        const double step_t0_sh = s0 + step_g0;
+        const double step_t0_sh_bb = step_t0_sh - s0;
+        const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const double step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+        const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_g1)
+        const double step_t0_th = s1 + step_g1;
+        const double step_t0_th_bb = step_t0_th - s1;
+        const double step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const double step_t0_th_t1 = s1 - step_t0_th_t0;
+        const double step_t0_th_t2 = step_g1 - step_t0_th_bb;
+        const double step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const double step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const double step_t0_vh = step_t0_sh + step_t0_c;
+        const double step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const double step_t0_vl = step_t0_c - step_t0_vh_z;
+        const double step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const double step_t0 = step_t0_vh + step_t0_w;
+        const double step_t0_z = step_t0 - step_t0_vh;
+        const double step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void sum_2_entry_packed(const float* x0_in, const float* x1_in, std::size_t n, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 8;
+    __m256 s0_lane_ = _mm256_setzero_ps();
+    __m256 s1_lane_ = _mm256_setzero_ps();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 8) {
+        const __m256 x0 = _mm256_loadu_ps(x0_in + i_);
+        const __m256 x1 = _mm256_loadu_ps(x1_in + i_);
+        // (step_t0, step_t1) = sum_entry_step_2(s0_lane_, s1_lane_, x0, x1)
+        const __m256 step_g0 = _mm256_add_ps(x0, _mm256_setzero_ps());
+        const __m256 step_g1 = _mm256_add_ps(x1, _mm256_setzero_ps());
+        // (step_t0, step_t1) = add_2_2(s0_lane_, s1_lane_, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_g0)
+        const __m256 step_t0_sh = _mm256_add_ps(s0_lane_, step_g0);
+        const __m256 step_t0_sh_bb = _mm256_sub_ps(step_t0_sh, s0_lane_);
+        const __m256 step_t0_sh_t0 = _mm256_sub_ps(step_t0_sh, step_t0_sh_bb);
+        const __m256 step_t0_sh_t1 = _mm256_sub_ps(s0_lane_, step_t0_sh_t0);
+        const __m256 step_t0_sh_t2 = _mm256_sub_ps(step_g0, step_t0_sh_bb);
+        const __m256 step_t0_sl = _mm256_add_ps(step_t0_sh_t1, step_t0_sh_t2);
+        // (step_t0_th, step_t0_tl) = two_sum(s1_lane_, step_g1)
+        const __m256 step_t0_th = _mm256_add_ps(s1_lane_, step_g1);
+        const __m256 step_t0_th_bb = _mm256_sub_ps(step_t0_th, s1_lane_);
+        const __m256 step_t0_th_t0 = _mm256_sub_ps(step_t0_th, step_t0_th_bb);
+        const __m256 step_t0_th_t1 = _mm256_sub_ps(s1_lane_, step_t0_th_t0);
+        const __m256 step_t0_th_t2 = _mm256_sub_ps(step_g1, step_t0_th_bb);
+        const __m256 step_t0_tl = _mm256_add_ps(step_t0_th_t1, step_t0_th_t2);
+        const __m256 step_t0_c = _mm256_add_ps(step_t0_sl, step_t0_th);
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const __m256 step_t0_vh = _mm256_add_ps(step_t0_sh, step_t0_c);
+        const __m256 step_t0_vh_z = _mm256_sub_ps(step_t0_vh, step_t0_sh);
+        const __m256 step_t0_vl = _mm256_sub_ps(step_t0_c, step_t0_vh_z);
+        const __m256 step_t0_w = _mm256_add_ps(step_t0_tl, step_t0_vl);
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const __m256 step_t0 = _mm256_add_ps(step_t0_vh, step_t0_w);
+        const __m256 step_t0_z = _mm256_sub_ps(step_t0, step_t0_vh);
+        const __m256 step_t1 = _mm256_sub_ps(step_t0_w, step_t0_z);
+        s0_lane_ = step_t0;
+        s1_lane_ = step_t1;
+    }
+    float s0_lanes_[8] = {};
+    float s1_lanes_[8] = {};
+    _mm256_storeu_ps(s0_lanes_, s0_lane_);
+    _mm256_storeu_ps(s1_lanes_, s1_lane_);
+    float s0 = s0_lanes_[0];
+    float s1 = s1_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 8; ++j_) {
+        const float s0_next_ = s0_lanes_[j_];
+        const float s1_next_ = s1_lanes_[j_];
+        // (comb_z0, comb_z1) = add_2_2(s0, s1, s0_next_, s1_next_)
+        // (comb_sh, comb_sl) = two_sum(s0, s0_next_)
+        const float comb_sh = s0 + s0_next_;
+        const float comb_sh_bb = comb_sh - s0;
+        const float comb_sh_t0 = comb_sh - comb_sh_bb;
+        const float comb_sh_t1 = s0 - comb_sh_t0;
+        const float comb_sh_t2 = s0_next_ - comb_sh_bb;
+        const float comb_sl = comb_sh_t1 + comb_sh_t2;
+        // (comb_th, comb_tl) = two_sum(s1, s1_next_)
+        const float comb_th = s1 + s1_next_;
+        const float comb_th_bb = comb_th - s1;
+        const float comb_th_t0 = comb_th - comb_th_bb;
+        const float comb_th_t1 = s1 - comb_th_t0;
+        const float comb_th_t2 = s1_next_ - comb_th_bb;
+        const float comb_tl = comb_th_t1 + comb_th_t2;
+        const float comb_c = comb_sl + comb_th;
+        // (comb_vh, comb_vl) = fast_two_sum(comb_sh, comb_c)
+        const float comb_vh = comb_sh + comb_c;
+        const float comb_vh_z = comb_vh - comb_sh;
+        const float comb_vl = comb_c - comb_vh_z;
+        const float comb_w = comb_tl + comb_vl;
+        // (comb_z0, comb_z1) = fast_two_sum(comb_vh, comb_w)
+        const float comb_z0 = comb_vh + comb_w;
+        const float comb_z0_z = comb_z0 - comb_vh;
+        const float comb_z1 = comb_w - comb_z0_z;
+        s0 = comb_z0;
+        s1 = comb_z1;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_t0, step_t1) = sum_entry_step_2(s0, s1, x0, x1)
+        const float step_g0 = x0 + 0.0f;
+        const float step_g1 = x1 + 0.0f;
+        // (step_t0, step_t1) = add_2_2(s0, s1, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_g0)
+        const float step_t0_sh = s0 + step_g0;
+        const float step_t0_sh_bb = step_t0_sh - s0;
+        const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const float step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+        const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        // (step_t0_th, step_t0_tl) = two_sum(s1, step_g1)
+        const float step_t0_th = s1 + step_g1;
+        const float step_t0_th_bb = step_t0_th - s1;
+        const float step_t0_th_t0 = step_t0_th - step_t0_th_bb;
+        const float step_t0_th_t1 = s1 - step_t0_th_t0;
+        const float step_t0_th_t2 = step_g1 - step_t0_th_bb;
+        const float step_t0_tl = step_t0_th_t1 + step_t0_th_t2;
+        const float step_t0_c = step_t0_sl + step_t0_th;
+        // (step_t0_vh, step_t0_vl) = fast_two_sum(step_t0_sh, step_t0_c)
+        const float step_t0_vh = step_t0_sh + step_t0_c;
+        const float step_t0_vh_z = step_t0_vh - step_t0_sh;
+        const float step_t0_vl = step_t0_c - step_t0_vh_z;
+        const float step_t0_w = step_t0_tl + step_t0_vl;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_vh, step_t0_w)
+        const float step_t0 = step_t0_vh + step_t0_w;
+        const float step_t0_z = step_t0 - step_t0_vh;
+        const float step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+inline void sum_fast_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    __m256d s0_lane_ = _mm256_setzero_pd();
+    __m256d s1_lane_ = _mm256_setzero_pd();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const __m256d x0 = _mm256_loadu_pd(x0_in + i_);
+        const __m256d x1 = _mm256_loadu_pd(x1_in + i_);
+        // (step_z0, step_z1) = add_fast_2_2(s0_lane_, s1_lane_, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0_lane_, x0)
+        const __m256d step_sh = _mm256_add_pd(s0_lane_, x0);
+        const __m256d step_sh_bb = _mm256_sub_pd(step_sh, s0_lane_);
+        const __m256d step_sh_t0 = _mm256_sub_pd(step_sh, step_sh_bb);
+        const __m256d step_sh_t1 = _mm256_sub_pd(s0_lane_, step_sh_t0);
+        const __m256d step_sh_t2 = _mm256_sub_pd(x0, step_sh_bb);
+        const __m256d step_sl = _mm256_add_pd(step_sh_t1, step_sh_t2);
+        const __m256d step_v = _mm256_add_pd(s1_lane_, x1);
+        const __m256d step_w = _mm256_add_pd(step_sl, step_v);
+        // (step_z0, step_z1) = fast_two_sum(step_sh, step_w)
+        const __m256d step_z0 = _mm256_add_pd(step_sh, step_w);
+        const __m256d step_z0_z = _mm256_sub_pd(step_z0, step_sh);
+        const __m256d step_z1 = _mm256_sub_pd(step_w, step_z0_z);
+        s0_lane_ = step_z0;
+        s1_lane_ = step_z1;
+    }
+    double s0_lanes_[4] = {};
+    double s1_lanes_[4] = {};
+    _mm256_storeu_pd(s0_lanes_, s0_lane_);
+    _mm256_storeu_pd(s1_lanes_, s1_lane_);
+    double s0 = s0_lanes_[0];
+    double s1 = s1_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const double s0_next_ = s0_lanes_[j_];
+        const double s1_next_ = s1_lanes_[j_];
+        // (comb_z0, comb_z1) = add_fast_2_2(s0, s1, s0_next_, s1_next_)
+        // (comb_sh, comb_sl) = two_sum(s0, s0_next_)
+        const double comb_sh = s0 + s0_next_;
+        const double comb_sh_bb = comb_sh - s0;
+        const double comb_sh_t0 = comb_sh - comb_sh_bb;
+        const double comb_sh_t1 = s0 - comb_sh_t0;
+        const double comb_sh_t2 = s0_next_ - comb_sh_bb;
+        const double comb_sl = comb_sh_t1 + comb_sh_t2;
+        const double comb_v = s1 + s1_next_;
+        const double comb_w = comb_sl + comb_v;
+        // (comb_z0, comb_z1) = fast_two_sum(comb_sh, comb_w)
+        const double comb_z0 = comb_sh + comb_w;
+        const double comb_z0_z = comb_z0 - comb_sh;
+        const double comb_z1 = comb_w - comb_z0_z;
+        s0 = comb_z0;
+        s1 = comb_z1;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1) = add_fast_2_2(s0, s1, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0, x0)
+        const double step_sh = s0 + x0;
+        const double step_sh_bb = step_sh - s0;
+        const double step_sh_t0 = step_sh - step_sh_bb;
+        const double step_sh_t1 = s0 - step_sh_t0;
+        const double step_sh_t2 = x0 - step_sh_bb;
+        const double step_sl = step_sh_t1 + step_sh_t2;
+        const double step_v = s1 + x1;
+        const double step_w = step_sl + step_v;
+        // (step_z0, step_z1) = fast_two_sum(step_sh, step_w)
+        const double step_z0 = step_sh + step_w;
+        const double step_z0_z = step_z0 - step_sh;
+        const double step_z1 = step_w - step_z0_z;
+        s0 = step_z0;
+        s1 = step_z1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void sum_fast_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 8;
+    __m256 s0_lane_ = _mm256_setzero_ps();
+    __m256 s1_lane_ = _mm256_setzero_ps();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 8) {
+        const __m256 x0 = _mm256_loadu_ps(x0_in + i_);
+        const __m256 x1 = _mm256_loadu_ps(x1_in + i_);
+        // (step_z0, step_z1) = add_fast_2_2(s0_lane_, s1_lane_, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0_lane_, x0)
+        const __m256 step_sh = _mm256_add_ps(s0_lane_, x0);
+        const __m256 step_sh_bb = _mm256_sub_ps(step_sh, s0_lane_);
+        const __m256 step_sh_t0 = _mm256_sub_ps(step_sh, step_sh_bb);
+        const __m256 step_sh_t1 = _mm256_sub_ps(s0_lane_, step_sh_t0);
+        const __m256 step_sh_t2 = _mm256_sub_ps(x0, step_sh_bb);
+        const __m256 step_sl = _mm256_add_ps(step_sh_t1, step_sh_t2);
+        const __m256 step_v = _mm256_add_ps(s1_lane_, x1);
+        const __m256 step_w = _mm256_add_ps(step_sl, step_v);
+        // (step_z0, step_z1) = fast_two_sum(step_sh, step_w)
+        const __m256 step_z0 = _mm256_add_ps(step_sh, step_w);
+        const __m256 step_z0_z = _mm256_sub_ps(step_z0, step_sh);
+        const __m256 step_z1 = _mm256_sub_ps(step_w, step_z0_z);
+        s0_lane_ = step_z0;
+        s1_lane_ = step_z1;
+    }
+    float s0_lanes_[8] = {};
+    float s1_lanes_[8] = {};
+    _mm256_storeu_ps(s0_lanes_, s0_lane_);
+    _mm256_storeu_ps(s1_lanes_, s1_lane_);
+    float s0 = s0_lanes_[0];
+    float s1 = s1_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 8; ++j_) {
+        const float s0_next_ = s0_lanes_[j_];
+        const float s1_next_ = s1_lanes_[j_];
+        // (comb_z0, comb_z1) = add_fast_2_2(s0, s1, s0_next_, s1_next_)
+        // (comb_sh, comb_sl) = two_sum(s0, s0_next_)
+        const float comb_sh = s0 + s0_next_;
+        const float comb_sh_bb = comb_sh - s0;
+        const float comb_sh_t0 = comb_sh - comb_sh_bb;
+        const float comb_sh_t1 = s0 - comb_sh_t0;
+        const float comb_sh_t2 = s0_next_ - comb_sh_bb;
+        const float comb_sl = comb_sh_t1 + comb_sh_t2;
+        const float comb_v = s1 + s1_next_;
+        const float comb_w = comb_sl + comb_v;
+        // (comb_z0, comb_z1) = fast_two_sum(comb_sh, comb_w)
+        const float comb_z0 = comb_sh + comb_w;
+        const float comb_z0_z = comb_z0 - comb_sh;
+        const float comb_z1 = comb_w - comb_z0_z;
+        s0 = comb_z0;
+        s1 = comb_z1;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1) = add_fast_2_2(s0, s1, x0, x1)
+        // (step_sh, step_sl) = two_sum(s0, x0)
+        const float step_sh = s0 + x0;
+        const float step_sh_bb = step_sh - s0;
+        const float step_sh_t0 = step_sh - step_sh_bb;
+        const float step_sh_t1 = s0 - step_sh_t0;
+        const float step_sh_t2 = x0 - step_sh_bb;
+        const float step_sl = step_sh_t1 + step_sh_t2;
+        const float step_v = s1 + x1;
+        const float step_w = step_sl + step_v;
+        // (step_z0, step_z1) = fast_two_sum(step_sh, step_w)
+        const float step_z0 = step_sh + step_w;
+        const float step_z0_z = step_z0 - step_sh;
+        const float step_z1 = step_w - step_z0_z;
+        s0 = step_z0;
+        s1 = step_z1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+
+// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+inline void sum_fast_2_entry_packed(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    __m256d s0_lane_ = _mm256_setzero_pd();
+    __m256d s1_lane_ = _mm256_setzero_pd();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const __m256d x0 = _mm256_loadu_pd(x0_in + i_);
+        const __m256d x1 = _mm256_loadu_pd(x1_in + i_);
+        // (step_t0, step_t1) = sum_fast_entry_step_2(s0_lane_, s1_lane_, x0, x1)
+        const __m256d step_g0 = _mm256_add_pd(x0, _mm256_setzero_pd());
+        const __m256d step_g1 = _mm256_add_pd(x1, _mm256_setzero_pd());
+        // (step_t0, step_t1) = add_fast_2_2(s0_lane_, s1_lane_, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_g0)
+        const __m256d step_t0_sh = _mm256_add_pd(s0_lane_, step_g0);
+        const __m256d step_t0_sh_bb = _mm256_sub_pd(step_t0_sh, s0_lane_);
+        const __m256d step_t0_sh_t0 = _mm256_sub_pd(step_t0_sh, step_t0_sh_bb);
+        const __m256d step_t0_sh_t1 = _mm256_sub_pd(s0_lane_, step_t0_sh_t0);
+        const __m256d step_t0_sh_t2 = _mm256_sub_pd(step_g0, step_t0_sh_bb);
+        const __m256d step_t0_sl = _mm256_add_pd(step_t0_sh_t1, step_t0_sh_t2);
+        const __m256d step_t0_v = _mm256_add_pd(s1_lane_, step_g1);
+        const __m256d step_t0_w = _mm256_add_pd(step_t0_sl, step_t0_v);
+        // (step_t0, step_t1) = fast_two_sum(step_t0_sh, step_t0_w)
+        const __m256d step_t0 = _mm256_add_pd(step_t0_sh, step_t0_w);
+        const __m256d step_t0_z = _mm256_sub_pd(step_t0, step_t0_sh);
+        const __m256d step_t1 = _mm256_sub_pd(step_t0_w, step_t0_z);
+        s0_lane_ = step_t0;
+        s1_lane_ = step_t1;
+    }
+    double s0_lanes_[4] = {};
+    double s1_lanes_[4] = {};
+    _mm256_storeu_pd(s0_lanes_, s0_lane_);
+    _mm256_storeu_pd(s1_lanes_, s1_lane_);
+    double s0 = s0_lanes_[0];
+    double s1 = s1_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const double s0_next_ = s0_lanes_[j_];
+        const double s1_next_ = s1_lanes_[j_];
+        // (comb_z0, comb_z1) = add_fast_2_2(s0, s1, s0_next_, s1_next_)
+        // (comb_sh, comb_sl) = two_sum(s0, s0_next_)
+        const double comb_sh = s0 + s0_next_;
+        const double comb_sh_bb = comb_sh - s0;
+        const double comb_sh_t0 = comb_sh - comb_sh_bb;
+        const double comb_sh_t1 = s0 - comb_sh_t0;
+        const double comb_sh_t2 = s0_next_ - comb_sh_bb;
+        const double comb_sl = comb_sh_t1 + comb_sh_t2;
+        const double comb_v = s1 + s1_next_;
+        const double comb_w = comb_sl + comb_v;
+        // (comb_z0, comb_z1) = fast_two_sum(comb_sh, comb_w)
+        const double comb_z0 = comb_sh + comb_w;
+        const double comb_z0_z = comb_z0 - comb_sh;
+        const double comb_z1 = comb_w - comb_z0_z;
+        s0 = comb_z0;
+        s1 = comb_z1;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_t0, step_t1) = sum_fast_entry_step_2(s0, s1, x0, x1)
+        const double step_g0 = x0 + 0.0;
+        const double step_g1 = x1 + 0.0;
+        // (step_t0, step_t1) = add_fast_2_2(s0, s1, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_g0)
+        const double step_t0_sh = s0 + step_g0;
+        const double step_t0_sh_bb = step_t0_sh - s0;
+        const double step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const double step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const double step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+        const double step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        const double step_t0_v = s1 + step_g1;
+        const double step_t0_w = step_t0_sl + step_t0_v;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_sh, step_t0_w)
+        const double step_t0 = step_t0_sh + step_t0_w;
+        const double step_t0_z = step_t0 - step_t0_sh;
+        const double step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const double fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_a;
+    const double fin_r0 = fin_flag ? s0 : std::numeric_limits<double>::quiet_NaN();
+    const double fin_r1 = fin_flag ? s1 : std::numeric_limits<double>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
+}
+inline void sum_fast_2_entry_packed(const float* x0_in, const float* x1_in, std::size_t n, float& r0_out, float& r1_out, bool& flag_out) noexcept {
+    const std::size_t full_ = n - n % 8;
+    __m256 s0_lane_ = _mm256_setzero_ps();
+    __m256 s1_lane_ = _mm256_setzero_ps();
+    for (std::size_t i_ = 0; i_ < full_; i_ += 8) {
+        const __m256 x0 = _mm256_loadu_ps(x0_in + i_);
+        const __m256 x1 = _mm256_loadu_ps(x1_in + i_);
+        // (step_t0, step_t1) = sum_fast_entry_step_2(s0_lane_, s1_lane_, x0, x1)
+        const __m256 step_g0 = _mm256_add_ps(x0, _mm256_setzero_ps());
+        const __m256 step_g1 = _mm256_add_ps(x1, _mm256_setzero_ps());
+        // (step_t0, step_t1) = add_fast_2_2(s0_lane_, s1_lane_, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0_lane_, step_g0)
+        const __m256 step_t0_sh = _mm256_add_ps(s0_lane_, step_g0);
+        const __m256 step_t0_sh_bb = _mm256_sub_ps(step_t0_sh, s0_lane_);
+        const __m256 step_t0_sh_t0 = _mm256_sub_ps(step_t0_sh, step_t0_sh_bb);
+        const __m256 step_t0_sh_t1 = _mm256_sub_ps(s0_lane_, step_t0_sh_t0);
+        const __m256 step_t0_sh_t2 = _mm256_sub_ps(step_g0, step_t0_sh_bb);
+        const __m256 step_t0_sl = _mm256_add_ps(step_t0_sh_t1, step_t0_sh_t2);
+        const __m256 step_t0_v = _mm256_add_ps(s1_lane_, step_g1);
+        const __m256 step_t0_w = _mm256_add_ps(step_t0_sl, step_t0_v);
+        // (step_t0, step_t1) = fast_two_sum(step_t0_sh, step_t0_w)
+        const __m256 step_t0 = _mm256_add_ps(step_t0_sh, step_t0_w);
+        const __m256 step_t0_z = _mm256_sub_ps(step_t0, step_t0_sh);
+        const __m256 step_t1 = _mm256_sub_ps(step_t0_w, step_t0_z);
+        s0_lane_ = step_t0;
+        s1_lane_ = step_t1;
+    }
+    float s0_lanes_[8] = {};
+    float s1_lanes_[8] = {};
+    _mm256_storeu_ps(s0_lanes_, s0_lane_);
+    _mm256_storeu_ps(s1_lanes_, s1_lane_);
+    float s0 = s0_lanes_[0];
+    float s1 = s1_lanes_[0];
+    for (std::size_t j_ = 1; j_ < 8; ++j_) {
+        const float s0_next_ = s0_lanes_[j_];
+        const float s1_next_ = s1_lanes_[j_];
+        // (comb_z0, comb_z1) = add_fast_2_2(s0, s1, s0_next_, s1_next_)
+        // (comb_sh, comb_sl) = two_sum(s0, s0_next_)
+        const float comb_sh = s0 + s0_next_;
+        const float comb_sh_bb = comb_sh - s0;
+        const float comb_sh_t0 = comb_sh - comb_sh_bb;
+        const float comb_sh_t1 = s0 - comb_sh_t0;
+        const float comb_sh_t2 = s0_next_ - comb_sh_bb;
+        const float comb_sl = comb_sh_t1 + comb_sh_t2;
+        const float comb_v = s1 + s1_next_;
+        const float comb_w = comb_sl + comb_v;
+        // (comb_z0, comb_z1) = fast_two_sum(comb_sh, comb_w)
+        const float comb_z0 = comb_sh + comb_w;
+        const float comb_z0_z = comb_z0 - comb_sh;
+        const float comb_z1 = comb_w - comb_z0_z;
+        s0 = comb_z0;
+        s1 = comb_z1;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_t0, step_t1) = sum_fast_entry_step_2(s0, s1, x0, x1)
+        const float step_g0 = x0 + 0.0f;
+        const float step_g1 = x1 + 0.0f;
+        // (step_t0, step_t1) = add_fast_2_2(s0, s1, step_g0, step_g1)
+        // (step_t0_sh, step_t0_sl) = two_sum(s0, step_g0)
+        const float step_t0_sh = s0 + step_g0;
+        const float step_t0_sh_bb = step_t0_sh - s0;
+        const float step_t0_sh_t0 = step_t0_sh - step_t0_sh_bb;
+        const float step_t0_sh_t1 = s0 - step_t0_sh_t0;
+        const float step_t0_sh_t2 = step_g0 - step_t0_sh_bb;
+        const float step_t0_sl = step_t0_sh_t1 + step_t0_sh_t2;
+        const float step_t0_v = s1 + step_g1;
+        const float step_t0_w = step_t0_sl + step_t0_v;
+        // (step_t0, step_t1) = fast_two_sum(step_t0_sh, step_t0_w)
+        const float step_t0 = step_t0_sh + step_t0_w;
+        const float step_t0_z = step_t0 - step_t0_sh;
+        const float step_t1 = step_t0_w - step_t0_z;
+        s0 = step_t0;
+        s1 = step_t1;
+    }
+    // (fin_r0, fin_r1, fin_flag) = fold_finish_2(s0, s1)
+    const float fin_a = abs_bits(s0);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_a;
+    const float fin_r0 = fin_flag ? s0 : std::numeric_limits<float>::quiet_NaN();
+    const float fin_r1 = fin_flag ? s1 : std::numeric_limits<float>::quiet_NaN();
+    r0_out = fin_r0;
+    r1_out = fin_r1;
+    flag_out = fin_flag;
 }
 
 }  // namespace kairn::gen

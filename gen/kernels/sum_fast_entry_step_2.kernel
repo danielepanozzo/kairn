@@ -1,0 +1,22 @@
+# The step of the sum of an array of two limbs that the program supplies, with the fast addition
+# (milestone2.md, "Summation over any tree": its bound is already relative to the operands): both
+# limbs of the element pass through guard, rule R3, then add_fast_2_2. Its claims are those of
+# add_fast_2_2.
+kernel:        sum_fast_entry_step_2
+input:         s = s0 s1
+input:         supplied x = x0 x1
+output:        t = t0 t1
+value:         s+x
+requires:      normalized s
+requires:      normalized x
+ensures:       normalized t
+ensures:       error t A c=3 k=2 t=0
+min_precision: 2
+source:        add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5
+license:       algorithm: published; proof: MIT
+status:        unverified
+entry:         yes
+
+g0       = guard(x0)
+g1       = guard(x1)
+(t0, t1) = add_fast_2_2(s0, s1, g0, g1)

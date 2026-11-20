@@ -224,6 +224,31 @@ template <> struct ball_sub_1_full<float> {
     static constexpr bool proved = true;
 };
 
+// bound_dot_1: UNVERIFIED. Claims: upper; upper.
+template <class T> struct bound_dot_1;
+template <> struct bound_dot_1<double> { static constexpr bool proved = false; };
+template <> struct bound_dot_1<float> { static constexpr bool proved = false; };
+
+// bound_dot_2: UNVERIFIED. Claims: upper; upper.
+template <class T> struct bound_dot_2;
+template <> struct bound_dot_2<double> { static constexpr bool proved = false; };
+template <> struct bound_dot_2<float> { static constexpr bool proved = false; };
+
+// bound_sum_1: UNVERIFIED. Claims: holds; upper.
+template <class T> struct bound_sum_1;
+template <> struct bound_sum_1<double> { static constexpr bool proved = false; };
+template <> struct bound_sum_1<float> { static constexpr bool proved = false; };
+
+// bound_sum_2: UNVERIFIED. Claims: holds; upper.
+template <class T> struct bound_sum_2;
+template <> struct bound_sum_2<double> { static constexpr bool proved = false; };
+template <> struct bound_sum_2<float> { static constexpr bool proved = false; };
+
+// dot_step_1: UNVERIFIED. Claims: rounded.
+template <class T> struct dot_step_1;
+template <> struct dot_step_1<double> { static constexpr bool proved = false; };
+template <> struct dot_step_1<float> { static constexpr bool proved = false; };
+
 // fast_two_sum_entry: proved. Claims: leading_rounded; error, form R, c = 0, k = 2, t = 0; normalized.
 template <class T> struct fast_two_sum_entry;
 template <> struct fast_two_sum_entry<double> {
@@ -242,6 +267,11 @@ template <> struct fast_two_sum_entry<float> {
     static constexpr float unit_computed = 0.0f;
     static constexpr float tiny_computed = 0.0f;
 };
+
+// fold_finish_1: UNVERIFIED. Claims: finite_or_nan.
+template <class T> struct fold_finish_1;
+template <> struct fold_finish_1<double> { static constexpr bool proved = false; };
+template <> struct fold_finish_1<float> { static constexpr bool proved = false; };
 
 // make_2: proved. Claims: represents.
 template <class T> struct make_2;
@@ -407,6 +437,11 @@ template <> struct sub_up_entry<double> {
 template <> struct sub_up_entry<float> {
     static constexpr bool proved = true;
 };
+
+// sum_entry_step_1: UNVERIFIED. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0.
+template <class T> struct sum_entry_step_1;
+template <> struct sum_entry_step_1<double> { static constexpr bool proved = false; };
+template <> struct sum_entry_step_1<float> { static constexpr bool proved = false; };
 
 // two_prod_dekker: proved. Claims: leading_rounded; error, form R, c = 0, k = 2, t = 13/8; error, form R, c = 0, k = 2, t = 0 when product_large.
 template <class T> struct two_prod_dekker;
@@ -747,6 +782,11 @@ template <> struct ball_sub_2_full<float> {
     static constexpr bool proved = true;
 };
 
+// dot_step_2: UNVERIFIED. Claims: normalized; error, form T, c = 3*(1+4*u*u)/(1-4*u)+4, k = 2, t = 2.
+template <class T> struct dot_step_2;
+template <> struct dot_step_2<double> { static constexpr bool proved = false; };
+template <> struct dot_step_2<float> { static constexpr bool proved = false; };
+
 // eq_2_1: proved. Claims: predicate.
 template <class T> struct eq_2_1;
 template <> struct eq_2_1<double> {
@@ -764,6 +804,11 @@ template <> struct eq_2_2<double> {
 template <> struct eq_2_2<float> {
     static constexpr bool proved = true;
 };
+
+// fold_finish_2: UNVERIFIED. Claims: finite_or_nan.
+template <class T> struct fold_finish_2;
+template <> struct fold_finish_2<double> { static constexpr bool proved = false; };
+template <> struct fold_finish_2<float> { static constexpr bool proved = false; };
 
 // le_1_2: proved. Claims: predicate.
 template <class T> struct le_1_2;
@@ -957,6 +1002,16 @@ template <> struct sub_2_2_full<double> {
 template <> struct sub_2_2_full<float> {
     static constexpr bool proved = true;
 };
+
+// sum_entry_step_2: UNVERIFIED. Claims: normalized; error, form R, c = 3/(1-4*u), k = 2, t = 0.
+template <class T> struct sum_entry_step_2;
+template <> struct sum_entry_step_2<double> { static constexpr bool proved = false; };
+template <> struct sum_entry_step_2<float> { static constexpr bool proved = false; };
+
+// sum_fast_entry_step_2: UNVERIFIED. Claims: normalized; error, form A, c = 3, k = 2, t = 0.
+template <class T> struct sum_fast_entry_step_2;
+template <> struct sum_fast_entry_step_2<double> { static constexpr bool proved = false; };
+template <> struct sum_fast_entry_step_2<float> { static constexpr bool proved = false; };
 
 // to_down_2: proved. Claims: rounded.
 template <class T> struct to_down_2;

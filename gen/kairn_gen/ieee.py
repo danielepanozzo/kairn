@@ -655,6 +655,19 @@ def _makes_ball_spec(k, kernels, e):
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
 
+def _finite_or_nan_spec(k, kernels, e):
+    """The finish of a fold (milestone2.md, "When something is not finite"): the flag is true
+    exactly when limb 0 of the value is finite; the output is then the value, limb for limb, and
+    otherwise every limb of it is a NaN. For every input: the statement has no hypothesis."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=False) + _hyps_extended(k, t) + [_let(k, kernels)]
+    src, out, flag = t.ins[k.value].limbs, t.outs[e['of']].limbs, e['flag']
+    lines += [f'  ({flag} = true <-> finite {src[0]}) /\\',
+              f'  ({flag} = true -> ' + ' /\\ '.join(f'{o} = {i}' for o, i in zip(out, src)) + ') /\\',
+              f'  ({flag} = false -> ' + ' /\\ '.join(f'nan {o}' for o in out) + ').']
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
 ROUNDING = {'nearest': 'RN', 'down': 'RD', 'up': 'RU'}
 RELATION = {'lt': 'xlt', 'le': 'xle', 'eq': 'xeq'}
 
@@ -750,6 +763,8 @@ def kernel_statements(k, kernels):
             return [_makes_ball_spec(k, kernels, k.ensures[0])]
         if 'represents' in kinds:
             return [_represents_spec(k, kernels, next(e for e in k.ensures if e['kind'] == 'represents'))]
+        if kinds == {'finite_or_nan'}:
+            return [_finite_or_nan_spec(k, kernels, k.ensures[0])]
         enc = [e for e in k.ensures if e['kind'] == 'encloses']
         if enc:
             return [_ball_spec(k, kernels, enc[0])]

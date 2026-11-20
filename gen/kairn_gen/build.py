@@ -18,6 +18,8 @@ def outputs(kernels):
         'proofs/gen/Model.v': rocq.model(kernels),
         'proofs/gen/Statements.v': rocq.statements(kernels),
         'proofs/gen/Audit.v': rocq.audit(kernels),
+        'proofs/gen/FoldModel.v': rocq.fold_model(kernels),
+        'proofs/gen/FoldStatements.v': rocq.fold_statements(kernels),
         'proofs/gen/IeeeModel.v': ieee.model(kernels),
         'proofs/gen/IeeeStatements.v': ieee.statements(kernels),
         'proofs/gen/IeeeAudit.v': ieee.audit(kernels),

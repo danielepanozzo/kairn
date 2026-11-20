@@ -1,0 +1,19 @@
+# The step of the sum of an array of one limb that the program supplies (milestone2.md, "Folds",
+# "Arrays that the program fills"; question 19, decided (a)): the element passes through guard,
+# rule R3, then add_1_1. A compiler that inlines the loop into a program that stored products into
+# the array cannot fuse them into the addition. Its claims are those of add_1_1.
+kernel:        sum_entry_step_1
+input:         stored s
+input:         x
+output:        t
+value:         s+x
+ensures:       rounded t nearest
+ensures:       error t R c=1/(1+u) k=1 t=0
+min_precision: 1
+source:        add_1_1 on a guarded element (rule R3)
+license:       proof: MIT
+status:        unverified
+entry:         yes
+
+g = guard(x)
+t = add(s, g)

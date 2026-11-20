@@ -38,6 +38,8 @@ theories/DirectedSum.v
 theories/DirectedProd.v
 theories/EntryKernels.v
 theories/BallPow2.v
+gen/FoldModel.v
+gen/FoldStatements.v
 theories/IeeeOperations.v
 gen/IeeeModel.v
 theories/IeeeBridge.v
