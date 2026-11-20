@@ -34,6 +34,9 @@ FAMILY_SCHEDULE = {
              "centerpow2", "overflow", "pow2", "extreme", "zero"),
 }
 
+# The families of Milestone 2 (gen4.py).
+FAMILIES4 = ("neighbor", "dirsum", "dirprod", "ballpow2")
+
 TAILS = ("near", "any", "half+", "half-", "quarter-", "max", "eta", "tiny", "zero")
 HALF_TAILS = ("half+", "half-", "quarter-")
 EXTREME_TAILS = ("half+", "half-", "quarter-", "max", "eta", "tiny", "zero")
@@ -64,6 +67,14 @@ class Shape2:
         self.names = [n for n, _ in kernel.inputs]
         kinds = {e.kind for e in kernel.ensures}
         self.op = kernel.value_tree[0] if kernel.value_tree is not None else None
+        # The kernels of Milestone 2 have families of their own (gen4.py), chosen from claims
+        # that no kernel of the earlier waves has.
+        from . import gen4
+        fam4 = gen4.family_of(kernel, self.roles)
+        if fam4 is not None:
+            self.family = fam4
+            gen4.setup(self)
+            return
         if "encloses" in kinds:
             self.family = "ball"
             enc = next(e for e in kernel.ensures if e.kind == "encloses")
@@ -229,6 +240,9 @@ def operand(fmt, rng, sh, name, stratum):
 def make_case(fmt, sh, rng, stratum):
     """Operand limbs {name: [fixed, ...]} and the set of (name, limb) that are -0."""
     fam = sh.family
+    if fam in FAMILIES4:
+        from . import gen4
+        return gen4.make_case(fmt, sh, rng, stratum)
     if fam == "compare":
         vals = _compare(fmt, sh, rng, stratum)
     elif fam == "step":

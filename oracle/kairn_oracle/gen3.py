@@ -338,12 +338,37 @@ def _threshold(fmt, sh, rng):
                 continue
             _near_product(fmt, sh, rng, vals, n1, n2, T, inside)
             touched.update((n1, n2))
+        elif t[0] == "*" and any(u[0] == "name" and sh.roles.get(u[1]) == "pow2" for u in t[1:]):
+            # An expression times a power of two, (abs(cx)+rx)*c for the scaling of a ball by a
+            # power of two (Milestone 2): c chosen for the operands drawn.
+            pn, other = (t[1][1], t[2]) if t[1][0] == "name" and sh.roles.get(t[1][1]) == "pow2" \
+                else (t[2][1], t[1])
+            if _scale_to(fmt, vals, other, pn, T, inside):
+                touched.add(pn)
     negz = {(n, i) for n, i in negz if n not in touched}
     return vals, negz
 
 
 def _fixed_pow2(fmt, T):
     return 1 << (T - fmt.qmin) if T >= fmt.qmin else None
+
+
+def _scale_to(fmt, vals, tree, pn, T, inside):
+    """The power of two pn set to the largest c with |tree| c <= 2^T (inside), or to twice it,
+    for the finite operands in vals; False when no such power of two is a number of the format
+    (or tree is zero there)."""
+    if any(type(v) is not int for vs in vals.values() for v in vs):
+        return False
+    src, s = EX.compile_tree(tree, lambda n: ("(%d)" % sum(vals[n]), fmt.qmin))
+    e = abs(EX.make_function([], src)())
+    if e == 0:
+        return False
+    # |tree| = e 2^s; the largest k with e 2^(s+k) <= 2^T.
+    k = T - s - (e - 1).bit_length() + (0 if inside else 1)
+    if not fmt.qmin <= k <= fmt.emax:
+        return False
+    vals[pn] = [1 << (k - fmt.qmin)]
+    return True
 
 
 def _near_power(fmt, sh, rng, n, T, inside):
