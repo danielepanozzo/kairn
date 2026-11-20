@@ -36,6 +36,8 @@ theories/Summation.v
 theories/SummationKernels.v
 theories/DirectedSum.v
 theories/DirectedProd.v
+theories/EntryKernels.v
+theories/BallPow2.v
 theories/IeeeOperations.v
 gen/IeeeModel.v
 theories/IeeeBridge.v
@@ -56,6 +58,7 @@ theories/Rectangle.v
 theories/IeeeProduct.v
 theories/IeeeDirected.v
 theories/IeeeDirectedProd.v
+theories/IeeeEntry.v
 theories/IeeeBall.v
 theories/IeeeBallCores.v
 theories/IeeeBallFinite.v

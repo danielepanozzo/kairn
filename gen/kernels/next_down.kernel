@@ -11,9 +11,11 @@ ensures:       neighbor r down
 min_precision: 1
 source:        IEEE 754 nextDown on the bit pattern (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+theorem:       proofs/theories/EntryKernels.v next_down_correct
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeEntry.v next_down_ieee_correct
 entry:         yes
 cone_exempt:   r = pred(a), and pred(+inf) is finite; the neighbor claim states the output for every input, infinities and NaN included
 

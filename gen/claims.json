@@ -170,8 +170,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "two_sum_ord_correct"
+      },
       "source": {
         "cite": "Fast2Sum of the operands ordered by magnitude (Dekker 1971, with its comparison; BGM17)",
         "license": "algorithm: published; proof: MIT"
@@ -221,9 +224,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "add_down_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeDirected.v",
+        "name": "add_down_1_ieee_correct"
+      },
       "source": {
         "cite": "the rounded sum and the sign of its exact error (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -263,9 +273,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "add_down_entry_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeEntry.v",
+        "name": "add_down_entry_ieee_correct"
+      },
       "source": {
         "cite": "add_down_1 on its guarded operands (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -305,9 +322,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "add_up_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeDirected.v",
+        "name": "add_up_1_ieee_correct"
+      },
       "source": {
         "cite": "the rounded sum and the sign of its exact error (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -347,9 +371,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "add_up_entry_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeEntry.v",
+        "name": "add_up_entry_ieee_correct"
+      },
       "source": {
         "cite": "add_up_1 on its guarded operands (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -766,8 +797,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BallPow2.v",
+        "name": "ball_mul_pow2_1_correct"
+      },
       "source": {
         "cite": "midpoint-radius scaling by a power of two (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1238,8 +1272,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/EntryKernels.v",
+        "name": "fast_two_sum_entry_correct"
+      },
       "source": {
         "cite": "fast_two_sum on its guarded operands (Milestone 2 listing)",
         "license": "algorithm: published; proof: MIT"
@@ -1478,9 +1515,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedProd.v",
+        "name": "mul_down_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeDirectedProd.v",
+        "name": "mul_down_1_ieee_correct"
+      },
       "source": {
         "cite": "two_prod and the sign of its error term (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1527,9 +1571,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedProd.v",
+        "name": "mul_up_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeDirectedProd.v",
+        "name": "mul_up_1_ieee_correct"
+      },
       "source": {
         "cite": "two_prod and the sign of its error term (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1565,9 +1616,16 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/EntryKernels.v",
+        "name": "next_down_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeEntry.v",
+        "name": "next_down_ieee_correct"
+      },
       "source": {
         "cite": "IEEE 754 nextDown on the bit pattern (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1603,9 +1661,16 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/EntryKernels.v",
+        "name": "next_up_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeEntry.v",
+        "name": "next_up_ieee_correct"
+      },
       "source": {
         "cite": "IEEE 754 nextUp on the bit pattern (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1700,9 +1765,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/EntryKernels.v",
+        "name": "radd_entry_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeEntry.v",
+        "name": "radd_entry_ieee_correct"
+      },
       "source": {
         "cite": "radd on its guarded operands (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1847,9 +1919,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "sub_down_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeDirected.v",
+        "name": "sub_down_1_ieee_correct"
+      },
       "source": {
         "cite": "add_down_1 on a and -b (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1889,9 +1968,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "sub_down_entry_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeEntry.v",
+        "name": "sub_down_entry_ieee_correct"
+      },
       "source": {
         "cite": "sub_down_1 on its guarded operands (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1931,9 +2017,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "sub_up_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeDirected.v",
+        "name": "sub_up_1_ieee_correct"
+      },
       "source": {
         "cite": "add_up_1 on a and -b (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1973,9 +2066,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "sub_up_entry_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeEntry.v",
+        "name": "sub_up_entry_ieee_correct"
+      },
       "source": {
         "cite": "sub_up_1 on its guarded operands (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2161,8 +2261,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/EntryKernels.v",
+        "name": "two_sum_entry_correct"
+      },
       "source": {
         "cite": "two_sum on its guarded operands (Milestone 2 listing)",
         "license": "algorithm: published; proof: MIT"
@@ -3212,8 +3315,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/BallPow2.v",
+        "name": "ball_mul_pow2_2_correct"
+      },
       "source": {
         "cite": "midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

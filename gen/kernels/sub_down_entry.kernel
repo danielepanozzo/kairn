@@ -10,9 +10,11 @@ ensures:       rounded r down
 min_precision: 2
 source:        sub_down_1 on its guarded operands (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+theorem:       proofs/theories/DirectedSum.v sub_down_entry_correct
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeEntry.v sub_down_entry_ieee_correct
 entry:         yes
 cone_exempt:   through sub_down_1, whose result is selected; the rounded claim states the output for infinite and NaN operands
 

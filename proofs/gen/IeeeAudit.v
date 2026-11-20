@@ -6,9 +6,24 @@
 From Kairn.Gen Require Import IeeeStatements.
 From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
+From Kairn Require Import IeeeDirected.
+From Kairn Require Import IeeeDirectedProd.
+From Kairn Require Import IeeeEntry.
 From Kairn Require Import IeeeExt.
 From Kairn Require Import IeeeFull.
 From Kairn Require Import IeeeMake.
+
+Definition add_down_1_ieee_audit : add_down_1_ieee_spec := add_down_1_ieee_correct.
+Print Assumptions add_down_1_ieee_correct.
+
+Definition add_down_entry_ieee_audit : add_down_entry_ieee_spec := add_down_entry_ieee_correct.
+Print Assumptions add_down_entry_ieee_correct.
+
+Definition add_up_1_ieee_audit : add_up_1_ieee_spec := add_up_1_ieee_correct.
+Print Assumptions add_up_1_ieee_correct.
+
+Definition add_up_entry_ieee_audit : add_up_entry_ieee_spec := add_up_entry_ieee_correct.
+Print Assumptions add_up_entry_ieee_correct.
 
 Definition ball_add_1_full_audit : ball_add_1_full_spec := ball_add_1_full_correct.
 Print Assumptions ball_add_1_full_correct.
@@ -31,11 +46,38 @@ Print Assumptions ball_sub_1_full_correct.
 Definition make_2_audit : make_2_spec := make_2_correct.
 Print Assumptions make_2_correct.
 
+Definition mul_down_1_ieee_audit : mul_down_1_ieee_spec := mul_down_1_ieee_correct.
+Print Assumptions mul_down_1_ieee_correct.
+
+Definition mul_up_1_ieee_audit : mul_up_1_ieee_spec := mul_up_1_ieee_correct.
+Print Assumptions mul_up_1_ieee_correct.
+
+Definition next_down_ieee_audit : next_down_ieee_spec := next_down_ieee_correct.
+Print Assumptions next_down_ieee_correct.
+
+Definition next_up_ieee_audit : next_up_ieee_spec := next_up_ieee_correct.
+Print Assumptions next_up_ieee_correct.
+
 Definition radd_ieee_audit : radd_ieee_spec := radd_ieee_correct.
 Print Assumptions radd_ieee_correct.
 
+Definition radd_entry_ieee_audit : radd_entry_ieee_spec := radd_entry_ieee_correct.
+Print Assumptions radd_entry_ieee_correct.
+
 Definition rmul_ieee_audit : rmul_ieee_spec := rmul_ieee_correct.
 Print Assumptions rmul_ieee_correct.
+
+Definition sub_down_1_ieee_audit : sub_down_1_ieee_spec := sub_down_1_ieee_correct.
+Print Assumptions sub_down_1_ieee_correct.
+
+Definition sub_down_entry_ieee_audit : sub_down_entry_ieee_spec := sub_down_entry_ieee_correct.
+Print Assumptions sub_down_entry_ieee_correct.
+
+Definition sub_up_1_ieee_audit : sub_up_1_ieee_spec := sub_up_1_ieee_correct.
+Print Assumptions sub_up_1_ieee_correct.
+
+Definition sub_up_entry_ieee_audit : sub_up_entry_ieee_spec := sub_up_entry_ieee_correct.
+Print Assumptions sub_up_entry_ieee_correct.
 
 Definition abs_2_ieee_audit : abs_2_ieee_spec := abs_2_ieee_correct.
 Print Assumptions abs_2_ieee_correct.

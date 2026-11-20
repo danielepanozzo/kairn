@@ -50,21 +50,17 @@
       mul_dir_1 returns the pair (mul_down_1, mul_up_1): in the real model a zero factor
       gives p = 0, which is the literal zero of its last two lines.
       The facts hold for every positive precision and every tie rule
-      (mul_down_1_listing_facts, mul_up_1_listing_facts); the theorems in the shape of a
-      generated statement are for ties to even from precision 2, as the page states them.
+      (mul_down_1_facts, mul_up_1_facts); the generated statements mul_down_1_spec and
+      mul_up_1_spec (theorems mul_down_1_correct, mul_up_1_correct) are for ties to even
+      from precision 2, as the kernels' descriptions say.
 
    The fallback of the design page (the test le(ap, P) and a statement for |a b| > P) is
    not needed: the lemma holds at the boundary.
 
-   THE MODELS IN THIS FILE ARE WRITTEN BY HAND (section Listings). Each mirrors a listing
-   of the design page, line by line, in the text the generator prints for such a listing.
-   The generated Model.mul_down_1, Model.mul_up_1 and Model.mul_dir_1 replace them, and
-   the generated constant up(eta/(2*u^2)) replaces const_P, whose body is the term the
-   generator prints for that expression; the definitions are expected to be convertible,
-   so that the theorems transfer by `exact`, or after `unfold`. (Checked once, outside the
-   build, on the text the generator prints for the kernel descriptions of
-   experiments/milestone2/kernels: each definition is equal to its model here by
-   reflexivity.) *)
+   mul_down_1 and mul_up_1 are the generated models of proofs/gen/Model.v. mul_dir_1 is
+   not generated yet (it comes with the interval kernels): mul_dir_1_listing, in section
+   Listings, is its listing written by hand in the text the generator prints, and the
+   generated Model.mul_dir_1 will replace it. *)
 From Stdlib Require Import Reals ZArith Bool Lia Lra Psatz.
 From Flocq Require Import Core Mult_error.
 From Kairn.Gen Require Import Model Statements.
@@ -472,62 +468,21 @@ intros emin prec Hp a b Fa Fb. split.
   replace (emin - 1)%Z with (-1 + emin)%Z by ring. rewrite bpow_plus, pow2_m1. exact H.
 Qed.
 
-(** * The listings, as the generator prints a kernel *)
+(** * The listing of mul_dir_1 *)
 
 Section Listings.
 Variable emin prec : Z.
 Variable choice : Z -> bool.
 
-(* Hand-written copy of the constant `const up(eta/(2*u^2))` of the listings: the
-   expression eta / (2 u^2) rounded up to the format, in the term the generator prints
-   for it. The generated constant (named up_K_0 after the first kernel K that uses it)
-   replaces it. Its value is P = 2^(2 prec - 1) eta (const_P_eq). *)
-Definition const_P : R :=
-  round radix2 (FLT_exp emin prec) Zceil (bpow radix2 emin / (2 * (bpow radix2 (- prec) ^ 2))).
-
-(* Hand-written model of the listing mul_down_1; the generated Model.mul_down_1
-   replaces it. *)
-Definition mul_down_1_listing (a b : R) : R :=
-  let '(p, e) := two_prod emin prec choice a b in
-  let ap := Rabs p in
-  let bd := Rlt_bool ap const_P in
-  let ez := Req_bool e 0 in
-  let un := andb bd ez in
-  let n := Rlt_bool e 0 in
-  let sd := orb n un in
-  let pp := pred radix2 (FLT_exp emin prec) p in
-  let d := if sd then pp else p in
-  let za := Req_bool a 0 in
-  let zb := Req_bool b 0 in
-  let zz := orb za zb in
-  let r := if zz then p else d in
-  r.
-
-(* Hand-written model of the listing mul_up_1; the generated Model.mul_up_1 replaces
-   it. *)
-Definition mul_up_1_listing (a b : R) : R :=
-  let '(p, e) := two_prod emin prec choice a b in
-  let ap := Rabs p in
-  let bd := Rlt_bool ap const_P in
-  let ez := Req_bool e 0 in
-  let un := andb bd ez in
-  let n := Rlt_bool 0 e in
-  let su := orb n un in
-  let sp := succ radix2 (FLT_exp emin prec) p in
-  let v := if su then sp else p in
-  let za := Req_bool a 0 in
-  let zb := Req_bool b 0 in
-  let zz := orb za zb in
-  let r := if zz then p else v in
-  r.
-
 (* Hand-written model of the listing mul_dir_1 (both directed products from one
-   two_prod, a zero factor giving the literal zero); the generated Model.mul_dir_1
-   replaces it. *)
+   two_prod, a zero factor giving the literal zero), in the text the generator prints
+   for such a listing; the kernel comes with the interval kernels, and the generated
+   Model.mul_dir_1 will replace this definition. The constant is the generated one of
+   mul_down_1 and mul_up_1. *)
 Definition mul_dir_1_listing (a b : R) : R * R :=
   let '(p, e) := two_prod emin prec choice a b in
   let ap := Rabs p in
-  let bd := Rlt_bool ap const_P in
+  let bd := Rlt_bool ap (up_mul_down_1_0 emin prec) in
   let ez := Req_bool e 0 in
   let un := andb bd ez in
   let n := Rlt_bool e 0 in
@@ -549,10 +504,11 @@ End Listings.
 
 (* The constant of the listings is P = eta / (2 u^2) = 2^(2 prec - 1) eta, which is a
    number of the format: rounding it up changes nothing. For every positive precision. *)
-Lemma const_P_eq :
-  forall emin prec {prec_gt_0_ : Prec_gt_0 prec}, const_P emin prec = pow2 (2 * prec - 1 + emin).
+Lemma up_mul_down_1_0_eq :
+  forall emin prec {prec_gt_0_ : Prec_gt_0 prec},
+  up_mul_down_1_0 emin prec = pow2 (2 * prec - 1 + emin).
 Proof.
-intros emin prec Hp. unfold const_P.
+intros emin prec Hp. unfold up_mul_down_1_0.
 assert (Hp0 : (0 < prec)%Z) by exact Hp.
 assert (E : pow2 emin / (2 * pow2 (- prec) ^ 2) = pow2 (2 * prec - 1 + emin)).
 { replace (2 * pow2 (- prec) ^ 2) with (pow2 (1 + (- prec + - prec))).
@@ -712,14 +668,14 @@ Qed.
    the number of the format before RD(a b), the latter only for a nonzero product whose
    rounding to nearest is below P in magnitude; and it is RD(a b) when a b = 0 or
    |RN(a b)| >= P. For every positive precision and every tie rule. *)
-Theorem mul_down_1_listing_facts :
-  let r := mul_down_1_listing emin prec choice a b in
+Theorem mul_down_1_facts :
+  let r := mul_down_1 emin prec choice a b in
   format r /\ r <= a * b /\
   (r = rd (a * b) \/ (r = pred (rd (a * b)) /\ a * b <> 0 /\ Rabs (rnd (a * b)) < P)) /\
   (a * b = 0 \/ P <= Rabs (rnd (a * b)) -> r = rd (a * b)).
 Proof.
-intros r. unfold r, mul_down_1_listing. clear r.
-rewrite two_prod_eq, (const_P_eq emin prec). cbv beta iota zeta.
+intros r. unfold r, mul_down_1. clear r.
+rewrite two_prod_eq, (up_mul_down_1_0_eq emin prec). cbv beta iota zeta.
 assert (Zero : a * b = 0 ->
   format (rnd (a * b)) /\ rnd (a * b) <= a * b /\
   (rnd (a * b) = rd (a * b) \/
@@ -744,14 +700,14 @@ Qed.
    the number of the format after RU(a b), the latter only for a nonzero product whose
    rounding to nearest is below P in magnitude; and it is RU(a b) when a b = 0 or
    |RN(a b)| >= P. For every positive precision and every tie rule. *)
-Theorem mul_up_1_listing_facts :
-  let r := mul_up_1_listing emin prec choice a b in
+Theorem mul_up_1_facts :
+  let r := mul_up_1 emin prec choice a b in
   format r /\ a * b <= r /\
   (r = ru (a * b) \/ (r = succ (ru (a * b)) /\ a * b <> 0 /\ Rabs (rnd (a * b)) < P)) /\
   (a * b = 0 \/ P <= Rabs (rnd (a * b)) -> r = ru (a * b)).
 Proof.
-intros r. unfold r, mul_up_1_listing. clear r.
-rewrite two_prod_eq, (const_P_eq emin prec). cbv beta iota zeta.
+intros r. unfold r, mul_up_1. clear r.
+rewrite two_prod_eq, (up_mul_down_1_0_eq emin prec). cbv beta iota zeta.
 assert (Zero : a * b = 0 ->
   format (rnd (a * b)) /\ a * b <= rnd (a * b) /\
   (rnd (a * b) = ru (a * b) \/
@@ -780,10 +736,10 @@ End DirectedProduct.
 Lemma mul_dir_1_listing_eq :
   forall emin prec {prec_gt_0_ : Prec_gt_0 prec} choice a b,
   mul_dir_1_listing emin prec choice a b
-  = (mul_down_1_listing emin prec choice a b, mul_up_1_listing emin prec choice a b).
+  = (mul_down_1 emin prec choice a b, mul_up_1 emin prec choice a b).
 Proof.
 intros emin prec Hp choice a b.
-unfold mul_dir_1_listing, mul_down_1_listing, mul_up_1_listing.
+unfold mul_dir_1_listing, mul_down_1, mul_up_1.
 rewrite two_prod_eq. cbv beta iota zeta.
 assert (Zero : a * b = 0 -> round radix2 (FLT_exp emin prec) (Znearest choice) (a * b) = 0).
 { intros Z. rewrite Z. apply round_0; auto with typeclass_instances. }
@@ -794,18 +750,18 @@ destruct (Req_bool_spec b 0) as [Zb|Zb].
 reflexivity.
 Qed.
 
-(** * The statements, in the shape of a generated statement *)
+(** * The statements *)
 
-(* mul_down_1, for numbers a, b of the format, ties to even, from precision 2 (as the
-   design page states it; the facts above need only a positive precision): the result r
-   is a number of the format; r <= a b; r is RD(a b) or the number of the format before
-   it; and r = RD(a b) when a b = 0 or |a b| >= 2^(2 prec - 1) eta. *)
-Theorem mul_down_1_listing_correct :
+(* mul_down_1, for numbers a, b of the format, ties to even, from precision 2 (the facts
+   above need only a positive precision): the result r is a number of the format;
+   r <= a b; r is RD(a b) or the number of the format before it; and r = RD(a b) when
+   a b = 0 or |a b| >= 2^(2 prec - 1) eta. *)
+Theorem mul_down_1_cases :
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a b : R,
   fmt emin prec a ->
   fmt emin prec b ->
-  let r := mul_down_1_listing emin prec tie_even a b in
+  let r := mul_down_1 emin prec tie_even a b in
   fmt emin prec r /\
   r <= (a * b) /\
   (r = RD emin prec (a * b) \/ r = pred radix2 (FLT_exp emin prec) (RD emin prec (a * b))) /\
@@ -813,7 +769,7 @@ Theorem mul_down_1_listing_correct :
 Proof.
 intros emin prec Hp a b Fa Fb r. unfold r. clear r.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
-destruct (mul_down_1_listing_facts emin prec tie_even a b Fa Fb) as [F [L [C X]]].
+destruct (mul_down_1_facts emin prec tie_even a b Fa Fb) as [F [L [C X]]].
 split; [exact F|split; [exact L|split]].
 - destruct C as [C|[C _]]; [now left|now right].
 - intros [Z|K]; apply X; [now left|right].
@@ -825,12 +781,12 @@ Qed.
 (* mul_up_1, likewise: the result r is a number of the format; a b <= r; r is RU(a b) or
    the number of the format after it; and r = RU(a b) when a b = 0 or
    |a b| >= 2^(2 prec - 1) eta. *)
-Theorem mul_up_1_listing_correct :
+Theorem mul_up_1_cases :
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a b : R,
   fmt emin prec a ->
   fmt emin prec b ->
-  let r := mul_up_1_listing emin prec tie_even a b in
+  let r := mul_up_1 emin prec tie_even a b in
   fmt emin prec r /\
   (a * b) <= r /\
   (r = RU emin prec (a * b) \/ r = succ radix2 (FLT_exp emin prec) (RU emin prec (a * b))) /\
@@ -838,13 +794,34 @@ Theorem mul_up_1_listing_correct :
 Proof.
 intros emin prec Hp a b Fa Fb r. unfold r. clear r.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
-destruct (mul_up_1_listing_facts emin prec tie_even a b Fa Fb) as [F [L [C X]]].
+destruct (mul_up_1_facts emin prec tie_even a b Fa Fb) as [F [L [C X]]].
 split; [exact F|split; [exact L|split]].
 - destruct C as [C|[C _]]; [now left|now right].
 - intros [Z|K]; apply X; [now left|right].
   unfold eta in K. rewrite P_split in K.
   apply round_abs_ge; trivial.
   apply generic_format_bpow. unfold FLT_exp. lia.
+Qed.
+
+(* The generated statements: the result is on the right side of a b, at most one step of
+   the format beyond its directed rounding, and equal to that rounding when a b = 0 or
+   |a b| >= 2^(2 prec - 1) eta. *)
+Theorem mul_down_1_correct : mul_down_1_spec.
+Proof.
+intros emin prec Hp a b Fa Fb r.
+assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
+destruct (mul_down_1_cases emin prec Hp a b Fa Fb) as [F [L [C X]]]. fold r in F, L, C, X.
+split; [exact F|split; [exact L|split; [|exact X]]].
+destruct C as [C|C]; rewrite C; [apply pred_le_id|apply Rle_refl].
+Qed.
+
+Theorem mul_up_1_correct : mul_up_1_spec.
+Proof.
+intros emin prec Hp a b Fa Fb r.
+assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
+destruct (mul_up_1_cases emin prec Hp a b Fa Fb) as [F [L [C X]]]. fold r in F, L, C, X.
+split; [exact F|split; [exact L|split; [|exact X]]].
+destruct C as [C|C]; rewrite C; [apply succ_ge_id|apply Rle_refl].
 Qed.
 
 (* mul_dir_1: its two outputs satisfy the statements of mul_down_1 and of mul_up_1. *)
@@ -866,8 +843,8 @@ Proof.
 intros emin prec Hp a b Fa Fb.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
 rewrite (mul_dir_1_listing_eq emin prec).
-destruct (mul_down_1_listing_correct emin prec Hp a b Fa Fb) as [F1 [L1 [C1 X1]]].
-destruct (mul_up_1_listing_correct emin prec Hp a b Fa Fb) as [F2 [L2 [C2 X2]]].
+destruct (mul_down_1_cases emin prec Hp a b Fa Fb) as [F1 [L1 [C1 X1]]].
+destruct (mul_up_1_cases emin prec Hp a b Fa Fb) as [F2 [L2 [C2 X2]]].
 exact (conj F1 (conj F2 (conj L1 (conj C1 (conj X1 (conj L2 (conj C2 X2))))))).
 Qed.
 

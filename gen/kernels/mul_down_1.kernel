@@ -18,9 +18,11 @@ ensures:       rounded r down when=product_large
 min_precision: 2
 source:        two_prod and the sign of its error term (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+theorem:       proofs/theories/DirectedProd.v mul_down_1_correct
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeDirectedProd.v mul_down_1_ieee_correct
 entry:         yes
 cone_exempt:   r is p or pred(p), chosen by select, and pred(+inf) is finite; the bound and rounded claims state the output for infinite and NaN operands
 

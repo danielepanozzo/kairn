@@ -46,7 +46,7 @@ Definition two_sum_ord_ieee_spec : Prop :=
   (val s + val e) = (val a + val b) /\
   normalized_2 (ieee_emin prec emax) prec (val s) (val e).
 
-(* add_down_1: the rounded sum and the sign of its exact error (Milestone 2 listing). IEEE-model status: unverified. *)
+(* add_down_1: the rounded sum and the sign of its exact error (Milestone 2 listing). IEEE-model status: proved. *)
 Definition add_down_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -56,7 +56,7 @@ Definition add_down_1_ieee_spec : Prop :=
   let r := IeeeModel.add_down_1 prec emax nan_plus nan_minus nan_abs a b in
   xval r = xrd prec emax (xadd (xval a) (xval b)).
 
-(* add_down_entry: add_down_1 on its guarded operands (Milestone 2 listing). IEEE-model status: unverified. *)
+(* add_down_entry: add_down_1 on its guarded operands (Milestone 2 listing). IEEE-model status: proved. *)
 Definition add_down_entry_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -66,7 +66,7 @@ Definition add_down_entry_ieee_spec : Prop :=
   let r := IeeeModel.add_down_entry prec emax nan_plus nan_minus nan_abs a b in
   xval r = xrd prec emax (xadd (xval a) (xval b)).
 
-(* add_up_1: the rounded sum and the sign of its exact error (Milestone 2 listing). IEEE-model status: unverified. *)
+(* add_up_1: the rounded sum and the sign of its exact error (Milestone 2 listing). IEEE-model status: proved. *)
 Definition add_up_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -76,7 +76,7 @@ Definition add_up_1_ieee_spec : Prop :=
   let r := IeeeModel.add_up_1 prec emax nan_plus nan_minus nan_abs a b in
   xval r = xru prec emax (xadd (xval a) (xval b)).
 
-(* add_up_entry: add_up_1 on its guarded operands (Milestone 2 listing). IEEE-model status: unverified. *)
+(* add_up_entry: add_up_1 on its guarded operands (Milestone 2 listing). IEEE-model status: proved. *)
 Definition add_up_entry_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -265,7 +265,7 @@ Definition two_prod_ieee_spec : Prop :=
   Rabs ((val p + val e) - (val a * val b)) <= (1 / 2) * eta (ieee_emin prec emax) /\
   (((val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) -> (val p + val e) = (val a * val b)).
 
-(* mul_down_1: two_prod and the sign of its error term (Milestone 2 listing). IEEE-model status: unverified. *)
+(* mul_down_1: two_prod and the sign of its error term (Milestone 2 listing). IEEE-model status: proved. *)
 Definition mul_down_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -280,7 +280,7 @@ Definition mul_down_1_ieee_spec : Prop :=
     (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
    xval r = xrd prec emax (xmul (xval a) (xval b))).
 
-(* mul_up_1: two_prod and the sign of its error term (Milestone 2 listing). IEEE-model status: unverified. *)
+(* mul_up_1: two_prod and the sign of its error term (Milestone 2 listing). IEEE-model status: proved. *)
 Definition mul_up_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -295,7 +295,7 @@ Definition mul_up_1_ieee_spec : Prop :=
     (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
    xval r = xru prec emax (xmul (xval a) (xval b))).
 
-(* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). IEEE-model status: unverified. *)
+(* next_down: IEEE 754 nextDown on the bit pattern (Milestone 2 listing). IEEE-model status: proved. *)
 Definition next_down_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -304,7 +304,7 @@ Definition next_down_ieee_spec : Prop :=
   let r := IeeeModel.next_down prec emax a in
   xval r = xpred prec emax (xval a).
 
-(* next_up: IEEE 754 nextUp on the bit pattern (Milestone 2 listing). IEEE-model status: unverified. *)
+(* next_up: IEEE 754 nextUp on the bit pattern (Milestone 2 listing). IEEE-model status: proved. *)
 Definition next_up_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
@@ -330,7 +330,7 @@ Definition radd_ieee_spec : Prop :=
    val r - (val a + val b)
    <= (3 / 2) * (val r - Ulp.pred radix2 (FLT_exp (ieee_emin prec emax) prec) (val r))).
 
-(* radd_entry: radd on its guarded operands (Milestone 2 listing). IEEE-model status: unverified. *)
+(* radd_entry: radd on its guarded operands (Milestone 2 listing). IEEE-model status: proved. *)
 Definition radd_entry_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -364,7 +364,7 @@ Definition rmul_ieee_spec : Prop :=
    val r - (val a * val b)
    <= (3 / 2) * (val r - Ulp.pred radix2 (FLT_exp (ieee_emin prec emax) prec) (val r))).
 
-(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). IEEE-model status: unverified. *)
+(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). IEEE-model status: proved. *)
 Definition sub_down_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -374,7 +374,7 @@ Definition sub_down_1_ieee_spec : Prop :=
   let r := IeeeModel.sub_down_1 prec emax nan_plus nan_minus nan_opp nan_abs a b in
   xval r = xrd prec emax (xadd (xval a) (xopp (xval b))).
 
-(* sub_down_entry: sub_down_1 on its guarded operands (Milestone 2 listing). IEEE-model status: unverified. *)
+(* sub_down_entry: sub_down_1 on its guarded operands (Milestone 2 listing). IEEE-model status: proved. *)
 Definition sub_down_entry_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -384,7 +384,7 @@ Definition sub_down_entry_ieee_spec : Prop :=
   let r := IeeeModel.sub_down_entry prec emax nan_plus nan_minus nan_opp nan_abs a b in
   xval r = xrd prec emax (xadd (xval a) (xopp (xval b))).
 
-(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). IEEE-model status: unverified. *)
+(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). IEEE-model status: proved. *)
 Definition sub_up_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -394,7 +394,7 @@ Definition sub_up_1_ieee_spec : Prop :=
   let r := IeeeModel.sub_up_1 prec emax nan_plus nan_minus nan_opp nan_abs a b in
   xval r = xru prec emax (xadd (xval a) (xopp (xval b))).
 
-(* sub_up_entry: sub_up_1 on its guarded operands (Milestone 2 listing). IEEE-model status: unverified. *)
+(* sub_up_entry: sub_up_1 on its guarded operands (Milestone 2 listing). IEEE-model status: proved. *)
 Definition sub_up_entry_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

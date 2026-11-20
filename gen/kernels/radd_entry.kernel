@@ -12,9 +12,11 @@ ensures:       upper r gaps=3/2
 min_precision: 2
 source:        radd on its guarded operands (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+theorem:       proofs/theories/EntryKernels.v radd_entry_correct
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeEntry.v radd_entry_ieee_correct
 entry:         yes
 cone_exempt:   r = succ(s), and succ(-inf) is finite; r is a radius, and the ball layer tests radii for non-finite values (Milestone 1 statements, Ball kernels)
 

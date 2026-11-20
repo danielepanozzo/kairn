@@ -18,11 +18,12 @@
    - the theorems of summation, which are about no single kernel and have no generated
      statement: the tree theorem, the bounds of a sum and of a dot product in the two
      orders of a loop, and the kernels to which they apply;
-   - the first building blocks of Milestone 2, proved before their kernels are generated:
-     the directed sums and products on models of their listings written by hand (the
-     generated models will replace them), in the real model and in the IEEE model, the
-     error of a rounded product and the sign of the error term of two_prod, the rectangle
-     lemma of the product of intervals, and the two executions of a product.
+   - the lemmas of the first building blocks of Milestone 2 that are not generated
+     statements: what the directed sums and products return in more detail than their
+     claims say, the error of a rounded product and the sign of the error term of
+     two_prod, mul_dir_1 on a model of its listing written by hand (the kernel is not
+     generated yet), the rectangle lemma of the product of intervals, and the two
+     executions of a product.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -32,8 +33,8 @@ From Kairn Require Import IeeeVocabulary IeeeEFT IeeeAdd22 IeeeMul22 IeeeMore Ie
 From Kairn Require Import Split Directed MulPow2.
 From Kairn Require Import Guard IeeeOps.
 From Kairn Require Import Folds Summation SummationKernels.
-From Kairn Require Import DirectedSum DirectedProd Rectangle IeeeProduct.
-From Kairn Require Import IeeeDirected IeeeDirectedProd.
+From Kairn Require Import DirectedSum DirectedProd BallPow2 Rectangle IeeeProduct.
+From Kairn Require Import IeeeDirected IeeeDirectedProd IeeeEntry.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
    theories/IeeeEFT.v). *)
@@ -253,23 +254,20 @@ Print Assumptions dot_1_lanes.
 Print Assumptions dot_1_seq_gamma.
 Print Assumptions dot_1_lanes_gamma.
 
-(* Rounding a sum down and up (theories/DirectedSum.v), on models of the listings
-   two_sum_ord, add_down_1, add_up_1, sub_down_1 and sub_up_1 written by hand: the
-   statements in the shape of a generated statement, and the two lemmas that say what the
-   last lines of a directed sum compute. *)
-Print Assumptions two_sum_ord_listing_correct.
-Print Assumptions two_sum_ord_listing_facts.
-Print Assumptions two_sum_ord_listing_error.
-Print Assumptions add_down_1_listing_correct.
-Print Assumptions add_up_1_listing_correct.
-Print Assumptions sub_down_1_listing_correct.
-Print Assumptions sub_up_1_listing_correct.
+(* Milestone 2, real model. The theorems of the generated statements of the building
+   blocks are listed by proofs/gen/Audit.v; these are the lemmas beside them: what the
+   last lines of a directed sum compute, and the error term of two_sum_ord
+   (theories/DirectedSum.v). *)
+Print Assumptions two_sum_ord_facts.
+Print Assumptions two_sum_ord_error.
 Print Assumptions down_of_normalized.
 Print Assumptions up_of_normalized.
 
 (* Rounding a product down and up (theories/DirectedProd.v): when the error of a rounded
-   product is a number of the format, the sign of the error term of two_prod, and the
-   models of the listings mul_down_1, mul_up_1 and mul_dir_1 written by hand. *)
+   product is a number of the format, the sign of the error term of two_prod, what
+   mul_down_1 and mul_up_1 return for every positive precision and every tie rule, and
+   mul_dir_1 on a model of its listing written by hand (the kernel is not generated
+   yet). *)
 Print Assumptions mult_error_multiple.
 Print Assumptions mult_multiple_eta.
 Print Assumptions mult_error_format.
@@ -285,12 +283,12 @@ Print Assumptions two_prod_error_exact_pred.
 Print Assumptions two_prod_error_zero.
 Print Assumptions two_prod_error_zero_iff.
 Print Assumptions two_prod_sign.
-Print Assumptions const_P_eq.
-Print Assumptions mul_down_1_listing_facts.
-Print Assumptions mul_up_1_listing_facts.
+Print Assumptions up_mul_down_1_0_eq.
+Print Assumptions mul_down_1_facts.
+Print Assumptions mul_up_1_facts.
+Print Assumptions mul_down_1_cases.
+Print Assumptions mul_up_1_cases.
 Print Assumptions mul_dir_1_listing_eq.
-Print Assumptions mul_down_1_listing_correct.
-Print Assumptions mul_up_1_listing_correct.
 Print Assumptions mul_dir_1_listing_correct.
 
 (* The product of two intervals (theories/Rectangle.v): the rectangle lemma on extended
@@ -315,30 +313,48 @@ Print Assumptions mult_prod_zero.
 Print Assumptions mult_prod_same.
 Print Assumptions succ_mult_prod.
 Print Assumptions rmul_two_executions.
+Print Assumptions mul_1_1_two_executions.
 
-(* The directed sums in the IEEE model (theories/IeeeDirected.v), on IEEE models of the
-   listings written by hand: the neighbors of the infinities, two_sum_ord, add_down_1 and
-   add_up_1 on finite operands (the directed rounding in the format with overflow) and
-   with an operand that is not finite (the sum of IEEE 754), and the differences. *)
+(* Scaling a ball by a power of two (theories/BallPow2.v): the radius and the two claims
+   for a center whose scaled value is exact when its test says so. *)
+Print Assumptions ball_pow2_radius.
+
+(* Milestone 2, IEEE model: the statements of the finite domain that no kernel
+   description names (two_sum_ord and fast_two_sum_entry on finite operands). *)
+Definition two_sum_ord_ieee_audit : two_sum_ord_ieee_spec := two_sum_ord_ieee_correct.
+Print Assumptions two_sum_ord_ieee_correct.
+
+Definition fast_two_sum_entry_ieee_audit : fast_two_sum_entry_ieee_spec :=
+  fast_two_sum_entry_ieee_correct.
+Print Assumptions fast_two_sum_entry_ieee_correct.
+
+(* The directed sums in the IEEE model (theories/IeeeDirected.v, theories/IeeeEntry.v):
+   the lemmas beside the theorems that proofs/gen/IeeeAudit.v lists. The neighbors of the
+   infinities, the directed roundings of the format with overflow on a real number,
+   two_sum_ord and the directed sums on finite operands and with an operand that is not
+   finite, and the guard on extended real numbers. *)
 Print Assumptions pred_pinf.
 Print Assumptions succ_ninf.
+Print Assumptions pred_ninf.
+Print Assumptions xrd_real.
+Print Assumptions xru_real.
 Print Assumptions two_sum_ord_ieee_finite.
 Print Assumptions two_sum_ord_ieee_nonfinite.
 Print Assumptions add_down_1_ieee_finite.
 Print Assumptions add_up_1_ieee_finite.
 Print Assumptions add_down_1_ieee_nonfinite.
 Print Assumptions add_up_1_ieee_nonfinite.
-Print Assumptions add_down_1_ieee.
-Print Assumptions add_up_1_ieee.
-Print Assumptions sub_down_1_ieee.
-Print Assumptions sub_up_1_ieee.
+Print Assumptions xval_guard.
+Print Assumptions guard_nonneg.
 
 (* The directed products in the IEEE model (theories/IeeeDirectedProd.v), likewise:
    mul_down_1 and mul_up_1 on finite operands and with an operand that is not finite, and
-   the enclosure of a product of bounds by mul_dir_1. *)
+   the enclosure of a product of bounds by mul_dir_1, on an IEEE model of its listing
+   written by hand (the kernel is not generated yet). *)
 Print Assumptions mul_down_1_ieee_finite.
 Print Assumptions mul_up_1_ieee_finite.
 Print Assumptions mul_down_1_ieee_nonfinite.
 Print Assumptions mul_up_1_ieee_nonfinite.
+Print Assumptions xval_prod_nonfinite.
 Print Assumptions mul_dir_1_ieee_eq.
 Print Assumptions mul_dir_1_ieee_encloses.

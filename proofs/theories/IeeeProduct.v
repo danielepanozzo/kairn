@@ -233,4 +233,19 @@ Corollary rmul_two_executions :
   fsucc (mult a b) = IeeeModel.rmul prec emax nan_fma a b.
 Proof. intros a b N. unfold IeeeModel.rmul. cbv zeta. now apply succ_mult_prod. Qed.
 
+(* mul_1_1 is prod a b: its two executions are the two products. They are the same
+   extended real number, and the same value unless the product is a NaN or an exact
+   zero. *)
+Corollary mul_1_1_two_executions :
+  forall a b : float,
+  xv (mult a b) = xv (IeeeModel.mul_1_1 prec emax nan_fma a b) /\
+  (is_nan prec emax (mult a b) = false ->
+   ~ (fin a /\ fin b /\ b2r a * b2r b = 0) ->
+   mult a b = IeeeModel.mul_1_1 prec emax nan_fma a b).
+Proof.
+intros a b. unfold IeeeModel.mul_1_1. cbv zeta. split.
+- apply mult_prod_xval.
+- apply mult_prod_eq.
+Qed.
+
 End TwoExecutions.

@@ -19,7 +19,8 @@ ensures:       encloses cz rz x*c x=cx,rx exact_when=zero_or_abs_gt(cx*c,eta/(2*
 min_precision: 2
 source:        midpoint-radius scaling by a power of two (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+theorem:       proofs/theories/BallPow2.v ball_mul_pow2_1_correct
+status:        proved
 entry:         yes
 cone_exempt:   the radius is selected and stepped; the special states of the ball layer test the center and the radius
 

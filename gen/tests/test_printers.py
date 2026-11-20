@@ -778,8 +778,8 @@ class Rocq(unittest.TestCase):
     # same, byte for byte, and fast_two_sum and two_prod are printed earlier, before the new kernels
     # that call them; Audit.v lists the same theorems, those two earlier.
     DIGESTS = {'Model.v': '3f2e3f54b76c21bf6d904880d082677af7821f4830b57d2152ee97618df8bbec',
-               'Statements.v': 'aa62c34c13cf335ef1751cb3897f095830c9d60de04a869c78968c1dc74a9463',
-               'Audit.v': '5a84d4a89dfd30d82fe18c89c6a11975c291c1b6226d70d23ff9bf9ed4c5e7a1'}
+               'Statements.v': '93ad4903d8fc398325f82f1d55cfcbd59c65d4fb88cf404efdcf6616fb3796fe',
+               'Audit.v': '0c93acbf8651ff7bc342d1c9ab1f80d0f98718ddf3d0123dbff0d0547a871f15'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in

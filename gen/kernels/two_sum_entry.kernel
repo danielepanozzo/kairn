@@ -13,7 +13,8 @@ ensures:       error r R c=0 k=2 t=0
 min_precision: 2
 source:        two_sum on its guarded operands (Milestone 2 listing)
 license:       algorithm: published; proof: MIT
-status:        unverified
+theorem:       proofs/theories/EntryKernels.v two_sum_entry_correct
+status:        proved
 entry:         yes
 
 ga     = guard(a)

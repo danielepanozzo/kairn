@@ -9,14 +9,15 @@
    and up in the format with no largest number (the real model); val is the real value of
    a finite limb and xval the extended real number a limb stands for.
 
-   The directed roundings in the format with overflow (xround_down, xround_up) are those
-   of the design page: RD(t) is -infinity when t < -Omega, Omega when t > Omega, and the
-   RD of the real model otherwise; symmetrically for RU. (xround of IeeeVocabulary.v gives
-   +infinity to an RD at or above 2^emax, which is right for the conversions of a 2-limb
-   value, whose RD never is, and not for a sum of two numbers.) The sum of IEEE 754 on
-   extended real numbers is xadd: +infinity plus -infinity is a NaN.
+   The directed roundings in the format with overflow are xrd and xru of
+   IeeeVocabulary.v, those of the design page: on a real number t, xrd is -infinity when
+   t < -Omega, Omega when t > Omega, and the RD of the real model otherwise (xrd_real);
+   symmetrically for xru (xru_real). The sum of IEEE 754 on extended real numbers is xadd:
+   +infinity plus -infinity is a NaN.
 
-   What is proved, from precision 2:
+   What is proved, from precision 2 (the models are the generated ones of
+   proofs/gen/IeeeModel.v, and the last theorems of the file are the generated statements
+   of proofs/gen/IeeeStatements.v):
    - two_sum_ord on finite operands (two_sum_ord_ieee_finite): if s is finite then e is
      finite and (s, e) is what the real model computes, so s = RN(a + b), s + e = a + b and
      (s, e) is normalized; otherwise the rounded sum overflows, s is the infinity of the
@@ -30,16 +31,10 @@
      infinity plus a finite number or plus itself is that infinity; +infinity plus
      -infinity, or a NaN operand, gives a NaN), and e is a NaN.
    - add_down_1_ieee, add_up_1_ieee, sub_down_1_ieee, sub_up_1_ieee: the two cases in
-     one statement, for all operands.
+     one statement, for all operands: the result is xrd, or xru, of the sum or the
+     difference of IEEE 754.
    Also here, because the directed sums need them: the neighbors of the infinities,
-   pred(+infinity) = Omega and succ(-infinity) = -Omega (pred_pinf, succ_ninf).
-
-   THE MODELS IN THIS FILE ARE WRITTEN BY HAND (section Listings): each mirrors a listing
-   of the design page in the text the generator prints for the IEEE model
-   (proofs/gen/IeeeModel.v), and the generated IeeeModel.two_sum_ord, IeeeModel.add_down_1,
-   ... replace them. The statements are written by hand too, and will be re-targeted to
-   the generated IEEE-model statements, whose shape for a directed sum of two operands is
-   not fixed yet. *)
+   pred(+infinity) = Omega and succ(-infinity) = -Omega (pred_pinf, succ_ninf). *)
 From Stdlib Require Import Reals ZArith Bool Lia Lra Psatz.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements IeeeStatements.
@@ -48,104 +43,6 @@ From Kairn Require Import IeeeBridge IeeeVocabulary IeeeEFT IeeeOps IeeeExt.
 From Kairn Require IeeeOperations.
 From Kairn.Gen Require IeeeModel.
 Open Scope R_scope.
-
-(** * The listings, as the generator prints a kernel of the IEEE model *)
-
-Section Listings.
-Variable prec emax : Z.
-Context {prec_gt_0_ : Prec_gt_0 prec}.
-Context {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}.
-
-Notation float := (binary_float prec emax).
-Notation nan_of := {x : float | is_nan prec emax x = true}.
-
-Variable nan_plus : float -> float -> nan_of.
-Variable nan_minus : float -> float -> nan_of.
-Variable nan_opp : float -> nan_of.
-Variable nan_abs : float -> nan_of.
-
-Local Notation pzero := (IeeeOperations.pzero prec emax).
-Local Notation neg := (IeeeOperations.neg prec emax nan_opp).
-Local Notation abs := (IeeeOperations.abs prec emax nan_abs).
-Local Notation lt := (IeeeOperations.lt prec emax).
-Local Notation succ := (IeeeOperations.succ prec emax).
-Local Notation pred := (IeeeOperations.pred prec emax).
-Local Notation fast_two_sum := (IeeeModel.fast_two_sum prec emax nan_plus nan_minus).
-
-(* Hand-written IEEE model of the listing two_sum_ord; the generated
-   IeeeModel.two_sum_ord replaces it. *)
-Definition two_sum_ord_ieee_listing (a b : float) : float * float :=
-  let aa := abs a in
-  let ab := abs b in
-  let m := lt aa ab in
-  let h := if m then b else a in
-  let l := if m then a else b in
-  let '(s, e) := fast_two_sum h l in
-  (s, e).
-
-(* Hand-written IEEE models of the listings add_down_1 and add_up_1; the generated
-   IeeeModel.add_down_1 and IeeeModel.add_up_1 replace them. *)
-Definition add_down_1_ieee_listing (a b : float) : float :=
-  let '(s, e) := two_sum_ord_ieee_listing a b in
-  let n := lt e pzero in
-  let p := pred s in
-  let r := if n then p else s in
-  r.
-
-Definition add_up_1_ieee_listing (a b : float) : float :=
-  let '(s, e) := two_sum_ord_ieee_listing a b in
-  let n := lt pzero e in
-  let q := succ s in
-  let r := if n then q else s in
-  r.
-
-(* Hand-written IEEE models of the listings sub_down_1 and sub_up_1; the generated
-   IeeeModel.sub_down_1 and IeeeModel.sub_up_1 replace them. *)
-Definition sub_down_1_ieee_listing (a b : float) : float :=
-  let nb := neg b in
-  let r := add_down_1_ieee_listing a nb in
-  r.
-
-Definition sub_up_1_ieee_listing (a b : float) : float :=
-  let nb := neg b in
-  let r := add_up_1_ieee_listing a nb in
-  r.
-
-End Listings.
-
-(** * The vocabulary of the statements: rounding in the format with overflow *)
-
-(* RD and RU in the format with overflow, as the design page defines them: beyond Omega
-   on the side of the rounding the result is the infinity, beyond Omega on the other side
-   it is the largest number of that sign. *)
-Definition xround_down (prec emax : Z) (t : R) : xreal :=
-  if Rlt_bool t (- omega prec emax) then XInf true
-  else if Rlt_bool (omega prec emax) t then XFin (omega prec emax)
-  else XFin (RD (ieee_emin prec emax) prec t).
-
-Definition xround_up (prec emax : Z) (t : R) : xreal :=
-  if Rlt_bool (omega prec emax) t then XInf false
-  else if Rlt_bool t (- omega prec emax) then XFin (- omega prec emax)
-  else XFin (RU (ieee_emin prec emax) prec t).
-
-(* The sum of IEEE 754 on extended real numbers: an infinity plus a real number or plus
-   itself is that infinity, +infinity plus -infinity is a NaN, a NaN gives a NaN. *)
-Definition xadd (a b : xreal) : xreal :=
-  match a, b with
-  | XNaN, _ | _, XNaN => XNaN
-  | XFin x, XFin y => XFin (x + y)
-  | XInf s, XFin _ => XInf s
-  | XFin _, XInf s => XInf s
-  | XInf s, XInf s' => if Bool.eqb s s' then XInf s else XNaN
-  end.
-
-(* A sum rounded by g when both operands are real numbers, and the sum of IEEE 754
-   otherwise. *)
-Definition xadd_rounded (g : R -> xreal) (a b : xreal) : xreal :=
-  match a, b with
-  | XFin x, XFin y => g (x + y)
-  | _, _ => xadd a b
-  end.
 
 Section IeeeDirected.
 Variable prec emax : Z.
@@ -178,11 +75,11 @@ Notation ninf := (B754_infinity prec emax true).
 Notation xv := (@xval prec emax).
 Notation Om := (Omega prec emax).
 Notation inrange := (inrange emax).
-Notation two_sum_ord := (two_sum_ord_ieee_listing prec emax nan_plus nan_minus nan_abs).
-Notation add_down_1 := (add_down_1_ieee_listing prec emax nan_plus nan_minus nan_abs).
-Notation add_up_1 := (add_up_1_ieee_listing prec emax nan_plus nan_minus nan_abs).
-Notation sub_down_1 := (sub_down_1_ieee_listing prec emax nan_plus nan_minus nan_opp nan_abs).
-Notation sub_up_1 := (sub_up_1_ieee_listing prec emax nan_plus nan_minus nan_opp nan_abs).
+Notation two_sum_ord := (IeeeModel.two_sum_ord prec emax nan_plus nan_minus nan_abs).
+Notation add_down_1 := (IeeeModel.add_down_1 prec emax nan_plus nan_minus nan_abs).
+Notation add_up_1 := (IeeeModel.add_up_1 prec emax nan_plus nan_minus nan_abs).
+Notation sub_down_1 := (IeeeModel.sub_down_1 prec emax nan_plus nan_minus nan_opp nan_abs).
+Notation sub_up_1 := (IeeeModel.sub_up_1 prec emax nan_plus nan_minus nan_opp nan_abs).
 
 Let Hprec : (0 < prec)%Z.
 Proof. exact prec_gt_0_. Qed.
@@ -320,20 +217,20 @@ Qed.
 
 (* Finite operands. If the sum s is finite, the error term e is finite and (s, e) is the
    pair of the real model: s = RN(a + b), s + e = a + b, (s, e) normalized
-   (two_sum_ord_listing_correct). Otherwise the rounded sum overflows: s is the infinity
+   (Model.two_sum_ord_correct). Otherwise the rounded sum overflows: s is the infinity
    of the sign of a + b, e the opposite infinity, and a + b is beyond Omega. *)
 Theorem two_sum_ord_ieee_finite :
   (2 <= prec)%Z ->
   forall a b : float, fin a -> fin b ->
   let '(s, e) := two_sum_ord a b in
   (fin s -> fin e /\
-   (b2r s, b2r e) = two_sum_ord_listing emin prec tie_even (b2r a) (b2r b)) /\
+   (b2r s, b2r e) = Model.two_sum_ord emin prec tie_even (b2r a) (b2r b)) /\
   (is_finite prec emax s = false ->
    exists sg : bool,
    s = B754_infinity prec emax sg /\ e = B754_infinity prec emax (negb sg) /\
    (if sg then b2r a + b2r b < - Om else Om < b2r a + b2r b)).
 Proof.
-intros Hp a b Fa Fb. unfold two_sum_ord_ieee_listing, two_sum_ord_listing. cbv zeta.
+intros Hp a b Fa Fb. unfold IeeeModel.two_sum_ord, Model.two_sum_ord. cbv zeta.
 rewrite (lt_finite prec emax (fabs a) (fabs b))
   by (rewrite (abs_finite prec emax nan_abs); assumption).
 rewrite 2!(abs_val prec emax nan_abs).
@@ -360,21 +257,70 @@ intros [sa|sa|sa pa Ha|sa ma ea Ha] [sb|sb|sb pb Hb|sb mb eb Hb] [H|H];
   split; reflexivity.
 Qed.
 
+(** * The directed roundings of the format with overflow, on a real number *)
+
+(* xrd of a real number t: -infinity below -Omega, Omega above Omega, and RD(t) of the
+   real model otherwise; xru symmetrically. *)
+Lemma xrd_real :
+  forall t : R,
+  xrd prec emax (XFin t)
+  = if Rlt_bool t (- Om) then XInf true
+    else if Rlt_bool Om t then XFin Om else XFin (RD emin prec t).
+Proof.
+intros t. unfold xrd, RD. change (omega prec emax) with Om.
+change (ieee_emin prec emax) with emin.
+generalize Omega_gt_0 Omega_lt_top. intros P0 P1.
+assert (F : format (round radix2 fexp Zfloor t)).
+{ apply generic_format_round; auto with typeclass_instances. }
+destruct (round_DN_pt radix2 fexp t) as [_ [L G]].
+destruct (Rlt_bool_spec t (- Om)) as [C|C].
+- rewrite Rlt_bool_false by lra. unfold overflow_of.
+  rewrite Rlt_bool_false.
+  + rewrite Rlt_bool_true by lra. reflexivity.
+  + apply Rnot_lt_le. intros K.
+    assert (B : Rabs (round radix2 fexp Zfloor t) <= Om).
+    { apply (inrange_le_Omega prec emax); assumption. }
+    apply Rabs_le_inv in B. lra.
+- destruct (Rlt_bool_spec Om t) as [D|D]; [reflexivity|].
+  unfold overflow_of. rewrite Rlt_bool_true; [reflexivity|].
+  apply Rabs_lt. split; [|lra].
+  assert (- Om <= round radix2 fexp Zfloor t).
+  { apply G; trivial. apply generic_format_opp. apply (format_Omega prec emax). }
+  lra.
+Qed.
+
+Lemma xru_real :
+  forall t : R,
+  xru prec emax (XFin t)
+  = if Rlt_bool Om t then XInf false
+    else if Rlt_bool t (- Om) then XFin (- Om) else XFin (RU emin prec t).
+Proof.
+intros t. unfold xru. cbn [xopp]. rewrite xrd_real.
+assert (E : RD emin prec (- t) = - RU emin prec t) by (unfold RD, RU; apply round_DN_opp).
+rewrite E.
+destruct (Rlt_bool_spec (- t) (- Om)) as [C|C].
+- rewrite Rlt_bool_true by lra. reflexivity.
+- rewrite (Rlt_bool_false Om t) by lra.
+  destruct (Rlt_bool_spec Om (- t)) as [D|D].
+  + rewrite Rlt_bool_true by lra. reflexivity.
+  + rewrite Rlt_bool_false by lra. cbn [xopp]. now rewrite Ropp_involutive.
+Qed.
+
 (** * add_down_1 and add_up_1 *)
 
-Lemma xround_down_in :
+Lemma xrd_in :
   forall t : R, - Om <= t <= Om ->
-  xround_down prec emax t = XFin (RD emin prec t).
+  xrd prec emax (XFin t) = XFin (RD emin prec t).
 Proof.
-intros t [H1 H2]. unfold xround_down. change (omega prec emax) with Om.
+intros t [H1 H2]. rewrite xrd_real.
 rewrite Rlt_bool_false by exact H1. now rewrite Rlt_bool_false by exact H2.
 Qed.
 
-Lemma xround_up_in :
+Lemma xru_in :
   forall t : R, - Om <= t <= Om ->
-  xround_up prec emax t = XFin (RU emin prec t).
+  xru prec emax (XFin t) = XFin (RU emin prec t).
 Proof.
-intros t [H1 H2]. unfold xround_up. change (omega prec emax) with Om.
+intros t [H1 H2]. rewrite xru_real.
 rewrite Rlt_bool_false by exact H2. now rewrite Rlt_bool_false by exact H1.
 Qed.
 
@@ -401,15 +347,15 @@ Qed.
 Theorem add_down_1_ieee_finite :
   (2 <= prec)%Z ->
   forall a b : float, fin a -> fin b ->
-  xv (add_down_1 a b) = xround_down prec emax (b2r a + b2r b).
+  xv (add_down_1 a b) = xrd prec emax (XFin (b2r a + b2r b)).
 Proof.
-intros Hp a b Fa Fb. unfold add_down_1_ieee_listing.
+intros Hp a b Fa Fb. unfold IeeeModel.add_down_1.
 generalize (two_sum_ord_ieee_finite Hp a b Fa Fb).
 destruct (two_sum_ord a b) as [s e]. intros [Hfin Hinf]. cbv zeta.
 assert (Hp1 : (1 <= prec)%Z) by lia.
 destruct (finite_dec prec emax s) as [Fs|Fs].
 - destruct (Hfin Fs) as [Fe E].
-  destruct (two_sum_ord_listing_facts emin prec Hp (b2r a) (b2r b)
+  destruct (two_sum_ord_facts emin prec Hp (b2r a) (b2r b)
               (b2r_format prec emax a) (b2r_format prec emax b)) as [Hs [He Hn]].
   rewrite <- E in Hs, He, Hn. cbn [fst snd] in Hs, He, Hn.
   rewrite (lt_finite prec emax e pzero Fe eq_refl). change (b2r pzero) with 0.
@@ -420,13 +366,13 @@ destruct (finite_dec prec emax s) as [Fs|Fs].
   destruct (Rlt_bool_spec (b2r e) 0) as [En|En]; intros D.
   + (* a negative error: one step down, which may leave the range *)
     destruct (pred_finite prec emax s Fs) as [[Fp [Ep Lp]]|[Ep Lp]].
-    * rewrite (xval_fin prec emax _ Fp), Ep, D. symmetry. apply xround_down_in.
+    * rewrite (xval_fin prec emax _ Fp), Ep, D. symmetry. apply xrd_in.
       assert (K : - Om <= Ulp.pred radix2 fexp (b2r s) <= Om).
       { apply format_Omega_bounds.
         - apply generic_format_pred; auto with typeclass_instances. apply b2r_format.
         - split; [exact Lp|]. generalize (pred_FLT_lt emin prec (b2r s)) Omega_lt_top. lra. }
       lra.
-    * rewrite Ep. unfold xround_down. change (omega prec emax) with Om.
+    * rewrite Ep. rewrite xrd_real.
       rewrite Rlt_bool_true; [reflexivity|].
       assert (K : b2r s <= - Om).
       { apply Rnot_lt_le. intros K.
@@ -438,14 +384,14 @@ destruct (finite_dec prec emax s) as [Fs|Fs].
       lra.
   + (* otherwise the rounded sum itself *)
     rewrite (xval_fin prec emax _ Fs).
-    unfold xround_down. change (omega prec emax) with Om.
+    rewrite xrd_real.
     rewrite Rlt_bool_false by lra.
     destruct (Rlt_bool_spec Om (b2r a + b2r b)) as [C|C].
     * f_equal. apply Rle_antisym; [lra|]. rewrite Hs.
       apply round_ge_generic; auto with typeclass_instances. apply (format_Omega prec emax). lra.
     * now rewrite D.
 - destruct (Hinf Fs) as [sg [Es [Ee V]]]. subst s e.
-  unfold xround_down. change (omega prec emax) with Om. generalize Omega_gt_0. intros P0.
+  rewrite xrd_real. generalize Omega_gt_0. intros P0.
   destruct sg; cbn [negb].
   + (* overflow downward: -infinity *)
     change (flt (B754_infinity prec emax false) pzero) with false.
@@ -462,15 +408,15 @@ Qed.
 Theorem add_up_1_ieee_finite :
   (2 <= prec)%Z ->
   forall a b : float, fin a -> fin b ->
-  xv (add_up_1 a b) = xround_up prec emax (b2r a + b2r b).
+  xv (add_up_1 a b) = xru prec emax (XFin (b2r a + b2r b)).
 Proof.
-intros Hp a b Fa Fb. unfold add_up_1_ieee_listing.
+intros Hp a b Fa Fb. unfold IeeeModel.add_up_1.
 generalize (two_sum_ord_ieee_finite Hp a b Fa Fb).
 destruct (two_sum_ord a b) as [s e]. intros [Hfin Hinf]. cbv zeta.
 assert (Hp1 : (1 <= prec)%Z) by lia.
 destruct (finite_dec prec emax s) as [Fs|Fs].
 - destruct (Hfin Fs) as [Fe E].
-  destruct (two_sum_ord_listing_facts emin prec Hp (b2r a) (b2r b)
+  destruct (two_sum_ord_facts emin prec Hp (b2r a) (b2r b)
               (b2r_format prec emax a) (b2r_format prec emax b)) as [Hs [He Hn]].
   rewrite <- E in Hs, He, Hn. cbn [fst snd] in Hs, He, Hn.
   rewrite (lt_finite prec emax pzero e eq_refl Fe). change (b2r pzero) with 0.
@@ -480,13 +426,13 @@ destruct (finite_dec prec emax s) as [Fs|Fs].
   generalize (b2r_Omega s). intros Bs.
   destruct (Rlt_bool_spec 0 (b2r e)) as [En|En]; intros D.
   + destruct (succ_finite prec emax s Fs) as [[Fp [Ep Lp]]|[Ep Lp]].
-    * rewrite (xval_fin prec emax _ Fp), Ep, D. symmetry. apply xround_up_in.
+    * rewrite (xval_fin prec emax _ Fp), Ep, D. symmetry. apply xru_in.
       assert (K : - Om <= Ulp.succ radix2 fexp (b2r s) <= Om).
       { apply format_Omega_bounds.
         - apply generic_format_succ; auto with typeclass_instances. apply b2r_format.
         - split; [|exact Lp]. generalize (succ_FLT_gt emin prec (b2r s)) Omega_lt_top. lra. }
       lra.
-    * rewrite Ep. unfold xround_up. change (omega prec emax) with Om.
+    * rewrite Ep. rewrite xru_real.
       rewrite Rlt_bool_true; [reflexivity|].
       assert (K : Om <= b2r s).
       { apply Rnot_lt_le. intros K.
@@ -497,7 +443,7 @@ destruct (finite_dec prec emax s) as [Fs|Fs].
         generalize Omega_lt_top. lra. }
       lra.
   + rewrite (xval_fin prec emax _ Fs).
-    unfold xround_up. change (omega prec emax) with Om.
+    rewrite xru_real.
     rewrite Rlt_bool_false by lra.
     destruct (Rlt_bool_spec (b2r a + b2r b) (- Om)) as [C|C].
     * f_equal. apply Rle_antisym; [|lra]. rewrite Hs.
@@ -505,7 +451,7 @@ destruct (finite_dec prec emax s) as [Fs|Fs].
       apply generic_format_opp. apply (format_Omega prec emax). lra.
     * now rewrite D.
 - destruct (Hinf Fs) as [sg [Es [Ee V]]]. subst s e.
-  unfold xround_up. change (omega prec emax) with Om. generalize Omega_gt_0. intros P0.
+  rewrite xru_real. generalize Omega_gt_0. intros P0.
   destruct sg; cbn [negb].
   + (* overflow downward: -Omega *)
     change (flt pzero (B754_infinity prec emax false)) with true.
@@ -540,40 +486,54 @@ intros [sa|sa|sa pa Ha|sa ma ea Ha] [sb|sb|sb pb Hb|sb mb eb Hb] [H|H];
   reflexivity.
 Qed.
 
+(* A sum with an operand that is not finite is an infinity or a NaN, which the directed
+   roundings leave as it is. *)
+Lemma xrd_xadd_nonfinite :
+  forall a b : float,
+  is_finite prec emax a = false \/ is_finite prec emax b = false ->
+  xrd prec emax (xadd (xv a) (xv b)) = xadd (xv a) (xv b) /\
+  xru prec emax (xadd (xv a) (xv b)) = xadd (xv a) (xv b).
+Proof.
+intros a b H.
+destruct (xval_cases prec emax a) as [[Fa Ea]|[[sa Ea]|Ea]];
+destruct (xval_cases prec emax b) as [[Fb Eb]|[[sb Eb]|Eb]];
+  rewrite Ea, Eb;
+  try (exfalso; destruct H; congruence);
+  repeat match goal with s : bool |- _ => destruct s end;
+  split; reflexivity.
+Qed.
+
 (* All operands, in one statement: the directed rounding, in the format with overflow,
-   of the sum of two finite operands, and the sum of IEEE 754 otherwise. *)
+   of the sum of IEEE 754 of the operands. For two finite operands that is the rounding
+   of their exact sum; otherwise the sum is an infinity or a NaN, and is returned. *)
 Theorem add_down_1_ieee :
   (2 <= prec)%Z ->
   forall a b : float,
-  xv (add_down_1 a b) = xadd_rounded (xround_down prec emax) (xv a) (xv b).
+  xv (add_down_1 a b) = xrd prec emax (xadd (xv a) (xv b)).
 Proof.
 intros Hp a b.
-destruct (finite_dec prec emax a) as [Fa|Fa]; destruct (finite_dec prec emax b) as [Fb|Fb].
-- rewrite (xval_fin prec emax a Fa), (xval_fin prec emax b Fb). cbn [xadd_rounded].
+destruct (finite_dec prec emax a) as [Fa|Fa]; [destruct (finite_dec prec emax b) as [Fb|Fb]|].
+- rewrite (xval_fin prec emax a Fa), (xval_fin prec emax b Fb). cbn [xadd].
   now apply add_down_1_ieee_finite.
-- rewrite (add_down_1_ieee_nonfinite a b (or_intror Fb)).
-  destruct b as [sb|sb|sb pb Hb|sb mb eb Hb]; try discriminate Fb; destruct (xv a); reflexivity.
-- rewrite (add_down_1_ieee_nonfinite a b (or_introl Fa)).
-  destruct a as [sa|sa|sa pa Ha|sa ma ea Ha]; try discriminate Fa; reflexivity.
-- rewrite (add_down_1_ieee_nonfinite a b (or_introl Fa)).
-  destruct a as [sa|sa|sa pa Ha|sa ma ea Ha]; try discriminate Fa; reflexivity.
+- rewrite (proj1 (xrd_xadd_nonfinite a b (or_intror Fb))).
+  apply add_down_1_ieee_nonfinite. now right.
+- rewrite (proj1 (xrd_xadd_nonfinite a b (or_introl Fa))).
+  apply add_down_1_ieee_nonfinite. now left.
 Qed.
 
 Theorem add_up_1_ieee :
   (2 <= prec)%Z ->
   forall a b : float,
-  xv (add_up_1 a b) = xadd_rounded (xround_up prec emax) (xv a) (xv b).
+  xv (add_up_1 a b) = xru prec emax (xadd (xv a) (xv b)).
 Proof.
 intros Hp a b.
-destruct (finite_dec prec emax a) as [Fa|Fa]; destruct (finite_dec prec emax b) as [Fb|Fb].
-- rewrite (xval_fin prec emax a Fa), (xval_fin prec emax b Fb). cbn [xadd_rounded].
+destruct (finite_dec prec emax a) as [Fa|Fa]; [destruct (finite_dec prec emax b) as [Fb|Fb]|].
+- rewrite (xval_fin prec emax a Fa), (xval_fin prec emax b Fb). cbn [xadd].
   now apply add_up_1_ieee_finite.
-- rewrite (add_up_1_ieee_nonfinite a b (or_intror Fb)).
-  destruct b as [sb|sb|sb pb Hb|sb mb eb Hb]; try discriminate Fb; destruct (xv a); reflexivity.
-- rewrite (add_up_1_ieee_nonfinite a b (or_introl Fa)).
-  destruct a as [sa|sa|sa pa Ha|sa ma ea Ha]; try discriminate Fa; reflexivity.
-- rewrite (add_up_1_ieee_nonfinite a b (or_introl Fa)).
-  destruct a as [sa|sa|sa pa Ha|sa ma ea Ha]; try discriminate Fa; reflexivity.
+- rewrite (proj2 (xrd_xadd_nonfinite a b (or_intror Fb))).
+  apply add_up_1_ieee_nonfinite. now right.
+- rewrite (proj2 (xrd_xadd_nonfinite a b (or_introl Fa))).
+  apply add_up_1_ieee_nonfinite. now left.
 Qed.
 
 (** * sub_down_1 and sub_up_1 *)
@@ -594,19 +554,59 @@ Qed.
 Theorem sub_down_1_ieee :
   (2 <= prec)%Z ->
   forall a b : float,
-  xv (sub_down_1 a b) = xadd_rounded (xround_down prec emax) (xv a) (xopp (xv b)).
+  xv (sub_down_1 a b) = xrd prec emax (xadd (xv a) (xopp (xv b))).
 Proof.
-intros Hp a b. unfold sub_down_1_ieee_listing. cbv zeta.
+intros Hp a b. unfold IeeeModel.sub_down_1. cbv zeta.
 rewrite <- xval_neg. now apply add_down_1_ieee.
 Qed.
 
 Theorem sub_up_1_ieee :
   (2 <= prec)%Z ->
   forall a b : float,
-  xv (sub_up_1 a b) = xadd_rounded (xround_up prec emax) (xv a) (xopp (xv b)).
+  xv (sub_up_1 a b) = xru prec emax (xadd (xv a) (xopp (xv b))).
 Proof.
-intros Hp a b. unfold sub_up_1_ieee_listing. cbv zeta.
+intros Hp a b. unfold IeeeModel.sub_up_1. cbv zeta.
 rewrite <- xval_neg. now apply add_up_1_ieee.
 Qed.
 
 End IeeeDirected.
+
+(** * The statements of proofs/gen/IeeeStatements.v *)
+
+(* two_sum_ord, finite operands: a finite sum has a finite error term, and the pair is
+   that of the real model. *)
+Theorem two_sum_ord_ieee_correct : two_sum_ord_ieee_spec.
+Proof.
+intros prec emax Hp0 He nan_plus nan_minus nan_abs Hp a b Fa Fb.
+generalize (two_sum_ord_ieee_finite prec emax nan_plus nan_minus nan_abs Hp a b Fa Fb).
+destruct (IeeeModel.two_sum_ord prec emax nan_plus nan_minus nan_abs a b) as [s e].
+intros [Hfin _] Fs. destruct (Hfin Fs) as [Fe E]. split; [exact Fe|].
+generalize (two_sum_ord_correct (ieee_emin prec emax) prec Hp (val a) (val b)
+              (b2r_format prec emax a) (b2r_format prec emax b)).
+unfold ieee_emin, val in *. rewrite <- E. trivial.
+Qed.
+
+(* The directed sums and differences, for all operands. *)
+Theorem add_down_1_ieee_correct : add_down_1_ieee_spec.
+Proof.
+intros prec emax Hp0 He nan_plus nan_minus nan_abs Hp a b.
+exact (add_down_1_ieee prec emax nan_plus nan_minus nan_abs Hp a b).
+Qed.
+
+Theorem add_up_1_ieee_correct : add_up_1_ieee_spec.
+Proof.
+intros prec emax Hp0 He nan_plus nan_minus nan_abs Hp a b.
+exact (add_up_1_ieee prec emax nan_plus nan_minus nan_abs Hp a b).
+Qed.
+
+Theorem sub_down_1_ieee_correct : sub_down_1_ieee_spec.
+Proof.
+intros prec emax Hp0 He nan_plus nan_minus nan_opp nan_abs Hp a b.
+exact (sub_down_1_ieee prec emax nan_plus nan_minus nan_opp nan_abs Hp a b).
+Qed.
+
+Theorem sub_up_1_ieee_correct : sub_up_1_ieee_spec.
+Proof.
+intros prec emax Hp0 He nan_plus nan_minus nan_opp nan_abs Hp a b.
+exact (sub_up_1_ieee prec emax nan_plus nan_minus nan_opp nan_abs Hp a b).
+Qed.

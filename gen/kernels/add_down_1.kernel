@@ -13,9 +13,11 @@ ensures:       rounded r down
 min_precision: 2
 source:        the rounded sum and the sign of its exact error (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+theorem:       proofs/theories/DirectedSum.v add_down_1_correct
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeDirected.v add_down_1_ieee_correct
 cone_exempt:   r is s or pred(s), chosen by select, and pred(+inf) is finite; the rounded claim states the output for infinite and NaN operands
 
 (s, e) = two_sum_ord(a, b)

@@ -16,7 +16,8 @@ ensures:       normalized r
 min_precision: 2
 source:        Fast2Sum of the operands ordered by magnitude (Dekker 1971, with its comparison; BGM17)
 license:       algorithm: published; proof: MIT
-status:        unverified
+theorem:       proofs/theories/DirectedSum.v two_sum_ord_correct
+status:        proved
 ieee:          spec
 cone_exempt:   the operands are ordered by select; the IEEE-model statement says that a finite sum has a finite error term
 

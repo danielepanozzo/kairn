@@ -1136,8 +1136,10 @@ class TheKernels(unittest.TestCase):
         # the real model, the Ball cores of the second radius design and add_2_1 with its guard
         # among them (Ball2.v, Add21.v), by their real-model theorems; the full kernels and the
         # constructors, which have no real-model statement, by their IEEE-model theorems.
-        self.assertEqual({name for name, k in ks.items() if k.status == 'proved'}, self.MILESTONE1)
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.WAVE_1)
+        # Of wave 1 of Milestone 2, every kernel but the two full scalings of a ball is proved.
+        self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
+                         self.MILESTONE1 | (self.WAVE_1 - self.WAVE_1_FULL))
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.WAVE_1_FULL)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
@@ -1145,12 +1147,13 @@ class TheKernels(unittest.TestCase):
         self.assertEqual({name for name, k in ks.items() if k.extended},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL)
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
-                         dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG, 'proved'),
-                              **dict.fromkeys(self.WAVE_1_EXTENDED | self.WAVE_1_FULL, 'unverified')))
+                         dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
+                                            | self.WAVE_1_EXTENDED, 'proved'),
+                              **dict.fromkeys(self.WAVE_1_FULL, 'unverified')))
         # Every kernel of the extended domain that is proved names its IEEE-model theorem, and no
         # other kernel does.
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
-                         self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG)
+                         self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED)
         # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
         # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H
         # of the radius are below the overflow threshold (IeeeExtStatementsDraft.v). A

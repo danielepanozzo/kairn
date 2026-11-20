@@ -46,7 +46,7 @@ KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum(float a, float b, float& s_out
 }
 
 // two_sum_ord(a, b) -> r = (s, e)
-// Fast2Sum of the operands ordered by magnitude (Dekker 1971, with its comparison; BGM17). Status: unverified; constexpr.
+// Fast2Sum of the operands ordered by magnitude (Dekker 1971, with its comparison; BGM17). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void two_sum_ord(double a, double b, double& s_out, double& e_out) noexcept {
     const double aa = abs_bits(a);
     const double ab = abs_bits(b);
@@ -75,7 +75,7 @@ KAIRN_GEN_FORCEINLINE constexpr void two_sum_ord(float a, float b, float& s_out,
 }
 
 // add_down_1(a, b) -> r
-// the rounded sum and the sign of its exact error (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+// the rounded sum and the sign of its exact error (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_down_1(double a, double b, double& r_out) noexcept {
     // (s, e) = two_sum_ord(a, b)
     const double s_aa = abs_bits(a);
@@ -110,7 +110,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_down_1(float a, float b, float& r_out) 
 }
 
 // add_down_entry(a, b) -> r
-// add_down_1 on its guarded operands (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+// add_down_1 on its guarded operands (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_down_entry(double a, double b, double& r_out) noexcept {
     const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
@@ -151,7 +151,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_down_entry(float a, float b, float& r_o
 }
 
 // add_up_1(a, b) -> r
-// the rounded sum and the sign of its exact error (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+// the rounded sum and the sign of its exact error (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_up_1(double a, double b, double& r_out) noexcept {
     // (s, e) = two_sum_ord(a, b)
     const double s_aa = abs_bits(a);
@@ -186,7 +186,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_up_1(float a, float b, float& r_out) no
 }
 
 // add_up_entry(a, b) -> r
-// add_up_1 on its guarded operands (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+// add_up_1 on its guarded operands (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_up_entry(double a, double b, double& r_out) noexcept {
     const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
@@ -524,7 +524,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_1_full(float cx, float rx, float cy, float r
 }
 
 // ball_mul_pow2_1(cx, rx, c) -> cz, rz
-// midpoint-radius scaling by a power of two (Milestone 2 listing). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+// midpoint-radius scaling by a power of two (Milestone 2 listing). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_1(double cx, double rx, double c, double& cz_out, double& rz_out) noexcept {
     const double cz = __builtin_is_constant_evaluated() ? cx * c : fma_rn(cx, c, 0.0);
     const double rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0);
@@ -891,7 +891,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(float cx, float rx, float cy, float r
 }
 
 // fast_two_sum_entry(a, b) -> r = (s, e)
-// fast_two_sum on its guarded operands (Milestone 2 listing). Status: unverified; constexpr.
+// fast_two_sum on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum_entry(double a, double b, double& s_out, double& e_out) noexcept {
     const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
@@ -1007,7 +1007,7 @@ KAIRN_GEN_FORCEINLINE constexpr void two_prod(float a, float b, float& p_out, fl
 }
 
 // mul_down_1(a, b) -> r
-// two_prod and the sign of its error term (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// two_prod and the sign of its error term (Milestone 2 listing). Status: proved (real model), proved (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_down_1(double a, double b, double& r_out) noexcept {
     // (p, e) = two_prod(a, b)
     const double p = fma_rn(a, b, 0.0);
@@ -1046,7 +1046,7 @@ KAIRN_GEN_FORCEINLINE void mul_down_1(float a, float b, float& r_out) noexcept {
 }
 
 // mul_up_1(a, b) -> r
-// two_prod and the sign of its error term (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// two_prod and the sign of its error term (Milestone 2 listing). Status: proved (real model), proved (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_up_1(double a, double b, double& r_out) noexcept {
     // (p, e) = two_prod(a, b)
     const double p = fma_rn(a, b, 0.0);
@@ -1085,7 +1085,7 @@ KAIRN_GEN_FORCEINLINE void mul_up_1(float a, float b, float& r_out) noexcept {
 }
 
 // next_down(a) -> r
-// IEEE 754 nextDown on the bit pattern (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+// IEEE 754 nextDown on the bit pattern (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void next_down(double a, double& r_out) noexcept {
     const double r = next_down_bits(a);
     r_out = r;
@@ -1096,7 +1096,7 @@ KAIRN_GEN_FORCEINLINE constexpr void next_down(float a, float& r_out) noexcept {
 }
 
 // next_up(a) -> r
-// IEEE 754 nextUp on the bit pattern (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+// IEEE 754 nextUp on the bit pattern (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void next_up(double a, double& r_out) noexcept {
     const double r = next_up_bits(a);
     r_out = r;
@@ -1120,7 +1120,7 @@ KAIRN_GEN_FORCEINLINE constexpr void radd(float a, float b, float& r_out) noexce
 }
 
 // radd_entry(a, b) -> r
-// radd on its guarded operands (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+// radd on its guarded operands (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void radd_entry(double a, double b, double& r_out) noexcept {
     const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
@@ -1171,7 +1171,7 @@ KAIRN_GEN_FORCEINLINE constexpr void split(float a, float& ah_out, float& al_out
 }
 
 // sub_down_1(a, b) -> r
-// add_down_1 on a and -b (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+// add_down_1 on a and -b (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_down_1(double a, double b, double& r_out) noexcept {
     const double nb = -b;
     // (r) = add_down_1(a, nb)
@@ -1210,7 +1210,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_down_1(float a, float b, float& r_out) 
 }
 
 // sub_down_entry(a, b) -> r
-// sub_down_1 on its guarded operands (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+// sub_down_1 on its guarded operands (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_down_entry(double a, double b, double& r_out) noexcept {
     const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
@@ -1255,7 +1255,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_down_entry(float a, float b, float& r_o
 }
 
 // sub_up_1(a, b) -> r
-// add_up_1 on a and -b (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+// add_up_1 on a and -b (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_up_1(double a, double b, double& r_out) noexcept {
     const double nb = -b;
     // (r) = add_up_1(a, nb)
@@ -1294,7 +1294,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_up_1(float a, float b, float& r_out) no
 }
 
 // sub_up_entry(a, b) -> r
-// sub_up_1 on its guarded operands (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); constexpr.
+// sub_up_1 on its guarded operands (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_up_entry(double a, double b, double& r_out) noexcept {
     const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
@@ -1411,7 +1411,7 @@ KAIRN_GEN_FORCEINLINE constexpr void two_sum(float a, float b, float& s_out, flo
 }
 
 // two_sum_entry(a, b) -> r = (s, e)
-// two_sum on its guarded operands (Milestone 2 listing). Status: unverified; constexpr.
+// two_sum on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void two_sum_entry(double a, double b, double& s_out, double& e_out) noexcept {
     const double ga = __builtin_is_constant_evaluated() ? a : a + 0.0;
     const double gb = __builtin_is_constant_evaluated() ? b : b + 0.0;
@@ -2475,7 +2475,7 @@ KAIRN_GEN_FORCEINLINE void ball_mul_2_full(float cx0, float cx1, float rx, float
 }
 
 // ball_mul_pow2_2(cx = (cx0, cx1), rx, c) -> cz = (cz0, cz1), rz
-// midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+// midpoint-radius scaling by a power of two, the center as mul_pow2_2 (Milestone 2 listing). Status: proved; constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2(double cx0, double cx1, double rx, double c, double& cz0_out, double& cz1_out, double& rz_out) noexcept {
     const double h = __builtin_is_constant_evaluated() ? cx0 * c : fma_rn(cx0, c, 0.0);
     const double l = __builtin_is_constant_evaluated() ? cx1 * c : fma_rn(cx1, c, 0.0);

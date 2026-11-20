@@ -656,7 +656,7 @@ the generator writes them (`source`, `flops` and the theorem fields left out):
   "inputs": [{"name": "a", "limbs": 1}], "outputs": [{"name": "r", "limbs": 1}],
   "value": "a", "requires": [],
   "ensures": [{"kind": "neighbor", "of": "r", "side": "up"}],
-  "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+  "min_precision": 1, "status": "proved", "ieee_status": "proved",
   "instances": {"binary64": [], "binary32": []}
 },
 {
@@ -665,7 +665,7 @@ the generator writes them (`source`, `flops` and the theorem fields left out):
   "value": "a*b", "requires": [],
   "ensures": [{"kind": "bound", "of": "r", "side": "below", "steps": 1},
               {"kind": "rounded", "of": "r", "mode": "down", "when": "product_large"}],
-  "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+  "min_precision": 2, "status": "proved", "ieee_status": "proved",
   "instances": {"binary64": [], "binary32": []}
 },
 {
@@ -679,7 +679,7 @@ the generator writes them (`source`, `flops` and the theorem fields left out):
                "exact_when": [{"zero_or_abs_gt": "cx[0]*c", "than": "eta/(2*u)"},
                               {"zero_or_abs_gt": "cx[1]*c", "than": "eta/(2*u)"},
                               {"zero_or_abs_gt": "rx*c", "than": "eta/(2*u)"}]}],
-  "min_precision": 2, "status": "unverified",
+  "min_precision": 2, "status": "proved",
   "instances": {"binary64": [], "binary32": []}
 },
 {
