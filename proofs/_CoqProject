@@ -89,6 +89,7 @@ theories/IeeeSteps.v
 theories/IeeeFolds.v
 theories/IeeeMapSteps.v
 theories/IeeeFoldMaps.v
+theories/IeeeFoldConv.v
 theories/IeeeFoldNorm.v
 theories/IeeeBallConvert.v
 theories/IeeeIntervalExact.v

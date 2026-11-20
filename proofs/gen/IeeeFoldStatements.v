@@ -1379,7 +1379,7 @@ Definition sub_2_entry_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* conv_1, each coefficient it writes, and its mask, in the IEEE model. Status: unverified. *)
+(* conv_1, each coefficient it writes, and its mask, in the IEEE model. Status: proved. *)
 Definition conv_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1402,7 +1402,7 @@ Definition conv_1_ieee_spec : Prop :=
     (seq 0 (conv_length (length xs) (length ys))) ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* conv_2, each coefficient it writes, and its mask, in the IEEE model. Status: unverified. *)
+(* conv_2, each coefficient it writes, and its mask, in the IEEE model. Status: proved. *)
 Definition conv_2_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

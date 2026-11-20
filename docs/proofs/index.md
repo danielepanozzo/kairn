@@ -95,7 +95,8 @@ lists:
   magnitude of an array and
   its kernels, over the real numbers and with overflow, infinities and NaN (`FoldNorm.v`,
   `IeeeFoldNorm.v`; [below](#the-largest-magnitude-of-an-array)); of the product of two
-  polynomials (`FoldConv.v`; [below](#the-product-of-two-polynomials)); and of the kernels of
+  polynomials, over the real numbers and with overflow, infinities and NaN (`FoldConv.v`,
+  `IeeeFoldConv.v`; [below](#the-product-of-two-polynomials)); and of the kernels of
   the accumulator and what a user of it relies on, over the real numbers and with overflow,
   infinities and NaN (`AccKernels.v`, `IeeeAccKernels.v`, `Accumulator.v`,
   `IeeeAccumulator.v`; [below](#the-accumulator));
@@ -144,13 +145,14 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
    generated `proofs/gen/IeeeAudit.v`, like step 2; then, in the same file, every other
    IEEE-model theorem that a description names: those of the steps and the combinations of
-   the folds and of the steps of the maps, and of the folds and the maps in their two orders.
+   the folds and of the steps of the maps, of the folds and the maps in their two orders, and
+   of the convolutions.
 
 What it prints, after the compilation lines, shortened where it says `...` (a run of this version):
 
 ```text
 == text scan of the proof files
-  93 files: no Admitted, admit, Axiom or Parameter
+  94 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -448,9 +450,20 @@ has at least one term and at most $\min(n_x, n_y)$ (`conv_terms_nonempty`,
 least $\min(n_x, n_y)$, its two numbers bound the error of every coefficient (`conv_1_bound`,
 `conv_2_bound`, from the theorems of [the two together](#sums-and-dot-products-of-arrays)).
 
-These are statements of the real model, as for a map: the statement of a convolution in the
-model with overflow is not generated yet, so nothing is proved of its mask or of a coefficient
-that overflows. No theorem is about the product as a polynomial (its value at a point).
+These are statements of the real model, as for a map. No theorem is about the product as a
+polynomial (its value at a point).
+
+**In the model with overflow** (`IeeeFoldConv.v`): `conv_k_ieee_correct` has the generated
+statement as its type. Coefficient $j$ is the final state of the dot product, in its
+sequential order, on the terms of $j$; the convolution keeps the and of the check of every
+coefficient, and when it is false every coefficient is replaced by what the check returns of
+it, as a map does. For canonical entries of the two polynomials, coefficient by coefficient:
+if its leading limb is finite, every limb of every term is finite, the values are those of
+the dot product of the real model on the values of the terms, and the conclusions of its
+statement hold; otherwise every limb of the coefficient is a NaN; and the mask is true exactly
+when every leading limb is finite. The proof reads the IEEE-model theorem of the dot product
+(`dot_k_seq_ieee_correct`, about the finish of that state) on the state: the finish of a state
+whose leading limb is finite returns it, with the flag true.
 
 ## The accumulator
 

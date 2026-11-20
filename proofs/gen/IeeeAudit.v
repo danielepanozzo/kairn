@@ -14,6 +14,7 @@ From Kairn Require Import IeeeDirected.
 From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
 From Kairn Require Import IeeeExt.
+From Kairn Require Import IeeeFoldConv.
 From Kairn Require Import IeeeFoldFinish.
 From Kairn Require Import IeeeFoldMaps.
 From Kairn Require Import IeeeFoldNorm.
@@ -645,3 +646,9 @@ Print Assumptions sub_2_entry_seq_ieee_correct.
 
 Definition sub_2_entry_lanes_ieee_audit : sub_2_entry_lanes_ieee_spec := sub_2_entry_lanes_ieee_correct.
 Print Assumptions sub_2_entry_lanes_ieee_correct.
+
+Definition conv_1_ieee_audit : conv_1_ieee_spec := conv_1_ieee_correct.
+Print Assumptions conv_1_ieee_correct.
+
+Definition conv_2_ieee_audit : conv_2_ieee_spec := conv_2_ieee_correct.
+Print Assumptions conv_2_ieee_correct.
