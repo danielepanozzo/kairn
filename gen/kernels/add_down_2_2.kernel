@@ -8,6 +8,12 @@
 # and B = 2 (1+u)^2 (G eta / 2 + H) + eta + (2 (1+u)^3 G E + 2 u^2) / (1 - u) tiny, with E, G, H the
 # constants of the radius as the format rounds them, and rel, tiny those of the bound of the
 # center's kernel (milestone2.md, "Bounds of two limbs"; Directed2.v, outward_rel, outward_abs).
+# The second limb moved down, RD(z1 - dd), is written as -RU(dd - z1), as in mul_dir_2_2, so
+# that no fused result is negated (a rule of the generator): dd is a select one of whose arms is
+# the fma of the radius, and compilers push a negation through the select into that fma. What is
+# negated is z1, from the renormalization of add_2_2 (a subtraction), and the result of add_up_1,
+# a select of a step and a sum; dd is used as it is. The values are those of sub_down_1(z1, dd),
+# rounding to nearest being symmetric.
 kernel:        add_down_2_2
 input:         x = x0 x1
 input:         y = y0 y1
@@ -26,5 +32,7 @@ cone_exempt:   through sub_down_1 and two_sum_ord, which select; the interval ke
 (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
 zd          = eq(z0, 0)
 dd          = select(zd, 0, d)
-w           = sub_down_1(z1, dd)
+nz          = neg(z1)
+t           = add_up_1(dd, nz)
+w           = neg(t)
 (l0, l1)    = two_sum_ord(z0, w)

@@ -66,7 +66,7 @@ Definition add_down_2_2_spec : Prop :=
 ## Listing
 
 From [`gen/kernels/add_down_2_2.kernel`](https://github.com/danielepanozzo/kairn/blob/main/gen/kernels/add_down_2_2.kernel), the description the C++ and the formal models (`proofs/gen/Model.v`, `proofs/gen/IeeeModel.v`) are generated from. Each line is one operation of `T`; one that rounds rounds to nearest, and `prod(a, b)` is $\mathrm{RN}(ab)$, written as a fused multiply-add with a zero addend ([the kernel IR](../developer/architecture.md#the-kernel-ir)).
-It calls [`add_ball_2_2`](add_ball_2_2.md), [`sub_down_1`](sub_down_1.md), [`two_sum_ord`](two_sum_ord.md).
+It calls [`add_ball_2_2`](add_ball_2_2.md), [`add_up_1`](add_up_1.md), [`two_sum_ord`](two_sum_ord.md).
 
 ```
 # A normalized pair that is at most x + y (milestone2.md, "Interval kernels", "Bounds of two
@@ -79,11 +79,19 @@ It calls [`add_ball_2_2`](add_ball_2_2.md), [`sub_down_1`](sub_down_1.md), [`two
 # and B = 2 (1+u)^2 (G eta / 2 + H) + eta + (2 (1+u)^3 G E + 2 u^2) / (1 - u) tiny, with E, G, H the
 # constants of the radius as the format rounds them, and rel, tiny those of the bound of the
 # center's kernel (milestone2.md, "Bounds of two limbs"; Directed2.v, outward_rel, outward_abs).
+# The second limb moved down, RD(z1 - dd), is written as -RU(dd - z1), as in mul_dir_2_2, so
+# that no fused result is negated (a rule of the generator): dd is a select one of whose arms is
+# the fma of the radius, and compilers push a negation through the select into that fma. What is
+# negated is z1, from the renormalization of add_2_2 (a subtraction), and the result of add_up_1,
+# a select of a step and a sum; dd is used as it is. The values are those of sub_down_1(z1, dd),
+# rounding to nearest being symmetric.
 
 (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
 zd          = eq(z0, 0)
 dd          = select(zd, 0, d)
-w           = sub_down_1(z1, dd)
+nz          = neg(z1)
+t           = add_up_1(dd, nz)
+w           = neg(t)
 (l0, l1)    = two_sum_ord(z0, w)
 ```
 

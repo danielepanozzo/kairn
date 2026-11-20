@@ -1,9 +1,10 @@
-33 kernel descriptions (22 of them in gen/kernels, with their claims); 21 remarks that a description has no claim (expected); 0 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
+refused: kernel ball_split_1, value nh: negated fused result: nh = neg(hs) negates a select one of whose arms, h, is the result of prod; compilers push a negation through a select into its arms. Negate an operand instead: -prod(a, b) is prod(neg(a), b), -fma(a, b, c) is fma(neg(a), b, neg(c)); and a rounding down of x - d is minus the rounding up of d - x, so sub_down_1(x, d) is neg(add_up_1(d, neg(x))) and sub_up_1(x, d) is neg(add_down_1(d, neg(x)))
+33 kernel descriptions (22 of them in gen/kernels, with their claims); 21 remarks that a description has no claim (expected); 1 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
 
 kernel                 operations after inlining
 add_ball_2_2            22 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
 add_down_1               3 rounded operations, 1 steps to a neighbor,   7 comparisons, selects, sign and mask operations
-add_down_2_2            28 rounded operations, 1 steps to a neighbor,  16 comparisons, selects, sign and mask operations
+add_down_2_2            28 rounded operations, 1 steps to a neighbor,  17 comparisons, selects, sign and mask operations
 add_up_1                 3 rounded operations, 1 steps to a neighbor,   7 comparisons, selects, sign and mask operations
 add_up_2_2              28 rounded operations, 1 steps to a neighbor,  15 comparisons, selects, sign and mask operations
 ball_from_interval_2    13 rounded operations, 2 steps to a neighbor,  37 comparisons, selects, sign and mask operations
@@ -18,7 +19,7 @@ bv_add_radius_2          3 rounded operations, 0 steps to a neighbor,   0 compar
 bv_scale_radius_2        3 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
 conv_radius              8 rounded operations, 0 steps to a neighbor,   0 comparisons, selects, sign and mask operations
 interval_add_1           6 rounded operations, 2 steps to a neighbor,  20 comparisons, selects, sign and mask operations
-interval_add_2          56 rounded operations, 2 steps to a neighbor,  47 comparisons, selects, sign and mask operations
+interval_add_2          56 rounded operations, 2 steps to a neighbor,  48 comparisons, selects, sign and mask operations
 interval_make_1          2 rounded operations, 0 steps to a neighbor,  13 comparisons, selects, sign and mask operations
 interval_mid_rad_1       9 rounded operations, 3 steps to a neighbor,  36 comparisons, selects, sign and mask operations
 interval_mul_1           8 rounded operations, 8 steps to a neighbor,  78 comparisons, selects, sign and mask operations

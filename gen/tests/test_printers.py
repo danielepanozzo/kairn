@@ -820,8 +820,11 @@ class Rocq(unittest.TestCase):
     # limbs), unverified: every earlier definition and statement is the same, byte for byte, some
     # printed earlier (callees before callers: sub_down_1, sub_up_1, to_down_2, two_prod), with
     # their constants named as before (gen/constant_names.json); Audit.v lists the same theorems,
-    # in that order. make -C proofs passed on these files.
-    DIGESTS = {'Model.v': 'daeb4f3078b3eb4cf80a08c91f800ba31a7eb19f7bc0670b82d07d6b6fceecfa',
+    # in that order. make -C proofs passed on these files. Then the definition of add_down_2_2
+    # changed alone, its rounding down of z1 - dd written as minus the rounding up of dd - z1 (a rule
+    # of the generator: no fused result negated through a select); Statements.v and Audit.v are the
+    # same, and make -C proofs passed on the new Model.v.
+    DIGESTS = {'Model.v': '2099ff2ba9094add1f8a66aa101b3e0da7c8e68550d7a78d432f010f5bb6668a',
                'Statements.v': 'a37b258ff7a27be6689bb00dff3843784c207be1dc22c16774fb480e37dd1687',
                'Audit.v': '833f93d669031deca32392d4a40b4b7d844295cd0a66a60d0f329443140c9f05'}
 

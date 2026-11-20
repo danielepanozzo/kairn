@@ -413,7 +413,9 @@ Definition add_down_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(z0, z1, d) := add_ball_2_2 x0 x1 y0 y1 in
   let zd := Req_bool z0 0 in
   let dd := if zd then 0 else d in
-  let w := sub_down_1 z1 dd in
+  let nz := - z1 in
+  let t := add_up_1 dd nz in
+  let w := - t in
   let '(l0, l1) := two_sum_ord z0 w in
   (l0, l1).
 

@@ -62,13 +62,36 @@ class Refusals(unittest.TestCase):
         negated = [e for e in errors if e.rule == rules.NEGATED_FUSED]
         self.assertEqual([e.kernel for e in negated], ['bad'])
         self.assertIn('negates the result of prod', str(negated[0]))
-        # A negated operand is not a negated result; a select between a fused result and another
-        # value is not refused either (add_down_2_2 negates such a select: gen/README.md says what
-        # the compilers do with it).
+        # A negated operand is not a negated result.
         self.assertEqual(check(HEAD + 'n = neg(a)\np = prod(n, b)\ns = add(p, b)\nz = sub(s, p)\ne = sub(b, z)\n'), [])
-        self.assertEqual(check(HEAD + 'cone_exempt: selected\n'
-                               'p = prod(a, b)\nc = eq(a, 0)\nt = select(c, a, p)\nq = neg(t)\n'
-                               's = add(q, b)\nz = sub(s, q)\ne = sub(b, z)\n'), [])
+
+    def test_a_negated_select_of_a_fused_result(self):
+        # Compilers push a negation through a select into its arms (Apple clang and GCC 13 on the
+        # radius of add_down_2_2 as first written): a select one of whose arms is a fused result,
+        # in either arm, through selects of selects and copies, and through a call, is refused.
+        tail = 's = add(q, b)\nz = sub(s, q)\ne = sub(b, z)\n'
+        head = HEAD + 'cone_exempt: selected\n'
+        for arms in ('a, p', 'p, a', 'p, 0'):
+            errors = check(head + f'p = prod(a, b)\nc = eq(a, 0)\nt = select(c, {arms})\nq = neg(t)\n' + tail)
+            self.refused(errors, 'bad', 'q', rules.NEGATED_FUSED,
+                         'q = neg(t) negates a select one of whose arms, p, is the result of prod')
+            self.refused(errors, 'bad', 'q', rules.NEGATED_FUSED, 'push a negation through a select')
+        errors = check(head + 'p = fma(a, b, a)\nc = eq(a, 0)\nd = lt(a, b)\nt = select(c, a, p)\n'
+                       'w = select(d, b, t)\nq = neg(w)\n' + tail)
+        self.refused(errors, 'bad', 'q', rules.NEGATED_FUSED, 'arms, p, is the result of fma')
+        errors = check(head + 'p = prod(a, b)\nc = eq(a, 0)\nt = select(c, 0, p)\nw = copy(t)\nq = neg(w)\n' + tail)
+        self.refused(errors, 'bad', 'q', rules.NEGATED_FUSED, 'negates a copy one of whose arms, p')
+        # Through a call: the callee negates its operand, as sub_down_1 negates its second.
+        minus = ('kernel:  minus\ninput:   x\ninput:   y\noutput:  r\nvalue:   x-y\nensures: error r R c=1 k=1 t=0\n'
+                 'status:  unverified\n\nny = neg(y)\nr  = add(x, ny)\n')
+        errors = check(minus, head + 'p = prod(a, b)\nc = eq(a, 0)\nt = select(c, 0, p)\nq = minus(b, t)\n' + tail)
+        negated = [e for e in errors if e.rule == rules.NEGATED_FUSED]
+        self.assertEqual([(e.kernel, e.value) for e in negated], [('bad', 'q_ny')])
+        self.assertIn('negates a select one of whose arms, p, is the result of prod (inside a call', str(negated[0]))
+        # A select of values none of which is a fused result is not refused, nor a select of a
+        # fused result whose operand was negated, nor a fused result selected and not negated.
+        self.assertEqual(check(head + 'p = add(a, b)\nc = eq(a, 0)\nt = select(c, 0, p)\nq = neg(t)\n' + tail), [])
+        self.assertEqual(check(head + 'n = neg(a)\np = prod(n, b)\nc = eq(a, 0)\nq = select(c, 0, p)\n' + tail), [])
 
     def test_value_assigned_twice(self):
         errors = check(HEAD + 's = add(a, b)\ns = sub(s, a)\nz = sub(s, a)\ne = sub(b, z)\n')

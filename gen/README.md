@@ -303,12 +303,14 @@ rule:
    kernel, and every kernel that passes a value into it, of the first part; `build` prints both
    lists, and the declaration is refused once the input is guarded.
 7. No value is the negation of the result of a fused operation (`fma`, `fms`, `fnma`, `prod`),
-   callees inlined: `sub_down_1(x, d)` and `sub_up_1(x, d)` negate `d`. Compilers fold such a
+   callees inlined: `sub_down_1(x, d)` and `sub_up_1(x, d)` negate `d`. Nor is it the negation of a
+   `select` one of whose arms is such a result (or a `select` or `copy` of one, through any number
+   of them): compilers push a negation through a select into its arms. Compilers fold such a
    negation into the fused instruction, which is one fused instruction more where the result is
    also used as it is, and +0 where the negation of an exact zero is −0 ("The tests"). Rounding to
    nearest being symmetric, the negation goes on an operand: `prod(neg(a), b)` for `-prod(a, b)`,
    and `neg(add_up_1(d, neg(x)))`, minus the rounding up of `d - x`, for the rounding down of
-   `x - d`, as `mul_dir_2_2` and `ball_from_interval_2` do. The message says so.
+   `x - d`, as `mul_dir_2_2`, `add_down_2_2` and `ball_from_interval_2` do. The message says so.
 
 There are also checks of names (none may shadow what the printers use), kinds, arity, the closed
 vocabulary of the claims (that of architecture.md, "Claims of the second wave", "Claims of the
@@ -405,15 +407,17 @@ and `ops_call`, which negate a `muladd` (the four results of the note the tests 
 kernel of `gen/kernels`. The same folding also costs one more fused instruction where the fused
 result is used elsewhere as well (the compiler keeps the FMA and adds a negated one), which the
 object-code check refuses; the rules therefore refuse the negation of an `fma`, `fms`, `fnma` or
-`prod` result ("The rules"), and `test_cxx.EveryOperation.test_negated_fused_results_are_known`
-pins that no kernel of `gen/kernels` negates a fused result of any kind. A negated `select` whose
-arm is a fused result is not refused. The directed sums of two limbs negate
-`dd = select(zd, 0, d)`. Apple clang 21 (`fnmadd`) and GCC 13 on x86-64 (`vfnmsub`) push that
-negation through the select into the FMA of the radius `d` and compute `-d` with one instruction;
-GCC 16 on AArch64 and Clang 18 on x86-64 compute `d` and flip its sign. The count stays that of the
-IR because `d` has no other use, and the value is the same because `d` is at least the constant
-$H > 0$, never zero. A kernel that used such a radius both negated and as it is would have the one
-fused instruction more of a negated FMA.
+`prod` result, directly or through a `select` ("The rules"), and
+`test_cxx.EveryOperation.test_negated_fused_results_are_known` pins that no kernel of
+`gen/kernels` negates a fused result of any kind, directly or through a select. The select is in
+the rule because of what compilers did with the first listing of the directed sums of two limbs,
+which negated `dd = select(zd, 0, d)` in `sub_down_1(z1, dd)`: Apple clang 21 (`fnmadd`) and GCC 13
+on x86-64 (`vfnmsub`) pushed that negation through the select into the FMA of the radius `d` and
+computed `-d` with one instruction, where GCC 16 on AArch64 and Clang 18 on x86-64 computed `d` and
+flipped its sign. The object code was right only because `d` had no other use (the count stayed
+that of the IR) and because `d` is at least the constant $H > 0$, never zero (the value was the
+same). `add_down_2_2` now computes the rounding down of `z1 - dd` as minus the rounding up of
+`dd - z1`, and negates no radius.
 
 The Rocq output is checked by hand on a machine with Rocq 9.0.1 and Flocq 4.2.2: `make -C proofs`
 builds `Model.v`, `Statements.v` and the proofs, and runs the audit.

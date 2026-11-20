@@ -1028,19 +1028,44 @@ def negated_fused(k, kernels):
     asks for, which the object-code check refuses; and where the fused result is an exact zero the
     folded instruction gives +0 where the negation gives -0, so that the kernel has no single
     bit-exact result. The values do not need it: rounding to nearest is symmetric, so the negation
-    can be put on an operand (gen/README.md, "The tests")."""
+    can be put on an operand (gen/README.md, "The tests").
+
+    The same holds of the negation of a select one of whose arms is a fused result (and of a select
+    of such a select, or a copy of one): compilers push the negation through the select into the
+    arm, -(m ? d : 0) being (m ? -d : -0), and fold it there (Apple clang's fnmadd and GCC 13's
+    vfnmsub on the radius of the directed sums of two limbs, before add_down_2_2 was written
+    without it)."""
     prims = ir.prims(k, kernels)
-    defs = {p.dst: p.op for p in prims}
+    defs = {p.dst: p for p in prims}
     own = {d for st in k.body for d in st.dsts}
+
+    def fused_arms(name, seen=()):
+        """The fused results that `name` is, or that a select or copy makes it, through selects."""
+        p = defs.get(name)
+        if p is None or name in seen:
+            return []
+        if p.op in ir.FUSED:
+            return [name]
+        arms = p.args[1:] if p.op == 'select' else p.args if p.op == 'copy' else ()
+        return [f for a in arms if not a.const for f in fused_arms(a.name, seen + (name,))]
+
     errs = []
     for p in prims:
-        if p.op != 'neg' or p.args[0].const or defs.get(p.args[0].name) not in ir.FUSED:
+        if p.op != 'neg' or p.args[0].const:
             continue
         src = p.args[0].name
+        fused = fused_arms(src)
+        if not fused:
+            continue
         where = '' if p.dst in own else ' (inside a call: a callee negates its operand, as sub_down_1 and sub_up_1 ' \
                                         'negate their second)'
+        if fused == [src]:
+            what = f'negates the result of {defs[src].op}{where}'
+        else:
+            what = (f'negates a {defs[src].op} one of whose arms, {fused[0]}, is the result of {defs[fused[0]].op}'
+                    f'{where}; compilers push a negation through a select into its arms')
         errs.append(RuleError(k.name, p.dst, NEGATED_FUSED,
-                              f'{p.dst} = neg({src}) negates the result of {defs[src]}{where}. Negate an operand '
+                              f'{p.dst} = neg({src}) {what}. Negate an operand '
                               'instead: -prod(a, b) is prod(neg(a), b), -fma(a, b, c) is fma(neg(a), b, neg(c)); '
                               'and a rounding down of x - d is minus the rounding up of d - x, so sub_down_1(x, d) '
                               'is neg(add_up_1(d, neg(x))) and sub_up_1(x, d) is neg(add_down_1(d, neg(x)))'))

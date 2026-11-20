@@ -433,12 +433,21 @@ def negates_a_fused_result(k, kernels):
     On AArch64, GCC and Clang at -O2 turn -fma(a, b, c) into one fnmadd, which computes
     (-ab) + (-c): when ab + c is exactly zero that is +0, where the negation gives -0. Clang does
     it even through a sign-bit flip written with std::bit_cast. Only the sign of a zero changes,
-    which Kairn leaves unspecified, but such a kernel has no single bit-exact result.
+    which Kairn leaves unspecified, but such a kernel has no single bit-exact result. A negated
+    select (or copy) of such a result counts too: compilers push the negation into the arms.
     """
     prims = ir.prims(k, kernels)
-    defs = {p.dst: p.op for p in prims}
-    return any(p.op == 'neg' and defs.get(p.args[0].name) in ir.FUSED | {'muladd'}
-               for p in prims if not p.args[0].const)
+    defs = {p.dst: p for p in prims}
+
+    def fused(name):
+        p = defs.get(name)
+        if p is None:
+            return False
+        if p.op in ir.FUSED | {'muladd'}:
+            return True
+        arms = p.args[1:] if p.op == 'select' else p.args if p.op == 'copy' else ()
+        return any(fused(a.name) for a in arms if not a.const)
+    return any(p.op == 'neg' and fused(p.args[0].name) for p in prims if not p.args[0].const)
 
 
 def same_but_zero_signs(x, y):
@@ -465,7 +474,7 @@ class EveryOperation(unittest.TestCase):
     def test_negated_fused_results_are_known(self):
         # The test kernels that negate a muladd, a contractable product the rules allow a test
         # kernel; no kernel of gen/kernels negates a fused result: the rules refuse a negated fma
-        # or prod (rules.negated_fused), and none uses muladd.
+        # or prod, directly or through a select (rules.negated_fused), and none uses muladd.
         self.assertEqual({n for n, k in self.ks.items() if negates_a_fused_result(k, self.ks)},
                          {'ops_muladd', 'ops_call'})
         ks = common.kernels()

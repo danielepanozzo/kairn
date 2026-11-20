@@ -691,7 +691,9 @@ Definition add_down_2_2 (x0 x1 y0 y1 : float) : float * float :=
   let '(z0, z1, d) := add_ball_2_2 x0 x1 y0 y1 in
   let zd := eq z0 pzero in
   let dd := if zd then pzero else d in
-  let w := sub_down_1 z1 dd in
+  let nz := neg z1 in
+  let t := add_up_1 dd nz in
+  let w := neg t in
   let '(l0, l1) := two_sum_ord z0 w in
   (l0, l1).
 

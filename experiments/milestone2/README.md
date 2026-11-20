@@ -18,10 +18,11 @@ wrong on what was run.
   two), and the thirteen of the first kernels of the intervals (`mul_dir_1`, `interval_make_1`,
   `interval_neg_1`, `interval_add_1`, `interval_sub_1`, `interval_mul_1`, `add_ball_2_2`,
   `mul_ball_2_2`, `add_down_2_2`, `add_up_2_2`, `mul_dir_2_2`, `interval_add_2` and
-  `ball_from_interval_2`). Two of those were written again there, with the same values, so that no
-  fused result is negated (a rule of the generator): the lower bound of `mul_dir_2_2` is minus the
-  rounding up of $d - z_1$, and the radius of `ball_from_interval_2` adds minus the lower half as a
-  product of its own.
+  `ball_from_interval_2`). Three of those were written again there, with the same values, so that
+  no fused result is negated, directly or through a select (a rule of the generator): the lower
+  bounds of `mul_dir_2_2` and `add_down_2_2` are minus the rounding up of $d - z_1$ (for the sum,
+  $dd - z_1$, with $dd$ the radius or zero), and the radius of `ball_from_interval_2` adds minus
+  the lower half as a product of its own.
 - `common.py` loads them together with the kernels of `gen/kernels`, taking a kernel from
   `gen/kernels` when it has one, and evaluates them with the
   generator's exact interpreter (`gen/kairn_gen/interp.py`), on any format `(p, qmin, qmax)`. It
@@ -106,6 +107,11 @@ ball, whose descriptions and script (`scaling.py`) are with the generator. And a
 that a kernel adds no value to itself (GCC rewrites `a + a` as `a * 2` and may fuse that product
 into the next addition), changed the test of an exact halving of `ball_from_interval_2`: each
 half is doubled back by `prod(h, const up(2))`, the same value as `add(h, h)` as an exact product.
+A third rule, that no fused result is negated, directly or through a select, rewrote the lower
+bounds of `mul_dir_2_2` and `add_down_2_2` with the same values (above), and refuses one proposal
+of `kernels/` as it is written: `ball_split_1` negates `hs = select(fr, h, 0)`, whose first arm is
+the product `h = prod(r, const 1/2)`. `rules_report.py` records the refusal; that listing waits
+for the stage of the operations of `Ball`, where it is to be written again.
 
 ## What the proofs changed
 

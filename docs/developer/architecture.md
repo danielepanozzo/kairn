@@ -740,13 +740,16 @@ numbers of `T`, the ball from an interval of two `T` and the narrowing of a ball
 need the additions below. Everything above keeps its meaning and its JSON shape: a field that is
 new to a kind that exists is written only in an entry that uses it.
 
-Two listings differ from the page's in form, not in value, because the generator refuses the
-negation of a fused result (gen/README.md, "The rules"): the lower bound of `mul_dir_2_2` is
-$\mathrm{RD}(z_1 - d)$ written as $-\mathrm{RU}(d - z_1)$ (`nz = neg(z1); t = add_up_1(d, nz);
-wl = neg(t)`), and the radius of `ball_from_interval_2` adds minus the lower half as its own exact
-product of the negated guarded bound (`gn = neg(gl); hn = prod(gn, const up(1/2));
-d = add_up_1(hu, hn)`). Rounding to nearest is symmetric, so both are the page's values, and
-their claims and statements are those of the page.
+Three listings differ from the page's in form, not in value, because the generator refuses the
+negation of a fused result, directly or through a select (gen/README.md, "The rules"): the lower
+bound of `mul_dir_2_2` is $\mathrm{RD}(z_1 - d)$ written as $-\mathrm{RU}(d - z_1)$
+(`nz = neg(z1); t = add_up_1(d, nz); wl = neg(t)`); the lower bound of `add_down_2_2`, and so of
+`sub_down_2_2`, which calls it, is $\mathrm{RD}(z_1 - dd)$ written the same way
+(`nz = neg(z1); t = add_up_1(dd, nz); w = neg(t)`), $dd$ being the select of the radius or zero;
+and the radius of `ball_from_interval_2` adds minus the lower half as its own exact product of
+the negated guarded bound (`gn = neg(gl); hn = prod(gn, const up(1/2)); d = add_up_1(hu, hn)`).
+Rounding to nearest is symmetric, so all three are the page's values, and their claims and
+statements are those of the page.
 
 **Requirements**, both of the extended domain:
 

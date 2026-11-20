@@ -340,8 +340,10 @@ class CheckedFiles(unittest.TestCase):
     # their proofs landed is those two words). Then the first kernels of the intervals of wave 2,
     # unverified, were added: every earlier definition and statement is the same, byte for byte,
     # some printed earlier (callees before callers), and the statements import
-    # IeeeIntervalVocabulary.v; make -C proofs passed on these files.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '8f94f1ed1d65b8b8599acd0e59efee7d9a2a6fbc67ddec3eab14bb3b8d88af74',
+    # IeeeIntervalVocabulary.v; make -C proofs passed on these files. Then the definition of
+    # add_down_2_2 changed alone (no fused result negated through a select: the rounding down of
+    # z1 - dd as minus the rounding up of dd - z1), and make -C proofs passed on the new model.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'dcc579a123ba1f706224bcadf90ce316b5c2b6f3487a5367a886a8c49cdb07a0',
                'proofs/gen/IeeeStatements.v': '6c606e00b9580b92d8009a5d53266043a34e3bb402cb042000c64b8967c98545'}
 
     def test_the_checked_files(self):
