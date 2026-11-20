@@ -183,6 +183,20 @@ MSVC `/Bt+`). `kernels` counts the lines and operations of every generated kerne
 the script, and every compiler it starts, to one logical processor (Linux, Windows). Every
 compilation has a timeout, and on a timeout only the process the script started is terminated.
 
+### Constants from fractions
+
+`rational_cost.py` measures `kairn::rational` (`include/kairn/rational.hpp`): `compile` compiles a
+translation unit with 1, 100 and 1000 distinct constants of `Expansion<double, 2>`, with
+`KAIRN_RATIONAL_CHECK` 0 and 1, and the same unit without constants, several times in rounds, and
+prints the median times and what each constant adds; `run` builds a program that times one call of
+`rational` and of `is_rational_result` per type, at run time. It writes its units into `--workdir`.
+
+```sh
+python3 bench/rational_cost.py compile --cxx g++ --reps 5 --flags=-mfma
+python3 bench/rational_cost.py compile --cxx cl --msvc --flags=/arch:AVX2 --json rational-msvc.json
+python3 bench/rational_cost.py run --cxx clang++ --flags=-mfma
+```
+
 ### The checks of `KAIRN_CHECKS`, and MSVC's stack cookie
 
 `costs.cpp` is a small benchmark of its own, timed as `kairn-bench` times (non-inlined functions

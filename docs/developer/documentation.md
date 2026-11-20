@@ -82,9 +82,10 @@ program, write its new output into the `.txt` file and check the page that inclu
 
 ## Reference pages
 
-The pages under `docs/reference/`, except `reading.md`, are generated and committed, like the
-generated C++, and the Reference part of `nav` in `mkdocs.yml` is generated between the lines
-`# BEGIN reference` and `# END reference`:
+The pages under `docs/reference/`, except `reading.md` and the pages that `PAGES` of
+`docs/tools/reference_operations.py` lists (`rational.md`, for operations that call no kernel), are
+generated and committed, like the generated C++, and the Reference part of `nav` in `mkdocs.yml` is
+generated between the lines `# BEGIN reference` and `# END reference`, the pages of `PAGES` in it:
 
 ```sh
 python3 docs/tools/reference.py          # rewrite them

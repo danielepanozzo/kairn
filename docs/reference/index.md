@@ -40,6 +40,9 @@ Making numbers and balls, and reading their parts.
 | `sign(x)` | `Expansion<T, K>` | $-1$, $0$ or $+1$, from the leading limb; $0$ for NaN | none |
 | `isfinite(x)` | `Expansion<T, K>` | whether the leading limb is finite | none |
 | `is_normalized(x)` | `Expansion<T, K>` | whether every limb is finite and, for two limbs, $x_0 + x_1$ rounds to $x_0$ | none |
+| `rational<X>(num, den)` | `long long`, `long long` | $q = \mathrm{num}/\mathrm{den}$ as `X`: $\mathrm{RN}(q)$ for one limb, for two the normalized pair of value $\mathrm{RN}(q) + \mathrm{RN}(q - \mathrm{RN}(q))$; the smallest error bound of `T` and whether it is exact. Integer arithmetic, in constant expressions too; specified exactly, not machine-checked ([Constants from fractions](rational.md)) | none |
+| `integer<X>(n)` | `long long` | `rational<X>(n, 1)` ([Constants from fractions](rational.md)) | none |
+| `is_rational_result(c, num, den)` | `Constant<X>`, `long long`, `long long` | whether `c` is what `rational<X>(num, den)` returns, decided with multiplications and comparisons of integers ([the check](rational.md#the-check)) | none |
 
 ## Arithmetic
 

@@ -12,7 +12,9 @@ relied on yet.** The documentation is at <https://danielepanozzo.github.io/kairn
 by a power of two that the limb type cannot represent, whose steps are proved and whose composition
 is argued and tested, and returns
 results like those of `T` at overflow and for infinities and NaN (a ball: the whole line or the
-empty set); `kairn::finite::` skips that layer. [What holds today](docs/getting-started/guarantees.md)
+empty set); `kairn::finite::` skips that layer. `kairn::rational` makes constants such as 1/10 from
+two integers, with integer arithmetic only: specified exactly and tested for equality, not
+machine-checked. [What holds today](docs/getting-started/guarantees.md)
 says what is proved, in which model, and what is not yet.
 
 - [Milestone 1 report](docs/developer/results/milestone1.md): what exists, what is proved, what

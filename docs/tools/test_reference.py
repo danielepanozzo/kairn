@@ -11,7 +11,8 @@
 - The tool on modified copies of its inputs: it fails, naming what it cannot print, on an unknown
   claim kind, requirement, field, condition, lead or status, on a kind or requirement outside its
   domain, and on a kernel the table does not have; --check fails on a stale, missing or stray page
-  and on a stale nav; an UNVERIFIED kernel is marked; runs that judged other claims are flagged;
+  and on a stale nav, and keeps the hand-written pages of PAGES, in the nav of their group; an
+  UNVERIFIED kernel is marked; runs that judged other claims are flagged;
   the statements of the extended domain (F1 to F5, B1 to B4, the constructors) are printed with
   the kernel's own names, conditions and core; the axioms are those of the audit's allow-list, and
   a proved theorem that no audit file prints fails; every form of ldexp beyond the powers of two
@@ -625,6 +626,19 @@ class Tool(unittest.TestCase):
         i = nav.index("      - How to read a page: reference/reading.md")
         self.assertEqual(nav[i + 1], "      - C++ API: api/index.md")
         self.assertIn("The [C++ API](../api/index.md), which Doxygen generates", files["docs/reference/index.md"])
+
+    def test_hand_written_pages_are_in_the_nav_and_kept(self):
+        # The pages of PAGES are listed in the nav, in their group, and neither stray nor rewritten.
+        ops = reference.load_operations(self.copy.root)
+        self.assertIn(("construction", "Constants from fractions", "rational"), ops.PAGES)
+        files = reference.plan(self.copy.root)
+        nav = files["mkdocs.yml"].split("\n")
+        group = nav.index("      - Construction and access:")
+        line = nav.index("          - Constants from fractions: reference/rational.md")
+        self.assertTrue(group < line < nav.index("      - Arithmetic:"))
+        self.assertNotIn("docs/reference/rational.md", files)
+        self.assertTrue(os.path.exists(self.copy.path("docs/reference/rational.md")))
+        self.assertEqual(reference.check(self.copy.root), [])
 
     def test_crlf_checkout_is_fresh(self):
         for rel in ("docs/reference/add_2_2.md", "mkdocs.yml"):

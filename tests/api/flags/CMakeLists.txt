@@ -8,6 +8,10 @@
 #   kairn-api-runner-SET          tests/api/runner.cpp, the public interface on the line protocol,
 #                                 which also runs kairn::self_test() (--self-test)
 #   kairn-api-constexpr-SET       tests/api/constexpr.cpp, the interface's constant expressions
+#   kairn-api-rational-SET        tests/api/rational.cpp, kairn::rational at compile time and at
+#                                 run time under the four rounding modes
+#   kairn-api-rational-runner-SET tests/api/rational_runner.cpp, kairn::rational on the line
+#                                 protocol of rational_K
 #
 # and, for the debug build and the set marked "kernels" below, the kernels' runners:
 #
@@ -105,9 +109,13 @@ foreach(_entry IN LISTS _flags_sets)
 
   _kairn_flags_target(kairn-api-runner-${_set} "${_api}/runner.cpp" "${_words}" ${_debug} ${_api_warnings})
   _kairn_flags_target(kairn-api-constexpr-${_set} "${_api}/constexpr.cpp" "${_words}" ${_debug} ${_api_warnings})
+  _kairn_flags_target(kairn-api-rational-${_set} "${_api}/rational.cpp" "${_words}" ${_debug} ${_api_warnings})
+  _kairn_flags_target(kairn-api-rational-runner-${_set} "${_api}/rational_runner.cpp" "${_words}" ${_debug}
+    ${_api_warnings})
   if(_debug)
-    # The runner leaves KAIRN_CHECKS to its default, 1 without NDEBUG (runner.cpp).
+    # The runners leave KAIRN_CHECKS to its default, 1 without NDEBUG (runner.cpp).
     target_compile_definitions(kairn-api-runner-${_set} PRIVATE KAIRN_TEST_CHECKS)
+    target_compile_definitions(kairn-api-rational-runner-${_set} PRIVATE KAIRN_TEST_CHECKS)
   endif()
   if(_what STREQUAL "kernels" AND EXISTS "${_gen}/runner.cpp")
     _kairn_flags_target(kairn-gen-runner-${_set} "${_gen}/runner.cpp" "${_words}" ${_debug} ${_warnings})

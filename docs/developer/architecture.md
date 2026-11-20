@@ -569,6 +569,13 @@ completed:  KERNEL FORMAT LIMB ... [#TAG] -> LIMB ...
 - The sign of a zero is never compared: Kairn leaves it unspecified.
 - Which backend or variant a runner uses is chosen on its command line, never in the stream.
 
+The constants of `include/kairn/rational.hpp`, which are not kernels, have lines of their own
+([Constants from fractions](../reference/rational.md)): `rational_K FORMAT NUM DEN [#TAG]`, with K
+the number of limbs (1 or 2) and NUM and DEN decimal signed 64-bit integers (DEN may be 0); the
+runner (`tests/api/rational_runner.cpp`) adds ` -> `, the K limbs of the value, the error, and `0`
+or `1` for exact, the limbs written as above. The specification fixes every bit, so the oracle
+compares each completed line for equality.
+
 The oracle generates requests (case $i$ of a given generator and seed is computed without
 generating the others; for toy formats it can enumerate every operand combination), and checks
 completed lines: the requirements first (a case that violates them is reported as invalid, never

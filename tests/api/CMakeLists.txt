@@ -29,6 +29,11 @@
 #   marker, and with KAIRN_CHECKS constant expressions that the checks refuse (each with a control
 #   that compiles).
 # - api.k1.zero_cost: the code of Expansion<double, 1> against that of double (k1/zero_cost.py).
+# - api.rational.constexpr: kairn::rational and kairn::integer (rational.cpp): constants computed
+#   independently, the checker against results changed by one unit, and the same bits at run time
+#   under the four rounding modes; api.rational.K.FORMAT: the oracle's cases of rational_K through
+#   rational_runner.cpp (rational.cmake). The full tier has more cases, through the runner of every
+#   flag set too, and rational.cpp built with every flag set.
 # - api.example.*: the documentation's examples (docs/examples/cpp/), which check their own output;
 #   api.example.accurate_sums.* also compares it with the text its tutorial shows.
 
@@ -147,6 +152,38 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   list(LENGTH _flags_names _n_flags)
   message(STATUS "Kairn tests: the public interface of ${_n} kernels against the oracle, with 2 runners, "
     "and in the full tier the debug build's on the first form of each and the runners of ${_n_flags} flag sets")
+endif()
+
+# --- kairn::rational -------------------------------------------------------------------------
+#
+# rational.hpp computes with integers only, so contraction and the other flags cannot change its
+# result: one runner here, with the build's flags; the full tier adds the runner of every flag set
+# (flags/), whose outputs must be the same bytes. The specification fixes every bit, so the oracle
+# judges each line for equality (docs/reference/rational.md). KAIRN_RATIONAL_QUICK_CASES: the
+# runner completes 2 000 lines in a few hundredths of a second; the rest of each test is the
+# oracle's Python.
+_kairn_api_program(kairn-api-rational rational.cpp)
+add_test(NAME api.rational.constexpr COMMAND kairn-api-rational)
+set_tests_properties(api.rational.constexpr PROPERTIES LABELS "api;rational")
+_kairn_api_program(kairn-api-rational-runner rational_runner.cpp)
+set(KAIRN_RATIONAL_CASES 20000 CACHE STRING "Cases per kind and format of kairn::rational judged by the oracle, in the full tier")
+set(KAIRN_RATIONAL_QUICK_CASES 2000 CACHE STRING
+  "Cases per kind and format of kairn::rational judged by the oracle, in the quick tier")
+if(Python3_Interpreter_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-oracle")
+  set(_api_rational_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DSEED=${KAIRN_API_SEED}")
+  foreach(_kind 1 2)
+    foreach(_format binary64 binary32)
+      set(_name api.rational.${_kind}.${_format})
+      add_test(NAME ${_name}
+        COMMAND "${CMAKE_COMMAND}" ${_api_rational_common} "-DRUNNERS=build|$<TARGET_FILE:kairn-api-rational-runner>"
+          "-DKIND=rational_${_kind}" "-DFORMAT=${_format}" "-DCOUNT=${KAIRN_RATIONAL_QUICK_CASES}"
+          "-DSUMMARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/rational" -P "${CMAKE_CURRENT_SOURCE_DIR}/rational.cmake")
+      set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "api;oracle;rational")
+    endforeach()
+  endforeach()
+  # For ../full/CMakeLists.txt.
+  set(_api_rational_common ${_api_rational_common} PARENT_SCOPE)
 endif()
 
 # --- Products of the program passed into Kairn ------------------------------------------------
@@ -301,7 +338,10 @@ endif()
 # (checks_handler.cpp).
 add_test(NAME api.flags.debug.self_test COMMAND kairn-api-runner-debug --self-test)
 add_test(NAME api.flags.debug.constexpr COMMAND kairn-api-constexpr-debug)
-set_tests_properties(api.flags.debug.self_test api.flags.debug.constexpr PROPERTIES
+# rational.cpp in the debug build: KAIRN_CHECKS is 1, and kairn::rational, which does not round,
+# must run under each directed rounding mode without stopping the program.
+add_test(NAME api.flags.debug.rational COMMAND kairn-api-rational-debug)
+set_tests_properties(api.flags.debug.self_test api.flags.debug.constexpr api.flags.debug.rational PROPERTIES
   TIMEOUT 120 LABELS "api;flags")
 _kairn_api_program(kairn-api-checks-release checks.cpp)
 target_compile_definitions(kairn-api-checks-release PRIVATE KAIRN_CHECKS=1)
@@ -402,6 +442,22 @@ endforeach()
 _kairn_api_reject(checks.from_limbs_not_canonical 11 "constant|constexpr")
 _kairn_api_reject(checks.operator_not_canonical 15 "constant|constexpr")
 _kairn_api_reject(checks.ball_negative_radius 16 "constant|constexpr")
+# kairn::rational in a constant expression: a zero denominator, whose message names the function
+# that says so (MSVC's message was not seen yet: there, any failed constant expression); and a
+# result that fails its check, against a copy of the headers in which the flag exact is inverted
+# (compile_fail.cmake), which must not compile, while the control, the same copy with
+# KAIRN_RATIONAL_CHECK 0, compiles: that wrong constant goes unnoticed at compile time without the
+# check.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(_api_zero "rational_denominator_is_zero|expression did not evaluate to a constant")
+  set(_api_fails "rational_result_fails_its_specification|expression did not evaluate to a constant")
+else()
+  set(_api_zero "rational_denominator_is_zero")
+  set(_api_fails "rational_result_fails_its_specification")
+endif()
+_kairn_api_reject(rational.denominator_zero 17 "${_api_zero}")
+_kairn_api_reject(rational.result_fails_its_check 18 "${_api_fails}"
+  "-DRATIONAL_FAULT_FIXTURE=${CMAKE_CURRENT_BINARY_DIR}/rational-fault-fixture")
 
 # --- The program's names ------------------------------------------------------------------------
 #
@@ -461,7 +517,10 @@ _kairn_api_program(kairn-example-choosing "${PROJECT_SOURCE_DIR}/docs/examples/c
 add_test(NAME api.example.choosing COMMAND kairn-example-choosing)
 _kairn_api_program(kairn-example-troubleshooting "${PROJECT_SOURCE_DIR}/docs/examples/cpp/troubleshooting.cpp")
 add_test(NAME api.example.troubleshooting COMMAND kairn-example-troubleshooting)
-set_tests_properties(api.example.first_steps api.example.choosing api.example.troubleshooting
+# The example of "Constants from fractions" in Getting started.
+_kairn_api_program(kairn-example-constants "${PROJECT_SOURCE_DIR}/docs/examples/cpp/constants.cpp")
+add_test(NAME api.example.constants COMMAND kairn-example-constants)
+set_tests_properties(api.example.first_steps api.example.choosing api.example.troubleshooting api.example.constants
   PROPERTIES LABELS "api;example")
 
 # The tutorial's program prints the same text on every platform and under every contraction

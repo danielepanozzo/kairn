@@ -47,7 +47,13 @@ static int run() {
     const E2 z = kairn::ldexp(x, 3);  // 12
     const B1 p = B1(E1(T(1)), T(0.5)) + B1(E1(T(2)), T(0.25));
     const B2 q = B2(x, T(0.125)) * B2(x, T(0));
+    constexpr kairn::Constant<E2> third = kairn::rational<E2>(1, 3);
+    volatile long long three = 3;
+    const kairn::Constant<E2> third_at_run_time = kairn::rational<E2>(1, three);
     int failures = 0;
+    if (third_at_run_time.value.limb[0] != third.value.limb[0] || third_at_run_time.error != third.error ||
+        third.exact || !kairn::is_rational_result(third, 1, 3) || !kairn::integer<E1>(-7).exact)
+        ++failures;
     if (y.limb[0] != T(0.75) || y.limb[1] != T(0)) ++failures;
     if (a.limb[0] != T(0.75)) ++failures;
     if (z.limb[0] != T(12) || z.limb[1] != T(0)) ++failures;

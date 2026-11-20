@@ -248,6 +248,30 @@ foreach(_set IN LISTS _flags_names)
   endif()
   add_test(NAME full.api.flags.${_set}.self_test COMMAND kairn-api-runner-${_set} --self-test)
   add_test(NAME full.api.flags.${_set}.constexpr COMMAND kairn-api-constexpr-${_set})
-  set_tests_properties(full.api.flags.${_set}.self_test full.api.flags.${_set}.constexpr PROPERTIES
-    TIMEOUT 120 LABELS "full;api;flags")
+  add_test(NAME full.api.flags.${_set}.rational COMMAND kairn-api-rational-${_set})
+  set_tests_properties(full.api.flags.${_set}.self_test full.api.flags.${_set}.constexpr
+    full.api.flags.${_set}.rational PROPERTIES TIMEOUT 120 LABELS "full;api;flags")
 endforeach()
+
+# --- kairn::rational against the oracle ----------------------------------------------------------
+#
+# full.api.rational.KIND.FORMAT: KAIRN_RATIONAL_CASES cases of rational_KIND (the quick tier has
+# KAIRN_RATIONAL_QUICK_CASES of the same seed), through the runner with the build's flags and the
+# runner of every flag set, the debug build's included: integer code, so every output must be the
+# same bytes, and the oracle judges one (tests/api/rational.cmake).
+if(_api_rational_common)
+  set(_runners "build|$<TARGET_FILE:kairn-api-rational-runner>")
+  foreach(_set IN LISTS _flags_names)
+    string(APPEND _runners "|${_set}|$<TARGET_FILE:kairn-api-rational-runner-${_set}>")
+  endforeach()
+  foreach(_kind 1 2)
+    foreach(_format binary64 binary32)
+      set(_name full.api.rational.${_kind}.${_format})
+      add_test(NAME ${_name}
+        COMMAND "${CMAKE_COMMAND}" ${_api_rational_common} "-DRUNNERS=${_runners}" "-DKIND=rational_${_kind}"
+          "-DFORMAT=${_format}" "-DCOUNT=${KAIRN_RATIONAL_CASES}" "-DSUMMARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/rational"
+          -P "${PROJECT_SOURCE_DIR}/tests/api/rational.cmake")
+      set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle;rational")
+    endforeach()
+  endforeach()
+endif()

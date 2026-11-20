@@ -7,8 +7,8 @@ model of arithmetic where nothing overflows, and at overflow and for infinities 
 return results like those of `float` and `double` (balls: the whole line, or the empty set), which
 is proved in a model of IEEE 754; [What holds today](guarantees.md) has the details and what is
 not proved yet. This page shows how to write a first program, choose the limb type and the number
-of limbs, build and test the repository, use the CMake package, read what Kairn's checks report
-when something is wrong, and build this site.
+of limbs, write constants such as 1/10, build and test the repository, use the CMake package, read
+what Kairn's checks report when something is wrong, and build this site.
 
 ## A first program
 
@@ -123,6 +123,24 @@ the range a k-number overflows where `T` does: each operation's page in the
 
 Three and four limbs, and a $k$ chosen at run time, are planned for later milestones
 ([Plan](../developer/design/phase0/plan.md#milestones)).
+
+## Constants from fractions
+
+A constant such as 1/10 or 1/3 is not a `double`, nor the sum of two. `kairn::rational<X>(num,
+den)` gives the fraction of two 64-bit integers as a number of type `X`, with a bound of its
+error and whether it is exact, in constant expressions and at run time:
+
+```cpp
+--8<-- "docs/examples/cpp/constants.cpp:rational"
+```
+
+It computes with integers only, so the result is the same, bit for bit, at compile time and at
+run time, under every rounding mode. Its result is specified exactly and tested for equality with
+the oracle, but, being integer code written by hand rather than a generated kernel, it is not
+machine-checked; each constant computed at compile time is checked against its specification
+before it compiles ([Constants from fractions](../reference/rational.md)). The program is
+[`docs/examples/cpp/constants.cpp`](https://github.com/danielepanozzo/kairn/blob/main/docs/examples/cpp/constants.cpp);
+ctest builds and runs it (`api.example.constants`).
 
 ## What you need
 

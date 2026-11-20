@@ -184,6 +184,15 @@ double use_every_operation(UseT use_a, UseT use_b) {
             TE2::add_fast.verified + TE2::sub.verified + TE2::sub_limb.verified + TE2::mul.verified +
             TE2::mul_limb.verified + TE2::ldexp.verified + TE1::mul.verified);
     use_add(UseT(unverified(use_a)));
+
+    // Constants from fractions: rational and integer, in constant evaluation and at run time, and
+    // the checker.
+    constexpr kairn::Constant<E2> use_third = kairn::rational<E2>(1, 3);
+    const kairn::Constant<E1> use_int = kairn::integer<E1>(static_cast<long long>(use_a));
+    const kairn::Constant<UseT> use_tenth = kairn::rational<UseT>(-1, 10);
+    use_add(use_third.value.limb[1] + use_third.error + use_third.exact + use_int.value.limb[0] + use_tenth.value);
+    use_add(kairn::is_rational_result(use_int, static_cast<long long>(use_a), 1) +
+            kairn::is_rational_result(use_third, 1, 3));
     return use_sum;
 }
 

@@ -46,7 +46,9 @@ import sys
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 REPO_URL = "https://github.com/danielepanozzo/kairn"
 OUT_DIR = "docs/reference"
-HAND_WRITTEN = {"reading.md"}          # pages of docs/reference/ that this script does not own
+# Pages of docs/reference/ that this script does not own: these, and those of PAGES in
+# docs/tools/reference_operations.py (hand_written()).
+HAND_WRITTEN = {"reading.md"}
 NAV_BEGIN = "  # BEGIN reference: written by docs/tools/reference.py; do not edit by hand"
 NAV_END = "  # END reference"
 # The page in place of which the CI puts Doxygen's C++ API reference (docs/Doxyfile).
@@ -1969,11 +1971,14 @@ class Site:
                  "      - C++ API: %s" % API_PAGE]
         for gid, title, _ in self.groups:
             names = [n for n, p in self.ops.KERNELS.items() if p["group"] == gid]
-            if not names:
+            pages = [(t, f) for g, t, f in getattr(self.ops, "PAGES", []) if g == gid]
+            if not names and not pages:
                 continue
             lines.append("      - %s:" % yaml_str(title))
             for n in names:
                 lines.append("          - %s: reference/%s.md" % (yaml_str(self.ops.KERNELS[n]["title"]), n))
+            for t, f in pages:
+                lines.append("          - %s: reference/%s.md" % (yaml_str(t), f))
         lines.append(NAV_END)
         return lines
 
@@ -2015,13 +2020,19 @@ def plan(root, claims=None):
     return files
 
 
+def hand_written(root):
+    """The pages of docs/reference/ written by hand: HAND_WRITTEN and those of PAGES."""
+    return HAND_WRITTEN | {f + ".md" for _, _, f in getattr(load_operations(root), "PAGES", [])}
+
+
 def stray(root, files):
     d = in_root(root, OUT_DIR)
     if not os.path.isdir(d):
         return []
     owned = {p.rsplit("/", 1)[1] for p in files if p.startswith(OUT_DIR + "/")}
+    kept = hand_written(root)
     return sorted(OUT_DIR + "/" + f for f in os.listdir(d)
-                  if f.endswith(".md") and f not in owned and f not in HAND_WRITTEN)
+                  if f.endswith(".md") and f not in owned and f not in kept)
 
 
 def check(root, claims=None):

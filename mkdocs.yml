@@ -109,6 +109,7 @@ nav:
           - A two-limb number from its limbs: reference/make_2_limbs.md
           - A ball from a one-limb center and a radius: reference/ball_make_1.md
           - A ball from a two-limb center and a radius: reference/ball_make_2.md
+          - Constants from fractions: reference/rational.md
       - Arithmetic:
           - Sum and difference, one limb: reference/add_1_1.md
           - Product, one limb: reference/mul_1_1.md

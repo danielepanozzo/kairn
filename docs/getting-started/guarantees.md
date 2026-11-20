@@ -78,6 +78,7 @@ and values may be infinite or NaN ([below](#overflow-and-non-finite-values)).
 | one limb: `-x`, `abs`, comparisons, conversions | exact (no kernel) | the IEEE 754 operation |
 | `Ball`: `+`, `-`, `*`, scaling by a `T`, `-X` (the kernels of [Ball operations](../reference/index.md#ball-operations)) | containment: $x \circ y \in Z$ for all $x \in X$, $y \in Y$; for two limbs the center is normalized | B1 to B4 (B1 to B3 for `-X`): containment in every case, the empty set and the whole line included; a finite ball when no $x \circ y$ exceeds $2^{e_{\max}-2}$ in magnitude ($2^{e_{\max}-4}$ for the product of one-limb balls) |
 | `limb`, `sign`, `isfinite`, `is_normalized`, a ball's states | exact (no kernel) | |
+| `rational<X>(num, den)`, `integer<X>(n)` (no kernel: [Constants from fractions](../reference/rational.md)) | specified exactly, bit for bit; tested for equality with the oracle; **not machine-checked** ([below](#constants-from-fractions)) | integer arithmetic only: the same result in every environment; for `den` = 0, the canonical NaN at run time |
 
 A one-limb operand next to a two-limb one is its limb: `x + y` with `y` an `Expansion<T, 1>` is
 `x + a`, through [`add_2_1_full`](../reference/add_2_1_full.md). The claims hold for every
@@ -171,7 +172,7 @@ descriptions as the C++ ([Proofs](../proofs/index.md#what-is-proved-and-in-which
 kernel's page in the [reference](../reference/index.md) gives its theorem).
 
 **Not proved yet.** The two statements about `ldexp` when $2^n$ is not a number of `T`, above,
-and the one about `ldexp` on one limb.
+and the one about `ldexp` on one limb; `rational` ([below](#constants-from-fractions)).
 And thresholds sharper than those stated. For the two-limb arithmetic, exhaustive runs on small
 formats first see an overflow at 0.55 of the overflow threshold or above for the additions and
 0.86 or above for the products, where the proved conditions are a quarter and a half of it
@@ -242,9 +243,10 @@ same flags were measured to break nothing. It is not supported with any compiler
 
 `constexpr`: the constructors, the sums and differences of two limbs (their full kernels, whose
 fix-up evaluates at compile time), negation and absolute value, the comparisons and conversions,
-every operation of one limb, a ball's negation, states and constants, and `kairn::finite::add`,
-`sub` and `add_fast`. Not yet: the products of two limbs, `ldexp` and `half` on two limbs, and the
-Ball arithmetic, whose kernels contain fused operations without a constant-evaluation variant.
+every operation of one limb, a ball's negation, states and constants, `kairn::finite::add`,
+`sub` and `add_fast`, and `rational` and `integer` (below). Not yet: the products of two limbs,
+`ldexp` and `half` on two limbs, and the Ball arithmetic, whose kernels contain fused operations
+without a constant-evaluation variant.
 The canonical infinities and NaN come out of the constructors at compile time
 (`Expansion<double, 2>(INFINITY)` is $(+\infty, 0)$), and so do the states of a ball. GCC and
 Clang refuse, at compile time, an operation that produces an infinity from finite operands or a
@@ -254,6 +256,21 @@ though it is evaluated as stated at run time. In constant evaluation the guard i
 `a < b` for true when an operand is a NaN: every comparison that can run at compile time, in the
 generated kernels and in the headers, is written `b > a` or `b >= a`, and `api.constexpr` checks
 the comparisons with NaN operands.
+
+## Constants from fractions
+
+`kairn::rational<X>(num, den)` gives $\mathrm{num}/\mathrm{den}$, for any two `long long`, as a
+number of one or two limbs, with the smallest bound of its error that is a number of `T` and
+whether it is exact; `kairn::integer<X>(n)` is `rational<X>(n, 1)`. It computes with integers only,
+so it gives the same bits in a constant expression and at run time, under every rounding mode and
+every accepted flag, and a debug build does not check the environment before it. Its result is
+**specified exactly, and tested for equality with the oracle, but not machine-checked**: it is
+integer code written by hand in the header, not a generated kernel, so no Rocq theorem is about
+it. Every result computed in a constant expression is checked against the whole statement by a
+second piece of integer code that divides nothing (`kairn::is_rational_result`), so that a constant
+that would be wrong does not compile; a build with `KAIRN_CHECKS` checks the results computed at
+run time too ([Constants from fractions](../reference/rational.md); an example is in
+[Getting started](index.md#constants-from-fractions)).
 
 ## One limb
 

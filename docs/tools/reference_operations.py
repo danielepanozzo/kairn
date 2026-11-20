@@ -23,9 +23,13 @@ docs/reference/KERNEL.md. An entry gives:
   (traits<T> is also traits<float>, traits<double> and traits<Expansion<T, 1>>);
 - note: optional, one sentence about the forms, shown under them.
 
-EXACT lists the public operations that call no kernel: IEEE 754 operations on one limb, and
-construction and access, which only copy limbs. They appear in the index, not on pages of
-their own.
+EXACT lists the public operations that call no kernel: IEEE 754 operations on one limb,
+construction and access, which only copy limbs, and the constants of include/kairn/rational.hpp,
+which compute with integers. They appear in the index, not on pages of their own.
+
+PAGES lists the pages of docs/reference/ written by hand for operations of EXACT that need more
+than a line of the index: (group, title, file name without .md). reference.py puts each in the
+nav after the kernel pages of its group, and neither writes nor removes it.
 
 Nothing here is a number, a bound or a status: those come from gen/claims.json and the stored
 results, and the reference pages print them from there.
@@ -483,4 +487,18 @@ EXACT = [
           form("x < y, x > y, x <= y, x >= y, x == y, x != y", E1, E1, result="bool")),
     exact("conversions", "$x$ itself, or $\\lvert x\\rvert$ for `abs_upper`",
           form("to_nearest(x), to_down(x), to_up(x), abs_upper(x)", E1, result=T)),
+    exact("construction", "$q = \\mathrm{num}/\\mathrm{den}$ as `X`: $\\mathrm{RN}(q)$ for one limb, for two the "
+          "normalized pair of value $\\mathrm{RN}(q) + \\mathrm{RN}(q - \\mathrm{RN}(q))$; the smallest error "
+          "bound of `T` and whether it is exact. Integer arithmetic, in constant expressions too; specified "
+          "exactly, not machine-checked ([Constants from fractions](rational.md))",
+          form("rational<X>(num, den)", "long long", "long long", result="Constant<X>")),
+    exact("construction", "`rational<X>(n, 1)` ([Constants from fractions](rational.md))",
+          form("integer<X>(n)", "long long", result="Constant<X>")),
+    exact("construction", "whether `c` is what `rational<X>(num, den)` returns, decided with multiplications and "
+          "comparisons of integers ([the check](rational.md#the-check))",
+          form("is_rational_result(c, num, den)", "Constant<X>", "long long", "long long", result="bool")),
+]
+
+PAGES = [
+    ("construction", "Constants from fractions", "rational"),
 ]

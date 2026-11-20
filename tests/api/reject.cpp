@@ -17,12 +17,19 @@
 //          KAIRN_CHECKS (the control turns KAIRN_CHECKS off)
 //   15     the same for an operator given a pair that is not canonical, written into its limbs
 //   16     the same for a Ball constructor given a negative radius
+//   17     kairn::rational with a zero denominator in a constant expression (the control: 3)
+//   18     kairn::rational in a constant expression, against a copy of the headers in which its
+//          result is wrong (compile_fail.cmake, RATIONAL_FAULT_FIXTURE): its check refuses it (the
+//          control turns KAIRN_RATIONAL_CHECK off)
 #if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16
 #if defined(KAIRN_TEST_CONTROL)
 #define KAIRN_CHECKS 0
 #else
 #define KAIRN_CHECKS 1
 #endif
+#endif
+#if KAIRN_TEST_CASE == 18 && defined(KAIRN_TEST_CONTROL)
+#define KAIRN_RATIONAL_CHECK 0
 #endif
 #include <kairn/kairn.hpp>
 
@@ -104,6 +111,16 @@ int main() {
 #elif KAIRN_TEST_CASE == 16
     constexpr B2 z(kairn::unverified(E2(kairn::unverified(1.0))), -0.5);
     sink = z.radius();
+#elif KAIRN_TEST_CASE == 17
+#if defined(KAIRN_TEST_CONTROL)
+    constexpr kairn::Constant<E2> z = kairn::rational<E2>(1, 3);
+#else
+    constexpr kairn::Constant<E2> z = kairn::rational<E2>(1, 0);
+#endif
+    sink = z.error;
+#elif KAIRN_TEST_CASE == 18
+    constexpr kairn::Constant<E2> z = kairn::rational<E2>(1, 3);
+    sink = z.error;
 #endif
     return sink == 12345 ? 1 : 0;
 }

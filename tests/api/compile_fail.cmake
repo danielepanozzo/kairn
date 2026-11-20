@@ -2,7 +2,8 @@
 # matching EXPECT, with the test options (tests/api/reject.cpp).
 #
 #   cmake -DCXX=... -DSTYLE=gnu|msvc -DINCLUDE=DIR -DSOURCE=FILE -DCASE=N "-DOPTIONS=a|b"
-#         "-DCOMMON=a|b" "-DEXPECT=regex" [-DSYSROOT=...] -P compile_fail.cmake
+#         "-DCOMMON=a|b" "-DEXPECT=regex" [-DSYSROOT=...] [-DUNVERIFIED_FIXTURE=DIR ...]
+#         [-DRATIONAL_FAULT_FIXTURE=DIR] -P compile_fail.cmake
 #
 # OPTIONS and COMMON separate their options with |, which survives being passed through add_test.
 # Only the front end runs (-fsyntax-only, /Zs): what is tested is whether the program is accepted.
@@ -53,6 +54,26 @@ if(UNVERIFIED_FIXTURE)
   endif()
   file(WRITE "${_bounds}" "${_fixture}")
   set(INCLUDE "${UNVERIFIED_FIXTURE}")
+endif()
+
+# With -DRATIONAL_FAULT_FIXTURE=DIR, the headers are first copied into DIR with a fault planted in
+# kairn::rational: the flag exact of every result inverted, so that the check of KAIRN_RATIONAL_CHECK
+# has a wrong result to refuse.
+if(RATIONAL_FAULT_FIXTURE)
+  file(REMOVE_RECURSE "${RATIONAL_FAULT_FIXTURE}")
+  file(COPY "${INCLUDE}/kairn" DESTINATION "${RATIONAL_FAULT_FIXTURE}")
+  set(_rational "${RATIONAL_FAULT_FIXTURE}/kairn/rational.hpp")
+  file(READ "${_rational}" _text)
+  # The pattern stops before the semicolon, which would split the match as a CMake list.
+  string(REGEX MATCHALL "\n    c\\.exact = r\\.exact" _found "${_text}")
+  list(LENGTH _found _n)
+  if(NOT _n EQUAL 1)
+    message(FATAL_ERROR "could not find the one line 'c.exact = r.exact;' in ${_rational} (${_n} found)")
+  endif()
+  # Without the line ends, which a checkout on Windows may have as CR LF.
+  string(REPLACE "    c.exact = r.exact;" "    c.exact = !r.exact;  // the fault" _text "${_text}")
+  file(WRITE "${_rational}" "${_text}")
+  set(INCLUDE "${RATIONAL_FAULT_FIXTURE}")
 endif()
 
 if(STYLE STREQUAL "msvc")
