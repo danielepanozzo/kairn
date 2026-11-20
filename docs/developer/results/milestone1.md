@@ -269,9 +269,9 @@ Measured after the audit, which found them promised and missing
   with MSVC, with `--parallel 4`. The brief asks for under about two minutes per platform, in CI
   too. On the hosted Windows runners the quick tier took 128 to 202 s; the tools' own tests then
   moved to the full tier, which CI also runs on every change. Since then its test step takes 32
-  to 44 s on Linux, 75 to 79 s on macOS and 90 to 94 s on Windows with clang-cl, and 126 and
-  154 s on Windows with MSVC in the first two runs: still over the budget in that one job (open
-  issue 20).
+  to 65 s on Linux and 71 to 79 s on macOS; on Windows, where the hosted runners vary most, 71 to
+  154 s over the first three runs with MSVC and clang-cl, over two minutes in three of those six
+  (open issue 20).
 - **Full tier** (`ctest --test-dir build/tests/full`): 407 to 409 more tests, 5 to 11 minutes; in
   CI on every push, in jobs of its own.
 - **The flag sets of a client** ([Testing](../testing.md#flag-sets)). The audit found that the
@@ -346,7 +346,7 @@ each.
 | In debug builds the scalar operations check the floating-point environment and fail loudly | Implemented, compiled once and never run by a test | Tested on every operation and state; the tests found four defects, now fixed |
 | An adversarial search that maximizes error over bound | None | Built; no claim violated, most bounds reached to within $10^{-15}$ |
 | A failing case is shrunk automatically and added to the quick tier | No shrinker, no stored cases | Built; 185 stored cases run in the quick tier |
-| The quick tier runs in under about two minutes per platform, in CI | 128 to 202 s on the hosted Windows runners | The tools' own tests moved to the full tier: under two minutes in every job except Windows with MSVC, 126 and 154 s |
+| The quick tier runs in under about two minutes per platform, in CI | 128 to 202 s on the hosted Windows runners | The tools' own tests moved to the full tier: under two minutes on Linux and macOS; on Windows 71 to 154 s, over two minutes in three of the first six job runs |
 | Compile times are reported | Not measured | Measured |
 | The cost of the environment check is reported in Milestone 1 | Not measured | Measured: 2 to 21 cycles |
 | MSVC's stack cookie on one-limb values, an open issue for Milestone 1 | Not followed up | Cause found and fixed |
@@ -455,9 +455,9 @@ Tests:
 19. **No stratum is named for long carry chains**, which the brief lists. With two limbs a carry
     goes from one limb to the other, which the strata of cancellation, of ties and of limbs at
     the edge of the invariant exercise; a stratum of its own belongs with three limbs and more.
-20. **The quick tier on the hosted Windows runners with MSVC** still takes 126 to 154 s, over
-    the two-minute budget; every other job is under it, and on the Windows test machine it takes
-    63 to 71 s. Running the generator of cases, the judge and the guards in one process per test
+20. **The quick tier on the hosted Windows runners** takes 71 to 154 s (three runs, MSVC and
+    clang-cl), over the two-minute budget in half of them; the Linux and macOS jobs are under it,
+    and on the Windows test machine it takes 63 to 71 s. Running the generator of cases, the judge and the guards in one process per test
     would save an estimated 15 to 20 s there without dropping a check; fewer cases per test would
     save more and catch fewer planted faults.
 
@@ -493,9 +493,9 @@ Scope:
    an integer or a rational with their error bound. *Recommended: both in Milestone 2*, with the
    enclosure interface.
 
-5. **The quick tier with MSVC on the hosted runners** (open issue 20). *Recommended: put each
-   cross-check in one process, which loses no check, in Milestone 2, and accept 2 to 2.5 minutes
-   in that one job until then.* The alternative is fewer cases per test in the quick tier, which
+5. **The quick tier on the hosted Windows runners** (open issue 20). *Recommended: put each
+   cross-check in one process, which loses no check, in Milestone 2, and accept up to 2.5 minutes
+   in those two jobs until then.* The alternative is fewer cases per test in the quick tier, which
    the experiment with planted faults advises against.
 
 Milestone 2 adds `Interval`, `BallVector` and the batch kernels, and ends with a pull request to
