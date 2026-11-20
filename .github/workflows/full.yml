@@ -33,7 +33,9 @@ jobs:
   compiled:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    # The Windows runners are the slow ones: once the tests of the intervals, the maps and the
+    # convolutions were in the tier, clang-cl took 27 minutes here and MSVC was cancelled at 30.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
