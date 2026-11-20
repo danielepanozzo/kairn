@@ -184,10 +184,18 @@ constant evaluation and the opaque product at run time. As real numbers both are
 $\mathrm{RN}(ab)$, so the real model is one definition for both (`rnd (a * b + 0)`) and every
 real-model theorem holds of both. As values of `T` they differ in one case only: an exact zero
 product of negative sign is $-0$ as `a * b` and $+0$ as `fma(a, b, +0)`. The IEEE model
-(`proofs/theories/IeeeOperations.v`) defines `prod` as the FMA; that its statements, which never
-mention the sign of a zero, hold of the plain product too is the lemma the page names, left to the
-proofs. The generator's tests check that the two executions give the same bits, or for the
-kernels whose outputs can be an exact zero product the same values
+(`proofs/theories/IeeeOperations.v`) defines `prod` as the FMA. Its statements hold of the plain
+product too because they are about values, in which the two zeros are the same, except where a
+fix-up returns its own literal zero, which no product reaches: F4 and F5 of `mul_pow2_2_full`
+say that its second limb is the `+0` of the fix-up, a constant of the listing and the same in
+both executions. What is proved (`proofs/theories/IeeeTwoExecutions.v`) is that the eight kernels
+of the rule that are more than one product give outputs of the same value in both executions, on
+all operands (finite, infinite and NaN): each listing is written there once more with the
+product as a parameter, which with the FMA is the generated model by `reflexivity`, and with the
+plain product is the execution of constant evaluation (`IeeeProduct.v` compares the two products
+of `rmul` and `mul_1_1`); what is tested rather than proved is that the C++ compiled for
+constant evaluation is that listing: the generator's tests check that the two executions give
+the same bits, or for the kernels whose outputs can be an exact zero product the same values
 (`gen/tests/test_interp.py`, `TwoExecutionsOfAProduct`; `test_cxx.py` ties the C++ to them). The
 kernels `constexpr` by this rule are `rmul`, `mul_1_1`, `split`, `two_prod_dekker`, `mul_pow2_2`,
 `mul_pow2_2_full`, and `ball_mul_pow2_k` with its full form; `build` lists them.
