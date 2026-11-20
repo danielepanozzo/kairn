@@ -2,6 +2,355 @@
   "schema": 1,
   "kernels": [
     {
+      "name": "acc_add_1",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "value": "s+x",
+      "requires": [
+        "nonneg(a)"
+      ],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "t",
+          "mode": "nearest"
+        },
+        {
+          "kind": "error",
+          "of": "t",
+          "form": "R",
+          "c": "1/(1+u)",
+          "k": 1,
+          "t": "0",
+          "when": null
+        },
+        {
+          "kind": "rounded",
+          "of": "b",
+          "mode": "nearest",
+          "value": "a+abs(x)"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/9007199254740993",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/16777217",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "acc_merge_1",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "v",
+          "limbs": 1
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "value": "s+v",
+      "requires": [
+        "nonneg(a)",
+        "nonneg(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "t",
+          "mode": "nearest"
+        },
+        {
+          "kind": "error",
+          "of": "t",
+          "form": "R",
+          "c": "1/(1+u)",
+          "k": 1,
+          "t": "0",
+          "when": null
+        },
+        {
+          "kind": "rounded",
+          "of": "b",
+          "mode": "nearest",
+          "value": "a+c"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/9007199254740993",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/16777217",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "acc_mul_1",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 1
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "value": "s+x*y",
+      "requires": [
+        "nonneg(a)"
+      ],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "t",
+          "mode": "nearest"
+        },
+        {
+          "kind": "rounded",
+          "of": "b",
+          "mode": "nearest",
+          "value": "a+abs(x)*abs(y)"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "acc_radius_1",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "g",
+          "limbs": 1
+        },
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "nonneg(a)",
+        "count(m)",
+        "nonneg(g)",
+        "nonneg(t)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "r",
+          "value": "g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t",
+          "if": "ok"
+        },
+        {
+          "kind": "holds",
+          "rel": "le",
+          "args": [
+            "m*u",
+            "1/2"
+          ],
+          "if": "ok"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here",
+        "license": "proof: MIT"
+      },
+      "flops": 9,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "acc_radius_2",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "g",
+          "limbs": 1
+        },
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "nonneg(a)",
+        "count(m)",
+        "nonneg(g)",
+        "nonneg(t)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "r",
+          "value": "g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t",
+          "if": "ok"
+        },
+        {
+          "kind": "holds",
+          "rel": "le",
+          "args": [
+            "m*u",
+            "1/2"
+          ],
+          "if": "ok"
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "acc_radius_1, for the bound of dot_2 (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 9,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "add_1_1",
       "inputs": [
         {
@@ -4539,6 +4888,441 @@
       }
     },
     {
+      "name": "add_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "3/(1-4*u)",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 3,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Add22.v",
+        "name": "add_2_2_correct"
+      },
+      "source": {
+        "cite": "JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 20,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "3/81129638414606645666991986180096",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/93824969867264",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "acc_add_2",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 2
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "value": "s+x",
+      "requires": [
+        "normalized(s)",
+        "normalized(x)",
+        "nonneg(a)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "t"
+        },
+        {
+          "kind": "error",
+          "of": "t",
+          "form": "R",
+          "c": "3/(1-4*u)",
+          "k": 2,
+          "t": "0",
+          "when": null
+        },
+        {
+          "kind": "rounded",
+          "of": "b",
+          "mode": "nearest",
+          "value": "a+abs(x[0])"
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 23,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "3/81129638414606645666991986180096",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/93824969867264",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "acc_merge_2",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "v",
+          "limbs": 2
+        },
+        {
+          "name": "c",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 2
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "value": "s+v",
+      "requires": [
+        "normalized(s)",
+        "normalized(v)",
+        "nonneg(a)",
+        "nonneg(c)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "t"
+        },
+        {
+          "kind": "error",
+          "of": "t",
+          "form": "R",
+          "c": "3/(1-4*u)",
+          "k": 2,
+          "t": "0",
+          "when": null
+        },
+        {
+          "kind": "rounded",
+          "of": "b",
+          "mode": "nearest",
+          "value": "a+c"
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 21,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "3/81129638414606645666991986180096",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/93824969867264",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "mul_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "4",
+          "k": 2,
+          "t": "3/2",
+          "when": null
+        }
+      ],
+      "min_precision": 4,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Mul22.v",
+        "name": "mul_2_2_correct"
+      },
+      "source": {
+        "cite": "JMP17 Alg. 12 (DWTimesDW3); bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 9,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/20282409603651670423947251286016",
+            "abs": "3/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/70368744177664",
+            "abs": "3/1427247692705959881058285969449495136382746624"
+          }
+        ]
+      }
+    },
+    {
+      "name": "dot_step_2",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 2
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 2
+        }
+      ],
+      "value": "s+x*y",
+      "requires": [
+        "normalized(s)",
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "t"
+        },
+        {
+          "kind": "error",
+          "of": "t",
+          "form": "T",
+          "c": "3*(1+4*u*u)/(1-4*u)+4",
+          "k": 2,
+          "t": "2",
+          "when": null
+        }
+      ],
+      "min_precision": 4,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/StepKernels.v",
+        "name": "dot_step_2_correct"
+      },
+      "source": {
+        "cite": "the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 29,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "141976867225561656938833740038147/1645504557321205311404150517105891403140319507492070035382337536",
+            "abs": "1/101201126653655309176247673359458653524778324882071059178450679013715169783997673445980191850718562247593538932158405955694904368692896738433506699970369254960758712138283180682233453871046608170619883839236372534281003741712346349309051677824579778170405028256179384776166707307615251266093163754323003131653853870546747392"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "164193714044929/6602345302066533842913591296",
+            "abs": "1/356811923176489970264571492362373784095686656"
+          }
+        ]
+      }
+    },
+    {
+      "name": "acc_mul_2",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 2
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "value": "s+x*y",
+      "requires": [
+        "normalized(s)",
+        "normalized(x)",
+        "normalized(y)",
+        "nonneg(a)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "t"
+        },
+        {
+          "kind": "error",
+          "of": "t",
+          "form": "T",
+          "c": "3*(1+4*u*u)/(1-4*u)+4",
+          "k": 2,
+          "t": "2",
+          "when": null
+        },
+        {
+          "kind": "rounded",
+          "of": "b",
+          "mode": "nearest",
+          "value": "a+abs(x[0])*abs(y[0])"
+        }
+      ],
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 30,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "141976867225561656938833740038147/1645504557321205311404150517105891403140319507492070035382337536",
+            "abs": "1/101201126653655309176247673359458653524778324882071059178450679013715169783997673445980191850718562247593538932158405955694904368692896738433506699970369254960758712138283180682233453871046608170619883839236372534281003741712346349309051677824579778170405028256179384776166707307615251266093163754323003131653853870546747392"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "164193714044929/6602345302066533842913591296",
+            "abs": "1/356811923176489970264571492362373784095686656"
+          }
+        ]
+      }
+    },
+    {
       "name": "add_2_1",
       "inputs": [
         {
@@ -4659,70 +5443,6 @@
       "instances": {
         "binary64": [],
         "binary32": []
-      }
-    },
-    {
-      "name": "add_2_2",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "z",
-          "limbs": 2
-        }
-      ],
-      "value": "x+y",
-      "requires": [
-        "normalized(x)",
-        "normalized(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "normalized",
-          "of": "z"
-        },
-        {
-          "kind": "error",
-          "of": "z",
-          "form": "R",
-          "c": "3/(1-4*u)",
-          "k": 2,
-          "t": "0",
-          "when": null
-        }
-      ],
-      "min_precision": 3,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Add22.v",
-        "name": "add_2_2_correct"
-      },
-      "source": {
-        "cite": "JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22",
-        "license": "algorithm: published; proof: MIT"
-      },
-      "flops": 20,
-      "instances": {
-        "binary64": [
-          {
-            "rel": "3/81129638414606645666991986180096",
-            "abs": "0"
-          }
-        ],
-        "binary32": [
-          {
-            "rel": "1/93824969867264",
-            "abs": "0"
-          }
-        ]
       }
     },
     {
@@ -5162,70 +5882,6 @@
       "instances": {
         "binary64": [],
         "binary32": []
-      }
-    },
-    {
-      "name": "mul_2_2",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "z",
-          "limbs": 2
-        }
-      ],
-      "value": "x*y",
-      "requires": [
-        "normalized(x)",
-        "normalized(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "normalized",
-          "of": "z"
-        },
-        {
-          "kind": "error",
-          "of": "z",
-          "form": "R",
-          "c": "4",
-          "k": 2,
-          "t": "3/2",
-          "when": null
-        }
-      ],
-      "min_precision": 4,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Mul22.v",
-        "name": "mul_2_2_correct"
-      },
-      "source": {
-        "cite": "JMP17 Alg. 12 (DWTimesDW3); bound from MR22",
-        "license": "algorithm: published; proof: MIT"
-      },
-      "flops": 9,
-      "instances": {
-        "binary64": [
-          {
-            "rel": "1/20282409603651670423947251286016",
-            "abs": "3/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
-          }
-        ],
-        "binary32": [
-          {
-            "rel": "1/70368744177664",
-            "abs": "3/1427247692705959881058285969449495136382746624"
-          }
-        ]
       }
     },
     {
@@ -6778,75 +7434,6 @@
           {
             "rel": "5/16777216",
             "abs": "3/713623846352979940529142984724747568191373312"
-          }
-        ]
-      }
-    },
-    {
-      "name": "dot_step_2",
-      "inputs": [
-        {
-          "name": "s",
-          "limbs": 2
-        },
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "t",
-          "limbs": 2
-        }
-      ],
-      "value": "s+x*y",
-      "requires": [
-        "normalized(s)",
-        "normalized(x)",
-        "normalized(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "normalized",
-          "of": "t"
-        },
-        {
-          "kind": "error",
-          "of": "t",
-          "form": "T",
-          "c": "3*(1+4*u*u)/(1-4*u)+4",
-          "k": 2,
-          "t": "2",
-          "when": null
-        }
-      ],
-      "min_precision": 4,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/StepKernels.v",
-        "name": "dot_step_2_correct"
-      },
-      "source": {
-        "cite": "the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22",
-        "license": "algorithm: published; proof: MIT"
-      },
-      "flops": 29,
-      "instances": {
-        "binary64": [
-          {
-            "rel": "141976867225561656938833740038147/1645504557321205311404150517105891403140319507492070035382337536",
-            "abs": "1/101201126653655309176247673359458653524778324882071059178450679013715169783997673445980191850718562247593538932158405955694904368692896738433506699970369254960758712138283180682233453871046608170619883839236372534281003741712346349309051677824579778170405028256179384776166707307615251266093163754323003131653853870546747392"
-          }
-        ],
-        "binary32": [
-          {
-            "rel": "164193714044929/6602345302066533842913591296",
-            "abs": "1/356811923176489970264571492362373784095686656"
           }
         ]
       }

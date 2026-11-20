@@ -713,6 +713,72 @@ Lemma conv_terms_nth :
 `test_conv.Printers.test_conv_terms_is_the_terms`). A convolution has no IEEE-model statement, as
 a map has none.
 
+### The accumulator
+
+`Accumulator<T, k>` ([milestone2.md, "The accumulator"](design/milestone2.md#the-accumulator)) is
+the state of `sum_k` and `dot_k` given to the program: the running k-number $s$, the running sum
+$a$ in `T` of the magnitudes of the leading limbs of what was added, and the count $n$. Its
+operations are straight-line kernels on that state, passed in and returned; no kernel is a fold.
+The count is not a limb of any kernel: it is an integer of the header (`std::size_t`), exact where
+a count in `T` would round past $2^p$, added on a merge, and converted to `T` only for
+`bound_dot_k(n)` and `acc_radius_k`, which require a count of `T`.
+
+| Kernel | Inputs | Outputs | Listing |
+|---|---|---|---|
+| `acc_add_k` | `s`, `a`, `x` (supplied) | `t`, `b` | `add_1_1` (`add_2_2`) on the guarded `x`; `b = add(a, abs(x0))` |
+| `acc_mul_k` | `s`, `a`, `x`, `y` (supplied) | `t`, `b` | the step of `dot_k`; `b = fma(abs(x0), abs(y0), a)` |
+| `acc_merge_k` | `s`, `a`, `v`, `c` (another accumulator) | `t`, `b` | `add_1_1` (`add_2_2`) of the sums; `b = add(a, c)` |
+| `acc_radius_k` | `a`, `m`, `g`, `t` | `r`, mask `ok` | in the form of `conv_radius`; `(g, t) = bound_dot_k(m)` |
+
+**What is claimed of each output, and where.** The requirements: every limb finite, `s`, `x`, `y`,
+`v` normalized for two limbs, and `a`, `c` nonnegative (a sum of magnitudes never is negative).
+
+- `t`, the running sum, output limb 0 and the first group: what `add_1_1`, `add_2_2` or the step of
+  `dot_k` claims of its result, in the claims file whenever `t`'s leading limb is finite, as for
+  every kernel. With one limb `rounded t nearest` (and `error t R`), with two limbs `normalized t`
+  and the bound of `add_2_2` or `dot_step_2`.
+- `b`, the sum of magnitudes, the second group: `rounded b nearest value=a+abs(x)` (`a+abs(x[0])`,
+  `a+abs(x[0])*abs(y[0])`, `a+c`), the rounding to nearest of a value of its own, over the inputs and
+  their limbs, rather than of the kernel's value. An entry about an output group other than the
+  first holds where that group's leading limb is finite ([below](#claims-of-the-interval-kernels)):
+  so in the format itself the claim says nothing of `b` where it is $+\infty$, which happens while
+  `t` is finite (`b` does not reach `t`: the kernels are exempt from the non-finite cone).
+  `experiments/milestone2/accumulator.py` counts those cases (A4) and checks that `b` is then the
+  rounding with overflow.
+- `r`, the radius, under the mask: `upper r value=g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t if=ok`
+  and `holds le m*u 1/2 if=ok`. Where `ok` is false nothing is claimed of `r`, and the header
+  returns the whole line. `ok` is false when $mu$ may exceed $\tfrac12$ and when `a` is not finite:
+  a sum of magnitudes that overflowed, from which no radius may be believed. The test is
+  `z = sub(a, a)`, $+0$ for a finite `a` and a NaN otherwise, then `eq(z, z)`, without the constant
+  `inf` that the real model does not have. `acc_radius_2` is `acc_radius_1`: the magnitudes are
+  summed in `T` for both numbers of limbs, and only the `(g, t)` passed in differ.
+
+The page gives `acc_radius_k` no listing; the one in `gen/kernels/acc_radius_1.kernel` is proposed
+and checked in exact arithmetic by `accumulator.py`: the inequality the radius rests on,
+$\sum_i\lvert x_i y_i\rvert \le (1+u)^{n+2}(a + \tfrac12 n\eta)$, after random sequences of `add`,
+`add_product` and `merge` (A1); the claim of the radius (A2); the chain
+$\lvert s - \Sigma\rvert \le g\sum_i\lvert x_i y_i\rvert + t \le r$ with `bound_dot_k` (A3); the mask
+false for `a` $= +\infty$ or a NaN (A5).
+
+**In Rocq.** The real-model statements are those of every kernel (`Statements.v`), the claim of `b`
+`b = RN emin prec (a + Rabs x0)`. The IEEE-model statements (`ieee: spec`, `K_ieee_spec`) put each
+group's claims under the finiteness of its own leading limb:
+
+```coq
+  let '(t0, t1, b) := IeeeModel.acc_add_2 prec emax ... s0 s1 a x0 x1 in
+  (finite t0 ->
+   finite t1 /\
+   normalized_2 (ieee_emin prec emax) prec (val t0) (val t1) /\
+   Rabs ((val t0 + val t1) - ((val s0 + val s1) + (val x0 + val x1))) <= ...) /\
+  (finite b ->
+   val b = RN (ieee_emin prec emax) prec (val a + (Rabs (val x0)))).
+```
+
+and for `acc_radius_k`, `finite r -> (ok = true -> ... <= val r) /\ (ok = true -> val m * u prec <=
+1 / 2)`. A kernel whose claims are all about its first group keeps the statement it had. No
+accumulator kernel has a bridge (`ieee: bridge`): the bridge says that a finite output limb 0
+means a finite run of the whole program, which `b` breaks.
+
 ## Kernels of the first wave
 
 Names of values are normative: the Rocq model, the C++ and the proofs use the same ones. Each
@@ -1196,6 +1262,7 @@ infinity is the one of the table of `neighbor` below.
 | `bound` | `of` (a one-limb output), `side`: `below` or `above`, `steps`: an integer $\ge 0$ | `below`: the output is at most `value`, and at least `value` rounded down, then stepped down `steps` times; `above`: at least `value`, and at most `value` rounded up, then stepped up `steps` times. In the extended domain the roundings are in the format with overflow, and the output may be an infinity | the output is `value` as IEEE 754 defines it on the operands (below) |
 | `rounded`, with `when` | as before, and `when`: `product_large` | when the condition holds (`value` $= 0$ or $\lvert\text{value}\rvert \ge 2^{2p-1}\eta$, as for `error`), the output is `value` rounded that way, in the format with overflow in the extended domain; nothing is claimed otherwise | as `rounded` without `when` |
 | `rounded`, of the value of two operands | as before | in the extended domain, `value` rounded in the format with overflow; for `down` a sum beyond $\Omega$ gives $\Omega$, not $+\infty$ | the output is `value` as IEEE 754 defines it on the operands |
+| `rounded`, with `value` | as before, and `value`: an expression of the inputs and their limbs `NAME[I]` (`+ - *`, unary minus, `abs( )`), in the finite domain | the output is that expression rounded that way, in place of the kernel's `value` (the accumulator's sum of magnitudes, [The accumulator](#the-accumulator)); of an output group other than the first, where its leading limb is finite | none: of the finite domain only |
 | `exact_when`, a field of `error` | a list of conditions (below) | when every condition holds, the output equals `value` exactly (in the extended domain: when every operand and the output are finite, as for `error`) | nothing more |
 | `exact_when`, a field of `encloses` | a list of conditions | when every condition holds, the output ball is exactly the set: besides containing every value of `set` (the claim of `encloses`), every number within `radius` of `center` is a value of `set`, with each ball name ranging over its ball. With containment this says that center $-$ radius and center $+$ radius are the least and the greatest value of `set`. In the extended domain it applies when the output is a finite ball (every operand is then finite) | nothing more |
 
@@ -1249,7 +1316,7 @@ entry, `exact_when` or not):
  "exact_when": [{"zero_or_abs_gt": "cx[0]*c", "than": "eta/(2*u)"}]}
 ```
 
-`steps` is a JSON integer; `when` of `rounded` is absent when there is no condition (an `error`
+`steps` is a JSON integer; `when` and `value` of `rounded` are absent when there is none (an `error`
 entry keeps its `"when": null`); `exact_when` is absent when there is none; `finite_when` is
 written, as before, for an `encloses` entry of the extended domain only. Four entries in full, as
 the generator writes them (`source`, `flops` and the theorem fields left out):

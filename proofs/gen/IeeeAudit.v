@@ -319,11 +319,11 @@ Print Assumptions sum_entry_step_1_ieee_lead.
 Definition add_2_2_ieee_lead_audit : add_2_2_ieee_lead_spec := add_2_2_ieee_lead.
 Print Assumptions add_2_2_ieee_lead.
 
-Definition add_fast_2_2_ieee_lead_audit : add_fast_2_2_ieee_lead_spec := add_fast_2_2_ieee_lead.
-Print Assumptions add_fast_2_2_ieee_lead.
-
 Definition dot_step_2_ieee_lead_audit : dot_step_2_ieee_lead_spec := dot_step_2_ieee_lead.
 Print Assumptions dot_step_2_ieee_lead.
+
+Definition add_fast_2_2_ieee_lead_audit : add_fast_2_2_ieee_lead_spec := add_fast_2_2_ieee_lead.
+Print Assumptions add_fast_2_2_ieee_lead.
 
 Definition sum_entry_step_2_ieee_lead_audit : sum_entry_step_2_ieee_lead_spec := sum_entry_step_2_ieee_lead.
 Print Assumptions sum_entry_step_2_ieee_lead.

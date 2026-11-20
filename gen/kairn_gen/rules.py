@@ -791,6 +791,23 @@ def claims(k, kernels):
             if 'when' in e and e['when'] not in WHEN:
                 err(f'when={e["when"]!r}: the vocabulary is {", ".join(WHEN)}')
             zero_factor(e)
+            if 'value' in e:
+                # A value of its own: an expression of the inputs and their limbs, as in maximum.
+                if k.extended:
+                    err('rounded value=: a claim of the finite domain')
+                try:
+                    tree = expr.parse(e['value'])
+                except expr.ExprError as x:
+                    err(f'rounded value: {x}')
+                    tree = None
+                if tree is not None and (expr.names(tree) - limb_ins or not _only(tree, EXACT_TREES)):
+                    err(f'rounded value {e["value"]!r}: + - *, unary minus, abs( ), the names of limb inputs and '
+                        'their limbs NAME[I]')
+                elif tree is not None:
+                    for gname, i in sorted(expr.limbs(tree)):
+                        if i >= len(ins[gname].limbs):
+                            err(f'rounded value {e["value"]!r}: {gname} has {len(ins[gname].limbs)} limbs, so no '
+                                f'limb {gname}[{i}]')
         elif kind in SIDES:
             output(e['of'], kind, one=True)
             if e['side'] not in SIDES[kind]:

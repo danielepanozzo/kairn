@@ -1031,6 +1031,9 @@ class R3OfTheKernels(unittest.TestCase):
     FOLD_STEPS = {'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2', 'dot_step_1', 'dot_step_2'}
     # And the steps of the maps that read what the program supplies (sub_1_1 reads stored arrays).
     FOLD_STEPS |= MAP_STEPS - {'sub_1_1'}
+    # And the kernels of the accumulator that take what the program adds (acc_merge_k takes two
+    # accumulators, acc_radius_k a state).
+    FOLD_STEPS |= {'acc_add_1', 'acc_add_2', 'acc_mul_1', 'acc_mul_2'}
 
     def test_entry_kernels(self):
         ks = common.kernels()
@@ -1423,7 +1426,9 @@ class TheKernels(unittest.TestCase):
     # finite domain, and the finishes, with the IEEE-model statement only.
     NORM_FINISH = {'norm_finish_1', 'norm_finish_2'}
     NORM = {'norm_combine', 'norm_step_1', 'norm_step_2'} | NORM_FINISH
-    FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM
+    # The kernels of the accumulator (milestone2.md, "The accumulator"), of the finite domain.
+    ACC = {f'acc_{op}_{k}' for op in ('add', 'mul', 'merge', 'radius') for k in (1, 2)}
+    FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # which were unverified until their proofs were about the generated text: the interval kernels of one
     # limb and the sum of two, with the IEEE-model statement only; mul_dir_1, of the extended domain
@@ -1478,16 +1483,17 @@ class TheKernels(unittest.TestCase):
         # constructors, which have no real-model statement, by their IEEE-model theorems.
         # Of wave 1 of Milestone 2, every kernel is proved too, the two full scalings of a ball by
         # their IEEE-model theorems (IeeeBallPow2.v), and so is every kernel of the folds' stage,
-        # those of the folds of maxima included (FoldNorm.v; the two finishes by their IEEE-model
-        # theorems, IeeeFoldNorm.v).
+        # every step of the maps (MapSteps.v) and those of the folds of maxima included (FoldNorm.v;
+        # the two finishes by their IEEE-model theorems, IeeeFoldNorm.v), but not the kernels of
+        # the accumulator, which are unverified.
         # The two constructors of a ball are proved for the rule of 2026-11-20, that a NaN radius
         # gives the whole line (IeeeMake.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.MILESTONE1 | self.WAVE_1 | self.FOLDS | self.WAVE_2_PROVED)
-        # No kernel is unverified: the kernels of wave 2 were, in both models, until their proofs
-        # were about the generated text.
+                         self.MILESTONE1 | self.WAVE_1 | (self.FOLDS - self.ACC) | self.WAVE_2_PROVED)
+        # The kernels of wave 2 were unverified, in both models, until their proofs were about the
+        # generated text; the kernels of the accumulator are unverified.
         self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
-                         self.WAVE_2 - self.WAVE_2_PROVED)
+                         (self.WAVE_2 - self.WAVE_2_PROVED) | self.ACC)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
@@ -1544,6 +1550,10 @@ class TheKernels(unittest.TestCase):
             'axpy_entry_step_2': 4, 'axpy_step_2_1': 3, 'axpy_entry_step_2_1': 3,
             # the folds of maxima: comparisons and selects, from one bit on
             'norm_combine': 1, 'norm_step_1': 1, 'norm_step_2': 1,
+            # the accumulator: that of add_1_1, add_2_2 and dot_step_2; the radius's constants are
+            # numbers of the toy formats from two bits on ((1+u)^8 above the top of fp:1:-3:3)
+            'acc_add_1': 1, 'acc_mul_1': 1, 'acc_merge_1': 1, 'acc_add_2': 3, 'acc_mul_2': 4, 'acc_merge_2': 3,
+            'acc_radius_1': 2, 'acc_radius_2': 2,
             # Wave 2 (as the proofs found them): mul_dir_1 from 2, the sums of two limbs from 3, the
             # products from 4.
             'mul_dir_1': 2, 'add_ball_2_2': 3, 'add_down_2_2': 3, 'add_up_2_2': 3, 'sub_down_2_2': 3,

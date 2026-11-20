@@ -38,6 +38,87 @@ Definition normalized_2 (x0 x1 : R) : Prop :=
 
 End Vocabulary.
 
+(* acc_add_1: add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md). Status: unverified. *)
+Definition acc_add_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall s a x : R,
+  fmt emin prec s ->
+  fmt emin prec a ->
+  fmt emin prec x ->
+  0 <= a ->
+  let '(t, b) := acc_add_1 emin prec tie_even s a x in
+  fmt emin prec t /\
+  fmt emin prec b /\
+  t = RN emin prec (s + x) /\
+  Rabs (t - (s + x)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (s + x) /\
+  b = RN emin prec (a + (Rabs x)).
+
+(* acc_merge_1: add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md). Status: unverified. *)
+Definition acc_merge_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall s a v c : R,
+  fmt emin prec s ->
+  fmt emin prec a ->
+  fmt emin prec v ->
+  fmt emin prec c ->
+  0 <= a ->
+  0 <= c ->
+  let '(t, b) := acc_merge_1 emin prec tie_even s a v c in
+  fmt emin prec t /\
+  fmt emin prec b /\
+  t = RN emin prec (s + v) /\
+  Rabs (t - (s + v)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (s + v) /\
+  b = RN emin prec (a + c).
+
+(* acc_mul_1: the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md). Status: unverified. *)
+Definition acc_mul_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall s a x y : R,
+  fmt emin prec s ->
+  fmt emin prec a ->
+  fmt emin prec x ->
+  fmt emin prec y ->
+  0 <= a ->
+  let '(t, b) := acc_mul_1 emin prec tie_even s a x y in
+  fmt emin prec t /\
+  fmt emin prec b /\
+  t = RN emin prec (s + (x * y)) /\
+  b = RN emin prec (a + ((Rabs x) * (Rabs y))).
+
+(* acc_radius_1: the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. Status: unverified. *)
+Definition acc_radius_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a m g t : R,
+  fmt emin prec a ->
+  fmt emin prec m ->
+  fmt emin prec g ->
+  fmt emin prec t ->
+  0 <= a ->
+  (m = 0 \/ 1 <= m) ->
+  0 <= g ->
+  0 <= t ->
+  let '(r, ok) := acc_radius_1 emin prec tie_even a m g t in
+  fmt emin prec r /\
+  (ok = true -> ((((g * ((1 + u prec) ^ 2)) * ((1 + (m * u prec)) + ((2 * (m ^ 2)) * (u prec ^ 2)))) * (a + ((m * eta emin) / 2))) + t) <= r) /\
+  (ok = true -> (m * u prec) <= (1 / 2)).
+
+(* acc_radius_2: acc_radius_1, for the bound of dot_2 (milestone2.md). Status: unverified. *)
+Definition acc_radius_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a m g t : R,
+  fmt emin prec a ->
+  fmt emin prec m ->
+  fmt emin prec g ->
+  fmt emin prec t ->
+  0 <= a ->
+  (m = 0 \/ 1 <= m) ->
+  0 <= g ->
+  0 <= t ->
+  let '(r, ok) := acc_radius_2 emin prec tie_even a m g t in
+  fmt emin prec r /\
+  (ok = true -> ((((g * ((1 + u prec) ^ 2)) * ((1 + (m * u prec)) + ((2 * (m ^ 2)) * (u prec ^ 2)))) * (a + ((m * eta emin) / 2))) + t) <= r) /\
+  (ok = true -> (m * u prec) <= (1 / 2)).
+
 (* add_1_1: one rounding to nearest. Status: proved. *)
 Definition add_1_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -613,16 +694,6 @@ Definition abs_upper_2_spec : Prop :=
   fmt emin prec t /\
   t = RU emin prec (Rabs (x0 + x1)).
 
-(* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. Status: proved. *)
-Definition add_2_1_spec : Prop :=
-  forall emin prec : Z, (3 <= prec)%Z ->
-  forall x0 x1 a : R,
-  normalized_2 emin prec x0 x1 ->
-  fmt emin prec a ->
-  let '(z0, z1) := add_2_1 emin prec tie_even x0 x1 a in
-  normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((x0 + x1) + a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) + a).
-
 (* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. Status: proved. *)
 Definition add_2_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
@@ -632,6 +703,82 @@ Definition add_2_2_spec : Prop :=
   let '(z0, z1) := add_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) + (y0 + y1)).
+
+(* acc_add_2: add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22. Status: unverified. *)
+Definition acc_add_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall s0 s1 a x0 x1 : R,
+  normalized_2 emin prec s0 s1 ->
+  fmt emin prec a ->
+  normalized_2 emin prec x0 x1 ->
+  0 <= a ->
+  let '(t0, t1, b) := acc_add_2 emin prec tie_even s0 s1 a x0 x1 in
+  fmt emin prec b /\
+  normalized_2 emin prec t0 t1 /\
+  Rabs ((t0 + t1) - ((s0 + s1) + (x0 + x1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((s0 + s1) + (x0 + x1)) /\
+  b = RN emin prec (a + (Rabs x0)).
+
+(* acc_merge_2: add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22. Status: unverified. *)
+Definition acc_merge_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall s0 s1 a v0 v1 c : R,
+  normalized_2 emin prec s0 s1 ->
+  fmt emin prec a ->
+  normalized_2 emin prec v0 v1 ->
+  fmt emin prec c ->
+  0 <= a ->
+  0 <= c ->
+  let '(t0, t1, b) := acc_merge_2 emin prec tie_even s0 s1 a v0 v1 c in
+  fmt emin prec b /\
+  normalized_2 emin prec t0 t1 /\
+  Rabs ((t0 + t1) - ((s0 + s1) + (v0 + v1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((s0 + s1) + (v0 + v1)) /\
+  b = RN emin prec (a + c).
+
+(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. Status: proved. *)
+Definition mul_2_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let '(z0, z1) := mul_2_2 emin prec tie_even x0 x1 y0 y1 in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) * (y0 + y1))) <= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + (3 / 2) * eta emin.
+
+(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. Status: proved. *)
+Definition dot_step_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall s0 s1 x0 x1 y0 y1 : R,
+  normalized_2 emin prec s0 s1 ->
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let '(t0, t1) := dot_step_2 emin prec tie_even s0 s1 x0 x1 y0 y1 in
+  normalized_2 emin prec t0 t1 /\
+  Rabs ((t0 + t1) - ((s0 + s1) + ((x0 + x1) * (y0 + y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (s0 + s1) + Rabs ((x0 + x1) * (y0 + y1))) + 2 * eta emin.
+
+(* acc_mul_2: the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22. Status: unverified. *)
+Definition acc_mul_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall s0 s1 a x0 x1 y0 y1 : R,
+  normalized_2 emin prec s0 s1 ->
+  fmt emin prec a ->
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  0 <= a ->
+  let '(t0, t1, b) := acc_mul_2 emin prec tie_even s0 s1 a x0 x1 y0 y1 in
+  fmt emin prec b /\
+  normalized_2 emin prec t0 t1 /\
+  Rabs ((t0 + t1) - ((s0 + s1) + ((x0 + x1) * (y0 + y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (s0 + s1) + Rabs ((x0 + x1) * (y0 + y1))) + 2 * eta emin /\
+  b = RN emin prec (a + ((Rabs x0) * (Rabs y0))).
+
+(* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. Status: proved. *)
+Definition add_2_1_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall x0 x1 a : R,
+  normalized_2 emin prec x0 x1 ->
+  fmt emin prec a ->
+  let '(z0, z1) := add_2_1 emin prec tie_even x0 x1 a in
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) + a)) <= 2 * u prec ^ 2 * Rabs ((x0 + x1) + a).
 
 (* add_ball_2_2: add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). Status: proved. *)
 Definition add_ball_2_2_spec : Prop :=
@@ -688,16 +835,6 @@ Definition add_up_2_2_spec : Prop :=
   ((x0 + x1) + (y0 + y1)) <= (h0 + h1) /\
   Rabs ((h0 + h1) - ((x0 + x1) + (y0 + y1))) <= ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) * (1 + ((3 / (1 - (4 * u prec))) * u prec ^ 2))) / (1 - u prec)) * Rabs ((x0 + x1) + (y0 + y1)) + ((((2 * ((1 + u prec) ^ 2)) * ((((/ 2) * up_ball_add_1_1 emin prec) * eta emin) + up_ball_add_1_2 emin prec)) + eta emin) + ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) / (1 - u prec)) * 0)) /\
   (((x0 + x1) + (y0 + y1)) = 0 -> (h0 + h1) = ((x0 + x1) + (y0 + y1))).
-
-(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. Status: proved. *)
-Definition mul_2_2_spec : Prop :=
-  forall emin prec : Z, (4 <= prec)%Z ->
-  forall x0 x1 y0 y1 : R,
-  normalized_2 emin prec x0 x1 ->
-  normalized_2 emin prec y0 y1 ->
-  let '(z0, z1) := mul_2_2 emin prec tie_even x0 x1 y0 y1 in
-  normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((x0 + x1) * (y0 + y1))) <= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + (3 / 2) * eta emin.
 
 (* axpy_entry_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22. Status: proved. *)
 Definition axpy_entry_step_2_spec : Prop :=
@@ -857,17 +994,6 @@ Definition ball_sub_2_spec : Prop :=
   fmt emin prec rz /\
   normalized_2 emin prec cz0 cz1 /\
   (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x - y) - (cz0 + cz1)) <= rz).
-
-(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. Status: proved. *)
-Definition dot_step_2_spec : Prop :=
-  forall emin prec : Z, (4 <= prec)%Z ->
-  forall s0 s1 x0 x1 y0 y1 : R,
-  normalized_2 emin prec s0 s1 ->
-  normalized_2 emin prec x0 x1 ->
-  normalized_2 emin prec y0 y1 ->
-  let '(t0, t1) := dot_step_2 emin prec tie_even s0 s1 x0 x1 y0 y1 in
-  normalized_2 emin prec t0 t1 /\
-  Rabs ((t0 + t1) - ((s0 + s1) + ((x0 + x1) * (y0 + y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (s0 + s1) + Rabs ((x0 + x1) * (y0 + y1))) + 2 * eta emin.
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). Status: proved. *)
 Definition eq_2_1_spec : Prop :=

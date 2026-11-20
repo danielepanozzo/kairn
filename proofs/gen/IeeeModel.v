@@ -54,6 +54,15 @@ Local Notation const_of := (IeeeOperations.const_of prec emax).
 (* splitter, as a number of the format. *)
 Definition splitter : float := const_of (Model.splitter prec).
 
+(* up((1+u)*u+eta/(2*u)), as a number of the format. *)
+Definition up_acc_radius_1_0 : float := const_of (Model.up_acc_radius_1_0 (3 - emax - prec) prec).
+
+(* up((1+u)^8), as a number of the format. *)
+Definition up_acc_radius_1_3 : float := const_of (Model.up_acc_radius_1_3 (3 - emax - prec) prec).
+
+(* up((1+u)^7*eta/2+eta/(2*u)), as a number of the format. *)
+Definition up_acc_radius_1_4 : float := const_of (Model.up_acc_radius_1_4 (3 - emax - prec) prec).
+
 (* up(unit(add_1_1)/(1-unit(add_1_1))), as a number of the format. *)
 Definition up_ball_add_1_0 : float := const_of (Model.up_ball_add_1_0 (3 - emax - prec) prec).
 
@@ -143,6 +152,49 @@ Definition up_bound_sum_2_1 : float := const_of (Model.up_bound_sum_2_1 (3 - ema
 
 (* up(eta/(2*u^2)), as a number of the format. *)
 Definition up_mul_down_1_0 : float := const_of (Model.up_mul_down_1_0 (3 - emax - prec) prec).
+
+(* acc_add_1: add_1_1 on a guarded element, and the sum of the magnitudes (milestone2.md). *)
+Definition acc_add_1 (s a x : float) : float * float :=
+  let g := guard x in
+  let t := add s g in
+  let ag := abs g in
+  let b := add a ag in
+  (t, b).
+
+(* acc_merge_1: add_1_1 of two running sums, and the sum of the magnitudes (milestone2.md). *)
+Definition acc_merge_1 (s a v c : float) : float * float :=
+  let t := add s v in
+  let b := add a c in
+  (t, b).
+
+(* acc_mul_1: the step of the fused dot product of one limb, and the sum of the magnitudes (milestone2.md). *)
+Definition acc_mul_1 (s a x y : float) : float * float :=
+  let t := fma x y s in
+  let ax := abs x in
+  let ay := abs y in
+  let b := fma ax ay a in
+  (t, b).
+
+(* acc_radius_1: the radius of an accumulator, in the form of conv_radius (milestone2.md); proposed here. *)
+Definition acc_radius_1 (a m g t : float) : float * bool :=
+  let q := prod m up_acc_radius_1_0 in
+  let d := prod q up_bound_dot_1_2 in
+  let w := fma q d q in
+  let c := fma m up_ball_mul_pow2_1_0 a in
+  let e := fma c w c in
+  let f := prod e g in
+  let s := add f t in
+  let r := fma s up_acc_radius_1_3 up_acc_radius_1_4 in
+  let oq := le d up_bound_dot_1_6 in
+  let z := sub a a in
+  let fa := eq z z in
+  let ok := andb oq fa in
+  (r, ok).
+
+(* acc_radius_2: acc_radius_1, for the bound of dot_2 (milestone2.md). *)
+Definition acc_radius_2 (a m g t : float) : float * bool :=
+  let '(r, ok) := acc_radius_1 a m g t in
+  (r, ok).
 
 (* add_1_1: one rounding to nearest. *)
 Definition add_1_1 (a b : float) : float :=
@@ -888,6 +940,55 @@ Definition abs_upper_2 (x0 x1 : float) : float :=
   let t := to_up_2 a0 a1 in
   t.
 
+(* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. *)
+Definition add_2_2 (x0 x1 y0 y1 : float) : float * float :=
+  let '(sh, sl) := two_sum x0 y0 in
+  let '(th, tl) := two_sum x1 y1 in
+  let c := add sl th in
+  let '(vh, vl) := fast_two_sum sh c in
+  let w := add tl vl in
+  let '(z0, z1) := fast_two_sum vh w in
+  (z0, z1).
+
+(* acc_add_2: add_2_2 on a guarded element, and the sum of the magnitudes of the leading limbs (milestone2.md); JMP17 Alg. 6, bound from MR22. *)
+Definition acc_add_2 (s0 s1 a x0 x1 : float) : float * float * float :=
+  let g0 := guard x0 in
+  let g1 := guard x1 in
+  let '(t0, t1) := add_2_2 s0 s1 g0 g1 in
+  let ag := abs g0 in
+  let b := add a ag in
+  (t0, t1, b).
+
+(* acc_merge_2: add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22. *)
+Definition acc_merge_2 (s0 s1 a v0 v1 c : float) : float * float * float :=
+  let '(t0, t1) := add_2_2 s0 s1 v0 v1 in
+  let b := add a c in
+  (t0, t1, b).
+
+(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. *)
+Definition mul_2_2 (x0 x1 y0 y1 : float) : float * float :=
+  let '(ch, cl1) := two_prod x0 y0 in
+  let tl0 := prod x1 y1 in
+  let tl1 := fma x0 y1 tl0 in
+  let cl2 := fma x1 y0 tl1 in
+  let cl3 := add cl1 cl2 in
+  let '(z0, z1) := fast_two_sum ch cl3 in
+  (z0, z1).
+
+(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. *)
+Definition dot_step_2 (s0 s1 x0 x1 y0 y1 : float) : float * float :=
+  let '(p0, p1) := mul_2_2 x0 x1 y0 y1 in
+  let '(t0, t1) := add_2_2 s0 s1 p0 p1 in
+  (t0, t1).
+
+(* acc_mul_2: the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22. *)
+Definition acc_mul_2 (s0 s1 a x0 x1 y0 y1 : float) : float * float * float :=
+  let '(t0, t1) := dot_step_2 s0 s1 x0 x1 y0 y1 in
+  let ax := abs x0 in
+  let ay := abs y0 in
+  let b := fma ax ay a in
+  (t0, t1, b).
+
 (* add_2_1: JMP17 Alg. 4 (DWPlusFP); bound from MR22. *)
 Definition add_2_1 (x0 x1 a : float) : float * float :=
   let g := guard a in
@@ -909,16 +1010,6 @@ Definition add_2_1_full (x0 x1 a : float) : float * float :=
   let w0 := if f then z0 else r0 in
   let w1 := if f then z1 else r1 in
   (w0, w1).
-
-(* add_2_2: JMP17 Alg. 6 (AccurateDWPlusDW); bound from MR22. *)
-Definition add_2_2 (x0 x1 y0 y1 : float) : float * float :=
-  let '(sh, sl) := two_sum x0 y0 in
-  let '(th, tl) := two_sum x1 y1 in
-  let c := add sl th in
-  let '(vh, vl) := fast_two_sum sh c in
-  let w := add tl vl in
-  let '(z0, z1) := fast_two_sum vh w in
-  (z0, z1).
 
 (* add_2_2_full: add_2_2, then the fix-up of IEEE-like results (Milestone 1 listing). *)
 Definition add_2_2_full (x0 x1 y0 y1 : float) : float * float :=
@@ -990,16 +1081,6 @@ Definition add_up_2_2 (x0 x1 y0 y1 : float) : float * float :=
   let w := add_up_1 z1 dd in
   let '(h0, h1) := two_sum_ord z0 w in
   (h0, h1).
-
-(* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. *)
-Definition mul_2_2 (x0 x1 y0 y1 : float) : float * float :=
-  let '(ch, cl1) := two_prod x0 y0 in
-  let tl0 := prod x1 y1 in
-  let tl1 := fma x0 y1 tl0 in
-  let cl2 := fma x1 y0 tl1 in
-  let cl3 := add cl1 cl2 in
-  let '(z0, z1) := fast_two_sum ch cl3 in
-  (z0, z1).
 
 (* axpy_entry_step_2: the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22. *)
 Definition axpy_entry_step_2 (a0 a1 x0 x1 y0 y1 : float) : float * float :=
@@ -1238,12 +1319,6 @@ Definition ball_upper_as_2 (c0 c1 r : float) : float :=
   let mi := neg pinf in
   let h := if ne then t else mi in
   h.
-
-(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. *)
-Definition dot_step_2 (s0 s1 x0 x1 y0 y1 : float) : float * float :=
-  let '(p0, p1) := mul_2_2 x0 x1 y0 y1 in
-  let '(t0, t1) := add_2_2 s0 s1 p0 p1 in
-  (t0, t1).
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). *)
 Definition eq_2_1 (x0 x1 a : float) : bool :=
@@ -1676,6 +1751,12 @@ End IeeeKernels.
 (* The inputs are numbered from 0 in the order of the kernel's arguments, and each
    instruction defines the next position (Program.v). *)
 
+(* inputs: 0 s, 1 a, 2 v, 3 c *)
+Definition acc_merge_1_prog : list instr :=
+  [ Iadd 0 2  (*  4 t *)
+  ; Iadd 1 3  (*  5 b *)
+  ].
+
 (* inputs: 0 a, 1 b *)
 Definition fast_two_sum_prog : list instr :=
   [ Iadd 0 1  (*  2 s *)
@@ -1719,21 +1800,6 @@ Definition two_sum_prog : list instr :=
   ; Iadd 5 6  (*  7 e *)
   ].
 
-(* inputs: 0 x0, 1 x1, 2 a *)
-Definition add_2_1_prog : list instr :=
-  [ Iguard 2    (*  3 g *)
-  ; Iadd 0 3    (*  4 sh *)
-  ; Isub 4 0    (*  5 sh_bb *)
-  ; Isub 4 5    (*  6 sh_t0 *)
-  ; Isub 0 6    (*  7 sh_t1 *)
-  ; Isub 3 5    (*  8 sh_t2 *)
-  ; Iadd 7 8    (*  9 sl *)
-  ; Iadd 1 9    (* 10 v *)
-  ; Iadd 4 10   (* 11 z0 *)
-  ; Isub 11 4   (* 12 z0_z *)
-  ; Isub 10 12  (* 13 z1 *)
-  ].
-
 (* inputs: 0 x0, 1 x1, 2 y0, 3 y1 *)
 Definition add_2_2_prog : list instr :=
   [ Iadd 0 2    (*  4 sh *)
@@ -1758,19 +1824,29 @@ Definition add_2_2_prog : list instr :=
   ; Isub 20 22  (* 23 z1 *)
   ].
 
-(* inputs: 0 x0, 1 x1, 2 y0, 3 y1 *)
-Definition add_fast_2_2_prog : list instr :=
-  [ Iadd 0 2    (*  4 sh *)
-  ; Isub 4 0    (*  5 sh_bb *)
-  ; Isub 4 5    (*  6 sh_t0 *)
-  ; Isub 0 6    (*  7 sh_t1 *)
-  ; Isub 2 5    (*  8 sh_t2 *)
-  ; Iadd 7 8    (*  9 sl *)
-  ; Iadd 1 3    (* 10 v *)
-  ; Iadd 9 10   (* 11 w *)
-  ; Iadd 4 11   (* 12 z0 *)
-  ; Isub 12 4   (* 13 z0_z *)
-  ; Isub 11 13  (* 14 z1 *)
+(* inputs: 0 s0, 1 s1, 2 a, 3 v0, 4 v1, 5 c *)
+Definition acc_merge_2_prog : list instr :=
+  [ Iadd 0 3    (*  6 t0_sh *)
+  ; Isub 6 0    (*  7 t0_sh_bb *)
+  ; Isub 6 7    (*  8 t0_sh_t0 *)
+  ; Isub 0 8    (*  9 t0_sh_t1 *)
+  ; Isub 3 7    (* 10 t0_sh_t2 *)
+  ; Iadd 9 10   (* 11 t0_sl *)
+  ; Iadd 1 4    (* 12 t0_th *)
+  ; Isub 12 1   (* 13 t0_th_bb *)
+  ; Isub 12 13  (* 14 t0_th_t0 *)
+  ; Isub 1 14   (* 15 t0_th_t1 *)
+  ; Isub 4 13   (* 16 t0_th_t2 *)
+  ; Iadd 15 16  (* 17 t0_tl *)
+  ; Iadd 11 12  (* 18 t0_c *)
+  ; Iadd 6 18   (* 19 t0_vh *)
+  ; Isub 19 6   (* 20 t0_vh_z *)
+  ; Isub 18 20  (* 21 t0_vl *)
+  ; Iadd 17 21  (* 22 t0_w *)
+  ; Iadd 19 22  (* 23 t0 *)
+  ; Isub 23 19  (* 24 t0_z *)
+  ; Isub 22 24  (* 25 t1 *)
+  ; Iadd 2 5    (* 26 b *)
   ].
 
 (* inputs: 0 x0, 1 x1, 2 y0, 3 y1 *)
@@ -1784,16 +1860,6 @@ Definition mul_2_2_prog : list instr :=
   ; Iadd 4 9    (* 10 z0 *)
   ; Isub 10 4   (* 11 z0_z *)
   ; Isub 9 11   (* 12 z1 *)
-  ].
-
-(* inputs: 0 x0, 1 x1, 2 a *)
-Definition mul_2_1_prog : list instr :=
-  [ Iprod 0 2   (*  3 ch *)
-  ; Ifms 0 2 3  (*  4 cl1 *)
-  ; Ifma 1 2 4  (*  5 cl3 *)
-  ; Iadd 3 5    (*  6 z0 *)
-  ; Isub 6 3    (*  7 z0_z *)
-  ; Isub 5 7    (*  8 z1 *)
   ].
 
 (* inputs: 0 s0, 1 s1, 2 x0, 3 x1, 4 y0, 5 y1 *)
@@ -1827,6 +1893,46 @@ Definition dot_step_2_prog : list instr :=
   ; Iadd 28 31  (* 32 t0 *)
   ; Isub 32 28  (* 33 t0_z *)
   ; Isub 31 33  (* 34 t1 *)
+  ].
+
+(* inputs: 0 x0, 1 x1, 2 a *)
+Definition add_2_1_prog : list instr :=
+  [ Iguard 2    (*  3 g *)
+  ; Iadd 0 3    (*  4 sh *)
+  ; Isub 4 0    (*  5 sh_bb *)
+  ; Isub 4 5    (*  6 sh_t0 *)
+  ; Isub 0 6    (*  7 sh_t1 *)
+  ; Isub 3 5    (*  8 sh_t2 *)
+  ; Iadd 7 8    (*  9 sl *)
+  ; Iadd 1 9    (* 10 v *)
+  ; Iadd 4 10   (* 11 z0 *)
+  ; Isub 11 4   (* 12 z0_z *)
+  ; Isub 10 12  (* 13 z1 *)
+  ].
+
+(* inputs: 0 x0, 1 x1, 2 y0, 3 y1 *)
+Definition add_fast_2_2_prog : list instr :=
+  [ Iadd 0 2    (*  4 sh *)
+  ; Isub 4 0    (*  5 sh_bb *)
+  ; Isub 4 5    (*  6 sh_t0 *)
+  ; Isub 0 6    (*  7 sh_t1 *)
+  ; Isub 2 5    (*  8 sh_t2 *)
+  ; Iadd 7 8    (*  9 sl *)
+  ; Iadd 1 3    (* 10 v *)
+  ; Iadd 9 10   (* 11 w *)
+  ; Iadd 4 11   (* 12 z0 *)
+  ; Isub 12 4   (* 13 z0_z *)
+  ; Isub 11 13  (* 14 z1 *)
+  ].
+
+(* inputs: 0 x0, 1 x1, 2 a *)
+Definition mul_2_1_prog : list instr :=
+  [ Iprod 0 2   (*  3 ch *)
+  ; Ifms 0 2 3  (*  4 cl1 *)
+  ; Ifma 1 2 4  (*  5 cl3 *)
+  ; Iadd 3 5    (*  6 z0 *)
+  ; Isub 6 3    (*  7 z0_z *)
+  ; Isub 5 7    (*  8 z1 *)
   ].
 
 (* inputs: 0 x0, 1 x1, 2 c *)

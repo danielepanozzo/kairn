@@ -207,6 +207,9 @@ class Cpp(unittest.TestCase):
     NOT_CONSTEXPR |= {'dot_step_1', 'dot_step_2'}
     # The steps of the maps with the products of two limbs: mul_2_2 and mul_2_1.
     NOT_CONSTEXPR |= {'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1', 'scale_step_2'}
+    # The accumulator: the fma of the step of dot_1 and of the magnitudes (acc_mul_1), dot_step_2
+    # (acc_mul_2), and the fma of the radius (acc_radius_k).
+    NOT_CONSTEXPR |= {'acc_mul_1', 'acc_mul_2', 'acc_radius_1', 'acc_radius_2'}
     # The full kernels are constexpr where their cores are: their fix-up turns t into an infinity
     # with times_inf, which is no fused operation. Those of the products of two limbs are not, nor
     # are the full Ball kernels but the scalings by a power of two. The constructors are.
@@ -743,9 +746,11 @@ class Rocq(unittest.TestCase):
         # axpy_entry_step_1, 7 limbs in 7 kernels. With the folds of maxima: r of norm_combine,
         # norm_step_1 and norm_step_2, 3 limbs in 3 kernels. With Milestone 2's real-model kernels of
         # the intervals: d and v of mul_dir_1, d of add_ball_2_2 and of mul_ball_2_2 (the bounds of two
-        # limbs are normalized), 4 limbs in 3 kernels.
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3)
+        # limbs are normalized), 4 limbs in 3 kernels. With the accumulator: t and b of acc_add_1,
+        # acc_mul_1 and acc_merge_1, b of acc_add_2, acc_mul_2 and acc_merge_2, and r of acc_radius_1
+        # and acc_radius_2 (claimed under the mask), 11 limbs in 8 kernels.
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8)
         s = self.statements
         # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
         # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
@@ -891,9 +896,14 @@ class Rocq(unittest.TestCase):
     # proved: Statements.v prints that one word, and Audit.v lists its theorem; then the seven
     # bounds of two limbs: seven words more, and their theorems (Directed2.v). The files are
     # the regeneration of the merged descriptions.
-    DIGESTS = {'Model.v': '87fb181c8e6c93c1f4464b97b919af311fa8a00a9a9d941c3db262f8489375ee',
-               'Statements.v': '3e7e7c5148914c45a32bc5a285f4f552889434d0b714971783fe1f7521308fbc',
-               'Audit.v': '655b9f566eb3b51ca85aaffbe68da179ac2e76de08861bca21e0695ec5dcf129'}
+    # On another line, the eight kernels of the accumulator (unverified): every earlier definition
+    # and statement the same, byte for byte, add_2_2, mul_2_2 and dot_step_2, which they call,
+    # printed earlier, before them; their constants new (gen/constant_names.json); Audit.v lists
+    # the same theorems, add_2_2_correct and mul_2_2_correct earlier. Merged here: the
+    # regeneration of the merged descriptions.
+    DIGESTS = {'Model.v': '4f8a16ca6742b2de51d29646886b36c883514da40a53752f7810d2202c096b80',
+               'Statements.v': 'f8458e14c1af38d43a45cf4ead0e889481afd2c341852eb03adecea0c77240d3',
+               'Audit.v': 'c47ef8f01d6603f66b417b2d1345e7b1ab264de3298dbcc6ff1419b0a1173696'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
@@ -927,8 +937,8 @@ class Rocq(unittest.TestCase):
             finite[name] = k
         # 60; the nine of the folds' stage, the fifteen steps of the maps, the three of norm_upper_k;
         # and the eight of Milestone 2's interval work with a real-model statement: mul_dir_1 and the
-        # seven bounds of two limbs.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8)
+        # seven bounds of two limbs; and the eight kernels of the accumulator.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

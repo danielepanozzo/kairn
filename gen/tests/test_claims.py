@@ -130,8 +130,9 @@ class Claims(unittest.TestCase):
     # bounds, the midpoint of a ball made from an interval, an equivalence for the bounded result,
     # a tightness (Milestone 2); the zero of a product of intervals or of bounds of two limbs, the
     # smallest radius of a ball made from an interval (stage B1); the mask and the steps of the
-    # finish of a fold of maxima. Every entry without them has the shape it had before.
-    OPTIONAL = {'rounded': ['when', 'zero_factor'], 'error': ['exact_when'], 'encloses': ['exact_when'],
+    # finish of a fold of maxima; a value of its own (the accumulator's sum of magnitudes). Every
+    # entry without them has the shape it had before.
+    OPTIONAL = {'rounded': ['when', 'zero_factor', 'value'], 'error': ['exact_when'], 'encloses': ['exact_when'],
                 'bound': ['zero_factor'], 'outward': ['exact_when', 'zero_factor'], 'makes_ball': ['midpoint_when'],
                 'encloses_interval': ['bounded_exactly', 'zero_factor'], 'set_bound': ['tight'],
                 'ball_of_interval': ['smallest_radius'],

@@ -3,19 +3,24 @@ p=4 eta=2^-10 k=2: sum|x y| over (1+u)^(n+2) (a + n eta/2) at most 0.938; 2793 a
      acc_radius: its claimed expression over r at most 0.769; ok true in 3638 cases
      in the format itself, k=1: b the rounding with overflow in every case; b = +inf with output limb 0 finite in 338 of 3000 (acc_add_1), 102 of 3000 (acc_mul_1), 140 of 3000 (acc_merge_1)
      in the format itself, k=2: b the rounding with overflow in every case; b = +inf with output limb 0 finite in 328 of 3000 (acc_add_2), 137 of 3000 (acc_mul_2), 137 of 3000 (acc_merge_2)
-p=5 eta=2^-14 k=1: sum|x y| over (1+u)^(n+2) (a + n eta/2) at most 0.939; 3037 accumulators with a finite radius, error over the radius at most 0.400
-p=5 eta=2^-14 k=2: sum|x y| over (1+u)^(n+2) (a + n eta/2) at most 0.958; 3759 accumulators with a finite radius, error over the radius at most 0.041
-     acc_radius: its claimed expression over r at most 0.874; ok true in 4970 cases
-     in the format itself, k=1: b the rounding with overflow in every case; b = +inf with output limb 0 finite in 242 of 3000 (acc_add_1), 59 of 3000 (acc_mul_1), 94 of 3000 (acc_merge_1)
-     in the format itself, k=2: b the rounding with overflow in every case; b = +inf with output limb 0 finite in 274 of 3000 (acc_add_2), 58 of 3000 (acc_mul_2), 107 of 3000 (acc_merge_2)
-p=6 eta=2^-18 k=1: sum|x y| over (1+u)^(n+2) (a + n eta/2) at most 0.969; 3777 accumulators with a finite radius, error over the radius at most 0.471
-p=6 eta=2^-18 k=2: sum|x y| over (1+u)^(n+2) (a + n eta/2) at most 0.979; 3995 accumulators with a finite radius, error over the radius at most 0.070
-     acc_radius: its claimed expression over r at most 0.933; ok true in 5434 cases
-     in the format itself, k=1: b the rounding with overflow in every case; b = +inf with output limb 0 finite in 208 of 3000 (acc_add_1), 14 of 3000 (acc_mul_1), 70 of 3000 (acc_merge_1)
-     in the format itself, k=2: b the rounding with overflow in every case; b = +inf with output limb 0 finite in 186 of 3000 (acc_add_2), 20 of 3000 (acc_mul_2), 62 of 3000 (acc_merge_2)
-p=1 eta=2^-6: acc_radius: its claimed expression over r at most 0.078; ok true in 186 cases
-p=2 eta=2^-6: acc_radius: its claimed expression over r at most 0.335; ok true in 530 cases
-p=3 eta=2^-8: acc_radius: its claimed expression over r at most 0.516; ok true in 1202 cases
+     ok of acc_radius_1 and acc_radius_2 false for a = +inf or NaN in 500 cases each
+p=5 eta=2^-14 k=1: sum|x y| over (1+u)^(n+2) (a + n eta/2) at most 0.939; 3040 accumulators with a finite radius, error over the radius at most 0.395
+p=5 eta=2^-14 k=2: sum|x y| over (1+u)^(n+2) (a + n eta/2) at most 0.973; 3757 accumulators with a finite radius, error over the radius at most 0.046
+     acc_radius: its claimed expression over r at most 0.874; ok true in 4931 cases
+     in the format itself, k=1: b the rounding with overflow in every case; b = +inf with output limb 0 finite in 232 of 3000 (acc_add_1), 45 of 3000 (acc_mul_1), 75 of 3000 (acc_merge_1)
+     in the format itself, k=2: b the rounding with overflow in every case; b = +inf with output limb 0 finite in 229 of 3000 (acc_add_2), 45 of 3000 (acc_mul_2), 95 of 3000 (acc_merge_2)
+     ok of acc_radius_1 and acc_radius_2 false for a = +inf or NaN in 500 cases each
+p=6 eta=2^-18 k=1: sum|x y| over (1+u)^(n+2) (a + n eta/2) at most 0.969; 3780 accumulators with a finite radius, error over the radius at most 0.476
+p=6 eta=2^-18 k=2: sum|x y| over (1+u)^(n+2) (a + n eta/2) at most 0.978; 3995 accumulators with a finite radius, error over the radius at most 0.057
+     acc_radius: its claimed expression over r at most 0.928; ok true in 5426 cases
+     in the format itself, k=1: b the rounding with overflow in every case; b = +inf with output limb 0 finite in 197 of 3000 (acc_add_1), 15 of 3000 (acc_mul_1), 65 of 3000 (acc_merge_1)
+     in the format itself, k=2: b the rounding with overflow in every case; b = +inf with output limb 0 finite in 226 of 3000 (acc_add_2), 21 of 3000 (acc_mul_2), 64 of 3000 (acc_merge_2)
+     ok of acc_radius_1 and acc_radius_2 false for a = +inf or NaN in 500 cases each
+p=1 eta=2^-6: acc_radius: its claimed expression over r at most 0.078; ok true in 187 cases
+p=2 eta=2^-6: acc_radius: its claimed expression over r at most 0.335; ok true in 507 cases
+p=3 eta=2^-8: acc_radius: its claimed expression over r at most 0.501; ok true in 1224 cases
 binary32: acc_radius: its claimed expression over r at most 1.000000; ok true in 10000 cases
+binary32: ok of acc_radius_1 and acc_radius_2 false for a = +inf or NaN in 500 cases each
 binary64: acc_radius: its claimed expression over r at most 1.000000; ok true in 9546 cases
+binary64: ok of acc_radius_1 and acc_radius_2 false for a = +inf or NaN in 500 cases each
 every statement held

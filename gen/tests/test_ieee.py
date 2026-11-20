@@ -30,6 +30,9 @@ PROGRAMS = ['fast_two_sum', 'two_prod', 'two_sum', 'add_2_2', 'mul_2_2', 'add_2_
             'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_pow2_2', 'fast_two_sum_entry']
 # And the steps of the folds, whose bridge statements the IEEE model of a fold uses.
 PROGRAMS += ['dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2']
+# And the kernels of the accumulator with an IEEE-model statement whose listing is a program of
+# Program.v (acc_merge_k: additions; the others guard or take an absolute value).
+PROGRAMS += ['acc_merge_1', 'acc_merge_2']
 
 
 def read(rel):
@@ -100,8 +103,9 @@ class Model(unittest.TestCase):
         # The thirteen of the Ball cores, N and P of Milestone 2 (eta / (2u), eta / (2u^2): the
         # scalings of a ball and the directed products); the fourteen distinct ones of the four
         # bound kernels of the folds (bound_sum_k: 4 and 2; bound_dot_k: 4 and 3, 2, 1 + 2u, 1/4 and
-        # 1 shared); and the one above.
-        self.assertEqual(len(ups), 30)
+        # 1 shared); the one above; and the three of acc_radius_1 that no other kernel has
+        # ((1+u) u + N, (1+u)^8, (1+u)^7 eta/2 + N).
+        self.assertEqual(len(ups), 33)
         self.assertIn('Definition up_ball_mul_pow2_1_0 : float := const_of (Model.up_ball_mul_pow2_1_0 (3 - emax - prec) prec).', m)
 
     def test_programs(self):
@@ -435,8 +439,13 @@ class CheckedFiles(unittest.TestCase):
     # the new definitions for the new statements (theories/IeeeMake.v), the statements file prints
     # their status, proved, and make -C proofs passed on these files. Merged here: the
     # regeneration of the merged descriptions.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '88d13229fd112f3d8b1c8e4b12cac3283b4dc130f118fef93ab77d46a858c26d',
-               'proofs/gen/IeeeStatements.v': 'a49c798868fe7f681a4631b0af56f8e7264ecc3bdafb27fefa418f9438b996de'}
+    # On another line, the kernels of the accumulator (unverified): their definitions, the programs
+    # of acc_merge_k and their statements (ieee: spec, each output group's claims under its own
+    # leading limb) were added, every earlier line kept; add_2_2, mul_2_2 and dot_step_2, which
+    # they call, are printed earlier, before them. Merged here: the regeneration of the merged
+    # descriptions, and make -C proofs passed on these files.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'e247852f05c47c29250a321f81d1237d60885001672ad3b3cd917ca02f17cd7a',
+               'proofs/gen/IeeeStatements.v': '1545a154a8bdf834b0295f8039ef9de80784e3690c52b070e23c32485d2d22e6'}
 
 
     def test_the_checked_files(self):

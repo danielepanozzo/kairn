@@ -22,7 +22,10 @@ IN_GEN = ('two_sum_ord', 'add_down_1', 'add_up_1', 'sub_down_1', 'sub_up_1', 'mu
           'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2', 'mul_dir_2_2', 'interval_add_2',
           'ball_from_interval_2',
           # and of its stage B1: the product of intervals of two limbs, and two of the enclosure interface.
-          'mul_ext_2_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1')
+          'mul_ext_2_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1',
+          # and the accumulator, acc_radius_k as proposed here (accumulator.py).
+          'acc_add_1', 'acc_add_2', 'acc_mul_1', 'acc_mul_2', 'acc_merge_1', 'acc_merge_2', 'acc_radius_1',
+          'acc_radius_2')
 
 
 def main():

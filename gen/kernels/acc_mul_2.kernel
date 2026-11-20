@@ -2,17 +2,6 @@
 # plus the product x y, as dot_step_2 (mul_2_2, then add_2_2), and the running sum a of the
 # magnitudes of the leading limbs plus |x0| |y0|, rounded once. x and y are values of the program
 # that are only multiplied: rule R3 asks no guard of them.
-#
-# The claims proposed for it in gen/kernels, which accumulator.py checks:
-#   value:         s+x*y
-#   requires:      normalized s
-#   requires:      normalized x
-#   requires:      normalized y
-#   requires:      nonneg a
-#   ensures:       normalized t
-#   ensures:       error t T c=3*(1+4*u*u)/(1-4*u)+4 k=2 t=2
-#   ensures:       rounded b nearest value=a+abs(x[0])*abs(y[0])
-#   (needs rounded ... value=, which the generator does not have: see accumulator.py)
 kernel:        acc_mul_2
 input:         s = s0 s1
 input:         stored a
@@ -20,12 +9,21 @@ input:         supplied x = x0 x1
 input:         supplied y = y0 y1
 output:        t = t0 t1
 output:        b
+value:         s+x*y
+requires:      normalized s
+requires:      normalized x
+requires:      normalized y
+requires:      nonneg a
+ensures:       normalized t
+ensures:       error t T c=3*(1+4*u*u)/(1-4*u)+4 k=2 t=2
+ensures:       rounded b nearest value=a+abs(x[0])*abs(y[0])
 min_precision: 4
 source:        the step of the dot product of two limbs, and the sum of the magnitudes of the leading limbs (milestone2.md); bounds from MR22
 license:       algorithm: published; proof: MIT
 status:        unverified
+ieee:          spec
 entry:         yes
-cone_exempt:   b, the sum of magnitudes, does not reach t0; it overflows (to +inf, its operands being nonnegative) only when a + |x0| |y0| rounds above the largest number of T, and a radius computed from it is then +inf, the whole line
+cone_exempt:   b, the sum of magnitudes, does not reach t0: its claim is read where b is finite (an entry about an output group other than the first), and where b is +inf the mask ok of acc_radius_k is false
 
 (t0, t1) = dot_step_2(s0, s1, x0, x1, y0, y1)
 ax       = abs(x0)
