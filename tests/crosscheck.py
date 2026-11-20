@@ -32,9 +32,10 @@ each named by its LABEL; --interp adds the generator's interpreter (python3 gen/
 as one more, labelled interp. WORK is SUMMARY's name, without its extension, with .work; the
 summary of each output judged is written next to SUMMARY, as SUMMARY's name with the label of the
 first runner that wrote that output (check --json). The test fails if a runner fails, if the
-oracle fails an output (any violated claim, invalid case, broken stream, and with
---fail-on-suspicious a suspicious non-finite result), or if the guards fail its summary: the run
-did not check what it set out to check (tests/crosscheck_guards.py). An enumeration
+oracle fails an output (any violated claim or broken stream, and with --fail-on-suspicious a
+suspicious non-finite result; an invalid case it counts and shows, without --expect-valid), or if
+the guards fail its summary: the run did not check what it set out to check
+(tests/crosscheck_guards.py). An enumeration
 (--exhaustive) is supported as crosscheck.cmake supports it, though the tests run the interpreter's
 enumerations through crosscheck.cmake.
 

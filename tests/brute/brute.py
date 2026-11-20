@@ -7,7 +7,8 @@
     python3 tests/brute/brute.py report  FILE...
 
 Two parts, each a set of pipelines `gen | RUNNER | check` of the oracle (oracle/README.md), the
-same pipelines as the quick tier's cross-checks (tests/crosscheck.cmake), only longer:
+same pipelines as the quick tier's cross-checks (tests/crosscheck.py, which runs the oracle's two
+stages in its own process), only longer:
 
 - compiled: every kernel of gen/claims.json, binary64 and binary32, on random cases of the
   oracle's generator (seed --seed, every stratum), through every runner that the CMake builds
