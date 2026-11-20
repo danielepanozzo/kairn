@@ -692,9 +692,10 @@ The vectorization control compiles the unit once more, in the first optimized co
 the quick tier, *with* the compiler's own vectorization, and judges every function of it by the
 same rule. It records what the check then finds per compiler: with Clang on x86-64 (clang++ and
 clang-cl), the packing alone fails `F_seq` and `F_packed` of `axpy_2` and `axpy_2_entry` for
-`double`, and the scalar functions of `ball_from_interval_2`, `interval_add_2`, `interval_mul_1`
-and `interval_sub_2` for `double` and `float` (those the packing control finds; measured with
-Clang 18 on 2026-11-20, clang-cl by analogy); with Apple clang 21 on AArch64, the scalar functions
+`double`, and the scalar functions of `acc_mul_1`, `ball_from_interval_2`, `interval_add_2`,
+`interval_mul_1` and `interval_sub_2` for `double` and `float` (those the packing control finds;
+measured with Clang 18 on 2026-11-20, `acc_mul_1` with the accumulator's kernels, clang-cl by
+analogy); with Apple clang 21 on AArch64, the scalar functions
 of `interval_add_2` and `interval_sub_2` for `double` and `float`, in the form of the fix-ups that
 is a call; with GCC 13 on x86-64 and GCC 16 on AArch64, nothing. Their vectorized loops hold whole
 copies of the step. A compiler that stops packing, or one that starts, fails the control, so that

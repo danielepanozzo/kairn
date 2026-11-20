@@ -750,10 +750,14 @@ def control_counts(tools, workdir, expected, limb_types, folds=None):
 # interval kernels into one instruction, for double and float (control_packing: interval_mul_1
 # among them), and Apple clang on AArch64 two of interval_add_2 and of interval_sub_2 into one
 # fmla on .2d or .2s, in the form of the fix-ups that is a call (measured with Clang 18, Apple
-# clang 21 and GCC 16 on the joined tree of the folds and the intervals; GCC packs none). An entry
+# clang 21 and GCC 16 on the joined tree of the folds and the intervals; GCC packs none). Clang 18
+# on x86-64 also packs the two independent FMAs of acc_mul_1, the running sum and the sum of
+# magnitudes, into one vfmadd213pd (or ps), for double and float (Apple clang 21 and GCC do not:
+# measured with the accumulator's kernels). An entry
 # that stops holding, a compiler that stops packing or another that starts, fails the control: the
 # table is what we know, not what we expect.
-VECTORIZED_SCALAR = {'clang x86-64': ('ball_from_interval_2', 'interval_add_2', 'interval_mul_1', 'interval_sub_2'),
+VECTORIZED_SCALAR = {'clang x86-64': ('acc_mul_1', 'ball_from_interval_2', 'interval_add_2', 'interval_mul_1',
+                                      'interval_sub_2'),
                      'apple clang aarch64': ('interval_add_2', 'interval_sub_2')}
 
 
