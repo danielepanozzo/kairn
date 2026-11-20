@@ -507,39 +507,39 @@ def _hugeradius(fmt, sh, rng):
 
 
 def _badradius(fmt, sh, rng):
-    """The constructors of balls: radii negative, -inf, NaN, +inf, zero, huge or tiny; centers
-    finite, or not finite a quarter of the time."""
+    """The constructors of balls: each class of radius as often (negative, ordinary or tiny;
+    -inf; NaN; +inf; +0; -0; positive, ordinary, huge or eta), with a center that is finite or,
+    half the time, not finite (an infinity or a NaN): every class the guards ask for
+    (extended.MAKE_RADIUS_CLASSES with each of MAKE_CENTER_CLASSES)."""
     vals, negz = _finite_case(fmt, sh, rng)
     for e in sh.kernel.ensures:
-        if e.kind != "makes_ball":
+        if e.kind != "makes_ball" or getattr(e, "iv", False):
             continue
         c, r = e.from_center, e.from_radius
-        if rng.chance(1, 4):
+        if rng.bits(1):
             vals[c] = _nonfinite(rng, sh.roles[c] if sh.roles[c] != "center" else "any")
             if sh.limbs[c] > 1 and len(vals[c]) == 1:
                 vals[c] = [vals[c][0], NAN if vals[c][0] == NAN else 0]
-        k = rng.below(9)
+        k = rng.below(7)
         if k == 0:
-            v = -abs(G2.limb(fmt, rng, "uniform")) or -1
+            v = -abs(G2.limb(fmt, rng, "uniform" if rng.bits(1) else "underflow")) or -1
         elif k == 1:
-            v = -abs(G2.limb(fmt, rng, "underflow")) or -1
-        elif k == 2:
             v = NINF
-        elif k == 3:
+        elif k == 2:
             v = NAN
-        elif k == 4:
+        elif k == 3:
             v = INF
-        elif k == 5:
+        elif k in (4, 5):
             v = 0
-        elif k == 6:
-            v = abs(G2._top(fmt, rng))
-        elif k == 7:
-            v = 1
         else:
-            v = abs(G2.limb(fmt, rng, "uniform"))
+            j = rng.below(3)
+            v = (abs(G2._top(fmt, rng)) if j == 0 else 1 if j == 1
+                 else abs(G2.limb(fmt, rng, "uniform")) or 1)
         vals[r] = [v]
         negz = {(n, i) for n, i in negz if n not in (c, r)}
-        negz |= _random_negz(rng, vals, [c, r])
+        negz |= _random_negz(rng, vals, [c])
+        if k == 5:
+            negz.add((r, 0))
     return vals, negz
 
 

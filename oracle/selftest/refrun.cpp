@@ -58,7 +58,9 @@ enum class Variant {
   ball_full_zero_inf_empty,
   ball_full_finite_whole,
   make_negative_radius,
-  make_nan_radius,
+  make_nan_radius_empty,
+  make_nan_radius_finite,
+  make_negative_nan_center_whole,
   make2_inf_nan_tail,
   ball2_no_E,
   ball2_no_H,
@@ -101,7 +103,9 @@ const VariantName kVariants[] = {
     {"ball-full-zero-inf-empty", Variant::ball_full_zero_inf_empty},
     {"ball-full-finite-whole", Variant::ball_full_finite_whole},
     {"make-negative-radius", Variant::make_negative_radius},
-    {"make-nan-radius", Variant::make_nan_radius},
+    {"make-nan-radius-empty", Variant::make_nan_radius_empty},
+    {"make-nan-radius-finite", Variant::make_nan_radius_finite},
+    {"make-negative-nan-center-whole", Variant::make_negative_nan_center_whole},
     {"make2-inf-nan-tail", Variant::make2_inf_nan_tail},
     {"ball2-no-E", Variant::ball2_no_E},
     {"ball2-no-H", Variant::ball2_no_H},
@@ -707,19 +711,22 @@ void make_2(T a, T& x0, T& x1) {
 template <class T>
 std::vector<T> ball_make(int k, T c0, T c1, T r) {
   T g = guard(r);
-  bool e = T(0) <= g;              // false for a NaN or a negative radius
-  if (g_variant == Variant::make_negative_radius) e = g == g;
-  else if (g_variant == Variant::make_nan_radius) e = true;
+  bool n = g < T(0);               // false for a NaN
+  bool ok = !n;
+  if (g_variant == Variant::make_negative_radius) ok = g == g;
+  else if (g_variant == Variant::make_nan_radius_empty) ok = T(0) <= g;  // the rule before 2026-11-20
   T a = std::fabs(c0);
   bool f1 = a < inf_<T>();
   bool f2 = g < inf_<T>();
+  if (g_variant == Variant::make_nan_radius_finite) f2 = g != inf_<T>();
   bool f = f1 && f2;
+  if (g_variant == Variant::make_negative_nan_center_whole && !f1) ok = true;
   T k0 = f ? c0 : T(0);
   T k1 = f ? c1 : T(0);
   T s = f ? g : inf_<T>();
-  std::vector<T> out = {e ? k0 : qnan_<T>()};
-  if (k == 2) out.push_back(e ? k1 : qnan_<T>());
-  out.push_back(e ? s : qnan_<T>());
+  std::vector<T> out = {ok ? k0 : qnan_<T>()};
+  if (k == 2) out.push_back(ok ? k1 : qnan_<T>());
+  out.push_back(ok ? s : qnan_<T>());
   return out;
 }
 

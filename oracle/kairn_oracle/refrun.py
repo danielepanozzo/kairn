@@ -82,8 +82,15 @@ VARIANTS = {
     "ball-full-finite-whole": "the full Ball kernels keep a finite center and give the radius "
                               "Omega when the computed radius is not finite",
     "make-negative-radius": "ball_make tests the radius for a NaN only, so a negative radius is "
-                            "kept",
-    "make-nan-radius": "ball_make does not test the radius, so a NaN radius gives the whole line",
+                            "kept and a NaN radius gives the empty set",
+    "make-nan-radius-empty": "ball_make keeps the rule before 2026-11-20: a NaN radius gives the "
+                             "empty set",
+    "make-nan-radius-finite": "ball_make tests the radius against +inf only, so a NaN radius with "
+                              "a finite center gives the finite ball of that center and a NaN "
+                              "radius",
+    "make-negative-nan-center-whole": "ball_make tests the center before the radius, so a "
+                                      "negative radius with a center that is not finite gives "
+                                      "the whole line",
     "make2-inf-nan-tail": "make_2 of an infinity has a NaN second limb",
     # The second radius design (with --radius second).
     "ball2-no-E": "second radius design without E: the center kernel's error is left out",
@@ -1074,18 +1081,23 @@ class Kernels:
 
     def _ball_make(self, c, r):
         g = self.guard(r)
-        e = 0 <= g                     # le(0, g): false for a NaN or a negative radius
+        n = g < 0                      # lt(g, 0): false for a NaN
+        ok = not n
         if self.v == "make-negative-radius":
-            e = g == g
-        elif self.v == "make-nan-radius":
-            e = True
+            ok = g == g
+        elif self.v == "make-nan-radius-empty":
+            ok = 0 <= g                # the rule before 2026-11-20: le(0, g)
         a = abs(c[0])
         f1 = a < INF
         f2 = g < INF
+        if self.v == "make-nan-radius-finite":
+            f2 = g != INF              # a NaN radius kept beside a finite center
         f = f1 and f2
+        if self.v == "make-negative-nan-center-whole" and not f1:
+            ok = True                  # the center tested before the radius
         k = [ci if f else 0 for ci in c]
         s = g if f else INF
-        return tuple(ki if e else NAN for ki in k) + (s if e else NAN,)
+        return tuple(ki if ok else NAN for ki in k) + (s if ok else NAN,)
 
     def ball_make_1(self, c, r):
         return self._ball_make((self.guard(c),), r)

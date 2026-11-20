@@ -49,7 +49,9 @@ also when the run did not see what that layer is about:
   where every finite_when condition holds when the list is not empty; for encloses each of the
   finite ball, the whole line and the empty set as results (and cases where every finite_when
   condition holds when the list is not empty); for represents a finite, an infinite and a NaN
-  value; for makes_ball each of the three given states; for the kinds the finite domain has,
+  value; for makes_ball each of the three given states, and each class of the given radius
+  (negative, -inf, NaN, +inf, +0, -0 but in an enumeration, positive) with a finite center and
+  with one that is not (MAKE_RADIUS_CLASSES); for the kinds the finite domain has,
   non-finite operands (and, for a comparison, both outcomes on them; for an upper bound, both a
   NaN and an infinity from them).
 
@@ -107,6 +109,19 @@ EXTENDED_COUNTS = {
     "finite_or_nan": ("value: finite leading limb, every limb finite", "value: leading limb infinite",
                       "value: leading limb NaN"),
 }
+# makes_ball from a center and a radius (the rule of 2026-11-20: a negative radius gives the
+# empty set whatever the center, a NaN radius the whole line): each class of the given radius with
+# a finite center and with one that is not (oracle/kairn_oracle/extended.py, MAKE_RADIUS_CLASSES).
+# An enumeration has one zero, +0, so -0 is asked of random runs only.
+MAKE_RADIUS_CLASSES = ("negative", "-inf", "NaN", "+inf", "+0", "-0", "positive")
+MAKE_CENTER_CLASSES = ("finite", "not finite")
+
+
+def make_radius_needs(exhaustive):
+    return ["given radius %s, center %s" % (r, c) for r in MAKE_RADIUS_CLASSES
+            for c in MAKE_CENTER_CLASSES if not (exhaustive and r == "-0")]
+
+
 # For a finite_or_nan entry of a state of several limbs: a finite leading limb with a lower limb
 # that is not finite, which the finish passes on as it is.
 FINITE_OR_NAN_TAIL = "value: finite leading limb, a lower limb not finite"
@@ -876,6 +891,8 @@ def problems(summary, a):
         need = list(EXTENDED_COUNTS.get(e.get("kind"), ()))
         if e.get("kind") == "makes_ball" and set(e.get("from") or {}) == {"lower", "upper"}:
             need = []           # a ball from the bounds of an interval: iv_needs
+        elif e.get("kind") == "makes_ball":
+            need += make_radius_needs(getattr(a, "exhaustive", False))
         if e.get("kind") == "finite_or_nan":
             ins = {i.get("name"): i.get("limbs", 1) for i in kernel.get("inputs", [])}
             if ins.get((kernel.get("value") or "").strip(), 1) > 1:

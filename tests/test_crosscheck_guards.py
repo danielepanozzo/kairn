@@ -328,6 +328,28 @@ class ExtendedGuards(unittest.TestCase):
         self.fails(s, "make_2", "fp:3:-3:0", "--seed", "0", "--count", "100",
                    reason='saw no case of "value NaN"')
 
+    # The constructors under the rule of 2026-11-20: each class of radius with a finite center
+    # and with one that is not, -0 in a random run only (an enumeration has one zero).
+    def test_constructors_without_a_class_of_radius(self):
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        for kernel in ("ball_make_1", "ball_make_2"):
+            args = ("--seed", "0", "--count", "1200")
+            good = pipeline(kernel, "fp:3:-3:0", *args)
+            self.passes(good, kernel, "fp:3:-3:0", *args)
+            names = CG.make_radius_needs(False)
+            self.assertEqual(len(names), 14)
+            for name in names:
+                s = edited(good, 0, lambda e: e["counts"].pop(name, None))
+                self.fails(s, kernel, "fp:3:-3:0", *args, reason='saw no case of "%s"' % name)
+            ex = pipeline(kernel, "fp:2:-2:1", "--exhaustive")
+            self.passes(ex, kernel, "fp:2:-2:1", "--exhaustive")
+            self.assertEqual(len(CG.make_radius_needs(True)), 12)
+            for name in CG.make_radius_needs(True):
+                s = edited(ex, 0, lambda e: e["counts"].pop(name, None))
+                self.fails(s, kernel, "fp:2:-2:1", "--exhaustive",
+                           reason='saw no case of "%s"' % name)
+
     # The kernels that gained the extended domain: non-finite operands.
     def test_existing_kinds_without_nonfinite_operands(self):
         for kernel, reason in (

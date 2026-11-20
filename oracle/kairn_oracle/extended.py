@@ -549,9 +549,31 @@ def k_represents(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     return []
 
 
+def radius_class(r, token):
+    """The class of a radius given to a constructor (MAKE_RADIUS_CLASSES); token is its text, for
+    the sign of a zero."""
+    if r == NAN:
+        return "NaN"
+    if r == NINF:
+        return "-inf"
+    if r == INF:
+        return "+inf"
+    if r == 0:
+        return "-0" if token.startswith("-") else "+0"
+    return "negative" if r < 0 else "positive"
+
+
+# The classes of the given radius and center of makes_ball from a center and a radius, counted as
+# "given radius R, center C" (the guards ask for each).
+MAKE_RADIUS_CLASSES = ("negative", "-inf", "NaN", "+inf", "+0", "-0", "positive")
+MAKE_CENTER_CLASSES = ("finite", "not finite")
+
+
 def k_makes_ball(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
-    """Empty when the given radius is a NaN or negative; otherwise the whole line when the given
-    center is not finite or the radius is +inf; otherwise the given center and radius."""
+    """Empty when the given radius is negative, -inf included, whatever the center; otherwise the
+    whole line when the radius is a NaN or +inf or the given center is not finite; otherwise the
+    given center and radius (a radius -0 is 0). A NaN radius gave the empty set until the
+    owner's decision of 2026-11-20 (architecture.md, makes_ball)."""
     it = ep.items[i]
     fmt = pl.fmt
     lo, hi = it["from_center"]
@@ -559,13 +581,18 @@ def k_makes_ball(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     (clo, chi), (ri, _) = c["ranges"]
     cw, rw = z[clo:chi], z[ri]
     es.applicable += 1
-    if r == NAN or r == NINF or (type(r) is int and r < 0):
+    finite_center = all(type(t) is int for t in cin)
+    if r == NINF or (type(r) is int and r < 0):
         want = "empty"
-    elif r == INF or not all(type(t) is int for t in cin):
+    elif r == NAN or r == INF or not finite_center:
         want = "whole"
     else:
         want = "finite"
     es.count("given: %s" % STATE_TEXT[want])
+    toks = [t for t in line.partition(" -> ")[0].split(" ")[2:] if not t.startswith("#")]
+    token = toks[it["from_radius"]] if it["from_radius"] < len(toks) else ""
+    es.count("given radius %s, center %s" % (radius_class(r, token),
+                                             MAKE_CENTER_CLASSES[0 if finite_center else 1]))
     so = ball_state(fmt, cw, rw)
     if so is None:
         es.count("failed: not canonical")

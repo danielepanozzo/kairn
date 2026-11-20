@@ -392,6 +392,10 @@ def _class_checks(s, fname):
         c = counts(s, k)
         for key in ("given: empty set", "given: whole line", "given: finite ball"):
             expect(c.get(key, 0) > 0, "%s %s: no %s" % (k, fname, key))
+        for r in XT.MAKE_RADIUS_CLASSES:
+            for ce in XT.MAKE_CENTER_CLASSES:
+                key = "given radius %s, center %s" % (r, ce)
+                expect(c.get(key, 0) > 0, "%s %s: no %s" % (k, fname, key))
     for k in ("make_2", "make_2_limbs"):
         c = counts(s, k)
         for key in ("value NaN", "value infinite", "value finite"):
@@ -583,11 +587,18 @@ INJECTED3 = (
                     "ball_scale_1_full"), ("B3",), ("B3",), NOT_BALL),
     ("ball2-no-H", ("ball_mul_1_full", "ball_mul_2_full", "ball_scale_1_full",
                     "ball_scale_2_full"), ("B3",), ("B3",), NOT_BALL),
-    ("make-negative-radius", ("ball_make_1", "ball_make_2"), (": not canonical",),
-     (": not canonical", ": whole line instead of empty set"),
+    # The constructors under the rule of 2026-11-20 (a NaN radius gives the whole line).
+    ("make-negative-radius", ("ball_make_1", "ball_make_2"),
+     (": not canonical", ": empty set instead of whole line"),
+     (": not canonical", ": whole line instead of empty set", ": empty set instead of whole line"),
      ("make_2", "make_2_limbs") + NOT_MAKE),
-    ("make-nan-radius", ("ball_make_1", "ball_make_2"), (": whole line instead of empty set",),
-     (": not canonical", ": whole line instead of empty set"),
+    ("make-nan-radius-empty", ("ball_make_1", "ball_make_2"),
+     (": empty set instead of whole line",), (": empty set instead of whole line",),
+     ("make_2", "make_2_limbs") + NOT_MAKE),
+    ("make-nan-radius-finite", ("ball_make_1", "ball_make_2"), (": not canonical",),
+     (": not canonical",), ("make_2", "make_2_limbs") + NOT_MAKE),
+    ("make-negative-nan-center-whole", ("ball_make_1", "ball_make_2"),
+     (": whole line instead of empty set",), (": whole line instead of empty set",),
      ("make_2", "make_2_limbs") + NOT_MAKE),
     ("make2-inf-nan-tail", ("make_2",), (": not canonical",), (": not canonical",),
      ("make_2_limbs", "ball_make_1", "ball_make_2") + NOT_MAKE),
@@ -947,11 +958,20 @@ HAND3 = [
     ("ball_make_2 binary64 0x1p+0 0x1p-60 0x1p-3 -> 0x1p+0 0x0p+0 0x1p-3", "failed"),
     ("ball_make_2 binary64 0x1p+0 0x1p-60 -0x1p-3 -> nan nan nan", "passed"),
     ("ball_make_2 binary64 0x1p+0 0x1p-60 -0x1p-3 -> 0x1p+0 0x1p-60 -0x1p-3", "failed"),
-    ("ball_make_2 binary64 0x1p+0 0x1p-60 nan -> 0x0p+0 0x0p+0 inf", "failed"),
+    # A NaN radius gives the whole line (the rule of 2026-11-20), with any center.
+    ("ball_make_2 binary64 0x1p+0 0x1p-60 nan -> 0x0p+0 0x0p+0 inf", "passed"),
+    ("ball_make_2 binary64 0x1p+0 0x1p-60 nan -> nan nan nan", "failed"),
+    ("ball_make_2 binary64 0x1p+0 0x1p-60 nan -> 0x1p+0 0x1p-60 nan", "failed"),
     ("ball_make_2 binary64 0x1p+0 0x1p-60 -inf -> nan nan nan", "passed"),
     ("ball_make_2 binary64 nan nan 0x1p+0 -> 0x0p+0 0x0p+0 inf", "passed"),
     ("ball_make_2 binary64 nan nan 0x1p+0 -> nan nan nan", "failed"),
-    ("ball_make_2 binary64 -inf 0x0p+0 nan -> nan nan nan", "passed"),
+    ("ball_make_2 binary64 -inf 0x0p+0 nan -> nan nan nan", "failed"),
+    ("ball_make_2 binary64 -inf 0x0p+0 nan -> 0x0p+0 0x0p+0 inf", "passed"),
+    ("ball_make_2 binary64 nan nan nan -> 0x0p+0 0x0p+0 inf", "passed"),
+    # A negative radius gives the empty set whatever the center.
+    ("ball_make_2 binary64 nan nan -0x1p+0 -> nan nan nan", "passed"),
+    ("ball_make_2 binary64 nan nan -0x1p+0 -> 0x0p+0 0x0p+0 inf", "failed"),
+    ("ball_make_1 binary64 inf -inf -> nan nan", "passed"),
     ("ball_make_2 binary64 0x1p+0 0x0p+0 inf -> 0x0p+0 0x0p+0 inf", "passed"),
     ("ball_make_2 binary64 0x1p+0 0x0p+0 -0x0p+0 -> 0x1p+0 0x0p+0 0x0p+0", "passed"),
     ("ball_make_2 binary64 0x1p+0 0x1p+0 0x1p+0 -> 0x1p+1 0x0p+0 0x1p+0", "invalid"),
@@ -1078,7 +1098,14 @@ def judge_wave3(ctx):
     c = counts(s, "ball_mul_1_full")
     expect(c == {"result: whole line": 2, "result: empty set": 2}, "ball_mul_1_full %s" % c)
     c = counts(s, "ball_make_2")
-    expect(c == {"given: finite ball": 2, "given: empty set": 3, "given: whole line": 2},
+    expect(c == {"given: finite ball": 2, "given: empty set": 3, "given: whole line": 5,
+                 "given radius positive, center finite": 1,
+                 "given radius negative, center finite": 1,
+                 "given radius NaN, center finite": 1, "given radius -inf, center finite": 1,
+                 "given radius +inf, center finite": 1, "given radius -0, center finite": 1,
+                 "given radius positive, center not finite": 1,
+                 "given radius NaN, center not finite": 2,
+                 "given radius negative, center not finite": 1},
            "ball_make_2 %s" % c)
     # A whole line from finite operands that is not small: its position is reported.
     s = judge(["ball_add_1_full binary64 %s 0x0p+0 %s 0x0p+0 -> 0x0p+0 inf" % (OM, OM)], cl)

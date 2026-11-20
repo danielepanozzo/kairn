@@ -107,7 +107,7 @@ and gets strata of its own, each coming round twice per cycle (`gen3.py`):
 | `ballstates` | `encloses` | each ball finite, the whole line or the empty set; scalars not finite a third of the time |
 | `zerowhole` | `encloses` | an exact zero ball (or a ball centered at zero) against the whole line; a zero ball against a scalar that is not finite; the whole line against a zero scalar |
 | `hugeradius` | `encloses` | finite balls with radii in the top binades |
-| `badradius` | `makes_ball` | radii negative, $-\infty$, NaN, $+\infty$, zero, $\eta$, huge or ordinary; centers not finite a quarter of the time |
+| `badradius` | `makes_ball` | each class of radius as often: negative, $-\infty$, NaN, $+\infty$, $+0$, $-0$, positive ($\eta$, huge or ordinary); centers not finite (an infinity or a NaN) half the time |
 
 The `threshold` stratum also aims at a condition $\lvert E \cdot c\rvert \le 2^{q_{\max}+p+e}$ with
 $c$ a power of two and $E$ any expression ($(\lvert c_x\rvert + r_x)\,c$ of the scaling of a ball):
@@ -301,9 +301,15 @@ is judged: nothing is "non-finite, not judged". Steps 1 and 2 are as above; then
       above); **B4** as F3, with a finite ball. The whole line contains everything.
     - `represents`: the output is canonical and is the value exactly ($\pm\infty$ as
       $(\pm\infty, 0)$, NaN as all NaN).
-    - `makes_ball`: empty when the given radius is NaN or negative ($-\infty$ included);
-      otherwise the whole line when the given center or radius is not finite; otherwise the
-      given center and radius.
+    - `makes_ball`: empty when the given radius is negative ($-\infty$ included), whatever the
+      center; otherwise the whole line when the given radius is a NaN or $+\infty$ or the given
+      center is not finite; otherwise the given center and radius (a radius $-0$ is $0$). A NaN
+      radius gave the empty set until the owner's decision of 2026-11-20, which made it the
+      whole line (architecture.md, `makes_ball`). Counted by the given state (`given: finite
+      ball`, `whole line`, `empty set`) and by the class of the given radius (negative,
+      `-inf`, `NaN`, `+inf`, `+0`, `-0`, positive, the sign of a zero read from the line's text)
+      with a finite center and with one that is not (`given radius NaN, center not finite`),
+      each of which the guards ask for (`-0` but in an enumeration, which has one zero).
     - `normalized`, `error`, `leading_rounded`: the output is canonical; the rest applies when
       every operand and the output are finite.
     - `predicate`: the relation in the extended reals, false when either side is a NaN.
@@ -1443,7 +1449,10 @@ The non-finite layer, each planted bug with the statement that must catch it (an
 | `ball-full-swap`: the empty set and the whole line swapped | full Ball kernels | B2 |
 | `ball-full-zero-inf-empty`: `q` from the computed radius, so $0 \cdot \infty$ gives the empty set | products and scalings of balls | B2 |
 | `ball-full-finite-whole`: a finite center kept with the radius $\Omega$ | full Ball kernels | B3 |
-| `make-negative-radius`, `make-nan-radius`: the radius tested for NaN only, or not at all | `ball_make_1`, `ball_make_2` | `makes_ball` |
+| `make-negative-radius`: the radius tested for NaN only, so a negative radius is kept (and a NaN radius gives the empty set) | `ball_make_1`, `ball_make_2` | `makes_ball`: `not canonical` (`whole line instead of empty set`, with a center not finite, and `empty set instead of whole line` allowed) |
+| `make-nan-radius-empty`: the rule before 2026-11-20, a NaN radius gives the empty set | `ball_make_1`, `ball_make_2` | `makes_ball`: `empty set instead of whole line` |
+| `make-nan-radius-finite`: the radius tested against $+\infty$ only, so a NaN radius beside a finite center gives that center and a NaN radius | `ball_make_1`, `ball_make_2` | `makes_ball`: `not canonical` |
+| `make-negative-nan-center-whole`: the center tested before the radius, so a negative radius with a center that is not finite gives the whole line | `ball_make_1`, `ball_make_2` | `makes_ball`: `whole line instead of empty set` |
 | `make2-inf-nan-tail`: `make_2` of an infinity with a NaN tail | `make_2` | `represents` |
 | `ball2-no-E`: the second design without $E$ | one-limb full Ball kernels; $G$ rounded up has room for the missing term at low precision (a 2-limb center at $p = 4$; `ball_mul_1` on every case of `fp:2:-2:1` and `fp:3:-3:0`), so the exhaustive test takes `ball_mul_1` at `fp:3:-4:1` | B3 |
 | `ball2-no-H`: the second design without $H$ | products and scalings of balls | B3 |
