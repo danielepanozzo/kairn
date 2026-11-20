@@ -1,0 +1,13 @@
+# Proposed (milestone2.md, "BallVector", "Values": the constructor): a center of two limbs given as an
+# Expansion<T, 2>, already canonical (finite and normalized, (+-inf, +-0) or two NaN), copied. The
+# step of bv_make_2 (bv_make_2.fold). A center given as two arrays of limbs of the program's, which
+# need not be normalized, is not covered: its step would be make_2_limbs, which has no real-model
+# statement, and a map's step needs one.
+kernel:        bv_center_2
+input:         x = x0 x1
+output:        z = z0 z1
+status:        unverified
+cone_exempt:   a copy of a canonical pair, whose second limb is finite when the first is
+
+z0 = copy(x0)
+z1 = copy(x1)

@@ -420,8 +420,9 @@ class CheckedFiles(unittest.TestCase):
     # add_2_2, mul_2_2 and dot_step_2, which they call, are printed earlier, before them.
     # Then the steps of the maps got their bridges (ieee: bridge, and spec for those of two limbs):
     # the programs of sixteen steps and of mul_1_1, and their statements, were added, every earlier
-    # line kept.
-    DIGESTS = {'proofs/gen/IeeeModel.v': 'aa65f060e8d3240f696744592e9aae121d0d6fe1aec41d8c698c75d3117fdd25',
+    # line kept. Then the radius kernels of BallVector (unverified): their definitions were added,
+    # every earlier line kept.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '0ab8f64e67f29149dbdf92a1bf754e617e3dc27825a891b88866c9ad5762c8b5',
                'proofs/gen/IeeeStatements.v': '8239608aca271a04a602527b71621f009f4c0ecfff4dc4857522c703440563e1'}
 
 

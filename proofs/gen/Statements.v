@@ -386,6 +386,60 @@ Definition bound_sum_2_spec : Prop :=
   (ok = true -> (m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)) <= (1 / 2)) /\
   (ok = true -> ((m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)) / (1 - (m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)))) <= g).
 
+(* bv_add_radius_1: the radius lines of ball_add_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_add_radius_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall m rx ry : R,
+  fmt emin prec m ->
+  fmt emin prec rx ->
+  fmt emin prec ry ->
+  0 <= m ->
+  0 <= rx ->
+  0 <= ry ->
+  let rz := bv_add_radius_1 emin prec tie_even m rx ry in
+  fmt emin prec rz /\
+  ((rx + ry) + ((m * ((1 / (1 + u prec)) * u prec ^ 1)) / (1 - ((1 / (1 + u prec)) * u prec ^ 1)))) <= rz.
+
+(* bv_add_radius_2: the radius lines of ball_add_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_add_radius_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall m rx ry : R,
+  fmt emin prec m ->
+  fmt emin prec rx ->
+  fmt emin prec ry ->
+  0 <= m ->
+  0 <= rx ->
+  0 <= ry ->
+  let rz := bv_add_radius_2 emin prec tie_even m rx ry in
+  fmt emin prec rz /\
+  ((rx + ry) + (((m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)) / (1 - ((3 / (1 - (4 * u prec))) * u prec ^ 2))) * (1 + u prec))) <= rz.
+
+(* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_scale_radius_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall m rx a : R,
+  fmt emin prec m ->
+  fmt emin prec rx ->
+  fmt emin prec a ->
+  0 <= m ->
+  0 <= rx ->
+  let rz := bv_scale_radius_1 emin prec tie_even m rx a in
+  fmt emin prec rz /\
+  ((((Rabs a) * rx) + ((m * ((1 / (1 + u prec)) * u prec ^ 1)) / (1 - ((1 / (1 + u prec)) * u prec ^ 1)))) + (((1 / 2) * eta emin) / (1 - ((1 / (1 + u prec)) * u prec ^ 1)))) <= rz.
+
+(* bv_scale_radius_2: the radius lines of ball_scale_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_scale_radius_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall m rx a : R,
+  fmt emin prec m ->
+  fmt emin prec rx ->
+  fmt emin prec a ->
+  0 <= m ->
+  0 <= rx ->
+  let rz := bv_scale_radius_2 emin prec tie_even m rx a in
+  fmt emin prec rz /\
+  ((((Rabs a) * rx) + (((m * (2 * u prec ^ 2)) / (1 - (2 * u prec ^ 2))) * (1 + u prec))) + ((1 * eta emin) / (1 - (2 * u prec ^ 2)))) <= rz.
+
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). Status: proved. *)
 Definition dot_step_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->

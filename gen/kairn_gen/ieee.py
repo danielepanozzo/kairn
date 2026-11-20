@@ -1509,7 +1509,8 @@ def _folds_in_order(kernels):
     folds = list(getattr(kernels, 'folds', {}).values())
     maps = [fd for fd in folds if getattr(fd, 'is_map', False)]
     convs = [fd for fd in folds if getattr(fd, 'is_conv', False)]
-    return [fd for fd in folds if fd not in maps and fd not in convs] + maps + convs
+    bvs = [fd for fd in folds if getattr(fd, 'is_bv', False)]
+    return [fd for fd in folds if fd not in maps + convs + bvs] + maps + convs + bvs
 
 
 def fold_model(kernels):
@@ -1519,8 +1520,10 @@ def fold_model(kernels):
     from the zero state, every limb +0; F_lanes W the finish on fold_lanes W. Then the maps and the
     convolutions (map_model, conv_model)."""
     every = _folds_in_order(kernels)
-    folds = [fd for fd in every if not getattr(fd, 'is_map', False) and not getattr(fd, 'is_conv', False)]
-    writers = [fd for fd in every if fd not in folds]
+    folds = [fd for fd in every if not getattr(fd, 'is_map', False) and not getattr(fd, 'is_conv', False)
+             and not getattr(fd, 'is_bv', False)]
+    writers = [fd for fd in every if fd not in folds and not getattr(fd, 'is_bv', False)]
+    bvs = [fd for fd in every if getattr(fd, 'is_bv', False)]
     lines = [HEADER, '',
              '(* The folds in the IEEE model (docs/developer/architecture.md, "Folds"), in the shape of their',
              '   real model (FoldModel.v): the state is a tuple of limbs and an element one entry of every array,',
@@ -1549,6 +1552,8 @@ def fold_model(kernels):
         ('nan_fma', 'float -> float -> float -> nan_of'), ('nan_mult', 'float -> float -> nan_of'),
         ('nan_const', 'nan_of'))]
     lines += ['', 'Local Notation pzero := (IeeeOperations.pzero prec emax).']
+    if bvs:
+        lines.append('Local Notation pinf := (IeeeOperations.pinf prec emax).')
     for fd in folds:
         step, combine, finish = _fold_parts(fd, kernels)
         st, el, xs = rocq._fold_binders(fd)
@@ -1594,6 +1599,16 @@ def fold_model(kernels):
                   '   return the list written and the mask. *)']
     for fd in writers:
         lines += map_model(fd, kernels) if getattr(fd, 'is_map', False) else conv_model(fd, kernels)
+    if bvs:
+        lines += ['', '(* The ball vectors (architecture.md, "Ball vectors"): F_step and F_map are a map\'s, the centers',
+                  '   written; F_record, the step of a fold of maxima, updates the state, the largest magnitude of a',
+                  '   leading limb written and the mask that none was a NaN, from each center written, and F_combine',
+                  '   combines two; F_seq and F_lanes W fold it over the centers written (fold_seq, fold_lanes), give',
+                  '   the radius by the radius kernel on the state\'s limb and the scalars, and test it with the',
+                  '   finish under the state\'s mask; when the finish\'s flag is false, every center written is zero',
+                  '   and the radius +infinity (the whole space). They return the centers, the radius and the flag. *)']
+    for fd in bvs:
+        lines += bv_model(fd, kernels)
     lines += ['', 'End IeeeFolds.']
     return '\n'.join(lines) + '\n'
 
@@ -1893,6 +1908,169 @@ def conv_statement(fd, kernels):
     return lines
 
 
+def bv_model(fd, kernels):
+    """A ball vector in the IEEE model: F_step, F_map, F_record, F_combine, and F_seq, F_lanes W,
+    which return the centers written, the radius and the flag (the code of cpp.bv_seq, cpp.bv_lanes)."""
+    step, record, combine, radius, finish = (kernels[c[0]] for c in (fd.step, fd.record, fd.combine, fd.radius,
+                                                                       fd.finish))
+    _, el, xs = rocq._fold_binders(fd)
+    etype = _fold_element_ftype(fd)
+    lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+    groups = rocq.fold_groups(fd, el)
+    sizes = {g.name: len(g.limbs) for g in fd.arrays + fd.scalars}
+    groups.update({g.name: g.name for g in fd.scalars})
+    args = [p for a in fd.step[1] for p in rocq.tuple_parts(groups[a], sizes[a])]
+    used = [g.name for g in fd.scalars if g.name in fd.step[1]]
+    params = rocq.bv_scalar_params(fd, set(used), 'float')
+    allp = rocq.bv_scalar_params(fd, {g.name for g in fd.scalars}, 'float')
+    n = len(fd.writes[0].limbs)
+    wtype = _ftype(n)
+    lw = f'list ({wtype})' if ' ' in wtype else f'list {wtype}'
+    stype = rocq.state_type(fd, 'float')
+    mok = ''.join(fd.state_names())
+    zero = rocq.state_zero(fd, 'pzero', 'true')
+    stepped = f'({fd.name}_step{"".join(" " + s for s in used)})' if used else f'{fd.name}_step'
+    zeros = '(' + ', '.join(['pzero'] * n) + ')' if n > 1 else 'pzero'
+    lines = ['', f'(* {fd.name}: a ball vector; step {step.name}, record {record.name}, combination {combine.name}, '
+                 f'radius {radius.name}, finish {finish.name}. *)',
+             f'Definition {fd.name}_step{params} ({el} : {etype}) : {wtype} :=',
+             f'  {_kernel_call(step, kernels, args)}.',
+             '',
+             f'Definition {fd.name}_map{params} ({xs} : {lt}) : {lw} :=',
+             f'  map {stepped} {xs}.',
+             '',
+             f'Definition {fd.name}_record ({mok} : {stype}) (w_ : {wtype}) : {stype} :=',
+             f'  {_kernel_call(record, kernels, rocq.tuple_parts(mok, 2) + rocq.tuple_parts("w_", n))}.',
+             '',
+             f'Definition {fd.name}_combine (a b : {stype}) : {stype} :=',
+             f'  {_kernel_call(combine, kernels, rocq.tuple_parts("a", 2) + rocq.tuple_parts("b", 2))}.']
+    rad = _kernel_call(radius, kernels, ['fst s_'] + list(fd.radius[1][1:]))
+    fin = _kernel_call(finish, kernels, ['rz_', 'snd s_'])
+    for order in ('sequential', 'lanes'):
+        if order not in fd.orders:
+            continue
+        head = f'Definition {fd.name}_seq{allp} ({xs} : {lt})' if order == 'sequential' else \
+            f'Definition {fd.name}_lanes (W : nat){allp} ({xs} : {lt})'
+        state = (f'fold_seq {fd.name}_record {zero} ws_' if order == 'sequential' else
+                 f'fold_lanes {fd.name}_record {fd.name}_combine {zero} W ws_')
+        lines += ['', f'{head} : {lw} * float * bool :=',
+                  f'  let ws_ := map {stepped} {xs} in',
+                  f'  let s_ := {state} in',
+                  f'  let rz_ := {rad} in',
+                  f'  let f_ := {fin} in',
+                  f'  (if snd f_ then (ws_, fst f_) else (map (fun _ => {zeros}) ws_, pinf), snd f_).']
+    return lines
+
+
+def _bv_vector(name, limbs, radius, xs, el, part):
+    """That the centers `part` of the elements and the radius are a canonical BallVector: every center
+    a finite ball with the radius, or every center zero with the radius +infinity."""
+    n = len(limbs)
+    cs = ' '.join(rocq._paren(x) for x in rocq.tuple_parts(part, n))
+    k = n
+    return (f'(finite {radius} /\\ 0 <= val {radius} /\\ Forall (fun {el} => ball_finite_{k} {cs} {radius}) {xs}) \\/\n'
+            f'  ({radius} = infinity prec emax false /\\ Forall (fun {el} => ball_whole_{k} {cs} {radius}) {xs})')
+
+
+def bv_statement(fd, kernels, order):
+    """F_seq_ieee_spec or F_lanes_ieee_spec of a ball vector (the second for every W): V1 to V4 of
+    milestone2.md, "BallVector", and the flag, for canonical BallVectors and any value of a scalar that
+    is not a radius."""
+    step, radius = kernels[fd.step[0]], kernels[fd.radius[0]]
+    parts = [step, kernels[fd.record[0]], radius, kernels[fd.finish[0]]] + \
+        ([kernels[fd.combine[0]]] if order == 'lanes' else [])
+    used = set()
+    for k in parts:
+        used.update(_used_nans(k, kernels))
+    nans = [x for x, _ in NANS if x in used]
+    _, el, xs = rocq._fold_binders(fd)
+    suffix = ir.ORDER_SUFFIX[order]
+    etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
+    lt = f'list ({etype})'
+    vectors = {r[1]: r[2] for r in fd.requires if r[0] == 'ball_vector'}
+    groups = rocq.fold_groups(fd, el)
+    scalar_limbs = [v for g in fd.scalars for v in g.limbs]
+    binders = (f'forall (W : nat) ({" ".join(scalar_limbs)} : binary_float prec emax) ({xs} : {lt}),'
+               if order == 'lanes' else f'forall ({" ".join(scalar_limbs)} : binary_float prec emax) ({xs} : {lt}),')
+    hyps = [_bv_vector(g.name, g.limbs, vectors[g.name], xs, el, groups[g.name]) for g in fd.arrays]
+    w = list(fd.writes[0].limbs)
+    pattern = rocq._pattern([rocq._pattern(list(g.limbs)) for g in fd.arrays])
+    wp = rocq._pattern(w)
+    entry = fd.ensures[0]
+    members = [rocq.bv_member(b) for b in entry['balls']]
+    arrays = {g.name: g for g in fd.arrays}
+    scalars = {g.name: g for g in fd.scalars}
+    k = len(w)
+    inb = [f'in_ball_{len(arrays[v["center"]].limbs)} {" ".join(arrays[v["center"]].limbs)} {v["radius"]} '
+           f'{rocq.bv_member(b)}' for b, v in entry['balls'].items()]
+
+    def name(nm):
+        if nm in entry['balls']:
+            return rocq.bv_member(nm)
+        return _val_sum(scalars[nm].limbs)
+    setv = rocq._term(expr.parse(entry['set']), name)
+
+    def vname(nm):
+        g = arrays.get(nm) or scalars[nm]
+        return _val_sum(g.limbs)
+    conds = []
+    for c in entry['finite_when']:
+        tree = expr.parse(c['abs_le'])
+        term = rocq._term(tree, vname)
+        e = c['exp']
+        bound = 'emax' if e == 0 else f'(emax {"-" if e < 0 else "+"} {abs(e)})'
+        conds.append(f'Rabs {_paren(term)} <= bpow radix2 {bound}')
+    section = [{'emin': EMIN, 'prec': 'prec', 'choice': 'tie_even'}[v] for v in rocq.section_args(step, kernels)]
+    real_step = ' '.join([step.name] + section +
+                         [f'(val {v})' for a in fd.step[1] for v in (arrays.get(a) or scalars[a]).limbs])
+    rsection = [{'emin': EMIN, 'prec': 'prec', 'choice': 'tie_even'}[v]
+                for v in rocq.fold_section_args([step, radius, kernels[fd.record[0]]], kernels)]
+    values = []
+    for g in fd.arrays:
+        ps = [f'val {rocq._paren(x)}' for x in rocq.tuple_parts(groups[g.name], len(g.limbs))]
+        values.append(ps[0] if len(ps) == 1 else '(' + ', '.join(ps) + ')')
+    value = values[0] if len(values) == 1 else '(' + ', '.join(values) + ')'
+    real_r = ' '.join([f'FoldModel.{fd.name}_radius'] + rsection + [f'(val {v})' for v in scalar_limbs] +
+                      [f'(map (fun {el} => {value}) {xs})'])
+    vals = f'val {w[0]}' if k == 1 else '(' + ', '.join(f'val {v}' for v in w) + ')'
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_{suffix}', 'prec', 'emax'] + nans + (['W'] if order == 'lanes' else []) +
+                    scalar_limbs + [xs])
+    what = {'sequential': 'the sequential order', 'lanes': 'the lane order, for every number of lanes W'}[order]
+    wcs = ' '.join(rocq._paren(x) for x in rocq.tuple_parts('w_', k))
+    lines = [f'(* {fd.name}, {what}, in the IEEE model: V1 to V4 and the flag. Status: '
+             f'{"proved" if fd.ieee_theorem else "unverified"}. *)',
+             f'Definition {fd.name}_{suffix}_ieee_spec : Prop :=',
+             '  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
+             '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
+             (f'\n         {_binders(nans)},' if nans else ','),
+             f'  ({fd.min_precision} <= prec)%Z ->',
+             f'  {binders}']
+    lines += [f'  ({h}) ->' for h in hyps]
+    lines += [f"  let '(ws_, r_, flag_) := {call} in",
+              f'  ((finite r_ /\\ 0 <= val r_ /\\ Forall (fun w_ => ball_finite_{k} {wcs} r_) ws_) \\/',
+              f'   (r_ = infinity prec emax false /\\ Forall (fun w_ => ball_whole_{k} {wcs} r_) ws_)) /\\',
+              '  (flag_ = true <-> finite r_) /\\',
+              f'  Forall2 (fun {el} w_ =>']
+    lines += [f'    {rocq._let(pattern, el)}'] if pattern != el else []
+    lines += [f'    {rocq._let(wp, "w_")}',
+              f'    forall {" ".join(members)} : R, ' + ' -> '.join(inb) + f' -> in_ball_{k} {" ".join(w)} r_ {setv})',
+              f'    {xs} ws_ /\\',
+              '  (finite r_ ->',
+              '   ' + ' /\\ '.join(f'finite {v}' for v in scalar_limbs) + ' /\\',
+              f'   Forall2 (fun {el} w_ =>']
+    lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
+    lines += [f'     {rocq._let(wp, "w_")}',
+              f'     {vals} = {real_step}) {xs} ws_ /\\',
+              f'   val r_ = {real_r}) /\\',
+              '  (' + ' -> '.join(f'finite {v}' for v in scalar_limbs) + f' -> {xs} <> nil ->']
+    if conds:
+        lines += [f'   Forall (fun {el} =>']
+        lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
+        lines += ['     ' + ' /\\ '.join(conds) + f') {xs} ->']
+    lines += ['   finite r_).']
+    return lines
+
+
 # The kernels that are the steps or the combinations of the folds: each has a statement that its
 # result's leading limb is finite only if that of each of its operands is (lead_statement). Not
 # those of a fold of maxima, whose maximum keeps a finite state when the element is a NaN (the
@@ -1905,7 +2083,7 @@ def lead_kernels(kernels):
         names.add(fd.step[0])
         # A map's combination is the operation and, not a kernel; its step's operands are the
         # scalars and the element, and the statement is about every one of them.
-        if fd.combine and not getattr(fd, 'is_map', False):
+        if fd.combine and not getattr(fd, 'is_map', False) and not getattr(fd, 'is_bv', False):
             names.add(fd.combine[0])
     return [k for k in in_model(kernels).values() if k.name in names]
 
@@ -1944,6 +2122,11 @@ def fold_statements(kernels):
     for fd in _folds_in_order(kernels):
         if getattr(fd, 'is_conv', False):
             lines += [''] + conv_statement(fd, kernels)
+            continue
+        if getattr(fd, 'is_bv', False):
+            for order in ir.ORDERS:
+                if order in fd.orders:
+                    lines += [''] + bv_statement(fd, kernels, order)
             continue
         for order in ir.ORDERS:
             if order in fd.orders:

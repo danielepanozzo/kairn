@@ -38,6 +38,10 @@ KAIRN_RUNNER_KERNEL(bound_dot_1, "l", "llm", kairn::gen::bound_dot_1(in[0], out[
 KAIRN_RUNNER_KERNEL(bound_dot_2, "l", "llm", kairn::gen::bound_dot_2(in[0], out[0], out[1], mo[2]))
 KAIRN_RUNNER_KERNEL(bound_sum_1, "l", "lm", kairn::gen::bound_sum_1(in[0], out[0], mo[1]))
 KAIRN_RUNNER_KERNEL(bound_sum_2, "l", "lm", kairn::gen::bound_sum_2(in[0], out[0], mo[1]))
+KAIRN_RUNNER_KERNEL(bv_add_radius_1, "lll", "l", kairn::gen::bv_add_radius_1(in[0], in[1], in[2], out[0]))
+KAIRN_RUNNER_KERNEL(bv_add_radius_2, "lll", "l", kairn::gen::bv_add_radius_2(in[0], in[1], in[2], out[0]))
+KAIRN_RUNNER_KERNEL(bv_scale_radius_1, "lll", "l", kairn::gen::bv_scale_radius_1(in[0], in[1], in[2], out[0]))
+KAIRN_RUNNER_KERNEL(bv_scale_radius_2, "lll", "l", kairn::gen::bv_scale_radius_2(in[0], in[1], in[2], out[0]))
 KAIRN_RUNNER_KERNEL(dot_step_1, "lll", "l", kairn::gen::dot_step_1(in[0], in[1], in[2], out[0]))
 KAIRN_RUNNER_KERNEL(fast_two_sum_entry, "ll", "ll", kairn::gen::fast_two_sum_entry(in[0], in[1], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(fold_finish_1, "l", "lm", kairn::gen::fold_finish_1(in[0], out[0], mo[1]))
@@ -195,6 +199,16 @@ KAIRN_RUNNER_MAP(sub_1, "11", 0, 1, kairn::gen::sub_1_seq(in[0], in[1], n, w[0],
 KAIRN_RUNNER_MAP(sub_1_entry, "11", 0, 1, kairn::gen::sub_1_entry_seq(in[0], in[1], n, w[0], mo[0]), kairn::gen::sub_1_entry_lanes(in[0], in[1], n, lanes, w[0], mo[0]), kairn::gen::sub_1_entry_packed(in[0], in[1], n, w[0], mo[0]))
 KAIRN_RUNNER_MAP(sub_2, "22", 0, 2, kairn::gen::sub_2_seq(in[0], in[1], in[2], in[3], n, w[0], w[1], mo[0]), kairn::gen::sub_2_lanes(in[0], in[1], in[2], in[3], n, lanes, w[0], w[1], mo[0]), kairn::gen::sub_2_packed(in[0], in[1], in[2], in[3], n, w[0], w[1], mo[0]))
 KAIRN_RUNNER_MAP(sub_2_entry, "22", 0, 2, kairn::gen::sub_2_entry_seq(in[0], in[1], in[2], in[3], n, w[0], w[1], mo[0]), kairn::gen::sub_2_entry_lanes(in[0], in[1], in[2], in[3], n, lanes, w[0], w[1], mo[0]), kairn::gen::sub_2_entry_packed(in[0], in[1], in[2], in[3], n, w[0], w[1], mo[0]))
+#endif
+// The ball vectors, for a runner that defines KAIRN_RUNNER_BV: as a map, and the radius out[0]
+// (T&) before the flag mo[0].
+#if defined(KAIRN_RUNNER_BV)
+KAIRN_RUNNER_BV(bv_add_1, "11", 2, 1, kairn::gen::bv_add_1_seq(in[0], in[1], n, sc[0], sc[1], w[0], out[0], mo[0]), kairn::gen::bv_add_1_lanes(in[0], in[1], n, lanes, sc[0], sc[1], w[0], out[0], mo[0]), kairn::gen::bv_add_1_packed(in[0], in[1], n, sc[0], sc[1], w[0], out[0], mo[0]))
+KAIRN_RUNNER_BV(bv_add_2, "22", 2, 2, kairn::gen::bv_add_2_seq(in[0], in[1], in[2], in[3], n, sc[0], sc[1], w[0], w[1], out[0], mo[0]), kairn::gen::bv_add_2_lanes(in[0], in[1], in[2], in[3], n, lanes, sc[0], sc[1], w[0], w[1], out[0], mo[0]), kairn::gen::bv_add_2_packed(in[0], in[1], in[2], in[3], n, sc[0], sc[1], w[0], w[1], out[0], mo[0]))
+KAIRN_RUNNER_BV(bv_scale_1, "1", 2, 1, kairn::gen::bv_scale_1_seq(in[0], n, sc[0], sc[1], w[0], out[0], mo[0]), kairn::gen::bv_scale_1_lanes(in[0], n, lanes, sc[0], sc[1], w[0], out[0], mo[0]), kairn::gen::bv_scale_1_packed(in[0], n, sc[0], sc[1], w[0], out[0], mo[0]))
+KAIRN_RUNNER_BV(bv_scale_2, "2", 2, 2, kairn::gen::bv_scale_2_seq(in[0], in[1], n, sc[0], sc[1], w[0], w[1], out[0], mo[0]), kairn::gen::bv_scale_2_lanes(in[0], in[1], n, lanes, sc[0], sc[1], w[0], w[1], out[0], mo[0]), kairn::gen::bv_scale_2_packed(in[0], in[1], n, sc[0], sc[1], w[0], w[1], out[0], mo[0]))
+KAIRN_RUNNER_BV(bv_sub_1, "11", 2, 1, kairn::gen::bv_sub_1_seq(in[0], in[1], n, sc[0], sc[1], w[0], out[0], mo[0]), kairn::gen::bv_sub_1_lanes(in[0], in[1], n, lanes, sc[0], sc[1], w[0], out[0], mo[0]), kairn::gen::bv_sub_1_packed(in[0], in[1], n, sc[0], sc[1], w[0], out[0], mo[0]))
+KAIRN_RUNNER_BV(bv_sub_2, "22", 2, 2, kairn::gen::bv_sub_2_seq(in[0], in[1], in[2], in[3], n, sc[0], sc[1], w[0], w[1], out[0], mo[0]), kairn::gen::bv_sub_2_lanes(in[0], in[1], in[2], in[3], n, lanes, sc[0], sc[1], w[0], w[1], out[0], mo[0]), kairn::gen::bv_sub_2_packed(in[0], in[1], in[2], in[3], n, sc[0], sc[1], w[0], w[1], out[0], mo[0]))
 #endif
 // The convolutions, for a runner that defines KAIRN_RUNNER_CONV: name, the limbs of each array
 // read, the number of limb arrays written, the call of the sequential order. in[i] is limb array

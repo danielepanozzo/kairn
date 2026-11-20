@@ -207,6 +207,8 @@ class Cpp(unittest.TestCase):
     # The accumulator: the fma of the step of dot_1 and of the magnitudes (acc_mul_1), dot_step_2
     # (acc_mul_2), and the fma of the radius (acc_radius_k).
     NOT_CONSTEXPR |= {'acc_mul_1', 'acc_mul_2', 'acc_radius_1', 'acc_radius_2'}
+    # BallVector: the fmas of the radius kernels (bv_add_radius_k, bv_scale_radius_k).
+    NOT_CONSTEXPR |= {'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2'}
     # The full kernels are constexpr where their cores are: their fix-up turns t into an infinity
     # with times_inf, which is no fused operation. Those of the products of two limbs are not, nor
     # are the full Ball kernels but the scalings by a power of two. The constructors are.
@@ -744,9 +746,10 @@ class Rocq(unittest.TestCase):
         # the intervals: d and v of mul_dir_1, d of add_ball_2_2 and of mul_ball_2_2 (the bounds of two
         # limbs are normalized), 4 limbs in 3 kernels. With the accumulator: t and b of acc_add_1,
         # acc_mul_1 and acc_merge_1, b of acc_add_2, acc_mul_2 and acc_merge_2, and r of acc_radius_1
-        # and acc_radius_2 (claimed under the mask), 11 limbs in 8 kernels.
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8)
+        # and acc_radius_2 (claimed under the mask), 11 limbs in 8 kernels. With BallVector: rz of the
+        # four radius kernels, 4 limbs in 4 kernels.
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4)
         s = self.statements
         # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
         # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
@@ -883,8 +886,11 @@ class Rocq(unittest.TestCase):
     # the same, byte for byte, add_2_2, mul_2_2 and dot_step_2, which they call, printed earlier,
     # before them; their constants new (gen/constant_names.json); Audit.v lists the same theorems,
     # add_2_2_correct and mul_2_2_correct earlier.
-    DIGESTS = {'Model.v': '4f8a16ca6742b2de51d29646886b36c883514da40a53752f7810d2202c096b80',
-               'Statements.v': 'b8c718e13f7c2e42ae0fe995ab9b9898317e50bc440d18797c126d0107bf413d',
+    # Then the four radius kernels of BallVector (unverified): their definitions and statements were
+    # added, every earlier line kept; their constants are those of ball_add_k and ball_scale_k, under
+    # the names they had; Audit.v is the same.
+    DIGESTS = {'Model.v': '852cded22919dbde42ddc40eec7f67444a76a7e6bb03018ec69df53022dd5c6e',
+               'Statements.v': '2e6c937393724e3e43ff1c96353d29649bdbf7d01685f468be31c7d7e84905b5',
                'Audit.v': '3e9f61c2f0dd8093ddf5bf2cec8e3a9f7a36a12b8a126b372af5ebb2a55f47ce'}
 
 
@@ -919,8 +925,9 @@ class Rocq(unittest.TestCase):
             finite[name] = k
         # 60; the nine of the folds' stage, the fifteen steps of the maps, the three of norm_upper_k;
         # and the eight of Milestone 2's interval work with a real-model statement: mul_dir_1 and the
-        # seven bounds of two limbs; and the eight kernels of the accumulator.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8)
+        # seven bounds of two limbs; and the eight kernels of the accumulator; and the four radius
+        # kernels of BallVector.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

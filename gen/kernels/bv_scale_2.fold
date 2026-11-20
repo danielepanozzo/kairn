@@ -1,0 +1,27 @@
+# A BallVector with 2-limb centers times a number a of T (milestone2.md, "BallVector": bv_scale_k):
+# the centers by mul_2_1, entry by entry, as the map scale_2; the state that of norm_upper_2 on the
+# centers written; the one radius bv_scale_radius_2 at the largest magnitude, the largest of the
+# radii of ball_scale_2 entry by entry; norm_finish_1 tests that it is finite. When it is not (the
+# operand is the whole space, a is not finite, or something overflowed), every center written is
+# zero and the radius +infinity: the whole space.
+fold:          bv_scale_2
+arrays:        stored x = x0 x1
+scalars:       stored rx, supplied a
+state:         m, mask ok
+step:          z = scale_step_2(x, a)
+record:        (m, ok) = norm_step_2(m, ok, z)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+radius:        rz = bv_scale_radius_2(m, rx, a)
+finish:        (r, finite) = norm_finish_1(rz, ok)
+orders:        sequential, lanes
+writes:        z = z0 z1
+output:        r
+output:        mask finite
+value:         x*a
+requires:      ball_vector x rx
+ensures:       encloses_entries z r x*a x=x,rx flag=finite finite_when=abs_le((abs(x)+rx)*a,-2)
+min_precision: 2
+status:        unverified
+domain:        extended
+source:        mul_2_1 on the centers, the radius of ball_scale_2 at the largest center (milestone2.md, BallVector)
+license:       algorithm and proof: MIT

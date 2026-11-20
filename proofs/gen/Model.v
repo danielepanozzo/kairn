@@ -383,6 +383,36 @@ Definition bound_sum_2 (m : R) : R * bool :=
   let ok := Rle_bool a up_bound_dot_1_5 in
   (g, ok).
 
+(* bv_add_radius_1: the radius lines of ball_add_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
+Definition bv_add_radius_1 (m rx ry : R) : R :=
+  let s := rnd (rx + ry) in
+  let t := rnd (m * up_ball_add_1_0 + s) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
+  rz.
+
+(* bv_add_radius_2: the radius lines of ball_add_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
+Definition bv_add_radius_2 (m rx ry : R) : R :=
+  let s := rnd (rx + ry) in
+  let t := rnd (m * up_ball_add_2_0 + s) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
+  rz.
+
+(* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
+Definition bv_scale_radius_1 (m rx a : R) : R :=
+  let aa := Rabs a in
+  let p := rnd (aa * rx + 0) in
+  let t := rnd (m * up_ball_mul_1_0 + p) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_scale_1_2) in
+  rz.
+
+(* bv_scale_radius_2: the radius lines of ball_scale_2 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
+Definition bv_scale_radius_2 (m rx a : R) : R :=
+  let aa := Rabs a in
+  let p := rnd (aa * rx + 0) in
+  let t := rnd (m * up_ball_scale_2_0 + p) in
+  let rz := rnd (t * up_ball_add_1_1 + up_ball_scale_2_2) in
+  rz.
+
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). *)
 Definition dot_step_1 (s x y : R) : R :=
   let t := rnd (x * y + s) in

@@ -259,6 +259,20 @@ the interpreter runs it (`Machine.run_fold`) and completes its requests, which h
 (`interp.complete_conv`), and so does the compiled runner (`KAIRN_RUNNER_CONV` of
 `runner_kernels.inc`).
 
+A ball vector (architecture.md, "Ball vectors") is a map of the centers of BallVectors with the state
+of a fold of maxima: `record: (m, ok) = norm_step_k(m, ok, z)` updates the state from each center
+written, `combine:` is that fold's combination, `radius: rz = bv_add_radius_k(m, rx, ry)` gives the
+one radius from the largest magnitude and the scalars, and `finish: (r, finite) = norm_finish_1(rz,
+ok)` tests it; when the flag is false a second pass writes every center zero and the radius is
++infinity, the whole space. Each array is required `ball_vector ARRAY RADIUS`, and the fold claims
+`encloses_entries z r SET NAME=ARRAY,RADIUS... flag=F [finite_when=...]`. `rules.bv_rules` checks
+it; `cpp.bv_seq`, `cpp.bv_lanes` and `simd.bv_packed` print it; `rocq.bv_model` and
+`rocq.bv_statement` give it a model (the centers and the radius) and a statement (containment entry
+by entry); `ieee.bv_model` and `ieee.bv_statement` its IEEE model and V1 to V4 of milestone2.md;
+`claims.bv_claims`, its entry of `"folds"`, with `"bv": true`; the interpreter runs it
+(`Machine.run_fold`), and the runners complete its requests (`KAIRN_RUNNER_BV` of
+`runner_kernels.inc`), the centers written, then the radius and the flag.
+
 ## The operations
 
 | IR | Interpreter | Rocq (`rnd` rounds to nearest) | C++ | AVX2 (`pd`; `ps` for float) | NEON (`f64`; `f32`) |
@@ -546,6 +560,12 @@ statement uses too is `Model.v`'s, under one name: the doubling of `ball_from_in
   where overflows are frequent, and in `binary64` and `binary32`, with infinities, NaN and numbers
   near the top among the scalars and elements, in every order; the lead statements of the steps of
   the maps on operands of any value; and the same statements against every build of the runner;
+- the ball vectors (`test_bv.py`): the rules of a ball vector; V1 to V4 of milestone2.md and the
+  flag in exact arithmetic on the interpreter, on formats of the IEEE shape of a few bits and in
+  `binary64` and `binary32`, the whole space among the operands, in every order; the one radius
+  equal to the largest of the entrywise radii of the Ball kernel; the compiled `F_seq`, `F_lanes`
+  and `F_packed` bit for bit against the interpreter; the line protocol; the printers and the claims,
+  and the entries that architecture.md writes out;
 - the convolutions (`test_conv.py`): the rules of a convolution; the interpreter, each coefficient
   the fold of its coefficients on its terms, their number, the canonical NaN of the coefficients a
   non-finite term reaches; the claims in exact arithmetic on toy formats, each coefficient within

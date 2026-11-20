@@ -502,6 +502,9 @@ set(_toy_ext_a2 fp:5:-7:0)
 #   an encloses without a ball, nor a makes_ball from the bounds of an interval, yet;
 # - the kernels of the accumulator (architecture.md, "The accumulator"): the oracle reads neither a
 #   rounded entry with a value of its own (value=) yet, and acc_radius_k is on the list with them.
+# - the ball vectors (architecture.md, "Ball vectors") and their radius kernels: the oracle reads
+#   neither the folds with "bv": true (their requests, the requirement ball_vector, the claim
+#   encloses_entries) nor abs( ) in the value of an upper entry yet.
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
@@ -515,12 +518,14 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   ball_upper_as_1 ball_lower_as_2 ball_upper_as_2 ball_from_interval_2 ball_narrow_2_1 interval_neg_2 interval_sub_2
   interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
   interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1
-  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2)
+  acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
+  bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
   add_1 add_1_entry add_2 add_2_entry sub_1 sub_1_entry sub_2 sub_2_entry axpy_1 axpy_1_entry axpy_2 axpy_2_entry
   axpy_2_1 axpy_2_1_entry scale_1 scale_2 mul_pow2_map_1 mul_pow2_map_2
   norm_upper_1 norm_upper_2
-  conv_1 conv_2)
+  conv_1 conv_2
+  bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
 # whose public functions (sum, dot, the bounds as functions of n) come with BallVector. They are

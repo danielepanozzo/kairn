@@ -384,6 +384,26 @@ template <> struct bound_sum_2<float> {
     static constexpr bool proved = true;
 };
 
+// bv_add_radius_1: UNVERIFIED. Claims: upper.
+template <class T> struct bv_add_radius_1;
+template <> struct bv_add_radius_1<double> { static constexpr bool proved = false; };
+template <> struct bv_add_radius_1<float> { static constexpr bool proved = false; };
+
+// bv_add_radius_2: UNVERIFIED. Claims: upper.
+template <class T> struct bv_add_radius_2;
+template <> struct bv_add_radius_2<double> { static constexpr bool proved = false; };
+template <> struct bv_add_radius_2<float> { static constexpr bool proved = false; };
+
+// bv_scale_radius_1: UNVERIFIED. Claims: upper.
+template <class T> struct bv_scale_radius_1;
+template <> struct bv_scale_radius_1<double> { static constexpr bool proved = false; };
+template <> struct bv_scale_radius_1<float> { static constexpr bool proved = false; };
+
+// bv_scale_radius_2: UNVERIFIED. Claims: upper.
+template <class T> struct bv_scale_radius_2;
+template <> struct bv_scale_radius_2<double> { static constexpr bool proved = false; };
+template <> struct bv_scale_radius_2<float> { static constexpr bool proved = false; };
+
 // dot_step_1: proved. Claims: rounded.
 template <class T> struct dot_step_1;
 template <> struct dot_step_1<double> {

@@ -1,0 +1,5 @@
+fp:3:-4:1: 300192 constructions, 133371 finite ball vectors, 166821 the whole space
+fp:2:-3:2: 116467 constructions, 44610 finite ball vectors, 71857 the whole space
+binary64: 6000 constructions, 3662 finite ball vectors, 2338 the whole space
+binary32: 6000 constructions, 3700 finite ball vectors, 2300 the whole space
+every statement held

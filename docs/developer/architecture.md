@@ -850,6 +850,189 @@ fold of the coefficients, read on the final state rather than on the finish (a l
 leading limb of the final state is finite, the finish returns it, so the statement of `D_seq` gives
 the claims of the state; when it is not, the check returns the canonical NaN).
 
+### Ball vectors
+
+A `BallVector` ([milestone2.md, "BallVector"](design/milestone2.md#ballvector)) is $N$ centers and
+one radius: the set of the vectors each of whose entries is within the radius of its center. It is
+*canonical* when it is a **finite ball vector** (every center finite, normalized for two limbs, and
+the radius finite and nonnegative) or the **whole space** (every center zero, the radius
+$+\infty$); there is no empty state. A ball vector kernel is a fold of its own kind: a map of the
+centers whose state is that of a fold of maxima, and whose finish gives the one radius. `bv_add_2`
+in full:
+
+```
+fold:          bv_add_2
+arrays:        stored x = x0 x1, stored y = y0 y1
+scalars:       stored rx, stored ry
+state:         m, mask ok
+step:          z = add_2_2(x, y)
+record:        (m, ok) = norm_step_2(m, ok, z)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+radius:        rz = bv_add_radius_2(m, rx, ry)
+finish:        (r, finite) = norm_finish_1(rz, ok)
+orders:        sequential, lanes
+writes:        z = z0 z1
+output:        r
+output:        mask finite
+value:         x+y
+requires:      ball_vector x rx
+requires:      ball_vector y ry
+ensures:       encloses_entries z r x+y x=x,rx y=y,ry flag=finite finite_when=abs_le(abs(x+y)+rx+ry,-2)
+min_precision: 3
+status:        unverified
+domain:        extended
+```
+
+- **The arrays** are the centers of the operands, stored (written through Kairn), and **the
+  scalars** their radii, stored too, and any other operand of `T` (`a`, supplied, for `bv_scale_k`).
+  Each array is the centers of one BallVector, whose radius is a scalar (`ball_vector ARRAY
+  RADIUS`).
+- **The step** writes the center of each entry, as a map's step does: `bv_add_k` is the map `add_k`
+  on the centers, `bv_sub_k` the map `sub_k`, `bv_scale_k` the map `scale_k`.
+- **The state** is that of the fold of maxima of the centers written: `m`, the largest magnitude of
+  a leading limb written, from $+0$, and `ok`, that none was a NaN, from true. **The record** is the
+  step of that fold (`norm_step_k`) on each center written, and **the combination** its combination
+  (`norm_combine`), in the lane order. So the final state is what `norm_upper_k` on the centers
+  written would have before its finish, and both orders give the same.
+- **The radius** is a straight-line kernel on `m` and scalars: `bv_add_radius_k(m, rx, ry)`, the
+  radius lines of `ball_add_k` with `m` in place of one entry's $\lvert c_{z,0}\rvert$, and
+  `bv_scale_radius_k(m, rx, a)`, those of `ball_scale_k`. Every operation of those lines is a
+  rounding of a nondecreasing function of `m` on nonnegative values, so at the largest
+  $\lvert c_{z,0}\rvert$ the radius is the largest of the $N$ radii the Ball kernel returns entry by
+  entry: equal, not only at least (the page's table; `test_bv.py` finds it equal in every case it
+  compares).
+- **The finish** is `norm_finish_1` on the radius and the state's mask: the radius, with the flag
+  true, when no center was a NaN and the radius is finite. A center that is infinite makes `m`
+  infinite and with it the radius. **When the flag is false** a second pass writes every center
+  zero and the radius returned is $+\infty$: the whole space. An operand that is the whole space
+  (radius $+\infty$), a scalar that is not finite, or an overflow anywhere, give the whole space.
+
+**What the generator checks of a ball vector** (`rules.bv_rules`), besides the names: one array
+written; a step of a map, every array once and scalars, with a real-model statement, its
+requirements given by those of the fold (a normalized center of a canonical BallVector); the record
+and the combination are the step and the combination of a fold of maxima of the set whose array has
+the shape of the centers (`norm_upper_k`, whose laws `rules.max_rules` checks); the radius takes the
+state's limb, then scalars, and has a real-model statement; the finish takes the radius and the
+state's mask and claims `finite_or_nan` under that mask with no step (`norm_finish_1`); the
+outputs are the radius and the flag; rule R3 on the step (supplied arrays and scalars, as for a
+map) and on the radius (a supplied scalar it takes is a value of the program there); each array is
+required `ball_vector` with a stored scalar of one limb as its radius; the one claim is
+`encloses_entries` of the centers written, the radius and the flag, over the fold's value, one ball
+name per array; the extended domain; the minimum precision, at least that of the step, the record and
+the radius; the status.
+
+**In C++** a ball vector has the three functions of a map, with the radius and the flag by
+reference after the arrays written:
+
+```
+void bv_add_2_seq(const T* x0_in, const T* x1_in, const T* y0_in, const T* y1_in, std::size_t n,
+                  T rx, T ry, T* z0_out, T* z1_out, T& r_out, bool& finite_out)
+void bv_add_2_lanes(..., std::size_t n, std::size_t lanes, T rx, T ry, T* z0_out, T* z1_out, T& r_out, bool& finite_out)
+void bv_add_2_packed(..., std::size_t n, T rx, T ry, T* z0_out, T* z1_out, T& r_out, bool& finite_out)
+```
+
+`F_seq` loops over the elements: the step, the center written, the record on the state. `F_lanes`
+folds each lane from the zero state and combines the lanes from lane 0 upward, then the rest.
+`F_packed` computes the packed step and the packed record on $W$ lane states, stores the lane
+states and combines them in scalar code from lane 0, then the rest. All three end with a call of
+`F_end` (`F_packed_end` in a packed header, which does not include `scalar.hpp`), the radius and the
+finish, a function of its own that is never inlined (`KAIRN_GEN_NOINLINE`), and with the second
+pass. Inline, compilers duplicated the end into the paths that leave the loop and folded or hoisted
+part of a copy (GCC 13 at `-O2` hoisted the product by $\lvert a\rvert$ of `bv_scale_radius_2` and
+duplicated the rest; Apple clang at `-O2` folded the product by the $+0$ of the zero state on the
+path where the loop runs no element), so that the fused instructions of the function were no number
+of whole copies of the parts, which the object-code check refuses; a call is one copy. The largest
+magnitude enters the end through a volatile copy, against a clone for the constant $+0$, and the
+zeros of the whole space are volatile stores, which no compiler turns into a call of `memset` or
+`bzero` (outside the object, which the check also refuses) or vectorizes. Neither computes anything.
+Aliasing is a map's: the array written may be exactly one of the arrays read.
+
+**In Rocq.** `FoldModel.v` has `F_step` and `F_map`, the centers, `F_record`, and `F_radius`, the
+radius kernel on the limb of `fold_seq F_record (0, true)` over the centers written and on the
+scalars. `FoldStatements.v` has `F_spec`: for nonnegative radii and valid centers, the radius is a
+number of the format and, entry by entry, the center written is valid and the value of the fold on
+any members of the balls of the operands' entries is within the radius of it:
+
+```coq
+Definition bv_add_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall (rx ry : R) (xys : list ((R * R) * (R * R))),
+  fmt emin prec rx ->
+  0 <= rx ->
+  fmt emin prec ry ->
+  0 <= ry ->
+  Forall (fun xy => normalized_2 emin prec (fst (fst xy)) (snd (fst xy)) /\ normalized_2 emin prec (fst (snd xy)) (snd (snd xy))) xys ->
+  let r_ := bv_add_2_radius emin prec tie_even rx ry xys in
+  fmt emin prec r_ /\
+  Forall2 (fun xy w_ =>
+    let '((x0, x1), (y0, y1)) := xy in
+    let '(z0, z1) := w_ in
+    normalized_2 emin prec z0 z1 /\
+    forall x_ y_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs (y_ - (y0 + y1)) <= ry -> Rabs ((x_ + y_) - (z0 + z1)) <= r_)
+    xys (bv_add_2_map emin prec tie_even xys).
+```
+
+Its proof: the claim `maximum` of the record on each center written (the limb of the final state is
+the largest $\lvert z_{i,0}\rvert$), the claim `upper` of the radius kernel, and the error bound of
+the step entry by entry (`add_2_2_correct`: $\lvert z - s\rvert \le U\lvert z\rvert$ with
+$U = \mathrm{unit}/(1-\mathrm{unit})$, and $\lvert z\rvert \le (1+u)\lvert z_0\rvert$ for a
+normalized pair).
+
+`IeeeFoldModel.v` has `F_step`, `F_map`, `F_record`, `F_combine`, and `F_seq` and `F_lanes W`,
+which return the centers, the radius and the flag:
+
+```coq
+Definition bv_add_2_seq (rx : float) (ry : float) (xys : list ((float * float) * (float * float))) : list (float * float) * float * bool :=
+  let ws_ := map bv_add_2_step xys in
+  let s_ := fold_seq bv_add_2_record (pzero, true) ws_ in
+  let rz_ := IeeeModel.bv_add_radius_2 prec emax nan_plus nan_fma (fst s_) rx ry in
+  let f_ := IeeeModel.norm_finish_1 prec emax nan_abs nan_const rz_ (snd s_) in
+  (if snd f_ then (ws_, fst f_) else (map (fun _ => (pzero, pzero)) ws_, pinf), snd f_).
+```
+
+(`F_lanes W` with `fold_lanes F_record F_combine (pzero, true) W ws_`). `IeeeFoldStatements.v` has
+`F_seq_ieee_spec` and `F_lanes_ieee_spec` (every `W`), V1 to V4 of the page and the flag, for
+canonical BallVectors (`ball_finite_k` of every center with the radius, a finite nonnegative radius;
+or `ball_whole_k` of every center with the radius $+\infty$) and any value of a scalar that is not a
+radius, with `(ws_, r_, flag_)` the result:
+
+- **V1** the result is canonical: a finite nonnegative `r_` and every center a finite ball with it,
+  or `r_` $= +\infty$ and every center zero;
+- the flag: `flag_ = true` exactly when `r_` is finite;
+- **V2** entry by entry, for all reals in the balls of the operands' entries (`in_ball_k`, the whole
+  line for the whole space), the value of the fold on them is in the ball of the center written
+  (`in_ball_k`, for the whole space every real);
+- **V3** if `r_` is finite, every scalar is finite, the centers' values are those of the real-model
+  step on the values given, and the radius is `FoldModel.F_radius` on the values;
+- **V4** if every scalar is finite, the vector is not empty, and every entry satisfies the
+  conditions of `finite_when` ($\lvert$EXPR$\rvert \le 2^{e_{\max} + E}$ with EXPR over the values of
+  the entry's centers and the scalars), `r_` is finite.
+
+V4 is stated for a vector that is not empty: with no entry the conditions say nothing, and a radius
+computed from radii near the overflow threshold alone can overflow (`bv_add_radius_k` of two radii
+of about $\Omega/2$), so the page's V4, read for $N = 0$, would be false.
+
+**What their proofs need**: the theorems of the step (bridge and claims, as for a map), of the
+record and the combination (`maximum`, and in the IEEE model that the record keeps a finite state on
+a finite center and records a NaN or an infinity), of the radius kernel (`upper`, and in the IEEE
+model that a finite radius from finite operands is the real model's), of `norm_finish_1`; for the
+lane order, `fold_lanes_aci_step` (the state of the lane order is that of the sequential order); and
+for V4, B4 of the entrywise full Ball kernel at the entry of the largest magnitude, whose radius is
+the one radius (`ball_add_k_full`, `ball_scale_k_full`: the same lines).
+
+**`bv_norm_upper_k`** ([BallVector](design/milestone2.md#ballvector)) is `norm_upper_k` on the
+centers, which are stored and canonical: it needs no kernel of its own, and the header of `BallVector`
+calls `norm_upper_k`. It bounds the magnitudes of the centers, not of the members: for the whole
+space it returns $0$ (one limb) or $\eta$ (two), with the flag true.
+
+**Not yet generated.** The constructor, whose listing the page does not give, is proposed in
+`experiments/milestone2/kernels/` (`bv_make_1.fold`, `bv_make_2.fold`; checked by `ballvector.py`):
+its finish must also test the sign of the radius, which `norm_finish_1` does not and whose claim the
+vocabulary has no word for. `bv_neg_k`, `bv_mul_pow2_k` (its radius needs the exactness of every
+entry, a state that is not a maximum), `bv_axpy_k` (two maxima, of the scaled centers and of the
+results), and `bv_conv_k` with `conv_radius` (a convolution with the maxima of its two operands)
+come later.
+
 ### The accumulator
 
 `Accumulator<T, k>` ([milestone2.md, "The accumulator"](design/milestone2.md#the-accumulator)) is
@@ -1729,6 +1912,99 @@ true` (and no `"map"`):
   the leading limb of every coefficient is finite; a coefficient that is not finite (a term not
   finite, or an overflow) is the canonical NaN, the others are as computed.
 
+**Ball vectors** ([Ball vectors](#ball-vectors)) are in the list `"folds"` too, with `"bv": true`
+(and no `"map"` or `"conv"`). Two entries as the generator writes them:
+
+```json
+{
+  "name": "bv_add_2", "bv": true, "domain": "extended",
+  "arrays": [{"name": "x", "limbs": 2, "role": "stored"}, {"name": "y", "limbs": 2, "role": "stored"}],
+  "scalars": [{"name": "rx", "limbs": 1, "role": "stored"}, {"name": "ry", "limbs": 1, "role": "stored"}],
+  "writes": [{"name": "z", "limbs": 2}],
+  "outputs": [{"name": "r", "limbs": 1}, {"name": "finite", "limbs": 1, "type": "mask"}],
+  "value": "x+y",
+  "requires": ["ball_vector(x, rx)", "ball_vector(y, ry)"],
+  "ensures": [{"kind": "encloses_entries", "center": "z", "radius": "r", "flag": "finite", "set": "x+y",
+               "balls": {"x": {"center": "x", "radius": "rx"}, "y": {"center": "y", "radius": "ry"}},
+               "finite_when": [{"abs_le": "abs(x+y)+rx+ry", "exp": -2}]}],
+  "orders": ["sequential", "lanes"],
+  "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
+  "step": "add_2_2", "step_args": ["x", "y"], "record": "norm_step_2", "combine": "norm_combine",
+  "radius": "bv_add_radius_2", "radius_args": ["m", "rx", "ry"], "finish": "norm_finish_1",
+  "min_precision": 3, "status": "unverified", "theorem": null,
+  "source": {"cite": "add_2_2 on the centers, the radius of ball_add_2 at the largest center (milestone2.md, BallVector)",
+             "license": "algorithm and proof: MIT"}
+},
+{
+  "name": "bv_scale_1", "bv": true, "domain": "extended",
+  "arrays": [{"name": "x", "limbs": 1, "role": "stored"}],
+  "scalars": [{"name": "rx", "limbs": 1, "role": "stored"}, {"name": "a", "limbs": 1, "role": "supplied"}],
+  "writes": [{"name": "z", "limbs": 1}],
+  "outputs": [{"name": "r", "limbs": 1}, {"name": "finite", "limbs": 1, "type": "mask"}],
+  "value": "x*a",
+  "requires": ["ball_vector(x, rx)"],
+  "ensures": [{"kind": "encloses_entries", "center": "z", "radius": "r", "flag": "finite", "set": "x*a",
+               "balls": {"x": {"center": "x", "radius": "rx"}},
+               "finite_when": [{"abs_le": "(abs(x)+rx)*a", "exp": -2}]}],
+  "orders": ["sequential", "lanes"],
+  "packed_lanes": {"binary64": {"avx2": 4, "neon": 2}, "binary32": {"avx2": 8, "neon": 4}},
+  "step": "scale_step_1", "step_args": ["x", "a"], "record": "norm_step_1", "combine": "norm_combine",
+  "radius": "bv_scale_radius_1", "radius_args": ["m", "rx", "a"], "finish": "norm_finish_1",
+  "min_precision": 1, "status": "unverified", "theorem": null,
+  "source": {"cite": "mul_1_1 on the centers, the radius of ball_scale_1 at the largest center (milestone2.md, BallVector)",
+             "license": "algorithm and proof: MIT"}
+}
+```
+
+- `arrays` are the centers of the operands, one array per BallVector, all of the length $n$;
+  `scalars` are given once: the radii of the operands and any other operand of `T`; `writes` is the
+  centers of the result, $n$ of them; `outputs` are its radius and the flag.
+- **`ball_vector(ARRAY, RADIUS)`**, a requirement: the entries of ARRAY and the scalar RADIUS are a
+  canonical BallVector: either every entry finite (a finite normalized pair for two limbs) and RADIUS
+  finite and nonnegative, or every entry zero (every limb a zero) and RADIUS $= +\infty$, the whole
+  space. A scalar with no requirement (`a` of `bv_scale_k`) is any value of the format, $\pm\infty$
+  or NaN.
+- **`encloses_entries`**, the claim of a ball vector, `center` the array written, `radius` and
+  `flag` the outputs, `set` an expression over the ball names and the other scalars (the language of
+  `value`), `balls` for each ball name its `center` (an array read) and `radius` (a scalar), and
+  `finite_when` a list of conditions `{"abs_le": EXPR, "exp": E}` as for `encloses`, EXPR over the
+  arrays' names (an entry's value) and the scalars'. For canonical operands:
+    - **V1**: the result is canonical: a finite ball vector (`radius` finite and nonnegative, every
+      entry written finite and, for two limbs, normalized) or the whole space (`radius` $= +\infty$,
+      every limb of every entry written a zero);
+    - the flag is true exactly when `radius` is finite;
+    - **V2**, containment, entry by entry: for every $i$, every value of `set` with each ball name
+      ranging over the reals within its radius of entry $i$ of its center (every real, for an
+      operand that is the whole space) and each other scalar its value is within `radius` of entry
+      $i$ written; for the whole space, trivially;
+    - **V3**: if the result is a finite ball vector, every operand is one and every scalar is
+      finite;
+    - **V4**: if every operand is a finite ball vector, every scalar is finite, $n \ge 1$, and every
+      entry $i$ satisfies every condition of `finite_when` ($\lvert$EXPR$\rvert \le 2^{q_{\max} + p
+      + E}$, EXPR evaluated on the values of entry $i$ of the arrays and on the scalars), the result
+      is a finite ball vector. An empty list claims nothing about when the result is finite.
+
+    What is claimed of the one radius is that and nothing more: containment (V2) and when it is
+    finite (V4). That it is the largest of the $n$ radii the entrywise Ball kernel (`ball_add_k`,
+    `ball_sub_k`, `ball_scale_k`) returns, and so no larger than the radius of $N$ balls, is what
+    the listing computes and what the generator's tests find, and is not a claim: no claim names
+    another kernel's computation.
+- `step`, `step_args`, `record`, `combine`, `radius`, `radius_args` and `finish` name the parts:
+  the step on the scalars and arrays of `step_args`, the record and the combination of the state
+  `m, ok`, the radius kernel on `radius_args` (`m`, the limb of the state, then scalars), the finish.
+  They are for reading; the oracle judges the claim.
+- In the extended domain, as for a map: the order makes no difference, `F_seq`, `F_lanes` with any
+  $W$ and `F_packed` write the same centers and return the same radius and flag.
+
+The radius kernels are kernels with an entry `upper` with a value of its own, as the bound kernels
+are, whose value may hold `abs( )` of an input (`abs(a)*rx`), now in the language of that value:
+`bv_add_radius_2` claims `{"kind": "upper", "of": "rz", "value":
+"rx+ry+m*unit(add_2_2)/(1-unit(add_2_2))*(1+u)"}` (for one limb `unit(add_1_1)`, without the
+$(1+u)$), and `bv_scale_radius_1` `{"kind": "upper", "of": "rz", "value":
+"abs(a)*rx+m*unit(mul_1_1)/(1-unit(mul_1_1))+tiny(mul_1_1)/(1-unit(mul_1_1))"}` (for two limbs
+with `mul_2_1` and the factor $(1+u)$ on `m`), with the requirements `nonneg(m)`, `nonneg(rx)`
+(and `nonneg(ry)`), in the finite domain.
+
 ### Claims of the interval kernels
 
 The first kernels of the interval work ([Interval kernels](design/milestone2.md#interval-kernels):
@@ -2092,6 +2368,16 @@ is, for each limb array written, most significant first, its N entries, then the
 y = 1/2, 1/2, 1/2) the completion ` -> 0x1.4p+1 0x1.2p+2 0x1.1p+3 1`. The interpreter, the
 compiled runner (`F_seq`, `F_lanes` for any W) and the packed runner (`F_packed`, its register's W
 only) complete them, with the same bits.
+
+**Ball vectors** have the requests of maps, `BV FORMAT ORDER N SCALAR... LIMB...`, the scalars (the
+radii and the others, in the order of the fold's `scalars`) between the length and the arrays of
+centers. The result is, for each limb array of centers written, most significant first, its N
+entries, then the radius, then the flag: for `bv_add_1 binary64 seq 2 0x1p-4 0x1p-4 0x1p+0 0x1p+1
+0x1p+0 0x1p+0` ($x = (1, 2)$, $y = (1, 1)$, both of radius $\tfrac1{16}$) the completion
+` -> 0x1p+1 0x1.8p+1 R 1`, R the radius, a little above $\tfrac18$; when the flag is `0` the centers
+are `0x0p+0` and the radius `inf`, the whole space. The interpreter, the compiled runner (`F_seq`,
+`F_lanes` for any W) and the packed runner (`F_packed`, its register's W only) complete them, with
+the same bits.
 
 **Convolutions** have two lengths, and the sequential order only:
 

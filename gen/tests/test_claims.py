@@ -182,7 +182,8 @@ class Claims(unittest.TestCase):
             for e in k['ensures']:
                 fields = self.FIELDS[e['kind']] + (['finite_when'] if e['kind'] == 'encloses' and extended else [])
                 if e['kind'] == 'upper' and 'value' in e:
-                    fields = list(self.UPPER_OWN)
+                    # Its mask only when it has one (the radius kernels of BallVector have none).
+                    fields = [f for f in self.UPPER_OWN if f != 'if' or 'if' in e]
                 fields += [f for f in self.OPTIONAL.get(e['kind'], []) if f in e]
                 self.assertEqual(list(e), fields, k['name'])
                 for c in e.get('finite_when', []):
@@ -541,7 +542,11 @@ class FoldClaims(unittest.TestCase):
         convs = {name for name, fd in self.ks.folds.items() if fd.is_conv}
         self.assertEqual(convs, {'conv_1', 'conv_2'})
         self.assertTrue(all(self.by[n]['conv'] is True and 'map' not in self.by[n] for n in convs))
-        self.assertEqual(set(self.by) - maps - convs, {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
+        # The ball vectors (test_bv.py), with "bv": true.
+        bvs = {name for name, fd in self.ks.folds.items() if fd.is_bv}
+        self.assertEqual(bvs, {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2'})
+        self.assertTrue(all(self.by[n]['bv'] is True and 'map' not in self.by[n] for n in bvs))
+        self.assertEqual(set(self.by) - maps - convs - bvs, {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
                                                       'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1',
                                                       'norm_upper_2'})
         self.assertEqual(list(self.doc), ['schema', 'kernels', 'folds'])
@@ -550,8 +555,8 @@ class FoldClaims(unittest.TestCase):
 
     def test_schema(self):
         for f in self.doc['folds']:
-            if f.get('map') or f.get('conv'):
-                continue                # MapClaims; the convolutions, test_conv.py
+            if f.get('map') or f.get('conv') or f.get('bv'):
+                continue                # MapClaims; the convolutions, test_conv.py; the ball vectors, test_bv.py
             with self.subTest(fold=f['name']):
                 self.assertEqual(list(f), self.KEYS)
                 self.assertEqual(f['domain'], 'extended')

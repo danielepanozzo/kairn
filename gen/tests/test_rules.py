@@ -1024,6 +1024,9 @@ class R3OfTheKernels(unittest.TestCase):
     # And the kernels of the accumulator that take what the program adds (acc_merge_k takes two
     # accumulators, acc_radius_k a state).
     FOLD_STEPS |= {'acc_add_1', 'acc_add_2', 'acc_mul_1', 'acc_mul_2'}
+    # And the radius kernels of BallVector that take the scalar the program gives (bv_scale_radius_k;
+    # bv_add_radius_k takes radii, limbs of objects, and the largest magnitude of a center).
+    FOLD_STEPS |= {'bv_scale_radius_1', 'bv_scale_radius_2'}
 
     def test_entry_kernels(self):
         ks = common.kernels()
@@ -1088,7 +1091,8 @@ class R3OfTheKernels(unittest.TestCase):
         lines = build.summary(ks)
         self.assertEqual(set(ks.folds), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
                                          'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2',
-                                         'conv_1', 'conv_2'} | MAPS)
+                                         'conv_1', 'conv_2'} | MAPS |
+                         {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2'})
         self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
         unverified = [n for n, f in ks.folds.items() if f.status == 'unverified']
         self.assertIn('folds UNVERIFIED: %s' % (', '.join(unverified) or 'none'), lines)
@@ -1413,7 +1417,9 @@ class TheKernels(unittest.TestCase):
     NORM = {'norm_combine', 'norm_step_1', 'norm_step_2'} | NORM_FINISH
     # The kernels of the accumulator (milestone2.md, "The accumulator"), of the finite domain.
     ACC = {f'acc_{op}_{k}' for op in ('add', 'mul', 'merge', 'radius') for k in (1, 2)}
-    FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC
+    # The radius kernels of BallVector (milestone2.md, "BallVector"), of the finite domain.
+    BV = {f'bv_{op}_radius_{k}' for op in ('add', 'scale') for k in (1, 2)}
+    FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC | BV
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # unverified until their proofs are pointed at the generated text: the interval kernels of one
     # limb and the sum of two, with the IEEE-model statement only; mul_dir_1, of the extended domain
@@ -1461,11 +1467,12 @@ class TheKernels(unittest.TestCase):
         # every step of the maps (MapSteps.v). The kernels of the folds of maxima and of the
         # accumulator are unverified.
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.MILESTONE1 | self.WAVE_1 | self.FOLDS - self.NORM - self.ACC)
+                         self.MILESTONE1 | self.WAVE_1 | self.FOLDS - self.NORM - self.ACC - self.BV)
         # The first kernels of wave 2 are unverified, in both models, until their proofs (which
         # exist for hand-written copies of their listings) are pointed at the generated text; and so
         # are the kernels of the folds of maxima.
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.NORM | self.ACC | self.WAVE_2)
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
+                         self.NORM | self.ACC | self.BV | self.WAVE_2)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
@@ -1523,6 +1530,9 @@ class TheKernels(unittest.TestCase):
             # numbers of the toy formats from two bits on ((1+u)^8 above the top of fp:1:-3:3)
             'acc_add_1': 1, 'acc_mul_1': 1, 'acc_merge_1': 1, 'acc_add_2': 3, 'acc_mul_2': 4, 'acc_merge_2': 3,
             'acc_radius_1': 2, 'acc_radius_2': 2,
+            # The radius kernels of BallVector, from the precision of the Ball kernel whose radius
+            # lines they are.
+            'bv_add_radius_1': 1, 'bv_add_radius_2': 3, 'bv_scale_radius_1': 1, 'bv_scale_radius_2': 2,
             # Wave 2 (as the proofs found them): mul_dir_1 from 2, the sums of two limbs from 3, the
             # products from 4.
             'mul_dir_1': 2, 'add_ball_2_2': 3, 'add_down_2_2': 3, 'add_up_2_2': 3, 'sub_down_2_2': 3,

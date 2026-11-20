@@ -118,19 +118,23 @@ struct Map {
     const char* arrays;
     int scalars;
     int writes;
-    void (*binary64)(const double* const* in, std::size_t n, const double* sc, double* const* w, bool* mo);
-    void (*binary32)(const float* const* in, std::size_t n, const float* sc, float* const* w, bool* mo);
+    int radius;     // 1 for a ball vector, which returns its radius (out[0]) before the flag
+    void (*binary64)(const double* const* in, std::size_t n, const double* sc, double* const* w, double* out, bool* mo);
+    void (*binary32)(const float* const* in, std::size_t n, const float* sc, float* const* w, float* out, bool* mo);
 };
 #define KAIRN_RUNNER_MAP_ARGS(T)                                                                     \
     [[maybe_unused]] const T* const* in, [[maybe_unused]] std::size_t n, [[maybe_unused]] const T* sc, \
-        [[maybe_unused]] T* const* w, [[maybe_unused]] bool* mo
+        [[maybe_unused]] T* const* w, [[maybe_unused]] T* out, [[maybe_unused]] bool* mo
 #define KAIRN_RUNNER_FOLD(NAME, ARRAYS, OUT, SEQ, LANES, PACKED)
 #define KAIRN_RUNNER_MAP(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED) \
-    {#NAME, ARRAYS, SCALARS, WRITES, [](KAIRN_RUNNER_MAP_ARGS(double)) { PACKED; }, [](KAIRN_RUNNER_MAP_ARGS(float)) { PACKED; }},
+    {#NAME, ARRAYS, SCALARS, WRITES, 0, [](KAIRN_RUNNER_MAP_ARGS(double)) { PACKED; }, [](KAIRN_RUNNER_MAP_ARGS(float)) { PACKED; }},
+#define KAIRN_RUNNER_BV(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED) \
+    {#NAME, ARRAYS, SCALARS, WRITES, 1, [](KAIRN_RUNNER_MAP_ARGS(double)) { PACKED; }, [](KAIRN_RUNNER_MAP_ARGS(float)) { PACKED; }},
 const Map maps[] = {
 #include "runner_kernels.inc"
-    {nullptr, nullptr, 0, 0, nullptr, nullptr},
+    {nullptr, nullptr, 0, 0, 0, nullptr, nullptr},
 };
+#undef KAIRN_RUNNER_BV
 
 long lineno = 0;
 
@@ -293,7 +297,8 @@ T packed_limb(const std::string& text) {
 
 // A request of a map, MAP FORMAT lanes:W N SCALAR... LIMB..., computed at once.
 template <class T>
-void complete_map(const Map& m, const Request& r, void (*fn)(const T* const*, std::size_t, const T*, T* const*, bool*)) {
+void complete_map(const Map& m, const Request& r,
+                  void (*fn)(const T* const*, std::size_t, const T*, T* const*, T*, bool*)) {
     const std::vector<std::string>& fields = r.fields;
     if (fields.size() < 4) fail(std::string("expected ") + m.name + " FORMAT ORDER N SCALAR ... LIMB ... [#TAG]");
     const std::string head = "lanes:";
@@ -316,11 +321,16 @@ void complete_map(const Map& m, const Request& r, void (*fn)(const T* const*, st
     std::vector<T*> w(std::size_t(m.writes) + 1);
     for (int l = 0; l < m.writes; ++l) w[std::size_t(l)] = written.data() + std::size_t(l) * n;
     bool mo[1] = {};
-    fn(in.data(), n, sc.data(), w.data(), mo);
+    T res[1] = {};
+    fn(in.data(), n, sc.data(), w.data(), res, mo);
     std::string text = r.line + " ->";
     for (std::size_t i = 0; i < std::size_t(m.writes) * n; ++i) {
         text += ' ';
         put(static_cast<double>(written[i]), text);
+    }
+    if (m.radius) {
+        text += ' ';
+        put(static_cast<double>(res[0]), text);
     }
     text += mo[0] ? " 1\n" : " 0\n";
     std::fwrite(text.data(), 1, text.size(), stdout);
