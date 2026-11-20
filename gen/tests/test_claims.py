@@ -416,8 +416,10 @@ class FoldClaims(unittest.TestCase):
                     self.assertEqual(list(h), ['rel', 'abs'])
                     self.assertTrue(set(h.values()) <= {'n', 'n-1'})
                 self.assertIn({'kind': 'finite_or_nan', 'of': f['outputs'][0]['name'], 'flag': 'flag'}, f['ensures'])
-                self.assertEqual(f['theorems'], {'sequential': None, 'lanes': None})
-                self.assertEqual(f['status'], 'unverified')
+                self.assertEqual(f['theorems'], {
+                    'sequential': {'file': 'proofs/theories/FoldSums.v', 'name': f['name'] + '_seq_correct'},
+                    'lanes': {'file': 'proofs/theories/FoldSums.v', 'name': f['name'] + '_lanes_correct'}})
+                self.assertEqual(f['status'], 'proved')
                 for fmt in ('binary64', 'binary32'):
                     self.assertEqual(len(f['instances'][fmt]), 1)
                     self.assertEqual(set(f['instances'][fmt][0]), {'eps', 'term', 'tau'})

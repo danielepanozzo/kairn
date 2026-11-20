@@ -12,7 +12,7 @@ From Kairn.Gen Require Import Model Statements FoldModel.
 From Kairn Require Import Folds Summation.
 Open Scope R_scope.
 
-(* dot_1, the sequential order: Higham's bound for summation over any tree, weighted: the fused dot product. Status: unverified. *)
+(* dot_1, the sequential order: Higham's bound for summation over any tree, weighted: the fused dot product. Status: proved. *)
 Definition dot_1_seq_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall xys : list (R * R),
@@ -23,7 +23,7 @@ Definition dot_1_seq_spec : Prop :=
     ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs (map (fun xy => (fst xy * snd xy)) xys) +
     (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)).
 
-(* dot_1, the lane order, for every number of lanes W: Higham's bound for summation over any tree, weighted: the fused dot product. Status: unverified. *)
+(* dot_1, the lane order, for every number of lanes W: Higham's bound for summation over any tree, weighted: the fused dot product. Status: proved. *)
 Definition dot_1_lanes_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (W : nat) (xys : list (R * R)),
@@ -34,7 +34,7 @@ Definition dot_1_lanes_spec : Prop :=
     ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs (map (fun xy => (fst xy * snd xy)) xys) +
     (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)).
 
-(* dot_2, the sequential order: Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22). Status: unverified. *)
+(* dot_2, the sequential order: Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22). Status: proved. *)
 Definition dot_2_seq_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall xys : list ((R * R) * (R * R)),
@@ -45,7 +45,7 @@ Definition dot_2_seq_spec : Prop :=
     ((1 + (4 * (u prec ^ 2))) * (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) - 1) * sumabs (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys) +
     (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * ((3 / 2) * eta emin)).
 
-(* dot_2, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22). Status: unverified. *)
+(* dot_2, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22). Status: proved. *)
 Definition dot_2_lanes_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall (W : nat) (xys : list ((R * R) * (R * R))),
@@ -56,7 +56,7 @@ Definition dot_2_lanes_spec : Prop :=
     ((1 + (4 * (u prec ^ 2))) * (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) - 1) * sumabs (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys) +
     (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * ((3 / 2) * eta emin)).
 
-(* sum_1, the sequential order: Higham's bound for summation over any tree, with the bound of one rounding. Status: unverified. *)
+(* sum_1, the sequential order: Higham's bound for summation over any tree, with the bound of one rounding. Status: proved. *)
 Definition sum_1_seq_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall xs : list R,
@@ -66,7 +66,7 @@ Definition sum_1_seq_spec : Prop :=
   Rabs (s - sumR (map (fun x => x) xs)) <=
     ((1 + (u prec / (1 + u prec))) ^ (length xs - 1) - 1) * sumabs (map (fun x => x) xs).
 
-(* sum_1, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bound of one rounding. Status: unverified. *)
+(* sum_1, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bound of one rounding. Status: proved. *)
 Definition sum_1_lanes_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (W : nat) (xs : list R),
@@ -76,7 +76,7 @@ Definition sum_1_lanes_spec : Prop :=
   Rabs (s - sumR (map (fun x => x) xs)) <=
     ((1 + (u prec / (1 + u prec))) ^ (length xs - 1) - 1) * sumabs (map (fun x => x) xs).
 
-(* sum_1_entry, the sequential order: Higham's bound for summation over any tree, with the bound of one rounding. Status: unverified. *)
+(* sum_1_entry, the sequential order: Higham's bound for summation over any tree, with the bound of one rounding. Status: proved. *)
 Definition sum_1_entry_seq_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall xs : list R,
@@ -86,7 +86,7 @@ Definition sum_1_entry_seq_spec : Prop :=
   Rabs (s - sumR (map (fun x => x) xs)) <=
     ((1 + (u prec / (1 + u prec))) ^ (length xs - 1) - 1) * sumabs (map (fun x => x) xs).
 
-(* sum_1_entry, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bound of one rounding. Status: unverified. *)
+(* sum_1_entry, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bound of one rounding. Status: proved. *)
 Definition sum_1_entry_lanes_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall (W : nat) (xs : list R),
@@ -96,7 +96,7 @@ Definition sum_1_entry_lanes_spec : Prop :=
   Rabs (s - sumR (map (fun x => x) xs)) <=
     ((1 + (u prec / (1 + u prec))) ^ (length xs - 1) - 1) * sumabs (map (fun x => x) xs).
 
-(* sum_2, the sequential order: Higham's bound for summation over any tree, with the bound of add_2_2 (MR22). Status: unverified. *)
+(* sum_2, the sequential order: Higham's bound for summation over any tree, with the bound of add_2_2 (MR22). Status: proved. *)
 Definition sum_2_seq_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall xs : list (R * R),
@@ -106,7 +106,7 @@ Definition sum_2_seq_spec : Prop :=
   Rabs ((fst s + snd s) - sumR (map (fun x => (fst x + snd x)) xs)) <=
     ((1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) xs).
 
-(* sum_2, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bound of add_2_2 (MR22). Status: unverified. *)
+(* sum_2, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bound of add_2_2 (MR22). Status: proved. *)
 Definition sum_2_lanes_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall (W : nat) (xs : list (R * R)),
@@ -116,7 +116,7 @@ Definition sum_2_lanes_spec : Prop :=
   Rabs ((fst s + snd s) - sumR (map (fun x => (fst x + snd x)) xs)) <=
     ((1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) xs).
 
-(* sum_2_entry, the sequential order: Higham's bound for summation over any tree, with the bound of add_2_2 (MR22). Status: unverified. *)
+(* sum_2_entry, the sequential order: Higham's bound for summation over any tree, with the bound of add_2_2 (MR22). Status: proved. *)
 Definition sum_2_entry_seq_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall xs : list (R * R),
@@ -126,7 +126,7 @@ Definition sum_2_entry_seq_spec : Prop :=
   Rabs ((fst s + snd s) - sumR (map (fun x => (fst x + snd x)) xs)) <=
     ((1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) xs).
 
-(* sum_2_entry, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bound of add_2_2 (MR22). Status: unverified. *)
+(* sum_2_entry, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bound of add_2_2 (MR22). Status: proved. *)
 Definition sum_2_entry_lanes_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall (W : nat) (xs : list (R * R)),
@@ -136,7 +136,7 @@ Definition sum_2_entry_lanes_spec : Prop :=
   Rabs ((fst s + snd s) - sumR (map (fun x => (fst x + snd x)) xs)) <=
     ((1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) xs).
 
-(* sum_fast_2, the sequential order: Higham's bound for summation over any tree, with the bound of add_fast_2_2. Status: unverified. *)
+(* sum_fast_2, the sequential order: Higham's bound for summation over any tree, with the bound of add_fast_2_2. Status: proved. *)
 Definition sum_fast_2_seq_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall xs : list (R * R),
@@ -146,7 +146,7 @@ Definition sum_fast_2_seq_spec : Prop :=
   Rabs ((fst s + snd s) - sumR (map (fun x => (fst x + snd x)) xs)) <=
     ((1 + (3 * (u prec ^ 2))) ^ (length xs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) xs).
 
-(* sum_fast_2, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bound of add_fast_2_2. Status: unverified. *)
+(* sum_fast_2, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bound of add_fast_2_2. Status: proved. *)
 Definition sum_fast_2_lanes_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall (W : nat) (xs : list (R * R)),
@@ -156,7 +156,7 @@ Definition sum_fast_2_lanes_spec : Prop :=
   Rabs ((fst s + snd s) - sumR (map (fun x => (fst x + snd x)) xs)) <=
     ((1 + (3 * (u prec ^ 2))) ^ (length xs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) xs).
 
-(* sum_fast_2_entry, the sequential order: Higham's bound for summation over any tree, with the bound of add_fast_2_2. Status: unverified. *)
+(* sum_fast_2_entry, the sequential order: Higham's bound for summation over any tree, with the bound of add_fast_2_2. Status: proved. *)
 Definition sum_fast_2_entry_seq_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall xs : list (R * R),
@@ -166,7 +166,7 @@ Definition sum_fast_2_entry_seq_spec : Prop :=
   Rabs ((fst s + snd s) - sumR (map (fun x => (fst x + snd x)) xs)) <=
     ((1 + (3 * (u prec ^ 2))) ^ (length xs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) xs).
 
-(* sum_fast_2_entry, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bound of add_fast_2_2. Status: unverified. *)
+(* sum_fast_2_entry, the lane order, for every number of lanes W: Higham's bound for summation over any tree, with the bound of add_fast_2_2. Status: proved. *)
 Definition sum_fast_2_entry_lanes_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall (W : nat) (xs : list (R * R)),

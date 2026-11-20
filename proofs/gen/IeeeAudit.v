@@ -11,6 +11,7 @@ From Kairn Require Import IeeeDirected.
 From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
 From Kairn Require Import IeeeExt.
+From Kairn Require Import IeeeFoldFinish.
 From Kairn Require Import IeeeFull.
 From Kairn Require Import IeeeMake.
 
@@ -46,6 +47,9 @@ Print Assumptions ball_scale_1_full_correct.
 
 Definition ball_sub_1_full_audit : ball_sub_1_full_spec := ball_sub_1_full_correct.
 Print Assumptions ball_sub_1_full_correct.
+
+Definition fold_finish_1_audit : fold_finish_1_spec := fold_finish_1_correct.
+Print Assumptions fold_finish_1_correct.
 
 Definition make_2_audit : make_2_spec := make_2_correct.
 Print Assumptions make_2_correct.
@@ -130,6 +134,9 @@ Print Assumptions eq_2_1_ieee_correct.
 
 Definition eq_2_2_ieee_audit : eq_2_2_ieee_spec := eq_2_2_ieee_correct.
 Print Assumptions eq_2_2_ieee_correct.
+
+Definition fold_finish_2_audit : fold_finish_2_spec := fold_finish_2_correct.
+Print Assumptions fold_finish_2_correct.
 
 Definition le_1_2_ieee_audit : le_1_2_ieee_spec := le_1_2_ieee_correct.
 Print Assumptions le_1_2_ieee_correct.

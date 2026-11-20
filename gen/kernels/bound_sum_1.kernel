@@ -16,9 +16,10 @@ requires:      format half
 ensures:       holds le m*unit(add_1_1) 1/2 if=ok
 ensures:       upper g value=m*unit(add_1_1)/(1-m*unit(add_1_1)) if=ok
 min_precision: 1
+theorem:       proofs/theories/BoundKernels.v bound_sum_1_correct
 source:        the exported bound of a sum as a function of n (milestone2.md)
 license:       proof: MIT
-status:        unverified
+status:        proved
 
 a  = prod(m, const up((1+u)*(unit(add_1_1)+eta/2)))
 aa = prod(m, const up((1+u)^2*(unit(add_1_1)+eta)))

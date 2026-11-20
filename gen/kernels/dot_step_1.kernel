@@ -10,9 +10,10 @@ output:        t
 value:         s+x*y
 ensures:       rounded t nearest
 min_precision: 1
+theorem:       proofs/theories/StepKernels.v dot_step_1_correct
 source:        the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md)
 license:       proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 ieee:          bridge
 

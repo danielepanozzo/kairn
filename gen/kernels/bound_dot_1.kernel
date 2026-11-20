@@ -19,9 +19,10 @@ ensures:       holds le m*unit(mul_1_1) 1/2 if=ok
 ensures:       upper g value=m*unit(mul_1_1)/(1-m*unit(mul_1_1)) if=ok
 ensures:       upper t value=m*tiny(mul_1_1)*(1+g) if=ok
 min_precision: 1
+theorem:       proofs/theories/BoundKernels.v bound_dot_1_correct
 source:        the exported bound of a dot product as a function of n (milestone2.md)
 license:       proof: MIT
-status:        unverified
+status:        proved
 cone_exempt:   the third output is a mask; g and t are bounds, which nothing adds to a number
 
 a  = prod(m, const up((1+u)*(unit(mul_1_1)+eta/2)))

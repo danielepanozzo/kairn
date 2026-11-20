@@ -4,11 +4,13 @@
    statement as its type, and the axioms it depends on are printed, for the audit
    script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import Statements.
+From Kairn.Gen Require Import FoldStatements.
 From Kairn Require Import Add21.
 From Kairn Require Import Add22.
 From Kairn Require Import AddFast22.
 From Kairn Require Import Ball2.
 From Kairn Require Import BallPow2.
+From Kairn Require Import BoundKernels.
 From Kairn Require Import Compare.
 From Kairn Require Import Convert.
 From Kairn Require Import Directed.
@@ -16,12 +18,14 @@ From Kairn Require Import DirectedProd.
 From Kairn Require Import DirectedSum.
 From Kairn Require Import EFT.
 From Kairn Require Import EntryKernels.
+From Kairn Require Import FoldSums.
 From Kairn Require Import Mul21.
 From Kairn Require Import Mul22.
 From Kairn Require Import MulPow2.
 From Kairn Require Import OneLimb.
 From Kairn Require Import Sign.
 From Kairn Require Import Split.
+From Kairn Require Import StepKernels.
 From Kairn Require Import TwoProdDekker.
 
 Definition add_1_1_audit : add_1_1_spec := add_1_1_correct.
@@ -62,6 +66,21 @@ Print Assumptions ball_scale_1_correct.
 
 Definition ball_sub_1_audit : ball_sub_1_spec := ball_sub_1_correct.
 Print Assumptions ball_sub_1_correct.
+
+Definition bound_dot_1_audit : bound_dot_1_spec := bound_dot_1_correct.
+Print Assumptions bound_dot_1_correct.
+
+Definition bound_dot_2_audit : bound_dot_2_spec := bound_dot_2_correct.
+Print Assumptions bound_dot_2_correct.
+
+Definition bound_sum_1_audit : bound_sum_1_spec := bound_sum_1_correct.
+Print Assumptions bound_sum_1_correct.
+
+Definition bound_sum_2_audit : bound_sum_2_spec := bound_sum_2_correct.
+Print Assumptions bound_sum_2_correct.
+
+Definition dot_step_1_audit : dot_step_1_spec := dot_step_1_correct.
+Print Assumptions dot_step_1_correct.
 
 Definition fast_two_sum_entry_audit : fast_two_sum_entry_spec := fast_two_sum_entry_correct.
 Print Assumptions fast_two_sum_entry_correct.
@@ -107,6 +126,9 @@ Print Assumptions sub_up_1_correct.
 
 Definition sub_up_entry_audit : sub_up_entry_spec := sub_up_entry_correct.
 Print Assumptions sub_up_entry_correct.
+
+Definition sum_entry_step_1_audit : sum_entry_step_1_spec := sum_entry_step_1_correct.
+Print Assumptions sum_entry_step_1_correct.
 
 Definition two_prod_dekker_audit : two_prod_dekker_spec := two_prod_dekker_correct.
 Print Assumptions two_prod_dekker_correct.
@@ -198,8 +220,62 @@ Print Assumptions sub_2_1_correct.
 Definition sub_2_2_audit : sub_2_2_spec := sub_2_2_correct.
 Print Assumptions sub_2_2_correct.
 
+Definition sum_entry_step_2_audit : sum_entry_step_2_spec := sum_entry_step_2_correct.
+Print Assumptions sum_entry_step_2_correct.
+
+Definition sum_fast_entry_step_2_audit : sum_fast_entry_step_2_spec := sum_fast_entry_step_2_correct.
+Print Assumptions sum_fast_entry_step_2_correct.
+
 Definition to_down_2_audit : to_down_2_spec := to_down_2_correct.
 Print Assumptions to_down_2_correct.
 
 Definition to_nearest_2_audit : to_nearest_2_spec := to_nearest_2_correct.
 Print Assumptions to_nearest_2_correct.
+
+Definition dot_1_seq_audit : dot_1_seq_spec := dot_1_seq_correct.
+Print Assumptions dot_1_seq_correct.
+
+Definition dot_1_lanes_audit : dot_1_lanes_spec := dot_1_lanes_correct.
+Print Assumptions dot_1_lanes_correct.
+
+Definition dot_2_seq_audit : dot_2_seq_spec := dot_2_seq_correct.
+Print Assumptions dot_2_seq_correct.
+
+Definition dot_2_lanes_audit : dot_2_lanes_spec := dot_2_lanes_correct.
+Print Assumptions dot_2_lanes_correct.
+
+Definition sum_1_seq_audit : sum_1_seq_spec := sum_1_seq_correct.
+Print Assumptions sum_1_seq_correct.
+
+Definition sum_1_lanes_audit : sum_1_lanes_spec := sum_1_lanes_correct.
+Print Assumptions sum_1_lanes_correct.
+
+Definition sum_1_entry_seq_audit : sum_1_entry_seq_spec := sum_1_entry_seq_correct.
+Print Assumptions sum_1_entry_seq_correct.
+
+Definition sum_1_entry_lanes_audit : sum_1_entry_lanes_spec := sum_1_entry_lanes_correct.
+Print Assumptions sum_1_entry_lanes_correct.
+
+Definition sum_2_seq_audit : sum_2_seq_spec := sum_2_seq_correct.
+Print Assumptions sum_2_seq_correct.
+
+Definition sum_2_lanes_audit : sum_2_lanes_spec := sum_2_lanes_correct.
+Print Assumptions sum_2_lanes_correct.
+
+Definition sum_2_entry_seq_audit : sum_2_entry_seq_spec := sum_2_entry_seq_correct.
+Print Assumptions sum_2_entry_seq_correct.
+
+Definition sum_2_entry_lanes_audit : sum_2_entry_lanes_spec := sum_2_entry_lanes_correct.
+Print Assumptions sum_2_entry_lanes_correct.
+
+Definition sum_fast_2_seq_audit : sum_fast_2_seq_spec := sum_fast_2_seq_correct.
+Print Assumptions sum_fast_2_seq_correct.
+
+Definition sum_fast_2_lanes_audit : sum_fast_2_lanes_spec := sum_fast_2_lanes_correct.
+Print Assumptions sum_fast_2_lanes_correct.
+
+Definition sum_fast_2_entry_seq_audit : sum_fast_2_entry_seq_spec := sum_fast_2_entry_seq_correct.
+Print Assumptions sum_fast_2_entry_seq_correct.
+
+Definition sum_fast_2_entry_lanes_audit : sum_fast_2_entry_lanes_spec := sum_fast_2_entry_lanes_correct.
+Print Assumptions sum_fast_2_entry_lanes_correct.

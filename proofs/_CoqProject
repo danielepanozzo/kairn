@@ -32,6 +32,7 @@ theories/MulPow2.v
 theories/Ball2.v
 theories/Program.v
 theories/Folds.v
+theories/FoldTransfer.v
 theories/Summation.v
 theories/SummationKernels.v
 theories/DirectedSum.v
@@ -40,6 +41,10 @@ theories/EntryKernels.v
 theories/BallPow2.v
 gen/FoldModel.v
 gen/FoldStatements.v
+theories/StepKernels.v
+theories/FoldSums.v
+theories/BoundKernels.v
+theories/FoldGuarantee.v
 theories/IeeeOperations.v
 gen/IeeeModel.v
 theories/IeeeBridge.v
@@ -68,3 +73,4 @@ theories/IeeeBallCores.v
 theories/IeeeBallFinite.v
 theories/IeeeBallPow2.v
 theories/IeeeTwoExecutions.v
+theories/IeeeFoldFinish.v

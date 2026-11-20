@@ -11,9 +11,10 @@ requires:      normalized x
 ensures:       normalized t
 ensures:       error t R c=3/(1-4*u) k=2 t=0
 min_precision: 3
+theorem:       proofs/theories/StepKernels.v sum_entry_step_2_correct
 source:        add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 ieee:          bridge spec
 

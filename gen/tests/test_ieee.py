@@ -269,8 +269,9 @@ class Statements(unittest.TestCase):
 
     def test_audit(self):
         text = ieee.audit(self.ks)
-        # Every kernel of the extended domain names its theorem.
-        self.assertEqual(text.count('Print Assumptions'), 54)
+        # Every kernel of the extended domain names its theorem, the two finishes of the folds
+        # among them.
+        self.assertEqual(text.count('Print Assumptions'), 56)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -287,9 +288,10 @@ class CheckedFiles(unittest.TestCase):
     # their definitions, the constants of the bound kernels, and the statements of the two
     # finishes were added, and every earlier one is the same, byte for byte. Then the programs of
     # the steps of the folds and their bridge statements (and the spec of those of two limbs) were
-    # added, every earlier one the same, byte for byte.
+    # added, every earlier one the same, byte for byte. Then the two finishes were proved: the
+    # comments above their statements say so, and nothing else changed.
     DIGESTS = {'proofs/gen/IeeeModel.v': '2bd4b1a87c6946bc4676edfade74cf4a22636d7f4e5ea176c78ece1c266a6ac5',
-               'proofs/gen/IeeeStatements.v': 'e15a56b2d2b1fd27470049d65c9a29d6cde3c695eac92eaeeb2840a0fc3e34de'}
+               'proofs/gen/IeeeStatements.v': 'a28cf6cdee65221db4ec2b308f0c9dbf8cf2a392a9b067452d59d13641cef657'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

@@ -3435,7 +3435,7 @@ KAIRN_GEN_FORCEINLINE void to_nearest_2(__m256 x0, [[maybe_unused]] __m256 x1, _
 // "Folds"): 4 for double, 8 for float. The packed step in the loop, the scalar combination, step and
 // finish of scalar.hpp after it, inlined in the same way: values step_V, comb_V, fin_V.
 
-// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold dot_1(supplied x, supplied y), step dot_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved.
 inline void dot_1_packed(const double* x_in, const double* y_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d s_lane_ = _mm256_setzero_pd();
@@ -3503,7 +3503,7 @@ inline void dot_1_packed(const float* x_in, const float* y_in, std::size_t n, fl
     flag_out = fin_flag;
 }
 
-// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold dot_2(supplied x = (x0, x1), supplied y = (y0, y1)), step dot_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved.
 inline void dot_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d s0_lane_ = _mm256_setzero_pd();
@@ -3789,7 +3789,7 @@ inline void dot_2_packed(const float* x0_in, const float* x1_in, const float* y0
     flag_out = fin_flag;
 }
 
-// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold sum_1(stored x), step add_1_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved.
 inline void sum_1_packed(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d s_lane_ = _mm256_setzero_pd();
@@ -3853,7 +3853,7 @@ inline void sum_1_packed(const float* x_in, std::size_t n, float& r_out, bool& f
     flag_out = fin_flag;
 }
 
-// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold sum_1_entry(supplied x), step sum_entry_step_1, combination add_1_1, finish fold_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved.
 inline void sum_1_entry_packed(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d s_lane_ = _mm256_setzero_pd();
@@ -3921,7 +3921,7 @@ inline void sum_1_entry_packed(const float* x_in, std::size_t n, float& r_out, b
     flag_out = fin_flag;
 }
 
-// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold sum_2(stored x = (x0, x1)), step add_2_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved.
 inline void sum_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d s0_lane_ = _mm256_setzero_pd();
@@ -4147,7 +4147,7 @@ inline void sum_2_packed(const float* x0_in, const float* x1_in, std::size_t n, 
     flag_out = fin_flag;
 }
 
-// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold sum_2_entry(supplied x = (x0, x1)), step sum_entry_step_2, combination add_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved.
 inline void sum_2_entry_packed(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d s0_lane_ = _mm256_setzero_pd();
@@ -4385,7 +4385,7 @@ inline void sum_2_entry_packed(const float* x0_in, const float* x1_in, std::size
     flag_out = fin_flag;
 }
 
-// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold sum_fast_2(stored x = (x0, x1)), step add_fast_2_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved.
 inline void sum_fast_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d s0_lane_ = _mm256_setzero_pd();
@@ -4545,7 +4545,7 @@ inline void sum_fast_2_packed(const float* x0_in, const float* x1_in, std::size_
     flag_out = fin_flag;
 }
 
-// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold sum_fast_2_entry(supplied x = (x0, x1)), step sum_fast_entry_step_2, combination add_fast_2_2, finish fold_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved.
 inline void sum_fast_2_entry_packed(const double* x0_in, const double* x1_in, std::size_t n, double& r0_out, double& r1_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d s0_lane_ = _mm256_setzero_pd();

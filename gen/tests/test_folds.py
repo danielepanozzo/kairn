@@ -789,6 +789,8 @@ class Printers(unittest.TestCase):
     def test_the_audit_of_a_proved_fold(self):
         import copy
         ks = copy.deepcopy(self.ks)
+        for fd in ks.folds.values():        # the folds of the library are proved (FoldSums.v)
+            fd.status, fd.theorem = 'unverified', None
         # Without a proved fold the audit neither imports the folds' statements nor checks a fold's
         # theorem (a kernel's theorem may be in a file of any name).
         audit = rocq.audit(ks)

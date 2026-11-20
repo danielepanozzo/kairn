@@ -46,6 +46,9 @@ lists:
 - `proofs/gen/IeeeModel.v` and `proofs/gen/IeeeStatements.v`, generated too: each kernel as a
   function of Flocq's binary floating-point numbers, where operations overflow and operands may
   be infinite or NaN, and its statements there;
+- `proofs/gen/FoldModel.v` and `proofs/gen/FoldStatements.v`, generated too: each fold (a loop
+  of kernels along arrays: the sums and the dot products) as a function on lists, in the two
+  orders in which the library runs it, and its statement in each order;
 - `proofs/theories/`, the proofs written by hand, one theorem `K_correct` per kernel `K` and the
   lemmas they share, the theorems about sums and dot products of arrays, which bound a sum
   made in any order of its additions (`Folds.v`, `Summation.v`, `SummationKernels.v`), and the
@@ -57,7 +60,10 @@ lists:
   ball, with overflow, infinities and NaN (`IeeeBallPow2.v`), the lemma that the product of two
   intervals rests on (`Rectangle.v`), and the comparison of the two ways a product is executed
   (`IeeeProduct.v`), with what follows for the kernels whose only fused operations are products
-  (`IeeeTwoExecutions.v`);
+  (`IeeeTwoExecutions.v`); and the theorems of the folds, `F_seq_correct` and `F_lanes_correct`
+  per fold `F` (`FoldSums.v`), of their steps, finishes and bound kernels (`StepKernels.v`,
+  `IeeeFoldFinish.v`, `BoundKernels.v`), and of the two together (`FoldGuarantee.v`,
+  [below](#sums-and-dot-products-of-arrays));
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -72,18 +78,22 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
 2. **The theorems of the generated statements.** `proofs/gen/Audit.v` has, for every kernel that
    is not UNVERIFIED, a definition `K_audit : K_spec := K_correct`, which compiles only if the
    theorem has exactly the generated statement as its type, followed by
-   `Print Assumptions K_correct`. A script, `proofs/audit/audit.py`, reads what Rocq printed and
-   fails on any axiom outside the allowed list, on a missing report, or on any output it does not
-   understand.
+   `Print Assumptions K_correct`; and the same two lines for each order of every fold that is
+   proved (`F_seq_audit : F_seq_spec := F_seq_correct`, and `F_lanes`). A script,
+   `proofs/audit/audit.py`, reads what Rocq printed and fails on any axiom outside the allowed
+   list, on a missing report, or on any output it does not understand.
 3. **The theorems that the generated audits do not list**, the same way, from
    `proofs/audit/HandAudit.v`: the IEEE-model theorems of the kernels that also have a
    real-model statement of their own domain (they have generated statements as their types),
    a few facts whose statements are written by hand because they say more about a kernel than
    its claims can express, the theorems about sums and dot products of arrays, which are
-   about no single kernel, and the lemmas of the first building blocks of Milestone 2 that are
+   about no single kernel, the lemmas of the first building blocks of Milestone 2 that are
    not generated statements, among them those about `mul_dir_1`, whose kernel is not generated
    yet, and those about the two executions of a product, whose plain-product listings are
-   written by hand.
+   written by hand, and the theorems about the folds that have no generated statement
+   ([below](#sums-and-dot-products-of-arrays)). One theorem of a generated real-model statement
+   is audited here and not in step 2: that of `dot_step_2`, whose description stays UNVERIFIED
+   until the generator can export a bound of its form.
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
@@ -93,7 +103,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  60 files: no Admitted, admit, Axiom or Parameter
+  70 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -187,6 +197,54 @@ the statements use (what a canonical value is, what a ball contains). The kernel
 kind are in the generated headers and are `proved` in the claims; whether an operator of the
 library calls them yet is said in
 [What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values).
+
+## Sums and dot products of arrays
+
+A fold is a loop of kernels along arrays: `sum_1`, `sum_2`, `sum_fast_2` (the fast addition),
+their `_entry` forms for arrays that the program fills, `dot_1` and `dot_2`. Three things are
+proved of each, in the real model.
+
+**The bound of the fold, in both orders.** The generated model of a fold `F` is two functions on
+lists: `F_seq`, the elements taken one after the other, and `F_lanes W`, the order of a loop
+with `W` partial results that are combined at the end, as a SIMD loop runs it. `F_seq_correct`
+and `F_lanes_correct` (`FoldSums.v`) have the generated statements as their types: for every
+list of valid elements, and in the lane order for every `W`, the result is valid and within
+
+$$\bigl((1 + \varepsilon)^{n-1} - 1\bigr)\sum_i \lvert v_i\rvert$$
+
+of the exact sum of the $n$ values $v_i$, with $\varepsilon$ the relative error of the addition;
+for a dot product there is one more factor for the products, and a term for underflow
+([the statements](../developer/design/milestone2.md#sum-dot-axpy-convolution)). The bound does
+not depend on the order, which is why one statement serves the scalar loop and the SIMD loop.
+The proofs show that the generated step and combination are the ones the theorems of
+`SummationKernels.v` are about, and apply those theorems.
+
+**The exported bound.** A program cannot write $(1 + \varepsilon)^{n-1} - 1$ in floating
+point. The kernels `bound_sum_1`, `bound_sum_2`, `bound_dot_1` and `bound_dot_2` compute, from a
+count $m$, a number $g$ of the format (and for a dot product a second one, $t$) and a flag
+`ok`; `K_correct` (`BoundKernels.v`) proves that when `ok` is true, $g$ is at least
+$m\varepsilon/(1 - m\varepsilon)$ and $t$ at least $m\,\tau\,(1 + g)$, for $m$ zero or at
+least 1, in a format that contains $\tfrac12$.
+
+**The two together** (`FoldGuarantee.v`, audited by hand: these statements are not generated).
+For each fold and each order, if the bound kernel answers `ok` for a count $m$ that is at least
+the count of the fold, then the result of the fold is within $g\sum_i\lvert v_i\rvert$ of the
+exact sum, plus $t$ for a dot product. The count of a sum of $n$ elements is $n - 1$, and that
+of a dot product of $n$ terms is $n$. These theorems are named `F_seq_bound` and
+`F_lanes_bound`.
+
+| Fold | Bound kernel | Count | From precision |
+|---|---|---|---|
+| `sum_1`, `sum_1_entry` | `bound_sum_1` | $m \ge n - 1$ | 1 |
+| `sum_2`, `sum_2_entry`, `sum_fast_2`, `sum_fast_2_entry` | `bound_sum_2` | $m \ge n - 1$ | 3 |
+| `dot_1` | `bound_dot_1` | $m \ge n$ | 1 |
+| `dot_2` | `bound_dot_2` | $m \ge n$ | 4 |
+
+These are statements of the real model, where nothing overflows. The step of each fold is a
+kernel with a statement of its own (`StepKernels.v`). What a fold returns when an element is
+not finite or an operation overflows is decided by its finish, a kernel proved in the IEEE
+model (`IeeeFoldFinish.v`): the flag is true exactly when the leading limb of the final state is
+finite, the result is then that state, and otherwise every limb of the result is a NaN.
 
 ## What a proof does not cover
 

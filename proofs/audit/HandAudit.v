@@ -25,7 +25,18 @@
      generated yet), the rectangle lemma of the product of intervals, the two
      executions of a product, and the two executions of the eight kernels whose only
      fused operations are products, on listings written by hand with the product as an
-     argument (the generator does not emit the model of the plain-product execution).
+     argument (the generator does not emit the model of the plain-product execution);
+   - the theorems about the folds that have no generated statement: that a fold of the
+     model with overflow is the fold of the real model whenever its result is finite
+     (theories/FoldTransfer.v), what holds of the bound kernels beyond their generated
+     statements (theories/BoundKernels.v), and that the exported bound covers the error
+     of each fold in each order (theories/FoldGuarantee.v);
+   - the theorem of a real-model statement whose kernel description cannot name it yet:
+     dot_step_2, whose error entry has the form T (relative to the terms of the value).
+     The generator writes the constants of every proved kernel into
+     include/kairn/gen/bounds.hpp and has no export for that form, so the description
+     keeps the status unverified and the theorem is audited here against the generated
+     statement, as proofs/gen/Audit.v would.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -38,6 +49,7 @@ From Kairn Require Import Folds Summation SummationKernels.
 From Kairn Require Import DirectedSum DirectedProd BallPow2 Rectangle IeeeProduct.
 From Kairn Require Import IeeeDirected IeeeDirectedProd IeeeEntry.
 From Kairn Require Import IeeeTwoExecutions.
+From Kairn Require Import StepKernels FoldTransfer BoundKernels FoldGuarantee.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
    theories/IeeeEFT.v). *)
@@ -431,3 +443,40 @@ Print Assumptions mul_up_1_ieee_nonfinite.
 Print Assumptions xval_prod_nonfinite.
 Print Assumptions mul_dir_1_ieee_eq.
 Print Assumptions mul_dir_1_ieee_encloses.
+(* The step of the dot product of two limbs (theories/StepKernels.v): the generated
+   statement dot_step_2_spec of proofs/gen/Statements.v. See the head of this file for
+   why it is here and not in proofs/gen/Audit.v. *)
+Definition dot_step_2_audit : dot_step_2_spec := dot_step_2_correct.
+Print Assumptions dot_step_2_correct.
+
+(* A fold in two models (theories/FoldTransfer.v): lists only, no real number. *)
+Print Assumptions fold_seq_transfer.
+Print Assumptions fold_seq_transfer_prefix.
+Print Assumptions fold_lanes_transfer.
+
+(* The bound kernels (theories/BoundKernels.v): everything that holds of each, 0 <= g
+   included, which the generated statements do not have. *)
+Print Assumptions bound_sum_1_facts.
+Print Assumptions bound_sum_2_facts.
+Print Assumptions bound_dot_1_facts.
+Print Assumptions bound_dot_2_facts.
+
+(* The exported bound covers the error of the fold (theories/FoldGuarantee.v), for each
+   fold of proofs/gen/FoldModel.v and each order. *)
+Print Assumptions gamma_le_real.
+Print Assumptions sum_1_seq_bound.
+Print Assumptions sum_1_lanes_bound.
+Print Assumptions sum_1_entry_seq_bound.
+Print Assumptions sum_1_entry_lanes_bound.
+Print Assumptions sum_2_seq_bound.
+Print Assumptions sum_2_lanes_bound.
+Print Assumptions sum_2_entry_seq_bound.
+Print Assumptions sum_2_entry_lanes_bound.
+Print Assumptions sum_fast_2_seq_bound.
+Print Assumptions sum_fast_2_lanes_bound.
+Print Assumptions sum_fast_2_entry_seq_bound.
+Print Assumptions sum_fast_2_entry_lanes_bound.
+Print Assumptions dot_1_seq_bound.
+Print Assumptions dot_1_lanes_bound.
+Print Assumptions dot_2_seq_bound.
+Print Assumptions dot_2_lanes_bound.
