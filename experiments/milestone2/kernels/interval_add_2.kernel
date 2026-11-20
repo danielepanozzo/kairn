@@ -1,6 +1,8 @@
 # The sum of two intervals with 2-limb bounds. A bound that the finite cores do not return as a
 # finite number (an unbounded operand, or an overflow) becomes the infinity on its side; an
-# empty operand gives the empty set.
+# empty operand gives the empty set. Not in gen/kernels yet: Clang 18 at -O2 computes the scalar
+# code's independent FMAs two to a packed instruction (SLP vectorization), and the generator's
+# object-code check, one fused instruction per FMA, cannot count those.
 kernel:        interval_add_2
 input:         xl = xl0 xl1
 input:         xu = xu0 xu1

@@ -11,10 +11,17 @@ wrong on what was run.
 ## How it works
 
 - `kernels/` holds the proposed kernels as descriptions in the generator's own format
-  (`gen/README.md`), 24 of them. They carry no claims: the claims of this milestone need
-  vocabulary that the generator does not have yet. The nine of the first wave that the
-  generator has now (`two_sum_ord`, the four directed sums, the two directed products and the two
-  scalings of a ball by a power of two) are in `gen/kernels`, with their claims, and only there.
+  (`gen/README.md`), 15 of them. They carry no claims: the claims of this milestone need
+  vocabulary that the generator does not have yet. The 18 that the generator has now are in
+  `gen/kernels`, with their claims, and only there: the nine of the first wave (`two_sum_ord`, the
+  four directed sums, the two directed products and the two scalings of a ball by a power of
+  two), and nine of the first kernels of the intervals (`mul_dir_1`, `interval_make_1`,
+  `interval_neg_1`, `interval_add_1`, `interval_sub_1`, `add_ball_2_2`, `mul_ball_2_2`,
+  `add_down_2_2` and `add_up_2_2`). Four kernels of that stage stay here, because their compiled
+  code does not pass the generator's object-code check: `mul_dir_2_2` and `ball_from_interval_2`
+  negate a fused result, which compilers compute as one more fused instruction, and Clang computes
+  two independent FMAs of `interval_mul_1` and of `interval_add_2` in one packed instruction. The
+  generator's tests read the four with the claims they will have (`gen/tests/common.py`).
 - `common.py` loads them together with the kernels of `gen/kernels`, taking a kernel from
   `gen/kernels` when it has one, and evaluates them with the
   generator's exact interpreter (`gen/kairn_gen/interp.py`), on any format `(p, qmin, qmax)`. It
@@ -44,7 +51,7 @@ compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`)
 | `rational.py` | a model in integer arithmetic of `rational(num, den)`, the three-word method of the page's first version, equals the specification, limb for limb. It is not a test of the header, whose computation is another and which the oracle tests | Constants at compile time |
 | `convert.py` | conversions between a wide and a narrow format, of numbers and of balls | Limbs of another type |
 | `constants.py` | the constants $A$ and $B$ of the two-limb bounds in `binary64` and `binary32` | Bounds of two limbs |
-| `rules_report.py` | what the generator's rules say of the 33 proposed kernels (24 in `kernels/`, 9 in `gen/kernels`), and the operations of each after inlining | Experiments |
+| `rules_report.py` | what the generator's rules say of the 33 proposed kernels (15 in `kernels/`, 18 in `gen/kernels`), and the operations of each after inlining | Experiments |
 
 ## Rerun
 
@@ -95,7 +102,10 @@ subnormal constant in the hardware formats: `ball_from_interval_2` no longer add
 radius when a halving was rounded. It takes the number after $d = \mathrm{RU}(h_u - h_\ell)$,
 which is at least $d + \eta$ and never more than the earlier result; `enclosure_1.py` asserts
 containment and that value on every pair of values. The same rule changed the scalings of a
-ball, whose descriptions and script (`scaling.py`) are with the generator.
+ball, whose descriptions and script (`scaling.py`) are with the generator. And a second rule,
+that a kernel adds no value to itself (GCC rewrites `a + a` as `a * 2` and may fuse that product
+into the next addition), changed the test of an exact halving of `ball_from_interval_2`: each
+half is doubled back by `prod(h, const up(2))`, the same value as `add(h, h)` as an exact product.
 
 ## What the proofs changed
 

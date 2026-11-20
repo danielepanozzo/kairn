@@ -7,7 +7,11 @@
 # (hi - lo)/2 + |a + b| <= d - a + b + |a + b| <= d + eta). No constant of the listing is
 # subnormal: an earlier version added eta to d and then stepped. States: the whole line when a
 # bound is infinite, and when a bound is a NaN (decided on 2026-11-20, as for interval_make_1);
-# the empty set for lo > hi, lo = +inf or hi = -inf.
+# the empty set for lo > hi, lo = +inf or hi = -inf. The test of an exact halving doubles each half
+# back by an exact product with 2, not by adding it to itself (a rule of the generator: GCC rewrites
+# a + a as a * 2 and may fuse that product into the next addition). Not in gen/kernels yet: the
+# difference of the halves negates a fused result (the half, a prod), which compilers compute as one
+# more fused instruction, beyond what the object-code check allows.
 kernel:        ball_from_interval_2
 input:         lo
 input:         hi
@@ -26,8 +30,8 @@ hl       = prod(gl, const up(1/2))
 hu       = prod(gu, const up(1/2))
 (c0, c1) = two_sum_ord(hl, hu)
 d        = sub_up_1(hu, hl)
-bl       = add(hl, hl)
-bu       = add(hu, hu)
+bl       = prod(hl, const up(2))
+bu       = prod(hu, const up(2))
 xl       = eq(bl, gl)
 xu       = eq(bu, gu)
 xx       = and(xl, xu)

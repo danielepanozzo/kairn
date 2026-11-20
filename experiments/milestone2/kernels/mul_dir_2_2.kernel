@@ -1,5 +1,7 @@
 # Two normalized pairs l <= x y <= h from one product by mul_2_2: its second limb moved down and
-# up by the bound d of the product's own error, and each pair renormalized exactly.
+# up by the bound d of the product's own error, and each pair renormalized exactly. Not in
+# gen/kernels yet: sub_down_1(z1, d) negates d, a fused result, which compilers compute as one more
+# fused instruction, beyond what the object-code check allows.
 kernel:        mul_dir_2_2
 input:         x = x0 x1
 input:         y = y0 y1

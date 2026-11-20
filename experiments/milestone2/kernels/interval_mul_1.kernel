@@ -1,6 +1,8 @@
 # The product of two intervals with one-limb bounds, without a branch: the four products of
 # bounds, each rounded down and up (0 times infinity is 0), the least of the four lower values
-# and the greatest of the four upper ones.
+# and the greatest of the four upper ones. Not in gen/kernels yet: Clang 18 at -O2 computes the
+# scalar code's independent FMAs two to a packed instruction (SLP vectorization), and the
+# generator's object-code check, one fused instruction per FMA, cannot count those.
 kernel:        interval_mul_1
 input:         stored xl
 input:         stored xu
