@@ -19,6 +19,7 @@ A number of several limbs stands for their exact sum: $c = c_0 + c_1$, $c_w = c_
 | `Ball<T, 2>(c, r)` | `Expansion<T, 2>`, `T` | `Ball<T, 2>` |  |
 | `Ball<T, 2>(c)` | `Expansion<T, 2>` | `Ball<T, 2>` | implicit: the point $c$, radius 0 |
 | `Ball<T, 2>(a)` | `T` | `Ball<T, 2>` | implicit: the point $a$, radius 0, with the center made by `make_2` first |
+| `Ball<T, 2>(q)` | `Constant<Expansion<T, 2>>` | `Ball<T, 2>` | explicit: center `q.value`, radius `q.error`, for `q` a result of `rational` or `integer`: how to multiply a ball by $1/s$, `X * Ball<T, 2>(rational<Expansion<T, 2>>(1, s))`, until Kairn has a division; `constexpr`; its check of the center rounds |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED (a constructor does not take it).
 
@@ -32,8 +33,8 @@ A number of several limbs stands for their exact sum: $c = c_0 + c_1$, $c_w = c_
 For operands that satisfy the requirements, finite, infinite or NaN:
 
 - The result $Z$, of center $c_w$ and radius $r_w$, is a canonical ball.
-- $Z$ is the empty set (every limb a NaN) when $r$ is a NaN or negative, $-\infty$ included.
-- Otherwise $Z$ is the whole line (center 0, radius $+\infty$) when $c$ is not finite or $r = +\infty$.
+- $Z$ is the empty set (every limb a NaN) when $r$ is negative, $-\infty$ included.
+- Otherwise $Z$ is the whole line (center 0, radius $+\infty$) when $r$ is a NaN or $+\infty$, or $c$ is not finite.
 - Otherwise $Z$ is the ball of center $c$ and radius $r$, exactly.
 
 Proved for every binary format with a precision of at least 1 bit, rounding to nearest with ties to even and with gradual underflow, in the IEEE model, with signed zeros, infinities, NaN and overflow. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
@@ -55,7 +56,7 @@ Which of them the proof of `ball_make_2_correct` depends on is not copied here: 
 
 ## Source
 
-**Algorithm:** constructors (Milestone 1 listing). **License:** algorithm: MIT.
+**Algorithm:** constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). **License:** algorithm: MIT.
 
 ## Listing
 
@@ -63,12 +64,16 @@ From [`gen/kernels/ball_make_2.kernel`](https://github.com/danielepanozzo/kairn/
 
 ```
 # A ball from a canonical 2-limb center (an object, so its limbs are stored) and a radius from the
-# program, guarded (rule R3): the empty set when the radius is a NaN or negative (e false), the
-# whole line when the center is not finite or the radius is +infinity (f false), and otherwise the
-# ball itself (milestone1.md, "Values that enter from the program").
+# program, guarded (rule R3): the empty set when the radius is negative, -infinity included (n
+# true); otherwise the whole line when the center is not finite or the radius is +infinity or a
+# NaN (f false: lt(g, const inf) is false for a NaN), as a NaN bound given to an interval is (the
+# owner's decision of 2026-11-20); and otherwise the ball itself (milestone1.md, "Values that enter
+# from the program"). The ordinary case is the first arm of each select (ok = not(n)), as the
+# scalar printer's branch over a fix-up wants.
 
 g   = guard(r)
-e   = le(0, g)
+n   = lt(g, 0)
+ok  = not(n)
 a   = abs(c0)
 f1  = lt(a, const inf)
 f2  = lt(g, const inf)
@@ -76,9 +81,9 @@ f   = and(f1, f2)
 k0  = select(f, c0, 0)
 k1  = select(f, c1, 0)
 s   = select(f, g, const inf)
-cw0 = select(e, k0, const nan)
-cw1 = select(e, k1, const nan)
-rw  = select(e, s, const nan)
+cw0 = select(ok, k0, const nan)
+cw1 = select(ok, k1, const nan)
+rw  = select(ok, s, const nan)
 ```
 
 ## Measured

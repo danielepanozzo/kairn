@@ -830,9 +830,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert.v",
+        "name": "ball_from_interval_2_correct"
+      },
       "source": {
         "cite": "the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -933,9 +937,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert.v",
+        "name": "ball_lower_as_1_correct"
+      },
       "source": {
         "cite": "the center minus the radius, rounded down (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -991,7 +999,7 @@
         "name": "ball_make_1_correct"
       },
       "source": {
-        "cite": "constructors (Milestone 1 listing)",
+        "cite": "constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20)",
         "license": "algorithm: MIT"
       },
       "flops": 2,
@@ -1686,9 +1694,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert.v",
+        "name": "ball_to_interval_1_correct"
+      },
       "source": {
         "cite": "the directed difference and sum of the center and the radius (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1740,9 +1752,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert.v",
+        "name": "ball_upper_as_1_correct"
+      },
       "source": {
         "cite": "the center plus the radius, rounded up (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2224,9 +2240,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval1.v",
+        "name": "interval_add_1_correct"
+      },
       "source": {
         "cite": "directed sums of the bounds (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2292,9 +2312,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_hull_1_correct"
+      },
       "source": {
         "cite": "the smaller lower bound and the larger upper bound (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2360,9 +2384,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_intersection_1_correct"
+      },
       "source": {
         "cite": "the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2410,9 +2438,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval1.v",
+        "name": "interval_make_1_correct"
+      },
       "source": {
         "cite": "constructor of an interval (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2515,9 +2547,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert.v",
+        "name": "interval_mid_rad_1_correct"
+      },
       "source": {
         "cite": "the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2665,9 +2701,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedProd.v",
+        "name": "mul_dir_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeDirectedProd.v",
+        "name": "mul_dir_1_ieee_correct"
+      },
       "source": {
         "cite": "two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2745,9 +2788,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval1.v",
+        "name": "interval_mul_1_correct"
+      },
       "source": {
         "cite": "the least and the greatest of the directed products of the bounds (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2810,9 +2857,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval1.v",
+        "name": "interval_neg_1_correct"
+      },
       "source": {
         "cite": "the bounds negated and exchanged (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2878,9 +2929,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert.v",
+        "name": "interval_split_1_correct"
+      },
       "source": {
         "cite": "the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2956,9 +3011,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval1.v",
+        "name": "interval_sub_1_correct"
+      },
       "source": {
         "cite": "directed differences of the bounds (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -3012,9 +3071,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert.v",
+        "name": "interval_to_ball_1_correct"
+      },
       "source": {
         "cite": "interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -3378,8 +3441,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldNorm.v",
+        "name": "norm_combine_correct"
+      },
       "source": {
         "cite": "the larger of two numbers, by a comparison (milestone2.md, norm_upper_k)",
         "license": "proof: MIT"
@@ -3427,9 +3493,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFoldNorm.v",
+        "name": "norm_finish_1_correct"
+      },
       "source": {
         "cite": "the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md)",
         "license": "proof: MIT"
@@ -3478,9 +3548,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeFoldNorm.v",
+        "name": "norm_finish_2_correct"
+      },
       "source": {
         "cite": "the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md)",
         "license": "proof: MIT"
@@ -3531,8 +3605,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldNorm.v",
+        "name": "norm_step_1_correct"
+      },
       "source": {
         "cite": "the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k)",
         "license": "proof: MIT"
@@ -4759,8 +4836,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "add_ball_2_2_correct"
+      },
       "source": {
         "cite": "add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -4823,8 +4903,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "add_down_2_2_correct"
+      },
       "source": {
         "cite": "add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5066,8 +5149,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "add_up_2_2_correct"
+      },
       "source": {
         "cite": "add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5728,9 +5814,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert.v",
+        "name": "ball_lower_as_2_correct"
+      },
       "source": {
         "cite": "the center rounded down, minus the radius, rounded down (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5798,7 +5888,7 @@
         "name": "ball_make_2_correct"
       },
       "source": {
-        "cite": "constructors (Milestone 1 listing)",
+        "cite": "constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20)",
         "license": "algorithm: MIT"
       },
       "flops": 1,
@@ -6175,9 +6265,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert.v",
+        "name": "ball_narrow_2_1_correct"
+      },
       "source": {
         "cite": "the leading limb, and the radius widened by the second limb (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -6661,9 +6755,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert.v",
+        "name": "ball_upper_as_2_correct"
+      },
       "source": {
         "cite": "the center rounded up, plus the radius, rounded up (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -6992,9 +7090,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval2.v",
+        "name": "interval_add_2_correct"
+      },
       "source": {
         "cite": "the directed sums of two limbs, an infinite or empty result selected (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -7117,9 +7219,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_hull_2_correct"
+      },
       "source": {
         "cite": "the smaller lower bound and the larger upper bound, by lt_2_2 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -7242,9 +7348,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_intersection_2_correct"
+      },
       "source": {
         "cite": "the larger lower bound and the smaller upper bound by lt_2_2, the empty set if they cross (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -7295,9 +7405,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_make_2_correct"
+      },
       "source": {
         "cite": "constructor of an interval of two limbs (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -7358,8 +7472,11 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "mul_ball_2_2_correct"
+      },
       "source": {
         "cite": "mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -7432,8 +7549,11 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "mul_dir_2_2_correct"
+      },
       "source": {
         "cite": "mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -7502,9 +7622,13 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalMul2.v",
+        "name": "mul_ext_2_2_correct"
+      },
       "source": {
         "cite": "mul_dir_2_2, with the products of a zero and of an infinity selected (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -7582,9 +7706,13 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalMul2.v",
+        "name": "interval_mul_2_correct"
+      },
       "source": {
         "cite": "the least and the greatest of the four products of bounds by mul_ext_2_2 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -7647,9 +7775,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_neg_2_correct"
+      },
       "source": {
         "cite": "neg_2 of each bound, exchanged (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -7702,8 +7834,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "sub_down_2_2_correct"
+      },
       "source": {
         "cite": "add_down_2_2 on x and -y (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -7756,8 +7891,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "sub_up_2_2_correct"
+      },
       "source": {
         "cite": "add_up_2_2 on x and -y (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -7846,9 +7984,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalSub2.v",
+        "name": "interval_sub_2_correct"
+      },
       "source": {
         "cite": "the directed differences of two limbs, an infinite or empty result selected (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -8467,8 +8609,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldNorm.v",
+        "name": "norm_step_2_correct"
+      },
       "source": {
         "cite": "the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k)",
         "license": "proof: MIT"
@@ -9219,8 +9364,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "add_1_correct"
+      },
       "source": {
         "cite": "add_1_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -9291,8 +9439,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "add_1_entry_correct"
+      },
       "source": {
         "cite": "add_1_1 on each element, guarded",
         "license": "algorithm: published; proof: MIT"
@@ -9366,8 +9517,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "add_2_correct"
+      },
       "source": {
         "cite": "add_2_2 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -9441,8 +9595,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "add_2_entry_correct"
+      },
       "source": {
         "cite": "add_2_2 on each element, guarded",
         "license": "algorithm: published; proof: MIT"
@@ -9520,8 +9677,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "axpy_1_correct"
+      },
       "source": {
         "cite": "axpy_step_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -9599,8 +9759,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "axpy_1_entry_correct"
+      },
       "source": {
         "cite": "axpy_entry_step_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -9682,8 +9845,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "axpy_2_correct"
+      },
       "source": {
         "cite": "axpy_step_2 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -9764,8 +9930,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "axpy_2_1_correct"
+      },
       "source": {
         "cite": "axpy_step_2_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -9846,8 +10015,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "axpy_2_1_entry_correct"
+      },
       "source": {
         "cite": "axpy_entry_step_2_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -9929,8 +10101,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "axpy_2_entry_correct"
+      },
       "source": {
         "cite": "axpy_entry_step_2 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -9985,8 +10160,11 @@
       "coefficients": "dot_1",
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldConv.v",
+        "name": "conv_1_correct"
+      },
       "source": {
         "cite": "dot_1 on the terms of each coefficient",
         "license": "bound: published; proof: MIT"
@@ -10044,8 +10222,11 @@
       "coefficients": "dot_2",
       "check": "fold_finish_2",
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldConv.v",
+        "name": "conv_2_correct"
+      },
       "source": {
         "cite": "dot_2 on the terms of each coefficient",
         "license": "bound: published; proof: MIT"
@@ -10330,8 +10511,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "mul_pow2_map_1_correct"
+      },
       "source": {
         "cite": "a product by a power of two on each element",
         "license": "algorithm: published; proof: MIT"
@@ -10406,8 +10590,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "mul_pow2_map_2_correct"
+      },
       "source": {
         "cite": "mul_pow2_2 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -10467,10 +10654,16 @@
       "combine": "norm_combine",
       "finish": "norm_finish_1",
       "min_precision": 1,
-      "status": "unverified",
+      "status": "proved",
       "theorems": {
-        "sequential": null,
-        "lanes": null
+        "sequential": {
+          "file": "proofs/theories/FoldNorm.v",
+          "name": "norm_upper_1_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldNorm.v",
+          "name": "norm_upper_1_lanes_correct"
+        }
       },
       "source": {
         "cite": "a maximum by comparisons, in any order",
@@ -10537,10 +10730,16 @@
       "combine": "norm_combine",
       "finish": "norm_finish_2",
       "min_precision": 1,
-      "status": "unverified",
+      "status": "proved",
       "theorems": {
-        "sequential": null,
-        "lanes": null
+        "sequential": {
+          "file": "proofs/theories/FoldNorm.v",
+          "name": "norm_upper_2_seq_correct"
+        },
+        "lanes": {
+          "file": "proofs/theories/FoldNorm.v",
+          "name": "norm_upper_2_lanes_correct"
+        }
       },
       "source": {
         "cite": "a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between)",
@@ -10617,8 +10816,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "scale_1_correct"
+      },
       "source": {
         "cite": "mul_1_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -10692,8 +10894,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "scale_2_correct"
+      },
       "source": {
         "cite": "mul_2_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -10764,8 +10969,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "sub_1_correct"
+      },
       "source": {
         "cite": "sub_1_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -10836,8 +11044,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "sub_1_entry_correct"
+      },
       "source": {
         "cite": "sub_1_1 on each element, guarded",
         "license": "algorithm: published; proof: MIT"
@@ -10911,8 +11122,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "sub_2_correct"
+      },
       "source": {
         "cite": "sub_2_2 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -10986,8 +11200,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "sub_2_entry_correct"
+      },
       "source": {
         "cite": "sub_2_2 on each element, guarded",
         "license": "algorithm: published; proof: MIT"

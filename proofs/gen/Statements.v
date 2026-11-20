@@ -351,7 +351,7 @@ Definition two_prod_spec : Prop :=
   Rabs ((p + e) - (a * b)) <= (1 / 2) * eta emin /\
   (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).
 
-(* mul_dir_1: two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). Status: unverified. *)
+(* mul_dir_1: two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). Status: proved. *)
 Definition mul_dir_1_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a b : R,
@@ -417,7 +417,7 @@ Definition next_up_spec : Prop :=
   fmt emin prec r /\
   r = succ radix2 (FLT_exp emin prec) a.
 
-(* norm_combine: the larger of two numbers, by a comparison (milestone2.md, norm_upper_k). Status: unverified. *)
+(* norm_combine: the larger of two numbers, by a comparison (milestone2.md, norm_upper_k). Status: proved. *)
 Definition norm_combine_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall m n : R,
@@ -428,7 +428,7 @@ Definition norm_combine_spec : Prop :=
   fmt emin prec r /\
   r = Rmax m n.
 
-(* norm_step_1: the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k). Status: unverified. *)
+(* norm_step_1: the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k). Status: proved. *)
 Definition norm_step_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall m x : R,
@@ -633,7 +633,7 @@ Definition add_2_2_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) + (y0 + y1)).
 
-(* add_ball_2_2: add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). Status: unverified. *)
+(* add_ball_2_2: add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). Status: proved. *)
 Definition add_ball_2_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
@@ -645,7 +645,7 @@ Definition add_ball_2_2_spec : Prop :=
   Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) + (y0 + y1)) /\
   Rabs (((x0 + x1) + (y0 + y1)) - (z0 + z1)) <= d.
 
-(* add_down_2_2: add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified. *)
+(* add_down_2_2: add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: proved. *)
 Definition add_down_2_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
@@ -677,7 +677,7 @@ Definition add_fast_2_2_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= 3 * u prec ^ 2 * (Rabs (x0 + x1) + Rabs (y0 + y1)).
 
-(* add_up_2_2: add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified. *)
+(* add_up_2_2: add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: proved. *)
 Definition add_up_2_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
@@ -905,7 +905,7 @@ Definition le_2_2_spec : Prop :=
   let m := le_2_2 x0 x1 y0 y1 in
   m = Rle_bool (x0 + x1) (y0 + y1).
 
-(* mul_ball_2_2: mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). Status: unverified. *)
+(* mul_ball_2_2: mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). Status: proved. *)
 Definition mul_ball_2_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
@@ -917,7 +917,7 @@ Definition mul_ball_2_2_spec : Prop :=
   Rabs ((z0 + z1) - ((x0 + x1) * (y0 + y1))) <= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + (3 / 2) * eta emin /\
   Rabs (((x0 + x1) * (y0 + y1)) - (z0 + z1)) <= d.
 
-(* mul_dir_2_2: mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified. *)
+(* mul_dir_2_2: mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: proved. *)
 Definition mul_dir_2_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
@@ -931,7 +931,7 @@ Definition mul_dir_2_2_spec : Prop :=
   ((x0 + x1) * (y0 + y1)) <= (h0 + h1) /\
   Rabs ((h0 + h1) - ((x0 + x1) * (y0 + y1))) <= ((((((2 * ((1 + u prec) ^ 3)) * up_ball_mul_2_1 emin prec) * up_ball_mul_2_0 emin prec) + (2 * (u prec ^ 2))) * (1 + (4 * u prec ^ 2))) / (1 - u prec)) * Rabs ((x0 + x1) * (y0 + y1)) + ((((2 * ((1 + u prec) ^ 2)) * ((((/ 2) * up_ball_mul_2_1 emin prec) * eta emin) + up_ball_mul_2_2 emin prec)) + eta emin) + ((((((2 * ((1 + u prec) ^ 3)) * up_ball_mul_2_1 emin prec) * up_ball_mul_2_0 emin prec) + (2 * (u prec ^ 2))) / (1 - u prec)) * ((3 / 2) * eta emin))).
 
-(* sub_down_2_2: add_down_2_2 on x and -y (Milestone 2 listing). Status: unverified. *)
+(* sub_down_2_2: add_down_2_2 on x and -y (Milestone 2 listing). Status: proved. *)
 Definition sub_down_2_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
@@ -943,7 +943,7 @@ Definition sub_down_2_2_spec : Prop :=
   Rabs ((l0 + l1) - ((x0 + x1) - (y0 + y1))) <= ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) * (1 + ((3 / (1 - (4 * u prec))) * u prec ^ 2))) / (1 - u prec)) * Rabs ((x0 + x1) - (y0 + y1)) + ((((2 * ((1 + u prec) ^ 2)) * ((((/ 2) * up_ball_add_1_1 emin prec) * eta emin) + up_ball_add_1_2 emin prec)) + eta emin) + ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) / (1 - u prec)) * 0)) /\
   (((x0 + x1) - (y0 + y1)) = 0 -> (l0 + l1) = ((x0 + x1) - (y0 + y1))).
 
-(* sub_up_2_2: add_up_2_2 on x and -y (Milestone 2 listing). Status: unverified. *)
+(* sub_up_2_2: add_up_2_2 on x and -y (Milestone 2 listing). Status: proved. *)
 Definition sub_up_2_2_spec : Prop :=
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
@@ -1013,7 +1013,7 @@ Definition mul_pow2_step_2_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) * c)) <= 1 * eta emin.
 
-(* norm_step_2: the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k). Status: unverified. *)
+(* norm_step_2: the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k). Status: proved. *)
 Definition norm_step_2_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall m x0 x1 : R,

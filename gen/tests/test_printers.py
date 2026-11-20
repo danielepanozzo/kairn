@@ -103,7 +103,10 @@ TIMES_INF = r' \* std::numeric_limits<(?:double|float)>::infinity\(\);$'
 FULL = {f'{core}_full' for core in ('add_2_2', 'add_fast_2_2', 'sub_2_2', 'add_2_1', 'sub_2_1', 'sub_1_2',
                                     'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
 FULL_BALL = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale', 'mul_pow2') for k in (1, 2)}
-BRANCHED_M1 = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BALL | {'ball_make_1', 'ball_make_2'}})
+BRANCHED_M1 = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BALL})
+# The constructors of balls test that the radius is not negative (ok), then that the ball is finite;
+# a NaN radius, the whole line since 2026-11-20, fails the second test only.
+BRANCHED_M1.update({k: ('ok', 'f') for k in ('ball_make_1', 'ball_make_2')})
 BRANCHED = dict(BRANCHED_M1)
 # Milestone 2: the kernels without a real-model statement whose outputs are selects on one mask, the
 # test of empty operands (ne) of the interval kernels, the test of a pair that describes an interval
@@ -354,8 +357,9 @@ class Cpp(unittest.TestCase):
         self.assertIn('        const double w1 = f ? z1 : r1;', full)
         make = self.fns[('ball_make_2', 'float')]
         self.assertTrue(make['constexpr'])
-        self.assertIn('        const float rw = e ? s : std::numeric_limits<float>::quiet_NaN();', make['lines'])
-        self.assertIn('    const bool e = g >= 0.0f;', make['lines'])
+        self.assertIn('        const float rw = ok ? s : std::numeric_limits<float>::quiet_NaN();', make['lines'])
+        self.assertIn('    const bool n = 0.0f > g;', make['lines'])
+        self.assertIn('    const bool ok = !n;', make['lines'])
         self.assertIn('#include <limits>', cpp.prelude(self.ks))
         self.assertIn('#include <limits>', cpp.prelude(self.tks))         # ops_special, ops_branch
         without = {n: k for n, k in self.tks.items() if n not in ('ops_special', 'ops_branch')}
@@ -632,7 +636,7 @@ class Packed(unittest.TestCase):
                       avx2[('mul_2_2_full', '__m256')])
         self.assertIn('    const float64x2_t r0 = vmulq_f64(t, vdupq_n_f64(std::numeric_limits<double>::infinity()));',
                       neon[('add_2_2_full', 'float64x2_t')])
-        self.assertIn('    const float64x2_t rw = vbslq_f64(e, s, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));',
+        self.assertIn('    const float64x2_t rw = vbslq_f64(ok, s, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));',
                       neon[('ball_make_2', 'float64x2_t')])
         for (file, which), t in self.texts.items():
             ks = self.ks if which == 'kernels' else self.tks
@@ -874,9 +878,22 @@ class Rocq(unittest.TestCase):
     # rounding down of z1 - dd written as minus the rounding up of dd - z1 (no fused result negated
     # through a select); then the kernels of stage B1, which have no real-model statement, changed
     # the order of the files only. The files are the regeneration of the merged descriptions.
+    # Then the eighteen maps were proved (FoldMaps.v): Audit.v lists their theorems, one per map,
+    # among those of the folds, every earlier line kept, in its order; Model.v and Statements.v
+    # are the same.
+    # Then the combination and the steps of the folds of maxima were proved, and the two folds
+    # (FoldNorm.v): in Statements.v only the comments above the three statements changed, and
+    # Audit.v lists the three theorems and those of the two folds in their two orders, every
+    # earlier line kept, in its order.
+    # Then the two convolutions were proved (FoldConv.v): Audit.v lists their theorems, one each,
+    # every earlier line kept, in its order.
+    # Then the proofs of the intervals met them in a merge. On their own line mul_dir_1 was
+    # proved: Statements.v prints that one word, and Audit.v lists its theorem; then the seven
+    # bounds of two limbs: seven words more, and their theorems (Directed2.v). The files are
+    # the regeneration of the merged descriptions.
     DIGESTS = {'Model.v': '87fb181c8e6c93c1f4464b97b919af311fa8a00a9a9d941c3db262f8489375ee',
-               'Statements.v': '675c18903ea873185a280693d013a2174b88eb1b13e0d4d09b0764a39baff226',
-               'Audit.v': 'ec73e848723879724134adf9a1b35f25d195b5773d0288cf07499f201a53f655'}
+               'Statements.v': '3e7e7c5148914c45a32bc5a285f4f552889434d0b714971783fe1f7521308fbc',
+               'Audit.v': '655b9f566eb3b51ca85aaffbe68da179ac2e76de08861bca21e0695ec5dcf129'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
@@ -997,8 +1014,9 @@ class ConstantNames(unittest.TestCase):
         # The constants of the bound kernels of the folds' stage, as their line printed them before
         # the record joined it (BoundKernels.v names them). Among them the doubling, 2, which
         # ball_from_interval_2 shares: the two lines named it apart (up_bound_dot_1_2 and
-        # up_ball_from_interval_2_1), the proofs of the bound kernels use the first and no
-        # hand-written proof the second, so the joined record has the first (one name per constant).
+        # up_ball_from_interval_2_1), the proofs of the bound kernels use the first and one proof of
+        # the intervals the second (IeeeBallConvert.v, renamed to the first when the proofs of the
+        # interval kernels joined), so the joined record has the first (one name per constant).
         '(1+u)*(unit(mul_1_1)+eta/2)': 'up_bound_dot_1_0',
         '(1+u)^2*(unit(mul_1_1)+eta)': 'up_bound_dot_1_1',
         '2': 'up_bound_dot_1_2',

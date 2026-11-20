@@ -16,7 +16,8 @@ ensures:       outward l below rel=(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-un
 min_precision: 3
 source:        add_down_2_2 on x and -y (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+theorem:       proofs/theories/Directed2.v sub_down_2_2_correct
+status:        proved
 cone_exempt:   through add_down_2_2, which selects; the interval kernels test l0
 
 (n0, n1) = neg_2(y0, y1)

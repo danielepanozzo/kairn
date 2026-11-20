@@ -992,9 +992,10 @@ class EnclosureClaims(unittest.TestCase):
 
 class R3OfTheKernels(unittest.TestCase):
     """Rule R3 on gen/kernels: which kernels are entry kernels; no guard is pending."""
-    # What the public headers call (include/kairn/expansion.hpp and ball.hpp): the cores, through
-    # kairn::finite and the kernels that need no fix-up, and the full kernels and constructors
-    # (milestone1.md).
+    # What the public headers of Milestone 1 call (include/kairn/expansion.hpp, ball.hpp and
+    # ball_operations.hpp): the cores, through kairn::finite and the kernels that need no fix-up,
+    # and the full kernels and constructors (milestone1.md). Three of these comparisons, lt_1_2,
+    # lt_2_1 and eq_2_1, also decide the signs of a ball of two limbs (ball.hpp, Milestone 2).
     CORES = {'add_2_2', 'add_2_1', 'sub_2_2', 'sub_2_1', 'sub_1_2', 'mul_2_2', 'mul_2_1', 'neg_2', 'abs_2',
              'add_fast_2_2', 'mul_pow2_2', 'lt_2_2', 'le_2_2', 'eq_2_2', 'lt_2_1', 'le_2_1', 'eq_2_1', 'lt_1_2',
              'le_1_2', 'to_nearest_2', 'to_down_2', 'to_up_2', 'abs_upper_2', 'ball_neg_1', 'ball_neg_2'}
@@ -1006,14 +1007,23 @@ class R3OfTheKernels(unittest.TestCase):
     # no value of the program reaches it, and milestone1.md names it a building block, not an entry
     # kernel.
     NOT_ENTRY_BUT_CALLED = {'two_sum'}
-    # The building blocks that milestone2.md makes public ("Building blocks on T"), for the public
-    # headers of Milestone 2, which do not call them yet: the entry forms of the blocks that add
-    # their operands, the blocks that only multiply, compare or step theirs (entry kernels as they
-    # are: two_prod, rmul, the directed products, next_up, next_down), and the scalings of a ball by
-    # a power of two, core and full form ("Scaling a ball by a power of two").
+    # The building blocks that milestone2.md makes public ("Building blocks on T"): the entry forms
+    # of the blocks that add their operands, the blocks that only multiply, compare or step theirs
+    # (entry kernels as they are: two_prod, rmul, the directed products, next_up, next_down), and the
+    # scalings of a ball by a power of two, core and full form ("Scaling a ball by a power of two").
     WAVE_1 = {'two_sum_entry', 'fast_two_sum_entry', 'radd_entry', 'add_down_entry', 'add_up_entry', 'sub_down_entry',
               'sub_up_entry', 'two_prod', 'rmul', 'mul_down_1', 'mul_up_1', 'next_up', 'next_down',
               'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
+    # What the public headers of Milestone 2 call of them: each block of include/kairn/blocks.hpp
+    # calls its one kernel (two_sum, fast_two_sum, radd and the four directed sums the entry form;
+    # two_prod, rmul, mul_down, mul_up, next_up and next_down the kernel as it is), and ldexp and half
+    # of a ball call the full scalings, through detail::scale_pow2 (ball_operations.hpp).
+    WAVE_1_CALLED = {'two_sum_entry', 'fast_two_sum_entry', 'radd_entry', 'add_down_entry', 'add_up_entry',
+                     'sub_down_entry', 'sub_up_entry', 'two_prod', 'rmul', 'mul_down_1', 'mul_up_1', 'next_up',
+                     'next_down', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
+    # The cores of those scalings are entry kernels, but, like BALL_CORES, the headers call them only
+    # inside their full form: they have no kairn::finite form yet.
+    POW2_CORES = {'ball_mul_pow2_1', 'ball_mul_pow2_2'}
 
     # The steps of the folds whose arrays the program supplies (milestone2.md, "Arrays that the
     # program fills"): those of the sums guard the element, those of the dot products only multiply
@@ -1043,11 +1053,16 @@ class R3OfTheKernels(unittest.TestCase):
                 called |= set(re.findall(r'\bgen::(\w+)\(', text)) & set(ks)
                 for macro in re.findall(r'gen::NAME##(_\w+)\(', text):        # gen::NAME##_2_2(...)
                     called |= {n for n in ks if n.endswith(macro) and n[:-len(macro)] in ('lt', 'le', 'eq')}
-        self.assertEqual(called - self.NOT_ENTRY_BUT_CALLED, self.CORES | TheKernels.NON_FINITE)
+        # Of wave 1, the headers call every kernel but the two cores of the scalings; of the folds'
+        # stage, the maps and the intervals, nothing yet (FOLD_STEPS and wave 2 of test_entry_kernels
+        # are entry kernels that no header calls).
+        self.assertEqual(self.WAVE_1, self.WAVE_1_CALLED | self.POW2_CORES)
+        self.assertEqual(called - self.NOT_ENTRY_BUT_CALLED, self.CORES | TheKernels.NON_FINITE | self.WAVE_1_CALLED)
         self.assertTrue(all(ks[n].entry for n in called - self.NOT_ENTRY_BUT_CALLED))
         self.assertFalse(any(ks[n].entry for n in self.NOT_ENTRY_BUT_CALLED))
-        # Not called yet: the headers of Milestone 2 come with their own change of this test.
-        self.assertEqual(called & self.WAVE_1, set())
+        # The cores of the Ball operations and of the scalings by a power of two are reached only
+        # through their full forms: never called directly.
+        self.assertEqual(called & (self.BALL_CORES | self.POW2_CORES), set())
 
     def test_no_pending_guard(self):
         # add_2_1 guards its scalar in its first line (milestone1.md), and nothing is left pending.
@@ -1410,7 +1425,7 @@ class TheKernels(unittest.TestCase):
     NORM = {'norm_combine', 'norm_step_1', 'norm_step_2'} | NORM_FINISH
     FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
-    # unverified until their proofs are pointed at the generated text: the interval kernels of one
+    # which were unverified until their proofs were about the generated text: the interval kernels of one
     # limb and the sum of two, with the IEEE-model statement only; mul_dir_1, of the extended domain
     # with both statements; the bounds of two limbs, finite cores; the bounds of a ball as numbers
     # of T, the ball from an interval of two T and the narrowing of a ball, the IEEE-model statement
@@ -1429,6 +1444,16 @@ class TheKernels(unittest.TestCase):
                  'interval_intersection_1', 'interval_hull_2', 'interval_intersection_2', 'interval_mid_rad_1',
                  'interval_to_ball_1', 'ball_to_interval_1', 'interval_split_1'}
     WAVE_2 |= WAVE_2_B1 | {'mul_ext_2_2'}
+    # Of these, the kernels whose theorems are about the generated text and pass the audit: all
+    # of the first stage. The interval kernels of one limb (IeeeInterval1.v), mul_dir_1 in both models
+    # (DirectedProd.v, IeeeDirectedProd.v), the bounds of two limbs (Directed2.v), the sum of two
+    # intervals of two limbs (IeeeInterval2.v) and the conversions of a ball (IeeeBallConvert.v).
+    # And of stage B1, all of them: the exact ones (IeeeIntervalExact.v), the difference of two
+    # limbs (IeeeIntervalSub2.v), the conversions between an interval and a ball of one limb, with
+    # the midpoint and the split (IeeeIntervalConvert.v), and mul_ext_2_2 with the product of two
+    # limbs (IeeeIntervalMul2.v).
+    WAVE_2_B1_PROVED = WAVE_2_B1 | {'mul_ext_2_2'}
+    WAVE_2_PROVED = (WAVE_2 - WAVE_2_B1 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -1452,14 +1477,17 @@ class TheKernels(unittest.TestCase):
         # among them (Ball2.v, Add21.v), by their real-model theorems; the full kernels and the
         # constructors, which have no real-model statement, by their IEEE-model theorems.
         # Of wave 1 of Milestone 2, every kernel is proved too, the two full scalings of a ball by
-        # their IEEE-model theorems (IeeeBallPow2.v), and so is every kernel of the folds' stage and
-        # every step of the maps (MapSteps.v). The kernels of the folds of maxima are unverified.
+        # their IEEE-model theorems (IeeeBallPow2.v), and so is every kernel of the folds' stage,
+        # those of the folds of maxima included (FoldNorm.v; the two finishes by their IEEE-model
+        # theorems, IeeeFoldNorm.v).
+        # The two constructors of a ball are proved for the rule of 2026-11-20, that a NaN radius
+        # gives the whole line (IeeeMake.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.MILESTONE1 | self.WAVE_1 | self.FOLDS - self.NORM)
-        # The first kernels of wave 2 are unverified, in both models, until their proofs (which
-        # exist for hand-written copies of their listings) are pointed at the generated text; and so
-        # are the kernels of the folds of maxima.
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.NORM | self.WAVE_2)
+                         self.MILESTONE1 | self.WAVE_1 | self.FOLDS | self.WAVE_2_PROVED)
+        # No kernel is unverified: the kernels of wave 2 were, in both models, until their proofs
+        # were about the generated text.
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
+                         self.WAVE_2 - self.WAVE_2_PROVED)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
@@ -1471,13 +1499,16 @@ class TheKernels(unittest.TestCase):
                          self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'})
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
                          dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
-                                            | self.WAVE_1_EXTENDED | self.WAVE_1_FULL | self.FOLDS_FINISH, 'proved'),
-                              **dict.fromkeys(self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'}, 'unverified')))
+                                            | self.WAVE_1_EXTENDED | self.WAVE_1_FULL | self.FOLDS_FINISH
+                                            | self.NORM_FINISH | (self.WAVE_2_PROVED - self.WAVE_2_CORES), 'proved'),
+                              **dict.fromkeys((wave_2_ieee_only | {'mul_dir_1'}) - self.WAVE_2_PROVED,
+                                              'unverified')))
         # Every kernel of the extended domain that is proved names its IEEE-model theorem, and no
         # other kernel does.
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED
-                         | self.WAVE_1_FULL | self.FOLDS_FINISH)
+                         | self.WAVE_1_FULL | self.FOLDS_FINISH | self.NORM_FINISH
+                         | (self.WAVE_2_PROVED - self.WAVE_2_CORES))
         # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
         # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H
         # of the radius are below the overflow threshold (IeeeExtStatementsDraft.v). A

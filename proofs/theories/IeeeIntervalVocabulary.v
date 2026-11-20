@@ -3,8 +3,9 @@
    "What is stated of an interval kernel"). Written by hand; nothing in this file is a
    proof. It extends IeeeVocabulary.v, whose extended real numbers (xreal), comparisons
    (xle, xlt) and values of a limb and of a canonical 2-limb value (xval, xval_2) it uses.
-   The statements of the interval kernels are meant to be generated with these
-   definitions; until then the theorems of IeeeInterval1.v are written with them by hand.
+   The generated statements of the interval kernels (proofs/gen/IeeeStatements.v) are
+   written with these definitions, and so are the theorems of IeeeInterval1.v and
+   IeeeInterval2.v that establish them or say more.
 
    An interval is a set of real numbers given by two bounds. The vocabulary is small and
    closed:

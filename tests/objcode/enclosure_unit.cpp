@@ -2,7 +2,9 @@
 // the operations of Ball out of their callers (include/kairn/config.hpp; objcode.py,
 // docs/developer/testing.md, "Object code"): one function per operation and limb type, externally
 // visible and never inlined, that applies the public operator to operands it loads and stores the
-// result.
+// result. The scaling by a power of two is half(X), one call of its kernel; ldexp(X, n) calls it two
+// or three times when 2^n is not a number of T, from its inline steps, each a call of the same
+// function.
 //
 //   kairn_objcode_enclosure_double_K, kairn_objcode_enclosure_float_K   K the full Ball kernel the
 //                                                                       operator calls
@@ -44,14 +46,16 @@ extern "C" KAIRN_OBJCODE_NOINLINE void kairn_objcode_fixups_inline() noexcept {}
         (void)a;                                                                                             \
         *z = EXPR;                                                                                           \
     }
-#define KAIRN_OBJCODE_ENCLOSURES(T)                           \
-    KAIRN_OBJCODE_ENCLOSURE(T, 1, ball_add_1_full, *x + *y)   \
-    KAIRN_OBJCODE_ENCLOSURE(T, 1, ball_sub_1_full, *x - *y)   \
-    KAIRN_OBJCODE_ENCLOSURE(T, 1, ball_mul_1_full, *x * *y)   \
-    KAIRN_OBJCODE_ENCLOSURE(T, 1, ball_scale_1_full, *x * *a) \
-    KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_add_2_full, *x + *y)   \
-    KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_sub_2_full, *x - *y)   \
-    KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_mul_2_full, *x * *y)   \
-    KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_scale_2_full, *x * *a)
+#define KAIRN_OBJCODE_ENCLOSURES(T)                                      \
+    KAIRN_OBJCODE_ENCLOSURE(T, 1, ball_add_1_full, *x + *y)              \
+    KAIRN_OBJCODE_ENCLOSURE(T, 1, ball_sub_1_full, *x - *y)              \
+    KAIRN_OBJCODE_ENCLOSURE(T, 1, ball_mul_1_full, *x * *y)              \
+    KAIRN_OBJCODE_ENCLOSURE(T, 1, ball_scale_1_full, *x * *a)            \
+    KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_add_2_full, *x + *y)              \
+    KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_sub_2_full, *x - *y)              \
+    KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_mul_2_full, *x * *y)              \
+    KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_scale_2_full, *x * *a)            \
+    KAIRN_OBJCODE_ENCLOSURE(T, 1, ball_mul_pow2_1_full, kairn::half(*x)) \
+    KAIRN_OBJCODE_ENCLOSURE(T, 2, ball_mul_pow2_2_full, kairn::half(*x))
 KAIRN_OBJCODE_ENCLOSURES(double)
 KAIRN_OBJCODE_ENCLOSURES(float)

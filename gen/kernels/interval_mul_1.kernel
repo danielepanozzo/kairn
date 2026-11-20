@@ -17,9 +17,10 @@ ensures:       encloses_interval zl zu x*y x=xl,xu y=yl,yu tight=rounded;steps=1
 min_precision: 1
 source:        the least and the greatest of the directed products of the bounds (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeInterval1.v interval_mul_1_correct
 entry:         yes
 cone_exempt:   the bounds are selected among directed products, and the empty set after an explicit test; encloses_interval states what comes out
 

@@ -728,6 +728,22 @@ class FoldGuards(unittest.TestCase):
             {"excess over a positive stated value, in gaps of the output": [["9", "1"], ""]}))
         self.fails(s, "bound_dot_2", "binary64", *args, reason="never came within 8 gaps")
 
+    def test_a_bound_in_a_format_of_one_bit(self):
+        # At p = 1 the mask is true at m = 0 only, where the stated value is zero: no case has a
+        # positive stated value to come close to, and the enumeration passes on the mask both
+        # ways (the brute-force driver plans this enumeration for every bound kernel of one
+        # limb). A positive stated value that was met and missed by 9 gaps still fails there.
+        for kernel in ("bound_dot_1", "bound_sum_1"):
+            good = pipeline(kernel, "fp:1:-30:12", "--exhaustive")
+            out = self.passes(good, kernel, "fp:1:-30:12", "--exhaustive")
+            close = "excess over a positive stated value, in gaps of the output"
+            self.assertFalse(any(close in e.get("minima", {}) for k in good["keys"]
+                                 for e in k["stats"]["entries"]), out)
+            j = next(i for i, e in enumerate(good["keys"][0]["stats"]["entries"])
+                     if e["label"].startswith("upper(g)"))
+            s = edited(good, j, lambda e: e.setdefault("minima", {}).update({close: [["9", "1"], ""]}))
+            self.fails(s, kernel, "fp:1:-30:12", "--exhaustive", reason="never came within 8 gaps")
+
     def test_a_finish_without_a_state(self):
         good = pipeline("fold_finish_2", "fp:3:-3:0", "--exhaustive")
         for name in ("value: leading limb NaN", "value: finite leading limb, a lower limb not finite"):

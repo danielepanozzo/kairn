@@ -384,7 +384,17 @@ class Printers(unittest.TestCase):
                       '    fmt emin prec s /\\\n'
                       '    Rabs (s - sumR (map (fun xy => (fst xy * snd xy)) xys)) <=\n', s)
         self.assertIn('    (seq 0 (conv_length (length xs) (length ys))) (conv_2_conv emin prec tie_even xs ys).', s)
-        self.assertNotIn('conv_1', rocq.audit(self.ks))
+        # A convolution that is unverified is not in the audit, whatever the descriptions say (the
+        # convolutions of the library are proved, FoldConv.v); one that is proved is, once, with
+        # its one statement.
+        import copy
+        ks = copy.deepcopy(self.ks)
+        for name in ('conv_1', 'conv_2'):
+            ks.folds[name].status, ks.folds[name].theorem = 'unverified', None
+        self.assertNotIn('conv_1', rocq.audit(ks))
+        ks.folds['conv_1'].status, ks.folds['conv_1'].theorem = 'proved', 'proofs/theories/FoldConv.v'
+        self.assertIn('\nDefinition conv_1_audit : conv_1_spec := conv_1_correct.\n'
+                      'Print Assumptions conv_1_correct.\n', rocq.audit(ks))
 
     def test_the_claims(self):
         doc = json.loads(claims.claims(self.ks))

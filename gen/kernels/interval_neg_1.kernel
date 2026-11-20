@@ -11,9 +11,10 @@ ensures:       encloses_interval zl zu -x x=xl,xu tight=exact bounded_when=abs_l
 min_precision: 1
 source:        the bounds negated and exchanged (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeInterval1.v interval_neg_1_correct
 entry:         yes
 cone_exempt:   sign changes only, from the upper bound to the lower one; encloses_interval states what comes out for every canonical interval
 

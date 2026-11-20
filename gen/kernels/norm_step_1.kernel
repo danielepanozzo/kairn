@@ -11,9 +11,10 @@ output:        r
 output:        mask okr
 ensures:       maximum r m abs(x)
 min_precision: 1
+theorem:       proofs/theories/FoldNorm.v norm_step_1_correct
 source:        the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k)
 license:       proof: MIT
-status:        unverified
+status:        proved
 cone_exempt:   a maximum is a select after a comparison (norm_combine); a NaN element is kept in the mask okr, and an infinite one in r, which the finish of the fold tests
 
 a        = abs(x)

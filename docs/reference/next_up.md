@@ -12,7 +12,11 @@ $$r = \mathrm{succ}(a).$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `next_up(a)` | `T` | `T` | `constexpr`, with the same bits in constant evaluation; does not round: an integer operation on the bit pattern, checked for nothing |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

@@ -47,8 +47,11 @@ lists:
   function of Flocq's binary floating-point numbers, where operations overflow and operands may
   be infinite or NaN, and its statements there;
 - `proofs/gen/FoldModel.v` and `proofs/gen/FoldStatements.v`, generated too: each fold (a loop
-  of kernels along arrays: the sums and the dot products) as a function on lists, in the two
-  orders in which the library runs it, and its statement in each order;
+  of kernels along arrays: the sums, the dot products and the largest magnitude) as a function
+  on lists, in the two orders in which the library runs it, and its statement in each order;
+  each map (a loop that writes an array) as the list of the elements it writes, and each
+  convolution (the product of two polynomials) as the list of its coefficients, with one
+  statement each;
 - `proofs/gen/IeeeFoldModel.v` and `proofs/gen/IeeeFoldStatements.v`, generated too: each fold
   as a function on lists of Flocq's binary floating-point numbers, with its finish, in the same
   two orders; its statement in each order; and, for each kernel that is the step or the
@@ -71,11 +74,26 @@ lists:
   two limbs over the real numbers: a sum, a difference and a product of two 2-limb numbers,
   moved down or up by a bound of their own error, with how far that moves them
   (`Directed2.v`), and, with overflow, infinities and NaN, the sum of two intervals whose
-  bounds have two limbs (`IeeeInterval2.v`); and the theorems of the folds, `F_seq_correct`
-  and `F_lanes_correct` per fold `F` (`FoldSums.v`), of their steps, finishes and bound kernels
+  bounds have two limbs (`IeeeInterval2.v`) and the conversions of a ball: its bounds as
+  numbers of the limb type, the ball of one limb that contains a ball of two, and the ball
+  made from an interval of two numbers (`IeeeBallConvert.v`), and the exact interval kernels:
+  the negation and the constructor of an interval whose bounds have two limbs, and the hull
+  and the intersection of two intervals with bounds of one and of two limbs
+  (`IeeeIntervalExact.v`), the difference of two intervals whose bounds have two limbs
+  (`IeeeIntervalSub2.v`), the conversions between an interval and a ball of one limb, with
+  the midpoint and the radius of an interval and its split at the midpoint
+  (`IeeeIntervalConvert.v`), and the product of two intervals whose bounds have two limbs,
+  with the product of two bounds on all values (`IeeeIntervalMul2.v`); and the theorems of the
+  folds, `F_seq_correct` and `F_lanes_correct` per fold `F` (`FoldSums.v`), of their steps,
+  finishes and bound kernels
   (`StepKernels.v`, `IeeeFoldFinish.v`, `BoundKernels.v`), of the two together
   (`FoldGuarantee.v`), and of the folds and their steps in the model with overflow
   (`FoldTransfer.v`, `IeeeSteps.v`, `IeeeFolds.v`; [below](#sums-and-dot-products-of-arrays));
+  the theorems of the maps, `F_correct` per map `F`, and of their steps (`FoldMaps.v`,
+  `MapSteps.v`; [below](#loops-that-write-an-array)); of the largest magnitude of an array and
+  its kernels, over the real numbers and with overflow, infinities and NaN (`FoldNorm.v`,
+  `IeeeFoldNorm.v`; [below](#the-largest-magnitude-of-an-array)); and of the product of two
+  polynomials (`FoldConv.v`; [below](#the-product-of-two-polynomials));
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -90,35 +108,42 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
 2. **The theorems of the generated statements.** `proofs/gen/Audit.v` has, for every kernel that
    is not UNVERIFIED, a definition `K_audit : K_spec := K_correct`, which compiles only if the
    theorem has exactly the generated statement as its type, followed by
-   `Print Assumptions K_correct`; and the same two lines for each order of every fold that is
-   proved (`F_seq_audit : F_seq_spec := F_seq_correct`, and `F_lanes`). A script,
+   `Print Assumptions K_correct`; the same two lines for each order of every fold that is
+   proved (`F_seq_audit : F_seq_spec := F_seq_correct`, and `F_lanes`), and once for every map
+   and convolution, which have one statement (`F_audit : F_spec := F_correct`). A script,
    `proofs/audit/audit.py`, reads what Rocq printed and fails on any axiom outside the allowed
    list, on a missing report, or on any output it does not understand.
 3. **The theorems that the generated audits do not list**, the same way, from
-   `proofs/audit/HandAudit.v`: the IEEE-model theorems of the kernels that also have a
-   real-model statement of their own domain, and those of the folds and of the leading limbs
-   of their steps (all of these have generated statements as their types, checked by a
-   definition of the same form; no description of a kernel or of a fold names them),
+   `proofs/audit/HandAudit.v`: the IEEE-model theorems of the kernels of Milestone 1 and of
+   the first building blocks of Milestone 2 that also have a real-model statement of their own
+   domain (these have generated statements as their types, checked by a definition of the same
+   form; their descriptions do not name them yet),
    a few facts whose statements are written by hand because they say more about a kernel than
    its claims can express, the theorems about sums and dot products of arrays, which are
-   about no single kernel, the lemmas of the first building blocks of Milestone 2 that are
-   not generated statements, among them those about `mul_dir_1`, whose kernel is not generated
-   yet, those about the two executions of a product, whose plain-product listings are
-   written by hand, and the theorems of the interval kernels with bounds of one limb, of the
-   bounds of two limbs and of the sum of two intervals of two limbs, which are not generated
-   yet either: they are proved on models of their listings written by hand in the text the
-   generator prints; and the theorems about the folds whose statements are written by hand
-   ([below](#sums-and-dot-products-of-arrays)).
+   about no single kernel, and the lemmas of the first building blocks of Milestone 2 that are
+   not generated statements, among them what is proved of `mul_dir_1`, of the interval
+   kernels with bounds of one limb, of the bounds of two limbs, of the sum of two intervals
+   of two limbs, of the conversions of a ball, of the exact interval kernels (the hull and
+   the intersection of intervals of extended real numbers), of the difference of two
+   intervals of two limbs (the sum with the negated operand), of the conversions between an
+   interval and a ball (the midpoint of a bounded interval) and of the product of two
+   intervals of two limbs (the finite core of the directed product, and what each product of
+   bounds gives) beside their generated
+   statements, those about the two executions of a product, whose plain-product listings are
+   written by hand, and the theorems about the folds, the largest magnitude and the product of
+   polynomials whose statements are written by hand ([below](#sums-and-dot-products-of-arrays)).
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
-   generated `proofs/gen/IeeeAudit.v`, like step 2.
+   generated `proofs/gen/IeeeAudit.v`, like step 2; then, in the same file, every other
+   IEEE-model theorem that a description names: those of the steps and the combinations of
+   the folds, and of the folds in their two orders.
 
 What it prints, after the compilation lines, shortened where it says `...` (a run of this version):
 
 ```text
 == text scan of the proof files
-  79 files: no Admitted, admit, Axiom or Parameter
+  87 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -188,7 +213,7 @@ is the guarantee whenever no operation inside the kernel overflows.
 **What happens at overflow and with infinities and NaN is proved in Flocq's model of IEEE 754.**
 There, values are Flocq's binary floating-point numbers, with signed zeros, infinities and NaN,
 and the operations overflow as the hardware does, for formats shaped like `binary32` and
-`binary64`. Two kinds of statements are proved there:
+`binary64`. Four kinds of statements are proved there:
 
 - For the arithmetic kernels of two limbs: an overflow anywhere in the kernel never produces a
   finite wrong result (if the leading limb of the result is finite, the result is normalized and
@@ -203,17 +228,36 @@ and the operations overflow as the hardware does, for formats shaped like `binar
   and the empty set included; and it returns a finite ball, not the whole line, under a stated
   condition on its operands
   ([when the result is a finite ball](../developer/design/milestone1.md#when-the-result-is-a-finite-ball)).
+- For the interval kernels, whose bounds may be infinite and which are stated in this model only
+  ([Interval kernels](../developer/design/milestone2.md#what-is-stated-of-an-interval-kernel)):
+  the result is a canonical interval, it is empty exactly when an operand is, and it contains the
+  exact result for all members of the operands, unbounded operands included; and how close its
+  bounds are to those of the exact range. For bounds of one limb, the constructor, the negation,
+  the sum, the difference and the product are proved: the bounds of a sum and of a difference
+  are the bounds of the exact range rounded outward, those of a product are within one number
+  of `T` of that, and the result is bounded exactly when the exact range is within the largest
+  number of `T`. For bounds of two limbs, the sum is proved: each bound of a bounded result is
+  within $A\lvert v\rvert + B$ of the bound $v$ of the exact range, with the constants of
+  [Bounds of two limbs](../developer/design/milestone2.md#bounds-of-two-limbs), a bound of the
+  exact range that is zero is returned as zero, and the result is bounded when the exact range
+  is within a quarter of the overflow threshold.
+- For the conversions of a ball
+  ([Midpoint, radius and the conversions](../developer/design/milestone2.md#midpoint-radius-and-the-conversions)):
+  the bounds of a ball as numbers of `T` are on their side of every member, with $+\infty$ and
+  $-\infty$ for the empty ball, and they are the bounds rounded outward for a center of one
+  limb; a ball of two limbs narrowed to one limb, and a ball of two limbs made from an interval
+  of two numbers of `T`, are canonical and contain what they are made from, whatever the
+  operands are.
 
 These statements and the models of the kernels they are about are generated from the kernel
-descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Two files are written
-by hand and are part of what must be trusted: `proofs/theories/IeeeOperations.v`, which says
-what each operation of a kernel means in Flocq's terms, and `IeeeVocabulary.v`, the definitions
-the statements use (what a canonical value is, what a ball contains). A third,
-`IeeeIntervalVocabulary.v`, has the definitions for intervals (a canonical interval, its members,
-the exact range of an operation and its bounds); no generated statement uses it yet, because the
-interval kernels are not generated yet, and the theorems about them are stated with it by hand.
-The kernels of the second
-kind are in the generated headers and are `proved` in the claims; whether an operator of the
+descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Three files are
+written by hand and are part of what must be trusted: `proofs/theories/IeeeOperations.v`, which
+says what each operation of a kernel means in Flocq's terms, `IeeeVocabulary.v`, the definitions
+the statements use (what a canonical value is, what a ball contains), and
+`IeeeIntervalVocabulary.v`, the definitions the statements of the interval kernels use (a
+canonical interval, its members, the exact range of an operation and its bounds).
+The kernels of the last three
+kinds are in the generated headers and are `proved` in the claims; whether an operator of the
 library calls them yet is said in
 [What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values).
 
@@ -289,9 +333,88 @@ as kernels, the generated bridge statements, with the finiteness of every value 
 computes, and the correctness statements of the steps of two limbs are proved in `IeeeSteps.v`
 (`K_ieee_bridge`, `K_ieee_correct`).
 
-These theorems are audited in step 3 above and not by the generated audits: the generator
-writes the statements, but the description of a fold names the file of its real-model theorems
-only, and that of a step of the finite domain names no IEEE-model theorem.
+These theorems are audited by the generated audit of step 5 above: the description of a fold
+names the file of its IEEE-model theorems, and that of a step or a combination names the
+theorem of each of its IEEE-model statements. `F_seq_ieee_facts` and the facts about one
+application of a step, whose statements are written by hand, are audited in step 3.
+
+## Loops that write an array
+
+A map writes one element for each element it reads: the sum and the difference of two arrays
+(`add_k`, `sub_k`), `axpy_k` and `axpy_2_1` ($a\,x + y$), their `_entry` forms for arrays that
+the program fills, the product by a number (`scale_k`) and by a power of two
+(`mul_pow2_map_k`), eighteen in all. The generated model of a map `F` is the list of the
+elements it writes, and its statement says of every element written what the statement of its
+step says of one element: it is valid and within the step's bound of the exact value for its
+own element. `F_correct` (`FoldMaps.v`) is the theorem of the step on every element; the steps
+that are kernels of their own are proved in `MapSteps.v`.
+
+These are statements of the real model. They say nothing of the order in which the loop runs
+(the model has none: an element written depends on its own element only), of the mask the loop
+returns, or of an array written over one it reads; the statement of a map in the model with
+overflow is not generated yet, so nothing is proved of the mask.
+
+## The largest magnitude of an array
+
+`norm_upper_1` and `norm_upper_2` return the largest magnitude of the elements of an array, or
+a bound of it. They are folds of maxima: the state is the largest magnitude so far, with a mask
+that no element was a NaN; the combination is a maximum computed by a comparison.
+
+**In the real model** (`FoldNorm.v`): `F_seq_correct` and `F_lanes_correct` have the generated
+statements as their types. With $V$ the largest magnitude of the elements ($0$ for an empty
+array) and $r$ the result:
+
+- one limb: $V \le r \le \mathrm{RU}(V)$, and since $V$ is a number of the format, $r = V$:
+  the result is the largest magnitude itself;
+- two limbs: $V \le r \le \mathrm{succ}(\mathrm{RU}(V))$, where $V$ is the largest magnitude of
+  the exact values $x_0 + x_1$ of the elements: the result is at least the magnitude of every
+  element, and at most one step above the smallest number of the format that is. It is the
+  number next above the largest leading limb, and is never $V$ itself (`norm_upper_2_strict`).
+
+The lane order returns the state of the sequential order (`norm_upper_k_lanes_seq`): the
+combination is associative and commutative, and the zero state combined with itself is itself
+(`fold_lanes_aci` of `Folds.v`). So here the two orders give the same result, not only the same
+bound.
+
+**With infinities, NaN and overflow** (`IeeeFoldNorm.v`): the finishes `norm_finish_1` and
+`norm_finish_2` and the two folds in both orders have their generated IEEE-model statements
+as types. If the flag is true, every element is finite, the result is finite, and it is the
+result of the real model on the values of the elements, with the bounds above; if the flag is
+false, the result is a NaN. A comparison with a NaN is false, so the maximum alone would lose a
+NaN element: the mask keeps it, and the finish tests the mask.
+
+Beyond the generated statements (written by hand, audited in step 3): the two orders return
+the same result and the same flag on every input, NaN and infinities included
+(`norm_upper_k_lanes_seq_ieee`); for one limb the flag is true exactly when every element is
+finite (`norm_upper_1_seq_ieee_flag`); for two limbs, exactly when every leading limb is finite
+and the step up from the largest of them is finite (`norm_upper_2_seq_ieee_flag`). So
+`norm_upper_2` can answer with a false flag on an array of finite numbers, when the bound one
+step above the largest leading limb would not be a number of the format.
+
+## The product of two polynomials
+
+`conv_1` and `conv_2` write the coefficients of the product of two polynomials given by their
+coefficients, $n_x$ of one and $n_y$ of the other: $n_x + n_y - 1$ coefficients, none when a
+polynomial has none. In the generated model coefficient $j$ is the dot product (`dot_1`,
+`dot_2`), in its sequential order, of a list of terms, `conv_terms xs ys j`, and the generated
+statement says of every coefficient what the statement of the dot product says of that list:
+the coefficient is valid and within the bound of the dot product of the sum of the products of
+its terms. `conv_k_correct` (`FoldConv.v`) is the theorem of the dot product on the terms of
+every coefficient.
+
+The statement names the list of the terms and does not say what it is. That is proved beside
+it (`FoldConv.v`, written by hand, audited in step 3): the terms of coefficient $j$ are exactly
+the pairs $(x_i, y_{j-i})$ for $i$ from $\max(0, j - n_y + 1)$ to $\min(j, n_x - 1)$, in
+increasing $i$ (`conv_terms_eq`, `conv_terms_count`), so the exact sum the coefficient is
+compared with is the coefficient of the product as it is usually defined; every coefficient
+has at least one term and at most $\min(n_x, n_y)$ (`conv_terms_nonempty`,
+`conv_terms_length`); and if the bound kernel of the dot product answers `ok` for a count of at
+least $\min(n_x, n_y)$, its two numbers bound the error of every coefficient (`conv_1_bound`,
+`conv_2_bound`, from the theorems of [the two together](#sums-and-dot-products-of-arrays)).
+
+These are statements of the real model, as for a map: the statement of a convolution in the
+model with overflow is not generated yet, so nothing is proved of its mask or of a coefficient
+that overflows. No theorem is about the product as a polynomial (its value at a point).
 
 ## What a proof does not cover
 

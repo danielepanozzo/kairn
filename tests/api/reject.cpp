@@ -21,6 +21,10 @@
 //   18     kairn::rational in a constant expression, against a copy of the headers in which its
 //          result is wrong (compile_fail.cmake, RATIONAL_FAULT_FIXTURE): its check refuses it (the
 //          control turns KAIRN_RATIONAL_CHECK off)
+//   27-28  kairn::mul_down and kairn::mul_up in a constant expression, which they are not usable in
+//          (blocks.hpp says why); the control computes the same at run time
+//   29-31  an UNVERIFIED building block (two_sum, next_up) and the scaling of a ball by a power of
+//          two (half), written without the marker, against headers in which every kernel is
 #if KAIRN_TEST_CASE == 11 || KAIRN_TEST_CASE == 15 || KAIRN_TEST_CASE == 16
 #if defined(KAIRN_TEST_CONTROL)
 #define KAIRN_CHECKS 0
@@ -121,6 +125,26 @@ int main() {
 #elif KAIRN_TEST_CASE == 18
     constexpr kairn::Constant<E2> z = kairn::rational<E2>(1, 3);
     sink = z.error;
+#elif KAIRN_TEST_CASE == 27
+#if defined(KAIRN_TEST_CONTROL)
+    const double z = kairn::mul_down(1.5, 3.0);
+#else
+    constexpr double z = kairn::mul_down(1.5, 3.0);
+#endif
+    sink = z;
+#elif KAIRN_TEST_CASE == 28
+#if defined(KAIRN_TEST_CONTROL)
+    const double z = kairn::mul_up(1.5, 3.0);
+#else
+    constexpr double z = kairn::mul_up(1.5, 3.0);
+#endif
+    sink = z;
+#elif KAIRN_TEST_CASE == 29
+    sink = kairn::two_sum(MARK(s), s).sum;
+#elif KAIRN_TEST_CASE == 30
+    sink = kairn::next_up(MARK(s));
+#elif KAIRN_TEST_CASE == 31
+    sink = kairn::half(MARK(p)).radius();
 #endif
     return sink == 12345 ? 1 : 0;
 }

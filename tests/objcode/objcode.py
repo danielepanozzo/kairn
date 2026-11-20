@@ -93,7 +93,8 @@ ENCLOSURE_UNIT = os.path.join(HERE, 'enclosure_unit.cpp')
 # kernel each calls (include/kairn/config.hpp), and the forms of enclosure_unit.cpp: a label, its
 # macros, and whether the operation's definition is in the object ('in') or outside it ('out').
 ENCLOSURE_KERNELS = ['ball_add_1_full', 'ball_sub_1_full', 'ball_mul_1_full', 'ball_scale_1_full',
-                     'ball_add_2_full', 'ball_sub_2_full', 'ball_mul_2_full', 'ball_scale_2_full']
+                     'ball_add_2_full', 'ball_sub_2_full', 'ball_mul_2_full', 'ball_scale_2_full',
+                     'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full']
 ENCLOSURE_FORMS = [
     ('outlined', ['KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_OUTLINED'], 'in'),
     ('external', ['KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL'], 'out'),

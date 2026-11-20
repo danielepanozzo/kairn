@@ -18,8 +18,9 @@ A number of several limbs stands for their exact sum: $y = h + l$, $x = x_0 + x_
 |---|---|---|---|
 | `from_limbs(p)` | `T*` | `Expansion<T, 2>` | `Expansion<T, 2>::from_limbs(p)`, with `p` pointing to the two limbs; checked when `KAIRN_CHECKS` is 1 |
 | `from_limbs_unchecked(p)` | `T*` | `Expansion<T, 2>` | the same, never checked |
+| `Expansion<T, 2>(r)` | `SumAndError<T>` | `Expansion<T, 2>` | explicit: the result `r` of `two_sum` or `fast_two_sum` as the pair (`r.sum`, `r.error`), through `from_limbs_unchecked`; canonical, of value $a + b$ exactly, when both members are finite, which a debug build checks ([`two_sum_entry`](two_sum_entry.md) says when) |
 
-`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED (a constructor does not take it).
 
 ## Requires
 

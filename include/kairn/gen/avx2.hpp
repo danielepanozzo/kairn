@@ -617,30 +617,32 @@ KAIRN_GEN_FORCEINLINE void ball_lower_as_1(__m256 c, __m256 r, __m256& l_out) no
 KAIRN_GEN_FORCEINLINE void ball_make_1(__m256d c, __m256d r, __m256d& cw_out, __m256d& rw_out) noexcept {
     const __m256d g = _mm256_add_pd(r, _mm256_setzero_pd());
     const __m256d c0 = _mm256_add_pd(c, _mm256_setzero_pd());
-    const __m256d e = _mm256_cmp_pd(_mm256_setzero_pd(), g, _CMP_LE_OQ);
+    const __m256d n = _mm256_cmp_pd(g, _mm256_setzero_pd(), _CMP_LT_OQ);
+    const __m256d ok = not_mask(n);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), c0);
     const __m256d f1 = _mm256_cmp_pd(a, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
     const __m256d f2 = _mm256_cmp_pd(g, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
     const __m256d f = _mm256_and_pd(f1, f2);
     const __m256d k0 = _mm256_blendv_pd(_mm256_setzero_pd(), c0, f);
     const __m256d s = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::infinity()), g, f);
-    const __m256d cw = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), k0, e);
-    const __m256d rw = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), s, e);
+    const __m256d cw = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), k0, ok);
+    const __m256d rw = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), s, ok);
     cw_out = cw;
     rw_out = rw;
 }
 KAIRN_GEN_FORCEINLINE void ball_make_1(__m256 c, __m256 r, __m256& cw_out, __m256& rw_out) noexcept {
     const __m256 g = _mm256_add_ps(r, _mm256_setzero_ps());
     const __m256 c0 = _mm256_add_ps(c, _mm256_setzero_ps());
-    const __m256 e = _mm256_cmp_ps(_mm256_setzero_ps(), g, _CMP_LE_OQ);
+    const __m256 n = _mm256_cmp_ps(g, _mm256_setzero_ps(), _CMP_LT_OQ);
+    const __m256 ok = not_mask(n);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), c0);
     const __m256 f1 = _mm256_cmp_ps(a, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
     const __m256 f2 = _mm256_cmp_ps(g, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
     const __m256 f = _mm256_and_ps(f1, f2);
     const __m256 k0 = _mm256_blendv_ps(_mm256_setzero_ps(), c0, f);
     const __m256 s = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()), g, f);
-    const __m256 cw = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), k0, e);
-    const __m256 rw = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), s, e);
+    const __m256 cw = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), k0, ok);
+    const __m256 rw = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), s, ok);
     cw_out = cw;
     rw_out = rw;
 }
@@ -4092,7 +4094,8 @@ KAIRN_GEN_FORCEINLINE void ball_lower_as_2(__m256 c0, __m256 c1, __m256 r, __m25
 // ball_make_2(c = (c0, c1), r) -> cw = (cw0, cw1), rw
 KAIRN_GEN_FORCEINLINE void ball_make_2(__m256d c0, __m256d c1, __m256d r, __m256d& cw0_out, __m256d& cw1_out, __m256d& rw_out) noexcept {
     const __m256d g = _mm256_add_pd(r, _mm256_setzero_pd());
-    const __m256d e = _mm256_cmp_pd(_mm256_setzero_pd(), g, _CMP_LE_OQ);
+    const __m256d n = _mm256_cmp_pd(g, _mm256_setzero_pd(), _CMP_LT_OQ);
+    const __m256d ok = not_mask(n);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), c0);
     const __m256d f1 = _mm256_cmp_pd(a, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
     const __m256d f2 = _mm256_cmp_pd(g, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
@@ -4100,16 +4103,17 @@ KAIRN_GEN_FORCEINLINE void ball_make_2(__m256d c0, __m256d c1, __m256d r, __m256
     const __m256d k0 = _mm256_blendv_pd(_mm256_setzero_pd(), c0, f);
     const __m256d k1 = _mm256_blendv_pd(_mm256_setzero_pd(), c1, f);
     const __m256d s = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::infinity()), g, f);
-    const __m256d cw0 = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), k0, e);
-    const __m256d cw1 = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), k1, e);
-    const __m256d rw = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), s, e);
+    const __m256d cw0 = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), k0, ok);
+    const __m256d cw1 = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), k1, ok);
+    const __m256d rw = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), s, ok);
     cw0_out = cw0;
     cw1_out = cw1;
     rw_out = rw;
 }
 KAIRN_GEN_FORCEINLINE void ball_make_2(__m256 c0, __m256 c1, __m256 r, __m256& cw0_out, __m256& cw1_out, __m256& rw_out) noexcept {
     const __m256 g = _mm256_add_ps(r, _mm256_setzero_ps());
-    const __m256 e = _mm256_cmp_ps(_mm256_setzero_ps(), g, _CMP_LE_OQ);
+    const __m256 n = _mm256_cmp_ps(g, _mm256_setzero_ps(), _CMP_LT_OQ);
+    const __m256 ok = not_mask(n);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), c0);
     const __m256 f1 = _mm256_cmp_ps(a, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
     const __m256 f2 = _mm256_cmp_ps(g, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
@@ -4117,9 +4121,9 @@ KAIRN_GEN_FORCEINLINE void ball_make_2(__m256 c0, __m256 c1, __m256 r, __m256& c
     const __m256 k0 = _mm256_blendv_ps(_mm256_setzero_ps(), c0, f);
     const __m256 k1 = _mm256_blendv_ps(_mm256_setzero_ps(), c1, f);
     const __m256 s = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()), g, f);
-    const __m256 cw0 = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), k0, e);
-    const __m256 cw1 = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), k1, e);
-    const __m256 rw = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), s, e);
+    const __m256 cw0 = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), k0, ok);
+    const __m256 cw1 = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), k1, ok);
+    const __m256 rw = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), s, ok);
     cw0_out = cw0;
     cw1_out = cw1;
     rw_out = rw;
@@ -8100,7 +8104,7 @@ KAIRN_GEN_FORCEINLINE void to_nearest_2(__m256 x0, [[maybe_unused]] __m256 x1, _
 // finish of scalar.hpp after it, inlined in the same way: values step_V, comb_V, fin_V.
 
 // map add_1(stored x, stored y) -> z, step add_1_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_1_packed(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d finite_lane_ = _mm256_cmp_pd(_mm256_setzero_pd(), _mm256_setzero_pd(), _CMP_EQ_OQ);
@@ -8139,7 +8143,7 @@ inline void add_1_packed(const double* x_in, const double* y_in, std::size_t n, 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_1_packed(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 finite_lane_ = _mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), _CMP_EQ_OQ);
@@ -8180,7 +8184,7 @@ inline void add_1_packed(const float* x_in, const float* y_in, std::size_t n, fl
 }
 
 // map add_1_entry(supplied x, supplied y) -> z, step add_entry_step_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_1_entry_packed(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d finite_lane_ = _mm256_cmp_pd(_mm256_setzero_pd(), _mm256_setzero_pd(), _CMP_EQ_OQ);
@@ -8225,7 +8229,7 @@ inline void add_1_entry_packed(const double* x_in, const double* y_in, std::size
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_1_entry_packed(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 finite_lane_ = _mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), _CMP_EQ_OQ);
@@ -8272,7 +8276,7 @@ inline void add_1_entry_packed(const float* x_in, const float* y_in, std::size_t
 }
 
 // map add_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step add_2_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d finite_lane_ = _mm256_cmp_pd(_mm256_setzero_pd(), _mm256_setzero_pd(), _CMP_EQ_OQ);
@@ -8366,7 +8370,7 @@ inline void add_2_packed(const double* x0_in, const double* x1_in, const double*
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 finite_lane_ = _mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), _CMP_EQ_OQ);
@@ -8462,7 +8466,7 @@ inline void add_2_packed(const float* x0_in, const float* x1_in, const float* y0
 }
 
 // map add_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step add_entry_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_2_entry_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d finite_lane_ = _mm256_cmp_pd(_mm256_setzero_pd(), _mm256_setzero_pd(), _CMP_EQ_OQ);
@@ -8566,7 +8570,7 @@ inline void add_2_entry_packed(const double* x0_in, const double* x1_in, const d
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_2_entry_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 finite_lane_ = _mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), _CMP_EQ_OQ);
@@ -8672,7 +8676,7 @@ inline void add_2_entry_packed(const float* x0_in, const float* x1_in, const flo
 }
 
 // map axpy_1(supplied x, stored y, supplied a) -> z, step axpy_step_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_1_packed(const double* x_in, const double* y_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d a_v_ = _mm256_set1_pd(a);
@@ -8718,7 +8722,7 @@ inline void axpy_1_packed(const double* x_in, const double* y_in, std::size_t n,
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_1_packed(const float* x_in, const float* y_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 a_v_ = _mm256_set1_ps(a);
@@ -8766,7 +8770,7 @@ inline void axpy_1_packed(const float* x_in, const float* y_in, std::size_t n, f
 }
 
 // map axpy_1_entry(supplied x, supplied y, supplied a) -> z, step axpy_entry_step_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_1_entry_packed(const double* x_in, const double* y_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d a_v_ = _mm256_set1_pd(a);
@@ -8814,7 +8818,7 @@ inline void axpy_1_entry_packed(const double* x_in, const double* y_in, std::siz
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_1_entry_packed(const float* x_in, const float* y_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 a_v_ = _mm256_set1_ps(a);
@@ -8864,7 +8868,7 @@ inline void axpy_1_entry_packed(const float* x_in, const float* y_in, std::size_
 }
 
 // map axpy_2(supplied x = (x0, x1), stored y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d a0_v_ = _mm256_set1_pd(a0);
@@ -8986,7 +8990,7 @@ inline void axpy_2_packed(const double* x0_in, const double* x1_in, const double
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 a0_v_ = _mm256_set1_ps(a0);
@@ -9110,7 +9114,7 @@ inline void axpy_2_packed(const float* x0_in, const float* x1_in, const float* y
 }
 
 // map axpy_2_1(supplied x = (x0, x1), stored y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_1_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d a_v_ = _mm256_set1_pd(a);
@@ -9225,7 +9229,7 @@ inline void axpy_2_1_packed(const double* x0_in, const double* x1_in, const doub
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_1_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 a_v_ = _mm256_set1_ps(a);
@@ -9342,7 +9346,7 @@ inline void axpy_2_1_packed(const float* x0_in, const float* x1_in, const float*
 }
 
 // map axpy_2_1_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_entry_step_2_1, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_1_entry_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d a_v_ = _mm256_set1_pd(a);
@@ -9461,7 +9465,7 @@ inline void axpy_2_1_entry_packed(const double* x0_in, const double* x1_in, cons
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_1_entry_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 a_v_ = _mm256_set1_ps(a);
@@ -9582,7 +9586,7 @@ inline void axpy_2_1_entry_packed(const float* x0_in, const float* x1_in, const 
 }
 
 // map axpy_2_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_entry_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_entry_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d a0_v_ = _mm256_set1_pd(a0);
@@ -9708,7 +9712,7 @@ inline void axpy_2_entry_packed(const double* x0_in, const double* x1_in, const 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_entry_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 a0_v_ = _mm256_set1_ps(a0);
@@ -10190,7 +10194,7 @@ inline void dot_2_packed(const float* x0_in, const float* x1_in, const float* y0
 }
 
 // map mul_pow2_map_1(supplied x, supplied c) -> z, step mul_pow2_step_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void mul_pow2_map_1_packed(const double* x_in, std::size_t n, double c, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d c_v_ = _mm256_set1_pd(c);
@@ -10228,7 +10232,7 @@ inline void mul_pow2_map_1_packed(const double* x_in, std::size_t n, double c, d
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void mul_pow2_map_1_packed(const float* x_in, std::size_t n, float c, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 c_v_ = _mm256_set1_ps(c);
@@ -10268,7 +10272,7 @@ inline void mul_pow2_map_1_packed(const float* x_in, std::size_t n, float c, flo
 }
 
 // map mul_pow2_map_2(supplied x = (x0, x1), supplied c) -> z = (z0, z1), step mul_pow2_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void mul_pow2_map_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double c, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d c_v_ = _mm256_set1_pd(c);
@@ -10325,7 +10329,7 @@ inline void mul_pow2_map_2_packed(const double* x0_in, const double* x1_in, std:
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void mul_pow2_map_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float c, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 c_v_ = _mm256_set1_ps(c);
@@ -10383,7 +10387,7 @@ inline void mul_pow2_map_2_packed(const float* x0_in, const float* x1_in, std::s
     finite_out = finite;
 }
 
-// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold norm_upper_1(stored x), step norm_step_1, combination norm_combine, finish norm_finish_1: the lane order (fold_lanes) with the lanes of a register. Status: proved.
 inline void norm_upper_1_packed(const double* x_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d m_lane_ = _mm256_setzero_pd();
@@ -10489,7 +10493,7 @@ inline void norm_upper_1_packed(const float* x_in, std::size_t n, float& r_out, 
     flag_out = fin_flag;
 }
 
-// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: unverified.
+// fold norm_upper_2(stored x = (x0, x1)), step norm_step_2, combination norm_combine, finish norm_finish_2: the lane order (fold_lanes) with the lanes of a register. Status: proved.
 inline void norm_upper_2_packed(const double* x0_in, [[maybe_unused]] const double* x1_in, std::size_t n, double& r_out, bool& flag_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d m_lane_ = _mm256_setzero_pd();
@@ -10602,7 +10606,7 @@ inline void norm_upper_2_packed(const float* x0_in, [[maybe_unused]] const float
 }
 
 // map scale_1(supplied x, supplied a) -> z, step scale_step_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void scale_1_packed(const double* x_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d a_v_ = _mm256_set1_pd(a);
@@ -10642,7 +10646,7 @@ inline void scale_1_packed(const double* x_in, std::size_t n, double a, double* 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void scale_1_packed(const float* x_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 a_v_ = _mm256_set1_ps(a);
@@ -10684,7 +10688,7 @@ inline void scale_1_packed(const float* x_in, std::size_t n, float a, float* z_o
 }
 
 // map scale_2(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void scale_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     const __m256d a_v_ = _mm256_set1_pd(a);
@@ -10745,7 +10749,7 @@ inline void scale_2_packed(const double* x0_in, const double* x1_in, std::size_t
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void scale_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     const __m256 a_v_ = _mm256_set1_ps(a);
@@ -10808,7 +10812,7 @@ inline void scale_2_packed(const float* x0_in, const float* x1_in, std::size_t n
 }
 
 // map sub_1(stored x, stored y) -> z, step sub_1_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_1_packed(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d finite_lane_ = _mm256_cmp_pd(_mm256_setzero_pd(), _mm256_setzero_pd(), _CMP_EQ_OQ);
@@ -10847,7 +10851,7 @@ inline void sub_1_packed(const double* x_in, const double* y_in, std::size_t n, 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_1_packed(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 finite_lane_ = _mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), _CMP_EQ_OQ);
@@ -10888,7 +10892,7 @@ inline void sub_1_packed(const float* x_in, const float* y_in, std::size_t n, fl
 }
 
 // map sub_1_entry(supplied x, supplied y) -> z, step sub_entry_step_1, check fold_finish_1: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_1_entry_packed(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d finite_lane_ = _mm256_cmp_pd(_mm256_setzero_pd(), _mm256_setzero_pd(), _CMP_EQ_OQ);
@@ -10933,7 +10937,7 @@ inline void sub_1_entry_packed(const double* x_in, const double* y_in, std::size
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_1_entry_packed(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 finite_lane_ = _mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), _CMP_EQ_OQ);
@@ -10980,7 +10984,7 @@ inline void sub_1_entry_packed(const float* x_in, const float* y_in, std::size_t
 }
 
 // map sub_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step sub_2_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_2_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d finite_lane_ = _mm256_cmp_pd(_mm256_setzero_pd(), _mm256_setzero_pd(), _CMP_EQ_OQ);
@@ -11080,7 +11084,7 @@ inline void sub_2_packed(const double* x0_in, const double* x1_in, const double*
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_2_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 finite_lane_ = _mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), _CMP_EQ_OQ);
@@ -11182,7 +11186,7 @@ inline void sub_2_packed(const float* x0_in, const float* x1_in, const float* y0
 }
 
 // map sub_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step sub_entry_step_2, check fold_finish_2: in the lane order with the lanes of a register. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_2_entry_packed(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 4;
     __m256d finite_lane_ = _mm256_cmp_pd(_mm256_setzero_pd(), _mm256_setzero_pd(), _CMP_EQ_OQ);
@@ -11292,7 +11296,7 @@ inline void sub_2_entry_packed(const double* x0_in, const double* x1_in, const d
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_2_entry_packed(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = n - n % 8;
     __m256 finite_lane_ = _mm256_cmp_ps(_mm256_setzero_ps(), _mm256_setzero_ps(), _CMP_EQ_OQ);

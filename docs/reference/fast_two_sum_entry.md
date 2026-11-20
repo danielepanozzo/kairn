@@ -12,7 +12,11 @@ $$s + e = a + b.$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `fast_two_sum(a, b)` | `T`, `T` | `SumAndError<T>` | `constexpr`, with the same values in constant evaluation (a zero result can differ in sign); rounds; the operands are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); requires $\lvert a\rvert \ge \lvert b\rvert$, which a debug build checks; without it the sum is still $\mathrm{RN}(a + b)$ and the error term a number of `T`, but their sum need not be $a + b$ |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

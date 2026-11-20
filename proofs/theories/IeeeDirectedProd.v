@@ -26,13 +26,15 @@
      particular neither output is a NaN: a zero factor gives the literal zero and never
      meets an infinity.
 
-   mul_down_1 and mul_up_1 are the generated models of proofs/gen/IeeeModel.v, and
-   mul_down_1_ieee_correct, mul_up_1_ieee_correct establish their generated statements
-   (mul_down_1_ieee, mul_up_1_ieee: the three cases above in the words of the claims, with
-   xmul, the product of IEEE 754 on extended real numbers, and xpred, xsucc, one step).
-   mul_dir_1 is not generated yet (it comes with the interval kernels):
-   mul_dir_1_ieee_listing, in section Listings, is its listing written by hand in the text
-   the generator prints, and the generated IeeeModel.mul_dir_1 will replace it. *)
+   mul_down_1, mul_up_1 and mul_dir_1 are the generated models of proofs/gen/IeeeModel.v,
+   and mul_down_1_ieee_correct, mul_up_1_ieee_correct and mul_dir_1_ieee_correct
+   establish their generated statements (mul_down_1_ieee, mul_up_1_ieee: the three cases
+   above in the words of the claims, with xmul, the product of IEEE 754 on extended real
+   numbers, and xpred, xsucc, one step). The statement of mul_dir_1, for operands that
+   are not NaN, is the two of mul_down_1 and of mul_up_1 when no operand is a zero, and
+   "the output is a zero" when one is (the claim zero_factor): by mul_dir_1_ieee_eq the
+   listing returns the literal zero for a zero factor, and otherwise what mul_down_1 and
+   mul_up_1 return. *)
 From Stdlib Require Import Reals ZArith Bool Lia Lra Psatz.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements IeeeStatements.
@@ -42,55 +44,6 @@ From Kairn Require Import Rectangle IeeeProduct IeeeDirected.
 From Kairn Require IeeeOperations.
 From Kairn.Gen Require IeeeModel.
 Open Scope R_scope.
-
-(** * The listing of mul_dir_1 *)
-
-Section Listings.
-Variable prec emax : Z.
-Context {prec_gt_0_ : Prec_gt_0 prec}.
-Context {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}.
-
-Notation float := (binary_float prec emax).
-Notation nan_of := {x : float | is_nan prec emax x = true}.
-
-Variable nan_opp : float -> nan_of.
-Variable nan_abs : float -> nan_of.
-Variable nan_fma : float -> float -> float -> nan_of.
-
-Local Notation pzero := (IeeeOperations.pzero prec emax).
-Local Notation abs := (IeeeOperations.abs prec emax nan_abs).
-Local Notation lt := (IeeeOperations.lt prec emax).
-Local Notation eq := (IeeeOperations.eq prec emax).
-Local Notation succ := (IeeeOperations.succ prec emax).
-Local Notation pred := (IeeeOperations.pred prec emax).
-Local Notation two_prod := (IeeeModel.two_prod prec emax nan_opp nan_fma).
-
-(* Hand-written IEEE model of the listing mul_dir_1, in the text the generator prints for
-   the IEEE model; the kernel comes with the interval kernels, and the generated
-   IeeeModel.mul_dir_1 will replace this definition. The constant is the generated one of
-   mul_down_1 and mul_up_1. *)
-Definition mul_dir_1_ieee_listing (a b : float) : float * float :=
-  let '(p, e) := two_prod a b in
-  let ap := abs p in
-  let bd := lt ap (IeeeModel.up_mul_down_1_0 prec emax) in
-  let ez := eq e pzero in
-  let un := andb bd ez in
-  let n := lt e pzero in
-  let sd := orb n un in
-  let pp := pred p in
-  let dz := if sd then pp else p in
-  let q := lt pzero e in
-  let su := orb q un in
-  let sp := succ p in
-  let vz := if su then sp else p in
-  let za := eq a pzero in
-  let zb := eq b pzero in
-  let zz := orb za zb in
-  let d := if zz then pzero else dz in
-  let v := if zz then pzero else vz in
-  (d, v).
-
-End Listings.
 
 Section IeeeDirectedProd.
 Variable prec emax : Z.
@@ -129,7 +82,7 @@ Notation P := (bpow radix2 (2 * prec - 1 + emin)).
 Notation cP := (IeeeModel.up_mul_down_1_0 prec emax).
 Notation mul_down_1 := (IeeeModel.mul_down_1 prec emax nan_opp nan_abs nan_fma).
 Notation mul_up_1 := (IeeeModel.mul_up_1 prec emax nan_opp nan_abs nan_fma).
-Notation mul_dir_1 := (mul_dir_1_ieee_listing prec emax nan_opp nan_abs nan_fma).
+Notation mul_dir_1 := (IeeeModel.mul_dir_1 prec emax nan_opp nan_abs nan_fma).
 
 Let Hprec : (0 < prec)%Z.
 Proof. exact prec_gt_0_. Qed.
@@ -556,7 +509,7 @@ Lemma mul_dir_1_ieee_eq :
   = (if orb (feq a pzero) (feq b pzero) then pzero else mul_down_1 a b,
      if orb (feq a pzero) (feq b pzero) then pzero else mul_up_1 a b).
 Proof.
-intros a b. unfold mul_dir_1_ieee_listing, IeeeModel.mul_down_1, IeeeModel.mul_up_1.
+intros a b. unfold IeeeModel.mul_dir_1, IeeeModel.mul_down_1, IeeeModel.mul_up_1.
 destruct (IeeeModel.two_prod prec emax nan_opp nan_fma a b) as [p e]. cbv zeta.
 destruct (orb (feq a pzero) (feq b pzero)); reflexivity.
 Qed.
@@ -900,6 +853,25 @@ split; [|split].
     rewrite (mul_up_1_ieee_nonfinite a b (or_introl Fa)). apply xval_prod_nonfinite. now left.
 Qed.
 
+(* The test eq(a, 0) of mul_dir_1 accepts the two zeros and nothing else. *)
+Lemma eq_pzero_zero : forall a : float, feq a pzero = true <-> zero a.
+Proof.
+intros a. split.
+- destruct a as [sa|sa|sa pa Ha|sa ma ea Ha]; intros H.
+  + now exists sa.
+  + destruct sa; discriminate H.
+  + discriminate H.
+  + destruct sa; discriminate H.
+- intros [s E]. rewrite E. destruct s; reflexivity.
+Qed.
+
+Lemma zero_factor_test :
+  forall a b : float, orb (feq a pzero) (feq b pzero) = true <-> zero a \/ zero b.
+Proof.
+intros a b. rewrite orb_true_iff.
+split; (intros [H|H]; [left|right]; now apply eq_pzero_zero).
+Qed.
+
 End IeeeDirectedProd.
 
 (** * The statements of proofs/gen/IeeeStatements.v *)
@@ -914,4 +886,39 @@ Theorem mul_up_1_ieee_correct : mul_up_1_ieee_spec.
 Proof.
 intros prec emax Hp0 He nan_opp nan_abs nan_fma Hp a b.
 exact (mul_up_1_ieee prec emax nan_opp nan_abs nan_fma a b).
+Qed.
+
+(* mul_dir_1, for operands that are not NaN: a zero operand gives two zeros; otherwise
+   the lower output is what mul_down_1 returns and the upper one what mul_up_1 returns,
+   whose statements these are. *)
+Theorem mul_dir_1_ieee_correct : mul_dir_1_ieee_spec.
+Proof.
+intros prec emax Hp0 He nan_opp nan_abs nan_fma Hp a b Na Nb.
+rewrite (mul_dir_1_ieee_eq prec emax nan_opp nan_abs nan_fma a b).
+generalize (mul_down_1_ieee prec emax nan_opp nan_abs nan_fma a b)
+           (mul_up_1_ieee prec emax nan_opp nan_abs nan_fma a b)
+           (zero_factor_test prec emax a b).
+cbv zeta. intros [D1 [D2 D3]] [U1 [U2 U3]] Z.
+destruct (orb (IeeeOperations.eq prec emax a (IeeeOperations.pzero prec emax))
+              (IeeeOperations.eq prec emax b (IeeeOperations.pzero prec emax))).
+- assert (ZZ : zero a \/ zero b) by now apply Z.
+  assert (Z0 : zero (IeeeOperations.pzero prec emax)) by (exists false; reflexivity).
+  split; [intros _; exact Z0|].
+  split; [intros K; elim (K ZZ)|].
+  split; [intros _; exact Z0|].
+  split; [intros K; elim (K ZZ)|].
+  split; [intros _; exact Z0|].
+  split; [intros K; elim (K ZZ)|].
+  split; [intros _; exact Z0|].
+  intros K; elim (K ZZ).
+- assert (NZ : ~ (zero a \/ zero b)).
+  { intros K. apply Z in K. discriminate K. }
+  split; [intros K; elim (NZ K)|].
+  split; [intros _; split; [exact D1|exact D2]|].
+  split; [intros K; elim (NZ K)|].
+  split; [intros _; exact D3|].
+  split; [intros K; elim (NZ K)|].
+  split; [intros _; split; [exact U1|exact U2]|].
+  split; [intros K; elim (NZ K)|].
+  intros _; exact U3.
 Qed.

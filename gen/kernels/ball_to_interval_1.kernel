@@ -13,9 +13,10 @@ ensures:       interval_of_ball zl zu x x=c,r tight=rounded
 min_precision: 2
 source:        the directed difference and sum of the center and the radius (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalConvert.v ball_to_interval_1_correct
 entry:         yes
 cone_exempt:   the bounds are directed sums, and the empty set is selected after an explicit test; interval_of_ball states what comes out for every canonical ball
 

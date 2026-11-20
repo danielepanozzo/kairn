@@ -565,9 +565,11 @@ class FoldClaims(unittest.TestCase):
                 uppers = [e for e in f['ensures'] if e['kind'] == 'upper']
                 if uppers:
                     # A fold of maxima: one upper entry over the largest value, the result of one
-                    # limb, no fold_error and no constants; unverified.
-                    self.assertEqual(f['theorems'], {'sequential': None, 'lanes': None})
-                    self.assertEqual(f['status'], 'unverified')
+                    # limb, no fold_error and no constants. Proved (FoldNorm.v).
+                    self.assertEqual(f['theorems'], {
+                        'sequential': {'file': 'proofs/theories/FoldNorm.v', 'name': f['name'] + '_seq_correct'},
+                        'lanes': {'file': 'proofs/theories/FoldNorm.v', 'name': f['name'] + '_lanes_correct'}})
+                    self.assertEqual(f['status'], 'proved')
                     self.assertEqual(f['ensures'], [{'kind': 'upper', 'of': 'r', 'over': 'max',
                                                      'steps': f['arrays'][0]['limbs'] - 1},
                                                     {'kind': 'finite_or_nan', 'of': 'r', 'flag': 'flag'}])
@@ -646,8 +648,9 @@ class FoldClaims(unittest.TestCase):
                 self.assertEqual([sizes[a] for a in f['step_args']], [g['limbs'] for g in step['inputs']])
                 self.assertEqual(step['outputs'][0]['limbs'], f['writes'][0]['limbs'])
                 self.assertEqual(f['check'], f'fold_finish_{f["writes"][0]["limbs"]}')
-                self.assertEqual(f['status'], 'unverified')
-                self.assertIsNone(f['theorem'])
+                self.assertEqual(f['status'], 'proved')
+                self.assertEqual(f['theorem'], {'file': 'proofs/theories/FoldMaps.v',
+                                                'name': f['name'] + '_correct'})
         by = {f['name']: f for f in maps}
         a = by['axpy_2']
         self.assertEqual(a['arrays'], [{'name': 'x', 'limbs': 2, 'role': 'supplied'},

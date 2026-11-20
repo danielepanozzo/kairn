@@ -6,9 +6,12 @@
 model of arithmetic where nothing overflows, and at overflow and for infinities and NaN they
 return results like those of `float` and `double` (balls: the whole line, or the empty set), which
 is proved in a model of IEEE 754; [What holds today](guarantees.md) has the details and what is
-not proved yet. This page shows how to write a first program, choose the limb type and the number
-of limbs, write constants such as 1/10, build and test the repository, use the CMake package, read
-what Kairn's checks report when something is wrong, and build this site.
+not proved yet. Milestone 2 is in progress: its first public functions, the building blocks on
+`T`, the exact scaling of a ball, a ball from a constant and the signs of a ball, are in version
+0.2.0 of the development line. This page shows how to write a first program, choose the limb type
+and the number of limbs, write constants such as 1/10, use the building blocks, build and test the
+repository, use the CMake package, read what Kairn's checks report when something is wrong, and
+build this site.
 
 ## A first program
 
@@ -142,6 +145,104 @@ before it compiles ([Constants from fractions](../reference/rational.md)). The p
 [`docs/examples/cpp/constants.cpp`](https://github.com/danielepanozzo/kairn/blob/main/docs/examples/cpp/constants.cpp);
 ctest builds and runs it (`api.example.constants`).
 
+## Building blocks
+
+The functions of `float` and `double` that Kairn's operations are made of are public too
+(`kairn/blocks.hpp`, which `kairn/kairn.hpp` includes): for a program's own tests of exactness,
+its own radius arithmetic, and bounds rounded down or up without changing the rounding mode. Each
+is one call of a generated, proved kernel, whose [reference page](../reference/index.md#building-blocks-on-t)
+states it, on infinities and NaN too.
+
+| Function | Gives | `constexpr` | Rounds |
+|---|---|---|---|
+| `two_sum(a, b)` | `SumAndError<T>`: `sum` $= \mathrm{RN}(a + b)$ and `error`, with `sum + error` $= a + b$ exactly | yes, the same values | yes |
+| `fast_two_sum(a, b)` | the same in three operations instead of six, for $\lvert a\rvert \ge \lvert b\rvert$ (a debug build checks it) | yes, the same values | yes |
+| `two_prod(a, b)` | `ProductAndError<T>`: `product` $= \mathrm{RN}(ab)$ and `error`, with `product + error` $= ab$ exactly when $ab = 0$ or $\lvert ab\rvert \ge 2^{-969}$ for `double` ($2^{-102}$ for `float`), within $\tfrac12\eta$ of it otherwise | yes, by Dekker's product: the same values when exact | yes |
+| `next_up(a)`, `next_down(a)` | the next number of `T` above and below, IEEE 754's `nextUp` and `nextDown`, on every value (`next_up(-inf)` is $-\Omega$) | yes, the same bits | no |
+| `radd(a, b)`, `rmul(a, b)` | for $a, b \ge 0$, an upper bound of $a + b$ and of $ab$, at most $\tfrac32$ gaps of `T` above it | yes, the same bits | yes |
+| `add_down`, `add_up`, `sub_down`, `sub_up` | $a \pm b$ rounded down or up: the nearest number of `T` on that side, exactly | yes, the same values | yes |
+| `mul_down(a, b)`, `mul_up(a, b)` | a bound of $ab$ on that side: the exact directed rounding when $ab = 0$ or $\lvert ab\rvert \ge 2^{-969}$, and at most one number of `T` beyond it otherwise | no | yes |
+
+"The same values" means that constant evaluation gives the result of run time, but for the sign of
+a zero; "rounds" that the function computes with operations rounded to nearest, so that a debug
+build checks the rounding mode before it ([below](#when-a-check-of-a-build-without-ndebug-fails)):
+the directed bounds give, under rounding to nearest, what rounding down or up would.
+`mul_down` and `mul_up` are not usable in constant expressions: their statement is about the
+fused product, whose error term constant evaluation computes otherwise
+([Building blocks on T](../developer/design/milestone2.md#building-blocks-on-t)). A test of
+exactness, and the exact sum of two doubles as a two-limb number:
+
+```cpp
+--8<-- "docs/examples/cpp/building_blocks.cpp:exact"
+```
+
+`SumAndError<T>` and `ProductAndError<T>` have two named members rather than being a pair, since
+which of the two is the rounded result matters; they are aggregates, so
+`auto [s, e] = kairn::two_sum(a, b);` works too. The sum and its error term are a normalized
+pair, so the exact sum of two numbers is the two-limb number they make: the conversion of a
+`SumAndError` to `Expansion<T, 2>` is explicit, and valid exactly when both members are finite.
+They are for finite operands whose sum does not overflow, with one exception for `two_sum`, a
+second operand of $\pm\Omega$ (the largest finite number), where the error term can be a NaN
+although the sum is finite; a debug build reports a pair that is not canonical. The radius of a
+product, in a program's own arithmetic of radii:
+
+```cpp
+--8<-- "docs/examples/cpp/building_blocks.cpp:radius"
+```
+
+And bounds of a sum and of a product, with the rounding mode left as it is:
+
+```cpp
+--8<-- "docs/examples/cpp/building_blocks.cpp:bounds"
+```
+
+They are function templates of namespace `kairn` with both operands of the same type: write
+`kairn::next_up(a)`. A function of the program's own with the same name is not hidden, and
+argument-dependent lookup does not find Kairn's for an operand of type `double` or `float`.
+
+**The exact scaling of a ball.** `kairn::ldexp(X, n)` and `kairn::half(X)` multiply every member
+of a ball by $2^n$, exactly when nothing underflows: when each limb of the center and the radius
+of the result is zero or above the smallest normal number, the result is $2^n X$ itself, with
+nothing added to the radius. A subdivision that halves its balls can count on that. Below, the
+ball stays an enclosure and its radius grows by what was lost. `X * 0.5`, the scaling by a `T`,
+also covers the rounding of a product that need not be exact, so its radius grows even for a power
+of two:
+
+```cpp
+--8<-- "docs/examples/cpp/building_blocks.cpp:scaling"
+```
+
+**A ball from a constant.** `Ball<T, k>(q)`, for `q` a result of `kairn::rational` or
+`kairn::integer` of $k$ limbs, is the ball of center `q.value` and radius `q.error`, which
+contains the fraction. It is how a program multiplies a ball by $1/s$, for an integer $s$, and
+keeps an enclosure, until Kairn has a division:
+
+```cpp
+--8<-- "docs/examples/cpp/building_blocks.cpp:rational"
+```
+
+**The sign of a ball.** `X.certainly_positive()`, `X.certainly_negative()` and
+`X.certainly_zero()` say whether every member of a ball is positive, negative, or zero, from one
+exact comparison of the radius with the center; each is false for the empty set and for the whole
+line, so test `X.is_empty()` first where that matters:
+
+```cpp
+--8<-- "docs/examples/cpp/building_blocks.cpp:signs"
+```
+
+The program is
+[`docs/examples/cpp/building_blocks.cpp`](https://github.com/danielepanozzo/kairn/blob/main/docs/examples/cpp/building_blocks.cpp);
+ctest builds and runs it (`api.example.building_blocks`). A program that needs these functions,
+or `KAIRN_ENCLOSURE_CODE`, can require the version that has them:
+
+```cpp
+--8<-- "docs/examples/cpp/building_blocks.cpp:version"
+```
+
+The first test is in a group of its own because a version before 0.2.0 has no such macro, and an
+undefined function-like macro in an `#if` does not compile; `KAIRN_VERSION`, which every version
+defines, can also be compared directly (`#if KAIRN_VERSION >= 200`).
+
 ## What you need
 
 - CMake 3.21 or later and a C++20 compiler. A project that only uses the library, through
@@ -196,7 +297,7 @@ The tests of the quick tier:
 | `crosscheck.compiled.*` | Each kernel, compiled with the build's compiler and flags, scalar and packed (NEON on AArch64, AVX2 on x86-64, one operand per lane), and again under each contraction setting that matters to the compiler: every one of these builds on the same random `binary64` and `binary32` operands, judged by the oracle against the kernel's claims. |
 | `objcode.*` | The fused multiply-adds and plain multiplications in the object code of every kernel, compiled with the build's compiler in a few configurations of its flags, are those its description asks for; a textbook `a * b + c` fails that check where the compiler fuses it. With the operations of `Ball` outlined and external ([below](#compile-time-and-the-operations-of-ball)), each is a call, and the function it calls has the fused operations of its kernel. |
 | `regression.cases` | The stored cases that once found a problem or came closest to a claim (`tests/regression/cases.txt`), through every compiled runner, the generator's interpreter and every public form of their kernels, judged by the oracle. |
-| `consume.add_subdirectory` | A CMake project that adds Kairn with `add_subdirectory` and links `kairn::kairn` and `kairn::fma` builds, compiles as C++20, and runs a kernel. |
+| `consume.add_subdirectory` | A CMake project that adds Kairn with `add_subdirectory` and links `kairn::kairn` and `kairn::fma` builds, compiles as C++20, and runs a kernel; Kairn prints no line when it is configured there, and its `cmake --install` installs nothing of Kairn's unless `KAIRN_INSTALL` is on. |
 | `consume.install` | `cmake --install` of the build tree into a prefix inside the build directory, with the license in it as `share/licenses/kairn/LICENSE`. |
 | `consume.find_package` | A CMake project that finds that installed copy with `find_package(kairn)` builds, compiles as C++20, and runs a kernel. |
 | `api.oracle.*` | Each public operation, computed through the constructors, operators and functions of `kairn/kairn.hpp`, on random `binary64` and `binary32` operands (infinities, NaN, the empty set and the whole line included, for the kernels that have them), judged by the oracle against the claims of the kernel it calls; built with the build's flags and with contraction forced on. |
@@ -208,7 +309,7 @@ The tests of the quick tier:
 | `api.shadow` | A program with a global variable of every name of a parameter or a local variable of Kairn's headers, calling every public operation, compiles with the compiler's strictest warnings about hidden declarations as errors ([Testing](../developer/testing.md#the-programs-names)). |
 | `api.platform_macros` | The headers compile and work after a platform header that defines `min`, `max`, `small`, `near`, `far`, `hyper` and `interface` as macros: `<windows.h>` itself on Windows, without `NOMINMAX`, and the same macros defined by the test on every platform. |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break Kairn and define no macro; `kairn::self_test()` must report a failure. |
-| `api.reject.*` | What must not compile: the flags `config.hpp` rejects; a value of `KAIRN_ENCLOSURE_CODE` that is not one of its three; each kind of operation and constructor written without the marker while its kernel is UNVERIFIED (against a copy of the headers in which every kernel is); and an operation whose kernel alone is UNVERIFIED, which must not compile through a conversion to another kernel; with `KAIRN_CHECKS`, a constant expression given an operand the checks refuse. |
+| `api.reject.*` | What must not compile: the flags `config.hpp` rejects; a value of `KAIRN_ENCLOSURE_CODE` that is not one of its three; each kind of operation and constructor written without the marker while its kernel is UNVERIFIED (against a copy of the headers in which every kernel is); and an operation whose kernel alone is UNVERIFIED, which must not compile through a conversion to another kernel; with `KAIRN_CHECKS`, a constant expression given an operand the checks refuse; `mul_down` and `mul_up` in a constant expression. |
 | `api.link.external.*` | With the operations of `Ball` external, a program whose file of definitions was compiled with another `KAIRN_CHECKS` or another setting, or is missing, does not link; the same program with matching settings links and runs. |
 | `api.boundary.*` | A product the program computes and passes into an operation (`x + a * b`, a constructor, `from_limbs`, a ball's center or radius) gives, bit for bit, the result of the same operation on the rounded product, under each contraction setting; `api.boundary.unguarded.*` checks, against a copy of the headers without the generated guard, that the compilers that fuse across statements do change it. |
 | `api.k1.zero_cost` | The instructions emitted for loops and single operations over `Expansion<double, 1>` against the same code over `double`; with MSVC, also that none of them has a stack-cookie check. |
@@ -237,10 +338,12 @@ C++20, and there is nothing to compile. Its headers today:
 | `kairn/kairn.hpp` | All of the following. |
 | `kairn/expansion.hpp` | `kairn::Expansion<T, 1>` and `kairn::Expansion<T, 2>`, `T` = `float` or `double`, and their operations. |
 | `kairn/ball.hpp` | `kairn::Ball<T, 1>` and `kairn::Ball<T, 2>`. |
+| `kairn/blocks.hpp` | The [building blocks](#building-blocks) on `T`: `two_sum`, `fast_two_sum`, `two_prod`, `next_up`, `next_down`, `radd`, `rmul`, the sums and products rounded down and up. |
+| `kairn/rational.hpp` | `kairn::rational`, `kairn::integer` and `kairn::Constant` ([above](#constants-from-fractions)). |
 | `kairn/traits.hpp` | `kairn::traits<X>`: limb type, number of limbs, precision, and the error constants of the proved operations. |
 | `kairn/environment.hpp` | `kairn::self_test()` and `kairn::environment_ok()`. |
 | `kairn/config.hpp` | The checks of the compiler's flags, the marker `kairn::unverified`, and the macros `KAIRN_CHECKS`, `KAIRN_ENVIRONMENT_FAILURE`, `KAIRN_K1_CONTRACT`, `KAIRN_ENCLOSURE_CODE`. |
-| `kairn/version.hpp` | `KAIRN_VERSION_MAJOR`, `KAIRN_VERSION_MINOR`, `KAIRN_VERSION_PATCH`, `KAIRN_VERSION_STRING` and `KAIRN_VERSION` (configuring fails if they disagree with the version in `CMakeLists.txt`). |
+| `kairn/version.hpp` | `KAIRN_VERSION_MAJOR`, `KAIRN_VERSION_MINOR`, `KAIRN_VERSION_PATCH`, `KAIRN_VERSION_STRING` and `KAIRN_VERSION` (configuring fails if they disagree with the version in `CMakeLists.txt`), and `KAIRN_VERSION_AT_LEAST(major, minor, patch)` ([above](#building-blocks)). |
 | `kairn/definitions.hpp` | The definitions of the operations of `Ball`, for one file of a program built with `KAIRN_ENCLOSURE_CODE_EXTERNAL` ([below](#compile-time-and-the-operations-of-ball)); nothing in the other settings. |
 | `kairn/ball_operations.hpp`, `kairn/gen/` | The operations of `Ball` that `ball.hpp` and `definitions.hpp` include, and the generated kernels and data the headers above use; not an interface to call directly. |
 
@@ -261,7 +364,15 @@ headers, the package under `share/cmake/kairn` and the license as `share/license
 ```
 
 The installed package accepts a request for a version with the same major and minor number that is
-not newer than itself.
+not newer than itself. The development line of Milestone 2 is 0.2.0.
+
+Added with `add_subdirectory` or `FetchContent`, Kairn keeps to itself: it adds no install rule,
+so that `cmake --install` of the project installs the project's files and not Kairn's, unless the
+project sets the option `KAIRN_INSTALL` to `ON` (its default is `ON` only when Kairn is the
+top-level project), and its configuration prints nothing at the default log level: the line about
+the option of `kairn::fma` ([Hardware FMA](#hardware-fma)) is at the `VERBOSE` level there
+(`cmake --log-level=VERBOSE`), as it is for a package found with `find_package`. The test
+`consume.add_subdirectory` checks both.
 
 ## Compile time and the operations of Ball
 
@@ -270,8 +381,8 @@ what makes it fast. A function with thousands of ball operations, a loop unrolle
 example, then becomes one very large function, which the compiler takes long to compile and a lot
 of memory to compile. `KAIRN_ENCLOSURE_CODE`, defined the same way before Kairn is included in
 every file of a program (or with `target_compile_definitions` on every target), says where the code
-of the operations of `Ball` that round (`+`, `-`, `*` and the scaling by a `T`, one and two limbs)
-is:
+of the operations of `Ball` that round (`+`, `-`, `*`, the scaling by a `T`, and `ldexp` and
+`half`, one and two limbs) is:
 
 | Setting | The operations of `Ball` | When |
 |---|---|---|
@@ -298,9 +409,11 @@ included, which a library built by Kairn could not know. In the other settings
 The three settings compute the same bits: each operation's code is the same, its generated kernel
 inside it, and the tests check that every public form gives the same bytes in each
 ([Testing](../developer/testing.md#the-full-tier)). The negation of a ball and the constructors, a
-few instructions each, stay inline in every setting, and so does everything of `Expansion`. An
-operation that is outlined is still usable wherever it was (none of these is usable in constant
-expressions yet); an external one cannot be evaluated at compile time. A call costs time at run
+few instructions each, stay inline in every setting, and so does everything of `Expansion`; so do
+the steps of `ldexp`, each a call of the scaling by a power of two of `T`. An operation that is
+outlined is still usable wherever it was (none of these is usable in constant expressions yet,
+`ldexp` and `half` of a ball included, although their kernel is); an external one cannot be
+evaluated at compile time. A call costs time at run
 time where the operations are short and many. Measured on an Apple M3 Max ([Compile times and other
 costs, Milestone 2](../developer/results/costs-milestone2.md)): a function of 10 000 operations of
 `Ball<double, 2>` compiled 6.8 to 7.1 times faster with Apple clang 21 outlined or external (5
@@ -329,8 +442,9 @@ program's decision, and an option carried by `kairn::kairn` would apply to every
 target that links it. Either compile for such a CPU yourself (`-march=x86-64-v3` or `-mfma` with
 GCC and Clang, `/arch:AVX2` with MSVC and clang-cl), or also link `kairn::fma`, as the examples
 above do. `kairn::fma` adds that option for the compiler of your project, or nothing when your
-flags already enable FMA or the target needs no option; configuring prints a line when it adds
-one. Kairn's own tests link it.
+flags already enable FMA or the target needs no option; configuring Kairn on its own prints a line
+when it adds one, and as a subproject or a package found with `find_package` it writes that line at
+the `VERBOSE` log level only. Kairn's own tests link it.
 
 ## Troubleshooting
 
@@ -461,13 +575,18 @@ canonical pair, $x_0 + x_1 = x_0$). They are:
 | `<`, `<=`, `>`, `>=`, `==`, `!=`, one and two limbs, with a `T` or a one-limb number on either side | comparisons of limbs |
 | `kairn::to_nearest`, `kairn::to_down`, `kairn::to_up`, `kairn::abs_upper`, one and two limbs, and the narrowing `Expansion<T, 1>(x)` | a limb; or a comparison, a step of the bit pattern and a select |
 | `-X` for a `Ball` | sign bits, and the radius as it is |
-| `Ball<T, 1>(a)`, `Ball<T, 1>(c)`, `Ball<T, 1>(c, r)`, `Ball<T, 2>(a)`: the constructors of a ball from a `T` or a number of one limb | their only rounded operations are the guards `a + 0`, whose value is `a` under every rounding mode; only the sign of a zero can differ, which Kairn leaves unspecified anyway |
+| `X.certainly_positive()`, `X.certainly_negative()`, `X.certainly_zero()` for a `Ball` | comparisons of the radius with the center |
+| `Ball<T, 1>(a)`, `Ball<T, 1>(c)`, `Ball<T, 1>(c, r)`, `Ball<T, 1>(q)`, `Ball<T, 2>(a)`: the constructors of a ball from a `T`, a number of one limb or a constant of one limb | their only rounded operations are the guards `a + 0`, whose value is `a` under every rounding mode; only the sign of a zero can differ, which Kairn leaves unspecified anyway |
+| `Expansion<T, 2>(r)` for the result `r` of `two_sum` or `fast_two_sum` | the guards, as above, and a test of the pair that compares and does not round |
+| `kairn::next_up`, `kairn::next_down` | integer operations on the bit pattern, which no state of the environment changes: they check nothing at all |
 | `kairn::sign`, `kairn::isfinite`, `kairn::is_normalized` of one limb, `X.center()`, `X.radius()`, `X.is_finite()`, `X.is_whole()`, `X.is_empty()`, `Ball::empty()`, `Ball::whole()`, the constants of `kairn::traits`, `kairn::rational`; the constructors of two limbs from a `T` or a one-limb number and `from_limbs_unchecked` (their guard, as above) | tests of bit patterns, stored values and data, integer arithmetic; these check nothing at all, as before |
 
-Every other function rounds and checks the rounding mode: the arithmetic, `ldexp` and `half`, the
-functions of `kairn::finite::`, `from_limbs` and `kairn::is_normalized` of two limbs (both test
-$x_0 + x_1 = x_0$), and the constructors of `Ball<T, 2>` from a center of two limbs (the test of a
-canonical center). The header `config.hpp` has the same list, and the reference comment of each of
+Every other function rounds and checks the rounding mode: the arithmetic, `ldexp` and `half` (of
+numbers and of balls), the functions of `kairn::finite::`, the [building blocks](#building-blocks)
+but `next_up` and `next_down` (the directed bounds among them: they compute under rounding to
+nearest what rounding down or up gives), `from_limbs` and `kairn::is_normalized` of two limbs (both
+test $x_0 + x_1 = x_0$), and the constructors of `Ball<T, 2>` from a center of two limbs or a
+constant of two limbs (the test of a canonical center). The header `config.hpp` has the same list, and the reference comment of each of
 these functions says "Does not round".
 
 - `kairn: the floating-point environment: ` followed by what is wrong:
@@ -496,6 +615,13 @@ these functions says "Does not round".
   `kairn::finite::` with `kairn::isfinite` first.
 - `kairn: from_limbs: the limbs are not a canonical pair (finite with x0 + x1 == x0, an infinity and a zero, or two NaN)`.
   The same, caught when the number is made.
+- `kairn: fast_two_sum: |a| < |b|, which its requirement |a| >= |b| excludes (two_sum takes any order)`.
+  Without the checks, the sum is still the rounded sum, but the error term need not make it exact:
+  use `two_sum`, or put the larger operand first.
+- `kairn: SumAndError: the sum and the error term are not a canonical pair (an infinite operand, a sum that overflows, or two_sum with |b| the largest finite number), so the conversion to Expansion<T, 2> has no guarantee`.
+  The result of `two_sum` or `fast_two_sum` converted to `Expansion<T, 2>` had an error term that is
+  not finite. Test `kairn::isfinite` on the sum, or keep the operands away from the largest finite
+  number.
 - `kairn: a ball: has a negative radius (Ball::empty() is the empty set)`. Without the checks, such
   a ball is the empty set; write `Ball<T, K>::empty()` for that. Also
   `kairn: a ball: has a center that is not canonical` and

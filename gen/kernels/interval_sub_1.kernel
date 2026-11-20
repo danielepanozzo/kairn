@@ -14,9 +14,10 @@ ensures:       encloses_interval zl zu x-y x=xl,xu y=yl,yu tight=rounded bounded
 min_precision: 2
 source:        directed differences of the bounds (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeInterval1.v interval_sub_1_correct
 entry:         yes
 cone_exempt:   the bounds are directed differences, which select, and the empty set is selected after an explicit test; encloses_interval states what comes out
 

@@ -19,9 +19,10 @@ ensures:       encloses_interval zl zu x+y x=xl,xu y=yl,yu tight=outward;rel=(2*
 min_precision: 3
 source:        the directed sums of two limbs, an infinite or empty result selected (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeInterval2.v interval_add_2_correct
 entry:         yes
 cone_exempt:   every output is selected after explicit tests of the bounds (fl, fh) and of the operands (ne); encloses_interval states what comes out
 

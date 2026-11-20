@@ -16,9 +16,10 @@ ensures:       ball_of_interval c r from=xl,xu special=ball rel=u abs=eta smalle
 min_precision: 2
 source:        interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing)
 license:       algorithm and proof: MIT
-status:        unverified
+status:        proved
 domain:        extended
-ieee_status:   unverified
+ieee_status:   proved
+ieee_theorem:  proofs/theories/IeeeIntervalConvert.v interval_to_ball_1_correct
 entry:         yes
 cone_exempt:   the center is selected after the test of the radius that tells an unbounded interval; ball_of_interval states what comes out for every canonical interval
 

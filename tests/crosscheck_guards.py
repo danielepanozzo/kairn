@@ -384,7 +384,8 @@ def count_problems(kernel, keys, a):
     """The guards of the bound kernels (every entry under a mask, a count m): each entry's mask
     seen true at m * unit(K) = 0, at or below 1/5 and between 1/5 and 1/4, and false between 1/4
     and 1/2 and beyond 1/2; m not an integer; in binary64 and binary32 never false at or below
-    1/5; and the first upper entry (g) within CLOSE_GAPS gaps of its stated value somewhere."""
+    1/5; and the first upper entry (g) within CLOSE_GAPS gaps of its stated value somewhere (at a
+    precision below COUNT_FINE_PRECISION: wherever a positive stated value was met)."""
     if not any(r.replace(" ", "").startswith("count(") for r in kernel.get("requires", [])):
         return
     ens = kernel.get("ensures", [])
@@ -437,6 +438,13 @@ def count_problems(kernel, keys, a):
                                                                mask))
         if j == first_upper:
             r = minima.get(CLOSE)
+            # Below COUNT_FINE_PRECISION a format may have no count at all with the mask true
+            # and a positive stated value (at p = 1 the mask is true at m = 0 only, where the
+            # stated value is zero): there is then nothing to come close to, and the mask both
+            # ways, above, is what is asked. Wherever a positive stated value was met, at any
+            # precision, the closeness is asked.
+            if r is None and not fine:
+                continue
             if r is None or r[0] > CLOSE_GAPS * r[1]:
                 yield ('the claim "%s" never came within %d gaps of its stated value (smallest '
                        'excess: %s), so a bound far too large would pass'
