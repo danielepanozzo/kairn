@@ -161,6 +161,7 @@ FOLD_SHAPES = {
     "2_2": [("fp:4:-4:-1", 1), ("fp:4:-5:0", 1)],
 }
 FOLD_LENGTH = 4096
+FOLD_CHUNK_DIVISOR = 100
 
 # Precision 1 of the one-limb balls with two operands, in place of the base range. There u = 1/2
 # and the constants of the radius are large against a format of few exponents: the factor
@@ -1284,19 +1285,28 @@ class Scheduler:
                 return
             count = self.a.chunk if self.a.cases is None else min(self.a.chunk,
                                                                   self.a.cases - start)
+            # A fold's case is an array of 265 elements on average: its units are a hundredth of
+            # a kernel's, cases and cap alike, so that one unit takes about as long.
+            fchunk = max(1, self.a.chunk // FOLD_CHUNK_DIVISOR)
+            fstart = u * fchunk
+            fcount = fchunk if self.a.cases is None else max(
+                0, min(fchunk, self.a.cases // FOLD_CHUNK_DIVISOR - fstart))
             for k, f in self.pairs:
+                if k in self.folds and fcount == 0:
+                    continue
                 if k not in self.folds:
                     groups = [(Unit(self.work, k, f, start, count), self.runners)]
                 else:
                     groups = []
                     scalar = [r for r in self.runners if r["kind"] == "scalar"]
                     if scalar:
-                        groups.append((Unit(self.work, k, f, start, count, True, "scalar"), scalar))
+                        groups.append((Unit(self.work, k, f, fstart, fcount, True, "scalar"),
+                                       scalar))
                     for be in sorted({r["backend"] for r in self.runners if r["kind"] == "packed"}):
                         W = packed_lanes(k, f, be)
                         rs = [r for r in self.runners if r["kind"] == "packed" and r["backend"] == be]
                         if W:
-                            groups.append((Unit(self.work, k, f, start, count, True, be,
+                            groups.append((Unit(self.work, k, f, fstart, fcount, True, be,
                                                 "lanes:%d" % W), rs))
                 for unit, rs in groups:
                     unit.pending = [r for r in rs if (k, f, r["id"]) not in self.stopped
