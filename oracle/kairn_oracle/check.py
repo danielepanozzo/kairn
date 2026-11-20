@@ -795,7 +795,7 @@ class Checker:
             expected[i] = r
         for i in pl.bounds:
             r = F.rdir(fmt, V, pl.sv, pl.entries[i]["side"] == "above")
-            beyond = beyond or abs(r) > fmt.omega
+            beyond = abs(r) > fmt.omega or beyond
             expected[i] = r
         if beyond or any(type(v) is not int for v in z):
             if any(v == F.OUTSIDE for v in z):
@@ -1026,9 +1026,9 @@ class Checker:
             es.count("exact_when holds, the set empty (a negative input radius)")
             return None
         lo, hi = rg
-        clo, chi = e["center"]
         sh = e["sh_q"]
-        cz = sum(z[clo:chi]) << sh
+        c0, c1 = e["center"]
+        cz = sum(z[c0:c1]) << sh
         rz = z[e["radius"]] << sh
         if cz - rz == lo and cz + rz == hi:
             return None

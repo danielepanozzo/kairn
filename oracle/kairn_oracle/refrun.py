@@ -1114,6 +1114,7 @@ class Kernels:
 
     mul_down_real = mul_down_1
     mul_up_real = mul_up_1
+    mul_down_bound_real = mul_down_1
 
     # The entry forms: both operands guarded, then the kernel of the same name.
     def two_sum_entry(self, a, b):
@@ -1218,7 +1219,8 @@ ARITY = {"two_sum": 2, "fast_two_sum": 2, "two_prod": 2, "two_prod_dekker": 2, "
          # Milestone 2.
          "next_up": 1, "next_down": 1, "next_up_real": 1, "next_down_real": 1, "two_sum_ord": 2,
          "add_down_1": 2, "add_up_1": 2, "sub_down_1": 2, "sub_up_1": 2, "mul_down_1": 2,
-         "mul_up_1": 2, "mul_down_real": 2, "mul_up_real": 2, "two_sum_entry": 2,
+         "mul_up_1": 2, "mul_down_real": 2, "mul_up_real": 2, "mul_down_bound_real": 2,
+         "two_sum_entry": 2,
          "fast_two_sum_entry": 2, "radd_entry": 2, "add_down_entry": 2, "add_up_entry": 2,
          "sub_down_entry": 2, "sub_up_entry": 2, "ball_mul_pow2_1": 3, "ball_mul_pow2_2": 4,
          "ball_mul_pow2_1_full": 3, "ball_mul_pow2_2_full": 4}

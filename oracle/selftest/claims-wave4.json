@@ -121,6 +121,15 @@
    "instances": {"binary64": [], "binary32": []}
   },
   {
+   "name": "mul_down_bound_real",
+   "inputs": [{"name": "a", "limbs": 1}, {"name": "b", "limbs": 1}],
+   "outputs": [{"name": "r", "limbs": 1}],
+   "value": "a*b", "requires": [],
+   "ensures": [{"kind": "bound", "of": "r", "side": "below", "steps": 1}],
+   "min_precision": 2, "status": "unverified",
+   "instances": {"binary64": [], "binary32": []}
+  },
+  {
    "name": "ball_mul_pow2_1",
    "inputs": [{"name": "cx", "limbs": 1}, {"name": "rx", "limbs": 1}, {"name": "c", "limbs": 1}],
    "outputs": [{"name": "cz", "limbs": 1}, {"name": "rz", "limbs": 1}],

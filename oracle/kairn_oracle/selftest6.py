@@ -10,8 +10,9 @@ Fractions; the reference runner (written from milestone2.md's listings) on rando
 every case of tiny formats; planted faults that must be caught in the entry or statement where
 they belong and nowhere else; and hand-written lines whose verdicts are worked out by hand.  The
 fixture, oracle/selftest/claims-wave4.json, is written from architecture.md, not by the generator;
-it has the kernels of the wave, and the same claims in the finite domain (`next_up_real`,
-`mul_down_real`, ...) for the finite judge, and `mul_pow2_2` with an exact_when on its error.
+it has the kernels of the wave, the same claims in the finite domain (`next_up_real`,
+`mul_down_real`, ...) for the finite judge, a `bound` alone in that domain
+(`mul_down_bound_real`), and `mul_pow2_2` with an exact_when on its error.
 """
 
 import concurrent.futures as cf
@@ -40,16 +41,21 @@ NEIGHBOR_REAL = ("next_up_real", "next_down_real")
 DIRSUM = ("add_down_1", "add_up_1", "sub_down_1", "sub_up_1")
 DIRPROD = ("mul_down_1", "mul_up_1")
 DIRPROD_REAL = ("mul_down_real", "mul_up_real")
+# A bound with no rounding next to it, in the finite domain: its own test of a rounding beyond Omega
+# is the only one that makes such a line non-finite.
+BOUND_ONLY = ("mul_down_bound_real",)
 POW2 = ("ball_mul_pow2_1", "ball_mul_pow2_2")
 POW2_FULL = ("ball_mul_pow2_1_full", "ball_mul_pow2_2_full")
 OTHER = ("two_sum_ord", "mul_pow2_2")
-ALL4 = NEIGHBOR + NEIGHBOR_REAL + DIRSUM + DIRPROD + DIRPROD_REAL + POW2 + POW2_FULL + OTHER
+ALL4 = (NEIGHBOR + NEIGHBOR_REAL + DIRSUM + DIRPROD + DIRPROD_REAL + BOUND_ONLY + POW2 + POW2_FULL
+        + OTHER)
 FORMATS4 = ("binary64", "binary32", "fp:5:-10:5", "fp:4:-6:1")
 # The families of the generator (gen4.py) by kernel.
 FAMILY4 = {"next_up": "neighbor", "next_down": "neighbor", "next_up_real": "neighbor",
            "next_down_real": "neighbor", "add_down_1": "dirsum", "add_up_1": "dirsum",
            "sub_down_1": "dirsum", "sub_up_1": "dirsum", "mul_down_1": "dirprod",
            "mul_up_1": "dirprod", "mul_down_real": "dirprod", "mul_up_real": "dirprod",
+           "mul_down_bound_real": "dirprod",
            "ball_mul_pow2_1": "ballpow2", "ball_mul_pow2_2": "ballpow2",
            "ball_mul_pow2_1_full": "ballpow2", "ball_mul_pow2_2_full": "ballpow2"}
 
@@ -548,7 +554,7 @@ def gen_wave4(ctx):
 # The enumerations: (format, kernel); every class the guards ask for must occur in each.
 PLAN4 = [("fp:3:-3:2", k) for k in NEIGHBOR + NEIGHBOR_REAL] + [
     ("fp:1:-3:2", "next_up"), ("fp:2:-2:1", "next_down")] + [
-    ("fp:3:-3:0", k) for k in DIRSUM + DIRPROD + DIRPROD_REAL + POW2 + POW2_FULL] + [
+    ("fp:3:-3:0", k) for k in DIRSUM + DIRPROD + DIRPROD_REAL + BOUND_ONLY + POW2 + POW2_FULL] + [
     ("fp:2:-2:1", "mul_up_1"), ("fp:3:-3:2", "two_sum_ord"), ("fp:3:-3:2", "mul_pow2_2")]
 PLAN4_FULL = [("fp:4:-5:0", k) for k in DIRSUM + DIRPROD] + [
     ("fp:4:-6:1", k) for k in ("ball_mul_pow2_1", "ball_mul_pow2_1_full")] + [
@@ -606,12 +612,13 @@ INJECTED4 = (
      ("next_up", "next_up_real", "sub_down_1")),
     ("dir-sum-nearest", DIRSUM, ("rounded",), ("rounded",), DIRPROD + CLEAN_BLOCKS),
     ("dir-sum-overflow-inf", DIRSUM, ("rounded",), ("rounded",), DIRPROD + CLEAN_BLOCKS),
-    ("mul-bound-wrong-side", DIRPROD + DIRPROD_REAL, ("bound",), ("bound", "rounded"),
+    ("mul-bound-wrong-side", DIRPROD + DIRPROD_REAL + BOUND_ONLY, ("bound",),
+     ("bound", "rounded"), DIRSUM + CLEAN_BLOCKS),
+    ("mul-bound-two-beyond", DIRPROD + DIRPROD_REAL + BOUND_ONLY, ("bound",), ("bound",),
      DIRSUM + CLEAN_BLOCKS),
-    ("mul-bound-two-beyond", DIRPROD + DIRPROD_REAL, ("bound",), ("bound",),
-     DIRSUM + CLEAN_BLOCKS),
+    # A bound alone allows the step beyond the rounding of a large product: no failure there.
     ("mul-large-step", DIRPROD + DIRPROD_REAL, ("rounded",), ("rounded",),
-     DIRSUM + CLEAN_BLOCKS),
+     DIRSUM + CLEAN_BLOCKS + BOUND_ONLY),
     ("pow2-radius-small", POW2 + POW2_FULL, ("encloses:containment|encloses:B3",),
      ("encloses:containment", "encloses:B3", "encloses:exact_when"), CLEAN_BLOCKS + DIRSUM),
     ("pow2-grow-exact", POW2 + POW2_FULL, ("encloses:exact_when",), ("encloses:exact_when",),
@@ -817,6 +824,13 @@ HAND4 = [
     ("mul_down_real binary64 0x1p-1000 0x1p-60 -> 0x1.fffp-1061", ("bound",)),
     ("mul_up_real binary64 0x1.8p+1 0x1.4p+2 -> 0x1.e000000000001p+3", ("rounded",)),
     ("mul_up_real binary64 0x1p+0 inf -> inf", "invalid"),
+    # A bound alone: one step below the rounding of a large product passes; a directed rounding
+    # beyond Omega (1.5 2^1024, between Omega and twice it) is not judged in this domain.
+    ("mul_down_bound_real binary64 0x1.8p+1 0x1.4p+2 -> 0x1.dffffffffffffp+3", "passed"),
+    ("mul_down_bound_real binary64 0x1.8p+1 0x1.4p+2 -> 0x1.dfffffffffffep+3", ("bound",)),
+    ("mul_down_bound_real binary64 0x1p-1000 0x1p-60 -> 0x1.fff8p-1061", "passed"),
+    ("mul_down_bound_real binary64 0x1p+512 0x1.8p+512 -> %s" % OM, "nonfinite"),
+    ("mul_down_bound_real binary64 0x1p+512 0x1.8p+512 -> 0x1p+0", "nonfinite"),
     # encloses with exact_when: the scaling of a ball by a power of two.
     ("ball_mul_pow2_1 binary64 0x1p+0 0x1p-3 0x1p-1 -> 0x1p-1 0x1p-4", "passed"),
     ("ball_mul_pow2_1 binary64 0x1p+0 0x1p-3 0x1p-1 -> 0x1p-1 0x1.0000000000002p-4",

@@ -204,6 +204,9 @@ MUTANTS = {
         "extended.py", '        if k == c["steps"]:', '        if k == c["steps"] + 1:'),
     "bound: one step more allowed (finite domain)": (
         "check.py", '            if k == e["steps"]:', '            if k == e["steps"] + 1:'),
+    "bound: beyond Omega judged (finite domain)": (
+        "check.py", "            beyond = abs(r) > fmt.omega or beyond",
+        "            beyond = abs(r) > 2 * fmt.omega or beyond"),
     "bound: rounded up above Omega kept finite": (
         "directed.py", "    return INF if r > om else -om if r < -om else r",
         "    return om if r > om else -om if r < -om else r"),
