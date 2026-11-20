@@ -234,7 +234,7 @@ Definition two_prod_spec : Prop :=
   Rabs ((p + e) - (a * b)) <= (1 / 2) * eta emin /\
   (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).
 
-(* mul_dir_1: two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). Status: unverified. *)
+(* mul_dir_1: two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). Status: proved. *)
 Definition mul_dir_1_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
   forall a b : R,

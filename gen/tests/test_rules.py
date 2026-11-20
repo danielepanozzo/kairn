@@ -1279,6 +1279,11 @@ class TheKernels(unittest.TestCase):
     WAVE_2_BALLS = {'ball_lower_as_1', 'ball_upper_as_1', 'ball_lower_as_2', 'ball_upper_as_2',
                     'ball_from_interval_2', 'ball_narrow_2_1'}
     WAVE_2 = WAVE_2_INTERVALS | WAVE_2_CORES | WAVE_2_BALLS | {'mul_dir_1'}
+    # Of these, the kernels whose theorems are about the generated text and pass the audit: the
+    # interval kernels of one limb (IeeeInterval1.v) and mul_dir_1 in both models (DirectedProd.v,
+    # IeeeDirectedProd.v).
+    WAVE_2_PROVED = {'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1', 'interval_mul_1',
+                     'mul_dir_1'}
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -1304,10 +1309,11 @@ class TheKernels(unittest.TestCase):
         # Of wave 1 of Milestone 2, every kernel is proved too, the two full scalings of a ball by
         # their IEEE-model theorems (IeeeBallPow2.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.MILESTONE1 | self.WAVE_1)
-        # The first kernels of wave 2 are unverified, in both models, until their proofs (which
-        # exist for hand-written copies of their listings) are pointed at the generated text.
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.WAVE_2)
+                         self.MILESTONE1 | self.WAVE_1 | self.WAVE_2_PROVED)
+        # The other first kernels of wave 2 are unverified, in both models, until their proofs are
+        # about the generated text.
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
+                         self.WAVE_2 - self.WAVE_2_PROVED)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
@@ -1319,13 +1325,14 @@ class TheKernels(unittest.TestCase):
                          | wave_2_ieee_only | {'mul_dir_1'})
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
                          dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
-                                            | self.WAVE_1_EXTENDED | self.WAVE_1_FULL, 'proved'),
-                              **dict.fromkeys(wave_2_ieee_only | {'mul_dir_1'}, 'unverified')))
+                                            | self.WAVE_1_EXTENDED | self.WAVE_1_FULL | self.WAVE_2_PROVED, 'proved'),
+                              **dict.fromkeys((wave_2_ieee_only | {'mul_dir_1'}) - self.WAVE_2_PROVED,
+                                              'unverified')))
         # Every kernel of the extended domain that is proved names its IEEE-model theorem, and no
         # other kernel does.
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED
-                         | self.WAVE_1_FULL)
+                         | self.WAVE_1_FULL | (self.WAVE_2_PROVED - self.WAVE_2_CORES))
         # The minimum precision of a full kernel is that of its core, and so is a full Ball kernel's
         # with a 2-limb center; with a one-limb center it is 2, from which the constants G and H
         # of the radius are below the overflow threshold (IeeeExtStatementsDraft.v). A

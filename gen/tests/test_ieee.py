@@ -324,7 +324,7 @@ class Statements(unittest.TestCase):
     def test_audit(self):
         text = ieee.audit(self.ks)
         # Every kernel of the extended domain names its theorem.
-        self.assertEqual(text.count('Print Assumptions'), 54)
+        self.assertEqual(text.count('Print Assumptions'), 60)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -343,8 +343,10 @@ class CheckedFiles(unittest.TestCase):
     # IeeeIntervalVocabulary.v; make -C proofs passed on these files. Then the definition of
     # add_down_2_2 changed alone (no fused result negated through a select: the rounding down of
     # z1 - dd as minus the rounding up of dd - z1), and make -C proofs passed on the new model.
+    # Then the statements print "proved" for the interval kernels of one limb and for mul_dir_1,
+    # whose theorems passed the audit: six words, and nothing else, changed in the statements.
     DIGESTS = {'proofs/gen/IeeeModel.v': 'dcc579a123ba1f706224bcadf90ce316b5c2b6f3487a5367a886a8c49cdb07a0',
-               'proofs/gen/IeeeStatements.v': '6c606e00b9580b92d8009a5d53266043a34e3bb402cb042000c64b8967c98545'}
+               'proofs/gen/IeeeStatements.v': '69e2c1166b7e2ef9839b56260fbdac31f701624a2d3ae3d7cbaf357e0d3ee99f'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

@@ -72,6 +72,9 @@ Print Assumptions fast_two_sum_entry_correct.
 Definition two_prod_audit : two_prod_spec := two_prod_correct.
 Print Assumptions two_prod_correct.
 
+Definition mul_dir_1_audit : mul_dir_1_spec := mul_dir_1_correct.
+Print Assumptions mul_dir_1_correct.
+
 Definition sub_up_1_audit : sub_up_1_spec := sub_up_1_correct.
 Print Assumptions sub_up_1_correct.
 

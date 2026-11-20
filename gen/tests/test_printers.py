@@ -823,10 +823,11 @@ class Rocq(unittest.TestCase):
     # in that order. make -C proofs passed on these files. Then the definition of add_down_2_2
     # changed alone, its rounding down of z1 - dd written as minus the rounding up of dd - z1 (a rule
     # of the generator: no fused result negated through a select); Statements.v and Audit.v are the
-    # same, and make -C proofs passed on the new Model.v.
+    # same, and make -C proofs passed on the new Model.v. Then mul_dir_1 was proved: Statements.v
+    # prints that one word, and Audit.v lists its theorem.
     DIGESTS = {'Model.v': '2099ff2ba9094add1f8a66aa101b3e0da7c8e68550d7a78d432f010f5bb6668a',
-               'Statements.v': 'a37b258ff7a27be6689bb00dff3843784c207be1dc22c16774fb480e37dd1687',
-               'Audit.v': '833f93d669031deca32392d4a40b4b7d844295cd0a66a60d0f329443140c9f05'}
+               'Statements.v': '16f4dcf3496f07173ea49a3065192322a004402ecb2bec87bc3c6ea7aad3a4ae',
+               'Audit.v': 'ee3bb9f65fdeb605a6be5e871de83a1ef6d366ff28e8c00f5d132f5ca30eb4fd'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in

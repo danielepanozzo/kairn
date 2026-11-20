@@ -6,9 +6,9 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 103 kernels, 83 are proved and 20 are **UNVERIFIED**: [`add_ball_2_2`](add_ball_2_2.md), [`add_down_2_2`](add_down_2_2.md), [`add_up_2_2`](add_up_2_2.md), [`ball_from_interval_2`](ball_from_interval_2.md), [`ball_lower_as_1`](ball_lower_as_1.md), [`ball_lower_as_2`](ball_lower_as_2.md), [`ball_narrow_2_1`](ball_narrow_2_1.md), [`ball_upper_as_1`](ball_upper_as_1.md), [`ball_upper_as_2`](ball_upper_as_2.md), [`interval_add_1`](interval_add_1.md), [`interval_add_2`](interval_add_2.md), [`interval_make_1`](interval_make_1.md), [`interval_mul_1`](interval_mul_1.md), [`interval_neg_1`](interval_neg_1.md), [`interval_sub_1`](interval_sub_1.md), [`mul_ball_2_2`](mul_ball_2_2.md), [`mul_dir_1`](mul_dir_1.md), [`mul_dir_2_2`](mul_dir_2_2.md), [`sub_down_2_2`](sub_down_2_2.md), [`sub_up_2_2`](sub_up_2_2.md).
+Of the 103 kernels, 89 are proved and 14 are **UNVERIFIED**: [`add_ball_2_2`](add_ball_2_2.md), [`add_down_2_2`](add_down_2_2.md), [`add_up_2_2`](add_up_2_2.md), [`ball_from_interval_2`](ball_from_interval_2.md), [`ball_lower_as_1`](ball_lower_as_1.md), [`ball_lower_as_2`](ball_lower_as_2.md), [`ball_narrow_2_1`](ball_narrow_2_1.md), [`ball_upper_as_1`](ball_upper_as_1.md), [`ball_upper_as_2`](ball_upper_as_2.md), [`interval_add_2`](interval_add_2.md), [`mul_ball_2_2`](mul_ball_2_2.md), [`mul_dir_2_2`](mul_dir_2_2.md), [`sub_down_2_2`](sub_down_2_2.md), [`sub_up_2_2`](sub_up_2_2.md).
 
-32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is **UNVERIFIED** for [`mul_dir_1`](mul_dir_1.md).
+32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
 No public operation calls an UNVERIFIED kernel, so none needs the marker `kairn::unverified`.
 
@@ -161,11 +161,11 @@ Arithmetic on intervals of numbers of `T` and of two limbs: the result contains 
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| not yet called by the public headers | - | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound | [`interval_make_1`](interval_make_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_1`](interval_neg_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical interval that contains every $x + y$; the range rounded outward | [`interval_add_1`](interval_add_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical interval that contains every $x - y$; the range rounded outward | [`interval_sub_1`](interval_sub_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical interval that contains every $x y$; the range rounded outward, within a step | [`interval_mul_1`](interval_mul_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound | [`interval_make_1`](interval_make_1.md) |
+| not yet called by the public headers | - | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_1`](interval_neg_1.md) |
+| not yet called by the public headers | - | a canonical interval that contains every $x + y$; the range rounded outward | [`interval_add_1`](interval_add_1.md) |
+| not yet called by the public headers | - | a canonical interval that contains every $x - y$; the range rounded outward | [`interval_sub_1`](interval_sub_1.md) |
+| not yet called by the public headers | - | a canonical interval that contains every $x y$; the range rounded outward, within a step | [`interval_mul_1`](interval_mul_1.md) |
 | not yet called by the public headers | - | a canonical interval that contains every $x + y$; within $A\lvert v\rvert + B$ of the range | [`interval_add_2`](interval_add_2.md) **UNVERIFIED** |
 
 ## Building blocks
@@ -185,7 +185,7 @@ Kernels that other kernels call, and that no public operation computes on its ow
 | not yet called by the public headers | - | $r = \mathrm{RU}(a + b)$ | [`add_up_entry`](add_up_entry.md) |
 | not yet called by the public headers | - | $r = \mathrm{RD}(a - b)$ | [`sub_down_entry`](sub_down_entry.md) |
 | not yet called by the public headers | - | $r = \mathrm{RU}(a - b)$ | [`sub_up_entry`](sub_up_entry.md) |
-| none (internal) | - | $d \le a b$, at most 1 step below $\mathrm{RD}(a b)$; $v \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_dir_1`](mul_dir_1.md) **UNVERIFIED** |
+| none (internal) | - | $d \le a b$, at most 1 step below $\mathrm{RD}(a b)$; $v \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_dir_1`](mul_dir_1.md) |
 | none (internal) | - | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$; $\lvert (x + y) - z\rvert \le d$, normalized | [`add_ball_2_2`](add_ball_2_2.md) **UNVERIFIED** |
 | none (internal) | - | $\lvert z - x y\rvert \le 4\,u^2\,\lvert x y\rvert + \tfrac{3}{2}\,\eta$; $\lvert (x y) - z\rvert \le d$, normalized | [`mul_ball_2_2`](mul_ball_2_2.md) **UNVERIFIED** |
 | none (internal) | - | $l \le x + y$, within $A\lvert x + y\rvert + B$, exact when zero, normalized | [`add_down_2_2`](add_down_2_2.md) **UNVERIFIED** |

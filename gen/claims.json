@@ -1581,9 +1581,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval1.v",
+        "name": "interval_add_1_correct"
+      },
       "source": {
         "cite": "directed sums of the bounds (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1631,9 +1635,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval1.v",
+        "name": "interval_make_1_correct"
+      },
       "source": {
         "cite": "constructor of an interval (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1781,9 +1789,16 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedProd.v",
+        "name": "mul_dir_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeDirectedProd.v",
+        "name": "mul_dir_1_ieee_correct"
+      },
       "source": {
         "cite": "two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1861,9 +1876,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval1.v",
+        "name": "interval_mul_1_correct"
+      },
       "source": {
         "cite": "the least and the greatest of the directed products of the bounds (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1926,9 +1945,13 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval1.v",
+        "name": "interval_neg_1_correct"
+      },
       "source": {
         "cite": "the bounds negated and exchanged (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2053,9 +2076,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval1.v",
+        "name": "interval_sub_1_correct"
+      },
       "source": {
         "cite": "directed differences of the bounds (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

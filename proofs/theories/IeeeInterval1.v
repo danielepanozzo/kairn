@@ -9,7 +9,10 @@
    and the exact range of an operation are those of IeeeIntervalVocabulary.v. X, Y are the
    operands and Z the result.
 
-   What is proved.
+   What is proved. The five kernels are the generated models of proofs/gen/IeeeModel.v,
+   and the theorems K_correct establish their generated statements
+   (proofs/gen/IeeeStatements.v): interval_make_1_correct, interval_neg_1_correct,
+   interval_add_1_correct, interval_sub_1_correct and interval_mul_1_correct.
 
    - interval_make_1, for any two values of T (interval_make_1_correct): the result is a
      canonical interval; it is the interval [lo, hi] when lo <= hi, lo < +infinity and
@@ -18,10 +21,17 @@
      of equal infinities (interval_make_1_reversed, interval_make_1_equal_infinities).
      For every precision.
 
-   - interval_neg_1, for a canonical operand (interval_neg_1_correct): I1 the result is
-     canonical; I2 it is empty exactly when the operand is; I3 it contains -x for every
-     member x; I4 it is exact: its members are exactly the -x; I5 it is bounded exactly
-     when the operand is. For every precision.
+   - interval_neg_1, for a canonical operand: I1 the result is canonical; I2 it is empty
+     exactly when the operand is; I3 it contains -x for every member x; I4 it is exact;
+     I5 it is bounded exactly when the operand is. For every precision. Two forms.
+     interval_neg_1_exact says I4 as "the members of the result are exactly the -x, and
+     its bounds are the opposites of the operand's, exchanged", and I5 as "bounded
+     exactly when the operand is". interval_neg_1_correct is the generated statement:
+     I4 as "the bounds of the result are the bounds of the exact range", and I5 as "for
+     a bounded operand, the result is bounded exactly when every member of the exact
+     range is at most Omega in magnitude" (both sides then hold). The bridge is
+     range_neg_lower and range_neg_upper: the bounds of the exact range of -x are the
+     opposites of the bounds of the operand, exchanged.
 
    - interval_add_1 and interval_sub_1, for canonical operands, from precision 2
      (interval_add_1_correct, interval_sub_1_correct):
@@ -39,8 +49,8 @@
      range_upper); that they are the sums of the bounds of the operands, as extended real
      numbers, is range_add_lower and range_add_upper (range_sub_lower, range_sub_upper).
 
-   - interval_mul_1, for canonical operands, for every precision
-     (interval_mul_1_correct): I1, I2, I3 and I5 as above. I4, for nonempty operands
+   - interval_mul_1, for canonical operands, for every precision. I1, I2, I3 and I5 as
+     above (interval_mul_1_enclosure). I4, for nonempty operands
      (interval_mul_1_tight_range): with lo and hi the bounds of the exact range, the
      lower bound of Z is the rounding down of lo in the format with overflow or the
      number of the format before it, and its upper bound the rounding up of hi or the
@@ -49,18 +59,12 @@
      2^(2 prec - 1) eta in magnitude (product_large). The same statement with lo and hi
      the least and the greatest of the four products of bounds, taken with
      0 * infinity = 0, is interval_mul_1_tight; that these are the bounds of the exact
-     range is range_mul_lower and range_mul_upper.
+     range is range_mul_lower and range_mul_upper. The generated statement
+     (interval_mul_1_correct) is the two together, I1 to I5.
 
-   What is not proved for the product: nothing of I1 to I5 as the design page states
-   them. The page does not say which of the two values a bound takes when a product of
-   bounds is below 2^(2 prec - 1) eta, and neither does this file.
-
-   The listings. The five kernels are not generated yet: interval_make_1_listing and the
-   four others, in section Listings, are their listings written by hand in the text the
-   generator prints for the IEEE model (checked against the generator's printer on the
-   kernel descriptions), and the generated IeeeModel.interval_make_1 and the others
-   will replace them. interval_mul_1_listing calls mul_dir_1_ieee_listing of
-   IeeeDirectedProd.v, which is in the same situation.
+   What is not proved for the product: which of the two values a bound takes when a
+   product of bounds is below 2^(2 prec - 1) eta. The design page does not say it, and
+   neither does this file.
 
    The proofs. A limb is replaced by the extended real number it stands for as early as
    possible: a comparison of limbs is the comparison of their values (lt_xval, le_xval,
@@ -80,110 +84,6 @@ From Kairn Require Import IeeeIntervalVocabulary.
 From Kairn Require IeeeOperations.
 From Kairn.Gen Require IeeeModel.
 Open Scope R_scope.
-
-(** * The listings *)
-
-Section Listings.
-Variable prec emax : Z.
-Context {prec_gt_0_ : Prec_gt_0 prec}.
-Context {prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax}.
-
-Notation float := (binary_float prec emax).
-Notation nan_of := {x : float | is_nan prec emax x = true}.
-
-Variable nan_plus : float -> float -> nan_of.
-Variable nan_minus : float -> float -> nan_of.
-Variable nan_opp : float -> nan_of.
-Variable nan_abs : float -> nan_of.
-Variable nan_fma : float -> float -> float -> nan_of.
-
-Local Notation pinf := (IeeeOperations.pinf prec emax).
-Local Notation neg := (IeeeOperations.neg prec emax nan_opp).
-Local Notation lt := (IeeeOperations.lt prec emax).
-Local Notation le := (IeeeOperations.le prec emax).
-Local Notation eq := (IeeeOperations.eq prec emax).
-Local Notation guard := (IeeeOperations.guard prec emax nan_plus).
-Local Notation add_down_1 := (IeeeModel.add_down_1 prec emax nan_plus nan_minus nan_abs).
-Local Notation add_up_1 := (IeeeModel.add_up_1 prec emax nan_plus nan_minus nan_abs).
-Local Notation sub_down_1 := (IeeeModel.sub_down_1 prec emax nan_plus nan_minus nan_opp nan_abs).
-Local Notation sub_up_1 := (IeeeModel.sub_up_1 prec emax nan_plus nan_minus nan_opp nan_abs).
-Local Notation mul_dir_1 := (mul_dir_1_ieee_listing prec emax nan_opp nan_abs nan_fma).
-
-(* Hand-written IEEE models of the listings of the five kernels, in the text the generator
-   prints for the IEEE model. The kernels are not generated yet; the generated
-   IeeeModel.interval_make_1, interval_neg_1, interval_add_1, interval_sub_1 and
-   interval_mul_1 will replace these definitions. *)
-Definition interval_make_1_listing (lo hi : float) : float * float :=
-  let gl := guard lo in
-  let gu := guard hi in
-  let ok := le gl gu in
-  let nl := lt gl pinf in
-  let mi := neg pinf in
-  let nu := lt mi gu in
-  let va := andb ok nl in
-  let v := andb va nu in
-  let ql := eq gl gl in
-  let qu := eq gu gu in
-  let nn := andb ql qu in
-  let el := if nn then pinf else mi in
-  let eu := if nn then mi else pinf in
-  let zl := if v then gl else el in
-  let zu := if v then gu else eu in
-  (zl, zu).
-
-Definition interval_neg_1_listing (xl xu : float) : float * float :=
-  let zl := neg xu in
-  let zu := neg xl in
-  (zl, zu).
-
-Definition interval_add_1_listing (xl xu yl yu : float) : float * float :=
-  let l := add_down_1 xl yl in
-  let h := add_up_1 xu yu in
-  let nx := lt xl pinf in
-  let ny := lt yl pinf in
-  let ne := andb nx ny in
-  let mi := neg pinf in
-  let zl := if ne then l else pinf in
-  let zu := if ne then h else mi in
-  (zl, zu).
-
-Definition interval_sub_1_listing (xl xu yl yu : float) : float * float :=
-  let l := sub_down_1 xl yu in
-  let h := sub_up_1 xu yl in
-  let nx := lt xl pinf in
-  let ny := lt yl pinf in
-  let ne := andb nx ny in
-  let mi := neg pinf in
-  let zl := if ne then l else pinf in
-  let zu := if ne then h else mi in
-  (zl, zu).
-
-Definition interval_mul_1_listing (xl xu yl yu : float) : float * float :=
-  let '(d1, v1) := mul_dir_1 xl yl in
-  let '(d2, v2) := mul_dir_1 xl yu in
-  let '(d3, v3) := mul_dir_1 xu yl in
-  let '(d4, v4) := mul_dir_1 xu yu in
-  let ma := lt d2 d1 in
-  let da := if ma then d2 else d1 in
-  let mb := lt d4 d3 in
-  let db := if mb then d4 else d3 in
-  let mc := lt db da in
-  let l := if mc then db else da in
-  let na := lt v1 v2 in
-  let va := if na then v2 else v1 in
-  let nb := lt v3 v4 in
-  let vb := if nb then v4 else v3 in
-  let nc := lt va vb in
-  let h := if nc then vb else va in
-  let nx := lt xl pinf in
-  let ny := lt yl pinf in
-  let ne := andb nx ny in
-  let mi := neg pinf in
-  let zl := if ne then l else pinf in
-  let zu := if ne then h else mi in
-  (zl, zu).
-
-End Listings.
 
 (** * Extended real numbers: comparisons as propositions, by cases *)
 
@@ -445,6 +345,54 @@ Proof.
 intros a b c d Hx Hy.
 apply range_upper_ext with (1 := range_sub_add a b c d).
 apply range_add_upper; [exact Hx|now apply xnonempty_opp].
+Qed.
+
+(** * The exact range of a negation *)
+
+(* The bounds of a nonempty interval are the bounds of the set of its members. *)
+Lemma range_member_lower :
+  forall a b : xreal, xnonempty a b -> range_lower (xmember a b) a.
+Proof.
+intros a b H. split.
+- intros z [Hz _]. exact Hz.
+- intros t Ht. exact (xmember_approach_lower a b H t Ht).
+Qed.
+
+Lemma range_member_upper :
+  forall a b : xreal, xnonempty a b -> range_upper (xmember a b) b.
+Proof.
+intros a b H. split.
+- intros z [_ Hz]. exact Hz.
+- intros t Ht. exact (xmember_approach_upper a b H t Ht).
+Qed.
+
+(* The exact range of the negation of [a, b] is the set of the members of [-b, -a]. *)
+Lemma range_neg_member :
+  forall (a b : xreal) (z : R),
+  xmember (xopp b) (xopp a) z <-> range_1 (fun x : R => - x) (xmember a b) z.
+Proof.
+intros a b z. split.
+- intros Hz. exists (- z). split.
+  + generalize (xmember_opp _ _ _ Hz). now rewrite 2!xopp_involutive.
+  + cbv beta. ring.
+- intros [x [Hx E]]. cbv beta in E. rewrite E. now apply xmember_opp.
+Qed.
+
+(* Its bounds are the opposites of the bounds of the interval, exchanged. *)
+Lemma range_neg_lower :
+  forall a b : xreal, xnonempty a b ->
+  range_lower (range_1 (fun x : R => - x) (xmember a b)) (xopp b).
+Proof.
+intros a b H. apply range_lower_ext with (1 := range_neg_member a b).
+apply range_member_lower. now apply xnonempty_opp.
+Qed.
+
+Lemma range_neg_upper :
+  forall a b : xreal, xnonempty a b ->
+  range_upper (range_1 (fun x : R => - x) (xmember a b)) (xopp a).
+Proof.
+intros a b H. apply range_upper_ext with (1 := range_neg_member a b).
+apply range_member_upper. now apply xnonempty_opp.
 Qed.
 
 (** * More of the order of the extended real numbers *)
@@ -767,14 +715,14 @@ Notation sub_down_1 := (IeeeModel.sub_down_1 prec emax nan_plus nan_minus nan_op
 Notation sub_up_1 := (IeeeModel.sub_up_1 prec emax nan_plus nan_minus nan_opp nan_abs).
 Notation mul_down_1 := (IeeeModel.mul_down_1 prec emax nan_opp nan_abs nan_fma).
 Notation mul_up_1 := (IeeeModel.mul_up_1 prec emax nan_opp nan_abs nan_fma).
-Notation mul_dir_1 := (mul_dir_1_ieee_listing prec emax nan_opp nan_abs nan_fma).
-Notation interval_make_1 := (interval_make_1_listing prec emax nan_plus nan_opp).
-Notation interval_neg_1 := (interval_neg_1_listing prec emax nan_opp).
+Notation mul_dir_1 := (IeeeModel.mul_dir_1 prec emax nan_opp nan_abs nan_fma).
+Notation interval_make_1 := (IeeeModel.interval_make_1 prec emax nan_plus nan_opp).
+Notation interval_neg_1 := (IeeeModel.interval_neg_1 prec emax nan_opp).
 Notation interval_add_1 :=
-  (interval_add_1_listing prec emax nan_plus nan_minus nan_opp nan_abs).
+  (IeeeModel.interval_add_1 prec emax nan_plus nan_minus nan_opp nan_abs).
 Notation interval_sub_1 :=
-  (interval_sub_1_listing prec emax nan_plus nan_minus nan_opp nan_abs).
-Notation interval_mul_1 := (interval_mul_1_listing prec emax nan_opp nan_abs nan_fma).
+  (IeeeModel.interval_sub_1 prec emax nan_plus nan_minus nan_opp nan_abs).
+Notation interval_mul_1 := (IeeeModel.interval_mul_1 prec emax nan_opp nan_abs nan_fma).
 
 (** * Limbs and their extended real numbers *)
 
@@ -997,7 +945,7 @@ Theorem interval_make_1_correct :
   (nan lo \/ nan hi -> zl = infinity prec emax true /\ zu = infinity prec emax false) /\
   (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> interval_empty_1 zl zu).
 Proof.
-intros lo hi. unfold interval_make_1_listing. cbv zeta.
+intros lo hi. unfold IeeeModel.interval_make_1. cbv zeta.
 rewrite le_xval, 2!lt_xval, 2!eq_self, 2!(guard_nan prec emax nan_plus).
 rewrite neg_pinf. rewrite 2!(xval_guard prec emax nan_plus).
 change (xv pinf) with (XInf false). change (xv ninf) with (XInf true).
@@ -1063,8 +1011,10 @@ Qed.
    empty exactly when X is (I2); it contains -x for every member x of X (I3); its
    members are exactly the opposites of the members of X, and its bounds the opposites
    of those of X, exchanged (I4: the negation is exact); and it is bounded exactly when
-   X is (I5). For every precision. *)
-Theorem interval_neg_1_correct :
+   X is (I5). For every precision. The generated statement, which says I4 and I5 with
+   the bounds and the members of the exact range, is interval_neg_1_correct, at the end
+   of this file. *)
+Theorem interval_neg_1_exact :
   forall xl xu : float,
   interval_1 xl xu ->
   let '(zl, zu) := interval_neg_1 xl xu in
@@ -1075,7 +1025,7 @@ Theorem interval_neg_1_correct :
   (xval zl = xopp (xval xu) /\ xval zu = xopp (xval xl)) /\
   (interval_bounded_1 zl zu <-> interval_bounded_1 xl xu).
 Proof.
-intros xl xu CX. unfold interval_neg_1_listing. cbv zeta.
+intros xl xu CX. unfold IeeeModel.interval_neg_1. cbv zeta.
 assert (I3 : forall x : R, in_interval_1 xl xu x -> in_interval_1 (neg xu) (neg xl) (- x)).
 { intros x Hx. unfold in_interval_1. rewrite 2!xval_neg. now apply xmember_opp. }
 assert (I3' : forall z : R, in_interval_1 (neg xu) (neg xl) z -> in_interval_1 xl xu (- z)).
@@ -1083,7 +1033,7 @@ assert (I3' : forall z : R, in_interval_1 (neg xu) (neg xl) z -> in_interval_1 x
   generalize (xmember_opp _ _ _ Hz). now rewrite 2!xopp_involutive. }
 assert (I2 : interval_empty_1 (neg xu) (neg xl) <-> interval_empty_1 xl xu).
 { split; intros E; apply interval_empty_1_xval in E; apply interval_empty_1_xval;
-    rewrite ?xval_neg in *; revert E;
+    rewrite ?xval_neg in E; rewrite ?xval_neg; revert E;
     destruct (xv xl) as [|[|]|a]; destruct (xv xu) as [|[|]|b]; cbn;
     intros [H K]; try discriminate H; try discriminate K; split; reflexivity. }
 split; [|split; [exact I2|split; [exact I3|split; [|split]]]].
@@ -1095,7 +1045,8 @@ split; [|split; [exact I2|split; [exact I3|split; [|split]]]].
   + intros Hz. exists (- z). split; [now apply I3'|cbv beta; ring].
   + intros [x [Hx E]]. cbv beta in E. rewrite E. now apply I3.
 - split; apply xval_neg.
-- unfold interval_bounded_1, finite. rewrite 2!(IeeeExt.neg_finite prec emax nan_opp). tauto.
+- unfold interval_bounded_1, finite. rewrite 2!(IeeeExt.neg_finite prec emax nan_opp).
+  split; intros [A B]; split; assumption.
 Qed.
 
 (** * interval_add_1 and interval_sub_1 *)
@@ -1314,7 +1265,7 @@ Lemma interval_mul_1_eq :
                     (snd (mul_dir_1 xu yl)) (snd (mul_dir_1 xu yu))
      else neg pinf).
 Proof.
-intros xl xu yl yu. unfold interval_mul_1_listing.
+intros xl xu yl yu. unfold IeeeModel.interval_mul_1.
 destruct (mul_dir_1 xl yl) as [d1 v1]. destruct (mul_dir_1 xl yu) as [d2 v2].
 destruct (mul_dir_1 xu yl) as [d3 v3]. destruct (mul_dir_1 xu yu) as [d4 v4].
 reflexivity.
@@ -1379,8 +1330,10 @@ Qed.
    is canonical. I2: Z is empty exactly when an operand is. I3: x y is a member of Z for
    all members x of X and y of Y, unbounded operands included. I5: for bounded operands,
    Z is bounded exactly when every member of the exact range is at most Omega in
-   magnitude. (I4 is interval_mul_1_tight and interval_mul_1_tight_range, below.) *)
-Theorem interval_mul_1_correct :
+   magnitude. (I4 is interval_mul_1_tight and interval_mul_1_tight_range, below, and
+   the generated statement, I1 to I5, is interval_mul_1_correct, at the end of this
+   file.) *)
+Theorem interval_mul_1_enclosure :
   forall xl xu yl yu : float,
   interval_1 xl xu -> interval_1 yl yu ->
   let '(zl, zu) := interval_mul_1 xl xu yl yu in
@@ -1894,3 +1847,46 @@ exact T.
 Qed.
 
 End IeeeInterval1.
+
+(** * The generated statements of the negation and of the product *)
+
+(* interval_neg_1: the generated statement. Its I4 says that the bounds of the result
+   are the bounds of the exact range of -x, which are the opposites of the bounds of
+   the operand, exchanged (range_neg_lower, range_neg_upper); its I5, for a bounded
+   operand, that the result is bounded exactly when every member of the exact range is
+   at most Omega in magnitude: both hold, since the result is as bounded as the operand
+   and a member of a bounded interval is at most Omega in magnitude. *)
+Theorem interval_neg_1_correct : interval_neg_1_spec.
+Proof.
+intros prec emax Hp0 He nan_opp xl xu CX.
+generalize (interval_neg_1_exact prec emax nan_opp xl xu CX).
+destruct (IeeeModel.interval_neg_1 prec emax nan_opp xl xu) as [zl zu].
+intros [I1 [I2 [I3 [_ [[El Eu] I5]]]]].
+split; [exact I1|split; [exact I2|split; [exact I3|split]]].
+- intros NX lo hi Hlo Hhi.
+  destruct (xnonempty_member _ _ NX) as [mx Mx].
+  assert (Ex : exists z : R, range_1 (fun x : R => - x) (in_interval_1 xl xu) z).
+  { exists (- mx), mx. split; [exact Mx|reflexivity]. }
+  rewrite El, Eu. split.
+  + exact (range_lower_unique _ _ _ Ex (range_neg_lower _ _ NX) Hlo).
+  + exact (range_upper_unique _ _ _ Ex (range_neg_upper _ _ NX) Hhi).
+- intros BX. assert (BZ : interval_bounded_1 zl zu) by now apply I5.
+  split.
+  + intros _ z [x [Hx E]]. cbv beta in E. rewrite E.
+    exact (bounded_within prec emax zl zu _ BZ (I3 x Hx)).
+  + intros _. exact BZ.
+Qed.
+
+(* interval_mul_1: the generated statement is I1, I2, I3 and I5 of
+   interval_mul_1_enclosure with I4 of interval_mul_1_tight_range, whose condition
+   product_large is printed unfolded in the statement. *)
+Theorem interval_mul_1_correct : interval_mul_1_spec.
+Proof.
+intros prec emax Hp0 He nan_opp nan_abs nan_fma xl xu yl yu CX CY.
+generalize (interval_mul_1_enclosure prec emax nan_opp nan_abs nan_fma xl xu yl yu CX CY)
+           (interval_mul_1_tight_range prec emax nan_opp nan_abs nan_fma xl xu yl yu).
+destruct (IeeeModel.interval_mul_1 prec emax nan_opp nan_abs nan_fma xl xu yl yu) as [zl zu].
+intros [I1 [I2 [I3 I5]]] T.
+split; [exact I1|split; [exact I2|split; [exact I3|split; [|exact I5]]]].
+intros NX NY lo hi Hlo Hhi. exact (T NX NY lo hi Hlo Hhi).
+Qed.

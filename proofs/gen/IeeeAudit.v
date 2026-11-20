@@ -12,6 +12,7 @@ From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
 From Kairn Require Import IeeeExt.
 From Kairn Require Import IeeeFull.
+From Kairn Require Import IeeeInterval1.
 From Kairn Require Import IeeeMake.
 
 Definition add_down_1_ieee_audit : add_down_1_ieee_spec := add_down_1_ieee_correct.
@@ -50,8 +51,26 @@ Print Assumptions ball_scale_1_full_correct.
 Definition ball_sub_1_full_audit : ball_sub_1_full_spec := ball_sub_1_full_correct.
 Print Assumptions ball_sub_1_full_correct.
 
+Definition interval_add_1_audit : interval_add_1_spec := interval_add_1_correct.
+Print Assumptions interval_add_1_correct.
+
+Definition interval_make_1_audit : interval_make_1_spec := interval_make_1_correct.
+Print Assumptions interval_make_1_correct.
+
+Definition mul_dir_1_ieee_audit : mul_dir_1_ieee_spec := mul_dir_1_ieee_correct.
+Print Assumptions mul_dir_1_ieee_correct.
+
+Definition interval_mul_1_audit : interval_mul_1_spec := interval_mul_1_correct.
+Print Assumptions interval_mul_1_correct.
+
+Definition interval_neg_1_audit : interval_neg_1_spec := interval_neg_1_correct.
+Print Assumptions interval_neg_1_correct.
+
 Definition sub_up_1_ieee_audit : sub_up_1_ieee_spec := sub_up_1_ieee_correct.
 Print Assumptions sub_up_1_ieee_correct.
+
+Definition interval_sub_1_audit : interval_sub_1_spec := interval_sub_1_correct.
+Print Assumptions interval_sub_1_correct.
 
 Definition make_2_audit : make_2_spec := make_2_correct.
 Print Assumptions make_2_correct.

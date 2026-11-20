@@ -293,7 +293,7 @@ Definition fast_two_sum_entry_ieee_spec : Prop :=
   (val s + val e) = (val a + val b) /\
   normalized_2 (ieee_emin prec emax) prec (val s) (val e).
 
-(* interval_add_1: directed sums of the bounds (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_add_1: directed sums of the bounds (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_add_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -318,7 +318,7 @@ Definition interval_add_1_spec : Prop :=
     range_2 (fun x y : R => x + y) (in_interval_1 xl xu) (in_interval_1 yl yu) z ->
     Rabs z <= omega prec emax)).
 
-(* interval_make_1: constructor of an interval (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_make_1: constructor of an interval (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_make_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -345,7 +345,7 @@ Definition two_prod_ieee_spec : Prop :=
   Rabs ((val p + val e) - (val a * val b)) <= (1 / 2) * eta (ieee_emin prec emax) /\
   (((val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) -> (val p + val e) = (val a * val b)).
 
-(* mul_dir_1: two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). IEEE-model status: unverified. *)
+(* mul_dir_1: two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). IEEE-model status: proved. *)
 Definition mul_dir_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -376,7 +376,7 @@ Definition mul_dir_1_ieee_spec : Prop :=
     (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
    xval v = xru prec emax (xmul (xval a) (xval b)))).
 
-(* interval_mul_1: the least and the greatest of the directed products of the bounds (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_mul_1: the least and the greatest of the directed products of the bounds (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_mul_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -412,7 +412,7 @@ Definition interval_mul_1_spec : Prop :=
     range_2 (fun x y : R => x * y) (in_interval_1 xl xu) (in_interval_1 yl yu) z ->
     Rabs z <= omega prec emax)).
 
-(* interval_neg_1: the bounds negated and exchanged (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_neg_1: the bounds negated and exchanged (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_neg_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -445,7 +445,7 @@ Definition sub_up_1_ieee_spec : Prop :=
   let r := IeeeModel.sub_up_1 prec emax nan_plus nan_minus nan_opp nan_abs a b in
   xval r = xru prec emax (xadd (xval a) (xopp (xval b))).
 
-(* interval_sub_1: directed differences of the bounds (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_sub_1: directed differences of the bounds (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_sub_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

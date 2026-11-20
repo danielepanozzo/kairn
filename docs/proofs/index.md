@@ -87,12 +87,11 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    a few facts whose statements are written by hand because they say more about a kernel than
    its claims can express, the theorems about sums and dot products of arrays, which are
    about no single kernel, and the lemmas of the first building blocks of Milestone 2 that are
-   not generated statements, among them those about `mul_dir_1`, whose kernel is not generated
-   yet, those about the two executions of a product, whose plain-product listings are
-   written by hand, and the theorems of the interval kernels with bounds of one limb, of the
-   bounds of two limbs and of the sum of two intervals of two limbs, which are not generated
-   yet either: they are proved on models of their listings written by hand in the text the
-   generator prints.
+   not generated statements, among them what is proved of `mul_dir_1` and of the interval
+   kernels with bounds of one limb beside their generated statements, those about the two
+   executions of a product, whose plain-product listings are written by hand, and the theorems
+   of the bounds of two limbs and of the sum of two intervals of two limbs, which are still
+   proved on models of their listings written by hand in the text the generator prints.
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
@@ -172,7 +171,7 @@ is the guarantee whenever no operation inside the kernel overflows.
 **What happens at overflow and with infinities and NaN is proved in Flocq's model of IEEE 754.**
 There, values are Flocq's binary floating-point numbers, with signed zeros, infinities and NaN,
 and the operations overflow as the hardware does, for formats shaped like `binary32` and
-`binary64`. Two kinds of statements are proved there:
+`binary64`. Three kinds of statements are proved there:
 
 - For the arithmetic kernels of two limbs: an overflow anywhere in the kernel never produces a
   finite wrong result (if the leading limb of the result is finite, the result is normalized and
@@ -187,16 +186,24 @@ and the operations overflow as the hardware does, for formats shaped like `binar
   and the empty set included; and it returns a finite ball, not the whole line, under a stated
   condition on its operands
   ([when the result is a finite ball](../developer/design/milestone1.md#when-the-result-is-a-finite-ball)).
+- For the interval kernels, whose bounds may be infinite and which are stated in this model only
+  ([Interval kernels](../developer/design/milestone2.md#what-is-stated-of-an-interval-kernel)):
+  the result is a canonical interval, it is empty exactly when an operand is, and it contains the
+  exact result for all members of the operands, unbounded operands included; and how close its
+  bounds are to those of the exact range. For bounds of one limb, the constructor, the negation,
+  the sum, the difference and the product are proved: the bounds of a sum and of a difference
+  are the bounds of the exact range rounded outward, those of a product are within one number
+  of `T` of that, and the result is bounded exactly when the exact range is within the largest
+  number of `T`.
 
 These statements and the models of the kernels they are about are generated from the kernel
-descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Two files are written
-by hand and are part of what must be trusted: `proofs/theories/IeeeOperations.v`, which says
-what each operation of a kernel means in Flocq's terms, and `IeeeVocabulary.v`, the definitions
-the statements use (what a canonical value is, what a ball contains). A third,
-`IeeeIntervalVocabulary.v`, has the definitions for intervals (a canonical interval, its members,
-the exact range of an operation and its bounds); no generated statement uses it yet, because the
-interval kernels are not generated yet, and the theorems about them are stated with it by hand.
-The kernels of the second
+descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Three files are
+written by hand and are part of what must be trusted: `proofs/theories/IeeeOperations.v`, which
+says what each operation of a kernel means in Flocq's terms, `IeeeVocabulary.v`, the definitions
+the statements use (what a canonical value is, what a ball contains), and
+`IeeeIntervalVocabulary.v`, the definitions the statements of the interval kernels use (a
+canonical interval, its members, the exact range of an operation and its bounds).
+The kernels of the second and third
 kind are in the generated headers and are `proved` in the claims; whether an operator of the
 library calls them yet is said in
 [What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values).

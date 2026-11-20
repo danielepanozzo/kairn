@@ -21,17 +21,21 @@
    - the lemmas of the first building blocks of Milestone 2 that are not generated
      statements: what the directed sums and products return in more detail than their
      claims say, the error of a rounded product and the sign of the error term of
-     two_prod, mul_dir_1 on a model of its listing written by hand (the kernel is not
-     generated yet), the rectangle lemma of the product of intervals, the two
-     executions of a product, and the two executions of the eight kernels whose only
-     fused operations are products, on listings written by hand with the product as an
-     argument (the generator does not emit the model of the plain-product execution);
-   - the theorems of the interval kernels of Milestone 2, on models of their listings
-     written by hand (the kernels are not generated yet): the interval kernels with
-     bounds of one limb in the IEEE model, with the lemmas about the bounds of the exact
-     range of an operation, the bounds of two limbs in the real model (a sum, a
-     difference and a product moved outward by a bound of their own error), and the sum
-     of two intervals with bounds of two limbs in the IEEE model.
+     two_prod, what mul_dir_1 returns beside its generated statements, the rectangle
+     lemma of the product of intervals, the two executions of a product, and the two
+     executions of the eight kernels whose only fused operations are products, on
+     listings written by hand with the product as an argument (the generator does not
+     emit the model of the plain-product execution);
+   - what is proved of the interval kernels of Milestone 2 beside their generated
+     statements, which the generated audits list: for the interval kernels with bounds
+     of one limb, the statements written by hand that say more or say it in another form
+     (the special cases of the constructor, the negation as an exact image, the product
+     in the least and the greatest of four products of bounds) and the lemmas about the
+     bounds of the exact range of an operation; and, on models of their listings written
+     by hand (their proofs are not on the generated models yet), the bounds of two limbs
+     in the real model (a sum, a difference and a product moved outward by a bound of
+     their own error) and the sum of two intervals with bounds of two limbs in the IEEE
+     model.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -275,8 +279,8 @@ Print Assumptions up_of_normalized.
 (* Rounding a product down and up (theories/DirectedProd.v): when the error of a rounded
    product is a number of the format, the sign of the error term of two_prod, what
    mul_down_1 and mul_up_1 return for every positive precision and every tie rule, and
-   mul_dir_1 on a model of its listing written by hand (the kernel is not generated
-   yet). *)
+   mul_dir_1 as the pair of the two, with which of the two values each output is (its
+   generated statement is listed by proofs/gen/Audit.v). *)
 Print Assumptions mult_error_multiple.
 Print Assumptions mult_multiple_eta.
 Print Assumptions mult_error_format.
@@ -297,8 +301,8 @@ Print Assumptions mul_down_1_facts.
 Print Assumptions mul_up_1_facts.
 Print Assumptions mul_down_1_cases.
 Print Assumptions mul_up_1_cases.
-Print Assumptions mul_dir_1_listing_eq.
-Print Assumptions mul_dir_1_listing_correct.
+Print Assumptions mul_dir_1_eq.
+Print Assumptions mul_dir_1_cases.
 
 (* The product of two intervals (theories/Rectangle.v): the rectangle lemma on extended
    real numbers, the minimum of four lower bounds and the maximum of four upper bounds,
@@ -428,33 +432,38 @@ Print Assumptions guard_nonneg.
 
 (* The directed products in the IEEE model (theories/IeeeDirectedProd.v), likewise:
    mul_down_1 and mul_up_1 on finite operands and with an operand that is not finite, and
-   the enclosure of a product of bounds by mul_dir_1, on an IEEE model of its listing
-   written by hand (the kernel is not generated yet). *)
+   mul_dir_1: the listing as the two directed products with the literal zero for a zero
+   factor, the test of that factor, and the enclosure of a product of bounds. *)
 Print Assumptions mul_down_1_ieee_finite.
 Print Assumptions mul_up_1_ieee_finite.
 Print Assumptions mul_down_1_ieee_nonfinite.
 Print Assumptions mul_up_1_ieee_nonfinite.
 Print Assumptions xval_prod_nonfinite.
 Print Assumptions mul_dir_1_ieee_eq.
+Print Assumptions zero_factor_test.
 Print Assumptions mul_dir_1_ieee_encloses.
 
 (* The interval kernels with bounds of one limb, in the IEEE model
-   (theories/IeeeInterval1.v, with the vocabulary of theories/IeeeIntervalVocabulary.v), on
-   IEEE models of their listings written by hand (the kernels are not generated yet): the
-   constructor, the negation, the sum, the difference and the product; then the lemmas
-   they rest on: a set of real numbers has one lower bound and one upper bound, the
-   bounds of the exact range of a sum and of a difference, and the last five lines that
-   the sum, the difference and the product share. *)
+   (theories/IeeeInterval1.v, with the vocabulary of theories/IeeeIntervalVocabulary.v):
+   the theorems of their generated statements are listed by proofs/gen/IeeeAudit.v. Here,
+   what is stated by hand beside them: the two special cases of the constructor, the
+   negation in the form "the result is the exact image, bounded exactly when the operand
+   is", and the product without its tightness; then the lemmas they rest on: a set of
+   real numbers has one lower bound and one upper bound, the bounds of the set of the
+   members of an interval, the bounds of the exact range of a negation, of a sum and of
+   a difference, and the last five lines that the sum, the difference and the product
+   share. *)
 From Kairn Require Import IeeeIntervalVocabulary IeeeInterval1.
-Print Assumptions interval_make_1_correct.
 Print Assumptions interval_make_1_reversed.
 Print Assumptions interval_make_1_equal_infinities.
-Print Assumptions interval_neg_1_correct.
-Print Assumptions interval_add_1_correct.
-Print Assumptions interval_sub_1_correct.
-Print Assumptions interval_mul_1_correct.
+Print Assumptions interval_neg_1_exact.
+Print Assumptions interval_mul_1_enclosure.
 Print Assumptions range_lower_unique.
 Print Assumptions range_upper_unique.
+Print Assumptions range_member_lower.
+Print Assumptions range_member_upper.
+Print Assumptions range_neg_lower.
+Print Assumptions range_neg_upper.
 Print Assumptions range_add_lower.
 Print Assumptions range_add_upper.
 Print Assumptions range_sub_lower.
@@ -462,7 +471,7 @@ Print Assumptions range_sub_upper.
 Print Assumptions interval_tail.
 
 (* The bounds of two limbs, in the real model (theories/Directed2.v), on models of the
-   listings written by hand (the kernels are not generated yet): add_ball_2_2 and
+   listings written by hand (the proofs are not on the generated models yet): add_ball_2_2 and
    mul_ball_2_2, which are the ball kernels with radii zero; one rounding to nearest from
    above, the radius from above and the closed form of the outward move; the rule of the
    zero sum; and the directed sums, differences and product, in the values of the kernel
@@ -501,9 +510,9 @@ Print Assumptions interval_mul_1_tight.
 Print Assumptions interval_mul_1_tight_range.
 
 (* The sum of two intervals with bounds of two limbs, in the IEEE model
-   (theories/IeeeInterval2.v), on IEEE models of the listings written by hand (the kernels
-   are not generated yet): the finite cores add_ball_2_2, add_down_2_2 and add_up_2_2,
-   whose finite result is that of the real model, and interval_add_2. *)
+   (theories/IeeeInterval2.v), on IEEE models of the listings written by hand (the proofs
+   are not on the generated models yet): the finite cores add_ball_2_2, add_down_2_2 and
+   add_up_2_2, whose finite result is that of the real model, and interval_add_2. *)
 From Kairn Require Import IeeeInterval2.
 Print Assumptions add_ball_2_2_ieee_core.
 Print Assumptions add_down_2_2_ieee_core.
