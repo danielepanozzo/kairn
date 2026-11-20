@@ -6,7 +6,10 @@
 #
 # A client uses it through add_subdirectory or FetchContent, or through find_package(kairn) after
 # cmake --install. On x86-64 the kernels need hardware FMA, which kairn::kairn does not enable:
-# a client compiles for such a CPU, or also links kairn::fma (cmake/kairn_fma.cmake).
+# a client compiles for such a CPU, or also links kairn::fma (cmake/kairn_fma.cmake). Added by
+# another project, Kairn adds no install rule unless KAIRN_INSTALL is on, and its configuration
+# prints its notice about FMA at the VERBOSE log level only (a warning, when kairn::fma can enable
+# no FMA, is still printed, and so are the lines of its tests if the project asks for them).
 #
 # A project that uses Kairn needs CMake 3.18; Kairn's own tests and benchmarks need 3.21.
 cmake_minimum_required(VERSION 3.18...3.21)
@@ -28,6 +31,8 @@ if(NOT DEFINED PROJECT_IS_TOP_LEVEL)
 endif()
 
 option(KAIRN_BUILD_TESTS "Register Kairn's tests with ctest" ${PROJECT_IS_TOP_LEVEL})
+option(KAIRN_INSTALL "Add Kairn's install rules (its headers and CMake package) to cmake --install"
+  ${PROJECT_IS_TOP_LEVEL})
 option(KAIRN_BUILD_BENCHMARKS "Build the benchmark harness of bench/ (not part of the library)" OFF)
 
 # Built on its own, Kairn is built for testing, and its tests mean most with optimization on: the
@@ -66,35 +71,45 @@ target_include_directories(kairn INTERFACE
 target_compile_features(kairn INTERFACE cxx_std_20)
 
 # kairn::fma: the option that gives the kernels hardware FMA, for targets that want Kairn to choose
-# it (cmake/kairn_fma.cmake). kairn::kairn itself never changes the instruction set.
+# it (cmake/kairn_fma.cmake). kairn::kairn itself never changes the instruction set. The line that
+# says which option it adds is a notice of Kairn's own build: added by another project, Kairn
+# writes it at the VERBOSE log level only.
 include("${PROJECT_SOURCE_DIR}/cmake/kairn_fma.cmake")
-kairn_define_fma_target("${PROJECT_SOURCE_DIR}/include" GLOBAL)
+if(PROJECT_IS_TOP_LEVEL)
+  kairn_define_fma_target("${PROJECT_SOURCE_DIR}/include" GLOBAL)
+else()
+  kairn_define_fma_target("${PROJECT_SOURCE_DIR}/include" GLOBAL VERBOSE)
+endif()
 
 # Installation: the headers, a package configuration with a version file under share/cmake/kairn,
 # where find_package(kairn) looks, and the license under share/licenses/kairn. Nothing in it
 # depends on the architecture: the installed configuration chooses kairn::fma's option with the
 # client's compiler. No installed file derives from the third-party proofs of proofs/third_party/
 # (the headers are generated from Kairn's own kernel descriptions), so their notices stay there.
-set(_kairn_cmake_dir "${CMAKE_INSTALL_DATADIR}/cmake/kairn")
+# Only with KAIRN_INSTALL, on by default when Kairn is the top-level project: a project that adds
+# Kairn with add_subdirectory or FetchContent installs its own files, not Kairn's, unless it asks.
+if(KAIRN_INSTALL)
+  set(_kairn_cmake_dir "${CMAKE_INSTALL_DATADIR}/cmake/kairn")
 
-install(TARGETS kairn EXPORT kairnTargets)
-install(DIRECTORY include/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" PATTERN ".*" EXCLUDE)
-install(EXPORT kairnTargets NAMESPACE kairn:: DESTINATION "${_kairn_cmake_dir}")
-install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/kairn")
+  install(TARGETS kairn EXPORT kairnTargets)
+  install(DIRECTORY include/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" PATTERN ".*" EXCLUDE)
+  install(EXPORT kairnTargets NAMESPACE kairn:: DESTINATION "${_kairn_cmake_dir}")
+  install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/kairn")
 
-configure_package_config_file(cmake/kairnConfig.cmake.in
-  "${PROJECT_BINARY_DIR}/kairnConfig.cmake"
-  INSTALL_DESTINATION "${_kairn_cmake_dir}"
-  PATH_VARS CMAKE_INSTALL_INCLUDEDIR)
-# Before 1.0 a minor version may change the interface, so only the same MAJOR.MINOR is accepted.
-write_basic_package_version_file("${PROJECT_BINARY_DIR}/kairnConfigVersion.cmake"
-  COMPATIBILITY SameMinorVersion
-  ARCH_INDEPENDENT)
-install(FILES
-  "${PROJECT_BINARY_DIR}/kairnConfig.cmake"
-  "${PROJECT_BINARY_DIR}/kairnConfigVersion.cmake"
-  cmake/kairn_fma.cmake
-  DESTINATION "${_kairn_cmake_dir}")
+  configure_package_config_file(cmake/kairnConfig.cmake.in
+    "${PROJECT_BINARY_DIR}/kairnConfig.cmake"
+    INSTALL_DESTINATION "${_kairn_cmake_dir}"
+    PATH_VARS CMAKE_INSTALL_INCLUDEDIR)
+  # Before 1.0 a minor version may change the interface, so only the same MAJOR.MINOR is accepted.
+  write_basic_package_version_file("${PROJECT_BINARY_DIR}/kairnConfigVersion.cmake"
+    COMPATIBILITY SameMinorVersion
+    ARCH_INDEPENDENT)
+  install(FILES
+    "${PROJECT_BINARY_DIR}/kairnConfig.cmake"
+    "${PROJECT_BINARY_DIR}/kairnConfigVersion.cmake"
+    cmake/kairn_fma.cmake
+    DESTINATION "${_kairn_cmake_dir}")
+endif()
 
 if((KAIRN_BUILD_TESTS OR KAIRN_BUILD_BENCHMARKS) AND CMAKE_VERSION VERSION_LESS 3.21)
   message(FATAL_ERROR "Kairn's tests and benchmarks need CMake 3.21 or later (this is "

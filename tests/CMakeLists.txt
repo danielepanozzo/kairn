@@ -25,7 +25,8 @@
 #   generator's interpreter on every operand of a toy format (or, where that is too many, on every
 #   operand of a restricted domain and on random cases of the whole format).
 # - The consumer checks (consume/): a project that uses kairn::kairn and kairn::fma through
-#   add_subdirectory, and one that uses them through find_package after this build tree is
+#   add_subdirectory, in which Kairn prints nothing when configured and installs nothing unless
+#   asked (KAIRN_INSTALL), and one that uses them through find_package after this build tree is
 #   installed into a prefix under the build directory.
 
 find_package(Python3 COMPONENTS Interpreter)
@@ -801,8 +802,13 @@ endif()
 
 # --- The consumer checks ------------------------------------------------------------------------
 #
-# They build their project with ctest --build-and-test, with this build's generator and compiler,
-# and run its program, which checks the version it is given against version.hpp and runs a kernel.
+# They build their project with this build's generator and compiler, and run its program, which
+# checks the version it is given against version.hpp and runs a kernel: consume.add_subdirectory
+# through consume/subproject.cmake, which also checks that Kairn, added with add_subdirectory,
+# prints no notice when configured and adds no install rule unless KAIRN_INSTALL is on (and that
+# both checks can fail: the notice made necessary is printed at the VERBOSE log level, and the
+# option installs Kairn's headers); consume.find_package with ctest --build-and-test, after
+# consume.install has installed this build tree, which needs KAIRN_INSTALL (on by default here).
 set(_consume_dir "${CMAKE_CURRENT_BINARY_DIR}/consume")
 set(_build_and_test --build-generator "${CMAKE_GENERATOR}" --build-project kairn_consume)
 if(CMAKE_GENERATOR_PLATFORM)
@@ -825,22 +831,33 @@ endif()
 set(_build_options --build-options "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}" ${_build_type})
 set(_run --test-command consume "${PROJECT_VERSION}")
 
+set(_subproject "-DSOURCE=${CMAKE_CURRENT_SOURCE_DIR}/consume/add_subdirectory"
+  "-DWORK=${_consume_dir}/add_subdirectory" "-DKAIRN_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+  "-DVERSION=${PROJECT_VERSION}" "-DCXX=${CMAKE_CXX_COMPILER}" "-DGENERATOR=${CMAKE_GENERATOR}"
+  "-DPLATFORM=${CMAKE_GENERATOR_PLATFORM}" "-DTOOLSET=${CMAKE_GENERATOR_TOOLSET}"
+  "-DMAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}")
+if(_multi_config)
+  list(APPEND _subproject "-DCONFIG=$<CONFIG>")
+elseif(CMAKE_BUILD_TYPE)
+  list(APPEND _subproject "-DBUILD_TYPE=${CMAKE_BUILD_TYPE}")
+endif()
 add_test(NAME consume.add_subdirectory
-  COMMAND "${CMAKE_CTEST_COMMAND}" ${_config} --build-and-test
-    "${CMAKE_CURRENT_SOURCE_DIR}/consume/add_subdirectory" "${_consume_dir}/add_subdirectory"
-    ${_build_and_test} ${_build_options} "-DKAIRN_SOURCE_DIR=${PROJECT_SOURCE_DIR}" ${_run})
+  COMMAND "${CMAKE_COMMAND}" ${_subproject} -P "${CMAKE_CURRENT_SOURCE_DIR}/consume/subproject.cmake")
+set_tests_properties(consume.add_subdirectory PROPERTIES TIMEOUT 600)
 
-add_test(NAME consume.install
-  COMMAND "${CMAKE_COMMAND}" "-DBUILD_DIR=${PROJECT_BINARY_DIR}" "-DPREFIX=${_consume_dir}/prefix"
-    "-DLICENSE=${PROJECT_SOURCE_DIR}/LICENSE" "-DLICENSE_DIR=${CMAKE_INSTALL_DATADIR}/licenses/kairn"
-    "-DCONFIG=$<CONFIG>" -P "${CMAKE_CURRENT_SOURCE_DIR}/consume/install.cmake")
-set_tests_properties(consume.install PROPERTIES FIXTURES_SETUP kairn_installed)
+if(KAIRN_INSTALL)
+  add_test(NAME consume.install
+    COMMAND "${CMAKE_COMMAND}" "-DBUILD_DIR=${PROJECT_BINARY_DIR}" "-DPREFIX=${_consume_dir}/prefix"
+      "-DLICENSE=${PROJECT_SOURCE_DIR}/LICENSE" "-DLICENSE_DIR=${CMAKE_INSTALL_DATADIR}/licenses/kairn"
+      "-DCONFIG=$<CONFIG>" -P "${CMAKE_CURRENT_SOURCE_DIR}/consume/install.cmake")
+  set_tests_properties(consume.install PROPERTIES FIXTURES_SETUP kairn_installed)
 
-add_test(NAME consume.find_package
-  COMMAND "${CMAKE_CTEST_COMMAND}" ${_config} --build-and-test
-    "${CMAKE_CURRENT_SOURCE_DIR}/consume/find_package" "${_consume_dir}/find_package"
-    ${_build_and_test} ${_build_options} "-DCMAKE_PREFIX_PATH=${_consume_dir}/prefix" ${_run})
-set_tests_properties(consume.find_package PROPERTIES FIXTURES_REQUIRED kairn_installed)
+  add_test(NAME consume.find_package
+    COMMAND "${CMAKE_CTEST_COMMAND}" ${_config} --build-and-test
+      "${CMAKE_CURRENT_SOURCE_DIR}/consume/find_package" "${_consume_dir}/find_package"
+      ${_build_and_test} ${_build_options} "-DCMAKE_PREFIX_PATH=${_consume_dir}/prefix" ${_run})
+  set_tests_properties(consume.find_package PROPERTIES FIXTURES_REQUIRED kairn_installed)
+endif()
 add_subdirectory(api)
 
 # --- The regression cases (begin) ---------------------------------------------------------------
