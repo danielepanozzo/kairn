@@ -929,7 +929,9 @@ exists only in an entry that uses it):
   toy format with $q_{\min} \le -1$ do.
 - **`error`** gains the form `T`: $\rho$ is the sum of the magnitudes of the *terms* of `value`;
   for `s+x*y` (`dot_step_2`), $\lvert s\rvert + \lvert x y\rvert$. `instances` are as for the
-  forms `R` and `A`.
+  forms `R` and `A`. Once such a kernel is proved, `include/kairn/gen/bounds.hpp` exports its
+  `unit` and `tiny` with the form `terms` (`Form::terms`), and, as for the form `A`, no constants
+  relative to the computed value.
 - **`upper`** may carry `value` and `if` in place of `gaps`: `value` is an exact expression over
   the inputs, the one-limb outputs, `u`, `eta`, integers, `^` and the constants `unit(K)` and
   `tiny(K)` of kernel K's bound ($c\,u^k$ and $t\,\eta$ of its `error` entry), and replaces the

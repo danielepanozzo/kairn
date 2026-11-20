@@ -8,7 +8,9 @@
 //                  at least K's minimum precision;
 // and, only when K is proved and has an error claim without a condition,
 //   form           result: |computed - exact| <= unit |exact| + tiny,
-//                  operands: |computed - exact| <= unit (|x| + |y|) + tiny;
+//                  operands: |computed - exact| <= unit (|x| + |y|) + tiny,
+//                  terms: |computed - exact| <= unit (the sum of the magnitudes of the terms
+//                  of the exact value: |s| + |x y| for s + x y) + tiny;
 //   unit, tiny     the smallest numbers of T not below c u^k and t eta;
 //   unit_computed, tiny_computed (form result only)
 //                  the smallest numbers of T not below unit / (1 - unit) and tiny / (1 - unit),
@@ -21,7 +23,7 @@
 namespace kairn::gen::bounds {
 
 // What an error bound is relative to.
-enum class Form { result, operands };
+enum class Form { result, operands, terms };
 
 // add_1_1: proved. Claims: rounded; error, form R, c = 1/(1+u), k = 1, t = 0.
 template <class T> struct add_1_1;

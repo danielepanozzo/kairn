@@ -107,7 +107,7 @@ class Bounds(unittest.TestCase):
                 continue
             self.assertEqual(len(entries), 1, name)
             e = entries[0]
-            self.assertEqual(m['form'], 'Form::result' if e['form'] == 'R' else 'Form::operands', name)
+            self.assertEqual(m['form'], 'Form::' + library.FORMS[e['form']], name)
             want = exact(e, t)
             names = ['unit', 'tiny'] + (['unit_computed', 'tiny_computed'] if e['form'] == 'R' else [])
             self.assertEqual(set(m), {'proved', 'form'} | set(names), name)
@@ -163,6 +163,27 @@ class Bounds(unittest.TestCase):
         m = members(structs(library.bounds(ks))[('add_fast_2_2', 'double')])
         self.assertEqual(m['form'], 'Form::operands')
         self.assertEqual(set(m), {'proved', 'form', 'unit', 'tiny'})
+
+    def test_every_error_form_survives_a_proof(self):
+        # Every form an error claim can have (rules.ERROR_FORMS) has a name in bounds.hpp, and a
+        # kernel of each form, made proved, gets its constants there and the whole build runs: R,
+        # A and T (dot_step_2, relative to the terms |s| + |x y|), the last two without computed
+        # constants.
+        from kairn_gen import build, rules
+        self.assertEqual(set(library.FORMS), set(rules.ERROR_FORMS))
+        self.assertIn('enum class Form { result, operands, terms };', self.text)
+        for form in rules.ERROR_FORMS:
+            name = next(n for n, k in self.ks.items() if library.error_entry(k) is not None and
+                        library.error_entry(k)['form'] == form)
+            with self.subTest(form=form, kernel=name):
+                ks = copy.deepcopy(self.ks)
+                ks[name].status = 'proved'
+                ks[name].theorem = ks[name].theorem or ('proofs/theories/X.v', f'{name}_correct')
+                build.outputs(ks)
+                m = members(structs(library.bounds(ks))[(name, 'double')])
+                self.assertEqual(m['form'], 'Form::' + library.FORMS[form])
+                self.assertEqual(set(m), {'proved', 'form', 'unit', 'tiny'} |
+                                 ({'unit_computed', 'tiny_computed'} if form == 'R' else set()))
 
     def test_refusals(self):
         ks = copy.deepcopy(dict(self.ks))
