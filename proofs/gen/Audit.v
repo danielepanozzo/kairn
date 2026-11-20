@@ -48,6 +48,9 @@ Print Assumptions add_up_entry_correct.
 Definition ball_add_1_audit : ball_add_1_spec := ball_add_1_correct.
 Print Assumptions ball_add_1_correct.
 
+Definition sub_down_1_audit : sub_down_1_spec := sub_down_1_correct.
+Print Assumptions sub_down_1_correct.
+
 Definition ball_mul_1_audit : ball_mul_1_spec := ball_mul_1_correct.
 Print Assumptions ball_mul_1_correct.
 
@@ -65,6 +68,9 @@ Print Assumptions ball_sub_1_correct.
 
 Definition fast_two_sum_entry_audit : fast_two_sum_entry_spec := fast_two_sum_entry_correct.
 Print Assumptions fast_two_sum_entry_correct.
+
+Definition sub_up_1_audit : sub_up_1_spec := sub_up_1_correct.
+Print Assumptions sub_up_1_correct.
 
 Definition mul_1_1_audit : mul_1_1_spec := mul_1_1_correct.
 Print Assumptions mul_1_1_correct.
@@ -96,14 +102,8 @@ Print Assumptions rmul_correct.
 Definition split_audit : split_spec := split_correct.
 Print Assumptions split_correct.
 
-Definition sub_down_1_audit : sub_down_1_spec := sub_down_1_correct.
-Print Assumptions sub_down_1_correct.
-
 Definition sub_down_entry_audit : sub_down_entry_spec := sub_down_entry_correct.
 Print Assumptions sub_down_entry_correct.
-
-Definition sub_up_1_audit : sub_up_1_spec := sub_up_1_correct.
-Print Assumptions sub_up_1_correct.
 
 Definition sub_up_entry_audit : sub_up_entry_spec := sub_up_entry_correct.
 Print Assumptions sub_up_entry_correct.
@@ -137,6 +137,9 @@ Print Assumptions add_fast_2_2_correct.
 
 Definition ball_add_2_audit : ball_add_2_spec := ball_add_2_correct.
 Print Assumptions ball_add_2_correct.
+
+Definition to_down_2_audit : to_down_2_spec := to_down_2_correct.
+Print Assumptions to_down_2_correct.
 
 Definition mul_2_2_audit : mul_2_2_spec := mul_2_2_correct.
 Print Assumptions mul_2_2_correct.
@@ -197,9 +200,6 @@ Print Assumptions sub_2_1_correct.
 
 Definition sub_2_2_audit : sub_2_2_spec := sub_2_2_correct.
 Print Assumptions sub_2_2_correct.
-
-Definition to_down_2_audit : to_down_2_spec := to_down_2_correct.
-Print Assumptions to_down_2_correct.
 
 Definition to_nearest_2_audit : to_nearest_2_spec := to_nearest_2_correct.
 Print Assumptions to_nearest_2_correct.

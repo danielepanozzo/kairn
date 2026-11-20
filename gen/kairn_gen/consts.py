@@ -122,6 +122,67 @@ def up_exact(text, kernels, p, qmin):
         raise ConstError(f'up({text}): {err}')
 
 
+# The constants of a claim (rel and abs of outward, Milestone 2): the language of up(EXPR), and up( )
+# itself inside, a constant as the format rounds it.
+CLAIM_TREES = UP_TREES | {'up'}
+
+
+def claim_tree(text):
+    """The parsed constant of a claim, checked for its vocabulary. Raises ConstError."""
+    try:
+        tree = expr.parse(text)
+    except expr.ExprError as e:
+        raise ConstError(f'{text}: {e}')
+
+    def walk(t, inside):
+        if t[0] not in (UP_TREES if inside else CLAIM_TREES):
+            raise ConstError(f'{text}: {t[0]} is not allowed (only + - * /, ^ INTEGER, u, eta, integers, '
+                             'unit(K), tiny(K), and up(EXPR) of those)')
+        for x in t[1:]:
+            if isinstance(x, tuple):
+                walk(x, inside or t[0] == 'up')
+    walk(tree, False)
+    extra = expr.names(tree) - UP_NAMES
+    if extra:
+        raise ConstError(f'{text}: unknown name {", ".join(sorted(extra))}')
+    return tree
+
+
+def ups(tree):
+    """The parsed EXPR of every up(EXPR) inside a claim's constant. A constant of a kernel, const
+    up(EXPR), is the same constant when its EXPR parses to the same tree (up_tree)."""
+    if tree[0] == 'up':
+        return [tree[1]]
+    return [x for t in tree[1:] if isinstance(t, tuple) for x in ups(t)]
+
+
+def claim_constant(text, kernels, p, qmin, qmax):
+    """The exact value of a constant of a claim in format (p, qmin, qmax): its expression with each
+    up(EXPR) rounded up to the format (consts.value), unit(K) and tiny(K) from K's error claim."""
+    tree = claim_tree(text)
+    u, eta = Fraction(1, 2 ** p), Fraction(2) ** qmin
+    env = {'u': u, 'eta': eta}
+    for fn, kname in expr.calls(tree):
+        k = kernels.get(kname)
+        if k is None:
+            raise ConstError(f'{text}: {kname} is not a kernel')
+        e = source_bound(k)
+        env[f'unit({kname})'] = expr.evaluate(expr.parse(e['c']), {'u': u}) * u ** e['k']
+        env[f'tiny({kname})'] = expr.evaluate(expr.parse(e['t']), {}) * eta
+
+    def up(x):
+        if not x > 0:
+            raise ConstError(f'{text}: an up( ) inside it is {x} in the format ({p}, {qmin}, {qmax}); it must be positive')
+        v = round_up(x, p, qmin, qmax)
+        if v is None:
+            raise ConstError(f'{text}: an up( ) inside it overflows the format ({p}, {qmin}, {qmax})')
+        return v
+    try:
+        return expr.evaluate(tree, env, up)
+    except expr.ExprError as err:
+        raise ConstError(f'{text}: {err}')
+
+
 def value(name, kernels, p, qmin, qmax):
     """The exact value of constant `name` in format (p, qmin, qmax), as a Fraction."""
     if name == ir.ZERO:

@@ -1,0 +1,32 @@
+# The upper bound of a ball with a 2-limb center, as a number of T (milestone2.md, "One
+# enclosure interface", the row of lower_as and upper_as, and "The empty set and the whole line"):
+# the center rounded up to T by to_up_2, then the radius added, rounded up. A bound on
+# its side of every member: the whole line gives +inf, the empty ball -inf. For a finite ball
+# it is less than one gap of T at c plus one gap at the result away from c + r; no number of
+# steps from the directed rounding of c + r bounds it, since c + r can be far smaller than c in
+# magnitude. What is claimed of the distance is the error entry: at most 5 u (|c| + r) + 3 eta,
+# from the two gaps, each at most max(2 u |t|, eta), and |t| <= |c| + r + 2 u |c| + eta for the
+# number t that the second rounding rounds.
+kernel:        ball_upper_as_2
+input:         c = c0 c1
+input:         stored r
+output:        h
+value:         c+r
+requires:      ball c r
+ensures:       set_bound h above x x=c,r
+ensures:       error h A c=5 k=1 t=3
+min_precision: 2
+source:        the center rounded up, plus the radius, rounded up (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+ieee_only:     yes
+cone_exempt:   h is selected after the test of the radius that tells the empty ball; set_bound states what comes out for each state of the ball
+
+a  = to_up_2(c0, c1)
+t  = add_up_1(a, r)
+ne = eq(r, r)
+mi = neg(const inf)
+h  = select(ne, t, mi)

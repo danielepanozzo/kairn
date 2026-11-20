@@ -731,6 +731,204 @@ the claims). `mul_pow2_2` keeps its claims and its statement: an `exact_when` on
 would change the generated statement `mul_pow2_2_spec` that `mul_pow2_2_correct` proves, so its
 exactness stays the hand-written `mul_pow2_2_exact` ([Milestone 1](design/milestone1.md#second-wave-kernels)).
 
+### Claims of the interval kernels
+
+The first kernels of the interval work ([Interval kernels](design/milestone2.md#interval-kernels):
+the kernels of one limb and the bounds of two limbs; and from
+[One enclosure interface](design/milestone2.md#one-enclosure-interface) the bounds of a ball as
+numbers of `T` and the narrowing of a ball of two limbs) need the additions below. Everything above
+keeps its meaning and its JSON shape: a field that is new to a kind that exists is written only in
+an entry that uses it.
+
+Four kernels of that stage are not in `gen/kernels` yet, because their compiled code does not pass
+the object-code check, one fused instruction for each FMA of the IR. `mul_dir_2_2` and
+`ball_from_interval_2` each negate a fused result (the radius $d$ in `sub_down_1(z1, d)`, the half
+$h_\ell$ in `sub_up_1(hu, hl)`), and compilers compute that negation as one more fused
+instruction, a negated FMA beside the FMA. `interval_mul_1` and `interval_add_2` compute
+independent FMAs (four directed products, two directed sums of two limbs), and Clang 18 at `-O2`
+puts two of them in one packed instruction of the scalar code (SLP vectorization), which the check
+counts as one. Their listings are in `experiments/milestone2/kernels`; the vocabulary has what they
+claim, and the generator's tests read them with these claims (`gen/tests/common.py`, `WITHHELD`).
+
+**Requirements**, both of the extended domain:
+
+- `interval(L, U)`: the input groups L and U, of one limb each or of two each, are the bounds of a
+  canonical interval ([Values of an interval](design/milestone2.md#values-of-an-interval)): the
+  **empty set**, L $= +\infty$ and U $= -\infty$ (for two limbs $(+\infty, \pm 0)$ and
+  $(-\infty, \pm 0)$), or a **nonempty interval**: neither bound is a NaN, L $\le$ U as extended
+  real numbers, L $< +\infty$, U $> -\infty$, and each bound is a number of the format or an
+  infinity (for two limbs: canonical, so a finite normalized pair or $(\pm\infty, \pm 0)$). Its
+  *members* are the real numbers $x$ with L $\le x \le$ U: $[1, +\infty]$ does not contain
+  $+\infty$, and the empty set has none. It is *bounded* when both bounds are finite.
+- `not_nan(NAME)`: the one-limb input is not a NaN (an infinity is allowed).
+
+**Ensures:**
+
+| Kind | Fields | Meaning |
+|---|---|---|
+| `makes_interval` | `lower`, `upper`: the outputs; `from`: the inputs given as `lower` and `upper` | the output is a canonical interval: the interval of the given bounds (the same extended real numbers) when lo $\le$ hi, lo $< +\infty$ and hi $> -\infty$; the whole line $(-\infty, +\infty)$ when a given bound is a NaN, whatever the other; the empty set otherwise |
+| `encloses_interval` | `lower`, `upper`: the outputs; `set`: an expression over interval names; `intervals`: for each name its `lower` and `upper` inputs; `tight`; `bounded_when`: a list of conditions; `bounded_exactly`: `true`, only when it is so | I1 to I5 below |
+| `set_bound` | `of` (a one-limb output), `side`: `below` or `above`, `set` and `balls` as in `encloses`, `tight` (optional): `{"kind": "rounded"}`, with an optional `steps` | if a ball operand is empty the output is $+\infty$ (`below`) or $-\infty$ (`above`); otherwise it is at most (at least) every value of `set`, each ball name ranging over the members of its ball: below or at the set's greatest lower bound $t$, an extended real number, $-\infty$ for a set that is unbounded below. With `tight`, the output is $t$ rounded down (up) in the format with overflow, or, with `steps` $s$, between that rounding stepped $s$ times outward and the rounding |
+| `outward` | `of` (a 2-limb output), `side`: `below` or `above`, `rel`, `abs`: constants (below); `exact_when` (optional) | the output is on that side of `value`, and $\lvert\text{output} - \text{value}\rvert \le \mathrm{rel}\cdot\lvert\text{value}\rvert + \mathrm{abs}$; when every condition of `exact_when` holds, the output equals `value`. Of the finite domain: it holds whenever the requirements hold and the output's leading limb is finite |
+| `encloses`, with `"balls": {}` | as before | the operands are points: $\lvert \text{set} - \text{center}\rvert \le$ radius, `set` an expression over the inputs. Of the finite domain only |
+| `makes_ball`, from an interval | `center`, `radius`; `from`: the inputs given as `lower` and `upper` (one limb each); `midpoint_when` (optional): a list of conditions `{"half_in_format": NAME}`, NAME/2 is a number of the format | the output ball is canonical: the whole line when a given bound is a NaN, whatever the other; when lo $\le$ hi, lo $< +\infty$ and hi $> -\infty$: a finite ball that contains $[lo, hi]$ when both are finite, and when every condition of `midpoint_when` holds its center is $(lo + hi)/2$ exactly and its radius $(hi - lo)/2$ rounded up; the whole line when a bound is infinite; the empty set otherwise |
+| `bound`, `rounded`, with `"zero_factor": true` | as before, `value` the product of two one-limb inputs, the extended domain | when an operand is a zero, the output is a zero (0 · ∞ = 0: the product of two bounds in interval arithmetic); otherwise as without the field |
+
+The **I1 to I5** of `encloses_interval`, for canonical operands; $Z$ is the output interval. The
+*exact range* is the set of the values of `set` with each interval name ranging over the members
+of its interval, and $lo$, $hi$ are its greatest lower bound and least upper bound as extended
+real numbers. For the sets of these kernels they are the sums and differences of bounds, the
+opposites of the bounds exchanged for `-x`, and for `x*y` the least and the greatest of the four
+products of a bound of $x$ and a bound of $y$ taken with $0 \cdot \infty = 0$.
+
+- **I1.** $Z$ is canonical. **I2.** $Z$ is empty exactly when an operand is.
+- **I3.** For nonempty operands, $Z$'s lower bound is at most every member of the exact range and
+  its upper bound at least every member (so an unbounded range gives the infinite bound).
+- **I4**, for nonempty operands, by `tight`:
+    - `{"kind": "exact"}`: $Z$'s bounds are $lo$ and $hi$;
+    - `{"kind": "rounded"}`: $Z$'s lower bound is $lo$ rounded down in the format with overflow,
+      its upper bound $hi$ rounded up (an infinite bound stays); with `"steps"` $s$, the lower
+      bound is between that rounding stepped down $s$ times and that rounding, and symmetrically
+      the upper one; with `"when": "product_large"` (a set `x*y`), exactly the roundings when
+      each product of a finite bound of $x$ and a finite bound of $y$ is zero or at least
+      $2^{2p-1}\eta$ in magnitude;
+    - `{"kind": "outward", "rel": ..., "abs": ..., "exact_when": {"lower": [...], "upper": [...]}}`:
+      for bounded operands and a bounded $Z$ with bounds of values $z_\ell$, $z_u$:
+      $lo - z_\ell \le \mathrm{rel}\cdot\lvert lo\rvert + \mathrm{abs}$ and
+      $z_u - hi \le \mathrm{rel}\cdot\lvert hi\rvert + \mathrm{abs}$; for bounded operands, when
+      every condition of a side holds, that bound of $Z$ is that bound of the exact range; and an
+      infinite bound of the exact range is that bound of $Z$.
+- **I5.** For bounded operands, $Z$ is bounded when (with `bounded_exactly`, exactly when) every
+  member $z$ of the exact range satisfies every condition of `bounded_when`:
+  `{"abs_le": SET, "omega": true}` is $\lvert z\rvert \le \Omega$, `{"abs_le": SET, "exp": E}` is
+  $\lvert z\rvert \le 2^{q_{\max} + p + E}$, SET being the entry's `set`. An empty list claims
+  nothing.
+
+**Conditions.** `exact_when` of `outward`, and of the outward `tight`, has one more kind,
+`{"zero": EXPR}`: EXPR $= 0$, EXPR an expression of the language of `exact_when` over the inputs
+(the zero rule of the directed sums: a sum whose exact value is zero is returned as zero, and so
+is a bound of an interval sum whose exact bound is zero; for `tight`, EXPR is the bound of the
+exact range written over the bounds of the operands, `xl+yl` for the lower bound of `x+y`).
+
+**Constants of a claim**, `rel` and `abs`: the language of `const up(EXPR)` (`u`, `eta`,
+integers, `unit(K)`, `tiny(K)`, the four operations and integer powers), and `up(EXPR)` inside,
+the smallest number of the format not below EXPR (below $\eta$ it is $\eta$): the constant as the
+format rounds it, so that a bound can name the constants $E$, $G$, $H$ of a radius. Each `up(EXPR)`
+is a constant of a kernel with a real-model statement. The oracle evaluates them per format;
+`instances` is unchanged: one object per `error` entry.
+
+**An output group other than the first.** In the finite domain an entry whose `of` is an output
+group other than the first holds whenever the requirements hold and that group's leading limb is
+finite (the two bounds of `mul_dir_2_2` overflow apart; the second output of `mul_dir_1`, of the
+extended domain, has the infinity that its claims say). No earlier kernel has such an entry.
+
+Entries as the generator writes them (`source`, `flops` and the theorem fields left out; the
+constants of `outward` are those of
+[Bounds of two limbs](design/milestone2.md#bounds-of-two-limbs), $A$ and $B$ with the $E$, $G$,
+$H$ of `ball_add_2` and the $\mathrm{rel}$, $\mathrm{tiny}$ of `add_2_2`):
+
+```json
+{"name": "interval_add_1", "domain": "extended", "ieee_only": true,
+ "inputs": [{"name": "xl", "limbs": 1}, {"name": "xu", "limbs": 1}, {"name": "yl", "limbs": 1}, {"name": "yu", "limbs": 1}],
+ "outputs": [{"name": "zl", "limbs": 1}, {"name": "zu", "limbs": 1}],
+ "requires": ["interval(xl, xu)", "interval(yl, yu)"],
+ "ensures": [{"kind": "encloses_interval", "lower": "zl", "upper": "zu", "set": "x+y",
+              "intervals": {"x": {"lower": "xl", "upper": "xu"}, "y": {"lower": "yl", "upper": "yu"}},
+              "tight": {"kind": "rounded"}, "bounded_when": [{"abs_le": "x+y", "omega": true}],
+              "bounded_exactly": true}],
+ "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "instances": {"binary64": [], "binary32": []}},
+{"name": "interval_make_1", "domain": "extended", "ieee_only": true,
+ "inputs": [{"name": "lo", "limbs": 1}, {"name": "hi", "limbs": 1}],
+ "outputs": [{"name": "zl", "limbs": 1}, {"name": "zu", "limbs": 1}],
+ "requires": [],
+ "ensures": [{"kind": "makes_interval", "lower": "zl", "upper": "zu", "from": {"lower": "lo", "upper": "hi"}}],
+ "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+ "instances": {"binary64": [], "binary32": []}},
+{"name": "mul_dir_1", "domain": "extended",
+ "inputs": [{"name": "a", "limbs": 1}, {"name": "b", "limbs": 1}],
+ "outputs": [{"name": "d", "limbs": 1}, {"name": "v", "limbs": 1}],
+ "value": "a*b", "requires": ["not_nan(a)", "not_nan(b)"],
+ "ensures": [{"kind": "bound", "of": "d", "side": "below", "steps": 1, "zero_factor": true},
+             {"kind": "rounded", "of": "d", "mode": "down", "when": "product_large", "zero_factor": true},
+             {"kind": "bound", "of": "v", "side": "above", "steps": 1, "zero_factor": true},
+             {"kind": "rounded", "of": "v", "mode": "up", "when": "product_large", "zero_factor": true}],
+ "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "instances": {"binary64": [], "binary32": []}},
+{"name": "add_ball_2_2",
+ "inputs": [{"name": "x", "limbs": 2}, {"name": "y", "limbs": 2}],
+ "outputs": [{"name": "z", "limbs": 2}, {"name": "d", "limbs": 1}],
+ "value": "x+y", "requires": ["normalized(x)", "normalized(y)"],
+ "ensures": [{"kind": "normalized", "of": "z"},
+             {"kind": "error", "of": "z", "form": "R", "c": "3/(1-4*u)", "k": 2, "t": "0", "when": null},
+             {"kind": "encloses", "center": "z", "radius": "d", "set": "x+y", "balls": {}}],
+ "min_precision": 3, "status": "unverified",
+ "instances": {"binary64": [{"rel": "3/81129638414606645666991986180096", "abs": "0"}],
+               "binary32": [{"rel": "1/93824969867264", "abs": "0"}]}},
+{"name": "ball_lower_as_1", "domain": "extended", "ieee_only": true,
+ "inputs": [{"name": "c", "limbs": 1}, {"name": "r", "limbs": 1}],
+ "outputs": [{"name": "l", "limbs": 1}],
+ "requires": ["ball(c, r)"],
+ "ensures": [{"kind": "set_bound", "of": "l", "side": "below", "set": "x",
+              "balls": {"x": {"center": "c", "radius": "r"}}, "tight": {"kind": "rounded"}}],
+ "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "instances": {"binary64": [], "binary32": []}}
+```
+
+and the `ensures` of three more:
+
+```json
+[{"kind": "normalized", "of": "l"},
+ {"kind": "outward", "of": "l", "side": "below",
+  "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)",
+  "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)",
+  "exact_when": [{"zero": "x+y"}]}],
+[{"kind": "encloses_interval", "lower": "zl", "upper": "zu", "set": "x*y",
+  "intervals": {"x": {"lower": "xl", "upper": "xu"}, "y": {"lower": "yl", "upper": "yu"}},
+  "tight": {"kind": "rounded", "steps": 1, "when": "product_large"},
+  "bounded_when": [{"abs_le": "x*y", "omega": true}], "bounded_exactly": true}],
+[{"kind": "encloses_interval", "lower": "zl", "upper": "zu", "set": "x+y",
+  "intervals": {"x": {"lower": "xl", "upper": "xu"}, "y": {"lower": "yl", "upper": "yu"}},
+  "tight": {"kind": "outward",
+            "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)",
+            "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)",
+            "exact_when": {"lower": [{"zero": "xl+yl"}], "upper": [{"zero": "xu+yu"}]}},
+  "bounded_when": [{"abs_le": "x+y", "exp": -2}]}]
+```
+
+those of `add_down_2_2`, and of `interval_mul_1` and `interval_add_2` as they will be. The other
+kernels: `interval_sub_1` is `interval_add_1` with `x-y`; `interval_neg_1` has the set `-x`,
+`"tight": {"kind": "exact"}` and `bounded_when` `abs_le(-x, omega)`, exactly; `add_up_2_2`,
+`sub_down_2_2`, `sub_up_2_2` are `add_down_2_2` on their side and value (`mul_dir_2_2`, when it is
+a kernel, claims `normalized` of `l` and `h` and `outward` of each, below and above, with the
+constants of `ball_mul_2` and `mul_2_2` and no `exact_when`; `ball_from_interval_2` claims
+`{"kind": "makes_ball", "center": "cw", "radius": "rw", "from": {"lower": "lo", "upper": "hi"},
+"midpoint_when": [{"half_in_format": "lo"}, {"half_in_format": "hi"}]}`, with no `value`);
+`mul_ball_2_2` is `add_ball_2_2` with the claims of `mul_2_2`;
+`ball_upper_as_1` is `ball_lower_as_1` above. `ball_lower_as_2` and `ball_upper_as_2` claim
+`set_bound` without `tight`, a bound on its side, and
+`{"kind": "error", "of": "l", "form": "A", "c": "5", "k": 1, "t": "3", "when": null}` with the value
+`c-r` (`c+r`): $\lvert l - (c - r)\rvert \le 5u(\lvert c\rvert + r) + 3\eta$. No number of steps
+from the rounding of $c - r$ bounds that output when $c - r$ is much smaller than $c$ in
+magnitude: the page's "less than one gap of `T` at $c$ plus one at the result" is a distance in
+the gaps at $c$. `ball_narrow_2_1` claims `encloses` of the ball of its inputs, with
+`finite_when` `abs_le(abs(c)+r, -2)`.
+
+**In the formal models.** In the real model `outward` is the side, the bound and the exactness,
+in the shape of the theorems of `proofs/theories/Directed2.v`, with each `up(EXPR)` of a constant
+printed as its definition of `Model.v` applied to `emin prec`, and the constants in the forms of
+that file's `outward_rel` and `outward_abs` ($1/X$ as Rocq's `/ X`, a `tiny(K)` that is zero as
+`0`), so that a theorem stated with them has the statement as its type by unfolding them;
+`encloses` without a ball is the
+error bound by the radius; `zero_factor` and `not_nan` print nothing (a zero factor gives a zero
+product, which `rounded` with `product_large` already says). In the IEEE model the statements use
+`proofs/theories/IeeeIntervalVocabulary.v` (`interval_1`, `interval_empty_1`,
+`interval_nonempty_1`, `in_interval_1`, `interval_bounded_1`, the two-limb forms, `xnonempty`,
+`range_1`, `range_2`, `range_lower`, `range_upper`) in the shapes of the theorems of
+`IeeeInterval1.v`; I4 with `tight` rounded, `steps` and `when` is the shape of
+`interval_mul_1_tight_range`, with the condition `product_large` of that file unfolded. A
+statement about intervals has a hypothesis on the precision only when its minimum is above 1.
+
 ## The line protocol
 
 Runners and the oracle exchange text lines, the same on every platform and for every format.
@@ -743,7 +941,11 @@ completed:  KERNEL FORMAT LIMB ... [#TAG] -> LIMB ...
 - Fields are separated by single spaces. A limb is a C99 hexadecimal floating-point literal as
   printed by `printf("%a")` or Python's `float.hex()`, or `inf`, `-inf`, `nan`.
 - Input limbs are in the order of the kernel's `inputs`, most significant limb first; output
-  limbs likewise.
+  limbs likewise. An interval is its two bounds, each a group, the lower first: the sum of two
+  intervals of one limb is the line `interval_add_1 FORMAT xl xu yl yu`, completed with
+  `-> zl zu`, and one of two limbs will be `interval_add_2 FORMAT xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1`,
+  completed with `-> zl0 zl1 zu0 zu1`; the empty set of one limb is `inf -inf`, the whole line
+  `-inf inf`. A mask is `0` or `1` as before (no kernel of the intervals has one).
 - A runner reads requests on standard input and, for each, writes the same line followed by
   ` -> ` and the output limbs. It copies everything before the arrow unchanged, including an
   optional `#TAG`. The oracle's tags are `#STRATUM:INDEX`: the stratum the case belongs to and

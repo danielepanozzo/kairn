@@ -401,8 +401,9 @@ class Specials(unittest.TestCase):
                         seen += 1
         self.assertEqual(subnormal, [])
         # E, G, H of the six cores, and the splitter; P of the two directed products, and N of the
-        # two scalings of a ball by a power of two.
-        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2))
+        # two scalings of a ball by a power of two. Milestone 2: E, G, H of add_ball_2_2 and
+        # mul_ball_2_2, and P of mul_dir_1.
+        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 3 * 2 + 1))
         cores = {'ball_add_1': 2, 'ball_add_2': 2, 'ball_scale_1': 3, 'ball_scale_2': 3, 'ball_mul_1': 4,
                  'ball_mul_2': 5}
         for name, more in cores.items():

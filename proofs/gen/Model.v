@@ -139,6 +139,12 @@ Definition ball_add_1 (cx rx cy ry : R) : R * R :=
   let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
   (cz, rz).
 
+(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). *)
+Definition sub_down_1 (a b : R) : R :=
+  let nb := - b in
+  let r := add_down_1 a nb in
+  r.
+
 (* ball_mul_1: midpoint-radius product (Milestone 1 listing, second radius design). *)
 Definition ball_mul_1 (cx rx cy ry : R) : R * R :=
   let cz := rnd (cx * cy + 0) in
@@ -198,6 +204,12 @@ Definition fast_two_sum_entry (a b : R) : R * R :=
   let '(s, e) := fast_two_sum ga gb in
   (s, e).
 
+(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
+Definition sub_up_1 (a b : R) : R :=
+  let nb := - b in
+  let r := add_up_1 a nb in
+  r.
+
 (* mul_1_1: one rounding to nearest. *)
 Definition mul_1_1 (a b : R) : R :=
   let p := rnd (a * b + 0) in
@@ -208,6 +220,28 @@ Definition two_prod (a b : R) : R * R :=
   let p := rnd (a * b + 0) in
   let e := rnd (a * b + - p) in
   (p, e).
+
+(* mul_dir_1: two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). *)
+Definition mul_dir_1 (a b : R) : R * R :=
+  let '(p, e) := two_prod a b in
+  let ap := Rabs p in
+  let bd := Rlt_bool ap up_mul_down_1_0 in
+  let ez := Req_bool e 0 in
+  let un := andb bd ez in
+  let n := Rlt_bool e 0 in
+  let sd := orb n un in
+  let pp := pred radix2 (FLT_exp emin prec) p in
+  let dz := if sd then pp else p in
+  let q := Rlt_bool 0 e in
+  let su := orb q un in
+  let sp := succ radix2 (FLT_exp emin prec) p in
+  let vz := if su then sp else p in
+  let za := Req_bool a 0 in
+  let zb := Req_bool b 0 in
+  let zz := orb za zb in
+  let d := if zz then 0 else dz in
+  let v := if zz then 0 else vz in
+  (d, v).
 
 (* mul_down_1: two_prod and the sign of its error term (Milestone 2 listing). *)
 Definition mul_down_1 (a b : R) : R :=
@@ -280,23 +314,11 @@ Definition split (a : R) : R * R :=
   let al := rnd (a - ah) in
   (ah, al).
 
-(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). *)
-Definition sub_down_1 (a b : R) : R :=
-  let nb := - b in
-  let r := add_down_1 a nb in
-  r.
-
 (* sub_down_entry: sub_down_1 on its guarded operands (Milestone 2 listing). *)
 Definition sub_down_entry (a b : R) : R :=
   let ga := rnd (a + 0) in
   let gb := rnd (b + 0) in
   let r := sub_down_1 ga gb in
-  r.
-
-(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
-Definition sub_up_1 (a b : R) : R :=
-  let nb := - b in
-  let r := add_up_1 a nb in
   r.
 
 (* sub_up_entry: sub_up_1 on its guarded operands (Milestone 2 listing). *)
@@ -378,6 +400,23 @@ Definition add_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(z0, z1) := fast_two_sum vh w in
   (z0, z1).
 
+(* add_ball_2_2: add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). *)
+Definition add_ball_2_2 (x0 x1 y0 y1 : R) : R * R * R :=
+  let '(z0, z1) := add_2_2 x0 x1 y0 y1 in
+  let az := Rabs z0 in
+  let t := rnd (az * up_ball_add_2_0 + 0) in
+  let d := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
+  (z0, z1, d).
+
+(* add_down_2_2: add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing). *)
+Definition add_down_2_2 (x0 x1 y0 y1 : R) : R * R :=
+  let '(z0, z1, d) := add_ball_2_2 x0 x1 y0 y1 in
+  let zd := Req_bool z0 0 in
+  let dd := if zd then 0 else d in
+  let w := sub_down_1 z1 dd in
+  let '(l0, l1) := two_sum_ord z0 w in
+  (l0, l1).
+
 (* add_fast_2_2: JMP17 Alg. 5 (SloppyDWPlusDW); the bound and the normalization are proved here. *)
 Definition add_fast_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(sh, sl) := two_sum x0 y0 in
@@ -385,6 +424,15 @@ Definition add_fast_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let w := rnd (sl + v) in
   let '(z0, z1) := fast_two_sum sh w in
   (z0, z1).
+
+(* add_up_2_2: add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing). *)
+Definition add_up_2_2 (x0 x1 y0 y1 : R) : R * R :=
+  let '(z0, z1, d) := add_ball_2_2 x0 x1 y0 y1 in
+  let zd := Req_bool z0 0 in
+  let dd := if zd then 0 else d in
+  let w := add_up_1 z1 dd in
+  let '(h0, h1) := two_sum_ord z0 w in
+  (h0, h1).
 
 (* ball_add_2: midpoint-radius sum (Milestone 1 listing, second radius design). *)
 Definition ball_add_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
@@ -394,6 +442,13 @@ Definition ball_add_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
   let t := rnd (az * up_ball_add_2_0 + s) in
   let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
   (cz0, cz1, rz).
+
+(* to_down_2: the sign of x1 (Milestone 1 listing). *)
+Definition to_down_2 (x0 x1 : R) : R :=
+  let m := Rlt_bool x1 0 in
+  let p := pred radix2 (FLT_exp emin prec) x0 in
+  let t := if m then p else x0 in
+  t.
 
 (* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. *)
 Definition mul_2_2 (x0 x1 y0 y1 : R) : R * R :=
@@ -542,6 +597,14 @@ Definition lt_2_2 (x0 x1 y0 y1 : R) : bool :=
   let m := orb h t in
   m.
 
+(* mul_ball_2_2: mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). *)
+Definition mul_ball_2_2 (x0 x1 y0 y1 : R) : R * R * R :=
+  let '(z0, z1) := mul_2_2 x0 x1 y0 y1 in
+  let az := Rabs z0 in
+  let t := rnd (az * up_ball_mul_2_0 + 0) in
+  let d := rnd (t * up_ball_mul_2_1 + up_ball_mul_2_2) in
+  (z0, z1, d).
+
 (* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
 Definition mul_pow2_2 (x0 x1 c : R) : R * R :=
   let h := rnd (x0 * c + 0) in
@@ -569,12 +632,17 @@ Definition sub_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let '(z0, z1) := add_2_2 x0 x1 n0 n1 in
   (z0, z1).
 
-(* to_down_2: the sign of x1 (Milestone 1 listing). *)
-Definition to_down_2 (x0 x1 : R) : R :=
-  let m := Rlt_bool x1 0 in
-  let p := pred radix2 (FLT_exp emin prec) x0 in
-  let t := if m then p else x0 in
-  t.
+(* sub_down_2_2: add_down_2_2 on x and -y (Milestone 2 listing). *)
+Definition sub_down_2_2 (x0 x1 y0 y1 : R) : R * R :=
+  let '(n0, n1) := neg_2 y0 y1 in
+  let '(l0, l1) := add_down_2_2 x0 x1 n0 n1 in
+  (l0, l1).
+
+(* sub_up_2_2: add_up_2_2 on x and -y (Milestone 2 listing). *)
+Definition sub_up_2_2 (x0 x1 y0 y1 : R) : R * R :=
+  let '(n0, n1) := neg_2 y0 y1 in
+  let '(h0, h1) := add_up_2_2 x0 x1 n0 n1 in
+  (h0, h1).
 
 (* to_nearest_2: the definition of normalized (Milestone 1 listing). *)
 Definition to_nearest_2 (x0 x1 : R) : R :=

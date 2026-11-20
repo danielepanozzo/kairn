@@ -1,0 +1,29 @@
+# A ball with a 2-limb center as a ball with a one-limb center that contains it: the leading limb
+# for the center, and the radius plus the magnitude of the second limb, rounded up by radd
+# (whose operands are nonnegative here by construction: a radius, and an absolute value). The
+# special states pass through: the empty ball (all NaN) gives NaN for the center and the radius;
+# the whole line (0, 0, +inf) gives (0, +inf); and a radius that overflows gives the whole line,
+# its center replaced by zero, so that the ball is canonical. Bounded when no member exceeds a
+# quarter of the overflow threshold: then r + |c1| is below it and radd's result is finite.
+kernel:        ball_narrow_2_1
+input:         c = c0 c1
+input:         stored r
+output:        cz
+output:        rz
+value:         c
+requires:      ball c r
+ensures:       encloses cz rz x x=c,r finite_when=abs_le(abs(c)+r,-2)
+min_precision: 2
+source:        the leading limb, and the radius widened by the second limb (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+ieee_only:     yes
+cone_exempt:   the radius never reaches the center, which is selected after the test of a radius that overflowed; B1 to B4 of milestone1.md, "Ball kernels", state what comes out
+
+a  = abs(c1)
+rz = radd(r, a)
+wh = eq(rz, const inf)
+cz = select(wh, 0, c0)

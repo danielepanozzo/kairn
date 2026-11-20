@@ -1,0 +1,26 @@
+# A normalized pair that is at least x + y: as add_down_2_2, with the second limb moved up. The
+# bound is zero when the computed sum is zero, for the same reason.
+# The tightness constants of the outward claim are A = (2 (1+u)^3 G E + 2 u^2) (1 + rel) / (1 - u)
+# and B = 2 (1+u)^2 (G eta / 2 + H) + eta + (2 (1+u)^3 G E + 2 u^2) / (1 - u) tiny, with E, G, H the
+# constants of the radius as the format rounds them, and rel, tiny those of the bound of the
+# center's kernel (milestone2.md, "Bounds of two limbs"; Directed2.v, outward_rel, outward_abs).
+kernel:        add_up_2_2
+input:         x = x0 x1
+input:         y = y0 y1
+output:        h = h0 h1
+value:         x+y
+requires:      normalized x
+requires:      normalized y
+ensures:       normalized h
+ensures:       outward h above rel=(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u) abs=2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2) exact_when=zero(x+y)
+min_precision: 3
+source:        add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+cone_exempt:   through add_up_1 and two_sum_ord, which select; the interval kernels test h0
+
+(z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
+zd          = eq(z0, 0)
+dd          = select(zd, 0, d)
+w           = add_up_1(z1, dd)
+(h0, h1)    = two_sum_ord(z0, w)

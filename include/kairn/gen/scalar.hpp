@@ -9,7 +9,7 @@
 // the first arms of its selects need come first; when the masks are true the outputs are
 // those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,
 // "Emission").
-// Not constexpr: ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, mul_down_1, mul_up_1, ball_add_2, ball_add_2_full, mul_2_2, ball_mul_2, ball_mul_2_full, mul_2_1, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, mul_2_1_full, mul_2_2_full.
+// Not constexpr: ball_add_1, ball_add_1_full, ball_mul_1, ball_mul_1_full, ball_scale_1, ball_scale_1_full, ball_sub_1, ball_sub_1_full, mul_dir_1, mul_down_1, mul_up_1, add_ball_2_2, add_down_2_2, add_up_2_2, ball_add_2, ball_add_2_full, mul_2_2, ball_mul_2, ball_mul_2_full, mul_2_1, ball_scale_2, ball_scale_2_full, ball_sub_2, ball_sub_2_full, mul_2_1_full, mul_2_2_full, mul_ball_2_2, sub_down_2_2, sub_up_2_2.
 #pragma once
 
 #include "prelude.hpp"
@@ -326,6 +326,120 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(float cx, float rx, float cy, float r
         const float rw = e ? r : q;
         cw_out = cw;
         rw_out = rw;
+#endif
+    }
+}
+
+// sub_down_1(a, b) -> r
+// add_down_1 on a and -b (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_down_1(double a, double b, double& r_out) noexcept {
+    const double nb = -b;
+    // (r) = add_down_1(a, nb)
+    // (r_s, r_e) = two_sum_ord(a, nb)
+    const double r_s_aa = abs_bits(a);
+    const double r_s_ab = abs_bits(nb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const double r_s_h = r_s_m ? nb : a;
+    const double r_s_l = r_s_m ? a : nb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const double r_s = r_s_h + r_s_l;
+    const double r_s_z = r_s - r_s_h;
+    const double r_e = r_s_l - r_s_z;
+    const bool r_n = 0.0 > r_e;
+    const double r_p = next_down_bits(r_s);
+    const double r = r_n ? r_p : r_s;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sub_down_1(float a, float b, float& r_out) noexcept {
+    const float nb = -b;
+    // (r) = add_down_1(a, nb)
+    // (r_s, r_e) = two_sum_ord(a, nb)
+    const float r_s_aa = abs_bits(a);
+    const float r_s_ab = abs_bits(nb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const float r_s_h = r_s_m ? nb : a;
+    const float r_s_l = r_s_m ? a : nb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const float r_s = r_s_h + r_s_l;
+    const float r_s_z = r_s - r_s_h;
+    const float r_e = r_s_l - r_s_z;
+    const bool r_n = 0.0f > r_e;
+    const float r_p = next_down_bits(r_s);
+    const float r = r_n ? r_p : r_s;
+    r_out = r;
+}
+
+// ball_lower_as_1(c, r) -> l
+// the center minus the radius, rounded down (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD constexpr result<double, 1> ball_lower_as_1(double t, bool ne) noexcept {
+    const double l = ne ? t : std::numeric_limits<double>::infinity();
+    return {{l}};
+}
+KAIRN_GEN_COLD constexpr result<float, 1> ball_lower_as_1(float t, bool ne) noexcept {
+    const float l = ne ? t : std::numeric_limits<float>::infinity();
+    return {{l}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE constexpr void ball_lower_as_1(double c, double r, double& l_out) noexcept {
+    // (t) = sub_down_1(c, r)
+    const double t_nb = -r;
+    // (t) = add_down_1(c, t_nb)
+    // (t_s, t_e) = two_sum_ord(c, t_nb)
+    const double t_s_aa = abs_bits(c);
+    const double t_s_ab = abs_bits(t_nb);
+    const bool t_s_m = t_s_ab > t_s_aa;
+    const double t_s_h = t_s_m ? t_nb : c;
+    const double t_s_l = t_s_m ? c : t_nb;
+    // (t_s, t_e) = fast_two_sum(t_s_h, t_s_l)
+    const double t_s = t_s_h + t_s_l;
+    const double t_s_z = t_s - t_s_h;
+    const double t_e = t_s_l - t_s_z;
+    const bool t_n = 0.0 > t_e;
+    const double t_p = next_down_bits(t_s);
+    const double t = t_n ? t_p : t_s;
+    const bool ne = r == r;
+    if (ne) [[likely]] {
+        l_out = t;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 1> fixed_ = fixup::ball_lower_as_1(t, ne);
+        l_out = fixed_.limb[0];
+#else
+        const double l = ne ? t : std::numeric_limits<double>::infinity();
+        l_out = l;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE constexpr void ball_lower_as_1(float c, float r, float& l_out) noexcept {
+    // (t) = sub_down_1(c, r)
+    const float t_nb = -r;
+    // (t) = add_down_1(c, t_nb)
+    // (t_s, t_e) = two_sum_ord(c, t_nb)
+    const float t_s_aa = abs_bits(c);
+    const float t_s_ab = abs_bits(t_nb);
+    const bool t_s_m = t_s_ab > t_s_aa;
+    const float t_s_h = t_s_m ? t_nb : c;
+    const float t_s_l = t_s_m ? c : t_nb;
+    // (t_s, t_e) = fast_two_sum(t_s_h, t_s_l)
+    const float t_s = t_s_h + t_s_l;
+    const float t_s_z = t_s - t_s_h;
+    const float t_e = t_s_l - t_s_z;
+    const bool t_n = 0.0f > t_e;
+    const float t_p = next_down_bits(t_s);
+    const float t = t_n ? t_p : t_s;
+    const bool ne = r == r;
+    if (ne) [[likely]] {
+        l_out = t;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 1> fixed_ = fixup::ball_lower_as_1(t, ne);
+        l_out = fixed_.limb[0];
+#else
+        const float l = ne ? t : std::numeric_limits<float>::infinity();
+        l_out = l;
 #endif
     }
 }
@@ -890,6 +1004,81 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(float cx, float rx, float cy, float r
     }
 }
 
+// ball_upper_as_1(c, r) -> h
+// the center plus the radius, rounded up (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD constexpr result<double, 1> ball_upper_as_1(double t, bool ne) noexcept {
+    const double mi = -std::numeric_limits<double>::infinity();
+    const double h = ne ? t : mi;
+    return {{h}};
+}
+KAIRN_GEN_COLD constexpr result<float, 1> ball_upper_as_1(float t, bool ne) noexcept {
+    const float mi = -std::numeric_limits<float>::infinity();
+    const float h = ne ? t : mi;
+    return {{h}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE constexpr void ball_upper_as_1(double c, double r, double& h_out) noexcept {
+    // (t) = add_up_1(c, r)
+    // (t_s, t_e) = two_sum_ord(c, r)
+    const double t_s_aa = abs_bits(c);
+    const double t_s_ab = abs_bits(r);
+    const bool t_s_m = t_s_ab > t_s_aa;
+    const double t_s_h = t_s_m ? r : c;
+    const double t_s_l = t_s_m ? c : r;
+    // (t_s, t_e) = fast_two_sum(t_s_h, t_s_l)
+    const double t_s = t_s_h + t_s_l;
+    const double t_s_z = t_s - t_s_h;
+    const double t_e = t_s_l - t_s_z;
+    const bool t_n = t_e > 0.0;
+    const double t_q = next_up_bits(t_s);
+    const double t = t_n ? t_q : t_s;
+    const bool ne = r == r;
+    if (ne) [[likely]] {
+        h_out = t;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 1> fixed_ = fixup::ball_upper_as_1(t, ne);
+        h_out = fixed_.limb[0];
+#else
+        const double mi = -std::numeric_limits<double>::infinity();
+        const double h = ne ? t : mi;
+        h_out = h;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE constexpr void ball_upper_as_1(float c, float r, float& h_out) noexcept {
+    // (t) = add_up_1(c, r)
+    // (t_s, t_e) = two_sum_ord(c, r)
+    const float t_s_aa = abs_bits(c);
+    const float t_s_ab = abs_bits(r);
+    const bool t_s_m = t_s_ab > t_s_aa;
+    const float t_s_h = t_s_m ? r : c;
+    const float t_s_l = t_s_m ? c : r;
+    // (t_s, t_e) = fast_two_sum(t_s_h, t_s_l)
+    const float t_s = t_s_h + t_s_l;
+    const float t_s_z = t_s - t_s_h;
+    const float t_e = t_s_l - t_s_z;
+    const bool t_n = t_e > 0.0f;
+    const float t_q = next_up_bits(t_s);
+    const float t = t_n ? t_q : t_s;
+    const bool ne = r == r;
+    if (ne) [[likely]] {
+        h_out = t;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 1> fixed_ = fixup::ball_upper_as_1(t, ne);
+        h_out = fixed_.limb[0];
+#else
+        const float mi = -std::numeric_limits<float>::infinity();
+        const float h = ne ? t : mi;
+        h_out = h;
+#endif
+    }
+}
+
 // fast_two_sum_entry(a, b) -> r = (s, e)
 // fast_two_sum on its guarded operands (Milestone 2 listing). Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum_entry(double a, double b, double& s_out, double& e_out) noexcept {
@@ -911,6 +1100,389 @@ KAIRN_GEN_FORCEINLINE constexpr void fast_two_sum_entry(float a, float b, float&
     const float e = gb - s_z;
     s_out = s;
     e_out = e;
+}
+
+// interval_add_1(xl, xu, yl, yu) -> zl, zu
+// directed sums of the bounds (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD constexpr result<double, 2> interval_add_1(double l, double h, bool ne) noexcept {
+    const double mi = -std::numeric_limits<double>::infinity();
+    const double zl = ne ? l : std::numeric_limits<double>::infinity();
+    const double zu = ne ? h : mi;
+    return {{zl, zu}};
+}
+KAIRN_GEN_COLD constexpr result<float, 2> interval_add_1(float l, float h, bool ne) noexcept {
+    const float mi = -std::numeric_limits<float>::infinity();
+    const float zl = ne ? l : std::numeric_limits<float>::infinity();
+    const float zu = ne ? h : mi;
+    return {{zl, zu}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE constexpr void interval_add_1(double xl, double xu, double yl, double yu, double& zl_out, double& zu_out) noexcept {
+    // (l) = add_down_1(xl, yl)
+    // (l_s, l_e) = two_sum_ord(xl, yl)
+    const double l_s_aa = abs_bits(xl);
+    const double l_s_ab = abs_bits(yl);
+    const bool l_s_m = l_s_ab > l_s_aa;
+    const double l_s_h = l_s_m ? yl : xl;
+    const double l_s_l = l_s_m ? xl : yl;
+    // (l_s, l_e) = fast_two_sum(l_s_h, l_s_l)
+    const double l_s = l_s_h + l_s_l;
+    const double l_s_z = l_s - l_s_h;
+    const double l_e = l_s_l - l_s_z;
+    const bool l_n = 0.0 > l_e;
+    const double l_p = next_down_bits(l_s);
+    const double l = l_n ? l_p : l_s;
+    // (h) = add_up_1(xu, yu)
+    // (h_s, h_e) = two_sum_ord(xu, yu)
+    const double h_s_aa = abs_bits(xu);
+    const double h_s_ab = abs_bits(yu);
+    const bool h_s_m = h_s_ab > h_s_aa;
+    const double h_s_h = h_s_m ? yu : xu;
+    const double h_s_l = h_s_m ? xu : yu;
+    // (h_s, h_e) = fast_two_sum(h_s_h, h_s_l)
+    const double h_s = h_s_h + h_s_l;
+    const double h_s_z = h_s - h_s_h;
+    const double h_e = h_s_l - h_s_z;
+    const bool h_n = h_e > 0.0;
+    const double h_q = next_up_bits(h_s);
+    const double h = h_n ? h_q : h_s;
+    const bool nx = std::numeric_limits<double>::infinity() > xl;
+    const bool ny = std::numeric_limits<double>::infinity() > yl;
+    const bool ne = nx & ny;
+    if (ne) [[likely]] {
+        zl_out = l;
+        zu_out = h;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 2> fixed_ = fixup::interval_add_1(l, h, ne);
+        zl_out = fixed_.limb[0];
+        zu_out = fixed_.limb[1];
+#else
+        const double mi = -std::numeric_limits<double>::infinity();
+        const double zl = ne ? l : std::numeric_limits<double>::infinity();
+        const double zu = ne ? h : mi;
+        zl_out = zl;
+        zu_out = zu;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE constexpr void interval_add_1(float xl, float xu, float yl, float yu, float& zl_out, float& zu_out) noexcept {
+    // (l) = add_down_1(xl, yl)
+    // (l_s, l_e) = two_sum_ord(xl, yl)
+    const float l_s_aa = abs_bits(xl);
+    const float l_s_ab = abs_bits(yl);
+    const bool l_s_m = l_s_ab > l_s_aa;
+    const float l_s_h = l_s_m ? yl : xl;
+    const float l_s_l = l_s_m ? xl : yl;
+    // (l_s, l_e) = fast_two_sum(l_s_h, l_s_l)
+    const float l_s = l_s_h + l_s_l;
+    const float l_s_z = l_s - l_s_h;
+    const float l_e = l_s_l - l_s_z;
+    const bool l_n = 0.0f > l_e;
+    const float l_p = next_down_bits(l_s);
+    const float l = l_n ? l_p : l_s;
+    // (h) = add_up_1(xu, yu)
+    // (h_s, h_e) = two_sum_ord(xu, yu)
+    const float h_s_aa = abs_bits(xu);
+    const float h_s_ab = abs_bits(yu);
+    const bool h_s_m = h_s_ab > h_s_aa;
+    const float h_s_h = h_s_m ? yu : xu;
+    const float h_s_l = h_s_m ? xu : yu;
+    // (h_s, h_e) = fast_two_sum(h_s_h, h_s_l)
+    const float h_s = h_s_h + h_s_l;
+    const float h_s_z = h_s - h_s_h;
+    const float h_e = h_s_l - h_s_z;
+    const bool h_n = h_e > 0.0f;
+    const float h_q = next_up_bits(h_s);
+    const float h = h_n ? h_q : h_s;
+    const bool nx = std::numeric_limits<float>::infinity() > xl;
+    const bool ny = std::numeric_limits<float>::infinity() > yl;
+    const bool ne = nx & ny;
+    if (ne) [[likely]] {
+        zl_out = l;
+        zu_out = h;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 2> fixed_ = fixup::interval_add_1(l, h, ne);
+        zl_out = fixed_.limb[0];
+        zu_out = fixed_.limb[1];
+#else
+        const float mi = -std::numeric_limits<float>::infinity();
+        const float zl = ne ? l : std::numeric_limits<float>::infinity();
+        const float zu = ne ? h : mi;
+        zl_out = zl;
+        zu_out = zu;
+#endif
+    }
+}
+
+// interval_make_1(lo, hi) -> zl, zu
+// constructor of an interval (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD constexpr result<double, 2> interval_make_1(double gl, double gu, double mi, bool v) noexcept {
+    const bool ql = gl == gl;
+    const bool qu = gu == gu;
+    const bool nn = ql & qu;
+    const double el = nn ? std::numeric_limits<double>::infinity() : mi;
+    const double eu = nn ? mi : std::numeric_limits<double>::infinity();
+    const double zl = v ? gl : el;
+    const double zu = v ? gu : eu;
+    return {{zl, zu}};
+}
+KAIRN_GEN_COLD constexpr result<float, 2> interval_make_1(float gl, float gu, float mi, bool v) noexcept {
+    const bool ql = gl == gl;
+    const bool qu = gu == gu;
+    const bool nn = ql & qu;
+    const float el = nn ? std::numeric_limits<float>::infinity() : mi;
+    const float eu = nn ? mi : std::numeric_limits<float>::infinity();
+    const float zl = v ? gl : el;
+    const float zu = v ? gu : eu;
+    return {{zl, zu}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE constexpr void interval_make_1(double lo, double hi, double& zl_out, double& zu_out) noexcept {
+    const double gl = __builtin_is_constant_evaluated() ? lo : lo + 0.0;
+    const double gu = __builtin_is_constant_evaluated() ? hi : hi + 0.0;
+    const bool ok = gu >= gl;
+    const bool nl = std::numeric_limits<double>::infinity() > gl;
+    const double mi = -std::numeric_limits<double>::infinity();
+    const bool nu = gu > mi;
+    const bool va = ok & nl;
+    const bool v = va & nu;
+    if (v) [[likely]] {
+        zl_out = gl;
+        zu_out = gu;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 2> fixed_ = fixup::interval_make_1(gl, gu, mi, v);
+        zl_out = fixed_.limb[0];
+        zu_out = fixed_.limb[1];
+#else
+        const bool ql = gl == gl;
+        const bool qu = gu == gu;
+        const bool nn = ql & qu;
+        const double el = nn ? std::numeric_limits<double>::infinity() : mi;
+        const double eu = nn ? mi : std::numeric_limits<double>::infinity();
+        const double zl = v ? gl : el;
+        const double zu = v ? gu : eu;
+        zl_out = zl;
+        zu_out = zu;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE constexpr void interval_make_1(float lo, float hi, float& zl_out, float& zu_out) noexcept {
+    const float gl = __builtin_is_constant_evaluated() ? lo : lo + 0.0f;
+    const float gu = __builtin_is_constant_evaluated() ? hi : hi + 0.0f;
+    const bool ok = gu >= gl;
+    const bool nl = std::numeric_limits<float>::infinity() > gl;
+    const float mi = -std::numeric_limits<float>::infinity();
+    const bool nu = gu > mi;
+    const bool va = ok & nl;
+    const bool v = va & nu;
+    if (v) [[likely]] {
+        zl_out = gl;
+        zu_out = gu;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 2> fixed_ = fixup::interval_make_1(gl, gu, mi, v);
+        zl_out = fixed_.limb[0];
+        zu_out = fixed_.limb[1];
+#else
+        const bool ql = gl == gl;
+        const bool qu = gu == gu;
+        const bool nn = ql & qu;
+        const float el = nn ? std::numeric_limits<float>::infinity() : mi;
+        const float eu = nn ? mi : std::numeric_limits<float>::infinity();
+        const float zl = v ? gl : el;
+        const float zu = v ? gu : eu;
+        zl_out = zl;
+        zu_out = zu;
+#endif
+    }
+}
+
+// interval_neg_1(xl, xu) -> zl, zu
+// the bounds negated and exchanged (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void interval_neg_1(double xl, double xu, double& zl_out, double& zu_out) noexcept {
+    const double zl = -xu;
+    const double zu = -xl;
+    zl_out = zl;
+    zu_out = zu;
+}
+KAIRN_GEN_FORCEINLINE constexpr void interval_neg_1(float xl, float xu, float& zl_out, float& zu_out) noexcept {
+    const float zl = -xu;
+    const float zu = -xl;
+    zl_out = zl;
+    zu_out = zu;
+}
+
+// sub_up_1(a, b) -> r
+// add_up_1 on a and -b (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void sub_up_1(double a, double b, double& r_out) noexcept {
+    const double nb = -b;
+    // (r) = add_up_1(a, nb)
+    // (r_s, r_e) = two_sum_ord(a, nb)
+    const double r_s_aa = abs_bits(a);
+    const double r_s_ab = abs_bits(nb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const double r_s_h = r_s_m ? nb : a;
+    const double r_s_l = r_s_m ? a : nb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const double r_s = r_s_h + r_s_l;
+    const double r_s_z = r_s - r_s_h;
+    const double r_e = r_s_l - r_s_z;
+    const bool r_n = r_e > 0.0;
+    const double r_q = next_up_bits(r_s);
+    const double r = r_n ? r_q : r_s;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE constexpr void sub_up_1(float a, float b, float& r_out) noexcept {
+    const float nb = -b;
+    // (r) = add_up_1(a, nb)
+    // (r_s, r_e) = two_sum_ord(a, nb)
+    const float r_s_aa = abs_bits(a);
+    const float r_s_ab = abs_bits(nb);
+    const bool r_s_m = r_s_ab > r_s_aa;
+    const float r_s_h = r_s_m ? nb : a;
+    const float r_s_l = r_s_m ? a : nb;
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const float r_s = r_s_h + r_s_l;
+    const float r_s_z = r_s - r_s_h;
+    const float r_e = r_s_l - r_s_z;
+    const bool r_n = r_e > 0.0f;
+    const float r_q = next_up_bits(r_s);
+    const float r = r_n ? r_q : r_s;
+    r_out = r;
+}
+
+// interval_sub_1(xl, xu, yl, yu) -> zl, zu
+// directed differences of the bounds (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD constexpr result<double, 2> interval_sub_1(double l, double h, bool ne) noexcept {
+    const double mi = -std::numeric_limits<double>::infinity();
+    const double zl = ne ? l : std::numeric_limits<double>::infinity();
+    const double zu = ne ? h : mi;
+    return {{zl, zu}};
+}
+KAIRN_GEN_COLD constexpr result<float, 2> interval_sub_1(float l, float h, bool ne) noexcept {
+    const float mi = -std::numeric_limits<float>::infinity();
+    const float zl = ne ? l : std::numeric_limits<float>::infinity();
+    const float zu = ne ? h : mi;
+    return {{zl, zu}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE constexpr void interval_sub_1(double xl, double xu, double yl, double yu, double& zl_out, double& zu_out) noexcept {
+    // (l) = sub_down_1(xl, yu)
+    const double l_nb = -yu;
+    // (l) = add_down_1(xl, l_nb)
+    // (l_s, l_e) = two_sum_ord(xl, l_nb)
+    const double l_s_aa = abs_bits(xl);
+    const double l_s_ab = abs_bits(l_nb);
+    const bool l_s_m = l_s_ab > l_s_aa;
+    const double l_s_h = l_s_m ? l_nb : xl;
+    const double l_s_l = l_s_m ? xl : l_nb;
+    // (l_s, l_e) = fast_two_sum(l_s_h, l_s_l)
+    const double l_s = l_s_h + l_s_l;
+    const double l_s_z = l_s - l_s_h;
+    const double l_e = l_s_l - l_s_z;
+    const bool l_n = 0.0 > l_e;
+    const double l_p = next_down_bits(l_s);
+    const double l = l_n ? l_p : l_s;
+    // (h) = sub_up_1(xu, yl)
+    const double h_nb = -yl;
+    // (h) = add_up_1(xu, h_nb)
+    // (h_s, h_e) = two_sum_ord(xu, h_nb)
+    const double h_s_aa = abs_bits(xu);
+    const double h_s_ab = abs_bits(h_nb);
+    const bool h_s_m = h_s_ab > h_s_aa;
+    const double h_s_h = h_s_m ? h_nb : xu;
+    const double h_s_l = h_s_m ? xu : h_nb;
+    // (h_s, h_e) = fast_two_sum(h_s_h, h_s_l)
+    const double h_s = h_s_h + h_s_l;
+    const double h_s_z = h_s - h_s_h;
+    const double h_e = h_s_l - h_s_z;
+    const bool h_n = h_e > 0.0;
+    const double h_q = next_up_bits(h_s);
+    const double h = h_n ? h_q : h_s;
+    const bool nx = std::numeric_limits<double>::infinity() > xl;
+    const bool ny = std::numeric_limits<double>::infinity() > yl;
+    const bool ne = nx & ny;
+    if (ne) [[likely]] {
+        zl_out = l;
+        zu_out = h;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 2> fixed_ = fixup::interval_sub_1(l, h, ne);
+        zl_out = fixed_.limb[0];
+        zu_out = fixed_.limb[1];
+#else
+        const double mi = -std::numeric_limits<double>::infinity();
+        const double zl = ne ? l : std::numeric_limits<double>::infinity();
+        const double zu = ne ? h : mi;
+        zl_out = zl;
+        zu_out = zu;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE constexpr void interval_sub_1(float xl, float xu, float yl, float yu, float& zl_out, float& zu_out) noexcept {
+    // (l) = sub_down_1(xl, yu)
+    const float l_nb = -yu;
+    // (l) = add_down_1(xl, l_nb)
+    // (l_s, l_e) = two_sum_ord(xl, l_nb)
+    const float l_s_aa = abs_bits(xl);
+    const float l_s_ab = abs_bits(l_nb);
+    const bool l_s_m = l_s_ab > l_s_aa;
+    const float l_s_h = l_s_m ? l_nb : xl;
+    const float l_s_l = l_s_m ? xl : l_nb;
+    // (l_s, l_e) = fast_two_sum(l_s_h, l_s_l)
+    const float l_s = l_s_h + l_s_l;
+    const float l_s_z = l_s - l_s_h;
+    const float l_e = l_s_l - l_s_z;
+    const bool l_n = 0.0f > l_e;
+    const float l_p = next_down_bits(l_s);
+    const float l = l_n ? l_p : l_s;
+    // (h) = sub_up_1(xu, yl)
+    const float h_nb = -yl;
+    // (h) = add_up_1(xu, h_nb)
+    // (h_s, h_e) = two_sum_ord(xu, h_nb)
+    const float h_s_aa = abs_bits(xu);
+    const float h_s_ab = abs_bits(h_nb);
+    const bool h_s_m = h_s_ab > h_s_aa;
+    const float h_s_h = h_s_m ? h_nb : xu;
+    const float h_s_l = h_s_m ? xu : h_nb;
+    // (h_s, h_e) = fast_two_sum(h_s_h, h_s_l)
+    const float h_s = h_s_h + h_s_l;
+    const float h_s_z = h_s - h_s_h;
+    const float h_e = h_s_l - h_s_z;
+    const bool h_n = h_e > 0.0f;
+    const float h_q = next_up_bits(h_s);
+    const float h = h_n ? h_q : h_s;
+    const bool nx = std::numeric_limits<float>::infinity() > xl;
+    const bool ny = std::numeric_limits<float>::infinity() > yl;
+    const bool ne = nx & ny;
+    if (ne) [[likely]] {
+        zl_out = l;
+        zu_out = h;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 2> fixed_ = fixup::interval_sub_1(l, h, ne);
+        zl_out = fixed_.limb[0];
+        zu_out = fixed_.limb[1];
+#else
+        const float mi = -std::numeric_limits<float>::infinity();
+        const float zl = ne ? l : std::numeric_limits<float>::infinity();
+        const float zu = ne ? h : mi;
+        zl_out = zl;
+        zu_out = zu;
+#endif
+    }
 }
 
 // make_2(a) -> x = (x0, x1)
@@ -1004,6 +1576,57 @@ KAIRN_GEN_FORCEINLINE constexpr void two_prod(float a, float b, float& p_out, fl
     const float e = fma_rn(a, b, -p);
     p_out = p;
     e_out = e;
+}
+
+// mul_dir_1(a, b) -> d, v
+// two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). Status: unverified (real model), unverified (IEEE model); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_dir_1(double a, double b, double& d_out, double& v_out) noexcept {
+    // (p, e) = two_prod(a, b)
+    const double p = fma_rn(a, b, 0.0);
+    const double e = fma_rn(a, b, -p);
+    const double ap = abs_bits(p);
+    const bool bd = 0x1p-969 > ap;
+    const bool ez = e == 0.0;
+    const bool un = bd & ez;
+    const bool n = 0.0 > e;
+    const bool sd = n | un;
+    const double pp = next_down_bits(p);
+    const double dz = sd ? pp : p;
+    const bool q = e > 0.0;
+    const bool su = q | un;
+    const double sp = next_up_bits(p);
+    const double vz = su ? sp : p;
+    const bool za = a == 0.0;
+    const bool zb = b == 0.0;
+    const bool zz = za | zb;
+    const double d = zz ? 0.0 : dz;
+    const double v = zz ? 0.0 : vz;
+    d_out = d;
+    v_out = v;
+}
+KAIRN_GEN_FORCEINLINE void mul_dir_1(float a, float b, float& d_out, float& v_out) noexcept {
+    // (p, e) = two_prod(a, b)
+    const float p = fma_rn(a, b, 0.0f);
+    const float e = fma_rn(a, b, -p);
+    const float ap = abs_bits(p);
+    const bool bd = 0x1p-102f > ap;
+    const bool ez = e == 0.0f;
+    const bool un = bd & ez;
+    const bool n = 0.0f > e;
+    const bool sd = n | un;
+    const float pp = next_down_bits(p);
+    const float dz = sd ? pp : p;
+    const bool q = e > 0.0f;
+    const bool su = q | un;
+    const float sp = next_up_bits(p);
+    const float vz = su ? sp : p;
+    const bool za = a == 0.0f;
+    const bool zb = b == 0.0f;
+    const bool zz = za | zb;
+    const float d = zz ? 0.0f : dz;
+    const float v = zz ? 0.0f : vz;
+    d_out = d;
+    v_out = v;
 }
 
 // mul_down_1(a, b) -> r
@@ -1170,45 +1793,6 @@ KAIRN_GEN_FORCEINLINE constexpr void split(float a, float& ah_out, float& al_out
     al_out = al;
 }
 
-// sub_down_1(a, b) -> r
-// add_down_1 on a and -b (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
-KAIRN_GEN_FORCEINLINE constexpr void sub_down_1(double a, double b, double& r_out) noexcept {
-    const double nb = -b;
-    // (r) = add_down_1(a, nb)
-    // (r_s, r_e) = two_sum_ord(a, nb)
-    const double r_s_aa = abs_bits(a);
-    const double r_s_ab = abs_bits(nb);
-    const bool r_s_m = r_s_ab > r_s_aa;
-    const double r_s_h = r_s_m ? nb : a;
-    const double r_s_l = r_s_m ? a : nb;
-    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
-    const double r_s = r_s_h + r_s_l;
-    const double r_s_z = r_s - r_s_h;
-    const double r_e = r_s_l - r_s_z;
-    const bool r_n = 0.0 > r_e;
-    const double r_p = next_down_bits(r_s);
-    const double r = r_n ? r_p : r_s;
-    r_out = r;
-}
-KAIRN_GEN_FORCEINLINE constexpr void sub_down_1(float a, float b, float& r_out) noexcept {
-    const float nb = -b;
-    // (r) = add_down_1(a, nb)
-    // (r_s, r_e) = two_sum_ord(a, nb)
-    const float r_s_aa = abs_bits(a);
-    const float r_s_ab = abs_bits(nb);
-    const bool r_s_m = r_s_ab > r_s_aa;
-    const float r_s_h = r_s_m ? nb : a;
-    const float r_s_l = r_s_m ? a : nb;
-    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
-    const float r_s = r_s_h + r_s_l;
-    const float r_s_z = r_s - r_s_h;
-    const float r_e = r_s_l - r_s_z;
-    const bool r_n = 0.0f > r_e;
-    const float r_p = next_down_bits(r_s);
-    const float r = r_n ? r_p : r_s;
-    r_out = r;
-}
-
 // sub_down_entry(a, b) -> r
 // sub_down_1 on its guarded operands (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void sub_down_entry(double a, double b, double& r_out) noexcept {
@@ -1251,45 +1835,6 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_down_entry(float a, float b, float& r_o
     const bool r_n = 0.0f > r_e;
     const float r_p = next_down_bits(r_s);
     const float r = r_n ? r_p : r_s;
-    r_out = r;
-}
-
-// sub_up_1(a, b) -> r
-// add_up_1 on a and -b (Milestone 2 listing). Status: proved (real model), proved (IEEE model); constexpr.
-KAIRN_GEN_FORCEINLINE constexpr void sub_up_1(double a, double b, double& r_out) noexcept {
-    const double nb = -b;
-    // (r) = add_up_1(a, nb)
-    // (r_s, r_e) = two_sum_ord(a, nb)
-    const double r_s_aa = abs_bits(a);
-    const double r_s_ab = abs_bits(nb);
-    const bool r_s_m = r_s_ab > r_s_aa;
-    const double r_s_h = r_s_m ? nb : a;
-    const double r_s_l = r_s_m ? a : nb;
-    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
-    const double r_s = r_s_h + r_s_l;
-    const double r_s_z = r_s - r_s_h;
-    const double r_e = r_s_l - r_s_z;
-    const bool r_n = r_e > 0.0;
-    const double r_q = next_up_bits(r_s);
-    const double r = r_n ? r_q : r_s;
-    r_out = r;
-}
-KAIRN_GEN_FORCEINLINE constexpr void sub_up_1(float a, float b, float& r_out) noexcept {
-    const float nb = -b;
-    // (r) = add_up_1(a, nb)
-    // (r_s, r_e) = two_sum_ord(a, nb)
-    const float r_s_aa = abs_bits(a);
-    const float r_s_ab = abs_bits(nb);
-    const bool r_s_m = r_s_ab > r_s_aa;
-    const float r_s_h = r_s_m ? nb : a;
-    const float r_s_l = r_s_m ? a : nb;
-    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
-    const float r_s = r_s_h + r_s_l;
-    const float r_s_z = r_s - r_s_h;
-    const float r_e = r_s_l - r_s_z;
-    const bool r_n = r_e > 0.0f;
-    const float r_q = next_up_bits(r_s);
-    const float r = r_n ? r_q : r_s;
     r_out = r;
 }
 
@@ -1824,6 +2369,200 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_2_full(float x0, float x1, float y0, 
     }
 }
 
+// add_ball_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1), d
+// add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void add_ball_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out, double& d_out) noexcept {
+    // (z0, z1) = add_2_2(x0, x1, y0, y1)
+    // (z0_sh, z0_sl) = two_sum(x0, y0)
+    const double z0_sh = x0 + y0;
+    const double z0_sh_bb = z0_sh - x0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = x0 - z0_sh_t0;
+    const double z0_sh_t2 = y0 - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(x1, y1)
+    const double z0_th = x1 + y1;
+    const double z0_th_bb = z0_th - x1;
+    const double z0_th_t0 = z0_th - z0_th_bb;
+    const double z0_th_t1 = x1 - z0_th_t0;
+    const double z0_th_t2 = y1 - z0_th_bb;
+    const double z0_tl = z0_th_t1 + z0_th_t2;
+    const double z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const double z0_vh = z0_sh + z0_c;
+    const double z0_vh_z = z0_vh - z0_sh;
+    const double z0_vl = z0_c - z0_vh_z;
+    const double z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const double z0 = z0_vh + z0_w;
+    const double z0_z = z0 - z0_vh;
+    const double z1 = z0_w - z0_z;
+    const double az = abs_bits(z0);
+    const double t = fma_rn(az, 0x1.8000000000004p-105, 0.0);
+    const double d = fma_rn(t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
+    z0_out = z0;
+    z1_out = z1;
+    d_out = d;
+}
+KAIRN_GEN_FORCEINLINE void add_ball_2_2(float x0, float x1, float y0, float y1, float& z0_out, float& z1_out, float& d_out) noexcept {
+    // (z0, z1) = add_2_2(x0, x1, y0, y1)
+    // (z0_sh, z0_sl) = two_sum(x0, y0)
+    const float z0_sh = x0 + y0;
+    const float z0_sh_bb = z0_sh - x0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = x0 - z0_sh_t0;
+    const float z0_sh_t2 = y0 - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(x1, y1)
+    const float z0_th = x1 + y1;
+    const float z0_th_bb = z0_th - x1;
+    const float z0_th_t0 = z0_th - z0_th_bb;
+    const float z0_th_t1 = x1 - z0_th_t0;
+    const float z0_th_t2 = y1 - z0_th_bb;
+    const float z0_tl = z0_th_t1 + z0_th_t2;
+    const float z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float z0_vh = z0_sh + z0_c;
+    const float z0_vh_z = z0_vh - z0_sh;
+    const float z0_vl = z0_c - z0_vh_z;
+    const float z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float z0 = z0_vh + z0_w;
+    const float z0_z = z0 - z0_vh;
+    const float z1 = z0_w - z0_z;
+    const float az = abs_bits(z0);
+    const float t = fma_rn(az, 0x1.800008p-47f, 0.0f);
+    const float d = fma_rn(t, 0x1.000004p+0f, 0x1.000004p-126f);
+    z0_out = z0;
+    z1_out = z1;
+    d_out = d;
+}
+
+// add_down_2_2(x = (x0, x1), y = (y0, y1)) -> l = (l0, l1)
+// add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void add_down_2_2(double x0, double x1, double y0, double y1, double& l0_out, double& l1_out) noexcept {
+    // (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
+    // (z0, z1) = add_2_2(x0, x1, y0, y1)
+    // (z0_sh, z0_sl) = two_sum(x0, y0)
+    const double z0_sh = x0 + y0;
+    const double z0_sh_bb = z0_sh - x0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = x0 - z0_sh_t0;
+    const double z0_sh_t2 = y0 - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(x1, y1)
+    const double z0_th = x1 + y1;
+    const double z0_th_bb = z0_th - x1;
+    const double z0_th_t0 = z0_th - z0_th_bb;
+    const double z0_th_t1 = x1 - z0_th_t0;
+    const double z0_th_t2 = y1 - z0_th_bb;
+    const double z0_tl = z0_th_t1 + z0_th_t2;
+    const double z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const double z0_vh = z0_sh + z0_c;
+    const double z0_vh_z = z0_vh - z0_sh;
+    const double z0_vl = z0_c - z0_vh_z;
+    const double z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const double z0 = z0_vh + z0_w;
+    const double z0_z = z0 - z0_vh;
+    const double z1 = z0_w - z0_z;
+    const double z0_az = abs_bits(z0);
+    const double z0_t = fma_rn(z0_az, 0x1.8000000000004p-105, 0.0);
+    const double d = fma_rn(z0_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
+    const bool zd = z0 == 0.0;
+    const double dd = zd ? 0.0 : d;
+    // (w) = sub_down_1(z1, dd)
+    const double w_nb = -dd;
+    // (w) = add_down_1(z1, w_nb)
+    // (w_s, w_e) = two_sum_ord(z1, w_nb)
+    const double w_s_aa = abs_bits(z1);
+    const double w_s_ab = abs_bits(w_nb);
+    const bool w_s_m = w_s_ab > w_s_aa;
+    const double w_s_h = w_s_m ? w_nb : z1;
+    const double w_s_l = w_s_m ? z1 : w_nb;
+    // (w_s, w_e) = fast_two_sum(w_s_h, w_s_l)
+    const double w_s = w_s_h + w_s_l;
+    const double w_s_z = w_s - w_s_h;
+    const double w_e = w_s_l - w_s_z;
+    const bool w_n = 0.0 > w_e;
+    const double w_p = next_down_bits(w_s);
+    const double w = w_n ? w_p : w_s;
+    // (l0, l1) = two_sum_ord(z0, w)
+    const double l0_aa = abs_bits(z0);
+    const double l0_ab = abs_bits(w);
+    const bool l0_m = l0_ab > l0_aa;
+    const double l0_h = l0_m ? w : z0;
+    const double l0_l = l0_m ? z0 : w;
+    // (l0, l1) = fast_two_sum(l0_h, l0_l)
+    const double l0 = l0_h + l0_l;
+    const double l0_z = l0 - l0_h;
+    const double l1 = l0_l - l0_z;
+    l0_out = l0;
+    l1_out = l1;
+}
+KAIRN_GEN_FORCEINLINE void add_down_2_2(float x0, float x1, float y0, float y1, float& l0_out, float& l1_out) noexcept {
+    // (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
+    // (z0, z1) = add_2_2(x0, x1, y0, y1)
+    // (z0_sh, z0_sl) = two_sum(x0, y0)
+    const float z0_sh = x0 + y0;
+    const float z0_sh_bb = z0_sh - x0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = x0 - z0_sh_t0;
+    const float z0_sh_t2 = y0 - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(x1, y1)
+    const float z0_th = x1 + y1;
+    const float z0_th_bb = z0_th - x1;
+    const float z0_th_t0 = z0_th - z0_th_bb;
+    const float z0_th_t1 = x1 - z0_th_t0;
+    const float z0_th_t2 = y1 - z0_th_bb;
+    const float z0_tl = z0_th_t1 + z0_th_t2;
+    const float z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float z0_vh = z0_sh + z0_c;
+    const float z0_vh_z = z0_vh - z0_sh;
+    const float z0_vl = z0_c - z0_vh_z;
+    const float z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float z0 = z0_vh + z0_w;
+    const float z0_z = z0 - z0_vh;
+    const float z1 = z0_w - z0_z;
+    const float z0_az = abs_bits(z0);
+    const float z0_t = fma_rn(z0_az, 0x1.800008p-47f, 0.0f);
+    const float d = fma_rn(z0_t, 0x1.000004p+0f, 0x1.000004p-126f);
+    const bool zd = z0 == 0.0f;
+    const float dd = zd ? 0.0f : d;
+    // (w) = sub_down_1(z1, dd)
+    const float w_nb = -dd;
+    // (w) = add_down_1(z1, w_nb)
+    // (w_s, w_e) = two_sum_ord(z1, w_nb)
+    const float w_s_aa = abs_bits(z1);
+    const float w_s_ab = abs_bits(w_nb);
+    const bool w_s_m = w_s_ab > w_s_aa;
+    const float w_s_h = w_s_m ? w_nb : z1;
+    const float w_s_l = w_s_m ? z1 : w_nb;
+    // (w_s, w_e) = fast_two_sum(w_s_h, w_s_l)
+    const float w_s = w_s_h + w_s_l;
+    const float w_s_z = w_s - w_s_h;
+    const float w_e = w_s_l - w_s_z;
+    const bool w_n = 0.0f > w_e;
+    const float w_p = next_down_bits(w_s);
+    const float w = w_n ? w_p : w_s;
+    // (l0, l1) = two_sum_ord(z0, w)
+    const float l0_aa = abs_bits(z0);
+    const float l0_ab = abs_bits(w);
+    const bool l0_m = l0_ab > l0_aa;
+    const float l0_h = l0_m ? w : z0;
+    const float l0_l = l0_m ? z0 : w;
+    // (l0, l1) = fast_two_sum(l0_h, l0_l)
+    const float l0 = l0_h + l0_l;
+    const float l0_z = l0 - l0_h;
+    const float l1 = l0_l - l0_z;
+    l0_out = l0;
+    l1_out = l1;
+}
+
 // add_fast_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1)
 // JMP17 Alg. 5 (SloppyDWPlusDW); the bound and the normalization are proved here. Status: proved; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out) noexcept {
@@ -1958,6 +2697,127 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_full(float x0, float x1, float
         w1_out = w1;
 #endif
     }
+}
+
+// add_up_2_2(x = (x0, x1), y = (y0, y1)) -> h = (h0, h1)
+// add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void add_up_2_2(double x0, double x1, double y0, double y1, double& h0_out, double& h1_out) noexcept {
+    // (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
+    // (z0, z1) = add_2_2(x0, x1, y0, y1)
+    // (z0_sh, z0_sl) = two_sum(x0, y0)
+    const double z0_sh = x0 + y0;
+    const double z0_sh_bb = z0_sh - x0;
+    const double z0_sh_t0 = z0_sh - z0_sh_bb;
+    const double z0_sh_t1 = x0 - z0_sh_t0;
+    const double z0_sh_t2 = y0 - z0_sh_bb;
+    const double z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(x1, y1)
+    const double z0_th = x1 + y1;
+    const double z0_th_bb = z0_th - x1;
+    const double z0_th_t0 = z0_th - z0_th_bb;
+    const double z0_th_t1 = x1 - z0_th_t0;
+    const double z0_th_t2 = y1 - z0_th_bb;
+    const double z0_tl = z0_th_t1 + z0_th_t2;
+    const double z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const double z0_vh = z0_sh + z0_c;
+    const double z0_vh_z = z0_vh - z0_sh;
+    const double z0_vl = z0_c - z0_vh_z;
+    const double z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const double z0 = z0_vh + z0_w;
+    const double z0_z = z0 - z0_vh;
+    const double z1 = z0_w - z0_z;
+    const double z0_az = abs_bits(z0);
+    const double z0_t = fma_rn(z0_az, 0x1.8000000000004p-105, 0.0);
+    const double d = fma_rn(z0_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
+    const bool zd = z0 == 0.0;
+    const double dd = zd ? 0.0 : d;
+    // (w) = add_up_1(z1, dd)
+    // (w_s, w_e) = two_sum_ord(z1, dd)
+    const double w_s_aa = abs_bits(z1);
+    const double w_s_ab = abs_bits(dd);
+    const bool w_s_m = w_s_ab > w_s_aa;
+    const double w_s_h = w_s_m ? dd : z1;
+    const double w_s_l = w_s_m ? z1 : dd;
+    // (w_s, w_e) = fast_two_sum(w_s_h, w_s_l)
+    const double w_s = w_s_h + w_s_l;
+    const double w_s_z = w_s - w_s_h;
+    const double w_e = w_s_l - w_s_z;
+    const bool w_n = w_e > 0.0;
+    const double w_q = next_up_bits(w_s);
+    const double w = w_n ? w_q : w_s;
+    // (h0, h1) = two_sum_ord(z0, w)
+    const double h0_aa = abs_bits(z0);
+    const double h0_ab = abs_bits(w);
+    const bool h0_m = h0_ab > h0_aa;
+    const double h0_h = h0_m ? w : z0;
+    const double h0_l = h0_m ? z0 : w;
+    // (h0, h1) = fast_two_sum(h0_h, h0_l)
+    const double h0 = h0_h + h0_l;
+    const double h0_z = h0 - h0_h;
+    const double h1 = h0_l - h0_z;
+    h0_out = h0;
+    h1_out = h1;
+}
+KAIRN_GEN_FORCEINLINE void add_up_2_2(float x0, float x1, float y0, float y1, float& h0_out, float& h1_out) noexcept {
+    // (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
+    // (z0, z1) = add_2_2(x0, x1, y0, y1)
+    // (z0_sh, z0_sl) = two_sum(x0, y0)
+    const float z0_sh = x0 + y0;
+    const float z0_sh_bb = z0_sh - x0;
+    const float z0_sh_t0 = z0_sh - z0_sh_bb;
+    const float z0_sh_t1 = x0 - z0_sh_t0;
+    const float z0_sh_t2 = y0 - z0_sh_bb;
+    const float z0_sl = z0_sh_t1 + z0_sh_t2;
+    // (z0_th, z0_tl) = two_sum(x1, y1)
+    const float z0_th = x1 + y1;
+    const float z0_th_bb = z0_th - x1;
+    const float z0_th_t0 = z0_th - z0_th_bb;
+    const float z0_th_t1 = x1 - z0_th_t0;
+    const float z0_th_t2 = y1 - z0_th_bb;
+    const float z0_tl = z0_th_t1 + z0_th_t2;
+    const float z0_c = z0_sl + z0_th;
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float z0_vh = z0_sh + z0_c;
+    const float z0_vh_z = z0_vh - z0_sh;
+    const float z0_vl = z0_c - z0_vh_z;
+    const float z0_w = z0_tl + z0_vl;
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float z0 = z0_vh + z0_w;
+    const float z0_z = z0 - z0_vh;
+    const float z1 = z0_w - z0_z;
+    const float z0_az = abs_bits(z0);
+    const float z0_t = fma_rn(z0_az, 0x1.800008p-47f, 0.0f);
+    const float d = fma_rn(z0_t, 0x1.000004p+0f, 0x1.000004p-126f);
+    const bool zd = z0 == 0.0f;
+    const float dd = zd ? 0.0f : d;
+    // (w) = add_up_1(z1, dd)
+    // (w_s, w_e) = two_sum_ord(z1, dd)
+    const float w_s_aa = abs_bits(z1);
+    const float w_s_ab = abs_bits(dd);
+    const bool w_s_m = w_s_ab > w_s_aa;
+    const float w_s_h = w_s_m ? dd : z1;
+    const float w_s_l = w_s_m ? z1 : dd;
+    // (w_s, w_e) = fast_two_sum(w_s_h, w_s_l)
+    const float w_s = w_s_h + w_s_l;
+    const float w_s_z = w_s - w_s_h;
+    const float w_e = w_s_l - w_s_z;
+    const bool w_n = w_e > 0.0f;
+    const float w_q = next_up_bits(w_s);
+    const float w = w_n ? w_q : w_s;
+    // (h0, h1) = two_sum_ord(z0, w)
+    const float h0_aa = abs_bits(z0);
+    const float h0_ab = abs_bits(w);
+    const bool h0_m = h0_ab > h0_aa;
+    const float h0_h = h0_m ? w : z0;
+    const float h0_l = h0_m ? z0 : w;
+    // (h0, h1) = fast_two_sum(h0_h, h0_l)
+    const float h0 = h0_h + h0_l;
+    const float h0_z = h0 - h0_h;
+    const float h1 = h0_l - h0_z;
+    h0_out = h0;
+    h1_out = h1;
 }
 
 // ball_add_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
@@ -2172,6 +3032,104 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(float cx0, float cx1, float rx, float
         cw0_out = cw0;
         cw1_out = cw1;
         rw_out = rw;
+#endif
+    }
+}
+
+// to_down_2(x = (x0, x1)) -> t
+// the sign of x1 (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void to_down_2(double x0, double x1, double& t_out) noexcept {
+    const bool m = 0.0 > x1;
+    const double p = next_down_bits(x0);
+    const double t = m ? p : x0;
+    t_out = t;
+}
+KAIRN_GEN_FORCEINLINE constexpr void to_down_2(float x0, float x1, float& t_out) noexcept {
+    const bool m = 0.0f > x1;
+    const float p = next_down_bits(x0);
+    const float t = m ? p : x0;
+    t_out = t;
+}
+
+// ball_lower_as_2(c = (c0, c1), r) -> l
+// the center rounded down, minus the radius, rounded down (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD constexpr result<double, 1> ball_lower_as_2(double t, bool ne) noexcept {
+    const double l = ne ? t : std::numeric_limits<double>::infinity();
+    return {{l}};
+}
+KAIRN_GEN_COLD constexpr result<float, 1> ball_lower_as_2(float t, bool ne) noexcept {
+    const float l = ne ? t : std::numeric_limits<float>::infinity();
+    return {{l}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE constexpr void ball_lower_as_2(double c0, double c1, double r, double& l_out) noexcept {
+    // (a) = to_down_2(c0, c1)
+    const bool a_m = 0.0 > c1;
+    const double a_p = next_down_bits(c0);
+    const double a = a_m ? a_p : c0;
+    // (t) = sub_down_1(a, r)
+    const double t_nb = -r;
+    // (t) = add_down_1(a, t_nb)
+    // (t_s, t_e) = two_sum_ord(a, t_nb)
+    const double t_s_aa = abs_bits(a);
+    const double t_s_ab = abs_bits(t_nb);
+    const bool t_s_m = t_s_ab > t_s_aa;
+    const double t_s_h = t_s_m ? t_nb : a;
+    const double t_s_l = t_s_m ? a : t_nb;
+    // (t_s, t_e) = fast_two_sum(t_s_h, t_s_l)
+    const double t_s = t_s_h + t_s_l;
+    const double t_s_z = t_s - t_s_h;
+    const double t_e = t_s_l - t_s_z;
+    const bool t_n = 0.0 > t_e;
+    const double t_p = next_down_bits(t_s);
+    const double t = t_n ? t_p : t_s;
+    const bool ne = r == r;
+    if (ne) [[likely]] {
+        l_out = t;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 1> fixed_ = fixup::ball_lower_as_2(t, ne);
+        l_out = fixed_.limb[0];
+#else
+        const double l = ne ? t : std::numeric_limits<double>::infinity();
+        l_out = l;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE constexpr void ball_lower_as_2(float c0, float c1, float r, float& l_out) noexcept {
+    // (a) = to_down_2(c0, c1)
+    const bool a_m = 0.0f > c1;
+    const float a_p = next_down_bits(c0);
+    const float a = a_m ? a_p : c0;
+    // (t) = sub_down_1(a, r)
+    const float t_nb = -r;
+    // (t) = add_down_1(a, t_nb)
+    // (t_s, t_e) = two_sum_ord(a, t_nb)
+    const float t_s_aa = abs_bits(a);
+    const float t_s_ab = abs_bits(t_nb);
+    const bool t_s_m = t_s_ab > t_s_aa;
+    const float t_s_h = t_s_m ? t_nb : a;
+    const float t_s_l = t_s_m ? a : t_nb;
+    // (t_s, t_e) = fast_two_sum(t_s_h, t_s_l)
+    const float t_s = t_s_h + t_s_l;
+    const float t_s_z = t_s - t_s_h;
+    const float t_e = t_s_l - t_s_z;
+    const bool t_n = 0.0f > t_e;
+    const float t_p = next_down_bits(t_s);
+    const float t = t_n ? t_p : t_s;
+    const bool ne = r == r;
+    if (ne) [[likely]] {
+        l_out = t;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 1> fixed_ = fixup::ball_lower_as_2(t, ne);
+        l_out = fixed_.limb[0];
+#else
+        const float l = ne ? t : std::numeric_limits<float>::infinity();
+        l_out = l;
 #endif
     }
 }
@@ -2652,6 +3610,29 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2_full(float cx0, float cx1, 
     }
 }
 
+// ball_narrow_2_1(c = (c0, c1), r) -> cz, rz
+// the leading limb, and the radius widened by the second limb (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+KAIRN_GEN_FORCEINLINE constexpr void ball_narrow_2_1(double c0, double c1, double r, double& cz_out, double& rz_out) noexcept {
+    const double a = abs_bits(c1);
+    // (rz) = radd(r, a)
+    const double rz_s = r + a;
+    const double rz = next_up_bits(rz_s);
+    const bool wh = rz == std::numeric_limits<double>::infinity();
+    const double cz = wh ? 0.0 : c0;
+    cz_out = cz;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE constexpr void ball_narrow_2_1(float c0, float c1, float r, float& cz_out, float& rz_out) noexcept {
+    const float a = abs_bits(c1);
+    // (rz) = radd(r, a)
+    const float rz_s = r + a;
+    const float rz = next_up_bits(rz_s);
+    const bool wh = rz == std::numeric_limits<float>::infinity();
+    const float cz = wh ? 0.0f : c0;
+    cz_out = cz;
+    rz_out = rz;
+}
+
 // neg_2(x = (x0, x1)) -> z = (z0, z1)
 // limb by limb (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void neg_2(double x0, double x1, double& z0_out, double& z1_out) noexcept {
@@ -3101,6 +4082,89 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(float cx0, float cx1, float rx, float
     }
 }
 
+// ball_upper_as_2(c = (c0, c1), r) -> h
+// the center rounded up, plus the radius, rounded up (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+#if KAIRN_GEN_FIXUP_CALL
+namespace fixup {
+KAIRN_GEN_COLD constexpr result<double, 1> ball_upper_as_2(double t, bool ne) noexcept {
+    const double mi = -std::numeric_limits<double>::infinity();
+    const double h = ne ? t : mi;
+    return {{h}};
+}
+KAIRN_GEN_COLD constexpr result<float, 1> ball_upper_as_2(float t, bool ne) noexcept {
+    const float mi = -std::numeric_limits<float>::infinity();
+    const float h = ne ? t : mi;
+    return {{h}};
+}
+}  // namespace fixup
+#endif
+KAIRN_GEN_FORCEINLINE constexpr void ball_upper_as_2(double c0, double c1, double r, double& h_out) noexcept {
+    // (a) = to_up_2(c0, c1)
+    const bool a_m = c1 > 0.0;
+    const double a_s = next_up_bits(c0);
+    const double a = a_m ? a_s : c0;
+    // (t) = add_up_1(a, r)
+    // (t_s, t_e) = two_sum_ord(a, r)
+    const double t_s_aa = abs_bits(a);
+    const double t_s_ab = abs_bits(r);
+    const bool t_s_m = t_s_ab > t_s_aa;
+    const double t_s_h = t_s_m ? r : a;
+    const double t_s_l = t_s_m ? a : r;
+    // (t_s, t_e) = fast_two_sum(t_s_h, t_s_l)
+    const double t_s = t_s_h + t_s_l;
+    const double t_s_z = t_s - t_s_h;
+    const double t_e = t_s_l - t_s_z;
+    const bool t_n = t_e > 0.0;
+    const double t_q = next_up_bits(t_s);
+    const double t = t_n ? t_q : t_s;
+    const bool ne = r == r;
+    if (ne) [[likely]] {
+        h_out = t;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<double, 1> fixed_ = fixup::ball_upper_as_2(t, ne);
+        h_out = fixed_.limb[0];
+#else
+        const double mi = -std::numeric_limits<double>::infinity();
+        const double h = ne ? t : mi;
+        h_out = h;
+#endif
+    }
+}
+KAIRN_GEN_FORCEINLINE constexpr void ball_upper_as_2(float c0, float c1, float r, float& h_out) noexcept {
+    // (a) = to_up_2(c0, c1)
+    const bool a_m = c1 > 0.0f;
+    const float a_s = next_up_bits(c0);
+    const float a = a_m ? a_s : c0;
+    // (t) = add_up_1(a, r)
+    // (t_s, t_e) = two_sum_ord(a, r)
+    const float t_s_aa = abs_bits(a);
+    const float t_s_ab = abs_bits(r);
+    const bool t_s_m = t_s_ab > t_s_aa;
+    const float t_s_h = t_s_m ? r : a;
+    const float t_s_l = t_s_m ? a : r;
+    // (t_s, t_e) = fast_two_sum(t_s_h, t_s_l)
+    const float t_s = t_s_h + t_s_l;
+    const float t_s_z = t_s - t_s_h;
+    const float t_e = t_s_l - t_s_z;
+    const bool t_n = t_e > 0.0f;
+    const float t_q = next_up_bits(t_s);
+    const float t = t_n ? t_q : t_s;
+    const bool ne = r == r;
+    if (ne) [[likely]] {
+        h_out = t;
+    } else {
+#if KAIRN_GEN_FIXUP_CALL
+        const fixup::result<float, 1> fixed_ = fixup::ball_upper_as_2(t, ne);
+        h_out = fixed_.limb[0];
+#else
+        const float mi = -std::numeric_limits<float>::infinity();
+        const float h = ne ? t : mi;
+        h_out = h;
+#endif
+    }
+}
+
 // eq_2_1(x = (x0, x1), a) -> mask m
 // limbs compared in order (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void eq_2_1(double x0, double x1, double a, bool& m_out) noexcept {
@@ -3442,6 +4506,49 @@ KAIRN_GEN_FORCEINLINE void mul_2_2_full(float x0, float x1, float y0, float y1, 
         w1_out = w1;
 #endif
     }
+}
+
+// mul_ball_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1), d
+// mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void mul_ball_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out, double& d_out) noexcept {
+    // (z0, z1) = mul_2_2(x0, x1, y0, y1)
+    // (z0_ch, z0_cl1) = two_prod(x0, y0)
+    const double z0_ch = fma_rn(x0, y0, 0.0);
+    const double z0_cl1 = fma_rn(x0, y0, -z0_ch);
+    const double z0_tl0 = fma_rn(x1, y1, 0.0);
+    const double z0_tl1 = fma_rn(x0, y1, z0_tl0);
+    const double z0_cl2 = fma_rn(x1, y0, z0_tl1);
+    const double z0_cl3 = z0_cl1 + z0_cl2;
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const double z0 = z0_ch + z0_cl3;
+    const double z0_z = z0 - z0_ch;
+    const double z1 = z0_cl3 - z0_z;
+    const double az = abs_bits(z0);
+    const double t = fma_rn(az, 0x1.0000000000001p-104, 0.0);
+    const double d = fma_rn(t, 0x1.0000000000004p+0, 0x1.0000000000005p-1022);
+    z0_out = z0;
+    z1_out = z1;
+    d_out = d;
+}
+KAIRN_GEN_FORCEINLINE void mul_ball_2_2(float x0, float x1, float y0, float y1, float& z0_out, float& z1_out, float& d_out) noexcept {
+    // (z0, z1) = mul_2_2(x0, x1, y0, y1)
+    // (z0_ch, z0_cl1) = two_prod(x0, y0)
+    const float z0_ch = fma_rn(x0, y0, 0.0f);
+    const float z0_cl1 = fma_rn(x0, y0, -z0_ch);
+    const float z0_tl0 = fma_rn(x1, y1, 0.0f);
+    const float z0_tl1 = fma_rn(x0, y1, z0_tl0);
+    const float z0_cl2 = fma_rn(x1, y0, z0_tl1);
+    const float z0_cl3 = z0_cl1 + z0_cl2;
+    // (z0, z1) = fast_two_sum(z0_ch, z0_cl3)
+    const float z0 = z0_ch + z0_cl3;
+    const float z0_z = z0 - z0_ch;
+    const float z1 = z0_cl3 - z0_z;
+    const float az = abs_bits(z0);
+    const float t = fma_rn(az, 0x1.000002p-46f, 0.0f);
+    const float d = fma_rn(t, 0x1.000008p+0f, 0x1.00000ap-126f);
+    z0_out = z0;
+    z1_out = z1;
+    d_out = d;
 }
 
 // mul_pow2_2(x = (x0, x1), c) -> z = (z0, z1)
@@ -4044,19 +5151,266 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(float x0, float x1, float y0, 
     }
 }
 
-// to_down_2(x = (x0, x1)) -> t
-// the sign of x1 (Milestone 1 listing). Status: proved (real model), proved (IEEE model); constexpr.
-KAIRN_GEN_FORCEINLINE constexpr void to_down_2(double x0, double x1, double& t_out) noexcept {
-    const bool m = 0.0 > x1;
-    const double p = next_down_bits(x0);
-    const double t = m ? p : x0;
-    t_out = t;
+// sub_down_2_2(x = (x0, x1), y = (y0, y1)) -> l = (l0, l1)
+// add_down_2_2 on x and -y (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void sub_down_2_2(double x0, double x1, double y0, double y1, double& l0_out, double& l1_out) noexcept {
+    // (n0, n1) = neg_2(y0, y1)
+    const double n0 = -y0;
+    const double n1 = -y1;
+    // (l0, l1) = add_down_2_2(x0, x1, n0, n1)
+    // (l0_z0, l0_z1, l0_d) = add_ball_2_2(x0, x1, n0, n1)
+    // (l0_z0, l0_z1) = add_2_2(x0, x1, n0, n1)
+    // (l0_z0_sh, l0_z0_sl) = two_sum(x0, n0)
+    const double l0_z0_sh = x0 + n0;
+    const double l0_z0_sh_bb = l0_z0_sh - x0;
+    const double l0_z0_sh_t0 = l0_z0_sh - l0_z0_sh_bb;
+    const double l0_z0_sh_t1 = x0 - l0_z0_sh_t0;
+    const double l0_z0_sh_t2 = n0 - l0_z0_sh_bb;
+    const double l0_z0_sl = l0_z0_sh_t1 + l0_z0_sh_t2;
+    // (l0_z0_th, l0_z0_tl) = two_sum(x1, n1)
+    const double l0_z0_th = x1 + n1;
+    const double l0_z0_th_bb = l0_z0_th - x1;
+    const double l0_z0_th_t0 = l0_z0_th - l0_z0_th_bb;
+    const double l0_z0_th_t1 = x1 - l0_z0_th_t0;
+    const double l0_z0_th_t2 = n1 - l0_z0_th_bb;
+    const double l0_z0_tl = l0_z0_th_t1 + l0_z0_th_t2;
+    const double l0_z0_c = l0_z0_sl + l0_z0_th;
+    // (l0_z0_vh, l0_z0_vl) = fast_two_sum(l0_z0_sh, l0_z0_c)
+    const double l0_z0_vh = l0_z0_sh + l0_z0_c;
+    const double l0_z0_vh_z = l0_z0_vh - l0_z0_sh;
+    const double l0_z0_vl = l0_z0_c - l0_z0_vh_z;
+    const double l0_z0_w = l0_z0_tl + l0_z0_vl;
+    // (l0_z0, l0_z1) = fast_two_sum(l0_z0_vh, l0_z0_w)
+    const double l0_z0 = l0_z0_vh + l0_z0_w;
+    const double l0_z0_z = l0_z0 - l0_z0_vh;
+    const double l0_z1 = l0_z0_w - l0_z0_z;
+    const double l0_z0_az = abs_bits(l0_z0);
+    const double l0_z0_t = fma_rn(l0_z0_az, 0x1.8000000000004p-105, 0.0);
+    const double l0_d = fma_rn(l0_z0_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
+    const bool l0_zd = l0_z0 == 0.0;
+    const double l0_dd = l0_zd ? 0.0 : l0_d;
+    // (l0_w) = sub_down_1(l0_z1, l0_dd)
+    const double l0_w_nb = -l0_dd;
+    // (l0_w) = add_down_1(l0_z1, l0_w_nb)
+    // (l0_w_s, l0_w_e) = two_sum_ord(l0_z1, l0_w_nb)
+    const double l0_w_s_aa = abs_bits(l0_z1);
+    const double l0_w_s_ab = abs_bits(l0_w_nb);
+    const bool l0_w_s_m = l0_w_s_ab > l0_w_s_aa;
+    const double l0_w_s_h = l0_w_s_m ? l0_w_nb : l0_z1;
+    const double l0_w_s_l = l0_w_s_m ? l0_z1 : l0_w_nb;
+    // (l0_w_s, l0_w_e) = fast_two_sum(l0_w_s_h, l0_w_s_l)
+    const double l0_w_s = l0_w_s_h + l0_w_s_l;
+    const double l0_w_s_z = l0_w_s - l0_w_s_h;
+    const double l0_w_e = l0_w_s_l - l0_w_s_z;
+    const bool l0_w_n = 0.0 > l0_w_e;
+    const double l0_w_p = next_down_bits(l0_w_s);
+    const double l0_w = l0_w_n ? l0_w_p : l0_w_s;
+    // (l0, l1) = two_sum_ord(l0_z0, l0_w)
+    const double l0_aa = abs_bits(l0_z0);
+    const double l0_ab = abs_bits(l0_w);
+    const bool l0_m = l0_ab > l0_aa;
+    const double l0_h = l0_m ? l0_w : l0_z0;
+    const double l0_l = l0_m ? l0_z0 : l0_w;
+    // (l0, l1) = fast_two_sum(l0_h, l0_l)
+    const double l0 = l0_h + l0_l;
+    const double l0_z = l0 - l0_h;
+    const double l1 = l0_l - l0_z;
+    l0_out = l0;
+    l1_out = l1;
 }
-KAIRN_GEN_FORCEINLINE constexpr void to_down_2(float x0, float x1, float& t_out) noexcept {
-    const bool m = 0.0f > x1;
-    const float p = next_down_bits(x0);
-    const float t = m ? p : x0;
-    t_out = t;
+KAIRN_GEN_FORCEINLINE void sub_down_2_2(float x0, float x1, float y0, float y1, float& l0_out, float& l1_out) noexcept {
+    // (n0, n1) = neg_2(y0, y1)
+    const float n0 = -y0;
+    const float n1 = -y1;
+    // (l0, l1) = add_down_2_2(x0, x1, n0, n1)
+    // (l0_z0, l0_z1, l0_d) = add_ball_2_2(x0, x1, n0, n1)
+    // (l0_z0, l0_z1) = add_2_2(x0, x1, n0, n1)
+    // (l0_z0_sh, l0_z0_sl) = two_sum(x0, n0)
+    const float l0_z0_sh = x0 + n0;
+    const float l0_z0_sh_bb = l0_z0_sh - x0;
+    const float l0_z0_sh_t0 = l0_z0_sh - l0_z0_sh_bb;
+    const float l0_z0_sh_t1 = x0 - l0_z0_sh_t0;
+    const float l0_z0_sh_t2 = n0 - l0_z0_sh_bb;
+    const float l0_z0_sl = l0_z0_sh_t1 + l0_z0_sh_t2;
+    // (l0_z0_th, l0_z0_tl) = two_sum(x1, n1)
+    const float l0_z0_th = x1 + n1;
+    const float l0_z0_th_bb = l0_z0_th - x1;
+    const float l0_z0_th_t0 = l0_z0_th - l0_z0_th_bb;
+    const float l0_z0_th_t1 = x1 - l0_z0_th_t0;
+    const float l0_z0_th_t2 = n1 - l0_z0_th_bb;
+    const float l0_z0_tl = l0_z0_th_t1 + l0_z0_th_t2;
+    const float l0_z0_c = l0_z0_sl + l0_z0_th;
+    // (l0_z0_vh, l0_z0_vl) = fast_two_sum(l0_z0_sh, l0_z0_c)
+    const float l0_z0_vh = l0_z0_sh + l0_z0_c;
+    const float l0_z0_vh_z = l0_z0_vh - l0_z0_sh;
+    const float l0_z0_vl = l0_z0_c - l0_z0_vh_z;
+    const float l0_z0_w = l0_z0_tl + l0_z0_vl;
+    // (l0_z0, l0_z1) = fast_two_sum(l0_z0_vh, l0_z0_w)
+    const float l0_z0 = l0_z0_vh + l0_z0_w;
+    const float l0_z0_z = l0_z0 - l0_z0_vh;
+    const float l0_z1 = l0_z0_w - l0_z0_z;
+    const float l0_z0_az = abs_bits(l0_z0);
+    const float l0_z0_t = fma_rn(l0_z0_az, 0x1.800008p-47f, 0.0f);
+    const float l0_d = fma_rn(l0_z0_t, 0x1.000004p+0f, 0x1.000004p-126f);
+    const bool l0_zd = l0_z0 == 0.0f;
+    const float l0_dd = l0_zd ? 0.0f : l0_d;
+    // (l0_w) = sub_down_1(l0_z1, l0_dd)
+    const float l0_w_nb = -l0_dd;
+    // (l0_w) = add_down_1(l0_z1, l0_w_nb)
+    // (l0_w_s, l0_w_e) = two_sum_ord(l0_z1, l0_w_nb)
+    const float l0_w_s_aa = abs_bits(l0_z1);
+    const float l0_w_s_ab = abs_bits(l0_w_nb);
+    const bool l0_w_s_m = l0_w_s_ab > l0_w_s_aa;
+    const float l0_w_s_h = l0_w_s_m ? l0_w_nb : l0_z1;
+    const float l0_w_s_l = l0_w_s_m ? l0_z1 : l0_w_nb;
+    // (l0_w_s, l0_w_e) = fast_two_sum(l0_w_s_h, l0_w_s_l)
+    const float l0_w_s = l0_w_s_h + l0_w_s_l;
+    const float l0_w_s_z = l0_w_s - l0_w_s_h;
+    const float l0_w_e = l0_w_s_l - l0_w_s_z;
+    const bool l0_w_n = 0.0f > l0_w_e;
+    const float l0_w_p = next_down_bits(l0_w_s);
+    const float l0_w = l0_w_n ? l0_w_p : l0_w_s;
+    // (l0, l1) = two_sum_ord(l0_z0, l0_w)
+    const float l0_aa = abs_bits(l0_z0);
+    const float l0_ab = abs_bits(l0_w);
+    const bool l0_m = l0_ab > l0_aa;
+    const float l0_h = l0_m ? l0_w : l0_z0;
+    const float l0_l = l0_m ? l0_z0 : l0_w;
+    // (l0, l1) = fast_two_sum(l0_h, l0_l)
+    const float l0 = l0_h + l0_l;
+    const float l0_z = l0 - l0_h;
+    const float l1 = l0_l - l0_z;
+    l0_out = l0;
+    l1_out = l1;
+}
+
+// sub_up_2_2(x = (x0, x1), y = (y0, y1)) -> h = (h0, h1)
+// add_up_2_2 on x and -y (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+KAIRN_GEN_FORCEINLINE void sub_up_2_2(double x0, double x1, double y0, double y1, double& h0_out, double& h1_out) noexcept {
+    // (n0, n1) = neg_2(y0, y1)
+    const double n0 = -y0;
+    const double n1 = -y1;
+    // (h0, h1) = add_up_2_2(x0, x1, n0, n1)
+    // (h0_z0, h0_z1, h0_d) = add_ball_2_2(x0, x1, n0, n1)
+    // (h0_z0, h0_z1) = add_2_2(x0, x1, n0, n1)
+    // (h0_z0_sh, h0_z0_sl) = two_sum(x0, n0)
+    const double h0_z0_sh = x0 + n0;
+    const double h0_z0_sh_bb = h0_z0_sh - x0;
+    const double h0_z0_sh_t0 = h0_z0_sh - h0_z0_sh_bb;
+    const double h0_z0_sh_t1 = x0 - h0_z0_sh_t0;
+    const double h0_z0_sh_t2 = n0 - h0_z0_sh_bb;
+    const double h0_z0_sl = h0_z0_sh_t1 + h0_z0_sh_t2;
+    // (h0_z0_th, h0_z0_tl) = two_sum(x1, n1)
+    const double h0_z0_th = x1 + n1;
+    const double h0_z0_th_bb = h0_z0_th - x1;
+    const double h0_z0_th_t0 = h0_z0_th - h0_z0_th_bb;
+    const double h0_z0_th_t1 = x1 - h0_z0_th_t0;
+    const double h0_z0_th_t2 = n1 - h0_z0_th_bb;
+    const double h0_z0_tl = h0_z0_th_t1 + h0_z0_th_t2;
+    const double h0_z0_c = h0_z0_sl + h0_z0_th;
+    // (h0_z0_vh, h0_z0_vl) = fast_two_sum(h0_z0_sh, h0_z0_c)
+    const double h0_z0_vh = h0_z0_sh + h0_z0_c;
+    const double h0_z0_vh_z = h0_z0_vh - h0_z0_sh;
+    const double h0_z0_vl = h0_z0_c - h0_z0_vh_z;
+    const double h0_z0_w = h0_z0_tl + h0_z0_vl;
+    // (h0_z0, h0_z1) = fast_two_sum(h0_z0_vh, h0_z0_w)
+    const double h0_z0 = h0_z0_vh + h0_z0_w;
+    const double h0_z0_z = h0_z0 - h0_z0_vh;
+    const double h0_z1 = h0_z0_w - h0_z0_z;
+    const double h0_z0_az = abs_bits(h0_z0);
+    const double h0_z0_t = fma_rn(h0_z0_az, 0x1.8000000000004p-105, 0.0);
+    const double h0_d = fma_rn(h0_z0_t, 0x1.0000000000002p+0, 0x1.0000000000002p-1022);
+    const bool h0_zd = h0_z0 == 0.0;
+    const double h0_dd = h0_zd ? 0.0 : h0_d;
+    // (h0_w) = add_up_1(h0_z1, h0_dd)
+    // (h0_w_s, h0_w_e) = two_sum_ord(h0_z1, h0_dd)
+    const double h0_w_s_aa = abs_bits(h0_z1);
+    const double h0_w_s_ab = abs_bits(h0_dd);
+    const bool h0_w_s_m = h0_w_s_ab > h0_w_s_aa;
+    const double h0_w_s_h = h0_w_s_m ? h0_dd : h0_z1;
+    const double h0_w_s_l = h0_w_s_m ? h0_z1 : h0_dd;
+    // (h0_w_s, h0_w_e) = fast_two_sum(h0_w_s_h, h0_w_s_l)
+    const double h0_w_s = h0_w_s_h + h0_w_s_l;
+    const double h0_w_s_z = h0_w_s - h0_w_s_h;
+    const double h0_w_e = h0_w_s_l - h0_w_s_z;
+    const bool h0_w_n = h0_w_e > 0.0;
+    const double h0_w_q = next_up_bits(h0_w_s);
+    const double h0_w = h0_w_n ? h0_w_q : h0_w_s;
+    // (h0, h1) = two_sum_ord(h0_z0, h0_w)
+    const double h0_aa = abs_bits(h0_z0);
+    const double h0_ab = abs_bits(h0_w);
+    const bool h0_m = h0_ab > h0_aa;
+    const double h0_h = h0_m ? h0_w : h0_z0;
+    const double h0_l = h0_m ? h0_z0 : h0_w;
+    // (h0, h1) = fast_two_sum(h0_h, h0_l)
+    const double h0 = h0_h + h0_l;
+    const double h0_z = h0 - h0_h;
+    const double h1 = h0_l - h0_z;
+    h0_out = h0;
+    h1_out = h1;
+}
+KAIRN_GEN_FORCEINLINE void sub_up_2_2(float x0, float x1, float y0, float y1, float& h0_out, float& h1_out) noexcept {
+    // (n0, n1) = neg_2(y0, y1)
+    const float n0 = -y0;
+    const float n1 = -y1;
+    // (h0, h1) = add_up_2_2(x0, x1, n0, n1)
+    // (h0_z0, h0_z1, h0_d) = add_ball_2_2(x0, x1, n0, n1)
+    // (h0_z0, h0_z1) = add_2_2(x0, x1, n0, n1)
+    // (h0_z0_sh, h0_z0_sl) = two_sum(x0, n0)
+    const float h0_z0_sh = x0 + n0;
+    const float h0_z0_sh_bb = h0_z0_sh - x0;
+    const float h0_z0_sh_t0 = h0_z0_sh - h0_z0_sh_bb;
+    const float h0_z0_sh_t1 = x0 - h0_z0_sh_t0;
+    const float h0_z0_sh_t2 = n0 - h0_z0_sh_bb;
+    const float h0_z0_sl = h0_z0_sh_t1 + h0_z0_sh_t2;
+    // (h0_z0_th, h0_z0_tl) = two_sum(x1, n1)
+    const float h0_z0_th = x1 + n1;
+    const float h0_z0_th_bb = h0_z0_th - x1;
+    const float h0_z0_th_t0 = h0_z0_th - h0_z0_th_bb;
+    const float h0_z0_th_t1 = x1 - h0_z0_th_t0;
+    const float h0_z0_th_t2 = n1 - h0_z0_th_bb;
+    const float h0_z0_tl = h0_z0_th_t1 + h0_z0_th_t2;
+    const float h0_z0_c = h0_z0_sl + h0_z0_th;
+    // (h0_z0_vh, h0_z0_vl) = fast_two_sum(h0_z0_sh, h0_z0_c)
+    const float h0_z0_vh = h0_z0_sh + h0_z0_c;
+    const float h0_z0_vh_z = h0_z0_vh - h0_z0_sh;
+    const float h0_z0_vl = h0_z0_c - h0_z0_vh_z;
+    const float h0_z0_w = h0_z0_tl + h0_z0_vl;
+    // (h0_z0, h0_z1) = fast_two_sum(h0_z0_vh, h0_z0_w)
+    const float h0_z0 = h0_z0_vh + h0_z0_w;
+    const float h0_z0_z = h0_z0 - h0_z0_vh;
+    const float h0_z1 = h0_z0_w - h0_z0_z;
+    const float h0_z0_az = abs_bits(h0_z0);
+    const float h0_z0_t = fma_rn(h0_z0_az, 0x1.800008p-47f, 0.0f);
+    const float h0_d = fma_rn(h0_z0_t, 0x1.000004p+0f, 0x1.000004p-126f);
+    const bool h0_zd = h0_z0 == 0.0f;
+    const float h0_dd = h0_zd ? 0.0f : h0_d;
+    // (h0_w) = add_up_1(h0_z1, h0_dd)
+    // (h0_w_s, h0_w_e) = two_sum_ord(h0_z1, h0_dd)
+    const float h0_w_s_aa = abs_bits(h0_z1);
+    const float h0_w_s_ab = abs_bits(h0_dd);
+    const bool h0_w_s_m = h0_w_s_ab > h0_w_s_aa;
+    const float h0_w_s_h = h0_w_s_m ? h0_dd : h0_z1;
+    const float h0_w_s_l = h0_w_s_m ? h0_z1 : h0_dd;
+    // (h0_w_s, h0_w_e) = fast_two_sum(h0_w_s_h, h0_w_s_l)
+    const float h0_w_s = h0_w_s_h + h0_w_s_l;
+    const float h0_w_s_z = h0_w_s - h0_w_s_h;
+    const float h0_w_e = h0_w_s_l - h0_w_s_z;
+    const bool h0_w_n = h0_w_e > 0.0f;
+    const float h0_w_q = next_up_bits(h0_w_s);
+    const float h0_w = h0_w_n ? h0_w_q : h0_w_s;
+    // (h0, h1) = two_sum_ord(h0_z0, h0_w)
+    const float h0_aa = abs_bits(h0_z0);
+    const float h0_ab = abs_bits(h0_w);
+    const bool h0_m = h0_ab > h0_aa;
+    const float h0_h = h0_m ? h0_w : h0_z0;
+    const float h0_l = h0_m ? h0_z0 : h0_w;
+    // (h0, h1) = fast_two_sum(h0_h, h0_l)
+    const float h0 = h0_h + h0_l;
+    const float h0_z = h0 - h0_h;
+    const float h1 = h0_l - h0_z;
+    h0_out = h0;
+    h1_out = h1;
 }
 
 // to_nearest_2(x = (x0, x1)) -> t

@@ -35,6 +35,21 @@ kernel is described in one file, gen/kernels/NAME.kernel:
     ensures:       makes_ball cw rw from=c,r
                                       a constructor of a ball: center and radius outputs, from
                                       the center and radius inputs
+    ensures:       makes_ball cw rw from_interval=lo,hi [midpoint_when=half_in_format(lo);...]
+                                      a ball from the bounds of an interval (Milestone 2)
+    requires:      interval xl xu     the bounds of a canonical interval; or: not_nan a
+    ensures:       makes_interval zl zu from=lo,hi
+    ensures:       encloses_interval zl zu x+y x=xl,xu y=yl,yu tight=rounded [exact_lower=...]
+                   [exact_upper=...] [bounded_when=abs_le(x+y,omega)] [bounded_exactly]
+                                      I1 to I5 of an interval kernel; tight is exact, rounded
+                                      [;steps=N][;when=product_large], or outward;rel=EXPR;abs=EXPR
+    ensures:       set_bound l below x x=c,r [tight=rounded]
+                                      a bound of a set, as a number of T
+    ensures:       outward l below rel=EXPR abs=EXPR [exact_when=zero(x+y)]
+                                      on that side of the value, within rel |value| + abs; EXPR
+                                      may name a constant up(EXPR) as the format rounds it
+    ensures:       bound d below steps=1 zero_factor
+                                      zero_factor: a zero operand gives zero (0 times inf is 0)
     min_precision: 3                  optional
     theorem:       proofs/theories/Add22.v add_2_2_correct
     source:        free text
@@ -298,8 +313,9 @@ class Kernel:
 IEEE_STATEMENTS = ('bridge', 'spec')
 
 # The claims that only the non-finite layer has: a kernel that claims nothing else has no
-# real-model statement (Kernel.real_model).
-NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball')
+# real-model statement (Kernel.real_model). The interval kinds of Milestone 2 are among them: an
+# interval has infinite bounds as ordinary values, so its kernels are stated in the IEEE model only.
+NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball', 'makes_interval', 'encloses_interval', 'set_bound')
 
 INPUT_CLASSES = ('stored', 'supplied')   # rule R3: where an entry kernel's input comes from
 
@@ -331,20 +347,77 @@ def _finite_when(text, where):
     return out
 
 
-# The conditions of exact_when: EXPR = 0 or |EXPR| > K, and EXPR = 0 or |EXPR| >= K.
+# The conditions of exact_when: EXPR = 0 or |EXPR| > K, and EXPR = 0 or |EXPR| >= K; and, on
+# outward and on the outward tightness of an interval (Milestone 2), EXPR = 0.
 EXACT_CONDITIONS = ('zero_or_abs_gt', 'zero_or_abs_ge')
+ZERO_CONDITION = 'zero'
 
 
 def _exact_when(text, where):
-    """zero_or_abs_gt(EXPR,K);zero_or_abs_ge(EXPR,K) as [{'zero_or_abs_gt': EXPR, 'than': K}, ...]."""
+    """zero_or_abs_gt(EXPR,K);zero_or_abs_ge(EXPR,K);zero(EXPR) as
+    [{'zero_or_abs_gt': EXPR, 'than': K}, ..., {'zero': EXPR}]."""
     out = []
     for part in text.split(';'):
         m = re.fullmatch(r'([a-z_]+)\((.+)\)', part)
         args = _arguments(m.group(2), where) if m else []
+        if m and m.group(1) == ZERO_CONDITION and len(args) == 1 and args[0]:
+            out.append({ZERO_CONDITION: args[0]})
+            continue
         if not m or m.group(1) not in EXACT_CONDITIONS or len(args) != 2 or not all(args):
-            raise DescriptionError(f'{where}: a condition of exact_when is zero_or_abs_gt(EXPR,K) or '
-                                   f'zero_or_abs_ge(EXPR,K), got {part!r}')
+            raise DescriptionError(f'{where}: a condition of exact_when is zero_or_abs_gt(EXPR,K), '
+                                   f'zero_or_abs_ge(EXPR,K) or zero(EXPR), got {part!r}')
         out.append({m.group(1): args[0], 'than': args[1]})
+    return out
+
+
+def _bounded_when(text, where):
+    """abs_le(EXPR,omega);abs_le(EXPR,E) as [{'abs_le': EXPR, 'omega': True}, {'abs_le': EXPR, 'exp': E}]."""
+    out = []
+    for part in text.split(';') if text else ():
+        m = re.fullmatch(r'abs_le\((.+),(omega|-?[0-9]+)\)', part)
+        if not m:
+            raise DescriptionError(f'{where}: a condition of bounded_when is abs_le(EXPR,omega) or '
+                                   f'abs_le(EXPR,E), got {part!r}')
+        out.append({'abs_le': m.group(1), 'omega': True} if m.group(2) == 'omega'
+                   else {'abs_le': m.group(1), 'exp': int(m.group(2))})
+    return out
+
+
+# The tightness of an interval or of a bound of a set (Milestone 2): rounded (with optional steps
+# and when), exact, or outward with rel and abs.
+TIGHT_KINDS = ('rounded', 'exact', 'outward')
+
+
+def _tight(text, where):
+    """rounded[;steps=N][;when=COND], exact, or outward;rel=EXPR;abs=EXPR, as a dict."""
+    parts = text.split(';')
+    kind = parts[0]
+    if kind not in TIGHT_KINDS:
+        raise DescriptionError(f'{where}: tight is {", ".join(TIGHT_KINDS)}, got {kind!r}')
+    out = {'kind': kind}
+    allowed = {'rounded': ('steps', 'when'), 'exact': (), 'outward': ('rel', 'abs')}[kind]
+    for p in parts[1:]:
+        key, eq, val = p.partition('=')
+        if not eq or key not in allowed or key in out or not val:
+            raise DescriptionError(f'{where}: bad or repeated field {p!r} of tight={kind}')
+        if key == 'steps':
+            if not re.fullmatch(r'[0-9]+', val):
+                raise DescriptionError(f'{where}: steps must be an integer, got {val!r}')
+            val = int(val)
+        out[key] = val
+    if kind == 'outward' and ('rel' not in out or 'abs' not in out):
+        raise DescriptionError(f'{where}: tight=outward needs rel= and abs=')
+    return out
+
+
+def _pairs(words, where, what, keys):
+    """NAME=A,B words as {NAME: {keys[0]: A, keys[1]: B}}."""
+    out = {}
+    for w in words:
+        m = re.fullmatch(r'([a-z][a-z0-9]*)=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', w)
+        if not m or m.group(1) in out:
+            raise DescriptionError(f'{where}: bad or repeated {what} {w!r}: NAME={keys[0].upper()},{keys[1].upper()}')
+        out[m.group(1)] = {keys[0]: m.group(2), keys[1]: m.group(3)}
     return out
 
 
@@ -365,12 +438,43 @@ def _ensures(words, where):
         if entry['finite_when'] is None:
             entry['finite_when'] = []
         return entry
-    if kind == 'makes_ball' and len(words) == 4:
+    if kind == 'makes_ball' and len(words) == 4 and words[3].startswith('from='):
         m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
         if not m:
             raise DescriptionError(f'{where}: expected "makes_ball CENTER RADIUS from=CENTER,RADIUS"')
         return {'kind': kind, 'center': words[1], 'radius': words[2],
                 'from': {'center': m.group(1), 'radius': m.group(2)}}
+    if kind == 'makes_ball' and len(words) in (4, 5) and words[3].startswith('from_interval='):
+        # A ball from the bounds of an interval (Milestone 2): `from` names a lower and an upper
+        # input, and midpoint_when the conditions under which the center is the exact midpoint.
+        m = re.fullmatch(r'from_interval=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
+        if not m or (len(words) == 5 and not words[4].startswith('midpoint_when=')):
+            raise DescriptionError(f'{where}: expected "makes_ball CENTER RADIUS from_interval=LOWER,UPPER '
+                                   '[midpoint_when=CONDITIONS]"')
+        entry = {'kind': kind, 'center': words[1], 'radius': words[2],
+                 'from': {'lower': m.group(1), 'upper': m.group(2)}}
+        if len(words) == 5:
+            conds = []
+            for part in words[4][len('midpoint_when='):].split(';'):
+                c = re.fullmatch(r'half_in_format\(([a-z][a-z0-9]*)\)', part)
+                if not c:
+                    raise DescriptionError(f'{where}: a condition of midpoint_when is half_in_format(INPUT), '
+                                           f'got {part!r}')
+                conds.append({'half_in_format': c.group(1)})
+            entry['midpoint_when'] = conds
+        return entry
+    if kind == 'makes_interval' and len(words) == 4:
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
+        if not m:
+            raise DescriptionError(f'{where}: expected "makes_interval LOWER UPPER from=LOWER,UPPER"')
+        return {'kind': kind, 'lower': words[1], 'upper': words[2],
+                'from': {'lower': m.group(1), 'upper': m.group(2)}}
+    if kind in ('rounded', 'bound') and words[-1] == 'zero_factor' and len(words) > 3:
+        # The extended reading of a product with a zero factor: zero (Milestone 2, mul_dir_1).
+        # Written only when it is claimed, after the entry's other fields.
+        entry = _ensures(words[:-1], where)
+        entry['zero_factor'] = True
+        return entry
     if kind == 'rounded' and len(words) == 3:
         return {'kind': kind, 'of': words[1], 'mode': words[2]}
     if kind == 'rounded' and len(words) == 4 and words[3].startswith('when='):
@@ -386,9 +490,60 @@ def _ensures(words, where):
         if not re.fullmatch(r'[0-9]+', steps):
             raise DescriptionError(f'{where}: steps must be an integer, got {steps!r}')
         return {'kind': kind, 'of': words[1], 'side': words[2], 'steps': int(steps)}
+    if kind == 'outward' and len(words) in (5, 6):
+        entry = {'kind': kind, 'of': words[1], 'side': words[2], 'rel': None, 'abs': None}
+        for w in words[3:]:
+            key, eq, val = w.partition('=')
+            if key == 'exact_when' and eq and 'exact_when' not in entry:
+                entry['exact_when'] = _exact_when(val, where)
+            elif key in ('rel', 'abs') and eq and val and entry[key] is None:
+                entry[key] = val
+            else:
+                raise DescriptionError(f'{where}: bad or repeated field {w!r} in outward entry')
+        if entry['rel'] is None or entry['abs'] is None:
+            raise DescriptionError(f'{where}: an outward entry needs rel= and abs=')
+        return entry
+    if kind in ('encloses_interval', 'set_bound') and len(words) >= 5:
+        # encloses_interval LOWER UPPER SET NAME=LOWER,UPPER ... [tight=...] [exact_lower=...]
+        #   [exact_upper=...] [bounded_when=...] [bounded_exactly]
+        # set_bound OUTPUT SIDE SET NAME=CENTER,RADIUS ... [tight=...]
+        names, opts = [], {}
+        for w in words[4:]:
+            key, eq, val = w.partition('=')
+            if key in ('tight', 'exact_lower', 'exact_upper', 'bounded_when') and eq:
+                if key in opts:
+                    raise DescriptionError(f'{where}: {key} given twice')
+                opts[key] = val
+            elif w == 'bounded_exactly' and kind == 'encloses_interval' and w not in opts:
+                opts[w] = True
+            else:
+                names.append(w)
+        if kind == 'set_bound':
+            if set(opts) - {'tight'}:
+                raise DescriptionError(f'{where}: set_bound has tight= and nothing else of an interval')
+            entry = {'kind': kind, 'of': words[1], 'side': words[2], 'set': words[3],
+                     'balls': _pairs(names, where, 'ball', ('center', 'radius'))}
+            if 'tight' in opts:
+                entry['tight'] = _tight(opts['tight'], where)
+            return entry
+        entry = {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
+                 'intervals': _pairs(names, where, 'interval', ('lower', 'upper'))}
+        if 'tight' not in opts:
+            raise DescriptionError(f'{where}: an encloses_interval entry needs tight=')
+        entry['tight'] = _tight(opts['tight'], where)
+        sides = {s: _exact_when(opts[f'exact_{s}'], where) for s in ('lower', 'upper') if f'exact_{s}' in opts}
+        if sides:
+            if entry['tight']['kind'] != 'outward':
+                raise DescriptionError(f'{where}: exact_lower and exact_upper belong to tight=outward')
+            entry['tight']['exact_when'] = sides
+        entry['bounded_when'] = _bounded_when(opts.get('bounded_when', ''), where)
+        if opts.get('bounded_exactly'):
+            entry['bounded_exactly'] = True
+        return entry
     if kind == 'predicate' and len(words) == 5:
         return {'kind': kind, 'of': words[1], 'rel': words[2], 'args': words[3:5]}
-    if kind == 'encloses' and len(words) >= 5:
+    if kind == 'encloses' and len(words) >= 4:
+        # Without a NAME=CENTER,RADIUS word the operands are points (Milestone 2, add_ball_2_2).
         balls, finite_when, exact_when = {}, None, None
         for w in words[4:]:
             if w.startswith('finite_when=') and finite_when is None:

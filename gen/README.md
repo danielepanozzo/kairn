@@ -128,6 +128,19 @@ t        = add(x0, y0)
   with EXPR over the input names and their limbs, `cx[1]` the second limb of `cx`, and K an exact
   expression over `u`, `eta` and integers; several are separated by `;`, as in
   `exact_when=zero_or_abs_gt(cx[0]*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))`.
+- The interval kernels (architecture.md, "Claims of the interval kernels"): `requires: interval
+  xl xu` and `requires: not_nan a`;
+  `ensures: makes_interval zl zu from=lo,hi`;
+  `ensures: encloses_interval zl zu x+y x=xl,xu y=yl,yu tight=TIGHT [exact_lower=CONDITIONS]
+  [exact_upper=CONDITIONS] [bounded_when=CONDITIONS] [bounded_exactly]`, TIGHT being `exact`,
+  `rounded`, `rounded;steps=1;when=product_large` or `outward;rel=EXPR;abs=EXPR`, a condition of
+  bounded_when `abs_le(SET,omega)` or `abs_le(SET,E)`;
+  `ensures: set_bound l below x x=c,r [tight=rounded]`;
+  `ensures: outward l below rel=EXPR abs=EXPR [exact_when=zero(x+y)]`, the constants in the
+  language of `const up(EXPR)` with `up(EXPR)` inside;
+  `ensures: encloses z d x+y` with no ball (points, the finite domain);
+  `ensures: makes_ball cw rw from_interval=lo,hi [midpoint_when=half_in_format(lo);half_in_format(hi)]`;
+  and `zero_factor` as the last word of a `bound` or `rounded` entry.
 - `guard_pending: a REASON`: an input of an entry kernel whose guard is not written yet (only
   `add_2_1`, whose guard changes the formal model of a proved kernel and lands with its proof).
 
@@ -215,8 +228,10 @@ stops at what the core cannot compute there: an overflow (GCC) or the NaN that T
 
 The scalar printer puts the fix-up of the full kernels, the full Ball kernels and the
 constructors of balls behind a branch (`cpp.branch`; the rule and its measurements are in
-milestone1.md, "Emission"). When every output is a `select` on one mask, and while the first
-arms are all selects on one mask, those masks are what the branch tests; the operations that the
+milestone1.md, "Emission"). When every output is a `select` of the kernel's own listing on one
+mask, and while the first arms are all such selects on one mask, those masks are what the branch
+tests (a select inside a callee chooses on the data, and is computed: the directed difference that
+is the arm of `ball_lower_as_1`); the operations that the
 masks and the final arms need are printed first; `if (m1 & m2) [[likely]]` the outputs are the
 arms; `else` the rest of the listing runs, in its order. The `else` part has two spellings under
 `KAIRN_GEN_FIXUP_CALL` (`prelude.hpp`): inline, or a call of `fixup::K`, a function of its own
@@ -290,13 +305,19 @@ rule:
 
 There are also checks of names (none may shadow what the printers use), kinds, arity, the closed
 vocabulary of the claims (that of architecture.md, "Claims of the second wave", "Claims of the
-non-finite layer" and "Claims of Milestone 2" included, each kind in its domain), of the two models (a kernel with a
+non-finite layer", "Claims of Milestone 2" and "Claims of the interval kernels" included, each kind in its domain; the
+constants of a claim, `rel` and `abs`, name with `up( )` only constants of kernels with a real-model statement, are
+nonnegative in binary64 and binary32, and use `unit(K)` and `tiny(K)` as a constant `up(EXPR)` does), of the two models (a kernel with a
 real-model statement names no `const inf` or `const nan`, has no `times_inf`, and calls no kernel
 without one), of
 `extends` (its core has the same inputs, value, minimum precision, and requirements with
 `normalized` for `canonical`), of constant-evaluation variants (same signature, no FMA), and of
 computed constants (above). A kernel has no real-model statement when it claims `extends`,
-`represents` or `makes_ball`, or requires `ball`: the full kernels and the constructors.
+`represents` or `makes_ball` (and the interval kinds `makes_interval`, `encloses_interval`,
+`set_bound`) and nothing else, or says `ieee_only: yes`: the full kernels, the constructors, the
+interval kernels. A constant `up(EXPR)` that only such kernels use (none yet; the halves of
+`ball_from_interval_2` will be) has no definition in `Model.v`; `IeeeModel.v` defines it from its
+expression, and its name is in the record like any other.
 
 ## The tests
 
@@ -372,7 +393,16 @@ One difference is allowed, and reported each time it occurs: compilers fold the 
 result into one negated FMA (`fnmadd` on AArch64 with GCC 16 and Apple clang 21 at `-O2`, and
 `vfnmsub` on x86-64 with GCC 13 under `-ffp-contract=fast`), which returns +0 where the negation of
 an exact zero is −0. A kernel that negates a fused result therefore has no single bit-exact result;
-the tests accept exactly a different sign of a zero for such kernels (the first wave has none).
+the tests accept exactly a different sign of a zero for such kernels (the first wave has none). The
+same folding also costs one more fused instruction where the fused result is used elsewhere as
+well: the compiler keeps the FMA and adds a negated one, which the object-code check refuses. This
+is why `mul_dir_2_2` and `ball_from_interval_2` of Milestone 2, whose listings negate a fused
+result, are not kernels yet (`test_cxx.EveryOperation.test_negated_fused_results_are_known` pins
+that no kernel does). Clang 18 at `-O2` also puts two independent FMAs of a scalar function in one
+packed instruction (SLP vectorization), which the object-code check counts as one: so
+`interval_mul_1` and `interval_add_2`, whose four products and two sums of two limbs are
+independent, are not kernels yet either. The tests read the four with their claims
+(`tests/common.py`, `WITHHELD`).
 
 The Rocq output is checked by hand on a machine with Rocq 9.0.1 and Flocq 4.2.2: `make -C proofs`
 builds `Model.v`, `Statements.v` and the proofs, and runs the audit.

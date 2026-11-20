@@ -175,6 +175,19 @@ Definition ball_add_1_full (cx rx cy ry : float) : float * float :=
   let rw := if e then r else q in
   (cw, rw).
 
+(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). *)
+Definition sub_down_1 (a b : float) : float :=
+  let nb := neg b in
+  let r := add_down_1 a nb in
+  r.
+
+(* ball_lower_as_1: the center minus the radius, rounded down (Milestone 2 listing). *)
+Definition ball_lower_as_1 (c r : float) : float :=
+  let t := sub_down_1 c r in
+  let ne := eq r r in
+  let l := if ne then t else pinf in
+  l.
+
 (* ball_make_1: constructors (Milestone 1 listing). *)
 Definition ball_make_1 (c r : float) : float * float :=
   let g := guard r in
@@ -300,12 +313,75 @@ Definition ball_sub_1_full (cx rx cy ry : float) : float * float :=
   let rw := if e then r else q in
   (cw, rw).
 
+(* ball_upper_as_1: the center plus the radius, rounded up (Milestone 2 listing). *)
+Definition ball_upper_as_1 (c r : float) : float :=
+  let t := add_up_1 c r in
+  let ne := eq r r in
+  let mi := neg pinf in
+  let h := if ne then t else mi in
+  h.
+
 (* fast_two_sum_entry: fast_two_sum on its guarded operands (Milestone 2 listing). *)
 Definition fast_two_sum_entry (a b : float) : float * float :=
   let ga := guard a in
   let gb := guard b in
   let '(s, e) := fast_two_sum ga gb in
   (s, e).
+
+(* interval_add_1: directed sums of the bounds (Milestone 2 listing). *)
+Definition interval_add_1 (xl xu yl yu : float) : float * float :=
+  let l := add_down_1 xl yl in
+  let h := add_up_1 xu yu in
+  let nx := lt xl pinf in
+  let ny := lt yl pinf in
+  let ne := andb nx ny in
+  let mi := neg pinf in
+  let zl := if ne then l else pinf in
+  let zu := if ne then h else mi in
+  (zl, zu).
+
+(* interval_make_1: constructor of an interval (Milestone 2 listing). *)
+Definition interval_make_1 (lo hi : float) : float * float :=
+  let gl := guard lo in
+  let gu := guard hi in
+  let ok := le gl gu in
+  let nl := lt gl pinf in
+  let mi := neg pinf in
+  let nu := lt mi gu in
+  let va := andb ok nl in
+  let v := andb va nu in
+  let ql := eq gl gl in
+  let qu := eq gu gu in
+  let nn := andb ql qu in
+  let el := if nn then pinf else mi in
+  let eu := if nn then mi else pinf in
+  let zl := if v then gl else el in
+  let zu := if v then gu else eu in
+  (zl, zu).
+
+(* interval_neg_1: the bounds negated and exchanged (Milestone 2 listing). *)
+Definition interval_neg_1 (xl xu : float) : float * float :=
+  let zl := neg xu in
+  let zu := neg xl in
+  (zl, zu).
+
+(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
+Definition sub_up_1 (a b : float) : float :=
+  let nb := neg b in
+  let r := add_up_1 a nb in
+  r.
+
+(* interval_sub_1: directed differences of the bounds (Milestone 2 listing). *)
+Definition interval_sub_1 (xl xu yl yu : float) : float * float :=
+  let l := sub_down_1 xl yu in
+  let h := sub_up_1 xu yl in
+  let nx := lt xl pinf in
+  let ny := lt yl pinf in
+  let ne := andb nx ny in
+  let mi := neg pinf in
+  let zl := if ne then l else pinf in
+  let zu := if ne then h else mi in
+  (zl, zu).
 
 (* make_2: constructors (Milestone 1 listing). *)
 Definition make_2 (a : float) : float * float :=
@@ -324,6 +400,28 @@ Definition two_prod (a b : float) : float * float :=
   let p := prod a b in
   let e := fms a b p in
   (p, e).
+
+(* mul_dir_1: two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). *)
+Definition mul_dir_1 (a b : float) : float * float :=
+  let '(p, e) := two_prod a b in
+  let ap := abs p in
+  let bd := lt ap up_mul_down_1_0 in
+  let ez := eq e pzero in
+  let un := andb bd ez in
+  let n := lt e pzero in
+  let sd := orb n un in
+  let pp := pred p in
+  let dz := if sd then pp else p in
+  let q := lt pzero e in
+  let su := orb q un in
+  let sp := succ p in
+  let vz := if su then sp else p in
+  let za := eq a pzero in
+  let zb := eq b pzero in
+  let zz := orb za zb in
+  let d := if zz then pzero else dz in
+  let v := if zz then pzero else vz in
+  (d, v).
 
 (* mul_down_1: two_prod and the sign of its error term (Milestone 2 listing). *)
 Definition mul_down_1 (a b : float) : float :=
@@ -396,23 +494,11 @@ Definition split (a : float) : float * float :=
   let al := sub a ah in
   (ah, al).
 
-(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). *)
-Definition sub_down_1 (a b : float) : float :=
-  let nb := neg b in
-  let r := add_down_1 a nb in
-  r.
-
 (* sub_down_entry: sub_down_1 on its guarded operands (Milestone 2 listing). *)
 Definition sub_down_entry (a b : float) : float :=
   let ga := guard a in
   let gb := guard b in
   let r := sub_down_1 ga gb in
-  r.
-
-(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
-Definition sub_up_1 (a b : float) : float :=
-  let nb := neg b in
-  let r := add_up_1 a nb in
   r.
 
 (* sub_up_entry: sub_up_1 on its guarded operands (Milestone 2 listing). *)
@@ -521,6 +607,23 @@ Definition add_2_2_full (x0 x1 y0 y1 : float) : float * float :=
   let w1 := if f then z1 else r1 in
   (w0, w1).
 
+(* add_ball_2_2: add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). *)
+Definition add_ball_2_2 (x0 x1 y0 y1 : float) : float * float * float :=
+  let '(z0, z1) := add_2_2 x0 x1 y0 y1 in
+  let az := abs z0 in
+  let t := prod az up_ball_add_2_0 in
+  let d := fma t up_ball_add_1_1 up_ball_add_1_2 in
+  (z0, z1, d).
+
+(* add_down_2_2: add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing). *)
+Definition add_down_2_2 (x0 x1 y0 y1 : float) : float * float :=
+  let '(z0, z1, d) := add_ball_2_2 x0 x1 y0 y1 in
+  let zd := eq z0 pzero in
+  let dd := if zd then pzero else d in
+  let w := sub_down_1 z1 dd in
+  let '(l0, l1) := two_sum_ord z0 w in
+  (l0, l1).
+
 (* add_fast_2_2: JMP17 Alg. 5 (SloppyDWPlusDW); the bound and the normalization are proved here. *)
 Definition add_fast_2_2 (x0 x1 y0 y1 : float) : float * float :=
   let '(sh, sl) := two_sum x0 y0 in
@@ -541,6 +644,15 @@ Definition add_fast_2_2_full (x0 x1 y0 y1 : float) : float * float :=
   let w0 := if f then z0 else r0 in
   let w1 := if f then z1 else r1 in
   (w0, w1).
+
+(* add_up_2_2: add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing). *)
+Definition add_up_2_2 (x0 x1 y0 y1 : float) : float * float :=
+  let '(z0, z1, d) := add_ball_2_2 x0 x1 y0 y1 in
+  let zd := eq z0 pzero in
+  let dd := if zd then pzero else d in
+  let w := add_up_1 z1 dd in
+  let '(h0, h1) := two_sum_ord z0 w in
+  (h0, h1).
 
 (* ball_add_2: midpoint-radius sum (Milestone 1 listing, second radius design). *)
 Definition ball_add_2 (cx0 cx1 rx cy0 cy1 ry : float) : float * float * float :=
@@ -567,6 +679,21 @@ Definition ball_add_2_full (cx0 cx1 rx cy0 cy1 ry : float) : float * float * flo
   let cw1 := if e then c1 else q in
   let rw := if e then r else q in
   (cw0, cw1, rw).
+
+(* to_down_2: the sign of x1 (Milestone 1 listing). *)
+Definition to_down_2 (x0 x1 : float) : float :=
+  let m := lt x1 pzero in
+  let p := pred x0 in
+  let t := if m then p else x0 in
+  t.
+
+(* ball_lower_as_2: the center rounded down, minus the radius, rounded down (Milestone 2 listing). *)
+Definition ball_lower_as_2 (c0 c1 r : float) : float :=
+  let a := to_down_2 c0 c1 in
+  let t := sub_down_1 a r in
+  let ne := eq r r in
+  let l := if ne then t else pinf in
+  l.
 
 (* ball_make_2: constructors (Milestone 1 listing). *)
 Definition ball_make_2 (c0 c1 r : float) : float * float * float :=
@@ -661,6 +788,14 @@ Definition ball_mul_pow2_2_full (cx0 cx1 rx c : float) : float * float * float :
   let rw := if e then r else rx in
   (cw0, cw1, rw).
 
+(* ball_narrow_2_1: the leading limb, and the radius widened by the second limb (Milestone 2 listing). *)
+Definition ball_narrow_2_1 (c0 c1 r : float) : float * float :=
+  let a := abs c1 in
+  let rz := radd r a in
+  let wh := eq rz pinf in
+  let cz := if wh then pzero else c0 in
+  (cz, rz).
+
 (* neg_2: limb by limb (Milestone 1 listing). *)
 Definition neg_2 (x0 x1 : float) : float * float :=
   let z0 := neg x0 in
@@ -728,6 +863,15 @@ Definition ball_sub_2_full (cx0 cx1 rx cy0 cy1 ry : float) : float * float * flo
   let cw1 := if e then c1 else q in
   let rw := if e then r else q in
   (cw0, cw1, rw).
+
+(* ball_upper_as_2: the center rounded up, plus the radius, rounded up (Milestone 2 listing). *)
+Definition ball_upper_as_2 (c0 c1 r : float) : float :=
+  let a := to_up_2 c0 c1 in
+  let t := add_up_1 a r in
+  let ne := eq r r in
+  let mi := neg pinf in
+  let h := if ne then t else mi in
+  h.
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). *)
 Definition eq_2_1 (x0 x1 a : float) : bool :=
@@ -829,6 +973,14 @@ Definition mul_2_2_full (x0 x1 y0 y1 : float) : float * float :=
   let w1 := if f then z1 else r1 in
   (w0, w1).
 
+(* mul_ball_2_2: mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). *)
+Definition mul_ball_2_2 (x0 x1 y0 y1 : float) : float * float * float :=
+  let '(z0, z1) := mul_2_2 x0 x1 y0 y1 in
+  let az := abs z0 in
+  let t := prod az up_ball_mul_2_0 in
+  let d := fma t up_ball_mul_2_1 up_ball_mul_2_2 in
+  (z0, z1, d).
+
 (* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
 Definition mul_pow2_2 (x0 x1 c : float) : float * float :=
   let h := prod x0 c in
@@ -910,12 +1062,17 @@ Definition sub_2_2_full (x0 x1 y0 y1 : float) : float * float :=
   let w1 := if f then z1 else r1 in
   (w0, w1).
 
-(* to_down_2: the sign of x1 (Milestone 1 listing). *)
-Definition to_down_2 (x0 x1 : float) : float :=
-  let m := lt x1 pzero in
-  let p := pred x0 in
-  let t := if m then p else x0 in
-  t.
+(* sub_down_2_2: add_down_2_2 on x and -y (Milestone 2 listing). *)
+Definition sub_down_2_2 (x0 x1 y0 y1 : float) : float * float :=
+  let '(n0, n1) := neg_2 y0 y1 in
+  let '(l0, l1) := add_down_2_2 x0 x1 n0 n1 in
+  (l0, l1).
+
+(* sub_up_2_2: add_up_2_2 on x and -y (Milestone 2 listing). *)
+Definition sub_up_2_2 (x0 x1 y0 y1 : float) : float * float :=
+  let '(n0, n1) := neg_2 y0 y1 in
+  let '(h0, h1) := add_up_2_2 x0 x1 n0 n1 in
+  (h0, h1).
 
 (* to_nearest_2: the definition of normalized (Milestone 1 listing). *)
 Definition to_nearest_2 (x0 x1 : float) : float :=

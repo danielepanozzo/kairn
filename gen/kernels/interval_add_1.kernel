@@ -1,0 +1,31 @@
+# The sum of two intervals with one-limb bounds (milestone2.md, "Interval kernels", "One limb"):
+# the lower bounds added downward, the upper bounds upward, so that the result is the smallest
+# interval of T that contains the exact range; the empty set when an operand is empty (its lower
+# bound is then +inf). Bounded exactly when the exact range is within Omega, for bounded operands.
+kernel:        interval_add_1
+input:         stored xl
+input:         stored xu
+input:         stored yl
+input:         stored yu
+output:        zl
+output:        zu
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       encloses_interval zl zu x+y x=xl,xu y=yl,yu tight=rounded bounded_when=abs_le(x+y,omega) bounded_exactly
+min_precision: 2
+source:        directed sums of the bounds (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the bounds are directed sums, which select, and the empty set is selected after an explicit test; encloses_interval states what comes out
+
+l  = add_down_1(xl, yl)
+h  = add_up_1(xu, yu)
+nx = lt(xl, const inf)
+ny = lt(yl, const inf)
+ne = and(nx, ny)
+mi = neg(const inf)
+zl = select(ne, l, const inf)
+zu = select(ne, h, mi)

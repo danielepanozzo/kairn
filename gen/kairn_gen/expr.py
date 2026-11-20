@@ -7,14 +7,16 @@ A small explicit parser, so that no claim text is ever evaluated as Python:
     term  := unary (('*' | '/') unary)*
     unary := '-' unary | power
     power := atom ('^' ['-'] INTEGER)?
-    atom  := INTEGER | 'abs' '(' expr ')' | ('unit' | 'tiny') '(' NAME ')' | NAME '[' INTEGER ']'
-           | NAME | '(' expr ')'
+    atom  := INTEGER | 'abs' '(' expr ')' | 'up' '(' expr ')' | ('unit' | 'tiny') '(' NAME ')'
+           | NAME '[' INTEGER ']' | NAME | '(' expr ')'
 
 The result is a tree of tuples: ('int', n), ('name', s), ('limb', s, i) for limb i of the input
 group s (0 the leading limb), ('neg', a), ('abs', a), ('pow', a, n) with an integer n, ('call', f,
-K) for unit(K) and tiny(K), and (op, a, b) for op in add, sub, mul, div. Where each kind of tree may
-appear is the rules' business: only constants up(EXPR) have powers and calls, and only the
-conditions of exact_when name a limb.
+K) for unit(K) and tiny(K), ('up', a) for a constant up(EXPR) named inside an expression of a
+claim (the constants rel and abs of outward, Milestone 2), and (op, a, b) for op in add, sub, mul,
+div. Where each kind of tree may appear is the rules' business: only constants up(EXPR) and the
+constants of a claim have powers and calls, only the latter up( ), and only the conditions of
+exact_when name a limb.
 """
 import re
 from fractions import Fraction
@@ -97,12 +99,12 @@ def parse(text):
                 raise ExprError(f'{val}( ) takes the name of a kernel, in {text!r}')
             pos += 4
             return ('call', val, tokens[pos - 2][1])
-        if (kind, val) == ('name', 'abs') and pos + 1 < len(tokens) and tokens[pos + 1] == ('op', '('):
+        if val in ('abs', 'up') and kind == 'name' and pos + 1 < len(tokens) and tokens[pos + 1] == ('op', '('):
             pos += 2
             a = expr()
             if not take(')'):
                 raise ExprError(f'missing ")" in {text!r}')
-            return ('abs', a)
+            return (val, a)
         if kind == 'name' and pos + 1 < len(tokens) and tokens[pos + 1] == ('op', '['):
             if pos + 3 >= len(tokens) or tokens[pos + 2][0] != 'int' or tokens[pos + 3] != ('op', ']'):
                 raise ExprError(f'{val}[ ] takes the index of a limb, in {text!r}')
@@ -152,9 +154,10 @@ def calls(tree):
     return set().union(*(calls(t) for t in tree[1:] if isinstance(t, tuple)))
 
 
-def evaluate(tree, env):
+def evaluate(tree, env, up=None):
     """The exact value of a tree, with each name bound to a Fraction in env (limb i of group s
-    under limb_key(s, i))."""
+    under limb_key(s, i)); `up` rounds up to the format, for a constant up(EXPR) inside an
+    expression of a claim."""
     kind = tree[0]
     if kind == 'int':
         return Fraction(tree[1])
@@ -168,20 +171,24 @@ def evaluate(tree, env):
             raise ExprError(f'unknown limb {key!r}')
         return env[key]
     if kind == 'neg':
-        return -evaluate(tree[1], env)
+        return -evaluate(tree[1], env, up)
     if kind == 'abs':
-        return abs(evaluate(tree[1], env))
+        return abs(evaluate(tree[1], env, up))
+    if kind == 'up':
+        if up is None:
+            raise ExprError('up( ) is a constant of a format, and none is given')
+        return up(evaluate(tree[1], env, up))
     if kind == 'call':
         key = f'{tree[1]}({tree[2]})'
         if key not in env:
             raise ExprError(f'unknown {key}')
         return env[key]
     if kind == 'pow':
-        base = evaluate(tree[1], env)
+        base = evaluate(tree[1], env, up)
         if base == 0 and tree[2] < 0:
             raise ExprError('division by zero')
         return base ** tree[2]
-    a, b = evaluate(tree[1], env), evaluate(tree[2], env)
+    a, b = evaluate(tree[1], env, up), evaluate(tree[2], env, up)
     if kind == 'add':
         return a + b
     if kind == 'sub':

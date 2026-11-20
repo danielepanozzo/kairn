@@ -1,0 +1,35 @@
+# An interval from two values of T supplied by the program, guarded (rule R3); milestone2.md,
+# "Interval kernels", "Values of an interval": [lo, hi] when lo <= hi, lo < +inf and hi > -inf;
+# the whole line when a bound is a NaN, whatever the other bound is (decided on 2026-11-20: a NaN
+# says that something failed upstream, and the empty set must not come out of that); the empty set
+# otherwise, that is for lo > hi, [+inf, +inf] and [-inf, -inf]. For every precision.
+kernel:        interval_make_1
+input:         lo
+input:         hi
+output:        zl
+output:        zu
+ensures:       makes_interval zl zu from=lo,hi
+min_precision: 1
+source:        constructor of an interval (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   both outputs are selected after explicit tests of the bounds; makes_interval states what comes out
+
+gl = guard(lo)
+gu = guard(hi)
+ok = le(gl, gu)
+nl = lt(gl, const inf)
+mi = neg(const inf)
+nu = lt(mi, gu)
+va = and(ok, nl)
+v  = and(va, nu)
+ql = eq(gl, gl)
+qu = eq(gu, gu)
+nn = and(ql, qu)
+el = select(nn, const inf, mi)
+eu = select(nn, mi, const inf)
+zl = select(v, gl, el)
+zu = select(v, gu, eu)

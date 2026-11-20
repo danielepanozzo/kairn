@@ -92,6 +92,24 @@ NONFINITE_CE_CASES = [
     ('ball_make_2', 'double', [1.0, 2.0 ** -60, -1.0]),
     ('ball_make_2', 'float', [math.inf, 0.0, 0.5]),
     ('ball_make_2', 'double', [1.0, 2.0 ** -60, math.inf]),
+    # Milestone 2: the interval kernels and the functions of a Ball that are constexpr, on finite
+    # operands where they compute (an infinite bound would make TwoSum compute inf - inf, which
+    # constant evaluation refuses: a compile error, never a wrong constant), and interval_make_1,
+    # which only compares, on every kind of pair.
+    ('interval_make_1', 'double', [1.0, 2.0]),
+    ('interval_make_1', 'float', [2.0, 1.0]),
+    ('interval_make_1', 'double', [math.nan, 1.0]),
+    ('interval_make_1', 'float', [-math.inf, -math.inf]),
+    ('interval_neg_1', 'double', [-1.0, 2.0]),
+    ('interval_neg_1', 'float', [math.inf, -math.inf]),
+    ('interval_add_1', 'double', [1.0, 2.0, -0.5, 2.0 ** -60]),
+    ('interval_add_1', 'float', [1.0, 1.0, 2.0 ** -30, 2.0 ** -30]),
+    ('interval_sub_1', 'double', [1.0, 2.0, 1.0, 1.5]),
+    ('ball_lower_as_1', 'double', [1.0, 2.0 ** -60]),
+    ('ball_upper_as_1', 'float', [1.0, 0.25]),
+    ('ball_lower_as_2', 'double', [1.0, 2.0 ** -60, 0.5]),
+    ('ball_upper_as_2', 'float', [1.0, 2.0 ** -30, 0.5]),
+    ('ball_narrow_2_1', 'double', [1.0, 2.0 ** -60, 0.25]),
 ]
 
 

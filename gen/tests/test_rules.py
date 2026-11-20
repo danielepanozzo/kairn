@@ -729,6 +729,108 @@ p = prod(a, b)
                             f'{new}: ' + ('\n'.join(map(str, errors)) or 'accepted'))
 
 
+class IntervalClaims(unittest.TestCase):
+    """The claims of the interval kernels (architecture.md, "Claims of the interval kernels"): a toy
+    interval sum and a toy outward bound are accepted and parsed, and each misuse is refused."""
+    IADD = '''
+kernel:  iadd
+input:   stored xl
+input:   stored xu
+input:   stored yl
+input:   stored yu
+output:  zl
+output:  zu
+requires: interval xl xu
+requires: interval yl yu
+ensures: encloses_interval zl zu x+y x=xl,xu y=yl,yu tight=rounded bounded_when=abs_le(x+y,omega) bounded_exactly
+min_precision: 2
+status:  unverified
+domain:  extended
+ieee_status: unverified
+entry:   yes
+cone_exempt: selects
+nx = lt(xl, const inf)
+ny = lt(yl, const inf)
+ne = and(nx, ny)
+l  = add(xl, yl)
+h  = add(xu, yu)
+mi = neg(const inf)
+zl = select(ne, l, const inf)
+zu = select(ne, h, mi)
+'''
+    OUT = '''
+kernel:  odown
+input:   x = x0 x1
+input:   y = y0 y1
+output:  l = l0 l1
+value:   x+y
+requires: normalized x
+requires: normalized y
+ensures: outward l below rel=2*u^2 abs=eta exact_when=zero(x+y)
+status:  unverified
+s  = add(x0, y0)
+t  = add(x1, y1)
+l0 = add(s, t)
+l1 = sub(l0, s)
+'''
+
+    def refused(self, words, *texts):
+        errs = check(*texts)
+        self.assertTrue(any(words in str(e) for e in errs), f'nothing mentions {words!r} in:\n' +
+                        ('\n'.join(map(str, errs)) or 'accepted'))
+
+    def test_accepted_and_parsed(self):
+        self.assertEqual(check(self.IADD, self.OUT), [])
+        k = ir.parse_kernel(self.IADD, 't')
+        self.assertFalse(k.real_model)
+        self.assertEqual(k.requires, [('interval', 'xl', 'xu'), ('interval', 'yl', 'yu')])
+        self.assertEqual(k.ensures, [{'kind': 'encloses_interval', 'lower': 'zl', 'upper': 'zu', 'set': 'x+y',
+                                      'intervals': {'x': {'lower': 'xl', 'upper': 'xu'},
+                                                    'y': {'lower': 'yl', 'upper': 'yu'}},
+                                      'tight': {'kind': 'rounded'}, 'bounded_when': [{'abs_le': 'x+y', 'omega': True}],
+                                      'bounded_exactly': True}])
+        o = ir.parse_kernel(self.OUT, 't')
+        self.assertTrue(o.real_model)
+        self.assertEqual(o.ensures, [{'kind': 'outward', 'of': 'l', 'side': 'below', 'rel': '2*u^2', 'abs': 'eta',
+                                      'exact_when': [{'zero': 'x+y'}]}])
+        two = self.IADD.replace('tight=rounded', 'tight=outward;rel=u;abs=eta exact_lower=zero(xl+yl)')
+        self.assertEqual(ir.parse_kernel(two, 't').ensures[0]['tight'],
+                         {'kind': 'outward', 'rel': 'u', 'abs': 'eta', 'exact_when': {'lower': [{'zero': 'xl+yl'}]}})
+
+    def test_refused(self):
+        self.refused('the output has two limbs', self.OUT.replace('output:  l = l0 l1', 'output:  l')
+                     .replace('l0 = add(s, t)\nl1 = sub(l0, s)', 'l = add(s, t)'))
+        self.refused('no constant of a kernel with a real-model statement', self.OUT.replace('rel=2*u^2', 'rel=up(7*u)'))
+        self.refused('unknown name v', self.OUT.replace('abs=eta', 'abs=v'))
+        self.refused('is negative', self.OUT.replace('abs=eta', 'abs=-eta'))
+        self.refused('zero(EXPR) is a condition of outward',
+                     HEAD.replace('t=0', 't=0 exact_when=zero(a+b)') + GOOD)
+        self.refused('its operand is required to be an interval', self.IADD.replace('requires: interval yl yu\n', ''))
+        self.refused('abs_le(SET', self.IADD.replace('abs_le(x+y,omega)', 'abs_le(x,omega)'))
+        self.refused('the set is the product of two intervals',
+                     self.IADD.replace('tight=rounded', 'tight=rounded;steps=1;when=product_large'))
+        self.refused('not a claim of the finite domain',
+                     self.IADD.replace('domain:  extended\nieee_status: unverified\n', ''))
+        self.refused('bounded_exactly needs a condition', self.IADD.replace(' bounded_when=abs_le(x+y,omega)', ''))
+        self.refused('the bounds of an interval are two inputs',
+                     self.IADD.replace('input:   stored yu', 'input:   yu = yu0 yu1')
+                     .replace('h  = add(xu, yu)', 'h  = add(xu, yu0)\nq  = add(yu1, h)').replace('zu = select(ne, h, mi)',
+                                                                                          'zu = select(ne, q, mi)'))
+        self.refused('encloses names no ball',
+                     NonFiniteLayer.BALL.replace(' x=c,r finite_when=abs_le(c,-1)', '').replace('requires: ball c r\n', ''))
+        self.refused('zero_factor: the value is the product',
+                     HEAD.replace('ensures: error r R c=0 k=2 t=0', 'ensures: rounded r down zero_factor')
+                     .replace('output:  r = s e', 'output:  r').replace('status:  unverified',
+                                                                       'status:  unverified\ndomain:  extended\n'
+                                                                       'ieee_status: unverified\ncone_exempt: x')
+                     + 's = add(a, b)\nr = succ(s)\n')
+        mk = ('kernel:  mk\ninput:   lo\ninput:   hi = h0 h1\noutput:  zl\noutput:  zu\n'
+              'ensures: makes_interval zl zu from=lo,hi\nstatus:  unverified\ndomain:  extended\n'
+              'ieee_status: unverified\ncone_exempt: x\nq = add(h0, h1)\nm = lt(lo, q)\nzl = select(m, lo, q)\n'
+              'zu = copy(q)\n')
+        self.refused('makes_interval: the bounds given and returned', mk)
+
+
 class R3OfTheKernels(unittest.TestCase):
     """Rule R3 on gen/kernels: which kernels are entry kernels; no guard is pending."""
     # What the public headers call (include/kairn/expansion.hpp and ball.hpp): the cores, through
@@ -756,8 +858,13 @@ class R3OfTheKernels(unittest.TestCase):
 
     def test_entry_kernels(self):
         ks = common.kernels()
+        # The interval kernels and the functions of a Ball of the enclosure interface
+        # (milestone2.md, "Interval kernels", "One enclosure interface"), for the public headers of
+        # wave 2, which do not call them yet: their inputs are limbs of objects (stored), or bounds
+        # the program gives (interval_make_1, which guards them).
+        wave_2 = TheKernels.WAVE_2_INTERVALS | TheKernels.WAVE_2_BALLS
         self.assertEqual({n for n, k in ks.items() if k.entry},
-                         self.CORES | self.BALL_CORES | TheKernels.NON_FINITE | self.WAVE_1)
+                         self.CORES | self.BALL_CORES | TheKernels.NON_FINITE | self.WAVE_1 | wave_2)
 
     def test_every_kernel_the_public_headers_call_is_an_entry_kernel(self):
         ks = common.kernels()
@@ -1114,10 +1221,22 @@ class TheKernels(unittest.TestCase):
     WAVE_1_FINITE = {'two_sum_ord', 'two_sum_entry', 'fast_two_sum_entry', 'ball_mul_pow2_1', 'ball_mul_pow2_2'}
     WAVE_1_FULL = {'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
     WAVE_1 = WAVE_1_EXTENDED | WAVE_1_FINITE | WAVE_1_FULL
+    # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
+    # unverified until their proofs are pointed at the generated text: the interval kernels of one
+    # limb and the sum of two, with the IEEE-model statement only; mul_dir_1, of the extended domain
+    # with both statements; the bounds of two limbs, finite cores; the bounds of a ball as numbers
+    # of T and the narrowing of a ball, the IEEE-model statement only. (Not here, and in
+    # experiments/milestone2/kernels: mul_dir_2_2 and ball_from_interval_2, whose listings negate a
+    # fused result, and interval_mul_1 and interval_add_2, whose code Clang computes two FMAs to a
+    # packed instruction; the object-code check allows neither. common.WITHHELD has their claims.)
+    WAVE_2_INTERVALS = {'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1'}
+    WAVE_2_CORES = {'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2', 'sub_down_2_2', 'sub_up_2_2'}
+    WAVE_2_BALLS = {'ball_lower_as_1', 'ball_upper_as_1', 'ball_lower_as_2', 'ball_upper_as_2', 'ball_narrow_2_1'}
+    WAVE_2 = WAVE_2_INTERVALS | WAVE_2_CORES | WAVE_2_BALLS | {'mul_dir_1'}
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
-        self.assertEqual(set(ks), self.MILESTONE1 | self.WAVE_1)
+        self.assertEqual(set(ks), self.MILESTONE1 | self.WAVE_1 | self.WAVE_2)
         body = {name: [(st.dsts, st.op, tuple(map(str, st.args))) for st in k.body] for name, k in ks.items()}
         self.assertEqual(body['two_sum'], [
             (('s',), 'add', ('a', 'b')), (('bb',), 'sub', ('s', 'a')), (('t0',), 'sub', ('s', 'bb')),
@@ -1140,16 +1259,22 @@ class TheKernels(unittest.TestCase):
         # their IEEE-model theorems (IeeeBallPow2.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
                          self.MILESTONE1 | self.WAVE_1)
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, set())
+        # The first kernels of wave 2 are unverified, in both models, until their proofs (which
+        # exist for hand-written copies of their listings) are pointed at the generated text.
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, self.WAVE_2)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))
-        self.assertEqual({name for name, k in ks.items() if not k.real_model}, self.NON_FINITE | self.WAVE_1_FULL)
+        wave_2_ieee_only = self.WAVE_2_INTERVALS | self.WAVE_2_BALLS
+        self.assertEqual({name for name, k in ks.items() if not k.real_model},
+                         self.NON_FINITE | self.WAVE_1_FULL | wave_2_ieee_only)
         self.assertEqual({name for name, k in ks.items() if k.extended},
-                         self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL)
+                         self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL
+                         | wave_2_ieee_only | {'mul_dir_1'})
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
-                         dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
-                                       | self.WAVE_1_EXTENDED | self.WAVE_1_FULL, 'proved'))
+                         dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
+                                            | self.WAVE_1_EXTENDED | self.WAVE_1_FULL, 'proved'),
+                              **dict.fromkeys(wave_2_ieee_only | {'mul_dir_1'}, 'unverified')))
         # Every kernel of the extended domain that is proved names its IEEE-model theorem, and no
         # other kernel does.
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
@@ -1179,7 +1304,22 @@ class TheKernels(unittest.TestCase):
             'next_up': 1, 'next_down': 1, 'two_sum_ord': 2, 'add_down_1': 2, 'add_up_1': 2, 'sub_down_1': 2,
             'sub_up_1': 2, 'mul_down_1': 2, 'mul_up_1': 2, 'two_sum_entry': 2, 'fast_two_sum_entry': 2,
             'radd_entry': 2, 'add_down_entry': 2, 'add_up_entry': 2, 'sub_down_entry': 2, 'sub_up_entry': 2,
-            'ball_mul_pow2_1': 2, 'ball_mul_pow2_2': 2})
+            'ball_mul_pow2_1': 2, 'ball_mul_pow2_2': 2,
+            # Wave 2 (as the proofs found them): mul_dir_1 from 2, the sums of two limbs from 3, the
+            # product from 4.
+            'mul_dir_1': 2, 'add_ball_2_2': 3, 'add_down_2_2': 3, 'add_up_2_2': 3, 'sub_down_2_2': 3,
+            'sub_up_2_2': 3, 'mul_ball_2_2': 4})
+        # And of the interval kernels: none for the constructor and the negation (their theorems are
+        # for every precision), 2 for the sum and the difference; 2 for the bounds of a ball and the
+        # narrowing. Of those of common.WITHHELD: none for the product of one limb, 3 for the sum of
+        # two limbs, 4 for mul_dir_2_2, 2 for the ball from an interval.
+        self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_INTERVALS | self.WAVE_2_BALLS}, {
+            'interval_make_1': 1, 'interval_neg_1': 1, 'interval_add_1': 2, 'interval_sub_1': 2,
+            'ball_lower_as_1': 2, 'ball_upper_as_1': 2, 'ball_lower_as_2': 2, 'ball_upper_as_2': 2,
+            'ball_narrow_2_1': 2})
+        self.assertEqual({name: k.min_precision for name, k in common.withheld().items()}, {
+            'interval_mul_1': 1, 'interval_add_2': 3, 'mul_dir_2_2': 4, 'ball_from_interval_2': 2})
+        self.assertEqual(rules.check_all(common.kernels_and_withheld()), [])
 
     def test_milestone2_bodies_are_those_of_milestone2_md(self):
         """The listings of wave 1, line for line as the page writes them ("Building blocks on T",
@@ -1286,8 +1426,9 @@ class TheKernels(unittest.TestCase):
                       for k in re.findall(r'(?:unit|tiny)\([a-z0-9_]+\)', c)}
             self.assertEqual(called, {center}, name)
             self.assertEqual(ks[center].status, 'proved')
+        # (Of Milestone 1's Ball kernels: ball_narrow_2_1, of Milestone 2, widens a radius by radd.)
         self.assertTrue(all(st.op not in ('radd', 'rmul', 'abs_upper_2') for k in ks.values() for st in k.body
-                            if k.name.startswith('ball_')))
+                            if k.name.startswith('ball_') and k.name in self.MILESTONE1))
         self.assertIn('radd', ks)
         self.assertIn('rmul', ks)
 

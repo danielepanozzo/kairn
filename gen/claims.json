@@ -540,6 +540,109 @@
       }
     },
     {
+      "name": "sub_down_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a-b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "down"
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "sub_down_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeDirected.v",
+        "name": "sub_down_1_ieee_correct"
+      },
+      "source": {
+        "cite": "add_down_1 on a and -b (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_lower_as_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "l",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "set_bound",
+          "of": "l",
+          "side": "below",
+          "set": "x",
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          },
+          "tight": {
+            "kind": "rounded"
+          }
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the center minus the radius, rounded down (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_make_1",
       "domain": "extended",
       "ieee_only": true,
@@ -1235,6 +1338,60 @@
       }
     },
     {
+      "name": "ball_upper_as_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "h",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "set_bound",
+          "of": "h",
+          "side": "above",
+          "set": "x",
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          },
+          "tight": {
+            "kind": "rounded"
+          }
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the center plus the radius, rounded up (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "fast_two_sum_entry",
       "inputs": [
         {
@@ -1299,6 +1456,326 @@
             "abs": "0"
           }
         ]
+      }
+    },
+    {
+      "name": "interval_add_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "x+y",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "tight": {
+            "kind": "rounded"
+          },
+          "bounded_when": [
+            {
+              "abs_le": "x+y",
+              "omega": true
+            }
+          ],
+          "bounded_exactly": true
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "directed sums of the bounds (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 6,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_make_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "lo",
+          "limbs": 1
+        },
+        {
+          "name": "hi",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "makes_interval",
+          "lower": "zl",
+          "upper": "zu",
+          "from": {
+            "lower": "lo",
+            "upper": "hi"
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "constructor of an interval (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_neg_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "-x",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            }
+          },
+          "tight": {
+            "kind": "exact"
+          },
+          "bounded_when": [
+            {
+              "abs_le": "-x",
+              "omega": true
+            }
+          ],
+          "bounded_exactly": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds negated and exchanged (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "sub_up_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a-b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "up"
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "sub_up_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeDirected.v",
+        "name": "sub_up_1_ieee_correct"
+      },
+      "source": {
+        "cite": "add_up_1 on a and -b (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_sub_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "x-y",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "tight": {
+            "kind": "rounded"
+          },
+          "bounded_when": [
+            {
+              "abs_le": "x-y",
+              "omega": true
+            }
+          ],
+          "bounded_exactly": true
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "directed differences of the bounds (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 6,
+      "instances": {
+        "binary64": [],
+        "binary32": []
       }
     },
     {
@@ -1481,6 +1958,78 @@
             "abs": "0"
           }
         ]
+      }
+    },
+    {
+      "name": "mul_dir_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "d",
+          "limbs": 1
+        },
+        {
+          "name": "v",
+          "limbs": 1
+        }
+      ],
+      "value": "a*b",
+      "requires": [
+        "not_nan(a)",
+        "not_nan(b)"
+      ],
+      "ensures": [
+        {
+          "kind": "bound",
+          "of": "d",
+          "side": "below",
+          "steps": 1,
+          "zero_factor": true
+        },
+        {
+          "kind": "rounded",
+          "of": "d",
+          "mode": "down",
+          "when": "product_large",
+          "zero_factor": true
+        },
+        {
+          "kind": "bound",
+          "of": "v",
+          "side": "above",
+          "steps": 1,
+          "zero_factor": true
+        },
+        {
+          "kind": "rounded",
+          "of": "v",
+          "mode": "up",
+          "when": "product_large",
+          "zero_factor": true
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
       }
     },
     {
@@ -1895,55 +2444,6 @@
       }
     },
     {
-      "name": "sub_down_1",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "a",
-          "limbs": 1
-        },
-        {
-          "name": "b",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "r",
-          "limbs": 1
-        }
-      ],
-      "value": "a-b",
-      "requires": [],
-      "ensures": [
-        {
-          "kind": "rounded",
-          "of": "r",
-          "mode": "down"
-        }
-      ],
-      "min_precision": 2,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/DirectedSum.v",
-        "name": "sub_down_1_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeDirected.v",
-        "name": "sub_down_1_ieee_correct"
-      },
-      "source": {
-        "cite": "add_down_1 on a and -b (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 3,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
       "name": "sub_down_entry",
       "domain": "extended",
       "inputs": [
@@ -1987,55 +2487,6 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 5,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "sub_up_1",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "a",
-          "limbs": 1
-        },
-        {
-          "name": "b",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "r",
-          "limbs": 1
-        }
-      ],
-      "value": "a-b",
-      "requires": [],
-      "ensures": [
-        {
-          "kind": "rounded",
-          "of": "r",
-          "mode": "up"
-        }
-      ],
-      "min_precision": 2,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/DirectedSum.v",
-        "name": "sub_up_1_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeDirected.v",
-        "name": "sub_up_1_ieee_correct"
-      },
-      "source": {
-        "cite": "add_up_1 on a and -b (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 3,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -2702,6 +3153,132 @@
       }
     },
     {
+      "name": "add_ball_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        },
+        {
+          "name": "d",
+          "limbs": 1
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "3/(1-4*u)",
+          "k": 2,
+          "t": "0",
+          "when": null
+        },
+        {
+          "kind": "encloses",
+          "center": "z",
+          "radius": "d",
+          "set": "x+y",
+          "balls": {}
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 22,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "3/81129638414606645666991986180096",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/93824969867264",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "add_down_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "l",
+          "limbs": 2
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "l"
+        },
+        {
+          "kind": "outward",
+          "of": "l",
+          "side": "below",
+          "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)",
+          "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)",
+          "exact_when": [
+            {
+              "zero": "x+y"
+            }
+          ]
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 28,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "add_fast_2_2",
       "inputs": [
         {
@@ -2821,6 +3398,60 @@
         "license": "core: as add_fast_2_2; fix-up: MIT"
       },
       "flops": 13,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "add_up_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "h",
+          "limbs": 2
+        }
+      ],
+      "value": "x+y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "h"
+        },
+        {
+          "kind": "outward",
+          "of": "h",
+          "side": "above",
+          "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)",
+          "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)",
+          "exact_when": [
+            {
+              "zero": "x+y"
+            }
+          ]
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 28,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -2978,6 +3609,124 @@
       "instances": {
         "binary64": [],
         "binary32": []
+      }
+    },
+    {
+      "name": "to_down_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "value": "x",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "t",
+          "mode": "down"
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Convert.v",
+        "name": "to_down_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "to_down_2_ieee_correct"
+      },
+      "source": {
+        "cite": "the sign of x1 (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_lower_as_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 2
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "l",
+          "limbs": 1
+        }
+      ],
+      "value": "c-r",
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "set_bound",
+          "of": "l",
+          "side": "below",
+          "set": "x",
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          }
+        },
+        {
+          "kind": "error",
+          "of": "l",
+          "form": "A",
+          "c": "5",
+          "k": 1,
+          "t": "3",
+          "when": null
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the center rounded down, minus the radius, rounded down (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "5/9007199254740992",
+            "abs": "3/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "5/16777216",
+            "abs": "3/713623846352979940529142984724747568191373312"
+          }
+        ]
       }
     },
     {
@@ -3414,6 +4163,68 @@
         "license": "core: as ball_mul_pow2_2; fix-up: MIT"
       },
       "flops": 6,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_narrow_2_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 2
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 1
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "value": "c",
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses",
+          "center": "cz",
+          "radius": "rz",
+          "set": "x",
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          },
+          "finite_when": [
+            {
+              "abs_le": "abs(c)+r",
+              "exp": -2
+            }
+          ]
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the leading limb, and the radius widened by the second limb (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 1,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -3905,6 +4716,77 @@
       "instances": {
         "binary64": [],
         "binary32": []
+      }
+    },
+    {
+      "name": "ball_upper_as_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 2
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "h",
+          "limbs": 1
+        }
+      ],
+      "value": "c+r",
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "set_bound",
+          "of": "h",
+          "side": "above",
+          "set": "x",
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          }
+        },
+        {
+          "kind": "error",
+          "of": "h",
+          "form": "A",
+          "c": "5",
+          "k": 1,
+          "t": "3",
+          "when": null
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the center rounded up, plus the radius, rounded up (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "5/9007199254740992",
+            "abs": "3/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "5/16777216",
+            "abs": "3/713623846352979940529142984724747568191373312"
+          }
+        ]
       }
     },
     {
@@ -4516,6 +5398,78 @@
       }
     },
     {
+      "name": "mul_ball_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        },
+        {
+          "name": "d",
+          "limbs": 1
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "4",
+          "k": 2,
+          "t": "3/2",
+          "when": null
+        },
+        {
+          "kind": "encloses",
+          "center": "z",
+          "radius": "d",
+          "set": "x*y",
+          "balls": {}
+        }
+      ],
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 11,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/20282409603651670423947251286016",
+            "abs": "3/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/70368744177664",
+            "abs": "3/1427247692705959881058285969449495136382746624"
+          }
+        ]
+      }
+    },
+    {
       "name": "mul_pow2_2",
       "inputs": [
         {
@@ -5008,47 +5962,108 @@
       }
     },
     {
-      "name": "to_down_2",
-      "domain": "extended",
+      "name": "sub_down_2_2",
       "inputs": [
         {
           "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
           "limbs": 2
         }
       ],
       "outputs": [
         {
-          "name": "t",
-          "limbs": 1
+          "name": "l",
+          "limbs": 2
         }
       ],
-      "value": "x",
+      "value": "x-y",
       "requires": [
-        "canonical(x)"
+        "normalized(x)",
+        "normalized(y)"
       ],
       "ensures": [
         {
-          "kind": "rounded",
-          "of": "t",
-          "mode": "down"
+          "kind": "normalized",
+          "of": "l"
+        },
+        {
+          "kind": "outward",
+          "of": "l",
+          "side": "below",
+          "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)",
+          "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)",
+          "exact_when": [
+            {
+              "zero": "x-y"
+            }
+          ]
         }
       ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Convert.v",
-        "name": "to_down_2_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeExt.v",
-        "name": "to_down_2_ieee_correct"
-      },
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
       "source": {
-        "cite": "the sign of x1 (Milestone 1 listing)",
+        "cite": "add_down_2_2 on x and -y (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
       },
-      "flops": 0,
+      "flops": 28,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "sub_up_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "h",
+          "limbs": 2
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "h"
+        },
+        {
+          "kind": "outward",
+          "of": "h",
+          "side": "above",
+          "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)",
+          "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)",
+          "exact_when": [
+            {
+              "zero": "x-y"
+            }
+          ]
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_up_2_2 on x and -y (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 28,
       "instances": {
         "binary64": [],
         "binary32": []

@@ -7,12 +7,13 @@ this model were retired, a Rocq file checked by conversion alone that the printe
 drafts'."""
 import copy
 import hashlib
+import json
 import os
 import re
 import unittest
 
 import common
-from kairn_gen import expr, ieee, ir, rocq, rules
+from kairn_gen import claims, expr, ieee, ir, rocq, rules
 
 # The variables of the section of IeeeOperations.v, in their order.
 SECTION = ['Variable prec emax : Z.', 'Context {prec_gt_0_ : Prec_gt_0 prec}.',
@@ -87,6 +88,8 @@ class Model(unittest.TestCase):
         # The thirteen of the Ball cores, and N and P of Milestone 2 (eta / (2u), eta / (2u^2): the
         # scalings of a ball and the directed products).
         self.assertEqual(len(ups), 15)
+        # A constant that only a kernel without a real-model statement uses has no definition in
+        # Model.v; the IEEE model defines it from its expression (Statements.test_a_ball_from_an_interval).
         self.assertIn('Definition up_ball_mul_pow2_1_0 : float := const_of (Model.up_ball_mul_pow2_1_0 (3 - emax - prec) prec).', m)
 
     def test_programs(self):
@@ -152,6 +155,59 @@ class Statements(unittest.TestCase):
         self.assertIn('  (~ finite x0 -> canonical_of t w0 w1)', s)
         self.assertIn('Rabs ((val x0 + val x1) * val c) <= bpow radix2 (emax - 1) ->', s)
 
+    def test_the_withheld_kernels(self):
+        # The kernels of common.WITHHELD are not in gen/kernels yet: their compiled code does not
+        # pass the object-code check (architecture.md, "Claims of the interval kernels"). Their
+        # claims are in the vocabulary: the listings of experiments/milestone2/kernels with those
+        # claims pass every rule and have these statements, which make -C proofs compiled while the
+        # kernels were in gen/kernels (with these printers); the two constants of
+        # ball_from_interval_2 are defined in the IEEE model only.
+        ks = common.kernels_and_withheld()
+        self.assertEqual(rules.check_all(ks), [])
+        entry = claims.kernel_claims(ks['ball_from_interval_2'], ks)
+        self.assertTrue(entry['ieee_only'])
+        with open(os.path.join(common.ROOT, 'docs', 'developer', 'architecture.md'), encoding='utf-8') as f:
+            self.assertIn(json.dumps(entry['ensures'][0]).replace('\n', ' '), ' '.join(f.read().split('\n')))
+        text = ieee.statements(ks)
+
+        def spec(name, statements=text):
+            return re.search(rf'^Definition {name}_spec : Prop :=\n(.*?)\.\n', statements, flags=re.M | re.S).group(1)
+        # I4 of the product in the shape of interval_mul_1_tight_range, product_large unfolded.
+        s = spec('interval_mul_1')
+        self.assertIn('   xle (xpred prec emax (xrd prec emax lo)) (xval zl) = true /\\\n'
+                      '   xle (xval zl) (xrd prec emax lo) = true /\\\n', s)
+        self.assertIn('   ((finite xl /\\ finite yl ->\n'
+                      '    val xl * val yl = 0 \\/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) '
+                      '<= Rabs (val xl * val yl)) ->\n', s)
+        # I4 of the sum of two limbs: the outward constants of add_2_2 in the forms of Directed2.v,
+        # and the bound itself for a zero bound of the exact range.
+        s = spec('interval_add_2')
+        self.assertIn('   (((val xl0 + val xl1) + (val yl0 + val yl1)) = 0 -> xval_2 zl0 zl1 = XFin lo) /\\\n', s)
+        self.assertIn('((((/ 2) * up_ball_add_1_1 (ieee_emin prec emax) prec) * eta (ieee_emin prec emax))', s)
+        # mul_dir_2_2 in the real model: both bounds, each outward of the product.
+        s = spec('mul_dir_2_2', rocq.statements(ks))
+        self.assertIn("  let '(l0, l1, h0, h1) := mul_dir_2_2 emin prec tie_even x0 x1 y0 y1 in\n", s)
+        self.assertIn('  (l0 + l1) <= ((x0 + x1) * (y0 + y1)) /\\\n', s)
+        self.assertIn('  ((x0 + x1) * (y0 + y1)) <= (h0 + h1) /\\\n', s)
+        s = spec('ball_from_interval_2')
+        self.assertIn('  ball_2 cw0 cw1 rw /\\\n'
+                      '  (xnonempty (xval lo) (xval hi) -> finite lo -> finite hi ->\n'
+                      '   ball_finite_2 cw0 cw1 rw /\\\n'
+                      '   (forall x : R, val lo <= x <= val hi -> in_ball_2 cw0 cw1 rw x)) /\\\n'
+                      '  (xnonempty (xval lo) (xval hi) -> finite lo -> finite hi -> '
+                      'fmt (ieee_emin prec emax) prec (val lo / 2) -> fmt (ieee_emin prec emax) prec (val hi / 2) ->\n'
+                      '   (val cw0 + val cw1) = (val lo + val hi) / 2 /\\\n'
+                      '   val rw = RU (ieee_emin prec emax) prec ((val hi - val lo) / 2)) /\\\n'
+                      '  (xnonempty (xval lo) (xval hi) -> ~ (finite lo /\\ finite hi) -> ball_whole_2 cw0 cw1 rw) /\\\n'
+                      '  (nan lo \\/ nan hi -> ball_whole_2 cw0 cw1 rw) /\\\n'
+                      '  (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> ball_empty_2 cw0 cw1 rw)', s)
+        m = ieee.model(ks)
+        self.assertNotIn('up_ball_from_interval_2', rocq.model(ks))
+        self.assertIn('Definition up_ball_from_interval_2_0 : float := const_of (round radix2 '
+                      '(FLT_exp (3 - emax - prec) prec) Zceil (1 / 2)).', m)
+        self.assertIn('Definition up_ball_from_interval_2_1 : float := const_of (round radix2 '
+                      '(FLT_exp (3 - emax - prec) prec) Zceil 2).', m)
+
     def test_represents(self):
         # neg_2 and abs_2 say it next to normalized and an exact error, which it implies.
         self.assertTrue(self.statement('neg_2_ieee_spec').endswith(
@@ -192,7 +248,8 @@ class Statements(unittest.TestCase):
                 out = ' '.join(k.output_limbs)
                 clause = f'->\n   ball_finite_{len(k.outputs[0].limbs)} {out}) /\\\n'
                 self.assertEqual(s.count(clause), 1 if enc[0]['finite_when'] else 0, name)
-                self.assertEqual(bool(enc[0]['finite_when']), name.endswith('_full'), name)
+                # ball_narrow_2_1 (Milestone 2) has a condition too: its radius can overflow.
+                self.assertEqual(bool(enc[0]['finite_when']), name.endswith('_full') or name == 'ball_narrow_2_1', name)
 
     def test_the_finite_when_of_a_ball(self):
         # The same kernel with its conditions taken away, and with two of them.
@@ -279,9 +336,12 @@ class CheckedFiles(unittest.TestCase):
     # With the kernels of wave 1 of Milestone 2, whose definitions and statements were added
     # (every earlier one is the same, byte for byte) and whose statuses the statements file
     # prints: proved, the two full scalings of a ball included (the only change of the file when
-    # their proofs landed is those two words).
-    DIGESTS = {'proofs/gen/IeeeModel.v': '5f8b52744c5b159c79b59b54a7ab0d6315550e917d4d997962d21f971ce27031',
-               'proofs/gen/IeeeStatements.v': '71547afdfa7855358d802f2a836dd0a0ec4b0eaa4c67cc8c6b36a17ac39c9179'}
+    # their proofs landed is those two words). Then the first kernels of the intervals of wave 2,
+    # unverified, were added: every earlier definition and statement is the same, byte for byte,
+    # some printed earlier (callees before callers), and the statements import
+    # IeeeIntervalVocabulary.v; make -C proofs passed on these files.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '031e28ce56f5d22f4501373caddc704e94c2ff3219d5db9b713fc0f3c816ca1d',
+               'proofs/gen/IeeeStatements.v': '145965ea628caf41956a88e409f34e7a5335056d91b1d9ae1a67266c18910a4d'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

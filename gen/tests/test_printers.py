@@ -103,7 +103,14 @@ TIMES_INF = r' \* std::numeric_limits<(?:double|float)>::infinity\(\);$'
 FULL = {f'{core}_full' for core in ('add_2_2', 'add_fast_2_2', 'sub_2_2', 'add_2_1', 'sub_2_1', 'sub_1_2',
                                     'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
 FULL_BALL = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale', 'mul_pow2') for k in (1, 2)}
-BRANCHED = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BALL | {'ball_make_1', 'ball_make_2'}})
+BRANCHED_M1 = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BALL | {'ball_make_1', 'ball_make_2'}})
+BRANCHED = dict(BRANCHED_M1)
+# Milestone 2: the kernels without a real-model statement whose outputs are selects on one mask, the
+# test of empty operands (ne) of the interval kernels, the test of a pair that describes an interval
+# (v) of the constructor, and the test that a ball is not empty (ne) of its bounds as numbers of T.
+BRANCHED.update({k: ('ne',) for k in ('interval_add_1', 'interval_sub_1', 'ball_lower_as_1', 'ball_upper_as_1',
+                                      'ball_lower_as_2', 'ball_upper_as_2')})
+BRANCHED.update(interval_make_1=('v',))
 
 
 class Cpp(unittest.TestCase):
@@ -187,6 +194,12 @@ class Cpp(unittest.TestCase):
     # are the full Ball kernels but the scalings by a power of two. The constructors are.
     NOT_CONSTEXPR |= {f'{core}_full' for core in ('mul_2_2', 'mul_2_1')}
     NOT_CONSTEXPR |= {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+    # Milestone 2: the directed products of one limb in both directions and the product of
+    # intervals that calls them (two_prod's fms), and the bounds of two limbs, which call the
+    # products of two limbs or a radius of the second design (fma), with the sum of intervals of
+    # two limbs that calls them.
+    NOT_CONSTEXPR |= {'mul_dir_1', 'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2', 'sub_down_2_2',
+                      'sub_up_2_2'}
     # The kernels whose only fused operations are prod, constexpr by the rule of the product
     # (milestone2.md, "The two executions of a product").
     PRODUCT_RULE = {'rmul', 'mul_1_1', 'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full', 'ball_mul_pow2_1',
@@ -359,12 +372,31 @@ class FixupBranch(unittest.TestCase):
     def test_the_kernels_it_applies_to(self):
         got = {n: b.masks for n, k in self.ks.items() for b in [cpp.branch(k, self.ks)] if b}
         self.assertEqual(got, BRANCHED)
+        # Only the kernel's own selects are a fix-up (Milestone 2): the arm of ball_lower_as_1 is the
+        # directed difference, a callee whose last operation selects on the sign of an error, which
+        # is computed, not branched on.
+        b = cpp.branch(self.ks['ball_lower_as_1'], self.ks)
+        flat = {p.dst: p for p in ir.prims(self.ks['ball_lower_as_1'], self.ks)}
+        self.assertEqual((b.masks, flat[b.arms[0].name].op), (('ne',), 'select'))
         # The constructors of 2-limb numbers have no fix-up of this shape: make_2 returns x0 as it is
         # guarded, make_2_limbs has no select. Kernels with a real-model statement select on their
         # data (to_up_2 on the sign of x1), and are left alone too.
         for name in ('make_2', 'make_2_limbs', 'to_up_2', 'to_down_2', 'abs_2', 'abs_upper_2', 'lt_2_2'):
             self.assertIsNone(cpp.branch(self.ks[name], self.ks), name)
-        for name in BRANCHED:
+        # Milestone 2: the arms are the bounds the kernel computes, and the outputs of the fix-up
+        # the empty set or, for the constructor, the empty set or the whole line.
+        for name, arms in (('interval_add_1', ['l', 'h']), ('interval_make_1', ['gl', 'gu']),
+                           ('ball_lower_as_2', ['t'])):
+            self.assertEqual([str(a) for a in cpp.branch(self.ks[name], self.ks).arms], arms, name)
+        # And those of common.WITHHELD, as they will be printed.
+        every = common.kernels_and_withheld()
+        for name, masks, arms in (('interval_mul_1', ('ne',), ['l', 'h']),
+                                  ('interval_add_2', ('ne',), ['a0', 'a1', 'b0', 'b1']),
+                                  ('ball_from_interval_2', ('v', 'f'), ['c0', 'c1', 'r'])):
+            b = cpp.branch(every[name], every)
+            self.assertEqual((b.masks, [str(a) for a in b.arms]), (masks, arms), name)
+        self.assertIsNone(cpp.branch(every['mul_dir_2_2'], every))
+        for name in BRANCHED_M1:
             b = cpp.branch(self.ks[name], self.ks)
             ball = name.startswith('ball_')
             arms = {'ball_make_1': ['c0', 'g'], 'ball_make_2': ['c0', 'c1', 'g']}.get(
@@ -667,15 +699,24 @@ class Rocq(unittest.TestCase):
                 # after its claim's own (ball_mul_pow2_k).
                 printed = [e for e in k.ensures if e['kind'] != 'represents']
                 printed += [e for e in printed if 'exact_when' in e]
+                # outward (Milestone 2) says its side and its distance: two conjuncts before the exact.
+                printed += [e for e in k.ensures if e['kind'] == 'outward']
                 self.assertEqual(len(conjuncts), len(want) + len(printed), name)
                 uncovered[name] = len(want)
         # The loop has something to read: both ways of saying it occur, also in one statement,
         # and so does an output that says nothing (a mask).
         self.assertEqual([uncovered[n] for n in ('two_sum', 'ball_add_2', 'ops_wave2', 'add_2_2', 'lt_2_2')],
                          [2, 1, 3, 0, 0])
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38)
+        # With Milestone 2's real-model kernels: d and v of mul_dir_1, d of add_ball_2_2 and of
+        # mul_ball_2_2 (the bounds of two limbs are normalized).
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 4)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 3)
         s = self.statements
+        # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
+        # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
+        # add_down_2_2_spec as its type by unfolding them (checked with Rocq on these files).
+        self.assertEqual(rocq.claim_constant_term('1/2*eta+u/(1/u)+tiny(add_2_2)+tiny(mul_2_2)', self.all, 'emin'),
+                         '(((((/ 2) * eta emin) + (u prec / (/ u prec))) + 0) + ((3 / 2) * eta emin))')
         self.assertIn("  let '(cz0, cz1, rz) := ball_add_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in\n"
                       '  fmt emin prec rz /\\\n  normalized_2 emin prec cz0 cz1 /\\\n  (forall x y : R, ', s)
         self.assertIn('  let r := radd emin prec tie_even a b in\n  fmt emin prec r /\\\n  (a + b) <= r /\\ ', s)
@@ -777,10 +818,15 @@ class Rocq(unittest.TestCase):
     # up_ball_*_2). Then the kernels of wave 1 of Milestone 2 were added (eighteen with a real-model
     # statement, and the constants N, P and eta): every earlier definition and statement is the
     # same, byte for byte, and fast_two_sum and two_prod are printed earlier, before the new kernels
-    # that call them; Audit.v lists the same theorems, those two earlier.
-    DIGESTS = {'Model.v': '3f2e3f54b76c21bf6d904880d082677af7821f4830b57d2152ee97618df8bbec',
-               'Statements.v': '93ad4903d8fc398325f82f1d55cfcbd59c65d4fb88cf404efdcf6616fb3796fe',
-               'Audit.v': '0c93acbf8651ff7bc342d1c9ab1f80d0f98718ddf3d0123dbff0d0547a871f15'}
+    # that call them; Audit.v lists the same theorems, those two earlier. Then the first kernels of
+    # the intervals of wave 2 (seven with a real-model statement: mul_dir_1 and the bounds of two
+    # limbs), unverified: every earlier definition and statement is the same, byte for byte, some
+    # printed earlier (callees before callers: sub_down_1, sub_up_1, to_down_2, two_prod), with
+    # their constants named as before (gen/constant_names.json); Audit.v lists the same theorems,
+    # in that order. make -C proofs passed on these files.
+    DIGESTS = {'Model.v': 'ac09dd3020493542fdab74fc4420762435be8944eb14e25701f64ba01948d837',
+               'Statements.v': '42eaef6fc2466a8b6f5d945dbf3a59daf2862a55b1447cf7138e0511dc750a4b',
+               'Audit.v': '8b174b5f9693a7602bfc3a29a6f7578d37f798c185c6bfea9626c3e2664da9bb'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in
@@ -811,7 +857,9 @@ class Rocq(unittest.TestCase):
             for e in k.ensures:
                 e.pop('finite_when', None)
             finite[name] = k
-        self.assertEqual(len(finite), 60)
+        # 60, and the seven of Milestone 2's interval work with a real-model statement: mul_dir_1 and
+        # the six bounds of two limbs.
+        self.assertEqual(len(finite), 67)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

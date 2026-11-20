@@ -103,31 +103,36 @@ def _binders(names):
 # ---------------------------------------------------------------------------------------------
 # IeeeModel.v
 
-def _const_names(kernels, real):
+def _const_names(kernels, real, every=None):
     """{constant name: the name of its definition}, the same in Model.v and here (inf, nan and 0
     are not here). Each is defined here from its definition in Model.v, which has the constants of
-    the kernels with a real-model statement (`real`): a constant only a full kernel or a
-    constructor uses has none, and is refused."""
-    ups = rocq.up_names(real)
+    the kernels with a real-model statement (`real`). A constant up(EXPR) that only kernels without
+    one use (Milestone 2: the halves of a ball made from an interval) is defined here from its
+    expression (_real_constant); any other such constant is refused."""
+    ups = rocq.up_names(every if every is not None else kernels)
     in_model = {a.name for k in real.values() for st in k.body for a in st.args if a.const}
     out = {}
     for k in kernels.values():
         for st in k.body:
             for a in st.args:
                 if a.const and a.name not in (ir.ZERO,) + ir.SPECIAL:
-                    if a.name not in in_model:
+                    if a.name not in in_model and ir.up(a.name) is None:
                         raise PrintError(f'kernel {k.name}: const {a.name} is not in the real model, '
                                          'from which the IEEE model takes its value')
                     out[a.name] = rocq._const_name(a.name, ups)
-    return out
+    return out, in_model
 
 
-def _real_constant(name, rname):
+def _real_constant(name, rname, in_model, kernels):
     """The real-model term of a constant, at the emin and prec of the IEEE format: the arguments
-    of its closed definition in Model.v (prec alone for those of ir.CONSTANTS)."""
+    of its closed definition in Model.v (prec alone for those of ir.CONSTANTS); for a constant
+    up(EXPR) that Model.v has not, EXPR rounded up as Model.v would define it."""
     if name in ir.CONSTANTS:
         return f'Model.{rname} prec'
-    return f'Model.{rname} (3 - emax - prec) prec'
+    if name in in_model:
+        return f'Model.{rname} (3 - emax - prec) prec'
+    term = rocq.up_term(name, kernels, 'bpow radix2 (- prec)', 'bpow radix2 (3 - emax - prec)')
+    return f'round radix2 (FLT_exp (3 - emax - prec) prec) Zceil {rocq._paren(term)}'
 
 
 def _operand(a, cnames):
@@ -216,8 +221,9 @@ def program_kernels(kernels):
 
 def model(kernels):
     real = rocq.real(kernels)
+    every = kernels
     kernels = in_model(kernels)
-    cnames = _const_names(kernels, real)
+    cnames, defined = _const_names(kernels, real, every)
     lines = [HEADER, '',
              '(* The IEEE model of every kernel: one function over Flocq\'s binary_float prec emax, with',
              '   the operations of IeeeOperations.v (rounded to nearest, ties to even, overflow included), in',
@@ -275,7 +281,7 @@ def model(kernels):
             continue
         done.add(rname)
         lines += ['', f'(* {name}, as a number of the format. *)',
-                  f'Definition {rname} : float := const_of ({_real_constant(name, rname)}).']
+                  f'Definition {rname} : float := const_of ({_real_constant(name, rname, defined, every)}).']
     for k in kernels.values():
         lines += [''] + definition(k, kernels, cnames)
     lines += ['', 'End IeeeKernels.']
@@ -394,7 +400,8 @@ def _claim(e, k, t, outs):
             if e['form'] == 'R':
                 rho = f'Rabs {value}'
             else:
-                rho = '(' + ' + '.join(f'Rabs {_val_sum(g.limbs)}' for g in k.inputs) + ')'
+                # A one-limb input's value is an application, `val a`: in parentheses under Rabs.
+                rho = '(' + ' + '.join(f'Rabs {_paren(_val_sum(g.limbs))}' for g in k.inputs) + ')'
             terms = []
             if c != zero:
                 terms.append(f'{rocq._term(c, lambda n: "u prec")} * u prec ^ {e["k"]} * {rho}')
@@ -522,6 +529,11 @@ def _hyps_extended(k, t):
             lines.append(f'  nonneg_ext {r[1]} ->')
         elif r[0] == 'power_of_two':
             lines += [f'  finite {r[1]} ->', f'  (exists n : Z, val {r[1]} = bpow radix2 n) ->']
+        elif r[0] == 'interval':
+            lo, hi = t.ins[r[1]].limbs, t.ins[r[2]].limbs
+            lines.append(f'  interval_{len(lo)} {" ".join(lo + hi)} ->')
+        elif r[0] == 'not_nan':
+            lines.append(f'  ~ nan {r[1]} ->')
         else:
             raise PrintError(f'kernel {k.name}: no extended reading of {r[0]}')
     return lines
@@ -655,6 +667,226 @@ def _makes_ball_spec(k, kernels, e):
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
 
+# ---------------------------------------------------------------------------------------------
+# Intervals and the bounds of a set (Milestone 2), in the vocabulary of
+# proofs/theories/IeeeIntervalVocabulary.v and in the shapes of the theorems of IeeeInterval1.v.
+
+def _interval_precision(k):
+    """A statement about intervals has a hypothesis on the precision only when its kernel has a
+    minimum above 1: the theorems of interval_make_1, interval_neg_1 and interval_mul_1 are for
+    every precision and have none."""
+    return (k.min_precision or 1) > 1
+
+
+def _strip(term):
+    """A term without its outer parentheses (the body of a fun, as the theorems write it)."""
+    if term.startswith('(') and term.endswith(')'):
+        depth = 0
+        for i, ch in enumerate(term):
+            depth += {'(': 1, ')': -1}.get(ch, 0)
+            if depth == 0 and i < len(term) - 1:
+                return term
+        return term[1:-1]
+    return term
+
+
+def _set_of(k, e, groups, member):
+    """The set of an interval or ball claim as a predicate on R: the members of one operand when
+    the set is its name, otherwise range_1 or range_2 (IeeeIntervalVocabulary.v) of the operation
+    over the operands' members. `groups` maps each name of the claim to its limbs, `member` gives
+    the membership predicate of a name, partially applied."""
+    tree = expr.parse(e['set'])
+    names = list(groups)
+    if tree[0] == 'name':
+        return f'({member(tree[1])})'
+    used = [n for n in names if n in expr.names(tree)]
+    if len(used) not in (1, 2):
+        raise PrintError(f'kernel {k.name}: a set over {len(used)} names has no range_N in the vocabulary')
+    body = _strip(rocq._term(tree, lambda n: n))
+    return (f'(range_{len(used)} (fun {" ".join(used)} : R => {body}) '
+            + ' '.join(f'({member(n)})' for n in used) + ')')
+
+
+def _interval_bounds(k, e, t):
+    """The limbs of the result and of each interval of the claim, and their word size N."""
+    lo, hi = t.outs[e['lower']].limbs, t.outs[e['upper']].limbs
+    n = len(_limbs(k, lo, e['lower'], (1, 2)))
+    groups = {name: t.ins[b['lower']].limbs + t.ins[b['upper']].limbs for name, b in e['intervals'].items()}
+    return lo, hi, n, groups
+
+
+def _xv(limbs):
+    return f'xval_2 {" ".join(limbs)}' if len(limbs) == 2 else f'xval {limbs[0]}'
+
+
+def _product_large(a, b):
+    """The condition product_large of two bounds of one limb, as the theorems of IeeeInterval1.v
+    state it (its definition product_large there, unfolded): for finite bounds, their product is
+    zero or at least 2^(2 prec - 1) eta in magnitude."""
+    return (f'(finite {a} /\\ finite {b} ->\n    val {a} * val {b} = 0 \\/ bpow radix2 (2 * prec - 1) * eta {EMIN} '
+            f'<= Rabs (val {a} * val {b}))')
+
+
+def _interval_spec(k, kernels, e):
+    """I1 to I5 of milestone2.md, "What is stated of an interval kernel", for canonical operands, in
+    the shapes of the theorems of IeeeInterval1.v (interval_add_1_correct, and for a tightness
+    of steps, interval_mul_1_tight_range)."""
+    t = _Terms(k)
+    nans = _used_nans(k, kernels)
+    lines = _head(k, nans, precision=_interval_precision(k)) + _hyps_extended(k, t) + [_let(k, kernels)]
+    zlo, zhi, n, groups = _interval_bounds(k, e, t)
+    z = ' '.join(zlo + zhi)
+
+    def member(name):
+        return f'in_interval_{n} {" ".join(groups[name])}'
+    names = list(groups)
+    S = _set_of(k, e, groups, member)
+    tree = expr.parse(e['set'])
+    empties = ' \\/ '.join(f'interval_empty_{n} {" ".join(groups[x])}' for x in names)
+    claims = [f'interval_{n} {z}', f'(interval_empty_{n} {z} <-> {empties})']
+    target = rocq._term(tree, lambda x: x)
+    claims.append(f'(forall {" ".join(names)} : R, ' + ' '.join(f'{member(x)} {x} ->' for x in names) +
+                  f'\n   in_interval_{n} {z} {target})')
+    nonempty = ' '.join(f'interval_nonempty_{n} {" ".join(groups[x])} ->' for x in names)
+    bounded = ' '.join(f'interval_bounded_{n} {" ".join(groups[x])} ->' for x in names)
+    ranges = f'range_lower {S} lo ->\n   range_upper {S} hi ->'
+    tight = e['tight']
+    if tight['kind'] in ('rounded', 'exact'):
+        if tight['kind'] == 'exact':
+            body = f'{_xv(zlo)} = lo /\\ {_xv(zhi)} = hi'
+        else:
+            down, up = 'xrd prec emax lo', 'xru prec emax hi'
+            exact = f'{_xv(zlo)} = {down} /\\ {_xv(zhi)} = {up}'
+            steps = tight.get('steps', 0)
+            parts = []
+            if steps:
+                ld, hu = down, up
+                for _ in range(steps):
+                    ld, hu = f'xpred prec emax ({ld})', f'xsucc prec emax ({hu})'
+                parts += [f'xle ({ld}) ({_xv(zlo)}) = true', f'xle ({_xv(zlo)}) ({down}) = true',
+                          f'xle ({up}) ({_xv(zhi)}) = true', f'xle ({_xv(zhi)}) ({hu}) = true']
+            if tight.get('when') == 'product_large':
+                a, b = (groups[x[1]] for x in tree[1:])
+                pairs = [(a[0], b[0]), (a[0], b[1]), (a[1], b[0]), (a[1], b[1])]
+                parts.append('(' + ' ->\n   '.join(_product_large(p, q) for p, q in pairs) + f' ->\n   {exact})')
+            elif not steps:
+                parts.append(exact)
+            body = ' /\\\n   '.join(parts)
+        claims.append(f'({nonempty}\n   forall lo hi : xreal,\n   {ranges}\n   {body})')
+    else:
+        # The outward tightness (two limbs): for bounded operands, each finite bound of the exact range
+        # within rel |v| + abs of the bound of the result, when the result is bounded; that bound
+        # itself under the conditions of exact_when (zero, for the sums); and an infinite bound of the
+        # exact range returned as that infinity.
+        rel = rocq.claim_constant_term(tight['rel'], kernels, EMIN)
+        absolute = rocq.claim_constant_term(tight['abs'], kernels, EMIN)
+        vl, vh = _val_sum(zlo), _val_sum(zhi)
+        inner = [f'(interval_bounded_{n} {z} ->\n    lo - {vl} <= {rel} * Rabs lo + {absolute} /\\\n'
+                 f'    {vh} - hi <= {rel} * Rabs hi + {absolute})']
+        for side, var, limbs in (('lower', 'lo', zlo), ('upper', 'hi', zhi)):
+            conds = tight.get('exact_when', {}).get(side)
+            if conds:
+                inner.append(f'({t.exact_condition(conds)} -> {_xv(limbs)} = XFin {var})')
+        claims.append(f'({bounded}\n   forall lo hi : R,\n   range_lower {S} (XFin lo) ->\n'
+                      f'   range_upper {S} (XFin hi) ->\n   ' + ' /\\\n   '.join(inner) + ')')
+        claims.append(f'({nonempty}\n   (range_lower {S} (XInf true) -> {_xv(zlo)} = XInf true) /\\\n'
+                      f'   (range_upper {S} (XInf false) -> {_xv(zhi)} = XInf false))')
+    conds = []
+    for c in e['bounded_when']:
+        limit = 'omega prec emax' if c.get('omega') else \
+            'bpow radix2 ' + ('emax' if c['exp'] == 0 else f'(emax {"-" if c["exp"] < 0 else "+"} {abs(c["exp"])})')
+        conds.append(f'forall z : R,\n    {_strip(S)} z ->\n    Rabs z <= {limit}')
+    if conds:
+        if e.get('bounded_exactly'):
+            conds_text = ' /\\\n    '.join(conds if len(conds) == 1 else [f'({c})' for c in conds])
+            claims.append(f'({bounded}\n   (interval_bounded_{n} {z} <->\n    {conds_text}))')
+        else:
+            claims.append(f'({bounded}\n   ' + ' ->\n   '.join(f'({c})' for c in conds) +
+                          f' ->\n   interval_bounded_{n} {z})')
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _makes_interval_spec(k, kernels, e):
+    """The constructor of an interval (milestone2.md, "Values of an interval"), in the shape of
+    interval_make_1_correct: the result is canonical; the interval of the given bounds when they
+    describe a nonempty one; the whole line when a bound is a NaN; the empty set otherwise."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    zl, zu = _limbs(k, t.outs[e['lower']].limbs, e['lower'], (1,)), t.outs[e['upper']].limbs
+    lo, hi = e['from']['lower'], e['from']['upper']
+    nonempty = f'xnonempty (xval {lo}) (xval {hi})'
+    claims = [f'interval_1 {zl[0]} {zu[0]}',
+              f'({nonempty} -> xval {zl[0]} = xval {lo} /\\ xval {zu[0]} = xval {hi})',
+              f'(nan {lo} \\/ nan {hi} -> {zl[0]} = infinity prec emax true /\\ {zu[0]} = infinity prec emax false)',
+              f'(~ nan {lo} -> ~ nan {hi} -> ~ {nonempty} -> interval_empty_1 {zl[0]} {zu[0]})']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _makes_ball_interval_spec(k, kernels, e):
+    """A ball from the bounds of an interval (milestone2.md, "A ball from an interval of two T"):
+    canonical; for finite lo <= hi a finite ball that contains [lo, hi], with the exact midpoint
+    for center and the radius rounded up when the conditions of midpoint_when hold; the whole line
+    for a NaN bound and for an interval that is not empty with an infinite bound; the empty set
+    otherwise."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels)) + _hyps_extended(k, t) + [_let(k, kernels)]
+    c_out, r_out = _limbs(k, t.outs[e['center']].limbs, e['center'], (1, 2)), e['radius']
+    n = len(c_out)
+    out = _ball_args(c_out, r_out)
+    lo, hi = e['from']['lower'], e['from']['upper']
+    nonempty = f'xnonempty (xval {lo}) (xval {hi})'
+    claims = [f'ball_{n} {out}',
+              f'({nonempty} -> finite {lo} -> finite {hi} ->\n   ball_finite_{n} {out} /\\\n'
+              f'   (forall x : R, val {lo} <= x <= val {hi} -> in_ball_{n} {out} x))']
+    conds = e.get('midpoint_when', [])
+    if conds:
+        halves = ' -> '.join(f'fmt {EMIN} prec (val {c["half_in_format"]} / 2)' for c in conds)
+        claims.append(f'({nonempty} -> finite {lo} -> finite {hi} -> {halves} ->\n'
+                      f'   {_val_sum(c_out)} = (val {lo} + val {hi}) / 2 /\\\n'
+                      f'   val {r_out} = RU {EMIN} prec ((val {hi} - val {lo}) / 2))')
+    claims += [f'({nonempty} -> ~ (finite {lo} /\\ finite {hi}) -> ball_whole_{n} {out})',
+               f'(nan {lo} \\/ nan {hi} -> ball_whole_{n} {out})',
+               f'(~ nan {lo} -> ~ nan {hi} -> ~ {nonempty} -> ball_empty_{n} {out})']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _set_bound_claim(e, k, t):
+    """A bound of a set over balls (Milestone 2, the bounds of a ball as numbers of T): the empty
+    set gives the infinity beyond it (+inf below, -inf above); otherwise the output is on its side
+    of the bound of the set, as an extended real number (range_lower, range_upper), and with
+    tight=rounded the directed rounding of that bound, stepped `steps` times at most."""
+    out = e['of']
+    below = e['side'] == 'below'
+    groups = {b: t.ins[cr['center']].limbs + (cr['radius'],) for b, cr in e['balls'].items()}
+
+    def member(name):
+        return f'in_ball_{len(groups[name]) - 1} {" ".join(groups[name])}'
+    S = _set_of(k, e, groups, member)
+    empty = ' \\/ '.join(f'ball_empty_{len(g) - 1} {" ".join(g)}' for g in groups.values())
+    empty = f'({empty})' if len(groups) > 1 else empty
+    var, rng = ('lo', 'range_lower') if below else ('hi', 'range_upper')
+    tight = e.get('tight')
+    if tight is None:
+        side = f'xle (xval {out}) {var} = true' if below else f'xle {var} (xval {out}) = true'
+    else:
+        r = f'{"xrd" if below else "xru"} prec emax {var}'
+        steps = tight.get('steps', 0)
+        if steps:
+            limit = r
+            for _ in range(steps):
+                limit = f'{"xpred" if below else "xsucc"} prec emax ({limit})'
+            side = (f'xle ({limit}) (xval {out}) = true /\\ xle (xval {out}) ({r}) = true' if below else
+                    f'xle ({r}) (xval {out}) = true /\\ xle (xval {out}) ({limit}) = true')
+        else:
+            side = f'xval {out} = {r}'
+    return (f'({empty} -> {out} = infinity prec emax {"false" if below else "true"}) /\\\n'
+            f'  (~ {empty} -> forall {var} : xreal, {rng} {S} {var} -> {side})')
+
+
 ROUNDING = {'nearest': 'RN', 'down': 'RD', 'up': 'RU'}
 RELATION = {'lt': 'xlt', 'le': 'xle', 'eq': 'xeq'}
 
@@ -670,8 +902,22 @@ def _operands_finite(k):
 
 
 def _extended_claim(e, k, t):
-    """One claim of a kernel that needs no fix-up, read over extended real numbers."""
+    """One claim of a kernel that needs no fix-up, read over extended real numbers. With
+    zero_factor (Milestone 2, mul_dir_1), a zero operand gives zero, and the claim is read as
+    without it for the others: 0 times infinity is 0, the product of interval arithmetic."""
+    if e.get('zero_factor'):
+        a, b = (x[1] for x in expr.parse(k.value)[1:])
+        inner = _extended_claim({x: y for x, y in e.items() if x != 'zero_factor'}, k, t)
+        return (f'(zero {a} \\/ zero {b} -> zero {e["of"]}) /\\\n'
+                f'  (~ (zero {a} \\/ zero {b}) ->\n   {inner})')
     kind = e['kind']
+    if kind == 'set_bound':
+        return _set_bound_claim(e, k, t)
+    if kind == 'error':
+        # As for finite operands (the claim of a core), when every operand and the output are finite.
+        out = t.outs[e['of']].limbs
+        return (f'({_operands_finite(k)} -> ' + ' -> '.join(f'finite {v}' for v in out) + ' ->\n   '
+                + _claim(e, k, t, {g.name: g.limbs for g in k.outputs}) + ')')
     if kind == 'predicate':
         a, b = (t.xterm(x) for x in e['args'])
         return f'{e["of"]} = {RELATION[e["rel"]]} {a} {b}'
@@ -721,7 +967,7 @@ def _no_fix_up_spec(k, kernels):
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels)) + _hyps_extended(k, t) + [_let(k, kernels)]
     lines.append('  ' + ' /\\\n  '.join(_extended_claim(e, k, t) for e in k.ensures) + '.')
-    return _statement(f'{k.name}_ieee_spec', _comment(k), lines)
+    return _statement(statement_names(k)[0], _comment(k), lines)
 
 
 def statement_names(k):
@@ -747,12 +993,22 @@ def kernel_statements(k, kernels):
         if 'extends' in kinds:
             return [_full_spec(k, kernels, k.ensures[0])]
         if 'makes_ball' in kinds:
-            return [_makes_ball_spec(k, kernels, k.ensures[0])]
+            e = k.ensures[0]
+            if 'lower' in e['from']:
+                return [_makes_ball_interval_spec(k, kernels, e)]
+            return [_makes_ball_spec(k, kernels, e)]
+        if 'makes_interval' in kinds:
+            return [_makes_interval_spec(k, kernels, k.ensures[0])]
         if 'represents' in kinds:
             return [_represents_spec(k, kernels, next(e for e in k.ensures if e['kind'] == 'represents'))]
         enc = [e for e in k.ensures if e['kind'] == 'encloses']
         if enc:
             return [_ball_spec(k, kernels, enc[0])]
+        intervals = [e for e in k.ensures if e['kind'] == 'encloses_interval']
+        if intervals:
+            if len(k.ensures) != 1:
+                raise PrintError(f'kernel {k.name}: encloses_interval goes with no other claim')
+            return [_interval_spec(k, kernels, intervals[0])]
         return [_no_fix_up_spec(k, kernels)]
     out = []
     if 'bridge' in k.ieee:
@@ -769,7 +1025,7 @@ def kernel_statements(k, kernels):
 def statements(kernels):
     lines = [HEADER, '',
              '(* The statements about the IEEE model (IeeeModel.v), built from the claims in the shapes',
-             '   described in proofs/theories/IeeeVocabulary.v, whose vocabulary',
+             '   described in proofs/theories/IeeeVocabulary.v and IeeeIntervalVocabulary.v, whose vocabulary',
              '   they use: for all precisions from the kernel\'s minimum on and all emax with prec < emax,',
              '   for every choice of the NaN each operation returns, with rounding to nearest, ties to',
              '   even; emin = 3 - emax - prec. A hand-written proof of statement S is a theorem whose type',
@@ -777,7 +1033,7 @@ def statements(kernels):
              'From Stdlib Require Import Reals ZArith List.',
              'From Flocq Require Import Core Binary.',
              f'From {GEN_PATH} Require Import Model Statements.',
-             f'From {THEORIES_PATH} Require Import Program IeeeBridge IeeeVocabulary.',
+             f'From {THEORIES_PATH} Require Import Program IeeeBridge IeeeVocabulary IeeeIntervalVocabulary.',
              f'From {THEORIES_PATH} Require IeeeOperations.',
              f'From {GEN_PATH} Require IeeeModel.',
              'Import ListNotations.',

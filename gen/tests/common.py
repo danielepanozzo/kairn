@@ -4,6 +4,7 @@ import itertools
 import math
 import os
 import random
+import re
 import shutil
 import struct
 import sys
@@ -57,6 +58,86 @@ def kernels(directory=None):
             raise AssertionError('\n'.join(map(str, errors)))
         _cache[directory] = ks
     return _cache[directory]
+
+
+# Kernels of Milestone 2's interval work whose claims are in the vocabulary but which are not in
+# gen/kernels yet, because their compiled code does not pass the object-code check
+# (architecture.md, "Claims of the interval kernels"): the listings of
+# experiments/milestone2/kernels, which carry no claims, with the claims they will have. The tests
+# of the vocabulary (rules, claims.json entries, statements, the judges) read them as the
+# generator would.
+WITHHELD = {
+    'mul_dir_2_2': [
+        'requires:      normalized x',
+        'requires:      normalized y',
+        'ensures:       normalized l',
+        'ensures:       normalized h',
+        'ensures:       outward l below rel=(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)'
+        '*(1+unit(mul_2_2))/(1-u) abs=2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta'
+        '+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)'
+        '*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)',
+        'ensures:       outward h above rel=(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)'
+        '*(1+unit(mul_2_2))/(1-u) abs=2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta'
+        '+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)'
+        '*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)',
+        'min_precision: 4',
+        'source:        mul_2_2 moved down and up by the bound of its own error, renormalized exactly '
+        '(Milestone 2 listing)',
+        'license:       algorithm and proof: MIT',
+    ],
+    'ball_from_interval_2': [
+        'ensures:       makes_ball cw rw from_interval=lo,hi midpoint_when=half_in_format(lo);half_in_format(hi)',
+        'min_precision: 2',
+        'source:        the exact sum of the halves, and the difference of the halves rounded up '
+        '(Milestone 2 listing)',
+        'license:       algorithm and proof: MIT',
+    ],
+    'interval_mul_1': [
+        'requires:      interval xl xu',
+        'requires:      interval yl yu',
+        'ensures:       encloses_interval zl zu x*y x=xl,xu y=yl,yu tight=rounded;steps=1;when=product_large '
+        'bounded_when=abs_le(x*y,omega) bounded_exactly',
+        'min_precision: 1',
+        'source:        the least and the greatest of the directed products of the bounds (Milestone 2 listing)',
+        'license:       algorithm and proof: MIT',
+    ],
+    'interval_add_2': [
+        'requires:      interval xl xu',
+        'requires:      interval yl yu',
+        'ensures:       encloses_interval zl zu x+y x=xl,xu y=yl,yu tight=outward;'
+        'rel=(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u);'
+        'abs=2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta'
+        '+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2) '
+        'exact_lower=zero(xl+yl) exact_upper=zero(xu+yu) bounded_when=abs_le(x+y,-2)',
+        'min_precision: 3',
+        'source:        the directed sums of two limbs, an infinite or empty result selected (Milestone 2 listing)',
+        'license:       algorithm and proof: MIT',
+    ],
+}
+
+
+def withheld():
+    """{name: ir.Kernel} of WITHHELD, each the listing of experiments/milestone2/kernels with its
+    claims (its own requires and ieee_only lines left out: the generator says ieee_only itself)."""
+    if 'withheld' not in _cache:
+        out = {}
+        for name, claims in WITHHELD.items():
+            path = os.path.join(ROOT, 'experiments', 'milestone2', 'kernels', name + '.kernel')
+            with open(path, encoding='utf-8') as f:
+                lines = [line for line in f.read().splitlines() if not line.startswith('#')]
+            fields = [line for line in lines if re.match(r'[a-z_]+:', line)]
+            head = [line for line in fields if not line.startswith(('requires:', 'ieee_only:'))]
+            body = [line for line in lines if line and line not in fields]
+            out[name] = ir.parse_kernel('\n'.join(head + claims) + '\n\n' + '\n'.join(body) + '\n', path)
+        _cache['withheld'] = out
+    return _cache['withheld']
+
+
+def kernels_and_withheld():
+    """The kernels of gen/kernels and those of WITHHELD after them (their callees are before)."""
+    ks = dict(kernels())
+    ks.update(withheld())
+    return ks
 
 
 # ---------------------------------------------------------------------------------------------

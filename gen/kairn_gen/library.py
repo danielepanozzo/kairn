@@ -172,6 +172,11 @@ def _tail(f, rng, x0):
     return x1
 
 
+def _exact(limbs):
+    """The exact value of finite limbs, as a Fraction."""
+    return sum((-1 if v[1] else 1) * Fraction(v[2]) * Fraction(2) ** v[3] for v in limbs)
+
+
 def selftest_case(k, kernels, f):
     """Fixed operands of K in format f that satisfy its requirements, and its outputs."""
     rng = _Stream(f'{k.name}:{f.name}')
@@ -181,7 +186,12 @@ def selftest_case(k, kernels, f):
     # Radii are nonnegative: of a ball operand, and the one a ball is made from (otherwise the
     # result would be the empty set, which is not finite).
     nonneg = {r[0] for r in req.get('nonneg', [])} | {r[1] for r in req.get('ball', [])} | \
-        {e['from']['radius'] for e in k.ensures if e['kind'] == 'makes_ball'}
+        {e['from']['radius'] for e in k.ensures if e['kind'] == 'makes_ball' and 'radius' in e['from']}
+    # The bounds of an interval, and the bounds an interval or a ball is made from, are put in
+    # order, lower first (otherwise the result would be the empty set, which is not finite).
+    ordered = [tuple(r) for r in req.get('interval', [])] + \
+        [(e['from']['lower'], e['from']['upper']) for e in k.ensures
+         if e['kind'] in ('makes_ball', 'makes_interval') and 'lower' in e['from']]
     pow2 = {r[0] for r in req.get('power_of_two', [])}
     smaller = {r[1] for r in req.get('abs_ge', [])}
     inputs = []
@@ -200,6 +210,14 @@ def selftest_case(k, kernels, f):
             inputs += [x0] + [_tail(f, rng, x0)] * (len(g.limbs) - 1)
             if len(g.limbs) > 2:
                 raise LibraryError(f'{k.name}: no operands chosen for groups of more than two limbs')
+    at, i = {}, 0
+    for g in k.inputs:
+        at[g.name] = slice(i, i + len(g.limbs))
+        i += len(g.limbs)
+    for lo, hi in ordered:
+        a, b = inputs[at[lo]], inputs[at[hi]]
+        if _exact(a) > _exact(b):
+            inputs[at[lo]], inputs[at[hi]] = b, a
     machine = interp.Machine(kernels)
     out = machine.run(k.name, f, inputs)
     if interp.Machine(kernels, fused=False).run(k.name, f, inputs) != out:
@@ -231,10 +249,17 @@ def nonfinite_case(k, kernels, f):
     if first.kind != ir.LIMB:
         raise LibraryError(f'{k.name}: no non-finite case for a kernel whose first input is a mask')
     limbs = at[first.name]
+    intervals = {r[1]: r[2] for r in k.requires if r[0] == 'interval'}
     if first.name in balls:                 # the whole line, or the empty set
         for j in limbs:
             inputs[j] = zero if inf else interp.NaN
         inputs[at[balls[first.name]][0]] = special
+    elif first.name in intervals:           # the whole line (-inf, +inf), or the empty set (+inf, -inf)
+        upper = at[intervals[first.name]]
+        for j in limbs[1:] + upper[1:]:
+            inputs[j] = zero
+        inputs[limbs[0]] = (interp.INF, inf)
+        inputs[upper[0]] = (interp.INF, not inf)
     else:
         inputs[limbs[0]] = special
         for j in limbs[1:]:
@@ -265,7 +290,8 @@ def selftest(kernels):
              '// The operands are read through volatile objects, so that the compiler cannot evaluate a',
              '// kernel while it compiles: what runs is the code the client\'s flags produced. The full',
              '// kernels and the constructors of the non-finite layer have a second case each, with a',
-             '// non-finite first operand: +infinity for double, NaN for float.',
+             '// non-finite first operand: +infinity for double, NaN for float; an interval operand is',
+             '// then the whole line for double and the empty set for float.',
              '#pragma once', '',
              '#include <bit>',
              '#include <cstdint>',

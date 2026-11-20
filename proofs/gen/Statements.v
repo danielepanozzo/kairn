@@ -127,6 +127,16 @@ Definition ball_add_1_spec : Prop :=
   fmt emin prec rz /\
   (forall x y : R, Rabs (x - cx) <= rx -> Rabs (y - cy) <= ry -> Rabs ((x + y) - cz) <= rz).
 
+(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). Status: proved. *)
+Definition sub_down_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := sub_down_1 emin prec tie_even a b in
+  fmt emin prec r /\
+  r = RD emin prec (a - b).
+
 (* ball_mul_1: midpoint-radius product (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_mul_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -211,6 +221,16 @@ Definition fast_two_sum_entry_spec : Prop :=
   (s + e) = (a + b) /\
   normalized_2 emin prec s e.
 
+(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). Status: proved. *)
+Definition sub_up_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let r := sub_up_1 emin prec tie_even a b in
+  fmt emin prec r /\
+  r = RU emin prec (a - b).
+
 (* mul_1_1: one rounding to nearest. Status: proved. *)
 Definition mul_1_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -234,6 +254,20 @@ Definition two_prod_spec : Prop :=
   p = RN emin prec (a * b) /\
   Rabs ((p + e) - (a * b)) <= (1 / 2) * eta emin /\
   (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> (p + e) = (a * b)).
+
+(* mul_dir_1: two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). Status: unverified. *)
+Definition mul_dir_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall a b : R,
+  fmt emin prec a ->
+  fmt emin prec b ->
+  let '(d, v) := mul_dir_1 emin prec tie_even a b in
+  fmt emin prec d /\
+  fmt emin prec v /\
+  d <= (a * b) /\ pred radix2 (FLT_exp emin prec) (RD emin prec (a * b)) <= d /\
+  (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> d = RD emin prec (a * b)) /\
+  (a * b) <= v /\ v <= succ radix2 (FLT_exp emin prec) (RU emin prec (a * b)) /\
+  (((a * b) = 0 \/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs (a * b)) -> v = RU emin prec (a * b)).
 
 (* mul_down_1: two_prod and the sign of its error term (Milestone 2 listing). Status: proved. *)
 Definition mul_down_1_spec : Prop :=
@@ -321,16 +355,6 @@ Definition split_spec : Prop :=
   fmt emin prec al /\
   (ah + al) = a.
 
-(* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). Status: proved. *)
-Definition sub_down_1_spec : Prop :=
-  forall emin prec : Z, (2 <= prec)%Z ->
-  forall a b : R,
-  fmt emin prec a ->
-  fmt emin prec b ->
-  let r := sub_down_1 emin prec tie_even a b in
-  fmt emin prec r /\
-  r = RD emin prec (a - b).
-
 (* sub_down_entry: sub_down_1 on its guarded operands (Milestone 2 listing). Status: proved. *)
 Definition sub_down_entry_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -340,16 +364,6 @@ Definition sub_down_entry_spec : Prop :=
   let r := sub_down_entry emin prec tie_even a b in
   fmt emin prec r /\
   r = RD emin prec (a - b).
-
-(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). Status: proved. *)
-Definition sub_up_1_spec : Prop :=
-  forall emin prec : Z, (2 <= prec)%Z ->
-  forall a b : R,
-  fmt emin prec a ->
-  fmt emin prec b ->
-  let r := sub_up_1 emin prec tie_even a b in
-  fmt emin prec r /\
-  r = RU emin prec (a - b).
 
 (* sub_up_entry: sub_up_1 on its guarded operands (Milestone 2 listing). Status: proved. *)
 Definition sub_up_entry_spec : Prop :=
@@ -445,6 +459,30 @@ Definition add_2_2_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) + (y0 + y1)).
 
+(* add_ball_2_2: add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). Status: unverified. *)
+Definition add_ball_2_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let '(z0, z1, d) := add_ball_2_2 emin prec tie_even x0 x1 y0 y1 in
+  fmt emin prec d /\
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) + (y0 + y1)) /\
+  Rabs (((x0 + x1) + (y0 + y1)) - (z0 + z1)) <= d.
+
+(* add_down_2_2: add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified. *)
+Definition add_down_2_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let '(l0, l1) := add_down_2_2 emin prec tie_even x0 x1 y0 y1 in
+  normalized_2 emin prec l0 l1 /\
+  (l0 + l1) <= ((x0 + x1) + (y0 + y1)) /\
+  Rabs ((l0 + l1) - ((x0 + x1) + (y0 + y1))) <= ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) * (1 + ((3 / (1 - (4 * u prec))) * u prec ^ 2))) / (1 - u prec)) * Rabs ((x0 + x1) + (y0 + y1)) + ((((2 * ((1 + u prec) ^ 2)) * ((((/ 2) * up_ball_add_1_1 emin prec) * eta emin) + up_ball_add_1_2 emin prec)) + eta emin) + ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) / (1 - u prec)) * 0)) /\
+  (((x0 + x1) + (y0 + y1)) = 0 -> (l0 + l1) = ((x0 + x1) + (y0 + y1))).
+
 (* add_fast_2_2: JMP17 Alg. 5 (SloppyDWPlusDW); the bound and the normalization are proved here. Status: proved. *)
 Definition add_fast_2_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -454,6 +492,18 @@ Definition add_fast_2_2_spec : Prop :=
   let '(z0, z1) := add_fast_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= 3 * u prec ^ 2 * (Rabs (x0 + x1) + Rabs (y0 + y1)).
+
+(* add_up_2_2: add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified. *)
+Definition add_up_2_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let '(h0, h1) := add_up_2_2 emin prec tie_even x0 x1 y0 y1 in
+  normalized_2 emin prec h0 h1 /\
+  ((x0 + x1) + (y0 + y1)) <= (h0 + h1) /\
+  Rabs ((h0 + h1) - ((x0 + x1) + (y0 + y1))) <= ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) * (1 + ((3 / (1 - (4 * u prec))) * u prec ^ 2))) / (1 - u prec)) * Rabs ((x0 + x1) + (y0 + y1)) + ((((2 * ((1 + u prec) ^ 2)) * ((((/ 2) * up_ball_add_1_1 emin prec) * eta emin) + up_ball_add_1_2 emin prec)) + eta emin) + ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) / (1 - u prec)) * 0)) /\
+  (((x0 + x1) + (y0 + y1)) = 0 -> (h0 + h1) = ((x0 + x1) + (y0 + y1))).
 
 (* ball_add_2: midpoint-radius sum (Milestone 1 listing, second radius design). Status: proved. *)
 Definition ball_add_2_spec : Prop :=
@@ -469,6 +519,15 @@ Definition ball_add_2_spec : Prop :=
   fmt emin prec rz /\
   normalized_2 emin prec cz0 cz1 /\
   (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x + y) - (cz0 + cz1)) <= rz).
+
+(* to_down_2: the sign of x1 (Milestone 1 listing). Status: proved. *)
+Definition to_down_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 : R,
+  normalized_2 emin prec x0 x1 ->
+  let t := to_down_2 emin prec x0 x1 in
+  fmt emin prec t /\
+  t = RD emin prec (x0 + x1).
 
 (* mul_2_2: JMP17 Alg. 12 (DWTimesDW3); bound from MR22. Status: proved. *)
 Definition mul_2_2_spec : Prop :=
@@ -643,6 +702,18 @@ Definition lt_2_2_spec : Prop :=
   let m := lt_2_2 x0 x1 y0 y1 in
   m = Rlt_bool (x0 + x1) (y0 + y1).
 
+(* mul_ball_2_2: mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). Status: unverified. *)
+Definition mul_ball_2_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let '(z0, z1, d) := mul_ball_2_2 emin prec tie_even x0 x1 y0 y1 in
+  fmt emin prec d /\
+  normalized_2 emin prec z0 z1 /\
+  Rabs ((z0 + z1) - ((x0 + x1) * (y0 + y1))) <= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + (3 / 2) * eta emin /\
+  Rabs (((x0 + x1) * (y0 + y1)) - (z0 + z1)) <= d.
+
 (* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). Status: proved. *)
 Definition mul_pow2_2_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -684,14 +755,29 @@ Definition sub_2_2_spec : Prop :=
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) - (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) - (y0 + y1)).
 
-(* to_down_2: the sign of x1 (Milestone 1 listing). Status: proved. *)
-Definition to_down_2_spec : Prop :=
-  forall emin prec : Z, (1 <= prec)%Z ->
-  forall x0 x1 : R,
+(* sub_down_2_2: add_down_2_2 on x and -y (Milestone 2 listing). Status: unverified. *)
+Definition sub_down_2_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
   normalized_2 emin prec x0 x1 ->
-  let t := to_down_2 emin prec x0 x1 in
-  fmt emin prec t /\
-  t = RD emin prec (x0 + x1).
+  normalized_2 emin prec y0 y1 ->
+  let '(l0, l1) := sub_down_2_2 emin prec tie_even x0 x1 y0 y1 in
+  normalized_2 emin prec l0 l1 /\
+  (l0 + l1) <= ((x0 + x1) - (y0 + y1)) /\
+  Rabs ((l0 + l1) - ((x0 + x1) - (y0 + y1))) <= ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) * (1 + ((3 / (1 - (4 * u prec))) * u prec ^ 2))) / (1 - u prec)) * Rabs ((x0 + x1) - (y0 + y1)) + ((((2 * ((1 + u prec) ^ 2)) * ((((/ 2) * up_ball_add_1_1 emin prec) * eta emin) + up_ball_add_1_2 emin prec)) + eta emin) + ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) / (1 - u prec)) * 0)) /\
+  (((x0 + x1) - (y0 + y1)) = 0 -> (l0 + l1) = ((x0 + x1) - (y0 + y1))).
+
+(* sub_up_2_2: add_up_2_2 on x and -y (Milestone 2 listing). Status: unverified. *)
+Definition sub_up_2_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall x0 x1 y0 y1 : R,
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let '(h0, h1) := sub_up_2_2 emin prec tie_even x0 x1 y0 y1 in
+  normalized_2 emin prec h0 h1 /\
+  ((x0 + x1) - (y0 + y1)) <= (h0 + h1) /\
+  Rabs ((h0 + h1) - ((x0 + x1) - (y0 + y1))) <= ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) * (1 + ((3 / (1 - (4 * u prec))) * u prec ^ 2))) / (1 - u prec)) * Rabs ((x0 + x1) - (y0 + y1)) + ((((2 * ((1 + u prec) ^ 2)) * ((((/ 2) * up_ball_add_1_1 emin prec) * eta emin) + up_ball_add_1_2 emin prec)) + eta emin) + ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 emin prec) * up_ball_add_2_0 emin prec) + (2 * (u prec ^ 2))) / (1 - u prec)) * 0)) /\
+  (((x0 + x1) - (y0 + y1)) = 0 -> (h0 + h1) = ((x0 + x1) - (y0 + y1))).
 
 (* to_nearest_2: the definition of normalized (Milestone 1 listing). Status: proved. *)
 Definition to_nearest_2_spec : Prop :=
