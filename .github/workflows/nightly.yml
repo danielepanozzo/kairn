@@ -1,0 +1,175 @@
+# Nightly brute force on the hosted runners (docs/developer/testing.md, "The tiers"; decision of
+# 2026-11-20 in docs/developer/design/phase0/decisions.md). The brief asks for a nightly run of the
+# brute-force tier; CI stays off the test machines, so the nightly run is this one, with a budget
+# of under two hours per platform on the hosted runners, and the full runs of 3 to 4 hours on the
+# test machines are made by hand before each milestone report (tests/brute/README.md).
+#
+# Each job runs tests/brute/brute.py: every kernel of gen/claims.json, binary64 and binary32, on
+# new random cases every night (the seed is the number of the run), through every runner that the
+# platform's compilers build, judged by the oracle and held to the guards of the cross-checks.
+# One more job enumerates, with the generator's interpreter, every operand of one fortieth of the
+# toy-format domains of the plan, a different fortieth each night. A violated claim, an invalid
+# case, a suspicious result or a failed guard fails the job; each job keeps its summary and its
+# findings as an artifact.
+#
+# A pull request that changes this file or the driver runs the same jobs for a few minutes on a
+# few kernels, as a test of the workflow and of the driver.
+name: Nightly brute force
+
+on:
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: Seconds of budget for each job's run
+        default: "6000"
+  pull_request:
+    paths:
+      - .github/workflows/nightly.yml
+      - tests/brute/**
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # 100 minutes at night. On a pull request, four minutes on four kernels in small units, and the
+  # 26 enumerations of precision 1, which take seconds.
+  BUDGET: ${{ github.event_name == 'pull_request' && '240' || inputs.budget || '6000' }}
+  SELECTION: ${{ github.event_name == 'pull_request' && '--kernels add_2_2,mul_2_2_full,ball_mul_2_full,two_prod --chunk 5000' || '--chunk 50000' }}
+
+jobs:
+  compiled:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x86-64, GCC and Clang
+            os: ubuntu-24.04
+            platform: linux-x86-64
+            builds: --build gcc=g++ --build clang=clang++
+          - name: Linux arm64, GCC and Clang
+            os: ubuntu-24.04-arm
+            platform: linux-arm64
+            builds: --build gcc=g++ --build clang=clang++
+          - name: macOS arm64, Apple clang
+            os: macos-15
+            platform: macos-arm64
+            builds: --build clang=clang++
+          - name: Windows x64, MSVC and clang-cl
+            os: windows-2025
+            platform: windows-x64
+            builds: --build msvc=cl --build clang-cl=clang-cl
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      # As in build.yml: cl and clang-cl need the variables of a Visual Studio developer prompt.
+      - name: Visual Studio developer environment
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw "no Visual Studio with the x64 C++ tools" }
+          $bat = Join-Path $env:RUNNER_TEMP "vcvars-and-set.bat"
+          Set-Content -Path $bat -Value "@call `"$vs\VC\Auxiliary\Build\vcvars64.bat`" >nul || exit /b 1", "@set"
+          $before = @{}
+          Get-ChildItem env: | ForEach-Object { $before[$_.Name] = $_.Value }
+          $lines = & cmd.exe /d /c $bat
+          if ($LASTEXITCODE -ne 0) { throw "vcvars64.bat failed" }
+          foreach ($line in $lines) {
+            if ($line -match '^([^=]+)=(.*)$' -and $before[$Matches[1]] -cne $Matches[2]) {
+              Add-Content -Path $env:GITHUB_ENV -Value "$($Matches[1])=$($Matches[2])"
+            }
+          }
+
+      # As in build.yml: the image's clang-cl is older than its standard library accepts.
+      - name: Let the image's clang-cl use the image's newer standard library
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Add-Content -Path $env:GITHUB_ENV -Value "CL=/D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH"
+
+      # The quick tier's runners have each compiler's own form of the scalar fix-ups; the other
+      # form is in the runs on the test machines (--fixup-forms both), not here, to give the
+      # budget to cases.
+      - name: Run
+        run: >
+          python tests/brute/brute.py run --work "${{ runner.temp }}/brute" --budget ${{ env.BUDGET }}
+          --jobs 4 --generator Ninja ${{ matrix.builds }} --part compiled --fixup-forms default
+          ${{ env.SELECTION }}
+          --seed nightly-${{ github.run_number }}-${{ matrix.platform }}
+          --commit ${{ github.sha }} --driver-commit ${{ github.sha }}
+
+      - name: Collect, and hold every series to the guards
+        if: always()
+        run: >
+          python tests/brute/brute.py collect --work "${{ runner.temp }}/brute"
+          --name nightly-${{ matrix.platform }}
+          --out "${{ runner.temp }}/nightly-${{ matrix.platform }}.json" --jobs 4
+
+      - name: Keep the summary and the findings
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nightly-${{ matrix.platform }}
+          path: |
+            ${{ runner.temp }}/nightly-${{ matrix.platform }}.json
+            ${{ runner.temp }}/brute/findings.jsonl
+            ${{ runner.temp }}/brute/runs.jsonl
+          if-no-files-found: warn
+
+  enumerations:
+    name: Linux, Python only, a fortieth of the enumerations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      # An enumeration counts only if it is complete, so this job's budget is long: a bin of the
+      # plan is sized to end well inside it. The bin is the day of the year modulo 40.
+      - name: Run
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            what="--interp-match fp:1:"
+          else
+            what="--interp-bins 40 --interp-take $(( 10#$(date -u +%j) % 40 ))"
+          fi
+          python tests/brute/brute.py run --work "$RUNNER_TEMP/brute" --budget 12000 --jobs 4 \
+            --part interp $what --seed "nightly-${{ github.run_number }}-enumerations" \
+            --commit "$GITHUB_SHA" --driver-commit "$GITHUB_SHA"
+
+      - name: Collect, and hold every enumeration to the guards
+        if: always()
+        run: >
+          python tests/brute/brute.py collect --work "$RUNNER_TEMP/brute" --name nightly-enumerations
+          --out "$RUNNER_TEMP/nightly-enumerations.json" --jobs 4
+
+      - name: Keep the summary and the findings
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nightly-enumerations
+          path: |
+            ${{ runner.temp }}/nightly-enumerations.json
+            ${{ runner.temp }}/brute/findings.jsonl
+            ${{ runner.temp }}/brute/runs.jsonl
+          if-no-files-found: warn

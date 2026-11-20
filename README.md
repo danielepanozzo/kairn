@@ -4,9 +4,9 @@ Rigorous floating-point expansions ("k-numbers") with interval and ball arithmet
 header-only C++20. Every error bound is meant to carry a machine-checked proof, and the shipped
 code is generated from the same source the proofs are about.
 
-**Status: pre-release. Phase 0 (specification and feasibility) is complete and reviewed. Milestone 1
-is complete and awaits its review ([report](docs/developer/results/milestone1.md)). Nothing here
-should be relied on yet.** The first public headers exist: `kairn/kairn.hpp`, with
+**Status: pre-release. Phase 0 (specification and feasibility) and Milestone 1 are complete
+([report](docs/developer/results/milestone1.md)); Milestone 2 is next. Nothing here should be
+relied on yet.** The documentation is at <https://danielepanozzo.github.io/kairn/>. The first public headers exist: `kairn/kairn.hpp`, with
 `kairn::Expansion<T, 1>`, `kairn::Expansion<T, 2>` and `kairn::Ball<T, 1>`, `kairn::Ball<T, 2>` for
 `T` = `float` or `double`. Every operation has a proved error bound or containment, except `ldexp`
 by a power of two that the limb type cannot represent, whose steps are proved and whose composition

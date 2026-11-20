@@ -2,8 +2,9 @@
 
 The site is built with MkDocs and the Material theme from the Markdown files under `docs/`, as
 configured by `mkdocs.yml` at the repository root. Every page is also meant to read correctly on
-GitHub, so the conventions below are the ones both renderers agree on. The site is not published
-yet.
+GitHub, so the conventions below are the ones both renderers agree on. The site is published at
+<https://danielepanozzo.github.io/kairn/> from every push to `main`, by the workflow that builds
+and checks it (`checks.yml`).
 
 ## Building the site
 

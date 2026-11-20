@@ -4,9 +4,9 @@ Kairn is a header-only C++20 library, in development, for floating-point expansi
 and ball arithmetic. Its aim is that every error bound it states carries a machine-checked proof,
 and that the code it ships is generated from the same description the proofs are about.
 
-**Status: pre-release. Milestone 1 is complete and awaits its review
-([report](developer/results/milestone1.md)), and nothing in this repository should be relied
-on yet.** The first public headers exist, for k-numbers of one and two limbs and balls around them,
+**Status: pre-release. Milestone 1 is complete
+([report](developer/results/milestone1.md)), Milestone 2 is next, and nothing in this repository
+should be relied on yet.** The first public headers exist, for k-numbers of one and two limbs and balls around them,
 and the statement of each of their operations has a checked proof in a model where nothing
 overflows; the [reference](reference/index.md) has each statement and its theorem. One exception:
 `ldexp` by a power of two outside the limb type's range is composed from proved steps by an
@@ -72,7 +72,7 @@ written ([report](developer/design/phase0/index.md#verdict)). In short:
 ## Status
 
 - **Phase 0**, specification and feasibility: complete, reviewed on 2026-11-18.
-- **Milestone 1**, complete and awaiting its review
+- **Milestone 1**, complete, with the owner's decisions of 2026-11-20
   ([report](developer/results/milestone1.md)): `double` and `float` limbs with $k = 1$ and $2$;
   addition, subtraction and multiplication; scalar, AVX2 and NEON code; `Ball`; the generator, the
   Rocq proofs with gradual underflow, the oracle and CI. Every kernel is proved. At overflow and

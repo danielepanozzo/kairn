@@ -5,6 +5,7 @@
 #   mkdocs build --strict   # writes site/; a broken link or anchor, or a page missing from nav, fails
 
 site_name: Kairn
+site_url: https://danielepanozzo.github.io/kairn/
 site_description: Floating-point expansions with interval and ball arithmetic and machine-checked error bounds (in development)
 repo_name: danielepanozzo/kairn
 repo_url: https://github.com/danielepanozzo/kairn
