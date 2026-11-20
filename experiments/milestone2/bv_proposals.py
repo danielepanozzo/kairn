@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Two kernels of BallVector (milestone2.md, "BallVector") that a ball vector of gen/kernels cannot be
-yet, proposed in kernels/ and run here by composing their kernels with the generator's interpreter, as
-the generated code would run them (architecture.md, "Ball vectors": the step on each entry, the
-record of the state on what the step returns, the lane order of the state, the radius at the end, the
-finish, the whole space when its flag is false):
+"""Two kernels of BallVector (milestone2.md, "BallVector"): bv_mul_pow2_k, which the generator has now
+(gen/kernels/bv_mul_pow2_1.fold and bv_mul_pow2_2.fold, first proposed here) and which is run as the
+generated description; and bv_axpy_k, which a ball vector of gen/kernels cannot be (it needs a second
+fold of maxima), proposed in kernels/ and run here by composing its kernels with the generator's
+interpreter, as generated code would run them (architecture.md, "Ball vectors": the step on each entry,
+the record of the state on what the step returns, the lane order of the state, the radius at the end,
+the finish, the whole space when its flag is false):
 
-  bv_mul_pow2_k (bv_mul_pow2_2.fold): the centers by mul_pow2_k and, from the step, the mask that the
-      entry was scaled exactly (ec of ball_mul_pow2_k), and-ed over the entries into a third group of
-      the state; the radius bv_mul_pow2_radius(m, ex, rx, c): c rx when every entry and the radius
-      were scaled exactly, otherwise the second number after RN(c rx).
+  bv_mul_pow2_k (gen/kernels): the centers by mul_pow2_k and, from the step, the mask that the entry
+      was scaled exactly (ec of ball_mul_pow2_k), and-ed over the entries into a third group of the
+      state; the radius bv_mul_pow2_radius(m, ex, rx, c): c rx when every entry and the radius were
+      scaled exactly, otherwise the second number after RN(c rx). The proposal of this directory had
+      the same listings and the same shape, and gave the same results (results/bv_proposals.txt).
   bv_axpy_k (bv_axpy_2.fold): the centers by axpy_k and, from the step, the scaled center p, whose
       largest leading magnitude M' a second fold of maxima records; the radius
       bv_add_radius_k(M, bv_scale_radius_k(M', rx, a), ry), the page's.
@@ -37,7 +40,8 @@ from fractions import Fraction
 from common import KERNELS, ROOT, NaN, NINF, PINF, ZERO, interp, ir, is_fin, num, val
 
 FOLDS = {}
-for fn in ('bv_add_1.fold', 'bv_add_2.fold', 'bv_scale_1.fold', 'bv_scale_2.fold'):
+for fn in ('bv_add_1.fold', 'bv_add_2.fold', 'bv_scale_1.fold', 'bv_scale_2.fold', 'bv_mul_pow2_1.fold',
+           'bv_mul_pow2_2.fold'):
     with open(os.path.join(ROOT, 'gen', 'kernels', fn), encoding='utf-8') as f:
         fd = ir.parse_fold(f.read(), fn)
     FOLDS[fd.name] = fd
@@ -68,18 +72,12 @@ def fold_order(record, combine, zero, items, order, lanes):
 
 
 def run_mul_pow2(k, f, xs, rx, c, order, lanes):
-    """bv_mul_pow2_k as proposed: (centers, radius, flag)."""
-    outs = [M.run(f'bv_mul_pow2_step_{k}', f, list(x) + [c]) for x in xs]
-    zs = [o[:k] for o in outs]
-    es = [o[k] for o in outs]
-    rec = lambda s, g: tuple(M.run(f'norm_step_{k}', f, list(s[:2]) + list(g[0]))) + (s[2] and g[1],)
-    comb = lambda s, t: tuple(M.run('norm_combine', f, list(s[:2]) + list(t[:2]))) + (s[2] and t[2],)
-    m, ok, ex = fold_order(rec, comb, (ZERO, True, True), list(zip(zs, es)), order, lanes)
-    rz = M.run('bv_mul_pow2_radius', f, [m, ex, rx, c])[0]
-    r, flag = M.run('norm_finish_1', f, [rz, ok])
-    if not flag:
-        return [[ZERO] * k for _ in zs], PINF, False
-    return zs, r, True
+    """bv_mul_pow2_k as generated (gen/kernels/bv_mul_pow2_k.fold, Machine.run_fold): (centers, radius,
+    flag)."""
+    arrays = [[x[j] for x in xs] for j in range(k)]
+    out = M.run_fold(f'bv_mul_pow2_{k}', f, order, lanes, arrays, [rx, c])
+    zs = [[a[i] for a in out[:-2]] for i in range(len(xs))]
+    return zs, out[-2], out[-1]
 
 
 def run_axpy(k, f, xs, ys, rx, ry, a, order, lanes):

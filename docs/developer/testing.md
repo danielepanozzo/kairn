@@ -1526,7 +1526,11 @@ radius, in the sequential order and with 0 to 4 lanes, satisfies V1 to V4 and th
 arithmetic (containment entry by entry against the exact range of the operation on the balls; V4 of
 every length, and of the vector with no entry with its radii on each side of the limit of
 `radii_when`, which the conditions of an entry imply), every order the same; on finite operands the one radius equals the largest radius the entrywise Ball kernel
-returns, in every case compared; the compiled `F_seq`, `F_lanes` (0 to 8 lanes) and `F_packed` of
+returns, in every case compared; the scalings by a power of two, `bv_mul_pow2_k`, are exactly the set,
+their radius exactly $c\,r_x$, in every case where their conditions of `exact_when` hold, and a BallVector
+halved sixty times in a row keeps a radius of exactly $r_x/2^i$ (where `bv_scale_k` by $\tfrac12$ grows
+it), and gets the second number after the halved radius once a center falls below the smallest normal
+number; the compiled `F_seq`, `F_lanes` (0 to 8 lanes) and `F_packed` of
 every build are bit for bit the interpreter's, on the lengths of the folds; the line protocol, the
 printers, the counts of the loops and the claims (with the entries of architecture.md). The same file
 tests the constructors (`makes_ball_vector` on every small case and at random, every order), the

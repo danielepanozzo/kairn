@@ -132,7 +132,10 @@ class Claims(unittest.TestCase):
     # smallest radius of a ball made from an interval (stage B1); the mask and the steps of the
     # finish of a fold of maxima; a value of its own (the accumulator's sum of magnitudes). Every
     # entry without them has the shape it had before.
-    OPTIONAL = {'rounded': ['when', 'zero_factor', 'value'], 'error': ['exact_when'], 'encloses': ['exact_when'],
+    # exact_flag (of error) and unless, exact_when (of an upper entry with a value of its own): the
+    # steps and the radius of the scaling of a BallVector by a power of two.
+    OPTIONAL = {'rounded': ['when', 'zero_factor', 'value'], 'error': ['exact_when', 'exact_flag'],
+                'encloses': ['exact_when'], 'upper': ['unless', 'exact_when'],
                 'bound': ['zero_factor'], 'outward': ['exact_when', 'zero_factor'], 'makes_ball': ['midpoint_when'],
                 'encloses_interval': ['bounded_exactly', 'zero_factor'], 'set_bound': ['tight'],
                 'ball_of_interval': ['smallest_radius'],
@@ -191,7 +194,14 @@ class Claims(unittest.TestCase):
                     self.assertIsInstance(c['exp'], int)
                 for c in e.get('exact_when', []):
                     allowed = (['zero_or_abs_gt', 'than'], ['zero_or_abs_ge', 'than'])
-                    self.assertIn(list(c), allowed + ((['zero'],) if e['kind'] == 'outward' else ()), k['name'])
+                    self.assertIn(list(c), allowed + ((['zero'],) if e['kind'] == 'outward' else ()) +
+                                  ((['mask'],) if e['kind'] == 'upper' else ()), k['name'])
+                if 'exact_flag' in e:
+                    # A mask output, named after the conditions of exactness it says hold.
+                    self.assertIn({'name': e['exact_flag'], 'limbs': 1, 'type': 'mask'}, k['outputs'], k['name'])
+                    self.assertIn('exact_when', e, k['name'])
+                if 'unless' in e:
+                    self.assertIn({'name': e['unless'], 'limbs': 1, 'type': 'mask'}, k['inputs'], k['name'])
                 if 'when' in e and e['kind'] == 'rounded':
                     self.assertEqual(e['when'], 'product_large', k['name'])
                 if e['kind'] == 'bound':
@@ -547,7 +557,7 @@ class FoldClaims(unittest.TestCase):
         # The ball vectors (test_bv.py), with "bv": true.
         bvs = {name for name, fd in self.ks.folds.items() if fd.is_bv}
         self.assertEqual(bvs, {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
-                               'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2'})
+                               'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'})
         self.assertTrue(all(self.by[n]['bv'] is True and 'map' not in self.by[n] for n in bvs))
         self.assertEqual(set(self.by) - maps - convs - bvs, {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
                                                       'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1',

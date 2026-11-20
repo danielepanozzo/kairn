@@ -29,10 +29,14 @@ import test_simd as simd_tests
 import test_statements as st
 from kairn_gen import claims, cpp, expr, interp, ir, objcode, rocq, rules
 
-BVS = ('bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2', 'bv_neg_1', 'bv_neg_2')
+BVS = ('bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2', 'bv_neg_1', 'bv_neg_2',
+       'bv_mul_pow2_1', 'bv_mul_pow2_2')
 # The Ball kernel each one applies entry by entry, whose radius the one radius is the largest of.
 BALL = {'bv_add_1': 'ball_add_1', 'bv_add_2': 'ball_add_2', 'bv_sub_1': 'ball_sub_1', 'bv_sub_2': 'ball_sub_2',
-        'bv_scale_1': 'ball_scale_1', 'bv_scale_2': 'ball_scale_2', 'bv_neg_1': 'ball_neg_1', 'bv_neg_2': 'ball_neg_2'}
+        'bv_scale_1': 'ball_scale_1', 'bv_scale_2': 'ball_scale_2', 'bv_neg_1': 'ball_neg_1', 'bv_neg_2': 'ball_neg_2',
+        'bv_mul_pow2_1': 'ball_mul_pow2_1', 'bv_mul_pow2_2': 'ball_mul_pow2_2'}
+# The ball vectors exact under conditions (exact_when with conditions: the scalings by a power of two).
+EXACTS = ('bv_mul_pow2_1', 'bv_mul_pow2_2')
 ZERO = (interp.NUM, False, 0, 0)
 PINF = (interp.INF, False)
 exact, finite = writers.exact, writers.finite
@@ -52,9 +56,20 @@ def vectors(fd):
     return {r[1]: r[2] for r in fd.requires if r[0] == 'ball_vector'}
 
 
+def powers(fd):
+    """The scalars a ball vector requires to be powers of two (bv_mul_pow2_k)."""
+    return {r[1] for r in fd.requires if r[0] == 'power_of_two'}
+
+
+def power_of_two(f, rng):
+    """A positive power of two of the format, any of them: from eta to the largest, 2^(qmax + p - 1)."""
+    return interp.canon(False, 1, rng.randint(f.qmin, f.qmax + f.p - 1))
+
+
 def bv_case(fd, f, rng, n, whole=0.12):
     """(scalars' limbs, elements) of one case: each operand a canonical BallVector, the whole space
-    with probability `whole`; a scalar that is not a radius any value of the format."""
+    with probability `whole`; a scalar that is not a radius any value of the format, or a positive power
+    of two of it where the ball vector requires one."""
     fin, anyv = FiniteDraw(f, rng), writers.Draw(f, rng, special=0.1)
     radius_of = vectors(fd)
     whole_of = {a: rng.random() < whole for a in radius_of}
@@ -73,9 +88,35 @@ def bv_case(fd, f, rng, n, whole=0.12):
             else:
                 x = fin.one()
                 scalars.append((interp.NUM, False, x[2], x[3]))     # its magnitude: a radius is nonnegative
+        elif g.name in powers(fd):
+            scalars.append(power_of_two(f, rng))
         else:
             scalars.append(anyv.one())
     return scalars, els
+
+
+def exact_conditions_hold(fd, f, given, groups):
+    """Whether the conditions of exact_when of a ball vector exact under conditions hold: those of the
+    scalars, and those of an entry at every entry (`groups`, each {array: its limbs}), in exact
+    arithmetic (EXPR = 0 or |EXPR| > K, >= K for zero_or_abs_ge)."""
+    u, eta = F(1, 2 ** f.p), F(2) ** f.qmin
+    scalars = {s: exact(v) for s, v in given.items()}
+    arrays = {g.name for g in fd.arrays}
+    for c in fd.ensures[0]['exact_when']:
+        kind = next(x for x in ('zero_or_abs_gt', 'zero_or_abs_ge') if x in c)
+        tree, bound = expr.parse(c[kind]), expr.evaluate(expr.parse(c['than']), {'u': u, 'eta': eta})
+        envs = [dict(scalars)] if not (expr.names(tree) & arrays) else []
+        for gs in ([] if envs else groups):
+            env = dict(scalars)
+            for a, limbs in gs.items():
+                env[a] = sum(exact(x) for x in limbs)
+                env.update({expr.limb_key(a, i): exact(x) for i, x in enumerate(limbs)})
+            envs.append(env)
+        for env in envs:
+            x = expr.evaluate(tree, env)
+            if not (x == 0 or (abs(x) > bound if kind == 'zero_or_abs_gt' else abs(x) >= bound)):
+                return False
+    return True
 
 
 def radii_within(fd, f, given):
@@ -122,6 +163,9 @@ def judge_bv(m, ks, fd, f, scalars, elements, out):
     # V2: containment, entry by entry, in exact arithmetic.
     entry = fd.ensures[0]
     tree = expr.parse(entry['set'])
+    # Exact under conditions (bv_mul_pow2_k): when the scalars and every entry satisfy them, a finite
+    # result is exactly the set at every entry.
+    exact_now = bool(entry.get('exact_when')) and finite(r) and exact_conditions_hold(fd, f, given, groups)
     if finite(r):
         for i, (gs, z) in enumerate(zip(groups, zs)):
             env = {}
@@ -137,22 +181,30 @@ def judge_bv(m, ks, fd, f, scalars, elements, out):
             # set, an interval, is the ball.
             if 'exact_when' in entry and not entry['exact_when'] and (c - rad, c + rad) != (lo, hi):
                 bad.append(('exact', i))
+            if exact_now and (c - rad, c + rad) != (lo, hi):
+                bad.append(('exact under its conditions', i))
         # V3: every operand finite, the centers the step's, the radius the radius kernel's on the largest
         # magnitude of a leading limb written.
         if not operands_finite:
             bad.append('V3: a finite result from an operand that is not finite')
         else:
             step = ks[fd.step[0]]
+            width = len(fd.write_limbs())
+            masks = []
             for gs, z in zip(groups, zs):
                 args = [v for a in fd.step[1] for v in (gs[a] if a in gs else [given[a]])]
-                if [exact(v) for v in m.run(step.name, wide, args)] != [exact(v) for v in z]:
+                out = m.run(step.name, wide, args)
+                masks += out[width:]             # the mask that the entry is exact (bv_mul_pow2_k)
+                if [exact(v) for v in out[:width]] != [exact(v) for v in z]:
                     bad.append('V3: a center not the step\'s')
                     break
             big = max([abs(exact(z[0])) for z in zs], default=F(0))
             mz = max([z[0] for z in zs], key=lambda v: abs(exact(v)), default=ZERO)
             mz = (interp.NUM, False, mz[2], mz[3])
             assert exact(mz) == big
-            want = m.run(fd.radius[0], wide, [mz] + [given[a] for a in fd.radius[1][1:]])
+            # The radius kernel on the largest magnitude, and on the and of the masks of exactness.
+            lead = [mz] + ([all(masks)] if fd.exact_mask else [])
+            want = m.run(fd.radius[0], wide, lead + [given[a] for a in fd.radius[1][len(lead):]])
             if exact(want[0]) != exact(r):
                 bad.append('V3: the radius is not the radius kernel\'s on the largest center')
     elif operands_finite:
@@ -257,8 +309,11 @@ def empty_cases(fd, f):
     radii = [v for v in radii if finite(v)]
     two = interp.canon(False, 1, 1)
     others = [interp.canon(False, 1, 0), two, interp.neg(two), interp.succ(f, two), interp.canon(False, 1, 2)]
+    # A power of two (bv_mul_pow2_k): 1, 2, 4, and the smallest and the largest of the format.
+    pow2s = [interp.canon(False, 1, 0), two, interp.canon(False, 1, 2), interp.canon(False, 1, f.qmin),
+             interp.canon(False, 1, f.qmax + f.p - 1)]
     radius_names = set(vectors(fd).values())
-    choices = [radii if g.name in radius_names else others for g in fd.scalars]
+    choices = [radii if g.name in radius_names else pow2s if g.name in powers(fd) else others for g in fd.scalars]
     import itertools
     out = []
     for scalars in itertools.product(*choices):
@@ -273,7 +328,7 @@ def _judge(job):
     m = interp.Machine(ks)
     f = writers.ieee_format(p, emax) if p else interp.parse_format(emax)
     rng = random.Random(f'bv:{name}:{f.name}')
-    bad, count, whole, equal, compared = [], 0, 0, 0, 0
+    bad, count, whole, equal, compared, exactly = [], 0, 0, 0, 0, 0
     ball = ks[BALL[name]]
     for r in range(rounds):
         n = r % 7
@@ -290,6 +345,16 @@ def _judge(job):
                 whole += not out[-1]
             elif out != first:
                 bad.append((name, f.name, order, w, n, 'not the sequential order\'s'))
+        if fd.ensures[0].get('exact_when') and first[-1] and n:
+            # The cases where the conditions of exactness hold (judge_bv judged them exact): the radius is
+            # then c rx itself, the page's "c rx when every entry is exact".
+            given = dict(zip((g.name for g in fd.scalars), scalars))
+            groups = [{g.name: e[sum(len(h.limbs) for h in fd.arrays[:i]):][:len(g.limbs)]
+                       for i, g in enumerate(fd.arrays)} for e in elements]
+            if exact_conditions_hold(fd, f, given, groups):
+                exactly += 1
+                if exact(first[-2]) != exact(given['rx']) * exact(given['c']):
+                    bad.append((name, f.name, n, 'exact, and the radius is not c rx'))
         # The page's equality: the one radius is the largest of the entrywise radii.
         if first[-1] and n:
             given = dict(zip((g.name for g in fd.scalars), scalars))
@@ -312,7 +377,7 @@ def _judge(job):
                 radii.append(exact(m.run(ball.name, f, args)[-1]))
             compared += 1
             equal += max(radii) == exact(first[-2])
-    return name, f.name, count, whole, bad[:5], equal, compared
+    return name, f.name, count, whole, bad[:5], equal, compared, exactly
 
 
 class Rules(unittest.TestCase):
@@ -384,6 +449,95 @@ domain:        extended
         errs = self.refusals(self.BASE.replace('norm_finish_1(rz, ok)', 'bv_make_finish(rz, ok)'))
         self.assertTrue(any('with nonneg' in e for e in errs), errs)
 
+    EXACT = '''
+fold:          tb
+arrays:        stored x = x0 x1
+scalars:       stored rx, supplied c
+state:         m, mask ok, mask ex
+step:          (z, e) = bv_mul_pow2_step_2(x, c)
+record:        (m, ok) = norm_step_2(m, ok, z)
+record:        ex = and(ex, e)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+combine:       ex = and(ex, ex)
+radius:        rz = bv_mul_pow2_radius(m, ex, rx, c)
+finish:        (r, finite) = norm_finish_1(rz, ok)
+orders:        sequential, lanes
+writes:        z = z0 z1
+output:        r
+output:        mask finite
+value:         x*c
+requires:      ball_vector x rx
+requires:      power_of_two c
+ensures:       encloses_entries z r x*c x=x,rx flag=finite finite_when=abs_le((abs(x)+rx)*c,-2) radii_when=abs_le(rx*c,-2) exact_when=zero_or_abs_gt(x[0]*c,eta/(2*u));zero_or_abs_gt(x[1]*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))
+min_precision: 2
+status:        unverified
+domain:        extended
+'''
+
+    def test_exact_under_conditions(self):
+        """The shape of a ball vector exact under conditions (bv_mul_pow2_k), and each way of getting it
+        wrong: the mask of exactness in the state, from the step, and-ed by the second record and combine
+        lines, taken by the radius after the largest magnitude; the conditions of exact_when those of the
+        step's exact_flag and of the radius's exact upper entry; a scalar a power of two."""
+        self.assertEqual(self.refusals(self.EXACT), [])
+        for old, new, words in (
+                ('record:        ex = and(ex, e)\n', '', 'the second record line'),
+                ('record:        ex = and(ex, e)', 'record:        ex = and(ex, ex)', 'the second record line'),
+                ('combine:       ex = and(ex, ex)\n', '', 'the second combine line'),
+                ('radius:        rz = bv_mul_pow2_radius(m, ex, rx, c)', 'radius:        rz = bv_mul_pow2_radius(m, rx, ex, c)',
+                 'then its mask of exactness ex'),
+                ('step:          (z, e) = bv_mul_pow2_step_2(x, c)', 'step:          z = bv_mul_pow2_step_2(x, c)',
+                 'and a mask of a name of its own'),
+                ('step:          (z, e) = bv_mul_pow2_step_2(x, c)', 'step:          (z, ok) = bv_mul_pow2_step_2(x, c)',
+                 'and a mask of a name of its own'),
+                (';zero_or_abs_gt(x[1]*c,eta/(2*u))', '', 'the conditions of an entry are those of the error entry'),
+                (';zero_or_abs_gt(rx*c,eta/(2*u))', '', 'the conditions of the scalars are those of the upper entry'),
+                ('zero_or_abs_gt(rx*c,eta/(2*u))', 'zero_or_abs_ge(rx*c,eta/(2*u))',
+                 'the conditions of the scalars are those of the upper entry'),
+                ('requires:      power_of_two c\n', '', 'which no requirement of the fold gives'),
+                ('scalars:       stored rx, supplied c', 'scalars:       stored rx, stored c', 'power_of_two SCALAR'),
+                (' exact_when=zero_or_abs_gt(x[0]*c,eta/(2*u));zero_or_abs_gt(x[1]*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))',
+                 '', 'a mask of exactness is for a ball vector exact under conditions'),
+                ('state:         m, mask ok, mask ex', 'state:         m, mask ok, ex', 'the state of a ball vector')):
+            text = self.EXACT.replace(old, new)
+            self.assertNotEqual(text, self.EXACT, old)
+            errs = self.refusals(text)
+            self.assertTrue(any(words in e for e in errs), (old, words, errs))
+        # Conditions of exact_when need the mask of exactness: refused on a ball vector without it.
+        errs = self.refusals(self.BASE.replace('radii_when=abs_le(rx+ry,-2)',
+                                               'radii_when=abs_le(rx+ry,-2) exact_when=zero_or_abs_gt(rx,eta)'))
+        self.assertTrue(any('need the mask of exactness' in e for e in errs), errs)
+        # A second record or combine line belongs to such a ball vector only.
+        ks = common.kernels()
+        fd = ir.parse_fold(open(f'{common.GEN}/kernels/norm_upper_1.fold').read().replace(
+            'fold:          norm_upper_1', 'fold:          tb').replace(
+            'combine:       (m, ok) = norm_combine(m, ok, m, ok)',
+            'combine:       (m, ok) = norm_combine(m, ok, m, ok)\ncombine:       (m, ok) = norm_combine(m, ok, m, ok)'),
+            'tb.fold')
+        errs = [str(e) for e in rules.fold_rules(fd, ir.ordered(dict(ks), dict(ks.folds, tb=fd)))]
+        self.assertTrue(any('one record line and one combine line' in e for e in errs), errs)
+
+    def test_the_claims_of_its_kernels_are_refused(self):
+        """exact_flag, unless and the condition mask(NAME) of exact_when (architecture.md, "Claims of
+        Milestone 2"): each refused where it does not belong."""
+        ks = common.kernels()
+        for name, old, new, words in (
+                ('bv_mul_pow2_step_1', ' exact_flag=e', ' exact_flag=z', 'the output must be a mask'),
+                ('bv_mul_pow2_step_1', ' exact_when=zero_or_abs_gt(x*c,eta/(2*u)) exact_flag=e', ' exact_flag=e',
+                 'the mask of the conditions of exact_when'),
+                ('bv_mul_pow2_radius', 'unless=ex', 'unless=rx', 'the condition is a mask input'),
+                ('bv_mul_pow2_radius', 'exact_when=mask(ex);', 'exact_when=mask(rx);', 'names a mask input'),
+                ('bv_mul_pow2_radius', 'value=rx*c+eta unless=ex', 'value=rx*c+eta unless=ex exact_when=mask(ex)',
+                 'are two entries'),
+                ('bv_mul_pow2_step_2', 'exact_when=zero_or_abs_gt(x[0]*c,eta/(2*u))',
+                 'exact_when=mask(e);zero_or_abs_gt(x[0]*c,eta/(2*u))', 'a condition of an upper entry only')):
+            with open(f'{common.GEN}/kernels/{name}.kernel', encoding='utf-8') as fh:
+                text = fh.read()
+            self.assertIn(old, text, (name, old))
+            k = ir.parse_kernel(text.replace(old, new), f'{name}.kernel')
+            errs = [str(e) for e in rules.claims(k, ks)]
+            self.assertTrue(any(words in e for e in errs), (name, old, words, errs))
+
     def test_the_ball_vectors_are_accepted(self):
         ks = common.kernels()
         for name in BVS + MAKES:
@@ -434,6 +588,9 @@ class Interp(unittest.TestCase):
             # The radius is the largest entrywise radius of the Ball kernel in every case compared.
             self.assertEqual(sum(r[5] for r in mine), sum(r[6] for r in mine), name)
             self.assertGreater(sum(r[6] for r in mine), 200, name)
+            if name in EXACTS:
+                # Exact under its conditions, in many cases: the scalings that do not underflow.
+                self.assertGreater(sum(r[7] for r in mine), 30, name)
 
     def test_the_norm_of_a_ball_vector(self):
         """bv_norm_upper_k is two calls (architecture.md, "Ball vectors"): (n, ok) = norm_upper_k(c) and
@@ -584,6 +741,40 @@ class Interp(unittest.TestCase):
                         self.assertTrue(radii_within(fd, f, dict(zip((g.name for g in fd.scalars), scalars))),
                                         (name, f.name, scalars, elements))
                 self.assertGreater(tested, 100, (name, f.name))
+
+    def test_halving_again_and_again(self):
+        """The use the page names, subdividing a polynomial by de Casteljau halvings: a BallVector halved
+        sixty times by bv_mul_pow2_k keeps a radius of exactly rx / 2^i and centers of exactly x / 2^i
+        while nothing comes near the underflow range, where bv_scale_k by 1/2 lets the radius grow at
+        every halving; and once a center is too small to halve exactly, the radius grows by the second
+        number after the halved one, and no further exactness is claimed."""
+        ks = common.kernels()
+        m = interp.Machine(ks)
+        f = interp.parse_format('binary64')
+        half = interp.canon(False, 1, -1)
+        rng = random.Random('halving')
+        for k in (1, 2):
+            x0 = [interp.canon(rng.random() < 0.5, rng.randrange(2 ** 52, 2 ** 53), -52 + rng.randint(-3, 3))
+                  for _ in range(9)]
+            arrays = [x0] + ([[interp.canon(rng.random() < 0.5, 1, v[3] - 60) for v in x0]] if k == 2 else [])
+            rx, sx, sr = interp.canon(False, 1, -20), arrays, interp.canon(False, 1, -20)
+            for i in range(60):
+                out = m.run_fold(f'bv_mul_pow2_{k}', f, 'lanes', 2, arrays, [rx, half])
+                self.assertTrue(out[-1], (k, i))
+                self.assertEqual(exact(out[-2]), exact(rx) / 2, (k, i))
+                self.assertEqual([sum(exact(a[j]) for a in out[:-2]) for j in range(9)],
+                                 [sum(exact(a[j]) for a in arrays) / 2 for j in range(9)], (k, i))
+                arrays, rx = out[:-2], out[-2]
+                scaled = m.run_fold(f'bv_scale_{k}', f, 'lanes', 2, sx, [sr, half])
+                self.assertGreater(exact(scaled[-2]), exact(sr) / 2, (k, i))
+                sx, sr = scaled[:-2], scaled[-2]
+            # Near the underflow range: a center halved below the smallest normal number is not exact, and
+            # the radius is the second number after the halved one.
+            tiny = [[interp.canon(False, 1, f.qmin + f.p - 1)]] + ([[ZERO]] if k == 2 else [])     # N
+            out = m.run_fold(f'bv_mul_pow2_{k}', f, 'sequential', 0, tiny, [rx, half])
+            want = interp.succ(f, interp.succ(f, m.run('mul_pow2_step_1', f, [rx, half])[0]))
+            self.assertTrue(out[-1], k)
+            self.assertEqual(exact(out[-2]), exact(want), k)
 
     def test_the_whole_space_and_the_empty_vector(self):
         ks = common.kernels()
@@ -905,6 +1096,65 @@ class Printers(unittest.TestCase):
                                          'finite_when': [{'abs_le': 'abs(x+y)+rx+ry', 'exp': -2}],
                                          'radii_when': [{'abs_le': 'rx+ry', 'exp': -2}]}])
 
+    def test_the_scaling_printers(self):
+        """The scaling by a power of two, exact under conditions: its entry of gen/claims.json (exact_when
+        with conditions, exactness, power_of_two of c), the claims of its kernels as architecture.md writes
+        them, the mask of exactness in the C++ and in both models."""
+        import json
+        from kairn_gen import ieee, simd
+        doc = json.loads(claims.claims(self.ks))
+        e = {x['name']: x for x in doc['folds']}['bv_mul_pow2_2']
+        self.assertEqual([k for k in e], ['name', 'bv', 'domain', 'arrays', 'scalars', 'writes', 'outputs', 'value',
+                                          'requires', 'ensures', 'orders', 'packed_lanes', 'step', 'step_args',
+                                          'record', 'exactness', 'combine', 'radius', 'radius_args', 'finish',
+                                          'min_precision', 'status', 'theorem', 'source'])
+        self.assertEqual(e['requires'], ['ball_vector(x, rx)', 'power_of_two(c)'])
+        self.assertEqual(e['exactness'], {'mask': 'e', 'state': 'ex'})
+        self.assertEqual(e['radius_args'], ['m', 'ex', 'rx', 'c'])
+        n = {'than': 'eta/(2*u)'}
+        self.assertEqual(e['ensures'], [{'kind': 'encloses_entries', 'center': 'z', 'radius': 'r', 'flag': 'finite',
+                                         'set': 'x*c', 'balls': {'x': {'center': 'x', 'radius': 'rx'}},
+                                         'finite_when': [{'abs_le': '(abs(x)+rx)*c', 'exp': -2}],
+                                         'radii_when': [{'abs_le': 'rx*c', 'exp': -2}],
+                                         'exact_when': [dict(zero_or_abs_gt='x[0]*c', **n), dict(zero_or_abs_gt='x[1]*c', **n),
+                                                        dict(zero_or_abs_gt='rx*c', **n)]}])
+        kernels = {k['name']: k for k in doc['kernels']}
+        self.assertEqual(kernels['bv_mul_pow2_step_2']['ensures'][1], {
+            'kind': 'error', 'of': 'z', 'form': 'R', 'c': '0', 'k': 2, 't': '1', 'when': None,
+            'exact_when': [dict(zero_or_abs_gt='x[0]*c', **n), dict(zero_or_abs_gt='x[1]*c', **n)], 'exact_flag': 'e'})
+        self.assertEqual(kernels['bv_mul_pow2_radius']['ensures'], [
+            {'kind': 'upper', 'of': 'rz', 'value': 'rx*c', 'exact_when': [{'mask': 'ex'}, dict(zero_or_abs_gt='rx*c', **n)]},
+            {'kind': 'upper', 'of': 'rz', 'value': 'rx*c+eta', 'unless': 'ex'}])
+        with open(f'{common.ROOT}/docs/developer/architecture.md', encoding='utf-8') as fh:
+            text = fh.read()
+        for line in ('{"kind": "upper", "of": "rz", "value": "rx*c+eta", "unless": "ex"}', '"exact_flag": "e"}',
+                     '"exactness": {"mask": "e", "state": "ex"}'):
+            self.assertIn(line, text)
+        scalar = cpp.scalar(self.ks)
+        self.assertIn('KAIRN_GEN_NOINLINE void bv_mul_pow2_2_end(double m, bool ok, bool ex, double rx, double c, '
+                      'double& rad_out_, bool& fin_out_) noexcept {', scalar)
+        self.assertIn('        ex = ex & step_e;\n', scalar)
+        self.assertIn('            ex = ex & ex_lane_;\n', scalar)
+        self.assertIn('    bv_mul_pow2_2_end(m, ok, ex, rx, c, rad_r_, rad_f_);\n', scalar)
+        packed = simd.header(simd.AVX2, self.ks)
+        self.assertIn('        ex_lane_ = _mm256_and_pd(ex_lane_, step_e);\n', packed)
+        m, s = rocq.fold_model(self.ks), rocq.fold_statements(self.ks)
+        self.assertIn('Definition bv_mul_pow2_2_exact (c : R) (xs : list (R * R)) : bool :=\n'
+                      '  forallb (fun x => snd (bv_mul_pow2_2_step c x)) xs.', m)
+        self.assertIn('(bv_mul_pow2_2_exact c xs) rx c.', m)
+        self.assertIn('     forall v_ : R, Rabs (v_ - (z0 + z1)) <= r_ -> exists x_ : R, Rabs (x_ - (x0 + x1)) <= rx '
+                      '/\\ v_ = (x_ * c))', s)
+        im, ist = ieee.fold_model(self.ks), ieee.fold_statements(self.ks)
+        self.assertIn('  let ex_ := fold_lanes (fun m_ e_ => andb m_ (snd e_)) andb true W es_ in', im)
+        self.assertIn('  (exists n : Z, val c = bpow radix2 n) ->\n', ist)
+        self.assertIn('(val z0, val z1) = fst (bv_mul_pow2_step_2 (ieee_emin prec emax) prec tie_even (val x0) (val x1) '
+                      '(val c))) xs ws_ /\\', ist)
+        # The line protocol: that of every ball vector (architecture.md's example).
+        line = 'bv_mul_pow2_2 binary64 seq 2 0x1p-4 0x1p-1 0x1p+0 0x1p+1 0x1p-60 0x0p+0'
+        self.assertEqual(interp.complete(interp.Machine(self.ks), line, {}),
+                         line + ' -> 0x1p-1 0x1p+0 0x1p-61 0x0p+0 0x1p-5 1')
+        self.assertIn(line, text)
+
     def test_the_constructor_printers(self):
         import json
         from kairn_gen import ieee
@@ -965,7 +1215,8 @@ class Printers(unittest.TestCase):
                     self.assertEqual({k: v['least'] for k, v in parts.items()}, least, (name, form))
                     radius = self.ks[self.ks.folds[name].radius[0]]
                     self.assertEqual(parts['radius']['fma'], objcode.kernel_counts(radius, self.ks)['packed'][t]['fma'])
-                    self.assertEqual(parts['radius']['fma'], 3 if 'scale' in name else 0 if 'neg' in name else 2)
+                    self.assertEqual(parts['radius']['fma'], 3 if 'scale' in name else 0 if 'neg' in name else
+                                     1 if 'pow2' in name else 2)
                     self.assertEqual(parts['record']['fma'], 0)
 
 

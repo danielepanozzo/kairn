@@ -1809,6 +1809,56 @@ KAIRN_GEN_FORCEINLINE constexpr void bv_make_radius(float m, float r, float& rz_
     rz_out = rz;
 }
 
+// bv_mul_pow2_radius(m, mask ex, rx, c) -> rz
+// the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_radius(double m, bool ex, double rx, double c, double& rz_out) noexcept {
+    const double rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0);
+    const bool br = rr > 0x1p-1022;
+    const bool zr = rx == 0.0;
+    const bool er = br | zr;
+    const bool q = ex & er;
+    const double su = next_up_bits(rr);
+    const double rw = next_up_bits(su);
+    const double rs = q ? rr : rw;
+    const double d = m - m;
+    const double rz = rs + d;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_radius(float m, bool ex, float rx, float c, float& rz_out) noexcept {
+    const float rr = __builtin_is_constant_evaluated() ? rx * c : fma_rn(rx, c, 0.0f);
+    const bool br = rr > 0x1p-126f;
+    const bool zr = rx == 0.0f;
+    const bool er = br | zr;
+    const bool q = ex & er;
+    const float su = next_up_bits(rr);
+    const float rw = next_up_bits(su);
+    const float rs = q ? rr : rw;
+    const float d = m - m;
+    const float rz = rs + d;
+    rz_out = rz;
+}
+
+// bv_mul_pow2_step_1(x, c) -> z, mask e
+// mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_step_1(double x, double c, double& z_out, bool& e_out) noexcept {
+    const double z = __builtin_is_constant_evaluated() ? x * c : fma_rn(x, c, 0.0);
+    const double am = abs_bits(z);
+    const bool bc = am > 0x1p-1022;
+    const bool zc = x == 0.0;
+    const bool e = bc | zc;
+    z_out = z;
+    e_out = e;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_step_1(float x, float c, float& z_out, bool& e_out) noexcept {
+    const float z = __builtin_is_constant_evaluated() ? x * c : fma_rn(x, c, 0.0f);
+    const float am = abs_bits(z);
+    const bool bc = am > 0x1p-126f;
+    const bool zc = x == 0.0f;
+    const bool e = bc | zc;
+    z_out = z;
+    e_out = e;
+}
+
 // bv_neg_radius(m, rx) -> rz
 // the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). Status: unverified; constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void bv_neg_radius([[maybe_unused]] double m, double rx, double& rz_out) noexcept {
@@ -6579,6 +6629,43 @@ KAIRN_GEN_FORCEINLINE constexpr void bv_center_2(float x0, float x1, float& z0_o
     const float z1 = x1;
     z0_out = z0;
     z1_out = z1;
+}
+
+// bv_mul_pow2_step_2(x = (x0, x1), c) -> z = (z0, z1), mask e
+// mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). Status: unverified; constexpr, each prod a plain product in constant evaluation.
+KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_step_2(double x0, double x1, double c, double& z0_out, double& z1_out, bool& e_out) noexcept {
+    const double h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0);
+    const double l = __builtin_is_constant_evaluated() ? x1 * c : fma_rn(x1, c, 0.0);
+    // (z0, z1) = fast_two_sum(h, l)
+    const double z0 = h + l;
+    const double z0_z = z0 - h;
+    const double z1 = l - z0_z;
+    const bool ze = x1 == 0.0;
+    const double mm = ze ? h : l;
+    const double am = abs_bits(mm);
+    const bool bc = am > 0x1p-1022;
+    const bool zc = x0 == 0.0;
+    const bool e = bc | zc;
+    z0_out = z0;
+    z1_out = z1;
+    e_out = e;
+}
+KAIRN_GEN_FORCEINLINE constexpr void bv_mul_pow2_step_2(float x0, float x1, float c, float& z0_out, float& z1_out, bool& e_out) noexcept {
+    const float h = __builtin_is_constant_evaluated() ? x0 * c : fma_rn(x0, c, 0.0f);
+    const float l = __builtin_is_constant_evaluated() ? x1 * c : fma_rn(x1, c, 0.0f);
+    // (z0, z1) = fast_two_sum(h, l)
+    const float z0 = h + l;
+    const float z0_z = z0 - h;
+    const float z1 = l - z0_z;
+    const bool ze = x1 == 0.0f;
+    const float mm = ze ? h : l;
+    const float am = abs_bits(mm);
+    const bool bc = am > 0x1p-126f;
+    const bool zc = x0 == 0.0f;
+    const bool e = bc | zc;
+    z0_out = z0;
+    z1_out = z1;
+    e_out = e;
 }
 
 // eq_2_1(x = (x0, x1), a) -> mask m
@@ -14350,6 +14437,626 @@ inline void bv_make_2_lanes(const float* c0_in, const float* c1_in, std::size_t 
         }
     }
     rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// The end of ball vector bv_mul_pow2_1: its radius bv_mul_pow2_radius and its finish norm_finish_1.
+KAIRN_GEN_NOINLINE void bv_mul_pow2_1_end(double m, bool ok, bool ex, double rx, double c, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_mul_pow2_radius(m_e_, ex, rx, c)
+    const double rad_rr = fma_rn(rx, c, 0.0);
+    const bool rad_br = rad_rr > 0x1p-1022;
+    const bool rad_zr = rx == 0.0;
+    const bool rad_er = rad_br | rad_zr;
+    const bool rad_q = ex & rad_er;
+    const double rad_su = next_up_bits(rad_rr);
+    const double rad_rw = next_up_bits(rad_su);
+    const double rad_rs = rad_q ? rad_rr : rad_rw;
+    const double rad_d = m_e_ - m_e_;
+    const double rad_rz = rad_rs + rad_d;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_mul_pow2_1_end(float m, bool ok, bool ex, float rx, float c, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_mul_pow2_radius(m_e_, ex, rx, c)
+    const float rad_rr = fma_rn(rx, c, 0.0f);
+    const bool rad_br = rad_rr > 0x1p-126f;
+    const bool rad_zr = rx == 0.0f;
+    const bool rad_er = rad_br | rad_zr;
+    const bool rad_q = ex & rad_er;
+    const float rad_su = next_up_bits(rad_rr);
+    const float rad_rw = next_up_bits(rad_su);
+    const float rad_rs = rad_q ? rad_rr : rad_rw;
+    const float rad_d = m_e_ - m_e_;
+    const float rad_rz = rad_rs + rad_d;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_mul_pow2_1(stored x, stored rx, supplied c) -> z, r, finite: step bv_mul_pow2_step_1, record norm_step_1, radius bv_mul_pow2_radius: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_mul_pow2_1_seq(const double* x_in, std::size_t n, double rx, double c, double* z_out, double& r_out, bool& finite_out) noexcept {
+    double m = 0.0;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+        const double step_z = fma_rn(x, c, 0.0);
+        const double step_am = abs_bits(step_z);
+        const bool step_bc = step_am > 0x1p-1022;
+        const bool step_zc = x == 0.0;
+        const bool step_e = step_bc | step_zc;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const double rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_1_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_mul_pow2_1_seq(const float* x_in, std::size_t n, float rx, float c, float* z_out, float& r_out, bool& finite_out) noexcept {
+    float m = 0.0f;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+        const float step_z = fma_rn(x, c, 0.0f);
+        const float step_am = abs_bits(step_z);
+        const bool step_bc = step_am > 0x1p-126f;
+        const bool step_zc = x == 0.0f;
+        const bool step_e = step_bc | step_zc;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const float rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_1_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_mul_pow2_1(stored x, stored rx, supplied c) -> z, r, finite: step bv_mul_pow2_step_1, record norm_step_1, radius bv_mul_pow2_radius: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_mul_pow2_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double rx, double c, double* z_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double m = 0.0;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double m_lane_ = 0.0;
+        bool ok_lane_ = true;
+        bool ex_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x = x_in[i_];
+            // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+            const double step_z = fma_rn(x, c, 0.0);
+            const double step_am = abs_bits(step_z);
+            const bool step_bc = step_am > 0x1p-1022;
+            const bool step_zc = x == 0.0;
+            const bool step_e = step_bc | step_zc;
+            z_out[i_] = step_z;
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+            const double rec_a = abs_bits(step_z);
+            const bool rec_e = rec_a == rec_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+            const bool rec_r_c = rec_a > m_lane_;
+            const double rec_r = rec_r_c ? rec_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+            ex_lane_ = ex_lane_ & step_e;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+            ex = ex_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const double comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+            ex = ex & ex_lane_;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+        const double step_z = fma_rn(x, c, 0.0);
+        const double step_am = abs_bits(step_z);
+        const bool step_bc = step_am > 0x1p-1022;
+        const bool step_zc = x == 0.0;
+        const bool step_e = step_bc | step_zc;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const double rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_1_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_mul_pow2_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float rx, float c, float* z_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float m = 0.0f;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float m_lane_ = 0.0f;
+        bool ok_lane_ = true;
+        bool ex_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x = x_in[i_];
+            // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+            const float step_z = fma_rn(x, c, 0.0f);
+            const float step_am = abs_bits(step_z);
+            const bool step_bc = step_am > 0x1p-126f;
+            const bool step_zc = x == 0.0f;
+            const bool step_e = step_bc | step_zc;
+            z_out[i_] = step_z;
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+            const float rec_a = abs_bits(step_z);
+            const bool rec_e = rec_a == rec_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+            const bool rec_r_c = rec_a > m_lane_;
+            const float rec_r = rec_r_c ? rec_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+            ex_lane_ = ex_lane_ & step_e;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+            ex = ex_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const float comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+            ex = ex & ex_lane_;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+        const float step_z = fma_rn(x, c, 0.0f);
+        const float step_am = abs_bits(step_z);
+        const bool step_bc = step_am > 0x1p-126f;
+        const bool step_zc = x == 0.0f;
+        const bool step_e = step_bc | step_zc;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const float rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_1_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// The end of ball vector bv_mul_pow2_2: its radius bv_mul_pow2_radius and its finish norm_finish_1.
+KAIRN_GEN_NOINLINE void bv_mul_pow2_2_end(double m, bool ok, bool ex, double rx, double c, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_mul_pow2_radius(m_e_, ex, rx, c)
+    const double rad_rr = fma_rn(rx, c, 0.0);
+    const bool rad_br = rad_rr > 0x1p-1022;
+    const bool rad_zr = rx == 0.0;
+    const bool rad_er = rad_br | rad_zr;
+    const bool rad_q = ex & rad_er;
+    const double rad_su = next_up_bits(rad_rr);
+    const double rad_rw = next_up_bits(rad_su);
+    const double rad_rs = rad_q ? rad_rr : rad_rw;
+    const double rad_d = m_e_ - m_e_;
+    const double rad_rz = rad_rs + rad_d;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+KAIRN_GEN_NOINLINE void bv_mul_pow2_2_end(float m, bool ok, bool ex, float rx, float c, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_mul_pow2_radius(m_e_, ex, rx, c)
+    const float rad_rr = fma_rn(rx, c, 0.0f);
+    const bool rad_br = rad_rr > 0x1p-126f;
+    const bool rad_zr = rx == 0.0f;
+    const bool rad_er = rad_br | rad_zr;
+    const bool rad_q = ex & rad_er;
+    const float rad_su = next_up_bits(rad_rr);
+    const float rad_rw = next_up_bits(rad_su);
+    const float rad_rs = rad_q ? rad_rr : rad_rw;
+    const float rad_d = m_e_ - m_e_;
+    const float rad_rz = rad_rs + rad_d;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+
+// ball vector bv_mul_pow2_2(stored x = (x0, x1), stored rx, supplied c) -> z = (z0, z1), r, finite: step bv_mul_pow2_step_2, record norm_step_2, radius bv_mul_pow2_radius: element after element.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_mul_pow2_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double rx, double c, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    double m = 0.0;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+        const double step_h = fma_rn(x0, c, 0.0);
+        const double step_l = fma_rn(x1, c, 0.0);
+        // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+        const double step_z0 = step_h + step_l;
+        const double step_z0_z = step_z0 - step_h;
+        const double step_z1 = step_l - step_z0_z;
+        const bool step_ze = x1 == 0.0;
+        const double step_mm = step_ze ? step_h : step_l;
+        const double step_am = abs_bits(step_mm);
+        const bool step_bc = step_am > 0x1p-1022;
+        const bool step_zc = x0 == 0.0;
+        const bool step_e = step_bc | step_zc;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_2_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_mul_pow2_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float rx, float c, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    float m = 0.0f;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t i_ = 0; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+        const float step_h = fma_rn(x0, c, 0.0f);
+        const float step_l = fma_rn(x1, c, 0.0f);
+        // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+        const float step_z0 = step_h + step_l;
+        const float step_z0_z = step_z0 - step_h;
+        const float step_z1 = step_l - step_z0_z;
+        const bool step_ze = x1 == 0.0f;
+        const float step_mm = step_ze ? step_h : step_l;
+        const float step_am = abs_bits(step_mm);
+        const bool step_bc = step_am > 0x1p-126f;
+        const bool step_zc = x0 == 0.0f;
+        const bool step_e = step_bc | step_zc;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_2_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+// ball vector bv_mul_pow2_2(stored x = (x0, x1), stored rx, supplied c) -> z = (z0, z1), r, finite: step bv_mul_pow2_step_2, record norm_step_2, radius bv_mul_pow2_radius: in the lane order with `lanes` lanes, one lane after another.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_mul_pow2_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double rx, double c, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    double m = 0.0;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        double m_lane_ = 0.0;
+        bool ok_lane_ = true;
+        bool ex_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const double x0 = x0_in[i_];
+            const double x1 = x1_in[i_];
+            // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+            const double step_h = fma_rn(x0, c, 0.0);
+            const double step_l = fma_rn(x1, c, 0.0);
+            // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+            const double step_z0 = step_h + step_l;
+            const double step_z0_z = step_z0 - step_h;
+            const double step_z1 = step_l - step_z0_z;
+            const bool step_ze = x1 == 0.0;
+            const double step_mm = step_ze ? step_h : step_l;
+            const double step_am = abs_bits(step_mm);
+            const bool step_bc = step_am > 0x1p-1022;
+            const bool step_zc = x0 == 0.0;
+            const bool step_e = step_bc | step_zc;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const double rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const double rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+            ex_lane_ = ex_lane_ & step_e;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+            ex = ex_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const double comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+            ex = ex & ex_lane_;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+        const double step_h = fma_rn(x0, c, 0.0);
+        const double step_l = fma_rn(x1, c, 0.0);
+        // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+        const double step_z0 = step_h + step_l;
+        const double step_z0_z = step_z0 - step_h;
+        const double step_z1 = step_l - step_z0_z;
+        const bool step_ze = x1 == 0.0;
+        const double step_mm = step_ze ? step_h : step_l;
+        const double step_am = abs_bits(step_mm);
+        const bool step_bc = step_am > 0x1p-1022;
+        const bool step_zc = x0 == 0.0;
+        const bool step_e = step_bc | step_zc;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_2_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_mul_pow2_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float rx, float c, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
+    float m = 0.0f;
+    bool ok = true;
+    bool ex = true;
+    for (std::size_t j_ = 0; j_ < lanes; ++j_) {
+        float m_lane_ = 0.0f;
+        bool ok_lane_ = true;
+        bool ex_lane_ = true;
+        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {
+            const float x0 = x0_in[i_];
+            const float x1 = x1_in[i_];
+            // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+            const float step_h = fma_rn(x0, c, 0.0f);
+            const float step_l = fma_rn(x1, c, 0.0f);
+            // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+            const float step_z0 = step_h + step_l;
+            const float step_z0_z = step_z0 - step_h;
+            const float step_z1 = step_l - step_z0_z;
+            const bool step_ze = x1 == 0.0f;
+            const float step_mm = step_ze ? step_h : step_l;
+            const float step_am = abs_bits(step_mm);
+            const bool step_bc = step_am > 0x1p-126f;
+            const bool step_zc = x0 == 0.0f;
+            const bool step_e = step_bc | step_zc;
+            z0_out[i_] = step_z0;
+            z1_out[i_] = step_z1;
+            // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+            // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+            const float rec_r_a = abs_bits(step_z0);
+            const bool rec_r_e = rec_r_a == rec_r_a;
+            // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+            const bool rec_r_c = rec_r_a > m_lane_;
+            const float rec_r = rec_r_c ? rec_r_a : m_lane_;
+            const bool rec_okr = ok_lane_ & rec_r_e;
+            m_lane_ = rec_r;
+            ok_lane_ = rec_okr;
+            ex_lane_ = ex_lane_ & step_e;
+        }
+        if (j_ == 0) {
+            m = m_lane_;
+            ok = ok_lane_;
+            ex = ex_lane_;
+        } else {
+            // (comb_r, comb_okr) = norm_combine(m, ok, m_lane_, ok_lane_)
+            const bool comb_c = m_lane_ > m;
+            const float comb_r = comb_c ? m_lane_ : m;
+            const bool comb_okr = ok & ok_lane_;
+            m = comb_r;
+            ok = comb_okr;
+            ex = ex & ex_lane_;
+        }
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+        const float step_h = fma_rn(x0, c, 0.0f);
+        const float step_l = fma_rn(x1, c, 0.0f);
+        // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+        const float step_z0 = step_h + step_l;
+        const float step_z0_z = step_z0 - step_h;
+        const float step_z1 = step_l - step_z0_z;
+        const bool step_ze = x1 == 0.0f;
+        const float step_mm = step_ze ? step_h : step_l;
+        const float step_am = abs_bits(step_mm);
+        const bool step_bc = step_am > 0x1p-126f;
+        const bool step_zc = x0 == 0.0f;
+        const bool step_e = step_bc | step_zc;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_2_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
     finite_out = rad_f_;
 }
 

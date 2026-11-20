@@ -236,6 +236,9 @@ class Cpp(unittest.TestCase):
     # Stage B1: the midpoint and radius of an interval, which halves its bounds with prod, and the
     # conversion to a ball and the split that call it.
     PRODUCT_RULE |= {'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1'}
+    # The steps and the radius of the scaling of a BallVector by a power of two, whose products are
+    # those of mul_pow2_step_1, mul_pow2_2 and ball_mul_pow2_k.
+    PRODUCT_RULE |= {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'}
     # The kernels that are ordinary inline functions, not forced inline (ordinary_inline:).
     ORDINARY_INLINE = {'interval_mul_2'}
 
@@ -731,7 +734,8 @@ class Rocq(unittest.TestCase):
                 # it says what normalized with an exact error says. An exact_when adds a conjunct
                 # after its claim's own (ball_mul_pow2_k).
                 printed = [e for e in k.ensures if e['kind'] != 'represents']
-                printed += [e for e in printed if 'exact_when' in e]
+                # exact_flag one more, the mask of those conditions (bv_mul_pow2_step_k).
+                printed += [e for e in printed if 'exact_when' in e] + [e for e in printed if 'exact_flag' in e]
                 # outward (Milestone 2) says its side and its distance: two conjuncts before the exact.
                 printed += [e for e in k.ensures if e['kind'] == 'outward']
                 self.assertEqual(len(conjuncts), len(want) + len(printed), name)
@@ -751,9 +755,10 @@ class Rocq(unittest.TestCase):
         # and acc_radius_2 (claimed under the mask), 11 limbs in 8 kernels. With BallVector: rz of the
         # four radius kernels, 4 limbs in 4 kernels; and z of bv_center_entry_1 and rz of
         # bv_make_radius, the kernels of the constructor (bv_center_2 is normalized); and z of neg_1
-        # and rz of bv_neg_radius, of the negation.
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2)
+        # and rz of bv_neg_radius, of the negation; and z of bv_mul_pow2_step_1 and rz of
+        # bv_mul_pow2_radius, of the scaling by a power of two (bv_mul_pow2_step_2 is normalized).
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4 + 2 + 2 + 2)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4 + 2 + 2 + 2)
         s = self.statements
         # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
         # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
@@ -896,9 +901,12 @@ class Rocq(unittest.TestCase):
     # Then the three kernels of the constructor of BallVector with a real-model statement
     # (bv_center_entry_1, bv_center_2, bv_make_radius; unverified): their definitions and statements
     # were added, every earlier line kept; no constant; Audit.v is the same. Then neg_1 and
-    # bv_neg_radius, of the negation of a BallVector (unverified), in the same way.
-    DIGESTS = {'Model.v': '3f0409c14d6a55a0d9dd0f9b3774c48bc58b20f0fc6f99dd6bbbba58c3bb5fc7',
-               'Statements.v': 'dff50236dd9e4d76d8d4b2d4d249876192669f4c09fe9d10ed14f2aea308c0cb',
+    # bv_neg_radius, of the negation of a BallVector (unverified), in the same way. Then the two steps
+    # and the radius of the scaling of a BallVector by a power of two (unverified): their definitions
+    # and statements were added, every earlier line kept; their one constant is N of ball_mul_pow2_k,
+    # under the name it had; Audit.v is the same.
+    DIGESTS = {'Model.v': 'ac8fa622f0f50cb7d8723273d0540c77104f71cf2fa0fa5771eedb2d2cf152cf',
+               'Statements.v': '0f275945d69bdff464fec89542964a5da926ff41ab2f17976f17760582ae487c',
                'Audit.v': '3e9f61c2f0dd8093ddf5bf2cec8e3a9f7a36a12b8a126b372af5ebb2a55f47ce'}
 
 
@@ -934,8 +942,9 @@ class Rocq(unittest.TestCase):
         # 60; the nine of the folds' stage, the fifteen steps of the maps, the three of norm_upper_k;
         # and the eight of Milestone 2's interval work with a real-model statement: mul_dir_1 and the
         # seven bounds of two limbs; and the eight kernels of the accumulator; and the four radius
-        # kernels of BallVector; and the three of its constructor that have one.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2)
+        # kernels of BallVector; and the three of its constructor that have one; and the two of its
+        # negation; and the three of its scaling by a power of two.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3 + 2 + 3)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

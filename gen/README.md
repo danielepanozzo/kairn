@@ -175,6 +175,11 @@ t        = add(x0, y0)
   values of its own (`norm_combine`, `norm_step_k` have no `value:`); and
   `finite_or_nan r flag=f if=ok steps=1`, the finish of such a fold: the value stepped up that many
   times, a NaN when the mask input `ok` is false. A kernel may have mask inputs (`input: mask ok`).
+- The scaling of a BallVector by a power of two (architecture.md, "Ball vectors" and "Claims of
+  Milestone 2"): `exact_flag=e` after the `exact_when=` of an `error` entry, the mask output `e` true
+  exactly when those conditions hold; and of an `upper` entry with a value of its own, `unless=ex`, the
+  bound when the mask input `ex` is false, and `exact_when=mask(ex);zero_or_abs_gt(rx*c,eta/(2*u))`, the
+  output the value exactly when the conditions hold, `mask(NAME)` a condition that a mask input is true.
 
 ## A fold description
 
@@ -268,7 +273,12 @@ ok)` tests it; when the flag is false a second pass writes every center zero and
 `encloses_entries z r SET NAME=ARRAY,RADIUS... flag=F [finite_when=... radii_when=...]`, `radii_when`
 the conditions of V4 on the scalars alone, so that V4 holds of every length, the empty vector
 included (it comes with `finite_when`), and the word `exact` (`"exact_when": []`) for a ball vector that
-is exactly the set (`bv_neg_k`). A constructor (`bv_make_k`) reads the centers and the radius
+is exactly the set (`bv_neg_k`), or `exact_when=CONDITIONS` for one exact under conditions
+(`bv_mul_pow2_k`): its state has a third group, `mask ex`; its step returns the center and a mask, `(z, e)
+= STEP(...)`; a second `record:` line `ex = and(ex, e)` and a second `combine:` line `ex = and(ex, ex)`
+and the mask into the state; the radius takes `ex` after the state's limb; the conditions are those of
+the step's `exact_flag` and of the radius's exact `upper` entry (`rules._bv_exact`); a scalar may be
+required `power_of_two`. A constructor (`bv_make_k`) reads the centers and the radius
 given and claims `makes_ball_vector z rr from=c,r flag=F`; its finish claims
 `finite_or_nan r flag=flag if=ok nonneg`, the value also not negative (`rules._bv_make_claims`).
 `rules.bv_rules` checks
@@ -571,7 +581,9 @@ statement uses too is `Model.v`'s, under one name: the doubling of `ball_from_in
 - the ball vectors (`test_bv.py`): the rules of a ball vector; V1 to V4 of milestone2.md and the
   flag in exact arithmetic on the interpreter, on formats of the IEEE shape of a few bits and in
   `binary64` and `binary32`, the whole space among the operands, in every order; the one radius
-  equal to the largest of the entrywise radii of the Ball kernel; the compiled `F_seq`, `F_lanes`
+  equal to the largest of the entrywise radii of the Ball kernel; the scalings by a power of two
+  exactly the set (and the radius $c\,r_x$) wherever their conditions hold, and sixty halvings in a row
+  exact; the compiled `F_seq`, `F_lanes`
   and `F_packed` bit for bit against the interpreter; the line protocol; the printers and the claims,
   and the entries that architecture.md writes out;
 - the convolutions (`test_conv.py`): the rules of a convolution; the interpreter, each coefficient

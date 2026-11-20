@@ -409,6 +409,29 @@ Definition bv_make_radius (m r : R) : R :=
   let rz := rnd (g + d) in
   rz.
 
+(* bv_mul_pow2_radius: the radius lines of ball_mul_pow2_k (Milestone 2 listing), with the exactness of every entry (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_radius (m : R) (ex : bool) (rx c : R) : R :=
+  let rr := rnd (rx * c + 0) in
+  let br := Rlt_bool up_ball_mul_pow2_1_0 rr in
+  let zr := Req_bool rx 0 in
+  let er := orb br zr in
+  let q := andb ex er in
+  let su := succ radix2 (FLT_exp emin prec) rr in
+  let rw := succ radix2 (FLT_exp emin prec) su in
+  let rs := if q then rr else rw in
+  let d := rnd (m - m) in
+  let rz := rnd (rs + d) in
+  rz.
+
+(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_step_1 (x c : R) : R * bool :=
+  let z := rnd (x * c + 0) in
+  let am := Rabs z in
+  let bc := Rlt_bool up_ball_mul_pow2_1_0 am in
+  let zc := Req_bool x 0 in
+  let e := orb bc zc in
+  (z, e).
+
 (* bv_neg_radius: the radius of ball_neg_k (Milestone 1 listing), at every entry (milestone2.md, BallVector). *)
 Definition bv_neg_radius (m rx : R) : R :=
   let rz := rx in
@@ -882,6 +905,19 @@ Definition bv_center_2 (x0 x1 : R) : R * R :=
   let z0 := x0 in
   let z1 := x1 in
   (z0, z1).
+
+(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). *)
+Definition bv_mul_pow2_step_2 (x0 x1 c : R) : R * R * bool :=
+  let h := rnd (x0 * c + 0) in
+  let l := rnd (x1 * c + 0) in
+  let '(z0, z1) := fast_two_sum h l in
+  let ze := Req_bool x1 0 in
+  let mm := if ze then h else l in
+  let am := Rabs mm in
+  let bc := Rlt_bool up_ball_mul_pow2_1_0 am in
+  let zc := Req_bool x0 0 in
+  let e := orb bc zc in
+  (z0, z1, e).
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). *)
 Definition eq_2_1 (x0 x1 a : R) : bool :=

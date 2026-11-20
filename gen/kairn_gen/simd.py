@@ -380,9 +380,15 @@ def bv_packed(b, fd, kernels, ctype):
     args = [v for a in fd.step[1] for v in groups[a]]
     items, outs = ir.inline_call(step, kernels, [ir.Operand(a) for a in args], cpp.STEP)
     lines += _statements(b, items, kernels, ctype, ' ' * 8)
+    width = len(fd.write_limbs())
+    exact = fd.exact_mask is not None
     lines += [f'        {b["store"].format(f"{v}_out + i_", o, **fmt)};' for v, o in zip(fd.write_limbs(), outs)]
-    items, routs = ir.inline_call(record, kernels, [ir.Operand(a) for a in lane + outs], cpp.REC)
-    lines += _statements(b, items, kernels, ctype, ' ' * 8) + cpp._assign(lane, routs, ' ' * 8) + ['    }']
+    items, routs = ir.inline_call(record, kernels, [ir.Operand(a) for a in lane[:2] + outs[:width]], cpp.REC)
+    lines += _statements(b, items, kernels, ctype, ' ' * 8) + cpp._assign(lane[:2], routs, ' ' * 8)
+    if exact:
+        # The step's mask that its entry is exact, and-ed into the lane mask of exactness.
+        lines.append(f'        {lane[2]} = {b["spell"]["and"].format(lane[2], outs[width], **fmt)};')
+    lines.append('    }')
     for v, kind in zip(stored, kinds):
         decl = b['mask_decl'][ctype] if kind == ir.MASK else f'{ctype} {{0}}[{w}]'
         if decl:
@@ -394,8 +400,11 @@ def bv_packed(b, fd, kernels, ctype):
     lines.append(f'    for (std::size_t j_ = 1; j_ < {w}; ++j_) {{')
     lines += [f'        const bool {v} = {b["mask_lane"][ctype].format(r, "j_")};' if kind == ir.MASK else
               f'        const {ctype} {v} = {r}[j_];' for v, r, kind in zip(nxt, stored, kinds)]
-    body, couts = cpp._call(combine, kernels, ctype, state + nxt, cpp.COMB, ' ' * 8)
-    lines += body + cpp._assign(state, couts, ' ' * 8) + ['    }']
+    body, couts = cpp._call(combine, kernels, ctype, state[:2] + nxt[:2], cpp.COMB, ' ' * 8)
+    lines += body + cpp._assign(state[:2], couts, ' ' * 8)
+    if exact:
+        lines.append(f'        {state[2]} = {cpp.SPELL["and"].format(state[2], nxt[2])};')
+    lines.append('    }')
     lines.append('    for (std::size_t i_ = full_; i_ < n; ++i_) {')
     lines += cpp.bv_element(fd, kernels, ctype, ' ' * 8, state) + ['    }']
     return lines + cpp.bv_end(fd, kernels, ctype, state, packed=True) + ['}']

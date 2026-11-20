@@ -1417,6 +1417,54 @@ KAIRN_GEN_FORCEINLINE void bv_make_radius(float32x4_t m, float32x4_t r, float32x
     rz_out = rz;
 }
 
+// bv_mul_pow2_radius(m, mask ex, rx, c) -> rz
+KAIRN_GEN_FORCEINLINE void bv_mul_pow2_radius(float64x2_t m, uint64x2_t ex, float64x2_t rx, float64x2_t c, float64x2_t& rz_out) noexcept {
+    const float64x2_t rr = vfmaq_f64(vdupq_n_f64(0.0), rx, c);
+    const uint64x2_t br = vcltq_f64(vdupq_n_f64(0x1p-1022), rr);
+    const uint64x2_t zr = vceqq_f64(rx, vdupq_n_f64(0.0));
+    const uint64x2_t er = vorrq_u64(br, zr);
+    const uint64x2_t q = vandq_u64(ex, er);
+    const float64x2_t su = next_up_bits(rr);
+    const float64x2_t rw = next_up_bits(su);
+    const float64x2_t rs = vbslq_f64(q, rr, rw);
+    const float64x2_t d = vsubq_f64(m, m);
+    const float64x2_t rz = vaddq_f64(rs, d);
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void bv_mul_pow2_radius(float32x4_t m, uint32x4_t ex, float32x4_t rx, float32x4_t c, float32x4_t& rz_out) noexcept {
+    const float32x4_t rr = vfmaq_f32(vdupq_n_f32(0.0f), rx, c);
+    const uint32x4_t br = vcltq_f32(vdupq_n_f32(0x1p-126f), rr);
+    const uint32x4_t zr = vceqq_f32(rx, vdupq_n_f32(0.0f));
+    const uint32x4_t er = vorrq_u32(br, zr);
+    const uint32x4_t q = vandq_u32(ex, er);
+    const float32x4_t su = next_up_bits(rr);
+    const float32x4_t rw = next_up_bits(su);
+    const float32x4_t rs = vbslq_f32(q, rr, rw);
+    const float32x4_t d = vsubq_f32(m, m);
+    const float32x4_t rz = vaddq_f32(rs, d);
+    rz_out = rz;
+}
+
+// bv_mul_pow2_step_1(x, c) -> z, mask e
+KAIRN_GEN_FORCEINLINE void bv_mul_pow2_step_1(float64x2_t x, float64x2_t c, float64x2_t& z_out, uint64x2_t& e_out) noexcept {
+    const float64x2_t z = vfmaq_f64(vdupq_n_f64(0.0), x, c);
+    const float64x2_t am = vabsq_f64(z);
+    const uint64x2_t bc = vcltq_f64(vdupq_n_f64(0x1p-1022), am);
+    const uint64x2_t zc = vceqq_f64(x, vdupq_n_f64(0.0));
+    const uint64x2_t e = vorrq_u64(bc, zc);
+    z_out = z;
+    e_out = e;
+}
+KAIRN_GEN_FORCEINLINE void bv_mul_pow2_step_1(float32x4_t x, float32x4_t c, float32x4_t& z_out, uint32x4_t& e_out) noexcept {
+    const float32x4_t z = vfmaq_f32(vdupq_n_f32(0.0f), x, c);
+    const float32x4_t am = vabsq_f32(z);
+    const uint32x4_t bc = vcltq_f32(vdupq_n_f32(0x1p-126f), am);
+    const uint32x4_t zc = vceqq_f32(x, vdupq_n_f32(0.0f));
+    const uint32x4_t e = vorrq_u32(bc, zc);
+    z_out = z;
+    e_out = e;
+}
+
 // bv_neg_radius(m, rx) -> rz
 KAIRN_GEN_FORCEINLINE void bv_neg_radius([[maybe_unused]] float64x2_t m, float64x2_t rx, float64x2_t& rz_out) noexcept {
     const float64x2_t rz = rx;
@@ -5337,6 +5385,42 @@ KAIRN_GEN_FORCEINLINE void bv_center_2(float32x4_t x0, float32x4_t x1, float32x4
     const float32x4_t z1 = x1;
     z0_out = z0;
     z1_out = z1;
+}
+
+// bv_mul_pow2_step_2(x = (x0, x1), c) -> z = (z0, z1), mask e
+KAIRN_GEN_FORCEINLINE void bv_mul_pow2_step_2(float64x2_t x0, float64x2_t x1, float64x2_t c, float64x2_t& z0_out, float64x2_t& z1_out, uint64x2_t& e_out) noexcept {
+    const float64x2_t h = vfmaq_f64(vdupq_n_f64(0.0), x0, c);
+    const float64x2_t l = vfmaq_f64(vdupq_n_f64(0.0), x1, c);
+    // (z0, z1) = fast_two_sum(h, l)
+    const float64x2_t z0 = vaddq_f64(h, l);
+    const float64x2_t z0_z = vsubq_f64(z0, h);
+    const float64x2_t z1 = vsubq_f64(l, z0_z);
+    const uint64x2_t ze = vceqq_f64(x1, vdupq_n_f64(0.0));
+    const float64x2_t mm = vbslq_f64(ze, h, l);
+    const float64x2_t am = vabsq_f64(mm);
+    const uint64x2_t bc = vcltq_f64(vdupq_n_f64(0x1p-1022), am);
+    const uint64x2_t zc = vceqq_f64(x0, vdupq_n_f64(0.0));
+    const uint64x2_t e = vorrq_u64(bc, zc);
+    z0_out = z0;
+    z1_out = z1;
+    e_out = e;
+}
+KAIRN_GEN_FORCEINLINE void bv_mul_pow2_step_2(float32x4_t x0, float32x4_t x1, float32x4_t c, float32x4_t& z0_out, float32x4_t& z1_out, uint32x4_t& e_out) noexcept {
+    const float32x4_t h = vfmaq_f32(vdupq_n_f32(0.0f), x0, c);
+    const float32x4_t l = vfmaq_f32(vdupq_n_f32(0.0f), x1, c);
+    // (z0, z1) = fast_two_sum(h, l)
+    const float32x4_t z0 = vaddq_f32(h, l);
+    const float32x4_t z0_z = vsubq_f32(z0, h);
+    const float32x4_t z1 = vsubq_f32(l, z0_z);
+    const uint32x4_t ze = vceqq_f32(x1, vdupq_n_f32(0.0f));
+    const float32x4_t mm = vbslq_f32(ze, h, l);
+    const float32x4_t am = vabsq_f32(mm);
+    const uint32x4_t bc = vcltq_f32(vdupq_n_f32(0x1p-126f), am);
+    const uint32x4_t zc = vceqq_f32(x0, vdupq_n_f32(0.0f));
+    const uint32x4_t e = vorrq_u32(bc, zc);
+    z0_out = z0;
+    z1_out = z1;
+    e_out = e;
 }
 
 // eq_2_1(x = (x0, x1), a) -> mask m
@@ -11100,6 +11184,464 @@ inline void bv_make_2_packed(const float* c0_in, const float* c1_in, std::size_t
         }
     }
     rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+KAIRN_GEN_NOINLINE void bv_mul_pow2_1_packed_end(double m, bool ok, bool ex, double rx, double c, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_mul_pow2_radius(m_e_, ex, rx, c)
+    const double rad_rr = fma_rn(rx, c, 0.0);
+    const bool rad_br = rad_rr > 0x1p-1022;
+    const bool rad_zr = rx == 0.0;
+    const bool rad_er = rad_br | rad_zr;
+    const bool rad_q = ex & rad_er;
+    const double rad_su = next_up_bits(rad_rr);
+    const double rad_rw = next_up_bits(rad_su);
+    const double rad_rs = rad_q ? rad_rr : rad_rw;
+    const double rad_d = m_e_ - m_e_;
+    const double rad_rz = rad_rs + rad_d;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// ball vector bv_mul_pow2_1(stored x, stored rx, supplied c) -> z, r, finite: step bv_mul_pow2_step_1, record norm_step_1, radius bv_mul_pow2_radius: in the lane order with the lanes of a register.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_mul_pow2_1_packed(const double* x_in, std::size_t n, double rx, double c, double* z_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 2;
+    const float64x2_t c_v_ = vdupq_n_f64(c);
+    float64x2_t m_lane_ = vdupq_n_f64(0.0);
+    uint64x2_t ok_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    uint64x2_t ex_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 2) {
+        const float64x2_t x = vld1q_f64(x_in + i_);
+        // (step_z, step_e) = bv_mul_pow2_step_1(x, c_v_)
+        const float64x2_t step_z = vfmaq_f64(vdupq_n_f64(0.0), x, c_v_);
+        const float64x2_t step_am = vabsq_f64(step_z);
+        const uint64x2_t step_bc = vcltq_f64(vdupq_n_f64(0x1p-1022), step_am);
+        const uint64x2_t step_zc = vceqq_f64(x, vdupq_n_f64(0.0));
+        const uint64x2_t step_e = vorrq_u64(step_bc, step_zc);
+        vst1q_f64(z_out + i_, step_z);
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+        const float64x2_t rec_a = vabsq_f64(step_z);
+        const uint64x2_t rec_e = vceqq_f64(rec_a, rec_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+        const uint64x2_t rec_r_c = vcltq_f64(m_lane_, rec_a);
+        const float64x2_t rec_r = vbslq_f64(rec_r_c, rec_a, m_lane_);
+        const uint64x2_t rec_okr = vandq_u64(ok_lane_, rec_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+        ex_lane_ = vandq_u64(ex_lane_, step_e);
+    }
+    double m_lanes_[2];
+    uint64_t ok_lanes_[2];
+    uint64_t ex_lanes_[2];
+    vst1q_f64(m_lanes_, m_lane_);
+    vst1q_u64(ok_lanes_, ok_lane_);
+    vst1q_u64(ex_lanes_, ex_lane_);
+    double m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    bool ex = ex_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 2; ++j_) {
+        const double m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        const bool ex_next_ = ex_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const double comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+        ex = ex & ex_next_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x = x_in[i_];
+        // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+        const double step_z = fma_rn(x, c, 0.0);
+        const double step_am = abs_bits(step_z);
+        const bool step_bc = step_am > 0x1p-1022;
+        const bool step_zc = x == 0.0;
+        const bool step_e = step_bc | step_zc;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const double rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_1_packed_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+KAIRN_GEN_NOINLINE void bv_mul_pow2_1_packed_end(float m, bool ok, bool ex, float rx, float c, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_mul_pow2_radius(m_e_, ex, rx, c)
+    const float rad_rr = fma_rn(rx, c, 0.0f);
+    const bool rad_br = rad_rr > 0x1p-126f;
+    const bool rad_zr = rx == 0.0f;
+    const bool rad_er = rad_br | rad_zr;
+    const bool rad_q = ex & rad_er;
+    const float rad_su = next_up_bits(rad_rr);
+    const float rad_rw = next_up_bits(rad_su);
+    const float rad_rs = rad_q ? rad_rr : rad_rw;
+    const float rad_d = m_e_ - m_e_;
+    const float rad_rz = rad_rs + rad_d;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_mul_pow2_1_packed(const float* x_in, std::size_t n, float rx, float c, float* z_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    const float32x4_t c_v_ = vdupq_n_f32(c);
+    float32x4_t m_lane_ = vdupq_n_f32(0.0f);
+    uint32x4_t ok_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    uint32x4_t ex_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const float32x4_t x = vld1q_f32(x_in + i_);
+        // (step_z, step_e) = bv_mul_pow2_step_1(x, c_v_)
+        const float32x4_t step_z = vfmaq_f32(vdupq_n_f32(0.0f), x, c_v_);
+        const float32x4_t step_am = vabsq_f32(step_z);
+        const uint32x4_t step_bc = vcltq_f32(vdupq_n_f32(0x1p-126f), step_am);
+        const uint32x4_t step_zc = vceqq_f32(x, vdupq_n_f32(0.0f));
+        const uint32x4_t step_e = vorrq_u32(step_bc, step_zc);
+        vst1q_f32(z_out + i_, step_z);
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+        const float32x4_t rec_a = vabsq_f32(step_z);
+        const uint32x4_t rec_e = vceqq_f32(rec_a, rec_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+        const uint32x4_t rec_r_c = vcltq_f32(m_lane_, rec_a);
+        const float32x4_t rec_r = vbslq_f32(rec_r_c, rec_a, m_lane_);
+        const uint32x4_t rec_okr = vandq_u32(ok_lane_, rec_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+        ex_lane_ = vandq_u32(ex_lane_, step_e);
+    }
+    float m_lanes_[4];
+    uint32_t ok_lanes_[4];
+    uint32_t ex_lanes_[4];
+    vst1q_f32(m_lanes_, m_lane_);
+    vst1q_u32(ok_lanes_, ok_lane_);
+    vst1q_u32(ex_lanes_, ex_lane_);
+    float m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    bool ex = ex_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const float m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        const bool ex_next_ = ex_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const float comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+        ex = ex & ex_next_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x = x_in[i_];
+        // (step_z, step_e) = bv_mul_pow2_step_1(x, c)
+        const float step_z = fma_rn(x, c, 0.0f);
+        const float step_am = abs_bits(step_z);
+        const bool step_bc = step_am > 0x1p-126f;
+        const bool step_zc = x == 0.0f;
+        const bool step_e = step_bc | step_zc;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const float rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_1_packed_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+KAIRN_GEN_NOINLINE void bv_mul_pow2_2_packed_end(double m, bool ok, bool ex, double rx, double c, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_mul_pow2_radius(m_e_, ex, rx, c)
+    const double rad_rr = fma_rn(rx, c, 0.0);
+    const bool rad_br = rad_rr > 0x1p-1022;
+    const bool rad_zr = rx == 0.0;
+    const bool rad_er = rad_br | rad_zr;
+    const bool rad_q = ex & rad_er;
+    const double rad_su = next_up_bits(rad_rr);
+    const double rad_rw = next_up_bits(rad_su);
+    const double rad_rs = rad_q ? rad_rr : rad_rw;
+    const double rad_d = m_e_ - m_e_;
+    const double rad_rz = rad_rs + rad_d;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const double fin_t = ok ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const double fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// ball vector bv_mul_pow2_2(stored x = (x0, x1), stored rx, supplied c) -> z = (z0, z1), r, finite: step bv_mul_pow2_step_2, record norm_step_2, radius bv_mul_pow2_radius: in the lane order with the lanes of a register.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_mul_pow2_2_packed(const double* x0_in, const double* x1_in, std::size_t n, double rx, double c, double* z0_out, double* z1_out, double& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 2;
+    const float64x2_t c_v_ = vdupq_n_f64(c);
+    float64x2_t m_lane_ = vdupq_n_f64(0.0);
+    uint64x2_t ok_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    uint64x2_t ex_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 2) {
+        const float64x2_t x0 = vld1q_f64(x0_in + i_);
+        const float64x2_t x1 = vld1q_f64(x1_in + i_);
+        // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c_v_)
+        const float64x2_t step_h = vfmaq_f64(vdupq_n_f64(0.0), x0, c_v_);
+        const float64x2_t step_l = vfmaq_f64(vdupq_n_f64(0.0), x1, c_v_);
+        // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+        const float64x2_t step_z0 = vaddq_f64(step_h, step_l);
+        const float64x2_t step_z0_z = vsubq_f64(step_z0, step_h);
+        const float64x2_t step_z1 = vsubq_f64(step_l, step_z0_z);
+        const uint64x2_t step_ze = vceqq_f64(x1, vdupq_n_f64(0.0));
+        const float64x2_t step_mm = vbslq_f64(step_ze, step_h, step_l);
+        const float64x2_t step_am = vabsq_f64(step_mm);
+        const uint64x2_t step_bc = vcltq_f64(vdupq_n_f64(0x1p-1022), step_am);
+        const uint64x2_t step_zc = vceqq_f64(x0, vdupq_n_f64(0.0));
+        const uint64x2_t step_e = vorrq_u64(step_bc, step_zc);
+        vst1q_f64(z0_out + i_, step_z0);
+        vst1q_f64(z1_out + i_, step_z1);
+        // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+        const float64x2_t rec_r_a = vabsq_f64(step_z0);
+        const uint64x2_t rec_r_e = vceqq_f64(rec_r_a, rec_r_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+        const uint64x2_t rec_r_c = vcltq_f64(m_lane_, rec_r_a);
+        const float64x2_t rec_r = vbslq_f64(rec_r_c, rec_r_a, m_lane_);
+        const uint64x2_t rec_okr = vandq_u64(ok_lane_, rec_r_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+        ex_lane_ = vandq_u64(ex_lane_, step_e);
+    }
+    double m_lanes_[2];
+    uint64_t ok_lanes_[2];
+    uint64_t ex_lanes_[2];
+    vst1q_f64(m_lanes_, m_lane_);
+    vst1q_u64(ok_lanes_, ok_lane_);
+    vst1q_u64(ex_lanes_, ex_lane_);
+    double m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    bool ex = ex_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 2; ++j_) {
+        const double m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        const bool ex_next_ = ex_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const double comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+        ex = ex & ex_next_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double x0 = x0_in[i_];
+        const double x1 = x1_in[i_];
+        // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+        const double step_h = fma_rn(x0, c, 0.0);
+        const double step_l = fma_rn(x1, c, 0.0);
+        // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+        const double step_z0 = step_h + step_l;
+        const double step_z0_z = step_z0 - step_h;
+        const double step_z1 = step_l - step_z0_z;
+        const bool step_ze = x1 == 0.0;
+        const double step_mm = step_ze ? step_h : step_l;
+        const double step_am = abs_bits(step_mm);
+        const bool step_bc = step_am > 0x1p-1022;
+        const bool step_zc = x0 == 0.0;
+        const bool step_e = step_bc | step_zc;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_2_packed_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+KAIRN_GEN_NOINLINE void bv_mul_pow2_2_packed_end(float m, bool ok, bool ex, float rx, float c, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_mul_pow2_radius(m_e_, ex, rx, c)
+    const float rad_rr = fma_rn(rx, c, 0.0f);
+    const bool rad_br = rad_rr > 0x1p-126f;
+    const bool rad_zr = rx == 0.0f;
+    const bool rad_er = rad_br | rad_zr;
+    const bool rad_q = ex & rad_er;
+    const float rad_su = next_up_bits(rad_rr);
+    const float rad_rw = next_up_bits(rad_su);
+    const float rad_rs = rad_q ? rad_rr : rad_rw;
+    const float rad_d = m_e_ - m_e_;
+    const float rad_rz = rad_rs + rad_d;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, ok)
+    const float fin_t = ok ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_t)
+    const float fin_r_a = abs_bits(fin_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_mul_pow2_2_packed(const float* x0_in, const float* x1_in, std::size_t n, float rx, float c, float* z0_out, float* z1_out, float& r_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    const float32x4_t c_v_ = vdupq_n_f32(c);
+    float32x4_t m_lane_ = vdupq_n_f32(0.0f);
+    uint32x4_t ok_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    uint32x4_t ex_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const float32x4_t x0 = vld1q_f32(x0_in + i_);
+        const float32x4_t x1 = vld1q_f32(x1_in + i_);
+        // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c_v_)
+        const float32x4_t step_h = vfmaq_f32(vdupq_n_f32(0.0f), x0, c_v_);
+        const float32x4_t step_l = vfmaq_f32(vdupq_n_f32(0.0f), x1, c_v_);
+        // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+        const float32x4_t step_z0 = vaddq_f32(step_h, step_l);
+        const float32x4_t step_z0_z = vsubq_f32(step_z0, step_h);
+        const float32x4_t step_z1 = vsubq_f32(step_l, step_z0_z);
+        const uint32x4_t step_ze = vceqq_f32(x1, vdupq_n_f32(0.0f));
+        const float32x4_t step_mm = vbslq_f32(step_ze, step_h, step_l);
+        const float32x4_t step_am = vabsq_f32(step_mm);
+        const uint32x4_t step_bc = vcltq_f32(vdupq_n_f32(0x1p-126f), step_am);
+        const uint32x4_t step_zc = vceqq_f32(x0, vdupq_n_f32(0.0f));
+        const uint32x4_t step_e = vorrq_u32(step_bc, step_zc);
+        vst1q_f32(z0_out + i_, step_z0);
+        vst1q_f32(z1_out + i_, step_z1);
+        // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+        const float32x4_t rec_r_a = vabsq_f32(step_z0);
+        const uint32x4_t rec_r_e = vceqq_f32(rec_r_a, rec_r_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+        const uint32x4_t rec_r_c = vcltq_f32(m_lane_, rec_r_a);
+        const float32x4_t rec_r = vbslq_f32(rec_r_c, rec_r_a, m_lane_);
+        const uint32x4_t rec_okr = vandq_u32(ok_lane_, rec_r_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+        ex_lane_ = vandq_u32(ex_lane_, step_e);
+    }
+    float m_lanes_[4];
+    uint32_t ok_lanes_[4];
+    uint32_t ex_lanes_[4];
+    vst1q_f32(m_lanes_, m_lane_);
+    vst1q_u32(ok_lanes_, ok_lane_);
+    vst1q_u32(ex_lanes_, ex_lane_);
+    float m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    bool ex = ex_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const float m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        const bool ex_next_ = ex_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const float comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+        ex = ex & ex_next_;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float x0 = x0_in[i_];
+        const float x1 = x1_in[i_];
+        // (step_z0, step_z1, step_e) = bv_mul_pow2_step_2(x0, x1, c)
+        const float step_h = fma_rn(x0, c, 0.0f);
+        const float step_l = fma_rn(x1, c, 0.0f);
+        // (step_z0, step_z1) = fast_two_sum(step_h, step_l)
+        const float step_z0 = step_h + step_l;
+        const float step_z0_z = step_z0 - step_h;
+        const float step_z1 = step_l - step_z0_z;
+        const bool step_ze = x1 == 0.0f;
+        const float step_mm = step_ze ? step_h : step_l;
+        const float step_am = abs_bits(step_mm);
+        const bool step_bc = step_am > 0x1p-126f;
+        const bool step_zc = x0 == 0.0f;
+        const bool step_e = step_bc | step_zc;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+        ex = ex & step_e;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_mul_pow2_2_packed_end(m, ok, ex, rx, c, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
     finite_out = rad_f_;
 }
 

@@ -49,6 +49,8 @@ BVS = {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2
 BVS |= {'bv_make_1', 'bv_make_2'}
 # And the negations.
 BVS |= {'bv_neg_1', 'bv_neg_2'}
+# And the scalings by a power of two, exact under conditions.
+BVS |= {'bv_mul_pow2_1', 'bv_mul_pow2_2'}
 
 
 # ---------------------------------------------------------------------------------------------

@@ -423,6 +423,16 @@ template <class T> struct bv_make_radius;
 template <> struct bv_make_radius<double> { static constexpr bool proved = false; };
 template <> struct bv_make_radius<float> { static constexpr bool proved = false; };
 
+// bv_mul_pow2_radius: UNVERIFIED. Claims: upper; upper.
+template <class T> struct bv_mul_pow2_radius;
+template <> struct bv_mul_pow2_radius<double> { static constexpr bool proved = false; };
+template <> struct bv_mul_pow2_radius<float> { static constexpr bool proved = false; };
+
+// bv_mul_pow2_step_1: UNVERIFIED. Claims: rounded; error, form R, c = 0, k = 1, t = 1/2.
+template <class T> struct bv_mul_pow2_step_1;
+template <> struct bv_mul_pow2_step_1<double> { static constexpr bool proved = false; };
+template <> struct bv_mul_pow2_step_1<float> { static constexpr bool proved = false; };
+
 // bv_neg_radius: UNVERIFIED. Claims: rounded.
 template <class T> struct bv_neg_radius;
 template <> struct bv_neg_radius<double> { static constexpr bool proved = false; };
@@ -1264,6 +1274,11 @@ template <> struct ball_upper_as_2<float> { static constexpr bool proved = false
 template <class T> struct bv_center_2;
 template <> struct bv_center_2<double> { static constexpr bool proved = false; };
 template <> struct bv_center_2<float> { static constexpr bool proved = false; };
+
+// bv_mul_pow2_step_2: UNVERIFIED. Claims: normalized; error, form R, c = 0, k = 2, t = 1.
+template <class T> struct bv_mul_pow2_step_2;
+template <> struct bv_mul_pow2_step_2<double> { static constexpr bool proved = false; };
+template <> struct bv_mul_pow2_step_2<float> { static constexpr bool proved = false; };
 
 // eq_2_1: proved. Claims: predicate.
 template <class T> struct eq_2_1;

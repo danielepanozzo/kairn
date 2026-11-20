@@ -488,6 +488,23 @@ Definition bv_make_finish_spec : Prop :=
   (flag = true -> r = rz) /\
   (flag = false -> nan r).
 
+(* bv_mul_pow2_step_1: mul_pow2_step_1 on the center, and the exactness of the center of ball_mul_pow2_1 (milestone2.md, BallVector). IEEE-model status: unverified. *)
+Definition bv_mul_pow2_step_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (1 <= prec)%Z ->
+  forall x c : binary_float prec emax,
+  finite x -> finite c ->
+  (exists n : Z, val c = bpow radix2 n) ->
+  let '(z, e) := IeeeModel.bv_mul_pow2_step_1 prec emax nan_abs nan_fma x c in
+  finite z ->
+  val z = RN (ieee_emin prec emax) prec (val x * val c) /\
+  Rabs (val z - (val x * val c)) <= (1 / 2) * eta (ieee_emin prec emax) /\
+  (((val x * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x * val c)) ->
+   val z = (val x * val c)) /\
+  (e = true <-> ((val x * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x * val c))).
+
 (* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). IEEE-model status: unverified. *)
 Definition dot_step_1_ieee_bridge_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -1916,6 +1933,25 @@ Definition bv_center_2_ieee_spec : Prop :=
   canonical_2 z0 z1 /\
   xval_2 z0 z1 = xval_2 x0 x1 /\
   (finite x0 -> val z0 = val x0 /\ val z1 = val x1).
+
+(* bv_mul_pow2_step_2: mul_pow2_2 on the center, and the exactness of the center of ball_mul_pow2_2 (milestone2.md, BallVector). IEEE-model status: unverified. *)
+Definition bv_mul_pow2_step_2_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall x0 x1 c : binary_float prec emax,
+  finite x0 -> finite x1 -> finite c ->
+  normalized_2 (ieee_emin prec emax) prec (val x0) (val x1) ->
+  (exists n : Z, val c = bpow radix2 n) ->
+  let '(z0, z1, e) := IeeeModel.bv_mul_pow2_step_2 prec emax nan_plus nan_minus nan_abs nan_fma x0 x1 c in
+  finite z0 ->
+  finite z1 /\
+  normalized_2 (ieee_emin prec emax) prec (val z0) (val z1) /\
+  Rabs ((val z0 + val z1) - ((val x0 + val x1) * val c)) <= 1 * eta (ieee_emin prec emax) /\
+  (((val x0 * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x0 * val c)) /\ ((val x1 * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x1 * val c)) ->
+   (val z0 + val z1) = ((val x0 + val x1) * val c)) /\
+  (e = true <-> ((val x0 * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x0 * val c)) /\ ((val x1 * val c) = 0 \/ (eta (ieee_emin prec emax) / (2 * u prec)) < Rabs (val x1 * val c))).
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). IEEE-model status: proved. *)
 Definition eq_2_1_ieee_spec : Prop :=

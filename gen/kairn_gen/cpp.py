@@ -872,9 +872,14 @@ def bv_element(fd, kernels, ctype, pad, state):
     step, record = kernels[fd.step[0]], kernels[fd.record[0]]
     lines = [f'{pad}const {ctype} {v} = {v}_in[i_];' for v in fd.array_limbs()]
     body, outs = _call(step, kernels, ctype, map_arguments(fd, {g.name: list(g.limbs) for g in fd.arrays}), STEP, pad)
+    width = len(fd.write_limbs())
     lines += body + [f'{pad}{v}_out[i_] = {o};' for v, o in zip(fd.write_limbs(), outs)]
-    body, routs = _call(record, kernels, ctype, list(state) + outs, REC, pad)
-    return lines + body + _assign(state, routs, pad)
+    body, routs = _call(record, kernels, ctype, list(state[:2]) + outs[:width], REC, pad)
+    lines += body + _assign(state[:2], routs, pad)
+    if fd.exact_mask is not None:
+        # The step's mask that its entry is exact, and-ed into the state's mask of exactness.
+        lines.append(f'{pad}{state[2]} = {SPELL["and"].format(state[2], outs[width])};')
+    return lines
 
 
 def bv_end_name(fd, packed=False):
@@ -893,9 +898,12 @@ def bv_end_function(fd, kernels, ctype, packed=False):
     clang at -O2 folds the product by the +0 of the zero state on the path where the loop runs no
     element). A call is one copy."""
     radius, finish = kernels[fd.radius[0]], kernels[fd.finish[0]]
-    m, ok = fd.state_limbs()
-    scalars = [v for a in fd.radius[1][1:] for v in next(g for g in fd.scalars if g.name == a).limbs]
-    params = [f'{ctype} {m}', f'bool {ok}'] + [f'{ctype} {v}' for v in scalars] + \
+    m, ok = fd.state_limbs()[:2]
+    # A ball vector exact under conditions passes its mask of exactness after the state's mask, and its
+    # radius takes it after the largest magnitude.
+    ex = [fd.exact_mask[0]] if fd.exact_mask is not None else []
+    scalars = [v for a in fd.radius[1][1 + len(ex):] for v in next(g for g in fd.scalars if g.name == a).limbs]
+    params = [f'{ctype} {m}', f'bool {ok}'] + [f'bool {v}' for v in ex] + [f'{ctype} {v}' for v in scalars] + \
         [f'{ctype}& {RAD}_out_', 'bool& fin_out_']
     # The largest magnitude through a volatile copy, which computes nothing: a compiler may still
     # specialize the function for the +0 of the zero state (a clone for a constant argument) and fold
@@ -904,7 +912,7 @@ def bv_end_function(fd, kernels, ctype, packed=False):
     unused = '[[maybe_unused]] ' if radius.input_limbs[0] in radius.unused else ''
     lines = [f'KAIRN_GEN_NOINLINE void {bv_end_name(fd, packed)}({", ".join(params)}) noexcept {{',
              f'    volatile {ctype} {m}_v_ = {m};', f'    {unused}const {ctype} {m}_e_ = {m}_v_;']
-    body, rout = _call(radius, kernels, ctype, [f'{m}_e_'] + scalars, RAD, '    ')
+    body, rout = _call(radius, kernels, ctype, [f'{m}_e_'] + ex + scalars, RAD, '    ')
     lines += body
     body, fouts = _call(finish, kernels, ctype, rout + [ok], FIN, '    ')
     return lines + body + [f'    {RAD}_out_ = {fouts[0]};', f'    fin_out_ = {fouts[1]};', '}']
@@ -914,7 +922,8 @@ def bv_end(fd, kernels, ctype, state, pad='    ', packed=False):
     """The call of the end (bv_end_function), the second pass and the results. The zeros of the whole
     space are volatile stores, which compute nothing: otherwise the loop is a call of memset or bzero,
     outside the object, or a loop that a compiler vectorizes."""
-    scalars = [v for a in fd.radius[1][1:] for v in next(g for g in fd.scalars if g.name == a).limbs]
+    lead = 2 if fd.exact_mask is not None else 1
+    scalars = [v for a in fd.radius[1][lead:] for v in next(g for g in fd.scalars if g.name == a).limbs]
     lines = [f'{pad}{ctype} {RAD}_r_;', f'{pad}bool {RAD}_f_;',
              f'{pad}{bv_end_name(fd, packed)}({", ".join(list(state) + scalars + [f"{RAD}_r_", f"{RAD}_f_"])});']
     inner = pad + '        '
@@ -969,8 +978,11 @@ def bv_lanes(fd, kernels, ctype):
     lines.append('        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {')
     lines += bv_element(fd, kernels, ctype, ' ' * 12, lane) + ['        }', '        if (j_ == 0) {']
     lines += _assign(state, lane, ' ' * 12) + ['        } else {']
-    body, outs = _call(combine, kernels, ctype, state + lane, COMB, ' ' * 12)
-    lines += body + _assign(state, outs, ' ' * 12) + ['        }', '    }']
+    body, outs = _call(combine, kernels, ctype, state[:2] + lane[:2], COMB, ' ' * 12)
+    lines += body + _assign(state[:2], outs, ' ' * 12)
+    if fd.exact_mask is not None:
+        lines.append(f'            {state[2]} = {SPELL["and"].format(state[2], lane[2])};')
+    lines += ['        }', '    }']
     lines.append('    for (std::size_t i_ = full_; i_ < n; ++i_) {')
     lines += bv_element(fd, kernels, ctype, ' ' * 8, state) + ['    }']
     return lines + bv_end(fd, kernels, ctype, state) + ['}']

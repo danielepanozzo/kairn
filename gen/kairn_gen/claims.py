@@ -153,6 +153,10 @@ def bv_claims(fd, kernels):
     out['step'] = fd.step[0]
     out['step_args'] = list(fd.step[1])
     out['record'] = fd.record[0]
+    if fd.exact_mask is not None:
+        # Exact under conditions (bv_mul_pow2_k): the step's second output, the mask that its entry is
+        # exact, and-ed over the entries into the state's mask, which the radius takes (radius_args).
+        out['exactness'] = {'mask': fd.exact_mask[1], 'state': fd.exact_mask[0]}
     out['combine'] = fd.combine[0]
     out['radius'] = fd.radius[0]
     out['radius_args'] = list(fd.radius[1])

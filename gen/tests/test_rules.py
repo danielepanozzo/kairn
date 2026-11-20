@@ -1030,6 +1030,9 @@ class R3OfTheKernels(unittest.TestCase):
     # And the step and the radius kernel of the constructor of a BallVector, which take the center and
     # the radius the program gives (bv_center_2 copies the limbs of an Expansion<T, 2>, stored).
     FOLD_STEPS |= {'bv_center_entry_1', 'bv_make_radius'}
+    # And the steps and the radius of the scaling of a BallVector by a power of two, which take the power
+    # of two the program gives (only multiplied).
+    FOLD_STEPS |= {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'}
 
     def test_entry_kernels(self):
         ks = common.kernels()
@@ -1096,7 +1099,7 @@ class R3OfTheKernels(unittest.TestCase):
                                          'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2',
                                          'conv_1', 'conv_2'} | MAPS |
                          {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
-                          'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2'})
+                          'bv_make_1', 'bv_make_2', 'bv_neg_1', 'bv_neg_2', 'bv_mul_pow2_1', 'bv_mul_pow2_2'})
         self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
         unverified = [n for n, f in ks.folds.items() if f.status == 'unverified']
         self.assertIn('folds UNVERIFIED: %s' % (', '.join(unverified) or 'none'), lines)
@@ -1430,6 +1433,8 @@ class TheKernels(unittest.TestCase):
     BV |= {'bv_center_entry_1', 'bv_center_2', 'bv_make_radius', 'bv_make_finish'}
     # And the step of one limb and the radius of the negation of a BallVector (finite domain).
     BV |= {'neg_1', 'bv_neg_radius'}
+    # And the steps and the radius of the scaling of a BallVector by a power of two (finite domain).
+    BV |= {'bv_mul_pow2_step_1', 'bv_mul_pow2_step_2', 'bv_mul_pow2_radius'}
     FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC | BV
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # unverified until their proofs are pointed at the generated text: the interval kernels of one
@@ -1550,6 +1555,9 @@ class TheKernels(unittest.TestCase):
             'bv_center_entry_1': 1, 'bv_center_2': 1, 'bv_make_radius': 1,
             # and of the negation.
             'neg_1': 1, 'bv_neg_radius': 1,
+            # and of the scaling by a power of two: the step of one limb from 1 (mul_pow2_step_1's), the
+            # others from the precision of ball_mul_pow2_k, 2.
+            'bv_mul_pow2_step_1': 1, 'bv_mul_pow2_step_2': 2, 'bv_mul_pow2_radius': 2,
             # Wave 2 (as the proofs found them): mul_dir_1 from 2, the sums of two limbs from 3, the
             # products from 4.
             'mul_dir_1': 2, 'add_ball_2_2': 3, 'add_down_2_2': 3, 'add_up_2_2': 3, 'sub_down_2_2': 3,

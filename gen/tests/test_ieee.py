@@ -428,9 +428,11 @@ class CheckedFiles(unittest.TestCase):
     # every earlier line kept. Then the four kernels of the constructor of BallVector (unverified):
     # their definitions, the program of bv_center_entry_1 and their statements were added, every
     # earlier line kept. Then neg_1 and bv_neg_radius, of the negation of a BallVector (unverified),
-    # in the same way.
-    DIGESTS = {'proofs/gen/IeeeModel.v': 'bfd4393854f666b4669779ba745cc111ed4150ba2e660d81ed128097267a8c77',
-               'proofs/gen/IeeeStatements.v': 'f60f5ea60d65b028ec0c70546f75038dbb93bf68f92c419f4e8462b3d25fdb43'}
+    # in the same way. Then the two steps and the radius of the scaling of a BallVector by a power of
+    # two (unverified): their definitions and the statements of the steps (ieee: spec, with the mask
+    # of exact_flag) were added, every earlier line kept.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '4af625f41158ac45d627238ed168f88b7c48f6ac26c7e2dacf536ad5d3ca42db',
+               'proofs/gen/IeeeStatements.v': '1f5cba7bcbcbac26d130f489c275b5ed58cb73444b1d6dc0e2b6c301b10c0dd0'}
 
 
     def test_the_checked_files(self):

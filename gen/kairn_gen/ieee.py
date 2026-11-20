@@ -419,6 +419,8 @@ def _claim(e, k, t, outs):
                      f' {bound})')
         if 'exact_when' in e:
             bound += f' /\\\n  ({t.exact_condition(e["exact_when"])} ->\n   {_val_sum(limbs)} = {value})'
+        if 'exact_flag' in e:
+            bound += f' /\\\n  ({e["exact_flag"]} = true <-> {t.exact_condition(e["exact_when"])})'
         return bound
     if kind == 'rounded' and 'when' not in e:
         # The rounding of the kernel's value, or of a value of its own over the inputs and their
@@ -428,6 +430,8 @@ def _claim(e, k, t, outs):
             value = _paren(rocq._term(expr.parse(e['value']), t.name,
                                       limb=lambda g, i: f'val {t.ins[g].limbs[i]}'))
         return f'val {outs[e["of"]][0]} = {rounding} {EMIN} prec {value}'
+    if kind == 'upper' and ('unless' in e or 'exact_when' in e):
+        raise PrintError(f'kernel {k.name}: no IEEE reading of an upper entry with unless= or exact_when= yet')
     if kind == 'upper' and 'value' in e and 'gaps' not in e:
         # The bound kernels' own value, under its mask when it has one, as in the real model.
         claim = f'{_paren(_constant_term(e["value"], k, t))} <= val {outs[e["of"]][0]}'
@@ -1929,25 +1933,33 @@ def bv_model(fd, kernels):
     n = len(fd.writes[0].limbs)
     wtype = _ftype(n)
     lw = f'list ({wtype})' if ' ' in wtype else f'list {wtype}'
-    stype = rocq.state_type(fd, 'float')
-    mok = ''.join(fd.state_names())
-    zero = rocq.state_zero(fd, 'pzero', 'true')
+    exact = fd.exact_mask is not None
+    # The state of the fold of maxima, m and ok; a ball vector exact under conditions ands the step's
+    # masks apart, as a map its check's (ex_ below).
+    stype = 'float * bool'
+    mok = ''.join(fd.state_names()[:2])
+    zero = '(pzero, true)'
     stepped = f'({fd.name}_step{"".join(" " + s for s in used)})' if used else f'{fd.name}_step'
     zeros = '(' + ', '.join(['pzero'] * n) + ')' if n > 1 else 'pzero'
+    if exact:
+        mapped = [f'Definition {fd.name}_map{params} ({xs} : {lt}) : {lw} :=',
+                  f'  map (fun {el} => fst ({fd.name}_step{"".join(" " + s for s in used)} {el})) {xs}.']
+    else:
+        mapped = [f'Definition {fd.name}_map{params} ({xs} : {lt}) : {lw} :=',
+                  f'  map {stepped} {xs}.']
     lines = ['', f'(* {fd.name}: a ball vector; step {step.name}, record {record.name}, combination {combine.name}, '
-                 f'radius {radius.name}, finish {finish.name}. *)',
-             f'Definition {fd.name}_step{params} ({el} : {etype}) : {wtype} :=',
+                 f'radius {radius.name}, finish {finish.name}' +
+                 (', the and of the step\'s masks of exactness' if exact else '') + '. *)',
+             f'Definition {fd.name}_step{params} ({el} : {etype}) : {wtype}{" * bool" if exact else ""} :=',
              f'  {_kernel_call(step, kernels, args)}.',
-             '',
-             f'Definition {fd.name}_map{params} ({xs} : {lt}) : {lw} :=',
-             f'  map {stepped} {xs}.',
+             ''] + mapped + [
              '',
              f'Definition {fd.name}_record ({mok} : {stype}) (w_ : {wtype}) : {stype} :=',
              f'  {_kernel_call(record, kernels, rocq.tuple_parts(mok, 2) + rocq.tuple_parts("w_", n))}.',
              '',
              f'Definition {fd.name}_combine (a b : {stype}) : {stype} :=',
              f'  {_kernel_call(combine, kernels, rocq.tuple_parts("a", 2) + rocq.tuple_parts("b", 2))}.']
-    rad = _kernel_call(radius, kernels, ['fst s_'] + list(fd.radius[1][1:]))
+    rad = _kernel_call(radius, kernels, ['fst s_'] + (['ex_'] if exact else []) + list(fd.radius[1][1 + exact:]))
     fin = _kernel_call(finish, kernels, ['rz_', 'snd s_'])
     for order in ('sequential', 'lanes'):
         if order not in fd.orders:
@@ -1956,6 +1968,20 @@ def bv_model(fd, kernels):
             f'Definition {fd.name}_lanes (W : nat){allp} ({xs} : {lt})'
         state = (f'fold_seq {fd.name}_record {zero} ws_' if order == 'sequential' else
                  f'fold_lanes {fd.name}_record {fd.name}_combine {zero} W ws_')
+        if exact:
+            # The centers and the masks of the step; the masks and-ed from true in the order's form, as
+            # a map's mask (fold_seq_and, fold_lanes_and of Folds.v).
+            mask = ('fold_seq (fun m_ e_ => andb m_ (snd e_)) true es_' if order == 'sequential' else
+                    'fold_lanes (fun m_ e_ => andb m_ (snd e_)) andb true W es_')
+            lines += ['', f'{head} : {lw} * float * bool :=',
+                      f'  let es_ := map {stepped} {xs} in',
+                      '  let ws_ := map fst es_ in',
+                      f'  let s_ := {state} in',
+                      f'  let ex_ := {mask} in',
+                      f'  let rz_ := {rad} in',
+                      f'  let f_ := {fin} in',
+                      f'  (if snd f_ then (ws_, fst f_) else (map (fun _ => {zeros}) ws_, pinf), snd f_).']
+            continue
         lines += ['', f'{head} : {lw} * float * bool :=',
                   f'  let ws_ := map {stepped} {xs} in',
                   f'  let s_ := {state} in',
@@ -1998,6 +2024,8 @@ def bv_statement(fd, kernels, order):
     binders = (f'forall (W : nat) ({" ".join(scalar_limbs)} : binary_float prec emax) ({xs} : {lt}),'
                if order == 'lanes' else f'forall ({" ".join(scalar_limbs)} : binary_float prec emax) ({xs} : {lt}),')
     hyps = [_bv_vector(g.name, g.limbs, vectors[g.name], xs, el, groups[g.name]) for g in fd.arrays]
+    # A scalar that is a power of two (bv_mul_pow2_k): finite, as for a map.
+    pow2 = [r[1] for r in fd.requires if r[0] == 'power_of_two']
     w = list(fd.writes[0].limbs)
     pattern = rocq._pattern([rocq._pattern(list(g.limbs)) for g in fd.arrays])
     wp = rocq._pattern(w)
@@ -2059,6 +2087,8 @@ def bv_statement(fd, kernels, order):
              f'  ({fd.min_precision} <= prec)%Z ->',
              f'  {binders}']
     lines += [f'  ({h}) ->' for h in hyps]
+    for s in pow2:
+        lines += [f'  finite {s} ->', f'  (exists n : Z, val {s} = bpow radix2 n) ->']
     lines += [f"  let '(ws_, r_, flag_) := {call} in",
               f'  ((finite r_ /\\ 0 <= val r_ /\\ Forall (fun w_ => ball_finite_{k} {wcs} r_) ws_) \\/',
               f'   (r_ = infinity prec emax false /\\ Forall (fun w_ => ball_whole_{k} {wcs} r_) ws_)) /\\',
@@ -2068,7 +2098,17 @@ def bv_statement(fd, kernels, order):
     lines += [f'    {rocq._let(wp, "w_")}',
               f'    forall {" ".join(members)} : R, ' + ' -> '.join(inb) + f' -> in_ball_{k} {" ".join(w)} r_ {setv})',
               f'    {xs} ws_ /\\']
-    if 'exact_when' in entry:
+    if entry.get('exact_when'):
+        # Exact under conditions (bv_mul_pow2_k): a finite result whose scalars satisfy their
+        # conditions and every entry those of an entry is exactly the set, entry by entry.
+        econds = rocq.bv_exact_conditions(fd, entry, groups, pattern, el, xs, lambda nm: _val_sum(scalars[nm].limbs),
+                                          lambda v: f'val {v}', EMIN)
+        lines += ['  (finite r_ ->', '   ' + econds[0][3:]] + econds[1:] + [f'   Forall2 (fun {el} w_ =>']
+        lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
+        lines += [f'     {rocq._let(wp, "w_")}',
+                  f'     forall v_ : R, in_ball_{k} {" ".join(w)} r_ v_ -> exists {" ".join(members)} : R, ' +
+                  ' /\\ '.join(inb) + f' /\\ v_ = {setv}) {xs} ws_) /\\']
+    elif 'exact_when' in entry:
         # Exact (bv_neg_k): a finite result is exactly the set, entry by entry.
         lines += ['  (finite r_ ->', f'   Forall2 (fun {el} w_ =>']
         lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
@@ -2079,8 +2119,11 @@ def bv_statement(fd, kernels, order):
               '   ' + ' /\\ '.join(f'finite {v}' for v in scalar_limbs) + ' /\\',
               f'   Forall2 (fun {el} w_ =>']
     lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
+    # The step of a ball vector exact under conditions returns the center and its mask: the center is
+    # the first component of the real model's.
+    centers = f'fst ({real_step})' if fd.exact_mask is not None else real_step
     lines += [f'     {rocq._let(wp, "w_")}',
-              f'     {vals} = {real_step}) {xs} ws_ /\\',
+              f'     {vals} = {centers}) {xs} ws_ /\\',
               f'   val r_ = {real_r})' + (' /\\' if conds else '.')]
     if conds:
         # V4, for every length (the empty vector included).

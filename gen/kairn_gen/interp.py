@@ -434,12 +434,21 @@ class Machine:
         for e in elements:
             e = dict(e, **given)
             written.append(self._eval(step, f, [v for a in fd.step[1] for v in e[a]], False))
-        zero = [(NUM, False, 0, 0), True]
+        # A ball vector exact under conditions (fd.exact_mask): the step's last output is the mask that
+        # its entry is exact, and-ed into the state's third group, from true, by the second record and
+        # combine lines; the radius takes it after the state's limb.
+        exact = fd.exact_mask is not None
+        width = len(fd.write_limbs())
+        zero = [(NUM, False, 0, 0), True] + ([True] if exact else [])
 
         def fold_seq(ws, state):
             for w in ws:
-                state = self._eval(record, f, state + list(w), False)
+                state = self._eval(record, f, state[:2] + list(w[:width]), False) + \
+                    ([state[2] and w[width]] if exact else [])
             return state
+
+        def comb(s, t):
+            return self._eval(combine, f, s[:2] + t[:2], False) + ([s[2] and t[2]] if exact else [])
 
         n = len(written)
         if order == 'sequential':
@@ -451,14 +460,15 @@ class Machine:
             states = [fold_seq(written[j:full:lanes], zero) for j in range(lanes)]
             state = states[0] if states else zero
             for s in states[1:]:
-                state = self._eval(combine, f, state + s, False)
+                state = comb(state, s)
             state = fold_seq(written[full:], state)
-        rz = self._eval(radius, f, [state[0]] + [v for a in fd.radius[1][1:] for v in given[a]], False)
+        lead = [state[0]] + ([state[2]] if exact else [])
+        rz = self._eval(radius, f, lead + [v for a in fd.radius[1][len(lead):] for v in given[a]], False)
         r, flag = self._eval(finish, f, rz + [state[1]], False)
+        written = [w[:width] for w in written]
         if not flag:
             written = [[(NUM, False, 0, 0)] * len(w) for w in written]
             r = (INF, False)
-        width = len(fd.write_limbs())
         return [[w[j] for w in written] for j in range(width)] + [r, flag]
 
     def _run_conv(self, fd, f, arrays):

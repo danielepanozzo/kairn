@@ -426,6 +426,10 @@ def exact_condition(conditions, term, threshold):
             # zero(EXPR) (Milestone 2, outward): EXPR = 0, written as the theorems write it.
             parts.append(f'{term(c[ir.ZERO_CONDITION])} = 0')
             continue
+        if ir.MASK_CONDITION in c:
+            # mask(NAME) (the radius of the scaling of a BallVector): the mask input is true.
+            parts.append(f'{c[ir.MASK_CONDITION]} = true')
+            continue
         kind = next(x for x in ir.EXACT_CONDITIONS if x in c)
         e = term(c[kind])
         rel = '<' if kind == 'zero_or_abs_gt' else '<='
@@ -467,6 +471,9 @@ def _claim_error(e, s):
     if 'exact_when' in e:
         # The error is zero when the conditions hold.
         bound += f' /\\\n  ({_exact_condition(e, s)} ->\n   {_sum(limbs)} = {value})'
+    if 'exact_flag' in e:
+        # The mask output that says whether they hold (the step of the scaling of a BallVector).
+        bound += f' /\\\n  ({e["exact_flag"]} = true <-> {_exact_condition(e, s)})'
     return bound
 
 
@@ -511,6 +518,12 @@ def _claim_upper(e, s):
         gaps = _term(expr.parse(e['gaps']), None)
         parts.append(f'{r} - {value} <= {gaps} * ({r} - pred radix2 (FLT_exp emin prec) {r})')
     claim = ' /\\ '.join(parts)
+    if 'unless' in e:
+        # The bound when the mask input is false (the radius of the scaling of a BallVector).
+        return f'({e["unless"]} = false -> {claim})'
+    if 'exact_when' in e:
+        # And the value itself when the conditions hold, a mask input among them.
+        claim += f' /\\\n  ({_exact_condition(e, s)} ->\n   {r} = {value})'
     return f'({e["if"]} = true -> {claim})' if 'if' in e else claim
 
 
@@ -1164,30 +1177,74 @@ def bv_model(fd, kernels):
     params = bv_scalar_params(fd, used)
     written = fd.writes[0]
     wtype = tuple_type(len(written.limbs))
-    stype = state_type(fd)
-    zero = state_zero(fd, '0', 'true')
-    mok = ''.join(fd.state_names())
+    exact = fd.exact_mask is not None
+    # The state of the fold of maxima, m and ok (a ball vector exact under conditions has a third group,
+    # the and of the step's masks, which the model computes apart: F_exact).
+    stype = ' * '.join(['R', 'bool'])
+    zero = '(0, true)'
+    mok = ''.join(fd.state_names()[:2])
     rec_args = tuple_parts(mok, 2) + tuple_parts('w_', len(written.limbs))
-    stepped = f'({fd.name}_step{"".join(" " + g.name for g in fd.scalars if g.name in used)})' \
-        if used & {g.name for g in fd.scalars} else f'{fd.name}_step'
-    rad_args = [f'(fst (fold_seq {fd.name}_record {zero} ({fd.name}_map'
-                f'{"".join(" " + g.name for g in fd.scalars if g.name in used)} {xs})))'] + list(fd.radius[1][1:])
+    given = "".join(" " + g.name for g in fd.scalars if g.name in used)
+    stepped = f'({fd.name}_step{given})' if used & {g.name for g in fd.scalars} else f'{fd.name}_step'
+    rad_args = [f'(fst (fold_seq {fd.name}_record {zero} ({fd.name}_map{given} {xs})))'] + \
+        ([f'({fd.name}_exact{given} {xs})'] if exact else []) + list(fd.radius[1][1 + exact:])
     arrays = ', '.join(f'{fd.roles[g.name]} {g.name}' for g in fd.arrays)
     scalars = ', '.join(f'{fd.roles[g.name]} {g.name}' for g in fd.scalars)
+    if exact:
+        # The step returns the center and the mask that its entry is exact: F_map is the centers,
+        # F_exact that every entry is exact (forallb of the masks).
+        sstype = f'{wtype} * bool'
+        mapped = [f'Definition {fd.name}_map{params} ({xs} : {lt}) : list {_paren(wtype)} :=',
+                  f'  map (fun {el} => fst ({fd.name}_step{given} {el})) {xs}.',
+                  '',
+                  f'Definition {fd.name}_exact{params} ({xs} : {lt}) : bool :=',
+                  f'  forallb (fun {el} => snd ({fd.name}_step{given} {el})) {xs}.']
+        what = (f'records the largest magnitude of a center by {record.name} and the exactness of every entry by '
+                f'the step\'s mask, and gives the radius by {radius.name}')
+    else:
+        sstype = wtype
+        mapped = [f'Definition {fd.name}_map{params} ({xs} : {lt}) : list {_paren(wtype)} :=',
+                  f'  map {stepped} {xs}.']
+        what = f'records the largest magnitude of a center by {record.name}, and gives the radius by {radius.name}'
     return ['', f'(* {fd.name}: a ball vector; arrays {arrays}; scalars {scalars}; it writes {written.name} by the '
-                f'step {step.name}, records the largest magnitude of a center by {record.name}, and gives the radius '
-                f'by {radius.name}. *)',
-            f'Definition {fd.name}_step{params} ({el} : {etype}) : {wtype} :=',
+                f'step {step.name}, {what}. *)',
+            f'Definition {fd.name}_step{params} ({el} : {etype}) : {sstype} :=',
             f'  {_apply(step, kernels, args)}.',
-            '',
-            f'Definition {fd.name}_map{params} ({xs} : {lt}) : list {_paren(wtype)} :=',
-            f'  map {stepped} {xs}.',
+            ''] + mapped + [
             '',
             f'Definition {fd.name}_record ({mok} : {stype}) (w_ : {wtype}) : {stype} :=',
             f'  {_apply(record, kernels, rec_args)}.',
             '',
             f'Definition {fd.name}_radius{bv_scalar_params(fd, {g.name for g in fd.scalars})} ({xs} : {lt}) : R :=',
             f'  {_apply(radius, kernels, rad_args)}.']
+
+
+def bv_exact_conditions(fd, entry, groups, pattern, el, xs, scalar, val, emin='emin'):
+    """The hypotheses of the exactness of a ball vector under conditions, as lines: `  (` then the
+    conditions of the scalars, then those of an entry for every entry (Forall over the elements, each
+    destructured by `pattern`), each followed by `->`; the caller closes the parenthesis. `scalar`
+    spells a scalar's name, `val` a limb of an element (the limb itself in the real model, `val x0` in
+    the IEEE model)."""
+    arrays = {g.name: g for g in fd.arrays}
+
+    def threshold(text):
+        return _term(expr.parse(text), lambda n: {'u': 'u prec', 'eta': f'eta {emin}'}[n])
+
+    def term(text):
+        return _term(expr.parse(text),
+                     lambda n: _sum([val(v) for v in arrays[n].limbs]) if n in arrays else scalar(n),
+                     limb=lambda g, i: val(arrays[g].limbs[i]))
+    of_entry = [c for c in entry['exact_when']
+                if expr.names(expr.parse(next(c[x] for x in ir.EXACT_CONDITIONS if x in c))) & set(arrays)]
+    of_scalars = [c for c in entry['exact_when'] if c not in of_entry]
+    hyps = []
+    if of_scalars:
+        hyps.append(f'{exact_condition(of_scalars, term, threshold)} ->')
+    if of_entry:
+        inner = [f'Forall (fun {el} =>'] + ([f'  {_let(pattern, el)}'] if pattern != el else []) + \
+            [f'  {exact_condition(of_entry, term, threshold)}) {xs} ->']
+        hyps += inner
+    return ['  (' + hyps[0]] + ['   ' + h for h in hyps[1:]]
 
 
 def bv_member(name):
@@ -1211,12 +1268,15 @@ def bv_statement(fd, kernels):
     lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
     vectors = {r[1]: r[2] for r in fd.requires if r[0] == 'ball_vector'}
     radii = set(vectors.values())
+    pow2 = {r[1] for r in fd.requires if r[0] == 'power_of_two'}
     scalar_limbs = [v for g in fd.scalars for v in g.limbs]
     hyps = []
     for g in fd.scalars:
         hyps += [f'fmt emin prec {v}' for v in g.limbs]
         if g.name in radii:
             hyps.append(f'0 <= {g.name}')
+        if g.name in pow2:
+            hyps.append(f'(exists n : Z, {g.name} = bpow radix2 n)')
     groups = fold_groups(fd, el)
     valid = []
     for g in fd.arrays:
@@ -1252,6 +1312,24 @@ def bv_statement(fd, kernels):
               f'  Forall2 (fun {el} w_ =>']
     lines += [f'    {_let(pattern, el)}'] if pattern != el else []
     contain = f'    forall {" ".join(members)} : R, ' + ' -> '.join(near) + f' -> Rabs ({setv} - {_sum(w)}) <= r_'
+    if entry.get('exact_when'):
+        # Exact under conditions (bv_mul_pow2_k): when the conditions of the scalars hold and every
+        # entry satisfies those of an entry, every real within the radius of a center written is a value
+        # of the set with members of the operands' balls (the radius is one for every entry, so the
+        # conditions are of all of them at once).
+        econds = bv_exact_conditions(fd, entry, groups, pattern, el, xs,
+                                     lambda n: _sum(next(g for g in fd.scalars if g.name == n).limbs), lambda v: v)
+        lines += [f'    {_let(_pattern(w), "w_")}',
+                  f'    {center} /\\',
+                  contain + ')',
+                  f'    {xs} ({call_map}) /\\'] + econds + [
+                  f'   Forall2 (fun {el} w_ =>']
+        lines += [f'     {_let(pattern, el)}'] if pattern != el else []
+        lines += [f'     {_let(_pattern(w), "w_")}',
+                  f'     forall v_ : R, Rabs (v_ - {_sum(w)}) <= r_ -> exists {" ".join(members)} : R, ' +
+                  ' /\\ '.join(near) + f' /\\ v_ = {setv})',
+                  f'     {xs} ({call_map})).']
+        return lines
     if 'exact_when' in entry:
         # Exact (bv_neg_k): every real within the radius of a center written is a value of the set
         # with members of the operands' balls.

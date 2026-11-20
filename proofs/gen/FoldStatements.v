@@ -194,6 +194,57 @@ Definition bv_make_2_spec : Prop :=
   bv_make_2_radius emin prec tie_even r cs = r /\
   Forall2 (fun c w_ => w_ = c) cs (bv_make_2_map cs).
 
+(* bv_mul_pow2_1, each center it writes and its one radius: mul_pow2_step_1 on the centers, the radius of ball_mul_pow2_1 with the exactness of every entry (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_mul_pow2_1_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall (rx c : R) (xs : list R),
+  fmt emin prec rx ->
+  0 <= rx ->
+  fmt emin prec c ->
+  (exists n : Z, c = bpow radix2 n) ->
+  Forall (fun x => fmt emin prec x) xs ->
+  let r_ := bv_mul_pow2_1_radius emin prec tie_even rx c xs in
+  fmt emin prec r_ /\
+  Forall2 (fun x w_ =>
+    let z := w_ in
+    fmt emin prec z /\
+    forall x_ : R, Rabs (x_ - x) <= rx -> Rabs ((x_ * c) - z) <= r_)
+    xs (bv_mul_pow2_1_map emin prec tie_even c xs) /\
+  (((rx * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (rx * c)) ->
+   Forall (fun x =>
+     ((x * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x * c))) xs ->
+   Forall2 (fun x w_ =>
+     let z := w_ in
+     forall v_ : R, Rabs (v_ - z) <= r_ -> exists x_ : R, Rabs (x_ - x) <= rx /\ v_ = (x_ * c))
+     xs (bv_mul_pow2_1_map emin prec tie_even c xs)).
+
+(* bv_mul_pow2_2, each center it writes and its one radius: mul_pow2_2 on the centers, the radius of ball_mul_pow2_2 with the exactness of every entry (milestone2.md, BallVector). Status: unverified. *)
+Definition bv_mul_pow2_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall (rx c : R) (xs : list (R * R)),
+  fmt emin prec rx ->
+  0 <= rx ->
+  fmt emin prec c ->
+  (exists n : Z, c = bpow radix2 n) ->
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  let r_ := bv_mul_pow2_2_radius emin prec tie_even rx c xs in
+  fmt emin prec r_ /\
+  Forall2 (fun x w_ =>
+    let '(x0, x1) := x in
+    let '(z0, z1) := w_ in
+    normalized_2 emin prec z0 z1 /\
+    forall x_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs ((x_ * c) - (z0 + z1)) <= r_)
+    xs (bv_mul_pow2_2_map emin prec tie_even c xs) /\
+  (((rx * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (rx * c)) ->
+   Forall (fun x =>
+     let '(x0, x1) := x in
+     ((x0 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x0 * c)) /\ ((x1 * c) = 0 \/ (eta emin / (2 * u prec)) < Rabs (x1 * c))) xs ->
+   Forall2 (fun x w_ =>
+     let '(x0, x1) := x in
+     let '(z0, z1) := w_ in
+     forall v_ : R, Rabs (v_ - (z0 + z1)) <= r_ -> exists x_ : R, Rabs (x_ - (x0 + x1)) <= rx /\ v_ = (x_ * c))
+     xs (bv_mul_pow2_2_map emin prec tie_even c xs)).
+
 (* bv_neg_1, each center it writes and its one radius: the negation of each center, the radius of ball_neg_1 (milestone2.md, BallVector). Status: unverified. *)
 Definition bv_neg_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->

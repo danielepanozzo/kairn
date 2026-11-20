@@ -124,12 +124,17 @@ KIND_FIELDS = {
 # rounding under a condition, a condition of exactness, a zero factor, the midpoint of a ball made
 # from an interval, an equivalence for a bounded result, a tightness, a value of its own (the
 # accumulator's sum of magnitudes).
-KIND_OPTIONAL = {"rounded": {"when", "zero_factor", "value"}, "error": {"exact_when"}, "encloses": {"exact_when"},
+KIND_OPTIONAL = {"rounded": {"when", "zero_factor", "value"},
+                 # the mask output that the conditions of exactness hold (the step of the scaling of a
+                 # BallVector by a power of two)
+                 "error": {"exact_when", "exact_flag"}, "encloses": {"exact_when"},
                  "bound": {"zero_factor"}, "outward": {"exact_when", "zero_factor"}, "makes_ball": {"midpoint_when"},
                  "encloses_interval": {"bounded_exactly", "zero_factor"}, "set_bound": {"tight"},
                  "ball_of_interval": {"smallest_radius"},
-                 # gaps, or a value of its own (the exported bounds of the folds), under a mask (if)
-                 "upper": {"gaps", "value", "if"},
+                 # gaps, or a value of its own (the exported bounds of the folds), under a mask (if); or
+                 # when a mask input is false (unless), or the value exactly under conditions (exact_when:
+                 # the radius of the scaling of a BallVector by a power of two)
+                 "upper": {"gaps", "value", "if", "unless", "exact_when"},
                  # the finish of a fold of maxima: under a mask (if), the value stepped up (steps); of a
                  # constructor of a BallVector, the value also not negative (nonneg)
                  "finite_or_nan": {"if", "steps", "nonneg"}}
@@ -971,6 +976,12 @@ class Kernel:
                 parts.append("$%s = 0$" % tex(parse(c["zero"], "kernel %s, exact_when" % self.name,
                                                     set(self.inputs))))
                 continue
+            if set(c) == {"mask"}:
+                # mask(NAME), of upper (the radius of the scaling of a BallVector): a mask input is true.
+                if c["mask"] not in self.inputs:
+                    fail("kernel %s: the exact_when condition %r names no input" % (self.name, c))
+                parts.append("$%s$ is true" % name_tex(c["mask"]))
+                continue
             kinds = [x for x in KNOWN_EXACT_CONDITIONS if x in c]
             if len(kinds) != 1 or set(c) != {kinds[0], "than"}:
                 fail("kernel %s: the exact_when condition %r is not one this script knows" % (self.name, c))
@@ -1054,6 +1065,8 @@ class Kernel:
             text += (", " + when if when else "")
             if "exact_when" in e and not short:
                 text += "; and $%s = %s$ exactly when %s" % (of, v, self.exact_tex(e["exact_when"]))
+            if "exact_flag" in e and not short:
+                text += "; $%s$ is true exactly when %s" % (name_tex(e["exact_flag"]), self.exact_tex(e["exact_when"]))
             return text
         if kind == "leading_rounded":
             return "$%s = \\mathrm{RN}(%s)$" % (name_tex(self.lead_limb(e["of"])), tex(self.value))
@@ -1097,6 +1110,10 @@ class Kernel:
                 text += ", at most $%s$ gaps above" % num_tex(fractions.Fraction(e["gaps"]))
             if "if" in e:
                 text = ("when $%s$ is true, " % name_tex(e["if"])) + text
+            if "unless" in e:
+                text = ("when $%s$ is false, " % name_tex(e["unless"])) + text
+            if "exact_when" in e and not short:
+                text += "; and $%s = %s$ exactly when %s" % (r, v, self.exact_tex(e["exact_when"]))
             return text
         if kind == "holds":
             a, b = (tex(self.expr(x, "holds", self.names | {"u", "eta"}, constants=True)) for x in e["args"])
@@ -2253,6 +2270,24 @@ class Site:
                     "sum-dot-axpy-convolution)):\n\n$$%s = %s \\ \\text{when } %s_0 \\text{ is finite}, "
                     "\\qquad %s = \\mathrm{NaN} \\text{ otherwise}.$$" % (
                         name_tex(s), name_tex(f), name_tex(r), name_tex(s), name_tex(s), name_tex(r)))
+        if kinds and all(x["kind"] == "upper" and "value" in x for x in e["ensures"]) and \
+                any("unless" in x or "exact_when" in x for x in e["ensures"]):
+            # The radius of the scaling of a BallVector by a power of two: at least an expression, that
+            # expression exactly under conditions (a mask input among them), and at least another when a
+            # mask input is false.
+            parts, first = [], None
+            for x in e["ensures"]:
+                r = name_tex(x["of"])
+                w = tex(k.expr(x["value"], "upper value", k.names | {"u", "eta"}, constants=True))
+                if "unless" in x:
+                    parts.append("at least $%s$ when $%s$ is false" % (w, name_tex(x["unless"])))
+                elif "exact_when" in x:
+                    parts.append("at least $%s$, and exactly that when %s" % (w, k.exact_tex(x["exact_when"])))
+                    first = first or "%s \\ge %s" % (r, w)
+                else:
+                    parts.append("at least $%s$" % w)
+                    first = first or "%s \\ge %s" % (r, w)
+            return "A number of `T` %s:\n\n$$%s.$$" % ("; ".join(parts), first or r)
         if kinds and all(x["kind"] == "holds" or (x["kind"] == "upper" and "value" in x) for x in e["ensures"]):
             # An exported bound: each output bounds an expression of the inputs, under a mask.
             masks = sorted({x["if"] for x in e["ensures"] if "if" in x})
@@ -2408,6 +2443,15 @@ class Site:
             return ("A step of an accumulator: the running sum %s, and the sum of the magnitudes $%s$ rounded "
                     "to a number of `T`:\n\n$$%s, \\qquad %s = \\mathrm{%s}(%s).$$" % (
                         first, name_tex(x["of"]), first.strip("$"), name_tex(x["of"]), KNOWN_MODES[x["mode"]], w))
+        flagged = [x for x in e["ensures"] if x["kind"] == "error" and "exact_flag" in x]
+        if flagged and len(k.outputs) == 2:
+            # The steps of the scalings of a BallVector by a power of two: an approximation, exact under
+            # conditions, and the mask that they hold.
+            x = flagged[0]
+            return ("An approximation $%s$ of $%s$, exact when %s; and the mask $%s$, true exactly when those "
+                    "conditions hold:\n\n$$%s \\approx %s.$$" % (
+                        k.out_tex(x["of"]), v, k.exact_tex(x["exact_when"]), name_tex(x["exact_flag"]),
+                        k.out_tex(x["of"]), v))
         if len(k.outputs) != 1:
             fail("kernel %s: %d outputs, and no ball or predicate claim: no template" % (k.name, len(k.outputs)))
         out = k.out_tex(k.outputs[0])

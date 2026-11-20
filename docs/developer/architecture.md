@@ -934,7 +934,13 @@ required `ball_vector` with a stored scalar of one limb as its radius; the one c
 `encloses_entries` of the centers written, the radius and the flag, over the fold's value, one ball
 name per array, with `radii_when` over the scalars alone exactly when `finite_when` is not empty;
 the extended domain; the minimum precision, at least that of the step, the record and
-the radius; the status.
+the radius; the status. A ball vector exact under conditions ([below](#ball-vectors),
+`bv_mul_pow2_k`) is checked for the rest of its shape: the state's third group a mask; the step's two
+destinations the center and a mask of a name of its own, its outputs a center and a mask; the second
+record line `EX = and(EX, E)` and the second combine line `EX = and(EX, EX)`; the radius's arguments
+the state's limb, then `EX`, then scalars; a scalar it requires `power_of_two` supplied and of one limb;
+and the coherence of the conditions of `exact_when` with those of the step and of the radius
+(`rules._bv_exact`). A second record or combine line in any other fold is refused.
 
 **In C++** a ball vector has the three functions of a map, with the radius and the flag by
 reference after the arrays written:
@@ -1146,17 +1152,122 @@ vector have one more conjunct: in the real model, entry by entry, every real wit
 written is the set's value at some members of the operands' balls (`exists x_ : R, Rabs (x_ - (x0 +
 x1)) <= rx /\ v_ = (- x_)`); in the IEEE model the same under `finite r_`, with `in_ball_k`.
 
-**Not yet generated: proposals.** Three kernels of the page do not fit the ball vectors of the
-generator, whose step returns the center and whose state is one fold of maxima of the centers written;
+**The scaling by a power of two**, `bv_mul_pow2_1` and `bv_mul_pow2_2`
+([milestone2.md, "BallVector"](design/milestone2.md#ballvector), `bv_mul_pow2_k`; [Scaling a ball by a
+power of two](design/milestone2.md#scaling-a-ball-by-a-power-of-two)), is exact when nothing underflows,
+so that a polynomial halved again and again (subdivision by de Casteljau) keeps its radius $r/2^i$
+exactly. Its radius needs the exactness of every entry ("with `ec` over all entries"), which the centers
+written cannot tell (a second limb scaled to zero leaves a pair that looks exact), so the ball vector
+has, **as the one extension of the shape**, a mask of exactness: a third group of the state, a mask from
+true; a step that returns the center and a mask; a second record line and a second combine line, the
+`and` of that mask into the state and of two such states, as a map's mask; and a radius kernel that
+takes the state's mask after its limb. `bv_mul_pow2_2` in full:
+
+```
+fold:          bv_mul_pow2_2
+arrays:        stored x = x0 x1
+scalars:       stored rx, supplied c
+state:         m, mask ok, mask ex
+step:          (z, e) = bv_mul_pow2_step_2(x, c)
+record:        (m, ok) = norm_step_2(m, ok, z)
+record:        ex = and(ex, e)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+combine:       ex = and(ex, ex)
+radius:        rz = bv_mul_pow2_radius(m, ex, rx, c)
+finish:        (r, finite) = norm_finish_1(rz, ok)
+orders:        sequential, lanes
+writes:        z = z0 z1
+output:        r
+output:        mask finite
+value:         x*c
+requires:      ball_vector x rx
+requires:      power_of_two c
+ensures:       encloses_entries z r x*c x=x,rx flag=finite finite_when=abs_le((abs(x)+rx)*c,-2) radii_when=abs_le(rx*c,-2) exact_when=zero_or_abs_gt(x[0]*c,eta/(2*u));zero_or_abs_gt(x[1]*c,eta/(2*u));zero_or_abs_gt(rx*c,eta/(2*u))
+min_precision: 2
+status:        unverified
+domain:        extended
+```
+
+- **The step** `bv_mul_pow2_step_2` is `ball_mul_pow2_2` without its radius: the center as `mul_pow2_2`
+  scales it ($h = c\,x_0$, $l = c\,x_1$, `fast_two_sum`), and the mask `ec` of that kernel, `e`: the
+  scaled last nonzero limb above the smallest normal number $N = \eta/(2u)$ in magnitude, or the center
+  zero. `bv_mul_pow2_step_1` is `z = prod(x, c)` with `e` the same test of `z`. Each claims what the
+  step of the map `mul_pow2_map_k` claims (`normalized`, or `rounded z nearest`, and the error of
+  `mul_pow2_2`, $\eta$ for two limbs and $\tfrac12\eta$ for one), with `exact_when` the conditions of
+  `ball_mul_pow2_k` on the center (each limb times $c$ zero or above $N$: `zero_or_abs_gt(x[0]*c,
+  eta/(2*u))` and the same of `x[1]`, or of `x` for one limb), and **`exact_flag=e`**: the mask is true
+  exactly when those conditions hold ([below](#claims-of-milestone-2)). That is true because a product
+  by a power of two above $N$ in magnitude is a number of the format, so its rounding is above $N$
+  exactly when the product is; for two limbs, a nonzero second limb of a normalized pair makes the first
+  nonzero and larger. The steps have `ieee: spec` (their claims for finite operands) and no bridge,
+  which a kernel with a mask output or a constant operand cannot have (`ieee.program`).
+- **The record** of `m, ok` is that of every ball vector (`norm_step_k` on the center written); the
+  second, `ex = and(ex, e)`, ands the step's mask into the state; the combination of the lanes ands two
+  of them. So the final `ex` is true exactly when every entry's mask is, in every order.
+- **The radius** `bv_mul_pow2_radius(m, ex, rx, c)` is the radius lines of `ball_mul_pow2_k` with `ex` in
+  place of one entry's `ec`: `rr = prod(rx, c)`; `er` its exactness, $c\,r_x$ zero or above $N$; `rs =
+  select(and(ex, er), rr, succ(succ(rr)))`; and `rz = add(rs, sub(m, m))`. The radius does not grow
+  with the centers, so the largest magnitude enters only as $m - m$, $+0$ for a finite $m$ and a NaN for
+  an infinite one (a center that overflowed), which the addition carries into the radius and the finish
+  tests (`bv_make_radius` does the same). Its claims are two entries `upper` of new forms
+  ([below](#claims-of-milestone-2)): `upper rz value=rx*c exact_when=mask(ex);zero_or_abs_gt(rx*c,
+  eta/(2*u))`, at least $c\,r_x$, and exactly $c\,r_x$ when `ex` is true and $c\,r_x$ is zero or above
+  $N$; and `upper rz value=rx*c+eta unless=ex`, at least $c\,r_x + \eta$ when `ex` is false. The second
+  number after $\mathrm{RN}(c\,r_x)$ is above $c\,r_x + \eta$: the number after $\mathrm{RN}(y)$ is above
+  $y$ for every $y \ge 0$, and the next adds at least $\eta$.
+- **The claim** is `encloses_entries` with `exact_when` and conditions: when the result is a finite ball
+  vector, the scalars satisfy the conditions that name only scalars ($c\,r_x$ zero or above $N$) and every
+  entry those that name an array, the result is exactly the set, $c\,X$ itself: each center $c\,x_i$
+  and the radius $c\,r_x$. The rules (`rules._bv_exact`) require that the conditions of an entry are,
+  renamed to what the fold passes, those of the `exact_when` of the step's error entry whose
+  `exact_flag` is the step's mask, and the conditions of the scalars those of the radius kernel's
+  `upper` entry whose `exact_when` holds `mask(EX)` of its mask input. `finite_when` and `radii_when` are
+  those of `ball_mul_pow2_k_full` (B4) and of `bv_scale_k`: $(\lvert x\rvert + r_x)\,c$ and $r_x\,c$
+  within $2^{e_{\max}-2}$.
+- **Against `ball_mul_pow2_k`**, the page's "equal: $c\,r_x$ when every entry is exact": with at least one
+  entry, the one radius *is* the largest of the radii that `ball_mul_pow2_k` returns entry by entry,
+  because that kernel's radius is `select(and(ec, er), rr, succ(succ(rr)))` of the same `rr`, and the
+  second arm is the larger; the largest over the entries is `rr` exactly when every `ec` is true, which is
+  `ex`. What is **claimed** of it is the equality where the page states one, $c\,r_x$ when every entry
+  and the radius satisfy the conditions (the exactness of the result), and the upper bounds of the radius
+  kernel; the equality with the entrywise radii in the other case is what the listing computes and what
+  `test_bv.py` finds in every case it compares, not a claim (no claim names another kernel's
+  computation, as for `bv_add_k`).
+
+In C++ the state's mask `ex` is a `bool` (a lane mask in packed code) declared after `ok`, and-ed after
+the record (`ex = ex & step_e;`), and-ed in the combination of the lanes, passed to `F_end` after `ok`
+and to the radius after the largest magnitude. In Rocq the model keeps the state of the fold of maxima
+as it is for every ball vector and computes the mask apart, as a map's: `FoldModel.F_exact c xs`, the
+`forallb` of the step's masks, is the radius kernel's second argument in `F_radius`; `F_step` returns the
+center and the mask, and `F_map` the centers (`map (fun x => fst (F_step c x)) xs`). In `IeeeFoldModel.v`,
+`F_seq` and `F_lanes W` compute `es_ := map F_step xs`, `ws_ := map fst es_`, the state of `m, ok` on
+`ws_` as for every ball vector, and `ex_ := fold_seq (fun m_ e_ => andb m_ (snd e_)) true es_` (in the
+lane order `fold_lanes (...) andb true W es_`, the form of a map's mask), which the radius takes. Their
+statements: the real model's `F_spec` has, after containment entry by entry, the conjunct of exactness
+under the conditions (the conditions of the scalars, then those of an entry at every entry, `Forall`, then
+for every entry every real within `r_` of the center written is $c\,x$ for some member $x$ of the ball);
+the IEEE model's has the same under `finite r_` with `in_ball_k`, the requirement `finite c /\ (exists n :
+Z, val c = bpow radix2 n)` of the power of two, and in V3 the center the first component of the real
+model's step (`fst (bv_mul_pow2_step_2 ...)`). The line protocol is that of every ball vector:
+`bv_mul_pow2_2 binary64 seq 2 0x1p-4 0x1p-1 0x1p+0 0x1p+1 0x1p-60 0x0p+0` ($r_x = \tfrac1{16}$, $c =
+\tfrac12$, $x = (1, 2^{-60}), (2, 0)$) is completed with ` -> 0x1p-1 0x1p+0 0x1p-61 0x0p+0 0x1p-5 1`,
+the radius exactly $\tfrac1{32}$.
+
+**What their proofs need** besides those of every ball vector: of the step, its claims in both models
+(the error of `mul_pow2_2`, `mul_pow2_2_exact` under the conditions, and that the mask is true exactly
+when they hold: `round_abs_le`, a rounded product above $N$ comes from an exact product above $N$, and
+`normalized_2_tail_rel` for two limbs), and in the IEEE model a lemma in place of the bridge it cannot
+have (a finite center from finite operands is the real model's, center and mask); of the radius, its two
+`upper` entries (`up_above` of `Directed.v` and the smallest gap $\eta$, as for `ball_mul_pow2_k`) and in
+the IEEE model that a finite radius from finite operands is the real model's ($m - m$ is $+0$ for a
+finite $m$); `fold_seq_and` and `fold_lanes_and` (`Folds.v`) for the mask; and for exactness, that the
+conditions of every entry make `ex` true (the step's `exact_flag`), hence the radius $c\,r_x$, and every
+center $c\,x_i$ (the step's `exact_when`), so that the ball of each center written is $c$ times the ball
+of the operand's.
+
+**Not yet generated: proposals.** Two kernels of the page do not fit the ball vectors of the generator;
 each is proposed in `experiments/milestone2/kernels/` and checked there:
 
-- `bv_mul_pow2_k` (`bv_mul_pow2_2.fold`, `bv_mul_pow2_step_k`, `bv_mul_pow2_radius`; checked by
-  `bv_proposals.py`): its radius needs the exactness of every entry ("with `ec` over all entries"),
-  which the written center cannot tell (a second limb scaled to zero leaves a pair that looks exact).
-  The step returns the center and a mask, `ec` of `ball_mul_pow2_k`, and-ed into a third group of the
-  state; the radius kernel's claim ("at least $c\,r_x$, and at least $c\,r_x + \eta$ unless every entry
-  and the radius were exact, then exactly $c\,r_x$") is not in the vocabulary, and nor is an
-  `exact_when` of `encloses_entries` with conditions, which it would claim.
 - `bv_axpy_k` (`bv_axpy_2.fold`, `bv_axpy_step_k`, `bv_axpy_radius_k`; `bv_proposals.py`): the page's
   radius $\mathrm{bv\_add\_radius}_k(M, \mathrm{bv\_scale\_radius}_k(M', r_x, a), r_y)$ needs a second
   maximum, of the scaled centers, a second output of the step and a second fold of maxima in the state.
@@ -1771,6 +1882,8 @@ $\eta$ preceded by one.
 
 - `{"zero_or_abs_gt": EXPR, "than": K}`: EXPR $= 0$ or $\lvert\mathrm{EXPR}\rvert > K$;
 - `{"zero_or_abs_ge": EXPR, "than": K}`: EXPR $= 0$ or $\lvert\mathrm{EXPR}\rvert \ge K$;
+- `{"mask": NAME}`, in the `exact_when` of an `upper` entry only (the radius of the scaling of a
+  BallVector by a power of two, [below](#claims-of-milestone-2)): the mask input NAME is true;
 
 and the list holds when every condition does. EXPR is an expression of the language of `value`
 (input names, `+`, `-`, `*`, unary minus, `abs( )`, parentheses) in which, besides an input's
@@ -2181,8 +2294,27 @@ true` (and no `"map"`):
       word `exact` of the description): if the result is a finite ball vector, it is exactly the set,
       entry by entry: besides V2, every real within `radius` of entry $i$ written is a value of `set`
       with each ball name at some real within its radius of entry $i$ of its center. The list is
-      that of the conditions of `exact_when` of `encloses`, and the empty list always holds; an entry
-      with conditions is not generated yet (`bv_mul_pow2_k`, proposed below, would have them).
+      that of the conditions of `exact_when` of `encloses`, and the empty list always holds.
+    - **Exact under conditions**, with `"exact_when": [CONDITION, ...]`, a list that is not empty
+      (`bv_mul_pow2_k`), written last like the empty list. Each condition is
+      `{"zero_or_abs_gt": EXPR, "than": K}` or `{"zero_or_abs_ge": EXPR, "than": K}`, as for `encloses`
+      ([the conditions of `exact_when`](#claims-of-milestone-2), below the table of `neighbor`): EXPR $= 0$
+      or $\lvert\mathrm{EXPR}\rvert > K$ (or $\ge K$), K an exact positive expression over `u`, `eta` and
+      integers, EXPR an expression of the language of `value` over the arrays' names (the exact value of
+      an entry, the sum of its limbs), their limbs `NAME[I]` (limb I of the entry, the leading limb
+      `NAME[0]`) and the scalars' names. A condition whose EXPR names an array is **a condition of an
+      entry**, evaluated at each entry $i$ on the limbs of entry $i$ and on the scalars; one whose EXPR
+      names scalars only is **a condition of the scalars**. The claim: if the result is a finite ball
+      vector, every condition of the scalars holds, and every entry satisfies every condition of an
+      entry, then the result is exactly the set at every entry, as for the empty list. One entry that
+      fails its conditions takes the exactness from every entry (the radius is one for all), so nothing
+      is claimed then beyond V1 to V4; for $n = 0$ nothing is claimed beyond them either. For
+      `bv_mul_pow2_2` the conditions are `x[0]*c` and `x[1]*c` (of an entry) and `rx*c` (of the
+      scalars), each zero or above $N = \eta/(2u)$ in magnitude: when they hold the centers written are
+      $c\,x_i$ and the radius $c\,r_x$, exactly. A reader judges it by computing, in exact arithmetic,
+      whether every condition holds, and if so whether $[z_i - r, z_i + r]$ is exactly the exact range of
+      `set` over the operands' balls at every entry (for a product by a positive $c$, the endpoints
+      $c(x_i \mp r_x)$).
 
     What is claimed of the one radius is that and nothing more: containment (V2) and when it is
     finite (V4). That it is the largest of the $n$ radii the entrywise Ball kernel (`ball_add_k`,
@@ -2192,7 +2324,13 @@ true` (and no `"map"`):
 - `step`, `step_args`, `record`, `combine`, `radius`, `radius_args` and `finish` name the parts:
   the step on the scalars and arrays of `step_args`, the record and the combination of the state
   `m, ok`, the radius kernel on `radius_args` (`m`, the limb of the state, then scalars), the finish.
-  They are for reading; the oracle judges the claim.
+  They are for reading; the oracle judges the claim. A ball vector exact under conditions also has
+  `"exactness": {"mask": "e", "state": "ex"}`, after `record` and only there: the step's second
+  output `e` (the mask that its entry is exact, claimed by the step's `exact_flag`) and-ed over the
+  entries into the state's mask `ex`, which `radius_args` names after `m`.
+- **`power_of_two(SCALAR)`**, a requirement of a scalar the program supplies (`c` of `bv_mul_pow2_k`):
+  the scalar is a positive power of two of the format, finite, $c = 2^k$, as for a map; no other value
+  is a valid operand.
 - In the extended domain, as for a map: the order makes no difference, `F_seq`, `F_lanes` with any
   $W$ and `F_packed` write the same centers and return the same radius and flag.
 
@@ -2238,6 +2376,38 @@ Two things in those entries are new forms, which a reader of the claims must lea
 requirements): the output is at least the exact value of `value`, whether it is finite or the
 rounding has overflowed to $+\infty$. Nothing is said of how far above. And `value` may hold
 `abs(X)` of an input `X`, its exact magnitude.
+
+**The kernels of the scaling of a BallVector by a power of two** (`bv_mul_pow2_k`) add three fields, each
+written only in an entry that has it, in the finite domain:
+
+| Field | Of | Meaning |
+|---|---|---|
+| `exact_flag`: a mask output | an `error` entry with `exact_when` | the mask output is true exactly when every condition of the entry's `exact_when` holds (and then, by `exact_when`, the output is `value` exactly); like the rest of the entry, it holds where output limb 0 is finite |
+| `unless`: a mask input | an `upper` entry with `value` and without `if` or `gaps` | when the mask input is false, the output is at least the exact value of `value`; when it is true, the entry says nothing |
+| `exact_when`: a list of conditions | an `upper` entry with `value` and without `if`, `gaps` or `unless` | the output is at least `value`, as without the field, and equals it exactly when every condition holds |
+
+and one condition of `exact_when`, **`{"mask": NAME}`**, in the `exact_when` of an `upper` entry only:
+NAME is a mask input, and the condition holds when it is true. The two steps and the radius, as the
+generator writes them:
+
+```json
+{"kind": "error", "of": "z", "form": "R", "c": "0", "k": 2, "t": "1", "when": null,
+ "exact_when": [{"zero_or_abs_gt": "x[0]*c", "than": "eta/(2*u)"}, {"zero_or_abs_gt": "x[1]*c", "than": "eta/(2*u)"}],
+ "exact_flag": "e"}
+{"kind": "upper", "of": "rz", "value": "rx*c",
+ "exact_when": [{"mask": "ex"}, {"zero_or_abs_gt": "rx*c", "than": "eta/(2*u)"}]}
+{"kind": "upper", "of": "rz", "value": "rx*c+eta", "unless": "ex"}
+```
+
+The first is of `bv_mul_pow2_step_2` (with `normalized z` before it; `bv_mul_pow2_step_1` has `rounded z
+nearest` and the error `t=1/2` with the one condition `x*c`), whose outputs are the center `z` and the
+mask `e`; the others are the two entries of `bv_mul_pow2_radius`, whose inputs are `m`, the mask `ex`, `rx`
+and `c`, and which requires `nonneg(m)`, `nonneg(rx)`, `power_of_two(c)`. A reader judges them as the
+other entries of their kinds: the mask `e` against the conditions, evaluated exactly on the input limbs
+($x_1 c = 0$ or $\lvert x_1 c\rvert > \eta/(2u)$, $\eta/(2u)$ the smallest normal number of the format);
+`rz` against $r_x c$ always, against $r_x c + \eta$ when the input `ex` is `0`, and for equality with $r_x
+c$ when `ex` is `1` and the condition on $r_x c$ holds. In the formal models: `(e = true <-> CONDITIONS)`,
+`(ex = false -> rx * c + eta emin <= rz)`, and `(ex = true /\ CONDITIONS -> rz = rx * c)` after `rx * c <= rz`.
 
 ### Claims of the interval kernels
 
