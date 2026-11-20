@@ -1027,6 +1027,9 @@ class R3OfTheKernels(unittest.TestCase):
     # And the radius kernels of BallVector that take the scalar the program gives (bv_scale_radius_k;
     # bv_add_radius_k takes radii, limbs of objects, and the largest magnitude of a center).
     FOLD_STEPS |= {'bv_scale_radius_1', 'bv_scale_radius_2'}
+    # And the step and the radius kernel of the constructor of a BallVector, which take the center and
+    # the radius the program gives (bv_center_2 copies the limbs of an Expansion<T, 2>, stored).
+    FOLD_STEPS |= {'bv_center_entry_1', 'bv_make_radius'}
 
     def test_entry_kernels(self):
         ks = common.kernels()
@@ -1092,7 +1095,8 @@ class R3OfTheKernels(unittest.TestCase):
         self.assertEqual(set(ks.folds), {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
                                          'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1', 'norm_upper_2',
                                          'conv_1', 'conv_2'} | MAPS |
-                         {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2'})
+                         {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
+                          'bv_make_1', 'bv_make_2'})
         self.assertIn('folds: %d (%s)' % (len(ks.folds), ', '.join(ks.folds)), lines)
         unverified = [n for n, f in ks.folds.items() if f.status == 'unverified']
         self.assertIn('folds UNVERIFIED: %s' % (', '.join(unverified) or 'none'), lines)
@@ -1414,11 +1418,16 @@ class TheKernels(unittest.TestCase):
     # The folds of maxima, norm_upper_k (stage B, part 2): the combination and the steps, of the
     # finite domain, and the finishes, with the IEEE-model statement only.
     NORM_FINISH = {'norm_finish_1', 'norm_finish_2'}
+    # And the finish of the constructors of a BallVector, of the IEEE model only too.
+    NORM_FINISH |= {'bv_make_finish'}
     NORM = {'norm_combine', 'norm_step_1', 'norm_step_2'} | NORM_FINISH
     # The kernels of the accumulator (milestone2.md, "The accumulator"), of the finite domain.
     ACC = {f'acc_{op}_{k}' for op in ('add', 'mul', 'merge', 'radius') for k in (1, 2)}
     # The radius kernels of BallVector (milestone2.md, "BallVector"), of the finite domain.
     BV = {f'bv_{op}_radius_{k}' for op in ('add', 'scale') for k in (1, 2)}
+    # And the kernels of the constructor of a BallVector: its steps, its radius (finite domain; the copy
+    # bv_center_2 of the extended domain with a real-model statement, as neg_2) and its finish.
+    BV |= {'bv_center_entry_1', 'bv_center_2', 'bv_make_radius', 'bv_make_finish'}
     FOLDS = FOLDS_FINITE | FOLDS_FINISH | MAP_STEPS | NORM | ACC | BV
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
     # unverified until their proofs are pointed at the generated text: the interval kernels of one
@@ -1481,11 +1490,13 @@ class TheKernels(unittest.TestCase):
                          self.NON_FINITE | self.WAVE_1_FULL | self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only)
         self.assertEqual({name for name, k in ks.items() if k.extended},
                          self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG | self.WAVE_1_EXTENDED | self.WAVE_1_FULL |
-                         self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'})
+                         self.FOLDS_FINISH | self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'} | {'bv_center_2'})
+        # (bv_center_2, the copy of the constructor of a BallVector, has both statements, as neg_2.)
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
                          dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
                                             | self.WAVE_1_EXTENDED | self.WAVE_1_FULL | self.FOLDS_FINISH, 'proved'),
-                              **dict.fromkeys(self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1'}, 'unverified')))
+                              **dict.fromkeys(self.NORM_FINISH | wave_2_ieee_only | {'mul_dir_1', 'bv_center_2'},
+                                              'unverified')))
         # Every kernel of the extended domain that is proved names its IEEE-model theorem, and no
         # other kernel does.
         self.assertEqual({name for name, k in ks.items() if k.ieee_theorem},
@@ -1533,6 +1544,8 @@ class TheKernels(unittest.TestCase):
             # The radius kernels of BallVector, from the precision of the Ball kernel whose radius
             # lines they are.
             'bv_add_radius_1': 1, 'bv_add_radius_2': 3, 'bv_scale_radius_1': 1, 'bv_scale_radius_2': 2,
+            # and the kernels of its constructor that have a real-model statement, from 1.
+            'bv_center_entry_1': 1, 'bv_center_2': 1, 'bv_make_radius': 1,
             # Wave 2 (as the proofs found them): mul_dir_1 from 2, the sums of two limbs from 3, the
             # products from 4.
             'mul_dir_1': 2, 'add_ball_2_2': 3, 'add_down_2_2': 3, 'add_up_2_2': 3, 'sub_down_2_2': 3,

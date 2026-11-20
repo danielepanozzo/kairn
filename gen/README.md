@@ -267,7 +267,10 @@ ok)` tests it; when the flag is false a second pass writes every center zero and
 +infinity, the whole space. Each array is required `ball_vector ARRAY RADIUS`, and the fold claims
 `encloses_entries z r SET NAME=ARRAY,RADIUS... flag=F [finite_when=... radii_when=...]`, `radii_when`
 the conditions of V4 on the scalars alone, so that V4 holds of every length, the empty vector
-included (it comes with `finite_when`). `rules.bv_rules` checks
+included (it comes with `finite_when`). A constructor (`bv_make_k`) reads the centers and the radius
+given and claims `makes_ball_vector z rr from=c,r flag=F`; its finish claims
+`finite_or_nan r flag=flag if=ok nonneg`, the value also not negative (`rules._bv_make_claims`).
+`rules.bv_rules` checks
 it; `cpp.bv_seq`, `cpp.bv_lanes` and `simd.bv_packed` print it; `rocq.bv_model` and
 `rocq.bv_statement` give it a model (the centers and the radius) and a statement (containment entry
 by entry); `ieee.bv_model` and `ieee.bv_statement` its IEEE model and V1 to V4 of milestone2.md;

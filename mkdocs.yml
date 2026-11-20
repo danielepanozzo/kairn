@@ -276,6 +276,10 @@ nav:
           - The radius of the sum or the difference of two BallVectors of two limbs: reference/bv_add_radius_2.md
           - The radius of a BallVector of one limb times a number of T: reference/bv_scale_radius_1.md
           - The radius of a BallVector of two limbs times a number of T: reference/bv_scale_radius_2.md
+          - A center of one limb given to the constructor of a BallVector: reference/bv_center_entry_1.md
+          - A center of two limbs given to the constructor of a BallVector: reference/bv_center_2.md
+          - The radius given to the constructor of a BallVector: reference/bv_make_radius.md
+          - "The result of the constructor of a BallVector: the radius given, or NaN": reference/bv_make_finish.md
   # END reference
   - Proofs: proofs/index.md
   - Developer guide:

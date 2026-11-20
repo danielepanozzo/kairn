@@ -747,9 +747,10 @@ class Rocq(unittest.TestCase):
         # limbs are normalized), 4 limbs in 3 kernels. With the accumulator: t and b of acc_add_1,
         # acc_mul_1 and acc_merge_1, b of acc_add_2, acc_mul_2 and acc_merge_2, and r of acc_radius_1
         # and acc_radius_2 (claimed under the mask), 11 limbs in 8 kernels. With BallVector: rz of the
-        # four radius kernels, 4 limbs in 4 kernels.
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4)
+        # four radius kernels, 4 limbs in 4 kernels; and z of bv_center_entry_1 and rz of
+        # bv_make_radius, the kernels of the constructor (bv_center_2 is normalized).
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4 + 11 + 4 + 2)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3 + 8 + 4 + 2)
         s = self.statements
         # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
         # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
@@ -889,8 +890,11 @@ class Rocq(unittest.TestCase):
     # Then the four radius kernels of BallVector (unverified): their definitions and statements were
     # added, every earlier line kept; their constants are those of ball_add_k and ball_scale_k, under
     # the names they had; Audit.v is the same.
-    DIGESTS = {'Model.v': '852cded22919dbde42ddc40eec7f67444a76a7e6bb03018ec69df53022dd5c6e',
-               'Statements.v': '2e6c937393724e3e43ff1c96353d29649bdbf7d01685f468be31c7d7e84905b5',
+    # Then the three kernels of the constructor of BallVector with a real-model statement
+    # (bv_center_entry_1, bv_center_2, bv_make_radius; unverified): their definitions and statements
+    # were added, every earlier line kept; no constant; Audit.v is the same.
+    DIGESTS = {'Model.v': '57f4db135eeb2bbe86e001494a2ffeb30bedb9ad7f6a3955bea3ca864869e238',
+               'Statements.v': '57380bdd7838e1517195252b18ad5b4948cf18d9b77eb6bdc770fe47f2ab8676',
                'Audit.v': '3e9f61c2f0dd8093ddf5bf2cec8e3a9f7a36a12b8a126b372af5ebb2a55f47ce'}
 
 
@@ -926,8 +930,8 @@ class Rocq(unittest.TestCase):
         # 60; the nine of the folds' stage, the fifteen steps of the maps, the three of norm_upper_k;
         # and the eight of Milestone 2's interval work with a real-model statement: mul_dir_1 and the
         # seven bounds of two limbs; and the eight kernels of the accumulator; and the four radius
-        # kernels of BallVector.
-        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4)
+        # kernels of BallVector; and the three of its constructor that have one.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8 + 8 + 4 + 3)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)

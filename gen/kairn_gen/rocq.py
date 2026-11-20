@@ -1201,6 +1201,8 @@ def bv_statement(fd, kernels):
     the elements and the centers written), the center written is valid and, for every choice of
     members of the balls of the operands' entries, the value of the fold on them is within the radius
     of the center."""
+    if fd.ensures[0]['kind'] == 'makes_ball_vector':
+        return bv_make_statement(fd, kernels)
     step, radius = kernels[fd.step[0]], kernels[fd.radius[0]]
     _, el, xs = _fold_binders(fd)
     section = [{'choice': 'tie_even'}.get(v, v) for v in fold_section_args([step, radius, kernels[fd.record[0]]],
@@ -1254,6 +1256,35 @@ def bv_statement(fd, kernels):
               f'    forall {" ".join(members)} : R, ' + ' -> '.join(near) + f' -> Rabs ({setv} - {_sum(w)}) <= r_)',
               f'    {xs} ({call_map}).']
     return lines
+
+
+def bv_make_statement(fd, kernels):
+    """The Definition F_spec : Prop of a constructor of a BallVector (makes_ball_vector): in the real
+    model, where nothing is infinite and the radius given is a number of the format, for valid centers
+    (every limb a number of the format, normalized for two limbs) the centers written are those given
+    and the radius is the radius given, exactly."""
+    step, radius = kernels[fd.step[0]], kernels[fd.radius[0]]
+    _, el, xs = _fold_binders(fd)
+    section = [{'choice': 'tie_even'}.get(v, v) for v in fold_section_args([step, radius, kernels[fd.record[0]]],
+                                                                             kernels)]
+    etype = fold_element_type(fd)
+    lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+    c, r = fd.arrays[0], fd.scalars[0]
+    limbs = tuple_parts(el, len(c.limbs))
+    valid = (f'normalized_{len(limbs)} emin prec {" ".join(_paren(x) for x in limbs)}' if len(limbs) > 1
+             else f'fmt emin prec {_paren(limbs[0])}')
+    call_map = ' '.join([f'{fd.name}_map'] + [{'choice': 'tie_even'}.get(v, v) for v in fold_section_args([step], kernels)]
+                        + [xs])
+    call_r = ' '.join([f'{fd.name}_radius'] + section + [r.name, xs])
+    return [f'(* {fd.name}, the centers it writes and its radius: {fd.source or "no source given"}. Status: '
+            f'{fd.status}. *)',
+            f'Definition {fd.name}_spec : Prop :=',
+            f'  forall emin prec : Z, ({fd.min_precision} <= prec)%Z ->',
+            f'  forall ({r.name} : R) ({xs} : {lt}),',
+            f'  fmt emin prec {r.name} ->',
+            f'  Forall (fun {el} => {valid}) {xs} ->',
+            f'  {call_r} = {r.name} /\\',
+            f'  Forall2 (fun {el} w_ => w_ = {el}) {xs} ({call_map}).']
 
 
 # --- Convolutions ------------------------------------------------------------------------------------

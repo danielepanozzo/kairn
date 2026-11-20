@@ -136,7 +136,7 @@ class Claims(unittest.TestCase):
                 'bound': ['zero_factor'], 'outward': ['exact_when', 'zero_factor'], 'makes_ball': ['midpoint_when'],
                 'encloses_interval': ['bounded_exactly', 'zero_factor'], 'set_bound': ['tight'],
                 'ball_of_interval': ['smallest_radius'],
-                'finite_or_nan': ['if', 'steps']}   # the finish of a fold of maxima
+                'finite_or_nan': ['if', 'steps', 'nonneg']}   # the finish of a fold of maxima; of a constructor
     # The bound kernels of Milestone 2 (the folds' stage): an upper entry with a value of its own
     # under a mask, and no gaps.
     UPPER_OWN = ['kind', 'of', 'value', 'if']
@@ -492,6 +492,8 @@ class Claims(unittest.TestCase):
         constructors = {'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2'}
         # and the finishes of the folds, which say what comes out when the state is not finite
         finishes = {'fold_finish_1', 'fold_finish_2', 'norm_finish_1', 'norm_finish_2'}
+        # and the finish of the constructors of a BallVector (finite_or_nan with nonneg)
+        finishes |= {'bv_make_finish'}
         # Milestone 2: the interval kernels, stated in the IEEE model only (an interval has infinite
         # bounds as ordinary values), the constructors of an interval and of a ball from an interval,
         # the bounds of a ball as numbers of T and the narrowing of a ball.
@@ -544,7 +546,8 @@ class FoldClaims(unittest.TestCase):
         self.assertTrue(all(self.by[n]['conv'] is True and 'map' not in self.by[n] for n in convs))
         # The ball vectors (test_bv.py), with "bv": true.
         bvs = {name for name, fd in self.ks.folds.items() if fd.is_bv}
-        self.assertEqual(bvs, {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2'})
+        self.assertEqual(bvs, {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2',
+                               'bv_make_1', 'bv_make_2'})
         self.assertTrue(all(self.by[n]['bv'] is True and 'map' not in self.by[n] for n in bvs))
         self.assertEqual(set(self.by) - maps - convs - bvs, {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
                                                       'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1',

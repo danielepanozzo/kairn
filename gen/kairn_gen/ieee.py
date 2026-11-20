@@ -743,6 +743,9 @@ def _finite_or_nan_spec(k, kernels, e):
     for _ in range(e.get('steps', 0)):
         src = [f'({_ieee_op("succ", src)})']
     finite = f'finite {src[0]}'
+    if e.get('nonneg'):
+        # The finish of a constructor of a BallVector: the value is also not negative.
+        finite = f'{finite} /\\ 0 <= val {src[0]}'
     if 'if' in e:
         finite = f'{e["if"]} = true /\\ {finite}'
     lines += [f'  ({flag} = true <-> {finite}) /\\',
@@ -1976,6 +1979,8 @@ def bv_statement(fd, kernels, order):
     """F_seq_ieee_spec or F_lanes_ieee_spec of a ball vector (the second for every W): V1 to V4 of
     milestone2.md, "BallVector", and the flag, for canonical BallVectors and any value of a scalar that
     is not a radius."""
+    if fd.ensures[0]['kind'] == 'makes_ball_vector':
+        return bv_make_statement(fd, kernels, order)
     step, radius = kernels[fd.step[0]], kernels[fd.radius[0]]
     parts = [step, kernels[fd.record[0]], radius, kernels[fd.finish[0]]] + \
         ([kernels[fd.combine[0]]] if order == 'lanes' else [])
@@ -2078,6 +2083,60 @@ def bv_statement(fd, kernels, order):
         lines += [f'     {rocq._let(pattern, el)}'] if pattern != el else []
         lines += ['     ' + ' /\\ '.join(conds) + f') {xs} ->',
                   '   finite r_).']
+    return lines
+
+
+def bv_make_statement(fd, kernels, order):
+    """F_seq_ieee_spec or F_lanes_ieee_spec of a constructor of a BallVector (makes_ball_vector;
+    milestone2.md, "BallVector", "Values"), for any radius and any centers (canonical pairs for two
+    limbs): the result is canonical; the flag is true exactly when the radius is finite; it is true
+    exactly when the radius given is finite and not negative and every center given is finite (its
+    leading limb); and then the centers written are those given, limb for limb, and the radius the
+    radius given, as values."""
+    parts = [kernels[fd.step[0]], kernels[fd.record[0]], kernels[fd.radius[0]], kernels[fd.finish[0]]] + \
+        ([kernels[fd.combine[0]]] if order == 'lanes' else [])
+    used = set()
+    for k in parts:
+        used.update(_used_nans(k, kernels))
+    nans = [x for x, _ in NANS if x in used]
+    _, el, xs = rocq._fold_binders(fd)
+    suffix = ir.ORDER_SUFFIX[order]
+    etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
+    c, r = fd.arrays[0], fd.scalars[0]
+    n = len(c.limbs)
+    w = list(fd.writes[0].limbs)
+    binders = (f'forall (W : nat) ({r.name} : binary_float prec emax) ({xs} : list ({etype})),' if order == 'lanes'
+               else f'forall ({r.name} : binary_float prec emax) ({xs} : list ({etype})),')
+    call = ' '.join([f'IeeeFoldModel.{fd.name}_{suffix}', 'prec', 'emax'] + nans + (['W'] if order == 'lanes' else []) +
+                    [r.name, xs])
+    parts_c = rocq.tuple_parts(el, n)
+    wcs = ' '.join(rocq._paren(x) for x in rocq.tuple_parts('w_', n))
+    what = {'sequential': 'the sequential order', 'lanes': 'the lane order, for every number of lanes W'}[order]
+    lines = [f'(* {fd.name}, {what}, in the IEEE model: the constructor of a BallVector (a canonical result; the '
+             'whole space exactly when the radius given is negative, a NaN or +infinity or a center given is not '
+             f'finite; otherwise the centers and the radius given). Status: '
+             f'{"proved" if fd.ieee_theorem else "unverified"}. *)',
+             f'Definition {fd.name}_{suffix}_ieee_spec : Prop :=',
+             '  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)',
+             '         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)' +
+             (f'\n         {_binders(nans)},' if nans else ','),
+             f'  ({fd.min_precision} <= prec)%Z ->',
+             f'  {binders}']
+    if n > 1:
+        lines.append(f'  Forall (fun {el} => canonical_{n} {" ".join(rocq._paren(x) for x in parts_c)}) {xs} ->')
+    lines += [f"  let '(ws_, r_, flag_) := {call} in",
+              f'  ((finite r_ /\\ 0 <= val r_ /\\ Forall (fun w_ => ball_finite_{n} {wcs} r_) ws_) \\/',
+              f'   (r_ = infinity prec emax false /\\ Forall (fun w_ => ball_whole_{n} {wcs} r_) ws_)) /\\',
+              '  (flag_ = true <-> finite r_) /\\',
+              f'  (flag_ = true <-> finite {r.name} /\\ 0 <= val {r.name} /\\ '
+              f'Forall (fun {el} => finite {rocq._paren(parts_c[0])}) {xs}) /\\',
+              f'  Forall2 (fun {el} w_ =>']
+    pattern = rocq._pattern(list(c.limbs))
+    if pattern != el:
+        lines.append(f'    {rocq._let(pattern, el)}')
+    lines += [f'    {rocq._let(rocq._pattern(w), "w_")}',
+              '    flag_ = true -> ' + ' /\\ '.join(f'val {a} = val {b}' for a, b in zip(w, c.limbs)) + f') {xs} ws_ /\\',
+              f'  (flag_ = true -> val r_ = val {r.name}).']
     return lines
 
 

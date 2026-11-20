@@ -556,6 +556,38 @@ Definition bv_add_radius_2 (m rx ry : float) : float :=
   let rz := fma t up_ball_add_1_1 up_ball_add_1_2 in
   rz.
 
+(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). *)
+Definition bv_center_entry_1 (c : float) : float :=
+  let z := guard c in
+  z.
+
+(* fold_finish_1: the finish of a fold: the state or the canonical NaN (milestone2.md). *)
+Definition fold_finish_1 (s : float) : float * bool :=
+  let a := abs s in
+  let flag := lt a pinf in
+  let r := if flag then s else cnan in
+  (r, flag).
+
+(* norm_finish_1: the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). *)
+Definition norm_finish_1 (m : float) (ok : bool) : float * bool :=
+  let t := if ok then m else cnan in
+  let '(r, flag) := fold_finish_1 t in
+  (r, flag).
+
+(* bv_make_finish: the finish of a constructor: the radius given, or the canonical NaN (milestone2.md, BallVector, Values). *)
+Definition bv_make_finish (rz : float) (ok : bool) : float * bool :=
+  let p := le pzero rz in
+  let q := andb ok p in
+  let '(r, flag) := norm_finish_1 rz q in
+  (r, flag).
+
+(* bv_make_radius: the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values). *)
+Definition bv_make_radius (m r : float) : float :=
+  let g := guard r in
+  let d := sub m m in
+  let rz := add g d in
+  rz.
+
 (* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
 Definition bv_scale_radius_1 (m rx a : float) : float :=
   let aa := abs a in
@@ -583,13 +615,6 @@ Definition fast_two_sum_entry (a b : float) : float * float :=
   let gb := guard b in
   let '(s, e) := fast_two_sum ga gb in
   (s, e).
-
-(* fold_finish_1: the finish of a fold: the state or the canonical NaN (milestone2.md). *)
-Definition fold_finish_1 (s : float) : float * bool :=
-  let a := abs s in
-  let flag := lt a pinf in
-  let r := if flag then s else cnan in
-  (r, flag).
 
 (* interval_add_1: directed sums of the bounds (Milestone 2 listing). *)
 Definition interval_add_1 (xl xu yl yu : float) : float * float :=
@@ -830,12 +855,6 @@ Definition norm_combine (m : float) (ok : bool) (n : float) (okn : bool) : float
   let r := if c then n else m in
   let okr := andb ok okn in
   (r, okr).
-
-(* norm_finish_1: the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). *)
-Definition norm_finish_1 (m : float) (ok : bool) : float * bool :=
-  let t := if ok then m else cnan in
-  let '(r, flag) := fold_finish_1 t in
-  (r, flag).
 
 (* norm_finish_2: the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md). *)
 Definition norm_finish_2 (m : float) (ok : bool) : float * bool :=
@@ -1348,6 +1367,12 @@ Definition ball_upper_as_2 (c0 c1 r : float) : float :=
   let h := if ne then t else mi in
   h.
 
+(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). *)
+Definition bv_center_2 (x0 x1 : float) : float * float :=
+  let z0 := x0 in
+  let z1 := x1 in
+  (z0, z1).
+
 (* eq_2_1: limbs compared in order (Milestone 1 listing). *)
 Definition eq_2_1 (x0 x1 a : float) : bool :=
   let h := eq x0 a in
@@ -1820,6 +1845,11 @@ Definition axpy_entry_step_1_prog : list instr :=
 Definition axpy_step_1_prog : list instr :=
   [ Iprod 0 1  (*  3 p *)
   ; Iadd 3 2   (*  4 z *)
+  ].
+
+(* inputs: 0 c *)
+Definition bv_center_entry_1_prog : list instr :=
+  [ Iguard 0  (*  1 z *)
   ].
 
 (* inputs: 0 s, 1 x, 2 y *)

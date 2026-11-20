@@ -176,6 +176,24 @@ Definition bv_add_2_spec : Prop :=
     forall x_ y_ : R, Rabs (x_ - (x0 + x1)) <= rx -> Rabs (y_ - (y0 + y1)) <= ry -> Rabs ((x_ + y_) - (z0 + z1)) <= r_)
     xys (bv_add_2_map emin prec tie_even xys).
 
+(* bv_make_1, the centers it writes and its radius: the constructor of a BallVector: the centers and the radius given, or the whole space (milestone2.md, BallVector, Values). Status: unverified. *)
+Definition bv_make_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall (r : R) (cs : list R),
+  fmt emin prec r ->
+  Forall (fun c => fmt emin prec c) cs ->
+  bv_make_1_radius emin prec tie_even r cs = r /\
+  Forall2 (fun c w_ => w_ = c) cs (bv_make_1_map emin prec tie_even cs).
+
+(* bv_make_2, the centers it writes and its radius: the constructor of a BallVector: the centers given and the radius given, or the whole space (milestone2.md, BallVector, Values). Status: unverified. *)
+Definition bv_make_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall (r : R) (cs : list (R * R)),
+  fmt emin prec r ->
+  Forall (fun c => normalized_2 emin prec (fst c) (snd c)) cs ->
+  bv_make_2_radius emin prec tie_even r cs = r /\
+  Forall2 (fun c w_ => w_ = c) cs (bv_make_2_map cs).
+
 (* bv_scale_1, each center it writes and its one radius: mul_1_1 on the centers, the radius of ball_scale_1 at the largest center (milestone2.md, BallVector). Status: unverified. *)
 Definition bv_scale_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->

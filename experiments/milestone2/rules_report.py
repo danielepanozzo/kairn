@@ -28,7 +28,9 @@ IN_GEN = ('two_sum_ord', 'add_down_1', 'add_up_1', 'sub_down_1', 'sub_up_1', 'mu
           'acc_radius_2',
           # and the radii of BallVector, bv_add_radius_2 and bv_scale_radius_2 as proposed here, with
           # their forms of one limb.
-          'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2')
+          'bv_add_radius_1', 'bv_add_radius_2', 'bv_scale_radius_1', 'bv_scale_radius_2',
+          # and the kernels of the constructor of BallVector (ballvector.py), as proposed here.
+          'bv_center_2', 'bv_center_entry_1', 'bv_make_finish', 'bv_make_radius')
 
 
 def main():

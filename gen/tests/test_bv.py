@@ -167,6 +167,77 @@ def judge_bv(m, ks, fd, f, scalars, elements, out):
     return bad
 
 
+MAKES = ('bv_make_1', 'bv_make_2')
+
+
+def make_case(fd, f, rng, n, special=0.06):
+    """(scalars, elements) of one case of a constructor: the radius any value of the format (negative
+    ones, zeros of either sign, infinities and NaN among them), each center any value (one limb) or a
+    canonical pair (two limbs), specials with probability `special` each."""
+    draw = writers.Draw(f, rng, special=special)
+    elements = [draw.group(len(fd.arrays[0].limbs)) for _ in range(n)]
+    x = rng.random()
+    r = (rng.choice([PINF, (interp.INF, True), interp.NaN, (interp.NUM, True, 0, 0), ZERO]) if x < 0.15 else
+         draw.one())
+    return [r], elements
+
+
+def judge_make(fd, f, scalars, elements, out):
+    """The failures of makes_ball_vector on one case (milestone2.md, "BallVector", "Values"): the result
+    is canonical; the flag is true exactly when the radius is finite; it is the whole space exactly when
+    the radius given is negative, a NaN or +infinity, or a center given is not finite; otherwise the
+    centers and the radius are those given, as values (the sign of a zero is not part of the claim)."""
+    written, r, flag = out[:-2], out[-2], out[-1]
+    n = len(elements)
+    if any(len(a) != n for a in written):
+        return ['length']
+    zs = [[a[i] for a in written] for i in range(n)]
+    bad = []
+    if finite(r):
+        if exact(r) < 0:
+            bad.append('B1: a negative radius')
+        for z in zs:
+            if not all(finite(v) for v in z) or (len(z) == 2 and not interp.eq(interp.add(f, z[0], z[1]), z[0])):
+                bad.append('B1: a center not finite and normalized')
+                break
+    elif r != PINF or not all(v[0] == interp.NUM and v[2] == 0 for z in zs for v in z):
+        bad.append('B1: not the whole space')
+    if flag != finite(r):
+        bad.append('the flag')
+    given = scalars[0]
+    whole = not finite(given) or exact(given) < 0 or any(not finite(e[0]) for e in elements)
+    if flag == whole:
+        bad.append(('B2: the whole space', whole))
+    if flag:
+        if exact(r) != exact(given):
+            bad.append('B3: not the radius given')
+        if any([exact(v) for v in z] != [exact(v) for v in e] for z, e in zip(zs, elements)):
+            bad.append('B3: not the centers given')
+    return bad
+
+
+def _judge_make(job):
+    name, p, emax, rounds = job
+    ks = common.kernels()
+    fd = ks.folds[name]
+    m = interp.Machine(ks)
+    f = writers.ieee_format(p, emax) if p else interp.parse_format(emax)
+    rng = random.Random(f'make:{name}:{f.name}')
+    bad, count, whole = [], 0, 0
+    for r in range(rounds):
+        n = r % 6
+        scalars, elements = make_case(fd, f, rng, n)
+        arrays = [[e[j] for e in elements] for j in range(len(fd.array_limbs()))]
+        outs = [m.run_fold(name, f, order, w, arrays, scalars)
+                for order, w in [('sequential', 0)] + [('lanes', x) for x in (0, 1, 2, 3, 4)]]
+        if any(o != outs[0] for o in outs):
+            bad.append((name, f.name, n, 'not the sequential order\'s'))
+        bad += [(name, f.name, n, x) for x in judge_make(fd, f, scalars, elements, outs[0])]
+        count += 1
+        whole += not outs[0][-1]
+    return name, f.name, count, whole, bad[:5]
+
+
 def empty_cases(fd, f):
     """[(scalars, within)] of the vector with no entry, the radii (and the other scalars) on each side of
     the limit of radii_when, which is then the whole of V4: a radius of 2^(L-1) and its neighbors, 2^L
@@ -266,9 +337,49 @@ domain:        extended
         fd = ir.parse_fold(text, 'tb.fold')
         return [str(e) for e in rules.fold_rules(fd, ir.ordered(dict(ks), dict(ks.folds, tb=fd)))]
 
+    MAKE = '''
+fold:          tm
+arrays:        supplied c
+scalars:       supplied r
+state:         m, mask ok
+step:          z = bv_center_entry_1(c)
+record:        (m, ok) = norm_step_1(m, ok, z)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+radius:        rz = bv_make_radius(m, r)
+finish:        (rr, finite) = bv_make_finish(rz, ok)
+orders:        sequential, lanes
+writes:        z
+output:        rr
+output:        mask finite
+value:         c
+ensures:       makes_ball_vector z rr from=c,r flag=finite
+min_precision: 1
+status:        unverified
+domain:        extended
+'''
+
+    def test_the_constructor_is_refused(self):
+        self.assertEqual(self.refusals(self.MAKE.replace('fold:          tm', 'fold:          tb')), [])
+        for old, new, words in (
+                ('finish:        (rr, finite) = bv_make_finish(rz, ok)',
+                 'finish:        (rr, finite) = norm_finish_1(rz, ok)', 'with nonneg'),
+                ('scalars:       supplied r', 'scalars:       stored r', 'the radius the program supplies'),
+                ('value:         c', 'value:         -c', 'the center given'),
+                ('ensures:       makes_ball_vector z rr from=c,r flag=finite',
+                 'ensures:       makes_ball_vector z rr from=c,r flag=ok', 'and nothing else'),
+                ('step:          z = bv_center_entry_1(c)', 'step:          z = fold_finish_1(c)', 'step'),
+                ('domain:        extended\n', '', 'extended domain')):
+            text = self.MAKE.replace('fold:          tm', 'fold:          tb').replace(old, new)
+            self.assertNotEqual(text, self.MAKE.replace('fold:          tm', 'fold:          tb'), old)
+            errs = self.refusals(text)
+            self.assertTrue(any(words in e for e in errs), (old, words, errs))
+        # The finish of a constructor is no other ball vector's.
+        errs = self.refusals(self.BASE.replace('norm_finish_1(rz, ok)', 'bv_make_finish(rz, ok)'))
+        self.assertTrue(any('with nonneg' in e for e in errs), errs)
+
     def test_the_ball_vectors_are_accepted(self):
         ks = common.kernels()
-        for name in BVS:
+        for name in BVS + MAKES:
             self.assertTrue(ks.folds[name].is_bv and not ks.folds[name].is_map, name)
             self.assertEqual([str(e) for e in rules.fold_rules(ks.folds[name], ks)], [], name)
         self.assertEqual(self.refusals(self.BASE), [])
@@ -316,6 +427,51 @@ class Interp(unittest.TestCase):
             # The radius is the largest entrywise radius of the Ball kernel in every case compared.
             self.assertEqual(sum(r[5] for r in mine), sum(r[6] for r in mine), name)
             self.assertGreater(sum(r[6] for r in mine), 200, name)
+
+    def test_the_constructors(self):
+        """makes_ball_vector of bv_make_1 and bv_make_2 on the interpreter, in toy formats of the IEEE
+        shape and in binary64 and binary32, every order the same: B1 to B3 of judge_make, the radius given
+        and the centers given any value, with negative radii, zeros of either sign, infinities and NaN."""
+        ks = common.kernels()
+        jobs = []
+        for name in MAKES:
+            fd = ks.folds[name]
+            jobs += [(name, p, emax, common.size(300, 3000)) for p, emax in writers.toy_formats(fd.min_precision)]
+            jobs += [(name, None, fmt, common.size(200, 1500)) for fmt in ('binary64', 'binary32')]
+        with ProcessPoolExecutor(max_workers=common.JOBS) as ex:
+            results = list(ex.map(_judge_make, jobs))
+        self.assertEqual([r[4] for r in results if r[4]], [])
+        for name in MAKES:
+            mine = [r for r in results if r[0] == name]
+            self.assertGreater(sum(r[2] for r in mine), 1000, name)
+            self.assertGreater(sum(r[3] for r in mine), 200, name)                      # the whole space
+            self.assertGreater(sum(r[2] - r[3] for r in mine), 200, name)               # a finite ball vector
+
+    def test_the_constructors_on_every_small_case(self):
+        """Every radius and every list of up to two centers of a format of three bits (one limb: every
+        value, specials included; two limbs: canonical pairs, a sample), in the sequential order and
+        with 2 lanes."""
+        ks = common.kernels()
+        m = interp.Machine(ks)
+        f = writers.ieee_format(3, 3)
+        values = writers.numbers(f) + list(writers.SPECIALS)
+        import itertools
+        for name in MAKES:
+            fd = ks.folds[name]
+            rng = random.Random(f'small:{name}')
+            draw = writers.Draw(f, rng, special=0.2)
+            groups = ([[v] for v in values] if len(fd.arrays[0].limbs) == 1 else
+                      [draw.pair() for _ in range(40)])
+            count = 0
+            for r in values:
+                for n in range(3):
+                    for cs in itertools.product(groups[::max(1, len(groups) // 12)], repeat=n):
+                        arrays = [[e[j] for e in cs] for j in range(len(fd.array_limbs()))]
+                        outs = [m.run_fold(name, f, o, w, arrays, [r]) for o, w in (('sequential', 0), ('lanes', 2))]
+                        self.assertEqual(outs[0], outs[1], (name, r, cs))
+                        self.assertEqual(judge_make(fd, f, [r], list(cs), outs[0]), [], (name, r, cs))
+                        count += 1
+            self.assertGreater(count, 1000, name)
 
     def test_v4_of_the_empty_vector(self):
         """V4 for every length: with no entry, the radius comes from the radii (and the other scalars)
@@ -399,6 +555,13 @@ class Interp(unittest.TestCase):
         got = interp.complete(m, line, formats)
         self.assertTrue(got.startswith(line + ' -> 0x1p+1 0x1.8p+1 0x1.'), got)
         self.assertTrue(got.endswith(' 1'), got)
+        # The constructor: the radius, then the centers given; a negative radius gives the whole space.
+        self.assertEqual(interp.complete(m, 'bv_make_1 binary64 seq 2 0x1p-4 -0x1p+0 0x1p+1', formats),
+                         'bv_make_1 binary64 seq 2 0x1p-4 -0x1p+0 0x1p+1 -> -0x1p+0 0x1p+1 0x1p-4 1')
+        self.assertEqual(interp.complete(m, 'bv_make_1 binary64 seq 2 -0x1p-4 -0x1p+0 0x1p+1', formats),
+                         'bv_make_1 binary64 seq 2 -0x1p-4 -0x1p+0 0x1p+1 -> 0x0p+0 0x0p+0 inf 0')
+        self.assertEqual(interp.complete(m, 'bv_make_2 binary32 lanes:2 1 0x1p+0 inf 0x0p+0', formats),
+                         'bv_make_2 binary32 lanes:2 1 0x1p+0 inf 0x0p+0 -> 0x0p+0 0x0p+0 inf 0')
         self.assertEqual(interp.complete(m, 'bv_scale_2 binary32 lanes:4 0 0x1p+0 0x1p+0', formats),
                          'bv_scale_2 binary32 lanes:4 0 0x1p+0 0x1p+0 -> ' +
                          interp.format_limb(m.run('bv_scale_radius_2', interp.parse_format('binary32'),
@@ -432,6 +595,13 @@ def corpus(fmt, orders, seed):
         for scalars, _ in empty_cases(fd, f):
             for order, w in orders:
                 out.append((name, fmt, order, w, scalars, [], request(fd, fmt, order, w, scalars, [])))
+    for name in MAKES:
+        fd = ks.folds[name]
+        for n in folds_tests.lengths(rng):
+            for special in (0.0, 0.03):
+                scalars, elements = make_case(fd, f, rng, n, special)
+                for order, w in orders:
+                    out.append((name, fmt, order, w, scalars, elements, request(fd, fmt, order, w, scalars, elements)))
     return out
 
 
@@ -584,6 +754,27 @@ class Printers(unittest.TestCase):
                                                                  'y': {'center': 'y', 'radius': 'ry'}},
                                          'finite_when': [{'abs_le': 'abs(x+y)+rx+ry', 'exp': -2}],
                                          'radii_when': [{'abs_le': 'rx+ry', 'exp': -2}]}])
+
+    def test_the_constructor_printers(self):
+        import json
+        from kairn_gen import ieee
+        s, ist = rocq.fold_statements(self.ks), ieee.fold_statements(self.ks)
+        self.assertIn('  bv_make_1_radius emin prec tie_even r cs = r /\\\n'
+                      '  Forall2 (fun c w_ => w_ = c) cs (bv_make_1_map emin prec tie_even cs).', s)
+        for name in MAKES:
+            for o in ('seq', 'lanes'):
+                self.assertIn(f'Definition {name}_{o}_ieee_spec : Prop :=', ist)
+        self.assertIn('  (flag_ = true <-> finite r /\\ 0 <= val r /\\ Forall (fun c => finite (fst c)) cs) /\\', ist)
+        doc = json.loads(claims.claims(self.ks))
+        e = {x['name']: x for x in doc['folds']}['bv_make_2']
+        self.assertEqual(e['requires'], ['canonical(c)'])
+        self.assertEqual(e['ensures'], [{'kind': 'makes_ball_vector', 'center': 'z', 'radius': 'rr', 'flag': 'finite',
+                                         'from': {'center': 'c', 'radius': 'r'}}])
+        k = {x['name']: x for x in doc['kernels']}['bv_make_finish']
+        self.assertEqual(k['ensures'], [{'kind': 'finite_or_nan', 'of': 'r', 'flag': 'flag', 'if': 'ok',
+                                         'nonneg': True}])
+        self.assertIn('inline void bv_make_1_seq(const double* c_in, std::size_t n, double r, double* z_out, '
+                      'double& rr_out, bool& finite_out) noexcept {', cpp.scalar(self.ks))
 
     def test_the_entries_of_architecture_md(self):
         """The two entries that architecture.md writes out ("Claims of Milestone 2", ball vectors) are

@@ -1331,6 +1331,92 @@ KAIRN_GEN_FORCEINLINE void bv_add_radius_2(float32x4_t m, float32x4_t rx, float3
     rz_out = rz;
 }
 
+// bv_center_entry_1(c) -> z
+KAIRN_GEN_FORCEINLINE void bv_center_entry_1(float64x2_t c, float64x2_t& z_out) noexcept {
+    const float64x2_t z = vaddq_f64(c, vdupq_n_f64(0.0));
+    z_out = z;
+}
+KAIRN_GEN_FORCEINLINE void bv_center_entry_1(float32x4_t c, float32x4_t& z_out) noexcept {
+    const float32x4_t z = vaddq_f32(c, vdupq_n_f32(0.0f));
+    z_out = z;
+}
+
+// fold_finish_1(s) -> r, mask flag
+KAIRN_GEN_FORCEINLINE void fold_finish_1(float64x2_t s, float64x2_t& r_out, uint64x2_t& flag_out) noexcept {
+    const float64x2_t a = vabsq_f64(s);
+    const uint64x2_t flag = vcltq_f64(a, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t r = vbslq_f64(flag, s, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    r_out = r;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE void fold_finish_1(float32x4_t s, float32x4_t& r_out, uint32x4_t& flag_out) noexcept {
+    const float32x4_t a = vabsq_f32(s);
+    const uint32x4_t flag = vcltq_f32(a, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t r = vbslq_f32(flag, s, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    r_out = r;
+    flag_out = flag;
+}
+
+// norm_finish_1(m, mask ok) -> r, mask flag
+KAIRN_GEN_FORCEINLINE void norm_finish_1(float64x2_t m, uint64x2_t ok, float64x2_t& r_out, uint64x2_t& flag_out) noexcept {
+    const float64x2_t t = vbslq_f64(ok, m, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    // (r, flag) = fold_finish_1(t)
+    const float64x2_t r_a = vabsq_f64(t);
+    const uint64x2_t flag = vcltq_f64(r_a, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t r = vbslq_f64(flag, t, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    r_out = r;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE void norm_finish_1(float32x4_t m, uint32x4_t ok, float32x4_t& r_out, uint32x4_t& flag_out) noexcept {
+    const float32x4_t t = vbslq_f32(ok, m, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    // (r, flag) = fold_finish_1(t)
+    const float32x4_t r_a = vabsq_f32(t);
+    const uint32x4_t flag = vcltq_f32(r_a, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t r = vbslq_f32(flag, t, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    r_out = r;
+    flag_out = flag;
+}
+
+// bv_make_finish(rz, mask ok) -> r, mask flag
+KAIRN_GEN_FORCEINLINE void bv_make_finish(float64x2_t rz, uint64x2_t ok, float64x2_t& r_out, uint64x2_t& flag_out) noexcept {
+    const uint64x2_t p = vcleq_f64(vdupq_n_f64(0.0), rz);
+    const uint64x2_t q = vandq_u64(ok, p);
+    // (r, flag) = norm_finish_1(rz, q)
+    const float64x2_t r_t = vbslq_f64(q, rz, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    // (r, flag) = fold_finish_1(r_t)
+    const float64x2_t r_a = vabsq_f64(r_t);
+    const uint64x2_t flag = vcltq_f64(r_a, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t r = vbslq_f64(flag, r_t, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    r_out = r;
+    flag_out = flag;
+}
+KAIRN_GEN_FORCEINLINE void bv_make_finish(float32x4_t rz, uint32x4_t ok, float32x4_t& r_out, uint32x4_t& flag_out) noexcept {
+    const uint32x4_t p = vcleq_f32(vdupq_n_f32(0.0f), rz);
+    const uint32x4_t q = vandq_u32(ok, p);
+    // (r, flag) = norm_finish_1(rz, q)
+    const float32x4_t r_t = vbslq_f32(q, rz, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    // (r, flag) = fold_finish_1(r_t)
+    const float32x4_t r_a = vabsq_f32(r_t);
+    const uint32x4_t flag = vcltq_f32(r_a, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t r = vbslq_f32(flag, r_t, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    r_out = r;
+    flag_out = flag;
+}
+
+// bv_make_radius(m, r) -> rz
+KAIRN_GEN_FORCEINLINE void bv_make_radius(float64x2_t m, float64x2_t r, float64x2_t& rz_out) noexcept {
+    const float64x2_t g = vaddq_f64(r, vdupq_n_f64(0.0));
+    const float64x2_t d = vsubq_f64(m, m);
+    const float64x2_t rz = vaddq_f64(g, d);
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void bv_make_radius(float32x4_t m, float32x4_t r, float32x4_t& rz_out) noexcept {
+    const float32x4_t g = vaddq_f32(r, vdupq_n_f32(0.0f));
+    const float32x4_t d = vsubq_f32(m, m);
+    const float32x4_t rz = vaddq_f32(g, d);
+    rz_out = rz;
+}
+
 // bv_scale_radius_1(m, rx, a) -> rz
 KAIRN_GEN_FORCEINLINE void bv_scale_radius_1(float64x2_t m, float64x2_t rx, float64x2_t a, float64x2_t& rz_out) noexcept {
     const float64x2_t aa = vabsq_f64(a);
@@ -1393,22 +1479,6 @@ KAIRN_GEN_FORCEINLINE void fast_two_sum_entry(float32x4_t a, float32x4_t b, floa
     const float32x4_t e = vsubq_f32(gb, s_z);
     s_out = s;
     e_out = e;
-}
-
-// fold_finish_1(s) -> r, mask flag
-KAIRN_GEN_FORCEINLINE void fold_finish_1(float64x2_t s, float64x2_t& r_out, uint64x2_t& flag_out) noexcept {
-    const float64x2_t a = vabsq_f64(s);
-    const uint64x2_t flag = vcltq_f64(a, vdupq_n_f64(std::numeric_limits<double>::infinity()));
-    const float64x2_t r = vbslq_f64(flag, s, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
-    r_out = r;
-    flag_out = flag;
-}
-KAIRN_GEN_FORCEINLINE void fold_finish_1(float32x4_t s, float32x4_t& r_out, uint32x4_t& flag_out) noexcept {
-    const float32x4_t a = vabsq_f32(s);
-    const uint32x4_t flag = vcltq_f32(a, vdupq_n_f32(std::numeric_limits<float>::infinity()));
-    const float32x4_t r = vbslq_f32(flag, s, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
-    r_out = r;
-    flag_out = flag;
 }
 
 // interval_add_1(xl, xu, yl, yu) -> zl, zu
@@ -2515,26 +2585,6 @@ KAIRN_GEN_FORCEINLINE void norm_combine(float32x4_t m, uint32x4_t ok, float32x4_
     const uint32x4_t okr = vandq_u32(ok, okn);
     r_out = r;
     okr_out = okr;
-}
-
-// norm_finish_1(m, mask ok) -> r, mask flag
-KAIRN_GEN_FORCEINLINE void norm_finish_1(float64x2_t m, uint64x2_t ok, float64x2_t& r_out, uint64x2_t& flag_out) noexcept {
-    const float64x2_t t = vbslq_f64(ok, m, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
-    // (r, flag) = fold_finish_1(t)
-    const float64x2_t r_a = vabsq_f64(t);
-    const uint64x2_t flag = vcltq_f64(r_a, vdupq_n_f64(std::numeric_limits<double>::infinity()));
-    const float64x2_t r = vbslq_f64(flag, t, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
-    r_out = r;
-    flag_out = flag;
-}
-KAIRN_GEN_FORCEINLINE void norm_finish_1(float32x4_t m, uint32x4_t ok, float32x4_t& r_out, uint32x4_t& flag_out) noexcept {
-    const float32x4_t t = vbslq_f32(ok, m, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
-    // (r, flag) = fold_finish_1(t)
-    const float32x4_t r_a = vabsq_f32(t);
-    const uint32x4_t flag = vcltq_f32(r_a, vdupq_n_f32(std::numeric_limits<float>::infinity()));
-    const float32x4_t r = vbslq_f32(flag, t, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
-    r_out = r;
-    flag_out = flag;
 }
 
 // norm_finish_2(m, mask ok) -> r, mask flag
@@ -5253,6 +5303,20 @@ KAIRN_GEN_FORCEINLINE void ball_upper_as_2(float32x4_t c0, float32x4_t c1, float
     const float32x4_t mi = vnegq_f32(vdupq_n_f32(std::numeric_limits<float>::infinity()));
     const float32x4_t h = vbslq_f32(ne, t, mi);
     h_out = h;
+}
+
+// bv_center_2(x = (x0, x1)) -> z = (z0, z1)
+KAIRN_GEN_FORCEINLINE void bv_center_2(float64x2_t x0, float64x2_t x1, float64x2_t& z0_out, float64x2_t& z1_out) noexcept {
+    const float64x2_t z0 = x0;
+    const float64x2_t z1 = x1;
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void bv_center_2(float32x4_t x0, float32x4_t x1, float32x4_t& z0_out, float32x4_t& z1_out) noexcept {
+    const float32x4_t z0 = x0;
+    const float32x4_t z1 = x1;
+    z0_out = z0;
+    z1_out = z1;
 }
 
 // eq_2_1(x = (x0, x1), a) -> mask m
@@ -10666,6 +10730,356 @@ inline void bv_add_2_packed(const float* x0_in, const float* x1_in, const float*
         }
     }
     r_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+KAIRN_GEN_NOINLINE void bv_make_1_packed_end(double m, bool ok, double r, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const double rad_g = r + 0.0;
+    const double rad_d = m_e_ - m_e_;
+    const double rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= 0.0;
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const double fin_r_t = fin_q ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const double fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_r_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// ball vector bv_make_1(supplied c, supplied r) -> z, rr, finite: step bv_center_entry_1, record norm_step_1, radius bv_make_radius: in the lane order with the lanes of a register.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_make_1_packed(const double* c_in, std::size_t n, double r, double* z_out, double& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 2;
+    float64x2_t m_lane_ = vdupq_n_f64(0.0);
+    uint64x2_t ok_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 2) {
+        const float64x2_t c = vld1q_f64(c_in + i_);
+        // (step_z) = bv_center_entry_1(c)
+        const float64x2_t step_z = vaddq_f64(c, vdupq_n_f64(0.0));
+        vst1q_f64(z_out + i_, step_z);
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+        const float64x2_t rec_a = vabsq_f64(step_z);
+        const uint64x2_t rec_e = vceqq_f64(rec_a, rec_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+        const uint64x2_t rec_r_c = vcltq_f64(m_lane_, rec_a);
+        const float64x2_t rec_r = vbslq_f64(rec_r_c, rec_a, m_lane_);
+        const uint64x2_t rec_okr = vandq_u64(ok_lane_, rec_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    double m_lanes_[2];
+    uint64_t ok_lanes_[2];
+    vst1q_f64(m_lanes_, m_lane_);
+    vst1q_u64(ok_lanes_, ok_lane_);
+    double m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 2; ++j_) {
+        const double m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const double comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double c = c_in[i_];
+        // (step_z) = bv_center_entry_1(c)
+        const double step_z = c + 0.0;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const double rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const double rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_make_1_packed_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z_out)[i_] = 0.0;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+KAIRN_GEN_NOINLINE void bv_make_1_packed_end(float m, bool ok, float r, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const float rad_g = r + 0.0f;
+    const float rad_d = m_e_ - m_e_;
+    const float rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= 0.0f;
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const float fin_r_t = fin_q ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const float fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_r_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_make_1_packed(const float* c_in, std::size_t n, float r, float* z_out, float& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    float32x4_t m_lane_ = vdupq_n_f32(0.0f);
+    uint32x4_t ok_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const float32x4_t c = vld1q_f32(c_in + i_);
+        // (step_z) = bv_center_entry_1(c)
+        const float32x4_t step_z = vaddq_f32(c, vdupq_n_f32(0.0f));
+        vst1q_f32(z_out + i_, step_z);
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z)
+        const float32x4_t rec_a = vabsq_f32(step_z);
+        const uint32x4_t rec_e = vceqq_f32(rec_a, rec_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_a, rec_e)
+        const uint32x4_t rec_r_c = vcltq_f32(m_lane_, rec_a);
+        const float32x4_t rec_r = vbslq_f32(rec_r_c, rec_a, m_lane_);
+        const uint32x4_t rec_okr = vandq_u32(ok_lane_, rec_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    float m_lanes_[4];
+    uint32_t ok_lanes_[4];
+    vst1q_f32(m_lanes_, m_lane_);
+    vst1q_u32(ok_lanes_, ok_lane_);
+    float m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const float m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const float comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float c = c_in[i_];
+        // (step_z) = bv_center_entry_1(c)
+        const float step_z = c + 0.0f;
+        z_out[i_] = step_z;
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z)
+        const float rec_a = abs_bits(step_z);
+        const bool rec_e = rec_a == rec_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_a, rec_e)
+        const bool rec_r_c = rec_a > m;
+        const float rec_r = rec_r_c ? rec_a : m;
+        const bool rec_okr = ok & rec_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_make_1_packed_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z_out)[i_] = 0.0f;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
+    finite_out = rad_f_;
+}
+
+KAIRN_GEN_NOINLINE void bv_make_2_packed_end(double m, bool ok, double r, double& rad_out_, bool& fin_out_) noexcept {
+    volatile double m_v_ = m;
+    const double m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const double rad_g = r + 0.0;
+    const double rad_d = m_e_ - m_e_;
+    const double rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= 0.0;
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const double fin_r_t = fin_q ? rad_rz : std::numeric_limits<double>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const double fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<double>::infinity() > fin_r_a;
+    const double fin_r = fin_flag ? fin_r_t : std::numeric_limits<double>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// ball vector bv_make_2(stored c = (c0, c1), supplied r) -> z = (z0, z1), rr, finite: step bv_center_2, record norm_step_2, radius bv_make_radius: in the lane order with the lanes of a register.
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_make_2_packed(const double* c0_in, const double* c1_in, std::size_t n, double r, double* z0_out, double* z1_out, double& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 2;
+    float64x2_t m_lane_ = vdupq_n_f64(0.0);
+    uint64x2_t ok_lane_ = vceqq_f64(vdupq_n_f64(0.0), vdupq_n_f64(0.0));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 2) {
+        const float64x2_t c0 = vld1q_f64(c0_in + i_);
+        const float64x2_t c1 = vld1q_f64(c1_in + i_);
+        // (step_z0, step_z1) = bv_center_2(c0, c1)
+        const float64x2_t step_z0 = c0;
+        const float64x2_t step_z1 = c1;
+        vst1q_f64(z0_out + i_, step_z0);
+        vst1q_f64(z1_out + i_, step_z1);
+        // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+        const float64x2_t rec_r_a = vabsq_f64(step_z0);
+        const uint64x2_t rec_r_e = vceqq_f64(rec_r_a, rec_r_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+        const uint64x2_t rec_r_c = vcltq_f64(m_lane_, rec_r_a);
+        const float64x2_t rec_r = vbslq_f64(rec_r_c, rec_r_a, m_lane_);
+        const uint64x2_t rec_okr = vandq_u64(ok_lane_, rec_r_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    double m_lanes_[2];
+    uint64_t ok_lanes_[2];
+    vst1q_f64(m_lanes_, m_lane_);
+    vst1q_u64(ok_lanes_, ok_lane_);
+    double m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 2; ++j_) {
+        const double m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const double comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const double c0 = c0_in[i_];
+        const double c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_2(c0, c1)
+        const double step_z0 = c0;
+        const double step_z1 = c1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const double rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const double rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    double rad_r_;
+    bool rad_f_;
+    bv_make_2_packed_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile double*>(z0_out)[i_] = 0.0;
+            static_cast<volatile double*>(z1_out)[i_] = 0.0;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<double>::infinity();
+    finite_out = rad_f_;
+}
+KAIRN_GEN_NOINLINE void bv_make_2_packed_end(float m, bool ok, float r, float& rad_out_, bool& fin_out_) noexcept {
+    volatile float m_v_ = m;
+    const float m_e_ = m_v_;
+    // (rad_rz) = bv_make_radius(m_e_, r)
+    const float rad_g = r + 0.0f;
+    const float rad_d = m_e_ - m_e_;
+    const float rad_rz = rad_g + rad_d;
+    // (fin_r, fin_flag) = bv_make_finish(rad_rz, ok)
+    const bool fin_p = rad_rz >= 0.0f;
+    const bool fin_q = ok & fin_p;
+    // (fin_r, fin_flag) = norm_finish_1(rad_rz, fin_q)
+    const float fin_r_t = fin_q ? rad_rz : std::numeric_limits<float>::quiet_NaN();
+    // (fin_r, fin_flag) = fold_finish_1(fin_r_t)
+    const float fin_r_a = abs_bits(fin_r_t);
+    const bool fin_flag = std::numeric_limits<float>::infinity() > fin_r_a;
+    const float fin_r = fin_flag ? fin_r_t : std::numeric_limits<float>::quiet_NaN();
+    rad_out_ = fin_r;
+    fin_out_ = fin_flag;
+}
+// The whole space (every center zero, the radius +infinity) when the flag is false. A written array is exactly one
+// of the arrays read (in place) or overlaps none of them. Status: unverified.
+inline void bv_make_2_packed(const float* c0_in, const float* c1_in, std::size_t n, float r, float* z0_out, float* z1_out, float& rr_out, bool& finite_out) noexcept {
+    const std::size_t full_ = n - n % 4;
+    float32x4_t m_lane_ = vdupq_n_f32(0.0f);
+    uint32x4_t ok_lane_ = vceqq_f32(vdupq_n_f32(0.0f), vdupq_n_f32(0.0f));
+    for (std::size_t i_ = 0; i_ < full_; i_ += 4) {
+        const float32x4_t c0 = vld1q_f32(c0_in + i_);
+        const float32x4_t c1 = vld1q_f32(c1_in + i_);
+        // (step_z0, step_z1) = bv_center_2(c0, c1)
+        const float32x4_t step_z0 = c0;
+        const float32x4_t step_z1 = c1;
+        vst1q_f32(z0_out + i_, step_z0);
+        vst1q_f32(z1_out + i_, step_z1);
+        // (rec_r, rec_okr) = norm_step_2(m_lane_, ok_lane_, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m_lane_, ok_lane_, step_z0)
+        const float32x4_t rec_r_a = vabsq_f32(step_z0);
+        const uint32x4_t rec_r_e = vceqq_f32(rec_r_a, rec_r_a);
+        // (rec_r, rec_okr) = norm_combine(m_lane_, ok_lane_, rec_r_a, rec_r_e)
+        const uint32x4_t rec_r_c = vcltq_f32(m_lane_, rec_r_a);
+        const float32x4_t rec_r = vbslq_f32(rec_r_c, rec_r_a, m_lane_);
+        const uint32x4_t rec_okr = vandq_u32(ok_lane_, rec_r_e);
+        m_lane_ = rec_r;
+        ok_lane_ = rec_okr;
+    }
+    float m_lanes_[4];
+    uint32_t ok_lanes_[4];
+    vst1q_f32(m_lanes_, m_lane_);
+    vst1q_u32(ok_lanes_, ok_lane_);
+    float m = m_lanes_[0];
+    bool ok = ok_lanes_[0] != 0U;
+    for (std::size_t j_ = 1; j_ < 4; ++j_) {
+        const float m_next_ = m_lanes_[j_];
+        const bool ok_next_ = ok_lanes_[j_] != 0U;
+        // (comb_r, comb_okr) = norm_combine(m, ok, m_next_, ok_next_)
+        const bool comb_c = m_next_ > m;
+        const float comb_r = comb_c ? m_next_ : m;
+        const bool comb_okr = ok & ok_next_;
+        m = comb_r;
+        ok = comb_okr;
+    }
+    for (std::size_t i_ = full_; i_ < n; ++i_) {
+        const float c0 = c0_in[i_];
+        const float c1 = c1_in[i_];
+        // (step_z0, step_z1) = bv_center_2(c0, c1)
+        const float step_z0 = c0;
+        const float step_z1 = c1;
+        z0_out[i_] = step_z0;
+        z1_out[i_] = step_z1;
+        // (rec_r, rec_okr) = norm_step_2(m, ok, step_z0, step_z1)
+        // (rec_r, rec_okr) = norm_step_1(m, ok, step_z0)
+        const float rec_r_a = abs_bits(step_z0);
+        const bool rec_r_e = rec_r_a == rec_r_a;
+        // (rec_r, rec_okr) = norm_combine(m, ok, rec_r_a, rec_r_e)
+        const bool rec_r_c = rec_r_a > m;
+        const float rec_r = rec_r_c ? rec_r_a : m;
+        const bool rec_okr = ok & rec_r_e;
+        m = rec_r;
+        ok = rec_okr;
+    }
+    float rad_r_;
+    bool rad_f_;
+    bv_make_2_packed_end(m, ok, r, rad_r_, rad_f_);
+    if (!rad_f_) {
+        for (std::size_t i_ = 0; i_ < n; ++i_) {
+            static_cast<volatile float*>(z0_out)[i_] = 0.0f;
+            static_cast<volatile float*>(z1_out)[i_] = 0.0f;
+        }
+    }
+    rr_out = rad_f_ ? rad_r_ : std::numeric_limits<float>::infinity();
     finite_out = rad_f_;
 }
 

@@ -883,6 +883,9 @@ def claims(k, kernels):
                 err(f'finite_or_nan if={e["if"]}: the condition is a mask input')
             if 'steps' in e and (e['steps'] < 1 or g is None or len(g.limbs) != 1):
                 err(f'finite_or_nan steps={e["steps"]}: a number of steps up, at least 1, from a one-limb value')
+            if e.get('nonneg') and ('if' not in e or 'steps' in e or g is None or len(g.limbs) != 1):
+                err('finite_or_nan nonneg: the finish of a constructor, of a one-limb value under a mask (if=), '
+                    'without steps')
         elif kind == 'maximum':
             output(e['of'], kind, one=True)
             for a in e['args']:
@@ -1768,15 +1771,19 @@ def bv_rules(fd, kernels, reserved):
         if g.name not in used:
             err(f'scalar {g.name}: neither the step nor the radius takes it', g.name)
     # The finish: the radius and the state's mask to the radius returned and the flag, finite_or_nan
-    # under that mask with no step (norm_finish_1).
+    # under that mask with no step (norm_finish_1); for a constructor, which is given a radius that may
+    # be negative, also the test of its sign (nonneg: bv_make_finish).
+    make = bool(fd.ensures) and fd.ensures[0]['kind'] == 'makes_ball_vector'
     finish = kernels.get(fd.finish[0]) if fd.finish else None
     fin = [e for e in finish.ensures if e['kind'] == 'finite_or_nan'] if finish else []
     if finish is None or [_shape(g) for g in finish.inputs] != [(1, ir.LIMB), (1, ir.MASK)] or \
             [_shape(g) for g in finish.outputs] != [(1, ir.LIMB), (1, ir.MASK)] or len(fin) != 1 or \
             fin[0].get('if') != finish.inputs[1].name or fin[0].get('steps', 0) != 0 or \
-            fin[0]['of'] != finish.outputs[0].name or fin[0]['flag'] != finish.outputs[1].name:
+            fin[0]['of'] != finish.outputs[0].name or fin[0]['flag'] != finish.outputs[1].name or \
+            bool(fin[0].get('nonneg')) != make:
         err('finish: a kernel of the radius and a mask to the radius and a flag, finite_or_nan under the mask with no '
-            'step (norm_finish_1)')
+            'step (norm_finish_1); for a constructor (makes_ball_vector), and only there, with nonneg '
+            '(bv_make_finish)')
     elif fd.finish[1] != (rname[0], ok.name):
         err(f'finish: (R, FLAG) = {finish.name}({rname[0]}, {ok.name}): the radius and the state\'s mask')
     if [_shape(g) for g in fd.outputs] != [(1, ir.LIMB), (1, ir.MASK)] or \
@@ -1786,8 +1793,60 @@ def bv_rules(fd, kernels, reserved):
         return errs
     errs += _map_r3(fd, step, kernels)
     errs += _bv_radius_r3(fd, radius, kernels)
-    errs += _bv_claims(fd, kernels, step, radius, h)
+    errs += (_bv_make_claims if make else _bv_claims)(fd, kernels, step, radius, h)
     errs += _fold_theorem(fd)
+    return errs
+
+
+def _bv_make_claims(fd, kernels, step, radius, host):
+    """The claims of a constructor of a BallVector (milestone2.md, "BallVector", "Values"): it reads one
+    array, the centers given, and one scalar, the radius the program supplies; its value is the array's
+    name, the step's value of what it passes; the centers are required canonical (two limbs) or any
+    value (one limb); it claims makes_ball_vector of the centers written, the radius and the flag, from
+    the array and the scalar."""
+    errs = []
+
+    def err(msg):
+        errs.append(RuleError(fd.name, '-', CLAIMS, msg))
+
+    if not fd.extended:
+        err('a constructor of a ball vector is of the extended domain: it may return the whole space')
+    if len(fd.arrays) != 1 or len(fd.scalars) != 1 or len(fd.scalars[0].limbs) != 1 or \
+            fd.roles[fd.scalars[0].name] != 'supplied':
+        err('a constructor reads one array, the centers given, and one scalar of one limb, the radius the program '
+            'supplies')
+        return errs
+    c, r = fd.arrays[0], fd.scalars[0]
+    written = fd.writes[0]
+    if fd.value != c.name:
+        err(f'value: the value of a center written is the center given, {c.name}')
+    elif step.value is None or _renamed(expr.parse(step.value), {g.name: a for a, g in zip(fd.step[1], step.inputs)}) \
+            != expr.parse(fd.value):
+        err(f'value {fd.value!r}: not the value of the step {step.name} of what the fold passes it')
+    want = [('canonical', c.name)] if len(c.limbs) > 1 else []
+    if [tuple(x) for x in fd.requires] != want:
+        err(f'requires: a constructor requires {"canonical " + c.name if want else "nothing"} of the centers given '
+            '(any value of the format for one limb)')
+    passed = dict(zip((g.name for g in step.inputs), fd.step[1]))
+    for x in step.requires:
+        if x[0] not in ('normalized', 'canonical') or passed.get(x[1]) != c.name or not want:
+            err(f'the step {step.name} requires {" ".join(x)}, which no requirement of the fold gives')
+    if radius.requires:
+        err(f'the radius {radius.name} of a constructor requires nothing: it is given any value')
+    if fd.radius[1] != (fd.states[0].name, r.name):
+        err(f'radius: RZ = {radius.name}({fd.states[0].name}, {r.name}), the largest magnitude and the radius given')
+    outs = [g.name for g in fd.outputs]
+    want_e = {'kind': 'makes_ball_vector', 'center': written.name, 'radius': outs[0], 'flag': outs[1],
+              'from': {'center': c.name, 'radius': r.name}}
+    if fd.ensures != [want_e]:
+        err(f'ensures: a constructor claims makes_ball_vector {written.name} {outs[0]} from={c.name},{r.name} '
+            f'flag={outs[1]}, and nothing else')
+    if fd.min_precision is None or fd.min_precision < 1:
+        err('min_precision: an integer, at least 1')
+    else:
+        for k in (step, radius, kernels[host.step[0]], kernels[fd.finish[0]]):
+            if (k.min_precision or 1) > fd.min_precision:
+                err(f'min_precision {fd.min_precision}: the claims of {k.name} hold from precision {k.min_precision} on')
     return errs
 
 

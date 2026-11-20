@@ -414,6 +414,25 @@ Definition bv_add_radius_2_spec : Prop :=
   fmt emin prec rz /\
   ((rx + ry) + (((m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)) / (1 - ((3 / (1 - (4 * u prec))) * u prec ^ 2))) * (1 + u prec))) <= rz.
 
+(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). Status: unverified. *)
+Definition bv_center_entry_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall c : R,
+  fmt emin prec c ->
+  let z := bv_center_entry_1 emin prec tie_even c in
+  fmt emin prec z /\
+  z = RN emin prec c.
+
+(* bv_make_radius: the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values). Status: unverified. *)
+Definition bv_make_radius_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall m r : R,
+  fmt emin prec m ->
+  fmt emin prec r ->
+  let rz := bv_make_radius emin prec tie_even m r in
+  fmt emin prec rz /\
+  rz = RN emin prec r.
+
 (* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). Status: unverified. *)
 Definition bv_scale_radius_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -1048,6 +1067,15 @@ Definition ball_sub_2_spec : Prop :=
   fmt emin prec rz /\
   normalized_2 emin prec cz0 cz1 /\
   (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x - y) - (cz0 + cz1)) <= rz).
+
+(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). Status: unverified. *)
+Definition bv_center_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall x0 x1 : R,
+  normalized_2 emin prec x0 x1 ->
+  let '(z0, z1) := bv_center_2 x0 x1 in
+  normalized_2 emin prec z0 z1 /\
+  (z0 + z1) = (x0 + x1).
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). Status: proved. *)
 Definition eq_2_1_spec : Prop :=

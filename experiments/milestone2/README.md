@@ -11,13 +11,13 @@ wrong on what was run.
 ## How it works
 
 - `kernels/` holds the proposed kernels as descriptions in the generator's own format
-  (`gen/README.md`), 6 of them, and two proposed folds: `ball_split_1`, `conv_radius`, and the
-  constructor of a BallVector, `bv_make_1.fold` and `bv_make_2.fold` with their kernels
-  `bv_center_entry_1`, `bv_center_2`, `bv_make_radius` and `bv_make_finish`, whose listing the page
-  does not give (`ballvector.py`). They carry no claims: the claims of this milestone need
-  vocabulary that the generator does not have yet. The radii `bv_add_radius_2` and
+  (`gen/README.md`): `ball_split_1` and `conv_radius`. They carry no claims: the claims of this
+  milestone need vocabulary that the generator does not have yet. The radii `bv_add_radius_2` and
   `bv_scale_radius_2` that were proposed here are in `gen/kernels` now, with their forms of one limb
-  and their claims (`batch.py` reads them from there). The 41 that the generator has now
+  and their claims (`batch.py` reads them from there), and so is the constructor of a BallVector,
+  `bv_make_1.fold` and `bv_make_2.fold` with their kernels `bv_center_entry_1`, `bv_center_2`,
+  `bv_make_radius` and `bv_make_finish`, whose listing the page does not give and which was proposed
+  here (`ballvector.py` runs it from there; its output is the same). The 45 that the generator has now
   are in `gen/kernels`, with their claims, and only there: the nine of the first wave
   (`two_sum_ord`, the four directed sums, the two directed products and the two scalings of a ball
   by a power of two); three bound kernels of the folds' stage (`bound_sum_2`, `bound_dot_2`,
@@ -29,7 +29,7 @@ wrong on what was run.
   `interval_mid_rad_1` and `ball_to_interval_1`, as they were written here); and the eight of the
   accumulator (`acc_add_k`, `acc_mul_k`, `acc_merge_k`, and `acc_radius_k`, whose listing the page
   does not give and which was proposed here: `accumulator.py`); and the four radii of BallVector
-  (`bv_add_radius_k`, `bv_scale_radius_k`). Three of those were written again there, with the same values, so that
+  (`bv_add_radius_k`, `bv_scale_radius_k`), and the four kernels of its constructor. Three of those were written again there, with the same values, so that
   no fused result is negated, directly or through a select (a rule of the generator): the lower
   bounds of `mul_dir_2_2` and `add_down_2_2` are minus the rounding up of $d - z_1$ (for the sum,
   $dd - z_1$, with $dd$ the radius or zero), and the radius of `ball_from_interval_2` adds minus
@@ -65,7 +65,7 @@ compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`)
 | `constants.py` | the constants $A$ and $B$ of the two-limb bounds in `binary64` and `binary32` | Bounds of two limbs |
 | `ballvector.py` | the constructor of a BallVector proposed in `kernels/` (`bv_make_1`, `bv_make_2`): its result is canonical; it is the whole space exactly when the radius given is negative, a NaN or $+\infty$, or a center is not finite; otherwise the centers and the radius given; the same in every order | BallVector |
 | `accumulator.py` | the kernels of the accumulator: the inequality the radius rests on, $\sum_i \lvert x_i y_i\rvert \le (1+u)^{n+2}(a + n\eta/2)$, after random sequences of `add`, `add_product` and `merge`; the proposed `acc_radius` above its claimed expression, and the chain error $\le$ radius with `bound_dot_k`; in the format itself, the sum of magnitudes $+\infty$ while the running sum is finite, and the radius's mask false for a sum of magnitudes that is not finite | The accumulator |
-| `rules_report.py` | what the generator's rules say of the 47 proposed kernels (6 in `kernels/`, 41 in `gen/kernels`), and the operations of each after inlining | Experiments |
+| `rules_report.py` | what the generator's rules say of the 47 proposed kernels (2 in `kernels/`, 45 in `gen/kernels`), and the operations of each after inlining | Experiments |
 
 ## Rerun
 

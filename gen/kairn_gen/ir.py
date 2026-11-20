@@ -698,8 +698,12 @@ def _ensures(words, where):
         # steps up from the value (steps=). The fields are written only when there are.
         entry = {'kind': kind, 'of': words[1], 'flag': words[2][len('flag='):]}
         for w in words[3:]:
+            if w == 'nonneg' and 'nonneg' not in entry:
+                # The finish of a constructor of a BallVector: the value is also not negative.
+                entry['nonneg'] = True
+                continue
             key, eq, val = w.partition('=')
-            if not eq or key not in ('if', 'steps') or key in entry or not val:
+            if not eq or key not in ('if', 'steps') or key in entry or not val or 'nonneg' in entry:
                 raise DescriptionError(f'{where}: bad or repeated field {w!r} in finite_or_nan entry')
             entry[key] = _steps(val, where) if key == 'steps' else val
         return entry
@@ -838,6 +842,15 @@ def _ensures(words, where):
         if exact_when is not None:
             entry['exact_when'] = exact_when
         return entry
+    if kind == 'makes_ball_vector' and len(words) == 5:
+        # The constructor of a BallVector (milestone2.md, "BallVector", "Values"): the centers written,
+        # the radius and the flag, from the centers and the radius given.
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
+        if not m or not words[4].startswith('flag=') or not words[4][len('flag='):]:
+            raise DescriptionError(f'{where}: expected "makes_ball_vector CENTERS RADIUS from=CENTERS,RADIUS '
+                                   f'flag=MASK", got {" ".join(words)!r}')
+        return {'kind': kind, 'center': words[1], 'radius': words[2], 'flag': words[4][len('flag='):],
+                'from': {'center': m.group(1), 'radius': m.group(2)}}
     if kind == 'encloses_entries' and len(words) >= 5:
         # A ball vector (milestone2.md, "BallVector"): the centers written, the one radius and the
         # mask that the result is a finite ball vector; each ball name an array of centers and a

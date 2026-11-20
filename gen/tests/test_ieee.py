@@ -38,6 +38,8 @@ PROGRAMS += ['acc_merge_1', 'acc_merge_2']
 PROGRAMS += ['add_1_1', 'sub_1_1', 'add_entry_step_1', 'sub_entry_step_1', 'scale_step_1', 'mul_pow2_step_1',
              'axpy_step_1', 'axpy_entry_step_1', 'mul_1_1', 'add_entry_step_2', 'sub_entry_step_2', 'scale_step_2',
              'mul_pow2_step_2', 'axpy_step_2', 'axpy_entry_step_2', 'axpy_step_2_1', 'axpy_entry_step_2_1']
+# And the step of the constructor of a BallVector of one limb (ieee: bridge).
+PROGRAMS += ['bv_center_entry_1']
 
 
 def read(rel):
@@ -421,9 +423,11 @@ class CheckedFiles(unittest.TestCase):
     # Then the steps of the maps got their bridges (ieee: bridge, and spec for those of two limbs):
     # the programs of sixteen steps and of mul_1_1, and their statements, were added, every earlier
     # line kept. Then the radius kernels of BallVector (unverified): their definitions were added,
-    # every earlier line kept.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '0ab8f64e67f29149dbdf92a1bf754e617e3dc27825a891b88866c9ad5762c8b5',
-               'proofs/gen/IeeeStatements.v': '8239608aca271a04a602527b71621f009f4c0ecfff4dc4857522c703440563e1'}
+    # every earlier line kept. Then the four kernels of the constructor of BallVector (unverified):
+    # their definitions, the program of bv_center_entry_1 and their statements were added, every
+    # earlier line kept.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '0777485c3a9ca3ea4dcd9be0ce511a9762764e1e259e77a8fc00cda803fa6450',
+               'proofs/gen/IeeeStatements.v': 'b686c804770bb690542c803ec59344017a39f24ae65f18fdc49e63b3d65873c9'}
 
 
     def test_the_checked_files(self):

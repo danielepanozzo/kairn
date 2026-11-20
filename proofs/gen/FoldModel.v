@@ -128,6 +128,32 @@ Definition bv_add_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
 Definition bv_add_2_radius (rx : R) (ry : R) (xys : list ((R * R) * (R * R))) : R :=
   bv_add_radius_2 emin prec choice (fst (fold_seq bv_add_2_record (0, true) (bv_add_2_map xys))) rx ry.
 
+(* bv_make_1: a ball vector; arrays supplied c; scalars supplied r; it writes z by the step bv_center_entry_1, records the largest magnitude of a center by norm_step_1, and gives the radius by bv_make_radius. *)
+Definition bv_make_1_step (c : R) : R :=
+  bv_center_entry_1 emin prec choice c.
+
+Definition bv_make_1_map (cs : list R) : list R :=
+  map bv_make_1_step cs.
+
+Definition bv_make_1_record (mok : R * bool) (w_ : R) : R * bool :=
+  norm_step_1 (fst mok) (snd mok) w_.
+
+Definition bv_make_1_radius (r : R) (cs : list R) : R :=
+  bv_make_radius emin prec choice (fst (fold_seq bv_make_1_record (0, true) (bv_make_1_map cs))) r.
+
+(* bv_make_2: a ball vector; arrays stored c; scalars supplied r; it writes z by the step bv_center_2, records the largest magnitude of a center by norm_step_2, and gives the radius by bv_make_radius. *)
+Definition bv_make_2_step (c : R * R) : R * R :=
+  bv_center_2 (fst c) (snd c).
+
+Definition bv_make_2_map (cs : list (R * R)) : list (R * R) :=
+  map bv_make_2_step cs.
+
+Definition bv_make_2_record (mok : R * bool) (w_ : R * R) : R * bool :=
+  norm_step_2 (fst mok) (snd mok) (fst w_) (snd w_).
+
+Definition bv_make_2_radius (r : R) (cs : list (R * R)) : R :=
+  bv_make_radius emin prec choice (fst (fold_seq bv_make_2_record (0, true) (bv_make_2_map cs))) r.
+
 (* bv_scale_1: a ball vector; arrays stored x; scalars stored rx, supplied a; it writes z by the step scale_step_1, records the largest magnitude of a center by norm_step_1, and gives the radius by bv_scale_radius_1. *)
 Definition bv_scale_1_step (a : R) (x : R) : R :=
   scale_step_1 emin prec choice x a.

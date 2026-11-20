@@ -1036,10 +1036,74 @@ centers, which are stored and canonical: it needs no kernel of its own, and the 
 calls `norm_upper_k`. It bounds the magnitudes of the centers, not of the members: for the whole
 space it returns $0$ (one limb) or $\eta$ (two), with the flag true.
 
-**Not yet generated.** The constructor, whose listing the page does not give, is proposed in
-`experiments/milestone2/kernels/` (`bv_make_1.fold`, `bv_make_2.fold`; checked by `ballvector.py`):
-its finish must also test the sign of the radius, which `norm_finish_1` does not and whose claim the
-vocabulary has no word for. `bv_neg_k`, `bv_mul_pow2_k` (its radius needs the exactness of every
+**The constructor**, `bv_make_1` and `bv_make_2` (the page says what a constructor returns and gives no
+listing: "a constructor given a radius that is negative or a NaN, or a center that is not finite,
+returns the whole space"), is a ball vector of the same kind, first proposed in
+`experiments/milestone2/kernels/` and checked there by `ballvector.py`, which now runs the generated
+descriptions:
+
+```
+fold:          bv_make_1
+arrays:        supplied c
+scalars:       supplied r
+state:         m, mask ok
+step:          z = bv_center_entry_1(c)          z = guard(c)
+record:        (m, ok) = norm_step_1(m, ok, z)
+combine:       (m, ok) = norm_combine(m, ok, m, ok)
+radius:        rz = bv_make_radius(m, r)         g = guard(r); d = sub(m, m); rz = add(g, d)
+finish:        (rr, finite) = bv_make_finish(rz, ok)
+                                                 p = le(0, rz); q = and(ok, p); (r, flag) = norm_finish_1(rz, q)
+orders:        sequential, lanes
+writes:        z
+output:        rr
+output:        mask finite
+value:         c
+ensures:       makes_ball_vector z rr from=c,r flag=finite
+```
+
+The centers and the radius come from the program (rule R3), so the step and the radius guard them;
+`bv_make_2` takes its centers as `Expansion<T, 2>`, canonical and stored, and copies them
+(`bv_center_2`, the claims of `neg_2` with the value `x`), and requires `canonical c`. A center that is
+not finite makes `m` infinite or the mask false; `m - m` carries an infinite `m` into the radius as a
+NaN; and the finish tests, besides the mask and the finiteness of the radius, its sign: `le(0, rz)` is
+false for a negative radius and for a NaN, true for either zero. That is the one thing a finish of the
+other ball vectors does not do (their radii are nonnegative by construction), and its claim is
+`finite_or_nan` with the field `nonneg` ([Claims of Milestone 2](#claims-of-milestone-2)). A radius of
+$+\infty$ is not finite: the whole space. The rules of a ball vector apply, with these differences
+(`rules._bv_make_claims`): one array and one scalar of one limb, supplied, the radius; the value the
+array's name; `canonical` of the centers for two limbs and nothing for one; the radius kernel requires
+nothing and takes `(m, r)`; the finish claims `nonneg` (and a finish that claims it is refused in any
+other ball vector); the one claim is `makes_ball_vector`. Centers given as two arrays of limbs of the
+program's own, which need not be normalized, are not covered: their step would be `make_2_limbs`, which
+has no real-model statement.
+
+In Rocq the model is that of every ball vector. `FoldStatements.v` has `F_spec`: for a radius and
+centers that are numbers of the format (normalized pairs for two limbs), `F_radius r cs = r` and the
+centers written are those given, `Forall2 (fun c w_ => w_ = c) cs (F_map cs)`. `IeeeFoldStatements.v`
+has `F_seq_ieee_spec` and `F_lanes_ieee_spec`, for any radius and any centers (canonical pairs for two
+limbs): the result is canonical (V1); `flag_ = true` exactly when `r_` is finite; `flag_ = true` exactly
+when `finite r /\ 0 <= val r` and the leading limb of every center is finite; and then the values of
+the centers written are those given, limb for limb, and `val r_ = val r`:
+
+```coq
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_make_2_seq prec emax ... r cs in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_2 (fst w_) (snd w_) r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_2 (fst w_) (snd w_) r_) ws_)) /\
+  (flag_ = true <-> finite r_) /\
+  (flag_ = true <-> finite r /\ 0 <= val r /\ Forall (fun c => finite (fst c)) cs) /\
+  Forall2 (fun c w_ =>
+    let '(c0, c1) := c in
+    let '(z0, z1) := w_ in
+    flag_ = true -> val z0 = val c0 /\ val z1 = val c1) cs ws_ /\
+  (flag_ = true -> val r_ = val r).
+```
+
+Their proofs need: the claims of the step (a guard is the value; a copy is the pair), of the record
+and the combination (as for every ball vector), of `bv_make_radius` in the IEEE model ($m - m$ is $+0$
+for a finite $m$ and a NaN otherwise, and the guarded radius plus $+0$ is the radius, a $-0$ made
+$+0$), and of `bv_make_finish` (`finite_or_nan` with `nonneg`).
+
+**Not yet generated.** `bv_neg_k`, `bv_mul_pow2_k` (its radius needs the exactness of every
 entry, a state that is not a maximum), `bv_axpy_k` (two maxima, of the scaled centers and of the
 results), and `bv_conv_k` with `conv_radius` (a convolution with the maxima of its two operands)
 come later.
@@ -2017,6 +2081,34 @@ true` (and no `"map"`):
 - In the extended domain, as for a map: the order makes no difference, `F_seq`, `F_lanes` with any
   $W$ and `F_packed` write the same centers and return the same radius and flag.
 
+**The constructors** `bv_make_1` and `bv_make_2` are ball vectors too (`"bv": true`), with one array of
+the centers given and one scalar, the radius given, both `supplied` for one limb (`bv_make_2` reads its
+centers `stored`: they are `Expansion<T, 2>`), and a claim of a kind of their own:
+
+```json
+{"kind": "makes_ball_vector", "center": "z", "radius": "rr", "flag": "finite", "from": {"center": "c", "radius": "r"}}
+```
+
+- **`makes_ball_vector`**, `center` the array written, `radius` and `flag` the outputs, `from` the array
+  read (the centers given) and the scalar (the radius given). `requires` is empty for one limb, where a
+  center is any value of the format, and `canonical(c)` for two limbs; the radius is any value of the
+  format. The result is canonical (V1 above). The flag is true exactly when the radius returned is
+  finite. The result is the whole space (every limb of every center written a zero, the radius
+  $+\infty$, the flag false) exactly when the radius given is negative, a NaN or $+\infty$ (so $-\infty$
+  too), or the leading limb of a center given is not finite. Otherwise the centers written are those
+  given, limb for limb, and the radius is the radius given, as values: the sign of a zero is not part
+  of the claim (a center or a radius of $-0$ comes out as $+0$ for one limb, through the guard).
+- **`finite_or_nan` with `nonneg`**, `{"kind": "finite_or_nan", "of": "r", "flag": "flag", "if": "ok",
+  "nonneg": true}`, of `bv_make_finish`: as `finite_or_nan` with `if`, and the value must also not be
+  negative: the flag is true exactly when the mask `if` is true, the value is finite and it is not below
+  zero (either zero is not); the output is then the value, otherwise a NaN. The field is written only
+  where it is true, with `if` and without `steps`.
+
+The other kernels of the constructors claim kinds that exist: `bv_center_entry_1` (`guard(c)`) and
+`bv_make_radius` (`rz = guard(r) + (m - m)`, value `r`) claim `rounded` to nearest of their value,
+which is the value itself, in the finite domain; `bv_center_2` (a copy) claims what `neg_2` claims with
+the value `x`.
+
 The radius kernels are kernels with an entry `upper` with a value of its own, as the bound kernels
 are, whose value may hold `abs( )` of an input (`abs(a)*rx`), now in the language of that value:
 `bv_add_radius_2` claims `{"kind": "upper", "of": "rz", "value":
@@ -2402,9 +2494,11 @@ centers. The result is, for each limb array of centers written, most significant
 entries, then the radius, then the flag: for `bv_add_1 binary64 seq 2 0x1p-4 0x1p-4 0x1p+0 0x1p+1
 0x1p+0 0x1p+0` ($x = (1, 2)$, $y = (1, 1)$, both of radius $\tfrac1{16}$) the completion
 ` -> 0x1p+1 0x1.8p+1 R 1`, R the radius, a little above $\tfrac18$; when the flag is `0` the centers
-are `0x0p+0` and the radius `inf`, the whole space. The interpreter, the compiled runner (`F_seq`,
-`F_lanes` for any W) and the packed runner (`F_packed`, its register's W only) complete them, with
-the same bits.
+are `0x0p+0` and the radius `inf`, the whole space. The constructor has the same form, its one scalar
+the radius given: `bv_make_1 binary64 seq 2 0x1p-4 -0x1p+0 0x1p+1` is completed with
+` -> -0x1p+0 0x1p+1 0x1p-4 1`, and the same request with the radius `-0x1p-4` with
+` -> 0x0p+0 0x0p+0 inf 0`. The interpreter, the compiled runner (`F_seq`, `F_lanes` for any W) and the
+packed runner (`F_packed`, its register's W only) complete them, with the same bits.
 
 **Convolutions** have two lengths, and the sequential order only:
 

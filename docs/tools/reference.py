@@ -130,8 +130,9 @@ KIND_OPTIONAL = {"rounded": {"when", "zero_factor", "value"}, "error": {"exact_w
                  "ball_of_interval": {"smallest_radius"},
                  # gaps, or a value of its own (the exported bounds of the folds), under a mask (if)
                  "upper": {"gaps", "value", "if"},
-                 # the finish of a fold of maxima: under a mask (if), the value stepped up (steps)
-                 "finite_or_nan": {"if", "steps"}}
+                 # the finish of a fold of maxima: under a mask (if), the value stepped up (steps); of a
+                 # constructor of a BallVector, the value also not negative (nonneg)
+                 "finite_or_nan": {"if", "steps", "nonneg"}}
 # Which kinds and requirements each domain has a reading of.
 DOMAIN_KINDS = {
     "finite": {"normalized", "error", "leading_rounded", "rounded", "upper", "predicate", "encloses",
@@ -1786,7 +1787,8 @@ class Site:
                 for _ in range(x.get("steps", 0)):
                     s = "\\mathrm{succ}(%s)" % s
                 gate = ("$%s$ is true and " % name_tex(x["if"])) if "if" in x else ""
-                lines += ["$%s$ is true exactly when %s$%s$ is finite." % (f, gate, s),
+                sign = " and not negative (a zero of either sign is not)" if x.get("nonneg") else ""
+                lines += ["$%s$ is true exactly when %s$%s$ is finite%s." % (f, gate, s, sign),
                           "When it is, $%s = %s$." % (r, s),
                           "Otherwise $%s$ is a NaN." % r]
             elif kind == "finite_or_nan":
@@ -2229,6 +2231,13 @@ class Site:
             gate = name_tex(x["if"]) if "if" in x else None
             when = ("\\text{when } %s \\text{ is true and } %s \\text{ is finite}" % (gate, s) if gate else
                     "\\text{when } %s \\text{ is finite}" % s)
+            if x.get("nonneg"):
+                # The finish of a constructor of a BallVector (architecture.md, "Ball vectors").
+                return ("The result of the constructor of a BallVector from its radius $%s$ and the mask $%s$ that no "
+                        "center was a NaN: $%s$ when $%s$ is true and $%s$ is finite and not negative, with the flag "
+                        "$%s$ true; otherwise a NaN and the flag false, and the constructor returns the whole space:"
+                        "\n\n$$%s = %s \\ %s \\text{ and } %s \\ge 0, \\qquad %s = \\mathrm{NaN} \\text{ otherwise}.$$"
+                        % (s, gate, s, gate, s, name_tex(f), name_tex(r), s, when, s, name_tex(r)))
             return ("The result of a fold of maxima from its final state, the largest magnitude $%s$%s: $%s$ when "
                     "%sit is finite, with the flag $%s$ true; otherwise a NaN and the flag false (the canonical NaN "
                     "of [When something is not finite](../developer/design/milestone2.md#sum-dot-axpy-convolution))"

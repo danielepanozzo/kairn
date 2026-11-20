@@ -560,6 +560,10 @@ KERNELS = {
     "bv_add_radius_2": page("ball-vectors", "The radius of the sum or the difference of two BallVectors of two limbs"),
     "bv_scale_radius_1": page("ball-vectors", "The radius of a BallVector of one limb times a number of T"),
     "bv_scale_radius_2": page("ball-vectors", "The radius of a BallVector of two limbs times a number of T"),
+    "bv_center_entry_1": page("ball-vectors", "A center of one limb given to the constructor of a BallVector"),
+    "bv_center_2": page("ball-vectors", "A center of two limbs given to the constructor of a BallVector"),
+    "bv_make_radius": page("ball-vectors", "The radius given to the constructor of a BallVector"),
+    "bv_make_finish": page("ball-vectors", "The result of the constructor of a BallVector: the radius given, or NaN"),
 }
 
 

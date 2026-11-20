@@ -397,6 +397,18 @@ Definition bv_add_radius_2 (m rx ry : R) : R :=
   let rz := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
   rz.
 
+(* bv_center_entry_1: the guard of a constructor (milestone2.md, BallVector, Values). *)
+Definition bv_center_entry_1 (c : R) : R :=
+  let z := rnd (c + 0) in
+  z.
+
+(* bv_make_radius: the guard of a constructor, and the test of the centers by their largest magnitude (milestone2.md, BallVector, Values). *)
+Definition bv_make_radius (m r : R) : R :=
+  let g := rnd (r + 0) in
+  let d := rnd (m - m) in
+  let rz := rnd (g + d) in
+  rz.
+
 (* bv_scale_radius_1: the radius lines of ball_scale_1 (Milestone 1, second radius design), at the largest magnitude of a center of the result (milestone2.md, BallVector). *)
 Definition bv_scale_radius_1 (m rx a : R) : R :=
   let aa := Rabs a in
@@ -854,6 +866,12 @@ Definition ball_sub_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
   let '(n0, n1) := neg_2 cy0 cy1 in
   let '(cz0, cz1, rz) := ball_add_2 cx0 cx1 rx n0 n1 ry in
   (cz0, cz1, rz).
+
+(* bv_center_2: a copy of a canonical pair (milestone2.md, BallVector, Values). *)
+Definition bv_center_2 (x0 x1 : R) : R * R :=
+  let z0 := x0 in
+  let z1 := x1 in
+  (z0, z1).
 
 (* eq_2_1: limbs compared in order (Milestone 1 listing). *)
 Definition eq_2_1 (x0 x1 a : R) : bool :=

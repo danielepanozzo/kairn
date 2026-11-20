@@ -51,6 +51,15 @@ Definition axpy_step_1_ieee_lead_spec : Prop :=
   let z := IeeeModel.axpy_step_1 prec emax nan_plus nan_fma a x y in
   finite z -> finite a /\ finite x /\ finite y.
 
+(* bv_center_entry_1, the leading limb of its result: finite only if those of its operands are. *)
+Definition bv_center_entry_1_ieee_lead_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus : nan2 prec emax),
+  forall c : binary_float prec emax,
+  let z := IeeeModel.bv_center_entry_1 prec emax nan_plus c in
+  finite z -> finite c.
+
 (* dot_step_1, the leading limb of its result: finite only if those of its operands are. *)
 Definition dot_step_1_ieee_lead_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -176,6 +185,14 @@ Definition axpy_step_2_1_ieee_lead_spec : Prop :=
   forall a x0 x1 y0 y1 : binary_float prec emax,
   let '(z0, z1) := IeeeModel.axpy_step_2_1 prec emax nan_plus nan_minus nan_opp nan_fma a x0 x1 y0 y1 in
   finite z0 -> finite a /\ finite x0 /\ finite y0.
+
+(* bv_center_2, the leading limb of its result: finite only if those of its operands are. *)
+Definition bv_center_2_ieee_lead_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax),
+  forall x0 x1 : binary_float prec emax,
+  let '(z0, z1) := IeeeModel.bv_center_2 prec emax x0 x1 in
+  finite z0 -> finite x0.
 
 (* mul_pow2_step_2, the leading limb of its result: finite only if those of its operands are. *)
 Definition mul_pow2_step_2_ieee_lead_spec : Prop :=
@@ -1563,6 +1580,78 @@ Definition bv_add_2_lanes_ieee_spec : Prop :=
      let '((x0, x1), (y0, y1)) := xy in
      Rabs (((Rabs ((val x0 + val x1) + (val y0 + val y1))) + val rx) + val ry) <= bpow radix2 (emax - 2)) xys ->
    finite r_).
+
+(* bv_make_1, the sequential order, in the IEEE model: the constructor of a BallVector (a canonical result; the whole space exactly when the radius given is negative, a NaN or +infinity or a center given is not finite; otherwise the centers and the radius given). Status: unverified. *)
+Definition bv_make_1_seq_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (r : binary_float prec emax) (cs : list (binary_float prec emax)),
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_make_1_seq prec emax nan_plus nan_minus nan_abs nan_const r cs in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_1 w_ r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_1 w_ r_) ws_)) /\
+  (flag_ = true <-> finite r_) /\
+  (flag_ = true <-> finite r /\ 0 <= val r /\ Forall (fun c => finite c) cs) /\
+  Forall2 (fun c w_ =>
+    let z := w_ in
+    flag_ = true -> val z = val c) cs ws_ /\
+  (flag_ = true -> val r_ = val r).
+
+(* bv_make_1, the lane order, for every number of lanes W, in the IEEE model: the constructor of a BallVector (a canonical result; the whole space exactly when the radius given is negative, a NaN or +infinity or a center given is not finite; otherwise the centers and the radius given). Status: unverified. *)
+Definition bv_make_1_lanes_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (W : nat) (r : binary_float prec emax) (cs : list (binary_float prec emax)),
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_make_1_lanes prec emax nan_plus nan_minus nan_abs nan_const W r cs in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_1 w_ r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_1 w_ r_) ws_)) /\
+  (flag_ = true <-> finite r_) /\
+  (flag_ = true <-> finite r /\ 0 <= val r /\ Forall (fun c => finite c) cs) /\
+  Forall2 (fun c w_ =>
+    let z := w_ in
+    flag_ = true -> val z = val c) cs ws_ /\
+  (flag_ = true -> val r_ = val r).
+
+(* bv_make_2, the sequential order, in the IEEE model: the constructor of a BallVector (a canonical result; the whole space exactly when the radius given is negative, a NaN or +infinity or a center given is not finite; otherwise the centers and the radius given). Status: unverified. *)
+Definition bv_make_2_seq_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (r : binary_float prec emax) (cs : list (binary_float prec emax * binary_float prec emax)),
+  Forall (fun c => canonical_2 (fst c) (snd c)) cs ->
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_make_2_seq prec emax nan_plus nan_minus nan_abs nan_const r cs in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_2 (fst w_) (snd w_) r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_2 (fst w_) (snd w_) r_) ws_)) /\
+  (flag_ = true <-> finite r_) /\
+  (flag_ = true <-> finite r /\ 0 <= val r /\ Forall (fun c => finite (fst c)) cs) /\
+  Forall2 (fun c w_ =>
+    let '(c0, c1) := c in
+    let '(z0, z1) := w_ in
+    flag_ = true -> val z0 = val c0 /\ val z1 = val c1) cs ws_ /\
+  (flag_ = true -> val r_ = val r).
+
+(* bv_make_2, the lane order, for every number of lanes W, in the IEEE model: the constructor of a BallVector (a canonical result; the whole space exactly when the radius given is negative, a NaN or +infinity or a center given is not finite; otherwise the centers and the radius given). Status: unverified. *)
+Definition bv_make_2_lanes_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (W : nat) (r : binary_float prec emax) (cs : list (binary_float prec emax * binary_float prec emax)),
+  Forall (fun c => canonical_2 (fst c) (snd c)) cs ->
+  let '(ws_, r_, flag_) := IeeeFoldModel.bv_make_2_lanes prec emax nan_plus nan_minus nan_abs nan_const W r cs in
+  ((finite r_ /\ 0 <= val r_ /\ Forall (fun w_ => ball_finite_2 (fst w_) (snd w_) r_) ws_) \/
+   (r_ = infinity prec emax false /\ Forall (fun w_ => ball_whole_2 (fst w_) (snd w_) r_) ws_)) /\
+  (flag_ = true <-> finite r_) /\
+  (flag_ = true <-> finite r /\ 0 <= val r /\ Forall (fun c => finite (fst c)) cs) /\
+  Forall2 (fun c w_ =>
+    let '(c0, c1) := c in
+    let '(z0, z1) := w_ in
+    flag_ = true -> val z0 = val c0 /\ val z1 = val c1) cs ws_ /\
+  (flag_ = true -> val r_ = val r).
 
 (* bv_scale_1, the sequential order, in the IEEE model: V1 to V4 and the flag. Status: unverified. *)
 Definition bv_scale_1_seq_ieee_spec : Prop :=

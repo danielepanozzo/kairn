@@ -519,13 +519,15 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
   interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1
   acc_add_1 acc_add_2 acc_mul_1 acc_mul_2 acc_merge_1 acc_merge_2 acc_radius_1 acc_radius_2
-  bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2)
+  bv_add_radius_1 bv_add_radius_2 bv_scale_radius_1 bv_scale_radius_2
+  bv_center_entry_1 bv_center_2 bv_make_radius bv_make_finish)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
   add_1 add_1_entry add_2 add_2_entry sub_1 sub_1_entry sub_2 sub_2_entry axpy_1 axpy_1_entry axpy_2 axpy_2_entry
   axpy_2_1 axpy_2_1_entry scale_1 scale_2 mul_pow2_map_1 mul_pow2_map_2
   norm_upper_1 norm_upper_2
   conv_1 conv_2
-  bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2)
+  bv_add_1 bv_add_2 bv_sub_1 bv_sub_2 bv_scale_1 bv_scale_2
+  bv_make_1 bv_make_2)
 # The kernels that no public operation calls yet and that the public interface's runner lists in
 # none of its lists (api/CMakeLists.txt, api/coverage.cmake): the kernels of the folds' stage,
 # whose public functions (sum, dot, the bounds as functions of n) come with BallVector. They are

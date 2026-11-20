@@ -45,6 +45,8 @@ MAPS = {'add_1', 'add_1_entry', 'add_2', 'add_2_entry', 'sub_1', 'sub_1_entry', 
         'mul_pow2_map_1', 'mul_pow2_map_2'}
 # The ball vectors, maps of the centers with the state of a fold of maxima (test_bv.py).
 BVS = {'bv_add_1', 'bv_add_2', 'bv_sub_1', 'bv_sub_2', 'bv_scale_1', 'bv_scale_2'}
+# And the constructors of a BallVector (test_bv.py).
+BVS |= {'bv_make_1', 'bv_make_2'}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1044,6 +1046,8 @@ class Printers(unittest.TestCase):
         parts = {self.ks.folds[n].step[0] for n in FOLDS} | {self.ks.folds[n].combine[0] for n in FOLDS}
         # And the steps of the maps (their combination is the operation and).
         parts |= {self.ks.folds[n].step[0] for n in MAPS}
+        # And the steps of the ball vectors (most are steps of maps).
+        parts |= {self.ks.folds[n].step[0] for n in BVS}
         self.assertIn('   let s := FoldModel.norm_upper_2_lanes W vs in\n'
                       '   let r_ := succ radix2 (FLT_exp (ieee_emin prec emax) prec) (fst s) in\n'
                       '   let v_ := fold_right Rmax 0 (map (fun x => (Rabs (fst x + snd x))) vs) in\n'
