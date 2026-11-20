@@ -29,8 +29,11 @@
    - the theorems about the folds that have no generated statement: that a fold of the
      model with overflow is the fold of the real model whenever its result is finite
      (theories/FoldTransfer.v), what holds of the bound kernels beyond their generated
-     statements (theories/BoundKernels.v), and that the exported bound covers the error
-     of each fold in each order (theories/FoldGuarantee.v);
+     statements (theories/BoundKernels.v), that the exported bound covers the error
+     of each fold in each order (theories/FoldGuarantee.v), and the folds in the IEEE
+     model, which the generator does not print yet: the models are written by hand in
+     theories/IeeeFolds.v from the generated IEEE models of the kernels, with the
+     statement of the flag for each fold and order;
    - the theorem of a real-model statement whose kernel description cannot name it yet:
      dot_step_2, whose error entry has the form T (relative to the terms of the value).
      The generator writes the constants of every proved kernel into
@@ -50,6 +53,7 @@ From Kairn Require Import DirectedSum DirectedProd BallPow2 Rectangle IeeeProduc
 From Kairn Require Import IeeeDirected IeeeDirectedProd IeeeEntry.
 From Kairn Require Import IeeeTwoExecutions.
 From Kairn Require Import StepKernels FoldTransfer BoundKernels FoldGuarantee.
+From Kairn Require Import IeeeFolds.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
    theories/IeeeEFT.v). *)
@@ -480,3 +484,48 @@ Print Assumptions dot_1_seq_bound.
 Print Assumptions dot_1_lanes_bound.
 Print Assumptions dot_2_seq_bound.
 Print Assumptions dot_2_lanes_bound.
+
+(* The folds in the IEEE model (theories/IeeeFolds.v). The steps: a leading limb that is not
+   finite stays not finite, and from finite operands a finite leading limb gives the values
+   of the real model. *)
+Print Assumptions add_1_1_dead.
+Print Assumptions add_1_1_live.
+Print Assumptions sum_entry_step_1_dead.
+Print Assumptions sum_entry_step_1_live.
+Print Assumptions dot_step_1_dead.
+Print Assumptions dot_step_1_live.
+Print Assumptions add22i_lead.
+Print Assumptions add22i_live.
+Print Assumptions addfast22i_lead.
+Print Assumptions addfast22i_live.
+Print Assumptions mul22i_lead.
+Print Assumptions mul22i_live.
+Print Assumptions sum_2_entry_step_ieee_live.
+Print Assumptions sum_fast_2_entry_step_ieee_live.
+Print Assumptions dot_2_step_ieee_dead.
+Print Assumptions dot_2_step_ieee_live.
+
+(* A fold of such steps with its finish, for one and two limbs and both orders. *)
+Print Assumptions seq_1.
+Print Assumptions lanes_1.
+Print Assumptions seq_2.
+Print Assumptions lanes_2.
+
+(* Each fold: if the flag is true, every element and every state was finite and the result
+   is that of the real model, valid and within its bound; otherwise every limb is a NaN. *)
+Print Assumptions sum_1_seq_ieee_correct.
+Print Assumptions sum_1_lanes_ieee_correct.
+Print Assumptions sum_1_entry_seq_ieee_correct.
+Print Assumptions sum_1_entry_lanes_ieee_correct.
+Print Assumptions dot_1_seq_ieee_correct.
+Print Assumptions dot_1_lanes_ieee_correct.
+Print Assumptions sum_2_seq_ieee_correct.
+Print Assumptions sum_2_lanes_ieee_correct.
+Print Assumptions sum_2_entry_seq_ieee_correct.
+Print Assumptions sum_2_entry_lanes_ieee_correct.
+Print Assumptions sum_fast_2_seq_ieee_correct.
+Print Assumptions sum_fast_2_lanes_ieee_correct.
+Print Assumptions sum_fast_2_entry_seq_ieee_correct.
+Print Assumptions sum_fast_2_entry_lanes_ieee_correct.
+Print Assumptions dot_2_seq_ieee_correct.
+Print Assumptions dot_2_lanes_ieee_correct.

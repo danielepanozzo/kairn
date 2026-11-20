@@ -62,7 +62,8 @@ lists:
   (`IeeeProduct.v`), with what follows for the kernels whose only fused operations are products
   (`IeeeTwoExecutions.v`); and the theorems of the folds, `F_seq_correct` and `F_lanes_correct`
   per fold `F` (`FoldSums.v`), of their steps, finishes and bound kernels (`StepKernels.v`,
-  `IeeeFoldFinish.v`, `BoundKernels.v`), and of the two together (`FoldGuarantee.v`,
+  `IeeeFoldFinish.v`, `BoundKernels.v`), of the two together (`FoldGuarantee.v`), and of the
+  folds in the model with overflow (`FoldTransfer.v`, `IeeeFolds.v`;
   [below](#sums-and-dot-products-of-arrays));
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
@@ -103,7 +104,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  70 files: no Admitted, admit, Axiom or Parameter
+  71 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -241,10 +242,23 @@ of a dot product of $n$ terms is $n$. These theorems are named `F_seq_bound` and
 | `dot_2` | `bound_dot_2` | $m \ge n$ | 4 |
 
 These are statements of the real model, where nothing overflows. The step of each fold is a
-kernel with a statement of its own (`StepKernels.v`). What a fold returns when an element is
-not finite or an operation overflows is decided by its finish, a kernel proved in the IEEE
-model (`IeeeFoldFinish.v`): the flag is true exactly when the leading limb of the final state is
-finite, the result is then that state, and otherwise every limb of the result is a NaN.
+kernel with a statement of its own (`StepKernels.v`).
+
+**When an element is not finite, or an operation overflows.** A fold returns its result
+through a finish, a kernel proved in the IEEE model (`IeeeFoldFinish.v`): the flag is true
+exactly when the leading limb of the final state is finite, the result is then that state, and
+otherwise every limb of the result is a NaN. What a true flag says about the whole loop is
+proved for models of the folds in the IEEE model that are written by hand (`IeeeFolds.v`), from
+the generated IEEE models of the kernels and the same two orders; the generator does not print
+these models yet. For every fold and both orders, on any elements (canonical pairs, for two
+limbs): if the flag is true, every element is finite, the result is finite and is the result of
+the real model on the values of the elements, hence valid and within the bound above, and in
+the sequential order the state after every element was finite; if the flag is false, every limb
+of the result is a NaN. So an infinity or a NaN among the elements, or an overflow anywhere in
+the loop, cannot give a finite wrong result. The argument is one induction for all folds
+(`FoldTransfer.v`), from two facts about one application of a step: a leading limb that is not
+finite stays not finite, and from a finite, valid state a finite leading limb means a finite
+element and the values of the real model.
 
 ## What a proof does not cover
 
