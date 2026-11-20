@@ -337,6 +337,18 @@ class Entry:
         if self.kind in EXTENDED_KINDS and not kernel.extended:
             raise ClaimsError("%s: this kind belongs to the extended domain, and the kernel has "
                               "no \"domain\": \"extended\"" % where)
+        # The kinds of the interval kernels, and makes_ball from the bounds of an interval
+        # (intervals.py).
+        if self.kind in IV.KNOWN:
+            IV.read_entry(self, kernel, raw, where)
+            return
+        if self.kind == "makes_ball" and isinstance(raw.get("from"), dict) \
+                and set(raw["from"]) == {"lower", "upper"}:
+            IV.read_makes_ball_interval(self, kernel, raw, where)
+            return
+        if self.kind == "makes_ball" and "midpoint_when" in raw:
+            raise ClaimsError("%s: midpoint_when is for a ball made from the bounds of an "
+                              "interval" % where)
         if self.kind == "holds":
             self._read_holds(kernel, raw, where)
             self.of = []
@@ -463,6 +475,9 @@ class Entry:
             if "exact_when" in raw:
                 self.exact_when = self._read_exact_when(kernel, raw, where)
         self.label = self._label()
+        if self.kind in ("bound", "rounded"):
+            # zero_factor (the interval kernels): a zero operand gives a zero output.
+            IV.read_zero_factor(self, kernel, raw, where)
 
     def _read_mask_name(self, kernel, name, where):
         """The name of a mask output (the `if` of the folds' stage)."""
@@ -595,7 +610,9 @@ class Entry:
         if outs[self.radius] != 1:
             raise ClaimsError("%s: the radius %s must be one limb" % (where, self.radius))
         balls = raw["balls"]
-        if not isinstance(balls, dict) or not balls:
+        # "balls": {} is an encloses of points (the interval kernels' add_ball_2_2), in the finite
+        # domain only.
+        if not isinstance(balls, dict) or (not balls and kernel.extended):
             raise ClaimsError("%s: balls must be a nonempty object" % where)
         ins = dict(kernel.inputs)
         self.balls = {}
@@ -811,6 +828,7 @@ class Kernel:
                 self.limb_products = (t[1][1], t[2][1])
         self.requires = []
         self.ball_requires = []
+        self.interval_requires = []
         # format(PROPERTY): requirements on the format, not on an input (format(half): the format
         # contains 1/2, eta <= 1/2).  A format without the property is outside the claims.
         self.format_requires = []
@@ -886,10 +904,13 @@ class Kernel:
                 self.requires.append(("ball", c, rr))
                 self.ball_requires.append((c, rr))
                 continue
+            if IV.read_requirement(self, r, limbs):
+                continue
             raise ClaimsError("%s: requirement %r is outside the vocabulary "
                               "(normalized(NAME), abs_ge(NAME, NAME), power_of_two(NAME), "
                               "nonneg(NAME), count(NAME), format(half); in the extended domain "
                               "canonical(NAME), ball(CENTER, RADIUS))" % (self.name, r))
+        IV.finish_requirements(self)
         ens = raw.get("ensures")
         if not isinstance(ens, list):
             raise ClaimsError("%s: ensures must be a list" % self.name)
@@ -907,6 +928,8 @@ class Kernel:
             # finish of a fold takes the fold's state, whatever it is).
             covered = {r[1] for r in self.requires if r[0] == "canonical"}
             covered |= {c for c, _ in self.ball_requires}
+            # The bounds of an interval() of two limbs are canonical by that requirement.
+            covered |= {n for pair in self.interval_requires for n in pair}
             any_limbs = bool(self.ensures) and all(e.kind == "finite_or_nan" for e in self.ensures)
             for n, l in self.inputs:
                 if l > 1 and n not in self.masks and n not in covered and not any_limbs:
@@ -1133,6 +1156,8 @@ class Claims:
         self.check_instances()
         self.link_cores()
         self.link_constants()
+        # The constants of the claims of the interval kernels, rel and abs (intervals.py).
+        IV.link_constants(self)
         # The folds (architecture.md, "Claims of Milestone 2", "Folds"): a second list, absent
         # when there is none.  A fold whose claims cannot be read is set aside as a kernel is.
         self.folds = {}
@@ -1311,3 +1336,11 @@ def load_claims(path):
     except json.JSONDecodeError as ex:
         raise ClaimsError("claims %s are not valid JSON: %s" % (path, ex))
     return Claims(data, path)
+
+
+# The interval kernels (intervals.py): their kinds, and the fields they add to kinds that exist.
+# Imported last: intervals.py reads this module's ClaimsError and readers.
+from . import intervals as IV  # noqa: E402
+Entry.KNOWN.update(IV.KNOWN)
+for _kind, _fields in IV.ADDED_FIELDS.items():
+    Entry.KNOWN[_kind] = Entry.KNOWN[_kind] | _fields

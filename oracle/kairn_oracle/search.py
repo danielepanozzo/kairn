@@ -102,6 +102,17 @@ def _pow2(fmt, e):
 # ---------------------------------------------------------------------------
 # A kernel in a format
 
+def repair_intervals(kernel, vals):
+    """The bounds of an interval() requirement exchanged when they are finite and reversed (the
+    interval kernels)."""
+    for r in kernel.requires:
+        if r[0] != "interval":
+            continue
+        lo, hi = vals[r[1]], vals[r[2]]
+        if all(type(v) is int for v in lo + hi) and sum(lo) > sum(hi):
+            vals[r[1]], vals[r[2]] = hi, lo
+
+
 class Problem:
     """A kernel in a format as the search and the shrinker see it: its operands and their roles,
     the requirements every case must satisfy, and the text of a case. A kernel of the extended
@@ -112,9 +123,17 @@ class Problem:
         self.kernel = kernel
         self.fmt = fmt
         from . import gen5
+        from . import gen6
         self.valid5 = None
         try:
-            if gen5.family_of(kernel) is not None:
+            if gen6.family_of(kernel) is not None:
+                # The interval kernels: their own families (gen6.py), whose cases are checked by
+                # gen6.valid6 (the search keeps the finite ones).
+                self.view = kernel
+                self.shape = gen6.Shape6(kernel)
+                self.make, self.strata = gen6.make_case, tuple(self.shape.strata)
+                self.valid5 = gen6.valid6
+            elif gen5.family_of(kernel) is not None:
                 # The kernels of the folds' stage: their own families (the bounds' count, the
                 # steps of the dot products, the finishes).
                 self.view = kernel
@@ -148,7 +167,7 @@ class Problem:
                 raise SearchError("%s: inputs of more than two limbs are not searched" % kernel.name)
             elif ("power_of_two", n) in req:
                 role = "pow2"
-            elif ("nonneg", n) in req:
+            elif ("nonneg", n) in req or any(n == r for _c, r in kernel.ball_requires):
                 role = "radius"
             elif ("count", n) in req:
                 role = "count"
@@ -281,6 +300,7 @@ class Problem:
         for big, small in self.abs_ge:
             if abs(sum(vals[big])) < abs(sum(vals[small])) and self.limbs[big] == self.limbs[small]:
                 vals[big], vals[small] = vals[small], vals[big]
+        repair_intervals(self.kernel, vals)
         if not self.valid(vals):
             return None
         return vals, {(n, i) for n, i in negz if vals[n][i] == 0}

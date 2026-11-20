@@ -64,7 +64,11 @@ class Case:
         self.pr = problem
         self.fmt = problem.fmt
         self.kernel = problem.kernel
-        if self.kernel.extended:
+        from . import gen6
+        if gen6.family_of(self.kernel) is not None:
+            # The interval kernels: their requirements (interval(), not_nan()) by gen6.valid6.
+            self._valid = lambda vals: gen6.valid6(self.fmt, self.kernel, vals)
+        elif self.kernel.extended:
             from . import gen3
             self._valid = lambda vals: gen3.valid_ext(self.fmt, self.kernel, vals)
         else:
@@ -127,6 +131,7 @@ class Case:
         for big, small in pr.abs_ge:
             if abs(sum(vals[big])) < abs(sum(vals[small])):
                 vals[big], vals[small] = vals[small], vals[big]
+        S.repair_intervals(self.kernel, vals)
         if not self._valid(vals):
             return None
         return vals, frozenset((n, i) for n, i in negz if vals[n][i] == 0)

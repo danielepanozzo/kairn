@@ -447,7 +447,14 @@ class RandomGen:
         self.valid = valid
         check_format(kernel, fmt)
         from . import gen5
-        if gen5.family_of(kernel) is not None:
+        from . import gen6
+        if gen6.family_of(kernel) is not None:
+            # The interval kernels (gen6.py).
+            self.shape = gen6.Shape6(kernel)
+            known, schedule = self.shape.strata, self.shape.schedule
+            self.make = gen6.make_case
+            self.valid = gen6.valid6
+        elif gen5.family_of(kernel) is not None:
             # The kernels of the folds' stage (gen5.py): the bounds, the steps of the dot
             # products and the finishes.
             self.shape = gen5.Shape5(kernel)
@@ -620,7 +627,9 @@ class ExhaustiveGen:
         # operand: its enumeration is gen3.ExtExhaustiveGen, a subclass, whose __init__ runs.
         if cls is ExhaustiveGen and getattr(kernel, "extended", False):
             from . import gen3
-            cls = gen3.ExtExhaustiveGen
+            from . import gen6
+            # The interval kernels take an interval as one operand (gen6.py).
+            cls = gen6.IvExhaustiveGen if gen6.enumerates(kernel) else gen3.ExtExhaustiveGen
         return super().__new__(cls)
 
     def __init__(self, kernel, fmt, restrictions=(), index_tags=True):

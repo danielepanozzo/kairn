@@ -176,6 +176,9 @@ class ExtPlan:
             if r[0] == "ball":
                 self.req.append(("ball", "requires ball(%s, %s)" % (r[1], r[2]),
                                  pl.in_slices[r[1]], pl.in_slices[r[2]][0]))
+            elif r[0] == "interval":
+                self.req.append(("interval", "requires interval(%s, %s)" % (r[1], r[2]),
+                                 pl.in_slices[r[1]], pl.in_slices[r[2]]))
             else:
                 self.req.append((r[0], "requires %s(%s)" % (r[0], r[1]), pl.in_slices[r[1]]))
         self.items = []
@@ -184,7 +187,9 @@ class ExtPlan:
         # then not needed for them.
         self.pinned = set()
         for e, c in zip(k.ensures, pl.entries):
-            if e.kind == "represents":
+            # The entries of the interval kernels (outward, set_bound, ...) judge their outputs
+            # on every line too.
+            if e.kind == "represents" or getattr(e, "iv", False):
                 for lo, hi in c["ranges"]:
                     self.pinned.update(range(lo, hi))
         # Statistics entries after those of the kernel's own ensures: one per entry of the core
@@ -213,7 +218,7 @@ class ExtPlan:
                                  for i in range(*pl.in_slices[nm])]
             elif e.kind == "predicate":
                 it["args"] = e.args
-            elif e.kind == "makes_ball":
+            elif e.kind == "makes_ball" and not getattr(e, "iv", False):
                 it["from_center"] = pl.in_slices[e.from_center]
                 it["from_radius"] = pl.in_slices[e.from_radius][0]
             elif e.kind == "neighbor":
@@ -259,6 +264,13 @@ class ExtPlan:
                 (lo, hi), ri = r[2], r[3]
                 if ball_state(fmt, x[lo:hi], x[ri]) is None:
                     return r[1]
+                continue
+            if kind in ("interval", "not_nan"):
+                # The requirements of the interval kernels (intervals.py).
+                from . import intervals as IV
+                why = IV.requirement_violated(self, x, r)
+                if why:
+                    return why
                 continue
             lo, hi = r[2]
             g = x[lo:hi]
@@ -798,3 +810,5 @@ KINDS = {"extends": k_extends, "encloses": k_encloses, "represents": k_represent
          "leading_rounded": k_finite_kind, "predicate": k_predicate, "rounded": k_rounded,
          "upper": k_upper, "neighbor": k_neighbor, "bound": k_bound,
          "finite_or_nan": k_finite_or_nan}
+# intervals.py adds the kinds of the interval kernels in the extended domain to KINDS when it is
+# imported (claims.py imports it).

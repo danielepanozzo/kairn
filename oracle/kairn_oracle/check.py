@@ -17,6 +17,7 @@ from . import expr as EX
 from . import extended as XT
 from . import fmt as F
 from . import folds as FO
+from . import intervals as IV
 from . import rational as RAT
 from .claims import ClaimsError, ew_condition_text, format_u_eta
 
@@ -540,7 +541,13 @@ class Plan:
                 c.update(self._encloses(e))
                 if e.exact_when is not None and self.in_scope:
                     c["exact"] = self._exact_conditions(e)
+            if getattr(e, "iv", False):
+                # The kinds of the interval kernels and the fields they add (intervals.py).
+                c.update(IV.plan_entry(self, e, claims))
             self.entries.append(c)
+        # In the finite domain, a kernel with an entry about an output group other than the first
+        # is judged entry by entry, each where its own group's leading limb is finite.
+        self.by_groups = IV.by_groups(kernel)
         # The extended domain (the non-finite layer) is judged by extended.py.
         self.ext = XT.ExtPlan(self, Plan) if kernel.extended and self.in_scope else None
 
@@ -859,6 +866,10 @@ class Checker:
             # Every entry holds under a mask (the bounds of the folds' stage): judged on every
             # line, by the masks (_conditional).
             self._conditional(pl, st, x, z, line)
+            return
+        if pl.by_groups:
+            # Entries about output groups other than the first (intervals.py).
+            IV.judge_by_groups(self, pl, st, x, z, line)
             return
         V = pl.value_fn(x) if pl.value_fn is not None else None
         # A rounding whose exact result in unbounded range is beyond Omega is outside the
@@ -1350,6 +1361,8 @@ class Checker:
 SECOND_WAVE_KINDS = {"rounded": Checker._rounded, "upper": Checker._upper,
                      "predicate": Checker._predicate, "encloses": Checker._encloses,
                      "neighbor": Checker._neighbor, "bound": Checker._bound}
+# outward in the finite domain (the interval kernels, intervals.py).
+SECOND_WAVE_KINDS.update(IV.FINITE_KINDS)
 
 
 # ---------------------------------------------------------------------------
