@@ -14,7 +14,11 @@ A number of several limbs stands for their exact sum: $c = c_0 + c_1$.
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `X.lower_as<T>()` | `Ball<T, 2>` | `T` | `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

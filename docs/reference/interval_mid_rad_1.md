@@ -12,7 +12,12 @@ $$[m - r, m + r] \supseteq [x_l, x_u].$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`interval_split_1`](interval_split_1.md), [`interval_to_ball_1`](interval_to_ball_1.md).
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `X.midpoint()` | `Interval<T, 1>` | `Expansion<T, 1>` | $m$; `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+| `X.radius()` | `Interval<T, 1>` | `T` | $r$; `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

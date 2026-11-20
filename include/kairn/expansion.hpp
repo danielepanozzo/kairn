@@ -44,6 +44,9 @@ struct Expansion;
 template <class T, int K>
 class Ball;
 
+template <class T, int K>
+class Interval;
+
 namespace detail {
 
 template <class X>
@@ -55,6 +58,20 @@ struct is_ball_t<Unverified<X>> : is_ball_t<X> {};
 /// Whether X is a Ball, marked or not.
 template <class X>
 concept ball = is_ball_t<std::remove_cvref_t<X>>::value;
+
+template <class X>
+struct is_interval_t : std::false_type {};
+template <class T, int K>
+struct is_interval_t<Interval<T, K>> : std::true_type {};
+template <class X>
+struct is_interval_t<Unverified<X>> : is_interval_t<X> {};
+/// Whether X is an Interval, marked or not.
+template <class X>
+concept interval = is_interval_t<std::remove_cvref_t<X>>::value;
+/// Whether X is a set, a Ball or an Interval, marked or not: the operators of numbers with a marked
+/// operand leave these to the operators of their own headers.
+template <class X>
+concept enclosure = ball<X> || interval<X>;
 
 /// Whether the limb x is finite, from its bit pattern (std::isfinite is not constexpr in C++20).
 template <limb T>
@@ -1314,9 +1331,9 @@ KAIRN_FORCEINLINE constexpr bool operator!=(const Expansion<T, 1>& x, const Expa
 // operators above.
 namespace detail {
 template <class X, class Y>
-concept marked_expansion_pair = (marked<X> || marked<Y>) && !ball<X> && !ball<Y>;
+concept marked_expansion_pair = (marked<X> || marked<Y>) && !enclosure<X> && !enclosure<Y>;
 template <class X, class Y>
-concept marked_expansion_rhs = marked<Y> && !marked<X> && !ball<X> && !ball<Y>;
+concept marked_expansion_rhs = marked<Y> && !marked<X> && !enclosure<X> && !enclosure<Y>;
 }  // namespace detail
 
 /// x + y with a marked operand: the same operation as without the marker, for any combination of
@@ -1344,7 +1361,7 @@ KAIRN_FORCEINLINE constexpr auto operator*(const X& x, const Y& y) noexcept
 /// -x with a marked operand.
 /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X>
-    requires detail::marked<X> && (!detail::ball<X>)
+    requires detail::marked<X> && (!detail::enclosure<X>)
 KAIRN_FORCEINLINE constexpr auto operator-(const X& x) noexcept -> decltype(detail::neg(detail::unmark(x))) {
     return detail::neg(detail::unmark(x));
 }

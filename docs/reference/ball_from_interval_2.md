@@ -12,7 +12,11 @@ $$Z \supseteq [l_o, h_i].$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `from_interval(lo, hi)` | `T`, `T` | `Ball<T, 2>` | `Ball<T, 2>::from_interval(lo, hi)`; the bounds are guarded ([rule R3](../developer/architecture.md#the-kernel-ir)); `constexpr`; rounds, and is preceded by the debug build's check of the rounding mode |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 

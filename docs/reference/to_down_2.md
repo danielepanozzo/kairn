@@ -17,6 +17,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$.
 | Form | Operands | Result | Note |
 |---|---|---|---|
 | `to_down(x)` | `Expansion<T, 2>` | `T` |  |
+| `X.lower_as<T>()` | `Interval<T, 2>` | `T` | the lower bound of an interval of two limbs, rounded down: $x$ is the bound; `constexpr`; does not round |
 
 `T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 

@@ -1024,6 +1024,27 @@ class R3OfTheKernels(unittest.TestCase):
     # The cores of those scalings are entry kernels, but, like BALL_CORES, the headers call them only
     # inside their full form: they have no kairn::finite form yet.
     POW2_CORES = {'ball_mul_pow2_1', 'ball_mul_pow2_2'}
+    # What the public headers of wave 2 call (include/kairn/interval.hpp, interval_operations.hpp,
+    # and the functions of ball.hpp of the enclosure interface; milestone2.md, "Interval kernels",
+    # "One enclosure interface"), each once, from the function that the comment beside it names:
+    # - the operations of Interval<T, 1> and Interval<T, 2>: the constructors, the negation, the
+    #   sum, the difference, the product, the hull and the intersection, of both numbers of limbs;
+    INTERVAL_OPERATIONS = {f'interval_{op}_{k}' for op in ('make', 'neg', 'add', 'sub', 'mul', 'hull', 'intersection')
+                           for k in (1, 2)}
+    # - and of one limb only, the two-limb listings being still to come: the midpoint and the radius
+    #   (one kernel for both), the split, and the conversions between Interval<T, 1> and Ball<T, 1>;
+    INTERVAL_ONE_LIMB = {'interval_mid_rad_1', 'interval_split_1', 'interval_to_ball_1', 'ball_to_interval_1'}
+    # - of a Ball: its bounds as numbers of T (lower_as, upper_as, and lower and upper of one limb),
+    #   the ball of two limbs from an interval of two T (Ball<T, 2>::from_interval), and the
+    #   narrowing of a ball of two limbs to one (Ball<T, 1>(X)).
+    ENCLOSURE_BALL = {'ball_lower_as_1', 'ball_upper_as_1', 'ball_lower_as_2', 'ball_upper_as_2', 'ball_from_interval_2',
+                      'ball_narrow_2_1'}
+    WAVE_2_CALLED = INTERVAL_OPERATIONS | INTERVAL_ONE_LIMB | ENCLOSURE_BALL
+    # Their building blocks are not entry kernels, and the headers call none of them directly: the
+    # directed product of one limb, the outward sums and products of two limbs and the extended
+    # product of bounds of two limbs are reached only through the interval kernels that call them.
+    INTERVAL_PARTS = {'mul_dir_1', 'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2', 'sub_down_2_2',
+                      'sub_up_2_2', 'mul_dir_2_2', 'mul_ext_2_2'}
 
     # The steps of the folds whose arrays the program supplies (milestone2.md, "Arrays that the
     # program fills"): those of the sums guard the element, those of the dot products only multiply
@@ -1035,10 +1056,12 @@ class R3OfTheKernels(unittest.TestCase):
     def test_entry_kernels(self):
         ks = common.kernels()
         # The interval kernels and the functions of a Ball of the enclosure interface
-        # (milestone2.md, "Interval kernels", "One enclosure interface"), for the public headers of
-        # wave 2, which do not call them yet: their inputs are limbs of objects (stored), or bounds
-        # the program gives (interval_make_1 and ball_from_interval_2, which guard them).
+        # (milestone2.md, "Interval kernels", "One enclosure interface"), which the public headers of
+        # wave 2 call (WAVE_2_CALLED): their inputs are limbs of objects (stored), or bounds the
+        # program gives (interval_make_1 and ball_from_interval_2, which guard them).
         wave_2 = TheKernels.WAVE_2_INTERVALS | TheKernels.WAVE_2_BALLS | TheKernels.WAVE_2_B1
+        self.assertEqual(wave_2, self.WAVE_2_CALLED)
+        self.assertEqual(self.INTERVAL_PARTS, TheKernels.WAVE_2_CORES | {'mul_dir_1', 'mul_ext_2_2'})
         self.assertEqual({n for n, k in ks.items() if k.entry},
                          self.CORES | self.BALL_CORES | TheKernels.NON_FINITE | self.WAVE_1 | self.FOLD_STEPS | wave_2)
 
@@ -1053,16 +1076,22 @@ class R3OfTheKernels(unittest.TestCase):
                 called |= set(re.findall(r'\bgen::(\w+)\(', text)) & set(ks)
                 for macro in re.findall(r'gen::NAME##(_\w+)\(', text):        # gen::NAME##_2_2(...)
                     called |= {n for n in ks if n.endswith(macro) and n[:-len(macro)] in ('lt', 'le', 'eq')}
-        # Of wave 1, the headers call every kernel but the two cores of the scalings; of the folds'
-        # stage, the maps and the intervals, nothing yet (FOLD_STEPS and wave 2 of test_entry_kernels
-        # are entry kernels that no header calls).
+        # Of wave 1, the headers call every kernel but the two cores of the scalings; of wave 2,
+        # every entry kernel (the interval kernels and the functions of a Ball of the enclosure
+        # interface: WAVE_2_CALLED); of the folds' stage and the maps, nothing yet (FOLD_STEPS of
+        # test_entry_kernels are entry kernels that no header calls).
         self.assertEqual(self.WAVE_1, self.WAVE_1_CALLED | self.POW2_CORES)
-        self.assertEqual(called - self.NOT_ENTRY_BUT_CALLED, self.CORES | TheKernels.NON_FINITE | self.WAVE_1_CALLED)
+        self.assertEqual(TheKernels.WAVE_2_INTERVALS | TheKernels.WAVE_2_BALLS | TheKernels.WAVE_2_B1,
+                         self.WAVE_2_CALLED)
+        self.assertEqual(called - self.NOT_ENTRY_BUT_CALLED,
+                         self.CORES | TheKernels.NON_FINITE | self.WAVE_1_CALLED | self.WAVE_2_CALLED)
         self.assertTrue(all(ks[n].entry for n in called - self.NOT_ENTRY_BUT_CALLED))
         self.assertFalse(any(ks[n].entry for n in self.NOT_ENTRY_BUT_CALLED))
         # The cores of the Ball operations and of the scalings by a power of two are reached only
-        # through their full forms: never called directly.
-        self.assertEqual(called & (self.BALL_CORES | self.POW2_CORES), set())
+        # through their full forms, and the building blocks of the intervals only through the
+        # interval kernels: never called directly.
+        self.assertEqual(called & (self.BALL_CORES | self.POW2_CORES | self.INTERVAL_PARTS), set())
+        self.assertFalse(any(ks[n].entry for n in self.INTERVAL_PARTS))
 
     def test_no_pending_guard(self):
         # add_2_1 guards its scalar in its first line (milestone1.md), and nothing is left pending.

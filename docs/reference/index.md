@@ -37,6 +37,7 @@ Making numbers and balls, and reading their parts.
 | `X.is_finite()` | `Ball<T, K>` | whether it is a finite ball (its radius is finite) | none |
 | `X.is_whole()` | `Ball<T, K>` | whether it is the whole line (its radius is $+\infty$) | none |
 | `X.is_empty()` | `Ball<T, K>` | whether it is the empty set (its radius is a NaN) | none |
+| `X.midpoint()` | `Ball<T, K>` | the midpoint of the interface Ball shares with Interval: the center | none |
 | `sign(x)` | `Expansion<T, K>` | $-1$, $0$ or $+1$, from the leading limb; $0$ for NaN | none |
 | `isfinite(x)` | `Expansion<T, K>` | whether the leading limb is finite | none |
 | `is_normalized(x)` | `Expansion<T, K>` | whether every limb is finite and, for two limbs, $x_0 + x_1$ rounds to $x_0$ | none |
@@ -151,40 +152,47 @@ Arithmetic on balls: the result contains every result on points of the operands;
 | not yet called by the public headers | - | contains every $x a$, normalized | [`ball_scale_2`](ball_scale_2.md) |
 | not yet called by the public headers | - | contains every $x c$, exactly when nothing underflows | [`ball_mul_pow2_1`](ball_mul_pow2_1.md) |
 | not yet called by the public headers | - | contains every $x c$, exactly when nothing underflows, normalized | [`ball_mul_pow2_2`](ball_mul_pow2_2.md) |
-| not yet called by the public headers | - | a lower bound of the ball, rounded; $+\infty$ for the empty ball | [`ball_lower_as_1`](ball_lower_as_1.md) |
-| not yet called by the public headers | - | a upper bound of the ball, rounded; $-\infty$ for the empty ball | [`ball_upper_as_1`](ball_upper_as_1.md) |
-| not yet called by the public headers | - | a lower bound of the ball; $+\infty$ for the empty ball; $\lvert l - (c - r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_lower_as_2`](ball_lower_as_2.md) |
-| not yet called by the public headers | - | a upper bound of the ball; $-\infty$ for the empty ball; $\lvert h - (c + r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_upper_as_2`](ball_upper_as_2.md) |
-| not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound | [`ball_from_interval_2`](ball_from_interval_2.md) |
-| not yet called by the public headers | - | a canonical ball that contains every $x$; the empty set and the whole line included | [`ball_narrow_2_1`](ball_narrow_2_1.md) |
-| not yet called by the public headers | - | the smallest interval of `T` that contains the ball; empty for the empty ball | [`ball_to_interval_1`](ball_to_interval_1.md) |
+| `X.lower_as<T>()`, `X.lower()` | `Ball<T, 1>` | a lower bound of the ball, rounded; $+\infty$ for the empty ball | [`ball_lower_as_1`](ball_lower_as_1.md) |
+| `X.upper_as<T>()`, `X.upper()` | `Ball<T, 1>` | a upper bound of the ball, rounded; $-\infty$ for the empty ball | [`ball_upper_as_1`](ball_upper_as_1.md) |
+| `X.lower_as<T>()` | `Ball<T, 2>` | a lower bound of the ball; $+\infty$ for the empty ball; $\lvert l - (c - r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_lower_as_2`](ball_lower_as_2.md) |
+| `X.upper_as<T>()` | `Ball<T, 2>` | a upper bound of the ball; $-\infty$ for the empty ball; $\lvert h - (c + r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_upper_as_2`](ball_upper_as_2.md) |
+| `from_interval(lo, hi)` | `T`, `T` | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound | [`ball_from_interval_2`](ball_from_interval_2.md) |
+| `Ball<T, 1>(X)` | `Ball<T, 2>` | a canonical ball that contains every $x$; the empty set and the whole line included | [`ball_narrow_2_1`](ball_narrow_2_1.md) |
 | `X.certainly_positive()` | `Ball<T, 1>` | whether every member is positive: $r < c$, the comparison of `T`; false for the empty set and the whole line | none |
 | `X.certainly_negative()` | `Ball<T, 1>` | whether every member is negative: $c < -r$, the comparison of `T`; false for the empty set and the whole line | none |
 | `X.certainly_zero()` | `Ball<T, 1>` | whether the ball is the point 0: $c = 0$ and $r = 0$; false for the empty set and the whole line | none |
 
 ## Interval operations
 
-Arithmetic on intervals of numbers of `T` and of two limbs: the result contains every result on members of the operands, unbounded and empty intervals included. No public operation computes them yet.
+`Interval<T, k>` (`kairn/interval.hpp`): its constructors, the arithmetic of intervals of numbers of `T` and of two limbs, whose result contains every result on members of the operands, unbounded and empty intervals included, the hull, the intersection, the midpoint, the radius and the split, and the conversions between an interval and a ball. The arithmetic is not `constexpr` (its code is where `KAIRN_ENCLOSURE_CODE` puts it); the rest is, and of it only the midpoint, the radius, the split and the conversions round.
 
 | C++ | Operands | What it gives | Kernel |
 |---|---|---|---|
-| not yet called by the public headers | - | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound | [`interval_make_1`](interval_make_1.md) |
-| not yet called by the public headers | - | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_1`](interval_neg_1.md) |
-| not yet called by the public headers | - | a canonical interval that contains every $x + y$; the range rounded outward | [`interval_add_1`](interval_add_1.md) |
-| not yet called by the public headers | - | a canonical interval that contains every $x - y$; the range rounded outward | [`interval_sub_1`](interval_sub_1.md) |
-| not yet called by the public headers | - | a canonical interval that contains every $x y$; the range rounded outward, within a step | [`interval_mul_1`](interval_mul_1.md) |
-| not yet called by the public headers | - | a canonical interval that contains every $x + y$; within $A\lvert v\rvert + B$ of the range | [`interval_add_2`](interval_add_2.md) |
-| not yet called by the public headers | - | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_2`](interval_neg_2.md) |
-| not yet called by the public headers | - | a canonical interval that contains every $x - y$; within $A\lvert v\rvert + B$ of the range | [`interval_sub_2`](interval_sub_2.md) |
-| not yet called by the public headers | - | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound | [`interval_make_2`](interval_make_2.md) |
-| not yet called by the public headers | - | a canonical interval that contains every $x y$; within $A\lvert v\rvert + B$ of the range | [`interval_mul_2`](interval_mul_2.md) |
-| not yet called by the public headers | - | the hull of the intervals, exactly | [`interval_hull_1`](interval_hull_1.md) |
-| not yet called by the public headers | - | the intersection of the intervals, exactly | [`interval_intersection_1`](interval_intersection_1.md) |
-| not yet called by the public headers | - | the hull of the intervals, exactly | [`interval_hull_2`](interval_hull_2.md) |
-| not yet called by the public headers | - | the intersection of the intervals, exactly | [`interval_intersection_2`](interval_intersection_2.md) |
-| not yet called by the public headers | - | the midpoint and radius, the values of IEEE 1788 when unbounded or empty | [`interval_mid_rad_1`](interval_mid_rad_1.md) |
-| not yet called by the public headers | - | a canonical ball that contains the interval; the whole line when it is unbounded | [`interval_to_ball_1`](interval_to_ball_1.md) |
-| not yet called by the public headers | - | two intervals that together are the operand, split at a point of it | [`interval_split_1`](interval_split_1.md) |
+| `X.lower_as<T>()` | `Interval<T, 2>` | $t = \mathrm{RD}(x)$ | [`to_down_2`](to_down_2.md) |
+| `X.upper_as<T>()` | `Interval<T, 2>` | $t = \mathrm{RU}(x)$ | [`to_up_2`](to_up_2.md) |
+| `Interval<T, 1>(lo, hi)`, `Interval<T, 1>(a)` | `Expansion<T, 1>`, `Expansion<T, 1>` | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound | [`interval_make_1`](interval_make_1.md) |
+| `-X` | `Interval<T, 1>` | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_1`](interval_neg_1.md) |
+| `X + Y`, `X += Y` | `Interval<T, 1>`, `Interval<T, 1>` | a canonical interval that contains every $x + y$; the range rounded outward | [`interval_add_1`](interval_add_1.md) |
+| `X - Y`, `X -= Y` | `Interval<T, 1>`, `Interval<T, 1>` | a canonical interval that contains every $x - y$; the range rounded outward | [`interval_sub_1`](interval_sub_1.md) |
+| `X * Y`, `X *= Y` | `Interval<T, 1>`, `Interval<T, 1>` | a canonical interval that contains every $x y$; the range rounded outward, within a step | [`interval_mul_1`](interval_mul_1.md) |
+| `X + Y`, `X += Y` | `Interval<T, 2>`, `Interval<T, 2>` | a canonical interval that contains every $x + y$; within $A\lvert v\rvert + B$ of the range | [`interval_add_2`](interval_add_2.md) |
+| `-X` | `Interval<T, 2>` | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_2`](interval_neg_2.md) |
+| `X - Y`, `X -= Y` | `Interval<T, 2>`, `Interval<T, 2>` | a canonical interval that contains every $x - y$; within $A\lvert v\rvert + B$ of the range | [`interval_sub_2`](interval_sub_2.md) |
+| `Interval<T, 2>(lo, hi)`, `Interval<T, 2>(a)` | `Expansion<T, 2>`, `Expansion<T, 2>` | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound | [`interval_make_2`](interval_make_2.md) |
+| `X * Y`, `X *= Y` | `Interval<T, 2>`, `Interval<T, 2>` | a canonical interval that contains every $x y$; within $A\lvert v\rvert + B$ of the range | [`interval_mul_2`](interval_mul_2.md) |
+| `X.hull(Y)` | `Interval<T, 1>`, `Interval<T, 1>` | the hull of the intervals, exactly | [`interval_hull_1`](interval_hull_1.md) |
+| `X.intersection(Y)` | `Interval<T, 1>`, `Interval<T, 1>` | the intersection of the intervals, exactly | [`interval_intersection_1`](interval_intersection_1.md) |
+| `X.hull(Y)` | `Interval<T, 2>`, `Interval<T, 2>` | the hull of the intervals, exactly | [`interval_hull_2`](interval_hull_2.md) |
+| `X.intersection(Y)` | `Interval<T, 2>`, `Interval<T, 2>` | the intersection of the intervals, exactly | [`interval_intersection_2`](interval_intersection_2.md) |
+| `X.midpoint()`, `X.radius()` | `Interval<T, 1>` | the midpoint and radius, the values of IEEE 1788 when unbounded or empty | [`interval_mid_rad_1`](interval_mid_rad_1.md) |
+| `Ball<T, 1>(X)` | `Interval<T, 1>` | a canonical ball that contains the interval; the whole line when it is unbounded | [`interval_to_ball_1`](interval_to_ball_1.md) |
+| `X.split()` | `Interval<T, 1>` | two intervals that together are the operand, split at a point of it | [`interval_split_1`](interval_split_1.md) |
+| `Interval<T, 1>(X)` | `Ball<T, 1>` | the smallest interval of `T` that contains the ball; empty for the empty ball | [`ball_to_interval_1`](ball_to_interval_1.md) |
+| `Interval<T, K>()` | none | the point 0: $[0, 0]$ | none |
+| `Interval<T, K>::empty()` | none | the empty set: $(+\infty, -\infty)$ | none |
+| `Interval<T, K>::whole()` | none | the whole line: $[-\infty, +\infty]$ | none |
+| `X.lower(), X.upper()` | `Interval<T, K>` | the stored bounds; $+\infty$ and $-\infty$ for the empty set | none |
+| `X.lower_as<T>(), X.upper_as<T>()` | `Interval<T, 1>` | the stored bounds; $+\infty$ and $-\infty$ for the empty set | none |
 
 ## Building blocks on T
 

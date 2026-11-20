@@ -14,7 +14,11 @@ A number of several limbs stands for their exact sum: $x_l = x_{l0} + x_{l1}$, $
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+| Form | Operands | Result | Note |
+|---|---|---|---|
+| `X.hull(Y)` | `Interval<T, 2>`, `Interval<T, 2>` | `Interval<T, 2>` | `constexpr`; does not round |
+
+`T` is `float` or `double`; the operations are in namespace `kairn`, header `kairn/kairn.hpp`. The operators and functions also accept the marker `kairn::unverified` on an operand, which they need while the kernel is UNVERIFIED.
 
 ## Requires
 
