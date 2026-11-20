@@ -271,7 +271,8 @@ Measured after the audit, which found them promised and missing
   moved to the full tier, which CI also runs on every change. Since then its test step takes 32
   to 65 s on Linux and 71 to 79 s on macOS; on Windows, where the hosted runners vary most, 71 to
   154 s over the first three runs with MSVC and clang-cl, over two minutes in three of those six
-  (open issue 20).
+  (open issue 20). Since each cross-check runs in one process (2026-11-20, in Milestone 2), 73
+  to 93 s over the first two runs with each compiler.
 - **Full tier** (`ctest --test-dir build/tests/full`): 407 to 409 more tests, 5 to 11 minutes; in
   CI on every push, in jobs of its own.
 - **The flag sets of a client** ([Testing](../testing.md#flag-sets)). The audit found that the
@@ -347,7 +348,7 @@ each.
 | In debug builds the scalar operations check the floating-point environment and fail loudly | Implemented, compiled once and never run by a test | Tested on every operation and state; the tests found four defects, now fixed |
 | An adversarial search that maximizes error over bound | None | Built; no claim violated, most bounds reached to within $10^{-15}$ |
 | A failing case is shrunk automatically and added to the quick tier | No shrinker, no stored cases | Built; 185 stored cases run in the quick tier |
-| The quick tier runs in under about two minutes per platform, in CI | 128 to 202 s on the hosted Windows runners | The tools' own tests moved to the full tier: under two minutes on Linux and macOS; on Windows 71 to 154 s, over two minutes in three of the first six job runs |
+| The quick tier runs in under about two minutes per platform, in CI | 128 to 202 s on the hosted Windows runners | The tools' own tests moved to the full tier: under two minutes on Linux and macOS; on Windows 71 to 154 s, over two minutes in three of the first six job runs. Since each cross-check runs in one process (2026-11-20): 73 to 93 s on Windows over the first two runs with each compiler |
 | Compile times are reported | Not measured | Measured |
 | The cost of the environment check is reported in Milestone 1 | Not measured | Measured: 2 to 21 cycles |
 | MSVC's stack cookie on one-limb values, an open issue for Milestone 1 | Not followed up | Cause found and fixed |
@@ -456,11 +457,14 @@ Tests:
 19. **No stratum is named for long carry chains**, which the brief lists. With two limbs a carry
     goes from one limb to the other, which the strata of cancellation, of ties and of limbs at
     the edge of the invariant exercise; a stratum of its own belongs with three limbs and more.
-20. **The quick tier on the hosted Windows runners** takes 71 to 154 s (three runs, MSVC and
+20. **The quick tier on the hosted Windows runners** took 71 to 154 s (three runs, MSVC and
     clang-cl), over the two-minute budget in half of them; the Linux and macOS jobs are under it,
-    and on the Windows test machine it takes 63 to 71 s. Running the generator of cases, the judge and the guards in one process per test
-    would save an estimated 15 to 20 s there without dropping a check; fewer cases per test would
-    save more and catch fewer planted faults.
+    and on the Windows test machine it took 63 to 71 s. Since 2026-11-20 each cross-check runs the
+    generator of cases, the judge and the guards in one process, without dropping a check
+    ([Testing](../testing.md#each-cross-check-in-one-process)): 57 to 58 s on the Windows test
+    machine, and on the hosted runners 73 and 80 s with MSVC, 81 and 93 s with clang-cl, in the
+    first two runs. A runner as slow as the slowest seen before the change would still be near
+    two minutes; what is left of a compiled cross-check is mostly its runners' handling of text.
 
 Scope:
 
@@ -491,9 +495,10 @@ the fifth was put as a default and not objected to.
    (`two_sum`, `two_prod`, the directed steps) become public, and constants are built at compile
    time from an integer or a rational with their error bound. The enclosure interface of `Ball`
    arrives there too, with `Interval`.
-5. **The quick tier on the hosted Windows runners** (open issue 20): each cross-check will run
-   in one process, which loses no check, in Milestone 2; until then those two jobs take up to
-   2.5 minutes.
+5. **The quick tier on the hosted Windows runners** (open issue 20): each cross-check runs in
+   one process since 2026-11-20, which loses no check; the test step of those two jobs took 73
+   to 93 s in the first two runs. Faster parsing and printing in the runners is the next step
+   if the hosted runs come near the budget again.
 
 Milestone 2 adds `Interval`, `BallVector` and the batch kernels, and ends with a pull request to
 the first client; deviation 19 adds work to Milestone 3.

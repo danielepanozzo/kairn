@@ -1080,6 +1080,10 @@ took 2.2 times as long as the fastest for the same tests: the saving is 11 to 25
 of the step, as the profile of the earlier estimate (15 to 20) had it. On such a runner the step
 would stay at about two minutes; on the others it has a margin of 40 seconds or more.
 
+**Measured in CI.** In the first two runs after the change the quick tier's test step took 73
+and 80 seconds with MSVC and 81 and 93 with clang-cl on the hosted Windows runners (before: 71
+to 154), 26 to 66 on Linux and 50 and 58 on macOS.
+
 **Nothing was lost.** On each machine and compiler (the Mac with Apple clang 21 and GCC 16, the
 Linux machine with GCC 13 and Clang 18, the Windows machine with MSVC), on the builds of before and
 after: the lists of tests of both tiers are identical (names, order, labels, timeouts); the

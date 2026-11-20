@@ -1107,11 +1107,14 @@ With $e_x$ for "$X$ is empty":
 
 The first four need no test of emptiness: with the empty set stored as $(+\infty, -\infty)$ the
 comparisons already give the standard's answers (two empty sets are `equal` and `less`; the
-empty set is a `subset` of everything and `precedes` everything). These definitions are those of
-the drafts as I read them, and
-they agree with the public test cases quoted in [IEEE 1788](#ieee-1788); they are to be checked
-against all of those cases before they ship. The relations are not provided for `Ball`, which
-has `contains`, the three-valued comparisons, and the conversion to an interval.
+empty set is a `subset` of everything and `precedes` everything). `equal`, `subset`, `interior`
+and `disjoint` are the four relations of IEEE Std 1788.1-2017, and the rows above agree with its
+Tables 4.5 and 4.6 entry by entry, the empty operands included. `less`, `precedes`,
+`strict_less` and `strict_precedes` are relations of the full standard, IEEE Std 1788-2015,
+which the simplified one does not require; their rows are those of the drafts as I read them,
+they agree with the public test cases quoted in [IEEE 1788](#ieee-1788), and they are to be
+checked against all of those cases before they ship. The relations are not provided for `Ball`,
+which has `contains`, the three-valued comparisons, and the conversion to an interval.
 
 *Smallest precision of this section:* that of the kernels composed, at most 4. *IEEE model:*
 every kernel of the interface is of the extended domain. *Risk:* low for `Interval` (comparisons
@@ -1786,29 +1789,41 @@ report. The names are [question 13](#open-questions).
 
 ## IEEE 1788
 
-The standard was not consulted (it is not public); the semantics come from the P1788 drafts and
-from implementations ([deviation 12](phase0/decisions.md#deviations-from-the-brief-flagged)).
-This section lists the points where an implementation of the set-based model can differ, what
-Kairn does at each, and what public material can check it. Kairn is *modeled on* IEEE 1788.1
-and is not a conforming implementation: it has no decorations.
+The text of IEEE Std 1788.1-2017 was read against this page on 2026-11-20; the owner obtained
+it. It is not public and is not in the repository, so what follows cites its clauses and does
+not quote them. Until then the semantics came from the P1788 drafts and from implementations
+([deviation 12](phase0/decisions.md#deviations-from-the-brief-flagged)). This section lists
+the points where an implementation of the set-based model can differ, what Kairn does at each,
+and what the standard says. Kairn is *modeled on* IEEE 1788.1 and is not a conforming
+implementation: the standard requires decorations, text input and output, and operations that
+Kairn does not have, and its one interval type has bounds of type `binary64`.
 
-| Point | Kairn | Same as the drafts and test cases? |
+| Point | Kairn | IEEE Std 1788.1-2017 |
 |---|---|---|
-| The empty set and its bounds | stored $(+\infty, -\infty)$; `lower` and `upper` return these | yes: `inf` of the empty set is $+\infty$, `sup` is $-\infty$ |
-| An operation on an empty operand | empty | yes |
-| $[0, 0] \cdot X$ for unbounded $X$; $0 \cdot \infty$ between bounds | $[0, 0]$; $0$ | yes |
-| The constructor on an invalid pair ($lo > hi$, a NaN, $[+\infty, +\infty]$) | the empty set, silently | the value yes; the standard also signals an exception, and its decorated form returns "not an interval". [Question 1](#open-questions) |
-| The sign of a zero bound | unspecified | **no**: the standard returns $-0$ for a zero lower bound and $+0$ for a zero upper bound |
-| Tightness of $+$, $-$, $\times$ on one limb | tightest for sums; for products outside the range below $2^{2p-1}\eta$, and at most one number wider inside it | **no** inside that range: the standard asks for the tightest result of the basic operations |
-| Two limbs | bounds within about $8u^2$ and $10u^2$ | not a type of the standard: bounds of two limbs are not a number format |
-| An overflow on bounded operands | one limb: $[\Omega, +\infty]$; two limbs: the infinite bound on the side of the overflow, or the whole line | one limb yes; two limbs is valid and not tight |
-| `mid` | bounded: within one rounding and $\eta$ of the midpoint, inside the interval; whole line 0; half-line $\pm\Omega$; empty NaN | the special values yes. For a bounded interval the standard asks for the midpoint rounded to nearest; Kairn's can differ in the last place when a halving underflows |
-| `rad` | the smallest radius for *Kairn's* midpoint; $+\infty$ if unbounded; empty NaN | the special values yes |
-| `wid`, `mag`, `mig` | not in the interface of this milestone | absent |
-| The comparison relations on empty and unbounded operands | the standard's table; for instance `less`, `interior` and `strict_less` of the whole line with itself are true, `precedes` false, and every relation of the empty set with itself is true | to be checked case by case against the test cases below |
-| Membership of $\pm\infty$ | false | yes |
-| Division by an interval containing zero, the reverse operations, square root, text | later milestones | absent |
-| Decorations, the "not an interval" value, exceptions | none | absent, by the brief |
+| The empty set and its bounds | stored $(+\infty, -\infty)$; `lower` and `upper` return these | the same: by convention the lower bound of the empty set is $+\infty$ and the upper $-\infty$ (3.2, Table 4.3), and that pair is its representation (7.1, 7.3) |
+| Members | real numbers; $\pm\infty$ can be bounds and are never members | the same (4.2) |
+| An operation on an empty operand | empty | the same: the range over an empty box is empty (4.4.4) |
+| $[0, 0] \cdot X$ for nonempty $X$, unbounded included | $[0, 0]$ | the same (the example of 4.4.4) |
+| The constructor from two numbers, $lo > hi$, $[+\infty, +\infty]$ or $[-\infty, -\infty]$ | the empty set, silently | the same value (6.7.5); the standard also signals an exception (6.1.4), and its decorated form returns "not an interval" |
+| The constructor from two numbers, a NaN bound | the whole line ([question 1](#open-questions), decided by the owner) | **differs**: the call fails and returns the empty set (6.7.5) |
+| The sign of a zero bound | unspecified | **differs**: a zero lower bound is returned as $-0$, every other zero as $+0$ (6.7.6, 7.3) |
+| Tightness of $+$, $-$, $\times$ on one limb | tightest for sums and differences; for products tightest outside the range below $2^{2p-1}\eta$, and at most one number wider inside it | **differs** inside that range: the basic operations shall be *tightest* (6.5.2). Kairn's product there is within the standard's second mode, *accurate* (6.5.1): it is inside the tightest result widened by one number on each side |
+| Two limbs; `float` bounds | bounds within about $8u^2$ and $10u^2$; the same statements as for `double` | not types of the standard, whose one type has `binary64` bounds (6.1.1) |
+| An overflow on bounded operands | one limb: $[\Omega, +\infty]$; two limbs: the infinite bound on the side of the overflow, or the whole line | one limb: the same, it is the tightest interval of the type; two limbs: valid, not tight |
+| `mid` | bounded: within one rounding and $\eta$ of the midpoint, inside the interval; whole line 0; half-line $\pm\Omega$; empty NaN | the special values are the same (6.7.6, 6.1.4). For a bounded interval the standard asks for the midpoint rounded to nearest and for a description of how that case is handled; Kairn's is that number unless a bound is an odd multiple of $\eta$, where it is within $\eta$ of it |
+| `rad` | the smallest radius for *Kairn's* midpoint; $+\infty$ if unbounded; empty NaN | the same: the smallest number such that the returned midpoint, with it, covers the interval; NaN for the empty set (6.7.6) |
+| Hull and intersection | exact; the hull with the empty set is the other operand, the intersection with it is empty | the same (4.5.4, 6.7.4) |
+| `equal`, `subset`, `interior`, `disjoint` | on the stored bounds, as [above](#comparisons) | the same on nonempty operands (Table 4.5, with its rule that an infinite bound is strictly inside an equal infinite bound) and on empty ones (Table 4.6): compared entry by entry |
+| `less`, `precedes`, `strict_less`, `strict_precedes` | as [above](#comparisons) | not in this standard: they are relations of the full IEEE Std 1788-2015, which Annex A lists as not required. Their definitions here are still those of the drafts and of the test cases below |
+| `wid`, `mag`, `mig`; cancellative addition and subtraction | not in the interface of this milestone | required (4.5.3, 4.5.6): absent |
+| Division, also by an interval containing zero; square root and the rest of the required functions; text | later milestones | required (Table 4.1, 6.8): absent for now. The standard's division by $[0, 0]$ is the empty set |
+| Decorations, the "not an interval" value, exceptions | none | required (clause 5, 6.1.4): absent, by the brief |
+
+What the reading changed on this page: the relations of the standard are four, not eight; the
+standard has a name, *accurate*, for what Kairn's product is in the underflow range; and its
+constructor returns the empty set for a NaN bound, which the owner then chose to depart from,
+for the reason of [question 1](#open-questions). Nothing else on the page contradicted the
+text.
 
 **What can serve as a check.** ITF1788, the *Interval Test Framework for IEEE 1788*
 ([ITF1788](phase0/references.md#itf1788)), is a public collection of test cases for the
@@ -1832,8 +1847,9 @@ The special values of this page were compared with those files where they are qu
 `mid` of the empty set, of the whole line and of a half-line; `rad` of the same; the relations
 of the empty set and of the whole line with themselves; `mul` of the whole line with $[0, 0]$.
 A test case is evidence about the standard, not the standard: the cases were written by people
-who took part in its drafting and are used by several implementations, and deviation 12 stays
-open until someone reads the text.
+who took part in its drafting and are used by several implementations. For the four relations
+that are not in IEEE Std 1788.1, they are the only check there is until someone reads the text
+of the full standard.
 
 *For `Interval<T, 1>` with `T = double`* the cases apply as they are, up to the two rows marked
 "no" above. For `float` and for two limbs they give the special values and the conventions, not
@@ -1970,9 +1986,13 @@ Each with the options and what I recommend.
 - Question 2 is settled as (b), which changes the listings of the directed sums of two limbs
   above; they, their statements and their experiments are revised in a later version of this
   page, before those kernels are written.
-- Questions 1 and 5 are the owner's to decide: the first departs from IEEE 1788, the second
-  ships a function whose bound is not machine-checked. Until then the work follows the
-  recommendation, and neither is shipped as final.
+- Questions 1 and 5 were the owner's, since the first departs from IEEE 1788 and the second
+  ships a function whose bound is not machine-checked. Both were decided on 2026-11-20 as
+  recommended. Question 1, (b): a NaN bound gives the whole line, for `Interval(lo, hi)` and
+  for the ball from an interval; the listings and statements above, written for (a), are
+  revised with those of question 2. Question 5, (b): `rational` is specified exactly, tested
+  for equality with the oracle, checks its own error bound in every constant evaluation, and
+  is recorded as [deviation 22](phase0/decisions.md#deviations-from-the-brief-flagged).
 
 1. **A NaN bound given to the constructor of an interval.** (a) The empty set, as IEEE 1788
    and as written above. (b) The whole line. A NaN usually means that something upstream
