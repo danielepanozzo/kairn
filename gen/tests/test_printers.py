@@ -815,9 +815,11 @@ class Rocq(unittest.TestCase):
     # (FoldNorm.v): in Statements.v only the comments above the three statements changed, and
     # Audit.v lists the three theorems and those of the two folds in their two orders, every
     # earlier line kept, in its order.
+    # Then the two convolutions were proved (FoldConv.v): Audit.v lists their theorems, one each,
+    # every earlier line kept, in its order.
     DIGESTS = {'Model.v': '54d17099e0e1a7e4856ee586251c0ad909c533f23506838284cc29e1598857f6',
                'Statements.v': '3d8add0de2ac601a4d7ff3991b01cf7801f83ebe7c78abffc557fb806f678cad',
-               'Audit.v': 'f61c02e3713e0cc2fe5fb2bab49e5fceaecac3a518a8ddaeba382568c3144224'}
+               'Audit.v': 'a62ac2c436fb5974b85a00cf9e8d586f4f35ed66bc6dbc05e6d16ccb8c500f18'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in

@@ -48,6 +48,7 @@ theories/FoldMaps.v
 theories/FoldNorm.v
 theories/BoundKernels.v
 theories/FoldGuarantee.v
+theories/FoldConv.v
 theories/IeeeOperations.v
 gen/IeeeModel.v
 gen/IeeeWith.v

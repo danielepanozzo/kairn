@@ -57,7 +57,11 @@
      is, and the facts about a normalized pair behind the bound of two limbs; in the
      IEEE model (theories/IeeeFoldNorm.v), that the two orders return the same result
      and the same flag on every input, the statements of the sequential order with the
-     elements as finite normalized pairs, and when the flag is true.
+     elements as finite normalized pairs, and when the flag is true;
+   - the convolutions (theories/FoldConv.v), beside their theorems, which
+     proofs/gen/Audit.v lists: what the terms of a coefficient are, which the generated
+     statements name and do not describe, how many there are, and that one answer of
+     the bound kernel of the dot product covers every coefficient.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -73,7 +77,7 @@ From Kairn Require Import IeeeTwoExecutions.
 From Kairn Require Import StepKernels FoldTransfer BoundKernels FoldGuarantee.
 From Kairn Require Import MapSteps.
 From Kairn Require Import IeeeFolds.
-From Kairn Require Import FoldNorm IeeeFoldNorm.
+From Kairn Require Import FoldNorm IeeeFoldNorm FoldConv.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
    theories/IeeeEFT.v). *)
@@ -606,3 +610,23 @@ Print Assumptions norm_upper_1_seq_ieee_facts.
 Print Assumptions norm_upper_2_seq_ieee_facts.
 Print Assumptions norm_upper_1_seq_ieee_flag.
 Print Assumptions norm_upper_2_seq_ieee_flag.
+
+(* The convolutions (theories/FoldConv.v): the theorems of their generated statements are
+   listed by proofs/gen/Audit.v; these are beside them. The terms of coefficient j, the
+   list conv_terms xs ys j of proofs/gen/FoldModel.v: they satisfy the requirements of
+   the coefficients of the two polynomials; there are at most min (n_x, n_y) of them, at
+   least one, and min (j + 1, n_x) - (j - (n_y - 1)) with at least one y; term k is
+   (x_i, y_(j-i)) with i = j - (n_y - 1) + k, and the list is exactly those pairs in
+   increasing i. A statement in the form of a convolution's, read index by index. And the
+   exported bound of the dot product, for a count of at least min (n_x, n_y), on every
+   coefficient. *)
+Print Assumptions conv_terms_Forall.
+Print Assumptions conv_terms_length_eq.
+Print Assumptions conv_terms_length.
+Print Assumptions conv_terms_count.
+Print Assumptions conv_terms_nonempty.
+Print Assumptions conv_terms_nth.
+Print Assumptions conv_terms_eq.
+Print Assumptions Forall2_seq_nth.
+Print Assumptions conv_1_bound.
+Print Assumptions conv_2_bound.

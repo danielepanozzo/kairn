@@ -7996,7 +7996,7 @@ inline void axpy_2_entry_lanes(const float* x0_in, const float* x1_in, const flo
 
 // convolution conv_1(supplied x, supplied y) -> z: coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_1 in its
 // sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_1. The array written
-// overlaps neither x nor y. Status: unverified.
+// overlaps neither x nor y. Status: proved.
 inline void conv_1_seq(const double* x_in, std::size_t n_x, const double* y_in, std::size_t n_y, double* z_out, bool& finite_out) noexcept {
     const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
     bool finite = true;
@@ -8030,7 +8030,7 @@ inline void conv_1_seq(const double* x_in, std::size_t n_x, const double* y_in, 
     finite_out = finite;
 }
 // sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_1. The array written
-// overlaps neither x nor y. Status: unverified.
+// overlaps neither x nor y. Status: proved.
 inline void conv_1_seq(const float* x_in, std::size_t n_x, const float* y_in, std::size_t n_y, float* z_out, bool& finite_out) noexcept {
     const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
     bool finite = true;
@@ -8066,7 +8066,7 @@ inline void conv_1_seq(const float* x_in, std::size_t n_x, const float* y_in, st
 
 // convolution conv_2(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1): coefficient j, of n_x + n_y - 1 (none when a length is 0), is the fold dot_2 in its
 // sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_2. The array written
-// overlaps neither x nor y. Status: unverified.
+// overlaps neither x nor y. Status: proved.
 inline void conv_2_seq(const double* x0_in, const double* x1_in, std::size_t n_x, const double* y0_in, const double* y1_in, std::size_t n_y, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
     bool finite = true;
@@ -8144,7 +8144,7 @@ inline void conv_2_seq(const double* x0_in, const double* x1_in, std::size_t n_x
     finite_out = finite;
 }
 // sequential order on the terms (x_i, y_(j-i)), i increasing, checked by fold_finish_2. The array written
-// overlaps neither x nor y. Status: unverified.
+// overlaps neither x nor y. Status: proved.
 inline void conv_2_seq(const float* x0_in, const float* x1_in, std::size_t n_x, const float* y0_in, const float* y1_in, std::size_t n_y, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t nz_ = n_x == 0 || n_y == 0 ? 0 : n_x + n_y - 1;
     bool finite = true;

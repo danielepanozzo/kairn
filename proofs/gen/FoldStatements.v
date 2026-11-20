@@ -140,7 +140,7 @@ Definition axpy_2_entry_spec : Prop :=
     Rabs ((z0 + z1) - (((a0 + a1) * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs ((a0 + a1) * (x0 + x1)) + Rabs (y0 + y1)) + 2 * eta emin)
     xys (axpy_2_entry_map emin prec tie_even (a0, a1) xys).
 
-(* conv_1, each coefficient it writes: dot_1 on the terms of each coefficient. Status: unverified. *)
+(* conv_1, each coefficient it writes: dot_1 on the terms of each coefficient. Status: proved. *)
 Definition conv_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
   forall xs ys : list R,
@@ -154,7 +154,7 @@ Definition conv_1_spec : Prop :=
       (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)))
     (seq 0 (conv_length (length xs) (length ys))) (conv_1_conv emin prec tie_even xs ys).
 
-(* conv_2, each coefficient it writes: dot_2 on the terms of each coefficient. Status: unverified. *)
+(* conv_2, each coefficient it writes: dot_2 on the terms of each coefficient. Status: proved. *)
 Definition conv_2_spec : Prop :=
   forall emin prec : Z, (4 <= prec)%Z ->
   forall xs ys : list (R * R),

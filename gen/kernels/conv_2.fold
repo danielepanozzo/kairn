@@ -24,7 +24,8 @@ requires:      canonical y
 ensures:       coefficients z
 ensures:       finite_or_nan z flag=finite
 min_precision: 4
-status:        unverified
+theorem:       proofs/theories/FoldConv.v
+status:        proved
 domain:        extended
 source:        dot_2 on the terms of each coefficient
 license:       bound: published; proof: MIT

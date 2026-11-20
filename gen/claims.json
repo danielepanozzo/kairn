@@ -7854,8 +7854,11 @@
       "coefficients": "dot_1",
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldConv.v",
+        "name": "conv_1_correct"
+      },
       "source": {
         "cite": "dot_1 on the terms of each coefficient",
         "license": "bound: published; proof: MIT"
@@ -7913,8 +7916,11 @@
       "coefficients": "dot_2",
       "check": "fold_finish_2",
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldConv.v",
+        "name": "conv_2_correct"
+      },
       "source": {
         "cite": "dot_2 on the terms of each coefficient",
         "license": "bound: published; proof: MIT"
