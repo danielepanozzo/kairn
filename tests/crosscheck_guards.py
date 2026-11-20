@@ -5,9 +5,8 @@ calls run() in its own process, and tests/crosscheck.cmake, which runs this).
         (--exhaustive [--restrict R1,R2,...] | --count N --seed S) [--claims FILE]
 
 SUMMARY is the oracle's summary of the run (check --json). The oracle has already passed the
-run: no claim violated, no broken stream (an invalid case it counts and shows, and does not fail
-without --expect-valid, which the cross-checks do not pass). This fails, with the reason, when the
-run did not check what it set out to check:
+run: no claim violated, no broken stream, no invalid case (the cross-checks pass check
+--expect-valid). This fails, with the reason, when the run did not check what it set out to check:
 
 - the stream is not the one asked for: one generator header, for this kernel, format and mode
   (and seed), whose indices were all seen, from 0 to the end;

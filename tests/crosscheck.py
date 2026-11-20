@@ -32,17 +32,18 @@ each named by its LABEL; --interp adds the generator's interpreter (python3 gen/
 as one more, labelled interp. WORK is SUMMARY's name, without its extension, with .work; the
 summary of each output judged is written next to SUMMARY, as SUMMARY's name with the label of the
 first runner that wrote that output (check --json). The test fails if a runner fails, if the
-oracle fails an output (any violated claim or broken stream, and with --fail-on-suspicious a
-suspicious non-finite result; an invalid case it counts and shows, without --expect-valid), or if
-the guards fail its summary: the run did not check what it set out to check
-(tests/crosscheck_guards.py). An enumeration
+oracle fails an output (any violated claim or broken stream, an invalid case, which is one whose
+operands are outside the kernel's requirements and is not judged: check --expect-valid; and with
+--fail-on-suspicious a suspicious non-finite result), or if the guards fail its summary: the run
+did not check what it set out to check (tests/crosscheck_guards.py). An enumeration
 (--exhaustive) is supported as crosscheck.cmake supports it, though the tests run the interpreter's
 enumerations through crosscheck.cmake.
 
 api, the tests api.oracle.K.F, full.api.oracle.K.F and full.api.flags.oracle.K.F: the runners of
 the public interface (tests/api/runner.cpp), each with every form it maps to the kernel
 (RUNNER --forms K), or with its first form only for a runner named by --first-form, each form a
-run of RUNNER --form FORM named LABEL.FORM; check always with --fail-on-suspicious. WORK is
+run of RUNNER --form FORM named LABEL.FORM; check always with --expect-valid and
+--fail-on-suspicious. WORK is
 DIR/K.F.work, and the summary of each output judged DIR/K.F.LABEL.FORM.json. The test fails if a
 runner maps no form to the kernel, if a run fails (a form that computes only some lines of its
 kernel fails when it computed none), if the oracle fails an output, if it judged no case of an
@@ -249,7 +250,7 @@ def compiled(a):
         gen += ["--seed", a.seed, "--count", a.count]
         guard_args += ["--seed", a.seed, "--count", a.count]
         one = gen[:-2] + ["--start", "INDEX", "--count", "1"]
-    check = ["check"] + (["--fail-on-suspicious"] if a.fail_on_suspicious else [])
+    check = ["check", "--expect-valid"] + (["--fail-on-suspicious"] if a.fail_on_suspicious else [])
     python_oracle = [sys.executable, ORACLE]
     runs = [(label, [exe]) for label, exe in a.runner or []]
     if a.interp:
@@ -322,12 +323,15 @@ def compiled(a):
 
 # --- The public interface -------------------------------------------------------------------------
 
+API_CHECK = ["check", "--expect-valid", "--fail-on-suspicious"]
+
+
 def judge_api(output, summary, count):
     """The verdict on one output of a form of the public interface: "" if it passed, the reason
     otherwise. Beyond the oracle's verdict, something was judged, in every stratum the generator
     announced."""
     remove(summary)
-    status = judge(["check", "--fail-on-suspicious", "--json", summary], output)
+    status = judge(API_CHECK + ["--json", summary], output)
     if status != 0:
         return "oracle check %s; 0 is success" % status
     try:
@@ -422,7 +426,7 @@ def api(a):
               "with RUNNER one of:%s\n"
               "The requests and the outputs that failed are in %s"
               % (kernel, fmt, "\n  ".join(failed), shell(one),
-                 shell([sys.executable, ORACLE, "check", "--fail-on-suspicious"]),
+                 shell([sys.executable, ORACLE] + API_CHECK),
                  "".join("\n  %s: %s" % (label, exe) for label, exe in a.runner), work), flush=True)
         return 1
     shutil.rmtree(work, ignore_errors=True)

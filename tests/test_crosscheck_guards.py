@@ -10,7 +10,8 @@ finite_when never put to the test, a ball result or a constructor's outcome miss
 of the layer missing), or alters the summary of a good run where no stream can produce the fault;
 and requires the guards to fail it, with their reason. It also runs the driver of the compiled
 runners' cross-checks, tests/crosscheck.py, with the interpreter as its runner, on such runs,
-which it must fail with the guards' reason, and on good ones. With CMAKE, the path of cmake, it
+which it must fail with the guards' reason, and on good ones, and with a runner that changes an
+operand, whose invalid case must fail the run. With CMAKE, the path of cmake, it
 runs crosscheck.cmake, the driver of the interpreter's enumerations, likewise; with API_RUNNER,
 the public interface's runner (tests/api/runner.cpp), crosscheck.py api on a good run, on one
 whose cases miss a stratum, and on a kernel the runner maps no form to.
@@ -289,6 +290,56 @@ class ExtendedGuards(unittest.TestCase):
             good = drive(*ADD, "--exhaustive")
             self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
             self.assertIn("extended domain: F2 finite", good.stdout)
+
+    # A runner that changes an operand, so that a case is outside the kernel's requirements: the
+    # oracle does not judge such a case (it is invalid), and the cross-check fails on it (check
+    # --expect-valid). The runner is the interpreter behind a script; the same script without the
+    # change passes.
+    def test_a_runner_that_changes_an_operand(self):
+        body = """import subprocess, sys
+out = subprocess.run([sys.executable, %r, "interp"], stdin=sys.stdin.buffer,
+                     stdout=subprocess.PIPE, check=True).stdout.decode("ascii")
+lines = out.split("\\n")
+for i, line in enumerate(lines):
+    w = line.split(" ")
+    if CHANGE and not line.startswith("#") and len(w) > 4 and w[2].lstrip("-").startswith("0x1"):
+        w[3] = w[2]     # the second limb of x as large as its first: x is not normalized
+        lines[i] = " ".join(w)
+        break
+sys.stdout.write("\\n".join(lines))
+""" % os.path.join(ROOT, "gen", "kairn-gen")
+        with tempfile.TemporaryDirectory() as d:
+            def runner(name, change):
+                script = os.path.join(d, name + ".py")
+                with open(script, "w", encoding="utf-8") as f:
+                    f.write("CHANGE = %r\n" % change + body)
+                if os.name == "nt":
+                    exe = os.path.join(d, name + ".cmd")
+                    with open(exe, "w", encoding="utf-8") as f:
+                        f.write('@"%s" "%s"\n' % (PY, script))
+                else:
+                    exe = os.path.join(d, name)
+                    with open(exe, "w", encoding="utf-8") as f:
+                        f.write('#!/bin/sh\nexec "%s" "%s"\n' % (PY, script))
+                    os.chmod(exe, 0o755)
+                return exe
+
+            def drive(name, change):
+                return subprocess.run(
+                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", "add_2_2",
+                     "--format", "binary64", "--seed", "1", "--count", "1000",
+                     "--summary", os.path.join(d, name + ".json"), "--fail-on-suspicious",
+                     "--runner", name, runner(name, change)],
+                    capture_output=True, text=True)
+            good = drive("same", False)
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            self.assertIn("with same: passed, ", good.stdout)
+            bad = drive("changed", True)
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("kairn-oracle check: FAIL", bad.stdout)
+            self.assertIn("1 invalid", bad.stdout)
+            self.assertIn("requires normalized(x)", bad.stdout)
+            self.assertIn("changed: oracle check 1", bad.stdout)
 
     # The same driver for the public interface: with the API runner, a pass, a stratum the cases
     # missed, and a kernel the runner maps no form to.

@@ -18,8 +18,9 @@
 # in one Python process.
 #
 # The oracle's report is printed whatever happens. The test fails if a stage of the pipeline
-# fails (the oracle exits non-zero on any violated claim or broken stream, and with
-# FAIL_ON_SUSPICIOUS on a suspicious non-finite result; an invalid case it counts and shows), and also
+# fails (the oracle exits non-zero on any violated claim or broken stream, on an invalid case, one
+# whose operands are outside the kernel's requirements and is not judged, and with
+# FAIL_ON_SUSPICIOUS on a suspicious non-finite result), and also
 # when the run did not check what it set out to check, which crosscheck_guards.py decides from
 # the oracle's summary: a pass must mean that the claims were checked. In short, the stream must
 # be the one asked for and be seen whole; an exhaustive run must cover its enumeration, over
@@ -66,7 +67,7 @@ else()
   list(APPEND _gen --seed "${SEED}" --count "${COUNT}")
   list(APPEND _guard_args --seed "${SEED}" --count "${COUNT}")
 endif()
-set(_check ${_oracle} check)
+set(_check ${_oracle} check --expect-valid)
 if(FAIL_ON_SUSPICIOUS)
   list(APPEND _check --fail-on-suspicious)
 endif()

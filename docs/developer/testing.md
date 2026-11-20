@@ -241,12 +241,13 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
 
 ## What a pass requires
 
-Beyond the oracle's verdict (no claim violated, no line dropped or added, and with
-`--fail-on-suspicious` no suspicious non-finite result), a cross-check passes only if the run
-checked what it set out to check. An invalid case, one whose operands are outside the kernel's
-requirements, is counted and shown in the report (`INVALID`) and never judged, but it does not fail
-the run: the cross-checks do not pass `check --expect-valid`, and the oracle's generator writes
-none (in the quick tier's 952 000 cases, none). `tests/crosscheck_guards.py` decides from the
+Beyond the oracle's verdict (no claim violated, no line dropped or added, no invalid case, and
+with `--fail-on-suspicious` no suspicious non-finite result), a cross-check passes only if the run
+checked what it set out to check. An invalid case is one whose operands are outside the kernel's
+requirements: the oracle counts it, shows it in its report (`INVALID`) and does not judge it. The
+oracle's generator writes none, so one in a runner's output means that the runner changed an
+operand, and since 2026-11-20 it fails the run (the cross-checks pass `check --expect-valid`;
+before, such a case was shown and the run passed). `tests/crosscheck_guards.py` decides from the
 oracle's summary (`check --json`) whether the run checked what it set out to; `tests/crosscheck.py`
 calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
 
@@ -1095,8 +1096,9 @@ garbage, drops, repeats or cuts lines, prints nothing, returns a wrong result, o
 on small operands, changes a tag, prints bytes that are not ASCII, ends its lines with CR LF,
 leaves out the generator's headers, or does not exist; a stratum missing; for the public
 interface, a list of forms that fails or is empty, a form that crashes, and the like. A runner
-that changes an operand so that a case is outside the kernel's requirements passes under both,
-the case shown as invalid ([What a pass requires](#what-a-pass-requires)). Of the faults planted
+that changes an operand so that a case is outside the kernel's requirements passed under both,
+the case shown as invalid; it fails since the cross-checks pass `check --expect-valid`
+([What a pass requires](#what-a-pass-requires)). Of the faults planted
 by `tests/kernel_mutants.py`, 42 (40 that the quick tier caught, of 36 kernels and every kind of
 change, and the 2 that only the full tier caught) fail the same tests of each tier with both
 drivers, as in the stored run of the whole experiment, on the Linux machine with GCC 13. The
