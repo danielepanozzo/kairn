@@ -73,7 +73,8 @@ endif()
 #   in the build tree, and skips the tests that need it, with a SKIP line, if the compiler does not
 #   work: with a compiler given, a failure here. (Its other skip, of rounding_hardware on Python
 #   older than 3.13, which has no math.fma, is not.)
-# - full.tools.crosscheck.guards: the cross-checks' guards fail the runs they are there to fail (a
+# - full.tools.crosscheck.guards.CLASS, one per class of tests/test_crosscheck_guards.py: the
+#   cross-checks' guards fail the runs they are there to fail (a
 #   partial or restricted enumeration, a missing stratum, nothing judged, a comparison seen one way
 #   only), as tests/crosscheck_guards.py, as tests/crosscheck.py calls them (with the interpreter
 #   as its runner, and with the public interface's runner of this build), and as crosscheck.cmake
@@ -104,14 +105,25 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-oracle")
     FAIL_REGULAR_EXPRESSION "SKIP [^\n]*(no C\\+\\+ compiler|compiling the C\\+\\+ runner)")
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/tests/test_crosscheck_guards.py")
-  add_test(NAME full.tools.crosscheck.guards
-    COMMAND "${Python3_EXECUTABLE}" tests/test_crosscheck_guards.py "${CMAKE_COMMAND}"
-      "$<TARGET_FILE:kairn-api-runner>"
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
-  # About a minute on a desktop; more than 300 s on a hosted Windows runner since the folds' guards
-  # were added (it starts several hundred Python processes, which is slow there).
-  set_tests_properties(full.tools.crosscheck.guards PROPERTIES TIMEOUT 900
-    LABELS "full;tools;crosscheck")
+  # One test per class of the file (full.tools.crosscheck.guards.CLASS), so that they run side by
+  # side and none nears its time limit: as one test the file took 300 s on a 16-core machine once
+  # the guards of the intervals, the maps and the convolutions were in it, and a hosted Windows
+  # runner is about four times slower (it starts several hundred Python processes). The classes are
+  # read from the file, so a class added there is run without a change here.
+  file(STRINGS "${PROJECT_SOURCE_DIR}/tests/test_crosscheck_guards.py" _guard_classes
+    REGEX "^class [A-Za-z0-9_]+\\(unittest\\.TestCase\\):")
+  if(NOT _guard_classes)
+    message(FATAL_ERROR "tests/test_crosscheck_guards.py: no test class found")
+  endif()
+  foreach(_line IN LISTS _guard_classes)
+    string(REGEX REPLACE "^class ([A-Za-z0-9_]+).*" "\\1" _class "${_line}")
+    add_test(NAME full.tools.crosscheck.guards.${_class}
+      COMMAND "${Python3_EXECUTABLE}" tests/test_crosscheck_guards.py "${CMAKE_COMMAND}"
+        "$<TARGET_FILE:kairn-api-runner>" ${_class}
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+    set_tests_properties(full.tools.crosscheck.guards.${_class} PROPERTIES TIMEOUT 900
+      LABELS "full;tools;crosscheck")
+  endforeach()
 endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/docs/tools/test_reference.py")
   add_test(NAME full.tools.docs.reference.test
