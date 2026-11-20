@@ -435,7 +435,52 @@ class Interp(unittest.TestCase):
             self.assertEqual(sum(r[5] for r in mine), sum(r[6] for r in mine), name)
             self.assertGreater(sum(r[6] for r in mine), 200, name)
 
-    def test_the_constructors(self):
+    def test_the_norm_of_a_ball_vector(self):
+        """bv_norm_upper_k is two calls (architecture.md, "Ball vectors"): (n, ok) = norm_upper_k(c) and
+        b = add_up_1(n, r) when ok, +infinity otherwise. On canonical BallVectors (the whole space among
+        them, leading limbs at the largest number), in toy formats of the IEEE shape and in binary64 and
+        binary32, in exact arithmetic: every member is at most b in magnitude, and b is at most the
+        rounding up of RU(V) stepped up S times plus r (V the largest magnitude of a center)."""
+        ks = common.kernels()
+        m = interp.Machine(ks)
+        for k in (1, 2):
+            fd = ks.folds[f'bv_neg_{k}']             # its operand: one BallVector of k limbs
+            formats = [writers.ieee_format(p, emax) for p, emax in writers.toy_formats(1)] + \
+                [interp.parse_format('binary64'), interp.parse_format('binary32')]
+            infinite = clamped = 0
+            for f in formats:
+                rng = random.Random(f'norm:{k}:{f.name}')
+                for i in range(common.size(300, 2000)):
+                    scalars, elements = bv_case(fd, f, rng, i % 6)
+                    if k == 2 and elements and rng.random() < 0.1:
+                        elements[0] = [interp.largest(f, rng.random() < 0.5), ZERO]
+                    r = scalars[0]
+                    out = m.run_fold(f'norm_upper_{k}', f, 'sequential', 0,
+                                     [[e[j] for e in elements] for j in range(k)])
+                    n, ok = out[0], out[-1]
+                    b = m.run('add_up_1', f, [n, r])[0] if ok else PINF
+                    if not finite(b):
+                        self.assertEqual(b, PINF, (k, f.name, elements, r))
+                        infinite += 1
+                        clamped += ok and finite(r)
+                        continue
+                    big = max([abs(sum(exact(v) for v in e)) for e in elements], default=F(0))
+                    self.assertLessEqual(big + exact(r), exact(b), (k, f.name, elements, r))
+                    # At most the rounding up of RU(V) stepped up S times plus r (V, the largest
+                    # leading magnitude, is a number of the format, its own RU).
+                    w = max([e[0] for e in elements], key=lambda x: abs(exact(x)), default=ZERO)
+                    w = (interp.NUM, False, w[2], w[3])
+                    for _ in range(k - 1):
+                        w = interp.succ(f, w)
+                    q = exact(w) + exact(r)
+                    ru = interp.rnd(f, False, q.numerator, -(q.denominator.bit_length() - 1)) if q else ZERO
+                    if finite(ru) and exact(ru) < q:
+                        ru = interp.succ(f, ru)
+                    self.assertTrue(not finite(ru) or exact(b) <= exact(ru), (k, f.name, elements, r))
+            self.assertGreater(infinite, 0, k)
+            if k == 2:
+                self.assertGreater(clamped, 0)       # finite centers and radius, the step up from Omega infinite
+
         """makes_ball_vector of bv_make_1 and bv_make_2 on the interpreter, in toy formats of the IEEE
         shape and in binary64 and binary32, every order the same: B1 to B3 of judge_make, the radius given
         and the centers given any value, with negative radii, zeros of either sign, infinities and NaN."""

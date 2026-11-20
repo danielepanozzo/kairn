@@ -1528,7 +1528,11 @@ every length, and of the vector with no entry with its radii on each side of the
 `radii_when`, which the conditions of an entry imply), every order the same; on finite operands the one radius equals the largest radius the entrywise Ball kernel
 returns, in every case compared; the compiled `F_seq`, `F_lanes` (0 to 8 lanes) and `F_packed` of
 every build are bit for bit the interpreter's, on the lengths of the folds; the line protocol, the
-printers, the counts of the loops and the claims (with the entries of architecture.md).
+printers, the counts of the loops and the claims (with the entries of architecture.md). The same file
+tests the constructors (`makes_ball_vector` on every small case and at random, every order), the
+negations (exactness), and `bv_norm_upper_k` as the header writes it, `norm_upper_k` then `add_up_1`
+of the radius: every member at most the bound, the bound at most one rounding up above the claims of
+the two calls, in exact arithmetic.
 
 **The folds, and the kernels of their stage**, are cross-checked by the oracle like every kernel
 ([above](#cross-checks)), and tested here too. `gen/tests/test_folds.py` checks:

@@ -1031,10 +1031,28 @@ the one radius (`ball_add_k_full`, `ball_scale_k_full`: the same lines), and for
 same at the magnitude $+0$ of the zero state: the radius kernel on $+0$ and radii within `radii_when`
 is finite (each of its roundings is of a nonnegative value at most a few units above $2^{e_{\max}-2}$).
 
-**`bv_norm_upper_k`** ([BallVector](design/milestone2.md#ballvector)) is `norm_upper_k` on the
-centers, which are stored and canonical: it needs no kernel of its own, and the header of `BallVector`
-calls `norm_upper_k`. It bounds the magnitudes of the centers, not of the members: for the whole
-space it returns $0$ (one limb) or $\eta$ (two), with the flag true.
+**`bv_norm_upper_k`** ([BallVector](design/milestone2.md#ballvector)), an upper bound of the largest
+magnitude of any member of a BallVector $X$ of centers $c_i$ and radius $r$, needs no kernel and no
+fold of its own: it is two calls that exist, and the header of `BallVector` writes it as
+
+```
+(n, ok) = norm_upper_k(c)                 the fold of maxima on the centers, stored and canonical
+b       = ok ? add_up_1(n, r) : +infinity
+```
+
+What is claimed, and by what: `norm_upper_k` claims `upper n max steps=S` with its flag
+([Folds of maxima](#folds-of-maxima)): when `ok` is true, $V \le n \le \mathrm{RU}(V)$ stepped up $S$
+times, $V = \max_i \lvert c_i\rvert$ ($S = 0$ for one limb, $1$ for two); `add_up_1` claims `rounded b
+up` of $n + r$ in the extended domain (the sum of a finite $n$ and $r = +\infty$, the whole space, is
+$+\infty$). Every member $x$ of entry $i$ has $\lvert x\rvert \le \lvert c_i\rvert + r \le V + r \le n
++ r \le b$: so $b$ is an upper bound of every member, and $b \le \mathrm{RU}(\mathrm{RU}(V)\uparrow^S +
+r)$, at most one rounding up and $S$ steps above the smallest. The inequality chain is the header's
+argument from the two claims, not a claim of one kernel; the test of the composition is
+`test_bv.Interp.test_the_norm_of_a_ball_vector`, in exact arithmetic. `ok` is false for a vector of
+finite centers only when the step up from the largest leading limb is $+\infty$ (two limbs, a leading
+limb of magnitude $\Omega$): there the bound is $+\infty$, which bounds everything. For the whole space
+$n$ is $0$ (one limb) or $\eta$ (two) and $b = +\infty$. `norm_upper_k` alone bounds the magnitudes of
+the centers, not of the members.
 
 **The constructor**, `bv_make_1` and `bv_make_2` (the page says what a constructor returns and gives no
 listing: "a constructor given a radius that is negative or a NaN, or a center that is not finite,
