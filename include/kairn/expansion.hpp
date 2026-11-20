@@ -661,9 +661,11 @@ template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_add_fast(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
     return add(x, y);
 }
+// detail::ldexp, not ldexp: argument-dependent lookup also finds kairn::ldexp, and the call would
+// be ambiguous.
 template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> core_ldexp(Expansion<T, 1> x, int n) noexcept {
-    return ldexp(x, n);
+    return detail::ldexp(x, n);
 }
 
 }  // namespace detail
