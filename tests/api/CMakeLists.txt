@@ -133,6 +133,11 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
     if(_kernel IN_LIST _api_internal OR _kernel IN_LIST _api_not_public)
       continue()
     endif()
+    # The kernels the oracle does not judge yet (KAIRN_NOT_YET_CROSS_CHECKED, ../CMakeLists.txt):
+    # no public operation calls them either.
+    if(_kernel IN_LIST KAIRN_NOT_YET_CROSS_CHECKED)
+      continue()
+    endif()
     list(APPEND _api_mapped ${_kernel})
     foreach(_format binary64 binary32)
       set(_name api.oracle.${_kernel}.${_format})
@@ -151,7 +156,8 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   add_test(NAME api.oracle.coverage
     COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>" "-DCLAIMS=${_api_claims}"
       "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"
-      "-DNOT_PUBLIC=${_api_not_public}" -P "${CMAKE_CURRENT_SOURCE_DIR}/coverage.cmake")
+      "-DNOT_PUBLIC=${_api_not_public}" "-DNOT_CHECKED=${KAIRN_NOT_YET_CROSS_CHECKED}"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/coverage.cmake")
   set_tests_properties(api.oracle.coverage PROPERTIES LABELS "api;oracle")
   list(LENGTH _api_mapped _n)
   list(LENGTH _flags_names _n_flags)
@@ -220,6 +226,12 @@ string(REGEX MATCHALL "__builtin_is_constant_evaluated\\(\\) \\? ([A-Za-z0-9_]+)
 list(LENGTH _api_guards _api_n)
 string(REGEX REPLACE "__builtin_is_constant_evaluated\\(\\) \\? ([A-Za-z0-9_]+) : ([A-Za-z0-9_]+) \\+ 0\\.0f?;"
   "\\1;" _api_text "${_api_text}")
+# The folds over arrays of the program (the loops at the end of the file) are not constexpr, and
+# write their guards `a + 0.0`: those are taken out too, though no form here calls them yet.
+string(REGEX MATCHALL "= [A-Za-z0-9_]+ \\+ 0\\.0f?;" _api_fold_guards "${_api_text}")
+list(LENGTH _api_fold_guards _api_n_folds)
+math(EXPR _api_n "${_api_n} + ${_api_n_folds}")
+string(REGEX REPLACE "= ([A-Za-z0-9_]+) \\+ 0\\.0f?;" "= \\1;" _api_text "${_api_text}")
 string(REGEX MATCHALL "\\+ 0\\.0f?;" _api_left "${_api_text}")
 if(_api_n EQUAL 0 OR _api_left)
   message(FATAL_ERROR "tests/api: could not take the guard out of ${_api_scalar} (${_api_n} found)")

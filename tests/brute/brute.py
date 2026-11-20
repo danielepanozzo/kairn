@@ -276,9 +276,20 @@ def fitting_format(name, fmt, extended):
     return None
 
 
+def not_yet_cross_checked():
+    """The kernels the oracle does not judge yet: the list KAIRN_NOT_YET_CROSS_CHECKED of
+    tests/CMakeLists.txt, the one place that says which (the folds' stage of Milestone 2)."""
+    with open(os.path.join(REPO, "tests", "CMakeLists.txt"), encoding="utf-8") as f:
+        m = re.search(r"^set\(KAIRN_NOT_YET_CROSS_CHECKED\s([^)]*)\)", f.read(), re.M)
+    return set(m.group(1).split()) if m else set()
+
+
 def load_claims():
+    """The kernels of gen/claims.json that the oracle judges: every one, but those of
+    not_yet_cross_checked()."""
+    skip = not_yet_cross_checked()
     with open(CLAIMS, encoding="utf-8") as f:
-        return json.load(f)["kernels"]
+        return [k for k in json.load(f)["kernels"] if k["name"] not in skip]
 
 
 def shape_of(k):

@@ -4,10 +4,12 @@
 # same two lists. An entry kernel (entry: yes in its description in gen/kernels, one the public
 # headers may call with values from the program) can never be a building block: it is reached
 # by a public form or it is on the short list. A kernel added to the generator fails here until
-# someone decides which it is.
+# someone decides which it is. The kernels that the oracle does not judge yet (NOT_CHECKED, the
+# list KAIRN_NOT_YET_CROSS_CHECKED of tests/CMakeLists.txt: the folds' stage of Milestone 2) are
+# in none of the runner's lists, and no public operation calls them yet.
 #
 #   cmake -DRUNNER=... -DCLAIMS=gen/claims.json -DKERNELS=gen/kernels "-DINTERNAL=a;b"
-#         "-DNOT_PUBLIC=c;d" -P coverage.cmake
+#         "-DNOT_PUBLIC=c;d" "-DNOT_CHECKED=e;f" -P coverage.cmake
 cmake_minimum_required(VERSION 3.21)
 
 foreach(_what list internal not-public)
@@ -71,6 +73,12 @@ endif()
 if(NOT _runner_not_public STREQUAL _not_public)
   list(APPEND _problems "not public in tests/api/CMakeLists.txt: ${_not_public}; in tests/api/runner.cpp: ${_runner_not_public}")
 endif()
+set(_not_checked ${NOT_CHECKED})
+foreach(_k IN LISTS _not_checked)
+  if(NOT _k IN_LIST _claims)
+    list(APPEND _problems "${_k}, not cross-checked yet, is not a kernel of ${CLAIMS}")
+  endif()
+endforeach()
 foreach(_k IN LISTS _claims)
   set(_n 0)
   foreach(_group list internal not_public)
@@ -78,6 +86,12 @@ foreach(_k IN LISTS _claims)
       math(EXPR _n "${_n} + 1")
     endif()
   endforeach()
+  if(_k IN_LIST _not_checked)
+    if(NOT _n EQUAL 0)
+      list(APPEND _problems "${_k} is not cross-checked yet, and in ${_n} of the runner's lists")
+    endif()
+    continue()
+  endif()
   if(NOT _n EQUAL 1)
     list(APPEND _problems "${_k} is in ${_n} of the runner's lists (public forms, internal, not public), not in one")
   endif()
@@ -90,6 +104,9 @@ foreach(_group list internal not_public)
   endforeach()
 endforeach()
 foreach(_k IN LISTS _entry)
+  if(_k IN_LIST _not_checked)
+    continue()          # the steps of the folds over arrays of the program: checked above
+  endif()
   if(_k IN_LIST _runner_internal)
     list(APPEND _problems "${_k} is an entry kernel, but the runner lists it as a building block")
   elseif(NOT _k IN_LIST _runner_list AND NOT _k IN_LIST _runner_not_public)
@@ -109,5 +126,6 @@ list(LENGTH _runner_list _n)
 list(LENGTH _runner_internal _m)
 list(LENGTH _runner_not_public _p)
 list(LENGTH _entry _e)
+list(LENGTH _not_checked _q)
 message(STATUS "${_n} kernels reached by public forms, ${_m} building blocks, ${_p} entry kernels not public yet "
-  "(${_e} entry kernels in all)")
+  "(${_e} entry kernels in all), ${_q} kernels not cross-checked yet")

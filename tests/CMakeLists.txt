@@ -467,6 +467,23 @@ set(_toy_ext_b2_b2_sum fp:3:-2:-1)
 set(_radii "0x0p+0/0x1p-4/0x1p-1/0x1.8p+0")
 set(_toy_ext_b2_b2_product fp:4:-4:-1 "rx.in=${_radii},ry.in=${_radii},cx.lead=0:0")
 
+# --- Not yet cross-checked by the oracle ------------------------------------------------------
+#
+# The kernels and the folds of the folds' stage of Milestone 2 (docs/developer/design/milestone2.md,
+# "Batch kernels"; docs/developer/architecture.md, "Folds"): the oracle does not judge their claims
+# yet (upper with a value of its own and holds of the exported bounds, the error of form T of
+# dot_step_2, finite_or_nan, and the folds' fold_error on requests of arrays), and its author extends
+# it next. Until then the generator's tier is what tests them (docs/developer/testing.md, "The
+# generator's tier"): the interpreter in exact arithmetic on toy formats, and the compiled code
+# against the interpreter, bit for bit. No cross-check, no enumeration of a toy format and no test of
+# the public interface is registered for a name of these lists, and the public interface's coverage
+# (api/coverage.cmake) takes them as not cross-checked. A name leaves the list when the oracle judges
+# it; the folds are not in gen/claims.json's "kernels" and have no test registered either way.
+set(KAIRN_NOT_YET_CROSS_CHECKED
+  bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 sum_entry_step_1 sum_entry_step_2
+  sum_fast_entry_step_2 fold_finish_1 fold_finish_2)
+set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS sum_1 sum_1_entry sum_2 sum_2_entry sum_fast_2 sum_fast_2_entry dot_1 dot_2)
+
 # Kernels whose intermediate values can overflow for operands far below the largest number (the
 # product by the splitter), as their requirement of no intermediate overflow allows. The oracle
 # counts the non-finite results of such operands as suspicious; any other kernel that returns one
@@ -495,8 +512,13 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   set(_full_kernels "")
   set(_n_complete 0)
   set(_n_restricted 0)
+  set(_n_not_checked 0)
   foreach(_i RANGE ${_last})
     string(JSON _kernel GET "${_claims}" kernels ${_i} name)
+    if(_kernel IN_LIST KAIRN_NOT_YET_CROSS_CHECKED)
+      math(EXPR _n_not_checked "${_n_not_checked} + 1")
+      continue()
+    endif()
     string(JSON _value ERROR_VARIABLE _no_value GET "${_claims}" kernels ${_i} value)
     string(JSON _min ERROR_VARIABLE _no_min GET "${_claims}" kernels ${_i} min_precision)
     string(JSON _domain ERROR_VARIABLE _no_domain GET "${_claims}" kernels ${_i} domain)
@@ -626,6 +648,10 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     endif()
   endif()
   list(JOIN _runner_labels ", " _labels)
+  math(EXPR _count "${_count} - ${_n_not_checked}")
+  list(LENGTH KAIRN_NOT_YET_CROSS_CHECKED_FOLDS _n_folds)
+  message(STATUS "Kairn tests: not yet cross-checked by the oracle (KAIRN_NOT_YET_CROSS_CHECKED): "
+    "${_n_not_checked} kernels and ${_n_folds} folds, tested by the generator's tier")
   message(STATUS "Kairn tests: cross-checks of ${_count} kernels: the compiled runners ${_labels} "
     "(${_packed}), on ${KAIRN_CROSSCHECK_QUICK_CASES} cases per kernel and format in the quick "
     "tier and ${KAIRN_CROSSCHECK_CASES} in the full tier; and, in the full tier, the interpreter "
