@@ -16,7 +16,7 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
 which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
-tier, 383 tests. The full tier, 556 tests more: ctest --test-dir .../tests/full`); every test of
+tier, 421 tests. The full tier, 621 tests more: ctest --test-dir .../tests/full`); every test of
 the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
 are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
 the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
@@ -58,7 +58,7 @@ The tests of the public interface (`tests/api/`, label `api`):
 | Test | Checks |
 |---|---|
 | `api.oracle.K.F` | Every public operation that calls kernel K, computed through the constructors, operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on 2 000 random cases of format F, judged by the oracle against K's claims; by two runners on the same cases, one built with the build's flags and one with contraction forced on. For a kernel of the extended domain the cases include infinite and NaN operands and empty and whole balls, built through the public constructors. Each form of the operation (`x + a` and `a + x`, `x += a`, `x + y` with a one-limb `y`, the marked and the unmarked operator, `kairn::finite::add`) is judged on its own. A few forms can compute only some lines of their kernel (`ldexp` needs a power of two among the operands of `mul_1_1`, a point form a ball of radius 0, the steps of `ldexp` an operand that can be scaled exactly, a sign predicate of a ball a line of its comparison kernel whose operands are a center and a radius, the conversion of the result of `two_sum` to two limbs a finite error term); they compute the plain operation on the others, and fail if a stream of 1000 lines or more reached their own operation on none, which is why the quick tier has at least 1 000 cases. The building blocks on `T` are their kernels' forms as they are (`two_sum` is the form of `two_sum_entry`), and the scalings of a ball by a power of two are reached through `ldexp(X, n)` with $2^n$ the case's power of two, through `half` of a ball scaled first by $2^{n+1}$ exactly, and through the steps of `ldexp` from a ball scaled exactly by another power. |
-| `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the ten finite cores of the Ball operations, those of the scalings by a power of two among them: the operators and `ldexp` call the full kernels, and `kairn::finite` has no Ball forms); no entry kernel is a building block. |
+| `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the ten finite cores of the Ball operations, those of the scalings by a power of two among them: the operators and `ldexp` call the full kernels, and `kairn::finite` has no Ball forms); no entry kernel is a building block. The kernels of the folds' stage, which no public operation calls yet (`KAIRN_NOT_PUBLIC_YET`, [Cross-checks](#cross-checks)), are on none of the runner's lists. |
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, comparisons with a NaN among them, the building blocks on `T` against values computed by hand (every row of the table of `next_up` and `next_down`); the same results at run time, with the same bits where Milestone 2 says so and the same values where a zero can differ in sign; `mul_down`, `mul_up`, `ldexp` and `half` of a ball, which are not `constexpr`, at run time against values computed by hand; the properties of the types; that an operation compiles without `kairn::unverified` exactly when the kernel it calls is proved; that a building block is not found by argument-dependent lookup for a `T` and does not hide a program's own function of the same name; and `KAIRN_VERSION_AT_LEAST`. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass in the default environment and fail under each directed rounding mode and under flush-to-zero. |
 | `api.flags.debug.self_test`, `api.flags.debug.constexpr`, `api.flags.debug.rational` | `kairn::self_test()` and `kairn::environment_ok()`, compiled as the [debug build](#flag-sets), pass (`runner.cpp --self-test`); `tests/api/constexpr.cpp` and `tests/api/rational.cpp` built so, their constant expressions evaluated with the checks on; `kairn::rational`, which does not round, runs under each directed rounding mode without the checks stopping the program. |
@@ -884,7 +884,7 @@ and popped `#pragma warning(disable : 4459 6244)` with MSVC, and
 compiler applies the state of the header to the templates the program instantiates later.
 
 `api.shadow` (`tests/api/shadow.py`) reads the name of every parameter and local variable of the
-headers (410 today, by a scan of their tokens, which found every name of Clang's AST of the
+headers (556 today, by a scan of their tokens, which found every name of Clang's AST of the
 headers), writes a global variable of each name, and compiles `tests/api/shadow.cpp`, which calls
 every public operation once for `float` and for `double`, with the build's flags and the
 strictest warnings of the compiler about a declaration that hides another, as errors, the front
@@ -1039,6 +1039,14 @@ The quick tier gains 36 tests: `api.oracle.K.F` for the fifteen kernels that bec
 7.4 seconds of test time), five of `api.reject.*`, and `api.example.building_blocks`; the checks of
 a debug build run 22 functions more (0.7 and 1.2 s). The full tier gains 60, the same fifteen
 kernels in `full.api.oracle.K.F` and `full.api.flags.oracle.K.F`.
+
+Those numbers are of the commit before them on `main`, before the folds' stage. Joined to the
+folds' stage the same day, the change adds the same 36 and 60 tests: with Apple clang the quick
+tier has 385 tests before and 421 after, the full tier 561 and 621. Two runs of the quick tier of
+each, back to back on the Mac under a load average of 18 to 42, took 80.4 and 75.3 s before and
+74.2 and 64.3 s after (314 and 295, 288 and 250 s of test time): at that load the difference is
+the load's, not the change's. The full tier after took 1 059 s with Apple clang and 752 s with
+GCC 16 (load 13 to 36).
 
 **Waste removed** before anything left the quick tier, as measured on 16 threads of the Linux
 machine with GCC 13:

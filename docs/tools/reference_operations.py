@@ -15,8 +15,9 @@ docs/reference/KERNEL.md. An entry gives:
   conversion (a limb converted to a one-limb number, a point to a ball) has no declaration of
   its own, and says so in its note;
   A kernel with no forms is either a building block, part of other kernels, or an entry kernel
-  (`entry: yes` in its description: today the finite cores of the Ball operations) that the
-  public headers do not call yet; its page and the index say which. Give it forms only when a
+  (`entry: yes` in its description: today the finite cores of the Ball operations, and the
+  steps of the folds over arrays that the program fills) that the public headers do not call
+  yet; its page and the index say which. Give it forms only when a
   header calls it: the test fails on a form of a kernel that no header comment names. A function
   of `kairn::finite` is written `finite::add(x, y)`, a member function `X.name()`, with the object
   as its first operand;
