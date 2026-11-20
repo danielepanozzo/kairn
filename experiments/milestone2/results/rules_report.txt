@@ -1,5 +1,5 @@
 refused: kernel ball_split_1, value nh: negated fused result: nh = neg(hs) negates a select one of whose arms, h, is the result of prod; compilers push a negation through a select into its arms. Negate an operand instead: -prod(a, b) is prod(neg(a), b), -fma(a, b, c) is fma(neg(a), b, neg(c)); and a rounding down of x - d is minus the rounding up of d - x, so sub_down_1(x, d) is neg(add_up_1(d, neg(x))) and sub_up_1(x, d) is neg(add_down_1(d, neg(x)))
-33 kernel descriptions (22 of them in gen/kernels, with their claims); 21 remarks that a description has no claim (expected); 1 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
+33 kernel descriptions (26 of them in gen/kernels, with their claims); 14 remarks that a description has no claim (expected); 1 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
 
 kernel                 operations after inlining
 add_ball_2_2            22 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
