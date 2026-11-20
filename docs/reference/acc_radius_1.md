@@ -4,7 +4,7 @@
 
 Kernel `acc_radius_1` · **UNVERIFIED** · [all operations](index.md) · [how to read this page](reading.md)
 
-**UNVERIFIED: no proof is checked.** The statement below is a target: the oracle tests it, but Rocq has not checked a proof of it. No public operation calls it yet ([What holds today](../getting-started/guarantees.md#proved-and-unverified)).
+**UNVERIFIED: no proof is checked.** The statement below is a target: the generator's tests test it, but the oracle does not judge it yet (it is on the list `KAIRN_NOT_YET_CROSS_CHECKED` of `tests/CMakeLists.txt`) and Rocq has not checked a proof of it. No public operation calls it yet ([What holds today](../getting-started/guarantees.md#proved-and-unverified)).
 
 ## What it computes
 
