@@ -31,11 +31,12 @@
      of one limb, the statements written by hand that say more or say it in another form
      (the special cases of the constructor, the negation as an exact image, the product
      in the least and the greatest of four products of bounds) and the lemmas about the
-     bounds of the exact range of an operation; and, on models of their listings written
-     by hand (their proofs are not on the generated models yet), the bounds of two limbs
-     in the real model (a sum, a difference and a product moved outward by a bound of
-     their own error) and the sum of two intervals with bounds of two limbs in the IEEE
-     model.
+     bounds of the exact range of an operation; for the bounds of two limbs in the real
+     model (a sum, a difference and a product moved outward by a bound of their own
+     error), the same bounds in the values of the kernel and with the constants of the
+     closed form by name, and the lemmas they rest on; and for the sum of two intervals
+     with bounds of two limbs in the IEEE model, whose generated statement is not proved
+     yet, its finite cores and its enclosure.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -470,34 +471,36 @@ Print Assumptions range_sub_lower.
 Print Assumptions range_sub_upper.
 Print Assumptions interval_tail.
 
-(* The bounds of two limbs, in the real model (theories/Directed2.v), on models of the
-   listings written by hand (the proofs are not on the generated models yet): add_ball_2_2 and
-   mul_ball_2_2, which are the ball kernels with radii zero; one rounding to nearest from
-   above, the radius from above and the closed form of the outward move; the rule of the
-   zero sum; and the directed sums, differences and product, in the values of the kernel
-   and in the shape of a generated statement. *)
+(* The bounds of two limbs, in the real model (theories/Directed2.v): the theorems of
+   their generated statements are listed by proofs/gen/Audit.v. Here, the lemmas they
+   rest on and the statements written by hand beside them: add_ball_2_2 and mul_ball_2_2
+   are the ball kernels with radii zero; one rounding to nearest from above, the radius
+   from above and the closed form of the outward move; the rule of the zero sum; the form
+   in which the listings compute the second limb of a lower bound; and the directed sums,
+   differences and product, in the values of the kernel and with the constants of the
+   closed form by name. *)
 From Kairn Require Import Directed2.
-Print Assumptions add_ball_2_2_listing_eq.
-Print Assumptions mul_ball_2_2_listing_eq.
-Print Assumptions add_ball_2_2_listing_correct.
-Print Assumptions mul_ball_2_2_listing_correct.
+Print Assumptions add_ball_2_2_eq.
+Print Assumptions mul_ball_2_2_eq.
 Print Assumptions rnd_upper.
 Print Assumptions rnd_upper_normal.
 Print Assumptions radius_upper.
 Print Assumptions outward_closed.
 Print Assumptions add_2_2_zero_sum.
+Print Assumptions RD_as_opp_RU.
+Print Assumptions sub_down_1_as_add_up_1.
 Print Assumptions outward_down.
 Print Assumptions outward_up.
-Print Assumptions add_down_2_2_listing_values.
-Print Assumptions add_up_2_2_listing_values.
-Print Assumptions add_down_2_2_listing_correct.
-Print Assumptions add_up_2_2_listing_correct.
-Print Assumptions sub_down_2_2_listing_values.
-Print Assumptions sub_up_2_2_listing_values.
-Print Assumptions sub_down_2_2_listing_correct.
-Print Assumptions sub_up_2_2_listing_correct.
-Print Assumptions mul_dir_2_2_listing_values.
-Print Assumptions mul_dir_2_2_listing_correct.
+Print Assumptions add_down_2_2_values.
+Print Assumptions add_up_2_2_values.
+Print Assumptions add_down_2_2_outward.
+Print Assumptions add_up_2_2_outward.
+Print Assumptions sub_down_2_2_values.
+Print Assumptions sub_up_2_2_values.
+Print Assumptions sub_down_2_2_outward.
+Print Assumptions sub_up_2_2_outward.
+Print Assumptions mul_dir_2_2_values.
+Print Assumptions mul_dir_2_2_outward.
 
 (* The tightness of the product of intervals of one limb (theories/IeeeInterval1.v): the
    two outputs of mul_dir_1 against the directed roundings of a product of bounds, the
@@ -510,12 +513,13 @@ Print Assumptions interval_mul_1_tight.
 Print Assumptions interval_mul_1_tight_range.
 
 (* The sum of two intervals with bounds of two limbs, in the IEEE model
-   (theories/IeeeInterval2.v), on IEEE models of the listings written by hand (the proofs
-   are not on the generated models yet): the finite cores add_ball_2_2, add_down_2_2 and
-   add_up_2_2, whose finite result is that of the real model, and interval_add_2. *)
+   (theories/IeeeInterval2.v): the finite cores add_ball_2_2, add_down_2_2 and
+   add_up_2_2, whose finite result is that of the real model, and interval_add_2:
+   canonical, empty exactly when an operand is, and containing every sum (its generated
+   statement, which also has the tightness and the boundedness, is not proved yet). *)
 From Kairn Require Import IeeeInterval2.
 Print Assumptions add_ball_2_2_ieee_core.
 Print Assumptions add_down_2_2_ieee_core.
 Print Assumptions add_up_2_2_ieee_core.
 Print Assumptions interval_tail_2.
-Print Assumptions interval_add_2_correct.
+Print Assumptions interval_add_2_enclosure.

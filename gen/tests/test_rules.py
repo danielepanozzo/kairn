@@ -1280,10 +1280,10 @@ class TheKernels(unittest.TestCase):
                     'ball_from_interval_2', 'ball_narrow_2_1'}
     WAVE_2 = WAVE_2_INTERVALS | WAVE_2_CORES | WAVE_2_BALLS | {'mul_dir_1'}
     # Of these, the kernels whose theorems are about the generated text and pass the audit: the
-    # interval kernels of one limb (IeeeInterval1.v) and mul_dir_1 in both models (DirectedProd.v,
-    # IeeeDirectedProd.v).
+    # interval kernels of one limb (IeeeInterval1.v), mul_dir_1 in both models (DirectedProd.v,
+    # IeeeDirectedProd.v) and the bounds of two limbs (Directed2.v).
     WAVE_2_PROVED = {'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1', 'interval_mul_1',
-                     'mul_dir_1'}
+                     'mul_dir_1'} | WAVE_2_CORES
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -1325,7 +1325,8 @@ class TheKernels(unittest.TestCase):
                          | wave_2_ieee_only | {'mul_dir_1'})
         self.assertEqual({name: k.ieee_status for name, k in ks.items() if k.extended},
                          dict(dict.fromkeys(self.NON_FINITE | self.NO_FIX_UP | self.BALL_NEG
-                                            | self.WAVE_1_EXTENDED | self.WAVE_1_FULL | self.WAVE_2_PROVED, 'proved'),
+                                            | self.WAVE_1_EXTENDED | self.WAVE_1_FULL
+                                            | (self.WAVE_2_PROVED - self.WAVE_2_CORES), 'proved'),
                               **dict.fromkeys((wave_2_ieee_only | {'mul_dir_1'}) - self.WAVE_2_PROVED,
                                               'unverified')))
         # Every kernel of the extended domain that is proved names its IEEE-model theorem, and no

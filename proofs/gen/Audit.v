@@ -12,6 +12,7 @@ From Kairn Require Import BallPow2.
 From Kairn Require Import Compare.
 From Kairn Require Import Convert.
 From Kairn Require Import Directed.
+From Kairn Require Import Directed2.
 From Kairn Require Import DirectedProd.
 From Kairn Require Import DirectedSum.
 From Kairn Require Import EFT.
@@ -135,8 +136,17 @@ Print Assumptions add_2_1_correct.
 Definition add_2_2_audit : add_2_2_spec := add_2_2_correct.
 Print Assumptions add_2_2_correct.
 
+Definition add_ball_2_2_audit : add_ball_2_2_spec := add_ball_2_2_correct.
+Print Assumptions add_ball_2_2_correct.
+
+Definition add_down_2_2_audit : add_down_2_2_spec := add_down_2_2_correct.
+Print Assumptions add_down_2_2_correct.
+
 Definition add_fast_2_2_audit : add_fast_2_2_spec := add_fast_2_2_correct.
 Print Assumptions add_fast_2_2_correct.
+
+Definition add_up_2_2_audit : add_up_2_2_spec := add_up_2_2_correct.
+Print Assumptions add_up_2_2_correct.
 
 Definition ball_add_2_audit : ball_add_2_spec := ball_add_2_correct.
 Print Assumptions ball_add_2_correct.
@@ -192,6 +202,12 @@ Print Assumptions lt_2_1_correct.
 Definition lt_2_2_audit : lt_2_2_spec := lt_2_2_correct.
 Print Assumptions lt_2_2_correct.
 
+Definition mul_ball_2_2_audit : mul_ball_2_2_spec := mul_ball_2_2_correct.
+Print Assumptions mul_ball_2_2_correct.
+
+Definition mul_dir_2_2_audit : mul_dir_2_2_spec := mul_dir_2_2_correct.
+Print Assumptions mul_dir_2_2_correct.
+
 Definition mul_pow2_2_audit : mul_pow2_2_spec := mul_pow2_2_correct.
 Print Assumptions mul_pow2_2_correct.
 
@@ -203,6 +219,12 @@ Print Assumptions sub_2_1_correct.
 
 Definition sub_2_2_audit : sub_2_2_spec := sub_2_2_correct.
 Print Assumptions sub_2_2_correct.
+
+Definition sub_down_2_2_audit : sub_down_2_2_spec := sub_down_2_2_correct.
+Print Assumptions sub_down_2_2_correct.
+
+Definition sub_up_2_2_audit : sub_up_2_2_spec := sub_up_2_2_correct.
+Print Assumptions sub_up_2_2_correct.
 
 Definition to_nearest_2_audit : to_nearest_2_spec := to_nearest_2_correct.
 Print Assumptions to_nearest_2_correct.

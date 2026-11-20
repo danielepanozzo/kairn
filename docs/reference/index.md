@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 103 kernels, 89 are proved and 14 are **UNVERIFIED**: [`add_ball_2_2`](add_ball_2_2.md), [`add_down_2_2`](add_down_2_2.md), [`add_up_2_2`](add_up_2_2.md), [`ball_from_interval_2`](ball_from_interval_2.md), [`ball_lower_as_1`](ball_lower_as_1.md), [`ball_lower_as_2`](ball_lower_as_2.md), [`ball_narrow_2_1`](ball_narrow_2_1.md), [`ball_upper_as_1`](ball_upper_as_1.md), [`ball_upper_as_2`](ball_upper_as_2.md), [`interval_add_2`](interval_add_2.md), [`mul_ball_2_2`](mul_ball_2_2.md), [`mul_dir_2_2`](mul_dir_2_2.md), [`sub_down_2_2`](sub_down_2_2.md), [`sub_up_2_2`](sub_up_2_2.md).
+Of the 103 kernels, 96 are proved and 7 are **UNVERIFIED**: [`ball_from_interval_2`](ball_from_interval_2.md), [`ball_lower_as_1`](ball_lower_as_1.md), [`ball_lower_as_2`](ball_lower_as_2.md), [`ball_narrow_2_1`](ball_narrow_2_1.md), [`ball_upper_as_1`](ball_upper_as_1.md), [`ball_upper_as_2`](ball_upper_as_2.md), [`interval_add_2`](interval_add_2.md).
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -186,13 +186,13 @@ Kernels that other kernels call, and that no public operation computes on its ow
 | not yet called by the public headers | - | $r = \mathrm{RD}(a - b)$ | [`sub_down_entry`](sub_down_entry.md) |
 | not yet called by the public headers | - | $r = \mathrm{RU}(a - b)$ | [`sub_up_entry`](sub_up_entry.md) |
 | none (internal) | - | $d \le a b$, at most 1 step below $\mathrm{RD}(a b)$; $v \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_dir_1`](mul_dir_1.md) |
-| none (internal) | - | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$; $\lvert (x + y) - z\rvert \le d$, normalized | [`add_ball_2_2`](add_ball_2_2.md) **UNVERIFIED** |
-| none (internal) | - | $\lvert z - x y\rvert \le 4\,u^2\,\lvert x y\rvert + \tfrac{3}{2}\,\eta$; $\lvert (x y) - z\rvert \le d$, normalized | [`mul_ball_2_2`](mul_ball_2_2.md) **UNVERIFIED** |
-| none (internal) | - | $l \le x + y$, within $A\lvert x + y\rvert + B$, exact when zero, normalized | [`add_down_2_2`](add_down_2_2.md) **UNVERIFIED** |
-| none (internal) | - | $h \ge x + y$, within $A\lvert x + y\rvert + B$, exact when zero, normalized | [`add_up_2_2`](add_up_2_2.md) **UNVERIFIED** |
-| none (internal) | - | $l \le x - y$, within $A\lvert x - y\rvert + B$, exact when zero, normalized | [`sub_down_2_2`](sub_down_2_2.md) **UNVERIFIED** |
-| none (internal) | - | $h \ge x - y$, within $A\lvert x - y\rvert + B$, exact when zero, normalized | [`sub_up_2_2`](sub_up_2_2.md) **UNVERIFIED** |
-| none (internal) | - | $l \le x y$, within $A\lvert x y\rvert + B$; $h \ge x y$, within $A\lvert x y\rvert + B$, normalized | [`mul_dir_2_2`](mul_dir_2_2.md) **UNVERIFIED** |
+| none (internal) | - | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$; $\lvert (x + y) - z\rvert \le d$, normalized | [`add_ball_2_2`](add_ball_2_2.md) |
+| none (internal) | - | $\lvert z - x y\rvert \le 4\,u^2\,\lvert x y\rvert + \tfrac{3}{2}\,\eta$; $\lvert (x y) - z\rvert \le d$, normalized | [`mul_ball_2_2`](mul_ball_2_2.md) |
+| none (internal) | - | $l \le x + y$, within $A\lvert x + y\rvert + B$, exact when zero, normalized | [`add_down_2_2`](add_down_2_2.md) |
+| none (internal) | - | $h \ge x + y$, within $A\lvert x + y\rvert + B$, exact when zero, normalized | [`add_up_2_2`](add_up_2_2.md) |
+| none (internal) | - | $l \le x - y$, within $A\lvert x - y\rvert + B$, exact when zero, normalized | [`sub_down_2_2`](sub_down_2_2.md) |
+| none (internal) | - | $h \ge x - y$, within $A\lvert x - y\rvert + B$, exact when zero, normalized | [`sub_up_2_2`](sub_up_2_2.md) |
+| none (internal) | - | $l \le x y$, within $A\lvert x y\rvert + B$; $h \ge x y$, within $A\lvert x y\rvert + B$, normalized | [`mul_dir_2_2`](mul_dir_2_2.md) |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly | [`two_sum`](two_sum.md) |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly, normalized | [`fast_two_sum`](fast_two_sum.md) |
 | not yet called by the public headers | - | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{1}{2}\,\eta$ | [`two_prod`](two_prod.md) |

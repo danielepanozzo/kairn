@@ -87,11 +87,11 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    a few facts whose statements are written by hand because they say more about a kernel than
    its claims can express, the theorems about sums and dot products of arrays, which are
    about no single kernel, and the lemmas of the first building blocks of Milestone 2 that are
-   not generated statements, among them what is proved of `mul_dir_1` and of the interval
-   kernels with bounds of one limb beside their generated statements, those about the two
-   executions of a product, whose plain-product listings are written by hand, and the theorems
-   of the bounds of two limbs and of the sum of two intervals of two limbs, which are still
-   proved on models of their listings written by hand in the text the generator prints.
+   not generated statements, among them what is proved of `mul_dir_1`, of the interval
+   kernels with bounds of one limb and of the bounds of two limbs beside their generated
+   statements, those about the two executions of a product, whose plain-product listings are
+   written by hand, and the theorems about the sum of two intervals of two limbs, whose
+   generated statement is not proved yet.
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the

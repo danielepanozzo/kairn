@@ -2808,7 +2808,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_2_2_full(float x0, float x1, float y0, 
 }
 
 // add_ball_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1), d
-// add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void add_ball_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out, double& d_out) noexcept {
     // (z0, z1) = add_2_2(x0, x1, y0, y1)
     // (z0_sh, z0_sl) = two_sum(x0, y0)
@@ -2877,7 +2877,7 @@ KAIRN_GEN_FORCEINLINE void add_ball_2_2(float x0, float x1, float y0, float y1, 
 }
 
 // add_down_2_2(x = (x0, x1), y = (y0, y1)) -> l = (l0, l1)
-// add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void add_down_2_2(double x0, double x1, double y0, double y1, double& l0_out, double& l1_out) noexcept {
     // (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
     // (z0, z1) = add_2_2(x0, x1, y0, y1)
@@ -3138,7 +3138,7 @@ KAIRN_GEN_FORCEINLINE constexpr void add_fast_2_2_full(float x0, float x1, float
 }
 
 // add_up_2_2(x = (x0, x1), y = (y0, y1)) -> h = (h0, h1)
-// add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void add_up_2_2(double x0, double x1, double y0, double y1, double& h0_out, double& h1_out) noexcept {
     // (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
     // (z0, z1) = add_2_2(x0, x1, y0, y1)
@@ -5270,7 +5270,7 @@ KAIRN_GEN_FORCEINLINE void mul_2_2_full(float x0, float x1, float y0, float y1, 
 }
 
 // mul_ball_2_2(x = (x0, x1), y = (y0, y1)) -> z = (z0, z1), d
-// mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_ball_2_2(double x0, double x1, double y0, double y1, double& z0_out, double& z1_out, double& d_out) noexcept {
     // (z0, z1) = mul_2_2(x0, x1, y0, y1)
     // (z0_ch, z0_cl1) = two_prod(x0, y0)
@@ -5313,7 +5313,7 @@ KAIRN_GEN_FORCEINLINE void mul_ball_2_2(float x0, float x1, float y0, float y1, 
 }
 
 // mul_dir_2_2(x = (x0, x1), y = (y0, y1)) -> l = (l0, l1), h = (h0, h1)
-// mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void mul_dir_2_2(double x0, double x1, double y0, double y1, double& l0_out, double& l1_out, double& h0_out, double& h1_out) noexcept {
     // (z0, z1, d) = mul_ball_2_2(x0, x1, y0, y1)
     // (z0, z1) = mul_2_2(x0, x1, y0, y1)
@@ -6060,7 +6060,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_2_2_full(float x0, float x1, float y0, 
 }
 
 // sub_down_2_2(x = (x0, x1), y = (y0, y1)) -> l = (l0, l1)
-// add_down_2_2 on x and -y (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// add_down_2_2 on x and -y (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void sub_down_2_2(double x0, double x1, double y0, double y1, double& l0_out, double& l1_out) noexcept {
     // (n0, n1) = neg_2(y0, y1)
     const double n0 = -y0;
@@ -6193,7 +6193,7 @@ KAIRN_GEN_FORCEINLINE void sub_down_2_2(float x0, float x1, float y0, float y1, 
 }
 
 // sub_up_2_2(x = (x0, x1), y = (y0, y1)) -> h = (h0, h1)
-// add_up_2_2 on x and -y (Milestone 2 listing). Status: unverified; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// add_up_2_2 on x and -y (Milestone 2 listing). Status: proved; not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 KAIRN_GEN_FORCEINLINE void sub_up_2_2(double x0, double x1, double y0, double y1, double& h0_out, double& h1_out) noexcept {
     // (n0, n1) = neg_2(y0, y1)
     const double n0 = -y0;

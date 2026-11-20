@@ -863,7 +863,7 @@ $H$ of `ball_add_2` and the $\mathrm{rel}$, $\mathrm{tiny}$ of `add_2_2`):
  "ensures": [{"kind": "normalized", "of": "z"},
              {"kind": "error", "of": "z", "form": "R", "c": "3/(1-4*u)", "k": 2, "t": "0", "when": null},
              {"kind": "encloses", "center": "z", "radius": "d", "set": "x+y", "balls": {}}],
- "min_precision": 3, "status": "unverified",
+ "min_precision": 3, "status": "proved",
  "instances": {"binary64": [{"rel": "3/81129638414606645666991986180096", "abs": "0"}],
                "binary32": [{"rel": "1/93824969867264", "abs": "0"}]}},
 {"name": "ball_lower_as_1", "domain": "extended", "ieee_only": true,

@@ -12,12 +12,16 @@
          (z0, z1, d) = add_ball_2_2(x, y)           (z0, z1, d) = add_ball_2_2(x, y)
          zd          = eq(z0, 0)                    zd          = eq(z0, 0)
          dd          = select(zd, 0, d)             dd          = select(zd, 0, d)
-         w           = sub_down_1(z1, dd)           w           = add_up_1(z1, dd)
-         (l0, l1)    = two_sum_ord(z0, w)           (h0, h1)    = two_sum_ord(z0, w)
+         nz          = neg(z1)                      w           = add_up_1(z1, dd)
+         t           = add_up_1(dd, nz)             (h0, h1)    = two_sum_ord(z0, w)
+         w           = neg(t)
+         (l0, l1)    = two_sum_ord(z0, w)
 
        mul_dir_2_2(x, y) -> (l, h)                sub_down_2_2(x, y), sub_up_2_2(x, y):
-         (z0, z1, d) = mul_ball_2_2(x, y)           the sum on x and -y
-         wl          = sub_down_1(z1, d)
+         (z0, z1, d) = mul_ball_2_2(x, y)           neg_2(y), then the sum
+         nz          = neg(z1)
+         t           = add_up_1(d, nz)
+         wl          = neg(t)
          wu          = add_up_1(z1, d)
          (l0, l1)    = two_sum_ord(z0, wl)
          (h0, h1)    = two_sum_ord(z0, wu)
@@ -31,25 +35,39 @@
    the center's kernel: 3 u^2 / (1 - 4 u) and 0 for add_2_2, 4 u^2 and (3/2) eta for
    mul_2_2.
 
+   The kernels are the generated models of proofs/gen/Model.v, and the seven theorems
+   K_correct establish their generated statements (proofs/gen/Statements.v):
+   add_ball_2_2_correct, mul_ball_2_2_correct, add_down_2_2_correct, add_up_2_2_correct,
+   sub_down_2_2_correct, sub_up_2_2_correct and mul_dir_2_2_correct.
+
+   The second limb of a lower bound. The design page writes it w = sub_down_1(z1, b),
+   which is RD(z1 - b), with b the bound subtracted (dd in the sums, d in the product).
+   The listings above compute it as minus the rounding up of b - z1, in three lines,
+   because the generator refuses the negation of a fused result, directly or through a
+   select (gen/README.md, "The rules"), and sub_down_1 negates its second operand. The
+   two are the same number: -RU(b - z1) = RD(z1 - b) (RD_as_opp_RU), so the three lines
+   return what sub_down_1(z1, b) returns (sub_down_1_as_add_up_1), and everything below
+   is stated of the generated listings.
+
    What is proved.
 
-   1. add_ball_2_2 and mul_ball_2_2 (add_ball_2_2_listing_correct,
-      mul_ball_2_2_listing_correct), from precision 3 and 4: d is a number of F, z is
-      normalized, z has the error bound of add_2_2 or of mul_2_2, and |v - z| <= d. The
-      listing is ball_add_2, or ball_mul_2, with radii zero (add_ball_2_2_listing_eq,
-      mul_ball_2_2_listing_eq): the operations on the radii round zero. So the statements
-      are ball_add_2_correct and ball_mul_2_correct, and add_2_2_correct, mul_2_2_correct.
+   1. add_ball_2_2 and mul_ball_2_2 (add_ball_2_2_correct, mul_ball_2_2_correct), from
+      precision 3 and 4: d is a number of F, z is normalized, z has the error bound of
+      add_2_2 or of mul_2_2, and |v - z| <= d. The listing is ball_add_2, or ball_mul_2,
+      with radii zero (add_ball_2_2_eq, mul_ball_2_2_eq): the operations on the radii
+      round zero. So the statements are ball_add_2_correct and ball_mul_2_correct, and
+      add_2_2_correct, mul_2_2_correct.
 
    2. The directed sums and differences, with the rule of the zero sum, from precision 3
-      (add_down_2_2_listing_values, add_up_2_2_listing_values; the same four facts for
-      sub_down_2_2 and sub_up_2_2 in sub_down_2_2_listing_values and
-      sub_up_2_2_listing_values), in the values of the kernel:
+      (add_down_2_2_values, add_up_2_2_values; the same four facts for sub_down_2_2 and
+      sub_up_2_2 in sub_down_2_2_values and sub_up_2_2_values), in the values of the
+      kernel:
       - l and h are normalized, and l <= v <= h;
       - the computed sum z is zero exactly when v = 0, and then l = h = 0, limb by limb;
       - v - l <= 2 dd + max(eta, 2 u (u |z0| + dd)), and the same for h - v, where dd is
         the bound that the listing subtracts: d, or 0 when z0 = 0.
       And mul_dir_2_2, from precision 4, without the rule of the zero
-      (mul_dir_2_2_listing_values): the same with d in place of dd.
+      (mul_dir_2_2_values): the same with d in place of dd.
 
    3. The closed form (the `outward` claim), the first upper bound of a radius proved
       here: v - l <= A |v| + B and h - v <= A |v| + B, with
@@ -57,10 +75,11 @@
           A = (2 (1 + u)^3 G E + 2 u^2) (1 + rel) / (1 - u)
           B = 2 (1 + u)^2 (G eta / 2 + H) + eta + (2 (1 + u)^3 G E + 2 u^2) / (1 - u) tiny
 
-      (outward_rel and outward_abs; add_down_2_2_listing_correct and the five others
-      state it with the constants of each kernel, in the shape of a generated statement:
-      normalized, on its side of v, within A |v| + B of it, and equal to v when v = 0 for
-      the sums and the differences).
+      (outward_rel and outward_abs; add_down_2_2_outward and the four others state it
+      with the constants of each kernel, add_outward_rel and the like: normalized, on its
+      side of v, within A |v| + B of it, and equal to v when v = 0 for the sums and the
+      differences. The generated statements print the same constants unfolded, so each
+      K_correct is the theorem K_outward.)
 
    How the closed form is obtained. A rounding to nearest of x >= 0 is at most
    (1 + u) x + eta / 2 (rnd_upper), and at most (1 + u) x when x is at least the smallest
@@ -74,105 +93,12 @@
    and this is what the displayed B assumes. Then |z0| <= |z| / (1 - u) for a normalized
    pair, |z| <= (1 + rel) |v| + tiny, and max(eta, c) <= eta + c (outward_closed). Nothing
    in it uses that the constants are close to their expressions: only E >= 0, G >= 0 and
-   H >= N.
-
-   The listings. None of these kernels is generated yet: add_ball_2_2_listing and the
-   others, in section Listings, are their listings written by hand in the text the
-   generator prints for the real model (checked against the generator's printer on the
-   kernel descriptions), and the generated Model.add_ball_2_2 and the others will replace
-   them. The constants are the generated ones of ball_add_2 and ball_mul_2. There is no
-   description of sub_down_2_2 and sub_up_2_2 yet: their listings here negate the limbs
-   of y as sub_2_2 does, then call the sum. *)
+   H >= N. *)
 From Stdlib Require Import Reals ZArith Lia Lra Psatz.
 From Flocq Require Import Core Relative.
 From Kairn.Gen Require Import Model Statements.
 From Kairn Require Import Format Normalized Add22 Mul22 OneLimb Ball2 EFT Convert DirectedSum.
 Open Scope R_scope.
-
-(** * The listings *)
-
-Section Listings.
-Variable emin prec : Z.
-Variable choice : Z -> bool.
-Notation rnd := (round radix2 (FLT_exp emin prec) (Znearest choice)).
-
-Local Notation add_2_2 := (Model.add_2_2 emin prec choice).
-Local Notation mul_2_2 := (Model.mul_2_2 emin prec choice).
-Local Notation two_sum_ord := (Model.two_sum_ord emin prec choice).
-Local Notation sub_down_1 := (Model.sub_down_1 emin prec choice).
-Local Notation add_up_1 := (Model.add_up_1 emin prec choice).
-(* The constants E, G, H of ball_add_2 and of ball_mul_2, under the names the generator
-   gives them when add_ball_2_2 is the first kernel that uses E. *)
-Local Notation up_add_ball_2_2_0 := (Model.up_ball_add_2_0 emin prec).
-Local Notation up_ball_add_1_1 := (Model.up_ball_add_1_1 emin prec).
-Local Notation up_ball_add_1_2 := (Model.up_ball_add_1_2 emin prec).
-Local Notation up_ball_mul_2_0 := (Model.up_ball_mul_2_0 emin prec).
-Local Notation up_ball_mul_2_1 := (Model.up_ball_mul_2_1 emin prec).
-Local Notation up_ball_mul_2_2 := (Model.up_ball_mul_2_2 emin prec).
-
-(* Hand-written models of the listings, in the text the generator prints for the real
-   model. The kernels are not generated yet; the generated Model.add_ball_2_2,
-   mul_ball_2_2, add_down_2_2, add_up_2_2 and mul_dir_2_2 will replace these
-   definitions. *)
-Definition add_ball_2_2_listing (x0 x1 y0 y1 : R) : R * R * R :=
-  let '(z0, z1) := add_2_2 x0 x1 y0 y1 in
-  let az := Rabs z0 in
-  let t := rnd (az * up_add_ball_2_2_0 + 0) in
-  let d := rnd (t * up_ball_add_1_1 + up_ball_add_1_2) in
-  (z0, z1, d).
-
-Definition mul_ball_2_2_listing (x0 x1 y0 y1 : R) : R * R * R :=
-  let '(z0, z1) := mul_2_2 x0 x1 y0 y1 in
-  let az := Rabs z0 in
-  let t := rnd (az * up_ball_mul_2_0 + 0) in
-  let d := rnd (t * up_ball_mul_2_1 + up_ball_mul_2_2) in
-  (z0, z1, d).
-
-Local Notation add_ball_2_2 := add_ball_2_2_listing.
-Local Notation mul_ball_2_2 := mul_ball_2_2_listing.
-
-Definition add_down_2_2_listing (x0 x1 y0 y1 : R) : R * R :=
-  let '(z0, z1, d) := add_ball_2_2 x0 x1 y0 y1 in
-  let zd := Req_bool z0 0 in
-  let dd := if zd then 0 else d in
-  let w := sub_down_1 z1 dd in
-  let '(l0, l1) := two_sum_ord z0 w in
-  (l0, l1).
-
-Definition add_up_2_2_listing (x0 x1 y0 y1 : R) : R * R :=
-  let '(z0, z1, d) := add_ball_2_2 x0 x1 y0 y1 in
-  let zd := Req_bool z0 0 in
-  let dd := if zd then 0 else d in
-  let w := add_up_1 z1 dd in
-  let '(h0, h1) := two_sum_ord z0 w in
-  (h0, h1).
-
-Definition mul_dir_2_2_listing (x0 x1 y0 y1 : R) : R * R * R * R :=
-  let '(z0, z1, d) := mul_ball_2_2 x0 x1 y0 y1 in
-  let wl := sub_down_1 z1 d in
-  let wu := add_up_1 z1 d in
-  let '(l0, l1) := two_sum_ord z0 wl in
-  let '(h0, h1) := two_sum_ord z0 wu in
-  (l0, l1, h0, h1).
-
-Local Notation add_down_2_2 := add_down_2_2_listing.
-Local Notation add_up_2_2 := add_up_2_2_listing.
-
-(* The differences: no description yet. The limbs of y are negated as in sub_2_2, then
-   the sum is called. *)
-Definition sub_down_2_2_listing (x0 x1 y0 y1 : R) : R * R :=
-  let n0 := - y0 in
-  let n1 := - y1 in
-  let '(l0, l1) := add_down_2_2 x0 x1 n0 n1 in
-  (l0, l1).
-
-Definition sub_up_2_2_listing (x0 x1 y0 y1 : R) : R * R :=
-  let n0 := - y0 in
-  let n1 := - y1 in
-  let '(h0, h1) := add_up_2_2 x0 x1 n0 n1 in
-  (h0, h1).
-
-End Listings.
 
 (** * One rounding, from above, and the gap of a directed rounding *)
 
@@ -424,23 +350,23 @@ Definition mul_outward_abs (emin prec : Z) : R :=
 (** * add_ball_2_2 and mul_ball_2_2 *)
 
 (* The listing is ball_add_2 with radii zero: s = RN(0 + 0) = 0. For every tie rule. *)
-Lemma add_ball_2_2_listing_eq :
+Lemma add_ball_2_2_eq :
   forall (emin prec : Z) {prec_gt_0_ : Prec_gt_0 prec} (choice : Z -> bool) (x0 x1 y0 y1 : R),
-  add_ball_2_2_listing emin prec choice x0 x1 y0 y1
+  add_ball_2_2 emin prec choice x0 x1 y0 y1
   = ball_add_2 emin prec choice x0 x1 0 y0 y1 0.
 Proof.
-intros emin prec Hp choice x0 x1 y0 y1. unfold add_ball_2_2_listing, ball_add_2.
+intros emin prec Hp choice x0 x1 y0 y1. unfold add_ball_2_2, ball_add_2.
 destruct (add_2_2 emin prec choice x0 x1 y0 y1) as [z0 z1]. cbv zeta.
 rewrite (Rplus_0_l 0). rewrite round_0; auto with typeclass_instances.
 Qed.
 
 (* The listing is ball_mul_2 with radii zero: p, q and w are roundings of zero. *)
-Lemma mul_ball_2_2_listing_eq :
+Lemma mul_ball_2_2_eq :
   forall (emin prec : Z) {prec_gt_0_ : Prec_gt_0 prec} (choice : Z -> bool) (x0 x1 y0 y1 : R),
-  mul_ball_2_2_listing emin prec choice x0 x1 y0 y1
+  mul_ball_2_2 emin prec choice x0 x1 y0 y1
   = ball_mul_2 emin prec choice x0 x1 0 y0 y1 0.
 Proof.
-intros emin prec Hp choice x0 x1 y0 y1. unfold mul_ball_2_2_listing, ball_mul_2.
+intros emin prec Hp choice x0 x1 y0 y1. unfold mul_ball_2_2, ball_mul_2.
 destruct (mul_2_2 emin prec choice x0 x1 y0 y1) as [z0 z1]. cbv zeta.
 rewrite !Rmult_0_r, !Rplus_0_l. rewrite !round_0; auto with typeclass_instances.
 Qed.
@@ -448,21 +374,12 @@ Qed.
 (* add_ball_2_2, for normalized x and y, from precision 3: d is a number of the format, z
    is normalized, z is within 3 u^2 / (1 - 4 u) |x + y| of x + y (the bound of add_2_2),
    and |x + y - z| <= d. *)
-Theorem add_ball_2_2_listing_correct :
-  forall emin prec : Z, (3 <= prec)%Z ->
-  forall x0 x1 y0 y1 : R,
-  normalized_2 emin prec x0 x1 ->
-  normalized_2 emin prec y0 y1 ->
-  let '(z0, z1, d) := add_ball_2_2_listing emin prec tie_even x0 x1 y0 y1 in
-  fmt emin prec d /\
-  normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((x0 + x1) + (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) + (y0 + y1)) /\
-  Rabs (((x0 + x1) + (y0 + y1)) - (z0 + z1)) <= d.
+Theorem add_ball_2_2_correct : add_ball_2_2_spec.
 Proof.
 intros emin prec Hp x0 x1 y0 y1 Nx Ny.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 3%Z; lia).
 assert (F0 : fmt emin prec 0) by apply generic_format_0.
-rewrite (add_ball_2_2_listing_eq emin prec).
+rewrite (add_ball_2_2_eq emin prec).
 generalize (ball_add_2_correct emin prec Hp x0 x1 0 y0 y1 0 Nx F0 Ny F0 (Rle_refl 0) (Rle_refl 0)).
 generalize (add_2_2_correct emin prec Hp x0 x1 y0 y1 Nx Ny).
 unfold ball_add_2.
@@ -475,21 +392,12 @@ Qed.
 (* mul_ball_2_2, for normalized x and y, from precision 4: d is a number of the format, z
    is normalized, z is within 4 u^2 |x y| + (3/2) eta of x y (the bound of mul_2_2), and
    |x y - z| <= d. *)
-Theorem mul_ball_2_2_listing_correct :
-  forall emin prec : Z, (4 <= prec)%Z ->
-  forall x0 x1 y0 y1 : R,
-  normalized_2 emin prec x0 x1 ->
-  normalized_2 emin prec y0 y1 ->
-  let '(z0, z1, d) := mul_ball_2_2_listing emin prec tie_even x0 x1 y0 y1 in
-  fmt emin prec d /\
-  normalized_2 emin prec z0 z1 /\
-  Rabs ((z0 + z1) - ((x0 + x1) * (y0 + y1))) <= 4 * u prec ^ 2 * Rabs ((x0 + x1) * (y0 + y1)) + (3 / 2) * eta emin /\
-  Rabs (((x0 + x1) * (y0 + y1)) - (z0 + z1)) <= d.
+Theorem mul_ball_2_2_correct : mul_ball_2_2_spec.
 Proof.
 intros emin prec Hp x0 x1 y0 y1 Nx Ny.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 4%Z; lia).
 assert (F0 : fmt emin prec 0) by apply generic_format_0.
-rewrite (mul_ball_2_2_listing_eq emin prec).
+rewrite (mul_ball_2_2_eq emin prec).
 generalize (ball_mul_2_correct emin prec Hp x0 x1 0 y0 y1 0 Nx F0 Ny F0 (Rle_refl 0) (Rle_refl 0)).
 generalize (mul_2_2_correct emin prec Hp x0 x1 y0 y1 Nx Ny).
 unfold ball_mul_2.
@@ -501,16 +409,42 @@ Qed.
 
 (** * One outward step *)
 
-(* The last two lines of a directed sum or product, below. z is a normalized pair within
-   b of v, and b a nonnegative number of the format. Then w = RD(z1 - b), the pair
-   returned by two_sum_ord(z0, w) is normalized, its value is z0 + w exactly, it is at
-   most v, and v exceeds it by at most 2 b + max(eta, 2 u (u |z0| + b)). *)
+(* The rounding down of z - b is minus the rounding up of b - z: the form in which the
+   listings compute the second limb of a lower bound, so that no fused result is
+   negated. *)
+Lemma RD_as_opp_RU :
+  forall (emin prec : Z) (z b : R), - RU emin prec (b + - z) = RD emin prec (z - b).
+Proof.
+intros emin prec z b. unfold RU, RD.
+replace (z - b) with (- (b + - z)) by ring.
+now rewrite round_DN_opp.
+Qed.
+
+(* So the three lines nz = neg(z); t = add_up_1(b, nz); w = neg(t) return what
+   sub_down_1(z, b) of the design page returns, for numbers z and b of the format. From
+   precision 2. *)
+Lemma sub_down_1_as_add_up_1 :
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall z b : R, fmt emin prec z -> fmt emin prec b ->
+  - Model.add_up_1 emin prec tie_even b (- z) = Model.sub_down_1 emin prec tie_even z b.
+Proof.
+intros emin prec Hp z b Fz Fb.
+destruct (add_up_1_correct emin prec Hp b (- z) Fb (generic_format_opp _ _ _ Fz)) as [_ E1].
+destruct (sub_down_1_correct emin prec Hp z b Fz Fb) as [_ E2].
+rewrite E1, E2. apply RD_as_opp_RU.
+Qed.
+
+(* The last lines of a directed sum or product, below. z is a normalized pair within b
+   of v, and b a nonnegative number of the format. Then w = -RU(b - z1) = RD(z1 - b),
+   the pair returned by two_sum_ord(z0, w) is normalized, its value is z0 + w exactly, it
+   is at most v, and v exceeds it by at most 2 b + max(eta, 2 u (u |z0| + b)). *)
 Lemma outward_down :
   forall emin prec : Z, (2 <= prec)%Z ->
   forall z0 z1 b v : R,
   normalized_2 emin prec z0 z1 -> fmt emin prec b -> 0 <= b ->
   Rabs ((z0 + z1) - v) <= b ->
-  let l := Model.two_sum_ord emin prec tie_even z0 (Model.sub_down_1 emin prec tie_even z1 b) in
+  let l := Model.two_sum_ord emin prec tie_even z0
+             (- Model.add_up_1 emin prec tie_even b (- z1)) in
   normalized_2 emin prec (fst l) (snd l) /\
   fst l + snd l = z0 + RD emin prec (z1 - b) /\
   fst l + snd l <= v /\
@@ -521,8 +455,13 @@ assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 2%Z; lia).
 generalize (bpow_gt_0 radix2 (- prec)). fold (u prec). intros U0.
 assert (T := normalized_2_tail_rel emin prec z0 z1 Nz).
 destruct Nz as [Fz0 [Fz1 _]].
-destruct (sub_down_1_correct emin prec Hp z1 b Fz1 Fb) as [Fw Ew].
-revert Fw Ew. generalize (Model.sub_down_1 emin prec tie_even z1 b). intros w Fw Ew.
+destruct (add_up_1_correct emin prec Hp b (- z1) Fb (generic_format_opp _ _ _ Fz1))
+  as [Ft Et].
+assert (Fw : fmt emin prec (- Model.add_up_1 emin prec tie_even b (- z1)))
+  by (apply generic_format_opp; exact Ft).
+assert (Ew : - Model.add_up_1 emin prec tie_even b (- z1) = RD emin prec (z1 - b))
+  by (rewrite Et; apply RD_as_opp_RU).
+revert Fw Ew. generalize (- Model.add_up_1 emin prec tie_even b (- z1)). intros w Fw Ew.
 destruct (two_sum_ord_facts emin prec Hp z0 w Fz0 Fw) as [_ [Es Nl]].
 revert Es Nl. generalize (Model.two_sum_ord emin prec tie_even z0 w). intros l Es Nl.
 assert (G := rd_gap emin prec (z1 - b)).
@@ -612,7 +551,7 @@ Lemma add_ball_dd :
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
   let v := (x0 + x1) + (y0 + y1) in
-  let '(z0, z1, d) := add_ball_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(z0, z1, d) := add_ball_2_2 emin prec tie_even x0 x1 y0 y1 in
   let dd := if Req_bool z0 0 then 0 else d in
   normalized_2 emin prec z0 z1 /\
   fmt emin prec dd /\
@@ -625,8 +564,8 @@ Lemma add_ball_dd :
 Proof.
 intros emin prec Hp x0 x1 y0 y1 Nx Ny. cbv zeta.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 3%Z; lia).
-generalize (add_ball_2_2_listing_correct emin prec Hp x0 x1 y0 y1 Nx Ny).
-unfold add_ball_2_2_listing.
+generalize (add_ball_2_2_correct emin prec Hp x0 x1 y0 y1 Nx Ny).
+unfold add_ball_2_2.
 destruct (add_2_2 emin prec tie_even x0 x1 y0 y1) as [z0 z1]. cbv beta iota zeta.
 set (v := x0 + x1 + (y0 + y1)).
 set (d := round radix2 (FLT_exp emin prec) (Znearest tie_even)
@@ -665,7 +604,7 @@ Lemma mul_ball_d :
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
   let v := (x0 + x1) * (y0 + y1) in
-  let '(z0, z1, d) := mul_ball_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(z0, z1, d) := mul_ball_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec z0 z1 /\
   fmt emin prec d /\
   0 <= d /\
@@ -675,8 +614,8 @@ Lemma mul_ball_d :
 Proof.
 intros emin prec Hp x0 x1 y0 y1 Nx Ny. cbv zeta.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 4%Z; lia).
-generalize (mul_ball_2_2_listing_correct emin prec Hp x0 x1 y0 y1 Nx Ny).
-unfold mul_ball_2_2_listing.
+generalize (mul_ball_2_2_correct emin prec Hp x0 x1 y0 y1 Nx Ny).
+unfold mul_ball_2_2.
 destruct (mul_2_2 emin prec tie_even x0 x1 y0 y1) as [z0 z1]. cbv beta iota zeta.
 set (v := (x0 + x1) * (y0 + y1)).
 set (d := round radix2 (FLT_exp emin prec) (Znearest tie_even)
@@ -702,14 +641,14 @@ Qed.
    listing subtracts (d, or 0 when z0 = 0): l is normalized; l <= v; the computed sum is
    zero exactly when v = 0, and then both limbs of l are zero; v - l is at most
    2 dd + max(eta, 2 u (u |z0| + dd)); and that bound is at most A |v| + B. *)
-Theorem add_down_2_2_listing_values :
+Theorem add_down_2_2_values :
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
-  let '(z0, z1, d) := add_ball_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(z0, z1, d) := add_ball_2_2 emin prec tie_even x0 x1 y0 y1 in
   let dd := if Req_bool z0 0 then 0 else d in
-  let '(l0, l1) := add_down_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(l0, l1) := add_down_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec l0 l1 /\
   (l0 + l1) <= ((x0 + x1) + (y0 + y1)) /\
   (z0 = 0 <-> ((x0 + x1) + (y0 + y1)) = 0) /\
@@ -723,13 +662,13 @@ intros emin prec Hp x0 x1 y0 y1 Nx Ny.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 3%Z; lia).
 assert (Hp2 : (2 <= prec)%Z) by lia.
 generalize (add_ball_dd emin prec Hp x0 x1 y0 y1 Nx Ny). cbv zeta.
-unfold add_down_2_2_listing.
-destruct (add_ball_2_2_listing emin prec tie_even x0 x1 y0 y1) as [[z0 z1] d].
+unfold add_down_2_2.
+destruct (add_ball_2_2 emin prec tie_even x0 x1 y0 y1) as [[z0 z1] d].
 cbv beta iota zeta.
 set (v := x0 + x1 + (y0 + y1)). set (dd := if Req_bool z0 0 then 0 else d).
 intros [Nz [Fdd [D0 [Herr [Zero [Z1 Closed]]]]]].
 generalize (outward_down emin prec Hp2 z0 z1 dd v Nz Fdd D0 Herr). cbv zeta.
-destruct (two_sum_ord emin prec tie_even z0 (sub_down_1 emin prec tie_even z1 dd)) as [l0 l1].
+destruct (two_sum_ord emin prec tie_even z0 (- add_up_1 emin prec tie_even dd (- z1))) as [l0 l1].
 cbn [fst snd]. intros [Nl [El [Lv Tight]]].
 split; [exact Nl|split; [exact Lv|split; [exact Zero|split; [|split; [exact Tight|exact Closed]]]]].
 intros V0. destruct (Z1 (proj2 Zero V0)) as [Ez1 Edd].
@@ -742,14 +681,14 @@ Qed.
 
 (* add_up_2_2, likewise: h is normalized; v <= h; when v = 0 both limbs of h are zero;
    h - v is at most 2 dd + max(eta, 2 u (u |z0| + dd)), which is at most A |v| + B. *)
-Theorem add_up_2_2_listing_values :
+Theorem add_up_2_2_values :
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
-  let '(z0, z1, d) := add_ball_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(z0, z1, d) := add_ball_2_2 emin prec tie_even x0 x1 y0 y1 in
   let dd := if Req_bool z0 0 then 0 else d in
-  let '(h0, h1) := add_up_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(h0, h1) := add_up_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec h0 h1 /\
   ((x0 + x1) + (y0 + y1)) <= (h0 + h1) /\
   (z0 = 0 <-> ((x0 + x1) + (y0 + y1)) = 0) /\
@@ -763,8 +702,8 @@ intros emin prec Hp x0 x1 y0 y1 Nx Ny.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 3%Z; lia).
 assert (Hp2 : (2 <= prec)%Z) by lia.
 generalize (add_ball_dd emin prec Hp x0 x1 y0 y1 Nx Ny). cbv zeta.
-unfold add_up_2_2_listing.
-destruct (add_ball_2_2_listing emin prec tie_even x0 x1 y0 y1) as [[z0 z1] d].
+unfold add_up_2_2.
+destruct (add_ball_2_2 emin prec tie_even x0 x1 y0 y1) as [[z0 z1] d].
 cbv beta iota zeta.
 set (v := x0 + x1 + (y0 + y1)). set (dd := if Req_bool z0 0 then 0 else d).
 intros [Nz [Fdd [D0 [Herr [Zero [Z1 Closed]]]]]].
@@ -780,24 +719,24 @@ assert (H0 := proj1 (normalized_2_value_zero emin prec h0 h1 Nh) Eh).
 split; [exact H0|lra].
 Qed.
 
-(* add_down_2_2, in the shape of a generated statement, for normalized x and y, from
-   precision 3: l is normalized, l <= x + y, |l - (x + y)| <= A |x + y| + B, and l is
-   x + y when x + y = 0. *)
-Theorem add_down_2_2_listing_correct :
+(* add_down_2_2, the `outward` claim with the constants A and B by name, for normalized
+   x and y, from precision 3: l is normalized, l <= x + y, |l - (x + y)| <= A |x + y| + B,
+   and l is x + y when x + y = 0. *)
+Theorem add_down_2_2_outward :
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
-  let '(l0, l1) := add_down_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(l0, l1) := add_down_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec l0 l1 /\
   (l0 + l1) <= ((x0 + x1) + (y0 + y1)) /\
   Rabs ((l0 + l1) - ((x0 + x1) + (y0 + y1))) <= add_outward_rel emin prec * Rabs ((x0 + x1) + (y0 + y1)) + add_outward_abs emin prec /\
   (((x0 + x1) + (y0 + y1)) = 0 -> (l0 + l1) = ((x0 + x1) + (y0 + y1))).
 Proof.
 intros emin prec Hp x0 x1 y0 y1 Nx Ny.
-generalize (add_down_2_2_listing_values emin prec Hp x0 x1 y0 y1 Nx Ny).
-destruct (add_ball_2_2_listing emin prec tie_even x0 x1 y0 y1) as [[z0 z1] d]. cbv zeta.
-destruct (add_down_2_2_listing emin prec tie_even x0 x1 y0 y1) as [l0 l1].
+generalize (add_down_2_2_values emin prec Hp x0 x1 y0 y1 Nx Ny).
+destruct (add_ball_2_2 emin prec tie_even x0 x1 y0 y1) as [[z0 z1] d]. cbv zeta.
+destruct (add_down_2_2 emin prec tie_even x0 x1 y0 y1) as [l0 l1].
 intros [Nl [Lv [_ [Zr [Tight Closed]]]]].
 split; [exact Nl|split; [exact Lv|split]].
 - rewrite Rabs_left1 by lra. lra.
@@ -806,21 +745,21 @@ Qed.
 
 (* add_up_2_2, likewise: h is normalized, x + y <= h, |h - (x + y)| <= A |x + y| + B, and
    h is x + y when x + y = 0. *)
-Theorem add_up_2_2_listing_correct :
+Theorem add_up_2_2_outward :
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
-  let '(h0, h1) := add_up_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(h0, h1) := add_up_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec h0 h1 /\
   ((x0 + x1) + (y0 + y1)) <= (h0 + h1) /\
   Rabs ((h0 + h1) - ((x0 + x1) + (y0 + y1))) <= add_outward_rel emin prec * Rabs ((x0 + x1) + (y0 + y1)) + add_outward_abs emin prec /\
   (((x0 + x1) + (y0 + y1)) = 0 -> (h0 + h1) = ((x0 + x1) + (y0 + y1))).
 Proof.
 intros emin prec Hp x0 x1 y0 y1 Nx Ny.
-generalize (add_up_2_2_listing_values emin prec Hp x0 x1 y0 y1 Nx Ny).
-destruct (add_ball_2_2_listing emin prec tie_even x0 x1 y0 y1) as [[z0 z1] d]. cbv zeta.
-destruct (add_up_2_2_listing emin prec tie_even x0 x1 y0 y1) as [h0 h1].
+generalize (add_up_2_2_values emin prec Hp x0 x1 y0 y1 Nx Ny).
+destruct (add_ball_2_2 emin prec tie_even x0 x1 y0 y1) as [[z0 z1] d]. cbv zeta.
+destruct (add_up_2_2 emin prec tie_even x0 x1 y0 y1) as [h0 h1].
 intros [Nh [Lv [_ [Zr [Tight Closed]]]]].
 split; [exact Nh|split; [exact Lv|split]].
 - rewrite Rabs_pos_eq by lra. lra.
@@ -829,16 +768,17 @@ Qed.
 
 (** * sub_down_2_2 and sub_up_2_2 *)
 
-(* The differences are the sums on x and -y: the same facts, in the values of the kernel
-   (the add_ball_2_2 of x and -y), with v = x - y. From precision 3. *)
-Theorem sub_down_2_2_listing_values :
+(* The differences are the sums on x and -y, the limbs of y negated by neg_2: the same
+   facts, in the values of the kernel (the add_ball_2_2 of x and -y), with v = x - y.
+   From precision 3. *)
+Theorem sub_down_2_2_values :
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
-  let '(z0, z1, d) := add_ball_2_2_listing emin prec tie_even x0 x1 (- y0) (- y1) in
+  let '(z0, z1, d) := add_ball_2_2 emin prec tie_even x0 x1 (- y0) (- y1) in
   let dd := if Req_bool z0 0 then 0 else d in
-  let '(l0, l1) := sub_down_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(l0, l1) := sub_down_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec l0 l1 /\
   (l0 + l1) <= ((x0 + x1) - (y0 + y1)) /\
   (z0 = 0 <-> ((x0 + x1) - (y0 + y1)) = 0) /\
@@ -849,22 +789,22 @@ Theorem sub_down_2_2_listing_values :
   <= add_outward_rel emin prec * Rabs ((x0 + x1) - (y0 + y1)) + add_outward_abs emin prec.
 Proof.
 intros emin prec Hp x0 x1 y0 y1 Nx Ny.
-generalize (add_down_2_2_listing_values emin prec Hp x0 x1 (- y0) (- y1) Nx
+generalize (add_down_2_2_values emin prec Hp x0 x1 (- y0) (- y1) Nx
               (normalized_2_opp emin prec y0 y1 Ny)).
-unfold sub_down_2_2_listing. cbv zeta.
-destruct (add_ball_2_2_listing emin prec tie_even x0 x1 (- y0) (- y1)) as [[z0 z1] d].
-destruct (add_down_2_2_listing emin prec tie_even x0 x1 (- y0) (- y1)) as [l0 l1].
+unfold sub_down_2_2, neg_2. cbv beta iota zeta.
+destruct (add_ball_2_2 emin prec tie_even x0 x1 (- y0) (- y1)) as [[z0 z1] d].
+destruct (add_down_2_2 emin prec tie_even x0 x1 (- y0) (- y1)) as [l0 l1].
 replace (x0 + x1 + (- y0 + - y1)) with (x0 + x1 - (y0 + y1)) by ring. trivial.
 Qed.
 
-Theorem sub_up_2_2_listing_values :
+Theorem sub_up_2_2_values :
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
-  let '(z0, z1, d) := add_ball_2_2_listing emin prec tie_even x0 x1 (- y0) (- y1) in
+  let '(z0, z1, d) := add_ball_2_2 emin prec tie_even x0 x1 (- y0) (- y1) in
   let dd := if Req_bool z0 0 then 0 else d in
-  let '(h0, h1) := sub_up_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(h0, h1) := sub_up_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec h0 h1 /\
   ((x0 + x1) - (y0 + y1)) <= (h0 + h1) /\
   (z0 = 0 <-> ((x0 + x1) - (y0 + y1)) = 0) /\
@@ -875,50 +815,50 @@ Theorem sub_up_2_2_listing_values :
   <= add_outward_rel emin prec * Rabs ((x0 + x1) - (y0 + y1)) + add_outward_abs emin prec.
 Proof.
 intros emin prec Hp x0 x1 y0 y1 Nx Ny.
-generalize (add_up_2_2_listing_values emin prec Hp x0 x1 (- y0) (- y1) Nx
+generalize (add_up_2_2_values emin prec Hp x0 x1 (- y0) (- y1) Nx
               (normalized_2_opp emin prec y0 y1 Ny)).
-unfold sub_up_2_2_listing. cbv zeta.
-destruct (add_ball_2_2_listing emin prec tie_even x0 x1 (- y0) (- y1)) as [[z0 z1] d].
-destruct (add_up_2_2_listing emin prec tie_even x0 x1 (- y0) (- y1)) as [h0 h1].
+unfold sub_up_2_2, neg_2. cbv beta iota zeta.
+destruct (add_ball_2_2 emin prec tie_even x0 x1 (- y0) (- y1)) as [[z0 z1] d].
+destruct (add_up_2_2 emin prec tie_even x0 x1 (- y0) (- y1)) as [h0 h1].
 replace (x0 + x1 + (- y0 + - y1)) with (x0 + x1 - (y0 + y1)) by ring. trivial.
 Qed.
 
-(* The differences in the shape of a generated statement. *)
-Theorem sub_down_2_2_listing_correct :
+(* The differences, with the constants A and B by name. *)
+Theorem sub_down_2_2_outward :
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
-  let '(l0, l1) := sub_down_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(l0, l1) := sub_down_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec l0 l1 /\
   (l0 + l1) <= ((x0 + x1) - (y0 + y1)) /\
   Rabs ((l0 + l1) - ((x0 + x1) - (y0 + y1))) <= add_outward_rel emin prec * Rabs ((x0 + x1) - (y0 + y1)) + add_outward_abs emin prec /\
   (((x0 + x1) - (y0 + y1)) = 0 -> (l0 + l1) = ((x0 + x1) - (y0 + y1))).
 Proof.
 intros emin prec Hp x0 x1 y0 y1 Nx Ny.
-generalize (add_down_2_2_listing_correct emin prec Hp x0 x1 (- y0) (- y1) Nx
+generalize (add_down_2_2_outward emin prec Hp x0 x1 (- y0) (- y1) Nx
               (normalized_2_opp emin prec y0 y1 Ny)).
-unfold sub_down_2_2_listing. cbv zeta.
-destruct (add_down_2_2_listing emin prec tie_even x0 x1 (- y0) (- y1)) as [l0 l1].
+unfold sub_down_2_2, neg_2. cbv beta iota zeta.
+destruct (add_down_2_2 emin prec tie_even x0 x1 (- y0) (- y1)) as [l0 l1].
 replace (x0 + x1 + (- y0 + - y1)) with (x0 + x1 - (y0 + y1)) by ring. trivial.
 Qed.
 
-Theorem sub_up_2_2_listing_correct :
+Theorem sub_up_2_2_outward :
   forall emin prec : Z, (3 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
-  let '(h0, h1) := sub_up_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(h0, h1) := sub_up_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec h0 h1 /\
   ((x0 + x1) - (y0 + y1)) <= (h0 + h1) /\
   Rabs ((h0 + h1) - ((x0 + x1) - (y0 + y1))) <= add_outward_rel emin prec * Rabs ((x0 + x1) - (y0 + y1)) + add_outward_abs emin prec /\
   (((x0 + x1) - (y0 + y1)) = 0 -> (h0 + h1) = ((x0 + x1) - (y0 + y1))).
 Proof.
 intros emin prec Hp x0 x1 y0 y1 Nx Ny.
-generalize (add_up_2_2_listing_correct emin prec Hp x0 x1 (- y0) (- y1) Nx
+generalize (add_up_2_2_outward emin prec Hp x0 x1 (- y0) (- y1) Nx
               (normalized_2_opp emin prec y0 y1 Ny)).
-unfold sub_up_2_2_listing. cbv zeta.
-destruct (add_up_2_2_listing emin prec tie_even x0 x1 (- y0) (- y1)) as [h0 h1].
+unfold sub_up_2_2, neg_2. cbv beta iota zeta.
+destruct (add_up_2_2 emin prec tie_even x0 x1 (- y0) (- y1)) as [h0 h1].
 replace (x0 + x1 + (- y0 + - y1)) with (x0 + x1 - (y0 + y1)) by ring. trivial.
 Qed.
 
@@ -929,13 +869,13 @@ Qed.
    l <= v <= h; v - l and h - v are at most 2 d + max(eta, 2 u (u |z0| + d)); and that
    bound is at most A |v| + B. There is no rule of the zero: a product that is not zero
    can be computed as zero, and the bound stays. *)
-Theorem mul_dir_2_2_listing_values :
+Theorem mul_dir_2_2_values :
   forall emin prec : Z, (4 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
-  let '(z0, z1, d) := mul_ball_2_2_listing emin prec tie_even x0 x1 y0 y1 in
-  let '(l0, l1, h0, h1) := mul_dir_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(z0, z1, d) := mul_ball_2_2 emin prec tie_even x0 x1 y0 y1 in
+  let '(l0, l1, h0, h1) := mul_dir_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec l0 l1 /\
   normalized_2 emin prec h0 h1 /\
   (l0 + l1) <= ((x0 + x1) * (y0 + y1)) /\
@@ -951,28 +891,28 @@ intros emin prec Hp x0 x1 y0 y1 Nx Ny.
 assert (Hp0 : Prec_gt_0 prec) by (apply prec_gt_0_of_le with 4%Z; lia).
 assert (Hp2 : (2 <= prec)%Z) by lia.
 generalize (mul_ball_d emin prec Hp x0 x1 y0 y1 Nx Ny). cbv zeta.
-unfold mul_dir_2_2_listing.
-destruct (mul_ball_2_2_listing emin prec tie_even x0 x1 y0 y1) as [[z0 z1] d].
+unfold mul_dir_2_2.
+destruct (mul_ball_2_2 emin prec tie_even x0 x1 y0 y1) as [[z0 z1] d].
 cbv beta iota zeta.
 set (v := (x0 + x1) * (y0 + y1)).
 intros [Nz [Fd [D0 [Herr Closed]]]].
 generalize (outward_down emin prec Hp2 z0 z1 d v Nz Fd D0 Herr).
 generalize (outward_up emin prec Hp2 z0 z1 d v Nz Fd D0 Herr). cbv zeta.
-destruct (two_sum_ord emin prec tie_even z0 (sub_down_1 emin prec tie_even z1 d)) as [l0 l1].
+destruct (two_sum_ord emin prec tie_even z0 (- add_up_1 emin prec tie_even d (- z1))) as [l0 l1].
 destruct (two_sum_ord emin prec tie_even z0 (add_up_1 emin prec tie_even z1 d)) as [h0 h1].
 cbn [fst snd]. intros [Nh [_ [Hv TightH]]] [Nl [_ [Lv TightL]]].
 exact (conj Nl (conj Nh (conj Lv (conj Hv (conj TightL (conj TightH Closed)))))).
 Qed.
 
-(* mul_dir_2_2, in the shape of a generated statement, for normalized x and y, from
-   precision 4: l and h are normalized, l <= x y <= h, and each is within A |x y| + B of
-   x y. *)
-Theorem mul_dir_2_2_listing_correct :
+(* mul_dir_2_2, the `outward` claims with the constants A and B by name, for normalized
+   x and y, from precision 4: l and h are normalized, l <= x y <= h, and each is within
+   A |x y| + B of x y. *)
+Theorem mul_dir_2_2_outward :
   forall emin prec : Z, (4 <= prec)%Z ->
   forall x0 x1 y0 y1 : R,
   normalized_2 emin prec x0 x1 ->
   normalized_2 emin prec y0 y1 ->
-  let '(l0, l1, h0, h1) := mul_dir_2_2_listing emin prec tie_even x0 x1 y0 y1 in
+  let '(l0, l1, h0, h1) := mul_dir_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec l0 l1 /\
   normalized_2 emin prec h0 h1 /\
   (l0 + l1) <= ((x0 + x1) * (y0 + y1)) /\
@@ -981,11 +921,32 @@ Theorem mul_dir_2_2_listing_correct :
   Rabs ((h0 + h1) - ((x0 + x1) * (y0 + y1))) <= mul_outward_rel emin prec * Rabs ((x0 + x1) * (y0 + y1)) + mul_outward_abs emin prec.
 Proof.
 intros emin prec Hp x0 x1 y0 y1 Nx Ny.
-generalize (mul_dir_2_2_listing_values emin prec Hp x0 x1 y0 y1 Nx Ny).
-destruct (mul_ball_2_2_listing emin prec tie_even x0 x1 y0 y1) as [[z0 z1] d].
-destruct (mul_dir_2_2_listing emin prec tie_even x0 x1 y0 y1) as [[[l0 l1] h0] h1].
+generalize (mul_dir_2_2_values emin prec Hp x0 x1 y0 y1 Nx Ny).
+destruct (mul_ball_2_2 emin prec tie_even x0 x1 y0 y1) as [[z0 z1] d].
+destruct (mul_dir_2_2 emin prec tie_even x0 x1 y0 y1) as [[[l0 l1] h0] h1].
 intros [Nl [Nh [Lv [Hv [TightL [TightH Closed]]]]]].
 split; [exact Nl|split; [exact Nh|split; [exact Lv|split; [|split; [exact Hv|]]]]].
 - rewrite Rabs_left1 by lra. lra.
 - rewrite Rabs_pos_eq by lra. lra.
 Qed.
+
+(** * The generated statements *)
+
+(* The generated statements of the five directed kernels print the constants A and B of
+   the closed form unfolded (add_outward_rel and add_outward_abs, mul_outward_rel and
+   mul_outward_abs, on the constants of proofs/gen/Model.v): each is the theorem
+   K_outward above. *)
+Theorem add_down_2_2_correct : add_down_2_2_spec.
+Proof. exact add_down_2_2_outward. Qed.
+
+Theorem add_up_2_2_correct : add_up_2_2_spec.
+Proof. exact add_up_2_2_outward. Qed.
+
+Theorem sub_down_2_2_correct : sub_down_2_2_spec.
+Proof. exact sub_down_2_2_outward. Qed.
+
+Theorem sub_up_2_2_correct : sub_up_2_2_spec.
+Proof. exact sub_up_2_2_outward. Qed.
+
+Theorem mul_dir_2_2_correct : mul_dir_2_2_spec.
+Proof. exact mul_dir_2_2_outward. Qed.

@@ -3367,8 +3367,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "add_ball_2_2_correct"
+      },
       "source": {
         "cite": "add_2_2 with the radius of ball_add_2 for radii zero (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -3431,8 +3434,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "add_down_2_2_correct"
+      },
       "source": {
         "cite": "add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -3610,8 +3616,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "add_up_2_2_correct"
+      },
       "source": {
         "cite": "add_2_2 moved up by the bound of its own error, renormalized exactly (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5703,8 +5712,11 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "mul_ball_2_2_correct"
+      },
       "source": {
         "cite": "mul_2_2 with the radius of ball_mul_2 for radii zero (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -5777,8 +5789,11 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "mul_dir_2_2_correct"
+      },
       "source": {
         "cite": "mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -6323,8 +6338,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "sub_down_2_2_correct"
+      },
       "source": {
         "cite": "add_down_2_2 on x and -y (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -6377,8 +6395,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Directed2.v",
+        "name": "sub_up_2_2_correct"
+      },
       "source": {
         "cite": "add_up_2_2 on x and -y (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
