@@ -758,7 +758,43 @@ def k_upper(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
     return [] if x_cmp(o, pl.fmt.qmin, v, s) >= 0 else ["upper: output below the value"]
 
 
+def same_limb(a, b):
+    """Two limbs are the same value: equal numbers (a zero of either sign), the same infinity, or
+    two NaNs (a NaN is any NaN)."""
+    return a == b
+
+
+def k_finite_or_nan(ck, pl, ep, i, c, es, st, x, z, fin, V, line, sus):
+    """architecture.md, "Claims of Milestone 2": the flag is true exactly when limb 0 of value (an
+    input, the state of a fold) is finite, and the output is then value, limb for limb; otherwise
+    every limb of the output is a NaN.  The input is any limbs: a finite leading limb with a lower
+    limb that is not finite is passed on as it is."""
+    lo, hi = c["operand"]
+    s = x[lo:hi]
+    w = _gather(z, c["ranges"])
+    f = z[c["flag"]]
+    es.applicable += 1
+    lead = type(s[0]) is int
+    if lead:
+        es.count("value: finite leading limb, every limb finite" if all(type(v) is int for v in s)
+                 else "value: finite leading limb, a lower limb not finite")
+    else:
+        es.count("value: leading limb NaN" if s[0] == NAN else "value: leading limb infinite")
+    out = []
+    if f != (1 if lead else 0):
+        out.append("finite_or_nan: the flag is %d although limb 0 of the value is %s" % (
+            f, "finite" if lead else s[0]))
+    if lead:
+        if len(w) != len(s) or not all(same_limb(a, b) for a, b in zip(w, s)):
+            out.append("finite_or_nan: the output is not the value, limb for limb")
+    elif not all(v == NAN for v in w):
+        out.append("finite_or_nan: limb 0 of the value is not finite, and a limb of the output is "
+                   "not a NaN")
+    return out
+
+
 KINDS = {"extends": k_extends, "encloses": k_encloses, "represents": k_represents,
          "makes_ball": k_makes_ball, "normalized": k_finite_kind, "error": k_finite_kind,
          "leading_rounded": k_finite_kind, "predicate": k_predicate, "rounded": k_rounded,
-         "upper": k_upper, "neighbor": k_neighbor, "bound": k_bound}
+         "upper": k_upper, "neighbor": k_neighbor, "bound": k_bound,
+         "finite_or_nan": k_finite_or_nan}

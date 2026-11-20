@@ -11,12 +11,14 @@ import re
 import sys
 from fractions import Fraction
 
+from . import cexpr as CX
 from . import directed as D
 from . import expr as EX
 from . import extended as XT
 from . import fmt as F
+from . import folds as FO
 from . import rational as RAT
-from .claims import ClaimsError, ew_condition_text
+from .claims import ClaimsError, ew_condition_text, format_u_eta
 
 SUMMARY_VERSION = 1
 MASK_TEXT = {"0": 0, "1": 1}
@@ -367,10 +369,34 @@ class Summary:
 
 # ---------------------------------------------------------------------------
 
+def value_terms(tree):
+    """The terms of a value, for an error entry of form T: the operands of its outermost sums and
+    differences (a unary minus kept with its term): s and x*y for s+x*y."""
+    if tree[0] in ("+", "-"):
+        return value_terms(tree[1]) + value_terms(tree[2])
+    if tree[0] == "neg":
+        return value_terms(tree[1])
+    return [tree]
+
+
+def format_has(fmt, prop):
+    """format(PROPERTY): half, the format contains 1/2, eta <= 1/2."""
+    if prop == "half":
+        return fmt.qmin <= -1
+    raise ClaimsError("unknown format property %r" % prop)
+
+
+# The classes of a count m against the unit of the kernel its bound is for (the bound kernels of
+# the folds' stage): x = m * unit(K), by the limits of milestone2.md, "The bound as a function of
+# n" (ok is true for m eps <= 0.24 in binary64 and binary32; the statement needs m eps <= 1/2).
+COUNT_LIMITS = ((Fraction(1, 5), "1/5"), (Fraction(1, 4), "1/4"), (Fraction(1, 2), "1/2"),
+                (Fraction(1), "1"))
+
+
 class Plan:
     """Everything about one (kernel, format) that does not depend on the operands."""
 
-    def __init__(self, kernel, fmt, ignore_min_precision):
+    def __init__(self, kernel, fmt, ignore_min_precision, claims=None):
         self.kernel = kernel
         self.fmt = fmt
         q = fmt.qmin
@@ -395,6 +421,16 @@ class Plan:
         self.sh_out = q - self.sc
         self.sh_val = self.sv - self.sc
         self.in_scope = ignore_min_precision or fmt.p >= kernel.min_precision
+        # format(half): a format that does not contain 1/2 is outside the claims, whatever the
+        # precision (--ignore-min-precision does not bring it in).
+        self.format_missing = [r for r in getattr(kernel, "format_requires", ())
+                               if not format_has(fmt, r)]
+        if self.format_missing:
+            self.in_scope = False
+        # count(m): m = 0 or m >= 1, and 1 as a fixed value is 2^-qmin (a format with qmin > 0
+        # has no number between 0 and 1).
+        self.one = (1 << -q) if q < 0 else 1
+        self.conditional = getattr(kernel, "conditional", False)
         self.requires = []
         for r in kernel.requires:
             if r[0] == "abs_ge":
@@ -413,8 +449,24 @@ class Plan:
         self.rounded = []                            # indices of the rounded entries
         self.neighbors = []                          # ... of the neighbor entries
         self.bounds = []                             # ... of the bound entries
-        self.uppers = [e for e in kernel.ensures if e.kind == "upper"]
+        self.uppers = [e for e in kernel.ensures if e.kind == "upper" and e.cond is None]
         self.balls = None
+        # The kernels of the bounds (every entry under a mask): unit(K) and tiny(K) of the kernels
+        # their expressions name, and the count whose classes the statistics give.
+        self.units = {}
+        self.count_stat = None
+        if self.conditional and self.in_scope:
+            names = sorted({kn for e in kernel.ensures
+                            for t in ([e.cvalue] if e.cvalue is not None else [])
+                            + list(getattr(e, "cargs", [])) for _f, kn in CX.calls(t)})
+            for kn in names:
+                if claims is None:
+                    raise ClaimsError("%s: unit(%s) needs the claims" % (kernel.name, kn))
+                self.units[kn] = claims.unit_tiny(kn, fmt)
+            counts = [r[1] for r in kernel.requires if r[0] == "count"]
+            if len(counts) == 1 and len(names) == 1:
+                self.count_stat = (self.in_slices[counts[0]], names[0], self.units[names[0]][0])
+            self.u, self.eta = format_u_eta(fmt)
         # A value of two operands, NAME op NAME (the directed sums and products of Milestone 2):
         # the input slots of its two operands, for the classes of the extended domain.
         t = kernel.value_tree
@@ -424,7 +476,7 @@ class Plan:
             self.two = (self.in_slices[t[1][1]], self.in_slices[t[2][1]])
         for e in kernel.ensures:
             ranges = [self.out_slices[n] for n in e.of]
-            c = {"kind": e.kind, "ranges": ranges, "first": ranges[0][0]}
+            c = {"kind": e.kind, "ranges": ranges, "first": ranges[0][0] if ranges else None}
             if e.kind == "error" and not self.in_scope:
                 # Below the kernel's minimum precision nothing is judged, and a bound may not
                 # even exist there (3/(1 - 4u) at p = 2): it is not evaluated, so that such a
@@ -438,6 +490,14 @@ class Plan:
                 c.update(rel_n=rel.numerator, rel_d=rel.denominator,
                          abs_n=abs_sc.numerator, abs_d=abs_sc.denominator,
                          k=e.k, kp=e.k * fmt.p, form=e.form, when=e.when, source=src)
+                if e.form == "T":
+                    # rho is the sum of the magnitudes of the terms of value, each at its scale
+                    # (at least the value's, so at least sc).
+                    terms = []
+                    for t in value_terms(kernel.value_tree):
+                        tsrc, ts = EX.compile_tree(t, self._leaf)
+                        terms.append((EX.make_function(["x"], tsrc), ts - self.sc))
+                    c["terms"] = terms
                 if e.exact_when is not None:
                     c["exact"] = self._exact_conditions(e)
             elif e.kind == "rounded":
@@ -450,8 +510,21 @@ class Plan:
             elif e.kind == "bound":
                 c.update(side=e.side, steps=e.steps)
                 self.bounds.append(len(self.entries))
+            elif e.kind in ("upper", "holds") and e.cond is not None:
+                # Under a mask: the outputs the entry names (its own and those of its
+                # expressions), which must be numbers for the entry to say anything.
+                trees = [e.cvalue] if e.kind == "upper" else e.cargs
+                used = {self.out_slices[n][0] for t in trees for n in CX.names(t)
+                        if n in self.out_slices}
+                used |= {lo for lo, _hi in ranges}
+                c.update(cond=self.out_slices[e.cond][0], cond_name=e.cond, used=sorted(used),
+                         trees=trees)
+                if e.kind == "holds":
+                    c["rel"] = e.rel
             elif e.kind == "upper":
                 c.update(gn=e.gaps.numerator, gd=e.gaps.denominator)
+            elif e.kind == "finite_or_nan":
+                c.update(flag=self.out_slices[e.flag][0], operand=self.in_slices[e.operand])
             elif e.kind == "predicate":
                 (a, sa), (b, sb) = [EX.compile_tree(t, self._leaf) for t in e.args]
                 s = min(sa, sb)
@@ -561,7 +634,7 @@ class Checker:
         self.summary = Summary(max_examples)
         self.summary.claims_path = claims.path
         self.summary.claims_errors = claims.errors()
-        for k in claims.kernels.values():
+        for k in list(claims.kernels.values()) + list(getattr(claims, "folds", {}).values()):
             if k.unknown_fields:
                 self.summary.claims_warnings.append(
                     "%s: fields not read by the oracle: %s" % (k.name, ", ".join(k.unknown_fields)))
@@ -585,7 +658,7 @@ class Checker:
             pl = None
             if kernel is not None and f is not None:
                 try:
-                    pl = Plan(kernel, f, self.ignore_min_precision)
+                    pl = Plan(kernel, f, self.ignore_min_precision, self.claims)
                 except ClaimsError as ex:
                     # For example c cannot be evaluated for a format that instances omit.
                     self.claims.mark_broken(kname, str(ex))
@@ -667,6 +740,10 @@ class Checker:
             # kairn::rational<X>(num, den), judged for equality without claims (rational.py).
             RAT.judge_line(self, line, kname, fname, tag, lt[2:], sep, right)
             return
+        if kname in self.claims.folds:
+            # A fold, whose request carries arrays (folds.py).
+            FO.judge_line(self, line, lt, sep, right, tag)
+            return
         pl = self.plan(kname, fname)
         fmt = pl.fmt if pl else None
         st = self.summary.stats((kname, fmt.name if fmt else fname, tag), fmt.p if fmt else None)
@@ -703,6 +780,9 @@ class Checker:
             return
         if not pl.in_scope:
             st.c["out_of_scope"] += 1
+            if pl.format_missing:
+                st.reason("out of scope: the format does not have %s (format(%s))" % (
+                    ", ".join(pl.format_missing), ", ".join(pl.format_missing)))
             return
         if pl.ext is not None:
             XT.judge_line(self, st, pl, line, ins, outs)
@@ -746,6 +826,12 @@ class Checker:
                 if v <= 0 or v & (v - 1):
                     self._invalid(st, line, "requires power_of_two(%s)" % r[1])
                     return
+            elif r[0] == "count":
+                lo, hi = r[2]
+                v = sum(x[lo:hi])
+                if v != 0 and v < pl.one:
+                    self._invalid(st, line, "requires count(%s)" % r[1])
+                    return
             else:
                 (alo, ahi), (blo, bhi) = r[2], r[3]
                 if abs(sum(x[alo:ahi])) < abs(sum(x[blo:bhi])):
@@ -763,6 +849,11 @@ class Checker:
                 z = [F.parse_limb(fmt, t) for t in outs]
         except F.LimbError as ex:
             self._fail(st, line, "output limb malformed: %s" % ex)
+            return
+        if pl.conditional:
+            # Every entry holds under a mask (the bounds of the folds' stage): judged on every
+            # line, by the masks (_conditional).
+            self._conditional(pl, st, x, z, line)
             return
         V = pl.value_fn(x) if pl.value_fn is not None else None
         # A rounding whose exact result in unbounded range is beyond Omega is outside the
@@ -888,6 +979,10 @@ class Checker:
                 Err = abs((O << pl.sh_out) - Vc)
                 if e["form"] == "R":
                     rho = abs(Vc)
+                elif e["form"] == "T":
+                    rho = 0
+                    for fn, sh in e["terms"]:
+                        rho += abs(fn(x)) << sh
                 else:
                     rho = 0
                     for nm, (lo, hi) in pl.in_slices.items():
@@ -1110,6 +1205,133 @@ class Checker:
         es.track_min("slack in gaps of the radius", (rz - rmin, g), line)
         return None
 
+    # -- the entries under a mask: the bounds of the folds' stage ------------------------------
+
+    def _conditional(self, pl, st, x, z, line):
+        """upper with a value of its own, holds: when the entry's mask output is true, the output
+        is at least the exact value of value (upper), or the relation holds between the exact
+        values of the two args (holds); nothing is claimed when the mask is false.  An output the
+        entry names that is not a number of the format is a failure if it is outside the format;
+        if it is infinite or a NaN where the mask is true, the finite domain claims nothing of it
+        (the output is not a number), and the line is suspicious: the kernel said its bound
+        holds and gave none."""
+        fmt = pl.fmt
+        for i, v in enumerate(z):
+            if i not in pl.out_masks and (v == F.OUTSIDE or (type(v) is int
+                                                             and not F.is_member(fmt, v))):
+                self._fail(st, line, "output limb not a number of the format")
+                return
+        st.c["judged"] += 1
+        eta = pl.eta
+        names = None
+        reasons, sus = [], []
+        for i, c in enumerate(pl.entries):
+            es = st.entries[i]
+            on = z[c["cond"]] == 1
+            self._count_classes(pl, es, x, on, line)
+            if not on:
+                es.count("%s false: nothing claimed" % c["cond_name"])
+                continue
+            if any(type(z[s]) is not int for s in c["used"]):
+                es.count("%s true, an output not finite: nothing claimed" % c["cond_name"])
+                sus.append("%s: an output is not finite although %s is true" % (
+                    es.label, c["cond_name"]))
+                continue
+            es.applicable += 1
+            if names is None:
+                names = {}
+                for n, (lo, hi) in pl.in_slices.items():
+                    if n not in pl.kernel.masks:
+                        names[n] = sum(x[lo:hi]) * eta
+                for n, (lo, hi) in pl.out_slices.items():
+                    if hi - lo == 1 and lo not in pl.out_masks and type(z[lo]) is int:
+                        names[n] = z[lo] * eta
+                env = {"u": pl.u, "eta": eta, "names": names,
+                       "unit": lambda k: pl.units[k][0], "tiny": lambda k: pl.units[k][1]}
+            try:
+                vals = [CX.evaluate(t, env) for t in c["trees"]]
+            except CX.CExprError as ex:
+                es.failures += 1
+                es.count("failed: the stated value does not exist")
+                reasons.append("%s: the stated value does not exist where %s is true (%s)" % (
+                    c["kind"], c["cond_name"], ex))
+                continue
+            if c["kind"] == "upper":
+                why = self._upper_value(pl, c, es, z, vals[0], line)
+            else:
+                a, b = vals
+                rel = c["rel"]
+                truth = a < b if rel == "lt" else a <= b if rel == "le" else a == b
+                es.count("holds" if truth else "does not hold")
+                why = None if truth else "holds: %s is false where %s is true" % (
+                    es.label.split(" if ")[0][len("holds "):], c["cond_name"])
+            if why:
+                es.failures += 1
+                reasons.append(why)
+        if sus:
+            st.c["suspicious"] += 1
+            st.example("suspicious", line, "; ".join(sus), self.max_examples)
+        if reasons:
+            st.c["failed"] += 1
+            for r in reasons:
+                st.reason(r)
+            st.example("failure", line, "; ".join(reasons), self.max_examples)
+        else:
+            st.c["passed"] += 1
+
+    def _upper_value(self, pl, c, es, z, v, line):
+        """The output is at least v exactly; the statistics say how close it comes."""
+        o = z[c["first"]]
+        ov = o * pl.eta
+        if ov < v:
+            es.count("below the stated value")
+            return "upper: the output is below its stated value where %s is true" % c["cond_name"]
+        d = ov - v
+        if d == 0:
+            es.count("exactly the stated value")
+        if v > 0:
+            r = d / v
+            es.track_min("(output - value) / value", (r.numerator, r.denominator), line)
+            es.track_max("(output - value) / value", (r.numerator, r.denominator), line)
+            g = F.gap_below(pl.fmt, o) * pl.eta
+            r = d / g
+            es.track_min("excess over a positive stated value, in gaps of the output",
+                         (r.numerator, r.denominator), line)
+        else:
+            es.count("stated value not positive")
+        return None
+
+    def _count_classes(self, pl, es, x, on, line):
+        """For a bound kernel with a count m: m * unit(K) against the limits of COUNT_LIMITS,
+        whether m is an integer, with the mask; the largest m * unit(K) where the mask is true
+        and the smallest where it is false."""
+        if pl.count_stat is None:
+            return
+        (lo, hi), kn, unit = pl.count_stat
+        m = sum(x[lo:hi])
+        what = "%s %s" % (es.label.rsplit(" if ", 1)[-1], "true" if on else "false")
+        mv = m * pl.eta
+        t = mv * unit
+        if t == 0:
+            cls = "m*unit(%s) = 0" % kn
+        else:
+            cls = None
+            prev = "0"
+            for lim, text in COUNT_LIMITS:
+                if t <= lim if lim < 1 else t < lim:
+                    cls = "%s < m*unit(%s) %s %s" % (prev, kn, "<=" if lim < 1 else "<", text)
+                    break
+                prev = text
+            if cls is None:
+                cls = "m*unit(%s) >= 1" % kn
+        es.count("%s, %s" % (what, cls))
+        es.count("m an integer" if mv.denominator == 1 else "m not an integer")
+        tt = (t.numerator, t.denominator)
+        if on:
+            es.track_max("m*unit(%s) where %s" % (kn, what), tt, line)
+        else:
+            es.track_min("m*unit(%s) where %s" % (kn, what), tt, line)
+
     def _fail(self, st, line, why):
         st.c["failed"] += 1
         st.reason(why)
@@ -1178,6 +1400,13 @@ def report(summary, out=sys.stdout, far=None, fail_on_suspicious=False, expect_v
             w("  %s%s: %d applicable, %d failures" % (
                 es.label, "" if es.bound_source in (None, "instances") else
                 " [bound %s]" % es.bound_source, es.applicable, es.failures))
+            if es.kind == "fold_error" and es.max_ratio is not None:
+                if es.max_ratio[1] == 0:
+                    w("    largest error/allowed: infinite (nonzero error, zero bound) at")
+                else:
+                    w("    largest error/allowed: %s = %s at" % (frac_dec(es.max_ratio),
+                                                               _short(frac_str(es.max_ratio))))
+                w("      %s" % _short(es.max_ratio_case, 400))
             if es.kind != "error":
                 _report_counts(w, es)
                 continue
@@ -1205,7 +1434,8 @@ def report(summary, out=sys.stdout, far=None, fail_on_suspicious=False, expect_v
         for kind in ("failure", "invalid", "suspicious"):
             for line, why in agg.examples[kind]:
                 w("  %s: %s" % (kind.upper(), why))
-                w("    %s" % line)
+                # A fold's line may hold thousands of limbs: its middle is left out.
+                w("    %s" % _short(line, 1000))
 
 
 def _count_order(key):
@@ -1224,7 +1454,7 @@ def _report_counts(w, es):
     for what, d in (("largest", es.maxima), ("smallest", es.minima)):
         for k, (r, case) in sorted(d.items()):
             w("    %s %s: %s = %s at" % (what, k, frac_dec(r), _short(frac_str(r))))
-            w("      %s" % case)
+            w("      %s" % _short(case, 400))
 
 
 def _short(s, n=80):

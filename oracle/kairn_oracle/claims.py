@@ -9,6 +9,7 @@ import json
 import re
 from fractions import Fraction
 
+from . import cexpr as CX
 from . import expr as X
 from .fmt import parse_format, FormatError, Format
 
@@ -27,13 +28,18 @@ _UNARY_REQ_RE = re.compile(r"\s*(power_of_two|nonneg)\(\s*(%s)\s*\)\s*\Z" % _NAM
 # Requirements of the non-finite layer (architecture.md, "Claims of the non-finite layer").
 _CANONICAL_RE = re.compile(r"\s*canonical\(\s*(%s)\s*\)\s*\Z" % _NAME)
 _BALL_RE = re.compile(r"\s*ball\(\s*(%s)\s*,\s*(%s)\s*\)\s*\Z" % (_NAME, _NAME))
+# Requirements of the folds' stage of Milestone 2 (architecture.md, "Claims of Milestone 2"):
+# count(NAME), a one-limb input that is 0 or at least 1, and format(half), which names no input.
+_COUNT_RE = re.compile(r"\s*count\(\s*(%s)\s*\)\s*\Z" % _NAME)
+_FORMAT_RE = re.compile(r"\s*format\(\s*(%s)\s*\)\s*\Z" % _NAME)
+FORMAT_PROPERTIES = ("half",)
 DOMAINS = ("finite", "extended")
 IEEE_STATUSES = ("proved", "unverified")
 # The operation of T that `extends` applies to the leading limbs, and the operator the kernel's
 # value must have for it.
 LEADS = {"add": "+", "sub": "-", "mul": "*"}
 # Kinds that exist only in the extended domain, and the kinds a core of `extends` may have.
-EXTENDED_KINDS = ("extends", "represents", "makes_ball")
+EXTENDED_KINDS = ("extends", "represents", "makes_ball", "finite_or_nan")
 CORE_KINDS = ("normalized", "error", "leading_rounded")
 # limb_products_normal is not in architecture.md: it is the condition of the exactness claim of
 # mul_pow2_2 ("each of the two products is zero or at least 2^(p-1) eta in magnitude"), which
@@ -45,7 +51,9 @@ ROUNDED_WHEN = ("product_large",)
 NEIGHBOR_SIDES = ("up", "down")
 BOUND_SIDES = ("below", "above")
 EXACT_CONDITIONS = ("zero_or_abs_gt", "zero_or_abs_ge")
-FORMS = ("R", "A")
+# The forms of an error entry: rho is |value| (R), the sum of the magnitudes of the inputs (A), or
+# the sum of the magnitudes of the terms of value (T, the folds' stage: |s| + |x y| for s+x*y).
+FORMS = ("R", "A", "T")
 ROUNDING_MODES = ("nearest", "down", "up")
 RELATIONS = ("lt", "le", "eq")
 KERNEL_FIELDS = {"name", "inputs", "outputs", "value", "requires", "ensures", "min_precision",
@@ -288,7 +296,8 @@ class Entry:
              "error": {"kind", "of", "form", "c", "k", "t", "when", "instances", "exact_when"},
              "leading_rounded": {"kind", "of"},
              "rounded": {"kind", "of", "mode", "when"},
-             "upper": {"kind", "of", "gaps"},
+             # gaps; or, the folds' stage, a value of its own and the mask it holds under.
+             "upper": {"kind", "of", "gaps", "value", "if"},
              "predicate": {"kind", "of", "rel", "args"},
              "encloses": {"kind", "center", "radius", "set", "balls", "finite_when", "exact_when"},
              # The non-finite layer.
@@ -297,7 +306,10 @@ class Entry:
              "makes_ball": {"kind", "center", "radius", "from"},
              # Milestone 2 (architecture.md, "Claims of Milestone 2").
              "neighbor": {"kind", "of", "side"},
-             "bound": {"kind", "of", "side", "steps"}}
+             "bound": {"kind", "of", "side", "steps"},
+             # The folds' stage of Milestone 2.
+             "holds": {"kind", "rel", "args", "if"},
+             "finite_or_nan": {"kind", "of", "flag"}}
 
     def __init__(self, kernel, raw, index, error_index):
         self.raw = raw
@@ -318,9 +330,18 @@ class Entry:
         self.exact_when = None
         # The condition of a rounded entry (product_large), or None.
         self.when = None
+        # The mask output an `upper` with a value of its own or a `holds` entry holds under, and
+        # its expressions (cexpr trees); None for every other entry.
+        self.cond = None
+        self.cvalue = None
         if self.kind in EXTENDED_KINDS and not kernel.extended:
             raise ClaimsError("%s: this kind belongs to the extended domain, and the kernel has "
                               "no \"domain\": \"extended\"" % where)
+        if self.kind == "holds":
+            self._read_holds(kernel, raw, where)
+            self.of = []
+            self.label = self._label()
+            return
         if self.kind == "encloses":
             self._read_encloses(kernel, raw, where)
             self.of = [self.center, self.radius]
@@ -350,10 +371,14 @@ class Entry:
                 raise ClaimsError("%s: 'of' must name one mask output" % where)
         elif masks:
             raise ClaimsError("%s: 'of' names the mask %s" % (where, masks[0]))
+        # An upper entry with a value of its own does not use the kernel's.
+        own_value = self.kind == "upper" and ("value" in raw or "if" in raw)
         if (self.kind in ("error", "leading_rounded", "rounded", "upper", "extends", "represents",
-                          "neighbor", "bound")
-                and kernel.value_tree is None):
+                          "neighbor", "bound", "finite_or_nan")
+                and kernel.value_tree is None and not own_value):
             raise ClaimsError("%s: the kernel has no value" % where)
+        if self.kind == "finite_or_nan":
+            self._read_finite_or_nan(kernel, raw, where)
         if self.kind == "extends":
             self._read_extends(kernel, raw, where)
         if self.kind in ("rounded", "upper", "neighbor", "bound"):
@@ -388,6 +413,18 @@ class Entry:
             if (not isinstance(self.steps, int) or isinstance(self.steps, bool)
                     or self.steps < 0):
                 raise ClaimsError("%s: steps must be an integer >= 0, got %r" % (where, self.steps))
+        elif self.kind == "upper" and own_value:
+            # The folds' stage: value and if in place of gaps.  When the mask is true the output
+            # is at least the exact value of value; nothing else is said.
+            if "gaps" in raw:
+                raise ClaimsError("%s: an upper entry has gaps, or value and if, not both" % where)
+            if "value" not in raw or "if" not in raw:
+                raise ClaimsError("%s: an upper entry with a value of its own needs both value "
+                                  "and if" % where)
+            self.gaps = None
+            self.cond = self._read_mask_name(kernel, raw["if"], where)
+            self.cvalue = self._read_cexpr(kernel, raw["value"], where + " value")
+            self.cvalue_text = str(raw["value"]).strip()
         elif self.kind == "upper":
             self.gaps = parse_fraction(raw.get("gaps"), where + " gaps")
             if self.gaps < 0:
@@ -405,7 +442,7 @@ class Entry:
             self.error_index = error_index
             self.form = raw.get("form")
             if self.form not in FORMS:
-                raise ClaimsError("%s: form must be R or A, got %r" % (where, self.form))
+                raise ClaimsError("%s: form must be R, A or T, got %r" % (where, self.form))
             self.c = raw.get("c")
             if not isinstance(self.c, (str, int)) or isinstance(self.c, bool):
                 raise ClaimsError("%s: c must be a string" % where)
@@ -426,6 +463,68 @@ class Entry:
             if "exact_when" in raw:
                 self.exact_when = self._read_exact_when(kernel, raw, where)
         self.label = self._label()
+
+    def _read_mask_name(self, kernel, name, where):
+        """The name of a mask output (the `if` of the folds' stage)."""
+        if not isinstance(name, str) or name not in dict(kernel.outputs) or name not in kernel.masks:
+            raise ClaimsError("%s: if must name a mask output, got %r" % (where, name))
+        return name
+
+    def _read_cexpr(self, kernel, text, where):
+        """An exact expression over the limb inputs, the one-limb outputs, u, eta, integers and
+        unit(K), tiny(K) (cexpr.py); unit and tiny are resolved by Claims.link_constants."""
+        try:
+            tree = CX.parse(text)
+        except CX.CExprError as ex:
+            raise ClaimsError("%s: %s" % (where, ex))
+        outs = dict(kernel.outputs)
+        ins = dict(kernel.inputs)
+        clash = [n for n in list(ins) + list(outs) if n in CX.RESERVED]
+        if clash:
+            raise ClaimsError("%s: the kernel has an input or output named %s, which these "
+                              "expressions read as a constant" % (where, clash[0]))
+        for n in CX.names(tree):
+            if n in kernel.masks:
+                raise ClaimsError("%s: %r is a mask, not a value" % (where, n))
+            if n in ins:
+                continue
+            if n in outs and outs[n] == 1:
+                continue
+            raise ClaimsError("%s: %r is not a limb input or a one-limb output" % (where, n))
+        return tree
+
+    def _read_holds(self, kernel, raw, where):
+        """{"kind": "holds", "rel": REL, "args": [A, B], "if": MASK}: when the mask output is true,
+        the relation holds between the exact values of A and B."""
+        for f in ("rel", "args", "if"):
+            if f not in raw:
+                raise ClaimsError("%s: missing %s" % (where, f))
+        self.rel = raw["rel"]
+        if self.rel not in RELATIONS:
+            raise ClaimsError("%s: rel must be lt, le or eq, got %r" % (where, self.rel))
+        args = raw["args"]
+        if not isinstance(args, list) or len(args) != 2:
+            raise ClaimsError("%s: args must be a list of two expressions" % where)
+        self.cargs = [self._read_cexpr(kernel, a, where + " args") for a in args]
+        self.args_text = [str(a).strip() for a in args]
+        self.cond = self._read_mask_name(kernel, raw["if"], where)
+
+    def _read_finite_or_nan(self, kernel, raw, where):
+        """{"kind": "finite_or_nan", "of": R, "flag": F}: F is true exactly when limb 0 of value
+        (an input) is finite, and R is then value, limb for limb; otherwise every limb of R is a
+        NaN."""
+        if "flag" not in raw:
+            raise ClaimsError("%s: missing flag" % where)
+        self.flag = self._read_mask_name(kernel, raw["flag"], where)
+        t = kernel.value_tree
+        if t[0] != "name":
+            raise ClaimsError("%s: the value must be the name of an input, not %r"
+                              % (where, kernel.value_text))
+        self.operand = t[1]
+        limbs = sum(kernel.limbs_of(n) for n in self.of)
+        if kernel.limbs_of(self.operand) != limbs:
+            raise ClaimsError("%s: the output %s has %d limbs and the value %s %d" % (
+                where, "+".join(self.of), limbs, self.operand, kernel.limbs_of(self.operand)))
 
     def _read_exact_when(self, kernel, raw, where):
         """[(tree, text, op, K)]: each condition {"zero_or_abs_gt": EXPR, "than": K} or
@@ -652,8 +751,15 @@ class Entry:
             return "neighbor(%s) %s of %s" % (of, self.side, self.operand)
         if self.kind == "bound":
             return "bound(%s) %s, steps=%d" % (of, self.side, self.steps)
+        if self.kind == "upper" and self.cond is not None:
+            return "upper(%s) >= %s if %s" % (of, self.cvalue_text, self.cond)
         if self.kind == "upper":
             return "upper(%s) gaps=%s" % (of, self.gaps)
+        if self.kind == "holds":
+            return "holds %s(%s, %s) if %s" % (self.rel, self.args_text[0], self.args_text[1],
+                                               self.cond)
+        if self.kind == "finite_or_nan":
+            return "finite_or_nan(%s) flag %s" % (of, self.flag)
         if self.kind == "predicate":
             return "predicate(%s) %s(%s, %s)" % (of, self.rel, self.args_text[0], self.args_text[1])
         return "%s(%s)" % (self.kind, of)
@@ -705,6 +811,9 @@ class Kernel:
                 self.limb_products = (t[1][1], t[2][1])
         self.requires = []
         self.ball_requires = []
+        # format(PROPERTY): requirements on the format, not on an input (format(half): the format
+        # contains 1/2, eta <= 1/2).  A format without the property is outside the claims.
+        self.format_requires = []
         limbs = dict(self.inputs)
         reqs = raw.get("requires", [])
         if not isinstance(reqs, list):
@@ -712,6 +821,25 @@ class Kernel:
         for r in reqs:
             if not isinstance(r, str):
                 raise ClaimsError("%s: requirement %r is not a string" % (self.name, r))
+            m = _COUNT_RE.match(r)
+            if m and m.group(1) in self.input_names and m.group(1) not in self.masks:
+                if self.extended:
+                    raise ClaimsError("%s: requirement %r: count() is read in the finite domain "
+                                      "only" % (self.name, r))
+                if limbs[m.group(1)] != 1:
+                    raise ClaimsError("%s: requirement %r: count() is for a one-limb input"
+                                      % (self.name, r))
+                self.requires.append(("count", m.group(1)))
+                continue
+            m = _FORMAT_RE.match(r)
+            if m:
+                if m.group(1) not in FORMAT_PROPERTIES:
+                    raise ClaimsError("%s: requirement %r: the format property %r is not in the "
+                                      "vocabulary (half)" % (self.name, r, m.group(1)))
+                if m.group(1) in self.format_requires:
+                    raise ClaimsError("%s: requirement %r is listed twice" % (self.name, r))
+                self.format_requires.append(m.group(1))
+                continue
             m = _NORMALIZED_RE.match(r)
             if m and m.group(1) in self.input_names and m.group(1) not in self.masks:
                 if self.extended:
@@ -760,17 +888,8 @@ class Kernel:
                 continue
             raise ClaimsError("%s: requirement %r is outside the vocabulary "
                               "(normalized(NAME), abs_ge(NAME, NAME), power_of_two(NAME), "
-                              "nonneg(NAME); in the extended domain canonical(NAME), "
-                              "ball(CENTER, RADIUS))" % (self.name, r))
-        if self.extended:
-            # An operand of several limbs is canonical or the center of a ball: nothing else
-            # says what its limbs may be once they need not be finite.
-            covered = {r[1] for r in self.requires if r[0] == "canonical"}
-            covered |= {c for c, _ in self.ball_requires}
-            for n, l in self.inputs:
-                if l > 1 and n not in self.masks and n not in covered:
-                    raise ClaimsError("%s: the %d-limb input %s has neither canonical(%s) nor a "
-                                      "ball() requirement" % (self.name, l, n, n))
+                              "nonneg(NAME), count(NAME), format(half); in the extended domain "
+                              "canonical(NAME), ball(CENTER, RADIUS))" % (self.name, r))
         ens = raw.get("ensures")
         if not isinstance(ens, list):
             raise ClaimsError("%s: ensures must be a list" % self.name)
@@ -781,6 +900,26 @@ class Kernel:
             if ent.kind == "error":
                 nerr += 1
             self.ensures.append(ent)
+        if self.extended:
+            # An operand of several limbs is canonical or the center of a ball: nothing else
+            # says what its limbs may be once they need not be finite.  The one exception is a
+            # kernel whose every entry is finite_or_nan, whose reading covers any limbs (the
+            # finish of a fold takes the fold's state, whatever it is).
+            covered = {r[1] for r in self.requires if r[0] == "canonical"}
+            covered |= {c for c, _ in self.ball_requires}
+            any_limbs = bool(self.ensures) and all(e.kind == "finite_or_nan" for e in self.ensures)
+            for n, l in self.inputs:
+                if l > 1 and n not in self.masks and n not in covered and not any_limbs:
+                    raise ClaimsError("%s: the %d-limb input %s has neither canonical(%s) nor a "
+                                      "ball() requirement" % (self.name, l, n, n))
+        # The entries that hold under a mask (upper with a value of its own, holds): a kernel has
+        # all of its entries so, or none, and only in the finite domain, where they are read
+        # (check.py, "conditional").
+        conditional = [e for e in self.ensures if e.cond is not None]
+        if conditional and (len(conditional) != len(self.ensures) or self.extended):
+            raise ClaimsError("%s: entries that hold under a mask (if) are read in a kernel of "
+                              "the finite domain whose every entry has one" % self.name)
+        self.conditional = bool(conditional)
         # null means that the smallest precision for which the claims hold is not known yet
         # (an unproved kernel): every format is then in scope, which is the strict reading.
         mp = raw.get("min_precision", 2)
@@ -993,9 +1132,78 @@ class Claims:
                 self.broken[name] = str(ex)
         self.check_instances()
         self.link_cores()
+        self.link_constants()
+        # The folds (architecture.md, "Claims of Milestone 2", "Folds"): a second list, absent
+        # when there is none.  A fold whose claims cannot be read is set aside as a kernel is.
+        self.folds = {}
+        self.kernel_names = {raw.get("name") for raw in ks if isinstance(raw, dict)}
+        if "folds" in data:
+            from . import folds as FO
+            fl = data["folds"]
+            if not isinstance(fl, list):
+                raise ClaimsError("claims: folds must be a list")
+            for raw in fl:
+                name = raw.get("name") if isinstance(raw, dict) else None
+                name = name if isinstance(name, str) else "<fold without a name>"
+                if name in self.kernel_names:
+                    self.broken[name] = "%s: a fold has the name of a kernel" % name
+                    self.kernels.pop(name, None)
+                    continue
+                if name in self.folds or name in self.broken:
+                    self.folds.pop(name, None)
+                    self.broken[name] = "%s: listed twice" % name
+                    continue
+                try:
+                    self.folds[name] = FO.Fold(raw, self)
+                except ClaimsError as ex:
+                    self.broken[name] = str(ex)
 
     def get(self, name):
         return self.kernels.get(name)
+
+    def get_fold(self, name):
+        return self.folds.get(name)
+
+    def unit_tiny(self, name, fmt):
+        """(unit, tiny) of kernel name's error entry in a format: c u^k and t eta, as the bound
+        of the entry gives them (the listed instance in a named format)."""
+        k = self.kernels.get(name)
+        if k is None:
+            raise ClaimsError("unit(%s), tiny(%s): %s" % (name, name, self.broken.get(
+                name, "no kernel %s in the claims" % name)))
+        errs = [e for e in k.ensures if e.kind == "error"]
+        if len(errs) != 1:
+            raise ClaimsError("unit(%s), tiny(%s): %s has %d error entries, not one"
+                              % (name, name, name, len(errs)))
+        rel, ab, _ = k.bound(fmt, errs[0])
+        return rel, ab
+
+    def link_constants(self):
+        """unit(K) and tiny(K) in the expressions of a kernel's entries: K must be a kernel of the
+        claims, readable, with exactly one error entry.  A kernel whose expressions name another
+        is set aside otherwise."""
+        for k in list(self.kernels.values()):
+            # The generator's strata of a bound kernel are placed by the unit of the kernel its
+            # bound is for (gen5.py), so a kernel whose entries name one knows its claims.
+            k.claims_ref = self
+            for e in k.ensures:
+                trees = ([e.cvalue] if e.cvalue is not None else []) + list(getattr(e, "cargs", []))
+                try:
+                    for t in trees:
+                        for _f, kn in CX.calls(t):
+                            self.check_unit_kernel(kn, "%s: %s" % (k.name, e.label))
+                except ClaimsError as ex:
+                    self.mark_broken(k.name, str(ex))
+                    break
+
+    def check_unit_kernel(self, kn, where):
+        c = self.kernels.get(kn)
+        if c is None:
+            raise ClaimsError("%s: unit(%s)/tiny(%s): %s" % (where, kn, kn, self.broken.get(
+                kn, "%s is not a kernel of the claims" % kn)))
+        if sum(1 for x in c.ensures if x.kind == "error") != 1:
+            raise ClaimsError("%s: unit(%s)/tiny(%s): %s has no single error entry"
+                              % (where, kn, kn, kn))
 
     def mark_broken(self, name, why):
         self.kernels.pop(name, None)

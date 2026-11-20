@@ -48,6 +48,12 @@ def cmd_gen(a):
         sys.stdout.flush()
         return status
     claims = _claims(a.claims)
+    if claims.get_fold(a.kernel) is not None:
+        return _gen_fold(a, claims.get_fold(a.kernel))
+    if a.orders or a.max_length is not None:
+        print("kairn-oracle gen: --orders and --max-length are for folds; %s is not a fold of %s"
+              % (a.kernel, claims.path), file=sys.stderr)
+        return 2
     kernel = claims.get(a.kernel)
     if kernel is None:
         print("kairn-oracle gen: %s" % claims.broken.get(
@@ -70,6 +76,43 @@ def cmd_gen(a):
                 return 2
             strata = a.strata.split(",") if a.strata else None
             g = G.RandomGen(kernel, fmt, a.seed, strata, index_tags=not a.no_index)
+            G.write_lines(g.lines(a.start, 1000 if a.count is None else a.count))
+    except G.GenError as ex:
+        print("kairn-oracle gen: %s" % ex, file=sys.stderr)
+        return 2
+    except BrokenPipeError:
+        _quiet_pipe()
+        return 0
+    sys.stdout.flush()
+    return 0
+
+
+def _gen_fold(a, fold):
+    """gen for a fold (genfold.py): random arrays, or every array up to --max-length."""
+    from . import gen as G
+    from . import genfold as GF
+    fmt = _format(a.format)
+    try:
+        if a.restrict:
+            print("kairn-oracle gen: --restrict is not read for a fold", file=sys.stderr)
+            return 2
+        if a.exhaustive:
+            if a.orders:
+                print("kairn-oracle gen: an enumeration of a fold has every order that differs; "
+                      "--orders is for random runs", file=sys.stderr)
+                return 2
+            g = GF.ExhaustiveFoldGen(fold, fmt, a.max_length, index_tags=not a.no_index)
+            if a.total:
+                print("%d enumeration indices for %s %s (every array of length up to %d, every "
+                      "order that differs)" % (g.total, fold.name, fmt.name, a.max_length))
+                return 0
+            count = g.total - a.start if a.count is None else a.count
+            G.write_lines(g.lines(a.start, count))
+        else:
+            strata = a.strata.split(",") if a.strata else None
+            orders = a.orders.split(",") if a.orders else None
+            g = GF.RandomFoldGen(fold, fmt, a.seed, strata, orders, a.max_length,
+                                 index_tags=not a.no_index)
             G.write_lines(g.lines(a.start, 1000 if a.count is None else a.count))
     except G.GenError as ex:
         print("kairn-oracle gen: %s" % ex, file=sys.stderr)
@@ -207,6 +250,12 @@ def main(argv=None):
                    help="exhaustive only: NAME.lead=LO:HI or NAME.sign=+|- (repeatable)")
     g.add_argument("--total", action="store_true", help="exhaustive: print the size and stop")
     g.add_argument("--no-index", action="store_true", help="tags without the case index")
+    g.add_argument("--orders", help="a fold's random run: the orders drawn from, comma-separated "
+                                    "(seq, lanes:W, lanes:big: more lanes than elements; default "
+                                    "seq, lanes:0, 1, 2, 3, 4, 5, 8 and big)")
+    g.add_argument("--max-length", type=int, default=None,
+                   help="a fold: the largest random length (default 256), or, with --exhaustive, "
+                        "the largest length enumerated")
     g.set_defaults(func=cmd_gen)
 
     c = sub.add_parser("check", help="judge completed lines")

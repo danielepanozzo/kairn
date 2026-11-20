@@ -642,8 +642,14 @@ class ExtExhaustiveGen(G.ExhaustiveGen):
                 dom = [t for t in fin if t[0] > 0 and t[0] & (t[0] - 1) == 0]
             elif ("nonneg", n) in req:
                 dom = [t for t in fin if sum(t) >= 0] + [(INF,), (NAN,)]
-            elif l == 2:
+            elif l == 2 and ("canonical", n) in req:
                 dom = fin + [(INF, 0), (NINF, 0), (NAN, NAN)]
+            elif l == 2:
+                # Any two limbs (a kernel of finite_or_nan, the finish of a fold, whose input is
+                # the fold's state): every value of the format, the infinities and NaN, in each
+                # limb; a restriction keeps the finite leading limbs it names.
+                one = [v for (v,) in _finite_domain(fmt, 1)] + [INF, NINF, NAN]
+                dom = [(a, b) for a in one if type(a) is not int or keep((a,)) for b in one]
             else:
                 dom = fin + [(INF,), (NINF,), (NAN,)]
             self.slots.append(((n,), dom))

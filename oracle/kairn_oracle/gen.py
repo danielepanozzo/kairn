@@ -406,9 +406,21 @@ def valid(fmt, kernel, vals):
             v = sum(vals[r[1]])
             if v <= 0 or v & (v - 1):
                 return False
+        elif r[0] == "count":
+            v = sum(vals[r[1]])
+            if v != 0 and v < ((1 << -fmt.qmin) if fmt.qmin < 0 else 1):
+                return False
         elif abs(sum(vals[r[1]])) < abs(sum(vals[r[2]])):
             return False
     return True
+
+
+def check_format(kernel, fmt):
+    """A kernel that requires format(half) is not generated in a format without 1/2."""
+    for prop in getattr(kernel, "format_requires", ()):
+        if prop == "half" and fmt.qmin > -1:
+            raise GenError("%s requires format(half): %s does not contain 1/2" % (kernel.name,
+                                                                                  fmt.name))
 
 
 def limb_text(fmt, v, neg):
@@ -433,7 +445,16 @@ class RandomGen:
         self.kernel = kernel
         self.fmt = fmt
         self.valid = valid
-        if getattr(kernel, "extended", False):
+        check_format(kernel, fmt)
+        from . import gen5
+        if gen5.family_of(kernel) is not None:
+            # The kernels of the folds' stage (gen5.py): the bounds, the steps of the dot
+            # products and the finishes.
+            self.shape = gen5.Shape5(kernel)
+            known, schedule = self.shape.strata, self.shape.schedule
+            self.make = gen5.make_case
+            self.valid = gen5.valid5
+        elif getattr(kernel, "extended", False):
             # The non-finite layer (gen3.py): the family's strata and strata of its own.
             from . import gen3
             self.shape = gen3.ExtShape(kernel)
@@ -587,6 +608,9 @@ def domain(fmt, limbs, restrictions, requires=(), mask=False):
         base = [t for t in base if sum(t) >= 0]
     if "power_of_two" in requires:
         base = [t for t in base if sum(t) > 0 and sum(t) & (sum(t) - 1) == 0]
+    if "count" in requires:
+        one = (1 << -fmt.qmin) if fmt.qmin < 0 else 1
+        base = [t for t in base if sum(t) == 0 or sum(t) >= one]
     return [t for t in base if all(r.keep(fmt, t[0]) for r in restrictions)]
 
 
@@ -602,6 +626,7 @@ class ExhaustiveGen:
     def __init__(self, kernel, fmt, restrictions=(), index_tags=True):
         self.kernel = kernel
         self.fmt = fmt
+        check_format(kernel, fmt)
         self.restrictions = [Restriction(r) if isinstance(r, str) else r for r in restrictions]
         names = [n for n, _ in kernel.inputs]
         for r in self.restrictions:
