@@ -765,12 +765,12 @@ Exhaustive mode (`--exhaustive --max-length L`) enumerates every array of every 
 each element any value of its domain (every number of the format, $\pm\infty$ and NaN for one
 limb; every canonical pair for two), in every order that differs: `seq`, and `lanes:W` for W from
 2 to the length. Sizes: `sum_1` at `fp:3:-3:0` up to 3 elements 225 835 cases, `sum_2` at
-`fp:3:-4:1` up to 2 363 379, `dot_1` at `fp:2:-1:0` up to 2 77 029, `dot_2` at `fp:4:-4:-1` one
-element 62 501 (two elements of `dot_2` are more than $10^8$ in any format of its precision). A
-sum of pairs needs exponents: in a format of fewer binades than twice its precision,
-`fp:3:-2:-1` (four binades) or `fp:4:-4:-1` (seven), every sum of up to
-three pairs is a pair, exact, and a run there checks nothing of the bound (the guards fail it);
-in `fp:3:-4:1` and `fp:3:-3:0` the reference comes to 0.19 of it.
+`fp:3:-4:1` up to 2 elements 363 379, `dot_1` at `fp:2:-1:0` up to 2 elements 77 029, `dot_2` at
+`fp:4:-4:-1` one element 62 501 (two elements of `dot_2` are more than $10^8$ in any format of its
+precision). A sum of pairs needs exponents: in a format of fewer binades than twice its
+precision, `fp:3:-2:-1` (four binades) or `fp:4:-4:-1` (seven), every sum of up to three pairs is
+a pair, exact, and a run there checks nothing of the bound (the guards fail it); in `fp:3:-4:1`
+and `fp:3:-3:0` the reference comes to 0.19 of it.
 
 **What the reference implementation reaches**, the largest error/allowed in 400 cases of seed 0
 (the interpreter and `refrun` agree bit for bit): `sum_1` 1.00 of its bound in `binary64` and
