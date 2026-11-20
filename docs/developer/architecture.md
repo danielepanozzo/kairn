@@ -874,8 +874,9 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   has the generated statement as its type, followed by `Print Assumptions <kernel>_correct`. The
   file prints nothing else, so that the audit script can refuse any output it does not understand.
   A fold marked `proved` adds the same two lines for each of its orders (`<fold>_seq_correct`,
-  `<fold>_lanes_correct`); `FoldStatements.v` is imported only then, so that the file does not
-  change while every fold is `unverified`.
+  `<fold>_lanes_correct`), a map or a convolution marked `proved` once, for its one statement
+  (`<map>_audit : <map>_spec := <map>_correct`); `FoldStatements.v` is imported only then, so
+  that the file does not change while every fold is `unverified`.
 - `FoldModel.v`: inside a section with the variables of `Model.v`, four definitions per fold, over
   tuples of reals: an element is one entry of every array (for `dot_2`, `(R * R) * (R * R)`, read
   with `fst` and `snd`), the state the tuple of its limbs. `F_step` and `F_combine` apply the

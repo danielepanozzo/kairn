@@ -1086,6 +1086,26 @@ class Printers(unittest.TestCase):
                       'Print Assumptions dot_2_seq_correct.', audit)
         self.assertIn('Print Assumptions dot_2_lanes_correct.', audit)
 
+    def test_the_audit_of_a_proved_map(self):
+        """A map has one statement, F_spec (FoldStatements.v), not one per order: the audit checks
+        F_correct against it, and names no theorem of an order."""
+        import copy
+        ks = copy.deepcopy(self.ks)
+        fd = ks.folds['axpy_1']
+        self.assertTrue(fd.is_map)
+        self.assertIn('Definition axpy_1_spec : Prop :=', rocq.fold_statements(ks))
+        fd.status = 'proved'
+        fd.theorem = 'proofs/theories/FoldAxpy.v'
+        audit = rocq.audit(ks)
+        self.assertIn('From Kairn.Gen Require Import Statements.\nFrom Kairn.Gen Require Import FoldStatements.\n', audit)
+        self.assertIn('From Kairn Require Import FoldAxpy.\n', audit)
+        self.assertIn('\nDefinition axpy_1_audit : axpy_1_spec := axpy_1_correct.\n'
+                      'Print Assumptions axpy_1_correct.\n', audit)
+        for order in fd.orders:
+            self.assertNotIn(f'axpy_1_{ir.ORDER_SUFFIX[order]}', audit)
+        # Exactly the one theorem of the map is audited among the folds.
+        self.assertEqual(audit.count('_audit : '), rocq.audit(self.ks).count('_audit : ') + 1)
+
     def test_the_counts_of_the_loops(self):
         """gen/objcode.json gives each fold's functions as parts (objcode.py): the step at least
         once in F_seq, twice in F_lanes, packed and scalar in F_packed; each part's counts are those

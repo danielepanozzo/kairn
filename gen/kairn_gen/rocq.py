@@ -1121,8 +1121,8 @@ def audit(kernels):
         lines += ['', f'Definition {k.name}_audit : {k.name}_spec := {k.name}_correct.',
                   f'Print Assumptions {k.name}_correct.']
     for fd in folds:
-        # A convolution has one statement, F_spec, not one per order.
-        names = [fd.name] if fd.is_conv else \
+        # A map and a convolution have one statement each, F_spec, not one per order.
+        names = [fd.name] if fd.is_map or fd.is_conv else \
             [f'{fd.name}_{ir.ORDER_SUFFIX[order]}' for order in ir.ORDERS if order in fd.orders]
         for name in names:
             lines += ['', f'Definition {name}_audit : {name}_spec := {name}_correct.',
