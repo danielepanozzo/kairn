@@ -79,11 +79,13 @@ endif()
 _kairn_api_program(kairn-api-runner-contract-fast runner.cpp ${_api_contract})
 
 # Each test runs the runners, the one with the build's flags and the one with contraction forced
-# on (in the full tier, the debug build's too, below), on the same requests, generated once
-# (pipeline.cmake). The quick tier's KAIRN_API_QUICK_CASES are at least 1000, the length of stream
-# at which a form that computes only some lines of its kernel must have computed one (runner.cpp);
-# 2000, because with 1000 three more of the faults planted in the kernels that the full tier caught
-# went unseen (docs/developer/testing.md, "Time").
+# on (in the full tier, the debug build's too, below), on the same requests, generated once, and
+# the oracle on each distinct output, in one Python process (../crosscheck.py api: the oracle's
+# gen and check in that process, each runner in its own). The quick tier's KAIRN_API_QUICK_CASES
+# are at least 1000, the length of stream at which a form that computes only some lines of its
+# kernel must have computed one (runner.cpp); 2000, because with 1000 three more of the faults
+# planted in the kernels that the full tier caught went unseen (docs/developer/testing.md,
+# "Time").
 set(_api_claims "${PROJECT_SOURCE_DIR}/gen/claims.json")
 # --- The flag sets (flags/) -------------------------------------------------------------------
 #
@@ -97,20 +99,21 @@ set(_api_claims "${PROJECT_SOURCE_DIR}/gen/claims.json")
 # cases (full.api.flags.oracle.*) and the kernels' runners in its cross-checks
 # (../full/CMakeLists.txt, from the variables _flags_* passed up below).
 add_subdirectory(flags)
-set(_api_runners "build|$<TARGET_FILE:kairn-api-runner>|contract-fast|$<TARGET_FILE:kairn-api-runner-contract-fast>")
-set(_api_debug_runner "debug|$<TARGET_FILE:kairn-api-runner-debug>" PARENT_SCOPE)
+# The runners as --runner LABEL EXECUTABLE for ../crosscheck.py.
+set(_api_runners --runner build "$<TARGET_FILE:kairn-api-runner>"
+  --runner contract-fast "$<TARGET_FILE:kairn-api-runner-contract-fast>")
+set(_api_debug_runner --runner debug "$<TARGET_FILE:kairn-api-runner-debug>" PARENT_SCOPE)
 set(_flags_runners "")
 foreach(_set IN LISTS _flags_names)
-  list(APPEND _flags_runners "${_set}|$<TARGET_FILE:kairn-api-runner-${_set}>")
+  list(APPEND _flags_runners --runner "${_set}" "$<TARGET_FILE:kairn-api-runner-${_set}>")
 endforeach()
-list(JOIN _flags_runners "|" _flags_runners)
 set(_flags_names ${_flags_names} PARENT_SCOPE)
 set(_flags_gen_runners ${_flags_gen_runners} PARENT_SCOPE)
 set(_flags_gen_labels ${_flags_gen_labels} PARENT_SCOPE)
 # --- The end of the flag sets' runners ---------------------------------------------------------
 if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
-  set(_api_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
-    "-DRUNNERS=${_api_runners}" "-DSEED=${KAIRN_API_SEED}")
+  set(_api_crosscheck "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/crosscheck.py")
+  set(_api_common --seed "${KAIRN_API_SEED}" ${_api_runners})
   file(READ "${_api_claims}" _api_json)
   string(JSON _api_count LENGTH "${_api_json}" kernels)
   math(EXPR _api_last "${_api_count} - 1")
@@ -124,9 +127,9 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
     foreach(_format binary64 binary32)
       set(_name api.oracle.${_kernel}.${_format})
       add_test(NAME ${_name}
-        COMMAND "${CMAKE_COMMAND}" ${_api_common} "-DKERNEL=${_kernel}" "-DFORMAT=${_format}"
-          "-DCOUNT=${KAIRN_API_QUICK_CASES}" "-DSUMMARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/oracle"
-          -P "${CMAKE_CURRENT_SOURCE_DIR}/pipeline.cmake")
+        COMMAND ${_api_crosscheck} api --kernel ${_kernel} --format ${_format}
+          --count ${KAIRN_API_QUICK_CASES} --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/oracle"
+          ${_api_common})
       set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "api;oracle")
     endforeach()
   endforeach()
@@ -134,8 +137,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_api_claims}")
   # the flag sets' runners on KAIRN_API_QUICK_CASES.
   set(_api_oracle_kernels ${_api_mapped} PARENT_SCOPE)
   set(_api_oracle_common ${_api_common} PARENT_SCOPE)
-  set(_api_flags_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
-    "-DRUNNERS=${_flags_runners}" "-DSEED=${KAIRN_API_SEED}" PARENT_SCOPE)
+  set(_api_flags_common --seed "${KAIRN_API_SEED}" ${_flags_runners} PARENT_SCOPE)
   add_test(NAME api.oracle.coverage
     COMMAND "${CMAKE_COMMAND}" "-DRUNNER=$<TARGET_FILE:kairn-api-runner>" "-DCLAIMS=${_api_claims}"
       "-DKERNELS=${PROJECT_SOURCE_DIR}/gen/kernels" "-DINTERNAL=${_api_internal}"

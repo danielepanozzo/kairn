@@ -23,9 +23,9 @@ KAIRN_GEN_FIXUP_CALL picks one. The changes:
 For each, three scalar runners (gen/tests/runner.cpp) are built against the copy with CXX (a
 GCC-style compiler; default c++) at -O3 -DNDEBUG, as Release builds them: as they stand, with
 -ffp-contract=off and with -ffp-contract=fast; and the public interface's runner
-(tests/api/runner.cpp). Then tests/crosscheck.cmake runs the three on the kernel's binary64 and
-binary32 cases (seed 0) and tests/api/pipeline.cmake the public interface's forms of the kernel, if
-it has any (seed 1), as the tests of each tier do, guards included: by default 6000 and 2000 cases
+(tests/api/runner.cpp). Then tests/crosscheck.py runs the three on the kernel's binary64 and
+binary32 cases (seed 0), and the public interface's forms of the kernel, if it has any (seed 1), as
+the tests of each tier do, guards included: by default 6000 and 2000 cases
 for the quick tier, 20000 and 10000 for the full tier. A tier catches a mutant if one of its tests
 fails. A mutant that does not compile is reported and left out. --no-tiers leaves all of this out.
 
@@ -44,7 +44,7 @@ Every applicable mutant runs, 1052 of the 63 kernels when this was written. With
 nothing (results/milestone1/mutants/, from before the comparison's special operands, which catch 17
 of the 65). Without --bits, about 20 minutes on an Apple M3 Max with --jobs 12. It prints a line per
 mutant and a summary, and writes everything into results.json of its work directory (--work, default
-a temporary directory), a line per mutant. Python's standard library, cmake and a C++ compiler; not
+a temporary directory), a line per mutant. Python's standard library and a C++ compiler; not
 Windows.
 """
 import argparse
@@ -217,25 +217,22 @@ def tiers(a, d, kernel, res):
         exe = os.path.join(d, label)
         if run(base + extra + ["-I", GEN_TESTS, os.path.join(GEN_TESTS, "runner.cpp"), "-o", exe]):
             return False
-        runners.append("%s|%s" % (label, exe))
+        runners += ["--runner", label, exe]
     api = os.path.join(d, "api")
     if run(base + [os.path.join(ROOT, "tests", "api", "runner.cpp"), "-o", api]):
         return False
     forms = subprocess.run([api, "--forms", kernel], capture_output=True, text=True).stdout.split()
-    suspicious = "OFF" if kernel in INTERMEDIATE_OVERFLOW else "ON"
+    suspicious = [] if kernel in INTERMEDIATE_OVERFLOW else ["--fail-on-suspicious"]
+    driver = [sys.executable, os.path.join(ROOT, "tests", "crosscheck.py")]
     for tier, (n, napi) in (("quick", a.quick), ("full", a.full)):
         failed = []
         for fmt in ("binary64", "binary32"):
-            if run(["cmake", "-DPYTHON=" + sys.executable, "-DSOURCE_DIR=" + ROOT, "-DKERNEL=" + kernel,
-                    "-DFORMAT=" + fmt, "-DFAIL_ON_SUSPICIOUS=" + suspicious, "-DCOUNT=%d" % n, "-DSEED=0",
-                    "-DRUNNERS=" + "|".join(runners),
-                    "-DSUMMARY=" + os.path.join(d, "%s.%s.json" % (tier, fmt)),
-                    "-P", os.path.join(ROOT, "tests", "crosscheck.cmake")]):
+            if run(driver + ["compiled", "--kernel", kernel, "--format", fmt, "--seed", "0", "--count", str(n),
+                             "--summary", os.path.join(d, "%s.%s.json" % (tier, fmt))] + suspicious + runners):
                 failed.append("crosscheck." + fmt)
-            if forms and run(["cmake", "-DPYTHON=" + sys.executable, "-DSOURCE_DIR=" + ROOT,
-                              "-DKERNEL=" + kernel, "-DFORMAT=" + fmt, "-DCOUNT=%d" % napi, "-DSEED=1",
-                              "-DRUNNERS=build|" + api, "-DSUMMARY_DIR=" + os.path.join(d, "api-" + tier),
-                              "-P", os.path.join(ROOT, "tests", "api", "pipeline.cmake")]):
+            if forms and run(driver + ["api", "--kernel", kernel, "--format", fmt, "--seed", "1",
+                                       "--count", str(napi), "--summary-dir", os.path.join(d, "api-" + tier),
+                                       "--runner", "build", api]):
                 failed.append("api." + fmt)
         res[tier] = failed
     return True

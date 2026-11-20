@@ -73,9 +73,11 @@ endif()
 #   in the build tree, and skips the tests that need it, with a SKIP line, if the compiler does not
 #   work: with a compiler given, a failure here. (Its other skip, of rounding_hardware on Python
 #   older than 3.13, which has no math.fma, is not.)
-# - full.tools.crosscheck.guards: the guards of crosscheck.cmake fail the runs they are there to
-#   fail (a partial or restricted enumeration, a missing stratum, nothing judged, a comparison seen
-#   one way only), as tests/crosscheck_guards.py and as crosscheck.cmake run by this cmake.
+# - full.tools.crosscheck.guards: the cross-checks' guards fail the runs they are there to fail (a
+#   partial or restricted enumeration, a missing stratum, nothing judged, a comparison seen one way
+#   only), as tests/crosscheck_guards.py, as tests/crosscheck.py calls them (with the interpreter
+#   as its runner, and with the public interface's runner of this build), and as crosscheck.cmake
+#   runs them with this cmake.
 # - full.tools.docs.reference.test: docs/tools/test_reference.py, the tests of the script that
 #   writes the reference pages (docs.reference.check, in the quick tier, checks the pages).
 # - full.tools.brute.driver.test: tests/brute/test_brute.py, the tests of the brute-force driver
@@ -104,6 +106,7 @@ endif()
 if(EXISTS "${PROJECT_SOURCE_DIR}/tests/test_crosscheck_guards.py")
   add_test(NAME full.tools.crosscheck.guards
     COMMAND "${Python3_EXECUTABLE}" tests/test_crosscheck_guards.py "${CMAKE_COMMAND}"
+      "$<TARGET_FILE:kairn-api-runner>"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
   set_tests_properties(full.tools.crosscheck.guards PROPERTIES TIMEOUT 300
     LABELS "full;tools;crosscheck")
@@ -124,16 +127,19 @@ endif()
 # --- The cross-checks ---------------------------------------------------------------------------
 #
 # Kernel by kernel, as tests/CMakeLists.txt worked them out: the interpreter on every operand of
-# the kernel's toy format, or of a restricted domain of it and on random cases of all of it; and
-# every compiled runner on KAIRN_CROSSCHECK_CASES cases of each format, with the kernels' runners
-# of the flag sets (api/flags/: the debug build, and one set at -O1 or /O1).
+# the kernel's toy format, or of a restricted domain of it and on random cases of all of it
+# (crosscheck.cmake, the three stages of the pipeline at once); and every compiled runner on
+# KAIRN_CROSSCHECK_CASES cases of each format, with the kernels' runners of the flag sets
+# (api/flags/: the debug build, and one set at -O1 or /O1), in one Python process
+# (tests/crosscheck.py).
 set(_summaries "${CMAKE_CURRENT_BINARY_DIR}/crosscheck")
-set(_compiled_full "${_compiled}")
+set(_compiled_full ${_compiled})
 foreach(_runner _label IN ZIP_LISTS _flags_gen_runners _flags_gen_labels)
-  string(APPEND _compiled_full "|${_label}|$<TARGET_FILE:${_runner}>")
+  list(APPEND _compiled_full --runner "${_label}" "$<TARGET_FILE:${_runner}>")
 endforeach()
 foreach(_kernel IN LISTS _full_kernels)
   set(_this ${_full_${_kernel}_this})
+  set(_this_compiled ${_full_${_kernel}_this_compiled})
   set(_toy "${_full_${_kernel}_toy}")
   set(_restrict "${_full_${_kernel}_restrict}")
   set(_error "${_full_${_kernel}_error}")
@@ -163,9 +169,8 @@ foreach(_kernel IN LISTS _full_kernels)
   if(_compiled)
     foreach(_format binary64 binary32)
       set(_name full.crosscheck.compiled.${_kernel}.${_format})
-      add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_format}"
-        "-DRUNNERS=${_compiled_full}" ${_random} "-DSUMMARY=${_summaries}/${_name}.json"
-        -P "${_driver}")
+      add_test(NAME ${_name} COMMAND ${_crosscheck} ${_this_compiled} --format ${_format}
+        ${_random_args} --summary "${_summaries}/${_name}.json" ${_compiled_full})
       set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;crosscheck;compiled")
     endforeach()
   endif()
@@ -208,16 +213,13 @@ endif()
 # Every public form of every kernel api/CMakeLists.txt maps, with both of its runners, on
 # KAIRN_API_CASES cases (the quick tier has KAIRN_API_QUICK_CASES of the same seed), and the
 # debug build's runner, which the quick tier leaves out, on the first form of each kernel.
-set(_api_full_common ${_api_oracle_common})
-list(TRANSFORM _api_full_common APPEND "|${_api_debug_runner}" REGEX "^-DRUNNERS=")
-list(APPEND _api_full_common -DFIRST_FORM=debug)
+set(_api_full_common ${_api_oracle_common} ${_api_debug_runner} --first-form debug)
 foreach(_kernel IN LISTS _api_oracle_kernels)
   foreach(_format binary64 binary32)
     set(_name full.api.oracle.${_kernel}.${_format})
     add_test(NAME ${_name}
-      COMMAND "${CMAKE_COMMAND}" ${_api_full_common} "-DKERNEL=${_kernel}" "-DFORMAT=${_format}"
-        "-DCOUNT=${KAIRN_API_CASES}" "-DSUMMARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/api-oracle"
-        -P "${PROJECT_SOURCE_DIR}/tests/api/pipeline.cmake")
+      COMMAND ${_crosscheck} api --kernel ${_kernel} --format ${_format} --count ${KAIRN_API_CASES}
+        --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/api-oracle" ${_api_full_common})
     set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle")
   endforeach()
 endforeach()
@@ -234,9 +236,9 @@ foreach(_kernel IN LISTS _api_oracle_kernels)
   foreach(_format binary64 binary32)
     set(_name full.api.flags.oracle.${_kernel}.${_format})
     add_test(NAME ${_name}
-      COMMAND "${CMAKE_COMMAND}" ${_api_flags_common} "-DKERNEL=${_kernel}" "-DFORMAT=${_format}"
-        "-DCOUNT=${KAIRN_API_QUICK_CASES}" "-DSUMMARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/api-flags"
-        -P "${PROJECT_SOURCE_DIR}/tests/api/pipeline.cmake")
+      COMMAND ${_crosscheck} api --kernel ${_kernel} --format ${_format}
+        --count ${KAIRN_API_QUICK_CASES} --summary-dir "${CMAKE_CURRENT_BINARY_DIR}/api-flags"
+        ${_api_flags_common})
     set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle;flags")
   endforeach()
 endforeach()

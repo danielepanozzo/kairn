@@ -326,16 +326,19 @@ endif()
 
 # --- The cross-checks ---------------------------------------------------------------------------
 #
-# Run by crosscheck.cmake, which prints the oracle's report and fails when the run did not check
-# what it set out to (see there):
+# Each prints the oracle's report and fails when the run did not check what it set out to
+# (crosscheck_guards.py):
 # - crosscheck.compiled.KERNEL.FORMAT (quick tier) and full.crosscheck.compiled.KERNEL.FORMAT
-#   (full tier): every compiled runner above on the same random cases of every stratum, the
-#   requests generated once and every output judged (an output identical byte for byte to one
-#   judged before has its verdict). The quick tier has KAIRN_CROSSCHECK_QUICK_CASES cases, the
-#   full tier KAIRN_CROSSCHECK_CASES, from case 0 of the same seed: the quick tier's cases are the
-#   first of the full tier's. 6000, because with 2000 two more of the faults planted in the
-#   kernels that the full tier caught went unseen (docs/developer/testing.md, "Time").
-# - full.crosscheck.interp.KERNEL (or interp-restricted and interp-sampled, below): the
+#   (full tier), run by crosscheck.py in one Python process (the oracle's gen and check, and the
+#   guards, in that process; each runner in its own): every compiled runner above on the same
+#   random cases of every stratum, the requests generated once and every output judged (an output
+#   identical byte for byte to one judged before has its verdict). The quick tier has
+#   KAIRN_CROSSCHECK_QUICK_CASES cases, the full tier KAIRN_CROSSCHECK_CASES, from case 0 of the
+#   same seed: the quick tier's cases are the first of the full tier's. 6000, because with 2000
+#   two more of the faults planted in the kernels that the full tier caught went unseen
+#   (docs/developer/testing.md, "Time").
+# - full.crosscheck.interp.KERNEL (or interp-restricted and interp-sampled, below), run by
+#   crosscheck.cmake as the pipeline gen | interp | check, its three processes at once: the
 #   interpreter on a toy format, whose choice depends on the kernel's inputs (below). A kernel
 #   without a toy format, or whose toy format is below its min_precision, gets a test that fails
 #   and says so, instead of a format where its claims are not stated.
@@ -462,16 +465,17 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
   string(JSON _count LENGTH "${_claims}" kernels)
   math(EXPR _last "${_count} - 1")
   set(_driver "${CMAKE_CURRENT_SOURCE_DIR}/crosscheck.cmake")
+  set(_crosscheck "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/crosscheck.py")
   set(_summaries "${CMAKE_CURRENT_BINARY_DIR}/crosscheck")
   set(_common "-DPYTHON=${Python3_EXECUTABLE}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}")
   set(_random "-DCOUNT=${KAIRN_CROSSCHECK_CASES}" "-DSEED=${KAIRN_CROSSCHECK_SEED}")
-  set(_random_quick "-DCOUNT=${KAIRN_CROSSCHECK_QUICK_CASES}" "-DSEED=${KAIRN_CROSSCHECK_SEED}")
-  # Every compiled runner, as LABEL|EXECUTABLE pairs for crosscheck.cmake.
+  set(_random_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_CASES}")
+  set(_random_quick_args --seed "${KAIRN_CROSSCHECK_SEED}" --count "${KAIRN_CROSSCHECK_QUICK_CASES}")
+  # Every compiled runner, as --runner LABEL EXECUTABLE for crosscheck.py.
   set(_compiled "")
   foreach(_runner _label IN ZIP_LISTS _runners _runner_labels)
-    list(APPEND _compiled "${_label}" "$<TARGET_FILE:${_runner}>")
+    list(APPEND _compiled --runner "${_label}" "$<TARGET_FILE:${_runner}>")
   endforeach()
-  list(JOIN _compiled "|" _compiled)
   # What full/CMakeLists.txt registers, kernel by kernel, for the full tier.
   set(_full_kernels "")
   set(_n_complete 0)
@@ -540,10 +544,13 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
       endif()
     endif()
     set(_fail_on_suspicious ON)
+    set(_suspicious_arg --fail-on-suspicious)
     if(_kernel IN_LIST _intermediate_overflow)
       set(_fail_on_suspicious OFF)
+      set(_suspicious_arg "")
     endif()
     set(_this ${_common} "-DKERNEL=${_kernel}" "-DFAIL_ON_SUSPICIOUS=${_fail_on_suspicious}")
+    set(_this_compiled compiled --kernel "${_kernel}" ${_suspicious_arg})
 
     # The interpreter, on every operand of the toy format, or of a restricted domain of it and
     # on random cases of all of it.
@@ -576,6 +583,7 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     # on KAIRN_CROSSCHECK_CASES cases.
     list(APPEND _full_kernels ${_kernel})
     set(_full_${_kernel}_this ${_this})
+    set(_full_${_kernel}_this_compiled ${_this_compiled})
     set(_full_${_kernel}_toy "${_toy}")
     set(_full_${_kernel}_restrict "${_restrict}")
     set(_full_${_kernel}_error "${_error}")
@@ -584,15 +592,14 @@ if(Python3_Interpreter_FOUND AND EXISTS "${_claims_file}")
     if(_compiled)
       foreach(_format binary64 binary32)
         set(_name crosscheck.compiled.${_kernel}.${_format})
-        add_test(NAME ${_name} COMMAND "${CMAKE_COMMAND}" ${_this} "-DFORMAT=${_format}"
-          "-DRUNNERS=${_compiled}" ${_random_quick} "-DSUMMARY=${_summaries}/${_name}.json"
-          -P "${_driver}")
+        add_test(NAME ${_name} COMMAND ${_crosscheck} ${_this_compiled} --format ${_format}
+          ${_random_quick_args} --summary "${_summaries}/${_name}.json" ${_compiled})
         set_tests_properties(${_name} PROPERTIES TIMEOUT 300 LABELS "crosscheck;compiled")
       endforeach()
     endif()
   endforeach()
-  # That the guards of crosscheck.cmake fail the runs they are there to fail is tested in the full
-  # tier (full.tools.crosscheck.guards).
+  # That the guards fail the runs they are there to fail, and that crosscheck.py and
+  # crosscheck.cmake fail with them, is tested in the full tier (full.tools.crosscheck.guards).
 
   set(_packed "no packed runners (no packed backend for this target)")
   if(_packed_backend)

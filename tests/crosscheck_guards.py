@@ -1,4 +1,5 @@
-"""What a cross-check must have checked, beyond the oracle's verdict (tests/crosscheck.cmake).
+"""What a cross-check must have checked, beyond the oracle's verdict (tests/crosscheck.py, which
+calls run() in its own process, and tests/crosscheck.cmake, which runs this).
 
     python3 tests/crosscheck_guards.py SUMMARY --kernel K --format F
         (--exhaustive [--restrict R1,R2,...] | --count N --seed S) [--claims FILE]
@@ -272,7 +273,7 @@ def describe(summary, a):
     return text
 
 
-def main():
+def parser():
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("summary")
     p.add_argument("--kernel", required=True)
@@ -282,22 +283,34 @@ def main():
     p.add_argument("--count", type=int)
     p.add_argument("--seed")
     p.add_argument("--claims", help="the claims file (default: the one the summary names)")
-    a = p.parse_args()
+    return p
+
+
+def run(a):
+    """(exit status, lines to print) of the guards on the arguments A (parser()): 0 and what was
+    checked, or 1 and the reasons. tests/crosscheck.py calls it in its own process."""
     if not a.exhaustive and (a.count is None or a.seed is None):
-        p.error("a random run needs --count and --seed")
+        return 2, ["a random run needs --count and --seed"]
     try:
         with open(a.summary, encoding="utf-8") as f:
             summary = json.load(f)
     except (OSError, ValueError) as ex:
-        print("cannot read the oracle's summary %s: %s" % (a.summary, ex))
-        return 1
+        return 1, ["cannot read the oracle's summary %s: %s" % (a.summary, ex)]
     found = list(problems(summary, a))
     if found:
-        for why in found:
-            print(why)
-        return 1
-    print(describe(summary, a))
-    return 0
+        return 1, found
+    return 0, [describe(summary, a)]
+
+
+def main():
+    p = parser()
+    a = p.parse_args()
+    if not a.exhaustive and (a.count is None or a.seed is None):
+        p.error("a random run needs --count and --seed")
+    status, lines = run(a)
+    for line in lines:
+        print(line)
+    return status
 
 
 if __name__ == "__main__":

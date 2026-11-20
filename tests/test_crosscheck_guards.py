@@ -1,6 +1,6 @@
 """The cross-checks' guards must fail the runs they are there to fail (tests/crosscheck_guards.py).
 
-    python3 tests/test_crosscheck_guards.py [CMAKE]
+    python3 tests/test_crosscheck_guards.py [CMAKE [API_RUNNER]]
 
 Each test runs a real pipeline, gen | kairn-gen interp | check --json, on a tiny toy format, whose
 stream the oracle passes but which did not check what a cross-check sets out to check (a
@@ -8,8 +8,12 @@ partial or restricted enumeration, strata missing, nothing judged, a comparison 
 only; in the extended domain, a class of results never seen: no overflow, no non-finite operand,
 finite_when never put to the test, a ball result or a constructor's outcome missing, the strata
 of the layer missing), or alters the summary of a good run where no stream can produce the fault;
-and requires the guards to fail it, with their reason. With CMAKE, the path of cmake, it also
-runs crosscheck.cmake on such a run, which must fail with the guards' reason, and on a good one.
+and requires the guards to fail it, with their reason. It also runs the driver of the compiled
+runners' cross-checks, tests/crosscheck.py, with the interpreter as its runner, on such runs,
+which it must fail with the guards' reason, and on good ones. With CMAKE, the path of cmake, it
+runs crosscheck.cmake, the driver of the interpreter's enumerations, likewise; with API_RUNNER,
+the public interface's runner (tests/api/runner.cpp), crosscheck.py api on a good run, on one
+whose cases miss a stratum, and on a kernel the runner maps no form to.
 """
 import copy
 import json
@@ -23,6 +27,7 @@ TESTS = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(TESTS)
 PY = sys.executable
 CMAKE = None
+API_RUNNER = None
 
 
 def pipeline(kernel, fmt, *gen_args, fail_on_suspicious=True):
@@ -253,7 +258,62 @@ class ExtendedGuards(unittest.TestCase):
         self.fails(s, "make_2_limbs", "fp:3:-3:0", "--exhaustive",
                    reason="cannot read the claims")
 
-    # The driver passes the guards' verdict on.
+    # The driver of the compiled runners, crosscheck.py, passes the guards' verdict on: the
+    # interpreter as its runner (--interp), on the enumerations above.
+    def test_the_one_process_driver(self):
+        with tempfile.TemporaryDirectory() as d:
+            def drive(kernel, fmt, *args):
+                return subprocess.run(
+                    [PY, os.path.join(TESTS, "crosscheck.py"), "compiled", "--kernel", kernel,
+                     "--format", fmt, "--summary", os.path.join(d, kernel + ".json"),
+                     "--fail-on-suspicious", "--interp"] + list(args),
+                    capture_output=True, text=True)
+            bad = drive("mul_2_2", "fp:3:-3:2", "--exhaustive")
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("did not check what it set out to", bad.stdout)
+            self.assertIn("judged no case", bad.stdout)
+            self.assertTrue(os.path.isdir(os.path.join(d, "mul_2_2.work")))
+            good = drive("two_sum", "fp:3:-3:2", "--exhaustive")
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            self.assertIn("with interp: passed, 2903 cases judged (every operand, 3025 cases)",
+                          good.stdout)
+            self.assertIn("kairn-oracle check: PASS", good.stdout)
+            self.assertFalse(os.path.exists(os.path.join(d, "two_sum.work")))
+            self.assertTrue(os.path.exists(os.path.join(d, "two_sum.interp.json")))
+            bad = drive(*ADD, "--exhaustive", "--restrict", "x.lead=-3:-2,y.lead=-3:-2")
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("class F4", bad.stdout)
+            bad = drive("lt_2_2", "fp:4:-6:4", "--seed", "0", "--count", "5")
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("no case of stratum", bad.stdout)
+            good = drive(*ADD, "--exhaustive")
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            self.assertIn("extended domain: F2 finite", good.stdout)
+
+    # The same driver for the public interface: with the API runner, a pass, a stratum the cases
+    # missed, and a kernel the runner maps no form to.
+    def test_the_one_process_driver_of_the_public_interface(self):
+        if not API_RUNNER:
+            self.skipTest("needs the path of the API runner (tests/api/runner.cpp)")
+        with tempfile.TemporaryDirectory() as d:
+            def drive(kernel, count):
+                return subprocess.run(
+                    [PY, os.path.join(TESTS, "crosscheck.py"), "api", "--kernel", kernel,
+                     "--format", "binary64", "--seed", "1", "--count", str(count),
+                     "--summary-dir", d, "--runner", "build", API_RUNNER],
+                    capture_output=True, text=True)
+            good = drive("add_2_2", 1000)
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            self.assertIn("forms of the public interface passed", good.stdout)
+            bad = drive("add_2_2", 5)
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("no case of stratum", bad.stdout)
+            self.assertIn("To rerun case INDEX of form F", bad.stdout)
+            bad = drive("two_sum", 1000)
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("no public operation of the API runner build maps to two_sum", bad.stdout)
+
+    # The driver of the interpreter's enumerations, crosscheck.cmake, passes the guards' verdict on.
     def test_the_driver(self):
         if not CMAKE:
             self.skipTest("needs the path of cmake")
@@ -282,6 +342,8 @@ class ExtendedGuards(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         CMAKE = sys.argv.pop(1)
+    if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
+        API_RUNNER = sys.argv.pop(1)
     unittest.main()
