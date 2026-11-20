@@ -92,12 +92,18 @@ E2<T> two(const T* in) {
         return x;
     }
 }
+// A ball operand from the limbs the oracle gives, a canonical ball, whose empty set is every limb
+// a NaN. The constructor makes the whole line of a NaN radius (it is a value from the program,
+// and a NaN from the program never makes the empty set), so the empty operand is built as what
+// it is; the forms of the constructors themselves, below, give it every radius.
 template <class T>
 B1<T> ball1(const T* in) {
+    if (in[1] != in[1]) return B1<T>::empty();
     return B1<T>(AS(ball_make_1, one(in)), in[1]);
 }
 template <class T>
 B2<T> ball2(const T* in) {
+    if (in[2] != in[2]) return B2<T>::empty();
     return B2<T>(AS(ball_make_2, two(in)), in[2]);
 }
 // Results, into the limbs of the completed line.

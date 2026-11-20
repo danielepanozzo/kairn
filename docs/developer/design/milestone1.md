@@ -282,17 +282,18 @@ can still fuse:
 ```
 make_2(a) -> x                     make_2_limbs(h, l) -> x          ball_make_2(c, r) -> (cw, rw)
   x0 = guard(a)                      x0 = guard(h)                    g   = guard(r)
-  n  = eq(x0, x0)                    x1 = guard(l)                    e   = le(0, g)
-  x1 = select(n, 0, x0)                                               a   = abs(c0)
+  n  = eq(x0, x0)                    x1 = guard(l)                    n   = lt(g, 0)
+  x1 = select(n, 0, x0)                                               ok  = not(n)
+                                                                      a   = abs(c0)
                                                                       f1  = lt(a, const inf)
                                                                       f2  = lt(g, const inf)
                                                                       f   = and(f1, f2)
                                                                       k0  = select(f, c0, 0)
                                                                       k1  = select(f, c1, 0)
                                                                       s   = select(f, g, const inf)
-                                                                      cw0 = select(e, k0, const nan)
-                                                                      cw1 = select(e, k1, const nan)
-                                                                      rw  = select(e, s, const nan)
+                                                                      cw0 = select(ok, k0, const nan)
+                                                                      cw1 = select(ok, k1, const nan)
+                                                                      rw  = select(ok, s, const nan)
 ```
 
 - `make_2(a)` is `Expansion<T, 2>` from a value of `T` or from a one-limb number: the result is
@@ -300,9 +301,13 @@ make_2(a) -> x                     make_2_limbs(h, l) -> x          ball_make_2(
 - `make_2_limbs(h, l)` is `from_limbs`: it requires $(h, l)$ to be canonical and returns limbs of
   the same values (a zero limb may change sign).
 - `ball_make_2(c, r)` takes a canonical center (an object, `stored`) and a radius from the
-  program. The result is canonical: the empty set when the radius is a NaN or negative,
-  $-\infty$ included (`e` is then false); otherwise the whole line when the center is not finite
-  (an infinity or a NaN) or the radius is $+\infty$; and otherwise the ball itself. `ball_make_1(c, r)` is the same with a one-limb center supplied by
+  program. The result is canonical: the empty set when the radius is negative, $-\infty$
+  included (`n` is then true); otherwise the whole line when the center is not finite (an
+  infinity or a NaN) or the radius is $+\infty$ or a NaN (`f2` is false for a NaN); and otherwise
+  the ball itself. Until 2026-11-20 the first line tested `e = le(0, g)` and a NaN radius gave
+  the empty set; the owner then decided that a NaN from the program never makes the empty set
+  ([deviation 23](phase0/decisions.md#deviations-from-the-brief-flagged)), and the two kernels
+  were proved again for the rule as it stands. `ball_make_1(c, r)` is the same with a one-limb center supplied by
   the program: its first lines are `g = guard(r)` and `c0 = guard(c)`, and it has no `k1` and
   no `cw1`. `const nan` is a quiet NaN.
 

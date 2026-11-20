@@ -528,8 +528,7 @@ class Tool(unittest.TestCase):
             self.change(name, lambda k: k.update(ieee_only=True))
 
     def test_ieee_only_with_two_statuses(self):
-        # make_2, proved in the IEEE model and without a real-model statement (ball_make_1, the
-        # kernel this used, is unverified since 2026-11-20, in both statuses).
+        # make_2, proved in the IEEE model and without a real-model statement.
         self.change("make_2", lambda k: k.update(status="unverified"))
         self.fails("make_2", "ieee_only", "ieee_status")
 

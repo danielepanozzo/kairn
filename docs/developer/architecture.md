@@ -570,7 +570,7 @@ left out):
   "outputs": [{"name": "cw", "limbs": 2}, {"name": "rw", "limbs": 1}],
   "requires": ["canonical(c)"],
   "ensures": [{"kind": "makes_ball", "center": "cw", "radius": "rw", "from": {"center": "c", "radius": "r"}}],
-  "min_precision": 1, "status": "unverified", "ieee_status": "unverified",
+  "min_precision": 1, "status": "proved", "ieee_status": "proved",
   "instances": {"binary64": [], "binary32": []}
 }
 ```

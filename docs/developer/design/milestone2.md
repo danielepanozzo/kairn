@@ -1208,13 +1208,15 @@ And this is which values of `T`, given to a constructor, produce the two states:
 |---|---|---|
 | `Interval(lo, hi)`, two values of `T` | $lo > hi$; $[+\infty, +\infty]$; $[-\infty, -\infty]$ | a NaN bound, whatever the other; $[-\infty, +\infty]$ |
 | a `Ball` from an interval of two `T`, of one limb or two | the same three | a NaN bound, whatever the other; an infinite bound of an interval that is not empty |
-| `Ball(c, r)` ([Milestone 1](milestone1.md#values-that-enter-from-the-program), unchanged) | a radius that is a NaN or negative | otherwise: a center that is a NaN or infinite; a radius $+\infty$ |
+| `Ball(c, r)` ([Milestone 1](milestone1.md#values-that-enter-from-the-program), changed on 2026-11-20) | a negative radius, $-\infty$ included | otherwise: a center that is a NaN or infinite; a radius that is $+\infty$ or a NaN |
 
-A NaN *bound*, and a NaN center, never produce the empty set: a NaN says that something failed,
-and the answer that is always true is the whole line. The radius of `Ball(c, r)` is the one
-place where a NaN from the program gives the empty set. That is Milestone 1, where a NaN radius
-is the stored form of the empty ball, and the decision of 2026-11-20 was about bounds and does
-not change it; it is recorded here because the reason given for bounds would apply to it too.
+A NaN from the program never produces the empty set, be it a bound, a center or a radius: a NaN
+says that something failed, and the answer that is always true is the whole line. The radius of
+`Ball(c, r)` was the one exception, from Milestone 1, where a NaN radius is the stored form of
+the empty ball; the owner extended the decision about bounds to it on the same day, and
+`ball_make_1` and `ball_make_2` were changed and proved again. One consequence: `Ball(X.center(),
+X.radius())` of an empty `X` is the whole line, not `X`; a program that wants the empty set
+writes `Ball::empty()`.
 
 Three choices in this table are conventions, not consequences. `certainly_positive` is false on
 the empty set although "every member is positive" is vacuously true: a query about nothing

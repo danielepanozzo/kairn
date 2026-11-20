@@ -65,7 +65,7 @@
 /// - a Ball operation requires each ball to be canonical: a finite ball with a canonical center
 ///   and a radius r >= 0, the whole line, or the empty set;
 /// - from_limbs requires a canonical pair, and a constructor of Ball a canonical center and a
-///   radius that is not negative (a NaN radius, which makes the empty set, is accepted).
+///   radius that is not negative (a NaN radius, which makes the whole line, is accepted).
 ///
 /// An operand that fails prints a message and calls std::abort(); an environment that fails calls
 /// KAIRN_ENVIRONMENT_FAILURE. 0 for no checks. The default is 1 when NDEBUG is not defined, as for

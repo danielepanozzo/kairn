@@ -235,7 +235,7 @@ overflows, a two-limb operation returns $(\pm\infty, 0)$, as `double` would retu
 never a finite wrong value; an infinite or NaN operand gives what `double` gives on the leading
 limbs. A ball that cannot be bounded becomes the whole line, which still contains the exact
 result; a ball made with a negative radius is the empty set, and one made with a NaN radius the
-whole line (the constructors' proof is being redone for that rule). All of the rest is proved
+whole line. All of this is proved
 ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values)). It is also
 proved when finite operands give a finite ball: when no member of the exact result exceeds a
 quarter of the overflow threshold ($2^{1022}$ for `double`; a sixteenth of it for a product of
