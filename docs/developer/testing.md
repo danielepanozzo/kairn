@@ -8,20 +8,23 @@ by hand. The parts named here (generator, interpreter, oracle, runner, claims) a
 
 | Tier | What | Where it runs | Time |
 |---|---|---|---|
-| Quick | `ctest --test-dir build`: every kernel through every compiled runner on a small sample, every public operation on a small sample (and, built as a debug build with the checks, the first form of each), the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and the fast parts of the generator's and the oracle's own tests ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | 44 seconds to two minutes with `--parallel 4` ([Time](#time)) |
-| Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the longest parts of the generator's and the oracle's own tests ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | five to eight minutes with `--parallel 4` |
+| Quick | `ctest --test-dir build`: the library, with the build's compiler and flags: every kernel through every compiled runner on a small sample, every public operation on a small sample, the stored regression cases, the checks of a debug build, the object code of every kernel in five configurations of the compiler's flag matrix ([below](#object-code)), the examples, the negative controls, the consumer checks, and that the generated files and the reference pages are fresh ([below](#the-quick-tier)) | every push and pull request, on every platform of the CI (`build.yml`); and by anyone, with the three commands of [Getting started](../getting-started/index.md#configure-build-and-test) | 31 to 54 seconds on the Mac and the Linux machine and 63 to 71 on the Windows machine with `--parallel 4`; on the hosted Windows runners an estimated 108 to 116 seconds, elsewhere under a minute ([Time](#the-tools-tests-leave-the-quick-tier)) |
+| Full | `ctest --test-dir build/tests/full`: everything that left the quick tier, named `full.*`: the same cross-checks on more cases, every public operation built with each [flag set](#flag-sets) of a client, the kernels built at `-O0` and `-O1` (`/Od`, `/O1`), the object code on the compiler's whole flag matrix, the interpreter's enumerations of toy formats, and the tools' own tests: the generator's, the oracle's, and those of the cross-checks' guards, of the script of the reference pages and of the brute-force driver ([below](#the-full-tier)) | every push and pull request, in jobs beside the quick tier's (`full.yml`, and `generator.yml` for the generator's part); and by hand | five to eleven minutes with `--parallel 4` |
 | Generator | `python3 gen/kairn-gen test`: the generator's whole suite, C++ included | every push and pull request, with each GCC-style compiler of the CI, and without its C++ tests on Windows | a few minutes per compiler |
 | Proofs | `make -C proofs`: every Rocq proof, then the axiom audit | every push and pull request | a minute or two, with four cores |
 | Brute force | `tests/brute/brute.py`: the cross-checks of the compiled runners on millions of random cases per kernel, format and machine (every runner of a machine on the same cases, both forms of the scalar fix-ups), and the interpreter on every operand of larger toy formats, with the same guards and a time budget | by hand, on the test machines, never in CI (`tests/brute/README.md`); results in [Brute force, Milestone 1](results/brute-milestone1.md) | for the final code of Milestone 1, 3.5 hours on the Linux machine and 3 hours each on the Mac and the Windows machine |
 
 ctest runs the quick tier in the build directory and the full tier in `tests/full` of it, and says
-which before the first test and after the summary (`Kairn tests: the quick tier, 279 tests. The
-full tier, 293 tests more: ctest --test-dir .../tests/full`); every test of the quick tier also
-has the label `quick`, and every test of the full tier the label `full`. Both are registered by
-the same configuration: the file `CTestCustom.cmake` that configuring writes at the top of the
-build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`), so that
-`ctest -R` in the build directory never selects a `full.*` test, and a run in `build/tests` runs
-both. The full tier is registered only when Kairn is the top-level project and Python 3 is found.
+which before the first test and after the summary (with Apple clang: `Kairn tests: the quick
+tier, 290 tests. The full tier, 409 tests more: ctest --test-dir .../tests/full`); every test of
+the quick tier also has the label `quick`, and every test of the full tier the label `full`. Both
+are registered by the same configuration: the file `CTestCustom.cmake` that configuring writes at
+the top of the build tree leaves the full tier out of a run there (`CTEST_CUSTOM_TESTS_IGNORE`),
+so that `ctest -R` in the build directory never selects a `full.*` test, and a run in
+`build/tests` runs both. The full tier is registered only when Kairn is the top-level project and
+Python 3 is found: a project that adds Kairn with `KAIRN_BUILD_TESTS` on gets the quick tier, the
+tests of the library with that project's compiler and flags, among its own tests (without the
+messages, which are written into the top of Kairn's own build tree only).
 
 A kernel's claims are only as good as the tests that could have refuted them, so every cross-check
 fails when it checked nothing, or less than it says: when the oracle judged no case, when an
@@ -35,23 +38,25 @@ The tests that `ctest` runs in the build directory, by name:
 | Test | Checks |
 |---|---|
 | `kairn-gen.check` | Every committed generated file is what `python3 gen/kairn-gen build` writes. |
-| `kairn-gen.test` | The generator's own tests, without those that compile C++ (`--no-cxx`, see [the generator's tier](#the-generators-tier)) and without its four longest test classes (`--skip`), which `full.kairn-gen.test` runs. |
-| `kairn-oracle.selftest` | The oracle's own tests (`--quick`), including injected errors it must catch, without its six enumerations of toy formats (`--skip`), which `full.kairn-oracle.selftest` runs. It compiles its own C++ reference runner with the build's compiler; if that fails, the test fails. |
 | `kairn-oracle.claims` | The oracle can read every claim in `gen/claims.json`. |
-| `docs.reference.check`, `docs.reference.test` | The reference pages of the site are what `docs/tools/reference.py` writes, and that script's own tests ([Documentation](documentation.md#reference-pages)). |
+| `docs.reference.check` | The reference pages of the site are what `docs/tools/reference.py` writes ([Documentation](documentation.md#reference-pages)). |
 | `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum. |
-| `crosscheck.guards` | The cross-checks' guards fail the runs they are there to fail (`tests/test_crosscheck_guards.py`). |
 | `objcode.check` | Every kernel compiled with the build's compiler in five configurations of its flag matrix, scalar and packed, for `double` and `float`: the fused multiply-adds and the plain multiplications of its object code are what `gen/objcode.json` says the IR asks for ([below](#object-code)). |
 | `objcode.controls` | The textbook `a * b + c` fails that check in exactly the configurations where its program sees the compiler fuse it, and in at least one; counts changed on purpose fail it. |
 | `objcode.test` | The checker's own tests, on stored disassemblies of every format it reads (Python only). |
 | `regression.cases` | The stored cases of `tests/regression/cases.txt` (the cases that found a problem, and those that came closest to a claim, [below](#the-regression-cases)) through every compiled runner of the build, the generator's interpreter, and both runners of the public interface with every form of each public kernel, judged by the oracle (`tests/regression/run.py`). |
 | `consume.*` | A CMake project that uses Kairn through `add_subdirectory`, and one through `find_package` after `cmake --install`, build and run a kernel. |
 
+The tools' own tests, which test the generator, the oracle and the other tools rather than the
+library, were in the quick tier until they set its time on the hosted runners ([Time](#time)):
+they are in the full tier, each under its name there with `full.tools.` in front
+([below](#the-full-tier)).
+
 The tests of the public interface (`tests/api/`, label `api`):
 
 | Test | Checks |
 |---|---|
-| `api.oracle.K.F` | Every public operation that calls kernel K, computed through the constructors, operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on 2 000 random cases of format F, judged by the oracle against K's claims; by two runners on the same cases, one built with the build's flags and one with contraction forced on, and by a third, the [debug build](#flag-sets), with the checks, on the first form of K only. For a kernel of the extended domain the cases include infinite and NaN operands and empty and whole balls, built through the public constructors. Each form of the operation (`x + a` and `a + x`, `x += a`, `x + y` with a one-limb `y`, the marked and the unmarked operator, `kairn::finite::add`) is judged on its own. A few forms can compute only some lines of their kernel (`ldexp` needs a power of two among the operands of `mul_1_1`, a point form a ball of radius 0, the steps of `ldexp` an operand that can be scaled exactly); they compute the plain operation on the others, and fail if a stream of 1000 lines or more reached their own operation on none, which is why the quick tier has at least 1 000 cases. |
+| `api.oracle.K.F` | Every public operation that calls kernel K, computed through the constructors, operators and functions of `kairn/kairn.hpp` (`tests/api/runner.cpp`, a runner of the line protocol), on 2 000 random cases of format F, judged by the oracle against K's claims; by two runners on the same cases, one built with the build's flags and one with contraction forced on. For a kernel of the extended domain the cases include infinite and NaN operands and empty and whole balls, built through the public constructors. Each form of the operation (`x + a` and `a + x`, `x += a`, `x + y` with a one-limb `y`, the marked and the unmarked operator, `kairn::finite::add`) is judged on its own. A few forms can compute only some lines of their kernel (`ldexp` needs a power of two among the operands of `mul_1_1`, a point form a ball of radius 0, the steps of `ldexp` an operand that can be scaled exactly); they compute the plain operation on the others, and fail if a stream of 1000 lines or more reached their own operation on none, which is why the quick tier has at least 1 000 cases. |
 | `api.oracle.coverage` | Every kernel of `gen/claims.json` is called by a public form of the runner, or is a building block, or is an entry kernel (`entry: yes` in `gen/kernels`) on the runner's short list of those not public yet, each with its reason (today the finite cores of the Ball operations); no entry kernel is a building block. |
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, comparisons with a NaN among them; the same results at run time; the properties of the types; and that an operation compiles without `kairn::unverified` exactly when the kernel it calls is proved. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass in the default environment and fail under each directed rounding mode and under flush-to-zero. |
@@ -66,34 +71,43 @@ The tests of the public interface (`tests/api/`, label `api`):
 ## The full tier
 
 The tests that `ctest --test-dir build/tests/full` runs, by name, each named as the quick tier's
-test it extends, with `full.` in front:
+test it extends, with `full.` in front, or as the quick tier's test it was, with `full.tools.` in
+front:
 
 | Test | Checks |
 |---|---|
 | `full.crosscheck.compiled.K.F` | `crosscheck.compiled.K.F` on 20 000 cases instead of 6 000: the cases of the same seed from case 0, so that the quick tier's are the first 6 000 of these; with the kernels' runners, scalar and packed, of two [flag sets](#flag-sets) as well: the debug build (`-O0`, `/Od`) and one at `-O1` (`/O1`). |
-| `full.api.oracle.K.F` | `api.oracle.K.F` on 10 000 cases instead of 2 000, the quick tier's among them. |
+| `full.api.oracle.K.F` | `api.oracle.K.F` on 10 000 cases instead of 2 000, the quick tier's among them, and by a third runner, the [debug build](#flag-sets)'s, with the checks, on the first form of K only. |
 | `full.api.flags.oracle.K.F` | Every public form of kernel K through the runner of each [flag set](#flag-sets), the debug build's included, on the quick tier's 2 000 cases of format F. |
 | `full.api.flags.S.self_test`, `full.api.flags.S.constexpr` | `api.flags.debug.*` for each other flag set S. |
 | `full.objcode.check`, `full.objcode.controls` | `objcode.check` and `objcode.controls` in every configuration of the compiler's flag matrix: 24 for GCC, Clang and Apple clang and for clang-cl, 9 for MSVC. |
 | `full.crosscheck.interp.K` | Kernel K run by the generator's interpreter on **every** operand combination of a toy format. |
 | `full.crosscheck.interp-restricted.K` | Kernel K run by the interpreter on every operand of a **restricted** domain of a toy format, for the kernels whose whole enumeration is too long. |
 | `full.crosscheck.interp-sampled.K` | The same kernels on 20 000 random cases of the whole toy format, from every stratum. |
-| `full.kairn-gen.test` | The four test classes of the generator that `kairn-gen.test` leaves out (`-k`): the interpreter against the machine's own arithmetic (Python's float and `math.fma`) on thousands of cases per kernel and format and against every rounding of toy formats, and the statements of the IEEE model and of the non-finite layer on every operand of small formats. With four worker processes. |
-| `full.kairn-oracle.selftest` | The six tests of the oracle that `kairn-oracle.selftest` leaves out (`--only`): its Python reference runner, correct and with injected errors, on every case of tiny formats. With four worker processes. |
+| `full.kairn-gen.test` | The four test classes of the generator that `full.tools.kairn-gen.test` leaves out (`-k`): the interpreter against the machine's own arithmetic (Python's float and `math.fma`) on thousands of cases per kernel and format and against every rounding of toy formats, and the statements of the IEEE model and of the non-finite layer on every operand of small formats. With four worker processes. |
+| `full.kairn-oracle.selftest` | The six tests of the oracle that `full.tools.kairn-oracle.selftest` leaves out (`--only`): its Python reference runner, correct and with injected errors, on every case of tiny formats. With four worker processes. |
 | `full.search.compiled` | The adversarial search ([below](#the-adversarial-search)) on every kernel with an `error`, `upper`, `encloses` or `extends` entry, `binary64` and `binary32`, through the scalar runner with the build's flags, 5 000 cases per kernel and format from its seeds; fails on any violated claim. With four worker processes. |
+| `full.tools.kairn-gen.test` | The generator's own tests, without those that compile C++ (`--no-cxx`, see [the generator's tier](#the-generators-tier)) and without the four test classes of `full.kairn-gen.test` (`--skip`). |
+| `full.tools.kairn-oracle.selftest` | The oracle's own tests (`--quick`), including injected errors it must catch, without the six enumerations of toy formats of `full.kairn-oracle.selftest` (`--skip`). It compiles its own C++ reference runner with the build's compiler; if that fails, the test fails. |
+| `full.tools.crosscheck.guards` | The cross-checks' guards fail the runs they are there to fail ([What a pass requires](#what-a-pass-requires), `tests/test_crosscheck_guards.py`). |
+| `full.tools.docs.reference.test` | The tests of `docs/tools/reference.py`, the script of the reference pages ([Documentation](documentation.md#reference-pages)). |
+| `full.tools.brute.driver.test` | The tests of the [brute-force](#the-tiers) driver `tests/brute/brute.py`: the plan of its enumerations, the forms of the fix-ups, `widen.py` on one small format (`tests/brute/test_brute.py`). |
 
-The names of the parts left out are in `tests/CMakeLists.txt` (`_gen_full`, `_oracle_full`), and
-both tools fail when a name they are given matches no test, so that a test renamed cannot drop out
-of both tiers. A label says what a test of the full tier depends on, which is how the CI runs each
-where it must and no more ([Continuous integration](#continuous-integration)): `python`, on
-Python alone, in exact arithmetic, the same everywhere (run once, on Linux); `generator`, on the
-machine's arithmetic as well (run on every operating system, inside the generator's whole suite in
-`generator.yml`); neither, on the compiler (run on every platform and compiler of the CI).
+The names of the parts that each of the generator's and the oracle's two tests leaves to the other
+are in `tests/CMakeLists.txt` (`_gen_full`, `_oracle_full`), and both tools fail when a name they
+are given matches no test, so that a test renamed cannot drop out of both. A label says what a
+test of the full tier depends on, which is how the CI runs each where it must and no more
+([Continuous integration](#continuous-integration)): `python`, on Python alone, in exact
+arithmetic, the same everywhere (run once, on Linux); `generator`, on the machine's arithmetic as
+well (run on every operating system, inside the generator's whole suite in `generator.yml`);
+neither, on the compiler (run on every platform and compiler of the CI). The tools' own tests have
+the label `tools`; but for the generator's, which is labelled `generator` too, they run with every
+compiler, as they did in the quick tier.
 
 Labels select groups in either tier: `-L crosscheck`, `-L compiled`, `-L interp` (with
 `-L restricted` and `-L sampled` among them), `-L api` (with `-L oracle`, `-L reject` and
-`-L boundary` among them), `-L objcode`, `-L python`, `-L generator`; `-R` selects by name, for example
-`ctest --test-dir build -R mul_2_2` for the quick tier's tests of `mul_2_2`.
+`-L boundary` among them), `-L objcode`, `-L python`, `-L generator`, `-L tools`; `-R` selects by
+name, for example `ctest --test-dir build -R mul_2_2` for the quick tier's tests of `mul_2_2`.
 
 ## Cross-checks
 
@@ -259,7 +273,7 @@ the classes of each statement (`oracle/README.md`, "The extended domain"):
     the empty set) separately, so no guard asks for it: the complete enumerations contain it, as
     does the restricted one of `ball_mul_2_full`, and a random run has the `zerowhole` stratum.
 
-`crosscheck.guards` runs pipelines that the oracle passes but these guards must fail (a partial
+`full.tools.crosscheck.guards` runs pipelines that the oracle passes but these guards must fail (a partial
 enumeration, a restricted one passed off as complete, missing strata, nothing judged, a comparison
 that was never true; in the extended domain, an enumeration of `add_2_2_full` without an overflow
 or where `finite_when` never holds, one of `ball_add_1_full` whose radius makes every result from
@@ -515,7 +529,7 @@ kernels' runners, scalar and packed. They are tested as follows:
 
 | What | Quick tier | Full tier |
 |---|---|---|
-| The public interface against the oracle | the debug build's runner, on the first form of each kernel, in `api.oracle.K.F` | every form, through the runner of every set, on 2 000 cases (`full.api.flags.oracle.K.F`) |
+| The public interface against the oracle | | the debug build's runner, on the first form of each kernel, on 10 000 cases (`full.api.oracle.K.F`); every form, through the runner of every set, on the quick tier's 2 000 cases (`full.api.flags.oracle.K.F`) |
 | `kairn::self_test()` and `environment_ok()`, compiled with the set's flags | `api.flags.debug.self_test` | `full.api.flags.S.self_test` |
 | `constexpr.cpp`: its constant expressions, and the same at run time | `api.flags.debug.constexpr` | `full.api.flags.S.constexpr` |
 | The kernels' runners, in the cross-checks | | the debug build and the `-O1` or `/O1` set, in `full.crosscheck.compiled.K.F` |
@@ -524,7 +538,9 @@ kernels' runners, scalar and packed. They are tested as follows:
 The quick tier has so little of it because a debug build's runners take two to three times as long
 as optimized ones, most of it in the text of the line protocol: on the Mac, the debug build's
 runner on every form added 21 seconds of test time to `api.oracle`, and its kernels' runners 35 to
-the cross-checks, against about 5 for the first forms ([Time](#time)). The generator's own suite
+the cross-checks, against about 5 for the first forms ([Time](#time)). The first forms were in the
+quick tier's `api.oracle.K.F` too, until the hosted Windows runners showed that the quick tier
+could not keep to two minutes there with them ([Time](#time)). The generator's own suite
 builds the kernels at `-O0` too, with GCC and Clang only ([below](#the-generators-tier)): these
 are the tests that build them at `/Od` with MSVC and clang-cl, and at `-O1` with any compiler.
 
@@ -624,11 +640,12 @@ Windows machine an Intel i5-13500T with MSVC, each run held to 8 of its logical 
 Without `--parallel`, as the three commands of [Getting started](../getting-started/index.md)
 stand, the quick tier took 166 seconds on the Mac and 287 on 16 threads of the Linux machine.
 
-On 16 threads of the Linux machine, the quick tier's 278 seconds of test time are: the compiled
-runners' cross-checks 105 (126 tests), the oracle's own tests 54, the public interface against
-the oracle 51 (96 tests), the guards' tests 32, the generator's own tests 17, the reference
-script's tests 9, and 11 for the 50 others. The oracle's tests are the longest single test, and
-set a floor of about a minute to the wall time there. In the full tier, the pools of four workers
+On 16 threads of the Linux machine, the quick tier's 278 seconds of test time were then: the
+compiled runners' cross-checks 105 (126 tests), the oracle's own tests 54, the public interface
+against the oracle 51 (96 tests), the guards' tests 32, the generator's own tests 17, the
+reference script's tests 9, and 11 for the 50 others. The oracle's tests were the longest single
+test, and set a floor of about a minute to the wall time there, until the tools' own tests left
+the quick tier ([below](#the-tools-tests-leave-the-quick-tier)). In the full tier, the pools of four workers
 of the generator's and the oracle's longest tests are counted by ctest (`PROCESSORS`), so with
 `--parallel 4` each runs alone; a larger `--parallel` shortens the full tier on a machine with
 more cores.
@@ -706,7 +723,8 @@ machine with GCC 13:
   of `build.yml` and again, inside the whole suite, in each of the three of `generator.yml`; the
   interpreter's 67 enumerations, which are Python alone in exact arithmetic, ran in each of the
   five. Now the generator's longest tests run once per operating system and the enumerations
-  once.
+  once; since the tools' tests left the quick tier ([below](#the-tools-tests-leave-the-quick-tier)),
+  the rest of the generator's tests without C++ do too.
 
 **What left the quick tier**, and what that costs. The interpreter's enumerations of toy formats,
 the generator's four longest test classes and the oracle's six enumerations left whole; the
@@ -726,9 +744,10 @@ runner shows it), and `add_fast_2_2_full` with its finiteness test `inf > a` loo
 `inf >= a`, first at case 9 280. The samples were chosen by this experiment, when it was first run
 on the Mac (863 and 861 then, with the same two between the tiers): with 2 000 cases for the
 compiled runners two more went unseen, and with 1 000 for the public interface three more. The
-oracle's own mutants (`oracle/selftest/mutants.py`, 65 of them) are all caught by the quick tier's
-part of its selftest but one, `exhaustive: -inf left out of a one-limb domain`, which only an
-enumeration can see and the full tier catches.
+oracle's own mutants (`oracle/selftest/mutants.py`, 65 of them) are all caught by the part of its
+selftest that was then in the quick tier (now `full.tools.kairn-oracle.selftest`) but one,
+`exhaustive: -inf left out of a one-limb domain`, which only an enumeration can see and
+`full.kairn-oracle.selftest` catches.
 
 **What neither tier catches.** The tiers judge results against the kernels' claims, so a change
 that alters a result while keeping every claim passes them by design: 187 of the 1 052 do. What
@@ -787,6 +806,92 @@ The stopgap of the one tier, a timeout of 1 800 seconds for the generator's and 
 and of 60 minutes for the jobs of `build.yml`, is gone: their timeouts are 600 seconds and 30
 minutes again.
 
+### The tools' tests leave the quick tier
+
+On the hosted runners the quick tier's ctest step took 128 to 202 seconds on Windows (167 and 172
+on the median runs with MSVC and clang-cl), over the two minutes of the brief, and 54 to 126
+elsewhere ([Costs, Milestone 1](results/costs-milestone1.md#4-the-quick-tier-on-the-hosted-runners)).
+Five tests of the tools set that time, two fifths of the quick tier's test time there, and none
+builds anything of Kairn's with the build's compiler: the oracle's selftest (34 to 105 seconds),
+the guards' tests (23 to 58), the generator's (14 to 36), the reference script's (8 to 49) and
+the brute-force driver's (1 to 4). On 2026-11-19 they moved to the full tier as `full.tools.*`,
+and run in CI where they ran before ([Continuous integration](#continuous-integration)); the
+debug build's runner left the quick tier's `api.oracle.K.F` (below). Measured as above, the
+builds of before (the commit before) and after one after the other on the same machine; a second
+run of a build reads ctest's times of the first and starts the longest tests first. The Mac was
+loaded by other jobs (load average 4 to 14); the runs on the Windows machine during another job's
+builds and tests there are left out. Seconds, the first run of a build, then the later ones:
+
+| Where | Quick tier, before | The tools' tests out | After: the debug build's runner out too | Full tier, before and after |
+|---|---|---|---|---|
+| Mac, Apple clang 21 | 56.0; 51.0, 51.4 | 41.7; 36.2 | 40.1, 41.4; 35.1 | 357 and 374 |
+| Mac, GCC 16 | 50.1; 50.1, 47.0 | 36.8; 32.4 | 36.4; 30.9 | 294 and 320 |
+| Linux, 16 threads, GCC 13 | 82.6; 79.2 | 53.0; 48.3, 48.6 | 52.2, 53.5; 48.7 | 534 and 563 |
+| Linux, 16 threads, Clang 18 | 83.3; 80.5 | 54.1; 48.9, 48.1 | 52.7; 47.4 | 531 and 561 |
+| Windows, 8 logical processors, MSVC | 110.3; 123.0, 105.7 | 76.7; 69.6 | 71.2, 69.1; 66.1, 63.8, 63.3 | 608 and 652 |
+| Windows, 4 logical processors, MSVC | 136.1, 144.7 | 93.8, 87.6 | 84.1, 85.6 | |
+
+The runs on 4 logical processors followed runs on 8 of the same builds, and read their times.
+The full tier after is the same with or without the debug build's runner in the quick tier: the
+Windows machine's is that of the build with the tools' tests out, since the run of the last
+build there shared the machine with another job's full tier (1 024 seconds; it passed). Without
+`--parallel`, the quick tier took 133 seconds on the Mac (194 before) and 189 on 16 threads of
+the Linux machine.
+
+The quick tier's test time is now that of the tests of the library: on 16 threads of the Linux
+machine with GCC 13, 198 seconds, of which the compiled runners' cross-checks 106 (126 tests),
+the public interface against the oracle 52 (97 tests), the checks of a debug build 17 (9), what
+must not compile 9 (29), the object code 7 (3) and the 27 others 7; on the Windows machine 279,
+of which 155 and 77 for the first two. No test takes more than five seconds, so with
+`--parallel 4` the wall time is a quarter of the test time. The full tier gained the five tests,
+60 seconds of test time on the Mac and 166 on the Windows machine, which run beside its longest
+tests; in CI, the jobs of `full.yml` that build gain the four that are not the generator's (206
+seconds of test time on the median hosted Windows run, about a minute of wall time on four
+slots).
+
+**On the hosted runners.** The stored per-test times of the median runs
+(`results/milestone1/costs/ci/`), replayed on four slots without the five tests
+(`python3 bench/ci_times.py tables`), give 102 seconds for the ctest step with MSVC and 106 with
+clang-cl, 40 to 41 on Linux x86-64, 29 to 30 on arm64 and 51 on macOS. But the quick tier has
+gained tests since those runs: the regression cases, the object code, the checks of a debug build
+and its self-test and constant expressions, more of what must not compile, two examples, and the
+debug build's runner in `api.oracle.K.F`. Each was put at its time on the Windows machine times
+the ratio of the hosted to the local time of the tests the two runs share, the stored hosted
+time kept for the others, and the quick tier replayed as ctest schedules it without its times of
+an earlier run (in the order the tests are registered, a test of `PROCESSORS 2` on two slots); a
+second estimate put every test at its local time times its family's ratio. The ratio is 1.58
+with MSVC and 1.66 with clang-cl against the Windows machine on 8 logical processors (1.5 to 1.75
+by family for the cross-checks and the public interface), 1.27 and 1.33 against it on 4, whose
+times are closer to the hosted runners'; the four estimates agree within 3 seconds. With the
+debug build's runner, the ctest step comes to 115 to 116 seconds with MSVC and 120 to 121 with
+clang-cl; without it, 108 to 110 and 113 to 116. On Linux x86-64 the same estimates give 48
+seconds with GCC, and on macOS 54.
+
+**The debug build's runner** in `api.oracle.K.F` took 14 to 16 seconds of the quick tier's test
+time on the Windows machine (5%; its forms run at `/Od`, with `/RTC1` and the debug C runtime),
+an estimated 19 to 21 on a hosted Windows runner, 5 to 6 of the ctest step: with clang-cl, the
+difference between two minutes and less. On the Mac and the Linux machine it took 3 to 4 seconds
+of test time, one or two of wall time. The full tier judges the same runner on every form, on
+the same 2 000 cases (`full.api.flags.oracle.K.F`), and keeps it in `full.api.oracle.K.F` on the
+first form of each kernel on 10 000; the quick tier keeps the debug build's self-test, constant
+expressions and checks. It left the quick tier.
+
+**The margin** is small: 4 to 12 seconds by these estimates, while the hosted runners of one
+platform differ by a fifth from run to run (the five runs of each Windows job of
+[Costs, Milestone 1](results/costs-milestone1.md) ranged from 23% under their median to 18% over
+it), so a slow Windows runner can still take more than two minutes. Each 1 000 cases fewer per
+compiled cross-check would save about 8 seconds of the ctest step with MSVC and 6 with clang-cl,
+each 1 000 fewer per test of the public interface 7 and 4 (by the fixed and per-case costs of the
+same page); the samples are those that the planted faults chose ([above](#time)). Fewer
+processes would not change what is checked: on the Windows machine one compiled cross-check
+(`add_2_2`, `binary64`, eight runners) takes 1.6 to 1.7 seconds, of which the oracle's generator
+0.36 (0.11 for one case), the eight runners through `run_runners.py` 0.66 to 0.69 (0.05 to 0.08
+each, most of it starting the process, on 6 000 lines), the oracle's check 0.36 and the guards
+0.08, and a Python process starts in 0.05. Generating, checking and guarding in the process of
+`run_runners.py` would save about a quarter of a second per compiled cross-check there and a
+fifth per test of the public interface, by the ratios above 15 to 20 seconds of the hosted ctest
+step; it is not done.
+
 ## The generator's tier
 
 `python3 gen/kairn-gen test` is the generator's own suite (`gen/README.md`, "The tests"). About
@@ -799,8 +904,9 @@ that neither tier catches, it caught 122, and with the special operands it now a
 kernels (`SPECIAL_CASES`), 139; the other 48 cannot change a result
 ([What neither tier catches](#time)). The cross-checks build each compiler's own form only. ctest runs it without them (`--no-cxx`): with them it took 148 seconds on its own on the
 Linux machine of [Time](#time), and the cross-checks already compile the same code with the build's
-compiler and flags. Of the rest, four test classes take about 95% of the time; the quick tier
-leaves them out (`--skip`) and the full tier runs them alone (`-k`, `full.kairn-gen.test`). The
+compiler and flags. Of the rest, four test classes take about 95% of the time; the full tier runs
+them alone (`-k`, `full.kairn-gen.test`) and the others in a test of their own (`--skip`,
+`full.tools.kairn-gen.test`, the quick tier's `kairn-gen.test` until it left the quick tier). The
 whole suite runs in the workflow `generator.yml`, once per GCC-style compiler of the CI and once
 without C++ on Windows: its C++ tests are written for a GCC-style driver (`-O0`, `-ffp-contract=`,
 `-frounding-math`, `-fsyntax-only`, `-o`, `-mfma`, and the text of Clang's and GCC's errors), which
@@ -1064,8 +1170,8 @@ per branch at a time (a new push cancels the run in progress); their jobs all st
 | Workflow | Jobs |
 |---|---|
 | `build.yml`, "Build and test" | The quick tier: configure, build and `ctest` with Ninja, `Release` and warnings as errors, on Linux x86-64 with GCC and with Clang (packed: AVX2), Linux arm64 with GCC and with Clang (NEON), macOS arm64 with Apple clang (NEON), and Windows x64 with MSVC and with clang-cl (AVX2) |
-| `full.yml`, "Full tier" | The full tier's tests that depend on the compiler (`ctest --test-dir build/tests/full` with `-LE` of the labels `python` and `generator`: the compiled runners' cross-checks and the public interface on more cases, the [flag sets](#flag-sets), and the object code on the whole flag matrix), on the same seven platforms and compilers, configured and built as in `build.yml`; and those in exact arithmetic (`-L python`), once, on Linux, configured but not built, in two jobs: the interpreter's enumerations (`-L interp`) and the oracle's (`-L python -LE interp`) |
-| `generator.yml`, "Generator's full suite" | `python gen/kairn-gen test --cxx CXX`, C++ included, on Linux x86-64 and Linux arm64 with GCC and with Clang, and macOS arm64 with Apple clang; and `--no-cxx` on Windows x64. It contains the full tier's `full.kairn-gen.test` (label `generator`), which `full.yml` leaves out |
+| `full.yml`, "Full tier" | The full tier's tests that depend on the compiler, and the tools' own tests but the generator's (`ctest --test-dir build/tests/full` with `-LE` of the labels `python` and `generator`: the compiled runners' cross-checks and the public interface on more cases, the [flag sets](#flag-sets), the object code on the whole flag matrix, the adversarial search, and the tests labelled `tools`), on the same seven platforms and compilers, configured and built as in `build.yml`; and those in exact arithmetic (`-L python`), once, on Linux, configured but not built, in two jobs: the interpreter's enumerations (`-L interp`) and the oracle's (`-L python -LE interp`) |
+| `generator.yml`, "Generator's full suite" | `python gen/kairn-gen test --cxx CXX`, C++ included, on Linux x86-64 and Linux arm64 with GCC and with Clang, and macOS arm64 with Apple clang; and `--no-cxx` on Windows x64. It contains the full tier's `full.kairn-gen.test` and `full.tools.kairn-gen.test` (label `generator`), which `full.yml` leaves out |
 | `proofs.yml`, "Proofs" | `make -C proofs` in the Rocq team's image `rocq/rocq-prover:9.0` (Rocq 9.0.1), with Flocq 4.2.2 from opam, cached between runs; what the audit printed is kept as the run's artifact `proof-audit` |
 | `checks.yml`, "Generated files and documentation" | `gen/kairn-gen check`, `docs/tools/reference.py --check` and its tests, `mkdocs build --strict`, Doxygen 1.18.0 on `docs/Doxyfile` with warnings as errors into the site's `api/`, `docs/tools/check_links.py`; the built site is kept as the run's artifact `site` |
 
@@ -1073,3 +1179,9 @@ Every test of the full tier thus runs on every push and pull request: a test tha
 compiler with every compiler, a test in exact arithmetic once, and the generator's tests, which
 compare the interpreter with the machine's arithmetic (Python's float and `math.fma`), once on each
 operating system and processor of the CI (x86-64 Linux, arm64 Linux, arm64 macOS, x86-64 Windows).
+The tools' own tests run where they ran when they were in the quick tier: the oracle's, the
+guards', the reference script's and the brute-force driver's in each job of `full.yml` that
+builds, on every platform and compiler; the generator's, which compiles nothing, on every operating
+system and processor, in `generator.yml`, which ran it already inside the whole suite. The tests
+of the reference script also run in `checks.yml`, beside the pages they test, as before: they take
+seconds there, and that job is the one that reports on the documentation.
