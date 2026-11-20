@@ -483,6 +483,18 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   bound_sum_1 bound_sum_2 bound_dot_1 bound_dot_2 dot_step_1 dot_step_2 sum_entry_step_1 sum_entry_step_2
   sum_fast_entry_step_2 fold_finish_1 fold_finish_2)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS sum_1 sum_1_entry sum_2 sum_2_entry sum_fast_2 sum_fast_2_entry dot_1 dot_2)
+# The maps of stage B, part 1 (architecture.md, "Maps"), and their steps: the oracle reads neither
+# the requests of written arrays nor the claims entries and the error of form T yet. Added to the
+# two lists above, so that everything that reads those reads these.
+set(KAIRN_NOT_YET_CROSS_CHECKED_MAP_STEPS
+  sub_1_1 add_entry_step_1 sub_entry_step_1 add_entry_step_2 sub_entry_step_2 scale_step_1 scale_step_2
+  mul_pow2_step_1 mul_pow2_step_2 axpy_step_1 axpy_entry_step_1 axpy_step_2 axpy_entry_step_2 axpy_step_2_1
+  axpy_entry_step_2_1)
+set(KAIRN_NOT_YET_CROSS_CHECKED_MAPS
+  add_1 add_1_entry add_2 add_2_entry sub_1 sub_1_entry sub_2 sub_2_entry axpy_1 axpy_1_entry axpy_2 axpy_2_entry
+  axpy_2_1 axpy_2_1_entry scale_1 scale_2 mul_pow2_map_1 mul_pow2_map_2)
+list(APPEND KAIRN_NOT_YET_CROSS_CHECKED ${KAIRN_NOT_YET_CROSS_CHECKED_MAP_STEPS})
+list(APPEND KAIRN_NOT_YET_CROSS_CHECKED_FOLDS ${KAIRN_NOT_YET_CROSS_CHECKED_MAPS})
 
 # Kernels whose intermediate values can overflow for operands far below the largest number (the
 # product by the splitter), as their requirement of no intermediate overflow allows. The oracle
