@@ -19,6 +19,15 @@ Statements judged (milestone2.md, "Batch kernels" and "BallVector"):
   S4  BallVector: the radius of a sum and of a scaling equals the largest entrywise Ball radius;
       that of axpy is at least it; conv_radius is at least its stated expression, and the
       product of two polynomials with ball coefficients is contained; norm_upper.
+  S5  the dot product of one limb, whose step is one fused operation s <- RN(x y + s), in the
+      sequential order and in the lane order of proofs/theories/Folds.v (the lanes combined by
+      add_1_1), with eps = u / (1 + u):
+          |computed - sum x_i y_i| <= ((1 + eps)^n - 1) sum |x_i y_i| + (1 + eps)^(n-1) n eta / 2
+      (the theorems dot_1_seq and dot_1_lanes of proofs/theories/SummationKernels.v), and
+      bound_dot_1(n) = (g, t) dominates both terms: g >= gamma_n(eps) >= (1 + eps)^n - 1 and
+      t >= n (eta / 2) (1 + g) >= (1 + eps)^(n-1) n eta / 2. Counted: how often a term of
+      eta / 2 per rounded addition, the additions that combine the lanes included, would
+      exceed what the statement of bound_dot_1 promises, and the values it returns.
 """
 import random
 import sys
@@ -152,6 +161,98 @@ def dot(f, pool, rng, rounds):
     return worst, worst_exported
 
 
+def fused_lanes(f, xs, ys, w):
+    """The fused dot product of one limb in the lane order of proofs/theories/Folds.v
+    (fold_lanes): the first w (n // w) elements are dealt to w lanes, each folded from zero by
+    s <- RN(x y + s); the lane states are combined from lane 0 upward by add_1_1; the rest is
+    folded into the result. With w = 0, and with fewer elements than lanes, it is the
+    sequential order (the lanes are then all zero, and zero + zero is zero)."""
+    n = len(xs)
+    s = ZERO
+    full = w * (n // w) if w else 0
+    if w:
+        states = []
+        for j in range(w):
+            t = ZERO
+            for i in range(j, full, w):
+                t = interp.fma(f, xs[i], ys[i], t)
+            states.append(t)
+        s = states[0]
+        for t in states[1:]:
+            s = run('add_1_1', f, s, t)
+    for i in range(full, n):
+        s = interp.fma(f, xs[i], ys[i], s)
+    return s
+
+
+def dot_fused(f, pool, rng, rounds):
+    """S5: the fused dot product of one limb, in the sequential order and in the lane order for
+    2, 4 and 8 lanes, against the proved bound and against the exported one."""
+    u, e = u_of(f), eta(f)
+    eps = u / (1 + u)
+    worst = worst_exported = Fraction(0)
+    beyond_statement = beyond_value = lane_cases = 0
+    for _ in range(rounds):
+        n = rng.randint(0, 12)
+        xv = [rng.choice(pool)[0] for _ in range(n)]
+        yv = [rng.choice(pool)[0] for _ in range(n)]
+        if n and rng.random() < 0.5:                 # a product that is not a multiple of eta
+            k = rng.randrange(n)
+            xv[k] = rng.choice((1, -1)) * rng.randint(1, 5) * e
+            yv[k] = rng.choice((1, -1)) * Fraction(1, 2)
+        xs, ys = [num(t) for t in xv], [num(t) for t in yv]
+        assert all(interp.member(f, t) for t in xs + ys)
+        exact = sum(a * b for a, b in zip(xv, yv))
+        total = sum(abs(a * b) for a, b in zip(xv, yv))
+        bound = ((1 + eps) ** n - 1) * total + (1 + eps) ** max(n - 1, 0) * n * e / 2
+        g, t, ok = run('bound_dot_1', f, num(Fraction(n)))
+        for w in (0, 2, 4, 8):
+            got = val(fused_lanes(f, xs, ys, w))
+            assert abs(got - exact) <= bound, (f.name, xv, yv, w)
+            if bound:
+                worst = max(worst, abs(got - exact) / bound)
+            if ok:
+                exported = val(g) * total + val(t)
+                assert bound <= exported, (f.name, n)
+                if exported:
+                    worst_exported = max(worst_exported, abs(got - exact) / exported)
+            # A term eta / 2 per rounded addition, the w - 1 that combine the lanes included,
+            # would be (n + w - 1) eta / 2. Counted: how often that exceeds what the statement
+            # of bound_dot_1 promises for n terms (g = gamma_n, t = n (eta / 2) (1 + g)), and how
+            # often it exceeds the values the listing returns, which are larger.
+            if ok and w and n >= w:
+                lane_cases += 1
+                naive = ((1 + eps) ** n - 1) * total + (1 + eps) ** (n - 1) * (n + w - 1) * e / 2
+                gamma = n * eps / (1 - n * eps)
+                beyond_statement += naive > gamma * total + n * (e / 2) * (1 + gamma)
+                beyond_value += naive > val(g) * total + val(t)
+    return worst, worst_exported, (lane_cases, beyond_statement, beyond_value)
+
+
+def bounds_1(f, counts):
+    """bound_dot_1 against the two terms of the fused dot product, for counts m: its statement,
+    g >= gamma_m(eps) and t >= m (eta / 2) (1 + g), for every count it accepts; and, for the
+    counts small enough for the powers to be computed exactly, the two terms themselves (for
+    the others they follow, since gamma_m(eps) >= (1 + eps)^m - 1 is a proved lemma)."""
+    u, e = u_of(f), eta(f)
+    eps = u / (1 + u)
+    last = 0
+    for m in counts:
+        mv = num(Fraction(m))
+        if not interp.member(f, mv):
+            continue
+        g, t, ok = run('bound_dot_1', f, mv)
+        if not ok:                                  # claims nothing; when ok holds is reported
+            continue
+        assert m * eps < 1 and val(g) >= m * eps / (1 - m * eps), (f.name, m)
+        assert val(t) >= m * (e / 2) * (1 + val(g)), (f.name, m)
+        if m <= 1000:
+            assert val(g) >= (1 + eps) ** m - 1, (f.name, m)
+            assert val(t) >= (1 + eps) ** max(m - 1, 0) * m * e / 2, (f.name, m)
+        last = max(last, m)
+    return last
+
+
 def bounds(f, counts):
     """S3: the bound kernels against the exact gamma, for counts m."""
     u, e = u_of(f), eta(f)
@@ -249,6 +350,7 @@ def ball_vectors(f, pool, rng, rounds):
 
 def main():
     rng = random.Random(20261119)
+    rng_fused = random.Random(20261120)             # its own stream: the other draws are unchanged
     # Formats with room above, so that nothing overflows (the real model).
     for p, qmin, qtop in ((4, -10, -4), (5, -14, -6), (6, -18, -8)):
         g = fmt(p, qmin, qtop)
@@ -270,6 +372,18 @@ def main():
               f'axpy radius equal to the largest entrywise radius in {st["axpy_equal"]} of {st["axpy"]}; '
               f'{st["conv"]} polynomial products contained, largest needed radius over conv_radius '
               f'{float(st["conv_tight"]):.3f}')
+        wf, wfe, naive = dot_fused(f, pool1, rng_fused, 4000)
+        last1 = bounds_1(f, list(range(0, 40)) + [2 ** k for k in range(6, 3 * p)])
+        print(f'     fused dot of one limb, sequential and 2, 4, 8 lanes: over its bound {float(wf):.3f}, '
+              f'over the exported bound {float(wfe):.3f}; bound_dot_1 finite up to m = {last1}; of '
+              f'{naive[0]} runs in a lane order with a finite bound, a term eta/2 per rounded addition '
+              f'would exceed what the statement of bound_dot_1 promises in {naive[1]}, and the values '
+              f'it returns in {naive[2]}')
+    for p, qmin, qmax in ((1, -6, 8), (2, -6, 8), (3, -8, 8)):
+        f = fmt(p, qmin, qmax)
+        last1 = bounds_1(f, list(range(0, 12)))
+        print(f'p={p} eta=2^{qmin}: bound_dot_1 dominates the two terms of the fused dot product '
+              f'for every count it accepts, up to m = {last1}')
     for name in ('binary32', 'binary64'):
         f = interp.parse_format(name)
         counts = [0, 1, 2, 3, 7, 10, 100, 1000] + [2 ** k for k in range(10, f.p)] + \
@@ -285,8 +399,12 @@ def main():
             gd, td, okd = run('bound_dot_2', f, num(Fraction(m)))
             assert okd and val(gd) >= m * 4 * u * u / (1 - m * 4 * u * u)
             assert val(td) >= m * Fraction(3, 2) * eta(f) * (1 + val(gd))
+        # bound_dot_1: one limb, where m eps reaches 1/4 at about a quarter of 2^p terms.
+        last1 = bounds_1(f, [0, 1, 2, 3, 7, 10, 100, 1000] + [2 ** k for k in range(10, f.p - 1)] +
+                         [3 * 2 ** k for k in range(10, f.p - 3)])
         print(f'{name}: bound_sum_2 and bound_dot_2 hold for counts up to 2^{f.p - 1}; '
-              f'bound_sum_2 exceeds gamma by at most {float(loose):.2e} of it')
+              f'bound_sum_2 exceeds gamma by at most {float(loose):.2e} of it; bound_dot_1 dominates '
+              f'the two terms of the fused dot product for counts up to {last1}')
     print('every statement held')
 
 

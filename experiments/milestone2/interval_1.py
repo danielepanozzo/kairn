@@ -14,6 +14,10 @@ Statements judged (milestone2.md, "Interval kernels"), for canonical operands X 
   I5  for bounded operands the result is bounded exactly when the exact range lies in
       [-Omega, Omega].
 
+And the constructor interval_make_1 on every pair of values of T: [lo, hi] when lo <= hi,
+lo < +inf and hi > -inf; the whole line when a bound is a NaN (decided on 2026-11-20); the empty
+set otherwise.
+
 The exact range of a product is computed here without the rule "0 times infinity is 0": an
 infinite bound is replaced by a number K so large that any product with it leaves every range
 of interest, and the hull of the four exact corner products of that bounded rectangle is taken.
@@ -108,13 +112,24 @@ def check(f, name, X, Y, stats):
 
 
 def constructor(f):
-    """interval_make_1 on every pair of values, NaN and the infinities included."""
+    """interval_make_1 on every pair of values, NaN and the infinities included: the interval
+    when the pair describes one; the whole line when a bound is a NaN, whatever the other bound;
+    the empty set otherwise (lo > hi, [+inf, +inf], [-inf, -inf])."""
     vals = [(x, num(x)) for x in finite_numbers(f)] + [(INF, PINF), (-INF, NINF), (None, NaN)]
+    counts = dict(interval=0, whole=0, empty=0)
     for l, vl in vals:
         for u, vu in vals:
             zl, zu = run('interval_make_1', f, vl, vu)
-            valid = l is not None and u is not None and l <= u and l < INF and u > -INF
-            assert (ext(zl), ext(zu)) == ((l, u) if valid else EMPTY), (f.name, l, u, zl, zu)
+            assert canonical(zl, zu), (f.name, l, u, zl, zu)
+            if l is None or u is None:
+                want, kind = (-INF, INF), 'whole'
+            elif l <= u and l < INF and u > -INF:
+                want, kind = (l, u), 'interval'
+            else:
+                want, kind = EMPTY, 'empty'
+            assert (ext(zl), ext(zu)) == want, (f.name, l, u, zl, zu)
+            counts[kind] += 1
+    return counts
 
 
 def negation(f, all_intervals):
@@ -130,7 +145,7 @@ def main():
     for f, limit in ((ieee_shape(2, 1), None), (fmt(2, -3, 1), None), (ieee_shape(3, 1), 60000),
                      (ieee_shape(4, 1), 40000), (fmt(3, -6, 0), 40000)):
         ivs = intervals(f)
-        constructor(f)
+        made = constructor(f)
         negation(f, ivs)
         if limit is None:
             pairs = [(X, Y) for X in ivs for Y in ivs]
@@ -149,6 +164,8 @@ def main():
               f'{out["interval_sub_1"]["unbounded_from_bounded"]:6} '
               f'{out["interval_mul_1"]["unbounded_from_bounded"]:6}'
               f'                       {out["interval_mul_1"]["beyond"]:8}')
+        print(f'{"":12} constructor, every pair of values: {made["interval"]} give their interval, '
+              f'{made["whole"]} with a NaN bound the whole line, {made["empty"]} the empty set')
     print('every statement held')
 
 

@@ -2,60 +2,72 @@ add  p=3 eta=2^-5 operands up to 2^1: 119 pairs, 14161 cases
      E = 1/8, G = 3/2, H = 3/16 = 6 eta;  A = 45.215 u^2, B = 18.09 eta
      largest gap over the bound: in the kernel's values 0.5263, closed form 0.3844
      largest gap / (u^2 |v|) for |v| >= 2^(2p+2) H: 0.000   (A = 45.215 u^2 here, 2c + 2 = 14.000 with this precision's c; in the limit of a large precision 8)
-     Fast2Sum(z0, w) without ordering: |z0| < |w| in 1839 cases, the largest |z0| among them 8 eta; result not exact or not normalized in 112, above the exact value in 0
+     Fast2Sum(z0, w) without ordering: |z0| < |w| in 1720 cases, the largest |z0| among them 8 eta; result not exact or not normalized in 112, above the exact value in 0
+     exact sum zero in 119 cases: the computed sum is zero in exactly those, and both bounds are then the exact zero
 add  p=3 eta=2^-9 operands up to 2^0: 671 pairs, 188842 cases (sample)
      E = 1/8, G = 3/2, H = 3/256 = 6 eta;  A = 45.215 u^2, B = 18.09 eta
      largest gap over the bound: in the kernel's values 0.5649, closed form 0.3844
      largest gap / (u^2 |v|) for |v| >= 2^(2p+2) H: 0.000   (A = 45.215 u^2 here, 2c + 2 = 14.000 with this precision's c; in the limit of a large precision 8)
-     Fast2Sum(z0, w) without ordering: |z0| < |w| in 38698 cases, the largest |z0| among them 8 eta; result not exact or not normalized in 183, above the exact value in 0
+     Fast2Sum(z0, w) without ordering: |z0| < |w| in 33011 cases, the largest |z0| among them 8 eta; result not exact or not normalized in 183, above the exact value in 0
+     exact sum zero in 5687 cases: the computed sum is zero in exactly those, and both bounds are then the exact zero
 add  p=4 eta=2^-8 operands up to 2^0: 495 pairs, 188490 cases (sample)
      E = 5/256, G = 5/4, H = 5/128 = 10 eta;  A = 18.409 u^2, B = 24.99 eta
      largest gap over the bound: in the kernel's values 0.5185, closed form 0.4706
      largest gap / (u^2 |v|) for |v| >= 2^(2p+2) H: 0.000   (A = 18.409 u^2 here, 2c + 2 = 10.000 with this precision's c; in the limit of a large precision 8)
-     Fast2Sum(z0, w) without ordering: |z0| < |w| in 43192 cases, the largest |z0| among them 9 eta; result not exact or not normalized in 0, above the exact value in 0
+     Fast2Sum(z0, w) without ordering: |z0| < |w| in 37439 cases, the largest |z0| among them 9 eta; result not exact or not normalized in 0, above the exact value in 0
+     exact sum zero in 5753 cases: the computed sum is zero in exactly those, and both bounds are then the exact zero
 add  p=5 eta=2^-14 operands up to 2^-1: 11135 pairs, 147270 cases (sample)
      E = 29/8192, G = 9/8, H = 9/8192 = 18 eta;  A = 11.336 u^2, B = 40.48 eta
      largest gap over the bound: in the kernel's values 0.6128, closed form 0.5503
      largest gap / (u^2 |v|) for |v| >= 2^(2p+2) H: 0.000   (A = 11.336 u^2 here, 2c + 2 = 8.857 with this precision's c; in the limit of a large precision 8)
-     Fast2Sum(z0, w) without ordering: |z0| < |w| in 25330 cases, the largest |z0| among them 17 eta; result not exact or not normalized in 0, above the exact value in 0
+     Fast2Sum(z0, w) without ordering: |z0| < |w| in 21726 cases, the largest |z0| among them 17 eta; result not exact or not normalized in 0, above the exact value in 0
+     exact sum zero in 3604 cases: the computed sum is zero in exactly those, and both bounds are then the exact zero
 mul  p=4 eta=2^-6 operands up to 2^1: 247 pairs, 61009 cases
      E = 1/32, G = 3/2, H = 7/32 = 14 eta;  A = 33.353 u^2, B = 34.50 eta
      largest gap over the bound: in the kernel's values 0.5342, closed form 0.4874
      largest gap / (u^2 |v|) for |v| >= 2^(2p+2) H: 0.000   (A = 33.353 u^2 here, 2c + 2 = 10.000 with this precision's c; in the limit of a large precision 10)
      Fast2Sum(z0, w) without ordering: |z0| < |w| in 13281 cases, the largest |z0| among them 13 eta; result not exact or not normalized in 0, above the exact value in 0
+     computed product zero from an exact product that is not, in 500 cases
 mul  p=4 eta=2^-12 operands up to 2^-1: 2751 pairs, 193002 cases (sample)
      E = 9/512, G = 3/2, H = 7/2048 = 14 eta;  A = 19.709 u^2, B = 34.42 eta
      largest gap over the bound: in the kernel's values 0.5483, closed form 0.4983
      largest gap / (u^2 |v|) for |v| >= 2^(2p+2) H: 0.000   (A = 19.709 u^2 here, 2c + 2 = 10.000 with this precision's c; in the limit of a large precision 10)
      Fast2Sum(z0, w) without ordering: |z0| < |w| in 30446 cases, the largest |z0| among them 13 eta; result not exact or not normalized in 0, above the exact value in 0
+     computed product zero from an exact product that is not, in 2363 cases
 mul  p=5 eta=2^-16 operands up to 2^-3: 11135 pairs, 147270 cases (sample)
      E = 17/4096, G = 5/4, H = 21/65536 = 21 eta;  A = 14.148 u^2, B = 47.02 eta
      largest gap over the bound: in the kernel's values 0.5194, closed form 0.4952
      largest gap / (u^2 |v|) for |v| >= 2^(2p+2) H: 0.000   (A = 14.148 u^2 here, 2c + 2 = 10.000 with this precision's c; in the limit of a large precision 10)
      Fast2Sum(z0, w) without ordering: |z0| < |w| in 44463 cases, the largest |z0| among them 20 eta; result not exact or not normalized in 0, above the exact value in 0
+     computed product zero from an exact product that is not, in 1561 cases
 mul  p=6 eta=2^-20 operands up to 2^-6: 28479 pairs, 131958 cases (sample)
      E = 33/32768, G = 9/8, H = 37/1048576 = 37 eta;  A = 11.921 u^2, B = 78.50 eta
      largest gap over the bound: in the kernel's values 0.5118, closed form 0.4888
      largest gap / (u^2 |v|) for |v| >= 2^(2p+2) H: 0.000   (A = 11.921 u^2 here, 2c + 2 = 10.000 with this precision's c; in the limit of a large precision 10)
      Fast2Sum(z0, w) without ordering: |z0| < |w| in 92992 cases, the largest |z0| among them 36 eta; result not exact or not normalized in 0, above the exact value in 0
+     computed product zero from an exact product that is not, in 1861 cases
 add  p=4 eta=2^-26 operands up to 2^-1, leading limbs from 2^-4: 13008 pairs, 213516 cases (sample)
      E = 9/512, G = 5/4, H = 5/33554432 = 10 eta;  A = 16.785 u^2, B = 24.99 eta
      largest gap over the bound: in the kernel's values 0.5759, closed form 0.5088
      largest gap / (u^2 |v|) for |v| >= 2^(2p+2) H: 8.541   (A = 16.785 u^2 here, 2c + 2 = 10.000 with this precision's c; in the limit of a large precision 8)
-     Fast2Sum(z0, w) without ordering: |z0| < |w| in 12983 cases, the largest |z0| among them 9 eta; result not exact or not normalized in 0, above the exact value in 0
+     Fast2Sum(z0, w) without ordering: |z0| < |w| in 7585 cases, the largest |z0| among them 9 eta; result not exact or not normalized in 0, above the exact value in 0
+     exact sum zero in 5398 cases: the computed sum is zero in exactly those, and both bounds are then the exact zero
 add  p=5 eta=2^-32 operands up to 2^-1, leading limbs from 2^-4: 64416 pairs, 253832 cases (sample)
      E = 29/8192, G = 9/8, H = 9/2147483648 = 18 eta;  A = 11.336 u^2, B = 40.48 eta
      largest gap over the bound: in the kernel's values 0.6478, closed form 0.6006
      largest gap / (u^2 |v|) for |v| >= 2^(2p+2) H: 6.808   (A = 11.336 u^2 here, 2c + 2 = 8.857 with this precision's c; in the limit of a large precision 8)
-     Fast2Sum(z0, w) without ordering: |z0| < |w| in 8631 cases, the largest |z0| among them 17 eta; result not exact or not normalized in 0, above the exact value in 0
+     Fast2Sum(z0, w) without ordering: |z0| < |w| in 5037 cases, the largest |z0| among them 17 eta; result not exact or not normalized in 0, above the exact value in 0
+     exact sum zero in 3594 cases: the computed sum is zero in exactly those, and both bounds are then the exact zero
 mul  p=4 eta=2^-26 operands up to 2^-1, leading limbs from 2^-4: 13008 pairs, 213516 cases (sample)
      E = 9/512, G = 3/2, H = 7/33554432 = 14 eta;  A = 19.709 u^2, B = 34.42 eta
      largest gap over the bound: in the kernel's values 0.5910, closed form 0.4964
      largest gap / (u^2 |v|) for |v| >= 2^(2p+2) H: 9.784   (A = 19.709 u^2 here, 2c + 2 = 10.000 with this precision's c; in the limit of a large precision 10)
      Fast2Sum(z0, w) without ordering: |z0| < |w| in 26016 cases, the largest |z0| among them 0 eta; result not exact or not normalized in 0, above the exact value in 0
+     computed product zero from an exact product that is not, in 0 cases
 mul  p=5 eta=2^-32 operands up to 2^-1, leading limbs from 2^-4: 64416 pairs, 253832 cases (sample)
      E = 17/4096, G = 5/4, H = 21/4294967296 = 21 eta;  A = 14.148 u^2, B = 47.02 eta
      largest gap over the bound: in the kernel's values 0.6500, closed form 0.5923
      largest gap / (u^2 |v|) for |v| >= 2^(2p+2) H: 8.380   (A = 14.148 u^2 here, 2c + 2 = 10.000 with this precision's c; in the limit of a large precision 10)
      Fast2Sum(z0, w) without ordering: |z0| < |w| in 128832 cases, the largest |z0| among them 0 eta; result not exact or not normalized in 0, above the exact value in 0
+     computed product zero from an exact product that is not, in 0 cases
 every statement held

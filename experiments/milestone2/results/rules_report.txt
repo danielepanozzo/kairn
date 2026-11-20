@@ -1,24 +1,25 @@
-32 kernel descriptions; 48 remarks that a description has no claim (expected); 0 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
+33 kernel descriptions; 50 remarks that a description has no claim (expected); 0 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
 
 kernel                 operations after inlining
 add_ball_2_2            22 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
 add_down_1               3 rounded operations, 1 steps to a neighbor,   7 comparisons, selects, sign and mask operations
-add_down_2_2            28 rounded operations, 1 steps to a neighbor,  14 comparisons, selects, sign and mask operations
+add_down_2_2            28 rounded operations, 1 steps to a neighbor,  16 comparisons, selects, sign and mask operations
 add_up_1                 3 rounded operations, 1 steps to a neighbor,   7 comparisons, selects, sign and mask operations
-add_up_2_2              28 rounded operations, 1 steps to a neighbor,  13 comparisons, selects, sign and mask operations
-ball_from_interval_2    13 rounded operations, 2 steps to a neighbor,  32 comparisons, selects, sign and mask operations
+add_up_2_2              28 rounded operations, 1 steps to a neighbor,  15 comparisons, selects, sign and mask operations
+ball_from_interval_2    12 rounded operations, 2 steps to a neighbor,  37 comparisons, selects, sign and mask operations
 ball_mul_pow2_1          3 rounded operations, 2 steps to a neighbor,   9 comparisons, selects, sign and mask operations
 ball_mul_pow2_2          7 rounded operations, 2 steps to a neighbor,  11 comparisons, selects, sign and mask operations
 ball_split_1            12 rounded operations, 0 steps to a neighbor,  31 comparisons, selects, sign and mask operations
 ball_to_interval_1       6 rounded operations, 2 steps to a neighbor,  19 comparisons, selects, sign and mask operations
+bound_dot_1              8 rounded operations, 0 steps to a neighbor,   3 comparisons, selects, sign and mask operations
 bound_dot_2              8 rounded operations, 0 steps to a neighbor,   3 comparisons, selects, sign and mask operations
 bound_sum_2              5 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
 bv_add_radius_2          3 rounded operations, 0 steps to a neighbor,   0 comparisons, selects, sign and mask operations
 bv_scale_radius_2        3 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
 conv_radius              8 rounded operations, 0 steps to a neighbor,   0 comparisons, selects, sign and mask operations
 interval_add_1           6 rounded operations, 2 steps to a neighbor,  20 comparisons, selects, sign and mask operations
-interval_add_2          56 rounded operations, 2 steps to a neighbor,  43 comparisons, selects, sign and mask operations
-interval_make_1          2 rounded operations, 0 steps to a neighbor,   8 comparisons, selects, sign and mask operations
+interval_add_2          56 rounded operations, 2 steps to a neighbor,  47 comparisons, selects, sign and mask operations
+interval_make_1          2 rounded operations, 0 steps to a neighbor,  13 comparisons, selects, sign and mask operations
 interval_mid_rad_1       9 rounded operations, 3 steps to a neighbor,  36 comparisons, selects, sign and mask operations
 interval_mul_1           8 rounded operations, 8 steps to a neighbor,  78 comparisons, selects, sign and mask operations
 interval_mul_2          96 rounded operations, 8 steps to a neighbor, 258 comparisons, selects, sign and mask operations

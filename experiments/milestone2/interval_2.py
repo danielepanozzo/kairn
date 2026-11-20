@@ -13,6 +13,10 @@ Statements judged (milestone2.md, "Interval kernels"), for canonical operands X 
   I5  for bounded operands, the result is bounded when no member of the exact range exceeds
       2^(emax - 2) in magnitude (a quarter of the overflow threshold). Measured as well: the
       smallest magnitude of the exact range at which a bound was infinite.
+
+And for the sum: a bound of the exact range that is zero is returned as the exact zero (the
+directed sums take the bound zero when the computed sum is zero; decided on 2026-11-20), so
+that [0, 0] + [0, 0] is [0, 0]. The product has the rule of the zero operand instead.
 """
 import random
 import sys
@@ -77,6 +81,13 @@ def check(f, op, X, Y, A, B, st):
     lo, hi = (ex[0] + ey[0], ex[1] + ey[1]) if op == 'add' else hull_product(f, ex, ey)
     assert Z[0] <= lo and hi <= Z[1], (f.name, op, X, Y, Z, lo, hi)                             # I3
     st['n'] += 1
+    if op == 'add':
+        # A bound of the exact range that is zero is returned as zero: the sum of the two
+        # bounds is then computed as zero, and the directed sum takes the bound zero.
+        for exact_bound, got in ((lo, Z[0]), (hi, Z[1])):
+            if exact_bound == 0:
+                assert got == 0, (f.name, X, Y, Z)
+                st['zero_bounds'] += 1
     if any(abs(t) == INF for t in ex + ey):
         # The infinite bounds of the exact range are returned as such.
         assert (lo != -INF or Z[0] == -INF) and (hi != INF or Z[1] == INF)
@@ -127,15 +138,24 @@ def main():
         for op in ops:
             _, _, _, A, B = bound_parts(f, op)
             st = dict(n=0, tight=Fraction(0), overflow=0, first_unbounded=Fraction(10), unbounded_operands=0,
-                      zero_kept=0, zero_lost=0)
+                      zero_kept=0, zero_lost=0, zero_bounds=0)
             xs, ys = sample(f, pairs, rng, count), sample(f, pairs, rng, count)
+            if op == 'add':
+                # Sums with a bound that is exactly zero, which a random pair almost never has:
+                # Y is the point opposite to a bound of X.
+                for i in range(0, count, 15):
+                    b = xs[i][(i // 15) % 2]
+                    if b not in (INF, -INF):
+                        ys[i] = ((-b[0], -b[1]), (-b[0], -b[1]))
             for X, Y in zip(xs, ys):
                 check(f, op, X, Y, A, B, st)
             first = '-' if st['overflow'] == 0 else f'{float(st["first_unbounded"]):.3f} of the threshold'
+            zeros = (f'{st["zero_bounds"]} bounds of the exact range are zero, all returned as zero'
+                     if op == 'add' else
+                     f'exact range [0,0] returned as [0,0] in {st["zero_kept"]}, widened in {st["zero_lost"]}')
             print(f'{f.name:12} {op}: {st["n"]} nonempty pairs ({st["unbounded_operands"]} with an unbounded '
                   f'operand, {st["overflow"]} unbounded from bounded operands, first at {first}); '
-                  f'largest gap over A|v|+B: {float(st["tight"]):.3f}; exact range [0,0] returned as '
-                  f'[0,0] in {st["zero_kept"]}, widened in {st["zero_lost"]}')
+                  f'largest gap over A|v|+B: {float(st["tight"]):.3f}; {zeros}')
     print('every statement held')
 
 

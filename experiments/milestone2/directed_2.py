@@ -8,6 +8,9 @@ exact x + y or x y, in a format with room above so that nothing overflows (the r
       (z, d) is bit for bit what ball_add_2 / ball_mul_2 return for radii zero; |z - v| <= d;
   add_down_2_2, add_up_2_2, mul_dir_2_2
       the result is a normalized pair; l <= v <= h;
+      for the sums: the computed sum z is zero exactly when x + y is, and then l = h = 0 (the
+      bound d is replaced by zero; decided on 2026-11-20). Counted for the product, which has
+      no such rule: computed products that are zero while the exact one is not;
       tightness, in the kernel's own values:    v - l <= 2 d + max(eta, 2u (u |z0| + d))
       tightness, in the exact value (closed form):
           v - l <= A |v| + B,   A = (2 (1+u)^3 G E + 2 u^2) (1 + rel) / (1 - u),
@@ -72,6 +75,18 @@ def check_dir(f, op, x, y, st, A, B):
     assert normalized(f, *lv) and normalized(f, *hv), (f.name, op, x, y, lv, hv)
     lo, hi = sum(lv), sum(hv)
     assert lo <= v <= hi, (f.name, op, x, y, lo, hi)
+    if op == 'add':
+        # The bound of add_2_2 is relative: the computed sum is zero exactly when the exact sum
+        # is, and the directed sums then take the bound zero and return the exact zero.
+        assert (z0 == 0) == (v == 0), (f.name, x, y, z0)
+        if v == 0:
+            assert lo == 0 and hi == 0, (f.name, x, y, lo, hi)
+            st['zero'] += 1
+            d = Fraction(0)                         # the dd of the listing
+    else:
+        # Not so for the product, whose bound has an underflow term: a computed product of
+        # zero from an exact product that is not. The product has no such rule.
+        st['zero'] += z0 == 0 and v != 0
     inner = 2 * d + max(e, 2 * u * (u * abs(z0) + d))
     closed = A * abs(v) + B
     for gap in (v - lo, hi - v):
@@ -81,7 +96,8 @@ def check_dir(f, op, x, y, st, A, B):
         st['closed'] = max(st['closed'], gap / closed)
         if v != 0 and abs(v) >= st['far']:
             st['const'] = max(st['const'], gap / (u * u * abs(v)))
-    # Fast2Sum without ordering, on the lower bound's operands.
+    # Fast2Sum without ordering, on the lower bound's operands (d is the bound the listing uses:
+    # zero for a sum that is zero).
     w = run('sub_down_1', f, num(z1), num(d))
     if abs(z0) < abs(val(w)):
         st['unordered'] += 1
@@ -100,7 +116,7 @@ def run_format(p, qmin, qtop, op, limit, rng, lead_min=None):
     pairs = normalized_pairs(g, lead_min=None if lead_min is None else Fraction(2) ** lead_min)
     E, G, H, A, B = bound_parts(f, op)
     st = dict(n=0, inner=Fraction(0), closed=Fraction(0), const=Fraction(0), unordered=0,
-              unordered_wrong=0, unordered_above=0, unordered_max=Fraction(0),
+              unordered_wrong=0, unordered_above=0, unordered_max=Fraction(0), zero=0,
               far=Fraction(2) ** (2 * p + 2) * H)
     if limit is None or len(pairs) ** 2 <= limit:
         todo = ((x, y) for x in pairs for y in pairs)
@@ -130,6 +146,11 @@ def run_format(p, qmin, qtop, op, limit, rng, lead_min=None):
     print(f'     Fast2Sum(z0, w) without ordering: |z0| < |w| in {st["unordered"]} cases, the largest '
           f'|z0| among them {st["unordered_max"] / eta(f)} eta; result not exact or not normalized in '
           f'{st["unordered_wrong"]}, above the exact value in {st["unordered_above"]}')
+    if op == 'add':
+        print(f'     exact sum zero in {st["zero"]} cases: the computed sum is zero in exactly those, and '
+              'both bounds are then the exact zero')
+    else:
+        print(f'     computed product zero from an exact product that is not, in {st["zero"]} cases')
     return st
 
 

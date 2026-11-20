@@ -11,8 +11,11 @@ Statements judged (milestone2.md, "One enclosure interface"):
                        whole line -> [-inf, +inf]; empty -> empty
   ball_split_1         two canonical balls, the first containing [c - r, c], the second [c, c + r]
   ball_from_interval_2 from two values of T: the exact midpoint as a normalized pair and the
-                       smallest radius when both halvings are exact; states for lo > hi, NaN and
-                       infinite bounds
+                       smallest radius when both halvings are exact; otherwise a center within
+                       eta of the midpoint and the number after RU(hu - hl) as the radius, hl
+                       and hu the rounded halves; containment always; the whole line for an
+                       infinite bound and for a NaN bound (decided on 2026-11-20); the empty set
+                       for lo > hi, [+inf, +inf] and [-inf, -inf]
   Ball<T, 1> predicates computed with exact pairs (two_sum_ord, abs_2, the comparisons of two
   limbs): contains(point), contains(ball), and the three-valued X < Y: its "yes" by a strict
   comparison of pairs, its "no" by a comparison that is not strict and a test that both pairs
@@ -22,7 +25,7 @@ import sys
 from fractions import Fraction
 
 from common import (NINF, NaN, PINF, ZERO, eta, ext, finite_numbers, fmt, ieee_shape, is_nan, normalized,
-                    num, omega, rd, rn, ru, run, val)
+                    num, omega, rd, rn, ru, run, succ, val)
 
 INF = float('inf')
 EMPTY = (INF, -INF)
@@ -103,8 +106,11 @@ def from_interval(f):
     for lo in vals:
         for hi in vals:
             c0, c1, r = run('ball_from_interval_2', f, value(lo), value(hi))
-            valid = lo is not None and hi is not None and lo <= hi and lo < INF and hi > -INF
-            if not valid:
+            if lo is None or hi is None:
+                # a NaN bound: the whole line, whatever the other bound (decided on 2026-11-20)
+                assert ext(c0) == 0 and ext(c1) == 0 and ext(r) == INF, (f.name, lo, hi)
+            elif not (lo <= hi and lo < INF and hi > -INF):
+                # lo > hi, [+inf, +inf], [-inf, -inf]: the empty set
                 assert is_nan(c0) and is_nan(c1) and is_nan(r), (f.name, lo, hi)
             elif abs(lo) == INF or abs(hi) == INF:
                 assert ext(c0) == 0 and ext(c1) == 0 and ext(r) == INF, (f.name, lo, hi)
@@ -119,8 +125,14 @@ def from_interval(f):
                 else:
                     inexact += 1
                     assert abs(c - (lo + hi) / 2) <= eta(f)
-                if rn(f, lo / 2) == lo / 2 and rn(f, hi / 2) == hi / 2:
+                hl, hu = rn(f, lo / 2), rn(f, hi / 2)
+                if hl == lo / 2 and hu == hi / 2:
                     assert c == (lo + hi) / 2 and rr == ru(f, (hi - lo) / 2), (f.name, lo, hi)
+                else:
+                    # a halving was rounded: the radius is the number after RU(hu - hl), which is
+                    # at least eta more, and eta is what the center can be off by
+                    d = ru(f, hu - hl)
+                    assert rr == succ(f, d) and rr >= d + eta(f), (f.name, lo, hi, rr, d)
     return inexact
 
 

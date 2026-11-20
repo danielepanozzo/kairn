@@ -1,4 +1,4 @@
-p=3 eta=2^-8: 40000 midpoints and radii; 40000 balls to intervals; 40000 tests of a point, of which 6776 undecided (neither yes nor no)
-p=4 eta=2^-11: 40000 midpoints and radii; 40000 balls to intervals; 40000 tests of a point, of which 2149 undecided (neither yes nor no)
-p=5 eta=2^-14: 40000 midpoints and radii; 40000 balls to intervals; 40000 tests of a point, of which 1305 undecided (neither yes nor no)
+p=3 eta=2^-8: 40000 midpoints and radii; 40000 balls to intervals, 128 of their bounds exactly zero and returned as zero; 40000 tests of a point, of which 6776 undecided (neither yes nor no)
+p=4 eta=2^-11: 40000 midpoints and radii; 40000 balls to intervals, 27 of their bounds exactly zero and returned as zero; 40000 tests of a point, of which 2149 undecided (neither yes nor no)
+p=5 eta=2^-14: 40000 midpoints and radii; 40000 balls to intervals, 2 of their bounds exactly zero and returned as zero; 40000 tests of a point, of which 1305 undecided (neither yes nor no)
 every statement held

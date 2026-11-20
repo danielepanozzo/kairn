@@ -9,7 +9,8 @@ Statements judged (milestone2.md, "One enclosure interface"):
       r = max over the two sides of radd(to_up_2(d), e), with (d, e) the difference by
       add_ball_2_2 and its error bound; [m - r, m + r] contains [l, u];
   ball -> interval with 2-limb bounds
-      l = add_down_2_2(c, (-r, 0)), h = add_up_2_2(c, (r, 0)): l <= c - r and c + r <= h;
+      l = add_down_2_2(c, (-r, 0)), h = add_up_2_2(c, (r, 0)): l <= c - r and c + r <= h, and a
+      bound c - r or c + r that is exactly zero is returned as zero;
   Ball<T, 2> contains a 2-limb point t, as a three-valued answer
       yes when radd(abs_upper_2(d), e) <= r, no when r < sub_down_1(to_down_2(|d|), e), with
       (d, e) = add_ball_2_2(t, -c): yes implies |t - c| <= r and no implies |t - c| > r.
@@ -60,7 +61,7 @@ def main():
         g = fmt(p, qmin, qtop)
         f = fmt(p, qmin, 2 * (qtop + p) + 8 - qmin)
         pairs = normalized_pairs(g)
-        st = dict(mid=0, ball=0, contains=0, unknown=0)
+        st = dict(mid=0, ball=0, contains=0, unknown=0, touch=0)
         radii = sorted({abs(x[0]) for x in pairs[::5]})
         for _ in range(40000):
             a, b = rng.choice(pairs), rng.choice(pairs)
@@ -82,6 +83,13 @@ def main():
             l = run('add_down_2_2', f, *v2(c), num(-rr), ZERO)
             h = run('add_up_2_2', f, *v2(c), num(rr), ZERO)
             assert value(l) <= sum(c) - rr and sum(c) + rr <= value(h), (f.name, c, rr)
+            # a bound of the ball that is exactly zero comes out as the exact zero
+            if sum(c) - rr == 0:
+                assert value(l) == 0, (f.name, c, rr)
+                st['touch'] += 1
+            if sum(c) + rr == 0:
+                assert value(h) == 0, (f.name, c, rr)
+                st['touch'] += 1
             st['ball'] += 1
             # contains(point)
             t = b
@@ -97,7 +105,8 @@ def main():
             st['contains'] += 1
             if not yes and not no:
                 st['unknown'] += 1
-        print(f'p={p} eta=2^{qmin}: {st["mid"]} midpoints and radii; {st["ball"]} balls to intervals; '
+        print(f'p={p} eta=2^{qmin}: {st["mid"]} midpoints and radii; {st["ball"]} balls to intervals, '
+              f'{st["touch"]} of their bounds exactly zero and returned as zero; '
               f'{st["contains"]} tests of a point, of which {st["unknown"]} undecided (neither yes nor no)')
     print('every statement held')
 

@@ -9,9 +9,17 @@ It is the contract that the generator, the proofs, the oracle and the public hea
 milestone are built against. Notation is that of [Numbers](phase0/numbers.md) and of
 [Milestone 1 statements](milestone1.md); limbs are `float` and `double`, and $k$ is 1 or 2.
 
-**What is proved, and what is not.** Nothing on this page is implemented, and nothing on it is
-proved. Every statement is a *target*: something I believe provable with the lemmas that exist,
-for the reason given next to it. Every listing was run through the generator's exact interpreter
+**What is proved, and what is not.** This page was written before any of it was implemented or
+proved, and what it gives are *targets*: statements that I believe provable with the lemmas that
+exist, for the reason given next to each. Two parts have moved since, and the page says so
+where they are. The summation theorems of [Batch kernels](#batch-kernels) are proved: the bound
+of a sum made in any order, the two orders in which a loop is emitted, and the bounds of the
+sums and dot products of one and two limbs in those orders, in the real model. They are in
+`proofs/theories/Folds.v`, `proofs/theories/Summation.v` and
+`proofs/theories/SummationKernels.v`, and the sections concerned name the theorems. And
+`rational` is written, though by its nature not proved;
+[its section](#constants-at-compile-time) describes the header as it is. Every other statement
+is a target still. Every listing was run through the generator's exact interpreter
 and judged with exact rationals on every operand of small formats, or on samples where there are
 too many; the scripts and their recorded output are in
 [`experiments/milestone2/`](https://github.com/danielepanozzo/kairn/tree/main/experiments/milestone2),
@@ -35,19 +43,26 @@ not claimed.
   and $10u^2$ (products) of the exact ones, relative to their magnitude, plus about $2^{-1021}$
   for `double`.
 - **One departure from a decision taken at the start matters**: the bound of two limbs is not
-  renormalized by `Fast2Sum` as it stands. Its requirement fails whenever the leading limb is
-  below about the smallest normal number, zero included. At three bits of precision its result
-  is then not the exact sum of its operands (in every case found the bound stayed valid and was
-  only wider); from four bits on no failure was found, but no proved lemma covers those cases.
-  The listing orders the two operands first
+  renormalized by `Fast2Sum` as it stands. Its requirement fails when the leading limb is below
+  about the smallest normal number. At three bits of precision its result is then not always
+  the exact sum of its operands (in every case found the bound stayed valid and was only
+  wider); from four bits on no failure was found, but no proved lemma covers those cases. The
+  listing orders the two operands first
   ([below](#the-renormalization-and-why-it-is-not-fast2sum)).
+- **Two questions of this page were decided on 2026-11-20 and are applied in its listings.** A
+  NaN given as a bound of an interval, or of a ball built from an interval, gives the whole
+  line and not the empty set of IEEE 1788: a NaN says that something failed upstream, and a
+  search must not discard a box for that. And a sum of two-limb numbers that is exactly zero
+  gets the exact zero as its bounds, so that $[0, 0] + [0, 0]$ is $[0, 0]$.
 - **Batch kernels** are folds of the proved kernels of Milestone 1 over arrays. One theorem
-  covers every order of summation; the bound is exported as a function of $n$ that is itself a
-  generated, proved kernel. `BallVector` is built on top of them.
+  covers every order of summation, and it is proved, with the bounds of the sums and dot
+  products that follow from it; the bound is exported as a function of $n$ that is itself to
+  be a generated, proved kernel. `BallVector` is built on top of them.
 - **Three things are not machine-checked by design** and are recorded as such: the integer code
   of `rational`, the compositions the headers make of proved kernels where this page says so,
-  and the semantics of IEEE 1788, which are checked against public test cases and not against
-  the standard's text.
+  and the semantics of IEEE 1788, which are a reading: of the text of IEEE Std 1788.1-2017 for
+  what that standard defines, and of drafts and public test cases for the four relations that
+  only the full standard has ([IEEE 1788](#ieee-1788)).
 
 ## Decisions adopted and changed
 
@@ -57,12 +72,12 @@ work changed one, or found a consequence that the decision did not state.
 | Decision | State | What changed, or what follows from it |
 |---|---|---|
 | 1. Directed rounding on one limb | adopted | The operands of a sum are ordered by a kernel of its own, `two_sum_ord`. The underflow range of a product is recognized on the rounded product, and a zero factor on the operands. One lemma is needed beyond Flocq's: the error of a product whose rounding is at least $2^{2p-1}\eta$ is a number of the format |
-| 2. `Interval<T, 1>` | adopted | A product costs eight steps to a neighbor; in packed code each is about ten integer operations |
-| 3. `Interval<T, 2>` | **changed** | `Fast2Sum(z0, RD(z1 - d))` is replaced by `two_sum_ord`: the requirement of `Fast2Sum` does not hold when $\lvert z_0\rvert$ is below about the smallest normal number. The bound $d$ is the radius of the Milestone 1 ball with radii zero, bit for bit. Consequence found: the sum of two zero intervals is $[-H, H]$, not $[0, 0]$ ([question 2](#open-questions)) |
+| 2. `Interval<T, 1>` | adopted, with one departure decided since | A product costs eight steps to a neighbor; in packed code each is about ten integer operations. The semantics differ from IEEE 1788 in the three points that [its section](#ieee-1788) marks. One was decided by the owner on 2026-11-20 ([question 1](#open-questions)): a NaN bound given to the constructor gives the whole line, where the standard gives the empty set |
+| 3. `Interval<T, 2>` | **changed** | `Fast2Sum(z0, RD(z1 - d))` is replaced by `two_sum_ord`: the requirement of `Fast2Sum` does not hold when $\lvert z_0\rvert$ is below about the smallest normal number (and the bound subtracted is not zero). The bound $d$ is the radius of the Milestone 1 ball with radii zero, bit for bit, with one exception settled on 2026-11-20 ([question 2](#open-questions)): in the directed sums it is replaced by zero when the computed sum is zero. As first decided, the sum of two zero intervals was $[-H, H]$; it is now $[0, 0]$ |
 | 4. Statements in the IEEE model | adopted | For one limb, "bounded" has an exact condition, not only a sufficient one |
 | 5. One enclosure interface | adopted | For `Ball<T, 2>` the tests of membership and the comparisons are *certain*, not exact: they never answer wrongly, and may decline to answer within a few $u^2$ of the boundary. `lower_as` of a `Ball<T, 2>` is a valid bound within two steps of `T`, not the exact rounding |
 | 6. Three-valued comparisons | adopted | With an empty operand the answer is *unknown*; the relations of IEEE 1788 keep the standard's conventions |
-| 7. Batch kernels | adopted | The theorem needs less than asked: an error relative to the operands of each addition suffices, so it also covers the fast addition. The exported bound is finite for $n\varepsilon \le \tfrac14$ and not for all $n\varepsilon < 1$, and avoids a division |
+| 7. Batch kernels | adopted; the theorem is proved | The theorem needs less than asked: an error relative to the operands of each addition suffices, so it also covers the fast addition. The exported bound is finite for $n\varepsilon \le \tfrac14$ and not for all $n\varepsilon < 1$, and avoids a division. The proof asked more of the zero state of a fold than this page first did, and gave the dot product of one limb its own statement ([below](#sum-dot-axpy-convolution)) |
 | 8. `BallVector` | adopted | The radius of a sum, a difference and a scaling *equals* the largest entrywise `Ball` radius. That of a convolution comes from the theorem of the dot product and is not compared with a ball-by-ball evaluation. A kernel whose operations are exact adds nothing to the radius. There is no empty state |
 | 9. Public building blocks | adopted | A building block that adds its operands needs the guard of rule R3 once it is public, hence *entry* forms of seven of them. `rmul` and the scalings by a power of two become `constexpr` by a rule of the printer and one lemma, without variant kernels |
 | 10. Constants at compile time | adopted | The second limb cannot be "the rounding of what the first left": that pair is not always normalized. The value is fixed uniquely all the same |
@@ -86,11 +101,18 @@ The notation of Milestone 1, and four more symbols.
 
 The sign of a zero is never part of a statement, as before.
 
-In the listings, `const 1/2`, `const eta`, `const N` and `const P` stand for `const up(1/2)`,
-`const up(eta)`, `const up(eta/(2*u))` and `const up(eta/(2*u^2))`, which are exact, and
+In the listings, `const 1/2`, `const N` and `const P` stand for `const up(1/2)`,
+`const up(eta/(2*u))` and `const up(eta/(2*u^2))`, which are exact, and
 `const E`, `const G`, `const H` for the three constants of the ball kernel named next to the
 listing. Where two short operations share a line, or a call is written inside another, it is to
 save space: a description has one operation per line.
+
+No listing computes with a subnormal constant. The generator's tests forbid it in the hardware
+formats, because an operation with a subnormal operand is slow on some processors; it is the
+rule that made $H$ a normal number in Milestone 1. Two listings of the first version of this
+page added $\eta$ to a radius; they now take a step to the next number instead, which is at
+least $\eta$ away ([the ball from an interval](#midpoint-radius-and-the-conversions),
+[the scaling of a ball](#scaling-a-ball-by-a-power-of-two)).
 
 ### Additions to the claims
 
@@ -106,10 +128,12 @@ that exists keeps its meaning.
 | `outward` | `of` (a 2-limb output), `side`, `rel`, `abs` | the output is on that side of `value`, and $\lvert\text{output} - \text{value}\rvert \le \mathrm{rel}\cdot\lvert\text{value}\rvert + \mathrm{abs}$ |
 | `interval` (a requirement) | `interval(L, U)` | the two groups are the bounds of a canonical interval ([below](#values-of-an-interval)) |
 | `encloses_interval` | `lower`, `upper`, `set`, `intervals`, `tight`, `bounded_when` | statements I1 to I5 of [Interval kernels](#interval-kernels): `set` is an expression over interval names, `intervals` gives each name its bounds, `tight` is `rounded` (with optional `steps` and `when`) or a pair `rel`, `abs`, and `bounded_when` is a list of conditions |
-| `makes_interval` | `lower`, `upper`, `from` | the output is the canonical interval of the given bounds, or the empty set when they describe none |
+| `makes_interval` | `lower`, `upper`, `from` | the output is canonical: the interval of the given bounds when they describe one; the whole line when a given bound is a NaN; the empty set otherwise |
 | `certain` | `of` (a mask), `rel`, `args`, `exact_when` | when the mask is true the relation holds between the exact values; it is true whenever the relation holds and the condition `exact_when` does (always, when the condition is absent) |
 | `trit` | `yes`, `no` (masks), `rel`, `sets` | `yes` implies that the relation holds for every member of the sets, `no` that it fails for every member; never both |
-| `exact_when` on `error` | a condition | the error is zero when the condition holds (it is what `mul_pow2_2_exact` says today in a hand-written statement) |
+| `exact_when` on `encloses` | a list of conditions, each `zero_or_abs_gt(EXPR, K)` or `zero_or_abs_ge(EXPR, K)`: EXPR is zero, or exceeds $K$ (or is at least $K$) in magnitude. In EXPR, `NAME[I]` is limb I of an input | when every condition holds, the output ball is exactly the set: besides containing it, every number within the radius of the center is a value of the set. This reverse inclusion is how the generator states the exactness of the [scalings of a ball](#scaling-a-ball-by-a-power-of-two). For `ball_mul_pow2_2` the conditions are written limb by limb, each limb times $c$ zero or above $N$; for a normalized center that is "the center is zero or its last nonzero limb times $c$ is above $N$" |
+| `exact_when` on `error` | the same conditions | the output equals `value` when every condition holds. The vocabulary has it and no kernel uses it yet: `mul_pow2_2` keeps the hand-written `mul_pow2_2_exact`, since the field would change the generated statement that its theorem proves |
+| `exact_when` on `outward`, and on the pair `rel`, `abs` of `tight` | a condition of one more kind, `zero(EXPR)`: $\mathrm{EXPR} = 0$ | the output is `value` itself when the condition holds. Its one use: a directed sum of two limbs whose exact value is zero is zero, and so is a bound of an interval sum |
 | a condition `{"abs_le": EXPR, "omega": true}` | | $\lvert\mathrm{EXPR}\rvert \le \Omega$ |
 | expressions of constants | `rel`, `abs` | the language of `const up(EXPR)`: `u`, `eta`, integers, `unit(K)`, `tiny(K)`, the four operations and integer powers, and now `up( )` inside an expression, so that a bound can name a constant as the format rounds it |
 | `format` (a requirement) | `format(half)` | the statement is for formats that contain the number $\tfrac12$ ($\eta \le \tfrac12$); every format of the shape of `binary64` does |
@@ -271,6 +295,16 @@ one sentence "the output is `value` rounded down" covers the first three rows. N
 needed: at an overflow the error term is the infinity of the *opposite* sign, which is exactly
 what makes the test choose the right neighbor.
 
+*What is a claim in this table.* The two columns of the directed sums are claims on every row:
+the generator states them over extended real numbers, the output being the sum of the
+operands, as IEEE 754 defines it, rounded down or up in the format with overflow. The column of
+`two_sum_ord` is what the listing computes, and only its first row is a claim. The vocabulary
+of the claims has no word for a pair that is not canonical, as $(+\infty, -\infty)$ and
+(an infinity, NaN) are, so in the IEEE model `two_sum_ord` has the statement of a finite core,
+like `fast_two_sum`: finite operands and a finite sum give a finite error term and the claims
+of the real model. The proofs of the directed sums use the other rows as facts about the
+listing, not as a statement of the kernel.
+
 *Proof.* Real model: `fast_two_sum_correct` after a case split on the select, which gives its
 requirement $\lvert h\rvert \ge \lvert l\rvert$; then, with $x = a + b$: if $e < 0$ then $s > x$,
 so $s = \mathrm{RU}(x)$ and $x$ is not a number of the format, and
@@ -389,6 +423,13 @@ returned is unspecified in both.
 - **`mul_pow2_2` and the exact scaling of a ball** ([below](#scaling-a-ball-by-a-power-of-two))
   contain no fused operation but `prod`. Their two executions give the same values; a limb that
   is zero can differ in sign.
+- **The kernels that the rule makes `constexpr`**, now that the generator has it: `rmul`,
+  `mul_1_1`, `split`, `two_prod_dekker`, `mul_pow2_2`, `mul_pow2_2_full`, and the four scalings
+  of a ball, `ball_mul_pow2_k` and their full forms. All give the same values in both
+  executions, and `rmul` the same bits. `mul_1_1`, whose result *is* the product, and
+  `two_prod_dekker`, whose leading limb is, can differ in the sign of a zero, as the scalings
+  named above can. The generator's tests check the same bits, or the same values for the
+  kernels whose outputs can be an exact zero product.
 - **What it needs.** From the generator: a kernel whose only fused operations are `prod` is
   `constexpr`, and prints each `prod` as `a * b` under `__builtin_is_constant_evaluated()`, as it
   already does inside a constant-evaluation variant. From the proofs: one lemma in the IEEE
@@ -475,20 +516,43 @@ interval_make_1(lo, hi) -> (zl, zu)
   mi = neg(const inf)
   nu = lt(mi, gu)
   va = and(ok, nl)
-  v  = and(va, nu)
-  zl = select(v, gl, const inf)
-  zu = select(v, gu, mi)
+  v  = and(va, nu)               the pair describes an interval
+  ql = eq(gl, gl)
+  qu = eq(gu, gu)
+  nn = and(ql, qu)               neither bound is a NaN
+  el = select(nn, const inf, mi)     what is returned for a pair that describes none:
+  eu = select(nn, mi, const inf)     the empty set, or the whole line when a bound is a NaN
+  zl = select(v, gl, el)
+  zu = select(v, gu, eu)
 ```
 
 *Statement (`makes_interval`), in the IEEE model, for any two values of `T`:* the result is
-canonical; it is $[lo, hi]$ when $lo \le hi$, $lo < +\infty$ and $hi > -\infty$, and the empty
-set otherwise, that is when $lo > hi$, when a bound is a NaN, and for $[+\infty, +\infty]$ and
-$[-\infty, -\infty]$. This is `numsToInterval` of IEEE 1788, which returns the empty set for an
-invalid pair ([IEEE 1788](#ieee-1788)). `interval_make_2` takes two canonical 2-limb values
-(objects, so no guard) and is the same listing on the comparisons of two limbs (`le_2_2`, and
-the leading limbs for the tests against infinity). *Checked:* `interval_1.py`, every pair of
-values of five formats, NaN and infinities included. *Risk: low.* Whether a NaN bound should
-give the empty set is [question 1](#open-questions).
+canonical, and it is
+
+- $[lo, hi]$ when $lo \le hi$, $lo < +\infty$ and $hi > -\infty$;
+- **the whole line when a bound is a NaN**, whatever the other bound is;
+- the empty set otherwise: when $lo > hi$, and for $[+\infty, +\infty]$ and
+  $[-\infty, -\infty]$.
+
+The first and the third are `numsToInterval` of IEEE 1788. The second is not: for a NaN the
+standard's call fails and returns the empty set ([IEEE 1788](#ieee-1788)), and Kairn has no
+exception by which to say that it failed. The
+owner decided it on 2026-11-20 ([question 1](#open-questions),
+[deviation 23](phase0/decisions.md#deviations-from-the-brief-flagged)). A NaN among the bounds
+means that a computation upstream failed, and says nothing about where the values are; the
+empty set says that there are none, and a search that discards empty boxes would discard a
+solution with it. The whole line is the answer that is always true. Milestone 1 made the same
+choice for a `Ball` whose center is a NaN. Reversed bounds are different: $lo > hi$ with two
+numbers describes no value at all, and stays the empty set.
+
+`interval_make_2` takes two canonical 2-limb values (objects, so no guard) and is the same
+listing on the comparisons of two limbs: `le_2_2`, and the leading limbs for the tests against
+infinity and for the two tests of a NaN, a canonical NaN being $(\mathrm{NaN}, \mathrm{NaN})$.
+An infinite bound is returned as $(\pm\infty, 0)$.
+
+*Checked:* `interval_1.py`, every pair of values of five formats, NaN and infinities included:
+in the smallest, of 484 pairs, 229 give their interval, the 43 with a NaN the whole line, and
+212 the empty set. *Risk: low.*
 
 ### What is stated of an interval kernel
 
@@ -631,7 +695,9 @@ Then the bound itself:
 ```
 add_down_2_2(x, y) -> l                        add_up_2_2(x, y) -> h
   (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)     (z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
-  w           = sub_down_1(z1, d)                w           = add_up_1(z1, d)
+  zd          = eq(z0, 0)                        zd          = eq(z0, 0)
+  dd          = select(zd, 0, d)                 dd          = select(zd, 0, d)
+  w           = sub_down_1(z1, dd)               w           = add_up_1(z1, dd)
   (l0, l1)    = two_sum_ord(z0, w)               (h0, h1)    = two_sum_ord(z0, w)
 
 mul_dir_2_2(x, y) -> (l, h)                    sub_down_2_2(x, y), sub_up_2_2(x, y):
@@ -642,13 +708,25 @@ mul_dir_2_2(x, y) -> (l, h)                    sub_down_2_2(x, y), sub_up_2_2(x,
   (h0, h1)    = two_sum_ord(z0, wu)
 ```
 
+**A sum that is zero.** The two lines `zd` and `dd` of the sums replace the bound by zero when
+the computed sum is zero. Without them a sum that is exactly zero would get the bounds $-H$ and
+$H$, since $d$ is never below $H$, and $[0, 0] + [0, 0]$ would not be $[0, 0]$; this was
+[question 2](#open-questions), settled on 2026-11-20. It is sound for the sum and only for the
+sum, for the reason given in the proof: the bound of `add_2_2` is purely relative. The product
+has no such lines: a product of two numbers that are not zero can be computed as zero, and the
+bound must then stay.
+
 **Statement, in the real model**, for normalized $x$ and $y$, with $v$ the exact $x + y$ or
 $xy$; from $p = 3$ for the sums and $p = 4$ for the product.
 
 - $l$ and $h$ are normalized.
 - $l \le v \le h$.
+- For the sums and the differences: the computed $z$ is zero exactly when $v = 0$, and then
+  $l = h = 0$.
 - Tightness, in the values of the kernel:
-  $v - l \le 2d + \max\bigl(\eta,\ 2u\,(u\lvert z_0\rvert + d)\bigr)$, and the same for $h - v$.
+  $v - l \le 2b + \max\bigl(\eta,\ 2u\,(u\lvert z_0\rvert + b)\bigr)$, and the same for $h - v$,
+  where $b$ is the bound that the listing subtracts: $d$ in the product, $dd$ in the sums (which
+  is $d$ unless the sum is zero, and then both sides are zero).
 - Tightness, in the exact value (the `outward` claim): $v - l \le A\lvert v\rvert + B$ and
   $h - v \le A\lvert v\rvert + B$, with
 
@@ -679,13 +757,46 @@ five for the sum (where $A/u^2$ is 16.8 and 11.3), 9.78 and 8.38 for the product
 14.1); over 2.0 million cases, no gap exceeded 0.65 of the bound in the kernel's values, nor
 0.61 of the closed form.
 
-*Proof.* $\lvert z - v\rvert \le d$ is the statement of `add_ball_2_2`. `sub_down_1` gives
-$w = \mathrm{RD}(z_1 - d)$, so $z_0 + w \le z_0 + z_1 - d \le v$. `two_sum_ord` loses nothing:
-$l = z_0 + w$ exactly, and its result is normalized. For the tightness,
-$v - l = (v - z) + (z_1 - w)$; the first part is at most $d$, and
-$z_1 - w = d + (z_1 - d - w)$, where the last term is less than the gap of the format at
-$z_1 - d$, at most $\max(\eta, 2u\lvert z_1 - d\rvert)$, and $\lvert z_1\rvert \le u\lvert
-z_0\rvert$ (`normalized_2_tail_rel`). The closed form bounds $d$ from above by the same two
+*Proof.* Write $b$ for the bound that the listing subtracts: $d$ in the product, $dd$ in the
+sums. Given $\lvert z - v\rvert \le b$, `sub_down_1` gives $w = \mathrm{RD}(z_1 - b)$, so
+$z_0 + w \le z_0 + z_1 - b \le v$. `two_sum_ord` loses nothing: $l = z_0 + w$ exactly, and its
+result is normalized. For the product, $\lvert z - v\rvert \le d$ is the statement of
+`mul_ball_2_2`.
+
+For the sums it has to be shown that $\lvert z - v\rvert \le dd$. When $z_0 \ne 0$, $dd = d$
+and this is the statement of `add_ball_2_2`. When $z_0 = 0$, the pair $z$ is zero, because a
+normalized pair whose leading limb is zero is zero (`normalized_2_zero`, `Normalized.v`). The
+theorem of `add_2_2` (`add_2_2_correct`) says
+$\lvert z - v\rvert \le \mathrm{rel}\,\lvert v\rvert$ with $\mathrm{rel} = \tfrac{3u^2}{1-4u}$,
+which is below 1 from $p = 3$ (`rel_add_2_2`, `Ball2.v`). With $z = 0$ it reads
+$\lvert v\rvert \le \mathrm{rel}\,\lvert v\rvert$, so $v = 0$: the error is zero, and zero is a
+bound of it. Then $w = \mathrm{RD}(0 - 0) = 0$ and `two_sum_ord(0, 0)` is the zero pair.
+Conversely, $v = 0$ gives $\lvert z\rvert \le 0$ by the same theorem.
+
+Operands in the underflow range change nothing in this, and it is the point that makes the
+rule sound. The theorem of `add_2_2` has no underflow term: it is proved in the model with
+gradual underflow, for every normalized pair, limbs that are subnormal or zero included,
+because a sum of two numbers of the format whose result is below the smallest normal number is
+exact, and no operation of `add_2_2` is anything but a sum. So a computed zero cannot hide a
+sum that underflow lost. In the IEEE model the same bound holds for finite operands whenever
+$z_0$ is finite, whatever happened on the way (`add_2_2_ieee_correct`), and a $z_0$ that is
+zero is finite. A $z_0$ that is an infinity or a NaN is not equal to zero and leaves $dd = d$;
+with an infinite operand, as a bound of an unbounded interval is, `add_2_2` returns a NaN. For
+the product the step fails: its bound is
+$4u^2\lvert v\rvert + \tfrac32\eta$, and $z = 0$ only gives
+$\lvert v\rvert \le \tfrac32\eta/(1 - 4u^2)$. `directed_2.py` checks on every sum it runs that
+$z_0 = 0$ exactly when $v = 0$ and that both bounds are then zero: 24 155 of its 1.0 million
+sums, at three to five bits, in formats whose operands go down to $\eta$. It also counts the
+products that are computed as zero and are not zero: 6 285 of 1.0 million.
+
+For the tightness,
+$v - l = (v - z) + (z_1 - w)$; the first part is at most $b$, and
+$z_1 - w = b + (z_1 - b - w)$, where the last term is less than the gap of the format at
+$z_1 - b$, at most $\max(\eta, 2u\lvert z_1 - b\rvert)$, and $\lvert z_1\rvert \le u\lvert
+z_0\rvert$ (`normalized_2_tail_rel`). The constants $A$ and $B$ of the closed form are those
+of the listing without the two lines, and stay valid: $dd \le d$, so what held with $d$ holds
+with $dd$; more simply, when $z_0 \ne 0$ the listing computes what it computed before, and
+when $z_0 = 0$ both gaps are zero. The closed form bounds $d$ from above by the same two
 facts that Milestone 1 used from below: a rounding to nearest is at most $(1 + u)$ times its
 argument plus $\tfrac12\eta$, and $\lvert z_0\rvert \le \lvert z\rvert/(1 - u)$. The
 $\tfrac12\eta$ is counted for the inner rounding only: the outer one, of $tG + H$, is of a
@@ -699,10 +810,11 @@ of a radius that Kairn proves.
 
 The decision taken before this page was to end the listing with `Fast2Sum(z0, w)`. Its
 requirement is $\lvert z_0\rvert \ge \lvert w\rvert$, and that fails when the leading limb is
-small: then $z_1 = 0$ and $w = -d$, where $d \ge H > N$, so the requirement fails for
-$z_0 = 0$ and for every $\lvert z_0\rvert$ up to about the smallest normal number. It failed in
-1 839 of the 14 161 cases of the complete enumeration at three bits, and in thousands of cases
-of every other run (`directed_2.py`).
+small: then $z_1 = 0$ and $w = -d$, where $d \ge H > N$, so the requirement fails for every
+$\lvert z_0\rvert$ up to about the smallest normal number. Zero is among them in the product;
+in the sums it no longer is, since the rule of the zero sum gives $w = 0$ there. The requirement
+failed in 1 720 of the 14 161 cases of the complete enumeration at three bits, and in
+thousands of cases of every other run (`directed_2.py`).
 
 Where it fails, `Fast2Sum` need not return the sum of its operands. At three bits of precision,
 with $z_0 = -7\eta$, $z_1 = 0$ and $d = 8\eta$: $w = -8\eta$, and `Fast2Sum` computes
@@ -711,7 +823,7 @@ then $e = w - (-8\eta) = 0$. The pair $(-16\eta, 0)$ is not $z_0 + w = -15\eta$:
 longer "the kernel's result moved by $d$", and the tightness statement is lost. 112 cases of
 that enumeration are of this kind. In all of them the pair was on the safe side of $z_0 + w$,
 so the bound was still a bound; nothing says that it must be. From four bits on no such case
-was found, in 426 000 cases where the requirement fails; but the proved lemma does not apply to
+was found, in 408 000 cases where the requirement fails; but the proved lemma does not apply to
 them, and a proof for them would be a new theorem about `Fast2Sum` with a weaker hypothesis.
 
 `two_sum_ord` costs two sign operations, a comparison and two selects more, has the proved
@@ -785,11 +897,17 @@ results are finite.
   to the least product. An infinite bound of the exact range is returned as that infinity.
 - **I5.** For bounded operands, $Z$ is bounded when no member of the exact range exceeds
   $2^{e_{\max}-2}$ in magnitude, a quarter of the overflow threshold.
+- **Zero, for the sum and the difference.** A bound of the exact range that is zero is returned
+  as zero. So $[0, 0] + [0, 0]$ is $[0, 0]$, and $X - X$ is $[0, 0]$ when $X$ is one point. This
+  is the third item of the statement of the directed sums; a sum of bounds that is zero is far
+  from the overflow threshold, so its core is finite. The product has the rule of the zero
+  operand instead: $[0, 0] \cdot X$ is $[0, 0]$ for every nonempty $X$.
 
 *Checked:* `interval_2.py`, 12 000 to 39 000 pairs of nonempty intervals per operation and
-format at three, four and five bits, a third of them with an unbounded operand. Measured there, not
-claimed: the first unbounded result of bounded operands appeared at 0.62, 0.58 and 0.97 of the
-threshold for the sum (the 0.55 to 0.62 that
+format at three, four and five bits, a third of them with an unbounded operand; in the sums,
+810 to 2 849 bounds of the exact range were zero, and each was returned as zero. Measured
+there, not claimed: the first unbounded result of bounded operands appeared at 0.62, 0.58 and
+0.97 of the threshold for the sum (the 0.55 to 0.62 that
 [Milestone 1](milestone1.md#what-is-proved-about-an-arithmetic-kernel) measured for `add_2_2`),
 and at 0.92 and 0.98 for the product.
 
@@ -799,7 +917,9 @@ except inside `sub_down_1` and `two_sum_ord`, whose IEEE-model statements say th
 result has finite operands here ($d$ is nonnegative or $+\infty$, and $z_1 - \infty$ is not
 finite). So $z_0$ and $d$ are finite, the bridge of `add_2_2` or `mul_2_2` applies, and the
 real-model statement of the core holds: this is the argument of
-[B3](milestone1.md#ball-kernels) for a ball. A bound that is not finite is replaced by the
+[B3](milestone1.md#ball-kernels) for a ball. The select of the sums fits in it: it replaces $d$
+by zero only when $z_0$ is zero, which is a finite $z_0$, and then $d = H$ was finite as well.
+A bound that is not finite is replaced by the
 infinity on its side. I5 is statement 3 of the center's kernel and a bound on the outward move,
 as in [B4](milestone1.md#when-the-result-is-a-finite-ball). I3 for the product is the lemma of
 one limb.
@@ -813,10 +933,14 @@ IEEE-model proof multiplies the cases of `mul_ext_2_2` by four.
 
 - That an exact result gives a degenerate interval. The outward move does not know that the
   center's kernel made no error: $[1, 1] + [1, 1]$ is not $[2, 2]$ but an interval of width
-  $2d$ around 2. In particular $[0, 0] + [0, 0]$ is $[-H, H]$, with $H = N + 2\eta$; the
-  product $[0, 0] \cdot X$ is exactly $[0, 0]$, by the rule of the zero operand. `interval_2.py`
-  counts both. Making the sum of exact zeros exact is two lines and is
-  [question 2](#open-questions).
+  $2d$ around 2. Zero is the one exception, stated above: a sum or a difference that is exactly
+  zero is returned as zero, and so is a product with the interval $[0, 0]$. As first decided the
+  sum had no such rule, and $[0, 0] + [0, 0]$ was $[-H, H]$ with $H = N + 2\eta$
+  ([question 2](#open-questions)). The rule is for an exact zero only: a sum that is tiny and
+  not zero still gets a bound about $H$ away, on each side.
+- That a product whose exact range has a bound at zero keeps it. $[0, a] \cdot [b, c]$ with
+  positive bounds has the lower bound 0 from the two corners with a zero factor, but the corner
+  $a \cdot b$ contributes its own lower bound, which is negative when $ab$ is below about $H$.
 - A finite bound at an overflow. With bounded operands whose sum or product overflows, the
   result is the whole line, where `Interval<T, 1>` returns $[\Omega, +\infty]$. Keeping the sign
   there needs a constant of the top of the range in the IR ([question 3](#open-questions)).
@@ -839,7 +963,7 @@ names are `interval_NAME_k` and `ball_NAME_k`; the listings of the short ones ar
 
 | Function | `Interval<T, 1>` | `Interval<T, 2>` | `Ball<T, 1>` | `Ball<T, 2>` |
 |---|---|---|---|---|
-| `lower()`, `upper()`, k-numbers | the stored bounds | the stored bounds | the bounds of `ball_to_interval_1`: $\mathrm{RD}(c - r)$, $\mathrm{RU}(c + r)$ | the bounds of `ball_to_interval_2`: within $A\lvert v\rvert + B$ of $c \mp r$ |
+| `lower()`, `upper()`, k-numbers | the stored bounds | the stored bounds | the bounds of `ball_to_interval_1`: $\mathrm{RD}(c - r)$, $\mathrm{RU}(c + r)$ | the bounds of `ball_to_interval_2`: within $A\lvert v\rvert + B$ of $c \mp r$, and zero when $c \mp r$ is zero |
 | `lower_as<T>()`, `upper_as<T>()` | the stored bounds | `to_down_2`, `to_up_2`: the exact roundings | as `lower`, `upper` | `sub_down_1(to_down_2(c), r)`, `add_up_1(to_up_2(c), r)`: a bound, less than one gap of `T` at $c$ plus one at the result from $c \mp r$ |
 | `midpoint()` | `interval_mid_rad_1` | `interval_mid_rad_2` | the center | the center |
 | `radius()`, a `T` | `interval_mid_rad_1`: the smallest radius of `T` for that midpoint | `interval_mid_rad_2`: a radius for that midpoint | the radius | the radius |
@@ -948,8 +1072,12 @@ ball_to_interval_1(c, r) -> (zl, zu)             ball_to_interval_2(c, r) -> (zl
 *Statement:* the interval is canonical and contains the ball; it is empty exactly when the ball
 is; the whole line gives $[-\infty, +\infty]$ (by the same operations: $0 - \infty$ rounded down
 is $-\infty$). For one limb it is the *smallest* interval of `T` that contains the ball. For two
-limbs each bound is within $A\lvert v\rvert + B$ of $c \mp r$, the constants of the sum.
-*Checked:* `enclosure_1.py`, `enclosure_2.py`. *Risk: low.*
+limbs each bound is within $A\lvert v\rvert + B$ of $c \mp r$, the constants of the sum, and a
+bound $c \mp r$ that is exactly zero is returned as zero, by the rule of the directed sums: the
+ball of center $r$ and radius $r$ gives an interval whose lower bound is $0$, not $-H$. These
+are the values of `lower()` and `upper()` of a `Ball<T, 2>`.
+*Checked:* `enclosure_1.py`; `enclosure_2.py`, where 2 to 128 of the 80 000 bounds of each
+format were exactly zero. *Risk: low.*
 
 **A ball from an interval of two `T`.** A program that holds an interval of `double` can make a
 ball of two limbs whose center is the exact midpoint: the sum of two numbers of `T` is an exact
@@ -963,13 +1091,16 @@ ball_from_interval_2(lo, hi) -> (cw, rw)
   d  = sub_up_1(hu, hl)                              RU(hi/2 - lo/2)
   bl = add(hl, hl);  bu = add(hu, hu)
   xl = eq(bl, gl);   xu = eq(bu, gu);  xx = and(xl, xu)     both halvings were exact
-  da = add(d, const eta);  dn = succ(da)
+  dn = succ(d)                                       the number after d: at least d + eta
   r  = select(xx, d, dn)
   ok = le(gl, gu);  nl = lt(gl, const inf);  mi = neg(const inf);  nu = lt(mi, gu)
   va = and(ok, nl);  v = and(va, nu)                 the pair describes an interval
   fl = lt(mi, gl);  fu = lt(gu, const inf);  f = and(fl, fu)     and a bounded one
   k0 = select(f, c0, 0);  k1 = select(f, c1, 0);  s = select(f, r, const inf)
-  cw0 = select(v, k0, const nan);  cw1 = select(v, k1, const nan);  rw = select(v, s, const nan)
+  ql = eq(gl, gl);  qu = eq(gu, gu);  nn = and(ql, qu)           neither bound is a NaN
+  wc = select(nn, const nan, 0)                      for a pair that describes no interval: the
+  wr = select(nn, const nan, const inf)              empty set, or the whole line when a bound is a NaN
+  cw0 = select(v, k0, wc);  cw1 = select(v, k1, wc);  rw = select(v, s, wr)
 ```
 
 *Statement, IEEE model, any two values of `T`.* The result is a canonical ball.
@@ -978,18 +1109,37 @@ ball_from_interval_2(lo, hi) -> (cw, rw)
   multiple of $\eta$ below $2N$ (so that halving is exact), the center is $\tfrac{lo + hi}{2}$
   exactly and the radius is $\mathrm{RU}\bigl(\tfrac{hi - lo}{2}\bigr)$, the smallest of `T` for
   that center. Otherwise the center is within $\eta$ of the midpoint and the radius is the
-  number after $\mathrm{RN}(d + \eta)$, with $d$ the difference of the two rounded halves,
-  rounded up. Halving first is what keeps $[\Omega, \Omega]$ from overflowing; the price is at
-  the other end of the range.
+  number after $d$, with $d$ the difference of the two rounded halves, rounded up. That number
+  is at least $d + \eta$, since no two numbers of the format are closer than $\eta$, and
+  $d + \eta$ is enough: with the halves $h_u = \tfrac{hi}{2} + a$ and
+  $h_\ell = \tfrac{lo}{2} + b$, where $\lvert a\rvert, \lvert b\rvert \le \tfrac12\eta$, the
+  center is $\tfrac{lo + hi}{2} + a + b$, the radius needed is
+  $\tfrac{hi - lo}{2} + \lvert a + b\rvert$, and $d \ge h_u - h_\ell = \tfrac{hi - lo}{2} + a - b$,
+  so the radius needed is at most $d - a + b + \lvert a + b\rvert \le d + \eta$. Halving first
+  is what keeps $[\Omega, \Omega]$ from overflowing; the price is at the other end of the range.
 - If $lo \le hi$ and a bound is infinite ($[-\infty, hi]$, $[lo, +\infty]$, $[-\infty, +\infty]$):
   the whole line. A ball cannot be a half-line.
-- Otherwise, that is $lo > hi$, a NaN bound, $lo = +\infty$ or $hi = -\infty$: the empty set, as
-  `Interval(lo, hi)` gives; the two routes agree. [Question 1](#open-questions) applies to both.
+- **If a bound is a NaN, whatever the other bound: the whole line**, center $0$ and radius
+  $+\infty$. This is the decision of 2026-11-20 for `Interval(lo, hi)`
+  ([question 1](#open-questions)), for the same reason, and it is also what a `Ball` already
+  does with a center that is a NaN.
+- Otherwise, that is $lo > hi$, $[+\infty, +\infty]$ or $[-\infty, -\infty]$: the empty set.
 
-*Checked:* `enclosure_1.py`, every pair of values of five formats, NaN and infinities included.
+In each case the ball is the one that `Interval(lo, hi)` followed by the conversion to a ball
+has for its special states: the two routes agree on which pairs give the empty set and which
+the whole line.
+
+*Checked:* `enclosure_1.py`, every pair of values of five formats, NaN and infinities included:
+containment in every case, the smallest radius when both halvings are exact, and the number
+after $d$ otherwise.
 *Proof:* `two_sum_ord`; `sub_up_1`; a halving is exact exactly when doubling it back gives the
-operand, and is off by at most $\tfrac12\eta$ otherwise. *Risk: low.* `Ball<T, 1>` from two `T`
-is `interval_make_1` followed by `interval_to_ball_1`.
+operand, and is off by at most $\tfrac12\eta$ otherwise; the step, by the inequality above. The
+first version of this listing computed $\mathrm{RN}(d + \eta)$ and then stepped; one step from
+$d$ is never larger, and needs no subnormal constant
+([Notation](#notation-and-vocabulary)). *Risk: low.* `Ball<T, 1>` from two `T`
+is `interval_make_1` followed by `interval_to_ball_1`, so it has the same three cases: a NaN
+bound gives the whole line through the whole-line interval, and $lo > hi$ the empty ball
+through the empty interval.
 
 ### Hull, intersection and split of balls
 
@@ -1046,6 +1196,20 @@ returns on the two special values, for `Interval` and for `Ball` alike unless sa
 | `is_empty()`, `is_entire()` | true, false | false, true |
 | the conversion to the other type | the empty set | the whole line |
 | the three-valued comparisons | unknown | unknown |
+
+And this is which values of `T`, given to a constructor, produce the two states:
+
+| Built from | The empty set | The whole line |
+|---|---|---|
+| `Interval(lo, hi)`, two values of `T` | $lo > hi$; $[+\infty, +\infty]$; $[-\infty, -\infty]$ | a NaN bound, whatever the other; $[-\infty, +\infty]$ |
+| a `Ball` from an interval of two `T`, of one limb or two | the same three | a NaN bound, whatever the other; an infinite bound of an interval that is not empty |
+| `Ball(c, r)` ([Milestone 1](milestone1.md#values-that-enter-from-the-program), unchanged) | a radius that is a NaN or negative | otherwise: a center that is a NaN or infinite; a radius $+\infty$ |
+
+A NaN *bound*, and a NaN center, never produce the empty set: a NaN says that something failed,
+and the answer that is always true is the whole line. The radius of `Ball(c, r)` is the one
+place where a NaN from the program gives the empty set. That is Milestone 1, where a NaN radius
+is the stored form of the empty ball, and the decision of 2026-11-20 was about bounds and does
+not change it; it is recorded here because the reason given for bounds would apply to it too.
 
 Three choices in this table are conventions, not consequences. `certainly_positive` is false on
 the empty set although "every member is positive" is vacuously true: a query about nothing
@@ -1144,14 +1308,17 @@ ball_mul_pow2_2(cx, rx, c) -> (cz, rz)               c a positive power of two
   zr         = eq(rx, 0)
   er         = or(br, zr)                            the radius was scaled exactly
   ex         = and(ec, er)
-  su         = succ(rr)
-  sw         = add(su, const eta)
-  rw         = succ(sw)
+  su         = succ(rr)                              above c rx, whatever its scaling lost
+  rw         = succ(su)                              at least eta more
   rz         = select(ex, rr, rw)
 ```
 
 `ball_mul_pow2_1` is the same with one product for the center. `const N` is
-`const up(eta/(2*u))`.
+`const up(eta/(2*u))`, a normal number. The first version of this listing had one more line
+between the two steps, `sw = add(su, const eta)`. It was the only place where a kernel computed
+with a subnormal constant, which the generator's tests forbid in the hardware formats
+([Notation](#notation-and-vocabulary)), and it was not needed: the second step is at least
+$\eta$. The result is never larger than it was, and one step smaller in the subnormal range.
 
 **Statement, real model**, for a normalized $c_x$, $r_x \ge 0$ and $c$ a positive power of two
 of the format; from $p = 2$.
@@ -1162,10 +1329,18 @@ of the format; from $p = 2$.
   and the radius is zero or $c\,r_x$ exceeds $N$, then $c_z = c\,c_x$ and $r_z = c\,r_x$
   exactly: the result *is* $c\,X$. For `double`: `half(X)` is exact when the last nonzero limb
   of the center is above $2^{-1021}$ in magnitude and the radius is zero or above $2^{-1021}$.
-- **Otherwise** $r_z$ is the number after $\mathrm{RN}(\mathrm{succ}(\mathrm{RN}(c\,r_x)) + \eta)$:
-  at most two steps of the format above $\mathrm{RU}(c\,r_x + \eta)$. The $\eta$ is the bound of
-  `mul_pow2_2` on what the center lost ([Milestone 1](milestone1.md#second-wave-kernels)); the
-  first step covers a radius whose scaling was rounded.
+  In the claims this is `exact_when` on the `encloses` entry, which states the inclusion in the
+  other direction: every member of the output ball is $c$ times a member of the input ball. Its
+  conditions are written limb by limb, each limb times $c$ zero or above $N$, which for a
+  normalized center is the same condition, because a second limb that is not zero makes the
+  first one not zero and larger.
+- **Otherwise** $r_z$ is the second number after $\mathrm{RN}(c\,r_x)$. It is more than
+  $c\,r_x + \eta$, and at most two steps of the format above $\mathrm{RU}(c\,r_x)$. The first
+  step covers a radius whose scaling was rounded: the number after $\mathrm{RN}(y)$ is above
+  $y$, for every $y \ge 0$. The second adds at least $\eta$, since no two numbers of the format are
+  closer than that, and $\eta$ is the bound of `mul_pow2_2` on what the center lost
+  ([Milestone 1](milestone1.md#second-wave-kernels)), half of it per scaled limb. With
+  $r_x = 0$ the result is $2\eta$.
 
 **In the IEEE model**, `ball_mul_pow2_k_full` adds the fix-up of
 [`ball_scale_k_full`](milestone1.md#ball-kernels): B1 to B4, with the whole line when the scaled
@@ -1180,9 +1355,13 @@ whole, and exactness of each step exactness of the whole.
 (`MulPow2.v`), with one step added: a rounded product *above* $N$ comes from an exact product
 above $N$ (`round_abs_le`), hence from an exact scaling. When the second limb is not zero its
 scaling being above $N$ makes the first limb's so, by `normalized_2_tail_rel`. The other branch
-is `mul_pow2_2_correct`'s $\eta$ and the two steps, by `up_above` (`Directed.v`). *Checked:*
-`scaling.py`, every center, radius and power of two of four formats: containment always, and
-exactness in every case the statement says. *Smallest precision:* 2. *Risk: low.*
+is `mul_pow2_2_correct`'s $\eta$ and two facts about a step: the number after the rounding to
+nearest of a nonnegative $y$ is above $y$ (`up_above`, `Directed.v`), and the number after a
+number is at least $\eta$ above it, the smallest gap of the format. In the IEEE model the number after
+$\Omega$ is $+\infty$, as before. *Checked:* `scaling.py`, every center, radius and power of
+two of four formats: containment always, and exactness in every case the statement says; the
+script and the two descriptions are with the generator now, where the listing above is run.
+*Smallest precision:* 2. *Risk: low.*
 
 *`constexpr`:* yes, by [the rule of the product](#the-two-executions-of-a-product): the only
 fused operations are `prod`. The two executions give the same values; a zero limb of the center
@@ -1239,10 +1418,21 @@ finish:    (none)                         a straight-line kernel on the final st
   upward, $((s_0 \oplus s_1) \oplus s_2) \oplus \dots$; the remaining elements are folded
   sequentially into the result. $W$ is the number of lanes of the packed type: 4 and 8 for AVX2,
   2 and 4 for NEON.
-- **In Rocq** the model is a recursive function over lists: the sequential fold is `fold_left`
-  of the step's model, and the lane order is that function applied to the lists that a
-  function `deal W` returns, followed by `fold_left` of the combination. The statement
-  quantifies over the lists and over $W$.
+- **In Rocq** the two orders are two functions on lists, defined once in
+  `proofs/theories/Folds.v` and used by every fold: `fold_seq step zero xs`, which is
+  `fold_left` of the step from the zero state, and `fold_lanes step combine zero W xs`, which
+  folds each of the lists that a function `deal W` returns, combines the results by
+  `fold_left` of the combination, and folds the remainder into the result. The model that the
+  generator writes for a fold has this shape and no other: the state is a tuple of limbs (a
+  pair, for two limbs); an element is one entry of every array read, as a tuple (for `dot_2`, a
+  pair of pairs); the step and the combination are functions of those tuples, written from
+  their kernels' models; and the statement is about `fold_seq` or `fold_lanes` applied to
+  them, quantified over the list and, for the lane order, over $W$. A fold in this shape uses
+  the theorems below directly: its step is shown equal to the one a theorem names, on every
+  state and element, and the fold is rewritten by `fold_seq_ext` or `fold_lanes_ext`. For
+  fewer elements than lanes, for one lane and for $W = 0$, `fold_lanes` *is* `fold_seq`
+  (`fold_lanes_short`, `fold_lanes_1`, `fold_lanes_0`), so the statement of the lane order
+  needs no condition on $n$ and $W$.
 - **In C++** the sequential order is a loop over the scalar step, and the lane order a loop over
   the packed step followed by the combination of the lanes and a scalar loop on the remainder.
   The step is inlined in the loop; the loop itself is an ordinary function
@@ -1267,8 +1457,29 @@ finish:    (none)                         a straight-line kernel on the final st
   one addition per limb. For one limb this is a real cost, and [question 19](#open-questions).
 
 *What the generator enforces on a fold:* the step and the combination pass every rule of a
-kernel (R1 to R3 among them); the types of the state agree; the zero state is a fixed point of
-the combination's value (`0 + 0 = 0`). *Risk:* **medium to high**, and it is generator work, not
+kernel (R1 to R3 among them); the types of the state agree; and, for a fold whose combination
+$\oplus$ is an addition (a sum, a dot product, a convolution, the accumulator), the zero state
+has with it the four properties that the theorems use as one hypothesis
+(`zero_identity`, `Summation.v`):
+
+1. the zero state is valid (for two limbs, the pair $(0, 0)$ is normalized);
+2. its value is 0;
+3. $0 \oplus x$ has the value of $x$, for every valid $x$;
+4. $0 \oplus 0$ *is* the zero state: an equality of states, limb for limb, and not only of
+   values.
+
+The first version of this page asked only that the value of $0 \oplus 0$ be zero. That is not
+enough. The third property is what makes the first addition of a loop cost nothing, so that
+$n$ elements are $n - 1$ rounded additions. The fourth is needed by the lane order with fewer
+elements than lanes, where the $W$ states that are combined are all the zero state and the
+result must be the state the remainder starts from. A fold names its combination, and the
+bundle is a lemma about that kernel, proved once: `add_1_1_zero`, `add_2_2_zero` and
+`add_fast_2_2_zero` (`SummationKernels.v`), the last two by computation, from $p = 1$, for a
+normalized other operand. A fold whose combination has no such lemma is refused. The dot
+product of one limb uses properties 1, 2 and 4 only: its step rounds even from the zero state
+([below](#sum-dot-axpy-convolution)).
+
+*Risk:* **medium to high**, and it is generator work, not
 proof work: a second printer path for loops in scalar and packed code, and arrays in the
 interpreter and in both test tiers.
 
@@ -1296,8 +1507,17 @@ $$\Bigl\lvert\mathrm{val}(t) - \sum_i \mathrm{val}\,x_i\Bigr\rvert \le
 \le \gamma_h(\varepsilon)\sum_i\lvert\mathrm{val}\,x_i\rvert ,
 \qquad \gamma_m(\varepsilon) = \frac{m\,\varepsilon}{1 - m\,\varepsilon},$$
 
-the second inequality when $h\,\varepsilon < 1$. Every tree with $n$ leaves has
-$h \le n - 1$, so $\gamma_{n-1}(\varepsilon)$ serves for every order.
+the second inequality when $h\,\varepsilon < 1$. The value of $t$ is valid, and
+$\lvert\mathrm{val}(t)\rvert \le (1 + \varepsilon)^h\sum_i\lvert\mathrm{val}\,x_i\rvert$. Every
+tree with $n$ leaves has $h \le n - 1$, so $\gamma_{n-1}(\varepsilon)$ serves for every order
+when $(n - 1)\,\varepsilon < 1$.
+
+**The two forms.** The bound with the power, $(1 + \varepsilon)^h - 1$, holds with no
+hypothesis on $n$. The bound with $\gamma$ is defined only while its denominator is positive,
+and every statement with a $\gamma$ on this page carries that as an explicit hypothesis:
+$(n - 1)\,\varepsilon_+ < 1$ for a sum of $n$ terms, $n \cdot 4u^2 < 1$ for `dot_2`, and
+$n\,\tfrac{u}{1+u} < 1$ for `dot_1`. The exported bounds test a stronger condition themselves
+([below](#the-bound-as-a-function-of-n)).
 
 **What it needs of the addition** is the displayed inequality and nothing else: no order, no
 tie rule, no statement about underflow. It asks for an error relative to the *operands*, which
@@ -1311,21 +1531,41 @@ well.
 | `add_2_2` | a normalized pair | $\dfrac{3u^2}{1-4u}$ | `add_2_2_correct`, $p \ge 3$ |
 | `add_fast_2_2` | a normalized pair | $3u^2$ | `add_fast_2_2_correct`, $p \ge 2$; its bound is already in this form |
 
-**The orders emitted.** A fold starts from the zero state, and `add_2_2` with a zero operand
-returns the other operand exactly (a lemma by computation; checked on the normalized pairs of
-three formats, all of them or 4 000). So the zero state is not a leaf, and the heights are
-$n - 1$ for the sequential
-order and $\lfloor n/W\rfloor + (W - 1) + (n \bmod W) - 1$ for the lane order when $n \ge W$,
-which is at most $n - 1$.
+**The orders emitted.** A fold starts from the zero state, and each of the three additions with
+a zero operand returns the other operand exactly (property 3 of the
+[zero state](#folds-the-extension-of-the-ir); for `add_2_2`, also checked on the normalized
+pairs of three formats, all of them or 4 000). So the zero state is not a leaf, and both orders
+are trees over the $n$ elements:
+
+- the sequential order, for $n \ge 1$, has height $n - 1$ (`fold_seq_tree`);
+- the lane order, for $n \ge W \ge 1$, has height
+  $\lfloor n/W\rfloor + (W - 1) + (n \bmod W) - 1$: the additions inside a lane, those that
+  combine the $W$ lanes, and the remainder (`fold_lanes_tree`). It is at most $n - 1$
+  (`lanes_height_le`);
+- for $n < W$, and for $W = 0$, the lane order is the sequential order
+  (`fold_lanes_short`, which uses property 4, and `fold_lanes_0`).
+
+Hence one bound for both, with $h = n - 1$, for every $W$ and every $n$: `fold_seq_sum` and
+`fold_lanes_sum`, and with the exact height of the lane order `fold_lanes_sum_height`.
 
 *Proof.* By induction on the tree, in real numbers: with $S$ the sum of the magnitudes of the
 leaves of a subtree, its error is at most $((1+\varepsilon)^h - 1)S$ and its value at most
 $(1+\varepsilon)^h S$ in magnitude; a node adds $\varepsilon$ times the magnitudes of its two
 computed operands. Then $(1+\varepsilon)^h \le 1/(1 - h\varepsilon)$ by induction on $h$.
 Nothing floating-point is in it; the instances are the three theorems of the table.
+
+**Proved**, in `proofs/theories/Summation.v` and `SummationKernels.v`: the theorem is
+`tree_sum`; the closed form is `pow_minus_1_le_gamma`, and $h \le n - 1$ is
+`height_le_leaves`; the three rows of the table are `add_1_1_adds`, `add_2_2_adds` and
+`add_fast_2_2_adds`; the two orders are the theorems just named, and in closed form
+`fold_seq_sum_gamma` and `fold_lanes_sum_gamma`. The theorem has two more general forms, which
+the dot products use: leaves that are themselves approximations (`tree_sum_approx`), and an
+absolute error at an addition, either the same at every addition (`tree_sum_tau`) or one that
+only an operand which is not the result of an addition brings (`tree_sum_weighted`).
 *Checked:* `batch.py`, sequential, lane and random trees of 2 to 14 terms with cancellation, at
 four to six bits: the largest error was 1.000 of the bound for one limb (the bound is attained)
-and 0.21 to 0.28 for two limbs. *Risk: low.*
+and 0.21 to 0.28 for two limbs. *Risk:* none left in the theorem; what remains is that a
+generated fold has the shape these theorems are stated for.
 
 ### sum, dot, axpy, convolution
 
@@ -1343,25 +1583,58 @@ of `axpy` or `scale` is a `T`, and the operations of `T` for one limb.
 
 **Statement of `sum_k`.** If every $x_i$ is valid and the result is finite, the result is valid
 (normalized, for two limbs) and
-$\lvert s - \sum_i x_i\rvert \le \gamma_{n-1}(\varepsilon_+)\sum_i\lvert x_i\rvert$. There is no
-underflow term.
 
-**Statement of `dot_k`.** With $\varepsilon_\times$ and $\tau$ the two constants of the
-product's bound ($4u^2$ and $\tfrac32\eta$ for `mul_2_2`) and $h \le n - 1$ the height of the
-order:
+$$\Bigl\lvert s - \sum_i x_i\Bigr\rvert \le
+\bigl((1 + \varepsilon_+)^{n-1} - 1\bigr)\sum_i\lvert x_i\rvert
+\le \gamma_{n-1}(\varepsilon_+)\sum_i\lvert x_i\rvert ,$$
+
+the second inequality when $(n - 1)\,\varepsilon_+ < 1$, in both orders and for every width.
+There is no underflow term. *Proved in the real model*, where nothing overflows:
+`fold_seq_sum` and `fold_lanes_sum` with the addition of the fold, and in closed form
+`sum_1_seq`, `sum_1_lanes`, `sum_2_seq`, `sum_2_lanes`, and `sum_fast_2_seq`,
+`sum_fast_2_lanes` for the fast addition.
+
+**Statement of `dot_2`.** With $\varepsilon_\times = 4u^2$ and $\tau = \tfrac32\eta$ the two
+constants of the bound of `mul_2_2`, and $h$ the height of the order:
 
 $$\Bigl\lvert s - \sum_i x_i y_i\Bigr\rvert \le
 \bigl((1 + \varepsilon_\times)(1 + \varepsilon_+)^h - 1\bigr)\sum_i\lvert x_i y_i\rvert
 + (1 + \varepsilon_+)^h\,n\,\tau .$$
 
 Each product is off by $\varepsilon_\times\lvert x_i y_i\rvert + \tau$, and the additions that
-follow scale every term, the underflow terms included, by at most $(1 + \varepsilon_+)^h$. With
-$\varepsilon = \max(\varepsilon_\times, \varepsilon_+)$ the first factor is at most
-$\gamma_n(\varepsilon)$, which is the form of [Operations](phase0/operations.md#batch-kernels).
-For one limb the step is one fused operation: one rounding where two limbs have a product and
-then a sum. A term then passes through as many roundings as with two limbs, so the same form
-holds with the same $h$, with $\varepsilon_\times = \varepsilon_+ = \tfrac{u}{1+u}$ and
-$\tau = \tfrac12\eta$, and `bound_dot_1` covers it.
+follow scale every term, the underflow terms included, by at most $(1 + \varepsilon_+)^h$. The
+first factor is at most $\gamma_n(\varepsilon_\times)$ when $n \cdot 4u^2 < 1$, because
+$\varepsilon_+ \le \varepsilon_\times$ from $p = 4$; this is the form of
+[Operations](phase0/operations.md#batch-kernels). *Proved in the real model:* for any tree,
+with its height, `tree_sum_approx`; for the two orders, with $h = n - 1$, `dot_2_seq` and
+`dot_2_lanes`, and in closed form `dot_2_seq_gamma` and `dot_2_lanes_gamma`.
+
+**Statement of `dot_1`.** For one limb the step is one fused operation,
+$s \leftarrow \mathrm{RN}(x_i y_i + s)$: no product is computed, and the step is the addition
+of the state and of the exact product, which in general is not a number of the format. With
+$\varepsilon = \tfrac{u}{1+u}$, in both orders and for every width:
+
+$$\Bigl\lvert s - \sum_i x_i y_i\Bigr\rvert \le
+\bigl((1 + \varepsilon)^n - 1\bigr)\sum_i\lvert x_i y_i\rvert
++ (1 + \varepsilon)^{n-1}\,n\,\tfrac12\eta ,$$
+
+and the first factor is at most $\gamma_n(\varepsilon)$ when $n\,\varepsilon < 1$. Nothing is
+assumed of the $x_i$ and $y_i$: the theorem is about any real numbers. Three things differ
+from two limbs. The step rounds even from the zero state, so $n$ terms are $n$ rounded
+additions and the exponent is $n$, not $n - 1$. The term in $\eta$ is charged to the
+*operands* that are not numbers of the format, of which there are $n$, the exact products, and
+not to the additions: an addition of two numbers of the format, as the $W - 1$ that combine the
+lanes are, has no absolute error at all. Charged per addition it would be
+$(n + W - 1)\,\tfrac12\eta$ in the lane order, which is more than the statement of the exported
+bound for $n$ terms promises to cover. And each of those terms is scaled by at most
+$(1 + \varepsilon)^{n-1}$, one factor less than the relative part. *Proved in the real model:*
+`dot_1_seq` and `dot_1_lanes`, from `tree_sum_weighted`; in closed form `dot_1_seq_gamma` and
+`dot_1_lanes_gamma`.
+
+`bound_dot_1(n)`, [below](#the-bound-as-a-function-of-n), covers it: its $g$ is at least
+$\gamma_n(\varepsilon)$, which is at least $(1 + \varepsilon)^n - 1$, and its $t$ is at least
+$n\,\tfrac12\eta\,(1 + g) \ge (1 + \varepsilon)^n\,n\,\tfrac12\eta$, which is more than the
+second term.
 
 **Statement of `axpy_k`**, per entry, from the two kernels composed:
 $\lvert z_i - (a x_i + y_i)\rvert \le \varepsilon_+\lvert a x_i + y_i\rvert +
@@ -1372,9 +1645,24 @@ to the operands, $\mathrm{unit}\cdot(\lvert a x_i\rvert + \lvert y_i\rvert) + \m
 the largest number of terms of a coefficient is $\min(n_a, n_b)$.
 
 *Proof.* The tree theorem with the leaves $x_i \otimes y_i$, and the triangle inequality.
-*Checked:* `batch.py`: 2 500 dot products per format in four orders, with operands down to the
-underflow range, at most 0.72 of the bound. *Smallest precision:* that of the kernels: 3 for
-the sums, 4 for the products of two limbs. *Risk: low* for the statements; the risk is the fold.
+**Proved** for `sum_k` and `dot_k`, in `proofs/theories/SummationKernels.v`, by the theorems
+named with each statement. What they are about is the two functions on lists of
+[Folds](#folds-the-extension-of-the-ir) applied to the steps `add22`, `dot_step_2` and
+`dot_step_1` that the file defines from the models of `add_2_2`, `mul_2_2` and `add_1_1`. Not
+yet proved, because the generator has no folds yet: that the model generated for a fold is
+that function of that step; the statements in the IEEE model, with the flag
+([below](#sum-dot-axpy-convolution), "When something is not finite"); and `axpy_k`, `conv_k`
+and the maps, which follow from the theorems of their kernels entry by entry.
+*Checked:* `batch.py`: 2 500 dot products of two limbs per format in four orders, with operands
+down to the underflow range, at most 0.72 of the bound; and 4 000 fused dot products of one
+limb per format, of up to 12 terms, in the sequential order and with 2, 4 and 8 lanes as
+`Folds.v` defines them: the largest error was 0.94 to 0.99 of the proved bound, and 0.56 to
+0.66 of the exported one. A term of $\tfrac12\eta$ per rounded addition, the additions that
+combine the lanes included, exceeded what the statement of `bound_dot_1` promises in 173 of
+the 11 259 runs in a lane order; it never exceeded the values that the listing returns, whose
+constants have room. *Smallest precision:* that
+of the kernels: 1 for one limb, 3 for the sums of two limbs, 4 for the dot product of two limbs
+(2 for a sum with the fast addition). *Risk: low* for the statements; the risk is the fold.
 
 **When something is not finite.** The loop runs the finite cores, so
 [D5](phase0/decisions.md#d5-non-finite-results) applies in its batch form: a result is finite
@@ -1438,10 +1726,16 @@ $m\,\varepsilon \le 0.24$, and in the toy formats of `batch.py` it was true up t
 $m\,\varepsilon \le \tfrac15$.
 
 The same two listings with the constants of `add_1_1` and `mul_1_1` are `bound_sum_1` and
-`bound_dot_1`.
+`bound_dot_1`. For one limb $\varepsilon_\times = \varepsilon_+ = \varepsilon = \tfrac{u}{1+u}$
+and $\tau = \tfrac12\eta$, and the statement of `bound_dot_1` is: if `ok`, then
+$g \ge \gamma_m(\varepsilon) \ge (1 + \varepsilon)^m - 1$ and
+$t \ge m\,\tfrac12\eta\,(1 + g) \ge (1 + \varepsilon)^{m-1}\,m\,\tfrac12\eta$, the two terms of
+the statement of [`dot_1`](#sum-dot-axpy-convolution) for $m$ terms. The first chain is
+`pow_minus_1_le_gamma`; the second holds because $1 + g \ge (1 + \varepsilon)^m$.
 
 *Proof.* $\gamma_m(\varepsilon) \le m\varepsilon(1 + 2m\varepsilon)$ when
-$m\varepsilon \le \tfrac12$, which avoids a division. A rounding to nearest of a nonnegative
+$m\varepsilon \le \tfrac12$, which avoids a division; this lemma is proved (`gamma_le_poly`,
+`Summation.v`), the statements of the two kernels are not yet. A rounding to nearest of a nonnegative
 product is at least the product divided by $1 + u$, less $\tfrac12\eta$ (`rnd_lower`, `Ball2.v`),
 and each constant carries the factor and the term that this costs, using $m \ge 1$; a sum of
 nonnegative numbers loses only the factor. $a \ge m\varepsilon$ makes the test on $a$ a test on
@@ -1450,7 +1744,13 @@ and up to $2^{23}$ in `binary32`, and in three toy formats, $g$ and $t$ are at l
 rationals; in `binary64` $g$ exceeds $\gamma_m$ by at most $8.7 \cdot 10^{-16}$ of it, in
 `binary32` by $4.7 \cdot 10^{-7}$. For those counts $m\varepsilon$ is tiny; in general $g$ is
 about $(1 + 2x)(1 - x)$ times $\gamma_m$ with $x = m\varepsilon$, which is $1.125$ at
-$x = \tfrac14$. *Smallest precision:* 3 and 4. *Risk: low.*
+$x = \tfrac14$. `bound_dot_1` was run the same way, as the description
+`bound_dot_1.kernel`: for every count it accepts, $g$ and $t$ satisfy its statement, in
+`binary64` up to $3 \cdot 2^{49}$ terms and in `binary32` up to $3 \cdot 2^{20}$ (it refuses
+$2^{51}$ and $2^{22}$, where $m\,u = \tfrac14$), and in six toy formats, where it
+accepts 15 terms at six bits and none but zero at one and two bits; the two terms of the
+statement of `dot_1` were compared with it directly up to 1 000 terms.
+*Smallest precision:* 3 and 4, and 1 for the kernels of one limb. *Risk: low.*
 
 **In the header.** `traits<X>::sum(n)` calls `bound_sum_k` with $m = n - 1$ converted to `T`,
 and `dot(n)` calls `bound_dot_k` with $m = n$; a conversion that is not exact (possible for
@@ -1620,8 +1920,9 @@ Until Kairn has a division, it is also how a program divides by an integer: `rat
 
 ```cpp
 template <class X> struct Constant { X value; typename traits<X>::limb_type error; bool exact; };
-template <class X> constexpr Constant<X> rational(long long num, long long den);
-template <class X> constexpr Constant<X> integer(long long n);     // rational(n, 1)
+template <class X> constexpr Constant<X> rational(long long num, long long den) noexcept;
+template <class X> constexpr Constant<X> integer(long long n) noexcept;     // rational(n, 1)
+template <class X> constexpr bool is_rational_result(const Constant<X>& c, long long num, long long den) noexcept;
 ```
 
 **Arguments.** Any two 64-bit signed integers, $-2^{63}$ included, with $den \ne 0$. In
@@ -1657,40 +1958,89 @@ denominators below $2^{63}$ with $num \cdot 2^j - A \cdot den = \pm 1$. In `rati
 the 40 030 two-limb results in `binary64` (10 000 of them built that way) needed the pair
 renormalized. The value does not change; its leading limb is then not $\mathrm{RN}(q)$.
 
-**The computation.** Integer operations only: for each limb, one division with remainder of two
-integers aligned so that the quotient has $p$ bits, a comparison of twice the remainder with the
-divisor for the tie rule, then the exact sum of the two limbs as one integer, rounded once more
-to renormalize. The widest integer is below $2^{180}$ for two `double` limbs (168 bits were
-observed, 110 for `float`), so a fixed capacity of three 64-bit words is enough, without
-`__int128`. The limbs are assembled from significand and exponent by `std::bit_cast`, so that not
-even the final step is a floating-point operation, and the result cannot depend on a rounding
-mode or on `-frounding-math`.
+**The computation.** `rational` is written, in `include/kairn/rational.hpp`, and this is what
+it does. Integer operations only, and every integer in one 64-bit word: no `__int128`, and no
+wider integer.
+
+- Each limb is one division with remainder, of $\lvert num\rvert$ by $\lvert den\rvert$ aligned
+  so that the quotient has $p$ bits (fewer in the subnormal range). The integer part is one
+  division of words; the rest of the quotient is computed one bit at a time, so that the
+  remainder stays below the divisor, hence at most $2^{63}$. Twice the remainder compared with
+  the divisor decides the rounding, ties to even.
+- For two limbs, what is left after the first limb, $q - \mathrm{RN}(q)$, is that remainder
+  over the divisor times a power of two, and the same division gives its rounding.
+- The pair is renormalized without forming the sum of the limbs. With $a = \mathrm{RN}(q)$ and
+  $b = \mathrm{RN}(q - a)$, the pair $(a, b)$ fails to be normalized exactly when
+  $\lvert b\rvert$ is half the gap of $a$ and the significand of $a$ is odd, which is the case
+  of the paragraph above; the result is then $(a + 2b,\ -b)$. It is the same value, and the one
+  normalized pair of the statement.
+- `error` is the remainder of the last division, rounded up in the same way.
+- The limbs and the error are assembled from sign, significand and exponent by `std::bit_cast`,
+  so that not even the final step is a floating-point operation, and the result cannot depend
+  on a rounding mode or on `-frounding-math`.
+
+`X` is `Expansion<T, 1>`, `Expansion<T, 2>`, or `float` or `double` themselves. With these
+arguments a second limb that is zero means that the value is exact: what is left after the
+first limb, when it is not zero, is at least $\eta$ in magnitude.
+
+The first version of this page described another computation: the dividend of the second
+division, and the exact sum of the two limbs, as integers of up to three words, the sum rounded
+once more to renormalize. Its widest integer is below $2^{180}$ for two `double` limbs (168 bits
+were observed, 110 for `float`). That method gives the same results, and `rational.py` is a
+model of it; it is not what ships. Keeping the remainder below the divisor, and recognizing the
+one case that needs renormalization, is what brought every integer into one word.
+
+**The check.** `kairn::is_rational_result(c, num, den)` decides whether a result is exactly what
+the statement says, by other means than the computation: multiplications by
+$\lvert den\rvert$ and by powers of two, additions and comparisons of integers, and no
+division. Every number involved is an integer times a power of two, and each residual is scaled
+to an integer of three 64-bit words; for a correct result these have fewer than 118 bits, and a
+result whose integers do not fit fails the check. With $d = \lvert den\rvert$ it checks
+
+- that each limb is the rounding the statement names: the residual is below half the gap of the
+  limb on its side, or equal to it with an even significand;
+- for two limbs, that the pair is normalized and is $(a, b)$ or $(a + 2b, -b)$;
+- that $\lvert\mathrm{value}\cdot d - num\rvert \le \mathrm{error}\cdot d$, and that the number
+  of `T` before `error` fails this, so that `error` is the smallest bound and not only a bound;
+- that `exact` is true exactly when that residual is zero.
+
+It runs in every constant evaluation by default (`KAIRN_RATIONAL_CHECK`), where a result that
+fails makes the constant not compile, and at run time in a build with `KAIRN_CHECKS`. Its cost
+was measured, as [question 5](#open-questions) asked: a fraction of a millisecond per constant
+at compile time, and less than a tenth of a microsecond per call at run time;
+[the reference page of `rational`](../../reference/rational.md#the-check) has the tables.
 
 **What is machine-checked, and what is tested.** This is integer code written by hand in the
 header, not a floating-point kernel, and the generator has no integer IR: there is no generated
 model of it and no Rocq theorem about the C++. What can be said honestly:
 
+- *Not machine-checked.* That the C++ returns the specified value for all $2^{128}$ pairs of
+  arguments. This holds of the computation and of the check alike.
 - *Tested, and for equality.* The specification fixes every bit of the result, so the oracle,
   which computes with exact rationals and shares no code with the header, compares the limbs,
   the error and the flag for equality, not against a bound: every pair of small terms, random
-  64-bit terms, powers of two and the extremes, and the near-ties constructed as above. A
-  result one unit off anywhere is a failure. `rational.py` is this test against a model of the
-  algorithm in Python: 80 060 results per limb type and 44 790 in three toy formats, all equal.
-- *Not machine-checked.* That the C++ implements the specification for all $2^{128}$ pairs.
+  64-bit terms, powers of two, the extremes, a zero denominator, exact values, fractions built
+  next to a tie of the first rounding and of the second, and values whose second limb is
+  subnormal. A result one unit off anywhere is a failure. The strata, the nine faults that the
+  oracle's own tests plant and require to be caught, and the guards that require each class of
+  case to have been met in a run, are in `oracle/README.md`, "rational".
+- *Checked in every constant evaluation,* by `is_rational_result`. A constant that compiles has
+  been checked against the whole statement, by code that shares with the computation only the
+  description of the format, and that divides nothing. Both are written by hand and neither is
+  proved; a wrong constant would need the two to be wrong on the same fraction in the same way.
+  This is more than question 5 proposed, which was a check of the error bound only.
+- *The experiment of this page,* `rational.py`, is not a test of the header. It compares a
+  Python model of the three-word method with the specification: 80 060 results per limb type
+  and 44 790 in three toy formats, all equal. It showed that the statement can be met with
+  integers, and found that the naive pair is not always normalized.
 - *Could be machine-checked later:* a Rocq function over the integers that mirrors the
   algorithm, proved against the specification with Flocq; the link from that function to the
   C++ would still be by reading.
-- *An option that shrinks what is trusted:* a checker, `value * den` compared with `num` within
-  `error * den` in exact integers, which is multiplications and comparisons only, run inside
-  the same constant evaluation and made a compile error on failure. It would not prove the
-  rounding is the nearest, only that the stated error bound is true
-  ([question 5](#open-questions)).
 
-*Recorded as:* a numbered deviation next to
-[deviation 17](phase0/decisions.md#deviations-from-the-brief-flagged) ("shipped code is
-generated, and every bound is machine-checked"), and a line on the reference page of `rational`
-that says "specified exactly; tested for equality with the oracle; not machine-checked".
-*Risk: low to medium* (edge cases of integer code).
+*Recorded as:* [deviation 22](phase0/decisions.md#deviations-from-the-brief-flagged), next to
+deviation 17 ("shipped code is generated, and every bound is machine-checked"), and a line at
+the top of the reference page of `rational`: "specified exactly; tested for equality with an
+independent oracle; not machine-checked". *Risk: low to medium* (edge cases of integer code).
 
 ## Limbs of another type
 
@@ -1805,12 +2155,12 @@ Kairn does not have, and its one interval type has bounds of type `binary64`.
 | An operation on an empty operand | empty | the same: the range over an empty box is empty (4.4.4) |
 | $[0, 0] \cdot X$ for nonempty $X$, unbounded included | $[0, 0]$ | the same (the example of 4.4.4) |
 | The constructor from two numbers, $lo > hi$, $[+\infty, +\infty]$ or $[-\infty, -\infty]$ | the empty set, silently | the same value (6.7.5); the standard also signals an exception (6.1.4), and its decorated form returns "not an interval" |
-| The constructor from two numbers, a NaN bound | the whole line ([question 1](#open-questions), decided by the owner) | **differs**: the call fails and returns the empty set (6.7.5) |
+| The constructor from two numbers, a NaN bound | the whole line, whatever the other bound ([question 1](#open-questions), decided by the owner on 2026-11-20; the [listing](#values-of-an-interval) is `interval_make_1`) | **differs**: the call fails and returns the empty set (6.7.5) |
 | The sign of a zero bound | unspecified | **differs**: a zero lower bound is returned as $-0$, every other zero as $+0$ (6.7.6, 7.3) |
 | Tightness of $+$, $-$, $\times$ on one limb | tightest for sums and differences; for products tightest outside the range below $2^{2p-1}\eta$, and at most one number wider inside it | **differs** inside that range: the basic operations shall be *tightest* (6.5.2). Kairn's product there is within the standard's second mode, *accurate* (6.5.1): it is inside the tightest result widened by one number on each side |
-| Two limbs; `float` bounds | bounds within about $8u^2$ and $10u^2$; the same statements as for `double` | not types of the standard, whose one type has `binary64` bounds (6.1.1) |
+| Two limbs; `float` bounds | two limbs: bounds within about $8u^2$ and $10u^2$ of the exact ones, plus about twice the smallest normal number; a sum that is exactly zero is returned as zero. `float`: the same statements as for `double` | not types of the standard, whose one type has `binary64` bounds (6.1.1) |
 | An overflow on bounded operands | one limb: $[\Omega, +\infty]$; two limbs: the infinite bound on the side of the overflow, or the whole line | one limb: the same, it is the tightest interval of the type; two limbs: valid, not tight |
-| `mid` | bounded: within one rounding and $\eta$ of the midpoint, inside the interval; whole line 0; half-line $\pm\Omega$; empty NaN | the special values are the same (6.7.6, 6.1.4). For a bounded interval the standard asks for the midpoint rounded to nearest and for a description of how that case is handled; Kairn's is that number unless a bound is an odd multiple of $\eta$, where it is within $\eta$ of it |
+| `mid` | bounded: within one rounding and $\eta$ of the midpoint, inside the interval; whole line 0; half-line $\pm\Omega$; empty NaN | the special values are the same (6.7.6, 6.1.4). For a bounded interval the standard asks for the midpoint rounded to nearest and for a description of how that case is handled; Kairn's is that number unless a bound is an odd multiple of $\eta$. There the sum of the two halves is within $\eta$ of the exact midpoint *before* the one rounding, so the result is within $\eta$ and one rounding of the midpoint and need not be within $\eta$ of the midpoint rounded to nearest: in every interval of four small formats it was that number or the one next to it (`enclosure_1.py` reports the largest distance, 4 to 16 $\eta$) |
 | `rad` | the smallest radius for *Kairn's* midpoint; $+\infty$ if unbounded; empty NaN | the same: the smallest number such that the returned midpoint, with it, covers the interval; NaN for the empty set (6.7.6) |
 | Hull and intersection | exact; the hull with the empty set is the other operand, the intersection with it is empty | the same (4.5.4, 6.7.4) |
 | `equal`, `subset`, `interior`, `disjoint` | on the stored bounds, as [above](#comparisons) | the same on nonempty operands (Table 4.5, with its rule that an infinite bound is strictly inside an equal infinite bound) and on empty ones (Table 4.6): compared entry by entry |
@@ -1851,9 +2201,10 @@ who took part in its drafting and are used by several implementations. For the f
 that are not in IEEE Std 1788.1, they are the only check there is until someone reads the text
 of the full standard.
 
-*For `Interval<T, 1>` with `T = double`* the cases apply as they are, up to the two rows marked
-"no" above. For `float` and for two limbs they give the special values and the conventions, not
-the bounds.
+*For `Interval<T, 1>` with `T = double`* the cases apply as they are, up to the three rows
+marked "differs" above: the constructor with a NaN bound, the sign of a zero bound, and a
+product in the underflow range. For `float` and for two limbs they give the special values and
+the conventions, not the bounds.
 
 ## Every new kernel
 
@@ -1868,20 +2219,20 @@ from. `k` stands for 1 and 2.
 | Kernel | Inputs, outputs | Requires | Ensures | Rests on | $p \ge$ | IEEE | Risk |
 |---|---|---|---|---|---|---|---|
 | `next_up`, `next_down` | $a \to r$ | — | `neighbor` up, down ([table](#next_up-and-next_down-on-every-input)) | `Bsucc_correct`, `IeeeOps.v` | 1 | both | low: one operation |
-| `two_sum_ord` | $(a, b) \to (s, e)$ | — | `leading_rounded`; `error` with $c = 0$; `normalized` | `fast_two_sum_correct` | 2 | both | low: a select in front of a proved kernel |
+| `two_sum_ord` | $(a, b) \to (s, e)$ | — | `leading_rounded`; `error` with $c = 0$; `normalized` | `fast_two_sum_correct` | 2 | core: finite operands and a finite sum; what it returns otherwise is not expressible as a claim | low: a select in front of a proved kernel |
 | `add_down_1`, `add_up_1`, `sub_down_1`, `sub_up_1` | $(a, b) \to r$ | — | `rounded` down, up | `two_sum_ord`; `pred_UP_eq_DN` | 2 | both | low: the argument of `to_down_2` |
 | `mul_down_1`, `mul_up_1` | $(a, b) \to r$ | — | `bound` with `steps` 1; `rounded` when `product_large` | `two_prod_exact`; one new lemma | 2 | both | medium: the lemma at the edge of the range |
 | `mul_dir_1` | $(a, b) \to (d, v)$ | neither a NaN | the same two, and zero for a zero factor | as above | 2 | both | medium |
 | `two_sum_entry`, `fast_two_sum_entry`, `radd_entry`, `add_down_entry`, `add_up_entry`, `sub_down_entry`, `sub_up_entry` | as the kernel called | as the kernel called | as the kernel called | `guard_ieee`, `Guard.v` | 2 | as called | low: two guards |
-| `interval_make_k` | $(lo, hi) \to (z_\ell, z_u)$ | canonical bounds, for two limbs | `makes_interval` | the way of `IeeeMake.v` | 1 | only | low |
+| `interval_make_k` | $(lo, hi) \to (z_\ell, z_u)$ | canonical bounds, for two limbs | `makes_interval`: the interval, the whole line for a NaN bound, the empty set otherwise | the way of `IeeeMake.v` | 1 | only | low |
 | `interval_neg_k` | $X \to Z$ | `interval` | `encloses_interval`, exact | — | 1 | only | low |
 | `interval_add_1`, `interval_sub_1` | $(X, Y) \to Z$ | `interval` | `encloses_interval`, `tight` rounded, bounded exactly within $\Omega$ | `add_down_1`, `add_up_1` | 2 | only | low |
 | `interval_mul_1` | $(X, Y) \to Z$ | `interval` | the same, with `steps` 1 unless `product_large` | `mul_dir_1`; the lemma of the rectangle | 2 | only | medium: many cases |
 | `add_ball_2_2`, `mul_ball_2_2` | $(x, y) \to (z, d)$ | normalized | `normalized`; `error`; `encloses z d` | `ball_add_2_correct`, `ball_mul_2_correct` | 3, 4 | core | low: the ball with radii zero |
-| `add_down_2_2`, `add_up_2_2`, `sub_down_2_2`, `sub_up_2_2` | $(x, y) \to l$ | normalized | `normalized`; `outward` with $A$, $B$ | the row above; `sub_down_1`; `two_sum_ord` | 3 | core | medium: the first upper bound of a radius |
+| `add_down_2_2`, `add_up_2_2`, `sub_down_2_2`, `sub_up_2_2` | $(x, y) \to l$ | normalized | `normalized`; `outward` with $A$, $B$, and `exact_when` the exact value is zero | the row above; `sub_down_1`; `two_sum_ord`; for the zero, `add_2_2_correct` and `normalized_2_zero` | 3 | core | medium: the first upper bound of a radius |
 | `mul_dir_2_2` | $(x, y) \to (l, h)$ | normalized | `normalized`; `outward`, both sides | the same | 4 | core | medium |
 | `mul_ext_2_2` | $(x, y) \to (l, h)$ | canonical, not NaN | `bound` in extended real numbers, $0 \cdot \infty = 0$ | `mul_dir_2_2`; `IeeeFull.v`'s cases | 4 | only | medium |
-| `interval_add_2`, `interval_sub_2` | $(X, Y) \to Z$ | `interval` | `encloses_interval`, `tight` $A$, $B$, bounded within a quarter | the cores; the bridge of `add_2_2` | 3 | only | medium |
+| `interval_add_2`, `interval_sub_2` | $(X, Y) \to Z$ | `interval` | `encloses_interval`, `tight` $A$, $B$ and exact for a bound that is zero, bounded within a quarter | the cores; the bridge of `add_2_2` | 3 | only | medium |
 | `interval_mul_2` | $(X, Y) \to Z$ | `interval` | the same | `mul_ext_2_2`; `lt_2_2_ieee_correct` | 4 | only | **high**: the largest listing and proof |
 | `interval_hull_k`, `interval_intersection_k` | $(X, Y) \to Z$ | `interval` | `encloses_interval`, exact | `Compare.v`, `IeeeExt.v` | 1 | only | low |
 | `interval_mid_rad_k`, `interval_to_ball_k`, `interval_split_k` | $X \to (m, r)$, a ball, two intervals | `interval` | [stated above](#midpoint-radius-and-the-conversions) | `sub_up_1`; `add_ball_2_2`, `radd`, `to_up_2`, `mul_pow2_2` | 2, 3 | only | low for one limb, medium for two |
@@ -1889,12 +2240,12 @@ from. `k` stands for 1 and 2.
 | `interval_less_k`, `interval_less_equal_k`, `interval_equal_k` | $(X, Y) \to$ (yes, no) | `interval` | `trit`, exact | `Compare.v` | 1 | only | low |
 | the eight relations of IEEE 1788, `interval_rel_NAME_k` | $(X, Y) \to$ a mask | `interval` | `predicate` on the sets | `Compare.v` | 1 | only | low; the definitions are the risk, not the proofs |
 | `ball_to_interval_k`, `ball_lower_k`, `ball_upper_k` | a ball $\to$ bounds | `ball` | `encloses_interval`; `rounded` for one limb | the directed sums | 2, 3 | only | low |
-| `ball_from_interval_k` | $(lo, hi) \to$ a ball | — | [stated above](#midpoint-radius-and-the-conversions) | `two_sum_ord`, `sub_up_1` | 2 | only | low |
+| `ball_from_interval_k` | $(lo, hi) \to$ a ball | — | [stated above](#midpoint-radius-and-the-conversions): the whole line for a NaN bound and for an unbounded interval; the empty set for $lo > hi$, $[+\infty, +\infty]$ and $[-\infty, -\infty]$ | `two_sum_ord`, `sub_up_1` | 2 | only | low |
 | `ball_contains_point_k`, `ball_contains_ball_k`, `ball_less_k`, `ball_less_equal_k`, `ball_equal_k`, `ball_positive_k`, `ball_negative_k`, `ball_zero_k` | $\to$ masks | `ball` | `predicate` for the signs; `certain` and `trit`, exact for one limb without overflow | `two_sum_ord`, `abs_2`, the comparisons; `add_ball_2_2` | 2, 3 | only | medium for two limbs |
 | `ball_hull_k`, `ball_intersection_k`, `ball_split_k` | balls $\to$ balls | `ball` | `encloses`, of a union, an intersection, two halves | the conversions; `ball_add_k_full` | 2, 3 | only | medium: compositions |
-| `ball_mul_pow2_k`, `ball_mul_pow2_k_full` | $(c_x, r_x, c) \to (c_z, r_z)$ | normalized, $r_x \ge 0$, $c$ a positive power of two | `normalized`; `encloses`; `exact_when` | `mul_pow2_2_exact`, `up_above` | 2 | core, only | low |
-| `dot_step_k`, `axpy_step_k`, and the folds `sum_k`, `dot_k`, `axpy_k`, `add_k`, `sub_k`, `scale_k`, `mul_pow2_k`, `conv_k` | arrays $\to$ a number or arrays, and a flag | valid elements | the bound of the fold as a function of $n$; `normalized` | the tree theorem; the kernels of Milestone 1; the bridge, step by step | 3, 4 | core | low for the statements, **medium to high** for the fold in the generator |
-| `bound_sum_k`, `bound_dot_k` | $m \to (g, ok)$, $(g, t, ok)$ | $m = 0$ or $m \ge 1$; `format(half)` | `upper`: $g \ge \gamma_m$, when `ok` | `rnd_lower` | 3, 4 | real model | low |
+| `ball_mul_pow2_k`, `ball_mul_pow2_k_full` | $(c_x, r_x, c) \to (c_z, r_z)$ | normalized, $r_x \ge 0$, $c$ a positive power of two | `normalized`; `encloses`, with `exact_when` on it: the conditions per limb | `mul_pow2_2_exact`; `up_above` and the smallest gap of the format, for the two steps | 2 | core, only | low |
+| `dot_step_k`, `axpy_step_k`, and the folds `sum_k`, `dot_k`, `axpy_k`, `add_k`, `sub_k`, `scale_k`, `mul_pow2_k`, `conv_k` | arrays $\to$ a number or arrays, and a flag | valid elements | the bound of the fold as a function of $n$; `normalized` | the tree theorem and the theorems of the two orders, which are proved (`Summation.v`, `SummationKernels.v`); the kernels of Milestone 1; the bridge, step by step | 1 for one limb; 3, 4 | core | low for the statements, of which `sum_k` and `dot_k` are proved in the real model; **medium to high** for the fold in the generator |
+| `bound_sum_k`, `bound_dot_k` | $m \to (g, ok)$, $(g, t, ok)$ | $m = 0$ or $m \ge 1$; `format(half)` | `upper`: $g \ge \gamma_m$, when `ok` | `rnd_lower`; `gamma_le_poly` and `pow_minus_1_le_gamma`, which are proved | 1 for one limb; 3, 4 | real model | low |
 | `acc_add_k`, `acc_mul_k`, `acc_merge_k`, `acc_radius_k` | the state of an accumulator | valid | the bound of `dot` for what was added | the tree theorem; `chain_step` | 3, 4 | core | medium |
 | `norm_upper_k`, `bv_norm_upper_k` | an array $\to r$ | valid | `upper`, at most one step above the smallest | `normalized_2_between` | 1 | core | low |
 | `bv_neg_k`, `bv_add_k`, `bv_sub_k`, `bv_scale_k`, `bv_mul_pow2_k`, `bv_axpy_k`, with `bv_add_radius_k`, `bv_scale_radius_k` | ball vectors $\to$ a ball vector and a flag | canonical | V1 to V4 | the `Ball` theorems entry by entry; `round_le` | as `Ball` | only | medium: the fold, and the second pass |
@@ -1924,11 +2275,15 @@ parallel; the letters are the tracks: **G** generator and claims, **P** proofs, 
    of the two products.
 3. G, P, H: `ball_mul_pow2_k` and its full form; `ldexp` and `half` on `Ball`.
 4. H, O, T, independent of everything else: `rational`, its corpus and the equality test.
+   *Done:* the header, its check, and the oracle's test for equality
+   ([Constants at compile time](#constants-at-compile-time)).
 5. H, P: the part of the interface of `Ball` that needs no interval: `lower_as`, `upper_as`,
    `contains`, the signs, the comparisons, `split`; the list of functions that do not round,
    and the debug build's check taken off them.
 6. P, from the first day and depending on nothing: the tree theorem and the lemma on
-   $\gamma$.
+   $\gamma$. *Done:* they are proved, with the two orders as functions on lists and the bounds
+   of the sums and dot products of one and two limbs
+   ([Summation over any tree](#summation-over-any-tree)).
 
 **Wave 2: intervals.** Depends on 1.1 and 1.2.
 
@@ -1943,11 +2298,13 @@ parallel; the letters are the tracks: **G** generator and claims, **P** proofs, 
 **Wave 3: folds.** Depends on wave 1 only, and can start with it; the generator is its critical
 path.
 
-1. G: the fold description, its Rocq model over lists, the scalar loop; arrays in the
-   interpreter and the line protocol. O: exact sums and dot products. Then the lane order and
-   the packed loops.
-2. P: the statements of `sum_k`, `dot_k`, `axpy_k`, `conv_k` from the tree theorem;
-   `bound_sum_k`, `bound_dot_k`. H: the functions on arrays, `traits<X>::sum(n)` and `dot(n)`.
+1. G: the fold description, its Rocq model over lists in the shape of `fold_seq` and
+   `fold_lanes`, the check of the zero state, the scalar loop; arrays in the interpreter and
+   the line protocol. O: exact sums and dot products. Then the lane order and the packed loops.
+2. P: the statements of `sum_k` and `dot_k` for the generated models, each by an equality of
+   steps and a theorem that exists; those of `axpy_k`, `conv_k`; the statements in the IEEE
+   model; `bound_sum_k`, `bound_dot_k`. H: the functions on arrays, `traits<X>::sum(n)` and
+   `dot(n)`.
 3. H, P: the accumulator. H: `Packed`, `SoA` and the views as public types.
 
 **Wave 4: BallVector.** Depends on wave 3 and on 1.3: the kernels, their radii, the flag and
@@ -1983,32 +2340,45 @@ Each with the options and what I recommend.
 - The recommendation is adopted for questions 2 to 4 and 6 to 19. For question 6 nothing is
   given up that was promised: [Operations](phase0/operations.md#interval) already claims the
   tightest product of one limb only outside the underflow range.
-- Question 2 is settled as (b), which changes the listings of the directed sums of two limbs
-  above; they, their statements and their experiments are revised in a later version of this
-  page, before those kernels are written.
+- Question 2 is settled as (b) and is applied above: the
+  [directed sums of two limbs](#bounds-of-two-limbs) have the two lines, their statement has
+  the case of a sum that is zero, with its proof, and `directed_2.py`, `interval_2.py` and
+  `enclosure_2.py` judge it.
 - Questions 1 and 5 were the owner's, since the first departs from IEEE 1788 and the second
   ships a function whose bound is not machine-checked. Both were decided on 2026-11-20 as
   recommended. Question 1, (b): a NaN bound gives the whole line, for `Interval(lo, hi)` and
-  for the ball from an interval; the listings and statements above, written for (a), are
-  revised with those of question 2. Question 5, (b): `rational` is specified exactly, tested
-  for equality with the oracle, checks its own error bound in every constant evaluation, and
-  is recorded as [deviation 22](phase0/decisions.md#deviations-from-the-brief-flagged).
+  for the ball from an interval. It is applied above, in the listings and statements of
+  [`interval_make_1`](#values-of-an-interval) and
+  [`ball_from_interval_2`](#midpoint-radius-and-the-conversions), which `interval_1.py` and
+  `enclosure_1.py` judge, and it is recorded as
+  [deviation 23](phase0/decisions.md#deviations-from-the-brief-flagged). Question 5, (b):
+  `rational` is specified exactly, tested for equality with the oracle, checked in every
+  constant evaluation, and recorded as
+  [deviation 22](phase0/decisions.md#deviations-from-the-brief-flagged). It is written since,
+  and [its section](#constants-at-compile-time) describes what the header does: the
+  computation is not the one this page first gave, and the check is of the whole statement.
+- The summation theorems are proved since ([Summation over any tree](#summation-over-any-tree)).
+  The proof changed two statements of this page, which are revised above: what is required of
+  the zero state of a fold, and the bound of the dot product of one limb.
 
-1. **A NaN bound given to the constructor of an interval.** (a) The empty set, as IEEE 1788
-   and as written above. (b) The whole line. A NaN usually means that something upstream
-   failed, and the empty set is the one value that a verified computation must never produce by
-   accident: an empty box is discarded, and a root with it. The standard signals an exception
-   there, which Kairn cannot. Milestone 1 already made a `Ball` with a NaN *center* the whole
-   line. *Recommended: (b)*, for `Interval(lo, hi)` and for the ball from an interval alike,
-   keeping the empty set for $lo > hi$; it is one select more, and a deviation from 1788 to
-   record. It is written as (a) above because (a) is the decision taken.
-2. **The sum of exact zeros in two limbs.** (a) As decided: $[0, 0] + [0, 0] = [-H, H]$.
-   (b) Two more lines in the directed sums, after `add_ball_2_2`:
-   `zd = eq(z0, 0); dd = select(zd, 0, d)`, and `dd` in place of `d`. It is sound because the
-   bound of `add_2_2` is relative: a computed sum of zero means the exact sum is zero. Then a
-   sum whose result is zero is exactly zero, as for one limb, and `certainly_zero` can be true
-   of a computed interval. *Recommended: (b)* for the sums; the products already have their
-   zero rule.
+1. **A NaN bound given to the constructor of an interval.** *Decided by the owner on
+   2026-11-20: the whole line*, for `Interval(lo, hi)` and for the ball from an interval alike,
+   whatever the other bound is; $lo > hi$, $[+\infty, +\infty]$ and $[-\infty, -\infty]$ stay
+   the empty set. A NaN usually means that something upstream failed, and the empty set is the
+   one value that a verified computation must never produce by accident: an empty box is
+   discarded, and a root with it. The standard signals an exception there, which Kairn cannot.
+   Milestone 1 already made a `Ball` with a NaN *center* the whole line. The option not taken
+   was the empty set, as IEEE 1788 returns and as this page was first written. The cost is five
+   operations in each of the two listings (two tests of a NaN, a mask, two selects), and a
+   deviation from the standard, which is recorded.
+2. **The sum of exact zeros in two limbs.** *Settled on 2026-11-20: exact.* The directed sums
+   have two more lines after `add_ball_2_2`, `zd = eq(z0, 0); dd = select(zd, 0, d)`, and `dd`
+   in place of `d`. It is sound because the bound of `add_2_2` is relative: a computed sum of
+   zero means that the exact sum is zero ([the proof](#bounds-of-two-limbs)). So a sum that is
+   exactly zero is returned as zero, as for one limb, and `certainly_zero` can be true of a
+   computed interval. The option not taken was the listing as first decided, without the two
+   lines, where $[0, 0] + [0, 0]$ was $[-H, H]$. The products are not concerned: they have the
+   rule of the zero operand, and the same two lines would be wrong for them.
 3. **An overflow in a two-limb interval kernel.** (a) The infinite bound on that side, hence
    the whole line when both overflow. (b) Keep a finite bound of the right sign,
    $2^{e_{\max}-2}$, which the proved conditions of Milestone 1 justify; it needs a constant of
@@ -2022,9 +2392,13 @@ Each with the options and what I recommend.
    the smallest number of `T`, valid for all $n\varepsilon < 1$, tested for equality, not
    machine-checked. *Recommended: (a)*: a bound that a program builds its own proof on should
    be on the proved side.
-5. **How `rational` is recorded.** (a) A deviation and a test for equality. (b) The same, and
-   the checker run in every constant evaluation. *Recommended: (b) if the checker's cost at
-   compile time is small*, to be measured; (a) otherwise.
+5. **How `rational` is recorded.** *Decided by the owner on 2026-11-20: a deviation, a test
+   for equality, and a check run in every constant evaluation*
+   ([deviation 22](phase0/decisions.md#deviations-from-the-brief-flagged)). The option not
+   taken was the deviation and the test alone. The condition of the recommendation, that the
+   check cost little at compile time, was measured and holds, and the check that was written
+   covers the whole statement and not only the error bound
+   ([Constants at compile time](#constants-at-compile-time)).
 6. **Products below $2^{2p-1}\eta$.** (a) One number wider, as decided. (b) Rescale the
    operands by a power of two when the product is in that range, as `kv` does, and get the
    exact rounding everywhere; four to six more operations and two selects, and a proof by
@@ -2083,18 +2457,18 @@ exact rationals. The recorded output of each script is in `results/`.
 | Script | Judges | On |
 |---|---|---|
 | `directed_1.py` | the directed sums and products of one limb; `two_sum` in place of `two_sum_ord` | every pair of values of nine formats, 2 to 5 bits |
-| `interval_1.py` | I1 to I5 for `Interval<T, 1>`, and its constructor | every pair of intervals of two formats; samples of three |
+| `interval_1.py` | I1 to I5 for `Interval<T, 1>`; its constructor, with the whole line for a NaN bound | every pair of intervals of two formats; samples of three; every pair of values for the constructor |
 | `directed_2.py` | the bounds of two limbs: normalization, side, both forms of the tightness; `Fast2Sum` without ordering | 2.0 million cases, 3 to 6 bits |
-| `interval_2.py` | I1 to I5 for `Interval<T, 2>` | 12 000 to 39 000 pairs per operation and format |
-| `enclosure_1.py`, `enclosure_2.py` | midpoint and radius, the conversions, `split`, the ball from an interval, the exact and the certain predicates | every value of four or five formats; samples for two limbs |
+| `interval_2.py` | I1 to I5 for `Interval<T, 2>`; a zero bound of the exact range of a sum is returned as zero | 12 000 to 39 000 pairs per operation and format |
+| `enclosure_1.py`, `enclosure_2.py` | midpoint and radius, the conversions (a zero bound of a ball of two limbs included), `split`, the ball from an interval with its three kinds of result, the exact and the certain predicates | every value of four or five formats; samples for two limbs |
 | `scaling.py` | the exact scaling of a ball; `next_up` and `next_down` on every value; the two executions of a product | every case of four formats |
-| `batch.py` | the tree theorem, `dot`, the bound kernels, the radii of `BallVector`, the product of polynomials | random cases at 4 to 6 bits; counts up to $2^{52}$ in `binary64` |
-| `rational.py` | the integer algorithm of `rational` against its specification | 80 060 results per limb type; three toy formats |
+| `batch.py` | the tree theorem, `dot` of two limbs, the fused `dot` of one limb in the two orders, the bound kernels, the radii of `BallVector`, the product of polynomials | random cases at 4 to 6 bits; counts up to $2^{52}$ in `binary64` |
+| `rational.py` | an integer algorithm for `rational`, the three-word method of this page's first version, against the specification; not the header, which the oracle tests | 80 060 results per limb type; three toy formats |
 | `convert.py` | the conversions between a wide and a narrow format | five pairs of toy formats |
 | `constants.py` | $A$ and $B$ in `binary64` and `binary32` | exact |
-| `rules_report.py` | the generator's own rules on the 32 descriptions | no refusal but the absence of claims |
+| `rules_report.py` | the generator's own rules on the 33 descriptions | no refusal but the absence of claims |
 
-The 32 descriptions pass single assignment, R1, R2, R3, the non-finite cone and the checks of
+The 33 descriptions pass single assignment, R1, R2, R3, the non-finite cone and the checks of
 kinds and constants as the generator has them today; they carry no claims, since the claims
 need the vocabulary this page adds. No statement of this page, as it stands, fails in any run.
 Three were *changed* by a run before they were written here: the renormalization of the
@@ -2109,3 +2483,12 @@ that are not strict, which were wrong when both sides overflow. Both are correct
 `convert.py` and `enclosure_1.py` now run the cases that show them. The lesson for the
 milestone is the one of Milestone 1: a statement is tested on formats chosen to break it, by
 someone who did not write it, before anyone tries to prove it.
+
+**Since the first version of this page.** The two decisions of 2026-11-20 changed four
+listings: `interval_make_1` and `ball_from_interval_2` (a NaN bound), `add_down_2_2` and
+`add_up_2_2` (a sum that is zero). The rule against subnormal constants changed two:
+`ball_from_interval_2` again, and the scaling of a ball. The scripts that judge them were
+rerun, and the recorded outputs are those of the listings as they stand, with one exception:
+`scaling.py` and the two descriptions of the scaling are with the generator, where they are
+rerun. The proof of the summation theorems added one case to `batch.py`, which no run had
+covered: the fused dot product of one limb, in the two orders.

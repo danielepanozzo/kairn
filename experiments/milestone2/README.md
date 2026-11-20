@@ -11,7 +11,7 @@ wrong on what was run.
 ## How it works
 
 - `kernels/` holds the proposed kernels as descriptions in the generator's own format
-  (`gen/README.md`), 32 of them. They carry no claims: the claims of this milestone need
+  (`gen/README.md`), 33 of them. They carry no claims: the claims of this milestone need
   vocabulary that the generator does not have yet.
 - `common.py` loads them together with the kernels of `gen/kernels` and evaluates them with the
   generator's exact interpreter (`gen/kairn_gen/interp.py`), on any format `(p, qmin, qmax)`. It
@@ -31,17 +31,17 @@ compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`)
 | Script | Statements | Section of the page |
 |---|---|---|
 | `directed_1.py` | `add_down_1`, `add_up_1`, `sub_down_1`, `sub_up_1` are the exact directed roundings for all finite operands, and IEEE's sum otherwise; `mul_down_1`, `mul_up_1`, `mul_dir_1` are valid bounds, exact when the product is zero or at least $2^{2p-1}\eta$, at most one step beyond otherwise; the sign of the computed error of `two_prod`; what `two_sum` would do in place of `two_sum_ord` | Building blocks on T |
-| `interval_1.py` | I1 to I5 for `interval_add_1`, `interval_sub_1`, `interval_mul_1`; `interval_make_1`; `interval_neg_1` | Interval kernels, one limb |
-| `directed_2.py` | `add_ball_2_2`, `mul_ball_2_2` return the ball kernels' values for radii zero; `add_down_2_2`, `add_up_2_2`, `mul_dir_2_2` return normalized pairs on the right side, within both forms of the tightness bound; how often `Fast2Sum` without ordering is outside its requirement, and wrong | Bounds of two limbs |
-| `interval_2.py` | I1 to I5 for `interval_add_2`, `interval_mul_2` | Interval kernels, two limbs |
-| `enclosure_1.py` | `interval_mid_rad_1`, `ball_to_interval_1`, `ball_split_1`, `ball_from_interval_2`; the exact predicates of `Ball<T, 1>` | One enclosure interface |
-| `enclosure_2.py` | midpoint and radius, ball to interval, and the certain test of a point, on two limbs | One enclosure interface |
+| `interval_1.py` | I1 to I5 for `interval_add_1`, `interval_sub_1`, `interval_mul_1`; `interval_make_1` on every pair of values: the interval, the whole line for a NaN bound, the empty set otherwise; `interval_neg_1` | Interval kernels, one limb |
+| `directed_2.py` | `add_ball_2_2`, `mul_ball_2_2` return the ball kernels' values for radii zero; `add_down_2_2`, `add_up_2_2`, `mul_dir_2_2` return normalized pairs on the right side, within both forms of the tightness bound; a sum is computed as zero exactly when it is zero, and both its bounds are then zero; how often `Fast2Sum` without ordering is outside its requirement, and wrong | Bounds of two limbs |
+| `interval_2.py` | I1 to I5 for `interval_add_2`, `interval_mul_2`; a bound of the exact range of a sum that is zero is returned as zero | Interval kernels, two limbs |
+| `enclosure_1.py` | `interval_mid_rad_1`, `ball_to_interval_1`, `ball_split_1`; `ball_from_interval_2` on every pair of values, with the whole line for a NaN bound; the exact predicates of `Ball<T, 1>` | One enclosure interface |
+| `enclosure_2.py` | midpoint and radius, ball to interval (a bound that is exactly zero included), and the certain test of a point, on two limbs | One enclosure interface |
 | `scaling.py` | `ball_mul_pow2_1`, `ball_mul_pow2_2`: containment, and exactness where stated; `succ` and `pred` on every value; `prod` as an FMA and as a plain product | Scaling a ball by a power of two; Building blocks on T |
-| `batch.py` | the summation theorem on sequential, lane and random trees; `dot`; `bound_sum_2`, `bound_dot_2`; the radii of the `BallVector` kernels; `conv_radius` and the product of polynomials; the accumulator's magnitude | Batch kernels; BallVector |
-| `rational.py` | a model in integer arithmetic of `rational(num, den)` equals its specification, limb for limb | Constants at compile time |
+| `batch.py` | the summation theorem on sequential, lane and random trees; `dot` of two limbs; the fused dot product of one limb in the sequential order and in the lane order; `bound_sum_2`, `bound_dot_2`, `bound_dot_1`; the radii of the `BallVector` kernels; `conv_radius` and the product of polynomials; the accumulator's magnitude | Batch kernels; BallVector |
+| `rational.py` | a model in integer arithmetic of `rational(num, den)`, the three-word method of the page's first version, equals the specification, limb for limb. It is not a test of the header, whose computation is another and which the oracle tests | Constants at compile time |
 | `convert.py` | conversions between a wide and a narrow format, of numbers and of balls | Limbs of another type |
 | `constants.py` | the constants $A$ and $B$ of the two-limb bounds in `binary64` and `binary32` | Bounds of two limbs |
-| `rules_report.py` | what the generator's rules say of the 32 descriptions, and the operations of each after inlining | Experiments |
+| `rules_report.py` | what the generator's rules say of the 33 descriptions, and the operations of each after inlining | Experiments |
 
 ## Rerun
 
@@ -67,8 +67,41 @@ Three statements were changed by a run before the page was written:
 - A conversion to a narrow format can overflow in its renormalization, when the first limb is
   the largest number of the format (`convert.py`).
 
-And one consequence was found that the page records as an open question: the sum of two zero
-intervals of two limbs is not the zero interval (`interval_2.py`).
+And one consequence was found, which the page recorded as a question: as first decided, the sum
+of two zero intervals of two limbs was not the zero interval (`interval_2.py`).
+
+## What two decisions changed
+
+Two questions of the page were decided on 2026-11-20, and the descriptions and the scripts were
+revised with them.
+
+- A NaN given as a bound gives the whole line, where the first version gave the empty set, as
+  IEEE 1788 does: `interval_make_1` and `ball_from_interval_2`, judged on every pair of values
+  by `interval_1.py` and `enclosure_1.py`. Reversed bounds, $[+\infty, +\infty]$ and
+  $[-\infty, -\infty]$ still give the empty set.
+- The directed sums of two limbs take the bound zero when the computed sum is zero:
+  `add_down_2_2` and `add_up_2_2`. This is sound because the bound of `add_2_2` is relative, so
+  the computed sum is zero exactly when the exact one is; `directed_2.py` asserts that on every
+  sum it runs, operands in the underflow range included, and that both bounds are then zero.
+  `interval_2.py` and `enclosure_2.py` check what follows for an interval sum and for the
+  bounds of a ball. The product is left as it was: `directed_2.py` counts the products that are
+  computed as zero and are not zero.
+
+One more listing changed for a rule of the generator, which forbids a kernel to compute with a
+subnormal constant in the hardware formats: `ball_from_interval_2` no longer adds $\eta$ to the
+radius when a halving was rounded. It takes the number after $d = \mathrm{RU}(h_u - h_\ell)$,
+which is at least $d + \eta$ and never more than the earlier result; `enclosure_1.py` asserts
+containment and that value on every pair of values. The same rule changed the scalings of a
+ball, whose descriptions and script (`scaling.py`) are with the generator.
+
+## What the proofs changed
+
+The summation theorems of the page were proved in Rocq after these runs
+(`proofs/theories/Folds.v`, `Summation.v`, `SummationKernels.v`). Nothing that had been run was
+found false. The proof stated the dot product of one limb, whose step is one fused operation,
+with its own bound, and `batch.py` gained that case, which no run had covered: the fused step in
+the sequential order and in the lane order as `Folds.v` defines it, against the proved bound,
+and the description `bound_dot_1`, against the two terms of that bound.
 
 ## What the runs had missed
 
