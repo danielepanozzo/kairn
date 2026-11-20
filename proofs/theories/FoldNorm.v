@@ -50,7 +50,8 @@
    - What the result of two limbs is exactly: the successor of the largest |x0|, which
      is RU (V) or succ (RU (V)) (norm_upper_2_seq_value with the bounds). Both happen:
      for one element (x0, x1) with x0 > 0, it is RU (V) when x1 > 0 and succ (RU (V))
-     when x1 <= 0. The result is never V itself, even when every x1 is 0. *)
+     when x1 <= 0. The result is never V itself, even when every x1 is 0: the first
+     bound is strict (norm_upper_2_strict). *)
 From Stdlib Require Import Reals ZArith List Lia Lra Bool.
 From Flocq Require Import Core.
 From Kairn.Gen Require Import Model Statements FoldModel FoldStatements.
@@ -121,6 +122,14 @@ Proof.
 intros l b Hb H. induction H as [|a l Ha _ IH]; cbn [fold_right].
 - exact Hb.
 - now apply Rmax_lub.
+Qed.
+
+Lemma maxl_lt :
+  forall (l : list R) (b : R), 0 < b -> Forall (fun a => a < b) l -> maxl l < b.
+Proof.
+intros l b Hb H. induction H as [|a l Ha _ IH]; cbn [fold_right].
+- exact Hb.
+- now apply Rmax_lub_lt.
 Qed.
 
 Lemma maxl_fmt :
@@ -343,6 +352,29 @@ split. exact Fm. split.
     apply (normalized_2_lead_le (fst x) (snd x) (RU emin prec v) Nx Fu).
     apply Rle_trans with (2 := Hu).
     apply maxl_ge. exact (in_map (fun x => Rabs (fst x + snd x)) xs x Hin).
+Qed.
+
+(* The first bound is strict: the successor of the largest |x0| is above the magnitude of
+   every element, so the result of two limbs is never the largest magnitude itself. *)
+Lemma norm_upper_2_strict :
+  forall xs : list (R * R),
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  maxl (map (fun x => Rabs (fst x + snd x)) xs) <
+  succ radix2 fexp (maxl (map (fun x => Rabs (fst x)) xs)).
+Proof.
+intros xs Hx.
+destruct (norm_upper_2_bound xs Hx) as [Fm _].
+apply maxl_lt.
+- apply Rle_lt_trans with (1 := maxl_nonneg (map (fun x : R * R => Rabs (fst x)) xs)).
+  exact (succ_FLT_gt emin prec _).
+- apply Forall_map. apply Forall_forall. intros x Hin.
+  pose proof (proj1 (Forall_forall _ xs) Hx x Hin) as Nx.
+  apply Rlt_le_trans with (succ radix2 fexp (Rabs (fst x))).
+  + now apply normalized_2_abs_lt_succ.
+  + apply succ_mono.
+    * apply generic_format_abs. apply Nx.
+    * exact Fm.
+    * apply maxl_ge. exact (in_map (fun x => Rabs (fst x)) xs x Hin).
 Qed.
 
 End Pair.

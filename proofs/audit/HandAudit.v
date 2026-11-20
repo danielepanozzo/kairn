@@ -585,7 +585,8 @@ Print Assumptions fold_lanes_aci.
    orders return the same state; the final state is the largest magnitude (of the leading
    limbs, for two limbs) with a true mask; a normalized pair is below the successor of
    the magnitude of its leading limb, and a number of the format above the pair is above
-   that limb; and the bound of two limbs on the two largest magnitudes. *)
+   that limb; and the bound of two limbs on the two largest magnitudes, the first
+   inequality strictly. *)
 Print Assumptions norm_upper_1_lanes_seq.
 Print Assumptions norm_upper_2_lanes_seq.
 Print Assumptions norm_upper_1_seq_value.
@@ -593,6 +594,7 @@ Print Assumptions norm_upper_2_seq_value.
 Print Assumptions normalized_2_abs_lt_succ.
 Print Assumptions normalized_2_lead_le.
 Print Assumptions norm_upper_2_bound.
+Print Assumptions norm_upper_2_strict.
 
 (* The folds of maxima in the IEEE model (theories/IeeeFoldNorm.v): the theorems of the
    generated statements of the finishes and of the folds are listed by
