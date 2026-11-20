@@ -22,7 +22,8 @@ library.md):
   two executions of a product"): as real numbers both are RN(a b), and as values of T they differ
   only in the sign of an exactly zero product. A kernel with another fused operation (fma, fms,
   fnma) and no variant is not constexpr.
-- Kernels of at most two limbs are force-inlined.
+- Kernels of at most two limbs are force-inlined, but one that says `ordinary_inline:` (the largest
+  listings: milestone2.md, "Inlining and compile time"), which is an ordinary inline function.
 - A mask is a bool, and select a conditional expression on values already computed, which
   compilers turn into a conditional move or a blend; succ and pred step the bit pattern
   (std::bit_cast is constexpr), so that kernels that use them stay constexpr.
@@ -200,9 +201,9 @@ def branch(k, kernels):
     The rule (docs/developer/design/milestone1.md, "Emission"). It applies to a kernel without a
     real-model statement (a full kernel, a full Ball kernel, a constructor: the kernels whose
     selects are the fix-up of the non-finite layer, written with the ordinary case as the first
-    arm) whose every output is a limb defined by a select on one same mask m1. The first arms are
-    the outputs when m1 is true. While the arms are all selects on one same mask m2, m2 joins the
-    masks and the arms become their first arms. Before the branch: the operations that the masks
+    arm) whose every output is a limb defined by a select of its own listing (not of a callee's) on
+    one same mask m1. The first arms are the outputs when m1 is true. While the arms are all such
+    selects on one same mask m2, m2 joins the masks and the arms become their first arms. Before the branch: the operations that the masks
     and the final arms need. When every mask is true: the outputs are the final arms. Otherwise:
     every other operation, in the listing's order, and the outputs as listed. Both paths compute
     the listing's outputs: the first because every select on the way takes its first arm, the
@@ -213,10 +214,13 @@ def branch(k, kernels):
         return None
     items = ir.flatten(k, kernels)
     defs = {it.dst: it for it in items if isinstance(it, ir.Prim)}
+    # Only the kernel's own selects are a fix-up: a select inside a callee whose output is an arm
+    # (the directed sum of ball_lower_as_1, Milestone 2) chooses on the data, and is computed.
+    own = {st.dsts[0] for st in k.body if not st.is_call}
 
     def select(a):
         p = None if a.const else defs.get(a.name)
-        return p if p is not None and p.op == 'select' else None
+        return p if p is not None and p.op == 'select' and p.dst in own else None
 
     level = [select(ir.Operand(v)) for v in k.output_limbs]
     masks, arms = [], ()
@@ -324,7 +328,7 @@ def function(k, kernels, ctype):
     _check_names(k, kernels)
     kind = constexpr_kind(k, kernels)
     params = parameters(k, ctype, 'bool')
-    inline = 'KAIRN_GEN_FORCEINLINE' if k.limbs <= 2 else 'inline'
+    inline = 'KAIRN_GEN_FORCEINLINE' if k.forced_inline else 'inline'
     lines = [f'{inline} {"constexpr " if kind else ""}void {k.name}({", ".join(params)}) noexcept {{']
     if kind == 'variant':
         v = kernels[k.ce_variant]

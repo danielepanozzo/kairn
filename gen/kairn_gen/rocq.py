@@ -89,11 +89,22 @@ def _operand(a, ups=None):
     return _const_name(a.name, ups) if a.const else a.name
 
 
+def constant_record(kernels):
+    """The record of the names of the constants up(EXPR) that the kernel set was loaded with
+    (gen/constant_names.json for gen/kernels; ir.load_constant_names): {EXPR: name}. Empty for a
+    set loaded without one (the kernels of the tests)."""
+    return next((k.constant_names for k in kernels.values() if k.constant_names), {})
+
+
 def up_names(kernels):
-    """{up(EXPR): the name of its definition}, one per distinct constant, named after the first
-    kernel that uses it and its place among that kernel's distinct up constants: up_K_0, up_K_1,
-    ... (so the third constant of a kernel is up_K_2 even when the first two are named after an
-    earlier kernel)."""
+    """{up(EXPR): the name of its definition}, one per distinct constant. A constant the record
+    names keeps that name (constant_record): hand-written proofs use it, and a kernel added later
+    must not rename it. A constant the record does not have is named after the first kernel K that
+    uses it and its place i among K's distinct up constants, up_K_i (so the third constant of a
+    kernel is up_K_2 even when the first two are named after an earlier kernel), with the next
+    place when that name is the record's for another constant; build then adds it to the record."""
+    record = constant_record(kernels)
+    taken = set(record.values())
     names = {}
     for k in kernels.values():
         mine = []
@@ -102,8 +113,33 @@ def up_names(kernels):
                 if a.const and ir.up(a.name) is not None and a.name not in mine:
                     mine.append(a.name)
         for i, name in enumerate(mine):
-            names.setdefault(name, f'up_{k.name}_{i}')
+            if name in names:
+                continue
+            if ir.up(name) in record:
+                names[name] = record[ir.up(name)]
+                continue
+            while f'up_{k.name}_{i}' in taken:
+                i += 1
+            names[name] = f'up_{k.name}_{i}'
+            taken.add(names[name])
     return names
+
+
+def constant_names_file(kernels):
+    """gen/constant_names.json: the record the kernels were loaded with, and the names of the
+    constants of the kernels that it does not have yet (those of the real model, and those that only
+    a kernel without a real-model statement uses, which the IEEE model defines). Nothing is removed
+    from it, so that a name, once given, is never given to another constant."""
+    record = dict(constant_record(kernels))
+    for name, rname in up_names(kernels).items():
+        record.setdefault(ir.up(name), rname)
+    return ir.constant_names_text(record)
+
+
+def up_trees(kernels):
+    """{the parsed EXPR of a constant up(EXPR): the name of its definition}: how a claim names a
+    constant as the format rounds it (up( ) inside the constants rel and abs, Milestone 2)."""
+    return {consts.up_tree(ir.up(name)): rname for name, rname in up_names(kernels).items()}
 
 
 def _fuse(name):
@@ -140,7 +176,7 @@ def section_args(k, kernels):
 
 def definition(k, kernels, ups=None):
     """One kernel as a Definition over R (and bool, for masks), inside the section of Model.v."""
-    ups = up_names(real(kernels)) if ups is None else ups
+    ups = up_names(kernels) if ups is None else ups
     sites = ir.muladd_sites(k, kernels)
     params = f' ({" ".join(map(_fuse, sites))} : bool)' if sites else ''
     params += _binders(k.input_limbs, k.input_kinds)
@@ -184,18 +220,24 @@ U_TERM = 'bpow radix2 (- prec)'
 ETA_TERM = 'bpow radix2 emin'
 
 
+def up_term(name, kernels, u_term=U_TERM, eta_term=ETA_TERM):
+    """EXPR of a constant up(EXPR) as a term over R, with u and eta spelled as given and unit(K) =
+    c u^k, tiny(K) = t eta from K's error claim. Shared with the IEEE model, which spells them in
+    the IEEE format for a constant that Model.v has not."""
+    def call(fn, kname):
+        e = consts.source_bound(kernels[kname])
+        if fn == 'unit':
+            return f'({_term(expr.parse(e["c"]), lambda n: u_term)} * {u_term} ^ {e["k"]})'
+        return f'({_term(expr.parse(e["t"]), None)} * {eta_term})'
+
+    return _term(consts.up_tree(ir.up(name)), lambda n: {'u': u_term, 'eta': eta_term}[n], call)
+
+
 def _up_definition(name, rocq_name, kernels):
     """up(EXPR) over the reals: EXPR rounded up to the format (consts.py's computation, stated),
     with unit(K) = c u^k and tiny(K) = t eta from K's error claim."""
     text = ir.up(name)
-
-    def call(fn, kname):
-        e = consts.source_bound(kernels[kname])
-        if fn == 'unit':
-            return f'({_term(expr.parse(e["c"]), lambda n: U_TERM)} * {U_TERM} ^ {e["k"]})'
-        return f'({_term(expr.parse(e["t"]), None)} * {ETA_TERM})'
-
-    term = _term(consts.up_tree(text), lambda n: {'u': U_TERM, 'eta': ETA_TERM}[n], call)
+    term = up_term(name, kernels)
     # A name alone (up(eta)) is an application, `bpow radix2 emin`: the argument of round needs
     # parentheses; every compound term has them already.
     return [f'(* up({text}): the smallest number of the format not below it. *)',
@@ -209,6 +251,9 @@ def real(kernels):
 
 
 def model(kernels):
+    # The names of the constants, from every kernel: a constant that a kernel without a real-model
+    # statement uses first is named the same here and in the IEEE model (the record names them all).
+    ups = up_names(kernels)
     kernels = real(kernels)
     used = {a.name for k in kernels.values() for st in k.body for a in st.args if a.const} - {ir.ZERO}
     lines = [HEADER, '',
@@ -226,7 +271,6 @@ def model(kernels):
              'Variable emin prec : Z.',
              'Variable choice : Z -> bool.',
              'Notation rnd := (round radix2 (FLT_exp emin prec) (Znearest choice)).']
-    ups = up_names(kernels)
     # The constants by name, those defined by an expression last, in the order of their names.
     for name in sorted(used, key=lambda n: (1, ups[n]) if n in ups else (0, n)):
         if name in CONSTANTS:
@@ -242,10 +286,13 @@ def model(kernels):
     return '\n'.join(lines) + '\n'
 
 
-def _term(tree, name, call=None, limb=None):
+def _term(tree, name, call=None, limb=None, up=None):
     """An expression tree of expr.py as a term over R; `name` spells a name, `call` a unit(K) or
-    tiny(K), `limb` limb I of a group (the conditions of exact_when). An integer power is Rocq's
-    pow, whose exponent is a natural number."""
+    tiny(K), `limb` limb I of a group (the conditions of exact_when), `up` a constant up(EXPR)
+    inside a claim's constant (given the parsed EXPR). An integer power is Rocq's pow, whose
+    exponent is a natural number."""
+    def t(x):
+        return _term(x, name, call, limb, up)
     kind = tree[0]
     if kind == 'int':
         return str(tree[1])
@@ -255,20 +302,59 @@ def _term(tree, name, call=None, limb=None):
         return limb(tree[1], tree[2])
     if kind == 'call':
         return call(tree[1], tree[2])
+    if kind == 'up':
+        return up(tree[1])
+    if kind == 'inv':
+        return f'(/ {t(tree[1])})'
     if kind == 'neg':
-        return f'(- {_term(tree[1], name, call, limb)})'
+        return f'(- {t(tree[1])})'
     if kind == 'abs':
         # Rabs takes one argument: a name that is spelled as an application (`val cx`, a one-limb
         # input in the IEEE model) is put in parentheses; every other term already is, or is atomic.
-        inner = _term(tree[1], name, call, limb)
+        inner = t(tree[1])
         if ' ' in inner and not inner.startswith('('):
             inner = f'({inner})'
         return f'(Rabs {inner})'
     if kind == 'pow':
-        base = f'({_term(tree[1], name, call, limb)} ^ {abs(tree[2])})'
+        base = f'({t(tree[1])} ^ {abs(tree[2])})'
         return base if tree[2] >= 0 else f'(/ {base})'
     op = {'add': '+', 'sub': '-', 'mul': '*', 'div': '/'}[kind]
-    return f'({_term(tree[1], name, call, limb)} {op} {_term(tree[2], name, call, limb)})'
+    return f'({t(tree[1])} {op} {t(tree[2])})'
+
+
+def claim_constant_term(text, kernels, emin):
+    """A constant of a claim (rel or abs of outward, Milestone 2) as a term over R in a statement:
+    u is `u prec`, eta `eta EMIN`, unit(K) and tiny(K) are c u^k and t eta of K's error claim, and
+    up(EXPR) is the definition of that constant in Model.v, applied to EMIN and prec. Shared with the
+    IEEE-model printer, which gives its own EMIN.
+
+    Printed in the forms of the proofs' constants (Directed2.v, outward_rel and outward_abs), so
+    that a theorem has the statement as its type by unfolding them: 1/X is Rocq's / X, and a tiny(K)
+    that is zero (t = 0 in K's claim) is 0."""
+    names = up_trees(kernels)
+
+    def call(fn, kname):
+        e = consts.source_bound(kernels[kname])
+        if fn == 'unit':
+            return f'({_term(expr.parse(e["c"]), lambda n: "u prec")} * u prec ^ {e["k"]})'
+        t = expr.parse(e['t'])
+        return '0' if t == ('int', 0) else f'({_term(t, None)} * eta {emin})'
+
+    def up(sub):
+        return f'{names[sub]} {emin} prec'
+
+    def inverses(tree):
+        if tree[0] == 'div' and tree[1] == ('int', 1):
+            return ('inv', inverses(tree[2]))
+        if tree[0] in ('add', 'sub', 'mul', 'div'):
+            return (tree[0], inverses(tree[1]), inverses(tree[2]))
+        if tree[0] in ('neg', 'abs'):
+            return (tree[0], inverses(tree[1]))
+        if tree[0] == 'pow':
+            return ('pow', inverses(tree[1]), tree[2])
+        return tree
+    return _term(inverses(consts.claim_tree(text)), lambda n: {'u': 'u prec', 'eta': f'eta {emin}'}[n], call,
+                 up=up)
 
 
 def _sum(limbs):
@@ -336,6 +422,10 @@ def exact_condition(conditions, term, threshold):
     their limbs, `threshold` the constant K. Shared with the IEEE-model printer."""
     parts = []
     for c in conditions:
+        if ir.ZERO_CONDITION in c:
+            # zero(EXPR) (Milestone 2, outward): EXPR = 0, written as the theorems write it.
+            parts.append(f'{term(c[ir.ZERO_CONDITION])} = 0')
+            continue
         kind = next(x for x in ir.EXACT_CONDITIONS if x in c)
         e = term(c[kind])
         rel = '<' if kind == 'zero_or_abs_gt' else '<='
@@ -450,6 +540,9 @@ def _claim_encloses(e, s):
     hyps = [f'Rabs ({b} - {_sum(s.ins[cr["center"]].limbs)}) <= {cr["radius"]} ->' for b, cr in balls.items()]
     target = s.term(e['set'], lambda n: n if n in balls else _sum(s.ins[n].limbs))
     center = _sum(s.outs[e['center']].limbs)
+    if not balls:
+        # The operands are points (add_ball_2_2): the radius bounds the error of the center.
+        return f'Rabs ({target} - {center}) <= {e["radius"]}'
     claim = (f'(forall {" ".join(balls)} : R, {" ".join(hyps)} '
              f'Rabs ({target} - {center}) <= {e["radius"]})')
     if 'exact_when' in e:
@@ -463,10 +556,25 @@ def _claim_encloses(e, s):
     return claim
 
 
+def _claim_outward(e, s):
+    """On its side of the value, within rel |value| + abs of it, the constants as the format rounds
+    them (claim_constant_term); and the value itself when the conditions of exact_when hold (the
+    shape of the theorems of Directed2.v)."""
+    out, v = _sum(s.outs[e['of']].limbs), s.value
+    side = f'{out} <= {v}' if e['side'] == 'below' else f'{v} <= {out}'
+    rel = claim_constant_term(e['rel'], s.kernels, 'emin')
+    absolute = claim_constant_term(e['abs'], s.kernels, 'emin')
+    claim = f'{side} /\\\n  Rabs ({out} - {v}) <= {rel} * Rabs {v} + {absolute}'
+    if 'exact_when' in e:
+        claim += f' /\\\n  ({_exact_condition(e, s)} -> {out} = {v})'
+    return claim
+
+
 CLAIMS = {'normalized': _claim_normalized, 'leading_rounded': _claim_leading_rounded,
           'error': _claim_error, 'rounded': _claim_rounded, 'upper': _claim_upper,
           'predicate': _claim_predicate, 'encloses': _claim_encloses, 'neighbor': _claim_neighbor,
-          'bound': _claim_bound, 'holds': _claim_holds, 'maximum': _claim_maximum}
+          'bound': _claim_bound, 'holds': _claim_holds, 'maximum': _claim_maximum,
+          'outward': _claim_outward}
 
 
 def terms(tree):
@@ -597,6 +705,7 @@ def conclusion(k, kernels):
 
 
 def statements(kernels):
+    every = kernels      # for the names of the constants a claim names (claim_constant_term)
     kernels = real(kernels)
     sizes = sorted({len(g.limbs) for k in kernels.values() for g in k.inputs + k.outputs
                     if len(g.limbs) > 1})
@@ -617,7 +726,7 @@ def statements(kernels):
         lines += _normalized_definition(n) + ['']
     lines.append('End Vocabulary.')
     for k in kernels.values():
-        lines += [''] + statement(k, kernels)
+        lines += [''] + statement(k, every)
     return '\n'.join(lines) + '\n'
 
 

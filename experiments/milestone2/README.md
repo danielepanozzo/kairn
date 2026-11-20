@@ -11,15 +11,23 @@ wrong on what was run.
 ## How it works
 
 - `kernels/` holds the proposed kernels as descriptions in the generator's own format
-  (`gen/README.md`), 28 of them. They carry no claims: the claims of this milestone need
+  (`gen/README.md`), 11 of them. They carry no claims: the claims of this milestone need
   vocabulary that the generator does not have yet. The seven of the accumulator (`acc_add_k`,
   `acc_mul_k`, `acc_merge_k` and `acc_radius`) carry the claims proposed for them as comments,
-  and `accumulator.py` says why they are not in `gen/kernels`. The nine of the first wave that the
-  generator has now (`two_sum_ord`, the four directed sums, the two directed products and the two
-  scalings of a ball by a power of two), and three bound kernels of the folds' stage
-  (`bound_sum_2`, `bound_dot_2`, `bound_dot_1`, whose constant of `tm` holds the smallest normal
-  number, so that no constant is subnormal), are in `gen/kernels`, with their claims, and only
-  there.
+  and `accumulator.py` says why they are not in `gen/kernels`. The 29 that the generator has now
+  are in `gen/kernels`, with their claims, and only there: the nine of the first wave
+  (`two_sum_ord`, the four directed sums, the two directed products and the two scalings of a ball
+  by a power of two); three bound kernels of the folds' stage (`bound_sum_2`, `bound_dot_2`,
+  `bound_dot_1`, whose constant of `tm` holds the smallest normal number, so that no constant is
+  subnormal); the thirteen of the first kernels of the intervals (`mul_dir_1`, `interval_make_1`,
+  `interval_neg_1`, `interval_add_1`, `interval_sub_1`, `interval_mul_1`, `add_ball_2_2`,
+  `mul_ball_2_2`, `add_down_2_2`, `add_up_2_2`, `mul_dir_2_2`, `interval_add_2` and
+  `ball_from_interval_2`); and four of the next stage (`mul_ext_2_2`, `interval_mul_2`,
+  `interval_mid_rad_1` and `ball_to_interval_1`, as they were written here). Three of those were written again there, with the same values, so that
+  no fused result is negated, directly or through a select (a rule of the generator): the lower
+  bounds of `mul_dir_2_2` and `add_down_2_2` are minus the rounding up of $d - z_1$ (for the sum,
+  $dd - z_1$, with $dd$ the radius or zero), and the radius of `ball_from_interval_2` adds minus
+  the lower half as a product of its own.
 - `common.py` loads them together with the kernels of `gen/kernels`, taking a kernel from
   `gen/kernels` when it has one, and evaluates them with the
   generator's exact interpreter (`gen/kairn_gen/interp.py`), on any format `(p, qmin, qmax)`. It
@@ -50,7 +58,7 @@ compute in `binary64` and `binary32` (`batch.py`, `rational.py`, `constants.py`)
 | `convert.py` | conversions between a wide and a narrow format, of numbers and of balls | Limbs of another type |
 | `constants.py` | the constants $A$ and $B$ of the two-limb bounds in `binary64` and `binary32` | Bounds of two limbs |
 | `accumulator.py` | the kernels of the accumulator: the inequality the radius rests on, $\sum_i \lvert x_i y_i\rvert \le (1+u)^{n+2}(a + n\eta/2)$, after random sequences of `add`, `add_product` and `merge`; the proposed `acc_radius` above its claimed expression, and the chain error $\le$ radius with `bound_dot_k`; in the format itself, the sum of magnitudes $+\infty$ while the running sum is finite | The accumulator |
-| `rules_report.py` | what the generator's rules say of the 40 proposed kernels (28 in `kernels/`, 12 in `gen/kernels`), and the operations of each after inlining | Experiments |
+| `rules_report.py` | what the generator's rules say of the 40 proposed kernels (11 in `kernels/`, 29 in `gen/kernels`), and the operations of each after inlining | Experiments |
 
 ## Rerun
 
@@ -101,7 +109,15 @@ subnormal constant in the hardware formats: `ball_from_interval_2` no longer add
 radius when a halving was rounded. It takes the number after $d = \mathrm{RU}(h_u - h_\ell)$,
 which is at least $d + \eta$ and never more than the earlier result; `enclosure_1.py` asserts
 containment and that value on every pair of values. The same rule changed the scalings of a
-ball, whose descriptions and script (`scaling.py`) are with the generator.
+ball, whose descriptions and script (`scaling.py`) are with the generator. And a second rule,
+that a kernel adds no value to itself (GCC rewrites `a + a` as `a * 2` and may fuse that product
+into the next addition), changed the test of an exact halving of `ball_from_interval_2`: each
+half is doubled back by `prod(h, const up(2))`, the same value as `add(h, h)` as an exact product.
+A third rule, that no fused result is negated, directly or through a select, rewrote the lower
+bounds of `mul_dir_2_2` and `add_down_2_2` with the same values (above), and refuses one proposal
+of `kernels/` as it is written: `ball_split_1` negates `hs = select(fr, h, 0)`, whose first arm is
+the product `h = prod(r, const 1/2)`. `rules_report.py` records the refusal; that listing waits
+for the stage of the operations of `Ball`, where it is to be written again.
 
 ## What the proofs changed
 

@@ -18,6 +18,7 @@ CLAIMS = 'claims'
 DOMAIN = 'domain'
 CONSTEVAL = 'constant-evaluation variant'
 COMPUTED = 'computed constants'
+NEGATED_FUSED = 'negated fused result'
 
 STATUSES = ('unverified', 'proved')
 
@@ -38,9 +39,10 @@ PROPAGATING = frozenset({'add', 'sub', 'fma', 'fms', 'fnma', 'prod', 'muladd', '
 TIMES_INF_USES = {'lt': (0, 1), 'le': (0, 1), 'eq': (0, 1), 'select': (1, 2)}
 # The closed vocabulary of the claims (architecture.md, "Claims", "Claims of the second wave" and
 # "Claims of the non-finite layer"): requirements and their number of operands.
-REQUIRES = {'normalized': 1, 'abs_ge': 2, 'power_of_two': 1, 'nonneg': 1, 'canonical': 1, 'ball': 2, 'count': 1}
+REQUIRES = {'normalized': 1, 'abs_ge': 2, 'power_of_two': 1, 'nonneg': 1, 'canonical': 1, 'ball': 2, 'count': 1,
+            'interval': 2, 'not_nan': 1}
 REQUIRES_FINITE = ('normalized', 'abs_ge', 'power_of_two', 'nonneg', 'count')
-REQUIRES_EXTENDED = ('canonical', 'ball', 'power_of_two', 'nonneg')
+REQUIRES_EXTENDED = ('canonical', 'ball', 'power_of_two', 'nonneg', 'interval', 'not_nan')
 # Requirements about the format rather than an input (milestone2.md, "Additions to the claims"):
 # format half, the format contains 1/2.
 FORMAT_REQUIRES = ('half',)
@@ -60,15 +62,28 @@ EXACT_TREES = VALUE_TREES | {'limb'}
 THRESHOLD_TREES = {'int', 'name', 'add', 'sub', 'mul', 'div', 'neg', 'pow'}
 # The kinds of ensures entries in each domain.
 ENSURES_FINITE = ('normalized', 'leading_rounded', 'error', 'rounded', 'upper', 'predicate', 'encloses',
-                  'neighbor', 'bound', 'holds', 'maximum')
+                  'neighbor', 'bound', 'holds', 'maximum', 'outward')
 ENSURES_EXTENDED = ('normalized', 'error', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
-                    'represents', 'makes_ball', 'neighbor', 'bound', 'finite_or_nan')
+                    'represents', 'makes_ball', 'neighbor', 'bound', 'finite_or_nan', 'makes_interval',
+                    'encloses_interval', 'set_bound', 'outward', 'interval_set', 'ball_of_interval', 'interval_of_ball',
+                    'splits')
 # Entries that say something about the value: a kernel needs at least one.
 ABOUT_THE_VALUE = ('error', 'leading_rounded', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
-                   'represents', 'makes_ball', 'neighbor', 'bound', 'holds', 'finite_or_nan', 'maximum')
+                   'represents', 'makes_ball', 'neighbor', 'bound', 'holds', 'finite_or_nan', 'maximum', 'outward',
+                   'makes_interval', 'encloses_interval', 'set_bound', 'interval_set', 'ball_of_interval',
+                   'interval_of_ball', 'splits')
 # The forms of an error entry: relative to |value| (R), to the sum of the magnitudes of the inputs
 # (A), to the sum of the magnitudes of the terms of value (T: s+x*y gives |s| + |x*y|).
 ERROR_FORMS = ('R', 'A', 'T')
+# Entries that name their own set or make a value from the inputs: a kernel whose every entry is one
+# of them has no value (Milestone 2: the interval kernels, the one-limb bounds of a ball, and the
+# set operations, the conversions and the split of the enclosure interface).
+OWN_SET = ('makes_ball', 'makes_interval', 'encloses_interval', 'set_bound', 'interval_set', 'ball_of_interval',
+           'interval_of_ball', 'splits')
+SIDES_OUTWARD = ('below', 'above')
+# The set operations of interval_set, and the special values of ball_of_interval (Milestone 2).
+SET_OPERATIONS = ('union', 'intersection')
+BALL_SPECIALS = ('ieee1788', 'ball')
 
 
 class RuleError(Exception):
@@ -86,7 +101,7 @@ def check_all(kernels):
         return errors   # the other rules flatten calls, which needs well-formed callees
     for k in kernels.values():
         for rule in (products, outputs, nonfinite_cone, theorem, entry_values, claims, domains,
-                     consteval_variant, computed_constants):
+                     consteval_variant, computed_constants, negated_fused):
             errors += rule(k, kernels)
     if not errors:
         errors += ieee_printable(kernels)
@@ -572,15 +587,23 @@ def claims(k, kernels):
         elif one and len(g.limbs) != 1:
             err(f'ensures {what} of {name!r}: the output must have one limb')
 
-    def exact_when(e):
+    def exact_when(e, conds=None, zero=False):
         """The conditions of an exact_when: each EXPR = 0 or |EXPR| > K (or >= K), EXPR over the
-        input names and their limbs, K an exact positive expression over u, eta and integers."""
-        conds = e.get('exact_when')
+        input names and their limbs, K an exact positive expression over u, eta and integers; and,
+        where `zero` (outward, and the outward tightness of an interval), EXPR = 0."""
+        conds = e.get('exact_when') if conds is None else conds
         if conds is None:
             return
         if not conds:
             err(f'ensures {e["kind"]}: exact_when needs at least one condition')
         for c in conds:
+            if set(c) == {ir.ZERO_CONDITION}:
+                if not zero:
+                    err(f'exact_when {c!r}: zero(EXPR) is a condition of outward and of the outward tightness of '
+                        'an interval only')
+                    continue
+                parsed(c[ir.ZERO_CONDITION], limb_ins, 'exact_when zero', EXACT_TREES)
+                continue
             keys = set(c) - {'than'}
             if 'than' not in c or len(keys) != 1 or not keys <= set(ir.EXACT_CONDITIONS):
                 err(f'exact_when {c!r}: a condition is {{"zero_or_abs_gt" or "zero_or_abs_ge": EXPR, "than": K}}')
@@ -619,13 +642,82 @@ def claims(k, kernels):
                     err(f'exact_when than={c["than"]!r}: the threshold is positive')
                     break
 
-    makes_balls = bool(k.ensures) and all(e['kind'] == 'makes_ball' for e in k.ensures)
+    def zero_factor(e):
+        """zero_factor: the value is the product of two inputs, each of one limb or required to be
+        canonical (so that it is zero exactly when its leading limb is), and the domain extended."""
+        if not e.get('zero_factor'):
+            return
+        try:
+            tree = expr.parse(k.value or '')
+        except expr.ExprError:
+            return
+        if not k.extended or tree[0] != 'mul' or any(
+                t[0] != 'name' or (t[1] not in one_limb_ins and ('canonical', t[1]) not in k.requires)
+                for t in tree[1:]):
+            err(f'{e["kind"]} zero_factor: the value is the product of two inputs, each of one limb or required to '
+                'be canonical, in the extended domain')
+
+    def claim_constants(e, keys):
+        """The constants of a claim (rel and abs): the language of up(EXPR), unit(K) and tiny(K) of a
+        kernel with one unconditional relative bound (proved unless this kernel is unverified, its
+        minimum precision at most this kernel's), and up(EXPR) of a constant of a kernel with a
+        real-model statement, which Model.v defines and both models' statements name; nonnegative in
+        binary64 and binary32."""
+        model = set()
+        for kk in kernels.values():
+            for name in ir.constants(kk) if kk.real_model else ():
+                if ir.up(name) is not None:
+                    try:
+                        model.add(consts.up_tree(ir.up(name)))
+                    except consts.ConstError:
+                        pass
+        for key in keys:
+            text, before = e[key], len(errs)
+            try:
+                tree = consts.claim_tree(text)
+            except consts.ConstError as x:
+                err(f'{e["kind"]} {key}: {x}')
+                continue
+            for sub in consts.ups(tree):
+                if sub not in model:
+                    err(f'{e["kind"]} {key}: an up( ) inside it is no constant of a kernel with a real-model '
+                        'statement, so Model.v has no definition of it')
+            for fn, kname in sorted(expr.calls(tree)):
+                callee = kernels.get(kname)
+                if callee is None:
+                    err(f'{e["kind"]} {key}: {fn}({kname}): {kname} is not a kernel')
+                    continue
+                try:
+                    consts.source_bound(callee)
+                except consts.ConstError as x:
+                    err(f'{e["kind"]} {key}: {x}')
+                    continue
+                if callee.status != 'proved' and k.status != 'unverified':
+                    err(f'{e["kind"]} {key}: {kname} is {callee.status}: only an unverified kernel may use the '
+                        'constants of a bound that is not proved')
+                if callee.min_precision and (k.min_precision or 1) < callee.min_precision:
+                    err(f'{e["kind"]} {key}: the claims of {kname} hold from precision {callee.min_precision} on, '
+                        f'so min_precision must be at least {callee.min_precision}')
+            if len(errs) > before:
+                continue
+            for fmt in ((53, -1074, 971), (24, -149, 104)):
+                try:
+                    v = consts.claim_constant(text, kernels, *fmt)
+                except consts.ConstError as x:
+                    err(f'{e["kind"]} {key}: {x}')
+                    break
+                if v < 0:
+                    err(f'{e["kind"]} {key}: {text} is negative in the format {fmt}')
+                    break
+
+    makes_balls = bool(k.ensures) and all(e['kind'] in OWN_SET for e in k.ensures)
     # The bound kernels of Milestone 2: every entry says what it bounds, and the kernel has no value.
     own_values = bool(k.ensures) and all(e['kind'] in ('holds', 'maximum') or (e['kind'] == 'upper' and 'value' in e)
                                          for e in k.ensures)
     if makes_balls:
         if k.value:
-            err('a kernel that makes a ball from its inputs has no value')
+            err('a kernel that makes a ball from its inputs has no value' if all(e['kind'] == 'makes_ball' for e in k.ensures)
+                else 'a kernel whose claims make an interval from its inputs, or name their own sets, has no value')
     elif own_values:
         if k.value:
             err('every claim of the kernel has its own value (upper value=, holds): the kernel has none')
@@ -657,10 +749,17 @@ def claims(k, kernels):
                     'input is any value)')
             elif req[0] == 'ball' and names[1] not in one_limb_ins:
                 err(f'requires {" ".join(req)!r}: the radius of a ball is a one-limb input')
+            elif req[0] == 'interval' and (len(ins[names[0]].limbs) != len(ins[names[1]].limbs) or
+                                           len(ins[names[0]].limbs) not in (1, 2) or names[0] == names[1]):
+                err(f'requires {" ".join(req)!r}: the bounds of an interval are two inputs of one limb each, or '
+                    'of two each')
+            elif req[0] == 'not_nan' and names[0] not in one_limb_ins and ('canonical', names[0]) not in k.requires:
+                err(f'requires {" ".join(req)!r}: not_nan is about a one-limb input, or a multi-limb input required '
+                    'to be canonical (whose leading limb is then not a NaN)')
             continue
         err(f'requires {" ".join(req)!r}: the vocabulary is "normalized INPUT", "abs_ge INPUT INPUT", '
             '"power_of_two INPUT", "nonneg INPUT", "count INPUT", "format half", and in the extended '
-            'domain "canonical INPUT", "ball CENTER RADIUS"')
+            'domain "canonical INPUT", "ball CENTER RADIUS", "interval LOWER UPPER", "not_nan INPUT"')
     if not any(e['kind'] in ABOUT_THE_VALUE for e in k.ensures):
         err(f'ensures says nothing about the value: it needs an entry of kind {", ".join(ABOUT_THE_VALUE)}')
     kinds = ENSURES_EXTENDED if k.extended else ENSURES_FINITE
@@ -691,12 +790,50 @@ def claims(k, kernels):
                 err(f'rounded mode {e["mode"]!r}: it is {", ".join(ROUNDING_MODES)}')
             if 'when' in e and e['when'] not in WHEN:
                 err(f'when={e["when"]!r}: the vocabulary is {", ".join(WHEN)}')
+            zero_factor(e)
         elif kind in SIDES:
             output(e['of'], kind, one=True)
             if e['side'] not in SIDES[kind]:
                 err(f'{kind} side {e["side"]!r}: it is {" or ".join(SIDES[kind])}')
             if kind == 'neighbor' and k.value not in one_limb_ins:
                 err(f'neighbor: the value is the one-limb operand whose neighbor is the output, not {k.value!r}')
+            zero_factor(e)
+        elif kind == 'outward':
+            output(e['of'], kind)
+            if e['of'] in outs and len(outs[e['of']].limbs) != 2:
+                err(f'ensures outward of {e["of"]!r}: the output has two limbs')
+            if e['side'] not in SIDES_OUTWARD:
+                err(f'outward side {e["side"]!r}: it is {" or ".join(SIDES_OUTWARD)}')
+            claim_constants(e, ('rel', 'abs'))
+            exact_when(e, zero=True)
+            zero_factor(e)
+            if k.extended and any(('not_nan', g) not in k.requires for g in limb_ins if len(ins[g].limbs) > 1):
+                # The extended reading (mul_ext_2_2): the operands are bounds of intervals, never NaN.
+                err('outward in the extended domain: its operands of several limbs are required not_nan')
+        elif kind == 'interval_set':
+            _interval_set(e, k, ins, outs, err)
+        elif kind == 'ball_of_interval':
+            _ball_of_interval(e, k, ins, outs, err, claim_constants)
+        elif kind == 'interval_of_ball':
+            _interval_of_ball(e, k, ins, outs, parsed, err)
+        elif kind == 'splits':
+            _splits(e, k, ins, outs, err)
+        elif kind == 'makes_interval':
+            _makes_interval(e, k, ins, outs, err)
+        elif kind == 'encloses_interval':
+            _encloses_interval(e, k, ins, outs, parsed, err, claim_constants, exact_when)
+        elif kind == 'set_bound':
+            output(e['of'], kind, one=True)
+            if e['side'] not in SIDES_OUTWARD:
+                err(f'set_bound side {e["side"]!r}: it is {" or ".join(SIDES_OUTWARD)}')
+            _encloses(dict(e, center=e['of'], radius=e['of']), k, ins, outs, lambda *a, **kw: None, parsed, err)
+            for b, cr in e['balls'].items():
+                if ('ball', cr['center'], cr['radius']) not in k.requires:
+                    err(f'ball {b}: its operand is required to be a ball: "requires: ball {cr["center"]} '
+                        f'{cr["radius"]}"')
+            t = e.get('tight')
+            if t is not None and (t['kind'] != 'rounded' or set(t) - {'kind', 'steps'}):
+                err('set_bound: tight is rounded, with optional steps')
         elif kind == 'upper':
             output(e['of'], kind, one=True)
             if 'gaps' not in e and 'value' not in e:
@@ -750,6 +887,8 @@ def claims(k, kernels):
                 parsed(a, limb_ins, 'predicate argument', VALUE_TREES)
         elif kind == 'encloses':
             _encloses(e, k, ins, outs, output, parsed, err)
+            if not e['balls'] and k.extended:
+                err('encloses names no ball: in the extended domain the special states are those of balls')
             exact_when(e)
             if 'finite_when' in e:
                 for c in e['finite_when']:
@@ -763,6 +902,16 @@ def claims(k, kernels):
         elif kind == 'makes_ball':
             output(e['center'], 'makes_ball (center)')
             output(e['radius'], 'makes_ball (radius)', one=True)
+            if 'lower' in e['from']:
+                # A ball from the bounds of an interval (Milestone 2): two one-limb inputs, any values.
+                for what in ('lower', 'upper'):
+                    g = ins.get(e['from'][what])
+                    if g is None or g.kind != ir.LIMB or len(g.limbs) != 1:
+                        err(f'makes_ball from {what} {e["from"][what]!r}: not a one-limb limb input')
+                for c in e.get('midpoint_when', []):
+                    if c.get('half_in_format') not in e['from'].values():
+                        err(f'midpoint_when {c!r}: half_in_format names a bound the ball is made from')
+                continue
             for what, n in (('center', e['from']['center']), ('radius', e['from']['radius'])):
                 g = ins.get(n)
                 if g is None or g.kind != ir.LIMB or (what == 'radius' and len(g.limbs) != 1):
@@ -885,10 +1034,172 @@ def _encloses(e, k, ins, outs, output, parsed, err):
             if n in taken:
                 err(f'ball {b}: {n} belongs to two balls')
             taken.add(n)
-    if not e['balls']:
-        err('encloses names no ball')
+    # Without a ball the operands are points, and the claim is an error bound by an output
+    # (add_ball_2_2, mul_ball_2_2): allowed in the finite domain only (claims()).
     points = {n for n, g in ins.items() if g.kind == ir.LIMB and n not in taken}
     parsed(e['set'], set(e['balls']) | points, 'encloses set', VALUE_TREES)
+
+
+def _makes_interval(e, k, ins, outs, err):
+    """An interval made from two bounds (Milestone 2): two limb outputs and two limb inputs of one
+    limb each (or of two, canonical, for interval_make_2)."""
+    n = None
+    for side in ('lower', 'upper'):
+        o, i = outs.get(e[side]), ins.get(e['from'][side])
+        if o is None or o.kind != ir.LIMB:
+            err(f'makes_interval {side} {e[side]!r}: not a limb output')
+            return
+        if i is None or i.kind != ir.LIMB:
+            err(f'makes_interval from {side} {e["from"][side]!r}: not a limb input')
+            return
+        n = n or len(o.limbs)
+        if len(o.limbs) != n or len(i.limbs) != n or n not in (1, 2):
+            err('makes_interval: the bounds given and returned have one limb each, or two each')
+            return
+    if n == 2:
+        for side in ('lower', 'upper'):
+            if ('canonical', e['from'][side]) not in k.requires:
+                err(f'makes_interval: a bound of two limbs is required to be canonical: '
+                    f'"requires: canonical {e["from"][side]}"')
+
+
+def _encloses_interval(e, k, ins, outs, parsed, err, claim_constants, exact_when):
+    """I1 to I5 of an interval kernel (Milestone 2): the result's bounds are limb outputs of the
+    same number of limbs, each interval name is an `interval` requirement, the set an expression over
+    those names, the tightness one of the vocabulary, and the conditions of bounded_when are on the
+    members of the exact range (abs_le(SET, ...))."""
+    lo, hi = outs.get(e['lower']), outs.get(e['upper'])
+    if lo is None or hi is None or lo.kind != ir.LIMB or hi.kind != ir.LIMB or len(lo.limbs) != len(hi.limbs) \
+            or len(lo.limbs) not in (1, 2):
+        err('encloses_interval: lower and upper are limb outputs of one limb each, or of two each')
+        return
+    taken = set()
+    for name, b in e['intervals'].items():
+        if name in ins or name in outs or name in k.input_limbs + k.output_limbs or not ir.VALUE_NAME.match(name):
+            err(f'interval name {name!r} is the name of a group, a limb, or not a value name')
+        if ('interval', b['lower'], b['upper']) not in k.requires:
+            err(f'interval {name}: its operand is required to be an interval: "requires: interval {b["lower"]} '
+                f'{b["upper"]}"')
+        elif len(ins[b['lower']].limbs) != len(lo.limbs):
+            err(f'interval {name}: its bounds have as many limbs as those of the result')
+        if taken & {b['lower'], b['upper']}:
+            err(f'interval {name}: a bound belongs to two intervals')
+        taken |= {b['lower'], b['upper']}
+    if not 1 <= len(e['intervals']) <= 2:
+        err('encloses_interval names one or two intervals (range_1 and range_2 of the statements)')
+    tree = parsed(e['set'], set(e['intervals']), 'encloses_interval set', VALUE_TREES)
+    t = e['tight']
+    if t['kind'] == 'rounded':
+        if len(lo.limbs) != 1:
+            err('tight=rounded is about bounds of one limb')
+        if 'when' in t:
+            if t['when'] not in WHEN:
+                err(f'tight when={t["when"]!r}: the vocabulary is {", ".join(WHEN)}')
+            elif tree is not None and (tree[0] != 'mul' or any(x[0] != 'name' for x in tree[1:])):
+                err('tight when=product_large: the set is the product of two intervals')
+    elif t['kind'] == 'outward':
+        claim_constants(t, ('rel', 'abs'))
+        for conds in t.get('exact_when', {}).values():
+            exact_when(e, conds, zero=True)
+    for c in e['bounded_when']:
+        try:
+            same = expr.parse(c['abs_le']) == expr.parse(e['set'])
+        except expr.ExprError:
+            same = False
+        if not same:
+            err(f'bounded_when {c["abs_le"]!r}: a condition is on the members of the exact range: abs_le(SET, ...) '
+                'with the set of the claim')
+    if e.get('bounded_exactly') and not e['bounded_when']:
+        err('bounded_exactly needs a condition of bounded_when')
+    if e.get('zero_factor') and (tree is None or tree[0] != 'mul' or any(x[0] != 'name' for x in tree[1:])):
+        err('encloses_interval zero_factor: the set is the product of two intervals')
+
+
+def _interval_bounds(name, outs, err, what):
+    """The number of limbs of an output group that is a bound of an interval (1 or 2), or None."""
+    g = outs.get(name)
+    if g is None or g.kind != ir.LIMB or len(g.limbs) not in (1, 2):
+        err(f'{what} {name!r}: not a limb output of one limb or two')
+        return None
+    return len(g.limbs)
+
+
+def _interval_operand(b, k, ins, err, what):
+    """The number of limbs of an interval operand {lower, upper} of an `interval` requirement, or None."""
+    if ('interval', b['lower'], b['upper']) not in k.requires:
+        err(f'{what}: its operand is required to be an interval: "requires: interval {b["lower"]} {b["upper"]}"')
+        return None
+    return len(ins[b['lower']].limbs)
+
+
+def _interval_set(e, k, ins, outs, err):
+    """The hull or the intersection of two intervals (Milestone 2): bounds of the result of as many
+    limbs as those of the two interval operands, and a set operation of the vocabulary."""
+    if e['set'] not in SET_OPERATIONS:
+        err(f'interval_set {e["set"]!r}: the set operation is {" or ".join(SET_OPERATIONS)}')
+    n = {_interval_bounds(e[side], outs, err, f'interval_set {side}') for side in ('lower', 'upper')}
+    if len(e['intervals']) != 2:
+        err('interval_set names two intervals')
+    taken = set()
+    for name, b in e['intervals'].items():
+        if name in ins or name in outs or not ir.VALUE_NAME.match(name):
+            err(f'interval name {name!r} is the name of a group, or not a value name')
+        n.add(_interval_operand(b, k, ins, err, f'interval {name}'))
+        if taken & {b['lower'], b['upper']}:
+            err(f'interval {name}: a bound belongs to two intervals')
+        taken |= {b['lower'], b['upper']}
+    if None not in n and len(n) != 1:
+        err('interval_set: the bounds of the result and of the operands have as many limbs each')
+
+
+def _ball_of_interval(e, k, ins, outs, err, claim_constants):
+    """A ball made from an interval (Milestone 2: the midpoint and radius of an interval, and its
+    conversion to a ball): a center of one or two limbs and a one-limb radius, from the bounds of an
+    `interval` requirement, the special values of IEEE 1788 or of a canonical ball, and the constants
+    of the center's distance to the midpoint."""
+    c, r = outs.get(e['center']), outs.get(e['radius'])
+    if c is None or c.kind != ir.LIMB or len(c.limbs) not in (1, 2):
+        err(f'ball_of_interval center {e["center"]!r}: not a limb output of one limb or two')
+    if r is None or r.kind != ir.LIMB or len(r.limbs) != 1:
+        err(f'ball_of_interval radius {e["radius"]!r}: not a one-limb limb output')
+    n = _interval_operand(e['from'], k, ins, err, 'ball_of_interval from')
+    if n is not None and c is not None and n != len(c.limbs):
+        err('ball_of_interval: the center has as many limbs as the bounds of the interval')
+    if e['special'] not in BALL_SPECIALS:
+        err(f'ball_of_interval special {e["special"]!r}: it is {" or ".join(BALL_SPECIALS)}')
+    claim_constants(e, ('rel', 'abs'))
+
+
+def _interval_of_ball(e, k, ins, outs, parsed, err):
+    """An interval that encloses a ball (Milestone 2, the conversion of a ball to an interval):
+    bounds of one limb, one ball name of a `ball` requirement, its set an expression of the ball
+    name, the tightness rounded."""
+    for side in ('lower', 'upper'):
+        if _interval_bounds(e[side], outs, err, f'interval_of_ball {side}') not in (None, 1):
+            err('interval_of_ball: the bounds of the result have one limb (two limbs are a later stage)')
+    if len(e['balls']) != 1:
+        err('interval_of_ball names one ball')
+    for b, cr in e['balls'].items():
+        if b in ins or b in outs or not ir.VALUE_NAME.match(b):
+            err(f'ball name {b!r} is the name of a group, or not a value name')
+        if ('ball', cr['center'], cr['radius']) not in k.requires:
+            err(f'ball {b}: its operand is required to be a ball: "requires: ball {cr["center"]} {cr["radius"]}"')
+    parsed(e['set'], set(e['balls']), 'interval_of_ball set', VALUE_TREES)
+    t = e['tight']
+    if t['kind'] != 'rounded' or set(t) - {'kind', 'steps'}:
+        err('interval_of_ball: tight is rounded, with optional steps')
+
+
+def _splits(e, k, ins, outs, err):
+    """Two intervals that together are an interval operand (Milestone 2, the split of an interval):
+    four bounds of as many limbs as those of the operand, an `interval` requirement."""
+    n = {_interval_bounds(p[side], outs, err, f'splits {side}') for p in e['parts'] for side in ('lower', 'upper')}
+    names = [p[side] for p in e['parts'] for side in ('lower', 'upper')]
+    if len(set(names)) != 4:
+        err('splits: the four bounds of the parts are four outputs')
+    n.add(_interval_operand(e['from'], k, ins, err, 'splits from'))
+    if None not in n and len(n) != 1:
+        err('splits: the bounds of the parts and of the operand have as many limbs each')
 
 
 def _only(tree, allowed):
@@ -961,6 +1272,57 @@ def _constant_expression(text, names, k, kernels, err, what):
             err(f'{what}: the claims of {kname} hold from precision {callee.min_precision} on, so '
                 f'min_precision must be at least {callee.min_precision}')
     return tree
+
+
+def negated_fused(k, kernels):
+    """No value is the negation of the result of a fused operation (fma, fms, fnma, prod), the
+    callees inlined. Compilers fold such a negation into the fused instruction (fnmadd, vfnmsub):
+    where the fused result is also used as it is, that is one fused instruction more than the IR
+    asks for, which the object-code check refuses; and where the fused result is an exact zero the
+    folded instruction gives +0 where the negation gives -0, so that the kernel has no single
+    bit-exact result. The values do not need it: rounding to nearest is symmetric, so the negation
+    can be put on an operand (gen/README.md, "The tests").
+
+    The same holds of the negation of a select one of whose arms is a fused result (and of a select
+    of such a select, or a copy of one): compilers push the negation through the select into the
+    arm, -(m ? d : 0) being (m ? -d : -0), and fold it there (Apple clang's fnmadd and GCC 13's
+    vfnmsub on the radius of the directed sums of two limbs, before add_down_2_2 was written
+    without it)."""
+    prims = ir.prims(k, kernels)
+    defs = {p.dst: p for p in prims}
+    own = {d for st in k.body for d in st.dsts}
+
+    def fused_arms(name, seen=()):
+        """The fused results that `name` is, or that a select or copy makes it, through selects."""
+        p = defs.get(name)
+        if p is None or name in seen:
+            return []
+        if p.op in ir.FUSED:
+            return [name]
+        arms = p.args[1:] if p.op == 'select' else p.args if p.op == 'copy' else ()
+        return [f for a in arms if not a.const for f in fused_arms(a.name, seen + (name,))]
+
+    errs = []
+    for p in prims:
+        if p.op != 'neg' or p.args[0].const:
+            continue
+        src = p.args[0].name
+        fused = fused_arms(src)
+        if not fused:
+            continue
+        where = '' if p.dst in own else ' (inside a call: a callee negates its operand, as sub_down_1 and sub_up_1 ' \
+                                        'negate their second)'
+        if fused == [src]:
+            what = f'negates the result of {defs[src].op}{where}'
+        else:
+            what = (f'negates a {defs[src].op} one of whose arms, {fused[0]}, is the result of {defs[fused[0]].op}'
+                    f'{where}; compilers push a negation through a select into its arms')
+        errs.append(RuleError(k.name, p.dst, NEGATED_FUSED,
+                              f'{p.dst} = neg({src}) {what}. Negate an operand '
+                              'instead: -prod(a, b) is prod(neg(a), b), -fma(a, b, c) is fma(neg(a), b, neg(c)); '
+                              'and a rounding down of x - d is minus the rounding up of d - x, so sub_down_1(x, d) '
+                              'is neg(add_up_1(d, neg(x))) and sub_up_1(x, d) is neg(add_down_1(d, neg(x)))'))
+    return errs
 
 
 def _up_constant(k, kernels, name):

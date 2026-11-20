@@ -1,0 +1,24 @@
+# The lower bound of a ball with a one-limb center, as a number of T (milestone2.md, "One
+# enclosure interface", the row of lower_as and upper_as, and "The empty set and the whole line"):
+# for a finite ball RD(c - r), the largest number of T not above every member, in the
+# format with overflow; the whole line gives -inf (0 - inf rounded down), and the empty ball
+# +inf, by the select on the radius, which is a NaN exactly for the empty ball.
+kernel:        ball_lower_as_1
+input:         stored c
+input:         stored r
+output:        l
+requires:      ball c r
+ensures:       set_bound l below x x=c,r tight=rounded
+min_precision: 2
+source:        the center minus the radius, rounded down (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+ieee_only:     yes
+cone_exempt:   l is selected after the test of the radius that tells the empty ball; set_bound states what comes out for each state of the ball
+
+t  = sub_down_1(c, r)
+ne = eq(r, r)
+l  = select(ne, t, const inf)

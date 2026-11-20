@@ -1,0 +1,27 @@
+# A ball with a one-limb center that contains an interval with one-limb bounds (milestone2.md, "One
+# enclosure interface", "Midpoint, radius and the conversions", "Interval to ball"):
+# interval_mid_rad_1, then one select. A bounded interval gives the ball of its midpoint and radius,
+# the smallest radius of T for that center; an unbounded one, whose radius is +inf, the whole line,
+# whose center is 0 and not the +-Omega of a half-line; the empty set gives two NaN already, the
+# empty ball. So the ball is canonical, contains the interval, and is empty exactly when the
+# interval is. (The page speaks of two selects; the second, of the empty set, is the one that
+# interval_mid_rad_1 has already made.)
+kernel:        interval_to_ball_1
+input:         stored xl
+input:         stored xu
+output:        c
+output:        r
+requires:      interval xl xu
+ensures:       ball_of_interval c r from=xl,xu special=ball rel=u abs=eta smallest_radius
+min_precision: 2
+source:        interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the center is selected after the test of the radius that tells an unbounded interval; ball_of_interval states what comes out for every canonical interval
+
+(m, r) = interval_mid_rad_1(xl, xu)
+un     = eq(r, const inf)
+c      = select(un, 0, m)

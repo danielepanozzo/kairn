@@ -110,6 +110,51 @@ NONFINITE_CE_CASES = [
     ('norm_finish_2', 'double', [0.0, True]),
     ('norm_finish_2', 'float', [float.fromhex('0x1.fffffep+127'), True]),
     ('norm_finish_2', 'float', [3.0, False]),
+    # Milestone 2: the interval kernels and the functions of a Ball that are constexpr, on finite
+    # operands where they compute (an infinite bound would make TwoSum compute inf - inf, and a NaN
+    # bound of ball_from_interval_2 be halved, which constant evaluation refuses: a compile error,
+    # never a wrong constant), and interval_make_1, which only compares, on every kind of pair.
+    ('interval_make_1', 'double', [1.0, 2.0]),
+    ('interval_make_1', 'float', [2.0, 1.0]),
+    ('interval_make_1', 'double', [math.nan, 1.0]),
+    ('interval_make_1', 'float', [-math.inf, -math.inf]),
+    ('interval_neg_1', 'double', [-1.0, 2.0]),
+    ('interval_neg_1', 'float', [math.inf, -math.inf]),
+    ('interval_add_1', 'double', [1.0, 2.0, -0.5, 2.0 ** -60]),
+    ('interval_add_1', 'float', [1.0, 1.0, 2.0 ** -30, 2.0 ** -30]),
+    ('interval_sub_1', 'double', [1.0, 2.0, 1.0, 1.5]),
+    ('ball_lower_as_1', 'double', [1.0, 2.0 ** -60]),
+    ('ball_upper_as_1', 'float', [1.0, 0.25]),
+    ('ball_lower_as_2', 'double', [1.0, 2.0 ** -60, 0.5]),
+    ('ball_upper_as_2', 'float', [1.0, 2.0 ** -30, 0.5]),
+    ('ball_narrow_2_1', 'double', [1.0, 2.0 ** -60, 0.25]),
+    ('ball_from_interval_2', 'double', [1.0, 3.0]),
+    ('ball_from_interval_2', 'float', [2.0 ** -149, 1.0]),
+    ('ball_from_interval_2', 'double', [2.0, 1.0]),
+    # Stage B1: the negation, the constructor, the hulls and the intersections of intervals, which
+    # only compare, select and change signs, on every kind of interval; the midpoint and radius, the
+    # conversions and the split on bounded and unbounded intervals (the empty set would make the sum
+    # of the halves +inf - inf, and the whole line the directed sums of ball_to_interval_1, which
+    # constant evaluation refuses: a compile error, never a wrong constant).
+    ('interval_neg_2', 'double', [-1.0, 2.0 ** -60, 2.0, 0.0]),
+    ('interval_neg_2', 'float', [math.inf, 0.0, -math.inf, 0.0]),
+    ('interval_make_2', 'double', [1.0, 2.0 ** -60, 2.0, 0.0]),
+    ('interval_make_2', 'float', [math.nan, math.nan, 1.0, 0.0]),
+    ('interval_make_2', 'double', [2.0, 0.0, 1.0, 2.0 ** -60]),
+    ('interval_hull_1', 'double', [1.0, 2.0, -3.0, -2.5]),
+    ('interval_hull_1', 'float', [math.inf, -math.inf, 1.0, 2.0]),
+    ('interval_intersection_1', 'double', [1.0, 3.0, 2.0, 4.0]),
+    ('interval_intersection_1', 'float', [1.0, 2.0, 3.0, 4.0]),
+    ('interval_hull_2', 'double', [1.0, 2.0 ** -60, 2.0, 0.0, -math.inf, 0.0, 0.5, 0.0]),
+    ('interval_intersection_2', 'float', [1.0, 2.0 ** -30, 3.0, 0.0, 2.0, 0.0, math.inf, 0.0]),
+    ('interval_mid_rad_1', 'double', [1.0, 2.0]),
+    ('interval_mid_rad_1', 'float', [-math.inf, 1.0]),
+    ('interval_to_ball_1', 'double', [-0.5, 2.0 ** -60]),
+    ('interval_to_ball_1', 'float', [1.0, math.inf]),
+    ('ball_to_interval_1', 'double', [1.0, 0.5]),
+    ('ball_to_interval_1', 'float', [-2.0, 2.0 ** -30]),
+    ('interval_split_1', 'double', [1.0, 2.0]),
+    ('interval_split_1', 'float', [-math.inf, math.inf]),
 ]
 
 
@@ -444,12 +489,21 @@ def negates_a_fused_result(k, kernels):
     On AArch64, GCC and Clang at -O2 turn -fma(a, b, c) into one fnmadd, which computes
     (-ab) + (-c): when ab + c is exactly zero that is +0, where the negation gives -0. Clang does
     it even through a sign-bit flip written with std::bit_cast. Only the sign of a zero changes,
-    which Kairn leaves unspecified, but such a kernel has no single bit-exact result.
+    which Kairn leaves unspecified, but such a kernel has no single bit-exact result. A negated
+    select (or copy) of such a result counts too: compilers push the negation into the arms.
     """
     prims = ir.prims(k, kernels)
-    defs = {p.dst: p.op for p in prims}
-    return any(p.op == 'neg' and defs.get(p.args[0].name) in ir.FUSED | {'muladd'}
-               for p in prims if not p.args[0].const)
+    defs = {p.dst: p for p in prims}
+
+    def fused(name):
+        p = defs.get(name)
+        if p is None:
+            return False
+        if p.op in ir.FUSED | {'muladd'}:
+            return True
+        arms = p.args[1:] if p.op == 'select' else p.args if p.op == 'copy' else ()
+        return any(fused(a.name) for a in arms if not a.const)
+    return any(p.op == 'neg' and fused(p.args[0].name) for p in prims if not p.args[0].const)
 
 
 def same_but_zero_signs(x, y):
@@ -474,10 +528,14 @@ class EveryOperation(unittest.TestCase):
                             ['-I', d, '-DKAIRN_RUNNER_HEADER="kernels.hpp"'])
 
     def test_negated_fused_results_are_known(self):
+        # The test kernels that negate a muladd, a contractable product the rules allow a test
+        # kernel; no kernel of gen/kernels negates a fused result: the rules refuse a negated fma
+        # or prod, directly or through a select (rules.negated_fused), and none uses muladd.
         self.assertEqual({n for n, k in self.ks.items() if negates_a_fused_result(k, self.ks)},
                          {'ops_muladd', 'ops_call'})
         ks = common.kernels()
         self.assertEqual({n for n, k in ks.items() if negates_a_fused_result(k, ks)}, set())
+        self.assertEqual([n for n, k in ks.items() if ir.muladd_sites(k, ks)], [])
 
     def test_runner_mask_operands(self):
         code, out, err = self.builds.run(0, 'ops_wave2 binary64 -0x1p+0 1 0x1p+0\n')

@@ -1,0 +1,47 @@
+# The product of two intervals with one-limb bounds, without a branch (milestone2.md, "Interval
+# kernels", "One limb"): the four products of bounds, each rounded down and up by mul_dir_1 (0
+# times infinity is 0), the least of the four lower values and the greatest of the four upper ones;
+# the empty set when an operand is empty. Each bound is the directed rounding of the bound of the
+# exact range or one step beyond it, and the directed rounding when each of the four products of
+# bounds is zero, infinite or at least P = 2^(2p-1) eta in magnitude. For every precision.
+kernel:        interval_mul_1
+input:         stored xl
+input:         stored xu
+input:         stored yl
+input:         stored yu
+output:        zl
+output:        zu
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       encloses_interval zl zu x*y x=xl,xu y=yl,yu tight=rounded;steps=1;when=product_large bounded_when=abs_le(x*y,omega) bounded_exactly
+min_precision: 1
+source:        the least and the greatest of the directed products of the bounds (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the bounds are selected among directed products, and the empty set after an explicit test; encloses_interval states what comes out
+
+(d1, v1) = mul_dir_1(xl, yl)
+(d2, v2) = mul_dir_1(xl, yu)
+(d3, v3) = mul_dir_1(xu, yl)
+(d4, v4) = mul_dir_1(xu, yu)
+ma       = lt(d2, d1)
+da       = select(ma, d2, d1)
+mb       = lt(d4, d3)
+db       = select(mb, d4, d3)
+mc       = lt(db, da)
+l        = select(mc, db, da)
+na       = lt(v1, v2)
+va       = select(na, v2, v1)
+nb       = lt(v3, v4)
+vb       = select(nb, v4, v3)
+nc       = lt(va, vb)
+h        = select(nc, vb, va)
+nx       = lt(xl, const inf)
+ny       = lt(yl, const inf)
+ne       = and(nx, ny)
+mi       = neg(const inf)
+zl       = select(ne, l, const inf)
+zu       = select(ne, h, mi)

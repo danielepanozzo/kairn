@@ -1,6 +1,7 @@
 """The two printers: what their text says, read independently of how they produce it."""
 import copy
 import hashlib
+import os
 import re
 import unittest
 
@@ -102,7 +103,25 @@ TIMES_INF = r' \* std::numeric_limits<(?:double|float)>::infinity\(\);$'
 FULL = {f'{core}_full' for core in ('add_2_2', 'add_fast_2_2', 'sub_2_2', 'add_2_1', 'sub_2_1', 'sub_1_2',
                                     'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
 FULL_BALL = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale', 'mul_pow2') for k in (1, 2)}
-BRANCHED = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BALL | {'ball_make_1', 'ball_make_2'}})
+BRANCHED_M1 = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BALL | {'ball_make_1', 'ball_make_2'}})
+BRANCHED = dict(BRANCHED_M1)
+# Milestone 2: the kernels without a real-model statement whose outputs are selects on one mask, the
+# test of empty operands (ne) of the interval kernels, the test of a pair that describes an interval
+# (v) of the constructors from bounds, then whether it is bounded (f), and the test that a ball is
+# not empty (ne) of its bounds as numbers of T.
+BRANCHED.update({k: ('ne',) for k in ('interval_add_1', 'interval_sub_1', 'interval_mul_1', 'interval_add_2',
+                                      'ball_lower_as_1', 'ball_upper_as_1', 'ball_lower_as_2',
+                                      'ball_upper_as_2')})
+BRANCHED.update(interval_make_1=('v',), ball_from_interval_2=('v', 'f'))
+# Stage B1: the same test of empty operands of the difference and the product of intervals of two
+# limbs, of the midpoint and radius of an interval and of the conversion of a ball to an interval;
+# of a pair that describes an interval of the constructor of two limbs; of bounds that do not cross
+# (ok) of the intersections; and of mul_ext_2_2, a zero operand (nz) then finite operands (fo). The
+# hulls, the negation of two limbs, the conversion of an interval to a ball and the split return
+# values that are not selects of their own listings on one mask.
+BRANCHED.update({k: ('ne',) for k in ('interval_sub_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1')})
+BRANCHED.update(interval_make_2=('v',), interval_intersection_1=('ok',), interval_intersection_2=('ok',),
+                mul_ext_2_2=('nz', 'fo'))
 
 
 class Cpp(unittest.TestCase):
@@ -190,20 +209,39 @@ class Cpp(unittest.TestCase):
     # are the full Ball kernels but the scalings by a power of two. The constructors are.
     NOT_CONSTEXPR |= {f'{core}_full' for core in ('mul_2_2', 'mul_2_1')}
     NOT_CONSTEXPR |= {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale') for k in (1, 2)}
+    # Milestone 2: the directed products of one limb in both directions and the product of
+    # intervals that calls them (two_prod's fms), and the bounds of two limbs, which call the
+    # products of two limbs or a radius of the second design (fma), with the sum of intervals of
+    # two limbs that calls them.
+    NOT_CONSTEXPR |= {'mul_dir_1', 'interval_mul_1', 'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2',
+                      'sub_down_2_2', 'sub_up_2_2', 'mul_dir_2_2', 'interval_add_2'}
+    # Stage B1: the difference of intervals of two limbs, and the product, through mul_dir_2_2.
+    NOT_CONSTEXPR |= {'interval_sub_2', 'mul_ext_2_2', 'interval_mul_2'}
     # The kernels whose only fused operations are prod, constexpr by the rule of the product
-    # (milestone2.md, "The two executions of a product").
+    # (milestone2.md, "The two executions of a product"); in Milestone 2 the ball made from an
+    # interval, which halves its bounds and doubles the halves with prod.
     PRODUCT_RULE = {'rmul', 'mul_1_1', 'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full', 'ball_mul_pow2_1',
                     'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full',
                     'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2',   # the exported bounds of the folds
                     # the steps of the maps whose only products are prod: mul_1_1, mul_pow2_2
-                    'scale_step_1', 'mul_pow2_step_1', 'mul_pow2_step_2', 'axpy_step_1', 'axpy_entry_step_1'}
+                    'scale_step_1', 'mul_pow2_step_1', 'mul_pow2_step_2', 'axpy_step_1', 'axpy_entry_step_1',
+                    'ball_from_interval_2'}
+    # Stage B1: the midpoint and radius of an interval, which halves its bounds with prod, and the
+    # conversion to a ball and the split that call it.
+    PRODUCT_RULE |= {'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1'}
+    # The kernels that are ordinary inline functions, not forced inline (ordinary_inline:).
+    ORDINARY_INLINE = {'interval_mul_2'}
 
     def test_constexpr(self):
         plain = {name for (name, _), f in self.fns.items() if not f['constexpr']}
         self.assertEqual(plain, self.NOT_CONSTEXPR)
         line = [x for x in self.text.splitlines() if x.startswith('// Not constexpr: ')]
         self.assertEqual(set(line[0][len('// Not constexpr: '):-1].split(', ')), self.NOT_CONSTEXPR)
-        self.assertTrue(all(f['head'].startswith('KAIRN_GEN_FORCEINLINE') for f in self.fns.values()))
+        self.assertTrue(all(f['head'].startswith('KAIRN_GEN_FORCEINLINE') for (n, _), f in self.fns.items()
+                            if n not in self.ORDINARY_INLINE))
+        self.assertTrue(all(f['head'].startswith('inline void ') for (n, _), f in self.fns.items()
+                            if n in self.ORDINARY_INLINE))
+        self.assertEqual({n for n, k in self.ks.items() if not k.forced_inline}, self.ORDINARY_INLINE)
 
     def test_the_rule_of_the_product(self):
         """A kernel whose only fused operations are prod is constexpr, and prints each prod as the
@@ -365,12 +403,25 @@ class FixupBranch(unittest.TestCase):
     def test_the_kernels_it_applies_to(self):
         got = {n: b.masks for n, k in self.ks.items() for b in [cpp.branch(k, self.ks)] if b}
         self.assertEqual(got, BRANCHED)
+        # Only the kernel's own selects are a fix-up (Milestone 2): the arm of ball_lower_as_1 is the
+        # directed difference, a callee whose last operation selects on the sign of an error, which
+        # is computed, not branched on.
+        b = cpp.branch(self.ks['ball_lower_as_1'], self.ks)
+        flat = {p.dst: p for p in ir.prims(self.ks['ball_lower_as_1'], self.ks)}
+        self.assertEqual((b.masks, flat[b.arms[0].name].op), (('ne',), 'select'))
         # The constructors of 2-limb numbers have no fix-up of this shape: make_2 returns x0 as it is
         # guarded, make_2_limbs has no select. Kernels with a real-model statement select on their
         # data (to_up_2 on the sign of x1), and are left alone too.
         for name in ('make_2', 'make_2_limbs', 'to_up_2', 'to_down_2', 'abs_2', 'abs_upper_2', 'lt_2_2'):
             self.assertIsNone(cpp.branch(self.ks[name], self.ks), name)
-        for name in BRANCHED:
+        # Milestone 2: the arms are the bounds the kernel computes, and the outputs of the fix-up
+        # the empty set or, for the constructor, the empty set or the whole line.
+        for name, arms in (('interval_add_1', ['l', 'h']), ('interval_mul_1', ['l', 'h']),
+                           ('interval_add_2', ['a0', 'a1', 'b0', 'b1']), ('interval_make_1', ['gl', 'gu']),
+                           ('ball_lower_as_2', ['t']), ('ball_from_interval_2', ['c0', 'c1', 'r'])):
+            self.assertEqual([str(a) for a in cpp.branch(self.ks[name], self.ks).arms], arms, name)
+        self.assertIsNone(cpp.branch(self.ks['mul_dir_2_2'], self.ks))
+        for name in BRANCHED_M1:
             b = cpp.branch(self.ks[name], self.ks)
             ball = name.startswith('ball_')
             arms = {'ball_make_1': ['c0', 'g'], 'ball_make_2': ['c0', 'c1', 'g']}.get(
@@ -674,6 +725,8 @@ class Rocq(unittest.TestCase):
                 # after its claim's own (ball_mul_pow2_k).
                 printed = [e for e in k.ensures if e['kind'] != 'represents']
                 printed += [e for e in printed if 'exact_when' in e]
+                # outward (Milestone 2) says its side and its distance: two conjuncts before the exact.
+                printed += [e for e in k.ensures if e['kind'] == 'outward']
                 self.assertEqual(len(conjuncts), len(want) + len(printed), name)
                 uncovered[name] = len(want)
         # The loop has something to read: both ways of saying it occur, also in one statement,
@@ -684,10 +737,17 @@ class Rocq(unittest.TestCase):
         # and of sum_entry_step_1, 8 limbs in 6 kernels. With the steps of the maps: the one limb of
         # sub_1_1, add_entry_step_1, sub_entry_step_1, scale_step_1, mul_pow2_step_1, axpy_step_1 and
         # axpy_entry_step_1, 7 limbs in 7 kernels. With the folds of maxima: r of norm_combine,
-        # norm_step_1 and norm_step_2, 3 limbs in 3 kernels.
-        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3)
-        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3)
+        # norm_step_1 and norm_step_2, 3 limbs in 3 kernels. With Milestone 2's real-model kernels of
+        # the intervals: d and v of mul_dir_1, d of add_ball_2_2 and of mul_ball_2_2 (the bounds of two
+        # limbs are normalized), 4 limbs in 3 kernels.
+        self.assertEqual(sum(uncovered[n] for n in self.ks), 49 + 8 + 7 + 3 + 4)
+        self.assertEqual(sum(1 for n in self.ks if uncovered[n]), 38 + 6 + 7 + 3 + 3)
         s = self.statements
+        # The constants of outward (Milestone 2) in the forms of Directed2.v's outward_rel and
+        # outward_abs, / 2 and a tiny of add_2_2 that is 0, so that add_down_2_2_listing_correct has
+        # add_down_2_2_spec as its type by unfolding them (checked with Rocq on these files).
+        self.assertEqual(rocq.claim_constant_term('1/2*eta+u/(1/u)+tiny(add_2_2)+tiny(mul_2_2)', self.all, 'emin'),
+                         '(((((/ 2) * eta emin) + (u prec / (/ u prec))) + 0) + ((3 / 2) * eta emin))')
         self.assertIn("  let '(cz0, cz1, rz) := ball_add_2 emin prec tie_even cx0 cx1 rx cy0 cy1 ry in\n"
                       '  fmt emin prec rz /\\\n  normalized_2 emin prec cz0 cz1 /\\\n  (forall x y : R, ', s)
         self.assertIn('  let r := radd emin prec tie_even a b in\n  fmt emin prec r /\\\n  (a + b) <= r /\\ ', s)
@@ -806,9 +866,18 @@ class Rocq(unittest.TestCase):
     # Then the combination and the steps of the folds of maxima (three, unverified): only lines
     # added, every earlier line kept in its order; Audit.v is the same. (Merged with the proofs of
     # the folds and the maps: the regeneration of the merged descriptions.)
-    DIGESTS = {'Model.v': '54d17099e0e1a7e4856ee586251c0ad909c533f23506838284cc29e1598857f6',
-               'Statements.v': '9f3eea15b11b185d2e1db246c6f6397ec571aef2d7fd9e996e3eed34b1dd6552',
-               'Audit.v': 'facb09ba4b1656f07a9c14bbd3f43ddfe7984571043fa54a730d4322327a791d'}
+    # Then the two lines of work met in a merge. On the intervals' own line: the first kernels of the
+    # intervals of wave 2 (eight with a real-model statement: mul_dir_1 and the bounds of two limbs),
+    # unverified, every earlier definition and statement the same, byte for byte, some printed earlier
+    # (callees before callers: sub_down_1, sub_up_1, to_down_2, two_prod), their constants named as
+    # before (gen/constant_names.json); then the definition of add_down_2_2 changed alone, its
+    # rounding down of z1 - dd written as minus the rounding up of dd - z1 (no fused result negated
+    # through a select); then the kernels of stage B1, which have no real-model statement, changed
+    # the order of the files only. The files are the regeneration of the merged descriptions.
+    DIGESTS = {'Model.v': '87fb181c8e6c93c1f4464b97b919af311fa8a00a9a9d941c3db262f8489375ee',
+               'Statements.v': '675c18903ea873185a280693d013a2174b88eb1b13e0d4d09b0764a39baff226',
+               'Audit.v': 'ec73e848723879724134adf9a1b35f25d195b5773d0288cf07499f201a53f655'}
+
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in
@@ -839,7 +908,10 @@ class Rocq(unittest.TestCase):
             for e in k.ensures:
                 e.pop('finite_when', None)
             finite[name] = k
-        self.assertEqual(len(finite), 69 + 15 + 3)      # the fifteen steps of the maps, the three of norm_upper_k
+        # 60; the nine of the folds' stage, the fifteen steps of the maps, the three of norm_upper_k;
+        # and the eight of Milestone 2's interval work with a real-model statement: mul_dir_1 and the
+        # seven bounds of two limbs.
+        self.assertEqual(len(finite), 60 + 9 + 15 + 3 + 8)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)
@@ -893,6 +965,109 @@ class Rocq(unittest.TestCase):
         self.assertIn('Definition mul_2_2_audit : mul_2_2_spec := mul_2_2_correct.\n'
                       'Print Assumptions mul_2_2_correct.', audit)
         self.assertNotIn('Check', audit)       # the audit prints nothing but assumptions
+
+
+class ConstantNames(unittest.TestCase):
+    """The names of the constants up(EXPR) in the Rocq models are stable: gen/constant_names.json
+    records them, the printers take a recorded name before anything else, and build only adds to
+    the record. Hand-written proofs name these definitions (Ball2.v, IeeeBallCores.v,
+    IeeeBallFinite.v, DirectedProd.v, IeeeDirectedProd.v, Directed2.v, ...)."""
+
+    # Every name recorded so far, by the expression of its constant. A recorded name never changes
+    # and never disappears: this list only grows, with the record.
+    RECORDED = {
+        'unit(add_1_1)/(1-unit(add_1_1))': 'up_ball_add_1_0',
+        '(1+u)^3': 'up_ball_add_1_1',
+        '(1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)': 'up_ball_add_1_2',
+        'unit(add_2_2)/(1-unit(add_2_2))*(1+u)': 'up_ball_add_2_0',
+        'unit(mul_1_1)/(1-unit(mul_1_1))': 'up_ball_mul_1_0',
+        '(1+u)^5': 'up_ball_mul_1_1',
+        '(1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)': 'up_ball_mul_1_2',
+        'unit(mul_2_2)/(1-unit(mul_2_2))': 'up_ball_mul_2_0',
+        '(1+u)^6': 'up_ball_mul_2_1',
+        '(1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)': 'up_ball_mul_2_2',
+        'eta/(2*u)': 'up_ball_mul_pow2_1_0',
+        '(1+u)*((1+u)^2*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)': 'up_ball_scale_1_2',
+        'unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)': 'up_ball_scale_2_0',
+        '(1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)+eta/(2*u)': 'up_ball_scale_2_2',
+        'eta/(2*u^2)': 'up_mul_down_1_0',
+        # Milestone 2, the halving of ball_from_interval_2 (and of interval_mid_rad_1), which only the
+        # IEEE model defines (those kernels have no real-model statement).
+        '1/2': 'up_ball_from_interval_2_0',
+        # The constants of the bound kernels of the folds' stage, as their line printed them before
+        # the record joined it (BoundKernels.v names them). Among them the doubling, 2, which
+        # ball_from_interval_2 shares: the two lines named it apart (up_bound_dot_1_2 and
+        # up_ball_from_interval_2_1), the proofs of the bound kernels use the first and no
+        # hand-written proof the second, so the joined record has the first (one name per constant).
+        '(1+u)*(unit(mul_1_1)+eta/2)': 'up_bound_dot_1_0',
+        '(1+u)^2*(unit(mul_1_1)+eta)': 'up_bound_dot_1_1',
+        '2': 'up_bound_dot_1_2',
+        '1+2*u': 'up_bound_dot_1_3',
+        '(1+u)^2*(tiny(mul_1_1)+eta)+eta/(2*u)': 'up_bound_dot_1_4',
+        '1/4': 'up_bound_dot_1_5',
+        '1': 'up_bound_dot_1_6',
+        '(1+u)*(unit(mul_2_2)+eta/2)': 'up_bound_dot_2_0',
+        '(1+u)^2*(unit(mul_2_2)+eta)': 'up_bound_dot_2_1',
+        '(1+u)^2*(tiny(mul_2_2)+eta)+eta/(2*u)': 'up_bound_dot_2_4',
+        '(1+u)*(unit(add_1_1)+eta/2)': 'up_bound_sum_1_0',
+        '(1+u)^2*(unit(add_1_1)+eta)': 'up_bound_sum_1_1',
+        '(1+u)*(unit(add_2_2)+eta/2)': 'up_bound_sum_2_0',
+        '(1+u)^2*(unit(add_2_2)+eta)': 'up_bound_sum_2_1',
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        cls.ks = common.kernels()
+        cls.record = ir.load_constant_names(os.path.join(common.GEN, 'kernels'))
+
+    def test_no_recorded_name_changes_or_disappears(self):
+        for text, name in self.RECORDED.items():
+            self.assertEqual(self.record.get(text), name, text)
+        self.assertEqual(len(set(self.record.values())), len(self.record))
+
+    def test_the_printers_use_the_record(self):
+        names = rocq.up_names(rocq.real(self.ks))
+        for const, name in names.items():
+            self.assertEqual(self.record[ir.up(const)], name, const)
+        model = rocq.model(self.ks)
+        for const, name in names.items():
+            self.assertIn(f'(* up({ir.up(const)}): the smallest number of the format not below it. *)\n'
+                          f'Definition {name} : R :=', model)
+        # The committed record is what build writes: nothing is missing from it.
+        with open(os.path.join(common.GEN, ir.CONSTANT_NAMES), encoding='utf-8') as f:
+            self.assertEqual(f.read(), rocq.constant_names_file(self.ks))
+
+    def test_a_kernel_added_first_renames_nothing(self):
+        """A kernel that comes first (one limb, a name that sorts early) and uses a recorded
+        constant takes the recorded name; its new constant gets up_K_i, i its place among the
+        kernel's constants, and is the one entry build adds. Without the record the old rule would
+        have renamed the recorded constant after the new kernel."""
+        text = ('kernel: aaa_first\ninput: a\noutput: r\nvalue: a\nensures: upper r gaps=4\n'
+                'status: unverified\ncone_exempt: test\n'
+                'p = prod(a, const up(eta/(2*u^2)))\nr = prod(p, const up(3*eta+u))\n')
+        k = ir.parse_kernel(text, 'aaa_first.kernel')
+        ks = copy.deepcopy(dict(self.ks))
+        k.constant_names = next(iter(ks.values())).constant_names
+        ks = ir.ordered(dict(ks, aaa_first=k))
+        self.assertEqual(next(iter(ks)), 'aaa_first')
+        names = rocq.up_names(rocq.real(ks))
+        self.assertEqual(names['up(eta/(2*u^2))'], 'up_mul_down_1_0')
+        self.assertEqual(names['up(3*eta+u)'], 'up_aaa_first_1')
+        added = ir.constant_names_text(dict(self.record, **{'3*eta+u': 'up_aaa_first_1'}))
+        self.assertEqual(rocq.constant_names_file(ks), added)
+        for other in ks.values():
+            other.constant_names = None
+        self.assertEqual(rocq.up_names(rocq.real(ks))['up(eta/(2*u^2))'], 'up_aaa_first_0')
+
+    def test_a_new_name_avoids_the_recorded_ones(self):
+        """A new constant whose name up_K_i the record already gives to another constant takes the
+        next place."""
+        text = ('kernel: ball_add_1x\ninput: a\noutput: r\nvalue: a\nensures: upper r gaps=4\n'
+                'status: unverified\ncone_exempt: test\nr = prod(a, const up(5*eta+u))\n')
+        k = ir.parse_kernel(text, 'ball_add_1x.kernel')
+        k.name = 'ball_add_1'                  # as if the kernel had this name and a new constant
+        k.constant_names = {'(1+u)^3': 'up_ball_add_1_0'}
+        self.assertEqual(rocq.up_names({'ball_add_1': k}), {'up(5*eta+u)': 'up_ball_add_1_1'})
 
 
 if __name__ == '__main__':

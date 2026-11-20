@@ -1,0 +1,30 @@
+# The difference of two intervals with one-limb bounds (milestone2.md, "Interval kernels", "One
+# limb"): [xl - yu, xu - yl], outward, by the directed differences; the empty set when an operand
+# is empty. The same statement as the sum, of x - y.
+kernel:        interval_sub_1
+input:         stored xl
+input:         stored xu
+input:         stored yl
+input:         stored yu
+output:        zl
+output:        zu
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       encloses_interval zl zu x-y x=xl,xu y=yl,yu tight=rounded bounded_when=abs_le(x-y,omega) bounded_exactly
+min_precision: 2
+source:        directed differences of the bounds (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the bounds are directed differences, which select, and the empty set is selected after an explicit test; encloses_interval states what comes out
+
+l  = sub_down_1(xl, yu)
+h  = sub_up_1(xu, yl)
+nx = lt(xl, const inf)
+ny = lt(yl, const inf)
+ne = and(nx, ny)
+mi = neg(const inf)
+zl = select(ne, l, const inf)
+zu = select(ne, h, mi)

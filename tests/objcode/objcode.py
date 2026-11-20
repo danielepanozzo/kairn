@@ -31,7 +31,7 @@ A contraction the IR did not ask for shows as a fused instruction more, with a m
 or none; an FMA computed as a product and a sum, or an opaque product folded back into a plain one,
 as a multiplication more. The forms and the counts are described in gen/kairn_gen/objcode.py.
 
-Every compilation has the compiler's own vectorization off (Tools.no_vectorize: Clang
+Every compilation has the compiler's own vectorization off (NO_VECTORIZE: Clang
 -fno-vectorize -fno-slp-vectorize, GCC -fno-tree-vectorize, clang-cl the same through /clang:;
 MSVC, which has no such option, /Qvec-report:1, and the check fails on any loop it says it
 vectorized): vectorization packs independent operations into one instruction without changing
@@ -58,7 +58,11 @@ The negative controls (--controls), each in every configuration of the tier:
 - enclosure_unit.cpp, compiled once with the operations of Ball inline (the default), is judged
   as the outlined form: every function must fail, its operation not being a call.
 - the unit, compiled once WITH the compiler's own vectorization, must fail on exactly the
-  functions recorded for that compiler (vectorized_failures): the packing alone.
+  functions recorded for that compiler (vectorized_failures): the packing alone (control_vectorized).
+- the unit, compiled once at -O2 without the options that turn automatic vectorization off
+  (NO_VECTORIZE, given to every other compilation): with Clang on x86-64 the check must fail on
+  interval_mul_1 among others, for the packing of FMAs alone (control_packing); with another
+  compiler what it does is reported.
 
 Standard library only. Exits 1 on any failure, with what was found; a compiler or disassembler that
 cannot be run is a failure, never a skip.
@@ -99,6 +103,18 @@ ENCLOSURE_FORMS = [
 # The namespace of the external operations with KAIRN_CHECKS 0, which the unit is compiled with.
 EXTERNAL_NAMESPACE = 'external'
 TIMEOUT = 600   # seconds per compilation: MSVC has been seen to spin on generated code
+
+# Automatic vectorization off in every compilation of the check (docs/developer/testing.md, "Object
+# code"): a vectorizer packs independent operations of the scalar code into one instruction without
+# changing any of them (Clang 18 at -O2 puts two of interval_mul_1's FMAs in one vfmadd213pd), and
+# the number of operations a packed instruction does cannot be read off it (two live lanes of a
+# four-lane register; Clang 18 on x86-64 also packs two of the five FMAs of the step of axpy_2 in
+# the scalar rest of its loop, control_vectorized). The explicit SIMD forms are written with
+# intrinsics, which these options do not touch. MSVC has no option that turns its vectorizer off:
+# /Qvec-report:1 makes it name every loop it vectorized (info C5001), and the check fails on any
+# (Tools.compile); no packing by it has been seen.
+NO_VECTORIZE = {'clang': ('-fno-vectorize', '-fno-slp-vectorize'), 'gcc': ('-fno-tree-vectorize',),
+                'clang-cl': ('/clang:-fno-vectorize', '/clang:-fno-slp-vectorize'), 'msvc': ('/Qvec-report:1',)}
 
 # The flag matrix of each compiler family: optimization levels, contraction settings, and with and
 # without the flag that makes the compiler respect a dynamic rounding mode. Every combination is
@@ -180,19 +196,16 @@ class Tools:
                                      timeout=60).stdout
         if not self.name:
             self.name = (version.splitlines() or ['unknown compiler'])[0]
-        # Which compiler of the family: Clang (and Apple clang) or GCC, from CMake's id or from what
-        # --version prints.
-        self.clang = self.family == 'clang-cl' or (
-            self.family == 'gnu' and 'clang' in ((args.compiler_id or '') + ' ' + version).lower())
+        # GCC or Clang (Apple clang included) among the compilers with GNU options: CMake's id, or the
+        # compiler's own words; and whether it is Apple's (vectorized_failures).
+        if self.family == 'gnu':
+            said = (args.compiler_id or '').lower()
+            self.vendor = 'clang' if 'clang' in said or (not said and 'clang' in version.lower()) else 'gcc'
+        else:
+            self.vendor = self.family
         self.apple = 'apple' in ((args.compiler_id or '') + ' ' + version).lower()
-        # The compiler's own vectorization, off in every compilation of the check (docs/developer/
-        # testing.md, "Object code"): it packs independent operations into one instruction, which an
-        # instruction count cannot see through. MSVC has no option that turns its vectorizer off:
-        # /Qvec-report:1 makes it name every loop it vectorized (info C5001), and the check fails on
-        # any (compile).
-        self.no_vectorize = {'clang-cl': ['/clang:-fno-vectorize', '/clang:-fno-slp-vectorize'],
-                             'msvc': ['/Qvec-report:1']}.get(self.family) or (
-            ['-fno-vectorize', '-fno-slp-vectorize'] if self.clang else ['-fno-tree-vectorize'])
+        # The compiler's own vectorization, off in every compilation of the check (NO_VECTORIZE).
+        self.no_vectorize = list(NO_VECTORIZE[self.vendor])
         self.flags = args.flags.split()
         self.packed = args.packed or default_packed()
         self.packed_flags = args.packed_flags.split()
@@ -200,8 +213,9 @@ class Tools:
         self.disassembler, self.flavor = find_disassembler(args.disassembler, self.family, path)
 
     def compile(self, source, obj, options, defines, packed, cwd, vectorize=False):
-        """Compiles source into obj, with the compiler's own vectorization off (no_vectorize)
-        unless `vectorize` (the control that shows why it is off)."""
+        """Compiles source into obj, with the compiler's own vectorization off (no_vectorize, after
+        every other option, so that no flag of the build turns it back on) unless `vectorize` (the
+        controls that show why it is off)."""
         include = os.path.join(ROOT, 'include')
         table = os.path.join(ROOT, 'gen', 'tests')
         defs = list(defines) + (['KAIRN_OBJCODE_PACKED'] if packed else [])
@@ -627,7 +641,7 @@ def check(tools, args, expected, limb_types, folds=None):
           f'{len(configs)} configurations); disassembler {tools.disassembler} ({tools.flavor}); '
           f'packed: {tools.packed}{" with " + " ".join(tools.packed_flags) if tools.packed_flags else ""}; '
           f'options for every compilation: {" ".join(tools.flags) or "none"}; the compiler\'s own '
-          f'vectorization: ' + ('none allowed, reported by /Qvec-report:1' if tools.family == 'msvc' else
+          f'vectorization: ' + ('none allowed, reported by /Qvec-report:1' if tools.vendor == 'msvc' else
                                 'off, ' + ' '.join(tools.no_vectorize)), flush=True)
     if tools.packed == 'none':
         print('objcode: no packed backend for this target: the packed kernels are NOT checked')
@@ -732,13 +746,20 @@ def control_counts(tools, workdir, expected, limb_types, folds=None):
 # fused instructions in F_seq, fourteen in F_packed (whose rest is a loop too), which no number of
 # copies of the step makes, with the same operations. The other compilers seen (GCC 13 on x86-64,
 # Apple clang and GCC 16 on AArch64) vectorize these loops in whole copies of the step, which the
-# rule counts as copies. An entry that stops holding, a compiler that stops packing or another that
-# starts, fails the control: the table is what we know, not what we expect.
+# rule counts as copies. Clang on x86-64 also packs two independent FMAs of the scalar code of four
+# interval kernels into one instruction, for double and float (control_packing: interval_mul_1
+# among them; measured with Clang 18 on the joined tree of the folds and the intervals). An entry
+# that stops holding, a compiler that stops packing or another that starts, fails the control: the
+# table is what we know, not what we expect.
+VECTORIZED_SCALAR = ('ball_from_interval_2', 'interval_add_2', 'interval_mul_1', 'interval_sub_2')
+
+
 def vectorized_failures(tools, packed):
     x86 = platform.machine().lower() in ('x86_64', 'amd64')
-    if tools.clang and not tools.apple and x86:
+    if tools.vendor in ('clang', 'clang-cl') and not tools.apple and x86:
         forms = ['seq'] + (['packed'] if packed else [])
-        return sorted(f'fold {fold} {form} double' for fold in ('axpy_2', 'axpy_2_entry') for form in forms)
+        return sorted([f'fold {fold} {form} double' for fold in ('axpy_2', 'axpy_2_entry') for form in forms]
+                      + [f'scalar {t} {k} (scalar)' for k in VECTORIZED_SCALAR for t in ('double', 'float')])
     return []
 
 
@@ -788,6 +809,66 @@ def control_enclosures(tools, workdir, expected, limb_types):
             + ('' if ok else ': FAILED, expected every one')], ok
 
 
+# A fused instruction that operates on a vector register: x86-64 vfmadd213pd and the like (pd, ps),
+# AArch64 fmla/fmls on .2d, .4s or .2s.
+PACKED_FMA = re.compile(r'\bv?f(n)?m(add|sub)\w*p[sd]\b|\bfml[as]\b.*\.\d+[sd]\b', re.I)
+
+
+def control_packing(tools, workdir, expected, limb_types):
+    """(lines, ok): why every compilation of the check turns automatic vectorization off. The unit
+    compiled at -O2 with contraction off and the vectorizer on (the compiler's default), and its
+    scalar functions judged by the same counts. With Clang on x86-64 the check must fail there, on
+    interval_mul_1 among others, and only because scalar functions compute FMAs of the IR two to a
+    packed instruction (fewer fused instructions than the IR's, at least one of them packed, the
+    multiplications as counted): an expected failure, so that it shows when a compiler stops
+    packing. Of another compiler what it does is reported, and not judged."""
+    if tools.vendor == 'msvc':
+        return [f'automatic vectorization on: not compiled, {tools.name} has no option to turn it off here '
+                '(/Qvec-report:1 only reports, and the check itself would show a packing)'], True
+    config = next(c for c in configurations(tools.family, 'quick') if c[0] in ('-O2', '/O2'))
+    obj = os.path.join(workdir, f'unit-packing.{"obj" if tools.msvc_style else "o"}')
+    packed = tools.packed != 'none'
+    try:
+        level, contraction, rounding, _ = config
+        tools.compile(UNIT, obj, (level,) + contraction + rounding, [], packed, workdir, vectorize=True)
+        program = disasm.Program(tools.disassemble(obj, workdir))
+        form = unit_form(program)
+    except (Failure, ValueError) as e:
+        return [f'automatic vectorization on, {label(config)}: FAILED: {e}'], False
+    packing, other = [], []
+    for kernel, forms in expected.items():
+        for t in limb_types:
+            f = program.find(f'kairn_objcode_scalar_{t}_{kernel}')
+            if f is None:
+                other.append(f'{t} {kernel}: no function')
+                continue
+            count = program.count(f)
+            e = forms[form][t]
+            text, _ = judge(count, e)
+            if text is None:
+                continue
+            fewer = len(count.fma) < min(e['fma'], e['fma_distinct'])
+            in_vectors = any(PACKED_FMA.search(i) for _, i in count.fma)
+            only_fma = text.startswith(f'{len(count.fma)} fused multiply-adds') and 'plain multiplications' not in text
+            if fewer and in_vectors and only_fma and not count.external and not count.unknown:
+                packing.append((kernel, t))
+            else:
+                other.append(f'{t} {kernel}: {text.splitlines()[0]}')
+    kernels = sorted({k for k, _ in packing})
+    head = (f'automatic vectorization on, {label(config)}: ' +
+            (f'the check fails on {len(packing)} scalar functions for the packing alone, of '
+             f'{", ".join(kernels)}' if packing else 'nothing packed'))
+    lines = [head] + [f'    and otherwise: {x}' for x in other]
+    if tools.vendor == 'clang' and tools.family == 'gnu' and tools.packed == 'avx2':
+        ok = 'interval_mul_1' in kernels and not other
+        if not ok:
+            lines[0] += (': FAILED, expected Clang on x86-64 to pack interval_mul_1 and nothing else to fail '
+                         '(if it no longer packs, the options that turn the vectorizer off may be dropped)')
+        return lines, ok
+    lines[0] += ' (reported, not judged: the expected packing was seen with Clang on x86-64)'
+    return lines, True
+
+
 def controls(tools, args, expected, limb_types, folds=None):
     configs = configurations(tools.family, args.tier)
     print(f'objcode controls: {tools.cxx_path} ({tools.name}, {args.tier} tier: {len(configs)} '
@@ -799,6 +880,7 @@ def controls(tools, args, expected, limb_types, folds=None):
         counts = pool.submit(control_counts, tools, args.workdir, expected, limb_types, folds)
         enclosures = pool.submit(control_enclosures, tools, args.workdir, expected, limb_types)
         vectorized = pool.submit(control_vectorized, tools, args.workdir, expected, limb_types, folds)
+        packing = pool.submit(control_packing, tools, args.workdir, expected, limb_types)
         print('  The textbook a * b + c and the loop (fixture.cpp), judged against their source:')
         loops = 0
         for job in jobs:
@@ -817,6 +899,10 @@ def controls(tools, args, expected, limb_types, folds=None):
         for line in lines:
             print('  ' + line)
         lines, good = vectorized.result()
+        ok = ok and good
+        for line in lines:
+            print('  ' + line)
+        lines, good = packing.result()
         ok = ok and good
         for line in lines:
             print('  ' + line)

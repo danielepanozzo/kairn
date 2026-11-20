@@ -1,0 +1,27 @@
+# The smallest interval with one-limb bounds that contains a ball with a one-limb center
+# (milestone2.md, "One enclosure interface", "Midpoint, radius and the conversions", "Ball to
+# interval"): [RD(c - r), RU(c + r)]. The whole line (0, +inf) gives [-inf, +inf] by the same two
+# operations (0 - inf rounded down is -inf); the empty set (all NaN) is selected, by the test of the
+# radius. These are the values of lower() and upper() of a Ball<T, 1>.
+kernel:        ball_to_interval_1
+input:         stored c
+input:         stored r
+output:        zl
+output:        zu
+requires:      ball c r
+ensures:       interval_of_ball zl zu x x=c,r tight=rounded
+min_precision: 2
+source:        the directed difference and sum of the center and the radius (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the bounds are directed sums, and the empty set is selected after an explicit test; interval_of_ball states what comes out for every canonical ball
+
+l  = sub_down_1(c, r)
+h  = add_up_1(c, r)
+ne = eq(r, r)
+mi = neg(const inf)
+zl = select(ne, l, const inf)
+zu = select(ne, h, mi)

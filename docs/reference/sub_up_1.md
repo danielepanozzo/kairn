@@ -12,7 +12,7 @@ $$r = \mathrm{RU}(a - b).$$
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`sub_up_entry`](sub_up_entry.md).
+No public operation computes this kernel on its own. It is part of [`interval_mid_rad_1`](interval_mid_rad_1.md), [`interval_sub_1`](interval_sub_1.md), [`sub_up_entry`](sub_up_entry.md).
 
 ## Requires
 

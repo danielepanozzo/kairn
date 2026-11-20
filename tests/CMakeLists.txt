@@ -494,7 +494,12 @@ set(_toy_ext_a2 fp:5:-7:0)
 #   the oracle reads neither the claim maximum, nor finite_or_nan with if and steps, nor a fold's
 #   upper entry yet;
 # - the convolutions (architecture.md, "Convolutions"): the oracle reads neither requests of two
-#   lengths nor the claim coefficients yet (it refuses them as folds that write arrays).
+#   lengths nor the claim coefficients yet (it refuses them as folds that write arrays);
+# - the interval kernels of Milestone 2 and the kernels of their bounds (architecture.md, "Claims of
+#   the interval kernels" and "... two limbs and the enclosure interface"): the oracle reads neither
+#   the requirements interval and not_nan, nor the claims outward, makes_interval,
+#   encloses_interval, set_bound, interval_set, ball_of_interval, interval_of_ball and splits, nor
+#   an encloses without a ball, nor a makes_ball from the bounds of an interval, yet.
 #
 # Each list is written out in full here, the one place that says which (tests/brute/brute.py reads
 # them as written).
@@ -502,7 +507,12 @@ set(KAIRN_NOT_YET_CROSS_CHECKED
   sub_1_1 add_entry_step_1 sub_entry_step_1 add_entry_step_2 sub_entry_step_2 scale_step_1 scale_step_2
   mul_pow2_step_1 mul_pow2_step_2 axpy_step_1 axpy_entry_step_1 axpy_step_2 axpy_entry_step_2 axpy_step_2_1
   axpy_entry_step_2_1
-  norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2)
+  norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2
+  mul_dir_1 add_ball_2_2 mul_ball_2_2 add_down_2_2 add_up_2_2 sub_down_2_2 sub_up_2_2 mul_dir_2_2 mul_ext_2_2
+  interval_make_1 interval_neg_1 interval_add_1 interval_sub_1 interval_mul_1 interval_add_2 ball_lower_as_1
+  ball_upper_as_1 ball_lower_as_2 ball_upper_as_2 ball_from_interval_2 ball_narrow_2_1 interval_neg_2 interval_sub_2
+  interval_make_2 interval_mul_2 interval_hull_1 interval_intersection_1 interval_hull_2 interval_intersection_2
+  interval_mid_rad_1 interval_to_ball_1 interval_split_1 ball_to_interval_1)
 set(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS
   add_1 add_1_entry add_2 add_2_entry sub_1 sub_1_entry sub_2 sub_2_entry axpy_1 axpy_1_entry axpy_2 axpy_2_entry
   axpy_2_1 axpy_2_1_entry scale_1 scale_2 mul_pow2_map_1 mul_pow2_map_2

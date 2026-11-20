@@ -2,8 +2,8 @@
 
 Each kernel becomes one function per limb type that computes, in every lane, what the scalar
 kernel of cpp.py computes for that lane's operands, bit for bit. The rules are those of the
-scalar printer (calls inlined, one operation per statement, force-inlined up to two limbs), and
-for the same reasons: raw intrinsics are contracted by the same compilers under the same flags
+scalar printer (calls inlined, one operation per statement, force-inlined up to two limbs but for
+`ordinary_inline:`), and for the same reasons: raw intrinsics are contracted by the same compilers under the same flags
 (docs/developer/design/phase0/environment.md), so a rounded product is again an FMA with a +0
 addend and nothing else is multiplied. A mask is a lane mask (every bit of a lane set or clear),
 select a blend, and succ and pred step the bit pattern with integer lane operations, as the
@@ -258,7 +258,7 @@ def _statements(b, items, kernels, ctype, pad):
 def function(b, k, kernels, ctype):
     cpp._check_names(k, kernels)
     vec, mask, _, _, _ = b['types'][ctype]
-    inline = 'KAIRN_GEN_FORCEINLINE' if k.limbs <= 2 else 'inline'
+    inline = 'KAIRN_GEN_FORCEINLINE' if k.forced_inline else 'inline'
     lines = [f'{inline} void {k.name}({", ".join(cpp.parameters(k, vec, mask))}) noexcept {{']
     lines += _statements(b, ir.flatten(k, kernels), kernels, ctype, '    ')
     lines += [f'    {v}_out = {v};' for v in k.output_limbs]

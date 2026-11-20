@@ -462,6 +462,53 @@ class Tool(unittest.TestCase):
         self.assertIn("when $a = \\pm\\infty$, $x = (\\pm\\infty, 0)$", self.page("make_2"))
         self.assertIn("is a NaN or negative, $-\\infty$ included", self.page("ball_make_2"))
 
+    def test_unknown_set_operation(self):
+        # A set operation this script has no template for is an error, never a guess (stage B1).
+        self.change("interval_hull_1", lambda k: k["ensures"][0].update(set="xor"))
+        self.fails("interval_hull_1", "xor")
+
+    def test_interval_kernels(self):
+        # The claims of the interval kernels (architecture.md, "Claims of the interval kernels").
+        page = self.page("interval_mul_1")
+        self.assertIn("**I3.** $Z$ contains $x y$ for every $x \\in X$, $y \\in Y$", page)
+        self.assertIn("$z_l$ is $\\mathrm{RD}(\\ell)$ or at most 1 step of `T` below it", page)
+        self.assertIn("**I5.** For bounded $X$ and $Y$, $Z$ is bounded exactly when", page)
+        page = self.page("interval_add_2")
+        self.assertIn("| $A / u^2$ | $8.0000000000000091 \\times 10^{0}$ |", page)
+        self.assertIn("for the lower bound when $x_l + y_l = 0$", page)
+        self.assertIn("$\\lvert l - (x + y)\\rvert \\le A\\,\\lvert x + y\\rvert + B$", self.page("add_down_2_2"))
+        self.assertIn("If the ball $X$ of center $c$ and radius $r$ is empty: $l = +\\infty$", self.page("ball_lower_as_1"))
+        # Why a bound of a ball with a two-limb center claims no number of steps, and what it claims.
+        for name, side in (("ball_lower_as_2", "RD}(c - r)"), ("ball_upper_as_2", "RU}(c + r)")):
+            page = self.page(name)
+            self.assertIn("No number of steps of `T` from $\\mathrm{%s$ is claimed" % side, page)
+            self.assertIn("much smaller than $c$ in magnitude", page)
+            self.assertIn("within the bound above: $\\lvert", page)
+            self.assertIn("\\le 5\\,u\\,(\\lvert c\\rvert + \\lvert r\\rvert) + 3\\,\\eta$.", page)
+        self.assertNotIn("No number of steps", self.page("ball_lower_as_1"))
+        # Stage B1: the set operations, the conversions, the split, the zero of a product of
+        # intervals, the bounds of two limbs over extended reals, not_nan of two limbs.
+        self.assertIn("$Z$ is empty exactly when $X$ and $Y$ both are.", self.page("interval_hull_1"))
+        self.assertIn("$Z$ is empty exactly when no real number is a member of both", self.page("interval_intersection_2"))
+        page = self.page("interval_mid_rad_1")
+        self.assertIn("$\\lvert m - \\tfrac{x_l + x_u}{2}\\rvert \\le u\\,\\lvert \\tfrac{x_l + x_u}{2}\\rvert + \\eta$", page)
+        self.assertIn("$\\mathrm{RU}(\\max(m - x_l, x_u - m))$", page)
+        self.assertIn("These are the values of `mid` and `rad` of IEEE 1788.", page)
+        self.assertIn("An unbounded interval gives the whole line, center 0", self.page("interval_to_ball_1"))
+        self.assertIn("$z_l = \\mathrm{RD}(c - r)$ and $z_u = \\mathrm{RU}(c + r)$", self.page("ball_to_interval_1"))
+        self.assertIn("the two together are $X$, split at that point", self.page("interval_split_1"))
+        self.assertIn("**I6.** For nonempty $X$ and $Y$: if an operand is $[0, 0]$, $Z$ is $[0, 0]$",
+                      self.page("interval_mul_2"))
+        page = self.page("mul_ext_2_2")
+        self.assertIn("$l$ is never a NaN.", page)
+        self.assertIn("$x$ is not a NaN: a finite normalized pair or $(\\pm\\infty, \\pm 0)$", page)
+        self.assertIn("| $A / u^2$ |", page)
+        self.assertIn("$Z$ is the whole line, $[-\\infty, +\\infty]$", self.page("interval_make_1"))
+        self.assertIn("If an operand is a zero: $d$ is a zero", self.page("mul_dir_1"))
+        # A constant of a claim this script cannot read is an error, never a guess.
+        self.change("add_down_2_2", lambda k: k["ensures"][1].update(rel="up(v)"))
+        self.fails("add_down_2_2", "rel")
+
     # ieee_only, the claims' word on whether a kernel has a statement on finite operands.
     def test_ieee_only_outside_the_extended_domain(self):
         self.change("add_2_2", lambda k: k.update(ieee_only=True))

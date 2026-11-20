@@ -1,0 +1,22 @@
+# A normalized pair that is at least x - y: neg_2 of y, then the directed sum.
+# The tightness constants of the outward claim are A = (2 (1+u)^3 G E + 2 u^2) (1 + rel) / (1 - u)
+# and B = 2 (1+u)^2 (G eta / 2 + H) + eta + (2 (1+u)^3 G E + 2 u^2) / (1 - u) tiny, with E, G, H the
+# constants of the radius as the format rounds them, and rel, tiny those of the bound of the
+# center's kernel (milestone2.md, "Bounds of two limbs"; Directed2.v, outward_rel, outward_abs).
+kernel:        sub_up_2_2
+input:         x = x0 x1
+input:         y = y0 y1
+output:        h = h0 h1
+value:         x-y
+requires:      normalized x
+requires:      normalized y
+ensures:       normalized h
+ensures:       outward h above rel=(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u) abs=2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2) exact_when=zero(x-y)
+min_precision: 3
+source:        add_up_2_2 on x and -y (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+cone_exempt:   through add_up_2_2, which selects; the interval kernels test h0
+
+(n0, n1) = neg_2(y0, y1)
+(h0, h1) = add_up_2_2(x0, x1, n0, n1)

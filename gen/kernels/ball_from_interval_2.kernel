@@ -1,0 +1,65 @@
+# A ball with a 2-limb center from an interval [lo, hi] of two values of T supplied by the program,
+# guarded (rule R3); milestone2.md, "One enclosure interface", "A ball from an interval of two T".
+# The center is lo/2 + hi/2 as an exact 2-limb number, by two_sum_ord; the radius is
+# RU(hi/2 - lo/2), the smallest radius of T for that center. When a halving is not exact (a bound
+# that is an odd multiple of eta below 2N) the center may be off by eta, and the radius is the number
+# after d = RU(hu - hl), the difference of the two rounded halves: at least d + eta, which is enough
+# (with hu = hi/2 + a and hl = lo/2 + b, |a|, |b| <= eta/2, the radius needed is
+# (hi - lo)/2 + |a + b| <= d - a + b + |a + b| <= d + eta). No constant of the listing is subnormal.
+# The test of an exact halving doubles each half back by an exact product with 2, not by adding the
+# half to itself, which GCC rewrites as a product it may fuse into the next addition. States: the
+# whole line when a bound is a NaN, whatever the other bound (decided on 2026-11-20, as for
+# interval_make_1), and when a bound of an interval that is not empty is infinite; the empty set
+# for lo > hi, [+inf, +inf] and [-inf, -inf]. The difference of the halves adds minus the lower
+# half, computed as its own exact product of the negated guarded bound, so that no fused result is
+# negated (a rule of the generator); it is -hl, rounding to nearest being symmetric.
+kernel:        ball_from_interval_2
+input:         lo
+input:         hi
+output:        cw = cw0 cw1
+output:        rw
+ensures:       makes_ball cw rw from_interval=lo,hi midpoint_when=half_in_format(lo);half_in_format(hi)
+min_precision: 2
+source:        the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   every output is selected after explicit tests of the bounds; makes_ball states what comes out
+
+gl       = guard(lo)
+gu       = guard(hi)
+hl       = prod(gl, const up(1/2))
+hu       = prod(gu, const up(1/2))
+(c0, c1) = two_sum_ord(hl, hu)
+gn       = neg(gl)
+hn       = prod(gn, const up(1/2))
+d        = add_up_1(hu, hn)
+bl       = prod(hl, const up(2))
+bu       = prod(hu, const up(2))
+xl       = eq(bl, gl)
+xu       = eq(bu, gu)
+xx       = and(xl, xu)
+dn       = succ(d)
+r        = select(xx, d, dn)
+ok       = le(gl, gu)
+nl       = lt(gl, const inf)
+mi       = neg(const inf)
+nu       = lt(mi, gu)
+va       = and(ok, nl)
+v        = and(va, nu)
+fl       = lt(mi, gl)
+fu       = lt(gu, const inf)
+f        = and(fl, fu)
+k0       = select(f, c0, 0)
+k1       = select(f, c1, 0)
+s        = select(f, r, const inf)
+ql       = eq(gl, gl)
+qu       = eq(gu, gu)
+nn       = and(ql, qu)
+wc       = select(nn, const nan, 0)
+wr       = select(nn, const nan, const inf)
+cw0      = select(v, k0, wc)
+cw1      = select(v, k1, wc)
+rw       = select(v, s, wr)

@@ -64,6 +64,10 @@ set_tests_properties(api.platform_macros PROPERTIES LABELS api)
 #
 # The building blocks, which no public operation computes on its own, and the entry kernels that no
 # public operation calls yet; runner.cpp lists the same, with why.
+# The interval kernels of Milestone 2 are in neither list: the oracle does not judge them yet
+# (KAIRN_NOT_YET_CROSS_CHECKED, ../CMakeLists.txt), and coverage.cmake requires such a kernel to be
+# in none of the runner's lists. When the oracle reads them, the building blocks among them
+# (mul_dir_1, the bounds of two limbs, mul_ext_2_2) go in the first, the others in the second.
 set(_api_internal two_sum fast_two_sum split two_prod_dekker radd two_sum_ord add_down_1 add_up_1 sub_down_1
   sub_up_1)
 set(_api_not_public ball_add_1 ball_sub_1 ball_mul_1 ball_scale_1 ball_add_2 ball_sub_2 ball_mul_2 ball_scale_2

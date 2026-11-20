@@ -1,0 +1,46 @@
+# Both directed products of two numbers from one TwoProd (milestone2.md, "Interval kernels", "One
+# limb"): d is the output of mul_down_1 and v that of mul_up_1, on the same two_prod, except that a
+# zero factor gives the literal zero instead of the rounded product, so that 0 x = 0 for every x,
+# an infinite x included: the product of two bounds of interval arithmetic. For finite operands a
+# zero factor gives a zero product, so the claims of mul_down_1 and mul_up_1 already say it; the
+# difference is 0 times infinity, which the claims say with zero_factor. The operands are not NaN
+# (the bounds of a canonical interval never are). The constant is P = eta / (2 u^2), exact, the
+# one of mul_down_1. Like mul_down_1, not constexpr in this milestone (it has an fms).
+kernel:        mul_dir_1
+input:         a
+input:         b
+output:        d
+output:        v
+value:         a*b
+requires:      not_nan a
+requires:      not_nan b
+ensures:       bound d below steps=1 zero_factor
+ensures:       rounded d down when=product_large zero_factor
+ensures:       bound v above steps=1 zero_factor
+ensures:       rounded v up when=product_large zero_factor
+min_precision: 2
+source:        two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+cone_exempt:   d and v are p, a neighbor of p or zero, chosen by select, and succ(-inf) and pred(+inf) are finite; the bound and rounded claims state the outputs for infinite operands
+
+(p, e) = two_prod(a, b)
+ap     = abs(p)
+bd     = lt(ap, const up(eta/(2*u^2)))
+ez     = eq(e, 0)
+un     = and(bd, ez)
+n      = lt(e, 0)
+sd     = or(n, un)
+pp     = pred(p)
+dz     = select(sd, pp, p)
+q      = lt(0, e)
+su     = or(q, un)
+sp     = succ(p)
+vz     = select(su, sp, p)
+za     = eq(a, 0)
+zb     = eq(b, 0)
+zz     = or(za, zb)
+d      = select(zz, 0, dz)
+v      = select(zz, 0, vz)

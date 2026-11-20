@@ -403,7 +403,9 @@ class Specials(unittest.TestCase):
         # E, G, H of the six cores, and the splitter; P of the two directed products, and N of the
         # two scalings of a ball by a power of two; the five constants of bound_sum_1 and of
         # bound_sum_2 and the seven of bound_dot_1 and of bound_dot_2 (2, of the doubling, among them).
-        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 5 + 5 + 7 + 7))
+        # Milestone 2: E, G, H of add_ball_2_2 and mul_ball_2_2, P of mul_dir_1, and 1/2 and 2 of
+        # ball_from_interval_2. Stage B1: 1/2 of interval_mid_rad_1.
+        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 5 + 5 + 7 + 7 + 3 * 2 + 1 + 2 + 1))
         # The constant of tm in bound_dot_k, (1 + u)^2 (tiny + eta) of milestone2.md, is subnormal: it
         # holds the smallest normal number besides, as H does (1 + 5/2 eta or 3/2 eta, rounded up).
         for name, more in (('bound_dot_1', 2), ('bound_dot_2', 3)):
@@ -501,11 +503,16 @@ class TwoExecutionsOfAProduct(unittest.TestCase):
     N = common.size(4000, 100000)
     # The bound kernels of the folds (bound_sum_k, bound_dot_k) multiply m by their constants: for
     # m = -0, a zero that count(m) admits, their outputs are exact zero products.
+    # ball_from_interval_2 (Milestone 2) halves its bounds with prod: its center is the exact sum of
+    # the two halves, which for two zeros is a zero product of either sign. So does
+    # interval_mid_rad_1 (stage B1), whose midpoint of [-0, -0] is the sum of the two halves, and
+    # interval_to_ball_1 and interval_split_1, which return that midpoint.
     ZERO_SIGN = {'mul_pow2_2', 'mul_pow2_2_full', 'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full',
                  'ball_mul_pow2_2_full', 'mul_1_1', 'two_prod_dekker',
                  'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2',
                  # the steps of the maps whose products are those of mul_1_1 or mul_pow2_2
-                 'scale_step_1', 'mul_pow2_step_1', 'mul_pow2_step_2', 'axpy_step_1', 'axpy_entry_step_1'}
+                 'scale_step_1', 'mul_pow2_step_1', 'mul_pow2_step_2', 'axpy_step_1', 'axpy_entry_step_1',
+                 'ball_from_interval_2', 'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1'}
 
     def test_the_kernels(self):
         from kairn_gen import cpp

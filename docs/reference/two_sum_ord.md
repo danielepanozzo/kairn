@@ -12,7 +12,7 @@ $$s + e = a + b.$$
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`add_down_1`](add_down_1.md), [`add_up_1`](add_up_1.md).
+No public operation computes this kernel on its own. It is part of [`add_down_1`](add_down_1.md), [`add_up_1`](add_up_1.md), [`ball_from_interval_2`](ball_from_interval_2.md), [`add_down_2_2`](add_down_2_2.md), [`add_up_2_2`](add_up_2_2.md), [`mul_dir_2_2`](mul_dir_2_2.md).
 
 ## Requires
 
@@ -89,5 +89,5 @@ No stored brute-force run has judged this kernel yet.
 
 ## Not claimed
 
-- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: what is proved and what is not written yet there is in [What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values).
+- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: [`ball_from_interval_2`](ball_from_interval_2.md) states that, and the public headers do not call it yet ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the library does now).
 

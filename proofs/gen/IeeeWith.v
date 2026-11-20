@@ -48,10 +48,11 @@ Local Notation pred := (IeeeOperations.pred prec emax).
 Local Notation guard := (IeeeOperations.guard prec emax nan_plus).
 
 (* The constants and the other kernels of IeeeModel.v that the listings use. *)
+Local Notation up_ball_from_interval_2_0 := (IeeeModel.up_ball_from_interval_2_0 prec emax).
+Local Notation up_bound_dot_1_2 := (IeeeModel.up_bound_dot_1_2 prec emax).
 Local Notation up_ball_mul_pow2_1_0 := (IeeeModel.up_ball_mul_pow2_1_0 prec emax).
 Local Notation up_bound_dot_1_0 := (IeeeModel.up_bound_dot_1_0 prec emax).
 Local Notation up_bound_dot_1_1 := (IeeeModel.up_bound_dot_1_1 prec emax).
-Local Notation up_bound_dot_1_2 := (IeeeModel.up_bound_dot_1_2 prec emax).
 Local Notation up_bound_dot_1_3 := (IeeeModel.up_bound_dot_1_3 prec emax).
 Local Notation up_bound_dot_1_4 := (IeeeModel.up_bound_dot_1_4 prec emax).
 Local Notation up_bound_dot_1_5 := (IeeeModel.up_bound_dot_1_5 prec emax).
@@ -65,6 +66,9 @@ Local Notation up_bound_sum_2_0 := (IeeeModel.up_bound_sum_2_0 prec emax).
 Local Notation up_bound_sum_2_1 := (IeeeModel.up_bound_sum_2_1 prec emax).
 Local Notation splitter := (IeeeModel.splitter prec emax).
 Local Notation add_1_1 := (IeeeModel.add_1_1 prec emax nan_plus).
+Local Notation two_sum_ord := (IeeeModel.two_sum_ord prec emax nan_plus nan_minus nan_abs).
+Local Notation add_up_1 := (IeeeModel.add_up_1 prec emax nan_plus nan_minus nan_abs).
+Local Notation sub_up_1 := (IeeeModel.sub_up_1 prec emax nan_plus nan_minus nan_opp nan_abs).
 Local Notation fast_two_sum := (IeeeModel.fast_two_sum prec emax nan_plus nan_minus).
 
 (* mul_1_1: one rounding to nearest. *)
@@ -84,6 +88,45 @@ Definition axpy_step_1_with (p_ : float -> float -> float) (a x y : float) : flo
   let p := mul_1_1_with p_ a x in
   let z := add_1_1 p y in
   z.
+
+(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). *)
+Definition ball_from_interval_2_with (p_ : float -> float -> float) (lo hi : float) : float * float * float :=
+  let gl := guard lo in
+  let gu := guard hi in
+  let hl := p_ gl up_ball_from_interval_2_0 in
+  let hu := p_ gu up_ball_from_interval_2_0 in
+  let '(c0, c1) := two_sum_ord hl hu in
+  let gn := neg gl in
+  let hn := p_ gn up_ball_from_interval_2_0 in
+  let d := add_up_1 hu hn in
+  let bl := p_ hl up_bound_dot_1_2 in
+  let bu := p_ hu up_bound_dot_1_2 in
+  let xl := eq bl gl in
+  let xu := eq bu gu in
+  let xx := andb xl xu in
+  let dn := succ d in
+  let r := if xx then d else dn in
+  let ok := le gl gu in
+  let nl := lt gl pinf in
+  let mi := neg pinf in
+  let nu := lt mi gu in
+  let va := andb ok nl in
+  let v := andb va nu in
+  let fl := lt mi gl in
+  let fu := lt gu pinf in
+  let f := andb fl fu in
+  let k0 := if f then c0 else pzero in
+  let k1 := if f then c1 else pzero in
+  let s := if f then r else pinf in
+  let ql := eq gl gl in
+  let qu := eq gu gu in
+  let nn := andb ql qu in
+  let wc := if nn then cnan else pzero in
+  let wr := if nn then cnan else pinf in
+  let cw0 := if v then k0 else wc in
+  let cw1 := if v then k1 else wc in
+  let rw := if v then s else wr in
+  (cw0, cw1, rw).
 
 (* ball_mul_pow2_1: midpoint-radius scaling by a power of two (Milestone 2 listing). *)
 Definition ball_mul_pow2_1_with (p_ : float -> float -> float) (cx rx c : float) : float * float :=
@@ -165,6 +208,54 @@ Definition bound_sum_2_with (p_ : float -> float -> float) (m : float) : float *
   let g := p_ aa w in
   let ok := le a up_bound_dot_1_5 in
   (g, ok).
+
+(* interval_mid_rad_1: the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). *)
+Definition interval_mid_rad_1_with (p_ : float -> float -> float) (xl xu : float) : float * float :=
+  let om := pred pinf in
+  let mo := neg om in
+  let ml := lt xl mo in
+  let l := if ml then mo else xl in
+  let mu := lt om xu in
+  let h := if mu then om else xu in
+  let hl := p_ l up_ball_from_interval_2_0 in
+  let hu := p_ h up_ball_from_interval_2_0 in
+  let ma := add hl hu in
+  let ca := lt ma l in
+  let mb := if ca then l else ma in
+  let cb := lt h mb in
+  let mc := if cb then h else mb in
+  let ra := sub_up_1 mc l in
+  let rb := sub_up_1 h mc in
+  let rm := lt ra rb in
+  let rc := if rm then rb else ra in
+  let md := if ml then mo else mc in
+  let me := if mu then om else md in
+  let bo := andb ml mu in
+  let mf := if bo then pzero else me in
+  let un := orb ml mu in
+  let rd := if un then pinf else rc in
+  let ne := lt xl pinf in
+  let m := if ne then mf else cnan in
+  let r := if ne then rd else cnan in
+  (m, r).
+
+(* interval_split_1: the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing). *)
+Definition interval_split_1_with (p_ : float -> float -> float) (xl xu : float) : float * float * float * float :=
+  let '(m, r) := interval_mid_rad_1_with p_ xl xu in
+  let ne := eq r r in
+  let mi := neg pinf in
+  let al := xl in
+  let au := if ne then m else mi in
+  let bl := if ne then m else pinf in
+  let bu := xu in
+  (al, au, bl, bu).
+
+(* interval_to_ball_1: interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). *)
+Definition interval_to_ball_1_with (p_ : float -> float -> float) (xl xu : float) : float * float :=
+  let '(m, r) := interval_mid_rad_1_with p_ xl xu in
+  let un := eq r pinf in
+  let c := if un then pzero else m in
+  (c, r).
 
 (* mul_pow2_step_1: one rounding to nearest of a product by a power of two. *)
 Definition mul_pow2_step_1_with (p_ : float -> float -> float) (x c : float) : float :=

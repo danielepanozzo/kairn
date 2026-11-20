@@ -59,6 +59,32 @@ kernel is described in one file, gen/kernels/NAME.kernel:
     ensures:       makes_ball cw rw from=c,r
                                       a constructor of a ball: center and radius outputs, from
                                       the center and radius inputs
+    ensures:       makes_ball cw rw from_interval=lo,hi [midpoint_when=half_in_format(lo);...]
+                                      a ball from the bounds of an interval (Milestone 2)
+    requires:      interval xl xu     the bounds of a canonical interval; or: not_nan a
+    ensures:       makes_interval zl zu from=lo,hi
+    ensures:       encloses_interval zl zu x+y x=xl,xu y=yl,yu tight=rounded [exact_lower=...]
+                   [exact_upper=...] [bounded_when=abs_le(x+y,omega)] [bounded_exactly]
+                                      I1 to I5 of an interval kernel; tight is exact, rounded
+                                      [;steps=N][;when=product_large], or outward;rel=EXPR;abs=EXPR
+    ensures:       set_bound l below x x=c,r [tight=rounded]
+                                      a bound of a set, as a number of T
+    ensures:       outward l below rel=EXPR abs=EXPR [exact_when=zero(x+y)]
+                                      on that side of the value, within rel |value| + abs; EXPR
+                                      may name a constant up(EXPR) as the format rounds it
+    ensures:       bound d below steps=1 zero_factor
+                                      zero_factor: a zero operand gives zero (0 times inf is 0);
+                                      also on outward (extended domain: mul_ext_2_2) and as the
+                                      last word of encloses_interval (an operand [0, 0] gives [0, 0])
+    ensures:       interval_set zl zu union x=xl,xu y=yl,yu
+                                      the hull (union) or the intersection of two intervals, exact
+    ensures:       ball_of_interval m r from=xl,xu special=ieee1788 rel=u abs=eta [smallest_radius]
+                                      a ball made from an interval: special is ieee1788 (the mid and
+                                      rad of IEEE 1788) or ball (a canonical ball)
+    ensures:       interval_of_ball zl zu x x=c,r tight=rounded
+                                      an interval that encloses a ball
+    ensures:       splits al au bl bu from=xl,xu
+                                      two intervals that together are the interval split
     min_precision: 3                  optional
     theorem:       proofs/theories/Add22.v add_2_2_correct
     source:        free text
@@ -93,6 +119,8 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       and why (rule R3)
     ce_variant:    KERNEL             optional: its constant-evaluation variant
     cone_exempt:   free text          optional: why rule 4 cannot hold, and what stands in for it
+    ordinary_inline: free text        optional: the C++ is an ordinary inline function, not forced
+                                      inline though it has at most two limbs, and why
     unused:        x1 free text       optional: an input the computation does not need, and why
 
     sh = add(x0, y0)                  one operation per line
@@ -200,6 +228,7 @@ It has no step of its own, and is otherwise described as a map:
     ensures:       coefficients z     each coefficient satisfies that fold's claims on its terms
     ensures:       finite_or_nan z flag=finite
 """
+import json
 import os
 import re
 from dataclasses import dataclass, field
@@ -336,6 +365,9 @@ class Kernel:
     status: str = None
     ce_variant: str = None
     cone_exempt: str = None
+    # The C++ function is an ordinary inline function, not forced inline (milestone2.md, "Inlining
+    # and compile time"): why, or None for the rule (forced inline up to two limbs).
+    ordinary_inline: str = None
     unused: dict = field(default_factory=dict)     # input value -> why the computation ignores it
     # The non-finite layer (architecture.md, "Claims of the non-finite layer").
     domain: str = None                             # None (finite) or 'extended', as written
@@ -357,6 +389,9 @@ class Kernel:
     stored: set = field(default_factory=set)       # one-limb input groups that are limbs of objects
     supplied: set = field(default_factory=set)     # multi-limb input groups the program gives
     guard_pending: dict = field(default_factory=dict)   # input value -> why it is not guarded yet
+    # The record of the names of the constants up(EXPR) of the set the kernel was loaded with
+    # (load_kernels), shared by its kernels: {EXPR: name}. None for a kernel read on its own.
+    constant_names: dict = field(default=None, repr=False, compare=False)
 
     @property
     def extended(self):
@@ -409,6 +444,12 @@ class Kernel:
     def limbs(self):
         return max(len(g.limbs) for g in self.inputs + self.outputs)
 
+    @property
+    def forced_inline(self):
+        """Whether the C++ function is forced inline: a kernel of at most two limbs, unless it says
+        `ordinary_inline:`."""
+        return self.limbs <= 2 and self.ordinary_inline is None
+
 
 # The IEEE-model statements a kernel of the finite domain may ask for (ieee.py, `ieee:`).
 IEEE_STATEMENTS = ('bridge', 'spec')
@@ -420,8 +461,10 @@ IEEE_THEOREM_NAMES = {'ieee_bridge_theorem': '{}_ieee_bridge', 'ieee_spec_theore
                       'ieee_lead_theorem': '{}_ieee_lead'}
 
 # The claims that only the non-finite layer has: a kernel that claims nothing else has no
-# real-model statement (Kernel.real_model).
-NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball', 'finite_or_nan')
+# real-model statement (Kernel.real_model). The interval kinds of Milestone 2 are among them: an
+# interval has infinite bounds as ordinary values, so its kernels are stated in the IEEE model only.
+NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball', 'finite_or_nan', 'makes_interval', 'encloses_interval',
+                   'set_bound', 'interval_set', 'ball_of_interval', 'interval_of_ball', 'splits')
 
 INPUT_CLASSES = ('stored', 'supplied')   # rule R3: where an entry kernel's input comes from
 
@@ -453,19 +496,25 @@ def _finite_when(text, where):
     return out
 
 
-# The conditions of exact_when: EXPR = 0 or |EXPR| > K, and EXPR = 0 or |EXPR| >= K.
+# The conditions of exact_when: EXPR = 0 or |EXPR| > K, and EXPR = 0 or |EXPR| >= K; and, on
+# outward and on the outward tightness of an interval (Milestone 2), EXPR = 0.
 EXACT_CONDITIONS = ('zero_or_abs_gt', 'zero_or_abs_ge')
+ZERO_CONDITION = 'zero'
 
 
 def _exact_when(text, where):
-    """zero_or_abs_gt(EXPR,K);zero_or_abs_ge(EXPR,K) as [{'zero_or_abs_gt': EXPR, 'than': K}, ...]."""
+    """zero_or_abs_gt(EXPR,K);zero_or_abs_ge(EXPR,K);zero(EXPR) as
+    [{'zero_or_abs_gt': EXPR, 'than': K}, ..., {'zero': EXPR}]."""
     out = []
     for part in text.split(';'):
         m = re.fullmatch(r'([a-z_]+)\((.+)\)', part)
         args = _arguments(m.group(2), where) if m else []
+        if m and m.group(1) == ZERO_CONDITION and len(args) == 1 and args[0]:
+            out.append({ZERO_CONDITION: args[0]})
+            continue
         if not m or m.group(1) not in EXACT_CONDITIONS or len(args) != 2 or not all(args):
-            raise DescriptionError(f'{where}: a condition of exact_when is zero_or_abs_gt(EXPR,K) or '
-                                   f'zero_or_abs_ge(EXPR,K), got {part!r}')
+            raise DescriptionError(f'{where}: a condition of exact_when is zero_or_abs_gt(EXPR,K), '
+                                   f'zero_or_abs_ge(EXPR,K) or zero(EXPR), got {part!r}')
         out.append({m.group(1): args[0], 'than': args[1]})
     return out
 
@@ -474,6 +523,57 @@ def _steps(text, where):
     if not re.fullmatch(r'[0-9]+', text):
         raise DescriptionError(f'{where}: steps must be an integer, got {text!r}')
     return int(text)
+
+
+def _bounded_when(text, where):
+    """abs_le(EXPR,omega);abs_le(EXPR,E) as [{'abs_le': EXPR, 'omega': True}, {'abs_le': EXPR, 'exp': E}]."""
+    out = []
+    for part in text.split(';') if text else ():
+        m = re.fullmatch(r'abs_le\((.+),(omega|-?[0-9]+)\)', part)
+        if not m:
+            raise DescriptionError(f'{where}: a condition of bounded_when is abs_le(EXPR,omega) or '
+                                   f'abs_le(EXPR,E), got {part!r}')
+        out.append({'abs_le': m.group(1), 'omega': True} if m.group(2) == 'omega'
+                   else {'abs_le': m.group(1), 'exp': int(m.group(2))})
+    return out
+
+
+# The tightness of an interval or of a bound of a set (Milestone 2): rounded (with optional steps
+# and when), exact, or outward with rel and abs.
+TIGHT_KINDS = ('rounded', 'exact', 'outward')
+
+
+def _tight(text, where):
+    """rounded[;steps=N][;when=COND], exact, or outward;rel=EXPR;abs=EXPR, as a dict."""
+    parts = text.split(';')
+    kind = parts[0]
+    if kind not in TIGHT_KINDS:
+        raise DescriptionError(f'{where}: tight is {", ".join(TIGHT_KINDS)}, got {kind!r}')
+    out = {'kind': kind}
+    allowed = {'rounded': ('steps', 'when'), 'exact': (), 'outward': ('rel', 'abs')}[kind]
+    for p in parts[1:]:
+        key, eq, val = p.partition('=')
+        if not eq or key not in allowed or key in out or not val:
+            raise DescriptionError(f'{where}: bad or repeated field {p!r} of tight={kind}')
+        if key == 'steps':
+            if not re.fullmatch(r'[0-9]+', val):
+                raise DescriptionError(f'{where}: steps must be an integer, got {val!r}')
+            val = int(val)
+        out[key] = val
+    if kind == 'outward' and ('rel' not in out or 'abs' not in out):
+        raise DescriptionError(f'{where}: tight=outward needs rel= and abs=')
+    return out
+
+
+def _pairs(words, where, what, keys):
+    """NAME=A,B words as {NAME: {keys[0]: A, keys[1]: B}}."""
+    out = {}
+    for w in words:
+        m = re.fullmatch(r'([a-z][a-z0-9]*)=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', w)
+        if not m or m.group(1) in out:
+            raise DescriptionError(f'{where}: bad or repeated {what} {w!r}: NAME={keys[0].upper()},{keys[1].upper()}')
+        out[m.group(1)] = {keys[0]: m.group(2), keys[1]: m.group(3)}
+    return out
 
 
 def _ensures(words, where):
@@ -493,12 +593,44 @@ def _ensures(words, where):
         if entry['finite_when'] is None:
             entry['finite_when'] = []
         return entry
-    if kind == 'makes_ball' and len(words) == 4:
+    if kind == 'makes_ball' and len(words) == 4 and words[3].startswith('from='):
         m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
         if not m:
             raise DescriptionError(f'{where}: expected "makes_ball CENTER RADIUS from=CENTER,RADIUS"')
         return {'kind': kind, 'center': words[1], 'radius': words[2],
                 'from': {'center': m.group(1), 'radius': m.group(2)}}
+    if kind == 'makes_ball' and len(words) in (4, 5) and words[3].startswith('from_interval='):
+        # A ball from the bounds of an interval (Milestone 2): `from` names a lower and an upper
+        # input, and midpoint_when the conditions under which the center is the exact midpoint.
+        m = re.fullmatch(r'from_interval=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
+        if not m or (len(words) == 5 and not words[4].startswith('midpoint_when=')):
+            raise DescriptionError(f'{where}: expected "makes_ball CENTER RADIUS from_interval=LOWER,UPPER '
+                                   '[midpoint_when=CONDITIONS]"')
+        entry = {'kind': kind, 'center': words[1], 'radius': words[2],
+                 'from': {'lower': m.group(1), 'upper': m.group(2)}}
+        if len(words) == 5:
+            conds = []
+            for part in words[4][len('midpoint_when='):].split(';'):
+                c = re.fullmatch(r'half_in_format\(([a-z][a-z0-9]*)\)', part)
+                if not c:
+                    raise DescriptionError(f'{where}: a condition of midpoint_when is half_in_format(INPUT), '
+                                           f'got {part!r}')
+                conds.append({'half_in_format': c.group(1)})
+            entry['midpoint_when'] = conds
+        return entry
+    if kind == 'makes_interval' and len(words) == 4:
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
+        if not m:
+            raise DescriptionError(f'{where}: expected "makes_interval LOWER UPPER from=LOWER,UPPER"')
+        return {'kind': kind, 'lower': words[1], 'upper': words[2],
+                'from': {'lower': m.group(1), 'upper': m.group(2)}}
+    if kind in ('rounded', 'bound', 'outward') and words[-1] == 'zero_factor' and len(words) > 3:
+        # The extended reading of a product with a zero factor: zero (Milestone 2, mul_dir_1, and
+        # the bounds of two limbs of mul_ext_2_2). Written only when it is claimed, after the entry's
+        # other fields.
+        entry = _ensures(words[:-1], where)
+        entry['zero_factor'] = True
+        return entry
     if kind == 'rounded' and len(words) == 3:
         return {'kind': kind, 'of': words[1], 'mode': words[2]}
     if kind == 'rounded' and len(words) == 4 and words[3].startswith('when='):
@@ -558,9 +690,100 @@ def _ensures(words, where):
         return {'kind': kind, 'of': words[1], 'side': words[2]}
     if kind == 'bound' and len(words) == 4 and words[3].startswith('steps='):
         return {'kind': kind, 'of': words[1], 'side': words[2], 'steps': _steps(words[3][len('steps='):], where)}
+    if kind == 'outward' and len(words) in (5, 6):
+        entry = {'kind': kind, 'of': words[1], 'side': words[2], 'rel': None, 'abs': None}
+        for w in words[3:]:
+            key, eq, val = w.partition('=')
+            if key == 'exact_when' and eq and 'exact_when' not in entry:
+                entry['exact_when'] = _exact_when(val, where)
+            elif key in ('rel', 'abs') and eq and val and entry[key] is None:
+                entry[key] = val
+            else:
+                raise DescriptionError(f'{where}: bad or repeated field {w!r} in outward entry')
+        if entry['rel'] is None or entry['abs'] is None:
+            raise DescriptionError(f'{where}: an outward entry needs rel= and abs=')
+        return entry
+    if kind in ('encloses_interval', 'set_bound') and len(words) >= 5:
+        # encloses_interval LOWER UPPER SET NAME=LOWER,UPPER ... [tight=...] [exact_lower=...]
+        #   [exact_upper=...] [bounded_when=...] [bounded_exactly]
+        # set_bound OUTPUT SIDE SET NAME=CENTER,RADIUS ... [tight=...]
+        names, opts = [], {}
+        for w in words[4:]:
+            key, eq, val = w.partition('=')
+            if key in ('tight', 'exact_lower', 'exact_upper', 'bounded_when') and eq:
+                if key in opts:
+                    raise DescriptionError(f'{where}: {key} given twice')
+                opts[key] = val
+            elif w in ('bounded_exactly', 'zero_factor') and kind == 'encloses_interval' and w not in opts:
+                opts[w] = True
+            else:
+                names.append(w)
+        if kind == 'set_bound':
+            if set(opts) - {'tight'}:
+                raise DescriptionError(f'{where}: set_bound has tight= and nothing else of an interval')
+            entry = {'kind': kind, 'of': words[1], 'side': words[2], 'set': words[3],
+                     'balls': _pairs(names, where, 'ball', ('center', 'radius'))}
+            if 'tight' in opts:
+                entry['tight'] = _tight(opts['tight'], where)
+            return entry
+        entry = {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
+                 'intervals': _pairs(names, where, 'interval', ('lower', 'upper'))}
+        if 'tight' not in opts:
+            raise DescriptionError(f'{where}: an encloses_interval entry needs tight=')
+        entry['tight'] = _tight(opts['tight'], where)
+        sides = {s: _exact_when(opts[f'exact_{s}'], where) for s in ('lower', 'upper') if f'exact_{s}' in opts}
+        if sides:
+            if entry['tight']['kind'] != 'outward':
+                raise DescriptionError(f'{where}: exact_lower and exact_upper belong to tight=outward')
+            entry['tight']['exact_when'] = sides
+        entry['bounded_when'] = _bounded_when(opts.get('bounded_when', ''), where)
+        if opts.get('bounded_exactly'):
+            entry['bounded_exactly'] = True
+        if opts.get('zero_factor'):
+            # A nonempty operand [0, 0] gives [0, 0] (interval_mul_2): only when it is claimed.
+            entry['zero_factor'] = True
+        return entry
+    if kind == 'interval_set' and len(words) == 6:
+        # The hull (union) or the intersection of two intervals (Milestone 2): exact.
+        return {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
+                'intervals': _pairs(words[4:], where, 'interval', ('lower', 'upper'))}
+    if kind == 'ball_of_interval' and len(words) >= 4:
+        # ball_of_interval CENTER RADIUS from=LOWER,UPPER special=S rel=EXPR abs=EXPR [smallest_radius]
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[3])
+        if not m:
+            raise DescriptionError(f'{where}: expected "ball_of_interval CENTER RADIUS from=LOWER,UPPER special=... '
+                                   'rel=EXPR abs=EXPR [smallest_radius]"')
+        entry = {'kind': kind, 'center': words[1], 'radius': words[2],
+                 'from': {'lower': m.group(1), 'upper': m.group(2)}, 'special': None, 'rel': None, 'abs': None}
+        for w in words[4:]:
+            key, eq, val = w.partition('=')
+            if key in ('special', 'rel', 'abs') and eq and val and entry[key] is None:
+                entry[key] = val
+            elif w == 'smallest_radius' and w not in entry:
+                entry[w] = True
+            else:
+                raise DescriptionError(f'{where}: bad or repeated field {w!r} in ball_of_interval entry')
+        if None in (entry['special'], entry['rel'], entry['abs']):
+            raise DescriptionError(f'{where}: a ball_of_interval entry needs special=, rel= and abs=')
+        if 'smallest_radius' in entry:
+            entry['smallest_radius'] = entry.pop('smallest_radius')     # last, after the constants
+        return entry
+    if kind == 'interval_of_ball' and len(words) == 6 and words[5].startswith('tight='):
+        # interval_of_ball LOWER UPPER SET NAME=CENTER,RADIUS tight=...: an interval that encloses a ball.
+        return {'kind': kind, 'lower': words[1], 'upper': words[2], 'set': words[3],
+                'balls': _pairs(words[4:5], where, 'ball', ('center', 'radius')),
+                'tight': _tight(words[5][len('tight='):], where)}
+    if kind == 'splits' and len(words) == 6:
+        # splits AL AU BL BU from=LOWER,UPPER: two intervals that together are the operand.
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[5])
+        if not m:
+            raise DescriptionError(f'{where}: expected "splits AL AU BL BU from=LOWER,UPPER"')
+        return {'kind': kind, 'parts': [{'lower': words[1], 'upper': words[2]}, {'lower': words[3], 'upper': words[4]}],
+                'from': {'lower': m.group(1), 'upper': m.group(2)}}
     if kind == 'predicate' and len(words) == 5:
         return {'kind': kind, 'of': words[1], 'rel': words[2], 'args': words[3:5]}
-    if kind == 'encloses' and len(words) >= 5:
+    if kind == 'encloses' and len(words) >= 4:
+        # Without a NAME=CENTER,RADIUS word the operands are points (Milestone 2, add_ball_2_2).
         balls, finite_when, exact_when = {}, None, None
         for w in words[4:]:
             if w.startswith('finite_when=') and finite_when is None:
@@ -647,7 +870,7 @@ def parse_kernel(text, path):
     k = Kernel(name=None, path=path)
     single = {'kernel', 'value', 'min_precision', 'theorem', 'source', 'license', 'status',
               'ce_variant', 'cone_exempt', 'domain', 'ieee_status', 'ieee_theorem', 'entry', 'ieee_only',
-              'ieee', 'ieee_finite', 'ieee_finite_result'} | set(IEEE_THEOREM_KEYS)
+              'ieee', 'ieee_finite', 'ieee_finite_result', 'ordinary_inline'} | set(IEEE_THEOREM_KEYS)
     seen = set()
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split('#', 1)[0].strip()
@@ -692,6 +915,10 @@ def parse_kernel(text, path):
             setattr(k, key, tuple(parts))
         elif key in ('source', 'license', 'status', 'ce_variant', 'cone_exempt', 'domain', 'ieee_status'):
             setattr(k, key, val)
+        elif key == 'ordinary_inline':
+            if not val:
+                raise DescriptionError(f'{where}: expected "ordinary_inline: REASON"')
+            k.ordinary_inline = val
         elif key == 'ieee':
             words = val.split()
             if not words or any(w not in IEEE_STATEMENTS for w in words) or len(set(words)) < len(words):
@@ -934,10 +1161,59 @@ def parse_fold(text, path):
     return fd
 
 
+# The record of the names of the constants up(EXPR) in the Rocq models: a file next to the
+# directory of the kernel descriptions (gen/constant_names.json for gen/kernels), read by
+# load_kernels and written by build (rocq.constant_names_file). EXPR is written as the
+# descriptions write it, without spaces (the text of ir.up of the operand).
+CONSTANT_NAMES = 'constant_names.json'
+CONSTANT_NAMES_ABOUT = (
+    'The names of the constants up(EXPR) in proofs/gen/Model.v and IeeeModel.v, by EXPR as the kernel '
+    'descriptions write it, without spaces. Hand-written proofs use these names, so a name never '
+    'changes: the generator consults this record first, build adds an entry only for a constant that '
+    'is new, and nothing removes one (gen/README.md, "The operations").')
+
+
+def constant_names_path(directory):
+    return os.path.join(os.path.dirname(os.path.abspath(directory)), CONSTANT_NAMES)
+
+
+def load_constant_names(directory):
+    """The record next to a directory of descriptions, {EXPR: name}, or None when there is none."""
+    path = constant_names_path(directory)
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding='utf-8') as f:
+        try:
+            doc = json.load(f)
+        except ValueError as e:
+            raise DescriptionError(f'{path}: {e}')
+    names = doc.get('names') if isinstance(doc, dict) else None
+    if not isinstance(names, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in names.items()):
+        raise DescriptionError(f'{path}: expected {{"about": ..., "names": {{EXPR: NAME, ...}}}}')
+    if len(set(names.values())) != len(names):
+        raise DescriptionError(f'{path}: a name is given to two constants')
+    for text, name in names.items():
+        if not re.fullmatch(r'up_[a-z][a-z0-9_]*_[0-9]+', name) or ' ' in text:
+            raise DescriptionError(f'{path}: {text!r}: {name!r} is not a name up_K_i, or EXPR has a space')
+    return names
+
+
+def constant_names_text(record):
+    """The record as build writes it: its entries in the order of their names."""
+    entries = sorted(record.items(), key=lambda kv: (kv[1].rsplit('_', 1)[0], int(kv[1].rsplit('_', 1)[1])))
+    lines = ['{', f'  "about": {json.dumps(CONSTANT_NAMES_ABOUT)},', '  "names": {']
+    lines += [f'    {json.dumps(text)}: {json.dumps(name)}{"," if i + 1 < len(entries) else ""}'
+              for i, (text, name) in enumerate(entries)]
+    lines += ['  }', '}']
+    return '\n'.join(lines) + '\n'
+
+
 def load_kernels(directory):
-    """Every *.kernel file of a directory, as {name: Kernel} in output order (see `ordered`), and
-    every *.fold file, in the set's `folds`."""
+    """Every *.kernel file of a directory, as {name: Kernel} in output order (see `ordered`), each
+    with the record of constant names next to the directory, if there is one, and every *.fold file,
+    in the set's `folds`."""
     kernels, folds = {}, {}
+    record = load_constant_names(directory)
     for fn in sorted(os.listdir(directory)):
         if not fn.endswith(('.kernel', '.fold')):
             continue
@@ -955,6 +1231,7 @@ def load_kernels(directory):
             raise DescriptionError(f'{fn}: kernel {k.name} is also defined in {kernels[k.name].path}')
         if fn != k.name + '.kernel':
             raise DescriptionError(f'{fn}: kernel {k.name} must be in {k.name}.kernel')
+        k.constant_names = record
         kernels[k.name] = k
     for name in folds:
         if name in kernels:

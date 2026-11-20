@@ -1,0 +1,28 @@
+# The hull of two intervals with one-limb bounds (milestone2.md, "One enclosure interface"): the
+# smaller lower bound and the larger upper bound, exact. No test of emptiness: the empty set is
+# stored as (+inf, -inf), so the hull with it is the other operand, and of two empty sets the empty
+# set (milestone2.md, "Values of an interval"). The bounds are canonical, so no comparison sees a
+# NaN. For every precision.
+kernel:        interval_hull_1
+input:         stored xl
+input:         stored xu
+input:         stored yl
+input:         stored yu
+output:        zl
+output:        zu
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       interval_set zl zu union x=xl,xu y=yl,yu
+min_precision: 1
+source:        the smaller lower bound and the larger upper bound (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the bounds are selected among the bounds of the operands; interval_set states what comes out for every pair of canonical intervals
+
+ml = lt(yl, xl)
+zl = select(ml, yl, xl)
+mu = lt(xu, yu)
+zu = select(mu, yu, xu)

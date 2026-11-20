@@ -244,6 +244,14 @@ class Selftest(unittest.TestCase):
                 # double and NaN in float, in canonical form, and so is some output limb.
                 self.assertFalse(k.real_model, fn)
                 special = (interp.INF, False) if t == 'double' else interp.NaN
+                if any(r[0] == 'interval' and r[1] == k.inputs[0].name for r in k.requires):
+                    # An interval operand has no NaN bound: the whole line (-inf, +inf) in double and
+                    # the empty set (+inf, -inf) in float, both with a bound +inf.
+                    special = (interp.INF, False)
+                if ('not_nan', k.inputs[0].name) in k.requires:
+                    # An operand required not to be a NaN (stage B1, mul_ext_2_2): +inf in double,
+                    # -inf in float.
+                    special = (interp.INF, t != 'double')
                 self.assertIn(special, vals, fn)
                 self.assertTrue(any(not isinstance(v, bool) and v[0] != interp.NUM for v in got), fn)
                 nonfinite.add(name)
@@ -272,6 +280,19 @@ class Selftest(unittest.TestCase):
                     self.assertTrue(not env[r[1]][1] and env[r[1]][3] >= 0 and env[r[1]][2] >= 1, (fn, r))
                 elif r == ('format', 'half'):   # binary64 and binary32 contain 1/2
                     pass
+                elif r[0] == 'interval':
+                    # Bounds of a nonempty bounded interval: each normalized, the lower one first.
+                    lo, hi = ([env[x] for x in g[n].limbs] for n in r[1:])
+                    for limbs in (lo, hi):
+                        for a, b in zip(limbs, limbs[1:]):
+                            self.assertEqual(interp.add(f, a, b), a, (fn, r))
+                    # Normalized values are ordered by their leading limbs, then by the next ones.
+                    self.assertTrue(interp.lt(lo[0], hi[0]) or (interp.eq(lo[0], hi[0]) and
+                                                                 all(interp.le(a, b) for a, b in zip(lo[1:], hi[1:]))),
+                                    (fn, r))
+                elif r[0] == 'not_nan':
+                    # Of one limb, or the leading limb of a canonical value of two (stage B1).
+                    self.assertNotEqual(env[g[r[1]].limbs[0]], interp.NaN, (fn, r))
                 else:
                     self.fail((fn, r))
             # Something to check: no case where every limb output is zero.

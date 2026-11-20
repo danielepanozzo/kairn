@@ -257,11 +257,15 @@ def interval(tree, env):
     raise AssertionError(kind)
 
 
-def exact_conditions(e, fmt, ins, limbs):
+def exact_conditions(e, fmt, ins, limbs, conditions=None):
     """Whether every condition of the entry's exact_when holds: EXPR = 0 or |EXPR| > K (>= K),
-    EXPR over the inputs' values and limbs, K over u and eta."""
+    EXPR over the inputs' values and limbs, K over u and eta; or EXPR = 0 (zero, Milestone 2)."""
     env = dict(ins, **limbs)
-    for c in e['exact_when']:
+    for c in e['exact_when'] if conditions is None else conditions:
+        if 'zero' in c:
+            if expr.evaluate(expr.parse(c['zero']), env) != 0:
+                return False
+            continue
         kind = next(x for x in ('zero_or_abs_gt', 'zero_or_abs_ge') if x in c)
         x = expr.evaluate(expr.parse(c[kind]), env)
         bound = expr.evaluate(expr.parse(c['than']), {'u': fmt.u, 'eta': fmt.eta})
@@ -280,6 +284,20 @@ def constant(text, k, fmt, ins, outs, kernels):
     names = dict((n, v) for n, v in ins.items() if not isinstance(v, bool))
     names.update((n, v[0]) for n, v in outs.items() if len(v) == 1 and isinstance(v[0], F))
     return consts.evaluate(expr.parse(text), kernels, fmt.p, fmt.qmin, names)
+
+
+def claim_constant(text, fmt):
+    """A constant of a claim (rel and abs of outward, Milestone 2), evaluated here: u and eta of
+    the format, unit(K) and tiny(K) from K's error claim, and each up(EXPR) rounded up by this
+    module's own rounding."""
+    ks = common.kernels()
+    tree = expr.parse(text)
+    env = {'u': fmt.u, 'eta': fmt.eta}
+    for fn, name in expr.calls(tree):
+        e = next(x for x in ks[name].ensures if x['kind'] == 'error')
+        env[f'unit({name})'] = expr.evaluate(expr.parse(e['c']), {'u': fmt.u}) * fmt.u ** e['k']
+        env[f'tiny({name})'] = expr.evaluate(expr.parse(e['t']), {}) * fmt.eta
+    return expr.evaluate(tree, env, lambda x: fmt.round(x, 'up'))
 
 
 def holds(e, k, fmt, ins, outs, limbs=None, kernels=None):
@@ -350,6 +368,15 @@ def holds(e, k, fmt, ins, outs, limbs=None, kernels=None):
             return True
         gaps = expr.evaluate(expr.parse(e['gaps']), {})
         return r - value <= gaps * (r - fmt.pred(r))
+    if kind == 'outward':
+        # On its side of the value, within rel |value| + abs, and the value itself when the
+        # conditions of exact_when hold (Milestone 2).
+        z = sum(out)
+        if not (z <= value if e['side'] == 'below' else value <= z):
+            return False
+        if 'exact_when' in e and exact_conditions(e, fmt, ins, limbs) and z != value:
+            return False
+        return abs(z - value) <= claim_constant(e['rel'], fmt) * abs(value) + claim_constant(e['abs'], fmt)
     if kind == 'error':
         if 'exact_when' in e and exact_conditions(e, fmt, ins, limbs) and sum(out) != value:
             return False
@@ -401,7 +428,13 @@ def judge(job):
                 if reading == 'statement':
                     bad.append((reading, case, 'overflow', 'output limb 0 is not finite'))
                 continue    # the claims hold whenever output limb 0 is finite
-            failed = [e['kind'] for e in k.ensures if not holds(e, k, judged, ins, outs, limbs, ks)]
+            # In the format itself an entry about an output group other than the first holds when
+            # that group's leading limb is finite (architecture.md, "Claims of the interval
+            # kernels"): the two bounds of mul_dir_2_2 and of mul_dir_1 overflow apart.
+            failed = [e['kind'] for e in k.ensures
+                      if not (reading == 'claims file' and e.get('of') not in (None, k.outputs[0].name)
+                              and not isinstance(outs[e['of']][0], F))
+                      and not holds(e, k, judged, ins, outs, limbs, ks)]
             # What a statement says of every output limb besides its claims, so that statements
             # compose (rocq.py, _output_formats): it is a number of the format.
             if reading == 'statement' and not all(x in judged.members for g in k.outputs if g.kind == ir.LIMB
@@ -553,6 +586,19 @@ class Statements(unittest.TestCase):
         self.assertFalse(holds(enc, bm, fmt, ins, {'cz': [F(2)], 'rz': [F(3, 4)]}, limbs))  # encloses, not exact
         ins = {'cx': one, 'rx': tiny, 'c': F(2)}                  # rx c = 1/8 is below N: no exactness
         self.assertTrue(holds(enc, bm, fmt, ins, {'cz': [F(2)], 'rz': [half]}, dict(limbs, **{'rx[0]': tiny})))
+        # outward (Milestone 2): on its side, within A |v| + B, and v itself when v is zero.
+        ad = k['add_down_2_2']
+        ow = next(e for e in ad.ensures if e['kind'] == 'outward')
+        ins, limbs = {'x': one, 'y': half}, {'x[0]': one, 'x[1]': F(0), 'y[0]': half, 'y[1]': F(0)}
+        self.assertTrue(holds(ow, ad, fmt, ins, {'l': [F(3, 2), F(0)]}, limbs))
+        self.assertTrue(holds(ow, ad, fmt, ins, {'l': [F(5, 4), F(0)]}, limbs))        # within the bound
+        self.assertFalse(holds(ow, ad, fmt, ins, {'l': [F(7, 4), F(0)]}, limbs))       # above
+        self.assertFalse(holds(ow, ad, fmt, ins, {'l': [-F(56), F(0)]}, limbs))        # too far below
+        zero = {'x': one, 'y': -one}
+        zlimbs = {'x[0]': one, 'x[1]': F(0), 'y[0]': -one, 'y[1]': F(0)}
+        self.assertTrue(holds(ow, ad, fmt, zero, {'l': [F(0), F(0)]}, zlimbs))
+        self.assertFalse(holds(ow, ad, fmt, zero, {'l': [-tiny, F(0)]}, zlimbs))      # not zero
+        self.assertGreater(claim_constant(ow['rel'], fmt), 0)
         self.assertEqual(fmt.round(F(9, 8), 'nearest'), one)          # ties to the even significand
         self.assertEqual(fmt.round(F(11, 8), 'nearest'), F(3, 2))
         self.assertEqual(fmt.round(-F(9, 8), 'nearest'), -one)

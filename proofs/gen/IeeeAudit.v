@@ -30,6 +30,9 @@ Print Assumptions add_up_entry_ieee_correct.
 Definition ball_add_1_full_audit : ball_add_1_full_spec := ball_add_1_full_correct.
 Print Assumptions ball_add_1_full_correct.
 
+Definition sub_down_1_ieee_audit : sub_down_1_ieee_spec := sub_down_1_ieee_correct.
+Print Assumptions sub_down_1_ieee_correct.
+
 Definition ball_make_1_audit : ball_make_1_spec := ball_make_1_correct.
 Print Assumptions ball_make_1_correct.
 
@@ -50,6 +53,9 @@ Print Assumptions ball_sub_1_full_correct.
 
 Definition fold_finish_1_audit : fold_finish_1_spec := fold_finish_1_correct.
 Print Assumptions fold_finish_1_correct.
+
+Definition sub_up_1_ieee_audit : sub_up_1_ieee_spec := sub_up_1_ieee_correct.
+Print Assumptions sub_up_1_ieee_correct.
 
 Definition make_2_audit : make_2_spec := make_2_correct.
 Print Assumptions make_2_correct.
@@ -75,14 +81,8 @@ Print Assumptions radd_entry_ieee_correct.
 Definition rmul_ieee_audit : rmul_ieee_spec := rmul_ieee_correct.
 Print Assumptions rmul_ieee_correct.
 
-Definition sub_down_1_ieee_audit : sub_down_1_ieee_spec := sub_down_1_ieee_correct.
-Print Assumptions sub_down_1_ieee_correct.
-
 Definition sub_down_entry_ieee_audit : sub_down_entry_ieee_spec := sub_down_entry_ieee_correct.
 Print Assumptions sub_down_entry_ieee_correct.
-
-Definition sub_up_1_ieee_audit : sub_up_1_ieee_spec := sub_up_1_ieee_correct.
-Print Assumptions sub_up_1_ieee_correct.
 
 Definition sub_up_entry_ieee_audit : sub_up_entry_ieee_spec := sub_up_entry_ieee_correct.
 Print Assumptions sub_up_entry_ieee_correct.
@@ -107,6 +107,9 @@ Print Assumptions add_fast_2_2_full_correct.
 
 Definition ball_add_2_full_audit : ball_add_2_full_spec := ball_add_2_full_correct.
 Print Assumptions ball_add_2_full_correct.
+
+Definition to_down_2_ieee_audit : to_down_2_ieee_spec := to_down_2_ieee_correct.
+Print Assumptions to_down_2_ieee_correct.
 
 Definition ball_make_2_audit : ball_make_2_spec := ball_make_2_correct.
 Print Assumptions ball_make_2_correct.
@@ -138,23 +141,23 @@ Print Assumptions eq_2_2_ieee_correct.
 Definition fold_finish_2_audit : fold_finish_2_spec := fold_finish_2_correct.
 Print Assumptions fold_finish_2_correct.
 
+Definition lt_2_2_ieee_audit : lt_2_2_ieee_spec := lt_2_2_ieee_correct.
+Print Assumptions lt_2_2_ieee_correct.
+
+Definition le_2_2_ieee_audit : le_2_2_ieee_spec := le_2_2_ieee_correct.
+Print Assumptions le_2_2_ieee_correct.
+
 Definition le_1_2_ieee_audit : le_1_2_ieee_spec := le_1_2_ieee_correct.
 Print Assumptions le_1_2_ieee_correct.
 
 Definition le_2_1_ieee_audit : le_2_1_ieee_spec := le_2_1_ieee_correct.
 Print Assumptions le_2_1_ieee_correct.
 
-Definition le_2_2_ieee_audit : le_2_2_ieee_spec := le_2_2_ieee_correct.
-Print Assumptions le_2_2_ieee_correct.
-
 Definition lt_1_2_ieee_audit : lt_1_2_ieee_spec := lt_1_2_ieee_correct.
 Print Assumptions lt_1_2_ieee_correct.
 
 Definition lt_2_1_ieee_audit : lt_2_1_ieee_spec := lt_2_1_ieee_correct.
 Print Assumptions lt_2_1_ieee_correct.
-
-Definition lt_2_2_ieee_audit : lt_2_2_ieee_spec := lt_2_2_ieee_correct.
-Print Assumptions lt_2_2_ieee_correct.
 
 Definition make_2_limbs_audit : make_2_limbs_spec := make_2_limbs_correct.
 Print Assumptions make_2_limbs_correct.
@@ -176,9 +179,6 @@ Print Assumptions sub_2_1_full_correct.
 
 Definition sub_2_2_full_audit : sub_2_2_full_spec := sub_2_2_full_correct.
 Print Assumptions sub_2_2_full_correct.
-
-Definition to_down_2_ieee_audit : to_down_2_ieee_spec := to_down_2_ieee_correct.
-Print Assumptions to_down_2_ieee_correct.
 
 Definition to_nearest_2_ieee_audit : to_nearest_2_ieee_spec := to_nearest_2_ieee_correct.
 Print Assumptions to_nearest_2_ieee_correct.

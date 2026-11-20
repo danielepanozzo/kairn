@@ -6,9 +6,9 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 114 kernels, 109 are proved and 5 are **UNVERIFIED**: [`norm_combine`](norm_combine.md), [`norm_finish_1`](norm_finish_1.md), [`norm_finish_2`](norm_finish_2.md), [`norm_step_1`](norm_step_1.md), [`norm_step_2`](norm_step_2.md).
+Of the 147 kernels, 109 are proved and 38 are **UNVERIFIED**: [`add_ball_2_2`](add_ball_2_2.md), [`add_down_2_2`](add_down_2_2.md), [`add_up_2_2`](add_up_2_2.md), [`ball_from_interval_2`](ball_from_interval_2.md), [`ball_lower_as_1`](ball_lower_as_1.md), [`ball_lower_as_2`](ball_lower_as_2.md), [`ball_narrow_2_1`](ball_narrow_2_1.md), [`ball_to_interval_1`](ball_to_interval_1.md), [`ball_upper_as_1`](ball_upper_as_1.md), [`ball_upper_as_2`](ball_upper_as_2.md), [`interval_add_1`](interval_add_1.md), [`interval_add_2`](interval_add_2.md), [`interval_hull_1`](interval_hull_1.md), [`interval_hull_2`](interval_hull_2.md), [`interval_intersection_1`](interval_intersection_1.md), [`interval_intersection_2`](interval_intersection_2.md), [`interval_make_1`](interval_make_1.md), [`interval_make_2`](interval_make_2.md), [`interval_mid_rad_1`](interval_mid_rad_1.md), [`interval_mul_1`](interval_mul_1.md), [`interval_mul_2`](interval_mul_2.md), [`interval_neg_1`](interval_neg_1.md), [`interval_neg_2`](interval_neg_2.md), [`interval_split_1`](interval_split_1.md), [`interval_sub_1`](interval_sub_1.md), [`interval_sub_2`](interval_sub_2.md), [`interval_to_ball_1`](interval_to_ball_1.md), [`mul_ball_2_2`](mul_ball_2_2.md), [`mul_dir_1`](mul_dir_1.md), [`mul_dir_2_2`](mul_dir_2_2.md), [`mul_ext_2_2`](mul_ext_2_2.md), [`norm_combine`](norm_combine.md), [`norm_finish_1`](norm_finish_1.md), [`norm_finish_2`](norm_finish_2.md), [`norm_step_1`](norm_step_1.md), [`norm_step_2`](norm_step_2.md), [`sub_down_2_2`](sub_down_2_2.md), [`sub_up_2_2`](sub_up_2_2.md).
 
-31 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
+32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is **UNVERIFIED** for [`mul_dir_1`](mul_dir_1.md).
 
 No public operation calls an UNVERIFIED kernel, so none needs the marker `kairn::unverified`.
 
@@ -148,6 +148,37 @@ Arithmetic on balls: the result contains every result on points of the operands.
 | not yet called by the public headers | - | contains every $x c$, exactly when nothing underflows, normalized | [`ball_mul_pow2_2`](ball_mul_pow2_2.md) |
 | not yet called by the public headers | - | a canonical ball that contains every $x c$; the empty set and the whole line included | [`ball_mul_pow2_1_full`](ball_mul_pow2_1_full.md) |
 | not yet called by the public headers | - | a canonical ball that contains every $x c$; the empty set and the whole line included | [`ball_mul_pow2_2_full`](ball_mul_pow2_2_full.md) |
+| not yet called by the public headers | - | a lower bound of the ball, rounded; $+\infty$ for the empty ball | [`ball_lower_as_1`](ball_lower_as_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a upper bound of the ball, rounded; $-\infty$ for the empty ball | [`ball_upper_as_1`](ball_upper_as_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a lower bound of the ball; $+\infty$ for the empty ball; $\lvert l - (c - r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_lower_as_2`](ball_lower_as_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a upper bound of the ball; $-\infty$ for the empty ball; $\lvert h - (c + r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_upper_as_2`](ball_upper_as_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound | [`ball_from_interval_2`](ball_from_interval_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical ball that contains every $x$; the empty set and the whole line included | [`ball_narrow_2_1`](ball_narrow_2_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | the smallest interval of `T` that contains the ball; empty for the empty ball | [`ball_to_interval_1`](ball_to_interval_1.md) **UNVERIFIED** |
+
+## Interval operations
+
+Arithmetic on intervals of numbers of `T` and of two limbs: the result contains every result on members of the operands, unbounded and empty intervals included. No public operation computes them yet.
+
+| C++ | Operands | What it gives | Kernel |
+|---|---|---|---|
+| not yet called by the public headers | - | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound | [`interval_make_1`](interval_make_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_1`](interval_neg_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical interval that contains every $x + y$; the range rounded outward | [`interval_add_1`](interval_add_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical interval that contains every $x - y$; the range rounded outward | [`interval_sub_1`](interval_sub_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical interval that contains every $x y$; the range rounded outward, within a step | [`interval_mul_1`](interval_mul_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical interval that contains every $x + y$; within $A\lvert v\rvert + B$ of the range | [`interval_add_2`](interval_add_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_2`](interval_neg_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical interval that contains every $x - y$; within $A\lvert v\rvert + B$ of the range | [`interval_sub_2`](interval_sub_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound | [`interval_make_2`](interval_make_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical interval that contains every $x y$; within $A\lvert v\rvert + B$ of the range | [`interval_mul_2`](interval_mul_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | the hull of the intervals, exactly | [`interval_hull_1`](interval_hull_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | the intersection of the intervals, exactly | [`interval_intersection_1`](interval_intersection_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | the hull of the intervals, exactly | [`interval_hull_2`](interval_hull_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | the intersection of the intervals, exactly | [`interval_intersection_2`](interval_intersection_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | the midpoint and radius, the values of IEEE 1788 when unbounded or empty | [`interval_mid_rad_1`](interval_mid_rad_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical ball that contains the interval; the whole line when it is unbounded | [`interval_to_ball_1`](interval_to_ball_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | two intervals that together are the operand, split at a point of it | [`interval_split_1`](interval_split_1.md) **UNVERIFIED** |
 
 ## Building blocks
 
@@ -166,6 +197,15 @@ Kernels that other kernels call, and that no public operation computes on its ow
 | not yet called by the public headers | - | $r = \mathrm{RU}(a + b)$ | [`add_up_entry`](add_up_entry.md) |
 | not yet called by the public headers | - | $r = \mathrm{RD}(a - b)$ | [`sub_down_entry`](sub_down_entry.md) |
 | not yet called by the public headers | - | $r = \mathrm{RU}(a - b)$ | [`sub_up_entry`](sub_up_entry.md) |
+| none (internal) | - | $d \le a b$, at most 1 step below $\mathrm{RD}(a b)$; $v \ge a b$, at most 1 step above $\mathrm{RU}(a b)$ | [`mul_dir_1`](mul_dir_1.md) **UNVERIFIED** |
+| none (internal) | - | $\lvert z - (x + y)\rvert \le \frac{3u^2}{1 - 4u}\,\lvert x + y\rvert$; $\lvert (x + y) - z\rvert \le d$, normalized | [`add_ball_2_2`](add_ball_2_2.md) **UNVERIFIED** |
+| none (internal) | - | $\lvert z - x y\rvert \le 4\,u^2\,\lvert x y\rvert + \tfrac{3}{2}\,\eta$; $\lvert (x y) - z\rvert \le d$, normalized | [`mul_ball_2_2`](mul_ball_2_2.md) **UNVERIFIED** |
+| none (internal) | - | $l \le x + y$, within $A\lvert x + y\rvert + B$, exact when zero, normalized | [`add_down_2_2`](add_down_2_2.md) **UNVERIFIED** |
+| none (internal) | - | $h \ge x + y$, within $A\lvert x + y\rvert + B$, exact when zero, normalized | [`add_up_2_2`](add_up_2_2.md) **UNVERIFIED** |
+| none (internal) | - | $l \le x - y$, within $A\lvert x - y\rvert + B$, exact when zero, normalized | [`sub_down_2_2`](sub_down_2_2.md) **UNVERIFIED** |
+| none (internal) | - | $h \ge x - y$, within $A\lvert x - y\rvert + B$, exact when zero, normalized | [`sub_up_2_2`](sub_up_2_2.md) **UNVERIFIED** |
+| none (internal) | - | $l \le x y$, within $A\lvert x y\rvert + B$; $h \ge x y$, within $A\lvert x y\rvert + B$, normalized | [`mul_dir_2_2`](mul_dir_2_2.md) **UNVERIFIED** |
+| none (internal) | - | $l$ canonical, normalized when finite; $h$ canonical, normalized when finite; a lower bound of $x y$, within $A\lvert v\rvert + B$ when finite; zero for a zero operand; a upper bound of $x y$, within $A\lvert v\rvert + B$ when finite; zero for a zero operand | [`mul_ext_2_2`](mul_ext_2_2.md) **UNVERIFIED** |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly | [`two_sum`](two_sum.md) |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly, normalized | [`fast_two_sum`](fast_two_sum.md) |
 | not yet called by the public headers | - | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{1}{2}\,\eta$ | [`two_prod`](two_prod.md) |

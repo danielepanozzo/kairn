@@ -51,6 +51,21 @@ class Parser(unittest.TestCase):
         self.assertEqual(expr.evaluate(tree, env), Fraction(1, 4) / Fraction(3, 4) * Fraction(3, 2) + Fraction(1, 8))
         self.assertEqual(expr.parse('unit'), ('name', 'unit'))     # a name when no ( follows
 
+    def test_up_inside_an_expression(self):
+        # A constant of a claim names a constant as the format rounds it (Milestone 2, outward).
+        tree = expr.parse('2*up((1+u)^3)*eta')
+        self.assertEqual(tree, ('mul', ('mul', ('int', 2), ('up', ('pow', ('add', ('int', 1), ('name', 'u')), 3))),
+                                ('name', 'eta')))
+        self.assertEqual(expr.names(tree), {'u', 'eta'})
+        env = {'u': Fraction(1, 4), 'eta': Fraction(1, 8)}
+        self.assertEqual(expr.evaluate(tree, env, lambda x: Fraction(2)), Fraction(1, 2))
+        with self.assertRaises(expr.ExprError):
+            expr.evaluate(tree, env)                       # no format to round in
+        for text in ('up(', 'up()', 'up(1'):
+            with self.assertRaises(expr.ExprError, msg=text):
+                expr.parse(text)
+        self.assertEqual(expr.parse('up'), ('name', 'up'))  # a name when no ( follows
+
     def test_names(self):
         self.assertEqual(expr.names(expr.parse('x*y+x')), {'x', 'y'})
         self.assertEqual(expr.names(expr.parse('3/(1-4*u)')), {'u'})
@@ -99,15 +114,35 @@ class Claims(unittest.TestCase):
               'makes_ball': ['kind', 'center', 'radius', 'from'],
               'neighbor': ['kind', 'of', 'side'], 'bound': ['kind', 'of', 'side', 'steps'],
               'holds': ['kind', 'rel', 'args', 'if'], 'finite_or_nan': ['kind', 'of', 'flag'],
-              'maximum': ['kind', 'of', 'args']}
+              'maximum': ['kind', 'of', 'args'],
+              # The interval kernels and the bounds of two limbs (Milestone 2).
+              'outward': ['kind', 'of', 'side', 'rel', 'abs'],
+              'makes_interval': ['kind', 'lower', 'upper', 'from'],
+              'encloses_interval': ['kind', 'lower', 'upper', 'set', 'intervals', 'tight', 'bounded_when'],
+              'set_bound': ['kind', 'of', 'side', 'set', 'balls'],
+              # Stage B1 of the intervals: the set operations, the conversions and the split.
+              'interval_set': ['kind', 'lower', 'upper', 'set', 'intervals'],
+              'ball_of_interval': ['kind', 'center', 'radius', 'from', 'special', 'rel', 'abs'],
+              'interval_of_ball': ['kind', 'lower', 'upper', 'set', 'balls', 'tight'],
+              'splits': ['kind', 'parts', 'from']}
     # The fields that some entries of a kind have, after the others, and only when they say
-    # something: a rounding under a condition, and an exactness condition (Milestone 2). Every
-    # entry without them has the shape it had before.
-    OPTIONAL = {'rounded': ['when'], 'error': ['exact_when'], 'encloses': ['exact_when'],
+    # something: a rounding under a condition, an exactness condition, the zero of a product of
+    # bounds, the midpoint of a ball made from an interval, an equivalence for the bounded result,
+    # a tightness (Milestone 2); the zero of a product of intervals or of bounds of two limbs, the
+    # smallest radius of a ball made from an interval (stage B1); the mask and the steps of the
+    # finish of a fold of maxima. Every entry without them has the shape it had before.
+    OPTIONAL = {'rounded': ['when', 'zero_factor'], 'error': ['exact_when'], 'encloses': ['exact_when'],
+                'bound': ['zero_factor'], 'outward': ['exact_when', 'zero_factor'], 'makes_ball': ['midpoint_when'],
+                'encloses_interval': ['bounded_exactly', 'zero_factor'], 'set_bound': ['tight'],
+                'ball_of_interval': ['smallest_radius'],
                 'finite_or_nan': ['if', 'steps']}   # the finish of a fold of maxima
     # The bound kernels of Milestone 2 (the folds' stage): an upper entry with a value of its own
     # under a mask, and no gaps.
     UPPER_OWN = ['kind', 'of', 'value', 'if']
+    # The kinds whose entries name their own set or make a value from the inputs: a kernel whose
+    # every entry is one of them has no value.
+    OWN_SET = ('makes_ball', 'makes_interval', 'encloses_interval', 'set_bound', 'interval_set', 'ball_of_interval',
+               'interval_of_ball', 'splits')
 
     def test_schema(self):
         self.assertEqual(self.doc['schema'], 1)
@@ -124,8 +159,8 @@ class Claims(unittest.TestCase):
                 self.assertIs(k['ieee_only'], True, k['name'])
             if 'ieee_theorem' in k:          # the IEEE-model theorem after the real-model one
                 want.insert(want.index('theorem') + 1, 'ieee_theorem')
-            if all(e['kind'] == 'makes_ball' for e in k['ensures']):
-                want.remove('value')          # a ball made from its inputs has no value
+            if all(e['kind'] in self.OWN_SET for e in k['ensures']):
+                want.remove('value')          # a ball or an interval made from its inputs, or a set
             if all(e['kind'] in ('holds', 'maximum') or (e['kind'] == 'upper' and 'value' in e) for e in k['ensures']):
                 want.remove('value')          # a bound kernel, a maximum: every entry has its own value
             self.assertEqual(list(k), want, k['name'])
@@ -137,7 +172,8 @@ class Claims(unittest.TestCase):
                                   {'name': g['name'], 'limbs': 1, 'type': 'mask'}))
             for r in k['requires']:
                 if extended:
-                    self.assertRegex(r, r'^(canonical\(\w+\)|ball\(\w+, \w+\)|power_of_two\(\w+\)|nonneg\(\w+\))$')
+                    self.assertRegex(r, r'^(canonical\(\w+\)|ball\(\w+, \w+\)|power_of_two\(\w+\)|nonneg\(\w+\)'
+                                        r'|interval\(\w+, \w+\)|not_nan\(\w+\))$')
                 else:
                     self.assertRegex(r, r'^(normalized\(\w+\)|abs_ge\(\w+, \w+\)|power_of_two\(\w+\)|nonneg\(\w+\)'
                                         r'|count\(\w+\)|format\(half\))$')
@@ -152,11 +188,40 @@ class Claims(unittest.TestCase):
                     self.assertEqual(list(c), ['abs_le', 'exp'], k['name'])
                     self.assertIsInstance(c['exp'], int)
                 for c in e.get('exact_when', []):
-                    self.assertIn(list(c), (['zero_or_abs_gt', 'than'], ['zero_or_abs_ge', 'than']), k['name'])
+                    allowed = (['zero_or_abs_gt', 'than'], ['zero_or_abs_ge', 'than'])
+                    self.assertIn(list(c), allowed + ((['zero'],) if e['kind'] == 'outward' else ()), k['name'])
                 if 'when' in e and e['kind'] == 'rounded':
                     self.assertEqual(e['when'], 'product_large', k['name'])
                 if e['kind'] == 'bound':
                     self.assertIsInstance(e['steps'], int)
+                for flag in ('zero_factor', 'bounded_exactly', 'smallest_radius'):
+                    if flag in e:
+                        self.assertIs(e[flag], True, k['name'])
+                if e['kind'] == 'makes_ball':
+                    self.assertIn(list(e['from']), (['center', 'radius'], ['lower', 'upper']), k['name'])
+                    for c in e.get('midpoint_when', []):
+                        self.assertEqual(list(c), ['half_in_format'], k['name'])
+                if e['kind'] == 'interval_set':
+                    self.assertIn(e['set'], ('union', 'intersection'), k['name'])
+                if e['kind'] == 'ball_of_interval':
+                    self.assertIn(e['special'], ('ieee1788', 'ball'), k['name'])
+                if e['kind'] in ('ball_of_interval', 'splits'):
+                    self.assertEqual(list(e['from']), ['lower', 'upper'], k['name'])
+                if e['kind'] == 'splits':
+                    self.assertEqual([list(q) for q in e['parts']], [['lower', 'upper']] * 2, k['name'])
+                if e['kind'] in ('encloses_interval', 'set_bound', 'interval_set', 'interval_of_ball'):
+                    t = e.get('tight')
+                    if t is not None:
+                        self.assertIn(list(t), (['kind'], ['kind', 'steps'], ['kind', 'steps', 'when'],
+                                                ['kind', 'rel', 'abs'], ['kind', 'rel', 'abs', 'exact_when']), k['name'])
+                        for side, conds in t.get('exact_when', {}).items():
+                            self.assertIn(side, ('lower', 'upper'))
+                            self.assertTrue(all(list(c) == ['zero'] for c in conds), k['name'])
+                    for c in e.get('bounded_when', []):
+                        self.assertIn(list(c), (['abs_le', 'omega'], ['abs_le', 'exp']), k['name'])
+                    names = e.get('intervals', e.get('balls'))
+                    for b in names.values():
+                        self.assertIn(list(b), (['lower', 'upper'], ['center', 'radius']), k['name'])
             for inst in k['instances'].values():
                 # Always a list, one object per error entry (second wave; it was an object when
                 # there was one entry).
@@ -264,7 +329,10 @@ class Claims(unittest.TestCase):
                 'sub_1_2_full': [bound('a', -2), bound('y', -2)],
                 'mul_2_2_full': [bound('x*y', -1)],
                 'mul_2_1_full': [bound('x*a', -1)],
-                'mul_pow2_2_full': [bound('x*c', -1)]}
+                'mul_pow2_2_full': [bound('x*c', -1)],
+                # Milestone 2: a ball of two limbs narrowed to one, finite while no member exceeds a
+                # quarter of the threshold (its radius plus the second limb then stays below it).
+                'ball_narrow_2_1': [bound('abs(c)+r', -2)]}
         for k in self.doc['kernels']:
             for e in k['ensures']:
                 self.assertEqual(e.get('finite_when', []), want.get(k['name'], []), k['name'])
@@ -346,6 +414,72 @@ class Claims(unittest.TestCase):
                     if key not in ('source', 'flops', 'theorem', 'ieee_theorem')]
             self.assertEqual(list(e.items()), want, e['name'])
 
+    def test_the_entries_of_the_interval_kernels_in_architecture_md(self):
+        # The entries that architecture.md writes out ("Claims of the interval kernels"), field for
+        # field and in order, and the ensures of three more.
+        with open(os.path.join(common.ROOT, 'docs', 'developer', 'architecture.md'), encoding='utf-8') as f:
+            text = f.read()
+        section = text.split('### Claims of the interval kernels')[1].split('\n## ')[0]
+        blocks = re.findall(r'```json\n(.*?)```', section, re.S)
+        shown = json.loads('[' + blocks[0] + ']')
+        self.assertEqual([e['name'] for e in shown], ['interval_add_1', 'interval_make_1', 'mul_dir_1', 'add_ball_2_2',
+                                                     'ball_lower_as_1'])
+        for e in shown:
+            want = [(key, v) for key, v in self.by[e['name']].items()
+                    if key not in ('source', 'flops', 'theorem', 'ieee_theorem')]
+            self.assertEqual(list(e.items()), want, e['name'])
+        ensures = json.loads('[' + blocks[1] + ']')
+        for name, e in zip(('add_down_2_2', 'interval_mul_1', 'interval_add_2'), ensures):
+            self.assertEqual(e, self.by[name]['ensures'], name)
+        # What the text says of the others.
+        self.assertEqual(self.by['interval_sub_1']['ensures'][0]['set'], 'x-y')
+        self.assertEqual(self.by['interval_neg_1']['ensures'][0]['tight'], {'kind': 'exact'})
+        self.assertEqual(self.by['ball_lower_as_2']['ensures'][1],
+                         {'kind': 'error', 'of': 'l', 'form': 'A', 'c': '5', 'k': 1, 't': '3', 'when': None})
+        self.assertEqual(self.by['ball_narrow_2_1']['ensures'][0]['finite_when'], [{'abs_le': 'abs(c)+r', 'exp': -2}])
+        for name in ('add_up_2_2', 'sub_down_2_2', 'sub_up_2_2'):
+            e = self.by[name]['ensures'][1]
+            self.assertEqual((e['rel'], e['abs']), (ensures[0][1]['rel'], ensures[0][1]['abs']), name)
+            self.assertEqual(e['exact_when'], [{'zero': self.by[name]['value']}], name)
+        self.assertNotIn('exact_when', self.by['mul_dir_2_2']['ensures'][2])
+        self.assertEqual(self.by['ball_from_interval_2']['ensures'],
+                         [{'kind': 'makes_ball', 'center': 'cw', 'radius': 'rw', 'from': {'lower': 'lo', 'upper': 'hi'},
+                           'midpoint_when': [{'half_in_format': 'lo'}, {'half_in_format': 'hi'}]}])
+        self.assertNotIn('value', self.by['ball_from_interval_2'])
+
+    def test_the_entries_of_stage_b1_in_architecture_md(self):
+        # The entries that architecture.md writes out ("Claims of the interval kernels: two limbs and
+        # the enclosure interface"), field for field and in order, the ensures of four more, and what
+        # the text says of the others.
+        with open(os.path.join(common.ROOT, 'docs', 'developer', 'architecture.md'), encoding='utf-8') as f:
+            text = f.read()
+        section = text.split('### Claims of the interval kernels: two limbs and the enclosure interface')[1] \
+            .split('\n## ')[0]
+        blocks = re.findall(r'```json\n(.*?)```', section, re.S)
+        shown = json.loads('[' + blocks[0] + ']')
+        self.assertEqual([e['name'] for e in shown], ['interval_hull_1', 'interval_mid_rad_1', 'ball_to_interval_1',
+                                                     'interval_split_1', 'interval_make_2', 'mul_ext_2_2'])
+        for e in shown:
+            want = [(key, v) for key, v in self.by[e['name']].items()
+                    if key not in ('source', 'flops', 'theorem', 'ieee_theorem')]
+            self.assertEqual(list(e.items()), want, e['name'])
+        ensures = json.loads('[' + blocks[1] + ']')
+        names = ('interval_intersection_2', 'interval_to_ball_1', 'interval_neg_2', 'interval_mul_2')
+        self.assertEqual(len(ensures), len(names))
+        for name, e in zip(names, ensures):
+            self.assertEqual(e, self.by[name]['ensures'], name)
+        hull, inter = self.by['interval_hull_2']['ensures'], self.by['interval_intersection_1']['ensures']
+        self.assertEqual(hull, [dict(self.by['interval_hull_1']['ensures'][0])])
+        self.assertEqual(inter, [dict(self.by['interval_intersection_2']['ensures'][0])])
+        sub, add = self.by['interval_sub_2']['ensures'][0], self.by['interval_add_2']['ensures'][0]
+        self.assertEqual(sub, dict(add, set='x-y', tight=dict(add['tight'], exact_when={
+            'lower': [{'zero': 'xl-yu'}], 'upper': [{'zero': 'xu-yl'}]}), bounded_when=[{'abs_le': 'x-y', 'exp': -2}]))
+        mul = self.by['interval_mul_2']['ensures'][0]
+        dirs = self.by['mul_dir_2_2']['ensures'][2]
+        self.assertEqual((mul['tight']['rel'], mul['tight']['abs']), (dirs['rel'], dirs['abs']))
+        for e in self.by['mul_ext_2_2']['ensures'][2:]:
+            self.assertEqual((e['rel'], e['abs']), (dirs['rel'], dirs['abs']))
+
     def test_ieee_only(self):
         # Exactly the kernels without a real-model statement say so: the nine full kernels, the
         # ten full Ball kernels and the four constructors; ball_neg_k, which also requires a ball
@@ -356,8 +490,19 @@ class Claims(unittest.TestCase):
         constructors = {'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2'}
         # and the finishes of the folds, which say what comes out when the state is not finite
         finishes = {'fold_finish_1', 'fold_finish_2', 'norm_finish_1', 'norm_finish_2'}
+        # Milestone 2: the interval kernels, stated in the IEEE model only (an interval has infinite
+        # bounds as ordinary values), the constructors of an interval and of a ball from an interval,
+        # the bounds of a ball as numbers of T and the narrowing of a ball.
+        milestone2 = {'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1', 'interval_mul_1',
+                      'interval_add_2', 'ball_from_interval_2', 'ball_lower_as_1', 'ball_upper_as_1',
+                      'ball_lower_as_2', 'ball_upper_as_2', 'ball_narrow_2_1'}
+        # Stage B1: the interval kernels of two limbs, mul_ext_2_2 (a bound of two limbs over
+        # extended reals), the set operations, the conversions and the split.
+        milestone2 |= {'interval_neg_2', 'interval_sub_2', 'interval_make_2', 'mul_ext_2_2', 'interval_mul_2',
+                       'interval_hull_1', 'interval_intersection_1', 'interval_hull_2', 'interval_intersection_2',
+                       'interval_mid_rad_1', 'interval_to_ball_1', 'ball_to_interval_1', 'interval_split_1'}
         self.assertEqual({k['name'] for k in self.doc['kernels'] if 'ieee_only' in k},
-                         full | full_ball | constructors | finishes)
+                         full | full_ball | constructors | finishes | milestone2)
         self.assertTrue(all(k['ieee_only'] is True for k in self.doc['kernels'] if 'ieee_only' in k))
         self.assertEqual(list(self.by['ball_add_1_full'])[:3], ['name', 'domain', 'ieee_only'])
         for name in ('ball_neg_1', 'ball_neg_2', 'neg_2', 'ball_add_1'):

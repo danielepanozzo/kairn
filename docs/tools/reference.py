@@ -75,7 +75,20 @@ KNOWN_CONDITION_FIELDS = {"abs_le", "exp"}
 # or >= K.
 KNOWN_EXACT_CONDITIONS = {"zero_or_abs_gt": ">", "zero_or_abs_ge": "\\ge"}
 KNOWN_SIDES = {"neighbor": {"up": ("succ", "above"), "down": ("pred", "below")},
-               "bound": {"below": ("RD", "down"), "above": ("RU", "up")}}
+               "bound": {"below": ("RD", "down"), "above": ("RU", "up")},
+               "outward": {"below": ("RD", "down"), "above": ("RU", "up")},
+               "set_bound": {"below": ("RD", "down"), "above": ("RU", "up")}}
+# The tightness of an interval kernel and of a bound of a set (architecture.md, "Claims of the
+# interval kernels").
+KNOWN_TIGHT = {"exact": set(), "rounded": {"steps", "when"}, "outward": {"rel", "abs", "exact_when"}}
+# The kinds whose entries name their own set, or make a value from the inputs: a kernel whose every
+# entry is one of them has no value.
+OWN_SET_KINDS = {"makes_ball", "makes_interval", "encloses_interval", "set_bound", "interval_set",
+                 "ball_of_interval", "interval_of_ball", "splits"}
+# The set operations of interval_set and the special values of ball_of_interval (architecture.md,
+# "Claims of the interval kernels: two limbs and the enclosure interface").
+KNOWN_SET_OPERATIONS = {"union": ("\\cup", "hull"), "intersection": ("\\cap", "intersection")}
+KNOWN_BALL_SPECIALS = {"ieee1788", "ball"}
 
 # The fields of each kind of `ensures` entry: required, optional in the extended domain.
 KIND_FIELDS = {
@@ -95,10 +108,25 @@ KIND_FIELDS = {
     "bound": ({"of", "side", "steps"}, set()),
     # the larger of two expressions of the inputs and their limbs (the folds of maxima)
     "maximum": ({"of", "args"}, set()),
+    # The interval kernels and the bounds of two limbs (architecture.md, "Claims of the interval
+    # kernels").
+    "outward": ({"of", "side", "rel", "abs"}, set()),
+    "makes_interval": ({"lower", "upper", "from"}, set()),
+    "encloses_interval": ({"lower", "upper", "set", "intervals", "tight", "bounded_when"}, set()),
+    "set_bound": ({"of", "side", "set", "balls"}, set()),
+    # Stage B1: the set operations, the conversions and the split of the enclosure interface.
+    "interval_set": ({"lower", "upper", "set", "intervals"}, set()),
+    "ball_of_interval": ({"center", "radius", "from", "special", "rel", "abs"}, set()),
+    "interval_of_ball": ({"lower", "upper", "set", "balls", "tight"}, set()),
+    "splits": ({"parts", "from"}, set()),
 }
 # The fields an entry of these kinds has in either domain when it uses them (Milestone 2): a
-# rounding under a condition, and a condition of exactness.
-KIND_OPTIONAL = {"rounded": {"when"}, "error": {"exact_when"}, "encloses": {"exact_when"},
+# rounding under a condition, a condition of exactness, a zero factor, the midpoint of a ball made
+# from an interval, an equivalence for a bounded result, a tightness.
+KIND_OPTIONAL = {"rounded": {"when", "zero_factor"}, "error": {"exact_when"}, "encloses": {"exact_when"},
+                 "bound": {"zero_factor"}, "outward": {"exact_when", "zero_factor"}, "makes_ball": {"midpoint_when"},
+                 "encloses_interval": {"bounded_exactly", "zero_factor"}, "set_bound": {"tight"},
+                 "ball_of_interval": {"smallest_radius"},
                  # gaps, or a value of its own (the exported bounds of the folds), under a mask (if)
                  "upper": {"gaps", "value", "if"},
                  # the finish of a fold of maxima: under a mask (if), the value stepped up (steps)
@@ -106,17 +134,21 @@ KIND_OPTIONAL = {"rounded": {"when"}, "error": {"exact_when"}, "encloses": {"exa
 # Which kinds and requirements each domain has a reading of.
 DOMAIN_KINDS = {
     "finite": {"normalized", "error", "leading_rounded", "rounded", "upper", "predicate", "encloses",
-               "neighbor", "bound", "holds", "maximum"},
+               "neighbor", "bound", "holds", "maximum", "outward"},
     "extended": {"normalized", "error", "rounded", "upper", "predicate", "encloses", "extends",
-                 "represents", "makes_ball", "neighbor", "bound", "finite_or_nan"},
+                 "represents", "makes_ball", "neighbor", "bound", "finite_or_nan", "makes_interval",
+                 "encloses_interval", "set_bound", "outward", "interval_set", "ball_of_interval", "interval_of_ball",
+                 "splits"},
 }
 DOMAIN_REQUIRES = {
     "finite": {"normalized", "abs_ge", "nonneg", "power_of_two", "count", "format"},
-    "extended": {"canonical", "ball", "nonneg", "power_of_two"},
+    "extended": {"canonical", "ball", "nonneg", "power_of_two", "interval", "not_nan"},
 }
 # The kinds that exist only for a kernel without a statement on finite operands (a full kernel, a
-# constructor), which the claims mark "ieee_only": true; represents too, when it is the only entry.
-IEEE_ONLY_KINDS = {"extends", "makes_ball", "finite_or_nan"}
+# constructor, an interval kernel, the finish of a fold), which the claims mark "ieee_only": true;
+# represents too, when it is the only entry.
+IEEE_ONLY_KINDS = {"extends", "makes_ball", "finite_or_nan", "makes_interval", "encloses_interval", "set_bound",
+                   "interval_set", "ball_of_interval", "interval_of_ball", "splits"}
 
 # The one sentence every page with an UNVERIFIED statement about infinite and NaN operands carries,
 # word for word: gen/claims.json is the only source of a status here.
@@ -132,6 +164,9 @@ PROOFS_WORKFLOW = REPO_URL + "/actions/workflows/proofs.yml"
 AUDIT_ARTIFACT = "proof-audit"
 NUMBER_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight",
                 9: "nine"}
+# Every kernel's claims entry by name, for unit(K) and tiny(K) in the constants of a claim: filled
+# by Site before the kernels are read.
+KERNEL_CLAIMS = {}
 
 
 class ReferenceError(Exception):
@@ -233,6 +268,120 @@ def parse(text, where, names=None, constants=False):
     if peek() is not None:
         fail("%s: cannot read the expression %r" % (where, text))
     return node
+
+
+# The constants of a claim (rel and abs of `outward`, Milestone 2): the language of const up(EXPR)
+# (u, eta, integers, unit(K), tiny(K), + - * /, integer powers ^) and up(EXPR) inside, the constant
+# as the format rounds it (architecture.md, "Claims of the interval kernels"). Evaluated exactly
+# here, per format, to print their values; never printed as formulas.
+
+def claim_constant(text, where, fmt, kernels):
+    """The exact value of a claim's constant in a format (p, q_min), as a Fraction; `kernels` maps
+    a name to its claims entry, for unit(K) and tiny(K)."""
+    p, qmin = fmt
+    u, eta = fractions.Fraction(1, 2 ** p), fractions.Fraction(2) ** qmin
+    tokens = re.findall(r"\s*([A-Za-z_][A-Za-z0-9_]*|\d+|[-+*/()^])", text)
+    if "".join(tokens) != re.sub(r"\s+", "", text):
+        fail("%s: cannot read the constant %r" % (where, text))
+    pos = [0]
+
+    def peek():
+        return tokens[pos[0]] if pos[0] < len(tokens) else None
+
+    def take(expected=None):
+        tok = peek()
+        if tok is None or (expected is not None and tok != expected):
+            fail("%s: unexpected end or token in the constant %r" % (where, text))
+        pos[0] += 1
+        return tok
+
+    def up(x):
+        if x <= 0:
+            fail("%s: up( ) of a value that is not positive in %r" % (where, text))
+        e = x.numerator.bit_length() - x.denominator.bit_length()
+        if fractions.Fraction(2) ** e > x:
+            e -= 1
+        q = fractions.Fraction(2) ** max(e - p + 1, qmin)
+        return -((-x / q).__floor__()) * q
+
+    def bound(fn, name):
+        if name not in kernels:
+            fail("%s: %s(%s) names a kernel that gen/claims.json does not have" % (where, fn, name))
+        errs = [e for e in kernels[name]["ensures"] if e["kind"] == "error"]
+        if len(errs) != 1:
+            fail("%s: %s(%s) needs exactly one error claim of %s" % (where, fn, name, name))
+        e = errs[0]
+        if fn == "unit":
+            return value(parse(e["c"], where, {"u"}), {"u": u}) * u ** e["k"]
+        return fractions.Fraction(e["t"]) * eta
+
+    def expr():
+        x = term()
+        while peek() in ("+", "-"):
+            x = x + term() if take() == "+" else x - term()
+        return x
+
+    def term():
+        x = unary()
+        while peek() in ("*", "/"):
+            x = x * unary() if take() == "*" else x / unary()
+        return x
+
+    def unary():
+        if peek() == "-":
+            take()
+            return -unary()
+        x = atom()
+        if peek() == "^":
+            take()
+            sign = -1 if peek() == "-" and take() else 1
+            n = take()
+            if not n.isdigit():
+                fail("%s: an exponent is an integer, in %r" % (where, text))
+            x = x ** (sign * int(n))
+        return x
+
+    def atom():
+        tok = take()
+        if tok == "(":
+            x = expr()
+            take(")")
+            return x
+        if tok.isdigit():
+            return fractions.Fraction(int(tok))
+        if tok in ("unit", "tiny") and peek() == "(":
+            take("(")
+            name = take()
+            take(")")
+            return bound(tok, name)
+        if tok == "up" and peek() == "(":
+            take("(")
+            x = expr()
+            take(")")
+            return up(x)
+        if tok in ("u", "eta"):
+            return u if tok == "u" else eta
+        fail("%s: the name %r in the constant %r is not u, eta, unit( ), tiny( ) or up( )" % (where, tok, text))
+
+    x = expr()
+    if peek() is not None:
+        fail("%s: cannot read the constant %r" % (where, text))
+    return x
+
+
+def value(node, env):
+    """The exact value of a parsed expression, each name bound in env."""
+    kind = node[0]
+    if kind == "num":
+        return node[1]
+    if kind == "name":
+        return env[node[1]]
+    if kind == "neg":
+        return -value(node[1], env)
+    if kind == "abs":
+        return abs(value(node[1], env))
+    a, b = value(node[1], env), value(node[2], env)
+    return {"+": a + b, "-": a - b, "*": a * b}[kind] if kind != "/" else a / b
 
 
 def substitute(node, mapping):
@@ -527,7 +676,7 @@ class Kernel:
             for a in args:
                 if a not in self.inputs:
                     fail("%s: the requirement %r names %r, which is not an input" % (where, req, a))
-            if len(args) != {"abs_ge": 2, "ball": 2}.get(m.group(1), 1):
+            if len(args) != {"abs_ge": 2, "ball": 2, "interval": 2}.get(m.group(1), 1):
                 fail("%s: the requirement %r has the wrong number of arguments" % (where, req))
             self.requires.append((m.group(1), args))
         # Claims, in the vocabulary of the domain, with exactly the fields of their kind.
@@ -575,8 +724,40 @@ class Kernel:
             if kind == "finite_or_nan" and "steps" in e and (not isinstance(e["steps"], int) or e["steps"] < 1):
                 fail("%s: the steps %r of a finite_or_nan claim are not an integer >= 1" % (where, e["steps"]))
             own = kind in ("holds", "maximum") or (kind == "upper" and "value" in e)
-            if kind != "makes_ball" and not own and self.value is None:
+            if kind not in OWN_SET_KINDS and not own and self.value is None:
                 fail("%s: a %s claim needs a value, and the kernel has none" % (where, kind))
+            if e.get("zero_factor") not in (None, True) or e.get("bounded_exactly") not in (None, True):
+                fail("%s: zero_factor and bounded_exactly are true, or left out" % where)
+            if e.get("smallest_radius") not in (None, True):
+                fail("%s: smallest_radius is true, or left out" % where)
+            if kind == "interval_set" and e["set"] not in KNOWN_SET_OPERATIONS:
+                fail("%s: the set operation %r of an interval_set claim has no template" % (where, e["set"]))
+            if kind == "ball_of_interval" and e["special"] not in KNOWN_BALL_SPECIALS:
+                fail("%s: the special values %r of a ball_of_interval claim have no template" % (where, e["special"]))
+            if e.get("zero_factor"):
+                # The value of a product, or for an interval kernel its set (stage B1, interval_mul_2).
+                product = (parse(e["set"], "%s, set" % where, set(e["intervals"])) if kind == "encloses_interval"
+                           else self.value)
+                if not self.extended or product[0] != "*":
+                    fail("%s: zero_factor is about a product, in the extended domain" % where)
+            tight = e.get("tight")
+            if tight is not None and (tight.get("kind") not in KNOWN_TIGHT
+                                      or set(tight) - {"kind"} - KNOWN_TIGHT[tight["kind"]]):
+                fail("%s: the tightness %r has no template" % (where, tight))
+            if kind == "outward" or (tight or {}).get("kind") == "outward":
+                for key in ("rel", "abs"):
+                    for fmt in self.formats():
+                        claim_constant((tight or e)[key], "%s, %s" % (where, key), fmt, KERNEL_CLAIMS)
+                conds = e.get("exact_when") if kind == "outward" else None
+                for c in conds or [x for side in (tight or {}).get("exact_when", {}).values() for x in side]:
+                    if set(c) != {"zero"}:
+                        fail("%s: the condition %r of an outward claim has no template" % (where, c))
+            for c in e.get("bounded_when", []):
+                if set(c) not in ({"abs_le", "omega"}, {"abs_le", "exp"}) or c["abs_le"] != e["set"]:
+                    fail("%s: the bounded_when condition %r has no template" % (where, c))
+            for c in e.get("midpoint_when", []):
+                if set(c) != {"half_in_format"} or c["half_in_format"] not in self.inputs:
+                    fail("%s: the midpoint_when condition %r has no template" % (where, c))
         # Whether the kernel has a statement on finite operands (the real model) is what the claims
         # say with ieee_only, and nothing else (architecture.md, "Claims of the non-finite layer").
         if "ieee_only" in entry and entry["ieee_only"] is not True:
@@ -602,6 +783,11 @@ class Kernel:
             if len(entry["instances"].get(fmt, [])) != len(self.errors):
                 fail("%s: %s has %d constants for %d error claims"
                      % (where, fmt, len(entry["instances"].get(fmt, [])), len(self.errors)))
+
+    @staticmethod
+    def formats():
+        """(p, q_min) of each format of FORMATS: q_min + q_max = 3 - 2p."""
+        return [(p, 3 - 2 * p - qmax) for _, _, p, qmax in FORMATS]
 
     def limbs(self, name):
         return self.listing["limbs"][name]
@@ -673,6 +859,8 @@ class Kernel:
             return ["$%s = 0$ or $%s \\ge 1$, as a number of terms is" % (m, m)]
         if kind == "format":
             return ["The format contains $\\tfrac12$: $\\eta \\le \\tfrac12$, as `float` and `double` do"]
+        if kind == "not_nan":                         # a finite operand is not a NaN
+            return []
         fail("kernel %s: the requirement %s has no reading on finite operands" % (self.name, kind))
 
     def extended_requirement(self, kind, args):
@@ -691,7 +879,32 @@ class Kernel:
         if kind == "power_of_two":
             c = name_tex(args[0])
             return "$%s$ is a finite power of two: $%s = 2^n$ for an integer $n$" % (c, c)
+        if kind == "interval":
+            lo, hi = args
+            name = self.interval_names().get((lo, hi))
+            what = "$%s = [%s, %s]$" % (name_tex(name).upper(), name_tex(lo), name_tex(hi)) if name else \
+                "$[%s, %s]$" % (name_tex(lo), name_tex(hi))
+            two = len(self.limbs(lo)) == 2
+            return ("%s is a canonical interval: the empty set, $%s = +\\infty$ and $%s = -\\infty$%s, or a nonempty "
+                    "interval, neither bound a NaN, $%s \\le %s$, $%s < +\\infty$, $%s > -\\infty$, each bound %s; its "
+                    "members are the real numbers between its bounds" % (
+                        what, name_tex(lo), name_tex(hi), " (each followed by a zero)" if two else "",
+                        name_tex(lo), name_tex(hi), name_tex(lo), name_tex(hi),
+                        "finite and normalized or $(\\pm\\infty, \\pm 0)$" if two else "a number of `T` or an infinity"))
+        if kind == "not_nan":
+            if len(self.limbs(args[0])) == 2:          # stage B1: a canonical value that is not a NaN
+                return "$%s$ is not a NaN: a finite normalized pair or $(\\pm\\infty, \\pm 0)$" % name_tex(args[0])
+            return "$%s$ is a number of `T` or an infinity, not a NaN" % name_tex(args[0])
         fail("kernel %s: the requirement %s has no reading in the extended domain" % (self.name, kind))
+
+    def interval_names(self):
+        """{(lower, upper): interval name} of the encloses_interval claims."""
+        out = {}
+        for e in self.entry["ensures"]:
+            if e["kind"] in ("encloses_interval", "interval_set"):
+                for n, b in e["intervals"].items():
+                    out[(b["lower"], b["upper"])] = n
+        return out
 
     def extended_free_inputs(self):
         """The inputs no requirement constrains: in the extended domain, any value of T (for several
@@ -739,6 +952,11 @@ class Kernel:
         limbs = {l for i in self.inputs for l in self.limbs(i)}
         parts = []
         for c in conds:
+            if set(c) == {"zero"}:
+                # zero(EXPR), of outward (Milestone 2): EXPR = 0.
+                parts.append("$%s = 0$" % tex(parse(c["zero"], "kernel %s, exact_when" % self.name,
+                                                    set(self.inputs))))
+                continue
             kinds = [x for x in KNOWN_EXACT_CONDITIONS if x in c]
             if len(kinds) != 1 or set(c) != {kinds[0], "than"}:
                 fail("kernel %s: the exact_when condition %r is not one this script knows" % (self.name, c))
@@ -788,6 +1006,11 @@ class Kernel:
                 fail("kernel %s: the ball %r of an encloses claim is not a center and a radius of the inputs"
                      % (self.name, b))
         s = self.expr(e["set"], "encloses", names)
+        if not balls:
+            # The operands are points (Milestone 2, add_ball_2_2): the radius bounds the error.
+            return "$\\lvert %s - %s\\rvert \\le %s$: $%s$ bounds the error of $%s$" % (
+                parenthesized(s), self.out_tex(e["center"]), name_tex(e["radius"]), name_tex(e["radius"]),
+                self.out_tex(e["center"]))
         over = ", ".join("$\\lvert %s - %s\\rvert \\le %s$" % (name_tex(b), name_tex(cr["center"]),
                                                                 name_tex(cr["radius"]))
                          for b, cr in balls.items())
@@ -879,8 +1102,23 @@ class Kernel:
             if short:
                 return "exactly whether $%s$" % rel
             return "$%s$ is true exactly when $%s$, for the exact values" % (name_tex(e["of"]), rel)
+        if kind == "outward":
+            o, v = self.out_tex(e["of"]), tex(self.value)
+            below = e["side"] == "below"
+            side = "$%s \\le %s$" % (o, v) if below else "$%s \\ge %s$" % (o, v)
+            if short:
+                return "%s, within $A\\lvert %s\\rvert + B$%s" % (side, v, ", exact when zero" if "exact_when" in e else "")
+            text = ("%s, and $\\lvert %s - (%s)\\rvert \\le A\\,\\lvert %s\\rvert + B$: a %s bound, moved outward from "
+                    "the result rounded to nearest by a bound of its error, with the constants $A$ and $B$ below" % (
+                        side, o, v, v, "lower" if below else "upper"))
+            if "exact_when" in e:
+                text += "; and $%s = %s$ exactly when %s" % (o, v, self.exact_tex(e["exact_when"]))
+            return text
         if kind == "encloses":
             s = tex(self.expr(e["set"], "encloses", set(e["balls"]) | set(self.inputs)))
+            if short and not e["balls"]:
+                return "$\\lvert %s - %s\\rvert \\le %s$" % (parenthesized(self.expr(e["set"], "encloses")),
+                                                           self.out_tex(e["center"]), name_tex(e["radius"]))
             if short:
                 return "contains every $%s$%s" % (s, ", exactly when nothing underflows" if "exact_when" in e else "")
             text = self.encloses_text(e)
@@ -1199,6 +1437,8 @@ class Site:
         self.kernels = {}
         entries = load_claims(root, claims)
         self.all_names = {e["name"] for e in entries}
+        KERNEL_CLAIMS.clear()
+        KERNEL_CLAIMS.update({e["name"]: e for e in entries})
         for entry in entries:
             name = entry["name"]
             if name not in ops.KERNELS:
@@ -1313,6 +1553,9 @@ class Site:
             w("")
             if any(k.bound_tex(x) is not None for x in k.errors):
                 w(self.constants(k))
+            outward = [x for x in k.finite_entries if x["kind"] == "outward"]
+            if outward:
+                w(self.outward_constants(k, outward[0]))
             users = k.constants_of()
             if users:
                 w(self.ball_constants(k, users))
@@ -1321,6 +1564,12 @@ class Site:
             w("For operands that satisfy the requirements, finite, infinite or NaN:")
             w("")
             w(self.extended_statement(k))
+            tights = [x["tight"] for x in e["ensures"] if x.get("tight", {}).get("kind") == "outward"] + \
+                [x for x in e["ensures"] if x["kind"] == "outward"]
+            if tights:
+                w(self.outward_constants(k, tights[0]))
+            if any(k.bound_tex(x) is not None for x in k.errors):
+                w(self.constants(k))
             w(self.precision(k, extended=True))
         w("")
 
@@ -1477,9 +1726,10 @@ class Site:
             for x in exact_kinds:
                 if x["of"] not in outs:
                     outs.append(x["of"])
-            if not represents:
-                lines.append("$%s$ %s canonical." % ("$, $".join(name_tex(o) for o in outs),
-                                                      "is" if len(outs) == 1 else "are"))
+            several = [o for o in outs if len(k.limbs(o)) > 1]
+            if not represents and several:
+                lines.append("$%s$ %s canonical." % ("$, $".join(name_tex(o) for o in several),
+                                                      "is" if len(several) == 1 else "are"))
             lines.append("When every operand and %s are finite, the statement on finite operands holds:" % (
                 " and ".join("$%s$" % name_tex(o) for o in outs)))
             for x in exact_kinds:
@@ -1521,6 +1771,22 @@ class Site:
                 lines += ["$%s$ is true exactly when $%s$ is finite." % (f, name_tex(lead)),
                           "When it is, $%s = %s$, limb for limb." % (r, s),
                           "Otherwise every limb of $%s$ is a NaN." % r]
+            elif kind == "makes_interval":
+                lines.extend(self.extended_makes_interval(k, x))
+            elif kind == "encloses_interval":
+                lines.extend(self.extended_interval(k, x))
+            elif kind == "set_bound":
+                lines.extend(self.extended_set_bound(k, x))
+            elif kind == "outward":
+                lines.extend(self.extended_outward(k, x))
+            elif kind == "interval_set":
+                lines.extend(self.extended_interval_set(k, x))
+            elif kind == "ball_of_interval":
+                lines.extend(self.extended_ball_of_interval(k, x))
+            elif kind == "interval_of_ball":
+                lines.extend(self.extended_interval_of_ball(k, x))
+            elif kind == "splits":
+                lines.extend(self.extended_splits(k, x))
             else:
                 fail("kernel %s: the claim kind %r has no reading in the extended domain" % (k.name, kind))
         if not kinds:
@@ -1543,10 +1809,20 @@ class Site:
             "up": "$%s$ is the smallest number of `T` not below $%s$, or $+\\infty$ when $%s > \\Omega$" % (t, v, v),
         }[mode]
         when = k.when_tex(x)
-        return ["If every operand is finite%s: %s ($\\Omega$ is the largest finite number of `T`)." % (
+        zero = self.zero_factor(k, x)
+        return zero + ["If every operand is finite%s: %s ($\\Omega$ is the largest finite number of `T`)." % (
                     " and " + when[len("when "):] if when else "", what),
-                "If an operand is infinite or NaN: $%s = %s$%s." % (
+                "If an operand is infinite or NaN%s: $%s = %s$%s." % (
+                    " and none is a zero" if zero else "",
                     t, tex(self.leading(k, k.value)), ", as `T` computes it" if has_binary(k.value) else "")]
+
+    def zero_factor(self, k, x):
+        """The line of zero_factor (Milestone 2, mul_dir_1): a zero operand gives zero, 0 times
+        infinity included; none without the field."""
+        if not x.get("zero_factor"):
+            return []
+        return ["If an operand is a zero: $%s$ is a zero, whatever the other operand, $\\pm\\infty$ included "
+                "($0 \\cdot \\infty = 0$, the product of two bounds in interval arithmetic)." % name_tex(x["of"])]
 
     def extended_neighbor(self, k, x):
         r, a = name_tex(x["of"]), tex(k.value)
@@ -1567,11 +1843,13 @@ class Site:
         else:
             rounding = ("the smallest number of `T` not below $%s$, which is $+\\infty$ when $%s > \\Omega$ and "
                         "$-\\Omega$ when $%s < -\\Omega$" % (v, v, v))
-        return ["If every operand is finite: $%s %s %s$, and $%s$ is at most %d step%s of `T` %s %s (a step %s "
+        zero = self.zero_factor(k, x)
+        return zero + ["If every operand is finite: $%s %s %s$, and $%s$ is at most %d step%s of `T` %s %s (a step %s "
                 "$%s\\Omega$ gives $%s\\infty$)." % (
                     r, "\\le" if below else "\\ge", v, r, n, "" if n == 1 else "s", "below" if below else "above",
                     rounding, "below" if below else "above", "-" if below else "", "-" if below else "+"),
-                "If an operand is infinite or NaN: $%s = %s$, as `T` computes it." % (r, tex(k.value))]
+                "If an operand is infinite or NaN%s: $%s = %s$, as `T` computes it." % (
+                    " and none is a zero" if zero else "", r, tex(k.value))]
 
     def extended_upper(self, k, x):
         r, v = name_tex(x["of"]), tex(k.value)
@@ -1676,8 +1954,194 @@ class Site:
                 "$%s = (\\mathrm{NaN}, \\mathrm{NaN})$." % (
                     name_tex(o), v, v, name_tex(o), o0, o1, v, v, name_tex(o), v, name_tex(o))]
 
+    def extended_makes_interval(self, k, x):
+        lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
+        zl, zu = name_tex(x["lower"]), name_tex(x["upper"])
+        return ["The result $Z = [%s, %s]$ is a canonical interval." % (zl, zu),
+                "If $%s \\le %s$, $%s < +\\infty$ and $%s > -\\infty$: $Z$ is $[%s, %s]$, the same extended real "
+                "numbers (a zero may change its sign)." % (lo, hi, lo, hi, lo, hi),
+                "If a bound is a NaN, whatever the other: $Z$ is the whole line, $[-\\infty, +\\infty]$.",
+                "Otherwise ($%s > %s$, $[+\\infty, +\\infty]$, $[-\\infty, -\\infty]$): $Z$ is the empty set, "
+                "$(+\\infty, -\\infty)$." % (lo, hi)]
+
+    def interval_set(self, k, x):
+        names = list(x["intervals"])
+        s = tex(k.expr(x["set"], "encloses_interval", set(names)))
+        each = ", ".join("$%s \\in %s$" % (name_tex(n), name_tex(n).upper()) for n in names)
+        return s, each, names
+
+    def extended_interval(self, k, x):
+        """I1 to I5 of milestone2.md, "What is stated of an interval kernel"."""
+        s, each, names = self.interval_set(k, x)
+        big = [name_tex(n).upper() for n in names]
+        zl, zu = name_tex(x["lower"]), name_tex(x["upper"])
+        ops = " and ".join("$%s$" % n for n in big)
+        lines = ["**I1.** The result $Z = [%s, %s]$ is a canonical interval." % (zl, zu),
+                 "**I2.** $Z$ is empty exactly when %s." % (
+                     "an operand is" if len(names) > 1 else "$%s$ is" % big[0]),
+                 "**I3.** $Z$ contains $%s$ for every %s, unbounded operands included (their members are real "
+                 "numbers)." % (s, each)]
+        t = x["tight"]
+        members = ", ".join("%s \\in %s" % (name_tex(n), name_tex(n).upper()) for n in names)
+        rng = ("$\\ell$ and $h$ are the greatest lower bound and the least upper bound of the exact range "
+               "$\\{\\, %s : %s \\,\\}$, as extended real numbers" % (s, members))
+        if t["kind"] == "exact":
+            lines.append("**I4.** For nonempty %s, where %s: $%s = \\ell$ and $%s = h$, exactly." % (ops, rng, zl, zu))
+        elif t["kind"] == "rounded":
+            steps = t.get("steps", 0)
+            text = ("**I4.** For nonempty %s, where %s: %s" % (ops, rng, (
+                "$%s = \\mathrm{RD}(\\ell)$ and $%s = \\mathrm{RU}(h)$, the roundings in the format with overflow "
+                "(an infinite bound of the range is returned as such)" % (zl, zu)) if not steps else (
+                "$%s$ is $\\mathrm{RD}(\\ell)$ or at most %d step%s of `T` below it, and $%s$ is $\\mathrm{RU}(h)$ "
+                "or at most as many above it" % (zl, steps, "" if steps == 1 else "s", zu))))
+            if t.get("when") == "product_large":
+                text += ("; exactly $\\mathrm{RD}(\\ell)$ and $\\mathrm{RU}(h)$ when each product of a finite bound "
+                         "of $%s$ and a finite bound of $%s$ is zero or at least $\\eta/(2u^2)$ in magnitude" % tuple(big))
+            lines.append(text + ".")
+        else:
+            conds = ", ".join("for the %s bound when %s" % (side, k.exact_tex(c))
+                              for side, c in t.get("exact_when", {}).items())
+            lines.append("**I4.** For bounded %s and a bounded $Z$, where %s: $\\ell - %s \\le A\\,\\lvert \\ell\\rvert + "
+                         "B$ and $%s - h \\le A\\,\\lvert h\\rvert + B$, with the constants $A$ and $B$ below. A bound "
+                         "of $Z$ is the bound of the range exactly %s. For nonempty operands, an infinite bound of the "
+                         "range is returned as such." % (ops, rng, zl, zu, conds or "in no case claimed"))
+        if x.get("zero_factor"):
+            lines.append("**I6.** For nonempty %s: if an operand is $[0, 0]$, $Z$ is $[0, 0]$, the other operand "
+                         "unbounded included ($0 \\cdot \\infty = 0$, the rule of interval arithmetic)." % ops)
+        cs = []
+        for c in x["bounded_when"]:
+            cs.append("$\\lvert z\\rvert \\le %s$" % ("\\Omega" if c.get("omega") else power_tex(c["exp"])))
+        if cs:
+            lines.append("**I5.** For bounded %s, $Z$ is bounded %s every member $z$ of the exact range satisfies %s.%s" % (
+                ops, "exactly when" if x.get("bounded_exactly") else "when", " and ".join(cs),
+                "" if all(c.get("omega") for c in x["bounded_when"]) else
+                " " + self.threshold_note([c for c in x["bounded_when"] if not c.get("omega")])))
+        else:
+            lines.append("**I5.** No condition under which $Z$ is bounded is claimed.")
+        return lines
+
+    def extended_outward(self, k, x):
+        """outward in the extended domain (stage B1, mul_ext_2_2)."""
+        r, v = k.out_tex(x["of"]), tex(k.value)
+        below = x["side"] == "below"
+        zero = self.zero_factor(k, x)
+        return zero + ["$%s$ is never a NaN." % r,
+                       "If an operand is infinite%s: $%s = %s$ as `T` computes it on the leading limbs, the infinity "
+                       "of the sign of the product." % (" and none is a zero" if zero else "", r, v),
+                       "If every operand is finite: $%s %s %s$ (an infinite $%s$ is $%s\\infty$), and when $%s$ is "
+                       "finite, $\\lvert %s - %s\\rvert \\le A\\,\\lvert %s\\rvert + B$, with the constants "
+                       "$A$ and $B$ below." % (r, "\\le" if below else "\\ge", v, r, "-" if below else "+", r, r,
+                                              parenthesized(k.value), v)]
+
+    def extended_interval_set(self, k, x):
+        """The hull or the intersection of two intervals (stage B1)."""
+        (a, ba), (b, bb) = x["intervals"].items()
+        A, B = name_tex(a).upper(), name_tex(b).upper()
+        zl, zu = name_tex(x["lower"]), name_tex(x["upper"])
+        al, au, bl, bu = (name_tex(n) for n in (ba["lower"], ba["upper"], bb["lower"], bb["upper"]))
+        lines = ["The result $Z = [%s, %s]$ is a canonical interval." % (zl, zu)]
+        if x["set"] == "union":
+            lines += ["$Z$ is empty exactly when $%s$ and $%s$ both are." % (A, B),
+                      "Otherwise $Z$ is the smallest interval that contains $%s \\cup %s$, exactly: its lower bound "
+                      "is the smaller of the lower bounds of the nonempty operands, its upper bound the larger of "
+                      "their upper bounds ($[%s, %s]$ with $\\min(%s, %s)$ and $\\max(%s, %s)$ when both are "
+                      "nonempty); the hull with the empty set is the other operand." % (A, B, zl, zu, al, bl, au, bu)]
+        else:
+            lines += ["$Z$ is empty exactly when no real number is a member of both: when an operand is empty, or "
+                      "$\\max(%s, %s) > \\min(%s, %s)$." % (al, bl, au, bu),
+                      "Otherwise $Z = %s \\cap %s$, exactly: $%s = \\max(%s, %s)$ and $%s = \\min(%s, %s)$; the "
+                      "intersection with the whole line is the other operand." % (A, B, zl, al, bl, zu, au, bu)]
+        return lines
+
+    def extended_ball_of_interval(self, k, x):
+        """A ball made from an interval (stage B1): the midpoint and radius, or a canonical ball."""
+        lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
+        c, r = k.out_tex(x["center"]), name_tex(x["radius"])
+        rel, absolute = (tex(parse(x[key], "kernel %s, %s" % (k.name, key), {"u", "eta"})) for key in ("rel", "abs"))
+        mid = "\\tfrac{%s + %s}{2}" % (lo, hi)
+        bounded = ("If $[%s, %s]$ is bounded: $%s$ and $%s$ are finite, $%s \\le %s \\le %s$, "
+                   "$\\lvert %s - %s\\rvert \\le %s\\,\\lvert %s\\rvert + %s$, and $[%s - %s, %s + %s] "
+                   "\\supseteq [%s, %s]$%s." % (
+                       lo, hi, c, r, lo, c, hi, c, mid, rel, mid, absolute, c, r, c, r, lo, hi,
+                       (": $%s$ is the smallest number of `T` with that property, "
+                        "$\\mathrm{RU}(\\max(%s - %s, %s - %s))$" % (r, c, lo, hi, c)) if x.get("smallest_radius") else ""))
+        if x["special"] == "ieee1788":
+            return [bounded,
+                    "The whole line gives $%s = 0$, $%s = +\\infty$; $[%s, +\\infty]$ with $%s$ finite gives "
+                    "$%s = \\Omega$, the largest finite number of `T`, and $[-\\infty, %s]$ gives $%s = -\\Omega$, both "
+                    "with $%s = +\\infty$; the empty set gives two NaN. These are the values of `mid` and `rad` of "
+                    "IEEE 1788." % (c, r, lo, lo, c, hi, c, r)]
+        return ["The ball of center $%s$ and radius $%s$ is canonical, and empty exactly when the interval is." % (c, r),
+                bounded + " It is then a finite ball.",
+                "An unbounded interval gives the whole line, center 0 and radius $+\\infty$ (a ball cannot be a "
+                "half-line); the empty set gives the empty ball, every limb a NaN."]
+
+    def extended_interval_of_ball(self, k, x):
+        """An interval that encloses a ball (stage B1)."""
+        b, cr = next(iter(x["balls"].items()))
+        zl, zu = name_tex(x["lower"]), name_tex(x["upper"])
+        c, r = name_tex(cr["center"]), name_tex(cr["radius"])
+        s = tex(k.expr(x["set"], "interval_of_ball", set(x["balls"]) | set(k.inputs)))
+        ball = "the ball $%s$ of center $%s$ and radius $%s$" % (name_tex(b).upper(), c, r)
+        steps = x["tight"].get("steps", 0)
+        return ["The result $Z = [%s, %s]$ is a canonical interval, empty exactly when %s is." % (zl, zu, ball),
+                "$Z$ contains $%s$ for every $%s \\in %s$: the whole line gives $[-\\infty, +\\infty]$." % (
+                    s, name_tex(b), name_tex(b).upper()),
+                "For a finite ball: $%s = \\mathrm{RD}(%s - %s)$ and $%s = \\mathrm{RU}(%s + %s)$, the roundings in the "
+                "format with overflow%s: the smallest interval of `T` that contains the ball." % (
+                    zl, c, r, zu, c, r, "" if not steps else ", or at most %d step%s beyond" % (
+                        steps, "" if steps == 1 else "s"))]
+
+    def extended_splits(self, k, x):
+        """Two intervals that together are the operand (stage B1)."""
+        lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
+        (al, au), (bl, bu) = ((name_tex(q["lower"]), name_tex(q["upper"])) for q in x["parts"])
+        return ["$[%s, %s]$ and $[%s, %s]$ are canonical intervals." % (al, au, bl, bu),
+                "If $X = [%s, %s]$ is empty, both are." % (lo, hi),
+                "Otherwise neither is, $%s = %s$, $%s = %s$ and $%s = %s$: the two together are $X$, split at that "
+                "point, which is in $X$." % (al, lo, bu, hi, au, bl)]
+
+    def extended_set_bound(self, k, x):
+        b = next(iter(x["balls"]))
+        cr = x["balls"][b]
+        x_of, below = x["of"], x["side"] == "below"
+        o = name_tex(x_of)
+        s = tex(k.expr(x["set"], "set_bound", set(x["balls"]) | set(k.inputs)))
+        ball = "the ball $%s$ of center $%s$ and radius $%s$" % (name_tex(b).upper(), name_tex(cr["center"]),
+                                                                 name_tex(cr["radius"]))
+        lines = ["If %s is empty: $%s = %s\\infty$." % (ball, o, "+" if below else "-"),
+                 "Otherwise $%s %s %s$ for every $%s \\in %s$: the whole line gives $%s = %s\\infty$." % (
+                     o, "\\le" if below else "\\ge", s, name_tex(b), name_tex(b).upper(), o, "-" if below else "+")]
+        if x.get("tight"):
+            steps = x["tight"].get("steps", 0)
+            lines.append("For a finite ball: $%s = \\mathrm{%s}(%s)$, the %s bound of the ball rounded %s in the "
+                         "format with overflow%s." % (
+                             o, "RD" if below else "RU", "%s %s %s" % (name_tex(cr["center"]), "-" if below else "+",
+                                                                         name_tex(cr["radius"])),
+                             "lower" if below else "upper", "down" if below else "up",
+                             "" if not steps else ", or at most %d step%s beyond it" % (steps, "" if steps == 1 else "s")))
+        elif len(k.limbs(cr["center"])) > 1:
+            # Why no number of steps is claimed (ball_lower_as_2, ball_upper_as_2): the center is
+            # rounded to T first, and one gap of T at c can be many gaps at c -+ r.
+            c, r = name_tex(cr["center"]), name_tex(cr["radius"])
+            v = "%s %s %s" % (c, "-" if below else "+", r)
+            errors = [x for x in k.errors if x["of"] == x_of]
+            lines.append("No number of steps of `T` from $\\mathrm{%s}(%s)$ is claimed: the center, of %s limbs, is "
+                         "rounded to `T` before the radius is %s, which moves the bound by up to one gap of `T` at "
+                         "$%s$, and when $%s$ is much smaller than $%s$ in magnitude (a radius close to "
+                         "$\\lvert %s\\rvert$) that is many gaps of `T` at the result. %s" % (
+                             "RD" if below else "RU", v,
+                             {2: "two", 3: "three", 4: "four"}.get(len(k.limbs(cr["center"])), len(k.limbs(cr["center"]))),
+                             "subtracted" if below else "added", c, v, c, c,
+                             ("What is claimed of the distance is that $%s$ is on its side of every member and "
+                              "within the bound above: %s." % (o, k.finite_bullet(errors[0]))) if errors else
+                             "Nothing is claimed of the distance."))
+        return lines
+
     def extended_makes_ball(self, k, x):
         frm = x["from"]
+        if set(frm) == {"lower", "upper"}:
+            return self.extended_ball_from_interval(k, x)
         if set(frm) != {"center", "radius"} or frm["center"] not in k.inputs or frm["radius"] not in k.inputs:
             fail("kernel %s: the from of a makes_ball claim is not a center and a radius of the inputs" % k.name)
         c, r = name_tex(frm["center"]), name_tex(frm["radius"])
@@ -1687,6 +2151,39 @@ class Site:
                 "Otherwise $Z$ is the whole line (center 0, radius $+\\infty$) when $%s$ is not finite or "
                 "$%s = +\\infty$." % (c, r),
                 "Otherwise $Z$ is the ball of center $%s$ and radius $%s$, exactly." % (c, r)]
+
+    def extended_ball_from_interval(self, k, x):
+        lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
+        c, r = name_tex(x["center"]), name_tex(x["radius"])
+        lines = ["The result $Z$, of center $%s$ and radius $%s$, is a canonical ball." % (c, r),
+                 "If a bound is a NaN, whatever the other: $Z$ is the whole line (center 0, radius $+\\infty$).",
+                 "If $%s \\le %s$, both finite: $Z$ is a finite ball that contains $[%s, %s]$." % (lo, hi, lo, hi)]
+        if x.get("midpoint_when"):
+            halves = " and ".join("$%s/2$" % name_tex(cnd["half_in_format"]) for cnd in x["midpoint_when"])
+            lines.append("When moreover %s are numbers of `T`: $%s = (%s + %s)/2$ exactly and $%s = "
+                         "\\mathrm{RU}((%s - %s)/2)$, the smallest radius of `T` for that center." % (
+                             halves, c, lo, hi, r, hi, lo))
+        lines += ["If $%s \\le %s$, $%s < +\\infty$, $%s > -\\infty$ and a bound is infinite: $Z$ is the whole line." % (
+                      lo, hi, lo, hi),
+                  "Otherwise ($%s > %s$, $[+\\infty, +\\infty]$, $[-\\infty, -\\infty]$): $Z$ is the empty set." % (lo, hi)]
+        return lines
+
+    def outward_constants(self, k, x):
+        """The constants A and B of an outward claim or tightness, as the claims write them, and their
+        values per format, in units of u^2 and of the smallest normal number N."""
+        cols = []
+        for (p, qmin), (_, ctype, _, _) in zip(Kernel.formats(), FORMATS):
+            a = claim_constant(x["rel"], "kernel %s, rel" % k.name, (p, qmin), KERNEL_CLAIMS)
+            b = claim_constant(x["abs"], "kernel %s, abs" % k.name, (p, qmin), KERNEL_CLAIMS)
+            u, n = fractions.Fraction(1, 2 ** p), fractions.Fraction(2) ** (qmin + p - 1)
+            cols.append((ctype, a / u ** 2, b / n))
+        rows = ["| | %s |" % " | ".join("`%s`" % c for c, _, _ in cols), "|---|" + "---|" * len(cols),
+                "| $A / u^2$ | %s |" % " | ".join("$%s$" % approx(a, 17) for _, a, _ in cols),
+                "| $B / N$ | %s |" % " | ".join("$%s$" % approx(b, 17) for _, _, b in cols)]
+        return ("The constants of the bound, from `gen/claims.json`: $A$ is `%s` and $B$ is `%s`, where `up( )` is "
+                "a constant as `T` rounds it up (the $E$, $G$, $H$ of a radius) and `unit( )`, `tiny( )` are the "
+                "constants of the center's kernel; $N$ is the smallest normal number of `T`:\n\n%s\n" % (
+                    x["rel"], x["abs"], "\n".join(rows)))
 
     def computes(self, k):
         e = dict(k.entry, ensures=k.finite_entries) if k.finite_reading else k.entry
@@ -1732,6 +2229,84 @@ class Site:
                     "\n\n$$%s.$$" % (", ".join(name_tex(i) for i in k.inputs),
                                        " and ".join("$%s$" % name_tex(m) for m in masks),
                                        ", \\qquad ".join(b.strip("$") for b in bounds)))
+        if "makes_interval" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] == "makes_interval")
+            lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
+            return ("The interval of two values of `T`, or the whole line when a bound is a NaN, or the empty set "
+                    "when they describe none:\n\n$$Z = [%s, %s].$$" % (lo, hi))
+        if "interval_set" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] == "interval_set")
+            (a, _), (b, _) = x["intervals"].items()
+            op, what = KNOWN_SET_OPERATIONS[x["set"]]
+            A, B = name_tex(a).upper(), name_tex(b).upper()
+            return ("The %s of two intervals%s, exactly; the empty set included:\n\n$$Z = %s.$$" % (
+                what, ", the smallest interval that contains both" if x["set"] == "union" else "",
+                ("\\mathrm{hull}(%s \\cup %s)" if x["set"] == "union" else "%s \\cap %s") % (A, B)))
+        if "ball_of_interval" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] == "ball_of_interval")
+            lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
+            c, r = k.out_tex(x["center"]), name_tex(x["radius"])
+            if x["special"] == "ieee1788":
+                return ("The midpoint $%s$ and the radius $%s$ of the interval $[%s, %s]$, with the values of `mid` "
+                        "and `rad` of IEEE 1788 for an unbounded or empty interval:\n\n$$[%s - %s, %s + %s] "
+                        "\\supseteq [%s, %s].$$" % (c, r, lo, hi, c, r, c, r, lo, hi))
+            return ("A ball of center $%s$ and radius $%s$ that contains the interval $[%s, %s]$: the whole line for "
+                    "an unbounded interval, the empty set for the empty one:\n\n$$[%s - %s, %s + %s] \\supseteq "
+                    "[%s, %s].$$" % (c, r, lo, hi, c, r, c, r, lo, hi))
+        if "interval_of_ball" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] == "interval_of_ball")
+            b, cr = next(iter(x["balls"].items()))
+            c, r = name_tex(cr["center"]), name_tex(cr["radius"])
+            return ("The smallest interval of `T` that contains the ball of center $%s$ and radius $%s$:\n\n"
+                    "$$Z = [\\mathrm{RD}(%s - %s), \\mathrm{RU}(%s + %s)].$$" % (c, r, c, r, c, r))
+        if "splits" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] == "splits")
+            lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
+            (al, au), (bl, bu) = ((name_tex(q["lower"]), name_tex(q["upper"])) for q in x["parts"])
+            return ("Two intervals that together are $X = [%s, %s]$, split at a point of it:\n\n$$X = [%s, %s] "
+                    "\\cup [%s, %s].$$" % (lo, hi, al, au, bl, bu))
+        if "encloses_interval" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] == "encloses_interval")
+            s, each, names = self.interval_set(k, x)
+            defs = " and ".join("$%s = [%s, %s]$" % (name_tex(n).upper(), name_tex(b["lower"]), name_tex(b["upper"]))
+                                for n, b in x["intervals"].items())
+            return ("An interval $Z = [%s, %s]$ that contains $%s$ for every %s, with %s. An interval may be "
+                    "unbounded, and empty.\n\n$$Z \\supseteq \\{\\, %s : %s \\,\\}.$$" % (
+                        name_tex(x["lower"]), name_tex(x["upper"]), s, each, defs, s,
+                        ", ".join("%s \\in %s" % (name_tex(n), name_tex(n).upper()) for n in names)))
+        if "set_bound" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] == "set_bound")
+            b, cr = next(iter(x["balls"].items()))
+            below = x["side"] == "below"
+            return ("A%s bound of the ball $%s$ of center $%s$ and radius $%s$, as a number of `T`:\n\n"
+                    "$$%s %s %s \\text{ for every } %s \\in %s.$$" % (
+                        " lower" if below else "n upper", name_tex(b).upper(), name_tex(cr["center"]),
+                        name_tex(cr["radius"]), name_tex(x["of"]), "\\le" if below else "\\ge", name_tex(b),
+                        name_tex(b), name_tex(b).upper()))
+        if "makes_ball" in kinds and "lower" in next(x for x in e["ensures"] if x["kind"] == "makes_ball")["from"]:
+            x = next(x for x in e["ensures"] if x["kind"] == "makes_ball")
+            lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
+            return ("A ball $Z$, of center $%s$ and radius $%s$, that contains the interval $[%s, %s]$ of two values "
+                    "of `T`, with the exact midpoint for its center when halving is exact; or the whole line, or the "
+                    "empty set:\n\n$$Z \\supseteq [%s, %s].$$" % (
+                        name_tex(x["center"]), name_tex(x["radius"]), lo, hi, lo, hi))
+        if "outward" in kinds:
+            xs = [x for x in e["ensures"] if x["kind"] == "outward"]
+            parts = " \\le ".join([k.out_tex(x["of"]) for x in xs if x["side"] == "below"] + [v] +
+                                  [k.out_tex(x["of"]) for x in xs if x["side"] == "above"])
+            return ("%s of $%s$, of two limbs, within $A\\lvert %s\\rvert + B$ of it:\n\n$$%s.$$" % (
+                "Two bounds" if len(xs) > 1 else ("A lower bound" if xs[0]["side"] == "below" else "An upper bound"),
+                v, v, parts))
+        if "encloses" in kinds and not next(x for x in e["ensures"] if x["kind"] == "encloses")["balls"]:
+            x = next(x for x in e["ensures"] if x["kind"] == "encloses")
+            return ("An approximation $%s$ of $%s$ with a bound $%s$ of its error:\n\n$$\\lvert %s - %s\\rvert \\le %s.$$" % (
+                k.out_tex(x["center"]), v, name_tex(x["radius"]), parenthesized(k.value), k.out_tex(x["center"]),
+                name_tex(x["radius"])))
+        if "bound" in kinds and len(k.outputs) == 2:
+            lo = next(x for x in e["ensures"] if x["kind"] == "bound" and x["side"] == "below")
+            hi = next(x for x in e["ensures"] if x["kind"] == "bound" and x["side"] == "above")
+            return ("Both directed products of $%s$ from one rounding, a bound below and one above, each within a "
+                    "step of its rounding:\n\n$$%s \\le %s \\le %s.$$" % (v, name_tex(lo["of"]), v, name_tex(hi["of"])))
         if "makes_ball" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "makes_ball")
             c, r = name_tex(x["from"]["center"]), name_tex(x["from"]["radius"])
@@ -1807,12 +2382,46 @@ class Site:
                              "included" % tex(k.expr(x["set"], "encloses", set(x["balls"]) | set(k.inputs))))
             elif x["kind"] == "represents":
                 parts.append("$%s = %s$ exactly, canonical" % (name_tex(x["of"]), tex(k.value)))
+            elif x["kind"] == "makes_ball" and "lower" in x["from"]:
+                parts.append("a canonical ball that contains $[%s, %s]$; the whole line for a NaN bound" % (
+                    name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])))
             elif x["kind"] == "makes_ball":
                 parts.append("the ball of center $%s$ and radius $%s$, canonical" % (
                     name_tex(x["from"]["center"]), name_tex(x["from"]["radius"])))
             elif x["kind"] == "finite_or_nan":
                 parts.append("$%s$ when its leading limb is finite, flag true; otherwise NaN, flag false" % (
                     tex(k.value)))
+            elif x["kind"] == "makes_interval":
+                parts.append("the interval $[%s, %s]$, canonical; the whole line for a NaN bound" % (
+                    name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])))
+            elif x["kind"] == "encloses_interval":
+                s, _, _ = self.interval_set(k, x)
+                parts.append("a canonical interval that contains every $%s$; %s" % (s, {
+                    "exact": "exactly the range", "rounded": "the range rounded outward" + (
+                        ", within a step" if x["tight"].get("steps") else ""),
+                    "outward": "within $A\\lvert v\\rvert + B$ of the range"}[x["tight"]["kind"]]))
+            elif x["kind"] == "set_bound":
+                parts.append("a %s bound of the ball%s; $%s\\infty$ for the empty ball" % (
+                    "lower" if x["side"] == "below" else "upper", ", rounded" if x.get("tight") else "",
+                    "+" if x["side"] == "below" else "-"))
+            elif x["kind"] == "error":
+                parts.append(k.finite_bullet(x, short=True))
+            elif x["kind"] == "normalized":
+                parts.append("$%s$ canonical, normalized when finite" % name_tex(x["of"]))
+            elif x["kind"] == "outward":
+                parts.append("a %s bound of $%s$, within $A\\lvert v\\rvert + B$ when finite%s" % (
+                    "lower" if x["side"] == "below" else "upper", tex(k.value),
+                    "; zero for a zero operand" if x.get("zero_factor") else ""))
+            elif x["kind"] == "interval_set":
+                parts.append("the %s of the intervals, exactly" % KNOWN_SET_OPERATIONS[x["set"]][1])
+            elif x["kind"] == "ball_of_interval":
+                parts.append("the midpoint and radius, the values of IEEE 1788 when unbounded or empty"
+                             if x["special"] == "ieee1788" else
+                             "a canonical ball that contains the interval; the whole line when it is unbounded")
+            elif x["kind"] == "interval_of_ball":
+                parts.append("the smallest interval of `T` that contains the ball; empty for the empty ball")
+            elif x["kind"] == "splits":
+                parts.append("two intervals that together are the operand, split at a point of it")
             else:
                 fail("kernel %s: no index line for the claim kind %r" % (k.name, x["kind"]))
         return "; ".join(parts)

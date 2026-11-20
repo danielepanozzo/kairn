@@ -14,10 +14,15 @@ from collections import Counter
 
 from common import HERE, KERNELS, ir, rules
 
-# The proposals of the page that are in gen/kernels now, with their claims (wave 1, and the bound
-# kernels of the folds' stage).
+# The proposals of the page that are in gen/kernels now, with their claims: wave 1, the bound
+# kernels of the folds' stage, and the kernels of the intervals of wave 2 so far.
 IN_GEN = ('two_sum_ord', 'add_down_1', 'add_up_1', 'sub_down_1', 'sub_up_1', 'mul_down_1', 'mul_up_1',
-          'ball_mul_pow2_1', 'ball_mul_pow2_2', 'bound_sum_2', 'bound_dot_2', 'bound_dot_1')
+          'ball_mul_pow2_1', 'ball_mul_pow2_2', 'bound_sum_2', 'bound_dot_2', 'bound_dot_1',
+          'mul_dir_1', 'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1', 'interval_mul_1',
+          'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2', 'mul_dir_2_2', 'interval_add_2',
+          'ball_from_interval_2',
+          # and of its stage B1: the product of intervals of two limbs, and two of the enclosure interface.
+          'mul_ext_2_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1')
 
 
 def main():

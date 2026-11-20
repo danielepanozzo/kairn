@@ -1,0 +1,38 @@
+# A normalized pair that is at most x + y (milestone2.md, "Interval kernels", "Bounds of two
+# limbs"): the sum by add_2_2, its second limb moved down by the bound of the sum's own error,
+# rounded down, and the pair renormalized exactly by two_sum_ord. The bound is the d of
+# add_ball_2_2, or zero when the computed sum is zero: the bound of add_2_2 is relative
+# (3u^2 / (1 - 4u) times the exact sum, with no underflow term), so a computed sum of zero means
+# that the exact sum is zero, and the result is then the exact zero (exact_when zero).
+# The tightness constants of the outward claim are A = (2 (1+u)^3 G E + 2 u^2) (1 + rel) / (1 - u)
+# and B = 2 (1+u)^2 (G eta / 2 + H) + eta + (2 (1+u)^3 G E + 2 u^2) / (1 - u) tiny, with E, G, H the
+# constants of the radius as the format rounds them, and rel, tiny those of the bound of the
+# center's kernel (milestone2.md, "Bounds of two limbs"; Directed2.v, outward_rel, outward_abs).
+# The second limb moved down, RD(z1 - dd), is written as -RU(dd - z1), as in mul_dir_2_2, so
+# that no fused result is negated (a rule of the generator): dd is a select one of whose arms is
+# the fma of the radius, and compilers push a negation through the select into that fma. What is
+# negated is z1, from the renormalization of add_2_2 (a subtraction), and the result of add_up_1,
+# a select of a step and a sum; dd is used as it is. The values are those of sub_down_1(z1, dd),
+# rounding to nearest being symmetric.
+kernel:        add_down_2_2
+input:         x = x0 x1
+input:         y = y0 y1
+output:        l = l0 l1
+value:         x+y
+requires:      normalized x
+requires:      normalized y
+ensures:       normalized l
+ensures:       outward l below rel=(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u) abs=2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2) exact_when=zero(x+y)
+min_precision: 3
+source:        add_2_2 moved down by the bound of its own error, renormalized exactly (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+cone_exempt:   through sub_down_1 and two_sum_ord, which select; the interval kernels test l0
+
+(z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
+zd          = eq(z0, 0)
+dd          = select(zd, 0, d)
+nz          = neg(z1)
+t           = add_up_1(dd, nz)
+w           = neg(t)
+(l0, l1)    = two_sum_ord(z0, w)

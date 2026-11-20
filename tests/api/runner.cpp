@@ -623,6 +623,13 @@ const NotPublic not_public[] = {
     {"ball_mul_pow2_1", scaling}, {"ball_mul_pow2_2", scaling}, {"ball_mul_pow2_1_full", scaling},
     {"ball_mul_pow2_2_full", scaling},
 };
+// The interval kernels of Milestone 2 are in neither list: the oracle does not judge them yet
+// (KAIRN_NOT_YET_CROSS_CHECKED of tests/CMakeLists.txt), and such a kernel is in none of these lists
+// (coverage.cmake). When it reads them, mul_dir_1, the bounds of two limbs and mul_ext_2_2 are
+// building blocks of the interval kernels; the other interval kernels are for the Interval types
+// (milestone2.md, "Interval kernels"), and the bounds, conversions and narrowing of a Ball are
+// functions of the enclosure interface (milestone2.md, "One enclosure interface"), which come
+// with the public headers of the milestone.
 
 constexpr int max_limbs = 16;
 long lineno = 0;

@@ -1,0 +1,21 @@
+# The negation of an interval with one-limb bounds (milestone2.md, "Interval kernels", "One
+# limb"): exact; the empty set (+inf, -inf) is its own negation. Bounded exactly when the operand
+# is, which for a bounded operand is that every member of -X is within Omega. For every precision.
+kernel:        interval_neg_1
+input:         stored xl
+input:         stored xu
+output:        zl
+output:        zu
+requires:      interval xl xu
+ensures:       encloses_interval zl zu -x x=xl,xu tight=exact bounded_when=abs_le(-x,omega) bounded_exactly
+min_precision: 1
+source:        the bounds negated and exchanged (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   sign changes only, from the upper bound to the lower one; encloses_interval states what comes out for every canonical interval
+
+zl = neg(xu)
+zu = neg(xl)

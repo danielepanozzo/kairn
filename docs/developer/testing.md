@@ -523,8 +523,10 @@ For each kernel, form and limb type:
 - **Fused multiply-adds**: one per FMA node of the flattened IR (`fma`, `fms`, `fnma`, `prod`),
   with identical nodes of one function (the same operation on the same operands) each compiled or
   merged into one. The generator gives both numbers, `fma` and `fma_distinct`, and they differ in
-  three kernels only: the fix-ups of `mul_2_1_full`, `mul_2_2_full` and `mul_pow2_2_full` compute
-  the core's leading product again, `t = prod(x0, y0)`. A compiler that eliminates common
+  five kernels only: the fix-ups of `mul_2_1_full`, `mul_2_2_full` and `mul_pow2_2_full` compute
+  the core's leading product again, `t = prod(x0, y0)`, and so does `mul_ext_2_2`, whose product of
+  an infinite operand is the leading product of its `mul_2_2`, with `interval_mul_2`, which has four
+  `mul_ext_2_2` (32 FMA nodes, 28 distinct). A compiler that eliminates common
   subexpressions computes it once. Every compiler measured does so when it optimizes, in the
   inline form and in packed code, except MSVC under `/fp:strict` for the scalar code; none does
   without optimization; and in the form where the fix-up is a function of its own, which receives
@@ -627,6 +629,20 @@ come after those of `CMAKE_CXX_FLAGS` and `kairn::fma`'s, as in `api.k1.zero_cos
 kernels get the backend's option (`-mavx2 -mfma`, `/arch:AVX2`). Each object file and its
 disassembly stay in the test's work directory (`tests/objcode/` of the build tree).
 
+Every compilation of the check turns the compiler's automatic vectorization off
+([The rule](#the-rule)), with the options of `NO_VECTORIZE` in `objcode.py`, after every other
+option so that no flag of the build turns it back on: Clang and Apple clang `-fno-vectorize
+-fno-slp-vectorize`, clang-cl the same through `/clang:`, GCC `-fno-tree-vectorize`, MSVC
+`/Qvec-report:1`, which turns nothing off but makes MSVC name every loop it vectorized, and the
+check fails on any. Automatic vectorization packs independent operations into one instruction
+without changing any of them: besides the loop of `axpy_2`, Clang 18 at `-O2` on x86-64 computes
+two of the four directed products of `interval_mul_1`, and the two directed sums of
+`interval_add_2`, in one `vfmadd213pd` or `vfmadd213ps` of the scalar code. The number of
+operations of a packed instruction cannot be read off it (two live lanes in a four-lane `ps`
+register), so such an instruction cannot be counted. The explicit SIMD forms, written with
+intrinsics, are checked as before: the options do not touch them. No packing by MSVC has been
+seen.
+
 The disassembler is found as follows, and the check fails without one and says where it looked:
 
 | Compiler | Disassembler | Object files |
@@ -651,7 +667,16 @@ where the compiler fused it; the fixture's program, run on operands whose produc
 of the format, says independently where the compiler fused it. The test requires the two to agree
 in every configuration of the tier, and at least one configuration to fuse. It also judges the
 unit against counts changed on purpose (one FMA more for `mul_2_2`, one multiplication fewer for
-`add_2_2_full`) and requires exactly those two kernels to fail.
+`add_2_2_full`) and requires exactly those two kernels to fail. These controls run with automatic
+vectorization off, as the check does, and fail as they did without the options. Two more record
+why the options are there, each compiling the unit at `-O2 -ffp-contract=off` with the vectorizer
+on, the compiler's default (the vectorization control and the packing control, below). The packing
+control judges the scalar functions of the kernels: with Clang on x86-64 the check must fail there,
+on `interval_mul_1` among others, and only for the packing: each failing scalar function has fewer
+fused instructions than the IR has FMAs, at least one of them on a vector register, and the right
+number of multiplications. This is an expected failure, so a compiler that stops packing shows.
+With the other compilers what happens is reported and not judged: Apple clang 21 and GCC 16 on the
+Mac pack nothing there.
 
 The fixture has a loop too, the step of a map: `t = fma_rn(x[i], a, y[i]); z[i] = t * b + c`, its
 first product written as the generator writes every product and its second as the textbook
@@ -663,12 +688,14 @@ the compiler fused it (all of them, none, or some). The test requires the two to
 least one configuration of the tier to fuse the loop.
 
 The vectorization control compiles the unit once more, in the first optimized configuration of
-the quick tier, *with* the compiler's own vectorization, and judges it by the same rule. It
-records what the check then finds per compiler: with Clang on x86-64 (clang++ and clang-cl), the
-packing alone fails `F_seq` and `F_packed` of `axpy_2` and `axpy_2_entry` for `double`; with every
-other compiler measured (GCC 13 on x86-64, Apple clang 21 and GCC 16 on AArch64), nothing, their
-vectorized loops holding whole copies of the step. A compiler that stops packing, or one that
-starts, fails the control, so that we learn it.
+the quick tier, *with* the compiler's own vectorization, and judges every function of it by the
+same rule. It records what the check then finds per compiler: with Clang on x86-64 (clang++ and
+clang-cl), the packing alone fails `F_seq` and `F_packed` of `axpy_2` and `axpy_2_entry` for
+`double`, and the scalar functions of `ball_from_interval_2`, `interval_add_2`, `interval_mul_1`
+and `interval_sub_2` for `double` and `float` (those the packing control finds; measured with
+Clang 18 on 2026-11-20, clang-cl by analogy); with every other compiler measured (GCC 13 on x86-64,
+Apple clang 21 and GCC 16 on AArch64), nothing, their vectorized loops holding whole copies of the
+step. A compiler that stops packing, or one that starts, fails the control, so that we learn it.
 
 Where each compiler fused the textbook product in the configurations of the full tier, measured on
 2026-11-19; it fused nowhere else, and the check failed on exactly these:
