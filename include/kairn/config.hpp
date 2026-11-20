@@ -53,9 +53,8 @@
 #define KAIRN_FORCEINLINE KAIRN_GEN_FORCEINLINE
 
 /// @def KAIRN_CHECKS
-/// 1 to check, before every operation of Expansion and Ball (all but sign, isfinite,
-/// is_normalized and the accessors of Ball, which only read limbs) and in the constructors that
-/// are given limbs or a center (Expansion<T, 2>::from_limbs, the narrowing to one limb, the
+/// 1 to check, before every operation of Expansion and Ball that rounds, and in the constructors
+/// that are given limbs or a center (Expansion<T, 2>::from_limbs, the narrowing to one limb, the
 /// constructors of Ball), first that the floating-point environment is the default one
 /// (kairn::environment_ok()), then the operands:
 /// - an operator, and a function of kairn:: such as ldexp or to_down, requires each two-limb
@@ -73,6 +72,32 @@
 /// assert(). The checks are skipped in constant evaluation, except that an operand that fails them
 /// makes the constant expression invalid. Define it the same way in every translation unit of a
 /// program.
+///
+/// Functions that do not round (docs/developer/design/milestone2.md, "Functions that do not
+/// round"): their result is the same under every rounding mode, so a program may call them under a
+/// directed one, and the rounding mode is not checked before them. The rest of the environment is
+/// (flush to zero, which makes a comparison read a subnormal operand as zero), and their operands
+/// are checked as above, but only when the rounding mode is to nearest where that check rounds
+/// (the test of a canonical pair). They are:
+/// - negation and abs of a number of one or two limbs (a sign bit; abs_2 compares and selects);
+/// - the comparisons <, <=, >, >=, ==, != of numbers of one and two limbs (comparisons of limbs);
+/// - to_nearest, to_down, to_up and abs_upper, and the narrowing to one limb, which is to_nearest
+///   (a limb; or a comparison, a step of the bit pattern and a select);
+/// - the negation of a Ball (sign bits and a copy of the radius);
+/// - the constructors of a Ball from a T or from a number of one limb: Ball<T, 1>(a),
+///   Ball<T, 1>(c), Ball<T, 1>(c, r) and Ball<T, 2>(a). Their only rounded operations are the
+///   guards a + 0, whose value is a under every rounding mode; only the sign of a zero depends on
+///   the mode, and Kairn leaves it unspecified;
+/// - and, with no check at all, as before: the constructors of two limbs from a T or a number of
+///   one limb and from_limbs_unchecked (the same guards), sign, isfinite, is_normalized of one
+///   limb, the constructors that copy a value (Expansion<T, 1>(a), Expansion<T, 1>::from_limbs),
+///   Ball::empty(), Ball::whole(), the accessors center() and radius() and the tests is_finite(),
+///   is_whole(), is_empty() of a Ball, the constants of kairn::traits, and kairn::rational
+///   (rational.hpp).
+/// Every other function rounds and is checked as above: the arithmetic, ldexp and half, the
+/// functions of kairn::finite::, from_limbs and is_normalized of two limbs (each tests
+/// x0 + x1 == x0), and the constructors of Ball<T, 2> from a center (the test of a canonical
+/// center).
 #if !defined(KAIRN_CHECKS)
 #if defined(NDEBUG)
 #define KAIRN_CHECKS 0

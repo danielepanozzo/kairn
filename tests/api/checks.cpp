@@ -1,27 +1,33 @@
 // The checks of KAIRN_CHECKS (include/kairn/config.hpp), run. Built without NDEBUG, as a debug
 // build is (tests/api/flags/, where KAIRN_TEST_DEFAULT_CHECKS says that KAIRN_CHECKS must come from
 // that default), and with KAIRN_CHECKS defined to 1 and the build's own flags (tests/api/): every
-// operation, and every constructor that checks what it is given, must check the floating-point
-// environment first and then its operands, and stop the program with a message when one is wrong,
-// the environment's when it is the environment; what is right must pass. The operations and the
-// states of the environment are those of checks_cases.hpp.
+// function that rounds, and every constructor that checks what it is given, must check the
+// floating-point environment first and then its operands, and stop the program with a message
+// when one is wrong, the environment's when it is the environment; what is right must pass. A
+// function that does not round must not check the rounding mode: under every rounding mode it must
+// run without a report and give the same bits as to nearest. The functions and the states of the
+// environment are those of checks_cases.hpp.
 //
-//   checks --operations       the operations and constructors, one per line
+//   checks --operations       the functions, one per line: the name, a tab, and its kind (rounds,
+//                             exact or unchecked: checks_cases.hpp says what each means)
 //   checks --states           the states of the environment this target can set, one per line
 //   checks --operand-cases    the operands the checks must refuse, each with the message expected
 //   checks default            in the default environment: environment_ok() is true, and every
-//                             operation runs, as does each operand the checks must let through
+//                             function runs, as does each operand the checks must let through
 //                             (canonical infinities and NaN, the special balls, what a finite core
 //                             returns given to kairn::finite); exits 0
 //   checks STATE OPERATION    environment_ok() is true, then STATE is set and it is false, then
-//                             OPERATION runs, which must stop the program
+//                             OPERATION runs. A function that rounds must stop the program; one that
+//                             does not, under a rounding mode, must return the same bits as it did
+//                             to nearest just before (exit status 0, and a line that starts with ok)
 //   checks operand CASE       an operation given an operand that is not canonical, which must stop
 //                             the program
 //
-// A check that lets the program go on is reported with a line that starts with FAILED and exit
-// status 1; a stopped program exits through abort(). tests/api/checks.cmake runs every case and
-// tells the two apart. Each line that says what the program is about to do is flushed first,
-// since abort() discards what is buffered.
+// A check that lets the program go on where it must stop, or a function that does not round whose
+// results differ, is reported with a line that starts with FAILED and exit status 1; a stopped
+// program exits through abort(). tests/api/checks.cmake runs every case and tells them apart. Each
+// line that says what the program is about to do is flushed first, since abort() discards what is
+// buffered.
 #if defined(KAIRN_TEST_DEFAULT_CHECKS) && (defined(KAIRN_CHECKS) || defined(NDEBUG))
 #error "the debug build of checks.cpp must leave KAIRN_CHECKS to its default, without NDEBUG"
 #endif
@@ -54,29 +60,38 @@ const OperandCase operand_cases[] = {
     {"from_limbs.unnormalized", not_a_pair, [] { return pair(1.0, v_a).limb[1]; }},
     {"from_limbs.infinity", not_a_pair, [] { return pair(infinity, v_a).limb[1]; }},
     {"from_limbs.nan", not_a_pair, [] { return pair(not_a_number, v_a).limb[1]; }},
-    {"operator.unnormalized", not_canonical, [] { return (unverified(raw(1.0, v_a)) + o.y).limb[1]; }},
+    {"operator.unnormalized", not_canonical, [] { return (unverified(raw(1.0, double(v_a))) + o.y).limb[1]; }},
     // What a finite core may return after an overflow: given to an operator, refused.
-    {"operator.core_result", not_canonical, [] { return (unverified(raw(infinity, not_a_number)) * o.y).limb[1]; }},
-    {"operator.second", not_canonical, [] { return (unverified(o.y) - raw(1.0, v_a)).limb[1]; }},
-    {"comparison.unnormalized", not_canonical, [] { return double(unverified(raw(1.0, v_a)) < o.y); }},
-    {"conversion.unnormalized", not_canonical, [] { return kairn::to_down(unverified(raw(1.0, v_a))); }},
-    {"ldexp.unnormalized", not_canonical, [] { return kairn::ldexp(unverified(raw(1.0, v_a)), 2).limb[1]; }},
+    {"operator.core_result", not_canonical,
+     [] { return (unverified(raw(infinity, not_a_number)) * o.y).limb[1]; }},
+    {"operator.second", not_canonical, [] { return (unverified(o.y) - raw(1.0, double(v_a))).limb[1]; }},
+    // The functions that do not round check their operands too, in the default environment.
+    {"comparison.unnormalized", not_canonical, [] { return double(unverified(raw(1.0, double(v_a))) < o.y); }},
+    {"conversion.unnormalized", not_canonical, [] { return kairn::to_down(unverified(raw(1.0, double(v_a)))); }},
+    {"negation.unnormalized", not_canonical, [] { return (-unverified(raw(1.0, double(v_a)))).limb[1]; }},
+    {"ldexp.unnormalized", not_canonical, [] { return kairn::ldexp(unverified(raw(1.0, double(v_a))), 2).limb[1]; }},
     {"finite.unnormalized", "an operand: is not normalized",
-     [] { return kairn::finite::add(unverified(raw(1.0, v_a)), o.y).limb[1]; }},
+     [] { return kairn::finite::add(unverified(raw(1.0, double(v_a))), o.y).limb[1]; }},
     {"ball.negative_radius_1", negative, [] { return B1(unverified(E1(v_a)), -v_r).radius(); }},
     {"ball.negative_radius_2", negative, [] { return B2(unverified(o.x), -v_r).radius(); }},
     {"ball.minus_infinity_radius", negative, [] { return B1(unverified(E1(v_a)), -infinity).radius(); }},
     {"ball.center", "a ball: has a center that is not canonical",
-     [] { return B2(unverified(raw(1.0, v_a)), v_r).radius(); }},
+     [] { return B2(unverified(raw(1.0, double(v_a))), v_r).radius(); }},
     // A ball that is not canonical cannot be made through the public constructors; the internal
     // one, which takes a kernel's result as it is, makes one.
     {"ball.operand", "a ball: is not canonical",
      [] { return (unverified(B1(kairn::detail::kernel_result, E1(v_a), -v_r)) + o.q).radius(); }},
+    {"ball.negation", "a ball: is not canonical",
+     [] { return (-unverified(B2(kairn::detail::kernel_result, raw(1.0, double(v_a)), v_r))).radius(); }},
 };
 
 // What the checks must let through: canonical values that are not finite, the special balls,
 // a NaN radius, and what a finite core returns, given back to kairn::finite.
-const Operation accepted[] = {
+struct Accepted {
+    const char* name;
+    double (*run)();
+};
+const Accepted accepted[] = {
     {"from_limbs (+inf, 0)", [] { return pair(infinity, 0.0).limb[0]; }},
     {"from_limbs (-inf, -0)", [] { return pair(-infinity, -0.0).limb[0]; }},
     {"from_limbs (NaN, NaN)", [] { return pair(not_a_number, not_a_number).limb[0]; }},
@@ -111,11 +126,14 @@ int run_default() {
         return 1;
     }
     say("ok: environment_ok() is true in the default environment");
+    std::size_t results = 0;
     for (const Operation& op : operations) {
         say("calling %s", op.name);
-        sink = op.run();
+        Bits bits;
+        op.run(bits);
+        results += bits.size();
     }
-    for (const Operation& op : accepted) {
+    for (const Accepted& op : accepted) {
         say("calling %s", op.name);
         sink = op.run();
     }
@@ -130,8 +148,8 @@ int run_default() {
         say("FAILED: environment_ok() is false after the operations");
         return 1;
     }
-    std::printf("ok: %zu operations and %zu operands the checks must accept ran\n", std::size(operations),
-                std::size(accepted));
+    std::printf("ok: %zu functions (%zu results) and %zu operands the checks must accept ran\n", std::size(operations),
+                results, std::size(accepted));
     return 0;
 }
 
@@ -148,6 +166,10 @@ int run_state(const char* state_name, const char* op_name) {
         return 1;
     }
     say("ok: environment_ok() is true in the default environment");
+    // A function that does not round, under a rounding mode: its results to nearest first.
+    const bool same = state->rounding && op->kind != Kind::rounds;
+    Bits nearest, directed;
+    if (same) op->run(nearest);
     if (!state->set()) {
         state->restore();
         say("FAILED: %s cannot be set here", state_name);
@@ -160,10 +182,27 @@ int run_state(const char* state_name, const char* op_name) {
     }
     say("ok: environment_ok() is false under %s", state_name);
     say("calling %s under %s", op_name, state_name);
-    sink = op->run();
+    op->run(directed);
+    const bool still = !kairn::environment_ok();
     state->restore();
-    say("FAILED: %s returned under %s: no check stopped it", op_name, state_name);
-    return 1;
+    if (!same) {
+        say("FAILED: %s returned under %s: no check stopped it", op_name, state_name);
+        return 1;
+    }
+    if (!still) {
+        say("FAILED: %s is no longer set after %s", state_name, op_name);
+        return 1;
+    }
+    const long at = first_difference(nearest, directed);
+    if (nearest.empty() || at >= 0) {
+        std::printf("FAILED: %s under %s: %zu results, %zu to nearest, the first that differs is %ld\n", op_name,
+                    state_name, directed.size(), nearest.size(), at);
+        return 1;
+    }
+    std::printf("ok: %s does not round: under %s, %zu results with the same bits as to nearest, and no check "
+                "stopped it\n",
+                op_name, state_name, directed.size());
+    return 0;
 }
 
 int run_operand(const char* case_name) {
@@ -183,7 +222,7 @@ int main(int argc, char** argv) {
     kairn_test::no_crash_reports();
     make_operands();
     if (argc == 2 && std::strcmp(argv[1], "--operations") == 0) {
-        for (const Operation& op : operations) std::printf("%s\n", op.name);
+        for (const Operation& op : operations) std::printf("%s\t%s\n", op.name, kind_name(op.kind));
         return 0;
     }
     if (argc == 2 && std::strcmp(argv[1], "--states") == 0) {

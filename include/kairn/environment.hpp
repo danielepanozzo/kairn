@@ -32,12 +32,15 @@ namespace kairn {
 
 namespace detail {
 
-// What in the control register differs from the default environment, in words, or nullptr.
-inline const char* environment_problem() noexcept {
+// What in the control register differs from the default environment, in words, or nullptr. With
+// rounding false the rounding mode is left out, and what is left is flush to zero (and on AArch64
+// alternate handling): what can change the result even of a function that does not round, since
+// a comparison reads a subnormal operand as zero there.
+inline const char* environment_problem(bool rounding = true) noexcept {
 #if defined(KAIRN_DETAIL_MXCSR)
     // MXCSR: rounding control in bits 13-14, flush-to-zero in bit 15, denormals-are-zero in bit 6.
     const unsigned csr = _mm_getcsr();
-    if (csr & 0x6000u) return "the rounding mode is not to nearest (MXCSR.RC is not zero)";
+    if (rounding && (csr & 0x6000u)) return "the rounding mode is not to nearest (MXCSR.RC is not zero)";
     if (csr & 0x8000u) return "results below the normal range are flushed to zero (MXCSR.FTZ is set)";
     if (csr & 0x0040u) return "subnormal operands are read as zero (MXCSR.DAZ is set)";
     return nullptr;
@@ -50,7 +53,8 @@ inline const char* environment_problem() noexcept {
 #else
     const std::uint64_t fpcr = __builtin_aarch64_get_fpcr64();
 #endif
-    if (fpcr & (std::uint64_t{3} << 22)) return "the rounding mode is not to nearest (FPCR.RMode is not zero)";
+    if (rounding && (fpcr & (std::uint64_t{3} << 22)))
+        return "the rounding mode is not to nearest (FPCR.RMode is not zero)";
     if (fpcr & (std::uint64_t{1} << 24)) return "subnormal numbers are flushed to zero (FPCR.FZ is set)";
     if (fpcr & std::uint64_t{2}) return "alternate floating-point behavior is on (FPCR.AH is set)";
     if (fpcr & std::uint64_t{1}) return "subnormal operands are read as zero (FPCR.FIZ is set)";
@@ -58,7 +62,7 @@ inline const char* environment_problem() noexcept {
 #else
     // No register read is written for this target: only the rounding mode, as the C library
     // reports it, is checked.
-    return std::fegetround() == FE_TONEAREST ? nullptr : "the rounding mode is not to nearest";
+    return !rounding || std::fegetround() == FE_TONEAREST ? nullptr : "the rounding mode is not to nearest";
 #endif
 }
 
@@ -80,6 +84,35 @@ KAIRN_FORCEINLINE constexpr bool check_environment() noexcept {
     return ok;
 }
 
+// The same for a function that does not round (config.hpp lists them): its result is the same
+// under every rounding mode, so the rounding mode is left out of the check and of the report;
+// the rest of the environment is checked, since flush to zero can change a comparison. Whether the
+// checks of its operands that do not round may follow (a negative radius); those that round, the
+// test of a canonical pair, also need rounding_to_nearest().
+KAIRN_FORCEINLINE constexpr bool check_environment_except_rounding() noexcept {
+    bool ok = true;
+#if KAIRN_CHECKS
+    if (!__builtin_is_constant_evaluated()) {
+        if (const char* problem = environment_problem(false)) {
+            ok = false;
+            KAIRN_ENVIRONMENT_FAILURE(problem);
+        }
+    }
+#endif
+    return ok;
+}
+
+// Whether the rounding mode is to nearest, without a report: the checks of the operands of a
+// function that does not round are made only then, when they round themselves (x0 + x1 == x0
+// under a directed rounding mode can be false for a canonical pair). True in constant evaluation.
+KAIRN_FORCEINLINE constexpr bool rounding_to_nearest() noexcept {
+    bool ok = true;
+#if KAIRN_CHECKS
+    if (!__builtin_is_constant_evaluated()) ok = environment_problem() == nullptr;
+#endif
+    return ok;
+}
+
 }  // namespace detail
 
 /// Whether the floating-point environment is the one every Kairn guarantee assumes.
@@ -90,7 +123,9 @@ KAIRN_FORCEINLINE constexpr bool check_environment() noexcept {
 /// mode set by an interval library, or flush-to-zero set at startup by any object compiled with
 /// -ffast-math), and a program that does must restore them before calling Kairn. Checked before
 /// every operation, and in the constructors that check their operands, when KAIRN_CHECKS is 1,
-/// before the operands (config.hpp). Only reads. Costs one read of the register:
+/// before the operands; before a function that does not round, such as a comparison, without the
+/// rounding mode, so that a program may call it under a directed one (config.hpp). Only reads.
+/// Costs one read of the register:
 /// measured at about 2 cycles on an Apple M3, 5 on an Intel Core i5-13500T and 21 on an AMD
 /// Zen 2, where storing MXCSR is slow.
 ///

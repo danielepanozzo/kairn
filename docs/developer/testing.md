@@ -61,7 +61,7 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, comparisons with a NaN among them; the same results at run time; the properties of the types; and that an operation compiles without `kairn::unverified` exactly when the kernel it calls is proved. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass in the default environment and fail under each directed rounding mode and under flush-to-zero. |
 | `api.flags.debug.self_test`, `api.flags.debug.constexpr`, `api.flags.debug.rational` | `kairn::self_test()` and `kairn::environment_ok()`, compiled as the [debug build](#flag-sets), pass (`runner.cpp --self-test`); `tests/api/constexpr.cpp` and `tests/api/rational.cpp` built so, their constant expressions evaluated with the checks on; `kairn::rational`, which does not round, runs under each directed rounding mode without the checks stopping the program. |
-| `api.checks.debug.G`, `api.checks.release.G`, `api.checks.handler` | The [checks of a debug build](#the-checks-of-a-debug-build), in the debug build and with the build's own flags and `KAIRN_CHECKS` defined to 1: in the default environment every operation, and every constructor that checks its operands, runs (G = `default`); under each directed rounding mode (`rounding`) and each state of flush to zero (`flush`) `environment_ok()` is false and each of them stops the program with the environment's message; every operand that is not canonical, and every negative radius, stops it (`operands`); a `KAIRN_ENVIRONMENT_FAILURE` of the program's own is called instead, and every operation and constructor goes on, without the checks of its operands (`handler`). |
+| `api.checks.debug.G`, `api.checks.release.G`, `api.checks.handler` | The [checks of a debug build](#the-checks-of-a-debug-build), in the debug build and with the build's own flags and `KAIRN_CHECKS` defined to 1, on a table of every public function: in the default environment each runs (G = `default`); under each directed rounding mode (`rounding`) `environment_ok()` is false and each function that rounds stops the program with the environment's message, while each function that does not round gives the same bits as to nearest on its corpus, without a report; under each state of flush to zero (`flush`) each function that checks anything stops it; every operand that is not canonical, and every negative radius, stops it (`operands`); a `KAIRN_ENVIRONMENT_FAILURE` of the program's own is called instead, by exactly the functions that must report the state, and every function goes on, without the checks of its operands (`handler`). |
 | `api.shadow` | A program whose global variables have the name of every parameter and local variable of the headers, calling every public operation, compiles with the compiler's strictest warnings about a declaration that hides another, as errors; without the headers' suppression of those warnings (MSVC's C4459 and C6244, GCC's `-Wshadow`) it must not compile with MSVC, and without the globals it must compile with every warning on ([The program's names](#the-programs-names)). |
 | `api.platform_macros` | The headers compile and work after a platform header that defines `min`, `max`, `small`, `near`, `far`, `hyper` and `interface` as macros: `<windows.h>` itself on Windows, without `NOMINMAX`, and the same macros defined by the test on every platform. |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break the kernels and define no macro (reassociation; `-ffp-model=fast`; with Apple clang on AArch64, `-fno-signed-zeros` with `-ffp-contract=fast`, which Clang 18 was measured not to break the kernels with): `kairn::self_test()` must fail. |
@@ -591,12 +591,22 @@ are the tests that build them at `/Od` with MSVC and clang-cl, and at `-O1` with
 `KAIRN_CHECKS` is 1 when `NDEBUG` is not defined (or when a program defines it to 1); what it then
 does, as the headers are written (`config.hpp` says the same):
 
-- Before every operation of `Expansion` and `Ball` (the arithmetic, `ldexp` and `half`, negation
-  and `abs`, the comparisons, the conversions to `T` and the narrowing to one limb, and
-  `kairn::finite::`), and in the constructors that check what they are given (`from_limbs`, and
-  every constructor of `Ball` that is given a center, a radius or a `T`), first
-  `kairn::environment_ok()`; if it fails, `KAIRN_ENVIRONMENT_FAILURE` with the reason, by default
-  a message and `std::abort()`.
+- Before every operation of `Expansion` and `Ball` that rounds (the arithmetic, `ldexp` and
+  `half`, `kairn::finite::`, `is_normalized` of two limbs), and in the constructors that check
+  what they are given and round (`from_limbs`, and the constructors of `Ball<T, 2>` from a
+  center), first `kairn::environment_ok()`; if it fails, `KAIRN_ENVIRONMENT_FAILURE` with the
+  reason, by default a message and `std::abort()`.
+- Before a function that does not round, whose result is the same under every rounding mode
+  (negation and `abs`, the comparisons, the conversions to `T` and the narrowing to one limb, the
+  negation of a `Ball`, and the constructors of a `Ball` from a `T` or a number of one limb, whose
+  guard `a + 0` has the value `a` under every mode: the list of [Milestone 2
+  statements](design/milestone2.md#functions-that-do-not-round), which `config.hpp` and Getting
+  started repeat), the same without the rounding mode, so that a program may call it under a
+  directed one: flush to zero is still checked, since a comparison reads a subnormal operand as
+  zero there. Its operands are checked as below, but those checks that round (the test of a
+  canonical pair) only when the rounding mode is to nearest. The functions that had no check at all
+  (`sign`, `isfinite`, the accessors of a `Ball`, the constructors of two limbs from a `T`, ...)
+  still have none.
 - Then the operands: an operation of two limbs requires canonical operands, a function of
   `kairn::finite::` normalized ones or a leading limb that is not finite (what a core returns), a
   `Ball` operation canonical balls, `from_limbs` a canonical pair, and a constructor of `Ball` a
@@ -616,37 +626,56 @@ does, as the headers are written (`config.hpp` says the same):
 defined to 1 (`api.checks.release.*`, where an optimizer could move or drop a check), and
 `tests/api/checks.cmake` judges each case from the program's exit status and output:
 
-- `default`: in the default environment `environment_ok()` is true, and 29 operations run (a sum,
-  a product, `ldexp` and a comparison of one limb; every kind above of two limbs, and a sum of
-  `float` limbs; three of `kairn::finite::`; sums, products, scalings, negations and a point form
-  of balls) and 8 calls of constructors (`from_limbs` twice; `Ball` of one limb from a center and
-  a radius and from a `T`; of two limbs from a center and a radius twice, from a center and from a
-  `T`), as do 13 operands the checks must let through: the
-  canonical infinities and NaN, the empty set and the whole line, a NaN and a $-0$ radius, and
-  what a finite core returns, given back to `kairn::finite::`.
-- `rounding`: for each directed rounding mode and each of the 37 operations and constructors, a
-  run of its own: `environment_ok()` is true, the mode is set and `environment_ok()` is false, and
-  the operation must stop the program, with an exit status other than 0 (`SIGABRT`; exit status 3
-  with Microsoft's C runtime), after the line in which the program says it calls it, and with
-  Kairn's message on the standard error ("the rounding mode is not to nearest"), not one about an
-  operand. The two-limb operands, $(1.5, 2^{-60})$ and $(2.25, -2^{-58})$, are canonical pairs
-  whose test is false under rounding upward, and under rounding downward and toward zero; those of
-  the operations are made before the mode is set, so that each operation is what meets it, and the
-  constructors meet it in cases of their own.
-- `flush`: the same with FTZ and with DAZ of MXCSR on x86-64, and FZ of FPCR on AArch64; on those
-  targets a program that can set none fails the test.
-- `operands`: 15 operands that are not canonical, each given to an operation, must stop the
+The cases are a table of every public function of the headers, one entry per form that reaches a
+function of its own in `kairn::detail` (80 today), each marked with what the checks do before it:
+`rounds` (55: every operation that rounds, the compound assignments, the functions of
+`kairn::finite::`, `is_normalized` of two limbs, and the constructors whose checks round),
+`exact` (18: the functions that do not round and are checked without the rounding mode) or
+`unchecked` (7: the functions with no check at all). A function that rounds is run on the operands
+below; one that does not round, on a corpus, for `double` and for `float`: zeros of both signs,
+subnormal numbers, the smallest normal number, the largest finite number, the infinities and NaN,
+alone and in canonical pairs (a zero of either sign in each limb, a subnormal leading limb and a
+subnormal tail, the ties of the test of a canonical pair, tails next to the largest finite
+number), and balls of one and two limbs with radii from 0 to the largest finite number, the whole
+line and the empty set; the comparisons on every pair of it, the constructors of a ball on every
+center and every radius that is not negative.
+
+- `default`: in the default environment `environment_ok()` is true, and every function of the
+  table runs, as do 13 operands the checks must let through: the canonical infinities and NaN,
+  the empty set and the whole line, a NaN and a $-0$ radius, and what a finite core returns,
+  given back to `kairn::finite::`.
+- `rounding`: for each directed rounding mode and each function of the table, a run of its own:
+  `environment_ok()` is true, the mode is set and `environment_ok()` is false. A function that
+  rounds must stop the program, with an exit status other than 0 (`SIGABRT`; exit status 3 with
+  Microsoft's C runtime), after the line in which the program says it calls it, and with Kairn's
+  message on the standard error ("the rounding mode is not to nearest"), not one about an operand.
+  The two-limb operands, $(1.5, 2^{-60})$ and $(2.25, -2^{-58})$, are canonical pairs whose test
+  is false under rounding upward, and under rounding downward and toward zero; those of the
+  operations are made before the mode is set, so that each operation is what meets it, and the
+  constructors meet it in cases of their own. A function that does not round must not stop it: it
+  runs on its corpus to nearest, then under the mode, and must exit 0, with nothing of Kairn's on
+  the standard error, and with the same bits in every result (a constructor: the same values,
+  zeros compared without their sign, since its guard gives $-0 + 0 = -0$ when rounding downward).
+  So the table cannot rot either way: a function marked as not rounding that checks the mode, or
+  rounds, fails, and so does one marked as rounding that does not check it. 240 runs.
+- `flush`: the same with FTZ and with DAZ of MXCSR on x86-64, and FZ of FPCR on AArch64, under
+  which every function that rounds and every function that does not round but is checked must
+  stop the program; the 7 with no check at all are not run. On those targets a program that can
+  set no such state fails the test.
+- `operands`: 17 operands that are not canonical, each given to an operation, must stop the
   program with their message: pairs that are not canonical given to `from_limbs`, to an operator,
-  a comparison, a conversion, `ldexp` and `kairn::finite::add`, what a finite core returns after
-  an overflow given to an operator, negative radii ($-\infty$ among them), a center that is not
-  canonical, and a ball that is not canonical, made by the internal constructor that takes a
-  kernel's result as it is, the only way to make one.
+  a comparison, a conversion, a negation, `ldexp` and `kairn::finite::add`, what a finite core
+  returns after an overflow given to an operator, negative radii ($-\infty$ among them), a center
+  that is not canonical, and a ball that is not canonical, made by the internal constructor that
+  takes a kernel's result as it is, the only way to make one, given to a sum and to a negation.
 
 `api.checks.handler` (`tests/api/checks_handler.cpp`) defines `KAIRN_ENVIRONMENT_FAILURE` as a
 function that records the reason and returns. In the default environment it is not called; under
-each state of `rounding` and `flush`, each of the 37 operations and constructors calls it with the
+each state of `rounding` and `flush`, each function of the table that rounds calls it with the
 reason and goes on, and so does `x + y` with an `x` that is not canonical, which stops the
-program in the default environment. `api.reject.checks.*` are the constant expressions, and
+program in the default environment; under each rounding mode no function that does not round
+calls it, and each gives the same bits as to nearest; under flush to zero each that is checked
+calls it. `api.reject.checks.*` are the constant expressions, and
 `api.oracle.K.F` judges the debug build's runner: the checks let every canonical case through and
 change no result. On the lines of `ball_make_1` and `ball_make_2` whose radius is negative, about
 40% of their cases, which the checks stop by design, the debug build's runner computes

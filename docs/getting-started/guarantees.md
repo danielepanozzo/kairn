@@ -304,4 +304,8 @@ leading limb that is not finite, a `Ball` operation canonical balls; `from_limbs
 constructors of `Ball` check what they are given in the same way. A failed check stops the
 program with a message, the environment's when the environment is wrong. A program that defines
 `KAIRN_ENVIRONMENT_FAILURE` to a statement that returns gets that statement instead, and the
-operation then goes on without checking its operands, with no guarantee for its result.
+operation then goes on without checking its operands, with no guarantee for its result. A function
+whose result cannot depend on the rounding mode (negation, `abs`, the comparisons, the
+conversions to `T`, the accessors and the negation of a `Ball`, the constructors of a `Ball` from a
+`T` or a one-limb number) does not check the rounding mode, so that a program may call it under a
+directed one; [Getting started](index.md#when-a-check-of-a-build-without-ndebug-fails) lists them.

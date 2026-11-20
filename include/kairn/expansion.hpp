@@ -139,6 +139,17 @@ KAIRN_FORCEINLINE constexpr void check_core(const Expansion<T, 2>& x, const Expa
     check_core(x);
     check_core(y);
 }
+// The same for a function that does not round (config.hpp, KAIRN_CHECKS): the environment without
+// the rounding mode, which cannot change its result; then canonical operands, when the rounding
+// mode is to nearest only, since that test rounds.
+template <class... X>
+KAIRN_FORCEINLINE constexpr void check_exact([[maybe_unused]] const X&... x) noexcept {
+#if KAIRN_CHECKS
+    if (check_environment_except_rounding() && rounding_to_nearest() && !(admissible(x) && ...))
+        fail("an operand", "is not canonical (finite with x0 + x1 == x0, (+-inf, 0) or (NaN, NaN)), so no "
+                           "guarantee applies to the result");
+#endif
+}
 
 // The operations, without their markers and constraints. Each calls one kernel; the public
 // operators and functions below choose which may be called without kairn::unverified.
@@ -189,12 +200,12 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 1> mul(std::type_identity_t<T> a, Expan
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> neg(Expansion<T, 1> x) noexcept {
-    check(x);
+    check_exact(x);
     return Expansion<T, 1>(-x.limb[0]);
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> abs(Expansion<T, 1> x) noexcept {
-    check(x);
+    check_exact(x);
     return Expansion<T, 1>(gen::abs_bits(x.limb[0]));
 }
 template <class T>
@@ -236,37 +247,37 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 1> half(Expansion<T, 1> x) noexcept {
 // b > a and b >= a, not a < b and a <= b: see canonical().
 template <class T>
 KAIRN_FORCEINLINE constexpr bool lt(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
-    check(x, y);
+    check_exact(x, y);
     return y.limb[0] > x.limb[0];
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr bool le(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
-    check(x, y);
+    check_exact(x, y);
     return y.limb[0] >= x.limb[0];
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr bool eq(Expansion<T, 1> x, Expansion<T, 1> y) noexcept {
-    check(x, y);
+    check_exact(x, y);
     return x.limb[0] == y.limb[0];
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr T to_nearest(Expansion<T, 1> x) noexcept {
-    check(x);
+    check_exact(x);
     return x.limb[0];
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr T to_down(Expansion<T, 1> x) noexcept {
-    check(x);
+    check_exact(x);
     return x.limb[0];
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr T to_up(Expansion<T, 1> x) noexcept {
-    check(x);
+    check_exact(x);
     return x.limb[0];
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr T abs_upper(Expansion<T, 1> x) noexcept {
-    check(x);
+    check_exact(x);
     return gen::abs_bits(x.limb[0]);
 }
 
@@ -372,14 +383,14 @@ KAIRN_FORCEINLINE Expansion<T, 2> mul(Expansion<T, 1> x, Expansion<T, 2> y) noex
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 2> neg(Expansion<T, 2> x) noexcept {
-    check(x);
+    check_exact(x);
     Expansion<T, 2> z;
     gen::neg_2(x.limb[0], x.limb[1], z.limb[0], z.limb[1]);
     return z;
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 2> abs(Expansion<T, 2> x) noexcept {
-    check(x);
+    check_exact(x);
     Expansion<T, 2> z;
     gen::abs_2(x.limb[0], x.limb[1], z.limb[0], z.limb[1]);
     return z;
@@ -447,14 +458,14 @@ KAIRN_FORCEINLINE Expansion<T, 2> half(Expansion<T, 2> x) noexcept {
 #define KAIRN_DETAIL_K2_COMPARE(NAME)                                                                    \
     template <class T>                                                                                   \
     KAIRN_FORCEINLINE constexpr bool NAME(Expansion<T, 2> x, Expansion<T, 2> y) noexcept {               \
-        check(x, y);                                                                                     \
+        check_exact(x, y);                                                                               \
         bool m = false;                                                                                  \
         gen::NAME##_2_2(x.limb[0], x.limb[1], y.limb[0], y.limb[1], m);                                  \
         return m;                                                                                        \
     }                                                                                                    \
     template <class T>                                                                                   \
     KAIRN_FORCEINLINE constexpr bool NAME(Expansion<T, 2> x, std::type_identity_t<T> a) noexcept {       \
-        check(x);                                                                                        \
+        check_exact(x);                                                                                  \
         bool m = false; /* a is only compared: no guard */                                               \
         gen::NAME##_2_1(x.limb[0], x.limb[1], a, m);                                                     \
         return m;                                                                                        \
@@ -469,14 +480,14 @@ KAIRN_DETAIL_K2_COMPARE(eq)
 #undef KAIRN_DETAIL_K2_COMPARE
 template <class T>
 KAIRN_FORCEINLINE constexpr bool lt(std::type_identity_t<T> a, Expansion<T, 2> y) noexcept {
-    check(y);
+    check_exact(y);
     bool m = false;
     gen::lt_1_2(a, y.limb[0], y.limb[1], m);
     return m;
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr bool le(std::type_identity_t<T> a, Expansion<T, 2> y) noexcept {
-    check(y);
+    check_exact(y);
     bool m = false;
     gen::le_1_2(a, y.limb[0], y.limb[1], m);
     return m;
@@ -499,28 +510,28 @@ KAIRN_FORCEINLINE constexpr bool eq(Expansion<T, 1> x, Expansion<T, 2> y) noexce
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr T to_nearest(Expansion<T, 2> x) noexcept {
-    check(x);
+    check_exact(x);
     T t = T(0);
     gen::to_nearest_2(x.limb[0], x.limb[1], t);
     return t;
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr T to_down(Expansion<T, 2> x) noexcept {
-    check(x);
+    check_exact(x);
     T t = T(0);
     gen::to_down_2(x.limb[0], x.limb[1], t);
     return t;
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr T to_up(Expansion<T, 2> x) noexcept {
-    check(x);
+    check_exact(x);
     T t = T(0);
     gen::to_up_2(x.limb[0], x.limb[1], t);
     return t;
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr T abs_upper(Expansion<T, 2> x) noexcept {
-    check(x);
+    check_exact(x);
     T t = T(0);
     gen::abs_upper_2(x.limb[0], x.limb[1], t);
     return t;
@@ -702,10 +713,12 @@ struct Expansion<T, 1> {
     constexpr Expansion(T x) noexcept : limb{x} {}
     /// x rounded to nearest: its leading limb (kernel to_nearest_2), which for (+-inf, 0) is the
     /// infinity and for (NaN, NaN) a NaN. Explicit, because it loses the second limb.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     explicit constexpr Expansion(const Expansion<T, 2>& x) noexcept
         requires detail::proof_checked<gen::bounds::to_nearest_2<T>>
         : limb{detail::to_nearest(x)} {}
     /// The same with a marked operand: see kairn::Unverified.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     explicit constexpr Expansion(const Unverified<Expansion<T, 2>>& x) noexcept : limb{detail::to_nearest(x.value)} {}
     /// limbs[0]: every value of T is a one-limb number.
     static constexpr Expansion from_limbs(const T* limbs) noexcept { return Expansion(limbs[0]); }
@@ -749,28 +762,35 @@ struct Expansion<T, 1> {
         return x = detail::mul(x, y);
     }
     /// -x, exactly.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     friend KAIRN_FORCEINLINE constexpr Expansion operator-(const Expansion& x) noexcept { return detail::neg(x); }
     /// Whether x < y, exactly: the comparison of T. False if either is NaN.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     friend KAIRN_FORCEINLINE constexpr bool operator<(const Expansion& x, const Expansion& y) noexcept {
         return detail::lt(x, y);
     }
     /// Whether x > y, exactly. False if either is NaN.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     friend KAIRN_FORCEINLINE constexpr bool operator>(const Expansion& x, const Expansion& y) noexcept {
         return detail::lt(y, x);
     }
     /// Whether x <= y, exactly. False if either is NaN.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     friend KAIRN_FORCEINLINE constexpr bool operator<=(const Expansion& x, const Expansion& y) noexcept {
         return detail::le(x, y);
     }
     /// Whether x >= y, exactly. False if either is NaN.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     friend KAIRN_FORCEINLINE constexpr bool operator>=(const Expansion& x, const Expansion& y) noexcept {
         return detail::le(y, x);
     }
     /// Whether x == y, exactly (+0 equals -0). False if either is NaN.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     friend KAIRN_FORCEINLINE constexpr bool operator==(const Expansion& x, const Expansion& y) noexcept {
         return detail::eq(x, y);
     }
     /// Whether x != y, exactly. True if either is NaN.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     friend KAIRN_FORCEINLINE constexpr bool operator!=(const Expansion& x, const Expansion& y) noexcept {
         return !detail::eq(x, y);
     }
@@ -826,16 +846,28 @@ struct Expansion<T, 2> {
     constexpr Expansion() noexcept = default;
     /// a, exactly (kernel make_2): (a, 0), with a -0 made +0; for an infinite a, (a, 0); for a
     /// NaN, (NaN, NaN).
+    /// Its only rounded operation is the guard, a + 0, whose value is a under every rounding mode
+    /// (only the sign of a zero depends on the mode): not preceded by the debug build's check of
+    /// the rounding mode (config.hpp).
     constexpr Expansion(T a) noexcept
         requires detail::proof_checked<gen::bounds::make_2<T>>
         : Expansion(detail::make<T>(a)) {}
     /// The same with a marked operand: see kairn::Unverified.
+    /// Its only rounded operation is the guard, a + 0, whose value is a under every rounding mode
+    /// (only the sign of a zero depends on the mode): not preceded by the debug build's check of
+    /// the rounding mode (config.hpp).
     explicit constexpr Expansion(Unverified<T> a) noexcept : Expansion(detail::make<T>(a.value)) {}
     /// a, exactly: the constructor from the limb of the one-limb number (kernel make_2).
+    /// Its only rounded operation is the guard, a + 0, whose value is a under every rounding mode
+    /// (only the sign of a zero depends on the mode): not preceded by the debug build's check of
+    /// the rounding mode (config.hpp).
     constexpr Expansion(const Expansion<T, 1>& a) noexcept
         requires detail::proof_checked<gen::bounds::make_2<T>>
         : Expansion(detail::make<T>(a.limb[0])) {}
     /// The same with a marked operand.
+    /// Its only rounded operation is the guard, a + 0, whose value is a under every rounding mode
+    /// (only the sign of a zero depends on the mode): not preceded by the debug build's check of
+    /// the rounding mode (config.hpp).
     explicit constexpr Expansion(const Unverified<Expansion<T, 1>>& a) noexcept
         : Expansion(detail::make<T>(a.value.limb[0])) {}
     /// The number with the limbs limbs[0], limbs[1] (kernel make_2_limbs), each guarded. They must
@@ -857,6 +889,9 @@ struct Expansion<T, 2> {
     /// The number with these two limbs (kernel make_2_limbs), each guarded, without the check. If
     /// they do not form a canonical pair, operations on it have no undefined behavior but give
     /// results with no guarantee.
+    /// Its only rounded operation is the guard, a + 0, whose value is a under every rounding mode
+    /// (only the sign of a zero depends on the mode): not preceded by the debug build's check of
+    /// the rounding mode (config.hpp).
     static constexpr Expansion from_limbs_unchecked(const T* limbs) noexcept
         requires detail::proof_checked<gen::bounds::make_2_limbs<T>>
     {
@@ -1046,6 +1081,7 @@ KAIRN_FORCEINLINE Expansion<T, 2>& operator*=(Expansion<T, 2>& x, const Expansio
 }
 /// -x, limb by limb (kernel neg_2): exactly -x, normalized; for (+-inf, 0) the opposite
 /// infinity, and a NaN for (NaN, NaN). No fix-up is needed.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::neg_2<T>>
 KAIRN_FORCEINLINE constexpr Expansion<T, 2> operator-(const Expansion<T, 2>& x) noexcept {
@@ -1058,180 +1094,210 @@ KAIRN_FORCEINLINE constexpr Expansion<T, 2> operator-(const Expansion<T, 2>& x) 
 // with a NaN.
 
 /// Whether x < y (kernel lt_2_2).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::lt_2_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator<(const Expansion<T, 2>& x, const Expansion<T, 2>& y) noexcept {
     return detail::lt(x, y);
 }
 /// Whether x > y (kernel lt_2_2 on y, x).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::lt_2_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator>(const Expansion<T, 2>& x, const Expansion<T, 2>& y) noexcept {
     return detail::lt(y, x);
 }
 /// Whether x <= y (kernel le_2_2).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::le_2_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator<=(const Expansion<T, 2>& x, const Expansion<T, 2>& y) noexcept {
     return detail::le(x, y);
 }
 /// Whether x >= y (kernel le_2_2 on y, x).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::le_2_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator>=(const Expansion<T, 2>& x, const Expansion<T, 2>& y) noexcept {
     return detail::le(y, x);
 }
 /// Whether x == y (kernel eq_2_2).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::eq_2_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator==(const Expansion<T, 2>& x, const Expansion<T, 2>& y) noexcept {
     return detail::eq(x, y);
 }
 /// Whether x != y: not x == y (kernel eq_2_2).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::eq_2_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator!=(const Expansion<T, 2>& x, const Expansion<T, 2>& y) noexcept {
     return !detail::eq(x, y);
 }
 /// Whether x < a (kernel lt_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::lt_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator<(const Expansion<T, 2>& x, std::type_identity_t<T> a) noexcept {
     return detail::lt(x, a);
 }
 /// Whether x > a: a < x (kernel lt_1_2).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::lt_1_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator>(const Expansion<T, 2>& x, std::type_identity_t<T> a) noexcept {
     return detail::lt(a, x);
 }
 /// Whether x <= a (kernel le_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::le_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator<=(const Expansion<T, 2>& x, std::type_identity_t<T> a) noexcept {
     return detail::le(x, a);
 }
 /// Whether x >= a: a <= x (kernel le_1_2).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::le_1_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator>=(const Expansion<T, 2>& x, std::type_identity_t<T> a) noexcept {
     return detail::le(a, x);
 }
 /// Whether x == a (kernel eq_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::eq_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator==(const Expansion<T, 2>& x, std::type_identity_t<T> a) noexcept {
     return detail::eq(x, a);
 }
 /// Whether x != a (kernel eq_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::eq_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator!=(const Expansion<T, 2>& x, std::type_identity_t<T> a) noexcept {
     return !detail::eq(x, a);
 }
 /// Whether a < x (kernel lt_1_2).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::lt_1_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator<(std::type_identity_t<T> a, const Expansion<T, 2>& x) noexcept {
     return detail::lt(a, x);
 }
 /// Whether a > x: x < a (kernel lt_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::lt_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator>(std::type_identity_t<T> a, const Expansion<T, 2>& x) noexcept {
     return detail::lt(x, a);
 }
 /// Whether a <= x (kernel le_1_2).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::le_1_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator<=(std::type_identity_t<T> a, const Expansion<T, 2>& x) noexcept {
     return detail::le(a, x);
 }
 /// Whether a >= x: x <= a (kernel le_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::le_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator>=(std::type_identity_t<T> a, const Expansion<T, 2>& x) noexcept {
     return detail::le(x, a);
 }
 /// Whether a == x (kernel eq_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::eq_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator==(std::type_identity_t<T> a, const Expansion<T, 2>& x) noexcept {
     return detail::eq(x, a);
 }
 /// Whether a != x (kernel eq_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::eq_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator!=(std::type_identity_t<T> a, const Expansion<T, 2>& x) noexcept {
     return !detail::eq(x, a);
 }
 /// Whether x < y for a one-limb y: x < a with a its limb (kernel lt_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::lt_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator<(const Expansion<T, 2>& x, const Expansion<T, 1>& y) noexcept {
     return detail::lt(x, y);
 }
 /// Whether x > y for a one-limb y (kernel lt_1_2).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::lt_1_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator>(const Expansion<T, 2>& x, const Expansion<T, 1>& y) noexcept {
     return detail::lt(y, x);
 }
 /// Whether x <= y for a one-limb y (kernel le_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::le_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator<=(const Expansion<T, 2>& x, const Expansion<T, 1>& y) noexcept {
     return detail::le(x, y);
 }
 /// Whether x >= y for a one-limb y (kernel le_1_2).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::le_1_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator>=(const Expansion<T, 2>& x, const Expansion<T, 1>& y) noexcept {
     return detail::le(y, x);
 }
 /// Whether x == y for a one-limb y (kernel eq_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::eq_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator==(const Expansion<T, 2>& x, const Expansion<T, 1>& y) noexcept {
     return detail::eq(x, y);
 }
 /// Whether x != y for a one-limb y (kernel eq_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::eq_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator!=(const Expansion<T, 2>& x, const Expansion<T, 1>& y) noexcept {
     return !detail::eq(x, y);
 }
 /// Whether x < y for a one-limb x: a < y with a its limb (kernel lt_1_2).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::lt_1_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator<(const Expansion<T, 1>& x, const Expansion<T, 2>& y) noexcept {
     return detail::lt(x, y);
 }
 /// Whether x > y for a one-limb x (kernel lt_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::lt_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator>(const Expansion<T, 1>& x, const Expansion<T, 2>& y) noexcept {
     return detail::lt(y, x);
 }
 /// Whether x <= y for a one-limb x (kernel le_1_2).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::le_1_2<T>>
 KAIRN_FORCEINLINE constexpr bool operator<=(const Expansion<T, 1>& x, const Expansion<T, 2>& y) noexcept {
     return detail::le(x, y);
 }
 /// Whether x >= y for a one-limb x (kernel le_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::le_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator>=(const Expansion<T, 1>& x, const Expansion<T, 2>& y) noexcept {
     return detail::le(y, x);
 }
 /// Whether x == y for a one-limb x (kernel eq_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::eq_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator==(const Expansion<T, 1>& x, const Expansion<T, 2>& y) noexcept {
     return detail::eq(x, y);
 }
 /// Whether x != y for a one-limb x (kernel eq_2_1).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::eq_2_1<T>>
 KAIRN_FORCEINLINE constexpr bool operator!=(const Expansion<T, 1>& x, const Expansion<T, 2>& y) noexcept {
@@ -1272,6 +1338,7 @@ KAIRN_FORCEINLINE constexpr auto operator*(const X& x, const Y& y) noexcept
     return detail::mul(detail::unmark(x), detail::unmark(y));
 }
 /// -x with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X>
     requires detail::marked<X> && (!detail::ball<X>)
 KAIRN_FORCEINLINE constexpr auto operator-(const X& x) noexcept -> decltype(detail::neg(detail::unmark(x))) {
@@ -1299,6 +1366,7 @@ KAIRN_FORCEINLINE constexpr auto operator*=(X& x, const Y& y) noexcept
     return x = detail::mul(x, detail::unmark(y));
 }
 /// Whether x < y, with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X, class Y>
     requires detail::marked_expansion_pair<X, Y>
 KAIRN_FORCEINLINE constexpr auto operator<(const X& x, const Y& y) noexcept
@@ -1306,6 +1374,7 @@ KAIRN_FORCEINLINE constexpr auto operator<(const X& x, const Y& y) noexcept
     return detail::lt(detail::unmark(x), detail::unmark(y));
 }
 /// Whether x > y, with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X, class Y>
     requires detail::marked_expansion_pair<X, Y>
 KAIRN_FORCEINLINE constexpr auto operator>(const X& x, const Y& y) noexcept
@@ -1313,6 +1382,7 @@ KAIRN_FORCEINLINE constexpr auto operator>(const X& x, const Y& y) noexcept
     return detail::lt(detail::unmark(y), detail::unmark(x));
 }
 /// Whether x <= y, with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X, class Y>
     requires detail::marked_expansion_pair<X, Y>
 KAIRN_FORCEINLINE constexpr auto operator<=(const X& x, const Y& y) noexcept
@@ -1320,6 +1390,7 @@ KAIRN_FORCEINLINE constexpr auto operator<=(const X& x, const Y& y) noexcept
     return detail::le(detail::unmark(x), detail::unmark(y));
 }
 /// Whether x >= y, with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X, class Y>
     requires detail::marked_expansion_pair<X, Y>
 KAIRN_FORCEINLINE constexpr auto operator>=(const X& x, const Y& y) noexcept
@@ -1327,6 +1398,7 @@ KAIRN_FORCEINLINE constexpr auto operator>=(const X& x, const Y& y) noexcept
     return detail::le(detail::unmark(y), detail::unmark(x));
 }
 /// Whether x == y, with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X, class Y>
     requires detail::marked_expansion_pair<X, Y>
 KAIRN_FORCEINLINE constexpr auto operator==(const X& x, const Y& y) noexcept
@@ -1334,6 +1406,7 @@ KAIRN_FORCEINLINE constexpr auto operator==(const X& x, const Y& y) noexcept
     return detail::eq(detail::unmark(x), detail::unmark(y));
 }
 /// Whether x != y, with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X, class Y>
     requires detail::marked_expansion_pair<X, Y>
 KAIRN_FORCEINLINE constexpr auto operator!=(const X& x, const Y& y) noexcept
@@ -1345,18 +1418,21 @@ KAIRN_FORCEINLINE constexpr auto operator!=(const X& x, const Y& y) noexcept
 // form that takes a marked operand.
 
 /// |x|, exactly. One limb: the IEEE 754 absolute value; no marker needed.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
 KAIRN_FORCEINLINE constexpr Expansion<T, 1> abs(const Expansion<T, 1>& x) noexcept {
     return detail::abs(x);
 }
 /// |x| (kernel abs_2): exactly |x|, normalized; +inf for (+-inf, 0), and a NaN for (NaN, NaN).
 /// No fix-up is needed.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::abs_2<T>>
 KAIRN_FORCEINLINE constexpr Expansion<T, 2> abs(const Expansion<T, 2>& x) noexcept {
     return detail::abs(x);
 }
 /// |x| with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X>
     requires detail::marked<X>
 KAIRN_FORCEINLINE constexpr auto abs(const X& x) noexcept -> decltype(detail::abs(detail::unmark(x))) {
@@ -1440,6 +1516,7 @@ KAIRN_FORCEINLINE constexpr auto half(const X& x) noexcept -> decltype(detail::h
 }
 
 /// x rounded to nearest, ties to even. One limb: x itself.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
 KAIRN_FORCEINLINE constexpr T to_nearest(const Expansion<T, 1>& x) noexcept {
     return detail::to_nearest(x);
@@ -1447,18 +1524,21 @@ KAIRN_FORCEINLINE constexpr T to_nearest(const Expansion<T, 1>& x) noexcept {
 /// x rounded to nearest, ties to even: the leading limb (kernel to_nearest_2). Proved for
 /// canonical x: exactly that rounding for a finite x; the infinity for (+-inf, 0); a NaN for
 /// (NaN, NaN).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::to_nearest_2<T>>
 KAIRN_FORCEINLINE constexpr T to_nearest(const Expansion<T, 2>& x) noexcept {
     return detail::to_nearest(x);
 }
 /// to_nearest with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X>
     requires detail::marked<X>
 KAIRN_FORCEINLINE constexpr auto to_nearest(const X& x) noexcept -> decltype(detail::to_nearest(detail::unmark(x))) {
     return detail::to_nearest(detail::unmark(x));
 }
 /// The largest T not above x. One limb: x itself.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
 KAIRN_FORCEINLINE constexpr T to_down(const Expansion<T, 1>& x) noexcept {
     return detail::to_down(x);
@@ -1466,18 +1546,21 @@ KAIRN_FORCEINLINE constexpr T to_down(const Expansion<T, 1>& x) noexcept {
 /// The largest T not above x (kernel to_down_2). Proved for canonical x: exactly that number for a
 /// finite x, which is -inf when x is below -Omega (the largest finite T) by less than its gap;
 /// the infinity itself for (+-inf, 0); a NaN for (NaN, NaN).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::to_down_2<T>>
 KAIRN_FORCEINLINE constexpr T to_down(const Expansion<T, 2>& x) noexcept {
     return detail::to_down(x);
 }
 /// to_down with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X>
     requires detail::marked<X>
 KAIRN_FORCEINLINE constexpr auto to_down(const X& x) noexcept -> decltype(detail::to_down(detail::unmark(x))) {
     return detail::to_down(detail::unmark(x));
 }
 /// The smallest T not below x. One limb: x itself.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
 KAIRN_FORCEINLINE constexpr T to_up(const Expansion<T, 1>& x) noexcept {
     return detail::to_up(x);
@@ -1485,18 +1568,21 @@ KAIRN_FORCEINLINE constexpr T to_up(const Expansion<T, 1>& x) noexcept {
 /// The smallest T not below x (kernel to_up_2). Proved for canonical x: exactly that number for a
 /// finite x, which is +inf when x is above Omega; the infinity itself for (+-inf, 0); a NaN for
 /// (NaN, NaN).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::to_up_2<T>>
 KAIRN_FORCEINLINE constexpr T to_up(const Expansion<T, 2>& x) noexcept {
     return detail::to_up(x);
 }
 /// to_up with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X>
     requires detail::marked<X>
 KAIRN_FORCEINLINE constexpr auto to_up(const X& x) noexcept -> decltype(detail::to_up(detail::unmark(x))) {
     return detail::to_up(detail::unmark(x));
 }
 /// The smallest T not below |x|. One limb: |x| exactly.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
 KAIRN_FORCEINLINE constexpr T abs_upper(const Expansion<T, 1>& x) noexcept {
     return detail::abs_upper(x);
@@ -1504,12 +1590,14 @@ KAIRN_FORCEINLINE constexpr T abs_upper(const Expansion<T, 1>& x) noexcept {
 /// The smallest T not below |x| (kernel abs_upper_2). Proved for canonical x: exactly that number
 /// for a finite x, which is +inf when |x| is above Omega; +inf for (+-inf, 0); a NaN for
 /// (NaN, NaN).
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T>
     requires detail::proof_checked<gen::bounds::abs_upper_2<T>>
 KAIRN_FORCEINLINE constexpr T abs_upper(const Expansion<T, 2>& x) noexcept {
     return detail::abs_upper(x);
 }
 /// abs_upper with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X>
     requires detail::marked<X>
 KAIRN_FORCEINLINE constexpr auto abs_upper(const X& x) noexcept -> decltype(detail::abs_upper(detail::unmark(x))) {
@@ -1520,23 +1608,30 @@ KAIRN_FORCEINLINE constexpr auto abs_upper(const X& x) noexcept -> decltype(deta
 /// has the sign of the value and is zero exactly when the value is (a consequence of the
 /// invariant, docs/developer/design/phase0/numbers.md; no kernel). 0 for NaN. The sign of a zero
 /// is not reported.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T, int K>
 KAIRN_FORCEINLINE constexpr int sign(const Expansion<T, K>& x) noexcept {
     return (x.limb[0] > 0) - (0 > x.limb[0]);
 }
 /// Whether x is finite, from its leading limb alone: a canonical number is finite exactly when its
 /// leading limb is.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T, int K>
 KAIRN_FORCEINLINE constexpr bool isfinite(const Expansion<T, K>& x) noexcept {
     return detail::finite(x.limb[0]);
 }
 /// Whether x is normalized: every limb finite and, for two limbs, x0 + x1 rounded to nearest is
-/// x0. Exact; computed with one addition, so it assumes the default floating-point environment.
+/// x0. Exact. For two limbs it is computed with one addition, so it assumes the default
+/// floating-point environment: under another rounding mode it accepts and refuses other pairs.
+/// It rounds, and when KAIRN_CHECKS is 1 the environment is checked first, as for an operation
+/// (config.hpp). For one limb it is a test of the bit pattern, which does not round: not preceded
+/// by the debug build's check of the rounding mode.
 template <class T, int K>
 KAIRN_FORCEINLINE constexpr bool is_normalized(const Expansion<T, K>& x) noexcept {
     if constexpr (K == 1) {
         return detail::finite(x.limb[0]);
     } else {
+        detail::check_environment();
         return detail::finite(x.limb[0]) && detail::finite(x.limb[1]) && x.limb[0] + x.limb[1] == x.limb[0];
     }
 }

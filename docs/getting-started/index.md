@@ -204,7 +204,7 @@ The tests of the quick tier:
 | `api.constexpr` | `static_assert`s of every operation usable in constant evaluation, infinities, NaN and the states of a ball included, and the same results at run time. |
 | `api.environment` | `kairn::environment_ok()` and `kairn::self_test()` pass, and each detects a changed rounding mode and flush-to-zero. |
 | `api.flags.debug.*` | Built as a debug build (CMake's `Debug` flags, no `NDEBUG`): `kairn::self_test()` passes, and so do the constant expressions of `api.constexpr`. |
-| `api.checks.*` | With `KAIRN_CHECKS` 1, in a debug build and in an optimized one: under each directed rounding mode and under flush to zero `kairn::environment_ok()` is false and every operation, and every constructor that checks its operands, stops the program with the environment's message; so does every operand that is not canonical and every negative radius; what is canonical passes; with a `KAIRN_ENVIRONMENT_FAILURE` that returns, every operation goes on ([Testing](../developer/testing.md#the-checks-of-a-debug-build)). |
+| `api.checks.*` | With `KAIRN_CHECKS` 1, in a debug build and in an optimized one: under each directed rounding mode and under flush to zero `kairn::environment_ok()` is false and every function that rounds, and every constructor that checks its operands, stops the program with the environment's message; every [function that does not round](#when-a-check-of-a-build-without-ndebug-fails) gives, under each directed rounding mode, the same bits as to nearest without a report, and stops it under flush to zero if it checks anything; every operand that is not canonical and every negative radius stops it; what is canonical passes; with a `KAIRN_ENVIRONMENT_FAILURE` that returns, every function goes on ([Testing](../developer/testing.md#the-checks-of-a-debug-build)). |
 | `api.shadow` | A program with a global variable of every name of a parameter or a local variable of Kairn's headers, calling every public operation, compiles with the compiler's strictest warnings about hidden declarations as errors ([Testing](../developer/testing.md#the-programs-names)). |
 | `api.platform_macros` | The headers compile and work after a platform header that defines `min`, `max`, `small`, `near`, `far`, `hyper` and `interface` as macros: `<windows.h>` itself on Windows, without `NOMINMAX`, and the same macros defined by the test on every platform. |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break Kairn and define no macro; `kairn::self_test()` must report a failure. |
@@ -390,6 +390,28 @@ prints a line on the standard error and stops the program with `std::abort()`; i
 environment the line is the environment's, whatever the operands. In constant evaluation only the
 operands are checked, and an operand that fails makes the expression not a constant expression,
 which the compiler reports.
+
+**Functions that do not round.** A function whose result is the same under every rounding mode
+does not check the rounding mode, so that a program that computes under a directed rounding mode
+may call it without switching back to rounding to nearest. It still checks the rest of the
+environment (flush to zero, under which a comparison reads a subnormal number as zero), and its
+operands, but only under rounding to nearest where that check rounds itself (the test of a
+canonical pair, $x_0 + x_1 = x_0$). They are:
+
+| Functions | Why the rounding mode cannot change them |
+|---|---|
+| `-x` and `kairn::abs(x)`, one and two limbs | a sign bit; for two limbs a comparison and a select |
+| `<`, `<=`, `>`, `>=`, `==`, `!=`, one and two limbs, with a `T` or a one-limb number on either side | comparisons of limbs |
+| `kairn::to_nearest`, `kairn::to_down`, `kairn::to_up`, `kairn::abs_upper`, one and two limbs, and the narrowing `Expansion<T, 1>(x)` | a limb; or a comparison, a step of the bit pattern and a select |
+| `-X` for a `Ball` | sign bits, and the radius as it is |
+| `Ball<T, 1>(a)`, `Ball<T, 1>(c)`, `Ball<T, 1>(c, r)`, `Ball<T, 2>(a)`: the constructors of a ball from a `T` or a number of one limb | their only rounded operations are the guards `a + 0`, whose value is `a` under every rounding mode; only the sign of a zero can differ, which Kairn leaves unspecified anyway |
+| `kairn::sign`, `kairn::isfinite`, `kairn::is_normalized` of one limb, `X.center()`, `X.radius()`, `X.is_finite()`, `X.is_whole()`, `X.is_empty()`, `Ball::empty()`, `Ball::whole()`, the constants of `kairn::traits`, `kairn::rational`; the constructors of two limbs from a `T` or a one-limb number and `from_limbs_unchecked` (their guard, as above) | tests of bit patterns, stored values and data, integer arithmetic; these check nothing at all, as before |
+
+Every other function rounds and checks the rounding mode: the arithmetic, `ldexp` and `half`, the
+functions of `kairn::finite::`, `from_limbs` and `kairn::is_normalized` of two limbs (both test
+$x_0 + x_1 = x_0$), and the constructors of `Ball<T, 2>` from a center of two limbs (the test of a
+canonical center). The header `config.hpp` has the same list, and the reference comment of each of
+these functions says "Does not round".
 
 - `kairn: the floating-point environment: ` followed by what is wrong:
   `the rounding mode is not to nearest (MXCSR.RC is not zero)`,

@@ -76,17 +76,26 @@ KAIRN_FORCEINLINE constexpr bool canonical_ball(const Expansion<T, K>& c, T r) n
 // A ball from a canonical center and a radius (kernel ball_make_1 or ball_make_2), without the
 // constraint, for the constructors and the marked forms. Under KAIRN_CHECKS the environment is
 // checked, then a center of two limbs that is not canonical and a negative radius are reported:
-// the latter as almost surely a bug, though the kernel gives it a meaning (the empty set).
+// the latter as almost surely a bug, though the kernel gives it a meaning (the empty set). With a
+// center of one limb the constructor does not round but in its guards, whose values are the same
+// under every rounding mode, and nothing it checks rounds: the rounding mode is not checked.
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 1> make_ball(const Expansion<T, 1>& c, std::type_identity_t<T> r) noexcept;
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 2> make_ball(const Expansion<T, 2>& c, std::type_identity_t<T> r) noexcept;
+// The constructor kernel alone, without the checks.
+template <class T>
+KAIRN_FORCEINLINE constexpr Ball<T, 2> make_ball_kernel(const Expansion<T, 2>& c, std::type_identity_t<T> r) noexcept;
+// The point ball of a T. For two limbs, the center that make_2 returns is canonical, by the
+// kernel's proof, and the radius is zero: there is no operand to check, and nothing rounds but the
+// guards of a and of the radius, so only the environment without the rounding mode is checked.
 template <class T, int K>
 KAIRN_FORCEINLINE constexpr Ball<T, K> make_point(std::type_identity_t<T> a) noexcept {
     if constexpr (K == 1) {
         return make_ball(Expansion<T, 1>(a), T(0));
     } else {
-        return make_ball(make<T>(a), T(0));
+        check_environment_except_rounding();
+        return make_ball_kernel(make<T>(a), T(0));
     }
 }
 
@@ -97,6 +106,18 @@ template <class T, int K>
 KAIRN_FORCEINLINE constexpr void check_ball([[maybe_unused]] const Ball<T, K>& x) noexcept {
 #if KAIRN_CHECKS
     if (check_environment() && !canonical_ball(x.center(), x.radius()))
+        fail("a ball", "is not canonical (a finite ball with a canonical center and r >= 0, the whole line or the "
+                       "empty set), so no guarantee applies to the result");
+#endif
+}
+// The same for a function that does not round (the negation): the environment without the
+// rounding mode; then a canonical ball, which for two limbs is tested only when the rounding mode
+// is to nearest, since the test of a canonical center rounds (detail::check_exact).
+template <class T, int K>
+KAIRN_FORCEINLINE constexpr void check_ball_exact([[maybe_unused]] const Ball<T, K>& x) noexcept {
+#if KAIRN_CHECKS
+    if (check_environment_except_rounding() && (K == 1 || rounding_to_nearest()) &&
+        !canonical_ball(x.center(), x.radius()))
         fail("a ball", "is not canonical (a finite ball with a canonical center and r >= 0, the whole line or the "
                        "empty set), so no guarantee applies to the result");
 #endif
@@ -138,7 +159,7 @@ KAIRN_FORCEINLINE Ball<T, 1> mul(const Ball<T, 1>& x, std::type_identity_t<T> a)
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 1> neg(const Ball<T, 1>& x) noexcept {
-    check_ball(x);
+    check_ball_exact(x);
     T c = T(0), r = T(0);
     gen::ball_neg_1(x.center().limb[0], x.radius(), c, r);
     return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
@@ -184,7 +205,7 @@ KAIRN_FORCEINLINE Ball<T, 2> mul(const Ball<T, 2>& x, std::type_identity_t<T> a)
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 2> neg(const Ball<T, 2>& x) noexcept {
-    check_ball(x);
+    check_ball_exact(x);
     Expansion<T, 2> c;
     T r = T(0);
     gen::ball_neg_2(x.center().limb[0], x.center().limb[1], x.radius(), c.limb[0], c.limb[1], r);
@@ -294,13 +315,16 @@ public:
     /// The point a: center a (exactly, up to the sign of a zero), radius 0 (kernels ball_make_1 or
     /// ball_make_2, with a two-limb center made by make_2 first). An infinite or NaN a gives the
     /// whole line.
+    /// Its only rounded operations are the guards, a + 0 and 0 + 0, whose values are a and 0 under
+    /// every rounding mode (only the sign of a zero depends on the mode): not preceded by the debug
+    /// build's check of the rounding mode (config.hpp).
     constexpr Ball(T a) noexcept
         requires detail::point_proved<T, K>
         : Ball(detail::make_point<T, K>(a)) {}
     /// The same with a marked operand: see kairn::Unverified.
     explicit constexpr Ball(Unverified<T> a) noexcept : Ball(detail::make_point<T, K>(a.value)) {}
     /// The point c: center c, radius 0 (kernel ball_make_1 or ball_make_2). A c that is not finite
-    /// gives the whole line.
+    /// gives the whole line. Checked as the constructor below, with r = 0.
     constexpr Ball(const Expansion<T, K>& c) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::make>
         : Ball(detail::make_ball(c, T(0))) {}
@@ -312,6 +336,10 @@ public:
     /// KAIRN_CHECKS is 1, the environment is checked as for an operation (config.hpp), then c
     /// must be canonical and a negative r is reported (it is almost surely a mistake; write
     /// Ball::empty() for the empty set); the constructors of a point above check the same.
+    /// For one limb, the only rounded operations are the guards, c + 0 and r + 0, whose values are
+    /// c and r under every rounding mode (only the sign of a zero depends on the mode), and the
+    /// rounding mode is not checked (config.hpp); the radius is checked under every mode. For two
+    /// limbs the test of a canonical center rounds (c0 + c1 == c0), so the rounding mode is.
     constexpr Ball(const Expansion<T, K>& c, T r) noexcept
         requires detail::proof_checked<typename detail::ball_kernels<T, K>::make>
         : Ball(detail::make_ball(c, r)) {}
@@ -321,6 +349,7 @@ public:
     constexpr Ball(detail::kernel_result_t, const Expansion<T, K>& c, T r) noexcept : c_(c), r_(r) {}
 
     /// The empty set: every limb a NaN.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     [[nodiscard]] static constexpr Ball empty() noexcept {
         constexpr T nan = std::numeric_limits<T>::quiet_NaN();
         Expansion<T, K> c;
@@ -328,35 +357,50 @@ public:
         return Ball(detail::kernel_result, c, nan);
     }
     /// The whole line: center 0, radius +inf.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     [[nodiscard]] static constexpr Ball whole() noexcept {
         return Ball(detail::kernel_result, Expansion<T, K>(), std::numeric_limits<T>::infinity());
     }
 
     /// The center: of a finite ball, the center; 0 for the whole line; NaN limbs for the empty set.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     constexpr const Expansion<T, K>& center() const noexcept { return c_; }
     /// The radius: of a finite ball, a bound on the distance of every point of the set to the
     /// center; +inf for the whole line; a NaN for the empty set.
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     constexpr T radius() const noexcept { return r_; }
     /// Whether this is a finite ball (for a canonical ball: its radius is finite).
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     constexpr bool is_finite() const noexcept { return std::numeric_limits<T>::infinity() > r_; }
     /// Whether this is the whole line (radius +inf).
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     constexpr bool is_whole() const noexcept { return r_ == std::numeric_limits<T>::infinity(); }
     /// Whether this is the empty set (radius NaN).
+    /// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
     constexpr bool is_empty() const noexcept { return r_ != r_; }
 };
 
 namespace detail {
-// Under KAIRN_CHECKS the environment first, as for an operation; then, for two limbs, the center,
-// and the radius, which are not checked when the environment is not the default one and
-// KAIRN_ENVIRONMENT_FAILURE returned (check_environment).
+// Under KAIRN_CHECKS the environment first, as for an operation, without the rounding mode for one
+// limb, whose constructor does not round; then, for two limbs, the center, and the radius, which
+// are not checked when the environment is not the default one and KAIRN_ENVIRONMENT_FAILURE
+// returned (check_environment).
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 1> make_ball(const Expansion<T, 1>& c, std::type_identity_t<T> r) noexcept {
 #if KAIRN_CHECKS
-    if (check_environment() && 0 > r) fail("a ball", "has a negative radius (Ball::empty() is the empty set)");
+    if (check_environment_except_rounding() && 0 > r)
+        fail("a ball", "has a negative radius (Ball::empty() is the empty set)");
 #endif
     T cw = T(0), rw = T(0);
     gen::ball_make_1(c.limb[0], r, cw, rw);
     return Ball<T, 1>(kernel_result, Expansion<T, 1>(cw), rw);
+}
+template <class T>
+KAIRN_FORCEINLINE constexpr Ball<T, 2> make_ball_kernel(const Expansion<T, 2>& c, std::type_identity_t<T> r) noexcept {
+    Expansion<T, 2> cw;
+    T rw = T(0);
+    gen::ball_make_2(c.limb[0], c.limb[1], r, cw.limb[0], cw.limb[1], rw);
+    return Ball<T, 2>(kernel_result, cw, rw);
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 2> make_ball(const Expansion<T, 2>& c, std::type_identity_t<T> r) noexcept {
@@ -366,10 +410,7 @@ KAIRN_FORCEINLINE constexpr Ball<T, 2> make_ball(const Expansion<T, 2>& c, std::
         if (0 > r) fail("a ball", "has a negative radius (Ball::empty() is the empty set)");
     }
 #endif
-    Expansion<T, 2> cw;
-    T rw = T(0);
-    gen::ball_make_2(c.limb[0], c.limb[1], r, cw.limb[0], cw.limb[1], rw);
-    return Ball<T, 2>(kernel_result, cw, rw);
+    return make_ball_kernel(c, r);
 }
 }  // namespace detail
 
@@ -493,6 +534,7 @@ KAIRN_FORCEINLINE Ball<T, 2> operator*(const Expansion<T, 2>& c, const Ball<T, 2
 }
 /// -X (kernel ball_neg_1 or ball_neg_2): exactly -X; the whole line and the empty set stay what
 /// they are. No fix-up is needed.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class T, int K>
     requires detail::proof_checked<typename detail::ball_kernels<T, K>::neg>
 KAIRN_FORCEINLINE constexpr Ball<T, K> operator-(const Ball<T, K>& x) noexcept {
@@ -577,6 +619,7 @@ KAIRN_FORCEINLINE auto operator*(const X& x, const Y& y) noexcept
     return detail::mul(detail::unmark(x), detail::unmark(y));
 }
 /// -X with a marked operand.
+/// Does not round: not preceded by the debug build's check of the rounding mode (config.hpp).
 template <class X>
     requires detail::marked<X> && detail::ball<X>
 KAIRN_FORCEINLINE constexpr auto operator-(const X& x) noexcept -> decltype(detail::neg(detail::unmark(x))) {
