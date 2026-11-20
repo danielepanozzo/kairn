@@ -277,7 +277,14 @@ constexpr bool checked(std::size_t f, int change) {
         const bool up = (change - 2) % 2 == 1;
         auto& x = i < limbs_of<X> ? c.value.limb[i] : c.error;
         if (i == limbs_of<X> && !up && bits(x) == 0) return true;  // no error below 0
-        x = up ? kairn::gen::next_up(x) : kairn::gen::next_down(x);
+        // The next number of T up or down: the kernels next_up and next_down (Milestone 2).
+        auto stepped = x;
+        if (up) {
+            kairn::gen::next_up(x, stepped);
+        } else {
+            kairn::gen::next_down(x, stepped);
+        }
+        x = stepped;
     }
     return !kairn::is_rational_result(c, num, den);
 }
