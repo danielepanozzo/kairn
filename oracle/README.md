@@ -1,19 +1,22 @@
 # kairn-oracle
 
 The test oracle of Kairn: it decides, in exact arithmetic, whether results produced by any
-runner satisfy the claims in `gen/claims.json`. It is Python 3, standard library only, and shares
-no code with the generator or the library; it reads `gen/claims.json` as data and nothing else.
-The contract it implements is [docs/developer/architecture.md](../docs/developer/architecture.md)
-("Number formats", "Claims", "Claims of the second wave", "Claims of the non-finite layer", "The
-line protocol").
+runner satisfy the claims in `gen/claims.json`, and whether the results of `kairn::rational` are
+the ones its specification fixes ([rational](#rational)). It is Python 3, standard library only,
+and shares no code with the generator or the library; it reads `gen/claims.json` as data and
+nothing else. The contract it implements is
+[docs/developer/architecture.md](../docs/developer/architecture.md) ("Number formats", "Claims",
+"Claims of the second wave", "Claims of the non-finite layer", "The line protocol").
 
 Every verdict is decided with Python integers. A limb of a format with smallest subnormal
 $\eta = 2^{q_{\min}}$ is stored as the integer $N$ with value $N\eta$; sums of limbs are integers
-at the same scale and products are integers at scale $\eta^2$. No floating-point operation and no
-`Fraction` takes part in a verdict.
+at the same scale and products are integers at scale $\eta^2$. No floating-point operation takes
+part in a verdict, and no `Fraction` but in those of `rational_K`, whose answer is the rounding
+of a fraction.
 
 ```
 python3 oracle/kairn-oracle gen KERNEL FORMAT [options]      request lines
+python3 oracle/kairn-oracle gen rational_K FORMAT [options]  requests of kairn::rational (K = 1, 2)
 python3 oracle/kairn-oracle check [FILES] [options]          verdict and statistics
 python3 oracle/kairn-oracle brute --runner CMD ... [options] parallel gen | runner | check
 python3 oracle/kairn-oracle search KERNELS FORMATS [options]  the cases closest to the claims
@@ -130,7 +133,8 @@ trailer: a runner that drops or adds lines, or stops early, is a stream error an
 ## check
 
 Reads completed lines (`KERNEL FORMAT LIMB... [#TAG] -> LIMB...`), from files or standard input.
-For each line, in this order:
+Lines of `rational_1` and `rational_2` are judged as [rational](#rational) says. For each other
+line, in this order:
 
 1. The kernel must have claims and the format must parse; the line must have the arrow and the
    right number of limbs on both sides. Otherwise: **failure**.
@@ -333,6 +337,103 @@ B.json ...` merges summaries (counts add, maxima combine, coverage ranges unite)
   `abs` are evaluated exactly from `c` (a rational expression in `u`: integers, `u`, `+ - * /`,
   `^` or `**`, parentheses), `k` and `t`, and the report says so. Where both exist they must
   agree.
+
+## rational
+
+```
+kairn-oracle gen rational_2 binary64 --seed 0 --count 6000
+kairn-oracle gen rational_1 binary32 --seed 0 --start 1234 --count 1
+kairn-oracle gen rational_2 fp:4:-6:4 --seed 0 --strata tie1,tail
+```
+
+`rational_1` and `rational_2` are `kairn::rational<X>(num, den)` for a type `X` of one limb and of
+two (the specification is `docs/developer/design/milestone2.md`, "Constants at compile time").
+They are not kernels of `gen/claims.json`: the specification fixes every bit of the result, so
+the oracle computes the answer itself, in exact rationals (`Fraction`), and compares a runner's
+for **equality** (`rational.py`). With $q = num/den$ and $\mathrm{RN}$ the rounding of the format
+to nearest, ties to the even significand, with gradual underflow:
+
+| Field | Expected |
+|---|---|
+| limb (`rational_1`) | $\mathrm{RN}(q)$ |
+| limbs (`rational_2`) | the normalized pair $(z_0, z_1)$ whose value is $V = \mathrm{RN}(q) + \mathrm{RN}(q - \mathrm{RN}(q))$: $z_0 = \mathrm{RN}(V)$, $z_1 = V - z_0$ |
+| error | the smallest number of the format not below $\lvert\text{value} - q\rvert$; zero when exact |
+| exact | `1` exactly when $\text{value} = q$ |
+| $den = 0$ | every limb NaN, error $+\infty$, exact `0` |
+
+The pair is unique: a normalized pair has $z_0 = \mathrm{RN}(z_0 + z_1)$, so its leading limb is
+the rounding of its value, $\mathrm{RN}(V)$, and its second limb is $V - \mathrm{RN}(V)$. That
+pair exists, because $V$ is the exact sum of two numbers of the format and the error of rounding
+such a sum is a number of the format. It is the naive pair $(\mathrm{RN}(q), \mathrm{RN}(q -
+\mathrm{RN}(q)))$ except near a midpoint of two neighbours: when $q$ is just off the midpoint on
+the side of the neighbour with the odd significand, $\mathrm{RN}(q)$ is that neighbour, the
+remainder rounds to exactly half a gap, $V$ is the midpoint, and $\mathrm{RN}(V)$ is the even
+neighbour. In `binary64`, $q = (2^{62} + 511)/(2^{62} - 1) = 1 + 2^{-53} + 2^{-115} + \cdots$
+rounds to $1 + 2^{-52}$ with the remainder $-2^{-53}$, and the answer is $(1, 2^{-53})$ with
+error $2^{-115}(1 + 2^{-52})$.
+
+Terms are signed 64-bit integers, so $\lvert q\rvert$ is zero or between $2^{-63}$ and $2^{63}$:
+in `binary64` and `binary32` the value never overflows. In a toy format it can, and the oracle
+then expects the canonical infinity of the sign of $q$, $(\pm\infty, 0)$, with error $+\infty$ and
+exact `0`, the page's rule for a wider argument type: when $\mathrm{RN}(q)$ overflows, and for
+`rational_2` also when $\mathrm{RN}(q)$ is finite but $\mathrm{RN}(V)$ is not (no normalized pair
+has the value $V$ then). A value that rounds to zero is zero, with the error rounded up (to $\eta$
+at least).
+
+**Lines.** A request is `rational_K FORMAT NUM DEN #STRATUM:INDEX`; the runner echoes it and
+appends ` -> L0 [L1] ERROR EXACT`, the limbs and the error as hexadecimal literals (`nan`, `inf`,
+`-inf` and their other spellings, as for the kernels), EXACT `0` or `1`. The generator writes a
+header and a trailer as for the kernels (`mode=random`); there is no exhaustive mode (`gen
+--exhaustive` is refused): the `small` stratum enumerates every pair of small terms instead.
+
+**Strata**, counter-based as the kernels' random mode, by the schedule `small tie1 random tie2
+pow2 tie1 exact tail small tie1 random tie2 extreme tie1 tail den0`, so that a run of $N$ cases
+has $N/8$ cases of `small`, `random`, `tie2` and `tail`, $N/4$ of `tie1`, and $N/16$ of
+`pow2`, `exact`, `extreme` and `den0` (750, 1 500 and 375 of 6 000):
+
+| Stratum | Terms |
+|---|---|
+| `small` | every pair with $den \ne 0$, in order of $\max(\lvert num\rvert, \lvert den\rvert) = 1, 2, \dots$: a run of $N$ cases covers every pair with both terms up to 13 for $N = 6\,000$, 24 for $N = 20\,000$ |
+| `random` | each term of a bit length uniform in 0 to 63 (1 to 63 for $den$), a random sign, $-2^{63}$ one time in 32, and an eighth of the cases over a common factor |
+| `pow2` | $\pm(2^k + \delta)$, $0 \le k \le 63$, $\lvert\delta\rvert \le 3$, within the range; one term random a quarter of the time |
+| `extreme` | first every pair of $-2^{63}$, $-2^{63} + 1$, $2^{63} - 1$, $2^{63} - 2$, $\pm 1$, $\pm 2$, $\pm 3$, $\pm 2^{62}$, $2^{53} + 1$, $-(2^{24} + 1)$, $2^{62} + 1$ (and 0 as a numerator): 240 cases; then one of them with a random term, $den = \pm 1$, $num = 0$ |
+| `den0` | $den = 0$, the numerator zero, extreme or random |
+| `exact` | $q = M\,2^E$ exactly, $M$ odd of at most $Kp$ bits (and 63; for `rational_2` sometimes a far power of two added), inside the format, over a common odd factor half of the time |
+| `tie1` | near a midpoint $A/2^j$ of two neighbours: $num\,2^j - A\,den = t$, solved by the extended Euclidean algorithm, so that $q$ is $t/(den\,2^j)$ from the midpoint. Half the cases aim at a pair the naive way does not normalize: $t = \pm 1$ toward the neighbour with the odd significand and $den$ as large as the terms allow, in the binades where that makes the remainder round to exactly half a gap ($2^{-8}$ to $2^{7}$ in `binary64`, $2^{-37}$ to $2^{36}$ in `binary32`); the others $t$ from $-3$ to 3 ($t = 0$: an exact tie), either side, any binade; neighbours at powers of two and near the top of a binade among them. Where $2^j$ is too large for a denominator, the closest fraction on the side of $t$, from the continued fraction of the midpoint |
+| `tie2` | near $a + m$, $a$ a number of the format and $m$ a midpoint of two neighbours just below half a unit of $a$ (or, a quarter of the time, a number there), of either sign: near a tie of the second rounding, or of the rounding up of the error. In `binary32` $num\,2^j - A\,den = t$ with $t$ from $-2$ to 2 ($t = 0$: an exact tie of the second rounding); in `binary64` the point has more bits than a term holds, and $q$ is the closest fraction on a side, in the binades $2^{-13}$ to $2^{12}$ where that is within $2^{-6}$ of a unit of the second limb |
+| `tail` | the closest fraction to a number of the format, mostly in the lowest binades, so that $q$ is about $2^{-126}$ from it and the second limb of a `binary32` pair is often subnormal; a quarter of the cases exactly a number with few bits (second limb zero) |
+
+**Judging**, line by line: the format must parse and the request have two terms (otherwise a
+failure); each term must be a decimal integer from $-2^{63}$ to $2^{63} - 1$, or the line is
+**invalid** (counted, shown, never passed); the line must have the arrow and $K + 2$ fields, every
+limb and the error a number of the format or a non-finite literal, and EXACT `0` or `1` (otherwise
+a failure). Then every field is compared with the expected one: limbs and error by value, so the
+sign of a zero is free (the design pages never state it), an infinity only with the same infinity,
+a NaN only with a NaN (of any sign). A line with any field different is a **failure**, counted in
+the entry of that field (`limbs`, `error`, `exact`), and its example in the report shows what it
+returned and what was expected. Every line is judged, NaN and infinities included: nothing is
+"non-finite, not judged" and nothing is suspicious.
+
+**Stream.** Besides the count of lines between header and trailer, which catches a dropped or
+added line as for the kernels, every completed line under a header of `rational_K` must begin with
+the request the generator wrote for its index, which `check` writes again from the header (kernel,
+format, seed, strata): a line the runner changed, or lines dropped and repeated, or reordered,
+are a stream error even when the count is right. A stream may mix kernels and `rational_K`, each
+under its own header; their statistics are kept apart, by kernel, format and tag.
+
+**Statistics**, per (kernel, format, tag) as for the kernels, with three entries: the limbs, the
+error and the flag. The first counts the classes of the judged cases: `exact`, `inexact`,
+`den = 0`, `first rounding a tie` ($q$ a midpoint), `second rounding a tie` (the remainder a
+midpoint; `rational_2`), `naive pair not normalized` (`rational_2`), `second limb subnormal`
+(`rational_2`), `value beyond the range` and `value zero, q not zero` (toy formats); the second
+the errors that are zero, subnormal, normal and $+\infty$; the third the flags. The cross-checks'
+guards read these (`tests/crosscheck_guards.py`). In 6 000 cases of seed 0, `rational_2` has
+817 pairs that the naive way does not normalize in `binary64` and 1 087 in `binary32`, where 216
+second limbs are subnormal and 75 cases are ties of the second rounding; there are no such ties in
+`binary64`, where a fraction of 64-bit terms is never a midpoint of the second limb. `check` reads
+about 30 000 lines of `rational_K` per second, the echo included.
+
+`brute`, `search` and `shrink` do not run `rational_K`.
 
 ## brute
 
@@ -538,6 +639,18 @@ runs the in-process runner with them. The variants `ball2-no-E` and `ball2-no-H`
 constant (planted bugs); `ball2-G-pred` and `ball2-H-half` take $G$ one unit in the last place
 smaller and half of $H$ rounded up, to measure the slack the page reports.
 
+**rational_1 and rational_2.** `refrun` completes the requests of `kairn::rational` as well, from
+the specification and not from the checker's code: its rounding to nearest takes the smallest
+number of the format not below $\lvert x\rvert$ and the one before it and compares the distances
+(the checker divides and inspects the remainder), and its pair is the one of the three candidates
+$(z_0, V - z_0)$, $z_0 = \mathrm{RN}(q)$ or a neighbour, that its own addition leaves normalized.
+Its variants plant one fault each: `rat-lead-ulp` and `rat-tail-ulp` (a limb one unit in the last
+place too large in about one line in four), `rat-naive-pair`, `rat-error-small` and
+`rat-error-large` (the error one number too small or too large), `rat-exact-flip`,
+`rat-den0-finite` (zero limbs for $den = 0$), `rat-tie-away` and `rat-truncate` (in every rounding
+to nearest, the renormalization's included: at an exact tie $V = q$ whichever neighbour the
+first rounding took).
+
 `selftest/refrun.cpp` is a standalone C++ runner for binary64 and binary32, written from the same
 pseudo-code. The selftest compiles it with the system compiler (`$CXX`, then `c++`, `clang++`,
 `g++`, or `--cxx`) with `-std=c++17 -O2 -ffp-contract=off -fno-fast-math` (`/std:c++17 /O2
@@ -575,7 +688,11 @@ of two, the `when` condition ignored, ...; for the second wave, one per new chec
 or a direction misread, the gap taken on the wrong side of a power of two, the lower side of an
 enclosure or the input radii or two of the four corners ignored, a requirement not checked,
 `abs` or a minus dropped from expressions, instances read in the wrong order, a statistic
-computed over the wrong cases, ...) and requires `selftest --quick` to fail on the copy.
+computed over the wrong cases, ...; for `rational_K`, the naive pair expected, the error rounded
+to nearest, ties away from zero, a binade misread, overflow at twice $\Omega$, the flag never 1,
+zero limbs for $den = 0$, anything equal to a NaN, a field not compared, a term beyond 64 bits
+accepted, the echo of requests not checked, near-ties never aimed at a pair to renormalize) and
+requires `selftest --quick` to fail on the copy.
 
 | Test | What would make it fail |
 |---|---|
@@ -619,6 +736,15 @@ computed over the wrong cases, ...) and requires `selftest --quick` to fail on t
 | `search_correct_runner` | the search failing the correct runner on seven kernels of every kind it measures; a quantity it reports other than the checker's for the reported line; the same seed giving two searches, or two seeds the same |
 | `search_moves_valid` | a child of the search's moves, once repaired, outside the requirements of its kernel (pairs, radii, powers of two, `abs_ge`, balls) |
 | `shrink_planted` | a shrunk line of four planted faults that the checker passes, that fails another entry, that is not simpler, or that two runs disagree on; no toy format found where the fault exists in one; a line that passes shrunk at all |
+| `rational_rounding` | the rounding of rationals of the judge (to nearest and up, and whether a case is exact or a tie) or of the reference runner other than a brute-force search over every number of six toy formats (precision 1 included), on every multiple of $\eta/3$, $\eta/5$ and $\eta/7$, beyond the overflow threshold too |
+| `rational_toy_brute` | an answer of `rational_1` or `rational_2` other than one from the definitions alone, for every pair of terms up to 24 (40 without `--quick`) in six toy formats: the pair found by enumerating every pair of numbers of the format and keeping the normalized ones, which must be exactly one for every finite value; a class (a renormalized pair, a tie of either rounding, overflow, underflow, a subnormal second limb) never met |
+| `rational_hardware` | a `binary64` answer of the generator's streams other than CPython's correctly rounded division of integers with the machine's addition (Fast2Sum for the pair, `math.nextafter` for the error) |
+| `rational_page_bounds` | on the generator's streams in `binary64` and `binary32`, a case beyond the consequences the design page states ($\lvert\text{value} - q\rvert \le \frac{u}{1+u}\lvert q\rvert$ for one limb, $\le u^2\lvert q\rvert$ for two, with no term for underflow), a subnormal leading limb, or an error that is zero when the flag is not 1 |
+| `rational_judge` | one of 69 hand-written lines judged otherwise than worked out by hand: right answers in every spelling of a zero, a NaN or an infinity, wrong ones failing in their field alone (a limb one unit off, the naive pair, the error rounded to nearest or one step up, the flag, $den = 0$, a tie away from even, truncation, an overflow), malformed lines, invalid requests |
+| `rational_gen` | a term outside the 64-bit range, a tag out of the schedule, $den = 0$ outside its stratum, case $i$ alone other than in its run, a seed that does not matter, a turn of the schedule without every stratum, the `small` stratum out of order or not covering its pairs, too few renormalized pairs (`binary64`, `binary32`), subnormal second limbs or ties of the second rounding (`binary32`) in their strata, `--strata` not obeyed, `gen` accepting an unknown stratum, format or kernel or `--exhaustive` |
+| `rational_reference` | the reference runner flagged on a stream of either kernel in `binary64`, `binary32` or four toy formats; a dropped, repeated, dropped-and-repeated, altered or reordered line, or a missing trailer, not a stream error; a stream of `add_2_2` and `rational_2` together judged otherwise than each alone |
+| `rational_injected` | a planted fault of the reference runner (`rat-*`) not failing in `binary64`, `binary32` and `fp:4:-6:4`, failing in another field than its own, or changing the kernel it does not apply to; the naive pair failing on other lines than those the judge counts as not normalized, and likewise for $den = 0$ and the error's faults |
+| `rational_merging` | the merge of the summaries of two halves of rational streams differing from the whole; `check --json` and its exit status on a correct and a faulty runner, the report without the expected value of a failure |
 
 The Ball kernels of the non-finite layer run with the second radius design in these tests (the
 design their IEEE-model statements are proved with); the second wave's tests run the first.

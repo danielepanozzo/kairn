@@ -14,6 +14,7 @@ from fractions import Fraction
 from . import expr as EX
 from . import extended as XT
 from . import fmt as F
+from . import rational as RAT
 from .claims import ClaimsError
 
 SUMMARY_VERSION = 1
@@ -522,6 +523,8 @@ class Checker:
         self.max_examples = max_examples
         self.plans = {}
         self.open_header = None     # (descriptor, expected lines, kernel, format, seen)
+        # Under a generator header of rational_K, the requests it announces (rational.Echo).
+        self.echo = None
         self.lineno = 0
 
     def plan(self, kname, fname):
@@ -566,9 +569,11 @@ class Checker:
             else:
                 self.summary.coverage.add(desc, start, end)
             self.open_header = None
+            self.echo = None
             return
         if self.open_header is not None:
             self.stream_error("generator header inside another generator's output (truncated?)")
+        self.echo = None
         try:
             start = int(fields.pop("start"))
             count = int(fields.pop("count"))
@@ -578,12 +583,14 @@ class Checker:
             return
         fields.pop("event", None)
         self.open_header = [tuple(sorted(fields.items())), start, start + count, 0]
+        self.echo = RAT.Echo.for_header(self, fields, start)
 
     def finish(self):
         if self.open_header is not None:
             self.stream_error("stream ended before the generator's trailer: the runner stopped "
                               "early or the stream was truncated")
             self.open_header = None
+            self.echo = None
         return self.summary
 
     def feed(self, lines):
@@ -601,6 +608,8 @@ class Checker:
         if self.open_header is not None:
             self.open_header[3] += 1
         left, sep, right = line.partition(" -> ")
+        if self.echo is not None:
+            self.echo.check(self, left, self.open_header[3])
         lt = left.split(" ")
         kname = lt[0]
         fname = lt[1] if len(lt) > 1 else "?"
@@ -608,6 +617,10 @@ class Checker:
         if len(lt) > 2 and lt[-1].startswith("#"):
             tag = lt[-1][1:].split(":", 1)[0]
             lt = lt[:-1]
+        if kname in RAT.KERNELS:
+            # kairn::rational<X>(num, den), judged for equality without claims (rational.py).
+            RAT.judge_line(self, line, kname, fname, tag, lt[2:], sep, right)
+            return
         pl = self.plan(kname, fname)
         fmt = pl.fmt if pl else None
         st = self.summary.stats((kname, fmt.name if fmt else fname, tag), fmt.p if fmt else None)

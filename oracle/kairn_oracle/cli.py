@@ -37,6 +37,16 @@ def _format(name):
 
 def cmd_gen(a):
     from . import gen as G
+    from . import rational
+    if a.kernel in rational.KERNELS:
+        # kairn::rational<X>(num, den): no claims, the oracle computes the answer itself.
+        try:
+            status = rational.cmd_gen(a)
+        except BrokenPipeError:
+            _quiet_pipe()
+            return 0
+        sys.stdout.flush()
+        return status
     claims = _claims(a.claims)
     kernel = claims.get(a.kernel)
     if kernel is None:
@@ -184,7 +194,7 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     g = sub.add_parser("gen", help="write request lines")
-    g.add_argument("kernel")
+    g.add_argument("kernel", help="a kernel of the claims, or rational_1 or rational_2")
     g.add_argument("format", help="binary64, binary32 or fp:P:QMIN:QMAX")
     g.add_argument("--claims", help="claims file (default: gen/claims.json of this repository)")
     g.add_argument("--seed", default="0")

@@ -91,6 +91,18 @@ VARIANTS = {
     "ball2-G-pred": "second radius design with G one unit in the last place smaller (not an "
                     "error with respect to the claim where the listing has slack)",
     "ball2-H-half": "second radius design with half of H, rounded up (likewise)",
+    # kairn::rational<X>(num, den) (rational_1, rational_2).
+    "rat-lead-ulp": "rational: the first limb one unit in the last place too large, in about 1 "
+                    "line in 4",
+    "rat-tail-ulp": "rational_2: the second limb one unit in the last place too large, in about 1 "
+                    "line in 4",
+    "rat-naive-pair": "rational_2: the pair (RN(q), RN(q - RN(q))), not normalized near some ties",
+    "rat-error-small": "rational: the error one number of the format too small when not zero",
+    "rat-error-large": "rational: the error one number of the format too large",
+    "rat-exact-flip": "rational: the flag exact wrong in about 1 line in 4",
+    "rat-den0-finite": "rational: zero limbs for den = 0 instead of NaN",
+    "rat-tie-away": "rational: ties rounded away from zero instead of to even",
+    "rat-truncate": "rational: every rounding to nearest truncates instead",
 }
 
 ORACLE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -1006,6 +1018,8 @@ ARITY = {"two_sum": 2, "fast_two_sum": 2, "two_prod": 2, "two_prod_dekker": 2, "
          "ball_make_2": 3, "add_1_1": 2, "mul_1_1": 2}
 FIRST_WAVE = frozenset(("two_sum", "fast_two_sum", "two_prod", "two_prod_dekker", "split",
                         "add_2_2", "add_2_1", "mul_2_2", "mul_2_1", "add_fast_2_2"))
+# kairn::rational<X>(num, den), with its number of limbs.
+RATIONAL = {"rational_1": 1, "rational_2": 2}
 # Which input limb pairs form a normalized 2-limb operand (for corrupt-input).
 PAIRS = {"add_2_2": (0, 2), "add_2_1": (0,), "mul_2_2": (0, 2), "mul_2_1": (0,),
          "add_fast_2_2": (0, 2)}
@@ -1040,6 +1054,8 @@ class Runner:
             tag = [toks[-1]]
             toks = toks[:-1]
         kname, fname, args = toks[0], toks[1], toks[2:]
+        if kname in RATIONAL:
+            return [line + " -> " + self.rational(kname, fname, args, line)]
         K = self.kernels(fname)
         A = K.A
         if ARITY.get(kname) != len(args):
@@ -1098,6 +1114,97 @@ class Runner:
         else:
             args[0] = _exact_hex_out(1, A.qmin - 1)
         return args
+
+    # -- kairn::rational<X>(num, den) ----------------------------------------------------------
+    #
+    # From the specification (docs/developer/design/milestone2.md, "Constants at compile time"),
+    # without the checker's code (rational.py), which divides and inspects the remainder: here
+    # the rounding to nearest takes the smallest number not below |x| and the one before it and
+    # compares the two distances, and the pair of rational_2 is the one of the three candidates
+    # (z0, V - z0), z0 = RN(q) or a neighbour, that is normalized by this runner's own addition.
+
+    def _nearest(self, A, x):
+        """x (a Fraction, in units of eta) rounded to nearest, ties to even (the variants:
+        away from zero, or truncated), with the IEEE overflow threshold."""
+        if x == 0:
+            return 0
+        ax = abs(x)
+        up = A.round_up_fraction(ax)
+        if up == INF:
+            # Beyond Omega: Omega below Omega + ulp(Omega)/2, the infinity from there on.
+            half = Fraction(A.spacing_above(A.omega), 2)
+            r = A.omega if self.variant == "rat-truncate" or ax < A.omega + half else INF
+        elif up == ax:
+            r = up
+        else:
+            down = A.next_down(up)
+            below, above = ax - down, up - ax
+            if self.variant == "rat-truncate":
+                r = down
+            elif below != above:
+                r = down if below < above else up
+            elif self.variant == "rat-tie-away":
+                r = up
+            else:
+                r = down if A._canonical(down)[0] % 2 == 0 else up
+        return r if x > 0 else -r
+
+    def rational(self, kname, fname, args, line):
+        k = RATIONAL[kname]
+        A = self.cache.get(("rational", fname))
+        if A is None:
+            A = self.cache[("rational", fname)] = Arith(parse_format_triple(fname))
+        if len(args) != 2:
+            raise ValueError("cannot run %r with %d terms" % (kname, len(args)))
+        num, den = int(args[0]), int(args[1])
+        v = self.variant
+        rare = zlib.crc32(line.encode()) % 4 == 0
+        if den == 0:
+            limbs = [0] * k if v == "rat-den0-finite" else [NAN] * k
+            return " ".join([A.write(z) for z in limbs] + ["inf", "0"])
+        # q in units of eta.
+        q = Fraction(num << -A.qmin, den) if A.qmin < 0 else Fraction(num, den << A.qmin)
+        a = self._nearest(A, q)
+        if type(a) is float:
+            limbs = [a] + [0] * (k - 1)
+            return " ".join([A.write(z) for z in limbs] + ["inf", "0"])
+        if k == 1:
+            limbs = [a]
+        else:
+            b = self._nearest(A, q - a)
+            value = a + b
+            pairs = []
+            if v in ("rat-tie-away", "rat-truncate"):
+                # The faulty rounding renormalizes too, as one rounding routine would: at an
+                # exact tie V = q whichever neighbour the first rounding took.
+                z0 = self._nearest(A, Fraction(value))
+                if type(z0) is int:
+                    pairs.append([z0, value - z0])
+            else:
+                for z0 in (a, A.next_up(a), A.next_down(a)):
+                    if type(z0) is int and A.member(value - z0) and A.add(z0, value - z0) == z0:
+                        pairs.append([z0, value - z0])
+            if not pairs and abs(value) > A.omega:
+                # No normalized pair of this value: beyond the range.
+                return " ".join([A.write(INF if value > 0 else -INF), A.write(0), "inf", "0"])
+            if len(pairs) != 1:
+                raise ValueError("%d normalized pairs of value %s in %s"
+                                 % (len(pairs), value, fname))
+            limbs = [a, b] if v == "rat-naive-pair" else pairs[0]
+        d = abs(sum(limbs) - q)              # the naive pair has the same value
+        error = A.round_up_fraction(d) if d else 0
+        exact = d == 0
+        if v == "rat-lead-ulp" and rare:
+            limbs[0] = A.next_up(limbs[0])
+        if v == "rat-tail-ulp" and rare and k == 2:
+            limbs[1] = A.next_up(limbs[1])
+        if v == "rat-error-small" and type(error) is int and error > 0:
+            error = A.next_down(error)
+        if v == "rat-error-large" and type(error) is int:
+            error = A.next_up(error)
+        if v == "rat-exact-flip" and rare:
+            exact = not exact
+        return " ".join([A.write(z) for z in limbs] + [A.write(error), "1" if exact else "0"])
 
     def run(self, inp, out):
         w = out.write

@@ -175,6 +175,41 @@ MUTANTS = {
         "    pinned = False"),
     "claims: lead not compared with the value": (
         "claims.py", "        if (t[0] != LEADS[self.lead] or", "        if False and (t[0] != LEADS[self.lead] or"),
+    # rational_1 and rational_2 (kairn::rational).
+    "rational: the naive pair": (
+        "rational.py", "        z0 = F.rn_fixed(fmt, v)\n", "        z0 = a\n"),
+    "rational: the error rounded to nearest": (
+        "rational.py", "    err, _ = round_fraction(fmt, d, up=True)", "    err, _ = round_fraction(fmt, d)"),
+    "rational: ties away from zero": (
+        "rational.py", "    elif 2 * rem > den or (2 * rem == den and m & 1):", "    elif 2 * rem >= den:"),
+    "rational: the binade of q one too high": (
+        "rational.py", "    if (a << max(-e, 0)) < (d << max(e, 0)):\n        e -= 1",
+        "    if False:\n        e -= 1"),
+    "rational: overflow at twice Omega": (
+        "rational.py", "    r = m << (last - fmt.qmin)\n    if r > fmt.omega:",
+        "    r = m << (last - fmt.qmin)\n    if r > 2 * fmt.omega:"),
+    "rational: exact never 1": (
+        "rational.py", "return Answer(limbs, 0, 1, classes + [EXACT])",
+        "return Answer(limbs, 0, 0, classes + [EXACT])"),
+    "rational: den = 0 gives zero limbs": (
+        "rational.py", "return Answer([F.NAN] * k, F.POS_INF, 0, [DEN0])",
+        "return Answer([0] * k, F.POS_INF, 0, [DEN0])"),
+    "rational: anything equals a NaN": (
+        "rational.py", "    if want == F.NAN or found == F.NAN:\n        return want == found",
+        "    if want == F.NAN or found == F.NAN:\n        return True"),
+    "rational: the second limb not compared": (
+        "rational.py", "zip(found[:k], ans.limbs)", "zip(found[:1], ans.limbs)"),
+    "rational: the error not compared": (
+        "rational.py", "    if not _same(found[k], e):", "    if False:"),
+    "rational: exact not compared": (
+        "rational.py", "    if flag != ans.exact:", "    if False:"),
+    "rational: terms beyond 64 bits accepted": (
+        "rational.py", "        if not INT64_MIN <= v <= INT64_MAX:", "        if False:"),
+    "rational: the echo of requests not checked": (
+        "rational.py", "        if self.broken:\n            return\n        i = self.start",
+        "        if True:\n            return\n        i = self.start"),
+    "rational: near-ties never aimed at a pair to renormalize": (
+        "rational.py", "        aim = rng.bits(1) and self.window1", "        aim = rng.bits(1) and []"),
 }
 
 
