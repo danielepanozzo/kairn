@@ -140,6 +140,11 @@ t        = add(x0, y0)
   the mask `ok` is true, EXPR over the inputs, the one-limb outputs, `u`, `eta`, `unit(K)` and
   `tiny(K)`, with `^`; `holds le EXPR EXPR if=ok`; and `finite_or_nan r flag=f`, a fold's finish.
   A kernel whose every entry has its own value (`bound_sum_k`, `bound_dot_k`) has no `value:`.
+- The folds of maxima (architecture.md, "Folds of maxima"): `maximum r m abs(x[0])`, the one-limb
+  output the larger of two expressions (over the inputs and their limbs `NAME[I]`), an entry with
+  values of its own (`norm_combine`, `norm_step_k` have no `value:`); and
+  `finite_or_nan r flag=f if=ok steps=1`, the finish of such a fold: the value stepped up that many
+  times, a NaN when the mask input `ok` is false. A kernel may have mask inputs (`input: mask ok`).
 
 ## A fold description
 
@@ -195,6 +200,29 @@ model, `map` of its step, and a statement, `Forall2` of the elements and the ele
 `claims.map_claims`, its entry of `"folds"`, with `"map": true`; the interpreter runs it with the
 scalars after the length (`Machine.run_fold`), and the runners complete its requests
 (`KAIRN_RUNNER_MAP` of `runner_kernels.inc`).
+
+A fold of maxima (architecture.md, "Folds of maxima") has a state of two groups,
+`state: m, mask ok` (a limb from +0 and a mask from true), which its step, combination and finish
+take and return in that order: `step: (m, ok) = norm_step_2(m, ok, x)`, `combine: (m, ok) =
+norm_combine(m, ok, m, ok)`, `finish: (r, flag) = norm_finish_2(m, ok)`; its value is `abs(x)`
+and it claims `upper r max steps=S`. `rules.max_rules` checks it (the claims of its combination
+and step, the step a call of the combination, the zero state and the laws of the combination by
+evaluation, the finish); the printers are those of the folds, with a mask of the state a `bool` in
+scalar code and in Rocq and a lane mask in packed code, and `rocq.max_statement` its statement.
+An array limb that the step declares `unused` (`norm_step_2`'s `x1`) is a parameter of the C++
+functions, `[[maybe_unused]]`, and is not loaded (`cpp.loaded_limbs`).
+
+A convolution (architecture.md, "Convolutions") names the fold of its coefficients,
+`coefficients: dot_2`, and has no `step:`; it reads two arrays of their own lengths (those of that
+fold), writes one array (`writes: z = z0 z1`), has the mask, the `and`, the check (that fold's
+finish) and the second pass of a map, the order `sequential` only, and claims `coefficients z` and
+`finite_or_nan z flag=finite`. `rules.conv_rules` checks it; `cpp.conv_seq` prints it (no packed
+form); `rocq.conv_model` and `rocq.conv_statement` give it a model, a `map` over the indices of the
+coefficients of that fold's sequential order on `conv_terms xs ys j`, and a statement, `Forall2` of
+the indices and the coefficients; `claims.conv_claims`, its entry of `"folds"`, with `"conv": true`;
+the interpreter runs it (`Machine.run_fold`) and completes its requests, which have two lengths
+(`interp.complete_conv`), and so does the compiled runner (`KAIRN_RUNNER_CONV` of
+`runner_kernels.inc`).
 
 ## The operations
 
@@ -445,7 +473,16 @@ computed constants (above). A kernel has no real-model statement when it claims 
   interpreter in exact arithmetic on toy formats in both orders and against an implementation of
   the lane order of its own, the compiled `F_seq`, `F_lanes` and `F_packed` bit for bit against the
   interpreter on lengths around every packed width and up to a few thousand, non-finite elements
-  included, rule R3 on a supplied array with each compiler, and the printers.
+  included, rule R3 on a supplied array with each compiler, and the printers; the folds of maxima
+  with them, and on their own the checks of `rules.max_rules`, the empty list and non-finite
+  elements in every order, and their claim in exact arithmetic on random lists of toy formats of
+  precision 1 to 6;
+- the convolutions (`test_conv.py`): the rules of a convolution; the interpreter, each coefficient
+  the fold of its coefficients on its terms, their number, the canonical NaN of the coefficients a
+  non-finite term reaches; the claims in exact arithmetic on toy formats, each coefficient within
+  the bound of `dot` for its own number of terms; the compiled `F_seq` bit for bit against the
+  interpreter on every pair of lengths up to 5 and random ones; the line protocol with two lengths;
+  `conv_terms` of the model against its definition; the printers.
 
 `--full` raises the sizes to a few hundred thousand requests per kernel; `--jobs N` (or
 `$KAIRN_GEN_JOBS`) caps the processes and compilers that run at once, on a shared machine.

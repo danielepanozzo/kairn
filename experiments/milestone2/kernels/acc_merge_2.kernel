@@ -1,0 +1,30 @@
+# acc.merge(other) of Accumulator<T, 2> (milestone2.md, "The accumulator"): the running sums added,
+# as add_2_2 (a node of the tree of the summation), and the sums of the magnitudes of the leading
+# limbs added, rounded to nearest. The counts are added in the header. Both accumulators are
+# objects: nothing comes from the program.
+#
+# The claims proposed for it in gen/kernels, which accumulator.py checks:
+#   value:         s+v
+#   requires:      normalized s
+#   requires:      normalized v
+#   requires:      nonneg a
+#   requires:      nonneg c
+#   ensures:       normalized t
+#   ensures:       error t R c=3/(1-4*u) k=2 t=0
+#   ensures:       rounded b nearest value=a+c
+#   (needs rounded ... value=, which the generator does not have: see accumulator.py)
+kernel:        acc_merge_2
+input:         s = s0 s1
+input:         a
+input:         v = v0 v1
+input:         c
+output:        t = t0 t1
+output:        b
+min_precision: 3
+source:        add_2_2 of two running sums, and the sum of the magnitudes (milestone2.md); JMP17 Alg. 6, bound from MR22
+license:       algorithm: published; proof: MIT
+status:        unverified
+cone_exempt:   b, the sum of magnitudes, does not reach t0; it overflows (to +inf, its operands being nonnegative) only when a + c rounds above the largest number of T, and a radius computed from it is then +inf, the whole line
+
+(t0, t1) = add_2_2(s0, s1, v0, v1)
+b        = add(a, c)

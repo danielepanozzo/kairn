@@ -1,0 +1,24 @@
+# The coefficients of the product of two polynomials of coefficients of one limb (milestone2.md,
+# "sum, dot, axpy, convolution": conv_k): coefficient j of z, of n_x + n_y - 1 (none when a
+# polynomial is empty), is the fused dot product dot_1, in its sequential order, of the terms
+# (x_i, y_(j-i)), i from max(0, j - n_y + 1) to min(j, n_x - 1) in increasing order: each
+# coefficient that is finite satisfies the statement of dot_1 for its own m_j terms,
+# m_j <= min(n_x, n_y). A convolution (architecture.md, "Convolutions"), with the mask and the second
+# pass of a map; the array written overlaps neither x nor y.
+fold:          conv_1
+arrays:        supplied x, supplied y
+coefficients:  dot_1
+state:         mask finite
+combine:       finite = and(finite, finite)
+orders:        sequential
+writes:        z
+check:         fold_finish_1
+finish:        none
+value:         x*y
+ensures:       coefficients z
+ensures:       finite_or_nan z flag=finite
+min_precision: 1
+status:        unverified
+domain:        extended
+source:        dot_1 on the terms of each coefficient
+license:       bound: published; proof: MIT

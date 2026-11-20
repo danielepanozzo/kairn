@@ -424,7 +424,11 @@ def _head(k, nans, precision=True):
              (f'\n         {_binders(nans)},' if nans else ',')]
     if precision:
         lines.append(f'  ({k.min_precision or 1} <= prec)%Z ->')
-    lines.append(f'  forall {" ".join(k.input_limbs)} : binary_float prec emax,')
+    limbs = [v for v, kind in zip(k.input_limbs, k.input_kinds) if kind == ir.LIMB]
+    masks = [v for v, kind in zip(k.input_limbs, k.input_kinds) if kind == ir.MASK]
+    lines.append(f'  forall {" ".join(limbs)} : binary_float prec emax,')
+    if masks:
+        lines.append(f'  forall {" ".join(masks)} : bool,')
     return lines
 
 
@@ -670,8 +674,14 @@ def _finite_or_nan_spec(k, kernels, e):
     otherwise every limb of it is a NaN. For every input: the statement has no hypothesis."""
     t = _Terms(k)
     lines = _head(k, _used_nans(k, kernels), precision=False) + _hyps_extended(k, t) + [_let(k, kernels)]
-    src, out, flag = t.ins[k.value].limbs, t.outs[e['of']].limbs, e['flag']
-    lines += [f'  ({flag} = true <-> finite {src[0]}) /\\',
+    src, out, flag = list(t.ins[k.value].limbs), t.outs[e['of']].limbs, e['flag']
+    # The finish of a fold of maxima: the value stepped up (steps), under a mask (if).
+    for _ in range(e.get('steps', 0)):
+        src = [f'({_ieee_op("succ", src)})']
+    finite = f'finite {src[0]}'
+    if 'if' in e:
+        finite = f'{e["if"]} = true /\\ {finite}'
+    lines += [f'  ({flag} = true <-> {finite}) /\\',
               f'  ({flag} = true -> ' + ' /\\ '.join(f'{o} = {i}' for o, i in zip(out, src)) + ') /\\',
               f'  ({flag} = false -> ' + ' /\\ '.join(f'nan {o}' for o in out) + ').']
     return _statement(f'{k.name}_spec', _comment(k), lines)
@@ -1013,7 +1023,8 @@ def fold_model(kernels):
     of its real model (FoldModel.v): F_step and F_combine apply the IEEE models of the step and the
     combination (IeeeModel.v) to the limbs of tuples; F_seq is the finish on fold_seq of the step
     from the zero state, every limb +0; F_lanes W the finish on fold_lanes W."""
-    folds = [fd for fd in getattr(kernels, 'folds', {}).values() if not getattr(fd, 'is_map', False)]
+    folds = [fd for fd in getattr(kernels, 'folds', {}).values()
+             if not getattr(fd, 'is_map', False) and not getattr(fd, 'is_conv', False)]
     lines = [HEADER, '',
              '(* The folds in the IEEE model (docs/developer/architecture.md, "Folds"), in the shape of their',
              '   real model (FoldModel.v): the state is a tuple of limbs and an element one entry of every array,',
@@ -1044,17 +1055,18 @@ def fold_model(kernels):
     for fd in folds:
         step, combine, finish = _fold_parts(fd, kernels)
         st, el, xs = rocq._fold_binders(fd)
-        n = len(fd.state.limbs)
-        stype = _ftype(n)
+        n = len(fd.state_limbs())
+        stype = rocq.state_type(fd, 'float')
         etype = _fold_element_ftype(fd)
         lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
-        zero = 'pzero' if n == 1 else '(' + ', '.join(['pzero'] * n) + ')'
+        zero = rocq.state_zero(fd, 'pzero', 'true')
         groups = rocq.fold_groups(fd, el)
+        state = rocq.state_groups(fd, st)
         sizes = {g.name: len(g.limbs) for g in fd.arrays}
         args = []
         for a in fd.step[1]:
-            args += rocq.tuple_parts(st if a == fd.state.name else groups[a], n if a == fd.state.name else sizes[a])
-        rtype = ' * '.join(['float'] * len(fd.state.limbs) if finish is None else
+            args += state[a] if a in state else rocq.tuple_parts(groups[a], sizes[a])
+        rtype = ' * '.join(rocq.state_type(fd, 'float').split(' * ') if finish is None else
                            [('bool' if g.kind == ir.MASK else 'float') for g in finish.outputs for _ in g.limbs])
         lines += ['', f'(* {fd.name}: step {step.name}' + (f', combination {combine.name}' if combine else '') +
                   (f', finish {finish.name}' if finish else '') + '. *)',
@@ -1096,6 +1108,7 @@ def fold_statement(fd, kernels, order):
     every limb of the result is a NaN (milestone2.md, "When something is not finite")."""
     st, el, xs = rocq._fold_binders(fd)
     suffix = ir.ORDER_SUFFIX[order]
+    step, combine, _ = _fold_parts(fd, kernels)
     nans = _fold_nans(fd, kernels, order)
     etype = _fold_element_ftype(fd).replace('float', 'binary_float prec emax')
     lt = f'list ({etype})'
@@ -1118,9 +1131,18 @@ def fold_statement(fd, kernels, order):
     flags = [v for g in fd.results() if g.kind == ir.MASK for v in g.limbs]
     flag = flags[0]
     pattern = results[0] if len(results) == 1 else "'(" + ', '.join(results) + ')'
-    real = f'FoldModel.{fd.name}_{suffix} {EMIN} prec tie_even' + (' W' if order == 'lanes' else '') + ' vs'
+    parts = [step] + ([combine] if order == 'lanes' else [])
+    section = [{'emin': EMIN, 'prec': 'prec', 'choice': 'tie_even'}[v] for v in rocq.fold_section_args(parts, kernels)]
+    real = ' '.join([f'FoldModel.{fd.name}_{suffix}'] + section + (['W'] if order == 'lanes' else []) + ['vs'])
     vals = f'val {limbs[0]}' if len(limbs) == 1 else '(' + ', '.join(f'val {v}' for v in limbs) + ')'
-    claims = [re.sub(r'\bemin\b', EMIN, c) for c in rocq.fold_conclusion(fd, 's', el, 'vs', indent='      ')]
+    if fd.is_max:
+        # A fold of maxima: the result is the limb of the final state stepped up as the finish
+        # does (rocq.max_result), and its claims are those of rocq.max_conclusion.
+        lets, claims = rocq.max_conclusion(fd, rocq.max_result(fd, 's', EMIN), el, 'vs', EMIN)
+        middle = [f'   {x}' for x in lets] + [f'   {vals} = r_ /\\']
+    else:
+        claims = [re.sub(r'\bemin\b', EMIN, c) for c in rocq.fold_conclusion(fd, 's', el, 'vs', indent='      ')]
+        middle = [f'   {vals} = s /\\']
     binders = f'forall (W : nat) ({xs} : {lt}),' if order == 'lanes' else f'forall {xs} : {lt},'
     call = ' '.join([f'IeeeFoldModel.{fd.name}_{suffix}', 'prec', 'emax'] + nans +
                     (['W'] if order == 'lanes' else []) + [xs])
@@ -1139,19 +1161,20 @@ def fold_statement(fd, kernels, order):
               f'   Forall (fun {el} => {" /\\ ".join(finite)}) {xs} /\\',
               '   ' + ' /\\ '.join(f'finite {v}' for v in limbs) + ' /\\',
               f'   let vs := map (fun {el} => {value}) {xs} in',
-              f'   let s := {real} in',
-              f'   {vals} = s /\\',
+              f'   let s := {real} in'] + middle + [
               '   ' + ' /\\\n   '.join(claims) + ') /\\',
               f'  ({flag} = false -> ' + ' /\\ '.join(f'nan {v}' for v in limbs) + ').']
     return lines
 
 
 # The kernels that are the steps or the combinations of the folds: each has a statement that its
-# result's leading limb is finite only if that of each of its operands is (lead_statement).
+# result's leading limb is finite only if that of each of its operands is (lead_statement). Not
+# those of a fold of maxima, whose maximum keeps a finite state when the element is a NaN (the
+# mask of its state says so instead): the statement would be false of them.
 def lead_kernels(kernels):
     names = set()
     for fd in getattr(kernels, 'folds', {}).values():
-        if getattr(fd, 'is_map', False):
+        if getattr(fd, 'is_map', False) or getattr(fd, 'is_max', False) or getattr(fd, 'is_conv', False):
             continue
         names.add(fd.step[0])
         if fd.combine:
@@ -1191,7 +1214,7 @@ def fold_statements(kernels):
     for k in lead_kernels(kernels):
         lines += [''] + lead_statement(k, kernels)
     for fd in getattr(kernels, 'folds', {}).values():
-        if getattr(fd, 'is_map', False):
+        if getattr(fd, 'is_map', False) or getattr(fd, 'is_conv', False):
             continue
         for order in ir.ORDERS:
             if order in fd.orders:

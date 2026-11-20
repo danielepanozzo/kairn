@@ -169,6 +169,92 @@ Definition dot_2_lanes_ieee_spec : Prop :=
       (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length vs - 1) * (INR (length vs) * ((3 / 2) * eta (ieee_emin prec emax)))) /\
   (flag = false -> nan r0 /\ nan r1).
 
+(* norm_upper_1, the sequential order, in the IEEE model. Status: unverified. *)
+Definition norm_upper_1_seq_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall xs : list (binary_float prec emax),
+  let '(r, flag) := IeeeFoldModel.norm_upper_1_seq prec emax nan_abs nan_const xs in
+  (flag = true ->
+   Forall (fun x => finite x) xs /\
+   finite r /\
+   let vs := map (fun x => val x) xs in
+   let s := FoldModel.norm_upper_1_seq vs in
+   let r_ := fst s in
+   let v_ := fold_right Rmax 0 (map (fun x => (Rabs x)) vs) in
+   val r = r_ /\
+   fmt (ieee_emin prec emax) prec r_ /\
+   v_ <= r_ /\
+   r_ <= RU (ieee_emin prec emax) prec v_) /\
+  (flag = false -> nan r).
+
+(* norm_upper_1, the lane order, for every number of lanes W, in the IEEE model. Status: unverified. *)
+Definition norm_upper_1_lanes_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (W : nat) (xs : list (binary_float prec emax)),
+  let '(r, flag) := IeeeFoldModel.norm_upper_1_lanes prec emax nan_abs nan_const W xs in
+  (flag = true ->
+   Forall (fun x => finite x) xs /\
+   finite r /\
+   let vs := map (fun x => val x) xs in
+   let s := FoldModel.norm_upper_1_lanes W vs in
+   let r_ := fst s in
+   let v_ := fold_right Rmax 0 (map (fun x => (Rabs x)) vs) in
+   val r = r_ /\
+   fmt (ieee_emin prec emax) prec r_ /\
+   v_ <= r_ /\
+   r_ <= RU (ieee_emin prec emax) prec v_) /\
+  (flag = false -> nan r).
+
+(* norm_upper_2, the sequential order, in the IEEE model. Status: unverified. *)
+Definition norm_upper_2_seq_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall xs : list (binary_float prec emax * binary_float prec emax),
+  Forall (fun x => canonical_2 (fst x) (snd x)) xs ->
+  let '(r, flag) := IeeeFoldModel.norm_upper_2_seq prec emax nan_abs nan_const xs in
+  (flag = true ->
+   Forall (fun x => finite (fst x) /\ finite (snd x)) xs /\
+   finite r /\
+   let vs := map (fun x => (val (fst x), val (snd x))) xs in
+   let s := FoldModel.norm_upper_2_seq vs in
+   let r_ := succ radix2 (FLT_exp (ieee_emin prec emax) prec) (fst s) in
+   let v_ := fold_right Rmax 0 (map (fun x => (Rabs (fst x + snd x))) vs) in
+   val r = r_ /\
+   fmt (ieee_emin prec emax) prec r_ /\
+   v_ <= r_ /\
+   r_ <= succ radix2 (FLT_exp (ieee_emin prec emax) prec) (RU (ieee_emin prec emax) prec v_)) /\
+  (flag = false -> nan r).
+
+(* norm_upper_2, the lane order, for every number of lanes W, in the IEEE model. Status: unverified. *)
+Definition norm_upper_2_lanes_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (1 <= prec)%Z ->
+  forall (W : nat) (xs : list (binary_float prec emax * binary_float prec emax)),
+  Forall (fun x => canonical_2 (fst x) (snd x)) xs ->
+  let '(r, flag) := IeeeFoldModel.norm_upper_2_lanes prec emax nan_abs nan_const W xs in
+  (flag = true ->
+   Forall (fun x => finite (fst x) /\ finite (snd x)) xs /\
+   finite r /\
+   let vs := map (fun x => (val (fst x), val (snd x))) xs in
+   let s := FoldModel.norm_upper_2_lanes W vs in
+   let r_ := succ radix2 (FLT_exp (ieee_emin prec emax) prec) (fst s) in
+   let v_ := fold_right Rmax 0 (map (fun x => (Rabs (fst x + snd x))) vs) in
+   val r = r_ /\
+   fmt (ieee_emin prec emax) prec r_ /\
+   v_ <= r_ /\
+   r_ <= succ radix2 (FLT_exp (ieee_emin prec emax) prec) (RU (ieee_emin prec emax) prec v_)) /\
+  (flag = false -> nan r).
+
 (* sum_1, the sequential order, in the IEEE model. Status: unverified. *)
 Definition sum_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)

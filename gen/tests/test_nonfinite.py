@@ -130,8 +130,9 @@ class Operand:
         self.groups, self.finite, self.special = groups, finite_values, special
 
     def top(self, fmt):
-        """The finite values whose leading limb is in the top two binades."""
-        return [v for v in self.finite if finite(v[0]) and abs(fr(v[0])) >= fmt.top / 4] or self.finite
+        """The finite values whose leading limb is in the top two binades (a mask: both values)."""
+        return [v for v in self.finite if not isinstance(v[0], bool) and finite(v[0]) and
+                abs(fr(v[0])) >= fmt.top / 4] or self.finite
 
 
 def operands(k, fmt):
@@ -146,7 +147,9 @@ def operands(k, fmt):
         if g.name in radii:
             continue
         kinds = {r[0] for r in req.get(g.name, [])}
-        if 'ball' in kinds:
+        if g.kind == ir.MASK:              # the mask of the state of a fold of maxima: both values
+            out.append(Operand([g], [(True,), (False,)], []))
+        elif 'ball' in kinds:
             radius = [r[2] for r in req[g.name] if r[0] == 'ball'][0]
             centers = fmt.pairs() if len(g.limbs) == 2 else [(v,) for v in fmt.values]
             fin = [c + (r,) for c in centers for r in nonneg_finite]
@@ -493,7 +496,11 @@ def judge_finite_or_nan(k, ks, fmt, e, ins, outs, values):
     exactly when limb 0 of the value is finite; the output is then the value, limb for limb, and
     otherwise every limb of it is a NaN."""
     src, out, flag = ins[k.value], outs[e['of']], outs[e['flag']][0]
-    if flag != finite(src[0]):
+    # The finish of a fold of maxima: the value stepped up (steps), and a NaN when the mask (if) is
+    # false.
+    for _ in range(e.get('steps', 0)):
+        src = [interp.succ(fmt.f, v) for v in src]
+    if flag != (finite(src[0]) and ins[e['if']][0] if 'if' in e else finite(src[0])):
         return ['finite_or_nan (flag)']
     if flag:
         return [] if out == src else ['finite_or_nan (not the value)']
@@ -534,8 +541,8 @@ def judge(job):
         count += 1
         for statement in bad:
             failures.setdefault(statement, []).append(
-                (' '.join(show(v) for v in values), ' '.join(interp.format_mask(v) if isinstance(v, bool)
-                                                            else show(v) for v in got)))
+                (' '.join(interp.format_mask(v) if isinstance(v, bool) else show(v) for v in values),
+                 ' '.join(interp.format_mask(v) if isinstance(v, bool) else show(v) for v in got)))
     return name, fmt.name, count, {s: (len(v), v[:3]) for s, v in failures.items()}, seen
 
 
@@ -580,8 +587,8 @@ class NonFinite(unittest.TestCase):
         # Full kernels, full Ball kernels, constructors, and the kernels that need no fix-up
         # (ball_neg_k among them): 39 of Milestone 1, and 15 of wave 1 of Milestone 2 (the steps,
         # the directed sums and products, five entry forms, the full scalings by a power of two);
-        # and the two finishes of the folds.
-        self.assertEqual(len(self.names), 56)
+        # and the two finishes of the folds, and the two of the folds of maxima.
+        self.assertEqual(len(self.names), 58)
 
     def test_every_situation_is_reached(self):
         """The cases reach what the statements are about: every full kernel overflows on finite

@@ -389,6 +389,20 @@ Definition next_up (a : R) : R :=
   let r := succ radix2 (FLT_exp emin prec) a in
   r.
 
+(* norm_combine: the larger of two numbers, by a comparison (milestone2.md, norm_upper_k). *)
+Definition norm_combine (m : R) (ok : bool) (n : R) (okn : bool) : R * bool :=
+  let c := Rlt_bool m n in
+  let r := if c then n else m in
+  let okr := andb ok okn in
+  (r, okr).
+
+(* norm_step_1: the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k). *)
+Definition norm_step_1 (m : R) (ok : bool) (x : R) : R * bool :=
+  let a := Rabs x in
+  let e := Req_bool a a in
+  let '(r, okr) := norm_combine m ok a e in
+  (r, okr).
+
 (* radd: one step up from the rounded sum (Milestone 1 listing). *)
 Definition radd (a b : R) : R :=
   let s := rnd (a + b) in
@@ -755,6 +769,11 @@ Definition mul_pow2_2 (x0 x1 c : R) : R * R :=
 Definition mul_pow2_step_2 (x0 x1 c : R) : R * R :=
   let '(z0, z1) := mul_pow2_2 x0 x1 c in
   (z0, z1).
+
+(* norm_step_2: the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k). *)
+Definition norm_step_2 (m : R) (ok : bool) (x0 x1 : R) : R * bool :=
+  let '(r, okr) := norm_step_1 m ok x0 in
+  (r, okr).
 
 (* scale_step_2: mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. *)
 Definition scale_step_2 (x0 x1 a : R) : R * R :=

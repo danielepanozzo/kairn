@@ -313,6 +313,8 @@ class Machine:
         limbs = fd.array_limbs()
         if len(arrays) != len(limbs):
             raise InterpError(f'{name} reads {len(limbs)} limb arrays, not {len(arrays)}')
+        if fd.is_conv:
+            return self._run_conv(fd, f, arrays)
         n = len(arrays[0]) if arrays else 0
         if any(len(a) != n for a in arrays):
             raise InterpError(f'{name}: the limb arrays have different lengths')
@@ -334,12 +336,17 @@ class Machine:
         step = self.kernels[fd.step[0]]
         if fd.is_map:
             return self._run_map(fd, f, order, lanes, elements, list(scalars))
-        zero = [(NUM, False, 0, 0)] * len(fd.state.limbs)
+        # The zero state: every limb +0, every mask true (a fold of maxima has one of each).
+        zero = [True if kind == ir.MASK else (NUM, False, 0, 0) for kind in fd.state_kinds()]
+        at, parts = 0, {}
+        for g in fd.states:
+            parts[g.name] = (at, at + len(g.limbs))
+            at += len(g.limbs)
 
         def apply_step(state, e):
             args = []
             for a in fd.step[1]:
-                args += state if a == fd.state.name else e[a]
+                args += state[parts[a][0]:parts[a][1]] if a in parts else e[a]
             return self._eval(step, f, args, False)
 
         def fold_seq(xs, state):
@@ -407,6 +414,39 @@ class Machine:
             written = [self._eval(check, f, w, False)[:-1] for w in written]
         width = len(fd.write_limbs())
         return [[w[j] for w in written] for j in range(width)] + [mask]
+
+    def _run_conv(self, fd, f, arrays):
+        """A convolution (rules.py, "Convolutions"): `arrays` the limb arrays of x, then of y, each of
+        its own array's length. Coefficient j, for 0 <= j < n_x + n_y - 1 (none when an array is
+        empty), is the final state of the fold of the coefficients in the sequential order on the
+        terms (x_i, y_(j-i)), i from max(0, j - n_y + 1) to min(j, n_x - 1); the mask is the and of
+        the check's flag on each, and when it is false each is replaced by what the check returns."""
+        cf = self.kernels.folds[fd.coefficients]
+        step, check = self.kernels[cf.step[0]], self.kernels[fd.check]
+        gx, gy = fd.arrays
+        xs, ys = arrays[:len(gx.limbs)], arrays[len(gx.limbs):]
+        nx, ny = len(xs[0]), len(ys[0])
+        if any(len(a) != nx for a in xs) or any(len(a) != ny for a in ys):
+            raise InterpError(f'{fd.name}: the limb arrays of one array have different lengths')
+        for a in arrays:
+            for v in a:
+                if isinstance(v, bool) or not member(f, v):
+                    raise InterpError(f'{format_limb(v) if not isinstance(v, bool) else v} is not a number '
+                                      f'of format {f.name}')
+        nz = 0 if nx == 0 or ny == 0 else nx + ny - 1
+        written, mask = [], True
+        for j in range(nz):
+            state = [True if kind == ir.MASK else (NUM, False, 0, 0) for kind in cf.state_kinds()]
+            for i in range(max(0, j - ny + 1), min(j, nx - 1) + 1):
+                e = {gx.name: [a[i] for a in xs], gy.name: [a[j - i] for a in ys], cf.state.name: state}
+                state = self._eval(step, f, [v for a in cf.step[1] for v in e[a]], False)
+            written.append(state)
+            flag = self._eval(check, f, state, False)[-1]
+            mask = mask and flag
+        if not mask:
+            written = [self._eval(check, f, w, False)[:-1] for w in written]
+        width = len(fd.write_limbs())
+        return [[w[k] for w in written] for k in range(width)] + [mask]
 
     def _const(self, f, name):
         if name == 'inf':
@@ -530,6 +570,8 @@ def complete_fold(machine, fd, f, fields):
     """The output fields of a request of a fold: ORDER N, then the limbs of the scalars (a map),
     then for each array of the fold in order, for each of its limbs, the N entries of that limb
     array. A map's result is, for each limb of the array it writes, its N entries, then the mask."""
+    if fd.is_conv:
+        return complete_conv(machine, fd, f, fields)
     if len(fields) < 2:
         raise InterpError(f'expected "{fd.name} FORMAT ORDER N LIMB ... [#TAG]"')
     order, lanes = parse_order(fields[0])
@@ -549,6 +591,32 @@ def complete_fold(machine, fd, f, fields):
         return ' '.join(written + [format_mask(out[-1])])
     kinds = [g.kind for g in fd.results() for _ in g.limbs]
     return ' '.join(format_mask(v) if kind == ir.MASK else format_limb(v) for v, kind in zip(out, kinds))
+
+
+def complete_conv(machine, fd, f, fields):
+    """The output fields of a request of a convolution (architecture.md, "The line protocol"):
+    ORDER (seq), N_X, N_Y, then the N_X entries of each limb array of x and the N_Y entries of each
+    of y; the result, the n_x + n_y - 1 entries (none when a length is 0) of each limb array
+    written, then the mask."""
+    if len(fields) < 3:
+        raise InterpError(f'expected "{fd.name} FORMAT seq N_X N_Y LIMB ... [#TAG]"')
+    order, _ = parse_order(fields[0])
+    if order != 'sequential':
+        raise InterpError(f'{fd.name} has the sequential order only (seq)')
+    for t in fields[1:3]:
+        if not re.fullmatch(r'0|[1-9][0-9]*', t):
+            raise InterpError(f'not a length: {t!r} (a decimal number)')
+    nx, ny = int(fields[1]), int(fields[2])
+    gx, gy = fd.arrays
+    want = nx * len(gx.limbs) + ny * len(gy.limbs)
+    if len(fields) - 3 != want:
+        raise InterpError(f'{fd.name} of lengths {nx} and {ny} takes {want} limbs, not {len(fields) - 3}')
+    values = [parse_limb(t) for t in fields[3:]]
+    arrays = [values[i * nx:(i + 1) * nx] for i in range(len(gx.limbs))]
+    rest = values[nx * len(gx.limbs):]
+    arrays += [rest[i * ny:(i + 1) * ny] for i in range(len(gy.limbs))]
+    out = machine.run_fold(fd.name, f, 'sequential', 0, arrays)
+    return ' '.join([format_limb(v) for a in out[:-1] for v in a] + [format_mask(out[-1])])
 
 
 def serve(machine, infile, outfile, errfile):

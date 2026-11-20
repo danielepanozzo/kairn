@@ -165,6 +165,12 @@ def fold_counts(fd, kernels):
     kernel): F_seq the step once and the check twice, F_lanes the step twice (the lanes and the
     rest) and the check three times, F_packed the packed step and check once, and the scalar step
     once and check twice."""
+    if fd.is_conv:
+        # A convolution: the step of the fold of its coefficients in the loop over the terms, and the
+        # check in the first pass and the second; the sequential order only.
+        step, check = kernels[kernels.folds[fd.coefficients].step[0]], kernels[fd.check]
+        return {'seq': {t: [_part('step', step, 1, kernels, t), _part('check', check, 2, kernels, t)]
+                        for t in LIMB_TYPES}}
     if fd.is_map:
         step, check = kernels[fd.step[0]], kernels[fd.check]
         forms = {'seq': [('step', step, 1), ('check', check, 2)],
