@@ -88,10 +88,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    its claims can express, the theorems about sums and dot products of arrays, which are
    about no single kernel, and the lemmas of the first building blocks of Milestone 2 that are
    not generated statements, among them what is proved of `mul_dir_1`, of the interval
-   kernels with bounds of one limb and of the bounds of two limbs beside their generated
-   statements, those about the two executions of a product, whose plain-product listings are
-   written by hand, and the theorems about the sum of two intervals of two limbs, whose
-   generated statement is not proved yet.
+   kernels with bounds of one limb, of the bounds of two limbs and of the sum of two intervals
+   of two limbs beside their generated statements, and those about the two executions of a
+   product, whose plain-product listings are written by hand.
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
@@ -194,7 +193,11 @@ and the operations overflow as the hardware does, for formats shaped like `binar
   the sum, the difference and the product are proved: the bounds of a sum and of a difference
   are the bounds of the exact range rounded outward, those of a product are within one number
   of `T` of that, and the result is bounded exactly when the exact range is within the largest
-  number of `T`.
+  number of `T`. For bounds of two limbs, the sum is proved: each bound of a bounded result is
+  within $A\lvert v\rvert + B$ of the bound $v$ of the exact range, with the constants of
+  [Bounds of two limbs](../developer/design/milestone2.md#bounds-of-two-limbs), a bound of the
+  exact range that is zero is returned as zero, and the result is bounded when the exact range
+  is within a quarter of the overflow threshold.
 
 These statements and the models of the kernels they are about are generated from the kernel
 descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Three files are

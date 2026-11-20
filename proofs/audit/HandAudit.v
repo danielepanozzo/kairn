@@ -35,8 +35,8 @@
      model (a sum, a difference and a product moved outward by a bound of their own
      error), the same bounds in the values of the kernel and with the constants of the
      closed form by name, and the lemmas they rest on; and for the sum of two intervals
-     with bounds of two limbs in the IEEE model, whose generated statement is not proved
-     yet, its finite cores and its enclosure.
+     with bounds of two limbs in the IEEE model, its finite cores, when they are finite,
+     and its statement with the constants of the closed form by name.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -513,13 +513,24 @@ Print Assumptions interval_mul_1_tight.
 Print Assumptions interval_mul_1_tight_range.
 
 (* The sum of two intervals with bounds of two limbs, in the IEEE model
-   (theories/IeeeInterval2.v): the finite cores add_ball_2_2, add_down_2_2 and
-   add_up_2_2, whose finite result is that of the real model, and interval_add_2:
-   canonical, empty exactly when an operand is, and containing every sum (its generated
-   statement, which also has the tightness and the boundedness, is not proved yet). *)
+   (theories/IeeeInterval2.v): the theorem of its generated statement is listed by
+   proofs/gen/IeeeAudit.v. Here, the lemmas it rests on: the finite cores add_ball_2_2,
+   add_down_2_2 and add_up_2_2, whose finite result is that of the real model; the two
+   constants of the radius from above, and the cores finite when the exact sum is within
+   a quarter of the range; the last lines of the listing; the bounds of the exact range;
+   and the statement itself in two forms written by hand: I1 to I3 alone, and I1 to I5
+   with the constants of the closed form by name. *)
 From Kairn Require Import IeeeInterval2.
 Print Assumptions add_ball_2_2_ieee_core.
 Print Assumptions add_down_2_2_ieee_core.
 Print Assumptions add_up_2_2_ieee_core.
+Print Assumptions E_add_2_le_eighth.
+Print Assumptions H_add_le_tiny.
+Print Assumptions add_ball_2_2_ieee_small.
+Print Assumptions add_down_2_2_ieee_small.
+Print Assumptions add_up_2_2_ieee_small.
 Print Assumptions interval_tail_2.
+Print Assumptions range_add_2_lower.
+Print Assumptions range_add_2_upper.
 Print Assumptions interval_add_2_enclosure.
+Print Assumptions interval_add_2_all.

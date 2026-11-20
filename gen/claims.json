@@ -5154,9 +5154,13 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeInterval2.v",
+        "name": "interval_add_2_correct"
+      },
       "source": {
         "cite": "the directed sums of two limbs, an infinite or empty result selected (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

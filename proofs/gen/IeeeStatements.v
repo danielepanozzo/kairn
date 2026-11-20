@@ -1238,7 +1238,7 @@ Definition eq_2_2_ieee_spec : Prop :=
   let m := IeeeModel.eq_2_2 prec emax x0 x1 y0 y1 in
   m = xeq (xval_2 x0 x1) (xval_2 y0 y1).
 
-(* interval_add_2: the directed sums of two limbs, an infinite or empty result selected (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_add_2: the directed sums of two limbs, an infinite or empty result selected (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_add_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

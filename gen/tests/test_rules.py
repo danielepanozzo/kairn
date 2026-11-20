@@ -1281,9 +1281,9 @@ class TheKernels(unittest.TestCase):
     WAVE_2 = WAVE_2_INTERVALS | WAVE_2_CORES | WAVE_2_BALLS | {'mul_dir_1'}
     # Of these, the kernels whose theorems are about the generated text and pass the audit: the
     # interval kernels of one limb (IeeeInterval1.v), mul_dir_1 in both models (DirectedProd.v,
-    # IeeeDirectedProd.v) and the bounds of two limbs (Directed2.v).
-    WAVE_2_PROVED = {'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1', 'interval_mul_1',
-                     'mul_dir_1'} | WAVE_2_CORES
+    # IeeeDirectedProd.v), the bounds of two limbs (Directed2.v) and the sum of two intervals of two
+    # limbs (IeeeInterval2.v).
+    WAVE_2_PROVED = WAVE_2_INTERVALS | {'mul_dir_1'} | WAVE_2_CORES
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
