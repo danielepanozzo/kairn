@@ -1,0 +1,1017 @@
+{
+ "schema": 1,
+ "date": "2026-11-20",
+ "commit": "009fb78",
+ "machine": {
+  "description": "Apple M3 Max (16 cores), macOS",
+  "cpu": "Apple M3 Max",
+  "os": "macOS",
+  "arch": "arm64",
+  "pinning": "not pinned (no affinity on macOS); QoS user-interactive"
+ },
+ "compiler": "GCC 16.2.0",
+ "flags": "-O3 -DNDEBUG -O3 -ffp-contract=off",
+ "packed_backend": "neon",
+ "fixup_call": 0,
+ "mpfr": "4.2.2",
+ "elements": 256,
+ "reps": 31,
+ "sample_ms": 4,
+ "checks": {
+  "compared": 245,
+  "failed": 0,
+  "full_forms": [
+   {
+    "kernel": "add_2_2_full",
+    "cases": 8192,
+    "nonfinite_operand": 602,
+    "overflow": 203,
+    "finite": 7387,
+    "sel_vs_full": 0,
+    "packed_vs_full": 0,
+    "not_canonical": 0,
+    "against_statement": 0
+   },
+   {
+    "kernel": "mul_2_2_full",
+    "cases": 8192,
+    "nonfinite_operand": 580,
+    "overflow": 1867,
+    "finite": 5745,
+    "sel_vs_full": 0,
+    "packed_vs_full": 0,
+    "not_canonical": 0,
+    "against_statement": 0
+   },
+   {
+    "kernel": "ball_add_2_full",
+    "cases": 8192,
+    "nonfinite_operand": 273,
+    "overflow": 2041,
+    "finite": 5878,
+    "sel_vs_full": 0,
+    "packed_vs_full": 0,
+    "not_canonical": 0,
+    "against_statement": 0
+   },
+   {
+    "kernel": "ball_mul_2_full",
+    "cases": 8192,
+    "nonfinite_operand": 273,
+    "overflow": 3226,
+    "finite": 4693,
+    "sel_vs_full": 0,
+    "packed_vs_full": 0,
+    "not_canonical": 0,
+    "against_statement": 0
+   }
+  ]
+ },
+ "results": [
+  {
+   "name": "scalar/tp/ball_add_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.884,
+   "ns_median": 1.017,
+   "ns_max": 1.614
+  },
+  {
+   "name": "scalar/tp/ball_add_2/full",
+   "lanes": 1,
+   "ns_min": 2.07,
+   "ns_median": 2.39,
+   "ns_max": 3.609
+  },
+  {
+   "name": "scalar/tp/ball_add_2/full_sel",
+   "lanes": 1,
+   "ns_min": 2.318,
+   "ns_median": 2.678,
+   "ns_max": 3.716
+  },
+  {
+   "name": "scalar/tp/ball_mul_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.6582,
+   "ns_median": 0.7756,
+   "ns_max": 1.267
+  },
+  {
+   "name": "scalar/tp/ball_mul_2/plain",
+   "lanes": 1,
+   "ns_min": 0.6507,
+   "ns_median": 0.7952,
+   "ns_max": 1.147
+  },
+  {
+   "name": "scalar/tp/ball_mul_2/full",
+   "lanes": 1,
+   "ns_min": 1.555,
+   "ns_median": 1.856,
+   "ns_max": 3.618
+  },
+  {
+   "name": "scalar/tp/ball_mul_2/full_sel",
+   "lanes": 1,
+   "ns_min": 1.72,
+   "ns_median": 2.071,
+   "ns_max": 4.204
+  },
+  {
+   "name": "scalar/tp/ball_scale_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.4439,
+   "ns_median": 0.591,
+   "ns_max": 0.9995
+  },
+  {
+   "name": "scalar/tp/ball_scale_2/full",
+   "lanes": 1,
+   "ns_min": 1.059,
+   "ns_median": 1.317,
+   "ns_max": 1.882
+  },
+  {
+   "name": "scalar/tp/ball_neg_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.3864,
+   "ns_median": 0.4797,
+   "ns_max": 0.7357
+  },
+  {
+   "name": "scalar/tp/ball_add_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.2414,
+   "ns_median": 0.2868,
+   "ns_max": 0.3784
+  },
+  {
+   "name": "scalar/tp/ball_add_1/full",
+   "lanes": 1,
+   "ns_min": 0.5783,
+   "ns_median": 0.6835,
+   "ns_max": 0.8441
+  },
+  {
+   "name": "scalar/tp/ball_mul_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.3564,
+   "ns_median": 0.445,
+   "ns_max": 0.7179
+  },
+  {
+   "name": "scalar/tp/ball_mul_1/full",
+   "lanes": 1,
+   "ns_min": 0.742,
+   "ns_median": 0.9706,
+   "ns_max": 1.785
+  },
+  {
+   "name": "scalar/tp/ball_scale_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.3007,
+   "ns_median": 0.3697,
+   "ns_max": 0.5371
+  },
+  {
+   "name": "scalar/tp/ball_scale_1/full",
+   "lanes": 1,
+   "ns_min": 0.5771,
+   "ns_median": 0.7014,
+   "ns_max": 1.06
+  },
+  {
+   "name": "scalar/tp/ball_neg_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.2314,
+   "ns_median": 0.2749,
+   "ns_max": 0.3815
+  },
+  {
+   "name": "scalar/sum/ball_add_2/kairn",
+   "lanes": 1,
+   "ns_min": 7.859,
+   "ns_median": 9.08,
+   "ns_max": 12.55
+  },
+  {
+   "name": "scalar/sum/ball_add_2/full",
+   "lanes": 1,
+   "ns_min": 8.016,
+   "ns_median": 8.997,
+   "ns_max": 11.44
+  },
+  {
+   "name": "scalar/sum/ball_add_2/full_sel",
+   "lanes": 1,
+   "ns_min": 8.572,
+   "ns_median": 9.601,
+   "ns_max": 15.96
+  },
+  {
+   "name": "scalar/sum/ball_add_1/kairn",
+   "lanes": 1,
+   "ns_min": 2.503,
+   "ns_median": 2.904,
+   "ns_max": 3.737
+  },
+  {
+   "name": "scalar/sum/ball_add_1/full",
+   "lanes": 1,
+   "ns_min": 2.873,
+   "ns_median": 3.439,
+   "ns_max": 4.011
+  },
+  {
+   "name": "scalar/prod/ball_mul_2/kairn",
+   "lanes": 1,
+   "ns_min": 6.19,
+   "ns_median": 7.123,
+   "ns_max": 9.222
+  },
+  {
+   "name": "scalar/prod/ball_mul_2/plain",
+   "lanes": 1,
+   "ns_min": 6.206,
+   "ns_median": 6.99,
+   "ns_max": 10.98
+  },
+  {
+   "name": "scalar/prod/ball_mul_2/full",
+   "lanes": 1,
+   "ns_min": 6.211,
+   "ns_median": 6.975,
+   "ns_max": 9.492
+  },
+  {
+   "name": "scalar/prod/ball_mul_2/full_sel",
+   "lanes": 1,
+   "ns_min": 6.883,
+   "ns_median": 7.936,
+   "ns_max": 12.29
+  },
+  {
+   "name": "scalar/prod/ball_scale_2/kairn",
+   "lanes": 1,
+   "ns_min": 3.93,
+   "ns_median": 4.355,
+   "ns_max": 6.54
+  },
+  {
+   "name": "scalar/prod/ball_scale_2/full",
+   "lanes": 1,
+   "ns_min": 4.08,
+   "ns_median": 4.533,
+   "ns_max": 8.113
+  },
+  {
+   "name": "scalar/prod/ball_mul_1/kairn",
+   "lanes": 1,
+   "ns_min": 4.924,
+   "ns_median": 5.532,
+   "ns_max": 6.738
+  },
+  {
+   "name": "scalar/prod/ball_mul_1/full",
+   "lanes": 1,
+   "ns_min": 5.224,
+   "ns_median": 6.026,
+   "ns_max": 7.574
+  },
+  {
+   "name": "scalar/prod/ball_scale_1/kairn",
+   "lanes": 1,
+   "ns_min": 2.71,
+   "ns_median": 3.137,
+   "ns_max": 4.79
+  },
+  {
+   "name": "scalar/prod/ball_scale_1/full",
+   "lanes": 1,
+   "ns_min": 3.635,
+   "ns_median": 4.21,
+   "ns_max": 6.204
+  },
+  {
+   "name": "scalar/horner/ball_mul_2+ball_add_2/kairn",
+   "lanes": 1,
+   "ns_min": 14.32,
+   "ns_median": 16.59,
+   "ns_max": 27.31
+  },
+  {
+   "name": "scalar/horner/ball_mul_2+ball_add_2/plain",
+   "lanes": 1,
+   "ns_min": 14.32,
+   "ns_median": 16.52,
+   "ns_max": 20.78
+  },
+  {
+   "name": "scalar/horner/ball_mul_2+ball_add_2/full",
+   "lanes": 1,
+   "ns_min": 14.4,
+   "ns_median": 16.03,
+   "ns_max": 24.09
+  },
+  {
+   "name": "scalar/horner/ball_mul_2+ball_add_2/full_sel",
+   "lanes": 1,
+   "ns_min": 15.63,
+   "ns_median": 17.23,
+   "ns_max": 26.05
+  },
+  {
+   "name": "scalar/horner/ball_mul_1+ball_add_1/kairn",
+   "lanes": 1,
+   "ns_min": 7.728,
+   "ns_median": 8.503,
+   "ns_max": 12.27
+  },
+  {
+   "name": "scalar/horner/ball_mul_1+ball_add_1/full",
+   "lanes": 1,
+   "ns_min": 7.912,
+   "ns_median": 9.268,
+   "ns_max": 11.81
+  },
+  {
+   "name": "packed/tp/ball_add_2/kairn",
+   "lanes": 2,
+   "ns_min": 0.8823,
+   "ns_median": 1.03,
+   "ns_max": 1.451
+  },
+  {
+   "name": "packed/tp/ball_add_2/full",
+   "lanes": 2,
+   "ns_min": 1.35,
+   "ns_median": 1.604,
+   "ns_max": 2.344
+  },
+  {
+   "name": "packed/tp/ball_mul_2/kairn",
+   "lanes": 2,
+   "ns_min": 0.6548,
+   "ns_median": 0.8045,
+   "ns_max": 1.205
+  },
+  {
+   "name": "packed/tp/ball_mul_2/plain",
+   "lanes": 2,
+   "ns_min": 0.6451,
+   "ns_median": 0.7923,
+   "ns_max": 1.242
+  },
+  {
+   "name": "packed/tp/ball_mul_2/full",
+   "lanes": 2,
+   "ns_min": 1.07,
+   "ns_median": 1.301,
+   "ns_max": 2.412
+  },
+  {
+   "name": "packed/tp/ball_scale_2/kairn",
+   "lanes": 2,
+   "ns_min": 0.4525,
+   "ns_median": 0.5396,
+   "ns_max": 0.9278
+  },
+  {
+   "name": "packed/tp/ball_scale_2/full",
+   "lanes": 2,
+   "ns_min": 0.8428,
+   "ns_median": 1.022,
+   "ns_max": 1.392
+  },
+  {
+   "name": "packed/tp/ball_neg_2/kairn",
+   "lanes": 2,
+   "ns_min": 0.4017,
+   "ns_median": 0.4712,
+   "ns_max": 0.698
+  },
+  {
+   "name": "packed/tp/ball_add_1/kairn",
+   "lanes": 2,
+   "ns_min": 0.2514,
+   "ns_median": 0.2906,
+   "ns_max": 0.5572
+  },
+  {
+   "name": "packed/tp/ball_add_1/full",
+   "lanes": 2,
+   "ns_min": 0.4936,
+   "ns_median": 0.6331,
+   "ns_max": 0.9524
+  },
+  {
+   "name": "packed/tp/ball_mul_1/kairn",
+   "lanes": 2,
+   "ns_min": 0.3407,
+   "ns_median": 0.4248,
+   "ns_max": 0.5538
+  },
+  {
+   "name": "packed/tp/ball_mul_1/full",
+   "lanes": 2,
+   "ns_min": 0.6554,
+   "ns_median": 0.8041,
+   "ns_max": 1.143
+  },
+  {
+   "name": "packed/tp/ball_scale_1/kairn",
+   "lanes": 2,
+   "ns_min": 0.3028,
+   "ns_median": 0.3642,
+   "ns_max": 0.592
+  },
+  {
+   "name": "packed/tp/ball_scale_1/full",
+   "lanes": 2,
+   "ns_min": 0.5058,
+   "ns_median": 0.6075,
+   "ns_max": 0.9715
+  },
+  {
+   "name": "packed/tp/ball_neg_1/kairn",
+   "lanes": 2,
+   "ns_min": 0.2366,
+   "ns_median": 0.2816,
+   "ns_max": 0.3805
+  },
+  {
+   "name": "packed/sum/ball_add_2/kairn",
+   "lanes": 2,
+   "ns_min": 7.841,
+   "ns_median": 8.921,
+   "ns_max": 12.54
+  },
+  {
+   "name": "packed/sum/ball_add_2/full",
+   "lanes": 2,
+   "ns_min": 12.77,
+   "ns_median": 14.6,
+   "ns_max": 19.04
+  },
+  {
+   "name": "packed/sum/ball_add_1/kairn",
+   "lanes": 2,
+   "ns_min": 1.898,
+   "ns_median": 2.108,
+   "ns_max": 3.039
+  },
+  {
+   "name": "packed/sum/ball_add_1/full",
+   "lanes": 2,
+   "ns_min": 5.286,
+   "ns_median": 5.911,
+   "ns_max": 7.858
+  },
+  {
+   "name": "packed/prod/ball_mul_2/kairn",
+   "lanes": 2,
+   "ns_min": 5.981,
+   "ns_median": 6.844,
+   "ns_max": 9.268
+  },
+  {
+   "name": "packed/prod/ball_mul_2/plain",
+   "lanes": 2,
+   "ns_min": 5.985,
+   "ns_median": 7.028,
+   "ns_max": 9.624
+  },
+  {
+   "name": "packed/prod/ball_mul_2/full",
+   "lanes": 2,
+   "ns_min": 9.549,
+   "ns_median": 10.93,
+   "ns_max": 14.52
+  },
+  {
+   "name": "packed/prod/ball_scale_2/kairn",
+   "lanes": 2,
+   "ns_min": 4.255,
+   "ns_median": 4.865,
+   "ns_max": 6.288
+  },
+  {
+   "name": "packed/prod/ball_scale_2/full",
+   "lanes": 2,
+   "ns_min": 9.154,
+   "ns_median": 10.46,
+   "ns_max": 14.93
+  },
+  {
+   "name": "packed/prod/ball_mul_1/kairn",
+   "lanes": 2,
+   "ns_min": 4.19,
+   "ns_median": 4.617,
+   "ns_max": 6.118
+  },
+  {
+   "name": "packed/prod/ball_mul_1/full",
+   "lanes": 2,
+   "ns_min": 7.271,
+   "ns_median": 8.04,
+   "ns_max": 10.89
+  },
+  {
+   "name": "packed/prod/ball_scale_1/kairn",
+   "lanes": 2,
+   "ns_min": 2.146,
+   "ns_median": 2.481,
+   "ns_max": 3.446
+  },
+  {
+   "name": "packed/prod/ball_scale_1/full",
+   "lanes": 2,
+   "ns_min": 5.471,
+   "ns_median": 6.44,
+   "ns_max": 10.29
+  },
+  {
+   "name": "packed/horner/ball_mul_2+ball_add_2/kairn",
+   "lanes": 2,
+   "ns_min": 13.98,
+   "ns_median": 16.53,
+   "ns_max": 21.94
+  },
+  {
+   "name": "packed/horner/ball_mul_2+ball_add_2/plain",
+   "lanes": 2,
+   "ns_min": 13.9,
+   "ns_median": 16.3,
+   "ns_max": 20.15
+  },
+  {
+   "name": "packed/horner/ball_mul_2+ball_add_2/full",
+   "lanes": 2,
+   "ns_min": 22.67,
+   "ns_median": 25.17,
+   "ns_max": 34.85
+  },
+  {
+   "name": "packed/horner/ball_mul_1+ball_add_1/kairn",
+   "lanes": 2,
+   "ns_min": 7.197,
+   "ns_median": 8.019,
+   "ns_max": 11.09
+  },
+  {
+   "name": "packed/horner/ball_mul_1+ball_add_1/full",
+   "lanes": 2,
+   "ns_min": 13.04,
+   "ns_median": 14.64,
+   "ns_max": 17.02
+  },
+  {
+   "name": "api/tp/ball_add_2/kairn",
+   "lanes": 1,
+   "ns_min": 1.268,
+   "ns_median": 1.418,
+   "ns_max": 2.057
+  },
+  {
+   "name": "api/tp/ball_add_2/op",
+   "lanes": 1,
+   "ns_min": 2.121,
+   "ns_median": 2.428,
+   "ns_max": 3.128
+  },
+  {
+   "name": "api/tp/ball_mul_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.9851,
+   "ns_median": 1.134,
+   "ns_max": 1.695
+  },
+  {
+   "name": "api/tp/ball_mul_2/op",
+   "lanes": 1,
+   "ns_min": 1.564,
+   "ns_median": 1.848,
+   "ns_max": 2.741
+  },
+  {
+   "name": "api/tp/ball_scale_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.6504,
+   "ns_median": 0.7645,
+   "ns_max": 1.317
+  },
+  {
+   "name": "api/tp/ball_scale_2/op",
+   "lanes": 1,
+   "ns_min": 1.126,
+   "ns_median": 1.288,
+   "ns_max": 1.908
+  },
+  {
+   "name": "api/tp/ball_neg_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.4335,
+   "ns_median": 0.5394,
+   "ns_max": 0.6835
+  },
+  {
+   "name": "api/tp/ball_neg_2/op",
+   "lanes": 1,
+   "ns_min": 0.4337,
+   "ns_median": 0.5321,
+   "ns_max": 0.7844
+  },
+  {
+   "name": "api/tp/ball_add_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.5728,
+   "ns_median": 0.6693,
+   "ns_max": 0.9713
+  },
+  {
+   "name": "api/tp/ball_add_1/op",
+   "lanes": 1,
+   "ns_min": 0.7463,
+   "ns_median": 0.8715,
+   "ns_max": 1.309
+  },
+  {
+   "name": "api/tp/ball_mul_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.5735,
+   "ns_median": 0.6777,
+   "ns_max": 0.8566
+  },
+  {
+   "name": "api/tp/ball_mul_1/op",
+   "lanes": 1,
+   "ns_min": 0.9245,
+   "ns_median": 1.077,
+   "ns_max": 1.694
+  },
+  {
+   "name": "api/tp/ball_scale_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.4345,
+   "ns_median": 0.5028,
+   "ns_max": 0.7542
+  },
+  {
+   "name": "api/tp/ball_scale_1/op",
+   "lanes": 1,
+   "ns_min": 0.7146,
+   "ns_median": 0.8524,
+   "ns_max": 1.716
+  },
+  {
+   "name": "api/tp/ball_neg_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.6351,
+   "ns_median": 0.7434,
+   "ns_max": 1.095
+  },
+  {
+   "name": "api/tp/ball_neg_1/op",
+   "lanes": 1,
+   "ns_min": 0.6362,
+   "ns_median": 0.7372,
+   "ns_max": 1.06
+  },
+  {
+   "name": "api/sum/ball_add_2/kairn",
+   "lanes": 1,
+   "ns_min": 8.032,
+   "ns_median": 9.087,
+   "ns_max": 14.07
+  },
+  {
+   "name": "api/sum/ball_add_2/op",
+   "lanes": 1,
+   "ns_min": 8.003,
+   "ns_median": 8.943,
+   "ns_max": 14.12
+  },
+  {
+   "name": "api/sum/ball_add_1/kairn",
+   "lanes": 1,
+   "ns_min": 2.484,
+   "ns_median": 2.86,
+   "ns_max": 4.269
+  },
+  {
+   "name": "api/sum/ball_add_1/op",
+   "lanes": 1,
+   "ns_min": 2.871,
+   "ns_median": 3.352,
+   "ns_max": 4.599
+  },
+  {
+   "name": "api/prod/ball_mul_2/kairn",
+   "lanes": 1,
+   "ns_min": 6.173,
+   "ns_median": 7.368,
+   "ns_max": 10.11
+  },
+  {
+   "name": "api/prod/ball_mul_2/op",
+   "lanes": 1,
+   "ns_min": 6.229,
+   "ns_median": 7.346,
+   "ns_max": 11.56
+  },
+  {
+   "name": "api/prod/ball_scale_2/kairn",
+   "lanes": 1,
+   "ns_min": 3.922,
+   "ns_median": 4.618,
+   "ns_max": 5.713
+  },
+  {
+   "name": "api/prod/ball_scale_2/op",
+   "lanes": 1,
+   "ns_min": 4.093,
+   "ns_median": 4.652,
+   "ns_max": 6.549
+  },
+  {
+   "name": "api/prod/ball_mul_1/kairn",
+   "lanes": 1,
+   "ns_min": 4.83,
+   "ns_median": 5.469,
+   "ns_max": 7.188
+  },
+  {
+   "name": "api/prod/ball_mul_1/op",
+   "lanes": 1,
+   "ns_min": 5.111,
+   "ns_median": 5.786,
+   "ns_max": 9.111
+  },
+  {
+   "name": "api/prod/ball_scale_1/kairn",
+   "lanes": 1,
+   "ns_min": 2.716,
+   "ns_median": 3.016,
+   "ns_max": 5.947
+  },
+  {
+   "name": "api/prod/ball_scale_1/op",
+   "lanes": 1,
+   "ns_min": 3.637,
+   "ns_median": 4.187,
+   "ns_max": 5.455
+  },
+  {
+   "name": "api/horner/ball_mul_2+ball_add_2/kairn",
+   "lanes": 1,
+   "ns_min": 14.21,
+   "ns_median": 16.54,
+   "ns_max": 22.15
+  },
+  {
+   "name": "api/horner/ball_mul_2+ball_add_2/op",
+   "lanes": 1,
+   "ns_min": 14.41,
+   "ns_median": 16.58,
+   "ns_max": 20.61
+  },
+  {
+   "name": "api/horner/ball_mul_1+ball_add_1/kairn",
+   "lanes": 1,
+   "ns_min": 7.863,
+   "ns_median": 9.074,
+   "ns_max": 11.24
+  },
+  {
+   "name": "api/horner/ball_mul_1+ball_add_1/op",
+   "lanes": 1,
+   "ns_min": 8.169,
+   "ns_median": 9.754,
+   "ns_max": 16.58
+  },
+  {
+   "name": "apif/tp/ball_add_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.5879,
+   "ns_median": 0.6754,
+   "ns_max": 0.8871
+  },
+  {
+   "name": "apif/tp/ball_add_2/op",
+   "lanes": 1,
+   "ns_min": 2.079,
+   "ns_median": 2.421,
+   "ns_max": 3.112
+  },
+  {
+   "name": "apif/tp/ball_mul_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.4672,
+   "ns_median": 0.5432,
+   "ns_max": 0.8396
+  },
+  {
+   "name": "apif/tp/ball_mul_2/op",
+   "lanes": 1,
+   "ns_min": 1.674,
+   "ns_median": 1.936,
+   "ns_max": 3.039
+  },
+  {
+   "name": "apif/tp/ball_scale_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.3207,
+   "ns_median": 0.3871,
+   "ns_max": 0.6215
+  },
+  {
+   "name": "apif/tp/ball_scale_2/op",
+   "lanes": 1,
+   "ns_min": 1.14,
+   "ns_median": 1.358,
+   "ns_max": 2.504
+  },
+  {
+   "name": "apif/tp/ball_neg_2/kairn",
+   "lanes": 1,
+   "ns_min": 0.2296,
+   "ns_median": 0.272,
+   "ns_max": 0.4553
+  },
+  {
+   "name": "apif/tp/ball_neg_2/op",
+   "lanes": 1,
+   "ns_min": 0.2255,
+   "ns_median": 0.2725,
+   "ns_max": 0.3521
+  },
+  {
+   "name": "apif/tp/ball_add_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.2677,
+   "ns_median": 0.3233,
+   "ns_max": 0.3937
+  },
+  {
+   "name": "apif/tp/ball_add_1/op",
+   "lanes": 1,
+   "ns_min": 0.367,
+   "ns_median": 0.4231,
+   "ns_max": 0.6583
+  },
+  {
+   "name": "apif/tp/ball_mul_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.2803,
+   "ns_median": 0.3225,
+   "ns_max": 0.5096
+  },
+  {
+   "name": "apif/tp/ball_mul_1/op",
+   "lanes": 1,
+   "ns_min": 0.4875,
+   "ns_median": 0.5862,
+   "ns_max": 0.8963
+  },
+  {
+   "name": "apif/tp/ball_scale_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.2116,
+   "ns_median": 0.2481,
+   "ns_max": 0.3845
+  },
+  {
+   "name": "apif/tp/ball_scale_1/op",
+   "lanes": 1,
+   "ns_min": 0.3528,
+   "ns_median": 0.4174,
+   "ns_max": 0.5682
+  },
+  {
+   "name": "apif/tp/ball_neg_1/kairn",
+   "lanes": 1,
+   "ns_min": 0.628,
+   "ns_median": 0.7247,
+   "ns_max": 1.038
+  },
+  {
+   "name": "apif/tp/ball_neg_1/op",
+   "lanes": 1,
+   "ns_min": 0.6209,
+   "ns_median": 0.7147,
+   "ns_max": 0.9834
+  },
+  {
+   "name": "apif/sum/ball_add_2/kairn",
+   "lanes": 1,
+   "ns_min": 7.95,
+   "ns_median": 9.029,
+   "ns_max": 14.5
+  },
+  {
+   "name": "apif/sum/ball_add_2/op",
+   "lanes": 1,
+   "ns_min": 8.071,
+   "ns_median": 9.294,
+   "ns_max": 12.27
+  },
+  {
+   "name": "apif/sum/ball_add_1/kairn",
+   "lanes": 1,
+   "ns_min": 2.409,
+   "ns_median": 2.759,
+   "ns_max": 3.734
+  },
+  {
+   "name": "apif/sum/ball_add_1/op",
+   "lanes": 1,
+   "ns_min": 2.818,
+   "ns_median": 3.34,
+   "ns_max": 4.051
+  },
+  {
+   "name": "apif/prod/ball_mul_2/kairn",
+   "lanes": 1,
+   "ns_min": 5.884,
+   "ns_median": 7.075,
+   "ns_max": 9.729
+  },
+  {
+   "name": "apif/prod/ball_mul_2/op",
+   "lanes": 1,
+   "ns_min": 6.108,
+   "ns_median": 7.025,
+   "ns_max": 11.89
+  },
+  {
+   "name": "apif/prod/ball_scale_2/kairn",
+   "lanes": 1,
+   "ns_min": 3.754,
+   "ns_median": 4.225,
+   "ns_max": 4.9
+  },
+  {
+   "name": "apif/prod/ball_scale_2/op",
+   "lanes": 1,
+   "ns_min": 3.836,
+   "ns_median": 4.305,
+   "ns_max": 6.541
+  },
+  {
+   "name": "apif/prod/ball_mul_1/kairn",
+   "lanes": 1,
+   "ns_min": 4.55,
+   "ns_median": 5.201,
+   "ns_max": 6.779
+  },
+  {
+   "name": "apif/prod/ball_mul_1/op",
+   "lanes": 1,
+   "ns_min": 4.824,
+   "ns_median": 5.386,
+   "ns_max": 7.786
+  },
+  {
+   "name": "apif/prod/ball_scale_1/kairn",
+   "lanes": 1,
+   "ns_min": 2.636,
+   "ns_median": 2.922,
+   "ns_max": 4.875
+  },
+  {
+   "name": "apif/prod/ball_scale_1/op",
+   "lanes": 1,
+   "ns_min": 3.522,
+   "ns_median": 3.946,
+   "ns_max": 6.165
+  },
+  {
+   "name": "apif/horner/ball_mul_2+ball_add_2/kairn",
+   "lanes": 1,
+   "ns_min": 14.11,
+   "ns_median": 15.87,
+   "ns_max": 19.36
+  },
+  {
+   "name": "apif/horner/ball_mul_2+ball_add_2/op",
+   "lanes": 1,
+   "ns_min": 14.26,
+   "ns_median": 16.03,
+   "ns_max": 21.31
+  },
+  {
+   "name": "apif/horner/ball_mul_1+ball_add_1/kairn",
+   "lanes": 1,
+   "ns_min": 7.554,
+   "ns_median": 8.771,
+   "ns_max": 10.47
+  },
+  {
+   "name": "apif/horner/ball_mul_1+ball_add_1/op",
+   "lanes": 1,
+   "ns_min": 8.079,
+   "ns_median": 9.153,
+   "ns_max": 13.32
+  }
+ ]
+}

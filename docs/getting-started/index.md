@@ -276,8 +276,8 @@ is:
 | Setting | The operations of `Ball` | When |
 |---|---|---|
 | `KAIRN_ENCLOSURE_CODE_INLINE`, the default | forced inline into each call, as before | the operations are in loops and chains whose speed matters, and the functions are of ordinary size |
-| `KAIRN_ENCLOSURE_CODE_OUTLINED` | ordinary functions that the compiler is asked not to inline: each file compiles each operation once, whatever the number of its calls | a file with many ball operations in a few functions compiles too slowly or uses too much memory, and the build stays as simple as it is |
-| `KAIRN_ENCLOSURE_CODE_EXTERNAL` | declared only; one file of the program defines them | the same, when many files use balls and the program would rather compile the operations once in all; or the outlined setting is not enough |
+| `KAIRN_ENCLOSURE_CODE_OUTLINED` | ordinary functions that the compiler is asked not to inline: each file compiles each operation once, whatever the number of its calls | a file with many ball operations in a few functions compiles too slowly or uses too much memory, and the build stays as simple as it is; with Clang it saves as much as external |
+| `KAIRN_ENCLOSURE_CODE_EXTERNAL` | declared only; one file of the program defines them | the same, when many files use balls and the program would rather compile the operations once in all; with GCC, which compiled an external unit 1.1 to 2.4 times as fast as an outlined one |
 
 ```cpp
 // In every file of the program, or with -DKAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL:
@@ -301,7 +301,13 @@ inside it, and the tests check that every public form gives the same bytes in ea
 few instructions each, stay inline in every setting, and so does everything of `Expansion`. An
 operation that is outlined is still usable wherever it was (none of these is usable in constant
 expressions yet); an external one cannot be evaluated at compile time. A call costs time at run
-time where the operations are short and many.
+time where the operations are short and many. Measured on an Apple M3 Max ([Compile times and other
+costs, Milestone 2](../developer/results/costs-milestone2.md)): a function of 10 000 operations of
+`Ball<double, 2>` compiled 6.8 to 7.1 times faster with Apple clang 21 outlined or external (5
+seconds instead of 33 to 35), 1.5 to 2.1 times with GCC 16 (44 to 132 seconds instead of 74 to
+212), in a third to a fifth of the memory; at run time each operation took 2.4 to 6.2 nanoseconds
+more in a chain of dependent operations (a chain of two-limb sums 1.5 times as long with Apple
+clang, 1.8 times with GCC), and 1.05 to 1.9 times as long in a loop of independent ones.
 
 If the files of a program disagree: a file compiled inline and one compiled outlined each get what
 they asked for, since the outlined operations are functions of a namespace of their own; a file

@@ -1,0 +1,162 @@
+{
+ "schema": 1,
+ "what": "enclosure compile",
+ "date": "2026-11-20",
+ "commit": "009fb78",
+ "machine": {
+  "description": "Apple M3 Max (16 cores), macOS",
+  "cpu": "Apple M3 Max"
+ },
+ "compiler": "g++-16 (Homebrew GCC 16.2.0) 16.2.0",
+ "cxx": "g++-16",
+ "timeout": 3600,
+ "reps": 3,
+ "results": [
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O2",
+   "setting": "calls",
+   "wall": [
+    0.126,
+    0.117,
+    0.117
+   ],
+   "cpu": [
+    0.117,
+    0.11,
+    0.109
+   ],
+   "peak_mb": [
+    36.6,
+    36.6,
+    36.1
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 6320
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O3",
+   "setting": "calls",
+   "wall": [
+    0.135,
+    0.128,
+    0.126
+   ],
+   "cpu": [
+    0.126,
+    0.12,
+    0.119
+   ],
+   "peak_mb": [
+    36.7,
+    36.8,
+    36.3
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 6240
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "calls",
+   "wall": [
+    0.929,
+    0.8,
+    0.797
+   ],
+   "cpu": [
+    0.919,
+    0.792,
+    0.788
+   ],
+   "peak_mb": [
+    117.3,
+    117.3,
+    116.9
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 63616
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "calls",
+   "wall": [
+    1.476,
+    1.363,
+    1.37
+   ],
+   "cpu": [
+    1.467,
+    1.354,
+    1.361
+   ],
+   "peak_mb": [
+    133.4,
+    119.4,
+    119.4
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 62232
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O2",
+   "setting": "calls",
+   "wall": [
+    19.246
+   ],
+   "cpu": [
+    19.234
+   ],
+   "peak_mb": [
+    1235.8
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 917480
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O3",
+   "setting": "calls",
+   "wall": [
+    78.188
+   ],
+   "cpu": [
+    78.171
+   ],
+   "peak_mb": [
+    1015.3
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 759104
+  }
+ ]
+}

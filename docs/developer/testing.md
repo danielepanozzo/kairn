@@ -846,6 +846,31 @@ The 8 calls of constructors that the same change added to the cases of the check
 state of the environment to each `api.checks.*.rounding` and `api.checks.*.flush`, under a second
 on every machine.
 
+**The settings of `KAIRN_ENCLOSURE_CODE`** ([Flag sets](#flag-sets), [The operations of Ball
+outlined and external](#the-operations-of-ball-outlined-and-external)) were measured on 2026-11-20
+on the Mac with Apple clang 21, against the commit before them, back to back, `--parallel 4`; other
+jobs loaded the machine, much more during the second full tier (load average 7 to 8 for the
+first, up to 59 during the second):
+
+| Mac, Apple clang 21 | Before | After |
+|---|---|---|
+| Quick tier | 301 tests, 39.2 s (152.9 s of test time) | 307 tests, 34.1 s (132.6 s) |
+| Full tier | 420 tests, 384 s (996 s of test time) | 436 tests, 552 s (1 269 s) |
+| Build | 7 s | 9 s |
+
+The quick tier gains six tests, 1.8 seconds of test time (`api.link.external.*`, 0.4 to 0.5 s each,
+and `api.reject.enclosure_code.*`), and `objcode.check` compiles three more units in one
+configuration. The full tier's difference is mostly the load: tests that this change does not
+touch took longer too (`full.kairn-gen.test` 115.7 and 213.2 s, `full.kairn-oracle.selftest` 47.8
+and 69.3 s). What the change adds is: two more runners on every form of every kernel in
+`full.api.oracle` (372 runs of a runner on 10 000 lines each, 85 ms per run on that machine, so
+about 63 s of test time; measured 112.7 and 189.3 s in all), two more of ten flag sets in
+`full.api.flags.oracle` (93.1 and 135.8 s), 72 compilations of the enclosure unit in
+`full.objcode.check` (8.1 and 16.6 s for the two tests of the object code), and 16 tests of 3.9 s
+in all (`full.api.checks.outlined.*`, `full.api.checks.external.*`, `full.api.checks.handler.*`,
+`full.api.flags.O3-outlined.*`, `full.api.flags.O3-external.*`): about 100 seconds of test time by
+these estimates, some 25 seconds of wall time with `--parallel 4`.
+
 **Waste removed** before anything left the quick tier, as measured on 16 threads of the Linux
 machine with GCC 13:
 

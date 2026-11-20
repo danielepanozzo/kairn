@@ -199,8 +199,10 @@ python3 bench/rational_cost.py run --cxx clang++ --flags=-mfma
 
 ### The settings of `KAIRN_ENCLOSURE_CODE`
 
-What the operations of `Ball` inline, outlined and external (`include/kairn/config.hpp`) cost at
-compile time and at run time.
+The tools behind [Compile times and other costs, Milestone
+2](../docs/developer/results/costs-milestone2.md): what the operations of `Ball` inline, outlined
+and external (`include/kairn/config.hpp`) cost at compile time and at run time, with the
+measurements in `results/milestone2/costs/`.
 
 `enclosure_costs.py compile` writes translation units with 100, 1 000 and 10 000 operations of
 `Ball<double, 2>` in straight-line code in one function (`enclosure_costs.py source N` prints one: a
@@ -209,7 +211,9 @@ each result stored so that none is dead), compiles each at `-O2` and `-O3` (`/O2
 each setting, three times in rounds (once for the largest), and records the wall time, the
 processor time, the peak memory and the size of the object, as `compile_time.py` measures them;
 and the same for `definitions.cpp`, the one file that defines the operations in the external
-setting. Nothing is linked.
+setting. Nothing is linked. `--settings calls` compiles the same units without Kairn, the
+operations functions declared only on a structure of three `double`s: what the calls themselves
+cost the compiler.
 
 ```sh
 python3 bench/enclosure_costs.py compile --cxx g++-16 --reps 3 --workdir /tmp/enclosure \

@@ -1,0 +1,508 @@
+{
+ "schema": 1,
+ "what": "enclosure compile",
+ "date": "2026-11-20",
+ "commit": "009fb78",
+ "machine": {
+  "description": "Apple M3 Max (16 cores), macOS",
+  "cpu": "Apple M3 Max"
+ },
+ "compiler": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+ "cxx": "c++",
+ "timeout": 3600,
+ "reps": 3,
+ "results": [
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    0.153,
+    0.151,
+    0.152
+   ],
+   "cpu": [
+    0.148,
+    0.147,
+    0.148
+   ],
+   "peak_mb": [
+    63.8,
+    63.6,
+    64.0
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 30048
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O2",
+   "setting": "outlined",
+   "wall": [
+    0.097,
+    0.097,
+    0.097
+   ],
+   "cpu": [
+    0.093,
+    0.094,
+    0.093
+   ],
+   "peak_mb": [
+    55.1,
+    55.1,
+    55.2
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 7232
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    0.084,
+    0.083,
+    0.083
+   ],
+   "cpu": [
+    0.08,
+    0.079,
+    0.079
+   ],
+   "peak_mb": [
+    51.6,
+    51.5,
+    51.5
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 5560
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O3",
+   "setting": "inline",
+   "wall": [
+    0.153,
+    0.154,
+    0.153
+   ],
+   "cpu": [
+    0.15,
+    0.15,
+    0.15
+   ],
+   "peak_mb": [
+    64.1,
+    63.8,
+    63.9
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 30048
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O3",
+   "setting": "outlined",
+   "wall": [
+    0.098,
+    0.098,
+    0.103
+   ],
+   "cpu": [
+    0.095,
+    0.094,
+    0.098
+   ],
+   "peak_mb": [
+    55.4,
+    55.1,
+    55.2
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 7232
+  },
+  {
+   "kind": "unit",
+   "operations": 100,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    0.084,
+    0.084,
+    0.088
+   ],
+   "cpu": [
+    0.08,
+    0.08,
+    0.084
+   ],
+   "peak_mb": [
+    51.5,
+    51.6,
+    51.5
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 5560
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    1.09,
+    1.111,
+    1.091
+   ],
+   "cpu": [
+    1.087,
+    1.106,
+    1.086
+   ],
+   "peak_mb": [
+    181.3,
+    177.8,
+    182.2
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 274912
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "outlined",
+   "wall": [
+    0.307,
+    0.305,
+    0.302
+   ],
+   "cpu": [
+    0.303,
+    0.301,
+    0.298
+   ],
+   "peak_mb": [
+    83.3,
+    83.0,
+    83.6
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 58296
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    0.283,
+    0.286,
+    0.285
+   ],
+   "cpu": [
+    0.279,
+    0.282,
+    0.282
+   ],
+   "peak_mb": [
+    80.7,
+    80.6,
+    80.6
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 56624
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "inline",
+   "wall": [
+    1.094,
+    1.096,
+    1.115
+   ],
+   "cpu": [
+    1.089,
+    1.091,
+    1.111
+   ],
+   "peak_mb": [
+    181.9,
+    182.1,
+    183.4
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 274928
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "outlined",
+   "wall": [
+    0.308,
+    0.309,
+    0.309
+   ],
+   "cpu": [
+    0.304,
+    0.305,
+    0.305
+   ],
+   "peak_mb": [
+    83.5,
+    83.6,
+    83.6
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 58296
+  },
+  {
+   "kind": "unit",
+   "operations": 1000,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    0.291,
+    0.296,
+    0.293
+   ],
+   "cpu": [
+    0.287,
+    0.292,
+    0.289
+   ],
+   "peak_mb": [
+    80.5,
+    80.8,
+    80.6
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 56624
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O2",
+   "setting": "inline",
+   "wall": [
+    33.143
+   ],
+   "cpu": [
+    33.14
+   ],
+   "peak_mb": [
+    1308.8
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 2769648
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O2",
+   "setting": "outlined",
+   "wall": [
+    4.833
+   ],
+   "cpu": [
+    4.827
+   ],
+   "peak_mb": [
+    394.3
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 574032
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    4.847
+   ],
+   "cpu": [
+    4.841
+   ],
+   "peak_mb": [
+    390.6
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 572360
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O3",
+   "setting": "inline",
+   "wall": [
+    35.003
+   ],
+   "cpu": [
+    34.992
+   ],
+   "peak_mb": [
+    1311.9
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 2770104
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O3",
+   "setting": "outlined",
+   "wall": [
+    5.011
+   ],
+   "cpu": [
+    5.005
+   ],
+   "peak_mb": [
+    395.1
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 574032
+  },
+  {
+   "kind": "unit",
+   "operations": 10000,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    4.953
+   ],
+   "cpu": [
+    4.947
+   ],
+   "peak_mb": [
+    390.6
+   ],
+   "status": [
+    0
+   ],
+   "object_bytes": 572360
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O2",
+   "setting": "external",
+   "wall": [
+    0.089,
+    0.088,
+    0.088
+   ],
+   "cpu": [
+    0.085,
+    0.084,
+    0.084
+   ],
+   "peak_mb": [
+    54.3,
+    54.4,
+    54.6
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 7856
+  },
+  {
+   "kind": "definitions",
+   "operations": 0,
+   "config": "O3",
+   "setting": "external",
+   "wall": [
+    0.088,
+    0.088,
+    0.087
+   ],
+   "cpu": [
+    0.084,
+    0.084,
+    0.084
+   ],
+   "peak_mb": [
+    54.4,
+    54.5,
+    54.4
+   ],
+   "status": [
+    0,
+    0,
+    0
+   ],
+   "object_bytes": 7856
+  }
+ ]
+}

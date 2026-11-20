@@ -7,13 +7,15 @@ docs/developer/results/costs-milestone2.md).
       function: a mix of +, -, * and the scaling by a double, in turn, each on two of the eight
       values computed last (chosen by a fixed seed), each result stored, so that none is dead.
   enclosure_costs.py compile --cxx CXX [--msvc] [--sizes 100,1000,10000] [--configs O2,O3]
-                     [--settings inline,outlined,external] [--reps R] [--timeout S]
+                     [--settings inline,outlined,external[,calls]] [--reps R] [--timeout S]
                      --workdir DIR --machine TEXT --commit TEXT --json FILE
       Writes those units into DIR and compiles each (nothing is linked) with each configuration and
       setting, R times in rounds over all of them (once for the units of the largest size), and
       records the wall time, the processor time and the peak memory of each compilation, and the
       size of the object; and the same for bench/definitions.cpp, the translation unit that defines
-      the operations for the external setting, which a program compiles once.
+      the operations for the external setting, which a program compiles once. The setting calls is
+      the same code without Kairn, B a structure of three doubles and the operations functions
+      declared only: what the calls themselves cost the compiler.
   enclosure_costs.py report DIR
       The tables of docs/developer/results/costs-milestone2.md from DIR: compile-*.json, written by
       compile, and run-COMPILER-SETTING-LEVEL.json, written by kairn-bench-LEVEL,
@@ -43,17 +45,28 @@ CONFIGS = {'gnu': {'O2': ['-O2', '-DNDEBUG'], 'O3': ['-O3', '-DNDEBUG']},
            'msvc': {'O2': ['/O2', '/DNDEBUG']}}
 
 
-def source(n, seed=1):
-    """A translation unit with n operations of Ball<double, 2> in one function."""
+def source(n, seed=1, calls=False):
+    """A translation unit with n operations of Ball<double, 2> in one function. With calls, the same
+    code without Kairn: B is a structure of three doubles and the operations are functions declared
+    only, the floor of what any unit of n calls of them costs a compiler."""
     rng = random.Random(seed)
     out = ['// Written by bench/enclosure_costs.py: %d operations of kairn::Ball<double, 2> in straight-line'
            % n,
-           '// code, each result stored.',
-           '#include <kairn/kairn.hpp>',
-           '',
-           'using B = kairn::Ball<double, 2>;',
-           '',
-           'void enclosure_unit(const B* in, const double* s, B* out) {']
+           '// code, each result stored.' + (' The same calls without Kairn: functions declared only.' if calls else '')]
+    if calls:
+        out += ['struct B {',
+                '    double c0, c1, r;',
+                '};',
+                'B operator+(const B&, const B&) noexcept;',
+                'B operator-(const B&, const B&) noexcept;',
+                'B operator*(const B&, const B&) noexcept;',
+                'B operator*(const B&, double) noexcept;']
+    else:
+        out += ['#include <kairn/kairn.hpp>',
+                '',
+                'using B = kairn::Ball<double, 2>;']
+    out += ['',
+            'void enclosure_unit(const B* in, const double* s, B* out) {']
     live = []
     for i in range(8):
         out.append('    const B v%d = in[%d];' % (i, i))
@@ -84,7 +97,7 @@ def cmd_source(args):
 
 def compile_command(args, src, config, setting, obj):
     family = 'msvc' if args.msvc else 'gnu'
-    define = 'KAIRN_ENCLOSURE_CODE=' + SETTINGS[setting]
+    define = 'KAIRN_ENCLOSURE_CODE=' + SETTINGS.get(setting, SETTINGS['inline'])
     include = os.path.join(ROOT, 'include')
     if args.msvc:
         return [args.cxx, '/nologo', '/std:c++20', '/EHsc', '/arch:AVX2', '/I', include, '/D' + define] + \
@@ -104,10 +117,13 @@ def cmd_compile(args):
         path = os.path.join(args.workdir, 'unit-%d.cpp' % n)
         with open(path, 'w') as f:
             f.write(source(n))
+        calls = os.path.join(args.workdir, 'calls-%d.cpp' % n)
+        with open(calls, 'w') as f:
+            f.write(source(n, calls=True))
         for config in configs:
             for setting in settings:
-                units.append(('unit', n, config, setting, path))
-    for config in configs:
+                units.append(('unit', n, config, setting, calls if setting == 'calls' else path))
+    for config in configs if 'external' in settings else []:
         units.append(('definitions', 0, config, 'external', os.path.join(HERE, 'definitions.cpp')))
     results = {}
     largest = max(sizes)
@@ -157,12 +173,13 @@ def cmd_report(args):
         rows = [r for r in d['results'] if r['kind'] == 'unit']
         configs = sorted({r['config'] for r in rows})
         sizes = sorted({r['operations'] for r in rows})
-        print('| Operations | ' + ' | '.join('%s %s' % (c, s) for c in configs for s in SETTINGS) + ' |')
-        print('|---' * (1 + len(configs) * len(SETTINGS)) + '|')
+        present = [s for s in list(SETTINGS) + ['calls'] if any(r['setting'] == s for r in rows)]
+        print('| Operations | ' + ' | '.join('%s %s' % (c, s) for c in configs for s in present) + ' |')
+        print('|---' * (1 + len(configs) * len(present)) + '|')
         for n in sizes:
             cells = []
             for c in configs:
-                for s in SETTINGS:
+                for s in present:
                     r = next((x for x in rows if x['operations'] == n and x['config'] == c and x['setting'] == s), None)
                     if r is None:
                         cells.append('')
@@ -181,16 +198,35 @@ def cmd_report(args):
                          r.get('object_bytes', 0)))
         print('\nObject sizes in bytes: ' + '; '.join(
             '%d %s %s: %d' % (r['operations'], r['config'], r['setting'], r.get('object_bytes', 0)) for r in rows))
-    runs = {}
+    # run-COMPILER-SETTING-LEVEL[-rN].json: the minimum over the runs of each function's minimum,
+    # and the largest ratio of one run's minimum to that, the spread.
+    runs, spread = {}, {}
     for path in sorted(glob.glob(os.path.join(args.dir, 'run-*.json'))):
         stem = os.path.basename(path)[len('run-'):-len('.json')]
-        compiler, setting, level = stem.rsplit('-', 2)
+        parts = stem.split('-')
+        if parts[-1].startswith('r') and parts[-1][1:].isdigit():
+            parts = parts[:-1]
+        compiler, setting, level = '-'.join(parts[:-2]), parts[-2], parts[-1]
         d = json.load(open(path))
-        runs.setdefault((compiler, level), {})[setting] = {r['name']: r for r in d['results']}
-    names = ['api/tp/ball_add_2/op', 'api/tp/ball_mul_2/op', 'api/tp/ball_scale_2/op', 'api/sum/ball_add_2/op',
-             'api/prod/ball_mul_2/op', 'api/prod/ball_scale_2/op', 'api/horner/ball_2/op',
-             'api/tp/ball_add_1/op', 'api/tp/ball_mul_1/op', 'api/sum/ball_add_1/op', 'api/prod/ball_mul_1/op',
-             'api/horner/ball_1/op']
+        by = runs.setdefault((compiler, level), {}).setdefault(setting, {})
+        for r in d['results']:
+            if r['name'] in by:
+                lo = min(by[r['name']]['ns_min'], r['ns_min'])
+                hi = max(by[r['name']]['ns_min'], r['ns_min'])
+                spread[(compiler, level, setting, r['name'])] = hi / lo
+                by[r['name']] = dict(r, ns_min=lo)
+            else:
+                by[r['name']] = dict(r)
+    if spread:
+        worst = max(spread.items(), key=lambda kv: kv[1])
+        print('\nThe largest spread between two runs of one function: %.3f (%s)' % (worst[1], ' '.join(worst[0])))
+    names = ['api/tp/ball_add_2/op', 'api/tp/ball_mul_2/op', 'api/tp/ball_scale_2/op', 'api/tp/ball_neg_2/op',
+             'api/sum/ball_add_2/op', 'api/prod/ball_mul_2/op', 'api/prod/ball_scale_2/op',
+             'api/horner/ball_mul_2+ball_add_2/op',
+             'api/tp/ball_add_1/op', 'api/tp/ball_mul_1/op', 'api/tp/ball_scale_1/op', 'api/sum/ball_add_1/op',
+             'api/prod/ball_mul_1/op', 'api/prod/ball_scale_1/op', 'api/horner/ball_mul_1+ball_add_1/op',
+             # The generated cores called directly, which no setting changes: a control.
+             'api/tp/ball_add_2/kairn', 'api/sum/ball_add_2/kairn', 'api/prod/ball_mul_2/kairn']
     for (compiler, level), by in sorted(runs.items()):
         print('\n%s %s, run time: the minimum time per operation or step in ns, inline, outlined, external\n'
               % (compiler, level))
