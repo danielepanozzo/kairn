@@ -750,6 +750,26 @@ def fold_statement(fd, kernels, order):
             valid.append(f'normalized_{len(limbs)} emin prec {" ".join(_paren(x) for x in limbs)}')
         else:
             valid += [f'fmt emin prec {_paren(x)}' for x in limbs]
+    claims = fold_conclusion(fd, st, el, xs)
+    binders = f'forall (W : nat) ({xs} : {lt}),' if order == 'lanes' else f'forall {xs} : {lt},'
+    call = ' '.join([f'{fd.name}_{suffix}'] + section + (['W'] if order == 'lanes' else []) + [xs])
+    what = {'sequential': 'the sequential order', 'lanes': 'the lane order, for every number of lanes W'}[order]
+    lines = [f'(* {fd.name}, {what}: {fd.source or "no source given"}. Status: {fd.status}. *)',
+             f'Definition {fd.name}_{suffix}_spec : Prop :=',
+             f'  forall emin prec : Z, ({fd.min_precision} <= prec)%Z ->',
+             f'  {binders}',
+             f'  Forall (fun {el} => {" /\\ ".join(valid)}) {xs} ->',
+             f'  let {st} := {call} in',
+             '  ' + ' /\\\n  '.join(claims) + '.']
+    return lines
+
+
+def fold_conclusion(fd, st, el, xs, indent='    '):
+    """The conclusion of a fold's statement over the real model, a list of conjuncts: the final
+    state `st` (a term) is valid and within the bound of fold_error, over the list of elements `xs`
+    (a term), `el` the binder of an element. The IEEE-model statement (ieee.py) says the same of the
+    values of its result."""
+    groups = fold_groups(fd, el)
     n = len(fd.state.limbs)
     result = tuple_parts(st, n)
     covered = any(e['kind'] == 'normalized' for e in fd.ensures)
@@ -765,20 +785,10 @@ def fold_statement(fd, kernels, order):
             power = f'(1 + {_constants(e["term"])}) * {power}'
         bound = f'({power} - 1) * sumabs (map {value} {xs})'
         if expr.parse(e['tau']) != ('int', 0):
-            bound += (f' +\n    (1 + {eps}) ^ {_height(e["abs"], xs)} * (INR (length {xs}) * '
+            bound += (f' +\n{indent}(1 + {eps}) ^ {_height(e["abs"], xs)} * (INR (length {xs}) * '
                       f'{_constants(e["tau"])})')
-        claims.append(f'Rabs ({_sum(result)} - sumR (map {value} {xs})) <=\n    {bound}')
-    binders = f'forall (W : nat) ({xs} : {lt}),' if order == 'lanes' else f'forall {xs} : {lt},'
-    call = ' '.join([f'{fd.name}_{suffix}'] + section + (['W'] if order == 'lanes' else []) + [xs])
-    what = {'sequential': 'the sequential order', 'lanes': 'the lane order, for every number of lanes W'}[order]
-    lines = [f'(* {fd.name}, {what}: {fd.source or "no source given"}. Status: {fd.status}. *)',
-             f'Definition {fd.name}_{suffix}_spec : Prop :=',
-             f'  forall emin prec : Z, ({fd.min_precision} <= prec)%Z ->',
-             f'  {binders}',
-             f'  Forall (fun {el} => {" /\\ ".join(valid)}) {xs} ->',
-             f'  let {st} := {call} in',
-             '  ' + ' /\\\n  '.join(claims) + '.']
-    return lines
+        claims.append(f'Rabs ({_sum(result)} - sumR (map {value} {xs})) <=\n{indent}{bound}')
+    return claims
 
 
 def fold_statements(kernels):

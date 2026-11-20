@@ -21,6 +21,7 @@ import json
 import math
 import os
 import random
+import re
 import subprocess
 import unittest
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
@@ -734,6 +735,56 @@ class Printers(unittest.TestCase):
                       '((3 / 2) * eta emin)).', s)
         self.assertIn('    ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs', s)
         self.assertEqual(s.count('_spec : Prop'), 2 * len(FOLDS))
+
+    def test_the_ieee_model(self):
+        """IeeeFoldModel.v: every fold in both orders, in the shape of FoldModel.v over floats, the
+        finish on the final state; the section of IeeeModel.v."""
+        from kairn_gen import ieee
+        m = ieee.fold_model(self.ks)
+        for name in FOLDS:
+            for d in ('step', 'combine', 'seq', 'lanes'):
+                self.assertIn(f'Definition {name}_{d} ', m)
+        self.assertIn('Definition dot_2_step (s : float * float) (xy : (float * float) * (float * float)) : float * float :=\n'
+                      '  IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst s) (snd s) (fst (fst xy)) '
+                      '(snd (fst xy)) (fst (snd xy)) (snd (snd xy)).', m)
+        self.assertIn('Definition sum_2_seq (xs : list (float * float)) : float * float * bool :=\n'
+                      '  let s := fold_seq sum_2_step (pzero, pzero) xs in\n'
+                      '  IeeeModel.fold_finish_2 prec emax nan_abs nan_const (fst s) (snd s).', m)
+        self.assertIn('Definition sum_1_lanes (W : nat) (xs : list float) : float * bool :=\n'
+                      '  let s := fold_lanes sum_1_step sum_1_combine pzero W xs in\n'
+                      '  IeeeModel.fold_finish_1 prec emax nan_abs nan_const s.', m)
+        section = m.split('Section IeeeFolds.\n', 1)[1]
+        self.assertEqual([x for x in section.splitlines() if x.startswith(('Variable', 'Context'))],
+                         [x for x in ieee.model(self.ks).split('Section IeeeKernels.\n', 1)[1].splitlines()
+                          if x.startswith(('Variable', 'Context'))])
+
+    def test_the_ieee_statements(self):
+        """IeeeFoldStatements.v: per fold and order, the flag; and the lead statement of every step
+        and combination of a fold."""
+        from kairn_gen import ieee
+        s = ieee.fold_statements(self.ks)
+        for name in FOLDS:
+            self.assertIn(f'Definition {name}_seq_ieee_spec : Prop :=', s)
+            self.assertIn(f'Definition {name}_lanes_ieee_spec : Prop :=', s)
+        parts = {self.ks.folds[n].step[0] for n in FOLDS} | {self.ks.folds[n].combine[0] for n in FOLDS}
+        self.assertEqual(set(re.findall(r'^Definition (\w+)_ieee_lead_spec', s, flags=re.M)), parts)
+        self.assertIn('  let \'(t0, t1) := IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 '
+                      'y0 y1 in\n  finite t0 -> finite s0 /\\ finite x0 /\\ finite y0.', s)
+        self.assertIn('  Forall (fun x => canonical_2 (fst x) (snd x)) xs ->\n'
+                      "  let '(r0, r1, flag) := IeeeFoldModel.sum_2_seq prec emax nan_plus nan_minus nan_abs nan_const xs in\n"
+                      '  (flag = true ->\n'
+                      '   Forall (fun x => finite (fst x) /\\ finite (snd x)) xs /\\\n'
+                      '   finite r0 /\\ finite r1 /\\\n'
+                      '   let vs := map (fun x => (val (fst x), val (snd x))) xs in\n'
+                      '   let s := FoldModel.sum_2_seq (ieee_emin prec emax) prec tie_even vs in\n'
+                      '   (val r0, val r1) = s /\\\n'
+                      '   normalized_2 (ieee_emin prec emax) prec (fst s) (snd s) /\\\n', s)
+        self.assertIn('  (flag = false -> nan r0 /\\ nan r1).', s)
+        # One limb: no requirement on an element, any value of the format.
+        self.assertIn('  forall xs : list (binary_float prec emax),\n'
+                      "  let '(r, flag) := IeeeFoldModel.sum_1_seq prec emax nan_plus nan_abs nan_const xs in\n", s)
+        # The bound is the real model's, with emin = ieee_emin prec emax.
+        self.assertNotRegex(s.split('Open Scope R_scope.', 1)[1], r'\bemin\b')
 
     def test_the_audit_of_a_proved_fold(self):
         import copy

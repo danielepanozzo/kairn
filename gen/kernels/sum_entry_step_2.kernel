@@ -15,6 +15,7 @@ source:        add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from 
 license:       algorithm: published; proof: MIT
 status:        unverified
 entry:         yes
+ieee:          bridge spec
 
 g0       = guard(x0)
 g1       = guard(x1)

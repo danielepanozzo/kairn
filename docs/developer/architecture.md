@@ -498,6 +498,22 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   Flocq's terms, and `IeeeVocabulary.v`, the definitions the statements are written with.
   `IeeeAudit.v` is to them what `Audit.v` is to the real model, for the kernels of the extended
   domain.
+- `IeeeFoldModel.v` and `IeeeFoldStatements.v`: the folds in the IEEE model, in the section of
+  `IeeeModel.v`. `F_step` and `F_combine` apply the IEEE models of the step and the combination
+  to the limbs of tuples of floats, as `FoldModel.v` does over the reals; `F_seq xs` is the finish
+  on `fold_seq F_step zero xs` and `F_lanes W xs` the finish on `fold_lanes`, the zero state every
+  limb $+0$. `F_seq_ieee_spec` and `F_lanes_ieee_spec` (the second for every `W`) say, for every
+  precision from the fold's minimum, every `emax` and every choice of NaN, of every list of
+  elements (`canonical_2` of an array of two limbs, any value for one limb): when the flag is
+  true, every limb of every element and of the result is finite, the values of the result are
+  those of the real model of the fold on the values of the elements (`FoldModel.F_O` at
+  `ieee_emin prec emax`), and they are valid and within the bound of the fold's claims; when it is
+  false, every limb of the result is a NaN ([When something is not
+  finite](design/milestone2.md#sum-dot-axpy-convolution)). With them, for each kernel that is the
+  step or the combination of a fold, `K_ieee_lead_spec`: if limb 0 of its result is finite, so is
+  limb 0 of each operand, the non-finite cone of the rules as a statement. The steps of the folds
+  have the bridge of their cores (`ieee: bridge`, and `spec` for those of two limbs), which the
+  proof of a fold uses step by step.
 - `Audit.v`: for every kernel not marked `unverified`, a silent definition
   `<kernel>_audit : <kernel>_spec := <kernel>_correct`, which fails to compile unless the theorem
   has the generated statement as its type, followed by `Print Assumptions <kernel>_correct`. The

@@ -50,6 +50,8 @@ theories/IeeeMul22.v
 theories/IeeeMore.v
 theories/IeeeSub.v
 gen/IeeeStatements.v
+gen/IeeeFoldModel.v
+gen/IeeeFoldStatements.v
 theories/IeeeOps.v
 theories/IeeeRange.v
 theories/IeeeFull.v
