@@ -74,4 +74,5 @@ theories/IeeeBallFinite.v
 theories/IeeeBallPow2.v
 theories/IeeeTwoExecutions.v
 theories/IeeeFoldFinish.v
+theories/IeeeSteps.v
 theories/IeeeFolds.v

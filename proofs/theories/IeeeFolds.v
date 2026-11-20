@@ -1,30 +1,35 @@
 (* The folds in the IEEE model: the flag, and what a finite result means.
 
-   The generator does not print the IEEE model of a fold yet. This file writes it by hand,
-   for every fold of proofs/gen/FoldModel.v and both orders, from the generated IEEE
-   models of the kernels (proofs/gen/IeeeModel.v) and the two orders of Folds.v, in the
-   shape of the real model:
+   The generator prints the IEEE model of every fold (proofs/gen/IeeeFoldModel.v), from
+   the generated IEEE models of the kernels (proofs/gen/IeeeModel.v) and the two orders
+   of Folds.v, in the shape of the real model:
 
-       F_step_ieee, F_combine_ieee      the IEEE models of the step and the combination,
-                                        applied to the limbs of tuples
-       F_seq_ieee xs                    finish (fold_seq F_step_ieee zero xs)
-       F_lanes_ieee W xs                finish (fold_lanes F_step_ieee F_combine_ieee zero W xs)
+       F_step, F_combine      the IEEE models of the step and the combination, applied
+                              to the limbs of tuples
+       F_seq xs               finish (fold_seq F_step zero xs)
+       F_lanes W xs           finish (fold_lanes F_step F_combine zero W xs)
 
-   with the zero state +0 in every limb and the finish fold_finish_1 or fold_finish_2. It
-   proves of each the statement of docs/developer/design/milestone2.md, "When something
-   is not finite" (F_seq_ieee_correct, F_lanes_ieee_correct). For every list of elements
-   (any values of the format, infinities and NaN included, for one limb; canonical pairs
-   for two limbs), with (r, flag) the result:
+   with the zero state +0 in every limb and the finish fold_finish_1 or fold_finish_2;
+   and its statements (proofs/gen/IeeeFoldStatements.v), those of
+   docs/developer/design/milestone2.md, "When something is not finite". This file proves
+   them, about those definitions: F_seq_ieee_correct : F_seq_ieee_spec and
+   F_lanes_ieee_correct : F_lanes_ieee_spec for every fold F, at the end of the file.
+   For every list of elements (any values of the format, infinities and NaN included, for
+   one limb; canonical pairs for two limbs), with (r, flag) the result:
 
    - if flag is true: every element is finite; the result is finite; its value is the
      result of the real model of the fold (proofs/gen/FoldModel.v) on the values of the
      elements; hence it is valid and within the bound of the real-model statement
-     (FoldSums.v), which is restated here for those values; and, in the sequential
-     order, the state after every element was finite;
+     (FoldSums.v), which is restated for those values;
    - if flag is false: every limb of the result is a NaN.
    The flag is true exactly when the leading limb of the final state is finite
    (IeeeFoldFinish.v). So an element that is not finite, or an overflow anywhere in the
    loop, gives the flag false: there is no finite wrong result.
+
+   Inside the section the same is proved with a little more (F_seq_ieee_facts,
+   F_lanes_ieee_facts): the elements of two limbs are normalized pairs, and, in the
+   sequential order, the state after every element was finite, and normalized for two
+   limbs. The generated statements follow by forgetting it.
 
    How. FoldTransfer.v reduces the statement to two facts about one application of the
    step (and of the combination), which this file proves for the kernels of the folds:
@@ -34,7 +39,9 @@
                add_fast_2_2 and mul_2_2 is a sum of sums, or of a product, of the
                leading limbs, and an IEEE addition or fused operation with an operand
                that is not finite is not finite (add_finite_inv, fma_finite_inv of
-               IeeeBridge.v). Until now this was the generator's syntactic cone check;
+               IeeeBridge.v). It is the generator's syntactic cone check as a theorem,
+               and the generated statements K_ieee_lead_spec say it of every step and
+               combination (K_ieee_lead, at the end of the file);
        live    from a finite, valid state and a canonical element, a finite leading limb
                of the result gives: the element is finite, every limb of the result is
                finite, the result is valid, and its values are those of the real model
@@ -46,18 +53,22 @@
    sum_entry_step_2, sum_fast_entry_step_2, dot_step_2 (two limbs). An entry step guards
    its element first: the guard keeps the finiteness and the value of a limb (guard_finite,
    guard_val of IeeeOps.v), and in the real model it returns a number of the format
-   unchanged (guard_real_any).
+   unchanged (guard_real_any). The bridges of the steps as kernels, with the finiteness
+   of every value they compute, are in IeeeSteps.v.
 
    Vocabulary of this file, for a pair x of limbs: vals2 x, the pair of the values;
    lead2 x, the leading limb is finite; good2 x, both limbs are finite and the pair is
-   normalized; can2 x, the pair is canonical (canonical_2 of IeeeVocabulary.v). *)
+   normalized; can2 x, the pair is canonical (canonical_2 of IeeeVocabulary.v). In the
+   section, F_step_ieee, F_combine_ieee, F_seq_ieee and F_lanes_ieee are notations for
+   the generated definitions with the NaN choices of the section, not definitions. *)
 From Stdlib Require Import Reals ZArith List Lia Lra.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements IeeeStatements FoldModel FoldStatements.
 From Kairn Require Import Format Guard Add22 AddFast22 Mul22 Program IeeeBridge IeeeVocabulary
   IeeeOps IeeeAdd22 IeeeMul22 IeeeMore Folds FoldTransfer Summation FoldSums IeeeFoldFinish.
 From Kairn Require IeeeOperations.
-From Kairn.Gen Require IeeeModel.
+From Kairn.Gen Require IeeeModel IeeeFoldModel.
+From Kairn.Gen Require Import IeeeFoldStatements.
 Import ListNotations.
 Open Scope R_scope.
 
@@ -112,6 +123,57 @@ Variable nan_const : nan_of.
 Notation emin := (ieee_emin prec emax).
 Notation pzero := (IeeeOperations.pzero prec emax).
 Notation guard := (IeeeOperations.guard prec emax nan_plus).
+
+(* The generated models of the folds (proofs/gen/IeeeFoldModel.v), with the NaN choices of
+   this section: notations, so that every statement below is about the generated
+   definitions. *)
+Notation sum_1_step_ieee := (IeeeFoldModel.sum_1_step prec emax nan_plus).
+Notation sum_1_combine_ieee := (IeeeFoldModel.sum_1_combine prec emax nan_plus).
+Notation sum_1_seq_ieee := (IeeeFoldModel.sum_1_seq prec emax nan_plus nan_abs nan_const).
+Notation sum_1_lanes_ieee := (IeeeFoldModel.sum_1_lanes prec emax nan_plus nan_abs nan_const).
+Notation sum_1_entry_step_ieee := (IeeeFoldModel.sum_1_entry_step prec emax nan_plus).
+Notation sum_1_entry_combine_ieee := (IeeeFoldModel.sum_1_entry_combine prec emax nan_plus).
+Notation sum_1_entry_seq_ieee :=
+  (IeeeFoldModel.sum_1_entry_seq prec emax nan_plus nan_abs nan_const).
+Notation sum_1_entry_lanes_ieee :=
+  (IeeeFoldModel.sum_1_entry_lanes prec emax nan_plus nan_abs nan_const).
+Notation dot_1_step_ieee := (IeeeFoldModel.dot_1_step prec emax nan_fma).
+Notation dot_1_combine_ieee := (IeeeFoldModel.dot_1_combine prec emax nan_plus).
+Notation dot_1_seq_ieee := (IeeeFoldModel.dot_1_seq prec emax nan_abs nan_fma nan_const).
+Notation dot_1_lanes_ieee :=
+  (IeeeFoldModel.dot_1_lanes prec emax nan_plus nan_abs nan_fma nan_const).
+Notation sum_2_step_ieee := (IeeeFoldModel.sum_2_step prec emax nan_plus nan_minus).
+Notation sum_2_combine_ieee := (IeeeFoldModel.sum_2_combine prec emax nan_plus nan_minus).
+Notation sum_2_seq_ieee := (IeeeFoldModel.sum_2_seq prec emax nan_plus nan_minus nan_abs nan_const).
+Notation sum_2_lanes_ieee :=
+  (IeeeFoldModel.sum_2_lanes prec emax nan_plus nan_minus nan_abs nan_const).
+Notation sum_2_entry_step_ieee := (IeeeFoldModel.sum_2_entry_step prec emax nan_plus nan_minus).
+Notation sum_2_entry_combine_ieee :=
+  (IeeeFoldModel.sum_2_entry_combine prec emax nan_plus nan_minus).
+Notation sum_2_entry_seq_ieee :=
+  (IeeeFoldModel.sum_2_entry_seq prec emax nan_plus nan_minus nan_abs nan_const).
+Notation sum_2_entry_lanes_ieee :=
+  (IeeeFoldModel.sum_2_entry_lanes prec emax nan_plus nan_minus nan_abs nan_const).
+Notation sum_fast_2_step_ieee := (IeeeFoldModel.sum_fast_2_step prec emax nan_plus nan_minus).
+Notation sum_fast_2_combine_ieee := (IeeeFoldModel.sum_fast_2_combine prec emax nan_plus nan_minus).
+Notation sum_fast_2_seq_ieee :=
+  (IeeeFoldModel.sum_fast_2_seq prec emax nan_plus nan_minus nan_abs nan_const).
+Notation sum_fast_2_lanes_ieee :=
+  (IeeeFoldModel.sum_fast_2_lanes prec emax nan_plus nan_minus nan_abs nan_const).
+Notation sum_fast_2_entry_step_ieee :=
+  (IeeeFoldModel.sum_fast_2_entry_step prec emax nan_plus nan_minus).
+Notation sum_fast_2_entry_combine_ieee :=
+  (IeeeFoldModel.sum_fast_2_entry_combine prec emax nan_plus nan_minus).
+Notation sum_fast_2_entry_seq_ieee :=
+  (IeeeFoldModel.sum_fast_2_entry_seq prec emax nan_plus nan_minus nan_abs nan_const).
+Notation sum_fast_2_entry_lanes_ieee :=
+  (IeeeFoldModel.sum_fast_2_entry_lanes prec emax nan_plus nan_minus nan_abs nan_const).
+Notation dot_2_step_ieee := (IeeeFoldModel.dot_2_step prec emax nan_plus nan_minus nan_opp nan_fma).
+Notation dot_2_combine_ieee := (IeeeFoldModel.dot_2_combine prec emax nan_plus nan_minus).
+Notation dot_2_seq_ieee :=
+  (IeeeFoldModel.dot_2_seq prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const).
+Notation dot_2_lanes_ieee :=
+  (IeeeFoldModel.dot_2_lanes prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const).
 
 (* A value of the IEEE format is a number of the real format. *)
 Lemma val_fmt : forall x : float, fmt emin prec (val x).
@@ -603,9 +665,6 @@ exact (f_equal (fun p : R * R => addr (val (fst s)) (val (snd s)) (fst p) (snd p
 Qed.
 
 (* sum_2 and sum_2_entry: add_2_2. *)
-Definition sum_2_step_ieee (s x : float * float) : float * float :=
-  IeeeModel.add_2_2 prec emax nan_plus nan_minus (fst s) (snd s) (fst x) (snd x).
-
 Lemma sum_2_step_ieee_dead :
   forall s e : float * float, lead2 (sum_2_step_ieee s e) -> lead2 s.
 Proof. intros s e H. exact (proj1 (add22i_lead s e H)). Qed.
@@ -620,13 +679,10 @@ intros Hp.
 exact (stored_step_live add22i (add_2_2 emin prec tie_even) add22i_lead (add22i_live Hp)).
 Qed.
 
-Definition sum_2_entry_step_ieee (s x : float * float) : float * float :=
-  IeeeModel.sum_entry_step_2 prec emax nan_plus nan_minus (fst s) (snd s) (fst x) (snd x).
-
 Lemma sum_2_entry_step_ieee_eq :
   forall s x : float * float, sum_2_entry_step_ieee s x = add22i s (guard2i x).
 Proof.
-intros s x. unfold sum_2_entry_step_ieee, IeeeModel.sum_entry_step_2, add22i, guard2i.
+intros s x. unfold IeeeFoldModel.sum_2_entry_step, IeeeModel.sum_entry_step_2, add22i, guard2i.
 cbv zeta. cbn [fst snd]. apply pair_eta.
 Qed.
 
@@ -652,9 +708,6 @@ exact (sum_entry_step_2_real emin prec (val (fst s)) (val (snd s)) (val (fst e))
 Qed.
 
 (* sum_fast_2 and sum_fast_2_entry: add_fast_2_2. *)
-Definition sum_fast_2_step_ieee (s x : float * float) : float * float :=
-  IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus (fst s) (snd s) (fst x) (snd x).
-
 Lemma sum_fast_2_step_ieee_dead :
   forall s e : float * float, lead2 (sum_fast_2_step_ieee s e) -> lead2 s.
 Proof. intros s e H. exact (proj1 (addfast22i_lead s e H)). Qed.
@@ -671,14 +724,11 @@ exact (stored_step_live addfast22i (add_fast_2_2 emin prec tie_even) addfast22i_
          (addfast22i_live Hp)).
 Qed.
 
-Definition sum_fast_2_entry_step_ieee (s x : float * float) : float * float :=
-  IeeeModel.sum_fast_entry_step_2 prec emax nan_plus nan_minus (fst s) (snd s) (fst x) (snd x).
-
 Lemma sum_fast_2_entry_step_ieee_eq :
   forall s x : float * float, sum_fast_2_entry_step_ieee s x = addfast22i s (guard2i x).
 Proof.
 intros s x.
-unfold sum_fast_2_entry_step_ieee, IeeeModel.sum_fast_entry_step_2, addfast22i, guard2i.
+unfold IeeeFoldModel.sum_fast_2_entry_step, IeeeModel.sum_fast_entry_step_2, addfast22i, guard2i.
 cbv zeta. cbn [fst snd]. apply pair_eta.
 Qed.
 
@@ -722,16 +772,11 @@ intros xs H. induction H as [|x r [[_ [_ Nx]] [_ [_ Ny]]] _ IH]; cbn [map]; cons
 - exact IH.
 Qed.
 
-Definition dot_2_step_ieee (s : float * float) (xy : (float * float) * (float * float))
-  : float * float :=
-  IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst s) (snd s)
-    (fst (fst xy)) (snd (fst xy)) (fst (snd xy)) (snd (snd xy)).
-
 Lemma dot_2_step_ieee_eq :
   forall (s : float * float) (xy : (float * float) * (float * float)),
   dot_2_step_ieee s xy = add22i s (mul22i (fst xy) (snd xy)).
 Proof.
-intros s xy. unfold dot_2_step_ieee, IeeeModel.dot_step_2, add22i, mul22i.
+intros s xy. unfold IeeeFoldModel.dot_2_step, IeeeModel.dot_step_2, add22i, mul22i.
 destruct (IeeeModel.mul_2_2 prec emax nan_plus nan_minus nan_opp nan_fma (fst (fst xy))
             (snd (fst xy)) (fst (snd xy)) (snd (snd xy))) as [p0 p1].
 cbn [fst snd]. apply pair_eta.
@@ -768,18 +813,7 @@ Qed.
 (** * The folds of one limb, with their finish *)
 
 (* sum_1. *)
-Definition sum_1_step_ieee (s : float) (x : float) : float :=
-  IeeeModel.add_1_1 prec emax nan_plus s x.
-
-Definition sum_1_combine_ieee (a b : float) : float := IeeeModel.add_1_1 prec emax nan_plus a b.
-
-Definition sum_1_seq_ieee (xs : list (float)) : float * bool :=
-  finish1 (fold_seq sum_1_step_ieee pzero xs).
-
-Definition sum_1_lanes_ieee (W : nat) (xs : list (float)) : float * bool :=
-  finish1 (fold_lanes sum_1_step_ieee sum_1_combine_ieee pzero W xs).
-
-Theorem sum_1_seq_ieee_correct :
+Theorem sum_1_seq_ieee_facts :
   (1 <= prec)%Z ->
   forall xs : list (float),
   let '(r, flag) := sum_1_seq_ieee xs in
@@ -794,7 +828,8 @@ Theorem sum_1_seq_ieee_correct :
      ((1 + u prec / (1 + u prec)) ^ (length vs - 1) - 1) * sumabs (map (fun x => x) vs)) /\
   (flag = false -> nan r).
 Proof.
-intros Hp xs. unfold sum_1_seq_ieee.
+intros Hp xs.
+change (sum_1_seq_ieee xs) with (finish1 (fold_seq sum_1_step_ieee pzero xs)).
 generalize (seq_1 _ _ sum_1_step_ieee (FoldModel.sum_1_step emin prec tie_even)
               (@val prec emax) (@finite prec emax) add_1_1_step_dead add_1_1_step_live xs).
 destruct (finish1 (fold_seq sum_1_step_ieee pzero xs)) as [r flag].
@@ -805,7 +840,7 @@ cbv zeta. split. exact V.
 exact (sum_1_seq_correct emin prec Hp (map val xs) (vals_fmt xs)).
 Qed.
 
-Theorem sum_1_lanes_ieee_correct :
+Theorem sum_1_lanes_ieee_facts :
   (1 <= prec)%Z ->
   forall (W : nat) (xs : list (float)),
   let '(r, flag) := sum_1_lanes_ieee W xs in
@@ -819,7 +854,9 @@ Theorem sum_1_lanes_ieee_correct :
      ((1 + u prec / (1 + u prec)) ^ (length vs - 1) - 1) * sumabs (map (fun x => x) vs)) /\
   (flag = false -> nan r).
 Proof.
-intros Hp W xs. unfold sum_1_lanes_ieee.
+intros Hp W xs.
+change (sum_1_lanes_ieee W xs)
+  with (finish1 (fold_lanes sum_1_step_ieee sum_1_combine_ieee pzero W xs)).
 generalize (lanes_1 _ _ sum_1_step_ieee (FoldModel.sum_1_step emin prec tie_even)
               sum_1_combine_ieee (FoldModel.sum_1_combine emin prec tie_even)
               (@val prec emax) (@finite prec emax) add_1_1_step_dead add_1_1_step_live
@@ -833,18 +870,7 @@ exact (sum_1_lanes_correct emin prec Hp W (map val xs) (vals_fmt xs)).
 Qed.
 
 (* sum_1_entry. *)
-Definition sum_1_entry_step_ieee (s : float) (x : float) : float :=
-  IeeeModel.sum_entry_step_1 prec emax nan_plus s x.
-
-Definition sum_1_entry_combine_ieee (a b : float) : float := IeeeModel.add_1_1 prec emax nan_plus a b.
-
-Definition sum_1_entry_seq_ieee (xs : list (float)) : float * bool :=
-  finish1 (fold_seq sum_1_entry_step_ieee pzero xs).
-
-Definition sum_1_entry_lanes_ieee (W : nat) (xs : list (float)) : float * bool :=
-  finish1 (fold_lanes sum_1_entry_step_ieee sum_1_entry_combine_ieee pzero W xs).
-
-Theorem sum_1_entry_seq_ieee_correct :
+Theorem sum_1_entry_seq_ieee_facts :
   (1 <= prec)%Z ->
   forall xs : list (float),
   let '(r, flag) := sum_1_entry_seq_ieee xs in
@@ -859,7 +885,8 @@ Theorem sum_1_entry_seq_ieee_correct :
      ((1 + u prec / (1 + u prec)) ^ (length vs - 1) - 1) * sumabs (map (fun x => x) vs)) /\
   (flag = false -> nan r).
 Proof.
-intros Hp xs. unfold sum_1_entry_seq_ieee.
+intros Hp xs.
+change (sum_1_entry_seq_ieee xs) with (finish1 (fold_seq sum_1_entry_step_ieee pzero xs)).
 generalize (seq_1 _ _ sum_1_entry_step_ieee (FoldModel.sum_1_entry_step emin prec tie_even)
               (@val prec emax) (@finite prec emax) sum_entry_step_1_step_dead sum_entry_step_1_step_live xs).
 destruct (finish1 (fold_seq sum_1_entry_step_ieee pzero xs)) as [r flag].
@@ -870,7 +897,7 @@ cbv zeta. split. exact V.
 exact (sum_1_entry_seq_correct emin prec Hp (map val xs) (vals_fmt xs)).
 Qed.
 
-Theorem sum_1_entry_lanes_ieee_correct :
+Theorem sum_1_entry_lanes_ieee_facts :
   (1 <= prec)%Z ->
   forall (W : nat) (xs : list (float)),
   let '(r, flag) := sum_1_entry_lanes_ieee W xs in
@@ -884,7 +911,9 @@ Theorem sum_1_entry_lanes_ieee_correct :
      ((1 + u prec / (1 + u prec)) ^ (length vs - 1) - 1) * sumabs (map (fun x => x) vs)) /\
   (flag = false -> nan r).
 Proof.
-intros Hp W xs. unfold sum_1_entry_lanes_ieee.
+intros Hp W xs.
+change (sum_1_entry_lanes_ieee W xs)
+  with (finish1 (fold_lanes sum_1_entry_step_ieee sum_1_entry_combine_ieee pzero W xs)).
 generalize (lanes_1 _ _ sum_1_entry_step_ieee (FoldModel.sum_1_entry_step emin prec tie_even)
               sum_1_entry_combine_ieee (FoldModel.sum_1_entry_combine emin prec tie_even)
               (@val prec emax) (@finite prec emax) sum_entry_step_1_step_dead sum_entry_step_1_step_live
@@ -898,18 +927,7 @@ exact (sum_1_entry_lanes_correct emin prec Hp W (map val xs) (vals_fmt xs)).
 Qed.
 
 (* dot_1. *)
-Definition dot_1_step_ieee (s : float) (xy : float * float) : float :=
-  IeeeModel.dot_step_1 prec emax nan_fma s (fst xy) (snd xy).
-
-Definition dot_1_combine_ieee (a b : float) : float := IeeeModel.add_1_1 prec emax nan_plus a b.
-
-Definition dot_1_seq_ieee (xs : list (float * float)) : float * bool :=
-  finish1 (fold_seq dot_1_step_ieee pzero xs).
-
-Definition dot_1_lanes_ieee (W : nat) (xs : list (float * float)) : float * bool :=
-  finish1 (fold_lanes dot_1_step_ieee dot_1_combine_ieee pzero W xs).
-
-Theorem dot_1_seq_ieee_correct :
+Theorem dot_1_seq_ieee_facts :
   (1 <= prec)%Z ->
   forall xs : list (float * float),
   let '(r, flag) := dot_1_seq_ieee xs in
@@ -925,7 +943,8 @@ Theorem dot_1_seq_ieee_correct :
      (1 + u prec / (1 + u prec)) ^ (length vs - 1) * (INR (length vs) * (eta emin / 2))) /\
   (flag = false -> nan r).
 Proof.
-intros Hp xs. unfold dot_1_seq_ieee.
+intros Hp xs.
+change (dot_1_seq_ieee xs) with (finish1 (fold_seq dot_1_step_ieee pzero xs)).
 generalize (seq_1 _ _ dot_1_step_ieee (FoldModel.dot_1_step emin prec tie_even)
               vals11 fin11 dot_step_1_step_dead dot_step_1_step_live xs).
 destruct (finish1 (fold_seq dot_1_step_ieee pzero xs)) as [r flag].
@@ -936,7 +955,7 @@ cbv zeta. split. exact V.
 exact (dot_1_seq_correct emin prec Hp (map vals11 xs) (vals11_fmt xs)).
 Qed.
 
-Theorem dot_1_lanes_ieee_correct :
+Theorem dot_1_lanes_ieee_facts :
   (1 <= prec)%Z ->
   forall (W : nat) (xs : list (float * float)),
   let '(r, flag) := dot_1_lanes_ieee W xs in
@@ -951,7 +970,9 @@ Theorem dot_1_lanes_ieee_correct :
      (1 + u prec / (1 + u prec)) ^ (length vs - 1) * (INR (length vs) * (eta emin / 2))) /\
   (flag = false -> nan r).
 Proof.
-intros Hp W xs. unfold dot_1_lanes_ieee.
+intros Hp W xs.
+change (dot_1_lanes_ieee W xs)
+  with (finish1 (fold_lanes dot_1_step_ieee dot_1_combine_ieee pzero W xs)).
 generalize (lanes_1 _ _ dot_1_step_ieee (FoldModel.dot_1_step emin prec tie_even)
               dot_1_combine_ieee (FoldModel.dot_1_combine emin prec tie_even)
               vals11 fin11 dot_step_1_step_dead dot_step_1_step_live
@@ -967,16 +988,7 @@ Qed.
 (** * The folds of two limbs, with their finish *)
 
 (* sum_2. *)
-Definition sum_2_seq_ieee (xs : list (float * float)) : float * float * bool :=
-  finish2 (fold_seq sum_2_step_ieee zero2 xs).
-
-Definition sum_2_combine_ieee (a b : float * float) : float * float :=
-  IeeeModel.add_2_2 prec emax nan_plus nan_minus (fst a) (snd a) (fst b) (snd b).
-
-Definition sum_2_lanes_ieee (W : nat) (xs : list (float * float)) : float * float * bool :=
-  finish2 (fold_lanes sum_2_step_ieee sum_2_combine_ieee zero2 W xs).
-
-Theorem sum_2_seq_ieee_correct :
+Theorem sum_2_seq_ieee_facts :
   (3 <= prec)%Z ->
   forall xs : list (float * float), Forall can2 xs ->
   let '(r0, r1, flag) := sum_2_seq_ieee xs in
@@ -992,7 +1004,8 @@ Theorem sum_2_seq_ieee_correct :
      sumabs (map (fun x => fst x + snd x) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 Proof.
-intros Hp xs Hx. unfold sum_2_seq_ieee.
+intros Hp xs Hx.
+change (sum_2_seq_ieee xs) with (finish2 (fold_seq sum_2_step_ieee zero2 xs)).
 generalize (seq_2 _ _ sum_2_step_ieee (FoldModel.sum_2_step emin prec tie_even)
               vals2 can2 good2
               sum_2_step_ieee_dead (sum_2_step_ieee_live Hp) xs Hx).
@@ -1004,7 +1017,7 @@ cbv zeta. split. exact V.
 exact (sum_2_seq_correct emin prec Hp (map vals2 xs) (good2_normalized xs Fx)).
 Qed.
 
-Theorem sum_2_lanes_ieee_correct :
+Theorem sum_2_lanes_ieee_facts :
   (3 <= prec)%Z ->
   forall (W : nat) (xs : list (float * float)), Forall can2 xs ->
   let '(r0, r1, flag) := sum_2_lanes_ieee W xs in
@@ -1019,7 +1032,9 @@ Theorem sum_2_lanes_ieee_correct :
      sumabs (map (fun x => fst x + snd x) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 Proof.
-intros Hp W xs Hx. unfold sum_2_lanes_ieee.
+intros Hp W xs Hx.
+change (sum_2_lanes_ieee W xs)
+  with (finish2 (fold_lanes sum_2_step_ieee sum_2_combine_ieee zero2 W xs)).
 generalize (lanes_2 _ _ sum_2_step_ieee (FoldModel.sum_2_step emin prec tie_even)
               sum_2_combine_ieee (FoldModel.sum_2_combine emin prec tie_even)
               vals2 can2 good2
@@ -1033,16 +1048,7 @@ exact (sum_2_lanes_correct emin prec Hp W (map vals2 xs) (good2_normalized xs Fx
 Qed.
 
 (* sum_2_entry. *)
-Definition sum_2_entry_seq_ieee (xs : list (float * float)) : float * float * bool :=
-  finish2 (fold_seq sum_2_entry_step_ieee zero2 xs).
-
-Definition sum_2_entry_combine_ieee (a b : float * float) : float * float :=
-  IeeeModel.add_2_2 prec emax nan_plus nan_minus (fst a) (snd a) (fst b) (snd b).
-
-Definition sum_2_entry_lanes_ieee (W : nat) (xs : list (float * float)) : float * float * bool :=
-  finish2 (fold_lanes sum_2_entry_step_ieee sum_2_entry_combine_ieee zero2 W xs).
-
-Theorem sum_2_entry_seq_ieee_correct :
+Theorem sum_2_entry_seq_ieee_facts :
   (3 <= prec)%Z ->
   forall xs : list (float * float), Forall can2 xs ->
   let '(r0, r1, flag) := sum_2_entry_seq_ieee xs in
@@ -1058,7 +1064,8 @@ Theorem sum_2_entry_seq_ieee_correct :
      sumabs (map (fun x => fst x + snd x) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 Proof.
-intros Hp xs Hx. unfold sum_2_entry_seq_ieee.
+intros Hp xs Hx.
+change (sum_2_entry_seq_ieee xs) with (finish2 (fold_seq sum_2_entry_step_ieee zero2 xs)).
 generalize (seq_2 _ _ sum_2_entry_step_ieee (FoldModel.sum_2_entry_step emin prec tie_even)
               vals2 can2 good2
               sum_2_entry_step_ieee_dead (sum_2_entry_step_ieee_live Hp) xs Hx).
@@ -1070,7 +1077,7 @@ cbv zeta. split. exact V.
 exact (sum_2_entry_seq_correct emin prec Hp (map vals2 xs) (good2_normalized xs Fx)).
 Qed.
 
-Theorem sum_2_entry_lanes_ieee_correct :
+Theorem sum_2_entry_lanes_ieee_facts :
   (3 <= prec)%Z ->
   forall (W : nat) (xs : list (float * float)), Forall can2 xs ->
   let '(r0, r1, flag) := sum_2_entry_lanes_ieee W xs in
@@ -1085,7 +1092,9 @@ Theorem sum_2_entry_lanes_ieee_correct :
      sumabs (map (fun x => fst x + snd x) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 Proof.
-intros Hp W xs Hx. unfold sum_2_entry_lanes_ieee.
+intros Hp W xs Hx.
+change (sum_2_entry_lanes_ieee W xs)
+  with (finish2 (fold_lanes sum_2_entry_step_ieee sum_2_entry_combine_ieee zero2 W xs)).
 generalize (lanes_2 _ _ sum_2_entry_step_ieee (FoldModel.sum_2_entry_step emin prec tie_even)
               sum_2_entry_combine_ieee (FoldModel.sum_2_entry_combine emin prec tie_even)
               vals2 can2 good2
@@ -1099,16 +1108,7 @@ exact (sum_2_entry_lanes_correct emin prec Hp W (map vals2 xs) (good2_normalized
 Qed.
 
 (* sum_fast_2. *)
-Definition sum_fast_2_seq_ieee (xs : list (float * float)) : float * float * bool :=
-  finish2 (fold_seq sum_fast_2_step_ieee zero2 xs).
-
-Definition sum_fast_2_combine_ieee (a b : float * float) : float * float :=
-  IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus (fst a) (snd a) (fst b) (snd b).
-
-Definition sum_fast_2_lanes_ieee (W : nat) (xs : list (float * float)) : float * float * bool :=
-  finish2 (fold_lanes sum_fast_2_step_ieee sum_fast_2_combine_ieee zero2 W xs).
-
-Theorem sum_fast_2_seq_ieee_correct :
+Theorem sum_fast_2_seq_ieee_facts :
   (2 <= prec)%Z ->
   forall xs : list (float * float), Forall can2 xs ->
   let '(r0, r1, flag) := sum_fast_2_seq_ieee xs in
@@ -1124,7 +1124,8 @@ Theorem sum_fast_2_seq_ieee_correct :
      sumabs (map (fun x => fst x + snd x) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 Proof.
-intros Hp xs Hx. unfold sum_fast_2_seq_ieee.
+intros Hp xs Hx.
+change (sum_fast_2_seq_ieee xs) with (finish2 (fold_seq sum_fast_2_step_ieee zero2 xs)).
 generalize (seq_2 _ _ sum_fast_2_step_ieee (FoldModel.sum_fast_2_step emin prec tie_even)
               vals2 can2 good2
               sum_fast_2_step_ieee_dead (sum_fast_2_step_ieee_live Hp) xs Hx).
@@ -1136,7 +1137,7 @@ cbv zeta. split. exact V.
 exact (sum_fast_2_seq_correct emin prec Hp (map vals2 xs) (good2_normalized xs Fx)).
 Qed.
 
-Theorem sum_fast_2_lanes_ieee_correct :
+Theorem sum_fast_2_lanes_ieee_facts :
   (2 <= prec)%Z ->
   forall (W : nat) (xs : list (float * float)), Forall can2 xs ->
   let '(r0, r1, flag) := sum_fast_2_lanes_ieee W xs in
@@ -1151,7 +1152,9 @@ Theorem sum_fast_2_lanes_ieee_correct :
      sumabs (map (fun x => fst x + snd x) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 Proof.
-intros Hp W xs Hx. unfold sum_fast_2_lanes_ieee.
+intros Hp W xs Hx.
+change (sum_fast_2_lanes_ieee W xs)
+  with (finish2 (fold_lanes sum_fast_2_step_ieee sum_fast_2_combine_ieee zero2 W xs)).
 generalize (lanes_2 _ _ sum_fast_2_step_ieee (FoldModel.sum_fast_2_step emin prec tie_even)
               sum_fast_2_combine_ieee (FoldModel.sum_fast_2_combine emin prec tie_even)
               vals2 can2 good2
@@ -1165,16 +1168,7 @@ exact (sum_fast_2_lanes_correct emin prec Hp W (map vals2 xs) (good2_normalized 
 Qed.
 
 (* sum_fast_2_entry. *)
-Definition sum_fast_2_entry_seq_ieee (xs : list (float * float)) : float * float * bool :=
-  finish2 (fold_seq sum_fast_2_entry_step_ieee zero2 xs).
-
-Definition sum_fast_2_entry_combine_ieee (a b : float * float) : float * float :=
-  IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus (fst a) (snd a) (fst b) (snd b).
-
-Definition sum_fast_2_entry_lanes_ieee (W : nat) (xs : list (float * float)) : float * float * bool :=
-  finish2 (fold_lanes sum_fast_2_entry_step_ieee sum_fast_2_entry_combine_ieee zero2 W xs).
-
-Theorem sum_fast_2_entry_seq_ieee_correct :
+Theorem sum_fast_2_entry_seq_ieee_facts :
   (2 <= prec)%Z ->
   forall xs : list (float * float), Forall can2 xs ->
   let '(r0, r1, flag) := sum_fast_2_entry_seq_ieee xs in
@@ -1190,7 +1184,8 @@ Theorem sum_fast_2_entry_seq_ieee_correct :
      sumabs (map (fun x => fst x + snd x) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 Proof.
-intros Hp xs Hx. unfold sum_fast_2_entry_seq_ieee.
+intros Hp xs Hx.
+change (sum_fast_2_entry_seq_ieee xs) with (finish2 (fold_seq sum_fast_2_entry_step_ieee zero2 xs)).
 generalize (seq_2 _ _ sum_fast_2_entry_step_ieee (FoldModel.sum_fast_2_entry_step emin prec tie_even)
               vals2 can2 good2
               sum_fast_2_entry_step_ieee_dead (sum_fast_2_entry_step_ieee_live Hp) xs Hx).
@@ -1202,7 +1197,7 @@ cbv zeta. split. exact V.
 exact (sum_fast_2_entry_seq_correct emin prec Hp (map vals2 xs) (good2_normalized xs Fx)).
 Qed.
 
-Theorem sum_fast_2_entry_lanes_ieee_correct :
+Theorem sum_fast_2_entry_lanes_ieee_facts :
   (2 <= prec)%Z ->
   forall (W : nat) (xs : list (float * float)), Forall can2 xs ->
   let '(r0, r1, flag) := sum_fast_2_entry_lanes_ieee W xs in
@@ -1217,7 +1212,9 @@ Theorem sum_fast_2_entry_lanes_ieee_correct :
      sumabs (map (fun x => fst x + snd x) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 Proof.
-intros Hp W xs Hx. unfold sum_fast_2_entry_lanes_ieee.
+intros Hp W xs Hx.
+change (sum_fast_2_entry_lanes_ieee W xs)
+  with (finish2 (fold_lanes sum_fast_2_entry_step_ieee sum_fast_2_entry_combine_ieee zero2 W xs)).
 generalize (lanes_2 _ _ sum_fast_2_entry_step_ieee (FoldModel.sum_fast_2_entry_step emin prec tie_even)
               sum_fast_2_entry_combine_ieee (FoldModel.sum_fast_2_entry_combine emin prec tie_even)
               vals2 can2 good2
@@ -1231,16 +1228,7 @@ exact (sum_fast_2_entry_lanes_correct emin prec Hp W (map vals2 xs) (good2_norma
 Qed.
 
 (* dot_2. *)
-Definition dot_2_seq_ieee (xs : list ((float * float) * (float * float))) : float * float * bool :=
-  finish2 (fold_seq dot_2_step_ieee zero2 xs).
-
-Definition dot_2_combine_ieee (a b : float * float) : float * float :=
-  IeeeModel.add_2_2 prec emax nan_plus nan_minus (fst a) (snd a) (fst b) (snd b).
-
-Definition dot_2_lanes_ieee (W : nat) (xs : list ((float * float) * (float * float))) : float * float * bool :=
-  finish2 (fold_lanes dot_2_step_ieee dot_2_combine_ieee zero2 W xs).
-
-Theorem dot_2_seq_ieee_correct :
+Theorem dot_2_seq_ieee_facts :
   (4 <= prec)%Z ->
   forall xs : list ((float * float) * (float * float)), Forall can22 xs ->
   let '(r0, r1, flag) := dot_2_seq_ieee xs in
@@ -1261,7 +1249,8 @@ Theorem dot_2_seq_ieee_correct :
      (INR (length vs) * (3 / 2 * eta emin))) /\
   (flag = false -> nan r0 /\ nan r1).
 Proof.
-intros Hp xs Hx. unfold dot_2_seq_ieee.
+intros Hp xs Hx.
+change (dot_2_seq_ieee xs) with (finish2 (fold_seq dot_2_step_ieee zero2 xs)).
 generalize (seq_2 _ _ dot_2_step_ieee (FoldModel.dot_2_step emin prec tie_even)
               vals22 can22 good22
               dot_2_step_ieee_dead (dot_2_step_ieee_live Hp) xs Hx).
@@ -1273,7 +1262,7 @@ cbv zeta. split. exact V.
 exact (dot_2_seq_correct emin prec Hp (map vals22 xs) (good22_normalized xs Fx)).
 Qed.
 
-Theorem dot_2_lanes_ieee_correct :
+Theorem dot_2_lanes_ieee_facts :
   (4 <= prec)%Z ->
   forall (W : nat) (xs : list ((float * float) * (float * float))), Forall can22 xs ->
   let '(r0, r1, flag) := dot_2_lanes_ieee W xs in
@@ -1293,7 +1282,9 @@ Theorem dot_2_lanes_ieee_correct :
      (INR (length vs) * (3 / 2 * eta emin))) /\
   (flag = false -> nan r0 /\ nan r1).
 Proof.
-intros Hp W xs Hx. unfold dot_2_lanes_ieee.
+intros Hp W xs Hx.
+change (dot_2_lanes_ieee W xs)
+  with (finish2 (fold_lanes dot_2_step_ieee dot_2_combine_ieee zero2 W xs)).
 assert (Hp3 : (3 <= prec)%Z) by lia.
 generalize (lanes_2 _ _ dot_2_step_ieee (FoldModel.dot_2_step emin prec tie_even)
               dot_2_combine_ieee (FoldModel.dot_2_combine emin prec tie_even)
@@ -1307,4 +1298,302 @@ cbv zeta. split. exact V.
 exact (dot_2_lanes_correct emin prec Hp W (map vals22 xs) (good22_normalized xs Fx)).
 Qed.
 
+(** * The leading limb of the result of a step of two limbs, and those of its operands *)
+
+Lemma sum_2_entry_step_ieee_lead :
+  forall s e : float * float, lead2 (sum_2_entry_step_ieee s e) -> lead2 s /\ lead2 e.
+Proof.
+intros s e. rewrite sum_2_entry_step_ieee_eq. intros H.
+destruct (add22i_lead _ _ H) as [Ls Lg]. split. exact Ls. exact (guard2i_lead e Lg).
+Qed.
+
+Lemma sum_fast_2_entry_step_ieee_lead :
+  forall s e : float * float, lead2 (sum_fast_2_entry_step_ieee s e) -> lead2 s /\ lead2 e.
+Proof.
+intros s e. rewrite sum_fast_2_entry_step_ieee_eq. intros H.
+destruct (addfast22i_lead _ _ H) as [Ls Lg]. split. exact Ls. exact (guard2i_lead e Lg).
+Qed.
+
+Lemma dot_2_step_ieee_lead :
+  forall (s : float * float) (xy : (float * float) * (float * float)),
+  lead2 (dot_2_step_ieee s xy) -> lead2 s /\ lead2 (fst xy) /\ lead2 (snd xy).
+Proof.
+intros s xy. rewrite dot_2_step_ieee_eq. intros H.
+destruct (add22i_lead _ _ H) as [Ls Lp]. destruct (mul22i_lead _ _ Lp) as [Lx Ly].
+split. exact Ls. split; assumption.
+Qed.
+
 End IeeeFolds.
+
+(** * The generated statements: the leading limb of each step and combination *)
+
+(* proofs/gen/IeeeFoldStatements.v, K_ieee_lead_spec: if the leading limb of the result of
+   K is finite, so is the leading limb of each operand. *)
+Theorem add_1_1_ieee_lead : add_1_1_ieee_lead_spec.
+Proof.
+intros prec emax Hg Hl nan_plus a b s H. exact (add_1_1_dead prec emax nan_plus a b H).
+Qed.
+
+Theorem dot_step_1_ieee_lead : dot_step_1_ieee_lead_spec.
+Proof.
+intros prec emax Hg Hl nan_fma s x y t H. exact (dot_step_1_dead prec emax nan_fma s x y H).
+Qed.
+
+Theorem sum_entry_step_1_ieee_lead : sum_entry_step_1_ieee_lead_spec.
+Proof.
+intros prec emax Hg Hl nan_plus s x t H. exact (sum_entry_step_1_dead prec emax nan_plus s x H).
+Qed.
+
+Theorem add_2_2_ieee_lead : add_2_2_ieee_lead_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus x0 x1 y0 y1.
+generalize (add22i_lead prec emax nan_plus nan_minus (x0, x1) (y0, y1)).
+unfold add22i, lead2. cbn [fst snd].
+destruct (IeeeModel.add_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1) as [z0 z1].
+cbn [fst]. intros H. exact H.
+Qed.
+
+Theorem add_fast_2_2_ieee_lead : add_fast_2_2_ieee_lead_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus x0 x1 y0 y1.
+generalize (addfast22i_lead prec emax nan_plus nan_minus (x0, x1) (y0, y1)).
+unfold addfast22i, lead2. cbn [fst snd].
+destruct (IeeeModel.add_fast_2_2 prec emax nan_plus nan_minus x0 x1 y0 y1) as [z0 z1].
+cbn [fst]. intros H. exact H.
+Qed.
+
+Theorem dot_step_2_ieee_lead : dot_step_2_ieee_lead_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1.
+generalize (dot_2_step_ieee_lead prec emax nan_plus nan_minus nan_opp nan_fma (s0, s1)
+              ((x0, x1), (y0, y1))).
+unfold IeeeFoldModel.dot_2_step, lead2. cbn [fst snd].
+destruct (IeeeModel.dot_step_2 prec emax nan_plus nan_minus nan_opp nan_fma s0 s1 x0 x1 y0 y1)
+  as [t0 t1].
+cbn [fst]. intros H. exact H.
+Qed.
+
+Theorem sum_entry_step_2_ieee_lead : sum_entry_step_2_ieee_lead_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus s0 s1 x0 x1.
+generalize (sum_2_entry_step_ieee_lead prec emax nan_plus nan_minus (s0, s1) (x0, x1)).
+unfold IeeeFoldModel.sum_2_entry_step, lead2. cbn [fst snd].
+destruct (IeeeModel.sum_entry_step_2 prec emax nan_plus nan_minus s0 s1 x0 x1) as [t0 t1].
+cbn [fst]. intros H. exact H.
+Qed.
+
+Theorem sum_fast_entry_step_2_ieee_lead : sum_fast_entry_step_2_ieee_lead_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus s0 s1 x0 x1.
+generalize (sum_fast_2_entry_step_ieee_lead prec emax nan_plus nan_minus (s0, s1) (x0, x1)).
+unfold IeeeFoldModel.sum_fast_2_entry_step, lead2. cbn [fst snd].
+destruct (IeeeModel.sum_fast_entry_step_2 prec emax nan_plus nan_minus s0 s1 x0 x1) as [t0 t1].
+cbn [fst]. intros H. exact H.
+Qed.
+
+(** * The generated statements: the folds *)
+
+(* proofs/gen/IeeeFoldStatements.v, F_seq_ieee_spec and F_lanes_ieee_spec: each is the
+   theorem of the section without what the generated statement does not say. *)
+
+Theorem sum_1_seq_ieee_correct : sum_1_seq_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_abs nan_const Hp xs.
+generalize (sum_1_seq_ieee_facts prec emax nan_plus nan_abs nan_const Hp xs).
+destruct (IeeeFoldModel.sum_1_seq prec emax nan_plus nan_abs nan_const xs) as [r flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [Fr [_ H]]].
+split. exact G. split. exact Fr. exact H.
+Qed.
+
+Theorem sum_1_lanes_ieee_correct : sum_1_lanes_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_abs nan_const Hp W xs.
+generalize (sum_1_lanes_ieee_facts prec emax nan_plus nan_abs nan_const Hp W xs).
+destruct (IeeeFoldModel.sum_1_lanes prec emax nan_plus nan_abs nan_const W xs) as [r flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [Fr H]].
+split. exact G. split. exact Fr. exact H.
+Qed.
+
+Theorem sum_1_entry_seq_ieee_correct : sum_1_entry_seq_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_abs nan_const Hp xs.
+generalize (sum_1_entry_seq_ieee_facts prec emax nan_plus nan_abs nan_const Hp xs).
+destruct (IeeeFoldModel.sum_1_entry_seq prec emax nan_plus nan_abs nan_const xs) as [r flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [Fr [_ H]]].
+split. exact G. split. exact Fr. exact H.
+Qed.
+
+Theorem sum_1_entry_lanes_ieee_correct : sum_1_entry_lanes_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_abs nan_const Hp W xs.
+generalize (sum_1_entry_lanes_ieee_facts prec emax nan_plus nan_abs nan_const Hp W xs).
+destruct (IeeeFoldModel.sum_1_entry_lanes prec emax nan_plus nan_abs nan_const W xs) as [r flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [Fr H]].
+split. exact G. split. exact Fr. exact H.
+Qed.
+
+Theorem dot_1_seq_ieee_correct : dot_1_seq_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_abs nan_fma nan_const Hp xs.
+generalize (dot_1_seq_ieee_facts prec emax nan_abs nan_fma nan_const Hp xs).
+destruct (IeeeFoldModel.dot_1_seq prec emax nan_abs nan_fma nan_const xs) as [r flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [Fr [_ H]]].
+split. exact G. split. exact Fr. exact H.
+Qed.
+
+Theorem dot_1_lanes_ieee_correct : dot_1_lanes_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_abs nan_fma nan_const Hp W xs.
+generalize (dot_1_lanes_ieee_facts prec emax nan_plus nan_abs nan_fma nan_const Hp W xs).
+destruct (IeeeFoldModel.dot_1_lanes prec emax nan_plus nan_abs nan_fma nan_const W xs) as [r flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [Fr H]].
+split. exact G. split. exact Fr. exact H.
+Qed.
+
+Theorem sum_2_seq_ieee_correct : sum_2_seq_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_abs nan_const Hp xs Hx.
+generalize (sum_2_seq_ieee_facts prec emax nan_plus nan_minus nan_abs nan_const
+              Hp xs Hx).
+destruct (IeeeFoldModel.sum_2_seq prec emax nan_plus nan_minus nan_abs nan_const xs)
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [F0 [F1 [_ H]]]].
+split.
+{ eapply Forall_impl; [|exact G]. intros x [A [B _]]. split; assumption. }
+split. exact F0. split. exact F1. exact H.
+Qed.
+
+Theorem sum_2_lanes_ieee_correct : sum_2_lanes_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_abs nan_const Hp W xs Hx.
+generalize (sum_2_lanes_ieee_facts prec emax nan_plus nan_minus nan_abs nan_const
+              Hp W xs Hx).
+destruct (IeeeFoldModel.sum_2_lanes prec emax nan_plus nan_minus nan_abs nan_const W xs)
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [F0 [F1 H]]].
+split.
+{ eapply Forall_impl; [|exact G]. intros x [A [B _]]. split; assumption. }
+split. exact F0. split. exact F1. exact H.
+Qed.
+
+Theorem sum_2_entry_seq_ieee_correct : sum_2_entry_seq_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_abs nan_const Hp xs Hx.
+generalize (sum_2_entry_seq_ieee_facts prec emax nan_plus nan_minus nan_abs nan_const
+              Hp xs Hx).
+destruct (IeeeFoldModel.sum_2_entry_seq prec emax nan_plus nan_minus nan_abs nan_const xs)
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [F0 [F1 [_ H]]]].
+split.
+{ eapply Forall_impl; [|exact G]. intros x [A [B _]]. split; assumption. }
+split. exact F0. split. exact F1. exact H.
+Qed.
+
+Theorem sum_2_entry_lanes_ieee_correct : sum_2_entry_lanes_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_abs nan_const Hp W xs Hx.
+generalize (sum_2_entry_lanes_ieee_facts prec emax nan_plus nan_minus nan_abs nan_const
+              Hp W xs Hx).
+destruct (IeeeFoldModel.sum_2_entry_lanes prec emax nan_plus nan_minus nan_abs nan_const W xs)
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [F0 [F1 H]]].
+split.
+{ eapply Forall_impl; [|exact G]. intros x [A [B _]]. split; assumption. }
+split. exact F0. split. exact F1. exact H.
+Qed.
+
+Theorem sum_fast_2_seq_ieee_correct : sum_fast_2_seq_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_abs nan_const Hp xs Hx.
+generalize (sum_fast_2_seq_ieee_facts prec emax nan_plus nan_minus nan_abs nan_const
+              Hp xs Hx).
+destruct (IeeeFoldModel.sum_fast_2_seq prec emax nan_plus nan_minus nan_abs nan_const xs)
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [F0 [F1 [_ H]]]].
+split.
+{ eapply Forall_impl; [|exact G]. intros x [A [B _]]. split; assumption. }
+split. exact F0. split. exact F1. exact H.
+Qed.
+
+Theorem sum_fast_2_lanes_ieee_correct : sum_fast_2_lanes_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_abs nan_const Hp W xs Hx.
+generalize (sum_fast_2_lanes_ieee_facts prec emax nan_plus nan_minus nan_abs nan_const
+              Hp W xs Hx).
+destruct (IeeeFoldModel.sum_fast_2_lanes prec emax nan_plus nan_minus nan_abs nan_const W xs)
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [F0 [F1 H]]].
+split.
+{ eapply Forall_impl; [|exact G]. intros x [A [B _]]. split; assumption. }
+split. exact F0. split. exact F1. exact H.
+Qed.
+
+Theorem sum_fast_2_entry_seq_ieee_correct : sum_fast_2_entry_seq_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_abs nan_const Hp xs Hx.
+generalize (sum_fast_2_entry_seq_ieee_facts prec emax nan_plus nan_minus nan_abs nan_const
+              Hp xs Hx).
+destruct (IeeeFoldModel.sum_fast_2_entry_seq prec emax nan_plus nan_minus nan_abs nan_const xs)
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [F0 [F1 [_ H]]]].
+split.
+{ eapply Forall_impl; [|exact G]. intros x [A [B _]]. split; assumption. }
+split. exact F0. split. exact F1. exact H.
+Qed.
+
+Theorem sum_fast_2_entry_lanes_ieee_correct : sum_fast_2_entry_lanes_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_abs nan_const Hp W xs Hx.
+generalize (sum_fast_2_entry_lanes_ieee_facts prec emax nan_plus nan_minus nan_abs nan_const
+              Hp W xs Hx).
+destruct (IeeeFoldModel.sum_fast_2_entry_lanes prec emax nan_plus nan_minus nan_abs nan_const W xs)
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [F0 [F1 H]]].
+split.
+{ eapply Forall_impl; [|exact G]. intros x [A [B _]]. split; assumption. }
+split. exact F0. split. exact F1. exact H.
+Qed.
+
+Theorem dot_2_seq_ieee_correct : dot_2_seq_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hp xs Hx.
+generalize (dot_2_seq_ieee_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const
+              Hp xs Hx).
+destruct (IeeeFoldModel.dot_2_seq prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const xs)
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [F0 [F1 [_ H]]]].
+split.
+{ eapply Forall_impl; [|exact G]. intros x [[A [B _]] [C [D _]]].
+  split; [exact A|split; [exact B|split; [exact C|exact D]]]. }
+split. exact F0. split. exact F1. exact H.
+Qed.
+
+Theorem dot_2_lanes_ieee_correct : dot_2_lanes_ieee_spec.
+Proof.
+intros prec emax Hg Hl nan_plus nan_minus nan_opp nan_abs nan_fma nan_const Hp W xs Hx.
+generalize (dot_2_lanes_ieee_facts prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const
+              Hp W xs Hx).
+destruct (IeeeFoldModel.dot_2_lanes prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const W xs)
+  as [[r0 r1] flag].
+intros [HT HF]. split; [|exact HF].
+intros E. destruct (HT E) as [G [F0 [F1 H]]].
+split.
+{ eapply Forall_impl; [|exact G]. intros x [[A [B _]] [C [D _]]].
+  split; [exact A|split; [exact B|split; [exact C|exact D]]]. }
+split. exact F0. split. exact F1. exact H.
+Qed.

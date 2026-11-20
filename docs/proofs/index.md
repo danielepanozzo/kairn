@@ -49,6 +49,11 @@ lists:
 - `proofs/gen/FoldModel.v` and `proofs/gen/FoldStatements.v`, generated too: each fold (a loop
   of kernels along arrays: the sums and the dot products) as a function on lists, in the two
   orders in which the library runs it, and its statement in each order;
+- `proofs/gen/IeeeFoldModel.v` and `proofs/gen/IeeeFoldStatements.v`, generated too: each fold
+  as a function on lists of Flocq's binary floating-point numbers, with its finish, in the same
+  two orders; its statement in each order; and, for each kernel that is the step or the
+  combination of a fold, the statement that the leading limb of its result is finite only if
+  those of its operands are;
 - `proofs/theories/`, the proofs written by hand, one theorem `K_correct` per kernel `K` and the
   lemmas they share, the theorems about sums and dot products of arrays, which bound a sum
   made in any order of its additions (`Folds.v`, `Summation.v`, `SummationKernels.v`), and the
@@ -63,8 +68,8 @@ lists:
   (`IeeeTwoExecutions.v`); and the theorems of the folds, `F_seq_correct` and `F_lanes_correct`
   per fold `F` (`FoldSums.v`), of their steps, finishes and bound kernels (`StepKernels.v`,
   `IeeeFoldFinish.v`, `BoundKernels.v`), of the two together (`FoldGuarantee.v`), and of the
-  folds in the model with overflow (`FoldTransfer.v`, `IeeeFolds.v`;
-  [below](#sums-and-dot-products-of-arrays));
+  folds and their steps in the model with overflow (`FoldTransfer.v`, `IeeeSteps.v`,
+  `IeeeFolds.v`; [below](#sums-and-dot-products-of-arrays));
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -85,13 +90,15 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    list, on a missing report, or on any output it does not understand.
 3. **The theorems that the generated audits do not list**, the same way, from
    `proofs/audit/HandAudit.v`: the IEEE-model theorems of the kernels that also have a
-   real-model statement of their own domain (they have generated statements as their types),
+   real-model statement of their own domain, and those of the folds and of the leading limbs
+   of their steps (all of these have generated statements as their types, checked by a
+   definition of the same form; no description of a kernel or of a fold names them),
    a few facts whose statements are written by hand because they say more about a kernel than
    its claims can express, the theorems about sums and dot products of arrays, which are
    about no single kernel, the lemmas of the first building blocks of Milestone 2 that are
    not generated statements, among them those about `mul_dir_1`, whose kernel is not generated
    yet, and those about the two executions of a product, whose plain-product listings are
-   written by hand, and the theorems about the folds that have no generated statement
+   written by hand, and the theorems about the folds whose statements are written by hand
    ([below](#sums-and-dot-products-of-arrays)).
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
@@ -102,7 +109,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  71 files: no Admitted, admit, Axiom or Parameter
+  72 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -246,17 +253,32 @@ kernel with a statement of its own (`StepKernels.v`).
 through a finish, a kernel proved in the IEEE model (`IeeeFoldFinish.v`): the flag is true
 exactly when the leading limb of the final state is finite, the result is then that state, and
 otherwise every limb of the result is a NaN. What a true flag says about the whole loop is
-proved for models of the folds in the IEEE model that are written by hand (`IeeeFolds.v`), from
-the generated IEEE models of the kernels and the same two orders; the generator does not print
-these models yet. For every fold and both orders, on any elements (canonical pairs, for two
-limbs): if the flag is true, every element is finite, the result is finite and is the result of
-the real model on the values of the elements, hence valid and within the bound above, and in
-the sequential order the state after every element was finite; if the flag is false, every limb
-of the result is a NaN. So an infinity or a NaN among the elements, or an overflow anywhere in
-the loop, cannot give a finite wrong result. The argument is one induction for all folds
-(`FoldTransfer.v`), from two facts about one application of a step: a leading limb that is not
-finite stays not finite, and from a finite, valid state a finite leading limb means a finite
-element and the values of the real model.
+proved for the generated models of the folds in the IEEE model (`proofs/gen/IeeeFoldModel.v`:
+the generated IEEE models of the step, the combination and the finish, in the same two orders),
+against the generated statements: `F_seq_ieee_correct` and `F_lanes_ieee_correct`
+(`IeeeFolds.v`) have `F_seq_ieee_spec` and `F_lanes_ieee_spec` of
+`proofs/gen/IeeeFoldStatements.v` as their types. For every fold and both orders, on any
+elements (canonical pairs, for two limbs): if the flag is true, every element is finite, the
+result is finite and is the result of the real model on the values of the elements, hence valid
+and within the bound above; if the flag is false, every limb of the result is a NaN. So an
+infinity or a NaN among the elements, or an overflow anywhere in the loop, cannot give a finite
+wrong result. In the sequential order the state after every element was finite too, which the
+generated statements do not say (`F_seq_ieee_facts`, a statement written by hand about the same
+generated model).
+
+The argument is one induction for all folds (`FoldTransfer.v`), from two facts about one
+application of a step. The first, that a leading limb which is not finite stays not finite, is
+a generated statement for every step and combination, `K_ieee_lead_spec`, proved as
+`K_ieee_lead` (`IeeeFolds.v`); it is the rule that the generator checks on every listing, here
+as a theorem. The second, that from a finite, valid state a finite leading limb means a finite
+element and the values of the real model, is the bridge between the two models. For the steps
+as kernels, the generated bridge statements, with the finiteness of every value the step
+computes, and the correctness statements of the steps of two limbs are proved in `IeeeSteps.v`
+(`K_ieee_bridge`, `K_ieee_correct`).
+
+These theorems are audited in step 3 above and not by the generated audits: the generator
+writes the statements, but the description of a fold names the file of its real-model theorems
+only, and that of a step of the finite domain names no IEEE-model theorem.
 
 ## What a proof does not cover
 
