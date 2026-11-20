@@ -175,9 +175,10 @@ oracle's work overlaps the interpreter's. A test's whole cross-check runs by han
 
     Two elements of `dot_2` are more than $10^8$ arrays in any format of its precision 4; its
     sums of products are in the sampled runs and in the compiled runners' lengths. The sums of
-    pairs need exponents: in a format of four to seven binades every sum of up to three pairs is
-    itself a pair, exact, and the guards fail such a run (it puts nothing of the bound to the
-    test); `fp:3:-4:1` has eight.
+    pairs need exponents: in a format of fewer binades than twice its precision (`fp:3:-2:-1`,
+    `fp:4:-4:-1`) every sum of up to three pairs is itself a pair, exact, and the guards fail
+    such a run (it puts nothing of the bound to the test); `fp:3:-4:1` has eight binades for
+    three bits.
 - **Random cases**: 6 000 per kernel and format in the quick tier (`KAIRN_CROSSCHECK_QUICK_CASES`)
   and 20 000 in the full tier (`KAIRN_CROSSCHECK_CASES`), seed 0 (`KAIRN_CROSSCHECK_SEED`), so
   that a run is the same everywhere and can be repeated. The oracle's generator chooses the strata

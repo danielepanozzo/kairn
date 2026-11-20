@@ -66,8 +66,9 @@ up to 4 096 elements (`FOLD_LENGTH`) in units of a hundredth of `--chunk`, one s
 scalar runners in every order and one per packed backend in the lane order of its register
 (`packed_lanes` of the fold), each judged and guarded with its orders and length; in the interp
 part, every array of the formats of `FOLD_SHAPES` up to a length, in every order that differs
-(`gen --exhaustive --max-length`). A format of the sums of two limbs needs eight binades or more:
-with fewer, every sum of up to three pairs is a pair, exact, and the guards fail the run.
+(`gen --exhaustive --max-length`). A format of the sums of two limbs needs at least twice as
+many binades as bits: with fewer (`fp:3:-2:-1`, `fp:4:-4:-1`), every sum of up to three pairs is
+a pair, exact, and the guards fail the run.
 
 A pipeline that fails (a violated claim, an invalid case, a suspicious non-finite result where
 the quick tier fails on one, a broken stream, a runner or oracle error, a timeout) is a finding:
