@@ -23,6 +23,19 @@ class Plan(unittest.TestCase):
         self.assertEqual(self.errors, [])
         self.assertEqual({e["kernel"] for e in self.plan}, {k["name"] for k in self.kernels})
 
+    def test_every_fold_is_planned(self):
+        # Every fold of the claims, in the formats of its arrays, each enumeration up to a length
+        # (gen --max-length), at or above the fold's min_precision.
+        folds = brute.load_folds()
+        plan, errors = brute.fold_plan(folds)
+        self.assertEqual(errors, [])
+        self.assertEqual({e["kernel"] for e in plan}, {f["name"] for f in folds})
+        mp = {f["name"]: f.get("min_precision") or 1 for f in folds}
+        for e in plan:
+            self.assertGreaterEqual(brute.parse_fmt(e["format"])[0], mp[e["kernel"]], e)
+            self.assertIn("--max-length", brute.gen_extra(e))
+            self.assertTrue(brute.enum_key(e).endswith("__L%d" % e["maxlen"]))
+
     def test_the_interpreter_accepts_every_format(self):
         # Every constant of every kernel (the splitter, the constants of the Ball radii) is a
         # number of each format the plan gives it.

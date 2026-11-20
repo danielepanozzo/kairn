@@ -141,7 +141,26 @@ SHAPES = {
     # The full scalings of a ball by a power of two (Milestone 2): 0.3 to 2.3 million cases each.
     "ext_b1_c_product": ("fp:4:-6:1", ["fp:5:-7:0", "fp:6:-8:-1", "fp:4:-8:3"]),
     "ext_b2_c_product": ("fp:3:-4:1", ["fp:4:-5:0", "fp:5:-6:-1", "fp:3:-6:3"]),
+    # The kernels of the folds' stage (Milestone 2): the bounds (a count m, formats with 1/2 and
+    # counts past the limit), the steps of the dot products, the finish of two limbs (any limbs).
+    "n": ("fp:12:-30:12", ["fp:13:-30:12", "fp:16:-30:14", "fp:20:-50:20"]),
+    "1_1_1_product": ("fp:3:-6:-1", ["fp:4:-6:-1", "fp:3:-8:1"]),
+    "2_2_2_product": ("fp:4:-3:-2", ["fp:4:-4:-2"]),
+    "ext_a2": ("fp:5:-7:0", ["fp:6:-8:-1", "fp:7:-9:-2", "fp:6:-12:3"]),
 }
+
+# The folds (gen/claims.json, "folds"), by their arrays as tests/CMakeLists.txt names them (_1 a
+# sum of one limb, _2 of two, _1_1 and _2_2 dot products): every array of each format up to the
+# length given, in every order that differs (gen --exhaustive --max-length), the quick tier's
+# first; and the compiled runners on random arrays up to FOLD_LENGTH elements, the scalar ones on
+# every order and the packed ones on the lane order of their register.
+FOLD_SHAPES = {
+    "1": [("fp:3:-3:0", 3), ("fp:4:-4:-1", 3), ("fp:2:-2:1", 4)],
+    "2": [("fp:3:-4:1", 2), ("fp:3:-3:0", 2), ("fp:3:-5:2", 2)],
+    "1_1": [("fp:2:-1:0", 2), ("fp:2:-2:1", 2), ("fp:3:-3:0", 1)],
+    "2_2": [("fp:4:-4:-1", 1), ("fp:4:-5:0", 1)],
+}
+FOLD_LENGTH = 4096
 
 # Precision 1 of the one-limb balls with two operands, in place of the base range. There u = 1/2
 # and the constants of the radius are large against a format of few exponents: the factor
@@ -292,6 +311,56 @@ def load_claims():
         return [k for k in json.load(f)["kernels"] if k["name"] not in skip]
 
 
+def not_yet_cross_checked_folds():
+    """The folds the oracle does not judge yet: KAIRN_NOT_YET_CROSS_CHECKED_FOLDS of
+    tests/CMakeLists.txt."""
+    with open(os.path.join(REPO, "tests", "CMakeLists.txt"), encoding="utf-8") as f:
+        m = re.search(r"^set\(KAIRN_NOT_YET_CROSS_CHECKED_FOLDS\s([^)]*)\)", f.read(), re.M)
+    return set(m.group(1).split()) if m else set()
+
+
+def load_folds():
+    """The folds of gen/claims.json that the oracle judges."""
+    skip = not_yet_cross_checked_folds()
+    with open(CLAIMS, encoding="utf-8") as f:
+        return [k for k in json.load(f).get("folds", []) if k["name"] not in skip]
+
+
+def fold_shape(f):
+    return "_".join(str(a.get("limbs", 1)) for a in f.get("arrays", []))
+
+
+def fold_plan(folds, only=None):
+    """[{kernel, format, restrict, maxlen, why}] and [errors]: every array of the formats of
+    FOLD_SHAPES up to their lengths, for each fold at or above its min_precision."""
+    plan, errors = [], []
+    for f in folds:
+        name = f["name"]
+        if only and name not in only:
+            continue
+        shape = fold_shape(f)
+        if shape not in FOLD_SHAPES:
+            errors.append("%s: no toy formats are planned for its arrays (%s): add them to "
+                          "FOLD_SHAPES in tests/brute/brute.py" % (name, shape.replace("_", " ")))
+            continue
+        for i, (fmt, L) in enumerate(FOLD_SHAPES[shape]):
+            if parse_fmt(fmt)[0] < (f.get("min_precision") or 1):
+                continue
+            plan.append({"kernel": name, "format": fmt, "restrict": [], "maxlen": L,
+                         "why": ("the full tier's format" if i == 0 else "another format") +
+                                ", every array up to %d elements" % L})
+    return plan, errors
+
+
+def packed_lanes(fold_name, fmt, backend):
+    """W of the packed form of a fold for a format and backend (its claims), or None."""
+    with open(CLAIMS, encoding="utf-8") as f:
+        for k in json.load(f).get("folds", []):
+            if k["name"] == fold_name:
+                return (k.get("packed_lanes") or {}).get(fmt, {}).get(backend)
+    return None
+
+
 def shape_of(k):
     """The roles of the inputs and the operation, as tests/CMakeLists.txt derives them."""
     requires = [r.replace(" ", "") for r in k.get("requires", [])]
@@ -305,8 +374,13 @@ def shape_of(k):
             roles.append("m")
         elif i["name"] in balls:
             roles.append("b%d" % i.get("limbs", 1))
+        elif (i.get("limbs", 1) != 1 and k.get("domain") == "extended"
+              and "canonical(%s)" % i["name"] not in requires):
+            roles.append("a%d" % i["limbs"])       # several limbs of any values
         elif i.get("limbs", 1) != 1:
             roles.append(str(i["limbs"]))
+        elif "count(%s)" % i["name"] in requires:
+            roles.append("n")
         elif "nonneg(%s)" % i["name"] in requires:
             roles.append("r")
         elif "power_of_two(%s)" % i["name"] in requires:
@@ -426,13 +500,24 @@ def enum_key(e):
     key = "%s__%s" % (e["kernel"], e["format"].replace(":", "_"))
     if e["restrict"]:
         key += "__r" + hashlib.sha1(",".join(e["restrict"]).encode()).hexdigest()[:10]
+    if e.get("maxlen") is not None:
+        key += "__L%d" % e["maxlen"]
     return key
 
 
-def gen_total(e):
-    cmd = [PY, ORACLE, "gen", e["kernel"], e["format"], "--exhaustive", "--total"]
+def gen_extra(e):
+    """The arguments of gen for an enumeration beyond its kernel and format: the restrictions,
+    and for a fold the largest length."""
+    out = []
     for r in e["restrict"]:
-        cmd += ["--restrict", r]
+        out += ["--restrict", r]
+    if e.get("maxlen") is not None:
+        out += ["--max-length", str(e["maxlen"])]
+    return out
+
+
+def gen_total(e):
+    cmd = [PY, ORACLE, "gen", e["kernel"], e["format"], "--exhaustive", "--total"] + gen_extra(e)
     out = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     m = re.match(r"(\d+) enumeration indices", out.stdout)
     if out.returncode != 0 or not m:
@@ -949,9 +1034,10 @@ class GenTask(Task):
         self.tmp = u.req + ".tmp"
         out = open(self.tmp, "wb")
         self.files.append(out)
-        _, err = self.errlog("gen-%s-%s-%d" % (u.kernel, u.format, u.start))
+        _, err = self.errlog("gen-%s-%s%s-%d" % (u.kernel, u.format, u.group, u.start))
         self.procs = [popen([PY, ORACLE, "gen", u.kernel, u.format, "--seed", self.s.seed,
-                             "--start", str(u.start), "--count", str(u.count)],
+                             "--start", str(u.start), "--count", str(u.count)]
+                            + fold_stream_args(u),
                             stdout=out, stderr=err, cwd=REPO)]
 
     def finish(self):
@@ -1012,7 +1098,8 @@ class CheckTask(Task):
         if why:
             self.s.finding("compiled", why, examples, kernel=u.kernel, format=u.format,
                            runner=r["id"], seed=self.s.seed, start=u.start, count=u.count,
-                           reproduce=reproduce_random(u.kernel, u.format, self.s.seed, r))
+                           reproduce=reproduce_random(u.kernel, u.format, self.s.seed, r,
+                                                      fold_stream_args(u)))
             self.s.stopped.add((u.kernel, u.format, r["id"]))
             if os.path.exists(self.tmp):
                 os.replace(self.tmp, self.out + ".failed")
@@ -1040,9 +1127,7 @@ class InterpTask(Task):
             os.remove(self.tmp)
         _, err = self.errlog("interp-%s-%d" % (enum_key(e), self.start_i))
         gen = [PY, ORACLE, "gen", e["kernel"], e["format"], "--exhaustive",
-               "--start", str(self.start_i), "--count", str(self.count)]
-        for r in e["restrict"]:
-            gen += ["--restrict", r]
+               "--start", str(self.start_i), "--count", str(self.count)] + gen_extra(e)
         check = [PY, ORACLE, "check", "--json", self.tmp, "--quiet"]
         if fails_on_suspicious(e["kernel"], e["format"]):
             check.append("--fail-on-suspicious")
@@ -1087,17 +1172,28 @@ class InterpTask(Task):
         return []
 
 
-def reproduce_random(kernel, fmt, seed, runner):
+def reproduce_random(kernel, fmt, seed, runner, extra=()):
     check = "python3 oracle/kairn-oracle check"
     if fails_on_suspicious(kernel, fmt):
         check += " --fail-on-suspicious"
-    return ("python3 oracle/kairn-oracle gen %s %s --seed %s --start INDEX --count 1 | "
+    return ("python3 oracle/kairn-oracle gen %s %s --seed %s%s --start INDEX --count 1 | "
             "BUILD/tests/%s | %s   (BUILD: the build %s, runner %s; INDEX from the line's tag)"
-            % (kernel, fmt, seed, runner["target"], check, runner["build"], runner["id"]))
+            % (kernel, fmt, seed, "".join(" " + w for w in extra), runner["target"], check,
+               runner["build"], runner["id"]))
+
+
+def fold_stream_args(unit):
+    """gen's arguments of a fold's unit beyond seed and indices: its orders and largest length."""
+    out = []
+    if unit.orders:
+        out += ["--orders", unit.orders]
+    if unit.fold:
+        out += ["--max-length", str(FOLD_LENGTH)]
+    return out
 
 
 def reproduce_exhaustive(e):
-    restrict = "".join(" --restrict %s" % r for r in e["restrict"])
+    restrict = "".join(" " + w for w in gen_extra(e))
     check = "python3 oracle/kairn-oracle check"
     if fails_on_suspicious(e["kernel"], e["format"]):
         check += " --fail-on-suspicious"
@@ -1107,10 +1203,14 @@ def reproduce_exhaustive(e):
 
 
 class Unit:
-    def __init__(self, work, kernel, fmt, start, count):
+    def __init__(self, work, kernel, fmt, start, count, fold=False, group="", orders=None):
         self.kernel, self.format, self.start, self.count = kernel, fmt, start, count
+        # A fold's unit is for one group of runners: the scalar ones (every order), or the
+        # packed ones of a backend (the lane order of their register, orders lanes:W).
+        self.fold, self.group, self.orders = fold, group, orders
         self.dir = os.path.join(work, "compiled", kernel, fmt)
-        self.req = os.path.join(work, "streams", "%s-%s-%012d.req" % (kernel, fmt, start))
+        self.req = os.path.join(work, "streams", "%s-%s%s-%012d.req" % (
+            kernel, fmt, "-" + group if group else "", start))
         self.generated = False
         self.pending = []           # runners still to judge it
 
@@ -1141,7 +1241,9 @@ class Scheduler:
                             self.stopped.add((x["kernel"], x["format"], x["runner"]))
                         else:
                             self.stopped_enums.add(enum_key(x))
-        self.pairs = [(k, f) for k in a.kernel_names for f in ("binary64", "binary32")]
+        self.folds = set(getattr(a, "fold_names", []))
+        self.pairs = [(k, f) for k in list(a.kernel_names) + sorted(self.folds)
+                      for f in ("binary64", "binary32")]
         self.stats = {"tasks": 0, "judged_cases": 0, "interp_cases": 0}
 
     def timing(self, t, why):
@@ -1183,11 +1285,24 @@ class Scheduler:
             count = self.a.chunk if self.a.cases is None else min(self.a.chunk,
                                                                   self.a.cases - start)
             for k, f in self.pairs:
-                unit = Unit(self.work, k, f, start, count)
-                unit.pending = [r for r in self.runners if (k, f, r["id"]) not in self.stopped
-                                and not os.path.exists(unit.result(r["id"]))]
-                if unit.pending:
-                    yield unit
+                if k not in self.folds:
+                    groups = [(Unit(self.work, k, f, start, count), self.runners)]
+                else:
+                    groups = []
+                    scalar = [r for r in self.runners if r["kind"] == "scalar"]
+                    if scalar:
+                        groups.append((Unit(self.work, k, f, start, count, True, "scalar"), scalar))
+                    for be in sorted({r["backend"] for r in self.runners if r["kind"] == "packed"}):
+                        W = packed_lanes(k, f, be)
+                        rs = [r for r in self.runners if r["kind"] == "packed" and r["backend"] == be]
+                        if W:
+                            groups.append((Unit(self.work, k, f, start, count, True, be,
+                                                "lanes:%d" % W), rs))
+                for unit, rs in groups:
+                    unit.pending = [r for r in rs if (k, f, r["id"]) not in self.stopped
+                                    and not os.path.exists(unit.result(r["id"]))]
+                    if unit.pending:
+                        yield unit
             u += 1
 
     def release(self, unit, runner, open_units):
@@ -1355,8 +1470,10 @@ def cmd_run(a):
         sys.exit("brute: no git history to name the commit of the code under test and of the "
                  "driver: give --commit and --driver-commit")
     kernels = load_claims()
+    folds = load_folds()
     only = set(a.kernels.split(",")) if a.kernels else None
     a.kernel_names = [k["name"] for k in kernels if not only or k["name"] in only]
+    a.fold_names = [k["name"] for k in folds if not only or k["name"] in only]
     started = now_iso()
     t0 = time.time()
     runners = []
@@ -1370,6 +1487,9 @@ def cmd_run(a):
     enums = []
     if a.interp:
         plan, errors = interp_plan(kernels, only)
+        fplan, ferrors = fold_plan(folds, only)
+        plan += fplan
+        errors += ferrors
         for e in errors:
             log("PLAN ERROR: %s" % e)
         if errors:
@@ -1387,7 +1507,8 @@ def cmd_run(a):
         log("%d enumerations, %d indices" % (len(enums), sum(e["total"] for e in enums)))
     record = {"started": started, "budget": a.budget, "jobs": a.jobs, "parts": sorted(parts),
               "seed": a.seed, "chunk": a.chunk, "interp_chunk": a.interp_chunk,
-              "cases_cap": a.cases, "kernels": a.kernel_names, "cpus": a.cpus, "nice": a.nice,
+              "cases_cap": a.cases, "kernels": a.kernel_names + a.fold_names, "cpus": a.cpus,
+              "nice": a.nice,
               "commit": code_commit, "driver_commit": driver_commit,
               "driver_sha256": file_sha256(__file__),
               "fixup_forms": a.fixup_forms, "machine": machine_info(a.cpus),
@@ -1646,7 +1767,8 @@ def cmd_collect(a):
             findings = [json.loads(l) for l in f if l.strip()]
     runners = read_json(os.path.join(work, "runners.json")) \
         if os.path.exists(os.path.join(work, "runners.json")) else []
-    domain = {k["name"]: k.get("domain") or "finite" for k in load_claims()}
+    domain = {k["name"]: k.get("domain") or "finite" for k in load_claims() + load_folds()}
+    fold_names = {k["name"] for k in load_folds()}
     times = read_times(os.path.join(work, "times.jsonl"))
     merges = []
     series = []
@@ -1686,6 +1808,13 @@ def cmd_collect(a):
         covered = sum(b - a for a, b in ranges) if ranges else 0
         ns = argparse.Namespace(kernel=kernel, format=fmt, exhaustive=False, restrict="",
                                 count=covered, seed=seed)
+        if kernel in fold_names:
+            # A fold's stream: every order for the scalar runners, the lane order of the register
+            # for the packed ones; arrays up to FOLD_LENGTH elements.
+            rr = next((r for r in runners if r["id"] == rid), {})
+            ns.max_length = str(FOLD_LENGTH)
+            ns.orders = (None if rr.get("kind") != "packed" else
+                         "lanes:%s" % packed_lanes(kernel, fmt, rr.get("backend")))
         problems = list(guards.problems(s, ns))
         more, examples, _ = summary_problems(s, fails_on_suspicious(kernel, fmt))
         problems += more
@@ -1745,7 +1874,8 @@ def cmd_collect(a):
         keys = [k for k in s["keys"] if (k["kernel"], k["format"]) == (e["kernel"], e["format"])]
         desc, ranges = coverage_of(s)
         ns = argparse.Namespace(kernel=e["kernel"], format=e["format"], exhaustive=True,
-                                restrict=",".join(e["restrict"]), count=None, seed=None)
+                                restrict=",".join(e["restrict"]), count=None, seed=None,
+                                max_length=e.get("maxlen"))
         problems = list(guards.problems(s, ns))
         more, examples, _ = summary_problems(s, fails_on_suspicious(e["kernel"], e["format"]))
         problems += more
@@ -2368,6 +2498,9 @@ def cmd_plan(a):
     kernels = load_claims()
     only = set(a.kernels.split(",")) if a.kernels else None
     plan, errors = interp_plan(kernels, only)
+    fplan, ferrors = fold_plan(load_folds(), only)
+    plan += fplan
+    errors += ferrors
     for e in errors:
         print("PLAN ERROR: %s" % e)
     plan = sized_plan(plan)
