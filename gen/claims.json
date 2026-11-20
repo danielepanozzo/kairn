@@ -584,9 +584,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert.v",
+        "name": "ball_from_interval_2_correct"
+      },
       "source": {
         "cite": "the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -687,9 +691,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert.v",
+        "name": "ball_lower_as_1_correct"
+      },
       "source": {
         "cite": "the center minus the radius, rounded down (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1436,9 +1444,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert.v",
+        "name": "ball_upper_as_1_correct"
+      },
       "source": {
         "cite": "the center plus the radius, rounded up (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -3880,9 +3892,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert.v",
+        "name": "ball_lower_as_2_correct"
+      },
       "source": {
         "cite": "the center rounded down, minus the radius, rounded down (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -4391,9 +4407,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert.v",
+        "name": "ball_narrow_2_1_correct"
+      },
       "source": {
         "cite": "the leading limb, and the radius widened by the second limb (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -4940,9 +4960,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeBallConvert.v",
+        "name": "ball_upper_as_2_correct"
+      },
       "source": {
         "cite": "the center rounded up, plus the radius, rounded up (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

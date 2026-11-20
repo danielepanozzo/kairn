@@ -331,7 +331,7 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(float cx, float rx, float cy, float r
 }
 
 // ball_from_interval_2(lo, hi) -> cw = (cw0, cw1), rw
-// the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 3> ball_from_interval_2(double gl, double gu, double c0, double c1, double r, bool v, bool f) noexcept {
@@ -555,7 +555,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_down_1(float a, float b, float& r_out) 
 }
 
 // ball_lower_as_1(c, r) -> l
-// the center minus the radius, rounded down (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center minus the radius, rounded down (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 1> ball_lower_as_1(double t, bool ne) noexcept {
@@ -1190,7 +1190,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(float cx, float rx, float cy, float r
 }
 
 // ball_upper_as_1(c, r) -> h
-// the center plus the radius, rounded up (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center plus the radius, rounded up (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 1> ball_upper_as_1(double t, bool ne) noexcept {
@@ -3490,7 +3490,7 @@ KAIRN_GEN_FORCEINLINE constexpr void to_down_2(float x0, float x1, float& t_out)
 }
 
 // ball_lower_as_2(c = (c0, c1), r) -> l
-// the center rounded down, minus the radius, rounded down (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center rounded down, minus the radius, rounded down (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 1> ball_lower_as_2(double t, bool ne) noexcept {
@@ -4049,7 +4049,7 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_mul_pow2_2_full(float cx0, float cx1, 
 }
 
 // ball_narrow_2_1(c = (c0, c1), r) -> cz, rz
-// the leading limb, and the radius widened by the second limb (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the leading limb, and the radius widened by the second limb (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 KAIRN_GEN_FORCEINLINE constexpr void ball_narrow_2_1(double c0, double c1, double r, double& cz_out, double& rz_out) noexcept {
     const double a = abs_bits(c1);
     // (rz) = radd(r, a)
@@ -4521,7 +4521,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_2_full(float cx0, float cx1, float rx, float
 }
 
 // ball_upper_as_2(c = (c0, c1), r) -> h
-// the center rounded up, plus the radius, rounded up (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the center rounded up, plus the radius, rounded up (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 1> ball_upper_as_2(double t, bool ne) noexcept {

@@ -63,7 +63,9 @@ lists:
   two limbs over the real numbers: a sum, a difference and a product of two 2-limb numbers,
   moved down or up by a bound of their own error, with how far that moves them
   (`Directed2.v`), and, with overflow, infinities and NaN, the sum of two intervals whose
-  bounds have two limbs (`IeeeInterval2.v`);
+  bounds have two limbs (`IeeeInterval2.v`) and the conversions of a ball: its bounds as
+  numbers of the limb type, the ball of one limb that contains a ball of two, and the ball
+  made from an interval of two numbers (`IeeeBallConvert.v`);
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -88,9 +90,9 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    its claims can express, the theorems about sums and dot products of arrays, which are
    about no single kernel, and the lemmas of the first building blocks of Milestone 2 that are
    not generated statements, among them what is proved of `mul_dir_1`, of the interval
-   kernels with bounds of one limb, of the bounds of two limbs and of the sum of two intervals
-   of two limbs beside their generated statements, and those about the two executions of a
-   product, whose plain-product listings are written by hand.
+   kernels with bounds of one limb, of the bounds of two limbs, of the sum of two intervals
+   of two limbs and of the conversions of a ball beside their generated statements, and those
+   about the two executions of a product, whose plain-product listings are written by hand.
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
    rejected by both checks.
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
@@ -100,7 +102,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  64 files: no Admitted, admit, Axiom or Parameter
+  65 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -170,7 +172,7 @@ is the guarantee whenever no operation inside the kernel overflows.
 **What happens at overflow and with infinities and NaN is proved in Flocq's model of IEEE 754.**
 There, values are Flocq's binary floating-point numbers, with signed zeros, infinities and NaN,
 and the operations overflow as the hardware does, for formats shaped like `binary32` and
-`binary64`. Three kinds of statements are proved there:
+`binary64`. Four kinds of statements are proved there:
 
 - For the arithmetic kernels of two limbs: an overflow anywhere in the kernel never produces a
   finite wrong result (if the leading limb of the result is finite, the result is normalized and
@@ -198,6 +200,13 @@ and the operations overflow as the hardware does, for formats shaped like `binar
   [Bounds of two limbs](../developer/design/milestone2.md#bounds-of-two-limbs), a bound of the
   exact range that is zero is returned as zero, and the result is bounded when the exact range
   is within a quarter of the overflow threshold.
+- For the conversions of a ball
+  ([Midpoint, radius and the conversions](../developer/design/milestone2.md#midpoint-radius-and-the-conversions)):
+  the bounds of a ball as numbers of `T` are on their side of every member, with $+\infty$ and
+  $-\infty$ for the empty ball, and they are the bounds rounded outward for a center of one
+  limb; a ball of two limbs narrowed to one limb, and a ball of two limbs made from an interval
+  of two numbers of `T`, are canonical and contain what they are made from, whatever the
+  operands are.
 
 These statements and the models of the kernels they are about are generated from the kernel
 descriptions, like the C++ (`proofs/gen/IeeeModel.v`, `IeeeStatements.v`). Three files are
@@ -206,8 +215,8 @@ says what each operation of a kernel means in Flocq's terms, `IeeeVocabulary.v`,
 the statements use (what a canonical value is, what a ball contains), and
 `IeeeIntervalVocabulary.v`, the definitions the statements of the interval kernels use (a
 canonical interval, its members, the exact range of an operation and its bounds).
-The kernels of the second and third
-kind are in the generated headers and are `proved` in the claims; whether an operator of the
+The kernels of the last three
+kinds are in the generated headers and are `proved` in the claims; whether an operator of the
 library calls them yet is said in
 [What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values).
 

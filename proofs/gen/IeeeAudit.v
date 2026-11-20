@@ -4,6 +4,7 @@
    exactly the generated statement as its type, and the axioms it depends on are printed,
    for the audit script to compare with the allow-list. Nothing else is printed. *)
 From Kairn.Gen Require Import IeeeStatements.
+From Kairn Require Import IeeeBallConvert.
 From Kairn Require Import IeeeBallCores.
 From Kairn Require Import IeeeBallFinite.
 From Kairn Require Import IeeeBallPow2.
@@ -31,8 +32,14 @@ Print Assumptions add_up_entry_ieee_correct.
 Definition ball_add_1_full_audit : ball_add_1_full_spec := ball_add_1_full_correct.
 Print Assumptions ball_add_1_full_correct.
 
+Definition ball_from_interval_2_audit : ball_from_interval_2_spec := ball_from_interval_2_correct.
+Print Assumptions ball_from_interval_2_correct.
+
 Definition sub_down_1_ieee_audit : sub_down_1_ieee_spec := sub_down_1_ieee_correct.
 Print Assumptions sub_down_1_ieee_correct.
+
+Definition ball_lower_as_1_audit : ball_lower_as_1_spec := ball_lower_as_1_correct.
+Print Assumptions ball_lower_as_1_correct.
 
 Definition ball_make_1_audit : ball_make_1_spec := ball_make_1_correct.
 Print Assumptions ball_make_1_correct.
@@ -51,6 +58,9 @@ Print Assumptions ball_scale_1_full_correct.
 
 Definition ball_sub_1_full_audit : ball_sub_1_full_spec := ball_sub_1_full_correct.
 Print Assumptions ball_sub_1_full_correct.
+
+Definition ball_upper_as_1_audit : ball_upper_as_1_spec := ball_upper_as_1_correct.
+Print Assumptions ball_upper_as_1_correct.
 
 Definition interval_add_1_audit : interval_add_1_spec := interval_add_1_correct.
 Print Assumptions interval_add_1_correct.
@@ -127,6 +137,9 @@ Print Assumptions ball_add_2_full_correct.
 Definition to_down_2_ieee_audit : to_down_2_ieee_spec := to_down_2_ieee_correct.
 Print Assumptions to_down_2_ieee_correct.
 
+Definition ball_lower_as_2_audit : ball_lower_as_2_spec := ball_lower_as_2_correct.
+Print Assumptions ball_lower_as_2_correct.
+
 Definition ball_make_2_audit : ball_make_2_spec := ball_make_2_correct.
 Print Assumptions ball_make_2_correct.
 
@@ -135,6 +148,9 @@ Print Assumptions ball_mul_2_full_correct.
 
 Definition ball_mul_pow2_2_full_audit : ball_mul_pow2_2_full_spec := ball_mul_pow2_2_full_correct.
 Print Assumptions ball_mul_pow2_2_full_correct.
+
+Definition ball_narrow_2_1_audit : ball_narrow_2_1_spec := ball_narrow_2_1_correct.
+Print Assumptions ball_narrow_2_1_correct.
 
 Definition neg_2_ieee_audit : neg_2_ieee_spec := neg_2_ieee_correct.
 Print Assumptions neg_2_ieee_correct.
@@ -147,6 +163,9 @@ Print Assumptions ball_scale_2_full_correct.
 
 Definition ball_sub_2_full_audit : ball_sub_2_full_spec := ball_sub_2_full_correct.
 Print Assumptions ball_sub_2_full_correct.
+
+Definition ball_upper_as_2_audit : ball_upper_as_2_spec := ball_upper_as_2_correct.
+Print Assumptions ball_upper_as_2_correct.
 
 Definition eq_2_1_ieee_audit : eq_2_1_ieee_spec := eq_2_1_ieee_correct.
 Print Assumptions eq_2_1_ieee_correct.

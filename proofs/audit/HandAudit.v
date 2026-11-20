@@ -26,8 +26,10 @@
      executions of the eight kernels whose only fused operations are products, on
      listings written by hand with the product as an argument (the generator does not
      emit the model of the plain-product execution);
-   - what is proved of the interval kernels of Milestone 2 beside their generated
-     statements, which the generated audits list: for the interval kernels with bounds
+   - what is proved of the interval kernels of Milestone 2 and of the conversions of a
+     ball beside their generated statements, which the generated audits list: for the
+     conversions of a ball, the lemmas their theorems rest on; for the interval kernels
+     with bounds
      of one limb, the statements written by hand that say more or say it in another form
      (the special cases of the constructor, the negation as an exact image, the product
      in the least and the greatest of four products of bounds) and the lemmas about the
@@ -534,3 +536,27 @@ Print Assumptions range_add_2_lower.
 Print Assumptions range_add_2_upper.
 Print Assumptions interval_add_2_enclosure.
 Print Assumptions interval_add_2_all.
+
+(* The conversions of a ball, in the IEEE model (theories/IeeeBallConvert.v): the bounds
+   of a ball as numbers of T, the narrowing of a ball of two limbs and the ball made from
+   an interval of two values of T. The theorems of the generated statements of the six
+   kernels are listed by proofs/gen/IeeeAudit.v. Here, the lemmas they rest on: the
+   bounds of a segment and of the whole line; the center of a ball of two limbs rounded
+   down and up; two roundings, each within the gap of the format; the radius of the
+   narrowed ball, finite within a quarter of the range; halving a number of the format,
+   and doubling it back; and the finite ball made from a bounded interval. *)
+From Kairn Require Import IeeeBallConvert.
+Print Assumptions range_segment_lower.
+Print Assumptions range_segment_upper.
+Print Assumptions range_line_lower.
+Print Assumptions range_line_upper.
+Print Assumptions to_down_2_le.
+Print Assumptions to_up_2_ge.
+Print Assumptions two_gaps.
+Print Assumptions radd_small.
+Print Assumptions half_error.
+Print Assumptions half_inexact_small.
+Print Assumptions format_double.
+Print Assumptions half_of_bound.
+Print Assumptions ball_from_interval_2_eq.
+Print Assumptions ball_from_interval_2_finite.

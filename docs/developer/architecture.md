@@ -872,7 +872,7 @@ $H$ of `ball_add_2` and the $\mathrm{rel}$, $\mathrm{tiny}$ of `add_2_2`):
  "requires": ["ball(c, r)"],
  "ensures": [{"kind": "set_bound", "of": "l", "side": "below", "set": "x",
               "balls": {"x": {"center": "c", "radius": "r"}}, "tight": {"kind": "rounded"}}],
- "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 2, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}}
 ```
 

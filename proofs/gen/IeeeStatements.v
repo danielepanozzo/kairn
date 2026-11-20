@@ -107,7 +107,7 @@ Definition ball_add_1_full_spec : Prop :=
    ball_finite_1 cw rw) /\
   (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> in_ball_1 cw rw (x + y)).
 
-(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_from_interval_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -136,7 +136,7 @@ Definition sub_down_1_ieee_spec : Prop :=
   let r := IeeeModel.sub_down_1 prec emax nan_plus nan_minus nan_opp nan_abs a b in
   xval r = xrd prec emax (xadd (xval a) (xopp (xval b))).
 
-(* ball_lower_as_1: the center minus the radius, rounded down (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_lower_as_1: the center minus the radius, rounded down (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_lower_as_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -265,7 +265,7 @@ Definition ball_sub_1_full_spec : Prop :=
    ball_finite_1 cw rw) /\
   (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> in_ball_1 cw rw (x - y)).
 
-(* ball_upper_as_1: the center plus the radius, rounded up (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_upper_as_1: the center plus the radius, rounded up (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_upper_as_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -942,7 +942,7 @@ Definition to_down_2_ieee_spec : Prop :=
   let t := IeeeModel.to_down_2 prec emax x0 x1 in
   xval t = xround emax (RD (ieee_emin prec emax) prec) (xval_2 x0 x1).
 
-(* ball_lower_as_2: the center rounded down, minus the radius, rounded down (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_lower_as_2: the center rounded down, minus the radius, rounded down (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_lower_as_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1066,7 +1066,7 @@ Definition ball_mul_pow2_2_full_spec : Prop :=
    ball_finite_2 cw0 cw1 rw) /\
   (finite c -> forall x : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cw0 cw1 rw (x * val c)).
 
-(* ball_narrow_2_1: the leading limb, and the radius widened by the second limb (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_narrow_2_1: the leading limb, and the radius widened by the second limb (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_narrow_2_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1203,7 +1203,7 @@ Definition ball_sub_2_full_spec : Prop :=
    ball_finite_2 cw0 cw1 rw) /\
   (forall x y : R, in_ball_2 cx0 cx1 rx x -> in_ball_2 cy0 cy1 ry y -> in_ball_2 cw0 cw1 rw (x - y)).
 
-(* ball_upper_as_2: the center rounded up, plus the radius, rounded up (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_upper_as_2: the center rounded up, plus the radius, rounded up (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_upper_as_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

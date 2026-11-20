@@ -1267,7 +1267,7 @@ class TheKernels(unittest.TestCase):
     WAVE_1_FULL = {'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
     WAVE_1 = WAVE_1_EXTENDED | WAVE_1_FINITE | WAVE_1_FULL
     # milestone2.md, "Interval kernels" and "One enclosure interface" (wave 2, first stage),
-    # unverified until their proofs are pointed at the generated text: the interval kernels of one
+    # which were unverified until their proofs were about the generated text: the interval kernels of one
     # limb and the sum of two, with the IEEE-model statement only; mul_dir_1, of the extended domain
     # with both statements; the bounds of two limbs, finite cores; the bounds of a ball as numbers
     # of T, the ball from an interval of two T and the narrowing of a ball, the IEEE-model statement
@@ -1279,11 +1279,11 @@ class TheKernels(unittest.TestCase):
     WAVE_2_BALLS = {'ball_lower_as_1', 'ball_upper_as_1', 'ball_lower_as_2', 'ball_upper_as_2',
                     'ball_from_interval_2', 'ball_narrow_2_1'}
     WAVE_2 = WAVE_2_INTERVALS | WAVE_2_CORES | WAVE_2_BALLS | {'mul_dir_1'}
-    # Of these, the kernels whose theorems are about the generated text and pass the audit: the
-    # interval kernels of one limb (IeeeInterval1.v), mul_dir_1 in both models (DirectedProd.v,
-    # IeeeDirectedProd.v), the bounds of two limbs (Directed2.v) and the sum of two intervals of two
-    # limbs (IeeeInterval2.v).
-    WAVE_2_PROVED = WAVE_2_INTERVALS | {'mul_dir_1'} | WAVE_2_CORES
+    # Of these, the kernels whose theorems are about the generated text and pass the audit: all
+    # of them. The interval kernels of one limb (IeeeInterval1.v), mul_dir_1 in both models
+    # (DirectedProd.v, IeeeDirectedProd.v), the bounds of two limbs (Directed2.v), the sum of two
+    # intervals of two limbs (IeeeInterval2.v) and the conversions of a ball (IeeeBallConvert.v).
+    WAVE_2_PROVED = WAVE_2
 
     def test_kernel_names_are_those_of_the_listings(self):
         ks = common.kernels()
@@ -1310,8 +1310,8 @@ class TheKernels(unittest.TestCase):
         # their IEEE-model theorems (IeeeBallPow2.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
                          self.MILESTONE1 | self.WAVE_1 | self.WAVE_2_PROVED)
-        # The other first kernels of wave 2 are unverified, in both models, until their proofs are
-        # about the generated text.
+        # No kernel is unverified: the first kernels of wave 2 were, in both models, until their
+        # proofs were about the generated text.
         self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'},
                          self.WAVE_2 - self.WAVE_2_PROVED)
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},

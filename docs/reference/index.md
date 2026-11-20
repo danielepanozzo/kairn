@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 103 kernels, 97 are proved and 6 are **UNVERIFIED**: [`ball_from_interval_2`](ball_from_interval_2.md), [`ball_lower_as_1`](ball_lower_as_1.md), [`ball_lower_as_2`](ball_lower_as_2.md), [`ball_narrow_2_1`](ball_narrow_2_1.md), [`ball_upper_as_1`](ball_upper_as_1.md), [`ball_upper_as_2`](ball_upper_as_2.md).
+All 103 kernels are proved.
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -148,12 +148,12 @@ Arithmetic on balls: the result contains every result on points of the operands.
 | not yet called by the public headers | - | contains every $x c$, exactly when nothing underflows, normalized | [`ball_mul_pow2_2`](ball_mul_pow2_2.md) |
 | not yet called by the public headers | - | a canonical ball that contains every $x c$; the empty set and the whole line included | [`ball_mul_pow2_1_full`](ball_mul_pow2_1_full.md) |
 | not yet called by the public headers | - | a canonical ball that contains every $x c$; the empty set and the whole line included | [`ball_mul_pow2_2_full`](ball_mul_pow2_2_full.md) |
-| not yet called by the public headers | - | a lower bound of the ball, rounded; $+\infty$ for the empty ball | [`ball_lower_as_1`](ball_lower_as_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a upper bound of the ball, rounded; $-\infty$ for the empty ball | [`ball_upper_as_1`](ball_upper_as_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a lower bound of the ball; $+\infty$ for the empty ball; $\lvert l - (c - r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_lower_as_2`](ball_lower_as_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a upper bound of the ball; $-\infty$ for the empty ball; $\lvert h - (c + r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_upper_as_2`](ball_upper_as_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound | [`ball_from_interval_2`](ball_from_interval_2.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical ball that contains every $x$; the empty set and the whole line included | [`ball_narrow_2_1`](ball_narrow_2_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a lower bound of the ball, rounded; $+\infty$ for the empty ball | [`ball_lower_as_1`](ball_lower_as_1.md) |
+| not yet called by the public headers | - | a upper bound of the ball, rounded; $-\infty$ for the empty ball | [`ball_upper_as_1`](ball_upper_as_1.md) |
+| not yet called by the public headers | - | a lower bound of the ball; $+\infty$ for the empty ball; $\lvert l - (c - r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_lower_as_2`](ball_lower_as_2.md) |
+| not yet called by the public headers | - | a upper bound of the ball; $-\infty$ for the empty ball; $\lvert h - (c + r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_upper_as_2`](ball_upper_as_2.md) |
+| not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound | [`ball_from_interval_2`](ball_from_interval_2.md) |
+| not yet called by the public headers | - | a canonical ball that contains every $x$; the empty set and the whole line included | [`ball_narrow_2_1`](ball_narrow_2_1.md) |
 
 ## Interval operations
 
