@@ -25,7 +25,7 @@ says what is proved, in which model, and what is not yet.
 ## Build and test
 
 Needs CMake 3.21 or later and a C++20 compiler, and on x86-64 a CPU with FMA; the tests also need
-Python 3. From the repository root:
+Python 3. (A project that only uses the library needs CMake 3.18.) From the repository root:
 
 ```sh
 cmake -S . -B build                      # Release unless CMAKE_BUILD_TYPE says otherwise

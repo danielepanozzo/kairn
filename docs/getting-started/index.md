@@ -126,7 +126,9 @@ Three and four limbs, and a $k$ chosen at run time, are planned for later milest
 
 ## What you need
 
-- CMake 3.21 or later and a C++20 compiler.
+- CMake 3.21 or later and a C++20 compiler. A project that only uses the library, through
+  `add_subdirectory`, `FetchContent` or `find_package`, needs CMake 3.18; Kairn's own tests need
+  3.21.
 - On x86-64, a CPU with FMA (Intel Haswell, AMD Piledriver or later) to run the kernels and their
   tests ([Hardware FMA](#hardware-fma)), and with AVX2 too (Intel Haswell, AMD Excavator or
   later) for the tests of the packed kernels.

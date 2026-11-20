@@ -7,12 +7,23 @@
 # A client uses it through add_subdirectory or FetchContent, or through find_package(kairn) after
 # cmake --install. On x86-64 the kernels need hardware FMA, which kairn::kairn does not enable:
 # a client compiles for such a CPU, or also links kairn::fma (cmake/kairn_fma.cmake).
-cmake_minimum_required(VERSION 3.21)
+#
+# A project that uses Kairn needs CMake 3.18; Kairn's own tests and benchmarks need 3.21.
+cmake_minimum_required(VERSION 3.18...3.21)
 
 project(kairn
   VERSION 0.0.0
   DESCRIPTION "Floating-point expansions with interval and ball arithmetic"
   LANGUAGES CXX)
+
+# PROJECT_IS_TOP_LEVEL is set by project() since CMake 3.21; before that, the same test by hand.
+if(NOT DEFINED PROJECT_IS_TOP_LEVEL)
+  if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    set(PROJECT_IS_TOP_LEVEL ON)
+  else()
+    set(PROJECT_IS_TOP_LEVEL OFF)
+  endif()
+endif()
 
 option(KAIRN_BUILD_TESTS "Register Kairn's tests with ctest" ${PROJECT_IS_TOP_LEVEL})
 option(KAIRN_BUILD_BENCHMARKS "Build the benchmark harness of bench/ (not part of the library)" OFF)
@@ -82,6 +93,12 @@ install(FILES
   "${PROJECT_BINARY_DIR}/kairnConfigVersion.cmake"
   cmake/kairn_fma.cmake
   DESTINATION "${_kairn_cmake_dir}")
+
+if((KAIRN_BUILD_TESTS OR KAIRN_BUILD_BENCHMARKS) AND CMAKE_VERSION VERSION_LESS 3.21)
+  message(FATAL_ERROR "Kairn's tests and benchmarks need CMake 3.21 or later (this is "
+    "${CMAKE_VERSION}); the library itself needs 3.18. Configure with -DKAIRN_BUILD_TESTS=OFF "
+    "to use the library only.")
+endif()
 
 if(KAIRN_BUILD_TESTS)
   enable_testing()

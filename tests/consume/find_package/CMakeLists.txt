@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.18...3.21)
 project(kairn_consume CXX)
 find_package(kairn REQUIRED)
 add_executable(consume ../consume.cpp)
