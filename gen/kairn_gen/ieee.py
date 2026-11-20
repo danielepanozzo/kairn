@@ -658,13 +658,16 @@ def _makes_ball_spec(k, kernels, e):
     guarded = e['from']['center'] in k.program_values() or c_in[0] in k.program_values()
     same = (' /\\ '.join(f'val {o} = val {i}' for o, i in zip(c_out, c_in)) if guarded else
             ' /\\ '.join(f'{o} = {i}' for o, i in zip(c_out, c_in)))
+    # The empty set for a negative radius, -infinity included; the whole line for a radius that is
+    # a NaN or +infinity, or a center that is not finite (a NaN radius: the owner's decision of
+    # 2026-11-20, as for a NaN bound given to an interval); otherwise the ball given.
     lines += [f'  ball_{n} {out} /\\',
-              f'  (nan {r_in} \\/ {r_in} = infinity prec emax true \\/ (finite {r_in} /\\ val {r_in} < 0) -> '
+              f'  ({r_in} = infinity prec emax true \\/ (finite {r_in} /\\ val {r_in} < 0) -> '
               f'ball_empty_{n} {out}) /\\',
               f'  (finite {r_in} -> 0 <= val {r_in} -> finite {c_in[0]} ->\n'
               f'   ball_finite_{n} {out} /\\ {same} /\\ val {r_out} = val {r_in}) /\\',
-              f'  ({r_in} = infinity prec emax false \\/ (finite {r_in} /\\ 0 <= val {r_in} /\\ ~ finite {c_in[0]}) -> '
-              f'ball_whole_{n} {out}).']
+              f'  (nan {r_in} \\/ {r_in} = infinity prec emax false \\/ (finite {r_in} /\\ 0 <= val {r_in} /\\ '
+              f'~ finite {c_in[0]}) -> ball_whole_{n} {out}).']
     return _statement(f'{k.name}_spec', _comment(k), lines)
 
 

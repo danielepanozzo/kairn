@@ -292,7 +292,9 @@ class Claims(unittest.TestCase):
             'requires': ['canonical(c)'],
             'ensures': [{'kind': 'makes_ball', 'center': 'cw', 'radius': 'rw',
                          'from': {'center': 'c', 'radius': 'r'}}],
-            'min_precision': 1, 'status': 'proved', 'ieee_status': 'proved',
+            # Unverified since a NaN radius gives the whole line (decided on 2026-11-20): the proof
+            # of the rule before is being redone.
+            'min_precision': 1, 'status': 'unverified', 'ieee_status': 'unverified',
             'instances': {'binary64': [], 'binary32': []}}.items()))
         # The conditions of finite_when: those that architecture.md gives, and the thresholds
         # proved for the other full kernels (IeeeFull.v; IeeeBallFinite.v for the balls: the

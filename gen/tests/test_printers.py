@@ -103,7 +103,10 @@ TIMES_INF = r' \* std::numeric_limits<(?:double|float)>::infinity\(\);$'
 FULL = {f'{core}_full' for core in ('add_2_2', 'add_fast_2_2', 'sub_2_2', 'add_2_1', 'sub_2_1', 'sub_1_2',
                                     'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
 FULL_BALL = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale', 'mul_pow2') for k in (1, 2)}
-BRANCHED_M1 = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BALL | {'ball_make_1', 'ball_make_2'}})
+BRANCHED_M1 = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BALL})
+# The constructors of balls test that the radius is not negative (ok), then that the ball is finite;
+# a NaN radius, the whole line since 2026-11-20, fails the second test only.
+BRANCHED_M1.update({k: ('ok', 'f') for k in ('ball_make_1', 'ball_make_2')})
 BRANCHED = dict(BRANCHED_M1)
 # Milestone 2: the kernels without a real-model statement whose outputs are selects on one mask, the
 # test of empty operands (ne) of the interval kernels, the test of a pair that describes an interval
@@ -346,8 +349,9 @@ class Cpp(unittest.TestCase):
         self.assertIn('        const double w1 = f ? z1 : r1;', full)
         make = self.fns[('ball_make_2', 'float')]
         self.assertTrue(make['constexpr'])
-        self.assertIn('        const float rw = e ? s : std::numeric_limits<float>::quiet_NaN();', make['lines'])
-        self.assertIn('    const bool e = g >= 0.0f;', make['lines'])
+        self.assertIn('        const float rw = ok ? s : std::numeric_limits<float>::quiet_NaN();', make['lines'])
+        self.assertIn('    const bool n = 0.0f > g;', make['lines'])
+        self.assertIn('    const bool ok = !n;', make['lines'])
         self.assertIn('#include <limits>', cpp.prelude(self.ks))
         self.assertIn('#include <limits>', cpp.prelude(self.tks))         # ops_special, ops_branch
         without = {n: k for n, k in self.tks.items() if n not in ('ops_special', 'ops_branch')}
@@ -623,7 +627,7 @@ class Packed(unittest.TestCase):
                       avx2[('mul_2_2_full', '__m256')])
         self.assertIn('    const float64x2_t r0 = vmulq_f64(t, vdupq_n_f64(std::numeric_limits<double>::infinity()));',
                       neon[('add_2_2_full', 'float64x2_t')])
-        self.assertIn('    const float64x2_t rw = vbslq_f64(e, s, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));',
+        self.assertIn('    const float64x2_t rw = vbslq_f64(ok, s, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));',
                       neon[('ball_make_2', 'float64x2_t')])
         for (file, which), t in self.texts.items():
             ks = self.ks if which == 'kernels' else self.tks

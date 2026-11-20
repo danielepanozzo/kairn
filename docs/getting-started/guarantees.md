@@ -132,8 +132,10 @@ what `std::ldexp` returns, holds by the same argument, tested and not machine-ch
 within its radius of its center (center finite, radius finite and $\ge 0$); the *whole line*,
 every real (center 0, radius $+\infty$); the *empty set* (every limb a NaN). `X.is_finite()`,
 `X.is_whole()` and `X.is_empty()` say which, and `Ball<T, K>::whole()` and `Ball<T, K>::empty()`
-make the last two. A constructor gives the empty set for a NaN or negative radius, and the whole
-line for a center that is not finite or a radius of $+\infty$; in a build with `KAIRN_CHECKS`, a
+make the last two. A constructor gives the empty set for a negative radius, and the whole line
+for a center that is not finite or a radius that is $+\infty$ or a NaN (a NaN says that something
+failed upstream, as for a NaN bound given to an interval; until 2026-11-20 it gave the empty set,
+and the proof of the constructors is being redone for the new rule); in a build with `KAIRN_CHECKS`, a
 negative radius is reported, since it is almost surely a mistake. Every Ball operation calls a
 *full Ball kernel*, which proves, for canonical operands: **B1** the result is canonical; **B2**
 it is empty exactly when an operand is empty; **B3** if it is a finite ball, every operand is a

@@ -70,7 +70,7 @@ class Model(unittest.TestCase):
                       '  let rz := fma t up_ball_add_1_1 up_ball_add_1_2 in\n'
                       '  (cz0, cz1, rz).', m)
         self.assertIn('  let r0 := times_inf t in\n  let n := eq r0 r0 in\n  let r1 := if n then pzero else r0 in\n', m)
-        self.assertIn('  let cw := if e then k0 else cnan in\n', m)
+        self.assertIn('  let cw := if ok then k0 else cnan in\n', m)
         self.assertIn('Definition to_nearest_2 (x0 x1 : float) : float :=\n  let t := x0 in\n  t.', m)
         self.assertIn('Definition lt_2_2 (x0 x1 y0 y1 : float) : bool :=', m)
         # Every operation is that of IeeeOperations.v, applied to the variables of this section.
@@ -349,6 +349,10 @@ class Statements(unittest.TestCase):
     def test_constructors(self):
         s = self.statement('ball_make_1_spec')
         self.assertIn('ball_finite_1 cw rw /\\ val cw = val c /\\ val rw = val r', s)
+        # A negative radius gives the empty set, a NaN radius the whole line (decided on 2026-11-20).
+        self.assertIn('  (r = infinity prec emax true \\/ (finite r /\\ val r < 0) -> ball_empty_1 cw rw) /\\\n', s)
+        self.assertIn('  (nan r \\/ r = infinity prec emax false \\/ (finite r /\\ 0 <= val r /\\ ~ finite c) -> '
+                      'ball_whole_1 cw rw)', s)
         s = self.statement('ball_make_2_spec')
         self.assertIn('ball_finite_2 cw0 cw1 rw /\\ cw0 = c0 /\\ cw1 = c1 /\\ val rw = val r', s)
 
@@ -362,7 +366,9 @@ class Statements(unittest.TestCase):
     def test_audit(self):
         text = ieee.audit(self.ks)
         # Every kernel of the extended domain names its theorem.
-        self.assertEqual(text.count('Print Assumptions'), 54)
+        # 54, but the two constructors of a ball, unverified while their proof is redone for a NaN
+        # radius that gives the whole line (decided on 2026-11-20).
+        self.assertEqual(text.count('Print Assumptions'), 52)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -383,9 +389,12 @@ class CheckedFiles(unittest.TestCase):
     # z1 - dd as minus the rounding up of dd - z1), and make -C proofs passed on the new model.
     # Then the thirteen kernels of stage B1 of the intervals, unverified, were added: every earlier
     # definition and statement is the same, byte for byte, some printed earlier; make -C proofs passed
-    # on these files.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '5648f899068f611e16d06faf4506495f5efac9ddc7d4ce775d7ebd75f8024b25',
-               'proofs/gen/IeeeStatements.v': '5e3868fb045d772ba11fc980379f50f2568381d600765184a6797774ae53fb41'}
+    # on these files. Then a NaN radius given to a constructor of a ball became the whole line
+    # (decided on 2026-11-20): the definitions and statements of ball_make_1 and ball_make_2 changed,
+    # their status is unverified, and make -C proofs builds every file but theories/IeeeMake.v, whose
+    # proof of the rule before fails, and the IEEE audit, which needs it; IeeeMake.v is being redone.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'bad9bdbb870aeb2c18b2d6034c54b0d267f823ab0d02de198fb5a1cb08e276e9',
+               'proofs/gen/IeeeStatements.v': 'ac755681e1db6c9d5d475876e3026c4593cefa9e01eed3e725da828abeff4ec4'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

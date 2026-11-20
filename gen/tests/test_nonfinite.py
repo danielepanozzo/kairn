@@ -761,10 +761,10 @@ def judge_makes_ball(k, ks, fmt, e, ins, outs, values):
     state = ball_state(fmt, oc, orad)
     if state is None:
         return ['makes_ball (canonical)']
-    if radius[0] == NAN or radius == NINF or (finite(radius) and radius[1] and radius[2] != 0):
-        want = 'empty'                  # a NaN or negative radius, -inf included
-    elif not all(finite(v) for v in center) or radius == PINF:
-        want = 'line'
+    if radius == NINF or (finite(radius) and radius[1] and radius[2] != 0):
+        want = 'empty'                  # a negative radius, -inf included
+    elif radius[0] == NAN or not all(finite(v) for v in center) or radius == PINF:
+        want = 'line'                   # a NaN radius too (decided on 2026-11-20)
     else:
         want = 'finite'
     if state != want:

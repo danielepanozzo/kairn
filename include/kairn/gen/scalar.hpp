@@ -630,21 +630,21 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_lower_as_1(float c, float r, float& l_
 }
 
 // ball_make_1(c, r) -> cw, rw
-// constructors (Milestone 1 listing). Status: proved (IEEE model only); constexpr.
+// constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). Status: unverified (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
-KAIRN_GEN_COLD constexpr result<double, 2> ball_make_1(double g, double c0, bool e, bool f) noexcept {
+KAIRN_GEN_COLD constexpr result<double, 2> ball_make_1(double g, double c0, bool ok, bool f) noexcept {
     const double k0 = f ? c0 : 0.0;
     const double s = f ? g : std::numeric_limits<double>::infinity();
-    const double cw = e ? k0 : std::numeric_limits<double>::quiet_NaN();
-    const double rw = e ? s : std::numeric_limits<double>::quiet_NaN();
+    const double cw = ok ? k0 : std::numeric_limits<double>::quiet_NaN();
+    const double rw = ok ? s : std::numeric_limits<double>::quiet_NaN();
     return {{cw, rw}};
 }
-KAIRN_GEN_COLD constexpr result<float, 2> ball_make_1(float g, float c0, bool e, bool f) noexcept {
+KAIRN_GEN_COLD constexpr result<float, 2> ball_make_1(float g, float c0, bool ok, bool f) noexcept {
     const float k0 = f ? c0 : 0.0f;
     const float s = f ? g : std::numeric_limits<float>::infinity();
-    const float cw = e ? k0 : std::numeric_limits<float>::quiet_NaN();
-    const float rw = e ? s : std::numeric_limits<float>::quiet_NaN();
+    const float cw = ok ? k0 : std::numeric_limits<float>::quiet_NaN();
+    const float rw = ok ? s : std::numeric_limits<float>::quiet_NaN();
     return {{cw, rw}};
 }
 }  // namespace fixup
@@ -652,24 +652,25 @@ KAIRN_GEN_COLD constexpr result<float, 2> ball_make_1(float g, float c0, bool e,
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_1(double c, double r, double& cw_out, double& rw_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? r : r + 0.0;
     const double c0 = __builtin_is_constant_evaluated() ? c : c + 0.0;
-    const bool e = g >= 0.0;
+    const bool n = 0.0 > g;
+    const bool ok = !n;
     const double a = abs_bits(c0);
     const bool f1 = std::numeric_limits<double>::infinity() > a;
     const bool f2 = std::numeric_limits<double>::infinity() > g;
     const bool f = f1 & f2;
-    if (e & f) [[likely]] {
+    if (ok & f) [[likely]] {
         cw_out = c0;
         rw_out = g;
     } else {
 #if KAIRN_GEN_FIXUP_CALL
-        const fixup::result<double, 2> fixed_ = fixup::ball_make_1(g, c0, e, f);
+        const fixup::result<double, 2> fixed_ = fixup::ball_make_1(g, c0, ok, f);
         cw_out = fixed_.limb[0];
         rw_out = fixed_.limb[1];
 #else
         const double k0 = f ? c0 : 0.0;
         const double s = f ? g : std::numeric_limits<double>::infinity();
-        const double cw = e ? k0 : std::numeric_limits<double>::quiet_NaN();
-        const double rw = e ? s : std::numeric_limits<double>::quiet_NaN();
+        const double cw = ok ? k0 : std::numeric_limits<double>::quiet_NaN();
+        const double rw = ok ? s : std::numeric_limits<double>::quiet_NaN();
         cw_out = cw;
         rw_out = rw;
 #endif
@@ -678,24 +679,25 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_make_1(double c, double r, double& cw_
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_1(float c, float r, float& cw_out, float& rw_out) noexcept {
     const float g = __builtin_is_constant_evaluated() ? r : r + 0.0f;
     const float c0 = __builtin_is_constant_evaluated() ? c : c + 0.0f;
-    const bool e = g >= 0.0f;
+    const bool n = 0.0f > g;
+    const bool ok = !n;
     const float a = abs_bits(c0);
     const bool f1 = std::numeric_limits<float>::infinity() > a;
     const bool f2 = std::numeric_limits<float>::infinity() > g;
     const bool f = f1 & f2;
-    if (e & f) [[likely]] {
+    if (ok & f) [[likely]] {
         cw_out = c0;
         rw_out = g;
     } else {
 #if KAIRN_GEN_FIXUP_CALL
-        const fixup::result<float, 2> fixed_ = fixup::ball_make_1(g, c0, e, f);
+        const fixup::result<float, 2> fixed_ = fixup::ball_make_1(g, c0, ok, f);
         cw_out = fixed_.limb[0];
         rw_out = fixed_.limb[1];
 #else
         const float k0 = f ? c0 : 0.0f;
         const float s = f ? g : std::numeric_limits<float>::infinity();
-        const float cw = e ? k0 : std::numeric_limits<float>::quiet_NaN();
-        const float rw = e ? s : std::numeric_limits<float>::quiet_NaN();
+        const float cw = ok ? k0 : std::numeric_limits<float>::quiet_NaN();
+        const float rw = ok ? s : std::numeric_limits<float>::quiet_NaN();
         cw_out = cw;
         rw_out = rw;
 #endif
@@ -4203,43 +4205,44 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_lower_as_2(float c0, float c1, float r
 }
 
 // ball_make_2(c = (c0, c1), r) -> cw = (cw0, cw1), rw
-// constructors (Milestone 1 listing). Status: proved (IEEE model only); constexpr.
+// constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). Status: unverified (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
-KAIRN_GEN_COLD constexpr result<double, 3> ball_make_2(double c0, double c1, double g, bool e, bool f) noexcept {
+KAIRN_GEN_COLD constexpr result<double, 3> ball_make_2(double c0, double c1, double g, bool ok, bool f) noexcept {
     const double k0 = f ? c0 : 0.0;
     const double k1 = f ? c1 : 0.0;
     const double s = f ? g : std::numeric_limits<double>::infinity();
-    const double cw0 = e ? k0 : std::numeric_limits<double>::quiet_NaN();
-    const double cw1 = e ? k1 : std::numeric_limits<double>::quiet_NaN();
-    const double rw = e ? s : std::numeric_limits<double>::quiet_NaN();
+    const double cw0 = ok ? k0 : std::numeric_limits<double>::quiet_NaN();
+    const double cw1 = ok ? k1 : std::numeric_limits<double>::quiet_NaN();
+    const double rw = ok ? s : std::numeric_limits<double>::quiet_NaN();
     return {{cw0, cw1, rw}};
 }
-KAIRN_GEN_COLD constexpr result<float, 3> ball_make_2(float c0, float c1, float g, bool e, bool f) noexcept {
+KAIRN_GEN_COLD constexpr result<float, 3> ball_make_2(float c0, float c1, float g, bool ok, bool f) noexcept {
     const float k0 = f ? c0 : 0.0f;
     const float k1 = f ? c1 : 0.0f;
     const float s = f ? g : std::numeric_limits<float>::infinity();
-    const float cw0 = e ? k0 : std::numeric_limits<float>::quiet_NaN();
-    const float cw1 = e ? k1 : std::numeric_limits<float>::quiet_NaN();
-    const float rw = e ? s : std::numeric_limits<float>::quiet_NaN();
+    const float cw0 = ok ? k0 : std::numeric_limits<float>::quiet_NaN();
+    const float cw1 = ok ? k1 : std::numeric_limits<float>::quiet_NaN();
+    const float rw = ok ? s : std::numeric_limits<float>::quiet_NaN();
     return {{cw0, cw1, rw}};
 }
 }  // namespace fixup
 #endif
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(double c0, double c1, double r, double& cw0_out, double& cw1_out, double& rw_out) noexcept {
     const double g = __builtin_is_constant_evaluated() ? r : r + 0.0;
-    const bool e = g >= 0.0;
+    const bool n = 0.0 > g;
+    const bool ok = !n;
     const double a = abs_bits(c0);
     const bool f1 = std::numeric_limits<double>::infinity() > a;
     const bool f2 = std::numeric_limits<double>::infinity() > g;
     const bool f = f1 & f2;
-    if (e & f) [[likely]] {
+    if (ok & f) [[likely]] {
         cw0_out = c0;
         cw1_out = c1;
         rw_out = g;
     } else {
 #if KAIRN_GEN_FIXUP_CALL
-        const fixup::result<double, 3> fixed_ = fixup::ball_make_2(c0, c1, g, e, f);
+        const fixup::result<double, 3> fixed_ = fixup::ball_make_2(c0, c1, g, ok, f);
         cw0_out = fixed_.limb[0];
         cw1_out = fixed_.limb[1];
         rw_out = fixed_.limb[2];
@@ -4247,9 +4250,9 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(double c0, double c1, double r,
         const double k0 = f ? c0 : 0.0;
         const double k1 = f ? c1 : 0.0;
         const double s = f ? g : std::numeric_limits<double>::infinity();
-        const double cw0 = e ? k0 : std::numeric_limits<double>::quiet_NaN();
-        const double cw1 = e ? k1 : std::numeric_limits<double>::quiet_NaN();
-        const double rw = e ? s : std::numeric_limits<double>::quiet_NaN();
+        const double cw0 = ok ? k0 : std::numeric_limits<double>::quiet_NaN();
+        const double cw1 = ok ? k1 : std::numeric_limits<double>::quiet_NaN();
+        const double rw = ok ? s : std::numeric_limits<double>::quiet_NaN();
         cw0_out = cw0;
         cw1_out = cw1;
         rw_out = rw;
@@ -4258,18 +4261,19 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(double c0, double c1, double r,
 }
 KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(float c0, float c1, float r, float& cw0_out, float& cw1_out, float& rw_out) noexcept {
     const float g = __builtin_is_constant_evaluated() ? r : r + 0.0f;
-    const bool e = g >= 0.0f;
+    const bool n = 0.0f > g;
+    const bool ok = !n;
     const float a = abs_bits(c0);
     const bool f1 = std::numeric_limits<float>::infinity() > a;
     const bool f2 = std::numeric_limits<float>::infinity() > g;
     const bool f = f1 & f2;
-    if (e & f) [[likely]] {
+    if (ok & f) [[likely]] {
         cw0_out = c0;
         cw1_out = c1;
         rw_out = g;
     } else {
 #if KAIRN_GEN_FIXUP_CALL
-        const fixup::result<float, 3> fixed_ = fixup::ball_make_2(c0, c1, g, e, f);
+        const fixup::result<float, 3> fixed_ = fixup::ball_make_2(c0, c1, g, ok, f);
         cw0_out = fixed_.limb[0];
         cw1_out = fixed_.limb[1];
         rw_out = fixed_.limb[2];
@@ -4277,9 +4281,9 @@ KAIRN_GEN_FORCEINLINE constexpr void ball_make_2(float c0, float c1, float r, fl
         const float k0 = f ? c0 : 0.0f;
         const float k1 = f ? c1 : 0.0f;
         const float s = f ? g : std::numeric_limits<float>::infinity();
-        const float cw0 = e ? k0 : std::numeric_limits<float>::quiet_NaN();
-        const float cw1 = e ? k1 : std::numeric_limits<float>::quiet_NaN();
-        const float rw = e ? s : std::numeric_limits<float>::quiet_NaN();
+        const float cw0 = ok ? k0 : std::numeric_limits<float>::quiet_NaN();
+        const float cw1 = ok ? k1 : std::numeric_limits<float>::quiet_NaN();
+        const float rw = ok ? s : std::numeric_limits<float>::quiet_NaN();
         cw0_out = cw0;
         cw1_out = cw1;
         rw_out = rw;

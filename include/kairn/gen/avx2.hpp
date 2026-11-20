@@ -556,30 +556,32 @@ KAIRN_GEN_FORCEINLINE void ball_lower_as_1(__m256 c, __m256 r, __m256& l_out) no
 KAIRN_GEN_FORCEINLINE void ball_make_1(__m256d c, __m256d r, __m256d& cw_out, __m256d& rw_out) noexcept {
     const __m256d g = _mm256_add_pd(r, _mm256_setzero_pd());
     const __m256d c0 = _mm256_add_pd(c, _mm256_setzero_pd());
-    const __m256d e = _mm256_cmp_pd(_mm256_setzero_pd(), g, _CMP_LE_OQ);
+    const __m256d n = _mm256_cmp_pd(g, _mm256_setzero_pd(), _CMP_LT_OQ);
+    const __m256d ok = not_mask(n);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), c0);
     const __m256d f1 = _mm256_cmp_pd(a, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
     const __m256d f2 = _mm256_cmp_pd(g, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
     const __m256d f = _mm256_and_pd(f1, f2);
     const __m256d k0 = _mm256_blendv_pd(_mm256_setzero_pd(), c0, f);
     const __m256d s = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::infinity()), g, f);
-    const __m256d cw = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), k0, e);
-    const __m256d rw = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), s, e);
+    const __m256d cw = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), k0, ok);
+    const __m256d rw = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), s, ok);
     cw_out = cw;
     rw_out = rw;
 }
 KAIRN_GEN_FORCEINLINE void ball_make_1(__m256 c, __m256 r, __m256& cw_out, __m256& rw_out) noexcept {
     const __m256 g = _mm256_add_ps(r, _mm256_setzero_ps());
     const __m256 c0 = _mm256_add_ps(c, _mm256_setzero_ps());
-    const __m256 e = _mm256_cmp_ps(_mm256_setzero_ps(), g, _CMP_LE_OQ);
+    const __m256 n = _mm256_cmp_ps(g, _mm256_setzero_ps(), _CMP_LT_OQ);
+    const __m256 ok = not_mask(n);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), c0);
     const __m256 f1 = _mm256_cmp_ps(a, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
     const __m256 f2 = _mm256_cmp_ps(g, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
     const __m256 f = _mm256_and_ps(f1, f2);
     const __m256 k0 = _mm256_blendv_ps(_mm256_setzero_ps(), c0, f);
     const __m256 s = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()), g, f);
-    const __m256 cw = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), k0, e);
-    const __m256 rw = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), s, e);
+    const __m256 cw = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), k0, ok);
+    const __m256 rw = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), s, ok);
     cw_out = cw;
     rw_out = rw;
 }
@@ -3305,7 +3307,8 @@ KAIRN_GEN_FORCEINLINE void ball_lower_as_2(__m256 c0, __m256 c1, __m256 r, __m25
 // ball_make_2(c = (c0, c1), r) -> cw = (cw0, cw1), rw
 KAIRN_GEN_FORCEINLINE void ball_make_2(__m256d c0, __m256d c1, __m256d r, __m256d& cw0_out, __m256d& cw1_out, __m256d& rw_out) noexcept {
     const __m256d g = _mm256_add_pd(r, _mm256_setzero_pd());
-    const __m256d e = _mm256_cmp_pd(_mm256_setzero_pd(), g, _CMP_LE_OQ);
+    const __m256d n = _mm256_cmp_pd(g, _mm256_setzero_pd(), _CMP_LT_OQ);
+    const __m256d ok = not_mask(n);
     const __m256d a = _mm256_andnot_pd(_mm256_set1_pd(-0.0), c0);
     const __m256d f1 = _mm256_cmp_pd(a, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
     const __m256d f2 = _mm256_cmp_pd(g, _mm256_set1_pd(std::numeric_limits<double>::infinity()), _CMP_LT_OQ);
@@ -3313,16 +3316,17 @@ KAIRN_GEN_FORCEINLINE void ball_make_2(__m256d c0, __m256d c1, __m256d r, __m256
     const __m256d k0 = _mm256_blendv_pd(_mm256_setzero_pd(), c0, f);
     const __m256d k1 = _mm256_blendv_pd(_mm256_setzero_pd(), c1, f);
     const __m256d s = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::infinity()), g, f);
-    const __m256d cw0 = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), k0, e);
-    const __m256d cw1 = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), k1, e);
-    const __m256d rw = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), s, e);
+    const __m256d cw0 = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), k0, ok);
+    const __m256d cw1 = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), k1, ok);
+    const __m256d rw = _mm256_blendv_pd(_mm256_set1_pd(std::numeric_limits<double>::quiet_NaN()), s, ok);
     cw0_out = cw0;
     cw1_out = cw1;
     rw_out = rw;
 }
 KAIRN_GEN_FORCEINLINE void ball_make_2(__m256 c0, __m256 c1, __m256 r, __m256& cw0_out, __m256& cw1_out, __m256& rw_out) noexcept {
     const __m256 g = _mm256_add_ps(r, _mm256_setzero_ps());
-    const __m256 e = _mm256_cmp_ps(_mm256_setzero_ps(), g, _CMP_LE_OQ);
+    const __m256 n = _mm256_cmp_ps(g, _mm256_setzero_ps(), _CMP_LT_OQ);
+    const __m256 ok = not_mask(n);
     const __m256 a = _mm256_andnot_ps(_mm256_set1_ps(-0.0f), c0);
     const __m256 f1 = _mm256_cmp_ps(a, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
     const __m256 f2 = _mm256_cmp_ps(g, _mm256_set1_ps(std::numeric_limits<float>::infinity()), _CMP_LT_OQ);
@@ -3330,9 +3334,9 @@ KAIRN_GEN_FORCEINLINE void ball_make_2(__m256 c0, __m256 c1, __m256 r, __m256& c
     const __m256 k0 = _mm256_blendv_ps(_mm256_setzero_ps(), c0, f);
     const __m256 k1 = _mm256_blendv_ps(_mm256_setzero_ps(), c1, f);
     const __m256 s = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::infinity()), g, f);
-    const __m256 cw0 = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), k0, e);
-    const __m256 cw1 = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), k1, e);
-    const __m256 rw = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), s, e);
+    const __m256 cw0 = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), k0, ok);
+    const __m256 cw1 = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), k1, ok);
+    const __m256 rw = _mm256_blendv_ps(_mm256_set1_ps(std::numeric_limits<float>::quiet_NaN()), s, ok);
     cw0_out = cw0;
     cw1_out = cw1;
     rw_out = rw;

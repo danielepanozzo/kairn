@@ -460,7 +460,10 @@ class Tool(unittest.TestCase):
 
     def test_constructors(self):
         self.assertIn("when $a = \\pm\\infty$, $x = (\\pm\\infty, 0)$", self.page("make_2"))
-        self.assertIn("is a NaN or negative, $-\\infty$ included", self.page("ball_make_2"))
+        self.assertIn("$Z$ is the empty set (every limb a NaN) when $r$ is negative, $-\\infty$ included.",
+                      self.page("ball_make_2"))
+        self.assertIn("the whole line (center 0, radius $+\\infty$) when $r$ is a NaN or $+\\infty$",
+                      self.page("ball_make_1"))
 
     def test_unknown_set_operation(self):
         # A set operation this script has no template for is an error, never a guess (stage B1).
@@ -525,8 +528,10 @@ class Tool(unittest.TestCase):
             self.change(name, lambda k: k.update(ieee_only=True))
 
     def test_ieee_only_with_two_statuses(self):
-        self.change("ball_make_1", lambda k: k.update(status="unverified"))
-        self.fails("ball_make_1", "ieee_only", "ieee_status")
+        # make_2, proved in the IEEE model and without a real-model statement (ball_make_1, the
+        # kernel this used, is unverified since 2026-11-20, in both statuses).
+        self.change("make_2", lambda k: k.update(status="unverified"))
+        self.fails("make_2", "ieee_only", "ieee_status")
 
     def test_ieee_only_decides_the_reading(self):
         # A kernel with a ball requirement and an encloses claim, and a real-model statement:
