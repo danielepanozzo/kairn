@@ -1190,7 +1190,7 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(float cx, float rx, float cy, float r
 }
 
 // ball_to_interval_1(c, r) -> zl, zu
-// the directed difference and sum of the center and the radius (Milestone 2 listing). Status: unverified (IEEE model only); constexpr.
+// the directed difference and sum of the center and the radius (Milestone 2 listing). Status: proved (IEEE model only); constexpr.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> ball_to_interval_1(double l, double h, bool ne) noexcept {
@@ -1732,7 +1732,7 @@ KAIRN_GEN_FORCEINLINE constexpr void sub_up_1(float a, float b, float& r_out) no
 }
 
 // interval_mid_rad_1(xl, xu) -> m, r
-// the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD constexpr result<double, 2> interval_mid_rad_1(double mf, double rd, bool ne) noexcept {
@@ -2275,7 +2275,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_neg_1(float xl, float xu, float& z
 }
 
 // interval_split_1(xl, xu) -> al, au, bl, bu
-// the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void interval_split_1(double xl, double xu, double& al_out, double& au_out, double& bl_out, double& bu_out) noexcept {
     // (m, r) = interval_mid_rad_1(xl, xu)
     const double m_om = next_down_bits(std::numeric_limits<double>::infinity());
@@ -2541,7 +2541,7 @@ KAIRN_GEN_FORCEINLINE constexpr void interval_sub_1(float xl, float xu, float yl
 }
 
 // interval_to_ball_1(xl, xu) -> c, r
-// interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). Status: unverified (IEEE model only); constexpr, each prod a plain product in constant evaluation.
+// interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). Status: proved (IEEE model only); constexpr, each prod a plain product in constant evaluation.
 KAIRN_GEN_FORCEINLINE constexpr void interval_to_ball_1(double xl, double xu, double& c_out, double& r_out) noexcept {
     // (m, r) = interval_mid_rad_1(xl, xu)
     const double m_om = next_down_bits(std::numeric_limits<double>::infinity());

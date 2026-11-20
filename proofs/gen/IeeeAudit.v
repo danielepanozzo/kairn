@@ -15,6 +15,7 @@ From Kairn Require Import IeeeExt.
 From Kairn Require Import IeeeFull.
 From Kairn Require Import IeeeInterval1.
 From Kairn Require Import IeeeInterval2.
+From Kairn Require Import IeeeIntervalConvert.
 From Kairn Require Import IeeeIntervalExact.
 From Kairn Require Import IeeeIntervalSub2.
 From Kairn Require Import IeeeMake.
@@ -61,6 +62,9 @@ Print Assumptions ball_scale_1_full_correct.
 Definition ball_sub_1_full_audit : ball_sub_1_full_spec := ball_sub_1_full_correct.
 Print Assumptions ball_sub_1_full_correct.
 
+Definition ball_to_interval_1_audit : ball_to_interval_1_spec := ball_to_interval_1_correct.
+Print Assumptions ball_to_interval_1_correct.
+
 Definition ball_upper_as_1_audit : ball_upper_as_1_spec := ball_upper_as_1_correct.
 Print Assumptions ball_upper_as_1_correct.
 
@@ -79,6 +83,9 @@ Print Assumptions interval_make_1_correct.
 Definition sub_up_1_ieee_audit : sub_up_1_ieee_spec := sub_up_1_ieee_correct.
 Print Assumptions sub_up_1_ieee_correct.
 
+Definition interval_mid_rad_1_audit : interval_mid_rad_1_spec := interval_mid_rad_1_correct.
+Print Assumptions interval_mid_rad_1_correct.
+
 Definition mul_dir_1_ieee_audit : mul_dir_1_ieee_spec := mul_dir_1_ieee_correct.
 Print Assumptions mul_dir_1_ieee_correct.
 
@@ -88,8 +95,14 @@ Print Assumptions interval_mul_1_correct.
 Definition interval_neg_1_audit : interval_neg_1_spec := interval_neg_1_correct.
 Print Assumptions interval_neg_1_correct.
 
+Definition interval_split_1_audit : interval_split_1_spec := interval_split_1_correct.
+Print Assumptions interval_split_1_correct.
+
 Definition interval_sub_1_audit : interval_sub_1_spec := interval_sub_1_correct.
 Print Assumptions interval_sub_1_correct.
+
+Definition interval_to_ball_1_audit : interval_to_ball_1_spec := interval_to_ball_1_correct.
+Print Assumptions interval_to_ball_1_correct.
 
 Definition make_2_audit : make_2_spec := make_2_correct.
 Print Assumptions make_2_correct.

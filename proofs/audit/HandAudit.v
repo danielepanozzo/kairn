@@ -42,7 +42,9 @@
      interval kernels of stage B1 (the negation and the constructor of two limbs, the hulls
      and the intersections), the hull and the intersection of intervals of extended real
      numbers and the lemmas that carry them to limbs and to 2-limb values; for the
-     difference of two intervals of two limbs, the sum with the negated operand.
+     difference of two intervals of two limbs, the sum with the negated operand; for the
+     conversions between an interval and a ball of one limb, the midpoint of a bounded
+     interval over the real numbers and on limbs, and the cases of a canonical interval.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -601,3 +603,29 @@ Print Assumptions sub_test.
 Print Assumptions interval_sub_2_as_add.
 Print Assumptions range_sub_2_as_add.
 Print Assumptions interval_sub_2_all.
+
+(* The conversions between an interval and a ball of one limb, the midpoint and the radius of
+   an interval and its split, in the IEEE model (theories/IeeeIntervalConvert.v). The theorems
+   of their generated statements are listed by proofs/gen/IeeeAudit.v. Here, the lemmas they
+   rest on: the cases of a canonical interval of one limb; the bounds of the members of a
+   ball; the halvings that are exact; the error of the rounded sum of the halves, and its
+   distance to the bounds; the rounding up of the larger of two numbers; the two selects
+   that move the midpoint into the interval; the midpoint and the radius of a bounded
+   interval; and the four statements written with the names of this file. *)
+From Kairn Require Import IeeeIntervalConvert.
+Print Assumptions interval_1_cases.
+Print Assumptions ball_1_bounds.
+Print Assumptions half_exact_large.
+Print Assumptions mid_error.
+Print Assumptions mid_above.
+Print Assumptions mid_below.
+Print Assumptions RU_max.
+Print Assumptions clamp_facts.
+Print Assumptions prod_half.
+Print Assumptions sub_up_value.
+Print Assumptions mid_rad_bounded.
+Print Assumptions interval_mid_rad_1_eq.
+Print Assumptions ball_to_interval_1_all.
+Print Assumptions interval_mid_rad_1_all.
+Print Assumptions interval_to_ball_1_all.
+Print Assumptions interval_split_1_all.

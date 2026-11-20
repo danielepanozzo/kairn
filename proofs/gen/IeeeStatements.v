@@ -265,7 +265,7 @@ Definition ball_sub_1_full_spec : Prop :=
    ball_finite_1 cw rw) /\
   (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> in_ball_1 cw rw (x - y)).
 
-(* ball_to_interval_1: the directed difference and sum of the center and the radius (Milestone 2 listing). IEEE-model status: unverified. *)
+(* ball_to_interval_1: the directed difference and sum of the center and the radius (Milestone 2 listing). IEEE-model status: proved. *)
 Definition ball_to_interval_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -394,7 +394,7 @@ Definition sub_up_1_ieee_spec : Prop :=
   let r := IeeeModel.sub_up_1 prec emax nan_plus nan_minus nan_opp nan_abs a b in
   xval r = xru prec emax (xadd (xval a) (xopp (xval b))).
 
-(* interval_mid_rad_1: the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_mid_rad_1: the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_mid_rad_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -519,7 +519,7 @@ Definition interval_neg_1_spec : Prop :=
     range_1 (fun x : R => - x) (in_interval_1 xl xu) z ->
     Rabs z <= omega prec emax)).
 
-(* interval_split_1: the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_split_1: the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_split_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -560,7 +560,7 @@ Definition interval_sub_1_spec : Prop :=
     range_2 (fun x y : R => x - y) (in_interval_1 xl xu) (in_interval_1 yl yu) z ->
     Rabs z <= omega prec emax)).
 
-(* interval_to_ball_1: interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_to_ball_1: interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_to_ball_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

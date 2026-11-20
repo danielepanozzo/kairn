@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 116 kernels, 110 are proved and 6 are **UNVERIFIED**: [`ball_to_interval_1`](ball_to_interval_1.md), [`interval_mid_rad_1`](interval_mid_rad_1.md), [`interval_mul_2`](interval_mul_2.md), [`interval_split_1`](interval_split_1.md), [`interval_to_ball_1`](interval_to_ball_1.md), [`mul_ext_2_2`](mul_ext_2_2.md).
+Of the 116 kernels, 114 are proved and 2 are **UNVERIFIED**: [`interval_mul_2`](interval_mul_2.md), [`mul_ext_2_2`](mul_ext_2_2.md).
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -154,7 +154,7 @@ Arithmetic on balls: the result contains every result on points of the operands.
 | not yet called by the public headers | - | a upper bound of the ball; $-\infty$ for the empty ball; $\lvert h - (c + r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_upper_as_2`](ball_upper_as_2.md) |
 | not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound | [`ball_from_interval_2`](ball_from_interval_2.md) |
 | not yet called by the public headers | - | a canonical ball that contains every $x$; the empty set and the whole line included | [`ball_narrow_2_1`](ball_narrow_2_1.md) |
-| not yet called by the public headers | - | the smallest interval of `T` that contains the ball; empty for the empty ball | [`ball_to_interval_1`](ball_to_interval_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | the smallest interval of `T` that contains the ball; empty for the empty ball | [`ball_to_interval_1`](ball_to_interval_1.md) |
 
 ## Interval operations
 
@@ -176,9 +176,9 @@ Arithmetic on intervals of numbers of `T` and of two limbs: the result contains 
 | not yet called by the public headers | - | the intersection of the intervals, exactly | [`interval_intersection_1`](interval_intersection_1.md) |
 | not yet called by the public headers | - | the hull of the intervals, exactly | [`interval_hull_2`](interval_hull_2.md) |
 | not yet called by the public headers | - | the intersection of the intervals, exactly | [`interval_intersection_2`](interval_intersection_2.md) |
-| not yet called by the public headers | - | the midpoint and radius, the values of IEEE 1788 when unbounded or empty | [`interval_mid_rad_1`](interval_mid_rad_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | a canonical ball that contains the interval; the whole line when it is unbounded | [`interval_to_ball_1`](interval_to_ball_1.md) **UNVERIFIED** |
-| not yet called by the public headers | - | two intervals that together are the operand, split at a point of it | [`interval_split_1`](interval_split_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | the midpoint and radius, the values of IEEE 1788 when unbounded or empty | [`interval_mid_rad_1`](interval_mid_rad_1.md) |
+| not yet called by the public headers | - | a canonical ball that contains the interval; the whole line when it is unbounded | [`interval_to_ball_1`](interval_to_ball_1.md) |
+| not yet called by the public headers | - | two intervals that together are the operand, split at a point of it | [`interval_split_1`](interval_split_1.md) |
 
 ## Building blocks
 

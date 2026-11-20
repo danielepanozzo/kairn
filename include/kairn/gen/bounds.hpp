@@ -251,10 +251,14 @@ template <> struct ball_sub_1_full<float> {
     static constexpr bool proved = true;
 };
 
-// ball_to_interval_1: UNVERIFIED. Claims: interval_of_ball.
+// ball_to_interval_1: proved. Claims: interval_of_ball.
 template <class T> struct ball_to_interval_1;
-template <> struct ball_to_interval_1<double> { static constexpr bool proved = false; };
-template <> struct ball_to_interval_1<float> { static constexpr bool proved = false; };
+template <> struct ball_to_interval_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct ball_to_interval_1<float> {
+    static constexpr bool proved = true;
+};
 
 // ball_upper_as_1: proved. Claims: set_bound.
 template <class T> struct ball_upper_as_1;
@@ -329,10 +333,14 @@ template <> struct sub_up_1<float> {
     static constexpr bool proved = true;
 };
 
-// interval_mid_rad_1: UNVERIFIED. Claims: ball_of_interval.
+// interval_mid_rad_1: proved. Claims: ball_of_interval.
 template <class T> struct interval_mid_rad_1;
-template <> struct interval_mid_rad_1<double> { static constexpr bool proved = false; };
-template <> struct interval_mid_rad_1<float> { static constexpr bool proved = false; };
+template <> struct interval_mid_rad_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_mid_rad_1<float> {
+    static constexpr bool proved = true;
+};
 
 // two_prod: proved. Claims: leading_rounded; error, form R, c = 0, k = 2, t = 1/2; error, form R, c = 0, k = 2, t = 0 when product_large.
 template <class T> struct two_prod;
@@ -380,10 +388,14 @@ template <> struct interval_neg_1<float> {
     static constexpr bool proved = true;
 };
 
-// interval_split_1: UNVERIFIED. Claims: splits.
+// interval_split_1: proved. Claims: splits.
 template <class T> struct interval_split_1;
-template <> struct interval_split_1<double> { static constexpr bool proved = false; };
-template <> struct interval_split_1<float> { static constexpr bool proved = false; };
+template <> struct interval_split_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_split_1<float> {
+    static constexpr bool proved = true;
+};
 
 // interval_sub_1: proved. Claims: encloses_interval.
 template <class T> struct interval_sub_1;
@@ -394,10 +406,14 @@ template <> struct interval_sub_1<float> {
     static constexpr bool proved = true;
 };
 
-// interval_to_ball_1: UNVERIFIED. Claims: ball_of_interval.
+// interval_to_ball_1: proved. Claims: ball_of_interval.
 template <class T> struct interval_to_ball_1;
-template <> struct interval_to_ball_1<double> { static constexpr bool proved = false; };
-template <> struct interval_to_ball_1<float> { static constexpr bool proved = false; };
+template <> struct interval_to_ball_1<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_to_ball_1<float> {
+    static constexpr bool proved = true;
+};
 
 // make_2: proved. Claims: represents.
 template <class T> struct make_2;

@@ -1448,9 +1448,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert.v",
+        "name": "ball_to_interval_1_correct"
+      },
       "source": {
         "cite": "the directed difference and sum of the center and the radius (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -1958,9 +1962,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert.v",
+        "name": "interval_mid_rad_1_correct"
+      },
       "source": {
         "cite": "the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2336,9 +2344,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert.v",
+        "name": "interval_split_1_correct"
+      },
       "source": {
         "cite": "the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -2474,9 +2486,13 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert.v",
+        "name": "interval_to_ball_1_correct"
+      },
       "source": {
         "cite": "interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
