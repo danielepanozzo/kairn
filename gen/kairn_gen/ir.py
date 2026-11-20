@@ -69,6 +69,13 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       claims for finite operands and a finite output limb 0;
                                       `bridge`, that every value it computes is then finite and
                                       its outputs are the real model's
+    ieee_bridge_theorem: FILE K_ieee_bridge   the finite domain only, once K_ieee_bridge_spec is
+                                      proved (with `ieee: bridge`)
+    ieee_spec_theorem: FILE K_ieee_correct    likewise for K_ieee_spec (with `ieee: spec`)
+    ieee_lead_theorem: FILE K_ieee_lead       likewise for K_ieee_lead_spec of
+                                      proofs/gen/IeeeFoldStatements.v (a step or a combination
+                                      of a fold); a statement whose theorem is not named is
+                                      unverified
     ieee_finite:   abs_le(x0,-2);abs_le(y0,-2)
                                       optional, the finite domain only: conditions as in
                                       finite_when (over input names and limb names) under which
@@ -132,6 +139,9 @@ along arrays, described in gen/kernels/NAME.fold:
     ensures:       finite_or_nan r flag=flag
     min_precision: 4
     status:        unverified         or proved, with theorem: FILE (F_seq_correct, F_lanes_correct)
+    ieee_theorem:  FILE               optional, once the statements of proofs/gen/IeeeFoldStatements.v
+                                      are proved: F_seq_ieee_correct and F_lanes_ieee_correct, of
+                                      the orders the fold has (not for a map, which has none)
     domain:        extended           elements may be infinite or NaN (the flag says what comes out)
 
 A map is a fold that writes an array (docs/developer/architecture.md, "Maps"):
@@ -294,6 +304,11 @@ class Kernel:
     ieee_status: str = None
     ieee_theorem: tuple = None                     # (file, name)
     ieee_only: bool = False                        # no real-model statement (a full Ball kernel)
+    # The theorems of the IEEE-model statements of a kernel of the finite domain, (file, name), once
+    # each is proved: K_ieee_bridge_spec, K_ieee_spec and K_ieee_lead_spec.
+    ieee_bridge_theorem: tuple = None
+    ieee_spec_theorem: tuple = None
+    ieee_lead_theorem: tuple = None
     # The IEEE-model statements of a kernel of the finite domain (ieee.py): which of `bridge` and
     # `spec`, and the thresholds under which every value it computes is finite.
     ieee: tuple = ()
@@ -359,6 +374,12 @@ class Kernel:
 
 # The IEEE-model statements a kernel of the finite domain may ask for (ieee.py, `ieee:`).
 IEEE_STATEMENTS = ('bridge', 'spec')
+
+# The fields that name the theorems of the IEEE-model statements of a kernel of the finite domain,
+# and the name each theorem has (K standing for the kernel's name).
+IEEE_THEOREM_KEYS = ('ieee_bridge_theorem', 'ieee_spec_theorem', 'ieee_lead_theorem')
+IEEE_THEOREM_NAMES = {'ieee_bridge_theorem': '{}_ieee_bridge', 'ieee_spec_theorem': '{}_ieee_correct',
+                      'ieee_lead_theorem': '{}_ieee_lead'}
 
 # The claims that only the non-finite layer has: a kernel that claims nothing else has no
 # real-model statement (Kernel.real_model).
@@ -570,7 +591,7 @@ def parse_kernel(text, path):
     k = Kernel(name=None, path=path)
     single = {'kernel', 'value', 'min_precision', 'theorem', 'source', 'license', 'status',
               'ce_variant', 'cone_exempt', 'domain', 'ieee_status', 'ieee_theorem', 'entry', 'ieee_only',
-              'ieee', 'ieee_finite', 'ieee_finite_result'}
+              'ieee', 'ieee_finite', 'ieee_finite_result'} | set(IEEE_THEOREM_KEYS)
     seen = set()
     for lineno, raw in enumerate(text.splitlines(), 1):
         line = raw.split('#', 1)[0].strip()
@@ -608,7 +629,7 @@ def parse_kernel(text, path):
             if not re.fullmatch(r'[0-9]+', val):
                 raise DescriptionError(f'{where}: min_precision must be an integer')
             k.min_precision = int(val)
-        elif key in ('theorem', 'ieee_theorem'):
+        elif key in ('theorem', 'ieee_theorem') + IEEE_THEOREM_KEYS:
             parts = val.split()
             if len(parts) != 2:
                 raise DescriptionError(f'{where}: expected "{key}: FILE NAME"')
@@ -687,6 +708,7 @@ class Fold:
     ensures: list = field(default_factory=list)
     min_precision: int = None
     theorem: str = None         # the file of F_seq_correct and F_lanes_correct
+    ieee_theorem: str = None    # the file of F_seq_ieee_correct and F_lanes_ieee_correct
     source: str = None
     license: str = None
     status: str = None
@@ -718,6 +740,9 @@ class Fold:
 
     def theorem_name(self, order):
         return f'{self.name}_{ORDER_SUFFIX[order]}_correct'
+
+    def ieee_theorem_name(self, order):
+        return f'{self.name}_{ORDER_SUFFIX[order]}_ieee_correct'
 
 
 # What each order is called in the names of the C++ functions, the Rocq definitions and the
@@ -805,6 +830,11 @@ def parse_fold(text, path):
                 raise DescriptionError(f'{where}: expected "theorem: FILE" (its theorems are F_seq_correct '
                                        'and F_lanes_correct)')
             fd.theorem = val
+        elif key == 'ieee_theorem':
+            if len(val.split()) != 1:
+                raise DescriptionError(f'{where}: expected "ieee_theorem: FILE" (its theorems are '
+                                       'F_seq_ieee_correct and F_lanes_ieee_correct)')
+            fd.ieee_theorem = val
         elif key in ('source', 'license', 'status', 'domain'):
             setattr(fd, key, val)
         else:

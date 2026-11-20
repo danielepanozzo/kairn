@@ -596,6 +596,16 @@ Generated into `proofs/gen/`, following the Phase 0 tracer
   limb 0 of each operand, the non-finite cone of the rules as a statement. The steps of the folds
   have the bridge of their cores (`ieee: bridge`, and `spec` for those of two limbs), which the
   proof of a fold uses step by step.
+- **Their theorems.** A kernel of the finite domain names the theorem of each IEEE-model
+  statement once it is proved: `ieee_bridge_theorem` (`K_ieee_bridge`, of `K_ieee_bridge_spec`),
+  `ieee_spec_theorem` (`K_ieee_correct`, of `K_ieee_spec`) and `ieee_lead_theorem`
+  (`K_ieee_lead`, of `K_ieee_lead_spec`), each as `FILE NAME`; a fold, `ieee_theorem: FILE`, whose
+  theorems are `F_seq_ieee_correct` and `F_lanes_ieee_correct`. The comment above a statement
+  says `proved` when its theorem is named and `unverified` otherwise, and `IeeeAudit.v` checks
+  every named theorem against its statement (`Definition S_audit : S := theorem.` and `Print
+  Assumptions`), after the theorems of the extended domain, importing `IeeeFoldStatements` only
+  when one of them is about a fold. Without any of these fields every generated file is what it
+  was before they existed.
 - `IeeeWith.v`: the kernels that `build` lists as `constexpr` by the rule of the product, in the
   IEEE model with the product as an argument. `K_with p_` is the definition of `IeeeModel.K` with
   every `prod a b` written `p_ a b` and every call of another such kernel written as its

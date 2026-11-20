@@ -346,7 +346,14 @@ rule:
    that selects, steps to a neighbor, returns a mask, or computes a radius).
 5. Every kernel names its theorem, source and license, or is marked `unverified`. A kernel of the
    extended domain also gives `ieee_status` (and `ieee_theorem` once that is proved); a kernel
-   without a real-model statement has no `theorem`, and its `status` is its `ieee_status`.
+   without a real-model statement has no `theorem`, and its `status` is its `ieee_status`. A
+   kernel of the finite domain names the theorems of its IEEE-model statements once each is
+   proved: `ieee_bridge_theorem: FILE K_ieee_bridge` (with `ieee: bridge`), `ieee_spec_theorem:
+   FILE K_ieee_correct` (with `ieee: spec`), `ieee_lead_theorem: FILE K_ieee_lead` (the step or
+   the combination of a fold); a fold that is not a map, `ieee_theorem: FILE`, the file of
+   `F_seq_ieee_correct` and `F_lanes_ieee_correct`. Each names only a statement that is printed,
+   by its conventional name, in `proofs/theories/`; a statement whose theorem is not named is
+   printed as unverified, and only those that are named are in `proofs/gen/IeeeAudit.v`.
 6. R3: in a kernel marked `entry`, an input that enters from the program (a one-limb input not
    declared `stored`, or the limbs of an input declared `supplied`), and whatever `neg`, `abs`,
    `select` or `copy` alone make of it, is never an operand of `add` or `sub` nor the addend of an
