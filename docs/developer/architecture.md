@@ -1097,7 +1097,7 @@ Two more kinds serve the constructors
 | Kind | Fields | Meaning |
 |---|---|---|
 | `represents` | `of` | the output is canonical and is `value` exactly: a finite `value` gives a finite normalized output of that value, $\pm\infty$ gives $(\pm\infty, 0)$, a NaN gives all NaN |
-| `makes_ball` | `center`, `radius`: the outputs; `from`: the inputs given as center and radius | the output ball is canonical: empty when the given radius is a NaN or negative; otherwise the whole line when the given center is not finite or the given radius is $+\infty$; otherwise the given center and radius, exactly |
+| `makes_ball` | `center`, `radius`: the outputs; `from`: the inputs given as center and radius | the output ball is canonical: empty when the given radius is negative, $-\infty$ included; otherwise the whole line when the given radius is a NaN or $+\infty$ or the given center is not finite; otherwise the given center and radius, exactly. (A NaN radius gave the empty set until the owner's decision of 2026-11-20, which made it the whole line, as a NaN bound given to an interval is.) |
 
 `value` may be an expression there too: `neg_2` and `abs_2` carry `represents` next to their
 `normalized` and `error` entries, with the values `-x` and `abs(x)`, and that entry is what says

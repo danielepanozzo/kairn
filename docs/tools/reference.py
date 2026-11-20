@@ -2147,9 +2147,9 @@ class Site:
         c, r = name_tex(frm["center"]), name_tex(frm["radius"])
         return ["The result $Z$, of center $%s$ and radius $%s$, is a canonical ball." % (
                     name_tex(x["center"]), name_tex(x["radius"])),
-                "$Z$ is the empty set (every limb a NaN) when $%s$ is a NaN or negative, $-\\infty$ included." % r,
-                "Otherwise $Z$ is the whole line (center 0, radius $+\\infty$) when $%s$ is not finite or "
-                "$%s = +\\infty$." % (c, r),
+                "$Z$ is the empty set (every limb a NaN) when $%s$ is negative, $-\\infty$ included." % r,
+                "Otherwise $Z$ is the whole line (center 0, radius $+\\infty$) when $%s$ is a NaN or $+\\infty$, or "
+                "$%s$ is not finite." % (r, c),
                 "Otherwise $Z$ is the ball of center $%s$ and radius $%s$, exactly." % (c, r)]
 
     def extended_ball_from_interval(self, k, x):

@@ -72,7 +72,7 @@ class Model(unittest.TestCase):
                       '  let rz := fma t up_ball_add_1_1 up_ball_add_1_2 in\n'
                       '  (cz0, cz1, rz).', m)
         self.assertIn('  let r0 := times_inf t in\n  let n := eq r0 r0 in\n  let r1 := if n then pzero else r0 in\n', m)
-        self.assertIn('  let cw := if e then k0 else cnan in\n', m)
+        self.assertIn('  let cw := if ok then k0 else cnan in\n', m)
         self.assertIn('Definition to_nearest_2 (x0 x1 : float) : float :=\n  let t := x0 in\n  t.', m)
         self.assertIn('Definition lt_2_2 (x0 x1 y0 y1 : float) : bool :=', m)
         # Every operation is that of IeeeOperations.v, applied to the variables of this section.
@@ -359,6 +359,10 @@ class Statements(unittest.TestCase):
     def test_constructors(self):
         s = self.statement('ball_make_1_spec')
         self.assertIn('ball_finite_1 cw rw /\\ val cw = val c /\\ val rw = val r', s)
+        # A negative radius gives the empty set, a NaN radius the whole line (decided on 2026-11-20).
+        self.assertIn('  (r = infinity prec emax true \\/ (finite r /\\ val r < 0) -> ball_empty_1 cw rw) /\\\n', s)
+        self.assertIn('  (nan r \\/ r = infinity prec emax false \\/ (finite r /\\ 0 <= val r /\\ ~ finite c) -> '
+                      'ball_whole_1 cw rw)', s)
         s = self.statement('ball_make_2_spec')
         self.assertIn('ball_finite_2 cw0 cw1 rw /\\ cw0 = c0 /\\ cw1 = c1 /\\ val rw = val r', s)
 
@@ -425,8 +429,14 @@ class CheckedFiles(unittest.TestCase):
     # stage B1 (IeeeIntervalConvert.v): four words more. Then for mul_ext_2_2 and
     # interval_mul_2 (IeeeIntervalMul2.v): two words more.)
     # The files are the regeneration of the merged descriptions.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '023e54103864b7cc3157ba5ccdaf9d32d5733e2424a17605bd5324e6026b4af5',
-               'proofs/gen/IeeeStatements.v': 'ca4a2a61a5ae4b39d89aef07ac8cf482bc3a517e010ed03fd0a313ab7431b87a'}
+    # Then a NaN radius given to a constructor of a ball became the whole line (decided on
+    # 2026-11-20), on the line of the intervals' generator: the definitions and statements of
+    # ball_make_1 and ball_make_2 changed, and nothing else; their theorems were proved again on
+    # the new definitions for the new statements (theories/IeeeMake.v), the statements file prints
+    # their status, proved, and make -C proofs passed on these files. Merged here: the
+    # regeneration of the merged descriptions.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '88d13229fd112f3d8b1c8e4b12cac3283b4dc130f118fef93ab77d46a858c26d',
+               'proofs/gen/IeeeStatements.v': 'a49c798868fe7f681a4631b0af56f8e7264ecc3bdafb27fefa418f9438b996de'}
 
 
     def test_the_checked_files(self):

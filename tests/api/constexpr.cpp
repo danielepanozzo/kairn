@@ -159,8 +159,9 @@ struct Checks {
     static_assert(B2::empty().is_empty() && !B2::empty().is_finite() && !B2::empty().is_whole());
     static_assert(B1::whole().radius() == inf && B1::empty().center().limb[0] != B1::empty().center().limb[0]);
     static_assert(B2(inf).is_whole() && B2(nan).is_whole() && B2(E2(-inf)).is_whole() && B1(-inf).is_whole());
-    static_assert(B2(x, inf).is_whole() && B2(x, nan).is_empty() && B1(a, nan).is_empty() && B1(T(1), T(0.5)).is_finite());
-    static_assert(B2(E2(inf), T(1)).is_whole() && B2(E2(nan), T(1)).is_whole() && B2(E2(nan), nan).is_empty());
+    // A NaN radius gives the whole line (decided on 2026-11-20), a negative one the empty set.
+    static_assert(B2(x, inf).is_whole() && B2(x, nan).is_whole() && B1(a, nan).is_whole() && B1(T(1), T(0.5)).is_finite());
+    static_assert(B2(E2(inf), T(1)).is_whole() && B2(E2(nan), T(1)).is_whole() && B2(E2(nan), nan).is_whole());
 #if !KAIRN_CHECKS
     static_assert(B2(x, -u).is_empty() && B1(a, -inf).is_empty());  // KAIRN_CHECKS reports a negative radius
 #endif
@@ -244,7 +245,7 @@ void run_time() {
     same("-big - big", (-E2(T(vmax)) - C::big).limb[0], -inf);
     same("x < E2(nan)", T(x < E2(T(vnan))), T(0));
     same("E1(nan) < a", T(E1(T(vnan)) < C::a), T(0));
-    same("Ball(x, nan) empty", T(B2(x, T(vnan)).is_empty()), T(1));
+    same("Ball(x, nan) whole", T(B2(x, T(vnan)).is_whole()), T(1));
     same("Ball(inf) whole", T(B2(T(vinf)).is_whole()), T(1));
     // ldexp is total: an infinity on overflow, zero below the range of T, the same in one or two
     // limbs.

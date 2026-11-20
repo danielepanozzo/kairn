@@ -297,19 +297,20 @@ Definition ball_lower_as_1 (c r : float) : float :=
   let l := if ne then t else pinf in
   l.
 
-(* ball_make_1: constructors (Milestone 1 listing). *)
+(* ball_make_1: constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). *)
 Definition ball_make_1 (c r : float) : float * float :=
   let g := guard r in
   let c0 := guard c in
-  let e := le pzero g in
+  let n := lt g pzero in
+  let ok := negb n in
   let a := abs c0 in
   let f1 := lt a pinf in
   let f2 := lt g pinf in
   let f := andb f1 f2 in
   let k0 := if f then c0 else pzero in
   let s := if f then g else pinf in
-  let cw := if e then k0 else cnan in
-  let rw := if e then s else cnan in
+  let cw := if ok then k0 else cnan in
+  let rw := if ok then s else cnan in
   (cw, rw).
 
 (* ball_mul_1: midpoint-radius product (Milestone 1 listing, second radius design). *)
@@ -1076,10 +1077,11 @@ Definition ball_lower_as_2 (c0 c1 r : float) : float :=
   let l := if ne then t else pinf in
   l.
 
-(* ball_make_2: constructors (Milestone 1 listing). *)
+(* ball_make_2: constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). *)
 Definition ball_make_2 (c0 c1 r : float) : float * float * float :=
   let g := guard r in
-  let e := le pzero g in
+  let n := lt g pzero in
+  let ok := negb n in
   let a := abs c0 in
   let f1 := lt a pinf in
   let f2 := lt g pinf in
@@ -1087,9 +1089,9 @@ Definition ball_make_2 (c0 c1 r : float) : float * float * float :=
   let k0 := if f then c0 else pzero in
   let k1 := if f then c1 else pzero in
   let s := if f then g else pinf in
-  let cw0 := if e then k0 else cnan in
-  let cw1 := if e then k1 else cnan in
-  let rw := if e then s else cnan in
+  let cw0 := if ok then k0 else cnan in
+  let cw1 := if ok then k1 else cnan in
+  let rw := if ok then s else cnan in
   (cw0, cw1, rw).
 
 (* ball_mul_2: midpoint-radius product (Milestone 1 listing, second radius design). *)

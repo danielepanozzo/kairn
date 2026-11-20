@@ -1465,6 +1465,8 @@ class TheKernels(unittest.TestCase):
         # their IEEE-model theorems (IeeeBallPow2.v), and so is every kernel of the folds' stage,
         # those of the folds of maxima included (FoldNorm.v; the two finishes by their IEEE-model
         # theorems, IeeeFoldNorm.v).
+        # The two constructors of a ball are proved for the rule of 2026-11-20, that a NaN radius
+        # gives the whole line (IeeeMake.v).
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
                          self.MILESTONE1 | self.WAVE_1 | self.FOLDS | self.WAVE_2_PROVED)
         # No kernel is unverified: the kernels of wave 2 were, in both models, until their proofs

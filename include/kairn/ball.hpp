@@ -243,9 +243,10 @@ KAIRN_FORCEINLINE Ball<T, 2> mul(const Expansion<T, 2>& c, const Ball<T, 2>& y) 
 ///   finite radius r >= 0;
 /// - the whole line, every real number: center 0 and radius +inf. It is what an operation returns
 ///   when it cannot bound its result: an operand or a scalar that is not finite, or a center or
-///   radius that overflows;
-/// - the empty set: every limb a NaN. It is what a ball made with a NaN or negative radius is,
-///   and what every operation with an empty operand returns.
+///   radius that overflows; and what a ball made with a center that is not finite, or with a
+///   radius that is +inf or a NaN, is;
+/// - the empty set: every limb a NaN. It is what a ball made with a negative radius is, and what
+///   every operation with an empty operand returns.
 /// is_finite(), is_whole() and is_empty() say which; Ball::whole() and Ball::empty() make the
 /// last two.
 ///
@@ -297,8 +298,10 @@ public:
     /// The same with a marked operand.
     explicit constexpr Ball(const Unverified<Expansion<T, K>>& c) noexcept : Ball(detail::make_ball(c.value, T(0))) {}
     /// The ball of center c and radius r (kernel ball_make_1 or ball_make_2), each guarded. For a
-    /// canonical c: the empty set when r is a NaN or negative (-inf included); otherwise the whole
-    /// line when c is not finite or r is +inf; otherwise center c and radius r, exactly. When
+    /// canonical c: the empty set when r is negative (-inf included); otherwise the whole line
+    /// when c is not finite or r is +inf or a NaN (a NaN says that something failed upstream, and
+    /// the whole line is the answer that is always true); otherwise center c and radius r,
+    /// exactly. So Ball(X.center(), X.radius()) of an empty X is the whole line, not X. When
     /// KAIRN_CHECKS is 1, the environment is checked as for an operation (config.hpp), then c
     /// must be canonical and a negative r is reported (it is almost surely a mistake; write
     /// Ball::empty() for the empty set); the constructors of a point above check the same.

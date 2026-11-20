@@ -999,7 +999,7 @@
         "name": "ball_make_1_correct"
       },
       "source": {
-        "cite": "constructors (Milestone 1 listing)",
+        "cite": "constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20)",
         "license": "algorithm: MIT"
       },
       "flops": 2,
@@ -5888,7 +5888,7 @@
         "name": "ball_make_2_correct"
       },
       "source": {
-        "cite": "constructors (Milestone 1 listing)",
+        "cite": "constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20)",
         "license": "algorithm: MIT"
       },
       "flops": 1,

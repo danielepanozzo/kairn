@@ -30,8 +30,8 @@ $$Z = \{\, t : \lvert t - c\rvert \le r \,\}.$$
 For operands that satisfy the requirements, finite, infinite or NaN:
 
 - The result $Z$, of center $c_w$ and radius $r_w$, is a canonical ball.
-- $Z$ is the empty set (every limb a NaN) when $r$ is a NaN or negative, $-\infty$ included.
-- Otherwise $Z$ is the whole line (center 0, radius $+\infty$) when $c$ is not finite or $r = +\infty$.
+- $Z$ is the empty set (every limb a NaN) when $r$ is negative, $-\infty$ included.
+- Otherwise $Z$ is the whole line (center 0, radius $+\infty$) when $r$ is a NaN or $+\infty$, or $c$ is not finite.
 - Otherwise $Z$ is the ball of center $c$ and radius $r$, exactly.
 
 Proved for every binary format with a precision of at least 1 bit, rounding to nearest with ties to even and with gradual underflow, in the IEEE model, with signed zeros, infinities, NaN and overflow. Both limb types qualify: `double` has 53 bits, `float` has 24 bits.
@@ -53,7 +53,7 @@ Which of them the proof of `ball_make_1_correct` depends on is not copied here: 
 
 ## Source
 
-**Algorithm:** constructors (Milestone 1 listing). **License:** algorithm: MIT.
+**Algorithm:** constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). **License:** algorithm: MIT.
 
 ## Listing
 
@@ -62,19 +62,24 @@ From [`gen/kernels/ball_make_1.kernel`](https://github.com/danielepanozzo/kairn/
 ```
 # A ball from a one-limb center and a radius, both from the program and both guarded (rule R3):
 # ball_make_2 with the center guarded as well, here c0 = guard(c), and no k1 (milestone1.md,
-# "Values that enter from the program").
+# "Values that enter from the program"). The empty set when the radius is negative, -infinity
+# included (n true); otherwise the whole line when the center is not finite or the radius is
+# +infinity or a NaN (f false: lt(g, const inf) is false for a NaN), as a NaN bound given to an
+# interval is (the owner's decision of 2026-11-20); otherwise the ball itself. The ordinary case is
+# the first arm of each select (ok = not(n)), as the scalar printer's branch over a fix-up wants.
 
 g   = guard(r)
 c0  = guard(c)
-e   = le(0, g)
+n   = lt(g, 0)
+ok  = not(n)
 a   = abs(c0)
 f1  = lt(a, const inf)
 f2  = lt(g, const inf)
 f   = and(f1, f2)
 k0  = select(f, c0, 0)
 s   = select(f, g, const inf)
-cw  = select(e, k0, const nan)
-rw  = select(e, s, const nan)
+cw  = select(ok, k0, const nan)
+rw  = select(ok, s, const nan)
 ```
 
 ## Measured

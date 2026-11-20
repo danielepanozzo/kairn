@@ -148,7 +148,7 @@ Definition ball_lower_as_1_spec : Prop :=
   (ball_empty_1 c r -> l = infinity prec emax false) /\
   (~ ball_empty_1 c r -> forall lo : xreal, range_lower (in_ball_1 c r) lo -> xval l = xrd prec emax lo).
 
-(* ball_make_1: constructors (Milestone 1 listing). IEEE-model status: proved. *)
+(* ball_make_1: constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). IEEE-model status: proved. *)
 Definition ball_make_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -156,10 +156,10 @@ Definition ball_make_1_spec : Prop :=
   forall c r : binary_float prec emax,
   let '(cw, rw) := IeeeModel.ball_make_1 prec emax nan_plus nan_abs nan_const c r in
   ball_1 cw rw /\
-  (nan r \/ r = infinity prec emax true \/ (finite r /\ val r < 0) -> ball_empty_1 cw rw) /\
+  (r = infinity prec emax true \/ (finite r /\ val r < 0) -> ball_empty_1 cw rw) /\
   (finite r -> 0 <= val r -> finite c ->
    ball_finite_1 cw rw /\ val cw = val c /\ val rw = val r) /\
-  (r = infinity prec emax false \/ (finite r /\ 0 <= val r /\ ~ finite c) -> ball_whole_1 cw rw).
+  (nan r \/ r = infinity prec emax false \/ (finite r /\ 0 <= val r /\ ~ finite c) -> ball_whole_1 cw rw).
 
 (* ball_mul_1_full: ball_mul_1, then the fix-up of the special states of a ball (Milestone 1 listing). IEEE-model status: proved. *)
 Definition ball_mul_1_full_spec : Prop :=
@@ -1227,7 +1227,7 @@ Definition ball_lower_as_2_spec : Prop :=
   (finite c0 /\ finite c1 /\ finite r -> finite l ->
    Rabs (val l - ((val c0 + val c1) - val r)) <= 5 * u prec ^ 1 * (Rabs (val c0 + val c1) + Rabs (val r)) + 3 * eta (ieee_emin prec emax)).
 
-(* ball_make_2: constructors (Milestone 1 listing). IEEE-model status: proved. *)
+(* ball_make_2: constructors (Milestone 1 listing; a NaN radius the whole line, 2026-11-20). IEEE-model status: proved. *)
 Definition ball_make_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1236,10 +1236,10 @@ Definition ball_make_2_spec : Prop :=
   canonical_2 c0 c1 ->
   let '(cw0, cw1, rw) := IeeeModel.ball_make_2 prec emax nan_plus nan_abs nan_const c0 c1 r in
   ball_2 cw0 cw1 rw /\
-  (nan r \/ r = infinity prec emax true \/ (finite r /\ val r < 0) -> ball_empty_2 cw0 cw1 rw) /\
+  (r = infinity prec emax true \/ (finite r /\ val r < 0) -> ball_empty_2 cw0 cw1 rw) /\
   (finite r -> 0 <= val r -> finite c0 ->
    ball_finite_2 cw0 cw1 rw /\ cw0 = c0 /\ cw1 = c1 /\ val rw = val r) /\
-  (r = infinity prec emax false \/ (finite r /\ 0 <= val r /\ ~ finite c0) -> ball_whole_2 cw0 cw1 rw).
+  (nan r \/ r = infinity prec emax false \/ (finite r /\ 0 <= val r /\ ~ finite c0) -> ball_whole_2 cw0 cw1 rw).
 
 (* ball_mul_2_full: ball_mul_2, then the fix-up of the special states of a ball (Milestone 1 listing). IEEE-model status: proved. *)
 Definition ball_mul_2_full_spec : Prop :=
