@@ -71,7 +71,8 @@ lists:
   (`IeeeIntervalExact.v`), the difference of two intervals whose bounds have two limbs
   (`IeeeIntervalSub2.v`), and the conversions between an interval and a ball of one limb, with
   the midpoint and the radius of an interval and its split at the midpoint
-  (`IeeeIntervalConvert.v`);
+  (`IeeeIntervalConvert.v`), and the product of two intervals whose bounds have two limbs,
+  with the product of two bounds on all values (`IeeeIntervalMul2.v`);
 - `proofs/third_party/mr22/`, five files of the machine-checked proofs of double-word additions by
   Muller and Rideau ([MR22](../developer/design/phase0/references.md#mr22), MIT license), which the
   proofs of the two additions use
@@ -99,8 +100,10 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
    kernels with bounds of one limb, of the bounds of two limbs, of the sum of two intervals
    of two limbs, of the conversions of a ball, of the exact interval kernels (the hull and
    the intersection of intervals of extended real numbers) and of the difference of two
-   intervals of two limbs (the sum with the negated operand), and of the conversions between
-   an interval and a ball (the midpoint of a bounded interval) beside their generated
+   intervals of two limbs (the sum with the negated operand), of the conversions between an
+   interval and a ball (the midpoint of a bounded interval) and of the product of two
+   intervals of two limbs (the finite core of the directed product, and what each product of
+   bounds gives) beside their generated
    statements, and those
    about the two executions of a product, whose plain-product listings are written by hand.
 4. **A negative control**: `proofs/audit/Bad.v`, a false theorem closed with `Admitted`, must be
@@ -112,7 +115,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  68 files: no Admitted, admit, Axiom or Parameter
+  69 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec

@@ -53,7 +53,8 @@
      A bound that its core does not return as a finite number is the infinity on its
      side. I1 to I3 alone are interval_add_2_enclosure.
 
-   What is not proved here: the difference, mul_ext_2_2 and the product. *)
+   The difference of two intervals of two limbs is proved in IeeeIntervalSub2.v, as this sum
+   on the negated operand; mul_ext_2_2 and the product in IeeeIntervalMul2.v. *)
 From Stdlib Require Import Reals ZArith Bool Lia Lra Psatz.
 From Flocq Require Import Core Binary.
 From Kairn.Gen Require Import Model Statements IeeeStatements.

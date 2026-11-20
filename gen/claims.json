@@ -6108,9 +6108,13 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalMul2.v",
+        "name": "mul_ext_2_2_correct"
+      },
       "source": {
         "cite": "mul_dir_2_2, with the products of a zero and of an infinity selected (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"
@@ -6188,9 +6192,13 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "ieee_status": "unverified",
+      "status": "proved",
+      "ieee_status": "proved",
       "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalMul2.v",
+        "name": "interval_mul_2_correct"
+      },
       "source": {
         "cite": "the least and the greatest of the four products of bounds by mul_ext_2_2 (Milestone 2 listing)",
         "license": "algorithm and proof: MIT"

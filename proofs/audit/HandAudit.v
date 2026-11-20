@@ -44,7 +44,9 @@
      numbers and the lemmas that carry them to limbs and to 2-limb values; for the
      difference of two intervals of two limbs, the sum with the negated operand; for the
      conversions between an interval and a ball of one limb, the midpoint of a bounded
-     interval over the real numbers and on limbs, and the cases of a canonical interval.
+     interval over the real numbers and on limbs, and the cases of a canonical interval; and
+     for the product of two intervals of two limbs, the finite core of the directed product,
+     the facts of each product of bounds, and the statements with the constants by name.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -629,3 +631,33 @@ Print Assumptions ball_to_interval_1_all.
 Print Assumptions interval_mid_rad_1_all.
 Print Assumptions interval_to_ball_1_all.
 Print Assumptions interval_split_1_all.
+
+(* The product of two intervals with bounds of two limbs, in the IEEE model
+   (theories/IeeeIntervalMul2.v): the theorems of the generated statements of mul_ext_2_2 and
+   interval_mul_2 are listed by proofs/gen/IeeeAudit.v. Here, the lemmas they rest on: the
+   bound of the least and of the greatest of four values; the constants of the closed form
+   (E at most 1/8, A at most 1, B nonnegative); the finite core of mul_ball_2_2 and
+   mul_dir_2_2, and the core finite within a quarter of the range; the sign of a normalized
+   pair and the product with an infinite factor; the facts of a product of bounds; and the
+   two statements with the constants by name. *)
+From Kairn Require Import IeeeIntervalMul2.
+Print Assumptions below_mono.
+Print Assumptions min_tight.
+Print Assumptions max_tight.
+Print Assumptions xmin4_mono.
+Print Assumptions xmax4_mono.
+Print Assumptions xmul0_xmul.
+Print Assumptions E_mul_2_le_eighth.
+Print Assumptions mul_rel_bounds.
+Print Assumptions mul_abs_ge_0.
+Print Assumptions mul_ball_2_2_ieee_core.
+Print Assumptions mul_dir_2_2_ieee_core.
+Print Assumptions mul_dir_2_2_ieee_small.
+Print Assumptions normalized_sign.
+Print Assumptions xval_2_lead_class.
+Print Assumptions xmul_2_lead.
+Print Assumptions mul_ext_2_2_all.
+Print Assumptions mul_ext_2_2_small.
+Print Assumptions mul_ext_corner.
+Print Assumptions interval_mul_2_of.
+Print Assumptions interval_mul_2_all.

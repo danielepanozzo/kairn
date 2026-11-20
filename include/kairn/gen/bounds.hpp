@@ -1067,15 +1067,23 @@ template <> struct mul_dir_2_2<float> {
     static constexpr bool proved = true;
 };
 
-// mul_ext_2_2: UNVERIFIED. Claims: normalized; normalized; outward; outward.
+// mul_ext_2_2: proved. Claims: normalized; normalized; outward; outward.
 template <class T> struct mul_ext_2_2;
-template <> struct mul_ext_2_2<double> { static constexpr bool proved = false; };
-template <> struct mul_ext_2_2<float> { static constexpr bool proved = false; };
+template <> struct mul_ext_2_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct mul_ext_2_2<float> {
+    static constexpr bool proved = true;
+};
 
-// interval_mul_2: UNVERIFIED. Claims: encloses_interval.
+// interval_mul_2: proved. Claims: encloses_interval.
 template <class T> struct interval_mul_2;
-template <> struct interval_mul_2<double> { static constexpr bool proved = false; };
-template <> struct interval_mul_2<float> { static constexpr bool proved = false; };
+template <> struct interval_mul_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_mul_2<float> {
+    static constexpr bool proved = true;
+};
 
 // interval_neg_2: proved. Claims: encloses_interval.
 template <class T> struct interval_neg_2;

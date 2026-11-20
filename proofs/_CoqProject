@@ -72,3 +72,4 @@ theories/IeeeBallConvert.v
 theories/IeeeIntervalExact.v
 theories/IeeeIntervalSub2.v
 theories/IeeeIntervalConvert.v
+theories/IeeeIntervalMul2.v

@@ -17,6 +17,7 @@ From Kairn Require Import IeeeInterval1.
 From Kairn Require Import IeeeInterval2.
 From Kairn Require Import IeeeIntervalConvert.
 From Kairn Require Import IeeeIntervalExact.
+From Kairn Require Import IeeeIntervalMul2.
 From Kairn Require Import IeeeIntervalSub2.
 From Kairn Require Import IeeeMake.
 
@@ -211,6 +212,12 @@ Print Assumptions interval_intersection_2_correct.
 
 Definition interval_make_2_audit : interval_make_2_spec := interval_make_2_correct.
 Print Assumptions interval_make_2_correct.
+
+Definition mul_ext_2_2_audit : mul_ext_2_2_spec := mul_ext_2_2_correct.
+Print Assumptions mul_ext_2_2_correct.
+
+Definition interval_mul_2_audit : interval_mul_2_spec := interval_mul_2_correct.
+Print Assumptions interval_mul_2_correct.
 
 Definition interval_neg_2_audit : interval_neg_2_spec := interval_neg_2_correct.
 Print Assumptions interval_neg_2_correct.

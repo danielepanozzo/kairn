@@ -1015,7 +1015,7 @@ Entries as the generator writes them (`source`, `flops` and the theorem fields l
  "outputs": [{"name": "l", "limbs": 2}, {"name": "h", "limbs": 2}],
  "value": "x*y", "requires": ["canonical(x)", "canonical(y)", "not_nan(x)", "not_nan(y)"],
  "ensures": [{"kind": "normalized", "of": "l"}, {"kind": "normalized", "of": "h"}, {"kind": "outward", "of": "l", "side": "below", "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)", "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)", "zero_factor": true}, {"kind": "outward", "of": "h", "side": "above", "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)", "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)", "zero_factor": true}],
- "min_precision": 4, "status": "unverified", "ieee_status": "unverified",
+ "min_precision": 4, "status": "proved", "ieee_status": "proved",
  "instances": {"binary64": [], "binary32": []}}
 ```
 

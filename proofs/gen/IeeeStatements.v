@@ -1450,7 +1450,7 @@ Definition interval_make_2_spec : Prop :=
   (nan lo0 \/ nan hi0 -> zl0 = infinity prec emax true /\ zu0 = infinity prec emax false /\ zero zl1 /\ zero zu1) /\
   (~ nan lo0 -> ~ nan hi0 -> ~ xnonempty (xval_2 lo0 lo1) (xval_2 hi0 hi1) -> interval_empty_2 zl0 zl1 zu0 zu1).
 
-(* mul_ext_2_2: mul_dir_2_2, with the products of a zero and of an infinity selected (Milestone 2 listing). IEEE-model status: unverified. *)
+(* mul_ext_2_2: mul_dir_2_2, with the products of a zero and of an infinity selected (Milestone 2 listing). IEEE-model status: proved. *)
 Definition mul_ext_2_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1485,7 +1485,7 @@ Definition mul_ext_2_2_spec : Prop :=
    (finite h0 ->
     Rabs ((val h0 + val h1) - ((val x0 + val x1) * (val y0 + val y1))) <= ((((((2 * ((1 + u prec) ^ 3)) * up_ball_mul_2_1 (ieee_emin prec emax) prec) * up_ball_mul_2_0 (ieee_emin prec emax) prec) + (2 * (u prec ^ 2))) * (1 + (4 * u prec ^ 2))) / (1 - u prec)) * Rabs ((val x0 + val x1) * (val y0 + val y1)) + ((((2 * ((1 + u prec) ^ 2)) * ((((/ 2) * up_ball_mul_2_1 (ieee_emin prec emax) prec) * eta (ieee_emin prec emax)) + up_ball_mul_2_2 (ieee_emin prec emax) prec)) + eta (ieee_emin prec emax)) + ((((((2 * ((1 + u prec) ^ 3)) * up_ball_mul_2_1 (ieee_emin prec emax) prec) * up_ball_mul_2_0 (ieee_emin prec emax) prec) + (2 * (u prec ^ 2))) / (1 - u prec)) * ((3 / 2) * eta (ieee_emin prec emax))))))).
 
-(* interval_mul_2: the least and the greatest of the four products of bounds by mul_ext_2_2 (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_mul_2: the least and the greatest of the four products of bounds by mul_ext_2_2 (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_mul_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

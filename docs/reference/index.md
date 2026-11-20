@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 116 kernels, 114 are proved and 2 are **UNVERIFIED**: [`interval_mul_2`](interval_mul_2.md), [`mul_ext_2_2`](mul_ext_2_2.md).
+All 116 kernels are proved.
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -171,7 +171,7 @@ Arithmetic on intervals of numbers of `T` and of two limbs: the result contains 
 | not yet called by the public headers | - | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_2`](interval_neg_2.md) |
 | not yet called by the public headers | - | a canonical interval that contains every $x - y$; within $A\lvert v\rvert + B$ of the range | [`interval_sub_2`](interval_sub_2.md) |
 | not yet called by the public headers | - | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound | [`interval_make_2`](interval_make_2.md) |
-| not yet called by the public headers | - | a canonical interval that contains every $x y$; within $A\lvert v\rvert + B$ of the range | [`interval_mul_2`](interval_mul_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical interval that contains every $x y$; within $A\lvert v\rvert + B$ of the range | [`interval_mul_2`](interval_mul_2.md) |
 | not yet called by the public headers | - | the hull of the intervals, exactly | [`interval_hull_1`](interval_hull_1.md) |
 | not yet called by the public headers | - | the intersection of the intervals, exactly | [`interval_intersection_1`](interval_intersection_1.md) |
 | not yet called by the public headers | - | the hull of the intervals, exactly | [`interval_hull_2`](interval_hull_2.md) |
@@ -205,7 +205,7 @@ Kernels that other kernels call, and that no public operation computes on its ow
 | none (internal) | - | $l \le x - y$, within $A\lvert x - y\rvert + B$, exact when zero, normalized | [`sub_down_2_2`](sub_down_2_2.md) |
 | none (internal) | - | $h \ge x - y$, within $A\lvert x - y\rvert + B$, exact when zero, normalized | [`sub_up_2_2`](sub_up_2_2.md) |
 | none (internal) | - | $l \le x y$, within $A\lvert x y\rvert + B$; $h \ge x y$, within $A\lvert x y\rvert + B$, normalized | [`mul_dir_2_2`](mul_dir_2_2.md) |
-| none (internal) | - | $l$ canonical, normalized when finite; $h$ canonical, normalized when finite; a lower bound of $x y$, within $A\lvert v\rvert + B$ when finite; zero for a zero operand; a upper bound of $x y$, within $A\lvert v\rvert + B$ when finite; zero for a zero operand | [`mul_ext_2_2`](mul_ext_2_2.md) **UNVERIFIED** |
+| none (internal) | - | $l$ canonical, normalized when finite; $h$ canonical, normalized when finite; a lower bound of $x y$, within $A\lvert v\rvert + B$ when finite; zero for a zero operand; a upper bound of $x y$, within $A\lvert v\rvert + B$ when finite; zero for a zero operand | [`mul_ext_2_2`](mul_ext_2_2.md) |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly | [`two_sum`](two_sum.md) |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly, normalized | [`fast_two_sum`](fast_two_sum.md) |
 | not yet called by the public headers | - | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{1}{2}\,\eta$ | [`two_prod`](two_prod.md) |

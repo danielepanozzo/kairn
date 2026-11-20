@@ -6094,7 +6094,7 @@ KAIRN_GEN_FORCEINLINE void mul_dir_2_2(float x0, float x1, float y0, float y1, f
 }
 
 // mul_ext_2_2(x = (x0, x1), y = (y0, y1)) -> l = (l0, l1), h = (h0, h1)
-// mul_dir_2_2, with the products of a zero and of an infinity selected (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// mul_dir_2_2, with the products of a zero and of an infinity selected (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 4> mul_ext_2_2(double x0, double y0, bool fo, bool nz, double p0, double p1, double q0, double q1) noexcept {
@@ -6355,7 +6355,7 @@ KAIRN_GEN_FORCEINLINE void mul_ext_2_2(float x0, float x1, float y0, float y1, f
 }
 
 // interval_mul_2(xl = (xl0, xl1), xu = (xu0, xu1), yl = (yl0, yl1), yu = (yu0, yu1)) -> zl = (zl0, zl1), zu = (zu0, zu1)
-// the least and the greatest of the four products of bounds by mul_ext_2_2 (Milestone 2 listing). Status: unverified (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
+// the least and the greatest of the four products of bounds by mul_ext_2_2 (Milestone 2 listing). Status: proved (IEEE model only); not constexpr: it has fused operations other than prod and no constant-evaluation variant.
 #if KAIRN_GEN_FIXUP_CALL
 namespace fixup {
 KAIRN_GEN_COLD result<double, 4> interval_mul_2(double l0, double l1, double u0, double u1, bool ne) noexcept {
