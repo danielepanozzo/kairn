@@ -18,6 +18,7 @@ From Kairn Require Import DirectedProd.
 From Kairn Require Import DirectedSum.
 From Kairn Require Import EFT.
 From Kairn Require Import EntryKernels.
+From Kairn Require Import FoldMaps.
 From Kairn Require Import FoldSums.
 From Kairn Require Import MapSteps.
 From Kairn Require Import Mul21.
@@ -281,6 +282,36 @@ Print Assumptions to_down_2_correct.
 Definition to_nearest_2_audit : to_nearest_2_spec := to_nearest_2_correct.
 Print Assumptions to_nearest_2_correct.
 
+Definition add_1_audit : add_1_spec := add_1_correct.
+Print Assumptions add_1_correct.
+
+Definition add_1_entry_audit : add_1_entry_spec := add_1_entry_correct.
+Print Assumptions add_1_entry_correct.
+
+Definition add_2_audit : add_2_spec := add_2_correct.
+Print Assumptions add_2_correct.
+
+Definition add_2_entry_audit : add_2_entry_spec := add_2_entry_correct.
+Print Assumptions add_2_entry_correct.
+
+Definition axpy_1_audit : axpy_1_spec := axpy_1_correct.
+Print Assumptions axpy_1_correct.
+
+Definition axpy_1_entry_audit : axpy_1_entry_spec := axpy_1_entry_correct.
+Print Assumptions axpy_1_entry_correct.
+
+Definition axpy_2_audit : axpy_2_spec := axpy_2_correct.
+Print Assumptions axpy_2_correct.
+
+Definition axpy_2_1_audit : axpy_2_1_spec := axpy_2_1_correct.
+Print Assumptions axpy_2_1_correct.
+
+Definition axpy_2_1_entry_audit : axpy_2_1_entry_spec := axpy_2_1_entry_correct.
+Print Assumptions axpy_2_1_entry_correct.
+
+Definition axpy_2_entry_audit : axpy_2_entry_spec := axpy_2_entry_correct.
+Print Assumptions axpy_2_entry_correct.
+
 Definition dot_1_seq_audit : dot_1_seq_spec := dot_1_seq_correct.
 Print Assumptions dot_1_seq_correct.
 
@@ -292,6 +323,30 @@ Print Assumptions dot_2_seq_correct.
 
 Definition dot_2_lanes_audit : dot_2_lanes_spec := dot_2_lanes_correct.
 Print Assumptions dot_2_lanes_correct.
+
+Definition mul_pow2_map_1_audit : mul_pow2_map_1_spec := mul_pow2_map_1_correct.
+Print Assumptions mul_pow2_map_1_correct.
+
+Definition mul_pow2_map_2_audit : mul_pow2_map_2_spec := mul_pow2_map_2_correct.
+Print Assumptions mul_pow2_map_2_correct.
+
+Definition scale_1_audit : scale_1_spec := scale_1_correct.
+Print Assumptions scale_1_correct.
+
+Definition scale_2_audit : scale_2_spec := scale_2_correct.
+Print Assumptions scale_2_correct.
+
+Definition sub_1_audit : sub_1_spec := sub_1_correct.
+Print Assumptions sub_1_correct.
+
+Definition sub_1_entry_audit : sub_1_entry_spec := sub_1_entry_correct.
+Print Assumptions sub_1_entry_correct.
+
+Definition sub_2_audit : sub_2_spec := sub_2_correct.
+Print Assumptions sub_2_correct.
+
+Definition sub_2_entry_audit : sub_2_entry_spec := sub_2_entry_correct.
+Print Assumptions sub_2_entry_correct.
 
 Definition sum_1_seq_audit : sum_1_seq_spec := sum_1_seq_correct.
 Print Assumptions sum_1_seq_correct.

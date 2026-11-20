@@ -502,8 +502,9 @@ class FoldClaims(unittest.TestCase):
                 self.assertEqual([sizes[a] for a in f['step_args']], [g['limbs'] for g in step['inputs']])
                 self.assertEqual(step['outputs'][0]['limbs'], f['writes'][0]['limbs'])
                 self.assertEqual(f['check'], f'fold_finish_{f["writes"][0]["limbs"]}')
-                self.assertEqual(f['status'], 'unverified')
-                self.assertIsNone(f['theorem'])
+                self.assertEqual(f['status'], 'proved')
+                self.assertEqual(f['theorem'], {'file': 'proofs/theories/FoldMaps.v',
+                                                'name': f['name'] + '_correct'})
         by = {f['name']: f for f in maps}
         a = by['axpy_2']
         self.assertEqual(a['arrays'], [{'name': 'x', 'limbs': 2, 'role': 'supplied'},

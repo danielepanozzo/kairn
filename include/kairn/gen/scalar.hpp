@@ -5197,7 +5197,7 @@ KAIRN_GEN_FORCEINLINE constexpr void to_nearest_2(float x0, [[maybe_unused]] flo
 // of the finish fin_V; the loop's own variables end with an underscore.
 
 // map add_1(stored x, stored y) -> z, step add_1_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_1_seq(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -5223,7 +5223,7 @@ inline void add_1_seq(const double* x_in, const double* y_in, std::size_t n, dou
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_1_seq(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -5251,7 +5251,7 @@ inline void add_1_seq(const float* x_in, const float* y_in, std::size_t n, float
 }
 
 // map add_1(stored x, stored y) -> z, step add_1_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -5293,7 +5293,7 @@ inline void add_1_lanes(const double* x_in, const double* y_in, std::size_t n, s
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_1_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -5337,7 +5337,7 @@ inline void add_1_lanes(const float* x_in, const float* y_in, std::size_t n, std
 }
 
 // map add_1_entry(supplied x, supplied y) -> z, step add_entry_step_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_1_entry_seq(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -5366,7 +5366,7 @@ inline void add_1_entry_seq(const double* x_in, const double* y_in, std::size_t 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_1_entry_seq(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -5397,7 +5397,7 @@ inline void add_1_entry_seq(const float* x_in, const float* y_in, std::size_t n,
 }
 
 // map add_1_entry(supplied x, supplied y) -> z, step add_entry_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_1_entry_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -5445,7 +5445,7 @@ inline void add_1_entry_lanes(const double* x_in, const double* y_in, std::size_
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_1_entry_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -5495,7 +5495,7 @@ inline void add_1_entry_lanes(const float* x_in, const float* y_in, std::size_t 
 }
 
 // map add_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step add_2_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -5550,7 +5550,7 @@ inline void add_2_seq(const double* x0_in, const double* x1_in, const double* y0
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_2_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -5607,7 +5607,7 @@ inline void add_2_seq(const float* x0_in, const float* x1_in, const float* y0_in
 }
 
 // map add_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step add_2_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -5704,7 +5704,7 @@ inline void add_2_lanes(const double* x0_in, const double* x1_in, const double* 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_2_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -5803,7 +5803,7 @@ inline void add_2_lanes(const float* x0_in, const float* x1_in, const float* y0_
 }
 
 // map add_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step add_entry_step_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_2_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -5863,7 +5863,7 @@ inline void add_2_entry_seq(const double* x0_in, const double* x1_in, const doub
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_2_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -5925,7 +5925,7 @@ inline void add_2_entry_seq(const float* x0_in, const float* x1_in, const float*
 }
 
 // map add_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step add_entry_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_2_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -6032,7 +6032,7 @@ inline void add_2_entry_lanes(const double* x0_in, const double* x1_in, const do
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void add_2_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -6141,7 +6141,7 @@ inline void add_2_entry_lanes(const float* x0_in, const float* x1_in, const floa
 }
 
 // map axpy_1(supplied x, stored y, supplied a) -> z, step axpy_step_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_1_seq(const double* x_in, const double* y_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -6170,7 +6170,7 @@ inline void axpy_1_seq(const double* x_in, const double* y_in, std::size_t n, do
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_1_seq(const float* x_in, const float* y_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -6201,7 +6201,7 @@ inline void axpy_1_seq(const float* x_in, const float* y_in, std::size_t n, floa
 }
 
 // map axpy_1(supplied x, stored y, supplied a) -> z, step axpy_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double a, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -6249,7 +6249,7 @@ inline void axpy_1_lanes(const double* x_in, const double* y_in, std::size_t n, 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_1_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float a, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -6299,7 +6299,7 @@ inline void axpy_1_lanes(const float* x_in, const float* y_in, std::size_t n, st
 }
 
 // map axpy_1_entry(supplied x, supplied y, supplied a) -> z, step axpy_entry_step_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_1_entry_seq(const double* x_in, const double* y_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -6329,7 +6329,7 @@ inline void axpy_1_entry_seq(const double* x_in, const double* y_in, std::size_t
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_1_entry_seq(const float* x_in, const float* y_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -6361,7 +6361,7 @@ inline void axpy_1_entry_seq(const float* x_in, const float* y_in, std::size_t n
 }
 
 // map axpy_1_entry(supplied x, supplied y, supplied a) -> z, step axpy_entry_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_1_entry_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double a, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -6411,7 +6411,7 @@ inline void axpy_1_entry_lanes(const double* x_in, const double* y_in, std::size
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_1_entry_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float a, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -6463,7 +6463,7 @@ inline void axpy_1_entry_lanes(const float* x_in, const float* y_in, std::size_t
 }
 
 // map axpy_2(supplied x = (x0, x1), stored y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -6531,7 +6531,7 @@ inline void axpy_2_seq(const double* x0_in, const double* x1_in, const double* y
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -6601,7 +6601,7 @@ inline void axpy_2_seq(const float* x0_in, const float* x1_in, const float* y0_i
 }
 
 // map axpy_2(supplied x = (x0, x1), stored y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -6724,7 +6724,7 @@ inline void axpy_2_lanes(const double* x0_in, const double* x1_in, const double*
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -6849,7 +6849,7 @@ inline void axpy_2_lanes(const float* x0_in, const float* x1_in, const float* y0
 }
 
 // map axpy_2_1(supplied x = (x0, x1), stored y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_1_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -6914,7 +6914,7 @@ inline void axpy_2_1_seq(const double* x0_in, const double* x1_in, const double*
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_1_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -6981,7 +6981,7 @@ inline void axpy_2_1_seq(const float* x0_in, const float* x1_in, const float* y0
 }
 
 // map axpy_2_1(supplied x = (x0, x1), stored y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_step_2_1, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_1_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -7098,7 +7098,7 @@ inline void axpy_2_1_lanes(const double* x0_in, const double* x1_in, const doubl
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_1_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -7217,7 +7217,7 @@ inline void axpy_2_1_lanes(const float* x0_in, const float* x1_in, const float* 
 }
 
 // map axpy_2_1_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_entry_step_2_1, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_1_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -7284,7 +7284,7 @@ inline void axpy_2_1_entry_seq(const double* x0_in, const double* x1_in, const d
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_1_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -7353,7 +7353,7 @@ inline void axpy_2_1_entry_seq(const float* x0_in, const float* x1_in, const flo
 }
 
 // map axpy_2_1_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a) -> z = (z0, z1), step axpy_entry_step_2_1, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_1_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -7474,7 +7474,7 @@ inline void axpy_2_1_entry_lanes(const double* x0_in, const double* x1_in, const
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_1_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -7597,7 +7597,7 @@ inline void axpy_2_1_entry_lanes(const float* x0_in, const float* x1_in, const f
 }
 
 // map axpy_2_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_entry_step_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -7667,7 +7667,7 @@ inline void axpy_2_entry_seq(const double* x0_in, const double* x1_in, const dou
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -7739,7 +7739,7 @@ inline void axpy_2_entry_seq(const float* x0_in, const float* x1_in, const float
 }
 
 // map axpy_2_entry(supplied x = (x0, x1), supplied y = (y0, y1), supplied a = (a0, a1)) -> z = (z0, z1), step axpy_entry_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double a0, double a1, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -7866,7 +7866,7 @@ inline void axpy_2_entry_lanes(const double* x0_in, const double* x1_in, const d
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void axpy_2_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float a0, float a1, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -8729,7 +8729,7 @@ inline void dot_2_lanes(const float* x0_in, const float* x1_in, const float* y0_
 }
 
 // map mul_pow2_map_1(supplied x, supplied c) -> z, step mul_pow2_step_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void mul_pow2_map_1_seq(const double* x_in, std::size_t n, double c, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -8754,7 +8754,7 @@ inline void mul_pow2_map_1_seq(const double* x_in, std::size_t n, double c, doub
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void mul_pow2_map_1_seq(const float* x_in, std::size_t n, float c, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -8781,7 +8781,7 @@ inline void mul_pow2_map_1_seq(const float* x_in, std::size_t n, float c, float*
 }
 
 // map mul_pow2_map_1(supplied x, supplied c) -> z, step mul_pow2_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void mul_pow2_map_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double c, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -8821,7 +8821,7 @@ inline void mul_pow2_map_1_lanes(const double* x_in, std::size_t n, std::size_t 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void mul_pow2_map_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float c, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -8863,7 +8863,7 @@ inline void mul_pow2_map_1_lanes(const float* x_in, std::size_t n, std::size_t l
 }
 
 // map mul_pow2_map_2(supplied x = (x0, x1), supplied c) -> z = (z0, z1), step mul_pow2_step_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void mul_pow2_map_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double c, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -8899,7 +8899,7 @@ inline void mul_pow2_map_2_seq(const double* x0_in, const double* x1_in, std::si
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void mul_pow2_map_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float c, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -8937,7 +8937,7 @@ inline void mul_pow2_map_2_seq(const float* x0_in, const float* x1_in, std::size
 }
 
 // map mul_pow2_map_2(supplied x = (x0, x1), supplied c) -> z = (z0, z1), step mul_pow2_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void mul_pow2_map_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double c, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -8996,7 +8996,7 @@ inline void mul_pow2_map_2_lanes(const double* x0_in, const double* x1_in, std::
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void mul_pow2_map_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float c, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -9379,7 +9379,7 @@ inline void norm_upper_2_lanes(const float* x0_in, [[maybe_unused]] const float*
 }
 
 // map scale_1(supplied x, supplied a) -> z, step scale_step_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void scale_1_seq(const double* x_in, std::size_t n, double a, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -9405,7 +9405,7 @@ inline void scale_1_seq(const double* x_in, std::size_t n, double a, double* z_o
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void scale_1_seq(const float* x_in, std::size_t n, float a, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -9433,7 +9433,7 @@ inline void scale_1_seq(const float* x_in, std::size_t n, float a, float* z_out,
 }
 
 // map scale_1(supplied x, supplied a) -> z, step scale_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void scale_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, double a, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -9475,7 +9475,7 @@ inline void scale_1_lanes(const double* x_in, std::size_t n, std::size_t lanes, 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void scale_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, float a, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -9519,7 +9519,7 @@ inline void scale_1_lanes(const float* x_in, std::size_t n, std::size_t lanes, f
 }
 
 // map scale_2(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void scale_2_seq(const double* x0_in, const double* x1_in, std::size_t n, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -9557,7 +9557,7 @@ inline void scale_2_seq(const double* x0_in, const double* x1_in, std::size_t n,
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void scale_2_seq(const float* x0_in, const float* x1_in, std::size_t n, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -9597,7 +9597,7 @@ inline void scale_2_seq(const float* x0_in, const float* x1_in, std::size_t n, f
 }
 
 // map scale_2(supplied x = (x0, x1), supplied a) -> z = (z0, z1), step scale_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void scale_2_lanes(const double* x0_in, const double* x1_in, std::size_t n, std::size_t lanes, double a, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -9660,7 +9660,7 @@ inline void scale_2_lanes(const double* x0_in, const double* x1_in, std::size_t 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void scale_2_lanes(const float* x0_in, const float* x1_in, std::size_t n, std::size_t lanes, float a, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -9725,7 +9725,7 @@ inline void scale_2_lanes(const float* x0_in, const float* x1_in, std::size_t n,
 }
 
 // map sub_1(stored x, stored y) -> z, step sub_1_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_1_seq(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -9751,7 +9751,7 @@ inline void sub_1_seq(const double* x_in, const double* y_in, std::size_t n, dou
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_1_seq(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -9779,7 +9779,7 @@ inline void sub_1_seq(const float* x_in, const float* y_in, std::size_t n, float
 }
 
 // map sub_1(stored x, stored y) -> z, step sub_1_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_1_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -9821,7 +9821,7 @@ inline void sub_1_lanes(const double* x_in, const double* y_in, std::size_t n, s
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_1_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -9865,7 +9865,7 @@ inline void sub_1_lanes(const float* x_in, const float* y_in, std::size_t n, std
 }
 
 // map sub_1_entry(supplied x, supplied y) -> z, step sub_entry_step_1, check fold_finish_1: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_1_entry_seq(const double* x_in, const double* y_in, std::size_t n, double* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -9894,7 +9894,7 @@ inline void sub_1_entry_seq(const double* x_in, const double* y_in, std::size_t 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_1_entry_seq(const float* x_in, const float* y_in, std::size_t n, float* z_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -9925,7 +9925,7 @@ inline void sub_1_entry_seq(const float* x_in, const float* y_in, std::size_t n,
 }
 
 // map sub_1_entry(supplied x, supplied y) -> z, step sub_entry_step_1, check fold_finish_1: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_1_entry_lanes(const double* x_in, const double* y_in, std::size_t n, std::size_t lanes, double* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -9973,7 +9973,7 @@ inline void sub_1_entry_lanes(const double* x_in, const double* y_in, std::size_
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_1_entry_lanes(const float* x_in, const float* y_in, std::size_t n, std::size_t lanes, float* z_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -10023,7 +10023,7 @@ inline void sub_1_entry_lanes(const float* x_in, const float* y_in, std::size_t 
 }
 
 // map sub_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step sub_2_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_2_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -10081,7 +10081,7 @@ inline void sub_2_seq(const double* x0_in, const double* x1_in, const double* y0
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_2_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -10141,7 +10141,7 @@ inline void sub_2_seq(const float* x0_in, const float* x1_in, const float* y0_in
 }
 
 // map sub_2(stored x = (x0, x1), stored y = (y0, y1)) -> z = (z0, z1), step sub_2_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_2_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -10244,7 +10244,7 @@ inline void sub_2_lanes(const double* x0_in, const double* x1_in, const double* 
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_2_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -10349,7 +10349,7 @@ inline void sub_2_lanes(const float* x0_in, const float* x1_in, const float* y0_
 }
 
 // map sub_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step sub_entry_step_2, check fold_finish_2: element after element. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_2_entry_seq(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -10412,7 +10412,7 @@ inline void sub_2_entry_seq(const double* x0_in, const double* x1_in, const doub
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_2_entry_seq(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     bool finite = true;
     for (std::size_t i_ = 0; i_ < n; ++i_) {
@@ -10477,7 +10477,7 @@ inline void sub_2_entry_seq(const float* x0_in, const float* x1_in, const float*
 }
 
 // map sub_2_entry(supplied x = (x0, x1), supplied y = (y0, y1)) -> z = (z0, z1), step sub_entry_step_2, check fold_finish_2: in the lane order with `lanes` lanes, one lane after another. A written array is exactly one of the
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_2_entry_lanes(const double* x0_in, const double* x1_in, const double* y0_in, const double* y1_in, std::size_t n, std::size_t lanes, double* z0_out, double* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;
@@ -10590,7 +10590,7 @@ inline void sub_2_entry_lanes(const double* x0_in, const double* x1_in, const do
     }
     finite_out = finite;
 }
-// arrays read (in place) or overlaps none of them, nor another written one. Status: unverified.
+// arrays read (in place) or overlaps none of them, nor another written one. Status: proved.
 inline void sub_2_entry_lanes(const float* x0_in, const float* x1_in, const float* y0_in, const float* y1_in, std::size_t n, std::size_t lanes, float* z0_out, float* z1_out, bool& finite_out) noexcept {
     const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;
     bool finite = true;

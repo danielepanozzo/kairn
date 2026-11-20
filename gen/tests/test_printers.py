@@ -808,9 +808,12 @@ class Rocq(unittest.TestCase):
     # in a merge again: Model.v is that of the side of the folds of maxima, byte for byte,
     # Audit.v that of the proofs' side, and Statements.v the regeneration of the merged
     # descriptions.)
+    # Then the eighteen maps were proved (FoldMaps.v): Audit.v lists their theorems, one per map,
+    # among those of the folds, every earlier line kept, in its order; Model.v and Statements.v
+    # are the same.
     DIGESTS = {'Model.v': '54d17099e0e1a7e4856ee586251c0ad909c533f23506838284cc29e1598857f6',
                'Statements.v': '9f3eea15b11b185d2e1db246c6f6397ec571aef2d7fd9e996e3eed34b1dd6552',
-               'Audit.v': 'facb09ba4b1656f07a9c14bbd3f43ddfe7984571043fa54a730d4322327a791d'}
+               'Audit.v': '5866cdf008c61b36d142f8800650fb5227c968494b934471e75ca20618c58338'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in

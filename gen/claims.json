@@ -7041,8 +7041,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "add_1_correct"
+      },
       "source": {
         "cite": "add_1_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -7113,8 +7116,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "add_1_entry_correct"
+      },
       "source": {
         "cite": "add_1_1 on each element, guarded",
         "license": "algorithm: published; proof: MIT"
@@ -7188,8 +7194,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "add_2_correct"
+      },
       "source": {
         "cite": "add_2_2 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -7263,8 +7272,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "add_2_entry_correct"
+      },
       "source": {
         "cite": "add_2_2 on each element, guarded",
         "license": "algorithm: published; proof: MIT"
@@ -7342,8 +7354,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "axpy_1_correct"
+      },
       "source": {
         "cite": "axpy_step_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -7421,8 +7436,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "axpy_1_entry_correct"
+      },
       "source": {
         "cite": "axpy_entry_step_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -7504,8 +7522,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "axpy_2_correct"
+      },
       "source": {
         "cite": "axpy_step_2 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -7586,8 +7607,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "axpy_2_1_correct"
+      },
       "source": {
         "cite": "axpy_step_2_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -7668,8 +7692,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "axpy_2_1_entry_correct"
+      },
       "source": {
         "cite": "axpy_entry_step_2_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -7751,8 +7778,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "axpy_2_entry_correct"
+      },
       "source": {
         "cite": "axpy_entry_step_2 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -8152,8 +8182,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "mul_pow2_map_1_correct"
+      },
       "source": {
         "cite": "a product by a power of two on each element",
         "license": "algorithm: published; proof: MIT"
@@ -8228,8 +8261,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "mul_pow2_map_2_correct"
+      },
       "source": {
         "cite": "mul_pow2_2 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -8439,8 +8475,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "scale_1_correct"
+      },
       "source": {
         "cite": "mul_1_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -8514,8 +8553,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "scale_2_correct"
+      },
       "source": {
         "cite": "mul_2_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -8586,8 +8628,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "sub_1_correct"
+      },
       "source": {
         "cite": "sub_1_1 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -8658,8 +8703,11 @@
       ],
       "check": "fold_finish_1",
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "sub_1_entry_correct"
+      },
       "source": {
         "cite": "sub_1_1 on each element, guarded",
         "license": "algorithm: published; proof: MIT"
@@ -8733,8 +8781,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "sub_2_correct"
+      },
       "source": {
         "cite": "sub_2_2 on each element",
         "license": "algorithm: published; proof: MIT"
@@ -8808,8 +8859,11 @@
       ],
       "check": "fold_finish_2",
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/FoldMaps.v",
+        "name": "sub_2_entry_correct"
+      },
       "source": {
         "cite": "sub_2_2 on each element, guarded",
         "license": "algorithm: published; proof: MIT"
