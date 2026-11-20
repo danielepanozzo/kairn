@@ -164,8 +164,8 @@ COUNT_NEVER = ("%s false, m*unit(%s) = 0", "%s false, 0 < m*unit(%s) <= 1/5")
 COUNT_FINE_PRECISION = 8
 HARDWARE = ("binary64", "binary32")
 # How close the first bound of a bound kernel (g) must come to its stated value somewhere: the
-# interpreter's g exceeds it by 1.8 to 3.9 gaps of g at least, in binary64, binary32 and
-# fp:11:-30:10; a g twice too large would be 2^p gaps away.
+# interpreter's and the compiled kernels' g exceed it by 1.3 to 2.9 gaps of g at least, in
+# binary64, binary32 and every count of fp:12:-30:12; a g twice too large would be 2^p gaps away.
 CLOSE = "excess over a positive stated value, in gaps of the output"
 CLOSE_GAPS = 8
 

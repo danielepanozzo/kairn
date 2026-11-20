@@ -434,10 +434,11 @@ $x$ where the mask is true and the smallest where it is false; for `upper` with 
 smallest and largest (output $-$ value)/value and the smallest excess over a positive stated
 value in gaps of the output; for `holds`, `holds`; for `finite_or_nan`, the class of the value
 (`value: finite leading limb, every limb finite`, `... a lower limb not finite`, `value: leading
-limb infinite`, `value: leading limb NaN`). In 2 000 to 3 000 random counts per format, the
-reference listing and the interpreter give $g$ at least 1.7 gaps above its stated value
-everywhere (1.8 to 3.9 in `binary64`, `binary32` and `fp:12:-30:12`), and ok true up to
-$x$ just below 1/4 and false from there, in every format tried.
+limb infinite`, `value: leading limb NaN`). In 2 000 to 20 000 random counts per format and on
+every count of `fp:12:-30:12`, the reference listing, the interpreter and the compiled kernels
+give $g$ more than a gap above its stated value everywhere (at least 1.34 gaps, `bound_sum_2` in
+`fp:12:-30:12`; 1.8 to 2.9 in `binary64` and `binary32`), and ok true up to $x$ just below 1/4
+and false from there, in every format tried.
 
 Readings chosen where the documents leave a choice:
 

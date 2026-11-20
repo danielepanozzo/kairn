@@ -359,7 +359,7 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
 
     | Kernels | Cases the run must have seen |
     |---|---|
-    | the bounds `bound_sum_k`, `bound_dot_k` | for each entry, its mask true at $m \cdot \mathrm{unit}(K) = 0$, at most 1/5, and between 1/5 and 1/4 (just below the limit); false between 1/4 and 1/2 and beyond 1/2 (where `holds` cannot be true); a count that is not an integer; the first bound, $g$, within 8 gaps of its stated value somewhere (the interpreter comes within 1.7 to 3.9 gaps; a $g$ twice as large would be $2^p$ gaps away); in `binary64` and `binary32` no false mask at or below 1/5 (milestone2.md: ok is true there for every $m\varepsilon \le 0.24$) |
+    | the bounds `bound_sum_k`, `bound_dot_k` | for each entry, its mask true at $m \cdot \mathrm{unit}(K) = 0$, at most 1/5, and between 1/5 and 1/4 (just below the limit); false between 1/4 and 1/2 and beyond 1/2 (where `holds` cannot be true); a count that is not an integer; the first bound, $g$, within 8 gaps of its stated value somewhere (the interpreter and the compiled kernels come within 1.3 to 2.9 gaps; a $g$ twice as large would be $2^p$ gaps away); in `binary64` and `binary32` no false mask at or below 1/5 (milestone2.md: ok is true there for every $m\varepsilon \le 0.24$) |
     | the finishes `fold_finish_k` | a finite state, an infinite and a NaN leading limb; for two limbs a finite leading limb with a lower limb that is not finite |
 
     **A fold** must have seen, on its judged arrays with a true flag (the counts of `fold_error`):
@@ -376,7 +376,9 @@ calls it in its own process (`run`), `tests/crosscheck.cmake` runs it:
     below half a unit of the sum attains the bound), 0.15 to 0.33 with two (the literature's tight
     case of `add_2_2` makes a third: its error is $3u^2$ of $\lvert x+y\rvert$, a third of
     $\lvert x\rvert + \lvert y\rvert$) and up to 0.9995 for `dot_2` in `binary64` (MR22's case of
-    `mul_2_2`). And of the flag (the counts of `finite_or_nan`): a true flag, a false one from an
+    `mul_2_2`). In the full tier (2 000 arrays per format of the compiled folds, 2 000 sampled in
+    a toy format, every array of the enumerations): 0.83 to 1.00 with one limb, 0.11 to 0.47 for
+    the sums of two, 0.21 to 0.9995 for `dot_2`. And of the flag (the counts of `finite_or_nan`): a true flag, a false one from an
     element that is not finite, a false one from finite elements near the overflow threshold; and
     no false flag from finite elements far from overflow (every node of any summation tree below
     an eighth of the threshold; the oracle also counts such a line suspicious, which fails the
