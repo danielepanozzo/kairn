@@ -879,6 +879,29 @@ class IntervalGuards(unittest.TestCase):
         s = edited(s, 0, lambda e: e["counts"].pop("X: half-line [-inf, h]", None))
         self.fails(s, "interval_split_1", IV, *args, reason="half-line [-inf, h]")
 
+    def test_every_class_is_asked_for(self):
+        # For every kind of the interval kernels: each class the guards ask of an entry, taken out
+        # of a good run's summary, fails the run, with that class as the reason.
+        sys.path.insert(0, TESTS)
+        import crosscheck_guards as CG
+        runs = {"interval_add_1": self.add1, "interval_mul_1": self.mul1,
+                "interval_add_2": self.add2, "interval_mul_2": self.mul2,
+                "interval_mid_rad_1": self.mid, "add_down_2_2": self.down}
+        for name in ("mul_ext_2_2", "interval_make_1", "ball_from_interval_2", "ball_lower_as_2",
+                     "ball_to_interval_1", "interval_hull_1", "interval_split_1", "mul_dir_1",
+                     "interval_neg_2"):
+            runs[name] = pipeline(name, IV, *self.args)
+        asked = 0
+        for name, good in runs.items():
+            with open(good["claims"], encoding="utf-8") as f:
+                kernel = next(k for k in json.load(f)["kernels"] if k["name"] == name)
+            for j, e in enumerate(kernel["ensures"]):
+                for need in CG.iv_needs(kernel, e, None):
+                    s = edited(good, j, lambda x: x["counts"].pop(need, None))
+                    self.fails(s, name, IV, *self.args, reason='saw no case of "%s"' % need)
+                    asked += 1
+        self.assertGreater(asked, 100)
+
     def test_the_midpoint_far_from_its_bound(self):
         name = "|center - midpoint| / (rel*|midpoint| + abs)"
         s = edited(self.mid, 0, lambda e: e["maxima"].update({name: [["1", "3"], ""]}))
