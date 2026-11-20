@@ -127,6 +127,37 @@ VARIANTS = {
                            "is exact: the same value, not normalized",
     "bound-g-pred": "the bound kernels return g one number of the format smaller when ok is true",
     "bound-ok-beyond": "the bound kernels return ok true for every count",
+    # The interval kernels.
+    "iv-sum-nearest": "interval_add_1 and interval_sub_1 round their bounds to nearest",
+    "iv-empty-whole": "the interval sums and products of one limb give the whole line for an empty "
+                      "operand",
+    "iv-mul-zero-nan": "mul_dir_1 without the zero factor: 0 * inf is a NaN, a zero factor the "
+                       "rounded product stepped",
+    "iv-mul-step-large": "mul_dir_1 steps outward whenever the computed error is zero, above P too",
+    "iv-neg-not-swapped": "the negations of intervals negate each bound without exchanging them",
+    "iv-make-nan-empty": "the constructors of intervals give the empty set for a NaN bound (the "
+                         "rule of IEEE 1788, not Kairn's)",
+    "iv-make-reversed": "the constructors of intervals keep reversed bounds",
+    "iv2-no-zero-rule": "the bounds of two-limb sums move a sum that is zero by d (no select)",
+    "iv2-wrong-side": "the bounds of two limbs move the second limb to the wrong side",
+    "iv2-wide": "the bounds of two limbs move by 4 d instead of d (valid, not tight)",
+    "iv2-keep-nonfinite": "the interval sums of two limbs keep a bound that is not finite as the "
+                          "core returned it",
+    "iv-mulext-inf-sign": "mul_ext_2_2 gives the infinity of the wrong sign for an infinite operand",
+    "iv-hull-as-intersection": "the hulls return the intersection",
+    "iv-intersection-no-empty": "the intersections keep crossed bounds instead of the empty set",
+    "iv-mid-no-move": "interval_mid_rad_1 without the moves into [l, h]",
+    "iv-mid-radius-small": "interval_mid_rad_1 returns the radius one number smaller",
+    "iv-mid-radius-large": "interval_mid_rad_1 returns the radius one number larger",
+    "iv-tball-halfline": "interval_to_ball_1 keeps the center +-Omega of a half-line",
+    "iv-split-gap": "interval_split_1 starts the second part one number after the split point",
+    "iv-ballbound-nearest": "the bounds of a ball round c - r and c + r to nearest",
+    "iv-ballbound-empty-nan": "the bounds of a ball give a NaN for the empty ball",
+    "iv-fromint-no-step": "ball_from_interval_2 does not step the radius when a halving is inexact",
+    "iv-fromint-nan-empty": "ball_from_interval_2 gives the empty set for a NaN bound",
+    "iv-narrow-no-tail": "ball_narrow_2_1 keeps the radius without the second limb of the center",
+    "iv-ball-no-term": "add_ball_2_2 and mul_ball_2_2 return d = H, without the center's error",
+    "iv-to-interval-nearest": "ball_to_interval_1 rounds c - r and c + r to nearest",
     # kairn::rational<X>(num, den) (rational_1, rational_2).
     "rat-lead-ulp": "rational: the first limb one unit in the last place too large, in about 1 "
                     "line in 4",
@@ -1370,6 +1401,340 @@ class Kernels:
                 out[0], out[1] = nb, z1 - (nb - z0)
         return out
 
+    # -- the interval kernels (milestone2.md, "Interval kernels", "One enclosure interface"), as
+    # listed there, on IEEE values; a ball of two limbs to one limb by its own listing below ------
+    def _half(self):
+        """const up(1/2)."""
+        return self._const_up(Fraction(1, 2))
+
+    def _iv_consts(self, kname):
+        """E, G, H of the Ball kernel kname (the second radius design), rounded up."""
+        key = ("iv", kname)
+        c = self._consts.get(key)
+        if c is None:
+            c = self._consts[key] = radius2_constants(self.A, kname)
+        return c
+
+    def mul_dir_1(self, a, b):
+        """The lines of mul_down_1 and mul_up_1 on one two_prod; a zero factor gives the literal
+        zero (0 * inf = 0)."""
+        A = self.A
+        p, e = self.two_prod(a, b)
+        ap = abs(p)
+        bd = ap < self._const_P()
+        if self.v == "iv-mul-step-large":
+            bd = True
+        ez = e == 0
+        un = bd and ez
+        sd = (e < 0) or un
+        su = (0 < e) or un
+        dz = A.next_down(p) if sd else p
+        vz = A.next_up(p) if su else p
+        zz = a == 0 or b == 0
+        if self.v == "iv-mul-zero-nan":
+            return dz, vz
+        return (0 if zz else dz), (0 if zz else vz)
+
+    def _iv_empty(self, ne, l, h):
+        if self.v == "iv-empty-whole" and not ne:
+            return -INF, INF
+        return (l if ne else INF), (h if ne else -INF)
+
+    def interval_neg_1(self, xl, xu):
+        if self.v == "iv-neg-not-swapped":
+            return -xl, -xu
+        return -xu, -xl
+
+    def interval_add_1(self, xl, xu, yl, yu):
+        (l,) = self.add_down_1(xl, yl)
+        (h,) = self.add_up_1(xu, yu)
+        if self.v == "iv-sum-nearest":
+            l, h = self.A.add(xl, yl), self.A.add(xu, yu)
+        return self._iv_empty(xl < INF and yl < INF, l, h)
+
+    def interval_sub_1(self, xl, xu, yl, yu):
+        (l,) = self.sub_down_1(xl, yu)
+        (h,) = self.sub_up_1(xu, yl)
+        if self.v == "iv-sum-nearest":
+            l, h = self.A.sub(xl, yu), self.A.sub(xu, yl)
+        return self._iv_empty(xl < INF and yl < INF, l, h)
+
+    def interval_mul_1(self, xl, xu, yl, yu):
+        d1, v1 = self.mul_dir_1(xl, yl)
+        d2, v2 = self.mul_dir_1(xl, yu)
+        d3, v3 = self.mul_dir_1(xu, yl)
+        d4, v4 = self.mul_dir_1(xu, yu)
+        da = d2 if d2 < d1 else d1
+        db = d4 if d4 < d3 else d3
+        l = db if db < da else da
+        va = v2 if v1 < v2 else v1
+        vb = v4 if v3 < v4 else v3
+        h = vb if va < vb else va
+        return self._iv_empty(xl < INF and yl < INF, l, h)
+
+    def interval_make_1(self, lo, hi):
+        gl, gu = self.guard(lo), self.guard(hi)
+        ok = gl <= gu
+        v = ok and gl < INF and -INF < gu
+        nn = gl == gl and gu == gu
+        if self.v == "iv-make-nan-empty":
+            nn = True
+        if self.v == "iv-make-reversed" and nn and not ok:
+            v = True
+        el = INF if nn else -INF
+        eu = -INF if nn else INF
+        return (gl if v else el), (gu if v else eu)
+
+    def add_ball_2_2(self, x0, x1, y0, y1):
+        A = self.A
+        E, G, H = self._iv_consts("ball_add_2")
+        z0, z1 = self.add_2_2(x0, x1, y0, y1)
+        t = A.prod(abs(z0), E)
+        d = H if self.v == "iv-ball-no-term" else A.fma(t, G, H)
+        return z0, z1, d
+
+    def mul_ball_2_2(self, x0, x1, y0, y1):
+        A = self.A
+        E, G, H = self._iv_consts("ball_mul_2")
+        z0, z1 = self.mul_2_2(x0, x1, y0, y1)
+        t = A.prod(abs(z0), E)
+        d = H if self.v == "iv-ball-no-term" else A.fma(t, G, H)
+        return z0, z1, d
+
+    def _add_dir_2_2(self, x0, x1, y0, y1, up):
+        A = self.A
+        z0, z1, d = self.add_ball_2_2(x0, x1, y0, y1)
+        dd = 0 if z0 == 0 and self.v != "iv2-no-zero-rule" else d
+        if self.v == "iv2-wide" and type(dd) is int:
+            dd = A.prod(dd, self._const_up(Fraction(4)))
+        if self.v == "iv2-wrong-side":
+            up = not up
+        (w,) = self.add_up_1(z1, dd) if up else self.sub_down_1(z1, dd)
+        return self.two_sum_ord(z0, w)
+
+    def add_down_2_2(self, x0, x1, y0, y1):
+        return self._add_dir_2_2(x0, x1, y0, y1, False)
+
+    def add_up_2_2(self, x0, x1, y0, y1):
+        return self._add_dir_2_2(x0, x1, y0, y1, True)
+
+    def sub_down_2_2(self, x0, x1, y0, y1):
+        return self._add_dir_2_2(x0, x1, -y0, -y1, False)
+
+    def sub_up_2_2(self, x0, x1, y0, y1):
+        return self._add_dir_2_2(x0, x1, -y0, -y1, True)
+
+    def mul_dir_2_2(self, x0, x1, y0, y1):
+        A = self.A
+        z0, z1, d = self.mul_ball_2_2(x0, x1, y0, y1)
+        if self.v == "iv2-wide" and type(d) is int:
+            d = A.prod(d, self._const_up(Fraction(4)))
+        lo_up, hi_up = (True, False) if self.v == "iv2-wrong-side" else (False, True)
+        (wl,) = self.add_up_1(z1, d) if lo_up else self.sub_down_1(z1, d)
+        (wu,) = self.add_up_1(z1, d) if hi_up else self.sub_down_1(z1, d)
+        return self.two_sum_ord(z0, wl) + self.two_sum_ord(z0, wu)
+
+    def _ball_bound_1(self, c, r, up):
+        A = self.A
+        (b,) = self.add_up_1(c, r) if up else self.sub_down_1(c, r)
+        if self.v == "iv-ballbound-nearest":
+            b = A.add(c, r) if up else A.sub(c, r)
+        if self.v == "iv-ballbound-empty-nan":
+            return b
+        return b if r == r else (-INF if up else INF)
+
+    def ball_lower_as_1(self, c, r):
+        return (self._ball_bound_1(c, r, False),)
+
+    def ball_upper_as_1(self, c, r):
+        return (self._ball_bound_1(c, r, True),)
+
+    def ball_lower_as_2(self, c0, c1, r):
+        (t,) = self.to_down_2(c0, c1)
+        return (self._ball_bound_1(t, r, False),)
+
+    def ball_upper_as_2(self, c0, c1, r):
+        (t,) = self.to_up_2(c0, c1)
+        return (self._ball_bound_1(t, r, True),)
+
+    def ball_narrow_2_1(self, c0, c1, r):
+        """A ball of two limbs as a ball of one: the leading limb as the center, the radius grown
+        by the magnitude of the second limb and stepped up (radd); the special states as they
+        are, and the whole line when the radius is not finite."""
+        A = self.A
+        if r != r:
+            return NAN, NAN
+        if r == INF:
+            return 0, INF
+        rz = r if c1 == 0 or self.v == "iv-narrow-no-tail" else A.next_up(A.add(r, abs(c1)))
+        if not rz < INF:
+            return 0, INF
+        return c0, rz
+
+    def ball_from_interval_2(self, lo, hi):
+        A = self.A
+        gl, gu = self.guard(lo), self.guard(hi)
+        half = self._half()
+        hl, hu = A.prod(gl, half), A.prod(gu, half)
+        c0, c1 = self.two_sum_ord(hl, hu)
+        (d,) = self.sub_up_1(hu, hl)
+        xx = A.add(hl, hl) == gl and A.add(hu, hu) == gu
+        r = d if xx or self.v == "iv-fromint-no-step" else A.next_up(d)
+        v = gl <= gu and gl < INF and -INF < gu
+        f = -INF < gl and gu < INF
+        k0, k1, s = (c0, c1, r) if f else (0, 0, INF)
+        nn = gl == gl and gu == gu
+        if self.v == "iv-fromint-nan-empty":
+            nn = True
+        wc, wr = (NAN, NAN) if nn else (0, INF)
+        return (k0, k1, s) if v else (wc, wc, wr)
+
+    def _iv2_finish(self, l, h, ne):
+        l0, l1 = l
+        h0, h1 = h
+        fl, fh = abs(l0) < INF, abs(h0) < INF
+        a0, a1 = (l0, l1) if fl else (-INF, 0)
+        b0, b1 = (h0, h1) if fh else (INF, 0)
+        if self.v == "iv2-keep-nonfinite":
+            a0, a1, b0, b1 = l0, l1, h0, h1
+        return (a0, a1, b0, b1) if ne else (INF, 0, -INF, 0)
+
+    def interval_add_2(self, xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1):
+        l = self.add_down_2_2(xl0, xl1, yl0, yl1)
+        h = self.add_up_2_2(xu0, xu1, yu0, yu1)
+        return self._iv2_finish(l, h, xl0 < INF and yl0 < INF)
+
+    def interval_sub_2(self, xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1):
+        l = self.sub_down_2_2(xl0, xl1, yu0, yu1)
+        h = self.sub_up_2_2(xu0, xu1, yl0, yl1)
+        return self._iv2_finish(l, h, xl0 < INF and yl0 < INF)
+
+    def interval_neg_2(self, xl0, xl1, xu0, xu1):
+        if self.v == "iv-neg-not-swapped":
+            return -xl0, -xl1, -xu0, -xu1
+        return -xu0, -xu1, -xl0, -xl1
+
+    def interval_make_2(self, lo0, lo1, hi0, hi1):
+        ok = lo0 < hi0 or (lo0 == hi0 and lo1 <= hi1)
+        v = ok and lo0 < INF and -INF < hi0
+        nn = lo0 == lo0 and hi0 == hi0
+        if self.v == "iv-make-nan-empty":
+            nn = True
+        if self.v == "iv-make-reversed" and nn and not ok:
+            v = True
+        el = (INF, 0) if nn else (-INF, 0)
+        eu = (-INF, 0) if nn else (INF, 0)
+        return ((lo0, lo1) if v else el) + ((hi0, hi1) if v else eu)
+
+    def mul_ext_2_2(self, x0, x1, y0, y1):
+        A = self.A
+        c0, c1, e0, e1 = self.mul_dir_2_2(x0, x1, y0, y1)
+        t = A.prod(x0, y0)
+        if self.v == "iv-mulext-inf-sign":
+            t = -t
+        fo = abs(x0) < INF and abs(y0) < INF
+        nz = not (x0 == 0 or y0 == 0)
+        p = (c0, c1) if abs(c0) < INF else (-INF, 0)
+        q = (e0, e1) if abs(e0) < INF else (INF, 0)
+        r = p if fo else (t, 0)
+        s = q if fo else (t, 0)
+        return (r if nz else (0, 0)) + (s if nz else (0, 0))
+
+    def _lt2(self, a, b):
+        return self.lt_2_2(a[0], a[1], b[0], b[1])[0]
+
+    def interval_mul_2(self, xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1):
+        xl, xu, yl, yu = (xl0, xl1), (xu0, xu1), (yl0, yl1), (yu0, yu1)
+        m = [self.mul_ext_2_2(*(a + b)) for a, b in ((xl, yl), (xl, yu), (xu, yl), (xu, yu))]
+        L = [t[:2] for t in m]
+        H = [t[2:] for t in m]
+        la = L[1] if self._lt2(L[1], L[0]) else L[0]
+        lb = L[3] if self._lt2(L[3], L[2]) else L[2]
+        l = lb if self._lt2(lb, la) else la
+        ha = H[1] if self._lt2(H[0], H[1]) else H[0]
+        hb = H[3] if self._lt2(H[2], H[3]) else H[2]
+        h = hb if self._lt2(ha, hb) else ha
+        ne = xl0 < INF and yl0 < INF
+        return (l + h) if ne else (INF, 0, -INF, 0)
+
+    def interval_hull_1(self, xl, xu, yl, yu):
+        if self.v == "iv-hull-as-intersection":
+            return self.interval_intersection_1(xl, xu, yl, yu)
+        return (yl if yl < xl else xl), (yu if xu < yu else xu)
+
+    def interval_hull_2(self, xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1):
+        if self.v == "iv-hull-as-intersection":
+            return self.interval_intersection_2(xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1)
+        xl, xu, yl, yu = (xl0, xl1), (xu0, xu1), (yl0, yl1), (yu0, yu1)
+        return (yl if self._lt2(yl, xl) else xl) + (yu if self._lt2(xu, yu) else xu)
+
+    def interval_intersection_1(self, xl, xu, yl, yu):
+        zl = yl if xl < yl else xl
+        zu = yu if yu < xu else xu
+        if zu < zl and self.v != "iv-intersection-no-empty":
+            return INF, -INF
+        return zl, zu
+
+    def interval_intersection_2(self, xl0, xl1, xu0, xu1, yl0, yl1, yu0, yu1):
+        xl, xu, yl, yu = (xl0, xl1), (xu0, xu1), (yl0, yl1), (yu0, yu1)
+        zl = yl if self._lt2(xl, yl) else xl
+        zu = yu if self._lt2(yu, xu) else xu
+        if self._lt2(zu, zl) and self.v != "iv-intersection-no-empty":
+            return INF, 0, -INF, 0
+        return zl + zu
+
+    def interval_mid_rad_1(self, xl, xu):
+        A = self.A
+        om = A.next_down(INF)
+        mo = -om
+        ml = xl < mo
+        l = mo if ml else xl
+        mu = om < xu
+        h = om if mu else xu
+        half = self._half()
+        hl, hu = A.prod(l, half), A.prod(h, half)
+        ma = A.add(hl, hu)
+        mb = l if ma < l else ma
+        mc = h if h < mb else mb
+        if self.v == "iv-mid-no-move":
+            mc = ma
+        (ra,) = self.sub_up_1(mc, l)
+        (rb,) = self.sub_up_1(h, mc)
+        rc = rb if ra < rb else ra
+        if self.v == "iv-mid-radius-small" and type(rc) is int and rc > 0:
+            rc = A.next_down(rc)
+        if self.v == "iv-mid-radius-large" and type(rc) is int:
+            rc = A.next_up(rc)
+        md = mo if ml else mc
+        me = om if mu else md
+        mf = 0 if ml and mu else me
+        rd = INF if ml or mu else rc
+        ne = xl < INF
+        return (mf if ne else NAN), (rd if ne else NAN)
+
+    def interval_to_ball_1(self, xl, xu):
+        m, r = self.interval_mid_rad_1(xl, xu)
+        if r == INF and self.v != "iv-tball-halfline":
+            m = 0
+        return m, r
+
+    def ball_to_interval_1(self, c, r):
+        A = self.A
+        (l,) = self.sub_down_1(c, r)
+        (h,) = self.add_up_1(c, r)
+        if self.v == "iv-to-interval-nearest":
+            l, h = A.sub(c, r), A.add(c, r)
+        ne = r == r
+        return (l if ne else INF), (h if ne else -INF)
+
+    def interval_split_1(self, xl, xu):
+        m = self.interval_mid_rad_1(xl, xu)[0]
+        ne = xl < INF
+        bl = m
+        if self.v == "iv-split-gap" and type(m) is int:
+            bl = self.A.next_up(m)
+        return xl, (m if ne else -INF), (bl if ne else INF), xu
+
 
 # A negative zero as an output (next-down-zero): the fixed values have one zero.
 NEG_ZERO = "-0x0p+0"
@@ -1402,7 +1767,17 @@ ARITY = {"two_sum": 2, "fast_two_sum": 2, "two_prod": 2, "two_prod_dekker": 2, "
          # The folds' stage.
          "dot_step_1": 3, "dot_step_2": 6, "sum_entry_step_1": 2, "sum_entry_step_2": 4,
          "sum_fast_entry_step_2": 4, "fold_finish_1": 1, "fold_finish_2": 2, "bound_sum_1": 1,
-         "bound_sum_2": 1, "bound_dot_1": 1, "bound_dot_2": 1}
+         "bound_sum_2": 1, "bound_dot_1": 1, "bound_dot_2": 1,
+         # The interval kernels.
+         "mul_dir_1": 2, "interval_make_1": 2, "interval_neg_1": 2, "interval_add_1": 4,
+         "interval_sub_1": 4, "interval_mul_1": 4, "add_ball_2_2": 4, "mul_ball_2_2": 4,
+         "add_down_2_2": 4, "add_up_2_2": 4, "sub_down_2_2": 4, "sub_up_2_2": 4, "mul_dir_2_2": 4,
+         "ball_lower_as_1": 2, "ball_upper_as_1": 2, "ball_lower_as_2": 3, "ball_upper_as_2": 3,
+         "ball_narrow_2_1": 3, "ball_from_interval_2": 2, "interval_add_2": 8, "interval_neg_2": 4,
+         "interval_sub_2": 8, "interval_make_2": 4, "mul_ext_2_2": 4, "interval_mul_2": 8,
+         "interval_hull_1": 4, "interval_hull_2": 8, "interval_intersection_1": 4,
+         "interval_intersection_2": 8, "interval_mid_rad_1": 2, "interval_to_ball_1": 2,
+         "ball_to_interval_1": 2, "interval_split_1": 2}
 FIRST_WAVE = frozenset(("two_sum", "fast_two_sum", "two_prod", "two_prod_dekker", "split",
                         "add_2_2", "add_2_1", "mul_2_2", "mul_2_1", "add_fast_2_2"))
 # kairn::rational<X>(num, den), with its number of limbs.

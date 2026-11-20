@@ -383,6 +383,121 @@ MUTANTS = {
     "finite_or_nan: a non-NaN output of a non-finite value accepted": (
         "extended.py", "    elif not all(v == NAN for v in w):\n        out.append(\"finite_or_nan: limb 0",
         "    elif False:\n        out.append(\"finite_or_nan: limb 0"),
+    # The interval kernels: the requirements, the exact range, I1 to I6, the other kinds, the
+    # constants of a claim, the reading of an output group other than the first, the generator.
+    "interval: reversed bounds read as an interval": (
+        "intervals.py", "    if XT.x_cmp(L, 0, U, 0) > 0:\n        return None\n    return (\"nonempty\"",
+        "    if False:\n        return None\n    return (\"nonempty\""),
+    "interval: the empty set not read": (
+        "intervals.py", "    if L == INF and U == NINF:\n        return (\"empty\", L, U)",
+        "    if False:\n        return (\"empty\", L, U)"),
+    "interval: requirement interval() not checked": (
+        "intervals.py", "        return r[1] if interval_state(fmt, x[alo:ahi], x[blo:bhi]) is None else None",
+        "        return None"),
+    "interval: requirement not_nan() not checked": (
+        "intervals.py", "    return r[1] if x[lo] == NAN else None", "    return None"),
+    "range: a product of bounds without 0 * inf = 0": (
+        "intervals.py", "    if a == 0 or b == 0:\n        return 0\n    if a == NAN", "    if False:\n        return 0\n    if a == NAN"),
+    "range: the upper bound of a sum from the lower ones": (
+        "intervals.py", "    hi = _xadd(_align(a[1], a[2], s), _align(b[1], b[2], s))",
+        "    hi = _xadd(_align(a[0], a[2], s), _align(b[1], b[2], s))"),
+    "range: a negation without exchanging the bounds": (
+        "intervals.py", "        return XT.x_neg(hi), XT.x_neg(lo), s", "        return XT.x_neg(lo), XT.x_neg(hi), s"),
+    "I2: an empty operand with a result that is not empty accepted": (
+        "intervals.py", "        if zs[0] != \"empty\":\n            fail(\"I2\"", "        if False:\n            fail(\"I2\""),
+    "I3: the lower bound not compared with the range": (
+        "intervals.py", "    if _cmp(zl, q, lo, s) > 0:\n        fail(\"I3\"", "    if False:\n        fail(\"I3\""),
+    "I4: tight exact not judged": (
+        "intervals.py", "        if _cmp(zl, q, lo, s) != 0 or _cmp(zu, q, hi, s) != 0:",
+        "        if False:"),
+    "I4: one step more allowed beyond the rounding": (
+        "intervals.py", "    limit = 0 if exact_needed else steps", "    limit = 0 if exact_needed else steps + 1"),
+    "I4: product_large ignored": (
+        "intervals.py", "            exact = _product_large(c, fmt, x, list(c[\"ivs\"].values()))",
+        "            exact = False"),
+    "I4: the relative term of outward doubled": (
+        "intervals.py", "            ok, r = ratio_le(dist, abs(Vv), rel, ab, m)",
+        "            ok, r = ratio_le(dist, abs(Vv), 2 * rel, ab, m)"),
+    "I5: an unbounded result from a range within the limit accepted": (
+        "intervals.py", "                if not bounded(zs):\n                    fail(\"I5\"",
+        "                if False:\n                    fail(\"I5\""),
+    "I5: bounded_exactly not judged": (
+        "intervals.py", "                if c[\"bexact\"] and bounded(zs):", "                if False:"),
+    "I5: the limit Omega read as twice Omega": (
+        "intervals.py", "        lim_n, lim_s = fmt.omega, fmt.qmin", "        lim_n, lim_s = 2 * fmt.omega, fmt.qmin"),
+    "I6: [0, 0] times anything not judged": (
+        "intervals.py", "            if not (zl == 0 and zu == 0):\n                fail(\"I6\"",
+        "            if False:\n                fail(\"I6\""),
+    "outward: the side not judged": (
+        "intervals.py", "    if (Oc > Vc) if below else (Oc < Vc):", "    if False:"),
+    "outward: the relative term doubled": (
+        "intervals.py", "    ok, r = ratio_le(abs(Oc - Vc), abs(Vc), rel, ab, scale)",
+        "    ok, r = ratio_le(abs(Oc - Vc), abs(Vc), 2 * rel, ab, scale)"),
+    "outward: the absolute term left out": (
+        "intervals.py", "    den = rn * mag * ad + an * rd", "    den = rn * mag * ad"),
+    "outward: exact_when not judged": (
+        "intervals.py", "        if not failing(e[\"conds\"], x, es, OUT_EW_FAILS, OUT_EW_HOLDS) and Oc != Vc:",
+        "        if False:"),
+    "outward: the zero condition read as holding always": (
+        "intervals.py", "            out.append((lambda x, fn=fn: fn(x) == 0, condition_text(text, op, k)))",
+        "            out.append((lambda x, fn=fn: True, condition_text(text, op, k)))"),
+    "outward: a zero factor need not give zero": (
+        "intervals.py", "        if not all(v == 0 for v in w):\n            fail(\"zero_factor\"",
+        "        if False:\n            fail(\"zero_factor\""),
+    "outward: the infinity of an infinite operand not compared": (
+        "intervals.py", "        if w != want:\n            fail(\"infinite operand\"",
+        "        if False:\n            fail(\"infinite operand\""),
+    "outward: an infinity on the wrong side accepted": (
+        "intervals.py", "        if w0 != (NINF if below else INF) or any(t != 0 for t in w[1:]):",
+        "        if any(t != 0 for t in w[1:]):"),
+    "makes_interval: a NaN bound gives the empty set": (
+        "intervals.py", "        want = (\"nonempty\", NINF, INF)\n    elif L != INF",
+        "        want = (\"empty\", INF, NINF)\n    elif L != INF"),
+    "set_bound: an empty ball not judged": (
+        "intervals.py", "        if o != want:\n            es.count(\"failed: empty ball\")",
+        "        if False:\n            es.count(\"failed: empty ball\")"),
+    "set_bound: the side not judged": (
+        "intervals.py", "    if (side > 0) if below else (side < 0):\n        es.count(\"failed: wrong side\")",
+        "    if False:\n        es.count(\"failed: wrong side\")"),
+    "interval_of_ball: tight not judged": (
+        "intervals.py", "        why = _judge_rounded_side(fmt, es, name, zv, v, s, c[\"steps\"], False, down)\n        if why:\n            fail(\"tight\", why)",
+        "        why = None\n        if why:\n            fail(\"tight\", why)"),
+    "interval_set: the union read as the intersection": (
+        "intervals.py", "    if c[\"op\"] == \"union\":", "    if c[\"op\"] == \"intersection\":"),
+    "ball_of_interval: the smallest radius not judged": (
+        "intervals.py", "        if r != want:\n            fail(\"smallest_radius\"",
+        "        if False:\n            fail(\"smallest_radius\""),
+    "ball_of_interval: the midpoint not judged": (
+        "intervals.py", "    if not ok:\n        fail(\"midpoint\"", "    if False:\n        fail(\"midpoint\""),
+    "ball_of_interval: the half-lines' centers exchanged": (
+        "intervals.py", "else fmt.omega if U == INF else -fmt.omega", "else -fmt.omega if U == INF else fmt.omega"),
+    "makes_ball from an interval: midpoint_when not judged": (
+        "intervals.py", "            if 2 * cv != lo + hi:", "            if False:"),
+    "makes_ball from an interval: containment not judged": (
+        "intervals.py", "    if cv - r > lo or cv + r < hi:\n        es.count(\"failed: does not contain",
+        "    if False:\n        es.count(\"failed: does not contain"),
+    "zero_factor: a zero factor need not give zero": (
+        "intervals.py", "    if z[c[\"first\"]] != 0:", "    if False:"),
+    "groups: an entry judged only where the first group is finite": (
+        "intervals.py", "        if type(z[lead]) is not int:\n            es.count(GROUP_NONFINITE)",
+        "        if type(z[pl.lead]) is not int:\n            es.count(GROUP_NONFINITE)"),
+    "constants: up( ) read as its argument": (
+        "intervals.py", "            r = round_up_format(fmt, ev(t[1]))", "            r = ev(t[1])"),
+    "claims: an interval of bounds of other limbs accepted": (
+        "intervals.py", "        if limbs[lo] != limbs[hi] or limbs[lo] not in (1, 2):",
+        "        if limbs[lo] not in (1, 2):"),
+    "claims: bounded_when over another set accepted": (
+        "intervals.py", "        if ct != e.set_tree:", "        if False:"),
+    "claims: balls {} accepted in the extended domain": (
+        "claims.py", "        if not isinstance(balls, dict) or (not balls and kernel.extended):",
+        "        if not isinstance(balls, dict):"),
+    "gen6: the threshold stratum aimed elsewhere": (
+        "gen6.py", "        r = _threshold_pair(fmt, rng, sh) if n == 2 else None", "        r = None"),
+    "gen6: halving never inexact in oddeta": (
+        "gen6.py", "    v = 2 * rng.below(fmt.lam) + 1", "    v = 2 * rng.below(fmt.lam) + 2"),
+    "gen6: no empty interval among the special ones": (
+        "gen6.py", "    if kind == \"empty\":\n        return _inf(k, 1), _inf(k, -1)",
+        "    if kind == \"empty\":\n        return _inf(k, -1), _inf(k, 1)"),
 }
 
 
