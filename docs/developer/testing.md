@@ -1177,6 +1177,18 @@ convolution). On 16 threads of the Linux machine, shared with other runs, with `
 quick tier took 97 to 98 seconds with them and 83 without, 351 and 291 seconds of test time; they
 alone took 15 seconds.
 
+With both stages merged (and every kernel and fold of `gen/claims.json` judged), measured on
+2026-11-20 back to back on 16 threads of the Linux machine with GCC 13, `--parallel 4`, load 5 to
+8: `main` (0622f99) ran 423 tests in 68 seconds (258 and 259 seconds of test time), the merged
+tree 573 tests in 115 to 118 seconds (426 to 439). Of the difference in test time, 37 seconds are
+the interval kernels' 66 tests, 63 stage B's 84, and about 69 the 422 tests both have: their
+cross-checks of the compiled runners 24 seconds (the merged oracle imports more and reads a larger
+claims file, 0.03 to 0.04 seconds more per check of 6 000 lines on the Mac), the public
+interface's 11, and the object code's tests and `api.reject` 29, which do not run the oracle
+(they compile the headers, which the joined branch extended). The guards' tests (`full.tools.crosscheck.guards`, 74 tests)
+took 300 seconds there with each compiler and 170 to 201 on the Mac, under their timeout of 900
+but close to a third of it.
+
 On 16 threads of the Linux machine, the quick tier's 278 seconds of test time were then: the
 compiled runners' cross-checks 105 (126 tests), the oracle's own tests 54, the public interface
 against the oracle 51 (96 tests), the guards' tests 32, the generator's own tests 17, the
