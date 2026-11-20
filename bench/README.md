@@ -197,6 +197,38 @@ python3 bench/rational_cost.py compile --cxx cl --msvc --flags=/arch:AVX2 --json
 python3 bench/rational_cost.py run --cxx clang++ --flags=-mfma
 ```
 
+### The settings of `KAIRN_ENCLOSURE_CODE`
+
+What the operations of `Ball` inline, outlined and external (`include/kairn/config.hpp`) cost at
+compile time and at run time.
+
+`enclosure_costs.py compile` writes translation units with 100, 1 000 and 10 000 operations of
+`Ball<double, 2>` in straight-line code in one function (`enclosure_costs.py source N` prints one: a
+mix of `+`, `-`, `*` and the scaling by a `double`, each on two of the eight values computed last,
+each result stored so that none is dead), compiles each at `-O2` and `-O3` (`/O2`) with `NDEBUG` in
+each setting, three times in rounds (once for the largest), and records the wall time, the
+processor time, the peak memory and the size of the object, as `compile_time.py` measures them;
+and the same for `definitions.cpp`, the one file that defines the operations in the external
+setting. Nothing is linked.
+
+```sh
+python3 bench/enclosure_costs.py compile --cxx g++-16 --reps 3 --workdir /tmp/enclosure \
+    --machine "..." --commit "$(git rev-parse --short HEAD)" --json results/milestone2/costs/compile-gcc16.json
+python3 bench/enclosure_costs.py report results/milestone2/costs
+```
+
+At run time, the harness above is built once more per setting, `kairn-bench-outlined-LEVEL` and
+`kairn-bench-external-LEVEL` (with `definitions.cpp`), every translation unit with the setting;
+`--filter ball` times the operations of `Ball` (`api/.../op`: the public operators, in a loop of
+independent operations and in dependent chains) next to the generated kernels called directly
+(`scalar/...`, `api/.../kairn`), which no setting changes. `report` reads the runs as
+`run-COMPILER-SETTING-LEVEL.json`, SETTING `inline` for `kairn-bench-LEVEL`.
+
+```sh
+build-bench/bench/kairn-bench-outlined-O3 --filter ball --reps 31 --machine "..." \
+    --commit "$(git rev-parse --short HEAD)" --json results/milestone2/costs/run-gcc16-outlined-O3.json
+```
+
 ### The checks of `KAIRN_CHECKS`, and MSVC's stack cookie
 
 `costs.cpp` is a small benchmark of its own, timed as `kairn-bench` times (non-inlined functions

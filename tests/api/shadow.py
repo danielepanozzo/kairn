@@ -16,9 +16,11 @@ public operation once, with the strictest warnings of the compiler about a decla
 another, as errors (the front end only):
 
   own       without the globals and with KAIRN_GEN_KEEP_SHADOW_WARNINGS, which keeps the two
-            warnings on in the headers: Kairn's own declarations hide nothing; must compile
+            warnings on in the headers: Kairn's own declarations hide nothing; must compile, also
+            with the operations of Ball external and their definitions (kairn/definitions.hpp)
   program   with the globals, as a program builds it: must compile, with each form of the scalar
-            fix-ups (KAIRN_GEN_FIXUP_CALL 0 and 1)
+            fix-ups (KAIRN_GEN_FIXUP_CALL 0 and 1), and with the operations of Ball outlined, and
+            external with their definitions (KAIRN_ENCLOSURE_CODE)
   control   with the globals and KAIRN_GEN_KEEP_SHADOW_WARNINGS: what a program saw before the
             headers turned the warnings off. With MSVC it must fail with C4459 (C6244 too under
             /analyze), so that the program build cannot pass for want of a name the compiler
@@ -218,9 +220,16 @@ def main():
     # Each build: its name, its macros, whether under /analyze, its options, and what it must give:
     # 'pass', to compile without a warning about a hidden name; 'report', to compile or be rejected
     # for a hidden name only; or the warning it must be rejected with.
+    outlined = 'KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_OUTLINED'
+    external = ['KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL', 'KAIRN_TEST_DEFINITIONS']
     builds = [('own', [keep], False, (), 'pass'),
+              ('own, the operations of Ball external, with their definitions', [keep] + external, False, (),
+               'pass'),
               ('program', [globals_, 'KAIRN_GEN_FIXUP_CALL=0'], False, (), 'pass'),
-              ('program, the fix-ups called', [globals_, 'KAIRN_GEN_FIXUP_CALL=1'], False, (), 'pass')]
+              ('program, the fix-ups called', [globals_, 'KAIRN_GEN_FIXUP_CALL=1'], False, (), 'pass'),
+              ('program, the operations of Ball outlined', [globals_, outlined], False, (), 'pass'),
+              ('program, the operations of Ball external, with their definitions', [globals_] + external, False,
+               (), 'pass')]
     if a.compiler == 'msvc':
         # The control under /analyze without C4459, which would stop the compilation first.
         builds += [('own, /analyze', [keep], True, (), 'pass'),

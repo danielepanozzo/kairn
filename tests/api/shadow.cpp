@@ -204,3 +204,9 @@ int main() {
                              use_test::use_every_operation<float>(1.5f, 0x1p-30f);
     return use_status.ok() && kairn::environment_ok() && use_total == use_total ? 0 : 1;
 }
+
+// With KAIRN_TEST_DEFINITIONS (and KAIRN_ENCLOSURE_CODE_EXTERNAL), the definitions of the
+// operations of Ball, which a program compiles in one of its translation units.
+#if defined(KAIRN_TEST_DEFINITIONS)
+#include <kairn/definitions.hpp>
+#endif

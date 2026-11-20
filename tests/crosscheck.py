@@ -6,7 +6,7 @@ on each distinct output and, for the kernels' runners, the guards (docs/develope
         (--seed S --count N | --exhaustive [--restrict R1,R2,...]) [--fail-on-suspicious]
         (--runner LABEL EXECUTABLE)... [--interp] [--refrun]
     python3 tests/crosscheck.py api --kernel K --format F --seed S --count N --summary-dir DIR
-        (--runner LABEL EXECUTABLE)... [--first-form LABEL]...
+        (--runner LABEL EXECUTABLE)... [--first-form LABEL]... [--same-as LABEL OTHER]...
 
 Each output is that of the pipeline
 
@@ -52,7 +52,9 @@ run of RUNNER --form FORM named LABEL.FORM; check always with --expect-valid and
 DIR/K.F.work, and the summary of each output judged DIR/K.F.LABEL.FORM.json. The test fails if a
 runner maps no form to the kernel, if a run fails (a form that computes only some lines of its
 kernel fails when it computed none), if the oracle fails an output, if it judged no case of an
-output, or if an output has no case of a stratum the generator's header announced.
+output, or if an output has no case of a stratum the generator's header announced; and, for each
+--same-as LABEL OTHER, if a form of runner LABEL wrote other bytes than the same form of runner
+OTHER (the settings of KAIRN_ENCLOSURE_CODE, which must compute the same bits).
 
 The oracle's report is printed for every output judged. On a failure, the test says which runner
 and form failed and how, prints the command that reruns one case by hand from the tag of its line
@@ -403,7 +405,20 @@ def api(a):
     failed = []
     failure_of = {}
     n_judged = 0
-    for name, status, output, first in run_all(runs, requests):
+    done = run_all(runs, requests)
+    # --same-as LABEL OTHER: every form of LABEL wrote the same bytes as the same form of OTHER.
+    first_of = {name: first for name, status, _, first in done if status == 0}
+    n_same = 0
+    for label, other in a.same_as or []:
+        for name in [n for n, _ in runs if n.startswith(label + ".")]:
+            twin = other + name[len(label):]
+            if twin not in what_of:
+                failed.append("%s: %s has no form %s" % (what_of[name], other, name[len(label) + 1:]))
+            elif name in first_of and twin in first_of and first_of[name] != first_of[twin]:
+                failed.append("%s: not the same bytes as %s" % (what_of[name], what_of[twin]))
+            else:
+                n_same += 1
+    for name, status, output, first in done:
         what = what_of[name]
         if status != 0:
             say("== %s %s, %s: the runner failed (%s)" % (kernel, fmt, what, status))
@@ -439,8 +454,9 @@ def api(a):
                  "".join("\n  %s: %s" % (label, exe) for label, exe in a.runner), work), flush=True)
         return 1
     shutil.rmtree(work, ignore_errors=True)
-    say("%s %s: %d forms of the public interface passed (distinct outputs judged: %d)"
-        % (kernel, fmt, len(runs), n_judged))
+    say("%s %s: %d forms of the public interface passed (distinct outputs judged: %d)%s"
+        % (kernel, fmt, len(runs), n_judged,
+           "; %d forms the same bytes as their twins (--same-as)" % n_same if a.same_as else ""))
     return 0
 
 
@@ -473,6 +489,9 @@ def main(argv=None):
     p.add_argument("--runner", nargs=2, action="append", metavar=("LABEL", "EXECUTABLE"))
     p.add_argument("--first-form", action="append", metavar="LABEL",
                    help="a runner that runs the kernel's first form only")
+    p.add_argument("--same-as", nargs=2, action="append", metavar=("LABEL", "OTHER"),
+                   help="every form of runner LABEL must write the same bytes as the same form of "
+                        "runner OTHER")
     a = ap.parse_args(argv)
     if a.mode == "compiled":
         if not a.exhaustive and (a.seed is None or a.count is None):

@@ -72,6 +72,33 @@ foreach(_level IN LISTS _levels)
   endif()
 endforeach()
 
+# The same harness with the operations of Ball outlined and external (KAIRN_ENCLOSURE_CODE,
+# include/kairn/config.hpp), which must be the same in every translation unit of a program:
+# kairn-bench-outlined-LEVEL and kairn-bench-external-LEVEL, the second with definitions.cpp, the
+# translation unit that defines the operations. bench/README.md, "The settings of
+# KAIRN_ENCLOSURE_CODE", says how they are compared.
+foreach(_code OUTLINED EXTERNAL)
+  string(TOLOWER "${_code}" _name)
+  foreach(_level IN LISTS _levels)
+    set(_target kairn-bench-${_name}-${_level})
+    add_executable(${_target} main.cpp scalar.cpp packed.cpp api.cpp mpfr.cpp)
+    if(_code STREQUAL "EXTERNAL")
+      target_sources(${_target} PRIVATE definitions.cpp)
+    endif()
+    target_link_libraries(${_target} PRIVATE kairn::kairn kairn::fma)
+    target_compile_options(${_target} PRIVATE ${_opt_${_level}} ${_no_contract})
+    string(STRIP "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_config}} ${_opt_${_level}} ${_no_contract} ${_fma} -DKAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_${_code}" _flags)
+    string(REGEX REPLACE " +" " " _flags "${_flags}")
+    target_compile_definitions(${_target} PRIVATE "KAIRN_BENCH_FLAGS=\"${_flags}\""
+      KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_${_code})
+    if(_mpfr)
+      target_compile_definitions(${_target} PRIVATE KAIRN_BENCH_MPFR)
+      target_include_directories(${_target} PRIVATE "${KAIRN_BENCH_MPFR_INCLUDE_DIR}" "${KAIRN_BENCH_GMP_INCLUDE_DIR}")
+      target_link_libraries(${_target} PRIVATE "${KAIRN_BENCH_MPFR_LIBRARY}" "${KAIRN_BENCH_GMP_LIBRARY}")
+    endif()
+  endforeach()
+endforeach()
+
 # The cost of the checks of KAIRN_CHECKS and of MSVC's stack cookie (costs.cpp): one program per
 # value of KAIRN_CHECKS, which must be the same in every translation unit of a program,
 # kairn-bench-costs-LEVEL (0) and kairn-bench-costs-checks-LEVEL (1), at the levels above and

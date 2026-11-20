@@ -113,6 +113,7 @@ foreach(_set IN LISTS _flags_names)
   list(APPEND _flags_runners --runner "${_set}" "$<TARGET_FILE:kairn-api-runner-${_set}>")
 endforeach()
 set(_flags_names ${_flags_names} PARENT_SCOPE)
+set(_flags_enclosure_sets ${_flags_enclosure_sets} PARENT_SCOPE)
 set(_flags_gen_runners ${_flags_gen_runners} PARENT_SCOPE)
 set(_flags_gen_labels ${_flags_gen_labels} PARENT_SCOPE)
 # --- The end of the flag sets' runners ---------------------------------------------------------
@@ -364,6 +365,23 @@ foreach(_build debug release)
 endforeach()
 add_test(NAME api.checks.handler COMMAND kairn-api-checks-handler)
 set_tests_properties(api.checks.handler PROPERTIES TIMEOUT 120 LABELS "api;checks")
+# The same programs, with the build's own flags and KAIRN_CHECKS 1, in the other settings of
+# KAIRN_ENCLOSURE_CODE (include/kairn/config.hpp), where the checks of the operations of Ball are in
+# functions of their own: outlined, and external, whose definitions are those of definitions.cpp
+# (checks_handler.cpp has them itself, with its handler). The full tier runs them
+# (full.api.checks.SETTING.*, ../full/CMakeLists.txt).
+foreach(_code OUTLINED EXTERNAL)
+  string(TOLOWER "${_code}" _name)
+  _kairn_api_program(kairn-api-checks-${_name} checks.cpp)
+  _kairn_api_program(kairn-api-checks-handler-${_name} checks_handler.cpp)
+  target_compile_definitions(kairn-api-checks-${_name} PRIVATE KAIRN_CHECKS=1 KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_${_code})
+  target_compile_definitions(kairn-api-checks-handler-${_name} PRIVATE KAIRN_CHECKS=1
+    KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_${_code})
+  if(_code STREQUAL "EXTERNAL")
+    target_sources(kairn-api-checks-${_name} PRIVATE definitions.cpp)
+  endif()
+endforeach()
+set(_api_expect_flush ${_api_expect_flush} PARENT_SCOPE)
 # --- The end of the debug build and the checks -------------------------------------------------
 
 # --- What must not compile --------------------------------------------------------------------
@@ -408,6 +426,50 @@ elseif(NOT _msvc_style)
     _kairn_api_reject(reciprocal_math 0 "Kairn does not work with -freciprocal-math" "-DOPTIONS=-freciprocal-math")
   endif()
 endif()
+
+# A value of KAIRN_ENCLOSURE_CODE that is not one of its three (include/kairn/config.hpp): a name the
+# preprocessor does not know, nothing, and the 1 of a bare -D; the control, without it, compiles.
+if(_msvc_style)
+  set(_api_define /D)
+else()
+  set(_api_define -D)
+endif()
+_kairn_api_reject(enclosure_code.unknown 0 "KAIRN_ENCLOSURE_CODE must be KAIRN_ENCLOSURE_CODE_INLINE"
+  "-DOPTIONS=${_api_define}KAIRN_ENCLOSURE_CODE=outlined")
+_kairn_api_reject(enclosure_code.empty 0 "KAIRN_ENCLOSURE_CODE must be KAIRN_ENCLOSURE_CODE_INLINE"
+  "-DOPTIONS=${_api_define}KAIRN_ENCLOSURE_CODE=")
+_kairn_api_reject(enclosure_code.bare 0 "KAIRN_ENCLOSURE_CODE must be KAIRN_ENCLOSURE_CODE_INLINE"
+  "-DOPTIONS=${_api_define}KAIRN_ENCLOSURE_CODE")
+
+# What must not link (link_fail.cmake): with KAIRN_ENCLOSURE_CODE_EXTERNAL, link_main.cpp with the
+# definitions (definitions.cpp) compiled with another KAIRN_CHECKS, with another setting, and
+# without them; each with a control, both units with the same options, which links and runs.
+set(_api_external "${_api_define}KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL")
+set(_api_link_common "-DCXX=${CMAKE_CXX_COMPILER}" "-DSTYLE=${_api_style}" "-DINCLUDE=${_api_include}"
+  "-DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}" "-DCOMMON=${_api_fma_bars}")
+if(CMAKE_OSX_SYSROOT AND NOT _msvc_style)
+  list(APPEND _api_link_common "-DSYSROOT=${CMAKE_OSX_SYSROOT}")
+endif()
+foreach(_case checks setting missing)
+  if(_case STREQUAL "checks")
+    set(_main "${_api_external}|${_api_define}KAIRN_CHECKS=1")
+    set(_definitions "${_api_external}|${_api_define}KAIRN_CHECKS=0")
+    set(_expect "kairn::detail::external_checked::")
+  elseif(_case STREQUAL "setting")
+    set(_main "${_api_external}|${_api_define}KAIRN_CHECKS=0")
+    set(_definitions "${_api_define}KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_OUTLINED|${_api_define}KAIRN_CHECKS=0")
+    set(_expect "kairn::detail::external::|kairn_enclosure_code")
+  else()
+    set(_main "${_api_external}|${_api_define}KAIRN_CHECKS=0")
+    set(_definitions NONE)
+    set(_expect "kairn::detail::external::")
+  endif()
+  add_test(NAME api.link.external.${_case}
+    COMMAND "${CMAKE_COMMAND}" ${_api_link_common} "-DWORK=${CMAKE_CURRENT_BINARY_DIR}/link/${_case}"
+      "-DMAIN=${_main}" "-DDEFINITIONS=${_definitions}" "-DEXPECT=${_expect}"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/link_fail.cmake")
+  set_tests_properties(api.link.external.${_case} PROPERTIES TIMEOUT 300 LABELS "api;reject")
+endforeach()
 
 # UNVERIFIED operations written without the marker, compiled against a copy of the headers in which
 # every kernel is marked unverified (compile_fail.cmake), so that the mechanism is tested whatever

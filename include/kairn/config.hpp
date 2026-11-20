@@ -130,6 +130,99 @@
 #define KAIRN_DETAIL_K1_CONTRACT
 #endif
 
+/// The value of KAIRN_ENCLOSURE_CODE, the default, that forces the operations of Ball inline.
+#define KAIRN_ENCLOSURE_CODE_INLINE 2
+/// The value of KAIRN_ENCLOSURE_CODE that makes the operations of Ball functions of their own.
+#define KAIRN_ENCLOSURE_CODE_OUTLINED 4
+/// The value of KAIRN_ENCLOSURE_CODE that leaves the operations of Ball to one translation unit of
+/// the program, which includes kairn/definitions.hpp.
+#define KAIRN_ENCLOSURE_CODE_EXTERNAL 8
+
+/// @def KAIRN_ENCLOSURE_CODE
+/// Where the code of the operations of a Ball that round is: + - * and the scaling by a T, for one
+/// and two limbs (docs/developer/design/milestone2.md, "Inlining and compile time"). One of:
+/// - KAIRN_ENCLOSURE_CODE_INLINE, the default: each operation is forced inline into its caller,
+///   as every kernel of at most two limbs is. The fastest code, and the longest compilations
+///   where many operations are inlined into one function.
+/// - KAIRN_ENCLOSURE_CODE_OUTLINED: each is an ordinary function that the compiler is asked not to
+///   inline, compiled once per translation unit that uses it, whatever the number of its calls,
+///   and kept once by the linker; each call then costs a call at run time. Usable where it was
+///   usable before.
+/// - KAIRN_ENCLOSURE_CODE_EXTERNAL: each is only declared, for float and double with one and two
+///   limbs, and one translation unit of the program defines them all, by including
+///   <kairn/definitions.hpp> (with the same settings as the others). The other translation units
+///   do not compile them at all.
+/// The negation of a Ball and its constructors, a few instructions each, stay inline in every
+/// setting, and so does everything of Expansion. The three settings compute the same bits: the
+/// body of each operation is the same code, the generated kernel force-inlined into it, whose
+/// rules R1 to R3 make it immune to what a compiler does at the call boundary or across it.
+///
+/// Define it the same way, before including Kairn, in every translation unit of a program. The
+/// operations of OUTLINED and EXTERNAL are in a namespace of their own for each setting and each
+/// value of KAIRN_CHECKS, so that a translation unit gets the code of its own settings: one of
+/// INLINE and one of OUTLINED in one program each work as they were compiled; one of EXTERNAL whose
+/// definitions are missing, or were compiled with another setting or another KAIRN_CHECKS, does
+/// not link (an undefined kairn::detail::external... or external_checked:: function). With MSVC
+/// and clang-cl a program whose translation units disagree in any way does not link (LNK2038,
+/// "mismatch detected for 'kairn_enclosure_code'"). Any other value does not compile. Interval
+/// and BallVector, when they exist, will follow the same setting.
+#if !defined(KAIRN_ENCLOSURE_CODE)
+#define KAIRN_ENCLOSURE_CODE KAIRN_ENCLOSURE_CODE_INLINE
+#endif
+// (X + 0) is 0 for a value that is empty or a name the preprocessor does not know, and the values
+// are not 0 or 1, so that a bare -DKAIRN_ENCLOSURE_CODE is refused too.
+#if (KAIRN_ENCLOSURE_CODE + 0) != KAIRN_ENCLOSURE_CODE_INLINE && \
+    (KAIRN_ENCLOSURE_CODE + 0) != KAIRN_ENCLOSURE_CODE_OUTLINED && \
+    (KAIRN_ENCLOSURE_CODE + 0) != KAIRN_ENCLOSURE_CODE_EXTERNAL
+#error "KAIRN_ENCLOSURE_CODE must be KAIRN_ENCLOSURE_CODE_INLINE, KAIRN_ENCLOSURE_CODE_OUTLINED or KAIRN_ENCLOSURE_CODE_EXTERNAL"
+#endif
+
+// What KAIRN_ENCLOSURE_CODE makes of an operation: its specifiers (KAIRN_DETAIL_ENCLOSURE), and the
+// namespace around its declaration and its definition (KAIRN_DETAIL_ENCLOSURE_BEGIN, _END), inline
+// in kairn::detail, whose name says the setting and KAIRN_CHECKS. KAIRN_DETAIL_NOINLINE asks the
+// compiler not to inline a function, as KAIRN_GEN_COLD does in the generated code.
+#if defined(_MSC_VER) && !defined(__clang__)
+#define KAIRN_DETAIL_NOINLINE __declspec(noinline)
+#else
+#define KAIRN_DETAIL_NOINLINE __attribute__((noinline))
+#endif
+#if KAIRN_ENCLOSURE_CODE == KAIRN_ENCLOSURE_CODE_INLINE
+#define KAIRN_DETAIL_ENCLOSURE KAIRN_FORCEINLINE
+#define KAIRN_DETAIL_ENCLOSURE_BEGIN
+#define KAIRN_DETAIL_ENCLOSURE_END
+#elif KAIRN_ENCLOSURE_CODE == KAIRN_ENCLOSURE_CODE_OUTLINED
+// Function templates, so that each translation unit that uses one compiles its instances once
+// and the linker keeps one copy, as of an inline function, without the keyword (with it, GCC
+// warns that a declaration without its body is inline and noinline).
+#define KAIRN_DETAIL_ENCLOSURE KAIRN_DETAIL_NOINLINE
+#if KAIRN_CHECKS
+#define KAIRN_DETAIL_ENCLOSURE_BEGIN inline namespace outlined_checked {
+#else
+#define KAIRN_DETAIL_ENCLOSURE_BEGIN inline namespace outlined {
+#endif
+#define KAIRN_DETAIL_ENCLOSURE_END }
+#else
+#define KAIRN_DETAIL_ENCLOSURE KAIRN_DETAIL_NOINLINE
+#if KAIRN_CHECKS
+#define KAIRN_DETAIL_ENCLOSURE_BEGIN inline namespace external_checked {
+#else
+#define KAIRN_DETAIL_ENCLOSURE_BEGIN inline namespace external {
+#endif
+#define KAIRN_DETAIL_ENCLOSURE_END }
+#endif
+// A macro argument that is nothing.
+#define KAIRN_DETAIL_NOTHING
+// MSVC's linker refuses objects that record different values under one name.
+#if defined(_MSC_VER)
+#if KAIRN_ENCLOSURE_CODE == KAIRN_ENCLOSURE_CODE_INLINE
+#pragma detect_mismatch("kairn_enclosure_code", "inline")
+#elif KAIRN_ENCLOSURE_CODE == KAIRN_ENCLOSURE_CODE_OUTLINED
+#pragma detect_mismatch("kairn_enclosure_code", "outlined")
+#else
+#pragma detect_mismatch("kairn_enclosure_code", "external")
+#endif
+#endif
+
 // The warnings of MSVC and GCC about a declaration that hides a global variable of the program
 // are off for the declarations of each header of Kairn (gen/prelude.hpp says why).
 KAIRN_GEN_PUSH_WARNINGS

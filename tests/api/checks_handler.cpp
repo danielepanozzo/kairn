@@ -115,3 +115,8 @@ int main() {
                 failures);
     return failures == 0 ? 0 : 1;
 }
+
+// With KAIRN_ENCLOSURE_CODE_EXTERNAL (the full tier's full.api.checks.handler.external), the
+// operations of Ball are defined here, in the one translation unit of this program, where
+// KAIRN_ENVIRONMENT_FAILURE is the handler above; with any other setting this defines nothing.
+#include <kairn/definitions.hpp>

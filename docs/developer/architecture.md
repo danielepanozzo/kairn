@@ -178,7 +178,11 @@ emitted as `a * b`, because there is no FMA in constant evaluation and no contra
 variant has its own statement and proof.
 
 C++ emission rules: non-template functions, one overload per limb type; one operation per
-statement; kernels of at most two limbs are force-inlined. A kernel is `constexpr` when it
+statement; kernels of at most two limbs are force-inlined. The public operations of `Ball` that
+round are functions of `ball_operations.hpp` that force-inline their kernel and are themselves
+forced inline (the default), outlined or external, as `KAIRN_ENCLOSURE_CODE` says
+([Getting started](../getting-started/index.md#compile-time-and-the-operations-of-ball)); the code
+of the kernel is the same in each, and the generated files do not depend on the setting. A kernel is `constexpr` when it
 contains no fused operation or names a constant-evaluation variant; a kernel that is not yet
 `constexpr` is listed as such in the generator's output. `guard` and `times_inf` dispatch on
 `__builtin_is_constant_evaluated()`, so the full kernels of the additions and the constructors

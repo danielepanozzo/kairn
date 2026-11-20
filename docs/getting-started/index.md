@@ -194,7 +194,7 @@ The tests of the quick tier:
 | `kairn-oracle.claims` | `python3 oracle/kairn-oracle check --claims-only`: the oracle can read every claim in `gen/claims.json`. |
 | `docs.reference.check` | `python3 docs/tools/reference.py --check`: the reference pages of this site are what the script writes from the claims and the stored results. |
 | `crosscheck.compiled.*` | Each kernel, compiled with the build's compiler and flags, scalar and packed (NEON on AArch64, AVX2 on x86-64, one operand per lane), and again under each contraction setting that matters to the compiler: every one of these builds on the same random `binary64` and `binary32` operands, judged by the oracle against the kernel's claims. |
-| `objcode.*` | The fused multiply-adds and plain multiplications in the object code of every kernel, compiled with the build's compiler in a few configurations of its flags, are those its description asks for; a textbook `a * b + c` fails that check where the compiler fuses it. |
+| `objcode.*` | The fused multiply-adds and plain multiplications in the object code of every kernel, compiled with the build's compiler in a few configurations of its flags, are those its description asks for; a textbook `a * b + c` fails that check where the compiler fuses it. With the operations of `Ball` outlined and external ([below](#compile-time-and-the-operations-of-ball)), each is a call, and the function it calls has the fused operations of its kernel. |
 | `regression.cases` | The stored cases that once found a problem or came closest to a claim (`tests/regression/cases.txt`), through every compiled runner, the generator's interpreter and every public form of their kernels, judged by the oracle. |
 | `consume.add_subdirectory` | A CMake project that adds Kairn with `add_subdirectory` and links `kairn::kairn` and `kairn::fma` builds, compiles as C++20, and runs a kernel. |
 | `consume.install` | `cmake --install` of the build tree into a prefix inside the build directory, with the license in it as `share/licenses/kairn/LICENSE`. |
@@ -208,7 +208,8 @@ The tests of the quick tier:
 | `api.shadow` | A program with a global variable of every name of a parameter or a local variable of Kairn's headers, calling every public operation, compiles with the compiler's strictest warnings about hidden declarations as errors ([Testing](../developer/testing.md#the-programs-names)). |
 | `api.platform_macros` | The headers compile and work after a platform header that defines `min`, `max`, `small`, `near`, `far`, `hyper` and `interface` as macros: `<windows.h>` itself on Windows, without `NOMINMAX`, and the same macros defined by the test on every platform. |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break Kairn and define no macro; `kairn::self_test()` must report a failure. |
-| `api.reject.*` | What must not compile: the flags `config.hpp` rejects; each kind of operation and constructor written without the marker while its kernel is UNVERIFIED (against a copy of the headers in which every kernel is); and an operation whose kernel alone is UNVERIFIED, which must not compile through a conversion to another kernel; with `KAIRN_CHECKS`, a constant expression given an operand the checks refuse. |
+| `api.reject.*` | What must not compile: the flags `config.hpp` rejects; a value of `KAIRN_ENCLOSURE_CODE` that is not one of its three; each kind of operation and constructor written without the marker while its kernel is UNVERIFIED (against a copy of the headers in which every kernel is); and an operation whose kernel alone is UNVERIFIED, which must not compile through a conversion to another kernel; with `KAIRN_CHECKS`, a constant expression given an operand the checks refuse. |
+| `api.link.external.*` | With the operations of `Ball` external, a program whose file of definitions was compiled with another `KAIRN_CHECKS` or another setting, or is missing, does not link; the same program with matching settings links and runs. |
 | `api.boundary.*` | A product the program computes and passes into an operation (`x + a * b`, a constructor, `from_limbs`, a ball's center or radius) gives, bit for bit, the result of the same operation on the rounded product, under each contraction setting; `api.boundary.unguarded.*` checks, against a copy of the headers without the generated guard, that the compilers that fuse across statements do change it. |
 | `api.k1.zero_cost` | The instructions emitted for loops and single operations over `Expansion<double, 1>` against the same code over `double`; with MSVC, also that none of them has a stack-cookie check. |
 | `api.example.*` | The examples of this site, which check their own output; the tutorial's, under each contraction setting, against the output its page shows. |
@@ -238,9 +239,10 @@ C++20, and there is nothing to compile. Its headers today:
 | `kairn/ball.hpp` | `kairn::Ball<T, 1>` and `kairn::Ball<T, 2>`. |
 | `kairn/traits.hpp` | `kairn::traits<X>`: limb type, number of limbs, precision, and the error constants of the proved operations. |
 | `kairn/environment.hpp` | `kairn::self_test()` and `kairn::environment_ok()`. |
-| `kairn/config.hpp` | The checks of the compiler's flags, the marker `kairn::unverified`, and the macros `KAIRN_CHECKS`, `KAIRN_ENVIRONMENT_FAILURE`, `KAIRN_K1_CONTRACT`. |
+| `kairn/config.hpp` | The checks of the compiler's flags, the marker `kairn::unverified`, and the macros `KAIRN_CHECKS`, `KAIRN_ENVIRONMENT_FAILURE`, `KAIRN_K1_CONTRACT`, `KAIRN_ENCLOSURE_CODE`. |
 | `kairn/version.hpp` | `KAIRN_VERSION_MAJOR`, `KAIRN_VERSION_MINOR`, `KAIRN_VERSION_PATCH`, `KAIRN_VERSION_STRING` and `KAIRN_VERSION` (configuring fails if they disagree with the version in `CMakeLists.txt`). |
-| `kairn/gen/` | The generated kernels and data the headers above use; not an interface to call directly. |
+| `kairn/definitions.hpp` | The definitions of the operations of `Ball`, for one file of a program built with `KAIRN_ENCLOSURE_CODE_EXTERNAL` ([below](#compile-time-and-the-operations-of-ball)); nothing in the other settings. |
+| `kairn/ball_operations.hpp`, `kairn/gen/` | The operations of `Ball` that `ball.hpp` and `definitions.hpp` include, and the generated kernels and data the headers above use; not an interface to call directly. |
 
 A project can add the source tree (directly, or through `FetchContent`), as the
 `consume.add_subdirectory` test does, with `KAIRN_SOURCE_DIR` the path of the checkout:
@@ -260,6 +262,55 @@ headers, the package under `share/cmake/kairn` and the license as `share/license
 
 The installed package accepts a request for a version with the same major and minor number that is
 not newer than itself.
+
+## Compile time and the operations of Ball
+
+Every operation of one and two limbs is forced inline into the function that calls it, which is
+what makes it fast. A function with thousands of ball operations, a loop unrolled by templates for
+example, then becomes one very large function, which the compiler takes long to compile and a lot
+of memory to compile. `KAIRN_ENCLOSURE_CODE`, defined the same way before Kairn is included in
+every file of a program (or with `target_compile_definitions` on every target), says where the code
+of the operations of `Ball` that round (`+`, `-`, `*` and the scaling by a `T`, one and two limbs)
+is:
+
+| Setting | The operations of `Ball` | When |
+|---|---|---|
+| `KAIRN_ENCLOSURE_CODE_INLINE`, the default | forced inline into each call, as before | the operations are in loops and chains whose speed matters, and the functions are of ordinary size |
+| `KAIRN_ENCLOSURE_CODE_OUTLINED` | ordinary functions that the compiler is asked not to inline: each file compiles each operation once, whatever the number of its calls | a file with many ball operations in a few functions compiles too slowly or uses too much memory, and the build stays as simple as it is |
+| `KAIRN_ENCLOSURE_CODE_EXTERNAL` | declared only; one file of the program defines them | the same, when many files use balls and the program would rather compile the operations once in all; or the outlined setting is not enough |
+
+```cpp
+// In every file of the program, or with -DKAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL:
+#define KAIRN_ENCLOSURE_CODE KAIRN_ENCLOSURE_CODE_EXTERNAL
+#include <kairn/kairn.hpp>
+
+// And in exactly one file, compiled with the same settings as the others:
+#include <kairn/definitions.hpp>
+```
+
+With CMake, the definition can go on the targets
+(`target_compile_definitions(app PRIVATE KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL)`), and the
+one file into one of them. `kairn::kairn` builds nothing: the file is the program's own, so that it
+is compiled with the program's compiler and flags, `KAIRN_CHECKS` and `KAIRN_ENVIRONMENT_FAILURE`
+included, which a library built by Kairn could not know. In the other settings
+`kairn/definitions.hpp` defines nothing, so the file can stay.
+
+The three settings compute the same bits: each operation's code is the same, its generated kernel
+inside it, and the tests check that every public form gives the same bytes in each
+([Testing](../developer/testing.md#the-full-tier)). The negation of a ball and the constructors, a
+few instructions each, stay inline in every setting, and so does everything of `Expansion`. An
+operation that is outlined is still usable wherever it was (none of these is usable in constant
+expressions yet); an external one cannot be evaluated at compile time. A call costs time at run
+time where the operations are short and many.
+
+If the files of a program disagree: a file compiled inline and one compiled outlined each get what
+they asked for, since the outlined operations are functions of a namespace of their own; a file
+compiled external whose definitions are missing, or were compiled with another setting or another
+`KAIRN_CHECKS`, does not link, with an undefined `kairn::detail::external::...` (or
+`external_checked::...` when `KAIRN_CHECKS` is 1); with MSVC and clang-cl a program whose files
+disagree in any way does not link (LNK2038, "mismatch detected for 'kairn_enclosure_code'"). Any
+other value of the macro does not compile: `KAIRN_ENCLOSURE_CODE must be KAIRN_ENCLOSURE_CODE_INLINE,
+KAIRN_ENCLOSURE_CODE_OUTLINED or KAIRN_ENCLOSURE_CODE_EXTERNAL`.
 
 ## Hardware FMA
 

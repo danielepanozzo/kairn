@@ -31,6 +31,13 @@ A contraction the IR did not ask for shows as a fused instruction more, with a m
 or none; an FMA computed as a product and a sum, or an opaque product folded back into a plain one,
 as a multiplication more. The forms and the counts are described in gen/kairn_gen/objcode.py.
 
+In each configuration that compiles both forms of the fix-ups, enclosure_unit.cpp, the public
+operations of Ball, is compiled with KAIRN_ENCLOSURE_CODE outlined, external, and external with
+kairn/definitions.hpp (include/kairn/config.hpp): each of its functions must have no fused
+multiply-add or multiplication of its own, and call a function with the counts of the operation's
+full Ball kernel by the rule above, or, external without the definitions, the operation outside the
+object and nothing that computes (check_enclosure_program).
+
 The negative controls (--controls), each in every configuration of the tier:
 
 - fixture.cpp has the textbook `a * b + c`, as two statements and as one expression, scalar and
@@ -39,6 +46,8 @@ The negative controls (--controls), each in every configuration of the tier:
   function exactly when it was fused, and at least one configuration must fuse something.
 - the unit, compiled once, is judged against counts with two kernels changed (one FMA more for
   mul_2_2, one multiplication fewer for add_2_2_full): exactly those kernels must fail.
+- enclosure_unit.cpp, compiled once with the operations of Ball inline (the default), is judged
+  as the outlined form: every function must fail, its operation not being a call.
 
 Standard library only. Exits 1 on any failure, with what was found; a compiler or disassembler that
 cannot be run is a failure, never a skip.
@@ -63,6 +72,21 @@ import disasm  # noqa: E402
 
 UNIT = os.path.join(HERE, 'unit.cpp')
 FIXTURE = os.path.join(HERE, 'fixture.cpp')
+ENCLOSURE_UNIT = os.path.join(HERE, 'enclosure_unit.cpp')
+
+# The operations of Ball that KAIRN_ENCLOSURE_CODE takes out of their callers, by the full Ball
+# kernel each calls (include/kairn/config.hpp), and the forms of enclosure_unit.cpp: a label, its
+# macros, and whether the operation's definition is in the object ('in') or outside it ('out').
+ENCLOSURE_KERNELS = ['ball_add_1_full', 'ball_sub_1_full', 'ball_mul_1_full', 'ball_scale_1_full',
+                     'ball_add_2_full', 'ball_sub_2_full', 'ball_mul_2_full', 'ball_scale_2_full']
+ENCLOSURE_FORMS = [
+    ('outlined', ['KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_OUTLINED'], 'in'),
+    ('external', ['KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL'], 'out'),
+    ('external with its definitions', ['KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL',
+                                       'KAIRN_OBJCODE_DEFINITIONS'], 'in'),
+]
+# The namespace of the external operations with KAIRN_CHECKS 0, which the unit is compiled with.
+EXTERNAL_NAMESPACE = 'external'
 TIMEOUT = 600   # seconds per compilation: MSVC has been seen to spin on generated code
 
 # The flag matrix of each compiler family: optimization levels, contraction settings, and with and
@@ -329,6 +353,82 @@ def check_program(program, expected, limb_types, packed):
     return failures, tally, n
 
 
+def check_enclosure_program(program, expected, limb_types, where):
+    """(failures, functions checked) of one object file of enclosure_unit.cpp. Each function of the
+    unit must have no fused multiply-add and no multiplication of its own: the operation is a call.
+    With where 'in', the function it calls is in the object, and with it the counts are those of the
+    operation's kernel, by the rule of judge(); with 'out', it calls the operation outside the object
+    (a symbol of the namespace kairn::detail::external), once, and nothing it executes in the object
+    has a fused multiply-add or a multiplication."""
+    form = unit_form(program)
+    failures, n = [], 0
+    for kernel in ENCLOSURE_KERNELS:
+        for t in limb_types:
+            name = f'kairn_objcode_enclosure_{t}_{kernel}'
+            f = program.find(name)
+            where_text = f'{t} {kernel} ({form})'
+            if f is None:
+                failures.append((kernel, f'{where_text}: no function {name} in the disassembly'))
+                continue
+            n += 1
+            count = program.count(f)
+            own_names = {p.names[0] for p in program.parts.get(id(f), [f])}
+            own = [i for fn, i in count.fma + count.mul if fn in own_names]
+            problems = []
+            if own:
+                problems.append(f'{len(own)} fused multiply-adds or multiplications of its own '
+                                f'({"; ".join(own)}): the operation is not a call')
+            if where == 'in':
+                text, _ = judge(count, expected[kernel][form][t])
+                if text:
+                    problems.append(text)
+                if not count.calls:
+                    problems.append('it calls no function of the object')
+            else:
+                ops = [sym for _, sym in count.external if EXTERNAL_NAMESPACE in sym]
+                others = [sym for _, sym in count.external if EXTERNAL_NAMESPACE not in sym]
+                if len(ops) != 1:
+                    problems.append(f'{len(ops)} calls of an external operation (kairn::detail::'
+                                    f'{EXTERNAL_NAMESPACE}), expected one')
+                if others:
+                    problems.append('calls outside the object that are not the operation: ' + ', '.join(others))
+                if count.fma or count.mul:
+                    problems.append(f'{len(count.fma)} fused multiply-adds and {len(count.mul)} '
+                                    f'multiplications in the object, expected none')
+                for fn, insn in count.unknown:
+                    problems.append(f'a call or jump whose target is not known (in {fn}: {insn})')
+            if problems:
+                failures.append((kernel, f'{where_text}: ' + '; '.join(problems)))
+    return failures, n
+
+
+def check_enclosures(tools, config, index, workdir, expected, limb_types):
+    """[(text, ok)] of enclosure_unit.cpp in one configuration, in each of its forms."""
+    level, contraction, rounding, _ = config
+    options = (level,) + contraction + rounding
+    out = []
+    for i, (label_, defines, where) in enumerate(ENCLOSURE_FORMS):
+        obj = os.path.join(workdir, f'enclosure-{index}-{i}.{"obj" if tools.msvc_style else "o"}')
+        t0 = time.time()
+        try:
+            tools.compile(ENCLOSURE_UNIT, obj, options, defines + ['KAIRN_CHECKS=0'], False, workdir)
+            program = disasm.Program(tools.disassemble(obj, workdir))
+            failures, n = check_enclosure_program(program, expected, limb_types, where)
+        except (Failure, ValueError) as e:
+            out.append((f'{label(config)}, operations of Ball {label_}: FAILED: {e}', False))
+            continue
+        took = f'{time.time() - t0:.1f} s'
+        head = f'{label(config)}, operations of Ball {label_}'
+        if failures:
+            out.append((f'{head}: FAILED, {len(failures)} of {n} functions ({took}):', False))
+            out += [(f'    {text}', False) for _, text in failures]
+        else:
+            what = ('each a call of a function of the object with the counts of its kernel' if where == 'in'
+                    else 'each a call of the external operation, nothing computed in the object')
+            out.append((f'{head}: {n} functions, {what}: ok ({took})', True))
+    return out
+
+
 def describe(tally, n):
     parts = []
     if tally.get('each') or tally.get('distinct'):
@@ -378,6 +478,11 @@ def check_configuration(tools, config, index, workdir, expected, limb_types):
             out += [(f'    {text}', False) for _, text in failures]
         else:
             out.append((f'{head}: {describe(tally, n)}: ok ({took})', True))
+    # The operations of Ball outlined and external, in the configurations that compile both forms
+    # of the fix-ups: every one of the full tier, and in the quick tier the one with contraction
+    # forced on at -O2 or /O2.
+    if both:
+        out += check_enclosures(tools, config, index, workdir, expected, limb_types)
     return out
 
 
@@ -474,6 +579,26 @@ def control_counts(tools, workdir, expected, limb_types):
                                                       'functions of those two kernels')], ok
 
 
+def control_enclosures(tools, workdir, expected, limb_types):
+    """(lines, ok): enclosure_unit.cpp compiled with the operations of Ball inline, as by default,
+    and judged as the outlined form: every function must fail, its operation not being a call."""
+    config = next(c for c in configurations(tools.family, 'quick') if c[0] not in ('-O0', '/Od'))
+    obj = os.path.join(workdir, f'enclosure-inline.{"obj" if tools.msvc_style else "o"}')
+    try:
+        level, contraction, rounding, _ = config
+        tools.compile(ENCLOSURE_UNIT, obj, (level,) + contraction + rounding,
+                      ['KAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_INLINE', 'KAIRN_CHECKS=0'], False, workdir)
+        program = disasm.Program(tools.disassemble(obj, workdir))
+        failures, n = check_enclosure_program(program, expected, limb_types, 'in')
+    except (Failure, ValueError) as e:
+        return [f'the operations of Ball inline, judged as outlined, {label(config)}: FAILED: {e}'], False
+    not_calls = [text for _, text in failures if 'the operation is not a call' in text]
+    ok = n == len(ENCLOSURE_KERNELS) * len(limb_types) and len(not_calls) == n
+    return [f'the operations of Ball inline (KAIRN_ENCLOSURE_CODE_INLINE), judged as outlined, {label(config)}: '
+            f'the check fails on {len(not_calls)} of {n} functions as not a call'
+            + ('' if ok else ': FAILED, expected every one')], ok
+
+
 def controls(tools, args, expected, limb_types):
     configs = configurations(tools.family, args.tier)
     print(f'objcode controls: {tools.cxx_path} ({tools.name}, {args.tier} tier: {len(configs)} '
@@ -483,6 +608,7 @@ def controls(tools, args, expected, limb_types):
     with concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
         jobs = [pool.submit(control_fixture, tools, c, i, args.workdir) for i, c in enumerate(configs)]
         counts = pool.submit(control_counts, tools, args.workdir, expected, limb_types)
+        enclosures = pool.submit(control_enclosures, tools, args.workdir, expected, limb_types)
         print('  The textbook a * b + c (fixture.cpp), judged against its source:')
         for job in jobs:
             lines, good, fused = job.result()
@@ -491,6 +617,10 @@ def controls(tools, args, expected, limb_types):
             for line in lines:
                 print('    ' + line, flush=True)
         lines, good = counts.result()
+        ok = ok and good
+        for line in lines:
+            print('  ' + line)
+        lines, good = enclosures.result()
         ok = ok and good
         for line in lines:
             print('  ' + line)

@@ -123,85 +123,51 @@ KAIRN_FORCEINLINE constexpr void check_ball_exact([[maybe_unused]] const Ball<T,
 #endif
 }
 
-// The operations, without their markers and constraints: one kernel each. Not constexpr except
-// the negation: the radius of every other one is computed with fused operations.
+// The operations that round, without their markers and constraints: one kernel each. Where their
+// code is depends on KAIRN_ENCLOSURE_CODE (config.hpp): declared here, defined in
+// ball_operations.hpp, which the end of this header includes unless the setting is
+// KAIRN_ENCLOSURE_CODE_EXTERNAL, and then kairn/definitions.hpp, in the one translation unit of the
+// program that defines them. Not constexpr: the radius of each is computed with fused operations.
+KAIRN_DETAIL_ENCLOSURE_BEGIN
 template <class T>
-KAIRN_FORCEINLINE Ball<T, 1> add(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept {
-    check_ball(x);
-    check_ball(y);
-    T c = T(0), r = T(0);
-    gen::ball_add_1_full(x.center().limb[0], x.radius(), y.center().limb[0], y.radius(), c, r);
-    return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
-}
+KAIRN_DETAIL_ENCLOSURE Ball<T, 1> add(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept;
 template <class T>
-KAIRN_FORCEINLINE Ball<T, 1> sub(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept {
-    check_ball(x);
-    check_ball(y);
-    T c = T(0), r = T(0);
-    gen::ball_sub_1_full(x.center().limb[0], x.radius(), y.center().limb[0], y.radius(), c, r);
-    return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
-}
+KAIRN_DETAIL_ENCLOSURE Ball<T, 1> sub(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept;
 template <class T>
-KAIRN_FORCEINLINE Ball<T, 1> mul(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept {
-    check_ball(x);
-    check_ball(y);
-    T c = T(0), r = T(0);
-    gen::ball_mul_1_full(x.center().limb[0], x.radius(), y.center().limb[0], y.radius(), c, r);
-    return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
-}
+KAIRN_DETAIL_ENCLOSURE Ball<T, 1> mul(const Ball<T, 1>& x, const Ball<T, 1>& y) noexcept;
 template <class T>
-KAIRN_FORCEINLINE Ball<T, 1> mul(const Ball<T, 1>& x, std::type_identity_t<T> a) noexcept {
-    check_ball(x);
-    T c = T(0), r = T(0);
-    // a is only multiplied (the center's product, abs(a) times the radius): no guard needed.
-    gen::ball_scale_1_full(x.center().limb[0], x.radius(), a, c, r);
-    return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
-}
+KAIRN_DETAIL_ENCLOSURE Ball<T, 1> mul(const Ball<T, 1>& x, std::type_identity_t<T> a) noexcept;
+template <class T>
+KAIRN_DETAIL_ENCLOSURE Ball<T, 2> add(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept;
+template <class T>
+KAIRN_DETAIL_ENCLOSURE Ball<T, 2> sub(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept;
+template <class T>
+KAIRN_DETAIL_ENCLOSURE Ball<T, 2> mul(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept;
+template <class T>
+KAIRN_DETAIL_ENCLOSURE Ball<T, 2> mul(const Ball<T, 2>& x, std::type_identity_t<T> a) noexcept;
+KAIRN_DETAIL_ENCLOSURE_END
+
+// The instances of those operations that KAIRN_ENCLOSURE_CODE_EXTERNAL leaves to
+// kairn/definitions.hpp: for the limb type T, with PREFIX extern for their declarations and
+// nothing for their definitions.
+#define KAIRN_DETAIL_BALL_INSTANCES(PREFIX, T)                                              \
+    PREFIX template Ball<T, 1> add<T>(const Ball<T, 1>&, const Ball<T, 1>&) noexcept;       \
+    PREFIX template Ball<T, 1> sub<T>(const Ball<T, 1>&, const Ball<T, 1>&) noexcept;       \
+    PREFIX template Ball<T, 1> mul<T>(const Ball<T, 1>&, const Ball<T, 1>&) noexcept;       \
+    PREFIX template Ball<T, 1> mul<T>(const Ball<T, 1>&, std::type_identity_t<T>) noexcept; \
+    PREFIX template Ball<T, 2> add<T>(const Ball<T, 2>&, const Ball<T, 2>&) noexcept;       \
+    PREFIX template Ball<T, 2> sub<T>(const Ball<T, 2>&, const Ball<T, 2>&) noexcept;       \
+    PREFIX template Ball<T, 2> mul<T>(const Ball<T, 2>&, const Ball<T, 2>&) noexcept;       \
+    PREFIX template Ball<T, 2> mul<T>(const Ball<T, 2>&, std::type_identity_t<T>) noexcept;
+
+// The negation, a few changes of sign, stays inline in every setting, and constexpr. It does not
+// round: the rounding mode is not checked (check_ball_exact).
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 1> neg(const Ball<T, 1>& x) noexcept {
     check_ball_exact(x);
     T c = T(0), r = T(0);
     gen::ball_neg_1(x.center().limb[0], x.radius(), c, r);
     return Ball<T, 1>(kernel_result, Expansion<T, 1>(c), r);
-}
-template <class T>
-KAIRN_FORCEINLINE Ball<T, 2> add(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept {
-    check_ball(x);
-    check_ball(y);
-    Expansion<T, 2> c;
-    T r = T(0);
-    gen::ball_add_2_full(x.center().limb[0], x.center().limb[1], x.radius(), y.center().limb[0], y.center().limb[1],
-                         y.radius(), c.limb[0], c.limb[1], r);
-    return Ball<T, 2>(kernel_result, c, r);
-}
-template <class T>
-KAIRN_FORCEINLINE Ball<T, 2> sub(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept {
-    check_ball(x);
-    check_ball(y);
-    Expansion<T, 2> c;
-    T r = T(0);
-    gen::ball_sub_2_full(x.center().limb[0], x.center().limb[1], x.radius(), y.center().limb[0], y.center().limb[1],
-                         y.radius(), c.limb[0], c.limb[1], r);
-    return Ball<T, 2>(kernel_result, c, r);
-}
-template <class T>
-KAIRN_FORCEINLINE Ball<T, 2> mul(const Ball<T, 2>& x, const Ball<T, 2>& y) noexcept {
-    check_ball(x);
-    check_ball(y);
-    Expansion<T, 2> c;
-    T r = T(0);
-    gen::ball_mul_2_full(x.center().limb[0], x.center().limb[1], x.radius(), y.center().limb[0], y.center().limb[1],
-                         y.radius(), c.limb[0], c.limb[1], r);
-    return Ball<T, 2>(kernel_result, c, r);
-}
-template <class T>
-KAIRN_FORCEINLINE Ball<T, 2> mul(const Ball<T, 2>& x, std::type_identity_t<T> a) noexcept {
-    check_ball(x);
-    Expansion<T, 2> c;
-    T r = T(0);
-    // a is only multiplied (mul_2_1 on the center, abs(a) times the radius): no guard needed.
-    gen::ball_scale_2_full(x.center().limb[0], x.center().limb[1], x.radius(), a, c.limb[0], c.limb[1], r);
-    return Ball<T, 2>(kernel_result, c, r);
 }
 template <class T>
 KAIRN_FORCEINLINE constexpr Ball<T, 2> neg(const Ball<T, 2>& x) noexcept {
@@ -646,3 +612,19 @@ KAIRN_FORCEINLINE auto operator*=(X& x, const Y& y) noexcept -> decltype(x = det
 
 }  // namespace kairn
 KAIRN_GEN_POP_WARNINGS
+
+// The definitions of the operations that round (config.hpp, KAIRN_ENCLOSURE_CODE): here, inline
+// or outlined; or, external, in the one translation unit that includes kairn/definitions.hpp, and
+// here the declarations of their instances, so that no translation unit compiles one of its own.
+#if KAIRN_ENCLOSURE_CODE == KAIRN_ENCLOSURE_CODE_EXTERNAL
+KAIRN_GEN_PUSH_WARNINGS
+namespace kairn::detail {
+KAIRN_DETAIL_ENCLOSURE_BEGIN
+KAIRN_DETAIL_BALL_INSTANCES(extern, double)
+KAIRN_DETAIL_BALL_INSTANCES(extern, float)
+KAIRN_DETAIL_ENCLOSURE_END
+}  // namespace kairn::detail
+KAIRN_GEN_POP_WARNINGS
+#else
+#include "ball_operations.hpp"
+#endif

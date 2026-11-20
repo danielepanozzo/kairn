@@ -214,6 +214,12 @@ endif()
 # KAIRN_API_CASES cases (the quick tier has KAIRN_API_QUICK_CASES of the same seed), and the
 # debug build's runner, which the quick tier leaves out, on the first form of each kernel.
 set(_api_full_common ${_api_oracle_common} ${_api_debug_runner} --first-form debug)
+# And the runners of the other settings of KAIRN_ENCLOSURE_CODE (the operations of Ball outlined and
+# external, include/kairn/config.hpp), built with the build's own level (api/flags/), every form of
+# which must write the same bytes as the same form of the runner with the build's flags.
+foreach(_set IN LISTS _flags_enclosure_sets)
+  list(APPEND _api_full_common --runner ${_set} "$<TARGET_FILE:kairn-api-runner-${_set}>" --same-as ${_set} build)
+endforeach()
 foreach(_kernel IN LISTS _api_oracle_kernels)
   foreach(_format binary64 binary32)
     set(_name full.api.oracle.${_kernel}.${_format})
@@ -251,6 +257,22 @@ foreach(_set IN LISTS _flags_names)
   add_test(NAME full.api.flags.${_set}.rational COMMAND kairn-api-rational-${_set})
   set_tests_properties(full.api.flags.${_set}.self_test full.api.flags.${_set}.constexpr
     full.api.flags.${_set}.rational PROPERTIES TIMEOUT 120 LABELS "full;api;flags")
+endforeach()
+
+# --- The checks in the other settings of KAIRN_ENCLOSURE_CODE -----------------------------------
+#
+# full.api.checks.SETTING.GROUP and full.api.checks.handler.SETTING: api.checks.release.* and
+# api.checks.handler with the operations of Ball outlined and external (include/kairn/config.hpp),
+# whose checks are then in functions of their own (api/CMakeLists.txt builds the programs).
+foreach(_setting outlined external)
+  foreach(_group default rounding flush operands)
+    add_test(NAME full.api.checks.${_setting}.${_group}
+      COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:kairn-api-checks-${_setting}>" "-DGROUP=${_group}"
+        "-DEXPECT_FLUSH=${_api_expect_flush}" -P "${PROJECT_SOURCE_DIR}/tests/api/checks.cmake")
+    set_tests_properties(full.api.checks.${_setting}.${_group} PROPERTIES TIMEOUT 300 LABELS "full;api;checks")
+  endforeach()
+  add_test(NAME full.api.checks.handler.${_setting} COMMAND kairn-api-checks-handler-${_setting})
+  set_tests_properties(full.api.checks.handler.${_setting} PROPERTIES TIMEOUT 120 LABELS "full;api;checks")
 endforeach()
 
 # --- kairn::rational against the oracle ----------------------------------------------------------

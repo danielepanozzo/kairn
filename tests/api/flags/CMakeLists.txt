@@ -1,7 +1,8 @@
 # The flag sets of a client (docs/developer/testing.md, "Flag sets"): the public interface and the
 # generated kernels built as a program that includes Kairn may build them, at each optimization
 # level, under each contraction setting, with -frounding-math (GCC, Clang) or /fp:strict (MSVC,
-# clang-cl), and as a debug build, in which KAIRN_CHECKS is 1.
+# clang-cl), as a debug build, in which KAIRN_CHECKS is 1, and with the operations of Ball outlined
+# and external (KAIRN_ENCLOSURE_CODE, include/kairn/config.hpp).
 #
 # For each flag set of this compiler, this directory builds, with the set's options:
 #
@@ -72,9 +73,26 @@ else()
     "O3-contract-fast api -O3 -ffp-contract=fast")
 endif()
 list(PREPEND _flags_sets "debug kernels")
+# The settings of KAIRN_ENCLOSURE_CODE other than the default (include/kairn/config.hpp): the
+# operations of Ball outlined, and external, each at the level of Release (-O3, /O2), as sets of
+# their own. A program of the external set is linked with ../definitions.cpp, the translation unit
+# that defines the operations, compiled with the same options.
+if(_msvc_style)
+  set(_flags_level /O2)
+  set(_flags_level_name O2)
+else()
+  set(_flags_level -O3)
+  set(_flags_level_name O3)
+endif()
+list(APPEND _flags_sets
+  "${_flags_level_name}-outlined api ${_flags_level} -DKAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_OUTLINED"
+  "${_flags_level_name}-external api ${_flags_level} -DKAIRN_ENCLOSURE_CODE=KAIRN_ENCLOSURE_CODE_EXTERNAL")
 
 function(_kairn_flags_target target source set_options debug)
   add_executable(${target} "${source}")
+  if(set_options MATCHES "KAIRN_ENCLOSURE_CODE_EXTERNAL")
+    target_sources(${target} PRIVATE "${PROJECT_SOURCE_DIR}/tests/api/definitions.cpp")
+  endif()
   target_link_libraries(${target} PRIVATE kairn::kairn kairn::fma)
   target_compile_options(${target} PRIVATE ${set_options} ${ARGN})
   if(debug)
@@ -139,6 +157,7 @@ target_compile_definitions(kairn-api-checks-debug PRIVATE KAIRN_TEST_DEFAULT_CHE
 _kairn_flags_target(kairn-api-checks-handler "${_api}/checks_handler.cpp" "${_flags_debug}" ON ${_api_warnings})
 
 set(_flags_names ${_names} PARENT_SCOPE)
+set(_flags_enclosure_sets ${_flags_level_name}-outlined ${_flags_level_name}-external PARENT_SCOPE)
 set(_flags_gen_runners ${_gen_runners} PARENT_SCOPE)
 set(_flags_gen_labels ${_gen_labels} PARENT_SCOPE)
 list(JOIN _described ", " _described)

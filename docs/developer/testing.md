@@ -41,7 +41,7 @@ The tests that `ctest` runs in the build directory, by name:
 | `kairn-oracle.claims` | The oracle can read every claim in `gen/claims.json`. |
 | `docs.reference.check` | The reference pages of the site are what `docs/tools/reference.py` writes ([Documentation](documentation.md#reference-pages)). |
 | `crosscheck.compiled.K.F` | Kernel K compiled with the build's compiler and flags, scalar (`gen/tests/runner.cpp`) and packed (`gen/tests/packed_runner.cpp`, the backend of the target, [below](#packed-kernels)), once as the flags stand and once with each contraction setting added to them ([below](#contraction)): each of these runners on the same 6 000 random cases of format F (`binary64`, `binary32`) from every stratum. |
-| `objcode.check` | Every kernel compiled with the build's compiler in five configurations of its flag matrix, scalar and packed, for `double` and `float`: the fused multiply-adds and the plain multiplications of its object code are what `gen/objcode.json` says the IR asks for ([below](#object-code)). |
+| `objcode.check` | Every kernel compiled with the build's compiler in five configurations of its flag matrix, scalar and packed, for `double` and `float`: the fused multiply-adds and the plain multiplications of its object code are what `gen/objcode.json` says the IR asks for ([below](#object-code)); and in one of them the operations of `Ball` outlined and external, each a call of a function with the counts of its kernel ([below](#the-operations-of-ball-outlined-and-external)). |
 | `objcode.controls` | The textbook `a * b + c` fails that check in exactly the configurations where its program sees the compiler fuse it, and in at least one; counts changed on purpose fail it. |
 | `objcode.test` | The checker's own tests, on stored disassemblies of every format it reads (Python only). |
 | `regression.cases` | The stored cases of `tests/regression/cases.txt` (the cases that found a problem, and those that came closest to a claim, [below](#the-regression-cases)) through every compiled runner of the build, the generator's interpreter, and both runners of the public interface with every form of each public kernel, judged by the oracle (`tests/regression/run.py`). |
@@ -65,7 +65,8 @@ The tests of the public interface (`tests/api/`, label `api`):
 | `api.shadow` | A program whose global variables have the name of every parameter and local variable of the headers, calling every public operation, compiles with the compiler's strictest warnings about a declaration that hides another, as errors; without the headers' suppression of those warnings (MSVC's C4459 and C6244, GCC's `-Wshadow`) it must not compile with MSVC, and without the globals it must compile with every warning on ([The program's names](#the-programs-names)). |
 | `api.platform_macros` | The headers compile and work after a platform header that defines `min`, `max`, `small`, `near`, `far`, `hyper` and `interface` as macros: `<windows.h>` itself on Windows, without `NOMINMAX`, and the same macros defined by the test on every platform. |
 | `api.self_test.unsafe.*` | With Clang, programs built with flags that break the kernels and define no macro (reassociation; `-ffp-model=fast`; with Apple clang on AArch64, `-fno-signed-zeros` with `-ffp-contract=fast`, which Clang 18 was measured not to break the kernels with): `kairn::self_test()` must fail. |
-| `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball); with `KAIRN_CHECKS`, a constant expression given a pair that is not canonical (`from_limbs`, an operator) or a negative radius (`checks.*`); `kairn::rational` in a constant expression with a zero denominator, and with a result that fails its check, against a copy of the headers with a wrong flag planted in it, whose control turns `KAIRN_RATIONAL_CHECK` off (`rational.*`). |
+| `api.link.external.S` | With `KAIRN_ENCLOSURE_CODE_EXTERNAL`, `tests/api/link_main.cpp` linked with the definitions (`tests/api/definitions.cpp`) compiled with another `KAIRN_CHECKS` (S = `checks`), with the outlined setting (`setting`), or without them (`missing`) must not link, with the undefined operation in the message (`kairn::detail::external_checked::` or `external::`, or MSVC's LNK2038); its control, both files with the same options, links and runs (`tests/api/link_fail.cmake`). |
+| `api.reject.*` | What must not compile, each with a control that compiles: the flags `config.hpp` rejects; a value of `KAIRN_ENCLOSURE_CODE` that is not one of its three (`enclosure_code.*`: an unknown name, nothing, a bare `-D`); each kind of operation and constructor written without the marker while its kernel is unverified (`unverified.*`, against a copy of the headers in which every kernel is); and an operation whose kernel alone is unverified, which must not compile through a conversion to another, proved kernel (`unverified_only.*`: `x + a` through `x + Expansion(a)`, a ball times a `T` through a point ball); with `KAIRN_CHECKS`, a constant expression given a pair that is not canonical (`from_limbs`, an operator) or a negative radius (`checks.*`); `kairn::rational` in a constant expression with a zero denominator, and with a result that fails its check, against a copy of the headers with a wrong flag planted in it, whose control turns `KAIRN_RATIONAL_CHECK` off (`rational.*`). |
 | `api.boundary.S`, `api.boundary.unguarded.S` | A product the program computes and passes in (`x + a * b`, `E2(a * b)`, `from_limbs`, `kairn::finite::add`, a ball's center, radius or point) gives the result of the same operation on the rounded product, bit for bit, under contraction setting S; built against a copy of the headers in which the generated guard is taken out of `gen/scalar.hpp` (made at configure time, which fails if it finds no guard), it must not where the compiler was measured to fuse across statements (`tests/api/boundary.cpp`). |
 | `api.k1.zero_cost` | The instructions emitted for one operation and for loops over `Expansion<double, 1>` against the same code over `double` (`tests/api/k1/zero_cost.py`); with MSVC it also fails when one of these functions has a `/GS` stack cookie ([costs](results/costs-milestone1.md#3-msvc-and-the-gs-stack-cookie)). |
 | `api.rational.K.F` | `kairn::rational` with K limbs of format F ([Constants from fractions](../reference/rational.md)) on 2 000 cases of the oracle's generator of `rational_K` (`KAIRN_RATIONAL_QUICK_CASES`, seed `KAIRN_API_SEED`), computed at run time by `tests/api/rational_runner.cpp`, which also requires `kairn::is_rational_result` to accept each result; the oracle compares every limb, the error and the flag with its own, for equality, and the guards require what the cross-checks of `rational_K` must have seen ([Cross-checks](#cross-checks); `tests/crosscheck.py compiled --kernel rational_K`, one process, as for a kernel). |
@@ -81,11 +82,12 @@ front:
 | Test | Checks |
 |---|---|
 | `full.crosscheck.compiled.K.F` | `crosscheck.compiled.K.F` on 20 000 cases instead of 6 000: the cases of the same seed from case 0, so that the quick tier's are the first 6 000 of these; with the kernels' runners, scalar and packed, of two [flag sets](#flag-sets) as well: the debug build (`-O0`, `/Od`) and one at `-O1` (`/O1`). |
-| `full.api.oracle.K.F` | `api.oracle.K.F` on 10 000 cases instead of 2 000, the quick tier's among them, and by a third runner, the [debug build](#flag-sets)'s, with the checks, on the first form of K only. |
+| `full.api.oracle.K.F` | `api.oracle.K.F` on 10 000 cases instead of 2 000, the quick tier's among them, and by a third runner, the [debug build](#flag-sets)'s, with the checks, on the first form of K only; and by the runners of the [flag sets](#flag-sets) `O3-outlined` and `O3-external` (`O2-` with MSVC and clang-cl), the operations of `Ball` outlined and external, every form of which must write the same bytes as the same form of the runner with the build's flags (`tests/crosscheck.py api --same-as`). |
 | `full.api.flags.oracle.K.F` | Every public form of kernel K through the runner of each [flag set](#flag-sets), the debug build's included, on the quick tier's 2 000 cases of format F. |
-| `full.api.flags.S.self_test`, `full.api.flags.S.constexpr`, `full.api.flags.S.rational` | `api.flags.debug.*` for each other flag set S. |
+| `full.api.flags.S.self_test`, `full.api.flags.S.constexpr`, `full.api.flags.S.rational` | `api.flags.debug.*` for each other flag set S, the outlined and external ones among them. |
+| `full.api.checks.S.G`, `full.api.checks.handler.S` | `api.checks.release.G` and `api.checks.handler` with the operations of `Ball` outlined (S = `outlined`) and external (`external`), whose checks are then in functions of their own: the same cases, the same verdicts. |
 | `full.api.rational.K.F` | `api.rational.K.F` on 20 000 cases instead of 2 000 (`KAIRN_RATIONAL_CASES`), the quick tier's among them, through the runner with the build's flags and the runner of every [flag set](#flag-sets), the debug build's included; the code is integer code, so every output must be the same bytes; the oracle judges each distinct output once. |
-| `full.objcode.check`, `full.objcode.controls` | `objcode.check` and `objcode.controls` in every configuration of the compiler's flag matrix: 24 for GCC, Clang and Apple clang and for clang-cl, 9 for MSVC. |
+| `full.objcode.check`, `full.objcode.controls` | `objcode.check` and `objcode.controls` in every configuration of the compiler's flag matrix: 24 for GCC, Clang and Apple clang and for clang-cl, 9 for MSVC; the operations of `Ball` outlined and external in each. |
 | `full.crosscheck.interp.K` | Kernel K run by the generator's interpreter on **every** operand combination of a toy format. |
 | `full.crosscheck.interp-restricted.K` | Kernel K run by the interpreter on every operand of a **restricted** domain of a toy format, for the kernels whose whole enumeration is too long. |
 | `full.crosscheck.interp-sampled.K` | The same kernels on 20 000 random cases of the whole toy format, from every stratum. |
@@ -426,6 +428,30 @@ and R2 are what make that harmless for contraction,
 [Environment](design/phase0/environment.md#the-self-test)); the public headers' operators, which
 call these kernels; nvcc, Metal and AVX-512, which have no backend yet.
 
+### The operations of Ball outlined and external
+
+With `KAIRN_ENCLOSURE_CODE` set to `KAIRN_ENCLOSURE_CODE_OUTLINED` or
+`KAIRN_ENCLOSURE_CODE_EXTERNAL` ([Getting started](../getting-started/index.md#compile-time-and-the-operations-of-ball)),
+the operations of `Ball` that round are functions of their own, into which the generated kernel is
+inlined. `tests/objcode/enclosure_unit.cpp` has one function per operation (`+`, `-`, `*` and the
+scaling, one and two limbs) and limb type, externally visible and never inlined, that applies the
+public operator, and the check compiles it three times in each configuration that compiles both
+forms of the fix-ups (every configuration of the full tier, the one with contraction forced on at
+`-O2` or `/O2` of the quick tier), with `KAIRN_CHECKS` 0, as a release build has it:
+
+- **outlined**: each function has no fused multiply-add and no multiplication of its own, and the
+  count with the functions it calls is that of its full Ball kernel by the rule above: the call is
+  a call, and the function it calls has exactly the fused operations of the kernel;
+- **external**: each has none, calls the operation outside the object once (a symbol of
+  `kairn::detail::external`), and nothing of the object that it executes computes;
+- **external, with its definitions**: the same unit with `kairn/definitions.hpp`, whose explicit
+  instantiations are then in the object, and each function as in the outlined form.
+
+`objcode.controls` compiles the same unit with the operations inline, the default, judged as the
+outlined form: the check must fail on every function, the operation not being a call. On the Mac
+on 2026-11-20 the 72 checks of the full tier (24 configurations, three forms) passed with Apple clang
+21 and GCC 16, and the control failed on 16 of 16 functions with each.
+
 ### The flag matrix
 
 | Compiler | Full tier: every combination of | Quick tier |
@@ -560,6 +586,8 @@ still be one fused operation.
 | | `O1-fp-precise` | `/O1 /fp:precise` | `/O1` (Clang's `-Os`), contraction within expressions |
 | | `O1-contract-fast-rounding-math` | `/O1 /clang:-ffp-contract=fast /clang:-frounding-math` | forced contraction with `-frounding-math`; also the kernels |
 | | `O2-fp-contract`, `O2-fp-strict` | `/O2` with `/fp:contract`, with `/fp:strict` | the level of `Release` with contraction within expressions, and with `/fp:strict` |
+| GCC, Clang, Apple clang | `O3-outlined`, `O3-external` | `-O3` and `KAIRN_ENCLOSURE_CODE` set to `KAIRN_ENCLOSURE_CODE_OUTLINED`, to `KAIRN_ENCLOSURE_CODE_EXTERNAL` | the operations of `Ball` as functions of their own, and only declared, defined in one more file of each program, `tests/api/definitions.cpp` ([Getting started](../getting-started/index.md#compile-time-and-the-operations-of-ball)), at the level of `Release` |
+| MSVC, clang-cl | `O2-outlined`, `O2-external` | `/O2` and the same | the same |
 
 With the runners of the build's flags and of the contraction settings at `-O2` or `/O2`, every
 optimization level meets every `/fp:` setting with MSVC, and forced contraction with every
@@ -715,9 +743,11 @@ strictest warnings of the compiler about a declaration that hides another, as er
 end only: `/W4 /WX` with C4456 to C4459 at level 1, and again under `/analyze` (MSVC);
 `-Wall -Wextra -Wpedantic -Wshadow -Werror` (GCC); `-Wall -Wextra -Wpedantic -Wshadow-all -Werror`
 (Clang; `/W4 /WX -Wshadow-all` with clang-cl). With the globals, the program must compile, with
-each form of the fix-ups (`KAIRN_GEN_FIXUP_CALL` 0 and 1). Without them, and with
+each form of the fix-ups (`KAIRN_GEN_FIXUP_CALL` 0 and 1), and with the operations of `Ball`
+outlined, and external with their definitions (`KAIRN_ENCLOSURE_CODE`, `kairn/definitions.hpp`
+included at the end of the file). Without them, and with
 `KAIRN_GEN_KEEP_SHADOW_WARNINGS`, which keeps the warnings on in the headers, it must compile too
-(with MSVC, under `/analyze` as well): Kairn's own declarations hide nothing, so the warnings stay
+(with MSVC, under `/analyze` as well), also external with the definitions: Kairn's own declarations hide nothing, so the warnings stay
 as strong as they were for Kairn's own code. With both, which is what a program saw before the headers turned them off, MSVC must reject
 it, with C4459, and with C6244 under `/analyze`; with GCC and Clang it is only reported, since
 whether they reject it depends on their version (GCC 13 rejects it, GCC 16 and Clang accept it).
