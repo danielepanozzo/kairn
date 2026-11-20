@@ -1088,10 +1088,14 @@ template <> struct sub_up_2_2<float> {
     static constexpr bool proved = true;
 };
 
-// interval_sub_2: UNVERIFIED. Claims: encloses_interval.
+// interval_sub_2: proved. Claims: encloses_interval.
 template <class T> struct interval_sub_2;
-template <> struct interval_sub_2<double> { static constexpr bool proved = false; };
-template <> struct interval_sub_2<float> { static constexpr bool proved = false; };
+template <> struct interval_sub_2<double> {
+    static constexpr bool proved = true;
+};
+template <> struct interval_sub_2<float> {
+    static constexpr bool proved = true;
+};
 
 // le_1_2: proved. Claims: predicate.
 template <class T> struct le_1_2;

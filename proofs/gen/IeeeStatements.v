@@ -1542,7 +1542,7 @@ Definition interval_neg_2_spec : Prop :=
     range_1 (fun x : R => - x) (in_interval_2 xl0 xl1 xu0 xu1) z ->
     Rabs z <= bpow radix2 emax)).
 
-(* interval_sub_2: the directed differences of two limbs, an infinite or empty result selected (Milestone 2 listing). IEEE-model status: unverified. *)
+(* interval_sub_2: the directed differences of two limbs, an infinite or empty result selected (Milestone 2 listing). IEEE-model status: proved. *)
 Definition interval_sub_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)

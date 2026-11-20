@@ -1372,9 +1372,10 @@ class TheKernels(unittest.TestCase):
     # of the first stage. The interval kernels of one limb (IeeeInterval1.v), mul_dir_1 in both models
     # (DirectedProd.v, IeeeDirectedProd.v), the bounds of two limbs (Directed2.v), the sum of two
     # intervals of two limbs (IeeeInterval2.v) and the conversions of a ball (IeeeBallConvert.v).
-    # And of stage B1, the kernels proved so far: the exact ones (IeeeIntervalExact.v).
+    # And of stage B1, the kernels proved so far: the exact ones (IeeeIntervalExact.v) and the
+    # difference of two limbs (IeeeIntervalSub2.v).
     WAVE_2_B1_PROVED = {'interval_neg_2', 'interval_make_2', 'interval_hull_1', 'interval_hull_2',
-                        'interval_intersection_1', 'interval_intersection_2'}
+                        'interval_intersection_1', 'interval_intersection_2', 'interval_sub_2'}
     WAVE_2_PROVED = (WAVE_2 - WAVE_2_B1 - {'mul_ext_2_2'}) | WAVE_2_B1_PROVED
 
     def test_kernel_names_are_those_of_the_listings(self):

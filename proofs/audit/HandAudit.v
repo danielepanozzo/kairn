@@ -41,7 +41,8 @@
      and its statement with the constants of the closed form by name; for the exact
      interval kernels of stage B1 (the negation and the constructor of two limbs, the hulls
      and the intersections), the hull and the intersection of intervals of extended real
-     numbers and the lemmas that carry them to limbs and to 2-limb values.
+     numbers and the lemmas that carry them to limbs and to 2-limb values; for the
+     difference of two intervals of two limbs, the sum with the negated operand.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -586,3 +587,17 @@ Print Assumptions hull_1_of.
 Print Assumptions intersection_1_of.
 Print Assumptions hull_2_of.
 Print Assumptions intersection_2_of.
+
+(* The difference of two intervals with bounds of two limbs, in the IEEE model
+   (theories/IeeeIntervalSub2.v): the theorem of its generated statement is listed by
+   proofs/gen/IeeeAudit.v. Here, the lemmas it rests on: the directed differences are the
+   directed sums on the negated operand, the listing is interval_add_2 on the negated
+   operand, the exact range of the difference is that of the sum, and the statement with the
+   constants of the closed form by name. *)
+From Kairn Require Import IeeeIntervalSub2.
+Print Assumptions sub_down_2_2_as_add.
+Print Assumptions sub_up_2_2_as_add.
+Print Assumptions sub_test.
+Print Assumptions interval_sub_2_as_add.
+Print Assumptions range_sub_2_as_add.
+Print Assumptions interval_sub_2_all.

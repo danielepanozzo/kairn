@@ -363,7 +363,7 @@ class Statements(unittest.TestCase):
         text = ieee.audit(self.ks)
         # Every kernel of the extended domain that is proved names its theorem: those of stage B1
         # that are still unverified have none.
-        self.assertEqual(text.count('Print Assumptions'), 73)
+        self.assertEqual(text.count('Print Assumptions'), 74)
         self.assertIn('Definition add_2_2_full_audit : add_2_2_full_spec := add_2_2_full_correct.\n'
                       'Print Assumptions add_2_2_full_correct.', text)
         self.assertIn('From Kairn Require Import IeeeFull.', text)
@@ -388,9 +388,10 @@ class CheckedFiles(unittest.TestCase):
     # thirteen kernels of stage B1 of the intervals, unverified, were added: every earlier
     # definition and statement is the same, byte for byte, some printed earlier; make -C proofs
     # passed on these files. Then the statements print "proved" for the six exact kernels of
-    # stage B1 (IeeeIntervalExact.v): six words, and nothing else, changed.
+    # stage B1 (IeeeIntervalExact.v): six words, and nothing else, changed. Then for
+    # interval_sub_2 (IeeeIntervalSub2.v): one word more.
     DIGESTS = {'proofs/gen/IeeeModel.v': '5648f899068f611e16d06faf4506495f5efac9ddc7d4ce775d7ebd75f8024b25',
-               'proofs/gen/IeeeStatements.v': 'c78da1ad1d23059e07ee90bb2b4bf1dcb56f2c32112a0f90eec982571fa37cab'}
+               'proofs/gen/IeeeStatements.v': '08f41e4aee5496dda14181ca3ef56fdcbea6e17386d555b80d952dbaf7934dbb'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

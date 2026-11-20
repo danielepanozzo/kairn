@@ -16,6 +16,7 @@ From Kairn Require Import IeeeFull.
 From Kairn Require Import IeeeInterval1.
 From Kairn Require Import IeeeInterval2.
 From Kairn Require Import IeeeIntervalExact.
+From Kairn Require Import IeeeIntervalSub2.
 From Kairn Require Import IeeeMake.
 
 Definition add_down_1_ieee_audit : add_down_1_ieee_spec := add_down_1_ieee_correct.
@@ -200,6 +201,9 @@ Print Assumptions interval_make_2_correct.
 
 Definition interval_neg_2_audit : interval_neg_2_spec := interval_neg_2_correct.
 Print Assumptions interval_neg_2_correct.
+
+Definition interval_sub_2_audit : interval_sub_2_spec := interval_sub_2_correct.
+Print Assumptions interval_sub_2_correct.
 
 Definition le_1_2_ieee_audit : le_1_2_ieee_spec := le_1_2_ieee_correct.
 Print Assumptions le_1_2_ieee_correct.

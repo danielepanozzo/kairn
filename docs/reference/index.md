@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 116 kernels, 109 are proved and 7 are **UNVERIFIED**: [`ball_to_interval_1`](ball_to_interval_1.md), [`interval_mid_rad_1`](interval_mid_rad_1.md), [`interval_mul_2`](interval_mul_2.md), [`interval_split_1`](interval_split_1.md), [`interval_sub_2`](interval_sub_2.md), [`interval_to_ball_1`](interval_to_ball_1.md), [`mul_ext_2_2`](mul_ext_2_2.md).
+Of the 116 kernels, 110 are proved and 6 are **UNVERIFIED**: [`ball_to_interval_1`](ball_to_interval_1.md), [`interval_mid_rad_1`](interval_mid_rad_1.md), [`interval_mul_2`](interval_mul_2.md), [`interval_split_1`](interval_split_1.md), [`interval_to_ball_1`](interval_to_ball_1.md), [`mul_ext_2_2`](mul_ext_2_2.md).
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -169,7 +169,7 @@ Arithmetic on intervals of numbers of `T` and of two limbs: the result contains 
 | not yet called by the public headers | - | a canonical interval that contains every $x y$; the range rounded outward, within a step | [`interval_mul_1`](interval_mul_1.md) |
 | not yet called by the public headers | - | a canonical interval that contains every $x + y$; within $A\lvert v\rvert + B$ of the range | [`interval_add_2`](interval_add_2.md) |
 | not yet called by the public headers | - | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_2`](interval_neg_2.md) |
-| not yet called by the public headers | - | a canonical interval that contains every $x - y$; within $A\lvert v\rvert + B$ of the range | [`interval_sub_2`](interval_sub_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical interval that contains every $x - y$; within $A\lvert v\rvert + B$ of the range | [`interval_sub_2`](interval_sub_2.md) |
 | not yet called by the public headers | - | the interval $[l_o, h_i]$, canonical; the whole line for a NaN bound | [`interval_make_2`](interval_make_2.md) |
 | not yet called by the public headers | - | a canonical interval that contains every $x y$; within $A\lvert v\rvert + B$ of the range | [`interval_mul_2`](interval_mul_2.md) **UNVERIFIED** |
 | not yet called by the public headers | - | the hull of the intervals, exactly | [`interval_hull_1`](interval_hull_1.md) |
