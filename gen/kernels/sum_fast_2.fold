@@ -21,6 +21,7 @@ ensures:       fold_error r eps=3*u^2 rel=n-1
 ensures:       finite_or_nan r flag=flag
 min_precision: 2
 theorem:       proofs/theories/FoldSums.v
+ieee_theorem:  proofs/theories/IeeeFolds.v
 status:        proved
 domain:        extended
 source:        Higham's bound for summation over any tree, with the bound of add_fast_2_2

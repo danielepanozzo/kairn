@@ -11,6 +11,8 @@ value:         s+x*y
 ensures:       rounded t nearest
 min_precision: 1
 theorem:       proofs/theories/StepKernels.v dot_step_1_correct
+ieee_bridge_theorem: proofs/theories/IeeeSteps.v dot_step_1_ieee_bridge
+ieee_lead_theorem: proofs/theories/IeeeFolds.v dot_step_1_ieee_lead
 source:        the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md)
 license:       proof: MIT
 status:        proved
