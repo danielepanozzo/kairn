@@ -1961,6 +1961,19 @@ times, benchmarks; the report.
 
 Each with the options and what I recommend.
 
+**State on 2026-11-20**, after the review of this page
+([decisions log](phase0/decisions.md#decisions-log)):
+
+- The recommendation is adopted for questions 2 to 4 and 6 to 19. For question 6 nothing is
+  given up that was promised: [Operations](phase0/operations.md#interval) already claims the
+  tightest product of one limb only outside the underflow range.
+- Question 2 is settled as (b), which changes the listings of the directed sums of two limbs
+  above; they, their statements and their experiments are revised in a later version of this
+  page, before those kernels are written.
+- Questions 1 and 5 are the owner's to decide: the first departs from IEEE 1788, the second
+  ships a function whose bound is not machine-checked. Until then the work follows the
+  recommendation, and neither is shipped as final.
+
 1. **A NaN bound given to the constructor of an interval.** (a) The empty set, as IEEE 1788
    and as written above. (b) The whole line. A NaN usually means that something upstream
    failed, and the empty set is the one value that a verified computation must never produce by
