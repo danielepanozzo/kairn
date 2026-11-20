@@ -15,9 +15,12 @@
 # - python: Python alone, in exact arithmetic (the interpreter, the oracle and its Python runner
 #   compute with integers and fractions), so the same on every platform: the interpreter's
 #   enumerations of toy formats and the oracle's own enumerations. Once in the CI.
-# - generator: the generator's longest tests, which also compare the interpreter with the
+# - generator: the generator's tests without C++, which also compare the interpreter with the
 #   machine's own arithmetic (Python's float and math.fma), so on every operating system. The CI
 #   runs them in generator.yml, inside the generator's whole suite.
+# - tools: the tools' own tests (below), which were in the quick tier. Those of the generator are
+#   labelled generator too; the others neither python nor generator, so that the CI runs them with
+#   every compiler, as it ran them in the quick tier.
 #
 # This file is processed after tests/CMakeLists.txt and api/, whose variables say what to register.
 
@@ -50,6 +53,72 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-oracle")
   set_tests_properties(full.kairn-oracle.selftest PROPERTIES TIMEOUT 600 PROCESSORS 4
     LABELS "full;python"
     FAIL_REGULAR_EXPRESSION "SKIP [^\n]*(no C\\+\\+ compiler|compiling the C\\+\\+ runner)")
+endif()
+
+# --- The tools' own tests -----------------------------------------------------------------------
+#
+# The tests of the tools rather than of the library, each the quick tier's test of the name after
+# full.tools., which they left so that the quick tier keeps to its budget on the hosted runners
+# (docs/developer/testing.md, "Time"); together they were two fifths of its test time there, and
+# none builds anything of Kairn's with the build's compiler. Run as python3 SCRIPT ARGS from the
+# repository root:
+# - full.tools.kairn-gen.test: gen/kairn-gen test without its C++ tests (--no-cxx) and without the
+#   four test classes that full.kairn-gen.test runs (--skip). The C++ tests build the generated
+#   code at -O0 and -O2, with and without -frounding-math, under every contraction setting, and
+#   compare it bit for bit with the interpreter: about two thirds of the suite's time, and what the
+#   cross-checks cover for this build's compiler and flags. Label generator: the CI runs the whole
+#   suite, C++ included, in generator.yml; by hand, python3 gen/kairn-gen test.
+# - full.tools.kairn-oracle.selftest: oracle/kairn-oracle selftest --quick without the six tests of
+#   full.kairn-oracle.selftest (--skip). It compiles its own C++ runner with this build's compiler,
+#   in the build tree, and skips the tests that need it, with a SKIP line, if the compiler does not
+#   work: with a compiler given, a failure here. (Its other skip, of rounding_hardware on Python
+#   older than 3.13, which has no math.fma, is not.)
+# - full.tools.crosscheck.guards: the guards of crosscheck.cmake fail the runs they are there to
+#   fail (a partial or restricted enumeration, a missing stratum, nothing judged, a comparison seen
+#   one way only), as tests/crosscheck_guards.py and as crosscheck.cmake run by this cmake.
+# - full.tools.docs.reference.test: docs/tools/test_reference.py, the tests of the script that
+#   writes the reference pages (docs.reference.check, in the quick tier, checks the pages).
+# - full.tools.brute.driver.test: tests/brute/test_brute.py, the tests of the brute-force driver
+#   (the plan of the enumerations, the forms of the fix-ups, widen.py on one small format), which
+#   itself runs by hand, never here (tests/brute/README.md).
+if(EXISTS "${PROJECT_SOURCE_DIR}/gen/kairn-gen")
+  set(_args "")
+  foreach(_pattern IN LISTS _gen_full)
+    list(APPEND _args --skip "${_pattern}")
+  endforeach()
+  add_test(NAME full.tools.kairn-gen.test
+    COMMAND "${Python3_EXECUTABLE}" gen/kairn-gen test --no-cxx ${_args}
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(full.tools.kairn-gen.test PROPERTIES TIMEOUT 600
+    LABELS "full;tools;generator")
+endif()
+if(EXISTS "${PROJECT_SOURCE_DIR}/oracle/kairn-oracle")
+  add_test(NAME full.tools.kairn-oracle.selftest
+    COMMAND "${Python3_EXECUTABLE}" oracle/kairn-oracle selftest --quick
+      --skip "${_oracle_full_names}" --cxx "${CMAKE_CXX_COMPILER}"
+      --workdir "${CMAKE_CURRENT_BINARY_DIR}/oracle-selftest-tools"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(full.tools.kairn-oracle.selftest PROPERTIES TIMEOUT 600 LABELS "full;tools"
+    FAIL_REGULAR_EXPRESSION "SKIP [^\n]*(no C\\+\\+ compiler|compiling the C\\+\\+ runner)")
+endif()
+if(EXISTS "${PROJECT_SOURCE_DIR}/tests/test_crosscheck_guards.py")
+  add_test(NAME full.tools.crosscheck.guards
+    COMMAND "${Python3_EXECUTABLE}" tests/test_crosscheck_guards.py "${CMAKE_COMMAND}"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(full.tools.crosscheck.guards PROPERTIES TIMEOUT 300
+    LABELS "full;tools;crosscheck")
+endif()
+if(EXISTS "${PROJECT_SOURCE_DIR}/docs/tools/test_reference.py")
+  add_test(NAME full.tools.docs.reference.test
+    COMMAND "${Python3_EXECUTABLE}" docs/tools/test_reference.py
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(full.tools.docs.reference.test PROPERTIES LABELS "full;tools;docs")
+endif()
+if(EXISTS "${PROJECT_SOURCE_DIR}/tests/brute/test_brute.py")
+  add_test(NAME full.tools.brute.driver.test
+    COMMAND "${Python3_EXECUTABLE}" tests/brute/test_brute.py
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+  set_tests_properties(full.tools.brute.driver.test PROPERTIES LABELS "full;tools")
 endif()
 
 # --- The cross-checks ---------------------------------------------------------------------------
@@ -137,12 +206,16 @@ endif()
 # --- The public interface against the oracle ----------------------------------------------------
 #
 # Every public form of every kernel api/CMakeLists.txt maps, with both of its runners, on
-# KAIRN_API_CASES cases (the quick tier has KAIRN_API_QUICK_CASES of the same seed).
+# KAIRN_API_CASES cases (the quick tier has KAIRN_API_QUICK_CASES of the same seed), and the
+# debug build's runner, which the quick tier leaves out, on the first form of each kernel.
+set(_api_full_common ${_api_oracle_common})
+list(TRANSFORM _api_full_common APPEND "|${_api_debug_runner}" REGEX "^-DRUNNERS=")
+list(APPEND _api_full_common -DFIRST_FORM=debug)
 foreach(_kernel IN LISTS _api_oracle_kernels)
   foreach(_format binary64 binary32)
     set(_name full.api.oracle.${_kernel}.${_format})
     add_test(NAME ${_name}
-      COMMAND "${CMAKE_COMMAND}" ${_api_oracle_common} "-DKERNEL=${_kernel}" "-DFORMAT=${_format}"
+      COMMAND "${CMAKE_COMMAND}" ${_api_full_common} "-DKERNEL=${_kernel}" "-DFORMAT=${_format}"
         "-DCOUNT=${KAIRN_API_CASES}" "-DSUMMARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/api-oracle"
         -P "${PROJECT_SOURCE_DIR}/tests/api/pipeline.cmake")
     set_tests_properties(${_name} PROPERTIES TIMEOUT 600 LABELS "full;api;oracle")
@@ -152,8 +225,8 @@ endforeach()
 # --- The flag sets (api/flags/) -----------------------------------------------------------------
 #
 # full.api.flags.oracle.KERNEL.FORMAT: every public form of the kernel, through the runner of each
-# flag set, on KAIRN_API_QUICK_CASES cases (the quick tier's, which judge the debug build's runner
-# on the first form only). For each set but the debug build, which the quick tier has:
+# flag set, on KAIRN_API_QUICK_CASES cases (the quick tier's cases). For each set but the debug
+# build, which the quick tier has:
 # full.api.flags.SET.self_test, kairn::self_test() and kairn::environment_ok() compiled with the
 # set's flags (tests/api/runner.cpp --self-test), and full.api.flags.SET.constexpr,
 # tests/api/constexpr.cpp built with them.

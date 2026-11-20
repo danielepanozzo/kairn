@@ -95,8 +95,8 @@ The script reads `gen/claims.json`, the kernel descriptions under `gen/kernels/`
 `include/kairn/gen/bounds.hpp`, `proofs/gen/Statements.v`, the axiom audit's allow-list and files
 (below), and the stored brute-force summaries of the latest milestone under `results/`, and prints
 every number, status and formula of a page from them. Rerun it after any of these changes;
-`--check` runs in CI (the workflow `checks.yml`) and in ctest (`docs.reference.check`,
-`docs.reference.test`).
+`--check` and the tests run in CI (the workflow `checks.yml`) and in ctest: `docs.reference.check`
+in the quick tier, and `full.tools.docs.reference.test` in the full tier.
 
 The one input written by hand is `docs/tools/reference_operations.py`: for each kernel its page's
 title and group, and the C++ forms that reach it, with their operand types. A new kernel needs an
