@@ -84,12 +84,18 @@ class Model(unittest.TestCase):
         self.assertIn('Definition up_ball_add_1_0 : float := const_of (Model.up_ball_add_1_0 (3 - emax - prec) prec).', m)
         self.assertIn('Definition splitter : float := const_of (Model.splitter prec).', m)
         ups = {n for n in definitions(m) if n.startswith('up_')}
-        self.assertEqual(ups, {n for n in definitions(read('proofs/gen/Model.v')) if n.startswith('up_')})
-        # The thirteen of the Ball cores, and N and P of Milestone 2 (eta / (2u), eta / (2u^2): the
-        # scalings of a ball and the directed products).
-        self.assertEqual(len(ups), 15)
-        # A constant that only a kernel without a real-model statement uses has no definition in
-        # Model.v; the IEEE model defines it from its expression (Statements.test_a_ball_from_an_interval).
+        # Those of Model.v, and the two that only a kernel without a real-model statement uses (the
+        # halving and the doubling of ball_from_interval_2, Milestone 2), defined here from their
+        # expressions, as Model.v would define them.
+        only_here = {'up_ball_from_interval_2_0', 'up_ball_from_interval_2_1'}
+        self.assertEqual(ups, {n for n in definitions(read('proofs/gen/Model.v')) if n.startswith('up_')} | only_here)
+        self.assertIn('Definition up_ball_from_interval_2_0 : float := const_of (round radix2 '
+                      '(FLT_exp (3 - emax - prec) prec) Zceil (1 / 2)).', m)
+        self.assertIn('Definition up_ball_from_interval_2_1 : float := const_of (round radix2 '
+                      '(FLT_exp (3 - emax - prec) prec) Zceil 2).', m)
+        # The thirteen of the Ball cores, N and P of Milestone 2 (eta / (2u), eta / (2u^2): the
+        # scalings of a ball and the directed products), and the two above.
+        self.assertEqual(len(ups), 17)
         self.assertIn('Definition up_ball_mul_pow2_1_0 : float := const_of (Model.up_ball_mul_pow2_1_0 (3 - emax - prec) prec).', m)
 
     def test_programs(self):
@@ -155,15 +161,10 @@ class Statements(unittest.TestCase):
         self.assertIn('  (~ finite x0 -> canonical_of t w0 w1)', s)
         self.assertIn('Rabs ((val x0 + val x1) * val c) <= bpow radix2 (emax - 1) ->', s)
 
-    def test_the_withheld_kernels(self):
-        # The kernels of common.WITHHELD are not in gen/kernels yet: their compiled code does not
-        # pass the object-code check (architecture.md, "Claims of the interval kernels"). Their
-        # claims are in the vocabulary: the listings of experiments/milestone2/kernels with those
-        # claims pass every rule and have these statements, which make -C proofs compiled while the
-        # kernels were in gen/kernels (with these printers); the two constants of
-        # ball_from_interval_2 are defined in the IEEE model only.
-        ks = common.kernels_and_withheld()
-        self.assertEqual(rules.check_all(ks), [])
+    def test_the_interval_kernels(self):
+        # Statements of Milestone 2's interval work in their shapes (architecture.md, "Claims of the
+        # interval kernels"), and the entry of ball_from_interval_2 that architecture.md writes out.
+        ks = self.ks
         entry = claims.kernel_claims(ks['ball_from_interval_2'], ks)
         self.assertTrue(entry['ieee_only'])
         with open(os.path.join(common.ROOT, 'docs', 'developer', 'architecture.md'), encoding='utf-8') as f:
@@ -340,8 +341,8 @@ class CheckedFiles(unittest.TestCase):
     # unverified, were added: every earlier definition and statement is the same, byte for byte,
     # some printed earlier (callees before callers), and the statements import
     # IeeeIntervalVocabulary.v; make -C proofs passed on these files.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '031e28ce56f5d22f4501373caddc704e94c2ff3219d5db9b713fc0f3c816ca1d',
-               'proofs/gen/IeeeStatements.v': '145965ea628caf41956a88e409f34e7a5335056d91b1d9ae1a67266c18910a4d'}
+    DIGESTS = {'proofs/gen/IeeeModel.v': '8f94f1ed1d65b8b8599acd0e59efee7d9a2a6fbc67ddec3eab14bb3b8d88af74',
+               'proofs/gen/IeeeStatements.v': '6c606e00b9580b92d8009a5d53266043a34e3bb402cb042000c64b8967c98545'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

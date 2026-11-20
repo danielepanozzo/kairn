@@ -540,6 +540,64 @@
       }
     },
     {
+      "name": "ball_from_interval_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "lo",
+          "limbs": 1
+        },
+        {
+          "name": "hi",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cw",
+          "limbs": 2
+        },
+        {
+          "name": "rw",
+          "limbs": 1
+        }
+      ],
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "makes_ball",
+          "center": "cw",
+          "radius": "rw",
+          "from": {
+            "lower": "lo",
+            "upper": "hi"
+          },
+          "midpoint_when": [
+            {
+              "half_in_format": "lo"
+            },
+            {
+              "half_in_format": "hi"
+            }
+          ]
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 13,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "sub_down_1",
       "domain": "extended",
       "inputs": [
@@ -1587,6 +1645,236 @@
       }
     },
     {
+      "name": "two_prod",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        }
+      ],
+      "value": "a*b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "leading_rounded",
+          "of": "r"
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "1/2",
+          "when": null
+        },
+        {
+          "kind": "error",
+          "of": "r",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": "product_large"
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/EFT.v",
+        "name": "two_prod_correct"
+      },
+      "source": {
+        "cite": "TwoProd with an FMA (folklore; see JMP17)",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          },
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "1/1427247692705959881058285969449495136382746624"
+          },
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "mul_dir_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "d",
+          "limbs": 1
+        },
+        {
+          "name": "v",
+          "limbs": 1
+        }
+      ],
+      "value": "a*b",
+      "requires": [
+        "not_nan(a)",
+        "not_nan(b)"
+      ],
+      "ensures": [
+        {
+          "kind": "bound",
+          "of": "d",
+          "side": "below",
+          "steps": 1,
+          "zero_factor": true
+        },
+        {
+          "kind": "rounded",
+          "of": "d",
+          "mode": "down",
+          "when": "product_large",
+          "zero_factor": true
+        },
+        {
+          "kind": "bound",
+          "of": "v",
+          "side": "above",
+          "steps": 1,
+          "zero_factor": true
+        },
+        {
+          "kind": "rounded",
+          "of": "v",
+          "mode": "up",
+          "when": "product_large",
+          "zero_factor": true
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_mul_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "x*y",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "tight": {
+            "kind": "rounded",
+            "steps": 1,
+            "when": "product_large"
+          },
+          "bounded_when": [
+            {
+              "abs_le": "x*y",
+              "omega": true
+            }
+          ],
+          "bounded_exactly": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the least and the greatest of the directed products of the bounds (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 8,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "interval_neg_1",
       "domain": "extended",
       "ieee_only": true,
@@ -1880,156 +2168,6 @@
             "abs": "1/1427247692705959881058285969449495136382746624"
           }
         ]
-      }
-    },
-    {
-      "name": "two_prod",
-      "inputs": [
-        {
-          "name": "a",
-          "limbs": 1
-        },
-        {
-          "name": "b",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "r",
-          "limbs": 2
-        }
-      ],
-      "value": "a*b",
-      "requires": [],
-      "ensures": [
-        {
-          "kind": "leading_rounded",
-          "of": "r"
-        },
-        {
-          "kind": "error",
-          "of": "r",
-          "form": "R",
-          "c": "0",
-          "k": 2,
-          "t": "1/2",
-          "when": null
-        },
-        {
-          "kind": "error",
-          "of": "r",
-          "form": "R",
-          "c": "0",
-          "k": 2,
-          "t": "0",
-          "when": "product_large"
-        }
-      ],
-      "min_precision": 2,
-      "status": "proved",
-      "theorem": {
-        "file": "proofs/theories/EFT.v",
-        "name": "two_prod_correct"
-      },
-      "source": {
-        "cite": "TwoProd with an FMA (folklore; see JMP17)",
-        "license": "algorithm: published; proof: MIT"
-      },
-      "flops": 2,
-      "instances": {
-        "binary64": [
-          {
-            "rel": "0",
-            "abs": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
-          },
-          {
-            "rel": "0",
-            "abs": "0"
-          }
-        ],
-        "binary32": [
-          {
-            "rel": "0",
-            "abs": "1/1427247692705959881058285969449495136382746624"
-          },
-          {
-            "rel": "0",
-            "abs": "0"
-          }
-        ]
-      }
-    },
-    {
-      "name": "mul_dir_1",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "a",
-          "limbs": 1
-        },
-        {
-          "name": "b",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "d",
-          "limbs": 1
-        },
-        {
-          "name": "v",
-          "limbs": 1
-        }
-      ],
-      "value": "a*b",
-      "requires": [
-        "not_nan(a)",
-        "not_nan(b)"
-      ],
-      "ensures": [
-        {
-          "kind": "bound",
-          "of": "d",
-          "side": "below",
-          "steps": 1,
-          "zero_factor": true
-        },
-        {
-          "kind": "rounded",
-          "of": "d",
-          "mode": "down",
-          "when": "product_large",
-          "zero_factor": true
-        },
-        {
-          "kind": "bound",
-          "of": "v",
-          "side": "above",
-          "steps": 1,
-          "zero_factor": true
-        },
-        {
-          "kind": "rounded",
-          "of": "v",
-          "mode": "up",
-          "when": "product_large",
-          "zero_factor": true
-        }
-      ],
-      "min_precision": 2,
-      "status": "unverified",
-      "ieee_status": "unverified",
-      "theorem": null,
-      "source": {
-        "cite": "two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 2,
-      "instances": {
-        "binary64": [],
-        "binary32": []
       }
     },
     {
@@ -4903,6 +5041,97 @@
       }
     },
     {
+      "name": "interval_add_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 2
+        },
+        {
+          "name": "xu",
+          "limbs": 2
+        },
+        {
+          "name": "yl",
+          "limbs": 2
+        },
+        {
+          "name": "yu",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 2
+        },
+        {
+          "name": "zu",
+          "limbs": 2
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "encloses_interval",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "x+y",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          },
+          "tight": {
+            "kind": "outward",
+            "rel": "(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u)",
+            "abs": "2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2)",
+            "exact_when": {
+              "lower": [
+                {
+                  "zero": "xl+yl"
+                }
+              ],
+              "upper": [
+                {
+                  "zero": "xu+yu"
+                }
+              ]
+            }
+          },
+          "bounded_when": [
+            {
+              "abs_le": "x+y",
+              "exp": -2
+            }
+          ]
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the directed sums of two limbs, an infinite or empty result selected (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 56,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "le_1_2",
       "domain": "extended",
       "inputs": [
@@ -5467,6 +5696,70 @@
             "abs": "3/1427247692705959881058285969449495136382746624"
           }
         ]
+      }
+    },
+    {
+      "name": "mul_dir_2_2",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "l",
+          "limbs": 2
+        },
+        {
+          "name": "h",
+          "limbs": 2
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "l"
+        },
+        {
+          "kind": "normalized",
+          "of": "h"
+        },
+        {
+          "kind": "outward",
+          "of": "l",
+          "side": "below",
+          "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)",
+          "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)"
+        },
+        {
+          "kind": "outward",
+          "of": "h",
+          "side": "above",
+          "rel": "(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)*(1+unit(mul_2_2))/(1-u)",
+          "abs": "2*(1+u)^2*(1/2*up((1+u)^6)*eta+up((1+u)*(2*(1+u)^5*eta+tiny(mul_2_2)/(1-unit(mul_2_2))+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^6)*up(unit(mul_2_2)/(1-unit(mul_2_2)))+2*u^2)/(1-u)*tiny(mul_2_2)"
+        }
+      ],
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 23,
+      "instances": {
+        "binary64": [],
+        "binary32": []
       }
     },
     {

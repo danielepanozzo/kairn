@@ -455,10 +455,13 @@ KERNELS = {
     "interval_neg_1": page("intervals", "The negation of an interval, one-limb bounds"),
     "interval_add_1": page("intervals", "Sum of intervals, one-limb bounds"),
     "interval_sub_1": page("intervals", "Difference of intervals, one-limb bounds"),
+    "interval_mul_1": page("intervals", "Product of intervals, one-limb bounds"),
+    "interval_add_2": page("intervals", "Sum of intervals, two-limb bounds"),
     "ball_lower_as_1": page("ball", "The lower bound of a ball as a limb, one-limb center"),
     "ball_upper_as_1": page("ball", "The upper bound of a ball as a limb, one-limb center"),
     "ball_lower_as_2": page("ball", "A lower bound of a ball as a limb, two-limb center"),
     "ball_upper_as_2": page("ball", "An upper bound of a ball as a limb, two-limb center"),
+    "ball_from_interval_2": page("ball", "A ball with a two-limb center from an interval of two limbs"),
     "ball_narrow_2_1": page("ball", "A ball with a two-limb center as one with a one-limb center"),
     # The building blocks of the intervals: parts of the interval kernels.
     "mul_dir_1": page("building-blocks", "Both directed products of two limbs, a zero factor giving zero"),
@@ -468,6 +471,7 @@ KERNELS = {
     "add_up_2_2": page("building-blocks", "An upper bound of a sum of two-limb numbers"),
     "sub_down_2_2": page("building-blocks", "A lower bound of a difference of two-limb numbers"),
     "sub_up_2_2": page("building-blocks", "An upper bound of a difference of two-limb numbers"),
+    "mul_dir_2_2": page("building-blocks", "Two bounds of a product of two-limb numbers"),
     # --- Building blocks: no public form -------------------------------------------------------
     "two_sum": page("building-blocks", "TwoSum: an exact sum as two limbs"),
     "fast_two_sum": page("building-blocks", "Fast2Sum: an exact sum of ordered operands"),

@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-Of the 99 kernels, 83 are proved and 16 are **UNVERIFIED**: [`add_ball_2_2`](add_ball_2_2.md), [`add_down_2_2`](add_down_2_2.md), [`add_up_2_2`](add_up_2_2.md), [`ball_lower_as_1`](ball_lower_as_1.md), [`ball_lower_as_2`](ball_lower_as_2.md), [`ball_narrow_2_1`](ball_narrow_2_1.md), [`ball_upper_as_1`](ball_upper_as_1.md), [`ball_upper_as_2`](ball_upper_as_2.md), [`interval_add_1`](interval_add_1.md), [`interval_make_1`](interval_make_1.md), [`interval_neg_1`](interval_neg_1.md), [`interval_sub_1`](interval_sub_1.md), [`mul_ball_2_2`](mul_ball_2_2.md), [`mul_dir_1`](mul_dir_1.md), [`sub_down_2_2`](sub_down_2_2.md), [`sub_up_2_2`](sub_up_2_2.md).
+Of the 103 kernels, 83 are proved and 20 are **UNVERIFIED**: [`add_ball_2_2`](add_ball_2_2.md), [`add_down_2_2`](add_down_2_2.md), [`add_up_2_2`](add_up_2_2.md), [`ball_from_interval_2`](ball_from_interval_2.md), [`ball_lower_as_1`](ball_lower_as_1.md), [`ball_lower_as_2`](ball_lower_as_2.md), [`ball_narrow_2_1`](ball_narrow_2_1.md), [`ball_upper_as_1`](ball_upper_as_1.md), [`ball_upper_as_2`](ball_upper_as_2.md), [`interval_add_1`](interval_add_1.md), [`interval_add_2`](interval_add_2.md), [`interval_make_1`](interval_make_1.md), [`interval_mul_1`](interval_mul_1.md), [`interval_neg_1`](interval_neg_1.md), [`interval_sub_1`](interval_sub_1.md), [`mul_ball_2_2`](mul_ball_2_2.md), [`mul_dir_1`](mul_dir_1.md), [`mul_dir_2_2`](mul_dir_2_2.md), [`sub_down_2_2`](sub_down_2_2.md), [`sub_up_2_2`](sub_up_2_2.md).
 
 32 kernels have a statement on finite operands and one on infinite and NaN operands; the second is **UNVERIFIED** for [`mul_dir_1`](mul_dir_1.md).
 
@@ -152,6 +152,7 @@ Arithmetic on balls: the result contains every result on points of the operands.
 | not yet called by the public headers | - | a upper bound of the ball, rounded; $-\infty$ for the empty ball | [`ball_upper_as_1`](ball_upper_as_1.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a lower bound of the ball; $+\infty$ for the empty ball; $\lvert l - (c - r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_lower_as_2`](ball_lower_as_2.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a upper bound of the ball; $-\infty$ for the empty ball; $\lvert h - (c + r)\rvert \le 5\,u\,(\lvert c\rvert + \lvert r\rvert) + 3\,\eta$ | [`ball_upper_as_2`](ball_upper_as_2.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical ball that contains $[l_o, h_i]$; the whole line for a NaN bound | [`ball_from_interval_2`](ball_from_interval_2.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical ball that contains every $x$; the empty set and the whole line included | [`ball_narrow_2_1`](ball_narrow_2_1.md) **UNVERIFIED** |
 
 ## Interval operations
@@ -164,6 +165,8 @@ Arithmetic on intervals of numbers of `T` and of two limbs: the result contains 
 | not yet called by the public headers | - | a canonical interval that contains every $-x$; exactly the range | [`interval_neg_1`](interval_neg_1.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical interval that contains every $x + y$; the range rounded outward | [`interval_add_1`](interval_add_1.md) **UNVERIFIED** |
 | not yet called by the public headers | - | a canonical interval that contains every $x - y$; the range rounded outward | [`interval_sub_1`](interval_sub_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical interval that contains every $x y$; the range rounded outward, within a step | [`interval_mul_1`](interval_mul_1.md) **UNVERIFIED** |
+| not yet called by the public headers | - | a canonical interval that contains every $x + y$; within $A\lvert v\rvert + B$ of the range | [`interval_add_2`](interval_add_2.md) **UNVERIFIED** |
 
 ## Building blocks
 
@@ -189,6 +192,7 @@ Kernels that other kernels call, and that no public operation computes on its ow
 | none (internal) | - | $h \ge x + y$, within $A\lvert x + y\rvert + B$, exact when zero, normalized | [`add_up_2_2`](add_up_2_2.md) **UNVERIFIED** |
 | none (internal) | - | $l \le x - y$, within $A\lvert x - y\rvert + B$, exact when zero, normalized | [`sub_down_2_2`](sub_down_2_2.md) **UNVERIFIED** |
 | none (internal) | - | $h \ge x - y$, within $A\lvert x - y\rvert + B$, exact when zero, normalized | [`sub_up_2_2`](sub_up_2_2.md) **UNVERIFIED** |
+| none (internal) | - | $l \le x y$, within $A\lvert x y\rvert + B$; $h \ge x y$, within $A\lvert x y\rvert + B$, normalized | [`mul_dir_2_2`](mul_dir_2_2.md) **UNVERIFIED** |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly | [`two_sum`](two_sum.md) |
 | none (internal) | - | $s = \mathrm{RN}(a + b)$; $s + e = a + b$ exactly, normalized | [`fast_two_sum`](fast_two_sum.md) |
 | not yet called by the public headers | - | $p = \mathrm{RN}(a b)$; $\lvert p + e - a b\rvert \le \tfrac{1}{2}\,\eta$ | [`two_prod`](two_prod.md) |

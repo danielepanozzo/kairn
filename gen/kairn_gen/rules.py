@@ -18,6 +18,7 @@ CLAIMS = 'claims'
 DOMAIN = 'domain'
 CONSTEVAL = 'constant-evaluation variant'
 COMPUTED = 'computed constants'
+NEGATED_FUSED = 'negated fused result'
 
 STATUSES = ('unverified', 'proved')
 
@@ -84,7 +85,7 @@ def check_all(kernels):
         return errors   # the other rules flatten calls, which needs well-formed callees
     for k in kernels.values():
         for rule in (products, outputs, nonfinite_cone, theorem, entry_values, claims, domains,
-                     consteval_variant, computed_constants):
+                     consteval_variant, computed_constants, negated_fused):
             errors += rule(k, kernels)
     if not errors:
         errors += ieee_printable(kernels)
@@ -1017,6 +1018,32 @@ def computed_constants(k, kernels):
             errs.append(RuleError(k.name, name, COMPUTED,
                                   f'the claims of {c[1]} hold from precision {callee.min_precision} on, '
                                   f'so min_precision must be at least {callee.min_precision}'))
+    return errs
+
+
+def negated_fused(k, kernels):
+    """No value is the negation of the result of a fused operation (fma, fms, fnma, prod), the
+    callees inlined. Compilers fold such a negation into the fused instruction (fnmadd, vfnmsub):
+    where the fused result is also used as it is, that is one fused instruction more than the IR
+    asks for, which the object-code check refuses; and where the fused result is an exact zero the
+    folded instruction gives +0 where the negation gives -0, so that the kernel has no single
+    bit-exact result. The values do not need it: rounding to nearest is symmetric, so the negation
+    can be put on an operand (gen/README.md, "The tests")."""
+    prims = ir.prims(k, kernels)
+    defs = {p.dst: p.op for p in prims}
+    own = {d for st in k.body for d in st.dsts}
+    errs = []
+    for p in prims:
+        if p.op != 'neg' or p.args[0].const or defs.get(p.args[0].name) not in ir.FUSED:
+            continue
+        src = p.args[0].name
+        where = '' if p.dst in own else ' (inside a call: a callee negates its operand, as sub_down_1 and sub_up_1 ' \
+                                        'negate their second)'
+        errs.append(RuleError(k.name, p.dst, NEGATED_FUSED,
+                              f'{p.dst} = neg({src}) negates the result of {defs[src]}{where}. Negate an operand '
+                              'instead: -prod(a, b) is prod(neg(a), b), -fma(a, b, c) is fma(neg(a), b, neg(c)); '
+                              'and a rounding down of x - d is minus the rounding up of d - x, so sub_down_1(x, d) '
+                              'is neg(add_up_1(d, neg(x))) and sub_up_1(x, d) is neg(add_down_1(d, neg(x)))'))
     return errs
 
 

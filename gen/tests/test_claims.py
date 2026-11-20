@@ -99,10 +99,6 @@ class Claims(unittest.TestCase):
         ks = common.kernels()
         cls.doc = json.loads(claims.claims(ks))
         cls.by = {k['name']: k for k in cls.doc['kernels']}
-        # The entries that the kernels of common.WITHHELD will have, read with those of gen/kernels.
-        every = common.kernels_and_withheld()
-        cls.withheld = {name: json.loads(json.dumps(claims.kernel_claims(k, every)))
-                        for name, k in common.withheld().items()}
 
     def test_committed_claims_are_these(self):
         with open(os.path.join(common.GEN, 'claims.json'), encoding='utf-8') as f:
@@ -137,7 +133,7 @@ class Claims(unittest.TestCase):
         self.assertEqual(self.doc['schema'], 1)
         keys = ['name', 'inputs', 'outputs', 'value', 'requires', 'ensures', 'min_precision', 'status',
                 'theorem', 'source', 'flops', 'instances']
-        for k in self.doc['kernels'] + list(self.withheld.values()):
+        for k in self.doc['kernels']:
             extended = k.get('domain') == 'extended'
             want = list(keys)
             if extended:          # the domain after the name, the IEEE-model status after the status
@@ -404,9 +400,8 @@ class Claims(unittest.TestCase):
                     if key not in ('source', 'flops', 'theorem', 'ieee_theorem')]
             self.assertEqual(list(e.items()), want, e['name'])
         ensures = json.loads('[' + blocks[1] + ']')
-        # (interval_mul_1 and interval_add_2: the entries they will have, common.WITHHELD.)
         for name, e in zip(('add_down_2_2', 'interval_mul_1', 'interval_add_2'), ensures):
-            self.assertEqual(e, self.by[name]['ensures'] if name in self.by else self.withheld[name]['ensures'], name)
+            self.assertEqual(e, self.by[name]['ensures'], name)
         # What the text says of the others.
         self.assertEqual(self.by['interval_sub_1']['ensures'][0]['set'], 'x-y')
         self.assertEqual(self.by['interval_neg_1']['ensures'][0]['tight'], {'kind': 'exact'})
@@ -417,15 +412,11 @@ class Claims(unittest.TestCase):
             e = self.by[name]['ensures'][1]
             self.assertEqual((e['rel'], e['abs']), (ensures[0][1]['rel'], ensures[0][1]['abs']), name)
             self.assertEqual(e['exact_when'], [{'zero': self.by[name]['value']}], name)
-        # Four are not kernels yet (architecture.md): two whose listings negate a fused result, two
-        # whose code Clang computes two FMAs to a packed instruction. Their entries, as they will be:
-        self.assertEqual(set(self.withheld) & set(self.by), set())
-        self.assertEqual(set(self.withheld), {'mul_dir_2_2', 'ball_from_interval_2', 'interval_mul_1', 'interval_add_2'})
-        self.assertNotIn('exact_when', self.withheld['mul_dir_2_2']['ensures'][2])
-        self.assertEqual(self.withheld['ball_from_interval_2']['ensures'],
+        self.assertNotIn('exact_when', self.by['mul_dir_2_2']['ensures'][2])
+        self.assertEqual(self.by['ball_from_interval_2']['ensures'],
                          [{'kind': 'makes_ball', 'center': 'cw', 'radius': 'rw', 'from': {'lower': 'lo', 'upper': 'hi'},
                            'midpoint_when': [{'half_in_format': 'lo'}, {'half_in_format': 'hi'}]}])
-        self.assertNotIn('value', self.withheld['ball_from_interval_2'])
+        self.assertNotIn('value', self.by['ball_from_interval_2'])
 
     def test_ieee_only(self):
         # Exactly the kernels without a real-model statement say so: the nine full kernels, the
@@ -436,10 +427,11 @@ class Claims(unittest.TestCase):
         full_ball = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale', 'mul_pow2') for k in (1, 2)}
         constructors = {'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2'}
         # Milestone 2: the interval kernels, stated in the IEEE model only (an interval has infinite
-        # bounds as ordinary values), the constructor of an interval, the bounds of a ball as numbers
-        # of T and the narrowing of a ball.
-        milestone2 = {'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1', 'ball_lower_as_1',
-                      'ball_upper_as_1', 'ball_lower_as_2', 'ball_upper_as_2', 'ball_narrow_2_1'}
+        # bounds as ordinary values), the constructors of an interval and of a ball from an interval,
+        # the bounds of a ball as numbers of T and the narrowing of a ball.
+        milestone2 = {'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1', 'interval_mul_1',
+                      'interval_add_2', 'ball_from_interval_2', 'ball_lower_as_1', 'ball_upper_as_1',
+                      'ball_lower_as_2', 'ball_upper_as_2', 'ball_narrow_2_1'}
         self.assertEqual({k['name'] for k in self.doc['kernels'] if 'ieee_only' in k},
                          full | full_ball | constructors | milestone2)
         self.assertTrue(all(k['ieee_only'] is True for k in self.doc['kernels'] if 'ieee_only' in k))

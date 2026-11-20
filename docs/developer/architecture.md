@@ -734,21 +734,19 @@ exactness stays the hand-written `mul_pow2_2_exact` ([Milestone 1](design/milest
 ### Claims of the interval kernels
 
 The first kernels of the interval work ([Interval kernels](design/milestone2.md#interval-kernels):
-the kernels of one limb and the bounds of two limbs; and from
+the kernels of one limb, the bounds of two limbs and the sum of intervals of two limbs; and from
 [One enclosure interface](design/milestone2.md#one-enclosure-interface) the bounds of a ball as
-numbers of `T` and the narrowing of a ball of two limbs) need the additions below. Everything above
-keeps its meaning and its JSON shape: a field that is new to a kind that exists is written only in
-an entry that uses it.
+numbers of `T`, the ball from an interval of two `T` and the narrowing of a ball of two limbs)
+need the additions below. Everything above keeps its meaning and its JSON shape: a field that is
+new to a kind that exists is written only in an entry that uses it.
 
-Four kernels of that stage are not in `gen/kernels` yet, because their compiled code does not pass
-the object-code check, one fused instruction for each FMA of the IR. `mul_dir_2_2` and
-`ball_from_interval_2` each negate a fused result (the radius $d$ in `sub_down_1(z1, d)`, the half
-$h_\ell$ in `sub_up_1(hu, hl)`), and compilers compute that negation as one more fused
-instruction, a negated FMA beside the FMA. `interval_mul_1` and `interval_add_2` compute
-independent FMAs (four directed products, two directed sums of two limbs), and Clang 18 at `-O2`
-puts two of them in one packed instruction of the scalar code (SLP vectorization), which the check
-counts as one. Their listings are in `experiments/milestone2/kernels`; the vocabulary has what they
-claim, and the generator's tests read them with these claims (`gen/tests/common.py`, `WITHHELD`).
+Two listings differ from the page's in form, not in value, because the generator refuses the
+negation of a fused result (gen/README.md, "The rules"): the lower bound of `mul_dir_2_2` is
+$\mathrm{RD}(z_1 - d)$ written as $-\mathrm{RU}(d - z_1)$ (`nz = neg(z1); t = add_up_1(d, nz);
+wl = neg(t)`), and the radius of `ball_from_interval_2` adds minus the lower half as its own exact
+product of the negated guarded bound (`gn = neg(gl); hn = prod(gn, const up(1/2));
+d = add_up_1(hu, hn)`). Rounding to nearest is symmetric, so both are the page's values, and
+their claims and statements are those of the page.
 
 **Requirements**, both of the extended domain:
 
@@ -896,14 +894,14 @@ and the `ensures` of three more:
   "bounded_when": [{"abs_le": "x+y", "exp": -2}]}]
 ```
 
-those of `add_down_2_2`, and of `interval_mul_1` and `interval_add_2` as they will be. The other
-kernels: `interval_sub_1` is `interval_add_1` with `x-y`; `interval_neg_1` has the set `-x`,
-`"tight": {"kind": "exact"}` and `bounded_when` `abs_le(-x, omega)`, exactly; `add_up_2_2`,
-`sub_down_2_2`, `sub_up_2_2` are `add_down_2_2` on their side and value (`mul_dir_2_2`, when it is
-a kernel, claims `normalized` of `l` and `h` and `outward` of each, below and above, with the
-constants of `ball_mul_2` and `mul_2_2` and no `exact_when`; `ball_from_interval_2` claims
+those of `add_down_2_2`, `interval_mul_1` and `interval_add_2`. The other kernels:
+`interval_sub_1` is `interval_add_1` with `x-y`; `interval_neg_1` has the set `-x`, `"tight":
+{"kind": "exact"}` and `bounded_when` `abs_le(-x, omega)`, exactly; `add_up_2_2`, `sub_down_2_2`,
+`sub_up_2_2` are `add_down_2_2` on their side and value, and `mul_dir_2_2` claims `normalized` of
+`l` and `h` and `outward` of each, below and above, with the constants of `ball_mul_2` and
+`mul_2_2` and no `exact_when`; `ball_from_interval_2` claims
 `{"kind": "makes_ball", "center": "cw", "radius": "rw", "from": {"lower": "lo", "upper": "hi"},
-"midpoint_when": [{"half_in_format": "lo"}, {"half_in_format": "hi"}]}`, with no `value`);
+"midpoint_when": [{"half_in_format": "lo"}, {"half_in_format": "hi"}]}`, with no `value`;
 `mul_ball_2_2` is `add_ball_2_2` with the claims of `mul_2_2`;
 `ball_upper_as_1` is `ball_lower_as_1` above. `ball_lower_as_2` and `ball_upper_as_2` claim
 `set_bound` without `tight`, a bound on its side, and
@@ -943,7 +941,7 @@ completed:  KERNEL FORMAT LIMB ... [#TAG] -> LIMB ...
 - Input limbs are in the order of the kernel's `inputs`, most significant limb first; output
   limbs likewise. An interval is its two bounds, each a group, the lower first: the sum of two
   intervals of one limb is the line `interval_add_1 FORMAT xl xu yl yu`, completed with
-  `-> zl zu`, and one of two limbs will be `interval_add_2 FORMAT xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1`,
+  `-> zl zu`, and one of two limbs `interval_add_2 FORMAT xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1`,
   completed with `-> zl0 zl1 zu0 zu1`; the empty set of one limb is `inf -inf`, the whole line
   `-inf inf`. A mask is `0` or `1` as before (no kernel of the intervals has one).
 - A runner reads requests on standard input and, for each, writes the same line followed by

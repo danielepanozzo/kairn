@@ -302,6 +302,13 @@ rule:
    would be stored in an object, unguarded). `guard_pending: INPUT REASON` excuses one input of one
    kernel, and every kernel that passes a value into it, of the first part; `build` prints both
    lists, and the declaration is refused once the input is guarded.
+7. No value is the negation of the result of a fused operation (`fma`, `fms`, `fnma`, `prod`),
+   callees inlined: `sub_down_1(x, d)` and `sub_up_1(x, d)` negate `d`. Compilers fold such a
+   negation into the fused instruction, which is one fused instruction more where the result is
+   also used as it is, and +0 where the negation of an exact zero is −0 ("The tests"). Rounding to
+   nearest being symmetric, the negation goes on an operand: `prod(neg(a), b)` for `-prod(a, b)`,
+   and `neg(add_up_1(d, neg(x)))`, minus the rounding up of `d - x`, for the rounding down of
+   `x - d`, as `mul_dir_2_2` and `ball_from_interval_2` do. The message says so.
 
 There are also checks of names (none may shadow what the printers use), kinds, arity, the closed
 vocabulary of the claims (that of architecture.md, "Claims of the second wave", "Claims of the
@@ -315,8 +322,8 @@ without one), of
 computed constants (above). A kernel has no real-model statement when it claims `extends`,
 `represents` or `makes_ball` (and the interval kinds `makes_interval`, `encloses_interval`,
 `set_bound`) and nothing else, or says `ieee_only: yes`: the full kernels, the constructors, the
-interval kernels. A constant `up(EXPR)` that only such kernels use (none yet; the halves of
-`ball_from_interval_2` will be) has no definition in `Model.v`; `IeeeModel.v` defines it from its
+interval kernels. A constant `up(EXPR)` that only such kernels use (the halves and the doubling
+of `ball_from_interval_2`) has no definition in `Model.v`; `IeeeModel.v` defines it from its
 expression, and its name is in the record like any other.
 
 ## The tests
@@ -393,16 +400,20 @@ One difference is allowed, and reported each time it occurs: compilers fold the 
 result into one negated FMA (`fnmadd` on AArch64 with GCC 16 and Apple clang 21 at `-O2`, and
 `vfnmsub` on x86-64 with GCC 13 under `-ffp-contract=fast`), which returns +0 where the negation of
 an exact zero is −0. A kernel that negates a fused result therefore has no single bit-exact result;
-the tests accept exactly a different sign of a zero for such kernels (the first wave has none). The
-same folding also costs one more fused instruction where the fused result is used elsewhere as
-well: the compiler keeps the FMA and adds a negated one, which the object-code check refuses. This
-is why `mul_dir_2_2` and `ball_from_interval_2` of Milestone 2, whose listings negate a fused
-result, are not kernels yet (`test_cxx.EveryOperation.test_negated_fused_results_are_known` pins
-that no kernel does). Clang 18 at `-O2` also puts two independent FMAs of a scalar function in one
-packed instruction (SLP vectorization), which the object-code check counts as one: so
-`interval_mul_1` and `interval_add_2`, whose four products and two sums of two limbs are
-independent, are not kernels yet either. The tests read the four with their claims
-(`tests/common.py`, `WITHHELD`).
+the tests accept exactly a different sign of a zero for such kernels: the test kernels `ops_muladd`
+and `ops_call`, which negate a `muladd` (the four results of the note the tests print), and no
+kernel of `gen/kernels`. The same folding also costs one more fused instruction where the fused
+result is used elsewhere as well (the compiler keeps the FMA and adds a negated one), which the
+object-code check refuses; the rules therefore refuse the negation of an `fma`, `fms`, `fnma` or
+`prod` result ("The rules"), and `test_cxx.EveryOperation.test_negated_fused_results_are_known`
+pins that no kernel of `gen/kernels` negates a fused result of any kind. A negated `select` whose
+arm is a fused result is not refused. The directed sums of two limbs negate
+`dd = select(zd, 0, d)`. Apple clang 21 (`fnmadd`) and GCC 13 on x86-64 (`vfnmsub`) push that
+negation through the select into the FMA of the radius `d` and compute `-d` with one instruction;
+GCC 16 on AArch64 and Clang 18 on x86-64 compute `d` and flip its sign. The count stays that of the
+IR because `d` has no other use, and the value is the same because `d` is at least the constant
+$H > 0$, never zero. A kernel that used such a radius both negated and as it is would have the one
+fused instruction more of a negated FMA.
 
 The Rocq output is checked by hand on a machine with Rocq 9.0.1 and Flocq 4.2.2: `make -C proofs`
 builds `Model.v`, `Statements.v` and the proofs, and runs the audit.

@@ -16,7 +16,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$, $y = y_0 
 
 ## C++
 
-No public operation computes this kernel on its own.
+No public operation computes this kernel on its own. It is part of [`mul_dir_2_2`](mul_dir_2_2.md).
 
 ## Requires
 

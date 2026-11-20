@@ -93,9 +93,9 @@ NONFINITE_CE_CASES = [
     ('ball_make_2', 'float', [math.inf, 0.0, 0.5]),
     ('ball_make_2', 'double', [1.0, 2.0 ** -60, math.inf]),
     # Milestone 2: the interval kernels and the functions of a Ball that are constexpr, on finite
-    # operands where they compute (an infinite bound would make TwoSum compute inf - inf, which
-    # constant evaluation refuses: a compile error, never a wrong constant), and interval_make_1,
-    # which only compares, on every kind of pair.
+    # operands where they compute (an infinite bound would make TwoSum compute inf - inf, and a NaN
+    # bound of ball_from_interval_2 be halved, which constant evaluation refuses: a compile error,
+    # never a wrong constant), and interval_make_1, which only compares, on every kind of pair.
     ('interval_make_1', 'double', [1.0, 2.0]),
     ('interval_make_1', 'float', [2.0, 1.0]),
     ('interval_make_1', 'double', [math.nan, 1.0]),
@@ -110,6 +110,9 @@ NONFINITE_CE_CASES = [
     ('ball_lower_as_2', 'double', [1.0, 2.0 ** -60, 0.5]),
     ('ball_upper_as_2', 'float', [1.0, 2.0 ** -30, 0.5]),
     ('ball_narrow_2_1', 'double', [1.0, 2.0 ** -60, 0.25]),
+    ('ball_from_interval_2', 'double', [1.0, 3.0]),
+    ('ball_from_interval_2', 'float', [2.0 ** -149, 1.0]),
+    ('ball_from_interval_2', 'double', [2.0, 1.0]),
 ]
 
 
@@ -460,10 +463,14 @@ class EveryOperation(unittest.TestCase):
                             ['-I', d, '-DKAIRN_RUNNER_HEADER="kernels.hpp"'])
 
     def test_negated_fused_results_are_known(self):
+        # The test kernels that negate a muladd, a contractable product the rules allow a test
+        # kernel; no kernel of gen/kernels negates a fused result: the rules refuse a negated fma
+        # or prod (rules.negated_fused), and none uses muladd.
         self.assertEqual({n for n, k in self.ks.items() if negates_a_fused_result(k, self.ks)},
                          {'ops_muladd', 'ops_call'})
         ks = common.kernels()
         self.assertEqual({n for n, k in ks.items() if negates_a_fused_result(k, ks)}, set())
+        self.assertEqual([n for n, k in ks.items() if ir.muladd_sites(k, ks)], [])
 
     def test_runner_mask_operands(self):
         code, out, err = self.builds.run(0, 'ops_wave2 binary64 -0x1p+0 1 0x1p+0\n')

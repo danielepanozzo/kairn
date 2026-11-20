@@ -463,26 +463,12 @@ class Tool(unittest.TestCase):
         self.assertIn("is a NaN or negative, $-\\infty$ included", self.page("ball_make_2"))
 
     def test_interval_kernels(self):
-        # The claims of the interval kernels (architecture.md, "Claims of the interval kernels"),
-        # and on interval_add_1's page the tight forms of interval_mul_1 and interval_add_2, which
-        # are not kernels yet: rounded within a step where the products are large, and outward.
-        def product(e):
-            e.update(set="x*y", tight={"kind": "rounded", "steps": 1, "when": "product_large"},
-                     bounded_when=[{"abs_le": "x*y", "omega": True}])
-        self.change("interval_add_1", lambda k: product(k["ensures"][0]))
-        page = self.page("interval_add_1")
+        # The claims of the interval kernels (architecture.md, "Claims of the interval kernels").
+        page = self.page("interval_mul_1")
         self.assertIn("**I3.** $Z$ contains $x y$ for every $x \\in X$, $y \\in Y$", page)
         self.assertIn("$z_l$ is $\\mathrm{RD}(\\ell)$ or at most 1 step of `T` below it", page)
         self.assertIn("**I5.** For bounded $X$ and $Y$, $Z$ is bounded exactly when", page)
-        down = self.copy.kernel(self.copy.claims(), "add_down_2_2")["ensures"][1]
-
-        def outward(e):
-            e.update(set="x+y", tight={"kind": "outward", "rel": down["rel"], "abs": down["abs"],
-                                       "exact_when": {"lower": [{"zero": "xl+yl"}], "upper": [{"zero": "xu+yu"}]}},
-                     bounded_when=[{"abs_le": "x+y", "exp": -2}])
-            del e["bounded_exactly"]
-        self.change("interval_add_1", lambda k: outward(k["ensures"][0]))
-        page = self.page("interval_add_1")
+        page = self.page("interval_add_2")
         self.assertIn("| $A / u^2$ | $8.0000000000000091 \\times 10^{0}$ |", page)
         self.assertIn("for the lower bound when $x_l + y_l = 0$", page)
         self.assertIn("$\\lvert l - (x + y)\\rvert \\le A\\,\\lvert x + y\\rvert + B$", self.page("add_down_2_2"))

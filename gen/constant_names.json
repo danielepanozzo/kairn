@@ -5,6 +5,8 @@
     "(1+u)^3": "up_ball_add_1_1",
     "(1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)": "up_ball_add_1_2",
     "unit(add_2_2)/(1-unit(add_2_2))*(1+u)": "up_ball_add_2_0",
+    "1/2": "up_ball_from_interval_2_0",
+    "2": "up_ball_from_interval_2_1",
     "unit(mul_1_1)/(1-unit(mul_1_1))": "up_ball_mul_1_0",
     "(1+u)^5": "up_ball_mul_1_1",
     "(1+u)*(2*(1+u)^4*eta+tiny(mul_1_1)/(1-unit(mul_1_1))+eta/2)+eta/(2*u)": "up_ball_mul_1_2",

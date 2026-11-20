@@ -204,17 +204,6 @@ Definition fast_two_sum_entry (a b : R) : R * R :=
   let '(s, e) := fast_two_sum ga gb in
   (s, e).
 
-(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
-Definition sub_up_1 (a b : R) : R :=
-  let nb := - b in
-  let r := add_up_1 a nb in
-  r.
-
-(* mul_1_1: one rounding to nearest. *)
-Definition mul_1_1 (a b : R) : R :=
-  let p := rnd (a * b + 0) in
-  p.
-
 (* two_prod: TwoProd with an FMA (folklore; see JMP17). *)
 Definition two_prod (a b : R) : R * R :=
   let p := rnd (a * b + 0) in
@@ -242,6 +231,17 @@ Definition mul_dir_1 (a b : R) : R * R :=
   let d := if zz then 0 else dz in
   let v := if zz then 0 else vz in
   (d, v).
+
+(* sub_up_1: add_up_1 on a and -b (Milestone 2 listing). *)
+Definition sub_up_1 (a b : R) : R :=
+  let nb := - b in
+  let r := add_up_1 a nb in
+  r.
+
+(* mul_1_1: one rounding to nearest. *)
+Definition mul_1_1 (a b : R) : R :=
+  let p := rnd (a * b + 0) in
+  p.
 
 (* mul_down_1: two_prod and the sign of its error term (Milestone 2 listing). *)
 Definition mul_down_1 (a b : R) : R :=
@@ -604,6 +604,17 @@ Definition mul_ball_2_2 (x0 x1 y0 y1 : R) : R * R * R :=
   let t := rnd (az * up_ball_mul_2_0 + 0) in
   let d := rnd (t * up_ball_mul_2_1 + up_ball_mul_2_2) in
   (z0, z1, d).
+
+(* mul_dir_2_2: mul_2_2 moved down and up by the bound of its own error, renormalized exactly (Milestone 2 listing). *)
+Definition mul_dir_2_2 (x0 x1 y0 y1 : R) : R * R * R * R :=
+  let '(z0, z1, d) := mul_ball_2_2 x0 x1 y0 y1 in
+  let nz := - z1 in
+  let t := add_up_1 d nz in
+  let wl := - t in
+  let wu := add_up_1 z1 d in
+  let '(l0, l1) := two_sum_ord z0 wl in
+  let '(h0, h1) := two_sum_ord z0 wu in
+  (l0, l1, h0, h1).
 
 (* mul_pow2_2: both limbs scaled, then Fast2Sum (Milestone 1 listing). *)
 Definition mul_pow2_2 (x0 x1 c : R) : R * R :=

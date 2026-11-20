@@ -1,0 +1,45 @@
+# The sum of two intervals with 2-limb bounds (milestone2.md, "Interval kernels", "Two limbs"). The
+# finite cores add_down_2_2 and add_up_2_2 give the bounds; a bound that a core does not return as
+# a finite number (an unbounded operand, or an overflow inside the core) becomes the infinity on its
+# side, which is always a bound; an empty operand gives the empty set. Tightness for bounded
+# operands and a bounded result: each bound within A |v| + B of the bound v of the exact range, with
+# the constants of the directed sums; a bound of the exact range that is zero is returned as zero
+# (the rule of the zero sum of the cores). Bounded when the exact range is within a quarter of the
+# overflow threshold.
+kernel:        interval_add_2
+input:         xl = xl0 xl1
+input:         xu = xu0 xu1
+input:         yl = yl0 yl1
+input:         yu = yu0 yu1
+output:        zl = zl0 zl1
+output:        zu = zu0 zu1
+requires:      interval xl xu
+requires:      interval yl yu
+ensures:       encloses_interval zl zu x+y x=xl,xu y=yl,yu tight=outward;rel=(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)*(1+unit(add_2_2))/(1-u);abs=2*(1+u)^2*(1/2*up((1+u)^3)*eta+up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))+eta+(2*(1+u)^3*up((1+u)^3)*up(unit(add_2_2)/(1-unit(add_2_2))*(1+u))+2*u^2)/(1-u)*tiny(add_2_2) exact_lower=zero(xl+yl) exact_upper=zero(xu+yu) bounded_when=abs_le(x+y,-2)
+min_precision: 3
+source:        the directed sums of two limbs, an infinite or empty result selected (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   every output is selected after explicit tests of the bounds (fl, fh) and of the operands (ne); encloses_interval states what comes out
+
+(l0, l1) = add_down_2_2(xl0, xl1, yl0, yl1)
+(h0, h1) = add_up_2_2(xu0, xu1, yu0, yu1)
+al  = abs(l0)
+fl  = lt(al, const inf)
+ah  = abs(h0)
+fh  = lt(ah, const inf)
+mi  = neg(const inf)
+a0  = select(fl, l0, mi)
+a1  = select(fl, l1, 0)
+b0  = select(fh, h0, const inf)
+b1  = select(fh, h1, 0)
+nx  = lt(xl0, const inf)
+ny  = lt(yl0, const inf)
+ne  = and(nx, ny)
+zl0 = select(ne, a0, const inf)
+zl1 = select(ne, a1, 0)
+zu0 = select(ne, b0, mi)
+zu1 = select(ne, b1, 0)

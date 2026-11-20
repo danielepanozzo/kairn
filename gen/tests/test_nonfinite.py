@@ -779,7 +779,7 @@ JUDGES = {'extends': judge_extends, 'encloses': judge_ball, 'represents': judge_
 
 def judge(job):
     name, (p, qmin, qmax), seed = job
-    ks = common.kernels_and_withheld()
+    ks = common.kernels()
     k = ks[name]
     fmt = Fmt(p, qmin, qmax)
     m = interp.Machine(ks)
@@ -830,7 +830,7 @@ def situation(k, fmt, e, values, outs):
 
 
 def run_all(names, seed):
-    ks = common.kernels_and_withheld()
+    ks = common.kernels()
     jobs = [(n, f, seed) for n in names for f in FORMATS if not ks[n].min_precision or f[0] >= ks[n].min_precision]
     with ProcessPoolExecutor(max_workers=common.JOBS) as ex:
         return list(ex.map(judge, jobs))
@@ -845,9 +845,7 @@ KNOWN = set()
 class NonFinite(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # With the kernels of gen/kernels, those whose claims are in the vocabulary but which are
-        # not there yet (common.WITHHELD).
-        cls.ks = common.kernels_and_withheld()
+        cls.ks = common.kernels()
         cls.names = [n for n, k in cls.ks.items() if k.extended]
         cls.results = run_all(cls.names, 'nonfinite')
 
@@ -857,10 +855,9 @@ class NonFinite(unittest.TestCase):
         # Full kernels, full Ball kernels, constructors, and the kernels that need no fix-up
         # (ball_neg_k among them): 39 of Milestone 1, and 15 of wave 1 of Milestone 2 (the steps,
         # the directed sums and products, five entry forms, the full scalings by a power of two),
-        # and 10 of wave 2: the interval kernels of one limb but the product, mul_dir_1, the bounds
-        # of a ball as numbers of T and the narrowing of a ball; and 3 of common.WITHHELD:
-        # interval_mul_1, interval_add_2 and ball_from_interval_2.
-        self.assertEqual(len(self.names), 54 + 10 + 3)
+        # and 13 of wave 2: the interval kernels, mul_dir_1, the bounds of a ball as numbers of T,
+        # the ball from an interval and the narrowing of a ball.
+        self.assertEqual(len(self.names), 54 + 13)
 
     def test_every_situation_is_reached(self):
         """The cases reach what the statements are about: every full kernel overflows on finite
@@ -995,7 +992,7 @@ class NonFinite(unittest.TestCase):
                          ['makes_interval'])
         self.assertEqual(judge_makes_interval(mk, ks, fmt, mk.ensures[0], {'lo': [PINF], 'hi': [PINF]}, empty, None), [])
         # A ball made from an interval (makes_ball with a lower and an upper bound: the claim of
-        # ball_from_interval_2, common.WITHHELD).
+        # ball_from_interval_2).
         fb = ks['ball_from_interval_2'].ensures[0]
         self.assertEqual(fb, {'kind': 'makes_ball', 'center': 'cw', 'radius': 'rw', 'from': {'lower': 'lo', 'upper': 'hi'},
                               'midpoint_when': [{'half_in_format': 'lo'}, {'half_in_format': 'hi'}]})

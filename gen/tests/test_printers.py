@@ -107,10 +107,12 @@ BRANCHED_M1 = dict({k: ('f',) for k in FULL}, **{k: ('e', 'f') for k in FULL_BAL
 BRANCHED = dict(BRANCHED_M1)
 # Milestone 2: the kernels without a real-model statement whose outputs are selects on one mask, the
 # test of empty operands (ne) of the interval kernels, the test of a pair that describes an interval
-# (v) of the constructor, and the test that a ball is not empty (ne) of its bounds as numbers of T.
-BRANCHED.update({k: ('ne',) for k in ('interval_add_1', 'interval_sub_1', 'ball_lower_as_1', 'ball_upper_as_1',
-                                      'ball_lower_as_2', 'ball_upper_as_2')})
-BRANCHED.update(interval_make_1=('v',))
+# (v) of the constructors from bounds, then whether it is bounded (f), and the test that a ball is
+# not empty (ne) of its bounds as numbers of T.
+BRANCHED.update({k: ('ne',) for k in ('interval_add_1', 'interval_sub_1', 'interval_mul_1', 'interval_add_2',
+                                      'ball_lower_as_1', 'ball_upper_as_1', 'ball_lower_as_2',
+                                      'ball_upper_as_2')})
+BRANCHED.update(interval_make_1=('v',), ball_from_interval_2=('v', 'f'))
 
 
 class Cpp(unittest.TestCase):
@@ -198,12 +200,13 @@ class Cpp(unittest.TestCase):
     # intervals that calls them (two_prod's fms), and the bounds of two limbs, which call the
     # products of two limbs or a radius of the second design (fma), with the sum of intervals of
     # two limbs that calls them.
-    NOT_CONSTEXPR |= {'mul_dir_1', 'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2', 'sub_down_2_2',
-                      'sub_up_2_2'}
+    NOT_CONSTEXPR |= {'mul_dir_1', 'interval_mul_1', 'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2',
+                      'sub_down_2_2', 'sub_up_2_2', 'mul_dir_2_2', 'interval_add_2'}
     # The kernels whose only fused operations are prod, constexpr by the rule of the product
-    # (milestone2.md, "The two executions of a product").
+    # (milestone2.md, "The two executions of a product"); in Milestone 2 the ball made from an
+    # interval, which halves its bounds and doubles the halves with prod.
     PRODUCT_RULE = {'rmul', 'mul_1_1', 'split', 'two_prod_dekker', 'mul_pow2_2', 'mul_pow2_2_full', 'ball_mul_pow2_1',
-                    'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full'}
+                    'ball_mul_pow2_2', 'ball_mul_pow2_1_full', 'ball_mul_pow2_2_full', 'ball_from_interval_2'}
 
     def test_constexpr(self):
         plain = {name for (name, _), f in self.fns.items() if not f['constexpr']}
@@ -385,17 +388,11 @@ class FixupBranch(unittest.TestCase):
             self.assertIsNone(cpp.branch(self.ks[name], self.ks), name)
         # Milestone 2: the arms are the bounds the kernel computes, and the outputs of the fix-up
         # the empty set or, for the constructor, the empty set or the whole line.
-        for name, arms in (('interval_add_1', ['l', 'h']), ('interval_make_1', ['gl', 'gu']),
-                           ('ball_lower_as_2', ['t'])):
+        for name, arms in (('interval_add_1', ['l', 'h']), ('interval_mul_1', ['l', 'h']),
+                           ('interval_add_2', ['a0', 'a1', 'b0', 'b1']), ('interval_make_1', ['gl', 'gu']),
+                           ('ball_lower_as_2', ['t']), ('ball_from_interval_2', ['c0', 'c1', 'r'])):
             self.assertEqual([str(a) for a in cpp.branch(self.ks[name], self.ks).arms], arms, name)
-        # And those of common.WITHHELD, as they will be printed.
-        every = common.kernels_and_withheld()
-        for name, masks, arms in (('interval_mul_1', ('ne',), ['l', 'h']),
-                                  ('interval_add_2', ('ne',), ['a0', 'a1', 'b0', 'b1']),
-                                  ('ball_from_interval_2', ('v', 'f'), ['c0', 'c1', 'r'])):
-            b = cpp.branch(every[name], every)
-            self.assertEqual((b.masks, [str(a) for a in b.arms]), (masks, arms), name)
-        self.assertIsNone(cpp.branch(every['mul_dir_2_2'], every))
+        self.assertIsNone(cpp.branch(self.ks['mul_dir_2_2'], self.ks))
         for name in BRANCHED_M1:
             b = cpp.branch(self.ks[name], self.ks)
             ball = name.startswith('ball_')
@@ -819,14 +816,14 @@ class Rocq(unittest.TestCase):
     # statement, and the constants N, P and eta): every earlier definition and statement is the
     # same, byte for byte, and fast_two_sum and two_prod are printed earlier, before the new kernels
     # that call them; Audit.v lists the same theorems, those two earlier. Then the first kernels of
-    # the intervals of wave 2 (seven with a real-model statement: mul_dir_1 and the bounds of two
+    # the intervals of wave 2 (eight with a real-model statement: mul_dir_1 and the bounds of two
     # limbs), unverified: every earlier definition and statement is the same, byte for byte, some
     # printed earlier (callees before callers: sub_down_1, sub_up_1, to_down_2, two_prod), with
     # their constants named as before (gen/constant_names.json); Audit.v lists the same theorems,
     # in that order. make -C proofs passed on these files.
-    DIGESTS = {'Model.v': 'ac09dd3020493542fdab74fc4420762435be8944eb14e25701f64ba01948d837',
-               'Statements.v': '42eaef6fc2466a8b6f5d945dbf3a59daf2862a55b1447cf7138e0511dc750a4b',
-               'Audit.v': '8b174b5f9693a7602bfc3a29a6f7578d37f798c185c6bfea9626c3e2664da9bb'}
+    DIGESTS = {'Model.v': 'daeb4f3078b3eb4cf80a08c91f800ba31a7eb19f7bc0670b82d07d6b6fceecfa',
+               'Statements.v': 'a37b258ff7a27be6689bb00dff3843784c207be1dc22c16774fb480e37dd1687',
+               'Audit.v': '833f93d669031deca32392d4a40b4b7d844295cd0a66a60d0f329443140c9f05'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in
@@ -857,9 +854,9 @@ class Rocq(unittest.TestCase):
             for e in k.ensures:
                 e.pop('finite_when', None)
             finite[name] = k
-        # 60, and the seven of Milestone 2's interval work with a real-model statement: mul_dir_1 and
-        # the six bounds of two limbs.
-        self.assertEqual(len(finite), 67)
+        # 60, and the eight of Milestone 2's interval work with a real-model statement: mul_dir_1 and
+        # the seven bounds of two limbs.
+        self.assertEqual(len(finite), 68)
         self.assertTrue(any(k.extended for k in self.all.values() if k.real_model))
         for file, printer in printers.items():
             text = printer(self.all)
@@ -939,6 +936,10 @@ class ConstantNames(unittest.TestCase):
         'unit(mul_2_1)/(1-unit(mul_2_1))*(1+u)': 'up_ball_scale_2_0',
         '(1+u)*((1+u)^2*eta+tiny(mul_2_1)/(1-unit(mul_2_1))+eta/2)+eta/(2*u)': 'up_ball_scale_2_2',
         'eta/(2*u^2)': 'up_mul_down_1_0',
+        # Milestone 2, the halving and the doubling of ball_from_interval_2, which only the IEEE
+        # model defines (the kernel has no real-model statement).
+        '1/2': 'up_ball_from_interval_2_0',
+        '2': 'up_ball_from_interval_2_1',
     }
 
     @classmethod

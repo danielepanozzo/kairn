@@ -107,6 +107,25 @@ Definition ball_add_1_full_spec : Prop :=
    ball_finite_1 cw rw) /\
   (forall x y : R, in_ball_1 cx rx x -> in_ball_1 cy ry y -> in_ball_1 cw rw (x + y)).
 
+(* ball_from_interval_2: the exact sum of the halves, and the difference of the halves rounded up (Milestone 2 listing). IEEE-model status: unverified. *)
+Definition ball_from_interval_2_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  (2 <= prec)%Z ->
+  forall lo hi : binary_float prec emax,
+  let '(cw0, cw1, rw) := IeeeModel.ball_from_interval_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma nan_const lo hi in
+  ball_2 cw0 cw1 rw /\
+  (xnonempty (xval lo) (xval hi) -> finite lo -> finite hi ->
+   ball_finite_2 cw0 cw1 rw /\
+   (forall x : R, val lo <= x <= val hi -> in_ball_2 cw0 cw1 rw x)) /\
+  (xnonempty (xval lo) (xval hi) -> finite lo -> finite hi -> fmt (ieee_emin prec emax) prec (val lo / 2) -> fmt (ieee_emin prec emax) prec (val hi / 2) ->
+   (val cw0 + val cw1) = (val lo + val hi) / 2 /\
+   val rw = RU (ieee_emin prec emax) prec ((val hi - val lo) / 2)) /\
+  (xnonempty (xval lo) (xval hi) -> ~ (finite lo /\ finite hi) -> ball_whole_2 cw0 cw1 rw) /\
+  (nan lo \/ nan hi -> ball_whole_2 cw0 cw1 rw) /\
+  (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> ball_empty_2 cw0 cw1 rw).
+
 (* sub_down_1: add_down_1 on a and -b (Milestone 2 listing). IEEE-model status: proved. *)
 Definition sub_down_1_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -311,6 +330,88 @@ Definition interval_make_1_spec : Prop :=
   (nan lo \/ nan hi -> zl = infinity prec emax true /\ zu = infinity prec emax false) /\
   (~ nan lo -> ~ nan hi -> ~ xnonempty (xval lo) (xval hi) -> interval_empty_1 zl zu).
 
+(* two_prod: TwoProd with an FMA (folklore; see JMP17). IEEE-model status: unverified. *)
+Definition two_prod_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall a b : binary_float prec emax,
+  finite a -> finite b ->
+  let '(p, e) := IeeeModel.two_prod prec emax nan_opp nan_fma a b in
+  finite p ->
+  finite e /\
+  val p = RN (ieee_emin prec emax) prec (val a * val b) /\
+  Rabs ((val p + val e) - (val a * val b)) <= (1 / 2) * eta (ieee_emin prec emax) /\
+  (((val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) -> (val p + val e) = (val a * val b)).
+
+(* mul_dir_1: two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). IEEE-model status: unverified. *)
+Definition mul_dir_1_ieee_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (2 <= prec)%Z ->
+  forall a b : binary_float prec emax,
+  ~ nan a ->
+  ~ nan b ->
+  let '(d, v) := IeeeModel.mul_dir_1 prec emax nan_opp nan_abs nan_fma a b in
+  (zero a \/ zero b -> zero d) /\
+  (~ (zero a \/ zero b) ->
+   (finite a /\ finite b ->
+   xle (xval d) (xmul (xval a) (xval b)) = true /\ xle (xpred prec emax (xrd prec emax (xmul (xval a) (xval b)))) (xval d) = true) /\
+  (~ (finite a /\ finite b) -> xval d = (xmul (xval a) (xval b)))) /\
+  (zero a \/ zero b -> zero d) /\
+  (~ (zero a \/ zero b) ->
+   ((finite a /\ finite b ->
+    (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
+   xval d = xrd prec emax (xmul (xval a) (xval b)))) /\
+  (zero a \/ zero b -> zero v) /\
+  (~ (zero a \/ zero b) ->
+   (finite a /\ finite b ->
+   xle (xmul (xval a) (xval b)) (xval v) = true /\ xle (xval v) (xsucc prec emax (xru prec emax (xmul (xval a) (xval b)))) = true) /\
+  (~ (finite a /\ finite b) -> xval v = (xmul (xval a) (xval b)))) /\
+  (zero a \/ zero b -> zero v) /\
+  (~ (zero a \/ zero b) ->
+   ((finite a /\ finite b ->
+    (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
+   xval v = xru prec emax (xmul (xval a) (xval b)))).
+
+(* interval_mul_1: the least and the greatest of the directed products of the bounds (Milestone 2 listing). IEEE-model status: unverified. *)
+Definition interval_mul_1_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  forall xl xu yl yu : binary_float prec emax,
+  interval_1 xl xu ->
+  interval_1 yl yu ->
+  let '(zl, zu) := IeeeModel.interval_mul_1 prec emax nan_opp nan_abs nan_fma xl xu yl yu in
+  interval_1 zl zu /\
+  (interval_empty_1 zl zu <-> interval_empty_1 xl xu \/ interval_empty_1 yl yu) /\
+  (forall x y : R, in_interval_1 xl xu x -> in_interval_1 yl yu y ->
+   in_interval_1 zl zu (x * y)) /\
+  (interval_nonempty_1 xl xu -> interval_nonempty_1 yl yu ->
+   forall lo hi : xreal,
+   range_lower (range_2 (fun x y : R => x * y) (in_interval_1 xl xu) (in_interval_1 yl yu)) lo ->
+   range_upper (range_2 (fun x y : R => x * y) (in_interval_1 xl xu) (in_interval_1 yl yu)) hi ->
+   xle (xpred prec emax (xrd prec emax lo)) (xval zl) = true /\
+   xle (xval zl) (xrd prec emax lo) = true /\
+   xle (xru prec emax hi) (xval zu) = true /\
+   xle (xval zu) (xsucc prec emax (xru prec emax hi)) = true /\
+   ((finite xl /\ finite yl ->
+    val xl * val yl = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val xl * val yl)) ->
+   (finite xl /\ finite yu ->
+    val xl * val yu = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val xl * val yu)) ->
+   (finite xu /\ finite yl ->
+    val xu * val yl = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val xu * val yl)) ->
+   (finite xu /\ finite yu ->
+    val xu * val yu = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val xu * val yu)) ->
+   xval zl = xrd prec emax lo /\ xval zu = xru prec emax hi)) /\
+  (interval_bounded_1 xl xu -> interval_bounded_1 yl yu ->
+   (interval_bounded_1 zl zu <->
+    forall z : R,
+    range_2 (fun x y : R => x * y) (in_interval_1 xl xu) (in_interval_1 yl yu) z ->
+    Rabs z <= omega prec emax)).
+
 (* interval_neg_1: the bounds negated and exchanged (Milestone 2 listing). IEEE-model status: unverified. *)
 Definition interval_neg_1_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -378,52 +479,6 @@ Definition make_2_spec : Prop :=
   let '(x0, x1) := IeeeModel.make_2 prec emax nan_plus a in
   canonical_2 x0 x1 /\
   xval_2 x0 x1 = xval a.
-
-(* two_prod: TwoProd with an FMA (folklore; see JMP17). IEEE-model status: unverified. *)
-Definition two_prod_ieee_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_opp : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (2 <= prec)%Z ->
-  forall a b : binary_float prec emax,
-  finite a -> finite b ->
-  let '(p, e) := IeeeModel.two_prod prec emax nan_opp nan_fma a b in
-  finite p ->
-  finite e /\
-  val p = RN (ieee_emin prec emax) prec (val a * val b) /\
-  Rabs ((val p + val e) - (val a * val b)) <= (1 / 2) * eta (ieee_emin prec emax) /\
-  (((val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) -> (val p + val e) = (val a * val b)).
-
-(* mul_dir_1: two_prod and the sign of its error term, both directions, a zero factor giving zero (Milestone 2 listing). IEEE-model status: unverified. *)
-Definition mul_dir_1_ieee_spec : Prop :=
-  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
-         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
-         (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
-  (2 <= prec)%Z ->
-  forall a b : binary_float prec emax,
-  ~ nan a ->
-  ~ nan b ->
-  let '(d, v) := IeeeModel.mul_dir_1 prec emax nan_opp nan_abs nan_fma a b in
-  (zero a \/ zero b -> zero d) /\
-  (~ (zero a \/ zero b) ->
-   (finite a /\ finite b ->
-   xle (xval d) (xmul (xval a) (xval b)) = true /\ xle (xpred prec emax (xrd prec emax (xmul (xval a) (xval b)))) (xval d) = true) /\
-  (~ (finite a /\ finite b) -> xval d = (xmul (xval a) (xval b)))) /\
-  (zero a \/ zero b -> zero d) /\
-  (~ (zero a \/ zero b) ->
-   ((finite a /\ finite b ->
-    (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
-   xval d = xrd prec emax (xmul (xval a) (xval b)))) /\
-  (zero a \/ zero b -> zero v) /\
-  (~ (zero a \/ zero b) ->
-   (finite a /\ finite b ->
-   xle (xmul (xval a) (xval b)) (xval v) = true /\ xle (xval v) (xsucc prec emax (xru prec emax (xmul (xval a) (xval b)))) = true) /\
-  (~ (finite a /\ finite b) -> xval v = (xmul (xval a) (xval b)))) /\
-  (zero a \/ zero b -> zero v) /\
-  (~ (zero a \/ zero b) ->
-   ((finite a /\ finite b ->
-    (val a * val b) = 0 \/ bpow radix2 (2 * prec - 1) * eta (ieee_emin prec emax) <= Rabs (val a * val b)) ->
-   xval v = xru prec emax (xmul (xval a) (xval b)))).
 
 (* mul_down_1: two_prod and the sign of its error term (Milestone 2 listing). IEEE-model status: proved. *)
 Definition mul_down_1_ieee_spec : Prop :=
@@ -1182,6 +1237,38 @@ Definition eq_2_2_ieee_spec : Prop :=
   canonical_2 y0 y1 ->
   let m := IeeeModel.eq_2_2 prec emax x0 x1 y0 y1 in
   m = xeq (xval_2 x0 x1) (xval_2 y0 y1).
+
+(* interval_add_2: the directed sums of two limbs, an infinite or empty result selected (Milestone 2 listing). IEEE-model status: unverified. *)
+Definition interval_add_2_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_plus nan_minus : nan2 prec emax) (nan_opp nan_abs : nan1 prec emax) (nan_fma : nan3 prec emax),
+  (3 <= prec)%Z ->
+  forall xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 : binary_float prec emax,
+  interval_2 xl0 xl1 xu0 xu1 ->
+  interval_2 yl0 yl1 yu0 yu1 ->
+  let '(zl0, zl1, zu0, zu1) := IeeeModel.interval_add_2 prec emax nan_plus nan_minus nan_opp nan_abs nan_fma xl0 xl1 xu0 xu1 yl0 yl1 yu0 yu1 in
+  interval_2 zl0 zl1 zu0 zu1 /\
+  (interval_empty_2 zl0 zl1 zu0 zu1 <-> interval_empty_2 xl0 xl1 xu0 xu1 \/ interval_empty_2 yl0 yl1 yu0 yu1) /\
+  (forall x y : R, in_interval_2 xl0 xl1 xu0 xu1 x -> in_interval_2 yl0 yl1 yu0 yu1 y ->
+   in_interval_2 zl0 zl1 zu0 zu1 (x + y)) /\
+  (interval_bounded_2 xl0 xl1 xu0 xu1 -> interval_bounded_2 yl0 yl1 yu0 yu1 ->
+   forall lo hi : R,
+   range_lower (range_2 (fun x y : R => x + y) (in_interval_2 xl0 xl1 xu0 xu1) (in_interval_2 yl0 yl1 yu0 yu1)) (XFin lo) ->
+   range_upper (range_2 (fun x y : R => x + y) (in_interval_2 xl0 xl1 xu0 xu1) (in_interval_2 yl0 yl1 yu0 yu1)) (XFin hi) ->
+   (interval_bounded_2 zl0 zl1 zu0 zu1 ->
+    lo - (val zl0 + val zl1) <= ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 (ieee_emin prec emax) prec) * up_ball_add_2_0 (ieee_emin prec emax) prec) + (2 * (u prec ^ 2))) * (1 + ((3 / (1 - (4 * u prec))) * u prec ^ 2))) / (1 - u prec)) * Rabs lo + ((((2 * ((1 + u prec) ^ 2)) * ((((/ 2) * up_ball_add_1_1 (ieee_emin prec emax) prec) * eta (ieee_emin prec emax)) + up_ball_add_1_2 (ieee_emin prec emax) prec)) + eta (ieee_emin prec emax)) + ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 (ieee_emin prec emax) prec) * up_ball_add_2_0 (ieee_emin prec emax) prec) + (2 * (u prec ^ 2))) / (1 - u prec)) * 0)) /\
+    (val zu0 + val zu1) - hi <= ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 (ieee_emin prec emax) prec) * up_ball_add_2_0 (ieee_emin prec emax) prec) + (2 * (u prec ^ 2))) * (1 + ((3 / (1 - (4 * u prec))) * u prec ^ 2))) / (1 - u prec)) * Rabs hi + ((((2 * ((1 + u prec) ^ 2)) * ((((/ 2) * up_ball_add_1_1 (ieee_emin prec emax) prec) * eta (ieee_emin prec emax)) + up_ball_add_1_2 (ieee_emin prec emax) prec)) + eta (ieee_emin prec emax)) + ((((((2 * ((1 + u prec) ^ 3)) * up_ball_add_1_1 (ieee_emin prec emax) prec) * up_ball_add_2_0 (ieee_emin prec emax) prec) + (2 * (u prec ^ 2))) / (1 - u prec)) * 0))) /\
+   (((val xl0 + val xl1) + (val yl0 + val yl1)) = 0 -> xval_2 zl0 zl1 = XFin lo) /\
+   (((val xu0 + val xu1) + (val yu0 + val yu1)) = 0 -> xval_2 zu0 zu1 = XFin hi)) /\
+  (interval_nonempty_2 xl0 xl1 xu0 xu1 -> interval_nonempty_2 yl0 yl1 yu0 yu1 ->
+   (range_lower (range_2 (fun x y : R => x + y) (in_interval_2 xl0 xl1 xu0 xu1) (in_interval_2 yl0 yl1 yu0 yu1)) (XInf true) -> xval_2 zl0 zl1 = XInf true) /\
+   (range_upper (range_2 (fun x y : R => x + y) (in_interval_2 xl0 xl1 xu0 xu1) (in_interval_2 yl0 yl1 yu0 yu1)) (XInf false) -> xval_2 zu0 zu1 = XInf false)) /\
+  (interval_bounded_2 xl0 xl1 xu0 xu1 -> interval_bounded_2 yl0 yl1 yu0 yu1 ->
+   (forall z : R,
+    range_2 (fun x y : R => x + y) (in_interval_2 xl0 xl1 xu0 xu1) (in_interval_2 yl0 yl1 yu0 yu1) z ->
+    Rabs z <= bpow radix2 (emax - 2)) ->
+   interval_bounded_2 zl0 zl1 zu0 zu1).
 
 (* le_1_2: limbs compared in order (Milestone 1 listing). IEEE-model status: proved. *)
 Definition le_1_2_ieee_spec : Prop :=

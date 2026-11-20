@@ -48,6 +48,28 @@ class Refusals(unittest.TestCase):
     def test_the_starting_kernel_is_accepted(self):
         self.assertEqual(check(HEAD + GOOD), [])
 
+    def test_a_negated_fused_result(self):
+        # Compilers fold the negation into the fused instruction (gen/README.md): refused, with
+        # what to write instead; also through a call, the callee inlined.
+        errors = check(HEAD + 'p = prod(a, b)\nq = neg(p)\ns = add(a, b)\nz = sub(s, a)\ne = sub(q, z)\n')
+        self.refused(errors, 'bad', 'q', rules.NEGATED_FUSED, 'q = neg(p) negates the result of prod')
+        self.refused(errors, 'bad', 'q', rules.NEGATED_FUSED, 'prod(neg(a), b)')
+        errors = check(HEAD + 'p = fma(a, b, a)\nq = neg(p)\ns = add(a, b)\nz = sub(s, a)\ne = sub(q, z)\n')
+        self.refused(errors, 'bad', 'q', rules.NEGATED_FUSED, 'negates the result of fma')
+        negate = ('kernel:  negate\ninput:   x\noutput:  n\nvalue:   -x\nensures: error n R c=0 k=1 t=0\n'
+                  'status:  unverified\n\nn = neg(x)\n')
+        errors = check(negate, HEAD + 'p = prod(a, b)\nm = negate(p)\ns = add(a, b)\nz = sub(s, a)\ne = sub(m, z)\n')
+        negated = [e for e in errors if e.rule == rules.NEGATED_FUSED]
+        self.assertEqual([e.kernel for e in negated], ['bad'])
+        self.assertIn('negates the result of prod', str(negated[0]))
+        # A negated operand is not a negated result; a select between a fused result and another
+        # value is not refused either (add_down_2_2 negates such a select: gen/README.md says what
+        # the compilers do with it).
+        self.assertEqual(check(HEAD + 'n = neg(a)\np = prod(n, b)\ns = add(p, b)\nz = sub(s, p)\ne = sub(b, z)\n'), [])
+        self.assertEqual(check(HEAD + 'cone_exempt: selected\n'
+                               'p = prod(a, b)\nc = eq(a, 0)\nt = select(c, a, p)\nq = neg(t)\n'
+                               's = add(q, b)\nz = sub(s, q)\ne = sub(b, z)\n'), [])
+
     def test_value_assigned_twice(self):
         errors = check(HEAD + 's = add(a, b)\ns = sub(s, a)\nz = sub(s, a)\ne = sub(b, z)\n')
         self.refused(errors, 'bad', 's', rules.RULE1, 'assigned twice')
@@ -861,7 +883,7 @@ class R3OfTheKernels(unittest.TestCase):
         # The interval kernels and the functions of a Ball of the enclosure interface
         # (milestone2.md, "Interval kernels", "One enclosure interface"), for the public headers of
         # wave 2, which do not call them yet: their inputs are limbs of objects (stored), or bounds
-        # the program gives (interval_make_1, which guards them).
+        # the program gives (interval_make_1 and ball_from_interval_2, which guard them).
         wave_2 = TheKernels.WAVE_2_INTERVALS | TheKernels.WAVE_2_BALLS
         self.assertEqual({n for n, k in ks.items() if k.entry},
                          self.CORES | self.BALL_CORES | TheKernels.NON_FINITE | self.WAVE_1 | wave_2)
@@ -1225,13 +1247,14 @@ class TheKernels(unittest.TestCase):
     # unverified until their proofs are pointed at the generated text: the interval kernels of one
     # limb and the sum of two, with the IEEE-model statement only; mul_dir_1, of the extended domain
     # with both statements; the bounds of two limbs, finite cores; the bounds of a ball as numbers
-    # of T and the narrowing of a ball, the IEEE-model statement only. (Not here, and in
-    # experiments/milestone2/kernels: mul_dir_2_2 and ball_from_interval_2, whose listings negate a
-    # fused result, and interval_mul_1 and interval_add_2, whose code Clang computes two FMAs to a
-    # packed instruction; the object-code check allows neither. common.WITHHELD has their claims.)
-    WAVE_2_INTERVALS = {'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1'}
-    WAVE_2_CORES = {'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2', 'sub_down_2_2', 'sub_up_2_2'}
-    WAVE_2_BALLS = {'ball_lower_as_1', 'ball_upper_as_1', 'ball_lower_as_2', 'ball_upper_as_2', 'ball_narrow_2_1'}
+    # of T, the ball from an interval of two T and the narrowing of a ball, the IEEE-model statement
+    # only.
+    WAVE_2_INTERVALS = {'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1', 'interval_mul_1',
+                        'interval_add_2'}
+    WAVE_2_CORES = {'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2', 'sub_down_2_2', 'sub_up_2_2',
+                    'mul_dir_2_2'}
+    WAVE_2_BALLS = {'ball_lower_as_1', 'ball_upper_as_1', 'ball_lower_as_2', 'ball_upper_as_2',
+                    'ball_from_interval_2', 'ball_narrow_2_1'}
     WAVE_2 = WAVE_2_INTERVALS | WAVE_2_CORES | WAVE_2_BALLS | {'mul_dir_1'}
 
     def test_kernel_names_are_those_of_the_listings(self):
@@ -1306,20 +1329,16 @@ class TheKernels(unittest.TestCase):
             'radd_entry': 2, 'add_down_entry': 2, 'add_up_entry': 2, 'sub_down_entry': 2, 'sub_up_entry': 2,
             'ball_mul_pow2_1': 2, 'ball_mul_pow2_2': 2,
             # Wave 2 (as the proofs found them): mul_dir_1 from 2, the sums of two limbs from 3, the
-            # product from 4.
+            # products from 4.
             'mul_dir_1': 2, 'add_ball_2_2': 3, 'add_down_2_2': 3, 'add_up_2_2': 3, 'sub_down_2_2': 3,
-            'sub_up_2_2': 3, 'mul_ball_2_2': 4})
-        # And of the interval kernels: none for the constructor and the negation (their theorems are
-        # for every precision), 2 for the sum and the difference; 2 for the bounds of a ball and the
-        # narrowing. Of those of common.WITHHELD: none for the product of one limb, 3 for the sum of
-        # two limbs, 4 for mul_dir_2_2, 2 for the ball from an interval.
+            'sub_up_2_2': 3, 'mul_ball_2_2': 4, 'mul_dir_2_2': 4})
+        # And of the interval kernels: none for the constructor, the negation and the product of one
+        # limb (their theorems are for every precision), 2 for the sum and the difference, 3 for the
+        # sum of two limbs; 2 for the bounds of a ball, the ball from an interval and the narrowing.
         self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_INTERVALS | self.WAVE_2_BALLS}, {
-            'interval_make_1': 1, 'interval_neg_1': 1, 'interval_add_1': 2, 'interval_sub_1': 2,
-            'ball_lower_as_1': 2, 'ball_upper_as_1': 2, 'ball_lower_as_2': 2, 'ball_upper_as_2': 2,
-            'ball_narrow_2_1': 2})
-        self.assertEqual({name: k.min_precision for name, k in common.withheld().items()}, {
-            'interval_mul_1': 1, 'interval_add_2': 3, 'mul_dir_2_2': 4, 'ball_from_interval_2': 2})
-        self.assertEqual(rules.check_all(common.kernels_and_withheld()), [])
+            'interval_make_1': 1, 'interval_neg_1': 1, 'interval_mul_1': 1, 'interval_add_1': 2,
+            'interval_sub_1': 2, 'interval_add_2': 3, 'ball_lower_as_1': 2, 'ball_upper_as_1': 2,
+            'ball_lower_as_2': 2, 'ball_upper_as_2': 2, 'ball_from_interval_2': 2, 'ball_narrow_2_1': 2})
 
     def test_milestone2_bodies_are_those_of_milestone2_md(self):
         """The listings of wave 1, line for line as the page writes them ("Building blocks on T",

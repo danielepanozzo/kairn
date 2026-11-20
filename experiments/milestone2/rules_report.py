@@ -18,8 +18,9 @@ from common import HERE, KERNELS, ir, rules
 # kernels of the intervals (wave 2).
 IN_GEN = ('two_sum_ord', 'add_down_1', 'add_up_1', 'sub_down_1', 'sub_up_1', 'mul_down_1', 'mul_up_1',
           'ball_mul_pow2_1', 'ball_mul_pow2_2',
-          'mul_dir_1', 'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1',
-          'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2')
+          'mul_dir_1', 'interval_make_1', 'interval_neg_1', 'interval_add_1', 'interval_sub_1', 'interval_mul_1',
+          'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2', 'mul_dir_2_2', 'interval_add_2',
+          'ball_from_interval_2')
 
 
 def main():

@@ -14,7 +14,7 @@ $$d \le a b \le v.$$
 
 ## C++
 
-No public operation computes this kernel on its own.
+No public operation computes this kernel on its own. It is part of [`interval_mul_1`](interval_mul_1.md).
 
 ## Requires
 

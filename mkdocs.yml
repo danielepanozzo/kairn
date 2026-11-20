@@ -176,12 +176,15 @@ nav:
           - The upper bound of a ball as a limb, one-limb center: reference/ball_upper_as_1.md
           - A lower bound of a ball as a limb, two-limb center: reference/ball_lower_as_2.md
           - An upper bound of a ball as a limb, two-limb center: reference/ball_upper_as_2.md
+          - A ball with a two-limb center from an interval of two limbs: reference/ball_from_interval_2.md
           - A ball with a two-limb center as one with a one-limb center: reference/ball_narrow_2_1.md
       - Interval operations:
           - An interval from two limbs: reference/interval_make_1.md
           - The negation of an interval, one-limb bounds: reference/interval_neg_1.md
           - Sum of intervals, one-limb bounds: reference/interval_add_1.md
           - Difference of intervals, one-limb bounds: reference/interval_sub_1.md
+          - Product of intervals, one-limb bounds: reference/interval_mul_1.md
+          - Sum of intervals, two-limb bounds: reference/interval_add_2.md
       - Building blocks:
           - The next number of T above a value: reference/next_up.md
           - The next number of T below a value: reference/next_down.md
@@ -201,6 +204,7 @@ nav:
           - An upper bound of a sum of two-limb numbers: reference/add_up_2_2.md
           - A lower bound of a difference of two-limb numbers: reference/sub_down_2_2.md
           - An upper bound of a difference of two-limb numbers: reference/sub_up_2_2.md
+          - Two bounds of a product of two-limb numbers: reference/mul_dir_2_2.md
           - "TwoSum: an exact sum as two limbs": reference/two_sum.md
           - "Fast2Sum: an exact sum of ordered operands": reference/fast_two_sum.md
           - "TwoProd: an exact product as two limbs": reference/two_prod.md

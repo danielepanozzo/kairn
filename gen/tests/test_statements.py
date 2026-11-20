@@ -360,7 +360,7 @@ def holds(e, k, fmt, ins, outs, limbs=None):
 def judge(job):
     """The cases of one kernel on one format, in both readings: [(reading, case, entry, outputs)]."""
     directory, name, (p, qmin, qmax), seed = job
-    ks = common.kernels_and_withheld() if directory is None else common.kernels(directory)
+    ks = common.kernels(directory)
     k = ks[name]
     fmt = Format(p, qmin, qmax)
     # The same precision and underflow threshold, and room enough above that nothing overflows.
@@ -393,8 +393,8 @@ def judge(job):
                 continue    # the claims hold whenever output limb 0 is finite
             # In the format itself an entry about an output group other than the first holds when
             # that group's leading limb is finite (architecture.md, "Claims of the interval
-            # kernels"): the two bounds of mul_dir_1, and of mul_dir_2_2 (common.WITHHELD), overflow
-            # apart. No other kernel has such an entry.
+            # kernels"): the two bounds of mul_dir_2_2 and of mul_dir_1 overflow apart. No other
+            # kernel has such an entry.
             failed = [e['kind'] for e in k.ensures
                       if not (reading == 'claims file' and e.get('of') not in (None, k.outputs[0].name)
                               and not isinstance(outs[e['of']][0], F))
@@ -412,7 +412,7 @@ def judge(job):
 
 def run_all(directory, names, seed):
     jobs = []
-    ks = common.kernels_and_withheld() if directory is None else common.kernels(directory)
+    ks = common.kernels(directory)
     for name in names:
         for fmt in FORMATS:
             if ks[name].min_precision and fmt[0] < ks[name].min_precision:
@@ -451,9 +451,7 @@ TWO_SUM_CORNER = {'two_sum_entry'}
 class Statements(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # With the kernels of gen/kernels, those whose claims are in the vocabulary but which are
-        # not there yet (common.WITHHELD: mul_dir_2_2 has a real-model statement).
-        cls.ks = {name: k for name, k in common.kernels_and_withheld().items() if k.real_model}
+        cls.ks = {name: k for name, k in common.kernels().items() if k.real_model}
         cls.results = run_all(None, list(cls.ks), 'statements')
 
     def failures(self, reading):
