@@ -40,6 +40,11 @@ def _gt(a, b):
     return an * bd > bn * ad
 
 
+def _relation(a, rel, b):
+    """The truth of a REL b, REL one of lt, le, eq: the masks of the predicates and `holds`."""
+    return a < b if rel == "lt" else a <= b if rel == "le" else a == b
+
+
 def _reduce(num, den):
     g = math.gcd(num, den)
     return (num // g, den // g) if g > 1 else (num, den)
@@ -1066,7 +1071,7 @@ class Checker:
         es.applicable += 1
         a, b = e["fn"](x)
         rel = e["rel"]
-        truth = a < b if rel == "lt" else a <= b if rel == "le" else a == b
+        truth = _relation(a, rel, b)
         es.count("true" if truth else "false")
         if z[e["first"]] != (1 if truth else 0):
             return "mask is not the truth of %s" % rel
@@ -1260,8 +1265,7 @@ class Checker:
                 why = self._upper_value(pl, c, es, z, vals[0], line)
             else:
                 a, b = vals
-                rel = c["rel"]
-                truth = a < b if rel == "lt" else a <= b if rel == "le" else a == b
+                truth = _relation(a, c["rel"], b)
                 es.count("holds" if truth else "does not hold")
                 why = None if truth else "holds: %s is false where %s is true" % (
                     es.label.split(" if ")[0][len("holds "):], c["cond_name"])
