@@ -1701,18 +1701,27 @@ bound in the library.
 bound_sum_2(m) -> (g, ok)                          m: the number of additions on a path
   a  = prod(m, const up((1+u)*(unit(add_2_2)+eta/2)))       a  >= m eps
   aa = prod(m, const up((1+u)^2*(unit(add_2_2)+eta)))       aa >= (1+u)(m eps + eta/2)
-  d  = add(a, a)                                            2a, exact
+  d  = prod(a, const up(2))                                 2a, exact; a product, not a + a (below)
   w  = add(d, const up(1+2*u))                              >= 1 + 2a   (for a <= 1/2)
   g  = prod(aa, w)                                          >= m eps (1 + 2 m eps)
   ok = le(a, const up(1/4))
 
 bound_dot_2(m) -> (g, t, ok)                       m: the number of terms
   the five lines of bound_sum_2, with unit(mul_2_2)
-  tm = prod(m, const up((1+u)^2*(tiny(mul_2_2)+eta)))       >= (1+u)(m tiny + eta/2)
+  tm = prod(m, const up((1+u)^2*(tiny(mul_2_2)+eta)+eta/(2*u)))   >= (1+u)(m tiny + eta/2)
   wg = add(g, const up(1+2*u))                              >= 1 + g    (for g <= 1)
   t  = prod(tm, wg)                                         >= m tiny (1 + g)
   oa = le(a, const up(1/4));  ob = le(g, const up(1));  ok = and(oa, ob)
 ```
+
+Two lines are not what a first draft of this page wrote. $2a$ is a product by the constant 2 and
+not `add(a, a)`: GCC 13 with contraction allowed rewrites $a + a$ as $a \cdot 2$ and fuses it into
+the addition that follows, so the generator refuses a value added to itself (rule R1), and the
+product, which it keeps opaque, has the same value. And the constant of `tm` holds the smallest
+normal number, $\eta/(2u)$, in addition to what the bound needs: without it the constant would be
+a small multiple of $\eta$, a subnormal number, which
+[no listing computes with](#notation-and-vocabulary). It makes $t$ larger by about
+$m\,\tfrac{\eta}{2u}\,(1 + g)$, which the statement allows, since $t$ is only bounded from below.
 
 **Statement, real model**, for a number $m$ of the format that is zero or at least 1, in a
 format that contains $\tfrac12$; from the precision of the kernel named.
@@ -1740,7 +1749,7 @@ the statement of [`dot_1`](#sum-dot-axpy-convolution) for $m$ terms. The first c
 
 *Proof.* $\gamma_m(\varepsilon) \le m\varepsilon(1 + 2m\varepsilon)$ when
 $m\varepsilon \le \tfrac12$, which avoids a division; this lemma is proved (`gamma_le_poly`,
-`Summation.v`), the statements of the two kernels are not yet. A rounding to nearest of a nonnegative
+`Summation.v`), and so are the statements of the four kernels (`BoundKernels.v`). A rounding to nearest of a nonnegative
 product is at least the product divided by $1 + u$, less $\tfrac12\eta$ (`rnd_lower`, `Ball2.v`),
 and each constant carries the factor and the term that this costs, using $m \ge 1$; a sum of
 nonnegative numbers loses only the factor. $a \ge m\varepsilon$ makes the test on $a$ a test on
