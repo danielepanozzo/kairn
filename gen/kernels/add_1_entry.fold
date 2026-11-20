@@ -18,6 +18,7 @@ ensures:       entries z
 ensures:       finite_or_nan z flag=finite
 min_precision: 1
 theorem:       proofs/theories/FoldMaps.v
+ieee_theorem:  proofs/theories/IeeeFoldMaps.v
 status:        proved
 domain:        extended
 source:        add_1_1 on each element, guarded

@@ -15,10 +15,12 @@
    no lane, one lane, or fewer elements than lanes. The error bounds of sums and dot
    products in these orders are in Summation.v.
 
-   A loop that writes an array (a map) is the last section: its model is map f xs, and
-   the lemmas there relate that list to the list read entry by entry (Forall2), which is
-   the form of a map's generated statement; and they show that the mask such a loop
-   keeps, the and of a test of every element written, is the same in both orders. *)
+   A loop that writes an array (a map) has a section of its own: its model is map f xs,
+   and the lemmas there relate that list to the list read entry by entry (Forall2), which
+   is the form of a map's generated statement; they show that the mask such a loop keeps,
+   the and of a test of every element written, is the same in both orders; and, for the
+   model with overflow, what the list returned is when the mask is false and every element
+   written is rewritten by a second pass (map_entries_mask_true, map_entries_mask_false). *)
 From Stdlib Require Import List Arith Lia Permutation Bool.
 Import ListNotations.
 
@@ -475,6 +477,99 @@ intros B t W xs. destruct W as [|w].
   rewrite (forallb_perm B t _ _ (deal_perm B (S w) (firstn k xs) (Nat.lt_0_succ w))).
   rewrite <- forallb_app, firstn_skipn. reflexivity.
 Qed.
+
+(** * The second pass of a loop that writes an array *)
+
+(* In the model with overflow a map writes ws = map f xs, keeps the mask m, the and of a
+   test t of every element written (forallb t ws, in both orders: fold_seq_and,
+   fold_lanes_and), and when m is false a second pass rewrites every element written by g
+   (proofs/gen/IeeeFoldModel.v: t is the flag of the check of an element, g the element
+   the check returns). So the list returned is map f xs when m is true, and map g (map f
+   xs) when it is false. The statement relates it to the list read entry by entry
+   (Forall2), as Forall2_map_r does for map f xs, and says that m is true exactly when
+   every element returned satisfies L (for the IEEE model: its leading limb is finite).
+
+   What the check is asked: t w is true exactly when L w (check_flag); an element that
+   satisfies L is kept (check_kept); one that does not becomes an element that satisfies N
+   (check_bad: for the IEEE model, every limb a NaN), and no element that satisfies N
+   satisfies L. Of the step, entry by entry: an element written that satisfies L is related
+   by P to its element (step_good); and, when the mask is false, an element read whose
+   image does not satisfy L is related by P to any element that satisfies N (step_bad).
+   The proof that follows the mask, which is a boolean of the whole list, is split in its
+   two values: in a proof of a map the mask is a term of the goal, which a case analysis on
+   it replaces by true or by false (map_entries_mask_true, map_entries_mask_false). *)
+Section SecondPass.
+Variables A B : Type.
+Variable f : A -> B.
+Variable t : B -> bool.
+Variable g : B -> B.
+Variables L N : B -> Prop.
+Variable Q : A -> Prop.
+Variable P : A -> B -> Prop.
+
+Hypothesis check_flag : forall w : B, t w = true <-> L w.
+Hypothesis step_good : forall (x : A) (w : B), Q x -> f x = w -> L w -> P x w.
+
+(* An element of the image of a list of which forallb is true passes the test. *)
+Lemma forallb_map_In :
+  forall (xs : list A) (x : A), forallb t (map f xs) = true -> In x xs -> t (f x) = true.
+Proof.
+intros xs x H Hx. apply (proj1 (forallb_forall t (map f xs)) H). now apply in_map.
+Qed.
+
+(* An element of the image of a list of which forallb is false fails it. *)
+Lemma forallb_map_false :
+  forall xs : list A, forallb t (map f xs) = false -> exists x : A, In x xs /\ t (f x) = false.
+Proof.
+induction xs as [|x r IH]; cbn [map forallb]; intros H.
+- discriminate H.
+- destruct (t (f x)) eqn:Ex.
+  + destruct (IH H) as [y [Hy Ey]]. exists y. split. now right. exact Ey.
+  + exists x. split. now left. exact Ex.
+Qed.
+
+(* The mask true: every element written passes the test, and is the one returned. *)
+Theorem map_entries_mask_true :
+  forall xs : list A, forallb t (map f xs) = true -> Forall Q xs ->
+  Forall2 P xs (map f xs) /\ (true = true <-> Forall L (map f xs)).
+Proof.
+intros xs Ht HQ.
+assert (Hl : Forall (fun x => Q x /\ L (f x)) xs).
+{ apply Forall_forall. intros x Hx. split.
+  - exact (proj1 (Forall_forall Q xs) HQ x Hx).
+  - apply check_flag. now apply forallb_map_In with xs. }
+split.
+- revert Hl. apply map_entries. intros x [Hq Hx]. exact (step_good x (f x) Hq eq_refl Hx).
+- split; [intros _ | reflexivity]. apply Forall_map. revert Hl. apply Forall_impl. tauto.
+Qed.
+
+Hypothesis check_kept : forall w : B, L w -> g w = w.
+Hypothesis check_bad : forall w : B, ~ L w -> N (g w).
+Hypothesis bad_not_good : forall w : B, N w -> ~ L w.
+Hypothesis step_bad : forall (x : A) (w : B), Q x -> ~ L (f x) -> N w -> P x w.
+
+(* The mask false: every element returned is g of the element written; an element written
+   that passes the test is kept, and the others are replaced by elements that satisfy N, of
+   which there is at least one. *)
+Theorem map_entries_mask_false :
+  forall xs : list A, forallb t (map f xs) = false -> Forall Q xs ->
+  Forall2 P xs (map g (map f xs)) /\ (false = true <-> Forall L (map g (map f xs))).
+Proof.
+intros xs Hf HQ. split.
+- rewrite map_map. revert HQ. apply map_entries. intros x Hq.
+  destruct (t (f x)) eqn:Ex.
+  + assert (Lx : L (f x)) by now apply check_flag.
+    rewrite (check_kept (f x) Lx). exact (step_good x (f x) Hq eq_refl Lx).
+  + assert (Lx : ~ L (f x)) by (intros Lx; apply check_flag in Lx; congruence).
+    exact (step_bad x (g (f x)) Hq Lx (check_bad (f x) Lx)).
+- split; [discriminate|]. intros H. exfalso.
+  destruct (forallb_map_false xs Hf) as [x [Hx Ex]].
+  assert (Lf : ~ L (f x)) by (intros Lx; apply check_flag in Lx; congruence).
+  apply (bad_not_good (g (f x)) (check_bad (f x) Lf)).
+  apply (proj1 (Forall_forall L _) H). apply in_map. now apply in_map.
+Qed.
+
+End SecondPass.
 
 (** * A combination that is associative and commutative *)
 

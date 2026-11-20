@@ -15,6 +15,7 @@ From Kairn Require Import IeeeDirectedProd.
 From Kairn Require Import IeeeEntry.
 From Kairn Require Import IeeeExt.
 From Kairn Require Import IeeeFoldFinish.
+From Kairn Require Import IeeeFoldMaps.
 From Kairn Require Import IeeeFoldNorm.
 From Kairn Require Import IeeeFolds.
 From Kairn Require Import IeeeFull.
@@ -536,3 +537,111 @@ Print Assumptions sum_fast_2_entry_seq_ieee_correct.
 
 Definition sum_fast_2_entry_lanes_ieee_audit : sum_fast_2_entry_lanes_ieee_spec := sum_fast_2_entry_lanes_ieee_correct.
 Print Assumptions sum_fast_2_entry_lanes_ieee_correct.
+
+Definition add_1_seq_ieee_audit : add_1_seq_ieee_spec := add_1_seq_ieee_correct.
+Print Assumptions add_1_seq_ieee_correct.
+
+Definition add_1_lanes_ieee_audit : add_1_lanes_ieee_spec := add_1_lanes_ieee_correct.
+Print Assumptions add_1_lanes_ieee_correct.
+
+Definition add_1_entry_seq_ieee_audit : add_1_entry_seq_ieee_spec := add_1_entry_seq_ieee_correct.
+Print Assumptions add_1_entry_seq_ieee_correct.
+
+Definition add_1_entry_lanes_ieee_audit : add_1_entry_lanes_ieee_spec := add_1_entry_lanes_ieee_correct.
+Print Assumptions add_1_entry_lanes_ieee_correct.
+
+Definition add_2_seq_ieee_audit : add_2_seq_ieee_spec := add_2_seq_ieee_correct.
+Print Assumptions add_2_seq_ieee_correct.
+
+Definition add_2_lanes_ieee_audit : add_2_lanes_ieee_spec := add_2_lanes_ieee_correct.
+Print Assumptions add_2_lanes_ieee_correct.
+
+Definition add_2_entry_seq_ieee_audit : add_2_entry_seq_ieee_spec := add_2_entry_seq_ieee_correct.
+Print Assumptions add_2_entry_seq_ieee_correct.
+
+Definition add_2_entry_lanes_ieee_audit : add_2_entry_lanes_ieee_spec := add_2_entry_lanes_ieee_correct.
+Print Assumptions add_2_entry_lanes_ieee_correct.
+
+Definition axpy_1_seq_ieee_audit : axpy_1_seq_ieee_spec := axpy_1_seq_ieee_correct.
+Print Assumptions axpy_1_seq_ieee_correct.
+
+Definition axpy_1_lanes_ieee_audit : axpy_1_lanes_ieee_spec := axpy_1_lanes_ieee_correct.
+Print Assumptions axpy_1_lanes_ieee_correct.
+
+Definition axpy_1_entry_seq_ieee_audit : axpy_1_entry_seq_ieee_spec := axpy_1_entry_seq_ieee_correct.
+Print Assumptions axpy_1_entry_seq_ieee_correct.
+
+Definition axpy_1_entry_lanes_ieee_audit : axpy_1_entry_lanes_ieee_spec := axpy_1_entry_lanes_ieee_correct.
+Print Assumptions axpy_1_entry_lanes_ieee_correct.
+
+Definition axpy_2_seq_ieee_audit : axpy_2_seq_ieee_spec := axpy_2_seq_ieee_correct.
+Print Assumptions axpy_2_seq_ieee_correct.
+
+Definition axpy_2_lanes_ieee_audit : axpy_2_lanes_ieee_spec := axpy_2_lanes_ieee_correct.
+Print Assumptions axpy_2_lanes_ieee_correct.
+
+Definition axpy_2_1_seq_ieee_audit : axpy_2_1_seq_ieee_spec := axpy_2_1_seq_ieee_correct.
+Print Assumptions axpy_2_1_seq_ieee_correct.
+
+Definition axpy_2_1_lanes_ieee_audit : axpy_2_1_lanes_ieee_spec := axpy_2_1_lanes_ieee_correct.
+Print Assumptions axpy_2_1_lanes_ieee_correct.
+
+Definition axpy_2_1_entry_seq_ieee_audit : axpy_2_1_entry_seq_ieee_spec := axpy_2_1_entry_seq_ieee_correct.
+Print Assumptions axpy_2_1_entry_seq_ieee_correct.
+
+Definition axpy_2_1_entry_lanes_ieee_audit : axpy_2_1_entry_lanes_ieee_spec := axpy_2_1_entry_lanes_ieee_correct.
+Print Assumptions axpy_2_1_entry_lanes_ieee_correct.
+
+Definition axpy_2_entry_seq_ieee_audit : axpy_2_entry_seq_ieee_spec := axpy_2_entry_seq_ieee_correct.
+Print Assumptions axpy_2_entry_seq_ieee_correct.
+
+Definition axpy_2_entry_lanes_ieee_audit : axpy_2_entry_lanes_ieee_spec := axpy_2_entry_lanes_ieee_correct.
+Print Assumptions axpy_2_entry_lanes_ieee_correct.
+
+Definition mul_pow2_map_1_seq_ieee_audit : mul_pow2_map_1_seq_ieee_spec := mul_pow2_map_1_seq_ieee_correct.
+Print Assumptions mul_pow2_map_1_seq_ieee_correct.
+
+Definition mul_pow2_map_1_lanes_ieee_audit : mul_pow2_map_1_lanes_ieee_spec := mul_pow2_map_1_lanes_ieee_correct.
+Print Assumptions mul_pow2_map_1_lanes_ieee_correct.
+
+Definition mul_pow2_map_2_seq_ieee_audit : mul_pow2_map_2_seq_ieee_spec := mul_pow2_map_2_seq_ieee_correct.
+Print Assumptions mul_pow2_map_2_seq_ieee_correct.
+
+Definition mul_pow2_map_2_lanes_ieee_audit : mul_pow2_map_2_lanes_ieee_spec := mul_pow2_map_2_lanes_ieee_correct.
+Print Assumptions mul_pow2_map_2_lanes_ieee_correct.
+
+Definition scale_1_seq_ieee_audit : scale_1_seq_ieee_spec := scale_1_seq_ieee_correct.
+Print Assumptions scale_1_seq_ieee_correct.
+
+Definition scale_1_lanes_ieee_audit : scale_1_lanes_ieee_spec := scale_1_lanes_ieee_correct.
+Print Assumptions scale_1_lanes_ieee_correct.
+
+Definition scale_2_seq_ieee_audit : scale_2_seq_ieee_spec := scale_2_seq_ieee_correct.
+Print Assumptions scale_2_seq_ieee_correct.
+
+Definition scale_2_lanes_ieee_audit : scale_2_lanes_ieee_spec := scale_2_lanes_ieee_correct.
+Print Assumptions scale_2_lanes_ieee_correct.
+
+Definition sub_1_seq_ieee_audit : sub_1_seq_ieee_spec := sub_1_seq_ieee_correct.
+Print Assumptions sub_1_seq_ieee_correct.
+
+Definition sub_1_lanes_ieee_audit : sub_1_lanes_ieee_spec := sub_1_lanes_ieee_correct.
+Print Assumptions sub_1_lanes_ieee_correct.
+
+Definition sub_1_entry_seq_ieee_audit : sub_1_entry_seq_ieee_spec := sub_1_entry_seq_ieee_correct.
+Print Assumptions sub_1_entry_seq_ieee_correct.
+
+Definition sub_1_entry_lanes_ieee_audit : sub_1_entry_lanes_ieee_spec := sub_1_entry_lanes_ieee_correct.
+Print Assumptions sub_1_entry_lanes_ieee_correct.
+
+Definition sub_2_seq_ieee_audit : sub_2_seq_ieee_spec := sub_2_seq_ieee_correct.
+Print Assumptions sub_2_seq_ieee_correct.
+
+Definition sub_2_lanes_ieee_audit : sub_2_lanes_ieee_spec := sub_2_lanes_ieee_correct.
+Print Assumptions sub_2_lanes_ieee_correct.
+
+Definition sub_2_entry_seq_ieee_audit : sub_2_entry_seq_ieee_spec := sub_2_entry_seq_ieee_correct.
+Print Assumptions sub_2_entry_seq_ieee_correct.
+
+Definition sub_2_entry_lanes_ieee_audit : sub_2_entry_lanes_ieee_spec := sub_2_entry_lanes_ieee_correct.
+Print Assumptions sub_2_entry_lanes_ieee_correct.

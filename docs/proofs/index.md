@@ -90,8 +90,9 @@ lists:
   (`FoldGuarantee.v`), and of the folds and their steps in the model with overflow
   (`FoldTransfer.v`, `IeeeSteps.v`, `IeeeFolds.v`; [below](#sums-and-dot-products-of-arrays));
   the theorems of the maps, `F_correct` per map `F`, and of their steps (`FoldMaps.v`,
-  `MapSteps.v`), and of the steps in the model with overflow (`IeeeMapSteps.v`;
-  [below](#loops-that-write-an-array)); of the largest magnitude of an array and
+  `MapSteps.v`), and of the maps and their steps in the model with overflow
+  (`IeeeFoldMaps.v`, `IeeeMapSteps.v`; [below](#loops-that-write-an-array)); of the largest
+  magnitude of an array and
   its kernels, over the real numbers and with overflow, infinities and NaN (`FoldNorm.v`,
   `IeeeFoldNorm.v`; [below](#the-largest-magnitude-of-an-array)); of the product of two
   polynomials (`FoldConv.v`; [below](#the-product-of-two-polynomials)); and of the kernels of
@@ -143,13 +144,13 @@ Then it runs the audit, in four steps, each of which stops the build on a failur
 5. **The IEEE-model theorem of every kernel that accepts infinite and NaN operands**, from the
    generated `proofs/gen/IeeeAudit.v`, like step 2; then, in the same file, every other
    IEEE-model theorem that a description names: those of the steps and the combinations of
-   the folds and of the steps of the maps, and of the folds in their two orders.
+   the folds and of the steps of the maps, and of the folds and the maps in their two orders.
 
 What it prints, after the compilation lines, shortened where it says `...` (a run of this version):
 
 ```text
 == text scan of the proof files
-  92 files: no Admitted, admit, Axiom or Parameter
+  93 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
@@ -369,6 +370,25 @@ result means a finite leading limb of every operand, the scalars included (`K_ie
 for `sub_2_2`). Each value of a program at an input position or before its leading limb is in
 the cone of that limb, which is computed: the same theorems of `IeeeBridge.v` as for the steps
 of the folds.
+
+**The maps in the model with overflow** (`IeeeFoldMaps.v`). The generated model of a map in
+this model (`proofs/gen/IeeeFoldModel.v`) is that of the scalar loop: the step on every
+element, the mask, the and of the check of every element written (its leading limb is finite),
+in the sequential order and in the lane order for every `W`, and, when the mask is false, a
+second pass in which every element is replaced by what the check returns of it: itself when
+its leading limb is finite, NaN in every limb otherwise. `F_seq_ieee_correct` and
+`F_lanes_ieee_correct` have the generated statements as their types. For canonical elements
+and scalars (of two limbs: finite and normalized, or an infinity and a zero, or two NaN; of
+one limb, any value; a power of two, finite), entry by entry: if the leading limb returned is
+finite, every limb of the scalars, of the element and of the element returned is finite, the
+values are those of the real-model step on the values of the operands, and the claims of the
+step hold of them; otherwise every limb returned is a NaN and the mask is false; and the mask
+is true exactly when every leading limb returned is finite. So an infinity or a NaN among the
+operands, or an overflow in a step, gives a NaN in that entry and a false mask, never a finite
+wrong element, and the other entries keep their correct values. The proof writes the mask as
+`forallb` of the check, in both orders (`fold_seq_and`, `fold_lanes_and`), and follows its two
+values (`map_entries_mask_true`, `map_entries_mask_false` of `Folds.v`), entry by entry with
+the theorems of the step: its leading limb, its bridge, and its claims (`K_entry`).
 
 ## The largest magnitude of an array
 

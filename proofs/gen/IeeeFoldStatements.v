@@ -635,7 +635,7 @@ Definition sum_fast_2_entry_lanes_ieee_spec : Prop :=
       ((1 + (3 * (u prec ^ 2))) ^ (length vs - 1) - 1) * sumabs (map (fun x => (fst x + snd x)) vs)) /\
   (flag = false -> nan r0 /\ nan r1).
 
-(* add_1, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* add_1, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition add_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -655,7 +655,7 @@ Definition add_1_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* add_1, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* add_1, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition add_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -675,7 +675,7 @@ Definition add_1_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* add_1_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* add_1_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition add_1_entry_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -695,7 +695,7 @@ Definition add_1_entry_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* add_1_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* add_1_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition add_1_entry_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -715,7 +715,7 @@ Definition add_1_entry_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* add_2, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* add_2, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition add_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -736,7 +736,7 @@ Definition add_2_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* add_2, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* add_2, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition add_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -757,7 +757,7 @@ Definition add_2_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* add_2_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* add_2_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition add_2_entry_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -778,7 +778,7 @@ Definition add_2_entry_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* add_2_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* add_2_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition add_2_entry_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -799,7 +799,7 @@ Definition add_2_entry_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* axpy_1, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* axpy_1, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition axpy_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -818,7 +818,7 @@ Definition axpy_1_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* axpy_1, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* axpy_1, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition axpy_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -837,7 +837,7 @@ Definition axpy_1_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* axpy_1_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* axpy_1_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition axpy_1_entry_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -856,7 +856,7 @@ Definition axpy_1_entry_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* axpy_1_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* axpy_1_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition axpy_1_entry_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -875,7 +875,7 @@ Definition axpy_1_entry_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* axpy_2, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* axpy_2, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition axpy_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -897,7 +897,7 @@ Definition axpy_2_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* axpy_2, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* axpy_2, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition axpy_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -919,7 +919,7 @@ Definition axpy_2_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* axpy_2_1, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* axpy_2_1, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition axpy_2_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -940,7 +940,7 @@ Definition axpy_2_1_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* axpy_2_1, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* axpy_2_1, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition axpy_2_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -961,7 +961,7 @@ Definition axpy_2_1_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* axpy_2_1_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* axpy_2_1_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition axpy_2_1_entry_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -982,7 +982,7 @@ Definition axpy_2_1_entry_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* axpy_2_1_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* axpy_2_1_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition axpy_2_1_entry_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1003,7 +1003,7 @@ Definition axpy_2_1_entry_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* axpy_2_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* axpy_2_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition axpy_2_entry_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1025,7 +1025,7 @@ Definition axpy_2_entry_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* axpy_2_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* axpy_2_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition axpy_2_entry_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1047,7 +1047,7 @@ Definition axpy_2_entry_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* mul_pow2_map_1, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* mul_pow2_map_1, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition mul_pow2_map_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1068,7 +1068,7 @@ Definition mul_pow2_map_1_seq_ieee_spec : Prop :=
     xs ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* mul_pow2_map_1, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* mul_pow2_map_1, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition mul_pow2_map_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1089,7 +1089,7 @@ Definition mul_pow2_map_1_lanes_ieee_spec : Prop :=
     xs ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* mul_pow2_map_2, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* mul_pow2_map_2, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition mul_pow2_map_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1112,7 +1112,7 @@ Definition mul_pow2_map_2_seq_ieee_spec : Prop :=
     xs ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* mul_pow2_map_2, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* mul_pow2_map_2, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition mul_pow2_map_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1135,7 +1135,7 @@ Definition mul_pow2_map_2_lanes_ieee_spec : Prop :=
     xs ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* scale_1, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* scale_1, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition scale_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1154,7 +1154,7 @@ Definition scale_1_seq_ieee_spec : Prop :=
     xs ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* scale_1, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* scale_1, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition scale_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1173,7 +1173,7 @@ Definition scale_1_lanes_ieee_spec : Prop :=
     xs ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* scale_2, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* scale_2, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition scale_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1194,7 +1194,7 @@ Definition scale_2_seq_ieee_spec : Prop :=
     xs ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* scale_2, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* scale_2, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition scale_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1215,7 +1215,7 @@ Definition scale_2_lanes_ieee_spec : Prop :=
     xs ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* sub_1, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* sub_1, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition sub_1_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1235,7 +1235,7 @@ Definition sub_1_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* sub_1, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* sub_1, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition sub_1_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1255,7 +1255,7 @@ Definition sub_1_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* sub_1_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* sub_1_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition sub_1_entry_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1275,7 +1275,7 @@ Definition sub_1_entry_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* sub_1_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* sub_1_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition sub_1_entry_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1295,7 +1295,7 @@ Definition sub_1_entry_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite w_) ws_).
 
-(* sub_2, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* sub_2, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition sub_2_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1316,7 +1316,7 @@ Definition sub_2_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* sub_2, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* sub_2, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition sub_2_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1337,7 +1337,7 @@ Definition sub_2_lanes_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* sub_2_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* sub_2_entry, the sequential order, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition sub_2_entry_seq_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
@@ -1358,7 +1358,7 @@ Definition sub_2_entry_seq_ieee_spec : Prop :=
     xys ws_ /\
   (flag_ = true <-> Forall (fun w_ => finite (fst w_)) ws_).
 
-(* sub_2_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: unverified. *)
+(* sub_2_entry, the lane order, for every number of lanes W, in the IEEE model: each element it writes, and its mask. Status: proved. *)
 Definition sub_2_entry_lanes_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
          (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
