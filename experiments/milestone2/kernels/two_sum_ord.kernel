@@ -1,0 +1,17 @@
+# TwoSum by ordering: Fast2Sum of the operands ordered by magnitude with two selects. Unlike
+# two_sum, its error term is finite whenever its sum is, so the sign of e can be trusted at the
+# top of the range (decisions.md, the log of 2026-11-18).
+kernel:        two_sum_ord
+input:         a
+input:         b
+output:        r = s e
+value:         a+b
+status:        unverified
+cone_exempt:   the operands are ordered by select; the IEEE-model statement says what s and e are for every operand
+
+aa     = abs(a)
+ab     = abs(b)
+m      = lt(aa, ab)
+h      = select(m, b, a)
+l      = select(m, a, b)
+(s, e) = fast_two_sum(h, l)

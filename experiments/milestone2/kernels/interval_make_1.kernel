@@ -1,0 +1,24 @@
+# An interval from two values of T supplied by the program, guarded (rule R3): [lo, hi] when
+# lo <= hi, lo < +inf and hi > -inf (so neither is a NaN), and the empty set otherwise.
+kernel:        interval_make_1
+input:         lo
+input:         hi
+output:        zl
+output:        zu
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+ieee_only:     yes
+cone_exempt:   both outputs are selected after explicit tests of the bounds
+
+gl = guard(lo)
+gu = guard(hi)
+ok = le(gl, gu)
+nl = lt(gl, const inf)
+mi = neg(const inf)
+nu = lt(mi, gu)
+va = and(ok, nl)
+v  = and(va, nu)
+zl = select(v, gl, const inf)
+zu = select(v, gu, mi)

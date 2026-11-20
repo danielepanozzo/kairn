@@ -1,0 +1,4 @@
+W = fp:7:-22:2, N = fp:3:-8:1: 30683 conversions of two limbs (28414 beyond the range of N); largest error over the bound: one wide limb 0.909, two wide limbs 0.990; 4384 balls contained
+W = fp:9:-24:0, N = fp:4:-10:0: 28160 conversions of two limbs (31154 beyond the range of N); largest error over the bound: one wide limb 0.703, two wide limbs 0.981; 4023 balls contained
+W = fp:6:-18:2, N = fp:3:-8:2: 37907 conversions of two limbs (21544 beyond the range of N); largest error over the bound: one wide limb 0.953, two wide limbs 0.995; 5416 balls contained
+every statement held

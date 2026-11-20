@@ -1,0 +1,47 @@
+# The product of two bounds of intervals, enclosed between two canonical 2-limb values l and h.
+# The operands are canonical and not NaN. A zero operand gives zero whatever the other one
+# (0 times infinity is 0); otherwise an infinite operand gives the infinite product, as both
+# values; otherwise mul_dir_2_2, and a value of it that is not finite becomes the infinity on
+# its side (-inf for l, +inf for h), which is always a bound.
+kernel:        mul_ext_2_2
+input:         x = x0 x1
+input:         y = y0 y1
+output:        l = l0 l1
+output:        h = h0 h1
+value:         x*y
+requires:      canonical x
+requires:      canonical y
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+ieee_only:     yes
+cone_exempt:   every output is selected after explicit tests of the operands and of the finite results
+
+(c0, c1, e0, e1) = mul_dir_2_2(x0, x1, y0, y1)
+t   = prod(x0, y0)
+ax  = abs(x0)
+fx  = lt(ax, const inf)
+ay  = abs(y0)
+fy  = lt(ay, const inf)
+fo  = and(fx, fy)
+zx  = eq(x0, 0)
+zy  = eq(y0, 0)
+zz  = or(zx, zy)
+nz  = not(zz)
+ac  = abs(c0)
+fc  = lt(ac, const inf)
+ae  = abs(e0)
+fe  = lt(ae, const inf)
+mi  = neg(const inf)
+p0  = select(fc, c0, mi)
+p1  = select(fc, c1, 0)
+q0  = select(fe, e0, const inf)
+q1  = select(fe, e1, 0)
+r0  = select(fo, p0, t)
+r1  = select(fo, p1, 0)
+s0  = select(fo, q0, t)
+s1  = select(fo, q1, 0)
+l0  = select(nz, r0, 0)
+l1  = select(nz, r1, 0)
+h0  = select(nz, s0, 0)
+h1  = select(nz, s1, 0)

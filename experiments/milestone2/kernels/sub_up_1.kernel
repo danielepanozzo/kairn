@@ -1,0 +1,11 @@
+# RU(a - b), through add_up_1.
+kernel:        sub_up_1
+input:         a
+input:         b
+output:        r
+value:         a-b
+status:        unverified
+cone_exempt:   through add_up_1
+
+nb = neg(b)
+r  = add_up_1(a, nb)

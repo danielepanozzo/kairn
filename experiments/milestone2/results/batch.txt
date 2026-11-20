@@ -1,0 +1,9 @@
+p=4 eta=2^-10: sum, largest error over ((1+eps)^h - 1) sum|x|: one limb 1.000, two limbs 0.214; dot, over its bound 0.531, over the exported bound 0.282
+     bound_sum_2: g / gamma at most 1.674, finite up to m = 15; axpy radius equal to the largest entrywise radius in 1308 of 1500; 1500 polynomial products contained, largest needed radius over conv_radius 0.453
+p=5 eta=2^-14: sum, largest error over ((1+eps)^h - 1) sum|x|: one limb 1.000, two limbs 0.283; dot, over its bound 0.637, over the exported bound 0.330
+     bound_sum_2: g / gamma at most 1.311, finite up to m = 64; axpy radius equal to the largest entrywise radius in 1183 of 1500; 1500 polynomial products contained, largest needed radius over conv_radius 0.285
+p=6 eta=2^-18: sum, largest error over ((1+eps)^h - 1) sum|x|: one limb 0.970, two limbs 0.242; dot, over its bound 0.715, over the exported bound 0.372
+     bound_sum_2: g / gamma at most 1.219, finite up to m = 256; axpy radius equal to the largest entrywise radius in 1140 of 1500; 1500 polynomial products contained, largest needed radius over conv_radius 0.144
+binary32: bound_sum_2 and bound_dot_2 hold for counts up to 2^23; bound_sum_2 exceeds gamma by at most 4.67e-07 of it
+binary64: bound_sum_2 and bound_dot_2 hold for counts up to 2^52; bound_sum_2 exceeds gamma by at most 8.70e-16 of it
+every statement held

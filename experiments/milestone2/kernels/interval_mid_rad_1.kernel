@@ -1,0 +1,43 @@
+# The midpoint and the radius of an interval with one-limb bounds. For a bounded interval the
+# midpoint is RN(RN(xl/2) + RN(xu/2)) moved into [xl, xu] if it fell outside (it can, by eta, when
+# a halving underflows), and the radius is the larger of RU(m - xl) and RU(xu - m), so that
+# [m - r, m + r] contains the interval. As in IEEE 1788: the whole line has midpoint 0, a half-line
+# the largest finite number of its sign, both with radius +inf; the empty set gives two NaN.
+kernel:        interval_mid_rad_1
+input:         stored xl
+input:         stored xu
+output:        m
+output:        r
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+ieee_only:     yes
+cone_exempt:   every output is selected after explicit tests of the bounds
+
+om = pred(const inf)
+mo = neg(om)
+ml = lt(xl, mo)
+l  = select(ml, mo, xl)
+mu = lt(om, xu)
+h  = select(mu, om, xu)
+hl = prod(l, const up(1/2))
+hu = prod(h, const up(1/2))
+ma = add(hl, hu)
+ca = lt(ma, l)
+mb = select(ca, l, ma)
+cb = lt(h, mb)
+mc = select(cb, h, mb)
+ra = sub_up_1(mc, l)
+rb = sub_up_1(h, mc)
+rm = lt(ra, rb)
+rc = select(rm, rb, ra)
+md = select(ml, mo, mc)
+me = select(mu, om, md)
+bo = and(ml, mu)
+mf = select(bo, 0, me)
+un = or(ml, mu)
+rd = select(un, const inf, rc)
+ne = lt(xl, const inf)
+m  = select(ne, mf, const nan)
+r  = select(ne, rd, const nan)

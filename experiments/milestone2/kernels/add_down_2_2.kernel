@@ -1,0 +1,15 @@
+# A normalized pair that is at most x + y: the sum by add_2_2, its second limb moved down by the
+# bound d of the sum's own error, rounded down, and the pair renormalized exactly.
+kernel:        add_down_2_2
+input:         x = x0 x1
+input:         y = y0 y1
+output:        l = l0 l1
+value:         x+y
+requires:      normalized x
+requires:      normalized y
+status:        unverified
+cone_exempt:   through sub_down_1 and two_sum_ord, which select; the interval kernels test l0
+
+(z0, z1, d) = add_ball_2_2(x0, x1, y0, y1)
+w           = sub_down_1(z1, d)
+(l0, l1)    = two_sum_ord(z0, w)

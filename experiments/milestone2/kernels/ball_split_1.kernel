@@ -1,0 +1,33 @@
+# Two balls that together cover a ball with a one-limb center: the left one contains [c - r, c],
+# the right one [c, c + r]. Each is the proved sum ball_add_1_full of the point c and a ball of
+# center -h or +h, where h = RN(r/2), and of radius max(h, r - h) (r - h is exact). The whole
+# line and the empty set are returned twice, as they are.
+kernel:        ball_split_1
+input:         stored c
+input:         stored r
+output:        ca
+output:        ra
+output:        cb
+output:        rb
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+ieee_only:     yes
+cone_exempt:   through ball_add_1_full, which states what comes out; the special states are selected after an explicit test
+
+h        = prod(r, const up(1/2))
+g        = sub(r, h)
+mg       = lt(h, g)
+q        = select(mg, g, h)
+fr       = lt(r, const inf)
+hs       = select(fr, h, 0)
+ws       = select(fr, q, 0)
+cs       = select(fr, c, 0)
+nh       = neg(hs)
+(a0, a1) = ball_add_1_full(cs, 0, nh, ws)
+(b0, b1) = ball_add_1_full(cs, 0, hs, ws)
+ca       = select(fr, a0, c)
+ra       = select(fr, a1, r)
+cb       = select(fr, b0, c)
+rb       = select(fr, b1, r)

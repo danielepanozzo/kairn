@@ -1,0 +1,13 @@
+fp:2:-2:1    prod as fma and as a plain product differ on 38 operand pairs, all of them exact zeros of different signs: True; rmul differs on 0; mul_pow2_2 differs on 0 (in a value: 0)
+             ball_mul_pow2_1: 744 finite cases, 371 exact; otherwise rz - c rx <= 12.00 eta; the two executions differ on 0 (always only in the sign of a zero)
+             ball_mul_pow2_2: 1856 finite cases, 461 exact; otherwise rz - c rx <= 12.00 eta; the two executions differ on 0 (always only in the sign of a zero)
+fp:3:-4:1    prod as fma and as a plain product differ on 110 operand pairs, all of them exact zeros of different signs: True; rmul differs on 0; mul_pow2_2 differs on 0 (in a value: 0)
+             ball_mul_pow2_1: 10076 finite cases, 4945 exact; otherwise rz - c rx <= 64.00 eta; the two executions differ on 0 (always only in the sign of a zero)
+             ball_mul_pow2_2: 67576 finite cases, 13191 exact; otherwise rz - c rx <= 64.00 eta; the two executions differ on 0 (always only in the sign of a zero)
+fp:4:-6:1    prod as fma and as a plain product differ on 286 operand pairs, all of them exact zeros of different signs: True; rmul differs on 0; mul_pow2_2 differs on 0 (in a value: 0)
+             ball_mul_pow2_1: 94076 finite cases, 46153 exact; otherwise rz - c rx <= 256.00 eta; the two executions differ on 0 (always only in the sign of a zero)
+             ball_mul_pow2_2: 395792 finite cases, 69468 exact; otherwise rz - c rx <= 256.00 eta; the two executions differ on 0 (always only in the sign of a zero)
+fp:3:-6:0    prod as fma and as a plain product differ on 126 operand pairs, all of them exact zeros of different signs: True; rmul differs on 0; mul_pow2_2 differs on 0 (in a value: 0)
+             ball_mul_pow2_1: 16752 finite cases, 6729 exact; otherwise rz - c rx <= 128.00 eta; the two executions differ on 0 (always only in the sign of a zero)
+             ball_mul_pow2_2: 166956 finite cases, 30455 exact; otherwise rz - c rx <= 128.00 eta; the two executions differ on 0 (always only in the sign of a zero)
+every statement held

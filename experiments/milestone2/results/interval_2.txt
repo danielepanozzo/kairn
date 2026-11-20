@@ -1,0 +1,6 @@
+fp:3:-4:1    add: 39194 nonempty pairs (12227 with an unbounded operand, 18268 unbounded from bounded operands, first at 0.617 of the threshold); largest gap over A|v|+B: 0.384; exact range [0,0] returned as [0,0] in 0, widened in 5
+fp:4:-6:1    add: 29399 nonempty pairs (9284 with an unbounded operand, 9464 unbounded from bounded operands, first at 0.578 of the threshold); largest gap over A|v|+B: 0.456; exact range [0,0] returned as [0,0] in 0, widened in 4
+fp:4:-6:1    mul: 29384 nonempty pairs (9212 with an unbounded operand, 18796 unbounded from bounded operands, first at 0.918 of the threshold); largest gap over A|v|+B: 0.481; exact range [0,0] returned as [0,0] in 509, widened in 0
+fp:5:-9:2    add: 11766 nonempty pairs (3763 with an unbounded operand, 2002 unbounded from bounded operands, first at 0.969 of the threshold); largest gap over A|v|+B: 0.519; exact range [0,0] returned as [0,0] in 0, widened in 2
+fp:5:-9:2    mul: 11752 nonempty pairs (3730 with an unbounded operand, 7415 unbounded from bounded operands, first at 0.976 of the threshold); largest gap over A|v|+B: 0.499; exact range [0,0] returned as [0,0] in 184, widened in 0
+every statement held

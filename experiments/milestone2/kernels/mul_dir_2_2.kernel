@@ -1,0 +1,18 @@
+# Two normalized pairs l <= x y <= h from one product by mul_2_2: its second limb moved down and
+# up by the bound d of the product's own error, and each pair renormalized exactly.
+kernel:        mul_dir_2_2
+input:         x = x0 x1
+input:         y = y0 y1
+output:        l = l0 l1
+output:        h = h0 h1
+value:         x*y
+requires:      normalized x
+requires:      normalized y
+status:        unverified
+cone_exempt:   through the directed sums and two_sum_ord, which select; the interval kernels test l0 and h0
+
+(z0, z1, d) = mul_ball_2_2(x0, x1, y0, y1)
+wl          = sub_down_1(z1, d)
+wu          = add_up_1(z1, d)
+(l0, l1)    = two_sum_ord(z0, wl)
+(h0, h1)    = two_sum_ord(z0, wu)

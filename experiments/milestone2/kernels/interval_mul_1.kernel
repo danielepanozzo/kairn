@@ -1,0 +1,39 @@
+# The product of two intervals with one-limb bounds, without a branch: the four products of
+# bounds, each rounded down and up (0 times infinity is 0), the least of the four lower values
+# and the greatest of the four upper ones.
+kernel:        interval_mul_1
+input:         stored xl
+input:         stored xu
+input:         stored yl
+input:         stored yu
+output:        zl
+output:        zu
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+ieee_only:     yes
+cone_exempt:   the bounds are selected among directed products, and the empty set after an explicit test
+
+(d1, v1) = mul_dir_1(xl, yl)
+(d2, v2) = mul_dir_1(xl, yu)
+(d3, v3) = mul_dir_1(xu, yl)
+(d4, v4) = mul_dir_1(xu, yu)
+ma       = lt(d2, d1)
+da       = select(ma, d2, d1)
+mb       = lt(d4, d3)
+db       = select(mb, d4, d3)
+mc       = lt(db, da)
+l        = select(mc, db, da)
+na       = lt(v1, v2)
+va       = select(na, v2, v1)
+nb       = lt(v3, v4)
+vb       = select(nb, v4, v3)
+nc       = lt(va, vb)
+h        = select(nc, vb, va)
+nx       = lt(xl, const inf)
+ny       = lt(yl, const inf)
+ne       = and(nx, ny)
+mi       = neg(const inf)
+zl       = select(ne, l, const inf)
+zu       = select(ne, h, mi)

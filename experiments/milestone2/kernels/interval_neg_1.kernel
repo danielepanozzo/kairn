@@ -1,0 +1,15 @@
+# The negation of an interval: exact; the empty set (+inf, -inf) is its own negation.
+kernel:        interval_neg_1
+input:         stored xl
+input:         stored xu
+output:        zl
+output:        zu
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+ieee_only:     yes
+cone_exempt:   sign changes only; the statement says what comes out for every canonical interval
+
+zl = neg(xu)
+zu = neg(xl)

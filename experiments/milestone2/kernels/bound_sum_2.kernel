@@ -1,0 +1,22 @@
+# The exported bound of a sum of 2-limb numbers, as a function of the number m of additions on a
+# path of the summation tree. When the mask ok is true, g >= gamma_m(eps) = m eps / (1 - m eps),
+# with eps the proved unit of add_2_2, for m = 0 or m >= 1. ok is true at least when m eps <= 1/5;
+# when it is false the header returns +inf, which claims nothing. Only products and sums of
+# nonnegative numbers, so that the same listing runs in constant evaluation with plain products.
+#   a  >= m eps                         (the constant holds a factor 1 + u and eta / 2)
+#   aa >= (1 + u) (m eps + eta / 2)
+#   w  >= 1 + 2 a                       (for a <= 1/2)
+#   g  >= m eps (1 + 2 m eps) >= gamma_m(eps)   (for m eps <= 1/2)
+kernel:        bound_sum_2
+input:         m
+output:        g
+output:        mask ok
+min_precision: 3
+status:        unverified
+
+a  = prod(m, const up((1+u)*(unit(add_2_2)+eta/2)))
+aa = prod(m, const up((1+u)^2*(unit(add_2_2)+eta)))
+d  = add(a, a)
+w  = add(d, const up(1+2*u))
+g  = prod(aa, w)
+ok = le(a, const up(1/4))

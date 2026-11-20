@@ -1,0 +1,18 @@
+# The sum of two 2-limb numbers with a bound d of its own error: |z - (x + y)| <= d. d is the
+# radius that ball_add_2 returns for radii zero, with the same three constants E, G, H: there
+# s = add(0, 0) = 0 and t = fma(az, E, 0), which is prod(az, E).
+kernel:        add_ball_2_2
+input:         x = x0 x1
+input:         y = y0 y1
+output:        z = z0 z1
+output:        d
+value:         x+y
+requires:      normalized x
+requires:      normalized y
+min_precision: 3
+status:        unverified
+
+(z0, z1) = add_2_2(x0, x1, y0, y1)
+az       = abs(z0)
+t        = prod(az, const up(unit(add_2_2)/(1-unit(add_2_2))*(1+u)))
+d        = fma(t, const up((1+u)^3), const up((1+u)*((1+u)^2*eta+eta/2)+eta/(2*u)))

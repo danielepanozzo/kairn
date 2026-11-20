@@ -1,0 +1,47 @@
+# A ball with a 2-limb center from an interval [lo, hi] of two values of T supplied by the
+# program (guarded, rule R3). The center is lo/2 + hi/2 as an exact 2-limb number, by two_sum_ord;
+# the radius is RU(hi/2 - lo/2), the smallest radius of T for that center. When a halving is not
+# exact (a bound that is an odd multiple of eta) the center may be off by eta, and the radius is
+# the number after RN(RU(hi/2 - lo/2) + eta). States: the empty set when lo <= hi is false (lo > hi,
+# or a NaN) or lo = +inf or hi = -inf; the whole line when a bound is infinite.
+kernel:        ball_from_interval_2
+input:         lo
+input:         hi
+output:        cw = cw0 cw1
+output:        rw
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+ieee_only:     yes
+cone_exempt:   every output is selected after explicit tests of the bounds
+
+gl       = guard(lo)
+gu       = guard(hi)
+hl       = prod(gl, const up(1/2))
+hu       = prod(gu, const up(1/2))
+(c0, c1) = two_sum_ord(hl, hu)
+d        = sub_up_1(hu, hl)
+bl       = add(hl, hl)
+bu       = add(hu, hu)
+xl       = eq(bl, gl)
+xu       = eq(bu, gu)
+xx       = and(xl, xu)
+da       = add(d, const up(eta))
+dn       = succ(da)
+r        = select(xx, d, dn)
+ok       = le(gl, gu)
+nl       = lt(gl, const inf)
+mi       = neg(const inf)
+nu       = lt(mi, gu)
+va       = and(ok, nl)
+v        = and(va, nu)
+fl       = lt(mi, gl)
+fu       = lt(gu, const inf)
+f        = and(fl, fu)
+k0       = select(f, c0, 0)
+k1       = select(f, c1, 0)
+s        = select(f, r, const inf)
+cw0      = select(v, k0, const nan)
+cw1      = select(v, k1, const nan)
+rw       = select(v, s, const nan)

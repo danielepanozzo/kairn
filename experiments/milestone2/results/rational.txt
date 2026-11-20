@@ -1,0 +1,6 @@
+fp:3:-9:60   8930 results with |num|, den < 48 and 6000 near ties with 15-bit terms: all equal to the specification; leading limb moved by the renormalization in 328
+fp:4:-11:60  8930 results with |num|, den < 48 and 6000 near ties with 15-bit terms: all equal to the specification; leading limb moved by the renormalization in 247
+fp:5:-14:60  8930 results with |num|, den < 48 and 6000 near ties with 15-bit terms: all equal to the specification; leading limb moved by the renormalization in 213
+binary64: 80060 results with 64-bit terms, 20 000 of them near ties: all equal to the specification; leading limb moved by the renormalization in 733; widest integer formed: 168 bits
+binary32: 80060 results with 64-bit terms, 20 000 of them near ties: all equal to the specification; leading limb moved by the renormalization in 743; widest integer formed: 110 bits
+every statement held
