@@ -393,6 +393,308 @@ KAIRN_GEN_FORCEINLINE void ball_add_1_full(float32x4_t cx, float32x4_t rx, float
     rw_out = rw;
 }
 
+// abs_2(x = (x0, x1)) -> z = (z0, z1)
+KAIRN_GEN_FORCEINLINE void abs_2(float64x2_t x0, float64x2_t x1, float64x2_t& z0_out, float64x2_t& z1_out) noexcept {
+    const uint64x2_t m = vcltq_f64(x0, vdupq_n_f64(0.0));
+    const float64x2_t n0 = vnegq_f64(x0);
+    const float64x2_t n1 = vnegq_f64(x1);
+    const float64x2_t z0 = vbslq_f64(m, n0, x0);
+    const float64x2_t z1 = vbslq_f64(m, n1, x1);
+    z0_out = z0;
+    z1_out = z1;
+}
+KAIRN_GEN_FORCEINLINE void abs_2(float32x4_t x0, float32x4_t x1, float32x4_t& z0_out, float32x4_t& z1_out) noexcept {
+    const uint32x4_t m = vcltq_f32(x0, vdupq_n_f32(0.0f));
+    const float32x4_t n0 = vnegq_f32(x0);
+    const float32x4_t n1 = vnegq_f32(x1);
+    const float32x4_t z0 = vbslq_f32(m, n0, x0);
+    const float32x4_t z1 = vbslq_f32(m, n1, x1);
+    z0_out = z0;
+    z1_out = z1;
+}
+
+// le_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
+KAIRN_GEN_FORCEINLINE void le_2_2(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, uint64x2_t& m_out) noexcept {
+    const uint64x2_t h = vcltq_f64(x0, y0);
+    const uint64x2_t e = vceqq_f64(x0, y0);
+    const uint64x2_t l = vcleq_f64(x1, y1);
+    const uint64x2_t t = vandq_u64(e, l);
+    const uint64x2_t m = vorrq_u64(h, t);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void le_2_2(float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, uint32x4_t& m_out) noexcept {
+    const uint32x4_t h = vcltq_f32(x0, y0);
+    const uint32x4_t e = vceqq_f32(x0, y0);
+    const uint32x4_t l = vcleq_f32(x1, y1);
+    const uint32x4_t t = vandq_u32(e, l);
+    const uint32x4_t m = vorrq_u32(h, t);
+    m_out = m;
+}
+
+// ball_contains_ball_1(cx, rx, cy, ry) -> mask m
+KAIRN_GEN_FORCEINLINE void ball_contains_ball_1(float64x2_t cx, float64x2_t rx, float64x2_t cy, float64x2_t ry, uint64x2_t& m_out) noexcept {
+    const float64x2_t ncx = vnegq_f64(cx);
+    // (d0, d1) = two_sum_ord(cy, ncx)
+    const float64x2_t d0_aa = vabsq_f64(cy);
+    const float64x2_t d0_ab = vabsq_f64(ncx);
+    const uint64x2_t d0_m = vcltq_f64(d0_aa, d0_ab);
+    const float64x2_t d0_h = vbslq_f64(d0_m, ncx, cy);
+    const float64x2_t d0_l = vbslq_f64(d0_m, cy, ncx);
+    // (d0, d1) = fast_two_sum(d0_h, d0_l)
+    const float64x2_t d0 = vaddq_f64(d0_h, d0_l);
+    const float64x2_t d0_z = vsubq_f64(d0, d0_h);
+    const float64x2_t d1 = vsubq_f64(d0_l, d0_z);
+    // (a0, a1) = abs_2(d0, d1)
+    const uint64x2_t a0_m = vcltq_f64(d0, vdupq_n_f64(0.0));
+    const float64x2_t a0_n0 = vnegq_f64(d0);
+    const float64x2_t a0_n1 = vnegq_f64(d1);
+    const float64x2_t a0 = vbslq_f64(a0_m, a0_n0, d0);
+    const float64x2_t a1 = vbslq_f64(a0_m, a0_n1, d1);
+    const float64x2_t nry = vnegq_f64(ry);
+    // (g0, g1) = two_sum_ord(rx, nry)
+    const float64x2_t g0_aa = vabsq_f64(rx);
+    const float64x2_t g0_ab = vabsq_f64(nry);
+    const uint64x2_t g0_m = vcltq_f64(g0_aa, g0_ab);
+    const float64x2_t g0_h = vbslq_f64(g0_m, nry, rx);
+    const float64x2_t g0_l = vbslq_f64(g0_m, rx, nry);
+    // (g0, g1) = fast_two_sum(g0_h, g0_l)
+    const float64x2_t g0 = vaddq_f64(g0_h, g0_l);
+    const float64x2_t g0_z = vsubq_f64(g0, g0_h);
+    const float64x2_t g1 = vsubq_f64(g0_l, g0_z);
+    // (f) = le_2_2(a0, a1, g0, g1)
+    const uint64x2_t f_h = vcltq_f64(a0, g0);
+    const uint64x2_t f_e = vceqq_f64(a0, g0);
+    const uint64x2_t f_l = vcleq_f64(a1, g1);
+    const uint64x2_t f_t = vandq_u64(f_e, f_l);
+    const uint64x2_t f = vorrq_u64(f_h, f_t);
+    const uint64x2_t wx = vceqq_f64(rx, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t qy = vceqq_f64(ry, ry);
+    const uint64x2_t ey = not_mask(qy);
+    const uint64x2_t sp = vorrq_u64(wx, ey);
+    const uint64x2_t m = vorrq_u64(sp, f);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void ball_contains_ball_1(float32x4_t cx, float32x4_t rx, float32x4_t cy, float32x4_t ry, uint32x4_t& m_out) noexcept {
+    const float32x4_t ncx = vnegq_f32(cx);
+    // (d0, d1) = two_sum_ord(cy, ncx)
+    const float32x4_t d0_aa = vabsq_f32(cy);
+    const float32x4_t d0_ab = vabsq_f32(ncx);
+    const uint32x4_t d0_m = vcltq_f32(d0_aa, d0_ab);
+    const float32x4_t d0_h = vbslq_f32(d0_m, ncx, cy);
+    const float32x4_t d0_l = vbslq_f32(d0_m, cy, ncx);
+    // (d0, d1) = fast_two_sum(d0_h, d0_l)
+    const float32x4_t d0 = vaddq_f32(d0_h, d0_l);
+    const float32x4_t d0_z = vsubq_f32(d0, d0_h);
+    const float32x4_t d1 = vsubq_f32(d0_l, d0_z);
+    // (a0, a1) = abs_2(d0, d1)
+    const uint32x4_t a0_m = vcltq_f32(d0, vdupq_n_f32(0.0f));
+    const float32x4_t a0_n0 = vnegq_f32(d0);
+    const float32x4_t a0_n1 = vnegq_f32(d1);
+    const float32x4_t a0 = vbslq_f32(a0_m, a0_n0, d0);
+    const float32x4_t a1 = vbslq_f32(a0_m, a0_n1, d1);
+    const float32x4_t nry = vnegq_f32(ry);
+    // (g0, g1) = two_sum_ord(rx, nry)
+    const float32x4_t g0_aa = vabsq_f32(rx);
+    const float32x4_t g0_ab = vabsq_f32(nry);
+    const uint32x4_t g0_m = vcltq_f32(g0_aa, g0_ab);
+    const float32x4_t g0_h = vbslq_f32(g0_m, nry, rx);
+    const float32x4_t g0_l = vbslq_f32(g0_m, rx, nry);
+    // (g0, g1) = fast_two_sum(g0_h, g0_l)
+    const float32x4_t g0 = vaddq_f32(g0_h, g0_l);
+    const float32x4_t g0_z = vsubq_f32(g0, g0_h);
+    const float32x4_t g1 = vsubq_f32(g0_l, g0_z);
+    // (f) = le_2_2(a0, a1, g0, g1)
+    const uint32x4_t f_h = vcltq_f32(a0, g0);
+    const uint32x4_t f_e = vceqq_f32(a0, g0);
+    const uint32x4_t f_l = vcleq_f32(a1, g1);
+    const uint32x4_t f_t = vandq_u32(f_e, f_l);
+    const uint32x4_t f = vorrq_u32(f_h, f_t);
+    const uint32x4_t wx = vceqq_f32(rx, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t qy = vceqq_f32(ry, ry);
+    const uint32x4_t ey = not_mask(qy);
+    const uint32x4_t sp = vorrq_u32(wx, ey);
+    const uint32x4_t m = vorrq_u32(sp, f);
+    m_out = m;
+}
+
+// le_2_1(x = (x0, x1), a) -> mask m
+KAIRN_GEN_FORCEINLINE void le_2_1(float64x2_t x0, float64x2_t x1, float64x2_t a, uint64x2_t& m_out) noexcept {
+    const uint64x2_t h = vcltq_f64(x0, a);
+    const uint64x2_t e = vceqq_f64(x0, a);
+    const uint64x2_t l = vcleq_f64(x1, vdupq_n_f64(0.0));
+    const uint64x2_t t = vandq_u64(e, l);
+    const uint64x2_t m = vorrq_u64(h, t);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void le_2_1(float32x4_t x0, float32x4_t x1, float32x4_t a, uint32x4_t& m_out) noexcept {
+    const uint32x4_t h = vcltq_f32(x0, a);
+    const uint32x4_t e = vceqq_f32(x0, a);
+    const uint32x4_t l = vcleq_f32(x1, vdupq_n_f32(0.0f));
+    const uint32x4_t t = vandq_u32(e, l);
+    const uint32x4_t m = vorrq_u32(h, t);
+    m_out = m;
+}
+
+// ball_contains_point_1(c, r, t) -> mask m
+KAIRN_GEN_FORCEINLINE void ball_contains_point_1(float64x2_t c, float64x2_t r, float64x2_t t, uint64x2_t& m_out) noexcept {
+    const float64x2_t g = vaddq_f64(t, vdupq_n_f64(0.0));
+    const float64x2_t nc = vnegq_f64(c);
+    // (d0, d1) = two_sum_ord(g, nc)
+    const float64x2_t d0_aa = vabsq_f64(g);
+    const float64x2_t d0_ab = vabsq_f64(nc);
+    const uint64x2_t d0_m = vcltq_f64(d0_aa, d0_ab);
+    const float64x2_t d0_h = vbslq_f64(d0_m, nc, g);
+    const float64x2_t d0_l = vbslq_f64(d0_m, g, nc);
+    // (d0, d1) = fast_two_sum(d0_h, d0_l)
+    const float64x2_t d0 = vaddq_f64(d0_h, d0_l);
+    const float64x2_t d0_z = vsubq_f64(d0, d0_h);
+    const float64x2_t d1 = vsubq_f64(d0_l, d0_z);
+    // (a0, a1) = abs_2(d0, d1)
+    const uint64x2_t a0_m = vcltq_f64(d0, vdupq_n_f64(0.0));
+    const float64x2_t a0_n0 = vnegq_f64(d0);
+    const float64x2_t a0_n1 = vnegq_f64(d1);
+    const float64x2_t a0 = vbslq_f64(a0_m, a0_n0, d0);
+    const float64x2_t a1 = vbslq_f64(a0_m, a0_n1, d1);
+    // (m) = le_2_1(a0, a1, r)
+    const uint64x2_t m_h = vcltq_f64(a0, r);
+    const uint64x2_t m_e = vceqq_f64(a0, r);
+    const uint64x2_t m_l = vcleq_f64(a1, vdupq_n_f64(0.0));
+    const uint64x2_t m_t = vandq_u64(m_e, m_l);
+    const uint64x2_t m = vorrq_u64(m_h, m_t);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void ball_contains_point_1(float32x4_t c, float32x4_t r, float32x4_t t, uint32x4_t& m_out) noexcept {
+    const float32x4_t g = vaddq_f32(t, vdupq_n_f32(0.0f));
+    const float32x4_t nc = vnegq_f32(c);
+    // (d0, d1) = two_sum_ord(g, nc)
+    const float32x4_t d0_aa = vabsq_f32(g);
+    const float32x4_t d0_ab = vabsq_f32(nc);
+    const uint32x4_t d0_m = vcltq_f32(d0_aa, d0_ab);
+    const float32x4_t d0_h = vbslq_f32(d0_m, nc, g);
+    const float32x4_t d0_l = vbslq_f32(d0_m, g, nc);
+    // (d0, d1) = fast_two_sum(d0_h, d0_l)
+    const float32x4_t d0 = vaddq_f32(d0_h, d0_l);
+    const float32x4_t d0_z = vsubq_f32(d0, d0_h);
+    const float32x4_t d1 = vsubq_f32(d0_l, d0_z);
+    // (a0, a1) = abs_2(d0, d1)
+    const uint32x4_t a0_m = vcltq_f32(d0, vdupq_n_f32(0.0f));
+    const float32x4_t a0_n0 = vnegq_f32(d0);
+    const float32x4_t a0_n1 = vnegq_f32(d1);
+    const float32x4_t a0 = vbslq_f32(a0_m, a0_n0, d0);
+    const float32x4_t a1 = vbslq_f32(a0_m, a0_n1, d1);
+    // (m) = le_2_1(a0, a1, r)
+    const uint32x4_t m_h = vcltq_f32(a0, r);
+    const uint32x4_t m_e = vceqq_f32(a0, r);
+    const uint32x4_t m_l = vcleq_f32(a1, vdupq_n_f32(0.0f));
+    const uint32x4_t m_t = vandq_u32(m_e, m_l);
+    const uint32x4_t m = vorrq_u32(m_h, m_t);
+    m_out = m;
+}
+
+// lt_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
+KAIRN_GEN_FORCEINLINE void lt_2_2(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, uint64x2_t& m_out) noexcept {
+    const uint64x2_t h = vcltq_f64(x0, y0);
+    const uint64x2_t e = vceqq_f64(x0, y0);
+    const uint64x2_t l = vcltq_f64(x1, y1);
+    const uint64x2_t t = vandq_u64(e, l);
+    const uint64x2_t m = vorrq_u64(h, t);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void lt_2_2(float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, uint32x4_t& m_out) noexcept {
+    const uint32x4_t h = vcltq_f32(x0, y0);
+    const uint32x4_t e = vceqq_f32(x0, y0);
+    const uint32x4_t l = vcltq_f32(x1, y1);
+    const uint32x4_t t = vandq_u32(e, l);
+    const uint32x4_t m = vorrq_u32(h, t);
+    m_out = m;
+}
+
+// ball_equal_1(cx, rx, cy, ry) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void ball_equal_1(float64x2_t cx, float64x2_t rx, float64x2_t cy, float64x2_t ry, uint64x2_t& yes_out, uint64x2_t& no_out) noexcept {
+    const uint64x2_t ea = vceqq_f64(rx, vdupq_n_f64(0.0));
+    const uint64x2_t eb = vceqq_f64(ry, vdupq_n_f64(0.0));
+    const uint64x2_t ec = vceqq_f64(cx, cy);
+    const uint64x2_t eab = vandq_u64(ea, eb);
+    const uint64x2_t yes = vandq_u64(eab, ec);
+    // (s0, s1) = two_sum_ord(rx, ry)
+    const float64x2_t s0_aa = vabsq_f64(rx);
+    const float64x2_t s0_ab = vabsq_f64(ry);
+    const uint64x2_t s0_m = vcltq_f64(s0_aa, s0_ab);
+    const float64x2_t s0_h = vbslq_f64(s0_m, ry, rx);
+    const float64x2_t s0_l = vbslq_f64(s0_m, rx, ry);
+    // (s0, s1) = fast_two_sum(s0_h, s0_l)
+    const float64x2_t s0 = vaddq_f64(s0_h, s0_l);
+    const float64x2_t s0_z = vsubq_f64(s0, s0_h);
+    const float64x2_t s1 = vsubq_f64(s0_l, s0_z);
+    const float64x2_t ncx = vnegq_f64(cx);
+    // (d0, d1) = two_sum_ord(cy, ncx)
+    const float64x2_t d0_aa = vabsq_f64(cy);
+    const float64x2_t d0_ab = vabsq_f64(ncx);
+    const uint64x2_t d0_m = vcltq_f64(d0_aa, d0_ab);
+    const float64x2_t d0_h = vbslq_f64(d0_m, ncx, cy);
+    const float64x2_t d0_l = vbslq_f64(d0_m, cy, ncx);
+    // (d0, d1) = fast_two_sum(d0_h, d0_l)
+    const float64x2_t d0 = vaddq_f64(d0_h, d0_l);
+    const float64x2_t d0_z = vsubq_f64(d0, d0_h);
+    const float64x2_t d1 = vsubq_f64(d0_l, d0_z);
+    // (a0, a1) = abs_2(d0, d1)
+    const uint64x2_t a0_m = vcltq_f64(d0, vdupq_n_f64(0.0));
+    const float64x2_t a0_n0 = vnegq_f64(d0);
+    const float64x2_t a0_n1 = vnegq_f64(d1);
+    const float64x2_t a0 = vbslq_f64(a0_m, a0_n0, d0);
+    const float64x2_t a1 = vbslq_f64(a0_m, a0_n1, d1);
+    // (no) = lt_2_2(s0, s1, a0, a1)
+    const uint64x2_t no_h = vcltq_f64(s0, a0);
+    const uint64x2_t no_e = vceqq_f64(s0, a0);
+    const uint64x2_t no_l = vcltq_f64(s1, a1);
+    const uint64x2_t no_t = vandq_u64(no_e, no_l);
+    const uint64x2_t no = vorrq_u64(no_h, no_t);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void ball_equal_1(float32x4_t cx, float32x4_t rx, float32x4_t cy, float32x4_t ry, uint32x4_t& yes_out, uint32x4_t& no_out) noexcept {
+    const uint32x4_t ea = vceqq_f32(rx, vdupq_n_f32(0.0f));
+    const uint32x4_t eb = vceqq_f32(ry, vdupq_n_f32(0.0f));
+    const uint32x4_t ec = vceqq_f32(cx, cy);
+    const uint32x4_t eab = vandq_u32(ea, eb);
+    const uint32x4_t yes = vandq_u32(eab, ec);
+    // (s0, s1) = two_sum_ord(rx, ry)
+    const float32x4_t s0_aa = vabsq_f32(rx);
+    const float32x4_t s0_ab = vabsq_f32(ry);
+    const uint32x4_t s0_m = vcltq_f32(s0_aa, s0_ab);
+    const float32x4_t s0_h = vbslq_f32(s0_m, ry, rx);
+    const float32x4_t s0_l = vbslq_f32(s0_m, rx, ry);
+    // (s0, s1) = fast_two_sum(s0_h, s0_l)
+    const float32x4_t s0 = vaddq_f32(s0_h, s0_l);
+    const float32x4_t s0_z = vsubq_f32(s0, s0_h);
+    const float32x4_t s1 = vsubq_f32(s0_l, s0_z);
+    const float32x4_t ncx = vnegq_f32(cx);
+    // (d0, d1) = two_sum_ord(cy, ncx)
+    const float32x4_t d0_aa = vabsq_f32(cy);
+    const float32x4_t d0_ab = vabsq_f32(ncx);
+    const uint32x4_t d0_m = vcltq_f32(d0_aa, d0_ab);
+    const float32x4_t d0_h = vbslq_f32(d0_m, ncx, cy);
+    const float32x4_t d0_l = vbslq_f32(d0_m, cy, ncx);
+    // (d0, d1) = fast_two_sum(d0_h, d0_l)
+    const float32x4_t d0 = vaddq_f32(d0_h, d0_l);
+    const float32x4_t d0_z = vsubq_f32(d0, d0_h);
+    const float32x4_t d1 = vsubq_f32(d0_l, d0_z);
+    // (a0, a1) = abs_2(d0, d1)
+    const uint32x4_t a0_m = vcltq_f32(d0, vdupq_n_f32(0.0f));
+    const float32x4_t a0_n0 = vnegq_f32(d0);
+    const float32x4_t a0_n1 = vnegq_f32(d1);
+    const float32x4_t a0 = vbslq_f32(a0_m, a0_n0, d0);
+    const float32x4_t a1 = vbslq_f32(a0_m, a0_n1, d1);
+    // (no) = lt_2_2(s0, s1, a0, a1)
+    const uint32x4_t no_h = vcltq_f32(s0, a0);
+    const uint32x4_t no_e = vceqq_f32(s0, a0);
+    const uint32x4_t no_l = vcltq_f32(s1, a1);
+    const uint32x4_t no_t = vandq_u32(no_e, no_l);
+    const uint32x4_t no = vorrq_u32(no_h, no_t);
+    yes_out = yes;
+    no_out = no;
+}
+
 // ball_from_interval_2(lo, hi) -> cw = (cw0, cw1), rw
 KAIRN_GEN_FORCEINLINE void ball_from_interval_2(float64x2_t lo, float64x2_t hi, float64x2_t& cw0_out, float64x2_t& cw1_out, float64x2_t& rw_out) noexcept {
     const float64x2_t gl = vaddq_f64(lo, vdupq_n_f64(0.0));
@@ -555,6 +857,1220 @@ KAIRN_GEN_FORCEINLINE void sub_down_1(float32x4_t a, float32x4_t b, float32x4_t&
     const float32x4_t r_p = next_down_bits(r_s);
     const float32x4_t r = vbslq_f32(r_n, r_p, r_s);
     r_out = r;
+}
+
+// ball_to_interval_1(c, r) -> zl, zu
+KAIRN_GEN_FORCEINLINE void ball_to_interval_1(float64x2_t c, float64x2_t r, float64x2_t& zl_out, float64x2_t& zu_out) noexcept {
+    // (l) = sub_down_1(c, r)
+    const float64x2_t l_nb = vnegq_f64(r);
+    // (l) = add_down_1(c, l_nb)
+    // (l_s, l_e) = two_sum_ord(c, l_nb)
+    const float64x2_t l_s_aa = vabsq_f64(c);
+    const float64x2_t l_s_ab = vabsq_f64(l_nb);
+    const uint64x2_t l_s_m = vcltq_f64(l_s_aa, l_s_ab);
+    const float64x2_t l_s_h = vbslq_f64(l_s_m, l_nb, c);
+    const float64x2_t l_s_l = vbslq_f64(l_s_m, c, l_nb);
+    // (l_s, l_e) = fast_two_sum(l_s_h, l_s_l)
+    const float64x2_t l_s = vaddq_f64(l_s_h, l_s_l);
+    const float64x2_t l_s_z = vsubq_f64(l_s, l_s_h);
+    const float64x2_t l_e = vsubq_f64(l_s_l, l_s_z);
+    const uint64x2_t l_n = vcltq_f64(l_e, vdupq_n_f64(0.0));
+    const float64x2_t l_p = next_down_bits(l_s);
+    const float64x2_t l = vbslq_f64(l_n, l_p, l_s);
+    // (h) = add_up_1(c, r)
+    // (h_s, h_e) = two_sum_ord(c, r)
+    const float64x2_t h_s_aa = vabsq_f64(c);
+    const float64x2_t h_s_ab = vabsq_f64(r);
+    const uint64x2_t h_s_m = vcltq_f64(h_s_aa, h_s_ab);
+    const float64x2_t h_s_h = vbslq_f64(h_s_m, r, c);
+    const float64x2_t h_s_l = vbslq_f64(h_s_m, c, r);
+    // (h_s, h_e) = fast_two_sum(h_s_h, h_s_l)
+    const float64x2_t h_s = vaddq_f64(h_s_h, h_s_l);
+    const float64x2_t h_s_z = vsubq_f64(h_s, h_s_h);
+    const float64x2_t h_e = vsubq_f64(h_s_l, h_s_z);
+    const uint64x2_t h_n = vcltq_f64(vdupq_n_f64(0.0), h_e);
+    const float64x2_t h_q = next_up_bits(h_s);
+    const float64x2_t h = vbslq_f64(h_n, h_q, h_s);
+    const uint64x2_t ne = vceqq_f64(r, r);
+    const float64x2_t mi = vnegq_f64(vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t zl = vbslq_f64(ne, l, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t zu = vbslq_f64(ne, h, mi);
+    zl_out = zl;
+    zu_out = zu;
+}
+KAIRN_GEN_FORCEINLINE void ball_to_interval_1(float32x4_t c, float32x4_t r, float32x4_t& zl_out, float32x4_t& zu_out) noexcept {
+    // (l) = sub_down_1(c, r)
+    const float32x4_t l_nb = vnegq_f32(r);
+    // (l) = add_down_1(c, l_nb)
+    // (l_s, l_e) = two_sum_ord(c, l_nb)
+    const float32x4_t l_s_aa = vabsq_f32(c);
+    const float32x4_t l_s_ab = vabsq_f32(l_nb);
+    const uint32x4_t l_s_m = vcltq_f32(l_s_aa, l_s_ab);
+    const float32x4_t l_s_h = vbslq_f32(l_s_m, l_nb, c);
+    const float32x4_t l_s_l = vbslq_f32(l_s_m, c, l_nb);
+    // (l_s, l_e) = fast_two_sum(l_s_h, l_s_l)
+    const float32x4_t l_s = vaddq_f32(l_s_h, l_s_l);
+    const float32x4_t l_s_z = vsubq_f32(l_s, l_s_h);
+    const float32x4_t l_e = vsubq_f32(l_s_l, l_s_z);
+    const uint32x4_t l_n = vcltq_f32(l_e, vdupq_n_f32(0.0f));
+    const float32x4_t l_p = next_down_bits(l_s);
+    const float32x4_t l = vbslq_f32(l_n, l_p, l_s);
+    // (h) = add_up_1(c, r)
+    // (h_s, h_e) = two_sum_ord(c, r)
+    const float32x4_t h_s_aa = vabsq_f32(c);
+    const float32x4_t h_s_ab = vabsq_f32(r);
+    const uint32x4_t h_s_m = vcltq_f32(h_s_aa, h_s_ab);
+    const float32x4_t h_s_h = vbslq_f32(h_s_m, r, c);
+    const float32x4_t h_s_l = vbslq_f32(h_s_m, c, r);
+    // (h_s, h_e) = fast_two_sum(h_s_h, h_s_l)
+    const float32x4_t h_s = vaddq_f32(h_s_h, h_s_l);
+    const float32x4_t h_s_z = vsubq_f32(h_s, h_s_h);
+    const float32x4_t h_e = vsubq_f32(h_s_l, h_s_z);
+    const uint32x4_t h_n = vcltq_f32(vdupq_n_f32(0.0f), h_e);
+    const float32x4_t h_q = next_up_bits(h_s);
+    const float32x4_t h = vbslq_f32(h_n, h_q, h_s);
+    const uint32x4_t ne = vceqq_f32(r, r);
+    const float32x4_t mi = vnegq_f32(vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t zl = vbslq_f32(ne, l, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t zu = vbslq_f32(ne, h, mi);
+    zl_out = zl;
+    zu_out = zu;
+}
+
+// interval_hull_1(xl, xu, yl, yu) -> zl, zu
+KAIRN_GEN_FORCEINLINE void interval_hull_1(float64x2_t xl, float64x2_t xu, float64x2_t yl, float64x2_t yu, float64x2_t& zl_out, float64x2_t& zu_out) noexcept {
+    const uint64x2_t ml = vcltq_f64(yl, xl);
+    const float64x2_t zl = vbslq_f64(ml, yl, xl);
+    const uint64x2_t mu = vcltq_f64(xu, yu);
+    const float64x2_t zu = vbslq_f64(mu, yu, xu);
+    zl_out = zl;
+    zu_out = zu;
+}
+KAIRN_GEN_FORCEINLINE void interval_hull_1(float32x4_t xl, float32x4_t xu, float32x4_t yl, float32x4_t yu, float32x4_t& zl_out, float32x4_t& zu_out) noexcept {
+    const uint32x4_t ml = vcltq_f32(yl, xl);
+    const float32x4_t zl = vbslq_f32(ml, yl, xl);
+    const uint32x4_t mu = vcltq_f32(xu, yu);
+    const float32x4_t zu = vbslq_f32(mu, yu, xu);
+    zl_out = zl;
+    zu_out = zu;
+}
+
+// sub_up_1(a, b) -> r
+KAIRN_GEN_FORCEINLINE void sub_up_1(float64x2_t a, float64x2_t b, float64x2_t& r_out) noexcept {
+    const float64x2_t nb = vnegq_f64(b);
+    // (r) = add_up_1(a, nb)
+    // (r_s, r_e) = two_sum_ord(a, nb)
+    const float64x2_t r_s_aa = vabsq_f64(a);
+    const float64x2_t r_s_ab = vabsq_f64(nb);
+    const uint64x2_t r_s_m = vcltq_f64(r_s_aa, r_s_ab);
+    const float64x2_t r_s_h = vbslq_f64(r_s_m, nb, a);
+    const float64x2_t r_s_l = vbslq_f64(r_s_m, a, nb);
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const float64x2_t r_s = vaddq_f64(r_s_h, r_s_l);
+    const float64x2_t r_s_z = vsubq_f64(r_s, r_s_h);
+    const float64x2_t r_e = vsubq_f64(r_s_l, r_s_z);
+    const uint64x2_t r_n = vcltq_f64(vdupq_n_f64(0.0), r_e);
+    const float64x2_t r_q = next_up_bits(r_s);
+    const float64x2_t r = vbslq_f64(r_n, r_q, r_s);
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE void sub_up_1(float32x4_t a, float32x4_t b, float32x4_t& r_out) noexcept {
+    const float32x4_t nb = vnegq_f32(b);
+    // (r) = add_up_1(a, nb)
+    // (r_s, r_e) = two_sum_ord(a, nb)
+    const float32x4_t r_s_aa = vabsq_f32(a);
+    const float32x4_t r_s_ab = vabsq_f32(nb);
+    const uint32x4_t r_s_m = vcltq_f32(r_s_aa, r_s_ab);
+    const float32x4_t r_s_h = vbslq_f32(r_s_m, nb, a);
+    const float32x4_t r_s_l = vbslq_f32(r_s_m, a, nb);
+    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
+    const float32x4_t r_s = vaddq_f32(r_s_h, r_s_l);
+    const float32x4_t r_s_z = vsubq_f32(r_s, r_s_h);
+    const float32x4_t r_e = vsubq_f32(r_s_l, r_s_z);
+    const uint32x4_t r_n = vcltq_f32(vdupq_n_f32(0.0f), r_e);
+    const float32x4_t r_q = next_up_bits(r_s);
+    const float32x4_t r = vbslq_f32(r_n, r_q, r_s);
+    r_out = r;
+}
+
+// interval_mid_rad_1(xl, xu) -> m, r
+KAIRN_GEN_FORCEINLINE void interval_mid_rad_1(float64x2_t xl, float64x2_t xu, float64x2_t& m_out, float64x2_t& r_out) noexcept {
+    const float64x2_t om = next_down_bits(vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t mo = vnegq_f64(om);
+    const uint64x2_t ml = vcltq_f64(xl, mo);
+    const float64x2_t l = vbslq_f64(ml, mo, xl);
+    const uint64x2_t mu = vcltq_f64(om, xu);
+    const float64x2_t h = vbslq_f64(mu, om, xu);
+    const float64x2_t hl = vfmaq_f64(vdupq_n_f64(0.0), l, vdupq_n_f64(0x1p-1));
+    const float64x2_t hu = vfmaq_f64(vdupq_n_f64(0.0), h, vdupq_n_f64(0x1p-1));
+    const float64x2_t ma = vaddq_f64(hl, hu);
+    const uint64x2_t ca = vcltq_f64(ma, l);
+    const float64x2_t mb = vbslq_f64(ca, l, ma);
+    const uint64x2_t cb = vcltq_f64(h, mb);
+    const float64x2_t mc = vbslq_f64(cb, h, mb);
+    // (ra) = sub_up_1(mc, l)
+    const float64x2_t ra_nb = vnegq_f64(l);
+    // (ra) = add_up_1(mc, ra_nb)
+    // (ra_s, ra_e) = two_sum_ord(mc, ra_nb)
+    const float64x2_t ra_s_aa = vabsq_f64(mc);
+    const float64x2_t ra_s_ab = vabsq_f64(ra_nb);
+    const uint64x2_t ra_s_m = vcltq_f64(ra_s_aa, ra_s_ab);
+    const float64x2_t ra_s_h = vbslq_f64(ra_s_m, ra_nb, mc);
+    const float64x2_t ra_s_l = vbslq_f64(ra_s_m, mc, ra_nb);
+    // (ra_s, ra_e) = fast_two_sum(ra_s_h, ra_s_l)
+    const float64x2_t ra_s = vaddq_f64(ra_s_h, ra_s_l);
+    const float64x2_t ra_s_z = vsubq_f64(ra_s, ra_s_h);
+    const float64x2_t ra_e = vsubq_f64(ra_s_l, ra_s_z);
+    const uint64x2_t ra_n = vcltq_f64(vdupq_n_f64(0.0), ra_e);
+    const float64x2_t ra_q = next_up_bits(ra_s);
+    const float64x2_t ra = vbslq_f64(ra_n, ra_q, ra_s);
+    // (rb) = sub_up_1(h, mc)
+    const float64x2_t rb_nb = vnegq_f64(mc);
+    // (rb) = add_up_1(h, rb_nb)
+    // (rb_s, rb_e) = two_sum_ord(h, rb_nb)
+    const float64x2_t rb_s_aa = vabsq_f64(h);
+    const float64x2_t rb_s_ab = vabsq_f64(rb_nb);
+    const uint64x2_t rb_s_m = vcltq_f64(rb_s_aa, rb_s_ab);
+    const float64x2_t rb_s_h = vbslq_f64(rb_s_m, rb_nb, h);
+    const float64x2_t rb_s_l = vbslq_f64(rb_s_m, h, rb_nb);
+    // (rb_s, rb_e) = fast_two_sum(rb_s_h, rb_s_l)
+    const float64x2_t rb_s = vaddq_f64(rb_s_h, rb_s_l);
+    const float64x2_t rb_s_z = vsubq_f64(rb_s, rb_s_h);
+    const float64x2_t rb_e = vsubq_f64(rb_s_l, rb_s_z);
+    const uint64x2_t rb_n = vcltq_f64(vdupq_n_f64(0.0), rb_e);
+    const float64x2_t rb_q = next_up_bits(rb_s);
+    const float64x2_t rb = vbslq_f64(rb_n, rb_q, rb_s);
+    const uint64x2_t rm = vcltq_f64(ra, rb);
+    const float64x2_t rc = vbslq_f64(rm, rb, ra);
+    const float64x2_t md = vbslq_f64(ml, mo, mc);
+    const float64x2_t me = vbslq_f64(mu, om, md);
+    const uint64x2_t bo = vandq_u64(ml, mu);
+    const float64x2_t mf = vbslq_f64(bo, vdupq_n_f64(0.0), me);
+    const uint64x2_t un = vorrq_u64(ml, mu);
+    const float64x2_t rd = vbslq_f64(un, vdupq_n_f64(std::numeric_limits<double>::infinity()), rc);
+    const uint64x2_t ne = vcltq_f64(xl, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t m = vbslq_f64(ne, mf, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    const float64x2_t r = vbslq_f64(ne, rd, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    m_out = m;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE void interval_mid_rad_1(float32x4_t xl, float32x4_t xu, float32x4_t& m_out, float32x4_t& r_out) noexcept {
+    const float32x4_t om = next_down_bits(vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t mo = vnegq_f32(om);
+    const uint32x4_t ml = vcltq_f32(xl, mo);
+    const float32x4_t l = vbslq_f32(ml, mo, xl);
+    const uint32x4_t mu = vcltq_f32(om, xu);
+    const float32x4_t h = vbslq_f32(mu, om, xu);
+    const float32x4_t hl = vfmaq_f32(vdupq_n_f32(0.0f), l, vdupq_n_f32(0x1p-1f));
+    const float32x4_t hu = vfmaq_f32(vdupq_n_f32(0.0f), h, vdupq_n_f32(0x1p-1f));
+    const float32x4_t ma = vaddq_f32(hl, hu);
+    const uint32x4_t ca = vcltq_f32(ma, l);
+    const float32x4_t mb = vbslq_f32(ca, l, ma);
+    const uint32x4_t cb = vcltq_f32(h, mb);
+    const float32x4_t mc = vbslq_f32(cb, h, mb);
+    // (ra) = sub_up_1(mc, l)
+    const float32x4_t ra_nb = vnegq_f32(l);
+    // (ra) = add_up_1(mc, ra_nb)
+    // (ra_s, ra_e) = two_sum_ord(mc, ra_nb)
+    const float32x4_t ra_s_aa = vabsq_f32(mc);
+    const float32x4_t ra_s_ab = vabsq_f32(ra_nb);
+    const uint32x4_t ra_s_m = vcltq_f32(ra_s_aa, ra_s_ab);
+    const float32x4_t ra_s_h = vbslq_f32(ra_s_m, ra_nb, mc);
+    const float32x4_t ra_s_l = vbslq_f32(ra_s_m, mc, ra_nb);
+    // (ra_s, ra_e) = fast_two_sum(ra_s_h, ra_s_l)
+    const float32x4_t ra_s = vaddq_f32(ra_s_h, ra_s_l);
+    const float32x4_t ra_s_z = vsubq_f32(ra_s, ra_s_h);
+    const float32x4_t ra_e = vsubq_f32(ra_s_l, ra_s_z);
+    const uint32x4_t ra_n = vcltq_f32(vdupq_n_f32(0.0f), ra_e);
+    const float32x4_t ra_q = next_up_bits(ra_s);
+    const float32x4_t ra = vbslq_f32(ra_n, ra_q, ra_s);
+    // (rb) = sub_up_1(h, mc)
+    const float32x4_t rb_nb = vnegq_f32(mc);
+    // (rb) = add_up_1(h, rb_nb)
+    // (rb_s, rb_e) = two_sum_ord(h, rb_nb)
+    const float32x4_t rb_s_aa = vabsq_f32(h);
+    const float32x4_t rb_s_ab = vabsq_f32(rb_nb);
+    const uint32x4_t rb_s_m = vcltq_f32(rb_s_aa, rb_s_ab);
+    const float32x4_t rb_s_h = vbslq_f32(rb_s_m, rb_nb, h);
+    const float32x4_t rb_s_l = vbslq_f32(rb_s_m, h, rb_nb);
+    // (rb_s, rb_e) = fast_two_sum(rb_s_h, rb_s_l)
+    const float32x4_t rb_s = vaddq_f32(rb_s_h, rb_s_l);
+    const float32x4_t rb_s_z = vsubq_f32(rb_s, rb_s_h);
+    const float32x4_t rb_e = vsubq_f32(rb_s_l, rb_s_z);
+    const uint32x4_t rb_n = vcltq_f32(vdupq_n_f32(0.0f), rb_e);
+    const float32x4_t rb_q = next_up_bits(rb_s);
+    const float32x4_t rb = vbslq_f32(rb_n, rb_q, rb_s);
+    const uint32x4_t rm = vcltq_f32(ra, rb);
+    const float32x4_t rc = vbslq_f32(rm, rb, ra);
+    const float32x4_t md = vbslq_f32(ml, mo, mc);
+    const float32x4_t me = vbslq_f32(mu, om, md);
+    const uint32x4_t bo = vandq_u32(ml, mu);
+    const float32x4_t mf = vbslq_f32(bo, vdupq_n_f32(0.0f), me);
+    const uint32x4_t un = vorrq_u32(ml, mu);
+    const float32x4_t rd = vbslq_f32(un, vdupq_n_f32(std::numeric_limits<float>::infinity()), rc);
+    const uint32x4_t ne = vcltq_f32(xl, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t m = vbslq_f32(ne, mf, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    const float32x4_t r = vbslq_f32(ne, rd, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    m_out = m;
+    r_out = r;
+}
+
+// interval_to_ball_1(xl, xu) -> c, r
+KAIRN_GEN_FORCEINLINE void interval_to_ball_1(float64x2_t xl, float64x2_t xu, float64x2_t& c_out, float64x2_t& r_out) noexcept {
+    // (m, r) = interval_mid_rad_1(xl, xu)
+    const float64x2_t m_om = next_down_bits(vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t m_mo = vnegq_f64(m_om);
+    const uint64x2_t m_ml = vcltq_f64(xl, m_mo);
+    const float64x2_t m_l = vbslq_f64(m_ml, m_mo, xl);
+    const uint64x2_t m_mu = vcltq_f64(m_om, xu);
+    const float64x2_t m_h = vbslq_f64(m_mu, m_om, xu);
+    const float64x2_t m_hl = vfmaq_f64(vdupq_n_f64(0.0), m_l, vdupq_n_f64(0x1p-1));
+    const float64x2_t m_hu = vfmaq_f64(vdupq_n_f64(0.0), m_h, vdupq_n_f64(0x1p-1));
+    const float64x2_t m_ma = vaddq_f64(m_hl, m_hu);
+    const uint64x2_t m_ca = vcltq_f64(m_ma, m_l);
+    const float64x2_t m_mb = vbslq_f64(m_ca, m_l, m_ma);
+    const uint64x2_t m_cb = vcltq_f64(m_h, m_mb);
+    const float64x2_t m_mc = vbslq_f64(m_cb, m_h, m_mb);
+    // (m_ra) = sub_up_1(m_mc, m_l)
+    const float64x2_t m_ra_nb = vnegq_f64(m_l);
+    // (m_ra) = add_up_1(m_mc, m_ra_nb)
+    // (m_ra_s, m_ra_e) = two_sum_ord(m_mc, m_ra_nb)
+    const float64x2_t m_ra_s_aa = vabsq_f64(m_mc);
+    const float64x2_t m_ra_s_ab = vabsq_f64(m_ra_nb);
+    const uint64x2_t m_ra_s_m = vcltq_f64(m_ra_s_aa, m_ra_s_ab);
+    const float64x2_t m_ra_s_h = vbslq_f64(m_ra_s_m, m_ra_nb, m_mc);
+    const float64x2_t m_ra_s_l = vbslq_f64(m_ra_s_m, m_mc, m_ra_nb);
+    // (m_ra_s, m_ra_e) = fast_two_sum(m_ra_s_h, m_ra_s_l)
+    const float64x2_t m_ra_s = vaddq_f64(m_ra_s_h, m_ra_s_l);
+    const float64x2_t m_ra_s_z = vsubq_f64(m_ra_s, m_ra_s_h);
+    const float64x2_t m_ra_e = vsubq_f64(m_ra_s_l, m_ra_s_z);
+    const uint64x2_t m_ra_n = vcltq_f64(vdupq_n_f64(0.0), m_ra_e);
+    const float64x2_t m_ra_q = next_up_bits(m_ra_s);
+    const float64x2_t m_ra = vbslq_f64(m_ra_n, m_ra_q, m_ra_s);
+    // (m_rb) = sub_up_1(m_h, m_mc)
+    const float64x2_t m_rb_nb = vnegq_f64(m_mc);
+    // (m_rb) = add_up_1(m_h, m_rb_nb)
+    // (m_rb_s, m_rb_e) = two_sum_ord(m_h, m_rb_nb)
+    const float64x2_t m_rb_s_aa = vabsq_f64(m_h);
+    const float64x2_t m_rb_s_ab = vabsq_f64(m_rb_nb);
+    const uint64x2_t m_rb_s_m = vcltq_f64(m_rb_s_aa, m_rb_s_ab);
+    const float64x2_t m_rb_s_h = vbslq_f64(m_rb_s_m, m_rb_nb, m_h);
+    const float64x2_t m_rb_s_l = vbslq_f64(m_rb_s_m, m_h, m_rb_nb);
+    // (m_rb_s, m_rb_e) = fast_two_sum(m_rb_s_h, m_rb_s_l)
+    const float64x2_t m_rb_s = vaddq_f64(m_rb_s_h, m_rb_s_l);
+    const float64x2_t m_rb_s_z = vsubq_f64(m_rb_s, m_rb_s_h);
+    const float64x2_t m_rb_e = vsubq_f64(m_rb_s_l, m_rb_s_z);
+    const uint64x2_t m_rb_n = vcltq_f64(vdupq_n_f64(0.0), m_rb_e);
+    const float64x2_t m_rb_q = next_up_bits(m_rb_s);
+    const float64x2_t m_rb = vbslq_f64(m_rb_n, m_rb_q, m_rb_s);
+    const uint64x2_t m_rm = vcltq_f64(m_ra, m_rb);
+    const float64x2_t m_rc = vbslq_f64(m_rm, m_rb, m_ra);
+    const float64x2_t m_md = vbslq_f64(m_ml, m_mo, m_mc);
+    const float64x2_t m_me = vbslq_f64(m_mu, m_om, m_md);
+    const uint64x2_t m_bo = vandq_u64(m_ml, m_mu);
+    const float64x2_t m_mf = vbslq_f64(m_bo, vdupq_n_f64(0.0), m_me);
+    const uint64x2_t m_un = vorrq_u64(m_ml, m_mu);
+    const float64x2_t m_rd = vbslq_f64(m_un, vdupq_n_f64(std::numeric_limits<double>::infinity()), m_rc);
+    const uint64x2_t m_ne = vcltq_f64(xl, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t m = vbslq_f64(m_ne, m_mf, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    const float64x2_t r = vbslq_f64(m_ne, m_rd, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    const uint64x2_t un = vceqq_f64(r, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t c = vbslq_f64(un, vdupq_n_f64(0.0), m);
+    c_out = c;
+    r_out = r;
+}
+KAIRN_GEN_FORCEINLINE void interval_to_ball_1(float32x4_t xl, float32x4_t xu, float32x4_t& c_out, float32x4_t& r_out) noexcept {
+    // (m, r) = interval_mid_rad_1(xl, xu)
+    const float32x4_t m_om = next_down_bits(vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t m_mo = vnegq_f32(m_om);
+    const uint32x4_t m_ml = vcltq_f32(xl, m_mo);
+    const float32x4_t m_l = vbslq_f32(m_ml, m_mo, xl);
+    const uint32x4_t m_mu = vcltq_f32(m_om, xu);
+    const float32x4_t m_h = vbslq_f32(m_mu, m_om, xu);
+    const float32x4_t m_hl = vfmaq_f32(vdupq_n_f32(0.0f), m_l, vdupq_n_f32(0x1p-1f));
+    const float32x4_t m_hu = vfmaq_f32(vdupq_n_f32(0.0f), m_h, vdupq_n_f32(0x1p-1f));
+    const float32x4_t m_ma = vaddq_f32(m_hl, m_hu);
+    const uint32x4_t m_ca = vcltq_f32(m_ma, m_l);
+    const float32x4_t m_mb = vbslq_f32(m_ca, m_l, m_ma);
+    const uint32x4_t m_cb = vcltq_f32(m_h, m_mb);
+    const float32x4_t m_mc = vbslq_f32(m_cb, m_h, m_mb);
+    // (m_ra) = sub_up_1(m_mc, m_l)
+    const float32x4_t m_ra_nb = vnegq_f32(m_l);
+    // (m_ra) = add_up_1(m_mc, m_ra_nb)
+    // (m_ra_s, m_ra_e) = two_sum_ord(m_mc, m_ra_nb)
+    const float32x4_t m_ra_s_aa = vabsq_f32(m_mc);
+    const float32x4_t m_ra_s_ab = vabsq_f32(m_ra_nb);
+    const uint32x4_t m_ra_s_m = vcltq_f32(m_ra_s_aa, m_ra_s_ab);
+    const float32x4_t m_ra_s_h = vbslq_f32(m_ra_s_m, m_ra_nb, m_mc);
+    const float32x4_t m_ra_s_l = vbslq_f32(m_ra_s_m, m_mc, m_ra_nb);
+    // (m_ra_s, m_ra_e) = fast_two_sum(m_ra_s_h, m_ra_s_l)
+    const float32x4_t m_ra_s = vaddq_f32(m_ra_s_h, m_ra_s_l);
+    const float32x4_t m_ra_s_z = vsubq_f32(m_ra_s, m_ra_s_h);
+    const float32x4_t m_ra_e = vsubq_f32(m_ra_s_l, m_ra_s_z);
+    const uint32x4_t m_ra_n = vcltq_f32(vdupq_n_f32(0.0f), m_ra_e);
+    const float32x4_t m_ra_q = next_up_bits(m_ra_s);
+    const float32x4_t m_ra = vbslq_f32(m_ra_n, m_ra_q, m_ra_s);
+    // (m_rb) = sub_up_1(m_h, m_mc)
+    const float32x4_t m_rb_nb = vnegq_f32(m_mc);
+    // (m_rb) = add_up_1(m_h, m_rb_nb)
+    // (m_rb_s, m_rb_e) = two_sum_ord(m_h, m_rb_nb)
+    const float32x4_t m_rb_s_aa = vabsq_f32(m_h);
+    const float32x4_t m_rb_s_ab = vabsq_f32(m_rb_nb);
+    const uint32x4_t m_rb_s_m = vcltq_f32(m_rb_s_aa, m_rb_s_ab);
+    const float32x4_t m_rb_s_h = vbslq_f32(m_rb_s_m, m_rb_nb, m_h);
+    const float32x4_t m_rb_s_l = vbslq_f32(m_rb_s_m, m_h, m_rb_nb);
+    // (m_rb_s, m_rb_e) = fast_two_sum(m_rb_s_h, m_rb_s_l)
+    const float32x4_t m_rb_s = vaddq_f32(m_rb_s_h, m_rb_s_l);
+    const float32x4_t m_rb_s_z = vsubq_f32(m_rb_s, m_rb_s_h);
+    const float32x4_t m_rb_e = vsubq_f32(m_rb_s_l, m_rb_s_z);
+    const uint32x4_t m_rb_n = vcltq_f32(vdupq_n_f32(0.0f), m_rb_e);
+    const float32x4_t m_rb_q = next_up_bits(m_rb_s);
+    const float32x4_t m_rb = vbslq_f32(m_rb_n, m_rb_q, m_rb_s);
+    const uint32x4_t m_rm = vcltq_f32(m_ra, m_rb);
+    const float32x4_t m_rc = vbslq_f32(m_rm, m_rb, m_ra);
+    const float32x4_t m_md = vbslq_f32(m_ml, m_mo, m_mc);
+    const float32x4_t m_me = vbslq_f32(m_mu, m_om, m_md);
+    const uint32x4_t m_bo = vandq_u32(m_ml, m_mu);
+    const float32x4_t m_mf = vbslq_f32(m_bo, vdupq_n_f32(0.0f), m_me);
+    const uint32x4_t m_un = vorrq_u32(m_ml, m_mu);
+    const float32x4_t m_rd = vbslq_f32(m_un, vdupq_n_f32(std::numeric_limits<float>::infinity()), m_rc);
+    const uint32x4_t m_ne = vcltq_f32(xl, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t m = vbslq_f32(m_ne, m_mf, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    const float32x4_t r = vbslq_f32(m_ne, m_rd, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    const uint32x4_t un = vceqq_f32(r, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t c = vbslq_f32(un, vdupq_n_f32(0.0f), m);
+    c_out = c;
+    r_out = r;
+}
+
+// ball_hull_1(cx, rx, cy, ry) -> cz, rz
+KAIRN_GEN_FORCEINLINE void ball_hull_1(float64x2_t cx, float64x2_t rx, float64x2_t cy, float64x2_t ry, float64x2_t& cz_out, float64x2_t& rz_out) noexcept {
+    // (xl, xu) = ball_to_interval_1(cx, rx)
+    // (xl_l) = sub_down_1(cx, rx)
+    const float64x2_t xl_l_nb = vnegq_f64(rx);
+    // (xl_l) = add_down_1(cx, xl_l_nb)
+    // (xl_l_s, xl_l_e) = two_sum_ord(cx, xl_l_nb)
+    const float64x2_t xl_l_s_aa = vabsq_f64(cx);
+    const float64x2_t xl_l_s_ab = vabsq_f64(xl_l_nb);
+    const uint64x2_t xl_l_s_m = vcltq_f64(xl_l_s_aa, xl_l_s_ab);
+    const float64x2_t xl_l_s_h = vbslq_f64(xl_l_s_m, xl_l_nb, cx);
+    const float64x2_t xl_l_s_l = vbslq_f64(xl_l_s_m, cx, xl_l_nb);
+    // (xl_l_s, xl_l_e) = fast_two_sum(xl_l_s_h, xl_l_s_l)
+    const float64x2_t xl_l_s = vaddq_f64(xl_l_s_h, xl_l_s_l);
+    const float64x2_t xl_l_s_z = vsubq_f64(xl_l_s, xl_l_s_h);
+    const float64x2_t xl_l_e = vsubq_f64(xl_l_s_l, xl_l_s_z);
+    const uint64x2_t xl_l_n = vcltq_f64(xl_l_e, vdupq_n_f64(0.0));
+    const float64x2_t xl_l_p = next_down_bits(xl_l_s);
+    const float64x2_t xl_l = vbslq_f64(xl_l_n, xl_l_p, xl_l_s);
+    // (xl_h) = add_up_1(cx, rx)
+    // (xl_h_s, xl_h_e) = two_sum_ord(cx, rx)
+    const float64x2_t xl_h_s_aa = vabsq_f64(cx);
+    const float64x2_t xl_h_s_ab = vabsq_f64(rx);
+    const uint64x2_t xl_h_s_m = vcltq_f64(xl_h_s_aa, xl_h_s_ab);
+    const float64x2_t xl_h_s_h = vbslq_f64(xl_h_s_m, rx, cx);
+    const float64x2_t xl_h_s_l = vbslq_f64(xl_h_s_m, cx, rx);
+    // (xl_h_s, xl_h_e) = fast_two_sum(xl_h_s_h, xl_h_s_l)
+    const float64x2_t xl_h_s = vaddq_f64(xl_h_s_h, xl_h_s_l);
+    const float64x2_t xl_h_s_z = vsubq_f64(xl_h_s, xl_h_s_h);
+    const float64x2_t xl_h_e = vsubq_f64(xl_h_s_l, xl_h_s_z);
+    const uint64x2_t xl_h_n = vcltq_f64(vdupq_n_f64(0.0), xl_h_e);
+    const float64x2_t xl_h_q = next_up_bits(xl_h_s);
+    const float64x2_t xl_h = vbslq_f64(xl_h_n, xl_h_q, xl_h_s);
+    const uint64x2_t xl_ne = vceqq_f64(rx, rx);
+    const float64x2_t xl_mi = vnegq_f64(vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t xl = vbslq_f64(xl_ne, xl_l, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t xu = vbslq_f64(xl_ne, xl_h, xl_mi);
+    // (yl, yu) = ball_to_interval_1(cy, ry)
+    // (yl_l) = sub_down_1(cy, ry)
+    const float64x2_t yl_l_nb = vnegq_f64(ry);
+    // (yl_l) = add_down_1(cy, yl_l_nb)
+    // (yl_l_s, yl_l_e) = two_sum_ord(cy, yl_l_nb)
+    const float64x2_t yl_l_s_aa = vabsq_f64(cy);
+    const float64x2_t yl_l_s_ab = vabsq_f64(yl_l_nb);
+    const uint64x2_t yl_l_s_m = vcltq_f64(yl_l_s_aa, yl_l_s_ab);
+    const float64x2_t yl_l_s_h = vbslq_f64(yl_l_s_m, yl_l_nb, cy);
+    const float64x2_t yl_l_s_l = vbslq_f64(yl_l_s_m, cy, yl_l_nb);
+    // (yl_l_s, yl_l_e) = fast_two_sum(yl_l_s_h, yl_l_s_l)
+    const float64x2_t yl_l_s = vaddq_f64(yl_l_s_h, yl_l_s_l);
+    const float64x2_t yl_l_s_z = vsubq_f64(yl_l_s, yl_l_s_h);
+    const float64x2_t yl_l_e = vsubq_f64(yl_l_s_l, yl_l_s_z);
+    const uint64x2_t yl_l_n = vcltq_f64(yl_l_e, vdupq_n_f64(0.0));
+    const float64x2_t yl_l_p = next_down_bits(yl_l_s);
+    const float64x2_t yl_l = vbslq_f64(yl_l_n, yl_l_p, yl_l_s);
+    // (yl_h) = add_up_1(cy, ry)
+    // (yl_h_s, yl_h_e) = two_sum_ord(cy, ry)
+    const float64x2_t yl_h_s_aa = vabsq_f64(cy);
+    const float64x2_t yl_h_s_ab = vabsq_f64(ry);
+    const uint64x2_t yl_h_s_m = vcltq_f64(yl_h_s_aa, yl_h_s_ab);
+    const float64x2_t yl_h_s_h = vbslq_f64(yl_h_s_m, ry, cy);
+    const float64x2_t yl_h_s_l = vbslq_f64(yl_h_s_m, cy, ry);
+    // (yl_h_s, yl_h_e) = fast_two_sum(yl_h_s_h, yl_h_s_l)
+    const float64x2_t yl_h_s = vaddq_f64(yl_h_s_h, yl_h_s_l);
+    const float64x2_t yl_h_s_z = vsubq_f64(yl_h_s, yl_h_s_h);
+    const float64x2_t yl_h_e = vsubq_f64(yl_h_s_l, yl_h_s_z);
+    const uint64x2_t yl_h_n = vcltq_f64(vdupq_n_f64(0.0), yl_h_e);
+    const float64x2_t yl_h_q = next_up_bits(yl_h_s);
+    const float64x2_t yl_h = vbslq_f64(yl_h_n, yl_h_q, yl_h_s);
+    const uint64x2_t yl_ne = vceqq_f64(ry, ry);
+    const float64x2_t yl_mi = vnegq_f64(vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t yl = vbslq_f64(yl_ne, yl_l, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t yu = vbslq_f64(yl_ne, yl_h, yl_mi);
+    // (zl, zu) = interval_hull_1(xl, xu, yl, yu)
+    const uint64x2_t zl_ml = vcltq_f64(yl, xl);
+    const float64x2_t zl = vbslq_f64(zl_ml, yl, xl);
+    const uint64x2_t zl_mu = vcltq_f64(xu, yu);
+    const float64x2_t zu = vbslq_f64(zl_mu, yu, xu);
+    // (c, r) = interval_to_ball_1(zl, zu)
+    // (c_m, r) = interval_mid_rad_1(zl, zu)
+    const float64x2_t c_m_om = next_down_bits(vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t c_m_mo = vnegq_f64(c_m_om);
+    const uint64x2_t c_m_ml = vcltq_f64(zl, c_m_mo);
+    const float64x2_t c_m_l = vbslq_f64(c_m_ml, c_m_mo, zl);
+    const uint64x2_t c_m_mu = vcltq_f64(c_m_om, zu);
+    const float64x2_t c_m_h = vbslq_f64(c_m_mu, c_m_om, zu);
+    const float64x2_t c_m_hl = vfmaq_f64(vdupq_n_f64(0.0), c_m_l, vdupq_n_f64(0x1p-1));
+    const float64x2_t c_m_hu = vfmaq_f64(vdupq_n_f64(0.0), c_m_h, vdupq_n_f64(0x1p-1));
+    const float64x2_t c_m_ma = vaddq_f64(c_m_hl, c_m_hu);
+    const uint64x2_t c_m_ca = vcltq_f64(c_m_ma, c_m_l);
+    const float64x2_t c_m_mb = vbslq_f64(c_m_ca, c_m_l, c_m_ma);
+    const uint64x2_t c_m_cb = vcltq_f64(c_m_h, c_m_mb);
+    const float64x2_t c_m_mc = vbslq_f64(c_m_cb, c_m_h, c_m_mb);
+    // (c_m_ra) = sub_up_1(c_m_mc, c_m_l)
+    const float64x2_t c_m_ra_nb = vnegq_f64(c_m_l);
+    // (c_m_ra) = add_up_1(c_m_mc, c_m_ra_nb)
+    // (c_m_ra_s, c_m_ra_e) = two_sum_ord(c_m_mc, c_m_ra_nb)
+    const float64x2_t c_m_ra_s_aa = vabsq_f64(c_m_mc);
+    const float64x2_t c_m_ra_s_ab = vabsq_f64(c_m_ra_nb);
+    const uint64x2_t c_m_ra_s_m = vcltq_f64(c_m_ra_s_aa, c_m_ra_s_ab);
+    const float64x2_t c_m_ra_s_h = vbslq_f64(c_m_ra_s_m, c_m_ra_nb, c_m_mc);
+    const float64x2_t c_m_ra_s_l = vbslq_f64(c_m_ra_s_m, c_m_mc, c_m_ra_nb);
+    // (c_m_ra_s, c_m_ra_e) = fast_two_sum(c_m_ra_s_h, c_m_ra_s_l)
+    const float64x2_t c_m_ra_s = vaddq_f64(c_m_ra_s_h, c_m_ra_s_l);
+    const float64x2_t c_m_ra_s_z = vsubq_f64(c_m_ra_s, c_m_ra_s_h);
+    const float64x2_t c_m_ra_e = vsubq_f64(c_m_ra_s_l, c_m_ra_s_z);
+    const uint64x2_t c_m_ra_n = vcltq_f64(vdupq_n_f64(0.0), c_m_ra_e);
+    const float64x2_t c_m_ra_q = next_up_bits(c_m_ra_s);
+    const float64x2_t c_m_ra = vbslq_f64(c_m_ra_n, c_m_ra_q, c_m_ra_s);
+    // (c_m_rb) = sub_up_1(c_m_h, c_m_mc)
+    const float64x2_t c_m_rb_nb = vnegq_f64(c_m_mc);
+    // (c_m_rb) = add_up_1(c_m_h, c_m_rb_nb)
+    // (c_m_rb_s, c_m_rb_e) = two_sum_ord(c_m_h, c_m_rb_nb)
+    const float64x2_t c_m_rb_s_aa = vabsq_f64(c_m_h);
+    const float64x2_t c_m_rb_s_ab = vabsq_f64(c_m_rb_nb);
+    const uint64x2_t c_m_rb_s_m = vcltq_f64(c_m_rb_s_aa, c_m_rb_s_ab);
+    const float64x2_t c_m_rb_s_h = vbslq_f64(c_m_rb_s_m, c_m_rb_nb, c_m_h);
+    const float64x2_t c_m_rb_s_l = vbslq_f64(c_m_rb_s_m, c_m_h, c_m_rb_nb);
+    // (c_m_rb_s, c_m_rb_e) = fast_two_sum(c_m_rb_s_h, c_m_rb_s_l)
+    const float64x2_t c_m_rb_s = vaddq_f64(c_m_rb_s_h, c_m_rb_s_l);
+    const float64x2_t c_m_rb_s_z = vsubq_f64(c_m_rb_s, c_m_rb_s_h);
+    const float64x2_t c_m_rb_e = vsubq_f64(c_m_rb_s_l, c_m_rb_s_z);
+    const uint64x2_t c_m_rb_n = vcltq_f64(vdupq_n_f64(0.0), c_m_rb_e);
+    const float64x2_t c_m_rb_q = next_up_bits(c_m_rb_s);
+    const float64x2_t c_m_rb = vbslq_f64(c_m_rb_n, c_m_rb_q, c_m_rb_s);
+    const uint64x2_t c_m_rm = vcltq_f64(c_m_ra, c_m_rb);
+    const float64x2_t c_m_rc = vbslq_f64(c_m_rm, c_m_rb, c_m_ra);
+    const float64x2_t c_m_md = vbslq_f64(c_m_ml, c_m_mo, c_m_mc);
+    const float64x2_t c_m_me = vbslq_f64(c_m_mu, c_m_om, c_m_md);
+    const uint64x2_t c_m_bo = vandq_u64(c_m_ml, c_m_mu);
+    const float64x2_t c_m_mf = vbslq_f64(c_m_bo, vdupq_n_f64(0.0), c_m_me);
+    const uint64x2_t c_m_un = vorrq_u64(c_m_ml, c_m_mu);
+    const float64x2_t c_m_rd = vbslq_f64(c_m_un, vdupq_n_f64(std::numeric_limits<double>::infinity()), c_m_rc);
+    const uint64x2_t c_m_ne = vcltq_f64(zl, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t c_m = vbslq_f64(c_m_ne, c_m_mf, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    const float64x2_t r = vbslq_f64(c_m_ne, c_m_rd, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    const uint64x2_t c_un = vceqq_f64(r, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t c = vbslq_f64(c_un, vdupq_n_f64(0.0), c_m);
+    const uint64x2_t qx = vceqq_f64(rx, rx);
+    const uint64x2_t qy = vceqq_f64(ry, ry);
+    const float64x2_t ca = vbslq_f64(qy, c, cx);
+    const float64x2_t ra = vbslq_f64(qy, r, rx);
+    const float64x2_t cz = vbslq_f64(qx, ca, cy);
+    const float64x2_t rz = vbslq_f64(qx, ra, ry);
+    cz_out = cz;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void ball_hull_1(float32x4_t cx, float32x4_t rx, float32x4_t cy, float32x4_t ry, float32x4_t& cz_out, float32x4_t& rz_out) noexcept {
+    // (xl, xu) = ball_to_interval_1(cx, rx)
+    // (xl_l) = sub_down_1(cx, rx)
+    const float32x4_t xl_l_nb = vnegq_f32(rx);
+    // (xl_l) = add_down_1(cx, xl_l_nb)
+    // (xl_l_s, xl_l_e) = two_sum_ord(cx, xl_l_nb)
+    const float32x4_t xl_l_s_aa = vabsq_f32(cx);
+    const float32x4_t xl_l_s_ab = vabsq_f32(xl_l_nb);
+    const uint32x4_t xl_l_s_m = vcltq_f32(xl_l_s_aa, xl_l_s_ab);
+    const float32x4_t xl_l_s_h = vbslq_f32(xl_l_s_m, xl_l_nb, cx);
+    const float32x4_t xl_l_s_l = vbslq_f32(xl_l_s_m, cx, xl_l_nb);
+    // (xl_l_s, xl_l_e) = fast_two_sum(xl_l_s_h, xl_l_s_l)
+    const float32x4_t xl_l_s = vaddq_f32(xl_l_s_h, xl_l_s_l);
+    const float32x4_t xl_l_s_z = vsubq_f32(xl_l_s, xl_l_s_h);
+    const float32x4_t xl_l_e = vsubq_f32(xl_l_s_l, xl_l_s_z);
+    const uint32x4_t xl_l_n = vcltq_f32(xl_l_e, vdupq_n_f32(0.0f));
+    const float32x4_t xl_l_p = next_down_bits(xl_l_s);
+    const float32x4_t xl_l = vbslq_f32(xl_l_n, xl_l_p, xl_l_s);
+    // (xl_h) = add_up_1(cx, rx)
+    // (xl_h_s, xl_h_e) = two_sum_ord(cx, rx)
+    const float32x4_t xl_h_s_aa = vabsq_f32(cx);
+    const float32x4_t xl_h_s_ab = vabsq_f32(rx);
+    const uint32x4_t xl_h_s_m = vcltq_f32(xl_h_s_aa, xl_h_s_ab);
+    const float32x4_t xl_h_s_h = vbslq_f32(xl_h_s_m, rx, cx);
+    const float32x4_t xl_h_s_l = vbslq_f32(xl_h_s_m, cx, rx);
+    // (xl_h_s, xl_h_e) = fast_two_sum(xl_h_s_h, xl_h_s_l)
+    const float32x4_t xl_h_s = vaddq_f32(xl_h_s_h, xl_h_s_l);
+    const float32x4_t xl_h_s_z = vsubq_f32(xl_h_s, xl_h_s_h);
+    const float32x4_t xl_h_e = vsubq_f32(xl_h_s_l, xl_h_s_z);
+    const uint32x4_t xl_h_n = vcltq_f32(vdupq_n_f32(0.0f), xl_h_e);
+    const float32x4_t xl_h_q = next_up_bits(xl_h_s);
+    const float32x4_t xl_h = vbslq_f32(xl_h_n, xl_h_q, xl_h_s);
+    const uint32x4_t xl_ne = vceqq_f32(rx, rx);
+    const float32x4_t xl_mi = vnegq_f32(vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t xl = vbslq_f32(xl_ne, xl_l, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t xu = vbslq_f32(xl_ne, xl_h, xl_mi);
+    // (yl, yu) = ball_to_interval_1(cy, ry)
+    // (yl_l) = sub_down_1(cy, ry)
+    const float32x4_t yl_l_nb = vnegq_f32(ry);
+    // (yl_l) = add_down_1(cy, yl_l_nb)
+    // (yl_l_s, yl_l_e) = two_sum_ord(cy, yl_l_nb)
+    const float32x4_t yl_l_s_aa = vabsq_f32(cy);
+    const float32x4_t yl_l_s_ab = vabsq_f32(yl_l_nb);
+    const uint32x4_t yl_l_s_m = vcltq_f32(yl_l_s_aa, yl_l_s_ab);
+    const float32x4_t yl_l_s_h = vbslq_f32(yl_l_s_m, yl_l_nb, cy);
+    const float32x4_t yl_l_s_l = vbslq_f32(yl_l_s_m, cy, yl_l_nb);
+    // (yl_l_s, yl_l_e) = fast_two_sum(yl_l_s_h, yl_l_s_l)
+    const float32x4_t yl_l_s = vaddq_f32(yl_l_s_h, yl_l_s_l);
+    const float32x4_t yl_l_s_z = vsubq_f32(yl_l_s, yl_l_s_h);
+    const float32x4_t yl_l_e = vsubq_f32(yl_l_s_l, yl_l_s_z);
+    const uint32x4_t yl_l_n = vcltq_f32(yl_l_e, vdupq_n_f32(0.0f));
+    const float32x4_t yl_l_p = next_down_bits(yl_l_s);
+    const float32x4_t yl_l = vbslq_f32(yl_l_n, yl_l_p, yl_l_s);
+    // (yl_h) = add_up_1(cy, ry)
+    // (yl_h_s, yl_h_e) = two_sum_ord(cy, ry)
+    const float32x4_t yl_h_s_aa = vabsq_f32(cy);
+    const float32x4_t yl_h_s_ab = vabsq_f32(ry);
+    const uint32x4_t yl_h_s_m = vcltq_f32(yl_h_s_aa, yl_h_s_ab);
+    const float32x4_t yl_h_s_h = vbslq_f32(yl_h_s_m, ry, cy);
+    const float32x4_t yl_h_s_l = vbslq_f32(yl_h_s_m, cy, ry);
+    // (yl_h_s, yl_h_e) = fast_two_sum(yl_h_s_h, yl_h_s_l)
+    const float32x4_t yl_h_s = vaddq_f32(yl_h_s_h, yl_h_s_l);
+    const float32x4_t yl_h_s_z = vsubq_f32(yl_h_s, yl_h_s_h);
+    const float32x4_t yl_h_e = vsubq_f32(yl_h_s_l, yl_h_s_z);
+    const uint32x4_t yl_h_n = vcltq_f32(vdupq_n_f32(0.0f), yl_h_e);
+    const float32x4_t yl_h_q = next_up_bits(yl_h_s);
+    const float32x4_t yl_h = vbslq_f32(yl_h_n, yl_h_q, yl_h_s);
+    const uint32x4_t yl_ne = vceqq_f32(ry, ry);
+    const float32x4_t yl_mi = vnegq_f32(vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t yl = vbslq_f32(yl_ne, yl_l, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t yu = vbslq_f32(yl_ne, yl_h, yl_mi);
+    // (zl, zu) = interval_hull_1(xl, xu, yl, yu)
+    const uint32x4_t zl_ml = vcltq_f32(yl, xl);
+    const float32x4_t zl = vbslq_f32(zl_ml, yl, xl);
+    const uint32x4_t zl_mu = vcltq_f32(xu, yu);
+    const float32x4_t zu = vbslq_f32(zl_mu, yu, xu);
+    // (c, r) = interval_to_ball_1(zl, zu)
+    // (c_m, r) = interval_mid_rad_1(zl, zu)
+    const float32x4_t c_m_om = next_down_bits(vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t c_m_mo = vnegq_f32(c_m_om);
+    const uint32x4_t c_m_ml = vcltq_f32(zl, c_m_mo);
+    const float32x4_t c_m_l = vbslq_f32(c_m_ml, c_m_mo, zl);
+    const uint32x4_t c_m_mu = vcltq_f32(c_m_om, zu);
+    const float32x4_t c_m_h = vbslq_f32(c_m_mu, c_m_om, zu);
+    const float32x4_t c_m_hl = vfmaq_f32(vdupq_n_f32(0.0f), c_m_l, vdupq_n_f32(0x1p-1f));
+    const float32x4_t c_m_hu = vfmaq_f32(vdupq_n_f32(0.0f), c_m_h, vdupq_n_f32(0x1p-1f));
+    const float32x4_t c_m_ma = vaddq_f32(c_m_hl, c_m_hu);
+    const uint32x4_t c_m_ca = vcltq_f32(c_m_ma, c_m_l);
+    const float32x4_t c_m_mb = vbslq_f32(c_m_ca, c_m_l, c_m_ma);
+    const uint32x4_t c_m_cb = vcltq_f32(c_m_h, c_m_mb);
+    const float32x4_t c_m_mc = vbslq_f32(c_m_cb, c_m_h, c_m_mb);
+    // (c_m_ra) = sub_up_1(c_m_mc, c_m_l)
+    const float32x4_t c_m_ra_nb = vnegq_f32(c_m_l);
+    // (c_m_ra) = add_up_1(c_m_mc, c_m_ra_nb)
+    // (c_m_ra_s, c_m_ra_e) = two_sum_ord(c_m_mc, c_m_ra_nb)
+    const float32x4_t c_m_ra_s_aa = vabsq_f32(c_m_mc);
+    const float32x4_t c_m_ra_s_ab = vabsq_f32(c_m_ra_nb);
+    const uint32x4_t c_m_ra_s_m = vcltq_f32(c_m_ra_s_aa, c_m_ra_s_ab);
+    const float32x4_t c_m_ra_s_h = vbslq_f32(c_m_ra_s_m, c_m_ra_nb, c_m_mc);
+    const float32x4_t c_m_ra_s_l = vbslq_f32(c_m_ra_s_m, c_m_mc, c_m_ra_nb);
+    // (c_m_ra_s, c_m_ra_e) = fast_two_sum(c_m_ra_s_h, c_m_ra_s_l)
+    const float32x4_t c_m_ra_s = vaddq_f32(c_m_ra_s_h, c_m_ra_s_l);
+    const float32x4_t c_m_ra_s_z = vsubq_f32(c_m_ra_s, c_m_ra_s_h);
+    const float32x4_t c_m_ra_e = vsubq_f32(c_m_ra_s_l, c_m_ra_s_z);
+    const uint32x4_t c_m_ra_n = vcltq_f32(vdupq_n_f32(0.0f), c_m_ra_e);
+    const float32x4_t c_m_ra_q = next_up_bits(c_m_ra_s);
+    const float32x4_t c_m_ra = vbslq_f32(c_m_ra_n, c_m_ra_q, c_m_ra_s);
+    // (c_m_rb) = sub_up_1(c_m_h, c_m_mc)
+    const float32x4_t c_m_rb_nb = vnegq_f32(c_m_mc);
+    // (c_m_rb) = add_up_1(c_m_h, c_m_rb_nb)
+    // (c_m_rb_s, c_m_rb_e) = two_sum_ord(c_m_h, c_m_rb_nb)
+    const float32x4_t c_m_rb_s_aa = vabsq_f32(c_m_h);
+    const float32x4_t c_m_rb_s_ab = vabsq_f32(c_m_rb_nb);
+    const uint32x4_t c_m_rb_s_m = vcltq_f32(c_m_rb_s_aa, c_m_rb_s_ab);
+    const float32x4_t c_m_rb_s_h = vbslq_f32(c_m_rb_s_m, c_m_rb_nb, c_m_h);
+    const float32x4_t c_m_rb_s_l = vbslq_f32(c_m_rb_s_m, c_m_h, c_m_rb_nb);
+    // (c_m_rb_s, c_m_rb_e) = fast_two_sum(c_m_rb_s_h, c_m_rb_s_l)
+    const float32x4_t c_m_rb_s = vaddq_f32(c_m_rb_s_h, c_m_rb_s_l);
+    const float32x4_t c_m_rb_s_z = vsubq_f32(c_m_rb_s, c_m_rb_s_h);
+    const float32x4_t c_m_rb_e = vsubq_f32(c_m_rb_s_l, c_m_rb_s_z);
+    const uint32x4_t c_m_rb_n = vcltq_f32(vdupq_n_f32(0.0f), c_m_rb_e);
+    const float32x4_t c_m_rb_q = next_up_bits(c_m_rb_s);
+    const float32x4_t c_m_rb = vbslq_f32(c_m_rb_n, c_m_rb_q, c_m_rb_s);
+    const uint32x4_t c_m_rm = vcltq_f32(c_m_ra, c_m_rb);
+    const float32x4_t c_m_rc = vbslq_f32(c_m_rm, c_m_rb, c_m_ra);
+    const float32x4_t c_m_md = vbslq_f32(c_m_ml, c_m_mo, c_m_mc);
+    const float32x4_t c_m_me = vbslq_f32(c_m_mu, c_m_om, c_m_md);
+    const uint32x4_t c_m_bo = vandq_u32(c_m_ml, c_m_mu);
+    const float32x4_t c_m_mf = vbslq_f32(c_m_bo, vdupq_n_f32(0.0f), c_m_me);
+    const uint32x4_t c_m_un = vorrq_u32(c_m_ml, c_m_mu);
+    const float32x4_t c_m_rd = vbslq_f32(c_m_un, vdupq_n_f32(std::numeric_limits<float>::infinity()), c_m_rc);
+    const uint32x4_t c_m_ne = vcltq_f32(zl, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t c_m = vbslq_f32(c_m_ne, c_m_mf, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    const float32x4_t r = vbslq_f32(c_m_ne, c_m_rd, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    const uint32x4_t c_un = vceqq_f32(r, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t c = vbslq_f32(c_un, vdupq_n_f32(0.0f), c_m);
+    const uint32x4_t qx = vceqq_f32(rx, rx);
+    const uint32x4_t qy = vceqq_f32(ry, ry);
+    const float32x4_t ca = vbslq_f32(qy, c, cx);
+    const float32x4_t ra = vbslq_f32(qy, r, rx);
+    const float32x4_t cz = vbslq_f32(qx, ca, cy);
+    const float32x4_t rz = vbslq_f32(qx, ra, ry);
+    cz_out = cz;
+    rz_out = rz;
+}
+
+// interval_intersection_1(xl, xu, yl, yu) -> zl, zu
+KAIRN_GEN_FORCEINLINE void interval_intersection_1(float64x2_t xl, float64x2_t xu, float64x2_t yl, float64x2_t yu, float64x2_t& zl_out, float64x2_t& zu_out) noexcept {
+    const uint64x2_t ml = vcltq_f64(xl, yl);
+    const float64x2_t l = vbslq_f64(ml, yl, xl);
+    const uint64x2_t mu = vcltq_f64(yu, xu);
+    const float64x2_t h = vbslq_f64(mu, yu, xu);
+    const uint64x2_t ok = vcleq_f64(l, h);
+    const float64x2_t mi = vnegq_f64(vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t zl = vbslq_f64(ok, l, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t zu = vbslq_f64(ok, h, mi);
+    zl_out = zl;
+    zu_out = zu;
+}
+KAIRN_GEN_FORCEINLINE void interval_intersection_1(float32x4_t xl, float32x4_t xu, float32x4_t yl, float32x4_t yu, float32x4_t& zl_out, float32x4_t& zu_out) noexcept {
+    const uint32x4_t ml = vcltq_f32(xl, yl);
+    const float32x4_t l = vbslq_f32(ml, yl, xl);
+    const uint32x4_t mu = vcltq_f32(yu, xu);
+    const float32x4_t h = vbslq_f32(mu, yu, xu);
+    const uint32x4_t ok = vcleq_f32(l, h);
+    const float32x4_t mi = vnegq_f32(vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t zl = vbslq_f32(ok, l, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t zu = vbslq_f32(ok, h, mi);
+    zl_out = zl;
+    zu_out = zu;
+}
+
+// ball_intersection_1(cx, rx, cy, ry) -> cz, rz
+KAIRN_GEN_FORCEINLINE void ball_intersection_1(float64x2_t cx, float64x2_t rx, float64x2_t cy, float64x2_t ry, float64x2_t& cz_out, float64x2_t& rz_out) noexcept {
+    // (xl, xu) = ball_to_interval_1(cx, rx)
+    // (xl_l) = sub_down_1(cx, rx)
+    const float64x2_t xl_l_nb = vnegq_f64(rx);
+    // (xl_l) = add_down_1(cx, xl_l_nb)
+    // (xl_l_s, xl_l_e) = two_sum_ord(cx, xl_l_nb)
+    const float64x2_t xl_l_s_aa = vabsq_f64(cx);
+    const float64x2_t xl_l_s_ab = vabsq_f64(xl_l_nb);
+    const uint64x2_t xl_l_s_m = vcltq_f64(xl_l_s_aa, xl_l_s_ab);
+    const float64x2_t xl_l_s_h = vbslq_f64(xl_l_s_m, xl_l_nb, cx);
+    const float64x2_t xl_l_s_l = vbslq_f64(xl_l_s_m, cx, xl_l_nb);
+    // (xl_l_s, xl_l_e) = fast_two_sum(xl_l_s_h, xl_l_s_l)
+    const float64x2_t xl_l_s = vaddq_f64(xl_l_s_h, xl_l_s_l);
+    const float64x2_t xl_l_s_z = vsubq_f64(xl_l_s, xl_l_s_h);
+    const float64x2_t xl_l_e = vsubq_f64(xl_l_s_l, xl_l_s_z);
+    const uint64x2_t xl_l_n = vcltq_f64(xl_l_e, vdupq_n_f64(0.0));
+    const float64x2_t xl_l_p = next_down_bits(xl_l_s);
+    const float64x2_t xl_l = vbslq_f64(xl_l_n, xl_l_p, xl_l_s);
+    // (xl_h) = add_up_1(cx, rx)
+    // (xl_h_s, xl_h_e) = two_sum_ord(cx, rx)
+    const float64x2_t xl_h_s_aa = vabsq_f64(cx);
+    const float64x2_t xl_h_s_ab = vabsq_f64(rx);
+    const uint64x2_t xl_h_s_m = vcltq_f64(xl_h_s_aa, xl_h_s_ab);
+    const float64x2_t xl_h_s_h = vbslq_f64(xl_h_s_m, rx, cx);
+    const float64x2_t xl_h_s_l = vbslq_f64(xl_h_s_m, cx, rx);
+    // (xl_h_s, xl_h_e) = fast_two_sum(xl_h_s_h, xl_h_s_l)
+    const float64x2_t xl_h_s = vaddq_f64(xl_h_s_h, xl_h_s_l);
+    const float64x2_t xl_h_s_z = vsubq_f64(xl_h_s, xl_h_s_h);
+    const float64x2_t xl_h_e = vsubq_f64(xl_h_s_l, xl_h_s_z);
+    const uint64x2_t xl_h_n = vcltq_f64(vdupq_n_f64(0.0), xl_h_e);
+    const float64x2_t xl_h_q = next_up_bits(xl_h_s);
+    const float64x2_t xl_h = vbslq_f64(xl_h_n, xl_h_q, xl_h_s);
+    const uint64x2_t xl_ne = vceqq_f64(rx, rx);
+    const float64x2_t xl_mi = vnegq_f64(vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t xl = vbslq_f64(xl_ne, xl_l, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t xu = vbslq_f64(xl_ne, xl_h, xl_mi);
+    // (yl, yu) = ball_to_interval_1(cy, ry)
+    // (yl_l) = sub_down_1(cy, ry)
+    const float64x2_t yl_l_nb = vnegq_f64(ry);
+    // (yl_l) = add_down_1(cy, yl_l_nb)
+    // (yl_l_s, yl_l_e) = two_sum_ord(cy, yl_l_nb)
+    const float64x2_t yl_l_s_aa = vabsq_f64(cy);
+    const float64x2_t yl_l_s_ab = vabsq_f64(yl_l_nb);
+    const uint64x2_t yl_l_s_m = vcltq_f64(yl_l_s_aa, yl_l_s_ab);
+    const float64x2_t yl_l_s_h = vbslq_f64(yl_l_s_m, yl_l_nb, cy);
+    const float64x2_t yl_l_s_l = vbslq_f64(yl_l_s_m, cy, yl_l_nb);
+    // (yl_l_s, yl_l_e) = fast_two_sum(yl_l_s_h, yl_l_s_l)
+    const float64x2_t yl_l_s = vaddq_f64(yl_l_s_h, yl_l_s_l);
+    const float64x2_t yl_l_s_z = vsubq_f64(yl_l_s, yl_l_s_h);
+    const float64x2_t yl_l_e = vsubq_f64(yl_l_s_l, yl_l_s_z);
+    const uint64x2_t yl_l_n = vcltq_f64(yl_l_e, vdupq_n_f64(0.0));
+    const float64x2_t yl_l_p = next_down_bits(yl_l_s);
+    const float64x2_t yl_l = vbslq_f64(yl_l_n, yl_l_p, yl_l_s);
+    // (yl_h) = add_up_1(cy, ry)
+    // (yl_h_s, yl_h_e) = two_sum_ord(cy, ry)
+    const float64x2_t yl_h_s_aa = vabsq_f64(cy);
+    const float64x2_t yl_h_s_ab = vabsq_f64(ry);
+    const uint64x2_t yl_h_s_m = vcltq_f64(yl_h_s_aa, yl_h_s_ab);
+    const float64x2_t yl_h_s_h = vbslq_f64(yl_h_s_m, ry, cy);
+    const float64x2_t yl_h_s_l = vbslq_f64(yl_h_s_m, cy, ry);
+    // (yl_h_s, yl_h_e) = fast_two_sum(yl_h_s_h, yl_h_s_l)
+    const float64x2_t yl_h_s = vaddq_f64(yl_h_s_h, yl_h_s_l);
+    const float64x2_t yl_h_s_z = vsubq_f64(yl_h_s, yl_h_s_h);
+    const float64x2_t yl_h_e = vsubq_f64(yl_h_s_l, yl_h_s_z);
+    const uint64x2_t yl_h_n = vcltq_f64(vdupq_n_f64(0.0), yl_h_e);
+    const float64x2_t yl_h_q = next_up_bits(yl_h_s);
+    const float64x2_t yl_h = vbslq_f64(yl_h_n, yl_h_q, yl_h_s);
+    const uint64x2_t yl_ne = vceqq_f64(ry, ry);
+    const float64x2_t yl_mi = vnegq_f64(vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t yl = vbslq_f64(yl_ne, yl_l, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t yu = vbslq_f64(yl_ne, yl_h, yl_mi);
+    // (zl, zu) = interval_intersection_1(xl, xu, yl, yu)
+    const uint64x2_t zl_ml = vcltq_f64(xl, yl);
+    const float64x2_t zl_l = vbslq_f64(zl_ml, yl, xl);
+    const uint64x2_t zl_mu = vcltq_f64(yu, xu);
+    const float64x2_t zl_h = vbslq_f64(zl_mu, yu, xu);
+    const uint64x2_t zl_ok = vcleq_f64(zl_l, zl_h);
+    const float64x2_t zl_mi = vnegq_f64(vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t zl = vbslq_f64(zl_ok, zl_l, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t zu = vbslq_f64(zl_ok, zl_h, zl_mi);
+    // (c, r) = interval_to_ball_1(zl, zu)
+    // (c_m, r) = interval_mid_rad_1(zl, zu)
+    const float64x2_t c_m_om = next_down_bits(vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t c_m_mo = vnegq_f64(c_m_om);
+    const uint64x2_t c_m_ml = vcltq_f64(zl, c_m_mo);
+    const float64x2_t c_m_l = vbslq_f64(c_m_ml, c_m_mo, zl);
+    const uint64x2_t c_m_mu = vcltq_f64(c_m_om, zu);
+    const float64x2_t c_m_h = vbslq_f64(c_m_mu, c_m_om, zu);
+    const float64x2_t c_m_hl = vfmaq_f64(vdupq_n_f64(0.0), c_m_l, vdupq_n_f64(0x1p-1));
+    const float64x2_t c_m_hu = vfmaq_f64(vdupq_n_f64(0.0), c_m_h, vdupq_n_f64(0x1p-1));
+    const float64x2_t c_m_ma = vaddq_f64(c_m_hl, c_m_hu);
+    const uint64x2_t c_m_ca = vcltq_f64(c_m_ma, c_m_l);
+    const float64x2_t c_m_mb = vbslq_f64(c_m_ca, c_m_l, c_m_ma);
+    const uint64x2_t c_m_cb = vcltq_f64(c_m_h, c_m_mb);
+    const float64x2_t c_m_mc = vbslq_f64(c_m_cb, c_m_h, c_m_mb);
+    // (c_m_ra) = sub_up_1(c_m_mc, c_m_l)
+    const float64x2_t c_m_ra_nb = vnegq_f64(c_m_l);
+    // (c_m_ra) = add_up_1(c_m_mc, c_m_ra_nb)
+    // (c_m_ra_s, c_m_ra_e) = two_sum_ord(c_m_mc, c_m_ra_nb)
+    const float64x2_t c_m_ra_s_aa = vabsq_f64(c_m_mc);
+    const float64x2_t c_m_ra_s_ab = vabsq_f64(c_m_ra_nb);
+    const uint64x2_t c_m_ra_s_m = vcltq_f64(c_m_ra_s_aa, c_m_ra_s_ab);
+    const float64x2_t c_m_ra_s_h = vbslq_f64(c_m_ra_s_m, c_m_ra_nb, c_m_mc);
+    const float64x2_t c_m_ra_s_l = vbslq_f64(c_m_ra_s_m, c_m_mc, c_m_ra_nb);
+    // (c_m_ra_s, c_m_ra_e) = fast_two_sum(c_m_ra_s_h, c_m_ra_s_l)
+    const float64x2_t c_m_ra_s = vaddq_f64(c_m_ra_s_h, c_m_ra_s_l);
+    const float64x2_t c_m_ra_s_z = vsubq_f64(c_m_ra_s, c_m_ra_s_h);
+    const float64x2_t c_m_ra_e = vsubq_f64(c_m_ra_s_l, c_m_ra_s_z);
+    const uint64x2_t c_m_ra_n = vcltq_f64(vdupq_n_f64(0.0), c_m_ra_e);
+    const float64x2_t c_m_ra_q = next_up_bits(c_m_ra_s);
+    const float64x2_t c_m_ra = vbslq_f64(c_m_ra_n, c_m_ra_q, c_m_ra_s);
+    // (c_m_rb) = sub_up_1(c_m_h, c_m_mc)
+    const float64x2_t c_m_rb_nb = vnegq_f64(c_m_mc);
+    // (c_m_rb) = add_up_1(c_m_h, c_m_rb_nb)
+    // (c_m_rb_s, c_m_rb_e) = two_sum_ord(c_m_h, c_m_rb_nb)
+    const float64x2_t c_m_rb_s_aa = vabsq_f64(c_m_h);
+    const float64x2_t c_m_rb_s_ab = vabsq_f64(c_m_rb_nb);
+    const uint64x2_t c_m_rb_s_m = vcltq_f64(c_m_rb_s_aa, c_m_rb_s_ab);
+    const float64x2_t c_m_rb_s_h = vbslq_f64(c_m_rb_s_m, c_m_rb_nb, c_m_h);
+    const float64x2_t c_m_rb_s_l = vbslq_f64(c_m_rb_s_m, c_m_h, c_m_rb_nb);
+    // (c_m_rb_s, c_m_rb_e) = fast_two_sum(c_m_rb_s_h, c_m_rb_s_l)
+    const float64x2_t c_m_rb_s = vaddq_f64(c_m_rb_s_h, c_m_rb_s_l);
+    const float64x2_t c_m_rb_s_z = vsubq_f64(c_m_rb_s, c_m_rb_s_h);
+    const float64x2_t c_m_rb_e = vsubq_f64(c_m_rb_s_l, c_m_rb_s_z);
+    const uint64x2_t c_m_rb_n = vcltq_f64(vdupq_n_f64(0.0), c_m_rb_e);
+    const float64x2_t c_m_rb_q = next_up_bits(c_m_rb_s);
+    const float64x2_t c_m_rb = vbslq_f64(c_m_rb_n, c_m_rb_q, c_m_rb_s);
+    const uint64x2_t c_m_rm = vcltq_f64(c_m_ra, c_m_rb);
+    const float64x2_t c_m_rc = vbslq_f64(c_m_rm, c_m_rb, c_m_ra);
+    const float64x2_t c_m_md = vbslq_f64(c_m_ml, c_m_mo, c_m_mc);
+    const float64x2_t c_m_me = vbslq_f64(c_m_mu, c_m_om, c_m_md);
+    const uint64x2_t c_m_bo = vandq_u64(c_m_ml, c_m_mu);
+    const float64x2_t c_m_mf = vbslq_f64(c_m_bo, vdupq_n_f64(0.0), c_m_me);
+    const uint64x2_t c_m_un = vorrq_u64(c_m_ml, c_m_mu);
+    const float64x2_t c_m_rd = vbslq_f64(c_m_un, vdupq_n_f64(std::numeric_limits<double>::infinity()), c_m_rc);
+    const uint64x2_t c_m_ne = vcltq_f64(zl, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t c_m = vbslq_f64(c_m_ne, c_m_mf, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    const float64x2_t r = vbslq_f64(c_m_ne, c_m_rd, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
+    const uint64x2_t c_un = vceqq_f64(r, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t c = vbslq_f64(c_un, vdupq_n_f64(0.0), c_m);
+    const uint64x2_t wx = vceqq_f64(rx, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t nx = not_mask(wx);
+    const uint64x2_t wy = vceqq_f64(ry, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t ny = not_mask(wy);
+    const float64x2_t ca = vbslq_f64(ny, c, cx);
+    const float64x2_t ra = vbslq_f64(ny, r, rx);
+    const float64x2_t cz = vbslq_f64(nx, ca, cy);
+    const float64x2_t rz = vbslq_f64(nx, ra, ry);
+    cz_out = cz;
+    rz_out = rz;
+}
+KAIRN_GEN_FORCEINLINE void ball_intersection_1(float32x4_t cx, float32x4_t rx, float32x4_t cy, float32x4_t ry, float32x4_t& cz_out, float32x4_t& rz_out) noexcept {
+    // (xl, xu) = ball_to_interval_1(cx, rx)
+    // (xl_l) = sub_down_1(cx, rx)
+    const float32x4_t xl_l_nb = vnegq_f32(rx);
+    // (xl_l) = add_down_1(cx, xl_l_nb)
+    // (xl_l_s, xl_l_e) = two_sum_ord(cx, xl_l_nb)
+    const float32x4_t xl_l_s_aa = vabsq_f32(cx);
+    const float32x4_t xl_l_s_ab = vabsq_f32(xl_l_nb);
+    const uint32x4_t xl_l_s_m = vcltq_f32(xl_l_s_aa, xl_l_s_ab);
+    const float32x4_t xl_l_s_h = vbslq_f32(xl_l_s_m, xl_l_nb, cx);
+    const float32x4_t xl_l_s_l = vbslq_f32(xl_l_s_m, cx, xl_l_nb);
+    // (xl_l_s, xl_l_e) = fast_two_sum(xl_l_s_h, xl_l_s_l)
+    const float32x4_t xl_l_s = vaddq_f32(xl_l_s_h, xl_l_s_l);
+    const float32x4_t xl_l_s_z = vsubq_f32(xl_l_s, xl_l_s_h);
+    const float32x4_t xl_l_e = vsubq_f32(xl_l_s_l, xl_l_s_z);
+    const uint32x4_t xl_l_n = vcltq_f32(xl_l_e, vdupq_n_f32(0.0f));
+    const float32x4_t xl_l_p = next_down_bits(xl_l_s);
+    const float32x4_t xl_l = vbslq_f32(xl_l_n, xl_l_p, xl_l_s);
+    // (xl_h) = add_up_1(cx, rx)
+    // (xl_h_s, xl_h_e) = two_sum_ord(cx, rx)
+    const float32x4_t xl_h_s_aa = vabsq_f32(cx);
+    const float32x4_t xl_h_s_ab = vabsq_f32(rx);
+    const uint32x4_t xl_h_s_m = vcltq_f32(xl_h_s_aa, xl_h_s_ab);
+    const float32x4_t xl_h_s_h = vbslq_f32(xl_h_s_m, rx, cx);
+    const float32x4_t xl_h_s_l = vbslq_f32(xl_h_s_m, cx, rx);
+    // (xl_h_s, xl_h_e) = fast_two_sum(xl_h_s_h, xl_h_s_l)
+    const float32x4_t xl_h_s = vaddq_f32(xl_h_s_h, xl_h_s_l);
+    const float32x4_t xl_h_s_z = vsubq_f32(xl_h_s, xl_h_s_h);
+    const float32x4_t xl_h_e = vsubq_f32(xl_h_s_l, xl_h_s_z);
+    const uint32x4_t xl_h_n = vcltq_f32(vdupq_n_f32(0.0f), xl_h_e);
+    const float32x4_t xl_h_q = next_up_bits(xl_h_s);
+    const float32x4_t xl_h = vbslq_f32(xl_h_n, xl_h_q, xl_h_s);
+    const uint32x4_t xl_ne = vceqq_f32(rx, rx);
+    const float32x4_t xl_mi = vnegq_f32(vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t xl = vbslq_f32(xl_ne, xl_l, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t xu = vbslq_f32(xl_ne, xl_h, xl_mi);
+    // (yl, yu) = ball_to_interval_1(cy, ry)
+    // (yl_l) = sub_down_1(cy, ry)
+    const float32x4_t yl_l_nb = vnegq_f32(ry);
+    // (yl_l) = add_down_1(cy, yl_l_nb)
+    // (yl_l_s, yl_l_e) = two_sum_ord(cy, yl_l_nb)
+    const float32x4_t yl_l_s_aa = vabsq_f32(cy);
+    const float32x4_t yl_l_s_ab = vabsq_f32(yl_l_nb);
+    const uint32x4_t yl_l_s_m = vcltq_f32(yl_l_s_aa, yl_l_s_ab);
+    const float32x4_t yl_l_s_h = vbslq_f32(yl_l_s_m, yl_l_nb, cy);
+    const float32x4_t yl_l_s_l = vbslq_f32(yl_l_s_m, cy, yl_l_nb);
+    // (yl_l_s, yl_l_e) = fast_two_sum(yl_l_s_h, yl_l_s_l)
+    const float32x4_t yl_l_s = vaddq_f32(yl_l_s_h, yl_l_s_l);
+    const float32x4_t yl_l_s_z = vsubq_f32(yl_l_s, yl_l_s_h);
+    const float32x4_t yl_l_e = vsubq_f32(yl_l_s_l, yl_l_s_z);
+    const uint32x4_t yl_l_n = vcltq_f32(yl_l_e, vdupq_n_f32(0.0f));
+    const float32x4_t yl_l_p = next_down_bits(yl_l_s);
+    const float32x4_t yl_l = vbslq_f32(yl_l_n, yl_l_p, yl_l_s);
+    // (yl_h) = add_up_1(cy, ry)
+    // (yl_h_s, yl_h_e) = two_sum_ord(cy, ry)
+    const float32x4_t yl_h_s_aa = vabsq_f32(cy);
+    const float32x4_t yl_h_s_ab = vabsq_f32(ry);
+    const uint32x4_t yl_h_s_m = vcltq_f32(yl_h_s_aa, yl_h_s_ab);
+    const float32x4_t yl_h_s_h = vbslq_f32(yl_h_s_m, ry, cy);
+    const float32x4_t yl_h_s_l = vbslq_f32(yl_h_s_m, cy, ry);
+    // (yl_h_s, yl_h_e) = fast_two_sum(yl_h_s_h, yl_h_s_l)
+    const float32x4_t yl_h_s = vaddq_f32(yl_h_s_h, yl_h_s_l);
+    const float32x4_t yl_h_s_z = vsubq_f32(yl_h_s, yl_h_s_h);
+    const float32x4_t yl_h_e = vsubq_f32(yl_h_s_l, yl_h_s_z);
+    const uint32x4_t yl_h_n = vcltq_f32(vdupq_n_f32(0.0f), yl_h_e);
+    const float32x4_t yl_h_q = next_up_bits(yl_h_s);
+    const float32x4_t yl_h = vbslq_f32(yl_h_n, yl_h_q, yl_h_s);
+    const uint32x4_t yl_ne = vceqq_f32(ry, ry);
+    const float32x4_t yl_mi = vnegq_f32(vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t yl = vbslq_f32(yl_ne, yl_l, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t yu = vbslq_f32(yl_ne, yl_h, yl_mi);
+    // (zl, zu) = interval_intersection_1(xl, xu, yl, yu)
+    const uint32x4_t zl_ml = vcltq_f32(xl, yl);
+    const float32x4_t zl_l = vbslq_f32(zl_ml, yl, xl);
+    const uint32x4_t zl_mu = vcltq_f32(yu, xu);
+    const float32x4_t zl_h = vbslq_f32(zl_mu, yu, xu);
+    const uint32x4_t zl_ok = vcleq_f32(zl_l, zl_h);
+    const float32x4_t zl_mi = vnegq_f32(vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t zl = vbslq_f32(zl_ok, zl_l, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t zu = vbslq_f32(zl_ok, zl_h, zl_mi);
+    // (c, r) = interval_to_ball_1(zl, zu)
+    // (c_m, r) = interval_mid_rad_1(zl, zu)
+    const float32x4_t c_m_om = next_down_bits(vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t c_m_mo = vnegq_f32(c_m_om);
+    const uint32x4_t c_m_ml = vcltq_f32(zl, c_m_mo);
+    const float32x4_t c_m_l = vbslq_f32(c_m_ml, c_m_mo, zl);
+    const uint32x4_t c_m_mu = vcltq_f32(c_m_om, zu);
+    const float32x4_t c_m_h = vbslq_f32(c_m_mu, c_m_om, zu);
+    const float32x4_t c_m_hl = vfmaq_f32(vdupq_n_f32(0.0f), c_m_l, vdupq_n_f32(0x1p-1f));
+    const float32x4_t c_m_hu = vfmaq_f32(vdupq_n_f32(0.0f), c_m_h, vdupq_n_f32(0x1p-1f));
+    const float32x4_t c_m_ma = vaddq_f32(c_m_hl, c_m_hu);
+    const uint32x4_t c_m_ca = vcltq_f32(c_m_ma, c_m_l);
+    const float32x4_t c_m_mb = vbslq_f32(c_m_ca, c_m_l, c_m_ma);
+    const uint32x4_t c_m_cb = vcltq_f32(c_m_h, c_m_mb);
+    const float32x4_t c_m_mc = vbslq_f32(c_m_cb, c_m_h, c_m_mb);
+    // (c_m_ra) = sub_up_1(c_m_mc, c_m_l)
+    const float32x4_t c_m_ra_nb = vnegq_f32(c_m_l);
+    // (c_m_ra) = add_up_1(c_m_mc, c_m_ra_nb)
+    // (c_m_ra_s, c_m_ra_e) = two_sum_ord(c_m_mc, c_m_ra_nb)
+    const float32x4_t c_m_ra_s_aa = vabsq_f32(c_m_mc);
+    const float32x4_t c_m_ra_s_ab = vabsq_f32(c_m_ra_nb);
+    const uint32x4_t c_m_ra_s_m = vcltq_f32(c_m_ra_s_aa, c_m_ra_s_ab);
+    const float32x4_t c_m_ra_s_h = vbslq_f32(c_m_ra_s_m, c_m_ra_nb, c_m_mc);
+    const float32x4_t c_m_ra_s_l = vbslq_f32(c_m_ra_s_m, c_m_mc, c_m_ra_nb);
+    // (c_m_ra_s, c_m_ra_e) = fast_two_sum(c_m_ra_s_h, c_m_ra_s_l)
+    const float32x4_t c_m_ra_s = vaddq_f32(c_m_ra_s_h, c_m_ra_s_l);
+    const float32x4_t c_m_ra_s_z = vsubq_f32(c_m_ra_s, c_m_ra_s_h);
+    const float32x4_t c_m_ra_e = vsubq_f32(c_m_ra_s_l, c_m_ra_s_z);
+    const uint32x4_t c_m_ra_n = vcltq_f32(vdupq_n_f32(0.0f), c_m_ra_e);
+    const float32x4_t c_m_ra_q = next_up_bits(c_m_ra_s);
+    const float32x4_t c_m_ra = vbslq_f32(c_m_ra_n, c_m_ra_q, c_m_ra_s);
+    // (c_m_rb) = sub_up_1(c_m_h, c_m_mc)
+    const float32x4_t c_m_rb_nb = vnegq_f32(c_m_mc);
+    // (c_m_rb) = add_up_1(c_m_h, c_m_rb_nb)
+    // (c_m_rb_s, c_m_rb_e) = two_sum_ord(c_m_h, c_m_rb_nb)
+    const float32x4_t c_m_rb_s_aa = vabsq_f32(c_m_h);
+    const float32x4_t c_m_rb_s_ab = vabsq_f32(c_m_rb_nb);
+    const uint32x4_t c_m_rb_s_m = vcltq_f32(c_m_rb_s_aa, c_m_rb_s_ab);
+    const float32x4_t c_m_rb_s_h = vbslq_f32(c_m_rb_s_m, c_m_rb_nb, c_m_h);
+    const float32x4_t c_m_rb_s_l = vbslq_f32(c_m_rb_s_m, c_m_h, c_m_rb_nb);
+    // (c_m_rb_s, c_m_rb_e) = fast_two_sum(c_m_rb_s_h, c_m_rb_s_l)
+    const float32x4_t c_m_rb_s = vaddq_f32(c_m_rb_s_h, c_m_rb_s_l);
+    const float32x4_t c_m_rb_s_z = vsubq_f32(c_m_rb_s, c_m_rb_s_h);
+    const float32x4_t c_m_rb_e = vsubq_f32(c_m_rb_s_l, c_m_rb_s_z);
+    const uint32x4_t c_m_rb_n = vcltq_f32(vdupq_n_f32(0.0f), c_m_rb_e);
+    const float32x4_t c_m_rb_q = next_up_bits(c_m_rb_s);
+    const float32x4_t c_m_rb = vbslq_f32(c_m_rb_n, c_m_rb_q, c_m_rb_s);
+    const uint32x4_t c_m_rm = vcltq_f32(c_m_ra, c_m_rb);
+    const float32x4_t c_m_rc = vbslq_f32(c_m_rm, c_m_rb, c_m_ra);
+    const float32x4_t c_m_md = vbslq_f32(c_m_ml, c_m_mo, c_m_mc);
+    const float32x4_t c_m_me = vbslq_f32(c_m_mu, c_m_om, c_m_md);
+    const uint32x4_t c_m_bo = vandq_u32(c_m_ml, c_m_mu);
+    const float32x4_t c_m_mf = vbslq_f32(c_m_bo, vdupq_n_f32(0.0f), c_m_me);
+    const uint32x4_t c_m_un = vorrq_u32(c_m_ml, c_m_mu);
+    const float32x4_t c_m_rd = vbslq_f32(c_m_un, vdupq_n_f32(std::numeric_limits<float>::infinity()), c_m_rc);
+    const uint32x4_t c_m_ne = vcltq_f32(zl, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t c_m = vbslq_f32(c_m_ne, c_m_mf, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    const float32x4_t r = vbslq_f32(c_m_ne, c_m_rd, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
+    const uint32x4_t c_un = vceqq_f32(r, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t c = vbslq_f32(c_un, vdupq_n_f32(0.0f), c_m);
+    const uint32x4_t wx = vceqq_f32(rx, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t nx = not_mask(wx);
+    const uint32x4_t wy = vceqq_f32(ry, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t ny = not_mask(wy);
+    const float32x4_t ca = vbslq_f32(ny, c, cx);
+    const float32x4_t ra = vbslq_f32(ny, r, rx);
+    const float32x4_t cz = vbslq_f32(nx, ca, cy);
+    const float32x4_t rz = vbslq_f32(nx, ra, ry);
+    cz_out = cz;
+    rz_out = rz;
+}
+
+// ball_less_1(cx, rx, cy, ry) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void ball_less_1(float64x2_t cx, float64x2_t rx, float64x2_t cy, float64x2_t ry, uint64x2_t& yes_out, uint64x2_t& no_out) noexcept {
+    // (s0, s1) = two_sum_ord(rx, ry)
+    const float64x2_t s0_aa = vabsq_f64(rx);
+    const float64x2_t s0_ab = vabsq_f64(ry);
+    const uint64x2_t s0_m = vcltq_f64(s0_aa, s0_ab);
+    const float64x2_t s0_h = vbslq_f64(s0_m, ry, rx);
+    const float64x2_t s0_l = vbslq_f64(s0_m, rx, ry);
+    // (s0, s1) = fast_two_sum(s0_h, s0_l)
+    const float64x2_t s0 = vaddq_f64(s0_h, s0_l);
+    const float64x2_t s0_z = vsubq_f64(s0, s0_h);
+    const float64x2_t s1 = vsubq_f64(s0_l, s0_z);
+    const float64x2_t ncx = vnegq_f64(cx);
+    // (d0, d1) = two_sum_ord(cy, ncx)
+    const float64x2_t d0_aa = vabsq_f64(cy);
+    const float64x2_t d0_ab = vabsq_f64(ncx);
+    const uint64x2_t d0_m = vcltq_f64(d0_aa, d0_ab);
+    const float64x2_t d0_h = vbslq_f64(d0_m, ncx, cy);
+    const float64x2_t d0_l = vbslq_f64(d0_m, cy, ncx);
+    // (d0, d1) = fast_two_sum(d0_h, d0_l)
+    const float64x2_t d0 = vaddq_f64(d0_h, d0_l);
+    const float64x2_t d0_z = vsubq_f64(d0, d0_h);
+    const float64x2_t d1 = vsubq_f64(d0_l, d0_z);
+    const float64x2_t ncy = vnegq_f64(cy);
+    // (g0, g1) = two_sum_ord(cx, ncy)
+    const float64x2_t g0_aa = vabsq_f64(cx);
+    const float64x2_t g0_ab = vabsq_f64(ncy);
+    const uint64x2_t g0_m = vcltq_f64(g0_aa, g0_ab);
+    const float64x2_t g0_h = vbslq_f64(g0_m, ncy, cx);
+    const float64x2_t g0_l = vbslq_f64(g0_m, cx, ncy);
+    // (g0, g1) = fast_two_sum(g0_h, g0_l)
+    const float64x2_t g0 = vaddq_f64(g0_h, g0_l);
+    const float64x2_t g0_z = vsubq_f64(g0, g0_h);
+    const float64x2_t g1 = vsubq_f64(g0_l, g0_z);
+    // (yes) = lt_2_2(s0, s1, d0, d1)
+    const uint64x2_t yes_h = vcltq_f64(s0, d0);
+    const uint64x2_t yes_e = vceqq_f64(s0, d0);
+    const uint64x2_t yes_l = vcltq_f64(s1, d1);
+    const uint64x2_t yes_t = vandq_u64(yes_e, yes_l);
+    const uint64x2_t yes = vorrq_u64(yes_h, yes_t);
+    // (b) = le_2_2(s0, s1, g0, g1)
+    const uint64x2_t b_h = vcltq_f64(s0, g0);
+    const uint64x2_t b_e = vceqq_f64(s0, g0);
+    const uint64x2_t b_l = vcleq_f64(s1, g1);
+    const uint64x2_t b_t = vandq_u64(b_e, b_l);
+    const uint64x2_t b = vorrq_u64(b_h, b_t);
+    const float64x2_t sa = vabsq_f64(s0);
+    const uint64x2_t fs = vcltq_f64(sa, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t no = vandq_u64(b, fs);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void ball_less_1(float32x4_t cx, float32x4_t rx, float32x4_t cy, float32x4_t ry, uint32x4_t& yes_out, uint32x4_t& no_out) noexcept {
+    // (s0, s1) = two_sum_ord(rx, ry)
+    const float32x4_t s0_aa = vabsq_f32(rx);
+    const float32x4_t s0_ab = vabsq_f32(ry);
+    const uint32x4_t s0_m = vcltq_f32(s0_aa, s0_ab);
+    const float32x4_t s0_h = vbslq_f32(s0_m, ry, rx);
+    const float32x4_t s0_l = vbslq_f32(s0_m, rx, ry);
+    // (s0, s1) = fast_two_sum(s0_h, s0_l)
+    const float32x4_t s0 = vaddq_f32(s0_h, s0_l);
+    const float32x4_t s0_z = vsubq_f32(s0, s0_h);
+    const float32x4_t s1 = vsubq_f32(s0_l, s0_z);
+    const float32x4_t ncx = vnegq_f32(cx);
+    // (d0, d1) = two_sum_ord(cy, ncx)
+    const float32x4_t d0_aa = vabsq_f32(cy);
+    const float32x4_t d0_ab = vabsq_f32(ncx);
+    const uint32x4_t d0_m = vcltq_f32(d0_aa, d0_ab);
+    const float32x4_t d0_h = vbslq_f32(d0_m, ncx, cy);
+    const float32x4_t d0_l = vbslq_f32(d0_m, cy, ncx);
+    // (d0, d1) = fast_two_sum(d0_h, d0_l)
+    const float32x4_t d0 = vaddq_f32(d0_h, d0_l);
+    const float32x4_t d0_z = vsubq_f32(d0, d0_h);
+    const float32x4_t d1 = vsubq_f32(d0_l, d0_z);
+    const float32x4_t ncy = vnegq_f32(cy);
+    // (g0, g1) = two_sum_ord(cx, ncy)
+    const float32x4_t g0_aa = vabsq_f32(cx);
+    const float32x4_t g0_ab = vabsq_f32(ncy);
+    const uint32x4_t g0_m = vcltq_f32(g0_aa, g0_ab);
+    const float32x4_t g0_h = vbslq_f32(g0_m, ncy, cx);
+    const float32x4_t g0_l = vbslq_f32(g0_m, cx, ncy);
+    // (g0, g1) = fast_two_sum(g0_h, g0_l)
+    const float32x4_t g0 = vaddq_f32(g0_h, g0_l);
+    const float32x4_t g0_z = vsubq_f32(g0, g0_h);
+    const float32x4_t g1 = vsubq_f32(g0_l, g0_z);
+    // (yes) = lt_2_2(s0, s1, d0, d1)
+    const uint32x4_t yes_h = vcltq_f32(s0, d0);
+    const uint32x4_t yes_e = vceqq_f32(s0, d0);
+    const uint32x4_t yes_l = vcltq_f32(s1, d1);
+    const uint32x4_t yes_t = vandq_u32(yes_e, yes_l);
+    const uint32x4_t yes = vorrq_u32(yes_h, yes_t);
+    // (b) = le_2_2(s0, s1, g0, g1)
+    const uint32x4_t b_h = vcltq_f32(s0, g0);
+    const uint32x4_t b_e = vceqq_f32(s0, g0);
+    const uint32x4_t b_l = vcleq_f32(s1, g1);
+    const uint32x4_t b_t = vandq_u32(b_e, b_l);
+    const uint32x4_t b = vorrq_u32(b_h, b_t);
+    const float32x4_t sa = vabsq_f32(s0);
+    const uint32x4_t fs = vcltq_f32(sa, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t no = vandq_u32(b, fs);
+    yes_out = yes;
+    no_out = no;
+}
+
+// ball_less_equal_1(cx, rx, cy, ry) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void ball_less_equal_1(float64x2_t cx, float64x2_t rx, float64x2_t cy, float64x2_t ry, uint64x2_t& yes_out, uint64x2_t& no_out) noexcept {
+    // (s0, s1) = two_sum_ord(rx, ry)
+    const float64x2_t s0_aa = vabsq_f64(rx);
+    const float64x2_t s0_ab = vabsq_f64(ry);
+    const uint64x2_t s0_m = vcltq_f64(s0_aa, s0_ab);
+    const float64x2_t s0_h = vbslq_f64(s0_m, ry, rx);
+    const float64x2_t s0_l = vbslq_f64(s0_m, rx, ry);
+    // (s0, s1) = fast_two_sum(s0_h, s0_l)
+    const float64x2_t s0 = vaddq_f64(s0_h, s0_l);
+    const float64x2_t s0_z = vsubq_f64(s0, s0_h);
+    const float64x2_t s1 = vsubq_f64(s0_l, s0_z);
+    const float64x2_t ncx = vnegq_f64(cx);
+    // (d0, d1) = two_sum_ord(cy, ncx)
+    const float64x2_t d0_aa = vabsq_f64(cy);
+    const float64x2_t d0_ab = vabsq_f64(ncx);
+    const uint64x2_t d0_m = vcltq_f64(d0_aa, d0_ab);
+    const float64x2_t d0_h = vbslq_f64(d0_m, ncx, cy);
+    const float64x2_t d0_l = vbslq_f64(d0_m, cy, ncx);
+    // (d0, d1) = fast_two_sum(d0_h, d0_l)
+    const float64x2_t d0 = vaddq_f64(d0_h, d0_l);
+    const float64x2_t d0_z = vsubq_f64(d0, d0_h);
+    const float64x2_t d1 = vsubq_f64(d0_l, d0_z);
+    const float64x2_t ncy = vnegq_f64(cy);
+    // (g0, g1) = two_sum_ord(cx, ncy)
+    const float64x2_t g0_aa = vabsq_f64(cx);
+    const float64x2_t g0_ab = vabsq_f64(ncy);
+    const uint64x2_t g0_m = vcltq_f64(g0_aa, g0_ab);
+    const float64x2_t g0_h = vbslq_f64(g0_m, ncy, cx);
+    const float64x2_t g0_l = vbslq_f64(g0_m, cx, ncy);
+    // (g0, g1) = fast_two_sum(g0_h, g0_l)
+    const float64x2_t g0 = vaddq_f64(g0_h, g0_l);
+    const float64x2_t g0_z = vsubq_f64(g0, g0_h);
+    const float64x2_t g1 = vsubq_f64(g0_l, g0_z);
+    // (a) = le_2_2(s0, s1, d0, d1)
+    const uint64x2_t a_h = vcltq_f64(s0, d0);
+    const uint64x2_t a_e = vceqq_f64(s0, d0);
+    const uint64x2_t a_l = vcleq_f64(s1, d1);
+    const uint64x2_t a_t = vandq_u64(a_e, a_l);
+    const uint64x2_t a = vorrq_u64(a_h, a_t);
+    const float64x2_t sa = vabsq_f64(s0);
+    const uint64x2_t fs = vcltq_f64(sa, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t yes = vandq_u64(a, fs);
+    // (no) = lt_2_2(s0, s1, g0, g1)
+    const uint64x2_t no_h = vcltq_f64(s0, g0);
+    const uint64x2_t no_e = vceqq_f64(s0, g0);
+    const uint64x2_t no_l = vcltq_f64(s1, g1);
+    const uint64x2_t no_t = vandq_u64(no_e, no_l);
+    const uint64x2_t no = vorrq_u64(no_h, no_t);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void ball_less_equal_1(float32x4_t cx, float32x4_t rx, float32x4_t cy, float32x4_t ry, uint32x4_t& yes_out, uint32x4_t& no_out) noexcept {
+    // (s0, s1) = two_sum_ord(rx, ry)
+    const float32x4_t s0_aa = vabsq_f32(rx);
+    const float32x4_t s0_ab = vabsq_f32(ry);
+    const uint32x4_t s0_m = vcltq_f32(s0_aa, s0_ab);
+    const float32x4_t s0_h = vbslq_f32(s0_m, ry, rx);
+    const float32x4_t s0_l = vbslq_f32(s0_m, rx, ry);
+    // (s0, s1) = fast_two_sum(s0_h, s0_l)
+    const float32x4_t s0 = vaddq_f32(s0_h, s0_l);
+    const float32x4_t s0_z = vsubq_f32(s0, s0_h);
+    const float32x4_t s1 = vsubq_f32(s0_l, s0_z);
+    const float32x4_t ncx = vnegq_f32(cx);
+    // (d0, d1) = two_sum_ord(cy, ncx)
+    const float32x4_t d0_aa = vabsq_f32(cy);
+    const float32x4_t d0_ab = vabsq_f32(ncx);
+    const uint32x4_t d0_m = vcltq_f32(d0_aa, d0_ab);
+    const float32x4_t d0_h = vbslq_f32(d0_m, ncx, cy);
+    const float32x4_t d0_l = vbslq_f32(d0_m, cy, ncx);
+    // (d0, d1) = fast_two_sum(d0_h, d0_l)
+    const float32x4_t d0 = vaddq_f32(d0_h, d0_l);
+    const float32x4_t d0_z = vsubq_f32(d0, d0_h);
+    const float32x4_t d1 = vsubq_f32(d0_l, d0_z);
+    const float32x4_t ncy = vnegq_f32(cy);
+    // (g0, g1) = two_sum_ord(cx, ncy)
+    const float32x4_t g0_aa = vabsq_f32(cx);
+    const float32x4_t g0_ab = vabsq_f32(ncy);
+    const uint32x4_t g0_m = vcltq_f32(g0_aa, g0_ab);
+    const float32x4_t g0_h = vbslq_f32(g0_m, ncy, cx);
+    const float32x4_t g0_l = vbslq_f32(g0_m, cx, ncy);
+    // (g0, g1) = fast_two_sum(g0_h, g0_l)
+    const float32x4_t g0 = vaddq_f32(g0_h, g0_l);
+    const float32x4_t g0_z = vsubq_f32(g0, g0_h);
+    const float32x4_t g1 = vsubq_f32(g0_l, g0_z);
+    // (a) = le_2_2(s0, s1, d0, d1)
+    const uint32x4_t a_h = vcltq_f32(s0, d0);
+    const uint32x4_t a_e = vceqq_f32(s0, d0);
+    const uint32x4_t a_l = vcleq_f32(s1, d1);
+    const uint32x4_t a_t = vandq_u32(a_e, a_l);
+    const uint32x4_t a = vorrq_u32(a_h, a_t);
+    const float32x4_t sa = vabsq_f32(s0);
+    const uint32x4_t fs = vcltq_f32(sa, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t yes = vandq_u32(a, fs);
+    // (no) = lt_2_2(s0, s1, g0, g1)
+    const uint32x4_t no_h = vcltq_f32(s0, g0);
+    const uint32x4_t no_e = vceqq_f32(s0, g0);
+    const uint32x4_t no_l = vcltq_f32(s1, g1);
+    const uint32x4_t no_t = vandq_u32(no_e, no_l);
+    const uint32x4_t no = vorrq_u32(no_h, no_t);
+    yes_out = yes;
+    no_out = no;
 }
 
 // ball_lower_as_1(c, r) -> l
@@ -819,6 +2335,28 @@ KAIRN_GEN_FORCEINLINE void ball_neg_1(float32x4_t cx, float32x4_t rx, float32x4_
     rz_out = rz;
 }
 
+// ball_negative_1(c, r) -> mask m
+KAIRN_GEN_FORCEINLINE void ball_negative_1(float64x2_t c, float64x2_t r, uint64x2_t& m_out) noexcept {
+    const float64x2_t nr = vnegq_f64(r);
+    const uint64x2_t m = vcltq_f64(c, nr);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void ball_negative_1(float32x4_t c, float32x4_t r, uint32x4_t& m_out) noexcept {
+    const float32x4_t nr = vnegq_f32(r);
+    const uint32x4_t m = vcltq_f32(c, nr);
+    m_out = m;
+}
+
+// ball_positive_1(c, r) -> mask m
+KAIRN_GEN_FORCEINLINE void ball_positive_1(float64x2_t c, float64x2_t r, uint64x2_t& m_out) noexcept {
+    const uint64x2_t m = vcltq_f64(r, c);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void ball_positive_1(float32x4_t c, float32x4_t r, uint32x4_t& m_out) noexcept {
+    const uint32x4_t m = vcltq_f32(r, c);
+    m_out = m;
+}
+
 // ball_scale_1(cx, rx, a) -> cz, rz
 KAIRN_GEN_FORCEINLINE void ball_scale_1(float64x2_t cx, float64x2_t rx, float64x2_t a, float64x2_t& cz_out, float64x2_t& rz_out) noexcept {
     const float64x2_t cz = vfmaq_f64(vdupq_n_f64(0.0), cx, a);
@@ -881,6 +2419,118 @@ KAIRN_GEN_FORCEINLINE void ball_scale_1_full(float32x4_t cx, float32x4_t rx, flo
     const float32x4_t rw = vbslq_f32(e, r, rx);
     cw_out = cw;
     rw_out = rw;
+}
+
+// ball_split_1(c, r) -> ca, ra, cb, rb
+KAIRN_GEN_FORCEINLINE void ball_split_1(float64x2_t c, float64x2_t r, float64x2_t& ca_out, float64x2_t& ra_out, float64x2_t& cb_out, float64x2_t& rb_out) noexcept {
+    const float64x2_t h = vfmaq_f64(vdupq_n_f64(0.0), r, vdupq_n_f64(0x1p-1));
+    const float64x2_t nr = vnegq_f64(r);
+    const float64x2_t hn = vfmaq_f64(vdupq_n_f64(0.0), nr, vdupq_n_f64(0x1p-1));
+    const float64x2_t g = vsubq_f64(r, h);
+    const uint64x2_t mg = vcltq_f64(h, g);
+    const float64x2_t q = vbslq_f64(mg, g, h);
+    const uint64x2_t fr = vcltq_f64(r, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t hs = vbslq_f64(fr, h, vdupq_n_f64(0.0));
+    const float64x2_t nh = vbslq_f64(fr, hn, vdupq_n_f64(0.0));
+    const float64x2_t ws = vbslq_f64(fr, q, vdupq_n_f64(0.0));
+    const float64x2_t cs = vbslq_f64(fr, c, vdupq_n_f64(0.0));
+    // (a0, a1) = ball_add_1_full(cs, 0, nh, ws)
+    // (a0_cz, a0_rz) = ball_add_1(cs, 0, nh, ws)
+    const float64x2_t a0_cz = vaddq_f64(cs, nh);
+    const float64x2_t a0_cz_az = vabsq_f64(a0_cz);
+    const float64x2_t a0_cz_s = vaddq_f64(vdupq_n_f64(0.0), ws);
+    const float64x2_t a0_cz_t = vfmaq_f64(a0_cz_s, a0_cz_az, vdupq_n_f64(0x1p-53));
+    const float64x2_t a0_rz = vfmaq_f64(vdupq_n_f64(0x1.0000000000002p-1022), a0_cz_t, vdupq_n_f64(0x1.0000000000002p+0));
+    const float64x2_t a0_q = vaddq_f64(vdupq_n_f64(0.0), ws);
+    const uint64x2_t a0_e = vceqq_f64(a0_q, a0_q);
+    const float64x2_t a0_a = vabsq_f64(a0_cz);
+    const uint64x2_t a0_f1 = vcltq_f64(a0_a, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t a0_f2 = vcltq_f64(a0_rz, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t a0_f = vandq_u64(a0_f1, a0_f2);
+    const float64x2_t a0_c0 = vbslq_f64(a0_f, a0_cz, vdupq_n_f64(0.0));
+    const float64x2_t a0_r = vbslq_f64(a0_f, a0_rz, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t a0 = vbslq_f64(a0_e, a0_c0, a0_q);
+    const float64x2_t a1 = vbslq_f64(a0_e, a0_r, a0_q);
+    // (b0, b1) = ball_add_1_full(cs, 0, hs, ws)
+    // (b0_cz, b0_rz) = ball_add_1(cs, 0, hs, ws)
+    const float64x2_t b0_cz = vaddq_f64(cs, hs);
+    const float64x2_t b0_cz_az = vabsq_f64(b0_cz);
+    const float64x2_t b0_cz_s = vaddq_f64(vdupq_n_f64(0.0), ws);
+    const float64x2_t b0_cz_t = vfmaq_f64(b0_cz_s, b0_cz_az, vdupq_n_f64(0x1p-53));
+    const float64x2_t b0_rz = vfmaq_f64(vdupq_n_f64(0x1.0000000000002p-1022), b0_cz_t, vdupq_n_f64(0x1.0000000000002p+0));
+    const float64x2_t b0_q = vaddq_f64(vdupq_n_f64(0.0), ws);
+    const uint64x2_t b0_e = vceqq_f64(b0_q, b0_q);
+    const float64x2_t b0_a = vabsq_f64(b0_cz);
+    const uint64x2_t b0_f1 = vcltq_f64(b0_a, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t b0_f2 = vcltq_f64(b0_rz, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t b0_f = vandq_u64(b0_f1, b0_f2);
+    const float64x2_t b0_c0 = vbslq_f64(b0_f, b0_cz, vdupq_n_f64(0.0));
+    const float64x2_t b0_r = vbslq_f64(b0_f, b0_rz, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t b0 = vbslq_f64(b0_e, b0_c0, b0_q);
+    const float64x2_t b1 = vbslq_f64(b0_e, b0_r, b0_q);
+    const float64x2_t ca = vbslq_f64(fr, a0, c);
+    const float64x2_t ra = vbslq_f64(fr, a1, r);
+    const float64x2_t cb = vbslq_f64(fr, b0, c);
+    const float64x2_t rb = vbslq_f64(fr, b1, r);
+    ca_out = ca;
+    ra_out = ra;
+    cb_out = cb;
+    rb_out = rb;
+}
+KAIRN_GEN_FORCEINLINE void ball_split_1(float32x4_t c, float32x4_t r, float32x4_t& ca_out, float32x4_t& ra_out, float32x4_t& cb_out, float32x4_t& rb_out) noexcept {
+    const float32x4_t h = vfmaq_f32(vdupq_n_f32(0.0f), r, vdupq_n_f32(0x1p-1f));
+    const float32x4_t nr = vnegq_f32(r);
+    const float32x4_t hn = vfmaq_f32(vdupq_n_f32(0.0f), nr, vdupq_n_f32(0x1p-1f));
+    const float32x4_t g = vsubq_f32(r, h);
+    const uint32x4_t mg = vcltq_f32(h, g);
+    const float32x4_t q = vbslq_f32(mg, g, h);
+    const uint32x4_t fr = vcltq_f32(r, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t hs = vbslq_f32(fr, h, vdupq_n_f32(0.0f));
+    const float32x4_t nh = vbslq_f32(fr, hn, vdupq_n_f32(0.0f));
+    const float32x4_t ws = vbslq_f32(fr, q, vdupq_n_f32(0.0f));
+    const float32x4_t cs = vbslq_f32(fr, c, vdupq_n_f32(0.0f));
+    // (a0, a1) = ball_add_1_full(cs, 0, nh, ws)
+    // (a0_cz, a0_rz) = ball_add_1(cs, 0, nh, ws)
+    const float32x4_t a0_cz = vaddq_f32(cs, nh);
+    const float32x4_t a0_cz_az = vabsq_f32(a0_cz);
+    const float32x4_t a0_cz_s = vaddq_f32(vdupq_n_f32(0.0f), ws);
+    const float32x4_t a0_cz_t = vfmaq_f32(a0_cz_s, a0_cz_az, vdupq_n_f32(0x1p-24f));
+    const float32x4_t a0_rz = vfmaq_f32(vdupq_n_f32(0x1.000004p-126f), a0_cz_t, vdupq_n_f32(0x1.000004p+0f));
+    const float32x4_t a0_q = vaddq_f32(vdupq_n_f32(0.0f), ws);
+    const uint32x4_t a0_e = vceqq_f32(a0_q, a0_q);
+    const float32x4_t a0_a = vabsq_f32(a0_cz);
+    const uint32x4_t a0_f1 = vcltq_f32(a0_a, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t a0_f2 = vcltq_f32(a0_rz, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t a0_f = vandq_u32(a0_f1, a0_f2);
+    const float32x4_t a0_c0 = vbslq_f32(a0_f, a0_cz, vdupq_n_f32(0.0f));
+    const float32x4_t a0_r = vbslq_f32(a0_f, a0_rz, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t a0 = vbslq_f32(a0_e, a0_c0, a0_q);
+    const float32x4_t a1 = vbslq_f32(a0_e, a0_r, a0_q);
+    // (b0, b1) = ball_add_1_full(cs, 0, hs, ws)
+    // (b0_cz, b0_rz) = ball_add_1(cs, 0, hs, ws)
+    const float32x4_t b0_cz = vaddq_f32(cs, hs);
+    const float32x4_t b0_cz_az = vabsq_f32(b0_cz);
+    const float32x4_t b0_cz_s = vaddq_f32(vdupq_n_f32(0.0f), ws);
+    const float32x4_t b0_cz_t = vfmaq_f32(b0_cz_s, b0_cz_az, vdupq_n_f32(0x1p-24f));
+    const float32x4_t b0_rz = vfmaq_f32(vdupq_n_f32(0x1.000004p-126f), b0_cz_t, vdupq_n_f32(0x1.000004p+0f));
+    const float32x4_t b0_q = vaddq_f32(vdupq_n_f32(0.0f), ws);
+    const uint32x4_t b0_e = vceqq_f32(b0_q, b0_q);
+    const float32x4_t b0_a = vabsq_f32(b0_cz);
+    const uint32x4_t b0_f1 = vcltq_f32(b0_a, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t b0_f2 = vcltq_f32(b0_rz, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t b0_f = vandq_u32(b0_f1, b0_f2);
+    const float32x4_t b0_c0 = vbslq_f32(b0_f, b0_cz, vdupq_n_f32(0.0f));
+    const float32x4_t b0_r = vbslq_f32(b0_f, b0_rz, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t b0 = vbslq_f32(b0_e, b0_c0, b0_q);
+    const float32x4_t b1 = vbslq_f32(b0_e, b0_r, b0_q);
+    const float32x4_t ca = vbslq_f32(fr, a0, c);
+    const float32x4_t ra = vbslq_f32(fr, a1, r);
+    const float32x4_t cb = vbslq_f32(fr, b0, c);
+    const float32x4_t rb = vbslq_f32(fr, b1, r);
+    ca_out = ca;
+    ra_out = ra;
+    cb_out = cb;
+    rb_out = rb;
 }
 
 // ball_sub_1(cx, rx, cy, ry) -> cz, rz
@@ -953,84 +2603,6 @@ KAIRN_GEN_FORCEINLINE void ball_sub_1_full(float32x4_t cx, float32x4_t rx, float
     rw_out = rw;
 }
 
-// ball_to_interval_1(c, r) -> zl, zu
-KAIRN_GEN_FORCEINLINE void ball_to_interval_1(float64x2_t c, float64x2_t r, float64x2_t& zl_out, float64x2_t& zu_out) noexcept {
-    // (l) = sub_down_1(c, r)
-    const float64x2_t l_nb = vnegq_f64(r);
-    // (l) = add_down_1(c, l_nb)
-    // (l_s, l_e) = two_sum_ord(c, l_nb)
-    const float64x2_t l_s_aa = vabsq_f64(c);
-    const float64x2_t l_s_ab = vabsq_f64(l_nb);
-    const uint64x2_t l_s_m = vcltq_f64(l_s_aa, l_s_ab);
-    const float64x2_t l_s_h = vbslq_f64(l_s_m, l_nb, c);
-    const float64x2_t l_s_l = vbslq_f64(l_s_m, c, l_nb);
-    // (l_s, l_e) = fast_two_sum(l_s_h, l_s_l)
-    const float64x2_t l_s = vaddq_f64(l_s_h, l_s_l);
-    const float64x2_t l_s_z = vsubq_f64(l_s, l_s_h);
-    const float64x2_t l_e = vsubq_f64(l_s_l, l_s_z);
-    const uint64x2_t l_n = vcltq_f64(l_e, vdupq_n_f64(0.0));
-    const float64x2_t l_p = next_down_bits(l_s);
-    const float64x2_t l = vbslq_f64(l_n, l_p, l_s);
-    // (h) = add_up_1(c, r)
-    // (h_s, h_e) = two_sum_ord(c, r)
-    const float64x2_t h_s_aa = vabsq_f64(c);
-    const float64x2_t h_s_ab = vabsq_f64(r);
-    const uint64x2_t h_s_m = vcltq_f64(h_s_aa, h_s_ab);
-    const float64x2_t h_s_h = vbslq_f64(h_s_m, r, c);
-    const float64x2_t h_s_l = vbslq_f64(h_s_m, c, r);
-    // (h_s, h_e) = fast_two_sum(h_s_h, h_s_l)
-    const float64x2_t h_s = vaddq_f64(h_s_h, h_s_l);
-    const float64x2_t h_s_z = vsubq_f64(h_s, h_s_h);
-    const float64x2_t h_e = vsubq_f64(h_s_l, h_s_z);
-    const uint64x2_t h_n = vcltq_f64(vdupq_n_f64(0.0), h_e);
-    const float64x2_t h_q = next_up_bits(h_s);
-    const float64x2_t h = vbslq_f64(h_n, h_q, h_s);
-    const uint64x2_t ne = vceqq_f64(r, r);
-    const float64x2_t mi = vnegq_f64(vdupq_n_f64(std::numeric_limits<double>::infinity()));
-    const float64x2_t zl = vbslq_f64(ne, l, vdupq_n_f64(std::numeric_limits<double>::infinity()));
-    const float64x2_t zu = vbslq_f64(ne, h, mi);
-    zl_out = zl;
-    zu_out = zu;
-}
-KAIRN_GEN_FORCEINLINE void ball_to_interval_1(float32x4_t c, float32x4_t r, float32x4_t& zl_out, float32x4_t& zu_out) noexcept {
-    // (l) = sub_down_1(c, r)
-    const float32x4_t l_nb = vnegq_f32(r);
-    // (l) = add_down_1(c, l_nb)
-    // (l_s, l_e) = two_sum_ord(c, l_nb)
-    const float32x4_t l_s_aa = vabsq_f32(c);
-    const float32x4_t l_s_ab = vabsq_f32(l_nb);
-    const uint32x4_t l_s_m = vcltq_f32(l_s_aa, l_s_ab);
-    const float32x4_t l_s_h = vbslq_f32(l_s_m, l_nb, c);
-    const float32x4_t l_s_l = vbslq_f32(l_s_m, c, l_nb);
-    // (l_s, l_e) = fast_two_sum(l_s_h, l_s_l)
-    const float32x4_t l_s = vaddq_f32(l_s_h, l_s_l);
-    const float32x4_t l_s_z = vsubq_f32(l_s, l_s_h);
-    const float32x4_t l_e = vsubq_f32(l_s_l, l_s_z);
-    const uint32x4_t l_n = vcltq_f32(l_e, vdupq_n_f32(0.0f));
-    const float32x4_t l_p = next_down_bits(l_s);
-    const float32x4_t l = vbslq_f32(l_n, l_p, l_s);
-    // (h) = add_up_1(c, r)
-    // (h_s, h_e) = two_sum_ord(c, r)
-    const float32x4_t h_s_aa = vabsq_f32(c);
-    const float32x4_t h_s_ab = vabsq_f32(r);
-    const uint32x4_t h_s_m = vcltq_f32(h_s_aa, h_s_ab);
-    const float32x4_t h_s_h = vbslq_f32(h_s_m, r, c);
-    const float32x4_t h_s_l = vbslq_f32(h_s_m, c, r);
-    // (h_s, h_e) = fast_two_sum(h_s_h, h_s_l)
-    const float32x4_t h_s = vaddq_f32(h_s_h, h_s_l);
-    const float32x4_t h_s_z = vsubq_f32(h_s, h_s_h);
-    const float32x4_t h_e = vsubq_f32(h_s_l, h_s_z);
-    const uint32x4_t h_n = vcltq_f32(vdupq_n_f32(0.0f), h_e);
-    const float32x4_t h_q = next_up_bits(h_s);
-    const float32x4_t h = vbslq_f32(h_n, h_q, h_s);
-    const uint32x4_t ne = vceqq_f32(r, r);
-    const float32x4_t mi = vnegq_f32(vdupq_n_f32(std::numeric_limits<float>::infinity()));
-    const float32x4_t zl = vbslq_f32(ne, l, vdupq_n_f32(std::numeric_limits<float>::infinity()));
-    const float32x4_t zu = vbslq_f32(ne, h, mi);
-    zl_out = zl;
-    zu_out = zu;
-}
-
 // ball_upper_as_1(c, r) -> h
 KAIRN_GEN_FORCEINLINE void ball_upper_as_1(float64x2_t c, float64x2_t r, float64x2_t& h_out) noexcept {
     // (t) = add_up_1(c, r)
@@ -1071,6 +2643,20 @@ KAIRN_GEN_FORCEINLINE void ball_upper_as_1(float32x4_t c, float32x4_t r, float32
     const float32x4_t mi = vnegq_f32(vdupq_n_f32(std::numeric_limits<float>::infinity()));
     const float32x4_t h = vbslq_f32(ne, t, mi);
     h_out = h;
+}
+
+// ball_zero_1(c, r) -> mask m
+KAIRN_GEN_FORCEINLINE void ball_zero_1(float64x2_t c, float64x2_t r, uint64x2_t& m_out) noexcept {
+    const uint64x2_t a = vceqq_f64(c, vdupq_n_f64(0.0));
+    const uint64x2_t b = vceqq_f64(r, vdupq_n_f64(0.0));
+    const uint64x2_t m = vandq_u64(a, b);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void ball_zero_1(float32x4_t c, float32x4_t r, uint32x4_t& m_out) noexcept {
+    const uint32x4_t a = vceqq_f32(c, vdupq_n_f32(0.0f));
+    const uint32x4_t b = vceqq_f32(r, vdupq_n_f32(0.0f));
+    const uint32x4_t m = vandq_u32(a, b);
+    m_out = m;
 }
 
 // bound_dot_1(m) -> g, t, mask ok
@@ -1391,50 +2977,6 @@ KAIRN_GEN_FORCEINLINE void interval_equal_1(float32x4_t xl, float32x4_t xu, floa
     no_out = no;
 }
 
-// interval_hull_1(xl, xu, yl, yu) -> zl, zu
-KAIRN_GEN_FORCEINLINE void interval_hull_1(float64x2_t xl, float64x2_t xu, float64x2_t yl, float64x2_t yu, float64x2_t& zl_out, float64x2_t& zu_out) noexcept {
-    const uint64x2_t ml = vcltq_f64(yl, xl);
-    const float64x2_t zl = vbslq_f64(ml, yl, xl);
-    const uint64x2_t mu = vcltq_f64(xu, yu);
-    const float64x2_t zu = vbslq_f64(mu, yu, xu);
-    zl_out = zl;
-    zu_out = zu;
-}
-KAIRN_GEN_FORCEINLINE void interval_hull_1(float32x4_t xl, float32x4_t xu, float32x4_t yl, float32x4_t yu, float32x4_t& zl_out, float32x4_t& zu_out) noexcept {
-    const uint32x4_t ml = vcltq_f32(yl, xl);
-    const float32x4_t zl = vbslq_f32(ml, yl, xl);
-    const uint32x4_t mu = vcltq_f32(xu, yu);
-    const float32x4_t zu = vbslq_f32(mu, yu, xu);
-    zl_out = zl;
-    zu_out = zu;
-}
-
-// interval_intersection_1(xl, xu, yl, yu) -> zl, zu
-KAIRN_GEN_FORCEINLINE void interval_intersection_1(float64x2_t xl, float64x2_t xu, float64x2_t yl, float64x2_t yu, float64x2_t& zl_out, float64x2_t& zu_out) noexcept {
-    const uint64x2_t ml = vcltq_f64(xl, yl);
-    const float64x2_t l = vbslq_f64(ml, yl, xl);
-    const uint64x2_t mu = vcltq_f64(yu, xu);
-    const float64x2_t h = vbslq_f64(mu, yu, xu);
-    const uint64x2_t ok = vcleq_f64(l, h);
-    const float64x2_t mi = vnegq_f64(vdupq_n_f64(std::numeric_limits<double>::infinity()));
-    const float64x2_t zl = vbslq_f64(ok, l, vdupq_n_f64(std::numeric_limits<double>::infinity()));
-    const float64x2_t zu = vbslq_f64(ok, h, mi);
-    zl_out = zl;
-    zu_out = zu;
-}
-KAIRN_GEN_FORCEINLINE void interval_intersection_1(float32x4_t xl, float32x4_t xu, float32x4_t yl, float32x4_t yu, float32x4_t& zl_out, float32x4_t& zu_out) noexcept {
-    const uint32x4_t ml = vcltq_f32(xl, yl);
-    const float32x4_t l = vbslq_f32(ml, yl, xl);
-    const uint32x4_t mu = vcltq_f32(yu, xu);
-    const float32x4_t h = vbslq_f32(mu, yu, xu);
-    const uint32x4_t ok = vcleq_f32(l, h);
-    const float32x4_t mi = vnegq_f32(vdupq_n_f32(std::numeric_limits<float>::infinity()));
-    const float32x4_t zl = vbslq_f32(ok, l, vdupq_n_f32(std::numeric_limits<float>::infinity()));
-    const float32x4_t zu = vbslq_f32(ok, h, mi);
-    zl_out = zl;
-    zu_out = zu;
-}
-
 // interval_less_1(xl, xu, yl, yu) -> mask yes, mask no
 KAIRN_GEN_FORCEINLINE void interval_less_1(float64x2_t xl, float64x2_t xu, float64x2_t yl, float64x2_t yu, uint64x2_t& yes_out, uint64x2_t& no_out) noexcept {
     const uint64x2_t nx = vcltq_f64(xl, vdupq_n_f64(std::numeric_limits<double>::infinity()));
@@ -1521,166 +3063,6 @@ KAIRN_GEN_FORCEINLINE void interval_make_1(float32x4_t lo, float32x4_t hi, float
     const float32x4_t zu = vbslq_f32(v, gu, eu);
     zl_out = zl;
     zu_out = zu;
-}
-
-// sub_up_1(a, b) -> r
-KAIRN_GEN_FORCEINLINE void sub_up_1(float64x2_t a, float64x2_t b, float64x2_t& r_out) noexcept {
-    const float64x2_t nb = vnegq_f64(b);
-    // (r) = add_up_1(a, nb)
-    // (r_s, r_e) = two_sum_ord(a, nb)
-    const float64x2_t r_s_aa = vabsq_f64(a);
-    const float64x2_t r_s_ab = vabsq_f64(nb);
-    const uint64x2_t r_s_m = vcltq_f64(r_s_aa, r_s_ab);
-    const float64x2_t r_s_h = vbslq_f64(r_s_m, nb, a);
-    const float64x2_t r_s_l = vbslq_f64(r_s_m, a, nb);
-    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
-    const float64x2_t r_s = vaddq_f64(r_s_h, r_s_l);
-    const float64x2_t r_s_z = vsubq_f64(r_s, r_s_h);
-    const float64x2_t r_e = vsubq_f64(r_s_l, r_s_z);
-    const uint64x2_t r_n = vcltq_f64(vdupq_n_f64(0.0), r_e);
-    const float64x2_t r_q = next_up_bits(r_s);
-    const float64x2_t r = vbslq_f64(r_n, r_q, r_s);
-    r_out = r;
-}
-KAIRN_GEN_FORCEINLINE void sub_up_1(float32x4_t a, float32x4_t b, float32x4_t& r_out) noexcept {
-    const float32x4_t nb = vnegq_f32(b);
-    // (r) = add_up_1(a, nb)
-    // (r_s, r_e) = two_sum_ord(a, nb)
-    const float32x4_t r_s_aa = vabsq_f32(a);
-    const float32x4_t r_s_ab = vabsq_f32(nb);
-    const uint32x4_t r_s_m = vcltq_f32(r_s_aa, r_s_ab);
-    const float32x4_t r_s_h = vbslq_f32(r_s_m, nb, a);
-    const float32x4_t r_s_l = vbslq_f32(r_s_m, a, nb);
-    // (r_s, r_e) = fast_two_sum(r_s_h, r_s_l)
-    const float32x4_t r_s = vaddq_f32(r_s_h, r_s_l);
-    const float32x4_t r_s_z = vsubq_f32(r_s, r_s_h);
-    const float32x4_t r_e = vsubq_f32(r_s_l, r_s_z);
-    const uint32x4_t r_n = vcltq_f32(vdupq_n_f32(0.0f), r_e);
-    const float32x4_t r_q = next_up_bits(r_s);
-    const float32x4_t r = vbslq_f32(r_n, r_q, r_s);
-    r_out = r;
-}
-
-// interval_mid_rad_1(xl, xu) -> m, r
-KAIRN_GEN_FORCEINLINE void interval_mid_rad_1(float64x2_t xl, float64x2_t xu, float64x2_t& m_out, float64x2_t& r_out) noexcept {
-    const float64x2_t om = next_down_bits(vdupq_n_f64(std::numeric_limits<double>::infinity()));
-    const float64x2_t mo = vnegq_f64(om);
-    const uint64x2_t ml = vcltq_f64(xl, mo);
-    const float64x2_t l = vbslq_f64(ml, mo, xl);
-    const uint64x2_t mu = vcltq_f64(om, xu);
-    const float64x2_t h = vbslq_f64(mu, om, xu);
-    const float64x2_t hl = vfmaq_f64(vdupq_n_f64(0.0), l, vdupq_n_f64(0x1p-1));
-    const float64x2_t hu = vfmaq_f64(vdupq_n_f64(0.0), h, vdupq_n_f64(0x1p-1));
-    const float64x2_t ma = vaddq_f64(hl, hu);
-    const uint64x2_t ca = vcltq_f64(ma, l);
-    const float64x2_t mb = vbslq_f64(ca, l, ma);
-    const uint64x2_t cb = vcltq_f64(h, mb);
-    const float64x2_t mc = vbslq_f64(cb, h, mb);
-    // (ra) = sub_up_1(mc, l)
-    const float64x2_t ra_nb = vnegq_f64(l);
-    // (ra) = add_up_1(mc, ra_nb)
-    // (ra_s, ra_e) = two_sum_ord(mc, ra_nb)
-    const float64x2_t ra_s_aa = vabsq_f64(mc);
-    const float64x2_t ra_s_ab = vabsq_f64(ra_nb);
-    const uint64x2_t ra_s_m = vcltq_f64(ra_s_aa, ra_s_ab);
-    const float64x2_t ra_s_h = vbslq_f64(ra_s_m, ra_nb, mc);
-    const float64x2_t ra_s_l = vbslq_f64(ra_s_m, mc, ra_nb);
-    // (ra_s, ra_e) = fast_two_sum(ra_s_h, ra_s_l)
-    const float64x2_t ra_s = vaddq_f64(ra_s_h, ra_s_l);
-    const float64x2_t ra_s_z = vsubq_f64(ra_s, ra_s_h);
-    const float64x2_t ra_e = vsubq_f64(ra_s_l, ra_s_z);
-    const uint64x2_t ra_n = vcltq_f64(vdupq_n_f64(0.0), ra_e);
-    const float64x2_t ra_q = next_up_bits(ra_s);
-    const float64x2_t ra = vbslq_f64(ra_n, ra_q, ra_s);
-    // (rb) = sub_up_1(h, mc)
-    const float64x2_t rb_nb = vnegq_f64(mc);
-    // (rb) = add_up_1(h, rb_nb)
-    // (rb_s, rb_e) = two_sum_ord(h, rb_nb)
-    const float64x2_t rb_s_aa = vabsq_f64(h);
-    const float64x2_t rb_s_ab = vabsq_f64(rb_nb);
-    const uint64x2_t rb_s_m = vcltq_f64(rb_s_aa, rb_s_ab);
-    const float64x2_t rb_s_h = vbslq_f64(rb_s_m, rb_nb, h);
-    const float64x2_t rb_s_l = vbslq_f64(rb_s_m, h, rb_nb);
-    // (rb_s, rb_e) = fast_two_sum(rb_s_h, rb_s_l)
-    const float64x2_t rb_s = vaddq_f64(rb_s_h, rb_s_l);
-    const float64x2_t rb_s_z = vsubq_f64(rb_s, rb_s_h);
-    const float64x2_t rb_e = vsubq_f64(rb_s_l, rb_s_z);
-    const uint64x2_t rb_n = vcltq_f64(vdupq_n_f64(0.0), rb_e);
-    const float64x2_t rb_q = next_up_bits(rb_s);
-    const float64x2_t rb = vbslq_f64(rb_n, rb_q, rb_s);
-    const uint64x2_t rm = vcltq_f64(ra, rb);
-    const float64x2_t rc = vbslq_f64(rm, rb, ra);
-    const float64x2_t md = vbslq_f64(ml, mo, mc);
-    const float64x2_t me = vbslq_f64(mu, om, md);
-    const uint64x2_t bo = vandq_u64(ml, mu);
-    const float64x2_t mf = vbslq_f64(bo, vdupq_n_f64(0.0), me);
-    const uint64x2_t un = vorrq_u64(ml, mu);
-    const float64x2_t rd = vbslq_f64(un, vdupq_n_f64(std::numeric_limits<double>::infinity()), rc);
-    const uint64x2_t ne = vcltq_f64(xl, vdupq_n_f64(std::numeric_limits<double>::infinity()));
-    const float64x2_t m = vbslq_f64(ne, mf, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
-    const float64x2_t r = vbslq_f64(ne, rd, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
-    m_out = m;
-    r_out = r;
-}
-KAIRN_GEN_FORCEINLINE void interval_mid_rad_1(float32x4_t xl, float32x4_t xu, float32x4_t& m_out, float32x4_t& r_out) noexcept {
-    const float32x4_t om = next_down_bits(vdupq_n_f32(std::numeric_limits<float>::infinity()));
-    const float32x4_t mo = vnegq_f32(om);
-    const uint32x4_t ml = vcltq_f32(xl, mo);
-    const float32x4_t l = vbslq_f32(ml, mo, xl);
-    const uint32x4_t mu = vcltq_f32(om, xu);
-    const float32x4_t h = vbslq_f32(mu, om, xu);
-    const float32x4_t hl = vfmaq_f32(vdupq_n_f32(0.0f), l, vdupq_n_f32(0x1p-1f));
-    const float32x4_t hu = vfmaq_f32(vdupq_n_f32(0.0f), h, vdupq_n_f32(0x1p-1f));
-    const float32x4_t ma = vaddq_f32(hl, hu);
-    const uint32x4_t ca = vcltq_f32(ma, l);
-    const float32x4_t mb = vbslq_f32(ca, l, ma);
-    const uint32x4_t cb = vcltq_f32(h, mb);
-    const float32x4_t mc = vbslq_f32(cb, h, mb);
-    // (ra) = sub_up_1(mc, l)
-    const float32x4_t ra_nb = vnegq_f32(l);
-    // (ra) = add_up_1(mc, ra_nb)
-    // (ra_s, ra_e) = two_sum_ord(mc, ra_nb)
-    const float32x4_t ra_s_aa = vabsq_f32(mc);
-    const float32x4_t ra_s_ab = vabsq_f32(ra_nb);
-    const uint32x4_t ra_s_m = vcltq_f32(ra_s_aa, ra_s_ab);
-    const float32x4_t ra_s_h = vbslq_f32(ra_s_m, ra_nb, mc);
-    const float32x4_t ra_s_l = vbslq_f32(ra_s_m, mc, ra_nb);
-    // (ra_s, ra_e) = fast_two_sum(ra_s_h, ra_s_l)
-    const float32x4_t ra_s = vaddq_f32(ra_s_h, ra_s_l);
-    const float32x4_t ra_s_z = vsubq_f32(ra_s, ra_s_h);
-    const float32x4_t ra_e = vsubq_f32(ra_s_l, ra_s_z);
-    const uint32x4_t ra_n = vcltq_f32(vdupq_n_f32(0.0f), ra_e);
-    const float32x4_t ra_q = next_up_bits(ra_s);
-    const float32x4_t ra = vbslq_f32(ra_n, ra_q, ra_s);
-    // (rb) = sub_up_1(h, mc)
-    const float32x4_t rb_nb = vnegq_f32(mc);
-    // (rb) = add_up_1(h, rb_nb)
-    // (rb_s, rb_e) = two_sum_ord(h, rb_nb)
-    const float32x4_t rb_s_aa = vabsq_f32(h);
-    const float32x4_t rb_s_ab = vabsq_f32(rb_nb);
-    const uint32x4_t rb_s_m = vcltq_f32(rb_s_aa, rb_s_ab);
-    const float32x4_t rb_s_h = vbslq_f32(rb_s_m, rb_nb, h);
-    const float32x4_t rb_s_l = vbslq_f32(rb_s_m, h, rb_nb);
-    // (rb_s, rb_e) = fast_two_sum(rb_s_h, rb_s_l)
-    const float32x4_t rb_s = vaddq_f32(rb_s_h, rb_s_l);
-    const float32x4_t rb_s_z = vsubq_f32(rb_s, rb_s_h);
-    const float32x4_t rb_e = vsubq_f32(rb_s_l, rb_s_z);
-    const uint32x4_t rb_n = vcltq_f32(vdupq_n_f32(0.0f), rb_e);
-    const float32x4_t rb_q = next_up_bits(rb_s);
-    const float32x4_t rb = vbslq_f32(rb_n, rb_q, rb_s);
-    const uint32x4_t rm = vcltq_f32(ra, rb);
-    const float32x4_t rc = vbslq_f32(rm, rb, ra);
-    const float32x4_t md = vbslq_f32(ml, mo, mc);
-    const float32x4_t me = vbslq_f32(mu, om, md);
-    const uint32x4_t bo = vandq_u32(ml, mu);
-    const float32x4_t mf = vbslq_f32(bo, vdupq_n_f32(0.0f), me);
-    const uint32x4_t un = vorrq_u32(ml, mu);
-    const float32x4_t rd = vbslq_f32(un, vdupq_n_f32(std::numeric_limits<float>::infinity()), rc);
-    const uint32x4_t ne = vcltq_f32(xl, vdupq_n_f32(std::numeric_limits<float>::infinity()));
-    const float32x4_t m = vbslq_f32(ne, mf, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
-    const float32x4_t r = vbslq_f32(ne, rd, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
-    m_out = m;
-    r_out = r;
 }
 
 // two_prod(a, b) -> r = (p, e)
@@ -2317,134 +3699,6 @@ KAIRN_GEN_FORCEINLINE void interval_subset_1(float32x4_t xl, float32x4_t xu, flo
     m_out = m;
 }
 
-// interval_to_ball_1(xl, xu) -> c, r
-KAIRN_GEN_FORCEINLINE void interval_to_ball_1(float64x2_t xl, float64x2_t xu, float64x2_t& c_out, float64x2_t& r_out) noexcept {
-    // (m, r) = interval_mid_rad_1(xl, xu)
-    const float64x2_t m_om = next_down_bits(vdupq_n_f64(std::numeric_limits<double>::infinity()));
-    const float64x2_t m_mo = vnegq_f64(m_om);
-    const uint64x2_t m_ml = vcltq_f64(xl, m_mo);
-    const float64x2_t m_l = vbslq_f64(m_ml, m_mo, xl);
-    const uint64x2_t m_mu = vcltq_f64(m_om, xu);
-    const float64x2_t m_h = vbslq_f64(m_mu, m_om, xu);
-    const float64x2_t m_hl = vfmaq_f64(vdupq_n_f64(0.0), m_l, vdupq_n_f64(0x1p-1));
-    const float64x2_t m_hu = vfmaq_f64(vdupq_n_f64(0.0), m_h, vdupq_n_f64(0x1p-1));
-    const float64x2_t m_ma = vaddq_f64(m_hl, m_hu);
-    const uint64x2_t m_ca = vcltq_f64(m_ma, m_l);
-    const float64x2_t m_mb = vbslq_f64(m_ca, m_l, m_ma);
-    const uint64x2_t m_cb = vcltq_f64(m_h, m_mb);
-    const float64x2_t m_mc = vbslq_f64(m_cb, m_h, m_mb);
-    // (m_ra) = sub_up_1(m_mc, m_l)
-    const float64x2_t m_ra_nb = vnegq_f64(m_l);
-    // (m_ra) = add_up_1(m_mc, m_ra_nb)
-    // (m_ra_s, m_ra_e) = two_sum_ord(m_mc, m_ra_nb)
-    const float64x2_t m_ra_s_aa = vabsq_f64(m_mc);
-    const float64x2_t m_ra_s_ab = vabsq_f64(m_ra_nb);
-    const uint64x2_t m_ra_s_m = vcltq_f64(m_ra_s_aa, m_ra_s_ab);
-    const float64x2_t m_ra_s_h = vbslq_f64(m_ra_s_m, m_ra_nb, m_mc);
-    const float64x2_t m_ra_s_l = vbslq_f64(m_ra_s_m, m_mc, m_ra_nb);
-    // (m_ra_s, m_ra_e) = fast_two_sum(m_ra_s_h, m_ra_s_l)
-    const float64x2_t m_ra_s = vaddq_f64(m_ra_s_h, m_ra_s_l);
-    const float64x2_t m_ra_s_z = vsubq_f64(m_ra_s, m_ra_s_h);
-    const float64x2_t m_ra_e = vsubq_f64(m_ra_s_l, m_ra_s_z);
-    const uint64x2_t m_ra_n = vcltq_f64(vdupq_n_f64(0.0), m_ra_e);
-    const float64x2_t m_ra_q = next_up_bits(m_ra_s);
-    const float64x2_t m_ra = vbslq_f64(m_ra_n, m_ra_q, m_ra_s);
-    // (m_rb) = sub_up_1(m_h, m_mc)
-    const float64x2_t m_rb_nb = vnegq_f64(m_mc);
-    // (m_rb) = add_up_1(m_h, m_rb_nb)
-    // (m_rb_s, m_rb_e) = two_sum_ord(m_h, m_rb_nb)
-    const float64x2_t m_rb_s_aa = vabsq_f64(m_h);
-    const float64x2_t m_rb_s_ab = vabsq_f64(m_rb_nb);
-    const uint64x2_t m_rb_s_m = vcltq_f64(m_rb_s_aa, m_rb_s_ab);
-    const float64x2_t m_rb_s_h = vbslq_f64(m_rb_s_m, m_rb_nb, m_h);
-    const float64x2_t m_rb_s_l = vbslq_f64(m_rb_s_m, m_h, m_rb_nb);
-    // (m_rb_s, m_rb_e) = fast_two_sum(m_rb_s_h, m_rb_s_l)
-    const float64x2_t m_rb_s = vaddq_f64(m_rb_s_h, m_rb_s_l);
-    const float64x2_t m_rb_s_z = vsubq_f64(m_rb_s, m_rb_s_h);
-    const float64x2_t m_rb_e = vsubq_f64(m_rb_s_l, m_rb_s_z);
-    const uint64x2_t m_rb_n = vcltq_f64(vdupq_n_f64(0.0), m_rb_e);
-    const float64x2_t m_rb_q = next_up_bits(m_rb_s);
-    const float64x2_t m_rb = vbslq_f64(m_rb_n, m_rb_q, m_rb_s);
-    const uint64x2_t m_rm = vcltq_f64(m_ra, m_rb);
-    const float64x2_t m_rc = vbslq_f64(m_rm, m_rb, m_ra);
-    const float64x2_t m_md = vbslq_f64(m_ml, m_mo, m_mc);
-    const float64x2_t m_me = vbslq_f64(m_mu, m_om, m_md);
-    const uint64x2_t m_bo = vandq_u64(m_ml, m_mu);
-    const float64x2_t m_mf = vbslq_f64(m_bo, vdupq_n_f64(0.0), m_me);
-    const uint64x2_t m_un = vorrq_u64(m_ml, m_mu);
-    const float64x2_t m_rd = vbslq_f64(m_un, vdupq_n_f64(std::numeric_limits<double>::infinity()), m_rc);
-    const uint64x2_t m_ne = vcltq_f64(xl, vdupq_n_f64(std::numeric_limits<double>::infinity()));
-    const float64x2_t m = vbslq_f64(m_ne, m_mf, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
-    const float64x2_t r = vbslq_f64(m_ne, m_rd, vdupq_n_f64(std::numeric_limits<double>::quiet_NaN()));
-    const uint64x2_t un = vceqq_f64(r, vdupq_n_f64(std::numeric_limits<double>::infinity()));
-    const float64x2_t c = vbslq_f64(un, vdupq_n_f64(0.0), m);
-    c_out = c;
-    r_out = r;
-}
-KAIRN_GEN_FORCEINLINE void interval_to_ball_1(float32x4_t xl, float32x4_t xu, float32x4_t& c_out, float32x4_t& r_out) noexcept {
-    // (m, r) = interval_mid_rad_1(xl, xu)
-    const float32x4_t m_om = next_down_bits(vdupq_n_f32(std::numeric_limits<float>::infinity()));
-    const float32x4_t m_mo = vnegq_f32(m_om);
-    const uint32x4_t m_ml = vcltq_f32(xl, m_mo);
-    const float32x4_t m_l = vbslq_f32(m_ml, m_mo, xl);
-    const uint32x4_t m_mu = vcltq_f32(m_om, xu);
-    const float32x4_t m_h = vbslq_f32(m_mu, m_om, xu);
-    const float32x4_t m_hl = vfmaq_f32(vdupq_n_f32(0.0f), m_l, vdupq_n_f32(0x1p-1f));
-    const float32x4_t m_hu = vfmaq_f32(vdupq_n_f32(0.0f), m_h, vdupq_n_f32(0x1p-1f));
-    const float32x4_t m_ma = vaddq_f32(m_hl, m_hu);
-    const uint32x4_t m_ca = vcltq_f32(m_ma, m_l);
-    const float32x4_t m_mb = vbslq_f32(m_ca, m_l, m_ma);
-    const uint32x4_t m_cb = vcltq_f32(m_h, m_mb);
-    const float32x4_t m_mc = vbslq_f32(m_cb, m_h, m_mb);
-    // (m_ra) = sub_up_1(m_mc, m_l)
-    const float32x4_t m_ra_nb = vnegq_f32(m_l);
-    // (m_ra) = add_up_1(m_mc, m_ra_nb)
-    // (m_ra_s, m_ra_e) = two_sum_ord(m_mc, m_ra_nb)
-    const float32x4_t m_ra_s_aa = vabsq_f32(m_mc);
-    const float32x4_t m_ra_s_ab = vabsq_f32(m_ra_nb);
-    const uint32x4_t m_ra_s_m = vcltq_f32(m_ra_s_aa, m_ra_s_ab);
-    const float32x4_t m_ra_s_h = vbslq_f32(m_ra_s_m, m_ra_nb, m_mc);
-    const float32x4_t m_ra_s_l = vbslq_f32(m_ra_s_m, m_mc, m_ra_nb);
-    // (m_ra_s, m_ra_e) = fast_two_sum(m_ra_s_h, m_ra_s_l)
-    const float32x4_t m_ra_s = vaddq_f32(m_ra_s_h, m_ra_s_l);
-    const float32x4_t m_ra_s_z = vsubq_f32(m_ra_s, m_ra_s_h);
-    const float32x4_t m_ra_e = vsubq_f32(m_ra_s_l, m_ra_s_z);
-    const uint32x4_t m_ra_n = vcltq_f32(vdupq_n_f32(0.0f), m_ra_e);
-    const float32x4_t m_ra_q = next_up_bits(m_ra_s);
-    const float32x4_t m_ra = vbslq_f32(m_ra_n, m_ra_q, m_ra_s);
-    // (m_rb) = sub_up_1(m_h, m_mc)
-    const float32x4_t m_rb_nb = vnegq_f32(m_mc);
-    // (m_rb) = add_up_1(m_h, m_rb_nb)
-    // (m_rb_s, m_rb_e) = two_sum_ord(m_h, m_rb_nb)
-    const float32x4_t m_rb_s_aa = vabsq_f32(m_h);
-    const float32x4_t m_rb_s_ab = vabsq_f32(m_rb_nb);
-    const uint32x4_t m_rb_s_m = vcltq_f32(m_rb_s_aa, m_rb_s_ab);
-    const float32x4_t m_rb_s_h = vbslq_f32(m_rb_s_m, m_rb_nb, m_h);
-    const float32x4_t m_rb_s_l = vbslq_f32(m_rb_s_m, m_h, m_rb_nb);
-    // (m_rb_s, m_rb_e) = fast_two_sum(m_rb_s_h, m_rb_s_l)
-    const float32x4_t m_rb_s = vaddq_f32(m_rb_s_h, m_rb_s_l);
-    const float32x4_t m_rb_s_z = vsubq_f32(m_rb_s, m_rb_s_h);
-    const float32x4_t m_rb_e = vsubq_f32(m_rb_s_l, m_rb_s_z);
-    const uint32x4_t m_rb_n = vcltq_f32(vdupq_n_f32(0.0f), m_rb_e);
-    const float32x4_t m_rb_q = next_up_bits(m_rb_s);
-    const float32x4_t m_rb = vbslq_f32(m_rb_n, m_rb_q, m_rb_s);
-    const uint32x4_t m_rm = vcltq_f32(m_ra, m_rb);
-    const float32x4_t m_rc = vbslq_f32(m_rm, m_rb, m_ra);
-    const float32x4_t m_md = vbslq_f32(m_ml, m_mo, m_mc);
-    const float32x4_t m_me = vbslq_f32(m_mu, m_om, m_md);
-    const uint32x4_t m_bo = vandq_u32(m_ml, m_mu);
-    const float32x4_t m_mf = vbslq_f32(m_bo, vdupq_n_f32(0.0f), m_me);
-    const uint32x4_t m_un = vorrq_u32(m_ml, m_mu);
-    const float32x4_t m_rd = vbslq_f32(m_un, vdupq_n_f32(std::numeric_limits<float>::infinity()), m_rc);
-    const uint32x4_t m_ne = vcltq_f32(xl, vdupq_n_f32(std::numeric_limits<float>::infinity()));
-    const float32x4_t m = vbslq_f32(m_ne, m_mf, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
-    const float32x4_t r = vbslq_f32(m_ne, m_rd, vdupq_n_f32(std::numeric_limits<float>::quiet_NaN()));
-    const uint32x4_t un = vceqq_f32(r, vdupq_n_f32(std::numeric_limits<float>::infinity()));
-    const float32x4_t c = vbslq_f32(un, vdupq_n_f32(0.0f), m);
-    c_out = c;
-    r_out = r;
-}
-
 // interval_zero_1(xl, xu) -> mask m
 KAIRN_GEN_FORCEINLINE void interval_zero_1(float64x2_t xl, float64x2_t xu, uint64x2_t& m_out) noexcept {
     const uint64x2_t a = vceqq_f64(xl, vdupq_n_f64(0.0));
@@ -2955,26 +4209,6 @@ KAIRN_GEN_FORCEINLINE void two_sum_entry(float32x4_t a, float32x4_t b, float32x4
     const float32x4_t e = vaddq_f32(s_t1, s_t2);
     s_out = s;
     e_out = e;
-}
-
-// abs_2(x = (x0, x1)) -> z = (z0, z1)
-KAIRN_GEN_FORCEINLINE void abs_2(float64x2_t x0, float64x2_t x1, float64x2_t& z0_out, float64x2_t& z1_out) noexcept {
-    const uint64x2_t m = vcltq_f64(x0, vdupq_n_f64(0.0));
-    const float64x2_t n0 = vnegq_f64(x0);
-    const float64x2_t n1 = vnegq_f64(x1);
-    const float64x2_t z0 = vbslq_f64(m, n0, x0);
-    const float64x2_t z1 = vbslq_f64(m, n1, x1);
-    z0_out = z0;
-    z1_out = z1;
-}
-KAIRN_GEN_FORCEINLINE void abs_2(float32x4_t x0, float32x4_t x1, float32x4_t& z0_out, float32x4_t& z1_out) noexcept {
-    const uint32x4_t m = vcltq_f32(x0, vdupq_n_f32(0.0f));
-    const float32x4_t n0 = vnegq_f32(x0);
-    const float32x4_t n1 = vnegq_f32(x1);
-    const float32x4_t z0 = vbslq_f32(m, n0, x0);
-    const float32x4_t z1 = vbslq_f32(m, n1, x1);
-    z0_out = z0;
-    z1_out = z1;
 }
 
 // to_up_2(x = (x0, x1)) -> t
@@ -4271,6 +5505,122 @@ KAIRN_GEN_FORCEINLINE void ball_add_2_full(float32x4_t cx0, float32x4_t cx1, flo
     rw_out = rw;
 }
 
+// ball_contains_ball_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> mask m
+KAIRN_GEN_FORCEINLINE void ball_contains_ball_2(float64x2_t cx0, float64x2_t cx1, float64x2_t rx, float64x2_t cy0, float64x2_t cy1, float64x2_t ry, uint64x2_t& m_out) noexcept {
+    const float64x2_t ncx0 = vnegq_f64(cx0);
+    const float64x2_t ncx1 = vnegq_f64(cx1);
+    // (z0, z1, e) = add_ball_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0, z1) = add_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0_sh, z0_sl) = two_sum(cy0, ncx0)
+    const float64x2_t z0_sh = vaddq_f64(cy0, ncx0);
+    const float64x2_t z0_sh_bb = vsubq_f64(z0_sh, cy0);
+    const float64x2_t z0_sh_t0 = vsubq_f64(z0_sh, z0_sh_bb);
+    const float64x2_t z0_sh_t1 = vsubq_f64(cy0, z0_sh_t0);
+    const float64x2_t z0_sh_t2 = vsubq_f64(ncx0, z0_sh_bb);
+    const float64x2_t z0_sl = vaddq_f64(z0_sh_t1, z0_sh_t2);
+    // (z0_th, z0_tl) = two_sum(cy1, ncx1)
+    const float64x2_t z0_th = vaddq_f64(cy1, ncx1);
+    const float64x2_t z0_th_bb = vsubq_f64(z0_th, cy1);
+    const float64x2_t z0_th_t0 = vsubq_f64(z0_th, z0_th_bb);
+    const float64x2_t z0_th_t1 = vsubq_f64(cy1, z0_th_t0);
+    const float64x2_t z0_th_t2 = vsubq_f64(ncx1, z0_th_bb);
+    const float64x2_t z0_tl = vaddq_f64(z0_th_t1, z0_th_t2);
+    const float64x2_t z0_c = vaddq_f64(z0_sl, z0_th);
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float64x2_t z0_vh = vaddq_f64(z0_sh, z0_c);
+    const float64x2_t z0_vh_z = vsubq_f64(z0_vh, z0_sh);
+    const float64x2_t z0_vl = vsubq_f64(z0_c, z0_vh_z);
+    const float64x2_t z0_w = vaddq_f64(z0_tl, z0_vl);
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float64x2_t z0 = vaddq_f64(z0_vh, z0_w);
+    const float64x2_t z0_z = vsubq_f64(z0, z0_vh);
+    const float64x2_t z1 = vsubq_f64(z0_w, z0_z);
+    const float64x2_t z0_az = vabsq_f64(z0);
+    const float64x2_t z0_t = vfmaq_f64(vdupq_n_f64(0.0), z0_az, vdupq_n_f64(0x1.8000000000004p-105));
+    const float64x2_t e = vfmaq_f64(vdupq_n_f64(0x1.0000000000002p-1022), z0_t, vdupq_n_f64(0x1.0000000000002p+0));
+    // (au) = abs_upper_2(z0, z1)
+    // (au_a0, au_a1) = abs_2(z0, z1)
+    const uint64x2_t au_a0_m = vcltq_f64(z0, vdupq_n_f64(0.0));
+    const float64x2_t au_a0_n0 = vnegq_f64(z0);
+    const float64x2_t au_a0_n1 = vnegq_f64(z1);
+    const float64x2_t au_a0 = vbslq_f64(au_a0_m, au_a0_n0, z0);
+    const float64x2_t au_a1 = vbslq_f64(au_a0_m, au_a0_n1, z1);
+    // (au) = to_up_2(au_a0, au_a1)
+    const uint64x2_t au_m = vcltq_f64(vdupq_n_f64(0.0), au_a1);
+    const float64x2_t au_s = next_up_bits(au_a0);
+    const float64x2_t au = vbslq_f64(au_m, au_s, au_a0);
+    // (hi) = radd(au, e)
+    const float64x2_t hi_s = vaddq_f64(au, e);
+    const float64x2_t hi = next_up_bits(hi_s);
+    // (s) = radd(hi, ry)
+    const float64x2_t s_s = vaddq_f64(hi, ry);
+    const float64x2_t s = next_up_bits(s_s);
+    const uint64x2_t f = vcleq_f64(s, rx);
+    const uint64x2_t wx = vceqq_f64(rx, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t qy = vceqq_f64(ry, ry);
+    const uint64x2_t ey = not_mask(qy);
+    const uint64x2_t sp = vorrq_u64(wx, ey);
+    const uint64x2_t m = vorrq_u64(sp, f);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void ball_contains_ball_2(float32x4_t cx0, float32x4_t cx1, float32x4_t rx, float32x4_t cy0, float32x4_t cy1, float32x4_t ry, uint32x4_t& m_out) noexcept {
+    const float32x4_t ncx0 = vnegq_f32(cx0);
+    const float32x4_t ncx1 = vnegq_f32(cx1);
+    // (z0, z1, e) = add_ball_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0, z1) = add_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0_sh, z0_sl) = two_sum(cy0, ncx0)
+    const float32x4_t z0_sh = vaddq_f32(cy0, ncx0);
+    const float32x4_t z0_sh_bb = vsubq_f32(z0_sh, cy0);
+    const float32x4_t z0_sh_t0 = vsubq_f32(z0_sh, z0_sh_bb);
+    const float32x4_t z0_sh_t1 = vsubq_f32(cy0, z0_sh_t0);
+    const float32x4_t z0_sh_t2 = vsubq_f32(ncx0, z0_sh_bb);
+    const float32x4_t z0_sl = vaddq_f32(z0_sh_t1, z0_sh_t2);
+    // (z0_th, z0_tl) = two_sum(cy1, ncx1)
+    const float32x4_t z0_th = vaddq_f32(cy1, ncx1);
+    const float32x4_t z0_th_bb = vsubq_f32(z0_th, cy1);
+    const float32x4_t z0_th_t0 = vsubq_f32(z0_th, z0_th_bb);
+    const float32x4_t z0_th_t1 = vsubq_f32(cy1, z0_th_t0);
+    const float32x4_t z0_th_t2 = vsubq_f32(ncx1, z0_th_bb);
+    const float32x4_t z0_tl = vaddq_f32(z0_th_t1, z0_th_t2);
+    const float32x4_t z0_c = vaddq_f32(z0_sl, z0_th);
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float32x4_t z0_vh = vaddq_f32(z0_sh, z0_c);
+    const float32x4_t z0_vh_z = vsubq_f32(z0_vh, z0_sh);
+    const float32x4_t z0_vl = vsubq_f32(z0_c, z0_vh_z);
+    const float32x4_t z0_w = vaddq_f32(z0_tl, z0_vl);
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float32x4_t z0 = vaddq_f32(z0_vh, z0_w);
+    const float32x4_t z0_z = vsubq_f32(z0, z0_vh);
+    const float32x4_t z1 = vsubq_f32(z0_w, z0_z);
+    const float32x4_t z0_az = vabsq_f32(z0);
+    const float32x4_t z0_t = vfmaq_f32(vdupq_n_f32(0.0f), z0_az, vdupq_n_f32(0x1.800008p-47f));
+    const float32x4_t e = vfmaq_f32(vdupq_n_f32(0x1.000004p-126f), z0_t, vdupq_n_f32(0x1.000004p+0f));
+    // (au) = abs_upper_2(z0, z1)
+    // (au_a0, au_a1) = abs_2(z0, z1)
+    const uint32x4_t au_a0_m = vcltq_f32(z0, vdupq_n_f32(0.0f));
+    const float32x4_t au_a0_n0 = vnegq_f32(z0);
+    const float32x4_t au_a0_n1 = vnegq_f32(z1);
+    const float32x4_t au_a0 = vbslq_f32(au_a0_m, au_a0_n0, z0);
+    const float32x4_t au_a1 = vbslq_f32(au_a0_m, au_a0_n1, z1);
+    // (au) = to_up_2(au_a0, au_a1)
+    const uint32x4_t au_m = vcltq_f32(vdupq_n_f32(0.0f), au_a1);
+    const float32x4_t au_s = next_up_bits(au_a0);
+    const float32x4_t au = vbslq_f32(au_m, au_s, au_a0);
+    // (hi) = radd(au, e)
+    const float32x4_t hi_s = vaddq_f32(au, e);
+    const float32x4_t hi = next_up_bits(hi_s);
+    // (s) = radd(hi, ry)
+    const float32x4_t s_s = vaddq_f32(hi, ry);
+    const float32x4_t s = next_up_bits(s_s);
+    const uint32x4_t f = vcleq_f32(s, rx);
+    const uint32x4_t wx = vceqq_f32(rx, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t qy = vceqq_f32(ry, ry);
+    const uint32x4_t ey = not_mask(qy);
+    const uint32x4_t sp = vorrq_u32(wx, ey);
+    const uint32x4_t m = vorrq_u32(sp, f);
+    m_out = m;
+}
+
 // to_down_2(x = (x0, x1)) -> t
 KAIRN_GEN_FORCEINLINE void to_down_2(float64x2_t x0, float64x2_t x1, float64x2_t& t_out) noexcept {
     const uint64x2_t m = vcltq_f64(x1, vdupq_n_f64(0.0));
@@ -4283,6 +5633,698 @@ KAIRN_GEN_FORCEINLINE void to_down_2(float32x4_t x0, float32x4_t x1, float32x4_t
     const float32x4_t p = next_down_bits(x0);
     const float32x4_t t = vbslq_f32(m, p, x0);
     t_out = t;
+}
+
+// ball_contains_point_2(c = (c0, c1), r, t = (t0, t1)) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void ball_contains_point_2(float64x2_t c0, float64x2_t c1, float64x2_t r, float64x2_t t0, float64x2_t t1, uint64x2_t& yes_out, uint64x2_t& no_out) noexcept {
+    const float64x2_t nc0 = vnegq_f64(c0);
+    const float64x2_t nc1 = vnegq_f64(c1);
+    // (z0, z1, e) = add_ball_2_2(t0, t1, nc0, nc1)
+    // (z0, z1) = add_2_2(t0, t1, nc0, nc1)
+    // (z0_sh, z0_sl) = two_sum(t0, nc0)
+    const float64x2_t z0_sh = vaddq_f64(t0, nc0);
+    const float64x2_t z0_sh_bb = vsubq_f64(z0_sh, t0);
+    const float64x2_t z0_sh_t0 = vsubq_f64(z0_sh, z0_sh_bb);
+    const float64x2_t z0_sh_t1 = vsubq_f64(t0, z0_sh_t0);
+    const float64x2_t z0_sh_t2 = vsubq_f64(nc0, z0_sh_bb);
+    const float64x2_t z0_sl = vaddq_f64(z0_sh_t1, z0_sh_t2);
+    // (z0_th, z0_tl) = two_sum(t1, nc1)
+    const float64x2_t z0_th = vaddq_f64(t1, nc1);
+    const float64x2_t z0_th_bb = vsubq_f64(z0_th, t1);
+    const float64x2_t z0_th_t0 = vsubq_f64(z0_th, z0_th_bb);
+    const float64x2_t z0_th_t1 = vsubq_f64(t1, z0_th_t0);
+    const float64x2_t z0_th_t2 = vsubq_f64(nc1, z0_th_bb);
+    const float64x2_t z0_tl = vaddq_f64(z0_th_t1, z0_th_t2);
+    const float64x2_t z0_c = vaddq_f64(z0_sl, z0_th);
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float64x2_t z0_vh = vaddq_f64(z0_sh, z0_c);
+    const float64x2_t z0_vh_z = vsubq_f64(z0_vh, z0_sh);
+    const float64x2_t z0_vl = vsubq_f64(z0_c, z0_vh_z);
+    const float64x2_t z0_w = vaddq_f64(z0_tl, z0_vl);
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float64x2_t z0 = vaddq_f64(z0_vh, z0_w);
+    const float64x2_t z0_z = vsubq_f64(z0, z0_vh);
+    const float64x2_t z1 = vsubq_f64(z0_w, z0_z);
+    const float64x2_t z0_az = vabsq_f64(z0);
+    const float64x2_t z0_t = vfmaq_f64(vdupq_n_f64(0.0), z0_az, vdupq_n_f64(0x1.8000000000004p-105));
+    const float64x2_t e = vfmaq_f64(vdupq_n_f64(0x1.0000000000002p-1022), z0_t, vdupq_n_f64(0x1.0000000000002p+0));
+    // (au) = abs_upper_2(z0, z1)
+    // (au_a0, au_a1) = abs_2(z0, z1)
+    const uint64x2_t au_a0_m = vcltq_f64(z0, vdupq_n_f64(0.0));
+    const float64x2_t au_a0_n0 = vnegq_f64(z0);
+    const float64x2_t au_a0_n1 = vnegq_f64(z1);
+    const float64x2_t au_a0 = vbslq_f64(au_a0_m, au_a0_n0, z0);
+    const float64x2_t au_a1 = vbslq_f64(au_a0_m, au_a0_n1, z1);
+    // (au) = to_up_2(au_a0, au_a1)
+    const uint64x2_t au_m = vcltq_f64(vdupq_n_f64(0.0), au_a1);
+    const float64x2_t au_s = next_up_bits(au_a0);
+    const float64x2_t au = vbslq_f64(au_m, au_s, au_a0);
+    // (hi) = radd(au, e)
+    const float64x2_t hi_s = vaddq_f64(au, e);
+    const float64x2_t hi = next_up_bits(hi_s);
+    // (w0, w1) = abs_2(z0, z1)
+    const uint64x2_t w0_m = vcltq_f64(z0, vdupq_n_f64(0.0));
+    const float64x2_t w0_n0 = vnegq_f64(z0);
+    const float64x2_t w0_n1 = vnegq_f64(z1);
+    const float64x2_t w0 = vbslq_f64(w0_m, w0_n0, z0);
+    const float64x2_t w1 = vbslq_f64(w0_m, w0_n1, z1);
+    // (wd) = to_down_2(w0, w1)
+    const uint64x2_t wd_m = vcltq_f64(w1, vdupq_n_f64(0.0));
+    const float64x2_t wd_p = next_down_bits(w0);
+    const float64x2_t wd = vbslq_f64(wd_m, wd_p, w0);
+    const float64x2_t nw = vnegq_f64(wd);
+    // (tl) = add_up_1(e, nw)
+    // (tl_s, tl_e) = two_sum_ord(e, nw)
+    const float64x2_t tl_s_aa = vabsq_f64(e);
+    const float64x2_t tl_s_ab = vabsq_f64(nw);
+    const uint64x2_t tl_s_m = vcltq_f64(tl_s_aa, tl_s_ab);
+    const float64x2_t tl_s_h = vbslq_f64(tl_s_m, nw, e);
+    const float64x2_t tl_s_l = vbslq_f64(tl_s_m, e, nw);
+    // (tl_s, tl_e) = fast_two_sum(tl_s_h, tl_s_l)
+    const float64x2_t tl_s = vaddq_f64(tl_s_h, tl_s_l);
+    const float64x2_t tl_s_z = vsubq_f64(tl_s, tl_s_h);
+    const float64x2_t tl_e = vsubq_f64(tl_s_l, tl_s_z);
+    const uint64x2_t tl_n = vcltq_f64(vdupq_n_f64(0.0), tl_e);
+    const float64x2_t tl_q = next_up_bits(tl_s);
+    const float64x2_t tl = vbslq_f64(tl_n, tl_q, tl_s);
+    const float64x2_t lo = vnegq_f64(tl);
+    const uint64x2_t yes = vcleq_f64(hi, r);
+    const uint64x2_t na = vcltq_f64(r, lo);
+    const float64x2_t ta = vabsq_f64(t0);
+    const uint64x2_t ft = vcltq_f64(ta, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t ne = vceqq_f64(r, r);
+    const uint64x2_t ok = vandq_u64(ft, ne);
+    const uint64x2_t nk = not_mask(ok);
+    const uint64x2_t no = vorrq_u64(na, nk);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void ball_contains_point_2(float32x4_t c0, float32x4_t c1, float32x4_t r, float32x4_t t0, float32x4_t t1, uint32x4_t& yes_out, uint32x4_t& no_out) noexcept {
+    const float32x4_t nc0 = vnegq_f32(c0);
+    const float32x4_t nc1 = vnegq_f32(c1);
+    // (z0, z1, e) = add_ball_2_2(t0, t1, nc0, nc1)
+    // (z0, z1) = add_2_2(t0, t1, nc0, nc1)
+    // (z0_sh, z0_sl) = two_sum(t0, nc0)
+    const float32x4_t z0_sh = vaddq_f32(t0, nc0);
+    const float32x4_t z0_sh_bb = vsubq_f32(z0_sh, t0);
+    const float32x4_t z0_sh_t0 = vsubq_f32(z0_sh, z0_sh_bb);
+    const float32x4_t z0_sh_t1 = vsubq_f32(t0, z0_sh_t0);
+    const float32x4_t z0_sh_t2 = vsubq_f32(nc0, z0_sh_bb);
+    const float32x4_t z0_sl = vaddq_f32(z0_sh_t1, z0_sh_t2);
+    // (z0_th, z0_tl) = two_sum(t1, nc1)
+    const float32x4_t z0_th = vaddq_f32(t1, nc1);
+    const float32x4_t z0_th_bb = vsubq_f32(z0_th, t1);
+    const float32x4_t z0_th_t0 = vsubq_f32(z0_th, z0_th_bb);
+    const float32x4_t z0_th_t1 = vsubq_f32(t1, z0_th_t0);
+    const float32x4_t z0_th_t2 = vsubq_f32(nc1, z0_th_bb);
+    const float32x4_t z0_tl = vaddq_f32(z0_th_t1, z0_th_t2);
+    const float32x4_t z0_c = vaddq_f32(z0_sl, z0_th);
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float32x4_t z0_vh = vaddq_f32(z0_sh, z0_c);
+    const float32x4_t z0_vh_z = vsubq_f32(z0_vh, z0_sh);
+    const float32x4_t z0_vl = vsubq_f32(z0_c, z0_vh_z);
+    const float32x4_t z0_w = vaddq_f32(z0_tl, z0_vl);
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float32x4_t z0 = vaddq_f32(z0_vh, z0_w);
+    const float32x4_t z0_z = vsubq_f32(z0, z0_vh);
+    const float32x4_t z1 = vsubq_f32(z0_w, z0_z);
+    const float32x4_t z0_az = vabsq_f32(z0);
+    const float32x4_t z0_t = vfmaq_f32(vdupq_n_f32(0.0f), z0_az, vdupq_n_f32(0x1.800008p-47f));
+    const float32x4_t e = vfmaq_f32(vdupq_n_f32(0x1.000004p-126f), z0_t, vdupq_n_f32(0x1.000004p+0f));
+    // (au) = abs_upper_2(z0, z1)
+    // (au_a0, au_a1) = abs_2(z0, z1)
+    const uint32x4_t au_a0_m = vcltq_f32(z0, vdupq_n_f32(0.0f));
+    const float32x4_t au_a0_n0 = vnegq_f32(z0);
+    const float32x4_t au_a0_n1 = vnegq_f32(z1);
+    const float32x4_t au_a0 = vbslq_f32(au_a0_m, au_a0_n0, z0);
+    const float32x4_t au_a1 = vbslq_f32(au_a0_m, au_a0_n1, z1);
+    // (au) = to_up_2(au_a0, au_a1)
+    const uint32x4_t au_m = vcltq_f32(vdupq_n_f32(0.0f), au_a1);
+    const float32x4_t au_s = next_up_bits(au_a0);
+    const float32x4_t au = vbslq_f32(au_m, au_s, au_a0);
+    // (hi) = radd(au, e)
+    const float32x4_t hi_s = vaddq_f32(au, e);
+    const float32x4_t hi = next_up_bits(hi_s);
+    // (w0, w1) = abs_2(z0, z1)
+    const uint32x4_t w0_m = vcltq_f32(z0, vdupq_n_f32(0.0f));
+    const float32x4_t w0_n0 = vnegq_f32(z0);
+    const float32x4_t w0_n1 = vnegq_f32(z1);
+    const float32x4_t w0 = vbslq_f32(w0_m, w0_n0, z0);
+    const float32x4_t w1 = vbslq_f32(w0_m, w0_n1, z1);
+    // (wd) = to_down_2(w0, w1)
+    const uint32x4_t wd_m = vcltq_f32(w1, vdupq_n_f32(0.0f));
+    const float32x4_t wd_p = next_down_bits(w0);
+    const float32x4_t wd = vbslq_f32(wd_m, wd_p, w0);
+    const float32x4_t nw = vnegq_f32(wd);
+    // (tl) = add_up_1(e, nw)
+    // (tl_s, tl_e) = two_sum_ord(e, nw)
+    const float32x4_t tl_s_aa = vabsq_f32(e);
+    const float32x4_t tl_s_ab = vabsq_f32(nw);
+    const uint32x4_t tl_s_m = vcltq_f32(tl_s_aa, tl_s_ab);
+    const float32x4_t tl_s_h = vbslq_f32(tl_s_m, nw, e);
+    const float32x4_t tl_s_l = vbslq_f32(tl_s_m, e, nw);
+    // (tl_s, tl_e) = fast_two_sum(tl_s_h, tl_s_l)
+    const float32x4_t tl_s = vaddq_f32(tl_s_h, tl_s_l);
+    const float32x4_t tl_s_z = vsubq_f32(tl_s, tl_s_h);
+    const float32x4_t tl_e = vsubq_f32(tl_s_l, tl_s_z);
+    const uint32x4_t tl_n = vcltq_f32(vdupq_n_f32(0.0f), tl_e);
+    const float32x4_t tl_q = next_up_bits(tl_s);
+    const float32x4_t tl = vbslq_f32(tl_n, tl_q, tl_s);
+    const float32x4_t lo = vnegq_f32(tl);
+    const uint32x4_t yes = vcleq_f32(hi, r);
+    const uint32x4_t na = vcltq_f32(r, lo);
+    const float32x4_t ta = vabsq_f32(t0);
+    const uint32x4_t ft = vcltq_f32(ta, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t ne = vceqq_f32(r, r);
+    const uint32x4_t ok = vandq_u32(ft, ne);
+    const uint32x4_t nk = not_mask(ok);
+    const uint32x4_t no = vorrq_u32(na, nk);
+    yes_out = yes;
+    no_out = no;
+}
+
+// eq_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
+KAIRN_GEN_FORCEINLINE void eq_2_2(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, uint64x2_t& m_out) noexcept {
+    const uint64x2_t h = vceqq_f64(x0, y0);
+    const uint64x2_t l = vceqq_f64(x1, y1);
+    const uint64x2_t m = vandq_u64(h, l);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void eq_2_2(float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, uint32x4_t& m_out) noexcept {
+    const uint32x4_t h = vceqq_f32(x0, y0);
+    const uint32x4_t l = vceqq_f32(x1, y1);
+    const uint32x4_t m = vandq_u32(h, l);
+    m_out = m;
+}
+
+// ball_equal_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void ball_equal_2(float64x2_t cx0, float64x2_t cx1, float64x2_t rx, float64x2_t cy0, float64x2_t cy1, float64x2_t ry, uint64x2_t& yes_out, uint64x2_t& no_out) noexcept {
+    const uint64x2_t ea = vceqq_f64(rx, vdupq_n_f64(0.0));
+    const uint64x2_t eb = vceqq_f64(ry, vdupq_n_f64(0.0));
+    // (ec) = eq_2_2(cx0, cx1, cy0, cy1)
+    const uint64x2_t ec_h = vceqq_f64(cx0, cy0);
+    const uint64x2_t ec_l = vceqq_f64(cx1, cy1);
+    const uint64x2_t ec = vandq_u64(ec_h, ec_l);
+    const uint64x2_t eab = vandq_u64(ea, eb);
+    const uint64x2_t yes = vandq_u64(eab, ec);
+    const float64x2_t ncx0 = vnegq_f64(cx0);
+    const float64x2_t ncx1 = vnegq_f64(cx1);
+    // (z0, z1, e) = add_ball_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0, z1) = add_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0_sh, z0_sl) = two_sum(cy0, ncx0)
+    const float64x2_t z0_sh = vaddq_f64(cy0, ncx0);
+    const float64x2_t z0_sh_bb = vsubq_f64(z0_sh, cy0);
+    const float64x2_t z0_sh_t0 = vsubq_f64(z0_sh, z0_sh_bb);
+    const float64x2_t z0_sh_t1 = vsubq_f64(cy0, z0_sh_t0);
+    const float64x2_t z0_sh_t2 = vsubq_f64(ncx0, z0_sh_bb);
+    const float64x2_t z0_sl = vaddq_f64(z0_sh_t1, z0_sh_t2);
+    // (z0_th, z0_tl) = two_sum(cy1, ncx1)
+    const float64x2_t z0_th = vaddq_f64(cy1, ncx1);
+    const float64x2_t z0_th_bb = vsubq_f64(z0_th, cy1);
+    const float64x2_t z0_th_t0 = vsubq_f64(z0_th, z0_th_bb);
+    const float64x2_t z0_th_t1 = vsubq_f64(cy1, z0_th_t0);
+    const float64x2_t z0_th_t2 = vsubq_f64(ncx1, z0_th_bb);
+    const float64x2_t z0_tl = vaddq_f64(z0_th_t1, z0_th_t2);
+    const float64x2_t z0_c = vaddq_f64(z0_sl, z0_th);
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float64x2_t z0_vh = vaddq_f64(z0_sh, z0_c);
+    const float64x2_t z0_vh_z = vsubq_f64(z0_vh, z0_sh);
+    const float64x2_t z0_vl = vsubq_f64(z0_c, z0_vh_z);
+    const float64x2_t z0_w = vaddq_f64(z0_tl, z0_vl);
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float64x2_t z0 = vaddq_f64(z0_vh, z0_w);
+    const float64x2_t z0_z = vsubq_f64(z0, z0_vh);
+    const float64x2_t z1 = vsubq_f64(z0_w, z0_z);
+    const float64x2_t z0_az = vabsq_f64(z0);
+    const float64x2_t z0_t = vfmaq_f64(vdupq_n_f64(0.0), z0_az, vdupq_n_f64(0x1.8000000000004p-105));
+    const float64x2_t e = vfmaq_f64(vdupq_n_f64(0x1.0000000000002p-1022), z0_t, vdupq_n_f64(0x1.0000000000002p+0));
+    // (s) = radd(rx, ry)
+    const float64x2_t s_s = vaddq_f64(rx, ry);
+    const float64x2_t s = next_up_bits(s_s);
+    // (w0, w1) = abs_2(z0, z1)
+    const uint64x2_t w0_m = vcltq_f64(z0, vdupq_n_f64(0.0));
+    const float64x2_t w0_n0 = vnegq_f64(z0);
+    const float64x2_t w0_n1 = vnegq_f64(z1);
+    const float64x2_t w0 = vbslq_f64(w0_m, w0_n0, z0);
+    const float64x2_t w1 = vbslq_f64(w0_m, w0_n1, z1);
+    // (wd) = to_down_2(w0, w1)
+    const uint64x2_t wd_m = vcltq_f64(w1, vdupq_n_f64(0.0));
+    const float64x2_t wd_p = next_down_bits(w0);
+    const float64x2_t wd = vbslq_f64(wd_m, wd_p, w0);
+    const float64x2_t nw = vnegq_f64(wd);
+    // (tl) = add_up_1(e, nw)
+    // (tl_s, tl_e) = two_sum_ord(e, nw)
+    const float64x2_t tl_s_aa = vabsq_f64(e);
+    const float64x2_t tl_s_ab = vabsq_f64(nw);
+    const uint64x2_t tl_s_m = vcltq_f64(tl_s_aa, tl_s_ab);
+    const float64x2_t tl_s_h = vbslq_f64(tl_s_m, nw, e);
+    const float64x2_t tl_s_l = vbslq_f64(tl_s_m, e, nw);
+    // (tl_s, tl_e) = fast_two_sum(tl_s_h, tl_s_l)
+    const float64x2_t tl_s = vaddq_f64(tl_s_h, tl_s_l);
+    const float64x2_t tl_s_z = vsubq_f64(tl_s, tl_s_h);
+    const float64x2_t tl_e = vsubq_f64(tl_s_l, tl_s_z);
+    const uint64x2_t tl_n = vcltq_f64(vdupq_n_f64(0.0), tl_e);
+    const float64x2_t tl_q = next_up_bits(tl_s);
+    const float64x2_t tl = vbslq_f64(tl_n, tl_q, tl_s);
+    const float64x2_t al = vnegq_f64(tl);
+    const float64x2_t aa = vabsq_f64(al);
+    const uint64x2_t fa = vcltq_f64(aa, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t b = vcltq_f64(s, al);
+    const uint64x2_t no = vandq_u64(b, fa);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void ball_equal_2(float32x4_t cx0, float32x4_t cx1, float32x4_t rx, float32x4_t cy0, float32x4_t cy1, float32x4_t ry, uint32x4_t& yes_out, uint32x4_t& no_out) noexcept {
+    const uint32x4_t ea = vceqq_f32(rx, vdupq_n_f32(0.0f));
+    const uint32x4_t eb = vceqq_f32(ry, vdupq_n_f32(0.0f));
+    // (ec) = eq_2_2(cx0, cx1, cy0, cy1)
+    const uint32x4_t ec_h = vceqq_f32(cx0, cy0);
+    const uint32x4_t ec_l = vceqq_f32(cx1, cy1);
+    const uint32x4_t ec = vandq_u32(ec_h, ec_l);
+    const uint32x4_t eab = vandq_u32(ea, eb);
+    const uint32x4_t yes = vandq_u32(eab, ec);
+    const float32x4_t ncx0 = vnegq_f32(cx0);
+    const float32x4_t ncx1 = vnegq_f32(cx1);
+    // (z0, z1, e) = add_ball_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0, z1) = add_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0_sh, z0_sl) = two_sum(cy0, ncx0)
+    const float32x4_t z0_sh = vaddq_f32(cy0, ncx0);
+    const float32x4_t z0_sh_bb = vsubq_f32(z0_sh, cy0);
+    const float32x4_t z0_sh_t0 = vsubq_f32(z0_sh, z0_sh_bb);
+    const float32x4_t z0_sh_t1 = vsubq_f32(cy0, z0_sh_t0);
+    const float32x4_t z0_sh_t2 = vsubq_f32(ncx0, z0_sh_bb);
+    const float32x4_t z0_sl = vaddq_f32(z0_sh_t1, z0_sh_t2);
+    // (z0_th, z0_tl) = two_sum(cy1, ncx1)
+    const float32x4_t z0_th = vaddq_f32(cy1, ncx1);
+    const float32x4_t z0_th_bb = vsubq_f32(z0_th, cy1);
+    const float32x4_t z0_th_t0 = vsubq_f32(z0_th, z0_th_bb);
+    const float32x4_t z0_th_t1 = vsubq_f32(cy1, z0_th_t0);
+    const float32x4_t z0_th_t2 = vsubq_f32(ncx1, z0_th_bb);
+    const float32x4_t z0_tl = vaddq_f32(z0_th_t1, z0_th_t2);
+    const float32x4_t z0_c = vaddq_f32(z0_sl, z0_th);
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float32x4_t z0_vh = vaddq_f32(z0_sh, z0_c);
+    const float32x4_t z0_vh_z = vsubq_f32(z0_vh, z0_sh);
+    const float32x4_t z0_vl = vsubq_f32(z0_c, z0_vh_z);
+    const float32x4_t z0_w = vaddq_f32(z0_tl, z0_vl);
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float32x4_t z0 = vaddq_f32(z0_vh, z0_w);
+    const float32x4_t z0_z = vsubq_f32(z0, z0_vh);
+    const float32x4_t z1 = vsubq_f32(z0_w, z0_z);
+    const float32x4_t z0_az = vabsq_f32(z0);
+    const float32x4_t z0_t = vfmaq_f32(vdupq_n_f32(0.0f), z0_az, vdupq_n_f32(0x1.800008p-47f));
+    const float32x4_t e = vfmaq_f32(vdupq_n_f32(0x1.000004p-126f), z0_t, vdupq_n_f32(0x1.000004p+0f));
+    // (s) = radd(rx, ry)
+    const float32x4_t s_s = vaddq_f32(rx, ry);
+    const float32x4_t s = next_up_bits(s_s);
+    // (w0, w1) = abs_2(z0, z1)
+    const uint32x4_t w0_m = vcltq_f32(z0, vdupq_n_f32(0.0f));
+    const float32x4_t w0_n0 = vnegq_f32(z0);
+    const float32x4_t w0_n1 = vnegq_f32(z1);
+    const float32x4_t w0 = vbslq_f32(w0_m, w0_n0, z0);
+    const float32x4_t w1 = vbslq_f32(w0_m, w0_n1, z1);
+    // (wd) = to_down_2(w0, w1)
+    const uint32x4_t wd_m = vcltq_f32(w1, vdupq_n_f32(0.0f));
+    const float32x4_t wd_p = next_down_bits(w0);
+    const float32x4_t wd = vbslq_f32(wd_m, wd_p, w0);
+    const float32x4_t nw = vnegq_f32(wd);
+    // (tl) = add_up_1(e, nw)
+    // (tl_s, tl_e) = two_sum_ord(e, nw)
+    const float32x4_t tl_s_aa = vabsq_f32(e);
+    const float32x4_t tl_s_ab = vabsq_f32(nw);
+    const uint32x4_t tl_s_m = vcltq_f32(tl_s_aa, tl_s_ab);
+    const float32x4_t tl_s_h = vbslq_f32(tl_s_m, nw, e);
+    const float32x4_t tl_s_l = vbslq_f32(tl_s_m, e, nw);
+    // (tl_s, tl_e) = fast_two_sum(tl_s_h, tl_s_l)
+    const float32x4_t tl_s = vaddq_f32(tl_s_h, tl_s_l);
+    const float32x4_t tl_s_z = vsubq_f32(tl_s, tl_s_h);
+    const float32x4_t tl_e = vsubq_f32(tl_s_l, tl_s_z);
+    const uint32x4_t tl_n = vcltq_f32(vdupq_n_f32(0.0f), tl_e);
+    const float32x4_t tl_q = next_up_bits(tl_s);
+    const float32x4_t tl = vbslq_f32(tl_n, tl_q, tl_s);
+    const float32x4_t al = vnegq_f32(tl);
+    const float32x4_t aa = vabsq_f32(al);
+    const uint32x4_t fa = vcltq_f32(aa, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t b = vcltq_f32(s, al);
+    const uint32x4_t no = vandq_u32(b, fa);
+    yes_out = yes;
+    no_out = no;
+}
+
+// ball_less_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void ball_less_2(float64x2_t cx0, float64x2_t cx1, float64x2_t rx, float64x2_t cy0, float64x2_t cy1, float64x2_t ry, uint64x2_t& yes_out, uint64x2_t& no_out) noexcept {
+    const float64x2_t ncx0 = vnegq_f64(cx0);
+    const float64x2_t ncx1 = vnegq_f64(cx1);
+    // (z0, z1, e) = add_ball_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0, z1) = add_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0_sh, z0_sl) = two_sum(cy0, ncx0)
+    const float64x2_t z0_sh = vaddq_f64(cy0, ncx0);
+    const float64x2_t z0_sh_bb = vsubq_f64(z0_sh, cy0);
+    const float64x2_t z0_sh_t0 = vsubq_f64(z0_sh, z0_sh_bb);
+    const float64x2_t z0_sh_t1 = vsubq_f64(cy0, z0_sh_t0);
+    const float64x2_t z0_sh_t2 = vsubq_f64(ncx0, z0_sh_bb);
+    const float64x2_t z0_sl = vaddq_f64(z0_sh_t1, z0_sh_t2);
+    // (z0_th, z0_tl) = two_sum(cy1, ncx1)
+    const float64x2_t z0_th = vaddq_f64(cy1, ncx1);
+    const float64x2_t z0_th_bb = vsubq_f64(z0_th, cy1);
+    const float64x2_t z0_th_t0 = vsubq_f64(z0_th, z0_th_bb);
+    const float64x2_t z0_th_t1 = vsubq_f64(cy1, z0_th_t0);
+    const float64x2_t z0_th_t2 = vsubq_f64(ncx1, z0_th_bb);
+    const float64x2_t z0_tl = vaddq_f64(z0_th_t1, z0_th_t2);
+    const float64x2_t z0_c = vaddq_f64(z0_sl, z0_th);
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float64x2_t z0_vh = vaddq_f64(z0_sh, z0_c);
+    const float64x2_t z0_vh_z = vsubq_f64(z0_vh, z0_sh);
+    const float64x2_t z0_vl = vsubq_f64(z0_c, z0_vh_z);
+    const float64x2_t z0_w = vaddq_f64(z0_tl, z0_vl);
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float64x2_t z0 = vaddq_f64(z0_vh, z0_w);
+    const float64x2_t z0_z = vsubq_f64(z0, z0_vh);
+    const float64x2_t z1 = vsubq_f64(z0_w, z0_z);
+    const float64x2_t z0_az = vabsq_f64(z0);
+    const float64x2_t z0_t = vfmaq_f64(vdupq_n_f64(0.0), z0_az, vdupq_n_f64(0x1.8000000000004p-105));
+    const float64x2_t e = vfmaq_f64(vdupq_n_f64(0x1.0000000000002p-1022), z0_t, vdupq_n_f64(0x1.0000000000002p+0));
+    // (s) = radd(rx, ry)
+    const float64x2_t s_s = vaddq_f64(rx, ry);
+    const float64x2_t s = next_up_bits(s_s);
+    const float64x2_t sa = vabsq_f64(s);
+    const uint64x2_t fs = vcltq_f64(sa, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    // (zd) = to_down_2(z0, z1)
+    const uint64x2_t zd_m = vcltq_f64(z1, vdupq_n_f64(0.0));
+    const float64x2_t zd_p = next_down_bits(z0);
+    const float64x2_t zd = vbslq_f64(zd_m, zd_p, z0);
+    const float64x2_t nzd = vnegq_f64(zd);
+    // (tl) = add_up_1(e, nzd)
+    // (tl_s, tl_e) = two_sum_ord(e, nzd)
+    const float64x2_t tl_s_aa = vabsq_f64(e);
+    const float64x2_t tl_s_ab = vabsq_f64(nzd);
+    const uint64x2_t tl_s_m = vcltq_f64(tl_s_aa, tl_s_ab);
+    const float64x2_t tl_s_h = vbslq_f64(tl_s_m, nzd, e);
+    const float64x2_t tl_s_l = vbslq_f64(tl_s_m, e, nzd);
+    // (tl_s, tl_e) = fast_two_sum(tl_s_h, tl_s_l)
+    const float64x2_t tl_s = vaddq_f64(tl_s_h, tl_s_l);
+    const float64x2_t tl_s_z = vsubq_f64(tl_s, tl_s_h);
+    const float64x2_t tl_e = vsubq_f64(tl_s_l, tl_s_z);
+    const uint64x2_t tl_n = vcltq_f64(vdupq_n_f64(0.0), tl_e);
+    const float64x2_t tl_q = next_up_bits(tl_s);
+    const float64x2_t tl = vbslq_f64(tl_n, tl_q, tl_s);
+    const float64x2_t dl = vnegq_f64(tl);
+    const float64x2_t la = vabsq_f64(dl);
+    const uint64x2_t fl = vcltq_f64(la, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    // (zu) = to_up_2(z0, z1)
+    const uint64x2_t zu_m = vcltq_f64(vdupq_n_f64(0.0), z1);
+    const float64x2_t zu_s = next_up_bits(z0);
+    const float64x2_t zu = vbslq_f64(zu_m, zu_s, z0);
+    // (tm) = add_up_1(zu, e)
+    // (tm_s, tm_e) = two_sum_ord(zu, e)
+    const float64x2_t tm_s_aa = vabsq_f64(zu);
+    const float64x2_t tm_s_ab = vabsq_f64(e);
+    const uint64x2_t tm_s_m = vcltq_f64(tm_s_aa, tm_s_ab);
+    const float64x2_t tm_s_h = vbslq_f64(tm_s_m, e, zu);
+    const float64x2_t tm_s_l = vbslq_f64(tm_s_m, zu, e);
+    // (tm_s, tm_e) = fast_two_sum(tm_s_h, tm_s_l)
+    const float64x2_t tm_s = vaddq_f64(tm_s_h, tm_s_l);
+    const float64x2_t tm_s_z = vsubq_f64(tm_s, tm_s_h);
+    const float64x2_t tm_e = vsubq_f64(tm_s_l, tm_s_z);
+    const uint64x2_t tm_n = vcltq_f64(vdupq_n_f64(0.0), tm_e);
+    const float64x2_t tm_q = next_up_bits(tm_s);
+    const float64x2_t tm = vbslq_f64(tm_n, tm_q, tm_s);
+    const float64x2_t ml = vnegq_f64(tm);
+    const float64x2_t ma = vabsq_f64(ml);
+    const uint64x2_t fm = vcltq_f64(ma, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t a = vcltq_f64(s, dl);
+    const uint64x2_t yes = vandq_u64(a, fl);
+    const uint64x2_t b = vcleq_f64(s, ml);
+    const uint64x2_t bs = vandq_u64(b, fs);
+    const uint64x2_t no = vandq_u64(bs, fm);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void ball_less_2(float32x4_t cx0, float32x4_t cx1, float32x4_t rx, float32x4_t cy0, float32x4_t cy1, float32x4_t ry, uint32x4_t& yes_out, uint32x4_t& no_out) noexcept {
+    const float32x4_t ncx0 = vnegq_f32(cx0);
+    const float32x4_t ncx1 = vnegq_f32(cx1);
+    // (z0, z1, e) = add_ball_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0, z1) = add_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0_sh, z0_sl) = two_sum(cy0, ncx0)
+    const float32x4_t z0_sh = vaddq_f32(cy0, ncx0);
+    const float32x4_t z0_sh_bb = vsubq_f32(z0_sh, cy0);
+    const float32x4_t z0_sh_t0 = vsubq_f32(z0_sh, z0_sh_bb);
+    const float32x4_t z0_sh_t1 = vsubq_f32(cy0, z0_sh_t0);
+    const float32x4_t z0_sh_t2 = vsubq_f32(ncx0, z0_sh_bb);
+    const float32x4_t z0_sl = vaddq_f32(z0_sh_t1, z0_sh_t2);
+    // (z0_th, z0_tl) = two_sum(cy1, ncx1)
+    const float32x4_t z0_th = vaddq_f32(cy1, ncx1);
+    const float32x4_t z0_th_bb = vsubq_f32(z0_th, cy1);
+    const float32x4_t z0_th_t0 = vsubq_f32(z0_th, z0_th_bb);
+    const float32x4_t z0_th_t1 = vsubq_f32(cy1, z0_th_t0);
+    const float32x4_t z0_th_t2 = vsubq_f32(ncx1, z0_th_bb);
+    const float32x4_t z0_tl = vaddq_f32(z0_th_t1, z0_th_t2);
+    const float32x4_t z0_c = vaddq_f32(z0_sl, z0_th);
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float32x4_t z0_vh = vaddq_f32(z0_sh, z0_c);
+    const float32x4_t z0_vh_z = vsubq_f32(z0_vh, z0_sh);
+    const float32x4_t z0_vl = vsubq_f32(z0_c, z0_vh_z);
+    const float32x4_t z0_w = vaddq_f32(z0_tl, z0_vl);
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float32x4_t z0 = vaddq_f32(z0_vh, z0_w);
+    const float32x4_t z0_z = vsubq_f32(z0, z0_vh);
+    const float32x4_t z1 = vsubq_f32(z0_w, z0_z);
+    const float32x4_t z0_az = vabsq_f32(z0);
+    const float32x4_t z0_t = vfmaq_f32(vdupq_n_f32(0.0f), z0_az, vdupq_n_f32(0x1.800008p-47f));
+    const float32x4_t e = vfmaq_f32(vdupq_n_f32(0x1.000004p-126f), z0_t, vdupq_n_f32(0x1.000004p+0f));
+    // (s) = radd(rx, ry)
+    const float32x4_t s_s = vaddq_f32(rx, ry);
+    const float32x4_t s = next_up_bits(s_s);
+    const float32x4_t sa = vabsq_f32(s);
+    const uint32x4_t fs = vcltq_f32(sa, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    // (zd) = to_down_2(z0, z1)
+    const uint32x4_t zd_m = vcltq_f32(z1, vdupq_n_f32(0.0f));
+    const float32x4_t zd_p = next_down_bits(z0);
+    const float32x4_t zd = vbslq_f32(zd_m, zd_p, z0);
+    const float32x4_t nzd = vnegq_f32(zd);
+    // (tl) = add_up_1(e, nzd)
+    // (tl_s, tl_e) = two_sum_ord(e, nzd)
+    const float32x4_t tl_s_aa = vabsq_f32(e);
+    const float32x4_t tl_s_ab = vabsq_f32(nzd);
+    const uint32x4_t tl_s_m = vcltq_f32(tl_s_aa, tl_s_ab);
+    const float32x4_t tl_s_h = vbslq_f32(tl_s_m, nzd, e);
+    const float32x4_t tl_s_l = vbslq_f32(tl_s_m, e, nzd);
+    // (tl_s, tl_e) = fast_two_sum(tl_s_h, tl_s_l)
+    const float32x4_t tl_s = vaddq_f32(tl_s_h, tl_s_l);
+    const float32x4_t tl_s_z = vsubq_f32(tl_s, tl_s_h);
+    const float32x4_t tl_e = vsubq_f32(tl_s_l, tl_s_z);
+    const uint32x4_t tl_n = vcltq_f32(vdupq_n_f32(0.0f), tl_e);
+    const float32x4_t tl_q = next_up_bits(tl_s);
+    const float32x4_t tl = vbslq_f32(tl_n, tl_q, tl_s);
+    const float32x4_t dl = vnegq_f32(tl);
+    const float32x4_t la = vabsq_f32(dl);
+    const uint32x4_t fl = vcltq_f32(la, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    // (zu) = to_up_2(z0, z1)
+    const uint32x4_t zu_m = vcltq_f32(vdupq_n_f32(0.0f), z1);
+    const float32x4_t zu_s = next_up_bits(z0);
+    const float32x4_t zu = vbslq_f32(zu_m, zu_s, z0);
+    // (tm) = add_up_1(zu, e)
+    // (tm_s, tm_e) = two_sum_ord(zu, e)
+    const float32x4_t tm_s_aa = vabsq_f32(zu);
+    const float32x4_t tm_s_ab = vabsq_f32(e);
+    const uint32x4_t tm_s_m = vcltq_f32(tm_s_aa, tm_s_ab);
+    const float32x4_t tm_s_h = vbslq_f32(tm_s_m, e, zu);
+    const float32x4_t tm_s_l = vbslq_f32(tm_s_m, zu, e);
+    // (tm_s, tm_e) = fast_two_sum(tm_s_h, tm_s_l)
+    const float32x4_t tm_s = vaddq_f32(tm_s_h, tm_s_l);
+    const float32x4_t tm_s_z = vsubq_f32(tm_s, tm_s_h);
+    const float32x4_t tm_e = vsubq_f32(tm_s_l, tm_s_z);
+    const uint32x4_t tm_n = vcltq_f32(vdupq_n_f32(0.0f), tm_e);
+    const float32x4_t tm_q = next_up_bits(tm_s);
+    const float32x4_t tm = vbslq_f32(tm_n, tm_q, tm_s);
+    const float32x4_t ml = vnegq_f32(tm);
+    const float32x4_t ma = vabsq_f32(ml);
+    const uint32x4_t fm = vcltq_f32(ma, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t a = vcltq_f32(s, dl);
+    const uint32x4_t yes = vandq_u32(a, fl);
+    const uint32x4_t b = vcleq_f32(s, ml);
+    const uint32x4_t bs = vandq_u32(b, fs);
+    const uint32x4_t no = vandq_u32(bs, fm);
+    yes_out = yes;
+    no_out = no;
+}
+
+// ball_less_equal_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> mask yes, mask no
+KAIRN_GEN_FORCEINLINE void ball_less_equal_2(float64x2_t cx0, float64x2_t cx1, float64x2_t rx, float64x2_t cy0, float64x2_t cy1, float64x2_t ry, uint64x2_t& yes_out, uint64x2_t& no_out) noexcept {
+    const float64x2_t ncx0 = vnegq_f64(cx0);
+    const float64x2_t ncx1 = vnegq_f64(cx1);
+    // (z0, z1, e) = add_ball_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0, z1) = add_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0_sh, z0_sl) = two_sum(cy0, ncx0)
+    const float64x2_t z0_sh = vaddq_f64(cy0, ncx0);
+    const float64x2_t z0_sh_bb = vsubq_f64(z0_sh, cy0);
+    const float64x2_t z0_sh_t0 = vsubq_f64(z0_sh, z0_sh_bb);
+    const float64x2_t z0_sh_t1 = vsubq_f64(cy0, z0_sh_t0);
+    const float64x2_t z0_sh_t2 = vsubq_f64(ncx0, z0_sh_bb);
+    const float64x2_t z0_sl = vaddq_f64(z0_sh_t1, z0_sh_t2);
+    // (z0_th, z0_tl) = two_sum(cy1, ncx1)
+    const float64x2_t z0_th = vaddq_f64(cy1, ncx1);
+    const float64x2_t z0_th_bb = vsubq_f64(z0_th, cy1);
+    const float64x2_t z0_th_t0 = vsubq_f64(z0_th, z0_th_bb);
+    const float64x2_t z0_th_t1 = vsubq_f64(cy1, z0_th_t0);
+    const float64x2_t z0_th_t2 = vsubq_f64(ncx1, z0_th_bb);
+    const float64x2_t z0_tl = vaddq_f64(z0_th_t1, z0_th_t2);
+    const float64x2_t z0_c = vaddq_f64(z0_sl, z0_th);
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float64x2_t z0_vh = vaddq_f64(z0_sh, z0_c);
+    const float64x2_t z0_vh_z = vsubq_f64(z0_vh, z0_sh);
+    const float64x2_t z0_vl = vsubq_f64(z0_c, z0_vh_z);
+    const float64x2_t z0_w = vaddq_f64(z0_tl, z0_vl);
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float64x2_t z0 = vaddq_f64(z0_vh, z0_w);
+    const float64x2_t z0_z = vsubq_f64(z0, z0_vh);
+    const float64x2_t z1 = vsubq_f64(z0_w, z0_z);
+    const float64x2_t z0_az = vabsq_f64(z0);
+    const float64x2_t z0_t = vfmaq_f64(vdupq_n_f64(0.0), z0_az, vdupq_n_f64(0x1.8000000000004p-105));
+    const float64x2_t e = vfmaq_f64(vdupq_n_f64(0x1.0000000000002p-1022), z0_t, vdupq_n_f64(0x1.0000000000002p+0));
+    // (s) = radd(rx, ry)
+    const float64x2_t s_s = vaddq_f64(rx, ry);
+    const float64x2_t s = next_up_bits(s_s);
+    const float64x2_t sa = vabsq_f64(s);
+    const uint64x2_t fs = vcltq_f64(sa, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    // (zd) = to_down_2(z0, z1)
+    const uint64x2_t zd_m = vcltq_f64(z1, vdupq_n_f64(0.0));
+    const float64x2_t zd_p = next_down_bits(z0);
+    const float64x2_t zd = vbslq_f64(zd_m, zd_p, z0);
+    const float64x2_t nzd = vnegq_f64(zd);
+    // (tl) = add_up_1(e, nzd)
+    // (tl_s, tl_e) = two_sum_ord(e, nzd)
+    const float64x2_t tl_s_aa = vabsq_f64(e);
+    const float64x2_t tl_s_ab = vabsq_f64(nzd);
+    const uint64x2_t tl_s_m = vcltq_f64(tl_s_aa, tl_s_ab);
+    const float64x2_t tl_s_h = vbslq_f64(tl_s_m, nzd, e);
+    const float64x2_t tl_s_l = vbslq_f64(tl_s_m, e, nzd);
+    // (tl_s, tl_e) = fast_two_sum(tl_s_h, tl_s_l)
+    const float64x2_t tl_s = vaddq_f64(tl_s_h, tl_s_l);
+    const float64x2_t tl_s_z = vsubq_f64(tl_s, tl_s_h);
+    const float64x2_t tl_e = vsubq_f64(tl_s_l, tl_s_z);
+    const uint64x2_t tl_n = vcltq_f64(vdupq_n_f64(0.0), tl_e);
+    const float64x2_t tl_q = next_up_bits(tl_s);
+    const float64x2_t tl = vbslq_f64(tl_n, tl_q, tl_s);
+    const float64x2_t dl = vnegq_f64(tl);
+    const float64x2_t la = vabsq_f64(dl);
+    const uint64x2_t fl = vcltq_f64(la, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    // (zu) = to_up_2(z0, z1)
+    const uint64x2_t zu_m = vcltq_f64(vdupq_n_f64(0.0), z1);
+    const float64x2_t zu_s = next_up_bits(z0);
+    const float64x2_t zu = vbslq_f64(zu_m, zu_s, z0);
+    // (tm) = add_up_1(zu, e)
+    // (tm_s, tm_e) = two_sum_ord(zu, e)
+    const float64x2_t tm_s_aa = vabsq_f64(zu);
+    const float64x2_t tm_s_ab = vabsq_f64(e);
+    const uint64x2_t tm_s_m = vcltq_f64(tm_s_aa, tm_s_ab);
+    const float64x2_t tm_s_h = vbslq_f64(tm_s_m, e, zu);
+    const float64x2_t tm_s_l = vbslq_f64(tm_s_m, zu, e);
+    // (tm_s, tm_e) = fast_two_sum(tm_s_h, tm_s_l)
+    const float64x2_t tm_s = vaddq_f64(tm_s_h, tm_s_l);
+    const float64x2_t tm_s_z = vsubq_f64(tm_s, tm_s_h);
+    const float64x2_t tm_e = vsubq_f64(tm_s_l, tm_s_z);
+    const uint64x2_t tm_n = vcltq_f64(vdupq_n_f64(0.0), tm_e);
+    const float64x2_t tm_q = next_up_bits(tm_s);
+    const float64x2_t tm = vbslq_f64(tm_n, tm_q, tm_s);
+    const float64x2_t ml = vnegq_f64(tm);
+    const float64x2_t ma = vabsq_f64(ml);
+    const uint64x2_t fm = vcltq_f64(ma, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t a = vcleq_f64(s, dl);
+    const uint64x2_t ys = vandq_u64(a, fs);
+    const uint64x2_t yes = vandq_u64(ys, fl);
+    const uint64x2_t b = vcltq_f64(s, ml);
+    const uint64x2_t no = vandq_u64(b, fm);
+    yes_out = yes;
+    no_out = no;
+}
+KAIRN_GEN_FORCEINLINE void ball_less_equal_2(float32x4_t cx0, float32x4_t cx1, float32x4_t rx, float32x4_t cy0, float32x4_t cy1, float32x4_t ry, uint32x4_t& yes_out, uint32x4_t& no_out) noexcept {
+    const float32x4_t ncx0 = vnegq_f32(cx0);
+    const float32x4_t ncx1 = vnegq_f32(cx1);
+    // (z0, z1, e) = add_ball_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0, z1) = add_2_2(cy0, cy1, ncx0, ncx1)
+    // (z0_sh, z0_sl) = two_sum(cy0, ncx0)
+    const float32x4_t z0_sh = vaddq_f32(cy0, ncx0);
+    const float32x4_t z0_sh_bb = vsubq_f32(z0_sh, cy0);
+    const float32x4_t z0_sh_t0 = vsubq_f32(z0_sh, z0_sh_bb);
+    const float32x4_t z0_sh_t1 = vsubq_f32(cy0, z0_sh_t0);
+    const float32x4_t z0_sh_t2 = vsubq_f32(ncx0, z0_sh_bb);
+    const float32x4_t z0_sl = vaddq_f32(z0_sh_t1, z0_sh_t2);
+    // (z0_th, z0_tl) = two_sum(cy1, ncx1)
+    const float32x4_t z0_th = vaddq_f32(cy1, ncx1);
+    const float32x4_t z0_th_bb = vsubq_f32(z0_th, cy1);
+    const float32x4_t z0_th_t0 = vsubq_f32(z0_th, z0_th_bb);
+    const float32x4_t z0_th_t1 = vsubq_f32(cy1, z0_th_t0);
+    const float32x4_t z0_th_t2 = vsubq_f32(ncx1, z0_th_bb);
+    const float32x4_t z0_tl = vaddq_f32(z0_th_t1, z0_th_t2);
+    const float32x4_t z0_c = vaddq_f32(z0_sl, z0_th);
+    // (z0_vh, z0_vl) = fast_two_sum(z0_sh, z0_c)
+    const float32x4_t z0_vh = vaddq_f32(z0_sh, z0_c);
+    const float32x4_t z0_vh_z = vsubq_f32(z0_vh, z0_sh);
+    const float32x4_t z0_vl = vsubq_f32(z0_c, z0_vh_z);
+    const float32x4_t z0_w = vaddq_f32(z0_tl, z0_vl);
+    // (z0, z1) = fast_two_sum(z0_vh, z0_w)
+    const float32x4_t z0 = vaddq_f32(z0_vh, z0_w);
+    const float32x4_t z0_z = vsubq_f32(z0, z0_vh);
+    const float32x4_t z1 = vsubq_f32(z0_w, z0_z);
+    const float32x4_t z0_az = vabsq_f32(z0);
+    const float32x4_t z0_t = vfmaq_f32(vdupq_n_f32(0.0f), z0_az, vdupq_n_f32(0x1.800008p-47f));
+    const float32x4_t e = vfmaq_f32(vdupq_n_f32(0x1.000004p-126f), z0_t, vdupq_n_f32(0x1.000004p+0f));
+    // (s) = radd(rx, ry)
+    const float32x4_t s_s = vaddq_f32(rx, ry);
+    const float32x4_t s = next_up_bits(s_s);
+    const float32x4_t sa = vabsq_f32(s);
+    const uint32x4_t fs = vcltq_f32(sa, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    // (zd) = to_down_2(z0, z1)
+    const uint32x4_t zd_m = vcltq_f32(z1, vdupq_n_f32(0.0f));
+    const float32x4_t zd_p = next_down_bits(z0);
+    const float32x4_t zd = vbslq_f32(zd_m, zd_p, z0);
+    const float32x4_t nzd = vnegq_f32(zd);
+    // (tl) = add_up_1(e, nzd)
+    // (tl_s, tl_e) = two_sum_ord(e, nzd)
+    const float32x4_t tl_s_aa = vabsq_f32(e);
+    const float32x4_t tl_s_ab = vabsq_f32(nzd);
+    const uint32x4_t tl_s_m = vcltq_f32(tl_s_aa, tl_s_ab);
+    const float32x4_t tl_s_h = vbslq_f32(tl_s_m, nzd, e);
+    const float32x4_t tl_s_l = vbslq_f32(tl_s_m, e, nzd);
+    // (tl_s, tl_e) = fast_two_sum(tl_s_h, tl_s_l)
+    const float32x4_t tl_s = vaddq_f32(tl_s_h, tl_s_l);
+    const float32x4_t tl_s_z = vsubq_f32(tl_s, tl_s_h);
+    const float32x4_t tl_e = vsubq_f32(tl_s_l, tl_s_z);
+    const uint32x4_t tl_n = vcltq_f32(vdupq_n_f32(0.0f), tl_e);
+    const float32x4_t tl_q = next_up_bits(tl_s);
+    const float32x4_t tl = vbslq_f32(tl_n, tl_q, tl_s);
+    const float32x4_t dl = vnegq_f32(tl);
+    const float32x4_t la = vabsq_f32(dl);
+    const uint32x4_t fl = vcltq_f32(la, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    // (zu) = to_up_2(z0, z1)
+    const uint32x4_t zu_m = vcltq_f32(vdupq_n_f32(0.0f), z1);
+    const float32x4_t zu_s = next_up_bits(z0);
+    const float32x4_t zu = vbslq_f32(zu_m, zu_s, z0);
+    // (tm) = add_up_1(zu, e)
+    // (tm_s, tm_e) = two_sum_ord(zu, e)
+    const float32x4_t tm_s_aa = vabsq_f32(zu);
+    const float32x4_t tm_s_ab = vabsq_f32(e);
+    const uint32x4_t tm_s_m = vcltq_f32(tm_s_aa, tm_s_ab);
+    const float32x4_t tm_s_h = vbslq_f32(tm_s_m, e, zu);
+    const float32x4_t tm_s_l = vbslq_f32(tm_s_m, zu, e);
+    // (tm_s, tm_e) = fast_two_sum(tm_s_h, tm_s_l)
+    const float32x4_t tm_s = vaddq_f32(tm_s_h, tm_s_l);
+    const float32x4_t tm_s_z = vsubq_f32(tm_s, tm_s_h);
+    const float32x4_t tm_e = vsubq_f32(tm_s_l, tm_s_z);
+    const uint32x4_t tm_n = vcltq_f32(vdupq_n_f32(0.0f), tm_e);
+    const float32x4_t tm_q = next_up_bits(tm_s);
+    const float32x4_t tm = vbslq_f32(tm_n, tm_q, tm_s);
+    const float32x4_t ml = vnegq_f32(tm);
+    const float32x4_t ma = vabsq_f32(ml);
+    const uint32x4_t fm = vcltq_f32(ma, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t a = vcleq_f32(s, dl);
+    const uint32x4_t ys = vandq_u32(a, fs);
+    const uint32x4_t yes = vandq_u32(ys, fl);
+    const uint32x4_t b = vcltq_f32(s, ml);
+    const uint32x4_t no = vandq_u32(b, fm);
+    yes_out = yes;
+    no_out = no;
 }
 
 // ball_lower_as_2(c = (c0, c1), r) -> l
@@ -4689,6 +6731,84 @@ KAIRN_GEN_FORCEINLINE void ball_neg_2(float32x4_t cx0, float32x4_t cx1, float32x
     rz_out = rz;
 }
 
+// lt_2_1(x = (x0, x1), a) -> mask m
+KAIRN_GEN_FORCEINLINE void lt_2_1(float64x2_t x0, float64x2_t x1, float64x2_t a, uint64x2_t& m_out) noexcept {
+    const uint64x2_t h = vcltq_f64(x0, a);
+    const uint64x2_t e = vceqq_f64(x0, a);
+    const uint64x2_t l = vcltq_f64(x1, vdupq_n_f64(0.0));
+    const uint64x2_t t = vandq_u64(e, l);
+    const uint64x2_t m = vorrq_u64(h, t);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void lt_2_1(float32x4_t x0, float32x4_t x1, float32x4_t a, uint32x4_t& m_out) noexcept {
+    const uint32x4_t h = vcltq_f32(x0, a);
+    const uint32x4_t e = vceqq_f32(x0, a);
+    const uint32x4_t l = vcltq_f32(x1, vdupq_n_f32(0.0f));
+    const uint32x4_t t = vandq_u32(e, l);
+    const uint32x4_t m = vorrq_u32(h, t);
+    m_out = m;
+}
+
+// ball_negative_2(c = (c0, c1), r) -> mask m
+KAIRN_GEN_FORCEINLINE void ball_negative_2(float64x2_t c0, float64x2_t c1, float64x2_t r, uint64x2_t& m_out) noexcept {
+    const float64x2_t nr = vnegq_f64(r);
+    // (m) = lt_2_1(c0, c1, nr)
+    const uint64x2_t m_h = vcltq_f64(c0, nr);
+    const uint64x2_t m_e = vceqq_f64(c0, nr);
+    const uint64x2_t m_l = vcltq_f64(c1, vdupq_n_f64(0.0));
+    const uint64x2_t m_t = vandq_u64(m_e, m_l);
+    const uint64x2_t m = vorrq_u64(m_h, m_t);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void ball_negative_2(float32x4_t c0, float32x4_t c1, float32x4_t r, uint32x4_t& m_out) noexcept {
+    const float32x4_t nr = vnegq_f32(r);
+    // (m) = lt_2_1(c0, c1, nr)
+    const uint32x4_t m_h = vcltq_f32(c0, nr);
+    const uint32x4_t m_e = vceqq_f32(c0, nr);
+    const uint32x4_t m_l = vcltq_f32(c1, vdupq_n_f32(0.0f));
+    const uint32x4_t m_t = vandq_u32(m_e, m_l);
+    const uint32x4_t m = vorrq_u32(m_h, m_t);
+    m_out = m;
+}
+
+// lt_1_2(a, y = (y0, y1)) -> mask m
+KAIRN_GEN_FORCEINLINE void lt_1_2(float64x2_t a, float64x2_t y0, float64x2_t y1, uint64x2_t& m_out) noexcept {
+    const uint64x2_t h = vcltq_f64(a, y0);
+    const uint64x2_t e = vceqq_f64(a, y0);
+    const uint64x2_t l = vcltq_f64(vdupq_n_f64(0.0), y1);
+    const uint64x2_t t = vandq_u64(e, l);
+    const uint64x2_t m = vorrq_u64(h, t);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void lt_1_2(float32x4_t a, float32x4_t y0, float32x4_t y1, uint32x4_t& m_out) noexcept {
+    const uint32x4_t h = vcltq_f32(a, y0);
+    const uint32x4_t e = vceqq_f32(a, y0);
+    const uint32x4_t l = vcltq_f32(vdupq_n_f32(0.0f), y1);
+    const uint32x4_t t = vandq_u32(e, l);
+    const uint32x4_t m = vorrq_u32(h, t);
+    m_out = m;
+}
+
+// ball_positive_2(c = (c0, c1), r) -> mask m
+KAIRN_GEN_FORCEINLINE void ball_positive_2(float64x2_t c0, float64x2_t c1, float64x2_t r, uint64x2_t& m_out) noexcept {
+    // (m) = lt_1_2(r, c0, c1)
+    const uint64x2_t m_h = vcltq_f64(r, c0);
+    const uint64x2_t m_e = vceqq_f64(r, c0);
+    const uint64x2_t m_l = vcltq_f64(vdupq_n_f64(0.0), c1);
+    const uint64x2_t m_t = vandq_u64(m_e, m_l);
+    const uint64x2_t m = vorrq_u64(m_h, m_t);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void ball_positive_2(float32x4_t c0, float32x4_t c1, float32x4_t r, uint32x4_t& m_out) noexcept {
+    // (m) = lt_1_2(r, c0, c1)
+    const uint32x4_t m_h = vcltq_f32(r, c0);
+    const uint32x4_t m_e = vceqq_f32(r, c0);
+    const uint32x4_t m_l = vcltq_f32(vdupq_n_f32(0.0f), c1);
+    const uint32x4_t m_t = vandq_u32(m_e, m_l);
+    const uint32x4_t m = vorrq_u32(m_h, m_t);
+    m_out = m;
+}
+
 // ball_scale_2(cx = (cx0, cx1), rx, a) -> cz = (cz0, cz1), rz
 KAIRN_GEN_FORCEINLINE void ball_scale_2(float64x2_t cx0, float64x2_t cx1, float64x2_t rx, float64x2_t a, float64x2_t& cz0_out, float64x2_t& cz1_out, float64x2_t& rz_out) noexcept {
     // (cz0, cz1) = mul_2_1(cx0, cx1, a)
@@ -4791,6 +6911,248 @@ KAIRN_GEN_FORCEINLINE void ball_scale_2_full(float32x4_t cx0, float32x4_t cx1, f
     cw0_out = cw0;
     cw1_out = cw1;
     rw_out = rw;
+}
+
+// ball_split_2(c = (c0, c1), r) -> ca = (ca0, ca1), ra, cb = (cb0, cb1), rb
+KAIRN_GEN_FORCEINLINE void ball_split_2(float64x2_t c0, float64x2_t c1, float64x2_t r, float64x2_t& ca0_out, float64x2_t& ca1_out, float64x2_t& ra_out, float64x2_t& cb0_out, float64x2_t& cb1_out, float64x2_t& rb_out) noexcept {
+    const float64x2_t h = vfmaq_f64(vdupq_n_f64(0.0), r, vdupq_n_f64(0x1p-1));
+    const float64x2_t nr = vnegq_f64(r);
+    const float64x2_t hn = vfmaq_f64(vdupq_n_f64(0.0), nr, vdupq_n_f64(0x1p-1));
+    const float64x2_t g = vsubq_f64(r, h);
+    const uint64x2_t mg = vcltq_f64(h, g);
+    const float64x2_t q = vbslq_f64(mg, g, h);
+    const uint64x2_t fr = vcltq_f64(r, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t hs = vbslq_f64(fr, h, vdupq_n_f64(0.0));
+    const float64x2_t nh = vbslq_f64(fr, hn, vdupq_n_f64(0.0));
+    const float64x2_t ws = vbslq_f64(fr, q, vdupq_n_f64(0.0));
+    const float64x2_t cs0 = vbslq_f64(fr, c0, vdupq_n_f64(0.0));
+    const float64x2_t cs1 = vbslq_f64(fr, c1, vdupq_n_f64(0.0));
+    // (n0, n1) = make_2(nh)
+    const float64x2_t n0 = vaddq_f64(nh, vdupq_n_f64(0.0));
+    const uint64x2_t n0_n = vceqq_f64(n0, n0);
+    const float64x2_t n1 = vbslq_f64(n0_n, vdupq_n_f64(0.0), n0);
+    // (p0, p1) = make_2(hs)
+    const float64x2_t p0 = vaddq_f64(hs, vdupq_n_f64(0.0));
+    const uint64x2_t p0_n = vceqq_f64(p0, p0);
+    const float64x2_t p1 = vbslq_f64(p0_n, vdupq_n_f64(0.0), p0);
+    // (a0, a1, ar) = ball_add_2_full(cs0, cs1, 0, n0, n1, ws)
+    // (a0_cz0, a0_cz1, a0_rz) = ball_add_2(cs0, cs1, 0, n0, n1, ws)
+    // (a0_cz0, a0_cz1) = add_2_2(cs0, cs1, n0, n1)
+    // (a0_cz0_sh, a0_cz0_sl) = two_sum(cs0, n0)
+    const float64x2_t a0_cz0_sh = vaddq_f64(cs0, n0);
+    const float64x2_t a0_cz0_sh_bb = vsubq_f64(a0_cz0_sh, cs0);
+    const float64x2_t a0_cz0_sh_t0 = vsubq_f64(a0_cz0_sh, a0_cz0_sh_bb);
+    const float64x2_t a0_cz0_sh_t1 = vsubq_f64(cs0, a0_cz0_sh_t0);
+    const float64x2_t a0_cz0_sh_t2 = vsubq_f64(n0, a0_cz0_sh_bb);
+    const float64x2_t a0_cz0_sl = vaddq_f64(a0_cz0_sh_t1, a0_cz0_sh_t2);
+    // (a0_cz0_th, a0_cz0_tl) = two_sum(cs1, n1)
+    const float64x2_t a0_cz0_th = vaddq_f64(cs1, n1);
+    const float64x2_t a0_cz0_th_bb = vsubq_f64(a0_cz0_th, cs1);
+    const float64x2_t a0_cz0_th_t0 = vsubq_f64(a0_cz0_th, a0_cz0_th_bb);
+    const float64x2_t a0_cz0_th_t1 = vsubq_f64(cs1, a0_cz0_th_t0);
+    const float64x2_t a0_cz0_th_t2 = vsubq_f64(n1, a0_cz0_th_bb);
+    const float64x2_t a0_cz0_tl = vaddq_f64(a0_cz0_th_t1, a0_cz0_th_t2);
+    const float64x2_t a0_cz0_c = vaddq_f64(a0_cz0_sl, a0_cz0_th);
+    // (a0_cz0_vh, a0_cz0_vl) = fast_two_sum(a0_cz0_sh, a0_cz0_c)
+    const float64x2_t a0_cz0_vh = vaddq_f64(a0_cz0_sh, a0_cz0_c);
+    const float64x2_t a0_cz0_vh_z = vsubq_f64(a0_cz0_vh, a0_cz0_sh);
+    const float64x2_t a0_cz0_vl = vsubq_f64(a0_cz0_c, a0_cz0_vh_z);
+    const float64x2_t a0_cz0_w = vaddq_f64(a0_cz0_tl, a0_cz0_vl);
+    // (a0_cz0, a0_cz1) = fast_two_sum(a0_cz0_vh, a0_cz0_w)
+    const float64x2_t a0_cz0 = vaddq_f64(a0_cz0_vh, a0_cz0_w);
+    const float64x2_t a0_cz0_z = vsubq_f64(a0_cz0, a0_cz0_vh);
+    const float64x2_t a0_cz1 = vsubq_f64(a0_cz0_w, a0_cz0_z);
+    const float64x2_t a0_cz0_az = vabsq_f64(a0_cz0);
+    const float64x2_t a0_cz0_s = vaddq_f64(vdupq_n_f64(0.0), ws);
+    const float64x2_t a0_cz0_t = vfmaq_f64(a0_cz0_s, a0_cz0_az, vdupq_n_f64(0x1.8000000000004p-105));
+    const float64x2_t a0_rz = vfmaq_f64(vdupq_n_f64(0x1.0000000000002p-1022), a0_cz0_t, vdupq_n_f64(0x1.0000000000002p+0));
+    const float64x2_t a0_q = vaddq_f64(vdupq_n_f64(0.0), ws);
+    const uint64x2_t a0_e = vceqq_f64(a0_q, a0_q);
+    const float64x2_t a0_a = vabsq_f64(a0_cz0);
+    const uint64x2_t a0_f1 = vcltq_f64(a0_a, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t a0_f2 = vcltq_f64(a0_rz, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t a0_f = vandq_u64(a0_f1, a0_f2);
+    const float64x2_t a0_c0 = vbslq_f64(a0_f, a0_cz0, vdupq_n_f64(0.0));
+    const float64x2_t a0_c1 = vbslq_f64(a0_f, a0_cz1, vdupq_n_f64(0.0));
+    const float64x2_t a0_r = vbslq_f64(a0_f, a0_rz, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t a0 = vbslq_f64(a0_e, a0_c0, a0_q);
+    const float64x2_t a1 = vbslq_f64(a0_e, a0_c1, a0_q);
+    const float64x2_t ar = vbslq_f64(a0_e, a0_r, a0_q);
+    // (b0, b1, br) = ball_add_2_full(cs0, cs1, 0, p0, p1, ws)
+    // (b0_cz0, b0_cz1, b0_rz) = ball_add_2(cs0, cs1, 0, p0, p1, ws)
+    // (b0_cz0, b0_cz1) = add_2_2(cs0, cs1, p0, p1)
+    // (b0_cz0_sh, b0_cz0_sl) = two_sum(cs0, p0)
+    const float64x2_t b0_cz0_sh = vaddq_f64(cs0, p0);
+    const float64x2_t b0_cz0_sh_bb = vsubq_f64(b0_cz0_sh, cs0);
+    const float64x2_t b0_cz0_sh_t0 = vsubq_f64(b0_cz0_sh, b0_cz0_sh_bb);
+    const float64x2_t b0_cz0_sh_t1 = vsubq_f64(cs0, b0_cz0_sh_t0);
+    const float64x2_t b0_cz0_sh_t2 = vsubq_f64(p0, b0_cz0_sh_bb);
+    const float64x2_t b0_cz0_sl = vaddq_f64(b0_cz0_sh_t1, b0_cz0_sh_t2);
+    // (b0_cz0_th, b0_cz0_tl) = two_sum(cs1, p1)
+    const float64x2_t b0_cz0_th = vaddq_f64(cs1, p1);
+    const float64x2_t b0_cz0_th_bb = vsubq_f64(b0_cz0_th, cs1);
+    const float64x2_t b0_cz0_th_t0 = vsubq_f64(b0_cz0_th, b0_cz0_th_bb);
+    const float64x2_t b0_cz0_th_t1 = vsubq_f64(cs1, b0_cz0_th_t0);
+    const float64x2_t b0_cz0_th_t2 = vsubq_f64(p1, b0_cz0_th_bb);
+    const float64x2_t b0_cz0_tl = vaddq_f64(b0_cz0_th_t1, b0_cz0_th_t2);
+    const float64x2_t b0_cz0_c = vaddq_f64(b0_cz0_sl, b0_cz0_th);
+    // (b0_cz0_vh, b0_cz0_vl) = fast_two_sum(b0_cz0_sh, b0_cz0_c)
+    const float64x2_t b0_cz0_vh = vaddq_f64(b0_cz0_sh, b0_cz0_c);
+    const float64x2_t b0_cz0_vh_z = vsubq_f64(b0_cz0_vh, b0_cz0_sh);
+    const float64x2_t b0_cz0_vl = vsubq_f64(b0_cz0_c, b0_cz0_vh_z);
+    const float64x2_t b0_cz0_w = vaddq_f64(b0_cz0_tl, b0_cz0_vl);
+    // (b0_cz0, b0_cz1) = fast_two_sum(b0_cz0_vh, b0_cz0_w)
+    const float64x2_t b0_cz0 = vaddq_f64(b0_cz0_vh, b0_cz0_w);
+    const float64x2_t b0_cz0_z = vsubq_f64(b0_cz0, b0_cz0_vh);
+    const float64x2_t b0_cz1 = vsubq_f64(b0_cz0_w, b0_cz0_z);
+    const float64x2_t b0_cz0_az = vabsq_f64(b0_cz0);
+    const float64x2_t b0_cz0_s = vaddq_f64(vdupq_n_f64(0.0), ws);
+    const float64x2_t b0_cz0_t = vfmaq_f64(b0_cz0_s, b0_cz0_az, vdupq_n_f64(0x1.8000000000004p-105));
+    const float64x2_t b0_rz = vfmaq_f64(vdupq_n_f64(0x1.0000000000002p-1022), b0_cz0_t, vdupq_n_f64(0x1.0000000000002p+0));
+    const float64x2_t b0_q = vaddq_f64(vdupq_n_f64(0.0), ws);
+    const uint64x2_t b0_e = vceqq_f64(b0_q, b0_q);
+    const float64x2_t b0_a = vabsq_f64(b0_cz0);
+    const uint64x2_t b0_f1 = vcltq_f64(b0_a, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t b0_f2 = vcltq_f64(b0_rz, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const uint64x2_t b0_f = vandq_u64(b0_f1, b0_f2);
+    const float64x2_t b0_c0 = vbslq_f64(b0_f, b0_cz0, vdupq_n_f64(0.0));
+    const float64x2_t b0_c1 = vbslq_f64(b0_f, b0_cz1, vdupq_n_f64(0.0));
+    const float64x2_t b0_r = vbslq_f64(b0_f, b0_rz, vdupq_n_f64(std::numeric_limits<double>::infinity()));
+    const float64x2_t b0 = vbslq_f64(b0_e, b0_c0, b0_q);
+    const float64x2_t b1 = vbslq_f64(b0_e, b0_c1, b0_q);
+    const float64x2_t br = vbslq_f64(b0_e, b0_r, b0_q);
+    const float64x2_t ca0 = vbslq_f64(fr, a0, c0);
+    const float64x2_t ca1 = vbslq_f64(fr, a1, c1);
+    const float64x2_t ra = vbslq_f64(fr, ar, r);
+    const float64x2_t cb0 = vbslq_f64(fr, b0, c0);
+    const float64x2_t cb1 = vbslq_f64(fr, b1, c1);
+    const float64x2_t rb = vbslq_f64(fr, br, r);
+    ca0_out = ca0;
+    ca1_out = ca1;
+    ra_out = ra;
+    cb0_out = cb0;
+    cb1_out = cb1;
+    rb_out = rb;
+}
+KAIRN_GEN_FORCEINLINE void ball_split_2(float32x4_t c0, float32x4_t c1, float32x4_t r, float32x4_t& ca0_out, float32x4_t& ca1_out, float32x4_t& ra_out, float32x4_t& cb0_out, float32x4_t& cb1_out, float32x4_t& rb_out) noexcept {
+    const float32x4_t h = vfmaq_f32(vdupq_n_f32(0.0f), r, vdupq_n_f32(0x1p-1f));
+    const float32x4_t nr = vnegq_f32(r);
+    const float32x4_t hn = vfmaq_f32(vdupq_n_f32(0.0f), nr, vdupq_n_f32(0x1p-1f));
+    const float32x4_t g = vsubq_f32(r, h);
+    const uint32x4_t mg = vcltq_f32(h, g);
+    const float32x4_t q = vbslq_f32(mg, g, h);
+    const uint32x4_t fr = vcltq_f32(r, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t hs = vbslq_f32(fr, h, vdupq_n_f32(0.0f));
+    const float32x4_t nh = vbslq_f32(fr, hn, vdupq_n_f32(0.0f));
+    const float32x4_t ws = vbslq_f32(fr, q, vdupq_n_f32(0.0f));
+    const float32x4_t cs0 = vbslq_f32(fr, c0, vdupq_n_f32(0.0f));
+    const float32x4_t cs1 = vbslq_f32(fr, c1, vdupq_n_f32(0.0f));
+    // (n0, n1) = make_2(nh)
+    const float32x4_t n0 = vaddq_f32(nh, vdupq_n_f32(0.0f));
+    const uint32x4_t n0_n = vceqq_f32(n0, n0);
+    const float32x4_t n1 = vbslq_f32(n0_n, vdupq_n_f32(0.0f), n0);
+    // (p0, p1) = make_2(hs)
+    const float32x4_t p0 = vaddq_f32(hs, vdupq_n_f32(0.0f));
+    const uint32x4_t p0_n = vceqq_f32(p0, p0);
+    const float32x4_t p1 = vbslq_f32(p0_n, vdupq_n_f32(0.0f), p0);
+    // (a0, a1, ar) = ball_add_2_full(cs0, cs1, 0, n0, n1, ws)
+    // (a0_cz0, a0_cz1, a0_rz) = ball_add_2(cs0, cs1, 0, n0, n1, ws)
+    // (a0_cz0, a0_cz1) = add_2_2(cs0, cs1, n0, n1)
+    // (a0_cz0_sh, a0_cz0_sl) = two_sum(cs0, n0)
+    const float32x4_t a0_cz0_sh = vaddq_f32(cs0, n0);
+    const float32x4_t a0_cz0_sh_bb = vsubq_f32(a0_cz0_sh, cs0);
+    const float32x4_t a0_cz0_sh_t0 = vsubq_f32(a0_cz0_sh, a0_cz0_sh_bb);
+    const float32x4_t a0_cz0_sh_t1 = vsubq_f32(cs0, a0_cz0_sh_t0);
+    const float32x4_t a0_cz0_sh_t2 = vsubq_f32(n0, a0_cz0_sh_bb);
+    const float32x4_t a0_cz0_sl = vaddq_f32(a0_cz0_sh_t1, a0_cz0_sh_t2);
+    // (a0_cz0_th, a0_cz0_tl) = two_sum(cs1, n1)
+    const float32x4_t a0_cz0_th = vaddq_f32(cs1, n1);
+    const float32x4_t a0_cz0_th_bb = vsubq_f32(a0_cz0_th, cs1);
+    const float32x4_t a0_cz0_th_t0 = vsubq_f32(a0_cz0_th, a0_cz0_th_bb);
+    const float32x4_t a0_cz0_th_t1 = vsubq_f32(cs1, a0_cz0_th_t0);
+    const float32x4_t a0_cz0_th_t2 = vsubq_f32(n1, a0_cz0_th_bb);
+    const float32x4_t a0_cz0_tl = vaddq_f32(a0_cz0_th_t1, a0_cz0_th_t2);
+    const float32x4_t a0_cz0_c = vaddq_f32(a0_cz0_sl, a0_cz0_th);
+    // (a0_cz0_vh, a0_cz0_vl) = fast_two_sum(a0_cz0_sh, a0_cz0_c)
+    const float32x4_t a0_cz0_vh = vaddq_f32(a0_cz0_sh, a0_cz0_c);
+    const float32x4_t a0_cz0_vh_z = vsubq_f32(a0_cz0_vh, a0_cz0_sh);
+    const float32x4_t a0_cz0_vl = vsubq_f32(a0_cz0_c, a0_cz0_vh_z);
+    const float32x4_t a0_cz0_w = vaddq_f32(a0_cz0_tl, a0_cz0_vl);
+    // (a0_cz0, a0_cz1) = fast_two_sum(a0_cz0_vh, a0_cz0_w)
+    const float32x4_t a0_cz0 = vaddq_f32(a0_cz0_vh, a0_cz0_w);
+    const float32x4_t a0_cz0_z = vsubq_f32(a0_cz0, a0_cz0_vh);
+    const float32x4_t a0_cz1 = vsubq_f32(a0_cz0_w, a0_cz0_z);
+    const float32x4_t a0_cz0_az = vabsq_f32(a0_cz0);
+    const float32x4_t a0_cz0_s = vaddq_f32(vdupq_n_f32(0.0f), ws);
+    const float32x4_t a0_cz0_t = vfmaq_f32(a0_cz0_s, a0_cz0_az, vdupq_n_f32(0x1.800008p-47f));
+    const float32x4_t a0_rz = vfmaq_f32(vdupq_n_f32(0x1.000004p-126f), a0_cz0_t, vdupq_n_f32(0x1.000004p+0f));
+    const float32x4_t a0_q = vaddq_f32(vdupq_n_f32(0.0f), ws);
+    const uint32x4_t a0_e = vceqq_f32(a0_q, a0_q);
+    const float32x4_t a0_a = vabsq_f32(a0_cz0);
+    const uint32x4_t a0_f1 = vcltq_f32(a0_a, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t a0_f2 = vcltq_f32(a0_rz, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t a0_f = vandq_u32(a0_f1, a0_f2);
+    const float32x4_t a0_c0 = vbslq_f32(a0_f, a0_cz0, vdupq_n_f32(0.0f));
+    const float32x4_t a0_c1 = vbslq_f32(a0_f, a0_cz1, vdupq_n_f32(0.0f));
+    const float32x4_t a0_r = vbslq_f32(a0_f, a0_rz, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t a0 = vbslq_f32(a0_e, a0_c0, a0_q);
+    const float32x4_t a1 = vbslq_f32(a0_e, a0_c1, a0_q);
+    const float32x4_t ar = vbslq_f32(a0_e, a0_r, a0_q);
+    // (b0, b1, br) = ball_add_2_full(cs0, cs1, 0, p0, p1, ws)
+    // (b0_cz0, b0_cz1, b0_rz) = ball_add_2(cs0, cs1, 0, p0, p1, ws)
+    // (b0_cz0, b0_cz1) = add_2_2(cs0, cs1, p0, p1)
+    // (b0_cz0_sh, b0_cz0_sl) = two_sum(cs0, p0)
+    const float32x4_t b0_cz0_sh = vaddq_f32(cs0, p0);
+    const float32x4_t b0_cz0_sh_bb = vsubq_f32(b0_cz0_sh, cs0);
+    const float32x4_t b0_cz0_sh_t0 = vsubq_f32(b0_cz0_sh, b0_cz0_sh_bb);
+    const float32x4_t b0_cz0_sh_t1 = vsubq_f32(cs0, b0_cz0_sh_t0);
+    const float32x4_t b0_cz0_sh_t2 = vsubq_f32(p0, b0_cz0_sh_bb);
+    const float32x4_t b0_cz0_sl = vaddq_f32(b0_cz0_sh_t1, b0_cz0_sh_t2);
+    // (b0_cz0_th, b0_cz0_tl) = two_sum(cs1, p1)
+    const float32x4_t b0_cz0_th = vaddq_f32(cs1, p1);
+    const float32x4_t b0_cz0_th_bb = vsubq_f32(b0_cz0_th, cs1);
+    const float32x4_t b0_cz0_th_t0 = vsubq_f32(b0_cz0_th, b0_cz0_th_bb);
+    const float32x4_t b0_cz0_th_t1 = vsubq_f32(cs1, b0_cz0_th_t0);
+    const float32x4_t b0_cz0_th_t2 = vsubq_f32(p1, b0_cz0_th_bb);
+    const float32x4_t b0_cz0_tl = vaddq_f32(b0_cz0_th_t1, b0_cz0_th_t2);
+    const float32x4_t b0_cz0_c = vaddq_f32(b0_cz0_sl, b0_cz0_th);
+    // (b0_cz0_vh, b0_cz0_vl) = fast_two_sum(b0_cz0_sh, b0_cz0_c)
+    const float32x4_t b0_cz0_vh = vaddq_f32(b0_cz0_sh, b0_cz0_c);
+    const float32x4_t b0_cz0_vh_z = vsubq_f32(b0_cz0_vh, b0_cz0_sh);
+    const float32x4_t b0_cz0_vl = vsubq_f32(b0_cz0_c, b0_cz0_vh_z);
+    const float32x4_t b0_cz0_w = vaddq_f32(b0_cz0_tl, b0_cz0_vl);
+    // (b0_cz0, b0_cz1) = fast_two_sum(b0_cz0_vh, b0_cz0_w)
+    const float32x4_t b0_cz0 = vaddq_f32(b0_cz0_vh, b0_cz0_w);
+    const float32x4_t b0_cz0_z = vsubq_f32(b0_cz0, b0_cz0_vh);
+    const float32x4_t b0_cz1 = vsubq_f32(b0_cz0_w, b0_cz0_z);
+    const float32x4_t b0_cz0_az = vabsq_f32(b0_cz0);
+    const float32x4_t b0_cz0_s = vaddq_f32(vdupq_n_f32(0.0f), ws);
+    const float32x4_t b0_cz0_t = vfmaq_f32(b0_cz0_s, b0_cz0_az, vdupq_n_f32(0x1.800008p-47f));
+    const float32x4_t b0_rz = vfmaq_f32(vdupq_n_f32(0x1.000004p-126f), b0_cz0_t, vdupq_n_f32(0x1.000004p+0f));
+    const float32x4_t b0_q = vaddq_f32(vdupq_n_f32(0.0f), ws);
+    const uint32x4_t b0_e = vceqq_f32(b0_q, b0_q);
+    const float32x4_t b0_a = vabsq_f32(b0_cz0);
+    const uint32x4_t b0_f1 = vcltq_f32(b0_a, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t b0_f2 = vcltq_f32(b0_rz, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const uint32x4_t b0_f = vandq_u32(b0_f1, b0_f2);
+    const float32x4_t b0_c0 = vbslq_f32(b0_f, b0_cz0, vdupq_n_f32(0.0f));
+    const float32x4_t b0_c1 = vbslq_f32(b0_f, b0_cz1, vdupq_n_f32(0.0f));
+    const float32x4_t b0_r = vbslq_f32(b0_f, b0_rz, vdupq_n_f32(std::numeric_limits<float>::infinity()));
+    const float32x4_t b0 = vbslq_f32(b0_e, b0_c0, b0_q);
+    const float32x4_t b1 = vbslq_f32(b0_e, b0_c1, b0_q);
+    const float32x4_t br = vbslq_f32(b0_e, b0_r, b0_q);
+    const float32x4_t ca0 = vbslq_f32(fr, a0, c0);
+    const float32x4_t ca1 = vbslq_f32(fr, a1, c1);
+    const float32x4_t ra = vbslq_f32(fr, ar, r);
+    const float32x4_t cb0 = vbslq_f32(fr, b0, c0);
+    const float32x4_t cb1 = vbslq_f32(fr, b1, c1);
+    const float32x4_t rb = vbslq_f32(fr, br, r);
+    ca0_out = ca0;
+    ca1_out = ca1;
+    ra_out = ra;
+    cb0_out = cb0;
+    cb1_out = cb1;
+    rb_out = rb;
 }
 
 // ball_sub_2(cx = (cx0, cx1), rx, cy = (cy0, cy1), ry) -> cz = (cz0, cz1), rz
@@ -5025,6 +7387,40 @@ KAIRN_GEN_FORCEINLINE void ball_upper_as_2(float32x4_t c0, float32x4_t c1, float
     h_out = h;
 }
 
+// eq_2_1(x = (x0, x1), a) -> mask m
+KAIRN_GEN_FORCEINLINE void eq_2_1(float64x2_t x0, float64x2_t x1, float64x2_t a, uint64x2_t& m_out) noexcept {
+    const uint64x2_t h = vceqq_f64(x0, a);
+    const uint64x2_t l = vceqq_f64(x1, vdupq_n_f64(0.0));
+    const uint64x2_t m = vandq_u64(h, l);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void eq_2_1(float32x4_t x0, float32x4_t x1, float32x4_t a, uint32x4_t& m_out) noexcept {
+    const uint32x4_t h = vceqq_f32(x0, a);
+    const uint32x4_t l = vceqq_f32(x1, vdupq_n_f32(0.0f));
+    const uint32x4_t m = vandq_u32(h, l);
+    m_out = m;
+}
+
+// ball_zero_2(c = (c0, c1), r) -> mask m
+KAIRN_GEN_FORCEINLINE void ball_zero_2(float64x2_t c0, float64x2_t c1, float64x2_t r, uint64x2_t& m_out) noexcept {
+    // (a) = eq_2_1(c0, c1, 0)
+    const uint64x2_t a_h = vceqq_f64(c0, vdupq_n_f64(0.0));
+    const uint64x2_t a_l = vceqq_f64(c1, vdupq_n_f64(0.0));
+    const uint64x2_t a = vandq_u64(a_h, a_l);
+    const uint64x2_t b = vceqq_f64(r, vdupq_n_f64(0.0));
+    const uint64x2_t m = vandq_u64(a, b);
+    m_out = m;
+}
+KAIRN_GEN_FORCEINLINE void ball_zero_2(float32x4_t c0, float32x4_t c1, float32x4_t r, uint32x4_t& m_out) noexcept {
+    // (a) = eq_2_1(c0, c1, 0)
+    const uint32x4_t a_h = vceqq_f32(c0, vdupq_n_f32(0.0f));
+    const uint32x4_t a_l = vceqq_f32(c1, vdupq_n_f32(0.0f));
+    const uint32x4_t a = vandq_u32(a_h, a_l);
+    const uint32x4_t b = vceqq_f32(r, vdupq_n_f32(0.0f));
+    const uint32x4_t m = vandq_u32(a, b);
+    m_out = m;
+}
+
 // dot_step_2(s = (s0, s1), x = (x0, x1), y = (y0, y1)) -> t = (t0, t1)
 KAIRN_GEN_FORCEINLINE void dot_step_2(float64x2_t s0, float64x2_t s1, float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, float64x2_t& t0_out, float64x2_t& t1_out) noexcept {
     // (p0, p1) = mul_2_2(x0, x1, y0, y1)
@@ -5107,34 +7503,6 @@ KAIRN_GEN_FORCEINLINE void dot_step_2(float32x4_t s0, float32x4_t s1, float32x4_
     const float32x4_t t1 = vsubq_f32(t0_w, t0_z);
     t0_out = t0;
     t1_out = t1;
-}
-
-// eq_2_1(x = (x0, x1), a) -> mask m
-KAIRN_GEN_FORCEINLINE void eq_2_1(float64x2_t x0, float64x2_t x1, float64x2_t a, uint64x2_t& m_out) noexcept {
-    const uint64x2_t h = vceqq_f64(x0, a);
-    const uint64x2_t l = vceqq_f64(x1, vdupq_n_f64(0.0));
-    const uint64x2_t m = vandq_u64(h, l);
-    m_out = m;
-}
-KAIRN_GEN_FORCEINLINE void eq_2_1(float32x4_t x0, float32x4_t x1, float32x4_t a, uint32x4_t& m_out) noexcept {
-    const uint32x4_t h = vceqq_f32(x0, a);
-    const uint32x4_t l = vceqq_f32(x1, vdupq_n_f32(0.0f));
-    const uint32x4_t m = vandq_u32(h, l);
-    m_out = m;
-}
-
-// eq_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
-KAIRN_GEN_FORCEINLINE void eq_2_2(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, uint64x2_t& m_out) noexcept {
-    const uint64x2_t h = vceqq_f64(x0, y0);
-    const uint64x2_t l = vceqq_f64(x1, y1);
-    const uint64x2_t m = vandq_u64(h, l);
-    m_out = m;
-}
-KAIRN_GEN_FORCEINLINE void eq_2_2(float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, uint32x4_t& m_out) noexcept {
-    const uint32x4_t h = vceqq_f32(x0, y0);
-    const uint32x4_t l = vceqq_f32(x1, y1);
-    const uint32x4_t m = vandq_u32(h, l);
-    m_out = m;
 }
 
 // fold_finish_2(s = (s0, s1)) -> r = (r0, r1), mask flag
@@ -5431,24 +7799,6 @@ KAIRN_GEN_FORCEINLINE void interval_add_2(float32x4_t xl0, float32x4_t xl1, floa
     zu1_out = zu1;
 }
 
-// le_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
-KAIRN_GEN_FORCEINLINE void le_2_2(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, uint64x2_t& m_out) noexcept {
-    const uint64x2_t h = vcltq_f64(x0, y0);
-    const uint64x2_t e = vceqq_f64(x0, y0);
-    const uint64x2_t l = vcleq_f64(x1, y1);
-    const uint64x2_t t = vandq_u64(e, l);
-    const uint64x2_t m = vorrq_u64(h, t);
-    m_out = m;
-}
-KAIRN_GEN_FORCEINLINE void le_2_2(float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, uint32x4_t& m_out) noexcept {
-    const uint32x4_t h = vcltq_f32(x0, y0);
-    const uint32x4_t e = vceqq_f32(x0, y0);
-    const uint32x4_t l = vcleq_f32(x1, y1);
-    const uint32x4_t t = vandq_u32(e, l);
-    const uint32x4_t m = vorrq_u32(h, t);
-    m_out = m;
-}
-
 // interval_contains_2(xl = (xl0, xl1), xu = (xu0, xu1), t = (t0, t1)) -> mask m
 KAIRN_GEN_FORCEINLINE void interval_contains_2(float64x2_t xl0, float64x2_t xl1, float64x2_t xu0, float64x2_t xu1, float64x2_t t0, float64x2_t t1, uint64x2_t& m_out) noexcept {
     // (a) = le_2_2(xl0, xl1, t0, t1)
@@ -5512,24 +7862,6 @@ KAIRN_GEN_FORCEINLINE void interval_entire_2(float32x4_t xl0, [[maybe_unused]] f
     const uint32x4_t a = vceqq_f32(xl0, mi);
     const uint32x4_t b = vceqq_f32(xu0, vdupq_n_f32(std::numeric_limits<float>::infinity()));
     const uint32x4_t m = vandq_u32(a, b);
-    m_out = m;
-}
-
-// lt_2_2(x = (x0, x1), y = (y0, y1)) -> mask m
-KAIRN_GEN_FORCEINLINE void lt_2_2(float64x2_t x0, float64x2_t x1, float64x2_t y0, float64x2_t y1, uint64x2_t& m_out) noexcept {
-    const uint64x2_t h = vcltq_f64(x0, y0);
-    const uint64x2_t e = vceqq_f64(x0, y0);
-    const uint64x2_t l = vcltq_f64(x1, y1);
-    const uint64x2_t t = vandq_u64(e, l);
-    const uint64x2_t m = vorrq_u64(h, t);
-    m_out = m;
-}
-KAIRN_GEN_FORCEINLINE void lt_2_2(float32x4_t x0, float32x4_t x1, float32x4_t y0, float32x4_t y1, uint32x4_t& m_out) noexcept {
-    const uint32x4_t h = vcltq_f32(x0, y0);
-    const uint32x4_t e = vceqq_f32(x0, y0);
-    const uint32x4_t l = vcltq_f32(x1, y1);
-    const uint32x4_t t = vandq_u32(e, l);
-    const uint32x4_t m = vorrq_u32(h, t);
     m_out = m;
 }
 
@@ -7928,60 +10260,6 @@ KAIRN_GEN_FORCEINLINE void le_1_2(float32x4_t a, float32x4_t y0, float32x4_t y1,
     const uint32x4_t h = vcltq_f32(a, y0);
     const uint32x4_t e = vceqq_f32(a, y0);
     const uint32x4_t l = vcleq_f32(vdupq_n_f32(0.0f), y1);
-    const uint32x4_t t = vandq_u32(e, l);
-    const uint32x4_t m = vorrq_u32(h, t);
-    m_out = m;
-}
-
-// le_2_1(x = (x0, x1), a) -> mask m
-KAIRN_GEN_FORCEINLINE void le_2_1(float64x2_t x0, float64x2_t x1, float64x2_t a, uint64x2_t& m_out) noexcept {
-    const uint64x2_t h = vcltq_f64(x0, a);
-    const uint64x2_t e = vceqq_f64(x0, a);
-    const uint64x2_t l = vcleq_f64(x1, vdupq_n_f64(0.0));
-    const uint64x2_t t = vandq_u64(e, l);
-    const uint64x2_t m = vorrq_u64(h, t);
-    m_out = m;
-}
-KAIRN_GEN_FORCEINLINE void le_2_1(float32x4_t x0, float32x4_t x1, float32x4_t a, uint32x4_t& m_out) noexcept {
-    const uint32x4_t h = vcltq_f32(x0, a);
-    const uint32x4_t e = vceqq_f32(x0, a);
-    const uint32x4_t l = vcleq_f32(x1, vdupq_n_f32(0.0f));
-    const uint32x4_t t = vandq_u32(e, l);
-    const uint32x4_t m = vorrq_u32(h, t);
-    m_out = m;
-}
-
-// lt_1_2(a, y = (y0, y1)) -> mask m
-KAIRN_GEN_FORCEINLINE void lt_1_2(float64x2_t a, float64x2_t y0, float64x2_t y1, uint64x2_t& m_out) noexcept {
-    const uint64x2_t h = vcltq_f64(a, y0);
-    const uint64x2_t e = vceqq_f64(a, y0);
-    const uint64x2_t l = vcltq_f64(vdupq_n_f64(0.0), y1);
-    const uint64x2_t t = vandq_u64(e, l);
-    const uint64x2_t m = vorrq_u64(h, t);
-    m_out = m;
-}
-KAIRN_GEN_FORCEINLINE void lt_1_2(float32x4_t a, float32x4_t y0, float32x4_t y1, uint32x4_t& m_out) noexcept {
-    const uint32x4_t h = vcltq_f32(a, y0);
-    const uint32x4_t e = vceqq_f32(a, y0);
-    const uint32x4_t l = vcltq_f32(vdupq_n_f32(0.0f), y1);
-    const uint32x4_t t = vandq_u32(e, l);
-    const uint32x4_t m = vorrq_u32(h, t);
-    m_out = m;
-}
-
-// lt_2_1(x = (x0, x1), a) -> mask m
-KAIRN_GEN_FORCEINLINE void lt_2_1(float64x2_t x0, float64x2_t x1, float64x2_t a, uint64x2_t& m_out) noexcept {
-    const uint64x2_t h = vcltq_f64(x0, a);
-    const uint64x2_t e = vceqq_f64(x0, a);
-    const uint64x2_t l = vcltq_f64(x1, vdupq_n_f64(0.0));
-    const uint64x2_t t = vandq_u64(e, l);
-    const uint64x2_t m = vorrq_u64(h, t);
-    m_out = m;
-}
-KAIRN_GEN_FORCEINLINE void lt_2_1(float32x4_t x0, float32x4_t x1, float32x4_t a, uint32x4_t& m_out) noexcept {
-    const uint32x4_t h = vcltq_f32(x0, a);
-    const uint32x4_t e = vceqq_f32(x0, a);
-    const uint32x4_t l = vcltq_f32(x1, vdupq_n_f32(0.0f));
     const uint32x4_t t = vandq_u32(e, l);
     const uint32x4_t m = vorrq_u32(h, t);
     m_out = m;

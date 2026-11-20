@@ -14,7 +14,7 @@ A number of several limbs stands for their exact sum: $x = x_0 + x_1$, $y = y_0 
 
 ## C++
 
-No public operation computes this kernel on its own. It is part of [`add_down_2_2`](add_down_2_2.md), [`add_up_2_2`](add_up_2_2.md).
+No public operation computes this kernel on its own. It is part of [`add_down_2_2`](add_down_2_2.md), [`add_up_2_2`](add_up_2_2.md), [`ball_contains_ball_2`](ball_contains_ball_2.md), [`ball_contains_point_2`](ball_contains_point_2.md), [`ball_equal_2`](ball_equal_2.md), [`ball_less_2`](ball_less_2.md), [`ball_less_equal_2`](ball_less_equal_2.md).
 
 ## Requires
 
@@ -100,6 +100,6 @@ No stored brute-force run has judged this kernel yet.
 
 ## Not claimed
 
-- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: what is proved and what is not written yet there is in [What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values).
+- Anything when an operand is infinite or NaN, or when an operation of the kernel overflows: [`ball_contains_ball_2`](ball_contains_ball_2.md) and [`ball_contains_point_2`](ball_contains_point_2.md) and [`ball_equal_2`](ball_equal_2.md) and [`ball_less_2`](ball_less_2.md) and [`ball_less_equal_2`](ball_less_equal_2.md) states that, and the public headers do not call them yet ([What holds today](../getting-started/guarantees.md#overflow-and-non-finite-values) says what the library does now).
 - Anything about an operand that is not normalized, which only limbs given by the program can make: `from_limbs` in a build without checks, `from_limbs_unchecked`, or `limb[]` written directly.
 

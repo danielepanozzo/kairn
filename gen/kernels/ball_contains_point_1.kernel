@@ -1,0 +1,28 @@
+# Whether a value t of T is a member of a ball with a one-limb center (milestone2.md, "One enclosure
+# interface", the row of contains(t), "Exact pairs"): |t - c| <= r, decided exactly as
+# le_2_1(abs_2(two_sum_ord(t, -c)), r), the difference being an exact pair. A difference that
+# overflows is (+inf, -inf), which le_2_1 calls above every radius, the right answer: it exceeds
+# Omega. The whole line, (0, +inf), contains every finite t; the empty set (NaN, NaN) and a t that
+# is not finite give false, through the same operations. t is a value of the program, guarded before
+# the sum (rule R3). Exact.
+kernel:        ball_contains_point_1
+input:         stored c
+input:         stored r
+input:         t
+output:        mask m
+requires:      ball c r
+ensures:       certain m member t x x=c,r exact
+min_precision: 2
+source:        the distance as an exact pair compared with the radius (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical ball
+
+g        = guard(t)
+nc       = neg(c)
+(d0, d1) = two_sum_ord(g, nc)
+(a0, a1) = abs_2(d0, d1)
+m        = le_2_1(a0, a1, r)

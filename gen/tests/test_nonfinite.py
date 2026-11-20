@@ -792,6 +792,78 @@ def judge_set_predicate(k, ks, fmt, e, ins, outs, values):
     return bad
 
 
+def _ball_bounds(fmt, center, radius):
+    """A canonical ball as (state, lo, hi): its least and greatest members, extended values for the
+    whole line, None for the empty set."""
+    state = ball_state(fmt, center, radius[0])
+    if state == 'empty':
+        return state, None, None
+    if state == 'line':
+        return state, NINF, PINF
+    c, r = sum(fr(v) for v in center), fr(radius[0])
+    return state, c - r, c + r
+
+
+def judge_ball_set(k, ks, fmt, e, ins, outs, values):
+    """A ball that contains the union or the intersection of two balls (stage B2): canonical; every
+    member of the set a member; for the union empty exactly when both operands are, and an empty
+    operand gives the other as it is; for the intersection an empty operand gives the empty set and
+    the whole line gives the other as it is."""
+    c, r = outs[e['center']], outs[e['radius']]
+    z = _ball_bounds(fmt, c, r) if ball_state(fmt, c, r[0]) is not None else None
+    if z is None:
+        return ['ball_set (canonical)']
+    (x, bx), (y, by) = e['balls'].items()
+    X = _ball_bounds(fmt, ins[bx['center']], ins[bx['radius']])
+    Y = _ball_bounds(fmt, ins[by['center']], ins[by['radius']])
+
+    def same(b):
+        return [fr(v) if finite(v) else v[0] for v in c + r] == [fr(v) if finite(v) else v[0]
+                                                                for v in ins[b['center']] + ins[b['radius']]]
+    bad = []
+    union = e['set'] == 'union'
+    if union:
+        if (z[0] == 'empty') != (X[0] == 'empty' and Y[0] == 'empty'):
+            bad.append('ball_set (empty)')
+        if X[0] == 'empty' and not same(by):
+            bad.append('ball_set (the other operand)')
+        if Y[0] == 'empty' and not same(bx):
+            bad.append('ball_set (the other operand)')
+        for s in (X, Y):
+            if s[0] != 'empty' and (z[0] == 'empty' or not (xle(z[1], s[1]) and xle(s[2], z[2]))):
+                bad.append('ball_set (containment)')
+    else:
+        if (X[0] == 'empty' or Y[0] == 'empty') and z[0] != 'empty':
+            bad.append('ball_set (empty)')
+        if X[0] == 'line' and not same(by):
+            bad.append('ball_set (the other operand)')
+        if Y[0] == 'line' and not same(bx):
+            bad.append('ball_set (the other operand)')
+        if 'empty' not in (X[0], Y[0]):
+            lo, hi = max((X[1], Y[1]), key=_rank), min((X[2], Y[2]), key=_rank)
+            if xle(lo, hi) and (z[0] == 'empty' or not (xle(z[1], lo) and xle(hi, z[2]))):
+                bad.append('ball_set (containment)')
+    return bad
+
+
+def judge_ball_splits(k, ks, fmt, e, ins, outs, values):
+    """Two balls that cover the halves of a ball (stage B2): both canonical; the empty set and the
+    whole line twice; for a finite ball (c, r) the first contains [c - r, c], the second [c, c + r]."""
+    parts = [(outs[p['center']], outs[p['radius']]) for p in e['parts']]
+    if any(ball_state(fmt, c, r[0]) is None for c, r in parts):
+        return ['ball_splits (canonical)']
+    a, b = (_ball_bounds(fmt, c, r) for c, r in parts)
+    x = _ball_bounds(fmt, ins[e['from']['center']], ins[e['from']['radius']])
+    if x[0] in ('empty', 'line'):
+        return [] if a[0] == b[0] == x[0] else ['ball_splits (special)']
+    c = sum(fr(v) for v in ins[e['from']['center']])
+    bad = []
+    for part, (lo, hi) in ((a, (x[1], c)), (b, (c, x[2]))):
+        if part[0] == 'empty' or not (xle(part[1], lo) and xle(hi, part[2])):
+            bad.append('ball_splits (cover)')
+    return bad
+
+
 def judge_makes_interval(k, ks, fmt, e, ins, outs, values):
     """The constructor of an interval: canonical; the interval of the bounds given when they
     describe a nonempty one; the whole line when a bound is a NaN; the empty set otherwise."""
@@ -1055,7 +1127,8 @@ JUDGES = {'extends': judge_extends, 'encloses': judge_ball, 'represents': judge_
           'makes_interval': judge_makes_interval, 'set_bound': judge_set_bound,
           'interval_set': judge_interval_set, 'ball_of_interval': judge_ball_of_interval,
           'interval_of_ball': judge_interval_of_ball, 'splits': judge_splits,
-          'certain': judge_set_predicate, 'trit': judge_set_predicate}
+          'certain': judge_set_predicate, 'trit': judge_set_predicate,
+          'ball_set': judge_ball_set, 'ball_splits': judge_ball_splits}
 
 
 def judge(job):
@@ -1102,9 +1175,13 @@ def situation(k, fmt, e, values, outs):
         if not operands_finite:
             return 'non-finite operand'
         return 'finite' if finite(outs[e['of']][0]) else 'overflow'
-    if e['kind'] in ('encloses', 'makes_ball'):
+    if e['kind'] in ('encloses', 'makes_ball', 'ball_set'):
         state = ball_state(fmt, outs[e['center']], outs[e['radius']][0])
         return f'{state} from {"finite" if operands_finite else "non-finite"} operands'
+    if e['kind'] == 'ball_splits':
+        it = iter(values)
+        ins = {g.name: [next(it) for _ in g.limbs] for g in k.inputs}
+        return f'{ball_state(fmt, ins[e["from"]["center"]], ins[e["from"]["radius"]][0])} operand'
     if e['kind'] in ('encloses_interval', 'makes_interval', 'interval_set', 'interval_of_ball'):
         return f'{interval_state(fmt, outs[e["lower"]], outs[e["upper"]])} result'
     if e['kind'] in ('ball_of_interval', 'splits'):
@@ -1144,8 +1221,9 @@ class NonFinite(unittest.TestCase):
         # and 13 of wave 2: the interval kernels, mul_dir_1, the bounds of a ball as numbers of T,
         # the ball from an interval and the narrowing of a ball; and 13 of stage B1; and the two
         # finishes of the folds, and the two of the folds of maxima; and of stage B2, the 26
-        # predicates and comparisons of an interval.
-        self.assertEqual(len(self.names), 54 + 13 + 13 + 4 + 26)
+        # predicates and comparisons of an interval and the 16 of a ball, the hull, the
+        # intersection and the split of a ball (4).
+        self.assertEqual(len(self.names), 54 + 13 + 13 + 4 + 26 + 16 + 4)
 
     def test_every_situation_is_reached(self):
         """The cases reach what the statements are about: every full kernel overflows on finite
@@ -1174,6 +1252,15 @@ class NonFinite(unittest.TestCase):
             elif kinds & {'ball_of_interval', 'splits'}:
                 # They are given intervals in each of the three states.
                 want = {'empty operand', 'bounded operand', 'unbounded operand'}
+            elif 'ball_set' in kinds:
+                # The hull and the intersection of balls (stage B2) return each of the three states,
+                # the whole line and the empty set from operands that are, and a finite ball from
+                # finite ones; the intersection also the empty set from finite ones.
+                want = {'finite from finite operands', 'line from non-finite operands', 'empty from non-finite operands'}
+                if k.ensures[0]['set'] == 'intersection':
+                    want.add('empty from finite operands')
+            elif 'ball_splits' in kinds:
+                want = {'finite operand', 'line operand', 'empty operand'}
             else:
                 want = {'finite operands', 'non-finite operand'}
             self.assertLessEqual(want, seen[name], name)
@@ -1397,6 +1484,40 @@ class NonFinite(unittest.TestCase):
         cont = ks['interval_contains_1']
         self.assertEqual(judge_set_predicate(cont, ks, fmt, cont.ensures[0], {'xl': [one], 'xu': [PINF], 't': [PINF]},
                                              {'m': [True]}, None), ['certain (wrong)', 'certain (not exact)'])
+        # Of a ball: the certain membership of two limbs, the hull, the intersection and the split.
+        cp = ks['ball_contains_point_2']
+        empty_ball = {'c': [NaN, NaN], 'r': [NaN], 't': [one, ZERO]}
+        self.assertEqual(judge_set_predicate(cp, ks, fmt, cp.ensures[0], empty_ball, {'yes': [False], 'no': [True]},
+                                             None), [])
+        self.assertEqual(judge_set_predicate(cp, ks, fmt, cp.ensures[0], empty_ball, {'yes': [False], 'no': [False]},
+                                             None), ['trit (not exact)'])
+        near = {'c': [one, ZERO], 'r': [one], 't': [two, ZERO]}          # |t - c| = r: a member
+        self.assertEqual(judge_set_predicate(cp, ks, fmt, cp.ensures[0], near, {'yes': [False], 'no': [False]},
+                                             None), [])                   # certain: no answer is allowed
+        self.assertEqual(judge_set_predicate(cp, ks, fmt, cp.ensures[0], near, {'yes': [False], 'no': [True]},
+                                             None), ['trit (wrong)'])
+        bh, bi, bs = ks['ball_hull_1'], ks['ball_intersection_1'], ks['ball_split_1']
+        xy = {'cx': [one], 'rx': [ZERO], 'cy': [make(F(3))], 'ry': [one]}
+        self.assertEqual(judge_ball_set(bh, ks, fmt, bh.ensures[0], xy, {'cz': [two], 'rz': [two]}, None), [])
+        self.assertEqual(judge_ball_set(bh, ks, fmt, bh.ensures[0], xy, {'cz': [two], 'rz': [one]}, None),
+                         ['ball_set (containment)'])
+        self.assertEqual(judge_ball_set(bh, ks, fmt, bh.ensures[0], dict(xy, cx=[NaN], rx=[NaN]),
+                                        {'cz': [two], 'rz': [two]}, None), ['ball_set (the other operand)'])
+        self.assertEqual(judge_ball_set(bi, ks, fmt, bi.ensures[0], xy, {'cz': [NaN], 'rz': [NaN]}, None), [])
+        self.assertEqual(judge_ball_set(bi, ks, fmt, bi.ensures[0], dict(xy, cx=[two]), {'cz': [NaN], 'rz': [NaN]},
+                                        None), ['ball_set (containment)'])
+        self.assertEqual(judge_ball_set(bi, ks, fmt, bi.ensures[0], dict(xy, cx=[ZERO], rx=[PINF]),
+                                        {'cz': [make(F(3))], 'rz': [one]}, None), [])
+        x = {'c': [two], 'r': [one]}
+        self.assertEqual(judge_ball_splits(bs, ks, fmt, bs.ensures[0], x, {'ca': [make(F(3, 2))], 'ra': [make(F(1, 2))],
+                                                                        'cb': [make(F(5, 2))], 'rb': [make(F(1, 2))]},
+                                           None), [])
+        self.assertEqual(judge_ball_splits(bs, ks, fmt, bs.ensures[0], x, {'ca': [make(F(3, 2))], 'ra': [make(F(1, 4))],
+                                                                        'cb': [make(F(5, 2))], 'rb': [make(F(1, 2))]},
+                                           None), ['ball_splits (cover)'])
+        self.assertEqual(judge_ball_splits(bs, ks, fmt, bs.ensures[0], {'c': [ZERO], 'r': [PINF]},
+                                           {'ca': [ZERO], 'ra': [PINF], 'cb': [NaN], 'rb': [NaN]}, None),
+                         ['ball_splits (special)'])
         self.assertEqual(fmt.ieee_round(F(15), 'nearest'), PINF)           # 15 is a tie between 14 and 16
         self.assertEqual(fmt.ieee_round(F(29, 2), 'down'), make(F(14)))
         self.assertEqual(fmt.ieee_round(F(-29, 2), 'down'), NINF)

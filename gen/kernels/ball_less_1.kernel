@@ -1,0 +1,37 @@
+# The three-valued X < Y of balls with one-limb centers (milestone2.md, "One enclosure interface",
+# "Comparisons"): yes when every member of X is below every member of Y, c_x + r_x < c_y - r_y, that
+# is r_x + r_y < c_y - c_x, decided exactly on the exact pairs two_sum_ord(r_x, r_y) and
+# two_sum_ord(c_y, -c_x) by lt_2_2; no when none is, r_x + r_y <= c_x - c_y, by le_2_2 and a test
+# that the sum of the radii is finite (two sums that overflow are both (+inf, -inf), which le_2_2
+# calls equal). Both false for an empty operand and for the whole line, through the same operations.
+# Exact unless the sum of the radii and the difference of the centers both overflow; the claim says
+# the half that a condition can: exact when r_x + r_y <= Omega.
+kernel:        ball_less_1
+input:         stored cx
+input:         stored rx
+input:         stored cy
+input:         stored ry
+output:        mask yes
+output:        mask no
+requires:      ball cx rx
+requires:      ball cy ry
+ensures:       trit yes no lt x y x=cx,rx y=cy,ry exact_when=abs_le(rx+ry,omega)
+min_precision: 2
+source:        the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; trit states what comes out for every canonical ball
+
+(s0, s1) = two_sum_ord(rx, ry)
+ncx      = neg(cx)
+(d0, d1) = two_sum_ord(cy, ncx)
+ncy      = neg(cy)
+(g0, g1) = two_sum_ord(cx, ncy)
+yes      = lt_2_2(s0, s1, d0, d1)
+b        = le_2_2(s0, s1, g0, g1)
+sa       = abs(s0)
+fs       = lt(sa, const inf)
+no       = and(b, fs)

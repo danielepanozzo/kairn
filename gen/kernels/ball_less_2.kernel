@@ -1,0 +1,51 @@
+# The three-valued X < Y of balls with 2-limb centers (milestone2.md, "One enclosure interface",
+# "Comparisons": certain): with (z, e) = add_ball_2_2(c_y, -c_x), so that d = c_y - c_x is within e
+# of z, and s = radd(r_x, r_y) at least r_x + r_y: yes when s < dl, dl = RD(to_down_2(z) - e) a
+# finite lower bound of d; no when s <= ml, ml = RD(-to_up_2(z) - e) a lower bound of -d, s and ml
+# finite. Each rounding down of a difference with e is written as minus the rounding up of the
+# opposite (dl = -add_up_1(e, -to_down_2(z)), ml = -add_up_1(to_up_2(z), e)), so that the radius e,
+# a fused result, is not negated (a rule of the generator). Each implies its relation; never both.
+# Both false for an empty operand (a NaN compares false) and for the whole line (s = +inf). Certain,
+# not exact: undecided within about e and a step of T at r_x + r_y of the boundary, and when a bound
+# overflows.
+kernel:        ball_less_2
+input:         cx = cx0 cx1
+input:         stored rx
+input:         cy = cy0 cy1
+input:         stored ry
+output:        mask yes
+output:        mask no
+requires:      ball cx rx
+requires:      ball cy ry
+ensures:       trit yes no lt x y x=cx,rx y=cy,ry
+min_precision: 3
+source:        a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; trit states what comes out for every canonical ball
+
+ncx0        = neg(cx0)
+ncx1        = neg(cx1)
+(z0, z1, e) = add_ball_2_2(cy0, cy1, ncx0, ncx1)
+s           = radd(rx, ry)
+sa          = abs(s)
+fs          = lt(sa, const inf)
+zd          = to_down_2(z0, z1)
+nzd         = neg(zd)
+tl          = add_up_1(e, nzd)
+dl          = neg(tl)
+la          = abs(dl)
+fl          = lt(la, const inf)
+zu          = to_up_2(z0, z1)
+tm          = add_up_1(zu, e)
+ml          = neg(tm)
+ma          = abs(ml)
+fm          = lt(ma, const inf)
+a           = lt(s, dl)
+yes         = and(a, fl)
+b           = le(s, ml)
+bs          = and(b, fs)
+no          = and(bs, fm)

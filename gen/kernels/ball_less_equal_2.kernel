@@ -1,0 +1,45 @@
+# The three-valued X <= Y of balls with 2-limb centers (milestone2.md, "One enclosure interface",
+# "Comparisons": certain): with the bounds of ball_less_2, yes when s <= dl, s and dl finite; no
+# when s < ml, ml finite. Each implies its relation; never both. Both false for an empty operand and
+# for the whole line. Certain, not exact.
+kernel:        ball_less_equal_2
+input:         cx = cx0 cx1
+input:         stored rx
+input:         cy = cy0 cy1
+input:         stored ry
+output:        mask yes
+output:        mask no
+requires:      ball cx rx
+requires:      ball cy ry
+ensures:       trit yes no le x y x=cx,rx y=cy,ry
+min_precision: 3
+source:        a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; trit states what comes out for every canonical ball
+
+ncx0        = neg(cx0)
+ncx1        = neg(cx1)
+(z0, z1, e) = add_ball_2_2(cy0, cy1, ncx0, ncx1)
+s           = radd(rx, ry)
+sa          = abs(s)
+fs          = lt(sa, const inf)
+zd          = to_down_2(z0, z1)
+nzd         = neg(zd)
+tl          = add_up_1(e, nzd)
+dl          = neg(tl)
+la          = abs(dl)
+fl          = lt(la, const inf)
+zu          = to_up_2(z0, z1)
+tm          = add_up_1(zu, e)
+ml          = neg(tm)
+ma          = abs(ml)
+fm          = lt(ma, const inf)
+a           = le(s, dl)
+ys          = and(a, fs)
+yes         = and(ys, fl)
+b           = lt(s, ml)
+no          = and(b, fm)

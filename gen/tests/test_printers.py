@@ -128,6 +128,11 @@ BRANCHED.update(interval_make_1=('v',), ball_from_interval_2=('v', 'f'))
 BRANCHED.update({k: ('ne',) for k in ('interval_sub_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1')})
 BRANCHED.update(interval_make_2=('v',), interval_intersection_1=('ok',), interval_intersection_2=('ok',),
                 mul_ext_2_2=('nz', 'fo'))
+# Stage B2: the set operations of a ball, the composition when both operands are not empty (the
+# hull: qx, qy) or not the whole line (the intersection: nx, ny), and the ball sums of a finite ball
+# (the split: fr). The predicates and comparisons return masks, which are no selects.
+BRANCHED.update(ball_hull_1=('qx', 'qy'), ball_intersection_1=('nx', 'ny'), ball_split_1=('fr',),
+                ball_split_2=('fr',))
 
 
 class Cpp(unittest.TestCase):
@@ -223,6 +228,10 @@ class Cpp(unittest.TestCase):
                       'sub_down_2_2', 'sub_up_2_2', 'mul_dir_2_2', 'interval_add_2'}
     # Stage B1: the difference of intervals of two limbs, and the product, through mul_dir_2_2.
     NOT_CONSTEXPR |= {'interval_sub_2', 'mul_ext_2_2', 'interval_mul_2'}
+    # Stage B2: the certain predicates and comparisons of a ball of two limbs (add_ball_2_2), and the
+    # split of a ball (ball_add_1_full, ball_add_2_full).
+    NOT_CONSTEXPR |= {'ball_contains_point_2', 'ball_contains_ball_2', 'ball_less_2', 'ball_less_equal_2',
+                      'ball_equal_2', 'ball_split_1', 'ball_split_2'}
     # The kernels whose only fused operations are prod, constexpr by the rule of the product
     # (milestone2.md, "The two executions of a product"); in Milestone 2 the ball made from an
     # interval, which halves its bounds and doubles the halves with prod.
@@ -235,6 +244,8 @@ class Cpp(unittest.TestCase):
     # Stage B1: the midpoint and radius of an interval, which halves its bounds with prod, and the
     # conversion to a ball and the split that call it.
     PRODUCT_RULE |= {'interval_mid_rad_1', 'interval_to_ball_1', 'interval_split_1'}
+    # Stage B2: the hull and the intersection of balls of one limb, through interval_to_ball_1.
+    PRODUCT_RULE |= {'ball_hull_1', 'ball_intersection_1'}
     # The kernels that are ordinary inline functions, not forced inline (ordinary_inline:).
     ORDINARY_INLINE = {'interval_mul_2'}
 
@@ -897,9 +908,11 @@ class Rocq(unittest.TestCase):
     # Then the predicates and comparisons of an interval of stage B2, which have no real-model
     # statement, changed the order of the three files only: le_2_2, which interval_contains_2
     # calls, is printed before lt_2_2 (callees before callers), every block the same, byte for byte.
-    DIGESTS = {'Model.v': '0dbcef843ac7965484d9db78b6398d2eb80f040d15400f32316ed3ec9164c99e',
-               'Statements.v': 'cfb46655cfc043a5236b61f39dacae174d0e86ea03a4f899237d1769c33e2066',
-               'Audit.v': 'b5ffaf0b75f2215cded078a66ccd034fd60aa0eb600292fb8007624f8453f0ea'}
+    # Then the predicates, comparisons and set operations of a ball of stage B2, which have no
+    # real-model statement either: the order of the three files only, every block the same.
+    DIGESTS = {'Model.v': '5f46c7298a420e5e1ae6477fd634494ca2c1df7990b33fdbe7f587f8cc110fdf',
+               'Statements.v': 'b30ef8c67db0a9d8501b290cd6c4906263c76c4defe66e3afb0085ac944dcc6e',
+               'Audit.v': '3bed87a8bc53541cd4e9b637ec989514466db30cf5e5a791b05310973b39835b'}
 
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):

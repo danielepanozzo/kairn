@@ -1450,7 +1450,13 @@ class TheKernels(unittest.TestCase):
     WAVE_2_B2_INTERVALS = {f'interval_{name}_{k}' for k in (1, 2) for name in (
         'empty', 'entire', 'contains', 'subset', 'positive', 'negative', 'zero', 'less', 'less_equal', 'equal',
         'rel_equal', 'rel_interior', 'rel_disjoint')}
-    WAVE_2_B2 = set(WAVE_2_B2_INTERVALS)
+    # And those of a ball, one limb and two.
+    WAVE_2_B2_BALLS = {f'ball_{name}_{k}' for k in (1, 2) for name in (
+        'contains_point', 'contains_ball', 'positive', 'negative', 'zero', 'less', 'less_equal', 'equal')}
+    # And the set operations of a ball: the hull and the intersection of one limb, the split of one
+    # and of two.
+    WAVE_2_B2_BALL_SETS = {'ball_hull_1', 'ball_intersection_1', 'ball_split_1', 'ball_split_2'}
+    WAVE_2_B2 = WAVE_2_B2_INTERVALS | WAVE_2_B2_BALLS | WAVE_2_B2_BALL_SETS
     WAVE_2 |= WAVE_2_B2
     # Of these, the kernels whose theorems are about the generated text and pass the audit: all
     # of the first stage. The interval kernels of one limb (IeeeInterval1.v), mul_dir_1 in both models
@@ -1573,6 +1579,17 @@ class TheKernels(unittest.TestCase):
             'interval_mid_rad_1': 2, 'interval_to_ball_1': 2, 'ball_to_interval_1': 2, 'interval_split_1': 2})
         # Stage B2: none for the predicates and comparisons of an interval (comparisons and selects).
         self.assertEqual({ks[name].min_precision for name in self.WAVE_2_B2_INTERVALS}, {1})
+        # Of a ball: none for the signs; 2 for the exact pairs of one limb (two_sum_ord), 3 for the
+        # certain answers of two limbs (add_ball_2_2).
+        self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_B2_BALLS}, {
+            'ball_positive_1': 1, 'ball_negative_1': 1, 'ball_zero_1': 1, 'ball_positive_2': 1, 'ball_negative_2': 1,
+            'ball_zero_2': 1, 'ball_contains_point_1': 2, 'ball_contains_ball_1': 2, 'ball_less_1': 2,
+            'ball_less_equal_1': 2, 'ball_equal_1': 2, 'ball_contains_point_2': 3, 'ball_contains_ball_2': 3,
+            'ball_less_2': 3, 'ball_less_equal_2': 3, 'ball_equal_2': 3})
+        # Of the set operations: 2 for one limb (the conversions, the ball sum of one limb), 3 for the
+        # split of two limbs (the ball sum of two).
+        self.assertEqual({name: ks[name].min_precision for name in self.WAVE_2_B2_BALL_SETS}, {
+            'ball_hull_1': 2, 'ball_intersection_1': 2, 'ball_split_1': 2, 'ball_split_2': 3})
 
     def test_milestone2_bodies_are_those_of_milestone2_md(self):
         """The listings of wave 1, line for line as the page writes them ("Building blocks on T",

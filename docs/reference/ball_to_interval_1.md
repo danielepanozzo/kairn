@@ -12,7 +12,7 @@ $$Z = [\mathrm{RD}(c - r), \mathrm{RU}(c + r)].$$
 
 ## C++
 
-**Not yet called by the public headers.** No public operation computes this kernel yet.
+**Not yet called by the public headers.** No public operation computes this kernel yet. It is part of [`ball_hull_1`](ball_hull_1.md), [`ball_intersection_1`](ball_intersection_1.md).
 
 ## Requires
 

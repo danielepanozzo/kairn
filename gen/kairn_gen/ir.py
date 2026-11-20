@@ -94,6 +94,11 @@ kernel is described in one file, gen/kernels/NAME.kernel:
     ensures:       trit yes no lt x y x=xl,xu y=yl,yu [exact | exact_when=...]
                                       a three-valued comparison: yes only if the relation holds for
                                       every choice of members, no only if it fails for every one
+    ensures:       ball_set cz rz union x=cx,rx y=cy,ry
+                                      a ball that contains the union (or intersection) of two balls
+    ensures:       ball_splits ca ra cb rb from=c,r
+                                      two balls, the first containing [c - r, c], the second
+                                      [c, c + r]
     min_precision: 3                  optional
     theorem:       proofs/theories/Add22.v add_2_2_correct
     source:        free text
@@ -473,7 +478,8 @@ IEEE_THEOREM_NAMES = {'ieee_bridge_theorem': '{}_ieee_bridge', 'ieee_spec_theore
 # real-model statement (Kernel.real_model). The interval kinds of Milestone 2 are among them: an
 # interval has infinite bounds as ordinary values, so its kernels are stated in the IEEE model only.
 NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball', 'finite_or_nan', 'makes_interval', 'encloses_interval',
-                   'set_bound', 'interval_set', 'ball_of_interval', 'interval_of_ball', 'splits', 'certain', 'trit')
+                   'set_bound', 'interval_set', 'ball_of_interval', 'interval_of_ball', 'splits', 'certain', 'trit',
+                   'ball_set', 'ball_splits')
 
 INPUT_CLASSES = ('stored', 'supplied')   # rule R3: where an entry kernel's input comes from
 
@@ -813,6 +819,19 @@ def _ensures(words, where):
             raise DescriptionError(f'{where}: expected "splits AL AU BL BU from=LOWER,UPPER"')
         return {'kind': kind, 'parts': [{'lower': words[1], 'upper': words[2]}, {'lower': words[3], 'upper': words[4]}],
                 'from': {'lower': m.group(1), 'upper': m.group(2)}}
+    if kind == 'ball_set' and len(words) == 6:
+        # ball_set CENTER RADIUS union|intersection NAME=CENTER,RADIUS NAME=CENTER,RADIUS: a ball that
+        # contains the union or the intersection of two balls (Milestone 2, the enclosure interface).
+        return {'kind': kind, 'center': words[1], 'radius': words[2], 'set': words[3],
+                'balls': _pairs(words[4:], where, 'ball', ('center', 'radius'))}
+    if kind == 'ball_splits' and len(words) == 6:
+        # ball_splits CA RA CB RB from=CENTER,RADIUS: two balls that cover the two halves of a ball.
+        m = re.fullmatch(r'from=([a-z][a-z0-9]*),([a-z][a-z0-9]*)', words[5])
+        if not m:
+            raise DescriptionError(f'{where}: expected "ball_splits CA RA CB RB from=CENTER,RADIUS"')
+        return {'kind': kind, 'parts': [{'center': words[1], 'radius': words[2]},
+                                        {'center': words[3], 'radius': words[4]}],
+                'from': {'center': m.group(1), 'radius': m.group(2)}}
     if kind in ('certain', 'trit') and len(words) >= 4:
         # certain MASK REL ARG... NAME=A,B ... [exact | exact_when=CONDITIONS]
         # trit YES NO REL ARG ARG NAME=A,B ... [exact | exact_when=CONDITIONS]

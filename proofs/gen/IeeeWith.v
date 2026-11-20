@@ -69,6 +69,9 @@ Local Notation add_1_1 := (IeeeModel.add_1_1 prec emax nan_plus).
 Local Notation two_sum_ord := (IeeeModel.two_sum_ord prec emax nan_plus nan_minus nan_abs).
 Local Notation add_up_1 := (IeeeModel.add_up_1 prec emax nan_plus nan_minus nan_abs).
 Local Notation sub_up_1 := (IeeeModel.sub_up_1 prec emax nan_plus nan_minus nan_opp nan_abs).
+Local Notation ball_to_interval_1 := (IeeeModel.ball_to_interval_1 prec emax nan_plus nan_minus nan_opp nan_abs).
+Local Notation interval_hull_1 := (IeeeModel.interval_hull_1 prec emax).
+Local Notation interval_intersection_1 := (IeeeModel.interval_intersection_1 prec emax nan_opp).
 Local Notation fast_two_sum := (IeeeModel.fast_two_sum prec emax nan_plus nan_minus).
 
 (* mul_1_1: one rounding to nearest. *)
@@ -127,6 +130,73 @@ Definition ball_from_interval_2_with (p_ : float -> float -> float) (lo hi : flo
   let cw1 := if v then k1 else wc in
   let rw := if v then s else wr in
   (cw0, cw1, rw).
+
+(* interval_mid_rad_1: the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). *)
+Definition interval_mid_rad_1_with (p_ : float -> float -> float) (xl xu : float) : float * float :=
+  let om := pred pinf in
+  let mo := neg om in
+  let ml := lt xl mo in
+  let l := if ml then mo else xl in
+  let mu := lt om xu in
+  let h := if mu then om else xu in
+  let hl := p_ l up_ball_from_interval_2_0 in
+  let hu := p_ h up_ball_from_interval_2_0 in
+  let ma := add hl hu in
+  let ca := lt ma l in
+  let mb := if ca then l else ma in
+  let cb := lt h mb in
+  let mc := if cb then h else mb in
+  let ra := sub_up_1 mc l in
+  let rb := sub_up_1 h mc in
+  let rm := lt ra rb in
+  let rc := if rm then rb else ra in
+  let md := if ml then mo else mc in
+  let me := if mu then om else md in
+  let bo := andb ml mu in
+  let mf := if bo then pzero else me in
+  let un := orb ml mu in
+  let rd := if un then pinf else rc in
+  let ne := lt xl pinf in
+  let m := if ne then mf else cnan in
+  let r := if ne then rd else cnan in
+  (m, r).
+
+(* interval_to_ball_1: interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). *)
+Definition interval_to_ball_1_with (p_ : float -> float -> float) (xl xu : float) : float * float :=
+  let '(m, r) := interval_mid_rad_1_with p_ xl xu in
+  let un := eq r pinf in
+  let c := if un then pzero else m in
+  (c, r).
+
+(* ball_hull_1: both balls to intervals, their hull, back to a ball (Milestone 2 listing). *)
+Definition ball_hull_1_with (p_ : float -> float -> float) (cx rx cy ry : float) : float * float :=
+  let '(xl, xu) := ball_to_interval_1 cx rx in
+  let '(yl, yu) := ball_to_interval_1 cy ry in
+  let '(zl, zu) := interval_hull_1 xl xu yl yu in
+  let '(c, r) := interval_to_ball_1_with p_ zl zu in
+  let qx := eq rx rx in
+  let qy := eq ry ry in
+  let ca := if qy then c else cx in
+  let ra := if qy then r else rx in
+  let cz := if qx then ca else cy in
+  let rz := if qx then ra else ry in
+  (cz, rz).
+
+(* ball_intersection_1: both balls to intervals, their intersection, back to a ball (Milestone 2 listing). *)
+Definition ball_intersection_1_with (p_ : float -> float -> float) (cx rx cy ry : float) : float * float :=
+  let '(xl, xu) := ball_to_interval_1 cx rx in
+  let '(yl, yu) := ball_to_interval_1 cy ry in
+  let '(zl, zu) := interval_intersection_1 xl xu yl yu in
+  let '(c, r) := interval_to_ball_1_with p_ zl zu in
+  let wx := eq rx pinf in
+  let nx := negb wx in
+  let wy := eq ry pinf in
+  let ny := negb wy in
+  let ca := if ny then c else cx in
+  let ra := if ny then r else rx in
+  let cz := if nx then ca else cy in
+  let rz := if nx then ra else ry in
+  (cz, rz).
 
 (* ball_mul_pow2_1: midpoint-radius scaling by a power of two (Milestone 2 listing). *)
 Definition ball_mul_pow2_1_with (p_ : float -> float -> float) (cx rx c : float) : float * float :=
@@ -209,36 +279,6 @@ Definition bound_sum_2_with (p_ : float -> float -> float) (m : float) : float *
   let ok := le a up_bound_dot_1_5 in
   (g, ok).
 
-(* interval_mid_rad_1: the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing). *)
-Definition interval_mid_rad_1_with (p_ : float -> float -> float) (xl xu : float) : float * float :=
-  let om := pred pinf in
-  let mo := neg om in
-  let ml := lt xl mo in
-  let l := if ml then mo else xl in
-  let mu := lt om xu in
-  let h := if mu then om else xu in
-  let hl := p_ l up_ball_from_interval_2_0 in
-  let hu := p_ h up_ball_from_interval_2_0 in
-  let ma := add hl hu in
-  let ca := lt ma l in
-  let mb := if ca then l else ma in
-  let cb := lt h mb in
-  let mc := if cb then h else mb in
-  let ra := sub_up_1 mc l in
-  let rb := sub_up_1 h mc in
-  let rm := lt ra rb in
-  let rc := if rm then rb else ra in
-  let md := if ml then mo else mc in
-  let me := if mu then om else md in
-  let bo := andb ml mu in
-  let mf := if bo then pzero else me in
-  let un := orb ml mu in
-  let rd := if un then pinf else rc in
-  let ne := lt xl pinf in
-  let m := if ne then mf else cnan in
-  let r := if ne then rd else cnan in
-  (m, r).
-
 (* interval_split_1: the bounds and the midpoint of interval_mid_rad_1 (Milestone 2 listing). *)
 Definition interval_split_1_with (p_ : float -> float -> float) (xl xu : float) : float * float * float * float :=
   let '(m, r) := interval_mid_rad_1_with p_ xl xu in
@@ -249,13 +289,6 @@ Definition interval_split_1_with (p_ : float -> float -> float) (xl xu : float) 
   let bl := if ne then m else pinf in
   let bu := xu in
   (al, au, bl, bu).
-
-(* interval_to_ball_1: interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing). *)
-Definition interval_to_ball_1_with (p_ : float -> float -> float) (xl xu : float) : float * float :=
-  let '(m, r) := interval_mid_rad_1_with p_ xl xu in
-  let un := eq r pinf in
-  let c := if un then pzero else m in
-  (c, r).
 
 (* mul_pow2_step_1: one rounding to nearest of a product by a power of two. *)
 Definition mul_pow2_step_1_with (p_ : float -> float -> float) (x c : float) : float :=

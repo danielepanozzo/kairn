@@ -1,0 +1,9 @@
+two limbs: answers not given (yes or no false although the relation holds, or fails for every pair) and the largest margin to the boundary in units of 2e + G
+  p=3 eta=2^-8: contains_point 4433 of 20000 not given, largest margin 0.75; contains_ball 1200 of 5693 not given, largest margin 1.10; less 1710 of 6801 not given, largest margin 0.98; less_equal 1661 of 6761 not given, largest margin 1.01; equal 1881 of 6749 not given, largest margin 1.01
+  p=4 eta=2^-11: contains_point 2405 of 20000 not given, largest margin 1.22; contains_ball 636 of 5936 not given, largest margin 1.47; less 547 of 7159 not given, largest margin 1.84; less_equal 538 of 7149 not given, largest margin 1.92; equal 645 of 7144 not given, largest margin 1.92
+  p=5 eta=2^-14: contains_point 1619 of 20000 not given, largest margin 1.47; contains_ball 388 of 6008 not given, largest margin 1.67; less 248 of 7113 not given, largest margin 2.22; less_equal 251 of 7113 not given, largest margin 2.31; equal 292 of 7112 not given, largest margin 2.31
+one limb: answers that are unknown although decidable, all where both sums overflow
+  fp:2:-2:1: 43264 pairs of balls; less 502, less_equal 502, equal 404
+  fp:3:-4:1: 56644 pairs of balls; less 457, less_equal 457, equal 418
+  fp:3:-6:0: 48400 pairs of balls; less 355, less_equal 355, equal 316
+every statement held

@@ -253,7 +253,10 @@ class Selftest(unittest.TestCase):
                     # -inf in float.
                     special = (interp.INF, t != 'double')
                 self.assertIn(special, vals, fn)
-                self.assertTrue(any(not isinstance(v, bool) and v[0] != interp.NUM for v in got), fn)
+                # A kernel whose outputs are all masks (stage B2: the predicates and comparisons of
+                # the enclosure interface) has no output limb, and its masks are compared above.
+                if any(g.kind == ir.LIMB for g in k.outputs):
+                    self.assertTrue(any(not isinstance(v, bool) and v[0] != interp.NUM for v in got), fn)
                 nonfinite.add(name)
                 continue
             for v in vals:

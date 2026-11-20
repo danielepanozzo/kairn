@@ -1,0 +1,36 @@
+# Whether a ball with a one-limb center contains another, Y inside X (milestone2.md, "One enclosure
+# interface", the row of contains(Y), "Exact pairs"): |c_y - c_x| <= r_x - r_y, decided exactly as
+# le_2_2(abs_2(two_sum_ord(c_y, -c_x)), two_sum_ord(r_x, -r_y)). A difference of the centers that
+# overflows exceeds every radius. The special states, by the table of "The empty set and the whole
+# line": the whole line contains every ball, and the empty set is in every ball; the comparison
+# gives false for an empty X and a nonempty Y, and for a whole line Y in a finite X (r_x - inf is
+# -inf). Exact.
+kernel:        ball_contains_ball_1
+input:         stored cx
+input:         stored rx
+input:         stored cy
+input:         stored ry
+output:        mask m
+requires:      ball cx rx
+requires:      ball cy ry
+ensures:       certain m subset y x x=cx,rx y=cy,ry exact
+min_precision: 2
+source:        the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing)
+license:       algorithm and proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+entry:         yes
+cone_exempt:   the results are masks, which have no non-finite value, and a comparison with NaN is false; certain states what comes out for every canonical ball
+
+ncx      = neg(cx)
+(d0, d1) = two_sum_ord(cy, ncx)
+(a0, a1) = abs_2(d0, d1)
+nry      = neg(ry)
+(g0, g1) = two_sum_ord(rx, nry)
+f        = le_2_2(a0, a1, g0, g1)
+wx       = eq(rx, const inf)
+qy       = eq(ry, ry)
+ey       = not(qy)
+sp       = or(wx, ey)
+m        = or(sp, f)

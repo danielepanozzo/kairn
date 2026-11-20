@@ -22,7 +22,9 @@ IN_GEN = ('two_sum_ord', 'add_down_1', 'add_up_1', 'sub_down_1', 'sub_up_1', 'mu
           'add_ball_2_2', 'mul_ball_2_2', 'add_down_2_2', 'add_up_2_2', 'mul_dir_2_2', 'interval_add_2',
           'ball_from_interval_2',
           # and of its stage B1: the product of intervals of two limbs, and two of the enclosure interface.
-          'mul_ext_2_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1')
+          'mul_ext_2_2', 'interval_mul_2', 'interval_mid_rad_1', 'ball_to_interval_1',
+          # and of stage B2: the split of a ball, written again so that no fused result is negated.
+          'ball_split_1')
 
 
 def main():

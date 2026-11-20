@@ -1834,7 +1834,8 @@ A statement about intervals or balls made from them has a hypothesis on the prec
 The third stage of the interval work (stage B2) needs the additions below, for these kernels of [One enclosure interface](design/milestone2.md#one-enclosure-interface), each of one limb and of two (`_1`, `_2`):
 - the predicates of an interval: `interval_empty_k`, `interval_entire_k`, `interval_contains_k` (a point), `interval_subset_k`, `interval_positive_k`, `interval_negative_k`, `interval_zero_k`;
 - its three-valued comparisons: `interval_less_k`, `interval_less_equal_k`, `interval_equal_k`;
-- the relations of IEEE 1788 that are not one of those: `interval_rel_equal_k`, `interval_rel_interior_k`, `interval_rel_disjoint_k`.
+- the relations of IEEE 1788 that are not one of those: `interval_rel_equal_k`, `interval_rel_interior_k`, `interval_rel_disjoint_k`;
+- the predicates and three-valued comparisons of a ball (below): `ball_contains_point_k`, `ball_contains_ball_k`, `ball_positive_k`, `ball_negative_k`, `ball_zero_k`, `ball_less_k`, `ball_less_equal_k`, `ball_equal_k`.
 
 Everything above keeps its meaning and its JSON shape: the two kinds below are new, and `abs_le` with `omega`, a condition of `bounded_when`, is also a condition of their `exact_when`.
 
@@ -1898,10 +1899,83 @@ those of `interval_positive_1`, `interval_zero_1`, `interval_empty_2`, `interval
 - `interval_negative_k` is `lt` with the arguments `["x", "0"]`; `interval_entire_k` is `entire`; `interval_contains_2` is `interval_contains_1` with bounds of two limbs and a point of two limbs, required `canonical`; `interval_rel_equal_k` and `interval_rel_disjoint_k` are `equal` and `disjoint`; `interval_less_equal_k` is `interval_less_k` with `le`. Every one is `exact`, and each kernel of two limbs claims what the kernel of one limb claims.
 - The masks of a `trit` are the outputs `yes` and `no`, in that order; in the line protocol each is `0` or `1`, as every mask.
 
+**The predicates and comparisons of a ball**, the same kinds with `balls`: `ball_contains_point_k`, `ball_contains_ball_k` (Y inside X: `subset` with the arguments `["y", "x"]`), `ball_positive_k`, `ball_negative_k`, `ball_zero_k`, `ball_less_k`, `ball_less_equal_k`, `ball_equal_k`. The bounds $c \mp r$ of a ball are not numbers of `T` in general, and what each kernel claims differs by the number of limbs:
+- One limb: exact. The kernels compare exact pairs (`two_sum_ord` of a difference or a sum of two numbers of `T`) by the comparisons of two limbs ([Exact pairs](design/milestone2.md#one-enclosure-interface)). `ball_contains_point_1`, `ball_contains_ball_1` and the signs are `exact`. The three comparisons are exact unless the sum of the radii and the difference of the centers both overflow, when the answer is *unknown*; the claim states the half that a condition can, `"exact_when": [{"abs_le": "rx+ry", "omega": true}]`, and a sum of the radii that does not overflow is enough.
+- Two limbs: certain, not exact, but `ball_positive_2`, `ball_negative_2` and `ball_zero_2` (the comparisons `lt_1_2`, `lt_2_1`, `eq_2_1` with the radius), which are `exact`. The others compare a one-limb bound of a distance with the radius: with $(z, e)$ = `add_ball_2_2` of the difference of the centers (or of the point and the center), $\lvert d - z\rvert \le e$, and an upper bound by `abs_upper_2` and `radd`, or a lower bound by `to_down_2` and a directed difference with $e$. Every answer given is right; an answer not given is near the boundary. With $G$ the gap of `T` at the largest of the radii and the distance: `contains(t)` answers unless $\bigl\lvert\lvert t - c\rvert - r\bigr\rvert < 2e + 3G$; `contains(Y)` gives true unless $r_x - (\lvert c_y - c_x\rvert + r_y) < 2e + 4G$; `less` and `less_equal` give *yes* (*no*) unless the gap between the balls, $(c_y - c_x) - (r_x + r_y)$ (or $(c_x - c_y) - (r_x + r_y)$), is below $2e + 4G$; `equal` gives *no* unless $\lvert c_y - c_x\rvert - (r_x + r_y) < 2e + 4G$, and its *yes* (both balls the same point) is exact. The band is not claimed: the reasoning is in `experiments/milestone2/predicates_2.py`, which asserts it on 20 000 cases at three, four and five bits and measures the largest margin of an answer not given (2.3 units of $2e + G$). It is $G$, a gap of `T` at the radius, about $2u\,r$, that dominates unless the radius is small compared with the distance: $e$ is about $3u^2$ times the distance plus twice the smallest normal number.
+- Special states: on the empty set and the whole line every kernel gives the exact answers, those of [The empty set and the whole line](design/milestone2.md#the-empty-set-and-the-whole-line): `contains(t)` is false on the empty set and true on the whole line for a finite $t$, `contains(Y)` true when X is the whole line or Y empty, the signs false, the comparisons *unknown*. A point that is not a finite number is a member of nothing: the *no* of `ball_contains_point_2` is then true.
+
+`ball_contains_point_2` returns *yes* and *no*, as the page's listing does (`contains` returns *yes*), and `ball_contains_point_1` one mask, exact. The signs are the comparisons that the hand-written `Ball::certainly_positive`, `certainly_negative` and `certainly_zero` of `include/kairn/ball.hpp` make: for two limbs the same calls of `lt_1_2`, `lt_2_1` and `eq_2_1`, for one limb the same comparisons of `T`, now with statements of their own about the members of the ball.
+
+Two entries in full, and the `ensures` of four more (`ball_contains_point_1`, `ball_contains_ball_2`, `ball_positive_2`, `ball_equal_2`):
+
+```json
+{"name": "ball_less_1", "domain": "extended", "ieee_only": true,
+ "inputs": [{"name": "cx", "limbs": 1}, {"name": "rx", "limbs": 1}, {"name": "cy", "limbs": 1}, {"name": "ry", "limbs": 1}],
+ "outputs": [{"name": "yes", "limbs": 1, "type": "mask"}, {"name": "no", "limbs": 1, "type": "mask"}],
+ "requires": ["ball(cx, rx)", "ball(cy, ry)"],
+ "ensures": [{"kind": "trit", "yes": "yes", "no": "no", "rel": "lt", "args": ["x", "y"], "balls": {"x": {"center": "cx", "radius": "rx"}, "y": {"center": "cy", "radius": "ry"}}, "exact_when": [{"abs_le": "rx+ry", "omega": true}]}],
+ "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "instances": {"binary64": [], "binary32": []}},
+{"name": "ball_contains_point_2", "domain": "extended", "ieee_only": true,
+ "inputs": [{"name": "c", "limbs": 2}, {"name": "r", "limbs": 1}, {"name": "t", "limbs": 2}],
+ "outputs": [{"name": "yes", "limbs": 1, "type": "mask"}, {"name": "no", "limbs": 1, "type": "mask"}],
+ "requires": ["ball(c, r)", "canonical(t)"],
+ "ensures": [{"kind": "trit", "yes": "yes", "no": "no", "rel": "member", "args": ["t", "x"], "balls": {"x": {"center": "c", "radius": "r"}}}],
+ "min_precision": 3, "status": "unverified", "ieee_status": "unverified",
+ "instances": {"binary64": [], "binary32": []}}
+```
+
+```json
+[{"kind": "certain", "of": "m", "rel": "member", "args": ["t", "x"], "balls": {"x": {"center": "c", "radius": "r"}}, "exact": true}],
+[{"kind": "certain", "of": "m", "rel": "subset", "args": ["y", "x"], "balls": {"x": {"center": "cx", "radius": "rx"}, "y": {"center": "cy", "radius": "ry"}}}],
+[{"kind": "certain", "of": "m", "rel": "lt", "args": ["0", "x"], "balls": {"x": {"center": "c", "radius": "r"}}, "exact": true}],
+[{"kind": "trit", "yes": "yes", "no": "no", "rel": "eq", "args": ["x", "y"], "balls": {"x": {"center": "cx", "radius": "rx"}, "y": {"center": "cy", "radius": "ry"}}}]
+```
+
+The other kernels: `ball_contains_ball_1` is `ball_contains_ball_2` with one-limb centers and `exact`; `ball_negative_k` and `ball_zero_k` are `lt` with `["x", "0"]` and `eq` with `["x", "0"]`, `exact`, and `ball_positive_1` is `ball_positive_2` with one limb; `ball_less_equal_1` and `ball_equal_1` are `ball_less_1` with `le` and `eq`; `ball_less_2` and `ball_less_equal_2` are `ball_equal_2` with `lt` and `le`.
+
+Two listings differ from the page's in form, not in value, by the rule against negating a fused result (gen/README.md, "The rules"): where the page writes `sub_down_1(x, e)` with $e$ the radius of `add_ball_2_2`, an FMA, the listing writes `neg(add_up_1(e, neg(x)))`, minus the rounding up of $e - x$, which is the rounding down of $x - e$: the lower bound `lo` of `ball_contains_point_2` (`nw = neg(wd); tl = add_up_1(e, nw); lo = neg(tl)`) and the lower bounds of the comparisons of two limbs, which the page describes without a listing ("bounded below and above as in `ball_contains_point_2`").
+
 **In the formal models.** IEEE model only, in the vocabulary of `IeeeIntervalVocabulary.v` and `IeeeVocabulary.v`. A mask is a `bool`, and the claims are about `m = true`:
 - the relation, with the members `in_interval_n` (or `in_ball_n`) of the sets: for `lt`, `le` and `eq`, `interval_nonempty_n` of each set named (for a ball, `~ ball_empty_n`) and `forall x y : R, in X x -> in Y y -> x < y` (the failure of `trit`: `~ (x < y)`); for `member`, `finite t0 /\ in X (val t0 + val t1)`; for `subset`, `forall z : R, in X z -> in Y z`; for `equal`, the same with `<->`; for `interior`, `forall z : R, in X z -> exists d : R, 0 < d /\ (forall w : R, Rabs (w - z) < d -> in Y w)`; for `disjoint`, `~ (exists z : R, in X z /\ in Y z)`; for `empty`, `interval_empty_n` (`ball_empty_n`); for `entire`, `forall z : R, in X z`;
 - `certain`: `(m = true -> R)`; then, without `exact`, `(S -> (m = true <-> R))` with S the disjunction of `interval_empty_n X \/ (xval xl = XInf true /\ xval xu = XInf false)` of each interval (for a ball, `ball_empty_n \/ ball_whole_n`) and, for `member`, `~ finite t0`; and with `exact_when`, `(F -> C -> (m = true <-> R))`, F the conjunction of `interval_bounded_n` (for a ball, `ball_finite_n`) of each set and, for `member`, `finite t0`, C the conditions (`Rabs E <= omega prec emax`). With `exact`, the statement is `(m = true <-> R)` alone;
 - `trit`: `(yes = true -> R)`, `(no = true -> N)` and `~ (yes = true /\ no = true)`, N the failure for every choice; then as for `certain`, with `(yes = true <-> R) /\ (no = true <-> N)` for each equivalence.
+
+### Claims of the enclosure interface: the set operations of a ball
+
+The hull, the intersection and the split of a ball ([Hull, intersection and split of balls](design/milestone2.md#hull-intersection-and-split-of-balls)), stage B2: `ball_hull_1`, `ball_intersection_1`, `ball_split_1` and `ball_split_2`. (`ball_hull_2` and `ball_intersection_2` convert balls of two limbs to intervals and back, and come with the conversions of two limbs, in the next section.) Two kinds are new; everything above keeps its meaning and its shape.
+
+| Kind | Fields | Meaning |
+|---|---|---|
+| `ball_set` | `center`, `radius`: the outputs; `set`: `union` or `intersection`; `balls`: two names, each with its `center` and `radius` inputs (of a `ball` requirement) | The result Z is a canonical ball, and every real number that is a member of X or of Y (`union`), or of both (`intersection`), is a member of Z. For `union`: Z is empty exactly when X and Y both are; when X is empty, Z is Y as it is (the same limbs), and when Y is empty, X. For `intersection`: Z is empty when an operand is; when X is the whole line, Z is Y as it is, and when Y is the whole line, X. Nothing more: Z need not be the smallest such ball, nor inside X or Y, nor empty for disjoint balls |
+| `ball_splits` | `parts`: two objects, each with the `center` and `radius` outputs of a ball; `from`: the `center` and `radius` inputs of a `ball` requirement | Both parts are canonical balls. The empty set gives the empty set twice, the whole line the whole line twice (a ball cannot be a half-line). For a finite ball X of center $c$ and radius $r$: every real in $[c - r, c]$ is a member of the first part, and every real in $[c, c + r]$ a member of the second; together they cover X. Nothing more: the parts need not be inside X, nor their radii close to $r/2$ |
+
+"As it is" is the operand's limbs, compared as values: the sign of a zero is not part of a claim.
+
+Entries as the generator writes them (`source`, `flops` and the theorem fields left out):
+
+```json
+{"name": "ball_hull_1", "domain": "extended", "ieee_only": true,
+ "inputs": [{"name": "cx", "limbs": 1}, {"name": "rx", "limbs": 1}, {"name": "cy", "limbs": 1}, {"name": "ry", "limbs": 1}],
+ "outputs": [{"name": "cz", "limbs": 1}, {"name": "rz", "limbs": 1}],
+ "requires": ["ball(cx, rx)", "ball(cy, ry)"],
+ "ensures": [{"kind": "ball_set", "center": "cz", "radius": "rz", "set": "union", "balls": {"x": {"center": "cx", "radius": "rx"}, "y": {"center": "cy", "radius": "ry"}}}],
+ "min_precision": 2, "status": "unverified", "ieee_status": "unverified",
+ "instances": {"binary64": [], "binary32": []}},
+{"name": "ball_split_2", "domain": "extended", "ieee_only": true,
+ "inputs": [{"name": "c", "limbs": 2}, {"name": "r", "limbs": 1}],
+ "outputs": [{"name": "ca", "limbs": 2}, {"name": "ra", "limbs": 1}, {"name": "cb", "limbs": 2}, {"name": "rb", "limbs": 1}],
+ "requires": ["ball(c, r)"],
+ "ensures": [{"kind": "ball_splits", "parts": [{"center": "ca", "radius": "ra"}, {"center": "cb", "radius": "rb"}], "from": {"center": "c", "radius": "r"}}],
+ "min_precision": 3, "status": "unverified", "ieee_status": "unverified",
+ "instances": {"binary64": [], "binary32": []}}
+```
+
+`ball_intersection_1` is `ball_hull_1` with `"set": "intersection"`, and `ball_split_1` is `ball_split_2` with one-limb centers (minimum precision 2). The line protocol: a ball is its center limbs then its radius, and `ball_split_k` returns the first part, then the second.
+
+The listings: `ball_hull_1` and `ball_intersection_1` are `ball_to_interval_1` of each operand, `interval_hull_1` or `interval_intersection_1`, `interval_to_ball_1`, then selects on the tests of the radii for the operands returned as they are (a NaN radius is the empty set, $+\infty$ the whole line). `ball_split_k` is the page's listing, the point $c$ plus the balls of center $\mp h$ and radius $\max(h, r - h)$, $h = \mathrm{RN}(r/2)$, by `ball_add_k_full`, with one change of form: the page negates `hs = select(fr, h, 0)`, whose first arm is the product `h`, which the generator refuses (gen/README.md, "The rules"); the listing computes $-h$ as its own product, `nh = select(fr, prod(neg(r), const up(1/2)), 0)`, the same value, rounding to nearest being symmetric.
+
+**In the formal models.** IEEE model only: `ball_n` of the result; for `union`, `(ball_empty_n Z <-> ball_empty_n X /\ ball_empty_n Y)`, `(ball_empty_n X -> cz = cy /\ rz = ry)` (the limbs themselves) and the same with X and Y exchanged; for `intersection`, `(ball_empty_n X \/ ball_empty_n Y -> ball_empty_n Z)` and `(ball_whole_n X -> cz = cy /\ rz = ry)`, and exchanged; then `forall z : R, in_ball_n X z \/ in_ball_n Y z -> in_ball_n Z z` (`/\` for the intersection). For `ball_splits`: `ball_n` of each part, the empty set and the whole line twice (`ball_empty_n`, `ball_whole_n`), and for `ball_finite_n X`, `forall z : R, c - r <= z <= c -> in_ball_n A z` and `forall z : R, c <= z <= c + r -> in_ball_n B z`, $c$ the value of the center limbs.
 
 ## The line protocol
 

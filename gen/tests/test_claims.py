@@ -126,7 +126,9 @@ class Claims(unittest.TestCase):
               'interval_of_ball': ['kind', 'lower', 'upper', 'set', 'balls', 'tight'],
               'splits': ['kind', 'parts', 'from'],
               # Stage B2: the predicates and the three-valued comparisons of the enclosure interface.
-              'certain': ['kind', 'of', 'rel', 'args'], 'trit': ['kind', 'yes', 'no', 'rel', 'args']}
+              'certain': ['kind', 'of', 'rel', 'args'], 'trit': ['kind', 'yes', 'no', 'rel', 'args'],
+              # and the set operations of a ball
+              'ball_set': ['kind', 'center', 'radius', 'set', 'balls'], 'ball_splits': ['kind', 'parts', 'from']}
     # The fields that some entries of a kind have, after the others, and only when they say
     # something: a rounding under a condition, an exactness condition, the zero of a product of
     # bounds, the midpoint of a ball made from an interval, an equivalence for the bounded result,
@@ -147,7 +149,7 @@ class Claims(unittest.TestCase):
     # The kinds whose entries name their own set or make a value from the inputs: a kernel whose
     # every entry is one of them has no value.
     OWN_SET = ('makes_ball', 'makes_interval', 'encloses_interval', 'set_bound', 'interval_set', 'ball_of_interval',
-               'interval_of_ball', 'splits', 'certain', 'trit')
+               'interval_of_ball', 'splits', 'certain', 'trit', 'ball_set', 'ball_splits')
 
     def test_schema(self):
         self.assertEqual(self.doc['schema'], 1)
@@ -224,6 +226,12 @@ class Claims(unittest.TestCase):
                     self.assertIn(e['special'], ('ieee1788', 'ball'), k['name'])
                 if e['kind'] in ('ball_of_interval', 'splits'):
                     self.assertEqual(list(e['from']), ['lower', 'upper'], k['name'])
+                if e['kind'] == 'ball_set':
+                    self.assertIn(e['set'], ('union', 'intersection'), k['name'])
+                    self.assertEqual([list(b) for b in e['balls'].values()], [['center', 'radius']] * 2, k['name'])
+                if e['kind'] == 'ball_splits':
+                    self.assertEqual(list(e['from']), ['center', 'radius'], k['name'])
+                    self.assertEqual([list(q) for q in e['parts']], [['center', 'radius']] * 2, k['name'])
                 if e['kind'] == 'splits':
                     self.assertEqual([list(q) for q in e['parts']], [['lower', 'upper']] * 2, k['name'])
                 if e['kind'] in ('encloses_interval', 'set_bound', 'interval_set', 'interval_of_ball'):
@@ -534,6 +542,51 @@ class Claims(unittest.TestCase):
                      'equal', 'rel_equal', 'rel_interior', 'rel_disjoint'):
             self.assertEqual(self.by[f'interval_{name}_2']['ensures'], self.by[f'interval_{name}_1']['ensures'], name)
         self.assertEqual(self.by['interval_contains_2']['requires'], ['interval(xl, xu)', 'canonical(t)'])
+        # The predicates and comparisons of a ball: two entries in full, the ensures of four more.
+        shown = json.loads('[' + blocks[2] + ']')
+        self.assertEqual([e['name'] for e in shown], ['ball_less_1', 'ball_contains_point_2'])
+        for e in shown:
+            want = [(key, v) for key, v in self.by[e['name']].items()
+                    if key not in ('source', 'flops', 'theorem', 'ieee_theorem')]
+            self.assertEqual(list(e.items()), want, e['name'])
+        ensures = json.loads('[' + blocks[3] + ']')
+        names = ('ball_contains_point_1', 'ball_contains_ball_2', 'ball_positive_2', 'ball_equal_2')
+        self.assertEqual(len(ensures), len(names))
+        for name, e in zip(names, ensures):
+            self.assertEqual(e, self.by[name]['ensures'], name)
+        by = {n: self.by[n]['ensures'][0] for n in self.by if n.startswith('ball_')}
+        self.assertEqual(by['ball_contains_ball_1'], dict(by['ball_contains_ball_2'], exact=True))
+        b1 = {'x': {'center': 'c', 'radius': 'r'}}
+        for k in (1, 2):
+            self.assertEqual(by[f'ball_negative_{k}'], {'kind': 'certain', 'of': 'm', 'rel': 'lt', 'args': ['x', '0'],
+                                                        'balls': b1, 'exact': True})
+            self.assertEqual(by[f'ball_zero_{k}'], {'kind': 'certain', 'of': 'm', 'rel': 'eq', 'args': ['x', '0'],
+                                                    'balls': b1, 'exact': True})
+        self.assertEqual(by['ball_positive_1'], by['ball_positive_2'])
+        for name, rel in (('ball_less_equal_1', 'le'), ('ball_equal_1', 'eq')):
+            self.assertEqual(by[name], dict(by['ball_less_1'], rel=rel))
+        for name, rel in (('ball_less_2', 'lt'), ('ball_less_equal_2', 'le')):
+            self.assertEqual(by[name], dict(by['ball_equal_2'], rel=rel))
+
+    def test_the_entries_of_the_set_operations_of_a_ball_in_architecture_md(self):
+        # The entries that architecture.md writes out ("Claims of the enclosure interface: the set
+        # operations of a ball"), field for field and in order, and what the text says of the others.
+        with open(os.path.join(common.ROOT, 'docs', 'developer', 'architecture.md'), encoding='utf-8') as f:
+            text = f.read()
+        section = text.split('### Claims of the enclosure interface: the set operations of a ball')[1] \
+            .split('\n## ')[0].split('\n### ')[0]
+        blocks = re.findall(r'```json\n(.*?)```', section, re.S)
+        shown = json.loads('[' + blocks[0] + ']')
+        self.assertEqual([e['name'] for e in shown], ['ball_hull_1', 'ball_split_2'])
+        for e in shown:
+            want = [(key, v) for key, v in self.by[e['name']].items()
+                    if key not in ('source', 'flops', 'theorem', 'ieee_theorem')]
+            self.assertEqual(list(e.items()), want, e['name'])
+        self.assertEqual(self.by['ball_intersection_1']['ensures'],
+                         [dict(self.by['ball_hull_1']['ensures'][0], set='intersection')])
+        self.assertEqual(self.by['ball_split_1']['ensures'], self.by['ball_split_2']['ensures'])
+        self.assertEqual(self.by['ball_split_1']['min_precision'], 2)
+        self.assertEqual([g['limbs'] for g in self.by['ball_split_1']['outputs']], [1, 1, 1, 1])
 
     def test_ieee_only(self):
         # Exactly the kernels without a real-model statement say so: the nine full kernels, the
@@ -560,6 +613,9 @@ class Claims(unittest.TestCase):
         milestone2 |= {f'interval_{name}_{k}' for k in (1, 2) for name in (
             'empty', 'entire', 'contains', 'subset', 'positive', 'negative', 'zero', 'less', 'less_equal', 'equal',
             'rel_equal', 'rel_interior', 'rel_disjoint')}
+        milestone2 |= {f'ball_{name}_{k}' for k in (1, 2) for name in (
+            'contains_point', 'contains_ball', 'positive', 'negative', 'zero', 'less', 'less_equal', 'equal')}
+        milestone2 |= {'ball_hull_1', 'ball_intersection_1', 'ball_split_1', 'ball_split_2'}
         self.assertEqual({k['name'] for k in self.doc['kernels'] if 'ieee_only' in k},
                          full | full_ball | constructors | finishes | milestone2)
         self.assertTrue(all(k['ieee_only'] is True for k in self.doc['kernels'] if 'ieee_only' in k))

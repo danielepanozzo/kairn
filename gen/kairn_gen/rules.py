@@ -66,12 +66,12 @@ ENSURES_FINITE = ('normalized', 'leading_rounded', 'error', 'rounded', 'upper', 
 ENSURES_EXTENDED = ('normalized', 'error', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
                     'represents', 'makes_ball', 'neighbor', 'bound', 'finite_or_nan', 'makes_interval',
                     'encloses_interval', 'set_bound', 'outward', 'interval_set', 'ball_of_interval', 'interval_of_ball',
-                    'splits', 'certain', 'trit')
+                    'splits', 'certain', 'trit', 'ball_set', 'ball_splits')
 # Entries that say something about the value: a kernel needs at least one.
 ABOUT_THE_VALUE = ('error', 'leading_rounded', 'rounded', 'upper', 'predicate', 'encloses', 'extends',
                    'represents', 'makes_ball', 'neighbor', 'bound', 'holds', 'finite_or_nan', 'maximum', 'outward',
                    'makes_interval', 'encloses_interval', 'set_bound', 'interval_set', 'ball_of_interval',
-                   'interval_of_ball', 'splits', 'certain', 'trit')
+                   'interval_of_ball', 'splits', 'certain', 'trit', 'ball_set', 'ball_splits')
 # The forms of an error entry: relative to |value| (R), to the sum of the magnitudes of the inputs
 # (A), to the sum of the magnitudes of the terms of value (T: s+x*y gives |s| + |x*y|).
 ERROR_FORMS = ('R', 'A', 'T')
@@ -79,7 +79,7 @@ ERROR_FORMS = ('R', 'A', 'T')
 # of them has no value (Milestone 2: the interval kernels, the one-limb bounds of a ball, and the
 # set operations, the conversions and the split of the enclosure interface).
 OWN_SET = ('makes_ball', 'makes_interval', 'encloses_interval', 'set_bound', 'interval_set', 'ball_of_interval',
-           'interval_of_ball', 'splits', 'certain', 'trit')
+           'interval_of_ball', 'splits', 'certain', 'trit', 'ball_set', 'ball_splits')
 SIDES_OUTWARD = ('below', 'above')
 # The set operations of interval_set, and the special values of ball_of_interval (Milestone 2).
 SET_OPERATIONS = ('union', 'intersection')
@@ -833,6 +833,10 @@ def claims(k, kernels):
             _interval_of_ball(e, k, ins, outs, parsed, err)
         elif kind == 'splits':
             _splits(e, k, ins, outs, err)
+        elif kind == 'ball_set':
+            _ball_set(e, k, ins, outs, err)
+        elif kind == 'ball_splits':
+            _ball_splits(e, k, ins, outs, err)
         elif kind in ('certain', 'trit'):
             _certain(e, k, ins, outs, err)
             if 'exact' in e and 'exact_when' in e:
@@ -1210,6 +1214,59 @@ def _interval_of_ball(e, k, ins, outs, parsed, err):
     t = e['tight']
     if t['kind'] != 'rounded' or set(t) - {'kind', 'steps'}:
         err('interval_of_ball: tight is rounded, with optional steps')
+
+
+def _ball_output(c, r, outs, err, what):
+    """The number of limbs of a center output (1 or 2) whose radius output has one limb, or None."""
+    gc, gr = outs.get(c), outs.get(r)
+    if gc is None or gc.kind != ir.LIMB or len(gc.limbs) not in (1, 2):
+        err(f'{what} center {c!r}: not a limb output of one limb or two')
+        return None
+    if gr is None or gr.kind != ir.LIMB or len(gr.limbs) != 1:
+        err(f'{what} radius {r!r}: not a one-limb limb output')
+        return None
+    return len(gc.limbs)
+
+
+def _ball_operand(b, k, ins, err, what):
+    """The number of limbs of the center of a ball operand {center, radius} of a `ball` requirement."""
+    if ('ball', b['center'], b['radius']) not in k.requires:
+        err(f'{what}: its operand is required to be a ball: "requires: ball {b["center"]} {b["radius"]}"')
+        return None
+    return len(ins[b['center']].limbs)
+
+
+def _ball_set(e, k, ins, outs, err):
+    """A ball that contains the union or the intersection of two balls (Milestone 2, the hull and the
+    intersection of balls): a canonical ball of as many limbs as the operands', two balls of `ball`
+    requirements, a set operation of the vocabulary."""
+    if e['set'] not in SET_OPERATIONS:
+        err(f'ball_set {e["set"]!r}: the set operation is {" or ".join(SET_OPERATIONS)}')
+    n = {_ball_output(e['center'], e['radius'], outs, err, 'ball_set')}
+    if len(e['balls']) != 2:
+        err('ball_set names two balls')
+    taken = set()
+    for name, b in e['balls'].items():
+        if name in ins or name in outs or not ir.VALUE_NAME.match(name):
+            err(f'ball name {name!r} is the name of a group, or not a value name')
+        n.add(_ball_operand(b, k, ins, err, f'ball {name}'))
+        if taken & {b['center'], b['radius']}:
+            err(f'ball {name}: a center or a radius belongs to two balls')
+        taken |= {b['center'], b['radius']}
+    if None not in n and len(n) != 1:
+        err('ball_set: the centers of the result and of the operands have as many limbs each')
+
+
+def _ball_splits(e, k, ins, outs, err):
+    """Two balls that cover the two halves of a ball operand (Milestone 2, the split of a ball): two
+    canonical balls of as many limbs as the operand's, a `ball` requirement."""
+    n = {_ball_output(p['center'], p['radius'], outs, err, 'ball_splits') for p in e['parts']}
+    names = [p[x] for p in e['parts'] for x in ('center', 'radius')]
+    if len(set(names)) != 4:
+        err('ball_splits: the centers and radii of the parts are four outputs')
+    n.add(_ball_operand(e['from'], k, ins, err, 'ball_splits from'))
+    if None not in n and len(n) != 1:
+        err('ball_splits: the centers of the parts and of the operand have as many limbs each')
 
 
 def _certain(e, k, ins, outs, err):

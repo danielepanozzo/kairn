@@ -786,6 +786,454 @@
       }
     },
     {
+      "name": "abs_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "z",
+          "limbs": 2
+        }
+      ],
+      "value": "abs(x)",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "z"
+        },
+        {
+          "kind": "error",
+          "of": "z",
+          "form": "R",
+          "c": "0",
+          "k": 2,
+          "t": "0",
+          "when": null
+        },
+        {
+          "kind": "represents",
+          "of": "z"
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Sign.v",
+        "name": "abs_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "abs_2_ieee_correct"
+      },
+      "source": {
+        "cite": "the sign of x0 (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "0",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "le_2_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "le",
+          "args": [
+            "x",
+            "y"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "le_2_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "le_2_2_ieee_correct"
+      },
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_contains_ball_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "subset",
+          "args": [
+            "y",
+            "x"
+          ],
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the distance of the centers and the difference of the radii as exact pairs, compared (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 6,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "le_2_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-a",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "le",
+          "args": [
+            "x",
+            "a"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "le_2_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "le_2_1_ieee_correct"
+      },
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_contains_point_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "member",
+          "args": [
+            "t",
+            "x"
+          ],
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the distance as an exact pair compared with the radius (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 4,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "lt_2_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "x",
+            "y"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "lt_2_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "lt_2_2_ieee_correct"
+      },
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_equal_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "eq",
+          "args": [
+            "x",
+            "y"
+          ],
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          },
+          "exact_when": [
+            {
+              "abs_le": "rx+ry",
+              "omega": true
+            }
+          ]
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radii and the centers compared, and the sum of the radii with the distance of the centers as exact pairs (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 6,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_from_interval_2",
       "domain": "extended",
       "ieee_only": true,
@@ -891,6 +1339,677 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_to_interval_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "interval_of_ball",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "x",
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          },
+          "tight": {
+            "kind": "rounded"
+          }
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert.v",
+        "name": "ball_to_interval_1_correct"
+      },
+      "source": {
+        "cite": "the directed difference and sum of the center and the radius (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 6,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_hull_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "interval_set",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "union",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_hull_1_correct"
+      },
+      "source": {
+        "cite": "the smaller lower bound and the larger upper bound (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "sub_up_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "b",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "value": "a-b",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "r",
+          "mode": "up"
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/DirectedSum.v",
+        "name": "sub_up_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeDirected.v",
+        "name": "sub_up_1_ieee_correct"
+      },
+      "source": {
+        "cite": "add_up_1 on a and -b (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_mid_rad_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "ball_of_interval",
+          "center": "m",
+          "radius": "r",
+          "from": {
+            "lower": "xl",
+            "upper": "xu"
+          },
+          "special": "ieee1788",
+          "rel": "u",
+          "abs": "eta",
+          "smallest_radius": true
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert.v",
+        "name": "interval_mid_rad_1_correct"
+      },
+      "source": {
+        "cite": "the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 9,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_to_ball_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)"
+      ],
+      "ensures": [
+        {
+          "kind": "ball_of_interval",
+          "center": "c",
+          "radius": "r",
+          "from": {
+            "lower": "xl",
+            "upper": "xu"
+          },
+          "special": "ball",
+          "rel": "u",
+          "abs": "eta",
+          "smallest_radius": true
+        }
+      ],
+      "min_precision": 2,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalConvert.v",
+        "name": "interval_to_ball_1_correct"
+      },
+      "source": {
+        "cite": "interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 9,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_hull_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 1
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "ball_set",
+          "center": "cz",
+          "radius": "rz",
+          "set": "union",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          }
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "both balls to intervals, their hull, back to a ball (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 21,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "interval_intersection_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "xl",
+          "limbs": 1
+        },
+        {
+          "name": "xu",
+          "limbs": 1
+        },
+        {
+          "name": "yl",
+          "limbs": 1
+        },
+        {
+          "name": "yu",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "zl",
+          "limbs": 1
+        },
+        {
+          "name": "zu",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "interval(xl, xu)",
+        "interval(yl, yu)"
+      ],
+      "ensures": [
+        {
+          "kind": "interval_set",
+          "lower": "zl",
+          "upper": "zu",
+          "set": "intersection",
+          "intervals": {
+            "x": {
+              "lower": "xl",
+              "upper": "xu"
+            },
+            "y": {
+              "lower": "yl",
+              "upper": "yu"
+            }
+          }
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": null,
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeIntervalExact.v",
+        "name": "interval_intersection_1_correct"
+      },
+      "source": {
+        "cite": "the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_intersection_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cz",
+          "limbs": 1
+        },
+        {
+          "name": "rz",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "ball_set",
+          "center": "cz",
+          "radius": "rz",
+          "set": "intersection",
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          }
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "both balls to intervals, their intersection, back to a ball (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 21,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_less_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "lt",
+          "args": [
+            "x",
+            "y"
+          ],
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          },
+          "exact_when": [
+            {
+              "abs_le": "rx+ry",
+              "omega": true
+            }
+          ]
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 9,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_less_equal_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 1
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 1
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "le",
+          "args": [
+            "x",
+            "y"
+          ],
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          },
+          "exact_when": [
+            {
+              "abs_le": "rx+ry",
+              "omega": true
+            }
+          ]
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the sum of the radii and the differences of the centers as exact pairs, compared (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 9,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -1372,6 +2491,118 @@
       }
     },
     {
+      "name": "ball_negative_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "x",
+            "0"
+          ],
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the center compared with the negated radius (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_positive_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "0",
+            "x"
+          ],
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radius compared with the center (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_scale_1",
       "inputs": [
         {
@@ -1496,6 +2727,74 @@
         "license": "core: as ball_scale_1; fix-up: MIT"
       },
       "flops": 4,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_split_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ca",
+          "limbs": 1
+        },
+        {
+          "name": "ra",
+          "limbs": 1
+        },
+        {
+          "name": "cb",
+          "limbs": 1
+        },
+        {
+          "name": "rb",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "ball_splits",
+          "parts": [
+            {
+              "center": "ca",
+              "radius": "ra"
+            },
+            {
+              "center": "cb",
+              "radius": "rb"
+            }
+          ],
+          "from": {
+            "center": "c",
+            "radius": "r"
+          }
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 13,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -1650,68 +2949,6 @@
       }
     },
     {
-      "name": "ball_to_interval_1",
-      "domain": "extended",
-      "ieee_only": true,
-      "inputs": [
-        {
-          "name": "c",
-          "limbs": 1
-        },
-        {
-          "name": "r",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "zl",
-          "limbs": 1
-        },
-        {
-          "name": "zu",
-          "limbs": 1
-        }
-      ],
-      "requires": [
-        "ball(c, r)"
-      ],
-      "ensures": [
-        {
-          "kind": "interval_of_ball",
-          "lower": "zl",
-          "upper": "zu",
-          "set": "x",
-          "balls": {
-            "x": {
-              "center": "c",
-              "radius": "r"
-            }
-          },
-          "tight": {
-            "kind": "rounded"
-          }
-        }
-      ],
-      "min_precision": 2,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": null,
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeIntervalConvert.v",
-        "name": "ball_to_interval_1_correct"
-      },
-      "source": {
-        "cite": "the directed difference and sum of the center and the radius (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 6,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
       "name": "ball_upper_as_1",
       "domain": "extended",
       "ieee_only": true,
@@ -1764,6 +3001,62 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 3,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_zero_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 1
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "eq",
+          "args": [
+            "x",
+            "0"
+          ],
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the center and the radius compared with 0 (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -2503,150 +3796,6 @@
       }
     },
     {
-      "name": "interval_hull_1",
-      "domain": "extended",
-      "ieee_only": true,
-      "inputs": [
-        {
-          "name": "xl",
-          "limbs": 1
-        },
-        {
-          "name": "xu",
-          "limbs": 1
-        },
-        {
-          "name": "yl",
-          "limbs": 1
-        },
-        {
-          "name": "yu",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "zl",
-          "limbs": 1
-        },
-        {
-          "name": "zu",
-          "limbs": 1
-        }
-      ],
-      "requires": [
-        "interval(xl, xu)",
-        "interval(yl, yu)"
-      ],
-      "ensures": [
-        {
-          "kind": "interval_set",
-          "lower": "zl",
-          "upper": "zu",
-          "set": "union",
-          "intervals": {
-            "x": {
-              "lower": "xl",
-              "upper": "xu"
-            },
-            "y": {
-              "lower": "yl",
-              "upper": "yu"
-            }
-          }
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": null,
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeIntervalExact.v",
-        "name": "interval_hull_1_correct"
-      },
-      "source": {
-        "cite": "the smaller lower bound and the larger upper bound (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "interval_intersection_1",
-      "domain": "extended",
-      "ieee_only": true,
-      "inputs": [
-        {
-          "name": "xl",
-          "limbs": 1
-        },
-        {
-          "name": "xu",
-          "limbs": 1
-        },
-        {
-          "name": "yl",
-          "limbs": 1
-        },
-        {
-          "name": "yu",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "zl",
-          "limbs": 1
-        },
-        {
-          "name": "zu",
-          "limbs": 1
-        }
-      ],
-      "requires": [
-        "interval(xl, xu)",
-        "interval(yl, yu)"
-      ],
-      "ensures": [
-        {
-          "kind": "interval_set",
-          "lower": "zl",
-          "upper": "zu",
-          "set": "intersection",
-          "intervals": {
-            "x": {
-              "lower": "xl",
-              "upper": "xu"
-            },
-            "y": {
-              "lower": "yl",
-              "upper": "yu"
-            }
-          }
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": null,
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeIntervalExact.v",
-        "name": "interval_intersection_1_correct"
-      },
-      "source": {
-        "cite": "the larger lower bound and the smaller upper bound, the empty set if they cross (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
       "name": "interval_less_1",
       "domain": "extended",
       "ieee_only": true,
@@ -2845,115 +3994,6 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 2,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "sub_up_1",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "a",
-          "limbs": 1
-        },
-        {
-          "name": "b",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "r",
-          "limbs": 1
-        }
-      ],
-      "value": "a-b",
-      "requires": [],
-      "ensures": [
-        {
-          "kind": "rounded",
-          "of": "r",
-          "mode": "up"
-        }
-      ],
-      "min_precision": 2,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/DirectedSum.v",
-        "name": "sub_up_1_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeDirected.v",
-        "name": "sub_up_1_ieee_correct"
-      },
-      "source": {
-        "cite": "add_up_1 on a and -b (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 3,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "interval_mid_rad_1",
-      "domain": "extended",
-      "ieee_only": true,
-      "inputs": [
-        {
-          "name": "xl",
-          "limbs": 1
-        },
-        {
-          "name": "xu",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "m",
-          "limbs": 1
-        },
-        {
-          "name": "r",
-          "limbs": 1
-        }
-      ],
-      "requires": [
-        "interval(xl, xu)"
-      ],
-      "ensures": [
-        {
-          "kind": "ball_of_interval",
-          "center": "m",
-          "radius": "r",
-          "from": {
-            "lower": "xl",
-            "upper": "xu"
-          },
-          "special": "ieee1788",
-          "rel": "u",
-          "abs": "eta",
-          "smallest_radius": true
-        }
-      ],
-      "min_precision": 2,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": null,
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeIntervalConvert.v",
-        "name": "interval_mid_rad_1_correct"
-      },
-      "source": {
-        "cite": "the sum of the halves, moved into the interval, and the larger directed distance to a bound (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 9,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -3806,66 +4846,6 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "interval_to_ball_1",
-      "domain": "extended",
-      "ieee_only": true,
-      "inputs": [
-        {
-          "name": "xl",
-          "limbs": 1
-        },
-        {
-          "name": "xu",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "c",
-          "limbs": 1
-        },
-        {
-          "name": "r",
-          "limbs": 1
-        }
-      ],
-      "requires": [
-        "interval(xl, xu)"
-      ],
-      "ensures": [
-        {
-          "kind": "ball_of_interval",
-          "center": "c",
-          "radius": "r",
-          "from": {
-            "lower": "xl",
-            "upper": "xu"
-          },
-          "special": "ball",
-          "rel": "u",
-          "abs": "eta",
-          "smallest_radius": true
-        }
-      ],
-      "min_precision": 2,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": null,
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeIntervalConvert.v",
-        "name": "interval_to_ball_1_correct"
-      },
-      "source": {
-        "cite": "interval_mid_rad_1, an unbounded interval made the whole line (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 9,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -5215,75 +6195,6 @@
       }
     },
     {
-      "name": "abs_2",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "z",
-          "limbs": 2
-        }
-      ],
-      "value": "abs(x)",
-      "requires": [
-        "canonical(x)"
-      ],
-      "ensures": [
-        {
-          "kind": "normalized",
-          "of": "z"
-        },
-        {
-          "kind": "error",
-          "of": "z",
-          "form": "R",
-          "c": "0",
-          "k": 2,
-          "t": "0",
-          "when": null
-        },
-        {
-          "kind": "represents",
-          "of": "z"
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Sign.v",
-        "name": "abs_2_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeExt.v",
-        "name": "abs_2_ieee_correct"
-      },
-      "source": {
-        "cite": "the sign of x0 (Milestone 1 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [
-          {
-            "rel": "0",
-            "abs": "0"
-          }
-        ],
-        "binary32": [
-          {
-            "rel": "0",
-            "abs": "0"
-          }
-        ]
-      }
-    },
-    {
       "name": "to_up_2",
       "domain": "extended",
       "inputs": [
@@ -6559,6 +7470,74 @@
       }
     },
     {
+      "name": "ball_contains_ball_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 2
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "subset",
+          "args": [
+            "y",
+            "x"
+          ],
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          }
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "an upper bound of the distance of the centers by add_ball_2_2 and radd, compared with the radius (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 24,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "to_down_2",
       "domain": "extended",
       "inputs": [
@@ -6600,6 +7579,351 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_contains_point_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 2
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "t",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(c, r)",
+        "canonical(t)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "member",
+          "args": [
+            "t",
+            "x"
+          ],
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          }
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the bounds of the distance by add_ball_2_2 compared with the radius (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 26,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "eq_2_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "eq",
+          "args": [
+            "x",
+            "y"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "eq_2_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "eq_2_2_ieee_correct"
+      },
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_equal_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 2
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "eq",
+          "args": [
+            "x",
+            "y"
+          ],
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          }
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radii and the centers compared, and a bound of the sum of the radii with a bound of the distance of the centers (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 26,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_less_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 2
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "lt",
+          "args": [
+            "x",
+            "y"
+          ],
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          }
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 29,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_less_equal_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "cx",
+          "limbs": 2
+        },
+        {
+          "name": "rx",
+          "limbs": 1
+        },
+        {
+          "name": "cy",
+          "limbs": 2
+        },
+        {
+          "name": "ry",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yes",
+          "limbs": 1,
+          "type": "mask"
+        },
+        {
+          "name": "no",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(cx, rx)",
+        "ball(cy, ry)"
+      ],
+      "ensures": [
+        {
+          "kind": "trit",
+          "yes": "yes",
+          "no": "no",
+          "rel": "le",
+          "args": [
+            "x",
+            "y"
+          ],
+          "balls": {
+            "x": {
+              "center": "cx",
+              "radius": "rx"
+            },
+            "y": {
+              "center": "cy",
+              "radius": "ry"
+            }
+          }
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "a bound of the sum of the radii by radd and bounds of the difference of the centers by add_ball_2_2, compared (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 29,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -7258,6 +8582,230 @@
       }
     },
     {
+      "name": "lt_2_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-a",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "x",
+            "a"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "lt_2_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "lt_2_1_ieee_correct"
+      },
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_negative_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 2
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "x",
+            "0"
+          ],
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the center compared with the negated radius by lt_2_1 (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "lt_1_2",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "a",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "a-y",
+      "requires": [
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "a",
+            "y"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "lt_1_2_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "lt_1_2_ieee_correct"
+      },
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_positive_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 2
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "lt",
+          "args": [
+            "0",
+            "x"
+          ],
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the radius compared with the center by lt_1_2 (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "ball_scale_2",
       "inputs": [
         {
@@ -7387,6 +8935,74 @@
         "license": "core: as ball_scale_2; fix-up: MIT"
       },
       "flops": 9,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_split_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 2
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ca",
+          "limbs": 2
+        },
+        {
+          "name": "ra",
+          "limbs": 1
+        },
+        {
+          "name": "cb",
+          "limbs": 2
+        },
+        {
+          "name": "rb",
+          "limbs": 1
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "ball_splits",
+          "parts": [
+            {
+              "center": "ca",
+              "radius": "ra"
+            },
+            {
+              "center": "cb",
+              "radius": "rb"
+            }
+          ],
+          "from": {
+            "center": "c",
+            "radius": "r"
+          }
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the point c plus the balls (-h, q) and (h, q), q = max(h, r - h), by the proved ball sum of two limbs (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 53,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -7622,6 +9238,118 @@
       }
     },
     {
+      "name": "eq_2_1",
+      "domain": "extended",
+      "inputs": [
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "a",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x-a",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "predicate",
+          "of": "m",
+          "rel": "eq",
+          "args": [
+            "x",
+            "a"
+          ]
+        }
+      ],
+      "min_precision": 1,
+      "status": "proved",
+      "ieee_status": "proved",
+      "theorem": {
+        "file": "proofs/theories/Compare.v",
+        "name": "eq_2_1_correct"
+      },
+      "ieee_theorem": {
+        "file": "proofs/theories/IeeeExt.v",
+        "name": "eq_2_1_ieee_correct"
+      },
+      "source": {
+        "cite": "limbs compared in order (Milestone 1 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "ball_zero_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "c",
+          "limbs": 2
+        },
+        {
+          "name": "r",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "m",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "ball(c, r)"
+      ],
+      "ensures": [
+        {
+          "kind": "certain",
+          "of": "m",
+          "rel": "eq",
+          "args": [
+            "x",
+            "0"
+          ],
+          "balls": {
+            "x": {
+              "center": "c",
+              "radius": "r"
+            }
+          },
+          "exact": true
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the center compared with 0 by eq_2_1, and the radius with 0 (Milestone 2 listing)",
+        "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "dot_step_2",
       "inputs": [
         {
@@ -7688,119 +9416,6 @@
             "abs": "1/356811923176489970264571492362373784095686656"
           }
         ]
-      }
-    },
-    {
-      "name": "eq_2_1",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "a",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "m",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "value": "x-a",
-      "requires": [
-        "canonical(x)"
-      ],
-      "ensures": [
-        {
-          "kind": "predicate",
-          "of": "m",
-          "rel": "eq",
-          "args": [
-            "x",
-            "a"
-          ]
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Compare.v",
-        "name": "eq_2_1_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeExt.v",
-        "name": "eq_2_1_ieee_correct"
-      },
-      "source": {
-        "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "eq_2_2",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "m",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "value": "x-y",
-      "requires": [
-        "canonical(x)",
-        "canonical(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "predicate",
-          "of": "m",
-          "rel": "eq",
-          "args": [
-            "x",
-            "y"
-          ]
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Compare.v",
-        "name": "eq_2_2_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeExt.v",
-        "name": "eq_2_2_ieee_correct"
-      },
-      "source": {
-        "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
       }
     },
     {
@@ -7941,63 +9556,6 @@
         "license": "algorithm and proof: MIT"
       },
       "flops": 56,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "le_2_2",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "m",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "value": "x-y",
-      "requires": [
-        "canonical(x)",
-        "canonical(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "predicate",
-          "of": "m",
-          "rel": "le",
-          "args": [
-            "x",
-            "y"
-          ]
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Compare.v",
-        "name": "le_2_2_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeExt.v",
-        "name": "le_2_2_ieee_correct"
-      },
-      "source": {
-        "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
       "instances": {
         "binary64": [],
         "binary32": []
@@ -8166,63 +9724,6 @@
       "theorem": null,
       "source": {
         "cite": "the leading limbs of the bounds compared with the infinities (Milestone 2 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "lt_2_2",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "m",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "value": "x-y",
-      "requires": [
-        "canonical(x)",
-        "canonical(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "predicate",
-          "of": "m",
-          "rel": "lt",
-          "args": [
-            "x",
-            "y"
-          ]
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Compare.v",
-        "name": "lt_2_2_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeExt.v",
-        "name": "lt_2_2_ieee_correct"
-      },
-      "source": {
-        "cite": "limbs compared in order (Milestone 1 listing)",
         "license": "algorithm and proof: MIT"
       },
       "flops": 0,
@@ -9725,174 +11226,6 @@
       "ieee_theorem": {
         "file": "proofs/theories/IeeeExt.v",
         "name": "le_1_2_ieee_correct"
-      },
-      "source": {
-        "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "le_2_1",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "a",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "m",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "value": "x-a",
-      "requires": [
-        "canonical(x)"
-      ],
-      "ensures": [
-        {
-          "kind": "predicate",
-          "of": "m",
-          "rel": "le",
-          "args": [
-            "x",
-            "a"
-          ]
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Compare.v",
-        "name": "le_2_1_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeExt.v",
-        "name": "le_2_1_ieee_correct"
-      },
-      "source": {
-        "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "lt_1_2",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "a",
-          "limbs": 1
-        },
-        {
-          "name": "y",
-          "limbs": 2
-        }
-      ],
-      "outputs": [
-        {
-          "name": "m",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "value": "a-y",
-      "requires": [
-        "canonical(y)"
-      ],
-      "ensures": [
-        {
-          "kind": "predicate",
-          "of": "m",
-          "rel": "lt",
-          "args": [
-            "a",
-            "y"
-          ]
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Compare.v",
-        "name": "lt_1_2_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeExt.v",
-        "name": "lt_1_2_ieee_correct"
-      },
-      "source": {
-        "cite": "limbs compared in order (Milestone 1 listing)",
-        "license": "algorithm and proof: MIT"
-      },
-      "flops": 0,
-      "instances": {
-        "binary64": [],
-        "binary32": []
-      }
-    },
-    {
-      "name": "lt_2_1",
-      "domain": "extended",
-      "inputs": [
-        {
-          "name": "x",
-          "limbs": 2
-        },
-        {
-          "name": "a",
-          "limbs": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "m",
-          "limbs": 1,
-          "type": "mask"
-        }
-      ],
-      "value": "x-a",
-      "requires": [
-        "canonical(x)"
-      ],
-      "ensures": [
-        {
-          "kind": "predicate",
-          "of": "m",
-          "rel": "lt",
-          "args": [
-            "x",
-            "a"
-          ]
-        }
-      ],
-      "min_precision": 1,
-      "status": "proved",
-      "ieee_status": "proved",
-      "theorem": {
-        "file": "proofs/theories/Compare.v",
-        "name": "lt_2_1_correct"
-      },
-      "ieee_theorem": {
-        "file": "proofs/theories/IeeeExt.v",
-        "name": "lt_2_1_ieee_correct"
       },
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",

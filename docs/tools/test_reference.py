@@ -498,6 +498,16 @@ class Tool(unittest.TestCase):
         self.assertIn("never both. Both false is the answer *unknown*.", page)
         self.assertIn("*unknown* is returned exactly when neither holds.", page)
         self.assertIn("$\\mathit{no}$ only if", page)
+        # Of a ball: certain for two limbs, exact under a condition for one.
+        page = self.page("ball_contains_point_2")
+        self.assertIn("the point is not a finite number, the answer is exact", page)
+        self.assertIn("certain, not exact.", page)
+        self.assertIn("$\\lvert r_x + r_y\\rvert \\le \\Omega$, the answer is exact as well.", self.page("ball_less_1"))
+        self.assertIn("$m$ is true only if $Y \\subseteq X$", self.page("ball_contains_ball_2"))
+        # The set operations of a ball.
+        self.assertIn("when one is empty, $Z$ is the other, as it is", self.page("ball_hull_1"))
+        self.assertIn("when one is the whole line, $Z$ is the other", self.page("ball_intersection_1"))
+        self.assertIn("is a member of the first part", self.page("ball_split_2"))
 
     def test_interval_kernels(self):
         # The claims of the interval kernels (architecture.md, "Claims of the interval kernels").

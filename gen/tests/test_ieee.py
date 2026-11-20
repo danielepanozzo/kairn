@@ -281,6 +281,26 @@ class Statements(unittest.TestCase):
         self.assertIn('-> ~ (x < y))) /\\\n  ~ (yes = true /\\ no = true)', s)
         # No hypothesis on the precision: comparisons and selects, for every precision.
         self.assertNotIn('<= prec)%Z', s)
+        # Of a ball: certain, exact on the special states and a point that is not finite, and for
+        # one limb exact for finite balls under the condition of exact_when.
+        s = spec('ball_contains_point_2')
+        self.assertIn('  (no = true ->\n    ~ (finite t0 /\\ in_ball_2 c0 c1 r (val t0 + val t1))) /\\\n', s)
+        self.assertIn('  (ball_empty_2 c0 c1 r \\/ ball_whole_2 c0 c1 r \\/ ~ finite t0 ->\n   (yes = true <->\n', s)
+        s = spec('ball_less_1')
+        self.assertIn('  (ball_finite_1 cx rx /\\ ball_finite_1 cy ry -> Rabs (val rx + val ry) <= omega prec emax ->\n',
+                      s)
+        self.assertIn('    ~ ball_empty_1 cx rx /\\ ~ ball_empty_1 cy ry /\\\n', s)
+        s = spec('ball_contains_ball_2')
+        self.assertIn('  (m = true ->\n    (forall z : R, in_ball_2 cy0 cy1 ry z -> in_ball_2 cx0 cx1 rx z)) /\\\n', s)
+        # The set operations of a ball.
+        s = spec('ball_hull_1')
+        self.assertIn('  (ball_empty_1 cz rz <-> ball_empty_1 cx rx /\\ ball_empty_1 cy ry) /\\\n'
+                      '  (ball_empty_1 cx rx -> cz = cy /\\ rz = ry) /\\\n', s)
+        self.assertIn('  (forall z : R, in_ball_1 cx rx z \\/ in_ball_1 cy ry z -> in_ball_1 cz rz z)', s)
+        s = spec('ball_intersection_1')
+        self.assertIn('  (ball_whole_1 cy ry -> cz = cx /\\ rz = rx) /\\\n', s)
+        s = spec('ball_split_2')
+        self.assertIn('   (forall z : R, (val c0 + val c1) - val r <= z <= (val c0 + val c1) -> in_ball_2 ca0 ca1 ra z)', s)
 
     def test_represents(self):
         # neg_2 and abs_2 say it next to normalized and an exact error, which it implies.
@@ -464,8 +484,11 @@ class CheckedFiles(unittest.TestCase):
     # were added: their definitions and statements (certain and trit), every earlier definition
     # and statement the same, byte for byte, some printed earlier (le_2_2 before lt_2_2, callees
     # before callers); make -C proofs passed on these files.
-    DIGESTS = {'proofs/gen/IeeeModel.v': '15831b5e35256bca85a77a081987f9cb0ded7020538e83b08c139ffa24bbb294',
-               'proofs/gen/IeeeStatements.v': 'f0d0b51ca4b9b676a03337ffdf36ac5a68bd397c17112929c9ea56c86ef5ab4e'}
+    # Then the 20 predicates, comparisons and set operations of a ball (unverified): their
+    # definitions and statements added, every earlier one the same, byte for byte, some printed
+    # earlier; make -C proofs passed on these files.
+    DIGESTS = {'proofs/gen/IeeeModel.v': 'e21a83a273a7c53ded5c6436673b6d09dbad18f4c336102a18bdc3eddc292fa5',
+               'proofs/gen/IeeeStatements.v': 'ad4387ff91fe5fad7500384faf3d1f5a98a449c23eb6dfcf7d9e153e218acf89'}
 
 
     def test_the_checked_files(self):

@@ -1,5 +1,4 @@
-refused: kernel ball_split_1, value nh: negated fused result: nh = neg(hs) negates a select one of whose arms, h, is the result of prod; compilers push a negation through a select into its arms. Negate an operand instead: -prod(a, b) is prod(neg(a), b), -fma(a, b, c) is fma(neg(a), b, neg(c)); and a rounding down of x - d is minus the rounding up of d - x, so sub_down_1(x, d) is neg(add_up_1(d, neg(x))) and sub_up_1(x, d) is neg(add_down_1(d, neg(x)))
-40 kernel descriptions (29 of them in gen/kernels, with their claims); 22 remarks that a description has no claim (expected); 1 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
+40 kernel descriptions (30 of them in gen/kernels, with their claims); 20 remarks that a description has no claim (expected); 0 refusals by the other rules (single assignment, R1, R2, R3, the non-finite cone, kinds, constants)
 
 kernel                 operations after inlining
 acc_add_1                3 rounded operations, 0 steps to a neighbor,   1 comparisons, selects, sign and mask operations
@@ -17,7 +16,7 @@ add_up_2_2              28 rounded operations, 1 steps to a neighbor,  15 compar
 ball_from_interval_2    13 rounded operations, 2 steps to a neighbor,  37 comparisons, selects, sign and mask operations
 ball_mul_pow2_1          2 rounded operations, 2 steps to a neighbor,   9 comparisons, selects, sign and mask operations
 ball_mul_pow2_2          6 rounded operations, 2 steps to a neighbor,  11 comparisons, selects, sign and mask operations
-ball_split_1            12 rounded operations, 0 steps to a neighbor,  31 comparisons, selects, sign and mask operations
+ball_split_1            13 rounded operations, 0 steps to a neighbor,  32 comparisons, selects, sign and mask operations
 ball_to_interval_1       6 rounded operations, 2 steps to a neighbor,  19 comparisons, selects, sign and mask operations
 bound_dot_1              8 rounded operations, 0 steps to a neighbor,   3 comparisons, selects, sign and mask operations
 bound_dot_2              8 rounded operations, 0 steps to a neighbor,   3 comparisons, selects, sign and mask operations

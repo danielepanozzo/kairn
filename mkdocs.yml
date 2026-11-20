@@ -179,6 +179,26 @@ nav:
           - A ball with a two-limb center from an interval of two limbs: reference/ball_from_interval_2.md
           - A ball with a two-limb center as one with a one-limb center: reference/ball_narrow_2_1.md
           - The smallest interval that contains a ball, one-limb center: reference/ball_to_interval_1.md
+          - A ball that contains two balls, one-limb center: reference/ball_hull_1.md
+          - A ball that contains the intersection of two balls, one-limb center: reference/ball_intersection_1.md
+          - Two balls that cover a ball, one-limb center: reference/ball_split_1.md
+          - Two balls that cover a ball, two-limb center: reference/ball_split_2.md
+          - Whether a point is a member of a ball, one-limb center: reference/ball_contains_point_1.md
+          - Whether a ball contains another, one-limb center: reference/ball_contains_ball_1.md
+          - Whether every member of a ball is positive, one-limb center: reference/ball_positive_1.md
+          - Whether every member of a ball is negative, one-limb center: reference/ball_negative_1.md
+          - Whether a ball is the point 0, one-limb center: reference/ball_zero_1.md
+          - "The three-valued X < Y of balls, one-limb center": reference/ball_less_1.md
+          - "The three-valued X <= Y of balls, one-limb center": reference/ball_less_equal_1.md
+          - "The three-valued X = Y of balls, one-limb center": reference/ball_equal_1.md
+          - Whether a point is a member of a ball, two-limb center: reference/ball_contains_point_2.md
+          - Whether a ball contains another, two-limb center: reference/ball_contains_ball_2.md
+          - Whether every member of a ball is positive, two-limb center: reference/ball_positive_2.md
+          - Whether every member of a ball is negative, two-limb center: reference/ball_negative_2.md
+          - Whether a ball is the point 0, two-limb center: reference/ball_zero_2.md
+          - "The three-valued X < Y of balls, two-limb center": reference/ball_less_2.md
+          - "The three-valued X <= Y of balls, two-limb center": reference/ball_less_equal_2.md
+          - "The three-valued X = Y of balls, two-limb center": reference/ball_equal_2.md
       - Interval operations:
           - An interval from two limbs: reference/interval_make_1.md
           - The negation of an interval, one-limb bounds: reference/interval_neg_1.md

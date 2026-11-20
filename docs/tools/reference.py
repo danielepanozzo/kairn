@@ -84,7 +84,7 @@ KNOWN_TIGHT = {"exact": set(), "rounded": {"steps", "when"}, "outward": {"rel", 
 # The kinds whose entries name their own set, or make a value from the inputs: a kernel whose every
 # entry is one of them has no value.
 OWN_SET_KINDS = {"makes_ball", "makes_interval", "encloses_interval", "set_bound", "interval_set",
-                 "ball_of_interval", "interval_of_ball", "splits", "certain", "trit"}
+                 "ball_of_interval", "interval_of_ball", "splits", "certain", "trit", "ball_set", "ball_splits"}
 # The set operations of interval_set and the special values of ball_of_interval (architecture.md,
 # "Claims of the interval kernels: two limbs and the enclosure interface").
 KNOWN_SET_OPERATIONS = {"union": ("\\cup", "hull"), "intersection": ("\\cap", "intersection")}
@@ -127,6 +127,9 @@ KIND_FIELDS = {
     # The predicates and comparisons of the enclosure interface: one mask, or yes and no.
     "certain": ({"of", "rel", "args"}, set()),
     "trit": ({"yes", "no", "rel", "args"}, set()),
+    # The set operations of a ball.
+    "ball_set": ({"center", "radius", "set", "balls"}, set()),
+    "ball_splits": ({"parts", "from"}, set()),
 }
 # The fields an entry of these kinds has in either domain when it uses them (Milestone 2): a
 # rounding under a condition, a condition of exactness, a zero factor, the midpoint of a ball made
@@ -149,7 +152,7 @@ DOMAIN_KINDS = {
     "extended": {"normalized", "error", "rounded", "upper", "predicate", "encloses", "extends",
                  "represents", "makes_ball", "neighbor", "bound", "finite_or_nan", "makes_interval",
                  "encloses_interval", "set_bound", "outward", "interval_set", "ball_of_interval", "interval_of_ball",
-                 "splits", "certain", "trit"},
+                 "splits", "certain", "trit", "ball_set", "ball_splits"},
 }
 DOMAIN_REQUIRES = {
     "finite": {"normalized", "abs_ge", "nonneg", "power_of_two", "count", "format"},
@@ -159,7 +162,8 @@ DOMAIN_REQUIRES = {
 # constructor, an interval kernel, the finish of a fold), which the claims mark "ieee_only": true;
 # represents too, when it is the only entry.
 IEEE_ONLY_KINDS = {"extends", "makes_ball", "finite_or_nan", "makes_interval", "encloses_interval", "set_bound",
-                   "interval_set", "ball_of_interval", "interval_of_ball", "splits", "certain", "trit"}
+                   "interval_set", "ball_of_interval", "interval_of_ball", "splits", "certain", "trit", "ball_set",
+                   "ball_splits"}
 
 # The one sentence every page with an UNVERIFIED statement about infinite and NaN operands carries,
 # word for word: gen/claims.json is the only source of a status here.
@@ -744,6 +748,8 @@ class Kernel:
                 fail("%s: smallest_radius is true, or left out" % where)
             if kind in ("certain", "trit"):
                 self.check_set_predicate(e, where)
+            if kind == "ball_set" and e["set"] not in KNOWN_SET_OPERATIONS:
+                fail("%s: the set operation %r of a ball_set claim has no template" % (where, e["set"]))
             if kind == "interval_set" and e["set"] not in KNOWN_SET_OPERATIONS:
                 fail("%s: the set operation %r of an interval_set claim has no template" % (where, e["set"]))
             if kind == "ball_of_interval" and e["special"] not in KNOWN_BALL_SPECIALS:
@@ -833,7 +839,7 @@ class Kernel:
         """{(center, radius): ball name} of the encloses claims, to name the balls of requirements."""
         out = {}
         for e in self.entry["ensures"]:
-            if e["kind"] == "encloses" or (e["kind"] in ("certain", "trit") and "balls" in e):
+            if e["kind"] in ("encloses", "ball_set") or (e["kind"] in ("certain", "trit") and "balls" in e):
                 for b, cr in e["balls"].items():
                     out[(cr["center"], cr["radius"])] = b
         return out
@@ -1831,6 +1837,10 @@ class Site:
                 lines.extend(self.extended_splits(k, x))
             elif kind in ("certain", "trit"):
                 lines.extend(self.extended_set_predicate(k, x))
+            elif kind == "ball_set":
+                lines.extend(self.extended_ball_set(k, x))
+            elif kind == "ball_splits":
+                lines.extend(self.extended_ball_splits(k, x))
             else:
                 fail("kernel %s: the claim kind %r has no reading in the extended domain" % (k.name, kind))
         if not kinds:
@@ -2145,6 +2155,46 @@ class Site:
                 "Otherwise neither is, $%s = %s$, $%s = %s$ and $%s = %s$: the two together are $X$, split at that "
                 "point, which is in $X$." % (al, lo, bu, hi, au, bl)]
 
+    def center_tex(self, k, name):
+        """A center input or output in TeX, by its name: the page says once what a name of several
+        limbs stands for."""
+        return name_tex(name)
+
+    def ball_definitions(self, k, x):
+        """The balls of a ball_set claim, in words."""
+        return " and ".join("$%s$ the ball of center $%s$ and radius $%s$" % (
+            name_tex(n).upper(), self.center_tex(k, b["center"]), name_tex(b["radius"])) for n, b in x["balls"].items())
+
+    def extended_ball_set(self, k, x):
+        """The hull or the intersection of two balls (stage B2)."""
+        (a, ba), (b, bb) = x["balls"].items()
+        A, B = name_tex(a).upper(), name_tex(b).upper()
+        Z = "the ball $Z$ of center $%s$ and radius $%s$" % (self.center_tex(k, x["center"]), name_tex(x["radius"]))
+        lines = ["The result, %s, is a canonical ball." % Z]
+        if x["set"] == "union":
+            lines += ["$Z$ contains every member of $%s$ and every member of $%s$." % (A, B),
+                      "$Z$ is empty exactly when $%s$ and $%s$ both are; when one is empty, $Z$ is the other, as it is "
+                      "(the same limbs)." % (A, B),
+                      "Not claimed: that $Z$ is the smallest such ball."]
+        else:
+            lines += ["$Z$ contains every real number that is a member of both $%s$ and $%s$." % (A, B),
+                      "$Z$ is empty when an operand is; when one is the whole line, $Z$ is the other, as it is (the same "
+                      "limbs).",
+                      "Not claimed: that $Z$ is inside $%s$ or $%s$, nor that it is empty whenever they are disjoint."
+                      % (A, B)]
+        return lines
+
+    def extended_ball_splits(self, k, x):
+        """Two balls that cover the halves of a ball (stage B2)."""
+        c, r = self.center_tex(k, x["from"]["center"]), name_tex(x["from"]["radius"])
+        (ca, ra), (cb, rb) = ((self.center_tex(k, q["center"]), name_tex(q["radius"])) for q in x["parts"])
+        return ["The two parts, of centers $%s$ and $%s$ and radii $%s$ and $%s$, are canonical balls." % (ca, cb, ra, rb),
+                "If the ball $X$ of center $%s$ and radius $%s$ is empty, both parts are; if it is the whole line, both "
+                "are the whole line." % (c, r),
+                "Otherwise every real number of $[%s - %s, %s]$ is a member of the first part, and every one of "
+                "$[%s, %s + %s]$ a member of the second." % (c, r, c, c, c, r),
+                "Not claimed: that the parts are inside $X$, nor that their radii are close to $%s/2$." % r]
+
     def set_definitions(self, k, x):
         """What the sets of a certain or trit claim are, in words."""
         if "intervals" in x:
@@ -2362,17 +2412,33 @@ class Site:
                     "\n\n$$%s.$$" % (", ".join(name_tex(i) for i in k.inputs),
                                        " and ".join("$%s$" % name_tex(m) for m in masks),
                                        ", \\qquad ".join(b.strip("$") for b in bounds)))
+        if "ball_set" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] == "ball_set")
+            (a, _), (b, _) = x["balls"].items()
+            op, what = KNOWN_SET_OPERATIONS[x["set"]]
+            return ("A ball that contains the %s of two balls, %s; the empty set and the whole line included:\n\n"
+                    "$$Z \\supseteq %s %s %s.$$" % ("union" if x["set"] == "union" else "intersection",
+                                                    self.ball_definitions(k, x), name_tex(a).upper(), op,
+                                                    name_tex(b).upper()))
+        if "ball_splits" in kinds:
+            x = next(x for x in e["ensures"] if x["kind"] == "ball_splits")
+            c, r = self.center_tex(k, x["from"]["center"]), name_tex(x["from"]["radius"])
+            (ca, ra), (cb, rb) = ((self.center_tex(k, q["center"]), name_tex(q["radius"])) for q in x["parts"])
+            return ("Two balls that together cover the ball $X$ of center $%s$ and radius $%s$, one each half:\n\n"
+                    "$$[%s - %s, %s] \\subseteq [%s - %s, %s + %s], \\qquad [%s, %s + %s] \\subseteq [%s - %s, %s + %s].$$" % (
+                        c, r, c, r, c, ca, ra, ca, ra, c, c, r, cb, rb, cb, rb))
         if "certain" in kinds or "trit" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] in ("certain", "trit"))
             sets = self.set_definitions(k, x)
             if x["kind"] == "certain":
                 return ("Whether %s, %s; a mask that is true only if it holds:\n\n$$%s \\implies %s.$$" % (
                     self.set_relation(k, x), sets, name_tex(x["of"]), self.set_relation(k, x, formula=True)))
-            return ("The three-valued answer to whether %s, %s: *yes* only if it holds for every choice of members, "
-                    "*no* only if it fails for every choice, otherwise *unknown*, both masks false:\n\n$$%s "
-                    "\\implies %s, \\qquad %s \\implies %s.$$" % (
-                        self.set_relation(k, x), sets, name_tex(x["yes"]), self.set_relation(k, x, formula=True),
-                        name_tex(x["no"]), self.set_relation(k, x, formula=True, negated=True)))
+            every = (" for every choice of members", " for every choice") if x["rel"] != "member" else ("", "")
+            return ("The three-valued answer to whether %s, %s: *yes* only if it holds%s, *no* only if it fails%s, "
+                    "otherwise *unknown*, both masks false:\n\n$$%s \\implies %s, \\qquad %s \\implies %s.$$" % (
+                        self.set_relation(k, x), sets, every[0], every[1], name_tex(x["yes"]),
+                        self.set_relation(k, x, formula=True), name_tex(x["no"]),
+                        self.set_relation(k, x, formula=True, negated=True)))
         if "makes_interval" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "makes_interval")
             lo, hi = name_tex(x["from"]["lower"]), name_tex(x["from"]["upper"])
@@ -2569,6 +2635,12 @@ class Site:
             elif x["kind"] == "certain":
                 parts.append("whether $%s$; %s" % (self.set_relation(k, x, formula=True),
                                                    "exact" if x.get("exact") else "true only if it holds"))
+            elif x["kind"] == "ball_set":
+                parts.append("a canonical ball that contains the %s of the balls; an empty operand gives the other"
+                             % x["set"] if x["set"] == "union" else
+                             "a canonical ball that contains the intersection of the balls; the whole line gives the other")
+            elif x["kind"] == "ball_splits":
+                parts.append("two canonical balls that cover the two halves of the ball")
             elif x["kind"] == "trit":
                 parts.append("yes, no or unknown: whether $%s$; %s" % (
                     self.set_relation(k, x, formula=True), "exact" if x.get("exact") else "never wrong"))

@@ -1131,6 +1131,62 @@ class _Sets:
         raise PrintError(f'kernel {self.k.name}: no IEEE reading of the relation {rel}')
 
 
+def _ball_set_spec(k, kernels, e):
+    """A ball that contains the union or the intersection of two balls (Milestone 2, "Hull,
+    intersection and split of balls"): canonical; every member of the set a member; for the union,
+    empty exactly when both operands are, and an operand that is empty gives the other, limb for
+    limb; for the intersection, an empty operand gives the empty set, and an operand that is the
+    whole line gives the other, limb for limb."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    c = _limbs(k, t.outs[e['center']].limbs, e['center'], (1, 2))
+    n = len(c)
+    z = _ball_args(c, e['radius'])
+    groups = {x: (t.ins[b['center']].limbs, b['radius']) for x, b in e['balls'].items()}
+    (x, (xc, xr)), (y, (yc, yr)) = groups.items()
+    bx, by = _ball_args(xc, xr), _ball_args(yc, yr)
+
+    def same(cc, r):
+        return ' /\\ '.join(f'{o} = {i}' for o, i in zip(list(c) + [e['radius']], list(cc) + [r]))
+    union = e['set'] == 'union'
+    ins = [f'in_ball_{n} {bx} z', f'in_ball_{n} {by} z']
+    claims = [f'ball_{n} {z}']
+    if union:
+        claims += [f'(ball_empty_{n} {z} <-> ball_empty_{n} {bx} /\\ ball_empty_{n} {by})',
+                   f'(ball_empty_{n} {bx} -> {same(yc, yr)})',
+                   f'(ball_empty_{n} {by} -> {same(xc, xr)})',
+                   f'(forall z : R, {ins[0]} \\/ {ins[1]} -> in_ball_{n} {z} z)']
+    else:
+        claims += [f'(ball_empty_{n} {bx} \\/ ball_empty_{n} {by} -> ball_empty_{n} {z})',
+                   f'(ball_whole_{n} {bx} -> {same(yc, yr)})',
+                   f'(ball_whole_{n} {by} -> {same(xc, xr)})',
+                   f'(forall z : R, {ins[0]} /\\ {ins[1]} -> in_ball_{n} {z} z)']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
+def _ball_splits_spec(k, kernels, e):
+    """Two balls that cover the halves of a ball (Milestone 2, "Hull, intersection and split of
+    balls"): both canonical; the empty set gives the empty set twice and the whole line the whole
+    line twice; for a finite ball (c, r), the first contains [c - r, c] and the second [c, c + r]."""
+    t = _Terms(k)
+    lines = _head(k, _used_nans(k, kernels), precision=_interval_precision(k)) + _hyps_extended(k, t) + \
+        [_let(k, kernels)]
+    xc, xr = t.ins[e['from']['center']].limbs, e['from']['radius']
+    n = len(_limbs(k, xc, e['from']['center'], (1, 2)))
+    x = _ball_args(xc, xr)
+    (a, b) = (_ball_args(t.outs[p['center']].limbs, p['radius']) for p in e['parts'])
+    vc = _val_sum(xc)
+    claims = [f'ball_{n} {a}', f'ball_{n} {b}',
+              f'(ball_empty_{n} {x} -> ball_empty_{n} {a} /\\ ball_empty_{n} {b})',
+              f'(ball_whole_{n} {x} -> ball_whole_{n} {a} /\\ ball_whole_{n} {b})',
+              f'(ball_finite_{n} {x} ->\n   (forall z : R, {vc} - val {xr} <= z <= {vc} -> in_ball_{n} {a} z) /\\\n'
+              f'   (forall z : R, {vc} <= z <= {vc} + val {xr} -> in_ball_{n} {b} z))']
+    lines.append('  ' + ' /\\\n  '.join(claims) + '.')
+    return _statement(f'{k.name}_spec', _comment(k), lines)
+
+
 def _set_predicate_spec(k, kernels, e):
     """A predicate of sets (Milestone 2, the enclosure interface), certain or trit, in the
     vocabulary of IeeeIntervalVocabulary.v: a mask true only if the relation holds (certain; for
@@ -1350,7 +1406,8 @@ def kernel_statements(k, kernels):
             return [_ball_spec(k, kernels, enc[0])]
         for kind, printer in (('interval_set', _interval_set_spec), ('ball_of_interval', _ball_of_interval_spec),
                               ('interval_of_ball', _interval_of_ball_spec), ('splits', _splits_spec),
-                              ('certain', _set_predicate_spec), ('trit', _set_predicate_spec)):
+                              ('certain', _set_predicate_spec), ('trit', _set_predicate_spec),
+                              ('ball_set', _ball_set_spec), ('ball_splits', _ball_splits_spec)):
             if kind in kinds:
                 if len(k.ensures) != 1:
                     raise PrintError(f'kernel {k.name}: {kind} goes with no other claim')
