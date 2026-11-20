@@ -1400,12 +1400,33 @@ Apple clang and GCC 16 on the Mac, and GCC 13 and Clang 18 on x86-64).
   are the control, and must differ in some case where a compiler fuses (GCC and Apple clang with
   `-ffp-contract=fast`, measured);
 - the printers: the model, the statements and the audit of a fold made `proved`, the C++ text and
-  the counts of the loops.
+  the counts of the loops;
+- the folds of maxima, `norm_upper_1` and `norm_upper_2` ([Architecture](architecture.md#folds-of-maxima)),
+  in all of the above but the claims of `fold_error`, and on their own: each check of
+  `rules.max_rules` refuses what it is for (a combination that claims a maximum and computes
+  something else is refused by evaluation, as not commutative); no element gives $0$ for one limb
+  and $\eta$ for two, with the flag true; a NaN or infinite element at any position, in every
+  order, the canonical NaN and the flag false, and so does a leading limb of $\Omega$ for two
+  limbs; and the claim `upper r max steps=S` in exact arithmetic on toy formats of precision 1 to
+  6, in both orders and several numbers of lanes, more than 10 000 cases, with the exponent range
+  widened (the Rocq statement) and in the format itself (the flag);
+- the convolutions, `conv_1` and `conv_2` ([Architecture](architecture.md#convolutions)), in
+  `gen/tests/test_conv.py`: each check of `rules.conv_rules` refuses what it is for; in the
+  interpreter every coefficient is the fold of its coefficients run on its own terms, there are
+  $n_x + n_y - 1$ of them (none for an empty array), a term that is not finite makes the
+  coefficients it is in the canonical NaN and the mask false and keeps the others; on toy formats
+  of precision 3 to 6, in exact arithmetic, every coefficient is within the bound of `dot` for its
+  own number of terms, with the exponent range widened and in the format itself; the compiled
+  `F_seq` of every build of the runner is bit for bit the interpreter's on every pair of lengths up
+  to 5 and random ones up to a few hundred, non-finite terms in some; the line protocol with two
+  lengths; and `conv_terms` of the Rocq model, written in Python as the model writes it, is the list
+  of the terms of coefficient $j$ for every pair of lengths up to 7.
 
 The kernels of the stage (the steps, the finishes, the bounds) are in the suite's other tests like
 every kernel: the interpreter against the host, the claims in exact arithmetic on toy formats
-(`test_statements.py`; `upper` with its own value, `holds`, the form `T`), the non-finite reading
-of the finishes (`test_nonfinite.py`), the compiled runners bit for bit, and the self-test.
+(`test_statements.py`; `upper` with its own value, `holds`, the form `T`, `maximum`), the
+non-finite reading of the finishes (`test_nonfinite.py`, the finishes of the folds of maxima with
+both values of their mask), the compiled runners bit for bit, and the self-test.
 ## A cross-check by hand
 
 From the repository root, a toy format with the interpreter, and binary64 with a compiled runner

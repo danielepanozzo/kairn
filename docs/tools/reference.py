@@ -93,16 +93,20 @@ KIND_FIELDS = {
     "makes_ball": ({"center", "radius", "from"}, set()),
     "neighbor": ({"of", "side"}, set()),
     "bound": ({"of", "side", "steps"}, set()),
+    # the larger of two expressions of the inputs and their limbs (the folds of maxima)
+    "maximum": ({"of", "args"}, set()),
 }
 # The fields an entry of these kinds has in either domain when it uses them (Milestone 2): a
 # rounding under a condition, and a condition of exactness.
 KIND_OPTIONAL = {"rounded": {"when"}, "error": {"exact_when"}, "encloses": {"exact_when"},
                  # gaps, or a value of its own (the exported bounds of the folds), under a mask (if)
-                 "upper": {"gaps", "value", "if"}}
+                 "upper": {"gaps", "value", "if"},
+                 # the finish of a fold of maxima: under a mask (if), the value stepped up (steps)
+                 "finite_or_nan": {"if", "steps"}}
 # Which kinds and requirements each domain has a reading of.
 DOMAIN_KINDS = {
     "finite": {"normalized", "error", "leading_rounded", "rounded", "upper", "predicate", "encloses",
-               "neighbor", "bound", "holds"},
+               "neighbor", "bound", "holds", "maximum"},
     "extended": {"normalized", "error", "rounded", "upper", "predicate", "encloses", "extends",
                  "represents", "makes_ball", "neighbor", "bound", "finite_or_nan"},
 }
@@ -484,6 +488,7 @@ class Kernel:
             if set(g) - KNOWN_GROUP_FIELDS or g.get("type", "mask") not in KNOWN_GROUP_TYPES:
                 fail("%s: the input or output %r has fields or a type this script does not know" % (where, g))
         self.inputs = [i["name"] for i in entry["inputs"]]
+        self.mask_inputs = {i["name"] for i in entry["inputs"] if i.get("type") == "mask"}
         self.outputs = [o["name"] for o in entry["outputs"]]
         self.names = set(self.inputs) | set(self.outputs)
         for n in self.inputs + self.outputs:
@@ -560,7 +565,16 @@ class Kernel:
                     self.expr(a, "holds", self.names | {"u", "eta"}, constants=True)
                 if e["rel"] not in KNOWN_RELS:
                     fail("%s: the relation %r of a holds claim has no template" % (where, e["rel"]))
-            own = kind == "holds" or (kind == "upper" and "value" in e)
+            if kind == "maximum":
+                if len(e["args"]) != 2:
+                    fail("%s: a maximum claim has two expressions" % where)
+                for a in e["args"]:
+                    self.limb_expr(a, "maximum")
+            if kind == "finite_or_nan" and "if" in e and e["if"] not in self.inputs:
+                fail("%s: the mask %r of a finite_or_nan claim is not an input" % (where, e["if"]))
+            if kind == "finite_or_nan" and "steps" in e and (not isinstance(e["steps"], int) or e["steps"] < 1):
+                fail("%s: the steps %r of a finite_or_nan claim are not an integer >= 1" % (where, e["steps"]))
+            own = kind in ("holds", "maximum") or (kind == "upper" and "value" in e)
             if kind != "makes_ball" and not own and self.value is None:
                 fail("%s: a %s claim needs a value, and the kernel has none" % (where, kind))
         # Whether the kernel has a statement on finite operands (the real model) is what the claims
@@ -744,6 +758,19 @@ class Kernel:
         return ", ".join(parts[:-1]) + (", and " if len(parts) > 2 else " and ") + parts[-1] if len(parts) > 1 \
             else parts[0]
 
+    def limb_expr(self, text, what):
+        """An expression over the inputs and their limbs NAME[I] (a maximum claim), as a tree, each
+        limb by its name."""
+        limbs = {l for i in self.inputs for l in self.limbs(i)}
+
+        def limb(m):
+            name, i = m.group(1), int(m.group(2))
+            if name not in self.inputs or i >= len(self.limbs(name)):
+                fail("kernel %s: the %s claim names a limb %s[%d] that is not one" % (self.name, what, name, i))
+            return self.limbs(name)[i]
+        return parse(re.sub(r"([a-z][a-z0-9]*)\[(\d+)\]", limb, text), "kernel %s, %s" % (self.name, what),
+                     set(self.inputs) | limbs)
+
     def when_tex(self, e):
         if e.get("when") not in KNOWN_WHEN:
             fail("kernel %s: the condition when=%r has no template" % (self.name, e["when"]))
@@ -835,6 +862,11 @@ class Kernel:
         if kind == "holds":
             a, b = (tex(self.expr(x, "holds", self.names | {"u", "eta"}, constants=True)) for x in e["args"])
             return "when $%s$ is true, $%s %s %s$" % (name_tex(e["if"]), a, KNOWN_RELS[e["rel"]], b)
+        if kind == "maximum":
+            a, b = (tex(self.limb_expr(x, "maximum")) for x in e["args"])
+            if short:
+                return "$%s = \\max(%s, %s)$" % (name_tex(e["of"]), a, b)
+            return "$%s = \\max(%s, %s)$, exactly: the larger of the two" % (name_tex(e["of"]), a, b)
         if kind == "upper":
             r, v = name_tex(e["of"]), tex(self.value)
             gaps = num_tex(fractions.Fraction(e["gaps"]))
@@ -1421,7 +1453,8 @@ class Site:
         lines = [(min(k.inputs.index(a) for a in args), k.extended_requirement(kind, args))
                  for kind, args in k.requires]
         for a in k.extended_free_inputs():
-            lines.append((k.inputs.index(a), ("$%s$ is any value of `T`: a number, $\\pm\\infty$ or a NaN"
+            lines.append((k.inputs.index(a), ("$%s$ is a mask, true or false" if a in k.mask_inputs else
+                                              "$%s$ is any value of `T`: a number, $\\pm\\infty$ or a NaN"
                                               if len(k.limbs(a)) == 1 else
                                               "every limb of $%s$ is any value of `T`: a number, $\\pm\\infty$ "
                                               "or a NaN") % name_tex(a)))
@@ -1473,6 +1506,15 @@ class Site:
                 lines.extend(self.extended_encloses(k, x))
             elif kind == "makes_ball":
                 lines.extend(self.extended_makes_ball(k, x))
+            elif kind == "finite_or_nan" and ("if" in x or "steps" in x):
+                # The finish of a fold of maxima: the value stepped up, under the mask of the state.
+                r, f, s = name_tex(x["of"]), name_tex(x["flag"]), tex(k.value)
+                for _ in range(x.get("steps", 0)):
+                    s = "\\mathrm{succ}(%s)" % s
+                gate = ("$%s$ is true and " % name_tex(x["if"])) if "if" in x else ""
+                lines += ["$%s$ is true exactly when %s$%s$ is finite." % (f, gate, s),
+                          "When it is, $%s = %s$." % (r, s),
+                          "Otherwise $%s$ is a NaN." % r]
             elif kind == "finite_or_nan":
                 s, r, f = tex(k.value), name_tex(x["of"]), name_tex(x["flag"])
                 lead = k.limbs(k.value[1])[0]
@@ -1656,6 +1698,22 @@ class Site:
             return ("$%s$ with results like those of `T` for infinite and NaN operands and on overflow: the "
                     "result of its core, %s, when that is finite, and otherwise a canonical infinity or NaN:"
                     "\n\n$$%s \\approx %s.$$" % (v, self.link(self.core[k.name]), w, v))
+        if "finite_or_nan" in kinds and any("if" in x or "steps" in x for x in e["ensures"]):
+            # The finish of a fold of maxima (architecture.md, "Folds of maxima").
+            x = next(x for x in e["ensures"] if x["kind"] == "finite_or_nan")
+            m, r, f = k.value[1], x["of"], x["flag"]
+            s = name_tex(m)
+            for _ in range(x.get("steps", 0)):
+                s = "\\mathrm{succ}(%s)" % s
+            gate = name_tex(x["if"]) if "if" in x else None
+            when = ("\\text{when } %s \\text{ is true and } %s \\text{ is finite}" % (gate, s) if gate else
+                    "\\text{when } %s \\text{ is finite}" % s)
+            return ("The result of a fold of maxima from its final state, the largest magnitude $%s$%s: $%s$ when "
+                    "%sit is finite, with the flag $%s$ true; otherwise a NaN and the flag false (the canonical NaN "
+                    "of [When something is not finite](../developer/design/milestone2.md#sum-dot-axpy-convolution))"
+                    ":\n\n$$%s = %s \\ %s, \\qquad %s = \\mathrm{NaN} \\text{ otherwise}.$$" % (
+                        name_tex(m), (" and the mask $%s$ that no element was a NaN" % gate) if gate else "", s,
+                        ("$%s$ is true and " % gate) if gate else "", name_tex(f), name_tex(r), s, when, name_tex(r)))
         if "finite_or_nan" in kinds:
             x = next(x for x in e["ensures"] if x["kind"] == "finite_or_nan")
             s, r, f = k.value[1], x["of"], x["flag"]
@@ -1718,6 +1776,15 @@ class Site:
                 v, out, KNOWN_MODES[x["mode"]], v)
         if "upper" in kinds:
             return "An upper bound of $%s$, a number of `T`:\n\n$$%s \\ge %s.$$" % (v, out, v)
+        if "maximum" in kinds:
+            # The combination and the steps of a fold of maxima: the larger of two values, and a mask
+            # (the and of the masks: that no element was a NaN), which the claims do not describe.
+            x = next(x for x in e["ensures"] if x["kind"] == "maximum")
+            a, b = (tex(k.limb_expr(y, "maximum")) for y in x["args"])
+            masks = [name_tex(o) for o in k.outputs if o != x["of"]]
+            return ("The larger of $%s$ and $%s$, exactly, by a comparison%s:\n\n$$%s = \\max(%s, %s).$$" % (
+                a, b, ("; and the mask $%s$ of a fold of maxima, true while no element was a NaN, which the claims "
+                       "do not describe" % masks[0]) if masks else "", name_tex(x["of"]), a, b))
         if len(k.outputs) != 1:
             fail("kernel %s: %d outputs, and no ball or predicate claim: no template" % (k.name, len(k.outputs)))
         out = k.out_tex(k.outputs[0])

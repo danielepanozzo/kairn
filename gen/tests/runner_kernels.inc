@@ -38,6 +38,10 @@ KAIRN_RUNNER_KERNEL(mul_pow2_step_1, "ll", "l", kairn::gen::mul_pow2_step_1(in[0
 KAIRN_RUNNER_KERNEL(mul_up_1, "ll", "l", kairn::gen::mul_up_1(in[0], in[1], out[0]))
 KAIRN_RUNNER_KERNEL(next_down, "l", "l", kairn::gen::next_down(in[0], out[0]))
 KAIRN_RUNNER_KERNEL(next_up, "l", "l", kairn::gen::next_up(in[0], out[0]))
+KAIRN_RUNNER_KERNEL(norm_combine, "lmlm", "lm", kairn::gen::norm_combine(in[0], mi[1], in[2], mi[3], out[0], mo[1]))
+KAIRN_RUNNER_KERNEL(norm_finish_1, "lm", "lm", kairn::gen::norm_finish_1(in[0], mi[1], out[0], mo[1]))
+KAIRN_RUNNER_KERNEL(norm_finish_2, "lm", "lm", kairn::gen::norm_finish_2(in[0], mi[1], out[0], mo[1]))
+KAIRN_RUNNER_KERNEL(norm_step_1, "lml", "lm", kairn::gen::norm_step_1(in[0], mi[1], in[2], out[0], mo[1]))
 KAIRN_RUNNER_KERNEL(radd, "ll", "l", kairn::gen::radd(in[0], in[1], out[0]))
 KAIRN_RUNNER_KERNEL(radd_entry, "ll", "l", kairn::gen::radd_entry(in[0], in[1], out[0]))
 KAIRN_RUNNER_KERNEL(rmul, "ll", "l", kairn::gen::rmul(in[0], in[1], out[0]))
@@ -98,6 +102,7 @@ KAIRN_RUNNER_KERNEL(mul_2_2_full, "llll", "ll", kairn::gen::mul_2_2_full(in[0], 
 KAIRN_RUNNER_KERNEL(mul_pow2_2, "lll", "ll", kairn::gen::mul_pow2_2(in[0], in[1], in[2], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(mul_pow2_2_full, "lll", "ll", kairn::gen::mul_pow2_2_full(in[0], in[1], in[2], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(mul_pow2_step_2, "lll", "ll", kairn::gen::mul_pow2_step_2(in[0], in[1], in[2], out[0], out[1]))
+KAIRN_RUNNER_KERNEL(norm_step_2, "lmll", "lm", kairn::gen::norm_step_2(in[0], mi[1], in[2], in[3], out[0], mo[1]))
 KAIRN_RUNNER_KERNEL(scale_step_2, "lll", "ll", kairn::gen::scale_step_2(in[0], in[1], in[2], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(sub_1_2, "lll", "ll", kairn::gen::sub_1_2(in[0], in[1], in[2], out[0], out[1]))
 KAIRN_RUNNER_KERNEL(sub_1_2_full, "lll", "ll", kairn::gen::sub_1_2_full(in[0], in[1], in[2], out[0], out[1]))
@@ -117,6 +122,8 @@ KAIRN_RUNNER_KERNEL(to_nearest_2, "ll", "l", kairn::gen::to_nearest_2(in[0], in[
 #if defined(KAIRN_RUNNER_FOLD)
 KAIRN_RUNNER_FOLD(dot_1, "11", "lm", kairn::gen::dot_1_seq(in[0], in[1], n, out[0], mo[1]), kairn::gen::dot_1_lanes(in[0], in[1], n, lanes, out[0], mo[1]), kairn::gen::dot_1_packed(in[0], in[1], n, out[0], mo[1]))
 KAIRN_RUNNER_FOLD(dot_2, "22", "llm", kairn::gen::dot_2_seq(in[0], in[1], in[2], in[3], n, out[0], out[1], mo[2]), kairn::gen::dot_2_lanes(in[0], in[1], in[2], in[3], n, lanes, out[0], out[1], mo[2]), kairn::gen::dot_2_packed(in[0], in[1], in[2], in[3], n, out[0], out[1], mo[2]))
+KAIRN_RUNNER_FOLD(norm_upper_1, "1", "lm", kairn::gen::norm_upper_1_seq(in[0], n, out[0], mo[1]), kairn::gen::norm_upper_1_lanes(in[0], n, lanes, out[0], mo[1]), kairn::gen::norm_upper_1_packed(in[0], n, out[0], mo[1]))
+KAIRN_RUNNER_FOLD(norm_upper_2, "2", "lm", kairn::gen::norm_upper_2_seq(in[0], in[1], n, out[0], mo[1]), kairn::gen::norm_upper_2_lanes(in[0], in[1], n, lanes, out[0], mo[1]), kairn::gen::norm_upper_2_packed(in[0], in[1], n, out[0], mo[1]))
 KAIRN_RUNNER_FOLD(sum_1, "1", "lm", kairn::gen::sum_1_seq(in[0], n, out[0], mo[1]), kairn::gen::sum_1_lanes(in[0], n, lanes, out[0], mo[1]), kairn::gen::sum_1_packed(in[0], n, out[0], mo[1]))
 KAIRN_RUNNER_FOLD(sum_1_entry, "1", "lm", kairn::gen::sum_1_entry_seq(in[0], n, out[0], mo[1]), kairn::gen::sum_1_entry_lanes(in[0], n, lanes, out[0], mo[1]), kairn::gen::sum_1_entry_packed(in[0], n, out[0], mo[1]))
 KAIRN_RUNNER_FOLD(sum_2, "2", "llm", kairn::gen::sum_2_seq(in[0], in[1], n, out[0], out[1], mo[2]), kairn::gen::sum_2_lanes(in[0], in[1], n, lanes, out[0], out[1], mo[2]), kairn::gen::sum_2_packed(in[0], in[1], n, out[0], out[1], mo[2]))
@@ -147,4 +154,12 @@ KAIRN_RUNNER_MAP(sub_1, "11", 0, 1, kairn::gen::sub_1_seq(in[0], in[1], n, w[0],
 KAIRN_RUNNER_MAP(sub_1_entry, "11", 0, 1, kairn::gen::sub_1_entry_seq(in[0], in[1], n, w[0], mo[0]), kairn::gen::sub_1_entry_lanes(in[0], in[1], n, lanes, w[0], mo[0]), kairn::gen::sub_1_entry_packed(in[0], in[1], n, w[0], mo[0]))
 KAIRN_RUNNER_MAP(sub_2, "22", 0, 2, kairn::gen::sub_2_seq(in[0], in[1], in[2], in[3], n, w[0], w[1], mo[0]), kairn::gen::sub_2_lanes(in[0], in[1], in[2], in[3], n, lanes, w[0], w[1], mo[0]), kairn::gen::sub_2_packed(in[0], in[1], in[2], in[3], n, w[0], w[1], mo[0]))
 KAIRN_RUNNER_MAP(sub_2_entry, "22", 0, 2, kairn::gen::sub_2_entry_seq(in[0], in[1], in[2], in[3], n, w[0], w[1], mo[0]), kairn::gen::sub_2_entry_lanes(in[0], in[1], in[2], in[3], n, lanes, w[0], w[1], mo[0]), kairn::gen::sub_2_entry_packed(in[0], in[1], in[2], in[3], n, w[0], w[1], mo[0]))
+#endif
+// The convolutions, for a runner that defines KAIRN_RUNNER_CONV: name, the limbs of each array
+// read, the number of limb arrays written, the call of the sequential order. in[i] is limb array
+// i read (const T*), the limbs of the first array before those of the second, nx and ny their
+// lengths, w[i] limb array i written (T*), mo[0] the mask.
+#if defined(KAIRN_RUNNER_CONV)
+KAIRN_RUNNER_CONV(conv_1, "11", 1, kairn::gen::conv_1_seq(in[0], nx, in[1], ny, w[0], mo[0]))
+KAIRN_RUNNER_CONV(conv_2, "22", 2, kairn::gen::conv_2_seq(in[0], in[1], nx, in[2], in[3], ny, w[0], w[1], mo[0]))
 #endif

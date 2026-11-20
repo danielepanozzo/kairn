@@ -330,6 +330,10 @@ def holds(e, k, fmt, ins, outs, limbs=None, kernels=None):
         return out[0] == fmt.directed(value, e['mode'])
     if kind == 'neighbor':
         return out[0] == (fmt.succ(value) if e['side'] == 'up' else fmt.pred(value))
+    if kind == 'maximum':
+        # The larger of two expressions of the inputs and their limbs (the folds of maxima).
+        env = dict(ins, **(limbs or {}))
+        return out[0] == max(expr.evaluate(expr.parse(x), env) for x in e['args'])
     if kind == 'bound':
         r, below = out[0], e['side'] == 'below'
         limit = fmt.directed(value, 'down' if below else 'up')

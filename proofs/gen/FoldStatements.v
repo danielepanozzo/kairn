@@ -140,6 +140,34 @@ Definition axpy_2_entry_spec : Prop :=
     Rabs ((z0 + z1) - (((a0 + a1) * (x0 + x1)) + (y0 + y1))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs ((a0 + a1) * (x0 + x1)) + Rabs (y0 + y1)) + 2 * eta emin)
     xys (axpy_2_entry_map emin prec tie_even (a0, a1) xys).
 
+(* conv_1, each coefficient it writes: dot_1 on the terms of each coefficient. Status: unverified. *)
+Definition conv_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall xs ys : list R,
+  Forall (fun x => fmt emin prec x) xs ->
+  Forall (fun y => fmt emin prec y) ys ->
+  Forall2 (fun j s =>
+    let xys := conv_terms xs ys j in
+    fmt emin prec s /\
+    Rabs (s - sumR (map (fun xy => (fst xy * snd xy)) xys)) <=
+      ((1 + (u prec / (1 + u prec))) ^ length xys - 1) * sumabs (map (fun xy => (fst xy * snd xy)) xys) +
+      (1 + (u prec / (1 + u prec))) ^ (length xys - 1) * (INR (length xys) * (eta emin / 2)))
+    (seq 0 (conv_length (length xs) (length ys))) (conv_1_conv emin prec tie_even xs ys).
+
+(* conv_2, each coefficient it writes: dot_2 on the terms of each coefficient. Status: unverified. *)
+Definition conv_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall xs ys : list (R * R),
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  Forall (fun y => normalized_2 emin prec (fst y) (snd y)) ys ->
+  Forall2 (fun j s =>
+    let xys := conv_terms xs ys j in
+    normalized_2 emin prec (fst s) (snd s) /\
+    Rabs ((fst s + snd s) - sumR (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys)) <=
+      ((1 + (4 * (u prec ^ 2))) * (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) - 1) * sumabs (map (fun xy => ((fst (fst xy) + snd (fst xy)) * (fst (snd xy) + snd (snd xy)))) xys) +
+      (1 + ((3 * (u prec ^ 2)) / (1 - (4 * u prec)))) ^ (length xys - 1) * (INR (length xys) * ((3 / 2) * eta emin)))
+    (seq 0 (conv_length (length xs) (length ys))) (conv_2_conv emin prec tie_even xs ys).
+
 (* dot_1, the sequential order: Higham's bound for summation over any tree, weighted: the fused dot product. Status: proved. *)
 Definition dot_1_seq_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -211,6 +239,54 @@ Definition mul_pow2_map_2_spec : Prop :=
     normalized_2 emin prec z0 z1 /\
     Rabs ((z0 + z1) - ((x0 + x1) * c)) <= 1 * eta emin)
     xs (mul_pow2_map_2_map emin prec tie_even c xs).
+
+(* norm_upper_1, the sequential order: a maximum by comparisons, in any order. Status: unverified. *)
+Definition norm_upper_1_seq_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall xs : list R,
+  Forall (fun x => fmt emin prec x) xs ->
+  let mok := norm_upper_1_seq xs in
+  let r_ := fst mok in
+  let v_ := fold_right Rmax 0 (map (fun x => (Rabs x)) xs) in
+  fmt emin prec r_ /\
+  v_ <= r_ /\
+  r_ <= RU emin prec v_.
+
+(* norm_upper_1, the lane order, for every number of lanes W: a maximum by comparisons, in any order. Status: unverified. *)
+Definition norm_upper_1_lanes_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall (W : nat) (xs : list R),
+  Forall (fun x => fmt emin prec x) xs ->
+  let mok := norm_upper_1_lanes W xs in
+  let r_ := fst mok in
+  let v_ := fold_right Rmax 0 (map (fun x => (Rabs x)) xs) in
+  fmt emin prec r_ /\
+  v_ <= r_ /\
+  r_ <= RU emin prec v_.
+
+(* norm_upper_2, the sequential order: a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between). Status: unverified. *)
+Definition norm_upper_2_seq_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall xs : list (R * R),
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  let mok := norm_upper_2_seq xs in
+  let r_ := succ radix2 (FLT_exp emin prec) (fst mok) in
+  let v_ := fold_right Rmax 0 (map (fun x => (Rabs (fst x + snd x))) xs) in
+  fmt emin prec r_ /\
+  v_ <= r_ /\
+  r_ <= succ radix2 (FLT_exp emin prec) (RU emin prec v_).
+
+(* norm_upper_2, the lane order, for every number of lanes W: a maximum by comparisons, in any order, and the neighbors of a normalized pair (normalized_2_between). Status: unverified. *)
+Definition norm_upper_2_lanes_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall (W : nat) (xs : list (R * R)),
+  Forall (fun x => normalized_2 emin prec (fst x) (snd x)) xs ->
+  let mok := norm_upper_2_lanes W xs in
+  let r_ := succ radix2 (FLT_exp emin prec) (fst mok) in
+  let v_ := fold_right Rmax 0 (map (fun x => (Rabs (fst x + snd x))) xs) in
+  fmt emin prec r_ /\
+  v_ <= r_ /\
+  r_ <= succ radix2 (FLT_exp emin prec) (RU emin prec v_).
 
 (* scale_1, each element it writes: mul_1_1 on each element. Status: unverified. *)
 Definition scale_1_spec : Prop :=

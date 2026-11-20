@@ -1,0 +1,47 @@
+# The radius of an accumulator (milestone2.md, "The accumulator": acc.error_bound()), in the form of
+# conv_radius ("The product of polynomials"): roundings to nearest of nonnegative values, then one
+# product by (1+u)^8 that covers the seven before it, and a constant that covers what the one product
+# that may underflow loses and keeps the radius normal. One kernel for both numbers of limbs: the
+# magnitudes are summed in T in both. A proposal: the page gives this kernel no listing
+# (experiments/milestone2/accumulator.py is its check).
+#
+# a is the running sum of the magnitudes of the leading limbs of what was added, m the count of terms
+# (0 or at least 1), and (g, t) = bound_dot_k(m). The radius rests on the inequality of the page,
+#   sum_i |x_i y_i| <= (1+u)^(m+2) (a + m eta/2),
+# with (1+u)^m <= 1 + m u (1 + 2 m u) when m u <= 1/2 (pow_minus_1_le_gamma and gamma_le_poly of
+# proofs/theories/Summation.v with eps = u): then g sum_i |x_i y_i| + t, the bound of dot for m terms
+# in any tree, is at most the value of the claim upper below, which r is at least.
+#   q >= m u: q = RN(m ((1+u) u + N)), and q >= N for m >= 1   d = 2 q, exactly
+#   w = RN(q + 2 q^2) >= (q + 2 q^2) / (1+u)                     c = RN(m N + a) >= (a + m eta/2) / (1+u)
+#   e = RN(c (1 + w)) >= c (1 + w) / (1+u)                       f = RN(e g) >= e g / (1+u) - eta/2
+#   s = RN(f + t) >= (f + t) / (1+u)                             r = RN(s K + C) >= (s K + C) / (1+u)
+# with K >= (1+u)^8 and C >= (1+u)^7 eta/2 + N: r >= (1+u)^2 g (1 + m u + 2 m^2 u^2)(a + m eta/2) + t.
+#
+# The claims proposed for it in gen/kernels, which accumulator.py checks:
+#   requires:      nonneg a
+#   requires:      count m
+#   requires:      nonneg g
+#   requires:      nonneg t
+#   ensures:       upper r value=g*(1+u)^2*(1+m*u+2*m^2*u^2)*(a+m*eta/2)+t
+#   ensures:       holds le m*u 1/2 if=ok
+kernel:        acc_radius
+input:         a
+input:         m
+input:         g
+input:         t
+output:        r
+output:        mask ok
+min_precision: 1
+source:        the radius of an accumulator, in the form of conv_radius (milestone2.md); a proposal
+license:       proof: MIT
+status:        unverified
+
+q  = prod(m, const up((1+u)*u+eta/(2*u)))
+d  = prod(q, const up(2))
+w  = fma(q, d, q)
+c  = fma(m, const up(eta/(2*u)), a)
+e  = fma(c, w, c)
+f  = prod(e, g)
+s  = add(f, t)
+r  = fma(s, const up((1+u)^8), const up((1+u)^7*eta/2+eta/(2*u)))
+ok = le(q, const up(1/2))

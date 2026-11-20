@@ -495,6 +495,14 @@ set(KAIRN_NOT_YET_CROSS_CHECKED_MAPS
   axpy_2_1 axpy_2_1_entry scale_1 scale_2 mul_pow2_map_1 mul_pow2_map_2)
 list(APPEND KAIRN_NOT_YET_CROSS_CHECKED ${KAIRN_NOT_YET_CROSS_CHECKED_MAP_STEPS})
 list(APPEND KAIRN_NOT_YET_CROSS_CHECKED_FOLDS ${KAIRN_NOT_YET_CROSS_CHECKED_MAPS})
+# The folds of maxima of stage B, part 2 (architecture.md, "Folds of maxima"), and their kernels:
+# the oracle reads neither the claim maximum, nor finite_or_nan with if and steps, nor a fold's upper
+# entry yet. Appended to the lists above.
+list(APPEND KAIRN_NOT_YET_CROSS_CHECKED norm_combine norm_step_1 norm_step_2 norm_finish_1 norm_finish_2)
+list(APPEND KAIRN_NOT_YET_CROSS_CHECKED_FOLDS norm_upper_1 norm_upper_2)
+# The convolutions (architecture.md, "Convolutions"): the oracle reads neither requests of two lengths
+# nor the claim coefficients yet.
+list(APPEND KAIRN_NOT_YET_CROSS_CHECKED_FOLDS conv_1 conv_2)
 
 # Kernels whose intermediate values can overflow for operands far below the largest number (the
 # product by the splitter), as their requirement of no intermediate overflow allows. The oracle

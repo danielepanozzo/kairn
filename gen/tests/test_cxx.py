@@ -101,6 +101,15 @@ NONFINITE_CE_CASES = [
     ('fold_finish_2', 'float', [-math.inf, 0.0]),
     ('fold_finish_2', 'double', [math.nan, math.nan]),
     ('fold_finish_2', 'float', [math.inf, math.nan]),
+    # The finishes of the folds of maxima: the maximum (stepped up, for two limbs) when the mask is
+    # true and that is finite; the canonical NaN otherwise, the largest float stepped up among them.
+    ('norm_finish_1', 'double', [2.0, True]),
+    ('norm_finish_1', 'float', [2.0, False]),
+    ('norm_finish_1', 'double', [math.inf, True]),
+    ('norm_finish_2', 'double', [1.0, True]),
+    ('norm_finish_2', 'double', [0.0, True]),
+    ('norm_finish_2', 'float', [float.fromhex('0x1.fffffep+127'), True]),
+    ('norm_finish_2', 'float', [3.0, False]),
 ]
 
 
@@ -122,6 +131,8 @@ NAN_CE_CASES = [
 
 
 def _ce_literal(x, ctype):
+    if isinstance(x, bool):             # a mask operand (the finishes of the folds of maxima)
+        return 'true' if x else 'false'
     if x != x:
         return f'std::numeric_limits<{ctype}>::quiet_NaN()'
     if math.isinf(x):

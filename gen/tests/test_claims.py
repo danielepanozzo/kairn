@@ -98,11 +98,13 @@ class Claims(unittest.TestCase):
               'extends': ['kind', 'of', 'core', 'lead', 'finite_when'], 'represents': ['kind', 'of'],
               'makes_ball': ['kind', 'center', 'radius', 'from'],
               'neighbor': ['kind', 'of', 'side'], 'bound': ['kind', 'of', 'side', 'steps'],
-              'holds': ['kind', 'rel', 'args', 'if'], 'finite_or_nan': ['kind', 'of', 'flag']}
+              'holds': ['kind', 'rel', 'args', 'if'], 'finite_or_nan': ['kind', 'of', 'flag'],
+              'maximum': ['kind', 'of', 'args']}
     # The fields that some entries of a kind have, after the others, and only when they say
     # something: a rounding under a condition, and an exactness condition (Milestone 2). Every
     # entry without them has the shape it had before.
-    OPTIONAL = {'rounded': ['when'], 'error': ['exact_when'], 'encloses': ['exact_when']}
+    OPTIONAL = {'rounded': ['when'], 'error': ['exact_when'], 'encloses': ['exact_when'],
+                'finite_or_nan': ['if', 'steps']}   # the finish of a fold of maxima
     # The bound kernels of Milestone 2 (the folds' stage): an upper entry with a value of its own
     # under a mask, and no gaps.
     UPPER_OWN = ['kind', 'of', 'value', 'if']
@@ -124,8 +126,8 @@ class Claims(unittest.TestCase):
                 want.insert(want.index('theorem') + 1, 'ieee_theorem')
             if all(e['kind'] == 'makes_ball' for e in k['ensures']):
                 want.remove('value')          # a ball made from its inputs has no value
-            if all(e['kind'] == 'holds' or (e['kind'] == 'upper' and 'value' in e) for e in k['ensures']):
-                want.remove('value')          # a bound kernel: every entry has its own value
+            if all(e['kind'] in ('holds', 'maximum') or (e['kind'] == 'upper' and 'value' in e) for e in k['ensures']):
+                want.remove('value')          # a bound kernel, a maximum: every entry has its own value
             self.assertEqual(list(k), want, k['name'])
             if extended:
                 self.assertIn(k['ieee_status'], ('proved', 'unverified'))
@@ -352,8 +354,8 @@ class Claims(unittest.TestCase):
                                         'mul_2_2', 'mul_2_1', 'mul_pow2_2')}
         full_ball = {f'ball_{op}_{k}_full' for op in ('add', 'sub', 'mul', 'scale', 'mul_pow2') for k in (1, 2)}
         constructors = {'make_2', 'make_2_limbs', 'ball_make_1', 'ball_make_2'}
-        # and the two finishes of the folds, which say what comes out when the state is not finite
-        finishes = {'fold_finish_1', 'fold_finish_2'}
+        # and the finishes of the folds, which say what comes out when the state is not finite
+        finishes = {'fold_finish_1', 'fold_finish_2', 'norm_finish_1', 'norm_finish_2'}
         self.assertEqual({k['name'] for k in self.doc['kernels'] if 'ieee_only' in k},
                          full | full_ball | constructors | finishes)
         self.assertTrue(all(k['ieee_only'] is True for k in self.doc['kernels'] if 'ieee_only' in k))
@@ -390,16 +392,20 @@ class FoldClaims(unittest.TestCase):
 
     def test_the_folds(self):
         maps = {name for name, fd in self.ks.folds.items() if fd.is_map}
-        self.assertEqual(set(self.by) - maps, {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
-                                               'sum_fast_2_entry', 'dot_1', 'dot_2'})
+        convs = {name for name, fd in self.ks.folds.items() if fd.is_conv}
+        self.assertEqual(convs, {'conv_1', 'conv_2'})
+        self.assertTrue(all(self.by[n]['conv'] is True and 'map' not in self.by[n] for n in convs))
+        self.assertEqual(set(self.by) - maps - convs, {'sum_1', 'sum_1_entry', 'sum_2', 'sum_2_entry', 'sum_fast_2',
+                                                      'sum_fast_2_entry', 'dot_1', 'dot_2', 'norm_upper_1',
+                                                      'norm_upper_2'})
         self.assertEqual(list(self.doc), ['schema', 'kernels', 'folds'])
         # Without folds the file has the shape it had: the test kernels have none.
         self.assertEqual(list(json.loads(claims.claims(common.kernels(common.TEST_KERNELS)))), ['schema', 'kernels'])
 
     def test_schema(self):
         for f in self.doc['folds']:
-            if f.get('map'):
-                continue                # MapClaims
+            if f.get('map') or f.get('conv'):
+                continue                # MapClaims; the convolutions, test_conv.py
             with self.subTest(fold=f['name']):
                 self.assertEqual(list(f), self.KEYS)
                 self.assertEqual(f['domain'], 'extended')
@@ -410,6 +416,20 @@ class FoldClaims(unittest.TestCase):
                 self.assertEqual(f['orders'], ['sequential', 'lanes'])
                 self.assertEqual(f['packed_lanes'], {'binary64': {'avx2': 4, 'neon': 2},
                                                      'binary32': {'avx2': 8, 'neon': 4}})
+                self.assertIn({'kind': 'finite_or_nan', 'of': f['outputs'][0]['name'], 'flag': 'flag'}, f['ensures'])
+                uppers = [e for e in f['ensures'] if e['kind'] == 'upper']
+                if uppers:
+                    # A fold of maxima: one upper entry over the largest value, the result of one
+                    # limb, no fold_error and no constants. Unverified; the sums and the dot
+                    # products are proved (below).
+                    self.assertEqual(f['theorems'], {'sequential': None, 'lanes': None})
+                    self.assertEqual(f['status'], 'unverified')
+                    self.assertEqual(f['ensures'], [{'kind': 'upper', 'of': 'r', 'over': 'max',
+                                                     'steps': f['arrays'][0]['limbs'] - 1},
+                                                    {'kind': 'finite_or_nan', 'of': 'r', 'flag': 'flag'}])
+                    self.assertEqual(f['value'], f'abs({f["arrays"][0]["name"]})')
+                    self.assertEqual(f['instances'], {'binary64': [], 'binary32': []})
+                    continue
                 errors = [e for e in f['ensures'] if e['kind'] == 'fold_error']
                 self.assertEqual(len(errors), 1)
                 e = errors[0]

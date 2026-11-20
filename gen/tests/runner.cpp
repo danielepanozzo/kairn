@@ -93,6 +93,28 @@ const Map maps[] = {
 #include "runner_kernels.inc"
     {nullptr, nullptr, 0, 0, nullptr, nullptr, nullptr, nullptr},
 };
+#undef KAIRN_RUNNER_MAP
+
+// The convolutions: CONV FORMAT seq N_X N_Y LIMB..., the N_X entries of each limb array of the first
+// array, then the N_Y entries of each of the second; the result is each limb array written, with
+// n_x + n_y - 1 entries (none when a length is 0), then the mask. The sequential order only.
+struct Conv {
+    const char* name;
+    const char* arrays;
+    int writes;
+    void (*seq64)(const double* const* in, std::size_t nx, std::size_t ny, double* const* w, bool* mo);
+    void (*seq32)(const float* const* in, std::size_t nx, std::size_t ny, float* const* w, bool* mo);
+};
+#define KAIRN_RUNNER_CONV_ARGS(T)                                                                   \
+    [[maybe_unused]] const T* const* in, [[maybe_unused]] std::size_t nx, [[maybe_unused]] std::size_t ny, \
+        [[maybe_unused]] T* const* w, [[maybe_unused]] bool* mo
+#define KAIRN_RUNNER_MAP(NAME, ARRAYS, SCALARS, WRITES, SEQ, LANES, PACKED)
+#define KAIRN_RUNNER_CONV(NAME, ARRAYS, WRITES, SEQ) \
+    {#NAME, ARRAYS, WRITES, [](KAIRN_RUNNER_CONV_ARGS(double)) { SEQ; }, [](KAIRN_RUNNER_CONV_ARGS(float)) { SEQ; }},
+const Conv convs[] = {
+#include "runner_kernels.inc"
+    {nullptr, nullptr, 0, nullptr, nullptr},
+};
 
 long lineno = 0;
 
@@ -220,6 +242,36 @@ void complete_map(const Map& m, const std::vector<std::string>& fields, std::str
     out += mo[0] ? " 1" : " 0";
 }
 
+template <class T>
+void complete_conv(const Conv& c, const std::vector<std::string>& fields, std::string& out,
+                   void (*seq)(const T* const*, std::size_t, std::size_t, T* const*, bool*)) {
+    if (fields.size() < 5) fail(std::string("expected ") + c.name + " FORMAT seq N_X N_Y LIMB ... [#TAG]");
+    std::size_t lanes = 0;
+    if (lane_order(fields[2], lanes)) fail(std::string(c.name) + " has the sequential order only (seq)");
+    const std::size_t nx = length(fields[3]), ny = length(fields[4]);
+    if (std::strlen(c.arrays) != 2) fail("a convolution reads two arrays");
+    const std::size_t lx = std::size_t(c.arrays[0] - '0'), ly = std::size_t(c.arrays[1] - '0');
+    if (fields.size() - 5 != lx * nx + ly * ny)
+        fail(std::string(c.name) + " of lengths " + fields[3] + " and " + fields[4] + " takes " +
+             std::to_string(lx * nx + ly * ny) + " limbs");
+    std::vector<T> data(lx * nx + ly * ny + 1);
+    for (std::size_t i = 0; i + 5 < fields.size(); ++i) data[i] = limb(T(), fields[5 + i]);
+    std::vector<const T*> in(lx + ly + 1);
+    for (std::size_t l = 0; l < lx; ++l) in[l] = data.data() + l * nx;
+    for (std::size_t l = 0; l < ly; ++l) in[lx + l] = data.data() + lx * nx + l * ny;
+    const std::size_t nz = nx == 0 || ny == 0 ? 0 : nx + ny - 1;
+    std::vector<T> written(std::size_t(c.writes) * nz + 1);
+    std::vector<T*> w(std::size_t(c.writes) + 1);
+    for (int l = 0; l < c.writes; ++l) w[std::size_t(l)] = written.data() + std::size_t(l) * nz;
+    bool mo[1] = {};
+    seq(in.data(), nx, ny, w.data(), mo);
+    for (std::size_t i = 0; i < std::size_t(c.writes) * nz; ++i) {
+        out += ' ';
+        put(static_cast<double>(written[i]), out);
+    }
+    out += mo[0] ? " 1" : " 0";
+}
+
 }  // namespace
 
 int main() {
@@ -245,6 +297,18 @@ int main() {
         }
         if (fields.back()[0] == '#') fields.pop_back();  // the tag
         if (fields.size() < 2) fail("expected KERNEL FORMAT LIMB ... [#TAG]");
+        const Conv* co = nullptr;
+        for (const Conv* c = convs; c->name; ++c)
+            if (fields[0] == c->name) co = c;
+        if (co) {
+            out += " ->";
+            if (fields[1] == "binary64") complete_conv<double>(*co, fields, out, co->seq64);
+            else if (fields[1] == "binary32") complete_conv<float>(*co, fields, out, co->seq32);
+            else fail("this runner knows binary64 and binary32, not " + fields[1]);
+            out += '\n';
+            std::fwrite(out.data(), 1, out.size(), stdout);
+            continue;
+        }
         const Map* ma = nullptr;
         for (const Map* c = maps; c->name; ++c)
             if (fields[0] == c->name) ma = c;

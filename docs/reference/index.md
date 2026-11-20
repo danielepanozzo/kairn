@@ -6,7 +6,7 @@ Every public operation of Kairn, grouped by what it does, with the kernel that c
 
 The [C++ API](../api/index.md), which Doxygen generates from the comments of the public headers, lists every class, function and macro of `include/kairn/*.hpp` with its declaration and its comment; the comment of an operation names the kernel it calls.
 
-All 109 kernels are proved.
+Of the 114 kernels, 109 are proved and 5 are **UNVERIFIED**: [`norm_combine`](norm_combine.md), [`norm_finish_1`](norm_finish_1.md), [`norm_finish_2`](norm_finish_2.md), [`norm_step_1`](norm_step_1.md), [`norm_step_2`](norm_step_2.md).
 
 31 kernels have a statement on finite operands and one on infinite and NaN operands; the second is proved for all of them.
 
@@ -196,6 +196,11 @@ The kernels of the loops over arrays (the folds of Milestone 2): their steps, th
 | none (internal) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{add\_2\_2}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{add\_2\_2})}{1 - m \mathrm{unit}(\mathtt{add\_2\_2})}$ | [`bound_sum_2`](bound_sum_2.md) |
 | none (internal) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{mul\_1\_1}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{mul\_1\_1})}{1 - m \mathrm{unit}(\mathtt{mul\_1\_1})}$; when $\mathit{ok}$ is true, $t \ge m \mathrm{tiny}(\mathtt{mul\_1\_1}) (1 + g)$ | [`bound_dot_1`](bound_dot_1.md) |
 | none (internal) | - | when $\mathit{ok}$ is true, $m \mathrm{unit}(\mathtt{mul\_2\_2}) \le \frac{1}{2}$; when $\mathit{ok}$ is true, $g \ge \frac{m \mathrm{unit}(\mathtt{mul\_2\_2})}{1 - m \mathrm{unit}(\mathtt{mul\_2\_2})}$; when $\mathit{ok}$ is true, $t \ge m \mathrm{tiny}(\mathtt{mul\_2\_2}) (1 + g)$ | [`bound_dot_2`](bound_dot_2.md) |
+| none (internal) | - | $r = \max(m, n)$ | [`norm_combine`](norm_combine.md) **UNVERIFIED** |
+| none (internal) | - | $r = \max(m, \lvert x\rvert)$ | [`norm_step_1`](norm_step_1.md) **UNVERIFIED** |
+| none (internal) | - | $r = \max(m, \lvert x_0\rvert)$ | [`norm_step_2`](norm_step_2.md) **UNVERIFIED** |
+| none (internal) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_1`](norm_finish_1.md) **UNVERIFIED** |
+| none (internal) | - | $m$ when its leading limb is finite, flag true; otherwise NaN, flag false | [`norm_finish_2`](norm_finish_2.md) **UNVERIFIED** |
 
 ## Operations on arrays, entry by entry
 

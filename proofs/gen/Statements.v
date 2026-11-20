@@ -383,6 +383,28 @@ Definition next_up_spec : Prop :=
   fmt emin prec r /\
   r = succ radix2 (FLT_exp emin prec) a.
 
+(* norm_combine: the larger of two numbers, by a comparison (milestone2.md, norm_upper_k). Status: unverified. *)
+Definition norm_combine_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall m n : R,
+  forall ok okn : bool,
+  fmt emin prec m ->
+  fmt emin prec n ->
+  let '(r, okr) := norm_combine m ok n okn in
+  fmt emin prec r /\
+  r = Rmax m n.
+
+(* norm_step_1: the larger of the state and the magnitude of the element (milestone2.md, norm_upper_k). Status: unverified. *)
+Definition norm_step_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall m x : R,
+  forall ok : bool,
+  fmt emin prec m ->
+  fmt emin prec x ->
+  let '(r, okr) := norm_step_1 m ok x in
+  fmt emin prec r /\
+  r = Rmax m (Rabs x).
+
 (* radd: one step up from the rounded sum (Milestone 1 listing). Status: proved. *)
 Definition radd_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -881,6 +903,17 @@ Definition mul_pow2_step_2_spec : Prop :=
   let '(z0, z1) := mul_pow2_step_2 emin prec tie_even x0 x1 c in
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) * c)) <= 1 * eta emin.
+
+(* norm_step_2: the larger of the state and the magnitude of the leading limb (milestone2.md, norm_upper_k). Status: unverified. *)
+Definition norm_step_2_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall m x0 x1 : R,
+  forall ok : bool,
+  fmt emin prec m ->
+  normalized_2 emin prec x0 x1 ->
+  let '(r, okr) := norm_step_2 m ok x0 x1 in
+  fmt emin prec r /\
+  r = Rmax m (Rabs x0).
 
 (* scale_step_2: mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22. Status: proved. *)
 Definition scale_step_2_spec : Prop :=

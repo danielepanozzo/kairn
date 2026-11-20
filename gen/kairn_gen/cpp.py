@@ -530,22 +530,41 @@ def fold_kernels(fd, kernels):
     return tuple(kernels[c[0]] if c else None for c in (fd.step, fd.combine, fd.finish))
 
 
-def fold_parameters(fd, limb, mask, lanes):
+def loaded_limbs(fd, kernels):
+    """The limb arrays whose entries the step uses: not those passed to an input that the step
+    declares unused (norm_step_2's x1: the second limb of a pair, which the finish's step up
+    covers). The others are parameters all the same, [[maybe_unused]], and are not loaded."""
+    step = kernels[fd.step[0]]
+    by_arg = dict(zip(fd.step[1], step.inputs))
+    return [v for g in fd.arrays for v, w in zip(g.limbs, by_arg[g.name].limbs) if w not in step.unused]
+
+
+def fold_parameters(fd, limb, mask, lanes, kernels=None):
     """One pointer per limb array, the length, the number of lanes (F_lanes), the results by
     reference."""
-    ps = [f'const {limb}* {v}_in' for v in fd.array_limbs()] + ['std::size_t n']
+    loaded = loaded_limbs(fd, kernels) if kernels is not None else fd.array_limbs()
+    ps = [f'{"" if v in loaded else "[[maybe_unused]] "}const {limb}* {v}_in' for v in fd.array_limbs()] + \
+        ['std::size_t n']
     if lanes:
         ps.append('std::size_t lanes')
     return ps + [f'{mask if g.kind == ir.MASK else limb}& {v}_out' for g in fd.results() for v in g.limbs]
 
 
 def step_arguments(fd, state, elements):
-    """The step's operands, value by value: `state` the names of the state's limbs, `elements`
-    {array: the names of its limbs}, in the order of the step's arguments."""
-    args = []
-    for a in fd.step[1]:
-        args += state if a == fd.state.name else elements[a]
-    return args
+    """The step's operands, value by value: `state` the names of the state's limbs (every group of
+    it, in order), `elements` {array: the names of its limbs}, in the order of the step's
+    arguments."""
+    groups, at = dict(elements), 0
+    for g in fd.states:
+        groups[g.name] = state[at:at + len(g.limbs)]
+        at += len(g.limbs)
+    return [v for a in fd.step[1] for v in groups[a]]
+
+
+def state_declarations(fd, ctype, names, pad):
+    """The variables of a state, from the zero state: every limb +0 and every mask true."""
+    return [f'{pad}bool {v} = true;' if kind == ir.MASK else f'{pad}{ctype} {v} = {_zero(ctype)};'
+            for v, kind in zip(names, fd.state_kinds())]
 
 
 def _call(k, kernels, ctype, args, prefix, pad):
@@ -573,7 +592,7 @@ def fold_step_loop(fd, kernels, ctype, state, start, pad='    '):
     step, _, _ = fold_kernels(fd, kernels)
     lines = [f'{pad}for (std::size_t i_ = {start}; i_ < n; ++i_) {{']
     inner = pad + '    '
-    lines += [f'{inner}const {ctype} {v} = {v}_in[i_];' for v in fd.array_limbs()]
+    lines += [f'{inner}const {ctype} {v} = {v}_in[i_];' for v in loaded_limbs(fd, kernels)]
     body, outs = _call(step, kernels, ctype, step_arguments(fd, state, {g.name: list(g.limbs) for g in fd.arrays}),
                        STEP, inner)
     return lines + body + _assign(state, outs, inner) + [f'{pad}}}']
@@ -598,10 +617,10 @@ def fold_description(fd, kernels, order):
 def fold_seq(fd, kernels, ctype):
     """The sequential order: the state after element i is the step on the state after element
     i - 1, from the zero state."""
-    state = list(fd.state.limbs)
+    state = fd.state_limbs()
     lines = fold_description(fd, kernels, 'seq')
-    lines.append(f'inline void {fd.name}_seq({", ".join(fold_parameters(fd, ctype, "bool", False))}) noexcept {{')
-    lines += [f'    {ctype} {v} = {_zero(ctype)};' for v in state]
+    lines.append(f'inline void {fd.name}_seq({", ".join(fold_parameters(fd, ctype, "bool", False, kernels))}) noexcept {{')
+    lines += state_declarations(fd, ctype, state, '    ')
     lines += fold_step_loop(fd, kernels, ctype, state, '0')
     return lines + fold_finish_lines(fd, kernels, ctype, state) + ['}']
 
@@ -614,17 +633,17 @@ def fold_lanes(fd, kernels, ctype):
     nothing is stored but the state and one lane's: the same operations, in the same order, as
     the definition. With no lane the result is the sequential order."""
     step, combine, _ = fold_kernels(fd, kernels)
-    state = list(fd.state.limbs)
+    state = fd.state_limbs()
     lane = [f'{v}_lane_' for v in state]
     elements = {g.name: list(g.limbs) for g in fd.arrays}
     lines = fold_description(fd, kernels, 'lanes')
-    lines.append(f'inline void {fd.name}_lanes({", ".join(fold_parameters(fd, ctype, "bool", True))}) noexcept {{')
+    lines.append(f'inline void {fd.name}_lanes({", ".join(fold_parameters(fd, ctype, "bool", True, kernels))}) noexcept {{')
     lines.append('    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;')
-    lines += [f'    {ctype} {v} = {_zero(ctype)};' for v in state]
+    lines += state_declarations(fd, ctype, state, '    ')
     lines.append('    for (std::size_t j_ = 0; j_ < lanes; ++j_) {')
-    lines += [f'        {ctype} {v} = {_zero(ctype)};' for v in lane]
+    lines += state_declarations(fd, ctype, lane, '        ')
     lines.append('        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {')
-    lines += [f'            const {ctype} {v} = {v}_in[i_];' for v in fd.array_limbs()]
+    lines += [f'            const {ctype} {v} = {v}_in[i_];' for v in loaded_limbs(fd, kernels)]
     body, outs = _call(step, kernels, ctype, step_arguments(fd, lane, elements), STEP, ' ' * 12)
     lines += body + _assign(lane, outs, ' ' * 12) + ['        }', '        if (j_ == 0) {']
     lines += _assign(state, lane, ' ' * 12) + ['        } else {']
@@ -696,12 +715,12 @@ def map_element(fd, kernels, ctype, mask, pad, state):
     return lines + [f'{pad}{state} = {SPELL["and"].format(state, couts[-1])};']
 
 
-def map_second_pass(fd, kernels, ctype, pad='    '):
+def map_second_pass(fd, kernels, ctype, pad='    ', length='n'):
     """When the mask is false: every element written, again, as the check returns it."""
     check = kernels[fd.check]
     state = fd.state.limbs[0]
     inner = pad + '        '
-    lines = [f'{pad}if (!{state}) {{', f'{pad}    for (std::size_t i_ = 0; i_ < n; ++i_) {{']
+    lines = [f'{pad}if (!{state}) {{', f'{pad}    for (std::size_t i_ = 0; i_ < {length}; ++i_) {{']
     lines += [f'{inner}const {ctype} {v} = {v}_out[i_];' for v in fd.write_limbs()]
     body, outs = _call(check, kernels, ctype, fd.write_limbs(), CHECK, inner)
     lines += [x for x in body] + [f'{inner}{v}_out[i_] = {o};' for v, o in zip(fd.write_limbs(), outs[:-1])]
@@ -751,11 +770,73 @@ def map_lanes(fd, kernels, ctype):
     return lines + map_second_pass(fd, kernels, ctype) + ['}']
 
 
+# --- Convolutions -----------------------------------------------------------------------------------
+#
+# A convolution (rules.py, "Convolutions") writes the n_x + n_y - 1 coefficients of the product of
+# two polynomials: for each j, the state of the fold of its coefficients from the zero state, its
+# step on the terms (x_i, y_(j-i)) for i from max(0, j - n_y + 1) to min(j, n_x - 1) in increasing
+# order, written as the coefficient and tested by the check, the flags and-ed into the mask; then the
+# second pass of a map. Each array has its length, n_ and its name. Aliasing: the array written
+# overlaps neither array read (a coefficient reads several entries of each), nor itself.
+
+def conv_parameters(fd, limb, mask):
+    """Each array read, one pointer per limb and its length; one pointer per limb array written;
+    the mask by reference."""
+    ps = []
+    for g in fd.arrays:
+        ps += [f'const {limb}* {v}_in' for v in g.limbs] + [f'std::size_t n_{g.name}']
+    ps += [f'{limb}* {v}_out' for v in fd.write_limbs()]
+    return ps + [f'{mask}& {v}_out' for v in fd.state.limbs]
+
+
+def conv_description(fd, kernels):
+    cf = kernels.folds[fd.coefficients]
+    x, y = fd.arrays
+    w = fd.writes[0]
+
+    def part(g):
+        return f'{fd.roles[g.name]} {g.name}' + (f' = ({", ".join(g.limbs)})' if len(g.limbs) > 1 else '')
+    return [f'// convolution {fd.name}({part(x)}, {part(y)}) -> {w.name}' +
+            (f' = ({", ".join(w.limbs)})' if len(w.limbs) > 1 else '') +
+            f': coefficient j, of n_{x.name} + n_{y.name} - 1 (none when a length is 0), is the fold {cf.name} in its',
+            f'// sequential order on the terms ({x.name}_i, {y.name}_(j-i)), i increasing, checked by {fd.check}. '
+            f'The array written',
+            f'// overlaps neither {x.name} nor {y.name}. Status: {fd.status}.']
+
+
+def conv_seq(fd, kernels, ctype):
+    cf = kernels.folds[fd.coefficients]
+    step, check = kernels[cf.step[0]], kernels[fd.check]
+    x, y = fd.arrays
+    state = cf.state_limbs()
+    mask = fd.state.limbs[0]
+    lines = conv_description(fd, kernels)
+    lines.append(f'inline void {fd.name}_seq({", ".join(conv_parameters(fd, ctype, "bool"))}) noexcept {{')
+    lines += [f'    const std::size_t nz_ = n_{x.name} == 0 || n_{y.name} == 0 ? 0 : n_{x.name} + n_{y.name} - 1;',
+              f'    bool {mask} = true;',
+              '    for (std::size_t j_ = 0; j_ < nz_; ++j_) {']
+    lines += state_declarations(cf, ctype, state, ' ' * 8)
+    lines += [f'        const std::size_t lo_ = j_ < n_{y.name} ? 0 : j_ - (n_{y.name} - 1);',
+              f'        const std::size_t hi_ = j_ < n_{x.name} ? j_ : n_{x.name} - 1;',
+              '        for (std::size_t i_ = lo_; i_ <= hi_; ++i_) {']
+    lines += [f'            const {ctype} {v} = {v}_in[i_];' for v in x.limbs]
+    lines += [f'            const {ctype} {v} = {v}_in[j_ - i_];' for v in y.limbs]
+    body, outs = _call(step, kernels, ctype, step_arguments(cf, state, {g.name: list(g.limbs) for g in fd.arrays}),
+                       STEP, ' ' * 12)
+    lines += body + _assign(state, outs, ' ' * 12) + ['        }']
+    lines += [f'        {v}_out[j_] = {s};' for v, s in zip(fd.write_limbs(), state)]
+    items, couts = ir.inline_call(check, kernels, [ir.Operand(s) for s in state], CHECK)
+    lines += _statements(needed(items, couts[-1:]), kernels, ctype, SPELL, ' ' * 8)
+    lines += [f'        {mask} = {SPELL["and"].format(mask, couts[-1])};', '    }']
+    return lines + map_second_pass(fd, kernels, ctype, length='nz_') + ['}']
+
+
 def folds(kernels):
     """The scalar functions of every fold, for both limb types."""
     lines = []
     for fd in getattr(kernels, 'folds', {}).values():
         printers = ((('sequential', map_seq), ('lanes', map_lanes)) if fd.is_map else
+                    (('sequential', conv_seq),) if fd.is_conv else
                     (('sequential', fold_seq), ('lanes', fold_lanes)))
         for order, printer in printers:
             if order in fd.orders:
@@ -824,7 +905,7 @@ def runner_table(kernels):
                   '// out[i] and mo[i] the outputs by position, as above.',
                   '#if defined(KAIRN_RUNNER_FOLD)']
         for fd in folds.values():
-            if fd.is_map:
+            if fd.is_map or fd.is_conv:
                 continue
             args = [f'in[{i}]' for i in range(len(fd.array_limbs()))]
             outs = [f'{"mo" if g.kind == ir.MASK else "out"}[{i}]'
@@ -856,5 +937,20 @@ def runner_table(kernels):
                              if order in fd.orders else '(void)0')
             lines.append(f'KAIRN_RUNNER_MAP({fd.name}, "{"".join(str(len(g.limbs)) for g in fd.arrays)}", '
                          f'{len(fd.scalar_limbs())}, {len(fd.write_limbs())}, {", ".join(calls)})')
+        lines.append('#endif')
+    convs = [fd for fd in folds.values() if fd.is_conv]
+    if convs:
+        lines += ['// The convolutions, for a runner that defines KAIRN_RUNNER_CONV: name, the limbs of each array',
+                  '// read, the number of limb arrays written, the call of the sequential order. in[i] is limb array',
+                  '// i read (const T*), the limbs of the first array before those of the second, nx and ny their',
+                  '// lengths, w[i] limb array i written (T*), mo[0] the mask.',
+                  '#if defined(KAIRN_RUNNER_CONV)']
+        for fd in convs:
+            x, y = fd.arrays
+            args = [f'in[{i}]' for i in range(len(x.limbs))] + ['nx']
+            args += [f'in[{len(x.limbs) + i}]' for i in range(len(y.limbs))] + ['ny']
+            args += [f'w[{i}]' for i in range(len(fd.write_limbs()))] + ['mo[0]']
+            lines.append(f'KAIRN_RUNNER_CONV({fd.name}, "{"".join(str(len(g.limbs)) for g in fd.arrays)}", '
+                         f'{len(fd.write_limbs())}, kairn::gen::{fd.name}_seq({", ".join(args)}))')
         lines.append('#endif')
     return '\n'.join(lines) + '\n'

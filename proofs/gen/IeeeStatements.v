@@ -339,6 +339,30 @@ Definition next_up_ieee_spec : Prop :=
   let r := IeeeModel.next_up prec emax a in
   xval r = xsucc prec emax (xval a).
 
+(* norm_finish_1: the finish of a fold of maxima: the maximum or the canonical NaN (milestone2.md). IEEE-model status: unverified. *)
+Definition norm_finish_1_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall m : binary_float prec emax,
+  forall ok : bool,
+  let '(r, flag) := IeeeModel.norm_finish_1 prec emax nan_abs nan_const m ok in
+  (flag = true <-> ok = true /\ finite m) /\
+  (flag = true -> r = m) /\
+  (flag = false -> nan r).
+
+(* norm_finish_2: the finish of a fold of maxima: the step after the maximum, or the canonical NaN (milestone2.md). IEEE-model status: unverified. *)
+Definition norm_finish_2_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall m : binary_float prec emax,
+  forall ok : bool,
+  let '(r, flag) := IeeeModel.norm_finish_2 prec emax nan_abs nan_const m ok in
+  (flag = true <-> ok = true /\ finite (IeeeOperations.succ prec emax m)) /\
+  (flag = true -> r = (IeeeOperations.succ prec emax m)) /\
+  (flag = false -> nan r).
+
 (* radd: one step up from the rounded sum (Milestone 1 listing). IEEE-model status: proved. *)
 Definition radd_ieee_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)

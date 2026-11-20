@@ -12,7 +12,7 @@ $$r = s \ \text{when } s_0 \text{ is finite}, \qquad r = \mathrm{NaN} \text{ oth
 
 ## C++
 
-No public operation computes this kernel on its own.
+No public operation computes this kernel on its own. It is part of [`norm_finish_1`](norm_finish_1.md), [`norm_finish_2`](norm_finish_2.md).
 
 ## Requires
 

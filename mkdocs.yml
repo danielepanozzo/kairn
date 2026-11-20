@@ -208,6 +208,11 @@ nav:
           - The bound of a sum of two limbs, as a function of the number of additions: reference/bound_sum_2.md
           - The bound of a dot product of one limb, as a function of the number of terms: reference/bound_dot_1.md
           - The bound of a dot product of two limbs, as a function of the number of terms: reference/bound_dot_2.md
+          - The larger of two magnitudes, and the and of two masks: reference/norm_combine.md
+          - The step of the largest magnitude of an array of one limb: reference/norm_step_1.md
+          - "The step of the largest magnitude of an array of two limbs: its leading limb": reference/norm_step_2.md
+          - "The result of a fold of maxima of one limb: the maximum, or NaN": reference/norm_finish_1.md
+          - "The result of a fold of maxima of two limbs: one step above the maximum, or NaN": reference/norm_finish_2.md
       - Operations on arrays, entry by entry:
           - The difference of two numbers of one limb, rounded to nearest: reference/sub_1_1.md
           - "x + y of one limb, on arrays of the program": reference/add_entry_step_1.md

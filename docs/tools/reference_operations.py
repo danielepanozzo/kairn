@@ -496,6 +496,12 @@ KERNELS = {
     "axpy_entry_step_2": page("maps", "a x + y of two limbs, y of the program"),
     "axpy_step_2_1": page("maps", "a x + y of two limbs, a of T, y stored"),
     "axpy_entry_step_2_1": page("maps", "a x + y of two limbs, a of T, y of the program"),
+    # --- Milestone 2, the folds of maxima (norm_upper_k) ---------------------------------------------
+    "norm_combine": page("arrays", "The larger of two magnitudes, and the and of two masks"),
+    "norm_step_1": page("arrays", "The step of the largest magnitude of an array of one limb"),
+    "norm_step_2": page("arrays", "The step of the largest magnitude of an array of two limbs: its leading limb"),
+    "norm_finish_1": page("arrays", "The result of a fold of maxima of one limb: the maximum, or NaN"),
+    "norm_finish_2": page("arrays", "The result of a fold of maxima of two limbs: one step above the maximum, or NaN"),
 }
 
 
