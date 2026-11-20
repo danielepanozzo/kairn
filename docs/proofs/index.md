@@ -118,7 +118,7 @@ What it prints, after the compilation lines, shortened where it says `...` (a ru
 
 ```text
 == text scan of the proof files
-  76 files: no Admitted, admit, Axiom or Parameter
+  79 files: no Admitted, admit, Axiom or Parameter
 == assumptions of every theorem that establishes a generated statement
   ok           add_1_1_correct: 4 axioms
       allowed      ClassicalDedekindReals.sig_forall_dec
