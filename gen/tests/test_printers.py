@@ -800,9 +800,11 @@ class Rocq(unittest.TestCase):
     # first kernel that calls it; Audit.v lists the same theorems, mul_1_1_correct earlier.
     # (The two lines of work met in a merge: the files are the regeneration of the merged
     # descriptions, Model.v that of the maps' side, byte for byte.)
+    # Then those fifteen were proved (MapSteps.v): in Statements.v only the comments above their
+    # statements changed, and Audit.v lists their fifteen theorems, every earlier line the same.
     DIGESTS = {'Model.v': 'd23dababab5e004ab91f7ccc1e87d40cf206e62aa460714e99b04e95f430ccb0',
-               'Statements.v': 'a0819bb7dcfd67e8cbbf3f2befbf9cbd112826414a2886c04c35928fff5cc552',
-               'Audit.v': 'da0714a8f7fa383890c24a9ff49a03139911bcfc6b2b3b64b8282cc89d3a07e2'}
+               'Statements.v': '09e5b71b0ae0b5777b7f7f36b6bdc32fefbfe9e47468c375475e44ce13c92923',
+               'Audit.v': 'facb09ba4b1656f07a9c14bbd3f43ddfe7984571043fa54a730d4322327a791d'}
 
     def test_the_non_finite_layer_leaves_the_real_model_as_it_was(self):
         """The full kernels and the constructors have no real-model statement and appear nowhere in

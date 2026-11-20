@@ -39,7 +39,10 @@
      theories/IeeeFolds.v proves of the generated models of the folds in the IEEE model
      beyond their generated statements: the two facts about one application of each
      step, a fold of such steps with its finish, and the state after every element in
-     the sequential order.
+     the sequential order;
+   - the arithmetic of the steps of the maps (theories/MapSteps.v), beside their theorems,
+     which proofs/gen/Audit.v lists: the error of a product followed by a sum, and its
+     three instances, with the constants of the steps of axpy.
 
    Same form as the generated audits: for every theorem, a silent definition that fails
    to compile unless the theorem has the stated type, then the axioms it depends on, for
@@ -54,6 +57,7 @@ From Kairn Require Import DirectedSum DirectedProd BallPow2 Rectangle IeeeProduc
 From Kairn Require Import IeeeDirected IeeeDirectedProd IeeeEntry.
 From Kairn Require Import IeeeTwoExecutions.
 From Kairn Require Import StepKernels FoldTransfer BoundKernels FoldGuarantee.
+From Kairn Require Import MapSteps.
 From Kairn Require Import IeeeSteps IeeeFolds.
 
 (* The IEEE model: error-free transformations (two_sum_ieee_spec is written by hand, in
@@ -643,3 +647,15 @@ Print Assumptions sum_2_entry_seq_ieee_facts.
 Print Assumptions sum_fast_2_seq_ieee_facts.
 Print Assumptions sum_fast_2_entry_seq_ieee_facts.
 Print Assumptions dot_2_seq_ieee_facts.
+
+(* The steps of the maps (theories/MapSteps.v): the theorems of their generated statements
+   are listed by proofs/gen/Audit.v; these are the lemmas beside them. A product within
+   em |X| + tm of X, then a sum of relative error ea, is within
+   (ea (1 + em) + em) (|X| + |Y|) + (1 + ea) tm of X + Y; the three instances have the
+   constants that the steps of axpy claim; and the relative error of add_2_2 is at most
+   3/32 from precision 3. *)
+Print Assumptions axpy_compose.
+Print Assumptions rel_add_2_2_le.
+Print Assumptions axpy_step_1_arith.
+Print Assumptions axpy_step_2_arith.
+Print Assumptions axpy_step_2_1_arith.

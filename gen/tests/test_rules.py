@@ -1164,8 +1164,7 @@ class TheKernels(unittest.TestCase):
     WAVE_1 = WAVE_1_EXTENDED | WAVE_1_FINITE | WAVE_1_FULL
     # milestone2.md, "Batch kernels" (the folds' stage): the steps of the folds and the exported
     # bounds, of the finite domain; and the two finishes, with the IEEE-model statement only.
-    # Proved (StepKernels.v, BoundKernels.v, IeeeFoldFinish.v). With them, the steps of the maps
-    # (MAP_STEPS, above).
+    # Proved (StepKernels.v, BoundKernels.v, IeeeFoldFinish.v).
     FOLDS_FINITE = {'dot_step_1', 'dot_step_2', 'sum_entry_step_1', 'sum_entry_step_2', 'sum_fast_entry_step_2',
                     'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2'}
     FOLDS_FINISH = {'fold_finish_1', 'fold_finish_2'}
@@ -1194,10 +1193,9 @@ class TheKernels(unittest.TestCase):
         # constructors, which have no real-model statement, by their IEEE-model theorems.
         # Of wave 1 of Milestone 2, every kernel is proved too, the two full scalings of a ball by
         # their IEEE-model theorems (IeeeBallPow2.v), and so is every kernel of the folds' stage.
-        # The steps of the maps are unverified until their proofs land.
         self.assertEqual({name for name, k in ks.items() if k.status == 'proved'},
-                         self.MILESTONE1 | self.WAVE_1 | self.FOLDS - MAP_STEPS)
-        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, MAP_STEPS)
+                         self.MILESTONE1 | self.WAVE_1 | self.FOLDS)
+        self.assertEqual({name for name, k in ks.items() if k.status == 'unverified'}, set())
         self.assertEqual({name: k.theorem for name, k in ks.items() if name in self.BALL_CORES},
                          {name: ('proofs/theories/Ball2.v', f'{name}_correct') for name in self.BALL_CORES})
         self.assertEqual(ks['add_2_1'].theorem, ('proofs/theories/Add21.v', 'add_2_1_correct'))

@@ -11,9 +11,10 @@ requires:      power_of_two c
 ensures:       normalized z
 ensures:       error z R c=0 k=2 t=1
 min_precision: 2
+theorem:       proofs/theories/MapSteps.v mul_pow2_step_2_correct
 source:        mul_pow2_2, the two limbs scaled and renormalized
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 
 (z0, z1) = mul_pow2_2(x0, x1, c)

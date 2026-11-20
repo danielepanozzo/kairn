@@ -15,9 +15,10 @@ requires:      normalized y
 ensures:       normalized z
 ensures:       error z T c=3*(1+4*u*u)/(1-4*u)+4 k=2 t=2
 min_precision: 4
+theorem:       proofs/theories/MapSteps.v axpy_entry_step_2_correct
 source:        the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 
 (p0, p1) = mul_2_2(a0, a1, x0, x1)

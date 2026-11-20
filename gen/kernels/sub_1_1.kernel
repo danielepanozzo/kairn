@@ -9,8 +9,9 @@ value:         a-b
 ensures:       rounded s nearest
 ensures:       error s R c=1/(1+u) k=1 t=0
 min_precision: 1
+theorem:       proofs/theories/MapSteps.v sub_1_1_correct
 source:        one rounding to nearest
 license:       bound: published; proof: MIT
-status:        unverified
+status:        proved
 
 s = sub(a, b)

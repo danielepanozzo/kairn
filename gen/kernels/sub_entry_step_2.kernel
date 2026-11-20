@@ -10,9 +10,10 @@ requires:      normalized y
 ensures:       normalized z
 ensures:       error z R c=3/(1-4*u) k=2 t=0
 min_precision: 3
+theorem:       proofs/theories/MapSteps.v sub_entry_step_2_correct
 source:        sub_2_2 on guarded operands (rule R3); add_2_2 (JMP17 Alg. 6) on -y, bound from MR22
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 
 gx0      = guard(x0)

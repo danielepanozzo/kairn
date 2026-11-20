@@ -12,9 +12,10 @@ output:        z
 value:         a*x+y
 ensures:       error z T c=(2+3*u)/((1+u)*(1+u)) k=1 t=2/3
 min_precision: 1
+theorem:       proofs/theories/MapSteps.v axpy_step_1_correct
 source:        the step of axpy (milestone2.md, "sum, dot, axpy, convolution"): the product, then the sum, mul_1_1 then add_1_1
 license:       algorithm: published; proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 
 p = mul_1_1(a, x)

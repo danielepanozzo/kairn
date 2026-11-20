@@ -330,8 +330,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "add_entry_step_1_correct"
+      },
       "source": {
         "cite": "add_1_1 on guarded operands (rule R3); one rounding to nearest",
         "license": "bound: published; proof: MIT"
@@ -548,8 +551,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "axpy_entry_step_1_correct"
+      },
       "source": {
         "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_1_1 then add_1_1 on the guarded y",
         "license": "algorithm: published; proof: MIT"
@@ -606,8 +612,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "axpy_step_1_correct"
+      },
       "source": {
         "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_1_1 then add_1_1",
         "license": "algorithm: published; proof: MIT"
@@ -2092,8 +2101,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "mul_pow2_step_1_correct"
+      },
       "source": {
         "cite": "one rounding to nearest of a product by a power of two",
         "license": "bound: published; proof: MIT"
@@ -2453,8 +2465,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "scale_step_1_correct"
+      },
       "source": {
         "cite": "mul_1_1, one rounding to nearest",
         "license": "bound: published; proof: MIT"
@@ -2565,8 +2580,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "sub_1_1_correct"
+      },
       "source": {
         "cite": "one rounding to nearest",
         "license": "bound: published; proof: MIT"
@@ -2722,8 +2740,11 @@
         }
       ],
       "min_precision": 1,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "sub_entry_step_1_correct"
+      },
       "source": {
         "cite": "sub_1_1 on guarded operands (rule R3); one rounding to nearest",
         "license": "bound: published; proof: MIT"
@@ -3554,8 +3575,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "add_entry_step_2_correct"
+      },
       "source": {
         "cite": "add_2_2 on guarded operands (rule R3); JMP17 Alg. 6, bound from MR22",
         "license": "algorithm: published; proof: MIT"
@@ -3809,8 +3833,11 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "axpy_entry_step_2_correct"
+      },
       "source": {
         "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_2_2 then add_2_2 on the guarded y; bounds from MR22",
         "license": "algorithm: published; proof: MIT"
@@ -3937,8 +3964,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "axpy_entry_step_2_1_correct"
+      },
       "source": {
         "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_2_1 then add_2_2 on the guarded y; bounds from MR22",
         "license": "algorithm: published; proof: MIT"
@@ -4003,8 +4033,11 @@
         }
       ],
       "min_precision": 4,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "axpy_step_2_correct"
+      },
       "source": {
         "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_2_2 then add_2_2; bounds from MR22",
         "license": "algorithm: published; proof: MIT"
@@ -4068,8 +4101,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "axpy_step_2_1_correct"
+      },
       "source": {
         "cite": "the step of axpy (milestone2.md, \"sum, dot, axpy, convolution\"): the product, then the sum, mul_2_1 then add_2_2; bounds from MR22",
         "license": "algorithm: published; proof: MIT"
@@ -5929,8 +5965,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "mul_pow2_step_2_correct"
+      },
       "source": {
         "cite": "mul_pow2_2, the two limbs scaled and renormalized",
         "license": "algorithm: published; proof: MIT"
@@ -5989,8 +6028,11 @@
         }
       ],
       "min_precision": 2,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "scale_step_2_correct"
+      },
       "source": {
         "cite": "mul_2_1 (JMP17 Alg. 9, DWTimesFP3); bound from MR22",
         "license": "algorithm: published; proof: MIT"
@@ -6421,8 +6463,11 @@
         }
       ],
       "min_precision": 3,
-      "status": "unverified",
-      "theorem": null,
+      "status": "proved",
+      "theorem": {
+        "file": "proofs/theories/MapSteps.v",
+        "name": "sub_entry_step_2_correct"
+      },
       "source": {
         "cite": "sub_2_2 on guarded operands (rule R3); add_2_2 (JMP17 Alg. 6) on -y, bound from MR22",
         "license": "algorithm: published; proof: MIT"

@@ -10,9 +10,10 @@ requires:      power_of_two c
 ensures:       rounded z nearest
 ensures:       error z R c=0 k=1 t=1/2
 min_precision: 1
+theorem:       proofs/theories/MapSteps.v mul_pow2_step_1_correct
 source:        one rounding to nearest of a product by a power of two
 license:       bound: published; proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 
 z = prod(x, c)

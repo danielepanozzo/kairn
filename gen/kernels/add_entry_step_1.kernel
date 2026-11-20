@@ -9,9 +9,10 @@ value:         x+y
 ensures:       rounded z nearest
 ensures:       error z R c=1/(1+u) k=1 t=0
 min_precision: 1
+theorem:       proofs/theories/MapSteps.v add_entry_step_1_correct
 source:        add_1_1 on guarded operands (rule R3); one rounding to nearest
 license:       bound: published; proof: MIT
-status:        unverified
+status:        proved
 entry:         yes
 
 gx = guard(x)

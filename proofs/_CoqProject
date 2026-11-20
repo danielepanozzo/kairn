@@ -42,6 +42,7 @@ theories/BallPow2.v
 gen/FoldModel.v
 gen/FoldStatements.v
 theories/StepKernels.v
+theories/MapSteps.v
 theories/FoldSums.v
 theories/BoundKernels.v
 theories/FoldGuarantee.v
