@@ -52,6 +52,26 @@ extern "C" KAIRN_OBJCODE_NOINLINE void kairn_objcode_fixups_inline() noexcept {}
 #include "runner_kernels.inc"
 #undef KAIRN_RUNNER_KERNEL
 
+// The folds (gen/objcode.json, "folds"): one function per fold, order and limb type, which calls
+// the fold's function on limb arrays it is given, a length and a number of lanes:
+//
+//   kairn_objcode_fold_seq_double_F, kairn_objcode_fold_lanes_double_F (and float)    scalar.hpp
+//   kairn_objcode_fold_packed_double_F, kairn_objcode_fold_packed_float_F             the packed header
+#define KAIRN_OBJCODE_FOLD_ARGS(L)                                                                   \
+    [[maybe_unused]] const L* const* in, [[maybe_unused]] std::size_t n, [[maybe_unused]] std::size_t lanes, \
+        [[maybe_unused]] L* out, [[maybe_unused]] bool* mo
+#define KAIRN_OBJCODE_FOLD(PREFIX, NAME, L, CALL) \
+    extern "C" KAIRN_OBJCODE_NOINLINE void PREFIX##NAME(KAIRN_OBJCODE_FOLD_ARGS(L)) noexcept { CALL; }
+#define KAIRN_RUNNER_KERNEL(NAME, IN, OUT, CALL)
+#define KAIRN_RUNNER_FOLD(NAME, ARRAYS, OUT, SEQ, LANES, PACKED)        \
+    KAIRN_OBJCODE_FOLD(kairn_objcode_fold_seq_double_, NAME, double, SEQ)     \
+    KAIRN_OBJCODE_FOLD(kairn_objcode_fold_seq_float_, NAME, float, SEQ)       \
+    KAIRN_OBJCODE_FOLD(kairn_objcode_fold_lanes_double_, NAME, double, LANES) \
+    KAIRN_OBJCODE_FOLD(kairn_objcode_fold_lanes_float_, NAME, float, LANES)
+#include "runner_kernels.inc"
+#undef KAIRN_RUNNER_FOLD
+#undef KAIRN_RUNNER_KERNEL
+
 #if defined(KAIRN_OBJCODE_PACKED)
 #if defined(__AVX2__)
 using kairn_objcode_d = __m256d;
@@ -68,5 +88,12 @@ using kairn_objcode_fm = uint32x4_t;
     KAIRN_OBJCODE_FUNCTION(kairn_objcode_packed_double_, NAME, kairn_objcode_d, kairn_objcode_dm, CALL) \
     KAIRN_OBJCODE_FUNCTION(kairn_objcode_packed_float_, NAME, kairn_objcode_f, kairn_objcode_fm, CALL)
 #include "runner_kernels.inc"
+#undef KAIRN_RUNNER_KERNEL
+#define KAIRN_RUNNER_KERNEL(NAME, IN, OUT, CALL)
+#define KAIRN_RUNNER_FOLD(NAME, ARRAYS, OUT, SEQ, LANES, PACKED)            \
+    KAIRN_OBJCODE_FOLD(kairn_objcode_fold_packed_double_, NAME, double, PACKED) \
+    KAIRN_OBJCODE_FOLD(kairn_objcode_fold_packed_float_, NAME, float, PACKED)
+#include "runner_kernels.inc"
+#undef KAIRN_RUNNER_FOLD
 #undef KAIRN_RUNNER_KERNEL
 #endif

@@ -5,21 +5,32 @@
 # with g >= gamma_m(eps), eps = u / (1 + u), and t >= m (eta / 2) (1 + g). These dominate the two
 # terms of the proved statement of the fused dot product (dot_1_seq, dot_1_lanes):
 #   (1 + eps)^m - 1 <= gamma_m(eps) <= g       and      (1 + eps)^(m-1) m eta / 2 <= t.
+# The constant of tm holds the smallest normal number, eta / (2u), so that it is not subnormal (as
+# H of the Ball cores; milestone2.md asks of no listing a subnormal constant): t is larger by about
+# m eta / (2u) (1 + g), which keeps t >= m (eta / 2) (1 + g).
 kernel:        bound_dot_1
 input:         m
 output:        g
 output:        t
 output:        mask ok
+requires:      count m
+requires:      format half
+ensures:       upper g value=m*unit(mul_1_1)/(1-m*unit(mul_1_1)) if=ok
+ensures:       upper t value=m*tiny(mul_1_1)*(1+g) if=ok
 min_precision: 1
+source:        the exported bound of a dot product as a function of n (milestone2.md)
+license:       proof: MIT
 status:        unverified
 cone_exempt:   the third output is a mask; g and t are bounds, which nothing adds to a number
 
 a  = prod(m, const up((1+u)*(unit(mul_1_1)+eta/2)))
 aa = prod(m, const up((1+u)^2*(unit(mul_1_1)+eta)))
-d  = add(a, a)
+# d = 2a. milestone2.md writes add(a, a), which GCC turns into a * 2 and contracts into the
+# next addition (rule R1 refuses it); the opaque product has the same value.
+d  = prod(a, const up(2))
 w  = add(d, const up(1+2*u))
 g  = prod(aa, w)
-tm = prod(m, const up((1+u)^2*(tiny(mul_1_1)+eta)))
+tm = prod(m, const up((1+u)^2*(tiny(mul_1_1)+eta)+eta/(2*u)))
 wg = add(g, const up(1+2*u))
 t  = prod(tm, wg)
 oa = le(a, const up(1/4))

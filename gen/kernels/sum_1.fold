@@ -1,0 +1,25 @@
+# The sum of an array of numbers of one limb written through Kairn (milestone2.md, "sum, dot,
+# axpy, convolution"): s <- add_1_1(s, x) from 0, the lanes combined by add_1_1. If the flag is
+# true, the result is a number of the format and, with eps = u / (1 + u),
+#   |r - sum x_i| <= ((1 + eps)^(n-1) - 1) sum |x_i|          in both orders, for every width;
+# the flag is false, and the result a NaN, when the final state is not finite. Proved in the real
+# model for the steps of SummationKernels.v (sum_1_seq, sum_1_lanes in closed form, fold_seq_sum
+# and fold_lanes_sum with add_1_1_adds and add_1_1_zero in the form with the power).
+fold:          sum_1
+arrays:        stored x
+state:         s
+step:          s = add_1_1(s, x)
+combine:       s = add_1_1(s, s)
+orders:        sequential, lanes
+writes:        none
+output:        r
+output:        mask flag
+finish:        (r, flag) = fold_finish_1(s)
+value:         x
+ensures:       fold_error r eps=u/(1+u) rel=n-1
+ensures:       finite_or_nan r flag=flag
+min_precision: 1
+status:        unverified
+domain:        extended
+source:        Higham's bound for summation over any tree, with the bound of one rounding
+license:       bound: published; proof: MIT

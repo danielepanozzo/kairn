@@ -268,6 +268,79 @@ def load_expected(path):
     return kernels, doc['limb_types']
 
 
+def load_fold_expected(path):
+    """{fold: {form: {limb type: [{'part', 'least', counts...}]}}} of gen/objcode.json ("folds"), or
+    {} when it has none."""
+    with open(path, encoding='utf-8') as f:
+        doc = json.load(f)
+    names = doc.get('fold_parts', [])
+    return {fd: {form: {t: [dict(zip(names, part)) for part in parts] for t, parts in types.items()}
+                 for form, types in forms.items()}
+            for fd, forms in doc.get('folds', {}).items()}
+
+
+# The most copies of one part of a fold's function that a compiler is taken to make (unrolling
+# and peeling of its loops): the counts are judged against every number of copies up to it.
+FOLD_COPIES = 64
+
+
+def _sums(parts, key, alt, limit):
+    """Every total, up to limit, of the counts `key` (or `alt`, for a copy whose identical
+    operations a compiler merged) of each part taken at least `least` times and at most
+    FOLD_COPIES."""
+    totals = {0}
+    for p in parts:
+        values = {p[key], p[alt]}
+        nxt = set()
+        for t in totals:
+            if values == {0}:            # any number of copies of a part that asks for none
+                nxt.add(t)
+                continue
+            if p['least'] == 0:
+                nxt.add(t)
+            frontier = {t}
+            for copy in range(1, FOLD_COPIES + 1):
+                frontier = {x + v for x in frontier for v in values if x + v <= limit}
+                if not frontier:
+                    break
+                if copy >= p['least']:
+                    nxt |= frontier
+        totals = nxt
+    return totals
+
+
+def judge_fold(count, parts):
+    """(failure text or None, how) for a fold's function: its fused instructions and its plain
+    multiplications are what some number of copies of its parts ask for, each part at least as
+    often as the printed function has it (a loop unrolled holds its step several times), and
+    nothing else: no call outside the object, no declared contractable multiply-add."""
+    f, m = len(count.fma), len(count.mul)
+    problems = []
+    if any(p['muladd'] for p in parts):
+        problems.append('a part has declared contractable multiply-adds (muladd), for which the check has no rule yet')
+    if any(p['consteval_mul'] for p in parts):
+        problems.append('a part has a branch of constant evaluation, which a fold has not')
+    described = ', '.join(f'{p["part"]} {p["fma"]}' + (f' or {p["fma_distinct"]}' if p['fma_distinct'] != p['fma'] else '')
+                          + f' at least {p["least"]} times' for p in parts)
+    if f not in _sums(parts, 'fma', 'fma_distinct', f):
+        problems.append(f'{f} fused multiply-adds, which no number of copies of the parts makes ({described})')
+    if m not in _sums(parts, 'mul', 'mul_distinct', m):
+        muls = ', '.join(f'{p["part"]} {p["mul"]}' for p in parts)
+        problems.append(f'{m} plain multiplications, which no number of copies of the parts makes ({muls})')
+    for fn, sym in count.external:
+        problems.append(f'calls {sym} outside the object (in {fn}): what it executes cannot be counted')
+    for fn, insn in count.unknown:
+        problems.append(f'a call or jump whose target is not known (in {fn}: {insn})')
+    if problems:
+        detail = []
+        if count.fma:
+            detail.append('fused: ' + '; '.join(f'{fn}: {i}' for fn, i in count.fma))
+        if count.mul:
+            detail.append('multiplications: ' + '; '.join(f'{fn}: {i}' for fn, i in count.mul))
+        return '; '.join(problems) + ''.join(f'\n        {d}' for d in detail), set()
+    return None, set()
+
+
 def judge(count, e):
     """(failure text or None, how): how says which alternatives of the rule held, for the tally:
     'each' or 'distinct' where the two counts of FMAs differ, and 'consteval' where the
@@ -314,11 +387,39 @@ def unit_form(program):
     return 'scalar_call' if call else 'scalar'
 
 
-def check_program(program, expected, limb_types, packed):
+def check_program(program, expected, limb_types, packed, folds=None):
     """(failures, tally, functions checked) of one object file of the unit; a failure is (kernel
-    or None, text)."""
+    or fold, or None, text). `folds` are the expectations of the folds (load_fold_expected)."""
     form = unit_form(program)
     failures, tally, n = [], {}, 0
+    folds = folds or {}
+    fold_forms = ['seq', 'lanes'] + (['packed'] if packed else [])
+    for fold, forms in folds.items():
+        for fform in fold_forms:
+            if fform not in forms:
+                continue
+            for t in limb_types:
+                name = f'kairn_objcode_fold_{fform}_{t}_{fold}'
+                f = program.find(name)
+                if f is None:
+                    failures.append((fold, f'fold {fold} {fform} {t}: no function {name} in the disassembly'))
+                    continue
+                n += 1
+                count = program.count(f)
+                text, _ = judge_fold(count, forms[fform][t])
+                if count.calls:
+                    tally['calls'] = tally.get('calls', 0) + 1
+                if text:
+                    failures.append((fold, f'fold {fold} {fform} {t}: {text}'))
+    known_folds = {f'kairn_objcode_fold_{ff}_{t}_{fd}' for fd, forms in folds.items() for ff in fold_forms
+                   if ff in forms for t in limb_types}
+    for fn in program.functions:
+        if program.owner(fn) is not fn:
+            continue
+        for fname in fn.names:
+            plain = fname[1:] if fname.startswith('_kairn_objcode_') else fname
+            if re.match(r'^kairn_objcode_fold_(seq|lanes|packed)_', plain) and plain not in known_folds:
+                failures.append((None, f'{plain}: a function of the unit with no counts in gen/objcode.json'))
     families = ['scalar'] + (['packed'] if packed else [])
     for kernel, forms in expected.items():
         for family in families:
@@ -445,7 +546,7 @@ def describe(tally, n):
 
 # --- The check ------------------------------------------------------------------------------------
 
-def check_configuration(tools, config, index, workdir, expected, limb_types):
+def check_configuration(tools, config, index, workdir, expected, limb_types, folds=None):
     """[(text, ok)] of one configuration: the compiler's own form of the fix-ups, with the packed
     kernels, and where asked the other form, scalar only."""
     level, contraction, rounding, both = config
@@ -464,7 +565,7 @@ def check_configuration(tools, config, index, workdir, expected, limb_types):
             tools.compile(UNIT, obj, options, defines, with_packed, workdir)
             program = disasm.Program(tools.disassemble(obj, workdir))
             form = unit_form(program)
-            failures, tally, n = check_program(program, expected, limb_types, with_packed)
+            failures, tally, n = check_program(program, expected, limb_types, with_packed, folds)
         except (Failure, ValueError) as e:
             out.append((f'{label(config)}: FAILED: {e}', False))
             continue
@@ -486,7 +587,7 @@ def check_configuration(tools, config, index, workdir, expected, limb_types):
     return out
 
 
-def check(tools, args, expected, limb_types):
+def check(tools, args, expected, limb_types, folds=None):
     configs = configurations(tools.family, args.tier)
     print(f'objcode: {tools.cxx_path} ({tools.name}, {tools.family} matrix, {args.tier} tier: '
           f'{len(configs)} configurations); disassembler {tools.disassembler} ({tools.flavor}); '
@@ -496,7 +597,7 @@ def check(tools, args, expected, limb_types):
         print('objcode: no packed backend for this target: the packed kernels are NOT checked')
     ok = True
     with concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
-        jobs = [pool.submit(check_configuration, tools, c, i, args.workdir, expected, limb_types)
+        jobs = [pool.submit(check_configuration, tools, c, i, args.workdir, expected, limb_types, folds)
                 for i, c in enumerate(configs)]
         for job in jobs:
             for text, good in job.result():
@@ -550,7 +651,7 @@ def control_fixture(tools, config, index, workdir):
     return [head + ('' if ok else ': FAILED')] + ['    ' + x for x in lines], ok, fused
 
 
-def control_counts(tools, workdir, expected, limb_types):
+def control_counts(tools, workdir, expected, limb_types, folds=None):
     """(lines, ok): the unit judged against counts with two kernels changed."""
     config = next(c for c in configurations(tools.family, 'quick') if c[0] not in ('-O0', '/Od'))
     changed = copy.deepcopy(expected)
@@ -568,7 +669,7 @@ def control_counts(tools, workdir, expected, limb_types):
         level, contraction, rounding, _ = config
         tools.compile(UNIT, obj, (level,) + contraction + rounding, [], packed, workdir)
         program = disasm.Program(tools.disassemble(obj, workdir))
-        failures, _, n = check_program(program, changed, limb_types, packed)
+        failures, _, n = check_program(program, changed, limb_types, packed, folds)
     except (Failure, ValueError) as e:
         return [f'wrong counts, {label(config)}: FAILED: {e}'], False
     failed = sorted({str(kernel) for kernel, _ in failures})
@@ -599,7 +700,7 @@ def control_enclosures(tools, workdir, expected, limb_types):
             + ('' if ok else ': FAILED, expected every one')], ok
 
 
-def controls(tools, args, expected, limb_types):
+def controls(tools, args, expected, limb_types, folds=None):
     configs = configurations(tools.family, args.tier)
     print(f'objcode controls: {tools.cxx_path} ({tools.name}, {args.tier} tier: {len(configs)} '
           f'configurations); disassembler {tools.disassembler} ({tools.flavor})', flush=True)
@@ -607,7 +708,7 @@ def controls(tools, args, expected, limb_types):
     contracted = 0
     with concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
         jobs = [pool.submit(control_fixture, tools, c, i, args.workdir) for i, c in enumerate(configs)]
-        counts = pool.submit(control_counts, tools, args.workdir, expected, limb_types)
+        counts = pool.submit(control_counts, tools, args.workdir, expected, limb_types, folds)
         enclosures = pool.submit(control_enclosures, tools, args.workdir, expected, limb_types)
         print('  The textbook a * b + c (fixture.cpp), judged against its source:')
         for job in jobs:
@@ -659,7 +760,8 @@ def main():
     try:
         tools = Tools(args)
         expected, limb_types = load_expected(args.expected)
-        ok = (controls if args.controls else check)(tools, args, expected, limb_types)
+        folds = load_fold_expected(args.expected)
+        ok = (controls if args.controls else check)(tools, args, expected, limb_types, folds)
     except Failure as e:
         print(f'objcode: FAILED: {e}')
         return 1

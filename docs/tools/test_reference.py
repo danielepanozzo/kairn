@@ -762,6 +762,17 @@ class Numbers(unittest.TestCase):
             reference.parse("x^2", "test", {"x"})
         with self.assertRaises(reference.ReferenceError):
             reference.parse("x+q", "test", {"x"})
+        # The expressions of the claims of Milestone 2 (an upper bound's own value, holds): integer
+        # powers and the constants of a kernel's bound, there only.
+        with self.assertRaises(reference.ReferenceError):
+            reference.parse("m*unit(add_2_2)", "test", {"m"})
+        node = reference.parse("m*unit(add_2_2)/(1-m*unit(add_2_2))", "test", {"m"}, constants=True)
+        self.assertEqual(reference.tex(node), "\\frac{m \\mathrm{unit}(\\mathtt{add\\_2\\_2})}"
+                                              "{1 - m \\mathrm{unit}(\\mathtt{add\\_2\\_2})}")
+        self.assertEqual(reference.tex(reference.parse("(1+u)^2*2^-3", "test", {"u"}, constants=True)),
+                         "(1 + u)^{2} 2^{-3}")
+        self.assertEqual(reference.name_tex("ok"), "\\mathit{ok}")
+        self.assertEqual(reference.name_tex("flag"), "\\mathit{flag}")
 
 
 if __name__ == "__main__":

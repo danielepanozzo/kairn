@@ -142,9 +142,45 @@ def kernel_counts(k, kernels):
     return out
 
 
+# The functions of a fold (cpp.py, simd.py): F_seq and F_lanes of scalar.hpp, F_packed of the
+# packed headers. Each is a loop, which a compiler may unroll, peel or duplicate: what its code
+# asks for is given part by part, each part an inlined kernel (the step, the combination, the
+# finish) with the least number of times it is in the printed function (the step twice in F_lanes,
+# its loop over the lanes and its loop over the rest; the scalar and the packed step in F_packed).
+# The check (tests/objcode/objcode.py) accepts the counts of a function that are a sum of each
+# part's counts taken at least that many times: the fused instructions of one iteration are
+# those of the step, and nothing else is fused anywhere.
+FOLD_FORMS = ('seq', 'lanes', 'packed')
+
+
+def _part(name, k, minimum, kernels, ctype):
+    items, _ = ir.inline_call(k, kernels, [ir.Operand(v) for v in k.input_limbs], 'p')
+    counts = _counts([it for it in items if isinstance(it, ir.Prim)], kernels, ctype)
+    return [name, minimum] + [counts[c] for c in COUNTS]
+
+
+def fold_counts(fd, kernels):
+    """{form: {limb type: [[part, least number of times, counts...], ...]}} of one fold."""
+    step, combine, finish = cpp.fold_kernels(fd, kernels)
+    forms = {}
+    if 'sequential' in fd.orders:
+        forms['seq'] = [('step', step, 1)]
+    if 'lanes' in fd.orders:
+        forms['lanes'] = [('step', step, 2), ('combine', combine, 1)]
+        forms['packed'] = [('packed step', step, 1), ('combine', combine, 1), ('step', step, 1)]
+    out = {}
+    for form, parts in forms.items():
+        if finish is not None:
+            parts = parts + [('finish', finish, 1)]
+        out[form] = {t: [_part(name, k, m, kernels, t) for name, k, m in parts] for t in LIMB_TYPES}
+    return out
+
+
 def objcode(kernels):
     """The text of gen/objcode.json: for each kernel, one line per form, and in it, for each limb
-    type, the counts in the order of COUNTS (the file's "counts")."""
+    type, the counts in the order of COUNTS (the file's "counts"); then, when there are folds,
+    for each fold one line per form with its parts (FOLD_FORMS)."""
+    folds = getattr(kernels, 'folds', {})
     lines = ['{',
              f' "schema": {SCHEMA},',
              f' "forms": {json.dumps(list(FORMS))},',
@@ -160,5 +196,20 @@ def objcode(kernels):
                             for t in LIMB_TYPES)
             lines.append(f'   {json.dumps(form)}: {{{row}}}{"," if j + 1 < len(FORMS) else ""}')
         lines.append(f'  }}{"," if i + 1 < len(names) else ""}')
-    lines += [' }', '}']
+    lines.append(' }' + (',' if folds else ''))
+    if folds:
+        lines += [f' "fold_forms": {json.dumps(list(FOLD_FORMS))},',
+                  ' "fold_parts": ["part", "least", ' + ', '.join(json.dumps(c) for c in COUNTS) + '],',
+                  ' "folds": {']
+        names = list(folds)
+        for i, name in enumerate(names):
+            counts = fold_counts(folds[name], kernels)
+            lines.append(f'  {json.dumps(name)}: {{')
+            forms = list(counts)
+            for j, form in enumerate(forms):
+                row = ', '.join(f'{json.dumps(t)}: {json.dumps(counts[form][t])}' for t in LIMB_TYPES)
+                lines.append(f'   {json.dumps(form)}: {{{row}}}{"," if j + 1 < len(forms) else ""}')
+            lines.append(f'  }}{"," if i + 1 < len(names) else ""}')
+        lines.append(' }')
+    lines.append('}')
     return '\n'.join(lines) + '\n'

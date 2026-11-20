@@ -85,8 +85,10 @@ class Model(unittest.TestCase):
         ups = {n for n in definitions(m) if n.startswith('up_')}
         self.assertEqual(ups, {n for n in definitions(read('proofs/gen/Model.v')) if n.startswith('up_')})
         # The thirteen of the Ball cores, and N and P of Milestone 2 (eta / (2u), eta / (2u^2): the
-        # scalings of a ball and the directed products).
-        self.assertEqual(len(ups), 15)
+        # scalings of a ball and the directed products); and the fourteen distinct ones of the four
+        # bound kernels of the folds (bound_sum_k: 4 and 2; bound_dot_k: 4 and 3, 2, 1 + 2u, 1/4 and
+        # 1 shared).
+        self.assertEqual(len(ups), 29)
         self.assertIn('Definition up_ball_mul_pow2_1_0 : float := const_of (Model.up_ball_mul_pow2_1_0 (3 - emax - prec) prec).', m)
 
     def test_programs(self):
@@ -279,9 +281,11 @@ class CheckedFiles(unittest.TestCase):
     # With the kernels of wave 1 of Milestone 2, whose definitions and statements were added
     # (every earlier one is the same, byte for byte) and whose statuses the statements file
     # prints: proved, the two full scalings of a ball included (the only change of the file when
-    # their proofs landed is those two words).
-    DIGESTS = {'proofs/gen/IeeeModel.v': '5f8b52744c5b159c79b59b54a7ab0d6315550e917d4d997962d21f971ce27031',
-               'proofs/gen/IeeeStatements.v': '71547afdfa7855358d802f2a836dd0a0ec4b0eaa4c67cc8c6b36a17ac39c9179'}
+    # their proofs landed is those two words). Then the kernels of the folds' stage (unverified):
+    # their definitions, the constants of the bound kernels, and the statements of the two
+    # finishes were added, and every earlier one is the same, byte for byte.
+    DIGESTS = {'proofs/gen/IeeeModel.v': '9a2adeb31a19e09f9d9cc8b0cc1e27dc76080535bf4275445f59b3098b42aee6',
+               'proofs/gen/IeeeStatements.v': '743d04d20c50b4cb1e58383045466e514b9b6e23463239c470d13ca330ad941e'}
 
     def test_the_checked_files(self):
         for path, digest in self.DIGESTS.items():

@@ -196,6 +196,18 @@ nav:
           - A sum of two limbs rounded up: reference/add_up_1.md
           - A difference of two limbs rounded down: reference/sub_down_1.md
           - A difference of two limbs rounded up: reference/sub_up_1.md
+      - Sums and dot products of arrays:
+          - "The step of a dot product of one limb: one fused multiply-add": reference/dot_step_1.md
+          - The step of a dot product of two limbs: reference/dot_step_2.md
+          - The step of a sum of one limb, on an array of the program: reference/sum_entry_step_1.md
+          - The step of a sum of two limbs, on an array of the program: reference/sum_entry_step_2.md
+          - The step of a sum of two limbs with the fast addition, on an array of the program: reference/sum_fast_entry_step_2.md
+          - "The result of a fold of one limb: the state, or NaN": reference/fold_finish_1.md
+          - "The result of a fold of two limbs: the state, or NaN": reference/fold_finish_2.md
+          - The bound of a sum of one limb, as a function of the number of additions: reference/bound_sum_1.md
+          - The bound of a sum of two limbs, as a function of the number of additions: reference/bound_sum_2.md
+          - The bound of a dot product of one limb, as a function of the number of terms: reference/bound_dot_1.md
+          - The bound of a dot product of two limbs, as a function of the number of terms: reference/bound_dot_2.md
   # END reference
   - Proofs: proofs/index.md
   - Developer guide:

@@ -56,6 +56,10 @@ GROUPS = [
     ("ball", "Ball operations", "Arithmetic on balls: the result contains every result on points of the operands."),
     ("building-blocks", "Building blocks",
      "Kernels that other kernels call, and that no public operation computes on its own."),
+    ("arrays", "Sums and dot products of arrays",
+     "The kernels of the loops over arrays (the folds of Milestone 2): their steps, the finish of their "
+     "result, and the bounds of a sum and of a dot product as a function of the number of terms. The "
+     "functions on arrays of the public headers come later."),
 ]
 
 
@@ -460,6 +464,19 @@ KERNELS = {
     "add_up_1": page("building-blocks", "A sum of two limbs rounded up"),
     "sub_down_1": page("building-blocks", "A difference of two limbs rounded down"),
     "sub_up_1": page("building-blocks", "A difference of two limbs rounded up"),
+    # --- Milestone 2, the folds: the steps, the finishes, the exported bounds ---------------------
+    "dot_step_1": page("arrays", "The step of a dot product of one limb: one fused multiply-add"),
+    "dot_step_2": page("arrays", "The step of a dot product of two limbs"),
+    "sum_entry_step_1": page("arrays", "The step of a sum of one limb, on an array of the program"),
+    "sum_entry_step_2": page("arrays", "The step of a sum of two limbs, on an array of the program"),
+    "sum_fast_entry_step_2": page("arrays", "The step of a sum of two limbs with the fast addition, on an array of "
+                                            "the program"),
+    "fold_finish_1": page("arrays", "The result of a fold of one limb: the state, or NaN"),
+    "fold_finish_2": page("arrays", "The result of a fold of two limbs: the state, or NaN"),
+    "bound_sum_1": page("arrays", "The bound of a sum of one limb, as a function of the number of additions"),
+    "bound_sum_2": page("arrays", "The bound of a sum of two limbs, as a function of the number of additions"),
+    "bound_dot_1": page("arrays", "The bound of a dot product of one limb, as a function of the number of terms"),
+    "bound_dot_2": page("arrays", "The bound of a dot product of two limbs, as a function of the number of terms"),
 }
 
 

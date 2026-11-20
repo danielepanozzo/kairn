@@ -68,6 +68,57 @@ def kernel_claims(k, kernels):
     return out
 
 
+# The lanes of the registers of the packed forms (simd.py): the number W of the lane order that
+# F_packed computes, per format and backend. The claims hold for every W; these are the ones the
+# library's packed code uses, which a judge should see most.
+PACKED_LANES = {'binary64': {'avx2': 4, 'neon': 2}, 'binary32': {'avx2': 8, 'neon': 4}}
+
+
+def fold_instance(entry, fmt, kernels):
+    """eps, term and tau of a fold_error entry, in format fmt, as exact fractions."""
+    from . import consts
+    return {key: str(consts.evaluate(expr.parse(entry[key]), kernels, fmt.p, fmt.qmin)) for key in ('eps', 'term', 'tau')}
+
+
+def fold_claims(fd, kernels):
+    """One fold's entry (architecture.md, "Claims of Milestone 2", folds): the arrays and their
+    roles, the results, the value of an element, the requirements of each element, the claims
+    with the heights of the bound per order, the parts, the orders and the lanes of the packed
+    forms, the statuses."""
+    errors = [e for e in fd.ensures if e['kind'] == 'fold_error']
+    out = {'name': fd.name}
+    if fd.extended:
+        out['domain'] = 'extended'
+    out['arrays'] = [{'name': g.name, 'limbs': len(g.limbs), 'role': fd.roles[g.name]} for g in fd.arrays]
+    out['outputs'] = [_group(g) for g in fd.results()]
+    out['value'] = fd.value
+    out['requires'] = [_requires(r) for r in fd.requires]
+    ensures = []
+    for e in fd.ensures:
+        if e['kind'] == 'fold_error':
+            ensures.append({'kind': 'fold_error', 'of': e['of'], 'eps': e['eps'], 'term': e['term'], 'tau': e['tau'],
+                            'heights': {order: {'rel': e['rel'], 'abs': e['abs']} for order in fd.orders}})
+        else:
+            ensures.append(dict(e))
+    out['ensures'] = ensures
+    out['orders'] = list(fd.orders)
+    out['packed_lanes'] = PACKED_LANES
+    out['step'] = fd.step[0]
+    out['combine'] = fd.combine[0] if fd.combine else None
+    out['finish'] = fd.finish[0] if fd.finish else None
+    out['min_precision'] = fd.min_precision
+    out['status'] = fd.status
+    out['theorems'] = {order: ({'file': fd.theorem, 'name': fd.theorem_name(order)} if fd.theorem else None)
+                       for order in fd.orders}
+    out['source'] = {'cite': fd.source, 'license': fd.license}
+    out['instances'] = {name: [fold_instance(e, interp.parse_format(name), kernels) for e in errors]
+                        for name in INSTANCE_FORMATS}
+    return out
+
+
 def claims(kernels):
     doc = {'schema': SCHEMA, 'kernels': [kernel_claims(k, kernels) for k in kernels.values()]}
+    folds = getattr(kernels, 'folds', {})
+    if folds:
+        doc['folds'] = [fold_claims(fd, kernels) for fd in folds.values()]
     return json.dumps(doc, indent=2) + '\n'

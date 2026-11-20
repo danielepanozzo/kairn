@@ -18,6 +18,8 @@ def outputs(kernels):
         'proofs/gen/Model.v': rocq.model(kernels),
         'proofs/gen/Statements.v': rocq.statements(kernels),
         'proofs/gen/Audit.v': rocq.audit(kernels),
+        'proofs/gen/FoldModel.v': rocq.fold_model(kernels),
+        'proofs/gen/FoldStatements.v': rocq.fold_statements(kernels),
         'proofs/gen/IeeeModel.v': ieee.model(kernels),
         'proofs/gen/IeeeStatements.v': ieee.statements(kernels),
         'proofs/gen/IeeeAudit.v': ieee.audit(kernels),
@@ -100,4 +102,6 @@ def summary(kernels):
         f'entry kernels (rule R3): {names(lambda k: k.entry)}',
         f'R3 GUARD PENDING: {pending_text or "none"}',
         f'accepted by R3 only through a pending guard: {through_text or "none"}',
+        f'folds: {len(kernels.folds)} ({", ".join(kernels.folds) or "none"})',
+        f'folds UNVERIFIED: {", ".join(n for n, f in kernels.folds.items() if f.status == "unverified") or "none"}',
     ]

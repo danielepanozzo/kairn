@@ -509,6 +509,143 @@ def prelude(kernels):
     return '\n'.join(lines) + '\n'
 
 
+# --- Folds -----------------------------------------------------------------------------------------
+#
+# A fold (milestone2.md, "Folds, the extension of the IR") is a loop of kernels along arrays, one
+# pointer per limb array and a length, no allocation. Its functions are ordinary inline functions,
+# not forced inline ("Inlining and compile time"): F_seq, the sequential order; F_lanes, the lane
+# order for a number of lanes given at run time, the reference that the packed form F_packed of
+# simd.py computes with the lanes of a register. The step, the combination and the finish are
+# inlined in the loop as calls are inlined in a kernel (ir.inline_call): every value they define
+# is named PREFIX_V, PREFIX being step, comb or fin, and the names of the loop's own variables end
+# with an underscore, so that neither can be a name of the fold, which have none. Nothing in them
+# is constexpr: a loop over pointers is no constant expression of use, and the packed form cannot
+# be one.
+
+STEP, COMB, FIN = 'step', 'comb', 'fin'
+
+
+def fold_kernels(fd, kernels):
+    """The step, the combination and the finish of a fold (None for those it has not)."""
+    return tuple(kernels[c[0]] if c else None for c in (fd.step, fd.combine, fd.finish))
+
+
+def fold_parameters(fd, limb, mask, lanes):
+    """One pointer per limb array, the length, the number of lanes (F_lanes), the results by
+    reference."""
+    ps = [f'const {limb}* {v}_in' for v in fd.array_limbs()] + ['std::size_t n']
+    if lanes:
+        ps.append('std::size_t lanes')
+    return ps + [f'{mask if g.kind == ir.MASK else limb}& {v}_out' for g in fd.results() for v in g.limbs]
+
+
+def step_arguments(fd, state, elements):
+    """The step's operands, value by value: `state` the names of the state's limbs, `elements`
+    {array: the names of its limbs}, in the order of the step's arguments."""
+    args = []
+    for a in fd.step[1]:
+        args += state if a == fd.state.name else elements[a]
+    return args
+
+
+def _call(k, kernels, ctype, args, prefix, pad):
+    """The statements of one inlined call of k on `args` (names), and the names of its outputs."""
+    items, outs = ir.inline_call(k, kernels, [ir.Operand(a) for a in args], prefix)
+    return _statements(items, kernels, ctype, SPELL, pad), outs
+
+
+def _assign(names, values, pad):
+    return [f'{pad}{n} = {v};' for n, v in zip(names, values)]
+
+
+def fold_finish_lines(fd, kernels, ctype, state, pad='    '):
+    """The finish on the final state, and the results stored."""
+    _, _, finish = fold_kernels(fd, kernels)
+    outs = [f'{v}_out' for g in fd.results() for v in g.limbs]
+    if finish is None:
+        return _assign(outs, state, pad)
+    lines, vals = _call(finish, kernels, ctype, state, FIN, pad)
+    return lines + _assign(outs, vals, pad)
+
+
+def fold_step_loop(fd, kernels, ctype, state, start, pad='    '):
+    """`for (i_ = START; i_ < n; ++i_)` the scalar step on the state variables `state`."""
+    step, _, _ = fold_kernels(fd, kernels)
+    lines = [f'{pad}for (std::size_t i_ = {start}; i_ < n; ++i_) {{']
+    inner = pad + '    '
+    lines += [f'{inner}const {ctype} {v} = {v}_in[i_];' for v in fd.array_limbs()]
+    body, outs = _call(step, kernels, ctype, step_arguments(fd, state, {g.name: list(g.limbs) for g in fd.arrays}),
+                       STEP, inner)
+    return lines + body + _assign(state, outs, inner) + [f'{pad}}}']
+
+
+def _zero(ctype):
+    return '0.0' + TYPES[ctype][1]
+
+
+def fold_description(fd, kernels, order):
+    step, combine, finish = fold_kernels(fd, kernels)
+    arrays = ', '.join(f'{fd.roles[g.name]} {g.name} = ({", ".join(g.limbs)})' if len(g.limbs) > 1
+                       else f'{fd.roles[g.name]} {g.name}' for g in fd.arrays)
+    parts = f'step {step.name}' + (f', combination {combine.name}' if combine else '') + \
+            (f', finish {finish.name}' if finish else '')
+    what = {'seq': 'the sequential order (fold_seq of proofs/theories/Folds.v)',
+            'lanes': 'the lane order (fold_lanes) with `lanes` lanes, computed one lane after another',
+            'packed': 'the lane order (fold_lanes) with the lanes of a register'}[order]
+    return [f'// fold {fd.name}({arrays}), {parts}: {what}. Status: {fd.status}.']
+
+
+def fold_seq(fd, kernels, ctype):
+    """The sequential order: the state after element i is the step on the state after element
+    i - 1, from the zero state."""
+    state = list(fd.state.limbs)
+    lines = fold_description(fd, kernels, 'seq')
+    lines.append(f'inline void {fd.name}_seq({", ".join(fold_parameters(fd, ctype, "bool", False))}) noexcept {{')
+    lines += [f'    {ctype} {v} = {_zero(ctype)};' for v in state]
+    lines += fold_step_loop(fd, kernels, ctype, state, '0')
+    return lines + fold_finish_lines(fd, kernels, ctype, state) + ['}']
+
+
+def fold_lanes(fd, kernels, ctype):
+    """The lane order of Folds.v for W = lanes: the first W (n / W) elements, element i to lane
+    i mod W; each lane folded sequentially from the zero state; the lanes combined from lane 0
+    upward, ((l0 + l1) + l2) + ...; then the remaining elements folded sequentially into the
+    result. The lanes are folded one after the other, each combined as soon as it is done, so that
+    nothing is stored but the state and one lane's: the same operations, in the same order, as
+    the definition. With no lane the result is the sequential order."""
+    step, combine, _ = fold_kernels(fd, kernels)
+    state = list(fd.state.limbs)
+    lane = [f'{v}_lane_' for v in state]
+    elements = {g.name: list(g.limbs) for g in fd.arrays}
+    lines = fold_description(fd, kernels, 'lanes')
+    lines.append(f'inline void {fd.name}_lanes({", ".join(fold_parameters(fd, ctype, "bool", True))}) noexcept {{')
+    lines.append('    const std::size_t full_ = lanes == 0 ? 0 : n - n % lanes;')
+    lines += [f'    {ctype} {v} = {_zero(ctype)};' for v in state]
+    lines.append('    for (std::size_t j_ = 0; j_ < lanes; ++j_) {')
+    lines += [f'        {ctype} {v} = {_zero(ctype)};' for v in lane]
+    lines.append('        for (std::size_t i_ = j_; i_ < full_; i_ += lanes) {')
+    lines += [f'            const {ctype} {v} = {v}_in[i_];' for v in fd.array_limbs()]
+    body, outs = _call(step, kernels, ctype, step_arguments(fd, lane, elements), STEP, ' ' * 12)
+    lines += body + _assign(lane, outs, ' ' * 12) + ['        }', '        if (j_ == 0) {']
+    lines += _assign(state, lane, ' ' * 12) + ['        } else {']
+    body, outs = _call(combine, kernels, ctype, state + lane, COMB, ' ' * 12)
+    lines += body + _assign(state, outs, ' ' * 12) + ['        }', '    }']
+    lines += fold_step_loop(fd, kernels, ctype, state, 'full_')
+    return lines + fold_finish_lines(fd, kernels, ctype, state) + ['}']
+
+
+def folds(kernels):
+    """The scalar functions of every fold, for both limb types."""
+    lines = []
+    for fd in getattr(kernels, 'folds', {}).values():
+        for order, printer in (('sequential', fold_seq), ('lanes', fold_lanes)):
+            if order in fd.orders:
+                lines.append('')
+                for i, ctype in enumerate(TYPES):
+                    lines += printer(fd, kernels, ctype)[(1 if i else 0):]   # the description once
+    return lines
+
+
 def scalar(kernels, prelude_name='prelude.hpp'):
     plain = [k.name for k in kernels.values() if constexpr_kind(k, kernels) is None]
     lines = [HEADER, '//',
@@ -521,10 +658,12 @@ def scalar(kernels, prelude_name='prelude.hpp'):
              '// those arms; otherwise the rest of the listing runs (docs/developer/design/milestone1.md,',
              '// "Emission").',
              f'// Not constexpr: {", ".join(plain) if plain else "none"}.',
-             '#pragma once', '',
-             f'#include "{prelude_name}"', '',
-             'KAIRN_GEN_PUSH_WARNINGS',
-             'namespace kairn::gen {']
+             '#pragma once', '']
+    if getattr(kernels, 'folds', {}):
+        lines += ['#include <cstddef>', '']
+    lines += [f'#include "{prelude_name}"', '',
+              'KAIRN_GEN_PUSH_WARNINGS',
+              'namespace kairn::gen {']
     for k in kernels.values():
         lines += [''] + _description(k, kernels)
         if branch(k, kernels):
@@ -534,6 +673,12 @@ def scalar(kernels, prelude_name='prelude.hpp'):
             lines += ['}  // namespace fixup', '#endif']
         for ctype in TYPES:
             lines += function(k, kernels, ctype)
+    if getattr(kernels, 'folds', {}):
+        lines += ['', '// --- Folds: loops of the kernels above along arrays (docs/developer/architecture.md, "Folds").',
+                  '// One pointer per limb array and a length; nothing is allocated. Ordinary inline functions,',
+                  '// the step inlined in the loop: a value of the step is named step_V, of the combination comb_V,',
+                  '// of the finish fin_V; the loop\'s own variables end with an underscore.']
+        lines += folds(kernels)
     lines += ['', '}  // namespace kairn::gen', 'KAIRN_GEN_POP_WARNINGS']
     return '\n'.join(lines) + '\n'
 
@@ -552,4 +697,24 @@ def runner_table(kernels):
         args += [f'{"mo" if kind == ir.MASK else "out"}[{i}]' for i, kind in enumerate(k.output_kinds)]
         lines.append(f'KAIRN_RUNNER_KERNEL({k.name}, "{kinds(k.input_kinds)}", "{kinds(k.output_kinds)}", '
                      f'kairn::gen::{k.name}({", ".join(args)}))')
+    folds = getattr(kernels, 'folds', {})
+    if folds:
+        lines += ['// The folds, for a runner that defines KAIRN_RUNNER_FOLD: name, the limbs of each array, the',
+                  '// output kinds, the calls of the sequential order, of the lane order with `lanes` lanes, and of',
+                  '// its packed form (avx2.hpp or neon.hpp). in[i] is limb array i (const T*), n the length,',
+                  '// out[i] and mo[i] the outputs by position, as above.',
+                  '#if defined(KAIRN_RUNNER_FOLD)']
+        for fd in folds.values():
+            args = [f'in[{i}]' for i in range(len(fd.array_limbs()))]
+            outs = [f'{"mo" if g.kind == ir.MASK else "out"}[{i}]'
+                    for i, g in enumerate(g for g in fd.results() for _ in g.limbs)]
+            kinds = ''.join('m' if g.kind == ir.MASK else 'l' for g in fd.results() for _ in g.limbs)
+            calls = []
+            for order, suffix, extra in (('sequential', 'seq', []), ('lanes', 'lanes', ['lanes']),
+                                         ('lanes', 'packed', [])):
+                calls.append(f'kairn::gen::{fd.name}_{suffix}({", ".join(args + ["n"] + extra + outs)})'
+                             if order in fd.orders else '(void)0')
+            lines.append(f'KAIRN_RUNNER_FOLD({fd.name}, "{"".join(str(len(g.limbs)) for g in fd.arrays)}", '
+                         f'"{kinds}", {", ".join(calls)})')
+        lines.append('#endif')
     return '\n'.join(lines) + '\n'

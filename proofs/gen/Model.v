@@ -74,6 +74,62 @@ Definition up_ball_scale_2_0 : R :=
 Definition up_ball_scale_2_2 : R :=
   round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) * (((((1 + bpow radix2 (- prec)) ^ 2) * bpow radix2 emin) + ((1 * bpow radix2 emin) / (1 - (2 * bpow radix2 (- prec) ^ 2)))) + (bpow radix2 emin / 2))) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
 
+(* up((1+u)*(unit(mul_1_1)+eta/2)): the smallest number of the format not below it. *)
+Definition up_bound_dot_1_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * (((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1) + (bpow radix2 emin / 2))).
+
+(* up((1+u)^2*(unit(mul_1_1)+eta)): the smallest number of the format not below it. *)
+Definition up_bound_dot_1_1 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) ^ 2) * (((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1) + bpow radix2 emin)).
+
+(* up(2): the smallest number of the format not below it. *)
+Definition up_bound_dot_1_2 : R :=
+  round radix2 (FLT_exp emin prec) Zceil 2.
+
+(* up(1+2*u): the smallest number of the format not below it. *)
+Definition up_bound_dot_1_3 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (1 + (2 * bpow radix2 (- prec))).
+
+(* up((1+u)^2*(tiny(mul_1_1)+eta)+eta/(2*u)): the smallest number of the format not below it. *)
+Definition up_bound_dot_1_4 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((((1 + bpow radix2 (- prec)) ^ 2) * (((1 / 2) * bpow radix2 emin) + bpow radix2 emin)) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
+
+(* up(1/4): the smallest number of the format not below it. *)
+Definition up_bound_dot_1_5 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (1 / 4).
+
+(* up(1): the smallest number of the format not below it. *)
+Definition up_bound_dot_1_6 : R :=
+  round radix2 (FLT_exp emin prec) Zceil 1.
+
+(* up((1+u)*(unit(mul_2_2)+eta/2)): the smallest number of the format not below it. *)
+Definition up_bound_dot_2_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * ((4 * bpow radix2 (- prec) ^ 2) + (bpow radix2 emin / 2))).
+
+(* up((1+u)^2*(unit(mul_2_2)+eta)): the smallest number of the format not below it. *)
+Definition up_bound_dot_2_1 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) ^ 2) * ((4 * bpow radix2 (- prec) ^ 2) + bpow radix2 emin)).
+
+(* up((1+u)^2*(tiny(mul_2_2)+eta)+eta/(2*u)): the smallest number of the format not below it. *)
+Definition up_bound_dot_2_4 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((((1 + bpow radix2 (- prec)) ^ 2) * (((3 / 2) * bpow radix2 emin) + bpow radix2 emin)) + (bpow radix2 emin / (2 * bpow radix2 (- prec)))).
+
+(* up((1+u)*(unit(add_1_1)+eta/2)): the smallest number of the format not below it. *)
+Definition up_bound_sum_1_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * (((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1) + (bpow radix2 emin / 2))).
+
+(* up((1+u)^2*(unit(add_1_1)+eta)): the smallest number of the format not below it. *)
+Definition up_bound_sum_1_1 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) ^ 2) * (((1 / (1 + bpow radix2 (- prec))) * bpow radix2 (- prec) ^ 1) + bpow radix2 emin)).
+
+(* up((1+u)*(unit(add_2_2)+eta/2)): the smallest number of the format not below it. *)
+Definition up_bound_sum_2_0 : R :=
+  round radix2 (FLT_exp emin prec) Zceil ((1 + bpow radix2 (- prec)) * (((3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2) + (bpow radix2 emin / 2))).
+
+(* up((1+u)^2*(unit(add_2_2)+eta)): the smallest number of the format not below it. *)
+Definition up_bound_sum_2_1 : R :=
+  round radix2 (FLT_exp emin prec) Zceil (((1 + bpow radix2 (- prec)) ^ 2) * (((3 / (1 - (4 * bpow radix2 (- prec)))) * bpow radix2 (- prec) ^ 2) + bpow radix2 emin)).
+
 (* up(eta/(2*u^2)): the smallest number of the format not below it. *)
 Definition up_mul_down_1_0 : R :=
   round radix2 (FLT_exp emin prec) Zceil (bpow radix2 emin / (2 * (bpow radix2 (- prec) ^ 2))).
@@ -191,6 +247,61 @@ Definition ball_sub_1 (cx rx cy ry : R) : R * R :=
   let '(cz, rz) := ball_add_1 cx rx n ry in
   (cz, rz).
 
+(* bound_dot_1: the exported bound of a dot product as a function of n (milestone2.md). *)
+Definition bound_dot_1 (m : R) : R * R * bool :=
+  let a := rnd (m * up_bound_dot_1_0 + 0) in
+  let aa := rnd (m * up_bound_dot_1_1 + 0) in
+  let d := rnd (a * up_bound_dot_1_2 + 0) in
+  let w := rnd (d + up_bound_dot_1_3) in
+  let g := rnd (aa * w + 0) in
+  let tm := rnd (m * up_bound_dot_1_4 + 0) in
+  let wg := rnd (g + up_bound_dot_1_3) in
+  let t := rnd (tm * wg + 0) in
+  let oa := Rle_bool a up_bound_dot_1_5 in
+  let ob := Rle_bool g up_bound_dot_1_6 in
+  let ok := andb oa ob in
+  (g, t, ok).
+
+(* bound_dot_2: the exported bound of a dot product as a function of n (milestone2.md). *)
+Definition bound_dot_2 (m : R) : R * R * bool :=
+  let a := rnd (m * up_bound_dot_2_0 + 0) in
+  let aa := rnd (m * up_bound_dot_2_1 + 0) in
+  let d := rnd (a * up_bound_dot_1_2 + 0) in
+  let w := rnd (d + up_bound_dot_1_3) in
+  let g := rnd (aa * w + 0) in
+  let tm := rnd (m * up_bound_dot_2_4 + 0) in
+  let wg := rnd (g + up_bound_dot_1_3) in
+  let t := rnd (tm * wg + 0) in
+  let oa := Rle_bool a up_bound_dot_1_5 in
+  let ob := Rle_bool g up_bound_dot_1_6 in
+  let ok := andb oa ob in
+  (g, t, ok).
+
+(* bound_sum_1: the exported bound of a sum as a function of n (milestone2.md). *)
+Definition bound_sum_1 (m : R) : R * bool :=
+  let a := rnd (m * up_bound_sum_1_0 + 0) in
+  let aa := rnd (m * up_bound_sum_1_1 + 0) in
+  let d := rnd (a * up_bound_dot_1_2 + 0) in
+  let w := rnd (d + up_bound_dot_1_3) in
+  let g := rnd (aa * w + 0) in
+  let ok := Rle_bool a up_bound_dot_1_5 in
+  (g, ok).
+
+(* bound_sum_2: the exported bound of a sum as a function of n (milestone2.md). *)
+Definition bound_sum_2 (m : R) : R * bool :=
+  let a := rnd (m * up_bound_sum_2_0 + 0) in
+  let aa := rnd (m * up_bound_sum_2_1 + 0) in
+  let d := rnd (a * up_bound_dot_1_2 + 0) in
+  let w := rnd (d + up_bound_dot_1_3) in
+  let g := rnd (aa * w + 0) in
+  let ok := Rle_bool a up_bound_dot_1_5 in
+  (g, ok).
+
+(* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). *)
+Definition dot_step_1 (s x y : R) : R :=
+  let t := rnd (x * y + s) in
+  t.
+
 (* fast_two_sum_entry: fast_two_sum on its guarded operands (Milestone 2 listing). *)
 Definition fast_two_sum_entry (a b : R) : R * R :=
   let ga := rnd (a + 0) in
@@ -305,6 +416,12 @@ Definition sub_up_entry (a b : R) : R :=
   let gb := rnd (b + 0) in
   let r := sub_up_1 ga gb in
   r.
+
+(* sum_entry_step_1: add_1_1 on a guarded element (rule R3). *)
+Definition sum_entry_step_1 (s x : R) : R :=
+  let g := rnd (x + 0) in
+  let t := rnd (s + g) in
+  t.
 
 (* two_prod_dekker: Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11. *)
 Definition two_prod_dekker (a b : R) : R * R :=
@@ -474,6 +591,12 @@ Definition ball_sub_2 (cx0 cx1 rx cy0 cy1 ry : R) : R * R * R :=
   let '(cz0, cz1, rz) := ball_add_2 cx0 cx1 rx n0 n1 ry in
   (cz0, cz1, rz).
 
+(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. *)
+Definition dot_step_2 (s0 s1 x0 x1 y0 y1 : R) : R * R :=
+  let '(p0, p1) := mul_2_2 x0 x1 y0 y1 in
+  let '(t0, t1) := add_2_2 s0 s1 p0 p1 in
+  (t0, t1).
+
 (* eq_2_1: limbs compared in order (Milestone 1 listing). *)
 Definition eq_2_1 (x0 x1 a : R) : bool :=
   let h := Req_bool x0 a in
@@ -568,6 +691,20 @@ Definition sub_2_2 (x0 x1 y0 y1 : R) : R * R :=
   let n1 := - y1 in
   let '(z0, z1) := add_2_2 x0 x1 n0 n1 in
   (z0, z1).
+
+(* sum_entry_step_2: add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22. *)
+Definition sum_entry_step_2 (s0 s1 x0 x1 : R) : R * R :=
+  let g0 := rnd (x0 + 0) in
+  let g1 := rnd (x1 + 0) in
+  let '(t0, t1) := add_2_2 s0 s1 g0 g1 in
+  (t0, t1).
+
+(* sum_fast_entry_step_2: add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5. *)
+Definition sum_fast_entry_step_2 (s0 s1 x0 x1 : R) : R * R :=
+  let g0 := rnd (x0 + 0) in
+  let g1 := rnd (x1 + 0) in
+  let '(t0, t1) := add_fast_2_2 s0 s1 g0 g1 in
+  (t0, t1).
 
 (* to_down_2: the sign of x1 (Milestone 1 listing). *)
 Definition to_down_2 (x0 x1 : R) : R :=

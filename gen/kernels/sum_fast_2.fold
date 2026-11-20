@@ -1,0 +1,26 @@
+# The sum of an array of 2-limb numbers written through Kairn, with the fast addition
+# (milestone2.md, "Summation over any tree": the bound of add_fast_2_2 is relative to the operands,
+# which is all the tree theorem asks): s <- add_fast_2_2(s, x) from (0, 0), the lanes combined by
+# add_fast_2_2. If every element is canonical and the flag is true, the result is normalized and
+#   |r - sum x_i| <= ((1 + 3u^2)^(n-1) - 1) sum |x_i|          in both orders, for every width.
+# Proved in the real model for the steps of SummationKernels.v (sum_fast_2_seq, sum_fast_2_lanes).
+fold:          sum_fast_2
+arrays:        stored x = x0 x1
+state:         s = s0 s1
+step:          s = add_fast_2_2(s, x)
+combine:       s = add_fast_2_2(s, s)
+orders:        sequential, lanes
+writes:        none
+output:        r = r0 r1
+output:        mask flag
+finish:        (r, flag) = fold_finish_2(s)
+value:         x
+requires:      canonical x
+ensures:       normalized r
+ensures:       fold_error r eps=3*u^2 rel=n-1
+ensures:       finite_or_nan r flag=flag
+min_precision: 2
+status:        unverified
+domain:        extended
+source:        Higham's bound for summation over any tree, with the bound of add_fast_2_2
+license:       bound: published; proof: MIT

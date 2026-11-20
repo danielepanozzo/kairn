@@ -16,11 +16,28 @@ kernel is described in one file, gen/kernels/NAME.kernel:
                                       + - *, unary minus, abs( ), parentheses
     requires:      normalized x       or: abs_ge a b, power_of_two c, nonneg r
     requires:      canonical x        (domain extended) or: ball cx rx
+    requires:      count m            m is zero or at least 1 (a number of terms or additions)
+    requires:      format half        the format contains 1/2 (eta <= 1/2)
     ensures:       normalized z       or: leading_rounded z
     ensures:       error z R c=3/(1-4*u) k=2 t=0 [when=product_large] [exact_when=CONDITIONS]
+                                      the form: R, relative to |value|; A, to the sum of the
+                                      magnitudes of the inputs; T, to the sum of the magnitudes of
+                                      the terms of value (s+x*y: |s| + |x*y|)
     ensures:       rounded t down [when=product_large]
                                       the mode: nearest, down or up
     ensures:       upper r gaps=2
+    ensures:       upper g value=m*unit(add_2_2)/(1-m*unit(add_2_2)) if=ok
+                                      the value of the entry (an exact expression over the inputs,
+                                      the one-limb outputs, u, eta, unit(K), tiny(K)) is at most the
+                                      output whenever the mask output ok is true; no gaps: nothing
+                                      is said of how far above
+    ensures:       holds le m*unit(add_2_2) 1/2 if=ok
+                                      the relation lt, le or eq between two such expressions, when
+                                      the mask ok is true
+    ensures:       finite_or_nan r flag=f
+                                      the finish of a fold: f is true exactly when limb 0 of the
+                                      value is finite, and r is then the value, limb for limb;
+                                      otherwise every limb of r is a NaN
     ensures:       neighbor r up      the next number of the format above (down: below) the value
     ensures:       bound r below steps=1
                                       on that side of the value (below or above), and at most
@@ -84,6 +101,38 @@ zero_or_abs_ge(EXPR,K), meaning EXPR = 0 or |EXPR| > K (>= K), with EXPR over th
 and their limbs (`cx[1]`, limb 1 of the input cx) and K an exact expression over u, eta and
 integers (`eta/(2*u)`); several are separated by `;`, and all must hold. This module only reads
 and represents descriptions; rules.py decides whether they are acceptable.
+
+A fold (docs/developer/design/milestone2.md, "Folds, the extension of the IR") is a loop of kernels
+along arrays, described in gen/kernels/NAME.fold:
+
+    fold:          dot_2
+    arrays:        supplied x = x0 x1, supplied y = y0 y1
+                                      the arrays read, one array per limb, each declared stored (a
+                                      container written through Kairn) or supplied (the program's)
+    state:         s = s0 s1          the state; it starts at zero, every limb +0
+    step:          s = dot_step_2(s, x, y)
+                                      a kernel: the state and one element of each array, in the
+                                      order the kernel's inputs take them, to the next state
+    combine:       s = add_2_2(s, s)  a kernel: two states into one (the lane order)
+    orders:        sequential, lanes  the orders emitted
+    writes:        none               the arrays written, for a map (not in this stage)
+    output:        r = r0 r1          the fold's results: the outputs of the finish
+    output:        mask flag
+    finish:        (r, flag) = fold_finish_2(s)
+                                      a kernel on the final state, or `none` (the state is returned)
+    value:         x*y                the exact value of one element; the fold's is their sum
+    requires:      canonical x        of every element
+    ensures:       normalized r
+    ensures:       fold_error r eps=3*u^2/(1-4*u) term=4*u^2 tau=3/2*eta rel=n-1 abs=n-1
+                                      |r - sum v_i| <= ((1 + term) (1 + eps)^rel - 1) sum |v_i|
+                                                       + (1 + eps)^abs n tau, n the length; rel
+                                                       and abs are n or n-1 (natural numbers: 0 -
+                                                       1 is 0), the same in both orders; term and
+                                                       tau are 0 when left out
+    ensures:       finite_or_nan r flag=flag
+    min_precision: 4
+    status:        unverified         or proved, with theorem: FILE (F_seq_correct, F_lanes_correct)
+    domain:        extended           elements may be infinite or NaN (the flag says what comes out)
 """
 import os
 import re
@@ -295,7 +344,7 @@ IEEE_STATEMENTS = ('bridge', 'spec')
 
 # The claims that only the non-finite layer has: a kernel that claims nothing else has no
 # real-model statement (Kernel.real_model).
-NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball')
+NON_FINITE_ONLY = ('extends', 'represents', 'makes_ball', 'finite_or_nan')
 
 INPUT_CLASSES = ('stored', 'supplied')   # rule R3: where an entry kernel's input comes from
 
@@ -375,6 +424,36 @@ def _ensures(words, where):
         return {'kind': kind, 'of': words[1], 'mode': words[2], 'when': words[3][len('when='):]}
     if kind == 'upper' and len(words) == 3 and words[2].startswith('gaps='):
         return {'kind': kind, 'of': words[1], 'gaps': words[2][len('gaps='):]}
+    if kind == 'upper' and len(words) >= 3:
+        # Milestone 2: an upper bound of an expression of its own, under the condition of a mask
+        # output. The fields are written only when there are: an upper entry with gaps alone has
+        # the shape it always had.
+        entry = {'kind': kind, 'of': words[1]}
+        for w in words[2:]:
+            key, eq, val = w.partition('=')
+            if not eq or key not in ('gaps', 'value', 'if') or key in entry or not val:
+                raise DescriptionError(f'{where}: bad or repeated field {w!r} in upper entry')
+            entry[key] = val
+        return entry
+    if kind == 'holds' and len(words) == 5 and words[4].startswith('if='):
+        return {'kind': kind, 'rel': words[1], 'args': words[2:4], 'if': words[4][len('if='):]}
+    if kind == 'finite_or_nan' and len(words) == 3 and words[2].startswith('flag='):
+        return {'kind': kind, 'of': words[1], 'flag': words[2][len('flag='):]}
+    if kind == 'fold_error' and len(words) >= 3:
+        entry = {'kind': kind, 'of': words[1], 'eps': None, 'term': '0', 'tau': '0', 'rel': None, 'abs': None}
+        seen = set()
+        for w in words[2:]:
+            key, eq, val = w.partition('=')
+            if not eq or key not in ('eps', 'term', 'tau', 'rel', 'abs') or key in seen or not val:
+                raise DescriptionError(f'{where}: bad or repeated field {w!r} in fold_error entry')
+            seen.add(key)
+            entry[key] = val
+        for key in ('eps', 'rel'):
+            if entry[key] is None:
+                raise DescriptionError(f'{where}: a fold_error entry needs {key}=')
+        if entry['abs'] is None:
+            entry['abs'] = entry['rel']
+        return entry
     if kind == 'neighbor' and len(words) == 3:
         return {'kind': kind, 'of': words[1], 'side': words[2]}
     if kind == 'bound' and len(words) == 4 and words[3].startswith('steps='):
@@ -553,26 +632,189 @@ def parse_kernel(text, path):
     return k
 
 
+class KernelSet(dict):
+    """{name: Kernel} in output order, and the folds of the same directory, {name: Fold} by name,
+    in `folds`. Printers read the folds from here, so that a set of kernels without folds (the
+    test kernels, a dict built by hand) prints exactly what it printed before folds existed."""
+
+    def __init__(self, *args, folds=None):
+        super().__init__(*args)
+        self.folds = dict(folds or {})
+
+
+# The two orders of a fold (proofs/theories/Folds.v): fold_seq and fold_lanes.
+ORDERS = ('sequential', 'lanes')
+
+
+@dataclass
+class Fold:
+    """A loop of kernels along arrays (milestone2.md, "Folds, the extension of the IR")."""
+    name: str
+    path: str
+    arrays: list = field(default_factory=list)      # Groups, in order
+    roles: dict = field(default_factory=dict)       # array name -> 'stored' or 'supplied'
+    state: Group = None
+    step: tuple = None          # (kernel, argument group names, the line's destination)
+    combine: tuple = None       # the same, or None
+    finish: tuple = None        # (kernel, argument group names, destination group names), or None
+    orders: tuple = ()
+    writes: tuple = ()
+    outputs: list = field(default_factory=list)     # Groups: the finish's outputs as the fold names them
+    value: str = None
+    requires: list = field(default_factory=list)
+    ensures: list = field(default_factory=list)
+    min_precision: int = None
+    theorem: str = None         # the file of F_seq_correct and F_lanes_correct
+    source: str = None
+    license: str = None
+    status: str = None
+    domain: str = None
+    declared: set = field(default_factory=set)      # the header lines given
+
+    @property
+    def extended(self):
+        return self.domain == 'extended'
+
+    def results(self):
+        """The groups the fold returns: the finish's outputs, or the state when there is none."""
+        return self.outputs if self.finish else [self.state]
+
+    def array_limbs(self):
+        return [v for g in self.arrays for v in g.limbs]
+
+    def theorem_name(self, order):
+        return f'{self.name}_{ORDER_SUFFIX[order]}_correct'
+
+
+# What each order is called in the names of the C++ functions, the Rocq definitions and the
+# statements: F_seq and F_lanes (F_packed is the packed form of the lane order).
+ORDER_SUFFIX = {'sequential': 'seq', 'lanes': 'lanes'}
+
+_CALL = re.compile(r'(?:\(\s*(?P<many>[^()]*)\)|(?P<one>[a-z][a-z0-9]*))\s*=\s*'
+                   r'(?P<op>[a-z][a-z0-9_]*)\((?P<args>[^()]*)\)\Z')
+
+
+def _fold_call(text, where, key):
+    m = _CALL.match(text.strip())
+    if not m:
+        raise DescriptionError(f'{where}: expected "{key}: DST = KERNEL(GROUP, ...)", got {text!r}')
+    dsts = tuple(d.strip() for d in (m.group('many') or m.group('one')).split(','))
+    args = tuple(a.strip() for a in m.group('args').split(',')) if m.group('args').strip() else ()
+    for n in dsts + args:
+        if not VALUE_NAME.match(n):
+            raise DescriptionError(f'{where}: {n!r} is not the name of a group')
+    return m.group('op'), args, dsts
+
+
+def parse_fold(text, path):
+    fd = Fold(name=None, path=path)
+    single = {'fold', 'arrays', 'state', 'step', 'combine', 'orders', 'writes', 'finish', 'value',
+              'min_precision', 'theorem', 'source', 'license', 'status', 'domain'}
+    for lineno, raw in enumerate(text.splitlines(), 1):
+        line = raw.split('#', 1)[0].strip()
+        where = f'{path}:{lineno}'
+        if not line:
+            continue
+        header = re.fullmatch(r'([a-z_]+):\s*(.*)', line)
+        if not header:
+            raise DescriptionError(f'{where}: a fold has no listing of its own (its step, combination '
+                                   f'and finish are kernels): {line!r}')
+        key, val = header.group(1), header.group(2).strip()
+        if key in single:
+            if key in fd.declared:
+                raise DescriptionError(f'{where}: {key} given twice')
+            fd.declared.add(key)
+        if key == 'fold':
+            fd.name = val
+        elif key == 'arrays':
+            for part in val.split(','):
+                g, cls = _group(part, where, INPUT_CLASSES)
+                if cls is None:
+                    raise DescriptionError(f'{where}: an array is declared stored (written through Kairn) or '
+                                           f'supplied (the program\'s): {part.strip()!r}')
+                if g.kind != LIMB:
+                    raise DescriptionError(f'{where}: an array holds limbs, not masks')
+                fd.arrays.append(g)
+                fd.roles[g.name] = cls
+        elif key == 'state':
+            fd.state = _group(val, where)[0]
+        elif key in ('step', 'combine'):
+            setattr(fd, key, _fold_call(val, where, key))
+        elif key == 'finish':
+            fd.finish = None if val == 'none' else _fold_call(val, where, key)
+        elif key == 'orders':
+            fd.orders = tuple(w.strip() for w in val.split(','))
+        elif key == 'writes':
+            fd.writes = () if val == 'none' else tuple(w.strip() for w in val.split(','))
+        elif key == 'output':
+            fd.outputs.append(_group(val, where)[0])
+        elif key == 'value':
+            fd.value = val
+        elif key == 'requires':
+            words = val.split()
+            if not words:
+                raise DescriptionError(f'{where}: empty requires')
+            fd.requires.append(tuple(words))
+        elif key == 'ensures':
+            fd.ensures.append(_ensures(val.split(), where))
+        elif key == 'min_precision':
+            if not re.fullmatch(r'[0-9]+', val):
+                raise DescriptionError(f'{where}: min_precision must be an integer')
+            fd.min_precision = int(val)
+        elif key == 'theorem':
+            if len(val.split()) != 1:
+                raise DescriptionError(f'{where}: expected "theorem: FILE" (its theorems are F_seq_correct '
+                                       'and F_lanes_correct)')
+            fd.theorem = val
+        elif key in ('source', 'license', 'status', 'domain'):
+            setattr(fd, key, val)
+        else:
+            raise DescriptionError(f'{where}: unknown key {key!r} in a fold')
+    if fd.name is None:
+        raise DescriptionError(f'{path}: no "fold:" line')
+    if not KERNEL_NAME.match(fd.name):
+        raise DescriptionError(f'{path}: bad fold name {fd.name!r}')
+    for key in ('arrays', 'state', 'step', 'orders', 'writes', 'finish'):
+        if key not in fd.declared:
+            raise DescriptionError(f'{path}: a fold needs "{key}:"' +
+                                   (' (none, when there is none)' if key in ('writes', 'finish') else ''))
+    return fd
+
+
 def load_kernels(directory):
-    """Every *.kernel file of a directory, as {name: Kernel} in output order (see `ordered`)."""
-    kernels = {}
+    """Every *.kernel file of a directory, as {name: Kernel} in output order (see `ordered`), and
+    every *.fold file, in the set's `folds`."""
+    kernels, folds = {}, {}
     for fn in sorted(os.listdir(directory)):
-        if not fn.endswith('.kernel'):
+        if not fn.endswith(('.kernel', '.fold')):
             continue
         path = os.path.join(directory, fn)
         with open(path, encoding='utf-8') as f:
-            k = parse_kernel(f.read(), fn)
+            text = f.read()
+        if fn.endswith('.fold'):
+            fd = parse_fold(text, fn)
+            if fn != fd.name + '.fold':
+                raise DescriptionError(f'{fn}: fold {fd.name} must be in {fd.name}.fold')
+            folds[fd.name] = fd
+            continue
+        k = parse_kernel(text, fn)
         if k.name in kernels:
             raise DescriptionError(f'{fn}: kernel {k.name} is also defined in {kernels[k.name].path}')
         if fn != k.name + '.kernel':
             raise DescriptionError(f'{fn}: kernel {k.name} must be in {k.name}.kernel')
         kernels[k.name] = k
-    return ordered(kernels)
+    for name in folds:
+        if name in kernels:
+            raise DescriptionError(f'{name}.fold: {name} is also the name of a kernel')
+    return ordered(kernels, folds)
 
 
-def ordered(kernels):
-    """Callees before callers (Rocq needs it), otherwise by input limb count, then by name."""
-    out = {}
+def ordered(kernels, folds=None):
+    """Callees before callers (Rocq needs it), otherwise by input limb count, then by name. The
+    folds are kept: those given, or those of `kernels` if it is a KernelSet."""
+    if folds is None:
+        folds = getattr(kernels, 'folds', {})
+    out = KernelSet(folds=folds)
 
     def visit(name, path):
         if name in out:
@@ -613,29 +855,39 @@ def flatten(kernel, kernels):
     that every name of the result is unique. Returns a list of Prim and CallMark.
     """
     items = []
-
-    def inline(k, env, outnames, prefix):
-        local = dict(env)
-
-        def name_of(v):
-            return outnames[v] if v in outnames else (f'{prefix}_{v}' if prefix else v)
-
-        for st in k.body:
-            args = tuple(a if a.const else local[a.name] for a in st.args)
-            names = tuple(name_of(d) for d in st.dsts)
-            for d, n in zip(st.dsts, names):
-                local[d] = Operand(n)
-            if st.is_call:
-                callee = kernels[st.op]
-                items.append(CallMark(names, st.op, args))
-                inline(callee, dict(zip(callee.input_limbs, args)),
-                       dict(zip(callee.output_limbs, names)), names[0])
-            else:
-                items.append(Prim(names[0], st.op, args))
-
-    inline(kernel, {v: Operand(v) for v in kernel.input_limbs},
-           {v: v for v in kernel.output_limbs}, '')
+    _inline(items, kernel, kernels, {v: Operand(v) for v in kernel.input_limbs},
+            {v: v for v in kernel.output_limbs}, '')
     return items
+
+
+def _inline(items, k, kernels, env, outnames, prefix):
+    local = dict(env)
+
+    def name_of(v):
+        return outnames[v] if v in outnames else (f'{prefix}_{v}' if prefix else v)
+
+    for st in k.body:
+        args = tuple(a if a.const else local[a.name] for a in st.args)
+        names = tuple(name_of(d) for d in st.dsts)
+        for d, n in zip(st.dsts, names):
+            local[d] = Operand(n)
+        if st.is_call:
+            callee = kernels[st.op]
+            items.append(CallMark(names, st.op, args))
+            _inline(items, callee, kernels, dict(zip(callee.input_limbs, args)),
+                    dict(zip(callee.output_limbs, names)), names[0])
+        else:
+            items.append(Prim(names[0], st.op, args))
+
+
+def inline_call(kernel, kernels, args, prefix):
+    """One call of `kernel` on the operands `args` (one per input value), flattened as a call
+    site of a fold's loop: every value it defines, its outputs included, is named PREFIX_V, so
+    that no name of the result can be a name of the fold (which have no underscore). Returns
+    (items, the names of the outputs)."""
+    items = [CallMark(tuple(f'{prefix}_{v}' for v in kernel.output_limbs), kernel.name, tuple(args))]
+    _inline(items, kernel, kernels, dict(zip(kernel.input_limbs, args)), {}, prefix)
+    return items, [f'{prefix}_{v}' for v in kernel.output_limbs]
 
 
 def prims(kernel, kernels):

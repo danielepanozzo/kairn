@@ -1,0 +1,28 @@
+# The sum of an array of 2-limb numbers written through Kairn (milestone2.md, "sum, dot, axpy,
+# convolution"): s <- add_2_2(s, x) from (0, 0), the lanes combined by add_2_2. If every element
+# is canonical and the flag is true, the result is normalized and, with eps the unit of add_2_2,
+#   |r - sum x_i| <= ((1 + eps)^(n-1) - 1) sum |x_i|          in both orders, for every width;
+# the flag is false, and the result (NaN, NaN), when the leading limb of the final state is not
+# finite (an element that is not finite, or an overflow). Proved in the real model for the steps
+# of SummationKernels.v (sum_2_seq, sum_2_lanes in closed form, fold_seq_sum and fold_lanes_sum
+# with add_2_2_adds and add_2_2_zero in the form with the power).
+fold:          sum_2
+arrays:        stored x = x0 x1
+state:         s = s0 s1
+step:          s = add_2_2(s, x)
+combine:       s = add_2_2(s, s)
+orders:        sequential, lanes
+writes:        none
+output:        r = r0 r1
+output:        mask flag
+finish:        (r, flag) = fold_finish_2(s)
+value:         x
+requires:      canonical x
+ensures:       normalized r
+ensures:       fold_error r eps=3*u^2/(1-4*u) rel=n-1
+ensures:       finite_or_nan r flag=flag
+min_precision: 3
+status:        unverified
+domain:        extended
+source:        Higham's bound for summation over any tree, with the bound of add_2_2 (MR22)
+license:       bound: published; proof: MIT

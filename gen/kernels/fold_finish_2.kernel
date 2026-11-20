@@ -1,0 +1,22 @@
+# The finish of a fold of two limbs (milestone2.md, "When something is not finite"): the final
+# state when its leading limb is finite, with the flag true; otherwise the canonical NaN, (NaN,
+# NaN), and the flag false. A finite leading limb of the final state means that every state before
+# it was finite (the non-finite cone of the steps): the bridge of Milestone 1 applies step by step.
+kernel:        fold_finish_2
+input:         s = s0 s1
+output:        r = r0 r1
+output:        mask flag
+value:         s
+ensures:       finite_or_nan r flag=flag
+min_precision: 1
+source:        the finish of a fold: the state or the canonical NaN (milestone2.md)
+license:       proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+cone_exempt:   the outputs are selects after an explicit test that s0 is finite (flag), which is what the kernel claims
+
+a    = abs(s0)
+flag = lt(a, const inf)
+r0   = select(flag, s0, const nan)
+r1   = select(flag, s1, const nan)

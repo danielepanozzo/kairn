@@ -401,8 +401,17 @@ class Specials(unittest.TestCase):
                         seen += 1
         self.assertEqual(subnormal, [])
         # E, G, H of the six cores, and the splitter; P of the two directed products, and N of the
-        # two scalings of a ball by a power of two.
-        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2))
+        # two scalings of a ball by a power of two; the five constants of bound_sum_1 and of
+        # bound_sum_2 and the seven of bound_dot_1 and of bound_dot_2 (2, of the doubling, among them).
+        self.assertEqual(seen, 2 * (3 * 6 + 1 + 2 + 2 + 5 + 5 + 7 + 7))
+        # The constant of tm in bound_dot_k, (1 + u)^2 (tiny + eta) of milestone2.md, is subnormal: it
+        # holds the smallest normal number besides, as H does (1 + 5/2 eta or 3/2 eta, rounded up).
+        for name, more in (('bound_dot_1', 2), ('bound_dot_2', 3)):
+            tm = [c for c in ir.constants(ks[name]) if 'tiny' in c]
+            self.assertEqual(len(tm), 1, name)
+            self.assertTrue(tm[0].endswith('+eta/(2*u))'), name)
+            self.assertEqual(consts.value(tm[0], ks, 53, -1074, 971), Fraction(2) ** -1022 + more * Fraction(2) ** -1074,
+                             name)
         cores = {'ball_add_1': 2, 'ball_add_2': 2, 'ball_scale_1': 3, 'ball_scale_2': 3, 'ball_mul_1': 4,
                  'ball_mul_2': 5}
         for name, more in cores.items():
@@ -490,8 +499,11 @@ class TwoExecutionsOfAProduct(unittest.TestCase):
     non-finite operands of the extended domain (all NaNs being the same). The C++ is tied to these
     results by test_cxx (constant evaluation: ConstantEvaluation; run time: Kernels.test_matrix)."""
     N = common.size(4000, 100000)
+    # The bound kernels of the folds (bound_sum_k, bound_dot_k) multiply m by their constants: for
+    # m = -0, a zero that count(m) admits, their outputs are exact zero products.
     ZERO_SIGN = {'mul_pow2_2', 'mul_pow2_2_full', 'ball_mul_pow2_1', 'ball_mul_pow2_2', 'ball_mul_pow2_1_full',
-                 'ball_mul_pow2_2_full', 'mul_1_1', 'two_prod_dekker'}
+                 'ball_mul_pow2_2_full', 'mul_1_1', 'two_prod_dekker',
+                 'bound_sum_1', 'bound_sum_2', 'bound_dot_1', 'bound_dot_2'}
 
     def test_the_kernels(self):
         from kairn_gen import cpp

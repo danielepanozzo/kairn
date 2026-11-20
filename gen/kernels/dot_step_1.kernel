@@ -1,0 +1,18 @@
+# The step of the dot product of one limb (milestone2.md, "sum, dot, axpy, convolution"): one
+# fused operation, s <- RN(x y + s). No product is rounded: the step is the addition of the state
+# and of the exact product. Its elements come from arrays the program supplies; it only multiplies
+# them, so rule R3 asks no guard of them (an entry kernel whose x and y enter from the program).
+kernel:        dot_step_1
+input:         stored s
+input:         x
+input:         y
+output:        t
+value:         s+x*y
+ensures:       rounded t nearest
+min_precision: 1
+source:        the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md)
+license:       proof: MIT
+status:        unverified
+entry:         yes
+
+t = fma(x, y, s)

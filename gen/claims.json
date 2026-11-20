@@ -1235,6 +1235,264 @@
       }
     },
     {
+      "name": "bound_dot_1",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "g",
+          "limbs": 1
+        },
+        {
+          "name": "t",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "count(m)",
+        "format(half)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "g",
+          "value": "m*unit(mul_1_1)/(1-m*unit(mul_1_1))",
+          "if": "ok"
+        },
+        {
+          "kind": "upper",
+          "of": "t",
+          "value": "m*tiny(mul_1_1)*(1+g)",
+          "if": "ok"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the exported bound of a dot product as a function of n (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 8,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "bound_dot_2",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "g",
+          "limbs": 1
+        },
+        {
+          "name": "t",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "count(m)",
+        "format(half)"
+      ],
+      "ensures": [
+        {
+          "kind": "upper",
+          "of": "g",
+          "value": "m*unit(mul_2_2)/(1-m*unit(mul_2_2))",
+          "if": "ok"
+        },
+        {
+          "kind": "upper",
+          "of": "t",
+          "value": "m*tiny(mul_2_2)*(1+g)",
+          "if": "ok"
+        }
+      ],
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the exported bound of a dot product as a function of n (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 8,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "bound_sum_1",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "g",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "count(m)",
+        "format(half)"
+      ],
+      "ensures": [
+        {
+          "kind": "holds",
+          "rel": "le",
+          "args": [
+            "m*unit(add_1_1)",
+            "1/2"
+          ],
+          "if": "ok"
+        },
+        {
+          "kind": "upper",
+          "of": "g",
+          "value": "m*unit(add_1_1)/(1-m*unit(add_1_1))",
+          "if": "ok"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the exported bound of a sum as a function of n (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 5,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "bound_sum_2",
+      "inputs": [
+        {
+          "name": "m",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "g",
+          "limbs": 1
+        },
+        {
+          "name": "ok",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "requires": [
+        "count(m)",
+        "format(half)"
+      ],
+      "ensures": [
+        {
+          "kind": "holds",
+          "rel": "le",
+          "args": [
+            "m*unit(add_2_2)",
+            "1/2"
+          ],
+          "if": "ok"
+        },
+        {
+          "kind": "upper",
+          "of": "g",
+          "value": "m*unit(add_2_2)/(1-m*unit(add_2_2))",
+          "if": "ok"
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the exported bound of a sum as a function of n (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 5,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "dot_step_1",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 1
+        },
+        {
+          "name": "y",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "value": "s+x*y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "t",
+          "mode": "nearest"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 1,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
       "name": "fast_two_sum_entry",
       "inputs": [
         {
@@ -1299,6 +1557,50 @@
             "abs": "0"
           }
         ]
+      }
+    },
+    {
+      "name": "fold_finish_1",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "s",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the finish of a fold: the state or the canonical NaN (milestone2.md)",
+        "license": "proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
       }
     },
     {
@@ -2088,6 +2390,65 @@
       "instances": {
         "binary64": [],
         "binary32": []
+      }
+    },
+    {
+      "name": "sum_entry_step_1",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 1
+        },
+        {
+          "name": "x",
+          "limbs": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 1
+        }
+      ],
+      "value": "s+x",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "rounded",
+          "of": "t",
+          "mode": "nearest"
+        },
+        {
+          "kind": "error",
+          "of": "t",
+          "form": "R",
+          "c": "1/(1+u)",
+          "k": 1,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_1_1 on a guarded element (rule R3)",
+        "license": "proof: MIT"
+      },
+      "flops": 2,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "1/9007199254740993",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/16777217",
+            "abs": "0"
+          }
+        ]
       }
     },
     {
@@ -3908,6 +4269,72 @@
       }
     },
     {
+      "name": "dot_step_2",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 2
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        },
+        {
+          "name": "y",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 2
+        }
+      ],
+      "value": "s+x*y",
+      "requires": [
+        "normalized(s)",
+        "normalized(x)",
+        "normalized(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "t"
+        },
+        {
+          "kind": "error",
+          "of": "t",
+          "form": "T",
+          "c": "3*(1+4*u*u)/(1-4*u)+4",
+          "k": 2,
+          "t": "2",
+          "when": null
+        }
+      ],
+      "min_precision": 4,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 29,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "141976867225561656938833740038147/1645504557321205311404150517105891403140319507492070035382337536",
+            "abs": "1/101201126653655309176247673359458653524778324882071059178450679013715169783997673445980191850718562247593538932158405955694904368692896738433506699970369254960758712138283180682233453871046608170619883839236372534281003741712346349309051677824579778170405028256179384776166707307615251266093163754323003131653853870546747392"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "164193714044929/6602345302066533842913591296",
+            "abs": "1/356811923176489970264571492362373784095686656"
+          }
+        ]
+      }
+    },
+    {
       "name": "eq_2_1",
       "domain": "extended",
       "inputs": [
@@ -4013,6 +4440,50 @@
       "source": {
         "cite": "limbs compared in order (Milestone 1 listing)",
         "license": "algorithm and proof: MIT"
+      },
+      "flops": 0,
+      "instances": {
+        "binary64": [],
+        "binary32": []
+      }
+    },
+    {
+      "name": "fold_finish_2",
+      "domain": "extended",
+      "ieee_only": true,
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "s",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "min_precision": 1,
+      "status": "unverified",
+      "ieee_status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "the finish of a fold: the state or the canonical NaN (milestone2.md)",
+        "license": "proof: MIT"
       },
       "flops": 0,
       "instances": {
@@ -5008,6 +5479,128 @@
       }
     },
     {
+      "name": "sum_entry_step_2",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 2
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 2
+        }
+      ],
+      "value": "s+x",
+      "requires": [
+        "normalized(s)",
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "t"
+        },
+        {
+          "kind": "error",
+          "of": "t",
+          "form": "R",
+          "c": "3/(1-4*u)",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 3,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 22,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "3/81129638414606645666991986180096",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "1/93824969867264",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sum_fast_entry_step_2",
+      "inputs": [
+        {
+          "name": "s",
+          "limbs": 2
+        },
+        {
+          "name": "x",
+          "limbs": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "t",
+          "limbs": 2
+        }
+      ],
+      "value": "s+x",
+      "requires": [
+        "normalized(s)",
+        "normalized(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "t"
+        },
+        {
+          "kind": "error",
+          "of": "t",
+          "form": "A",
+          "c": "3",
+          "k": 2,
+          "t": "0",
+          "when": null
+        }
+      ],
+      "min_precision": 2,
+      "status": "unverified",
+      "theorem": null,
+      "source": {
+        "cite": "add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5",
+        "license": "algorithm: published; proof: MIT"
+      },
+      "flops": 13,
+      "instances": {
+        "binary64": [
+          {
+            "rel": "3/81129638414606681695789005144064",
+            "abs": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "rel": "3/281474976710656",
+            "abs": "0"
+          }
+        ]
+      }
+    },
+    {
       "name": "to_down_2",
       "domain": "extended",
       "inputs": [
@@ -5099,6 +5692,777 @@
       "instances": {
         "binary64": [],
         "binary32": []
+      }
+    }
+  ],
+  "folds": [
+    {
+      "name": "dot_1",
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "fold_error",
+          "of": "r",
+          "eps": "u/(1+u)",
+          "term": "0",
+          "tau": "eta/2",
+          "heights": {
+            "sequential": {
+              "rel": "n",
+              "abs": "n-1"
+            },
+            "lanes": {
+              "rel": "n",
+              "abs": "n-1"
+            }
+          }
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "dot_step_1",
+      "combine": "add_1_1",
+      "finish": "fold_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorems": {
+        "sequential": null,
+        "lanes": null
+      },
+      "source": {
+        "cite": "Higham's bound for summation over any tree, weighted: the fused dot product",
+        "license": "bound: published; proof: MIT"
+      },
+      "instances": {
+        "binary64": [
+          {
+            "eps": "1/9007199254740993",
+            "term": "0",
+            "tau": "1/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "eps": "1/16777217",
+            "term": "0",
+            "tau": "1/1427247692705959881058285969449495136382746624"
+          }
+        ]
+      }
+    },
+    {
+      "name": "dot_2",
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        },
+        {
+          "name": "y",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x*y",
+      "requires": [
+        "canonical(x)",
+        "canonical(y)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "r"
+        },
+        {
+          "kind": "fold_error",
+          "of": "r",
+          "eps": "3*u^2/(1-4*u)",
+          "term": "4*u^2",
+          "tau": "3/2*eta",
+          "heights": {
+            "sequential": {
+              "rel": "n-1",
+              "abs": "n-1"
+            },
+            "lanes": {
+              "rel": "n-1",
+              "abs": "n-1"
+            }
+          }
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "dot_step_2",
+      "combine": "add_2_2",
+      "finish": "fold_finish_2",
+      "min_precision": 4,
+      "status": "unverified",
+      "theorems": {
+        "sequential": null,
+        "lanes": null
+      },
+      "source": {
+        "cite": "Higham's bound for summation over any tree, with the bounds of add_2_2 and mul_2_2 (MR22)",
+        "license": "bound: published; proof: MIT"
+      },
+      "instances": {
+        "binary64": [
+          {
+            "eps": "3/81129638414606645666991986180096",
+            "term": "1/20282409603651670423947251286016",
+            "tau": "3/404804506614621236704990693437834614099113299528284236713802716054860679135990693783920767402874248990374155728633623822779617474771586953734026799881477019843034848553132722728933815484186432682479535356945490137124014966849385397236206711298319112681620113024717539104666829230461005064372655017292012526615415482186989568"
+          }
+        ],
+        "binary32": [
+          {
+            "eps": "1/93824969867264",
+            "term": "1/70368744177664",
+            "tau": "3/1427247692705959881058285969449495136382746624"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sum_1",
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "stored"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "fold_error",
+          "of": "r",
+          "eps": "u/(1+u)",
+          "term": "0",
+          "tau": "0",
+          "heights": {
+            "sequential": {
+              "rel": "n-1",
+              "abs": "n-1"
+            },
+            "lanes": {
+              "rel": "n-1",
+              "abs": "n-1"
+            }
+          }
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "add_1_1",
+      "combine": "add_1_1",
+      "finish": "fold_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorems": {
+        "sequential": null,
+        "lanes": null
+      },
+      "source": {
+        "cite": "Higham's bound for summation over any tree, with the bound of one rounding",
+        "license": "bound: published; proof: MIT"
+      },
+      "instances": {
+        "binary64": [
+          {
+            "eps": "1/9007199254740993",
+            "term": "0",
+            "tau": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "eps": "1/16777217",
+            "term": "0",
+            "tau": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sum_1_entry",
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 1,
+          "role": "supplied"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 1
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x",
+      "requires": [],
+      "ensures": [
+        {
+          "kind": "fold_error",
+          "of": "r",
+          "eps": "u/(1+u)",
+          "term": "0",
+          "tau": "0",
+          "heights": {
+            "sequential": {
+              "rel": "n-1",
+              "abs": "n-1"
+            },
+            "lanes": {
+              "rel": "n-1",
+              "abs": "n-1"
+            }
+          }
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "sum_entry_step_1",
+      "combine": "add_1_1",
+      "finish": "fold_finish_1",
+      "min_precision": 1,
+      "status": "unverified",
+      "theorems": {
+        "sequential": null,
+        "lanes": null
+      },
+      "source": {
+        "cite": "Higham's bound for summation over any tree, with the bound of one rounding",
+        "license": "bound: published; proof: MIT"
+      },
+      "instances": {
+        "binary64": [
+          {
+            "eps": "1/9007199254740993",
+            "term": "0",
+            "tau": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "eps": "1/16777217",
+            "term": "0",
+            "tau": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sum_2",
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "r"
+        },
+        {
+          "kind": "fold_error",
+          "of": "r",
+          "eps": "3*u^2/(1-4*u)",
+          "term": "0",
+          "tau": "0",
+          "heights": {
+            "sequential": {
+              "rel": "n-1",
+              "abs": "n-1"
+            },
+            "lanes": {
+              "rel": "n-1",
+              "abs": "n-1"
+            }
+          }
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "add_2_2",
+      "combine": "add_2_2",
+      "finish": "fold_finish_2",
+      "min_precision": 3,
+      "status": "unverified",
+      "theorems": {
+        "sequential": null,
+        "lanes": null
+      },
+      "source": {
+        "cite": "Higham's bound for summation over any tree, with the bound of add_2_2 (MR22)",
+        "license": "bound: published; proof: MIT"
+      },
+      "instances": {
+        "binary64": [
+          {
+            "eps": "3/81129638414606645666991986180096",
+            "term": "0",
+            "tau": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "eps": "1/93824969867264",
+            "term": "0",
+            "tau": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sum_2_entry",
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "r"
+        },
+        {
+          "kind": "fold_error",
+          "of": "r",
+          "eps": "3*u^2/(1-4*u)",
+          "term": "0",
+          "tau": "0",
+          "heights": {
+            "sequential": {
+              "rel": "n-1",
+              "abs": "n-1"
+            },
+            "lanes": {
+              "rel": "n-1",
+              "abs": "n-1"
+            }
+          }
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "sum_entry_step_2",
+      "combine": "add_2_2",
+      "finish": "fold_finish_2",
+      "min_precision": 3,
+      "status": "unverified",
+      "theorems": {
+        "sequential": null,
+        "lanes": null
+      },
+      "source": {
+        "cite": "Higham's bound for summation over any tree, with the bound of add_2_2 (MR22)",
+        "license": "bound: published; proof: MIT"
+      },
+      "instances": {
+        "binary64": [
+          {
+            "eps": "3/81129638414606645666991986180096",
+            "term": "0",
+            "tau": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "eps": "1/93824969867264",
+            "term": "0",
+            "tau": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sum_fast_2",
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "stored"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "r"
+        },
+        {
+          "kind": "fold_error",
+          "of": "r",
+          "eps": "3*u^2",
+          "term": "0",
+          "tau": "0",
+          "heights": {
+            "sequential": {
+              "rel": "n-1",
+              "abs": "n-1"
+            },
+            "lanes": {
+              "rel": "n-1",
+              "abs": "n-1"
+            }
+          }
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "add_fast_2_2",
+      "combine": "add_fast_2_2",
+      "finish": "fold_finish_2",
+      "min_precision": 2,
+      "status": "unverified",
+      "theorems": {
+        "sequential": null,
+        "lanes": null
+      },
+      "source": {
+        "cite": "Higham's bound for summation over any tree, with the bound of add_fast_2_2",
+        "license": "bound: published; proof: MIT"
+      },
+      "instances": {
+        "binary64": [
+          {
+            "eps": "3/81129638414606681695789005144064",
+            "term": "0",
+            "tau": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "eps": "3/281474976710656",
+            "term": "0",
+            "tau": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sum_fast_2_entry",
+      "domain": "extended",
+      "arrays": [
+        {
+          "name": "x",
+          "limbs": 2,
+          "role": "supplied"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "r",
+          "limbs": 2
+        },
+        {
+          "name": "flag",
+          "limbs": 1,
+          "type": "mask"
+        }
+      ],
+      "value": "x",
+      "requires": [
+        "canonical(x)"
+      ],
+      "ensures": [
+        {
+          "kind": "normalized",
+          "of": "r"
+        },
+        {
+          "kind": "fold_error",
+          "of": "r",
+          "eps": "3*u^2",
+          "term": "0",
+          "tau": "0",
+          "heights": {
+            "sequential": {
+              "rel": "n-1",
+              "abs": "n-1"
+            },
+            "lanes": {
+              "rel": "n-1",
+              "abs": "n-1"
+            }
+          }
+        },
+        {
+          "kind": "finite_or_nan",
+          "of": "r",
+          "flag": "flag"
+        }
+      ],
+      "orders": [
+        "sequential",
+        "lanes"
+      ],
+      "packed_lanes": {
+        "binary64": {
+          "avx2": 4,
+          "neon": 2
+        },
+        "binary32": {
+          "avx2": 8,
+          "neon": 4
+        }
+      },
+      "step": "sum_fast_entry_step_2",
+      "combine": "add_fast_2_2",
+      "finish": "fold_finish_2",
+      "min_precision": 2,
+      "status": "unverified",
+      "theorems": {
+        "sequential": null,
+        "lanes": null
+      },
+      "source": {
+        "cite": "Higham's bound for summation over any tree, with the bound of add_fast_2_2",
+        "license": "bound: published; proof: MIT"
+      },
+      "instances": {
+        "binary64": [
+          {
+            "eps": "3/81129638414606681695789005144064",
+            "term": "0",
+            "tau": "0"
+          }
+        ],
+        "binary32": [
+          {
+            "eps": "3/281474976710656",
+            "term": "0",
+            "tau": "0"
+          }
+        ]
       }
     }
   ]

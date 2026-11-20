@@ -100,26 +100,33 @@ def up_tree(text):
 
 def up_exact(text, kernels, p, qmin):
     """The exact value of EXPR in up(EXPR), for precision p and underflow threshold 2^qmin."""
-    tree = up_tree(text)
+    return evaluate(up_tree(text), kernels, p, qmin, what=f'up({text})')
+
+
+def evaluate(tree, kernels, p, qmin, names=None, what=None):
+    """The exact value of an expression of constants (a tree of expr.py over u, eta, integers,
+    unit(K) and tiny(K)), for precision p and underflow threshold 2^qmin; `names` gives the
+    value of any other name it uses (the inputs of a claim of Milestone 2)."""
+    what = what or 'the expression'
     u, eta = Fraction(1, 2 ** p), Fraction(2) ** qmin
-    env = {'u': u, 'eta': eta}
+    env = dict(names or {}, u=u, eta=eta)
     for fn, kname in expr.calls(tree):
         k = kernels.get(kname)
         if k is None:
-            raise ConstError(f'up({text}): {kname} is not a kernel')
+            raise ConstError(f'{what}: {kname} is not a kernel')
         e = source_bound(k)
         if k.min_precision is not None and p < k.min_precision:
-            raise ConstError(f'up({text}) is not defined for precision {p}: the claims of {kname} hold '
+            raise ConstError(f'{what} is not defined for precision {p}: the claims of {kname} hold '
                              f'from precision {k.min_precision} on')
         try:
             env[f'unit({kname})'] = expr.evaluate(expr.parse(e['c']), {'u': u}) * u ** e['k']
             env[f'tiny({kname})'] = expr.evaluate(expr.parse(e['t']), {}) * eta
         except expr.ExprError as err:
-            raise ConstError(f'up({text}): the bound of {kname}: {err}')
+            raise ConstError(f'{what}: the bound of {kname}: {err}')
     try:
         return expr.evaluate(tree, env)
     except expr.ExprError as err:
-        raise ConstError(f'up({text}): {err}')
+        raise ConstError(f'{what}: {err}')
 
 
 def value(name, kernels, p, qmin, qmax):

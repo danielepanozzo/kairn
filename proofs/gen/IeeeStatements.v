@@ -240,6 +240,17 @@ Definition fast_two_sum_entry_ieee_spec : Prop :=
   (val s + val e) = (val a + val b) /\
   normalized_2 (ieee_emin prec emax) prec (val s) (val e).
 
+(* fold_finish_1: the finish of a fold: the state or the canonical NaN (milestone2.md). IEEE-model status: unverified. *)
+Definition fold_finish_1_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall s : binary_float prec emax,
+  let '(r, flag) := IeeeModel.fold_finish_1 prec emax nan_abs nan_const s in
+  (flag = true <-> finite s) /\
+  (flag = true -> r = s) /\
+  (flag = false -> nan r).
+
 (* make_2: constructors (Milestone 1 listing). IEEE-model status: proved. *)
 Definition make_2_spec : Prop :=
   forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
@@ -984,6 +995,17 @@ Definition eq_2_2_ieee_spec : Prop :=
   canonical_2 y0 y1 ->
   let m := IeeeModel.eq_2_2 prec emax x0 x1 y0 y1 in
   m = xeq (xval_2 x0 x1) (xval_2 y0 y1).
+
+(* fold_finish_2: the finish of a fold: the state or the canonical NaN (milestone2.md). IEEE-model status: unverified. *)
+Definition fold_finish_2_spec : Prop :=
+  forall (prec emax : Z) (prec_gt_0_ : Prec_gt_0 prec)
+         (prec_lt_emax_ : BinarySingleNaN.Prec_lt_emax prec emax)
+         (nan_abs : nan1 prec emax) (nan_const : {x : binary_float prec emax | is_nan prec emax x = true}),
+  forall s0 s1 : binary_float prec emax,
+  let '(r0, r1, flag) := IeeeModel.fold_finish_2 prec emax nan_abs nan_const s0 s1 in
+  (flag = true <-> finite s0) /\
+  (flag = true -> r0 = s0 /\ r1 = s1) /\
+  (flag = false -> nan r0 /\ nan r1).
 
 (* le_1_2: limbs compared in order (Milestone 1 listing). IEEE-model status: proved. *)
 Definition le_1_2_ieee_spec : Prop :=

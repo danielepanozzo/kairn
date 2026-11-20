@@ -1,0 +1,26 @@
+# The dot product of two arrays of numbers of one limb (milestone2.md, "sum, dot, axpy,
+# convolution"): the fused step s <- RN(x y + s) from 0, the lanes combined by add_1_1. The arrays
+# may be the program's: the step only multiplies their elements (rule R3). If the flag is true,
+# the result is a number of the format and, with eps = u / (1 + u),
+#   |r - sum x_i y_i| <= ((1 + eps)^n - 1) sum |x_i y_i| + (1 + eps)^(n-1) n eta / 2
+# in both orders, for every width: the step rounds even from the zero state, so the exponent is n,
+# and the term in eta is charged to the n exact products, not to the additions that combine the
+# lanes. Proved in the real model for the steps of SummationKernels.v (dot_1_seq, dot_1_lanes).
+fold:          dot_1
+arrays:        supplied x, supplied y
+state:         s
+step:          s = dot_step_1(s, x, y)
+combine:       s = add_1_1(s, s)
+orders:        sequential, lanes
+writes:        none
+output:        r
+output:        mask flag
+finish:        (r, flag) = fold_finish_1(s)
+value:         x*y
+ensures:       fold_error r eps=u/(1+u) tau=eta/2 rel=n abs=n-1
+ensures:       finite_or_nan r flag=flag
+min_precision: 1
+status:        unverified
+domain:        extended
+source:        Higham's bound for summation over any tree, weighted: the fused dot product
+license:       bound: published; proof: MIT

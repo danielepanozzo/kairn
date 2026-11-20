@@ -1,0 +1,23 @@
+# The sum of an array of 2-limb numbers that the program supplies, with the fast addition: the
+# sum_fast_2 fold with each limb of an element passed through guard first (sum_fast_entry_step_2),
+# rule R3. Its claims are those of sum_fast_2.
+fold:          sum_fast_2_entry
+arrays:        supplied x = x0 x1
+state:         s = s0 s1
+step:          s = sum_fast_entry_step_2(s, x)
+combine:       s = add_fast_2_2(s, s)
+orders:        sequential, lanes
+writes:        none
+output:        r = r0 r1
+output:        mask flag
+finish:        (r, flag) = fold_finish_2(s)
+value:         x
+requires:      canonical x
+ensures:       normalized r
+ensures:       fold_error r eps=3*u^2 rel=n-1
+ensures:       finite_or_nan r flag=flag
+min_precision: 2
+status:        unverified
+domain:        extended
+source:        Higham's bound for summation over any tree, with the bound of add_fast_2_2
+license:       bound: published; proof: MIT

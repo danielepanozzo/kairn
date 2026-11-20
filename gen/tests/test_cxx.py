@@ -92,6 +92,15 @@ NONFINITE_CE_CASES = [
     ('ball_make_2', 'double', [1.0, 2.0 ** -60, -1.0]),
     ('ball_make_2', 'float', [math.inf, 0.0, 0.5]),
     ('ball_make_2', 'double', [1.0, 2.0 ** -60, math.inf]),
+    # The finishes of the folds: a finite state as it is with the flag true, the canonical NaN with
+    # the flag false otherwise.
+    ('fold_finish_1', 'double', [-2.0 ** -1074]),
+    ('fold_finish_1', 'float', [math.inf]),
+    ('fold_finish_1', 'double', [math.nan]),
+    ('fold_finish_2', 'double', [1.0, 2.0 ** -60]),
+    ('fold_finish_2', 'float', [-math.inf, 0.0]),
+    ('fold_finish_2', 'double', [math.nan, math.nan]),
+    ('fold_finish_2', 'float', [math.inf, math.nan]),
 ]
 
 
@@ -328,13 +337,25 @@ class Builds:
         return r.returncode, r.stdout, r.stderr
 
 
+_shared = None
+
+
+def shared_builds():
+    """The runner of gen/tests built in every configuration, once per run of the suite: the
+    kernels' tests here and the folds' (test_folds.py) use the same builds."""
+    global _shared
+    if _shared is None:
+        _shared = Builds('cxx', [RUNNER], ['-I', INCLUDE, '-I', common.TESTS])
+    return _shared
+
+
 class Kernels(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not COMPILERS:
             raise unittest.SkipTest('no C++ compiler (set KAIRN_GEN_CXX)')
         cls.ks = common.kernels()
-        cls.builds = Builds('cxx', [RUNNER], ['-I', INCLUDE, '-I', common.TESTS])
+        cls.builds = shared_builds()
 
     def test_matrix(self):
         """Every build, every kernel, both limb types: bit-identical to the interpreter."""

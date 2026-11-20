@@ -359,14 +359,18 @@ def _claim_error(e, s):
     else:
         if e['form'] == 'R':
             rho = f'Rabs {value}'
-        else:
+        elif e['form'] == 'A':
             rho = '(' + ' + '.join(f'Rabs {_sum(g.limbs)}' for g in s.k.inputs) + ')'
-        terms = []
+        else:
+            # Relative to the terms of the value: s+x*y gives |s| + |x*y|.
+            rho = '(' + ' + '.join(f'Rabs {_paren(_term(x, lambda n: _sum(s.ins[n].limbs)))}'
+                                   for x in terms(expr.parse(s.k.value))) + ')'
+        parts = []
         if c != zero:
-            terms.append(f'{_term(c, lambda n: "u prec")} * u prec ^ {e["k"]} * {rho}')
+            parts.append(f'{_term(c, lambda n: "u prec")} * u prec ^ {e["k"]} * {rho}')
         if t != zero:
-            terms.append(f'{_term(t, None)} * eta emin')
-        bound = f'Rabs ({_sum(limbs)} - {value}) <= {" + ".join(terms)}'
+            parts.append(f'{_term(t, None)} * eta emin')
+        bound = f'Rabs ({_sum(limbs)} - {value}) <= {" + ".join(parts)}'
     if e['when'] == 'product_large':
         bound = (f'(({value} = 0 \\/ bpow radix2 (2 * prec - 1) * eta emin <= Rabs {value}) ->'
                  f' {bound})')
@@ -403,9 +407,24 @@ def _claim_bound(e, s):
 
 
 def _claim_upper(e, s):
-    r, gaps = s.outs[e['of']].limbs[0], _term(expr.parse(e['gaps']), None)
-    return (f'{s.value} <= {r} /\\ {r} - {s.value} <= {gaps} * ({r} - pred radix2 (FLT_exp emin prec) '
-            f'{r})')
+    """value <= r, and r - value <= gaps (r - pred r) when the entry has gaps; the value is the
+    entry's own when it has one (the bound kernels of Milestone 2); under its mask when it has
+    `if`."""
+    r = s.outs[e['of']].limbs[0]
+    value = _paren(s.constant_term(e['value'])) if 'value' in e else s.value
+    parts = [f'{value} <= {r}']
+    if 'gaps' in e:
+        gaps = _term(expr.parse(e['gaps']), None)
+        parts.append(f'{r} - {value} <= {gaps} * ({r} - pred radix2 (FLT_exp emin prec) {r})')
+    claim = ' /\\ '.join(parts)
+    return f'({e["if"]} = true -> {claim})' if 'if' in e else claim
+
+
+def _claim_holds(e, s):
+    """The relation between two expressions of the inputs and the constants, under a mask."""
+    a, b = (s.constant_term(x) for x in e['args'])
+    rel = {'lt': '<', 'le': '<=', 'eq': '='}[e['rel']]
+    return f'({e["if"]} = true -> {a} {rel} {b})'
 
 
 def _claim_predicate(e, s):
@@ -440,7 +459,24 @@ def _claim_encloses(e, s):
 CLAIMS = {'normalized': _claim_normalized, 'leading_rounded': _claim_leading_rounded,
           'error': _claim_error, 'rounded': _claim_rounded, 'upper': _claim_upper,
           'predicate': _claim_predicate, 'encloses': _claim_encloses, 'neighbor': _claim_neighbor,
-          'bound': _claim_bound}
+          'bound': _claim_bound, 'holds': _claim_holds}
+
+
+def terms(tree):
+    """The terms of an expression read as a sum: s+x*y gives s and x*y, a-b a and -b (as trees)."""
+    if tree[0] == 'add':
+        return terms(tree[1]) + terms(tree[2])
+    if tree[0] == 'sub':
+        return terms(tree[1]) + [('neg', t) for t in terms(tree[2])]
+    return [tree]
+
+
+def constant_call(fn, kname, kernels, u, eta):
+    """unit(K) = c u^k and tiny(K) = t eta of K's error claim, as terms, with u and eta spelled."""
+    e = consts.source_bound(kernels[kname])
+    if fn == 'unit':
+        return f'({_term(expr.parse(e["c"]), lambda n: u)} * {u} ^ {e["k"]})'
+    return f'({_term(expr.parse(e["t"]), None)} * {eta})'
 
 
 def _hypotheses(k, ins):
@@ -465,6 +501,10 @@ def _hypotheses(k, ins):
             hyps.append(f'0 <= {r[1]}')
         elif r[0] == 'ball':
             hyps.append(f'0 <= {r[2]}')
+        elif r[0] == 'count':
+            hyps.append(f'({r[1]} = 0 \\/ 1 <= {r[1]})')
+        elif r[0] == 'format':           # format half: the format contains 1/2
+            hyps.append('eta emin <= / 2')
     return hyps
 
 
@@ -483,14 +523,26 @@ def _output_formats(k):
 
 
 class _Shared:
-    def __init__(self, k):
-        self.k = k
+    def __init__(self, k, kernels=None):
+        self.k, self.kernels = k, kernels
         self.ins = {g.name: g for g in k.inputs}
         self.outs = {g.name: g for g in k.outputs}
-        self.value = self.term(k.value)
+        self.value = self.term(k.value) if k.value is not None else None
 
     def term(self, text, name=None):
         return _term(expr.parse(text), name or (lambda n: _sum(self.ins[n].limbs)))
+
+    def constant_term(self, text):
+        """An expression of the claims of Milestone 2: input names (the sum of their limbs), the
+        one-limb outputs, u, eta, unit(K), tiny(K)."""
+        def name(n):
+            if n == 'u':
+                return 'u prec'
+            if n == 'eta':
+                return 'eta emin'
+            return _sum(self.ins[n].limbs) if n in self.ins else self.outs[n].limbs[0]
+        return _term(expr.parse(text), name,
+                     lambda fn, kname: constant_call(fn, kname, self.kernels, 'u prec', 'eta emin'))
 
 
 def statement(k, kernels):
@@ -504,7 +556,7 @@ def statement(k, kernels):
     what `normalized` with an exact `error` says (architecture.md, "Claims of the non-finite
     layer").
     """
-    s = _Shared(k)
+    s = _Shared(k, kernels)
     hyps = _hypotheses(k, s.ins)
     claims = _output_formats(k) + [CLAIMS[e['kind']](e, s) for e in k.ensures if e['kind'] != 'represents']
     sites = ir.muladd_sites(k, kernels)
@@ -554,6 +606,202 @@ def statements(kernels):
     return '\n'.join(lines) + '\n'
 
 
+# --- Folds -----------------------------------------------------------------------------------------
+#
+# The model of a fold (milestone2.md, "Folds, the extension of the IR") is written with the two
+# functions on lists of proofs/theories/Folds.v and nothing else: the state is a tuple of limbs,
+# an element one entry of every array as a tuple (a pair of pairs for two arrays of two limbs),
+# the step and the combination are functions of those tuples that apply the kernels' models of
+# Model.v to their limbs, and the zero state has every limb 0. A tuple is nested to the left, as
+# Rocq writes (a, b, c), and read with fst and snd, so that a function of tuples that a theorem
+# names (add22 of SummationKernels.v is add_2_2 of fst and snd) is the generated one by
+# conversion. The finish, which says what comes out when the state is not finite, has no
+# real-model statement: in the real model nothing is infinite, and the result is the final state.
+
+def tuple_type(n, item='R'):
+    return ' * '.join([item] * n) if n > 1 else item
+
+
+def tuple_parts(term, n):
+    """The n components of a left-nested tuple `term`, as terms: (a, b, c) is ((a, b), c)."""
+    if n == 1:
+        return [term]
+    return tuple_parts(f'fst {_paren(term)}', n - 1) + [f'snd {_paren(term)}']
+
+
+def fold_section_args(kernel_list, kernels):
+    used = set()
+    for k in kernel_list:
+        used.update(section_args(k, kernels))
+    return [v for v in SECTION if v in used]
+
+
+def _apply(k, kernels, args, section=None):
+    """The model of kernel k applied to the section variables it takes and to `args`."""
+    head = [k.name] + (section_args(k, kernels) if section is None else section)
+    return ' '.join(head + [_paren(a) for a in args])
+
+
+def fold_element_type(fd):
+    """The type of an element: the tuple of the arrays' groups, (R * R) * (R * R) for dot_2."""
+    types = [tuple_type(len(g.limbs)) for g in fd.arrays]
+    if len(types) == 1:
+        return types[0]
+    return ' * '.join(f'({t})' if ' ' in t else t for t in types)
+
+
+def fold_groups(fd, element):
+    """{array name: the term of its group in the element `element`}."""
+    parts = tuple_parts(element, len(fd.arrays))
+    return {g.name: p for g, p in zip(fd.arrays, parts)}
+
+
+def fold_model(kernels):
+    """proofs/gen/FoldModel.v: every fold's step, combination and two orders."""
+    folds = getattr(kernels, 'folds', {})
+    lines = [HEADER, '',
+             '(* The formal model of every fold (docs/developer/architecture.md, "Folds"): a loop of kernels',
+             '   along arrays, in the two orders of proofs/theories/Folds.v. The state is a tuple of limbs and',
+             '   an element one entry of every array as a tuple, each read with fst and snd; the step and the',
+             '   combination apply the models of their kernels (Model.v) to those limbs; the zero state has',
+             '   every limb 0. F_seq is fold_seq of the step from the zero state, F_lanes W fold_lanes of the',
+             '   step and the combination with W lanes. The finish of a fold has no real-model statement and',
+             '   is not here: in the real model nothing is infinite, and the result is the final state. *)',
+             'From Stdlib Require Import Reals ZArith List.',
+             'From Flocq Require Import Core.',
+             f'From {GEN_PATH} Require Import Model.',
+             f'From {THEORIES_PATH} Require Import Folds.',
+             'Open Scope R_scope.',
+             '',
+             'Section Folds.',
+             'Variable emin prec : Z.',
+             'Variable choice : Z -> bool.']
+    for fd in folds.values():
+        step, combine = kernels[fd.step[0]], kernels[fd.combine[0]] if fd.combine else None
+        st, el, _ = _fold_binders(fd)
+        stype = tuple_type(len(fd.state.limbs))
+        etype = fold_element_type(fd)
+        zero = '0' if len(fd.state.limbs) == 1 else '(' + ', '.join(['0'] * len(fd.state.limbs)) + ')'
+        groups = fold_groups(fd, el)
+        args = []
+        for a in fd.step[1]:
+            term = st if a == fd.state.name else groups[a]
+            args += tuple_parts(term, len(fd.state.limbs if a == fd.state.name else
+                                          next(g for g in fd.arrays if g.name == a).limbs))
+        arrays = ', '.join(f'{fd.roles[g.name]} {g.name}' for g in fd.arrays)
+        lines += ['', f'(* {fd.name}: arrays {arrays}; state {fd.state.name} of {len(fd.state.limbs)} limb'
+                      f'{"s" if len(fd.state.limbs) > 1 else ""}; step {step.name}'
+                      + (f', combination {combine.name}' if combine else '') + '. *)',
+                  f'Definition {fd.name}_step ({st} : {stype}) ({el} : {etype}) : {stype} :=',
+                  f'  {_apply(step, kernels, args)}.']
+        if combine is not None:
+            n = len(fd.state.limbs)
+            lines += ['', f'Definition {fd.name}_combine (a b : {stype}) : {stype} :=',
+                      f'  {_apply(combine, kernels, tuple_parts("a", n) + tuple_parts("b", n))}.']
+        lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+        if 'sequential' in fd.orders:
+            lines += ['', f'Definition {fd.name}_seq (xs : {lt}) : {stype} :=',
+                      f'  fold_seq {fd.name}_step {zero} xs.']
+        if 'lanes' in fd.orders:
+            lines += ['', f'Definition {fd.name}_lanes (W : nat) (xs : {lt}) : {stype} :=',
+                      f'  fold_lanes {fd.name}_step {fd.name}_combine {zero} W xs.']
+    lines += ['', 'End Folds.']
+    return '\n'.join(lines) + '\n'
+
+
+def _fold_binders(fd):
+    element = ''.join(g.name for g in fd.arrays)
+    return fd.state.name, element, element + 's'
+
+
+def _fold_term(text, groups, fd):
+    """The value of an element (an expression over the arrays' names) as a term: each name the
+    sum of the limbs of its group."""
+    sizes = {g.name: len(g.limbs) for g in fd.arrays}
+    return _term(expr.parse(text), lambda n: _sum(tuple_parts(groups[n], sizes[n])))
+
+
+def _height(h, xs):
+    return {'n': f'length {xs}', 'n-1': f'(length {xs} - 1)'}[h]
+
+
+def _constants(text):
+    return _term(expr.parse(text), lambda n: {'u': 'u prec', 'eta': 'eta emin'}[n])
+
+
+def fold_statement(fd, kernels, order):
+    """The Definition F_seq_spec or F_lanes_spec : Prop, from the fold's claims: for every list of
+    valid elements, the result is valid and within the bound of fold_error, with the powers of
+    the bound (the forms with gamma, which need a hypothesis on n, follow from these by
+    pow_minus_1_le_gamma of Summation.v)."""
+    st, el, xs = _fold_binders(fd)
+    suffix = ir.ORDER_SUFFIX[order]
+    step, combine, _ = (kernels[c[0]] if c else None for c in (fd.step, fd.combine, fd.finish))
+    parts = [step] + ([combine] if order == 'lanes' else [])
+    section = [{'choice': 'tie_even'}.get(v, v) for v in fold_section_args(parts, kernels)]
+    etype = fold_element_type(fd)
+    lt = f'list ({etype})' if ' ' in etype else f'list {etype}'
+    groups = fold_groups(fd, el)
+    normalized = {r[1] for r in fd.requires if r[0] in ('normalized', 'canonical')}
+    valid = []
+    for g in fd.arrays:
+        limbs = tuple_parts(groups[g.name], len(g.limbs))
+        if g.name in normalized:
+            valid.append(f'normalized_{len(limbs)} emin prec {" ".join(_paren(x) for x in limbs)}')
+        else:
+            valid += [f'fmt emin prec {_paren(x)}' for x in limbs]
+    n = len(fd.state.limbs)
+    result = tuple_parts(st, n)
+    covered = any(e['kind'] == 'normalized' for e in fd.ensures)
+    claims = [f'normalized_{n} emin prec {" ".join(_paren(x) for x in result)}'] if covered else \
+        [f'fmt emin prec {_paren(x)}' for x in result]
+    value = f'(fun {el} => {_fold_term(fd.value, groups, fd)})'
+    for e in fd.ensures:
+        if e['kind'] != 'fold_error':
+            continue
+        eps = _constants(e['eps'])
+        power = f'(1 + {eps}) ^ {_height(e["rel"], xs)}'
+        if expr.parse(e['term']) != ('int', 0):
+            power = f'(1 + {_constants(e["term"])}) * {power}'
+        bound = f'({power} - 1) * sumabs (map {value} {xs})'
+        if expr.parse(e['tau']) != ('int', 0):
+            bound += (f' +\n    (1 + {eps}) ^ {_height(e["abs"], xs)} * (INR (length {xs}) * '
+                      f'{_constants(e["tau"])})')
+        claims.append(f'Rabs ({_sum(result)} - sumR (map {value} {xs})) <=\n    {bound}')
+    binders = f'forall (W : nat) ({xs} : {lt}),' if order == 'lanes' else f'forall {xs} : {lt},'
+    call = ' '.join([f'{fd.name}_{suffix}'] + section + (['W'] if order == 'lanes' else []) + [xs])
+    what = {'sequential': 'the sequential order', 'lanes': 'the lane order, for every number of lanes W'}[order]
+    lines = [f'(* {fd.name}, {what}: {fd.source or "no source given"}. Status: {fd.status}. *)',
+             f'Definition {fd.name}_{suffix}_spec : Prop :=',
+             f'  forall emin prec : Z, ({fd.min_precision} <= prec)%Z ->',
+             f'  {binders}',
+             f'  Forall (fun {el} => {" /\\ ".join(valid)}) {xs} ->',
+             f'  let {st} := {call} in',
+             '  ' + ' /\\\n  '.join(claims) + '.']
+    return lines
+
+
+def fold_statements(kernels):
+    """proofs/gen/FoldStatements.v: the statements of every fold, in each of its orders."""
+    lines = [HEADER, '',
+             '(* One statement per fold and order, built from the fold\'s claims (gen/claims.json, "folds"):',
+             '   a hand-written proof of fold F in order O is a theorem F_O_correct whose type is exactly',
+             '   F_O_spec. For every list of elements that satisfy the requirements, every limb a number of',
+             '   the format, the result is valid and within the bound, in the form with the powers of',
+             '   proofs/theories/Summation.v (sumR, sumabs); the lane order for every number of lanes. Rounding',
+             '   is to nearest, ties to even, with gradual underflow and no overflow, as in Statements.v. *)',
+             'From Stdlib Require Import Reals ZArith List.',
+             'From Flocq Require Import Core.',
+             f'From {GEN_PATH} Require Import Model Statements FoldModel.',
+             f'From {THEORIES_PATH} Require Import Folds Summation.',
+             'Open Scope R_scope.']
+    for fd in getattr(kernels, 'folds', {}).values():
+        for order in ir.ORDERS:
+            if order in fd.orders:
+                lines += [''] + fold_statement(fd, kernels, order)
+    return '\n'.join(lines) + '\n'
+
+
 def theory_module(path):
     """proofs/theories/A/B.v -> A.B"""
     return path[len('proofs/theories/'):-len('.v')].replace('/', '.')
@@ -561,16 +809,27 @@ def theory_module(path):
 
 def audit(kernels):
     verified = [k for k in real(kernels).values() if k.status != 'unverified']
+    # The folds that are proved: each order's theorem, as for a kernel (FoldStatements.v is
+    # imported only when there is one, so that the file is what it was before folds existed).
+    folds = [fd for fd in getattr(kernels, 'folds', {}).values() if fd.status != 'unverified']
     lines = [HEADER, '',
              '(* For every kernel not marked unverified: its theorem has exactly the generated',
              '   statement as its type, and the axioms it depends on are printed, for the audit',
              '   script to compare with the allow-list. Nothing else is printed. *)',
              f'From {GEN_PATH} Require Import Statements.']
-    for m in sorted({theory_module(k.theorem[0]) for k in verified}):
+    if folds:
+        lines.append(f'From {GEN_PATH} Require Import FoldStatements.')
+    for m in sorted({theory_module(k.theorem[0]) for k in verified} | {theory_module(fd.theorem) for fd in folds}):
         lines.append(f'From {THEORIES_PATH} Require Import {m}.')
-    if not verified:
+    if not verified and not folds:
         lines += ['', '(* No kernel is verified yet. *)']
     for k in verified:
         lines += ['', f'Definition {k.name}_audit : {k.name}_spec := {k.name}_correct.',
                   f'Print Assumptions {k.name}_correct.']
+    for fd in folds:
+        for order in ir.ORDERS:
+            if order in fd.orders:
+                name = f'{fd.name}_{ir.ORDER_SUFFIX[order]}'
+                lines += ['', f'Definition {name}_audit : {name}_spec := {name}_correct.',
+                          f'Print Assumptions {name}_correct.']
     return '\n'.join(lines) + '\n'

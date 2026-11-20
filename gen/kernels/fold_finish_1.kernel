@@ -1,0 +1,21 @@
+# The finish of a fold of one limb (milestone2.md, "When something is not finite"): the final
+# state when it is finite, with the flag true; otherwise the canonical NaN and the flag false.
+# Which infinity an IEEE sum of the operands would have given is not computed: D5's "not finite,
+# which value is unspecified", made a definite value.
+kernel:        fold_finish_1
+input:         s
+output:        r
+output:        mask flag
+value:         s
+ensures:       finite_or_nan r flag=flag
+min_precision: 1
+source:        the finish of a fold: the state or the canonical NaN (milestone2.md)
+license:       proof: MIT
+status:        unverified
+domain:        extended
+ieee_status:   unverified
+cone_exempt:   the output is a select after an explicit test that s is finite (flag), which is what the kernel claims
+
+a    = abs(s)
+flag = lt(a, const inf)
+r    = select(flag, s, const nan)

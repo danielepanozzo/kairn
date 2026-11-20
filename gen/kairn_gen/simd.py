@@ -31,6 +31,8 @@ AVX2 = {
     'types': {'double': ('__m256d', '__m256d', 'pd', 'pd', 4), 'float': ('__m256', '__m256', 'ps', 'ps', 8)},
     'set1': '_mm256_set1_{s}({0})',
     'zero': '_mm256_setzero_{s}()',
+    'load': '_mm256_loadu_{s}({0})',          # the lanes of a register from memory (a fold's loop)
+    'store': '_mm256_storeu_{s}({0}, {1})',
     'spell': {
         'add': '_mm256_add_{s}({0}, {1})',
         'sub': '_mm256_sub_{s}({0}, {1})',
@@ -68,6 +70,8 @@ NEON = {
               'float': ('float32x4_t', 'uint32x4_t', 'f32', 'u32', 4)},
     'set1': 'vdupq_n_{s}({0})',
     'zero': 'vdupq_n_{s}(0.0{f})',
+    'load': 'vld1q_{s}({0})',
+    'store': 'vst1q_{s}({0}, {1})',
     'spell': {
         'add': 'vaddq_{s}({0}, {1})',
         'sub': 'vsubq_{s}({0}, {1})',
@@ -221,22 +225,70 @@ def _operand(a, b, kernels, ctype, fmt):
     return b['set1'].format(cpp.literal(a.name, kernels, ctype), **fmt)
 
 
-def function(b, k, kernels, ctype):
-    cpp._check_names(k, kernels)
-    vec, mask, s, u, _ = b['types'][ctype]
-    fmt = {'s': s, 'u': u, 'f': cpp.TYPES[ctype][1], 'inf': cpp.literal('inf', kernels, ctype)}
-    inline = 'KAIRN_GEN_FORCEINLINE' if k.limbs <= 2 else 'inline'
-    lines = [f'{inline} void {k.name}({", ".join(cpp.parameters(k, vec, mask))}) noexcept {{']
-    for it in ir.flatten(k, kernels):
+def _format(b, kernels, ctype):
+    _, _, s, u, _ = b['types'][ctype]
+    return {'s': s, 'u': u, 'f': cpp.TYPES[ctype][1], 'inf': cpp.literal('inf', kernels, ctype)}
+
+
+def _statements(b, items, kernels, ctype, pad):
+    vec, mask, _, _, _ = b['types'][ctype]
+    fmt = _format(b, kernels, ctype)
+    lines = []
+    for it in items:
         if isinstance(it, ir.CallMark):
-            lines.append(f'    // ({", ".join(it.dsts)}) = {it.callee}({", ".join(map(str, it.args))})')
+            lines.append(f'{pad}// ({", ".join(it.dsts)}) = {it.callee}({", ".join(map(str, it.args))})')
             continue
         args = [_operand(a, b, kernels, ctype, fmt) for a in it.args]
         vtype = vec if ir.OPS[it.op][1] == ir.LIMB else mask
-        lines.append(f'    const {vtype} {it.dst} = {b["spell"][it.op].format(*args, **fmt)};')
+        lines.append(f'{pad}const {vtype} {it.dst} = {b["spell"][it.op].format(*args, **fmt)};')
+    return lines
+
+
+def function(b, k, kernels, ctype):
+    cpp._check_names(k, kernels)
+    vec, mask, _, _, _ = b['types'][ctype]
+    inline = 'KAIRN_GEN_FORCEINLINE' if k.limbs <= 2 else 'inline'
+    lines = [f'{inline} void {k.name}({", ".join(cpp.parameters(k, vec, mask))}) noexcept {{']
+    lines += _statements(b, ir.flatten(k, kernels), kernels, ctype, '    ')
     lines += [f'    {v}_out = {v};' for v in k.output_limbs]
     lines.append('}')
     return lines
+
+
+def fold_packed(b, fd, kernels, ctype):
+    """The lane order of a fold (proofs/theories/Folds.v, fold_lanes) with W the lanes of the
+    register: the first W (n / W) elements in blocks of W, element i in lane i mod W, each lane
+    folded by the packed step from the zero state; the W lane states, stored, combined from lane 0
+    upward by the scalar combination; the remaining elements folded into the result by the scalar
+    step; the finish. In every lane the packed step computes what the scalar step computes, so
+    this is, bit for bit, F_lanes of scalar.hpp with lanes = W."""
+    vec, _, _, _, w = b['types'][ctype]
+    fmt = _format(b, kernels, ctype)
+    step, combine, _ = cpp.fold_kernels(fd, kernels)
+    state = list(fd.state.limbs)
+    lane = [f'{v}_lane_' for v in state]
+    stored = [f'{v}_lanes_' for v in state]
+    nxt = [f'{v}_next_' for v in state]
+    lines = cpp.fold_description(fd, kernels, 'packed')
+    lines.append(f'inline void {fd.name}_packed({", ".join(cpp.fold_parameters(fd, ctype, "bool", False))}) noexcept {{')
+    lines.append(f'    const std::size_t full_ = n - n % {w};')
+    lines += [f'    {vec} {v} = {b["zero"].format(**fmt)};' for v in lane]
+    lines.append(f'    for (std::size_t i_ = 0; i_ < full_; i_ += {w}) {{')
+    lines += [f'        const {vec} {v} = {b["load"].format(f"{v}_in + i_", **fmt)};' for v in fd.array_limbs()]
+    items, outs = ir.inline_call(step, kernels, [ir.Operand(a) for a in cpp.step_arguments(
+        fd, lane, {g.name: list(g.limbs) for g in fd.arrays})], cpp.STEP)
+    lines += _statements(b, items, kernels, ctype, ' ' * 8) + cpp._assign(lane, outs, ' ' * 8) + ['    }']
+    # Not initialized: the store writes every lane before any is read. (An initializer `= {}` is a
+    # call of memset at -O0 with Clang for 32 bytes, which the object-code check cannot count.)
+    lines += [f'    {ctype} {v}[{w}];' for v in stored]
+    lines += [f'    {b["store"].format(v, r, **fmt)};' for v, r in zip(stored, lane)]
+    lines += [f'    {ctype} {v} = {r}[0];' for v, r in zip(state, stored)]
+    lines.append(f'    for (std::size_t j_ = 1; j_ < {w}; ++j_) {{')
+    lines += [f'        const {ctype} {v} = {r}[j_];' for v, r in zip(nxt, stored)]
+    body, outs = cpp._call(combine, kernels, ctype, state + nxt, cpp.COMB, ' ' * 8)
+    lines += body + cpp._assign(state, outs, ' ' * 8) + ['    }']
+    lines += cpp.fold_step_loop(fd, kernels, ctype, state, 'full_')
+    return lines + cpp.fold_finish_lines(fd, kernels, ctype, state) + ['}']
 
 
 HEADER = ('// Generated by gen/kairn-gen from gen/kernels/*.kernel. Do not edit: change the\n'
@@ -251,7 +303,8 @@ def header(b, kernels, prelude_name='prelude.hpp'):
              '// operands. A mask is a lane mask: every bit of a lane set, or every bit clear.',
              '#pragma once', ''] + b['guard'] + [
              '',
-             f'#include {b["include"]}', '',
+             f'#include {b["include"]}'] + (['#include <cstddef>'] if getattr(kernels, 'folds', {}) else []) + [
+             '',
              f'#include "{prelude_name}"', '',
              'KAIRN_GEN_PUSH_WARNINGS',
              'namespace kairn::gen {', '',
@@ -262,5 +315,15 @@ def header(b, kernels, prelude_name='prelude.hpp'):
         lines += [''] + cpp._description(k, kernels)[:1]
         for ctype in cpp.TYPES:
             lines += function(b, k, kernels, ctype)
+    folds = [fd for fd in getattr(kernels, 'folds', {}).values() if 'lanes' in fd.orders]
+    if folds:
+        lanes = ', '.join(f'{b["types"][t][4]} for {t}' for t in cpp.TYPES)
+        lines += ['', '// --- Folds: the lane order with the lanes of a register (docs/developer/architecture.md,',
+                  f'// "Folds"): {lanes}. The packed step in the loop, the scalar combination, step and',
+                  '// finish of scalar.hpp after it, inlined in the same way: values step_V, comb_V, fin_V.']
+        for fd in folds:
+            lines.append('')
+            for i, ctype in enumerate(cpp.TYPES):
+                lines += fold_packed(b, fd, kernels, ctype)[(1 if i else 0):]
     lines += ['', '}  // namespace kairn::gen', 'KAIRN_GEN_POP_WARNINGS']
     return '\n'.join(lines) + '\n'

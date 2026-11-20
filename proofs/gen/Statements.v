@@ -199,6 +199,67 @@ Definition ball_sub_1_spec : Prop :=
   fmt emin prec rz /\
   (forall x y : R, Rabs (x - cx) <= rx -> Rabs (y - cy) <= ry -> Rabs ((x - y) - cz) <= rz).
 
+(* bound_dot_1: the exported bound of a dot product as a function of n (milestone2.md). Status: unverified. *)
+Definition bound_dot_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall m : R,
+  fmt emin prec m ->
+  (m = 0 \/ 1 <= m) ->
+  eta emin <= / 2 ->
+  let '(g, t, ok) := bound_dot_1 emin prec tie_even m in
+  fmt emin prec g /\
+  fmt emin prec t /\
+  (ok = true -> ((m * ((1 / (1 + u prec)) * u prec ^ 1)) / (1 - (m * ((1 / (1 + u prec)) * u prec ^ 1)))) <= g) /\
+  (ok = true -> ((m * ((1 / 2) * eta emin)) * (1 + g)) <= t).
+
+(* bound_dot_2: the exported bound of a dot product as a function of n (milestone2.md). Status: unverified. *)
+Definition bound_dot_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall m : R,
+  fmt emin prec m ->
+  (m = 0 \/ 1 <= m) ->
+  eta emin <= / 2 ->
+  let '(g, t, ok) := bound_dot_2 emin prec tie_even m in
+  fmt emin prec g /\
+  fmt emin prec t /\
+  (ok = true -> ((m * (4 * u prec ^ 2)) / (1 - (m * (4 * u prec ^ 2)))) <= g) /\
+  (ok = true -> ((m * ((3 / 2) * eta emin)) * (1 + g)) <= t).
+
+(* bound_sum_1: the exported bound of a sum as a function of n (milestone2.md). Status: unverified. *)
+Definition bound_sum_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall m : R,
+  fmt emin prec m ->
+  (m = 0 \/ 1 <= m) ->
+  eta emin <= / 2 ->
+  let '(g, ok) := bound_sum_1 emin prec tie_even m in
+  fmt emin prec g /\
+  (ok = true -> (m * ((1 / (1 + u prec)) * u prec ^ 1)) <= (1 / 2)) /\
+  (ok = true -> ((m * ((1 / (1 + u prec)) * u prec ^ 1)) / (1 - (m * ((1 / (1 + u prec)) * u prec ^ 1)))) <= g).
+
+(* bound_sum_2: the exported bound of a sum as a function of n (milestone2.md). Status: unverified. *)
+Definition bound_sum_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall m : R,
+  fmt emin prec m ->
+  (m = 0 \/ 1 <= m) ->
+  eta emin <= / 2 ->
+  let '(g, ok) := bound_sum_2 emin prec tie_even m in
+  fmt emin prec g /\
+  (ok = true -> (m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)) <= (1 / 2)) /\
+  (ok = true -> ((m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)) / (1 - (m * ((3 / (1 - (4 * u prec))) * u prec ^ 2)))) <= g).
+
+(* dot_step_1: the step of the fused dot product of one limb, s <- RN(x y + s) (milestone2.md). Status: unverified. *)
+Definition dot_step_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall s x y : R,
+  fmt emin prec s ->
+  fmt emin prec x ->
+  fmt emin prec y ->
+  let t := dot_step_1 emin prec tie_even s x y in
+  fmt emin prec t /\
+  t = RN emin prec (s + (x * y)).
+
 (* fast_two_sum_entry: fast_two_sum on its guarded operands (Milestone 2 listing). Status: proved. *)
 Definition fast_two_sum_entry_spec : Prop :=
   forall emin prec : Z, (2 <= prec)%Z ->
@@ -360,6 +421,17 @@ Definition sub_up_entry_spec : Prop :=
   let r := sub_up_entry emin prec tie_even a b in
   fmt emin prec r /\
   r = RU emin prec (a - b).
+
+(* sum_entry_step_1: add_1_1 on a guarded element (rule R3). Status: unverified. *)
+Definition sum_entry_step_1_spec : Prop :=
+  forall emin prec : Z, (1 <= prec)%Z ->
+  forall s x : R,
+  fmt emin prec s ->
+  fmt emin prec x ->
+  let t := sum_entry_step_1 emin prec tie_even s x in
+  fmt emin prec t /\
+  t = RN emin prec (s + x) /\
+  Rabs (t - (s + x)) <= (1 / (1 + u prec)) * u prec ^ 1 * Rabs (s + x).
 
 (* two_prod_dekker: Dekker's product with Veltkamp's split (Dekker 1971); overflow preconditions BM11. Status: proved. *)
 Definition two_prod_dekker_spec : Prop :=
@@ -571,6 +643,17 @@ Definition ball_sub_2_spec : Prop :=
   normalized_2 emin prec cz0 cz1 /\
   (forall x y : R, Rabs (x - (cx0 + cx1)) <= rx -> Rabs (y - (cy0 + cy1)) <= ry -> Rabs ((x - y) - (cz0 + cz1)) <= rz).
 
+(* dot_step_2: the step of the dot product of two limbs, add_2_2 of mul_2_2 (milestone2.md); bounds from MR22. Status: unverified. *)
+Definition dot_step_2_spec : Prop :=
+  forall emin prec : Z, (4 <= prec)%Z ->
+  forall s0 s1 x0 x1 y0 y1 : R,
+  normalized_2 emin prec s0 s1 ->
+  normalized_2 emin prec x0 x1 ->
+  normalized_2 emin prec y0 y1 ->
+  let '(t0, t1) := dot_step_2 emin prec tie_even s0 s1 x0 x1 y0 y1 in
+  normalized_2 emin prec t0 t1 /\
+  Rabs ((t0 + t1) - ((s0 + s1) + ((x0 + x1) * (y0 + y1)))) <= (((3 * (1 + ((4 * u prec) * u prec))) / (1 - (4 * u prec))) + 4) * u prec ^ 2 * (Rabs (s0 + s1) + Rabs ((x0 + x1) * (y0 + y1))) + 2 * eta emin.
+
 (* eq_2_1: limbs compared in order (Milestone 1 listing). Status: proved. *)
 Definition eq_2_1_spec : Prop :=
   forall emin prec : Z, (1 <= prec)%Z ->
@@ -683,6 +766,26 @@ Definition sub_2_2_spec : Prop :=
   let '(z0, z1) := sub_2_2 emin prec tie_even x0 x1 y0 y1 in
   normalized_2 emin prec z0 z1 /\
   Rabs ((z0 + z1) - ((x0 + x1) - (y0 + y1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((x0 + x1) - (y0 + y1)).
+
+(* sum_entry_step_2: add_2_2 on a guarded element (rule R3); JMP17 Alg. 6, bound from MR22. Status: unverified. *)
+Definition sum_entry_step_2_spec : Prop :=
+  forall emin prec : Z, (3 <= prec)%Z ->
+  forall s0 s1 x0 x1 : R,
+  normalized_2 emin prec s0 s1 ->
+  normalized_2 emin prec x0 x1 ->
+  let '(t0, t1) := sum_entry_step_2 emin prec tie_even s0 s1 x0 x1 in
+  normalized_2 emin prec t0 t1 /\
+  Rabs ((t0 + t1) - ((s0 + s1) + (x0 + x1))) <= (3 / (1 - (4 * u prec))) * u prec ^ 2 * Rabs ((s0 + s1) + (x0 + x1)).
+
+(* sum_fast_entry_step_2: add_fast_2_2 on a guarded element (rule R3); JMP17 Alg. 5. Status: unverified. *)
+Definition sum_fast_entry_step_2_spec : Prop :=
+  forall emin prec : Z, (2 <= prec)%Z ->
+  forall s0 s1 x0 x1 : R,
+  normalized_2 emin prec s0 s1 ->
+  normalized_2 emin prec x0 x1 ->
+  let '(t0, t1) := sum_fast_entry_step_2 emin prec tie_even s0 s1 x0 x1 in
+  normalized_2 emin prec t0 t1 /\
+  Rabs ((t0 + t1) - ((s0 + s1) + (x0 + x1))) <= 3 * u prec ^ 2 * (Rabs (s0 + s1) + Rabs (x0 + x1)).
 
 (* to_down_2: the sign of x1 (Milestone 1 listing). Status: proved. *)
 Definition to_down_2_spec : Prop :=
